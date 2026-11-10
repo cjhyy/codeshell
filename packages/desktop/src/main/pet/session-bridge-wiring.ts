@@ -8,7 +8,9 @@
  *
  * It owns three concerns: constructing the store and bridge, exposing the
  * sessionBind executor for the host-action table, and turning a Session's
- * final answer into a durable outbound event.
+ * final answer into a durable outbound event. Which conversations that answer
+ * goes to is the delivery plan's call (pet-delivery-plan.ts): there, this
+ * reply is the delivery of the turn's outcome to a bound conversation.
  */
 
 import { randomUUID } from "node:crypto";
@@ -29,6 +31,11 @@ import {
 } from "./session-conversation-bridge.js";
 import { createSessionBindHostAction, type BindActionContext } from "./session-bind-host-action.js";
 import type { PetReusableSessionCandidate } from "./pet-dispatch-service.js";
+import {
+  closingOutcome,
+  sessionOutcomeStreamOf,
+  type SessionOutcomeStream,
+} from "./session-outcome.js";
 
 export interface SessionBridgeWiringDeps {
   /** `<userData>/pet/conversation-session-routes.json`. */
@@ -58,14 +65,12 @@ export interface SessionBridgeWiringDeps {
     target: { channel: string; target: string };
   }): Promise<void>;
   /**
-   * One turn's reply is now in the durable outbox for `route` (the notice
-   * wiring then keeps that run's done notice off the same conversation).
+   * The conversations a Session's turn reply is forwarded to, from the
+   * delivery plan (`PetDeliveryResolver.replyRoutes`): the same plan keeps a
+   * done / failed notice off a conversation this reply already reaches.
+   * Defaults to every route this wiring's store holds for the Session.
    */
-  onReplyForwarded?(reply: {
-    sessionId: string;
-    turnId: string;
-    route: ConversationSessionRoute;
-  }): void;
+  replyRoutes?(sessionId: string): Promise<readonly ConversationSessionRoute[]>;
   /** Initial retry delay for a reply not yet persisted to the outbox. */
   deliveryRetryMs?: number;
   onDeliveryError?(error: unknown, turn: BoundSessionTurnResult): void;
@@ -88,14 +93,6 @@ export interface SessionBridgeWiring {
   routeInbound(inbound: BoundSessionInbound): Promise<BoundSessionDisposition>;
   /** Deliver one Session turn's final answer back to every bound conversation. */
   deliverSessionReply(input: { sessionId: string; turnId: string; text: string }): Promise<void>;
-  /** Settles once this turn's reply is in the outbox; undefined when none is in flight. */
-  pendingReply(sessionId: string, turnId: string): Promise<void> | undefined;
-  /**
-   * Settles when the Session's observed run ends; undefined when none is in
-   * flight. The run's reply is then handed to the outbox synchronously, so a
-   * caller that waits on this and then on {@link pendingReply} sees it.
-   */
-  runInFlight(sessionId: string): Promise<void> | undefined;
   /** Downgrade routes that aged out while the app was closed. */
   recoverOnStartup(): Promise<void>;
 }
@@ -112,7 +109,10 @@ export function createSessionBridgeWiring(deps: SessionBridgeWiringDeps): Sessio
     publishedRoutes?: Set<string>,
   ): Promise<void> {
     if (!text.trim()) return;
-    for (const route of await routes.notifyRoutesForSession(sessionId)) {
+    const targets = deps.replyRoutes
+      ? await deps.replyRoutes(sessionId)
+      : await routes.notifyRoutesForSession(sessionId);
+    for (const route of targets) {
       if (publishedRoutes?.has(route.id)) continue;
       await deps.publish({
         // Stable across retries and restarts so one turn is delivered once.
@@ -129,11 +129,6 @@ export function createSessionBridgeWiring(deps: SessionBridgeWiringDeps): Sessio
         target: { channel: route.channel, target: route.target },
       });
       publishedRoutes?.add(route.id);
-      try {
-        deps.onReplyForwarded?.({ sessionId, turnId, route });
-      } catch {
-        // Bookkeeping for notices must never fail a published reply.
-      }
     }
   }
 
@@ -209,8 +204,6 @@ export function createSessionBridgeWiring(deps: SessionBridgeWiringDeps): Sessio
     },
     routeInbound: (inbound) => bridge.accept(inbound),
     deliverSessionReply,
-    pendingReply: (sessionId, turnId) => pendingReplies.get(`${sessionId}\u0000${turnId}`),
-    runInFlight: (sessionId) => runner.runInFlight?.(sessionId),
     recoverOnStartup: async () => {
       await routes.expireStaleBoundRoutes();
     },
@@ -252,27 +245,6 @@ const META = {
   meta: { origin: "host" as const, producer: "session-bridge" },
 };
 
-/**
- * Flatten one assistant message to plain text. `content` is either a string or
- * a block list; only text blocks are user-facing, so tool calls and thinking
- * never reach the chat.
- */
-function assistantMessageText(message: unknown): string | undefined {
-  if (!message || typeof message !== "object" || Array.isArray(message)) return undefined;
-  const content = (message as { content?: unknown }).content;
-  if (typeof content === "string") return content.trim() || undefined;
-  if (!Array.isArray(content)) return undefined;
-  const text = content
-    .map((block) =>
-      block && typeof block === "object" && (block as { type?: unknown }).type === "text"
-        ? String((block as { text?: unknown }).text ?? "")
-        : "",
-    )
-    .join("")
-    .trim();
-  return text || undefined;
-}
-
 /** Emitted when a Session finishes a turn and produced user-facing text. */
 export interface BoundSessionTurnResult {
   sessionId: string;
@@ -297,6 +269,13 @@ export function createBoundSessionRunner(
   worker: BridgeWorkerLike,
   aggregator: BridgeAggregatorLike,
   onTurn?: (result: BoundSessionTurnResult) => void | Promise<void>,
+  /**
+   * The Session stream with the deriver's outcomes. Main passes its one tap's
+   * stream; without it the runner interprets the worker stream itself.
+   */
+  sessions: SessionOutcomeStream = sessionOutcomeStreamOf((listener) =>
+    worker.subscribeOutbound(listener),
+  ),
 ): BoundSessionRunner {
   const injected = new Set<string>();
   interface ObservedRun {
@@ -305,7 +284,6 @@ export function createBoundSessionRunner(
     runId?: string;
     clientMessageId?: string;
     fallbackTurnId: string;
-    lastAssistantText?: string;
   }
   const running = new Map<string, ObservedRun>();
   const completed = new Set<string>();
@@ -339,9 +317,7 @@ export function createBoundSessionRunner(
   }
 
   // One tap serves steer confirmation, turn boundaries and reply capture.
-  worker.subscribeOutbound((_line, snapshotEntry) => {
-    const sessionId = snapshotEntry?.sessionId;
-    const event = snapshotEntry?.event;
+  sessions.subscribe((sessionId, event, outcomes) => {
     if (!sessionId || !event || typeof event !== "object" || Array.isArray(event)) return;
     const record = event as Record<string, unknown>;
     // Child events share the parent's stream envelope. They cannot settle its
@@ -368,29 +344,15 @@ export function createBoundSessionRunner(
       return;
     }
     if (type === "assistant_message") {
-      const entry = running.get(sessionId) ?? beginRun(sessionId);
-      if (!belongsToRun(record, entry)) return;
-      const text = assistantMessageText(record.message);
-      if (text) entry.lastAssistantText = text;
+      // A message is evidence of a run in flight; its text is the deriver's to keep.
+      if (!running.has(sessionId)) beginRun(sessionId);
       return;
     }
     if (type === "turn_complete") {
       const entry = running.get(sessionId);
       const matching = entry && belongsToRun(record, entry) ? entry : undefined;
-      // Core's completion text is the authoritative final answer. An explicit
-      // empty result must not resurrect an earlier progress message.
-      const failed = record.reason === "model_error";
-      const stopped = typeof record.reason === "string" && record.reason.startsWith("aborted");
-      const finalText = typeof record.text === "string" ? record.text.trim() : undefined;
-      const text =
-        finalText ||
-        (failed
-          ? "这个 Session 本轮执行失败，请在桌面端查看详情后重试。"
-          : stopped
-            ? "这个 Session 本轮已停止。你可以发送新消息继续。"
-            : finalText === undefined
-              ? matching?.lastAssistantText
-              : undefined);
+      // Exactly the text the outcome says is forwarded (the notice plan reads the same).
+      const text = closingOutcome(outcomes)?.replyText;
       const turnId =
         (typeof record.runId === "string" && record.runId) ||
         matching?.runId ||
@@ -398,7 +360,7 @@ export function createBoundSessionRunner(
         matching?.clientMessageId ||
         matching?.fallbackTurnId;
       if (matching) endRun(sessionId, matching);
-      if (!text?.trim() || !turnId) return;
+      if (!text || !turnId) return;
       const key = `${sessionId}\u0000${turnId}`;
       if (completed.has(key) || publishing.has(key)) return;
       publishing.add(key);
@@ -483,7 +445,6 @@ export function createBoundSessionRunner(
     },
     wasInjected: (sessionId, id) => injected.has(`${sessionId}\u0000${id}`),
     runDone: (sessionId) => running.get(sessionId)?.done ?? Promise.resolve(),
-    runInFlight: (sessionId) => running.get(sessionId)?.done,
     queueNextTurn: async (input) => {
       // Core owns serialization; its acknowledgement confirms the successor
       // is queued without waiting for the current or following turn to finish.

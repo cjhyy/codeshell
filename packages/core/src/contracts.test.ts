@@ -11,7 +11,7 @@ describe("CONTRACTS", () => {
       cloudManagementAuthority: 2,
       cloudBrowserAuthority: 1,
       relayProtocol: 1,
-      desktopControl: 1,
+      desktopControl: 2,
       mobileRemote: 1,
       outputJournal: 1,
     });

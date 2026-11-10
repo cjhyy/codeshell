@@ -21,6 +21,8 @@ import {
 
 export type NoticeDeliveryStatus =
   | "claimed"
+  /** Written to the gateway outbox; its delivery result has not come back yet. */
+  | "enqueued"
   | "accepted"
   | "failed"
   | "queued"
@@ -49,6 +51,46 @@ export interface NoticeDelivery {
   error?: string;
 }
 
+/**
+ * Where a decision prompt stands. Grace is not a phase: until the first
+ * prompt is submitted there is no record, and the grace end is derived from
+ * the pending decision's own `createdAt`.
+ *
+ *   desktop    submitted; no IM conversation can answer it (yet): kept on the
+ *              desktop, queued, held, or sent as the generic group text
+ *   escalated  the one "owner left" copy (`:away`) was submitted, not (yet)
+ *              answerable either
+ *   im         a copy reached the conversation that may answer it (`channel`)
+ *   answered / expired / revoked   the decision ended: resolved, timed out,
+ *              or gone without an answer (cancelled, worker lost)
+ */
+export type NoticePromptPhase = "desktop" | "escalated" | "im" | "answered" | "expired" | "revoked";
+
+/** The lifecycle of one decision prompt, kept on its first `session.blocked` record. */
+export interface NoticeDecisionPrompt {
+  /** The 12-hex reply code (upper case). */
+  code: string;
+  phase: NoticePromptPhase;
+  /** The decision's deadline; absent: it waits until answered. */
+  deadline?: number;
+  /** A model question: Core applies its timeout, so no expiry notice. */
+  skippable?: true;
+  /** Bare replies that address this prompt (option labels, 拒绝 …), for late short replies. */
+  replies?: string[];
+  /** The IM channel of the copy an answering conversation accepted. */
+  channel?: string;
+  /** When it reached that conversation. */
+  imAt?: number;
+  /** When the "owner left" copy was submitted. */
+  escalatedAt?: number;
+  endedAt?: number;
+  /** Expired after reaching IM: the "已超时" notice owed there, and whether the router took it. */
+  expiryNotice?: { channel: string; sent: boolean };
+}
+
+/** What a prompt update may change; the code never changes. */
+export type NoticeDecisionPromptPatch = Partial<Omit<NoticeDecisionPrompt, "code" | "replies">>;
+
 export interface NoticeRecord {
   id: string;
   kind: string;
@@ -64,6 +106,8 @@ export interface NoticeRecord {
   body?: string;
   decision?: RouteDecision;
   delivery?: NoticeDelivery;
+  /** Decision prompts only: where the prompt stands (see {@link NoticeDecisionPrompt}). */
+  prompt?: NoticeDecisionPrompt;
   createdAt: number;
 }
 
@@ -73,8 +117,10 @@ export interface NoticeRecord {
  * in the key and counters. Without one, a `digest` decision starts `held`
  * and a `queued` decision starts `queued` (channel = `decision.im`).
  */
-export type NoticeRecordInput = Omit<NoticeRecord, "id" | "createdAt" | "delivery"> & {
+export type NoticeRecordInput = Omit<NoticeRecord, "id" | "createdAt" | "delivery" | "prompt"> & {
   delivery?: { status: "held" | "queued"; channel?: string };
+  /** A decision prompt starts in phase `desktop`; replies that are not plain text are dropped. */
+  prompt?: Pick<NoticeDecisionPrompt, "code" | "deadline" | "skippable" | "replies">;
 };
 
 export interface PetNoticeLedgerOptions {
@@ -150,6 +196,7 @@ const OUTLETS: readonly RouteDecision["outlet"][] = [
 ];
 const STATUSES: readonly NoticeDeliveryStatus[] = [
   "claimed",
+  "enqueued",
   "accepted",
   "failed",
   "queued",
@@ -160,22 +207,64 @@ const STATUSES: readonly NoticeDeliveryStatus[] = [
 const SETTLE_STATUSES: readonly NoticeDeliveryStatus[] = STATUSES.filter(
   (status) => status !== "claimed",
 );
+const PROMPT_CODE = /^[0-9A-F]{12}$/u;
+const MAX_PROMPT_REPLIES = 32;
+const PROMPT_PHASES: readonly NoticePromptPhase[] = [
+  "desktop",
+  "escalated",
+  "im",
+  "answered",
+  "expired",
+  "revoked",
+];
+const ENDED_PHASES: ReadonlySet<NoticePromptPhase> = new Set(["answered", "expired", "revoked"]);
+/**
+ * Prompt phases only move forward; an ended prompt keeps its phase (its
+ * expiry notice may still be updated).
+ */
+const PROMPT_TRANSITIONS: Readonly<Record<NoticePromptPhase, ReadonlySet<NoticePromptPhase>>> = {
+  desktop: new Set(["desktop", "escalated", "im", "answered", "expired", "revoked"]),
+  escalated: new Set(["escalated", "im", "answered", "expired", "revoked"]),
+  im: new Set(["im", "answered", "expired", "revoked"]),
+  answered: new Set(["answered"]),
+  expired: new Set(["expired"]),
+  revoked: new Set(["revoked"]),
+};
+
+/** The decision ended (answered, expired or revoked). */
+export function isPromptEnded(phase: NoticePromptPhase): boolean {
+  return ENDED_PHASES.has(phase);
+}
+
 /** Work still owed to the owner; these records are never evicted. */
-const LIVE_STATUSES: ReadonlySet<NoticeDeliveryStatus> = new Set(["claimed", "queued", "held"]);
+const LIVE_STATUSES: ReadonlySet<NoticeDeliveryStatus> = new Set([
+  "claimed",
+  "enqueued",
+  "queued",
+  "held",
+]);
 
 /**
  * Delivery state machine. Rows are the current status ("none" = no delivery
  * yet); columns are the target (`claimed` via claim(), the rest via settle()).
  *
- *              claimed accepted failed unknown queued held revoked
- *   none         ok      -        -      -       ok    ok    ok
- *   held         ok      -        -      -       ok    ok    ok
- *   queued       ok      -        -      -       ok    ok    ok
- *   failed       ok      -        -      -       ok    ok    ok
- *   claimed      ok     ok       ok     ok       ok    -     ok
- *   unknown      m       -        -      -       -     -     ok
- *   accepted     x       x        x      x       x     x     x
- *   revoked      x       x        x      x       x     x     x
+ *              claimed enqueued accepted failed unknown queued held revoked
+ *   none         ok      -        -        -      -       ok    ok    ok
+ *   held         ok      -        a        -      -       ok    ok    ok
+ *   queued       ok      -        -        -      -       ok    ok    ok
+ *   failed       ok      -        -        -      -       ok    ok    ok
+ *   claimed      ok      ok       ok       ok     ok      ok    -     ok
+ *   enqueued     -       -        ok       ok     ok      ok    ok    ok
+ *   unknown      m       -        -        -      -       -     -     ok
+ *   accepted     x       x        x        x      x       x     x     x
+ *   revoked      x       x        x        x      x       x     x     x
+ *
+ * `a` (held → accepted): an outbox send that expired into the digest was
+ * delivered after all (the relay was mid-send at its deadline).
+ * `enqueued`: the gateway outbox took the send and delivers (and retries)
+ * it; the outbox's result settles it: accepted, failed (then queued for the
+ * owner's next message), unknown, or held (expired before quiet hours, for
+ * the digest). The router never resends an enqueued notice itself.
  *
  * `-` throws invalid_transition; `x` throws notice_already_settled; `m` is
  * allowed only with `claim(..., { manualRetry: true })`.
@@ -189,10 +278,11 @@ const TRANSITIONS: Readonly<
   Record<NoticeDeliveryStatus | "none", ReadonlySet<NoticeDeliveryStatus>>
 > = {
   none: new Set(["claimed", "queued", "held", "revoked"]),
-  held: new Set(["claimed", "queued", "held", "revoked"]),
+  held: new Set(["claimed", "accepted", "queued", "held", "revoked"]),
   queued: new Set(["claimed", "queued", "held", "revoked"]),
   failed: new Set(["claimed", "queued", "held", "revoked"]),
-  claimed: new Set(["claimed", "accepted", "failed", "unknown", "queued", "revoked"]),
+  claimed: new Set(["claimed", "enqueued", "accepted", "failed", "unknown", "queued", "revoked"]),
+  enqueued: new Set(["accepted", "failed", "unknown", "queued", "held", "revoked"]),
   unknown: new Set(["revoked"]),
   accepted: new Set(),
   revoked: new Set(),
@@ -288,6 +378,58 @@ function parseDelivery(value: unknown): NoticeDelivery | undefined {
   return value as unknown as NoticeDelivery;
 }
 
+const PROMPT_KEYS = [
+  "code",
+  "phase",
+  "deadline",
+  "skippable",
+  "replies",
+  "channel",
+  "imAt",
+  "escalatedAt",
+  "endedAt",
+  "expiryNotice",
+] as const;
+
+function parsePrompt(value: unknown): NoticeDecisionPrompt | undefined {
+  if (!isRecord(value) || !hasOnlyKeys(value, PROMPT_KEYS)) return undefined;
+  const notice = value.expiryNotice;
+  if (
+    typeof value.code !== "string" ||
+    !PROMPT_CODE.test(value.code) ||
+    !isOneOf(PROMPT_PHASES, value.phase) ||
+    (value.deadline !== undefined && !isTimestamp(value.deadline)) ||
+    (value.skippable !== undefined && value.skippable !== true) ||
+    (value.replies !== undefined &&
+      (!Array.isArray(value.replies) ||
+        value.replies.length > MAX_PROMPT_REPLIES ||
+        !value.replies.every((reply) => isText(reply)))) ||
+    (value.channel !== undefined && !isText(value.channel, 64)) ||
+    (value.imAt !== undefined && !isTimestamp(value.imAt)) ||
+    (value.escalatedAt !== undefined && !isTimestamp(value.escalatedAt)) ||
+    (value.endedAt !== undefined && !isTimestamp(value.endedAt)) ||
+    (notice !== undefined &&
+      (!isRecord(notice) ||
+        !hasOnlyKeys(notice, ["channel", "sent"]) ||
+        !isText(notice.channel, 64) ||
+        typeof notice.sent !== "boolean"))
+  )
+    return undefined;
+  return value as unknown as NoticeDecisionPrompt;
+}
+
+/**
+ * Loading is tolerant of a prompt this build cannot read (a newer phase, a
+ * malformed field): the record is kept as an ordinary notice without it.
+ */
+function parseStoredRecord(value: unknown): NoticeRecord | undefined {
+  if (isRecord(value) && "prompt" in value && !parsePrompt(value.prompt)) {
+    const { prompt: _unreadable, ...rest } = value;
+    return parseNoticeRecord(rest);
+  }
+  return parseNoticeRecord(value);
+}
+
 /** Strict row validator; anything it rejects is quarantined, never dropped. */
 function parseNoticeRecord(value: unknown): NoticeRecord | undefined {
   if (
@@ -305,6 +447,7 @@ function parseNoticeRecord(value: unknown): NoticeRecord | undefined {
       "body",
       "decision",
       "delivery",
+      "prompt",
       "createdAt",
     ])
   )
@@ -326,6 +469,7 @@ function parseNoticeRecord(value: unknown): NoticeRecord | undefined {
       (typeof value.body !== "string" || value.body.length > MAX_BODY)) ||
     (value.decision !== undefined && !parseDecision(value.decision)) ||
     (value.delivery !== undefined && !parseDelivery(value.delivery)) ||
+    (value.prompt !== undefined && !parsePrompt(value.prompt)) ||
     !isTimestamp(value.createdAt)
   )
     return undefined;
@@ -341,8 +485,25 @@ function recordHashes(staged: LedgerState): Set<string> {
   return new Set([...staged.records.values()].map((record) => hex24(record.dedupeKey)));
 }
 
+/** A decision prompt still open is live work too: its record is never evicted. */
 function isEvictable(record: NoticeRecord): boolean {
+  if (record.prompt && !isPromptEnded(record.prompt.phase)) return false;
   return !record.delivery || !LIVE_STATUSES.has(record.delivery.status);
+}
+
+function initialPrompt(input: NoticeRecordInput["prompt"]): NoticeDecisionPrompt | undefined {
+  if (input === undefined) return undefined;
+  if (!isRecord(input)) throw new PetNoticeLedgerError("invalid_notice");
+  const replies = Array.isArray(input.replies)
+    ? [...new Set(input.replies.filter((reply) => isText(reply)))].slice(0, MAX_PROMPT_REPLIES)
+    : [];
+  return {
+    code: input.code,
+    phase: "desktop",
+    ...(input.deadline !== undefined ? { deadline: input.deadline } : {}),
+    ...(input.skippable === true ? { skippable: true } : {}),
+    ...(replies.length > 0 ? { replies } : {}),
+  };
 }
 
 function defaultLocalHourKey(ms: number): string {
@@ -367,6 +528,7 @@ function normalizeInput(input: NoticeRecordInput, id: string, createdAt: number)
   const expiresAt =
     input.expiresAt ??
     (initial?.status === "queued" ? createdAt + NOTICE_QUEUED_TTL_MS : undefined);
+  const prompt = initialPrompt(input.prompt);
   const record: NoticeRecord = {
     id,
     kind: input.kind,
@@ -379,6 +541,7 @@ function normalizeInput(input: NoticeRecordInput, id: string, createdAt: number)
     facts: input.facts,
     ...(input.body !== undefined ? { body: input.body } : {}),
     ...(input.decision !== undefined ? { decision: input.decision } : {}),
+    ...(prompt !== undefined ? { prompt } : {}),
     ...(initial !== undefined
       ? {
           delivery: {
@@ -489,6 +652,84 @@ export class PetNoticeLedger {
     return found ? structuredClone(found) : undefined;
   }
 
+  /** The first record carrying the decision prompt with this reply code. */
+  byPromptCode(code: string): NoticeRecord | undefined {
+    let found: NoticeRecord | undefined;
+    for (const record of this.state.records.values()) {
+      if (record.prompt?.code !== code) continue;
+      if (!found || record.createdAt < found.createdAt) found = record;
+    }
+    return found ? structuredClone(found) : undefined;
+  }
+
+  /** Records that carry a decision prompt (`only` picks them by prompt), oldest first. */
+  prompts(only?: (prompt: NoticeDecisionPrompt) => boolean): NoticeRecord[] {
+    return [...this.state.records.values()]
+      .filter((record) => record.prompt !== undefined && (!only || only(record.prompt)))
+      .sort((a, b) => a.createdAt - b.createdAt)
+      .map((record) => structuredClone(record));
+  }
+
+  /** Notices about one decision request (its prompt and the prompt's copies), oldest first. */
+  forRequest(sessionId: string, requestId: string): NoticeRecord[] {
+    return [...this.state.records.values()]
+      .filter((record) => record.sessionId === sessionId && record.requestId === requestId)
+      .sort((a, b) => a.createdAt - b.createdAt)
+      .map((record) => structuredClone(record));
+  }
+
+  /**
+   * Give a record written before prompts were recorded (an older build) its
+   * prompt, in `phase`. A record that already has one is returned unchanged.
+   */
+  adoptPrompt(
+    id: string,
+    input: NonNullable<NoticeRecordInput["prompt"]>,
+    phase: Extract<NoticePromptPhase, "desktop" | "escalated">,
+  ): Promise<NoticeRecord> {
+    const snapshot = structuredClone(input);
+    return this.mutate((staged, touched) => {
+      const current = staged.records.get(id);
+      if (!current) throw new PetNoticeLedgerError("notice_not_found");
+      if (current.prompt) return current;
+      const prompt = parsePrompt(JSON.parse(JSON.stringify({ ...initialPrompt(snapshot), phase })));
+      if (!prompt) throw new PetNoticeLedgerError("invalid_notice");
+      const record = { ...current, prompt };
+      staged.records.set(id, record);
+      touched.add(id);
+      return record;
+    });
+  }
+
+  /**
+   * Move a decision prompt along its lifecycle (see `PROMPT_TRANSITIONS`):
+   * phases only go forward and an ended prompt keeps its phase.
+   */
+  updatePrompt(id: string, patch: NoticeDecisionPromptPatch): Promise<NoticeRecord> {
+    const changes = structuredClone(patch);
+    return this.mutate((staged, touched) => {
+      const current = staged.records.get(id);
+      if (!current?.prompt) throw new PetNoticeLedgerError("notice_not_found");
+      if (!isRecord(changes) || "code" in changes || "replies" in changes)
+        throw new PetNoticeLedgerError("invalid_notice");
+      const phase = changes.phase ?? current.prompt.phase;
+      if (!isOneOf(PROMPT_PHASES, phase)) throw new PetNoticeLedgerError("invalid_notice");
+      if (!PROMPT_TRANSITIONS[current.prompt.phase].has(phase))
+        throw new PetNoticeLedgerError("invalid_transition");
+      const prompt = { ...current.prompt } as Record<string, unknown>;
+      for (const [key, value] of Object.entries(changes)) {
+        if (value === undefined) delete prompt[key];
+        else prompt[key] = value;
+      }
+      const next = parsePrompt(JSON.parse(JSON.stringify(prompt)));
+      if (!next) throw new PetNoticeLedgerError("invalid_notice");
+      const record = { ...current, prompt: next };
+      staged.records.set(id, record);
+      touched.add(id);
+      return record;
+    });
+  }
+
   /**
    * Dedupe keys first recorded within the last 7 days, including evicted
    * records. The index stores hashes, so this is a lookup, not a listing.
@@ -515,6 +756,14 @@ export class PetNoticeLedger {
     );
   }
 
+  /** Records the gateway outbox is delivering, oldest first. */
+  enqueued(): NoticeRecord[] {
+    return [...this.state.records.values()]
+      .filter((record) => record.delivery?.status === "enqueued")
+      .sort((a, b) => a.createdAt - b.createdAt)
+      .map((record) => structuredClone(record));
+  }
+
   /** Records held for the next digest, oldest first. */
   held(): NoticeRecord[] {
     return (
@@ -537,7 +786,12 @@ export class PetNoticeLedger {
     for (const record of this.state.records.values()) {
       const delivery = record.delivery;
       if (!delivery?.channel || delivery.channel === "desktop") continue;
-      if (delivery.status !== "claimed" && delivery.status !== "accepted") continue;
+      if (
+        delivery.status !== "claimed" &&
+        delivery.status !== "enqueued" &&
+        delivery.status !== "accepted"
+      )
+        continue;
       if (this.localHourKey(delivery.claimedAt ?? delivery.at) !== hour) continue;
       if (record.priority === "P0") p0Sent += 1;
       else sent += 1;
@@ -928,7 +1182,7 @@ export class PetNoticeLedger {
     }
     let rejected = 0;
     for (const stored of parsed.records) {
-      const record = parseNoticeRecord(stored);
+      const record = parseStoredRecord(stored);
       if (record && !records.has(record.id)) {
         records.set(record.id, record);
         continue;

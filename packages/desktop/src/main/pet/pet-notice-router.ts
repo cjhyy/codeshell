@@ -2,12 +2,16 @@ import { dlog } from "../desktop-logger.js";
 import { composeNoticeBody, MAX_NOTICE_BODY, noticeLine } from "./pet-notice-compose.js";
 import { NoticeDigest } from "./pet-notice-digest.js";
 import {
+  isPromptEnded,
   newNoticeRecordId,
+  type NoticeDecisionPrompt,
+  type NoticeDecisionPromptPatch,
   type NoticeRecord,
   type NoticeSettleStatus,
 } from "./pet-notice-ledger.js";
 import {
   hostTimezoneOffsetMin,
+  nextQuietHoursStart,
   route,
   type DedupeLookup,
   type ImReadiness,
@@ -17,6 +21,7 @@ import {
   errorText,
   imTarget,
   matchesConversation,
+  noticeDeliveryKey,
   noticeFromRecord,
   normalizeSettings,
   pinToRoute,
@@ -24,9 +29,12 @@ import {
   sendWithTimeout,
   staleReason,
   unpackFacts,
+  type DecisionPromptRecord,
   type NoticeConversation,
+  type NoticeDecisionPrompts,
   type NoticeImPayload,
-  type NoticePriorDecision,
+  type NoticeOutboxOutcome,
+  type NoticeOutboxState,
   type NoticeSubmitResult,
   type NoticeRouterSettings,
   type NoticeSubmission,
@@ -56,13 +64,17 @@ const DISPOSED: RouteDecision = { outlet: "drop", reason: "disposed" };
  */
 export const ROUTE_MEDIA_RETENTION_MS = 7 * 24 * 60 * 60_000;
 const MEDIA_RELEASED: ReadonlySet<NoticeSettleStatus> = new Set(["accepted", "revoked", "unknown"]);
+/** How long the gateway outbox keeps trying an owner notice (a route reply: a day). */
+export const OWNER_OUTBOX_TTL_MS = 30 * 60_000;
+export const ROUTE_OUTBOX_TTL_MS = 24 * 60 * 60_000;
 
-function payloadOf(notice: NoticeSubmission): NoticeImPayload {
+function payloadOf(notice: NoticeSubmission, expiresAt?: number): NoticeImPayload {
   const nonDirect = notice.facts.nonDirectBody;
   return {
     kind: notice.kind,
     ...(notice.media ? { media: notice.media } : {}),
     ...(typeof nonDirect === "string" && nonDirect ? { nonDirectBody: nonDirect } : {}),
+    ...(expiresAt !== undefined && Number.isFinite(expiresAt) ? { expiresAt } : {}),
   };
 }
 
@@ -90,7 +102,7 @@ function receiptKey(pending: DesktopPendingDecision): string {
  *   the decision in the ledger, then delivers to the desktop and/or IM, holds
  *   it for the digest, or queues it for when the IM channel is back.
  */
-export class PetNoticeRouter {
+export class PetNoticeRouter implements NoticeDecisionPrompts {
   private readonly listeners = new Set<(event: PetAttentionEvent) => void>();
   private readonly timers = new Map<string, unknown>();
   private readonly now: () => number;
@@ -109,6 +121,15 @@ export class PetNoticeRouter {
   private readonly lastImSendAt = new Map<string, number>();
   /** Records this process is sending right now; startup recovery must not resend them. */
   private readonly sending = new Set<string>();
+  /** Records revoked while their send was being written: withdrawn as soon as it lands. */
+  private readonly revokeOnLanding = new Map<string, string>();
+  /** Young claims recovery left because the outbox was not ready to answer. */
+  private readonly awaitingOutbox = new Set<string>();
+  /** Outbox results that arrived before their send was recorded as enqueued (by delivery key). */
+  private readonly earlyResults = new Map<
+    string,
+    { outcome: NoticeOutboxOutcome; error: string | undefined }
+  >();
   /** Records handed to a turn by replayPending (→ when), not yet marked or released. */
   private readonly replaying = new Map<string, number>();
   /** Background media resends started by replayPending, not yet settled. */
@@ -327,7 +348,13 @@ export class PetNoticeRouter {
    */
   private needsMedia(record: NoticeRecord, now: number): boolean {
     const status = record.delivery?.status;
-    if (status === "claimed" || status === "queued" || status === "held" || status === "failed")
+    if (
+      status === "claimed" ||
+      status === "enqueued" ||
+      status === "queued" ||
+      status === "held" ||
+      status === "failed"
+    )
       return true;
     return (
       status === "accepted" &&
@@ -359,19 +386,127 @@ export class PetNoticeRouter {
     });
   }
 
-  /**
-   * What became of an earlier notice with this dedupe key: its decision and
-   * current delivery. Lets a caller that lost its memory (a restart) tell
-   * whether that notice ever reached IM. Undefined before the ledger loads.
-   */
-  priorDecision(dedupeKey: string): NoticePriorDecision | undefined {
-    const record = this.options.ledger?.byDedupeKey(dedupeKey);
-    if (!record) return undefined;
-    const channel = record.delivery?.channel ?? record.decision?.im;
+  /** Resolves once decision records are readable (the ledger loaded, or failed to). */
+  async decisionsLoaded(): Promise<void> {
+    try {
+      await this.options.ledger?.load();
+    } catch (error) {
+      this.log("pet.notice.ledger_read_failed", { error: errorText(error) });
+    }
+  }
+
+  /** The decision prompt with this reply code, from its record; undefined before the ledger loads. */
+  decisionRecord(code: string): DecisionPromptRecord | undefined {
+    const ledger = this.options.ledger;
+    const record = ledger?.byPromptCode(code);
+    if (!ledger || !record) return undefined;
+    return this.promptView(record);
+  }
+
+  /** Decision prompts the ledger still holds (`only` filters before views are built). */
+  decisionRecords(only?: (prompt: NoticeDecisionPrompt) => boolean): DecisionPromptRecord[] {
+    const ledger = this.options.ledger;
+    if (!ledger) return [];
+    const seen = new Set<string>();
+    const views: DecisionPromptRecord[] = [];
+    for (const record of ledger.prompts(only)) {
+      // A resubmitted code (a duplicate record) is the same prompt.
+      if (seen.has(record.prompt!.code)) continue;
+      seen.add(record.prompt!.code);
+      views.push(this.promptView(record));
+    }
+    return views;
+  }
+
+  async adoptDecision(
+    sessionId: string,
+    requestId: string,
+    dedupeKey: string,
+    prompt: NonNullable<NoticeSubmission["prompt"]>,
+  ): Promise<DecisionPromptRecord | undefined> {
+    const ledger = this.options.ledger;
+    if (!ledger) return undefined;
+    const related = ledger.forRequest(sessionId, requestId);
+    // The oldest: a later one with the same key is a duplicate the policy dropped.
+    const first = related.find(
+      (record) => record.dedupeKey === dedupeKey && record.kind === "session.blocked",
+    );
+    if (!first) return undefined;
+    // Prompted already under another code (a new connection for the same
+    // request): the normal submission records this one and catches up from
+    // the copies; adopting here would never yield a record for this code.
+    if (first.prompt && first.prompt.code !== prompt.code) return undefined;
+    const escalated = related.some((record) => record.dedupeKey === `${dedupeKey}:away`);
+    try {
+      return this.promptView(
+        await ledger.adoptPrompt(first.id, prompt, escalated ? "escalated" : "desktop"),
+      );
+    } catch (error) {
+      this.log("pet.notice.prompt_adopt_failed", { error: errorText(error) });
+      return undefined;
+    }
+  }
+
+  /** Persist one step of a decision prompt's lifecycle through the ledger's write queue. */
+  async updateDecision(
+    code: string,
+    patch: NoticeDecisionPromptPatch,
+  ): Promise<DecisionPromptRecord | undefined> {
+    const ledger = this.options.ledger;
+    const record = ledger?.byPromptCode(code);
+    if (!ledger || !record) return undefined;
+    try {
+      const next = await ledger.updatePrompt(record.id, patch);
+      // An ended decision's prompt must never arrive later: withdraw any copy
+      // still in the outbox (or waiting for a channel).
+      if (patch.phase && isPromptEnded(patch.phase) && next.sessionId && next.requestId) {
+        const { sessionId, requestId } = next;
+        await this.revokeWaiting(
+          (other) =>
+            other.kind === "session.blocked" &&
+            other.sessionId === sessionId &&
+            other.requestId === requestId,
+          patch.phase,
+        );
+      }
+      return this.promptView(next);
+    } catch (error) {
+      this.log("pet.notice.prompt_update_failed", { phase: patch.phase, error: errorText(error) });
+      return undefined;
+    }
+  }
+
+  private promptView(record: NoticeRecord): DecisionPromptRecord {
+    const ledger = this.options.ledger!;
+    const { facts, target } = unpackFacts(record.facts);
+    const title = noticeLine(facts.title);
+    let copies: DecisionPromptRecord["copies"] | undefined;
+    // The prompt itself, then its other session.blocked copies (the escalation).
+    const readCopies = (): DecisionPromptRecord["copies"] =>
+      [
+        record,
+        ...ledger
+          .forRequest(record.sessionId!, record.requestId!)
+          .filter((other) => other.id !== record.id && other.kind === record.kind),
+      ].map((copy) => {
+        const channel = copy.delivery?.channel ?? copy.decision?.im;
+        return {
+          ...(copy.delivery ? { status: copy.delivery.status } : {}),
+          ...(channel !== undefined ? { channel } : {}),
+        };
+      });
     return {
+      code: record.prompt!.code,
+      sessionId: record.sessionId!,
+      requestId: record.requestId!,
+      target,
+      ruleIds: record.ruleIds,
+      ...(title !== undefined ? { title } : {}),
+      prompt: record.prompt!,
       ...(record.decision ? { decision: record.decision } : {}),
-      ...(record.delivery ? { status: record.delivery.status } : {}),
-      ...(channel !== undefined ? { channel } : {}),
+      get copies() {
+        return (copies ??= readCopies());
+      },
     };
   }
 
@@ -469,13 +604,14 @@ export class PetNoticeRouter {
     this.sending.add(record.id);
     try {
       const { key } = await ledger.claim(record.id, channel, body);
+      const target = imTarget(notice.target, channel);
       const outcome = await this.sendIm(
         record.id,
         channel,
         key,
-        imTarget(notice.target, channel),
+        target,
         body,
-        payloadOf(notice),
+        payloadOf(notice, this.outboxExpiry(notice, target)),
       );
       if (outcome !== "accepted") this.log("pet.notice.resend_failed", { kind: record.kind });
     } catch (error) {
@@ -530,10 +666,135 @@ export class PetNoticeRouter {
       this.log("pet.notice.ledger_read_failed", { error: errorText(error) });
       return;
     }
-    for (const record of [...ledger.queued(), ...ledger.held()]) {
-      if (!matches(record) || this.sending.has(record.id)) continue;
+    // A send being written right now is withdrawn the moment it lands.
+    for (const id of this.sending) {
+      const sending = ledger.get(id);
+      if (sending && matches(sending)) this.revokeOnLanding.set(id, reason);
+    }
+    for (const record of [...ledger.queued(), ...ledger.held(), ...ledger.enqueued()]) {
+      if (!matches(record)) continue;
+      if (this.sending.has(record.id)) {
+        this.revokeOnLanding.set(record.id, reason);
+        continue;
+      }
+      if (record.delivery?.status === "enqueued") {
+        // Withdrawn from the outbox first: once that resolves it is never sent.
+        // If it could not be, the record stays enqueued and its result decides.
+        try {
+          await this.options.outlets?.revoke?.(this.deliveryKeyOf(record));
+        } catch (error) {
+          this.log("pet.notice.outbox_revoke_failed", {
+            kind: record.kind,
+            error: errorText(error),
+          });
+          continue;
+        }
+      }
       await this.settleQuietly(record.id, "revoked", reason);
     }
+  }
+
+  /** The outbox delivery key of a record's (latest) send. */
+  private deliveryKeyOf(record: NoticeRecord): string {
+    const channel = record.delivery?.channel ?? record.decision?.im ?? "";
+    return noticeDeliveryKey(
+      record.delivery?.key ?? "",
+      imTarget(unpackFacts(record.facts).target, channel),
+    );
+  }
+
+  /**
+   * When the outbox must stop trying one send. An owner P1/P2 never lands
+   * in quiet hours on a retry: it expires at their start and the digest takes
+   * it. A decision prompt never outlives its decision.
+   */
+  private outboxExpiry(notice: NoticeSubmission, target: NoticeTarget): number {
+    const now = this.now();
+    let at = now + (target.kind === "route" ? ROUTE_OUTBOX_TTL_MS : OWNER_OUTBOX_TTL_MS);
+    if (notice.expiresAt !== undefined) at = Math.min(at, notice.expiresAt);
+    const immediate = notice.reply === true || notice.media !== undefined;
+    if (target.kind === "owner" && notice.priority !== "P0" && !immediate)
+      at = Math.min(at, nextQuietHoursStart(this.settings().quietHours, now, this.offset(now)));
+    return at;
+  }
+
+  /**
+   * The gateway outbox settled one delivery: settle the record that made it.
+   * Failed (or unauthorized) shows the notice on the desktop and, for the
+   * owner, queues it for their next message, when Mimi mentions it. Expired:
+   * a P1/P2 goes to the digest (quiet hours began, or the outbox could not
+   * deliver in time); a decision prompt is treated as failed. Results for
+   * records that already moved on are ignored.
+   */
+  async applyOutboxResult(
+    deliveryKey: string,
+    outcome: NoticeOutboxOutcome,
+    error?: string,
+  ): Promise<void> {
+    const ledger = this.options.ledger;
+    if (!ledger || this.disposed) return;
+    if (this.recovered) await this.recovered;
+    const record = ledger
+      .enqueued()
+      .find((candidate) => this.deliveryKeyOf(candidate) === deliveryKey);
+    if (record) {
+      await this.settleFromOutbox(record, outcome, error);
+      return;
+    }
+    // Expired into the digest while the relay was still sending it, then
+    // delivered after all: it is out of the digest for good.
+    if (outcome === "delivered") {
+      const held = ledger.held().find((candidate) => this.deliveryKeyOf(candidate) === deliveryKey);
+      if (held) {
+        await this.settleQuietly(held.id, "accepted");
+        return;
+      }
+    }
+    // The outbox can answer before this process recorded the send as enqueued.
+    for (const id of this.sending) {
+      const sending = ledger.get(id);
+      if (sending && this.deliveryKeyOf(sending) === deliveryKey)
+        this.earlyResults.set(deliveryKey, { outcome, error });
+    }
+  }
+
+  private async settleFromOutbox(
+    record: NoticeRecord,
+    outcome: NoticeOutboxOutcome,
+    error?: string,
+  ): Promise<void> {
+    const notice = noticeFromRecord(record);
+    const body = record.body ?? composeNoticeBody(notice.kind, notice.facts);
+    const owner = notice.target.kind !== "route";
+    // Shown on the desktop already when the decision was both / desktop.
+    const shown = record.decision?.outlet === "desktop" || record.decision?.outlet === "both";
+    const immediate = notice.reply === true || notice.media !== undefined;
+    switch (outcome) {
+      case "delivered":
+        await this.settleQuietly(record.id, "accepted");
+        return;
+      case "revoked":
+        await this.settleQuietly(record.id, "revoked", error ?? "revoked");
+        return;
+      case "unknown":
+        await this.settleQuietly(record.id, "unknown", error);
+        if (!shown) this.showOutcome(notice, body, "unknown");
+        return;
+      case "expired":
+        if (notice.priority !== "P0" && !immediate && owner && this.digest) {
+          await this.settleQuietly(record.id, "held", "outbox-expired");
+          this.digest.schedule();
+          return;
+        }
+        break;
+      case "failed":
+      case "unauthorized":
+        break;
+    }
+    this.log("pet.notice.outbox_failed", { kind: record.kind, outcome });
+    await this.settleQuietly(record.id, "failed", error ?? outcome);
+    if (owner) await this.settleQuietly(record.id, "queued", error ?? outcome);
+    if (!shown) this.showOutcome(notice, body, "failed");
   }
 
   /** The turn did not take them after all; let the next inbound message replay them. */
@@ -568,6 +829,7 @@ export class PetNoticeRouter {
     for (const record of resend) {
       await this.recoverClaim(record);
     }
+    await this.recoverEnqueued();
     await this.expireQueued(now);
     // Claims recovery marked unknown, expired and evicted records lose their files.
     await this.sweepMedia();
@@ -641,6 +903,10 @@ export class PetNoticeRouter {
           },
           body,
           decision,
+          // Only a request's own prompt carries its lifecycle.
+          ...(notice.prompt && notice.sessionId !== undefined && notice.requestId !== undefined
+            ? { prompt: notice.prompt }
+            : {}),
         },
         id !== undefined ? { id } : {},
       );
@@ -768,7 +1034,7 @@ export class PetNoticeRouter {
       key,
       target,
       body,
-      payloadOf(notice),
+      payloadOf(notice, this.outboxExpiry(notice, target)),
     );
     if (outcome !== "accepted" && !desktopNow) this.showOutcome(notice, body, outcome);
     return outcome;
@@ -807,7 +1073,20 @@ export class PetNoticeRouter {
         this.cancel,
       );
       if (result.accepted) {
-        await this.settleQuietly(id, "accepted");
+        // Written to the gateway outbox: its delivery result settles the record later.
+        await this.settleQuietly(id, result.enqueued === true ? "enqueued" : "accepted");
+        const early = this.earlyResults.get(noticeDeliveryKey(key, target));
+        if (early && result.enqueued === true) {
+          this.earlyResults.delete(noticeDeliveryKey(key, target));
+          const landed = this.options.ledger?.get(id);
+          if (landed?.delivery?.status === "enqueued")
+            await this.settleFromOutbox(landed, early.outcome, early.error);
+        }
+        const revoked = this.revokeOnLanding.get(id);
+        if (revoked !== undefined && result.enqueued === true) {
+          this.sending.delete(id);
+          await this.revokeWaiting((record) => record.id === id, revoked);
+        }
         return "accepted";
       }
       this.log("pet.notice.im_failed", { channel, error: result.error });
@@ -817,9 +1096,14 @@ export class PetNoticeRouter {
       }
       await this.settleQuietly(id, "failed", result.error);
       if (target.kind !== "route") await this.settleQuietly(id, "queued", result.error);
+      // Revoked while it was being sent: it must not wait for the next message either.
+      const revoked = this.revokeOnLanding.get(id);
+      if (revoked !== undefined) await this.settleQuietly(id, "revoked", revoked);
       return "failed";
     } finally {
       this.sending.delete(id);
+      this.revokeOnLanding.delete(id);
+      this.earlyResults.delete(noticeDeliveryKey(key, target));
     }
   }
 
@@ -841,11 +1125,39 @@ export class PetNoticeRouter {
     const channel = record.delivery?.channel;
     const body = record.body ?? "";
     const notice = noticeFromRecord(record);
+    // The outbox is the only resender: a send it took is settled from its
+    // state, never written again.
+    const state = channel && body ? this.outboxState(record) : undefined;
+    if (state === "not-ready") {
+      // The outbox is still starting: decide once it can answer (recheckOutbox).
+      this.awaitingOutbox.add(record.id);
+      return;
+    }
+    if (state !== undefined) {
+      try {
+        await ledger.settle(record.id, "enqueued");
+      } catch (error) {
+        this.log("pet.notice.recover_failed", { error: errorText(error) });
+        return;
+      }
+      if (state !== "pending") {
+        const current = ledger.get(record.id);
+        if (current) await this.settleFromOutbox(current, state.outcome, state.error);
+      }
+      return;
+    }
     if (channel && body && this.isIdempotent(channel, imTarget(notice.target, channel))) {
       try {
         const { key } = await ledger.claim(record.id, channel, body);
         const target = imTarget(notice.target, channel);
-        const outcome = await this.sendIm(record.id, channel, key, target, body, payloadOf(notice));
+        const outcome = await this.sendIm(
+          record.id,
+          channel,
+          key,
+          target,
+          body,
+          payloadOf(notice, this.outboxExpiry(notice, target)),
+        );
         if (outcome !== "accepted") this.showOutcome(notice, body, outcome);
       } catch (error) {
         this.log("pet.notice.resend_failed", { error: errorText(error) });
@@ -855,6 +1167,49 @@ export class PetNoticeRouter {
     }
     await this.settleQuietly(record.id, "unknown");
     this.showDesktop(notice, `可能已发送：${body || composeNoticeBody(notice.kind, notice.facts)}`);
+  }
+
+  private outboxState(record: NoticeRecord): NoticeOutboxState | undefined {
+    try {
+      return this.options.outlets?.outboxState?.(this.deliveryKeyOf(record));
+    } catch (error) {
+      this.log("pet.notice.outbox_state_failed", { error: errorText(error) });
+      return undefined;
+    }
+  }
+
+  /**
+   * After a restart: enqueued sends whose result came while this process was
+   * down are settled from the outbox; one the outbox no longer knows (its
+   * file was lost) may or may not have been delivered: unknown.
+   */
+  private async recoverEnqueued(): Promise<void> {
+    const ledger = this.options.ledger!;
+    if (!this.options.outlets?.outboxState) return;
+    for (const record of ledger.enqueued()) {
+      const state = this.outboxState(record);
+      // Still starting: nothing is known yet, so nothing is lost either.
+      if (state === "pending" || state === "not-ready") continue;
+      if (state) await this.settleFromOutbox(record, state.outcome, state.error);
+      else await this.settleFromOutbox(record, "unknown", "outbox-lost");
+    }
+  }
+
+  /**
+   * The outbox can answer now (the control server finished starting): settle
+   * what startup recovery had to leave, enqueued sends and young claims.
+   */
+  async recheckOutbox(): Promise<void> {
+    const ledger = this.options.ledger;
+    if (!ledger || this.disposed) return;
+    if (this.recovered) await this.recovered;
+    const waiting = [...this.awaitingOutbox];
+    this.awaitingOutbox.clear();
+    for (const id of waiting) {
+      const record = ledger.get(id);
+      if (record?.delivery?.status === "claimed") await this.recoverClaim(record);
+    }
+    await this.recoverEnqueued();
   }
 
   private async settleQuietly(

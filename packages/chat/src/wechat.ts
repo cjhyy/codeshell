@@ -8,7 +8,7 @@ import type {
   ChannelSendOptions,
   OutgoingMessage,
 } from "./channel.js";
-import { BUILTIN_CHANNEL_CAPABILITIES } from "./channel.js";
+import { BUILTIN_CHANNEL_CAPABILITIES, NotDeliveredError } from "./channel.js";
 import { OutgoingDeliveryTracker, outgoingAttachments } from "./media.js";
 import {
   normalizeWechatAccountId,
@@ -439,10 +439,12 @@ export class WechatAdapter implements ChannelAdapter {
       this.log(`微信会话上下文已失效，已清除并尝试无上下文直发：${wechatResponseDetail(first)}`);
       const fallback = await this.postWechatMessageWithRateLimitRetry(target, item, clientId);
       if (!wechatResponseFailed(fallback)) return;
-      throw new Error(wechatSendFailure(fallback, true));
+      // Refused again without a context: nothing was sent.
+      throw new NotDeliveredError(wechatSendFailure(fallback, true));
     }
 
-    throw new Error(wechatSendFailure(first, contextToken === undefined));
+    // iLink answered with an error code (stale context, expired login, …): nothing was sent.
+    throw new NotDeliveredError(wechatSendFailure(first, contextToken === undefined));
   }
 
   private async postWechatMessage(
@@ -475,6 +477,9 @@ export class WechatAdapter implements ChannelAdapter {
       if (error instanceof WechatHttpError && error.status === 429) {
         return { ret: 429, errmsg: error.message };
       }
+      // Any other 4xx answer is a refusal too; a 5xx or a socket error may not be.
+      if (error instanceof WechatHttpError && error.status >= 400 && error.status < 500)
+        throw new NotDeliveredError(error.message, { cause: error });
       throw error;
     }
   }
@@ -512,7 +517,8 @@ export class WechatAdapter implements ChannelAdapter {
       rateLimitCooldownUntil.delete(this.accountKey);
       return;
     }
-    throw new Error(`微信发送暂时限流，冷却还剩 ${remaining}ms`);
+    // Not even tried: the account is cooling down after a rate limit.
+    throw new NotDeliveredError(`微信发送暂时限流，冷却还剩 ${remaining}ms`);
   }
 
   private async clearContextToken(target: string, failedToken: string): Promise<void> {

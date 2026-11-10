@@ -1,7 +1,14 @@
+import { createHash } from "node:crypto";
 import type { PetLongTaskCompletionTarget } from "@cjhyy/code-shell-pet";
 import type { NoticeAttention, NoticeChannel } from "@cjhyy/code-shell-pet/protocol";
 import type { NoticeFacts } from "./pet-notice-compose.js";
-import type { NoticeDeliveryStatus, NoticeRecord, PetNoticeLedger } from "./pet-notice-ledger.js";
+import type {
+  NoticeDecisionPrompt,
+  NoticeDecisionPromptPatch,
+  NoticeDeliveryStatus,
+  NoticeRecord,
+  PetNoticeLedger,
+} from "./pet-notice-ledger.js";
 import {
   DEFAULT_MAX_P0_PER_HOUR,
   DEFAULT_MAX_PER_HOUR,
@@ -163,10 +170,16 @@ export interface NoticeSubmission {
   /** Files / URL action sent with the text; such a notice is never digested or merged. */
   media?: NoticeMedia;
   /**
-   * The Session is bound to an IM conversation that already received this
-   * run's reply: the notice never goes to IM (or the digest), only the desktop.
+   * The delivery plan serves this outcome with the Session's own reply in a
+   * bound IM conversation (`composeBy: "session-reply"`): the notice never
+   * goes to IM (or the digest), only the desktop.
    */
   boundReplyDelivered?: boolean;
+  /**
+   * The first prompt for a pending decision (needs `sessionId` and
+   * `requestId`): its record carries the prompt's lifecycle from now on.
+   */
+  prompt?: Pick<NoticeDecisionPrompt, "code" | "deadline" | "skippable" | "replies">;
 }
 
 export interface NoticeRouterSettings {
@@ -177,7 +190,10 @@ export interface NoticeRouterSettings {
   mergeWindowSec?: number;
 }
 
-export type NoticeImSendResult = { accepted: true } | { accepted: false; error: string };
+/** `enqueued`: written to the gateway outbox, whose delivery result settles the record later. */
+export type NoticeImSendResult =
+  | { accepted: true; enqueued?: true }
+  | { accepted: false; error: string };
 
 /** What an IM send carries besides the text; the same record always yields the same payload. */
 export interface NoticeImPayload {
@@ -185,7 +201,28 @@ export interface NoticeImPayload {
   media?: NoticeMedia;
   /** Send this instead when the owner target on that channel is not a private chat. */
   nonDirectBody?: string;
+  /**
+   * The gateway outbox delivers (and retries) it no later than this; past it
+   * the delivery settles `expired` (a P1/P2 owner notice then goes to the digest).
+   */
+  expiresAt?: number;
 }
+
+/** A gateway outbox delivery's final result, as the outbox reports it. */
+export type NoticeOutboxOutcome =
+  | "delivered"
+  | "failed"
+  | "unknown"
+  | "expired"
+  | "revoked"
+  | "unauthorized";
+
+/** Where an outbox delivery stands: under way, settled, or unknown to the outbox. */
+export type NoticeOutboxState =
+  | "pending"
+  /** The outbox has not been read yet (the control server is starting): ask again later. */
+  | "not-ready"
+  | { outcome: NoticeOutboxOutcome; error?: string };
 
 /** What one submission did: the routing decision and, when IM was tried, the send. */
 export interface NoticeSubmitResult {
@@ -194,19 +231,56 @@ export interface NoticeSubmitResult {
   sent?: "accepted" | "failed" | "unknown";
 }
 
-/** A dedupe key's earlier record (decision and delivery), e.g. after a restart. */
-export interface NoticePriorDecision {
+/** One decision prompt as its ledger record has it. */
+export interface DecisionPromptRecord {
+  code: string;
+  sessionId: string;
+  requestId: string;
+  target: NoticeTarget;
+  ruleIds: string[];
+  title?: string;
+  prompt: NoticeDecisionPrompt;
+  /** The router's decision on the first prompt. */
   decision?: RouteDecision;
-  status?: NoticeDeliveryStatus;
-  /** The IM channel of the latest claim or queue entry. */
-  channel?: string;
+  /**
+   * The delivery of each copy of the prompt, oldest first: the first prompt,
+   * then its "owner left" escalation. `channel` is the claim's or queue's.
+   * Read lazily from the ledger.
+   */
+  readonly copies: Array<{ status?: NoticeDeliveryStatus; channel?: string }>;
+}
+
+/** The decision-prompt surface of the router (`PetNoticeRouter` implements it). */
+export interface NoticeDecisionPrompts {
+  submitWithOutcome(notice: NoticeSubmission): Promise<NoticeSubmitResult>;
+  /** Resolves once the records are readable (the ledger loaded, or failed to). */
+  decisionsLoaded(): Promise<void>;
+  decisionRecord(code: string): DecisionPromptRecord | undefined;
+  /** Prompt records, oldest first; `only` picks them before any view is built. */
+  decisionRecords(only?: (prompt: NoticeDecisionPrompt) => boolean): DecisionPromptRecord[];
+  /**
+   * A request prompted by an older build has its first record (`dedupeKey`)
+   * but no lifecycle: give it one instead of prompting again.
+   */
+  adoptDecision(
+    sessionId: string,
+    requestId: string,
+    dedupeKey: string,
+    prompt: NonNullable<NoticeSubmission["prompt"]>,
+  ): Promise<DecisionPromptRecord | undefined>;
+  /** Persist a lifecycle step; undefined when there is no such record or it could not be written. */
+  updateDecision(
+    code: string,
+    patch: NoticeDecisionPromptPatch,
+  ): Promise<DecisionPromptRecord | undefined>;
 }
 
 export interface NoticeOutlets {
   desktop(notice: NoticeSubmission, body: string): void;
   /**
-   * Route targets get the record's claim key always (the gateway outbox keys
-   * its delivery progress by it); owner sends only on idempotent channels.
+   * Write one send to the gateway outbox, keyed by the record's claim key
+   * (see {@link noticeDeliveryKey}). Accepted = enqueued; the outbox reports
+   * the delivery's result later (`PetNoticeRouter.applyOutboxResult`).
    */
   im(
     channel: string,
@@ -215,6 +289,10 @@ export interface NoticeOutlets {
     idempotencyKey: string | undefined,
     payload: NoticeImPayload,
   ): Promise<NoticeImSendResult>;
+  /** Withdraw an enqueued delivery; it is never sent after this resolves. Throws when it could not be. */
+  revoke?(deliveryKey: string): Promise<void>;
+  /** Where an enqueued delivery stands in the outbox (startup recovery). */
+  outboxState?(deliveryKey: string): NoticeOutboxState | undefined;
 }
 
 /** The ledger surface the router uses; `PetNoticeLedger` satisfies it. */
@@ -228,10 +306,16 @@ export type NoticeLedgerPort = Pick<
   | "seenDedupeKeys"
   | "queued"
   | "held"
+  | "enqueued"
   | "recoverOnStartup"
   | "expireQueued"
   | "get"
   | "byDedupeKey"
+  | "byPromptCode"
+  | "prompts"
+  | "forRequest"
+  | "updatePrompt"
+  | "adoptPrompt"
 >;
 
 /**
@@ -312,6 +396,19 @@ export function unpackFacts(raw: unknown): {
     ...(typeof channel === "string" && channel && channel !== "auto" ? { channel } : {}),
     ...(media ? { media } : {}),
   };
+}
+
+/**
+ * The gateway outbox's delivery key for one notice record's send: derived
+ * from the record's claim key, so every resend of the record is the same
+ * delivery (the outbox dedupes it, the relay resumes it, and the platform
+ * client id derived from it lets a channel drop a duplicate).
+ */
+export function noticeDeliveryKey(claimKey: string, target: NoticeTarget): string {
+  return createHash("sha256")
+    .update(target.kind === "route" ? "pet-notice-route\0" : "pet-notice-owner\0")
+    .update(claimKey)
+    .digest("hex");
 }
 
 /** The IM address for `channel`: the origin route only when it lives on that channel. */

@@ -1,6 +1,10 @@
 import type { ChannelCapabilities } from "./channel.js";
 
-export const DESKTOP_CONTROL_PROTOCOL_VERSION = 1;
+/**
+ * 2: outbox events may expire, be revoked and carry a delivery budget; the
+ * relay reports each event's result instead of retrying it in place.
+ */
+export const DESKTOP_CONTROL_PROTOCOL_VERSION = 2;
 
 export interface DesktopControlDescriptor {
   version: typeof DESKTOP_CONTROL_PROTOCOL_VERSION;
@@ -38,6 +42,29 @@ export interface DesktopControlEvent {
   attachments?: DesktopControlEventAttachment[];
   /** One originating IM conversation; bypasses general notification targets. */
   target?: { channel: string; target: string };
+  /** Epoch ms. Never sent at or after this moment; reported `expired` instead. */
+  expiresAt?: number;
+  /** Desktop's retry budget for this delivery (Desktop retries; the relay tries once). */
+  maxAttempts?: number;
+  /** 1-based attempt number of this copy (Desktop re-appends a failed delivery as a new copy). */
+  attempt?: number;
+}
+
+/**
+ * What became of one served event, reported back to Desktop. The relay tries
+ * each event once and moves on; Desktop decides whether to retry (as a new
+ * copy), give up, or tell the publisher.
+ */
+export interface DesktopControlEventResult {
+  streamId: string;
+  eventId: number;
+  deliveryKey?: string;
+  outcome: "delivered" | "failed" | "expired" | "revoked" | "unauthorized";
+  /** failed: a platform send was made and failed, so it may have reached the target. */
+  attempted?: boolean;
+  /** failed: every failed send was on a channel that collapses resends with the same client id. */
+  idempotent?: boolean;
+  error?: string;
 }
 
 export interface DesktopControlEventAttachment {

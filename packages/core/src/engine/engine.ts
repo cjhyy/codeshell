@@ -25,6 +25,7 @@ import { createRunBatchAuthority } from "../operations/run-batch-authority.js";
 import { createSessionOperationController } from "../operations/controller.js";
 import { CapabilityResolver } from "../operations/resolver.js";
 import { buildWrappedOnStream, createRunOutputJournalPolicy } from "./run-stream.js";
+import { createTurnOutcomeTracker } from "./turn-outcome.js";
 import { createRunTiming } from "../session/stream-timing.js";
 import { ToolRegistry } from "../tool-system/registry.js";
 import { readLastTodoSnapshot } from "../tool-system/builtin/task.js";
@@ -1551,6 +1552,13 @@ export class Engine {
     let latestTodos: TaskInfo[] = [];
     const userOnStream = options?.onStream;
     const clientMessageId = options?.clientMessageId;
+    // Only a top-level run reports an outcome; a sub-agent is its parent's tool call.
+    const turnOutcome =
+      this.config.isSubAgent === true
+        ? undefined
+        : createTurnOutcomeTracker(
+            (toolName) => this.toolRegistry.getTool(toolName)?.bookkeeping === true,
+          );
     const wrappedOnStream = buildWrappedOnStream({
       outputJournal: createRunOutputJournalPolicy(
         this.sessionManager,
@@ -1561,6 +1569,7 @@ export class Engine {
       prepareEvent: (event) => {
         event = runTiming.prepareEvent(event);
         event = this.goalControl.meter?.decorate(event) ?? event;
+        event = turnOutcome?.prepareEvent(event) ?? event;
         return event.type === "session_started"
           ? { ...event, runId, previousRunId, clientMessageId }
           : event;

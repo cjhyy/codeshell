@@ -53,7 +53,7 @@ const LEGACY_MAX_LINES: Record<string, number> = {
   "packages/core/src/protocol/server.ts": 4_500,
   "packages/desktop/src/main/panel-app-bridge.ts": 3_500,
   "packages/web/src/hooks/useRemoteApp.ts": 3_500,
-  "packages/desktop/src/main/pet/pet-dispatch-service.ts": 3_500,
+  "packages/desktop/src/main/pet/pet-dispatch-service.ts": 2_500,
   "packages/desktop/src/renderer/digital-humans/DigitalHumansView.tsx": 3_500,
   "packages/desktop/src/preload/types.d.ts": 3_500,
   "packages/desktop/src/renderer/App.tsx": 3_500,

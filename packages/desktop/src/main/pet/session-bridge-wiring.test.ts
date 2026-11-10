@@ -201,19 +201,36 @@ describe("delivering a Session reply", () => {
     expect(w.published[2]!.deliveryKey).not.toBe(w.published[0]!.deliveryKey);
   });
 
-  test("each published route is reported, and the turn is pending until then", async () => {
-    const forwarded: unknown[] = [];
+  test("the conversations a reply goes to come from the delivery plan", async () => {
+    const asked: string[] = [];
     const w = wiring({
-      onReplyForwarded: ({ sessionId, turnId, route }) =>
-        forwarded.push([sessionId, turnId, route.channel, route.target]),
+      replyRoutes: async (sessionId) => {
+        asked.push(sessionId);
+        return (await w.routes.notifyRoutesForSession(sessionId)).filter(
+          (route) => route.channel === "wechat",
+        );
+      },
     });
     await w.sessionBindExecutor({ action: "enter", sessionSelector: SELECTOR }, IM_CONTEXT);
-    expect(w.pendingReply("s-login", "t-1")).toBeUndefined();
-    const delivery = w.emitTurn({ sessionId: "s-login", turnId: "t-1", text: "已修复" });
-    expect(w.pendingReply("s-login", "t-1")).toBe(delivery);
-    await delivery;
-    expect(forwarded).toEqual([["s-login", "t-1", "wechat", "owner-1"]]);
-    expect(w.pendingReply("s-login", "t-1")).toBeUndefined();
+    await w.emitTurn({ sessionId: "s-login", turnId: "t-1", text: "已修复" });
+    expect(asked).toEqual(["s-login"]);
+    expect(w.published.map((event) => [event.type, event.text, event.target])).toEqual([
+      ["session.reply", "已修复", { channel: "wechat", target: "owner-1" }],
+    ]);
+  });
+
+  test("a plan that cannot be read keeps the reply pending and retries it", async () => {
+    let failures = 1;
+    const w = wiring({
+      deliveryRetryMs: 1,
+      replyRoutes: async (sessionId) => {
+        if (failures-- > 0) throw new Error("routes unreadable");
+        return w.routes.notifyRoutesForSession(sessionId);
+      },
+    });
+    await w.sessionBindExecutor({ action: "enter", sessionSelector: SELECTOR }, IM_CONTEXT);
+    await w.emitTurn({ sessionId: "s-login", turnId: "t-1", text: "已修复" });
+    expect(w.published.map((event) => event.text)).toEqual(["已修复"]);
   });
 
   test("an unrelated Session and an empty answer publish nothing", async () => {

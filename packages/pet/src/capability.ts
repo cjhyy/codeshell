@@ -199,6 +199,8 @@ function buildPetParts(): PetParts {
           permissionDefault: "ask",
           isReadOnly: false,
           isConcurrencySafe: false,
+          // Talking to the owner or Mimi is not work on the task.
+          bookkeeping: true,
         },
         execute: (args, ctx) => requestMimiDeliveryTool(args, ctx, reportFor(ctx?.sessionId)),
         exposure: {
@@ -213,6 +215,8 @@ function buildPetParts(): PetParts {
           permissionDefault: "allow",
           isReadOnly: false,
           isConcurrencySafe: false,
+          // Talking to the owner or Mimi is not work on the task.
+          bookkeeping: true,
         },
         execute: (args, ctx) => reportToMimiTool(args, ctx, reportFor(ctx?.sessionId)),
         exposure: {
@@ -228,6 +232,8 @@ function buildPetParts(): PetParts {
           permissionDefault: "allow",
           isReadOnly: false,
           isConcurrencySafe: false,
+          // Talking to the owner or Mimi is not work on the task.
+          bookkeeping: true,
         },
         execute: (args, ctx) => notifyMeTool(args, ctx, ruleRequesterFor(ctx?.sessionId)),
         exposure: {

@@ -10,6 +10,7 @@ import {
   type DesktopControlDescriptor,
   type DesktopControlEvent,
   type DesktopControlEventPage,
+  type DesktopControlEventResult,
   type MobileRemoteOpenResult,
   type MobileRemoteStatus,
   type PetChatRequest,
@@ -39,6 +40,35 @@ export interface DesktopEventWatchOptions {
 
 export interface DesktopEventContext {
   streamId: string;
+  /**
+   * Whether Desktop still wants this event sent (not revoked, expired or
+   * settled). Asked right before every platform send; absent: always.
+   */
+  isLive?: () => Promise<boolean>;
+}
+
+/** A handled event that was not (fully) sent, and why; nothing means delivered. */
+export type DesktopEventDelivery =
+  | { outcome: "delivered" }
+  | { outcome: "expired" | "revoked" | "unauthorized" };
+
+/** How a handler failure is reported: a platform send was made, and on which kind of channel. */
+interface DeliveryFailureFacts {
+  attempted?: unknown;
+  idempotent?: unknown;
+}
+
+function failureResult(
+  error: unknown,
+): Pick<DesktopControlEventResult, "outcome" | "attempted" | "idempotent" | "error"> {
+  const facts = (error && typeof error === "object" ? error : {}) as DeliveryFailureFacts;
+  const message = error instanceof Error ? error.message : String(error);
+  return {
+    outcome: "failed",
+    attempted: facts.attempted === true,
+    idempotent: facts.idempotent === true,
+    error: message.slice(0, 500),
+  };
 }
 
 interface DesktopEventCheckpoint {
@@ -162,9 +192,44 @@ export class DesktopControlClient {
     );
   }
 
+  /** Report what became of one served event (see {@link DesktopControlEventResult}). */
+  async reportEventResult(result: DesktopControlEventResult): Promise<void> {
+    const body = await this.request<{ recorded?: unknown }>(
+      "POST",
+      "/v1/events/result",
+      10_000,
+      result,
+    );
+    // Desktop did not take it (the copy changed under it, or its stream did):
+    // read the page again rather than move past an unrecorded result.
+    if (body?.recorded === false) {
+      throw new DesktopControlUnavailableError("桌面端未记录该事件结果，将重新读取事件");
+    }
+  }
+
+  /** Whether Desktop still wants this event sent; asked right before each platform send. */
+  async isEventLive(streamId: string, eventId: number): Promise<boolean> {
+    const body = await this.request<{ live?: unknown }>("POST", "/v1/events/live", 10_000, {
+      streamId,
+      eventId,
+    });
+    return body?.live === true;
+  }
+
+  /**
+   * Deliver Desktop's events in order. Each event is tried once: its result
+   * (delivered, failed, expired, revoked, unauthorized) is reported to
+   * Desktop before the cursor moves past it, so a failing event never holds
+   * up the ones behind it; Desktop retries it as a new copy or gives up.
+   * Only Desktop being unreachable (or a cursor write failing) retries the
+   * page, from the last checkpoint.
+   */
   async watchEvents(
     signal: AbortSignal,
-    handle: (event: DesktopControlEvent, context: DesktopEventContext) => Promise<void>,
+    handle: (
+      event: DesktopControlEvent,
+      context: DesktopEventContext,
+    ) => Promise<DesktopEventDelivery | void>,
     options: DesktopEventWatchOptions = {},
   ): Promise<void> {
     const saved = options.checkpointPath
@@ -188,7 +253,25 @@ export class DesktopControlClient {
         streamId = page.streamId;
         for (const event of page.events) {
           if (signal.aborted) return;
-          await handle(event, { streamId });
+          const pageStream = page.streamId;
+          let result: Omit<DesktopControlEventResult, "streamId" | "eventId" | "deliveryKey">;
+          try {
+            const delivery = await handle(event, {
+              streamId: pageStream,
+              isLive: () => this.isEventLive(pageStream, event.id),
+            });
+            result = { outcome: delivery?.outcome ?? "delivered" };
+          } catch (error) {
+            // Desktop itself unreachable: nothing can be reported; retry the page.
+            if (signal.aborted || error instanceof DesktopControlUnavailableError) throw error;
+            result = failureResult(error);
+          }
+          await this.reportEventResult({
+            streamId: pageStream,
+            eventId: event.id,
+            ...(event.deliveryKey ? { deliveryKey: event.deliveryKey } : {}),
+            ...result,
+          });
           const nextCursor = Math.max(cursor, event.id);
           if (options.checkpointPath) {
             await writeEventCheckpoint(options.checkpointPath, {

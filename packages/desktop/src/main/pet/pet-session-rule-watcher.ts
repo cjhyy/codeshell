@@ -1,7 +1,13 @@
-import type { NoticeEvent } from "@cjhyy/code-shell-pet/protocol";
-import { topLevelEvent } from "./pet-long-task-coordinator.js";
+import {
+  ruleDelivery,
+  type DeliveryPlanEntry,
+  type DeliveryQuery,
+  type PetDeliveryResolver,
+} from "./pet-delivery-plan.js";
+import type { PetLongTask } from "@cjhyy/code-shell-pet";
 import type { NoticeRule, NoticeRuleState, PetRuleStore } from "./pet-rule-store.js";
 import type { DesktopPendingDecision, DesktopPetProjectionEvent } from "./pet-state-aggregator.js";
+import type { SessionOutcome } from "./session-outcome.js";
 
 export interface NoticeDraftOption {
   label: string;
@@ -13,14 +19,11 @@ export interface NoticeDraft {
   priority: "P0" | "P1";
   dedupeKey: string;
   sessionId: string;
-  ruleIds: string[];
-  /** True when only the all-sessions system rule matched. */
-  requiresAway?: boolean;
   /**
-   * done / failed: the core run it closed, to pair it with that run's bound
-   * reply. Absent when core gave no run id: such a notice is never suppressed.
+   * Who this draft is for and how it reaches them, from the delivery plan:
+   * address, the rules it satisfies, and whether the owner must be away.
    */
-  runId?: string;
+  delivery: DeliveryPlanEntry;
   requestId?: string;
   expiresAt?: number;
   facts: {
@@ -33,13 +36,14 @@ export interface NoticeDraft {
 }
 
 export interface PetSessionRuleWatcherOptions {
+  /** Rule lifecycle only (spend, cancel); who is told comes from `deliveries`. */
   rules: Pick<PetRuleStore, "activeForSession" | "update">;
-  onNotice: (draft: NoticeDraft) => void;
   /**
-   * A long task owns this run's done / failed (its closure notifies). `runKey`
-   * is the core run id (or the watcher's fallback key when core gave none).
+   * Who must be told about an outcome. A run whose plan is reported by the
+   * long-task closure is left to it; the watcher reports the rest.
    */
-  hasActiveLongTask: (sessionId: string, runKey: string) => boolean;
+  deliveries: Pick<PetDeliveryResolver, "plan">;
+  onNotice: (draft: NoticeDraft) => void;
   /** Queued user messages or running background / sub-agent work. */
   isSessionBusy: (sessionId: string) => boolean;
   /** False for Mimi's own Session, child Sessions and hidden kinds. */
@@ -53,47 +57,45 @@ export interface PetSessionRuleWatcherOptions {
   /** The Session's Goal was cleared (after its goal rules were cancelled). */
   onGoalCleared?: (sessionId: string) => Promise<void> | void;
   sessionTitle?: (sessionId: string) => string | undefined;
+  /**
+   * The Session's active long task. A Goal pause in a task the owner asked
+   * for over IM is answered there, like its decision prompts (`reply`).
+   */
+  activeTask?: (sessionId: string) => PetLongTask | undefined;
   now?: () => number;
   log?: (event: string, data: Record<string, unknown>) => void;
 }
 
-/** Tools that talk to the owner or Mimi; a turn that only used these did no work. */
-const NON_WORK_TOOLS: ReadonlySet<string> = new Set([
-  "NotifyMe",
-  "ReportToMimi",
-  "AskUserQuestion",
-  "AskUserQuestionAsync",
-  "RequestMimiDelivery",
-  // Loading a deferred tool schema (e.g. to reach NotifyMe) is not work either.
-  "ToolSearch",
-]);
-/** Undelivered host-queued user messages tracked per Session (bounds a stuck counter). */
-const MAX_QUEUED_USER_MESSAGES = 64;
-const MAX_SUMMARY_LENGTH = 2_000;
 const MAX_FACT_LENGTH = 500;
 
-/** What the watcher knows about the in-flight top-level turn of one Session. */
-interface SessionTurnState {
-  /** Run identity from `session_started`, for events that do not carry one. */
-  runId?: string;
-  /** The current turn did real work (a non-notice tool, or a background wake). */
-  workInTurn: boolean;
-  /** A done / failed draft already went out for the current turn. */
-  doneInTurn: boolean;
-  failedInTurn: boolean;
+/** What the watcher already told the owner about one turn of a Session. */
+interface TurnMarks {
+  turn: number;
+  /** A done / failed draft already went out (or is parked) for this turn. */
+  done: boolean;
+  failed: boolean;
   /**
-   * The Goal paused this turn (waiting for the user, or exhausted). Core then
-   * parks the run with an ordinary `turn_complete(completed)`, which must not
-   * read as done.
+   * Reports raised while the run was going (a Goal met, an `error`) that a
+   * bound conversation's reply would serve. Whether the run forwards a reply
+   * is only known when it closes, so they are decided then.
    */
-  blockedInTurn: boolean;
+  parked: ParkedReport[];
 }
 
-function freshTurn(): SessionTurnState {
-  return { workInTurn: false, doneInTurn: false, failedInTurn: false, blockedInTurn: false };
+type DraftFacts = Omit<NoticeDraft, "sessionId" | "delivery">;
+
+interface ParkedReport {
+  event: "done" | "failed";
+  query: OutcomeQuery;
+  draft: DraftFacts;
+  spend: boolean;
 }
 
-type Matcher = (when: Extract<NoticeRule["when"], { kind: "session" }>) => boolean;
+/** What an outcome asks the delivery plan: which rules it can satisfy, and whose run it is. */
+type OutcomeQuery = Pick<
+  DeliveryQuery,
+  "at" | "scope" | "includeSystem" | "runKey" | "replyForwarded" | "task"
+>;
 
 function boundedText(value: unknown, max: number): string | undefined {
   if (typeof value !== "string") return undefined;
@@ -101,54 +103,37 @@ function boundedText(value: unknown, max: number): string | undefined {
   return text ? text.slice(0, max) : undefined;
 }
 
-function nonEmptyString(value: unknown): string | undefined {
-  return typeof value === "string" && value ? value : undefined;
-}
-
-/** When a stream event happened: its own timestamp when core stamped one, else now. */
-function eventTime(event: Record<string, unknown>, field: string, now: () => number): number {
-  const value = event[field];
-  return typeof value === "number" && Number.isFinite(value) ? value : now();
-}
-
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
 /**
- * Turns work-Session stream events into notice drafts for the owner's notice
- * rules, deterministically from the event stream so the model never has to
- * remember that it was asked to report back.
+ * Turns a work Session's outcomes into notice drafts for the owner's notice
+ * rules. What happened is decided once, by `SessionOutcomeDeriver`; who must
+ * be told is decided once, by the delivery plan (pet-delivery-plan.ts). This
+ * class joins the two: when an outcome is reportable, and which rules it spends.
  *
- * Detection, per top-level event:
- * - done: `turn_complete(completed)` without a completionKind, after a turn
- *   that did real work, on an idle Session (turn-scope rules); or
- *   `goal_progress(met)` (goal-scope rules).
- * - failed: `turn_complete` that is neither completed nor a user abort, or `error`.
- * - blocked: `limit_stop`, a Goal waiting for the user, or an exhausted Goal.
- *   A pending decision from the projection is handed to `onPendingDecision`
- *   (the IM decision module) instead, when a blocked rule watches it.
+ * How each outcome is reported, next to what the long-task coordinator does
+ * with the same outcome, is tabulated in session-outcome.ts.
  *
- * A Session rule can only fire on an event that happened at/after its
+ * A closing outcome that only restates one raised while the run was going
+ * (`repeat`) is never reported twice.
+ *
+ * A Session rule can only fire on an outcome that happened at/after its
  * `armedAt` (wall clock, so it survives restarts); the acknowledgement turn
- * that armed it is filtered by the work gate instead. Dedupe keys are built
- * from the core run id, so they are stable across restarts and unique per run.
+ * that armed it is an idle outcome. Dedupe keys are built from the core run
+ * id, so they are stable across restarts and unique per run.
  *
  * done / failed spend the matched Session rules; blocked leaves them armed.
- * The all-sessions system rule is never spent. Events are serialised per
- * Session; drafts are emitted before rules are spent so a store failure can
- * never swallow a notice.
+ * The all-sessions system rule is never spent. A done / failed run that a
+ * long task owns is reported (and its rules spent) by the task's closure: the
+ * plan says so, and the watcher then does nothing for it. Outcomes are
+ * serialised per Session; drafts are emitted before rules are spent so a
+ * store failure can never swallow a notice.
  */
 export class PetSessionRuleWatcher {
-  private readonly turns = new Map<string, SessionTurnState>();
+  private readonly marks = new Map<string, TurnMarks>();
   private readonly queues = new Map<string, Promise<void>>();
-  /**
-   * Host-queued user messages (SendMessageToSession) whose run has not started.
-   * Such a run has no client message id, exactly like a background wake; core
-   * marks which is which on `session_started.trigger`, and without that
-   * marker only the `session_user_message` that precedes it tells them apart.
-   */
-  private readonly queuedUserMessages = new Map<string, number>();
   /**
    * Sessions whose working turn completed while busy: the completion was
    * deferred, so the follow-up turn inherits the work. Deleted once a done
@@ -161,8 +146,42 @@ export class PetSessionRuleWatcher {
     this.now = options.now ?? Date.now;
   }
 
-  observe(sessionId: string, event: unknown): Promise<void> {
-    return this.enqueue(sessionId, () => this.applySessionEvent(sessionId, event));
+  /** Apply the outcomes one stream event produced (see `createSessionOutcomeTap`). */
+  observe(sessionId: string, outcomes: readonly SessionOutcome[]): Promise<void> {
+    if (outcomes.length === 0) return this.queues.get(sessionId) ?? Promise.resolve();
+    return this.enqueue(sessionId, async () => {
+      for (const outcome of outcomes) await this.applyOutcome(outcome);
+    });
+  }
+
+  /**
+   * The runs of these Sessions (all, without `sessionId`) will never close:
+   * the worker went away, or this process is shutting down. Their parked
+   * reports go out now as "no reply forwarded" (templated), the same as when
+   * the Session's next turn reports. Serialised behind each Session's queue.
+   */
+  flush(sessionId?: string): Promise<void> {
+    const sessions =
+      sessionId !== undefined
+        ? [sessionId]
+        : [...new Set([...this.marks.keys(), ...this.queues.keys()])];
+    return Promise.all(
+      sessions.map((id) =>
+        this.enqueue(id, async () => {
+          const marks = this.marks.get(id);
+          if (!marks) return;
+          this.marks.delete(id);
+          await this.flushParked(id, marks, false);
+        }),
+      ),
+    ).then(() => undefined);
+  }
+
+  /** Some report waits for its run to close, or an outcome is still being applied. */
+  hasPending(): boolean {
+    return (
+      this.queues.size > 0 || [...this.marks.values()].some((marks) => marks.parked.length > 0)
+    );
   }
 
   async observeProjection(event: DesktopPetProjectionEvent): Promise<void> {
@@ -184,258 +203,202 @@ export class PetSessionRuleWatcher {
     });
   }
 
-  private turn(sessionId: string): SessionTurnState {
-    let state = this.turns.get(sessionId);
-    if (!state) {
-      state = freshTurn();
-      this.turns.set(sessionId, state);
+  private async marksFor(outcome: SessionOutcome): Promise<TurnMarks> {
+    let marks = this.marks.get(outcome.sessionId);
+    // Caveat: turns are told apart by the deriver's own counter, not by core's
+    // run id (a runner may give none), so a parked report of a run that never
+    // closed waits for the next outcome of the Session or for flush().
+    if (marks?.turn !== outcome.turn) {
+      // A turn that never closed (the worker went away) forwarded nothing.
+      if (marks) await this.flushParked(outcome.sessionId, marks, false);
+      marks = { turn: outcome.turn, done: false, failed: false, parked: [] };
+      this.marks.set(outcome.sessionId, marks);
     }
-    return state;
+    return marks;
   }
 
-  /**
-   * Whether a run is core's background wake. Core marks it on
-   * `session_started.trigger`; an older core does not, and then a run without
-   * a client message id is either a host-queued user message or a wake, told
-   * apart only by a preceding `session_user_message` (`previousRunId` cannot:
-   * every resumed run has one).
-   */
-  private isBackgroundWake(sessionId: string, event: Record<string, unknown>): boolean {
-    const trigger = event.trigger;
-    if (trigger === "background_wake") return true;
-    if (event.clientMessageId !== undefined) return false;
-    // This run was the announced one (or, unmarked, is assumed to be).
-    const queued = this.queuedUserMessages.get(sessionId) ?? 0;
-    if (queued > 1) this.queuedUserMessages.set(sessionId, queued - 1);
-    else this.queuedUserMessages.delete(sessionId);
-    return typeof trigger === "string" ? false : queued === 0;
-  }
-
-  /** The run this event belongs to; a timestamp only when core gave no run id. */
-  private runKey(event: Record<string, unknown>, state: SessionTurnState, at: number): string {
-    return this.coreRunId(event, state) ?? String(at);
-  }
-
-  /** The core run id, when core gave one (never the timestamp fallback). */
-  private coreRunId(event: Record<string, unknown>, state: SessionTurnState): string | undefined {
-    return nonEmptyString(event.runId) ?? state.runId;
-  }
-
-  /** `runId` for a done / failed draft: only a real core run id pairs with a bound reply. */
-  private runField(
-    event: Record<string, unknown>,
-    state: SessionTurnState,
-  ): Pick<NoticeDraft, "runId"> {
-    const runId = this.coreRunId(event, state);
-    return runId !== undefined ? { runId } : {};
-  }
-
-  private async applySessionEvent(sessionId: string, value: unknown): Promise<void> {
-    const event = topLevelEvent(value);
-    if (!event) return;
-    switch (event.type) {
-      case "session_user_message":
-        // SendMessageToSession announces its run this way before enqueueing it
-        // without a client message id (core server.ts).
-        if (event.clientMessageId === undefined) {
-          const queued = this.queuedUserMessages.get(sessionId) ?? 0;
-          this.queuedUserMessages.set(sessionId, Math.min(queued + 1, MAX_QUEUED_USER_MESSAGES));
-        }
-        return;
-      case "session_started": {
-        const state = freshTurn();
-        const runId = nonEmptyString(event.runId);
-        if (runId) state.runId = runId;
-        if (this.isBackgroundWake(sessionId, event))
-          // A background completion wakes the Session with a synthetic run
-          // (core background-result-wakeup). That turn exists to act on
-          // finished work, so it counts as work.
-          state.workInTurn = true;
-        this.turns.set(sessionId, state);
-        return;
-      }
-      case "tool_use_start": {
-        const toolCall = event.toolCall as { toolName?: unknown } | undefined;
-        const name = typeof toolCall?.toolName === "string" ? toolCall.toolName : undefined;
-        if (!name || !NON_WORK_TOOLS.has(name)) this.turn(sessionId).workInTurn = true;
-        return;
-      }
-      case "goal_progress":
-        await this.applyGoalProgress(sessionId, this.turn(sessionId), event);
-        return;
-      case "goal_cleared":
-        await this.cancelGoalRules(sessionId);
-        await this.options.onGoalCleared?.(sessionId);
-        return;
-      case "error": {
-        const state = this.turn(sessionId);
-        const at = eventTime(event, "timestamp", this.now);
-        await this.emitFailed(
-          sessionId,
-          state,
-          at,
-          this.runKey(event, state, at),
-          boundedText(event.error, MAX_FACT_LENGTH) ?? "Work session failed",
-          this.runField(event, state),
-        );
-        return;
-      }
-      case "turn_complete":
-        try {
-          await this.applyTurnComplete(sessionId, this.turn(sessionId), event);
-        } finally {
-          // The turn is over; nothing about it is needed for the next one.
-          this.turns.delete(sessionId);
-        }
-    }
-  }
-
-  private async applyTurnComplete(
+  /** Decide the reports parked for this turn, now that its reply is known. */
+  private async flushParked(
     sessionId: string,
-    state: SessionTurnState,
-    event: Record<string, unknown>,
+    marks: TurnMarks,
+    replyForwarded: boolean,
   ): Promise<void> {
-    const at = eventTime(event, "completedAt", this.now);
-    const run = this.runKey(event, state, at);
-    const armed: Matcher = (when) => when.armedAt <= at;
-    const reason = event.reason;
-    if (reason !== "completed") this.carriedWork.delete(sessionId);
-    if (reason === "aborted_streaming" || reason === "aborted_tools") return;
-    if (reason !== "completed") {
-      await this.emitFailed(
-        sessionId,
-        state,
-        at,
-        run,
-        `Work session ended: ${String(reason ?? "unknown")}`,
-        this.runField(event, state),
-      );
-      return;
+    for (const { event, query, draft, spend } of marks.parked.splice(0))
+      await this.emit(sessionId, event, { ...query, replyForwarded }, draft, undefined, spend);
+  }
+
+  private async applyOutcome(outcome: SessionOutcome): Promise<void> {
+    const { sessionId } = outcome;
+    const marks = await this.marksFor(outcome);
+    try {
+      switch (outcome.kind) {
+        case "failed":
+          if (outcome.final) this.carriedWork.delete(sessionId);
+          await this.emitFailed(outcome, marks);
+          return;
+        case "aborted":
+          this.carriedWork.delete(sessionId);
+          return;
+        case "cancelled":
+          // The closing outcome of a goal_control_stop run restates the clear.
+          if (outcome.final) return;
+          await this.cancelGoalRules(sessionId);
+          await this.options.onGoalCleared?.(sessionId);
+          return;
+        case "blocked":
+          if (outcome.final && outcome.repeat) return;
+          await this.emitBlocked(outcome);
+          return;
+        case "done":
+          if (outcome.scope === "turn") await this.emitTurnDone(outcome, marks);
+          // goal_progress(met) reports the Goal; its closing outcome restates it.
+          else if (!outcome.final) await this.emitGoalDone(outcome, marks);
+          return;
+        case "idle":
+          // The "OK, will do" turn that armed a rule did no work and must not fire it.
+          // Work deferred from a turn that completed while busy still counts.
+          if (this.carriedWork.has(sessionId)) await this.emitTurnDone(outcome, marks);
+          return;
+        case "waiting-worker":
+          // The run yields to a later background wake, which reports.
+          return;
+        case "unrecognized":
+          // A completion kind from a newer core: nothing is known about the run.
+          return;
+      }
+    } finally {
+      if (outcome.final) {
+        await this.flushParked(sessionId, marks, outcome.reply === true);
+        // The turn is over; nothing about it is needed for the next one.
+        this.marks.delete(sessionId);
+      }
     }
-    const summary = boundedText(event.text, MAX_SUMMARY_LENGTH);
-    // A Goal that paused this run (waiting for the user / stop-block cap) is
-    // parked by core with turn_complete(completed) and no completionKind. The
-    // goal_progress event already raised blocked; this is not done.
-    if (state.blockedInTurn) return;
-    if (event.completionKind === "limit_stop") {
-      await this.emit(sessionId, "blocked", armed, {
-        kind: "session.blocked",
-        priority: "P0",
-        dedupeKey: `${sessionId}:goal-pause:-:-:${run}`,
-        facts: summary ? { summary } : {},
-      });
-      return;
-    }
-    // background_wait yields to a later wake; goal_control_stop follows
-    // goal_cleared / goal_progress(met), which already handled the outcome.
-    if (event.completionKind !== undefined) return;
-    // The "OK, will do" turn that armed a rule did no work and must not fire it.
-    // Work deferred from a turn that completed while busy still counts.
-    if (!state.workInTurn && !this.carriedWork.has(sessionId)) return;
+  }
+
+  private async emitTurnDone(
+    outcome: Extract<SessionOutcome, { kind: "done" | "idle" }>,
+    marks: TurnMarks,
+  ): Promise<void> {
+    const { sessionId } = outcome;
     if (this.options.isSessionBusy(sessionId)) {
       // More work is queued; the follow-up turn reports it, even with no tools.
       this.carriedWork.add(sessionId);
       return;
     }
     this.carriedWork.delete(sessionId);
-    // Long-task closure owns done/failed and spends these rules when it notifies.
-    if (this.options.hasActiveLongTask(sessionId, run)) return;
     await this.emit(
       sessionId,
       "done",
-      (when) => when.scope === "turn" && armed(when),
+      {
+        scope: "turn",
+        at: outcome.at,
+        runKey: outcome.runKey,
+        // A Goal met earlier in this turn already told the system rule.
+        includeSystem: !marks.done,
+        replyForwarded: outcome.reply,
+      },
       {
         kind: "session.done",
         priority: "P1",
-        dedupeKey: `${sessionId}:turn:${run}`,
-        ...this.runField(event, state),
-        facts: summary ? { summary } : {},
+        dedupeKey: `${sessionId}:turn:${outcome.runKey}`,
+        facts: outcome.summary ? { summary: outcome.summary } : {},
       },
-      { spend: true, includeSystem: !state.doneInTurn },
     );
   }
 
-  private async applyGoalProgress(
-    sessionId: string,
-    state: SessionTurnState,
-    event: Record<string, unknown>,
+  private async emitGoalDone(
+    outcome: Extract<SessionOutcome, { kind: "done" }>,
+    marks: TurnMarks,
   ): Promise<void> {
-    // A replayed goal_progress from before a rule was armed must not fire it.
-    const at = eventTime(event, "timestamp", this.now);
-    const run = this.runKey(event, state, at);
-    const armed: Matcher = (when) => when.armedAt <= at;
-    const question = boundedText(event.waitingForUser, MAX_FACT_LENGTH);
-    if (event.status === "met") {
-      // Long-task closure owns done/failed and spends these rules when it notifies.
-      if (this.options.hasActiveLongTask(sessionId, run)) return;
-      const goalId = nonEmptyString(event.goalId) ?? run;
-      const emitted = await this.emit(
-        sessionId,
-        "done",
-        (when) => when.scope === "goal" && armed(when),
-        {
-          kind: "session.done",
-          priority: "P1",
-          dedupeKey: `${sessionId}:goal:${goalId}`,
-          ...this.runField(event, state),
-          facts: {},
-        },
-        { spend: true },
-      );
-      // The closing turn_complete of this run must not tell the system rule twice.
-      if (emitted) state.doneInTurn = true;
-      return;
-    }
-    // Core carries the question itself in `waitingForUser`; accept a bare flag too.
-    const waiting = question !== undefined || event.waitingForUser === true;
-    if (!waiting && event.status !== "exhausted") return;
-    state.blockedInTurn = true;
-    const goalId = nonEmptyString(event.goalId) ?? "-";
-    const revision = typeof event.revision === "number" ? event.revision : "-";
-    const gaps = boundedText(event.gaps, MAX_SUMMARY_LENGTH);
-    await this.emit(sessionId, "blocked", armed, {
-      kind: "session.blocked",
-      priority: "P0",
-      dedupeKey: `${sessionId}:goal-pause:${goalId}:${revision}:${run}`,
-      facts: { ...(question ? { question } : {}), ...(gaps ? { summary: gaps } : {}) },
-    });
+    const { sessionId } = outcome;
+    const emitted = await this.emit(
+      sessionId,
+      "done",
+      // A replayed goal_progress from before a rule was armed must not fire it.
+      {
+        scope: "goal",
+        at: outcome.at,
+        runKey: outcome.runKey,
+        ...(outcome.inRun ? {} : { replyForwarded: false }),
+      },
+      {
+        kind: "session.done",
+        priority: "P1",
+        dedupeKey: `${sessionId}:goal:${outcome.goalId ?? outcome.runKey}`,
+        facts: {},
+      },
+      // Only a run that is open can still forward a reply when it closes.
+      outcome.inRun ? marks : undefined,
+    );
+    // The closing outcome of this run must not tell the system rule twice.
+    if (emitted) marks.done = true;
+  }
+
+  private async emitBlocked(outcome: Extract<SessionOutcome, { kind: "blocked" }>): Promise<void> {
+    const { sessionId, question, summary } = outcome;
+    // Blocked leaves the rules armed, and is the rules' to report even while a
+    // long task owns the run (no `runKey`: the closure only reports done / failed).
+    // The active task, like a decision prompt's: an IM-started task's pause goes
+    // back to its conversation as a reply.
+    const task = this.options.activeTask?.(sessionId);
+    await this.emit(
+      sessionId,
+      "blocked",
+      { at: outcome.at, ...(task ? { task } : {}) },
+      {
+        kind: "session.blocked",
+        priority: "P0",
+        dedupeKey: `${sessionId}:goal-pause:${outcome.goalId ?? "-"}:${outcome.revision ?? "-"}:${outcome.runKey}`,
+        facts: { ...(question ? { question } : {}), ...(summary ? { summary } : {}) },
+      },
+    );
   }
 
   private async emitFailed(
-    sessionId: string,
-    state: SessionTurnState,
-    at: number,
-    run: string,
-    error: string,
-    runField: Pick<NoticeDraft, "runId">,
+    outcome: Extract<SessionOutcome, { kind: "failed" }>,
+    marks: TurnMarks,
   ): Promise<void> {
+    const { sessionId } = outcome;
     // An `error` event is usually followed by a failing turn_complete; one notice per turn.
-    if (state.failedInTurn) return;
-    // Long-task closure owns done/failed and spends these rules when it notifies.
-    if (this.options.hasActiveLongTask(sessionId, run)) return;
+    if (marks.failed) return;
     const emitted = await this.emit(
       sessionId,
       "failed",
-      (when) => when.armedAt <= at,
+      {
+        at: outcome.at,
+        runKey: outcome.runKey,
+        // Outside a run (core reported the failure after the run boundary) no
+        // reply will be forwarded for it: report it now, templated.
+        ...(outcome.final
+          ? { replyForwarded: outcome.reply }
+          : outcome.inRun
+            ? {}
+            : { replyForwarded: false }),
+      },
       {
         kind: "session.failed",
         priority: "P1",
-        dedupeKey: `${sessionId}:failed:${run}`,
-        ...runField,
-        facts: { error },
+        dedupeKey: `${sessionId}:failed:${outcome.runKey}`,
+        facts: { error: boundedText(outcome.error, MAX_FACT_LENGTH) ?? "Work session failed" },
       },
-      { spend: true },
+      // An `error` inside a run is raised before the run closes; one outside
+      // a run has no closing outcome to wait for.
+      outcome.final || !outcome.inRun ? undefined : marks,
+      // A failure outside any run is not the run the rules wait for: the owner
+      // hears about it, and the rules stay armed for the next real result.
+      outcome.final || outcome.inRun,
     );
-    if (emitted) state.failedInTurn = true;
+    if (emitted) marks.failed = true;
   }
 
   private async applyPending(pending: DesktopPendingDecision, at: number): Promise<void> {
     if (pending.status !== "pending") return;
     const sessionId = pending.agentSessionId;
-    const armed: Matcher = (when) => when.armedAt <= at;
     // The IM decision module owns pending decisions; it is only nudged when a
     // rule asked to be told about this Session blocking.
-    if (this.match(sessionId, "blocked", armed).length === 0) return;
+    if (!this.options.isEligibleSession(sessionId)) return;
+    const plan = await this.options.deliveries.plan({ sessionId, event: "blocked", at });
+    if (!ruleDelivery(plan)) return;
     try {
       this.options.onPendingDecision(sessionId, pending);
     } catch (error) {
@@ -455,37 +418,39 @@ export class PetSessionRuleWatcher {
     await this.setState(sessionId, goalRules, "cancelled");
   }
 
-  /** Eligible active rules for this Session that watch `event` and pass `matches`. */
-  private match(sessionId: string, event: NoticeEvent, matches: Matcher): NoticeRule[] {
-    if (!this.options.isEligibleSession(sessionId)) return [];
-    return this.options.rules
-      .activeForSession(sessionId)
-      .filter(
-        (rule) =>
-          rule.when.events.includes(event) &&
-          (rule.when.kind === "all-sessions" || matches(rule.when)),
-      );
-  }
-
-  /** Emit one draft for every matched rule; returns whether a draft went out. */
+  /**
+   * Report one outcome to whoever its delivery plan names; returns whether a
+   * draft went out (or was parked). A run the long-task closure reports is
+   * left alone: the closure notifies and spends these rules. done / failed
+   * spend the Session rules they satisfied; blocked leaves them armed.
+   *
+   * `park`: the run has not closed yet. A report its bound conversation's
+   * reply would serve waits there for the closing outcome, which knows
+   * whether a reply is forwarded at all.
+   *
+   * `spend`: done / failed spend the rules they satisfied, unless false.
+   */
   private async emit(
     sessionId: string,
-    event: NoticeEvent,
-    matches: Matcher,
-    draft: Omit<NoticeDraft, "sessionId" | "ruleIds" | "requiresAway">,
-    options: { spend?: boolean; includeSystem?: boolean } = {},
+    event: "done" | "failed" | "blocked",
+    query: OutcomeQuery,
+    draft: DraftFacts,
+    park?: TurnMarks,
+    spend = event !== "blocked",
   ): Promise<boolean> {
-    const matched = this.match(sessionId, event, matches).filter(
-      (rule) => options.includeSystem !== false || rule.when.kind === "session",
-    );
-    if (matched.length === 0) return false;
-    const sessionRules = matched.filter((rule) => rule.when.kind === "session");
+    if (!this.options.isEligibleSession(sessionId)) return false;
+    const plan = await this.options.deliveries.plan({ sessionId, event, ...query });
+    const delivery = ruleDelivery(plan);
+    if (!delivery) return false;
+    if (park && event !== "blocked" && delivery.composeBy === "session-reply") {
+      park.parked.push({ event, query, draft, spend });
+      return true;
+    }
     const title = boundedText(this.options.sessionTitle?.(sessionId), MAX_FACT_LENGTH);
     const notice: NoticeDraft = {
       ...draft,
       sessionId,
-      ruleIds: matched.map((rule) => rule.id),
-      ...(sessionRules.length === 0 ? { requiresAway: true } : {}),
+      delivery,
       facts: { ...(title ? { title } : {}), ...draft.facts },
     };
     try {
@@ -499,7 +464,7 @@ export class PetSessionRuleWatcher {
       });
       return false;
     }
-    if (options.spend) await this.setState(sessionId, sessionRules, "spent");
+    if (spend && event !== "blocked") await this.setState(sessionId, plan.rules, "spent");
     return true;
   }
 

@@ -147,6 +147,33 @@ export interface OutgoingAttachment {
 }
 
 /** Placement of a reply within the target conversation, copied from the inbound message. */
+/**
+ * A send the platform explicitly refused: it answered with an error (an
+ * HTTP 4xx, an API error code, an unknown chat, an expired credential), so
+ * nothing reached the target and a retry can never duplicate it. Adapters
+ * throw this for definite rejections only. Anything else a send throws (a
+ * timeout, a reset after the request was written) may have been delivered.
+ */
+export class NotDeliveredError extends Error {
+  readonly deliveryAttempted = false as const;
+
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options);
+    this.name = "NotDeliveredError";
+  }
+}
+
+/** Whether a send failure is a definite rejection (see {@link NotDeliveredError}), through causes. */
+export function isNotDelivered(error: unknown): boolean {
+  for (let current = error, depth = 0; current && depth < 8; depth += 1) {
+    if ((current as { deliveryAttempted?: unknown }).deliveryAttempted === false) return true;
+    if (current instanceof AggregateError)
+      return current.errors.length > 0 && current.errors.every((inner) => isNotDelivered(inner));
+    current = (current as { cause?: unknown }).cause;
+  }
+  return false;
+}
+
 export interface ChannelSendOptions {
   /** Platform thread to reply in; adapters without threads ignore it. */
   threadId?: string;

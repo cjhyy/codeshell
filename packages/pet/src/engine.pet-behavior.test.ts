@@ -489,6 +489,8 @@ describe("Engine pet behavior", () => {
       type: "turn_complete",
       reason: "completed",
       text: result.text,
+      // GatewayReply is not declared as bookkeeping, as before this field existed.
+      outcome: { didWork: true, backgroundPending: false },
       timestamp: expect.any(Number),
       startedAt: expect.any(Number),
       completedAt: expect.any(Number),

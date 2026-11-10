@@ -464,6 +464,79 @@ describe("ImGatewayService", () => {
     }
   });
 
+  test("an owner notice to a WeChat target without context gets one tokenless direct try", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-im-gateway-wechat-tokenless-"));
+    const configPath = join(root, "config.json");
+    const credentialsDir = join(root, "wechat-credentials");
+    const credentialStore = new FileWechatCredentialStore(credentialsDir);
+    const credentials = credentialStore.save({
+      accountId: "wechat-account",
+      token: "wechat-token",
+      baseUrl: "https://ilinkai.weixin.qq.com",
+      userId: "wechat-owner",
+    });
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        wechat: { enabled: true, accountId: credentials.accountId, credentialsDir },
+        runtime: {
+          lockPath: join(root, "gateway.lock"),
+          inboxPath: join(root, "inbox.json"),
+          eventCursorPath: join(root, "events.json"),
+        },
+      }),
+      { mode: 0o600 },
+    );
+    const sent: Array<{ target: string; clientId?: string }> = [];
+    const service = new ImGatewayService({
+      configPath,
+      createChannelAdapter: async (channel) => ({
+        channel: channel.channel,
+        capabilities: {
+          inbound: { text: true, attachments: [] },
+          outbound: {
+            text: true,
+            proactive: true,
+            direct: true,
+            idempotentSend: true,
+            button: "link",
+            attachments: [],
+          },
+        },
+        run: async () => undefined,
+        send: async (target, _message, options) => {
+          sent.push({ target, ...(options?.clientId ? { clientId: options.clientId } : {}) });
+          throw new Error("ret=-14 context required");
+        },
+      }),
+    });
+    const [owner] = service.listOwnerMessageTargets();
+    expect(owner).toMatchObject({ proactiveReady: "unknown" });
+    // Resolved to the raw destination for the outbox, never shown to the model.
+    const destination = service.resolveOwnerTarget(owner!.id);
+    expect(destination).toEqual({ channel: "wechat", target: "wechat-owner" });
+    const event = {
+      id: 1,
+      createdAt: 1,
+      deliveryKey: "9".repeat(64),
+      type: "pet.task.completed" as const,
+      text: "做完了",
+      target: destination!,
+    };
+    const context = { streamId: "a".repeat(32) };
+    // Unbudgeted: no blind try, it waits for the Gateway watcher as before.
+    expect(await service.deliverPublishedNotification(event, context)).toBeUndefined();
+    expect(sent).toEqual([]);
+    // Budgeted (an owner notice): one try, whose failure is reported to the outbox.
+    const failure = await service
+      .deliverPublishedNotification({ ...event, maxAttempts: 1 }, context)
+      .catch((error) => error);
+    expect(failure).toMatchObject({ attempted: true, idempotent: true });
+    expect(sent).toEqual([
+      { target: "wechat-owner", clientId: expect.stringMatching(/^code-shell-notice-/u) },
+    ]);
+  });
+
   test("exposes personal WeChat as an opaque direct Mimi destination while Gateway is stopped", async () => {
     const root = mkdtempSync(join(tmpdir(), "codeshell-im-gateway-wechat-reply-only-"));
     const configPath = join(root, "config.json");
@@ -683,7 +756,7 @@ describe("ImGatewayService", () => {
     await Promise.resolve();
     expect(runCalls).toBe(0);
     releaseDirect();
-    expect(await direct).toBe(true);
+    expect(await direct).toEqual({ outcome: "delivered" });
     expect(await start).toMatchObject({ running: true });
     expect(runCalls).toBe(1);
     expect(sent).toEqual([
@@ -694,7 +767,9 @@ describe("ImGatewayService", () => {
     ]);
 
     // The live event watcher is now the only delivery owner.
-    expect(await service.deliverPublishedNotification({ ...event, id: 2 }, context)).toBe(false);
+    expect(
+      await service.deliverPublishedNotification({ ...event, id: 2 }, context),
+    ).toBeUndefined();
     expect(sent).toHaveLength(1);
     await service.stop();
 
@@ -761,7 +836,7 @@ describe("ImGatewayService", () => {
         },
         { streamId: "f".repeat(32) },
       ),
-    ).resolves.toBe(true);
+    ).resolves.toEqual({ outcome: "delivered" });
     expect(sent).toEqual([
       {
         target: "owner-chat",
@@ -818,7 +893,7 @@ describe("ImGatewayService", () => {
         { id: 1, createdAt: 1, type: "pet.task.completed", text: "完成" },
         context,
       ),
-    ).resolves.toBe(false);
+    ).resolves.toBeUndefined();
     expect(sent).toEqual([{ channel: "telegram", target: "owner-chat", text: "完成" }]);
 
     // The delivered telegram target is checkpointed so a resumed Gateway
@@ -878,7 +953,7 @@ describe("ImGatewayService", () => {
           },
           { streamId: "e".repeat(32) },
         ),
-      ).toBe(false);
+      ).toBeUndefined();
       const target = service.listOwnerMessageTargets()[0];
       if (!target) throw new Error("missing owner target");
       await expect(service.sendOwnerMessage(target.id, "主动消息")).rejects.toThrow(

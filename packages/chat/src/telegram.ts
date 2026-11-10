@@ -6,7 +6,7 @@ import type {
   ChannelMessageHandler,
   OutgoingMessage,
 } from "./channel.js";
-import { BUILTIN_CHANNEL_CAPABILITIES } from "./channel.js";
+import { BUILTIN_CHANNEL_CAPABILITIES, NotDeliveredError } from "./channel.js";
 import { OutgoingDeliveryTracker, outgoingAttachments } from "./media.js";
 
 export interface TelegramAdapterConfig {
@@ -221,10 +221,16 @@ export class TelegramAdapter implements ChannelAdapter {
     try {
       result = (await response.json()) as TelegramResponse<T>;
     } catch {
-      throw new Error(`Telegram ${method} 返回无效 JSON（HTTP ${response.status}）`);
+      const message = `Telegram ${method} 返回无效 JSON（HTTP ${response.status}）`;
+      // A 4xx answer is a refusal; a broken 5xx body says nothing about delivery.
+      throw response.status >= 400 && response.status < 500
+        ? new NotDeliveredError(message)
+        : new Error(message);
     }
     if (!response.ok || !result.ok) {
-      throw new Error(result.description ?? `Telegram ${method} 失败（HTTP ${response.status}）`);
+      const message = result.description ?? `Telegram ${method} 失败（HTTP ${response.status}）`;
+      // Telegram answered with an error (chat not found, bot blocked, 429…): nothing was sent.
+      throw response.status >= 500 ? new Error(message) : new NotDeliveredError(message);
     }
     return result.result as T;
   }

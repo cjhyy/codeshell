@@ -8,14 +8,34 @@ import type {
   DesktopPetProjectionEvent,
   DesktopPetProjectionSnapshot,
 } from "./pet-state-aggregator.js";
+import { createPetDeliveryResolver } from "./pet-delivery-plan.js";
 import { PetLongTaskCoordinator } from "./pet-long-task-coordinator.js";
 import { PetLongTaskStore } from "./pet-long-task-store.js";
+import type { NoticeRule } from "./pet-rule-store.js";
+import { PetSessionRuleWatcher, type NoticeDraft } from "./pet-session-rule-watcher.js";
+import {
+  createSessionOutcomeTap,
+  SessionOutcomeDeriver,
+  type SessionOutcome,
+} from "./session-outcome.js";
 import {
   petDelegationClientMessageId,
   petDelegationSessionId,
 } from "./pet-work-delegation-host.js";
 
 const roots: string[] = [];
+const derivers = new WeakMap<PetLongTaskCoordinator, SessionOutcomeDeriver>();
+
+/** Feed one raw stream event the way the main-process tap does: interpreted once. */
+function observeSessionEvent(
+  coordinator: PetLongTaskCoordinator,
+  sessionId: string,
+  event: unknown,
+): Promise<void> {
+  let deriver = derivers.get(coordinator);
+  if (!deriver) derivers.set(coordinator, (deriver = new SessionOutcomeDeriver()));
+  return coordinator.observeSessionEvent(sessionId, event, deriver.derive(sessionId, event));
+}
 
 afterEach(async () => {
   await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
@@ -95,7 +115,7 @@ async function harness(
         };
         const previousRunId = identities.get(sessionId)?.runId;
         identities.set(sessionId, identity);
-        await coordinator.observeSessionEvent(sessionId, {
+        await observeSessionEvent(coordinator, sessionId, {
           type: "session_started",
           sessionId,
           promptTokens: 0,
@@ -128,7 +148,7 @@ async function harness(
     closed,
     identity: (sessionId: string) => identities.get(sessionId)!,
     stream: (sessionId: string, event: Record<string, unknown>) =>
-      coordinator.observeSessionEvent(sessionId, { ...identities.get(sessionId), ...event }),
+      observeSessionEvent(coordinator, sessionId, { ...identities.get(sessionId), ...event }),
     idle: async (sessionId: string, taskId: string) => {
       const snapshot = projection.getSnapshot();
       const session = {
@@ -460,14 +480,14 @@ describe("PetLongTaskCoordinator", () => {
       reason: "completed",
       completionKind: "background_wait",
     });
-    await h.coordinator.observeSessionEvent(launch.sessionId, {
+    await observeSessionEvent(h.coordinator, launch.sessionId, {
       type: "session_started",
       sessionId: launch.sessionId,
       promptTokens: 0,
       runId: "stale-background",
       previousRunId: "older-parent",
     });
-    await h.coordinator.observeSessionEvent(launch.sessionId, {
+    await observeSessionEvent(h.coordinator, launch.sessionId, {
       type: "turn_complete",
       reason: "completed",
       runId: "stale-background",
@@ -486,13 +506,13 @@ describe("PetLongTaskCoordinator", () => {
       at: 900,
       clientMessageId: "expected-launch",
     });
-    await h.coordinator.observeSessionEvent(task.sessionId, {
+    await observeSessionEvent(h.coordinator, task.sessionId, {
       type: "turn_complete",
       reason: "model_error",
       clientMessageId: "previous-launch",
     });
     expect(h.store.get(task.id)?.status).toBe("queued");
-    await h.coordinator.observeSessionEvent(task.sessionId, {
+    await observeSessionEvent(h.coordinator, task.sessionId, {
       type: "turn_complete",
       reason: "model_error",
       clientMessageId: "expected-launch",
@@ -507,7 +527,7 @@ describe("PetLongTaskCoordinator", () => {
       workspacePath: null,
     });
     const old = h.identity(launch.sessionId);
-    await h.coordinator.observeSessionEvent(launch.sessionId, {
+    await observeSessionEvent(h.coordinator, launch.sessionId, {
       type: "session_started",
       sessionId: launch.sessionId,
       promptTokens: 0,
@@ -517,14 +537,14 @@ describe("PetLongTaskCoordinator", () => {
     h.tick(2_000);
     await h.coordinator.control({ taskId: launch.taskId, action: "retry" });
     const current = h.identity(launch.sessionId);
-    await h.coordinator.observeSessionEvent(launch.sessionId, {
+    await observeSessionEvent(h.coordinator, launch.sessionId, {
       type: "session_started",
       sessionId: launch.sessionId,
       promptTokens: 0,
       ...current,
     });
     h.tick(3_000);
-    await h.coordinator.observeSessionEvent(launch.sessionId, {
+    await observeSessionEvent(h.coordinator, launch.sessionId, {
       type: "turn_complete",
       reason: "completed",
       ...old,
@@ -548,7 +568,7 @@ describe("PetLongTaskCoordinator", () => {
     });
     await h.coordinator.reconcileNow();
     expect(h.store.get(launch.taskId)?.status).toBe("running");
-    await h.coordinator.observeSessionEvent(launch.sessionId, {
+    await observeSessionEvent(h.coordinator, launch.sessionId, {
       type: "turn_complete",
       reason: "completed",
       ...current,
@@ -564,7 +584,7 @@ describe("PetLongTaskCoordinator", () => {
       workspacePath: null,
     });
     const identity = h.identity(launch.sessionId);
-    await h.coordinator.observeSessionEvent(launch.sessionId, {
+    await observeSessionEvent(h.coordinator, launch.sessionId, {
       type: "session_started",
       sessionId: launch.sessionId,
       promptTokens: 0,
@@ -580,14 +600,14 @@ describe("PetLongTaskCoordinator", () => {
       message: { role: "assistant", content: summary },
       ...identity,
     };
-    await h.coordinator.observeSessionEvent(launch.sessionId, { ...resultEvent, runId: "old" });
-    await h.coordinator.observeSessionEvent(launch.sessionId, {
+    await observeSessionEvent(h.coordinator, launch.sessionId, { ...resultEvent, runId: "old" });
+    await observeSessionEvent(h.coordinator, launch.sessionId, {
       type: "text_delta",
       text: "partial",
       ...identity,
     });
     expect(h.store.get(launch.taskId)?.resultSummary).toBeUndefined();
-    await h.coordinator.observeSessionEvent(launch.sessionId, resultEvent);
+    await observeSessionEvent(h.coordinator, launch.sessionId, resultEvent);
     expect(h.store.get(launch.taskId)?.resultSummary).toBeUndefined();
     const terminalEvent = {
       ...identity,
@@ -595,15 +615,15 @@ describe("PetLongTaskCoordinator", () => {
       reason: "completed",
       text: summary,
     };
-    await h.coordinator.observeSessionEvent(launch.sessionId, terminalEvent);
+    await observeSessionEvent(h.coordinator, launch.sessionId, terminalEvent);
     expect(h.store.get(launch.taskId)).toMatchObject({
       status: "completed",
       resultSummary: summary,
       attempt: 1,
     });
     expect(h.store.get(launch.taskId)?.events.at(-1)?.kind).toBe("result-updated");
-    await h.coordinator.observeSessionEvent(launch.sessionId, resultEvent);
-    await h.coordinator.observeSessionEvent(launch.sessionId, terminalEvent);
+    await observeSessionEvent(h.coordinator, launch.sessionId, resultEvent);
+    await observeSessionEvent(h.coordinator, launch.sessionId, terminalEvent);
     expect(revisions).toHaveLength(1);
     const reloaded = new PetLongTaskStore(join(h.root, "tasks.json"));
     await reloaded.load();
@@ -623,14 +643,14 @@ describe("PetLongTaskCoordinator", () => {
       workspacePath: null,
     });
     const current = h.identity(launch.sessionId);
-    await h.coordinator.observeSessionEvent(launch.sessionId, {
+    await observeSessionEvent(h.coordinator, launch.sessionId, {
       type: "session_started",
       sessionId: launch.sessionId,
       promptTokens: 0,
       ...current,
       runId: "stale-start",
     });
-    await h.coordinator.observeSessionEvent(launch.sessionId, {
+    await observeSessionEvent(h.coordinator, launch.sessionId, {
       type: "turn_complete",
       reason: "completed",
       ...current,
@@ -673,29 +693,29 @@ describe("PetLongTaskCoordinator", () => {
       at: 500,
     });
     await h.store.transition(task.id, { kind: "started", at: 600 });
-    await h.coordinator.observeSessionEvent(task.sessionId, {
+    await observeSessionEvent(h.coordinator, task.sessionId, {
       type: "turn_complete",
       reason: "completed",
     });
-    await h.coordinator.observeSessionEvent(task.sessionId, {
+    await observeSessionEvent(h.coordinator, task.sessionId, {
       type: "turn_complete",
       reason: "completed",
       runId: "old",
     });
     expect(h.store.get(task.id)?.status).toBe("running");
     await Promise.all([
-      h.coordinator.observeSessionEvent(task.sessionId, {
+      observeSessionEvent(h.coordinator, task.sessionId, {
         type: "session_started",
         sessionId: task.sessionId,
         promptTokens: 0,
         runId: "fresh",
       }),
-      h.coordinator.observeSessionEvent(task.sessionId, {
+      observeSessionEvent(h.coordinator, task.sessionId, {
         type: "assistant_message",
         runId: "fresh",
         message: { role: "assistant", content: "Fresh verified result" },
       }),
-      h.coordinator.observeSessionEvent(task.sessionId, {
+      observeSessionEvent(h.coordinator, task.sessionId, {
         type: "turn_complete",
         reason: "completed",
         runId: "fresh",
@@ -1413,7 +1433,7 @@ describe("PetLongTaskCoordinator", () => {
     // The background-result notification starts a new foreground run in the
     // same Session. Only that run's ordinary final response closes the task.
     h.tick(3_000);
-    await h.coordinator.observeSessionEvent(launch.sessionId, {
+    await observeSessionEvent(h.coordinator, launch.sessionId, {
       type: "session_started",
       sessionId: launch.sessionId,
       promptTokens: 0,
@@ -1422,17 +1442,17 @@ describe("PetLongTaskCoordinator", () => {
     });
     await h.stream(launch.sessionId, { type: "turn_complete", reason: "completed" });
     expect(h.store.get(launch.taskId)?.status).toBe("running");
-    await h.coordinator.observeSessionEvent(launch.sessionId, {
+    await observeSessionEvent(h.coordinator, launch.sessionId, {
       runId: "background-result-run",
       type: "stream_request_start",
       turnNumber: 2,
     });
-    await h.coordinator.observeSessionEvent(launch.sessionId, {
+    await observeSessionEvent(h.coordinator, launch.sessionId, {
       runId: "background-result-run",
       type: "assistant_message",
       message: { role: "assistant", content: "The background download finished." },
     });
-    await h.coordinator.observeSessionEvent(launch.sessionId, {
+    await observeSessionEvent(h.coordinator, launch.sessionId, {
       runId: "background-result-run",
       type: "turn_complete",
       reason: "completed",
@@ -1462,6 +1482,29 @@ describe("PetLongTaskCoordinator", () => {
     expect(h.store.get(launch.taskId)).toMatchObject({
       status: "interrupted",
       waitingFor: "The work session reached its run limit before a final response",
+    });
+    expect(h.closed).toEqual([]);
+  });
+
+  test("a completion kind from a newer core interrupts the task without completing it", async () => {
+    const h = await harness();
+    const launch = await h.coordinator.startDelegation({
+      clientMessageId: "message-unknown-kind",
+      task: "Finish the delegated implementation",
+      workspacePath: "/work/app",
+    });
+    h.tick(2_000);
+
+    await h.stream(launch.sessionId, {
+      type: "turn_complete",
+      reason: "completed",
+      completionKind: "handed_off",
+      text: "Handed off.",
+    });
+
+    expect(h.store.get(launch.taskId)).toMatchObject({
+      status: "interrupted",
+      waitingFor: "The work session ended in a way this version does not recognise",
     });
     expect(h.closed).toEqual([]);
   });
@@ -1908,7 +1951,7 @@ describe("PetLongTaskCoordinator", () => {
       runId: "live-goal-run",
       clientMessageId: petDelegationClientMessageId("message-live-goal"),
     };
-    await coordinator.observeSessionEvent(launch.sessionId, {
+    await observeSessionEvent(coordinator, launch.sessionId, {
       type: "session_started",
       sessionId: launch.sessionId,
       promptTokens: 0,
@@ -1920,13 +1963,13 @@ describe("PetLongTaskCoordinator", () => {
     expect(paused).toBe(false);
     expect(launchCount).toBe(1);
     // GoalUpdate can resume an existing Goal loop without session_started.
-    await coordinator.observeSessionEvent(launch.sessionId, {
+    await observeSessionEvent(coordinator, launch.sessionId, {
       type: "goal_progress",
       status: "met",
       round: 1,
       ...identity,
     });
-    await coordinator.observeSessionEvent(launch.sessionId, {
+    await observeSessionEvent(coordinator, launch.sessionId, {
       type: "turn_complete",
       reason: "completed",
       text: "Verified Goal result",
@@ -1975,6 +2018,92 @@ describe("PetLongTaskCoordinator", () => {
     expect(recoveredStore.get(launch.taskId)).toMatchObject({
       status: "interrupted",
       nextAction: "Resume from the durable work session",
+      // The snapshot says why the Session is gone: its worker was reclaimed.
+      waitingFor: "The worker was reclaimed before task completion was observed",
     });
+  });
+});
+
+describe("one interpretation for the long task and the notice rules", () => {
+  test("an exhausted Goal fails the task and tells the owner the Session is blocked", async () => {
+    const h = await harness();
+    const launch = await h.coordinator.startDelegation({
+      clientMessageId: "message-shared-outcome",
+      task: "Finish within the continuation budget",
+      goalObjective: "Finish within the continuation budget",
+      workspacePath: "/work/app",
+    });
+    h.tick(2_000);
+    const drafts: NoticeDraft[] = [];
+    const rule = {
+      id: "rule-blocked",
+      version: 1,
+      state: "active",
+      when: {
+        kind: "session",
+        sessionId: launch.sessionId,
+        events: ["done", "failed", "blocked"],
+        scope: "goal",
+        armedAt: 0,
+      },
+      attention: "always",
+      channel: "auto",
+      target: { kind: "owner" },
+    } as unknown as NoticeRule;
+    const watcher = new PetSessionRuleWatcher({
+      rules: { activeForSession: () => [rule], update: async () => rule },
+      onNotice: (draft) => drafts.push(draft),
+      onPendingDecision: () => undefined,
+      // The task owns the run; blocked is still the rules' to report.
+      deliveries: createPetDeliveryResolver({
+        rules: { activeForSession: () => [rule] },
+        longTasks: h.store,
+        replyRoutes: async () => [],
+        delegatedFromDesktop: () => "auto",
+      }),
+      isSessionBusy: () => false,
+      isEligibleSession: () => true,
+    });
+    const handed: Array<{ to: string; outcomes: readonly SessionOutcome[] }> = [];
+    const work: Promise<void>[] = [];
+    const tap = createSessionOutcomeTap({
+      coordinator: (sessionId, event, outcomes) => {
+        handed.push({ to: "coordinator", outcomes });
+        work.push(h.coordinator.observeSessionEvent(sessionId, event, outcomes));
+      },
+      watcher: (sessionId, outcomes) => {
+        handed.push({ to: "watcher", outcomes });
+        work.push(watcher.observe(sessionId, outcomes));
+      },
+    });
+
+    tap(launch.sessionId, {
+      ...h.identity(launch.sessionId),
+      type: "goal_progress",
+      status: "exhausted",
+      goalId: "goal-1",
+      revision: 1,
+    });
+    await Promise.all(work);
+
+    expect(handed.map((entry) => entry.to)).toEqual(["coordinator", "watcher"]);
+    expect(handed[0]!.outcomes).toHaveLength(1);
+    expect(handed[1]!.outcomes[0]).toBe(handed[0]!.outcomes[0]);
+    expect(handed[0]!.outcomes[0]).toMatchObject({
+      kind: "blocked",
+      reason: "goal_exhausted",
+      final: false,
+    });
+    // The same outcome, two deliberate readings.
+    expect(h.store.get(launch.taskId)).toMatchObject({
+      status: "failed",
+      lastError: "The Goal continuation limit was exhausted before completion",
+    });
+    expect(drafts.map((draft) => [draft.kind, draft.dedupeKey])).toEqual([
+      [
+        "session.blocked",
+        `${launch.sessionId}:goal-pause:goal-1:1:${h.identity(launch.sessionId).runId}`,
+      ],
+    ]);
   });
 });

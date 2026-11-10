@@ -180,6 +180,7 @@ describe("Agent background completion boundaries", () => {
             reason: "completed",
             completionKind: "background_wait",
             text: initial.text,
+            outcome: { didWork: true, backgroundPending: true },
           },
         ]);
         expect(h.state(initial.sessionId).lastCompletionKind).toBe("background_wait");
@@ -207,8 +208,16 @@ describe("Agent background completion boundaries", () => {
             reason: "completed",
             completionKind: "background_wait",
             text: initial.text,
+            outcome: { didWork: true, backgroundPending: true },
           },
-          { type: "turn_complete", reason: "completed", text: result.text },
+          {
+            type: "turn_complete",
+            reason: "completed",
+            text: result.text,
+            // The follow-up run only reports the result. ChatSession marks a
+            // real background wake as work; a direct Engine.run has no trigger.
+            outcome: { didWork: false, backgroundPending: false },
+          },
         ]);
         expect(h.state(initial.sessionId).lastCompletionKind).toBeUndefined();
       } finally {
@@ -228,7 +237,12 @@ describe("Agent background completion boundaries", () => {
         const result = await run;
         expect(result.text).toBe(FINAL_RESULT);
         expect(h.completeEvents()).toEqual([
-          { type: "turn_complete", reason: "completed", text: result.text },
+          {
+            type: "turn_complete",
+            reason: "completed",
+            text: result.text,
+            outcome: { didWork: true, backgroundPending: false },
+          },
         ]);
         expect(h.state(result.sessionId).lastCompletionKind).toBeUndefined();
       } finally {
@@ -259,6 +273,7 @@ describe("Agent background completion boundaries", () => {
           reason: "completed",
           completionKind: "background_wait",
           text: initial.text,
+          outcome: { didWork: true, backgroundPending: true },
         },
       ]);
       h.finish(FINAL_RESULT);

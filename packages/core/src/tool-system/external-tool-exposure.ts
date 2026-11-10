@@ -34,15 +34,21 @@ function canonical(value: unknown): string {
 }
 
 /**
- * Hash execution-relevant data, not compiled function source or descriptive
- * prose. Presence of imperative guards/resolvers is reviewed here; their behavior
+ * Hash execution-relevant data, not compiled function source, descriptive
+ * prose or the `bookkeeping` flag (it only tells a host whether a run did
+ * work; it changes nothing about what the tool may do). Presence of imperative guards/resolvers is reviewed here; their behavior
  * remains covered by their owning module's tests and code review.
  */
 export function externalToolContractFingerprint(
   definition: RegisteredTool,
   exposure: BuiltinToolExposure,
 ): string {
-  const { description: _description, pathResolver, ...metadata } = definition;
+  const {
+    description: _description,
+    bookkeeping: _bookkeeping,
+    pathResolver,
+    ...metadata
+  } = definition;
   const contract = {
     definition: {
       ...metadata,

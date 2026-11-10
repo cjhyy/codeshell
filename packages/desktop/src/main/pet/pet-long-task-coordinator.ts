@@ -28,6 +28,12 @@ import type {
 import { PetLongTaskStore } from "./pet-long-task-store.js";
 import type { WorkerFrameMeta } from "@cjhyy/code-shell-server/worker";
 import { ErrorCodes } from "@cjhyy/code-shell-core";
+import {
+  closingOutcome,
+  runningOutcome,
+  topLevelEvent,
+  type SessionOutcome,
+} from "./session-outcome.js";
 
 const MAX_PET_LONG_TASK_SUMMARY_LENGTH = 8_000;
 const PROJECTION_LAUNCH_GRACE_MS = 2_000;
@@ -184,11 +190,17 @@ function projectionPredatesCurrentAttempt(
   return sessionAt < currentAttemptStartedAt(task);
 }
 
-/** A Session stream event from the top-level agent (child-agent events carry `agentId`). */
-export function topLevelEvent(value: unknown): Record<string, unknown> | null {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-  const event = value as Record<string, unknown>;
-  return typeof event.type === "string" && event.agentId === undefined ? event : null;
+/**
+ * A run that ended as an ordinary completed turn, with no special boundary:
+ * it did work, only acknowledged, or its Goal parked it. Whether that closes
+ * the task depends on how the task is verified, not on which of these it was.
+ */
+function isOrdinaryCompletion(outcome: SessionOutcome): boolean {
+  return (
+    outcome.kind === "idle" ||
+    (outcome.kind === "done" && outcome.scope === "turn") ||
+    (outcome.kind === "blocked" && outcome.reason !== "limit")
+  );
 }
 
 function matchesRun(
@@ -517,12 +529,21 @@ export class PetLongTaskCoordinator {
     return this.options.store.removeTerminal(taskId);
   }
 
-  /** Observe the exact, top-level session stream retained by AgentBridge. */
-  async observeSessionEvent(sessionId: string, value: unknown): Promise<void> {
+  /**
+   * Observe the exact, top-level session stream retained by AgentBridge.
+   * `outcomes` is what `SessionOutcomeDeriver` made of this event (see
+   * `createSessionOutcomeTap`): it drives every terminal / interrupt
+   * transition, while progress, checkpoints and artifacts read the event.
+   */
+  async observeSessionEvent(
+    sessionId: string,
+    value: unknown,
+    outcomes: readonly SessionOutcome[],
+  ): Promise<void> {
     const previous = this.sessionEventQueues.get(sessionId) ?? Promise.resolve();
     const operation = previous
       .catch(() => undefined)
-      .then(() => this.applySessionEvent(sessionId, value));
+      .then(() => this.applySessionEvent(sessionId, value, outcomes));
     this.sessionEventQueues.set(sessionId, operation);
     try {
       await operation;
@@ -532,9 +553,17 @@ export class PetLongTaskCoordinator {
     }
   }
 
-  private async applySessionEvent(sessionId: string, value: unknown): Promise<void> {
+  private async applySessionEvent(
+    sessionId: string,
+    value: unknown,
+    outcomes: readonly SessionOutcome[],
+  ): Promise<void> {
     const event = topLevelEvent(value);
     if (!event) return;
+    // What the event means is decided once, by SessionOutcomeDeriver; the
+    // outcome → task-state mapping is tabulated in session-outcome.ts.
+    const closing = closingOutcome(outcomes);
+    const running = runningOutcome(outcomes);
     const task =
       this.options.store.activeForSession(sessionId) ??
       this.options.store.latestForSession(sessionId);
@@ -565,9 +594,9 @@ export class PetLongTaskCoordinator {
       if (!task.runId) return;
       // An assistant_message may precede a Goal rejection or a steer backfill.
       // Only the finalized run payload is safe to publish as a result update.
-      if (event.type === "turn_complete" && !event.completionKind) {
+      if (closing && isOrdinaryCompletion(closing)) {
         const summary = typeof event.text === "string" ? extractText(event) : undefined;
-        if (event.reason === "completed" && (task.verificationMode === "turn" || summary)) {
+        if (task.verificationMode === "turn" || summary) {
           await transition({
             kind: "result-updated",
             at,
@@ -576,21 +605,18 @@ export class PetLongTaskCoordinator {
             attempt: task.attempt,
             runId: task.runId,
           });
-        } else if (
-          event.reason !== "completed" &&
-          event.reason !== "aborted_streaming" &&
-          event.reason !== "aborted_tools"
-        ) {
-          await transition({
-            kind: "result-updated",
-            at,
-            terminalStatus: "failed",
-            summary: `Work session ended: ${String(event.reason ?? "unknown")}`,
-            attempt: task.attempt,
-            runId: task.runId!,
-          });
         }
-      } else if (event.type === "goal_progress" && event.status === "met") {
+      } else if (closing?.kind === "failed") {
+        await transition({
+          kind: "result-updated",
+          at,
+          terminalStatus: "failed",
+          summary: closing.error,
+          attempt: task.attempt,
+          runId: task.runId!,
+        });
+      } else if (running?.kind === "done") {
+        // goal_progress(met): the Goal was verified after the task had closed.
         await transition({
           kind: "result-updated",
           at,
@@ -639,7 +665,7 @@ export class PetLongTaskCoordinator {
       case "goal_progress": {
         const status = event.status;
         const gaps = typeof event.gaps === "string" ? event.gaps : undefined;
-        if (status === "met") {
+        if (running?.kind === "done") {
           const current = this.options.store.get(task.id);
           if (!current || current.status === "paused" || current.status === "cancelled") return;
           const completed = await transition({
@@ -656,7 +682,9 @@ export class PetLongTaskCoordinator {
           await this.notifyClosed(completed);
           return;
         }
-        if (status === "exhausted") {
+        // The Goal this task was driving is closed, so the task has failed;
+        // the rule watcher tells the owner the same outcome as "blocked".
+        if (running?.kind === "blocked" && running.reason === "goal_exhausted") {
           const failed = await transition({
             kind: "failed",
             at,
@@ -676,7 +704,7 @@ export class PetLongTaskCoordinator {
         return;
       }
       case "goal_cleared": {
-        if (task.verificationMode === "goal") {
+        if (running?.kind === "cancelled" && task.verificationMode === "goal") {
           await transition({
             kind: "verification-changed",
             at,
@@ -687,56 +715,10 @@ export class PetLongTaskCoordinator {
       }
       case "turn_complete": {
         const current = this.options.store.get(task.id);
-        if (!current || current.status === "paused" || current.status === "cancelled") return;
-        if (event.reason === "completed") {
-          if (
-            event.completionKind === "goal_control_stop" ||
-            event.completionKind === "limit_stop"
-          ) {
-            await transition({
-              kind: "interrupted",
-              at,
-              reason: interruptReasonForCompletionKind(event.completionKind),
-            });
-            return;
-          }
-          if (event.completionKind === "background_wait") {
-            await transition({
-              kind: "waiting-worker",
-              at,
-              waitingFor: interruptReasonForCompletionKind(event.completionKind),
-            });
-            return;
-          }
-          if (current.verificationMode === "turn") {
-            const completed = await transition({
-              kind: "completed",
-              at,
-              summary: typeof event.text === "string" ? extractText(event) : undefined,
-              artifacts: [
-                { kind: "result", label: "Completed work session", reference: current.sessionId },
-              ],
-            });
-            await this.notifyClosed(completed);
-            return;
-          }
-          // Core also uses turn_complete(completed) when a Goal stops because
-          // its judge prompt is too large or a continuation cap is reached.
-          // Only goal_progress(met) is proof that the objective completed.
-          await transition({
-            kind: "interrupted",
-            at,
-            reason: "The work session stopped without a verified Goal-complete signal",
-          });
-        } else if (event.reason === "aborted_streaming" || event.reason === "aborted_tools") {
-          await transition({
-            kind: "interrupted",
-            at,
-            reason: "The work session stopped before the objective was complete",
-          });
-        } else {
-          const budgetExhausted = event.reason === "max_turns";
-          if (budgetExhausted && typeof event.text === "string" && event.text.trim()) {
+        if (!closing || !current || current.status === "paused" || current.status === "cancelled")
+          return;
+        if (closing.kind === "failed") {
+          if (closing.budgetExhausted && typeof event.text === "string" && event.text.trim()) {
             await transition({
               kind: "checkpoint",
               at,
@@ -747,20 +729,76 @@ export class PetLongTaskCoordinator {
           const failed = await transition({
             kind: "failed",
             at,
-            error: budgetExhausted
+            error: closing.budgetExhausted
               ? "Work session reached its turn budget (max_turns); the objective is not verified complete"
-              : `Work session ended: ${String(event.reason ?? "unknown")}`,
+              : closing.error,
           });
           await this.notifyClosed(failed);
+          return;
         }
+        if (closing.kind === "unrecognized") {
+          // A completion kind from a newer core: the run has ended, so the task
+          // no longer owns the Session, but nothing says the objective was met.
+          await transition({
+            kind: "interrupted",
+            at,
+            reason: "The work session ended in a way this version does not recognise",
+          });
+          return;
+        }
+        if (closing.kind === "aborted") {
+          await transition({
+            kind: "interrupted",
+            at,
+            reason: "The work session stopped before the objective was complete",
+          });
+          return;
+        }
+        if (closing.kind === "waiting-worker") {
+          await transition({
+            kind: "waiting-worker",
+            at,
+            waitingFor: interruptReasonForCompletionKind("background_wait"),
+          });
+          return;
+        }
+        if (!isOrdinaryCompletion(closing)) {
+          // The run's token budget stopped it (blocked: limit), or Goal driving
+          // stopped (done: goal / cancelled close a goal_control_stop run).
+          await transition({
+            kind: "interrupted",
+            at,
+            reason: interruptReasonForCompletionKind(
+              closing.kind === "blocked" ? "limit_stop" : "goal_control_stop",
+            ),
+          });
+          return;
+        }
+        if (current.verificationMode === "turn") {
+          const completed = await transition({
+            kind: "completed",
+            at,
+            summary: typeof event.text === "string" ? extractText(event) : undefined,
+            artifacts: [
+              { kind: "result", label: "Completed work session", reference: current.sessionId },
+            ],
+          });
+          await this.notifyClosed(completed);
+          return;
+        }
+        // Core also uses turn_complete(completed) when a Goal stops because
+        // its judge prompt is too large or a continuation cap is reached.
+        // Only goal_progress(met) is proof that the objective completed.
+        await transition({
+          kind: "interrupted",
+          at,
+          reason: "The work session stopped without a verified Goal-complete signal",
+        });
         return;
       }
       case "error": {
-        const failed = await transition({
-          kind: "failed",
-          at,
-          error: typeof event.error === "string" ? event.error : "Work session failed",
-        });
+        if (running?.kind !== "failed") return;
+        const failed = await transition({ kind: "failed", at, error: running.error });
         await this.notifyClosed(failed);
       }
     }
@@ -769,22 +807,6 @@ export class PetLongTaskCoordinator {
   private async observeProjectionEvent(event: DesktopPetProjectionEvent): Promise<void> {
     if (event.kind === "reset") {
       await this.reconcile(this.options.projection.getSnapshot());
-      return;
-    }
-    if (event.kind === "worker-state") {
-      if (event.state === "disconnected" || event.state === "reclaimed") {
-        for (const task of this.options.store.activeTasks()) {
-          if (task.status === "paused" || task.status === "interrupted") continue;
-          await this.options.store.transition(task.id, {
-            kind: "interrupted",
-            at: event.observedAt,
-            reason:
-              event.state === "disconnected"
-                ? "The worker disconnected; durable session state is available for resume"
-                : "The worker was reclaimed before task completion was observed",
-          });
-        }
-      }
       return;
     }
     if (event.kind === "pending-upsert") {
@@ -930,7 +952,13 @@ export class PetLongTaskCoordinator {
           await this.options.store.transition(task.id, {
             kind: "interrupted",
             at: observedAt,
-            reason: "The durable work session is not currently live",
+            // The aggregator reports a lost worker as a reset of a snapshot in that state.
+            reason:
+              snapshot.workerState === "disconnected"
+                ? "The worker disconnected; durable session state is available for resume"
+                : snapshot.workerState === "reclaimed"
+                  ? "The worker was reclaimed before task completion was observed"
+                  : "The durable work session is not currently live",
           });
         }
         continue;

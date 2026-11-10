@@ -169,6 +169,11 @@ import { PetReportReceiptStore } from "./pet/pet-report-receipt-store.js";
 import { PetLongTaskStore } from "./pet/pet-long-task-store.js";
 import { PetLongTaskCoordinator } from "./pet/pet-long-task-coordinator.js";
 import {
+  createSessionOutcomeFanout,
+  createSessionOutcomeTap,
+  SessionOutcomeDeriver,
+} from "./pet/session-outcome.js";
+import {
   PetImDecisions,
   collectImDecisions,
   imDecisionWorkerActions,
@@ -290,6 +295,7 @@ import { createDesktopRoomModeAuthority } from "./cc-room/room-mode-ipc.js";
 import {
   GatewayControlServer,
   type GatewayControlEventAttachment,
+  type GatewayControlEvent,
   type GatewayControlEventInput,
   type PetChatControlRequest,
   type PetChatControlResult,
@@ -1066,21 +1072,48 @@ let sessionBridge: SessionBridgeWiring | undefined;
 async function publishGatewayControlEvent(event: GatewayControlEventInput): Promise<void> {
   const gateway = gatewayControlServer;
   if (!gateway) throw new Error("IM Gateway notification outbox is unavailable");
-  const published = await gateway.publish(event);
+  handOffDirectDelivery(gateway, await gateway.publish(event));
+}
+
+/**
+ * While the polling Gateway is stopped, direct-capable adapters deliver an
+ * outbox event (a new one, or a retry copy the outbox appended) and report
+ * its result like the live watcher does. Undefined: not handled here; the
+ * event waits for the watcher. A send failure is reported so the outbox
+ * retries or gives up; any other error leaves the event waiting, as before.
+ */
+function handOffDirectDelivery(
+  gateway: GatewayControlServer,
+  published: GatewayControlEvent,
+): void {
   const context = gateway.eventContext();
   if (!context) return;
+  const report = (
+    result: Omit<Parameters<GatewayControlServer["reportEventResult"]>[0], "streamId" | "eventId">,
+  ) => gateway.reportEventResult({ streamId: context.streamId, eventId: published.id, ...result });
   void imGatewayService
-    .deliverPublishedNotification(published, context)
-    .then(async (delivered) => {
-      if (delivered) await gateway.acknowledgeDirectDelivery(published.id);
+    .deliverPublishedNotification(published, {
+      ...context,
+      isLive: async () => gateway.isEventLive(context.streamId, published.id),
     })
-    .catch((error) =>
+    .then(async (delivery) => {
+      if (delivery) await report({ outcome: delivery.outcome });
+    })
+    .catch(async (error: unknown) => {
       dlog("main", "im_gateway.notification_direct.failed", {
         eventId: published.id,
         type: published.type,
         error: String(error),
-      }),
-    );
+      });
+      const failure = error as { attempted?: unknown; idempotent?: unknown };
+      if (typeof failure?.attempted !== "boolean") return;
+      await report({
+        outcome: "failed",
+        attempted: failure.attempted,
+        idempotent: failure.idempotent === true,
+        error: String(error).slice(0, 500),
+      }).catch(() => undefined);
+    });
 }
 
 function publishGatewayControlEventBestEffort(event: GatewayControlEventInput): void {
@@ -1825,16 +1858,26 @@ async function createWindow(): Promise<BrowserWindow> {
     );
     petLongTaskStore = longTaskStore;
     taskInboxDisposers.push(longTaskStore.subscribe(() => taskInboxService?.scheduleRefresh()));
+    // The one interpreter of Session streams (see createSessionOutcomeTap below);
+    // the bound-Session bridge reads its outcomes from `sessionOutcomes`.
+    const sessionOutcomeDeriver = new SessionOutcomeDeriver();
+    const sessionOutcomes = createSessionOutcomeFanout();
     const notices = wirePetNotices({
       userDataDir: app.getPath("userData"),
       bridge,
       projection: aggregator,
       longTasks: longTaskStore,
       sessionRoutes: () => sessionBridge?.routes,
-      boundReplies: () => sessionBridge,
       gateway: imGatewayService,
-      publishRoute: publishGatewayControlEvent,
-      materializeAttachments: materializeOutgoingAttachments,
+      outbox: {
+        publish: publishGatewayControlEvent,
+        revoke: async (deliveryKey) => {
+          const gateway = gatewayControlServer;
+          if (!gateway) throw new Error("IM Gateway notification outbox is unavailable");
+          await gateway.revokeDelivery(deliveryKey, "notice-revoked");
+        },
+        state: (deliveryKey) => gatewayControlServer?.deliveryState(deliveryKey),
+      },
       notifyDesktop: async (input) => desktopNotifier?.notify(input),
       readSettings: () => new SettingsManager(resolveNoRepoCwd(), "full").getForScope("user"),
       presence: {
@@ -1842,6 +1885,9 @@ async function createWindow(): Promise<BrowserWindow> {
         hasFocusedWindow: () => BrowserWindow.getFocusedWindow() !== null,
       },
       powerEvents: powerMonitor,
+      focusEvents: app,
+      hasLiveWorker: () => bridge?.hasLiveWorker() ?? false,
+      onWorkerLost: () => sessionOutcomeDeriver.reset(),
     });
     petNotices = notices;
     const petMemoryStoreInstance = new PetMemoryStore(
@@ -1981,7 +2027,7 @@ async function createWindow(): Promise<BrowserWindow> {
           aggregator.getSnapshot(),
           longTaskStore.getSnapshot().tasks,
           pendingMobileApprovals.replayAllLines(),
-          notices.decisions.rulesFor,
+          notices.decisions.deliveryFor,
         );
       },
       ...imDecisionWorkerActions(
@@ -1989,24 +2035,37 @@ async function createWindow(): Promise<BrowserWindow> {
           decisionBridge.requestWorker(method, params, timeoutMs, options),
         (params) => mobileOrchestrator.broadcastApprovalResolved(params),
       ),
-      // The router decides whether a prompt goes to IM (presence, caps) and where.
-      submit: (notice) => notices.router.submitWithOutcome(notice),
-      prior: (dedupeKey) => notices.router.priorDecision(dedupeKey),
+      // The router decides whether a prompt goes to IM (presence, caps) and
+      // where; its ledger records hold each prompt's lifecycle.
+      router: notices.router,
       isOwnerConversation: notices.decisions.isOwnerConversation,
       ownerChannelIsDirect: notices.decisions.ownerChannelIsDirect,
       isAway: notices.decisions.isAway,
       decisionStatus: notices.decisions.decisionStatus,
+      projectionLive: notices.decisions.projectionLive,
+      workerGone: notices.decisions.workerGone,
+      projection: aggregator,
+      nudges: [notices.decisions.onBlocked],
+      onAwayChange: notices.decisions.onAwayChange,
       onError: (error) => dlog("main", "pet.im-decision.failed", { error: String(error) }),
     });
-    const imDecisions = petImDecisions;
-    notices.decisions.onBlocked(() => imDecisions.scanNow());
     petImDecisions.start();
+    // One interpretation of each Session event, handed to the long task and
+    // the notice rules (see createSessionOutcomeTap). Which of them reports a
+    // run is decided by the delivery plan, not by who hears of it first.
+    const observeSessionOutcome = createSessionOutcomeTap(
+      {
+        coordinator: (sessionId, event, outcomes) =>
+          void longTaskCoordinator
+            .observeSessionEvent(sessionId, event, outcomes)
+            .catch((error) => dlog("main", "pet.longTask.stream.failed", { error: String(error) })),
+        watcher: (sessionId, outcomes) => notices.observeSessionOutcomes(sessionId, outcomes),
+        stream: sessionOutcomes.emit,
+      },
+      sessionOutcomeDeriver,
+    );
     unsubscribePetLongTaskStream = bridge.subscribeOutbound((_line, snapshotEntry) => {
-      if (!snapshotEntry) return;
-      void longTaskCoordinator
-        .observeSessionEvent(snapshotEntry.sessionId, snapshotEntry.event)
-        .catch((error) => dlog("main", "pet.longTask.stream.failed", { error: String(error) }));
-      notices.observeSessionEvent(snapshotEntry.sessionId, snapshotEntry.event);
+      if (snapshotEntry) observeSessionOutcome(snapshotEntry.sessionId, snapshotEntry.event);
     });
     // One root for both the Sessions disclosure tool and the resume resolver,
     // so the directory Mimi reads and the one selectors resolve against can
@@ -2063,12 +2122,13 @@ async function createWindow(): Promise<BrowserWindow> {
     sessionBridge = createSessionBridgeWiring({
       routesFilePath: resolve(app.getPath("userData"), "pet", "conversation-session-routes.json"),
       resolveSelector: createReusableSessionResolver(petSessionsRootDir),
-      createRunner: (onTurn) => createBoundSessionRunner(worker, aggregator, onTurn),
+      createRunner: (onTurn) =>
+        createBoundSessionRunner(worker, aggregator, onTurn, sessionOutcomes),
       health: createBoundSessionHealth(aggregator, petSessionsRootDir),
       describeStatus: async (route) => `当前在「${route.sessionTitle}」中。发送 /mimi 可退出。`,
       publish: (event) => publishGatewayControlEvent(event),
-      onReplyForwarded: ({ sessionId, turnId, route }) =>
-        notices.recordBoundReply(sessionId, turnId, route),
+      // The conversations a turn's reply goes to come from the delivery plan.
+      replyRoutes: (sessionId) => notices.deliveries.replyRoutes(sessionId),
       onDeliveryError: (error, turn) =>
         dlog("main", "pet.session.reply.retry", {
           sessionId: turn.sessionId,
@@ -3386,9 +3446,18 @@ app.whenReady().then(async () => {
       (await petImDecisions?.replyToSession(request)) ??
       (sessionBridge ? sessionBridge.routeInbound(request) : { kind: "not-bound" }),
   });
-  await gatewayControlServer.start().catch((error) => {
-    dlog("main", "im_gateway.desktop_control.start_failed", { error: String(error) });
-  });
+  // Delivery results settle the notices that made them; retry copies the
+  // outbox appends get the same direct hand-off as a fresh publication.
+  const controlServer = gatewayControlServer;
+  controlServer.onEventResult((result) => void petNotices?.outboxResult(result));
+  controlServer.onEventAppended((event) => handOffDirectDelivery(controlServer, event));
+  await gatewayControlServer
+    .start()
+    // Notices recovered before the outbox could answer are settled now.
+    .then(() => void petNotices?.outboxReady())
+    .catch((error) => {
+      dlog("main", "im_gateway.desktop_control.start_failed", { error: String(error) });
+    });
 
   // A configured Chat Gateway is part of the Desktop runtime, not a panel
   // toggle. Start it on every owning app launch after the authenticated local

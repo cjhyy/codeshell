@@ -163,6 +163,12 @@ export interface RegisteredTool {
   /** Declaratively marks result bodies as sensitive for retained Goal evidence. */
   sensitiveResult?: boolean;
   /**
+   * Calling this tool is communication or bookkeeping (asking the user,
+   * arranging a notice, loading a tool schema), not work on the task. A run
+   * that only called such tools reports `turn_complete.outcome.didWork: false`.
+   */
+  bookkeeping?: boolean;
+  /**
    * Declarative file-path safety metadata. ToolExecutor enforces this before
    * dispatching the tool, so file access cannot depend on each tool handler
    * remembering to call path-policy manually.
@@ -683,6 +689,34 @@ export interface TurnDiffSnapshot {
 /** Why a run started; see `session_started.trigger`. */
 export type SessionRunTrigger = "user" | "host_message" | "background_wake";
 
+/**
+ * What a top-level run did, reported on its `turn_complete`. Optional and
+ * additive: sub-agent runs do not report one, and hosts fall back to reading
+ * the event stream when it is absent.
+ */
+export interface TurnOutcome {
+  /**
+   * The run called at least one tool that is real work (not one declared
+   * `bookkeeping`), or was started by a background wake.
+   */
+  didWork: boolean;
+  /**
+   * What the run is stopped on, when it cannot continue by itself:
+   * - `user`: the Goal paused until the user replies (the judge asked a
+   *   question, or the continuation cap was reached);
+   * - `goal_exhausted`: the Goal ran out of budget or turns and was closed
+   *   (`goal_progress` status `exhausted`);
+   * - `limit`: the run's own token budget stopped it (`limit_stop`).
+   */
+  blockedOn?: "user" | "limit" | "goal_exhausted";
+  /** The last thing that happened to the Goal in this run. `paused` means parked, still active. */
+  goal?: "met" | "cleared" | "paused";
+  /** The run yielded to background work that will wake the Session (`background_wait`). */
+  backgroundPending: boolean;
+  /** Why the run started, when the host that queued it said. */
+  trigger?: SessionRunTrigger;
+}
+
 export type StreamEvent = {
   /** Source wall-clock time (Unix milliseconds), retained across durable replay. */
   timestamp?: number;
@@ -787,6 +821,8 @@ type StreamEventPayload =
       /** Final run result, after tool/steer/Goal continuations have settled. */
       text?: string;
       completionKind?: TurnCompletionKind;
+      /** Explicit result of a top-level run; hosts need not infer it from the stream. */
+      outcome?: TurnOutcome;
       agentId?: string;
       /** Whole logical submission timing, independent of individual tool spans. */
       startedAt?: number;

@@ -20,12 +20,29 @@ import { acquireGatewayInstanceLock, type GatewayInstanceLease } from "@cjhyy/co
 import { CONTRACTS } from "@cjhyy/code-shell-core";
 import { dlog } from "./desktop-logger.js";
 import { GatewayChatRequests, GatewayChatRequestError } from "./im-gateway-chat-requests.js";
+import {
+  decideOutboxResult,
+  isOutboxDeliveryOutcome,
+  MAX_OUTBOX_ATTEMPTS,
+  parseOutboxRelayReport,
+  parseSettledDelivery,
+  rememberSettled,
+  type OutboxDeliveryOutcome,
+  type OutboxDeliveryResult,
+  type OutboxRelayReport,
+  type OutboxSettledDelivery,
+} from "./im-gateway-outbox-deliveries.js";
+
+export type {
+  OutboxDeliveryOutcome,
+  OutboxDeliveryResult,
+} from "./im-gateway-outbox-deliveries.js";
 
 export const DESKTOP_CONTROL_PROTOCOL_VERSION = CONTRACTS.desktopControl;
 
 const MAX_DESKTOP_CONTROL_DESCRIPTOR_BYTES = 64 * 1024;
 const DESCRIPTOR_HEALTH_CHECK_INTERVAL_MS = 5_000;
-const GATEWAY_EVENT_OUTBOX_VERSION = 2;
+const GATEWAY_EVENT_OUTBOX_VERSION = 3;
 const MAX_GATEWAY_EVENTS = 200;
 const MAX_GATEWAY_EVENT_TEXT_LENGTH = 100_000;
 const MAX_GATEWAY_EVENT_OUTBOX_BYTES = 96 * 1024 * 1024;
@@ -85,6 +102,8 @@ export interface GatewayControlServerOptions {
   routeSession?: (request: SessionRouteControlRequest) => Promise<unknown>;
   /** Return false until persisted conversation bindings have been restored. */
   isSessionRouteReady?: () => boolean;
+  /** Test seam: the outbox clock (expiry, retry backoff). */
+  now?: () => number;
 }
 
 export interface GatewayControlEventInput {
@@ -109,6 +128,14 @@ export interface GatewayControlEventInput {
   button?: { text: string; url: string };
   attachments?: GatewayControlEventAttachment[];
   target?: { channel: string; target: string };
+  /** Epoch ms: never delivered at or after it; settled `expired` instead. */
+  expiresAt?: number;
+  /**
+   * Retry budget (1..20). Budgeted deliveries give up, and never resend a
+   * possibly delivered send on a channel without client ids (`unknown`).
+   * Absent: retried until delivered (the at-least-once events).
+   */
+  maxAttempts?: number;
 }
 
 export interface GatewayControlEventAttachment {
@@ -123,7 +150,32 @@ export interface GatewayControlEventAttachment {
 export interface GatewayControlEvent extends GatewayControlEventInput {
   id: number;
   createdAt: number;
+  /** 1-based copy number of this delivery (absent: 1). */
+  attempt?: number;
+  /** Desktop-only: this copy is done (settled, or superseded by a retry copy); never served. */
+  closed?: OutboxDeliveryOutcome | "retried";
 }
+
+/** A failed delivery waiting for its next copy. */
+interface GatewayControlEventRetry {
+  event: Omit<GatewayControlEvent, "id" | "closed"> & { deliveryKey: string; attempt: number };
+  dueAt: number;
+}
+
+/** What the relay reports for one served event (`POST /v1/events/result`). */
+export interface GatewayEventResultReport extends OutboxRelayReport {
+  streamId: string;
+  eventId: number;
+  /** Must match the copy's own key when given. */
+  deliveryKey?: string;
+}
+
+/**
+ * A copy the relay has read (in a page, or by asking whether it is live)
+ * may be mid-send when it expires; it stays open this long past its expiry
+ * for the report, so a late "delivered" is not mistaken for an expiry.
+ */
+export const SERVED_EXPIRY_GRACE_MS = 2 * 60_000;
 
 export interface GatewayControlEventContext {
   streamId: string;
@@ -135,6 +187,8 @@ interface GatewayControlEventOutbox {
   acknowledgedEventId: number;
   nextEventId: number;
   events: GatewayControlEvent[];
+  retries: GatewayControlEventRetry[];
+  settled: Array<[string, OutboxSettledDelivery]>;
 }
 
 export type PetChatControlAttachmentKind = "image" | "file" | "audio" | "video";
@@ -228,10 +282,19 @@ export class GatewayControlServer {
   private nextEventId = 1;
   private eventOutboxReady = false;
   private eventMutationTail: Promise<void> = Promise.resolve();
+  private retries: GatewayControlEventRetry[] = [];
+  private settled = new Map<string, OutboxSettledDelivery>();
+  private readonly resultListeners = new Set<(result: OutboxDeliveryResult) => void>();
+  private readonly appendListeners = new Set<(event: GatewayControlEvent) => void>();
+  private deliveryTimer?: ReturnType<typeof setTimeout>;
+  private readonly now: () => number;
+  /** When the relay last read each copy (event id → ms); in memory only. */
+  private readonly servedAt = new Map<number, number>();
 
   private readonly chatRequests: GatewayChatRequests;
 
   constructor(private readonly opts: GatewayControlServerOptions) {
+    this.now = opts.now ?? Date.now;
     this.chatRequests = new GatewayChatRequests((request) => {
       if (!opts.petChat) throw new Error("Mimi chat is unavailable");
       return opts.petChat(request);
@@ -298,6 +361,8 @@ export class GatewayControlServer {
         acknowledgedEventId: 0,
         nextEventId: 1,
         events: [],
+        retries: [],
+        settled: [],
       } satisfies GatewayControlEventOutbox);
     // Also rewrites a validated v1 file into the current schema atomically.
     await this.writeEventOutbox(outbox);
@@ -339,6 +404,7 @@ export class GatewayControlServer {
     }
     this.eventOutboxReady = true;
     this.startDescriptorHealthCheck();
+    this.scheduleDeliveries();
     return this.descriptor;
   }
 
@@ -359,6 +425,8 @@ export class GatewayControlServer {
     if (this.startPromise) await this.startPromise.catch(() => undefined);
     if (this.descriptorHealthTimer) clearInterval(this.descriptorHealthTimer);
     this.descriptorHealthTimer = undefined;
+    if (this.deliveryTimer) clearTimeout(this.deliveryTimer);
+    this.deliveryTimer = undefined;
     this.descriptorHealthError = undefined;
     const server = this.server;
     const descriptor = this.descriptor;
@@ -390,6 +458,17 @@ export class GatewayControlServer {
       if (!this.eventOutboxReady || !this.eventStreamId) {
         throw new Error("Gateway control event stream is not started");
       }
+      const key = event.deliveryKey;
+      // Publishing is idempotent by deliveryKey: a delivery still under way is
+      // the same delivery (a publisher re-driving it after a restart), and a
+      // copy waiting for its retry goes now.
+      const live = key
+        ? this.events.find((entry) => entry.deliveryKey === key && !entry.closed)
+        : undefined;
+      if (live) return live;
+      const waiting = key
+        ? this.retries.find((entry) => entry.event.deliveryKey === key)
+        : undefined;
       if (this.events.length >= MAX_GATEWAY_EVENTS) {
         throw new Error(
           `Gateway control event outbox is full (${MAX_GATEWAY_EVENTS} unacknowledged events)`,
@@ -397,28 +476,273 @@ export class GatewayControlServer {
       }
       const stored = parseGatewayControlEvent({
         ...event,
+        ...(waiting ? { attempt: waiting.event.attempt } : {}),
         // Every event needs an identity independent of streamId:id. This keeps
         // notification progress safe when a client resets a cursor against a
         // restored/rolled-back stream whose numeric ids may be reused.
-        deliveryKey: event.deliveryKey ?? randomBytes(32).toString("hex"),
+        deliveryKey: key ?? randomBytes(32).toString("hex"),
         id: this.nextEventId,
-        createdAt: Date.now(),
+        createdAt: this.now(),
       });
-      const events = [...this.events, stored];
-      const outbox: GatewayControlEventOutbox = {
-        version: GATEWAY_EVENT_OUTBOX_VERSION,
-        streamId: this.eventStreamId,
-        acknowledgedEventId: this.events.at(0)?.id ? this.events[0]!.id - 1 : stored.id - 1,
-        nextEventId: stored.id + 1,
-        events,
-      };
       // Persist before making the event observable. Once publish() resolves, a
       // process restart can recover the same stream/id and retry the notification.
-      await this.writeEventOutbox(outbox);
-      this.restoreEventOutbox(outbox);
+      await this.commitOutbox({
+        events: [...this.events, stored],
+        nextEventId: stored.id + 1,
+        retries: waiting ? this.retries.filter((entry) => entry !== waiting) : this.retries,
+      });
       this.wakeEventWaiters();
       return stored;
     });
+  }
+
+  /** Hear each delivery's final result (delivered, failed, unknown, expired, unauthorized). */
+  onEventResult(listener: (result: OutboxDeliveryResult) => void): () => void {
+    this.resultListeners.add(listener);
+    return () => this.resultListeners.delete(listener);
+  }
+
+  /** Hear each retry copy the outbox appends itself (for the stopped-Gateway direct path). */
+  onEventAppended(listener: (event: GatewayControlEvent) => void): () => void {
+    this.appendListeners.add(listener);
+    return () => this.appendListeners.delete(listener);
+  }
+
+  /**
+   * Record what became of one served event: settle it (and tell the
+   * publisher), or close this copy and schedule the next one. A report for an
+   * unknown or already closed copy is ignored, so a repeated report is harmless.
+   */
+  reportEventResult(report: GatewayEventResultReport): Promise<boolean> {
+    if (!this.descriptor || !this.server || this.stopPromise) return Promise.resolve(false);
+    return this.enqueueEventMutation(async () => {
+      if (report.streamId !== this.eventStreamId) return false;
+      const event = this.events.find((entry) => entry.id === report.eventId);
+      if (event && report.deliveryKey !== undefined && report.deliveryKey !== event.deliveryKey)
+        throw new GatewayControlRequestError("event result delivery key mismatch", 400);
+      const now = this.now();
+      // A copy closed as expired while the relay was sending it: its delivery stands.
+      const key = event?.deliveryKey ?? report.deliveryKey;
+      if (
+        report.outcome === "delivered" &&
+        key !== undefined &&
+        (event?.closed === "expired" || (!event && this.settled.get(key)?.outcome === "expired"))
+      ) {
+        await this.commitOutbox({ settled: this.settle(key, "delivered", undefined, now) });
+        this.notifyResult(key, "delivered");
+        return true;
+      }
+      if (!event || event.closed) return false;
+      this.servedAt.delete(event.id);
+      const decision = decideOutboxResult(event, report, now);
+      const closed: GatewayControlEvent["closed"] =
+        decision.kind === "retry" ? "retried" : decision.outcome;
+      const events = this.events.map((entry) => (entry === event ? { ...entry, closed } : entry));
+      if (decision.kind === "retry") {
+        const { id: _id, closed: _closed, ...copy } = event;
+        await this.commitOutbox({
+          events,
+          retries: [
+            ...this.retries,
+            {
+              event: { ...copy, deliveryKey: event.deliveryKey!, attempt: decision.attempt },
+              dueAt: decision.dueAt,
+            },
+          ],
+        });
+        this.scheduleDeliveries();
+        return true;
+      }
+      await this.commitOutbox({
+        events,
+        settled: this.settle(event.deliveryKey!, decision.outcome, decision.error, now),
+      });
+      this.notifyResult(event.deliveryKey!, decision.outcome, decision.error);
+      return true;
+    });
+  }
+
+  /**
+   * Withdraw a delivery that has not been made: its copies are never served
+   * again and a pending retry is dropped. The relay asks right before every
+   * send (`isEventLive`), so a copy already being sent stops too. Returns
+   * whether anything was still pending.
+   */
+  revokeDelivery(deliveryKey: string, reason = "revoked"): Promise<boolean> {
+    if (!this.descriptor || !this.server || this.stopPromise) return Promise.resolve(false);
+    return this.enqueueEventMutation(async () => {
+      const live = this.events.some((entry) => entry.deliveryKey === deliveryKey && !entry.closed);
+      const waiting = this.retries.some((entry) => entry.event.deliveryKey === deliveryKey);
+      if (!live && !waiting) return false;
+      await this.commitOutbox({
+        events: this.events.map((entry) =>
+          entry.deliveryKey === deliveryKey && !entry.closed
+            ? { ...entry, closed: "revoked" as const }
+            : entry,
+        ),
+        retries: this.retries.filter((entry) => entry.event.deliveryKey !== deliveryKey),
+        settled: this.settle(deliveryKey, "revoked", reason, this.now()),
+      });
+      return true;
+    });
+  }
+
+  /** Where a delivery stands: still under way, settled (how), or unknown to this outbox. */
+  deliveryState(deliveryKey: string): "pending" | "not-ready" | OutboxSettledDelivery | undefined {
+    // Before the outbox file is read nothing is known yet; never "unknown to this outbox".
+    if (!this.eventOutboxReady) return "not-ready";
+    if (
+      this.events.some((entry) => entry.deliveryKey === deliveryKey && !entry.closed) ||
+      this.retries.some((entry) => entry.event.deliveryKey === deliveryKey)
+    )
+      return "pending";
+    const settled = this.settled.get(deliveryKey);
+    return settled ? { ...settled } : undefined;
+  }
+
+  /** Whether this copy may still be sent: in this stream, not closed, not expired. */
+  isEventLive(streamId: string, eventId: number): boolean {
+    if (streamId !== this.eventStreamId) return false;
+    const event = this.events.find((entry) => entry.id === eventId);
+    const now = this.now();
+    if (!event || !this.isServable(event, now)) return false;
+    // About to be sent: it must not quietly expire mid-send.
+    this.servedAt.set(event.id, now);
+    return true;
+  }
+
+  private isServable(event: GatewayControlEvent, now: number): boolean {
+    return !event.closed && (event.expiresAt === undefined || now < event.expiresAt);
+  }
+
+  private settle(
+    deliveryKey: string,
+    outcome: OutboxDeliveryOutcome,
+    error: string | undefined,
+    now: number,
+  ): Map<string, OutboxSettledDelivery> {
+    return rememberSettled(
+      this.settled,
+      deliveryKey,
+      { outcome, at: now, ...(error ? { error: error.slice(0, 500) } : {}) },
+      now,
+    );
+  }
+
+  private notifyResult(deliveryKey: string, outcome: OutboxDeliveryOutcome, error?: string): void {
+    for (const listener of [...this.resultListeners]) {
+      try {
+        listener({ deliveryKey, outcome, ...(error ? { error } : {}) });
+      } catch (failure) {
+        dlog("main", "im_gateway.event_result_listener.failed", { error: String(failure) });
+      }
+    }
+  }
+
+  /**
+   * Persist the next outbox state and adopt it. Closed copies at the head are
+   * acknowledged on the way: nothing will ever serve them, so they must not
+   * hold capacity or the cursor.
+   */
+  private async commitOutbox(next: {
+    events?: GatewayControlEvent[];
+    nextEventId?: number;
+    retries?: GatewayControlEventRetry[];
+    settled?: Map<string, OutboxSettledDelivery>;
+  }): Promise<void> {
+    const events = [...(next.events ?? this.events)];
+    let acknowledgedEventId = this.events.at(0)?.id ? this.events[0]!.id - 1 : this.nextEventId - 1;
+    while (events[0]?.closed) acknowledgedEventId = events.shift()!.id;
+    const nextEventId = next.nextEventId ?? this.nextEventId;
+    if (events.length === 0) acknowledgedEventId = Math.max(acknowledgedEventId, nextEventId - 1);
+    else acknowledgedEventId = events[0]!.id - 1;
+    const outbox: GatewayControlEventOutbox = {
+      version: GATEWAY_EVENT_OUTBOX_VERSION,
+      streamId: this.eventStreamId,
+      acknowledgedEventId,
+      nextEventId,
+      events,
+      retries: next.retries ?? this.retries,
+      settled: [...(next.settled ?? this.settled)],
+    };
+    await this.writeEventOutbox(outbox);
+    this.restoreEventOutbox(outbox);
+  }
+
+  /** One timer for the next due moment: a retry copy, or a delivery's expiry. */
+  private scheduleDeliveries(): void {
+    if (this.deliveryTimer) clearTimeout(this.deliveryTimer);
+    this.deliveryTimer = undefined;
+    if (!this.eventOutboxReady || this.stopPromise) return;
+    const moments = [
+      ...this.retries.map((entry) => entry.dueAt),
+      ...this.events
+        .filter((entry) => !entry.closed && entry.expiresAt !== undefined)
+        .map((entry) =>
+          Math.max(
+            entry.expiresAt!,
+            (this.servedAt.get(entry.id) ?? Number.NEGATIVE_INFINITY) + SERVED_EXPIRY_GRACE_MS,
+          ),
+        ),
+    ];
+    if (moments.length === 0) return;
+    const delay = Math.max(0, Math.min(...moments) - this.now());
+    this.deliveryTimer = setTimeout(
+      () => void this.runDueDeliveries(),
+      Math.min(delay, 2 ** 31 - 1),
+    );
+    this.deliveryTimer.unref?.();
+  }
+
+  /** Test seam and timer body: append due retry copies, settle expired deliveries. */
+  runDueDeliveries(): Promise<void> {
+    if (!this.descriptor || !this.server || this.stopPromise) return Promise.resolve();
+    return this.enqueueEventMutation(async () => {
+      const now = this.now();
+      const expired: string[] = [];
+      let events = this.events.map((entry) => {
+        if (entry.closed || entry.expiresAt === undefined || now < entry.expiresAt) return entry;
+        // Read by the relay: its report may still come (a send in flight at the deadline).
+        const served = this.servedAt.get(entry.id);
+        if (served !== undefined && now < served + SERVED_EXPIRY_GRACE_MS) return entry;
+        expired.push(entry.deliveryKey!);
+        return { ...entry, closed: "expired" as const };
+      });
+      const retries: GatewayControlEventRetry[] = [];
+      const appended: GatewayControlEvent[] = [];
+      let nextEventId = this.nextEventId;
+      for (const entry of this.retries) {
+        if (entry.dueAt > now) retries.push(entry);
+        else if (entry.event.expiresAt !== undefined && now >= entry.event.expiresAt)
+          expired.push(entry.event.deliveryKey);
+        else if (events.length >= MAX_GATEWAY_EVENTS) retries.push(entry);
+        else {
+          const copy = parseGatewayControlEvent({
+            ...entry.event,
+            id: nextEventId,
+            createdAt: now,
+          });
+          nextEventId += 1;
+          events = [...events, copy];
+          appended.push(copy);
+        }
+      }
+      if (expired.length === 0 && appended.length === 0) return;
+      let settled = this.settled;
+      for (const key of expired)
+        settled = rememberSettled(settled, key, { outcome: "expired", at: now }, now);
+      await this.commitOutbox({ events, nextEventId, retries, settled });
+      for (const key of expired) this.notifyResult(key, "expired");
+      if (appended.length > 0) this.wakeEventWaiters();
+      for (const copy of appended)
+        for (const listener of [...this.appendListeners]) {
+          try {
+            listener(copy);
+          } catch (error) {
+            dlog("main", "im_gateway.event_append_listener.failed", { error: String(error) });
+          }
+        }
+    }).finally(() => this.scheduleDeliveries());
   }
 
   /** Stable identity required by delivery checkpoints for this durable event stream. */
@@ -480,13 +804,44 @@ export class GatewayControlServer {
         const waitMs = parseBoundedInteger(url.searchParams.get("waitMs"), 0, 25_000);
         const resetCursor = after > this.nextEventId - 1;
         if (!resetCursor) await this.acknowledgeEvents(after);
-        const events = resetCursor ? [] : await this.eventsAfter(after, waitMs);
+        const page = resetCursor
+          ? { events: [], cursor: after }
+          : await this.eventsAfter(after, waitMs);
         sendJson(res, 200, {
           streamId: this.eventStreamId,
-          events,
-          cursor: events.at(-1)?.id ?? after,
+          events: page.events,
+          cursor: page.cursor,
           ...(resetCursor ? { resetCursor: true } : {}),
         });
+        return;
+      }
+      if (req.method === "POST" && req.url === "/v1/events/result") {
+        const body = await readJsonBody(req, 16 * 1024);
+        const parsed = parseOutboxRelayReport(body);
+        if (
+          !parsed ||
+          !isPlainRecord(body) ||
+          typeof body.streamId !== "string" ||
+          !Number.isSafeInteger(body.eventId)
+        ) {
+          throw new GatewayControlRequestError("invalid event result", 400);
+        }
+        const report = {
+          ...parsed,
+          streamId: body.streamId,
+          eventId: body.eventId as number,
+          ...(typeof body.deliveryKey === "string" ? { deliveryKey: body.deliveryKey } : {}),
+        };
+        sendJson(res, 200, { recorded: await this.reportEventResult(report) });
+        return;
+      }
+      if (req.method === "POST" && req.url === "/v1/events/live") {
+        const body = await readJsonBody(req, 4 * 1024);
+        const { streamId, eventId } = isPlainRecord(body) ? body : {};
+        if (typeof streamId !== "string" || !Number.isSafeInteger(eventId)) {
+          throw new GatewayControlRequestError("invalid event reference", 400);
+        }
+        sendJson(res, 200, { live: this.isEventLive(streamId, eventId as number) });
         return;
       }
       if (req.method === "POST" && req.url === "/v1/open") {
@@ -786,6 +1141,8 @@ export class GatewayControlServer {
     this.eventStreamId = outbox.streamId;
     this.nextEventId = outbox.nextEventId;
     this.events.splice(0, this.events.length, ...outbox.events);
+    this.retries = [...outbox.retries];
+    this.settled = new Map(outbox.settled);
   }
 
   private acknowledgeEvents(after: number): Promise<void> {
@@ -801,15 +1158,24 @@ export class GatewayControlServer {
     // returns our streamId so the client can reset, but it must not erase this
     // stream's events. Repeated/older acknowledgements are no-ops.
     if (after <= acknowledgedEventId || after > latestPublishedEventId) return;
-    const outbox: GatewayControlEventOutbox = {
-      version: GATEWAY_EVENT_OUTBOX_VERSION,
-      streamId: this.eventStreamId,
-      acknowledgedEventId: after,
-      nextEventId: this.nextEventId,
-      events: this.events.filter((event) => event.id > after),
-    };
-    await this.writeEventOutbox(outbox);
-    this.restoreEventOutbox(outbox);
+    // A copy acknowledged without a result report: past its expiry it expired;
+    // otherwise the relay may or may not have sent it.
+    const now = this.now();
+    const unreported = this.events
+      // Events restored from an older outbox may have no key: nobody to tell.
+      .filter((event) => event.id <= after && !event.closed && event.deliveryKey !== undefined)
+      .map((event) => ({
+        key: event.deliveryKey!,
+        outcome: (event.expiresAt !== undefined && now >= event.expiresAt
+          ? "expired"
+          : "unknown") as OutboxDeliveryOutcome,
+      }));
+    let settled = this.settled;
+    for (const { key, outcome } of unreported)
+      settled = rememberSettled(settled, key, { outcome, at: now }, now);
+    await this.commitOutbox({ events: this.events.filter((event) => event.id > after), settled });
+    for (const id of [...this.servedAt.keys()]) if (id <= after) this.servedAt.delete(id);
+    for (const { key, outcome } of unreported) this.notifyResult(key, outcome);
   }
 
   private enqueueEventMutation<T>(operation: () => Promise<T>): Promise<T> {
@@ -821,10 +1187,27 @@ export class GatewayControlServer {
     return result;
   }
 
-  private async eventsAfter(after: number, waitMs: number): Promise<GatewayControlEvent[]> {
-    const read = () => this.events.filter((event) => event.id > after);
+  /**
+   * The copies after `after` the relay may send, and the cursor past
+   * everything read: closed (revoked, settled, retried) and expired copies
+   * are skipped, never served, and acknowledged with the rest.
+   */
+  private async eventsAfter(
+    after: number,
+    waitMs: number,
+  ): Promise<{ events: GatewayControlEvent[]; cursor: number }> {
+    const read = () => {
+      const now = this.now();
+      const pending = this.events.filter((event) => event.id > after);
+      const served = pending.filter((event) => this.isServable(event, now));
+      for (const event of served) this.servedAt.set(event.id, now);
+      return {
+        events: served.map(({ closed: _closed, ...event }) => event),
+        cursor: pending.at(-1)?.id ?? after,
+      };
+    };
     const immediate = read();
-    if (immediate.length > 0 || waitMs === 0 || !this.server) return immediate;
+    if (immediate.cursor > after || waitMs === 0 || !this.server) return immediate;
     await new Promise<void>((resolve) => {
       const done = () => {
         clearTimeout(timer);
@@ -984,12 +1367,23 @@ function parseGatewayControlEventOutbox(raw: string, source: string): GatewayCon
     throw new Error(`Invalid Gateway event outbox: ${source}`);
   }
   const legacy = value.version === 1;
+  // Version 2 had no retry copies or settled deliveries yet.
   const allowedKeys = legacy
     ? ["version", "streamId", "nextEventId", "events"]
-    : ["version", "streamId", "acknowledgedEventId", "nextEventId", "events"];
+    : value.version === 2
+      ? ["version", "streamId", "acknowledgedEventId", "nextEventId", "events"]
+      : [
+          "version",
+          "streamId",
+          "acknowledgedEventId",
+          "nextEventId",
+          "events",
+          "retries",
+          "settled",
+        ];
   if (
     !hasOnlyKeys(value, allowedKeys) ||
-    (!legacy && value.version !== GATEWAY_EVENT_OUTBOX_VERSION) ||
+    (!legacy && value.version !== 2 && value.version !== GATEWAY_EVENT_OUTBOX_VERSION) ||
     typeof value.streamId !== "string" ||
     !GATEWAY_EVENT_STREAM_ID_RE.test(value.streamId) ||
     !Number.isSafeInteger(value.nextEventId) ||
@@ -1022,12 +1416,44 @@ function parseGatewayControlEventOutbox(raw: string, source: string): GatewayCon
   if (value.nextEventId !== expectedNextEventId || !Number.isSafeInteger(expectedNextEventId)) {
     throw new Error(`Gateway event outbox cursor is invalid: ${source}`);
   }
+  const rawRetries = value.retries ?? [];
+  const rawSettled = value.settled ?? [];
+  if (
+    !Array.isArray(rawRetries) ||
+    rawRetries.length > MAX_GATEWAY_EVENTS ||
+    !Array.isArray(rawSettled) ||
+    rawSettled.length > 1_000
+  ) {
+    throw new Error(`Invalid Gateway event outbox deliveries: ${source}`);
+  }
   return {
     version: GATEWAY_EVENT_OUTBOX_VERSION,
     streamId: value.streamId,
     acknowledgedEventId,
     nextEventId: value.nextEventId as number,
     events,
+    retries: rawRetries.map(parseGatewayControlEventRetry),
+    settled: rawSettled.map(parseSettledDelivery),
+  };
+}
+
+function parseGatewayControlEventRetry(value: unknown): GatewayControlEventRetry {
+  if (
+    !isPlainRecord(value) ||
+    !hasOnlyKeys(value, ["event", "dueAt"]) ||
+    !isPlainRecord(value.event)
+  )
+    throw new Error("Invalid Gateway event retry");
+  const {
+    id: _id,
+    closed: _closed,
+    ...event
+  } = parseGatewayControlEvent({ ...value.event, id: 1 });
+  if (!event.deliveryKey || event.attempt === undefined || !Number.isSafeInteger(value.dueAt))
+    throw new Error("Invalid Gateway event retry");
+  return {
+    event: { ...event, deliveryKey: event.deliveryKey, attempt: event.attempt },
+    dueAt: value.dueAt as number,
   };
 }
 
@@ -1045,7 +1471,21 @@ function parseGatewayControlEvent(value: unknown): GatewayControlEvent {
       "button",
       "attachments",
       "target",
+      "expiresAt",
+      "maxAttempts",
+      "attempt",
+      "closed",
     ]) ||
+    (value.expiresAt !== undefined && !Number.isSafeInteger(value.expiresAt)) ||
+    (value.maxAttempts !== undefined &&
+      (!Number.isSafeInteger(value.maxAttempts) ||
+        Number(value.maxAttempts) < 1 ||
+        Number(value.maxAttempts) > MAX_OUTBOX_ATTEMPTS)) ||
+    (value.attempt !== undefined &&
+      (!Number.isSafeInteger(value.attempt) || Number(value.attempt) < 1)) ||
+    (value.closed !== undefined &&
+      value.closed !== "retried" &&
+      !isOutboxDeliveryOutcome(value.closed)) ||
     !Number.isSafeInteger(value.id) ||
     Number(value.id) < 1 ||
     !Number.isSafeInteger(value.createdAt) ||
@@ -1082,6 +1522,12 @@ function parseGatewayControlEvent(value: unknown): GatewayControlEvent {
     ...(value.target === undefined
       ? {}
       : { target: { ...(value.target as { channel: string; target: string }) } }),
+    ...(value.expiresAt === undefined ? {} : { expiresAt: value.expiresAt as number }),
+    ...(value.maxAttempts === undefined ? {} : { maxAttempts: value.maxAttempts as number }),
+    ...(value.attempt === undefined ? {} : { attempt: value.attempt as number }),
+    ...(value.closed === undefined
+      ? {}
+      : { closed: value.closed as NonNullable<GatewayControlEvent["closed"]> }),
   };
 }
 

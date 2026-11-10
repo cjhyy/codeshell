@@ -20,14 +20,31 @@ import {
   DesktopControlUnavailableError,
   parseDescriptor,
 } from "./desktop-control-client.js";
+import { DESKTOP_CONTROL_PROTOCOL_VERSION } from "./protocol.js";
 
 const descriptor = JSON.stringify({
-  version: 1,
+  version: DESKTOP_CONTROL_PROTOCOL_VERSION,
   pid: 123,
   baseUrl: "http://127.0.0.1:3456",
   token: "a".repeat(64),
   startedAt: 100,
 });
+
+/** Desktop's event endpoints for a fake fetch: results are recorded, polls go to `poll`. */
+function eventEndpoints(
+  poll: (url: string) => Response | Promise<Response>,
+  reported: unknown[] = [],
+): typeof fetch {
+  return (async (url: string | URL | Request, init?: RequestInit) => {
+    const path = new URL(String(url)).pathname;
+    if (path === "/v1/events/result") {
+      reported.push(JSON.parse(String(init?.body)));
+      return Response.json({ ok: true });
+    }
+    if (path === "/v1/events/live") return Response.json({ live: true });
+    return poll(String(url));
+  }) as typeof fetch;
+}
 
 describe("DesktopControlClient", () => {
   test.each([null, {}, { pending: true, requestId: "bad/path" }])(
@@ -111,7 +128,7 @@ describe("DesktopControlClient", () => {
     expect(() =>
       parseDescriptor(
         JSON.stringify({
-          version: 1,
+          version: DESKTOP_CONTROL_PROTOCOL_VERSION,
           pid: 1,
           baseUrl: "https://attacker.example",
           token: "a".repeat(64),
@@ -253,50 +270,161 @@ describe("DesktopControlClient", () => {
     });
   });
 
-  test("retries a failed event handler and checkpoints only after success", async () => {
+  test("reports a failed event and moves on; only a delivered page is checkpointed", async () => {
     const root = mkdtempSync(join(tmpdir(), "codeshell-event-checkpoint-"));
     const checkpointPath = join(root, "nested", "events.json");
     const abort = new AbortController();
-    let handled = 0;
-    let errors = 0;
-    let recoveries = 0;
+    const handled: number[] = [];
+    const reported: unknown[] = [];
+    const after: number[] = [];
     const client = new DesktopControlClient(baseConfig(), {
       readDescriptor: async () => descriptor,
       sleep: async () => undefined,
-      fetch: async () =>
-        Response.json({
+      fetch: eventEndpoints((url) => {
+        after.push(Number(new URL(url).searchParams.get("after")));
+        return Response.json({
           streamId: "a".repeat(32),
-          cursor: 1,
-          events: [{ id: 1, createdAt: 1, type: "tunnel.connected", text: "ready" }],
-        }),
+          cursor: 2,
+          events: [
+            {
+              id: 1,
+              createdAt: 1,
+              deliveryKey: "d".repeat(64),
+              type: "pet.task.completed",
+              text: "one",
+              target: { channel: "wechat", target: "owner" },
+            },
+            { id: 2, createdAt: 1, type: "tunnel.connected", text: "two" },
+          ],
+        });
+      }, reported),
     });
     try {
       await client.watchEvents(
         abort.signal,
-        async () => {
-          handled++;
-          if (handled === 1) throw new Error("temporary adapter error");
+        async (event) => {
+          handled.push(event.id);
+          if (event.id === 1)
+            throw Object.assign(new Error("temporary adapter error"), {
+              attempted: true,
+              idempotent: true,
+            });
           abort.abort();
         },
-        {
-          checkpointPath,
-          retryBaseMs: 1,
-          retryMaxMs: 1,
-          onError: () => errors++,
-          onRecovered: () => recoveries++,
-        },
+        { checkpointPath, retryBaseMs: 1, retryMaxMs: 1 },
       );
-      expect(handled).toBe(2);
-      expect({ errors, recoveries }).toEqual({ errors: 1, recoveries: 1 });
+      // The failing event did not hold up the one behind it.
+      expect(handled).toEqual([1, 2]);
+      expect(after).toEqual([0]);
+      expect(reported).toEqual([
+        {
+          streamId: "a".repeat(32),
+          eventId: 1,
+          deliveryKey: "d".repeat(64),
+          outcome: "failed",
+          attempted: true,
+          idempotent: true,
+          error: "temporary adapter error",
+        },
+        { streamId: "a".repeat(32), eventId: 2, outcome: "delivered" },
+      ]);
       expect(JSON.parse(readFileSync(checkpointPath, "utf-8"))).toEqual({
         version: 1,
         streamId: "a".repeat(32),
-        cursor: 1,
+        cursor: 2,
       });
       if (process.platform !== "win32") expect(statSync(checkpointPath).mode & 0o777).toBe(0o600);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+
+  test("an unreachable Desktop retries the page instead of reporting", async () => {
+    const abort = new AbortController();
+    let polls = 0;
+    const reported: unknown[] = [];
+    let handled = 0;
+    const client = new DesktopControlClient(baseConfig(), {
+      readDescriptor: async () => descriptor,
+      sleep: async () => undefined,
+      fetch: eventEndpoints(() => {
+        polls++;
+        return Response.json({
+          streamId: "a".repeat(32),
+          cursor: 1,
+          events: [{ id: 1, createdAt: 1, type: "tunnel.connected", text: "ready" }],
+        });
+      }, reported),
+    });
+    await client.watchEvents(
+      abort.signal,
+      async () => {
+        handled++;
+        if (handled === 1) throw new DesktopControlUnavailableError("桌面端未在线");
+        abort.abort();
+      },
+      { retryBaseMs: 1, retryMaxMs: 1 },
+    );
+    expect({ polls, handled }).toEqual({ polls: 2, handled: 2 });
+    expect(reported).toEqual([{ streamId: "a".repeat(32), eventId: 1, outcome: "delivered" }]);
+  });
+
+  test("a result Desktop did not record re-reads the page instead of moving on", async () => {
+    const abort = new AbortController();
+    let polls = 0;
+    let reports = 0;
+    const client = new DesktopControlClient(baseConfig(), {
+      readDescriptor: async () => descriptor,
+      sleep: async () => undefined,
+      fetch: (async (url: string | URL | Request) => {
+        const path = new URL(String(url)).pathname;
+        if (path === "/v1/events/result") return Response.json({ recorded: ++reports > 1 });
+        polls++;
+        return Response.json({
+          streamId: "a".repeat(32),
+          cursor: 1,
+          events: [{ id: 1, createdAt: 1, type: "tunnel.connected", text: "ready" }],
+        });
+      }) as typeof fetch,
+    });
+    let handled = 0;
+    await client.watchEvents(
+      abort.signal,
+      async () => {
+        if (++handled === 2) abort.abort();
+      },
+      { retryBaseMs: 1, retryMaxMs: 1 },
+    );
+    expect({ polls, reports, handled }).toEqual({ polls: 2, reports: 2, handled: 2 });
+  });
+
+  test("hands the handler a freshness check for the event it is sending", async () => {
+    const abort = new AbortController();
+    const asked: unknown[] = [];
+    const client = new DesktopControlClient(baseConfig(), {
+      readDescriptor: async () => descriptor,
+      fetch: (async (url: string | URL | Request, init?: RequestInit) => {
+        const path = new URL(String(url)).pathname;
+        if (path === "/v1/events/live") {
+          asked.push(JSON.parse(String(init?.body)));
+          return Response.json({ live: false });
+        }
+        if (path === "/v1/events/result") return Response.json({ ok: true });
+        return Response.json({
+          streamId: "a".repeat(32),
+          cursor: 7,
+          events: [{ id: 7, createdAt: 1, type: "tunnel.connected", text: "ready" }],
+        });
+      }) as typeof fetch,
+    });
+    let live: boolean | undefined;
+    await client.watchEvents(abort.signal, async (_event, context) => {
+      live = await context.isLive?.();
+      abort.abort();
+      return { outcome: "revoked" };
+    });
+    expect(live).toBe(false);
+    expect(asked).toEqual([{ streamId: "a".repeat(32), eventId: 7 }]);
   });
 
   test("does not acknowledge an event when its durable checkpoint write fails", async () => {
@@ -316,7 +444,7 @@ describe("DesktopControlClient", () => {
     let errors = 0;
     const client = new DesktopControlClient(baseConfig(), {
       readDescriptor: async () => descriptor,
-      fetch: async (url) => {
+      fetch: eventEndpoints(async (url) => {
         const cursor = Number(new URL(String(url)).searchParams.get("after"));
         after.push(cursor);
         requests++;
@@ -331,7 +459,7 @@ describe("DesktopControlClient", () => {
           cursor: 1,
           events: [{ id: 1, createdAt: 1, type: "automation.completed", text: "ready" }],
         });
-      },
+      }),
       sleep: async () => {
         rmSync(checkpointDir, { force: true });
         mkdirSync(checkpointDir);
@@ -371,8 +499,8 @@ describe("DesktopControlClient", () => {
     const after: number[] = [];
     const client = new DesktopControlClient(baseConfig(), {
       readDescriptor: async () => descriptor,
-      fetch: async (url) => {
-        const cursor = Number(new URL(String(url)).searchParams.get("after"));
+      fetch: eventEndpoints((url) => {
+        const cursor = Number(new URL(url).searchParams.get("after"));
         after.push(cursor);
         if (cursor === 99) {
           return Response.json({ streamId: "b".repeat(32), cursor: 99, events: [] });
@@ -382,7 +510,7 @@ describe("DesktopControlClient", () => {
           cursor: 1,
           events: [{ id: 1, createdAt: 1, type: "tunnel.connected", text: "new" }],
         });
-      },
+      }),
     });
     try {
       await client.watchEvents(abort.signal, async () => abort.abort(), { checkpointPath });
@@ -408,8 +536,8 @@ describe("DesktopControlClient", () => {
     const after: number[] = [];
     const client = new DesktopControlClient(baseConfig(), {
       readDescriptor: async () => descriptor,
-      fetch: async (url) => {
-        const cursor = Number(new URL(String(url)).searchParams.get("after"));
+      fetch: eventEndpoints((url) => {
+        const cursor = Number(new URL(url).searchParams.get("after"));
         after.push(cursor);
         if (cursor === 99) {
           return Response.json({
@@ -424,7 +552,7 @@ describe("DesktopControlClient", () => {
           cursor: 1,
           events: [{ id: 1, createdAt: 1, type: "tunnel.connected", text: "recovered" }],
         });
-      },
+      }),
     });
     try {
       await client.watchEvents(abort.signal, async () => abort.abort(), { checkpointPath });

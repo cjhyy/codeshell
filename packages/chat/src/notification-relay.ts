@@ -1,15 +1,17 @@
+import { createHash } from "node:crypto";
 import { constants } from "node:fs";
 import { open } from "node:fs/promises";
 import { isAbsolute } from "node:path";
 import {
   channelCapabilities,
+  isNotDelivered,
   type ChannelAdapter,
   type ChatAttachmentKind,
   type ChannelCapabilities,
   type OutgoingAttachment,
 } from "./channel.js";
 import type { GatewayNotificationTarget } from "./config.js";
-import type { DesktopEventContext } from "./desktop-control-client.js";
+import type { DesktopEventContext, DesktopEventDelivery } from "./desktop-control-client.js";
 import type { DesktopControlEvent } from "./protocol.js";
 import {
   NotificationDeliveryProgress,
@@ -80,9 +82,64 @@ export function splitNotificationTextForChannel(
 }
 
 /**
- * Builds an at-least-once Desktop event sender. Successful targets are kept in
- * memory while a failed target is retried, so one unhealthy adapter does not
- * duplicate notifications on the adapters that already accepted the event.
+ * A failed delivery, as reported back to Desktop: whether a platform send was
+ * made (so the target may have received it) and whether every failed send was
+ * on a channel that collapses resends with the same client id.
+ */
+export class NotificationDeliveryError extends AggregateError {
+  constructor(
+    errors: unknown[],
+    message: string,
+    readonly attempted: boolean,
+    readonly idempotent: boolean,
+  ) {
+    super(errors, message);
+    this.name = "NotificationDeliveryError";
+  }
+}
+
+/** Why an event stopped before (all of) it was sent. */
+class DeliveryStopped extends Error {
+  constructor(readonly outcome: "expired" | "revoked") {
+    super(outcome);
+  }
+}
+
+/** A failed send on one target, with what the report needs to know about it. */
+class TargetSendFailure extends Error {
+  constructor(
+    readonly reason: unknown,
+    readonly attempted: boolean,
+    readonly idempotent: boolean,
+  ) {
+    super(reason instanceof Error ? reason.message : String(reason));
+  }
+}
+
+/**
+ * The platform client id for one part of one event on one target. Stable
+ * across retries (Desktop re-appends a failed delivery with the same
+ * deliveryKey), so a channel that honours client ids drops the duplicate of
+ * a send whose acknowledgement was lost. Per target, so two owner chats on
+ * one account never collide.
+ */
+export function notificationClientId(eventKey: string, targetKey: string, part: string): string {
+  const key = createHash("sha256")
+    .update(eventKey)
+    .update("\0")
+    .update(targetKey)
+    .digest("hex")
+    .slice(0, 24);
+  return `code-shell-notice-${key}-${part}`;
+}
+
+/**
+ * Builds a Desktop event sender that tries each event once. Successful
+ * targets are checkpointed, so a retried copy (same deliveryKey) only sends
+ * what is still missing and never duplicates the targets that accepted it.
+ * Right before every platform send it checks that the event has not expired
+ * and that Desktop still wants it (`context.isLive`): a revoked event is
+ * never sent.
  */
 export function createDesktopNotificationHandler(
   adapters: readonly ChannelAdapter[],
@@ -91,10 +148,12 @@ export function createDesktopNotificationHandler(
     progressStore?: NotificationDeliveryProgressStore;
     /** Revalidate current owner authorization immediately before transport. */
     authorizeTarget?: (target: GatewayNotificationTarget) => boolean | Promise<boolean>;
+    now?: () => number;
   } = {},
-): (event: DesktopControlEvent, context: DesktopEventContext) => Promise<void> {
+): (event: DesktopControlEvent, context: DesktopEventContext) => Promise<DesktopEventDelivery> {
   const adapterByChannel = new Map(adapters.map((adapter) => [adapter.channel, adapter]));
   const progress = new NotificationDeliveryProgress(options.progressStore);
+  const now = options.now ?? Date.now;
   const configuredTargetKeys = new Set(
     targets.map(({ channel, target }) => `${channel}\0${target}`),
   );
@@ -105,15 +164,15 @@ export function createDesktopNotificationHandler(
 
   return async (event, context) => {
     validateDesktopNotificationEvent(event);
+    if (event.expiresAt !== undefined && now() >= event.expiresAt) return { outcome: "expired" };
     const requestedTargets = event.target ? [event.target] : targets;
     const authorizations = await Promise.all(
       requestedTargets.map((target) => authorizeTarget(target)),
     );
     const eventTargets = requestedTargets.filter((_, index) => authorizations[index] === true);
     // Revoking a target is an owner decision, not a transient transport
-    // failure. Treat a fully-revoked event as handled so it cannot block every
-    // later outbox event while still guaranteeing no send occurs.
-    if (eventTargets.length === 0) return;
+    // failure: report it, and never send.
+    if (eventTargets.length === 0) return { outcome: "unauthorized" };
     // A semantic key survives Desktop/event-server restarts. Keep the on-disk
     // progress schema compact by using its first 128 bits plus a reserved zero
     // event suffix; the producer supplies a full SHA-256 key.
@@ -122,12 +181,44 @@ export function createDesktopNotificationHandler(
       : `${context.streamId}:${event.id}`;
     await progress.begin(eventKey);
 
+    // One stop for all targets: the first check that trips ends every target's sends.
+    let stopped: DeliveryStopped | undefined;
+    const gate = async (): Promise<void> => {
+      if (stopped) throw stopped;
+      if (event.expiresAt !== undefined && now() >= event.expiresAt)
+        stopped ??= new DeliveryStopped("expired");
+      else if (context.isLive && !(await context.isLive()))
+        stopped ??= new DeliveryStopped("revoked");
+      if (stopped) throw stopped;
+    };
+
     const results = await Promise.allSettled(
       eventTargets.map(async ({ channel, target }) => {
         const targetKey = notificationTargetProgressKey(channel, target);
         const adapter = adapterByChannel.get(channel);
-        if (!adapter) throw new Error(`Notification adapter is unavailable: ${channel}`);
+        if (!adapter) {
+          throw new TargetSendFailure(
+            new Error(`Notification adapter is unavailable: ${channel}`),
+            false,
+            false,
+          );
+        }
         const capabilities = channelCapabilities(adapter);
+        const idempotent = capabilities.outbound.idempotentSend === true;
+        /** One platform send; a failure from it may have reached the target. */
+        const send = async (message: Parameters<ChannelAdapter["send"]>[1], part: string) => {
+          await gate();
+          try {
+            if (idempotent)
+              await adapter.send(target, message, {
+                clientId: notificationClientId(eventKey, targetKey, part),
+              });
+            else await adapter.send(target, message);
+          } catch (error) {
+            // A definite rejection reached no one; anything else may have.
+            throw new TargetSendFailure(error, !isNotDelivered(error), idempotent);
+          }
+        };
         const supportedEventAttachments = (event.attachments ?? []).filter((attachment) =>
           capabilities.outbound.attachments.includes(attachment.kind),
         );
@@ -158,12 +249,15 @@ export function createDesktopNotificationHandler(
         const combineAttachments = combinedAttachments.length > 0;
         while (chunkIndex < chunks.length) {
           const isLast = chunkIndex === chunks.length - 1;
-          await adapter.send(target, {
-            text: chunks[chunkIndex]!,
-            ...(chunkIndex === 0 && event.title ? { title: event.title } : {}),
-            ...(isLast && event.button ? { button: event.button } : {}),
-            ...(isLast && combineAttachments ? { attachments: combinedAttachments } : {}),
-          });
+          await send(
+            {
+              text: chunks[chunkIndex]!,
+              ...(chunkIndex === 0 && event.title ? { title: event.title } : {}),
+              ...(isLast && event.button ? { button: event.button } : {}),
+              ...(isLast && combineAttachments ? { attachments: combinedAttachments } : {}),
+            },
+            `c${chunkIndex}`,
+          );
           chunkIndex += 1;
           if (isLast && combineAttachments) {
             attachmentIndex = supportedEventAttachments.length;
@@ -175,24 +269,49 @@ export function createDesktopNotificationHandler(
             isLast && combineAttachments ? attachmentIndex : undefined,
           );
         }
-        if (attachmentError) throw attachmentError;
+        if (attachmentError) throw new TargetSendFailure(attachmentError, false, idempotent);
         while (attachmentIndex < supportedEventAttachments.length) {
           const descriptor = supportedEventAttachments[attachmentIndex]!;
-          const [attachment] = await materializeOutgoingAttachments([descriptor]);
-          if (!attachment) throw new Error("Outgoing attachment could not be materialized");
-          await adapter.send(target, { text: "", attachments: [attachment] });
+          let attachment: OutgoingAttachment | undefined;
+          try {
+            [attachment] = await materializeOutgoingAttachments([descriptor]);
+          } catch (error) {
+            throw new TargetSendFailure(error, false, idempotent);
+          }
+          if (!attachment)
+            throw new TargetSendFailure(
+              new Error("Outgoing attachment could not be materialized"),
+              false,
+              idempotent,
+            );
+          await send({ text: "", attachments: [attachment] }, `a${attachmentIndex}`);
           attachmentIndex += 1;
           await progress.mark(eventKey, targetKey, chunkIndex, attachmentIndex);
         }
       }),
     );
+    await progress.flush();
     const failures = results
       .filter((result): result is PromiseRejectedResult => result.status === "rejected")
       .map(({ reason }) => reason);
-    if (failures.length > 0) {
-      throw new AggregateError(failures, `Desktop event ${eventKey} notification failed`);
+    const sendFailures = failures.filter(
+      (reason): reason is TargetSendFailure => reason instanceof TargetSendFailure,
+    );
+    // Anything else (a progress write) is a failure of this handler, not of a send.
+    const other = failures.filter(
+      (reason) => !(reason instanceof TargetSendFailure) && !(reason instanceof DeliveryStopped),
+    );
+    if (other.length > 0) throw other[0];
+    if (sendFailures.length > 0) {
+      throw new NotificationDeliveryError(
+        sendFailures.map((failure) => failure.reason),
+        `Desktop event ${eventKey} notification failed`,
+        sendFailures.some((failure) => failure.attempted),
+        sendFailures.every((failure) => !failure.attempted || failure.idempotent),
+      );
     }
-    await progress.flush();
+    if (stopped) return { outcome: stopped.outcome };
+    return { outcome: "delivered" };
   };
 }
 
@@ -220,6 +339,8 @@ function validateDesktopNotificationEvent(event: DesktopControlEvent): void {
         event.target.target.length > 4_096 ||
         NOTIFICATION_CONTROL_CHARACTER_RE.test(event.target.target))) ||
     (event.button !== undefined && !isValidNotificationButton(event.button)) ||
+    (event.expiresAt !== undefined &&
+      (typeof event.expiresAt !== "number" || !Number.isSafeInteger(event.expiresAt))) ||
     !Array.isArray(event.attachments ?? []) ||
     (event.attachments?.length ?? 0) > 4 ||
     (event.attachments ?? []).some((attachment) => !isValidAttachmentDescriptor(attachment))

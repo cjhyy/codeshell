@@ -3,6 +3,7 @@ import type { ModelEntry } from "../llm/model-pool.js";
 import type { SessionRunTrigger, StreamEvent } from "../types.js";
 import type { PermissionMode, SessionKind } from "../types.js";
 import { isAbortError } from "../llm/client-base.js";
+import { withOutcomeTrigger } from "../engine/turn-outcome.js";
 import type { InputAttachmentMeta, PendingApprovalMetadata } from "./types.js";
 import type { ApprovalRouter } from "../tool-system/permission.js";
 import type { EngineRunOptions, RunBehaviorMode } from "../engine/run-types.js";
@@ -99,7 +100,10 @@ export interface TurnOpts {
   trigger?: SessionRunTrigger;
 }
 
-/** Mark a top-level `session_started` with why its run started (other events pass through). */
+/**
+ * Mark a top-level `session_started`, and the `outcome` of its `turn_complete`,
+ * with why the run started (other events pass through).
+ */
 export function withRunTrigger(
   event: StreamEvent,
   trigger: SessionRunTrigger | undefined,
@@ -108,7 +112,7 @@ export function withRunTrigger(
     event.type === "session_started" &&
     !("agentId" in event && event.agentId !== undefined)
     ? { ...event, trigger }
-    : event;
+    : withOutcomeTrigger(event, trigger);
 }
 
 interface QueuedTurn {

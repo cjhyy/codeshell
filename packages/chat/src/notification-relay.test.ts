@@ -10,8 +10,136 @@ import type {
 import {
   createDesktopNotificationHandler,
   materializeOutgoingAttachments,
+  NotificationDeliveryError,
   splitNotificationText,
 } from "./notification-relay.js";
+
+describe("expiring, revocable events with stable client ids", () => {
+  const owner = { channel: "wechat", target: "owner-dm" };
+  const event = {
+    id: 3,
+    createdAt: 1,
+    deliveryKey: "e".repeat(64),
+    type: "pet.task.completed" as const,
+    text: "做完了",
+    target: owner,
+  };
+  /** A WeChat-like adapter: honours client ids; the first `failures` sends throw. */
+  function wechat(failures = 0) {
+    const sends: Array<{ text: string; clientId?: string }> = [];
+    const adapter: ChannelAdapter = {
+      channel: "wechat",
+      capabilities: {
+        inbound: { text: true, attachments: [] },
+        outbound: {
+          text: true,
+          proactive: true,
+          direct: true,
+          idempotentSend: true,
+          button: "link",
+          attachments: [],
+        },
+      },
+      run: async () => undefined,
+      send: async (_target, message, options) => {
+        sends.push({
+          text: message.text,
+          ...(options?.clientId ? { clientId: options.clientId } : {}),
+        });
+        if (sends.length <= failures) throw new Error("socket hang up");
+      },
+    };
+    return { adapter, sends };
+  }
+
+  test("a retried copy reuses the client id of the failed send", async () => {
+    const { adapter, sends } = wechat(1);
+    const handle = createAuthorizedTargetHandler(adapter);
+    const failure = await handle(event, { streamId: "a".repeat(32) }).catch((error) => error);
+    expect(failure).toBeInstanceOf(NotificationDeliveryError);
+    expect(failure).toMatchObject({ attempted: true, idempotent: true });
+    // Desktop re-appends the same delivery as a new copy: same deliveryKey, new id.
+    expect(await handle({ ...event, id: 9, attempt: 2 }, { streamId: "a".repeat(32) })).toEqual({
+      outcome: "delivered",
+    });
+    expect(sends).toHaveLength(2);
+    expect(sends[0]!.clientId).toMatch(/^code-shell-notice-[0-9a-f]{24}-c0$/u);
+    expect(sends[1]!.clientId).toBe(sends[0]!.clientId);
+    // Another target gets its own ids.
+    const other = wechat();
+    await createAuthorizedTargetHandler(other.adapter)(
+      { ...event, target: { channel: "wechat", target: "someone-else" } },
+      { streamId: "a".repeat(32) },
+    );
+    expect(other.sends[0]!.clientId).not.toBe(sends[0]!.clientId);
+  });
+
+  test("a failure on a channel without client ids is reported as possibly sent", async () => {
+    const adapter: ChannelAdapter = {
+      channel: "telegram",
+      run: async () => undefined,
+      send: async () => {
+        throw new Error("timeout");
+      },
+    };
+    const failure = await createAuthorizedTargetHandler(adapter)(
+      { ...event, target: { channel: "telegram", target: "1" } },
+      { streamId: "a".repeat(32) },
+    ).catch((error) => error);
+    expect(failure).toMatchObject({ attempted: true, idempotent: false });
+  });
+
+  test("an adapter that is not running fails without a send", async () => {
+    const failure = await createDesktopNotificationHandler([], [], { authorizeTarget: () => true })(
+      event,
+      { streamId: "a".repeat(32) },
+    ).catch((error) => error);
+    expect(failure).toMatchObject({ attempted: false });
+  });
+
+  test("an expired event is never sent", async () => {
+    const { adapter, sends } = wechat();
+    const handle = createDesktopNotificationHandler([adapter], [], {
+      authorizeTarget: () => true,
+      now: () => 2_000,
+    });
+    expect(await handle({ ...event, expiresAt: 2_000 }, { streamId: "a".repeat(32) })).toEqual({
+      outcome: "expired",
+    });
+    expect(sends).toEqual([]);
+  });
+
+  test("an event revoked between serve and send is never sent", async () => {
+    const { adapter, sends } = wechat();
+    const asked: number[] = [];
+    expect(
+      await createAuthorizedTargetHandler(adapter)(event, {
+        streamId: "a".repeat(32),
+        isLive: async () => {
+          asked.push(event.id);
+          return false;
+        },
+      }),
+    ).toEqual({ outcome: "revoked" });
+    expect(asked).toEqual([3]);
+    expect(sends).toEqual([]);
+  });
+
+  test("the freshness check runs before every platform send", async () => {
+    const { adapter, sends } = wechat();
+    let checks = 0;
+    const long = { ...event, text: "x".repeat(9_000) };
+    expect(
+      await createAuthorizedTargetHandler(adapter)(long, {
+        streamId: "a".repeat(32),
+        // Revoked after the first chunk went out.
+        isLive: async () => ++checks === 1,
+      }),
+    ).toEqual({ outcome: "revoked" });
+    expect(checks).toBe(2);
+    expect(sends).toHaveLength(1);
+  });
+});
 
 describe("createDesktopNotificationHandler", () => {
   test("retries only failed targets for the same event", async () => {

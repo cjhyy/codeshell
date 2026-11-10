@@ -140,6 +140,25 @@ export function isInQuietHours(
   return start < end ? minute >= start && minute < end : minute >= start || minute < end;
 }
 
+/**
+ * The next moment quiet hours begin after `now` (a whole minute); Infinity
+ * without a window. A notice sent outside quiet hours is not redelivered
+ * after this: its outbox delivery expires and the digest takes it.
+ */
+export function nextQuietHoursStart(
+  window: RouteState["quietHours"],
+  now: number,
+  timezoneOffsetMin: number,
+): number {
+  if (!window) return Number.POSITIVE_INFINITY;
+  const start = parseClock(window.start);
+  const end = parseClock(window.end);
+  if (start === undefined || end === undefined || start === end) return Number.POSITIVE_INFINITY;
+  const minute = localMinuteOfDay(now, timezoneOffsetMin);
+  const ahead = (start - minute + MINUTES_PER_DAY) % MINUTES_PER_DAY || MINUTES_PER_DAY;
+  return (Math.floor(now / 60_000) + ahead) * 60_000;
+}
+
 function usable(state: RouteState, channel: string | undefined): channel is string {
   if (channel === undefined || !Object.hasOwn(state.imReady, channel)) return false;
   return state.imReady[channel] !== "unavailable";

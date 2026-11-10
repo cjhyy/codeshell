@@ -72,6 +72,7 @@ describe("Engine prompt_too_long terminal event", () => {
         type: "turn_complete",
         reason: "prompt_too_long",
         text: result.text,
+        outcome: { didWork: false, backgroundPending: false },
         timestamp: expect.any(Number),
         startedAt: expect.any(Number),
         completedAt: expect.any(Number),

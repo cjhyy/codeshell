@@ -1,9 +1,12 @@
 import { beforeEach, describe, expect, test } from "bun:test";
+import type { ConversationSessionRoute, PetLongTask } from "@cjhyy/code-shell-pet";
 import type { NoticeEvent } from "@cjhyy/code-shell-pet/protocol";
+import { createPetDeliveryResolver, type DeliveryPlanEntry } from "./pet-delivery-plan.js";
 import type { NoticeRule, NoticeRulePatch } from "./pet-rule-store.js";
 import { PetRuleStoreError } from "./pet-rule-store.js";
 import type { DesktopPendingDecision, DesktopPetProjectionEvent } from "./pet-state-aggregator.js";
 import { PetSessionRuleWatcher, type NoticeDraft } from "./pet-session-rule-watcher.js";
+import { SessionOutcomeDeriver } from "./session-outcome.js";
 
 const SID = "s-work";
 const NOW = 1_700_000_000_000;
@@ -131,7 +134,16 @@ function pendingUpsert(value: DesktopPendingDecision): DesktopPetProjectionEvent
 }
 
 let rules: FakeRules;
-let drafts: NoticeDraft[];
+/**
+ * Drafts as emitted, with what their delivery says about rules spelled out
+ * (the delivery itself is kept in `deliveries`, same order).
+ */
+let drafts: Array<Omit<NoticeDraft, "delivery"> & { ruleIds: string[]; requiresAway?: boolean }>;
+let deliveries: DeliveryPlanEntry[];
+/** Long tasks the delivery plan knows (closed ones included). */
+let tasks: PetLongTask[];
+/** IM conversations that receive the Session's turn replies. */
+let replyRoutes: ConversationSessionRoute[];
 let logs: { event: string; data: Record<string, unknown> }[];
 let longTask: boolean;
 let busy: boolean;
@@ -143,9 +155,30 @@ function watcher(
 ): PetSessionRuleWatcher {
   return new PetSessionRuleWatcher({
     rules,
-    onNotice: (draft) => drafts.push(draft),
+    deliveries: createPetDeliveryResolver({
+      rules,
+      longTasks: {
+        activeForSession: (sessionId) =>
+          longTask ? ({ id: "task-active", sessionId } as PetLongTask) : undefined,
+        getSnapshot: () => ({ tasks }),
+      },
+      replyRoutes: async () => replyRoutes,
+      delegatedFromDesktop: () => "auto",
+    }),
+    onNotice: ({ delivery, ...draft }) => {
+      const { kind, priority, dedupeKey, sessionId, ...rest } = draft;
+      drafts.push({
+        kind,
+        priority,
+        dedupeKey,
+        sessionId,
+        ruleIds: delivery.ruleIds,
+        ...(delivery.requiresAway ? { requiresAway: true } : {}),
+        ...rest,
+      });
+      deliveries.push(delivery);
+    },
     onPendingDecision: () => undefined,
-    hasActiveLongTask: () => longTask,
     isSessionBusy: () => busy,
     isEligibleSession: () => eligible,
     sessionTitle: (sessionId) => (sessionId === SID ? "修复登录" : undefined),
@@ -155,13 +188,25 @@ function watcher(
   });
 }
 
+const derivers = new WeakMap<PetSessionRuleWatcher, SessionOutcomeDeriver>();
+
+/** Feed one raw stream event the way the main-process tap does: interpreted once. */
+function observe(w: PetSessionRuleWatcher, sessionId: string, event: unknown): Promise<void> {
+  let deriver = derivers.get(w);
+  if (!deriver) derivers.set(w, (deriver = new SessionOutcomeDeriver({ now: () => clock })));
+  return w.observe(sessionId, deriver.derive(sessionId, event));
+}
+
 async function feed(w: PetSessionRuleWatcher, events: unknown[], sessionId = SID): Promise<void> {
-  for (const event of events) await w.observe(sessionId, event);
+  for (const event of events) await observe(w, sessionId, event);
 }
 
 beforeEach(() => {
   rules = new FakeRules();
   drafts = [];
+  deliveries = [];
+  tasks = [];
+  replyRoutes = [];
   logs = [];
   longTask = false;
   busy = false;
@@ -179,7 +224,6 @@ describe("turn-scope done", () => {
         kind: "session.done",
         priority: "P1",
         dedupeKey: `${SID}:turn:run-1`,
-        runId: "run-1",
         sessionId: SID,
         ruleIds: ["rule-a"],
         facts: { title: "修复登录", summary: "All tests pass now." },
@@ -312,7 +356,6 @@ describe("goal scope", () => {
         kind: "session.done",
         priority: "P1",
         dedupeKey: `${SID}:goal:g-1`,
-        runId: "run-1",
         sessionId: SID,
         ruleIds: ["rule-goal"],
         facts: { title: "修复登录" },
@@ -440,7 +483,6 @@ describe("failed", () => {
         priority: "P1",
         dedupeKey: `${SID}:failed:run-1`,
         // Pairs the notice with the bound reply that already told the chat.
-        runId: "run-1",
         sessionId: SID,
         ruleIds: ["rule-a"],
         facts: { title: "修复登录", error: "Work session ended: model_error" },
@@ -457,9 +499,9 @@ describe("failed", () => {
       { type: "error", error: "provider down" },
       done({ reason: "error" }),
     ]);
-    expect(
-      drafts.map((draft) => [draft.kind, draft.dedupeKey, draft.runId, draft.facts.error]),
-    ).toEqual([["session.failed", `${SID}:failed:run-1`, "run-1", "provider down"]]);
+    expect(drafts.map((draft) => [draft.kind, draft.dedupeKey, draft.facts.error])).toEqual([
+      ["session.failed", `${SID}:failed:run-1`, "provider down"],
+    ]);
   });
 
   test("rules without failed do not match", async () => {
@@ -467,6 +509,24 @@ describe("failed", () => {
     const w = watcher();
     await feed(w, [{ type: "error", error: "boom" }]);
     expect(drafts).toEqual([]);
+  });
+});
+
+describe("a completion kind this host does not know", () => {
+  test("reports nothing, spends nothing and keeps carried work for the next turn", async () => {
+    rules.rules.push(sessionRule("rule-a"));
+    const w = watcher();
+    await feed(w, [started(), tool("Bash"), done({ completionKind: "handed_off" })]);
+    expect(drafts).toEqual([]);
+    expect(rules.rules[0]!.state).toBe("active");
+    // Work deferred from a busy turn is still reported by the turn after it.
+    busy = true;
+    await feed(w, [started({ runId: "run-2" }), tool("Bash"), done()]);
+    busy = false;
+    await feed(w, [started({ runId: "run-3" }), done({ completionKind: "handed_off" })]);
+    expect(drafts).toEqual([]);
+    await feed(w, [started({ runId: "run-4" }), done()]);
+    expect(drafts.map((draft) => draft.dedupeKey)).toEqual([`${SID}:turn:run-4`]);
   });
 });
 
@@ -483,20 +543,133 @@ describe("long task ownership", () => {
     expect(rules.rules[0]!.state).toBe("active");
   });
 
-  test("ownership is asked per run, with the core run id", async () => {
+  test("a closed task still owns the run it closed, and no later run", async () => {
     rules.rules.push(sessionRule("rule-a"));
-    const asked: string[] = [];
-    const w = watcher({
-      hasActiveLongTask: (_sessionId, run) => {
-        asked.push(run);
-        return run === "run-1";
-      },
-    });
+    tasks.push({
+      id: "task-1",
+      sessionId: SID,
+      runId: "run-1",
+      status: "completed",
+    } as PetLongTask);
+    const w = watcher();
     await feed(w, [started(), tool("Bash"), done()]);
     expect(drafts).toEqual([]);
+    expect(rules.rules[0]!.state).toBe("active");
     await feed(w, [started({ runId: "run-2" }), tool("Bash"), done()]);
-    expect(asked).toEqual(["run-1", "run-2"]);
     expect(drafts.map((draft) => draft.dedupeKey)).toEqual([`${SID}:turn:run-2`]);
+    expect(deliveries.map((delivery) => delivery.composeBy)).toEqual(["template"]);
+  });
+
+  test("a Session bound to an IM chat: the draft says its reply is the delivery", async () => {
+    rules.rules.push(sessionRule("rule-a"));
+    replyRoutes.push({
+      id: "route-1",
+      channel: "wechat",
+      target: "chat-1",
+      senderId: "owner-1",
+      sessionId: SID,
+      mode: "bound",
+      status: "active",
+    } as ConversationSessionRoute);
+    const w = watcher();
+    // Core gave no run id: the plan does not need one to know who is served.
+    await feed(w, [tool("Bash"), done()]);
+    expect(drafts.map((draft) => [draft.kind, draft.ruleIds])).toEqual([
+      ["session.done", ["rule-a"]],
+    ]);
+    expect(deliveries).toMatchObject([
+      { composeBy: "session-reply", target: { kind: "owner" }, channel: "auto" },
+    ]);
+    expect(rules.rules[0]!.state).toBe("spent");
+  });
+});
+
+describe("reports raised before the run closes, in a bound Session", () => {
+  const route = {
+    id: "route-1",
+    channel: "wechat",
+    target: "chat-1",
+    senderId: "owner-1",
+    sessionId: SID,
+    mode: "bound",
+    status: "active",
+  } as ConversationSessionRoute;
+
+  test("a met Goal waits for the closing outcome, which says whether a reply serves it", async () => {
+    for (const [text, composeBy] of [
+      ["目标完成", "session-reply"],
+      ["", "template"],
+    ] as const) {
+      rules.rules = [sessionRule("rule-g", { scope: "goal" }), systemRule()];
+      drafts = [];
+      deliveries = [];
+      replyRoutes = [route];
+      const w = watcher();
+      await feed(w, [started(), tool("Bash"), goal("met", { goalId: "g-1" })]);
+      expect(drafts).toEqual([]);
+      expect(rules.rules[0]!.state).toBe("active");
+      await feed(w, [done({ completionKind: "goal_control_stop", text })]);
+      // One report for the turn: the system rule is not told a second time.
+      expect(drafts.map((draft) => [draft.dedupeKey, draft.ruleIds])).toEqual([
+        [`${SID}:goal:g-1`, ["rule-g", "all-sessions"]],
+      ]);
+      expect(deliveries.map((delivery) => delivery.composeBy)).toEqual([composeBy]);
+      expect(rules.rules[0]!.state).toBe("spent");
+    }
+  });
+
+  test("an error waits for the failing turn_complete and is reported once", async () => {
+    rules.rules.push(sessionRule("rule-a"));
+    replyRoutes = [route];
+    const w = watcher();
+    await feed(w, [started(), { type: "error", error: "provider down" }]);
+    expect(drafts).toEqual([]);
+    await feed(w, [done({ reason: "max_turns", text: undefined })]);
+    expect(drafts.map((draft) => [draft.dedupeKey, draft.facts.error])).toEqual([
+      [`${SID}:failed:run-1`, "provider down"],
+    ]);
+    expect(deliveries.map((delivery) => delivery.composeBy)).toEqual(["template"]);
+  });
+
+  test("a turn that never closed is reported when the next one starts reporting", async () => {
+    rules.rules.push(sessionRule("rule-g", { scope: "goal" }), sessionRule("rule-t"));
+    replyRoutes = [route];
+    const w = watcher();
+    await feed(w, [started(), goal("met", { goalId: "g-1" })]);
+    // The worker went away; a new run of the Session completes.
+    await feed(w, [started({ runId: "run-2" }), tool("Bash"), done()]);
+    expect(drafts.map((draft) => draft.dedupeKey)).toEqual([
+      `${SID}:goal:g-1`,
+      `${SID}:turn:run-2`,
+    ]);
+    expect(deliveries.map((delivery) => delivery.composeBy)).toEqual(["template", "session-reply"]);
+  });
+
+  test("flush() reports parked runs as not forwarded, once, and leaves others alone", async () => {
+    rules.rules.push(sessionRule("rule-g", { scope: "goal" }));
+    rules.rules.push(sessionRule("rule-o", { sessionId: "s-other", scope: "goal" }));
+    replyRoutes = [route, { ...route, id: "route-2", sessionId: "s-other" }];
+    const w = watcher();
+    await feed(w, [started(), goal("met", { goalId: "g-1" })]);
+    await feed(w, [started({ sessionId: "s-other" }), goal("met", { goalId: "g-2" })], "s-other");
+    expect(drafts).toEqual([]);
+    expect(w.hasPending()).toBe(true);
+    // The worker went away: one Session first, then everything.
+    await w.flush(SID);
+    expect(drafts.map((draft) => draft.dedupeKey)).toEqual([`${SID}:goal:g-1`]);
+    expect(deliveries.map((delivery) => delivery.composeBy)).toEqual(["template"]);
+    await w.flush();
+    await w.flush();
+    expect(drafts.map((draft) => draft.dedupeKey)).toEqual([`${SID}:goal:g-1`, "s-other:goal:g-2"]);
+    expect(w.hasPending()).toBe(false);
+    expect(rules.rules.map((rule) => rule.state)).toEqual(["spent", "spent"]);
+  });
+
+  test("without a bound conversation nothing is parked", async () => {
+    rules.rules.push(sessionRule("rule-g", { scope: "goal" }));
+    const w = watcher();
+    await feed(w, [started(), goal("met", { goalId: "g-1" })]);
+    expect(drafts.map((draft) => draft.dedupeKey)).toEqual([`${SID}:goal:g-1`]);
   });
 });
 
@@ -713,9 +886,9 @@ describe("arming, dedupe keys and ordering", () => {
     rules.rules.push(sessionRule("rule-a"));
     const w = watcher();
     await Promise.all([
-      w.observe(SID, started()),
-      w.observe(SID, tool("Bash")),
-      w.observe(SID, done()),
+      observe(w, SID, started()),
+      observe(w, SID, tool("Bash")),
+      observe(w, SID, done()),
     ]);
     expect(drafts.map((draft) => draft.dedupeKey)).toEqual([`${SID}:turn:run-1`]);
   });
@@ -723,7 +896,7 @@ describe("arming, dedupe keys and ordering", () => {
   test("malformed events are ignored", async () => {
     rules.rules.push(systemRule());
     const w = watcher();
-    for (const event of [null, 3, "x", [], {}, { type: 5 }]) await w.observe(SID, event);
+    for (const event of [null, 3, "x", [], {}, { type: 5 }]) await observe(w, SID, event);
     expect(drafts).toEqual([]);
   });
 });
@@ -909,11 +1082,10 @@ describe("core's real flows", () => {
 
   test("observe never rejects; failures are logged", async () => {
     const w = watcher({
-      rules: {
-        activeForSession: () => {
+      deliveries: {
+        plan: async () => {
           throw new Error("store gone");
         },
-        update: rules.update.bind(rules),
       },
     });
     await expect(feed(w, [started(), tool("Bash"), done()])).resolves.toBeUndefined();

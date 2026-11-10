@@ -717,7 +717,7 @@ describe("GatewayControlServer", () => {
     });
     expect(published.id).toBe(1);
     expect(JSON.parse(readFileSync(outboxPath, "utf-8"))).toMatchObject({
-      version: 2,
+      version: 3,
       streamId: firstContext?.streamId,
       acknowledgedEventId: 0,
       nextEventId: 2,
@@ -936,7 +936,7 @@ describe("GatewayControlServer", () => {
       events: Array<{ id: number }>;
     };
     expect(afterAcknowledgement).toMatchObject({
-      version: 2,
+      version: 3,
       streamId,
       acknowledgedEventId: 100,
       nextEventId: 202,

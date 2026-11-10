@@ -582,6 +582,7 @@ const BUILTIN_CONTRIBUTIONS: Array<{
       isReadOnly: true,
       isConcurrencySafe: false,
       timeoutMs: 0, // 纯等待用户操作 — 不设超时，由用户 Esc/取消
+      bookkeeping: true,
     },
     execute: askUserTool,
     exposure: expose(HARNESS_TAGS, { defaultPermissionRules: allow(askUserToolDef.name) }),
@@ -593,6 +594,7 @@ const BUILTIN_CONTRIBUTIONS: Array<{
       permissionDefault: "allow",
       isReadOnly: true,
       isConcurrencySafe: true,
+      bookkeeping: true,
     },
     execute: askUserAsyncTool,
     exposure: expose(HARNESS_TAGS, { defaultPermissionRules: allow(askUserAsyncToolDef.name) }),
@@ -696,6 +698,7 @@ const BUILTIN_CONTRIBUTIONS: Array<{
       permissionDefault: "allow",
       isReadOnly: true,
       isConcurrencySafe: true,
+      bookkeeping: true,
     },
     execute: toolSearchTool,
     exposure: expose(HARNESS_TAGS, {

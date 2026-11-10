@@ -17,7 +17,7 @@ export const CONTRACTS = Object.freeze({
   cloudManagementAuthority: 2,
   cloudBrowserAuthority: 1,
   relayProtocol: 1,
-  desktopControl: 1,
+  desktopControl: 2,
   /** Declared now; the mobile WS hello starts carrying it with ch.16 step 1.5. */
   mobileRemote: 1,
   /** Output-journal segment storage manifest/pin `version: 1` (session/output-journal-storage.ts). */
@@ -37,7 +37,7 @@ export type _ContractLiteralTypes = [
   Expect<Equal<typeof CONTRACTS.cloudManagementAuthority, 2>>,
   Expect<Equal<typeof CONTRACTS.cloudBrowserAuthority, 1>>,
   Expect<Equal<typeof CONTRACTS.relayProtocol, 1>>,
-  Expect<Equal<typeof CONTRACTS.desktopControl, 1>>,
+  Expect<Equal<typeof CONTRACTS.desktopControl, 2>>,
   Expect<Equal<typeof CONTRACTS.mobileRemote, 1>>,
   Expect<Equal<typeof CONTRACTS.outputJournal, 1>>,
   Expect<Equal<typeof CONTRACTS.agentProtocol.supported, readonly ["1"]>>,
