@@ -1,5 +1,0 @@
-98:   existing: ImageAttachment[],
-104:     if (accepted.length + existing.length >= ATTACHMENT_LIMITS.maxImagesPerMessage) {
-136:       accepted.push({
-180:   existing: ImageAttachment[],
-185:   if (existing.length >= ATTACHMENT_LIMITS.maxImagesPerMessage) {

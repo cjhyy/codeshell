@@ -1,1 +1,0 @@
-{"args": ["rg", "-n", "installedThemeToPack|installThemeAssetProtocol", "packages/desktop/src/main/index.ts"], "exitCode": 0}
