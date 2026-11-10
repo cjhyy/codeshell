@@ -1,6 +1,6 @@
 import { BUILTIN_TOOLS } from "../tool-system/builtin/index.js";
 import { BUILTIN_AGENT_PRESETS } from "../preset/index.js";
-import { ISOLATED_TASK_PROFILE, QUICK_CHAT_RESTRICTED_PROFILE } from "../engine/run-types.js";
+import { ISOLATED_TASK_PROFILE, QUICK_CHAT_RESTRICTED_PROFILE } from "./behavior-profiles.js";
 import type { AgentModule } from "./types.js";
 
 /**

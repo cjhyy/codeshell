@@ -16,7 +16,7 @@ import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 
 import type { ToolDefinition } from "../types.js";
 import type { ToolContext } from "../tool-system/context.js";
-import { SENSITIVE_TOOL_RESULT_PLACEHOLDER } from "../tool-system/tool-result-redaction.js";
+import { SENSITIVE_TOOL_RESULT_PLACEHOLDER } from "../utils/sensitive-result.js";
 import {
   credentialUseGate,
   type SessionCredentialAllow,

@@ -21,7 +21,7 @@ import {
 import { isAbsolute, join, relative, sep } from "node:path";
 import { homedir } from "node:os";
 import { memoize } from "../utils/memoize.js";
-import { parseFrontmatter, coerceDescription } from "../skills/frontmatter.js";
+import { parseFrontmatter, coerceDescription } from "../utils/frontmatter.js";
 import { installedPluginsPath, readInstalledPlugins } from "./installedPlugins.js";
 
 export interface PluginCommand {

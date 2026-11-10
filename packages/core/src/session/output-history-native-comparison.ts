@@ -1,6 +1,6 @@
 import type { StreamEvent, TranscriptEvent } from "../types.js";
 import type { OutputHistoryComparison } from "../protocol/output-history-recovery-types.js";
-import { outputUserMessage } from "../engine/run-output-user-message.js";
+import { outputUserMessage } from "./output-user-message.js";
 
 type RecordValue = Record<string, any>;
 type Tool = { id: string; name: string; args: unknown };

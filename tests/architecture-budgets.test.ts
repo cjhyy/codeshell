@@ -172,43 +172,27 @@ const CORE_LAYERS: readonly (readonly string[])[] = [
 // must remove its allowance in the same change. New dependencies need a lower
 // layer, not another exception. Type-only dependencies do not consume a slot.
 const UPWARD_ALLOWLIST = new Set([
-  "automation/runner.ts -> run",
-  "composition/core-module.ts -> engine",
   "credentials/access.ts -> links",
   "credentials/access.ts -> services",
-  "credentials/use-credential-tool.ts -> tool-system",
   "hooks/goal-stop-hook.ts -> tool-system/builtin",
-  "hooks/registry.ts -> composition",
   "links/github-issue-batch.ts -> engine",
   "links/operation-reader.ts -> engine",
   "preset/index.ts -> tool-system/builtin",
   "prompt/composer.ts -> tool-system/builtin",
   "runtime/background-shell.ts -> tool-system/builtin",
   "session/background-continuation.ts -> tool-system/builtin",
-  "session/output-history-comparison.ts -> engine",
-  "session/output-history-native-comparison.ts -> engine",
-  "settings/schema.ts -> panel-apps",
-  "settings/schema.ts -> sources",
-  "settings/schema.ts -> tool-system",
   "skills/isolated-instruction-run.ts -> protocol",
   "tool-system/builtin/configure-model-connection.ts -> engine",
   "tool-system/dynamic-tool-defs.ts -> tool-system/builtin",
   "tool-system/executor.ts -> tool-system/builtin",
   "tool-system/path-policy.ts -> plugins",
-  "tool-system/registry.ts -> composition",
   "tool-system/registry.ts -> tool-system/builtin",
   "tool-system/session-tool-host.ts -> engine",
   "tool-system/session-tool-host.ts -> hooks",
   "tool-system/session-tool-policy.ts -> capability-control",
 ]);
 
-const SAME_LAYER_CYCLES = new Set([
-  "hooks <-> plugins",
-  "panel-apps <-> plugins",
-  "plugins <-> skills",
-  "preset <-> prompt",
-  "profile <-> sources",
-]);
+const SAME_LAYER_CYCLES = new Set(["hooks <-> plugins", "preset <-> prompt"]);
 
 const CORE_GRAPH_EXCLUDED_DIRS = new Set(["__fixtures__", "fixtures", "__tests__"]);
 

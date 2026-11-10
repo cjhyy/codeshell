@@ -20,7 +20,7 @@ import {
 import type { ToolContext } from "./context.js";
 import { validateToolMetadata } from "./validate-tool-metadata.js";
 import { assertPublicToolName } from "./tool-name.js";
-import { onceDispose, type Dispose } from "../composition/lifetime.js";
+import { onceDispose, type Dispose } from "../utils/dispose.js";
 
 /**
  * Default execution timeout for any tool that does not declare its own

@@ -8,7 +8,7 @@
 
 import { readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { isAbsolute, join, relative, sep } from "node:path";
-import { parseFrontmatter } from "../skills/frontmatter.js";
+import { parseFrontmatter } from "../utils/frontmatter.js";
 import { listPluginHooks, type PluginHookEntry } from "./loadPluginHooks.js";
 import { reviewPluginHooks, type PluginHookReview } from "./pluginHookApproval.js";
 import { readPluginMcp } from "./installer/loadPluginMcp.js";

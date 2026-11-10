@@ -1,6 +1,7 @@
 import type { Message, ToolResult } from "../types.js";
 
-export const SENSITIVE_TOOL_RESULT_PLACEHOLDER = "[credential value withheld]";
+import { SENSITIVE_TOOL_RESULT_PLACEHOLDER } from "../utils/sensitive-result.js";
+export { SENSITIVE_TOOL_RESULT_PLACEHOLDER } from "../utils/sensitive-result.js";
 
 export function toolResultDisplayText(result: ToolResult): string | undefined {
   if (!result.sensitive) return result.result;

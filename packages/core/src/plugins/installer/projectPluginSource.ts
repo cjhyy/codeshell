@@ -16,7 +16,7 @@ import {
   type CanonicalPluginManifest as CanonicalPluginManifestData,
   PluginInstallError,
 } from "./types.js";
-import { PANEL_APP_MANIFEST_FILE } from "../../panel-apps/manifest.js";
+import { PANEL_APP_MANIFEST_FILE } from "../../utils/panel-app-schema.js";
 
 const MAX_PLUGIN_SOURCE_ENTRIES = 10_000;
 const MAX_PLUGIN_SOURCE_BYTES = 256 * 1024 * 1024;

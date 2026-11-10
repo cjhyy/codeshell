@@ -4,7 +4,7 @@
 
 import type { HookEventName, HookContext, HookResult } from "./events.js";
 import type { PermissionDecision } from "../types.js";
-import { onceDispose, type Dispose } from "../composition/lifetime.js";
+import { onceDispose, type Dispose } from "../utils/dispose.js";
 
 export type HookHandler = (ctx: HookContext) => HookResult | Promise<HookResult>;
 
