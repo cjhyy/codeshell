@@ -1,6 +1,7 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { afterEach, describe, expect, it } from "bun:test";
 import { connect, type Socket } from "node:net";
-import type { Engine, EngineResult } from "../engine/engine.js";
+import type { EngineResult } from "../engine/engine.js";
 import { ApprovalRouter, InteractiveApprovalBackend } from "../tool-system/permission.js";
 import { ChatSessionManager } from "./chat-session-manager.js";
 import { AgentServer } from "./server.js";
@@ -47,12 +48,7 @@ function approvalRequests(client: WireClient) {
 }
 
 function makeApprovalEngine(decisions: Array<{ sessionId: string; approved: boolean }>) {
-  return {
-    setAskUser() {},
-    setPlanMode() {},
-    setBrowserBridge() {},
-    setInjectCredential() {},
-    setSessionMessageRouter() {},
+  return createFakeEngine({
     isHeadless: () => false,
     async run(
       _task: string,
@@ -75,7 +71,7 @@ function makeApprovalEngine(decisions: Array<{ sessionId: string; approved: bool
         usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       };
     },
-  } as unknown as Engine;
+  });
 }
 
 describe("TCP approval routing is connection-owned", () => {

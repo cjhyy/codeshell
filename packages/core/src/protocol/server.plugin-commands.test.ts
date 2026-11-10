@@ -1,3 +1,4 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -24,7 +25,7 @@ function makeTransport() {
 }
 
 function makeEngine(): Engine {
-  return { isHeadless: () => true } as unknown as Engine;
+  return createFakeEngine({ isHeadless: () => true });
 }
 
 function responseFor(sent: any[], id: number): any {

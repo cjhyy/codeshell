@@ -1,13 +1,14 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { ChatSessionManager, type EngineConfigSlice } from "./chat-session-manager.js";
-import type { Engine } from "../engine/engine.js";
+
 import type { EngineRuntime } from "../engine/runtime.js";
 import { backgroundJobRegistry } from "../tool-system/builtin/background-jobs.js";
 
 function makeManager() {
   return new ChatSessionManager({
     runtime: {} as unknown as EngineRuntime,
-    engineFactory: (_slice: EngineConfigSlice) => ({}) as unknown as Engine,
+    engineFactory: (_slice: EngineConfigSlice) => createFakeEngine({}),
     idleTtlMs: 10,
   });
 }

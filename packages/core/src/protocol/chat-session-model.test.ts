@@ -1,3 +1,4 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { describe, it, expect } from "bun:test";
 import { ChatSession } from "./chat-session.js";
 import type { Engine, EngineResult } from "../engine/engine.js";
@@ -25,7 +26,7 @@ function fakeEngine(models?: string[]): {
   const runStarted = new Promise<void>((r) => (signalStarted = r));
   const gate = new Promise<void>((r) => (releaseRun = r));
 
-  const engine = {
+  const engine = createFakeEngine({
     switchModel(key: string, opts?: { persist?: boolean }) {
       switched.push(key);
       switchedOpts.push(opts);
@@ -53,7 +54,7 @@ function fakeEngine(models?: string[]): {
         usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       };
     },
-  } as unknown as Engine;
+  });
 
   return { engine, switched, switchedOpts, resetUsage, release: releaseRun, runStarted };
 }

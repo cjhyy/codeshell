@@ -1,3 +1,4 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { describe, it, expect } from "bun:test";
 import { ChatSession } from "./chat-session.js";
 import type { Engine, EngineResult } from "../engine/engine.js";
@@ -12,7 +13,7 @@ import type { Engine, EngineResult } from "../engine/engine.js";
 function abortableEngine(): { engine: Engine; runStarted: Promise<void> } {
   let signalStarted!: () => void;
   const runStarted = new Promise<void>((r) => (signalStarted = r));
-  const engine = {
+  const engine = createFakeEngine({
     switchModel: () => ({}) as never,
     async run(_task: string, opts: { signal?: AbortSignal }): Promise<EngineResult> {
       signalStarted();
@@ -25,7 +26,7 @@ function abortableEngine(): { engine: Engine; runStarted: Promise<void> } {
         // Never resolves on its own — only via abort.
       });
     },
-  } as unknown as Engine;
+  });
   return { engine, runStarted };
 }
 
@@ -45,12 +46,12 @@ describe("ChatSession.cancel resolves the in-flight turn cleanly", () => {
   });
 
   it("a genuine (non-cancel) error still rejects", async () => {
-    const engine = {
+    const engine = createFakeEngine({
       switchModel: () => ({}) as never,
       async run(): Promise<EngineResult> {
         throw new Error("real failure: model exploded");
       },
-    } as unknown as Engine;
+    });
     const session = new ChatSession({ id: "s", engine });
     await expect(session.enqueueTurn("hi", { cwd: "/tmp" })).rejects.toThrow(
       /real failure/,

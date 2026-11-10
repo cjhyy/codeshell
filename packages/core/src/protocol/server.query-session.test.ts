@@ -1,3 +1,4 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { describe, expect, spyOn, test } from "bun:test";
 import type { Engine } from "../engine/engine.js";
 import type { EngineConfigSlice } from "./chat-session-manager.js";
@@ -16,11 +17,8 @@ import { defaultCacheDir, writeCache } from "../llm/model-cache.js";
 function fakeEngine(slice: EngineConfigSlice): Engine {
   const marker = slice.cwd ?? "global";
   const permissionMode = marker === "/project-b" ? "plan" : "default";
-  return {
+  return createFakeEngine({
     planMode: permissionMode === "plan",
-    setAskUser() {},
-    setPlanMode() {},
-    setPermissionMode() {},
     isHeadless: () => false,
     getToolRegistry: () => ({
       listToolsDetailed: () => [{ name: `tool:${marker}`, description: marker }],
@@ -32,7 +30,7 @@ function fakeEngine(slice: EngineConfigSlice): Engine {
     }),
     getFeatureFlags: () => ({ [`feature:${marker}`]: true }),
     getPermissionRules: () => [{ tool: `tool:${marker}`, decision: "allow" }],
-  } as unknown as Engine;
+  });
 }
 
 describe("AgentServer session-scoped queries", () => {

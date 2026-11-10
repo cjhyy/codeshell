@@ -1,5 +1,6 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { describe, expect, test } from "bun:test";
-import type { Engine, EngineResult } from "../engine/engine.js";
+import type { EngineResult } from "../engine/engine.js";
 import type { EngineRunOptions } from "../engine/run-types.js";
 import { AgentServer } from "./server.js";
 import { ChatSessionManager } from "./chat-session-manager.js";
@@ -37,13 +38,8 @@ const attachment: InputAttachmentMeta = {
 
 function makeEngine() {
   const calls: Array<{ task: string; options?: EngineRunOptions }> = [];
-  const engine = {
+  const engine = createFakeEngine({
     isHeadless: () => false,
-    setAskUser() {},
-    setBrowserBridge() {},
-    setInjectCredential() {},
-    setSessionMessageRouter() {},
-    setPlanMode() {},
     async run(task: string, options?: EngineRunOptions): Promise<EngineResult> {
       calls.push({ task, options });
       return {
@@ -55,7 +51,7 @@ function makeEngine() {
         extensions: { testProfile: { structured: true } },
       };
     },
-  } as unknown as Engine;
+  });
   return { engine, calls };
 }
 

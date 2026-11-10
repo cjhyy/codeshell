@@ -1,8 +1,9 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { afterEach, describe, expect, it, spyOn } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { Engine } from "../engine/engine.js";
+
 import { setDefaultCredentialAccess } from "../credentials/access.js";
 import { useCredentialTool } from "../credentials/use-credential-tool.js";
 import { injectCredentialTool } from "../credentials/inject-credential-tool.js";
@@ -30,7 +31,7 @@ async function fixture() {
   const manager = new ChatSessionManager({
     runtime: {} as never,
     dataRoot: cwd,
-    engineFactory: () => ({ dispose() {}, isHeadless: () => false }) as unknown as Engine,
+    engineFactory: () => createFakeEngine({ dispose() {}, isHeadless: () => false }),
   });
   const sessionId = "decision-session";
   const session = await manager.getOrCreate(sessionId, {});

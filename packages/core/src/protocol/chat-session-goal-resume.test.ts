@@ -1,5 +1,6 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { describe, expect, it } from "bun:test";
-import type { Engine, EngineResult } from "../engine/engine.js";
+import type { EngineResult } from "../engine/engine.js";
 import type { GoalConfig } from "../goal/lifecycle.js";
 import { ChatSession } from "./chat-session.js";
 
@@ -25,24 +26,24 @@ describe("ChatSession.enqueueGoalResumeTurn", () => {
   it("forwards the Goal version guard through the queued turn", async () => {
     const goalContinuation = { goalId: "original", revision: 4 };
     const runs: unknown[] = [];
-    const engine = {
+    const engine = createFakeEngine({
       async run(_task: string, opts: unknown) {
         runs.push(opts);
         return result("guarded");
       },
-    } as unknown as Engine;
+    });
     const session = new ChatSession({ id: "guarded", engine });
     await session.enqueueTurn("continue", { goalContinuation });
     expect(runs).toEqual([expect.objectContaining({ goalContinuation, goal: undefined })]);
   });
   it("forwards a one-turn request to disable Goal mode", async () => {
     const runs: Array<{ disableGoal?: boolean }> = [];
-    const engine = {
+    const engine = createFakeEngine({
       async run(_task: string, opts: { disableGoal?: boolean }): Promise<EngineResult> {
         runs.push(opts);
         return result("standalone-loop-session");
       },
-    } as unknown as Engine;
+    });
     const session = new ChatSession({ id: "standalone-loop-session", engine });
 
     await session.enqueueTurn("standalone loop", { disableGoal: true });
@@ -57,7 +58,7 @@ describe("ChatSession.enqueueGoalResumeTurn", () => {
       revision: 4,
     };
     const runs: Array<{ task: string; injected?: boolean }> = [];
-    const engine = {
+    const engine = createFakeEngine({
       getGoal: () => goal,
       async run(
         task: string,
@@ -66,7 +67,7 @@ describe("ChatSession.enqueueGoalResumeTurn", () => {
         runs.push({ task, injected: opts.injected });
         return result("idle-session");
       },
-    } as unknown as Engine;
+    });
     const session = new ChatSession({ id: "idle-session", engine });
 
     await expect(session.enqueueGoalResumeTurn(goal)).resolves.toBe(true);
@@ -90,7 +91,7 @@ describe("ChatSession.enqueueGoalResumeTurn", () => {
     const blockerStarted = deferred();
     const releaseBlocker = deferred();
     const tasks: string[] = [];
-    const engine = {
+    const engine = createFakeEngine({
       getGoal: () => currentGoal,
       async run(task: string): Promise<EngineResult> {
         tasks.push(task);
@@ -100,7 +101,7 @@ describe("ChatSession.enqueueGoalResumeTurn", () => {
         }
         return result("queued-edit-session");
       },
-    } as unknown as Engine;
+    });
     const session = new ChatSession({ id: "queued-edit-session", engine });
     const blocker = session.enqueueTurn("blocker", {});
     await blockerStarted.promise;
@@ -125,7 +126,7 @@ describe("ChatSession.enqueueGoalResumeTurn", () => {
     const blockerStarted = deferred();
     const releaseBlocker = deferred();
     const tasks: string[] = [];
-    const engine = {
+    const engine = createFakeEngine({
       getGoal: () => currentGoal,
       async run(task: string): Promise<EngineResult> {
         tasks.push(task);
@@ -135,7 +136,7 @@ describe("ChatSession.enqueueGoalResumeTurn", () => {
         }
         return result("resume-coalesced-session");
       },
-    } as unknown as Engine;
+    });
     const session = new ChatSession({ id: "resume-coalesced-session", engine });
     const blocker = session.enqueueTurn("blocker", {});
     await blockerStarted.promise;
@@ -165,7 +166,7 @@ describe("ChatSession.enqueueGoalResumeTurn", () => {
       const blockerStarted = deferred();
       const releaseBlocker = deferred();
       const tasks: string[] = [];
-      const engine = {
+      const engine = createFakeEngine({
         getGoal: () => currentGoal,
         async run(task: string): Promise<EngineResult> {
           tasks.push(task);
@@ -175,7 +176,7 @@ describe("ChatSession.enqueueGoalResumeTurn", () => {
           }
           return result("queued-session");
         },
-      } as unknown as Engine;
+      });
       const session = new ChatSession({ id: "queued-session", engine });
       const blocker = session.enqueueTurn("blocker", {});
       await blockerStarted.promise;

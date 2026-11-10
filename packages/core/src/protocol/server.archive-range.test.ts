@@ -1,8 +1,9 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { describe, expect, it } from "bun:test";
 import { ChatSessionManager } from "./chat-session-manager.js";
 import { AgentServer } from "./server.js";
 import { ErrorCodes, Methods } from "./types.js";
-import type { Engine } from "../engine/engine.js";
+
 
 function makeTransport() {
   const sent: any[] = [];
@@ -34,7 +35,7 @@ describe("AgentServer archive_range query", () => {
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () =>
-        ({
+        createFakeEngine({
           isHeadless: () => true,
           sessionExistsOnDisk: (sessionId: string) => sessionId === "s-archive",
           getSessionManager: () => ({ readSessionMainRoot: () => "/project/from/disk" }),
@@ -42,7 +43,7 @@ describe("AgentServer archive_range query", () => {
             archiveCalls.push({ sessionId, range });
             return { before: 128_000, after: 40_000 };
           },
-        }) as unknown as Engine,
+        }),
     });
     const t = makeTransport();
     new AgentServer({ transport: t.transport, chatManager });
@@ -85,12 +86,12 @@ describe("AgentServer archive_range query", () => {
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () =>
-        ({
+        createFakeEngine({
           isHeadless: () => true,
           sessionExistsOnDisk: (sessionId: string) => sessionId === "s-noop",
           getSessionManager: () => ({ readSessionMainRoot: () => "/project/from/disk" }),
           archiveTurnRange: () => ({ before: 40, after: 40 }),
-        }) as unknown as Engine,
+        }),
     });
     const t = makeTransport();
     new AgentServer({ transport: t.transport, chatManager });
@@ -115,12 +116,12 @@ describe("AgentServer archive_range query", () => {
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () =>
-        ({
+        createFakeEngine({
           isHeadless: () => true,
           sessionExistsOnDisk: () => true,
           getSessionManager: () => ({ readSessionMainRoot: () => "/x" }),
           archiveTurnRange: () => ({ before: 1, after: 1 }),
-        }) as unknown as Engine,
+        }),
     });
     const t = makeTransport();
     new AgentServer({ transport: t.transport, chatManager });
@@ -142,11 +143,11 @@ describe("AgentServer archive_range query", () => {
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () =>
-        ({
+        createFakeEngine({
           isHeadless: () => true,
           sessionExistsOnDisk: () => false,
           getSessionManager: () => ({ readSessionMainRoot: () => undefined }),
-        }) as unknown as Engine,
+        }),
     });
     const t = makeTransport();
     new AgentServer({ transport: t.transport, chatManager });

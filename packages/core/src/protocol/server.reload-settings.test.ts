@@ -1,7 +1,8 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { describe, it, expect } from "bun:test";
 import { AgentServer } from "./server.js";
 import { ChatSessionManager } from "./chat-session-manager.js";
-import type { Engine } from "../engine/engine.js";
+
 import type { ValidatedSettings } from "../settings/schema.js";
 import { getInteractiveApprovalBackend } from "../tool-system/permission.js";
 
@@ -25,11 +26,9 @@ function makeTransport() {
 function makeFakeEngine(id: string) {
   const calls: Array<{ patch: any; version: number }> = [];
   const reloadModelCalls: string[] = [];
-  const engine = {
+  const engine = createFakeEngine({
+    getConfig: undefined, // Preserve this fixture's absent optional capability.
     id,
-    setAskUser() {},
-    setPlanMode() {},
-    setPermissionMode() {},
     isHeadless: () => false,
     // The reload path folds per-session effective disabled lists into the
     // patch (能力总览 project on/off) — fake returns the empty baseline.
@@ -53,7 +52,7 @@ function makeFakeEngine(id: string) {
         usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       };
     },
-  } as unknown as Engine;
+  });
   return { engine, calls, reloadModelCalls };
 }
 
@@ -104,7 +103,8 @@ describe("AgentServer configure({ reloadSettings })", () => {
 
   it("answers global model/provider queries before the first chat session exists", async () => {
     let factoryCalls = 0;
-    const engine = {
+    const engine = createFakeEngine({
+      getConfig: undefined, // Preserve this fixture's absent optional capability.
       getModelPool() {
         return {
           getActiveKey: () => "sonnet",
@@ -124,7 +124,7 @@ describe("AgentServer configure({ reloadSettings })", () => {
         if (key === "models") return [{ key: "sonnet", providerKey: "anthropic" }];
         return undefined;
       },
-    } as unknown as Engine;
+    });
 
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
@@ -464,10 +464,9 @@ describe("AgentServer configure({ reloadSettings })", () => {
 
   it("does not regress permissionMode / model configure paths", () => {
     let pmCalls = 0;
-    const engine = {
+    const engine = createFakeEngine({
+      getConfig: undefined, // Preserve this fixture's absent optional capability.
       id: "A",
-      setAskUser() {},
-      setPlanMode() {},
       setPermissionMode() {
         pmCalls++;
       },
@@ -484,7 +483,7 @@ describe("AgentServer configure({ reloadSettings })", () => {
           usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
         };
       },
-    } as unknown as Engine;
+    });
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () => {

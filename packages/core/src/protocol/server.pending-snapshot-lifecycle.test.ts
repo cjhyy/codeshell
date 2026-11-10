@@ -1,3 +1,4 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -7,7 +8,7 @@ import { ChatSessionManager } from "./chat-session-manager.js";
 import { ApprovalRouter } from "../tool-system/permission.js";
 import { compileComposition } from "../composition/compiler.js";
 import type { AgentModule } from "../composition/types.js";
-import type { Engine } from "../engine/engine.js";
+
 
 const cleanup: Array<() => Promise<void>> = [];
 afterEach(async () => {
@@ -20,12 +21,10 @@ async function fixture(modules: AgentModule[], onTransportClose?: () => void) {
     runtime: {} as never,
     dataRoot: root,
     engineFactory: () =>
-      ({
-        setAskUser() {},
-        setSessionMessageRouter() {},
+      createFakeEngine({
         isHeadless: () => false,
         dispose() {},
-      }) as unknown as Engine,
+      }),
   });
   const session = await manager.getOrCreate("session", {});
   const router = new ApprovalRouter();

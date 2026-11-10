@@ -1,6 +1,7 @@
 import { describe, it, expect } from "bun:test";
 import { AgentServer } from "./server.js";
 import { Methods } from "./types.js";
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 
 function makeTransport() {
   const sent: any[] = [];
@@ -22,7 +23,7 @@ describe("AgentServer agent/goalClear", () => {
   for (const mode of ["live", "legacy"] as const) {
     it(`stamps ${mode} Goal clear with the run identity captured before the control`, () => {
       let runId = "cleared-run";
-      const engine = {
+      const engine = createFakeEngine({
         isHeadless: () => true,
         getGoal: () => ({ objective: "ship", goalId: "goal-1", revision: 2 }),
         getSessionManager: () => ({
@@ -32,7 +33,7 @@ describe("AgentServer agent/goalClear", () => {
           runId = "newer-run";
           return true;
         },
-      } as any;
+      });
       const t = makeTransport();
       new AgentServer({
         transport: t.transport,

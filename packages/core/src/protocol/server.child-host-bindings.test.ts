@@ -1,5 +1,6 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
-import type { Engine } from "../engine/engine.js";
+
 import type { ChildHostBindings, ChildHostBindingsFactory } from "../engine/types.js";
 import type { ApprovalRequest } from "../types.js";
 import { ApprovalRouter } from "../tool-system/permission.js";
@@ -19,17 +20,13 @@ async function setup() {
   const sent: any[] = [];
   let factory!: ChildHostBindingsFactory;
   let receive!: (message: any) => void;
-  const engine = {
+  const engine = createFakeEngine({
     isHeadless: () => false,
-    setAskUser() {},
-    setBrowserBridge() {},
-    setInjectCredential() {},
-    setSessionMessageRouter() {},
     dispose() {},
     setChildHostBindings(fn: ChildHostBindingsFactory) {
       factory = fn;
     },
-  } as unknown as Engine;
+  });
   const manager = new ChatSessionManager({ runtime: {} as never, engineFactory: () => engine });
   const router = new ApprovalRouter();
   const server = new AgentServer({

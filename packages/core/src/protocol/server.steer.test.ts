@@ -1,5 +1,6 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { describe, expect, it } from "bun:test";
-import type { Engine } from "../engine/engine.js";
+
 import { AgentServer } from "./server.js";
 
 function makeTransport() {
@@ -75,7 +76,7 @@ describe("AgentServer steer", () => {
         createdAt: 1,
       },
     ];
-    const engine = {
+    const engine = createFakeEngine({
       isHeadless: () => true,
       enqueueSteer(
         sessionId: string,
@@ -87,7 +88,7 @@ describe("AgentServer steer", () => {
         calls.push({ sessionId, text, id, clientMessageId, attachments: steerAttachments });
         return { accepted: false, id: id ?? "generated" };
       },
-    } as unknown as Engine;
+    });
     const t = makeTransport();
     new AgentServer({ transport: t.transport, engine });
 

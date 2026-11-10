@@ -1,5 +1,6 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { describe, expect, test } from "bun:test";
-import type { Engine, EngineResult } from "../engine/engine.js";
+import type { EngineResult } from "../engine/engine.js";
 import type { EngineRunOptions } from "../engine/run-types.js";
 import type {
   RouteSessionMessageInput,
@@ -38,7 +39,9 @@ async function fixture(
   const manager = new ChatSessionManager({
     runtime: {} as never,
     engineFactory: () =>
-      ({
+      createFakeEngine({
+        resolveSessionRunWorkspace: undefined, // Preserve this fixture's absent optional capability.
+        isGoalContinuationBlocked: undefined, // Preserve this fixture's absent optional capability.
         isHeadless: () => !wakeSource,
         sessionExistsOnDisk: () => false,
         getSessionManager: () => ({
@@ -46,10 +49,6 @@ async function fixture(
           readSessionProjectBinding: () => undefined,
           getSessionWorkspace: () => ({ root: "/message-project", kind: "main" }),
         }),
-        setAskUser() {},
-        setBrowserBridge() {},
-        setInjectCredential() {},
-        setSessionMessageRouter() {},
         run: async (task: string, options: EngineRunOptions) => {
           if (options.sessionId === "message-source") {
             sourceRuns.push(task);
@@ -58,7 +57,7 @@ async function fixture(
           }
           return targetRun(task, options);
         },
-      }) as unknown as Engine,
+      }),
   });
   // Avoid production closeAll's process-wide background work cleanup.
   manager.closeAll = () => {};

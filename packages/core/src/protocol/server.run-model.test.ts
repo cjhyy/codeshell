@@ -1,3 +1,4 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { runAcceptance } from "./server-run-controls.js";
 import { resolveConfiguredTextModel } from "../engine/configured-text-model.js";
 import { describe, expect, it } from "bun:test";
@@ -5,7 +6,7 @@ import { AgentServer } from "./server.js";
 import { ChatSessionManager } from "./chat-session-manager.js";
 import type { EngineConfigSlice } from "./chat-session-manager.js";
 import { ErrorCodes } from "./types.js";
-import type { Engine, EngineResult } from "../engine/engine.js";
+import type { EngineResult } from "../engine/engine.js";
 import { Engine as ActualEngine } from "../engine/engine.js";
 import { LLMClientBase } from "../llm/client-base.js";
 import { registerProvider } from "../llm/client-factory.js";
@@ -32,7 +33,7 @@ function makeTransport() {
 
 function makeEngine(opts: { failSwitch?: boolean } = {}) {
   const calls: string[] = [];
-  const engine = {
+  const engine = createFakeEngine({
     isHeadless: () => true,
     switchModel(key: string) {
       calls.push(`switch:${key}`);
@@ -52,7 +53,7 @@ function makeEngine(opts: { failSwitch?: boolean } = {}) {
         usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       };
     },
-  } as unknown as Engine;
+  });
   return { engine, calls };
 }
 
@@ -438,7 +439,7 @@ describe("agent/run model", () => {
 
   it("forwards host-injected completion turns without rendering a user bubble", async () => {
     let injected: boolean | undefined;
-    const engine = {
+    const engine = createFakeEngine({
       isHeadless: () => true,
       async run(_task: string, options: { injected?: boolean }): Promise<EngineResult> {
         injected = options.injected;
@@ -450,7 +451,7 @@ describe("agent/run model", () => {
           usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
         };
       },
-    } as unknown as Engine;
+    });
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () => engine,
@@ -477,7 +478,7 @@ describe("agent/run model", () => {
   it("shows displayText in the session while keeping the full task for the model", async () => {
     let receivedTask: string | undefined;
     let receivedDisplayText: string | undefined;
-    const engine = {
+    const engine = createFakeEngine({
       isHeadless: () => true,
       async run(task: string, options: { displayText?: string }): Promise<EngineResult> {
         receivedTask = task;
@@ -490,7 +491,7 @@ describe("agent/run model", () => {
           usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
         };
       },
-    } as unknown as Engine;
+    });
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () => engine,

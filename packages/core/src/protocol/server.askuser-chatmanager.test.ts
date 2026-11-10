@@ -1,7 +1,8 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { describe, it, expect } from "bun:test";
 import { AgentServer } from "./server.js";
 import { ChatSessionManager } from "./chat-session-manager.js";
-import type { Engine, EngineResult } from "../engine/engine.js";
+import type { EngineResult } from "../engine/engine.js";
 
 /**
  * Regression: the chatManager path (what desktop interactive chat uses) never
@@ -30,11 +31,10 @@ function makeTransport() {
 /** Fake engine that records whether setAskUser was wired and runs trivially. */
 function makeFakeEngine() {
   const state = { askUser: undefined as unknown };
-  const engine = {
+  const engine = createFakeEngine({
     setAskUser(fn: unknown) {
       state.askUser = fn;
     },
-    setPlanMode() {},
     isHeadless: () => false,
     async run(): Promise<EngineResult> {
       return {
@@ -45,7 +45,7 @@ function makeFakeEngine() {
         usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       };
     },
-  } as unknown as Engine;
+  });
   return { engine, state };
 }
 

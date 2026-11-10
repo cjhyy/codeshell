@@ -1,3 +1,4 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 /**
  * Identity dimension foundations (Task 2): ChatSessionManager identity scope.
  *
@@ -21,8 +22,7 @@ import {
 import type { Engine, EngineResult } from "../engine/engine.js";
 
 function makeFakeEngine(): Engine {
-  return {
-    setAskUser() {},
+  return createFakeEngine({
     isHeadless: () => true,
     sessionExistsOnDisk: () => false,
     async run(): Promise<EngineResult> {
@@ -34,7 +34,7 @@ function makeFakeEngine(): Engine {
         usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       };
     },
-  } as unknown as Engine;
+  });
 }
 
 describe("ChatSessionManager identity scope", () => {

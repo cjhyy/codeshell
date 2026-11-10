@@ -1,12 +1,13 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { expect, test } from "bun:test";
 import { ChatSession } from "./chat-session.js";
-import type { Engine } from "../engine/engine.js";
+
 import type { EngineRunOptions } from "../engine/run-types.js";
 import type { StreamEvent } from "../types.js";
 
 test("scoped cancellation rejects stale input identities and preserves queued turns", async () => {
   const runs: string[] = [];
-  const engine = {
+  const engine = createFakeEngine({
     async run(task: string, options: EngineRunOptions) {
       runs.push(task);
       if (task === "first") {
@@ -24,7 +25,7 @@ test("scoped cancellation rejects stale input identities and preserves queued tu
         usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       };
     },
-  } as unknown as Engine;
+  });
   const session = new ChatSession({ id: "work", engine });
   const first = session.enqueueTurn("first", { clientMessageId: "first-input" });
   const second = session.enqueueTurn("second", { clientMessageId: "second-input" });
@@ -40,7 +41,7 @@ test("scoped cancellation rejects stale input identities and preserves queued tu
 
 test("retains the submit identity when initialization fails before session_started", async () => {
   const events: StreamEvent[] = [];
-  const engine = {
+  const engine = createFakeEngine({
     async run(_task: string, options: EngineRunOptions) {
       options.onStream?.({ type: "turn_complete", reason: "model_error" });
       return {
@@ -51,7 +52,7 @@ test("retains the submit identity when initialization fails before session_start
         usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       };
     },
-  } as unknown as Engine;
+  });
   const session = new ChatSession({ id: "work", engine, onStream: (event) => events.push(event) });
   await session.enqueueTurn("work", { clientMessageId: "current-submit" });
   expect(events[0]).toMatchObject({ reason: "model_error", clientMessageId: "current-submit" });
@@ -59,7 +60,7 @@ test("retains the submit identity when initialization fails before session_start
 
 test("queued runs forward their operation batch token and session brief", async () => {
   const runs: EngineRunOptions[] = [];
-  const engine = {
+  const engine = createFakeEngine({
     async run(_task: string, options: EngineRunOptions) {
       runs.push(options);
       return {
@@ -70,7 +71,7 @@ test("queued runs forward their operation batch token and session brief", async 
         usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       };
     },
-  } as unknown as Engine;
+  });
   const session = new ChatSession({ id: "work", engine });
   const batch = session.enqueueTurn("batch task", {
     clientMessageId: "batch-input",
@@ -91,7 +92,7 @@ test("queued runs forward their operation batch token and session brief", async 
 test("run callbacks retain their own identity across queued and background turns", async () => {
   const callbacks: NonNullable<EngineRunOptions["onStream"]>[] = [];
   const events: StreamEvent[] = [];
-  const engine = {
+  const engine = createFakeEngine({
     async run(_task: string, options: EngineRunOptions) {
       const emit = options.onStream!;
       callbacks.push(emit);
@@ -111,7 +112,7 @@ test("run callbacks retain their own identity across queued and background turns
         usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       };
     },
-  } as unknown as Engine;
+  });
   const session = new ChatSession({ id: "work", engine, onStream: (event) => events.push(event) });
   await session.enqueueTurn("first", { clientMessageId: "submit" });
   await session.enqueueTurn("background result", { injected: true });
@@ -129,7 +130,7 @@ test("queued host tasks retain their original hard tool/Skill ceiling and epheme
     release = done;
   });
   const runs: EngineRunOptions[] = [];
-  const engine = {
+  const engine = createFakeEngine({
     run: async (_task: string, options: EngineRunOptions) => {
       runs.push(options);
       if (runs.length === 1) await gate;
@@ -141,7 +142,7 @@ test("queued host tasks retain their original hard tool/Skill ceiling and epheme
         usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       };
     },
-  } as unknown as Engine;
+  });
   const session = new ChatSession({ id: "task", engine });
   const first = session.enqueueTurn("hold", {});
   const tools = ["Write"];
@@ -172,7 +173,7 @@ test("queued host tasks retain their original hard tool/Skill ceiling and epheme
 
 test("a turn's trigger marks its own top-level session_started only", async () => {
   const events: StreamEvent[] = [];
-  const engine = {
+  const engine = createFakeEngine({
     async run(_task: string, options: EngineRunOptions) {
       const emit = options.onStream!;
       emit({
@@ -192,7 +193,7 @@ test("a turn's trigger marks its own top-level session_started only", async () =
         usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       };
     },
-  } as unknown as Engine;
+  });
   const session = new ChatSession({ id: "work", engine, onStream: (event) => events.push(event) });
   await session.enqueueTurn("wake", { injected: true, trigger: "background_wake" });
   await session.enqueueTurn("legacy", {});

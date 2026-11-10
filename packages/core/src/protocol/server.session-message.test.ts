@@ -1,5 +1,6 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { describe, expect, test } from "bun:test";
-import type { Engine, EngineResult } from "../engine/engine.js";
+import type { EngineResult } from "../engine/engine.js";
 import type { EngineRunOptions } from "../engine/run-types.js";
 import type { RouteSessionMessageInput } from "../session/session-message.js";
 import { ChatSessionManager } from "./chat-session-manager.js";
@@ -22,7 +23,7 @@ function makeTransport() {
 describe("AgentServer cross-Session message routing", () => {
   test("enqueues the text as the target Session's ordinary user turn", async () => {
     const received: Array<{ task: string; options: EngineRunOptions }> = [];
-    const engine = {
+    const engine = createFakeEngine({
       isHeadless: () => true,
       sessionExistsOnDisk: () => false,
       async run(task: string, options: EngineRunOptions): Promise<EngineResult> {
@@ -35,7 +36,7 @@ describe("AgentServer cross-Session message routing", () => {
           usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
         };
       },
-    } as unknown as Engine;
+    });
     const manager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () => engine,
@@ -102,13 +103,13 @@ describe("AgentServer cross-Session message failure reporting", () => {
     // threw "Workspace profile ... is unavailable". The turn ran fire-and-forget,
     // so SendMessageToSession still answered "has queued the turn" and the lead
     // waited two hours, then re-sent — never learning why.
-    const engine = {
+    const engine = createFakeEngine({
       isHeadless: () => true,
       sessionExistsOnDisk: () => false,
       async run(): Promise<EngineResult> {
         throw new Error('Workspace profile "video-engineer" is unavailable');
       },
-    } as unknown as Engine;
+    });
     const manager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () => engine,
@@ -145,7 +146,7 @@ describe("AgentServer cross-Session message failure reporting", () => {
 
   test("a healthy target still returns without waiting for the whole turn", async () => {
     let released: (() => void) | undefined;
-    const engine = {
+    const engine = createFakeEngine({
       isHeadless: () => true,
       sessionExistsOnDisk: () => false,
       async run(options?: unknown): Promise<EngineResult> {
@@ -162,7 +163,7 @@ describe("AgentServer cross-Session message failure reporting", () => {
           usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
         };
       },
-    } as unknown as Engine;
+    });
     const manager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () => engine,

@@ -1,3 +1,4 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { describe, expect, spyOn, test } from "bun:test";
 import type { Engine } from "../engine/engine.js";
 import { createWorkspaceContext } from "../workspace/workspace-context.js";
@@ -16,13 +17,13 @@ function fixture(dispose?: () => Promise<void>) {
   const manager = new ChatSessionManager({
     runtime: {} as never,
     engineFactory() {
-      const engine = {
+      const engine = createFakeEngine({
         migrateSessionMainRoot: (_id: string, _project: unknown, root: string) => ({
           root,
           kind: "main",
         }),
         dispose: engines.length === 0 ? dispose : undefined,
-      } as unknown as Engine;
+      });
       engines.push(engine);
       return engine;
     },

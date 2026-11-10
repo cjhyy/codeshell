@@ -1,8 +1,9 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { describe, expect, spyOn, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
-import type { Engine, EngineResult } from "../engine/engine.js";
+import type { EngineResult } from "../engine/engine.js";
 import type { EngineRunOptions } from "../engine/run-types.js";
 import type { SessionMessageReceipt, SessionMessageRouter } from "../session/session-message.js";
 import { NotificationQueue } from "../tool-system/builtin/agent-notifications.js";
@@ -82,13 +83,9 @@ function fixture() {
     dataRoot: dir,
     engineFactory(slice) {
       let routeMessage: SessionMessageRouter | undefined;
-      return {
+      return createFakeEngine({
         isHeadless: () => false,
         sessionExistsOnDisk: () => false,
-        setAskUser() {},
-        setBrowserBridge() {},
-        setInjectCredential() {},
-        setWorkspaceBridge() {},
         setSessionMessageRouter(router: SessionMessageRouter) {
           routeMessage = router;
         },
@@ -111,7 +108,7 @@ function fixture() {
           }
           return completed(sourceId, state.error ?? "Dispatch completed.");
         },
-      } as unknown as Engine;
+      });
     },
   });
   const getOrCreate = spyOn(manager, "getOrCreate");

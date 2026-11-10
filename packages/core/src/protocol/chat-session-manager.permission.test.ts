@@ -1,10 +1,11 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 /** Permission-mode lifecycle and approval cleanup integration coverage. */
 import { afterEach, beforeEach, describe, it, expect } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ChatSessionManager, type EngineConfigSlice } from "./chat-session-manager.js";
-import type { Engine } from "../engine/engine.js";
+
 import type { EngineRuntime } from "../engine/runtime.js";
 import type { ApprovalRequest, ApprovalResult, PermissionMode } from "../types.js";
 import {
@@ -22,7 +23,7 @@ import {
 function fakeEngine(initial: PermissionMode) {
   let mode: PermissionMode = initial;
   const setCalls: PermissionMode[] = [];
-  const engine = {
+  const engine = createFakeEngine({
     getPermissionMode() {
       return mode;
     },
@@ -30,7 +31,7 @@ function fakeEngine(initial: PermissionMode) {
       mode = m;
       setCalls.push(m);
     },
-  } as unknown as Engine;
+  });
   return { engine, setCalls, current: () => mode };
 }
 

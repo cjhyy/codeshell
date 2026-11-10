@@ -1,9 +1,10 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { afterEach, describe, expect, it } from "bun:test";
 import { AgentServer } from "./server.js";
 import { ChatSessionManager } from "./chat-session-manager.js";
 import { ErrorCodes, Methods } from "./types.js";
 import { HookRegistry } from "../hooks/registry.js";
-import type { Engine, EngineResult, EngineRunOptions } from "../engine/engine.js";
+import type { EngineResult, EngineRunOptions } from "../engine/engine.js";
 
 function deferred() {
   let resolve!: () => void;
@@ -45,16 +46,11 @@ function makeAskingEngine(sessionId: string, hold = false, consumeSteers = false
     state.hookEvents.push(ctx.data);
     return {};
   });
-  const engine = {
+  const engine = createFakeEngine({
     getHookRegistry: () => hooks,
-    setAskUser() {},
     setAskUserAsync(fn: (question: string) => Promise<unknown>) {
       state.askUserAsync = fn;
     },
-    setPlanMode() {},
-    setBrowserBridge() {},
-    setInjectCredential() {},
-    setSessionMessageRouter() {},
     isHeadless: () => false,
     getGoal: () => undefined,
     resolveSessionRunWorkspace: () => state.resolveWorkspace(),
@@ -102,7 +98,7 @@ function makeAskingEngine(sessionId: string, hold = false, consumeSteers = false
         state.active = false;
       }
     },
-  } as unknown as Engine;
+  });
   return { engine, state };
 }
 

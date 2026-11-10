@@ -1,8 +1,9 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { afterEach, describe, expect, it } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { Engine } from "../engine/engine.js";
+
 import { HookRegistry } from "../hooks/registry.js";
 import { ApprovalRouter, type ApprovalRequest } from "../tool-system/permission.js";
 import type { ApprovalResult } from "../types.js";
@@ -31,11 +32,11 @@ async function fixture() {
     runtime: {} as never,
     dataRoot: cwd,
     engineFactory: () =>
-      ({
+      createFakeEngine({
         dispose() {},
         isHeadless: () => false,
         getHookRegistry: () => hooks,
-      }) as unknown as Engine,
+      }),
   });
   const sessionId = "decision-session";
   const session = await manager.getOrCreate(sessionId, {});
