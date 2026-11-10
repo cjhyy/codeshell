@@ -17,7 +17,6 @@ const workspacePackageRoots = [
   "core",
   "host",
   "coding",
-  "arena",
   "pet",
   "optimization-lab",
   "server",
@@ -28,7 +27,7 @@ const workspacePackageRoots = [
   "browser-devtools",
   "desktop",
 ].map((name) => packageRoot("packages", name));
-const capabilityPackageRoots = ["coding", "arena", "pet", "optimization-lab"].map((name) => ({
+const capabilityPackageRoots = ["coding", "pet", "optimization-lab"].map((name) => ({
   name,
   root: packageRoot("packages", name),
 }));
@@ -479,7 +478,6 @@ export default [
   {
     files: [
       "packages/coding/src/**/*.{ts,tsx}",
-      "packages/arena/src/**/*.{ts,tsx}",
       "packages/pet/src/**/*.{ts,tsx}",
       "packages/optimization-lab/src/**/*.{ts,tsx}",
     ],

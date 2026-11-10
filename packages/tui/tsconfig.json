@@ -22,13 +22,5 @@
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"],
-  // Keep the dormant Arena command source for its private capability package;
-  // it is not a terminal entry point and must not ship in the public TUI.
-  "exclude": [
-    "node_modules",
-    "dist",
-    "src/**/*.test.ts",
-    "src/**/*.test.tsx",
-    "src/cli/commands/arena.ts"
-  ]
+  "exclude": ["node_modules", "dist", "src/**/*.test.ts", "src/**/*.test.tsx"]
 }

@@ -369,7 +369,6 @@ describe("architecture growth budgets", () => {
       // external runtime answer goalGet with the same shape (incl. goal progress).
       "packages/core/src/index.internal.ts": 133,
       "packages/coding/src/index.ts": 12,
-      "packages/arena/src/index.ts": 19,
       // +1 for conversation-session.ts, which re-exports the four modules
       // behind entering a Work Session from a chat (route record, IM list,
       // visit receipt, deterministic commands). They are one feature and are

@@ -207,7 +207,7 @@ jobs:
           # runner's resolver cache (see tests/helpers/bundle-in-subprocess.ts).
           - shard: rest
             paths: >-
-              tests packages/coding packages/pet packages/chat packages/arena packages/cdp
+              tests packages/coding packages/pet packages/chat packages/cdp
               packages/link packages/optimization-lab packages/browser-devtools packages/host
             # The native-trial cancel suite runs alone in the Desktop step: an earlier
             # file's electron mock (no `screen`) wins in a shared process, the import

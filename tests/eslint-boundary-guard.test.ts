@@ -136,7 +136,7 @@ describe("ESLint CodeShell package boundary guards", () => {
           ].join("\n"),
         ),
         lintStdin(
-          "packages/arena/src/__lint_boundary_probe__.ts",
+          "packages/pet/src/__lint_boundary_probe__.ts",
           ['export { WorkerBridgeCore } from "@cjhyy/code-shell-server";', ""].join("\n"),
         ),
       ];

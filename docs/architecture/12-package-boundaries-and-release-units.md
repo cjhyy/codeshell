@@ -38,6 +38,8 @@ The most important conclusions are:
    workflow runs it as a dedicated ten-tarball job before npm publication,
    without adding pack work to the normal targeted unit-test job.
 
+> Arena update (2026-11-10): the retired private workspace, dormant TUI command, and test fixture have been deleted. Earlier audit observations below remain historical; `scripts/package-release-audit-config.ts` is the current release authority.
+
 ## Current dependency graph
 
 Workspace edges from production code and manifests:
@@ -45,12 +47,11 @@ Workspace edges from production code and manifests:
 ```text
 @cjhyy/code-shell (meta manifest)
   ├─> core
-  └─> tui ──────────────> core + coding + arena
+  └─> tui ──────────────> core + coding
 
 link                     (no CodeShell runtime dependency)
 
 coding ─────────────────> core/extension
-arena ──────────────────> core/extension
 
 generated meta runtime
   ├─> core (SDK re-export)
@@ -58,7 +59,7 @@ generated meta runtime
 
 desktop (private)
   ├─> core + core/internal
-  ├─> coding / arena / pet
+  ├─> coding / pet
   ├─> server / web / chat / cdp
   └─> Electron + renderer dependencies
 
@@ -78,7 +79,7 @@ There are no workspace dependency cycles. The intended layer order is:
 | Layer | Packages                        | Meaning                                                   |
 | ----- | ------------------------------- | --------------------------------------------------------- |
 | L0    | `link`, `core`, `chat`, `cdp`   | Foundations with no dependency on another product package |
-| L1    | `coding`, `arena`, `pet`, `web` | Capabilities or clients built on core contracts           |
+| L1    | `coding`, `pet`, `web` | Capabilities or clients built on core contracts           |
 | L2    | `tui`, `server`                 | Composition hosts                                         |
 | L3    | `desktop`, root meta package    | Product/distribution composition                          |
 
@@ -92,7 +93,6 @@ declares core as a regular dependency so emitted declarations can resolve.
 | `link`    | Public manifest/guide root                                                                | Correct framework-independent leaf boundary. Hosts consume provider metadata without pulling in Core or a UI runtime.                                                                                  |
 | `core`    | Public `.`, trusted `/extension`, in-repo `/internal`, plugin runtime and worker subpaths | Correct three-surface model. The root barrel remains broad, so the documented stable API table must stay the compatibility authority.                                                                  |
 | `coding`  | Compatibility root plus `/capability`, `/git`, `/orchestration` and worker bin            | Correct physical capability split. Focused host imports no longer evaluate unrelated LSP, patch, Git, or external-agent surfaces, while the root preserves the existing SDK.                           |
-| `arena`   | Compatibility root plus `/runtime`                                                        | Correct capability split. Normal hosts use the runtime API without evaluating Iterate mode and advanced phase/strategy barrels; the root preserves those advanced exports.                             |
 | `pet`     | Compatibility root plus `/capability`, `/protocol`, `/team`                               | Correct extraction from core. Focused subpaths keep one release unit while preventing new consumers from depending on its implementation-wide root barrel.                                             |
 | `server`  | Compatibility root plus `/storage`, `/worker`, `/mobile-remote`, `/serve`, and CLI bin    | Correct evaluation boundary within one release unit. Kernel consumers avoid Coding/Web composition; `/serve` retains the ready-made product defaults.                                                  |
 | `web`     | Browser logic root plus bundled SPA assets                                                | Good browser boundary: no Electron and no core runtime import. Keeping the reusable state/reducer layer and SPA in one package is reasonable at current scale.                                         |
@@ -100,7 +100,7 @@ declares core as a regular dependency so emitted declarations can resolve.
 | `desktop` | Private app                                                                               | Correct composition root. Code loaded only through bundling may live in dev dependencies, while worker-loaded packages must remain runtime dependencies and be copied by `predist`.                    |
 | `cdp`     | Private package                                                                           | Good zero-dependency technical boundary. It is intentionally not an npm release unit today; documentation must not call it published.                                                                  |
 | `chat`    | Root plus per-platform subpaths                                                           | Good domain independence. `/factory` now dynamically imports only the selected adapter, but all platform SDKs remain one default installation unit.                                                    |
-| root meta | Core re-export and TUI CLI shim                                                           | Correct compatibility package. Its direct runtime dependencies now match the generated artifacts: Core for the SDK re-export and TUI for the CLI shim. Coding and Arena remain TUI-owned dependencies. |
+| root meta | Core re-export and TUI CLI shim                                                           | Correct compatibility package. Its direct runtime dependencies now match the generated artifacts: Core for the SDK re-export and TUI for the CLI shim. Coding remains a TUI-owned dependency. |
 
 ## Why Pet is a package
 
@@ -220,7 +220,7 @@ had this behavior.
 The intended rule is:
 
 ```text
-coding / arena / pet -> @cjhyy/code-shell-core/extension
+coding / pet -> @cjhyy/code-shell-core/extension
 ```
 
 Capability runtime code must not import core's public root, `/internal`, a host
@@ -336,7 +336,7 @@ passes:
 
 The count is not itself a defect, but broad star barrels make implementation
 modules semver-visible and increase accidental initialization. Core's three
-entry contracts are the right model. Pet, Coding, Arena, and Server now retain
+entry contracts are the right model. Pet, Coding, and Server now retain
 their roots for compatibility while offering focused host entries.
 
 Suggested shape/status:
@@ -344,7 +344,6 @@ Suggested shape/status:
 | Package  | Primary entry      | Focused subpaths / status                                         |
 | -------- | ------------------ | ----------------------------------------------------------------- |
 | `coding` | compatibility root | Implemented: `/capability`, `/git`, `/orchestration`, worker bin  |
-| `arena`  | compatibility root | Implemented: `/runtime`; advanced algorithms/Iterate stay at root |
 | `pet`    | compatibility root | Implemented: `/capability`, `/protocol`, `/team`                  |
 | `server` | compatibility root | Implemented: `/storage`, `/worker`, `/mobile-remote`, `/serve`    |
 
@@ -358,7 +357,7 @@ lockfile verification.
 The public list is also the npm publish order:
 
 ```text
-link -> core -> pet -> arena -> coding -> web -> server -> tui -> chat -> root meta
+link -> core -> pet -> coding -> web -> server -> tui -> chat -> root meta
 ```
 
 Independent packages may appear anywhere after their dependencies; the
@@ -369,9 +368,9 @@ manifest without adding it to the declaration fails version verification.
 
 ### P2 — package metadata and local entry documentation
 
-- Link, Core, Coding, Arena, Pet, Server, Web, TUI and Chat now publish repository
+- Link, Core, Coding, Pet, Server, Web, TUI and Chat now publish repository
   metadata and a Node `>=20.10` engine contract.
-- Web now has a package-local README. Pet, Coding, Arena, Server and Web
+- Web now has a package-local README. Pet, Coding, Server and Web
   document their focused entry contracts locally.
 - Older architecture docs still described four packages and called CDP
   published even though `packages/cdp/package.json` is private.
@@ -387,7 +386,7 @@ The repository guard now encodes these invariants:
 | Source                              | Allowed CodeShell imports                                                |
 | ----------------------------------- | ------------------------------------------------------------------------ |
 | `core` production                   | None; use relative self-imports                                          |
-| `coding`, `arena`, `pet` production | `@cjhyy/code-shell-core/extension`                                       |
+| `coding`, `pet` production | `@cjhyy/code-shell-core/extension`                                       |
 | coding worker composition entry     | Above plus core's stdio worker bin                                       |
 | TUI/Desktop main                    | core public/internal and explicitly composed capabilities                |
 | desktop renderer                    | Type-only CodeShell contracts and reviewed browser-safe runtime packages |
@@ -418,7 +417,7 @@ Useful checks:
 bun test tests/eslint-boundary-guard.test.ts
 bun test packages/core/src/plugins/runtime.browser-contract.test.ts
 bun test packages/pet/src/index.exports.test.ts
-bun test packages/coding/src/index.exports.test.ts packages/arena/src/index.exports.test.ts
+node scripts/run-bun-test-shard.mjs --timeout 30000 ./packages/coding/src/index.exports.test.ts
 bun test packages/server/src/index.exports.test.ts
 bun test packages/core/src/utils/lockfile.test.ts
 bun run test:package-release -- --list
@@ -428,7 +427,7 @@ bun run scripts/verify-release-versions.ts "$(node -p "require('./package.json')
 bun run scripts/release.ts 0.7.2 --dry-run
 bun run scripts/publish-release-packages.ts --list
 bun run scripts/publish-release-packages.ts --tag next --dry-run
-bunx eslint packages/core/src packages/coding/src packages/arena/src packages/pet/src --quiet
+bunx eslint packages/core/src packages/coding/src packages/pet/src --quiet
 bun run --filter '@cjhyy/code-shell-core' build
 (bun run --filter '@cjhyy/code-shell-pet' build && \
   cd packages/desktop && \

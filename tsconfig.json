@@ -54,8 +54,6 @@
       "@cjhyy/code-shell-server/panels": ["packages/server/src/index.panels.ts"],
       "@cjhyy/code-shell-web": ["packages/web/src/index.ts"],
       "@cjhyy/code-shell-web/*": ["packages/web/src/*"],
-      "@cjhyy/code-shell-arena": ["packages/arena/src/index.ts"],
-      "@cjhyy/code-shell-arena/runtime": ["packages/arena/src/index.runtime.ts"],
       "@cjhyy/code-shell-tui": ["packages/tui/src/index.ts"],
       "@cjhyy/code-shell-tui/*": ["packages/tui/src/*"],
       "@cjhyy/code-shell-server/account": ["packages/server/src/index.account.ts"],

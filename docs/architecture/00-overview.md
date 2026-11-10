@@ -2,7 +2,8 @@
 
 > 基线：`main` @ `df2ca0bda`（2026-10-19），版本 0.9.45。所有 `file:line` 引用都对应这个提交；源码变动后行号会漂移，以符号名为准。
 > 本组章节（00–10）于 2026-10-20 按函数层级重写，替换了 2026-07 版的同号章节（已归档到 [`docs/archive/architecture-2026-07/`](../archive/architecture-2026-07/README.md)）。11–16 章未改动。
-> 规模：14 个 workspace 包，非测试 TS/TSX 约 54 万行（desktop 24 万、core 15 万、tui 4.3 万、server 4.3 万）。
+> 包数量更新（2026-11-10）：Arena 删除后为 13 个 workspace 包；以下源码规模为原基线数据。
+> 原基线规模：14 个 workspace 包，非测试 TS/TSX 约 54 万行（desktop 24 万、core 15 万、tui 4.3 万、server 4.3 万）。
 
 ## 0.1 一句话定位
 
@@ -20,7 +21,6 @@ graph TD
   coding["capability-coding<br/>git/LSP/worktree"]
   pet["pet<br/>Mimi 能力"]
   optlab["optimization-lab<br/>(private, 实验)"]
-  arena["arena<br/>(private, 不再加载)"]
   cdp["cdp<br/>(legacy CDP 兼容)"]
   bdt["browser-devtools<br/>Console/Network 采集"]
   web["web<br/>浏览器端逻辑层"]
@@ -31,7 +31,7 @@ graph TD
   meta["@cjhyy/code-shell<br/>meta 包, bin: code-shell"]
 
   link --> core
-  core --> host & coding & pet & optlab & arena
+  core --> host & coding & pet & optlab
   core --> web
   link --> web
   core & coding & web & link & host --> server
@@ -48,7 +48,7 @@ graph TD
 | 入口                               | 谁能用                                            | 内容                                                |
 | ---------------------------------- | ------------------------------------------------- | --------------------------------------------------- |
 | `@cjhyy/code-shell-core`（`.`）    | 任何外部 SDK 使用者                               | 稳定公开 API                                        |
-| `@cjhyy/code-shell-core/extension` | 能力包（coding / pet / arena / optimization-lab） | 能力包契约：注册工具、prompt section、hook、profile |
+| `@cjhyy/code-shell-core/extension` | 能力包（coding / pet / optimization-lab） | 能力包契约：注册工具、prompt section、hook、profile |
 | `@cjhyy/code-shell-core/internal`  | 仓库内宿主（tui / desktop / server）              | 宿主专用 helper                                     |
 | `/browser/panel-app-runtime`       | desktop renderer                                  | 浏览器安全的 Panel App 运行时                       |
 | `/bin/agent-server-stdio`          | desktop/server 拉起的子进程                       | 引擎以 stdio 协议服务的进程入口                     |
@@ -87,7 +87,7 @@ desktop 里实际的 import 次数（`grep` 统计）：core `.` 209 处、`/int
 | [03 core：LLM、上下文、会话](03-core-llm-session-context.md)                 | `llm/` `model-*` `context/` `session/` `prompt/` `cost-*`                      |
 | [04 core：协议、插件、技能、Link](04-core-protocol-plugins-links.md)         | `protocol/` `plugins/` `skills/` `links/` `sources/`                           |
 | [05 core：入口、设置、组合、运行时](05-core-runtime-settings-composition.md) | 入口 / `settings/` `credentials/` `composition/` `preset/` `panel-apps/` …     |
-| [06 能力包](06-capability-packages.md)                                       | coding / pet / host / link / optimization-lab / cdp / browser-devtools / arena |
+| [06 能力包](06-capability-packages.md)                                       | coding / pet / host / link / optimization-lab / cdp / browser-devtools |
 | [07 TUI](07-tui.md)                                                          | `packages/tui` + meta 包                                                       |
 | [08 Desktop 主进程](08-desktop-main.md)                                      | main / preload / shared / browser-library / chrome-extension                   |
 | [09 Desktop 渲染层、手机端、web](09-desktop-renderer-mobile-web.md)          | renderer / mobile / `packages/web`                                             |

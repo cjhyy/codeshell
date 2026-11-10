@@ -1,7 +1,7 @@
 # 06 能力包与周边小包架构（函数层级）
 
 > 基线：`main` @ `df2ca0bda`（2026-10-19），版本 0.9.45。下文所有 `file:line` 都对应这个提交，路径相对 `packages/`。
-> 覆盖范围：`coding`、`pet`、`host`、`link`、`optimization-lab`、`cdp`、`browser-devtools`、`arena`（简述）。
+> 覆盖范围：`coding`、`pet`、`host`、`link`、`optimization-lab`、`cdp`、`browser-devtools`。
 > 说明：旧版章节（已归档到 `docs/archive/architecture-2026-07/`）只作线索参考，本文结论都已对照源码核过。
 
 ---
@@ -62,13 +62,12 @@ interface AgentModule {
 | server `serve`：`server/src/serve/cli.ts:152 resolveWorkerCapabilityModules()` → `headless-server.ts:546` | env                                                                                        | coding + `@cjhyy/code-shell-server/links#createLinkProviderModule`（没传时只给 links）                                                                                                                                                                                                                                               |
 | server Panel 任务 worker：`server/src/panels/agent-task-host.ts:366`                                      | env（默认）                                                                                | 仅 coding                                                                                                                                                                                                                                                                                                                            |
 | TUI：`tui/src/cli/commands/repl.ts:161`、`:164`（cron 用）、`run.ts:81`                                   | 进程内                                                                                     | 仅 coding                                                                                                                                                                                                                                                                                                                            |
-| arena                                                                                                     | **任何宿主都不加载**（`tui/src/cli/commands/arena.ts` 被 `tui/tsconfig.json` 排除）        | —                                                                                                                                                                                                                                                                                                                                    |
 
 Pet 只在 Desktop 加载；server/TUI 没有 Mimi。
 
 ### 6.0.4 入口纪律
 
-- `coding`、`pet`、`optimization-lab`、`arena` 的**非测试源码**只从 `@cjhyy/code-shell-core/extension`（`core/src/index.extension.ts`）导入。全仓 grep 结果：从 core 根入口 `.` 或 `/internal` 导入的文件全是 `*.test.ts`（例如 `coding/src/tools/drive-agent.test.ts`、`coding/src/integration/*.test.ts`）。
+- `coding`、`pet`、`optimization-lab` 的**非测试源码**只从 `@cjhyy/code-shell-core/extension`（`core/src/index.extension.ts`）导入。全仓 grep 结果：从 core 根入口 `.` 或 `/internal` 导入的文件全是 `*.test.ts`（例如 `coding/src/tools/drive-agent.test.ts`、`coding/src/integration/*.test.ts`）。
 - `host` 是宿主侧包，`host/src/runtime.ts:1` 用 `import type { Contracts } from "@cjhyy/code-shell-core"`（只导类型，从根入口）。
 - `link`、`cdp`、`browser-devtools` **零运行时依赖**（package.json 没有 `dependencies`），反过来是 core 依赖 `link`（`core/src/links/*`、`core/src/credentials/*`）。
 
@@ -81,7 +80,6 @@ graph LR
     pet["pet<br/>createPetModule()<br/>16 个 preset-tags 工具<br/>behaviorProfiles: pet<br/>protocol observer/queries"]
     olab["optimization-lab<br/>createOptimizationLabModule()<br/>instructionBindings + 21 个 queries"]
     links["server/links<br/>createLinkProviderModule()"]
-    arena["arena (private)<br/>createArenaModule()<br/>不被加载"]
   end
 
   subgraph Core["core"]
@@ -104,7 +102,7 @@ graph LR
   cdp["cdp<br/>CdpActionsDriver（legacy）"]
   bdt["browser-devtools<br/>createBrowserInspector()"]
 
-  coding & pet & olab & arena -->|import| ext
+  coding & pet & olab -->|import| ext
   desk -->|"env CODE_SHELL_CAPABILITY_MODULES"| stdio
   serve -->|env| stdio
   tui -->|"modules:[createCodingModule()]"| comp
@@ -1053,28 +1051,9 @@ Desktop renderer → IPC → optimization-lab-ipc.ts:333 query(check, `optimizat
 
 ---
 
-## 6.8 `packages/arena` — 保留的私有 Arena 源码（简述）
+## 6.8 Arena — 已删除
 
-### 6.8.1 定位
-
-- 包名 `@cjhyy/code-shell-arena`，private，依赖 core（只从 `/extension` 导入）+ `zod`，约 9.8k 行。
-- **宿主不再加载、发布也不包含**。TUI 里残留的 `tui/src/cli/commands/arena.ts`（import `@cjhyy/code-shell-arena/runtime`）被 `tui/tsconfig.json` 的 `exclude` 排除（注释："dormant Arena command source…must not ship in the public TUI"），`tui/package.json` 也不依赖 arena。根 `tsconfig.json:56-57` 保留了路径映射，供源码和测试继续编译。
-- CODESHELL.md 约束：不要把 Arena 的 import、内建工具、设置或固定 RPC query 加回 core。
-
-### 6.8.2 结构
-
-| 子入口 / 目录                                                                                                          | 内容                                                                                                                                                                                                                                                                                                                          |
-| ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `./runtime`（`index.runtime.ts`）                                                                                      | `Arena` 类、`createArenaModule`、`arenaTool/arenaToolDef`、`ArenaCapabilitySettingsSchema`、`getArenaStatus`、`saveArenaSettingsByKeys`、`MODEL_PRESETS`、终端/会话渲染                                                                                                                                                       |
-| `.`（`index.ts`）                                                                                                      | runtime + 策略、planner、证据采集、lens、各阶段函数、账本、claim 状态迁移、`IterativeArena`（迭代模式）                                                                                                                                                                                                                       |
-| `src/capability.ts`                                                                                                    | `createArenaModule()`（`:549`）：`engine.tools = [{kind:"always", tool: ARENA_TOOL}]`、`protocol.queries = ARENA_QUERIES`                                                                                                                                                                                                     |
-| `src/arena.ts`                                                                                                         | `Arena.run(topic, flags)`（`:96`）流水线：Phase 0 `planArena` → 1 `collectEvidence` → 2 `getStrategyForPlan` → 3 选工具 → 4 `runParticipantResearchWithDossiers`（并行）→ 4b claim 注册 → 5 按模式路由：planning 走 `runVerificationReview` + `buildConsensus` + `runDetailExpansion`，review/discussion 走交叉评审/辩论/裁决 |
-| `src/strategies/`、`src/phases/`、`src/lenses/`、`src/providers/`（repo/git/docs/none）、`src/iterate/`、`src/render/` | 策略、阶段、视角、证据源、迭代模式、渲染                                                                                                                                                                                                                                                                                      |
-
-### 6.8.3 要点
-
-- 它是 `kind:"always"` 工具（不走 preset 标签）的唯一例子。
-- 现状是"源码 + 测试仍可编译运行，产品不可达"。
+2026-11-10 删除退役的 Arena 私有源码、旧 TUI 命令和测试夹具。不要把它的 import、内建工具、设置或固定 RPC query 加回 core；已有防回归测试及旧用户设置清理保留。
 
 ---
 
@@ -1085,7 +1064,6 @@ Desktop renderer → IPC → optimization-lab-ipc.ts:333 query(check, `optimizat
 | coding           | `coding`              | 9 个 preset-tags 工具、2 个 preset、defaultPreset、promptSections、dynamicContext、instructionBoundary、artifactDetectors、fileHistory、sessionWorkspace、adjustToolSelection、privateService(engine) | 无                                                                   | Desktop worker/主进程、server serve/panels、TUI | core           |
 | pet              | `pet`                 | 16 个 preset-tags 工具、behaviorProfile `pet`                                                                                                                                                         | queries（投影快照）、observer、validateRunParams、hiddenSessionKinds | 仅 Desktop worker                               | core           |
 | optimization-lab | `optimization-lab`    | instructionBindings                                                                                                                                                                                   | 21 个 queries                                                        | Desktop worker（flag 开启时）                   | core、zod      |
-| arena            | `arena`               | 1 个 always 工具                                                                                                                                                                                      | queries                                                              | 无                                              | core、zod      |
 | host             | —（不是 AgentModule） | —                                                                                                                                                                                                     | —                                                                    | Desktop main、server                            | core（仅类型） |
 | link             | —                     | —                                                                                                                                                                                                     | —                                                                    | core、server、desktop、web                      | 无             |
 | cdp              | —                     | —                                                                                                                                                                                                     | —                                                                    | desktop（纯函数/常量；driver 仅兼容）           | 无             |

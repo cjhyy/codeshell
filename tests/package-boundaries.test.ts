@@ -127,7 +127,6 @@ describe("workspace package boundaries", () => {
     expect(Object.keys(link.exports ?? {})).toEqual(["."]);
     for (const capability of [
       "@cjhyy/code-shell-capability-coding",
-      "@cjhyy/code-shell-arena",
       "@cjhyy/code-shell-pet",
       "@cjhyy/code-shell-capability-optimization-lab",
     ]) {
@@ -296,11 +295,7 @@ describe("workspace package boundaries", () => {
       }),
     ).toBe(true);
 
-    // Arena is version-tracked but unpublished: hosts no longer load it and the
-    // package is retained on disk only so the capability can be revived or
-    // deleted outright in a follow-up.
     expect(PRIVATE_VERSIONED_PACKAGES.map((definition) => definition.name).sort()).toEqual([
-      "@cjhyy/code-shell-arena",
       "@cjhyy/code-shell-browser-devtools",
       "@cjhyy/code-shell-capability-optimization-lab",
       "@cjhyy/code-shell-cdp",
@@ -348,21 +343,21 @@ describe("workspace package boundaries", () => {
     "rejects an unpublished workspace in a public package's %s",
     async (field) => {
       const all = await workspaceManifests();
-      // The publisher loads only public manifests, so the retired package is
-      // deliberately absent from this map even if its old npm version exists.
+      // The publisher loads only public manifests, so private workspaces are
+      // deliberately absent from this map.
       const manifests = new Map(PUBLIC_RELEASE_PACKAGES.map(({ name }) => [name, all.get(name)!]));
       const tui = manifests.get("@cjhyy/code-shell-tui")!;
       manifests.set(tui.name, {
         ...tui,
-        [field]: { ...tui[field], "@cjhyy/code-shell-arena": "workspace:*" },
+        [field]: { ...tui[field], "@cjhyy/code-shell-browser-devtools": "workspace:*" },
       });
       expect(validatePublicReleaseOrder(manifests)).toContain(
-        "@cjhyy/code-shell-tui: runtime dependency @cjhyy/code-shell-arena is a private workspace and will not be published",
+        "@cjhyy/code-shell-tui: runtime dependency @cjhyy/code-shell-browser-devtools is a private workspace and will not be published",
       );
     },
   );
 
-  it("keeps product hosts on focused Coding and Arena entries", () => {
+  it("keeps product hosts on focused Coding entries", () => {
     const hosts = ["desktop", "tui", "server"].flatMap((name) =>
       sourceFiles(join(repoRoot, "packages", name, "src")),
     );
@@ -375,10 +370,7 @@ describe("workspace package boundaries", () => {
       const source = readFileSync(file, "utf8");
       const importsCodingRoot =
         /(?:from\s+|import\s*\()\s*["']@cjhyy\/code-shell-capability-coding["']/.test(source);
-      const importsArenaRoot = /(?:from\s+|import\s*\()\s*["']@cjhyy\/code-shell-arena["']/.test(
-        source,
-      );
-      if ((importsCodingRoot || importsArenaRoot) && !allowedCompatibilityImports.has(file)) {
+      if (importsCodingRoot && !allowedCompatibilityImports.has(file)) {
         offenders.push(file.slice(repoRoot.length + 1));
       }
     }

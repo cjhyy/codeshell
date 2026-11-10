@@ -241,7 +241,6 @@ packages/
 ├── link/      # 与框架无关的 Link provider 清单和授权指南
 ├── core/      # 领域无关的 Engine、context、MCP、hooks、sessions、runs、memory
 ├── coding/    # 编码 capability：tools、git/worktrees、LSP、review、prompt/presets
-├── arena/     # 保留的私有 Arena 源码（宿主不再加载）
 ├── pet/       # Mimi 行为、DelegateWork、投影协议、数字人团队
 ├── server/    # Headless HTTP/WebSocket host、rooms、uploads、mobile remote
 ├── web/       # 浏览器安全的远程客户端状态与 SPA

@@ -88,7 +88,7 @@ P2 / P3、统一工作台等后续增强和新增第三方 Link / OAuth / token 
 - **Ink meta/escape 兼容**注释保留到明确 major 迁移策略；不能因为带 TODO 就删除兼容行为。
 - **Memory P2 背压 / rate-limit / 注入 cap**按既有产品决策挂起，待真实容量或成本证据触发。
 - **外部 CLI 的审批/排队可观测性**受上游 transcript 限制，继续诚实显示可观测状态，不通过猜测补成完整状态。Pet 外部卡片跳转、项目可见性 override 和真实委派终态收尾已实现。
-- **Core First**：Pet、coding 是独立能力包，经 extension/composition 组合，不反向加回 core 内置业务；Arena 只作为私有保留源码（`packages/arena`，不被宿主加载、不发布），同样不得加回 core（2026-11-01 更正）。Mimi 单入口合并只改 Desktop 宿主呈现层，不改 `packages/pet` 能力边界。
+- **Core First**：Pet、coding 是独立能力包，经 extension/composition 组合，不反向加回 core 内置业务；Arena 已删除，同样不得加回 core（2026-11-10 更新）。Mimi 单入口合并只改 Desktop 宿主呈现层，不改 `packages/pet` 能力边界。
 - **quick-chat 不做 Pi 式 parent 指针树状 Session**：快聊是短对话，需要合并时使用 fork/复制派生，不引入树状会话模型。
 - **IM Gateway 不做编排大脑 / IM 内富交互审批 / 多租户**：Gateway 负责通道、隧道生命周期与入口回推；已绑定 Session 路由和通知能力保留。
 - **同一 Workspace 同时一个 active Profile**；项目专属定制仍放项目指令，项目明确 override 优先。

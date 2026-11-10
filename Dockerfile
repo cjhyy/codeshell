@@ -7,7 +7,6 @@ WORKDIR /opt/codeshell
 COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
 COPY package.json bun.lock LICENSE ./
 # Keep every workspace manifest so the frozen monorepo lockfile stays valid.
-COPY packages/arena/package.json packages/arena/package.json
 COPY packages/cdp/package.json packages/cdp/package.json
 COPY packages/chat/package.json packages/chat/package.json
 COPY packages/coding/package.json packages/coding/package.json
