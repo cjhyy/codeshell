@@ -645,6 +645,26 @@ describe("reports raised before the run closes, in a bound Session", () => {
     expect(deliveries.map((delivery) => delivery.composeBy)).toEqual(["template", "session-reply"]);
   });
 
+  test("flush() reports parked runs as not forwarded, once, and leaves others alone", async () => {
+    rules.rules.push(sessionRule("rule-g", { scope: "goal" }));
+    rules.rules.push(sessionRule("rule-o", { sessionId: "s-other", scope: "goal" }));
+    replyRoutes = [route, { ...route, id: "route-2", sessionId: "s-other" }];
+    const w = watcher();
+    await feed(w, [started(), goal("met", { goalId: "g-1" })]);
+    await feed(w, [started({ sessionId: "s-other" }), goal("met", { goalId: "g-2" })], "s-other");
+    expect(drafts).toEqual([]);
+    expect(w.hasPending()).toBe(true);
+    // The worker went away: one Session first, then everything.
+    await w.flush(SID);
+    expect(drafts.map((draft) => draft.dedupeKey)).toEqual([`${SID}:goal:g-1`]);
+    expect(deliveries.map((delivery) => delivery.composeBy)).toEqual(["template"]);
+    await w.flush();
+    await w.flush();
+    expect(drafts.map((draft) => draft.dedupeKey)).toEqual([`${SID}:goal:g-1`, "s-other:goal:g-2"]);
+    expect(w.hasPending()).toBe(false);
+    expect(rules.rules.map((rule) => rule.state)).toEqual(["spent", "spent"]);
+  });
+
   test("without a bound conversation nothing is parked", async () => {
     rules.rules.push(sessionRule("rule-g", { scope: "goal" }));
     const w = watcher();

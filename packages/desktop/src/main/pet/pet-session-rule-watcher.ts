@@ -147,6 +147,36 @@ export class PetSessionRuleWatcher {
     });
   }
 
+  /**
+   * The runs of these Sessions (all, without `sessionId`) will never close:
+   * the worker went away, or this process is shutting down. Their parked
+   * reports go out now as "no reply forwarded" (templated), the same as when
+   * the Session's next turn reports. Serialised behind each Session's queue.
+   */
+  flush(sessionId?: string): Promise<void> {
+    const sessions =
+      sessionId !== undefined
+        ? [sessionId]
+        : [...new Set([...this.marks.keys(), ...this.queues.keys()])];
+    return Promise.all(
+      sessions.map((id) =>
+        this.enqueue(id, async () => {
+          const marks = this.marks.get(id);
+          if (!marks) return;
+          this.marks.delete(id);
+          await this.flushParked(id, marks, false);
+        }),
+      ),
+    ).then(() => undefined);
+  }
+
+  /** Some report waits for its run to close, or an outcome is still being applied. */
+  hasPending(): boolean {
+    return (
+      this.queues.size > 0 || [...this.marks.values()].some((marks) => marks.parked.length > 0)
+    );
+  }
+
   async observeProjection(event: DesktopPetProjectionEvent): Promise<void> {
     if (event.kind !== "pending-upsert") return;
     const pending = event.pending;
@@ -168,6 +198,9 @@ export class PetSessionRuleWatcher {
 
   private async marksFor(outcome: SessionOutcome): Promise<TurnMarks> {
     let marks = this.marks.get(outcome.sessionId);
+    // Caveat: turns are told apart by the deriver's own counter, not by core's
+    // run id (a runner may give none), so a parked report of a run that never
+    // closed waits for the next outcome of the Session or for flush().
     if (marks?.turn !== outcome.turn) {
       // A turn that never closed (the worker went away) forwarded nothing.
       if (marks) await this.flushParked(outcome.sessionId, marks, false);

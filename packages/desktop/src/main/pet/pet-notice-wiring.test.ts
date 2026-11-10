@@ -103,6 +103,7 @@ interface Harness {
   channels: ImGatewayOwnerChannel[];
   directTargets: Set<string>;
   snapshot(): DesktopPetProjectionSnapshot;
+  setWorkerState(state: DesktopPetProjectionSnapshot["workerState"]): void;
   emitProjection(event: DesktopPetProjectionEvent): void;
 }
 
@@ -123,10 +124,11 @@ function harness(overrides: Partial<PetNoticeWiringDeps> = {}): Harness {
   const desktop: DesktopNotificationInput[] = [];
   const listeners = new Set<(event: DesktopPetProjectionEvent) => void>();
   let handler: HostActionHandler | undefined;
+  let workerState: DesktopPetProjectionSnapshot["workerState"] = "active";
   const snapshot = (): DesktopPetProjectionSnapshot => ({
     version: 1,
     generation: 1,
-    workerState: "active",
+    workerState,
     sessions,
     pending,
     observedAt: clock,
@@ -246,6 +248,9 @@ function harness(overrides: Partial<PetNoticeWiringDeps> = {}): Harness {
     channels,
     directTargets,
     snapshot,
+    setWorkerState: (state) => {
+      workerState = state;
+    },
     emitProjection: (event) => {
       for (const listener of listeners) listener(event);
     },
@@ -1510,6 +1515,48 @@ describe("bound Session replies", () => {
         suppressed ? [] : ["lark:owner"],
       );
     }
+  });
+
+  test("a report parked on a run the worker abandoned goes out when the worker is lost", async () => {
+    current = harness({ readSettings: () => ({ pet: { notifications: { mergeWindowSec: 0 } } }) });
+    current.routes.push(boundRoute());
+    await current.handler(SID, upsertArgs({ events: ["done"], scope: "goal" }));
+    clock = NOW + 1_000;
+    for (const event of [
+      { type: "session_started", runId: "run-1", clientMessageId: "cm-1" },
+      { type: "goal_progress", status: "met", goalId: "g-1", round: 1 },
+    ])
+      current.observeSessionEvent(SID, event);
+    await settle();
+    expect(current.submitted).toEqual([]);
+    // The aggregator reports a lost worker as a reset of a disconnected snapshot.
+    current.setWorkerState("disconnected");
+    current.emitProjection({ kind: "reset", version: 2, generation: 1, observedAt: clock });
+    await settle(() => current!.published.length > 0);
+    expect(
+      current.submitted.map((notice) => [notice.dedupeKey, notice.boundReplyDelivered]),
+    ).toEqual([[`${SID}:goal:g-1`, undefined]]);
+    expect(current.published).toMatchObject([
+      { type: "pet.task.completed", target: { channel: "wechat", target: "chat-1" } },
+    ]);
+  });
+
+  test("shutdown sends parked reports before the router stops", async () => {
+    current = harness({ readSettings: () => ({ pet: { notifications: { mergeWindowSec: 0 } } }) });
+    current.routes.push(boundRoute());
+    await current.handler(SID, upsertArgs({ events: ["done"], scope: "goal" }));
+    clock = NOW + 1_000;
+    for (const event of [
+      { type: "session_started", runId: "run-1", clientMessageId: "cm-1" },
+      { type: "goal_progress", status: "met", goalId: "g-1", round: 1 },
+    ])
+      current.observeSessionEvent(SID, event);
+    await settle();
+    const flushed = current.wiring.flush();
+    current.wiring.dispose();
+    await flushed;
+    await settle(() => current!.published.length > 0);
+    expect(current.published).toMatchObject([{ type: "pet.task.completed" }]);
   });
 
   test("a done without a core run id is served by the bound reply all the same", async () => {

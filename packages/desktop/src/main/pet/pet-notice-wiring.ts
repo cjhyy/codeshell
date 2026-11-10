@@ -219,7 +219,7 @@ export interface PetNoticeWiring {
    * rule watcher, the task closure, decision prompts and the bound-Session bridge.
    */
   deliveries: PetDeliveryResolver;
-  /** Waits for pending rule and notice writes (shutdown). */
+  /** Sends parked mid-run reports, then waits for pending rule and notice writes (shutdown). */
   flush(): Promise<void>;
   /** The settings this wiring currently routes with. */
   settings(): PetNotificationSettings;
@@ -599,11 +599,22 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     }
   }
 
-  const submit = (notice: NoticeSubmission): Promise<unknown> =>
-    router.submit(notice).catch((error) => {
+  /** Rule-watcher notices still on their way into the router (shutdown waits for them). */
+  const inFlight = new Set<Promise<unknown>>();
+  const submit = (notice: NoticeSubmission): Promise<unknown> => {
+    const sending = router.submit(notice).catch((error) => {
       log("pet.notice.submit_failed", { kind: notice.kind, error: errorText(error) });
       return undefined;
     });
+    inFlight.add(sending);
+    void sending.finally(() => inFlight.delete(sending));
+    return sending;
+  };
+  /** Hand every parked mid-run report to the router and wait until it took them. */
+  const flushParked = async (): Promise<void> => {
+    await watcher.flush();
+    while (inFlight.size > 0) await Promise.allSettled([...inFlight]);
+  };
 
   const deliveries = createPetDeliveryResolver({
     rules: ruleStore,
@@ -800,6 +811,15 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
   deps.powerEvents?.on("unlock-screen", flushDueDigest);
   const unsubscribeProjection = deps.projection.subscribe((event) => {
     void ready.then(() => (disposed ? undefined : watcher.observeProjection(event)));
+    // The worker went away: runs it was driving never close, so reports
+    // parked until their run's end go out now (as "no reply forwarded"). The
+    // aggregator reports a loss as a reset whose snapshot names the state.
+    const lost = (state: string) => state === "disconnected" || state === "reclaimed";
+    if (
+      (event.kind === "worker-state" && lost(event.state)) ||
+      (event.kind === "reset" && lost(snapshot().workerState))
+    )
+      void ready.then(() => (disposed ? undefined : watcher.flush()));
     // A decision answered anywhere (or timed out) must never be replayed later.
     const resolved =
       event.kind === "pending-remove"
@@ -997,6 +1017,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     decisions,
     deliveries,
     flush: async () => {
+      await flushParked();
       await Promise.all([ruleStore.flush(), ledger.flush()]);
     },
     settings,
@@ -1016,7 +1037,13 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
       unsubscribeProjection();
       deps.powerEvents?.removeListener("resume", flushDueDigest);
       deps.powerEvents?.removeListener("unlock-screen", flushDueDigest);
-      router.dispose();
+      // Reports parked on runs that will now never close still reach the
+      // router before it stops taking notices.
+      if (!watcher.hasPending() && inFlight.size === 0) router.dispose();
+      else
+        void flushParked()
+          .catch((error) => log("pet.notice.flush_failed", { error: errorText(error) }))
+          .finally(() => router.dispose());
     },
   };
 }
