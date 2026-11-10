@@ -111,6 +111,20 @@ function sourceFiles(): string[] {
   return files.sort();
 }
 
+function moduleMockFiles(root: string): string[] {
+  return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(root, entry.name);
+    if (entry.isDirectory()) {
+      return entry.name === "node_modules" || entry.name === "dist" ? [] : moduleMockFiles(path);
+    }
+    return entry.isFile() &&
+      /\.[cm]?[jt]sx?$/.test(entry.name) &&
+      /\bmock\.module\(/.test(source(path))
+      ? [path]
+      : [];
+  });
+}
+
 // L0 may depend on L1–L7; lower-level directories must not import upward.
 // Root entry files are outside this directory-layer guard. Keep builtin tools
 // distinct from the generic tool-system infrastructure that they build on.
@@ -327,6 +341,16 @@ describe("source file line caps", () => {
 });
 
 describe("architecture growth budgets", () => {
+  test("module-mocked files cannot spread across the test suite", () => {
+    // fcd8406d5: 66 TypeScript files plus seven JavaScript fixtures. Include
+    // fixtures and JS variants so moving a mock cannot hide it from this cap.
+    const files = ["packages", "tests"].flatMap(moduleMockFiles);
+    expect(
+      files.length,
+      "改用依赖注入 (dependency injection); do not add files that use module mocks.",
+    ).toBeLessThanOrEqual(73);
+  });
+
   test("Core value imports keep layers and shrink known exceptions", () => {
     const { nodes, edges } = coreValueGraph();
     const layers = new Map(
