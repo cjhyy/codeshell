@@ -7,7 +7,7 @@ import type {
   ChannelSendOptions,
   OutgoingMessage,
 } from "./channel.js";
-import { BUILTIN_CHANNEL_CAPABILITIES } from "./channel.js";
+import { BUILTIN_CHANNEL_CAPABILITIES, NotDeliveredError } from "./channel.js";
 import { dispatchSafely, formatOutgoingMarkdown, waitForAbort } from "./lifecycle.js";
 import { mediaKind, outgoingAttachments, remoteAttachment } from "./media.js";
 
@@ -140,6 +140,32 @@ export class SlackAdapter implements ChannelAdapter {
     target: string,
     message: OutgoingMessage,
     options: ChannelSendOptions = {},
+  ): Promise<void> {
+    try {
+      await this.sendOnce(target, message, options);
+    } catch (error) {
+      // Slack answered with an error (channel_not_found, not_in_channel,
+      // invalid_auth, rate limited, HTTP 4xx): nothing was posted.
+      const { code, statusCode } = (error ?? {}) as { code?: unknown; statusCode?: unknown };
+      const refused =
+        code === "slack_webapi_platform_error" ||
+        code === "slack_webapi_rate_limited_error" ||
+        (code === "slack_webapi_http_error" &&
+          typeof statusCode === "number" &&
+          statusCode >= 400 &&
+          statusCode < 500);
+      if (refused)
+        throw new NotDeliveredError(error instanceof Error ? error.message : String(error), {
+          cause: error,
+        });
+      throw error;
+    }
+  }
+
+  private async sendOnce(
+    target: string,
+    message: OutgoingMessage,
+    options: ChannelSendOptions,
   ): Promise<void> {
     const attachments = outgoingAttachments(message, this.capabilities.outbound.attachments);
     const thread = options.threadId ? { thread_ts: options.threadId } : {};

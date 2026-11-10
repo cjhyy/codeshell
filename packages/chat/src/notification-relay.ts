@@ -4,6 +4,7 @@ import { open } from "node:fs/promises";
 import { isAbsolute } from "node:path";
 import {
   channelCapabilities,
+  isNotDelivered,
   type ChannelAdapter,
   type ChatAttachmentKind,
   type ChannelCapabilities,
@@ -214,7 +215,8 @@ export function createDesktopNotificationHandler(
               });
             else await adapter.send(target, message);
           } catch (error) {
-            throw new TargetSendFailure(error, true, idempotent);
+            // A definite rejection reached no one; anything else may have.
+            throw new TargetSendFailure(error, !isNotDelivered(error), idempotent);
           }
         };
         const supportedEventAttachments = (event.attachments ?? []).filter((attachment) =>

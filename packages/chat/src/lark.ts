@@ -1,7 +1,7 @@
 import type { ChannelRunLifecycle } from "./channel.js";
 import * as lark from "@larksuiteoapi/node-sdk";
 import type { ChannelAdapter, ChannelMessageHandler, OutgoingMessage } from "./channel.js";
-import { BUILTIN_CHANNEL_CAPABILITIES } from "./channel.js";
+import { BUILTIN_CHANNEL_CAPABILITIES, NotDeliveredError } from "./channel.js";
 import { dispatchSafely, waitForAbort } from "./lifecycle.js";
 import { OutgoingDeliveryTracker, outgoingAttachments, safeAttachmentName } from "./media.js";
 
@@ -219,11 +219,22 @@ export class LarkAdapter implements ChannelAdapter {
     target: string,
     payload: { msg_type: string; content: string },
   ): Promise<void> {
-    const result = await this.client.im.v1.message.create({
-      params: { receive_id_type: "chat_id" },
-      data: { receive_id: target, ...payload },
-    });
-    if (result.code !== 0) throw new Error(`飞书发送失败：${result.msg ?? result.code}`);
+    let result: Awaited<ReturnType<typeof this.client.im.v1.message.create>>;
+    try {
+      result = await this.client.im.v1.message.create({
+        params: { receive_id_type: "chat_id" },
+        data: { receive_id: target, ...payload },
+      });
+    } catch (error) {
+      // An HTTP 4xx from the open platform is a refusal; a transport error may not be.
+      const status = (error as { response?: { status?: unknown } })?.response?.status;
+      if (typeof status === "number" && status >= 400 && status < 500)
+        throw new NotDeliveredError(`飞书发送失败（HTTP ${status}）`, { cause: error });
+      throw error;
+    }
+    // The platform answered with an error code: the message was not created.
+    if (result.code !== 0)
+      throw new NotDeliveredError(`飞书发送失败：${result.msg ?? result.code}`);
   }
 }
 
