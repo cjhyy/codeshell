@@ -1737,6 +1737,41 @@ describe("decision prompts through the router", () => {
     expect(current.ownerSends[0]!.text).toContain(`回答 ${d.code()}`);
   });
 
+  test("a missed snapshot never makes a queued prompt stale; a live one without it does", async () => {
+    current = harness();
+    current.channels[1] = { id: "lark", label: "飞书", ready: "unavailable" };
+    await current.handler(SID, upsertArgs({ events: ["blocked"], channel: "lark" }));
+    const d = decisionRelay(current);
+    d.raise();
+    await settle();
+    await d.poll(() => current!.wiring.ledger.queued().length > 0);
+    const [queued] = current.wiring.ledger.queued();
+    current.channels[1] = {
+      id: "lark",
+      label: "飞书",
+      ready: "ready",
+      targetId: "lark:owner",
+      isDirect: true,
+    };
+    const owner = { channel: "lark", target: "dm-1", isDirectMessage: true };
+    // One failed snapshot: pending emptied, no pending-remove for the decision.
+    current.pending.length = 0;
+    current.setWorkerState("disconnected");
+    let replay = current.wiring.inboundReplay(owner)!;
+    expect((await replay.take()).map((notice) => notice.kind)).toEqual(["session.blocked"]);
+    replay.finish();
+    expect(current.wiring.ledger.get(queued!.id)?.delivery?.status).toBe("queued");
+    // A live snapshot without the decision: it was resolved.
+    current.setWorkerState("active");
+    replay = current.wiring.inboundReplay(owner)!;
+    expect(await replay.take()).toEqual([]);
+    replay.finish();
+    expect(current.wiring.ledger.get(queued!.id)?.delivery).toMatchObject({
+      status: "revoked",
+      error: "resolved",
+    });
+  });
+
   test("a resolved decision's queued prompt is revoked and never replayed", async () => {
     current = harness();
     current.channels[1] = { id: "lark", label: "飞书", ready: "unavailable" };

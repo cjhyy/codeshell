@@ -519,13 +519,18 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     imChannels,
     lastInboundChannel: () => deps.gateway.lastOwnerInboundChannel(),
     supportsIdempotentSend: (channel) => deps.gateway.supportsIdempotentOwnerSend(channel),
-    isDecisionStillPending: (sessionId, requestId) =>
-      snapshot().pending.some(
+    isDecisionStillPending: (sessionId, requestId) => {
+      const current = snapshot();
+      // A missed snapshot empties the pending list while the worker may be
+      // alive: only a live snapshot without the decision says it was resolved.
+      if (current.workerState !== "active") return true;
+      return current.pending.some(
         (pending) =>
           pending.agentSessionId === sessionId &&
           pending.requestId === requestId &&
           pending.status === "pending",
-      ),
+      );
+    },
     wasSessionViewedSince: (sessionId, ms) => {
       let focused: boolean;
       try {
