@@ -31,7 +31,15 @@ async function fixture() {
   const manager = new ChatSessionManager({
     runtime: {} as never,
     dataRoot: cwd,
-    engineFactory: () => createFakeEngine({ dispose() {}, isHeadless: () => false }),
+    engineFactory: () =>
+      createFakeEngine({
+        // Preserve the optional-capability fallbacks exercised by this fixture.
+        getHookRegistry: undefined,
+        getSessionManager: undefined,
+        prepareSessionCloseFinalization: undefined,
+        dispose() {},
+        isHeadless: () => false,
+      }),
   });
   const sessionId = "decision-session";
   const session = await manager.getOrCreate(sessionId, {});

@@ -8,7 +8,13 @@ import { backgroundJobRegistry } from "../tool-system/builtin/background-jobs.js
 function makeManager() {
   return new ChatSessionManager({
     runtime: {} as unknown as EngineRuntime,
-    engineFactory: (_slice: EngineConfigSlice) => createFakeEngine({}),
+    engineFactory: (_slice: EngineConfigSlice) =>
+      createFakeEngine({
+        // Preserve the optional-capability fallbacks exercised by this fixture.
+        dispose: undefined,
+        getSessionManager: undefined,
+        prepareSessionCloseFinalization: undefined,
+      }),
     idleTtlMs: 10,
   });
 }

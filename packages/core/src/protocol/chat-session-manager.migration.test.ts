@@ -79,6 +79,9 @@ function fakeEngine(
   }> = {},
 ): Engine {
   return createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    getSessionManager: undefined,
+
     getPermissionMode: () => state.mode,
     setPermissionMode: (mode: PermissionMode) => {
       state.mode = mode;

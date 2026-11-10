@@ -39,6 +39,10 @@ const attachment: InputAttachmentMeta = {
 function makeEngine() {
   const calls: Array<{ task: string; options?: EngineRunOptions }> = [];
   const engine = createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    getComposition: undefined,
+    getSessionManager: undefined,
+
     isHeadless: () => false,
     async run(task: string, options?: EngineRunOptions): Promise<EngineResult> {
       calls.push({ task, options });

@@ -34,8 +34,15 @@ function makeTransport() {
  * exposing the pending approval so the test can cancel mid-approval.
  */
 function makeAskingEngine() {
-  const state = { askUser: undefined as ((q: string) => Promise<string>) | undefined, answer: undefined as string | undefined };
+  const state = {
+    askUser: undefined as ((q: string) => Promise<string>) | undefined,
+    answer: undefined as string | undefined,
+  };
   const engine = createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    getHookRegistry: undefined,
+    getSessionManager: undefined,
+
     setAskUser(fn: (q: string) => Promise<string>) {
       state.askUser = fn;
     },

@@ -49,6 +49,10 @@ describe("AgentServer module lifetime", () => {
       runtime: { lifetime: host } as never,
       engineFactory: () =>
         createFakeEngine({
+          // Preserve the optional-capability fallbacks exercised by this fixture.
+          getSessionManager: undefined,
+          prepareSessionCloseFinalization: undefined,
+
           isHeadless: () => false,
           async dispose() {
             enginesReleased++;

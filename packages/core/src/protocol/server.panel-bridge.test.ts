@@ -36,6 +36,9 @@ describe("AgentServer panel bridge", () => {
   test("routes list/open through hidden panel actions", async () => {
     let panelBridge: PanelHostBridge | undefined;
     const engine = createFakeEngine({
+      // Preserve the optional-capability fallbacks exercised by this fixture.
+      getSessionManager: undefined,
+
       setPanelBridge(bridge: PanelHostBridge | undefined) {
         panelBridge = bridge;
       },

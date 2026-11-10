@@ -33,6 +33,10 @@ async function fixture() {
     dataRoot: cwd,
     engineFactory: () =>
       createFakeEngine({
+        // Preserve the optional-capability fallbacks exercised by this fixture.
+        getSessionManager: undefined,
+        prepareSessionCloseFinalization: undefined,
+
         dispose() {},
         isHeadless: () => false,
         getHookRegistry: () => hooks,

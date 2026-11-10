@@ -21,6 +21,11 @@ async function setup() {
   let factory!: ChildHostBindingsFactory;
   let receive!: (message: any) => void;
   const engine = createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    getHookRegistry: undefined,
+    getSessionManager: undefined,
+    prepareSessionCloseFinalization: undefined,
+
     isHeadless: () => false,
     dispose() {},
     setChildHostBindings(fn: ChildHostBindingsFactory) {

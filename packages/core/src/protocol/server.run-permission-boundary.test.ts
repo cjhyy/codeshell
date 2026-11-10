@@ -52,6 +52,9 @@ describe("queued run permission context", () => {
     let mode: PermissionMode = "default";
 
     const engine = createFakeEngine({
+      // Preserve the optional-capability fallbacks exercised by this fixture.
+      getSessionManager: undefined,
+
       isHeadless: () => true,
       getPermissionMode: () => mode,
       setPermissionMode(next: PermissionMode) {
@@ -120,6 +123,9 @@ it("keeps queued sandbox/background policy local to its turn and follow-ups", as
     release = deferred();
   const observed: any[] = [];
   const engine = createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    getSessionManager: undefined,
+
     isHeadless: () => true,
     async run(task: string, opts: any) {
       if (task === "first") {

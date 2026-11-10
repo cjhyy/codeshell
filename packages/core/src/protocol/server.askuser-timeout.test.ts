@@ -48,6 +48,13 @@ function makeAskingEngine(sessionId: string, goal?: { objective: string }) {
     answer: undefined as string | undefined,
   };
   const engine = createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    dispose: undefined,
+    getComposition: undefined,
+    getHookRegistry: undefined,
+    getSessionManager: undefined,
+    prepareSessionCloseFinalization: undefined,
+
     setAskUser(fn: (q: string) => Promise<string>) {
       state.askUser = fn;
     },
@@ -209,7 +216,12 @@ describe("AgentServer AskUserQuestion timeout behavior", () => {
       const t = makeTransport();
       const server = new AgentServer({
         transport: t.transport,
-        engine: createFakeEngine({ isHeadless: () => true }),
+        engine: createFakeEngine({
+          // Preserve the optional-capability fallbacks exercised by this fixture.
+          dispose: undefined,
+          getComposition: undefined,
+          isHeadless: () => true,
+        }),
       });
       cleanup.push(server);
       const request: ApprovalRequest = {

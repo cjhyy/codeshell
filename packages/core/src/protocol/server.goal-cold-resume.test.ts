@@ -70,6 +70,10 @@ function fixture(runResult: (sessionId: string) => EngineResult) {
     sessionMetadata: { exists: () => true, readSessionMainRoot: () => root },
     engineFactory() {
       return createFakeEngine({
+        // Preserve the optional-capability fallbacks exercised by this fixture.
+        dispose: undefined,
+        prepareSessionCloseFinalization: undefined,
+
         isHeadless: () => false,
         sessionExistsOnDisk: () => true,
         getSessionManager: () => ({ readSessionMainRoot: () => root }),

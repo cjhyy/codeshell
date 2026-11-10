@@ -32,6 +32,9 @@ function makeTransport() {
 function makeFakeEngine() {
   const state = { askUser: undefined as unknown };
   const engine = createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    getSessionManager: undefined,
+
     setAskUser(fn: unknown) {
       state.askUser = fn;
     },

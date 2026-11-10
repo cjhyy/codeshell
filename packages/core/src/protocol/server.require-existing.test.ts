@@ -34,6 +34,9 @@ function makeTransport() {
 function makeFakeEngine(existsOnDisk: boolean, goal?: GoalConfig) {
   const state = { runs: 0, options: undefined as unknown };
   const engine = createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    getSessionManager: undefined,
+
     isHeadless: () => false,
     sessionExistsOnDisk: () => existsOnDisk,
     getGoal: () => goal,

@@ -38,6 +38,9 @@ function makeTransport() {
 
 function makeFakeEngine(slice: EngineConfigSlice, runs: EngineConfigSlice[]) {
   return createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    getSessionManager: undefined,
+
     isHeadless: () => false,
     sessionExistsOnDisk: () => false,
     async run(): Promise<EngineResult> {

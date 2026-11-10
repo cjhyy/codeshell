@@ -12,6 +12,12 @@ describe("RunResult completion kind", () => {
       `${mode} serializes %s in the RPC response`,
       async (completionKind) => {
         const engine = createFakeEngine({
+          // Preserve the optional-capability fallbacks exercised by this fixture.
+          dispose: undefined,
+          getComposition: undefined,
+          getSessionManager: undefined,
+          prepareSessionCloseFinalization: undefined,
+
           isHeadless: () => false,
           async run(): Promise<EngineResult> {
             return {

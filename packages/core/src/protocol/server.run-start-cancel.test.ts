@@ -18,6 +18,11 @@ function managerFixture() {
     runtime: {} as never,
     engineFactory: () =>
       createFakeEngine({
+        // Preserve the optional-capability fallbacks exercised by this fixture.
+        dispose: undefined,
+        getSessionManager: undefined,
+        prepareSessionCloseFinalization: undefined,
+
         isHeadless: () => false,
         async run(
           task: string,

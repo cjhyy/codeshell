@@ -46,6 +46,12 @@ function makeAskingEngine(sessionId: string) {
     answer: undefined as string | undefined,
   };
   const engine = createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    dispose: undefined,
+    getHookRegistry: undefined,
+    getSessionManager: undefined,
+    prepareSessionCloseFinalization: undefined,
+
     setAskUser(fn: (q: string) => Promise<string>) {
       state.askUser = fn;
     },

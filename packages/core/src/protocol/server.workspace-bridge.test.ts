@@ -47,6 +47,10 @@ function migrationAuthority(mainRoot: string) {
 
 function replacementEngine(): Engine {
   return createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    dispose: undefined,
+    getSessionManager: undefined,
+
     isHeadless: () => false,
     restoreSessionModel() {},
     async run(_task: string, opts: { sessionId: string }): Promise<EngineResult> {
@@ -67,6 +71,9 @@ function makeWorkspaceBridgeEngine() {
     switchedRoot: "",
   };
   const engine = createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    getSessionManager: undefined,
+
     setWorkspaceBridge(bridge: WorkspaceBridge | undefined) {
       state.workspaceBridge = bridge;
     },
@@ -149,6 +156,9 @@ describe("AgentServer workspace bridge", () => {
         error: "",
       };
       const engine = createFakeEngine({
+        // Preserve the optional-capability fallbacks exercised by this fixture.
+        getSessionManager: undefined,
+
         setWorkspaceBridge(bridge: WorkspaceBridge | undefined) {
           state.workspaceBridge = bridge;
         },
@@ -212,6 +222,9 @@ describe("AgentServer workspace bridge", () => {
   test("agent/releaseWorkspace resets a live session engine", async () => {
     const released: string[] = [];
     const engine = createFakeEngine({
+      // Preserve the optional-capability fallbacks exercised by this fixture.
+      getSessionManager: undefined,
+
       isHeadless: () => false,
       releaseSessionWorkspace(sessionId: string) {
         released.push(sessionId);
@@ -259,6 +272,9 @@ describe("AgentServer workspace bridge", () => {
   test("agent/setWorkspace rebases a live session engine", async () => {
     const updates: Array<{ sessionId: string; workspace: unknown }> = [];
     const engine = createFakeEngine({
+      // Preserve the optional-capability fallbacks exercised by this fixture.
+      getSessionManager: undefined,
+
       isHeadless: () => false,
       setSessionWorkspace(sessionId: string, workspace: unknown) {
         updates.push({ sessionId, workspace });
@@ -307,6 +323,11 @@ describe("AgentServer workspace bridge", () => {
   test("agent/migrateSessionMainRoot forwards one complete authoritative commit to the live engine", async () => {
     const updates: unknown[] = [];
     const engine = createFakeEngine({
+      // Preserve the optional-capability fallbacks exercised by this fixture.
+      dispose: undefined,
+      getPermissionMode: undefined,
+      getSessionManager: undefined,
+
       isHeadless: () => false,
       migrateSessionMainRoot(sessionId: string, project: unknown, mainRoot: string) {
         updates.push({ sessionId, project, mainRoot });
@@ -371,6 +392,11 @@ describe("AgentServer workspace bridge", () => {
     let runs = 0;
     const slices: unknown[] = [];
     const engine = createFakeEngine({
+      // Preserve the optional-capability fallbacks exercised by this fixture.
+      dispose: undefined,
+      getSessionManager: undefined,
+      prepareSessionCloseFinalization: undefined,
+
       isHeadless: () => false,
       async run(_task: string, opts: { sessionId: string }): Promise<EngineResult> {
         runs += 1;
@@ -476,6 +502,10 @@ describe("AgentServer workspace bridge", () => {
 
   test("agent/migrateSessionMainRoot reports a resident owner error as failed", async () => {
     const engine = createFakeEngine({
+      // Preserve the optional-capability fallbacks exercised by this fixture.
+      getPermissionMode: undefined,
+      getSessionManager: undefined,
+
       isHeadless: () => false,
       migrateSessionMainRoot() {
         throw new Error("state lock failed");

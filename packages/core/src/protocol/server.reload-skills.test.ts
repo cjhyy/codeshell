@@ -27,6 +27,10 @@ test("configure reloadSettings refreshes edited Skill content without restarting
   let onMessage: (message: any) => void = () => {};
   const sent: any[] = [];
   const engine = createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    dispose: undefined,
+    getComposition: undefined,
+
     getConfig: undefined, // Preserve this fixture's absent optional capability.
     isHeadless: () => false,
     getEffectiveDisabledLists: () => ({

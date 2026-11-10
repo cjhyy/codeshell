@@ -25,7 +25,12 @@ function makeTransport() {
 }
 
 function makeEngine(): Engine {
-  return createFakeEngine({ isHeadless: () => true });
+  return createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    getComposition: undefined,
+    getSessionManager: undefined,
+    isHeadless: () => true,
+  });
 }
 
 function responseFor(sent: any[], id: number): any {

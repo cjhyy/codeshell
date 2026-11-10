@@ -40,6 +40,10 @@ async function fixture(
     runtime: {} as never,
     engineFactory: () =>
       createFakeEngine({
+        // Preserve the optional-capability fallbacks exercised by this fixture.
+        dispose: undefined,
+        prepareSessionCloseFinalization: undefined,
+
         resolveSessionRunWorkspace: undefined, // Preserve this fixture's absent optional capability.
         isGoalContinuationBlocked: undefined, // Preserve this fixture's absent optional capability.
         isHeadless: () => !wakeSource,

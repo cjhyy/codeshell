@@ -18,6 +18,11 @@ function fakeEngine(slice: EngineConfigSlice): Engine {
   const marker = slice.cwd ?? "global";
   const permissionMode = marker === "/project-b" ? "plan" : "default";
   return createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    dispose: undefined,
+    getSessionManager: undefined,
+    prepareSessionCloseFinalization: undefined,
+
     planMode: permissionMode === "plan",
     isHeadless: () => false,
     getToolRegistry: () => ({

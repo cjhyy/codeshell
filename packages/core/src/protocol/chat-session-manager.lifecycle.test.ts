@@ -39,6 +39,10 @@ describe("ChatSessionManager serialized lifecycle", () => {
       runtime: {} as never,
       engineFactory: () =>
         createFakeEngine({
+          // Preserve the optional-capability fallbacks exercised by this fixture.
+          getSessionManager: undefined,
+          prepareSessionCloseFinalization: undefined,
+
           isHeadless: () => false,
           async dispose() {
             await release.promise;
@@ -71,7 +75,13 @@ describe("ChatSessionManager serialized lifecycle", () => {
       idleTtlMs: 0,
       engineFactory: () => {
         engines += 1;
-        return createFakeEngine({ isHeadless: () => false });
+        return createFakeEngine({
+          // Preserve the optional-capability fallbacks exercised by this fixture.
+          dispose: undefined,
+          getSessionManager: undefined,
+          prepareSessionCloseFinalization: undefined,
+          isHeadless: () => false,
+        });
       },
     });
 
@@ -99,6 +109,9 @@ describe("ChatSessionManager serialized lifecycle", () => {
       runtime: {} as never,
       engineFactory: () =>
         createFakeEngine({
+          // Preserve the optional-capability fallbacks exercised by this fixture.
+          dispose: undefined,
+
           getSessionManager: () => new SessionManager(storageDir),
         }),
     });
@@ -143,6 +156,10 @@ describe("ChatSessionManager serialized lifecycle", () => {
         const number = ++engineNumber;
         const sessions = new SessionManager(storageDir);
         const engine = createFakeEngine({
+          // Preserve the optional-capability fallbacks exercised by this fixture.
+          dispose: undefined,
+          prepareSessionCloseFinalization: undefined,
+
           getSessionManager: () => sessions,
           isHeadless: () => false,
           async run(): Promise<EngineResult> {
@@ -196,6 +213,11 @@ describe("ChatSessionManager serialized lifecycle", () => {
       engineFactory: () => {
         engines += 1;
         return createFakeEngine({
+          // Preserve the optional-capability fallbacks exercised by this fixture.
+          dispose: undefined,
+          getSessionManager: undefined,
+          prepareSessionCloseFinalization: undefined,
+
           isHeadless: () => false,
           async run(): Promise<EngineResult> {
             started.resolve();
@@ -231,6 +253,11 @@ describe("ChatSessionManager serialized lifecycle", () => {
       engineFactory: () => {
         const number = ++engines;
         return createFakeEngine({
+          // Preserve the optional-capability fallbacks exercised by this fixture.
+          dispose: undefined,
+          getSessionManager: undefined,
+          prepareSessionCloseFinalization: undefined,
+
           isHeadless: () => false,
           async run(): Promise<EngineResult> {
             runs.push(number);
@@ -258,6 +285,9 @@ describe("ChatSessionManager serialized lifecycle", () => {
       runtime: {} as never,
       engineFactory: () =>
         createFakeEngine({
+          // Preserve the optional-capability fallbacks exercised by this fixture.
+          getSessionManager: undefined,
+
           isHeadless: () => false,
           async run(): Promise<EngineResult> {
             order.push("turn");
@@ -296,6 +326,9 @@ describe("ChatSessionManager serialized lifecycle", () => {
       runtime: {} as never,
       engineFactory: () =>
         createFakeEngine({
+          // Preserve the optional-capability fallbacks exercised by this fixture.
+          getSessionManager: undefined,
+
           isHeadless: () => false,
           resolveModelEntry: (key: string) => ({ key, model: key }),
           getModelPool: () => ({

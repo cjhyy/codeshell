@@ -4,18 +4,8 @@ type EngineMethodName = {
   [Key in keyof Engine]: Engine[Key] extends (...args: never[]) => unknown ? Key : never;
 }[keyof Engine];
 
-// These optional lifecycle capabilities were absent from minimal protocol fakes.
-// Keep feature detection and its fallback paths intact unless a fixture opts in.
-type OptionalCapability =
-  | "getComposition"
-  | "getSessionManager"
-  | "getHookRegistry"
-  | "getPermissionMode"
-  | "restoreSessionModel"
-  | "prepareSessionCloseFinalization"
-  | "dispose";
-
-// Fixtures may return partial registries/results, but method overrides must be callable.
+// Fixtures may return partial registries/results or explicitly omit a capability.
+// Provided method implementations must be callable.
 type FakeEngineOverrides = {
   [Key in keyof Engine]?: Engine[Key] extends (...args: never[]) => unknown
     ? (...args: never[]) => unknown
@@ -23,7 +13,7 @@ type FakeEngineOverrides = {
 };
 
 type FakeEngineDefaults = {
-  [Key in EngineMethodName]: Key extends OptionalCapability ? undefined : Engine[Key];
+  [Key in EngineMethodName]: Engine[Key];
 };
 
 function unexpected(method: EngineMethodName): () => never {
@@ -59,7 +49,7 @@ const defaults = {
   selectContextPackage: unexpected("selectContextPackage"),
   createSummaryFork: unexpected("createSummaryFork"),
   summarizeContextPackage: unexpected("summarizeContextPackage"),
-  restoreSessionModel: undefined,
+  restoreSessionModel: unexpected("restoreSessionModel"),
   run: unexpected("run"),
   getToolRegistry: unexpected("getToolRegistry"),
   getRuntimeToolRegistry: unexpected("getRuntimeToolRegistry"),
@@ -68,15 +58,15 @@ const defaults = {
   resetSessionUsage: unexpected("resetSessionUsage"),
   getModelPool: unexpected("getModelPool"),
   getCurrentModel: unexpected("getCurrentModel"),
-  getHookRegistry: undefined,
-  getSessionManager: undefined,
+  getHookRegistry: unexpected("getHookRegistry"),
+  getSessionManager: unexpected("getSessionManager"),
   getUsageSummary: unexpected("getUsageSummary"),
   recordExternalUsage: unexpected("recordExternalUsage"),
   resolveSessionRunWorkspace: unexpected("resolveSessionRunWorkspace"),
-  prepareSessionCloseFinalization: undefined,
+  prepareSessionCloseFinalization: unexpected("prepareSessionCloseFinalization"),
   getConfig: unexpected("getConfig"),
-  getComposition: undefined,
-  dispose: undefined,
+  getComposition: unexpected("getComposition"),
+  dispose: unexpected("dispose"),
   refreshRuntimeConfig: unexpected("refreshRuntimeConfig"),
   getGoal: unexpected("getGoal"),
   isGoalContinuationBlocked: unexpected("isGoalContinuationBlocked"),
@@ -93,7 +83,7 @@ const defaults = {
   updateConfig: unexpected("updateConfig"),
   readSetting: unexpected("readSetting"),
   setPermissionMode: () => {},
-  getPermissionMode: undefined,
+  getPermissionMode: unexpected("getPermissionMode"),
   extendGoalRun: unexpected("extendGoalRun"),
   getPermissionRules: unexpected("getPermissionRules"),
   setPlanMode: () => {},

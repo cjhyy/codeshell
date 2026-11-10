@@ -23,6 +23,9 @@ import type { Engine, EngineResult } from "../engine/engine.js";
 
 function makeFakeEngine(): Engine {
   return createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    getSessionManager: undefined,
+
     isHeadless: () => true,
     sessionExistsOnDisk: () => false,
     async run(): Promise<EngineResult> {
@@ -75,9 +78,7 @@ describe("ChatSessionManager identity scope", () => {
 
       await derived.getOrCreate("sid-1", { cwd: "/tmp" } as EngineConfigSlice);
       expect(slices).toHaveLength(1);
-      expect(slices[0]!.sessionStorageDir).toBe(
-        join(dataRoot, "identities", "user-a", "sessions"),
-      );
+      expect(slices[0]!.sessionStorageDir).toBe(join(dataRoot, "identities", "user-a", "sessions"));
       // The base manager never saw the session — identities are isolated maps.
       expect(base.get("sid-1")).toBeUndefined();
       expect(derived.get("sid-1")).toBeDefined();

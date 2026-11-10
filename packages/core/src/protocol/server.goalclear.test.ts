@@ -24,6 +24,9 @@ describe("AgentServer agent/goalClear", () => {
     it(`stamps ${mode} Goal clear with the run identity captured before the control`, () => {
       let runId = "cleared-run";
       const engine = createFakeEngine({
+        // Preserve the optional-capability fallbacks exercised by this fixture.
+        getComposition: undefined,
+
         isHeadless: () => true,
         getGoal: () => ({ objective: "ship", goalId: "goal-1", revision: 2 }),
         getSessionManager: () => ({

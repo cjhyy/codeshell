@@ -27,6 +27,11 @@ function makeFakeEngine(id: string) {
   const calls: Array<{ patch: any; version: number }> = [];
   const reloadModelCalls: string[] = [];
   const engine = createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    getComposition: undefined,
+    getHookRegistry: undefined,
+    getSessionManager: undefined,
+
     getConfig: undefined, // Preserve this fixture's absent optional capability.
     id,
     isHeadless: () => false,

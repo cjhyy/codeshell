@@ -20,6 +20,11 @@ async function fixture() {
   const runs: Array<{ task: string; options: EngineRunOptions }> = [];
   const manual = deferred<void>();
   const engine = createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    dispose: undefined,
+    getSessionManager: undefined,
+    prepareSessionCloseFinalization: undefined,
+
     isGoalContinuationBlocked: undefined, // Preserve this fixture's absent optional capability.
     isHeadless: () => false,
     resolveSessionRunWorkspace: () => {

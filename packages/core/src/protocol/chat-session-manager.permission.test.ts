@@ -24,6 +24,11 @@ function fakeEngine(initial: PermissionMode) {
   let mode: PermissionMode = initial;
   const setCalls: PermissionMode[] = [];
   const engine = createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    dispose: undefined,
+    getSessionManager: undefined,
+    prepareSessionCloseFinalization: undefined,
+
     getPermissionMode() {
       return mode;
     },

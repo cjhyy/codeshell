@@ -66,6 +66,11 @@ function bootPanelProbe(sessionId: string) {
   let panelBridge: PanelHostBridge | undefined;
   let outcome: SettleOutcome | undefined;
   const engine = createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    dispose: undefined,
+    getSessionManager: undefined,
+    prepareSessionCloseFinalization: undefined,
+
     setPanelBridge(bridge: PanelHostBridge | undefined) {
       panelBridge = bridge;
     },
@@ -267,6 +272,9 @@ describe("host-loopback cancel semantics", () => {
     let panelBridge: PanelHostBridge | undefined;
     let listed: { items: unknown[]; failed?: string } | undefined;
     const engine = createFakeEngine({
+      // Preserve the optional-capability fallbacks exercised by this fixture.
+      getSessionManager: undefined,
+
       setPanelBridge(bridge: PanelHostBridge | undefined) {
         panelBridge = bridge;
       },
@@ -518,6 +526,9 @@ describe("host-loopback cancel semantics", () => {
     let panelBridge: PanelHostBridge | undefined;
     let opened: { ok?: boolean; detail?: string } | undefined;
     const engine = createFakeEngine({
+      // Preserve the optional-capability fallbacks exercised by this fixture.
+      getSessionManager: undefined,
+
       setPanelBridge(bridge: PanelHostBridge | undefined) {
         panelBridge = bridge;
       },
@@ -586,6 +597,9 @@ describe("host-loopback cancel semantics", () => {
     let panelBridge: PanelHostBridge | undefined;
     let queried: { items: unknown[]; failed?: string } | undefined;
     const engine = createFakeEngine({
+      // Preserve the optional-capability fallbacks exercised by this fixture.
+      getSessionManager: undefined,
+
       setPanelBridge(bridge: PanelHostBridge | undefined) {
         panelBridge = bridge;
       },

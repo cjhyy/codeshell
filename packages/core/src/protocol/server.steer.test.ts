@@ -77,6 +77,10 @@ describe("AgentServer steer", () => {
       },
     ];
     const engine = createFakeEngine({
+      // Preserve the optional-capability fallbacks exercised by this fixture.
+      getComposition: undefined,
+      getSessionManager: undefined,
+
       isHeadless: () => true,
       enqueueSteer(
         sessionId: string,

@@ -9,7 +9,6 @@ import { ApprovalRouter } from "../tool-system/permission.js";
 import { compileComposition } from "../composition/compiler.js";
 import type { AgentModule } from "../composition/types.js";
 
-
 const cleanup: Array<() => Promise<void>> = [];
 afterEach(async () => {
   for (const release of cleanup.splice(0).reverse()) await release();
@@ -22,6 +21,11 @@ async function fixture(modules: AgentModule[], onTransportClose?: () => void) {
     dataRoot: root,
     engineFactory: () =>
       createFakeEngine({
+        // Preserve the optional-capability fallbacks exercised by this fixture.
+        getHookRegistry: undefined,
+        getSessionManager: undefined,
+        prepareSessionCloseFinalization: undefined,
+
         isHeadless: () => false,
         dispose() {},
       }),

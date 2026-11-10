@@ -47,6 +47,11 @@ function makeAskingEngine(sessionId: string, hold = false, consumeSteers = false
     return {};
   });
   const engine = createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    dispose: undefined,
+    getSessionManager: undefined,
+    prepareSessionCloseFinalization: undefined,
+
     getHookRegistry: () => hooks,
     setAskUserAsync(fn: (question: string) => Promise<unknown>) {
       state.askUserAsync = fn;

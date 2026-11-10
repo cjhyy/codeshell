@@ -18,6 +18,12 @@ function fixture(dispose?: () => Promise<void>) {
     runtime: {} as never,
     engineFactory() {
       const engine = createFakeEngine({
+        // Preserve the optional-capability fallbacks exercised by this fixture.
+        getPermissionMode: undefined,
+        getSessionManager: undefined,
+        prepareSessionCloseFinalization: undefined,
+        restoreSessionModel: undefined,
+
         migrateSessionMainRoot: (_id: string, _project: unknown, root: string) => ({
           root,
           kind: "main",

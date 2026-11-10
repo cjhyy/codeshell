@@ -56,6 +56,11 @@ function makeTransport() {
 function makeFakeEngine() {
   const runs: string[] = [];
   const engine = createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    dispose: undefined,
+    getSessionManager: undefined,
+    prepareSessionCloseFinalization: undefined,
+
     resolveSessionRunWorkspace: undefined, // Preserve this fixture's absent optional capability.
     isGoalContinuationBlocked: undefined, // Preserve this fixture's absent optional capability.
     isHeadless: () => false,
@@ -84,6 +89,12 @@ function makeRehydratableEngineFactory(
     const engineId = ++nextEngineId;
     slices.push(slice);
     return createFakeEngine({
+      // Preserve the optional-capability fallbacks exercised by this fixture.
+      dispose: undefined,
+      getSessionManager: undefined,
+      prepareSessionCloseFinalization: undefined,
+      restoreSessionModel: undefined,
+
       resolveSessionRunWorkspace: undefined, // Preserve this fixture's absent optional capability.
       isGoalContinuationBlocked: undefined, // Preserve this fixture's absent optional capability.
       isHeadless: () => false,
@@ -218,6 +229,11 @@ describe("AgentServer — background shell completion wakes an idle session", ()
     });
     const runs: Array<{ cwd?: string; workspaceContext?: WorkspaceContext }> = [];
     const engine = createFakeEngine({
+      // Preserve the optional-capability fallbacks exercised by this fixture.
+      dispose: undefined,
+      getSessionManager: undefined,
+      prepareSessionCloseFinalization: undefined,
+
       isGoalContinuationBlocked: undefined, // Preserve this fixture's absent optional capability.
       isHeadless: () => false,
       resolveSessionRunWorkspace: () => ({
@@ -261,6 +277,11 @@ describe("AgentServer — background shell completion wakes an idle session", ()
 
   it("restores the completion when workspace validation prevents the turn from starting", async () => {
     const engine = createFakeEngine({
+      // Preserve the optional-capability fallbacks exercised by this fixture.
+      dispose: undefined,
+      getSessionManager: undefined,
+      prepareSessionCloseFinalization: undefined,
+
       resolveSessionRunWorkspace: undefined, // Preserve this fixture's absent optional capability.
       isGoalContinuationBlocked: undefined, // Preserve this fixture's absent optional capability.
       isHeadless: () => false,
@@ -294,6 +315,11 @@ describe("AgentServer — background shell completion wakes an idle session", ()
     let release!: () => void;
     const gate = new Promise<void>((r) => (release = r));
     const engine = createFakeEngine({
+      // Preserve the optional-capability fallbacks exercised by this fixture.
+      dispose: undefined,
+      getSessionManager: undefined,
+      prepareSessionCloseFinalization: undefined,
+
       resolveSessionRunWorkspace: undefined, // Preserve this fixture's absent optional capability.
       isGoalContinuationBlocked: undefined, // Preserve this fixture's absent optional capability.
       isHeadless: () => false,
@@ -369,6 +395,11 @@ describe("AgentServer — background shell completion wakes an idle session", ()
     // must be `error` (not turn_complete) so a woken automation session's
     // runStatus isn't mislabeled "completed".
     const engine = createFakeEngine({
+      // Preserve the optional-capability fallbacks exercised by this fixture.
+      dispose: undefined,
+      getSessionManager: undefined,
+      prepareSessionCloseFinalization: undefined,
+
       resolveSessionRunWorkspace: undefined, // Preserve this fixture's absent optional capability.
       isGoalContinuationBlocked: undefined, // Preserve this fixture's absent optional capability.
       isHeadless: () => false,

@@ -36,6 +36,10 @@ function makeTransport() {
 /** Headless legacy engine whose getGoal reads from a fixed on-disk map. */
 function makeEngine(goals: Record<string, GoalConfig | undefined>) {
   return createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    getComposition: undefined,
+    getSessionManager: undefined,
+
     isHeadless: () => true,
     getGoal: (sessionId: string): GoalConfig | undefined => goals[sessionId],
   });

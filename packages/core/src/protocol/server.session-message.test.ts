@@ -24,6 +24,11 @@ describe("AgentServer cross-Session message routing", () => {
   test("enqueues the text as the target Session's ordinary user turn", async () => {
     const received: Array<{ task: string; options: EngineRunOptions }> = [];
     const engine = createFakeEngine({
+      // Preserve the optional-capability fallbacks exercised by this fixture.
+      dispose: undefined,
+      getSessionManager: undefined,
+      prepareSessionCloseFinalization: undefined,
+
       isHeadless: () => true,
       sessionExistsOnDisk: () => false,
       async run(task: string, options: EngineRunOptions): Promise<EngineResult> {
@@ -104,6 +109,11 @@ describe("AgentServer cross-Session message failure reporting", () => {
     // so SendMessageToSession still answered "has queued the turn" and the lead
     // waited two hours, then re-sent — never learning why.
     const engine = createFakeEngine({
+      // Preserve the optional-capability fallbacks exercised by this fixture.
+      dispose: undefined,
+      getSessionManager: undefined,
+      prepareSessionCloseFinalization: undefined,
+
       isHeadless: () => true,
       sessionExistsOnDisk: () => false,
       async run(): Promise<EngineResult> {
@@ -147,6 +157,11 @@ describe("AgentServer cross-Session message failure reporting", () => {
   test("a healthy target still returns without waiting for the whole turn", async () => {
     let released: (() => void) | undefined;
     const engine = createFakeEngine({
+      // Preserve the optional-capability fallbacks exercised by this fixture.
+      dispose: undefined,
+      getSessionManager: undefined,
+      prepareSessionCloseFinalization: undefined,
+
       isHeadless: () => true,
       sessionExistsOnDisk: () => false,
       async run(options?: unknown): Promise<EngineResult> {

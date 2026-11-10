@@ -84,6 +84,11 @@ function fixture() {
     engineFactory(slice) {
       let routeMessage: SessionMessageRouter | undefined;
       return createFakeEngine({
+        // Preserve the optional-capability fallbacks exercised by this fixture.
+        dispose: undefined,
+        getSessionManager: undefined,
+        prepareSessionCloseFinalization: undefined,
+
         isHeadless: () => false,
         sessionExistsOnDisk: () => false,
         setSessionMessageRouter(router: SessionMessageRouter) {

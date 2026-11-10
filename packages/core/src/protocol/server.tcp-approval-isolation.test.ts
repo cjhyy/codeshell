@@ -49,6 +49,9 @@ function approvalRequests(client: WireClient) {
 
 function makeApprovalEngine(decisions: Array<{ sessionId: string; approved: boolean }>) {
   return createFakeEngine({
+    // TCP setup can fail before this fixture runs; retain its generation and hook fallbacks.
+    getSessionManager: undefined,
+    getHookRegistry: undefined,
     isHeadless: () => false,
     async run(
       _task: string,

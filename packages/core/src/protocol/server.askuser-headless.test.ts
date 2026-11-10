@@ -14,6 +14,10 @@ function makeTransport() {
 // Minimal Engine stub: only what the AgentServer ctor touches.
 function makeEngineStub(headless: boolean) {
   return createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    getComposition: undefined,
+    getSessionManager: undefined,
+
     isHeadless: () => headless,
     setAskUserCalled: false,
     setAskUser: function (fn: unknown) {
@@ -40,9 +44,8 @@ describe("AgentServer askUser wiring", () => {
   });
 });
 
-
 describe("createFakeEngine defaults", () => {
-  it("supports every host setter without opting into optional lifecycle capabilities", () => {
+  it("supports every host setter and rejects unconfigured capabilities by name", () => {
     const engine = createFakeEngine();
     expect(engine.isHeadless()).toBe(true);
     const setters = Object.entries(engine).filter(([name]) => name.startsWith("set"));
@@ -68,12 +71,30 @@ describe("createFakeEngine defaults", () => {
       "prepareSessionCloseFinalization",
       "dispose",
     ])
-      expect(Reflect.get(engine, method)).toBeUndefined();
+      expect(() => Reflect.get(engine, method)()).toThrow(
+        `Unexpected fake Engine.${method}() call`,
+      );
     expect(Reflect.get(engine, "then")).toBeUndefined();
     expect(Reflect.get(engine, "unknownCapability")).toBeUndefined();
   });
 
   it("names unexpected method calls and keeps overrides isolated between fakes", () => {
+    const absentCapabilities = {
+      getComposition: undefined,
+      getSessionManager: undefined,
+      getHookRegistry: undefined,
+      getPermissionMode: undefined,
+      restoreSessionModel: undefined,
+      prepareSessionCloseFinalization: undefined,
+      dispose: undefined,
+    };
+    const absent = createFakeEngine(absentCapabilities);
+    for (const method of Object.keys(absentCapabilities)) {
+      expect(Reflect.get(absent, method)).toBeUndefined();
+      expect(() => Reflect.get(createFakeEngine(), method)()).toThrow(
+        `Unexpected fake Engine.${method}() call`,
+      );
+    }
     const calls: string[] = [];
     const engine = createFakeEngine({
       isHeadless: () => false,

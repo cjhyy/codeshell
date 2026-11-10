@@ -59,6 +59,10 @@ async function fixture(failSend?: (m: any) => boolean) {
     runtime: {} as never,
     engineFactory: () =>
       createFakeEngine({
+        // Preserve the optional-capability fallbacks exercised by this fixture.
+        getSessionManager: undefined,
+        prepareSessionCloseFinalization: undefined,
+
         isHeadless: () => false,
         dispose() {},
       }),

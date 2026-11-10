@@ -34,6 +34,11 @@ function makeTransport() {
 function makeEngine(opts: { failSwitch?: boolean } = {}) {
   const calls: string[] = [];
   const engine = createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    dispose: undefined,
+    getSessionManager: undefined,
+    prepareSessionCloseFinalization: undefined,
+
     isHeadless: () => true,
     switchModel(key: string) {
       calls.push(`switch:${key}`);
@@ -440,6 +445,9 @@ describe("agent/run model", () => {
   it("forwards host-injected completion turns without rendering a user bubble", async () => {
     let injected: boolean | undefined;
     const engine = createFakeEngine({
+      // Preserve the optional-capability fallbacks exercised by this fixture.
+      getSessionManager: undefined,
+
       isHeadless: () => true,
       async run(_task: string, options: { injected?: boolean }): Promise<EngineResult> {
         injected = options.injected;
@@ -479,6 +487,9 @@ describe("agent/run model", () => {
     let receivedTask: string | undefined;
     let receivedDisplayText: string | undefined;
     const engine = createFakeEngine({
+      // Preserve the optional-capability fallbacks exercised by this fixture.
+      getSessionManager: undefined,
+
       isHeadless: () => true,
       async run(task: string, options: { displayText?: string }): Promise<EngineResult> {
         receivedTask = task;
