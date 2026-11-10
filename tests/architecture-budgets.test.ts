@@ -14,6 +14,29 @@ function matches(path: string, pattern: RegExp): number {
   return [...source(path).matchAll(pattern)].length;
 }
 
+function ipcSourceFiles(root: string): string[] {
+  return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(root, entry.name).split("\\").join("/");
+    if (entry.isDirectory()) return ipcSourceFiles(path);
+    return entry.isFile() &&
+      entry.name.endsWith(".ts") &&
+      !/\.(test|fixture|d)\.ts$/.test(entry.name)
+      ? [path]
+      : [];
+  });
+}
+
+function countIpc(
+  root: string,
+  defaultPattern: RegExp,
+  specialPatterns: Record<string, RegExp>,
+): number {
+  return ipcSourceFiles(root).reduce(
+    (total, path) => total + matches(path, specialPatterns[path] ?? defaultPattern),
+    0,
+  );
+}
+
 // Source files are capped, not pinned. Any file may change freely below its
 // cap; a file that would exceed it must be split into modules instead of
 // raising the number. Caps are round ceilings, never measured line counts.
@@ -131,79 +154,37 @@ describe("architecture growth budgets", () => {
     // it exposes only registration/GitHub availability, never account credentials.
     // Count all five explicit collection operations in the extracted registrar.
     // Managed runtime discovery retains its two existing routes in an extracted registrar.
+    // The registrar loops over eight fixed method entries, so count entries, not the loop.
+    // Two linked-file source routes: snapshot and add. Project resolution and
+    // Link authorization stay in Main; extraction must not hide them.
+    // Three owner-scoped DriveAgent task routes: list, cancel and the user's
+    // explicit mark-ended for a task no live process reports.
+    // rooms:create and ccRoom:openSession, moved here unchanged in number so
+    // both pass the Host room permission-mode authority.
+    // Nine local-only Lab routes: eight existing operations plus P2 native
+    // adoption. Exact body/scope review and post-dialog revalidation remain
+    // in this owner-scoped registrar; ordinary RPC cannot approve adoption.
+    // Count the two existing native manual-review routes and the new
+    // fixed-read reconciliation route; extraction must not hide them.
+    // Exactly two Native batch routes: bounded options and manual approval.
+    // Main alone issues the private Run nonce; extraction cannot hide IPC growth.
+    // Mimi's single presence owner: get/set/preview/retry plus the two legacy
+    // pet:widget-visible(-get) routes moved here from index.ts.
+    // The 2026-11-09 index.ts split moved 176 existing routes into these
+    // registrars without adding any; count each so the move hides nothing.
+    // 2026-11: scan every production file instead of a manually maintained list.
+    // The legacy 48-file selection still counts 390; the other 82 routes already
+    // existed but were not counted. This baseline grants no new routes.
     expect(
-      matches("packages/desktop/src/main/index.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/managed-runtime-wiring.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/cc-room/linked-session-ipc.ts", /ipcMain\.handle\(/g) +
-        matches(
-          "packages/desktop/src/main/cc-room/linked-session-observation-ipc.ts",
-          /ipcMain\.handle\(/g,
-        ) +
-        matches("packages/desktop/src/main/project-panel-ipc.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/project-panel-version-ipc.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/remote-link-ipc.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/device-relay-ipc.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/cloud-account-ipc.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/account-features.ts", /ipcMain\.handle\(/g) +
-        // The registrar loops over eight fixed method entries, so count entries, not the loop.
-        matches("packages/desktop/src/main/account-device-ipc.ts", /^    [a-z]+: \(/gm) +
-        matches("packages/desktop/src/main/cloud-workbench-ipc.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/computer-use/settings-ipc.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/local-file-preview-ipc.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/session-transcript-ipc.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/session-output-history-ipc.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/activity-history-ipc.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/model-trace-ipc.ts", /handle\("modelTraces:/g) +
-        matches("packages/desktop/src/main/profile-switch-ipc.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/profile-plugin-export-ipc.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/profile-memory-promotion-ipc.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/source-collections-ipc.ts", /ipcMain\.handle\(/g) +
-        // Two linked-file source routes: snapshot and add. Project resolution and
-        // Link authorization stay in Main; extraction must not hide them.
-        matches("packages/desktop/src/main/linked-file-sources-ipc.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/task-inbox/task-inbox-ipc.ts", /handle\("taskInbox:/g) +
-        // Three owner-scoped DriveAgent task routes: list, cancel and the user's
-        // explicit mark-ended for a task no live process reports.
-        matches("packages/desktop/src/main/cc-room/background-work-ipc.ts", /ipcMain\.handle\(/g) +
-        // rooms:create and ccRoom:openSession, moved here unchanged in number so
-        // both pass the Host room permission-mode authority.
-        matches("packages/desktop/src/main/cc-room/room-mode-ipc.ts", /ipcMain\.handle\(/g) +
-        // Nine local-only Lab routes: eight existing operations plus P2 native
-        // adoption. Exact body/scope review and post-dialog revalidation remain
-        // in this owner-scoped registrar; ordinary RPC cannot approve adoption.
-        matches("packages/desktop/src/main/optimization-lab-ipc.ts", /handle\("optimizationLab:/g) +
-        // Count the two existing native manual-review routes and the new
-        // fixed-read reconciliation route; extraction must not hide them.
-        matches(
-          "packages/desktop/src/main/operation-resolution-ipc.ts",
+      countIpc("packages/desktop/src/main", /ipcMain\.handle\(/g, {
+        "packages/desktop/src/main/account-device-ipc.ts": /^    [a-z]+: \(/gm,
+        "packages/desktop/src/main/model-trace-ipc.ts": /handle\("modelTraces:/g,
+        "packages/desktop/src/main/task-inbox/task-inbox-ipc.ts": /handle\("taskInbox:/g,
+        "packages/desktop/src/main/optimization-lab-ipc.ts": /handle\("optimizationLab:/g,
+        "packages/desktop/src/main/operation-resolution-ipc.ts":
           /handle\(\s*"operationResolution:/g,
-        ) +
-        // Exactly two Native batch routes: bounded options and manual approval.
-        // Main alone issues the private Run nonce; extraction cannot hide IPC growth.
-        matches("packages/desktop/src/main/operation-batch-ipc.ts", /handle\("operationBatch:/g) +
-        // Mimi's single presence owner: get/set/preview/retry plus the two legacy
-        // pet:widget-visible(-get) routes moved here from index.ts.
-        matches("packages/desktop/src/main/pet/mimi-presence-ipc.ts", /ipcMain\.handle\(/g) +
-        // The 2026-11-09 index.ts split moved 176 existing routes into these
-        // registrars without adding any; count each so the move hides nothing.
-        matches("packages/desktop/src/main/profile-catalog-ipc.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/link-credentials-ipc.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/browser-session-ipc.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/speech-ipc.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/attachments-ipc.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/agents-media-ipc.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/skills-mcp-ipc.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/model-catalog-ipc.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/mobile-remote-ipc.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/rooms-ipc.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/dialog-picker-ipc.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/external-runtime-ipc.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/browser-popout-ipc.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/git-review-ipc.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/workspace-files-ipc.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/memory-ipc.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/automation-ipc.ts", /ipcMain\.handle\(/g) +
-        matches("packages/desktop/src/main/trust-notification-ipc.ts", /ipcMain\.handle\(/g),
+        "packages/desktop/src/main/operation-batch-ipc.ts": /handle\("operationBatch:/g,
+      }),
       // +1 read-only, bounded Session output-journal page route. Its file/owner
       // validation and recovery algorithm stay in Core and the extracted adapters.
       // +2 metadata-only Profile preview and revision-checked adoption routes.
@@ -238,7 +219,7 @@ describe("architecture growth budgets", () => {
       // feature snapshot and bounded refresh. No credential-read route is exposed.
       // +2 main-frame-owned account operations: browser sign-in and fixed account
       // management pages. PKCE, session custody and origin checks remain in Main.
-    ).toBeLessThanOrEqual(390);
+    ).toBeLessThanOrEqual(472);
     expect(matches("packages/desktop/src/main/account-device-ipc.ts", /^    [a-z]+: \(/gm)).toBe(8);
     expect(
       matches("packages/desktop/src/main/session-output-history-ipc.ts", /ipcMain\.handle\(/g),
@@ -249,27 +230,15 @@ describe("architecture growth budgets", () => {
     // Count the same eight reviewed optional-account invokes: status, capabilities,
     // login, register, github, linkGitHub, cancelSignIn and logout. No token-read API
     // exists; this increases the invoke contract by exactly eight, not line budgets.
+    // Count each fixed helper call plus send's raw delivery DTO invoke.
+    // The legacy 16-file selectors counted 371. Counting both invoke receivers
+    // also finds two existing accountFeatures calls that its old ipc-only regex
+    // missed (373 on that selection). The other 108 invokes were outside the
+    // list, so the full measured baseline is 481, not the review's initial 479.
     expect(
-      matches("packages/desktop/src/preload/device-relay-api.ts", /ipcRenderer\.invoke\(/g) +
-        matches("packages/desktop/src/preload/cloud-account-api.ts", /ipcRenderer\.invoke\(/g) +
-        matches("packages/desktop/src/preload/account-features-api.ts", /ipc\.invoke\(/g) +
-        // Count each fixed helper call plus send's raw delivery DTO invoke.
-        matches("packages/desktop/src/preload/account-device-api.ts", /\binvoke(?:Raw)?\("/g) +
-        matches("packages/desktop/src/preload/mobile-remote-api.ts", /ipcRenderer\.invoke\(/g) +
-        matches("packages/desktop/src/preload/index.ts", /ipcRenderer\.invoke\(/g) +
-        matches(
-          "packages/desktop/src/preload/project-panel-version-api.ts",
-          /ipcRenderer\.invoke\(/g,
-        ) +
-        matches("packages/desktop/src/preload/session-transcript-api.ts", /ipc\.invoke\(/g) +
-        matches("packages/desktop/src/preload/model-trace-api.ts", /ipc\.invoke\(/g) +
-        matches("packages/desktop/src/preload/task-inbox-api.ts", /ipc\.invoke\(/g) +
-        matches("packages/desktop/src/preload/profile-plugin-export-api.ts", /ipc\.invoke\(/g) +
-        matches("packages/desktop/src/preload/profile-memory-promotion-api.ts", /ipc\.invoke\(/g) +
-        matches("packages/desktop/src/preload/optimization-lab-api.ts", /ipc\.invoke\(/g) +
-        matches("packages/desktop/src/preload/computer-use-api.ts", /ipc\.invoke\(/g) +
-        matches("packages/desktop/src/preload/operation-resolution-api.ts", /ipc\.invoke\(/g) +
-        matches("packages/desktop/src/preload/operation-batch-api.ts", /ipc\.invoke\(/g),
+      countIpc("packages/desktop/src/preload", /\b(?:ipcRenderer|ipc)\.invoke\(/g, {
+        "packages/desktop/src/preload/account-device-api.ts": /\binvoke(?:Raw)?\("/g,
+      }),
       // Five reviewed collection invokes. Native file paths never arrive as renderer arguments.
       // +2 memory-copy invokes; commit carries only the reviewed token and project.
       // +1 typed cloudAccount:profile invoke mirrors the single reviewed Main
@@ -287,7 +256,7 @@ describe("architecture growth budgets", () => {
       // +3 exact adapters for registration, feature snapshot and refresh above.
       // Browser sign-in and fixed account-management navigation add two typed
       // adapters within the existing ceiling; neither exposes credentials.
-    ).toBeLessThanOrEqual(372);
+    ).toBeLessThanOrEqual(481);
     expect(
       matches("packages/desktop/src/preload/account-device-api.ts", /\binvoke(?:Raw)?\("/g),
     ).toBe(8);
