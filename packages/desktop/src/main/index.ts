@@ -297,6 +297,7 @@ import { createDesktopRoomModeAuthority } from "./cc-room/room-mode-ipc.js";
 import {
   GatewayControlServer,
   type GatewayControlEventAttachment,
+  type GatewayControlEvent,
   type GatewayControlEventInput,
   type PetChatControlRequest,
   type PetChatControlResult,
@@ -1029,21 +1030,48 @@ let sessionBridge: SessionBridgeWiring | undefined;
 async function publishGatewayControlEvent(event: GatewayControlEventInput): Promise<void> {
   const gateway = gatewayControlServer;
   if (!gateway) throw new Error("IM Gateway notification outbox is unavailable");
-  const published = await gateway.publish(event);
+  handOffDirectDelivery(gateway, await gateway.publish(event));
+}
+
+/**
+ * While the polling Gateway is stopped, direct-capable adapters deliver an
+ * outbox event (a new one, or a retry copy the outbox appended) and report
+ * its result like the live watcher does. Undefined: not handled here; the
+ * event waits for the watcher. A send failure is reported so the outbox
+ * retries or gives up; any other error leaves the event waiting, as before.
+ */
+function handOffDirectDelivery(
+  gateway: GatewayControlServer,
+  published: GatewayControlEvent,
+): void {
   const context = gateway.eventContext();
   if (!context) return;
+  const report = (
+    result: Omit<Parameters<GatewayControlServer["reportEventResult"]>[0], "streamId" | "eventId">,
+  ) => gateway.reportEventResult({ streamId: context.streamId, eventId: published.id, ...result });
   void imGatewayService
-    .deliverPublishedNotification(published, context)
-    .then(async (delivered) => {
-      if (delivered) await gateway.acknowledgeDirectDelivery(published.id);
+    .deliverPublishedNotification(published, {
+      ...context,
+      isLive: async () => gateway.isEventLive(context.streamId, published.id),
     })
-    .catch((error) =>
+    .then(async (delivery) => {
+      if (delivery) await report({ outcome: delivery.outcome });
+    })
+    .catch(async (error: unknown) => {
       dlog("main", "im_gateway.notification_direct.failed", {
         eventId: published.id,
         type: published.type,
         error: String(error),
-      }),
-    );
+      });
+      const failure = error as { attempted?: unknown; idempotent?: unknown };
+      if (typeof failure?.attempted !== "boolean") return;
+      await report({
+        outcome: "failed",
+        attempted: failure.attempted,
+        idempotent: failure.idempotent === true,
+        error: String(error).slice(0, 500),
+      }).catch(() => undefined);
+    });
 }
 
 function publishGatewayControlEventBestEffort(event: GatewayControlEventInput): void {
@@ -3423,6 +3451,9 @@ app.whenReady().then(async () => {
       (await petImDecisions?.replyToSession(request)) ??
       (sessionBridge ? sessionBridge.routeInbound(request) : { kind: "not-bound" }),
   });
+  // Retry copies the outbox appends get the same direct hand-off as a fresh publication.
+  const controlServer = gatewayControlServer;
+  controlServer.onEventAppended((event) => handOffDirectDelivery(controlServer, event));
   await gatewayControlServer.start().catch((error) => {
     dlog("main", "im_gateway.desktop_control.start_failed", { error: String(error) });
   });

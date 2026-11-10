@@ -49,6 +49,7 @@ import {
   defaultGatewayConfigPath,
   DesktopControlClient,
   type DesktopEventContext,
+  type DesktopEventDelivery,
   gatewayConfigTemplate,
   hasWechatStoredContextToken,
   loadGatewayConfig,
@@ -786,6 +787,29 @@ export class ImGatewayService {
     });
   }
 
+  /**
+   * The raw platform destination behind an opaque owner target id, re-checked
+   * against the current allowlist, for owner notices written to the durable
+   * outbox (whose relay authorizes it again before every send). Host-only:
+   * raw ids never reach the model.
+   */
+  resolveOwnerTarget(targetId: string): { channel: ImGatewayChannel; target: string } | undefined {
+    const selected = this.listOwnerMessageTargets().find((target) => target.id === targetId);
+    if (!selected) return undefined;
+    let config: ReturnType<typeof loadDesktopGatewayConfig>;
+    try {
+      config = loadDesktopGatewayConfig(this.configPath, this.options.credentialStore);
+    } catch {
+      return undefined;
+    }
+    const raw = config.channels
+      .find((candidate) => candidate.channel === selected.channel)
+      ?.allowedTargetIds.find(
+        (candidate) => ownerTargetId(selected.channel, candidate) === targetId,
+      );
+    return raw ? { channel: selected.channel, target: raw } : undefined;
+  }
+
   /** Whether owner sends on this channel honour ImGatewayOwnerSendOptions.idempotencyKey. */
   supportsIdempotentOwnerSend(channel: string): boolean {
     return (
@@ -912,20 +936,25 @@ export class ImGatewayService {
   deliverPublishedNotification(
     event: DesktopControlEvent,
     context: DesktopEventContext,
-  ): Promise<boolean> {
+  ): Promise<DesktopEventDelivery | undefined> {
     return this.enqueueDeliveryHandoff(() =>
       this.deliverPublishedNotificationInOrder(event, context),
     );
   }
 
+  /**
+   * Undefined: not handled here (the live watcher owns delivery, or not every
+   * target is reachable directly), so the event waits in the outbox. A
+   * delivery result otherwise; a failed send throws (the caller reports it).
+   */
   private async deliverPublishedNotificationInOrder(
     event: DesktopControlEvent,
     context: DesktopEventContext,
-  ): Promise<boolean> {
+  ): Promise<DesktopEventDelivery | undefined> {
     // The live watcher is the sole owner while active. It uses the same relay
     // and progress store, so this boundary is channel-neutral.
-    if (this.active || this.startingAdapters) return false;
-    if (!existsSync(this.configPath)) return false;
+    if (this.active || this.startingAdapters) return undefined;
+    if (!existsSync(this.configPath)) return undefined;
     const config = loadDesktopGatewayConfig(this.configPath, this.options.credentialStore);
     const requestedTargets = event.target ? [event.target] : config.notifications;
     let authorizedRequestedTargets = 0;
@@ -944,13 +973,15 @@ export class ImGatewayService {
       // cannot reach it (channel not direct-capable, WeChat context missing).
       authorizedRequestedTargets += 1;
       if (!BUILTIN_CHANNEL_CAPABILITIES[channel].outbound.direct) return [];
-      // Unlike listOwnerMessageTargets (which offers an "unknown" WeChat target
-      // to an interactive sender that sees the real result), a durable event
-      // without context waits for the Gateway watcher instead of a blind try.
-      if (!hasRequiredProactiveContext(configured, target)) return [];
+      // An unbudgeted durable event without context waits for the Gateway
+      // watcher instead of a blind try. A budgeted one (an owner notice) gets
+      // the one tokenless try an interactive owner send gets, and its result
+      // is reported, so it gives up instead of waiting forever.
+      if (!hasRequiredProactiveContext(configured, target) && event.maxAttempts === undefined)
+        return [];
       return [{ channel, target, configured }];
     });
-    if (directTargets.length === 0) return false;
+    if (directTargets.length === 0) return undefined;
     // Only full coverage may be reported as "fully handled" — the caller acks
     // and permanently drops the durable event on true. A partial send still
     // runs (the shared progress store keeps a resumed Gateway watcher from
@@ -960,9 +991,9 @@ export class ImGatewayService {
 
     const channels = [...new Set(directTargets.map(({ channel }) => channel))].sort();
     return this.withOwnerSendLocks(channels, async () => {
-      if (this.active || this.startingAdapters) return false;
+      if (this.active || this.startingAdapters) return undefined;
       if (this.pendingRelease) await this.pendingRelease;
-      if (this.active || this.startingAdapters) return false;
+      if (this.active || this.startingAdapters) return undefined;
       let lease: GatewayInstanceLease;
       try {
         lease = acquireGatewayInstanceLock(
@@ -972,7 +1003,7 @@ export class ImGatewayService {
       } catch (error) {
         // A separate CLI Gateway owns the retained event and will consume it.
         // Never open a competing short-lived channel session in this process.
-        if (error instanceof GatewayAlreadyRunningError) return false;
+        if (error instanceof GatewayAlreadyRunningError) return undefined;
         throw error;
       }
       try {
@@ -1000,8 +1031,8 @@ export class ImGatewayService {
             authorizeTarget: (target) => this.isNotificationTargetAuthorized(target),
           },
         );
-        await handler(event, context);
-        return coversAllAuthorizedTargets;
+        const delivery = await handler(event, context);
+        return coversAllAuthorizedTargets ? delivery : undefined;
       } finally {
         lease.release();
       }
