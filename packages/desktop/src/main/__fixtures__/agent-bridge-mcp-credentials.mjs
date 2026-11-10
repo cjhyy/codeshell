@@ -320,10 +320,20 @@ trace(parsingBridge, "routePetReportLine", "report");
 trace(parsingBridge.quickChatForkRouter, "routeWorkerResponse", "fork");
 const stageOrder = ["configuration", "tentative", "host", "cron", "projection", "report", "fork"];
 const originalParse = JSON.parse;
+const sharedMessages = [];
+const freezeMessage = (value) => {
+  if (value && typeof value === "object") {
+    Object.values(value).forEach(freezeMessage);
+    Object.freeze(value);
+  }
+  return value;
+};
 let workerLineParses = 0;
 JSON.parse = (...args) => {
   workerLineParses++;
-  return originalParse(...args);
+  const message = originalParse(...args);
+  sharedMessages.push({ message, before: JSON.stringify(message) });
+  return freezeMessage(message);
 };
 try {
   for (const line of lines) {
@@ -344,6 +354,13 @@ try {
 }
 await Promise.resolve();
 assert.equal(workerLineParses, lines.length);
+for (const { message, before } of sharedMessages) {
+  assert.equal(
+    JSON.stringify(message),
+    before,
+    "downstream readers must not mutate shared messages",
+  );
+}
 assert(forwarded.some(({ channel, payload }) => channel === "agent:msg" && payload === lines[3]));
 assert(!tapped.includes(lines[5]), "cron notification must be consumed");
 assert(!tapped.includes(lines[6]), "pet projection must be consumed");
