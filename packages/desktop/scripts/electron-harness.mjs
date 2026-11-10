@@ -9,8 +9,19 @@ import {
   getElectronKeychainPreflightDiagnostic,
 } from "./electron-keychain-preflight.mjs";
 import { watchElectronTestProcess } from "./electron-test-watchdog.mjs";
+import { createElectronMainIdentityReader } from "./electron-main-identity.mjs";
 
-const windowsSourceMainIdentityReaders = new WeakMap();
+const mainIdentityReaders = new WeakMap();
+
+function registerMainIdentityReader(application, captured, options) {
+  let reader;
+  // Capture the watched child now, but keep the caller's first-read timing.
+  // Cache initialization (including rejection), never reacquire new bindings.
+  mainIdentityReaders.set(application, async () => {
+    reader ??= createElectronMainIdentityReader({ application, captured, ...options });
+    return (await reader)();
+  });
+}
 
 export function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -268,15 +279,9 @@ export async function verifyElectronMainIdentity(
     Number.isSafeInteger(child?.pid) && child.pid > 0,
     "Actual Electron child PID is required",
   );
-  const read = windowsSourceMainIdentityReaders.get(application);
-  const identity = read
-    ? await read()
-    : await application.evaluate(() => ({
-        pid: process.pid,
-        ppid: process.ppid,
-        executable: process.execPath,
-        home: process.env.HOME,
-      }));
+  const read = mainIdentityReaders.get(application);
+  assert(read, "Main identity requires an owned harness launch");
+  const identity = await read();
   assert(identity.pid === child.pid, "Connected Main PID differs from the direct captured child");
   assert(
     identity.ppid === parentPid,
@@ -429,7 +434,7 @@ appendFileSync(${JSON.stringify(join(home, "real-keyring-bootstrap.jsonl"))}, JS
   if (platform === "win32") {
     diagnostics?.phase("harness-windows-transport");
     const details = await windowsLaunchDetails();
-    const { installWindowsElectronDirectTransport, createWindowsSourceMainIdentityReader } =
+    const { installWindowsElectronDirectTransport } =
       await import("./windows-electron-direct-transport.mjs");
     let captured, custody;
     const transport = installWindowsElectronDirectTransport({
@@ -461,13 +466,10 @@ appendFileSync(${JSON.stringify(join(home, "real-keyring-bootstrap.jsonl"))}, JS
         captured && application.process() === captured,
         "Playwright must expose the captured direct Main",
       );
-      const readIdentity = await createWindowsSourceMainIdentityReader({
-        application,
-        captured,
+      registerMainIdentityReader(application, captured, {
         playwrightVersion: details.playwrightVersion,
         platform,
       });
-      windowsSourceMainIdentityReaders.set(application, readIdentity);
       application.__sourceMainIdentity = await verifyElectronMainIdentity(application, {
         executable: details.executable,
         home,
@@ -509,18 +511,19 @@ appendFileSync(${JSON.stringify(join(home, "real-keyring-bootstrap.jsonl"))}, JS
   }
   diagnostics?.phase("harness-launch");
   const application = await launch(options);
+  const child = application.process();
   try {
     diagnostics?.phase("harness-watch");
-    const monitor = watch(application.process(), { timeoutMs: runtimeTimeoutMs, reportFailure });
+    const monitor = watch(child, { timeoutMs: runtimeTimeoutMs, reportFailure });
     observeElectronDiagnostic(diagnostics, "watchdog", monitor);
   } catch (error) {
     // An unsuccessful birth query grants no quit/signal authority.
-    const child = application.process();
     child?.unref?.();
     child?.stdout?.unref?.();
     child?.stderr?.unref?.();
     throw error;
   }
+  registerMainIdentityReader(application, child, { platform });
   diagnostics?.phase("harness-ready");
   return application;
 }

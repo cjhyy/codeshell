@@ -1,4 +1,4 @@
-/** Pure Windows-shaped installed-Playwright calls. No Electron or cmd is run. */
+/** Pure installed-Playwright calls, including Windows transport. No Electron or cmd is run. */
 import assert from "node:assert/strict";
 import children from "node:child_process";
 import { EventEmitter } from "node:events";
@@ -15,7 +15,7 @@ import {
 } from "./electron-harness.mjs";
 
 let nextPid = 700000;
-async function fakeLaunch(t, mode = "success") {
+async function fakeLaunch(t, mode = "success", platform = "win32") {
   const root = await realpath(await mkdtemp(join(tmpdir(), "codeshell-source-win-transport-")));
   t.after(() => rm(root, { recursive: true, force: true }));
   const home = join(root, "owned home 中文"),
@@ -38,7 +38,10 @@ async function fakeLaunch(t, mode = "success") {
   child.unref = () => unrefs++;
   child.stdout = child.stderr = { unref() {} };
   const order = [],
-    failures = [];
+    failures = [],
+    identityEvents = [];
+  const protocolError = new Error("Resulting promise was garbage collected.");
+  protocolError.stack = `Error: ${protocolError.message}\n    at owned (${appDir}/caller.mjs:1:1)\n    at foreign (/foreign/operator/caller.mjs:2:1)`;
   const diagnostics = createElectronTestDiagnostics({ ownedRoots: [root] });
   const settlement = { status: "cleaned", queryFailed: false, remainingCount: 0 };
   const monitor = Object.assign(() => {}, {
@@ -78,6 +81,7 @@ async function fakeLaunch(t, mode = "success") {
       return "owned unrelated public evaluation";
     },
     close: async () => {
+      identityEvents.push("caller close");
       quits++;
     },
   };
@@ -88,6 +92,7 @@ async function fakeLaunch(t, mode = "success") {
     _closed: false,
     _crashed: false,
     send: async (method, params) => {
+      identityEvents.push("protocol read");
       protocolReads++;
       assert.equal(method, "Runtime.evaluate");
       assert.deepEqual(params, {
@@ -110,9 +115,7 @@ async function fakeLaunch(t, mode = "success") {
         );
       if (["evaluate rejection", "exited before evaluate rejection"].includes(mode)) {
         if (mode === "exited before evaluate rejection") child.exitCode = 1;
-        const error = new Error("Resulting promise was garbage collected.");
-        error.stack = `Error: ${error.message}\n    at owned (${appDir}/caller.mjs:1:1)\n    at foreign (/foreign/operator/caller.mjs:2:1)`;
-        throw error;
+        throw protocolError;
       }
       return {
         result: {
@@ -152,7 +155,7 @@ async function fakeLaunch(t, mode = "success") {
     launchCodeShellElectron(
       { appDir, home, mainEntry: 'owned argument "quoted" %PATH% & ^ 中文' },
       {
-        platform: "win32",
+        platform,
         preflight: () => {},
         reportFailure: (message) => failures.push(message),
         windowsLaunchDetails: async () => ({ executable, loader, playwrightVersion: "1.64.0" }),
@@ -164,6 +167,10 @@ async function fakeLaunch(t, mode = "success") {
         },
         diagnostics,
         launch: async (options) => {
+          if (platform !== "win32") {
+            order.push("Playwright handshake proceeds with same Main");
+            return app;
+          }
           const argv = ["-r", loader, "--inspect=0", "--remote-debugging-port=0", ...options.args];
           // Exact coreBundle45543/45698 encoding, independently spelled here.
           let command = [executable, ...argv]
@@ -198,9 +205,101 @@ async function fakeLaunch(t, mode = "success") {
     diagnostics: diagnostics.receipt,
     observer: diagnostics,
     identityContext: { executable, home },
+    identityEvents,
+    protocolError,
+    implementation,
+    session,
+    context,
     state: () => ({ unrefs, quits, terminations, spawns, protocolReads, publicEvaluations }),
   };
 }
+
+for (const platform of ["linux", "darwin"])
+  test(`source ${platform} verifies Main through the fixed synchronous session without public evaluation`, async (t) => {
+    const f = await fakeLaunch(t, "success", platform);
+    assert.equal(await f.run(), f.app);
+    assert.equal(f.state().protocolReads, 0, "Launch keeps the caller's first-identity timing");
+    assert.deepEqual(f.order, [
+      "Playwright handshake proceeds with same Main",
+      "early existing birth custody",
+    ]);
+    const identity = await verifyElectronMainIdentity(f.app, f.identityContext);
+    assert.deepEqual(identity, { pid: f.child.pid, ppid: process.pid, ...f.identityContext });
+    assert.equal(f.state().protocolReads, 1);
+    assert.equal(f.state().publicEvaluations, 0);
+    assert.equal(f.state().quits, 0);
+    assert.equal(f.state().terminations, 0);
+  });
+
+for (const [mode, message] of [
+  ["wrong Main", /Main PID differs/],
+  ["wrong parent", /Main parent differs/],
+  ["wrong identity HOME", /Main HOME differs/],
+  ["wrong executable", /Main executable differs/],
+  ["remote client", /requires in-process Playwright/],
+])
+  test(`source Linux retains the ${mode} identity gate without accepting launcher identity`, async (t) => {
+    const f = await fakeLaunch(t, mode, "linux");
+    await f.run();
+    await assert.rejects(verifyElectronMainIdentity(f.app, f.identityContext), message);
+    assert.equal(f.state().protocolReads, mode === "remote client" ? 0 : 1);
+    assert.equal(f.state().publicEvaluations, 0);
+    assert.equal(f.state().terminations, 0);
+    assert.equal(f.state().quits, 0);
+  });
+
+test("source Linux identity stays bound to the watched child before the first read", async (t) => {
+  const f = await fakeLaunch(t, "success", "linux");
+  await f.run();
+  const substitute = { pid: f.child.pid };
+  f.app.process = f.implementation.process = () => substitute;
+  await assert.rejects(verifyElectronMainIdentity(f.app, f.identityContext), /captured child/);
+  assert.equal(f.state().protocolReads, 0);
+  assert.equal(f.state().publicEvaluations, 0);
+});
+
+test("source Linux later identity reads cannot rebind to a replacement Main context", async (t) => {
+  const f = await fakeLaunch(t, "success", "linux");
+  await f.run();
+  await verifyElectronMainIdentity(f.app, f.identityContext);
+  f.implementation._nodeExecutionContext = { delegate: f.context.delegate };
+  f.implementation._nodeElectronHandlePromise = Promise.resolve({
+    _context: f.implementation._nodeExecutionContext,
+    _disposed: false,
+    _objectId: "replacement handle",
+  });
+  await assert.rejects(verifyElectronMainIdentity(f.app, f.identityContext), /changed/);
+  assert.equal(f.state().protocolReads, 1);
+  assert.equal(f.state().publicEvaluations, 0);
+});
+
+test("source Linux propagates the original read error once before existing caller cleanup", async (t) => {
+  const f = await fakeLaunch(t, "evaluate rejection", "linux");
+  await f.run();
+  const exercise = async () => {
+    try {
+      await verifyElectronMainIdentity(f.app, f.identityContext);
+    } catch (error) {
+      assert.equal(error, f.protocolError);
+      f.identityEvents.push("caller receives original error");
+      assert.equal(f.state().quits, 0);
+      assert.equal(f.state().terminations, 0);
+      throw error;
+    } finally {
+      await f.app.close();
+    }
+  };
+  await assert.rejects(exercise(), (error) => error === f.protocolError);
+  assert.deepEqual(f.identityEvents, [
+    "protocol read",
+    "caller receives original error",
+    "caller close",
+  ]);
+  assert.equal(f.state().protocolReads, 1);
+  assert.equal(f.state().publicEvaluations, 0);
+  assert.equal(f.state().quits, 1);
+  assert.equal(f.state().terminations, 0);
+});
 
 test("a first-window failure sidecar captures the registered watchdog timing", async (t) => {
   const fixture = await fakeLaunch(t, "normal");
