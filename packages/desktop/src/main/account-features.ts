@@ -1,6 +1,14 @@
 import type { App, BrowserWindow, IpcMain, IpcMainInvokeEvent } from "electron";
 import { AccountFeatureService } from "@cjhyy/code-shell-server/account";
 import type { CloudAccountStatus } from "../shared/cloud-account.js";
+import type { AccountFeatureIpc } from "../shared/account-features.js";
+
+type AccountFeatureHandlers = {
+  [K in keyof AccountFeatureIpc]: (
+    event: IpcMainInvokeEvent,
+    ...args: AccountFeatureIpc[K]["args"]
+  ) => AccountFeatureIpc[K]["result"] | Promise<AccountFeatureIpc[K]["result"]>;
+};
 import type { DesktopRelayStatus } from "../shared/device-relay.js";
 import type { ResolveAccountFeaturesInput } from "@cjhyy/code-shell-web/account";
 export { AccountFeatureService };
@@ -59,14 +67,19 @@ export function registerAccountFeatureIpc(options: {
     )
       throw new Error("账号功能仅允许桌面主窗口访问。");
   };
-  options.ipcMain.handle("accountFeatures:snapshot", (event) => {
-    owner(event);
-    return options.service.snapshot();
-  });
-  options.ipcMain.handle("accountFeatures:refresh", (event, origin?: string) => {
-    owner(event);
-    return options.service.refresh(origin);
-  });
+  const handlers = {
+    "accountFeatures:snapshot": (event) => {
+      owner(event);
+      return options.service.snapshot();
+    },
+    "accountFeatures:refresh": (event, origin) => {
+      owner(event);
+      return options.service.refresh(origin);
+    },
+  } satisfies AccountFeatureHandlers;
+  const { ipcMain } = options;
+  ipcMain.handle("accountFeatures:snapshot", handlers["accountFeatures:snapshot"]);
+  ipcMain.handle("accountFeatures:refresh", handlers["accountFeatures:refresh"]);
   const unsubscribe = options.service.onChanged((snapshot) => {
     for (const window of options.windows())
       if (!window.isDestroyed() && !window.webContents.isDestroyed())

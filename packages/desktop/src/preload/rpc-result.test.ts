@@ -23,5 +23,5 @@ test("a native run error reply rejects with the host's explanation", () => {
 // The preload itself imports Electron and cannot load under Bun.
 test("the preload run binding unwraps its JSON-RPC reply", () => {
   const source = readFileSync(join(import.meta.dir, "index.ts"), "utf8");
-  expect(source).toMatch(/rpc\("agent\/run",[^;]*?\)\s*\.then\(rpcResult\)/s);
+  expect(source).toMatch(/rpc\("agent\/run",[^;]*?\)\s*\.then\(rpcResult(?:<RunResult>)?\)/s);
 });
