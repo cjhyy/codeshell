@@ -63,7 +63,8 @@
     "test:output-paced": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-output-paced.mjs",
     "test:output-repair": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-output-journal-repair.mjs",
     "test:deferred-tools": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-deferred-tools.mjs",
-    "test:task-routing": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-task-capability-routing.mjs"
+    "test:task-routing": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-task-capability-routing.mjs",
+    "typecheck:tests": "bun run --filter '@cjhyy/code-shell-host' typecheck:tests && bun run --filter '@cjhyy/code-shell-link' typecheck:tests"
   },
   "dependencies": {
     "@cjhyy/code-shell-core": "workspace:*",

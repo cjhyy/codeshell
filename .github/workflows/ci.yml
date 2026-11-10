@@ -65,6 +65,8 @@ jobs:
         # The root command first establishes package declaration boundaries, so
         # this also works on a clean checkout before the no-emit workspace pass.
         run: bun run typecheck
+      - name: Typecheck Host and Link tests
+        run: bun run typecheck:tests
       - name: Isolated actual SDK MCP OAuth issuer boundary
         # A separate process installs the network guard before its first SDK/Core import.
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/mcp-oauth-issuer.test.ts

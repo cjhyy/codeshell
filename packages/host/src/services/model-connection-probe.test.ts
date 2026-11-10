@@ -47,7 +47,7 @@ function transport(body: unknown, status = 200) {
       expect(new URL(request.url).origin).toBe(origin);
       expect(request.redirect).toBe("error");
       expect(request.headers.get("authorization")).toBe(`Bearer ${key}`);
-      const payload = await request.json();
+      const payload = (await request.json()) as Record<string, unknown>;
       expect(payload.tools).toBeUndefined();
       expect(payload.max_tokens ?? payload.max_completion_tokens).toBe(32);
       requests++;
