@@ -8,6 +8,23 @@ breaking.
 
 ## [Unreleased]
 
+## [0.10.1] - Unreleased
+
+### Fixed
+
+- Derive Desktop Core and Optimization Lab production dependencies from the root
+  Bun lock, retaining transitive and optional dependencies and root overrides.
+  Reject missing or drifted production manifests and locks before packaging.
+- Isolate each macOS target's Computer Use helper files before signing so shared
+  files cannot invalidate a previously signed target. Preserve the signing order
+  and Node integrity checks, and strictly verify the helper executable.
+
+### Release status
+
+- This patch is prepared but has not been published. The failed `v0.10.0` release
+  attempt did not create a GitHub Release and skipped npm publishing; its existing
+  tag remains unchanged.
+
 ## [0.10.0] - 2026-11-11
 
 ### Changed (breaking)

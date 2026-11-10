@@ -25,6 +25,7 @@ function fixture(platform = "darwin") {
   const executable = platform === "win32" ? "bin/node.exe" : "bin/node";
   const nodePath = join(runtimeDir, executable);
   const helperPath = join(appPath, "Contents/Library/CodeShell Computer Use.app");
+  const helperExecutable = join(helperPath, "Contents/MacOS/codeshell-computer-use");
   const driverPath = join(helperPath, "Contents/Resources/cua-driver");
   const target = { platform, arch: "arm64" };
   const context = {
@@ -69,7 +70,14 @@ function fixture(platform = "darwin") {
   const run = async (command: string, args: string[]) => {
     expect(command.endsWith("codesign")).toBe(true);
     const file = args.at(-1);
-    const native = file === driverPath ? "driver" : file === helperPath ? "helper" : null;
+    const native =
+      file === driverPath
+        ? "driver"
+        : file === helperPath
+          ? "helper"
+          : file === helperExecutable
+            ? "helper-main"
+            : null;
     if (args.includes("--verify")) {
       events.push({
         kind: native ? `verify-${native}` : file === nodePath ? "verify-node" : "verify-app",
@@ -100,6 +108,7 @@ function fixture(platform = "darwin") {
     nodePath,
     driverPath,
     helperPath,
+    helperExecutable,
     runtimeDir,
     target,
     context,
@@ -112,7 +121,16 @@ function fixture(platform = "darwin") {
       bytes += " changed after manifest";
     },
     hooks: (overrides: Record<string, unknown> = {}) =>
-      createSigningHooks({ supply, run, signAsync, ...overrides }),
+      createSigningHooks({
+        supply,
+        run,
+        signAsync,
+        isolateHelperBundle: async (helper: string) => {
+          expect(helper).toBe(helperPath);
+          events.push({ kind: "isolate-helper" });
+        },
+        ...overrides,
+      }),
   };
 }
 
@@ -139,6 +157,7 @@ describe("managed Node packaging signature ordering", () => {
     expect(f.events[0].options).toMatchObject({ ...f.target, runtimeDir: f.runtimeDir });
     ordered(f.events, [
       "stage",
+      "isolate-helper",
       "sign-deep",
       "sign-driver",
       "sign-helper",
@@ -179,6 +198,11 @@ describe("managed Node packaging signature ordering", () => {
       ]);
     }
     expect(f.events.some(({ kind }) => kind === "verify-node")).toBe(true);
+    expect(f.events.find(({ kind }) => kind === "verify-helper-main")?.args).toEqual([
+      "--verify",
+      "--strict",
+      f.helperExecutable,
+    ]);
     expect(f.events.some(({ kind }) => kind === "verify-app")).toBe(true);
   });
 
@@ -285,6 +309,22 @@ describe("managed Node packaging signature ordering", () => {
     });
     await expect(hooks.afterPack(f.context)).rejects.toThrow("codesign failed");
     expect(f.events.some(({ kind }) => kind === "refresh" || kind === "sign-outer")).toBe(false);
+  });
+
+  test("a helper main executable strict failure blocks packaging even if bundle checks pass", async () => {
+    const f = fixture();
+    await expect(
+      f
+        .hooks({
+          run: async (command: string, args: string[]) => {
+            if (args.at(-1) === f.helperExecutable && args.includes("--strict"))
+              throw new Error("invalid resource directory");
+            return f.run(command, args);
+          },
+        })
+        .afterPack(f.context),
+    ).rejects.toThrow("invalid resource directory");
+    expect(f.events.some(({ kind }) => kind === "verify-app")).toBe(false);
   });
 
   for (const native of ["driverPath", "helperPath"] as const) {

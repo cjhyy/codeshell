@@ -3,9 +3,10 @@
 /* global require, module */
 /* eslint-disable @typescript-eslint/no-require-imports -- electron-builder resolves these build hooks as CommonJS. */
 const { execFile } = require("node:child_process");
+const { cp, lstat, mkdtemp, readdir, readlink, realpath, rename, rm } = require("node:fs/promises");
 const { createRequire } = require("node:module");
 const { promisify } = require("node:util");
-const { join } = require("node:path");
+const { basename, dirname, isAbsolute, join, relative, sep } = require("node:path");
 const runtime = require("./managed-node-runtime.cjs");
 
 const exec = promisify(execFile);
@@ -13,6 +14,65 @@ const APP_ID = "com.cjhyy.codeshell";
 const COMPUTER_USE_ID = "com.cjhyy.codeshell.computer-use";
 const ENTITLEMENTS = join(__dirname, "managed-node-entitlements.plist");
 const NODE_SIGN_IGNORE = /\/Contents\/Resources\/runtimes\/node\/bin\/node$/;
+
+async function isolateHelperBundle(helper) {
+  if (!(await lstat(helper)).isDirectory())
+    throw new Error(`Computer Use helper must be a real directory: ${helper}`);
+  const root = await realpath(helper);
+  async function resolveEntry(path, seen = new Set()) {
+    // Bun on macOS can realpath a hardlinked file to a different name for its
+    // inode. Only canonicalize directories; resolve final symlinks explicitly.
+    const parent = await realpath(dirname(path));
+    if (!(await lstat(parent)).isDirectory())
+      throw new Error(`Computer Use helper symlink parent is not a directory: ${parent}`);
+    const entry = join(parent, basename(path));
+    if (!(await lstat(entry)).isSymbolicLink()) return entry;
+    if (seen.has(entry)) throw new Error(`Computer Use helper symlink cycle: ${entry}`);
+    seen.add(entry);
+    const target = await readlink(entry);
+    // Preserve '..' until realpath resolves the parent, including directory links.
+    return resolveEntry(isAbsolute(target) ? target : `${parent}${sep}${target}`, seen);
+  }
+  async function validate(path) {
+    const entry = await lstat(path);
+    if (entry.isDirectory()) {
+      for (const name of await readdir(path)) await validate(join(path, name));
+    } else if (entry.isSymbolicLink()) {
+      const target = relative(root, await resolveEntry(path));
+      if (isAbsolute(target) || target === ".." || target.startsWith(`..${sep}`))
+        throw new Error(`Computer Use helper symlink escapes its bundle: ${path}`);
+    } else if (!entry.isFile()) {
+      throw new Error(`Unsupported Computer Use helper file type: ${path}`);
+    }
+  }
+  await validate(helper);
+  const temporary = await mkdtemp(join(dirname(helper), ".computer-use-signing-"));
+  const detached = join(temporary, "detached.app");
+  const original = join(temporary, "original.app");
+  let originalMoved = false;
+  try {
+    // extraFiles may hardlink every regular file, including CodeResources.
+    // Copy to fresh inodes; overwriting files in place would alter other targets.
+    await cp(helper, detached, {
+      recursive: true,
+      verbatimSymlinks: true,
+      preserveTimestamps: true,
+    });
+    await rename(helper, original);
+    originalMoved = true;
+    try {
+      await rename(detached, helper);
+    } catch (error) {
+      await rename(original, helper);
+      originalMoved = false;
+      throw error;
+    }
+    originalMoved = false;
+  } finally {
+    // If rollback itself fails, retain the original tree for recovery.
+    if (!originalMoved) await rm(temporary, { recursive: true, force: true });
+  }
+}
 
 /**
  * A fixed, self-signed certificate for the outer app (no Developer ID): its
@@ -48,6 +108,7 @@ function createSigningHooks(overrides = {}) {
         windowsHide: true,
       }));
   const signAsync = overrides.signAsync ?? builderSign;
+  const isolateHelper = overrides.isolateHelperBundle ?? isolateHelperBundle;
   const env = overrides.env ?? process.env;
   function computerUseCode(app) {
     const helper = join(app, "Contents/Library/CodeShell Computer Use.app");
@@ -86,6 +147,11 @@ function createSigningHooks(overrides = {}) {
   async function verifySignedApp(app, runtimeDir) {
     for (const executable of computerUseCode(app))
       await run("codesign", ["--verify", "--strict", executable]);
+    await run("codesign", [
+      "--verify",
+      "--strict",
+      join(computerUseCode(app)[1], "Contents/MacOS/codeshell-computer-use"),
+    ]);
     await run("codesign", ["--verify", "--strict", join(runtimeDir, "bin/node")]);
     await run("codesign", ["--verify", "--deep", "--strict", app]);
     await supply.verifyRuntime(runtimeDir);
@@ -106,6 +172,7 @@ function createSigningHooks(overrides = {}) {
       return;
     }
     const app = join(context.appOutDir, `${context.packager.appInfo.productFilename}.app`);
+    await isolateHelper(computerUseCode(app)[1]);
     // Preserve the existing unsigned-build fallback and stable Squirrel update
     // requirement. Node's entitlements and digest must follow the deep pass.
     await run("codesign", ["--deep", "--force", "-s", "-", app]);

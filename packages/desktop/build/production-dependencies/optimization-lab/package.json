@@ -1,0 +1,11 @@
+{
+  "name": "@cjhyy/code-shell-capability-optimization-lab",
+  "dependencies": {
+    "zod": "^3.24.2"
+  },
+  "optionalDependencies": {},
+  "overrides": {
+    "react": "19.2.6",
+    "proxy-addr": "2.0.8"
+  }
+}
