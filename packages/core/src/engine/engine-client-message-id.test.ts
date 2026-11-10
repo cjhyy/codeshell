@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { Engine } from "./engine.js";
 import { LLMClientBase } from "../llm/client-base.js";
 import { registerProvider } from "../llm/client-factory.js";
@@ -68,7 +69,9 @@ describe("Engine clientMessageId submit idempotency", () => {
     const child = Bun.spawn(
       [
         process.execPath,
-        new URL("../../../../tests/fixtures/client-message-crash.ts", import.meta.url).pathname,
+        fileURLToPath(
+          new URL("../../../../tests/fixtures/client-message-crash.ts", import.meta.url),
+        ),
         dir,
         model,
       ],

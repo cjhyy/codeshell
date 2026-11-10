@@ -32,19 +32,36 @@ const report = (value) => process.stdout.write(JSON.stringify(value) + "\n");
 const delay = (ms) => new Promise((done) => setTimeout(done, ms));
 
 if (process.argv[3] === "--owner") {
-  const [control, barrier, ready] = process.argv.slice(4);
+  const [control, barrier, ready, receiptMode] = process.argv.slice(4);
   for (let wait = 0; !fs.existsSync(barrier); wait++) {
     if (wait === 500) throw new Error("Owned cut controller acquisition timed out.");
     await delay(10);
   }
   const lease = acquireProjectControllerLock(control);
-  lease.assertHeld();
-  fs.writeFileSync(
-    ready,
-    JSON.stringify({ pid: process.pid, ino: fs.lstatSync(control + ".lock").ino }),
-    { mode: 0o600, flag: "wx" },
-  );
   try {
+    lease.assertHeld();
+    // The parent polls the final pathname from a synchronous syscall cut.
+    // Publish only a closed, complete receipt on that same filesystem.
+    const temporary = ready + `.${process.pid}.tmp`;
+    const descriptor = fs.openSync(temporary, "wx", 0o600);
+    try {
+      if (receiptMode === "--receipt-barrier") {
+        fs.writeFileSync(ready + ".opened", "1\n", { mode: 0o600, flag: "wx" });
+        for (let wait = 0; !fs.existsSync(ready + ".continue"); wait++) {
+          if (wait === 500) throw new Error("Owned receipt publication barrier timed out.");
+          await delay(10);
+        }
+      }
+      fs.writeFileSync(
+        descriptor,
+        receiptMode === "--bad-receipt"
+          ? '{"pid":'
+          : JSON.stringify({ pid: process.pid, ino: fs.lstatSync(control + ".lock").ino }),
+      );
+    } finally {
+      fs.closeSync(descriptor);
+    }
+    fs.renameSync(temporary, ready);
     for await (const line of createInterface({ input: process.stdin })) {
       if (line !== "check") throw new Error("Unknown owned controller cut command.");
       lease.assertHeld();
@@ -55,8 +72,11 @@ if (process.argv[3] === "--owner") {
     process.stdin.destroy();
   }
 } else {
+  const receiptMode = process.argv[3];
   const results = [];
-  for (const scenario of ["release", "stale-reclaim"]) {
+  for (const scenario of receiptMode === "--bad-receipt"
+    ? ["stale-reclaim"]
+    : ["release", "stale-reclaim"]) {
     console.error(`Controller syscall cut: ${scenario}: starting`);
     const root = fs.mkdtempSync(join(home, "native-controller-cut-"));
     const control = join(root, "project-control"),
@@ -73,15 +93,25 @@ if (process.argv[3] === "--owner") {
     }
     const child = ownedSpawn(
       process.execPath,
-      [fileURLToPath(import.meta.url), entry, "--owner", control, barrier, ready],
+      [
+        fileURLToPath(import.meta.url),
+        entry,
+        "--owner",
+        control,
+        barrier,
+        ready,
+        receiptMode ?? "",
+      ],
       { env: process.env, stdio: ["pipe", "pipe", "pipe"] },
     );
     let exited = false,
+      childResult,
       stderr = "";
     const ended = new Promise((done) =>
       child.once("close", (code, signal) => {
         exited = true;
-        done({ code, signal });
+        childResult = { code, signal };
+        done(childResult);
       }),
     );
     // A bounded test timeout may terminate this helper, but its exact captured
@@ -91,26 +121,60 @@ if (process.argv[3] === "--owner") {
     child.stderr.on("data", (part) => (stderr = (stderr + part).slice(-4000)));
     const originalRmdir = fs.rmdirSync;
     let cutReached = false,
+      receiptHiddenWhileOpen,
       replacement,
-      operationError;
+      operationError,
+      cutError,
+      cutStage,
+      failure;
     try {
       fs.rmdirSync = function (path, ...args) {
         if (path === lockPath && !cutReached) {
           cutReached = true;
-          fs.renameSync(path, path + ".retired");
-          fs.writeFileSync(barrier, "1\n", { mode: 0o600, flag: "wx" });
-          const waitUntil = Date.now() + 5000;
-          // The other owner is a separate native Node process. Wait at the
-          // exact sync syscall cut without relying on this event loop's IPC.
-          while (!fs.existsSync(ready)) {
-            if (Date.now() >= waitUntil) throw new Error("Replacement owner receipt timed out.");
-            Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10);
+          try {
+            cutStage = "retire-lock";
+            fs.renameSync(path, path + ".retired");
+            cutStage = "owner-acquire";
+            fs.writeFileSync(barrier, "1\n", { mode: 0o600, flag: "wx" });
+            const waitUntil = Date.now() + 5000;
+            if (receiptMode === "--receipt-barrier") {
+              cutStage = "receipt-open-barrier";
+              while (!fs.existsSync(ready + ".opened")) {
+                if (Date.now() >= waitUntil) throw new Error("Receipt open barrier timed out.");
+                Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10);
+              }
+              receiptHiddenWhileOpen = !fs.existsSync(ready);
+              console.error(
+                `Controller syscall cut: ${scenario}: receiptHiddenWhileOpen=${receiptHiddenWhileOpen}`,
+              );
+              fs.writeFileSync(ready + ".continue", "1\n", { mode: 0o600, flag: "wx" });
+              assert.equal(
+                receiptHiddenWhileOpen,
+                true,
+                "Unfinished receipt must not be published.",
+              );
+            }
+            // The other owner is a separate native Node process. Wait at the
+            // exact sync syscall cut without relying on this event loop's IPC.
+            cutStage = "receipt-ready";
+            while (!fs.existsSync(ready)) {
+              if (Date.now() >= waitUntil) throw new Error("Replacement owner receipt timed out.");
+              Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10);
+            }
+            cutStage = "receipt-read";
+            const contents = fs.readFileSync(ready, "utf8");
+            cutStage = "receipt-parse";
+            const receipt = JSON.parse(contents);
+            cutStage = "replacement-identity";
+            assert.equal(receipt.pid, child.pid);
+            const established = fs.lstatSync(path);
+            assert.equal(receipt.ino, established.ino);
+            replacement = established;
+            console.error(`Controller syscall cut: ${scenario}: replacement ready`);
+          } catch (error) {
+            cutError ??= error;
+            throw error;
           }
-          const receipt = JSON.parse(fs.readFileSync(ready, "utf8"));
-          assert.equal(receipt.pid, child.pid);
-          replacement = fs.lstatSync(path);
-          assert.equal(receipt.ino, replacement.ino);
-          console.error(`Controller syscall cut: ${scenario}: replacement ready`);
         }
         return originalRmdir.call(this, path, ...args);
       };
@@ -119,12 +183,19 @@ if (process.argv[3] === "--owner") {
         if (first) first.release();
         else first = acquireProjectControllerLock(control);
       } catch (error) {
-        operationError = error.message;
+        operationError = error;
       } finally {
         fs.rmdirSync = originalRmdir;
         syncBuiltinESMExports();
       }
       assert.ok(cutReached, "actual rmdir syscall cut must execute");
+      if (cutError)
+        throw new Error(`Controller syscall cut: ${scenario}: ${cutStage}`, { cause: cutError });
+      assert.ok(replacement, "actual rmdir cut must establish the replacement owner");
+      if (scenario === "stale-reclaim") {
+        assert.ok(operationError, "stale acquisition must reject the replacement owner");
+        assert.equal(operationError.cause?.code, "ENOTEMPTY");
+      }
       const preserved = fs.existsSync(lockPath) && fs.lstatSync(lockPath).ino === replacement.ino;
       console.error(`Controller syscall cut: ${scenario}: preserved=${preserved}`);
       let healthyHeartbeat = false,
@@ -165,24 +236,67 @@ if (process.argv[3] === "--owner") {
       results.push({
         scenario,
         cutReached,
+        receiptHiddenWhileOpen,
         preserved,
         markerPreserved,
         healthyHeartbeat,
         independentlyClosed,
-        operationError,
+        operationError: operationError?.message,
+        operationCode: operationError?.code,
+        operationCauseCode: operationError?.cause?.code,
         ownedChildExited: exited,
       });
+    } catch (error) {
+      failure = error;
     } finally {
-      process.removeListener("SIGTERM", terminate);
       fs.rmdirSync = originalRmdir;
       syncBuiltinESMExports();
-      if (!exited) {
-        child.kill("SIGKILL");
-        await ended;
+      const cleanupErrors = [];
+      try {
+        if (!exited) {
+          child.stdin.end();
+          try {
+            await Promise.race([
+              ended,
+              delay(5000).then(() => {
+                throw new Error("Replacement owner cleanup timed out.");
+              }),
+            ]);
+          } finally {
+            if (!exited) {
+              child.kill("SIGKILL");
+              await ended;
+            }
+          }
+        }
+        assert.deepEqual(childResult, { code: 0, signal: null }, stderr);
+      } catch (error) {
+        cleanupErrors.push(error);
       }
-      first?.release();
-      fs.rmSync(root, { recursive: true, force: true });
+      if (failure)
+        console.error(
+          `Controller syscall cut: ${scenario}: cleanup ownedChildExited=${exited} ` +
+            `code=${childResult?.code} signal=${childResult?.signal} ` +
+            `independentlyClosed=${!fs.existsSync(lockPath)}; child stderr: ${stderr}`,
+        );
+      try {
+        first?.release();
+      } catch (error) {
+        cleanupErrors.push(error);
+      }
+      try {
+        fs.rmSync(root, { recursive: true, force: true });
+      } catch (error) {
+        cleanupErrors.push(error);
+      }
+      process.removeListener("SIGTERM", terminate);
+      if (cleanupErrors.length)
+        failure = new AggregateError(
+          [...(failure ? [failure] : []), ...cleanupErrors],
+          "Controller cut fixture cleanup failed.",
+        );
     }
+    if (failure) throw failure;
   }
   report({ nativeNode: process.version, noExternalNetwork: true, results });
 }
