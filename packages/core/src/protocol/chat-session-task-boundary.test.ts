@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { ChatSession } from "./chat-session.js";
-import type { Engine, EngineRunOptions } from "../engine/engine.js";
+import type { Engine } from "../engine/engine.js";
+import type { EngineRunOptions } from "../engine/run-types.js";
 import type { StreamEvent } from "../types.js";
 
 test("scoped cancellation rejects stale input identities and preserves queued turns", async () => {
@@ -54,6 +55,37 @@ test("retains the submit identity when initialization fails before session_start
   const session = new ChatSession({ id: "work", engine, onStream: (event) => events.push(event) });
   await session.enqueueTurn("work", { clientMessageId: "current-submit" });
   expect(events[0]).toMatchObject({ reason: "model_error", clientMessageId: "current-submit" });
+});
+
+test("queued runs forward their operation batch token and session brief", async () => {
+  const runs: EngineRunOptions[] = [];
+  const engine = {
+    async run(_task: string, options: EngineRunOptions) {
+      runs.push(options);
+      return {
+        text: "done",
+        reason: "completed",
+        sessionId: "work",
+        turnCount: 1,
+        usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      };
+    },
+  } as unknown as Engine;
+  const session = new ChatSession({ id: "work", engine });
+  const batch = session.enqueueTurn("batch task", {
+    clientMessageId: "batch-input",
+    operationBatchToken: "host-batch-token",
+    sessionBrief: "Team brief for the native session",
+  });
+  const ordinary = session.enqueueTurn("ordinary task", { clientMessageId: "ordinary-input" });
+  await Promise.all([batch, ordinary]);
+  expect(runs[0]).toMatchObject({
+    clientMessageId: "batch-input",
+    operationBatchToken: "host-batch-token",
+    sessionBrief: "Team brief for the native session",
+  });
+  expect(runs[1]?.operationBatchToken).toBeUndefined();
+  expect(runs[1]?.sessionBrief).toBeUndefined();
 });
 
 test("run callbacks retain their own identity across queued and background turns", async () => {

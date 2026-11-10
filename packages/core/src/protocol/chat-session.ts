@@ -5,7 +5,7 @@ import type { PermissionMode, SessionKind } from "../types.js";
 import { isAbortError } from "../llm/client-base.js";
 import type { InputAttachmentMeta, PendingApprovalMetadata } from "./types.js";
 import type { ApprovalRouter } from "../tool-system/permission.js";
-import type { RunBehaviorMode } from "../engine/run-types.js";
+import type { EngineRunOptions, RunBehaviorMode } from "../engine/run-types.js";
 import type { SessionMessageTarget } from "../session/session-message.js";
 import type { LegacyPetWorkspaceOption } from "../types.js";
 import { isSameGoalInstance, type GoalConfig } from "../goal/lifecycle.js";
@@ -47,6 +47,10 @@ export interface TurnOpts {
   injected?: boolean;
   /** Stable id for this user-intent; forwarded to Engine.run for idempotency. */
   clientMessageId?: string;
+  /** Host-issued authority for an operation batch, scoped to this queued turn. */
+  operationBatchToken?: string;
+  /** Host-authored team brief persisted by the native session. */
+  sessionBrief?: string;
   /** Archive history before this turn at the engine's pre-model safe point. */
   archiveBeforeCurrentTurn?: {
     fromClientMessageId?: string;
@@ -549,7 +553,9 @@ export class ChatSession {
             : event,
         );
       };
-      const result = await this.engine.run(next.task, {
+      // Require every queued option to be accounted for. Stream callbacks and
+      // trigger metadata are handled above; all other TurnOpts reach Engine.run.
+      const runOptions = {
         configuredModel: next.opts.configuredModel,
         cwd: next.opts.cwd,
         workspaceContext: next.opts.workspaceContext,
@@ -562,6 +568,8 @@ export class ChatSession {
         disableGoal: next.opts.disableGoal,
         injected: next.opts.injected,
         clientMessageId: next.opts.clientMessageId,
+        operationBatchToken: next.opts.operationBatchToken,
+        sessionBrief: next.opts.sessionBrief,
         archiveBeforeCurrentTurn: next.opts.archiveBeforeCurrentTurn,
         attachments: next.opts.attachments,
         permissionMode: next.opts.permissionMode,
@@ -580,7 +588,8 @@ export class ChatSession {
         petWorkspaces: next.opts.petWorkspaces,
         kind: next.opts.kind,
         approvalRouter: next.opts.approvalRouter,
-      });
+      } satisfies EngineRunOptions & Record<keyof Omit<TurnOpts, "onStream" | "trigger">, unknown>;
+      const result = await this.engine.run(next.task, runOptions);
       this.lastActivityAt = Date.now();
       next.resolve(result);
     } catch (err) {

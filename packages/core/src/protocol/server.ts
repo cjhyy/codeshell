@@ -1761,7 +1761,7 @@ export class AgentServer {
       this.transport.send(createResponse(req.id, result));
     };
     try {
-      let session;
+      let session: ChatSession;
       try {
         session = await cm.getOrCreate(params.sessionId, sessionConfig, { signal: start.signal });
         start.signal.throwIfAborted();
