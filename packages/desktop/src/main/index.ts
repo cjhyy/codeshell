@@ -170,6 +170,7 @@ import { recordPetDelegationClosureBestEffort } from "./pet/pet-delegation-closu
 import { PetReportReceiptStore } from "./pet/pet-report-receipt-store.js";
 import { PetLongTaskStore } from "./pet/pet-long-task-store.js";
 import { PetLongTaskCoordinator } from "./pet/pet-long-task-coordinator.js";
+import { createSessionOutcomeTap } from "./pet/session-outcome.js";
 import {
   PetImDecisions,
   collectImDecisions,
@@ -2013,12 +2014,17 @@ async function createWindow(): Promise<BrowserWindow> {
     const imDecisions = petImDecisions;
     notices.decisions.onBlocked(() => imDecisions.scanNow());
     petImDecisions.start();
+    // One interpretation of each Session event, handed to the long task first
+    // and the notice rules second (see createSessionOutcomeTap).
+    const observeSessionOutcome = createSessionOutcomeTap({
+      coordinator: (sessionId, event, outcomes) =>
+        void longTaskCoordinator
+          .observeSessionEvent(sessionId, event, outcomes)
+          .catch((error) => dlog("main", "pet.longTask.stream.failed", { error: String(error) })),
+      watcher: (sessionId, outcomes) => notices.observeSessionOutcomes(sessionId, outcomes),
+    });
     unsubscribePetLongTaskStream = bridge.subscribeOutbound((_line, snapshotEntry) => {
-      if (!snapshotEntry) return;
-      void longTaskCoordinator
-        .observeSessionEvent(snapshotEntry.sessionId, snapshotEntry.event)
-        .catch((error) => dlog("main", "pet.longTask.stream.failed", { error: String(error) }));
-      notices.observeSessionEvent(snapshotEntry.sessionId, snapshotEntry.event);
+      if (snapshotEntry) observeSessionOutcome(snapshotEntry.sessionId, snapshotEntry.event);
     });
     // One root for both the Sessions disclosure tool and the resume resolver,
     // so the directory Mimi reads and the one selectors resolve against can

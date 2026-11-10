@@ -27,6 +27,7 @@ import {
   type PetNoticeWiringDeps,
 } from "./pet-notice-wiring.js";
 import type { NoticeRule } from "./pet-rule-store.js";
+import { createSessionOutcomeTap, SessionOutcomeDeriver } from "./session-outcome.js";
 import type {
   DesktopPendingDecision,
   DesktopPetProjectionEvent,
@@ -89,6 +90,8 @@ interface OwnerSend {
 
 interface Harness {
   wiring: PetNoticeWiring;
+  /** Feed one raw stream event the way the main-process tap does: interpreted once. */
+  observeSessionEvent(sessionId: string, event: unknown): void;
   handler: HostActionHandler;
   submitted: NoticeSubmission[];
   published: GatewayControlEventInput[];
@@ -225,6 +228,13 @@ function harness(overrides: Partial<PetNoticeWiringDeps> = {}): Harness {
   };
   return {
     wiring,
+    observeSessionEvent: createSessionOutcomeTap(
+      {
+        coordinator: () => undefined,
+        watcher: (sessionId, outcomes) => wiring.observeSessionOutcomes(sessionId, outcomes),
+      },
+      new SessionOutcomeDeriver({ now: () => clock }),
+    ),
     handler: (sessionId, args) => handler!(sessionId, args),
     submitted,
     published,
@@ -499,7 +509,7 @@ describe("rule watcher wiring", () => {
       { type: "tool_use_start", toolCall: { id: "t1", toolName: "Bash", args: {} } },
       { type: "turn_complete", reason: "completed", text: "测试都过了", runId: "run-1" },
     ];
-    for (const event of events) current.wiring.observeSessionEvent(SID, event);
+    for (const event of events) current.observeSessionEvent(SID, event);
     await settle(() => current!.submitted.length > 0);
     expect(current.submitted).toHaveLength(1);
     expect(current.submitted[0]).toMatchObject({
@@ -540,7 +550,7 @@ describe("rule watcher wiring", () => {
       { type: "tool_use_start", toolCall: { id: "t1", toolName: "Bash", args: {} } },
       { type: "turn_complete", reason: "completed", text: "测试都过了", runId: "run-1" },
     ])
-      current.wiring.observeSessionEvent(SID, event);
+      current.observeSessionEvent(SID, event);
     await settle(() => current!.wiring.ledger.held().length > 0);
     expect(current.ownerSends).toEqual([]);
     present = true;
@@ -564,7 +574,7 @@ describe("rule watcher wiring", () => {
       { type: "tool_use_start", toolCall: { id: "t1", toolName: "Bash", args: {} } },
       { type: "turn_complete", reason: "completed", runId: "run-1" },
     ])
-      current.wiring.observeSessionEvent(SID, event);
+      current.observeSessionEvent(SID, event);
     await settle();
     expect(current.submitted).toEqual([]);
   });
@@ -579,11 +589,11 @@ describe("rule watcher wiring", () => {
       { type: "tool_use_start", toolCall: { id: "t1", toolName: "Bash", args: {} } },
       { type: "turn_complete", reason: "completed", runId },
     ];
-    for (const event of turn("run-1")) current.wiring.observeSessionEvent(SID, event);
+    for (const event of turn("run-1")) current.observeSessionEvent(SID, event);
     await settle();
     expect(current.submitted).toEqual([]);
     // A later turn in the same Session is the owner's own work again.
-    for (const event of turn("run-2")) current.wiring.observeSessionEvent(SID, event);
+    for (const event of turn("run-2")) current.observeSessionEvent(SID, event);
     await settle(() => current!.submitted.length > 0);
     expect(current.submitted.map((notice) => notice.dedupeKey)).toEqual([`${SID}:turn:run-2`]);
   });
@@ -1275,13 +1285,13 @@ describe("goal pauses", () => {
         },
         { type: "turn_complete", reason: "completed", runId: `run-${id}` },
       ])
-        current.wiring.observeSessionEvent(id, event);
+        current.observeSessionEvent(id, event);
     await settle(
       () =>
         current!.wiring.ledger.queued().length === 1 && current!.wiring.ledger.held().length === 1,
     );
     for (const id of [SID, TWO])
-      current.wiring.observeSessionEvent(id, { type: "goal_cleared", goalId: `g-${id}` });
+      current.observeSessionEvent(id, { type: "goal_cleared", goalId: `g-${id}` });
     await settle(
       () =>
         current!.wiring.ledger.queued().length === 0 && current!.wiring.ledger.held().length === 0,
@@ -1489,7 +1499,7 @@ describe("bound Session replies", () => {
     await current.handler(SID, upsertArgs({ events: ["done"] }));
     clock = NOW + 1_000;
     current.wiring.recordBoundReply(SID, "run-1", bound);
-    for (const event of turn("run-1")) current.wiring.observeSessionEvent(SID, event);
+    for (const event of turn("run-1")) current.observeSessionEvent(SID, event);
     await settle(() => current!.desktop.length > 0);
     expect(current.submitted).toHaveLength(1);
     expect(current.submitted[0]!.boundReplyDelivered).toBe(true);
@@ -1511,7 +1521,7 @@ describe("bound Session replies", () => {
       await current.handler(SID, upsertArgs({ events: ["done"], channel }));
       clock = NOW + 1_000;
       current.wiring.recordBoundReply(SID, "run-1", bound);
-      for (const event of turn("run-1")) current.wiring.observeSessionEvent(SID, event);
+      for (const event of turn("run-1")) current.observeSessionEvent(SID, event);
       await settle(
         () => current!.submitted.length > 0 && (suppressed || current!.ownerSends.length > 0),
       );
@@ -1532,7 +1542,7 @@ describe("bound Session replies", () => {
       { type: "tool_use_start", toolCall: { id: "t1", toolName: "Bash", args: {} } },
       { type: "turn_complete", reason: "completed", text: "改好了", completedAt: clock },
     ])
-      current.wiring.observeSessionEvent(SID, event);
+      current.observeSessionEvent(SID, event);
     await settle(() => current!.published.length > 0);
     expect(current.submitted[0]!.boundReplyDelivered).toBeUndefined();
     expect(current.published).toHaveLength(1);
@@ -1563,7 +1573,7 @@ describe("bound Session replies", () => {
     });
     const h = current;
     listeners.push((_line, entry) => {
-      if (entry) h.wiring.observeSessionEvent(entry.sessionId, entry.event);
+      if (entry) h.observeSessionEvent(entry.sessionId, entry.event);
     });
     const wiringRef: SessionBridgeWiring = createSessionBridgeWiring({
       routesFilePath: join(dir, "routes.json"),
@@ -1658,7 +1668,7 @@ describe("bound Session replies", () => {
     current.routes.push(boundRoute());
     await current.handler(SID, upsertArgs({ events: ["done"] }));
     clock = NOW + 1_000;
-    for (const event of turn("run-1")) current.wiring.observeSessionEvent(SID, event);
+    for (const event of turn("run-1")) current.observeSessionEvent(SID, event);
     await settle();
     expect(current.submitted).toEqual([]);
     current.wiring.recordBoundReply(SID, "run-1", bound);
@@ -1674,14 +1684,14 @@ describe("bound Session replies", () => {
     await current.handler(SID, upsertArgs({ events: ["done"] }));
     clock = NOW + 1_000;
     current.wiring.recordBoundReply(SID, "run-0", bound);
-    for (const event of turn("run-1")) current.wiring.observeSessionEvent(SID, event);
+    for (const event of turn("run-1")) current.observeSessionEvent(SID, event);
     await settle(() => current!.published.length > 0);
     expect(current.published).toHaveLength(1);
     expect(current.published[0]).toMatchObject({ type: "pet.task.completed" });
     await current.handler(SID, upsertArgs({ events: ["failed"] }));
     clock = NOW + 2_000;
     for (const event of turn("run-2", { reason: "model_error" }))
-      current.wiring.observeSessionEvent(SID, event);
+      current.observeSessionEvent(SID, event);
     await settle(() => current!.published.length > 1);
     expect(current.submitted.at(-1)).toMatchObject({ kind: "session.failed" });
     expect(current.submitted.at(-1)!.boundReplyDelivered).toBeUndefined();

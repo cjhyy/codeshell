@@ -54,6 +54,7 @@ import { createPresenceDetector, DEFAULT_PRESENCE_IDLE_SEC } from "./pet-presenc
 import { PetReceiptStore } from "./pet-receipt-store.js";
 import { PetRuleStore, type NoticeRule } from "./pet-rule-store.js";
 import { PetSessionRuleWatcher, type NoticeDraft } from "./pet-session-rule-watcher.js";
+import type { SessionOutcome } from "./session-outcome.js";
 import type { DesktopPetProjectionSnapshot } from "./pet-state-aggregator.js";
 
 /** Notification preferences read from `settings.pet.notifications` (all optional). */
@@ -207,8 +208,8 @@ export interface PetNoticeWiring {
    * router's submit, replay and digest flush wait for it themselves.
    */
   ready: Promise<void>;
-  /** Feed one top-level Session stream event (from the bridge's outbound tap). */
-  observeSessionEvent(sessionId: string, event: unknown): void;
+  /** Feed what one Session stream event meant (from `createSessionOutcomeTap`). */
+  observeSessionOutcomes(sessionId: string, outcomes: readonly SessionOutcome[]): void;
   /** A long task reached a terminal state and was not continued: one notice, then spend rules. */
   notifyTaskClosed(task: PetLongTask, closure?: PetTaskClosureNotice): Promise<void>;
   /**
@@ -1157,9 +1158,10 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     receipts,
     attention,
     ready,
-    observeSessionEvent(sessionId, event) {
+    observeSessionOutcomes(sessionId, outcomes) {
+      if (outcomes.length === 0) return;
       // Chained on one promise, so per-Session order is preserved.
-      void ready.then(() => (disposed ? undefined : watcher.observe(sessionId, event)));
+      void ready.then(() => (disposed ? undefined : watcher.observe(sessionId, outcomes)));
     },
     notifyTaskClosed,
     armDelegationRule,

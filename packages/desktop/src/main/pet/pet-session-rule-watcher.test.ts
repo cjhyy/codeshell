@@ -4,6 +4,7 @@ import type { NoticeRule, NoticeRulePatch } from "./pet-rule-store.js";
 import { PetRuleStoreError } from "./pet-rule-store.js";
 import type { DesktopPendingDecision, DesktopPetProjectionEvent } from "./pet-state-aggregator.js";
 import { PetSessionRuleWatcher, type NoticeDraft } from "./pet-session-rule-watcher.js";
+import { SessionOutcomeDeriver } from "./session-outcome.js";
 
 const SID = "s-work";
 const NOW = 1_700_000_000_000;
@@ -155,8 +156,17 @@ function watcher(
   });
 }
 
+const derivers = new WeakMap<PetSessionRuleWatcher, SessionOutcomeDeriver>();
+
+/** Feed one raw stream event the way the main-process tap does: interpreted once. */
+function observe(w: PetSessionRuleWatcher, sessionId: string, event: unknown): Promise<void> {
+  let deriver = derivers.get(w);
+  if (!deriver) derivers.set(w, (deriver = new SessionOutcomeDeriver({ now: () => clock })));
+  return w.observe(sessionId, deriver.derive(sessionId, event));
+}
+
 async function feed(w: PetSessionRuleWatcher, events: unknown[], sessionId = SID): Promise<void> {
-  for (const event of events) await w.observe(sessionId, event);
+  for (const event of events) await observe(w, sessionId, event);
 }
 
 beforeEach(() => {
@@ -713,9 +723,9 @@ describe("arming, dedupe keys and ordering", () => {
     rules.rules.push(sessionRule("rule-a"));
     const w = watcher();
     await Promise.all([
-      w.observe(SID, started()),
-      w.observe(SID, tool("Bash")),
-      w.observe(SID, done()),
+      observe(w, SID, started()),
+      observe(w, SID, tool("Bash")),
+      observe(w, SID, done()),
     ]);
     expect(drafts.map((draft) => draft.dedupeKey)).toEqual([`${SID}:turn:run-1`]);
   });
@@ -723,7 +733,7 @@ describe("arming, dedupe keys and ordering", () => {
   test("malformed events are ignored", async () => {
     rules.rules.push(systemRule());
     const w = watcher();
-    for (const event of [null, 3, "x", [], {}, { type: 5 }]) await w.observe(SID, event);
+    for (const event of [null, 3, "x", [], {}, { type: 5 }]) await observe(w, SID, event);
     expect(drafts).toEqual([]);
   });
 });
