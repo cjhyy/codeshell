@@ -218,7 +218,6 @@ export function buildRunPermissionPipeline(args: {
   headless: boolean;
   getLatestTodos: () => TaskInfo[];
   onApprovalPhase: (waiting: boolean, toolName: string | undefined) => void;
-  emitNotificationHook: (payload: Record<string, unknown>) => void;
 }): { permission: PermissionClassifier; toolExecutor: ToolExecutor } {
   const mode = args.mode;
   const { rules: defaultRules, backend: approvalBackend } = args.permissionController.build(
@@ -231,9 +230,9 @@ export function buildRunPermissionPipeline(args: {
   permission.setApprovalStateListener((waiting, toolName) => {
     args.onApprovalPhase(waiting, toolName);
   });
-  // Surface approval waits on the notification hook (fire-and-forget, like
-  // background-agent terminal states) so plugins / settings hooks can ping
-  // the user while a decision is pending.
+  // Approval waits are traced here. The `notification` hook for them is
+  // emitted where the user-facing decision is registered (protocol
+  // decision-notification-hooks.ts), which also knows the request id.
   const approvalSpans = new Map<string, number>();
   permission.setApprovalEventListener((event) => {
     const startedAt =
@@ -262,13 +261,6 @@ export function buildRunPermissionPipeline(args: {
         error: event.error,
         ...(event.approved !== undefined ? { output: { approved: event.approved } } : {}),
       });
-    args.emitNotificationHook({
-      kind: event.phase === "requested" ? "approval_requested" : "approval_resolved",
-      toolName: event.toolName,
-      riskLevel: event.riskLevel,
-      ...(event.approved !== undefined ? { approved: event.approved } : {}),
-      ...(event.sessionId ? { sessionId: event.sessionId } : {}),
-    });
   });
   args.permissionController.attach(permission, args.approvalRouter);
 

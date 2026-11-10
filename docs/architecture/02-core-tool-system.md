@@ -773,7 +773,7 @@ Engine.run()
  ├─ buildRunPermissionPipeline()          engine/run-tooling.ts:208   (engine.ts:2542)
  │    ├─ permissionController.build(mode, cwd, approvalRouter) → {rules, backend}
  │    ├─ new PermissionClassifier(rules, mode, backend)        run-tooling.ts:231
- │    ├─ setApprovalStateListener / setApprovalEventListener → notification hook(approval_requested/resolved) + trace
+ │    ├─ setApprovalStateListener / setApprovalEventListener → UI 阶段 + trace（notification hook 在协议层登记决策处发出，见下）
  │    ├─ InteractiveApprovalBackend.setSessionContext(sid,{cwd,onProjectRules→permission.reconfigure})
  │    ├─ new ToolExecutor(registry, permission, hooks)          run-tooling.ts:293
  │    ├─ InvestigationGuard（readOnlySession→"read-only-review"，headless→softMode）、TaskGuard(getLatestTodos)
@@ -869,7 +869,7 @@ ToolExecutor.executeSingleAuthorized            executor.ts:563
      PermissionClassifier.handleAskResult(name, args, reason, {sessionId})   permission.ts:1807
        dontAsk→policy_denied；bypass→approve；DenialTracker 超阈值→deny
        assessRisk() :1937 → approvalStateListener / approvalEventListener("requested")
-          ↳ engine/run-tooling.ts:231-276：UI 阶段 + trace + notification hook(approval_requested)
+          ↳ engine/run-tooling.ts：UI 阶段 + trace
        approvalBackend.requestApproval(ApprovalRequest)
          ├─ HeadlessApprovalBackend :149（headless / automation：approve-read-only 等）
          ├─ AutoApprovalBackend :176（auto 模式；high/medium 交给 delegate 或 fail closed）
@@ -877,14 +877,16 @@ ToolExecutor.executeSingleAuthorized            executor.ts:563
               checkSessionRules（session 级 allow/deny 缓存）
               promptTurn 串行 → promptAndRecord :475
                  ApprovalRouter.resolve → ApprovalConnectionHandler.requestApproval
-                    → protocol/server.ts:3869 requestApprovalFromClient
+                    → protocol/server.ts requestApprovalFromClient → UserDecisionLifecycle.register
+                       → notification hook(approval_requested)（protocol/decision-notification-hooks.ts；internal 回环不发）
                     → 通知 agent/approvalRequest {connectionId, sessionId, generation, requestId, request}
                     ← 客户端 agent/approve {decision: ApprovalResult{approved, always?, scope?, pathScope?, reason?}}
                     （5 min 超时 → timed_out；owner 丢失 → owner_lost）
                  scope=session → allowRules/denyRules（buildProjectRule 收窄）
                  scope=project → persistProjectRule → settings.local.json
                                  → onProjectRules → permission.reconfigure([...saved, ...default])  run-tooling.ts:282-290
-       approvalEventListener("resolved") → notification hook(approval_resolved)
+       决策落定（register 的 resolve 包装）→ notification hook(approval_resolved，带 requestId / decision)
+       AskUserQuestion 走同一登记点：ask_user_requested / ask_user_resolved
 ```
 
 路径审批是**另一条独立通道**：`enforcePathPolicyWithApproval`（`path-policy.ts:983`）在权限分类之前执行，通过 `ctx.askUser`（AskUserQuestion 同一 UI 通道）提问，授权写入 session 内存或 `settings.local.json` 的 `pathApprovals`。

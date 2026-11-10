@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "bun:test";
 import { AgentServer } from "./server.js";
 import { ChatSessionManager } from "./chat-session-manager.js";
 import { ErrorCodes, Methods } from "./types.js";
+import { HookRegistry } from "../hooks/registry.js";
 import type { Engine, EngineResult, EngineRunOptions } from "../engine/engine.js";
 
 function deferred() {
@@ -37,8 +38,15 @@ function makeAskingEngine(sessionId: string, hold = false, consumeSteers = false
     followUpError: undefined as Error | undefined,
     resolveWorkspace: (): { cwd: string } | Promise<{ cwd: string }> => ({ cwd: "/tmp" }),
     release: gate.resolve,
+    hookEvents: [] as Array<Record<string, unknown>>,
   };
+  const hooks = new HookRegistry();
+  hooks.register("notification", (ctx) => {
+    state.hookEvents.push(ctx.data);
+    return {};
+  });
   const engine = {
+    getHookRegistry: () => hooks,
     setAskUser() {},
     setAskUserAsync(fn: (question: string) => Promise<unknown>) {
       state.askUserAsync = fn;
@@ -157,6 +165,33 @@ function fixture(
 }
 
 describe("AgentServer asynchronous user questions", () => {
+  it("announces the asynchronous question and its accepted answer on the notification hook", async () => {
+    const f = fixture();
+    f.run();
+    const question = await f.ready();
+    await f.manager.get(f.sid)!.settled;
+    f.answer(question.params.requestId, "use green");
+    await waitFor(() => f.asking.state.runs.length === 2, "answer should start a follow-up run");
+    await waitFor(
+      () => f.asking.state.hookEvents.length === 2,
+      `question should be announced twice; ${JSON.stringify(f.asking.state.hookEvents)}`,
+    );
+    expect(f.asking.state.hookEvents).toEqual([
+      expect.objectContaining({
+        kind: "ask_user_requested",
+        requestId: question.params.requestId,
+        question: `question for ${f.sid}`,
+        asynchronous: true,
+      }),
+      expect.objectContaining({
+        kind: "ask_user_resolved",
+        requestId: question.params.requestId,
+        decision: "answered",
+        status: "resolved",
+      }),
+    ]);
+  });
+
   it("marks the client's run and the answer's follow-up run as user-triggered", async () => {
     const f = fixture();
     f.run();

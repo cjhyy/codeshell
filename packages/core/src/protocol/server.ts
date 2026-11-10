@@ -1379,6 +1379,7 @@ export class AgentServer {
   }
 
   private observeApprovalTransition(metadata: PendingApprovalMetadata, status: string): void {
+    this.userDecisions.hooks.retired(metadata, status);
     this.forEachObserver("onApprovalTransition", (observer) =>
       observer.onApprovalTransition?.(metadata, status),
     );
@@ -4014,6 +4015,7 @@ export class AgentServer {
     const requestingRun = session.settled;
     let answerActive = true;
     session.lastActivityAt = Date.now();
+    this.userDecisions.hooks.describe(requestId, { question, header: opts?.header });
     this.registerSessionApproval(
       session,
       {

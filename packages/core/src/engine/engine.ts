@@ -2474,9 +2474,6 @@ export class Engine {
           toolName,
         });
       },
-      emitNotificationHook: (payload) => {
-        void this.emitHook("notification", payload);
-      },
     });
     this.activeRunScope!.own(() => this.permissionController.detach(permission));
 

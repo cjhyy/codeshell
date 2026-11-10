@@ -75,11 +75,22 @@ import type { GoalTerminationReason } from "../goal/lifecycle.js";
  *                                            sub-agent terminal states, plus
  *                                            agentId/name/finalText/error.
  *                                          · approval_requested /
- *                                            approval_resolved (engine.ts ←
- *                                            PermissionClassifier) — an
- *                                            interactive approval is waiting /
- *                                            was answered; data carries
- *                                            toolName, riskLevel, approved.
+ *                                            approval_resolved and
+ *                                            ask_user_requested /
+ *                                            ask_user_resolved (protocol
+ *                                            decision-notification-hooks.ts,
+ *                                            on the Session's Engine) — a
+ *                                            user-facing tool approval or
+ *                                            question is waiting / was
+ *                                            settled. data carries sessionId,
+ *                                            requestId, message, toolName +
+ *                                            riskLevel (approvals) or title +
+ *                                            question (questions); resolved
+ *                                            adds decision (approved / denied
+ *                                            / answered / skipped / expired /
+ *                                            cancelled) and approved. Never
+ *                                            for internal host loopbacks; the
+ *                                            answer text is never included.
  *                                          · mcp_server_connected /
  *                                            mcp_server_failed (engine.ts ←
  *                                            MCPManager.connectAll) — per-server

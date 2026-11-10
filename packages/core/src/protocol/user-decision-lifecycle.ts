@@ -9,6 +9,7 @@ import type { ApprovalResult } from "../types.js";
 import type { AskUserOptions } from "../tool-system/context.js";
 import type { ApprovalRouteTarget } from "../tool-system/permission.js";
 import type { ChatSession, PendingApprovalEntry } from "./chat-session.js";
+import { DecisionNotificationHooks } from "./decision-notification-hooks.js";
 import {
   ErrorCodes,
   Methods,
@@ -37,6 +38,9 @@ interface UserDecisionHost {
 }
 
 export class UserDecisionLifecycle {
+  /** `notification` hooks for every registered user-facing decision. */
+  readonly hooks = new DecisionNotificationHooks();
+
   constructor(private readonly host: UserDecisionHost) {}
 
   askSession(
@@ -56,6 +60,7 @@ export class UserDecisionLifecycle {
       const keepWaitable =
         typeof autoResolveMs === "number" && Number.isFinite(autoResolveMs) && autoResolveMs > 0;
       const expiresAt = createdAt + (keepWaitable ? autoResolveMs : USER_DECISION_TIMEOUT_MS);
+      this.hooks.describe(requestId, { question, header: opts?.header });
       const cancelQuestion = () =>
         this.finishSession(
           session,
@@ -399,6 +404,7 @@ export class UserDecisionLifecycle {
       resolve: (decision) => {
         if (!metadata.asynchronous && resolved) return;
         resolved = true;
+        this.hooks.decided(metadata.requestId, decision);
         scope?.pending.delete(metadata.requestId);
         if (!metadata.asynchronous) {
           this.host.pendingApprovalTargets.delete(metadata.requestId);
@@ -420,6 +426,7 @@ export class UserDecisionLifecycle {
       },
       metadata,
     });
+    this.hooks.requested(session, metadata);
   }
 }
 
