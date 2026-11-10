@@ -795,6 +795,51 @@ describe("core's real flows", () => {
     expect(drafts).toEqual([]);
   });
 
+  test("core's trigger marker wins over the queued-message counter", async () => {
+    rules.rules.push(systemRule());
+    const w = watcher();
+    await feed(w, [started(), tool("NotifyMe"), done()]);
+    // A host message is announced, but a background wake starts first.
+    await feed(w, [
+      { type: "session_user_message", text: "status?" },
+      started({
+        runId: "run-2",
+        previousRunId: "run-1",
+        clientMessageId: undefined,
+        trigger: "background_wake",
+      }),
+      done(),
+    ]);
+    expect(drafts.map((draft) => draft.dedupeKey)).toEqual([`${SID}:turn:run-2`]);
+    // The announced message's run is still a user turn: the wake did not eat it.
+    await feed(w, [
+      started({
+        runId: "run-3",
+        previousRunId: "run-2",
+        clientMessageId: undefined,
+        trigger: "host_message",
+      }),
+      done({ text: "Still on it" }),
+    ]);
+    expect(drafts).toHaveLength(1);
+  });
+
+  test("a run core marks as user-triggered is never a wake, even unannounced", async () => {
+    rules.rules.push(sessionRule("rule-a"));
+    const w = watcher();
+    await feed(w, [started(), tool("NotifyMe"), done()]);
+    await feed(w, [
+      started({
+        runId: "run-2",
+        previousRunId: "run-1",
+        clientMessageId: undefined,
+        trigger: "user",
+      }),
+      done({ text: "ok" }),
+    ]);
+    expect(drafts).toEqual([]);
+  });
+
   test("a delivered user turn that does work still fires", async () => {
     rules.rules.push(sessionRule("rule-a"));
     const w = watcher();

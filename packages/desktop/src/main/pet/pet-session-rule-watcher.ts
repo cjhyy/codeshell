@@ -144,8 +144,9 @@ export class PetSessionRuleWatcher {
   private readonly queues = new Map<string, Promise<void>>();
   /**
    * Host-queued user messages (SendMessageToSession) whose run has not started.
-   * Such a run has no client message id, exactly like a background wake, and
-   * is told apart only by the `session_user_message` that precedes it.
+   * Such a run has no client message id, exactly like a background wake; core
+   * marks which is which on `session_started.trigger`, and without that
+   * marker only the `session_user_message` that precedes it tells them apart.
    */
   private readonly queuedUserMessages = new Map<string, number>();
   /**
@@ -193,16 +194,21 @@ export class PetSessionRuleWatcher {
   }
 
   /**
-   * A run without a client message id is either a host-queued user message or
-   * a background wake. `previousRunId` cannot tell them apart (every resumed
-   * run has one); a preceding `session_user_message` can.
+   * Whether a run is core's background wake. Core marks it on
+   * `session_started.trigger`; an older core does not, and then a run without
+   * a client message id is either a host-queued user message or a wake, told
+   * apart only by a preceding `session_user_message` (`previousRunId` cannot:
+   * every resumed run has one).
    */
-  private isBackgroundWake(sessionId: string): boolean {
+  private isBackgroundWake(sessionId: string, event: Record<string, unknown>): boolean {
+    const trigger = event.trigger;
+    if (trigger === "background_wake") return true;
+    if (event.clientMessageId !== undefined) return false;
+    // This run was the announced one (or, unmarked, is assumed to be).
     const queued = this.queuedUserMessages.get(sessionId) ?? 0;
-    if (queued === 0) return true;
-    if (queued === 1) this.queuedUserMessages.delete(sessionId);
-    else this.queuedUserMessages.set(sessionId, queued - 1);
-    return false;
+    if (queued > 1) this.queuedUserMessages.set(sessionId, queued - 1);
+    else this.queuedUserMessages.delete(sessionId);
+    return typeof trigger === "string" ? false : queued === 0;
   }
 
   /** The run this event belongs to; a timestamp only when core gave no run id. */
@@ -240,7 +246,7 @@ export class PetSessionRuleWatcher {
         const state = freshTurn();
         const runId = nonEmptyString(event.runId);
         if (runId) state.runId = runId;
-        if (event.clientMessageId === undefined && this.isBackgroundWake(sessionId))
+        if (this.isBackgroundWake(sessionId, event))
           // A background completion wakes the Session with a synthetic run
           // (core background-result-wakeup). That turn exists to act on
           // finished work, so it counts as work.

@@ -157,6 +157,23 @@ function fixture(
 }
 
 describe("AgentServer asynchronous user questions", () => {
+  it("marks the client's run and the answer's follow-up run as user-triggered", async () => {
+    const f = fixture();
+    f.run();
+    const question = await f.ready();
+    await f.manager.get(f.sid)!.settled;
+    f.answer(question.params.requestId);
+    await waitFor(() => f.asking.state.runs.length === 2, "answer should start a follow-up run");
+    await f.manager.get(f.sid)!.settled;
+    const started = f.sent
+      .filter((message) => message.params?.event?.type === "session_started")
+      .map((message) => message.params.event);
+    expect(started.map((event) => [event.runId, event.trigger])).toEqual([
+      ["run-1", "user"],
+      ["run-2", "user"],
+    ]);
+  });
+
   it("returns immediately and keeps a question pending after the requesting run completes", async () => {
     const f = fixture();
     const runId = f.run();

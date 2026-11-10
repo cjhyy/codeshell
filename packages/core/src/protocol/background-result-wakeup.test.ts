@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { Engine, EngineResult } from "../engine/engine.js";
 import type { EngineRunOptions } from "../engine/run-types.js";
+import type { StreamEvent } from "../types.js";
 import { NotificationQueue } from "../tool-system/builtin/agent-notifications.js";
 import { createWorkspaceContext } from "../workspace/workspace-context.js";
 import { ChatSessionManager } from "./chat-session-manager.js";
@@ -60,6 +61,37 @@ async function fixture() {
 }
 
 describe("asynchronous authority for background-result wakeups", () => {
+  test("the wake run's session_started says it is a background wake", async () => {
+    const f = await fixture();
+    f.session.engine.run = (async (_task: string, options: EngineRunOptions) => {
+      options.onStream?.({
+        type: "session_started",
+        sessionId: "source",
+        promptTokens: 0,
+        runId: "wake",
+      });
+      return {
+        text: "done",
+        reason: "completed",
+        sessionId: "source",
+        turnCount: 1,
+        usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      };
+    }) as Engine["run"];
+    const streamed: StreamEvent[] = [];
+    expect(
+      await wakeSessionForBackgroundResults({
+        ...f.options,
+        resolveWorkspace: async () => ({}),
+        onStream: (event) => streamed.push(event),
+      }),
+    ).toBe(true);
+    expect(streamed.find((event) => event.type === "session_started")).toMatchObject({
+      runId: "wake",
+      trigger: "background_wake",
+    });
+  });
+
   test("a goal waiting for the user keeps results until the user resumes it", async () => {
     const f = await fixture();
     const original = f.notificationMailbox.getSnapshot("source")[0]!;

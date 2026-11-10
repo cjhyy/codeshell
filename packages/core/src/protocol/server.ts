@@ -100,7 +100,7 @@ import {
 import { logger } from "../logging/logger.js";
 import { nanoid } from "nanoid";
 import { UserDecisionLifecycle } from "./user-decision-lifecycle.js";
-import type { ChatSession } from "./chat-session.js";
+import { withRunTrigger, type ChatSession } from "./chat-session.js";
 import type { ChatSessionManager, EngineConfigSlice } from "./chat-session-manager.js";
 import { wakeSessionForBackgroundResults } from "./background-result-wakeup.js";
 import { assertSafeSessionId, SessionManager } from "../session/session-manager.js";
@@ -1192,6 +1192,7 @@ export class AgentServer {
       // persisted binding, so a stale source catalog cannot switch it back.
       workspaceProfile: targetAlreadyExists ? undefined : input.target.workspaceProfile,
       sessionMessageTargets: input.catalog,
+      trigger: "host_message",
       onStream: (event: StreamEvent) => {
         if (event.type === "session_started" && !state.started) {
           state.started = true;
@@ -1844,6 +1845,7 @@ export class AgentServer {
           displayText: displayText || undefined,
           injected: params.injected === true,
           attachments: Array.isArray(params.attachments) ? params.attachments : undefined,
+          trigger: "user",
           onStream: (event: StreamEvent) => {
             acceptance.observe(event);
             this.observeSessionStream(sid, event);
@@ -1994,7 +1996,8 @@ export class AgentServer {
     const acceptance = runAcceptance(params, req.id, (payload) =>
       this.notify(Methods.RunAccepted, payload),
     );
-    const streamToClient = (event: StreamEvent) => {
+    const streamToClient = (raw: StreamEvent) => {
+      const event = withRunTrigger(raw, "user");
       acceptance.observe(event);
       this.notify(Methods.StreamEvent, { sessionId: params.sessionId ?? "", event });
     };

@@ -96,6 +96,29 @@ async function fixture(
 }
 
 describe("cross-Session dispatch lifecycle", () => {
+  test("the target's run is marked as a host-queued message", async () => {
+    const f = await fixture(async (_task, options) => {
+      options.onStream?.({
+        type: "session_started",
+        sessionId: "message-target",
+        promptTokens: 0,
+        runId: "hosted",
+      });
+      return completed();
+    });
+    try {
+      await f.route();
+      const started = f.sent.find(
+        (message) =>
+          message.params?.sessionId === "message-target" &&
+          message.params?.event?.type === "session_started",
+      );
+      expect(started?.params.event).toMatchObject({ runId: "hosted", trigger: "host_message" });
+    } finally {
+      await f.close();
+    }
+  });
+
   test("returns a fast result directly without also posting a duplicate reply", async () => {
     const f = await fixture(async () => completed());
     try {
