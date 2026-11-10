@@ -14,7 +14,7 @@ import {
 import { basename, join, relative, sep } from "node:path";
 import { tmpdir } from "node:os";
 
-import { parseFrontmatter } from "../../skills/frontmatter.js";
+import { parseFrontmatter } from "../../utils/frontmatter.js";
 import { readInstalledPlugins } from "../installedPlugins.js";
 import { inspectPluginHooks } from "../pluginHookIntegrity.js";
 import {

@@ -9,6 +9,7 @@
  *   - Return execution result (does NOT manage run state transitions)
  */
 
+import { AUTOMATION_RUN_SOURCE } from "../automation/run-source.js";
 import { Engine, type EngineConfig, type EngineHookConfig } from "../engine/engine.js";
 import type { ClientDefaults, LLMConfig, RegisteredTool } from "../types.js";
 import type { RunSnapshot, RunExecutionContext, RunExecutionResult } from "./types.js";
@@ -28,9 +29,7 @@ export function buildHeadlessFlag(override: ApprovalBackend | undefined): boolea
   return override !== undefined;
 }
 
-/** Run-metadata `source` value tagging a run as unattended automation
- *  (set by the automation host; read here to decide prompt/headless behavior). */
-export const AUTOMATION_RUN_SOURCE = "automation";
+export { AUTOMATION_RUN_SOURCE } from "../automation/run-source.js";
 
 /** Appended to the system prompt for unattended automation runs so the model
  *  knows it IS the automation and must not ask the user or offer to schedule

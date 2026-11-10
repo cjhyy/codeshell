@@ -1,0 +1,9 @@
+H3 — Share browser and server Panel contracts through Web
+
+Base: codex/architecture/h3-dependencies@c55c08829, the union of R1→R2→G3 and H2. Branch: codex/web/h3-panel-contracts. Rebase after those prerequisite PRs merge; no main merge performed.
+
+Move the existing Panel declarations and browser recording validation verbatim to Web's React-free /panels subpath. Keep Server's original type exports and browser-capture functions as explicit re-exports, preserving @cjhyy/code-shell-server/panels. The six SPA files import within Web, and their six G3 exceptions are removed. Web still has no Server dependency; root Web exports remain unchanged.
+
+Closure inventory: SPA uses ManagedPanel, PanelCompatibility, PanelDiscovery, PanelReview, PanelSnapshot, PanelPackageHistory, PanelPackageRestoreReview, PanelVideoOptions, panelVideoOptions and panelVideoLimits. All transitively required declarations depend only on Core's GitPanelAppDiscoveryCandidate, GitPanelAppDiscoveryIssue and PanelAppPreview types plus standard types. No Server-only dependencies. All 12 original Server types and both runtime exports remain available; no extra video type is accidentally added to Server's public type barrel. The complete moved text equals the original two files byte-for-byte after concatenation.
+
+Validation: full root/Web build, all workspace typechecks, lint0/90, shards2660/764max, and 121 tests in6 files (three SPA suites + required three contracts) passed. Non-test Web app has zero server/src references. Desktop main/renderer/mobile separate builds passed. Full Desktop build fails downloading pinned CUA native binary (ConnectionRefused). Serialized package-release clean builds/packs/extracts and strict declarations passed; 53 runtime imports and strict owner-auth consumer passed; final packed owner HTTP lifecycle fails listen EPERM. Browser/Electron CI and CC review remain pending; no PR exists due approval restriction.

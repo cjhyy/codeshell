@@ -12,6 +12,51 @@ const repoRoot = process.cwd();
  */
 const LINT_PROBE_TIMEOUT_MS = 120_000;
 
+describe("ESLint explicit variable types", () => {
+  it("rejects untyped empty declarations only in the reviewed production scopes", async () => {
+    const { ESLint } = await import("eslint");
+    const eslint = new ESLint({ cwd: repoRoot });
+    const rule = "custom-rules/no-untyped-uninitialized-variable";
+    const scopes = ["core", "coding", "server", "web", "host", "pet", "chat", "link"]
+      .map((name) => `packages/${name}/src`)
+      .concat("packages/desktop/src/main");
+    const violations = async (filePath: string, source: string) => {
+      const [result] = await eslint.lintText(source, { filePath });
+      return result!.messages.filter((message) => message.ruleId === rule);
+    };
+    const untyped = "export function probe() { let value; var other; return [value, other]; }";
+    for (const scope of scopes) {
+      const messages = await violations(`${scope}/__lint_variable_probe__.ts`, untyped);
+      expect(messages).toHaveLength(2);
+      expect(
+        messages.every((message) => message.message.includes("explicit type or initializer")),
+      ).toBe(true);
+    }
+    expect(
+      await violations(
+        "packages/core/src/__lint_variable_probe__.ts",
+        [
+          "export function probe() {",
+          "  let typed: number;",
+          "  let initialized = 0;",
+          "  for (let item of [1, 2]) initialized += item;",
+          "  for (let key in { value: 1 }) initialized += key.length;",
+          "  typed = initialized;",
+          "  return typed;",
+          "}",
+        ].join("\n"),
+      ),
+    ).toHaveLength(0);
+    for (const filePath of [
+      "packages/core/src/__lint_variable_probe__.test.ts",
+      "packages/tui/src/render/__lint_variable_probe__.ts",
+      "packages/desktop/src/renderer/__lint_variable_probe__.ts",
+    ]) {
+      expect(await violations(filePath, untyped)).toHaveLength(0);
+    }
+  });
+});
+
 function lintStdin(filename: string, source: string) {
   return spawnSync("bunx", ["eslint", "--stdin", "--stdin-filename", filename], {
     cwd: repoRoot,
@@ -21,6 +66,63 @@ function lintStdin(filename: string, source: string) {
 }
 
 describe("ESLint CodeShell package boundary guards", () => {
+  it(
+    "rejects cross-workspace relative imports in ordinary package source",
+    () => {
+      const result = lintStdin(
+        "packages/server/src/__lint_relative_probe__.ts",
+        [
+          'export { state } from "../../web/src/index.js";',
+          'export type { State } from "../../web/src/index.js";',
+          'export async function load() { return import("../../web/src/index.js"); }',
+          'export function requireState() { return require("../../web/src/index.js"); }',
+        ].join("\n"),
+      );
+      expect(result.status).not.toBe(0);
+      expect(result.stdout.match(/use a declared workspace package entry/g)).toHaveLength(4);
+    },
+    LINT_PROBE_TIMEOUT_MS,
+  );
+
+  it(
+    "allows Web type contracts but rejects Core runtime imports",
+    () => {
+      const result = lintStdin(
+        "packages/web/app/__lint_core_probe__.ts",
+        [
+          'export type { StreamEvent } from "@cjhyy/code-shell-core";',
+          'export { type EngineConfig } from "@cjhyy/code-shell-core/internal";',
+          'export { Engine } from "@cjhyy/code-shell-core";',
+          'export async function load() { return import("@cjhyy/code-shell-core/internal"); }',
+        ].join("\n"),
+      );
+      expect(result.status).not.toBe(0);
+      const customMessages = result.stdout
+        .split("\n")
+        .filter((line) => line.includes("custom-rules/codeshell-boundary-imports"));
+      expect(customMessages).toHaveLength(2);
+      expect(
+        customMessages.every((line) =>
+          line.includes("web may import core contracts only as types"),
+        ),
+      ).toBe(true);
+    },
+    LINT_PROBE_TIMEOUT_MS,
+  );
+
+  it(
+    "preserves the reviewed Desktop mobile SPA source entry",
+    () => {
+      const result = lintStdin(
+        "packages/desktop/src/mobile/main.tsx",
+        'export { App } from "../../../web/app/App.js";',
+      );
+      expect(`${result.stdout}\n${result.stderr}`).toBe("\n");
+      expect(result.status).toBe(0);
+    },
+    LINT_PROBE_TIMEOUT_MS,
+  );
+
   it(
     "allows only the portable Link public contract in Core",
     () => {
@@ -91,7 +193,7 @@ describe("ESLint CodeShell package boundary guards", () => {
           ].join("\n"),
         ),
         lintStdin(
-          "packages/arena/src/__lint_boundary_probe__.ts",
+          "packages/pet/src/__lint_boundary_probe__.ts",
           ['export { WorkerBridgeCore } from "@cjhyy/code-shell-server";', ""].join("\n"),
         ),
       ];

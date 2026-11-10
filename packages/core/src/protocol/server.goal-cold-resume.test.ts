@@ -1,8 +1,9 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
-import type { Engine, EngineResult } from "../engine/engine.js";
+import type { EngineResult } from "../engine/engine.js";
 import type { EngineRunOptions } from "../engine/run-types.js";
 import type { GoalConfig } from "../goal/lifecycle.js";
 import { NotificationQueue } from "../tool-system/builtin/agent-notifications.js";
@@ -68,23 +69,22 @@ function fixture(runResult: (sessionId: string) => EngineResult) {
     dataRoot: dir,
     sessionMetadata: { exists: () => true, readSessionMainRoot: () => root },
     engineFactory() {
-      return {
+      return createFakeEngine({
+        // Preserve the optional-capability fallbacks exercised by this fixture.
+        dispose: undefined,
+        prepareSessionCloseFinalization: undefined,
+
         isHeadless: () => false,
         sessionExistsOnDisk: () => true,
         getSessionManager: () => ({ readSessionMainRoot: () => root }),
         restoreSessionModel() {},
-        setAskUser() {},
-        setBrowserBridge() {},
-        setInjectCredential() {},
-        setWorkspaceBridge() {},
-        setSessionMessageRouter() {},
         getGoal: () => goal,
         updateGoal: (_id: string, patch: Parameters<typeof updateGoal>[0]) => updateGoal(patch),
         async run(_task: string, options: EngineRunOptions): Promise<EngineResult> {
           runs.push(options);
           return runResult(sessionId);
         },
-      } as unknown as Engine;
+      });
     },
   });
   const [serverTransport, clientTransport] = createInProcessTransport();

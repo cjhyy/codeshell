@@ -1,8 +1,9 @@
 import { describe, expect, it } from "bun:test";
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { builtinModules, createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
 import { dirname, join, relative, resolve, sep } from "node:path";
+import ts from "typescript";
 
 import {
   AUDITED_RELEASE_PACKAGES,
@@ -76,7 +77,114 @@ function sourceFiles(root: string): string[] {
     .map((path) => join(root, path));
 }
 
+const workspaceDependencyFields = [
+  "dependencies",
+  "devDependencies",
+  "peerDependencies",
+  "optionalDependencies",
+] as const;
+const workspaceName = (suffix: string): string =>
+  suffix === "." ? "@cjhyy/code-shell" : `@cjhyy/code-shell-${suffix}`;
+const expectedWorkspaceDependencies: Record<
+  string,
+  Partial<Record<(typeof workspaceDependencyFields)[number], string[]>>
+> = {
+  ".": { dependencies: ["core", "tui"] },
+  link: {},
+  chat: {},
+  "browser-devtools": {},
+  core: { dependencies: ["link"] },
+  "capability-coding": { dependencies: ["core"] },
+  pet: { dependencies: ["core"] },
+  "capability-optimization-lab": { dependencies: ["core"] },
+  host: { dependencies: ["core"] },
+  web: { dependencies: ["core", "link"] },
+  server: { dependencies: ["core", "link", "host", "web", "capability-coding"] },
+  tui: { dependencies: ["core", "capability-coding", "server"] },
+  desktop: {
+    dependencies: ["core", "capability-coding", "pet", "capability-optimization-lab"],
+    devDependencies: ["browser-devtools", "chat", "host", "link", "server", "web"],
+  },
+};
+
+function packageImportSpecifiers(file: string): string[] {
+  const source = ts.createSourceFile(
+    file,
+    readFileSync(file, "utf8"),
+    ts.ScriptTarget.Latest,
+    true,
+  );
+  const specifiers: string[] = [];
+  const add = (node: ts.Node | undefined): void => {
+    if (node && ts.isStringLiteralLike(node)) specifiers.push(node.text);
+  };
+  const visit = (node: ts.Node): void => {
+    if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) add(node.moduleSpecifier);
+    else if (
+      ts.isImportEqualsDeclaration(node) &&
+      ts.isExternalModuleReference(node.moduleReference)
+    )
+      add(node.moduleReference.expression);
+    else if (ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument))
+      add(node.argument.literal);
+    else if (
+      ts.isCallExpression(node) &&
+      (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+        (ts.isIdentifier(node.expression) && node.expression.text === "require"))
+    )
+      add(node.arguments[0]);
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return specifiers;
+}
+
 describe("workspace package boundaries", () => {
+  it("pins every workspace dependency in its declared manifest field", async () => {
+    const manifests = await workspaceManifests();
+    expect([...manifests.keys()].sort()).toEqual(
+      Object.keys(expectedWorkspaceDependencies).map(workspaceName).sort(),
+    );
+    for (const [suffix, expected] of Object.entries(expectedWorkspaceDependencies)) {
+      const manifest = manifests.get(workspaceName(suffix))!;
+      for (const field of workspaceDependencyFields) {
+        const actual = Object.keys(manifest[field] ?? {})
+          .filter((name) => /^@cjhyy\/code-shell(?:$|-)/.test(name))
+          .sort();
+        expect(actual, `${manifest.name} ${field}`).toEqual(
+          (expected[field] ?? []).map(workspaceName).sort(),
+        );
+      }
+    }
+  });
+
+  it("declares every workspace import used by production source, including types", async () => {
+    const offenders: string[] = [];
+    for (const entry of readdirSync(join(repoRoot, "packages"), { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const directory = join(repoRoot, "packages", entry.name);
+      const manifest = await loadManifest(join(directory, "package.json"));
+      const declared = new Set([manifest.name, ...dependencyNames(manifest)]);
+      const roots = [
+        join(directory, "src"),
+        ...(entry.name === "web" ? [join(directory, "app")] : []),
+      ];
+      for (const file of roots.filter(existsSync).flatMap(sourceFiles)) {
+        if (
+          /\.fixture\.[cm]?[jt]sx?$/.test(file) ||
+          /[\\/](?:__fixtures__|test-utils)[\\/]/.test(file)
+        )
+          continue;
+        for (const specifier of packageImportSpecifiers(file)) {
+          const name = specifier.match(/^(@cjhyy\/code-shell(?:-[^/]+)?)(?:\/|$)/)?.[1];
+          if (name && !declared.has(name))
+            offenders.push(`${relative(repoRoot, file)} -> ${specifier}`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
   it("keeps the workspace dependency graph acyclic", async () => {
     const manifests = await workspaceManifests();
     const workspaceNames = new Set(manifests.keys());
@@ -126,7 +234,6 @@ describe("workspace package boundaries", () => {
     expect(Object.keys(link.exports ?? {})).toEqual(["."]);
     for (const capability of [
       "@cjhyy/code-shell-capability-coding",
-      "@cjhyy/code-shell-arena",
       "@cjhyy/code-shell-pet",
       "@cjhyy/code-shell-capability-optimization-lab",
     ]) {
@@ -295,14 +402,9 @@ describe("workspace package boundaries", () => {
       }),
     ).toBe(true);
 
-    // Arena is version-tracked but unpublished: hosts no longer load it and the
-    // package is retained on disk only so the capability can be revived or
-    // deleted outright in a follow-up.
     expect(PRIVATE_VERSIONED_PACKAGES.map((definition) => definition.name).sort()).toEqual([
-      "@cjhyy/code-shell-arena",
       "@cjhyy/code-shell-browser-devtools",
       "@cjhyy/code-shell-capability-optimization-lab",
-      "@cjhyy/code-shell-cdp",
       "@cjhyy/code-shell-desktop",
     ]);
     expect(
@@ -347,21 +449,21 @@ describe("workspace package boundaries", () => {
     "rejects an unpublished workspace in a public package's %s",
     async (field) => {
       const all = await workspaceManifests();
-      // The publisher loads only public manifests, so the retired package is
-      // deliberately absent from this map even if its old npm version exists.
+      // The publisher loads only public manifests, so private workspaces are
+      // deliberately absent from this map.
       const manifests = new Map(PUBLIC_RELEASE_PACKAGES.map(({ name }) => [name, all.get(name)!]));
       const tui = manifests.get("@cjhyy/code-shell-tui")!;
       manifests.set(tui.name, {
         ...tui,
-        [field]: { ...tui[field], "@cjhyy/code-shell-arena": "workspace:*" },
+        [field]: { ...tui[field], "@cjhyy/code-shell-browser-devtools": "workspace:*" },
       });
       expect(validatePublicReleaseOrder(manifests)).toContain(
-        "@cjhyy/code-shell-tui: runtime dependency @cjhyy/code-shell-arena is a private workspace and will not be published",
+        "@cjhyy/code-shell-tui: runtime dependency @cjhyy/code-shell-browser-devtools is a private workspace and will not be published",
       );
     },
   );
 
-  it("keeps product hosts on focused Coding and Arena entries", () => {
+  it("keeps product hosts on focused Coding entries", () => {
     const hosts = ["desktop", "tui", "server"].flatMap((name) =>
       sourceFiles(join(repoRoot, "packages", name, "src")),
     );
@@ -374,10 +476,7 @@ describe("workspace package boundaries", () => {
       const source = readFileSync(file, "utf8");
       const importsCodingRoot =
         /(?:from\s+|import\s*\()\s*["']@cjhyy\/code-shell-capability-coding["']/.test(source);
-      const importsArenaRoot = /(?:from\s+|import\s*\()\s*["']@cjhyy\/code-shell-arena["']/.test(
-        source,
-      );
-      if ((importsCodingRoot || importsArenaRoot) && !allowedCompatibilityImports.has(file)) {
+      if (importsCodingRoot && !allowedCompatibilityImports.has(file)) {
         offenders.push(file.slice(repoRoot.length + 1));
       }
     }
@@ -397,6 +496,50 @@ describe("workspace package boundaries", () => {
       )
       .map((file) => file.slice(repoRoot.length + 1));
 
+    expect(offenders).toEqual([]);
+  });
+
+  it("keeps Server runtime imports on React-free Web entries", () => {
+    const offenders: string[] = [];
+    const isWebRoot = (node: ts.Node | undefined): boolean =>
+      !!node && ts.isStringLiteralLike(node) && node.text === "@cjhyy/code-shell-web";
+    for (const file of sourceFiles(join(repoRoot, "packages/server/src"))) {
+      const source = ts.createSourceFile(file, readFileSync(file, "utf8"), ts.ScriptTarget.Latest);
+      const visit = (node: ts.Node): void => {
+        let runtimeRoot = false;
+        if (ts.isImportDeclaration(node) && isWebRoot(node.moduleSpecifier)) {
+          const clause = node.importClause;
+          runtimeRoot =
+            !clause ||
+            (!clause.isTypeOnly &&
+              (!!clause.name ||
+                !clause.namedBindings ||
+                ts.isNamespaceImport(clause.namedBindings) ||
+                clause.namedBindings.elements.length === 0 ||
+                clause.namedBindings.elements.some((entry) => !entry.isTypeOnly)));
+        } else if (ts.isExportDeclaration(node) && isWebRoot(node.moduleSpecifier)) {
+          runtimeRoot =
+            !node.isTypeOnly &&
+            (!node.exportClause ||
+              ts.isNamespaceExport(node.exportClause) ||
+              node.exportClause.elements.length === 0 ||
+              node.exportClause.elements.some((entry) => !entry.isTypeOnly));
+        } else if (ts.isCallExpression(node) && isWebRoot(node.arguments[0])) {
+          runtimeRoot =
+            node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+            (ts.isIdentifier(node.expression) && node.expression.text === "require");
+        } else if (
+          ts.isImportEqualsDeclaration(node) &&
+          !node.isTypeOnly &&
+          ts.isExternalModuleReference(node.moduleReference)
+        ) {
+          runtimeRoot = isWebRoot(node.moduleReference.expression);
+        }
+        if (runtimeRoot) offenders.push(relative(repoRoot, file));
+        ts.forEachChild(node, visit);
+      };
+      visit(source);
+    }
     expect(offenders).toEqual([]);
   });
 });

@@ -70,10 +70,11 @@ graph TD
 | `scripts.build`    | `clean && tsc -p && copy-assets init/templates`                                                                                                                                                                                                                                                                                         | `/init` 用的 `.md` 模板要拷到 dist。                                                                             |
 | 运行时依赖         | `@cjhyy/code-shell-core`、`@cjhyy/code-shell-capability-coding`、`@cjhyy/code-shell-server`，外加 `react@19.2.6`、`react-reconciler@0.33.0`、`commander`、`chalk`、`marked`+`marked-terminal`、`cli-highlight`、`wrap-ansi`、`strip-ansi`、`get-east-asian-width`、`emoji-regex`、`bidi-js`、`signal-exit`、`usehooks-ts`、`lodash-es`… | **没有 `ink`**，依赖里的 `auto-bind`/`signal-exit` 等是自研 `render/` 在用。                                     |
 
-`tsconfig.json` 有两个要点：
+`tsconfig.json` 的 React Compiler 映射：
 
 - `paths: { "react/compiler-runtime": ["./src/react-compiler-runtime-shim.js"] }`：`render/` 下有些组件是 React Compiler 的产物（`Box.tsx`、`Text.tsx`、`AlternateScreen.tsx`、`ClockContext.tsx` 等都 `import { c } from "react/compiler-runtime"`），这些 import 统一映射到 `react-compiler-runtime-shim.ts:9` 里的 `c(size)`。
-- `exclude` 里加了 `src/cli/commands/arena.ts`：Arena CLI 的源码还留着，但不参与编译，也不发布。
+
+Arena CLI 源码和对应的 `exclude` 项已于 2026-11-10 删除；命令原本就未注册、未发布。
 
 `bunfig.toml` 里设置了 `preload = ["../core/test-setup.ts"]`，把测试的 `.code-shell` home 重定向到临时目录。
 
@@ -107,7 +108,6 @@ graph TD
 - `@cjhyy/code-shell-capability-coding/capability` 的 `createCodingModule()`，`repl.ts:38`、`run.ts:25` 用。
 - `@cjhyy/code-shell-capability-coding/git` 的 git 辅助函数，`builtin/git-commands.ts:6` 用。
 - `@cjhyy/code-shell-server/links` 的 `installDefaultLinkProviders()`，`cli/main.ts:255` 动态 import。
-- `@cjhyy/code-shell-arena/runtime`：只有被排除编译的 `arena.ts` 用到。
 
 ---
 
@@ -142,7 +142,6 @@ graph TD
 | `cli/commands/link.ts`                                 | `createLinkCommand()`：`link status`（`getLinkStatus` + `localCredentialAccess`）；`isLinkStatusCommand()` 用来跳过 setup。                            |
 | `cli/commands/settings-recovery.ts`                    | `createSettingsRecoveryCommand()`：`inspect/repair/restore` 三个子命令；`isSettingsRecoveryCommand()` 用来跳过 setup。                                 |
 | `cli/commands/registry.ts`                             | 斜杠命令注册表 `CommandRegistry`，以及 `CommandContext`、`SlashCommand`、`RestoredChatEntry` 类型。                                                    |
-| `cli/commands/arena.ts`                                | Arena CLI（tsconfig 排除，**不编译、不挂载**）。                                                                                                       |
 | `cli/commands/builtin/core-commands.ts`                | `/exit /clear /cost /effort /tasks /model /sid /session /tools /memory /compact /resume /diff /status /version /export /config`，并导出 `/init`。      |
 | `cli/commands/builtin/git-commands.ts`                 | `/commit /branch /review /pr-comments /autofix-pr`。                                                                                                   |
 | `cli/commands/builtin/git-diff.ts`                     | `gitDiff`、`gitDiffStat`（`execFileSync git`）。                                                                                                       |
@@ -1028,7 +1027,7 @@ TextInput Enter → CommandInput.handleSubmit                            Command
 - commander 给 `--max-turns` 的默认值是 100，`-o/--output` 是 `"text"`，`--effort` 是 `"high"`（`main.ts:70-72`）。因此 `run.ts:142` 的 `options.maxTurns ?? 30`、`run.ts:232` 的 `options.output ?? settings.output.format` **永远走不到回退分支**：headless 实际的 maxTurns 是 100，`settings.output.format` 不起作用。
 - `runCommand` 也完全没用 `effort`。
 - 相比之下，`--provider` 已经刻意去掉了默认值（`main.ts:58-62` 的注释），其他几个选项还没这样处理。
-- 旧文档 [`09-tui.md`](../archive/architecture-2026-07/09-tui.md)（2026-07 版）写的 `arena` 子命令已经不存在：`arena.ts` 被 tsconfig 排除，main.ts 也没有注册。
+- 旧文档 [`09-tui.md`](../archive/architecture-2026-07/09-tui.md)（2026-07 版）写的 `arena` 子命令已经不存在：退役的 `arena.ts` 源码已删除，main.ts 也没有注册。
 
 ### 6.10 两个同名 `code-shell` bin
 

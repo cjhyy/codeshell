@@ -6,7 +6,7 @@
 
 import { appendFileSync, mkdirSync, existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { userHome } from "../settings/manager.js";
+import { userHome } from "../utils/paths.js";
 
 export interface DiagnosticEntry {
   timestamp: string;

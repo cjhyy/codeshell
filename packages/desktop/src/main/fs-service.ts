@@ -1,3 +1,4 @@
+import type { Stats } from "node:fs";
 // Filesystem reads for the file-browser panel. Mirrors Codex's fs RPC
 // (fs-read-directory / fs-read-file) but local-only: one directory level at a
 // time so the renderer can lazily expand a tree, plus a capped file reader.
@@ -27,7 +28,7 @@ async function realpathAllowMissing(target: string, links = 0): Promise<string> 
     return await fs.realpath(target);
   } catch (error) {
     if (!["ENOENT", "ENOTDIR"].includes((error as NodeJS.ErrnoException).code ?? "")) throw error;
-    let info;
+    let info: Stats | undefined;
     try {
       info = await fs.lstat(target);
     } catch (statError) {

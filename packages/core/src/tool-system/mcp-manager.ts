@@ -38,7 +38,7 @@ import {
   validMcpConnectRetries,
   validMcpConnectTimeout,
 } from "./mcp-connection-policy.js";
-import { codeShellHome } from "../session/session-manager.js";
+import { codeShellHome } from "../utils/paths.js";
 import {
   assertMcpOAuthCredentialBinding,
   normalizeMcpServerUrl,

@@ -1,3 +1,4 @@
+import type { Stats } from "node:fs";
 import { checkedExternalUrl } from "./app-renderer-navigation.js";
 /**
  * Desktop-side services that don't belong in the agent worker:
@@ -719,7 +720,7 @@ export async function getGitDiffForReview(cwd: string, mode: GitDiffMode = "all"
       // Do not follow a symlink in any containing directory. Git ordinarily
       // lists the link itself, but the worktree may change during collection.
       const parent = path.dirname(absolute);
-      let stat;
+      let stat: Stats;
       try {
         stat = await fs.lstat(absolute);
       } catch (error) {

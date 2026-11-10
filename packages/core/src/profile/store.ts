@@ -20,7 +20,7 @@ import {
 } from "node:fs";
 import { isAbsolute, join, relative, sep } from "node:path";
 import { logger } from "../logging/logger.js";
-import { codeShellHome } from "../session/session-manager.js";
+import { codeShellHome } from "../utils/paths.js";
 import {
   WORKSPACE_PROFILE_NAME_RE,
   WorkspaceProfileSchema,

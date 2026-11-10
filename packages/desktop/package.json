@@ -206,7 +206,7 @@
       "icon": "build/icon.png"
     }
   },
-  "//deps": "Runtime deps ONLY. The main process is esbuild-bundled (everything inlined except `electron` + `@cjhyy/code-shell-core`), and the renderer is vite-bundled — so node_modules is NOT shipped except for what's resolved at runtime: node-pty (native, can't bundle) and code-shell-core (spawned as a child process). Everything else is build-time → devDependencies. This is also what keeps electron-builder from walking bun's .bun-store symlinks and ENOENT-ing during packaging (electron-builder skips devDependencies). When adding a dep: if it's `require`d unbundled at runtime (a native addon, or anything kept `external` in scripts/build.ts), it goes here; otherwise it's a devDependency.",
+  "//deps": "Runtime dependencies are the unbundled worker/native packages. scripts/build-main.ts keeps electron, playwright-core, @cjhyy/code-shell-core, @cjhyy/code-shell-link, and @cjhyy/code-shell-capability-coding external; the renderer is Vite-bundled. scripts/predist.ts materializes Link, Core, Coding, Pet, and Optimization Lab from DESKTOP_MATERIALIZED_WORKSPACES in scripts/materialized-workspaces.ts, and installs their declared production closures. Link is a Desktop devDependency but is explicitly materialized and is also a Core production dependency, so packaging does not rely on a development workspace symlink. Host, Server, Web, Chat, and browser diagnostics are bundled. Keep runtime dependencies and materialization coverage aligned when adding an external or worker-loaded package; native node-pty and playwright-core also ship as runtime dependencies.",
   "dependencies": {
     "@cjhyy/code-shell-capability-coding": "workspace:*",
     "@cjhyy/code-shell-capability-optimization-lab": "workspace:*",
@@ -217,7 +217,6 @@
   },
   "devDependencies": {
     "@cjhyy/code-shell-browser-devtools": "workspace:*",
-    "@cjhyy/code-shell-cdp": "workspace:*",
     "@cjhyy/code-shell-chat": "workspace:*",
     "@cjhyy/code-shell-host": "workspace:*",
     "@cjhyy/code-shell-link": "workspace:*",

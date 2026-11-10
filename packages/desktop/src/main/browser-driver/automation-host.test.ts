@@ -1,70 +1,93 @@
 import { describe, expect, test, beforeEach } from "bun:test";
-import type { BrowserBridge } from "@cjhyy/code-shell-core";
+import type { BrowserBridge, BrowserElement } from "@cjhyy/code-shell-core";
 import { handleBrowserAction, releaseGuest, type AutomationDeps } from "./automation-host";
-import { CdpBrowserDriver } from "./cdp-driver.js";
 import { captureElectronPage } from "./electron-screenshot.js";
 import type { WebContents } from "electron";
 
-// The driver cache is module-level (keyed by guest id). Reset id:1 between tests
-// so a snapshot's ref map from one test doesn't bleed into another.
-beforeEach(() => releaseGuest(1));
+// The host caches drivers by guest id; keep tests independent.
+beforeEach(() => {
+  releaseGuest(1);
+  releaseGuest(2);
+});
 
-/** Minimal fake guest webContents that drives a scriptable CDP map. */
-function fakeGuest(opts: {
-  url?: string;
-  cdp?: Record<string, (p?: any) => any>;
-  destroyed?: boolean;
-  debuggerState?: { attached: boolean; attaches: number; detaches: number };
-  capturePage?: WebContents["capturePage"];
-}): WebContents {
-  const debuggerState = opts.debuggerState ?? { attached: false, attaches: 0, detaches: 0 };
-  const cdp = opts.cdp ?? {};
-  return {
-    id: (opts as { id?: number }).id ?? 1,
+const guestElements = new WeakMap<WebContents, Array<Omit<BrowserElement, "ref">>>();
+
+/** Minimal Electron target; browser behavior comes from the BrowserBridge seam. */
+function fakeGuest(
+  opts: {
+    id?: number;
+    url?: string;
+    elements?: Array<Omit<BrowserElement, "ref">>;
+    destroyed?: boolean;
+    capturePage?: WebContents["capturePage"];
+  } = {},
+): WebContents {
+  const guest = {
+    id: opts.id ?? 1,
     once: () => undefined,
     isDestroyed: () => opts.destroyed ?? false,
     getURL: () => opts.url ?? "https://www.xiaohongshu.com/explore",
     getTitle: () => "小红书",
     getZoomFactor: () => 1.25,
     capturePage: opts.capturePage,
-    debugger: {
-      isAttached: () => debuggerState.attached,
-      attach: () => {
-        debuggerState.attached = true;
-        debuggerState.attaches++;
-      },
-      detach: () => {
-        debuggerState.attached = false;
-        debuggerState.detaches++;
-      },
-      sendCommand: async (method: string, params?: any) => (cdp[method] ? cdp[method](params) : {}),
-    },
   } as unknown as WebContents;
+  guestElements.set(
+    guest,
+    opts.elements ?? [
+      { role: "textbox", name: "搜索" },
+      { role: "button", name: "搜索" },
+    ],
+  );
+  return guest;
 }
 
-const AX = {
-  nodes: [
-    { nodeId: "1", role: { value: "textbox" }, name: { value: "搜索" }, backendDOMNodeId: 10 },
-    { nodeId: "2", role: { value: "button" }, name: { value: "搜索" }, backendDOMNodeId: 20 },
-  ],
-};
-const BOX = { model: { content: [0, 0, 100, 0, 100, 40, 0, 40] } };
+let nextDriver = 0;
+function fakeDriver(guest: WebContents, overrides: Partial<BrowserBridge> = {}): BrowserBridge {
+  const snapshotId = `fixture-${++nextDriver}`;
+  const refs = new Set<string>();
+  const refResult = async (ref: string) =>
+    refs.has(ref) ? { ok: true } : { ok: false, staleRef: true };
+  const unused = async () => {
+    throw new Error("Unexpected BrowserBridge method");
+  };
+  return {
+    snapshot: async () => {
+      const elements = guestElements.get(guest)!.map((element, index) => ({
+        ...element,
+        ref: `${snapshotId}:e${index + 1}`,
+      }));
+      for (const element of elements) refs.add(element.ref);
+      return { url: guest.getURL(), title: guest.getTitle(), snapshotId, elements };
+    },
+    click: refResult,
+    type: refResult,
+    navigate: async () => ({ ok: true }),
+    screenshot: async (ref) => {
+      if (ref && !refs.has(ref)) return { ok: false, staleRef: true };
+      return captureElectronPage(guest, {
+        maxDim: 1568,
+        region: ref ? { x: 0, y: 0, width: 100, height: 40 } : undefined,
+      });
+    },
+    scroll: unused,
+    readContent: unused,
+    extractLinks: unused,
+    waitForLoad: unused,
+    hover: unused,
+    selectOption: unused,
+    pressKey: unused,
+    fetchImages: unused,
+    listTabs: unused,
+    switchTab: unused,
+    ...overrides,
+  };
+}
 
 function deps(over: Partial<AutomationDeps> = {}): AutomationDeps {
   return {
-    activeGuest: () =>
-      fakeGuest({ cdp: { "Accessibility.getFullAXTree": () => AX, "DOM.getBoxModel": () => BOX } }),
+    activeGuest: () => fakeGuest(),
     policy: () => ({ allowedDomains: [] }),
-    createDriver: (guest) =>
-      new CdpBrowserDriver(
-        (method, params) => guest.debugger.sendCommand(method, params),
-        () => ({ url: guest.getURL(), title: guest.getTitle() }),
-        {
-          captureScreenshot: guest.capturePage
-            ? (request) => captureElectronPage(guest, request)
-            : undefined,
-        },
-      ),
+    createDriver: (guest) => fakeDriver(guest),
     ...over,
   };
 }
@@ -125,10 +148,6 @@ describe("handleBrowserAction", () => {
       toJPEG: () => Buffer.from("native-guest"),
     };
     const guest = fakeGuest({
-      cdp: {
-        "Accessibility.getFullAXTree": () => AX,
-        "DOM.getBoxModel": () => BOX,
-      },
       capturePage: (async (...args: unknown[]) => {
         captures.push(args);
         return image;
@@ -193,7 +212,7 @@ describe("handleBrowserAction", () => {
 
   test("no guest but openPanel succeeds → auto-opens panel then proceeds", async () => {
     let opened = false;
-    const guest = fakeGuest({ cdp: { "Accessibility.getFullAXTree": () => AX } });
+    const guest = fakeGuest();
     const out = await handleBrowserAction(
       { action: "snapshot" },
       deps({
@@ -236,19 +255,30 @@ describe("handleBrowserAction", () => {
   });
 
   test("keeps a single target driver across consecutive actions", async () => {
-    const debuggerState = { attached: false, attaches: 0, detaches: 0 };
-    const guest = fakeGuest({
-      debuggerState,
-      cdp: { "Accessibility.getFullAXTree": () => AX, "DOM.getBoxModel": () => BOX },
+    const guest = fakeGuest();
+    const otherGuest = fakeGuest({ id: 2 });
+    let active = guest;
+    const created: number[] = [];
+    const d = deps({
+      activeGuest: () => active,
+      createDriver: (target) => {
+        created.push(target.id);
+        return fakeDriver(target);
+      },
     });
-    const d = deps({ activeGuest: () => guest });
     const snap = JSON.parse(await handleBrowserAction({ action: "snapshot" }, d));
     expect(snap.elements[1].ref).toBe(`${snap.snapshotId}:e2`);
-    expect(debuggerState).toMatchObject({ attached: false, attaches: 0, detaches: 0 });
-
     const out = await handleBrowserAction({ action: "click", ref: snap.elements[1].ref }, d);
     expect(JSON.parse(out)).toMatchObject({ ok: true });
-    expect(debuggerState).toMatchObject({ attached: false, attaches: 0, detaches: 0 });
+    expect(created).toEqual([1]);
+    active = otherGuest;
+    await handleBrowserAction({ action: "snapshot" }, d);
+    expect(created).toEqual([1, 2]);
+    active = guest;
+    expect(
+      JSON.parse(await handleBrowserAction({ action: "click", ref: snap.elements[1].ref }, d)),
+    ).toMatchObject({ ok: true });
+    expect(created).toEqual([1, 2]);
   });
 
   test("click after snapshot reuses the cached driver → ref resolves (persistent ref map)", async () => {
@@ -261,9 +291,19 @@ describe("handleBrowserAction", () => {
     expect(JSON.parse(out)).toMatchObject({ ok: true });
   });
 
-  test("click an unknown ref (never snapshotted) → stale", async () => {
-    const out = await handleBrowserAction({ action: "click", ref: "e99" }, deps());
-    expect(JSON.parse(out)).toMatchObject({ ok: false, staleRef: true });
+  test("driver failures are mapped to safe host errors", async () => {
+    const out = await handleBrowserAction(
+      { action: "click", ref: "e99" },
+      deps({
+        createDriver: (guest) =>
+          fakeDriver(guest, {
+            click: async () => {
+              throw new Error("fixture driver failure");
+            },
+          }),
+      }),
+    );
+    expect(JSON.parse(out)).toEqual({ ok: false, detail: "fixture driver failure" });
   });
 
   test("domain whitelist hard-blocks navigate to off-list host (no approve bypass)", async () => {
@@ -302,28 +342,17 @@ describe("handleBrowserAction", () => {
 
   test("snapshot-learned destructive ref requires approval before dispatch", async () => {
     let approvalRequests = 0;
-    let mouseEvents = 0;
-    const guest = fakeGuest({
-      cdp: {
-        "Accessibility.getFullAXTree": () => ({
-          nodes: [
-            {
-              nodeId: "delete-account",
-              role: { value: "button" },
-              name: { value: "删除账号" },
-              backendDOMNodeId: 30,
-            },
-          ],
-        }),
-        "DOM.getBoxModel": () => BOX,
-        "Input.dispatchMouseEvent": () => {
-          mouseEvents++;
-          return {};
-        },
-      },
-    });
+    let clicks = 0;
+    const guest = fakeGuest({ elements: [{ role: "button", name: "删除账号" }] });
     const d = deps({
       activeGuest: () => guest,
+      createDriver: (target) =>
+        fakeDriver(target, {
+          click: async () => {
+            clicks++;
+            return { ok: true };
+          },
+        }),
       approve: async () => {
         approvalRequests++;
         return false;
@@ -335,7 +364,7 @@ describe("handleBrowserAction", () => {
 
     expect(JSON.parse(out)).toMatchObject({ ok: false, detail: "sensitive action declined" });
     expect(approvalRequests).toBe(1);
-    expect(mouseEvents).toBe(0);
+    expect(clicks).toBe(0);
   });
 });
 

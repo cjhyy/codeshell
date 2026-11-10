@@ -71,7 +71,7 @@ export async function dispatchMobileChatTurn(
     return { ok: false, message: error instanceof Error ? error.message : String(error) };
   }
 
-  let materialized;
+  let materialized: Awaited<ReturnType<typeof materializeMobileAttachments>>;
   try {
     materialized = await materializeMobileAttachments({
       deviceId: input.deviceId,

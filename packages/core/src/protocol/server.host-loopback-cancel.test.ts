@@ -1,3 +1,4 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 /**
  * Host-loopback tools (Panel / Browser / SwitchSessionWorkspace /
  * InjectCredential) reach the Desktop renderer by riding the SAME
@@ -17,7 +18,7 @@ import { describe, expect, test } from "bun:test";
 import { AgentServer } from "./server.js";
 import { ChatSessionManager } from "./chat-session-manager.js";
 import { Methods } from "./types.js";
-import type { Engine, EngineResult } from "../engine/engine.js";
+import type { EngineResult } from "../engine/engine.js";
 import type { PanelHostBridge } from "../tool-system/panel-bridge.js";
 
 function makeTransport() {
@@ -64,12 +65,12 @@ type SettleOutcome = {
 function bootPanelProbe(sessionId: string) {
   let panelBridge: PanelHostBridge | undefined;
   let outcome: SettleOutcome | undefined;
-  const engine = {
-    setAskUser() {},
-    setPlanMode() {},
-    setBrowserBridge() {},
-    setInjectCredential() {},
-    setSessionMessageRouter() {},
+  const engine = createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    dispose: undefined,
+    getSessionManager: undefined,
+    prepareSessionCloseFinalization: undefined,
+
     setPanelBridge(bridge: PanelHostBridge | undefined) {
       panelBridge = bridge;
     },
@@ -84,7 +85,7 @@ function bootPanelProbe(sessionId: string) {
         usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       };
     },
-  } as unknown as Engine;
+  });
 
   const chatManager = new ChatSessionManager({
     runtime: {} as never,
@@ -270,12 +271,10 @@ describe("host-loopback cancel semantics", () => {
     // than a refusal: the model concludes there is nothing there and stops.
     let panelBridge: PanelHostBridge | undefined;
     let listed: { items: unknown[]; failed?: string } | undefined;
-    const engine = {
-      setAskUser() {},
-      setPlanMode() {},
-      setBrowserBridge() {},
-      setInjectCredential() {},
-      setSessionMessageRouter() {},
+    const engine = createFakeEngine({
+      // Preserve the optional-capability fallbacks exercised by this fixture.
+      getSessionManager: undefined,
+
       setPanelBridge(bridge: PanelHostBridge | undefined) {
         panelBridge = bridge;
       },
@@ -290,7 +289,7 @@ describe("host-loopback cancel semantics", () => {
           usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
         };
       },
-    } as unknown as Engine;
+    });
 
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
@@ -526,12 +525,10 @@ describe("host-loopback cancel semantics", () => {
     // reverting either one alone must fail a test, or half the fix is unprotected.
     let panelBridge: PanelHostBridge | undefined;
     let opened: { ok?: boolean; detail?: string } | undefined;
-    const engine = {
-      setAskUser() {},
-      setPlanMode() {},
-      setBrowserBridge() {},
-      setInjectCredential() {},
-      setSessionMessageRouter() {},
+    const engine = createFakeEngine({
+      // Preserve the optional-capability fallbacks exercised by this fixture.
+      getSessionManager: undefined,
+
       setPanelBridge(bridge: PanelHostBridge | undefined) {
         panelBridge = bridge;
       },
@@ -546,7 +543,7 @@ describe("host-loopback cancel semantics", () => {
           usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
         };
       },
-    } as unknown as Engine;
+    });
 
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
@@ -599,12 +596,10 @@ describe("host-loopback cancel semantics", () => {
   test("a tools failure keeps its host detail rather than a generic label", async () => {
     let panelBridge: PanelHostBridge | undefined;
     let queried: { items: unknown[]; failed?: string } | undefined;
-    const engine = {
-      setAskUser() {},
-      setPlanMode() {},
-      setBrowserBridge() {},
-      setInjectCredential() {},
-      setSessionMessageRouter() {},
+    const engine = createFakeEngine({
+      // Preserve the optional-capability fallbacks exercised by this fixture.
+      getSessionManager: undefined,
+
       setPanelBridge(bridge: PanelHostBridge | undefined) {
         panelBridge = bridge;
       },
@@ -619,7 +614,7 @@ describe("host-loopback cancel semantics", () => {
           usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
         };
       },
-    } as unknown as Engine;
+    });
 
     const chatManager = new ChatSessionManager({
       runtime: {} as never,

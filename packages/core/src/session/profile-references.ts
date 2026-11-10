@@ -13,7 +13,7 @@ export async function* iterateProfileReferences(
 ): AsyncGenerator<string> {
   const target = typeof profileName === "string" ? profileName.trim() : "";
   if (!target || target.length > 64) return;
-  let directory;
+  let directory: Awaited<ReturnType<typeof opendir>>;
   try {
     directory = await opendir(storageDir);
   } catch (error) {

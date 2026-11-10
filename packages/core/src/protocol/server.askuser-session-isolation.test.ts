@@ -1,8 +1,9 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { describe, expect, it } from "bun:test";
 import { AgentServer } from "./server.js";
 import { ChatSessionManager } from "./chat-session-manager.js";
 import { ErrorCodes, Methods } from "./types.js";
-import type { Engine, EngineResult } from "../engine/engine.js";
+import type { EngineResult } from "../engine/engine.js";
 
 function makeTransport() {
   const sent: any[] = [];
@@ -44,20 +45,22 @@ function makeAskingEngine(sessionId: string) {
     askUser: undefined as ((q: string) => Promise<string>) | undefined,
     answer: undefined as string | undefined,
   };
-  const engine = {
+  const engine = createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    dispose: undefined,
+    getHookRegistry: undefined,
+    getSessionManager: undefined,
+    prepareSessionCloseFinalization: undefined,
+
     setAskUser(fn: (q: string) => Promise<string>) {
       state.askUser = fn;
     },
-    setPlanMode() {},
-    setBrowserBridge() {},
-    setInjectCredential() {},
-    setSessionMessageRouter() {},
     isHeadless: () => false,
     async run(): Promise<EngineResult> {
       state.answer = await state.askUser!(`question for ${sessionId}`);
       return result(state.answer, sessionId);
     },
-  } as unknown as Engine;
+  });
   return { engine, state };
 }
 

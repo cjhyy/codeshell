@@ -29,12 +29,12 @@ interface InvokeOnly {
  * `agent/cancel` would leave it streaming. Only a session Main does not own
  * falls through to the worker.
  */
-export async function cancelSessionRun(
+export async function cancelSessionRun<T>(
   ipc: InvokeOnly,
-  nativeCancel: (sessionId: string | undefined) => Promise<unknown>,
+  nativeCancel: (sessionId: string | undefined) => Promise<T>,
   sessionId: string | undefined,
   options?: { keepGoal?: boolean },
-): Promise<unknown> {
+): Promise<T | undefined> {
   if (sessionId) {
     // `keepGoal` (interrupt-and-send) only matters there: the native Engine
     // never pauses a Goal on cancel.

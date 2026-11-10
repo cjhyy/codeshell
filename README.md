@@ -257,13 +257,11 @@ packages/
 ├── link/      # Framework-independent Link provider manifests and authorization guides
 ├── core/      # Domain-agnostic engine, context, MCP, hooks, sessions, runs, memory
 ├── coding/    # Coding capability pack: tools, git/worktrees, LSP, review, prompt/presets
-├── arena/     # Retained private Arena source (not loaded by hosts)
 ├── pet/       # Mimi behavior, DelegateWork, projection protocol, digital-human teams
 ├── server/    # Headless HTTP/WebSocket host, rooms, uploads, mobile remote
 ├── web/       # Browser-safe remote client state and SPA
 ├── tui/       # Terminal CLI, Ink-based UI, renderer, commands, approvals
 ├── desktop/   # Electron desktop client + agent worker bridge + mobile remote app
-├── cdp/       # Environment-agnostic CDP browser-action layer (no Playwright)
 └── chat/      # Standalone multi-channel chat gateway + optional CodeShell adapter
 
 package.json   # @cjhyy/code-shell compatibility meta package

@@ -67,7 +67,7 @@ export async function applyPatchTool(
     return "Error: patch is required and must be a non-empty string";
   }
 
-  let parsed;
+  let parsed: ReturnType<typeof parsePatch>;
   try {
     parsed = parsePatch(patchText, "lenient");
   } catch (err) {
@@ -82,7 +82,7 @@ export async function applyPatchTool(
   // host process cwd. See standard §S5.
   const cwd = ctx?.cwd ?? process.cwd();
 
-  let result;
+  let result: Awaited<ReturnType<typeof applyPatch>>;
   try {
     result = await applyPatch(parsed.hunks, {
       cwd,

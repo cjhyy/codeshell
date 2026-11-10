@@ -61,6 +61,7 @@ import {
 } from "./computer-use/service.js";
 import { composeCapabilityModulesEnv, readUserFeatureFlags } from "./capability-modules-env.js";
 import { ChildBrowserWorkerLifetime } from "./browser-runtime/child-browser-lifetime.js";
+import { parseWorkerLine, type ParsedWorkerLine } from "./worker-line.js";
 import { WebConfigurationGate } from "./web-configuration-gate.js";
 import { SessionSnapshotStore, type Snapshot, type SnapshotEntry } from "./SessionSnapshotStore.js";
 import { assertOutputHistoryWriteAvailable } from "./session-output-history-lease.js";
@@ -410,14 +411,14 @@ export class AgentBridge implements PetStateBridge {
   private readonly hostActionHandlers = new HostActionHandlers();
 
   private readonly workerHost = createDesktopWorkerHost({
-    operationBatch: (line) => this.maybeHandleOperationBatch(line),
-    credentials: (line) => this.maybeHandleCredentialAccessMessage(line),
-    browser: (line) => this.maybeHandleBrowserAction(line),
-    credentialCookie: (line) => this.maybeHandleCredentialAction(line),
-    workspace: (line) => this.maybeHandleWorkspaceAction(line),
-    panel: (line) => this.maybeHandlePanelAction(line),
-    hostAction: (line) => this.maybeHandleHostAction(line),
-    automation: (line) => this.maybeHandleAutomationAuthorityMessage(line),
+    operationBatch: (line, parsedLine) => this.maybeHandleOperationBatch(line, parsedLine),
+    credentials: (line, parsedLine) => this.maybeHandleCredentialAccessMessage(line, parsedLine),
+    browser: (line, parsedLine) => this.maybeHandleBrowserAction(line, parsedLine),
+    credentialCookie: (line, parsedLine) => this.maybeHandleCredentialAction(line, parsedLine),
+    workspace: (line, parsedLine) => this.maybeHandleWorkspaceAction(line, parsedLine),
+    panel: (line, parsedLine) => this.maybeHandlePanelAction(line, parsedLine),
+    hostAction: (line, parsedLine) => this.maybeHandleHostAction(line, parsedLine),
+    automation: (line, parsedLine) => this.maybeHandleAutomationAuthorityMessage(line, parsedLine),
     sendLine: (line) => this.core.sendLine(line),
   });
 
@@ -570,23 +571,25 @@ export class AgentBridge implements PetStateBridge {
    * then forwards to renderer windows + outbound taps.
    */
   private handleWorkerLine(line: string): void {
-    this.webConfiguration.observe(line);
-    this.updateTentativeRunLifecycle(line);
-    if (this.workerHost.intercept(line)) return;
+    const parsedLine = parseWorkerLine(line);
+    this.webConfiguration.observe(line, parsedLine);
+    this.updateTentativeRunLifecycle(line, parsedLine);
+    if (this.workerHost.intercept(line, parsedLine)) return;
     // Reload the Desktop scheduler after worker-owned cron changes.
-    if (this.maybeHandleCronChanged(line)) return;
+    if (this.maybeHandleCronChanged(line, parsedLine)) return;
     // Pet projection is a host-only read model. Its snapshot RPC responses are
     // consumed inside WorkerBridgeCore (consume: true); the delta notification
     // is consumed here so core-shaped payloads never leak through the generic
     // renderer agent:msg channel.
-    if (this.routePetProjectionLine(line)) return;
+    if (this.routePetProjectionLine(line, parsedLine)) return;
     // Any Session may explicitly report to Mimi. Keep the hidden Pet session
     // and any host-owned originating route out of the renderer protocol.
-    if (this.routePetReportLine(line)) return;
-    const quickChatForkSettlement = this.quickChatForkRouter?.routeWorkerResponse(line) ?? null;
+    if (this.routePetReportLine(line, parsedLine)) return;
+    const quickChatForkSettlement =
+      this.quickChatForkRouter?.routeWorkerResponse(line, parsedLine) ?? null;
     let summary: Record<string, unknown> = { raw: previewLine(line) };
     try {
-      const m = JSON.parse(line) as { method?: string; id?: number };
+      const m = parsedLine.message as { method?: string; id?: number };
       if (m.method) summary = { method: m.method, raw: previewLine(line) };
       else if (m.id !== undefined) summary = { responseId: m.id, raw: previewLine(line) };
     } catch {
@@ -594,7 +597,7 @@ export class AgentBridge implements PetStateBridge {
     }
     // Mirror stream events into the per-session snapshot so a remounted
     // renderer can replay what it missed. Non-streamEvent lines yield null.
-    const rawAppend = parseSnapshotAppend(line);
+    const rawAppend = parseSnapshotAppend(line, parsedLine);
     if (rawAppend) {
       try {
         if (!this.mainOutput.observeWorker(rawAppend.sessionId, rawAppend.event)) return;
@@ -621,7 +624,7 @@ export class AgentBridge implements PetStateBridge {
       this.workerRuns.observeWorker(append.sessionId, append.event);
       observeComputerUseRunEvent(append.sessionId, append.event);
     }
-    let snapshotEntry;
+    let snapshotEntry: (SnapshotEntry & { sessionId: string; epoch: string }) | undefined;
     try {
       snapshotEntry = append
         ? {
@@ -640,8 +643,8 @@ export class AgentBridge implements PetStateBridge {
           event: append.event,
           ...(snapshotEntry ? { seq: snapshotEntry.seq, epoch: snapshotEntry.epoch } : {}),
         }
-      : parseLiveStreamEnvelope(line, snapshotEntry);
-    const projectedLine = append ? replaceStreamEventInLine(line, append.event) : line;
+      : parseLiveStreamEnvelope(line, snapshotEntry, parsedLine);
+    const projectedLine = append ? replaceStreamEventInLine(line, append.event, parsedLine) : line;
     dlog("bridge", "worker→renderer", summary);
     if (liveStreamEnvelope) {
       this.safeSend("agent:streamEvent", liveStreamEnvelope);
@@ -720,21 +723,22 @@ export class AgentBridge implements PetStateBridge {
     return prepared.outLine;
   }
 
-  private updateTentativeRunLifecycle(line: string): void {
-    let message: {
-      id?: string | number;
-      method?: string;
-      params?: {
-        requestId?: string | number;
-        sessionId?: string;
-        event?: { type?: string; sessionId?: string };
-      };
-    };
-    try {
-      message = JSON.parse(line) as typeof message;
-    } catch {
-      return;
-    }
+  private updateTentativeRunLifecycle(
+    line: string,
+    parsedLine: ParsedWorkerLine = parseWorkerLine(line),
+  ): void {
+    const message = parsedLine.message as
+      | {
+          id?: string | number;
+          method?: string;
+          params?: {
+            requestId?: string | number;
+            sessionId?: string;
+            event?: { type?: string; sessionId?: string };
+          };
+        }
+      | undefined;
+    if (message === undefined) return;
     if (message.method === Methods.RunAccepted) {
       const sessionId = message.params?.sessionId;
       if (typeof sessionId === "string") getSessionCwdIndex().extendTentative(sessionId);
@@ -883,17 +887,18 @@ export class AgentBridge implements PetStateBridge {
     }
   }
 
-  private maybeHandleOperationBatch(line: string): boolean {
-    let message: {
-      method?: string;
-      id?: string | number;
-      params?: DesktopOperationBatchAuthorityInput;
-    };
-    try {
-      message = JSON.parse(line);
-    } catch {
-      return false;
-    }
+  private maybeHandleOperationBatch(
+    line: string,
+    parsedLine: ParsedWorkerLine = parseWorkerLine(line),
+  ): boolean {
+    const message = parsedLine.message as
+      | {
+          method?: string;
+          id?: string | number;
+          params?: DesktopOperationBatchAuthorityInput;
+        }
+      | undefined;
+    if (message === undefined) return false;
     if (message?.method !== DESKTOP_OPERATION_BATCH_METHOD) return false;
     const generation = this.workerGeneration();
     if (
@@ -1252,8 +1257,11 @@ export class AgentBridge implements PetStateBridge {
    * not consulted implicitly: the dispatch layer can use one of its tabs only
    * after an explicit, expiring handoff grant, never from focus alone.
    */
-  private maybeHandleBrowserAction(line: string): boolean {
-    const parsed = parseBrowserActionLine(line);
+  private maybeHandleBrowserAction(
+    line: string,
+    parsedLine: ParsedWorkerLine = parseWorkerLine(line),
+  ): boolean {
+    const parsed = parseBrowserActionLine(line, parsedLine);
     if (!parsed) return false;
     if (parsed.childHost?.activate && parsed.sessionId) {
       const parentSessionId = parsed.sessionId;
@@ -1306,13 +1314,12 @@ export class AgentBridge implements PetStateBridge {
   /** Intercept the worker's `agent/cronChanged` notification: reload main's
    *  cron scheduler so an AI-created/deleted job arms immediately. Returns true
    *  (consume, don't forward to renderer) when handled. */
-  private maybeHandleCronChanged(line: string): boolean {
-    let parsed: { method?: string };
-    try {
-      parsed = JSON.parse(line);
-    } catch {
-      return false;
-    }
+  private maybeHandleCronChanged(
+    line: string,
+    parsedLine: ParsedWorkerLine = parseWorkerLine(line),
+  ): boolean {
+    const parsed = parsedLine.message as { method?: string } | undefined;
+    if (parsed === undefined) return false;
     if (parsed.method !== "agent/cronChanged") return false;
     try {
       reloadAutomations();
@@ -1323,13 +1330,14 @@ export class AgentBridge implements PetStateBridge {
   }
 
   /** Main-owned CronCreate. The worker never writes caller cwd/resume ids to the shared store. */
-  private maybeHandleAutomationAuthorityMessage(line: string): boolean {
-    let parsed: { id?: string | number; method?: string; params?: Record<string, unknown> };
-    try {
-      parsed = JSON.parse(line);
-    } catch {
-      return false;
-    }
+  private maybeHandleAutomationAuthorityMessage(
+    line: string,
+    parsedLine: ParsedWorkerLine = parseWorkerLine(line),
+  ): boolean {
+    const parsed = parsedLine.message as
+      | { id?: string | number; method?: string; params?: Record<string, unknown> }
+      | undefined;
+    if (parsed === undefined) return false;
     if (parsed.method !== "desktop/automationCreate") return false;
     if (parsed.id === undefined) return true;
     void (async () => {
@@ -1362,17 +1370,18 @@ export class AgentBridge implements PetStateBridge {
     this.localOAuthLinkActions.clear();
   }
 
-  private maybeHandleCredentialAccessMessage(line: string): boolean {
-    let parsed: {
-      id?: string | number;
-      method?: string;
-      params?: Record<string, unknown>;
-    };
-    try {
-      parsed = JSON.parse(line);
-    } catch {
-      return false;
-    }
+  private maybeHandleCredentialAccessMessage(
+    line: string,
+    parsedLine: ParsedWorkerLine = parseWorkerLine(line),
+  ): boolean {
+    const parsed = parsedLine.message as
+      | {
+          id?: string | number;
+          method?: string;
+          params?: Record<string, unknown>;
+        }
+      | undefined;
+    if (parsed === undefined) return false;
     if (
       parsed.method !== "desktop/credentialResolve" &&
       parsed.method !== "desktop/credentialMaterializeCookie" &&
@@ -1587,8 +1596,11 @@ export class AgentBridge implements PetStateBridge {
    * Never throws — a failure still replies so the worker tool unblocks.
    * The AI-side approval gate already ran in the worker tool; this just executes.
    */
-  private maybeHandleCredentialAction(line: string): boolean {
-    const parsed = parseCredentialActionLine(line);
+  private maybeHandleCredentialAction(
+    line: string,
+    parsedLine: ParsedWorkerLine = parseWorkerLine(line),
+  ): boolean {
+    const parsed = parseCredentialActionLine(line, parsedLine);
     if (!parsed) return false;
     void (async () => {
       let resultJson: string;
@@ -1639,8 +1651,11 @@ export class AgentBridge implements PetStateBridge {
     return true;
   }
 
-  private maybeHandleWorkspaceAction(line: string): boolean {
-    const parsed = parseWorkspaceActionLine(line);
+  private maybeHandleWorkspaceAction(
+    line: string,
+    parsedLine: ParsedWorkerLine = parseWorkerLine(line),
+  ): boolean {
+    const parsed = parseWorkspaceActionLine(line, parsedLine);
     if (!parsed) return false;
     void (async () => {
       let resultJson: string;
@@ -1691,11 +1706,15 @@ export class AgentBridge implements PetStateBridge {
     return this.hostActionHandlers.set(action, handler);
   }
 
-  private maybeHandleHostAction(line: string): boolean {
+  private maybeHandleHostAction(
+    line: string,
+    parsedLine: ParsedWorkerLine = parseWorkerLine(line),
+  ): boolean {
     return this.hostActionHandlers.intercept(
       line,
       (reply) => this.core.sendLine(reply),
       (error) => dlog("bridge", "host-action-reply-failed", { error: String(error) }),
+      parsedLine,
     );
   }
 
@@ -1764,8 +1783,11 @@ export class AgentBridge implements PetStateBridge {
     });
   }
 
-  private maybeHandlePanelAction(line: string): boolean {
-    const parsed = parsePanelActionLine(line);
+  private maybeHandlePanelAction(
+    line: string,
+    parsedLine: ParsedWorkerLine = parseWorkerLine(line),
+  ): boolean {
+    const parsed = parsePanelActionLine(line, parsedLine);
     if (!parsed) return false;
     void (async () => {
       let result: AgentPanelHostResult;
@@ -1801,16 +1823,17 @@ export class AgentBridge implements PetStateBridge {
    * generic renderer agent:msg channel). Snapshot RPC responses are already
    * correlated + consumed inside WorkerBridgeCore.
    */
-  private routePetProjectionLine(line: string): boolean {
-    let message: {
-      method?: string;
-      params?: unknown;
-    };
-    try {
-      message = JSON.parse(line) as typeof message;
-    } catch {
-      return false;
-    }
+  private routePetProjectionLine(
+    line: string,
+    parsedLine: ParsedWorkerLine = parseWorkerLine(line),
+  ): boolean {
+    const message = parsedLine.message as
+      | {
+          method?: string;
+          params?: unknown;
+        }
+      | undefined;
+    if (message === undefined) return false;
     if (message.method !== Methods.PetProjectionDelta) return false;
     const delta = message.params as Partial<PetProjectionDelta> | undefined;
     if (
@@ -1840,13 +1863,12 @@ export class AgentBridge implements PetStateBridge {
     }
   }
 
-  private routePetReportLine(line: string): boolean {
-    let message: { method?: string; params?: unknown };
-    try {
-      message = JSON.parse(line) as typeof message;
-    } catch {
-      return false;
-    }
+  private routePetReportLine(
+    line: string,
+    parsedLine: ParsedWorkerLine = parseWorkerLine(line),
+  ): boolean {
+    const message = parsedLine.message as { method?: string; params?: unknown } | undefined;
+    if (message === undefined) return false;
     if (message.method !== PET_REPORT_TO_MIMI_METHOD) return false;
     const event = parsePetReportToMimiEvent(message.params);
     if (!event) {
@@ -2726,7 +2748,7 @@ export class AgentBridge implements PetStateBridge {
     this.workerRuns.observeExternal(sessionId, event);
     observeComputerUseRunEvent(sessionId, event);
     const projected = annotateBrowserRuntimeStreamEvent(event, options.browserVisibility ?? "full");
-    let entry;
+    let entry: SnapshotEntry;
     try {
       entry = this.snapshots.append(sessionId, projected);
     } catch {

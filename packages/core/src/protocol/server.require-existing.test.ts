@@ -1,8 +1,9 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { describe, it, expect } from "bun:test";
 import { AgentServer } from "./server.js";
 import { ChatSessionManager } from "./chat-session-manager.js";
 import { ErrorCodes } from "./types.js";
-import type { Engine, EngineResult } from "../engine/engine.js";
+import type { EngineResult } from "../engine/engine.js";
 import type { GoalConfig } from "../goal/lifecycle.js";
 
 /**
@@ -32,12 +33,10 @@ function makeTransport() {
 /** Fake engine with a controllable on-disk existence probe + run counter. */
 function makeFakeEngine(existsOnDisk: boolean, goal?: GoalConfig) {
   const state = { runs: 0, options: undefined as unknown };
-  const engine = {
-    setAskUser() {},
-    setBrowserBridge() {},
-    setInjectCredential() {},
-    setSessionMessageRouter() {},
-    setPlanMode() {},
+  const engine = createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    getSessionManager: undefined,
+
     isHeadless: () => false,
     sessionExistsOnDisk: () => existsOnDisk,
     getGoal: () => goal,
@@ -52,7 +51,7 @@ function makeFakeEngine(existsOnDisk: boolean, goal?: GoalConfig) {
         usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       };
     },
-  } as unknown as Engine;
+  });
   return { engine, state };
 }
 

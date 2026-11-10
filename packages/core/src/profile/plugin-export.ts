@@ -123,7 +123,7 @@ export function previewProfilePluginExport(
 ): ProfilePluginExportSnapshot {
   if (!WORKSPACE_PROFILE_NAME_RE.test(name)) throw new Error("invalid Profile name");
   const selection = validateProfilePluginExportSelection(input);
-  let profile;
+  let profile: ReturnType<typeof readWorkspaceProfile>;
   try {
     profile = readWorkspaceProfile(name);
   } catch {
@@ -140,7 +140,7 @@ export function previewProfilePluginExport(
   )
     throw new Error("Profile static component references must be literal names, not private paths");
   const reader = new ProfileExportReader();
-  let sources;
+  let sources: ReturnType<typeof discoverProfileExportSources>;
   try {
     sources = discoverProfileExportSources(profile, cwd, reader);
   } catch {

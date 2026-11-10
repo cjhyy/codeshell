@@ -1,3 +1,4 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { describe, it, expect, afterEach } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -9,7 +10,7 @@ import {
   NotificationQueue,
   notificationQueue,
 } from "../tool-system/builtin/agent-notifications.js";
-import type { Engine, EngineResult } from "../engine/engine.js";
+import type { EngineResult } from "../engine/engine.js";
 import {
   createWorkspaceContext,
   workspacePrimaryRoot,
@@ -54,9 +55,14 @@ function makeTransport() {
 /** Fake engine recording every run task; resolves trivially. */
 function makeFakeEngine() {
   const runs: string[] = [];
-  const engine = {
-    setAskUser() {},
-    setPlanMode() {},
+  const engine = createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    dispose: undefined,
+    getSessionManager: undefined,
+    prepareSessionCloseFinalization: undefined,
+
+    resolveSessionRunWorkspace: undefined, // Preserve this fixture's absent optional capability.
+    isGoalContinuationBlocked: undefined, // Preserve this fixture's absent optional capability.
     isHeadless: () => false,
     async run(task: string): Promise<EngineResult> {
       runs.push(task);
@@ -68,7 +74,7 @@ function makeFakeEngine() {
         usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       };
     },
-  } as unknown as Engine;
+  });
   return { engine, runs };
 }
 
@@ -82,12 +88,15 @@ function makeRehydratableEngineFactory(
   const engineFactory = (slice: EngineConfigSlice) => {
     const engineId = ++nextEngineId;
     slices.push(slice);
-    return {
-      setAskUser() {},
-      setBrowserBridge() {},
-      setInjectCredential() {},
-      setSessionMessageRouter() {},
-      setPlanMode() {},
+    return createFakeEngine({
+      // Preserve the optional-capability fallbacks exercised by this fixture.
+      dispose: undefined,
+      getSessionManager: undefined,
+      prepareSessionCloseFinalization: undefined,
+      restoreSessionModel: undefined,
+
+      resolveSessionRunWorkspace: undefined, // Preserve this fixture's absent optional capability.
+      isGoalContinuationBlocked: undefined, // Preserve this fixture's absent optional capability.
       isHeadless: () => false,
       sessionExistsOnDisk: (sessionId: string) =>
         typeof existsOnDisk === "function" ? existsOnDisk(sessionId) : existsOnDisk,
@@ -101,7 +110,7 @@ function makeRehydratableEngineFactory(
           usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
         };
       },
-    } as unknown as Engine;
+    });
   };
   return {
     engineFactory,
@@ -219,9 +228,13 @@ describe("AgentServer — background shell completion wakes an idle session", ()
       roots: [{ id: "root-main", path: worktreeRoot, role: "primary" }],
     });
     const runs: Array<{ cwd?: string; workspaceContext?: WorkspaceContext }> = [];
-    const engine = {
-      setAskUser() {},
-      setPlanMode() {},
+    const engine = createFakeEngine({
+      // Preserve the optional-capability fallbacks exercised by this fixture.
+      dispose: undefined,
+      getSessionManager: undefined,
+      prepareSessionCloseFinalization: undefined,
+
+      isGoalContinuationBlocked: undefined, // Preserve this fixture's absent optional capability.
       isHeadless: () => false,
       resolveSessionRunWorkspace: () => ({
         cwd: worktreeRoot,
@@ -244,7 +257,7 @@ describe("AgentServer — background shell completion wakes an idle session", ()
           usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
         };
       },
-    } as unknown as Engine;
+    });
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () => engine,
@@ -263,9 +276,14 @@ describe("AgentServer — background shell completion wakes an idle session", ()
   });
 
   it("restores the completion when workspace validation prevents the turn from starting", async () => {
-    const engine = {
-      setAskUser() {},
-      setPlanMode() {},
+    const engine = createFakeEngine({
+      // Preserve the optional-capability fallbacks exercised by this fixture.
+      dispose: undefined,
+      getSessionManager: undefined,
+      prepareSessionCloseFinalization: undefined,
+
+      resolveSessionRunWorkspace: undefined, // Preserve this fixture's absent optional capability.
+      isGoalContinuationBlocked: undefined, // Preserve this fixture's absent optional capability.
       isHeadless: () => false,
       async run(): Promise<EngineResult> {
         return {
@@ -276,7 +294,7 @@ describe("AgentServer — background shell completion wakes an idle session", ()
           usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
         };
       },
-    } as unknown as Engine;
+    });
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () => engine,
@@ -296,9 +314,14 @@ describe("AgentServer — background shell completion wakes an idle session", ()
     const runs: string[] = [];
     let release!: () => void;
     const gate = new Promise<void>((r) => (release = r));
-    const engine = {
-      setAskUser() {},
-      setPlanMode() {},
+    const engine = createFakeEngine({
+      // Preserve the optional-capability fallbacks exercised by this fixture.
+      dispose: undefined,
+      getSessionManager: undefined,
+      prepareSessionCloseFinalization: undefined,
+
+      resolveSessionRunWorkspace: undefined, // Preserve this fixture's absent optional capability.
+      isGoalContinuationBlocked: undefined, // Preserve this fixture's absent optional capability.
       isHeadless: () => false,
       async run(task: string): Promise<EngineResult> {
         runs.push(task);
@@ -311,7 +334,7 @@ describe("AgentServer — background shell completion wakes an idle session", ()
           usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
         };
       },
-    } as unknown as Engine;
+    });
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () => engine,
@@ -371,14 +394,19 @@ describe("AgentServer — background shell completion wakes an idle session", ()
     // on session_started; without a terminal event it would stick. The terminal
     // must be `error` (not turn_complete) so a woken automation session's
     // runStatus isn't mislabeled "completed".
-    const engine = {
-      setAskUser() {},
-      setPlanMode() {},
+    const engine = createFakeEngine({
+      // Preserve the optional-capability fallbacks exercised by this fixture.
+      dispose: undefined,
+      getSessionManager: undefined,
+      prepareSessionCloseFinalization: undefined,
+
+      resolveSessionRunWorkspace: undefined, // Preserve this fixture's absent optional capability.
+      isGoalContinuationBlocked: undefined, // Preserve this fixture's absent optional capability.
       isHeadless: () => false,
       async run(): Promise<EngineResult> {
         throw new Error("boom: setup failed");
       },
-    } as unknown as Engine;
+    });
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () => engine,

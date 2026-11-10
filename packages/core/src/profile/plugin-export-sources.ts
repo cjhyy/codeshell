@@ -3,7 +3,7 @@ import { join, relative } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { parseAgentDefinition, type AgentDefinition } from "../agent/agent-definition.js";
 import { readInstalledPlugins } from "../plugins/installedPlugins.js";
-import { userHome } from "../settings/manager.js";
+import { userHome } from "../utils/paths.js";
 import type { WorkspaceProfile } from "./types.js";
 import { ProfileExportReader, missing, safeSegment } from "./plugin-export-files.js";
 import type { ProfilePluginExportComponent } from "./plugin-export-types.js";

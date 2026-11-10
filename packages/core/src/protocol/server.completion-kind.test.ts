@@ -1,5 +1,6 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { describe, expect, test } from "bun:test";
-import type { Engine, EngineResult } from "../engine/engine.js";
+import type { EngineResult } from "../engine/engine.js";
 import { AgentServer } from "./server.js";
 import { AgentClient } from "./client.js";
 import { ChatSessionManager } from "./chat-session-manager.js";
@@ -10,13 +11,14 @@ describe("RunResult completion kind", () => {
     test.each([undefined, "background_wait", "goal_control_stop", "limit_stop"] as const)(
       `${mode} serializes %s in the RPC response`,
       async (completionKind) => {
-        const engine = {
+        const engine = createFakeEngine({
+          // Preserve the optional-capability fallbacks exercised by this fixture.
+          dispose: undefined,
+          getComposition: undefined,
+          getSessionManager: undefined,
+          prepareSessionCloseFinalization: undefined,
+
           isHeadless: () => false,
-          setAskUser() {},
-          setBrowserBridge() {},
-          setInjectCredential() {},
-          setSessionMessageRouter() {},
-          setPlanMode() {},
           async run(): Promise<EngineResult> {
             return {
               text: "launching",
@@ -27,7 +29,7 @@ describe("RunResult completion kind", () => {
               usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
             };
           },
-        } as unknown as Engine;
+        });
         const [clientTransport, serverTransport] = createInProcessTransport();
         const server = new AgentServer({
           transport: serverTransport,

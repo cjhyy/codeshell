@@ -22,7 +22,7 @@ import {
   hashText,
   normalizePageText,
   parseReadCursor,
-} from "@cjhyy/code-shell-cdp";
+} from "../../browser-library/page-utils.js";
 import type { BrowserContext, ElementHandle, Page } from "playwright-core";
 import { collectPageNodes, readFrameText } from "../../browser-library/dom-observation.js";
 import { observeScrollProgress } from "../../browser-library/scroll-observation.js";

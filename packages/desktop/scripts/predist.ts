@@ -90,12 +90,8 @@ function main(): void {
   // Rebuild every direct desktop workspace dependency, in dependency order,
   // BEFORE the desktop bundle. Previously this step only asserted that
   // each `dist` existed (see copyDir) — so whatever a developer or CI job had
-  // left on disk got shipped. Two ways that silently produced a WRONG installer:
-  //   - `packages/cdp/dist` is not tracked by git and was in no build script, yet
-  //     esbuild bundles it INTO main. A clean checkout failed to resolve it; a
-  //     dev box with a stale dist packaged old browser-action code.
-  //   - `bun run --cwd packages/desktop dist` only triggers desktop's own build,
-  //     so core/pet/coding dist could predate the source by any amount.
+  // left on disk got shipped. `bun run --cwd packages/desktop dist` only triggers
+  // desktop's own build, so core/pet/coding dist could predate the source by any amount.
   // Building here makes `dist`/`pack` reproducible from a clean checkout and
   // removes the "did you remember to run the root build first?" failure mode.
   buildDesktopWorkspaceDependencies();

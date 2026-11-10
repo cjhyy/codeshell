@@ -113,7 +113,8 @@ import { sanitizeTaskString } from "../logging/sanitize-messages.js";
 import { TurnLoop } from "./turn-loop.js";
 import type { AskUserFn, AskUserAsyncFn } from "../tool-system/builtin/ask-user.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
-import { SettingsManager, userHome } from "../settings/manager.js";
+import { SettingsManager } from "../settings/manager.js";
+import { userHome } from "../utils/paths.js";
 import { getCredentialAccess } from "../credentials/access.js";
 import type { CapabilityOverride, CapabilityOverrides } from "../settings/schema.js";
 import {
@@ -3563,7 +3564,7 @@ export class Engine {
     // persist: false is the per-session path (ChatSession) — switching one
     // session's model must not rewrite settings.defaults.text, the boot
     // default every future session inherits.
-    if (!perSession) persistActiveModel(entry);
+    if (!perSession) persistActiveModel(entry, this.getSettingsManager());
     return entry;
   }
 

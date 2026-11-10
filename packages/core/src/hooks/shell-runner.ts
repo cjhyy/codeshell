@@ -150,7 +150,7 @@ export async function runShellHook(
   if (signal?.aborted) return {};
 
   return new Promise<HookResult>((resolve) => {
-    let child;
+    let child: ReturnType<typeof spawn>;
     try {
       child = spawn(config.command, [], {
         shell: true,

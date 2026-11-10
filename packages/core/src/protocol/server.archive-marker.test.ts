@@ -1,8 +1,9 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { describe, expect, it } from "bun:test";
 import { ChatSessionManager } from "./chat-session-manager.js";
 import { AgentServer } from "./server.js";
 import { ErrorCodes, Methods } from "./types.js";
-import type { Engine } from "../engine/engine.js";
+
 
 function makeTransport() {
   const sent: any[] = [];
@@ -34,7 +35,7 @@ describe("AgentServer archive_range query anchors passthrough", () => {
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () =>
-        ({
+        createFakeEngine({
           isHeadless: () => true,
           sessionExistsOnDisk: (sessionId: string) => sessionId === "s-archive",
           getSessionManager: () => ({ readSessionMainRoot: () => "/project/from/disk" }),
@@ -42,7 +43,7 @@ describe("AgentServer archive_range query anchors passthrough", () => {
             archiveCalls.push({ sessionId, range, anchors });
             return { before: 100, after: 10 };
           },
-        }) as unknown as Engine,
+        }),
     });
     const t = makeTransport();
     new AgentServer({ transport: t.transport, chatManager });
@@ -78,7 +79,7 @@ describe("AgentServer archive_range query anchors passthrough", () => {
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () =>
-        ({
+        createFakeEngine({
           isHeadless: () => true,
           sessionExistsOnDisk: (sessionId: string) => sessionId === "s-archive",
           getSessionManager: () => ({ readSessionMainRoot: () => "/project/from/disk" }),
@@ -86,7 +87,7 @@ describe("AgentServer archive_range query anchors passthrough", () => {
             archiveCalls.push({ sessionId, range, anchors });
             return { before: 100, after: 10 };
           },
-        }) as unknown as Engine,
+        }),
     });
     const t = makeTransport();
     new AgentServer({ transport: t.transport, chatManager });
@@ -110,7 +111,7 @@ describe("AgentServer archive_range query anchors passthrough", () => {
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () =>
-        ({
+        createFakeEngine({
           isHeadless: () => true,
           sessionExistsOnDisk: (sessionId: string) => sessionId === "s-archive",
           getSessionManager: () => ({ readSessionMainRoot: () => "/project/from/disk" }),
@@ -118,7 +119,7 @@ describe("AgentServer archive_range query anchors passthrough", () => {
             archiveCalls.push({ sessionId, range, anchors });
             return { before: 100, after: 10 };
           },
-        }) as unknown as Engine,
+        }),
     });
     const t = makeTransport();
     new AgentServer({ transport: t.transport, chatManager });
@@ -162,7 +163,7 @@ describe("AgentServer archive_marker query", () => {
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () =>
-        ({
+        createFakeEngine({
           isHeadless: () => true,
           sessionExistsOnDisk: (sessionId: string) => sessionId === "s-marker",
           getSessionManager: () => ({ readSessionMainRoot: () => "/project/from/disk" }),
@@ -170,7 +171,7 @@ describe("AgentServer archive_marker query", () => {
             markerCalls.push({ sessionId, marker });
             return true;
           },
-        }) as unknown as Engine,
+        }),
     });
     const t = makeTransport();
     new AgentServer({ transport: t.transport, chatManager });
@@ -213,12 +214,12 @@ describe("AgentServer archive_marker query", () => {
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () =>
-        ({
+        createFakeEngine({
           isHeadless: () => true,
           sessionExistsOnDisk: () => true,
           getSessionManager: () => ({ readSessionMainRoot: () => "/x" }),
           appendArchiveMarker: () => true,
-        }) as unknown as Engine,
+        }),
     });
     const t = makeTransport();
     new AgentServer({ transport: t.transport, chatManager });
@@ -246,12 +247,12 @@ describe("AgentServer archive_marker query", () => {
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () =>
-        ({
+        createFakeEngine({
           isHeadless: () => true,
           sessionExistsOnDisk: () => true,
           getSessionManager: () => ({ readSessionMainRoot: () => "/x" }),
           appendArchiveMarker: () => true,
-        }) as unknown as Engine,
+        }),
     });
     const t = makeTransport();
     new AgentServer({ transport: t.transport, chatManager });
@@ -276,12 +277,12 @@ describe("AgentServer archive_marker query", () => {
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () =>
-        ({
+        createFakeEngine({
           isHeadless: () => true,
           sessionExistsOnDisk: () => true,
           getSessionManager: () => ({ readSessionMainRoot: () => "/x" }),
           appendArchiveMarker: () => true,
-        }) as unknown as Engine,
+        }),
     });
     const t = makeTransport();
     new AgentServer({ transport: t.transport, chatManager });
@@ -306,14 +307,14 @@ describe("AgentServer archive_marker query", () => {
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () =>
-        ({
+        createFakeEngine({
           isHeadless: () => true,
           sessionExistsOnDisk: (sessionId: string) => sessionId === "s-boom",
           getSessionManager: () => ({ readSessionMainRoot: () => "/project/from/disk" }),
           appendArchiveMarker: () => {
             throw new Error("boom");
           },
-        }) as unknown as Engine,
+        }),
     });
     const t = makeTransport();
     new AgentServer({ transport: t.transport, chatManager });
@@ -340,12 +341,12 @@ describe("AgentServer archive_marker query", () => {
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () =>
-        ({
+        createFakeEngine({
           isHeadless: () => true,
           sessionExistsOnDisk: (sessionId: string) => sessionId === "s-marker",
           getSessionManager: () => ({ readSessionMainRoot: () => "/project/from/disk" }),
           appendArchiveMarker: () => false,
-        }) as unknown as Engine,
+        }),
     });
     const t = makeTransport();
     new AgentServer({ transport: t.transport, chatManager });
@@ -375,11 +376,11 @@ describe("AgentServer archive_marker query", () => {
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () =>
-        ({
+        createFakeEngine({
           isHeadless: () => true,
           sessionExistsOnDisk: () => false,
           getSessionManager: () => ({ readSessionMainRoot: () => undefined }),
-        }) as unknown as Engine,
+        }),
     });
     const t = makeTransport();
     new AgentServer({ transport: t.transport, chatManager });

@@ -24,7 +24,7 @@ import {
   hashText,
   normalizePageText,
   parseReadCursor,
-} from "@cjhyy/code-shell-cdp";
+} from "./page-utils.js";
 import type {
   ElementHandle,
   Frame,

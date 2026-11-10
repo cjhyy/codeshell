@@ -1,0 +1,280 @@
+[
+  {
+    "shard": 4,
+    "head": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+    "log": "/private/tmp/codeshell-final-rest-shards-20261110/shard-4.log",
+    "exit": 130,
+    "signal": "SIGINT",
+    "incomplete": true,
+    "totals": null,
+    "observedPassLines": 432,
+    "observedFailLines": 17,
+    "note": "Observed lines include nested fixtures, not final shard totals; external process-group signal was denied EPERM, then owning exec session was interrupted with Ctrl-C.",
+    "interruption": {
+      "shard": 4,
+      "incomplete": true,
+      "reason": "Top-level await at tests/visible-output-coverage.hub.test.ts:12 calls reserve.listen(0, 127.0.0.1) with no error rejection. Sandbox listen failure leaves module import permanently pending, outside per-test timeout.",
+      "lastProgress": "2026-11-10T07:16:15.564Z",
+      "interruptedAt": "2026-11-10T07:17:32.196Z",
+      "elapsedSeconds": 128
+    },
+    "label": "rest",
+    "distinctFailureNames": 17
+  },
+  {
+    "shard": 5,
+    "head": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+    "log": "/private/tmp/codeshell-final-rest-shards-20261110/shard-5.log",
+    "exit": null,
+    "signal": "SIGTERM",
+    "timeout": false,
+    "interruption": {
+      "reason": "No progress after sandbox listen rejection at packages/server/src/links/remote-catalog.test.ts:39; catalog() waits on server.listen callback without error rejection, reached via rejects assertion at line 78. More than two 30-second test-timeout periods elapsed without completion.",
+      "lastProgress": "2026-11-10T07:20:02.799Z",
+      "requestedAt": "2026-11-10T07:21:12.330Z",
+      "incomplete": true
+    },
+    "incomplete": true,
+    "seconds": 144,
+    "summary": {
+      "pass": [],
+      "fail": [],
+      "skip": [],
+      "completed": []
+    },
+    "failureLines": 92,
+    "label": "rest-server",
+    "totals": null,
+    "observedPassLines": 276,
+    "observedFailLines": 92,
+    "distinctFailureNames": 92
+  },
+  {
+    "shard": 24,
+    "head": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+    "log": "/private/tmp/codeshell-final-rest-shards-20261110/shard-24.log",
+    "exit": null,
+    "signal": "SIGTERM",
+    "timeout": false,
+    "interruption": {
+      "reason": "beforeEach at packages/server/src/panels/management-http.test.ts:44 waits for server.listen success without an error rejection; sandbox listen failure produces an unhandled between-tests error and cannot complete the fixture setup.",
+      "lastProgress": "2026-11-10T07:21:32.726Z",
+      "requestedAt": "2026-11-10T07:21:52.520Z",
+      "incomplete": true
+    },
+    "incomplete": true,
+    "seconds": 40,
+    "summary": {
+      "pass": [],
+      "fail": [],
+      "skip": [],
+      "completed": []
+    },
+    "failureLines": 0,
+    "label": "Hub Panel packages",
+    "totals": null,
+    "observedPassLines": 32,
+    "observedFailLines": 0,
+    "distinctFailureNames": 0
+  },
+  {
+    "shard": 25,
+    "head": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+    "log": "/private/tmp/codeshell-final-rest-shards-20261110/shard-25.log",
+    "exit": 1,
+    "signal": null,
+    "timeout": false,
+    "incomplete": false,
+    "seconds": 25,
+    "summary": {
+      "pass": [
+        40
+      ],
+      "fail": [
+        81
+      ],
+      "skip": [],
+      "completed": []
+    },
+    "failureLines": 162,
+    "label": "Hub Panel runtime and scopes",
+    "totals": {
+      "pass": 40,
+      "fail": 81,
+      "tests": 121
+    },
+    "distinctFailureNames": 81
+  },
+  {
+    "shard": 26,
+    "head": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+    "log": "/private/tmp/codeshell-final-rest-shards-20261110/shard-26.log",
+    "exit": 0,
+    "signal": null,
+    "timeout": false,
+    "incomplete": false,
+    "seconds": 11,
+    "summary": {
+      "pass": [
+        43
+      ],
+      "fail": [
+        0
+      ],
+      "skip": [],
+      "completed": [
+        "43 tests, 0 skipped; 0 failures."
+      ]
+    },
+    "failureLines": 0,
+    "label": "Hub Panel native processes",
+    "totals": {
+      "pass": 43,
+      "fail": 0,
+      "tests": 43
+    },
+    "distinctFailureNames": 0
+  },
+  {
+    "shard": 27,
+    "head": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+    "log": "/private/tmp/codeshell-final-rest-shards-20261110/shard-27.log",
+    "exit": 1,
+    "signal": null,
+    "timeout": false,
+    "incomplete": false,
+    "seconds": 3,
+    "summary": {
+      "pass": [
+        64
+      ],
+      "fail": [
+        24
+      ],
+      "skip": [],
+      "completed": []
+    },
+    "failureLines": 48,
+    "label": "Hub Panel background services",
+    "totals": {
+      "pass": 64,
+      "fail": 24,
+      "tests": 88
+    },
+    "distinctFailureNames": 24
+  },
+  {
+    "shard": 28,
+    "head": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+    "log": "/private/tmp/codeshell-final-rest-shards-20261110/shard-28.log",
+    "exit": 1,
+    "signal": null,
+    "timeout": false,
+    "incomplete": false,
+    "seconds": 9,
+    "summary": {
+      "pass": [
+        73
+      ],
+      "fail": [
+        2
+      ],
+      "skip": [],
+      "completed": []
+    },
+    "failureLines": 4,
+    "label": "Hub Panel tasks",
+    "totals": {
+      "pass": 73,
+      "fail": 2,
+      "tests": 75
+    },
+    "distinctFailureNames": 2
+  },
+  {
+    "shard": 29,
+    "head": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+    "log": "/private/tmp/codeshell-final-rest-shards-20261110/shard-29.log",
+    "exit": 1,
+    "signal": null,
+    "timeout": false,
+    "incomplete": false,
+    "seconds": 8,
+    "summary": {
+      "pass": [
+        0,
+        70
+      ],
+      "fail": [
+        1,
+        15
+      ],
+      "skip": [],
+      "completed": []
+    },
+    "failureLines": 31,
+    "label": "Hub Panel resources and files",
+    "totals": {
+      "pass": 70,
+      "fail": 15,
+      "tests": 85
+    },
+    "distinctFailureNames": 15
+  },
+  {
+    "shard": 30,
+    "head": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+    "log": "/private/tmp/codeshell-final-rest-shards-20261110/shard-30.log",
+    "exit": 0,
+    "signal": null,
+    "timeout": false,
+    "incomplete": false,
+    "seconds": 3,
+    "summary": {
+      "pass": [
+        44
+      ],
+      "fail": [
+        0
+      ],
+      "skip": [],
+      "completed": [
+        "44 tests, 0 skipped; 0 failures."
+      ]
+    },
+    "failureLines": 0,
+    "label": "Hub Panel connections and automations",
+    "totals": {
+      "pass": 44,
+      "fail": 0,
+      "tests": 44
+    },
+    "distinctFailureNames": 0
+  },
+  {
+    "shard": 37,
+    "head": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+    "log": "/private/tmp/codeshell-final-rest-shards-20261110/shard-37.log",
+    "exit": 1,
+    "signal": null,
+    "timeout": false,
+    "incomplete": false,
+    "seconds": 6,
+    "summary": {
+      "pass": [],
+      "fail": [],
+      "skip": [],
+      "completed": []
+    },
+    "failureLines": 0,
+    "label": "isolated Node script suites",
+    "totals": {
+      "tests": 537,
+      "pass": 531,
+      "fail": 6,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "distinctFailureNames": 6
+  }
+]

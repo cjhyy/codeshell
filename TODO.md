@@ -2,7 +2,8 @@
 
 > 本文件只保留**未完成**的待办；已完成实现与历史验收见 Git 历史和 [能力盘点](docs/architecture/11-feature-inventory.md)。
 > 分区规则：**小 feature = 体量 M 及以下（M/S/XS），可单会话直接着手**；**大功能升级 = 体量 L**，需先方案设计再分阶段落地。
-> **当前主线核对：2026-11-06。** `origin/main` 为 `eb5a48e69`（PR #302），源码版本 `0.9.52`；最新 tag 为 v0.9.52（`d97fb6018`，2026-11-02），主线已领先该 tag 228 个提交，尚未发版。11-05～11-06 合入：浏览器（#295 profile 对齐、#300 关窗即停 / 分区只认 profile / Cookie 注入回读 / 面板授权请求、#301 空闲会话标签授权、#303 会话内复用已选标签、#304 Cookie 自动使用与启动去重）、手机远程（#297、#298）、会话实际模型显示（#299）、面板远程审批与进程同意对齐（#293、#294）及面板任务模型请求授权（#296）、外部运行时实时工具策略与 Stop 保持（#302）、账号浏览器登录与桌面账号管理（#305）。以上均为源码合入，装机与实体手机验收未做。`ci.yml` 为 14 项必需检查（ruleset 25940447）。
+> **当前主线核对：2026-11-10。** 本轮已 fetch 的 `origin/main` 为 `fcd8406d5`（PR #332），源码版本 `0.9.52`；相对 v0.9.52（`d97fb6018`，2026-11-02），`git rev-list --count v0.9.52..origin/main` 实测领先 **373 个提交**，这些提交不在该 tag 中。本轮未重新核对远端 Release 或装机状态。架构审查候选尚待 PR、独立审查与合入，不能计作主线完成。
+> **2026-11-05～11-06 历史合入：**浏览器（#295 profile 对齐、#300 关窗即停 / 分区只认 profile / Cookie 注入回读 / 面板授权请求、#301 空闲会话标签授权、#303 会话内复用已选标签、#304 Cookie 自动使用与启动去重）、手机远程（#297、#298）、会话实际模型显示（#299）、面板远程审批与进程同意对齐（#293、#294）及面板任务模型请求授权（#296）、外部运行时实时工具策略与 Stop 保持（#302）、账号浏览器登录与桌面账号管理（#305）。以上均为源码合入，装机与实体手机验收未做。`ci.yml` 为 14 项必需检查（ruleset 25940447）。
 > **2026-11-01 历史核对。** `origin/main` 为 `82c6f37ab`（PR #266），源码版本 `0.9.51`；最新 tag 为 v0.9.51（`3cadd158c`，2026-10-30），其前依次为 v0.9.50 `37369c0b3`、v0.9.49 `9161ff792`、v0.9.48 `d85ef7a23`、v0.9.47 `c6a1c5130`。主线领先 v0.9.51 tag 的改动包括 `773a3bba2`（停用外部输出源）、`0b0f559f1`/`d882fc717`（手机端原生模型选择）与 PR #266（手机面板目录选择）。`ci.yml` 按矩阵展开为 14 项检查；GitHub ruleset 是否全部必需本轮未核对。
 > **2026-10-26 历史发布核对。** 当时 `origin/main` 为 `2661eb04d`，源码版本 `0.9.46`；[v0.9.46](https://github.com/cjhyy/codeshell/releases/tag/v0.9.46) 已于 2026-10-22 正式发布，审计发行基线为 `c7f108ee4`。[发行流程](https://github.com/cjhyy/codeshell/actions/runs/39755931851) 三平台打包及 10 个公开包 smoke 已通过（49 typed entries / 47 runtime entries）；当时主线[普通 CI](https://github.com/cjhyy/codeshell/actions/runs/39771531242) 十二项成功。源码、发行与原生/真实环境验收分别记录，不能继续表述为尚未打包或未发行。
 >
@@ -46,6 +47,7 @@ P2 / P3、统一工作台等后续增强和新增第三方 Link / OAuth / token 
 
 ## 小 feature（体量 M 及以下）
 
+- [ ] **Diff 审查目标与完整任务范围不一致**（P2，M，2026-11-10 已复现）。后台 agent / Shell 在独立 worktree 提交后，原会话审查仍可能查询 main，显示空 diff；本轮文件卡片又只覆盖部分快照。补齐可信交付工作树与 base/head、目标/范围提示、快照完整性和跨工作树回归，保持 Host 授权边界；见[问题记录与验收标准](docs/todo/review-diff-worktree-scope-bug-20261110.md)。本次只登记，尚未修复。
 - **Server 部署性能与跨平台复验**（M）。[2026-10-27 首轮](docs/todo/server-flow-optimization-20261027.md)完成认证热路径、静态传输、关闭竞态与原生门禁；[第二轮](docs/todo/server-flow-optimization-round2-20261027.md)补静态 ETag/304、深页历史读取与账号页面恢复。后续在固定部署候选测端到端延迟，补 Linux/Windows 正式包、反向代理与实体手机弱网，评估历史索引与 Web bundle 拆分；受控源码/CI 验证不替代正式发布验收。
 - **账号上下文与跨端偏好**（M，跨仓）。已完成[可扩展模块机制设计](docs/todo/account-context-distribution-design.md)，尚未实现 context API 与同步。按 Account 注册表/存储/CAS/备份恢复 → Web 主题语言消费 → Desktop 覆盖层推进；首批资料、偏好、可用功能，后续模型/技能/MCP/策略分别接入。保留本机设置优先级、账号切换隔离和秘密引用边界，不把下发配置视为执行授权。
 
@@ -88,7 +90,7 @@ P2 / P3、统一工作台等后续增强和新增第三方 Link / OAuth / token 
 - **Ink meta/escape 兼容**注释保留到明确 major 迁移策略；不能因为带 TODO 就删除兼容行为。
 - **Memory P2 背压 / rate-limit / 注入 cap**按既有产品决策挂起，待真实容量或成本证据触发。
 - **外部 CLI 的审批/排队可观测性**受上游 transcript 限制，继续诚实显示可观测状态，不通过猜测补成完整状态。Pet 外部卡片跳转、项目可见性 override 和真实委派终态收尾已实现。
-- **Core First**：Pet、coding 是独立能力包，经 extension/composition 组合，不反向加回 core 内置业务；Arena 只作为私有保留源码（`packages/arena`，不被宿主加载、不发布），同样不得加回 core（2026-11-01 更正）。Mimi 单入口合并只改 Desktop 宿主呈现层，不改 `packages/pet` 能力边界。
+- **Core First**：Pet、coding 是独立能力包，经 extension/composition 组合，不反向加回 core 内置业务；Arena 已删除，同样不得加回 core（2026-11-10 更新）。Mimi 单入口合并只改 Desktop 宿主呈现层，不改 `packages/pet` 能力边界。
 - **quick-chat 不做 Pi 式 parent 指针树状 Session**：快聊是短对话，需要合并时使用 fork/复制派生，不引入树状会话模型。
 - **IM Gateway 不做编排大脑 / IM 内富交互审批 / 多租户**：Gateway 负责通道、隧道生命周期与入口回推；已绑定 Session 路由和通知能力保留。
 - **同一 Workspace 同时一个 active Profile**；项目专属定制仍放项目指令，项目明确 override 优先。

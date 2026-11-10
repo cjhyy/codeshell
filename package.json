@@ -17,7 +17,7 @@
   },
   "scripts": {
     "preinstall": "node scripts/check-node.cjs",
-    "build": "bun run --filter '@cjhyy/code-shell-link' build && bun run --filter '@cjhyy/code-shell-core' build && bun run --filter '@cjhyy/code-shell-host' build && bun run --filter '@cjhyy/code-shell-pet' build && bun run --filter '@cjhyy/code-shell-capability-optimization-lab' build && bun run --filter '@cjhyy/code-shell-capability-coding' build && bun run --filter '@cjhyy/code-shell-cdp' build && bun run --filter '@cjhyy/code-shell-browser-devtools' build && bun run --filter '@cjhyy/code-shell-web' build && bun run --filter '@cjhyy/code-shell-server' build && bun run --filter '@cjhyy/code-shell-tui' build && bun run --filter '@cjhyy/code-shell-chat' build && bun run scripts/build-meta.ts",
+    "build": "bun run --filter '@cjhyy/code-shell-link' build && bun run --filter '@cjhyy/code-shell-core' build && bun run --filter '@cjhyy/code-shell-host' build && bun run --filter '@cjhyy/code-shell-pet' build && bun run --filter '@cjhyy/code-shell-capability-optimization-lab' build && bun run --filter '@cjhyy/code-shell-capability-coding' build && bun run --filter '@cjhyy/code-shell-browser-devtools' build && bun run --filter '@cjhyy/code-shell-web' build && bun run --filter '@cjhyy/code-shell-server' build && bun run --filter '@cjhyy/code-shell-tui' build && bun run --filter '@cjhyy/code-shell-chat' build && bun run scripts/build-meta.ts",
     "build:server": "bun run --filter '@cjhyy/code-shell-link' build && bun run --filter '@cjhyy/code-shell-core' build && bun run --filter '@cjhyy/code-shell-host' build && bun run --filter '@cjhyy/code-shell-capability-coding' build && bun run --filter '@cjhyy/code-shell-web' build && bun run --filter '@cjhyy/code-shell-server' build",
     "serve:server": "node packages/server/dist/bin/code-shell-serve.js",
     "test:server-panel-recovery": "node scripts/smoke-web-panel-recovery.mjs",
@@ -63,7 +63,8 @@
     "test:output-paced": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-output-paced.mjs",
     "test:output-repair": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-output-journal-repair.mjs",
     "test:deferred-tools": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-deferred-tools.mjs",
-    "test:task-routing": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-task-capability-routing.mjs"
+    "test:task-routing": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-task-capability-routing.mjs",
+    "typecheck:tests": "bun run --filter '@cjhyy/code-shell-host' typecheck:tests && bun run --filter '@cjhyy/code-shell-link' typecheck:tests"
   },
   "dependencies": {
     "@cjhyy/code-shell-core": "workspace:*",

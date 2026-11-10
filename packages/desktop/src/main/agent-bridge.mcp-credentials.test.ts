@@ -29,6 +29,7 @@ test("Desktop bridge keeps Figma MCP tokens in Host and cancels dedicated action
       dedicatedActionCancelled: true,
       staleWorkerReplyDiscarded: true,
       atomicStateReplies: true,
+      workerLineParsing: { lines: 22, parses: 22 },
     });
   } finally {
     rmSync(root, { recursive: true, force: true });

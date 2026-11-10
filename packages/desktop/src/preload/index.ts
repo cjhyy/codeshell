@@ -61,9 +61,17 @@ import type { WindowTitleBarOverlay } from "../shared/window-titlebar";
 import type { RendererConfigurationTarget } from "../shared/renderer-configuration";
 import type { ExternalRuntimeModelEntry } from "../shared/external-runtime-models";
 import type { PanelAppWindowTarget } from "../shared/panel-apps";
-import type { GoalConfig, MobileServerEvent } from "@cjhyy/code-shell-core";
+import type { GoalConfig, MobileServerEvent, RunResult } from "@cjhyy/code-shell-core";
 import type {
   CodeshellApi,
+  RpcResponse,
+  ForkSessionResult,
+  StreamEventEnvelope,
+  ApprovalRequestEnvelope,
+  ApprovalResolvedEnvelope,
+  MobileSessionSettingsEnvelope,
+  AgentStatusEvent,
+  AgentLifecycleEvent,
   LocalPluginPreview,
   PluginHookApprovalResult,
   PluginMcpApprovalResult,
@@ -222,14 +230,12 @@ const pending = new Map<
 >();
 // Multi-session: callbacks receive `{ sessionId, event, seq? }` for stream events
 // and `{ sessionId, requestId, request }` for approval requests.
-const streamListeners: Array<
-  (env: { sessionId: string; event: unknown; seq?: number; epoch?: string }) => void
-> = [];
-const approvalListeners: Array<(env: unknown) => void> = [];
-const approvalResolvedListeners: Array<(env: unknown) => void> = [];
-const mobileSessionSettingsListeners: Array<(env: unknown) => void> = [];
-const statusListeners: Array<(evt: unknown) => void> = [];
-const lifecycleListeners: Array<(evt: unknown) => void> = [];
+const streamListeners: Array<(env: StreamEventEnvelope) => void> = [];
+const approvalListeners: Array<(env: ApprovalRequestEnvelope) => void> = [];
+const approvalResolvedListeners: Array<(env: ApprovalResolvedEnvelope) => void> = [];
+const mobileSessionSettingsListeners: Array<(env: MobileSessionSettingsEnvelope) => void> = [];
+const statusListeners: Array<(evt: AgentStatusEvent) => void> = [];
+const lifecycleListeners: Array<(evt: AgentLifecycleEvent) => void> = [];
 const worktreeCleanupSkippedListeners: Array<(evt: WorktreeCleanupSkippedEvent) => void> = [];
 // Live automation session announcements: `{ sessionId, cwd, title }`, fired
 // once when an in-main automation Engine emits session_started.
@@ -273,7 +279,7 @@ ipcRenderer.on(
 
 ipcRenderer.on("agent:streamEvent", (_e: IpcRendererEvent, env: unknown) => {
   const envelope = normalizeStreamEnvelope(env);
-  if (envelope) streamListeners.forEach((cb) => cb(envelope));
+  if (envelope) streamListeners.forEach((cb) => cb(envelope as StreamEventEnvelope));
 });
 
 ipcRenderer.on("agent:msg", (_e: IpcRendererEvent, line: string) => {
@@ -308,7 +314,7 @@ ipcRenderer.on("agent:msg", (_e: IpcRendererEvent, line: string) => {
     // Multi-session wire format: `{ sessionId, event }` envelope. The
     // renderer routes by sessionId; legacy callers can ignore it.
     const envelope = normalizeStreamEnvelope(params);
-    if (envelope) streamListeners.forEach((cb) => cb(envelope));
+    if (envelope) streamListeners.forEach((cb) => cb(envelope as StreamEventEnvelope));
   } else if (method === "agent/automationSession") {
     const sessionId = (params?.sessionId as string | undefined) ?? "";
     const cwd = (params?.cwd as string | undefined) ?? "";
@@ -337,19 +343,22 @@ ipcRenderer.on("agent:msg", (_e: IpcRendererEvent, line: string) => {
       );
     }
   } else if (method === "agent/approvalRequest") {
+    if (typeof params?.requestId !== "string" || !params.request) return;
     // `{ sessionId, requestId, request }` envelope. requestId lets the
     // renderer echo the decision back via approve(sessionId, requestId, ...).
-    approvalListeners.forEach((cb) => cb(params));
+    approvalListeners.forEach((cb) => cb(msg.params as ApprovalRequestEnvelope));
   } else if (method === "agent/approvalResolved") {
-    approvalResolvedListeners.forEach((cb) => cb(params));
+    if (typeof params?.requestId !== "string") return;
+    approvalResolvedListeners.forEach((cb) => cb(msg.params as ApprovalResolvedEnvelope));
   } else if (method === "agent/mobileSessionSettings") {
-    mobileSessionSettingsListeners.forEach((cb) => cb(params));
+    if (typeof params?.sessionId !== "string") return;
+    mobileSessionSettingsListeners.forEach((cb) => cb(msg.params as MobileSessionSettingsEnvelope));
   } else if (method === "agent/status") {
-    statusListeners.forEach((cb) => cb(params));
+    statusListeners.forEach((cb) => cb(params as AgentStatusEvent));
   }
 });
 
-ipcRenderer.on("agent:lifecycle", (_e: IpcRendererEvent, evt: unknown) => {
+ipcRenderer.on("agent:lifecycle", (_e: IpcRendererEvent, evt: AgentLifecycleEvent) => {
   // Worker death is the fallback that used to be covered by the per-RPC
   // timeout. Now that agent/run runs untimed, a crashed/exited worker would
   // otherwise leave its pending Promise hanging forever (busy never clears).
@@ -400,10 +409,10 @@ function rpc(
   method: string,
   params?: Record<string, unknown>,
   timeoutMs: number = RPC_TIMEOUT_MS,
-): Promise<unknown> {
+): Promise<RpcResponse> {
   const id = nextRpcId();
   const line = JSON.stringify({ jsonrpc: "2.0", id, method, params });
-  return new Promise((resolve, reject) => {
+  return new Promise<RpcResponse>((resolve, reject) => {
     const timer =
       timeoutMs > 0
         ? setTimeout(() => {
@@ -415,7 +424,7 @@ function rpc(
     pending.set(id, {
       resolve: (msg) => {
         if (timer) clearTimeout(timer);
-        resolve(msg);
+        resolve(msg as RpcResponse);
       },
       reject: (err) => {
         if (timer) clearTimeout(timer);
@@ -446,7 +455,7 @@ ipcRenderer.on("externalRuntime:event", (_e, payload: { sessionId?: unknown; eve
   const sessionId = typeof payload?.sessionId === "string" ? payload.sessionId : "";
   const event = payload?.event;
   if (!sessionId || event === undefined) return;
-  streamListeners.forEach((cb) => cb({ sessionId, event }));
+  streamListeners.forEach((cb) => cb({ sessionId, event: event as StreamEventEnvelope["event"] }));
 });
 
 /**
@@ -488,7 +497,12 @@ ipcRenderer.on(
     if (!sessionId || !requestId || payload?.request === undefined) return;
     externalApprovalIds.add(requestId);
     approvalListeners.forEach((cb) =>
-      cb({ sessionId, requestId, request: payload.request, source: "external-runtime" }),
+      cb({
+        sessionId,
+        requestId,
+        request: payload.request as ApprovalRequestEnvelope["request"],
+        source: "external-runtime",
+      }),
     );
   },
 );
@@ -496,7 +510,7 @@ ipcRenderer.on("externalRuntime:approvalResolved", (_e, payload: { requestId?: u
   const requestId = typeof payload?.requestId === "string" ? payload.requestId : "";
   if (!requestId) return;
   externalApprovalIds.delete(requestId);
-  approvalResolvedListeners.forEach((cb) => cb(payload));
+  approvalResolvedListeners.forEach((cb) => cb(payload as ApprovalResolvedEnvelope));
 });
 
 contextBridge.exposeInMainWorld("codeshell", {
@@ -553,7 +567,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     // minutes). The Stop button (agent/cancel) is the abort path, not a clock.
     // Resolve the RunResult itself (the external runtime's shape) and reject an
     // error reply, such as Main's configuration gate, so the caller shows it.
-    rpc("agent/run", { task, ...(opts ?? {}) }, 0).then(rpcResult),
+    rpc("agent/run", { task, ...(opts ?? {}) }, 0).then(rpcResult<RunResult>),
   /**
    * Cancel a session's running turn. sessionId is required for the
    * multi-session worker; legacy callers that omitted it routed through
@@ -622,7 +636,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     decisionOrReason?: "approve" | "deny" | string,
     reasonOrAnswer?: string,
     answer?: string,
-    scopeArg?: "once" | "session" | "project",
+    scopeArg?: "once" | "session" | "project" | "file" | "dir" | "tool",
     pathScopeArg?: "file" | "dir" | "tool",
   ) => {
     // Multi-session form: approve(sessionId, requestId, decision, reason?, answer?, scope?, pathScope?)
@@ -645,7 +659,7 @@ contextBridge.exposeInMainWorld("codeshell", {
       decision = decisionOrReason as "approve" | "deny";
       reason = reasonOrAnswer;
       answerText = answer;
-      scope = scopeArg;
+      scope = scopeArg as "once" | "session" | "project" | undefined;
       pathScope = pathScopeArg;
     } else {
       // Legacy: first arg is requestId; scope/pathScope ride in the slots after
@@ -654,7 +668,9 @@ contextBridge.exposeInMainWorld("codeshell", {
       decision = requestIdOrDecision as "approve" | "deny";
       reason = decisionOrReason as string | undefined;
       answerText = reasonOrAnswer;
-      scope = (answer as "once" | "session" | "project" | undefined) ?? scopeArg;
+      scope =
+        (answer as "once" | "session" | "project" | undefined) ??
+        (scopeArg as "once" | "session" | "project" | undefined);
       pathScope = (scopeArg as "file" | "dir" | "tool" | undefined) ?? pathScopeArg;
     }
     // Build the approve branch of ApprovalResult. `once` (or absent) is the
@@ -707,7 +723,10 @@ contextBridge.exposeInMainWorld("codeshell", {
     fromEventId?: string;
     toEventId?: string;
     quickChatClaimId?: string;
-  }) => rpc("agent/forkSession", params, params.mode === "summary" ? 0 : undefined).then(rpcResult),
+  }) =>
+    rpc("agent/forkSession", params, params.mode === "summary" ? 0 : undefined).then(
+      rpcResult<ForkSessionResult>,
+    ),
   compactSession: (sessionId: string) =>
     rpc("agent/query", { type: "compact", sessionId }).then(rpcResult) as Promise<{
       type: "compact";
@@ -721,7 +740,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     reloadModels?: boolean;
     reloadSettings?: boolean;
   }) => rpc("agent/configure", params),
-  onStreamEvent: (cb: (env: { sessionId: string; event: unknown }) => void): (() => void) => {
+  onStreamEvent: (cb: (env: StreamEventEnvelope) => void): (() => void) => {
     streamListeners.push(cb);
     return () => {
       const i = streamListeners.indexOf(cb);
@@ -774,35 +793,35 @@ contextBridge.exposeInMainWorld("codeshell", {
     }
     return pending;
   },
-  onApprovalRequest: (cb: (req: unknown) => void): (() => void) => {
+  onApprovalRequest: (cb: (req: ApprovalRequestEnvelope) => void): (() => void) => {
     approvalListeners.push(cb);
     return () => {
       const i = approvalListeners.indexOf(cb);
       if (i >= 0) approvalListeners.splice(i, 1);
     };
   },
-  onApprovalResolved: (cb: (req: unknown) => void): (() => void) => {
+  onApprovalResolved: (cb: (req: ApprovalResolvedEnvelope) => void): (() => void) => {
     approvalResolvedListeners.push(cb);
     return () => {
       const i = approvalResolvedListeners.indexOf(cb);
       if (i >= 0) approvalResolvedListeners.splice(i, 1);
     };
   },
-  onMobileSessionSettings: (cb: (env: unknown) => void): (() => void) => {
+  onMobileSessionSettings: (cb: (env: MobileSessionSettingsEnvelope) => void): (() => void) => {
     mobileSessionSettingsListeners.push(cb);
     return () => {
       const i = mobileSessionSettingsListeners.indexOf(cb);
       if (i >= 0) mobileSessionSettingsListeners.splice(i, 1);
     };
   },
-  onStatus: (cb: (evt: unknown) => void): (() => void) => {
+  onStatus: (cb: (evt: AgentStatusEvent) => void): (() => void) => {
     statusListeners.push(cb);
     return () => {
       const i = statusListeners.indexOf(cb);
       if (i >= 0) statusListeners.splice(i, 1);
     };
   },
-  onAgentLifecycle: (cb: (evt: unknown) => void): (() => void) => {
+  onAgentLifecycle: (cb: (evt: AgentLifecycleEvent) => void): (() => void) => {
     lifecycleListeners.push(cb);
     return () => {
       const i = lifecycleListeners.indexOf(cb);
@@ -882,7 +901,8 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("memory:list", level, scope, cwd, profileName),
   readMemory: (level: string, scope: string, name: string, cwd?: string, profileName?: string) =>
     ipcRenderer.invoke("memory:read", level, scope, name, cwd, profileName),
-  saveMemory: (input: Record<string, unknown>) => ipcRenderer.invoke("memory:save", input),
+  saveMemory: (input: Parameters<CodeshellApi["saveMemory"]>[0]) =>
+    ipcRenderer.invoke("memory:save", input),
   deleteMemory: (level: string, scope: string, name: string, cwd?: string, profileName?: string) =>
     ipcRenderer.invoke("memory:delete", level, scope, name, cwd, profileName),
   // 审批门 (pending global memories)
@@ -1257,7 +1277,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     reviewToken: string;
     overwrite?: boolean;
   }): Promise<
-    | { ok: true; id: string }
+    | { ok: true; id: string; packageDigest: string }
     | { ok: false; alreadyInstalled?: true; previewChanged?: true; error: string }
   > => ipcRenderer.invoke("panel-apps:installLocal", input),
   installPanelAppUpdate: (
@@ -1362,8 +1382,8 @@ contextBridge.exposeInMainWorld("codeshell", {
   downloadUpdate: () => ipcRenderer.invoke("updater:download"),
   installUpdate: () => ipcRenderer.invoke("updater:install"),
   getUpdaterStatus: () => ipcRenderer.invoke("updater:status"),
-  onUpdaterStatus: (cb: (status: unknown) => void): (() => void) => {
-    const h = (_e: IpcRendererEvent, status: unknown) => cb(status);
+  onUpdaterStatus: (cb: Parameters<CodeshellApi["onUpdaterStatus"]>[0]): (() => void) => {
+    const h = (_e: IpcRendererEvent, status: Parameters<typeof cb>[0]) => cb(status);
     ipcRenderer.on("updater:status", h);
     return () => ipcRenderer.removeListener("updater:status", h);
   },
@@ -1689,8 +1709,8 @@ contextBridge.exposeInMainWorld("codeshell", {
     cancelWechatLogin: () => ipcRenderer.invoke("im-gateway:wechatCancelLogin"),
     submitWechatVerification: (input: { loginId: string; code: string }) =>
       ipcRenderer.invoke("im-gateway:wechatSubmitVerification", input),
-    onEvent: (cb: (event: unknown) => void): (() => void) => {
-      const handler = (_event: IpcRendererEvent, payload: unknown) => cb(payload);
+    onEvent: (cb: Parameters<CodeshellApi["imGateway"]["onEvent"]>[0]): (() => void) => {
+      const handler = (_event: IpcRendererEvent, payload: Parameters<typeof cb>[0]) => cb(payload);
       ipcRenderer.on("im-gateway:event", handler);
       return () => ipcRenderer.removeListener("im-gateway:event", handler);
     },
@@ -1710,8 +1730,8 @@ contextBridge.exposeInMainWorld("codeshell", {
     send: (roomId: string, text: string) => ipcRenderer.invoke("rooms:send", roomId, text),
     history: (roomId: string, sinceSeq?: number) =>
       ipcRenderer.invoke("rooms:history", roomId, sinceSeq),
-    onMessage: (cb: (env: { roomId: string; msg: unknown }) => void): (() => void) => {
-      const h = (_e: IpcRendererEvent, env: { roomId: string; msg: unknown }) => cb(env);
+    onMessage: (cb: Parameters<CodeshellApi["rooms"]["onMessage"]>[0]): (() => void) => {
+      const h = (_e: IpcRendererEvent, env: Parameters<typeof cb>[0]) => cb(env);
       ipcRenderer.on("room:message", h);
       return () => ipcRenderer.removeListener("room:message", h);
     },
@@ -1814,8 +1834,10 @@ contextBridge.exposeInMainWorld("codeshell", {
       ipcRenderer.on("ccRoom:approvalResolved", h);
       return () => ipcRenderer.removeListener("ccRoom:approvalResolved", h);
     },
-    onRoomState: (cb: (room: unknown) => void): (() => void) => {
-      const h = (_e: IpcRendererEvent, room: unknown) => cb(room);
+    onRoomState: (
+      cb: Parameters<NonNullable<CodeshellApi["ccRoom"]["onRoomState"]>>[0],
+    ): (() => void) => {
+      const h = (_e: IpcRendererEvent, room: Parameters<typeof cb>[0]) => cb(room);
       ipcRenderer.on("ccRoom:roomState", h);
       return () => ipcRenderer.removeListener("ccRoom:roomState", h);
     },
@@ -1825,4 +1847,4 @@ contextBridge.exposeInMainWorld("codeshell", {
   quota: {
     get: (provider?: "claude" | "codex" | "both") => ipcRenderer.invoke("quota:get", provider),
   },
-});
+} satisfies CodeshellApi);

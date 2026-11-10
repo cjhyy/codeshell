@@ -1,0 +1,54 @@
+{
+  "candidate": "d65afec5b2af55ee3ed4f9de657005edd90fb0ea",
+  "headBefore": "d65afec5b2af55ee3ed4f9de657005edd90fb0ea",
+  "headAfter": "d65afec5b2af55ee3ed4f9de657005edd90fb0ea",
+  "readOnly": true,
+  "distReadyConfirmedByCoordinator": true,
+  "command": "TMPDIR=/private/tmp/codeshell-architecture-tmp node scripts/run-bun-test-shard.mjs --timeout 30000 --preload /private/tmp/codeshell-c4-final-integrated-log-preload.ts packages/core/src/protocol",
+  "exitCode": 1,
+  "pass": 428,
+  "fail": 11,
+  "tests": 439,
+  "files": 74,
+  "assertions": 1534,
+  "sameFailureNamesAsOriginalC4Baseline": true,
+  "failureNames": [
+    "AgentServer cross-Session messaging with a real Engine > cold-starts a project-bound target with its authoritative workspace and persists the turn",
+    "AgentServer cross-Session messaging with a real Engine > returns a delayed real target reply to the source mailbox with its dispatch id",
+    "ChatSessionManager resident Engine root migration > re-resolves every project-scoped authority from the target root before the next turn",
+    "TCP approval routing is connection-owned > does not expose A's approval to B and accepts A's matching four-tuple",
+    "TCP approval routing is connection-owned > fails a pending approval closed when its owning TCP connection disconnects",
+    "TCP approval routing is connection-owned > rejects a second connection that tries to claim an active session",
+    "agent/run model > acknowledges a configured intent only after its actual claim and returns duplicate receipts without replay",
+    "agent/run model > persists the actual per-run model on first use and after a later native switch",
+    "listenTcp \u2014 real localhost round trip > accepts a connection and exchanges a framed message",
+    "listenTcp \u2014 real localhost round trip > defaults to 127.0.0.1 (does not bind a public interface)",
+    "model keys resolve the current project connection without changing the shared pool"
+  ],
+  "c3AddedCases": 31,
+  "c3AddedCasesPassed": 31,
+  "queryCaseInventory": "/private/tmp/codeshell-c3-query-case-count.json",
+  "logger": {
+    "files": [
+      "/private/tmp/codeshell-c4-final-integrated-diagnostic-files/engine-2026-11-10.log"
+    ],
+    "records": 247,
+    "bytes": 60674,
+    "unexpectedFakeEngine": 0,
+    "decisionHookFailures": 0,
+    "engineDisposeFailures": 0
+  },
+  "log": "/private/tmp/codeshell-c4-final-integrated-protocol.log",
+  "firstIntegrationAttempt": {
+    "candidate": "f31986b4268231ee7ce1b9fcc5a63d2098cbd98a",
+    "pass": 397,
+    "fail": 42,
+    "tests": 439,
+    "cause": "31 C3 query fixture cases hit the strict getComposition default; real integration omission, corrected by explicit fixture absence",
+    "log": "/private/tmp/codeshell-c4-integrated-protocol.log"
+  },
+  "sourceCommits": [
+    "0a6fa12df3c646c763098f87bd270569c6dd01b3",
+    "f38da41f86ce1af36ec68ee32752fc8844d38668"
+  ]
+}

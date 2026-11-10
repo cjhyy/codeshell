@@ -1,3 +1,4 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { test, expect } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -44,15 +45,11 @@ test("close cancels a cold Goal resume waiting on migration before it can reopen
     engineFactory: (_slice) => {
       ++created;
       const sessions = new SessionManager(storage);
-      return {
+      return createFakeEngine({
         sessionExistsOnDisk: (id: string) => sessions.exists(id),
         getSessionManager: () => sessions,
         isHeadless: () => false,
         restoreSessionModel() {},
-        setAskUser() {},
-        setBrowserBridge() {},
-        setInjectCredential() {},
-        setSessionMessageRouter() {},
         getGoal: (id: string) => sessions.readActiveGoal(id),
         async dispose() {},
         async run() {
@@ -65,7 +62,7 @@ test("close cancels a cold Goal resume waiting on migration before it can reopen
             usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
           };
         },
-      } as unknown as Engine;
+      });
     },
   });
   const replies: any[] = [];
@@ -183,14 +180,14 @@ test("failed persisted model restoration never publishes a partial Engine", asyn
     sessionMetadata: { exists: () => true, readSessionMainRoot: () => "/project" },
     engineFactory: () => {
       created++;
-      return {
+      return createFakeEngine({
         restoreSessionModel() {
           throw new Error("Selected text connection is unavailable");
         },
         async dispose() {
           disposed++;
         },
-      } as unknown as Engine;
+      });
     },
   });
   for (let attempt = 0; attempt < 2; attempt++) {

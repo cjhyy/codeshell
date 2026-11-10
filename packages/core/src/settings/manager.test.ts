@@ -12,8 +12,36 @@ import {
   symlinkSync,
 } from "node:fs";
 import { join } from "node:path";
-import { tmpdir } from "node:os";
-import { SettingsManager, isProtectedSettingKey } from "./manager.js";
+import { homedir, tmpdir } from "node:os";
+import { SettingsManager, isProtectedSettingKey, userHome as settingsUserHome } from "./manager.js";
+import { codeShellHome as sessionHome } from "../session/session-paths.js";
+import { codeShellHome, userHome } from "../utils/paths.js";
+
+test("shared path helpers preserve distinct HOME and CODE_SHELL_HOME resolution", () => {
+  const previousHome = process.env.HOME;
+  const previousCodeShellHome = process.env.CODE_SHELL_HOME;
+  try {
+    expect(settingsUserHome).toBe(userHome);
+    expect(sessionHome).toBe(codeShellHome);
+    process.env.HOME = join(tmpdir(), "settings-home");
+    process.env.CODE_SHELL_HOME = join(tmpdir(), "session-home");
+    expect(userHome()).toBe(process.env.HOME);
+    expect(codeShellHome()).toBe(process.env.CODE_SHELL_HOME);
+    process.env.HOME = "";
+    process.env.CODE_SHELL_HOME = "";
+    expect(userHome()).toBe("");
+    expect(codeShellHome()).toBe(join(homedir(), ".code-shell"));
+    delete process.env.HOME;
+    delete process.env.CODE_SHELL_HOME;
+    expect(userHome()).toBe(homedir());
+    expect(codeShellHome()).toBe(join(homedir(), ".code-shell"));
+  } finally {
+    if (previousHome === undefined) delete process.env.HOME;
+    else process.env.HOME = previousHome;
+    if (previousCodeShellHome === undefined) delete process.env.CODE_SHELL_HOME;
+    else process.env.CODE_SHELL_HOME = previousCodeShellHome;
+  }
+});
 
 describe("isProtectedSettingKey", () => {
   test("blocks trust-root fields (exact and nested)", () => {

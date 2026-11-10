@@ -23,7 +23,7 @@ import {
 } from "./background-jobs.js";
 import { backgroundJobHistory, type BackgroundJobUnknownReason } from "./background-job-history.js";
 import { backgroundShellManager, type BgShell } from "../../runtime/background-shell.js";
-import { codeShellHome } from "../../session/session-manager.js";
+import { codeShellHome } from "../../utils/paths.js";
 
 export type BackgroundWorkKind = "subagent" | "job" | "shell";
 

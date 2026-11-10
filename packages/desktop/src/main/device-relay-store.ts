@@ -1,3 +1,4 @@
+import type { Stats } from "node:fs";
 import {
   constants,
   closeSync,
@@ -90,7 +91,7 @@ export class DeviceRelayStore {
     unlinkSync(this.temporary(encrypted));
   }
   load(): RelayRegistration | undefined {
-    let metadata;
+    let metadata: Stats;
     try {
       metadata = lstatSync(this.path);
     } catch (error) {

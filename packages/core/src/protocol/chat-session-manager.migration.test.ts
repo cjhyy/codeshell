@@ -1,3 +1,4 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { describe, expect, it } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -77,7 +78,10 @@ function fakeEngine(
     ) => SessionWorkspace;
   }> = {},
 ): Engine {
-  return {
+  return createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    getSessionManager: undefined,
+
     getPermissionMode: () => state.mode,
     setPermissionMode: (mode: PermissionMode) => {
       state.mode = mode;
@@ -101,7 +105,7 @@ function fakeEngine(
     dispose: async () => {
       state.disposeCalls += 1;
     },
-  } as unknown as Engine;
+  });
 }
 
 function state(mode: PermissionMode = "default"): FakeEngineState {

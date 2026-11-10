@@ -1,1 +1,0 @@
-{"verified": true, "sourceRows": 12, "reportLinks": 7, "excerptRangeObjectsChecked": 17}

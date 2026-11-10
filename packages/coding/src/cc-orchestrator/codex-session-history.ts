@@ -1,3 +1,4 @@
+import type { Stats } from "node:fs";
 import {
   readdirSync,
   readFileSync,
@@ -227,7 +228,7 @@ function* walkRollouts(root: string): Generator<string> {
   }
   for (const name of entries) {
     const full = join(root, name);
-    let st;
+    let st: Stats;
     try {
       st = statSync(full);
     } catch {

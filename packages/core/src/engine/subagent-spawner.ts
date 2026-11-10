@@ -255,7 +255,7 @@ class ChildRunSupervisor implements LiveChildControl {
         if (lifecycleSignal?.aborted) cascadeAbort();
         else lifecycleSignal?.addEventListener("abort", cascadeAbort, { once: true });
         this.state = agentDirection ? "redriving" : "starting";
-        let result;
+        let result: Awaited<ReturnType<ChildEngineRuntime["run"]>>;
         try {
           result = await this.runtime.run(nextTask, {
             ...options,

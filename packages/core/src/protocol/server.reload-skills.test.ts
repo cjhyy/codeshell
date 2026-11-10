@@ -1,10 +1,11 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { afterEach, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { AgentServer } from "./server.js";
 import { scanSkills, invalidateSkillCache } from "../skills/scanner.js";
-import type { Engine } from "../engine/engine.js";
+
 import { validateSettings } from "../settings/schema.js";
 
 const directories: string[] = [];
@@ -25,10 +26,12 @@ test("configure reloadSettings refreshes edited Skill content without restarting
   expect(scanSkills(cwd).find((skill) => skill.name === "hot-reload")?.content).toBe("Old body\n");
   let onMessage: (message: any) => void = () => {};
   const sent: any[] = [];
-  const engine = {
-    setAskUser() {},
-    setPlanMode() {},
-    setPermissionMode() {},
+  const engine = createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    dispose: undefined,
+    getComposition: undefined,
+
+    getConfig: undefined, // Preserve this fixture's absent optional capability.
     isHeadless: () => false,
     getEffectiveDisabledLists: () => ({
       disabledSkills: [],
@@ -36,7 +39,7 @@ test("configure reloadSettings refreshes edited Skill content without restarting
       disabledPluginHooks: [],
     }),
     refreshRuntimeConfig() {},
-  } as unknown as Engine;
+  });
   const server = new AgentServer({
     engine,
     settingsReader: () => validateSettings({}),

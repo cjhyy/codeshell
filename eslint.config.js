@@ -17,18 +17,16 @@ const workspacePackageRoots = [
   "core",
   "host",
   "coding",
-  "arena",
   "pet",
   "optimization-lab",
   "server",
   "web",
   "tui",
   "chat",
-  "cdp",
   "browser-devtools",
   "desktop",
 ].map((name) => packageRoot("packages", name));
-const capabilityPackageRoots = ["coding", "arena", "pet", "optimization-lab"].map((name) => ({
+const capabilityPackageRoots = ["coding", "pet", "optimization-lab"].map((name) => ({
   name,
   root: packageRoot("packages", name),
 }));
@@ -56,6 +54,11 @@ function isCodeShellPackage(specifier) {
 const rendererBrowserSafeRuntimeImports = new Set([
   "@cjhyy/code-shell-core/browser/panel-app-runtime",
   "@cjhyy/code-shell-web",
+]);
+
+// Desktop intentionally compiles the shared SPA as its mobile entry (vite.mobile.config.ts).
+const crossWorkspaceRelativeImports = new Map([
+  ["packages/desktop/src/mobile/main.tsx", ["packages/web/app/"]],
 ]);
 
 function isInsideFunction(node) {
@@ -213,6 +216,28 @@ const noTopLevelSideEffectsRule = {
   }),
 };
 
+const noUntypedUninitializedVariableRule = {
+  meta: {
+    type: "problem",
+    messages: {
+      forbidden: "add an explicit type or initializer; untyped empty declarations become any",
+    },
+  },
+  create: (context) => ({
+    VariableDeclarator(node) {
+      if (node.init || node.id.typeAnnotation) return;
+      const declaration = node.parent;
+      const loop = declaration.parent;
+      if (
+        (loop.type === "ForInStatement" || loop.type === "ForOfStatement") &&
+        loop.left === declaration
+      )
+        return;
+      context.report({ node, messageId: "forbidden" });
+    },
+  }),
+};
+
 const codeshellBoundaryImportsRule = {
   meta: {
     type: "problem",
@@ -226,6 +251,9 @@ const codeshellBoundaryImportsRule = {
         "capability packages must not depend on another CodeShell product or host package",
       rendererToCodeshell:
         "renderer must not import codeshell packages at runtime — talk to main via window.codeshell.* (type-only imports are allowed)",
+      crossWorkspaceRelative:
+        "use a declared workspace package entry instead of a cross-package relative import",
+      webCoreRuntime: "web may import core contracts only as types",
     },
   },
   create(context) {
@@ -234,9 +262,42 @@ const codeshellBoundaryImportsRule = {
       isInsideRoot(filename, root),
     );
     const isTestFile = /\.(?:test|spec)\.[cm]?[jt]sx?$/.test(filename);
+    const isFixture =
+      /\.fixture\.[cm]?[jt]sx?$/.test(filename) ||
+      /\/(?:__fixtures__|test-utils)\//.test(toPosixPath(filename));
+    const ownWorkspace = workspacePackageRoots.find((root) => isInsideRoot(filename, root));
 
     function check(node, specifier, isTypeOnly) {
       if (typeof specifier !== "string") return;
+
+      if (!isTestFile && !isFixture && ownWorkspace) {
+        if (
+          specifier.startsWith(".") &&
+          workspacePackageRoots.some(
+            (root) => root !== ownWorkspace && resolvesInsideRoot(filename, specifier, root),
+          )
+        ) {
+          const source = toPosixPath(path.relative(repoRoot, filename));
+          const target = toPosixPath(
+            path.relative(repoRoot, path.resolve(path.dirname(filename), specifier)),
+          );
+          const allowed = crossWorkspaceRelativeImports.get(source) ?? [];
+          if (
+            !allowed.some((entry) =>
+              entry.endsWith("/") ? target.startsWith(entry) : target === entry,
+            )
+          ) {
+            context.report({ node, messageId: "crossWorkspaceRelative" });
+          }
+        }
+        if (
+          isInsideRoot(filename, packageRoot("packages", "web")) &&
+          !isTypeOnly &&
+          matchesPackage(specifier, ["@cjhyy/code-shell-core"])
+        ) {
+          context.report({ node, messageId: "webCoreRuntime" });
+        }
+      }
 
       if (isInsideRoot(filename, coreSrcRoot)) {
         const isCoreSelfImport =
@@ -305,16 +366,36 @@ const codeshellBoundaryImportsRule = {
 
     return {
       ImportDeclaration(node) {
-        check(node, node.source?.value, node.importKind === "type");
+        const typeOnly =
+          node.importKind === "type" ||
+          (node.specifiers.length > 0 &&
+            node.specifiers.every(
+              (entry) => entry.type === "ImportSpecifier" && entry.importKind === "type",
+            ));
+        check(node, node.source?.value, typeOnly);
       },
       ImportExpression(node) {
         check(node, node.source?.value, false);
       },
       ExportNamedDeclaration(node) {
-        if (node.source) check(node, node.source.value, node.exportKind === "type");
+        const typeOnly =
+          node.exportKind === "type" ||
+          (node.specifiers.length > 0 &&
+            node.specifiers.every((entry) => entry.exportKind === "type"));
+        if (node.source) check(node, node.source.value, typeOnly);
       },
       ExportAllDeclaration(node) {
         check(node, node.source?.value, node.exportKind === "type");
+      },
+      CallExpression(node) {
+        if (node.callee.type === "Identifier" && node.callee.name === "require") {
+          check(node, node.arguments[0]?.value, false);
+        }
+      },
+      TSImportEqualsDeclaration(node) {
+        if (node.moduleReference.type === "TSExternalModuleReference") {
+          check(node, node.moduleReference.expression?.value, node.importKind === "type");
+        }
       },
     };
   },
@@ -351,6 +432,7 @@ export default [
           "no-process-cwd": noProcessCwdRule,
           "no-process-env-top-level": noProcessEnvTopLevelRule,
           "codeshell-boundary-imports": codeshellBoundaryImportsRule,
+          "no-untyped-uninitialized-variable": noUntypedUninitializedVariableRule,
         },
       },
       "react-hooks": {
@@ -423,6 +505,16 @@ export default [
     },
   },
   {
+    files: [
+      "packages/{core,coding,server,web,host,pet,chat,link}/src/**/*.{ts,tsx}",
+      "packages/desktop/src/main/**/*.{ts,tsx}",
+    ],
+    ignores: ["**/*.{test,spec}.{ts,tsx}", "**/*.d.ts"],
+    rules: {
+      "custom-rules/no-untyped-uninitialized-variable": "error",
+    },
+  },
+  {
     files: ["packages/core/src/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-imports": [
@@ -444,9 +536,31 @@ export default [
     },
   },
   {
+    files: ["packages/*/src/**/*.{ts,tsx,js,mjs,cjs}", "packages/web/app/**/*.{ts,tsx,js,mjs,cjs}"],
+    rules: { "custom-rules/codeshell-boundary-imports": "error" },
+  },
+  {
+    files: ["packages/web/src/**/*.{ts,tsx}", "packages/web/app/**/*.{ts,tsx}"],
+    ignores: ["**/*.{test,spec,fixture}.{ts,tsx}", "**/__fixtures__/**", "**/test-utils/**"],
+    rules: {
+      "no-restricted-imports": "off",
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@cjhyy/code-shell-core", "@cjhyy/code-shell-core/*"],
+              allowTypeImports: true,
+              message: "web may import core contracts only as types",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: [
       "packages/coding/src/**/*.{ts,tsx}",
-      "packages/arena/src/**/*.{ts,tsx}",
       "packages/pet/src/**/*.{ts,tsx}",
       "packages/optimization-lab/src/**/*.{ts,tsx}",
     ],

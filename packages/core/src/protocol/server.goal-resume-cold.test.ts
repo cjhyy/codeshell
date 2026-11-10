@@ -1,8 +1,9 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { afterEach, describe, expect, it } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { Engine, EngineResult } from "../engine/engine.js";
+import type { EngineResult } from "../engine/engine.js";
 import { SessionManager } from "../session/session-manager.js";
 import { ChatSessionManager, type EngineConfigSlice } from "./chat-session-manager.js";
 import { AgentServer } from "./server.js";
@@ -74,21 +75,18 @@ describe("AgentServer cold Goal resume", () => {
       engineFactory: (slice) => {
         factorySlices.push({ ...slice });
         const sessions = new SessionManager(storageDir);
-        return {
+        return createFakeEngine({
+          resolveSessionRunWorkspace: undefined, // Preserve this fixture's absent optional capability.
           sessionExistsOnDisk: (id: string) => sessions.exists(id),
           getSessionManager: () => sessions,
           restoreSessionModel: (id: string) => restoredModels.push(id),
           getGoal: (id: string) => sessions.readActiveGoal(id),
           isHeadless: () => false,
-          setAskUser() {},
-          setBrowserBridge() {},
-          setInjectCredential() {},
-          setSessionMessageRouter() {},
           async run(task: string, opts: { injected?: boolean }): Promise<EngineResult> {
             runs.push({ task, configuredCwd: slice.cwd, injected: opts.injected });
             return result(sessionId);
           },
-        } as unknown as Engine;
+        });
       },
     });
     const transport = makeTransport();

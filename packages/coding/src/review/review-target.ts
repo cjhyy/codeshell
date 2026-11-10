@@ -1,3 +1,4 @@
+import type { Stats } from "node:fs";
 import { execFile } from "node:child_process";
 import { constants } from "node:fs";
 import { lstat, open } from "node:fs/promises";
@@ -320,7 +321,7 @@ async function addedFilePatch(
 ): Promise<string | null> {
   const absolute = resolve(repoRoot, file);
   const bounded = repositoryPath(repoRoot, repoRoot, file);
-  let stat;
+  let stat: Stats;
   try {
     // Refuse symlinks in every component, including a directory replaced after ls-files.
     let component = repoRoot;

@@ -1,3 +1,4 @@
+import type { Dirent } from "node:fs";
 /**
  * Read run snapshots/events/checkpoints from ~/.code-shell/runs/<id>/.
  *
@@ -236,7 +237,7 @@ function snapshotToSummary(snap: Record<string, unknown>, authoritativeRunId: st
 }
 
 export async function listRuns(baseDir: string = RUNS_DIR): Promise<RunSummary[]> {
-  let entries;
+  let entries: Dirent[];
   try {
     entries = await fs.readdir(baseDir, { withFileTypes: true });
   } catch (e) {

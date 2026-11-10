@@ -1,6 +1,7 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { describe, it, expect, beforeEach } from "bun:test";
 import { AgentServer } from "./server.js";
-import type { Engine } from "../engine/engine.js";
+
 import { asyncAgentRegistry } from "../tool-system/builtin/agent-registry.js";
 import { backgroundJobRegistry } from "../tool-system/builtin/background-jobs.js";
 
@@ -29,7 +30,12 @@ function makeTransport() {
 }
 
 function makeEngine() {
-  return { isHeadless: () => true } as unknown as Engine;
+  return createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    getComposition: undefined,
+    getSessionManager: undefined,
+    isHeadless: () => true,
+  });
 }
 
 function lastResult(sent: any[]): any {

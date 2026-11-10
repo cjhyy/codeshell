@@ -147,7 +147,7 @@ export async function runPluginCommandHook(
   if (signal?.aborted) return {};
 
   return new Promise<HookResult>((resolve) => {
-    let child;
+    let child: ReturnType<typeof spawn>;
     try {
       const pluginDataPath = spec.dataPath ?? resolvePluginDataPath(spec.pluginKey);
       mkdirSync(pluginDataPath, { recursive: true, mode: 0o700 });

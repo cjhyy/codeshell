@@ -54,6 +54,7 @@ import {
 import { createHubFiles } from "../hub/files.js";
 import { createSessionHttpResponses } from "../session-http-responses.js";
 import { WorkerBridgeCore, previewLine, type WorkerBridgeLog } from "../worker-bridge-core.js";
+import { headlessWorkerEnv } from "../headless-worker-env.js";
 import { HostRuntime, interceptHostRequest } from "@cjhyy/code-shell-host";
 import { createModelTraceHttp } from "../model-trace-http.js";
 
@@ -276,7 +277,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
     broadcast(JSON.stringify({ jsonrpc: "2.0", method, params }));
   };
   const publishStream = (sessionId: string, event: unknown): boolean => {
-    let cursor;
+    let cursor: ReturnType<typeof runReplay.append>;
     try {
       cursor = runReplay.append(sessionId, event);
     } catch {
@@ -554,20 +555,13 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
     entryPath: opts.workerEntryPath,
     execPath: opts.execPath,
     fallbackCwd: () => opts.cwd,
-    buildEnv: () => ({
-      ...process.env,
-      CODE_SHELL_REMOTE_LINK_CLIENT_SECRET: undefined,
-      // These switch on Desktop-main-only IPC clients in the worker.
-      CODE_SHELL_OPERATION_BATCH_ACCESS: undefined,
-      CODE_SHELL_MODEL_REQUEST_SIGNING: undefined,
-      CODE_SHELL_HOST_MCP_SERVERS: undefined,
-      CODE_SHELL_WORKSPACE_ACCESS: undefined,
-      CODE_SHELL_DATA_ROOT: workerDataRoot,
-      CODE_SHELL_CREDENTIAL_ACCESS: "local",
-      CODE_SHELL_CAPABILITY_MODULES:
-        opts.workerCapabilityModules ??
-        `${import.meta.resolve("@cjhyy/code-shell-server/links")}#createLinkProviderModule`,
-    }),
+    buildEnv: () =>
+      headlessWorkerEnv(process.env, {
+        CODE_SHELL_DATA_ROOT: workerDataRoot,
+        CODE_SHELL_CAPABILITY_MODULES:
+          opts.workerCapabilityModules ??
+          `${import.meta.resolve("@cjhyy/code-shell-server/links")}#createLinkProviderModule`,
+      }),
     log,
     onStderr: (text) => log("worker.stderr", { text: previewLine(text) }),
     onSpawnFailed: () => workerUnavailable("agent worker could not start"),
@@ -677,20 +671,13 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
         publicPathPrefix: opts.publicPathPrefix,
         agentTaskOptions: {
           workerEntryPath: opts.workerEntryPath,
-          buildEnv: () => ({
-            ...process.env,
-            CODE_SHELL_REMOTE_LINK_CLIENT_SECRET: undefined,
-            // These switch on Desktop-main-only IPC clients in the worker.
-            CODE_SHELL_OPERATION_BATCH_ACCESS: undefined,
-            CODE_SHELL_MODEL_REQUEST_SIGNING: undefined,
-            CODE_SHELL_HOST_MCP_SERVERS: undefined,
-            CODE_SHELL_WORKSPACE_ACCESS: undefined,
-            CODE_SHELL_DATA_ROOT: workerDataRoot,
-            CODE_SHELL_CREDENTIAL_ACCESS: "local",
-            CODE_SHELL_CAPABILITY_MODULES:
-              opts.workerCapabilityModules ??
-              `${import.meta.resolve("@cjhyy/code-shell-server/links")}#createLinkProviderModule`,
-          }),
+          buildEnv: () =>
+            headlessWorkerEnv(process.env, {
+              CODE_SHELL_DATA_ROOT: workerDataRoot,
+              CODE_SHELL_CAPABILITY_MODULES:
+                opts.workerCapabilityModules ??
+                `${import.meta.resolve("@cjhyy/code-shell-server/links")}#createLinkProviderModule`,
+            }),
         },
         onChanged: () => notify("serve/configurationChanged", {}),
       })

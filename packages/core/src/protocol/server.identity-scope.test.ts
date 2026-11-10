@@ -1,3 +1,4 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 /**
  * Identity dimension foundations (Task 2): AgentServer resolveIdentity hook.
  *
@@ -17,7 +18,7 @@ import { AgentServer } from "./server.js";
 import { ChatSessionManager, type EngineConfigSlice } from "./chat-session-manager.js";
 import { ErrorCodes } from "./types.js";
 import { ApprovalRouter } from "../tool-system/permission.js";
-import type { Engine, EngineResult } from "../engine/engine.js";
+import type { EngineResult } from "../engine/engine.js";
 
 function makeTransport() {
   const sent: any[] = [];
@@ -36,11 +37,10 @@ function makeTransport() {
 }
 
 function makeFakeEngine(slice: EngineConfigSlice, runs: EngineConfigSlice[]) {
-  return {
-    setAskUser() {},
-    setBrowserBridge() {},
-    setInjectCredential() {},
-    setSessionMessageRouter() {},
+  return createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    getSessionManager: undefined,
+
     isHeadless: () => false,
     sessionExistsOnDisk: () => false,
     async run(): Promise<EngineResult> {
@@ -53,7 +53,7 @@ function makeFakeEngine(slice: EngineConfigSlice, runs: EngineConfigSlice[]) {
         usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       };
     },
-  } as unknown as Engine;
+  });
 }
 
 function lastError(sent: any[]): { code?: number; message?: string } | undefined {

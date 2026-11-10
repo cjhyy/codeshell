@@ -1,3 +1,4 @@
+import type { Dirent } from "node:fs";
 /**
  * Activity history combines legacy managed runs with durable Session run receipts.
  * A Session snapshot is not a run: drafts and interrupted runs without a receipt
@@ -230,7 +231,7 @@ export async function listRunHistory(options: HistoryOptions = {}): Promise<RunS
   const legacy = await listRuns(options.runsDir);
   const linkedSessions = new Set(legacy.map((run) => run.sessionId).filter(Boolean));
   const baseDir = options.sessionsDir ?? sessionsRoot();
-  let entries;
+  let entries: Dirent[];
   try {
     entries = await fs.readdir(baseDir, { withFileTypes: true });
   } catch (error) {

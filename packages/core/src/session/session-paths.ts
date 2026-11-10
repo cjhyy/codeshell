@@ -10,6 +10,7 @@
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { SessionError } from "../exceptions.js";
+import { codeShellHome } from "../utils/paths.js";
 
 /**
  * Validate a session ID before it is joined into a filesystem path.
@@ -49,16 +50,7 @@ export function assertSafeSessionId(sessionId: unknown): asserts sessionId is st
   }
 }
 
-/**
- * Resolve the `.code-shell` home dir. `CODE_SHELL_HOME` overrides the default
- * `~/.code-shell` — mirrors Codex's `CODEX_HOME`. Tests set it to a temp dir
- * (see bunfig.toml preload) so a `new Engine()` / `new SessionManager()` with
- * no explicit storageDir doesn't pollute the user's real ~/.code-shell/sessions
- * with throwaway test sessions (the rm-usage/test-model sidebar junk).
- */
-export function codeShellHome(): string {
-  return process.env.CODE_SHELL_HOME || join(homedir(), ".code-shell");
-}
+export { codeShellHome } from "../utils/paths.js";
 
 /** True when this process is a test runner. `bun test` sets NODE_ENV itself. */
 function isTestRunner(): boolean {

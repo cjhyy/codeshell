@@ -1,5 +1,6 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { describe, expect, it } from "bun:test";
-import type { Engine } from "../engine/engine.js";
+
 import { ChatSessionManager } from "./chat-session-manager.js";
 import { AgentServer } from "./server.js";
 import { ErrorCodes, Methods } from "./types.js";
@@ -22,7 +23,7 @@ function makeTransport() {
 
 function fakeEngine() {
   const calls: unknown[] = [];
-  const engine = {
+  const engine = createFakeEngine({
     isHeadless: () => true,
     getConfig: () => ({ cwd: "/project/from-source-state" }),
     getSessionManager: () => ({
@@ -87,7 +88,7 @@ function fakeEngine() {
         },
       };
     },
-  } as unknown as Engine;
+  });
   return { engine, calls };
 }
 

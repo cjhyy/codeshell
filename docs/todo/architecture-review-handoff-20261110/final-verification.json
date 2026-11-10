@@ -1,0 +1,356 @@
+{
+  "initialSweepCandidate": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+  "finalCodeCandidate": "d65afec5b2af55ee3ed4f9de657005edd90fb0ea",
+  "counts": {
+    "failed": 18,
+    "incomplete": 4,
+    "pass": 16
+  },
+  "partitions": [
+    {
+      "shard": 0,
+      "status": "failed",
+      "pass": 0,
+      "fail": 10,
+      "skip": null,
+      "log": "/private/tmp/codeshell-final-core-shards-20261110/shard-0.log"
+    },
+    {
+      "shard": 1,
+      "status": "failed",
+      "pass": 2257,
+      "fail": 196,
+      "skip": 3,
+      "log": "/private/tmp/codeshell-final-core-shards-20261110/shard-1.log"
+    },
+    {
+      "shard": 2,
+      "status": "failed",
+      "pass": 3271,
+      "fail": 92,
+      "skip": null,
+      "log": "/private/tmp/codeshell-final-core-shards-20261110/shard-2.log"
+    },
+    {
+      "shard": 3,
+      "status": "incomplete",
+      "pass": null,
+      "fail": null,
+      "skip": null,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-03.log"
+    },
+    {
+      "shard": 4,
+      "status": "incomplete",
+      "pass": null,
+      "fail": null,
+      "skip": null,
+      "log": "/private/tmp/codeshell-final-rest-shards-20261110/shard-4.log"
+    },
+    {
+      "shard": 5,
+      "status": "incomplete",
+      "pass": null,
+      "fail": null,
+      "skip": null,
+      "log": "/private/tmp/codeshell-final-rest-shards-20261110/shard-5.log"
+    },
+    {
+      "shard": 6,
+      "status": "pass",
+      "pass": 23,
+      "fail": 0,
+      "skip": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-06.log"
+    },
+    {
+      "shard": 7,
+      "status": "pass",
+      "pass": 5,
+      "fail": 0,
+      "skip": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-07.log"
+    },
+    {
+      "shard": 8,
+      "status": "pass",
+      "pass": 6,
+      "fail": 0,
+      "skip": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-08.log"
+    },
+    {
+      "shard": 9,
+      "status": "pass",
+      "pass": 6,
+      "fail": 0,
+      "skip": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-09.log"
+    },
+    {
+      "shard": 10,
+      "status": "pass",
+      "pass": 10,
+      "fail": 0,
+      "skip": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-10.log"
+    },
+    {
+      "shard": 11,
+      "status": "pass",
+      "pass": 12,
+      "fail": 0,
+      "skip": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-11-retry.log"
+    },
+    {
+      "shard": 12,
+      "status": "pass",
+      "pass": 7,
+      "fail": 0,
+      "skip": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-12.log"
+    },
+    {
+      "shard": 13,
+      "status": "pass",
+      "pass": 2,
+      "fail": 0,
+      "skip": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-13.log"
+    },
+    {
+      "shard": 14,
+      "status": "failed",
+      "pass": 166,
+      "fail": 36,
+      "skip": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-14.log"
+    },
+    {
+      "shard": 15,
+      "status": "pass",
+      "pass": 63,
+      "fail": 0,
+      "skip": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-15.log"
+    },
+    {
+      "shard": 16,
+      "status": "pass",
+      "pass": 6,
+      "fail": 0,
+      "skip": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-16.log"
+    },
+    {
+      "shard": 17,
+      "status": "pass",
+      "pass": 60,
+      "fail": 0,
+      "skip": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-17.log"
+    },
+    {
+      "shard": 18,
+      "status": "pass",
+      "pass": 365,
+      "fail": 0,
+      "skip": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-18.log"
+    },
+    {
+      "shard": 19,
+      "status": "failed",
+      "pass": 298,
+      "fail": 14,
+      "skip": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-19.log"
+    },
+    {
+      "shard": 20,
+      "status": "pass",
+      "pass": 96,
+      "fail": 0,
+      "skip": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-20.log"
+    },
+    {
+      "shard": 21,
+      "status": "failed",
+      "pass": 102,
+      "fail": 4,
+      "skip": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-21.log"
+    },
+    {
+      "shard": 22,
+      "status": "pass",
+      "pass": 16,
+      "fail": 0,
+      "skip": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-22.log"
+    },
+    {
+      "shard": 23,
+      "status": "failed",
+      "pass": 29,
+      "fail": 5,
+      "skip": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-23.log"
+    },
+    {
+      "shard": 24,
+      "status": "incomplete",
+      "pass": null,
+      "fail": null,
+      "skip": null,
+      "log": "/private/tmp/codeshell-final-rest-shards-20261110/shard-24.log"
+    },
+    {
+      "shard": 25,
+      "status": "failed",
+      "pass": 40,
+      "fail": 81,
+      "skip": null,
+      "log": "/private/tmp/codeshell-final-rest-shards-20261110/shard-25.log"
+    },
+    {
+      "shard": 26,
+      "status": "pass",
+      "pass": 43,
+      "fail": 0,
+      "skip": null,
+      "log": "/private/tmp/codeshell-final-rest-shards-20261110/shard-26.log"
+    },
+    {
+      "shard": 27,
+      "status": "failed",
+      "pass": 64,
+      "fail": 24,
+      "skip": null,
+      "log": "/private/tmp/codeshell-final-rest-shards-20261110/shard-27.log"
+    },
+    {
+      "shard": 28,
+      "status": "failed",
+      "pass": 73,
+      "fail": 2,
+      "skip": null,
+      "log": "/private/tmp/codeshell-final-rest-shards-20261110/shard-28.log"
+    },
+    {
+      "shard": 29,
+      "status": "failed",
+      "pass": 70,
+      "fail": 15,
+      "skip": null,
+      "log": "/private/tmp/codeshell-final-rest-shards-20261110/shard-29.log"
+    },
+    {
+      "shard": 30,
+      "status": "pass",
+      "pass": 44,
+      "fail": 0,
+      "skip": null,
+      "log": "/private/tmp/codeshell-final-rest-shards-20261110/shard-30.log"
+    },
+    {
+      "shard": 31,
+      "status": "failed",
+      "pass": 360,
+      "fail": 2,
+      "skip": null,
+      "log": "/private/tmp/codeshell-final-core-shards-20261110/shard-31.log"
+    },
+    {
+      "shard": 32,
+      "status": "failed",
+      "pass": 508,
+      "fail": 115,
+      "skip": null,
+      "log": "/private/tmp/codeshell-final-core-shards-20261110/shard-32.log"
+    },
+    {
+      "shard": 33,
+      "status": "failed",
+      "pass": 0,
+      "fail": 5,
+      "skip": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-33.log"
+    },
+    {
+      "shard": 34,
+      "status": "failed",
+      "pass": 12,
+      "fail": 2,
+      "skip": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-34.log"
+    },
+    {
+      "shard": 35,
+      "status": "failed",
+      "pass": 0,
+      "fail": 1,
+      "skip": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-35.log"
+    },
+    {
+      "shard": 36,
+      "status": "failed",
+      "pass": 66,
+      "fail": 12,
+      "skip": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-36.log"
+    },
+    {
+      "shard": 37,
+      "status": "failed",
+      "pass": 531,
+      "fail": 6,
+      "skip": null,
+      "log": "/private/tmp/codeshell-final-rest-shards-20261110/shard-37.log"
+    }
+  ],
+  "overallAcceptance": "not passed",
+  "finalFollowups": {
+    "protocol": {
+      "pass": 428,
+      "fail": 11,
+      "sameFailureNamesAsBaseline": true,
+      "newC3CasesPassing": 31
+    },
+    "targetedDesktopHost": {
+      "pass": 181,
+      "fail": 0,
+      "files": 16
+    },
+    "contracts": {
+      "pass": 47,
+      "fail": 0,
+      "files": 6
+    },
+    "build": "pass at f31986b4; d65 differs by one test-fixture field only",
+    "rootTypecheck": "pass at f31986b4",
+    "finalWorkspaceTypecheck": "pass at d65afec5b",
+    "finalHostLinkTestTypecheck": "pass at d65afec5b",
+    "lint": {
+      "errors": 0,
+      "warnings": 90,
+      "candidate": "d65afec5b"
+    },
+    "shardGuard": {
+      "files": 2660,
+      "max": 764,
+      "result": "pass"
+    },
+    "engineBypassGuard": "pass"
+  },
+  "packageRelease": "failed at packed HTTP listen EPERM after53 runtime imports passed",
+  "notes": [
+    "Initial incomplete partitions have no accepted whole-shard totals.",
+    "Shard11 retains first failed attempt and a passing full retry.",
+    "Scheduling-overlap receipts are retained separately and not used as clean followups.",
+    "Initial C3/C4 integration regression397/42 was real and fixed; final428/11 is a distinct run."
+  ]
+}

@@ -1171,7 +1171,7 @@ export class TurnLoop {
               ? "an authoritative host reply was already committed"
               : undefined,
         });
-        let response;
+        let response: LLMResponse;
         try {
           this.deps.contextNotes?.markModelBoundary();
           response = await this.callModelWithFallback(messages, assistantMessageId);
@@ -1183,7 +1183,7 @@ export class TurnLoop {
             }
             // Progressive recovery: drop oldest API rounds, up to 3 retries
             const { dropOldestRounds } = await import("../context/compaction.js");
-            let recovered = false;
+            let recovered: LLMResponse | undefined;
             for (let retry = 1; retry <= 3; retry++) {
               if (this.goalControlStopRequested) {
                 messages = this.redactConsumedSensitiveToolResults(messages);
@@ -1192,8 +1192,7 @@ export class TurnLoop {
               tlog.warn("turn.ptl_recovery", { cat: "turn", retry, roundsToDrop: retry });
               messages = dropOldestRounds(messages, retry);
               try {
-                response = await this.callModelWithFallback(messages, assistantMessageId);
-                recovered = true;
+                recovered = await this.callModelWithFallback(messages, assistantMessageId);
                 break;
               } catch (retryErr) {
                 if (!(retryErr instanceof ContextLimitError)) {
@@ -1212,6 +1211,7 @@ export class TurnLoop {
               messages = this.redactConsumedSensitiveToolResults(messages);
               return { text: finalText, reason: "prompt_too_long", messages };
             }
+            response = recovered;
           } else if (isAbortError(err) || this.config.signal?.aborted) {
             // User pressed Stop: the in-flight model call rejected with an
             // AbortError. This is NOT a failure — the UI already shows the

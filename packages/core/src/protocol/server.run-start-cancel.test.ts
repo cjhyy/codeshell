@@ -1,8 +1,9 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { afterEach, expect, test } from "bun:test";
 import { AgentServer } from "./server.js";
 import { ChatSessionManager } from "./chat-session-manager.js";
 import { ApprovalRouter } from "../tool-system/permission.js";
-import type { Engine, EngineResult } from "../engine/engine.js";
+import type { EngineResult } from "../engine/engine.js";
 import type { Transport } from "./transport.js";
 import { ErrorCodes } from "./types.js";
 
@@ -16,12 +17,12 @@ function managerFixture() {
   const manager = new ChatSessionManager({
     runtime: {} as never,
     engineFactory: () =>
-      ({
-        setAskUser() {},
-        setBrowserBridge() {},
-        setInjectCredential() {},
-        setSessionMessageRouter() {},
-        setPlanMode() {},
+      createFakeEngine({
+        // Preserve the optional-capability fallbacks exercised by this fixture.
+        dispose: undefined,
+        getSessionManager: undefined,
+        prepareSessionCloseFinalization: undefined,
+
         isHeadless: () => false,
         async run(
           task: string,
@@ -43,7 +44,7 @@ function managerFixture() {
             usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
           };
         },
-      }) as unknown as Engine,
+      }),
   });
   return { manager, runs, router: new ApprovalRouter() };
 }

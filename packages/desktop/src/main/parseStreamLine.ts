@@ -1,3 +1,4 @@
+import { parseWorkerLine, type ParsedWorkerLine } from "./worker-line.js";
 /**
  * Pure parse of a worker→renderer JSON-RPC line into a snapshot append, if any.
  *
@@ -22,13 +23,14 @@ export interface LiveStreamEnvelope {
   epoch?: string;
 }
 
-export function parseSnapshotAppend(line: string): SnapshotAppend | null {
-  let m: { method?: string; params?: { sessionId?: unknown; event?: unknown } };
-  try {
-    m = JSON.parse(line);
-  } catch {
-    return null;
-  }
+export function parseSnapshotAppend(
+  line: string,
+  parsedLine: ParsedWorkerLine = parseWorkerLine(line),
+): SnapshotAppend | null {
+  const m = parsedLine.message as {
+    method?: string;
+    params?: { sessionId?: unknown; event?: unknown };
+  };
   if (!m || typeof m !== "object" || m.method !== Methods.StreamEvent) return null;
   const envelope = normalizeStreamEnvelope(m.params);
   if (!envelope?.sessionId) return null;
@@ -45,13 +47,12 @@ export function parseSnapshotAppend(line: string): SnapshotAppend | null {
 export function parseLiveStreamEnvelope(
   line: string,
   snapshotEntry?: { seq: number; epoch?: string },
+  parsedLine: ParsedWorkerLine = parseWorkerLine(line),
 ): LiveStreamEnvelope | null {
-  let m: { method?: string; params?: { sessionId?: unknown; event?: unknown } };
-  try {
-    m = JSON.parse(line);
-  } catch {
-    return null;
-  }
+  const m = parsedLine.message as {
+    method?: string;
+    params?: { sessionId?: unknown; event?: unknown };
+  };
   if (!m || typeof m !== "object" || m.method !== Methods.StreamEvent) return null;
   const envelope = normalizeStreamEnvelope(m.params);
   if (!envelope) return null;

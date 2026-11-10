@@ -1,8 +1,9 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { describe, expect, it } from "bun:test";
 import { ChatSessionManager } from "./chat-session-manager.js";
 import { AgentServer } from "./server.js";
 import { ErrorCodes, Methods } from "./types.js";
-import type { Engine } from "../engine/engine.js";
+
 
 function makeTransport() {
   const sent: any[] = [];
@@ -36,7 +37,7 @@ describe("AgentServer compact query", () => {
       runtime: {} as never,
       engineFactory: (slice) => {
         slices.push(slice);
-        return {
+        return createFakeEngine({
           isHeadless: () => true,
           sessionExistsOnDisk: (sessionId: string) => sessionId === "s-compact",
           getSessionManager: () => ({
@@ -47,7 +48,7 @@ describe("AgentServer compact query", () => {
             forceCompactCalls.push(sessionId);
             return { before: 100, after: 40, strategy: "compacted" };
           },
-        } as unknown as Engine;
+        });
       },
     });
     const t = makeTransport();
@@ -94,12 +95,12 @@ describe("AgentServer compact query", () => {
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () =>
-        ({
+        createFakeEngine({
           isHeadless: () => true,
           sessionExistsOnDisk: (sessionId: string) => sessionId === "s-noop",
           getSessionManager: () => ({ readSessionMainRoot: () => "/project/from/disk" }),
           forceCompact: () => ({ before: 40, after: 40, strategy: "no compaction needed" }),
-        }) as unknown as Engine,
+        }),
     });
     const t = makeTransport();
     new AgentServer({ transport: t.transport, chatManager });
@@ -124,12 +125,12 @@ describe("AgentServer compact query", () => {
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () =>
-        ({
+        createFakeEngine({
           isHeadless: () => true,
           sessionExistsOnDisk: (sessionId: string) => sessionId === "s-summary",
           getSessionManager: () => ({ readSessionMainRoot: () => "/project/from/disk" }),
           forceCompact: () => ({ before: 128_000, after: 46_000, strategy: "summary" }),
-        }) as unknown as Engine,
+        }),
     });
     const t = makeTransport();
     new AgentServer({ transport: t.transport, chatManager });
@@ -170,11 +171,11 @@ describe("AgentServer compact query", () => {
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () =>
-        ({
+        createFakeEngine({
           isHeadless: () => true,
           sessionExistsOnDisk: () => false,
           getSessionManager: () => ({ readSessionMainRoot: () => undefined }),
-        }) as unknown as Engine,
+        }),
     });
     const t = makeTransport();
     new AgentServer({ transport: t.transport, chatManager });

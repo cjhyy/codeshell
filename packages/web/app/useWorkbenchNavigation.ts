@@ -1,5 +1,5 @@
 import React from "react";
-import type { ManagedPanel } from "../../server/src/panels/types.js";
+import type { ManagedPanel } from "../src/panels.js";
 import { parseWorkbenchLocation, type WorkspaceSettingsSection } from "./website-routes.js";
 
 export interface WorkbenchFileLocation {

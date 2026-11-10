@@ -2,7 +2,8 @@
 
 > 基线：`main` @ `df2ca0bda`（2026-10-19），版本 0.9.45。所有 `file:line` 引用都对应这个提交；源码变动后行号会漂移，以符号名为准。
 > 本组章节（00–10）于 2026-10-20 按函数层级重写，替换了 2026-07 版的同号章节（已归档到 [`docs/archive/architecture-2026-07/`](../archive/architecture-2026-07/README.md)）。11–16 章未改动。
-> 规模：14 个 workspace 包，非测试 TS/TSX 约 54 万行（desktop 24 万、core 15 万、tui 4.3 万、server 4.3 万）。
+> 包数量更新（2026-11-10）：Arena 和 legacy CDP 包删除后为 12 个 workspace 包；以下源码规模为原基线数据。
+> 原基线规模：14 个 workspace 包，非测试 TS/TSX 约 54 万行（desktop 24 万、core 15 万、tui 4.3 万、server 4.3 万）。
 
 ## 0.1 一句话定位
 
@@ -20,8 +21,6 @@ graph TD
   coding["capability-coding<br/>git/LSP/worktree"]
   pet["pet<br/>Mimi 能力"]
   optlab["optimization-lab<br/>(private, 实验)"]
-  arena["arena<br/>(private, 不再加载)"]
-  cdp["cdp<br/>(legacy CDP 兼容)"]
   bdt["browser-devtools<br/>Console/Network 采集"]
   web["web<br/>浏览器端逻辑层"]
   server["server<br/>HTTP+WS 远程宿主"]
@@ -31,24 +30,24 @@ graph TD
   meta["@cjhyy/code-shell<br/>meta 包, bin: code-shell"]
 
   link --> core
-  core --> host & coding & pet & optlab & arena
+  core --> host & coding & pet & optlab
   core --> web
   link --> web
   core & coding & web & link & host --> server
   core & coding & server --> tui
-  core & coding & pet & optlab & server & web & host & link & chat & cdp & bdt --> desktop
+  core & coding & pet & optlab & server & web & host & link & chat & bdt --> desktop
   tui --> meta
   core --> meta
 ```
 
-构建顺序（根 `package.json` 的 `build` 脚本）：`link → core → host → pet → optimization-lab → coding → cdp → browser-devtools → web → server → tui → chat → build-meta.ts`，desktop 单独构建。
+构建顺序（根 `package.json` 的 `build` 脚本）：`link → core → host → pet → optimization-lab → coding → browser-devtools → web → server → tui → chat → build-meta.ts`，desktop 单独构建。
 
 ## 0.3 core 的三个入口契约
 
 | 入口                               | 谁能用                                            | 内容                                                |
 | ---------------------------------- | ------------------------------------------------- | --------------------------------------------------- |
 | `@cjhyy/code-shell-core`（`.`）    | 任何外部 SDK 使用者                               | 稳定公开 API                                        |
-| `@cjhyy/code-shell-core/extension` | 能力包（coding / pet / arena / optimization-lab） | 能力包契约：注册工具、prompt section、hook、profile |
+| `@cjhyy/code-shell-core/extension` | 能力包（coding / pet / optimization-lab） | 能力包契约：注册工具、prompt section、hook、profile |
 | `@cjhyy/code-shell-core/internal`  | 仓库内宿主（tui / desktop / server）              | 宿主专用 helper                                     |
 | `/browser/panel-app-runtime`       | desktop renderer                                  | 浏览器安全的 Panel App 运行时                       |
 | `/bin/agent-server-stdio`          | desktop/server 拉起的子进程                       | 引擎以 stdio 协议服务的进程入口                     |
@@ -70,7 +69,7 @@ desktop 里实际的 import 次数（`grep` 统计）：core `.` 209 处、`/int
 │  web：stream reducer / approval state / reconnect（renderer & 手机共用）│
 ├──────────────────────────── 能力包 Capabilities ─────────────────────┤
 │  coding (git/LSP/worktree/patch)  pet (Mimi/DelegateWork)  optimization-lab │
-│  host (能力注册表/worker 派发)   link (provider 清单)   cdp / browser-devtools │
+│  host (能力注册表/worker 派发)   link (provider 清单)   browser-devtools │
 ├──────────────────────────── core ────────────────────────────────────┤
 │  engine(turn loop) · tool-system(工具/权限/MCP) · hooks · protocol    │
 │  llm/model-catalog · context(压缩/归档) · session(存储) · prompt/preset│
@@ -87,7 +86,7 @@ desktop 里实际的 import 次数（`grep` 统计）：core `.` 209 处、`/int
 | [03 core：LLM、上下文、会话](03-core-llm-session-context.md)                 | `llm/` `model-*` `context/` `session/` `prompt/` `cost-*`                      |
 | [04 core：协议、插件、技能、Link](04-core-protocol-plugins-links.md)         | `protocol/` `plugins/` `skills/` `links/` `sources/`                           |
 | [05 core：入口、设置、组合、运行时](05-core-runtime-settings-composition.md) | 入口 / `settings/` `credentials/` `composition/` `preset/` `panel-apps/` …     |
-| [06 能力包](06-capability-packages.md)                                       | coding / pet / host / link / optimization-lab / cdp / browser-devtools / arena |
+| [06 能力包](06-capability-packages.md)                                       | coding / pet / host / link / optimization-lab / browser-devtools |
 | [07 TUI](07-tui.md)                                                          | `packages/tui` + meta 包                                                       |
 | [08 Desktop 主进程](08-desktop-main.md)                                      | main / preload / shared / browser-library / chrome-extension                   |
 | [09 Desktop 渲染层、手机端、web](09-desktop-renderer-mobile-web.md)          | renderer / mobile / `packages/web`                                             |
@@ -140,7 +139,7 @@ flowchart LR
 
 **逐行核对过调用链**
 
-- **多会话路径丢字段**：`packages/core/src/protocol/server.ts:1822/1835` 把 `operationBatchToken`、`sessionBrief` 传给 `session.enqueueTurn`，但 `TurnOpts`（`protocol/chat-session.ts:26`）没有这两个字段，`ChatSession` 转发给 `engine.run`（`chat-session.ts:515`）时也没带。单 Engine（legacy）路径（`server.ts:1987`）会直接传。结果是：Desktop/server 的多会话模式下，`Engine` 里依赖它们的逻辑（`engine/engine.ts:1622`、`:1755`、`:1807`）收不到值。
+- **多会话路径丢字段（候选修复已实现，尚未合入）**：原问题是 `AgentServer` 传入的 `operationBatchToken`、`sessionBrief` 未进入 `TurnOpts`，也未由 `ChatSession` 转发给 `engine.run`。2026-11-10 的 T1 候选 `68eca438fbfa449c4f1267d0900c4c9a5fbb8ed2`（分支 `codex/architecture/t1-run-option-forwarding`）已补齐两字段及完整选项映射约束；此时尚无 PR 号，待建立 PR、独立审查并合入后补记 PR。状态与验证以 [架构审查任务 T1](../todo/architecture-review-tasks-20261110.md#t1-多会话路径丢-operationbatchtoken-和-sessionbrief) 和实施交接为准。
 - **中继能看到明文**：`packages/server/src/remote-relay/protocol.ts:1` 说明云端中继会解开 TLS，本地是纯 HTTP，没有端到端加密（目前是已知且接受的取舍）。
 
 **对照源码确认过行为**

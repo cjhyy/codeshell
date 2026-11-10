@@ -202,7 +202,7 @@ export function createDeviceRelayConnector(
     });
     ws.on("message", (data, binary) => {
       if (!current()) return ws.terminate();
-      let message;
+      let message: ReturnType<typeof parseRelayControlMessage>;
       try {
         if (binary || Buffer.byteLength(data.toString()) > RELAY_CONTROL_MAX_BYTES)
           throw new Error("Invalid control frame");

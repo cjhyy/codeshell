@@ -1,4 +1,5 @@
-import type { ExternalGitBlobRef } from "@cjhyy/code-shell-core";
+import type { ExternalGitBlobRef, SessionWorkspace } from "@cjhyy/code-shell-core";
+import type { LocalProject } from "./project-authority-types";
 import type { FileVersionResult } from "../shared/file-version.js";
 import type { IpcRenderer, IpcRendererEvent } from "electron";
 import type {
@@ -58,11 +59,11 @@ export function createProjectAuthorityApi(ipcRenderer: ProjectAuthorityIpcRender
     releaseManySessionWorkspaces: (sessionIds: string[]) =>
       ipcRenderer.invoke("workspace:releaseMany", sessionIds),
     onWorkspaceChanged: (
-      cb: (event: { sessionId: string; workspace?: unknown; mainRoot?: string }) => void,
+      cb: (event: { sessionId: string; workspace?: SessionWorkspace; mainRoot?: string }) => void,
     ): (() => void) => {
       const handler = (
         _event: IpcRendererEvent,
-        event: { sessionId: string; workspace?: unknown; mainRoot?: string },
+        event: { sessionId: string; workspace?: SessionWorkspace; mainRoot?: string },
       ) => cb(event);
       ipcRenderer.on("workspace:changed", handler);
       return () => ipcRenderer.removeListener("workspace:changed", handler);
@@ -105,8 +106,8 @@ export function createProjectAuthorityApi(ipcRenderer: ProjectAuthorityIpcRender
         ipcRenderer.invoke("projectRegistry:authorizeLegacyMigration", token, path),
       completeLegacyMigration: (token: string) =>
         ipcRenderer.invoke("projectRegistry:completeLegacyMigration", token),
-      onChanged: (cb: (projects: unknown[]) => void): (() => void) => {
-        const handler = (_event: IpcRendererEvent, projects: unknown[]) => cb(projects);
+      onChanged: (cb: (projects: LocalProject[]) => void): (() => void) => {
+        const handler = (_event: IpcRendererEvent, projects: LocalProject[]) => cb(projects);
         ipcRenderer.on("projectRegistry:changed", handler);
         return () => ipcRenderer.removeListener("projectRegistry:changed", handler);
       },

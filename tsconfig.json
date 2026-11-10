@@ -54,13 +54,14 @@
       "@cjhyy/code-shell-server/panels": ["packages/server/src/index.panels.ts"],
       "@cjhyy/code-shell-web": ["packages/web/src/index.ts"],
       "@cjhyy/code-shell-web/*": ["packages/web/src/*"],
-      "@cjhyy/code-shell-arena": ["packages/arena/src/index.ts"],
-      "@cjhyy/code-shell-arena/runtime": ["packages/arena/src/index.runtime.ts"],
       "@cjhyy/code-shell-tui": ["packages/tui/src/index.ts"],
       "@cjhyy/code-shell-tui/*": ["packages/tui/src/*"],
       "@cjhyy/code-shell-server/account": ["packages/server/src/index.account.ts"],
       "@cjhyy/code-shell-web/account-profile": ["packages/web/src/account/profile.ts"],
-      "@cjhyy/code-shell-web/account": ["packages/web/src/account/features.ts"]
+      "@cjhyy/code-shell-web/transcript-replay": ["packages/web/src/lib/transcriptReplay.ts"],
+      "@cjhyy/code-shell-web/output-coverage": ["packages/web/src/lib/outputCoverage.ts"],
+      "@cjhyy/code-shell-web/account": ["packages/web/src/account/features.ts"],
+      "@cjhyy/code-shell-web/panels": ["packages/web/src/panels.ts"]
     },
     "jsx": "react-jsx",
     "types": ["node", "bun-types"]

@@ -30,6 +30,12 @@ afterEach(() => {
   }
   expect(getDefaultCredentialCipher()).toBe(previousCipher);
 });
+interface FixtureRpcInput {
+  id?: string | number;
+  method?: string;
+  params?: { cursor?: string };
+}
+
 function fixture() {
   const dir = mkdtempSync(join(tmpdir(), "http-probe-transport-"));
   const old = process.env.HOME;
@@ -49,7 +55,7 @@ function fixture() {
     expect(new URL(request.url).origin).toBe(origin);
     expect(request.redirect).toBe("error");
     if (request.method !== "POST") return new Response(null, { status: 405 });
-    const input = await request.json();
+    const input = (await request.json()) as FixtureRpcInput;
     authorizations.push(request.headers.get("authorization") ?? "");
     if (
       request.headers.get("authorization") !== "Bearer refreshed-secret" &&
@@ -184,7 +190,7 @@ test.each(["preview", "repeat", "total"] as const)(
     handle = async (request) => {
       expect(new URL(request.url).origin).toBe(origin);
       if (request.method !== "POST") return new Response(null, { status: 405 });
-      const input = await request.json();
+      const input = (await request.json()) as FixtureRpcInput;
       if (input.id === undefined) return new Response(null, { status: 202 });
       let result: unknown;
       if (input.method === "initialize")
@@ -251,7 +257,7 @@ test.each([400, 403, 404])(
           );
         }
         if (request.method !== "POST") return new Response(null, { status: 405 });
-        const input = await request.json();
+        const input = (await request.json()) as FixtureRpcInput;
         if (input.id === undefined) return new Response(null, { status: 202 });
         if (input.method === "initialize")
           return Response.json({
@@ -312,7 +318,7 @@ test("ordinary verbs/content types/protocol headers survive while explicit HTTP 
   });
   handle = async (request) => {
     if (request.method !== "POST") return new Response(null, { status: 405 });
-    const input = await request.json();
+    const input = (await request.json()) as FixtureRpcInput;
     if (input.id === undefined) return new Response(null, { status: 202 });
     return Response.json({
       jsonrpc: "2.0",

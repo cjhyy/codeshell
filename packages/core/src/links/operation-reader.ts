@@ -188,7 +188,7 @@ export function createGithubOperationReader(options: {
         action,
         target: `${params.owner}/${params.repo}${params.issue_number ? `#${params.issue_number}` : ""}`,
       };
-      let execution;
+      let execution: Awaited<ReturnType<ToolExecutor["executeSingle"]>>;
       try {
         execution = await executor.executeSingle(
           {

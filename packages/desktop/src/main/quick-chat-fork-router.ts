@@ -1,3 +1,4 @@
+import { parseWorkerLine, type ParsedWorkerLine } from "./worker-line.js";
 import type { QuickChatForkRequest, QuickChatRunRequest } from "./agent-bridge-fallback.js";
 
 export interface QuickChatForkLifecycle {
@@ -76,17 +77,16 @@ export class QuickChatForkRouter {
   }
 
   /** Returns null when the line is not a tracked quick-chat fork response. */
-  routeWorkerResponse(line: string): Promise<void> | null {
-    let response: Record<string, unknown> & {
+  routeWorkerResponse(
+    line: string,
+    parsedLine: ParsedWorkerLine = parseWorkerLine(line),
+  ): Promise<void> | null {
+    const response = parsedLine.message as Record<string, unknown> & {
       id?: unknown;
       result?: { sessionId?: unknown };
       error?: unknown;
     };
-    try {
-      response = JSON.parse(line) as typeof response;
-    } catch {
-      return null;
-    }
+    if (response === undefined) return null;
     if (response.id === undefined) return null;
     const wireId = String(response.id);
     const pending = this.pending.get(wireId);

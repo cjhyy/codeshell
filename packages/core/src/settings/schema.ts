@@ -3,12 +3,12 @@
  */
 
 import { z } from "zod";
-import { WorkspaceSourceBindingSchema } from "../sources/types.js";
-import { PanelAppPackagePinsSchema } from "../panel-apps/bindings.js";
+import { WorkspaceSourceBindingSchema } from "../utils/source-bindings.js";
+import { PanelAppPackagePinsSchema } from "../utils/panel-app-schema.js";
 import {
   MAX_MCP_CONNECT_RETRIES,
   MAX_MCP_CONNECT_TIMEOUT_MS,
-} from "../tool-system/mcp-connection-policy.js";
+} from "../utils/mcp-connection-policy.js";
 const DEFAULT_WORKTREE_BRANCH_PREFIX = "worktree/";
 /** 24-hour local clock time, "00:00" to "23:59". */
 const PET_HH_MM = /^(?:[01]\d|2[0-3]):[0-5]\d$/u;

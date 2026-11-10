@@ -1,3 +1,4 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { afterEach, describe, expect, it } from "bun:test";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -37,13 +38,17 @@ describe("ChatSessionManager serialized lifecycle", () => {
     const manager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () =>
-        ({
+        createFakeEngine({
+          // Preserve the optional-capability fallbacks exercised by this fixture.
+          getSessionManager: undefined,
+          prepareSessionCloseFinalization: undefined,
+
           isHeadless: () => false,
           async dispose() {
             await release.promise;
             disposed = true;
           },
-        }) as unknown as Engine,
+        }),
     });
     await manager.getOrCreate("evicted", {});
     const individual = manager.close("evicted");
@@ -70,7 +75,13 @@ describe("ChatSessionManager serialized lifecycle", () => {
       idleTtlMs: 0,
       engineFactory: () => {
         engines += 1;
-        return { isHeadless: () => false } as unknown as Engine;
+        return createFakeEngine({
+          // Preserve the optional-capability fallbacks exercised by this fixture.
+          dispose: undefined,
+          getSessionManager: undefined,
+          prepareSessionCloseFinalization: undefined,
+          isHeadless: () => false,
+        });
       },
     });
 
@@ -97,9 +108,12 @@ describe("ChatSessionManager serialized lifecycle", () => {
     const manager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () =>
-        ({
+        createFakeEngine({
+          // Preserve the optional-capability fallbacks exercised by this fixture.
+          dispose: undefined,
+
           getSessionManager: () => new SessionManager(storageDir),
-        }) as unknown as Engine,
+        }),
     });
     const probe = new SessionManager(storageDir);
     expect(probe.exists(sid)).toBe(true);
@@ -141,7 +155,11 @@ describe("ChatSessionManager serialized lifecycle", () => {
       engineFactory: () => {
         const number = ++engineNumber;
         const sessions = new SessionManager(storageDir);
-        const engine = {
+        const engine = createFakeEngine({
+          // Preserve the optional-capability fallbacks exercised by this fixture.
+          dispose: undefined,
+          prepareSessionCloseFinalization: undefined,
+
           getSessionManager: () => sessions,
           isHeadless: () => false,
           async run(): Promise<EngineResult> {
@@ -157,7 +175,7 @@ describe("ChatSessionManager serialized lifecycle", () => {
             }
             return result(sid);
           },
-        } as unknown as Engine;
+        });
         return engine;
       },
     });
@@ -194,14 +212,19 @@ describe("ChatSessionManager serialized lifecycle", () => {
       runtime: {} as never,
       engineFactory: () => {
         engines += 1;
-        return {
+        return createFakeEngine({
+          // Preserve the optional-capability fallbacks exercised by this fixture.
+          dispose: undefined,
+          getSessionManager: undefined,
+          prepareSessionCloseFinalization: undefined,
+
           isHeadless: () => false,
           async run(): Promise<EngineResult> {
             started.resolve();
             await release.promise;
             return result("settle-sid");
           },
-        } as unknown as Engine;
+        });
       },
     });
     const session = await manager.getOrCreate("settle-sid", {} as never);
@@ -229,13 +252,18 @@ describe("ChatSessionManager serialized lifecycle", () => {
       runtime: {} as never,
       engineFactory: () => {
         const number = ++engines;
-        return {
+        return createFakeEngine({
+          // Preserve the optional-capability fallbacks exercised by this fixture.
+          dispose: undefined,
+          getSessionManager: undefined,
+          prepareSessionCloseFinalization: undefined,
+
           isHeadless: () => false,
           async run(): Promise<EngineResult> {
             runs.push(number);
             return result("serial-sid");
           },
-        } as unknown as Engine;
+        });
       },
     });
 
@@ -256,13 +284,16 @@ describe("ChatSessionManager serialized lifecycle", () => {
     const manager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () =>
-        ({
+        createFakeEngine({
+          // Preserve the optional-capability fallbacks exercised by this fixture.
+          getSessionManager: undefined,
+
           isHeadless: () => false,
           async run(): Promise<EngineResult> {
             order.push("turn");
             return result("exclusive-sid");
           },
-        }) as unknown as Engine,
+        }),
     });
     const session = await manager.getOrCreate("exclusive-sid", {} as never);
 
@@ -294,7 +325,10 @@ describe("ChatSessionManager serialized lifecycle", () => {
     const manager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () =>
-        ({
+        createFakeEngine({
+          // Preserve the optional-capability fallbacks exercised by this fixture.
+          getSessionManager: undefined,
+
           isHeadless: () => false,
           resolveModelEntry: (key: string) => ({ key, model: key }),
           getModelPool: () => ({
@@ -310,7 +344,7 @@ describe("ChatSessionManager serialized lifecycle", () => {
             order.push(`run:${activeModel}`);
             return result("exclusive-model-sid");
           },
-        }) as unknown as Engine,
+        }),
     });
     const session = await manager.getOrCreate("exclusive-model-sid", {} as never);
 

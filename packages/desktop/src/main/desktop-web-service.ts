@@ -20,6 +20,7 @@ import {
   type PanelProjectScopeBinding,
 } from "@cjhyy/code-shell-server/panels";
 import type { TrustedDeviceStore } from "@cjhyy/code-shell-server/mobile-remote";
+import { headlessWorkerEnv } from "@cjhyy/code-shell-server/worker";
 import type { AgentBridge } from "./agent-bridge.js";
 import type { CaptureLinkAccountAccess } from "./link-account-access.js";
 import { createDesktopModelTraceScopeResolver } from "./desktop-model-trace-scopes.js";
@@ -145,15 +146,10 @@ export function createDesktopWebService(options: {
               automations: options.automations,
               authorizePanelDirectory: options.authorizePanelDirectory,
               agentTaskOptions: {
-                buildEnv: () => ({
-                  ...process.env,
-                  CODE_SHELL_REMOTE_LINK_CLIENT_SECRET: undefined,
-                  CODE_SHELL_OPERATION_BATCH_ACCESS: undefined,
-                  CODE_SHELL_MODEL_REQUEST_SIGNING: undefined,
-                  CODE_SHELL_WORKSPACE_ACCESS: undefined,
-                  CODE_SHELL_HOST_MCP_SERVERS: undefined,
-                  ELECTRON_RUN_AS_NODE: "1",
-                }),
+                buildEnv: () =>
+                  headlessWorkerEnv(process.env, {
+                    ELECTRON_RUN_AS_NODE: "1",
+                  }),
               },
               ownerId: async (req) =>
                 (await authorized(req)) ? contexts.get(req)?.sessionId : undefined,

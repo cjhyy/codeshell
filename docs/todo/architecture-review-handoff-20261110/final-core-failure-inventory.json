@@ -1,0 +1,1799 @@
+{
+  "shard-0": {
+    "count_source": "observed cases matching final Bun count",
+    "observed_failure_count": 10,
+    "reported_failure_count": 10,
+    "failure_files": {
+      "packages/desktop/src/main/mcp-oauth-issuer.test.ts": 10
+    },
+    "failures": [
+      {
+        "file": "packages/desktop/src/main/mcp-oauth-issuer.test.ts",
+        "test": "actual SDK OAuth issuer binding with two controlled authorization servers > Desktop pins both auth legs and refresh to the actual AS, preserving SDK issuer stamps [2.28ms]"
+      },
+      {
+        "file": "packages/desktop/src/main/mcp-oauth-issuer.test.ts",
+        "test": "actual SDK OAuth issuer binding with two controlled authorization servers > SDK refuses pre-registered secrets bound to A when the MCP resource advertises B [1.41ms]"
+      },
+      {
+        "file": "packages/desktop/src/main/mcp-oauth-issuer.test.ts",
+        "test": "actual SDK OAuth issuer binding with two controlled authorization servers > SDK discards a token stamped for A before starting a new interactive sign-in at B [1.36ms]"
+      },
+      {
+        "file": "packages/desktop/src/main/mcp-oauth-issuer.test.ts",
+        "test": "actual SDK OAuth issuer binding with two controlled authorization servers > new public pre-registration without issuer receives SDK stamps after interactive login [1.25ms]"
+      },
+      {
+        "file": "packages/desktop/src/main/mcp-oauth-issuer.test.ts",
+        "test": "actual SDK OAuth issuer binding with two controlled authorization servers > legacy issuer fallback stamps only the public client ID and never sends the old private secret [1.33ms]"
+      },
+      {
+        "file": "packages/desktop/src/main/mcp-oauth-issuer.test.ts",
+        "test": "actual SDK OAuth issuer binding with two controlled authorization servers > unbound legacy registration cannot enter Desktop SDK discovery or lose the old credential [1.26ms]"
+      },
+      {
+        "file": "packages/desktop/src/main/mcp-oauth-issuer.test.ts",
+        "test": "actual SDK OAuth issuer binding with two controlled authorization servers > relogin refuses authorization endpoint replacement before sending a saved client secret [1.30ms]"
+      },
+      {
+        "file": "packages/desktop/src/main/mcp-oauth-issuer.test.ts",
+        "test": "actual SDK OAuth issuer binding with two controlled authorization servers > relogin refuses token endpoint replacement before sending a saved client secret [1.26ms]"
+      },
+      {
+        "file": "packages/desktop/src/main/mcp-oauth-issuer.test.ts",
+        "test": "actual SDK OAuth issuer binding with two controlled authorization servers > relogin refuses both endpoint replacement before sending a saved client secret [1.21ms]"
+      },
+      {
+        "file": "packages/desktop/src/main/mcp-oauth-issuer.test.ts",
+        "test": "actual SDK OAuth issuer binding with two controlled authorization servers > unbound legacy refresh fails closed without discovery or provider requests [1.29ms]"
+      }
+    ],
+    "nested_or_uncounted_failure_lines": []
+  },
+  "shard-1": {
+    "count_source": "final Bun failure summary",
+    "observed_failure_count": 196,
+    "reported_failure_count": 196,
+    "failure_files": {
+      "packages/core/src/engine/engine.prompt-cache.test.ts": 4,
+      "packages/core/src/engine/engine.primary-cache-accounting.test.ts": 2,
+      "packages/core/src/engine/engine.workspace-profile-session.test.ts": 2,
+      "packages/core/src/engine/engine.agent-background-yield.test.ts": 5,
+      "packages/core/src/engine/engine.session-title.test.ts": 4,
+      "packages/core/src/engine/engine.concurrent-run.test.ts": 3,
+      "packages/core/src/engine/engine.session-kind.test.ts": 1,
+      "packages/core/src/engine/engine.todo-resume.test.ts": 2,
+      "packages/core/src/engine/agent-direction-safe-point.test.ts": 5,
+      "packages/core/src/engine/engine.bash-background-continuation.test.ts": 3,
+      "packages/core/src/engine/engine.profile-input-change.test.ts": 2,
+      "packages/core/src/engine/engine.child-host-bindings.test.ts": 2,
+      "packages/core/src/engine/engine.prompt-too-long.test.ts": 1,
+      "packages/core/src/engine/engine.turn-diff.test.ts": 2,
+      "packages/core/src/engine/engine.file-history-home.test.ts": 1,
+      "packages/core/src/engine/engine-sid-isolation.test.ts": 1,
+      "packages/core/src/engine/engine.init-lifecycle.test.ts": 6,
+      "packages/core/src/engine/engine.task-routing.test.ts": 8,
+      "packages/core/src/engine/engine.run-yield.test.ts": 13,
+      "packages/core/src/engine/engine.tool-selection-resume.test.ts": 5,
+      "packages/core/src/engine/engine.session-fork-history.test.ts": 4,
+      "packages/core/src/engine/run-stream.test.ts": 8,
+      "packages/core/src/engine/engine.archive-persist.test.ts": 4,
+      "packages/core/src/engine/engine.session-open.test.ts": 1,
+      "packages/core/src/engine/engine.max-turns-stream.test.ts": 4,
+      "packages/core/src/engine/engine-client-message-id.test.ts": 3,
+      "packages/core/src/engine/subagent-reuse.integration.test.ts": 1,
+      "packages/core/src/engine/engine.context-notes.test.ts": 6,
+      "packages/core/src/engine/engine.mcp-health.test.ts": 1,
+      "packages/core/src/engine/turn-loop-goal-lifecycle.test.ts": 25,
+      "packages/core/src/engine/engine.background-output.test.ts": 4,
+      "packages/core/src/engine/engine-steer-idle.test.ts": 2,
+      "packages/core/src/engine/engine.external-file-provenance.test.ts": 1,
+      "packages/core/src/engine/engine.model-traces.test.ts": 1,
+      "packages/core/src/engine/engine-current-model.test.ts": 3,
+      "packages/core/src/engine/engine.auto-compaction-goal.test.ts": 4,
+      "packages/core/src/engine/engine.context-anchor.test.ts": 3,
+      "packages/core/src/engine/engine.permission-boundary.test.ts": 4,
+      "packages/core/src/engine/engine.output-journal.test.ts": 11,
+      "packages/core/src/engine/engine.session-message.test.ts": 2,
+      "packages/core/src/engine/engine.module-lifetime.test.ts": 1,
+      "packages/core/src/engine/engine.profile-max-turns.test.ts": 13,
+      "packages/core/src/engine/engine-structured-image-vision-gate.test.ts": 7,
+      "packages/core/src/engine/engine.cost-ledger.test.ts": 5,
+      "packages/core/src/engine/engine.quick-chat-restricted.test.ts": 1,
+      "packages/core/src/tool-system/mcp-envelope.test.ts": 1,
+      "packages/core/src/tool-system/sandbox/skill-resources.test.ts": 2,
+      "packages/core/src/tool-system/sandbox/sandbox.test.ts": 1,
+      "packages/core/src/tool-system/sandbox/multi-root.seatbelt.e2e.test.ts": 1
+    },
+    "failures": [
+      {
+        "file": "packages/core/src/engine/engine.prompt-cache.test.ts",
+        "test": "Engine prompt-cache hygiene > uses the Engine context window to bound skill metadata in the actual request [440.33ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.prompt-cache.test.ts",
+        "test": "Engine prompt-cache hygiene > does not retain injected userContext or dynamicContext in the compacted history cache [298.21ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.prompt-cache.test.ts",
+        "test": "Engine prompt-cache hygiene > keeps dynamicContext out of real summary compaction anchored summaries [263.89ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.prompt-cache.test.ts",
+        "test": "Engine prompt-cache hygiene > warns when cache_read drops sharply for the same session [263.89ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.primary-cache-accounting.test.ts",
+        "test": "same-model auxiliary usage is billed while live, final and restarted cache metrics stay foreground-only [40.62ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.primary-cache-accounting.test.ts",
+        "test": "an auxiliary response settling during the next run preserves cache counts and bills exactly once [38.51ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.workspace-profile-session.test.ts",
+        "test": "session-bound workspace profile > persists and switches the digital human without replacing the Session [170.27ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.workspace-profile-session.test.ts",
+        "test": "session-bound workspace profile > passes portable profile memory into the run ToolContext [68.04ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.agent-background-yield.test.ts",
+        "test": "Agent background completion boundaries > automatic timeout waits first and completes only after the result notification [66.81ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.agent-background-yield.test.ts",
+        "test": "Agent background completion boundaries > automatic timeout still returns the final result to a headless caller [3004.95ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.agent-background-yield.test.ts",
+        "test": "Agent background completion boundaries > explicit background waits first and completes only after the result notification [48.89ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.agent-background-yield.test.ts",
+        "test": "Agent background completion boundaries > explicit background still returns the final result to a headless caller [3006.37ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.agent-background-yield.test.ts",
+        "test": "Agent background completion boundaries > finishes all foreground siblings and launches all background siblings in the same tool batch [63.47ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.session-title.test.ts",
+        "test": "Engine session title persistence > titles the first request by its displayText, not model-only framing [30000.23ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.session-title.test.ts",
+        "test": "Engine session title persistence > merges a delayed title after a later serial session-state update [30000.00ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.session-title.test.ts",
+        "test": "Engine session title persistence > merges a late title into the latest state without rolling back a later run [76.69ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.session-title.test.ts",
+        "test": "Engine session title persistence > persists a title and folds its billed usage into the latest session state [30000.04ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.concurrent-run.test.ts",
+        "test": "Engine.run concurrent re-entry guard > rejects a second run without replacing the active run controls [30000.04ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.concurrent-run.test.ts",
+        "test": "Engine.run concurrent re-entry guard > allows sequential runs and resets active controls between them [30000.12ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.concurrent-run.test.ts",
+        "test": "Engine.run concurrent re-entry guard > preserves the normal single-run lifecycle [68.21ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.session-kind.test.ts",
+        "test": "runExclusive session-kind pinning (run-workspace behavior snapshot) > reuses the persisted kind when a resume omits options.kind [40.44ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.todo-resume.test.ts",
+        "test": "Engine TodoWrite resume replay > emits task_update for a non-empty latest TodoWrite snapshot [39.16ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.todo-resume.test.ts",
+        "test": "Engine TodoWrite resume replay > uses the latest TodoWrite snapshot when multiple exist [39.59ms]"
+      },
+      {
+        "file": "packages/core/src/engine/agent-direction-safe-point.test.ts",
+        "test": "child Engine direction safe point > injects after the completed response, redrives the next model call, and persists agent provenance [30000.67ms]"
+      },
+      {
+        "file": "packages/core/src/engine/agent-direction-safe-point.test.ts",
+        "test": "child Engine direction safe point > reports the real TurnLoop model phase and aborts interrupt-and-redrive [30000.06ms]"
+      },
+      {
+        "file": "packages/core/src/engine/agent-direction-safe-point.test.ts",
+        "test": "child Engine direction safe point > reports the real TurnLoop tool phase and aborts interrupt-and-redrive [30000.03ms]"
+      },
+      {
+        "file": "packages/core/src/engine/agent-direction-safe-point.test.ts",
+        "test": "child Engine direction safe point > reports real approval/finalizing phases and complete provider usage [30000.99ms]"
+      },
+      {
+        "file": "packages/core/src/engine/agent-direction-safe-point.test.ts",
+        "test": "child Engine direction safe point > returns delivered only after the real TurnLoop merged and persisted that envelope [30000.17ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.bash-background-continuation.test.ts",
+        "test": "Bash background turn continuation > continue executes the next actual tool step while the service is alive [116.80ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.bash-background-continuation.test.ts",
+        "test": "Bash background turn continuation > omitted behavior keeps the finite-task wait boundary [106.74ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.bash-background-continuation.test.ts",
+        "test": "Bash background turn continuation > wait_for_exit keeps the finite-task wait boundary [97.28ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.profile-input-change.test.ts",
+        "test": "Engine behavior-profile user input lifecycle > notifies the active profile for each consumed steer before publishing injection [108.88ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.profile-input-change.test.ts",
+        "test": "Engine behavior-profile user input lifecycle > does not notify for initial input or steers revoked before injection [110.12ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.child-host-bindings.test.ts",
+        "test": "Engine child host session initialization > starts an ordinary real Engine run without accessing the uninitialized session [95.48ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.child-host-bindings.test.ts",
+        "test": "Engine child host session initialization > resolves the parent identity only when a real child is spawned [95.12ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.prompt-too-long.test.ts",
+        "test": "Engine prompt_too_long terminal event > emits turn_complete and persists status when TurnLoop cannot recover context limit [106.86ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.turn-diff.test.ts",
+        "test": "Engine authoritative logical-turn diff > publishes original-to-final states, persists continuation baseline and starts a fresh user baseline [111.74ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.turn-diff.test.ts",
+        "test": "Engine authoritative logical-turn diff > publishes interrupted capture omissions on resume even without another edit [121.54ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.file-history-home.test.ts",
+        "test": "Engine FileHistory CODE_SHELL_HOME routing > the run-scoped FileHistory hook uses the same default root as SessionManager [100.31ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine-sid-isolation.test.ts",
+        "test": "Engine.run sid isolation > does not let concurrent runs overwrite the module fallback sid [5013.63ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.init-lifecycle.test.ts",
+        "test": "Engine initialization lifecycle > preserves an early cancellation rejection after publishing its durable timed terminal with normal observer [107.93ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.init-lifecycle.test.ts",
+        "test": "Engine initialization lifecycle > preserves an early cancellation rejection after publishing its durable timed terminal with throwing error observer [95.29ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.init-lifecycle.test.ts",
+        "test": "Engine initialization lifecycle > persists model_error, handles early client rejection, and releases the run guard [98.19ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.init-lifecycle.test.ts",
+        "test": "Engine initialization lifecycle > persists model_error for MCP initialization failure and releases the run guard [77.38ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.init-lifecycle.test.ts",
+        "test": "Engine initialization lifecycle > preserves the successful initialization path [58.27ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.init-lifecycle.test.ts",
+        "test": "Engine initialization lifecycle > logs a structured persistence error when transcript flushing becomes unrecoverable [54.73ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.task-routing.test.ts",
+        "test": "Engine task routing consumer > retains loaded schemas while adding tools for a new user intent [54.46ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.task-routing.test.ts",
+        "test": "Engine task routing consumer > ToolSearch loads an inactive tool only for the next model step [54.03ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.task-routing.test.ts",
+        "test": "Engine task routing consumer > an explicit Run allowlist stays eager and cannot be widened by routing [52.23ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.task-routing.test.ts",
+        "test": "Engine task routing consumer > a behavior allowlist stays eager and dominates task matching [52.32ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.task-routing.test.ts",
+        "test": "Engine task routing consumer > unmatched tasks retain the preset's existing initial schemas [106.41ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.task-routing.test.ts",
+        "test": "Engine task routing consumer > a custom preset without routing keeps deferred compatibility [53.88ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.task-routing.test.ts",
+        "test": "Engine task routing consumer > a custom preset without routing keeps eager compatibility [54.47ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.task-routing.test.ts",
+        "test": "Engine task routing consumer > a preset without ToolSearch keeps its complete eligible surface [72.18ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.run-yield.test.ts",
+        "test": "Engine tool run yield gating > keeps reused caller options free of previous run stream wrappers [104.15ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.run-yield.test.ts",
+        "test": "Engine tool run yield gating > does not persist an older Engine terminal under a newer run identity [30001.04ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.run-yield.test.ts",
+        "test": "Engine tool run yield gating > publishes the new run identity with active disk state on resume [188.79ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.run-yield.test.ts",
+        "test": "Engine tool run yield gating > carries the final run body on its terminal event [94.59ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.run-yield.test.ts",
+        "test": "Engine tool run yield gating > anchors the run start to its durable user message identity [103.68ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.run-yield.test.ts",
+        "test": "Engine tool run yield gating > preserves background_wait in EngineResult [100.02ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.run-yield.test.ts",
+        "test": "Engine tool run yield gating > preserves background_wait in run_result [96.81ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.run-yield.test.ts",
+        "test": "Engine tool run yield gating > ignores a tool run-yield in a headless run (one-shot caller keeps its full turn) [103.21ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.run-yield.test.ts",
+        "test": "Engine tool run yield gating > ignores a tool run-yield in a sub-agent run (parent cannot be woken for it) [92.46ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.run-yield.test.ts",
+        "test": "Engine tool run yield gating > honours a tool run-yield in an interactive top-level run (parks as background_wait) [96.95ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.run-yield.test.ts",
+        "test": "Engine tool run yield gating > honours a committed reply stop in interactive, headless, and sub-agent runs [104.85ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.run-yield.test.ts",
+        "test": "Engine tool run yield gating > re-drives a steer that arrived while the reply-committing batch was executing [101.05ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.run-yield.test.ts",
+        "test": "Engine tool run yield gating > keeps the background_wait park when the same batch also committed a reply [58.60ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.tool-selection-resume.test.ts",
+        "test": "background continuation keeps discovered definitions and order across runs and Engine restart [59.08ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.tool-selection-resume.test.ts",
+        "test": "selection in the same batch as a background yield is saved before another model step [100.54ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.tool-selection-resume.test.ts",
+        "test": "a genuine new user intent appends routed tools without reordering previously loaded tools [72.55ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.tool-selection-resume.test.ts",
+        "test": "another Session and a legacy injected continuation do not inherit or reroute tools [63.40ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.tool-selection-resume.test.ts",
+        "test": "restored names respect the current allowlist and use current definitions after restart [57.97ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.session-fork-history.test.ts",
+        "test": "Engine first turn after a session fork > sends copied legal tool history followed by the new user message [67.61ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.session-fork-history.test.ts",
+        "test": "Engine first turn after a session fork > does not propagate parent turns completed after the child snapshot [140.61ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.session-fork-history.test.ts",
+        "test": "Engine first turn after a session fork > sends only the persisted transfer summary before the first real target message [63.63ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.session-fork-history.test.ts",
+        "test": "Engine first turn after a session fork > a modern completed run with injected transcript flush degradation cannot use legacy tail fallback [59.39ms]"
+      },
+      {
+        "file": "packages/core/src/engine/run-stream.test.ts",
+        "test": "run stream background output boundaries > late parent text and thinking are rejected without marking recovery incomplete [19.76ms]"
+      },
+      {
+        "file": "packages/core/src/engine/run-stream.test.ts",
+        "test": "run stream background output boundaries > child lifecycle and late details keep parent cursors after finish and a successor run [18.16ms]"
+      },
+      {
+        "file": "packages/core/src/engine/run-stream.test.ts",
+        "test": "run stream background output boundaries > child Todos and Goal progress persist without changing parent run state [18.67ms]"
+      },
+      {
+        "file": "packages/core/src/engine/run-stream.test.ts",
+        "test": "run stream background output boundaries > a child title matching the parent title remains durable after a successor run [19.54ms]"
+      },
+      {
+        "file": "packages/core/src/engine/run-stream.test.ts",
+        "test": "run stream background output boundaries > a child journal failure fences the same Session after its parent run was replaced [18.85ms]"
+      },
+      {
+        "file": "packages/core/src/engine/run-stream.test.ts",
+        "test": "run stream background output boundaries > a late child cannot recreate its deleted parent Session [19.35ms]"
+      },
+      {
+        "file": "packages/core/src/engine/run-stream.test.ts",
+        "test": "run stream background output boundaries > a late child rejects a copied replacement without changing its state or journal [18.13ms]"
+      },
+      {
+        "file": "packages/core/src/engine/run-stream.test.ts",
+        "test": "run stream background output boundaries > consumer callback failures do not mark durable output as damaged [19.80ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.archive-persist.test.ts",
+        "test": "Engine archive persistence > archives history after appending the boundary message but before its first model call [73.37ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.archive-persist.test.ts",
+        "test": "Engine archive persistence > uses a host-authored pre-run archive summary without asking the summarizer [68.31ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.archive-persist.test.ts",
+        "test": "Engine archive persistence > pre-run archive uses fallbackSummary without a model call when notes rollover is unavailable [70.38ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.archive-persist.test.ts",
+        "test": "Engine archive persistence > pre-run archive still summarizes when no fallbackSummary is given when notes rollover is unavailable [76.28ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.session-open.test.ts",
+        "test": "runExclusive session open (run-session-open behavior snapshot) > stamps the first 80 chars of the first user message as the session summary [71.03ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.max-turns-stream.test.ts",
+        "test": "Engine max_turns stream terminal > does not advance an earlier completed snapshot after forced last-turn text [58.53ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.max-turns-stream.test.ts",
+        "test": "Engine max_turns stream terminal > persists and emits max_turns when the last-turn instruction produces plain final text [57.73ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.max-turns-stream.test.ts",
+        "test": "Engine max_turns stream terminal > emits one turn_complete(max_turns) for a maxTurns live run [58.83ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.max-turns-stream.test.ts",
+        "test": "Engine max_turns stream terminal > keeps one turn_complete(max_turns) when headless drain re-enters TurnLoop [55.09ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine-client-message-id.test.ts",
+        "test": "Engine clientMessageId submit idempotency > reports an accepted input without a saved result as incomplete and permits a fresh intent [345.34ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine-client-message-id.test.ts",
+        "test": "Engine clientMessageId submit idempotency > replays a duplicate submit result after an engine restart [82.83ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine-client-message-id.test.ts",
+        "test": "Engine clientMessageId submit idempotency > keeps distinct submits that do not provide a clientMessageId [92.92ms]"
+      },
+      {
+        "file": "packages/core/src/engine/subagent-reuse.integration.test.ts",
+        "test": "sub-agent reuse through the native Engine spawner > restores the conversation and enforces the original role scope after registry loss [45.22ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.context-notes.test.ts",
+        "test": "Engine notes context strategy > ordinary sessions default to summary and hide native notes controls [64.10ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.context-notes.test.ts",
+        "test": "Engine notes context strategy > config can enable notes for an ordinary session [61.08ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.context-notes.test.ts",
+        "test": "Engine notes context strategy > settings can enable notes for an ordinary session [65.71ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.context-notes.test.ts",
+        "test": "Engine notes context strategy > config can explicitly override notes settings with the summary strategy [67.37ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.context-notes.test.ts",
+        "test": "Engine notes context strategy > SaveContextNote then NewContext shrinks the same session and survives an engine restart [103.39ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.context-notes.test.ts",
+        "test": "Engine notes context strategy > manual forceCompact uses a saved note without a separate summary call [103.71ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.mcp-health.test.ts",
+        "test": "Engine per-run MCP health context > reports initialization failure to the model without persisting it or leaking it after recovery [60.03ms]"
+      },
+      {
+        "file": "packages/core/src/engine/turn-loop-goal-lifecycle.test.ts",
+        "test": "Engine persisted goal lifecycle > passes a failed tool round and the current assistant text to the built-in judge [52.34ms]"
+      },
+      {
+        "file": "packages/core/src/engine/turn-loop-goal-lifecycle.test.ts",
+        "test": "Engine persisted goal lifecycle > publishes exhausted only after the terminal lifecycle commit succeeds [78.54ms]"
+      },
+      {
+        "file": "packages/core/src/engine/turn-loop-goal-lifecycle.test.ts",
+        "test": "Engine persisted goal lifecycle > G1: does not re-enter headless TurnLoop after the first goal termination [68.95ms]"
+      },
+      {
+        "file": "packages/core/src/engine/turn-loop-goal-lifecycle.test.ts",
+        "test": "Engine persisted goal lifecycle > G1: persists a later background notification without restarting after termination [65.58ms]"
+      },
+      {
+        "file": "packages/core/src/engine/turn-loop-goal-lifecycle.test.ts",
+        "test": "Engine persisted goal lifecycle > G1 regression: keeps normal headless background continuation without goal termination [67.22ms]"
+      },
+      {
+        "file": "packages/core/src/engine/turn-loop-goal-lifecycle.test.ts",
+        "test": "Engine persisted goal lifecycle > F7: stops immediately on unrecoverable judge overflow but preserves the active goal [55.55ms]"
+      },
+      {
+        "file": "packages/core/src/engine/turn-loop-goal-lifecycle.test.ts",
+        "test": "Engine persisted goal lifecycle > F7: a bounded long objective still reaches the judge through Engine [55.25ms]"
+      },
+      {
+        "file": "packages/core/src/engine/turn-loop-goal-lifecycle.test.ts",
+        "test": "Engine persisted goal lifecycle > F7 regression: a normal objective still reaches the judge through Engine [57.11ms]"
+      },
+      {
+        "file": "packages/core/src/engine/turn-loop-goal-lifecycle.test.ts",
+        "test": "Engine persisted goal lifecycle > routes goal judgment to primary even when a distinct auxText model is configured [55.36ms]"
+      },
+      {
+        "file": "packages/core/src/engine/turn-loop-goal-lifecycle.test.ts",
+        "test": "Engine persisted goal lifecycle > refuses to arm a stale activeGoal that matches its terminal tombstone [58.40ms]"
+      },
+      {
+        "file": "packages/core/src/engine/turn-loop-goal-lifecycle.test.ts",
+        "test": "Engine persisted goal lifecycle > pauses a stop-block-capped goal and re-arms it on the user's next message [62.87ms]"
+      },
+      {
+        "file": "packages/core/src/engine/turn-loop-goal-lifecycle.test.ts",
+        "test": "Engine persisted goal lifecycle > parks a goal blocked on the user and re-arms it on the user's reply [59.69ms]"
+      },
+      {
+        "file": "packages/core/src/engine/turn-loop-goal-lifecycle.test.ts",
+        "test": "Engine persisted goal lifecycle > clears a token-budget-exhausted goal so a bare send stays out of goal mode [60.63ms]"
+      },
+      {
+        "file": "packages/core/src/engine/turn-loop-goal-lifecycle.test.ts",
+        "test": "Engine persisted goal lifecycle > met:true judge crossing the token budget writes a tombstone instead of clearing as met [45.15ms]"
+      },
+      {
+        "file": "packages/core/src/engine/turn-loop-goal-lifecycle.test.ts",
+        "test": "Engine persisted goal lifecycle > clears a goal-mode max-turns termination [98.52ms]"
+      },
+      {
+        "file": "packages/core/src/engine/turn-loop-goal-lifecycle.test.ts",
+        "test": "Engine persisted goal lifecycle > keeps the active goal when waiting on finite background work [43.86ms]"
+      },
+      {
+        "file": "packages/core/src/engine/turn-loop-goal-lifecycle.test.ts",
+        "test": "Engine persisted goal lifecycle > does not clear replacement goal B when run goal A terminates [48.88ms]"
+      },
+      {
+        "file": "packages/core/src/engine/turn-loop-goal-lifecycle.test.ts",
+        "test": "Engine persisted goal lifecycle > judge-met records run goal A terminal identity after live goal changes to B [49.25ms]"
+      },
+      {
+        "file": "packages/core/src/engine/turn-loop-goal-lifecycle.test.ts",
+        "test": "Engine persisted goal lifecycle > complete_goal records run goal A terminal identity after live goal changes to B [83.20ms]"
+      },
+      {
+        "file": "packages/core/src/engine/turn-loop-goal-lifecycle.test.ts",
+        "test": "Engine persisted goal lifecycle > cancel_goal records run goal A terminal identity after live goal changes to B [47.49ms]"
+      },
+      {
+        "file": "packages/core/src/engine/turn-loop-goal-lifecycle.test.ts",
+        "test": "Engine persisted goal lifecycle > complete_goal clears state.activeGoal so the next bare send cannot inherit it [136.48ms]"
+      },
+      {
+        "file": "packages/core/src/engine/turn-loop-goal-lifecycle.test.ts",
+        "test": "Engine persisted goal lifecycle > desktop workspace switch rebases the live revision before complete_goal persists [80.91ms]"
+      },
+      {
+        "file": "packages/core/src/engine/turn-loop-goal-lifecycle.test.ts",
+        "test": "Engine persisted goal lifecycle > desktop workspace switch rebases the live revision before budget exhaustion persists [46.73ms]"
+      },
+      {
+        "file": "packages/core/src/engine/turn-loop-goal-lifecycle.test.ts",
+        "test": "Engine persisted goal lifecycle > preserves the second turnSeq when a desktop workspace write advances disk revision [77.92ms]"
+      },
+      {
+        "file": "packages/core/src/engine/turn-loop-goal-lifecycle.test.ts",
+        "test": "Engine persisted goal lifecycle > confirmed cancel_goal clears state.activeGoal so the next bare send cannot inherit it [47.94ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.background-output.test.ts",
+        "test": "real Engine child output after background handoff > explicit background journals late child details and resumes from its notification [47.35ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.background-output.test.ts",
+        "test": "real Engine child output after background handoff > automatic timeout journals late child details and resumes from its notification [46.92ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.background-output.test.ts",
+        "test": "real Engine child output after background handoff > completes a real foreground sibling before yielding and retains the detached child's later output [52.11ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.background-output.test.ts",
+        "test": "real Engine child output after background handoff > late output from the previous child remains recoverable while a newer parent run owns the Session [50.26ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine-steer-idle.test.ts",
+        "test": "Engine.enqueueSteer active-run gate > accepts and consumes shutdown steer before activeRunSession is cleared [58.41ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine-steer-idle.test.ts",
+        "test": "Engine.enqueueSteer active-run gate > wires a consumed steer origin through Engine into the next tool context [50.55ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.external-file-provenance.test.ts",
+        "test": "actual Engine appends completion provenance to external_file_changes without loss [45.44ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.model-traces.test.ts",
+        "test": "real Engine runs retain assembled model inputs, separate execution IDs and exact tool parents without replay duplicates [60.80ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine-current-model.test.ts",
+        "test": "shared current model configuration > configured text intents use each Session's fresh workspace without mutating the shared boot pool [59.82ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine-current-model.test.ts",
+        "test": "shared current model configuration > an inherited child/SDK snapshot does not require ownership of the parent's pool [51.30ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine-current-model.test.ts",
+        "test": "shared current model configuration > catalog and connection hot reload reach every tool and the actual request at the next run [59.95ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.auto-compaction-goal.test.ts",
+        "test": "Engine auto-compaction Goal accounting > accounts auto-compaction primary-model usage against the Goal budget [49.08ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.auto-compaction-goal.test.ts",
+        "test": "Engine auto-compaction Goal accounting > does not issue the main request after compaction exhausts the Goal budget [62.49ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.auto-compaction-goal.test.ts",
+        "test": "Engine auto-compaction Goal accounting > keeps normal Goal usage accounting unchanged when compaction does not run [55.59ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.auto-compaction-goal.test.ts",
+        "test": "Engine auto-compaction Goal accounting > continues normally after auto-compaction when no Goal is active [46.30ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.context-anchor.test.ts",
+        "test": "Engine context usage anchor > persists the provider prompt-token anchor in session state [62.41ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.context-anchor.test.ts",
+        "test": "Engine context usage anchor > uses a compatible persisted anchor for the resumed session-start estimate [76.24ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.context-anchor.test.ts",
+        "test": "Engine context usage anchor > labels a cold session-start estimate as heuristic low confidence [43.38ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.permission-boundary.test.ts",
+        "test": "Engine permission context changes at run boundaries > keeps a busy turn approval-gated and applies bypass to the next turn [30113.29ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.permission-boundary.test.ts",
+        "test": "Engine permission context changes at run boundaries > keeps a busy turn out of plan mode and enables the hard gate next turn [30003.05ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.permission-boundary.test.ts",
+        "test": "Engine permission context changes at run boundaries > applies an idle serial permission switch to the next run [67.92ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.permission-boundary.test.ts",
+        "test": "an unattended background restriction does not change the next Engine turn [30001.65ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.output-journal.test.ts",
+        "test": "actual Engine throw flushes pending deltas before its durable non-success terminal and releases the timer [30000.12ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.output-journal.test.ts",
+        "test": "actual Engine abort flushes pending deltas before its durable non-success terminal and releases the timer [30000.00ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.output-journal.test.ts",
+        "test": "actual Engine close flushes pending deltas before its durable non-success terminal and releases the timer [30000.00ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.output-journal.test.ts",
+        "test": "actual Engine.run without options persists complete output [62.56ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.output-journal.test.ts",
+        "test": "actual Engine.run without options fences swallowed truncate [60.20ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.output-journal.test.ts",
+        "test": "actual Engine.run without options fences swallowed record-rewrite [58.33ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.output-journal.test.ts",
+        "test": "actual Engine.run without options fences swallowed header-rewrite [58.69ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.output-journal.test.ts",
+        "test": "actual Engine keeps sensitive raw tool results out of output journal, recovery and transcript [59.01ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.output-journal.test.ts",
+        "test": "actual Engine restart refuses a previously published journal that became empty [57.65ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.output-journal.test.ts",
+        "test": "actual Engine restart refuses a previously published journal that became missing [57.90ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.output-journal.test.ts",
+        "test": "actual Engine rejects a swallowed journal write failure and never reports completed [60.05ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.session-message.test.ts",
+        "test": "Engine SendMessageToSession wiring > exposes the closed target list and routes the model's message once [49.98ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.session-message.test.ts",
+        "test": "Engine SendMessageToSession wiring > uses project bindings instead of caller-reported workspace roots [77.40ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.module-lifetime.test.ts",
+        "test": "Engine module lifetimes through production paths > Runtime close cancels and awaits an active Engine before releasing shared resources [30001.68ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.profile-max-turns.test.ts",
+        "test": "Engine behavior-profile turn ceiling > caps an endlessly retrying model and preserves one truthful max_turns terminal [62.20ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.profile-max-turns.test.ts",
+        "test": "Engine behavior-profile turn ceiling > does not raise a stricter engine limit [58.47ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.profile-max-turns.test.ts",
+        "test": "Engine behavior-profile turn ceiling > does not raise a stricter Goal limit [60.18ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.profile-max-turns.test.ts",
+        "test": "Engine behavior-profile turn ceiling > keeps the profile ceiling when an active Goal is edited [59.22ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.profile-max-turns.test.ts",
+        "test": "Engine behavior-profile turn ceiling > allows a live extension only up to the profile ceiling [54.72ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.profile-max-turns.test.ts",
+        "test": "Engine behavior-profile turn ceiling > does not carry a profile ceiling into the next ordinary Work run [58.40ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.profile-max-turns.test.ts",
+        "test": "Engine behavior-profile turn ceiling > ignores invalid or absent profile cap %s [57.56ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.profile-max-turns.test.ts",
+        "test": "Engine behavior-profile turn ceiling > ignores invalid or absent profile cap %s [57.71ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.profile-max-turns.test.ts",
+        "test": "Engine behavior-profile turn ceiling > ignores invalid or absent profile cap %s [56.10ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.profile-max-turns.test.ts",
+        "test": "Engine behavior-profile turn ceiling > ignores invalid or absent profile cap %s [58.66ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.profile-max-turns.test.ts",
+        "test": "Engine behavior-profile turn ceiling > ignores invalid or absent profile cap %s [60.50ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.profile-max-turns.test.ts",
+        "test": "Engine behavior-profile turn ceiling > ignores invalid or absent profile cap %s [61.17ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.profile-max-turns.test.ts",
+        "test": "Engine behavior-profile turn ceiling > ignores invalid or absent profile cap %s [58.96ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine-structured-image-vision-gate.test.ts",
+        "test": "Engine structured image attachment vision gate > loads credential-named attachments in default run mode [67.65ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine-structured-image-vision-gate.test.ts",
+        "test": "Engine structured image attachment vision gate > loads credential-named attachments in bypassPermissions run mode [60.77ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine-structured-image-vision-gate.test.ts",
+        "test": "Engine structured image attachment vision gate > uses the active run's full access for steered attachments after a pending mode change [56.21ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine-structured-image-vision-gate.test.ts",
+        "test": "Engine structured image attachment vision gate > degrades structured image attachments to path metadata for non-vision models [69.75ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine-structured-image-vision-gate.test.ts",
+        "test": "Engine structured image attachment vision gate > allows non-image structured attachments for non-vision models [68.74ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine-structured-image-vision-gate.test.ts",
+        "test": "Engine structured image attachment vision gate > sends a structured-only image attachment as user content to a vision model [69.59ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine-structured-image-vision-gate.test.ts",
+        "test": "Engine structured image attachment vision gate > merges legacy and structured image attachments for vision models [82.85ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.cost-ledger.test.ts",
+        "test": "real Engine child execution rolls up leaf costs once and keeps Session/Runtime views distinct [67.30ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.cost-ledger.test.ts",
+        "test": "late title stays with its original Session while same SID in another identity bills separately [30005.83ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.cost-ledger.test.ts",
+        "test": "restart, input replay and fork do not import a cumulative Runtime bill [119.53ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.cost-ledger.test.ts",
+        "test": "protocol usage defaults to owned Session and rejects aggregate escalation and unbounded reads [103.65ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.cost-ledger.test.ts",
+        "test": "identity-bearing external tool billing updates the owning budget counters once [102.49ms]"
+      },
+      {
+        "file": "packages/core/src/engine/engine.quick-chat-restricted.test.ts",
+        "test": "Engine quick-chat prompt guidance > keeps preset-required capability sections in isolated tasks [107.83ms]"
+      },
+      {
+        "file": "packages/core/src/tool-system/mcp-envelope.test.ts",
+        "test": "isolated MCP manager uses its own credential access and paginates real local protocol [0.96ms]"
+      },
+      {
+        "file": "packages/core/src/tool-system/sandbox/skill-resources.test.ts",
+        "test": "Skill reads through real Seatbelt > cat, sed, grep and listing read registered resources [25.74ms]"
+      },
+      {
+        "file": "packages/core/src/tool-system/sandbox/skill-resources.test.ts",
+        "test": "Skill reads through real Seatbelt > literal profile paths handle quotes without widening access [22.13ms]"
+      },
+      {
+        "file": "packages/core/src/tool-system/sandbox/sandbox.test.ts",
+        "test": "seatbelt keychain access > profile grants write access to the MDS cache dir [3.88ms]"
+      },
+      {
+        "file": "packages/core/src/tool-system/sandbox/multi-root.seatbelt.e2e.test.ts",
+        "test": "real multi-root Seatbelt E2E writes primary and secondary but denies outside [13.48ms]"
+      }
+    ],
+    "nested_or_uncounted_failure_lines": []
+  },
+  "shard-2": {
+    "count_source": "final Bun failure summary",
+    "observed_failure_count": 94,
+    "reported_failure_count": 92,
+    "failure_files": {
+      "packages/core/src/protocol/tcp-transport.test.ts": 2,
+      "packages/core/src/protocol/server.session-message.integration.test.ts": 2,
+      "packages/core/src/protocol/server.run-model.test.ts": 2,
+      "packages/core/src/protocol/server.project-model.test.ts": 1,
+      "packages/core/src/protocol/server.tcp-approval-isolation.test.ts": 3,
+      "packages/core/src/protocol/chat-session-manager.migration.test.ts": 1,
+      "packages/core/src/cost-ledger/ledger.test.ts": 1,
+      "packages/core/src/profile/catalog.test.ts": 1,
+      "packages/core/src/links/remote-refresh-classification.test.ts": 1,
+      "packages/core/src/links/operation-reconcile.test.ts": 1,
+      "packages/core/src/links/verified-write.test.ts": 9,
+      "packages/core/src/links/remote.test.ts": 21,
+      "packages/core/src/links/remote-providers.test.ts": 28,
+      "packages/core/src/links/link-action-run-authority.test.ts": 1,
+      "packages/core/src/links/request-once.test.ts": 5,
+      "packages/core/src/model-traces/store.test.ts": 1,
+      "packages/core/src/services/oauth.test.ts": 3,
+      "packages/core/src/llm/providers/openai-reasoning-stream.test.ts": 9
+    },
+    "failures": [
+      {
+        "file": "packages/core/src/protocol/tcp-transport.test.ts",
+        "test": "listenTcp — real localhost round trip > accepts a connection and exchanges a framed message [3.05ms]"
+      },
+      {
+        "file": "packages/core/src/protocol/tcp-transport.test.ts",
+        "test": "listenTcp — real localhost round trip > defaults to 127.0.0.1 (does not bind a public interface) [2.04ms]"
+      },
+      {
+        "file": "packages/core/src/protocol/server.session-message.integration.test.ts",
+        "test": "AgentServer cross-Session messaging with a real Engine > cold-starts a project-bound target with its authoritative workspace and persists the turn [121.85ms]"
+      },
+      {
+        "file": "packages/core/src/protocol/server.session-message.integration.test.ts",
+        "test": "AgentServer cross-Session messaging with a real Engine > returns a delayed real target reply to the source mailbox with its dispatch id [86.47ms]"
+      },
+      {
+        "file": "packages/core/src/protocol/server.run-model.test.ts",
+        "test": "agent/run model > acknowledges a configured intent only after its actual claim and returns duplicate receipts without replay [79.83ms]"
+      },
+      {
+        "file": "packages/core/src/protocol/server.run-model.test.ts",
+        "test": "agent/run model > persists the actual per-run model on first use and after a later native switch [73.96ms]"
+      },
+      {
+        "file": "packages/core/src/protocol/server.project-model.test.ts",
+        "test": "model keys resolve the current project connection without changing the shared pool [116.45ms]"
+      },
+      {
+        "file": "packages/core/src/protocol/server.tcp-approval-isolation.test.ts",
+        "test": "TCP approval routing is connection-owned > does not expose A's approval to B and accepts A's matching four-tuple [2.32ms]"
+      },
+      {
+        "file": "packages/core/src/protocol/server.tcp-approval-isolation.test.ts",
+        "test": "TCP approval routing is connection-owned > fails a pending approval closed when its owning TCP connection disconnects [1.83ms]"
+      },
+      {
+        "file": "packages/core/src/protocol/server.tcp-approval-isolation.test.ts",
+        "test": "TCP approval routing is connection-owned > rejects a second connection that tries to claim an active session [1.92ms]"
+      },
+      {
+        "file": "packages/core/src/protocol/chat-session-manager.migration.test.ts",
+        "test": "ChatSessionManager resident Engine root migration > re-resolves every project-scoped authority from the target root before the next turn [128.00ms]"
+      },
+      {
+        "file": "packages/core/src/cost-ledger/ledger.test.ts",
+        "test": "direct SDK construction accounts real localhost retry attempts and explicitly reported zero usage [2.31ms]"
+      },
+      {
+        "file": "packages/core/src/profile/catalog.test.ts",
+        "test": "addHumanRepo error messages > a missing repo yields a name hint, not a git command line [101.31ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote-refresh-classification.test.ts",
+        "test": "isolated refresh rejection fixture completes with exact-origin guards [25011.80ms]"
+      },
+      {
+        "file": "packages/core/src/links/operation-reconcile.test.ts",
+        "test": "independent confined HTTP suite completes its own full JUnit report [25012.21ms]"
+      },
+      {
+        "file": "packages/core/src/links/verified-write.test.ts",
+        "test": "remote Host write crosses actual HTTP once and independently verifies through the owning executor [3.50ms]"
+      },
+      {
+        "file": "packages/core/src/links/verified-write.test.ts",
+        "test": "oauth Host write crosses actual HTTP once and independently verifies through the owning executor [1.95ms]"
+      },
+      {
+        "file": "packages/core/src/links/verified-write.test.ts",
+        "test": "legacy managed CLI write grant is rejected before any transport [1.84ms]"
+      },
+      {
+        "file": "packages/core/src/links/verified-write.test.ts",
+        "test": "actual lost POST response is unknown; different model tool ID, revised body, or later continue cannot replay [1.78ms]"
+      },
+      {
+        "file": "packages/core/src/links/verified-write.test.ts",
+        "test": "independent read mismatch never verifies the write response [1.79ms]"
+      },
+      {
+        "file": "packages/core/src/links/verified-write.test.ts",
+        "test": "exact argument read denial prevents the POST instead of borrowing outer write approval [1.84ms]"
+      },
+      {
+        "file": "packages/core/src/links/verified-write.test.ts",
+        "test": "missing declared read grant and live capability revocation fail closed before POST [1.90ms]"
+      },
+      {
+        "file": "packages/core/src/links/verified-write.test.ts",
+        "test": "bound read hook cannot change the validated target; revocation after approval prevents all IO [1.82ms]"
+      },
+      {
+        "file": "packages/core/src/links/verified-write.test.ts",
+        "test": "display-only post-hook context does not corrupt private verification evidence or skip hooks [1.72ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote.test.ts",
+        "test": "PKCE exchange discovers the selected account and restricts action shapes without exposing tokens [30006.22ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote.test.ts",
+        "test": "concurrent actions rotate a refresh token once and persist its replacement before use [30001.52ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote.test.ts",
+        "test": "uncertain rotation persists reconnect status and never resends the old refresh token [30000.39ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote.test.ts",
+        "test": "disconnect during refresh cannot revive a credential and an orphaned refresh is never replayed [30000.98ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote.test.ts",
+        "test": "scope and connection selection do not fall back to another account [30000.42ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote.test.ts",
+        "test": "mismatched callbacks and insecure issuers are rejected before any request [30000.63ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote.test.ts",
+        "test": "removing a connection while a provider is responding discards the result [30000.33ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote.test.ts",
+        "test": "a consumed authorization attempt cannot exchange its code twice [30000.50ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote.test.ts",
+        "test": "a narrowed token cannot execute removed actions and cannot expand again [30000.53ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote.test.ts",
+        "test": "remote revocation becomes reconnect status and never leaks provider error bodies [30000.53ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote.test.ts",
+        "test": "action 400 is a parameter failure, retains the grant and records only a reviewed broker code [30000.30ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote.test.ts",
+        "test": "action 401 records reviewed upstream reauthorization and invalidates the current grant [30000.38ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote.test.ts",
+        "test": "refresh 400 still requires reconnection and never replays the old rotation [30001.26ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote.test.ts",
+        "test": "refresh 401 still requires reconnection and never replays the old rotation [30000.47ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote.test.ts",
+        "test": "terminal preflight binding and scope errors mark the same saved grant before any request [30001.63ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote.test.ts",
+        "test": "a preflight CAS cannot overwrite a grant installed after the reviewed record [30000.72ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote.test.ts",
+        "test": "undecryptable custody is never rewritten to mark a terminal preflight failure [30000.89ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote.test.ts",
+        "test": "a delayed action 401 cannot invalidate a later successful installation [30000.39ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote.test.ts",
+        "test": "a failed in-flight refresh cannot overwrite a later successful installation [30001.37ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote.test.ts",
+        "test": "unknown and oversized broker error bodies never enter execution diagnostics [30000.35ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote.test.ts",
+        "test": "a stalled broker error body cannot hide its HTTP status or delay recovery [30000.55ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote-providers.test.ts",
+        "test": "Source read crosses production Link authorization/refresh/resource filters over actual HTTP [3.40ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote-providers.test.ts",
+        "test": "github: actual HTTP authorization and every declared action preserve the local contract and selected resources [1.98ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote-providers.test.ts",
+        "test": "gitlab: actual HTTP authorization and every declared action preserve the local contract and selected resources [1.72ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote-providers.test.ts",
+        "test": "sentry: actual HTTP authorization and every declared action preserve the local contract and selected resources [1.76ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote-providers.test.ts",
+        "test": "vercel: actual HTTP authorization and every declared action preserve the local contract and selected resources [1.71ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote-providers.test.ts",
+        "test": "slack: actual HTTP authorization and every declared action preserve the local contract and selected resources [1.70ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote-providers.test.ts",
+        "test": "notion: actual HTTP authorization and every declared action preserve the local contract and selected resources [1.66ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote-providers.test.ts",
+        "test": "linear: actual HTTP authorization and every declared action preserve the local contract and selected resources [1.77ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote-providers.test.ts",
+        "test": "todoist: actual HTTP authorization and every declared action preserve the local contract and selected resources [1.68ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote-providers.test.ts",
+        "test": "airtable: actual HTTP authorization and every declared action preserve the local contract and selected resources [1.66ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote-providers.test.ts",
+        "test": "figma: actual HTTP authorization and every declared action preserve the local contract and selected resources [1.70ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote-providers.test.ts",
+        "test": "authorization rejects cross-provider, expanded capabilities, ambiguous resources and missing identity [2.47ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote-providers.test.ts",
+        "test": "Figma account-only grants are connected but cannot read any file or refresh a token [1.88ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote-providers.test.ts",
+        "test": "legacy Figma grants read summaries without gaining design-content authority [1.78ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote-providers.test.ts",
+        "test": "explicit design-content grants permit explicit full reads without gaining node or image actions [1.86ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote-providers.test.ts",
+        "test": "Figma read_design_content fails explicitly when the service returns only a pages summary [1.73ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote-providers.test.ts",
+        "test": "remote Figma full content has a larger bounded budget and a recoverable overflow [133.51ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote-providers.test.ts",
+        "test": "remote Figma Make links fail explicitly before refresh or provider HTTP [2.54ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote-providers.test.ts",
+        "test": "Figma selection is canonical, bounded and cannot silently widen or lose requested file access [2.16ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote-providers.test.ts",
+        "test": "ReadSource over worker IPC directs an ungranted Figma file to Add file without issuing provider requests [2.83ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote-providers.test.ts",
+        "test": "empty resource grants remain invalid for providers without deferred file selection [2.01ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote-providers.test.ts",
+        "test": "unreviewed scopes in a token are rejected before any metadata or action request [1.95ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote-providers.test.ts",
+        "test": "resource-specific actions reject a different grant resource before sending HTTP [3.17ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote-providers.test.ts",
+        "test": "bounded list metadata survives normalization and refresh stays bound to the non-GitHub provider [2.13ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote-providers.test.ts",
+        "test": "in-flight resource authority changes discard the returned data [1.95ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote-providers.test.ts",
+        "test": "request cancellation and provider errors cannot return success or credential-bearing bodies [1.95ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote-providers.test.ts",
+        "test": "remote GitHub write requires approval and the owning authorization pipeline before any request [2.78ms]"
+      },
+      {
+        "file": "packages/core/src/links/remote-providers.test.ts",
+        "test": "execution rechecks the stored token scope intersection before HTTP [2.13ms]"
+      },
+      {
+        "file": "packages/core/src/links/link-action-run-authority.test.ts",
+        "test": "confined Link run authority child completes all 12 regressions [25013.09ms]"
+      },
+      {
+        "file": "packages/core/src/links/request-once.test.ts",
+        "test": "a consumed POST with a lost response has exactly one physical send [30000.25ms]"
+      },
+      {
+        "file": "packages/core/src/links/request-once.test.ts",
+        "test": "redirects never forward a credential or replay a write [30000.26ms]"
+      },
+      {
+        "file": "packages/core/src/links/request-once.test.ts",
+        "test": "upstream HTTP failures remain visible to the caller without retry [30000.18ms]"
+      },
+      {
+        "file": "packages/core/src/links/request-once.test.ts",
+        "test": "abort still bounds a response body after headers arrive [30001.84ms]"
+      },
+      {
+        "file": "packages/core/src/links/request-once.test.ts",
+        "test": "unsupported protocols and body types fail before network I/O [30000.24ms]"
+      },
+      {
+        "file": "packages/core/src/model-traces/store.test.ts",
+        "test": "ModelTraceStore > retention yields between batches and never scans history inside a trace write [30014.60ms]"
+      },
+      {
+        "file": "packages/core/src/services/oauth.test.ts",
+        "test": "OAuth authorization code flow > builds PKCE authorization URL, handles callback and validates token response [2.23ms]"
+      },
+      {
+        "file": "packages/core/src/services/oauth.test.ts",
+        "test": "OAuth authorization code flow > rejects state mismatch and access denial without exchanging a token [2.61ms]"
+      },
+      {
+        "file": "packages/core/src/services/oauth.test.ts",
+        "test": "OAuth authorization code flow > cleans up on timeout and AbortSignal [1.56ms]"
+      },
+      {
+        "file": "packages/core/src/llm/providers/openai-reasoning-stream.test.ts",
+        "test": "OpenAI-compatible reasoning over real SSE > openai forwards thinking before completion and persists each field once [2.52ms]"
+      },
+      {
+        "file": "packages/core/src/llm/providers/openai-reasoning-stream.test.ts",
+        "test": "OpenAI-compatible reasoning over real SSE > deepseek forwards thinking before completion and persists each field once [1.60ms]"
+      },
+      {
+        "file": "packages/core/src/llm/providers/openai-reasoning-stream.test.ts",
+        "test": "OpenAI-compatible reasoning over real SSE > does not infer thinking from answer text or unrelated provider metadata [1.52ms]"
+      },
+      {
+        "file": "packages/core/src/llm/providers/openai-reasoning-stream.test.ts",
+        "test": "OpenAI-compatible reasoning over real SSE > cancellation after the first thinking delta drops buffered reasoning, text and tools [1.51ms]"
+      },
+      {
+        "file": "packages/core/src/llm/providers/openai-reasoning-stream.test.ts",
+        "test": "OpenAI-compatible reasoning over real SSE > non-streaming fallback retains the provider's complete reasoning separately from answer text [1.51ms]"
+      },
+      {
+        "file": "packages/core/src/llm/providers/openai-reasoning-stream.test.ts",
+        "test": "does not transparently retry after a thinking delta escaped [1.48ms]"
+      },
+      {
+        "file": "packages/core/src/llm/providers/openai-reasoning-stream.test.ts",
+        "test": "does not transparently retry after a text delta escaped [1.45ms]"
+      },
+      {
+        "file": "packages/core/src/llm/providers/openai-reasoning-stream.test.ts",
+        "test": "does not transparently retry after a tool delta escaped [2.37ms]"
+      },
+      {
+        "file": "packages/core/src/llm/providers/openai-reasoning-stream.test.ts",
+        "test": "still retries transient stream errors before the first visible delta [1.53ms]"
+      }
+    ],
+    "nested_or_uncounted_failure_lines": [
+      {
+        "file": "packages/core/src/links/link-action-run-authority.test.ts",
+        "test": "fixture rejects outside fetch and socket requests before producer imports can escape [15014.73ms]"
+      },
+      {
+        "file": "packages/core/src/links/request-once.test.ts",
+        "test": "remote refresh can finish after run revocation but sends no action [30001.19ms]"
+      }
+    ]
+  },
+  "shard-31": {
+    "count_source": "final Bun failure summary",
+    "observed_failure_count": 2,
+    "reported_failure_count": 2,
+    "failure_files": {
+      "packages/core/src/plugins/loadPluginHooks.test.ts": 2
+    },
+    "failures": [
+      {
+        "file": "packages/core/src/plugins/loadPluginHooks.test.ts",
+        "test": "loadPluginHooks SessionStart matcher source > matcher 'resume' fires on resume and not on startup [106.07ms]"
+      },
+      {
+        "file": "packages/core/src/plugins/loadPluginHooks.test.ts",
+        "test": "loadPluginHooks SessionStart matcher source > fresh session with caller-supplied id is startup, not resume [109.35ms]"
+      }
+    ],
+    "nested_or_uncounted_failure_lines": []
+  },
+  "shard-32": {
+    "count_source": "final Bun failure summary",
+    "observed_failure_count": 115,
+    "reported_failure_count": 115,
+    "failure_files": {
+      "packages/core/src/session/output-journal-persistent-identity.test.ts": 8,
+      "packages/core/src/session/output-journal-storage.test.ts": 11,
+      "packages/core/src/session/output-journal-performance.test.ts": 1,
+      "packages/core/src/session/output-journal-contention.test.ts": 3,
+      "packages/core/src/session/output-journal-legacy-base.test.ts": 16,
+      "packages/core/src/session/output-journal-identity-migration.test.ts": 19,
+      "packages/core/src/session/output-history-recovery.test.ts": 22,
+      "packages/core/src/session/output-journal.test.ts": 34,
+      "packages/core/src/session/persistent-file-identity.test.ts": 1
+    },
+    "failures": [
+      {
+        "file": "packages/core/src/session/output-journal-persistent-identity.test.ts",
+        "test": "durable output identity across macOS reboot > cold readers, writers, coverage and old cursors survive device renumbering [29.11ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-persistent-identity.test.ts",
+        "test": "durable output identity across macOS reboot > whole-state saves preserve durable binding and incident evidence [15.05ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-persistent-identity.test.ts",
+        "test": "durable output identity across macOS reboot > legacy device drift at parent admission does not poison storage [14.44ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-persistent-identity.test.ts",
+        "test": "durable output identity across macOS reboot > legacy device drift at child admission does not poison storage [14.97ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-persistent-identity.test.ts",
+        "test": "first v3 watermark and cursor binding are published in one state transaction [12.51ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-persistent-identity.test.ts",
+        "test": "actual output arriving before legacy identity admission still records a storage failure [15.00ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-persistent-identity.test.ts",
+        "test": "platform identity lookup failure precedes journal materialization and can be retried [16.69ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-persistent-identity.test.ts",
+        "test": "coverage preflight rejects a FIFO state without waiting for a writer [21.80ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-storage.test.ts",
+        "test": "the actual historical reader and writer reject a migrated header-only anchor and leave its bytes intact [20.61ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-storage.test.ts",
+        "test": "retention expires old frozen ranges explicitly, preserves the original inode and resumes retained cursors [20.44ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-storage.test.ts",
+        "test": "lost, replaced and corrupted storage manifests or segments never become complete recovery [17.06ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-storage.test.ts",
+        "test": "persistent manifest and segment proof survives changed device observations [18.14ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-storage.test.ts",
+        "test": "stable segment proof rejects another volume even with the same inode and intact bytes [17.46ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-storage.test.ts",
+        "test": "healthy legacy storage admission upgrades physical proof while retaining every logical byte [16.45ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-storage.test.ts",
+        "test": "failure after the durable format barrier keeps real historical algorithms fenced [19.84ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-storage.test.ts",
+        "test": "every first-migration flush failure preserves rejecting bytes or an unchanged unpublished prefix [17.40ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-storage.test.ts",
+        "test": "retention faults never expose a header-only anchor and preserve retained cursor recovery [17.23ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-storage.test.ts",
+        "test": "retention truncate failure keeps a durable rejecting marker and a valid retained prefix [17.74ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-storage.test.ts",
+        "test": "active segment growth after opening a view preserves an older frozen prefix [17.73ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-performance.test.ts",
+        "test": "token-heavy history keeps bounded page reads and preserves every frame [13.49ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-contention.test.ts",
+        "test": "a short state CAS in another Node process does not poison journal admission [181.07ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-contention.test.ts",
+        "test": "a short state CAS in another Node process does not poison journal append [29.50ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-contention.test.ts",
+        "test": "a local asynchronous state lease is never synchronously waited on [22.25ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-legacy-base.test.ts",
+        "test": "sealed header tolerates a legal append during a 1024-byte base read [17.06ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-legacy-base.test.ts",
+        "test": "first capture seals the prefix despite a legal append during its 1024-byte scan [18.40ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-legacy-base.test.ts",
+        "test": "sealed header tolerates a legal append during a 2400000-byte base read [32.23ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-legacy-base.test.ts",
+        "test": "first capture seals the prefix despite a legal append during its 2400000-byte scan [39.71ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-legacy-base.test.ts",
+        "test": "sealed header rejects truncate of the prefix during its read [15.10ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-legacy-base.test.ts",
+        "test": "sealed header rejects rewrite of the prefix during its read [13.15ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-legacy-base.test.ts",
+        "test": "sealed header rejects rewrite-and-append of the prefix during its read [13.96ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-legacy-base.test.ts",
+        "test": "first capture omits a proof if truncate races the prefix scan [11.00ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-legacy-base.test.ts",
+        "test": "first capture omits a proof if rewrite races the prefix scan [13.34ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-legacy-base.test.ts",
+        "test": "first capture omits a proof if rewrite-and-append races the prefix scan [13.89ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-legacy-base.test.ts",
+        "test": "first writer seals raw BOM/CRLF bytes and a cold reader ignores a huge later line [31.29ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-legacy-base.test.ts",
+        "test": "existing journals do not rescan and failed first capture keeps run admission compatible [10.83ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-legacy-base.test.ts",
+        "test": "capture runs outside the state lock and discards a replaced transcript before sealing [12.47ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-legacy-base.test.ts",
+        "test": "the first header rechecks the captured path after taking the lock [24.31ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-legacy-base.test.ts",
+        "test": "wrapped Engine publication seals a large pre-run base and cold recovery joins output [41.77ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-legacy-base.test.ts",
+        "test": "sealed complete base exposes its exact raw prefix identity only on success [46.48ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-identity-migration.test.ts",
+        "test": "explicit re-admission preserves chats, old cursors and known gaps while allowing future output [31.42ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-identity-migration.test.ts",
+        "test": "healthy legacy migration does not manufacture a historical gap [21.94ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-identity-migration.test.ts",
+        "test": "legacy re-admission and resuming an incomplete Session each require explicit acceptance [21.93ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-identity-migration.test.ts",
+        "test": "migration retries the same evidence after interruption at evidence-durable [20.52ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-identity-migration.test.ts",
+        "test": "migration retries the same evidence after interruption at barrier-durable [16.29ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-identity-migration.test.ts",
+        "test": "migration retries the same evidence after interruption at state-durable [14.76ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-identity-migration.test.ts",
+        "test": "migration retries the same evidence after interruption at consumer-verified [14.76ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-identity-migration.test.ts",
+        "test": "identity migration refuses a checksummed chain ending in an unfinished fragment group [16.20ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-identity-migration.test.ts",
+        "test": "a changed source after durable evidence remains fenced and cannot be retried into success [12.20ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-identity-migration.test.ts",
+        "test": "copied migration evidence cannot re-admit a copied Session or a different store [12.84ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-identity-migration.test.ts",
+        "test": "the offline CLI requires its exact flags and migrates without a provider environment [85.53ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-identity-migration.test.ts",
+        "test": "evidence inside the Session store and symbolic-link inventory entries are refused [21.29ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-identity-migration.test.ts",
+        "test": "migration preserves valid nonempty input coverage and last input while recording a gap [19.08ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-identity-migration.test.ts",
+        "test": "malformed coverage is rejected before any re-admission [17.79ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-identity-migration.test.ts",
+        "test": "retry rejects a self-checksummed receipt with a path-bearing operation ID [12.85ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-identity-migration.test.ts",
+        "test": "retry reflushes a linked receipt, source files and directory entries before mutation [13.77ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-identity-migration.test.ts",
+        "test": "a replaced state lease at barrier-durable leaves the Session fenced [14.19ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-identity-migration.test.ts",
+        "test": "a replaced state lease at state-durable leaves the Session fenced [14.06ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal-identity-migration.test.ts",
+        "test": "a compromised state lease never throws from the lock refresh timer [16.46ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-history-recovery.test.ts",
+        "test": "explicit new epoch preserves original conversation/context/evidence and rejects old cursors [25.10ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-history-recovery.test.ts",
+        "test": "plan cannot survive changed owner authority/evidence [22.01ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-history-recovery.test.ts",
+        "test": "plan cannot survive changed revoked authority/evidence [22.08ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-history-recovery.test.ts",
+        "test": "plan cannot survive changed state authority/evidence [17.78ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-history-recovery.test.ts",
+        "test": "plan cannot survive changed transcript authority/evidence [21.17ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-history-recovery.test.ts",
+        "test": "interruption at evidence-durable never exposes a half-selected epoch [18.91ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-history-recovery.test.ts",
+        "test": "interruption at epoch-durable never exposes a half-selected epoch [16.82ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-history-recovery.test.ts",
+        "test": "interruption at state-durable never exposes a half-selected epoch [18.20ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-history-recovery.test.ts",
+        "test": "refuses unproved text before any epoch writes [17.42ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-history-recovery.test.ts",
+        "test": "refuses unproved args before any epoch writes [18.09ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-history-recovery.test.ts",
+        "test": "refuses unproved result before any epoch writes [18.91ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-history-recovery.test.ts",
+        "test": "refuses unproved tail before any epoch writes [19.48ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-history-recovery.test.ts",
+        "test": "refuses unproved hardlink before any epoch writes [16.54ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-history-recovery.test.ts",
+        "test": "refuses unproved unknown before any epoch writes [20.08ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-history-recovery.test.ts",
+        "test": "a stale active label does not override Host quiescence and a closed canonical history [18.70ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-history-recovery.test.ts",
+        "test": "a lost acknowledgement is idempotent after restart and under fresh authorization [22.54ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-history-recovery.test.ts",
+        "test": "a modified evidence copy cannot become an accepted checkpoint [22.24ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-history-recovery.test.ts",
+        "test": "complete large tool-result fragments survive exact comparison and checkpoint replay [17.90ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-history-recovery.test.ts",
+        "test": "a directory symlink substitution cannot publish even identical source files [20.39ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-history-recovery.test.ts",
+        "test": "actual native checkpoint inserts only a proven failed input and preserves its provider context [22.26ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-history-recovery.test.ts",
+        "test": "actual epoch inserts the recorder's proved unresolved-tool error without replaying the call [23.61ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-history-recovery.test.ts",
+        "test": "known native formats do not broaden recovery into the hidden Pet session boundary [24.98ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal.test.ts",
+        "test": "Session output journal > a bounded batch keeps distinct cursors and shares only durable flushes [21.23ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal.test.ts",
+        "test": "Session output journal > batch flush failure 1 publishes no cursors and preserves the old proof barrier [20.90ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal.test.ts",
+        "test": "Session output journal > batch flush failure 2 publishes no cursors and preserves the old proof barrier [16.60ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal.test.ts",
+        "test": "Session output journal > incremental batches flush before control/terminal events and at Run lifetime teardown [19.47ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal.test.ts",
+        "test": "Session output journal > buffered deltas retain source timestamps and replay uses the original user anchor time [20.02ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal.test.ts",
+        "test": "Session output journal > timer flush failure latches without unhandled errors and never publishes pending deltas or success [17.80ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal.test.ts",
+        "test": "Session output journal > freezes contiguous bounded pages while subsequent appends advance another head [19.32ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal.test.ts",
+        "test": "Session output journal > storage scope, file replacement, Session deletion/reuse and stale run owners invalidate cursors [21.26ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal.test.ts",
+        "test": "Session output journal > only an uncommitted final tail is isolated; committed interior corruption is never skipped [19.09ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal.test.ts",
+        "test": "Session output journal > a committed identity pin fences missing/zero/replaced journals after a cold owner restart [16.85ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal.test.ts",
+        "test": "Session output journal > a live writer cannot ignore a removed/replaced identity pin [18.47ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal.test.ts",
+        "test": "Session output journal > cached positions still detect same-size corruption before after, even with restored mtime [15.60ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal.test.ts",
+        "test": "Session output journal > a live writer refuses same-length committed record/header rewrites before publishing another cursor [19.90ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal.test.ts",
+        "test": "Session output journal > a mutation while assembling a page rechecks header, pin and sticky failure, while allowing a new run owner [16.23ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal.test.ts",
+        "test": "Session output journal > an append between the captured size and stamp cannot poison the current-head cache [18.25ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal.test.ts",
+        "test": "Session output journal > child forwarding retains origin while the parent commits its own distinct scope [17.09ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal.test.ts",
+        "test": "Session output journal > streamed child deltas commit in bounded batches and keep order with parent output [16.19ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal.test.ts",
+        "test": "Session output journal > a truncated frozen upper bound is invalid and malformed complete records are incomplete [17.27ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal.test.ts",
+        "test": "Session output journal > large UTF-8 events are bounded fragments and pending final fragments never become coverage [16.94ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal.test.ts",
+        "test": "Session output journal > an unpublished partial event repairs only after the complete original evidence is durable [18.54ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal.test.ts",
+        "test": "Session output journal > lost or malformed published watermarks fail closed and whole-state saves preserve the watermark [19.47ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal.test.ts",
+        "test": "Session output journal > repair receipt failure retains the original source and never truncates unpublished bytes [16.88ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal.test.ts",
+        "test": "Session output journal > a lost, replaced, truncated or damaged head never falls back to the admission floor [20.56ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal.test.ts",
+        "test": "Session output journal > a torn head update retains the journal and blocks recovery instead of publishing [18.29ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal.test.ts",
+        "test": "Session output journal > watermark commit failure never publishes or adopts a complete uncommitted event [18.76ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal.test.ts",
+        "test": "Session output journal > inline watermarks migrate without changing cursors and frame publication does not replace state [23.91ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal.test.ts",
+        "test": "Session output journal > a head fsync failure blocks publication and does not silently reuse the old watermark [20.23ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal.test.ts",
+        "test": "Session output journal > complete historical v1 data keeps its cursor during watermark migration; unknown old tails stay intact [16.76ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal.test.ts",
+        "test": "Session output journal > legacy cutover requires the exact bounded prefix and never reads a huge later reply [17.95ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal.test.ts",
+        "test": "Session output journal > whole-event rotation keeps previously published and frozen cursors in the same domain [16.24ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal.test.ts",
+        "test": "Session output journal > archive follows the existing read policy; ephemeral Sessions create no journal [20.12ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal.test.ts",
+        "test": "Session output journal > persistence/budget failure fences ordinary events and never publishes completed [18.57ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal.test.ts",
+        "test": "Session output journal > a physical write denial cannot publish a cursor or a completed event [20.83ms]"
+      },
+      {
+        "file": "packages/core/src/session/output-journal.test.ts",
+        "test": "Session output journal > rejects malformed options and too-small byte pages without inventing empty completeness [19.12ms]"
+      },
+      {
+        "file": "packages/core/src/session/persistent-file-identity.test.ts",
+        "test": "persistent file identity > the production resolver binds a real temporary file without truncating its identity [7.87ms]"
+      }
+    ],
+    "nested_or_uncounted_failure_lines": []
+  }
+}

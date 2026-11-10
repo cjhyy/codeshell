@@ -1,7 +1,8 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { describe, it, expect } from "bun:test";
 import { AgentServer } from "./server.js";
 import { ChatSessionManager } from "./chat-session-manager.js";
-import type { Engine, EngineResult } from "../engine/engine.js";
+import type { EngineResult } from "../engine/engine.js";
 
 /**
  * Regression (review-2026-06-17): handleCancel's chatManager branch only called
@@ -33,15 +34,18 @@ function makeTransport() {
  * exposing the pending approval so the test can cancel mid-approval.
  */
 function makeAskingEngine() {
-  const state = { askUser: undefined as ((q: string) => Promise<string>) | undefined, answer: undefined as string | undefined };
-  const engine = {
+  const state = {
+    askUser: undefined as ((q: string) => Promise<string>) | undefined,
+    answer: undefined as string | undefined,
+  };
+  const engine = createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    getHookRegistry: undefined,
+    getSessionManager: undefined,
+
     setAskUser(fn: (q: string) => Promise<string>) {
       state.askUser = fn;
     },
-    setPlanMode() {},
-    setBrowserBridge() {},
-    setInjectCredential() {},
-    setSessionMessageRouter() {},
     isHeadless: () => false,
     async run(): Promise<EngineResult> {
       // Ask the client something; the client never replies, so this hangs until
@@ -55,7 +59,7 @@ function makeAskingEngine() {
         usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       };
     },
-  } as unknown as Engine;
+  });
   return { engine, state };
 }
 

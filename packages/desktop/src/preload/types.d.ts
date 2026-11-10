@@ -45,6 +45,7 @@ import type {
   PanelAppPreview,
   PanelAppUpdateCheck,
   MobileServerEvent,
+  RunResult,
 } from "@cjhyy/code-shell-core";
 import type {
   ApprovalRequest,
@@ -486,7 +487,7 @@ export interface ApprovalRequestEnvelope {
 
 export interface RpcResponse<T = unknown> {
   jsonrpc: "2.0";
-  id: number;
+  id: string | number | null;
   result?: T;
   error?: { code: number; message: string; data?: unknown };
 }
@@ -1126,6 +1127,8 @@ export interface CodeshellApi
       behaviorMode?: "quickChatRestricted";
       /** Bind this Session to a workspace profile/digital human. */
       workspaceProfile?: string;
+      /** Standing brief injected as system context. */
+      sessionBrief?: string;
       /** Closed same-project Session choices available to SendMessageToSession. */
       sessionMessageTargets?: Array<{
         sessionId: string;
@@ -1141,11 +1144,11 @@ export interface CodeshellApi
        */
       goal?: string;
     },
-  ): Promise<RpcResponse>;
+  ): Promise<RunResult>;
   /** Cancel a session's running turn. sessionId optional for legacy callers.
    *  `keepGoal` interrupts an external runtime without pausing its Goal (the
    *  interrupt-and-send path); a plain Stop pauses it. */
-  cancel(sessionId?: string, options?: { keepGoal?: boolean }): Promise<RpcResponse>;
+  cancel(sessionId?: string, options?: { keepGoal?: boolean }): Promise<RpcResponse | undefined>;
   /** Steer an in-flight run: queue a user message spliced at the next turn-loop
    *  step (不打断, for 引导). `id` is a stable handle echoed back on the
    *  steer_injected event and used to revoke via unsteer. Waits for the next

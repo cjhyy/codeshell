@@ -1,8 +1,9 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { afterEach, describe, it, expect, spyOn } from "bun:test";
 import { AgentServer } from "./server.js";
 import { ChatSessionManager } from "./chat-session-manager.js";
 import { Methods, USER_DECISION_TIMEOUT_MS } from "./types.js";
-import type { Engine, EngineResult } from "../engine/engine.js";
+import type { EngineResult } from "../engine/engine.js";
 import type { ApprovalRequest, ApprovalResult } from "../types.js";
 
 const cleanup: AgentServer[] = [];
@@ -46,21 +47,24 @@ function makeAskingEngine(sessionId: string, goal?: { objective: string }) {
     askUser: undefined as ((q: string) => Promise<string>) | undefined,
     answer: undefined as string | undefined,
   };
-  const engine = {
+  const engine = createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    dispose: undefined,
+    getComposition: undefined,
+    getHookRegistry: undefined,
+    getSessionManager: undefined,
+    prepareSessionCloseFinalization: undefined,
+
     setAskUser(fn: (q: string) => Promise<string>) {
       state.askUser = fn;
     },
-    setPlanMode() {},
-    setBrowserBridge() {},
-    setInjectCredential() {},
-    setSessionMessageRouter() {},
     isHeadless: () => false,
     getGoal: () => goal,
     async run(): Promise<EngineResult> {
       state.answer = await state.askUser!("continue?");
       return result(state.answer, sessionId);
     },
-  } as unknown as Engine;
+  });
   return { engine, state };
 }
 
@@ -212,7 +216,12 @@ describe("AgentServer AskUserQuestion timeout behavior", () => {
       const t = makeTransport();
       const server = new AgentServer({
         transport: t.transport,
-        engine: { isHeadless: () => true, setAskUser() {} } as unknown as Engine,
+        engine: createFakeEngine({
+          // Preserve the optional-capability fallbacks exercised by this fixture.
+          dispose: undefined,
+          getComposition: undefined,
+          isHeadless: () => true,
+        }),
       });
       cleanup.push(server);
       const request: ApprovalRequest = {

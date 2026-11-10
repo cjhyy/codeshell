@@ -1,0 +1,326 @@
+[
+  {
+    "ref": "fcd8406d51bf34696417dd9dd90c609f1d5ca640",
+    "total": 2,
+    "declarations": [
+      {
+        "line": 32,
+        "kind": "test",
+        "cases": 1,
+        "title": "\"tools and config resolve the requested session instead of the first live engine\""
+      },
+      {
+        "line": 59,
+        "kind": "test",
+        "cases": 1,
+        "title": "\"a global query uses a detached neutral engine, not a live project's policy\""
+      }
+    ]
+  },
+  {
+    "ref": "b737ca119bba783e4d6cd6eb8a2f5ded8e74dd56",
+    "total": 33,
+    "declarations": [
+      {
+        "line": 39,
+        "kind": "test",
+        "cases": 1,
+        "title": "\"tools and config resolve the requested session instead of the first live engine\""
+      },
+      {
+        "line": 66,
+        "kind": "test",
+        "cases": 1,
+        "title": "\"a global query uses a detached neutral engine, not a live project's policy\""
+      },
+      {
+        "line": 131,
+        "kind": "test.each",
+        "cases": 8,
+        "title": "\"%s retains its existing InternalError validation response\""
+      },
+      {
+        "line": 146,
+        "kind": "test",
+        "cases": 1,
+        "title": "\"configuration reads and writes retain their data shape and secret masking\""
+      },
+      {
+        "line": 171,
+        "kind": "test",
+        "cases": 1,
+        "title": "\"permission_set returns the selected mode and forwards it once\""
+      },
+      {
+        "line": 184,
+        "kind": "test.each",
+        "cases": 4,
+        "title": "\"%s preserves mutation and success response\""
+      },
+      {
+        "line": 214,
+        "kind": "test",
+        "cases": 1,
+        "title": "\"provider deletion preserves references and refresh rejects unknown providers\""
+      },
+      {
+        "line": 232,
+        "kind": "test",
+        "cases": 1,
+        "title": "\"model entries retain protocol names, fallback labels, active marker and limits\""
+      },
+      {
+        "line": 268,
+        "kind": "test",
+        "cases": 1,
+        "title": "\"providers retain model/cache metadata while redacting secrets\""
+      },
+      {
+        "line": 301,
+        "kind": "test",
+        "cases": 1,
+        "title": "\"provider_refresh uses the bundled OpenRouter snapshot without network requests\""
+      },
+      {
+        "line": 317,
+        "kind": "test",
+        "cases": 1,
+        "title": "\"session list, detail and unavailable journal preserve their response envelopes\""
+      },
+      {
+        "line": 351,
+        "kind": "test.each",
+        "cases": 2,
+        "title": "\"%s requires sessionId\""
+      },
+      {
+        "line": 357,
+        "kind": "test",
+        "cases": 1,
+        "title": "\"output_journal preserves reader bounds and the page wire shape\""
+      },
+      {
+        "line": 398,
+        "kind": "test",
+        "cases": 1,
+        "title": "\"usage forwards every bound and maps reader failures to InvalidParams\""
+      },
+      {
+        "line": 449,
+        "kind": "test.each",
+        "cases": 4,
+        "title": "\"%s preserves thrown engine errors\""
+      },
+      {
+        "line": 469,
+        "kind": "test.each",
+        "cases": 4,
+        "title": "\"%s reaches capability fallback and retains unknown-query errors\""
+      }
+    ]
+  },
+  {
+    "ref": "924d58afcf0278d3b40b8c3e2c03dbe6edaed3ba",
+    "total": 33,
+    "declarations": [
+      {
+        "line": 39,
+        "kind": "test",
+        "cases": 1,
+        "title": "\"tools and config resolve the requested session instead of the first live engine\""
+      },
+      {
+        "line": 66,
+        "kind": "test",
+        "cases": 1,
+        "title": "\"a global query uses a detached neutral engine, not a live project's policy\""
+      },
+      {
+        "line": 131,
+        "kind": "test.each",
+        "cases": 8,
+        "title": "\"%s retains its existing InternalError validation response\""
+      },
+      {
+        "line": 146,
+        "kind": "test",
+        "cases": 1,
+        "title": "\"configuration reads and writes retain their data shape and secret masking\""
+      },
+      {
+        "line": 171,
+        "kind": "test",
+        "cases": 1,
+        "title": "\"permission_set returns the selected mode and forwards it once\""
+      },
+      {
+        "line": 184,
+        "kind": "test.each",
+        "cases": 4,
+        "title": "\"%s preserves mutation and success response\""
+      },
+      {
+        "line": 214,
+        "kind": "test",
+        "cases": 1,
+        "title": "\"provider deletion preserves references and refresh rejects unknown providers\""
+      },
+      {
+        "line": 232,
+        "kind": "test",
+        "cases": 1,
+        "title": "\"model entries retain protocol names, fallback labels, active marker and limits\""
+      },
+      {
+        "line": 268,
+        "kind": "test",
+        "cases": 1,
+        "title": "\"providers retain model/cache metadata while redacting secrets\""
+      },
+      {
+        "line": 301,
+        "kind": "test",
+        "cases": 1,
+        "title": "\"provider_refresh uses the bundled OpenRouter snapshot without network requests\""
+      },
+      {
+        "line": 317,
+        "kind": "test",
+        "cases": 1,
+        "title": "\"session list, detail and unavailable journal preserve their response envelopes\""
+      },
+      {
+        "line": 351,
+        "kind": "test.each",
+        "cases": 2,
+        "title": "\"%s requires sessionId\""
+      },
+      {
+        "line": 357,
+        "kind": "test",
+        "cases": 1,
+        "title": "\"output_journal preserves reader bounds and the page wire shape\""
+      },
+      {
+        "line": 398,
+        "kind": "test",
+        "cases": 1,
+        "title": "\"usage forwards every bound and maps reader failures to InvalidParams\""
+      },
+      {
+        "line": 449,
+        "kind": "test.each",
+        "cases": 4,
+        "title": "\"%s preserves thrown engine errors\""
+      },
+      {
+        "line": 469,
+        "kind": "test.each",
+        "cases": 4,
+        "title": "\"%s reaches capability fallback and retains unknown-query errors\""
+      }
+    ]
+  },
+  {
+    "ref": "f31986b4268231ee7ce1b9fcc5a63d2098cbd98a",
+    "total": 33,
+    "declarations": [
+      {
+        "line": 42,
+        "kind": "test",
+        "cases": 1,
+        "title": "\"tools and config resolve the requested session instead of the first live engine\""
+      },
+      {
+        "line": 69,
+        "kind": "test",
+        "cases": 1,
+        "title": "\"a global query uses a detached neutral engine, not a live project's policy\""
+      },
+      {
+        "line": 134,
+        "kind": "test.each",
+        "cases": 8,
+        "title": "\"%s retains its existing InternalError validation response\""
+      },
+      {
+        "line": 149,
+        "kind": "test",
+        "cases": 1,
+        "title": "\"configuration reads and writes retain their data shape and secret masking\""
+      },
+      {
+        "line": 174,
+        "kind": "test",
+        "cases": 1,
+        "title": "\"permission_set returns the selected mode and forwards it once\""
+      },
+      {
+        "line": 187,
+        "kind": "test.each",
+        "cases": 4,
+        "title": "\"%s preserves mutation and success response\""
+      },
+      {
+        "line": 217,
+        "kind": "test",
+        "cases": 1,
+        "title": "\"provider deletion preserves references and refresh rejects unknown providers\""
+      },
+      {
+        "line": 235,
+        "kind": "test",
+        "cases": 1,
+        "title": "\"model entries retain protocol names, fallback labels, active marker and limits\""
+      },
+      {
+        "line": 271,
+        "kind": "test",
+        "cases": 1,
+        "title": "\"providers retain model/cache metadata while redacting secrets\""
+      },
+      {
+        "line": 304,
+        "kind": "test",
+        "cases": 1,
+        "title": "\"provider_refresh uses the bundled OpenRouter snapshot without network requests\""
+      },
+      {
+        "line": 320,
+        "kind": "test",
+        "cases": 1,
+        "title": "\"session list, detail and unavailable journal preserve their response envelopes\""
+      },
+      {
+        "line": 354,
+        "kind": "test.each",
+        "cases": 2,
+        "title": "\"%s requires sessionId\""
+      },
+      {
+        "line": 360,
+        "kind": "test",
+        "cases": 1,
+        "title": "\"output_journal preserves reader bounds and the page wire shape\""
+      },
+      {
+        "line": 401,
+        "kind": "test",
+        "cases": 1,
+        "title": "\"usage forwards every bound and maps reader failures to InvalidParams\""
+      },
+      {
+        "line": 452,
+        "kind": "test.each",
+        "cases": 4,
+        "title": "\"%s preserves thrown engine errors\""
+      },
+      {
+        "line": 472,
+        "kind": "test.each",
+        "cases": 4,
+        "title": "\"%s reaches capability fallback and retains unknown-query errors\""
+      }
+    ]
+  }
+]

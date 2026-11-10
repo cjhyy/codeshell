@@ -1,3 +1,4 @@
+import type { Dirent } from "node:fs";
 /**
  * Discover plugin-provided slash commands. For each installed plugin,
  * walks <installPath>/commands/*.md and returns one PluginCommand per
@@ -20,7 +21,7 @@ import {
 import { isAbsolute, join, relative, sep } from "node:path";
 import { homedir } from "node:os";
 import { memoize } from "../utils/memoize.js";
-import { parseFrontmatter, coerceDescription } from "../skills/frontmatter.js";
+import { parseFrontmatter, coerceDescription } from "../utils/frontmatter.js";
 import { installedPluginsPath, readInstalledPlugins } from "./installedPlugins.js";
 
 export interface PluginCommand {
@@ -136,7 +137,7 @@ function scanOnce(): PluginCommand[] {
       const resolvedCommandsDir = resolveContainedPath(entry.installPath, commandsDir);
       if (!resolvedCommandsDir) continue;
 
-      let dirEntries;
+      let dirEntries: Dirent[];
       try {
         dirEntries = readdirSync(resolvedCommandsDir, { withFileTypes: true }).sort((a, b) =>
           a.name.localeCompare(b.name),

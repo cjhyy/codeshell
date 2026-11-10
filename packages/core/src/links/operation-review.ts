@@ -8,7 +8,7 @@ import { getCredentialAccess, credentialAccessScope } from "../credentials/acces
 import type { SettingsScope } from "../settings/manager.js";
 import { asRecord } from "./http.js";
 import { canonicalOperationValue } from "../operations/ledger.js";
-import { githubOperationPlan } from "./operation-recovery.js";
+import { githubOperationPlan, type ReviewedGithubWrite } from "./operation-recovery.js";
 import { githubSetStarredParameters } from "./github-star.js";
 import { githubIssueStateParameters } from "./github-issue-state.js";
 import { githubCreateIssueParameters } from "./verified-write.js";
@@ -21,6 +21,16 @@ import {
 import { observeGithubOperation } from "./operation-reconcile.js";
 import { readOperationSessionOwner } from "../operations/session-owner.js";
 import type { OperationHookProcesses } from "./operation-hooks.js";
+
+/** Legacy result fields inspected below before accepting operation evidence. */
+interface LegacyLinkOperationOutput {
+  kind: string;
+  untrustedExternalContent: boolean;
+  provider: string;
+  action: ReviewedGithubWrite;
+  connectionId?: string;
+  operation?: Pick<OperationReceipt, "id" | "owner" | "fingerprint" | "attemptId">;
+}
 
 /** Host-only Link adapter for existing activity review; provider semantics stay outside generic operations. */
 export function createLinkOperationReviewStore(
@@ -304,7 +314,7 @@ export function legacyLinkOperationCandidates(
         duplicates.has(data.toolCallId)
       )
         continue;
-      let output;
+      let output: LegacyLinkOperationOutput;
       try {
         output = JSON.parse(data.result);
       } catch {
@@ -376,7 +386,7 @@ export function legacyLinkOperationEvidence(owner: OperationSessionOwner): Map<s
         typeof event.data?.result !== "string"
       )
         continue;
-      let output;
+      let output: LegacyLinkOperationOutput;
       try {
         output = JSON.parse(event.data.result);
       } catch {

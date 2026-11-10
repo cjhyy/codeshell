@@ -1,3 +1,4 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { describe, expect, test } from "bun:test";
 import type { Engine, EngineResult } from "../engine/engine.js";
 import type { EngineRunOptions } from "../engine/run-types.js";
@@ -18,7 +19,13 @@ function deferred<T>() {
 async function fixture() {
   const runs: Array<{ task: string; options: EngineRunOptions }> = [];
   const manual = deferred<void>();
-  const engine = {
+  const engine = createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    dispose: undefined,
+    getSessionManager: undefined,
+    prepareSessionCloseFinalization: undefined,
+
+    isGoalContinuationBlocked: undefined, // Preserve this fixture's absent optional capability.
     isHeadless: () => false,
     resolveSessionRunWorkspace: () => {
       throw new Error("cold Engine has no WorkspaceContext");
@@ -34,7 +41,7 @@ async function fixture() {
         usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       };
     },
-  } as unknown as Engine;
+  });
   const manager = new ChatSessionManager({ runtime: {} as never, engineFactory: () => engine });
   const session = await manager.getOrCreate("source", { cwd: "/project" });
   const notificationMailbox = new NotificationQueue();

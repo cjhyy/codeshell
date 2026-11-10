@@ -16,7 +16,7 @@
 
 import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { join, dirname, parse, resolve } from "node:path";
-import { userHome } from "../settings/manager.js";
+import { userHome } from "../utils/paths.js";
 
 // ─── Types ──────────────────────────────────────────────────────────
 

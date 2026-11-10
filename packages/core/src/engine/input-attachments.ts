@@ -1,3 +1,4 @@
+import type { Stats } from "node:fs";
 import { createHash } from "node:crypto";
 import { readdir, readFile, realpath, stat } from "node:fs/promises";
 import { extname, isAbsolute, join, relative, resolve, sep } from "node:path";
@@ -146,7 +147,7 @@ export async function buildInputAttachmentContext(
     }
 
     const resolved = resolveAttachmentPath(attachment, cwd, displayPath);
-    let info;
+    let info: Stats;
     try {
       info = await stat(resolved);
     } catch (err) {

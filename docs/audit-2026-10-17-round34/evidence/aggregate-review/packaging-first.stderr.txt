@@ -1,3 +1,0 @@
-Traceback (most recent call last):
-  File "<stdin>", line 45, in <module>
-AssertionError: author-receipt.json

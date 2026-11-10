@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { validateToolInputSchemaStrict } from "../tool-system/validation.js";
 
-export const PANEL_APP_MANIFEST_FILE = ".codeshell-panel/panel.json";
+export { PANEL_APP_MANIFEST_FILE } from "../utils/panel-app-schema.js";
 
 export const PANEL_APP_PERMISSIONS = [
   "context.session",

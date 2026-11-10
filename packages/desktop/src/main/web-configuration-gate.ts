@@ -1,3 +1,4 @@
+import { parseWorkerLine, type ParsedWorkerLine } from "./worker-line.js";
 /** Shared by Desktop IPC, mobile submissions and host-created runs. */
 export class WebConfigurationGate {
   private readonly runs = new Map<string, string>();
@@ -16,9 +17,9 @@ export class WebConfigurationGate {
     this.runs.delete(String(requestId));
   }
 
-  observe(line: string): void {
+  observe(line: string, parsedLine: ParsedWorkerLine = parseWorkerLine(line)): void {
     try {
-      const message = JSON.parse(line);
+      const message = parsedLine.message as { id?: string | number; method?: unknown };
       if (message.id !== undefined && !message.method) this.settleRun(message.id);
     } catch {
       // Unrelated logs do not change admission state.

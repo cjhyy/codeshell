@@ -41,7 +41,7 @@ import { cleanOutput } from "./output-clean.js";
 import { notificationQueue } from "../tool-system/builtin/agent-notifications.js";
 import { logger } from "../logging/logger.js";
 import type { SandboxBackend } from "../tool-system/sandbox/index.js";
-import { codeShellHome } from "../session/session-manager.js";
+import { codeShellHome } from "../utils/paths.js";
 
 export type BgShellStatus = "starting" | "running" | "exited" | "killed" | "orphaned";
 

@@ -5,7 +5,7 @@
  * 设计稿：docs/superpowers/specs/2026-07-15-workspace-profile-design.md
  */
 import { z } from "zod";
-import { ProfileSourceAccessSchema } from "../sources/types.js";
+import { ProfileSourceAccessSchema } from "../utils/source-bindings.js";
 
 /** 目录名即机器标识：小写字母/数字开头，可含 - _，防路径逃逸。 */
 export const WORKSPACE_PROFILE_NAME_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/;

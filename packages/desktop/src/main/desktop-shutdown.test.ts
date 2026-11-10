@@ -1,11 +1,202 @@
 import { expect, test } from "bun:test";
 import {
+  createDesktopModuleRegistry,
   createDesktopShutdownHandler,
   desktopShutdownFailureDialog,
   desktopShutdownDialogChoice,
 } from "./desktop-shutdown.js";
 
 const settle = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+test("modules start synchronously once and quit awaits reverse-order cleanup at the host boundary", async () => {
+  const calls: string[] = [];
+  let finishSecond!: () => void;
+  const secondCleanup = new Promise<void>((resolve) => {
+    finishSecond = resolve;
+  });
+  const modules = createDesktopModuleRegistry([
+    {
+      name: "first",
+      start: () => {
+        calls.push("start-first");
+      },
+      dispose: () => {
+        calls.push("dispose-first");
+      },
+    },
+    {
+      name: "second",
+      start: () => {
+        calls.push("start-second");
+      },
+      dispose: async () => {
+        calls.push("dispose-second");
+        await secondCleanup;
+      },
+    },
+  ]);
+  modules.start();
+  modules.start();
+  expect(calls).toEqual(["start-first", "start-second"]);
+  const handler = createDesktopShutdownHandler({
+    ownsInstance: () => true,
+    flushRenderers: async () => {
+      calls.push("save");
+    },
+    disposeOperationResolution: async () => {
+      calls.push("operations");
+    },
+    cleanup: async () => {
+      calls.push("cleanup-before-modules");
+      const pending = modules.dispose();
+      expect(modules.dispose()).toBe(pending);
+      await pending;
+      calls.push("cleanup-after-modules");
+    },
+    finalize: async () => {
+      calls.push("finalize");
+    },
+    quit: () => calls.push("quit"),
+    onError: () => {
+      throw new Error("Unexpected module cleanup failure");
+    },
+  });
+  handler({ preventDefault() {} });
+  await settle();
+  expect(calls.slice(2)).toEqual([
+    "save",
+    "operations",
+    "cleanup-before-modules",
+    "dispose-second",
+  ]);
+  finishSecond();
+  await settle();
+  expect(calls.slice(-4)).toEqual(["dispose-first", "cleanup-after-modules", "finalize", "quit"]);
+  expect(() => modules.start()).toThrow("disposed");
+});
+
+test("a partially started module is cleaned and failures do not skip earlier owners", async () => {
+  const calls: string[] = [];
+  const startError = new Error("start failed");
+  const cleanupError = new Error("cleanup failed");
+  const modules = createDesktopModuleRegistry([
+    {
+      name: "first",
+      start() {},
+      dispose: () => {
+        calls.push("first");
+      },
+    },
+    {
+      name: "partial",
+      start() {
+        throw startError;
+      },
+      dispose() {
+        calls.push("partial");
+        throw cleanupError;
+      },
+    },
+    {
+      name: "unstarted",
+      start: () => {
+        calls.push("unexpected-start");
+      },
+      dispose: () => {
+        calls.push("unexpected-dispose");
+      },
+    },
+  ]);
+  expect(() => modules.start()).toThrow(startError);
+  expect(() => modules.start()).toThrow(startError);
+  const pending = modules.dispose();
+  await expect(pending).rejects.toMatchObject({ errors: [cleanupError] });
+  expect(modules.dispose()).toBe(pending);
+  expect(calls).toEqual(["partial", "first"]);
+});
+
+test("unstarted modules acquire no resources and duplicate registration is rejected", async () => {
+  const module = {
+    name: "fixture",
+    start() {
+      throw new Error("Unexpected start");
+    },
+    dispose() {
+      throw new Error("Unexpected disposal");
+    },
+  };
+  expect(() => createDesktopModuleRegistry([module, module])).toThrow("unique");
+  const modules = createDesktopModuleRegistry([module]);
+  await modules.dispose();
+  expect(() => modules.start()).toThrow("disposed");
+});
+
+test("external runtime registration stays lazy and owns one service subscription until shutdown", async () => {
+  const { createExternalRuntimeModule } = await import("./external-runtime-module.js");
+  const calls: string[] = [];
+  const external = createExternalRuntimeModule(() => {
+    calls.push("options");
+    return {
+      approvals: { windows: () => [] },
+      service: {
+        featureFlags: () => ({ external_agent_runtime: true }),
+        registerSession() {},
+        releaseSession() {},
+        resolveProjectBinding: () => undefined,
+        emit() {},
+        backgroundWork: {
+          subscribe: () => {
+            calls.push("subscribe");
+            return () => {
+              calls.push("unsubscribe");
+            };
+          },
+          claimResults: () => undefined,
+          hasPending: () => false,
+          hasRunning: () => false,
+          dropSession() {},
+        },
+      },
+    };
+  });
+  const modules = createDesktopModuleRegistry([external]);
+  expect(calls).toEqual([]);
+  expect(external.service).toBeNull();
+  expect(external.approvals).toBeNull();
+  modules.start();
+  const service = external.service;
+  expect(service?.isEnabled()).toBe(true);
+  expect(external.approvals).not.toBeNull();
+  modules.start();
+  expect(external.service).toBe(service);
+  expect(calls).toEqual(["options", "subscribe"]);
+  const pending = modules.dispose();
+  expect(external.service).toBeNull();
+  await pending;
+  expect(calls).toEqual(["options", "subscribe", "unsubscribe"]);
+});
+
+test("the external runtime pilot retains first-window start and the existing shutdown position", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const source = await readFile(new URL("./index.ts", import.meta.url), "utf8");
+  const startup = source.slice(source.indexOf("  if (!bridge) {"));
+  expect(source.match(/desktopModules\.start\(\)/g)).toHaveLength(1);
+  expect(startup.indexOf("bridge = new AgentBridge(")).toBeLessThan(
+    startup.indexOf("desktopModules.start();"),
+  );
+  expect(startup.indexOf("desktopModules.start();")).toBeLessThan(
+    startup.indexOf("const externalGoalSessions"),
+  );
+  expect(source).not.toContain("await desktopModules.start()");
+  const cleanup = source.slice(source.indexOf("registerDesktopShutdown(app,"));
+  expect(cleanup.match(/desktopModules\.dispose\(\)/g)).toHaveLength(1);
+  expect(cleanup.indexOf("roomManager.closeAll();")).toBeLessThan(
+    cleanup.indexOf("desktopModules.dispose()"),
+  );
+  expect(cleanup.indexOf("desktopModules.dispose()")).toBeLessThan(
+    cleanup.indexOf("getCuaDriverHost()?.stop()"),
+  );
+});
 
 test("quit waits for saves and actual child cleanup, coalesces retries and permits final quit", async () => {
   const calls: string[] = [];

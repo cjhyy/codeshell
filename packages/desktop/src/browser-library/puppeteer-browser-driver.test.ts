@@ -4,6 +4,47 @@ import { execFileSync } from "node:child_process";
 import puppeteer from "puppeteer-core/lib/esm/puppeteer/puppeteer-core.js";
 import type { Browser, Page } from "puppeteer-core/lib/esm/puppeteer/puppeteer-core-browser.js";
 import { PuppeteerBrowserDriver } from "./puppeteer-browser-driver.js";
+import { encodeReadCursor, hashText, normalizePageText, parseReadCursor } from "./page-utils.js";
+
+describe("shared browser page utilities", () => {
+  test("normalizes line endings and spacing while preserving paragraph breaks", () => {
+    expect(normalizePageText(" \tFirst  line\r\n \tSecond\r\r\rThird\f\v line  ")).toBe(
+      "First line\nSecond\n\nThird line",
+    );
+    expect(normalizePageText("\r\n\t  ")).toBe("");
+    expect(normalizePageText("段落一\n\n段落二")).toBe("段落一\n\n段落二");
+  });
+
+  test("encodes opaque document IDs and clamps chunk offsets", () => {
+    expect(encodeReadCursor("文档:frame/a%", 12.9)).toBe("%E6%96%87%E6%A1%A3%3Aframe%2Fa%25:12");
+    expect(parseReadCursor(encodeReadCursor("文档:frame/a%", 12.9))).toEqual({
+      documentId: "文档:frame/a%",
+      offset: 12,
+    });
+    expect(encodeReadCursor("doc", -4)).toBe("doc:0");
+    expect(parseReadCursor("doc:0002")).toEqual({ documentId: "doc", offset: 2 });
+  });
+
+  test.each([
+    "",
+    "doc",
+    ":1",
+    "doc:",
+    "%:1",
+    "doc:-1",
+    "doc:1.5",
+    "doc: 1",
+    "doc:9007199254740992",
+  ])("rejects malformed or unsafe cursor %j", (cursor) =>
+    expect(parseReadCursor(cursor)).toBeUndefined(),
+  );
+
+  test("retains deterministic eight-digit FNV-1a progress signatures", () => {
+    expect(hashText("")).toBe("811c9dc5");
+    expect(hashText("hello")).toBe("4f9f2cab");
+    expect(hashText("hello!")).not.toBe(hashText("hello"));
+  });
+});
 
 const executablePath = [
   process.env.CHROME_PATH,
@@ -12,8 +53,8 @@ const executablePath = [
   "/usr/bin/chromium-browser",
 ].find((path): path is string => !!path && existsSync(path));
 let browser: Browser;
-beforeAll(async () => {
-  if (executablePath) {
+async function startBrowser() {
+  if (executablePath && !browser) {
     if (process.env.CI) {
       console.info(
         "Puppeteer integration browser:",
@@ -33,7 +74,7 @@ beforeAll(async () => {
       args: ["--no-sandbox", "--window-size=1200,900"],
     });
   }
-});
+}
 afterAll(async () => {
   await browser?.close();
 });
@@ -51,6 +92,7 @@ async function withPage(run: (page: Page, driver: PuppeteerBrowserDriver) => Pro
 }
 
 describe("Puppeteer exact-node BrowserBridge", () => {
+  beforeAll(startBrowser);
   test.skipIf(!executablePath)(
     "waits for delayed visible text and a disappearing loading indicator",
     async () => {
@@ -425,6 +467,7 @@ describe("Puppeteer exact-node BrowserBridge", () => {
 });
 
 describe("Puppeteer scrolling delegates input to the library", () => {
+  beforeAll(startBrowser);
   test.skipIf(!executablePath)(
     "finds a nested panel outside the viewport center and proves end-of-content",
     async () => {

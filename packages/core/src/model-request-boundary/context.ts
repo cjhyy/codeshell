@@ -207,7 +207,7 @@ export function requestBoundaryFetch(
       projection.kind === "openai-chat"
         ? messages.filter((message) => message.role !== "system" && message.role !== "developer")
         : messages;
-    let signatures;
+    let signatures: Awaited<ReturnType<ModelRequestSigner["sign"]>>;
     try {
       call.binding.ensureDurableOwner?.();
       signatures = await call.binding.signer.sign({

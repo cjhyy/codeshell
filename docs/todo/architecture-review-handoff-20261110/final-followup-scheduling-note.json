@@ -1,0 +1,8 @@
+{
+  "candidate": "f31986b4268231ee7ce1b9fcc5a63d2098cbd98a",
+  "cause": "root typecheck script invokes build before typecheck:workspaces; mistakenly parallelized with dist readers",
+  "root_typecheck_result": "passed, exit 0",
+  "test_typecheck_first_result": "exit 2; transient missing Link dist declarations",
+  "contracts_first_result": "47 passed, but overlap receipt not used for final acceptance",
+  "action": "preserve first receipts and rerun affected readers after all builds end; separate real C3/C4 query fixture regression fixed independently"
+}

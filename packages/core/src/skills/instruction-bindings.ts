@@ -3,7 +3,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { constants, closeSync, fstatSync, openSync, readFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
-import { codeShellHome } from "../session/session-manager.js";
+import { codeShellHome } from "../utils/paths.js";
 import { mutateJsonFile } from "../utils/file-mutex.js";
 import { readSkillSnapshot } from "./snapshot.js";
 

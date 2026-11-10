@@ -1,6 +1,7 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { describe, expect, it } from "bun:test";
 
-import type { Engine, EngineResult } from "../engine/engine.js";
+import type { EngineResult } from "../engine/engine.js";
 import type { PermissionMode } from "../types.js";
 import { ChatSessionManager } from "./chat-session-manager.js";
 import { AgentServer } from "./server.js";
@@ -50,7 +51,10 @@ describe("queued run permission context", () => {
     const observed: Array<{ task: string; mode: PermissionMode; asked: boolean }> = [];
     let mode: PermissionMode = "default";
 
-    const engine = {
+    const engine = createFakeEngine({
+      // Preserve the optional-capability fallbacks exercised by this fixture.
+      getSessionManager: undefined,
+
       isHeadless: () => true,
       getPermissionMode: () => mode,
       setPermissionMode(next: PermissionMode) {
@@ -72,7 +76,7 @@ describe("queued run permission context", () => {
         });
         return result(task);
       },
-    } as unknown as Engine;
+    });
 
     const manager = new ChatSessionManager({
       runtime: {} as never,
@@ -118,7 +122,10 @@ it("keeps queued sandbox/background policy local to its turn and follow-ups", as
   const entered = deferred(),
     release = deferred();
   const observed: any[] = [];
-  const engine = {
+  const engine = createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    getSessionManager: undefined,
+
     isHeadless: () => true,
     async run(task: string, opts: any) {
       if (task === "first") {
@@ -132,7 +139,7 @@ it("keeps queued sandbox/background policy local to its turn and follow-ups", as
       });
       return result(task);
     },
-  } as unknown as Engine;
+  });
   const manager = new ChatSessionManager({ runtime: {} as never, engineFactory: () => engine });
   const transport = makeTransport();
   new AgentServer({ chatManager: manager, transport: transport.transport });

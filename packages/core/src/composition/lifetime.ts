@@ -1,6 +1,8 @@
+import type { Dispose } from "../utils/dispose.js";
+export { onceDispose, type Dispose } from "../utils/dispose.js";
+
 /** Explicit ownership for resources acquired by one host, engine, session or run. */
 export type ModuleScopeKind = "host" | "engine" | "session" | "run";
-export type Dispose = () => void | Promise<void>;
 export interface Disposable {
   dispose(): void | Promise<void>;
 }
@@ -79,17 +81,4 @@ export class LifetimeScope {
     drain();
     return this.disposal;
   }
-}
-
-/** Bind deletion to one registration, and never execute the same disposer twice. */
-export function onceDispose(dispose: Dispose): Dispose {
-  let called = false;
-  let result: void | Promise<void>;
-  return () => {
-    if (!called) {
-      called = true;
-      result = dispose();
-    }
-    return result;
-  };
 }

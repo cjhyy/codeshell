@@ -14,7 +14,7 @@
 
 import { readFile, stat } from "node:fs/promises";
 import { extname, isAbsolute, resolve } from "node:path";
-import type { ToolDefinition } from "../../types.js";
+import type { ToolDefinition, Message } from "../../types.js";
 import type { ToolContext } from "../context.js";
 import type { BuiltinToolReturn } from "./index.js";
 import { toolContextSupportsVision } from "../model-vision.js";
@@ -160,7 +160,7 @@ async function viewHistoricalImage(
     return `Error: 无法取回 image #${imageNumber}: 当前工具上下文没有可读取的 session 历史。`;
   }
 
-  let messages;
+  let messages: Message[];
   try {
     messages = sessionManager.resume(sessionId).transcript.toMessages();
   } catch (err) {

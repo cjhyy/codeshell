@@ -1,3 +1,4 @@
+import type { Stats } from "node:fs";
 import { lstatSync, realpathSync } from "node:fs";
 import { basename, dirname, isAbsolute, parse, resolve } from "node:path";
 import { canonicalKey } from "@cjhyy/code-shell-core/internal";
@@ -92,7 +93,7 @@ export function validateMountedProjectRoot(
   root: MountedProjectRootRecord,
 ): MountedProjectRootValidation {
   const mountPath = resolve(root.path);
-  let info;
+  let info: Stats;
   try {
     info = lstatSync(mountPath);
   } catch (error) {

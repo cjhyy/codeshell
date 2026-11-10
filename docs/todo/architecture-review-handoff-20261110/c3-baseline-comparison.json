@@ -1,0 +1,29 @@
+{
+  "baselineFailures": [
+    "AgentServer cross-Session messaging with a real Engine > cold-starts a project-bound target with its authoritative workspace and persists the turn",
+    "AgentServer cross-Session messaging with a real Engine > returns a delayed real target reply to the source mailbox with its dispatch id",
+    "ChatSessionManager resident Engine root migration > re-resolves every project-scoped authority from the target root before the next turn",
+    "TCP approval routing is connection-owned > does not expose A's approval to B and accepts A's matching four-tuple",
+    "TCP approval routing is connection-owned > fails a pending approval closed when its owning TCP connection disconnects",
+    "TCP approval routing is connection-owned > rejects a second connection that tries to claim an active session",
+    "agent/run model > acknowledges a configured intent only after its actual claim and returns duplicate receipts without replay",
+    "agent/run model > persists the actual per-run model on first use and after a later native switch",
+    "listenTcp \u2014 real localhost round trip > accepts a connection and exchanges a framed message",
+    "listenTcp \u2014 real localhost round trip > defaults to 127.0.0.1 (does not bind a public interface)",
+    "model keys resolve the current project connection without changing the shared pool"
+  ],
+  "migratedFailures": [
+    "AgentServer cross-Session messaging with a real Engine > cold-starts a project-bound target with its authoritative workspace and persists the turn",
+    "AgentServer cross-Session messaging with a real Engine > returns a delayed real target reply to the source mailbox with its dispatch id",
+    "ChatSessionManager resident Engine root migration > re-resolves every project-scoped authority from the target root before the next turn",
+    "TCP approval routing is connection-owned > does not expose A's approval to B and accepts A's matching four-tuple",
+    "TCP approval routing is connection-owned > fails a pending approval closed when its owning TCP connection disconnects",
+    "TCP approval routing is connection-owned > rejects a second connection that tries to claim an active session",
+    "agent/run model > acknowledges a configured intent only after its actual claim and returns duplicate receipts without replay",
+    "agent/run model > persists the actual per-run model on first use and after a later native switch",
+    "listenTcp \u2014 real localhost round trip > accepts a connection and exchanges a framed message",
+    "listenTcp \u2014 real localhost round trip > defaults to 127.0.0.1 (does not bind a public interface)",
+    "model keys resolve the current project connection without changing the shared pool"
+  ],
+  "sameFailures": true
+}

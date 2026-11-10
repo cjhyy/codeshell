@@ -1,3 +1,4 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { describe, expect, test } from "bun:test";
 import { AgentServer } from "./server.js";
 import { AgentClient } from "./client.js";
@@ -5,7 +6,6 @@ import { ChatSessionManager } from "./chat-session-manager.js";
 import { createInProcessTransport } from "./transport.js";
 import { compileComposition } from "../composition/compiler.js";
 import { LifetimeScope } from "../composition/lifetime.js";
-import type { Engine } from "../engine/engine.js";
 
 describe("AgentServer module lifetime", () => {
   test("close cancels pending host activation before waiting for the factory", async () => {
@@ -32,7 +32,7 @@ describe("AgentServer module lifetime", () => {
     });
     const manager = new ChatSessionManager({
       runtime: {} as never,
-      engineFactory: () => ({}) as Engine,
+      engineFactory: () => createFakeEngine(),
     });
     const [transport] = createInProcessTransport();
     const server = new AgentServer({ transport, chatManager: manager, composition });
@@ -48,14 +48,16 @@ describe("AgentServer module lifetime", () => {
     const manager = new ChatSessionManager({
       runtime: { lifetime: host } as never,
       engineFactory: () =>
-        ({
-          setAskUser() {},
-          setSessionMessageRouter() {},
+        createFakeEngine({
+          // Preserve the optional-capability fallbacks exercised by this fixture.
+          getSessionManager: undefined,
+          prepareSessionCloseFinalization: undefined,
+
           isHeadless: () => false,
           async dispose() {
             enginesReleased++;
           },
-        }) as unknown as Engine,
+        }),
     });
     await manager.getOrCreate("shared", {});
     const composition = compileComposition({
@@ -124,7 +126,7 @@ describe("AgentServer module lifetime", () => {
     });
     const manager = new ChatSessionManager({
       runtime: {} as never,
-      engineFactory: () => ({}) as Engine,
+      engineFactory: () => createFakeEngine(),
     });
     const composition = compileComposition({
       modules: [

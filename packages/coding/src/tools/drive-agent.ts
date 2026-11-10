@@ -328,7 +328,7 @@ async function prepareDriveWorktree(params: {
 
 function finalizeDriveWorktree(managed: ManagedDriveWorktree): WorktreeLifecycleResult {
   const { session } = managed;
-  let state;
+  let state: ReturnType<typeof inspectWorktreeChanges>;
   try {
     state = inspectWorktreeChanges(session.worktreePath, session.baseRef);
   } catch (error) {
@@ -802,7 +802,7 @@ function attachDriveCompletion(params: {
       // could never count DriveAgent edits.
       const rawChangedFiles = r.sessionId ? readChangedFiles(cli, cwd, r.sessionId) : [];
       const changedFiles = normalizeChangedFiles(cwd, rawChangedFiles);
-      let provenance;
+      let provenance: Awaited<ReturnType<typeof probeExternalChangedFiles>> | undefined;
       if (changedFiles.length) {
         try {
           provenance = await probeChangedFiles(cwd, changedFiles, { cli });
@@ -1479,7 +1479,7 @@ export function makeDriveAgentTool(
             : [],
         );
         if (changedFiles.length) {
-          let provenance;
+          let provenance: Awaited<ReturnType<typeof probeExternalChangedFiles>> | undefined;
           try {
             provenance = await (options.probeChangedFiles ?? probeExternalChangedFiles)(
               cwd,

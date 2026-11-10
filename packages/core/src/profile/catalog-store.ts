@@ -27,7 +27,7 @@ import {
 } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { basename, dirname, join } from "node:path";
-import { codeShellHome } from "../session/session-manager.js";
+import { codeShellHome } from "../utils/paths.js";
 import { acquireLockOnPath, mutateJsonFile } from "../utils/file-mutex.js";
 // gitFetchAndReset is deliberately NOT used any more: updating in place is what
 // destroyed the last-known-good tree on a bad upstream commit. Updates clone to

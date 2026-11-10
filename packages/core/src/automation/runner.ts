@@ -20,7 +20,7 @@ import type { CronScheduler } from "./scheduler.js";
 import type { PermissionMode } from "../types.js";
 import type { ApprovalBackend } from "../tool-system/permission.js";
 import type { SandboxMode } from "../tool-system/sandbox/index.js";
-import { AUTOMATION_RUN_SOURCE } from "../run/EngineRunner.js";
+import { AUTOMATION_RUN_SOURCE } from "./run-source.js";
 import { resolveWritePolicy } from "./write-policy.js";
 import { logger } from "../logging/logger.js";
 

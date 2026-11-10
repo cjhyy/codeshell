@@ -1,8 +1,9 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { describe, expect, test } from "bun:test";
 import { AgentServer } from "./server.js";
 import { ChatSessionManager } from "./chat-session-manager.js";
 import { Methods } from "./types.js";
-import type { Engine, EngineResult } from "../engine/engine.js";
+import type { EngineResult } from "../engine/engine.js";
 import type { PanelHostBridge } from "../tool-system/panel-bridge.js";
 
 function makeTransport() {
@@ -34,12 +35,10 @@ async function waitFor<T>(read: () => T | undefined, message: string): Promise<T
 describe("AgentServer panel bridge", () => {
   test("routes list/open through hidden panel actions", async () => {
     let panelBridge: PanelHostBridge | undefined;
-    const engine = {
-      setAskUser() {},
-      setPlanMode() {},
-      setBrowserBridge() {},
-      setInjectCredential() {},
-      setSessionMessageRouter() {},
+    const engine = createFakeEngine({
+      // Preserve the optional-capability fallbacks exercised by this fixture.
+      getSessionManager: undefined,
+
       setPanelBridge(bridge: PanelHostBridge | undefined) {
         panelBridge = bridge;
       },
@@ -55,7 +54,7 @@ describe("AgentServer panel bridge", () => {
           usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
         };
       },
-    } as unknown as Engine;
+    });
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () => engine,

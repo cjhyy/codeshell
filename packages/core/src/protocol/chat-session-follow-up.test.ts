@@ -1,13 +1,14 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { expect, test } from "bun:test";
 import { ChatSession, type TurnOpts } from "./chat-session.js";
-import type { Engine } from "../engine/engine.js";
+
 
 test("follow-up options preserve turn authority without replaying one-time input or goal state", async () => {
   let release!: () => void;
   const gate = new Promise<void>((resolve) => {
     release = resolve;
   });
-  const engine = {
+  const engine = createFakeEngine({
     async run() {
       await gate;
       return {
@@ -18,7 +19,7 @@ test("follow-up options preserve turn authority without replaying one-time input
         usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       };
     },
-  } as unknown as Engine;
+  });
   const session = new ChatSession({ id: "follow-up", engine });
   const opts: TurnOpts = {
     cwd: "/workspace",
@@ -93,7 +94,7 @@ test("cancellation epoch only advances for effective scoped Stop and survives a 
   const gate = new Promise<void>((resolve) => {
     release = resolve;
   });
-  const engine = {
+  const engine = createFakeEngine({
     async run(task: string) {
       if (task === "first") await gate;
       return {
@@ -104,7 +105,7 @@ test("cancellation epoch only advances for effective scoped Stop and survives a 
         usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       };
     },
-  } as unknown as Engine;
+  });
   const session = new ChatSession({ id: "follow-up", engine });
   const first = session.enqueueTurn("first", { clientMessageId: "first" });
   expect(session.cancellationEpoch).toBe(0);

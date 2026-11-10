@@ -1,10 +1,11 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { describe, expect, test } from "bun:test";
 import { AgentServer } from "./server.js";
 import { ChatSessionManager } from "./chat-session-manager.js";
 import { Methods } from "./types.js";
 import { HOST_ACTION_TOOL_NAME } from "./host-action.js";
 import { compileComposition } from "../composition/compiler.js";
-import type { Engine } from "../engine/engine.js";
+
 import type { ProtocolObserverHost } from "../tool-system/capability-module.js";
 
 function makeTransport(failSend?: (m: any) => boolean) {
@@ -57,12 +58,14 @@ async function fixture(failSend?: (m: any) => boolean) {
   const chatManager = new ChatSessionManager({
     runtime: {} as never,
     engineFactory: () =>
-      ({
-        setAskUser() {},
-        setSessionMessageRouter() {},
+      createFakeEngine({
+        // Preserve the optional-capability fallbacks exercised by this fixture.
+        getSessionManager: undefined,
+        prepareSessionCloseFinalization: undefined,
+
         isHeadless: () => false,
         dispose() {},
-      }) as unknown as Engine,
+      }),
   });
   const t = makeTransport(failSend);
   const server = new AgentServer({ transport: t.transport, chatManager, composition });

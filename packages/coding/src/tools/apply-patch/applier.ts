@@ -388,7 +388,7 @@ function isInside(child: string, parent: string): boolean {
 }
 
 async function readSnapshotIfExists(path: string): Promise<FileSnapshot | null> {
-  let file;
+  let file: Awaited<ReturnType<typeof open>>;
   try {
     file = await open(path, "r");
   } catch (error) {

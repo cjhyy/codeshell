@@ -1,6 +1,6 @@
 import { localDeadline } from "../src/remote-deadline.js";
 import React from "react";
-import type { ManagedPanel } from "../../server/src/panels/types.js";
+import type { ManagedPanel } from "../src/panels.js";
 import { api, ApiError } from "./auth.js";
 import { apiUrl, getApiWorkspace, getApiProject } from "./api-context.js";
 import { connectPanelRuntime, type PanelRuntimeEvent } from "./panel-runtime-connection.js";
@@ -15,7 +15,7 @@ import {
 } from "./PanelDirectoryPicker.js";
 import { CopyDownloadLink } from "./CopyDownloadLink.js";
 import { panelVideoCapabilities } from "./panel-video-capture.js";
-import { panelVideoOptions } from "../../server/src/panels/browser-capture.js";
+import { panelVideoOptions } from "../src/panels.js";
 import "./panel-host.css";
 
 const ROOT = "/api/v1/panels/runtime";

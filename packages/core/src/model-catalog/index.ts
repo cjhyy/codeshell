@@ -11,7 +11,7 @@
 
 import { closeSync, constants, fstatSync, lstatSync, openSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { userHome } from "../settings/manager.js";
+import { userHome } from "../utils/paths.js";
 import { logger } from "../logging/logger.js";
 import { BUILTIN_CATALOG } from "./builtin.js";
 import { userCatalogFileSchema, type CatalogEntry } from "./types.js";

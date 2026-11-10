@@ -1,3 +1,4 @@
+import { createFakeEngine } from "../testing/create-fake-engine.js";
 import { describe, expect, test } from "bun:test";
 import { AgentServer } from "./server.js";
 import { ChatSessionManager } from "./chat-session-manager.js";
@@ -45,12 +46,11 @@ function migrationAuthority(mainRoot: string) {
 }
 
 function replacementEngine(): Engine {
-  return {
-    setAskUser() {},
-    setPlanMode() {},
-    setBrowserBridge() {},
-    setInjectCredential() {},
-    setSessionMessageRouter() {},
+  return createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    dispose: undefined,
+    getSessionManager: undefined,
+
     isHeadless: () => false,
     restoreSessionModel() {},
     async run(_task: string, opts: { sessionId: string }): Promise<EngineResult> {
@@ -62,7 +62,7 @@ function replacementEngine(): Engine {
         usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       };
     },
-  } as unknown as Engine;
+  });
 }
 
 function makeWorkspaceBridgeEngine() {
@@ -70,12 +70,10 @@ function makeWorkspaceBridgeEngine() {
     workspaceBridge: undefined as WorkspaceBridge | undefined,
     switchedRoot: "",
   };
-  const engine = {
-    setAskUser() {},
-    setPlanMode() {},
-    setBrowserBridge() {},
-    setInjectCredential() {},
-    setSessionMessageRouter() {},
+  const engine = createFakeEngine({
+    // Preserve the optional-capability fallbacks exercised by this fixture.
+    getSessionManager: undefined,
+
     setWorkspaceBridge(bridge: WorkspaceBridge | undefined) {
       state.workspaceBridge = bridge;
     },
@@ -91,7 +89,7 @@ function makeWorkspaceBridgeEngine() {
         usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       };
     },
-  } as unknown as Engine;
+  });
   return { engine, state };
 }
 
@@ -157,12 +155,10 @@ describe("AgentServer workspace bridge", () => {
         workspaceBridge: undefined as WorkspaceBridge | undefined,
         error: "",
       };
-      const engine = {
-        setAskUser() {},
-        setPlanMode() {},
-        setBrowserBridge() {},
-        setInjectCredential() {},
-        setSessionMessageRouter() {},
+      const engine = createFakeEngine({
+        // Preserve the optional-capability fallbacks exercised by this fixture.
+        getSessionManager: undefined,
+
         setWorkspaceBridge(bridge: WorkspaceBridge | undefined) {
           state.workspaceBridge = bridge;
         },
@@ -182,7 +178,7 @@ describe("AgentServer workspace bridge", () => {
             usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
           };
         },
-      } as unknown as Engine;
+      });
 
       const chatManager = new ChatSessionManager({
         runtime: {} as never,
@@ -225,12 +221,10 @@ describe("AgentServer workspace bridge", () => {
 
   test("agent/releaseWorkspace resets a live session engine", async () => {
     const released: string[] = [];
-    const engine = {
-      setAskUser() {},
-      setPlanMode() {},
-      setBrowserBridge() {},
-      setInjectCredential() {},
-      setSessionMessageRouter() {},
+    const engine = createFakeEngine({
+      // Preserve the optional-capability fallbacks exercised by this fixture.
+      getSessionManager: undefined,
+
       isHeadless: () => false,
       releaseSessionWorkspace(sessionId: string) {
         released.push(sessionId);
@@ -245,7 +239,7 @@ describe("AgentServer workspace bridge", () => {
           usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
         };
       },
-    } as unknown as Engine;
+    });
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () => engine,
@@ -277,12 +271,10 @@ describe("AgentServer workspace bridge", () => {
 
   test("agent/setWorkspace rebases a live session engine", async () => {
     const updates: Array<{ sessionId: string; workspace: unknown }> = [];
-    const engine = {
-      setAskUser() {},
-      setPlanMode() {},
-      setBrowserBridge() {},
-      setInjectCredential() {},
-      setSessionMessageRouter() {},
+    const engine = createFakeEngine({
+      // Preserve the optional-capability fallbacks exercised by this fixture.
+      getSessionManager: undefined,
+
       isHeadless: () => false,
       setSessionWorkspace(sessionId: string, workspace: unknown) {
         updates.push({ sessionId, workspace });
@@ -297,7 +289,7 @@ describe("AgentServer workspace bridge", () => {
           usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
         };
       },
-    } as unknown as Engine;
+    });
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () => engine,
@@ -330,12 +322,12 @@ describe("AgentServer workspace bridge", () => {
 
   test("agent/migrateSessionMainRoot forwards one complete authoritative commit to the live engine", async () => {
     const updates: unknown[] = [];
-    const engine = {
-      setAskUser() {},
-      setPlanMode() {},
-      setBrowserBridge() {},
-      setInjectCredential() {},
-      setSessionMessageRouter() {},
+    const engine = createFakeEngine({
+      // Preserve the optional-capability fallbacks exercised by this fixture.
+      dispose: undefined,
+      getPermissionMode: undefined,
+      getSessionManager: undefined,
+
       isHeadless: () => false,
       migrateSessionMainRoot(sessionId: string, project: unknown, mainRoot: string) {
         updates.push({ sessionId, project, mainRoot });
@@ -350,7 +342,7 @@ describe("AgentServer workspace bridge", () => {
           usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
         };
       },
-    } as unknown as Engine;
+    });
     let factoryCalls = 0;
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
@@ -399,12 +391,12 @@ describe("AgentServer workspace bridge", () => {
   test("agent/migrateSessionMainRoot claims an idle-evicted Session until Main finishes its durable migration", async () => {
     let runs = 0;
     const slices: unknown[] = [];
-    const engine = {
-      setAskUser() {},
-      setPlanMode() {},
-      setBrowserBridge() {},
-      setInjectCredential() {},
-      setSessionMessageRouter() {},
+    const engine = createFakeEngine({
+      // Preserve the optional-capability fallbacks exercised by this fixture.
+      dispose: undefined,
+      getSessionManager: undefined,
+      prepareSessionCloseFinalization: undefined,
+
       isHeadless: () => false,
       async run(_task: string, opts: { sessionId: string }): Promise<EngineResult> {
         runs += 1;
@@ -416,7 +408,7 @@ describe("AgentServer workspace bridge", () => {
           usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
         };
       },
-    } as unknown as Engine;
+    });
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: (slice) => {
@@ -509,12 +501,11 @@ describe("AgentServer workspace bridge", () => {
   });
 
   test("agent/migrateSessionMainRoot reports a resident owner error as failed", async () => {
-    const engine = {
-      setAskUser() {},
-      setPlanMode() {},
-      setBrowserBridge() {},
-      setInjectCredential() {},
-      setSessionMessageRouter() {},
+    const engine = createFakeEngine({
+      // Preserve the optional-capability fallbacks exercised by this fixture.
+      getPermissionMode: undefined,
+      getSessionManager: undefined,
+
       isHeadless: () => false,
       migrateSessionMainRoot() {
         throw new Error("state lock failed");
@@ -528,7 +519,7 @@ describe("AgentServer workspace bridge", () => {
           usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
         };
       },
-    } as unknown as Engine;
+    });
     let factoryCalls = 0;
     const chatManager = new ChatSessionManager({
       runtime: {} as never,

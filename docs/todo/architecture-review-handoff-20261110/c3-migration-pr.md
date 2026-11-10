@@ -1,0 +1,9 @@
+C3 PR 2 — Extract the built-in query registry
+
+Base: codex/protocol/c3-query-contract-tests@b737ca119. Branch: codex/protocol/c3-query-registry.
+
+Move 19 query handlers into four domain files with independent functions and Pick<BuiltinQueryContext,...> contexts. AgentServer performs Map lookup, then the unchanged composition queryCapability fallback and Unknown query response. Keep detached global engines, exact session owner resolution, lazy identity manager lookup, redaction, error codes and notification ordering. Both run paths remain untouched.
+
+server.ts shrinks 4892→4246 lines (646), with budget 5000→4500. AST-normalized bodies match all 19 original cases exactly after the mechanical context/import/break→return substitutions. The registry uses Map so constructor/toString/__proto__ stay unknown unless an extension handles them. Before moving, source-reader inventory found architecture-budgets reads server.ts; no switch-text fixture required changes. Composition golden fixtures unchanged.
+
+Validation: full build and workspace typecheck passed. Same four query suites pass before and after extraction (51/0); with architecture, package boundary and composition golden, 74/0. Required three contracts independently 27/0; changed-source ESLint zero warnings/errors; shard inventory passed. Full protocol directory: 425 pass/11 fail across 74 files; exact failure-name set equals original T1 baseline 395 pass/11 fail, with 31 new passing contract cases measured directly as 33 minus 2 in the query file (the full-directory comparison uses different task bases, so its pass-count delta is not the new-case count). Five local socket-listen failures and six diskutil-dependent real-Engine failures are environment-blocked, not claimed passing. Full CI and CC review remain pending; PR creation is approval-blocked.
