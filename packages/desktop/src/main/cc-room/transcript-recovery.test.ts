@@ -203,30 +203,61 @@ test("independent Node writer can keep appending during long-file capture, pagin
   const metadata = JSON.stringify({ type: "progress", detail: "m".repeat(128 * 1024) }) + "\n";
   writeFileSync(f.file, metadata.repeat(496));
   const writerSource = `
-    import { appendFileSync } from 'node:fs';
+    import { appendFileSync, closeSync, openSync } from 'node:fs';
     const file = process.argv[1];
-    console.log('ready');
-    for (let n = 0; n < 120; n++) {
-      const metadata = JSON.stringify({type:'progress', detail:'x'.repeat(128)})+'\\n';
-      const message = JSON.stringify({type:'assistant',message:{content:[{type:'text',text:'writer-'+n}]}})+'\\n';
-      const bytes = Buffer.from(metadata + message);
-      appendFileSync(file, bytes.subarray(0, 100));
-      await new Promise(resolve => setTimeout(resolve, 2));
-      appendFileSync(file, bytes.subarray(100));
-      await new Promise(resolve => setTimeout(resolve, 50));
+    const fd = openSync(file, 'a');
+    try {
+      console.log('ready');
+      for (let n = 0; n < 120; n++) {
+        const metadata = JSON.stringify({type:'progress', detail:'x'.repeat(128)})+'\\n';
+        const message = JSON.stringify({type:'assistant',message:{content:[{type:'text',text:'writer-'+n}]}})+'\\n';
+        const bytes = Buffer.from(metadata + message);
+        appendFileSync(fd, bytes.subarray(0, 100));
+        await new Promise(resolve => setTimeout(resolve, 2));
+        appendFileSync(fd, bytes.subarray(100));
+        await new Promise(resolve => setTimeout(resolve, 50));
+        if ((n + 1) % 20 === 0) console.log('progress:' + (n + 1));
+      }
+    } finally {
+      closeSync(fd);
     }
+    console.log('done:120');
   `;
   const child = spawn("node", ["--input-type=module", "-e", writerSource, f.file], {
     stdio: ["ignore", "pipe", "pipe"],
   });
-  // Drain stderr: an unread pipe never ends, so "close" would wait on it forever.
-  let stderr = "";
-  child.stderr.on("data", (chunk: Buffer) => (stderr += chunk.toString()));
+  // Keep consuming both pipes and bound diagnostics without assuming a pipe
+  // caused an exit/close timeout. The writer emits only six progress records.
+  let stdout = "",
+    stderr = "",
+    stdoutBytes = 0,
+    completed = 0,
+    lastProgressAt: number | undefined,
+    loopDone = false;
+  child.stdout.on("data", (chunk: Buffer) => {
+    stdoutBytes += chunk.length;
+    stdout = (stdout + chunk.toString()).slice(-2000);
+    const progress = [...stdout.matchAll(/progress:(\d+)\n/g)].at(-1);
+    if (progress && Number(progress[1]) > completed) {
+      completed = Number(progress[1]);
+      lastProgressAt = Date.now();
+    }
+    loopDone ||= stdout.includes("done:120\n");
+  });
+  child.stderr.on("data", (chunk: Buffer) => (stderr = (stderr + chunk.toString()).slice(-2000)));
   let exitedYet = false;
-  child.once("exit", () => (exitedYet = true));
+  let exitEvent: { code: number | null; signal: NodeJS.Signals | null } | undefined;
+  let closeEvent: typeof exitEvent;
+  child.once("exit", (code, signal) => {
+    exitedYet = true;
+    exitEvent = { code, signal };
+  });
   const closed = new Promise<number | null>((resolve, reject) => {
     child.once("error", reject);
-    child.once("close", resolve);
+    child.once("close", (code, signal) => {
+      closeEvent = { code, signal };
+      resolve(code);
+    });
   });
   // Report the writer's state instead of an opaque test timeout if it never closes.
   let closeTimer: ReturnType<typeof setTimeout> | undefined;
@@ -235,6 +266,13 @@ test("independent Node writer can keep appending during long-file capture, pagin
       closed,
       new Promise<never>((_, reject) => {
         closeTimer = setTimeout(() => {
+          let processPresence: string;
+          try {
+            process.kill(child.pid!, 0);
+            processPresence = "present";
+          } catch (error) {
+            processPresence = (error as NodeJS.ErrnoException).code ?? String(error);
+          }
           reject(
             new Error(
               `writer did not close: ${JSON.stringify({
@@ -242,6 +280,14 @@ test("independent Node writer can keep appending during long-file capture, pagin
                 exitCode: child.exitCode,
                 signalCode: child.signalCode,
                 exitedYet,
+                exitEvent: exitEvent ?? null,
+                closeEvent: closeEvent ?? null,
+                processPresence,
+                completed,
+                loopDone,
+                progressAgeMs: lastProgressAt === undefined ? null : Date.now() - lastProgressAt,
+                stdoutBytes,
+                stdout,
                 stdoutEnded: child.stdout.readableEnded,
                 stderrEnded: child.stderr.readableEnded,
                 stderr: stderr.slice(-2000),
@@ -291,6 +337,8 @@ test("independent Node writer can keep appending during long-file capture, pagin
     const coldMs = performance.now() - coldStart;
     console.log("CCRoom ongoing writer cold", JSON.stringify({ coldMs }));
     expect(await settled()).toBe(0);
+    expect(completed).toBe(120);
+    expect(loopDone).toBe(true);
     const snapshot = cold.manager.subscribe(f.target);
     expect(snapshot.messages.map((message) => message.text)).toEqual(
       Array.from({ length: 50 }, (_, n) => `writer-${n + 70}`),

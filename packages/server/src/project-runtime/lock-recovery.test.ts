@@ -188,7 +188,7 @@ test("a stale current marker is reclaimed while unknown, unsafe, and multiple ma
   }
 });
 
-test("native Node release and stale reclaim preserve an established replacement owner at the actual rmdir cut", async () => {
+async function runNativeControllerCut(receiptMode: "--receipt-barrier" | "--bad-receipt") {
   const { root } = directory();
   const entry = join(root, "actual-lock.mjs");
   const built = spawnSyncOwned(
@@ -211,6 +211,7 @@ test("native Node release and stale reclaim preserve an established replacement 
     [
       fileURLToPath(new URL("./__fixtures__/controller-lock-rmdir-cut.mjs", import.meta.url)),
       entry,
+      receiptMode,
     ],
     { env: process.env, stdio: ["ignore", "pipe", "pipe"] },
   );
@@ -228,19 +229,40 @@ test("native Node release and stale reclaim preserve an established replacement 
   } finally {
     clearTimeout(timer);
   }
+  return { result, stdout, stderr };
+}
+
+test("native Node release and stale reclaim preserve an established replacement owner at the actual rmdir cut", async () => {
+  const { result, stdout, stderr } = await runNativeControllerCut("--receipt-barrier");
   expect(result, stderr).toEqual({ code: 0, signal: null });
   const receipt = JSON.parse(stdout);
   console.info(`Native controller syscall cuts: ${JSON.stringify(receipt)}`);
   expect(receipt.results).toHaveLength(2);
   for (const cut of receipt.results) {
     expect(cut.cutReached).toBe(true);
+    expect(cut.receiptHiddenWhileOpen).toBe(true);
     expect(cut.preserved).toBe(true);
     expect(cut.markerPreserved).toBe(true);
     expect(cut.independentlyClosed).toBe(true);
     expect(cut.ownedChildExited).toBe(true);
   }
   expect(receipt.results[0].healthyHeartbeat).toBe(true);
+  expect(receipt.results[1].scenario).toBe("stale-reclaim");
+  expect(receipt.results[1].operationError).toContain("Another project controller owns");
+  expect(receipt.results[1].operationCauseCode).toBe("ENOTEMPTY");
 }, 40_000);
+
+test("a malformed replacement receipt reports its original parse failure after owned child cleanup", async () => {
+  const { result, stderr } = await runNativeControllerCut("--bad-receipt");
+  expect(result, stderr).toEqual({ code: 1, signal: null });
+  expect(stderr).toContain("receipt-parse");
+  expect(stderr).toContain("SyntaxError");
+  expect(stderr).toMatch(/JSON|Unexpected/);
+  expect(stderr).toContain("ownedChildExited=true");
+  expect(stderr).toContain("code=0 signal=null");
+  expect(stderr).toContain("independentlyClosed=true");
+  expect(stderr).not.toContain("TypeError");
+});
 
 test("a missing sibling lock permanently invalidates ownership and does not resume heartbeat on restoration", async () => {
   const { control } = directory();

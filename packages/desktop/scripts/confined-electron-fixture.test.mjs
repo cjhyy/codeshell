@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { prepareConfinedElectronFixture } from "./confined-electron-fixture.mjs";
+import { launchCodeShellElectron } from "./electron-harness.mjs";
 
 test("guard verification binds the connected actual Main, never a Windows command wrapper", async (t) => {
   const home = await realpath(await mkdtemp(join(tmpdir(), "codeshell-confined-main-identity-")));
@@ -25,10 +26,57 @@ test("guard verification binds the connected actual Main, never a Windows comman
   };
   await writeFile(join(home, "network-guard.jsonl"), JSON.stringify(ledger) + "\n");
   const identity = { pid: 42, ppid: process.pid, executable, home };
-  const application = (changes = {}) => ({
-    process: () => ({ pid: 42 }),
-    evaluate: async () => ({ ...identity, ...changes }),
-  });
+  const child = { pid: 42 };
+  let connectedIdentity = identity;
+  const connection = { _closed: false, _sessions: new Map() };
+  const session = {
+    _connection: connection,
+    _sessionId: "",
+    _closed: false,
+    _crashed: false,
+    async send(method, params) {
+      assert.equal(method, "Runtime.evaluate");
+      assert.equal(params.awaitPromise, false);
+      return { result: { type: "object", value: connectedIdentity } };
+    },
+  };
+  connection.rootSession = session;
+  connection._sessions.set("", session);
+  const context = { delegate: { _client: session, _contextId: 17 } };
+  const implementation = {
+    process: () => child,
+    _nodeConnection: connection,
+    _nodeSession: session,
+    _nodeExecutionContext: context,
+    _nodeElectronHandlePromise: Promise.resolve({
+      _context: context,
+      _disposed: false,
+      _objectId: "owned Main module",
+    }),
+  };
+  const app = {
+    process: () => child,
+    evaluate() {
+      assert.fail("Identity must use the bound Main session, never public evaluation");
+    },
+    _connection: { toImpl: () => implementation },
+  };
+  await launchCodeShellElectron(
+    { appDir: home, home },
+    {
+      platform: "linux",
+      preflight: () => {},
+      launch: async () => app,
+      watch(captured) {
+        assert.equal(captured, child);
+        return () => {};
+      },
+    },
+  );
+  const application = (changes = {}) => {
+    connectedIdentity = { ...identity, ...changes };
+    return app;
+  };
   const valid = await fixture.assertWorker(application(), { requireWorker: false });
   assert.equal(valid.mainPid, 42);
   assert.deepEqual(valid.mainIdentity, identity);

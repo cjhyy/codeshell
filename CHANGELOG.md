@@ -8,20 +8,93 @@ breaking.
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-11
+
+### Changed (breaking)
+
+- Web cloud workspaces now require explicit account-service feature declarations
+  in both deployment status and account overview responses. Services that only
+  return the former `cloudTarget` contract no longer enable the workspace. To
+  retain access, advertise `features["cloud.projects"]` with `version: 1`,
+  `enabled: true` and `params.cloudOrigin` matching the cloud target. Missing,
+  disabled or unsupported declarations keep the feature hidden.
+
 ### Added
+
+- Persist session notification rules through `NotifyMe` and the session bell,
+  route approval/question decision codes through bound IM channels, and deliver
+  owner notices through an expiring, revocable outbox with stable client IDs.
+- Show Goal-level progress, rounds and active time, park Goals while awaiting
+  user replies or finite background work, and offer recommended answers, Skip
+  and Keep waiting across clients.
+- Add optional native account commands and secure credential storage, browser
+  sign-in and account management, account computer discovery and dispatch, and
+  phone pairing entry points.
+- Add selectable Mimi companion characters, computer-work routing and phone
+  control, with faster turn preparation and topic-segment rollover.
+
+### Changed
+
+- Allow reads outside the project while retaining approval boundaries for writes
+  outside authorized workspaces and to protected configuration or secret paths.
+- Share reviewed Host tool policy and background-result delivery with external
+  runtimes, and move execution traces into Settings.
+- Remove the retired private Arena and CDP workspaces. Arena was already absent
+  from the v0.9.52 public SDK, default tools and shipped TUI; the existing Core
+  public/extension/internal entries and Pet package entry points remain available.
+
+### Fixed
+
+- Reduce long-session recovery and rendering work, preserve prompt-cache
+  boundaries across runs, and keep external-agent file references readable after
+  worktree cleanup.
+- Reuse explicitly selected browser tabs within their authorized session, retain
+  closed-tab state, honor Cookie auto-use, and improve remote controls and queued
+  turns on Web.
+- Keep Goal waits and Stop authoritative across background completions, retain
+  pending decisions through missed snapshots, and distinguish rejected,
+  unconfirmed and expired notice deliveries.
+- Serialize durable settings updates and keep application logs under
+  `CODE_SHELL_HOME`.
+
+Source: [v0.9.52…c8e0ff356](https://github.com/cjhyy/codeshell/compare/v0.9.52...c8e0ff356f942f8202a1ed50973623355944eb5f).
+
+## [0.9.52] - 2026-11-02
+
+### Added
+
+- Browse and select existing subdirectories inside an authorized project from Web
+  Panels, using Host-owned directory tokens.
+- Select scoped native model connections and supported parameters on mobile.
+
+### Fixed
+
+- Unify docked and moving Mimi under one visibility controller, share chat and work
+  badges, and preserve placement and appearance across displays with different DPI.
+- Compact completed mobile tool records while preserving transcript segments.
+
+Source: [v0.9.51…v0.9.52](https://github.com/cjhyy/codeshell/compare/v0.9.51...v0.9.52).
+
+### Previously unfiled baseline notes
+
+These notes were already present under Unreleased in the
+[v0.9.52 tag](https://github.com/cjhyy/codeshell/blob/v0.9.52/CHANGELOG.md).
+They are retained as baseline history, not changes introduced in 0.10.0.
+
+#### Added
 
 - Share Host skill inventory, bounded MCP probes and safe session file metadata
   between Desktop and Hub. MCP SDK connections remain behind a narrow Core
   internal interface; adapters keep authorization, DTOs and cache policy.
 
-### Changed
+#### Changed
 
 - Move Hub's existing single-request model connection test into Host ownership,
   retaining its compatibility entry and Core clients. Core model listing and
   Desktop model metadata retain their existing behavior. Output replay remains
   deferred until both journal cursor and stateVersion resumptions exist.
 
-### Fixed
+#### Fixed
 
 - Persist external CLI background-completion and Goal events before display,
   preserving execution history when long sessions reopen and keeping each
@@ -42,22 +115,6 @@ breaking.
 - Keep Link account menus visible in scrolling dialogs, give authorized Figma
   files clear names and open actions, and separate alternative connections and
   authorization-service diagnostics from everyday account management.
-
-## [0.9.52] - 2026-11-02
-
-### Added
-
-- Browse and select existing subdirectories inside an authorized project from Web
-  Panels, using Host-owned directory tokens.
-- Select scoped native model connections and supported parameters on mobile.
-
-### Fixed
-
-- Unify docked and moving Mimi under one visibility controller, share chat and work
-  badges, and preserve placement and appearance across displays with different DPI.
-- Compact completed mobile tool records while preserving transcript segments.
-
-Source: [v0.9.51…v0.9.52](https://github.com/cjhyy/codeshell/compare/v0.9.51...v0.9.52).
 
 ## [0.9.51] - 2026-10-30
 

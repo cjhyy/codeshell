@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { test } from "node:test";
+import { createElectronMainIdentityReader } from "./electron-main-identity.mjs";
 import {
-  createWindowsSourceMainIdentityReader,
   installWindowsElectronDirectTransport,
   knownPlaywrightElectronVector,
 } from "./windows-electron-direct-transport.mjs";
@@ -62,7 +62,7 @@ function identityFixture() {
     application,
     response: () => ({ result: { type: "object", value } }),
     reader: (extra = {}) =>
-      createWindowsSourceMainIdentityReader({
+      createElectronMainIdentityReader({
         application,
         captured,
         playwrightVersion: "1.64.0",
@@ -99,7 +99,7 @@ test("synchronous identity borrows one existing Main session and sends only a fi
 test("synchronous identity rejects unsupported versions, remote clients and foreign Main references before send", async () => {
   for (const mutate of [
     (f) => f.reader({ playwrightVersion: "1.65.0" }),
-    (f) => f.reader({ platform: "linux" }),
+    (f) => f.reader({ platform: "unsupported" }),
     (f) => {
       delete f.application._connection.toImpl;
       return f.reader();
@@ -237,6 +237,27 @@ test("synchronous identity propagates the original protocol failure once without
   await assert.rejects(read(), (error) => error === original);
   assert.equal(f.calls.length, 1);
 });
+
+for (const stage of ["before", "after"])
+  test(`Linux synchronous identity rejects child/session/context/handle changes ${stage} the read`, async () => {
+    for (const [mutate, message] of [
+      [(f) => (f.application.process = () => ({ pid: f.captured.pid })), /process method changed/],
+      [(f) => (f.implementation._nodeSession = {}), /protocol session changed/],
+      [(f) => (f.context.delegate._contextId = 18), /context ID changed/],
+      [(f) => (f.handle._disposed = true), /handle was disposed/],
+    ]) {
+      const f = identityFixture();
+      const read = await f.reader({ platform: "linux" });
+      if (stage === "before") mutate(f);
+      else
+        f.response = () => {
+          mutate(f);
+          return { result: { type: "object", value: f.value } };
+        };
+      await assert.rejects(read(), message);
+      assert.equal(f.calls.length, stage === "before" ? 0 : 1);
+    }
+  });
 
 test("synchronous identity waits for the existing module handle and refuses a different resolved context", async () => {
   const f = identityFixture();
