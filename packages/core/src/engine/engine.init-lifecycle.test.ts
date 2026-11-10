@@ -174,6 +174,7 @@ describe("Engine initialization lifecycle", () => {
       expect(terminal).toEqual({
         type: "turn_complete",
         reason: "aborted_streaming",
+        outcome: { didWork: false, backgroundPending: false },
         timestamp: expect.any(Number),
         startedAt: expect.any(Number),
         completedAt: expect.any(Number),

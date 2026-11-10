@@ -402,7 +402,15 @@ describe("Engine tool run yield gating", () => {
         expect(result.text).toBe("launching");
         expect(modelRounds(events)).toBe(1);
         expect(turnCompletes(events)).toEqual([
-          { type: "turn_complete", reason: "completed", text: result.text },
+          {
+            type: "turn_complete",
+            reason: "completed",
+            text: result.text,
+            // Only a top-level run reports an outcome.
+            ...(label === "subagent"
+              ? {}
+              : { outcome: { didWork: true, backgroundPending: false } }),
+          },
         ]);
       } finally {
         rmSync(dir, { recursive: true, force: true });
@@ -442,7 +450,12 @@ describe("Engine tool run yield gating", () => {
       expect(modelRounds(events)).toBe(2);
       expect(result.text).toBe("finished after yield");
       expect(turnCompletes(events)).toEqual([
-        { type: "turn_complete", reason: "completed", text: result.text },
+        {
+          type: "turn_complete",
+          reason: "completed",
+          text: result.text,
+          outcome: { didWork: true, backgroundPending: false },
+        },
       ]);
     } finally {
       rmSync(dir, { recursive: true, force: true });

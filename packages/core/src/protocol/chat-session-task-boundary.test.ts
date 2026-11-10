@@ -173,3 +173,46 @@ test("a turn's trigger marks its own top-level session_started only", async () =
   ]);
   expect(events.some((event) => event.type === "turn_complete" && "trigger" in event)).toBe(false);
 });
+
+test("a turn's trigger is recorded on its own turn_complete outcome", async () => {
+  const events: StreamEvent[] = [];
+  const engine = {
+    async run(_task: string, options: EngineRunOptions) {
+      const emit = options.onStream!;
+      emit({ type: "session_started", sessionId: "work", promptTokens: 0, runId: "run" });
+      emit({
+        type: "turn_complete",
+        reason: "completed",
+        outcome: { didWork: false, backgroundPending: false },
+        agentId: "child",
+      } as StreamEvent);
+      emit({
+        type: "turn_complete",
+        reason: "completed",
+        outcome: { didWork: false, backgroundPending: false },
+      });
+      return {
+        text: "done",
+        reason: "completed",
+        sessionId: "work",
+        turnCount: 1,
+        usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      };
+    },
+  } as unknown as Engine;
+  const session = new ChatSession({ id: "work", engine, onStream: (event) => events.push(event) });
+  await session.enqueueTurn("wake", { injected: true, trigger: "background_wake" });
+  await session.enqueueTurn("host", { trigger: "host_message" });
+  await session.enqueueTurn("legacy", {});
+  const outcomes = events.flatMap((event) => (event.type === "turn_complete" ? [event] : []));
+  expect(outcomes.map((event) => [event.agentId, event.outcome])).toEqual([
+    // A child's terminal is never the run's outcome.
+    ["child", { didWork: false, backgroundPending: false }],
+    // A background wake exists to act on finished work.
+    [undefined, { didWork: true, backgroundPending: false, trigger: "background_wake" }],
+    ["child", { didWork: false, backgroundPending: false }],
+    [undefined, { didWork: false, backgroundPending: false, trigger: "host_message" }],
+    ["child", { didWork: false, backgroundPending: false }],
+    [undefined, { didWork: false, backgroundPending: false }],
+  ]);
+});

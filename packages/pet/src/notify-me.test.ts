@@ -345,3 +345,15 @@ describe("NotifyMe registration", () => {
     observer.onServerClose?.();
   });
 });
+
+describe("bookkeeping tools", () => {
+  test("only the tools that talk to the owner or Mimi are declared as not work", () => {
+    // Core reads this flag for turn_complete.outcome.didWork: a turn that only
+    // arranged a notice or reported to Mimi must not count as finished work.
+    const bookkeeping = (createPetModule().engine?.tools ?? [])
+      .filter(({ tool }) => tool.definition.bookkeeping === true)
+      .map(({ tool }) => tool.definition.name)
+      .sort();
+    expect(bookkeeping).toEqual([NOTIFY_ME_TOOL_NAME, "ReportToMimi", "RequestMimiDelivery"]);
+  });
+});
