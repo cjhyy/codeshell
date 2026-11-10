@@ -15,9 +15,15 @@ function bellApi(): BellApi | undefined {
   }
 }
 
+/** How long a watching rule gets to be recorded as fired before the renderer speaks. */
+const RULE_FIRE_GRACE_MS = 1_500;
+
 /**
- * The hidden-window "agent done" notification, unless a notice rule watches
- * (or just fired for) this Session: main's notice router owns that one.
+ * The hidden-window "agent done" notification, unless a notice rule just fired
+ * for this Session: main's notice router owns that outcome. A rule that only
+ * watches may still not fire (failures only, policy-suppressed), so it never
+ * silences the notification on its own; when one watches but main has not
+ * recorded a fire yet, the renderer asks once more after a short grace.
  */
 export async function notifyAgentDone(
   sessionId: string | null | undefined,
@@ -25,14 +31,26 @@ export async function notifyAgentDone(
   deps: {
     bell?: Pick<PetApi, "getSessionBell">;
     notify: (input: { title: string; body: string }) => Promise<unknown>;
+    wait?: (ms: number) => Promise<void>;
   } = { bell: bellApi(), notify: (input) => window.codeshell.notify(input) },
 ): Promise<void> {
-  if (sessionId && deps.bell?.getSessionBell) {
-    try {
-      const bell = await deps.bell.getSessionBell(sessionId);
-      if (bell.on || bell.firedRecently) return;
-    } catch {
-      // Unknown: notify as before rather than stay silent.
+  const getBell = deps.bell?.getSessionBell;
+  if (sessionId && getBell) {
+    const read = async (): Promise<PetSessionBellState | undefined> => {
+      try {
+        return await getBell(sessionId);
+      } catch {
+        // Unknown: notify as before rather than stay silent.
+        return undefined;
+      }
+    };
+    const bell = await read();
+    if (bell?.firedRecently) return;
+    if (bell?.on) {
+      const wait =
+        deps.wait ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
+      await wait(RULE_FIRE_GRACE_MS);
+      if ((await read())?.firedRecently) return;
     }
   }
   await deps.notify(input);
