@@ -736,6 +736,8 @@ export class PetLongTaskCoordinator {
           await this.notifyClosed(failed);
           return;
         }
+        // A completion kind from a newer core: nothing is known about the run.
+        if (closing.kind === "unrecognized") return;
         if (closing.kind === "aborted") {
           await transition({
             kind: "interrupted",

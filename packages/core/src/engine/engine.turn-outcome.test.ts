@@ -7,6 +7,7 @@ import { Engine } from "./engine.js";
 import { LLMClientBase } from "../llm/client-base.js";
 import { registerProvider } from "../llm/client-factory.js";
 import { BUILTIN_TOOLS } from "../tool-system/builtin/index.js";
+import type { AgentModule } from "../composition/types.js";
 import type { LLMResponse, StreamEvent, TurnOutcome } from "../types.js";
 
 const fakeProvider = "fake-engine-turn-outcome";
@@ -35,7 +36,7 @@ const call = (toolName: string, args: Record<string, unknown> = {}): LLMResponse
 
 async function runScript(
   responses: LLMResponse[],
-  options: { maxTurns?: number; isSubAgent?: boolean } = {},
+  options: { maxTurns?: number; isSubAgent?: boolean; modules?: AgentModule[] } = {},
 ): Promise<Array<Extract<StreamEvent, { type: "turn_complete" }>>> {
   const dir = mkdtempSync(join(tmpdir(), "engine-turn-outcome-"));
   const model = `${fakeProvider}-${crypto.randomUUID()}`;
@@ -46,11 +47,12 @@ async function runScript(
       llm: { provider: fakeProvider, model, apiKey: "test" } as never,
       cwd: dir,
       sessionStorageDir: join(dir, "sessions"),
-      enabledBuiltinTools: ["ToolSearch", "Glob"],
+      enabledBuiltinTools: ["ToolSearch", "Glob", ...(options.modules ? ["NotifyMe"] : [])],
       maxTurns: options.maxTurns ?? 5,
       headless: true,
       permissionMode: "bypassPermissions",
       ...(options.isSubAgent ? { isSubAgent: true } : {}),
+      ...(options.modules ? { modules: options.modules } : {}),
     });
     (engine as unknown as { hooks: { clear(): void } }).hooks.clear();
     await engine.run("do it", {
@@ -103,6 +105,55 @@ describe("Engine reports turn_complete.outcome", () => {
     });
     expect(terminals).toHaveLength(1);
     expect(terminals[0]!.outcome).toBeUndefined();
+  });
+});
+
+/**
+ * A module's catalog tool as the pet module contributes NotifyMe: the Engine
+ * reads `bookkeeping` from its own fork of the composed registry.
+ */
+function noticeModule(calls: string[]): AgentModule {
+  return {
+    id: "notice-fixture",
+    engine: {
+      tools: [
+        {
+          kind: "preset-tags",
+          tool: {
+            definition: {
+              name: "NotifyMe",
+              description: "Tell the owner when this Session is done.",
+              inputSchema: { type: "object", properties: {} },
+              source: "builtin",
+              permissionDefault: "allow",
+              isReadOnly: false,
+              isConcurrencySafe: false,
+              bookkeeping: true,
+            },
+            execute: async () => {
+              calls.push("NotifyMe");
+              return "armed";
+            },
+            exposure: { presetTags: ["harness-min", "general"] },
+          },
+        },
+      ],
+    },
+  };
+}
+
+/** A module tool is deferred: the model loads its schema first, as a real run does. */
+const loadNotifyMe = call("ToolSearch", { query: "select:NotifyMe" });
+
+describe("a module's bookkeeping tool", () => {
+  it("a NotifyMe-only run through the composed registry did no work", async () => {
+    const calls: string[] = [];
+    const terminals = await runScript([loadNotifyMe, call("NotifyMe"), say("好的，做完告诉你。")], {
+      modules: [noticeModule(calls)],
+    });
+    expect(calls).toEqual(["NotifyMe"]);
+    expect(terminals).toHaveLength(1);
+    expect(terminals[0]!.outcome).toEqual({ didWork: false, backgroundPending: false });
   });
 });
 

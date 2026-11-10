@@ -480,6 +480,24 @@ describe("failed", () => {
   });
 });
 
+describe("a completion kind this host does not know", () => {
+  test("reports nothing, spends nothing and keeps carried work for the next turn", async () => {
+    rules.rules.push(sessionRule("rule-a"));
+    const w = watcher();
+    await feed(w, [started(), tool("Bash"), done({ completionKind: "handed_off" })]);
+    expect(drafts).toEqual([]);
+    expect(rules.rules[0]!.state).toBe("active");
+    // Work deferred from a busy turn is still reported by the turn after it.
+    busy = true;
+    await feed(w, [started({ runId: "run-2" }), tool("Bash"), done()]);
+    busy = false;
+    await feed(w, [started({ runId: "run-3" }), done({ completionKind: "handed_off" })]);
+    expect(drafts).toEqual([]);
+    await feed(w, [started({ runId: "run-4" }), done()]);
+    expect(drafts.map((draft) => draft.dedupeKey)).toEqual([`${SID}:turn:run-4`]);
+  });
+});
+
 describe("long task ownership", () => {
   test("done and failed are left to the long-task closure path", async () => {
     rules.rules.push(sessionRule("rule-a"));

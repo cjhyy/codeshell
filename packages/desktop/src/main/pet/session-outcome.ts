@@ -22,6 +22,7 @@
  * | done (goal) / cancelled, closing  | interrupted (Goal driving stopped) | none                 |
  * | aborted, closing                  | interrupted                  | none (drops carried work)  |
  * | waiting-worker, closing           | waiting-worker               | none                       |
+ * | unrecognized, closing             | none                         | none                       |
  *
  * An exhausted Goal is read two ways on purpose, from the one outcome: the
  * task that was driving that Goal has failed and closes, while the owner is
@@ -74,6 +75,11 @@ export type SessionOutcome = SessionOutcomeBase &
     | { kind: "waiting-worker" }
     /** A completed turn that did no work (an acknowledgement). */
     | { kind: "idle"; summary?: string }
+    /**
+     * The run ended with a completion kind this host does not know (a newer
+     * core). Nothing can be said about what it did, so no consumer acts on it.
+     */
+    | { kind: "unrecognized"; completionKind: string }
   );
 
 export type SessionOutcomeKind = SessionOutcome["kind"];
@@ -165,8 +171,9 @@ function coreOutcome(value: unknown): CoreTurnOutcome | undefined {
  *   are raised while the run is still going (`final: false`).
  * - `turn_complete` → exactly one closing outcome (`final: true`): aborted,
  *   failed, waiting-worker (`background_wait`), blocked (`limit_stop`, or the
- *   Goal pause restated), done (goal) / cancelled (`goal_control_stop`), and
- *   otherwise done (turn) when the run did work or idle when it did not.
+ *   Goal pause restated), done (goal) / cancelled (`goal_control_stop`),
+ *   unrecognized (a completion kind this host does not know), and otherwise
+ *   done (turn) when the run did work or idle when it did not.
  *
  * When core reports `turn_complete.outcome`, it decides whether the run did
  * work, whether the Goal blocked it, and whether background work is pending.
@@ -369,8 +376,10 @@ export class SessionOutcomeDeriver {
     }
     if (reported ? reported.backgroundPending : completionKind === "background_wait")
       return { ...base, kind: "waiting-worker" };
-    // A completion kind this host does not know: the run ended, nothing to report.
-    if (completionKind !== undefined) return { ...base, kind: "idle", ...withSummary };
+    // A completion kind this host does not know: the run ended, and neither
+    // "did work" nor "only acknowledged" can be claimed for it.
+    if (completionKind !== undefined)
+      return { ...base, kind: "unrecognized", completionKind: String(completionKind) };
     // A Goal that paused this run (waiting for the user / exhausted) is parked
     // by core with turn_complete(completed) and no completionKind: not done.
     const goalBlock = reported
@@ -397,16 +406,21 @@ export function runningOutcome(outcomes: readonly SessionOutcome[]): SessionOutc
 }
 
 export interface SessionOutcomeConsumers {
-  /** First: the long task records the outcome before the watcher asks who owns the run. */
+  /** Called first. Returns at once; its own work is asynchronous. */
   coordinator: (sessionId: string, event: unknown, outcomes: readonly SessionOutcome[]) => void;
-  /** Second: the notice-rule watcher. */
+  /** Called second. Returns at once; its own work is asynchronous. */
   watcher: (sessionId: string, outcomes: readonly SessionOutcome[]) => void;
 }
 
 /**
  * The single tap on the worker's Session stream: each event is interpreted
  * once and the same outcomes are handed to both consumers, coordinator first.
- * The order is fixed here instead of depending on listener registration.
+ *
+ * Only the order of these two synchronous calls is fixed. Both consumers do
+ * their work asynchronously afterwards (store writes, rule lookups), so
+ * neither may assume the other has finished with an outcome: who reports a
+ * run is decided from the delivery plan (pet-delivery-plan.ts), not from
+ * which consumer got there first.
  */
 export function createSessionOutcomeTap(
   consumers: SessionOutcomeConsumers,

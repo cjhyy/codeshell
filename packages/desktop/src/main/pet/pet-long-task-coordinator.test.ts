@@ -1485,6 +1485,30 @@ describe("PetLongTaskCoordinator", () => {
     expect(h.closed).toEqual([]);
   });
 
+  test("a completion kind from a newer core neither completes nor interrupts the task", async () => {
+    const h = await harness();
+    const launch = await h.coordinator.startDelegation({
+      clientMessageId: "message-unknown-kind",
+      task: "Finish the delegated implementation",
+      workspacePath: "/work/app",
+    });
+    h.tick(2_000);
+    const before = h.store.get(launch.taskId)!;
+
+    await h.stream(launch.sessionId, {
+      type: "turn_complete",
+      reason: "completed",
+      completionKind: "handed_off",
+      text: "Handed off.",
+    });
+
+    expect(h.store.get(launch.taskId)).toMatchObject({
+      status: before.status,
+      revision: before.revision,
+    });
+    expect(h.closed).toEqual([]);
+  });
+
   test("continues and reports completion after an explicit Goal clear", async () => {
     const h = await harness();
     const launch = await h.coordinator.startDelegation({

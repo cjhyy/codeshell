@@ -250,6 +250,11 @@ const scenarios: Scenario[] = [
     outcomes: [{ ...closing, kind: "waiting-worker" }],
   },
   {
+    name: "a completion kind from a newer core is unrecognized, not idle",
+    events: [started(), tool("Bash"), complete({ completionKind: "handed_off" })],
+    outcomes: [{ ...closing, kind: "unrecognized", completionKind: "handed_off" }],
+  },
+  {
     name: "the user stops the run",
     events: [started(), tool("Bash"), complete({ reason: "aborted_tools" })],
     outcomes: [{ ...closing, kind: "aborted" }],
@@ -318,6 +323,34 @@ describe("SessionOutcomeDeriver", () => {
       expect(terminals.every((event) => typeof event.outcome === "object")).toBe(true);
       expect(withoutTurn(derive(reported))).toEqual(outcomes);
     });
+  });
+
+  test("a host that attached mid-run reads the Goal pause from turn_complete.outcome", () => {
+    // The goal_progress that raised the pause was published before this host
+    // subscribed, so the closing outcome is the first (not a repeated) report.
+    for (const blockedOn of ["user", "goal_exhausted"] as const) {
+      const outcomes = derive([
+        tool("Bash"),
+        complete({
+          outcome: { didWork: true, blockedOn, goal: "paused", backgroundPending: false },
+        }),
+      ]);
+      expect(withoutTurn(outcomes)).toEqual([{ ...closing, kind: "blocked", reason: blockedOn }]);
+      expect(outcomes[0]).not.toHaveProperty("repeat");
+    }
+    // The same run seen from its start restates the pause instead.
+    expect(
+      derive([
+        started(),
+        goal("not_met", { waitingForUser: "Which branch?" }),
+        complete({
+          outcome: { didWork: true, blockedOn: "user", goal: "paused", backgroundPending: false },
+        }),
+      ]).map((outcome) => [outcome.kind, outcome.final, "repeat" in outcome]),
+    ).toEqual([
+      ["blocked", false, false],
+      ["blocked", true, true],
+    ]);
   });
 
   test("turn_complete.outcome wins over what the stream suggests", () => {

@@ -191,6 +191,9 @@ export class PetSessionRuleWatcher {
         case "waiting-worker":
           // The run yields to a later background wake, which reports.
           return;
+        case "unrecognized":
+          // A completion kind from a newer core: nothing is known about the run.
+          return;
       }
     } finally {
       // The turn is over; nothing about it is needed for the next one.

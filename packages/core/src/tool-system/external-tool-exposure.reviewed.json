@@ -182,7 +182,7 @@
     "kind": "self-contained",
     "status": "exposed",
     "reason": "Discovers only the tools permitted by this session's allowedToolNames, availability guards and plan mode. The MCP bridge already advertises those schemas; search cannot register another tool, widen this allowlist or bypass execution checks.",
-    "contractFingerprint": "1f1a4ad74b8159ff8e37655ef4ff21035b99fc8f4b80cb87023a17f67dcbb07c"
+    "contractFingerprint": "77b3e96dc3be46a43554c4753a3da3524cea64a9965a2af26930ba1143ee918a"
   },
   {
     "tool": "WebFetch",
