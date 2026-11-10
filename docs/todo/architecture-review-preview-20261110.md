@@ -30,7 +30,7 @@ Astra 交付的其余实现均保留。本次补齐了清单中剩余的 D2、E3
 - 实际打包 Main/preload/renderer UI 验收通过：浅/深色、390/768/1280 宽度、设置导航、重载及主题流程。应用完整树、asar 和托管 Node 校验通过；深度严格签名验证通过，确认临时 ad-hoc 签名；验收子进程全部退出。
 - 预览应用未上传或公证，未合并 main；未进行生产发布。
 
-## 全量测试仍在跟进
+## 全量测试初次扫描（历史记录）
 
 宿主的 38 分片扫描使用固定前序候选 `408ad2703`，日志位于：
 `/Users/admin/Documents/个人学习/代码学习/codeshell-worktrees/architecture-review-delivery-20261110/host-validation/`。
@@ -38,3 +38,19 @@ Astra 交付的其余实现均保留。本次补齐了清单中剩余的 D2、E3
 截至本机预览交付，SDK 边界 10 项、core-engine 2456 项（3 skip）、core-rest 3363 项、rest 3510 项（3 skip）已完成且零失败。Desktop 初次 7103 pass / 73 skip / 1 fail；该失败来自把 Homebrew 动态链接 Node 复制到临时目录后缺少 libnode，不是生产代码改动。改用预览应用自带、校验通过的独立 Node，相关文件 3 项复验全过。Server 的 H1 导出期望遗漏已修正，相关 32 项复验通过。后续分片尚未全部结束，不能把这些分段结果合称全量通过，也不代表 14 项 required CI 已绿。
 
 本次没有再次委派 agent 或启动 CC；主工作区和其他 Mimi worktree 的文件均未修改。原始任务清单保留，不伪造 PR 号或全验收完成标记。
+
+
+## 最终补跑结果
+
+38 个分片的首轮扫描均已结束，34 个分片零失败，4 个失败分片经处理后均有完整通过结果。保留首轮 exit=1 记录，不将它改写成单次全绿。
+
+| 分片 | 补跑源码 | 完整结果 | 处理 |
+| --- | --- | --- | --- |
+| 3 Desktop | `4f1e7feca` | 7104 pass / 73 skip / 0 fail，764 files | 使用应用自带、已校验的 Node 24.22.1，消除复制 Homebrew 动态库运行时造成的夹具失败 |
+| 5 Server/Web/TUI | `4f1e7feca` | 2277 pass / 0 fail，240 files | 已包含 H1 导出期望修正，使用 Node 24.22.1 |
+| 11 日志恢复 | `4f1e7feca` | 12 pass / 0 fail，1 file | 独立复验支持版本 Node 下的持续写入、分页、冷恢复和子进程退出 |
+| 27 原生后台服务 | `4f1e7feca` | 88 pass / 0 fail，4 files | Node 25 不在生产安全版本范围；以受支持 Node 24.22.1 验证真实 guardian、沙箱与生命周期 |
+
+补跑分片 3、5 的正式回执：`/Users/admin/Documents/CodeShellBuilds/architecture-review-20261110-failed-shards-retest.json`；对应日志在同目录的 `architecture-review-20261110-*-full-retest.log`。分片 11、27 的日志分别为 `architecture-review-20261110-transcript-recovery-retest.log` 与 `architecture-review-20261110-native-services-retest.log`。
+
+预览包生产代码仍对应 `ece147bb7`；后续提交只修改测试与交付文档，因此不重打或替换已验收 ZIP。此次结果覆盖首轮扫描和明确的失败分片补跑，不冒称同一 commit 的单次 38 分片全绿，也不替代尚未执行的 GitHub required CI / main 集成。
