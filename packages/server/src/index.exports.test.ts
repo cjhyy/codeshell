@@ -44,7 +44,11 @@ describe("Server package public entry contracts", () => {
     expect("listDiskSessions" in mobileRemoteApi).toBe(false);
     expect("WorkerBridgeCore" in mobileRemoteApi).toBe(false);
     expect("startHeadlessServer" in mobileRemoteApi).toBe(false);
-    expect(Object.keys(workerApi).sort()).toEqual(["WorkerBridgeCore", "previewLine"]);
+    expect(Object.keys(workerApi).sort()).toEqual([
+      "WorkerBridgeCore",
+      "headlessWorkerEnv",
+      "previewLine",
+    ]);
   });
 
   test("keeps outbound transport and enrollment identity in the focused remote-relay capability", () => {
