@@ -17,28 +17,28 @@ Implementation and validation are tracked separately. No PR exists: GitHub creat
 | Task | Status | Branch / commit | PR / base | Validation / next step |
 | --- | --- | --- | --- | --- |
 | T1 | Implemented; environment-blocked full acceptance | `codex/architecture/t1-run-option-forwarding` / `68eca438f` (pushed) | No PR / main | First red 5 pass + 1 fail, then green 6/0; full build and workspace typecheck passed; combined regression + multi-session + three contracts 36/0; lint 0 errors/98 warnings; shard and engine guards passed |
-| T2 | In progress at T3 worktree | `codex/architecture/t2-typed-declarations`, based on T1 | No PR / T1 branch | AST inventory, annotations and ESLint guard |
+| T2 | Implemented | `codex/architecture/t2-typed-declarations` / `594fe4d81` | No PR / T1 | 62 declarations/50 files; build, workspace typecheck, lint 0/98, guard probes, 18 targeted + 27 contracts passed |
 | T3 | Implemented; environment-blocked full acceptance | `codex/core/t3-settings-locks` / `0e27d8f4d113c17a2d4339eb48fdb749fa069343` | No PR / main | build, workspace typecheck, lint 0/98, shards and engine guard; targeted 37/0 and contracts 27/0 |
-| G1 | Implemented; final contract rerun/commit in progress at `/private/tmp/codeshell-architecture-g1` | `codex/architecture/g1-ipc-budget-scan` | No PR / main | 472 main / 481 preload; negative main/preload and exclusion probes passed; original preload missed 2 existing ipcRenderer calls |
-| G2 | Next after G1 in its worktree | `codex/architecture/g2-core-layers` | No PR / G1 branch | — |
+| G1 | Implemented | `codex/architecture/g1-ipc-budget-scan` / `dcf469b3a` | No PR / main | Full scan 472/481; build/contracts/negative probes passed |
+| G2 | Implemented | `codex/architecture/g2-core-layers` / `6d7aa7e1f` | No PR / G1 | 29 upward edges, 6 same-layer cycles; 28 contracts; negative syntax/resolution probes passed |
 | G3 | Pending R1/R2 | — | — | — |
-| G4 | Pending | — | — | — |
-| C1 | Pending G2 | — | — | — |
-| C2 | Pending G2/C1 | — | — | — |
-| C3 tests | Coverage inventory in progress | — | — | Separate test and migration PRs required |
-| C3 migration | Pending tests | — | — | — |
-| C4 | Pending | — | — | — |
+| G4 | Implemented | `codex/architecture/g4-mock-module-ratchet` / `63c19a06e` | No PR / G2 | 73 files incl. 7 MJS fixtures; 29 contracts and negative probes passed; final candidate ratchet after R1/R2 pending |
+| C1 | In progress | `/private/tmp/codeshell-architecture-g1` | No PR / G4 | Preserve distinct path root semantics and compatibility exports |
+| C2 | Queued after C1 | `/private/tmp/codeshell-architecture-g1` | No PR / C1 | Only mechanical upward edges |
+| C3 tests | Implemented | `codex/protocol/c3-query-contract-tests` / `b737ca119` | No PR / main | 51 query tests / 4 files and 27 contracts passed before extraction |
+| C3 migration | Implemented; verification in progress | `codex/protocol/c3-query-registry` / uncommitted | No PR / C3 tests | 19 handlers; server 4892→4246 lines, budget 5000→4500; build and 74 query+architecture+golden+package tests passed |
+| C4 | Implemented; final probes/commit in progress | `codex/testing/c4-shared-engine-fake` | No PR / T1 | All protocol: baseline 395 pass/11 fail; migrated 397 pass/same 11 fail; sandbox diskutil/listen failures |
 | H1 | Implemented; environment-blocked full acceptance | `codex/server/h1-headless-worker-env` / `e2952dff58061a039a8ed36a8c60405820553f5b` | No PR / main | build, Desktop/mobile typecheck, ESLint, shard guard; contracts 27/0, targeted 46/0, 10 env comparisons passed |
-| H2 | Implemented; validation running at `/private/tmp/codeshell-architecture-h2` | `codex/web/h2-focused-server-imports` | No PR / main | focused exports/imports + AST guard; build underway |
+| H2 | Implemented | `codex/web/h2-focused-server-imports` / `1935b9c78` | No PR / main | build/typecheck, 45 targeted+contracts; package-release reached 52 runtime imports then HTTP listen EPERM |
 | H3 | Pending H2/G3 | — | — | — |
-| D1 | Pending | — | — | — |
-| D2 | Pending | — | — | Enumerate and stop fixing if more than 20 mismatches |
-| D3 | Pending | — | — | One domain; exclude Pet and AgentBridge |
-| E1 | Pending | — | — | host/link only |
+| D1 | Queued after C4 | `/private/tmp/codeshell-architecture-t3` | No PR | Parse once, preserve routing order |
+| D2 | Guardrail stop: owner decision required | `codex/desktop/d2-preload-type-contract` / `709d09652` | No PR / main | Exactly 21 diagnostics exceeds 20; source reverted, full report committed at architecture-review-d2-mismatches-20261110.md; no pilot edits |
+| D3 | Queued after R2 | `/private/tmp/codeshell-architecture-h1` | No PR | One non-Pet/non-AgentBridge domain |
+| E1 | Implemented | `codex/testing/e1-host-link-typecheck` / `8ca3bb3d4` | No PR / main | host/link test tsc zero errors, negative TS2322 probe, 97 tests/10 files, shards/eslint passed; other-package survey in PR draft |
 | E2 | Pending R1/R2/T1 | — | — | — |
 | E3 | Awaiting user decision | — | — | Preserve all evidence |
-| R1 | In progress in former H1 worktree | `codex/architecture/r1-remove-arena` | No PR / main | — |
-| R2 | Pending R1 | — | — | — |
+| R1 | Implemented; lockfile regeneration blocked | `codex/architecture/r1-remove-arena` / `f667c728e` | No PR / main | build/typecheck/lint0/90, contracts32, preserved guards72, clean committed shard inventory2664 passed; package-release HTTP EPERM; registry refuses Bun install |
+| R2 | Implemented; validation/commit in progress | `codex/architecture/r2-remove-legacy-cdp` | No PR / R1 | build, contracts27, host32, pure helpers12, shards2660 passed; browser launch sandbox failure; Desktop cached CUA signature verification failure; lockfile pending |
 
 ## Validation record
 
@@ -69,4 +69,11 @@ Continue all authorized items in dependency order. Preserve separate task commit
 - T3 PR draft: `/private/tmp/codeshell-t3-pr.md`.
 - Protocol investigation (T1/C3/C4): `/private/tmp/codeshell-protocol-inventory-20261110.md`.
 - G1 exact inventory: `/private/tmp/codeshell-g1-count-inventory-20261110.json`.
-- Candidate branch: `codex/architecture/review-candidate-20261110`, currently starting from T1; subsequent independent commits will be cherry-picked onto it. Original task refs remain available for review and later PR publication.
+- Candidate branch: `codex/architecture/review-candidate-20261110`, currently at `c46cc0d38` (T1/T3/H1/G1/H2/T2/R1/E1/G2/C3-tests/G4 plus status and D2 report); later independent commits will be cherry-picked onto it. Original task refs remain available for review and later PR publication.
+
+## Additional review evidence
+
+- Original task refs remain available in the coordinating repository; cherry-pick hashes on the candidate differ. No checklist item is marked ✅ because no real PR exists.
+- PR drafts currently `/private/tmp/codeshell-{t1,t2,t3,h1,h2,g1,g2,g4,r1,e1}-pr.md`; final handoff will preserve copies in the candidate repository.
+- R1 shard check was repeated on a clean detached checkout of its committed ref after an initial unstaged-deletion ENOENT; the clean check passed (2664 files).
+- E1 package survey diagnostics are transitive source-test compilation counts, not package-owned error counts: browser-devtools1, cdp0, chat98, coding6, core248, desktop634, optimization-lab14, pet25, server556, tui4, web65, retired arena3. Only host/link join the CI check.
