@@ -3,6 +3,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { builtinModules, createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
 import { dirname, join, relative, resolve, sep } from "node:path";
+import ts from "typescript";
 
 import {
   AUDITED_RELEASE_PACKAGES,
@@ -397,6 +398,50 @@ describe("workspace package boundaries", () => {
       )
       .map((file) => file.slice(repoRoot.length + 1));
 
+    expect(offenders).toEqual([]);
+  });
+
+  it("keeps Server runtime imports on React-free Web entries", () => {
+    const offenders: string[] = [];
+    const isWebRoot = (node: ts.Node | undefined): boolean =>
+      !!node && ts.isStringLiteralLike(node) && node.text === "@cjhyy/code-shell-web";
+    for (const file of sourceFiles(join(repoRoot, "packages/server/src"))) {
+      const source = ts.createSourceFile(file, readFileSync(file, "utf8"), ts.ScriptTarget.Latest);
+      const visit = (node: ts.Node): void => {
+        let runtimeRoot = false;
+        if (ts.isImportDeclaration(node) && isWebRoot(node.moduleSpecifier)) {
+          const clause = node.importClause;
+          runtimeRoot =
+            !clause ||
+            (!clause.isTypeOnly &&
+              (!!clause.name ||
+                !clause.namedBindings ||
+                ts.isNamespaceImport(clause.namedBindings) ||
+                clause.namedBindings.elements.length === 0 ||
+                clause.namedBindings.elements.some((entry) => !entry.isTypeOnly)));
+        } else if (ts.isExportDeclaration(node) && isWebRoot(node.moduleSpecifier)) {
+          runtimeRoot =
+            !node.isTypeOnly &&
+            (!node.exportClause ||
+              ts.isNamespaceExport(node.exportClause) ||
+              node.exportClause.elements.length === 0 ||
+              node.exportClause.elements.some((entry) => !entry.isTypeOnly));
+        } else if (ts.isCallExpression(node) && isWebRoot(node.arguments[0])) {
+          runtimeRoot =
+            node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+            (ts.isIdentifier(node.expression) && node.expression.text === "require");
+        } else if (
+          ts.isImportEqualsDeclaration(node) &&
+          !node.isTypeOnly &&
+          ts.isExternalModuleReference(node.moduleReference)
+        ) {
+          runtimeRoot = isWebRoot(node.moduleReference.expression);
+        }
+        if (runtimeRoot) offenders.push(relative(repoRoot, file));
+        ts.forEachChild(node, visit);
+      };
+      visit(source);
+    }
     expect(offenders).toEqual([]);
   });
 });

@@ -18,6 +18,14 @@
     "./account-profile": {
       "types": "./dist/account/profile.d.ts",
       "import": "./dist/account/profile.js"
+    },
+    "./transcript-replay": {
+      "types": "./dist/lib/transcriptReplay.d.ts",
+      "import": "./dist/lib/transcriptReplay.js"
+    },
+    "./output-coverage": {
+      "types": "./dist/lib/outputCoverage.d.ts",
+      "import": "./dist/lib/outputCoverage.js"
     }
   },
   "files": [

@@ -1,4 +1,4 @@
-import { OutputCoverage } from "@cjhyy/code-shell-web";
+import { OutputCoverage } from "@cjhyy/code-shell-web/output-coverage";
 import type { SessionOutputCoverageStore } from "@cjhyy/code-shell-core/internal";
 import { randomUUID } from "node:crypto";
 

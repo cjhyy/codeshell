@@ -7,7 +7,7 @@ import {
 import { listSessionEntries } from "@cjhyy/code-shell-core/internal";
 import { join, resolve } from "node:path";
 import { SessionManager, type SessionState } from "@cjhyy/code-shell-core";
-import { replayTranscript, transcriptUserDisplay } from "@cjhyy/code-shell-web";
+import { replayTranscript, transcriptUserDisplay } from "@cjhyy/code-shell-web/transcript-replay";
 import { createSessionTitlesStore, SessionTitleConflictError } from "../session-titles-store.js";
 import { hubJson } from "./uploads.js";
 
