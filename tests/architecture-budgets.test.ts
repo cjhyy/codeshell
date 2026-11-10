@@ -324,13 +324,13 @@ describe("source file line caps", () => {
 
 describe("architecture growth budgets", () => {
   test("module-mocked files cannot spread across the test suite", () => {
-    // fcd8406d5: 66 TypeScript files plus seven JavaScript fixtures. Include
-    // fixtures and JS variants so moving a mock cannot hide it from this cap.
+    // After Arena removal: 65 TypeScript files plus seven JavaScript fixtures.
+    // Include fixtures and JS variants so moving a mock cannot hide from this cap.
     const files = ["packages", "tests"].flatMap(moduleMockFiles);
     expect(
       files.length,
       "改用依赖注入 (dependency injection); do not add files that use module mocks.",
-    ).toBeLessThanOrEqual(73);
+    ).toBeLessThanOrEqual(72);
   });
 
   test("Core value imports keep layers and shrink known exceptions", () => {
