@@ -1,22 +1,23 @@
+import { parseWorkerLine, type ParsedWorkerLine } from "./worker-line.js";
 import { randomUUID } from "node:crypto";
 import { HostRuntime, interceptHostRequest } from "@cjhyy/code-shell-host";
 
 export interface DesktopWorkerHostHandlers {
-  operationBatch(line: string): boolean;
-  credentials(line: string): boolean;
-  browser(line: string): boolean;
-  credentialCookie(line: string): boolean;
-  workspace(line: string): boolean;
-  panel(line: string): boolean;
+  operationBatch(line: string, parsedLine: ParsedWorkerLine): boolean;
+  credentials(line: string, parsedLine: ParsedWorkerLine): boolean;
+  browser(line: string, parsedLine: ParsedWorkerLine): boolean;
+  credentialCookie(line: string, parsedLine: ParsedWorkerLine): boolean;
+  workspace(line: string, parsedLine: ParsedWorkerLine): boolean;
+  panel(line: string, parsedLine: ParsedWorkerLine): boolean;
   /** Generic `__host_action__` loopback (ProtocolObserverHost.requestHostAction). */
-  hostAction(line: string): boolean;
-  automation(line: string): boolean;
+  hostAction(line: string, parsedLine: ParsedWorkerLine): boolean;
+  automation(line: string, parsedLine: ParsedWorkerLine): boolean;
   sendLine(line: string): void;
 }
 
 /** Electron supplies mechanisms; the shared dispatcher owns private request routing. */
 export function createDesktopWorkerHost(handlers: DesktopWorkerHostHandlers) {
-  const routes: Record<string, (line: string) => boolean> = {
+  const routes: Record<string, (line: string, parsedLine: ParsedWorkerLine) => boolean> = {
     browser: handlers.browser,
     "credential.browserCookie": handlers.credentialCookie,
     "workspace.switch": handlers.workspace,
@@ -42,7 +43,7 @@ export function createDesktopWorkerHost(handlers: DesktopWorkerHostHandlers) {
       hostRequests: Object.fromEntries(
         Object.entries(routes).map(([capability, handler]) => [
           capability,
-          (request) => handler(request.line),
+          (request) => handler(request.line, { line: request.line, message: request.message }),
         ]),
       ),
     },
@@ -50,13 +51,8 @@ export function createDesktopWorkerHost(handlers: DesktopWorkerHostHandlers) {
   runtime.start();
   return {
     runtime,
-    intercept(line: string): boolean {
-      let message: any;
-      try {
-        message = JSON.parse(line);
-      } catch {
-        return false;
-      }
+    intercept(line: string, parsedLine: ParsedWorkerLine = parseWorkerLine(line)): boolean {
+      const message = parsedLine.message as { id?: unknown; method?: unknown };
       // Preserve the authorities' legacy handling of known notifications: batch
       // readiness is meaningful, while credential/automation frames without an
       // id are consumed privately without executing or replying.
@@ -66,9 +62,9 @@ export function createDesktopWorkerHost(handlers: DesktopWorkerHostHandlers) {
         message.method.startsWith("desktop/") &&
         Object.hasOwn(routes, message.method)
       )
-        return routes[message.method](line);
+        return routes[message.method](line, parsedLine);
       if (message?.method === "desktop/localOAuthLinkActionCancel")
-        return handlers.credentials(line);
+        return handlers.credentials(line, parsedLine);
       return interceptHostRequest(message, line, {
         runtime,
         sendLine: handlers.sendLine,

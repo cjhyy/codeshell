@@ -1,3 +1,4 @@
+import { parseWorkerLine, type ParsedWorkerLine } from "../worker-line.js";
 /**
  * Pure helpers for intercepting __browser_action__ requests on the worker→main
  * line stream and building the reply line. Kept pure (no Electron) so the
@@ -36,13 +37,11 @@ export interface ParsedBrowserAction {
  * {sessionId, requestId, request}; otherwise null (the caller forwards the line
  * normally). Tolerates malformed JSON.
  */
-export function parseBrowserActionLine(line: string): ParsedBrowserAction | null {
-  let msg: any;
-  try {
-    msg = JSON.parse(line);
-  } catch {
-    return null;
-  }
+export function parseBrowserActionLine(
+  line: string,
+  parsedLine: ParsedWorkerLine = parseWorkerLine(line),
+): ParsedBrowserAction | null {
+  const msg = parsedLine.message as any;
   if (!msg || msg.method !== Methods.ApprovalRequest) return null;
   const p = msg.params;
   if (!p || typeof p.requestId !== "string") return null;
@@ -150,13 +149,11 @@ export interface ParsedCredentialAction {
  * If `line` is a __credential_action__ approval request, return its parsed
  * shape; otherwise null. Tolerates malformed JSON.
  */
-export function parseCredentialActionLine(line: string): ParsedCredentialAction | null {
-  let msg: any;
-  try {
-    msg = JSON.parse(line);
-  } catch {
-    return null;
-  }
+export function parseCredentialActionLine(
+  line: string,
+  parsedLine: ParsedWorkerLine = parseWorkerLine(line),
+): ParsedCredentialAction | null {
+  const msg = parsedLine.message as any;
   if (!msg || msg.method !== Methods.ApprovalRequest) return null;
   const p = msg.params;
   if (!p || typeof p.requestId !== "string") return null;
@@ -210,13 +207,11 @@ export interface ParsedWorkspaceAction {
   target: string;
 }
 
-export function parseWorkspaceActionLine(line: string): ParsedWorkspaceAction | null {
-  let msg: any;
-  try {
-    msg = JSON.parse(line);
-  } catch {
-    return null;
-  }
+export function parseWorkspaceActionLine(
+  line: string,
+  parsedLine: ParsedWorkerLine = parseWorkerLine(line),
+): ParsedWorkspaceAction | null {
+  const msg = parsedLine.message as any;
   if (!msg || msg.method !== Methods.ApprovalRequest) return null;
   const p = msg.params;
   if (!p || typeof p.requestId !== "string") return null;
@@ -271,13 +266,11 @@ export interface ParsedHostAction extends HostActionEnvelope {
  * args are malformed, so main can still answer (and consume) it. Null for
  * every other line, or when there is no requestId to answer.
  */
-export function parseHostActionEnvelope(line: string): HostActionEnvelope | null {
-  let msg: any;
-  try {
-    msg = JSON.parse(line);
-  } catch {
-    return null;
-  }
+export function parseHostActionEnvelope(
+  line: string,
+  parsedLine: ParsedWorkerLine = parseWorkerLine(line),
+): HostActionEnvelope | null {
+  const msg = parsedLine.message as any;
   if (!msg || msg.method !== Methods.ApprovalRequest) return null;
   const p = msg.params;
   if (!p || typeof p.requestId !== "string") return null;
@@ -290,10 +283,13 @@ export function parseHostActionEnvelope(line: string): HostActionEnvelope | null
   };
 }
 
-export function parseHostActionLine(line: string): ParsedHostAction | null {
-  const envelope = parseHostActionEnvelope(line);
+export function parseHostActionLine(
+  line: string,
+  parsedLine: ParsedWorkerLine = parseWorkerLine(line),
+): ParsedHostAction | null {
+  const envelope = parseHostActionEnvelope(line, parsedLine);
   if (!envelope) return null;
-  const a = (JSON.parse(line) as any).params.request.args;
+  const a = (parsedLine.message as any).params.request.args;
   if (!a || typeof a !== "object" || typeof a.action !== "string") return null;
   if (!a.args || typeof a.args !== "object" || Array.isArray(a.args)) return null;
   return { ...envelope, action: a.action, args: a.args as Record<string, unknown> };
@@ -325,13 +321,11 @@ export interface ParsedPanelAction {
   arguments?: Record<string, unknown>;
 }
 
-export function parsePanelActionLine(line: string): ParsedPanelAction | null {
-  let msg: any;
-  try {
-    msg = JSON.parse(line);
-  } catch {
-    return null;
-  }
+export function parsePanelActionLine(
+  line: string,
+  parsedLine: ParsedWorkerLine = parseWorkerLine(line),
+): ParsedPanelAction | null {
+  const msg = parsedLine.message as any;
   if (!msg || msg.method !== Methods.ApprovalRequest) return null;
   const params = msg.params;
   if (!params || typeof params.requestId !== "string") return null;

@@ -1,3 +1,4 @@
+import { parseWorkerLine, type ParsedWorkerLine } from "./worker-line.js";
 import {
   buildHostActionReply,
   parseHostActionEnvelope,
@@ -43,10 +44,11 @@ export class HostActionHandlers {
     line: string,
     sendLine: (line: string) => void,
     log: (error: unknown) => void,
+    parsedLine: ParsedWorkerLine = parseWorkerLine(line),
   ): boolean {
-    const parsed = parseHostActionLine(line);
+    const parsed = parseHostActionLine(line, parsedLine);
     if (!parsed) {
-      const envelope = parseHostActionEnvelope(line);
+      const envelope = parseHostActionEnvelope(line, parsedLine);
       if (!envelope) return false;
       const malformed = JSON.stringify({ ok: false, error: "malformed host action request" });
       // Same isolation as the async path: a failed send must never throw back

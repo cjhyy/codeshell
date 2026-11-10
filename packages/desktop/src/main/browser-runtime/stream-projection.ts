@@ -1,3 +1,4 @@
+import { parseWorkerLine, type ParsedWorkerLine } from "../worker-line.js";
 import type { StreamEvent } from "@cjhyy/code-shell-core";
 import type { BrowserRuntimeVisibility } from "./runtime.js";
 
@@ -37,9 +38,13 @@ export function annotateBrowserRuntimeStreamEvent(
 }
 
 /** Replace only params.event in a JSON-RPC stream line for non-renderer taps. */
-export function replaceStreamEventInLine(line: string, event: unknown): string {
+export function replaceStreamEventInLine(
+  line: string,
+  event: unknown,
+  parsedLine: ParsedWorkerLine = parseWorkerLine(line),
+): string {
   try {
-    const parsed = JSON.parse(line) as {
+    const parsed = parsedLine.message as {
       params?: Record<string, unknown>;
     };
     if (!parsed.params) return line;
