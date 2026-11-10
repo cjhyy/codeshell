@@ -1,0 +1,64 @@
+[
+  {
+    "name": "desktop-build",
+    "exit": 1,
+    "seconds": 0.18,
+    "log": "/private/tmp/codeshell-final-desktop-build.log"
+  },
+  {
+    "name": "desktop-main",
+    "exit": 0,
+    "seconds": 1.09,
+    "log": "/private/tmp/codeshell-final-desktop-main.log"
+  },
+  {
+    "name": "desktop-renderer",
+    "exit": 0,
+    "seconds": 4.48,
+    "log": "/private/tmp/codeshell-final-desktop-renderer.log"
+  },
+  {
+    "name": "desktop-mobile",
+    "exit": 0,
+    "seconds": 1.32,
+    "log": "/private/tmp/codeshell-final-desktop-mobile.log"
+  },
+  {
+    "name": "server-smoke",
+    "exit": 1,
+    "seconds": 0.29,
+    "log": "/private/tmp/codeshell-final-server-smoke.log"
+  },
+  {
+    "name": "electron-recovery",
+    "exit": 1,
+    "seconds": 0.51,
+    "log": "/private/tmp/codeshell-final-electron-recovery.log"
+  },
+  {
+    "name": "batch-native",
+    "exit": 1,
+    "seconds": 0.24,
+    "log": "/private/tmp/codeshell-final-batch-native.log"
+  },
+  {
+    "name": "batch-worker",
+    "exit": 1,
+    "seconds": 0.18,
+    "log": "/private/tmp/codeshell-final-batch-worker.log"
+  },
+  {
+    "name": "chrome-extension",
+    "exit": 0,
+    "candidate": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+    "log": "/private/tmp/codeshell-final-chrome-extension.log"
+  },
+  {
+    "name": "electron-full-suite",
+    "exit": 1,
+    "candidate": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+    "command": "isolated wrapper -> bun run test:e2e",
+    "log": "/private/tmp/codeshell-final-electron-suite.log",
+    "reason": "first managed-cloud fixture cannot listen on loopback (EPERM)"
+  }
+]

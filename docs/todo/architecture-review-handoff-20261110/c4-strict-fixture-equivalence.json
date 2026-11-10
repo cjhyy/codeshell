@@ -1,0 +1,212 @@
+[
+  {
+    "file": "packages/core/src/protocol/background-result-wakeup.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 3
+  },
+  {
+    "file": "packages/core/src/protocol/chat-session-manager.access.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 4
+  },
+  {
+    "file": "packages/core/src/protocol/chat-session-manager.bg-jobs.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 3
+  },
+  {
+    "file": "packages/core/src/protocol/chat-session-manager.identity.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 1
+  },
+  {
+    "file": "packages/core/src/protocol/chat-session-manager.lifecycle.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 16
+  },
+  {
+    "file": "packages/core/src/protocol/chat-session-manager.migration.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 1
+  },
+  {
+    "file": "packages/core/src/protocol/chat-session-manager.permission.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 3
+  },
+  {
+    "file": "packages/core/src/protocol/server.askuser-async.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 3
+  },
+  {
+    "file": "packages/core/src/protocol/server.askuser-chatmanager.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 1
+  },
+  {
+    "file": "packages/core/src/protocol/server.askuser-session-isolation.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 4
+  },
+  {
+    "file": "packages/core/src/protocol/server.askuser-timeout.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 7
+  },
+  {
+    "file": "packages/core/src/protocol/server.backgroundwork.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 2
+  },
+  {
+    "file": "packages/core/src/protocol/server.bg-shell-wakeup.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 19
+  },
+  {
+    "file": "packages/core/src/protocol/server.cancel-approvals.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 2
+  },
+  {
+    "file": "packages/core/src/protocol/server.child-host-bindings.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 3
+  },
+  {
+    "file": "packages/core/src/protocol/server.completion-kind.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 4
+  },
+  {
+    "file": "packages/core/src/protocol/server.decision-hooks.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 2
+  },
+  {
+    "file": "packages/core/src/protocol/server.goal-cold-resume.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 2
+  },
+  {
+    "file": "packages/core/src/protocol/server.goalclear.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 1
+  },
+  {
+    "file": "packages/core/src/protocol/server.goalget.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 2
+  },
+  {
+    "file": "packages/core/src/protocol/server.host-action.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 2
+  },
+  {
+    "file": "packages/core/src/protocol/server.host-loopback-cancel.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 6
+  },
+  {
+    "file": "packages/core/src/protocol/server.identity-scope.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 1
+  },
+  {
+    "file": "packages/core/src/protocol/server.image-only.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 2
+  },
+  {
+    "file": "packages/core/src/protocol/server.module-lifetime.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 2
+  },
+  {
+    "file": "packages/core/src/protocol/server.panel-bridge.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 1
+  },
+  {
+    "file": "packages/core/src/protocol/server.pending-snapshot-lifecycle.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 3
+  },
+  {
+    "file": "packages/core/src/protocol/server.plugin-commands.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 2
+  },
+  {
+    "file": "packages/core/src/protocol/server.query-session.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 3
+  },
+  {
+    "file": "packages/core/src/protocol/server.reload-settings.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 3
+  },
+  {
+    "file": "packages/core/src/protocol/server.reload-skills.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 2
+  },
+  {
+    "file": "packages/core/src/protocol/server.require-existing.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 1
+  },
+  {
+    "file": "packages/core/src/protocol/server.run-model.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 5
+  },
+  {
+    "file": "packages/core/src/protocol/server.run-permission-boundary.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 2
+  },
+  {
+    "file": "packages/core/src/protocol/server.run-start-cancel.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 3
+  },
+  {
+    "file": "packages/core/src/protocol/server.session-message.host.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 3
+  },
+  {
+    "file": "packages/core/src/protocol/server.session-message.lifecycle.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 2
+  },
+  {
+    "file": "packages/core/src/protocol/server.session-message.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 9
+  },
+  {
+    "file": "packages/core/src/protocol/server.steer.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 2
+  },
+  {
+    "file": "packages/core/src/protocol/server.tcp-approval-isolation.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 2
+  },
+  {
+    "file": "packages/core/src/protocol/server.user-decision-lifecycle.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 3
+  },
+  {
+    "file": "packages/core/src/protocol/server.workspace-bridge.test.ts",
+    "equivalentAfterRemovingExplicitAbsence": true,
+    "removed": 14
+  }
+]

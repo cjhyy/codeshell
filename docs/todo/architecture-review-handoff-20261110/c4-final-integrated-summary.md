@@ -1,0 +1,5 @@
+Exact candidate: `d65afec5b2af55ee3ed4f9de657005edd90fb0ea` (unchanged before/after). Full isolated protocol run: **428 passed / 11 failed**, 439 cases across 74 files, 1,534 expectations, exit 1. The 11 failure names exactly match the original C4 baseline: five loopback listener denials and six real-Engine DiskManagement failures. This suite is not green in the sandbox.
+
+All **31 C3-added query cases passed**; AST expansion confirms the original file had 2 cases and C3 PR1/PR2 each have 33. Actual logger capture: 247 records, zero unexpected fake Engine calls, zero decision_hook.failed, zero engine-dispose failures. Full evidence is in `codeshell-c4-final-integrated-results.json` and its linked logs.
+
+The first integration attempt at f31986b4 remains archived: 397 passed / 42 failed. Its 31 additional failures exposed a real C3/C4 fixture composition-fallback omission, fixed in `f38da41f8` by one explicit getComposition: undefined property. No root source, HEAD or dist was changed by this worker. All validation processes are finished.

@@ -1,0 +1,1263 @@
+{
+  "candidate": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+  "plan": {
+    "cwd": "/private/tmp/codeshell-architecture-review-20261110",
+    "expected": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+    "planned": [
+      3,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      33,
+      34,
+      35,
+      36
+    ],
+    "concurrency": 2,
+    "mainWallClockLimitSeconds": 600,
+    "otherWallClockLimitSeconds": 240,
+    "command": "bun run test --shard N",
+    "TMPDIR": "/private/tmp/codeshell-architecture-tmp"
+  },
+  "initialAttempts": [
+    {
+      "shard": 3,
+      "status": "INCOMPLETE_TIMEOUT",
+      "command": "bun run test --shard 3",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:12:54.165Z",
+      "durationSeconds": 600.07,
+      "wallClockLimitSeconds": 600,
+      "exitCode": null,
+      "signal": "SIGTERM",
+      "timedOut": true,
+      "completed": null,
+      "bunSummary": null,
+      "observedPassLines": 1131,
+      "observedFailLines": 84,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-03.log",
+      "lastNestedOrPartialLogSummary": {
+        "pass": 70,
+        "fail": 1,
+        "skip": 0,
+        "tests": 71,
+        "files": 1
+      }
+    },
+    {
+      "shard": 6,
+      "status": "PASS",
+      "command": "bun run test --shard 6",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:12:54.194Z",
+      "durationSeconds": 1.99,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "completed": {
+        "tests": 23,
+        "skipped": 0
+      },
+      "bunSummary": {
+        "pass": 23,
+        "fail": 0,
+        "skip": 0,
+        "tests": 23,
+        "files": 1
+      },
+      "observedPassLines": 23,
+      "observedFailLines": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-06.log"
+    },
+    {
+      "shard": 7,
+      "status": "PASS",
+      "command": "bun run test --shard 7",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:12:56.208Z",
+      "durationSeconds": 0.96,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "completed": {
+        "tests": 5,
+        "skipped": 0
+      },
+      "bunSummary": {
+        "pass": 5,
+        "fail": 0,
+        "skip": 0,
+        "tests": 5,
+        "files": 1
+      },
+      "observedPassLines": 5,
+      "observedFailLines": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-07.log"
+    },
+    {
+      "shard": 8,
+      "status": "PASS",
+      "command": "bun run test --shard 8",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:12:57.199Z",
+      "durationSeconds": 1.02,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "completed": {
+        "tests": 6,
+        "skipped": 0
+      },
+      "bunSummary": {
+        "pass": 6,
+        "fail": 0,
+        "skip": 0,
+        "tests": 6,
+        "files": 1
+      },
+      "observedPassLines": 6,
+      "observedFailLines": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-08.log"
+    },
+    {
+      "shard": 9,
+      "status": "PASS",
+      "command": "bun run test --shard 9",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:12:58.243Z",
+      "durationSeconds": 0.77,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "completed": {
+        "tests": 6,
+        "skipped": 0
+      },
+      "bunSummary": {
+        "pass": 6,
+        "fail": 0,
+        "skip": 0,
+        "tests": 6,
+        "files": 1
+      },
+      "observedPassLines": 6,
+      "observedFailLines": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-09.log"
+    },
+    {
+      "shard": 10,
+      "status": "PASS",
+      "command": "bun run test --shard 10",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:12:59.040Z",
+      "durationSeconds": 0.77,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "completed": {
+        "tests": 10,
+        "skipped": 0
+      },
+      "bunSummary": {
+        "pass": 10,
+        "fail": 0,
+        "skip": 0,
+        "tests": 10,
+        "files": 1
+      },
+      "observedPassLines": 10,
+      "observedFailLines": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-10.log"
+    },
+    {
+      "shard": 11,
+      "status": "FAIL",
+      "command": "bun run test --shard 11",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:12:59.841Z",
+      "durationSeconds": 32.83,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 1,
+      "signal": null,
+      "timedOut": false,
+      "completed": null,
+      "bunSummary": {
+        "pass": 11,
+        "fail": 1,
+        "skip": 0,
+        "tests": 12,
+        "files": 1
+      },
+      "observedPassLines": 11,
+      "observedFailLines": 1,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-11.log"
+    },
+    {
+      "shard": 12,
+      "status": "PASS",
+      "command": "bun run test --shard 12",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:13:32.755Z",
+      "durationSeconds": 0.46,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "completed": {
+        "tests": 7,
+        "skipped": 0
+      },
+      "bunSummary": {
+        "pass": 7,
+        "fail": 0,
+        "skip": 0,
+        "tests": 7,
+        "files": 1
+      },
+      "observedPassLines": 7,
+      "observedFailLines": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-12.log"
+    },
+    {
+      "shard": 13,
+      "status": "PASS",
+      "command": "bun run test --shard 13",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:13:33.238Z",
+      "durationSeconds": 0.15,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "completed": {
+        "tests": 2,
+        "skipped": 0
+      },
+      "bunSummary": {
+        "pass": 2,
+        "fail": 0,
+        "skip": 0,
+        "tests": 2,
+        "files": 1
+      },
+      "observedPassLines": 2,
+      "observedFailLines": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-13.log"
+    },
+    {
+      "shard": 14,
+      "status": "FAIL",
+      "command": "bun run test --shard 14",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:13:33.421Z",
+      "durationSeconds": 2.91,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 1,
+      "signal": null,
+      "timedOut": false,
+      "completed": null,
+      "bunSummary": {
+        "pass": 166,
+        "fail": 36,
+        "skip": 0,
+        "tests": 202,
+        "files": 19
+      },
+      "observedPassLines": 166,
+      "observedFailLines": 72,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-14.log"
+    },
+    {
+      "shard": 15,
+      "status": "PASS",
+      "command": "bun run test --shard 15",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:13:36.360Z",
+      "durationSeconds": 0.69,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "completed": {
+        "tests": 63,
+        "skipped": 0
+      },
+      "bunSummary": {
+        "pass": 63,
+        "fail": 0,
+        "skip": 0,
+        "tests": 63,
+        "files": 5
+      },
+      "observedPassLines": 63,
+      "observedFailLines": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-15.log"
+    },
+    {
+      "shard": 16,
+      "status": "PASS",
+      "command": "bun run test --shard 16",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:13:37.074Z",
+      "durationSeconds": 0.17,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "completed": {
+        "tests": 6,
+        "skipped": 0
+      },
+      "bunSummary": {
+        "pass": 6,
+        "fail": 0,
+        "skip": 0,
+        "tests": 6,
+        "files": 1
+      },
+      "observedPassLines": 6,
+      "observedFailLines": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-16.log"
+    },
+    {
+      "shard": 17,
+      "status": "PASS",
+      "command": "bun run test --shard 17",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:13:37.267Z",
+      "durationSeconds": 5.89,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "completed": {
+        "tests": 60,
+        "skipped": 0
+      },
+      "bunSummary": {
+        "pass": 60,
+        "fail": 0,
+        "skip": 0,
+        "tests": 60,
+        "files": 3
+      },
+      "observedPassLines": 60,
+      "observedFailLines": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-17.log"
+    },
+    {
+      "shard": 18,
+      "status": "PASS",
+      "command": "bun run test --shard 18",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:13:43.192Z",
+      "durationSeconds": 3.13,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "completed": {
+        "tests": 365,
+        "skipped": 0
+      },
+      "bunSummary": {
+        "pass": 365,
+        "fail": 0,
+        "skip": 0,
+        "tests": 365,
+        "files": 10
+      },
+      "observedPassLines": 365,
+      "observedFailLines": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-18.log"
+    },
+    {
+      "shard": 19,
+      "status": "FAIL",
+      "command": "bun run test --shard 19",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:13:46.341Z",
+      "durationSeconds": 4.73,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 1,
+      "signal": null,
+      "timedOut": false,
+      "completed": null,
+      "bunSummary": {
+        "pass": 298,
+        "fail": 14,
+        "skip": 0,
+        "tests": 312,
+        "files": 29
+      },
+      "observedPassLines": 298,
+      "observedFailLines": 28,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-19.log"
+    },
+    {
+      "shard": 20,
+      "status": "PASS",
+      "command": "bun run test --shard 20",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:13:51.098Z",
+      "durationSeconds": 55.27,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "completed": {
+        "tests": 96,
+        "skipped": 0
+      },
+      "bunSummary": {
+        "pass": 96,
+        "fail": 0,
+        "skip": 0,
+        "tests": 96,
+        "files": 3
+      },
+      "observedPassLines": 96,
+      "observedFailLines": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-20.log"
+    },
+    {
+      "shard": 21,
+      "status": "FAIL",
+      "command": "bun run test --shard 21",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:14:46.393Z",
+      "durationSeconds": 2.38,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 1,
+      "signal": null,
+      "timedOut": false,
+      "completed": null,
+      "bunSummary": {
+        "pass": 102,
+        "fail": 4,
+        "skip": 0,
+        "tests": 106,
+        "files": 10
+      },
+      "observedPassLines": 123,
+      "observedFailLines": 16,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-21.log"
+    },
+    {
+      "shard": 22,
+      "status": "PASS",
+      "command": "bun run test --shard 22",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:14:48.816Z",
+      "durationSeconds": 5.46,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "completed": {
+        "tests": 16,
+        "skipped": 0
+      },
+      "bunSummary": {
+        "pass": 16,
+        "fail": 0,
+        "skip": 0,
+        "tests": 16,
+        "files": 1
+      },
+      "observedPassLines": 16,
+      "observedFailLines": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-22.log"
+    },
+    {
+      "shard": 23,
+      "status": "FAIL",
+      "command": "bun run test --shard 23",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:14:54.300Z",
+      "durationSeconds": 6.5,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 1,
+      "signal": null,
+      "timedOut": false,
+      "completed": null,
+      "bunSummary": {
+        "pass": 29,
+        "fail": 5,
+        "skip": 0,
+        "tests": 34,
+        "files": 5
+      },
+      "observedPassLines": 29,
+      "observedFailLines": 10,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-23.log"
+    },
+    {
+      "shard": 33,
+      "status": "FAIL",
+      "command": "bun run test --shard 33",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:15:00.828Z",
+      "durationSeconds": 4.8,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 1,
+      "signal": null,
+      "timedOut": false,
+      "completed": null,
+      "bunSummary": {
+        "pass": 0,
+        "fail": 5,
+        "skip": 0,
+        "tests": 5,
+        "files": 1
+      },
+      "observedPassLines": 0,
+      "observedFailLines": 5,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-33.log"
+    },
+    {
+      "shard": 34,
+      "status": "FAIL",
+      "command": "bun run test --shard 34",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:15:05.649Z",
+      "durationSeconds": 0.35,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 1,
+      "signal": null,
+      "timedOut": false,
+      "completed": null,
+      "bunSummary": {
+        "pass": 12,
+        "fail": 2,
+        "skip": 0,
+        "tests": 14,
+        "files": 1
+      },
+      "observedPassLines": 12,
+      "observedFailLines": 2,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-34.log"
+    },
+    {
+      "shard": 35,
+      "status": "FAIL",
+      "command": "bun run test --shard 35",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:15:06.026Z",
+      "durationSeconds": 0.84,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 1,
+      "signal": null,
+      "timedOut": false,
+      "completed": null,
+      "bunSummary": {
+        "pass": 0,
+        "fail": 1,
+        "skip": 0,
+        "tests": 1,
+        "files": 1
+      },
+      "observedPassLines": 0,
+      "observedFailLines": 1,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-35.log"
+    },
+    {
+      "shard": 36,
+      "status": "FAIL",
+      "command": "bun run test --shard 36",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:15:06.891Z",
+      "durationSeconds": 1.63,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 1,
+      "signal": null,
+      "timedOut": false,
+      "completed": null,
+      "bunSummary": {
+        "pass": 66,
+        "fail": 12,
+        "skip": 0,
+        "tests": 78,
+        "files": 12
+      },
+      "observedPassLines": 66,
+      "observedFailLines": 24,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-36.log"
+    }
+  ],
+  "retries": [
+    {
+      "shard": 11,
+      "attempt": "retry-full-shard",
+      "head": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "command": "bun run test --shard 11",
+      "exitCode": 0,
+      "status": "PASS",
+      "tests": 12,
+      "pass": 12,
+      "fail": 0,
+      "skipped": 0,
+      "assertions": 59,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-11-retry.log",
+      "previousAttemptStatus": "FAIL",
+      "previousAttemptPass": 11,
+      "previousAttemptFail": 1
+    }
+  ],
+  "latest": [
+    {
+      "shard": 3,
+      "status": "INCOMPLETE_TIMEOUT",
+      "command": "bun run test --shard 3",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:12:54.165Z",
+      "durationSeconds": 600.07,
+      "wallClockLimitSeconds": 600,
+      "exitCode": null,
+      "signal": "SIGTERM",
+      "timedOut": true,
+      "completed": null,
+      "bunSummary": null,
+      "observedPassLines": 1131,
+      "observedFailLines": 84,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-03.log",
+      "lastNestedOrPartialLogSummary": {
+        "pass": 70,
+        "fail": 1,
+        "skip": 0,
+        "tests": 71,
+        "files": 1
+      }
+    },
+    {
+      "shard": 6,
+      "status": "PASS",
+      "command": "bun run test --shard 6",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:12:54.194Z",
+      "durationSeconds": 1.99,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "completed": {
+        "tests": 23,
+        "skipped": 0
+      },
+      "bunSummary": {
+        "pass": 23,
+        "fail": 0,
+        "skip": 0,
+        "tests": 23,
+        "files": 1
+      },
+      "observedPassLines": 23,
+      "observedFailLines": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-06.log"
+    },
+    {
+      "shard": 7,
+      "status": "PASS",
+      "command": "bun run test --shard 7",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:12:56.208Z",
+      "durationSeconds": 0.96,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "completed": {
+        "tests": 5,
+        "skipped": 0
+      },
+      "bunSummary": {
+        "pass": 5,
+        "fail": 0,
+        "skip": 0,
+        "tests": 5,
+        "files": 1
+      },
+      "observedPassLines": 5,
+      "observedFailLines": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-07.log"
+    },
+    {
+      "shard": 8,
+      "status": "PASS",
+      "command": "bun run test --shard 8",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:12:57.199Z",
+      "durationSeconds": 1.02,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "completed": {
+        "tests": 6,
+        "skipped": 0
+      },
+      "bunSummary": {
+        "pass": 6,
+        "fail": 0,
+        "skip": 0,
+        "tests": 6,
+        "files": 1
+      },
+      "observedPassLines": 6,
+      "observedFailLines": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-08.log"
+    },
+    {
+      "shard": 9,
+      "status": "PASS",
+      "command": "bun run test --shard 9",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:12:58.243Z",
+      "durationSeconds": 0.77,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "completed": {
+        "tests": 6,
+        "skipped": 0
+      },
+      "bunSummary": {
+        "pass": 6,
+        "fail": 0,
+        "skip": 0,
+        "tests": 6,
+        "files": 1
+      },
+      "observedPassLines": 6,
+      "observedFailLines": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-09.log"
+    },
+    {
+      "shard": 10,
+      "status": "PASS",
+      "command": "bun run test --shard 10",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:12:59.040Z",
+      "durationSeconds": 0.77,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "completed": {
+        "tests": 10,
+        "skipped": 0
+      },
+      "bunSummary": {
+        "pass": 10,
+        "fail": 0,
+        "skip": 0,
+        "tests": 10,
+        "files": 1
+      },
+      "observedPassLines": 10,
+      "observedFailLines": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-10.log"
+    },
+    {
+      "shard": 11,
+      "status": "PASS",
+      "command": "bun run test --shard 11",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:12:59.841Z",
+      "durationSeconds": 32.83,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "completed": {
+        "tests": 12,
+        "skipped": 0
+      },
+      "bunSummary": {
+        "pass": 12,
+        "fail": 0,
+        "skip": 0,
+        "tests": 12
+      },
+      "observedPassLines": 11,
+      "observedFailLines": 1,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-11-retry.log",
+      "attempt": "retry-full-shard",
+      "head": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "tests": 12,
+      "pass": 12,
+      "fail": 0,
+      "skipped": 0,
+      "assertions": 59,
+      "previousAttemptStatus": "FAIL",
+      "previousAttemptPass": 11,
+      "previousAttemptFail": 1,
+      "firstAttemptLog": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-11.log",
+      "firstAttemptStatus": "FAIL"
+    },
+    {
+      "shard": 12,
+      "status": "PASS",
+      "command": "bun run test --shard 12",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:13:32.755Z",
+      "durationSeconds": 0.46,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "completed": {
+        "tests": 7,
+        "skipped": 0
+      },
+      "bunSummary": {
+        "pass": 7,
+        "fail": 0,
+        "skip": 0,
+        "tests": 7,
+        "files": 1
+      },
+      "observedPassLines": 7,
+      "observedFailLines": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-12.log"
+    },
+    {
+      "shard": 13,
+      "status": "PASS",
+      "command": "bun run test --shard 13",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:13:33.238Z",
+      "durationSeconds": 0.15,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "completed": {
+        "tests": 2,
+        "skipped": 0
+      },
+      "bunSummary": {
+        "pass": 2,
+        "fail": 0,
+        "skip": 0,
+        "tests": 2,
+        "files": 1
+      },
+      "observedPassLines": 2,
+      "observedFailLines": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-13.log"
+    },
+    {
+      "shard": 14,
+      "status": "FAIL",
+      "command": "bun run test --shard 14",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:13:33.421Z",
+      "durationSeconds": 2.91,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 1,
+      "signal": null,
+      "timedOut": false,
+      "completed": null,
+      "bunSummary": {
+        "pass": 166,
+        "fail": 36,
+        "skip": 0,
+        "tests": 202,
+        "files": 19
+      },
+      "observedPassLines": 166,
+      "observedFailLines": 72,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-14.log"
+    },
+    {
+      "shard": 15,
+      "status": "PASS",
+      "command": "bun run test --shard 15",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:13:36.360Z",
+      "durationSeconds": 0.69,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "completed": {
+        "tests": 63,
+        "skipped": 0
+      },
+      "bunSummary": {
+        "pass": 63,
+        "fail": 0,
+        "skip": 0,
+        "tests": 63,
+        "files": 5
+      },
+      "observedPassLines": 63,
+      "observedFailLines": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-15.log"
+    },
+    {
+      "shard": 16,
+      "status": "PASS",
+      "command": "bun run test --shard 16",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:13:37.074Z",
+      "durationSeconds": 0.17,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "completed": {
+        "tests": 6,
+        "skipped": 0
+      },
+      "bunSummary": {
+        "pass": 6,
+        "fail": 0,
+        "skip": 0,
+        "tests": 6,
+        "files": 1
+      },
+      "observedPassLines": 6,
+      "observedFailLines": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-16.log"
+    },
+    {
+      "shard": 17,
+      "status": "PASS",
+      "command": "bun run test --shard 17",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:13:37.267Z",
+      "durationSeconds": 5.89,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "completed": {
+        "tests": 60,
+        "skipped": 0
+      },
+      "bunSummary": {
+        "pass": 60,
+        "fail": 0,
+        "skip": 0,
+        "tests": 60,
+        "files": 3
+      },
+      "observedPassLines": 60,
+      "observedFailLines": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-17.log"
+    },
+    {
+      "shard": 18,
+      "status": "PASS",
+      "command": "bun run test --shard 18",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:13:43.192Z",
+      "durationSeconds": 3.13,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "completed": {
+        "tests": 365,
+        "skipped": 0
+      },
+      "bunSummary": {
+        "pass": 365,
+        "fail": 0,
+        "skip": 0,
+        "tests": 365,
+        "files": 10
+      },
+      "observedPassLines": 365,
+      "observedFailLines": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-18.log"
+    },
+    {
+      "shard": 19,
+      "status": "FAIL",
+      "command": "bun run test --shard 19",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:13:46.341Z",
+      "durationSeconds": 4.73,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 1,
+      "signal": null,
+      "timedOut": false,
+      "completed": null,
+      "bunSummary": {
+        "pass": 298,
+        "fail": 14,
+        "skip": 0,
+        "tests": 312,
+        "files": 29
+      },
+      "observedPassLines": 298,
+      "observedFailLines": 28,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-19.log"
+    },
+    {
+      "shard": 20,
+      "status": "PASS",
+      "command": "bun run test --shard 20",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:13:51.098Z",
+      "durationSeconds": 55.27,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "completed": {
+        "tests": 96,
+        "skipped": 0
+      },
+      "bunSummary": {
+        "pass": 96,
+        "fail": 0,
+        "skip": 0,
+        "tests": 96,
+        "files": 3
+      },
+      "observedPassLines": 96,
+      "observedFailLines": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-20.log"
+    },
+    {
+      "shard": 21,
+      "status": "FAIL",
+      "command": "bun run test --shard 21",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:14:46.393Z",
+      "durationSeconds": 2.38,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 1,
+      "signal": null,
+      "timedOut": false,
+      "completed": null,
+      "bunSummary": {
+        "pass": 102,
+        "fail": 4,
+        "skip": 0,
+        "tests": 106,
+        "files": 10
+      },
+      "observedPassLines": 123,
+      "observedFailLines": 16,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-21.log"
+    },
+    {
+      "shard": 22,
+      "status": "PASS",
+      "command": "bun run test --shard 22",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:14:48.816Z",
+      "durationSeconds": 5.46,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "completed": {
+        "tests": 16,
+        "skipped": 0
+      },
+      "bunSummary": {
+        "pass": 16,
+        "fail": 0,
+        "skip": 0,
+        "tests": 16,
+        "files": 1
+      },
+      "observedPassLines": 16,
+      "observedFailLines": 0,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-22.log"
+    },
+    {
+      "shard": 23,
+      "status": "FAIL",
+      "command": "bun run test --shard 23",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:14:54.300Z",
+      "durationSeconds": 6.5,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 1,
+      "signal": null,
+      "timedOut": false,
+      "completed": null,
+      "bunSummary": {
+        "pass": 29,
+        "fail": 5,
+        "skip": 0,
+        "tests": 34,
+        "files": 5
+      },
+      "observedPassLines": 29,
+      "observedFailLines": 10,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-23.log"
+    },
+    {
+      "shard": 33,
+      "status": "FAIL",
+      "command": "bun run test --shard 33",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:15:00.828Z",
+      "durationSeconds": 4.8,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 1,
+      "signal": null,
+      "timedOut": false,
+      "completed": null,
+      "bunSummary": {
+        "pass": 0,
+        "fail": 5,
+        "skip": 0,
+        "tests": 5,
+        "files": 1
+      },
+      "observedPassLines": 0,
+      "observedFailLines": 5,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-33.log"
+    },
+    {
+      "shard": 34,
+      "status": "FAIL",
+      "command": "bun run test --shard 34",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:15:05.649Z",
+      "durationSeconds": 0.35,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 1,
+      "signal": null,
+      "timedOut": false,
+      "completed": null,
+      "bunSummary": {
+        "pass": 12,
+        "fail": 2,
+        "skip": 0,
+        "tests": 14,
+        "files": 1
+      },
+      "observedPassLines": 12,
+      "observedFailLines": 2,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-34.log"
+    },
+    {
+      "shard": 35,
+      "status": "FAIL",
+      "command": "bun run test --shard 35",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:15:06.026Z",
+      "durationSeconds": 0.84,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 1,
+      "signal": null,
+      "timedOut": false,
+      "completed": null,
+      "bunSummary": {
+        "pass": 0,
+        "fail": 1,
+        "skip": 0,
+        "tests": 1,
+        "files": 1
+      },
+      "observedPassLines": 0,
+      "observedFailLines": 1,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-35.log"
+    },
+    {
+      "shard": 36,
+      "status": "FAIL",
+      "command": "bun run test --shard 36",
+      "headBefore": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "headAfter": "b7062fba47282d823e52bb29ea81aed686b0eb3f",
+      "started": "2026-11-10T07:15:06.891Z",
+      "durationSeconds": 1.63,
+      "wallClockLimitSeconds": 240,
+      "exitCode": 1,
+      "signal": null,
+      "timedOut": false,
+      "completed": null,
+      "bunSummary": {
+        "pass": 66,
+        "fail": 12,
+        "skip": 0,
+        "tests": 78,
+        "files": 12
+      },
+      "observedPassLines": 66,
+      "observedFailLines": 24,
+      "log": "/private/tmp/codeshell-final-desktop-shards-20261110/shard-36.log"
+    }
+  ],
+  "counts": {
+    "INCOMPLETE_TIMEOUT": 1,
+    "PASS": 14,
+    "FAIL": 8
+  }
+}

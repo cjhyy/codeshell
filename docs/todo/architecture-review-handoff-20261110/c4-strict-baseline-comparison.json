@@ -1,0 +1,78 @@
+{
+  "baselineRef": "ccd556101c31d175d16ade7c9f1f62016d61ad50",
+  "baseline": {
+    "pass": 397,
+    "fail": 11,
+    "assertions": 1462
+  },
+  "strict": {
+    "pass": 397,
+    "fail": 11,
+    "assertions": 1476
+  },
+  "sameFailureNames": true,
+  "matchesKnown11": true,
+  "failures": [
+    "AgentServer cross-Session messaging with a real Engine > cold-starts a project-bound target with its authoritative workspace and persists the turn",
+    "AgentServer cross-Session messaging with a real Engine > returns a delayed real target reply to the source mailbox with its dispatch id",
+    "ChatSessionManager resident Engine root migration > re-resolves every project-scoped authority from the target root before the next turn",
+    "TCP approval routing is connection-owned > does not expose A's approval to B and accepts A's matching four-tuple",
+    "TCP approval routing is connection-owned > fails a pending approval closed when its owning TCP connection disconnects",
+    "TCP approval routing is connection-owned > rejects a second connection that tries to claim an active session",
+    "agent/run model > acknowledges a configured intent only after its actual claim and returns duplicate receipts without replay",
+    "agent/run model > persists the actual per-run model on first use and after a later native switch",
+    "listenTcp \u2014 real localhost round trip > accepts a connection and exchanges a framed message",
+    "listenTcp \u2014 real localhost round trip > defaults to 127.0.0.1 (does not bind a public interface)",
+    "model keys resolve the current project connection without changing the shared pool"
+  ],
+  "diagnostics": {
+    "baseline": {
+      "paths": [
+        "/private/tmp/codeshell-c4-baseline-diagnostic-files/engine-2026-11-10.log"
+      ],
+      "bytes": 60672,
+      "records": 247,
+      "warnErrorMessages": [
+        "ask_user_async.delivery_failed",
+        "bg_wakeup.failed",
+        "bg_wakeup.rehydrate_skipped_missing_disk_session",
+        "bg_wakeup.turn_failed",
+        "bg_wakeup.turn_not_started",
+        "bg_wakeup.workspace_unavailable",
+        "engine.run_lifecycle_failed",
+        "goal.resume_turn_not_queued",
+        "permission.session_remember_ignored",
+        "protocol observer snapshotPendingDecisions hook failed: The object can not be cloned.",
+        "session_message.turn_failed"
+      ],
+      "unexpectedFakeEngineOccurrences": 0,
+      "decisionHookFailures": 0,
+      "engineDisposeFailures": 0
+    },
+    "strict": {
+      "paths": [
+        "/private/tmp/codeshell-c4-strict-diagnostic-files/engine-2026-11-10.log"
+      ],
+      "bytes": 121351,
+      "records": 494,
+      "warnErrorMessages": [
+        "ask_user_async.delivery_failed",
+        "bg_wakeup.failed",
+        "bg_wakeup.rehydrate_skipped_missing_disk_session",
+        "bg_wakeup.turn_failed",
+        "bg_wakeup.turn_not_started",
+        "bg_wakeup.workspace_unavailable",
+        "engine.run_lifecycle_failed",
+        "goal.resume_turn_not_queued",
+        "permission.session_remember_ignored",
+        "protocol observer snapshotPendingDecisions hook failed: The object can not be cloned.",
+        "session_message.turn_failed"
+      ],
+      "unexpectedFakeEngineOccurrences": 0,
+      "decisionHookFailures": 0,
+      "engineDisposeFailures": 0
+    }
+  },
+  "newWarnErrorMessageNames": [],
+  "diagnosticScope": "baseline contains one full run; strict files contain two full runs; zero target diagnostics compared, other message counts are not compared across unequal run counts"
+}

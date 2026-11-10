@@ -1,0 +1,16 @@
+{
+  "candidate": "d65afec5b2af55ee3ed4f9de657005edd90fb0ea",
+  "new_test_files": [],
+  "protected_evidence_or_golden_changes": [],
+  "checklist_sha256": {
+    "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/todo/architecture-review-tasks-20261110.md": "6c1558f604a1024e8695fb937c6fc54bf13198016aa1c1f08f4e9388667aa81d",
+    "/Users/admin/Documents/个人学习/代码学习/codeshell-worktrees/architecture-review-20261110/docs/todo/architecture-review-tasks-20261110.md": "6c1558f604a1024e8695fb937c6fc54bf13198016aa1c1f08f4e9388667aa81d",
+    "/private/tmp/codeshell-architecture-review-20261110/docs/todo/architecture-review-tasks-20261110.md": "6c1558f604a1024e8695fb937c6fc54bf13198016aa1c1f08f4e9388667aa81d"
+  },
+  "bun_lock_unchanged": true,
+  "new_test_typecheck_configs": [
+    "A\tpackages/host/tsconfig.test.json",
+    "A\tpackages/link/tsconfig.test.json"
+  ],
+  "diff_check_passed": true
+}

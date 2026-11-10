@@ -1,79 +1,85 @@
 # Architecture review implementation status — 2026-11-10
 
-## Candidate and environment
+This is an implementation/validation handoff, not CC review and not a completion claim. No PR has been merged. The original checklist is preserved without false ✅ markers.
 
-- Baseline: `origin/main@fcd8406d5`; initial fetch succeeded.
-- Requested worktree: `/Users/admin/Documents/个人学习/代码学习/codeshell-worktrees/architecture-review-20261110`, branch `codex/architecture/review-20261110`. It remains unchanged, with only its original untracked checklist.
-- Writing the requested status file there was rejected: `patch rejected: writing outside of the project; rejected by user approval settings`.
-- Actual task repository: `/private/tmp/codeshell-architecture-review-20261110`, independently cloned from the local repository and checked out at the exact baseline. Origin points to GitHub. All edits and commits live in the allowed temporary directory; the primary checkout and other sessions remain untouched.
-- Local clone uses a read-only object alternate to the primary repository. Preserve it until a bundle or remote push has made commits independent.
-- CC review is pending and will be initiated by the host coordinator. No agent CLI has been started and no PR will be merged in this phase.
-- E3 awaits an explicit decision in the original worktree's `docs/todo/architecture-review-e3-decision-20261110.md`. No evidence has been removed.
+## Candidate and isolation
+
+- Source baseline: `fcd8406d51bf34696417dd9dd90c609f1d5ca640` (the user-provided, fetched main).
+- Final code candidate: `d65afec5b2af55ee3ed4f9de657005edd90fb0ea`, branch `codex/architecture/review-candidate-20261110`. The final handoff commit adds only these documents/receipts; its exact HEAD is recorded in the delivery manifest.
+- All38 initial CI partition attempts used fixed `b7062fba47282d823e52bb29ea81aed686b0eb3f`; final affected checks use d65afec5b. Results are not relabeled across refs.
+- Repository: `/private/tmp/codeshell-architecture-review-20261110`. User-requested worktree `/Users/admin/Documents/个人学习/代码学习/codeshell-worktrees/architecture-review-20261110` is outside this session's write roots; its attempted write was rejected by approval settings. It and primary checkout/other Mimi worktrees remain untouched.
+- The temporary repository is a shared clone; new refs/objects are preserved in the verified incremental bundle described below. Baseline objects remain in the original repository.
+- Local `origin/main` initially inherited the primary checkout's stale `2d1c0b638`. It was explicitly refreshed from the requested worktree's already-fetched tracking ref to `fcd8406d5`; all task code was based on `fcd8406d5` throughout.
+- E3 decision source: original requested worktree `docs/todo/architecture-review-e3-decision-20261110.md`. Absence is not consent.
+
+Worktree aliases (sequentially reused only by this task): W0 = coordinating repository above; W1 = `/private/tmp/codeshell-architecture-h1`; W2 = `/private/tmp/codeshell-architecture-h2`; W3 = `/private/tmp/codeshell-architecture-t3`; W4 = `/private/tmp/codeshell-architecture-g1`; W5 = `/private/tmp/codeshell-architecture-d2`. Task refs are preserved even where the worktree now checks out a later task.
 
 ## Task ledger
 
-Implementation and validation are tracked separately. No PR exists: GitHub create_pull_request returned `MCP tool call requires approval, but approval policy is never`. Do not route around this restriction. Authorized branch pushes can succeed, although network resolution is intermittent.
+All PR URLs: **none**. GitHub create_pull_request explicitly returned `MCP tool call requires approval, but approval policy is never`; no alternate route was used to bypass that denial. T1 branch was pushed; other publication is not claimed. PR bodies are preserved in [handoff drafts](architecture-review-handoff-20261110/).
 
-| Task | Status | Branch / commit | PR / base | Validation / next step |
-| --- | --- | --- | --- | --- |
-| T1 | Implemented; environment-blocked full acceptance | `codex/architecture/t1-run-option-forwarding` / `68eca438f` (pushed) | No PR / main | First red 5 pass + 1 fail, then green 6/0; full build and workspace typecheck passed; combined regression + multi-session + three contracts 36/0; lint 0 errors/98 warnings; shard and engine guards passed |
-| T2 | Implemented | `codex/architecture/t2-typed-declarations` / `594fe4d81` | No PR / T1 | 62 declarations/50 files; build, workspace typecheck, lint 0/98, guard probes, 18 targeted + 27 contracts passed |
-| T3 | Implemented; environment-blocked full acceptance | `codex/core/t3-settings-locks` / `0e27d8f4d113c17a2d4339eb48fdb749fa069343` | No PR / main | build, workspace typecheck, lint 0/98, shards and engine guard; targeted 37/0 and contracts 27/0 |
-| G1 | Implemented | `codex/architecture/g1-ipc-budget-scan` / `dcf469b3a` | No PR / main | Full scan 472/481; build/contracts/negative probes passed |
-| G2 | Implemented | `codex/architecture/g2-core-layers` / `6d7aa7e1f` | No PR / G1 | 29 upward edges, 6 same-layer cycles; 28 contracts; negative syntax/resolution probes passed |
-| G3 | Pending R1/R2 | — | — | — |
-| G4 | Implemented | `codex/architecture/g4-mock-module-ratchet` / `63c19a06e` | No PR / G2 | 73 files incl. 7 MJS fixtures; 29 contracts and negative probes passed; final candidate ratchet after R1/R2 pending |
-| C1 | In progress | `/private/tmp/codeshell-architecture-g1` | No PR / G4 | Preserve distinct path root semantics and compatibility exports |
-| C2 | Queued after C1 | `/private/tmp/codeshell-architecture-g1` | No PR / C1 | Only mechanical upward edges |
-| C3 tests | Implemented | `codex/protocol/c3-query-contract-tests` / `b737ca119` | No PR / main | 51 query tests / 4 files and 27 contracts passed before extraction |
-| C3 migration | Implemented; verification in progress | `codex/protocol/c3-query-registry` / uncommitted | No PR / C3 tests | 19 handlers; server 4892→4246 lines, budget 5000→4500; build and 74 query+architecture+golden+package tests passed |
-| C4 | Implemented; final probes/commit in progress | `codex/testing/c4-shared-engine-fake` | No PR / T1 | All protocol: baseline 395 pass/11 fail; migrated 397 pass/same 11 fail; sandbox diskutil/listen failures |
-| H1 | Implemented; environment-blocked full acceptance | `codex/server/h1-headless-worker-env` / `e2952dff58061a039a8ed36a8c60405820553f5b` | No PR / main | build, Desktop/mobile typecheck, ESLint, shard guard; contracts 27/0, targeted 46/0, 10 env comparisons passed |
-| H2 | Implemented | `codex/web/h2-focused-server-imports` / `1935b9c78` | No PR / main | build/typecheck, 45 targeted+contracts; package-release reached 52 runtime imports then HTTP listen EPERM |
-| H3 | Pending H2/G3 | — | — | — |
-| D1 | Queued after C4 | `/private/tmp/codeshell-architecture-t3` | No PR | Parse once, preserve routing order |
-| D2 | Guardrail stop: owner decision required | `codex/desktop/d2-preload-type-contract` / `709d09652` | No PR / main | Exactly 21 diagnostics exceeds 20; source reverted, full report committed at architecture-review-d2-mismatches-20261110.md; no pilot edits |
-| D3 | Queued after R2 | `/private/tmp/codeshell-architecture-h1` | No PR | One non-Pet/non-AgentBridge domain |
-| E1 | Implemented | `codex/testing/e1-host-link-typecheck` / `8ca3bb3d4` | No PR / main | host/link test tsc zero errors, negative TS2322 probe, 97 tests/10 files, shards/eslint passed; other-package survey in PR draft |
-| E2 | Pending R1/R2/T1 | — | — | — |
-| E3 | Awaiting user decision | — | — | Preserve all evidence |
-| R1 | Implemented; lockfile regeneration blocked | `codex/architecture/r1-remove-arena` / `f667c728e` | No PR / main | build/typecheck/lint0/90, contracts32, preserved guards72, clean committed shard inventory2664 passed; package-release HTTP EPERM; registry refuses Bun install |
-| R2 | Implemented; validation/commit in progress | `codex/architecture/r2-remove-legacy-cdp` | No PR / R1 | build, contracts27, host32, pure helpers12, shards2660 passed; browser launch sandbox failure; Desktop cached CUA signature verification failure; lockfile pending |
+| Item | Original task commit(s) | Branch | Worktree | Intended PR base | State | Evidence / verification |
+|---|---|---|---|---|---|---|
+| T1 | 68eca438f | codex/architecture/t1-run-option-forwarding | W0 | main@fcd8406d5 | Implemented | red 5/1 → green 6/0; build/typecheck; targeted+contracts36/0; forwarding negative compile probe |
+| T2 | 594fe4d81 | codex/architecture/t2-typed-declarations | W3 | T1 | Implemented | 62 declarations/50 files; build/typecheck/lint;18 targeted+27 contracts; guard negative probes |
+| T3 | 0e27d8f4d | codex/core/t3-settings-locks | W3 | main | Implemented | 37 targeted+27 contracts; build/typecheck/lint; plugins360/2 with baseline-reproduced diskutil failures |
+| G1 | dcf469b3a | codex/architecture/g1-ipc-budget-scan | W4 | main | Implemented | 472 main/481 preload; positive/exclusion/negative probes; contracts27/0 |
+| G2 | 6d7aa7e1f | codex/architecture/g2-core-layers | W4 | G1 | Implemented | 29 upward/6 same-layer initial baseline; AST syntax/resolution negative probes; contracts28/0 |
+| G3 | 4b1345783 | codex/architecture/g3-workspace-import-guards | W2 | R2 (equivalent parent1af1317f7) | Implemented | exact manifest fields; declared imports;3 new ESLint probes; contracts29/0; lint0/90;2 negative package probes |
+| G4 | 63c19a06e + f170248a8 | codex/architecture/g4-mock-module-ratchet; codex/architecture/g4-post-removal-ratchet | W4/W0 | G2; combined candidate5cbf73d1b | Implemented | 73 initial files incl7 JS fixtures →72 after R1; negative new TS/MJS probes; final guard6/0 |
+| C1 | 7982e8767 | codex/core/c1-path-helpers | W4 | G4 | Implemented | path semantics preserved; targeted122/0, contracts29/0, exports/build/typecheck; G2 29→28/6→5; large partitions failed/incomplete; attribution recorded separately |
+| C2 | b7e37d007 | codex/core/c2-lower-mechanical-dependencies | W4 | C1 | Implemented | 35 declaration AST comparisons;158 targeted+188 projection/automation+29 contracts; G2 28→18/5→2; build/typecheck/lint |
+| C3 PR1 | b737ca119 | codex/protocol/c3-query-contract-tests | W2 | main | Implemented | 31 new frozen protocol cases; four query suites51/0 before extraction; contracts27/0 |
+| C3 PR2 | 924d58afc | codex/protocol/c3-query-registry | W2 | C3 PR1 | Implemented | 19 handlers exactly match transformed originals; server4892→4246/budget5000→4500; query51/0, golden+contracts; full protocol425/11 = baseline failure set |
+| C4 | ccd556101 + 0a6fa12df + f38da41f8 | codex/testing/c4-shared-engine-fake; codex/testing/c4-strict-fake-defaults; codex/testing/c4-query-fixture-integration | W3/W1 | T1; C4; combined f31986b4 with C3 | Implemented, integrated and retested | strict65-method table; explicit fixture absences; final428/11 exact known failure set;31 C3 additions pass; no unexpected/hook/dispose logger errors; negative setter probe |
+| H1 | e2952dff5 | codex/server/h1-headless-worker-env | W1 | main | Implemented | 10 AST env comparisons;46 targeted+27 contracts; build/desktop/mobile typecheck; HTTP/WS blocked at listen |
+| H2 | 1935b9c78 | codex/web/h2-focused-server-imports | W2 | main | Implemented | focused replay/coverage exports;45 targeted+contracts;build/typecheck;package-release52 imports then HTTP EPERM |
+| H3 | 188882aec | codex/web/h3-panel-contracts | W2 | codex/architecture/h3-dependencies@c55c08829 (G3+H2) | Implemented | clean type closure; verbatim moved162 lines;121 tests/6files;build/typecheck/lint;Desktop main/renderer/mobile pass;package-release53 imports then HTTP EPERM |
+| D1 | fa7c752cd + e563a6944 | codex/desktop/d1-parse-worker-line | W3 | codex/architecture/d1-dependencies@9c77751df | Implemented, both commits integrated | 22 lines→22 parses; deep-frozen shared input; final113/0 across9 files;29 task contracts; Desktop main build/typecheck/lint |
+| D2 | 709d09652 | codex/desktop/d2-preload-type-contract | W5 | main | Guardrail stop; owner decision required | 21 distinct diagnostics exceeds20; source reverted; detailed report committed; no main pilot edits |
+| D3 | 4207e8aa8 | codex/desktop/d3-runtime-module-registry | W1 | R2 | Implemented | only ExternalRuntime domain;start/dispose order and134 targeted/contracts/source-reader tests;build/typecheck/lint;index4589→4576 so5000 budget remains per formula |
+| E1 | 8ca3bb3d4 | codex/testing/e1-host-link-typecheck | W5 | main | Implemented | host/link test tsc zero;97 tests/10files;negative TS2322 probe; CI step preserves job names; other-package survey recorded |
+| E2 | 172ad8bba | codex/docs/e2-architecture-drift | W4 | codex/architecture/e2-dependencies@27373f5e7 | Implemented | 9 docs/comment/description paths;history bodies unchanged;12 workspaces/10 public release units/373 commits;contracts30/0; no fabricated T1 PR/merge |
+| E3 | — | — | original requested worktree | user decision | Awaiting explicit decision | Decision file absent at latest check. No evidence removed; no Git history rewritten. |
+| R1 | f667c728e | codex/architecture/r1-remove-arena | W1 | main | Implemented except Bun lockfile regeneration | build/typecheck/lint0/90;contracts32+preserved guards72;clean committed shards2664;package-release HTTP EPERM; registry refused Bun install |
+| R2 | b92e6dfa2 | codex/architecture/r2-remove-legacy-cdp | W1 | R1 | Implemented except Bun lockfile regeneration | 11 production symbols retained;32 host+12 pure helper+27 contract tests;shards2660;Desktop main/renderer/mobile/extension build;browser launch blocked;package-release HTTP EPERM |
 
-## Validation record
+## Final validation results
 
-- Read AGENTS.md, CODESHELL.md and the entire checklist including appendices.
-- `bun install --frozen-lockfile` initially failed because the inherited temp directory is not writable.
-- Retrying with temporary/cache paths under `/private/tmp` failed on registry connections (`ConnectionRefused` / `FailedToOpenSocket`). No dependency versions have been changed.
-- Preparing independent copies of existing dependency artifacts from the primary checkout; no source checkout files are changed by this copy. Builds will regenerate this candidate's own dist files.
-- Task validation results are in the ledger. Logs live in `/private/tmp/codeshell-{t1,t3,h1,g1,h2}-*.log`.
-- Copied Desktop workspace dependencies were stale packaged directories. Replaced only these ignored local copies with symlinks to each checkout’s own packages; workspace typecheck then passed. No source workaround.
-- T1 core-engine/core-rest partitions were attempted and stopped with status 130 after repeated environment failures/timeouts. They did not pass.
-- T3 plugins partition completed: 360 pass / 2 fail. Both failures were reproduced with production files restored to the exact baseline, and report `/usr/sbin/diskutil info -plist /dev/disk3s5`: DiskManagement/DiskArbitration unavailable. See `/private/tmp/codeshell-t3-baseline-model-error.log` and `/private/tmp/codeshell-t3-baseline-plugin-errors.log`.
-- H1 HTTP/WS integrations failed at loopback listen; independent Node probe reports EPERM while Bun reports EADDRINUSE. They did not reach normal worker behavior.
-- These are distinct from the checklist’s known Electron E2E promise garbage-collected failure. No Electron E2E has passed or been rerun here yet.
-- Full final build/typecheck/lint/all shards/package-release/browser/desktop/server acceptance and CC review remain outstanding.
+- All38 CI unit partitions attempted at b7062fba4: **16 passed / 18 failed / 4 incomplete**. Incomplete:3 (600-second cap),4,5,24 (listener failure leaves fixture waiting). Shard11 first failed11/1; full retry passed12/0, with both attempts retained. Exact per-partition counts and failure inventories: [Core](architecture-review-handoff-20261110/final-core-shards.md), [Desktop](architecture-review-handoff-20261110/final-desktop-shards.md), [Server/rest](architecture-review-handoff-20261110/final-rest-shards.md). No incomplete/nested summary is treated as a whole-shard pass.
+- `bun run test:package-release` on combined implementation: all clean builds/packs/extracts, strict NodeNext declarations, **53 runtime imports** and strict owner-auth consumer passed; final packed owner HTTP lifecycle failed with `listen EPERM 127.0.0.1`. Overall result is **failed**. Its public package/runtime sources are unchanged by the later test followups.
+- After D1/C4 strict integration at f31986b4, `bun run build` and full root `bun run typecheck` passed. Final d65afec5b adds only the query-test fallback field; its `bun run typecheck:workspaces` and `bun run typecheck:tests` both passed with stable dist. `bun run lint` is0 errors/90 warnings; guards pass (2660 files, largest764, engine bypass pass).
+- At final d65afec5b: three required repository contracts + composition golden + ESLint guard suite + Core export contract: **47/0 across6 files**,573 assertions. Golden fixtures unchanged.
+- At final d65afec5b: D1 **113/0**, missed Desktop tests **54/0**, Host tests **14/0**; total **181/0 across16 files**, with guarded completion receipts. [Exact followup results](architecture-review-handoff-20261110/final-followup-summary.md).
+- At final d65afec5b: complete protocol **428 passed / 11 failed**,439 cases/74 files. Failure names exactly match the original C4 baseline; all31 C3 additions pass. Actual logger output has zero unexpected fake/hook/disposal diagnostics. [Protocol result](architecture-review-handoff-20261110/c4-final-integrated-summary.md).
+- Real integration regression found and fixed: strict C4 defaults exposed absent `getComposition` in C3's legacy query fixture (397/42 first run). One explicit fixture absence fixes the31 extra failures. This was not labeled an environment failure. C3 count corrected by AST-expanded inventory: baseline2→33 cases, therefore31 added, not the earlier30.
+- Scheduling mistake retained: root `typecheck` internally rebuilds; one concurrently started test-typecheck saw transient missing Link declarations. All affected readers were rerun after builds ended, and first receipts are labeled scheduling-overlap, not accepted passes. [Receipt](architecture-review-handoff-20261110/final-followup-scheduling-note.json).
+- Native/browser/server smokes at b706 use separate W2. Desktop main, renderer, mobile and Chrome extension builds passed. Full Desktop build failed pinned CUA download; Server smoke failed listen EPERM; full Electron suite failed its first loopback fixture; recovery-only smoke failed diskutil seed; native/worker operation-batch scripts stopped at private metadata-reference preflight. Browser partitions33–35 failed browser launch. [Smoke exits](architecture-review-handoff-20261110/final-smoke-results.json). None is represented as passing E2E.
 
-## Evidence differences
+The only b706→d65 changes are D1 test/fixture coverage plus one comment, the internal test-only fake helper/fixtures and its query-fixture correction. Production behavior/public package exports remain unchanged. The full38-partition sweep is not claimed to have run again on d65; affected tests and final contract/type/lint checks are recorded separately.
 
-- C3 has 19 named switch cases plus default. The checklist says 21 but enumerates the same 19 cases.
+## Genuine blockers and evidence differences
 
-## Recovery
+- D2: [21 concrete mismatches](architecture-review-d2-mismatches-20261110.md); no fixes beyond the task's20-item cap. Owner decision needed before satisfying the preload/main pilot acceptance.
+- E3: explicit user destination decision still missing. No audit evidence has been deleted.
+- R1/R2 lockfile: Bun could not fetch registry metadata (`ConnectionRefused` / `FailedToOpenSocket`) after frozen/lockfile-only/cached/prefer-offline attempts. `bun.lock` is unchanged, so retired workspace entries remain. A network-capable host must regenerate with Bun and review only expected removal; no handwritten lockfile or dependency upgrades.
+- macOS disk identity calls fail because DiskManagement/DiskArbitration are unavailable. T3/C4 original-baseline comparison logs reproduce the relevant Engine failures. Local TCP/Unix sockets are denied (Node EPERM, Bun often EADDRINUSE). Unexplained failures must still be compared individually, not blanket-attributed to the environment.
+- Full Desktop build cannot download the pinned CUA driver; an existing checksum-matching cached archive also fails its strict signature check. No verification bypass was introduced. Puppeteer/Playwright browser startup is denied in this sandbox. Electron recovery fails at diskutil seed, before the known promise-garbage-collected location. No GitHub Electron job exists to rerun because PR creation is blocked; no14-check green claim.
+- T1's two native operation-batch scripts require a private default-Keychain metadata reference and interactive native approval. No real user credentials/reference have been read or synthesized. Final preflight attempts are recorded separately.
+- G1 actual preload count481 includes2 accountFeatures calls missed by the old ipc.invoke scan; checklist479 was incomplete. G4 initial73 includes7 JS fixture files beyond the checklist's66 TS files. C3 actually has19 named query cases plus default.
+- C1 needed a minimal additional relocation of shared process-tree primitives to avoid introducing runtime↔utils; implementations/re-exports preserved. C2 leaves18 explicitly out-of-scope behavioral upward edges and2 I/O-dependent same-layer cycles.
+- D3 only removes13 index lines (createWindow54; module lets31→29). Dropping5000→4500 would violate the required100-line headroom; the existing5000 cap is correctly retained.
 
-Continue all authorized items in dependency order. Preserve separate task commits and branches; use explicit stacked PR bases where required. Final synchronization into the requested worktree requires a host session with write access. Do not treat this checkpoint as completion.
+## Publication and CC recovery
 
-## Review artifacts
+No agent CLI or CC was started. Host coordinator must initiate independent CC review of the complete final candidate, including integration resolutions (T3/C1 persist-active-model import; C3/C4 query test import). Original task refs and explicit stacked bases above are retained. After dependencies are approved and merge is authorized in a later phase, rebase in dependency order: T1→T2/C4; G1→G2→G4→C1→C2; R1→R2→G3, plus H2→H3; C3 tests→C3 migration; D1/D3/E2 on their recorded dependency refs. Refresh main and rerun exact-candidate required CI then; no merge is authorized in this phase.
 
-- T1 branch is pushed at `68eca438f`; no PR number. Its three code paths are the only implementation changes in that branch.
-- H1 PR draft: `/private/tmp/codeshell-h1-pr.md`.
-- T3 PR draft: `/private/tmp/codeshell-t3-pr.md`.
-- Protocol investigation (T1/C3/C4): `/private/tmp/codeshell-protocol-inventory-20261110.md`.
-- G1 exact inventory: `/private/tmp/codeshell-g1-count-inventory-20261110.json`.
-- Candidate branch: `codex/architecture/review-candidate-20261110`, currently at `c46cc0d38` (T1/T3/H1/G1/H2/T2/R1/E1/G2/C3-tests/G4 plus status and D2 report); later independent commits will be cherry-picked onto it. Original task refs remain available for review and later PR publication.
+## Delivery and resumption
 
-## Additional review evidence
+- Final code ref: `d65afec5b2af55ee3ed4f9de657005edd90fb0ea`. Integration followups: D1 `3cf8228f2`, C4 strict `f31986b42`, query fallback `d65afec5b`. Original task commits/branches remain in the table.
+- Final incremental bundle: `/private/tmp/codeshell-architecture-review-20261110-final.bundle`. It includes all task refs plus final handoff documents and requires baseline fcd8406d5. Verify with `git bundle verify <bundle>` in a repository containing that baseline, then fetch its `refs/heads/codex/*` into unused task refs and create a fresh review worktree. Do not overwrite another checkout or its untracked checklist.
+- Raw validation archive: `/private/tmp/codeshell-architecture-review-20261110-validation.tar.gz`. Only this task's new logs/receipts are archived; no E3 evidence is moved or deleted.
+- Delivery manifest: `/private/tmp/codeshell-architecture-review-20261110-delivery.json`; records the actual final handoff HEAD, all branch SHAs, bundle/archive SHA256 and paths. The bundle is built after the metadata commit, so its hash lives in this external manifest rather than a circular self-hashed commit.
+- [CC handoff](architecture-review-handoff-20261110/cc-review-handoff.md) names integration seams and validation limits. Host coordinator starts CC separately. No source change, PR or main merge is pending in this sandbox other than the explicit blockers above; remaining acceptance needs owner decisions, Bun registry access, publication permission and a capable native/CI runner.
 
-- Original task refs remain available in the coordinating repository; cherry-pick hashes on the candidate differ. No checklist item is marked ✅ because no real PR exists.
-- PR drafts currently `/private/tmp/codeshell-{t1,t2,t3,h1,h2,g1,g2,g4,r1,e1}-pr.md`; final handoff will preserve copies in the candidate repository.
-- R1 shard check was repeated on a clean detached checkout of its committed ref after an initial unstaged-deletion ENOENT; the clean check passed (2664 files).
-- E1 package survey diagnostics are transitive source-test compilation counts, not package-owned error counts: browser-devtools1, cdp0, chat98, coding6, core248, desktop634, optimization-lab14, pet25, server556, tui4, web65, retired arena3. Only host/link join the CI check.
+The primary and requested worktrees still contain only their original untracked checklist; all three checklist copies have SHA256 `6c1558f604a1024e8695fb937c6fc54bf13198016aa1c1f08f4e9388667aa81d`. No original evidence, Mimi worktree or Git history was changed. No task receives a false ✅/PR marker.
