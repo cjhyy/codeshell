@@ -197,6 +197,10 @@ jobs:
               --path-ignore-patterns '**/src/main/mobile-remote/turn-queue-host.test.ts'
               --path-ignore-patterns '**/src/main/cc-room/room-mode-authority.test.ts'
               --path-ignore-patterns '**/src/main/cc-room/room-mode-host-boundary.test.ts'
+              --path-ignore-patterns '**/src/main/pet/pet-notice-*.test.ts'
+              --path-ignore-patterns '**/src/main/pet/pet-rule-store.test.ts'
+              --path-ignore-patterns '**/src/main/pet/pet-session-rule-watcher.test.ts'
+              --path-ignore-patterns '**/src/main/pet/pet-presence.test.ts'
           # rest is split in two only for wall time (470s as one shard). Together the two
           # path lists are the previous single list. The module losses seen when it was split
           # were not size: two suites bundled with an in-process Bun.build, which shares the
@@ -293,6 +297,9 @@ jobs:
           # Host turn-queue and CLI room-mode lifecycle suites (real RoomManager with mock
           # CLIs) run as one bounded process; the general Desktop shard is at its budget.
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/mobile-remote/turn-queue-host.test.ts packages/desktop/src/main/cc-room/room-mode-authority.test.ts packages/desktop/src/main/cc-room/room-mode-host-boundary.test.ts
+          # Mimi notice rules, watcher, router and ledger suites run as one bounded process;
+          # the general Desktop shard is at its budget.
+          node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/pet/pet-notice-compose.test.ts packages/desktop/src/main/pet/pet-notice-ipc.test.ts packages/desktop/src/main/pet/pet-notice-ledger.test.ts packages/desktop/src/main/pet/pet-notice-policy.test.ts packages/desktop/src/main/pet/pet-notice-router.test.ts packages/desktop/src/main/pet/pet-notice-wiring.test.ts packages/desktop/src/main/pet/pet-rule-store.test.ts packages/desktop/src/main/pet/pet-session-rule-watcher.test.ts packages/desktop/src/main/pet/pet-presence.test.ts
       - name: test Desktop application state hooks
         if: matrix.shard == 'desktop'
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 --path-ignore-patterns '**/useMimiPresence.test.tsx' packages/desktop/src/renderer/app
