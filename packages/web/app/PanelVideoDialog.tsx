@@ -1,5 +1,5 @@
 import React from "react";
-import type { PanelVideoOptions } from "../../server/src/panels/browser-capture.js";
+import type { PanelVideoOptions } from "../src/panels.js";
 import { createPanelVideoCapture, type PanelVideoSnapshot } from "./panel-video-capture.js";
 import { createPanelResourceUpload } from "./panel-resource-upload.js";
 

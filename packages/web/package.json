@@ -26,6 +26,10 @@
     "./output-coverage": {
       "types": "./dist/lib/outputCoverage.d.ts",
       "import": "./dist/lib/outputCoverage.js"
+    },
+    "./panels": {
+      "types": "./dist/panels.d.ts",
+      "import": "./dist/panels.js"
     }
   },
   "files": [

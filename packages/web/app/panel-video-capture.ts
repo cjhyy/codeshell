@@ -1,8 +1,4 @@
-import {
-  panelVideoLimits,
-  panelVideoOptions,
-  type PanelVideoOptions,
-} from "../../server/src/panels/browser-capture.js";
+import { panelVideoLimits, panelVideoOptions, type PanelVideoOptions } from "../src/panels.js";
 
 const VIDEO_TYPES = [
   "video/webm;codecs=vp8,opus",

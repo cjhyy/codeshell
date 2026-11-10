@@ -60,7 +60,8 @@
       "@cjhyy/code-shell-web/account-profile": ["packages/web/src/account/profile.ts"],
       "@cjhyy/code-shell-web/transcript-replay": ["packages/web/src/lib/transcriptReplay.ts"],
       "@cjhyy/code-shell-web/output-coverage": ["packages/web/src/lib/outputCoverage.ts"],
-      "@cjhyy/code-shell-web/account": ["packages/web/src/account/features.ts"]
+      "@cjhyy/code-shell-web/account": ["packages/web/src/account/features.ts"],
+      "@cjhyy/code-shell-web/panels": ["packages/web/src/panels.ts"]
     },
     "jsx": "react-jsx",
     "types": ["node", "bun-types"]

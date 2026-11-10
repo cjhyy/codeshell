@@ -57,18 +57,8 @@ const rendererBrowserSafeRuntimeImports = new Set([
 ]);
 
 // Desktop intentionally compiles the shared SPA as its mobile entry (vite.mobile.config.ts).
-// The six Web → Server sources are temporary exceptions removed by H3.
 const crossWorkspaceRelativeImports = new Map([
   ["packages/desktop/src/mobile/main.tsx", ["packages/web/app/"]],
-  ["packages/web/app/panel-video-capture.ts", ["packages/server/src/panels/browser-capture.js"]],
-  ["packages/web/app/HubPanels.tsx", ["packages/server/src/panels/types.js"]],
-  ["packages/web/app/useWorkbenchNavigation.ts", ["packages/server/src/panels/types.js"]],
-  ["packages/web/app/PanelVideoDialog.tsx", ["packages/server/src/panels/browser-capture.js"]],
-  ["packages/web/app/Workbench.tsx", ["packages/server/src/panels/types.js"]],
-  [
-    "packages/web/app/PanelHost.tsx",
-    ["packages/server/src/panels/types.js", "packages/server/src/panels/browser-capture.js"],
-  ],
 ]);
 
 function isInsideFunction(node) {

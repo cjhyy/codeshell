@@ -10,7 +10,7 @@ import { HubLinks } from "./HubLinks.js";
 import { HubPanels } from "./HubPanels.js";
 import { PanelHost } from "./PanelHost.js";
 import { PanelSessionBar } from "./PanelSessionBar.js";
-import type { ManagedPanel } from "../../server/src/panels/types.js";
+import type { ManagedPanel } from "../src/panels.js";
 import { OutputHistoryRecoveryExit } from "../src/components/OutputHistoryRecovery.js";
 import { connectionModelLabel } from "./configuration.js";
 import { MessageContent, subagentStatusLabel } from "./MessageContent.js";

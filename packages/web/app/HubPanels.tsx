@@ -8,7 +8,7 @@ import type {
   PanelSnapshot,
   PanelPackageHistory,
   PanelPackageRestoreReview,
-} from "../../server/src/panels/types.js";
+} from "../src/panels.js";
 import { api, ApiError } from "./auth.js";
 import { apiUrl } from "./api-context.js";
 import "./hub-panels.css";
