@@ -721,13 +721,33 @@ outcome?: {
 - 主人目标也写进网关发件箱（由网关重试），路由器的"待送队列"只保留"渠道不可用时等主人下次来消息补报"这一种语义。两套队列各自只有一个职责。
 - `pet-dispatch-service.ts` 把收尾轮和汇报轮移出，本期只搬不改行为。
 
+> **实现状态（2026-11-10）**：C4 的拆分已落地，统一出站队列**没有做**（原因见下）。
+>
+> - 接线拆成：`pet-notice-settings`（设置解析与 5 秒缓存）、`pet-notice-outlets`（桌面与 IM 出口、主人渠道/目标的 1 秒查表缓存、附件）、`pet-notice-projection`（投影视图、worker 丢失判断）、`pet-notice-decision-hooks`（决定提示要问的：去向、在场监听）、`pet-notice-task-closure`（收尾提醒、委派规则、规则核销）、`pet-notice-replay`（入站补报、摘要触发）、`pet-notice-host-action`（NotifyMe）、`pet-notice-attention`（铃铛与看过的会话）；`pet-notice-wiring.ts` 只剩组装（约 300 行），对外导出不变。测试按同样的边界拆开，共用 `test-utils/notice-wiring-harness.ts`。
+> - 收尾轮移到 `pet-closure-turn.ts`、汇报轮移到 `pet-report-turn.ts`，两边共用的纯函数移到 `pet-dispatch-helpers.ts`；服务只做委托，代码原样搬（`this` → `host`）。`pet-dispatch-service.ts` 从 3,233 行降到约 2,400 行。
+> - **主人目标仍直接走 `sendOwnerMessage`**。核对后，改走网关发件箱在本期做不安全：
+>   1. 发件箱是所有渠道共用的一条有序流，网关逐条投递，某条失败就带退避（1→30 秒）无限重试同一条，后面的全部等着，没有放弃、过期或跳过。微信主人目标没有上下文 token 时，无 token 直发对部分账号会被拒；现在是试一次、失败就进待送队列，等主人下次发消息（也会带来新 token）时补报；进了发件箱则会一直重试，并堵住所有渠道的回原对话、`session.reply` 和自动化通知。直接投递路径（网关没在跑时）也会跳过无 token 的目标，等网关来送。
+>   2. 发件箱没有撤销或送达前复查：事件只能按游标连续确认，投递方（可能是另一个进程、另一个版本的 CLI 网关）不会回问桌面"这条还有效吗"。已撤销的决定提示（已在桌面回答、已超时、worker 已丢失）一旦写入，就可能在重试中晚些送达，带着已经失效的回复码；重试也可能把 22:59 的结果推迟到免打扰时段里。
+>   3. 发件箱投递不带 `client_id`，微信适配器每次重试生成新的；主人发送现在用 `code-shell-notice-${key}` 保证同一条重发能被平台去重。改走发件箱会丢掉这一点，"受理"的含义也从"平台已接受"变成"已入队"，`accepted / unknown` 对主人的语义随之改变。
+>   4. 重启不会重复：发件箱按 `deliveryKey` 记录分段进度，路由器重启后用同一键重发，已发出的分段会被跳过。这一条本身是安全的。
+>
+>   要安全地统一，需要先改网关协议：事件带过期时间并在投递前检查、单条失败有次数上限且不阻塞后续（或按目标分流）、桌面能撤回未投递的事件、对支持幂等的渠道按 `deliveryKey` 生成 `client_id`，并且要处理旧版 CLI 网关读同一发件箱的兼容。留到二期和网关一起做。在那之前，待送队列仍有两种用途：主人目标发送失败后的排队，和渠道不可用时的排队。
+
 ### 16.3 做完 1c 应该能删掉的东西
 
-- 观察器里的工具名单和"是否后台唤醒"的计数回退（有 `outcome` 时不走）。
-- `hasActiveLongTask` / 按运行 id 判断归属的逻辑。
-- 绑定回复的 10 秒等待、`boundReplyRun` 配对、监听器顺序的测试约定。
-- `PetImDecisions` 的内存表和 `priorDecision` 反查。
-- 协调器与观察器各一份的事件解释代码（合成一份）。
+- [x] 观察器里的工具名单和"是否后台唤醒"的计数回退（有 `outcome` 时不走）。已移出观察器（C1）：`NON_WORK_TOOLS` 和排队消息计数只留在 `SessionOutcomeDeriver` 的回退路径里，供旧 core 和外部运行时用；core 报了 `outcome` 时不走。
+- [x] `hasActiveLongTask` / 按运行 id 判断归属的逻辑（C2）。
+- [x] 绑定回复的 10 秒等待、`boundReplyRun` 配对（C2）。监听器顺序的约定也去掉了：测试改为两种订阅顺序都只发一条。
+- [x] `PetImDecisions` 的内存表和 `priorDecision` 反查（C3）。
+- [x] 协调器与观察器各一份的事件解释代码，合成 `session-outcome.ts` 一份（C1）。
+
+还剩下的：
+
+- 统一出站队列（C4 第二条，见上）：主人目标仍走直接发送，路由器待送队列仍兼做"发送失败重排"。
+- 把 `WatchSession`、跟进、绑定本身存成规则行（C2 尚未做，二期迁移）；规则表、`completionTarget`、绑定路由仍各自存储，只由 `pet-delivery-plan.ts` 统一读取。
+- `pet-notice-router.ts`（约 1,000 行）和 `pet-notice-ledger.ts`（约 1,170 行）这次没拆；`pet-dispatch-service.ts` 仍有约 2,400 行（对话轮、派活）。
+- `PetImDecisions` 的 60 秒兜底扫描（C3 有意保留）。
+- 每条提醒重写 `notices.json` 三次（§16.1 次要问题）。
 
 ### 16.4 不建议现在做的
 
