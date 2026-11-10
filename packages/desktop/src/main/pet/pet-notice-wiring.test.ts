@@ -1672,12 +1672,9 @@ describe("bound Session replies", () => {
     emit({ type: "session_started", runId: "run-1", clientMessageId: "cm-1" });
     emit({ type: "tool_use_start", toolCall: { id: "t1", toolName: "Bash", args: {} } });
     emit({ type: "goal_progress", status: "met", goalId: "g-1", runId: "run-1" });
-    // Nothing waits for the run to end: the plan already says who is served.
-    await settle(() => h.submitted.length > 0);
-    expect(h.submitted.map((notice) => [notice.dedupeKey, notice.boundReplyDelivered])).toEqual([
-      [`${SID}:goal:g-1`, true],
-    ]);
-    expect(conversation()).toEqual([]);
+    // Whether the run forwards a reply is only known when it closes.
+    await settle();
+    expect(h.submitted).toEqual([]);
     emit({
       type: "turn_complete",
       reason: "completed",
@@ -1685,11 +1682,75 @@ describe("bound Session replies", () => {
       text: "目标完成",
       runId: "run-1",
     });
-    await settle(() => conversation().length > 0);
+    await settle(() => h.submitted.length > 0 && conversation().length > 0);
     await settle();
     expect(conversation()).toEqual(["目标完成"]);
-    expect(h.submitted).toHaveLength(1);
+    expect(h.submitted.map((notice) => [notice.dedupeKey, notice.boundReplyDelivered])).toEqual([
+      [`${SID}:goal:g-1`, true],
+    ]);
     expect(h.ownerSends).toEqual([]);
+  });
+
+  test("a goal met mid-run whose run closes without text is told by the notice instead", async () => {
+    const { h, emit, bind, replies, conversation } = realBridge();
+    expect((await bind()).ok).toBe(true);
+    await h.handler(SID, upsertArgs({ events: ["done"], scope: "goal" }));
+    clock = NOW + 1_000;
+    emit({ type: "session_started", runId: "run-1", clientMessageId: "cm-1" });
+    emit({ type: "goal_progress", status: "met", goalId: "g-1", runId: "run-1" });
+    emit({
+      type: "turn_complete",
+      reason: "completed",
+      completionKind: "goal_control_stop",
+      text: "",
+      runId: "run-1",
+    });
+    await settle(() => conversation().length > 0);
+    await settle();
+    expect(replies).toEqual([]);
+    expect(conversation()).toHaveLength(1);
+    expect(h.published).toMatchObject([{ type: "pet.task.completed" }]);
+    expect(h.submitted.map((notice) => notice.boundReplyDelivered)).toEqual([undefined]);
+  });
+
+  test("a bound Session's turn that ends with no text gets the templated notice in that chat", async () => {
+    const { h, emit, bind, replies, conversation } = realBridge();
+    expect((await bind()).ok).toBe(true);
+    await h.handler(SID, upsertArgs({ events: ["done"] }));
+    clock = NOW + 1_000;
+    emit({ type: "session_started", runId: "run-1", clientMessageId: "cm-1" });
+    emit({
+      type: "assistant_message",
+      message: { role: "assistant", content: [{ type: "text", text: "先看一下" }] },
+    });
+    emit({ type: "tool_use_start", toolCall: { id: "t1", toolName: "Bash", args: {} } });
+    // An explicit empty answer: the bridge forwards nothing for this run.
+    emit({ type: "turn_complete", reason: "completed", text: "", runId: "run-1" });
+    await settle(() => conversation().length > 0);
+    await settle();
+    expect(replies).toEqual([]);
+    expect(h.published).toMatchObject([
+      { type: "pet.task.completed", target: { channel: "wechat", target: "chat-1" } },
+    ]);
+    expect(conversation()).toHaveLength(1);
+    expect(h.submitted.map((notice) => notice.boundReplyDelivered)).toEqual([undefined]);
+  });
+
+  test("a failure that is not a model error and left no text gets the templated notice", async () => {
+    const { h, emit, bind, replies, conversation } = realBridge();
+    expect((await bind()).ok).toBe(true);
+    await h.handler(SID, upsertArgs({ events: ["failed"] }));
+    clock = NOW + 1_000;
+    emit({ type: "session_started", runId: "run-1", clientMessageId: "cm-1" });
+    emit({ type: "tool_use_start", toolCall: { id: "t1", toolName: "Bash", args: {} } });
+    emit({ type: "turn_complete", reason: "max_turns", runId: "run-1" });
+    await settle(() => conversation().length > 0);
+    await settle();
+    expect(replies).toEqual([]);
+    expect(h.published).toMatchObject([
+      { type: "pet.task.failed", target: { channel: "wechat", target: "chat-1" } },
+    ]);
+    expect(conversation()).toHaveLength(1);
   });
 
   test("a bound Session's failed turn posts once: the bridge's failure reply", async () => {

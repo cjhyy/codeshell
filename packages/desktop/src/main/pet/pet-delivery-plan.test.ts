@@ -142,6 +142,7 @@ interface Scenario {
   task?: PetLongTask;
   replyRoutes?: ConversationSessionRoute[];
   delegatedFromDesktop?: "auto" | "desktop";
+  replyForwarded?: boolean;
   rows: ReturnType<typeof rows>;
   reporter: ReturnType<typeof outcomeReporter>;
   requiresAway?: boolean[];
@@ -260,6 +261,61 @@ const scenarios: Scenario[] = [
     reporter: "rules",
   },
   {
+    name: "a bound Session whose run forwards no reply: the rule's notice goes to that chat",
+    rules: [rule("bell", { target: BOUND_TARGET })],
+    replyRoutes: [bound()],
+    replyForwarded: false,
+    rows: [["template", "wechat:chat-1", "auto", ["bell"], false]],
+    reporter: "rules",
+  },
+  {
+    name: "a run that forwards no reply, owner bell on auto: an ordinary owner notice",
+    rules: [rule("bell")],
+    replyRoutes: [bound()],
+    replyForwarded: false,
+    rows: [["template", "owner", "auto", ["bell"], false]],
+    reporter: "rules",
+  },
+  {
+    name: "a task's closure when the run forwarded no reply: the closure alone",
+    task: task(),
+    replyRoutes: [bound()],
+    replyForwarded: false,
+    rows: [["mimi-closure", "owner", "auto", [], false]],
+    reporter: "closure",
+  },
+  {
+    name: "a rule route recorded without its sender is the bound chat when channel and chat match",
+    rules: [
+      rule("old-origin", {
+        target: {
+          kind: "route",
+          route: { kind: "im-gateway", channel: "wechat", target: "chat-1" },
+        },
+      }),
+    ],
+    replyRoutes: [bound()],
+    rows: [["session-reply", "wechat:chat-1", "auto", ["old-origin"], false]],
+    reporter: "rules",
+  },
+  {
+    name: "a senderless route to another chat on the same channel is not the bound one",
+    rules: [
+      rule("old-origin", {
+        target: {
+          kind: "route",
+          route: { kind: "im-gateway", channel: "wechat", target: "chat-2" },
+        },
+      }),
+    ],
+    replyRoutes: [bound()],
+    rows: [
+      ["template", "wechat:chat-2", "auto", ["old-origin"], false],
+      ["session-reply", "wechat:chat-1", "wechat", [], false],
+    ],
+    reporter: "rules",
+  },
+  {
     name: "a bound Session nobody set a rule on: only the bridge has something to send",
     replyRoutes: [bound()],
     rows: [["session-reply", "wechat:chat-1", "wechat", [], false]],
@@ -334,6 +390,7 @@ describe("buildDeliveryPlan", () => {
       rules: scenario.rules ?? [],
       ...(scenario.task ? { task: scenario.task } : {}),
       replyRoutes: scenario.replyRoutes ?? [],
+      ...(scenario.replyForwarded !== undefined ? { replyForwarded: scenario.replyForwarded } : {}),
       delegatedFromDesktop: scenario.delegatedFromDesktop ?? "auto",
     });
     expect(rows(entries)).toEqual(scenario.rows);

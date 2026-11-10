@@ -134,8 +134,11 @@ function pendingUpsert(value: DesktopPendingDecision): DesktopPetProjectionEvent
 }
 
 let rules: FakeRules;
-/** Drafts as emitted, without their delivery (kept in `deliveries`, same order). */
-let drafts: Omit<NoticeDraft, "delivery">[];
+/**
+ * Drafts as emitted, with what their delivery says about rules spelled out
+ * (the delivery itself is kept in `deliveries`, same order).
+ */
+let drafts: Array<Omit<NoticeDraft, "delivery"> & { ruleIds: string[]; requiresAway?: boolean }>;
 let deliveries: DeliveryPlanEntry[];
 /** Long tasks the delivery plan knows (closed ones included). */
 let tasks: PetLongTask[];
@@ -163,7 +166,16 @@ function watcher(
       delegatedFromDesktop: () => "auto",
     }),
     onNotice: ({ delivery, ...draft }) => {
-      drafts.push(draft);
+      const { kind, priority, dedupeKey, sessionId, ...rest } = draft;
+      drafts.push({
+        kind,
+        priority,
+        dedupeKey,
+        sessionId,
+        ruleIds: delivery.ruleIds,
+        ...(delivery.requiresAway ? { requiresAway: true } : {}),
+        ...rest,
+      });
       deliveries.push(delivery);
     },
     onPendingDecision: () => undefined,
@@ -569,6 +581,75 @@ describe("long task ownership", () => {
       { composeBy: "session-reply", target: { kind: "owner" }, channel: "auto" },
     ]);
     expect(rules.rules[0]!.state).toBe("spent");
+  });
+});
+
+describe("reports raised before the run closes, in a bound Session", () => {
+  const route = {
+    id: "route-1",
+    channel: "wechat",
+    target: "chat-1",
+    senderId: "owner-1",
+    sessionId: SID,
+    mode: "bound",
+    status: "active",
+  } as ConversationSessionRoute;
+
+  test("a met Goal waits for the closing outcome, which says whether a reply serves it", async () => {
+    for (const [text, composeBy] of [
+      ["目标完成", "session-reply"],
+      ["", "template"],
+    ] as const) {
+      rules.rules = [sessionRule("rule-g", { scope: "goal" }), systemRule()];
+      drafts = [];
+      deliveries = [];
+      replyRoutes = [route];
+      const w = watcher();
+      await feed(w, [started(), tool("Bash"), goal("met", { goalId: "g-1" })]);
+      expect(drafts).toEqual([]);
+      expect(rules.rules[0]!.state).toBe("active");
+      await feed(w, [done({ completionKind: "goal_control_stop", text })]);
+      // One report for the turn: the system rule is not told a second time.
+      expect(drafts.map((draft) => [draft.dedupeKey, draft.ruleIds])).toEqual([
+        [`${SID}:goal:g-1`, ["rule-g", "all-sessions"]],
+      ]);
+      expect(deliveries.map((delivery) => delivery.composeBy)).toEqual([composeBy]);
+      expect(rules.rules[0]!.state).toBe("spent");
+    }
+  });
+
+  test("an error waits for the failing turn_complete and is reported once", async () => {
+    rules.rules.push(sessionRule("rule-a"));
+    replyRoutes = [route];
+    const w = watcher();
+    await feed(w, [started(), { type: "error", error: "provider down" }]);
+    expect(drafts).toEqual([]);
+    await feed(w, [done({ reason: "max_turns", text: undefined })]);
+    expect(drafts.map((draft) => [draft.dedupeKey, draft.facts.error])).toEqual([
+      [`${SID}:failed:run-1`, "provider down"],
+    ]);
+    expect(deliveries.map((delivery) => delivery.composeBy)).toEqual(["template"]);
+  });
+
+  test("a turn that never closed is reported when the next one starts reporting", async () => {
+    rules.rules.push(sessionRule("rule-g", { scope: "goal" }), sessionRule("rule-t"));
+    replyRoutes = [route];
+    const w = watcher();
+    await feed(w, [started(), goal("met", { goalId: "g-1" })]);
+    // The worker went away; a new run of the Session completes.
+    await feed(w, [started({ runId: "run-2" }), tool("Bash"), done()]);
+    expect(drafts.map((draft) => draft.dedupeKey)).toEqual([
+      `${SID}:goal:g-1`,
+      `${SID}:turn:run-2`,
+    ]);
+    expect(deliveries.map((delivery) => delivery.composeBy)).toEqual(["template", "session-reply"]);
+  });
+
+  test("without a bound conversation nothing is parked", async () => {
+    rules.rules.push(sessionRule("rule-g", { scope: "goal" }));
+    const w = watcher();
+    await feed(w, [started(), goal("met", { goalId: "g-1" })]);
+    expect(drafts.map((draft) => draft.dedupeKey)).toEqual([`${SID}:goal:g-1`]);
   });
 });
 

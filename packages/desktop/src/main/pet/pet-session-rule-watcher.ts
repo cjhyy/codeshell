@@ -1,5 +1,5 @@
 import {
-  outcomeReporter,
+  ruleDelivery,
   type DeliveryPlanEntry,
   type DeliveryQuery,
   type PetDeliveryResolver,
@@ -18,10 +18,10 @@ export interface NoticeDraft {
   priority: "P0" | "P1";
   dedupeKey: string;
   sessionId: string;
-  ruleIds: string[];
-  /** True when only the all-sessions system rule matched. */
-  requiresAway?: boolean;
-  /** Who this draft is for and how it reaches them (from the delivery plan). */
+  /**
+   * Who this draft is for and how it reaches them, from the delivery plan:
+   * address, the rules it satisfies, and whether the owner must be away.
+   */
   delivery: DeliveryPlanEntry;
   requestId?: string;
   expiresAt?: number;
@@ -65,13 +65,30 @@ const MAX_FACT_LENGTH = 500;
 /** What the watcher already told the owner about one turn of a Session. */
 interface TurnMarks {
   turn: number;
-  /** A done / failed draft already went out for this turn. */
+  /** A done / failed draft already went out (or is parked) for this turn. */
   done: boolean;
   failed: boolean;
+  /**
+   * Reports raised while the run was going (a Goal met, an `error`) that a
+   * bound conversation's reply would serve. Whether the run forwards a reply
+   * is only known when it closes, so they are decided then.
+   */
+  parked: ParkedReport[];
+}
+
+type DraftFacts = Omit<NoticeDraft, "sessionId" | "delivery">;
+
+interface ParkedReport {
+  event: "done" | "failed";
+  query: OutcomeQuery;
+  draft: DraftFacts;
 }
 
 /** What an outcome asks the delivery plan: which rules it can satisfy, and whose run it is. */
-type OutcomeQuery = Pick<DeliveryQuery, "at" | "scope" | "includeSystem" | "runKey">;
+type OutcomeQuery = Pick<
+  DeliveryQuery,
+  "at" | "scope" | "includeSystem" | "runKey" | "replyForwarded"
+>;
 
 function boundedText(value: unknown, max: number): string | undefined {
   if (typeof value !== "string") return undefined;
@@ -149,18 +166,30 @@ export class PetSessionRuleWatcher {
     });
   }
 
-  private marksFor(outcome: SessionOutcome): TurnMarks {
+  private async marksFor(outcome: SessionOutcome): Promise<TurnMarks> {
     let marks = this.marks.get(outcome.sessionId);
     if (marks?.turn !== outcome.turn) {
-      marks = { turn: outcome.turn, done: false, failed: false };
+      // A turn that never closed (the worker went away) forwarded nothing.
+      if (marks) await this.flushParked(outcome.sessionId, marks, false);
+      marks = { turn: outcome.turn, done: false, failed: false, parked: [] };
       this.marks.set(outcome.sessionId, marks);
     }
     return marks;
   }
 
+  /** Decide the reports parked for this turn, now that its reply is known. */
+  private async flushParked(
+    sessionId: string,
+    marks: TurnMarks,
+    replyForwarded: boolean,
+  ): Promise<void> {
+    for (const { event, query, draft } of marks.parked.splice(0))
+      await this.emit(sessionId, event, { ...query, replyForwarded }, draft);
+  }
+
   private async applyOutcome(outcome: SessionOutcome): Promise<void> {
     const { sessionId } = outcome;
-    const marks = this.marksFor(outcome);
+    const marks = await this.marksFor(outcome);
     try {
       switch (outcome.kind) {
         case "failed":
@@ -198,8 +227,11 @@ export class PetSessionRuleWatcher {
           return;
       }
     } finally {
-      // The turn is over; nothing about it is needed for the next one.
-      if (outcome.final) this.marks.delete(sessionId);
+      if (outcome.final) {
+        await this.flushParked(sessionId, marks, outcome.reply === true);
+        // The turn is over; nothing about it is needed for the next one.
+        this.marks.delete(sessionId);
+      }
     }
   }
 
@@ -223,6 +255,7 @@ export class PetSessionRuleWatcher {
         runKey: outcome.runKey,
         // A Goal met earlier in this turn already told the system rule.
         includeSystem: !marks.done,
+        replyForwarded: outcome.reply,
       },
       {
         kind: "session.done",
@@ -249,6 +282,7 @@ export class PetSessionRuleWatcher {
         dedupeKey: `${sessionId}:goal:${outcome.goalId ?? outcome.runKey}`,
         facts: {},
       },
+      marks,
     );
     // The closing outcome of this run must not tell the system rule twice.
     if (emitted) marks.done = true;
@@ -281,13 +315,19 @@ export class PetSessionRuleWatcher {
     const emitted = await this.emit(
       sessionId,
       "failed",
-      { at: outcome.at, runKey: outcome.runKey },
+      {
+        at: outcome.at,
+        runKey: outcome.runKey,
+        ...(outcome.final ? { replyForwarded: outcome.reply } : {}),
+      },
       {
         kind: "session.failed",
         priority: "P1",
         dedupeKey: `${sessionId}:failed:${outcome.runKey}`,
         facts: { error: boundedText(outcome.error, MAX_FACT_LENGTH) ?? "Work session failed" },
       },
+      // An `error` is raised before the run closes.
+      outcome.final ? undefined : marks,
     );
     if (emitted) marks.failed = true;
   }
@@ -299,7 +339,7 @@ export class PetSessionRuleWatcher {
     // rule asked to be told about this Session blocking.
     if (!this.options.isEligibleSession(sessionId)) return;
     const plan = await this.options.deliveries.plan({ sessionId, event: "blocked", at });
-    if (outcomeReporter(plan) !== "rules") return;
+    if (!ruleDelivery(plan)) return;
     try {
       this.options.onPendingDecision(sessionId, pending);
     } catch (error) {
@@ -321,48 +361,49 @@ export class PetSessionRuleWatcher {
 
   /**
    * Report one outcome to whoever its delivery plan names; returns whether a
-   * draft went out. A run the long-task closure reports is left alone: the
-   * closure notifies and spends these rules. done / failed spend the Session
-   * rules they satisfied; blocked leaves them armed.
+   * draft went out (or was parked). A run the long-task closure reports is
+   * left alone: the closure notifies and spends these rules. done / failed
+   * spend the Session rules they satisfied; blocked leaves them armed.
+   *
+   * `park`: the run has not closed yet. A report its bound conversation's
+   * reply would serve waits there for the closing outcome, which knows
+   * whether a reply is forwarded at all.
    */
   private async emit(
     sessionId: string,
     event: "done" | "failed" | "blocked",
     query: OutcomeQuery,
-    draft: Omit<NoticeDraft, "sessionId" | "ruleIds" | "requiresAway" | "delivery">,
+    draft: DraftFacts,
+    park?: TurnMarks,
   ): Promise<boolean> {
     if (!this.options.isEligibleSession(sessionId)) return false;
     const plan = await this.options.deliveries.plan({ sessionId, event, ...query });
-    if (outcomeReporter(plan) !== "rules") return false;
-    const title = boundedText(this.options.sessionTitle?.(sessionId), MAX_FACT_LENGTH);
-    let emitted = false;
-    for (const delivery of plan.entries) {
-      if (delivery.ruleIds.length === 0) continue;
-      const notice: NoticeDraft = {
-        ...draft,
-        // One outcome, one key per conversation told about it.
-        dedupeKey: emitted ? `${draft.dedupeKey}:${delivery.key}` : draft.dedupeKey,
-        sessionId,
-        ruleIds: delivery.ruleIds,
-        ...(delivery.requiresAway ? { requiresAway: true } : {}),
-        delivery,
-        facts: { ...(title ? { title } : {}), ...draft.facts },
-      };
-      try {
-        this.options.onNotice(notice);
-        emitted = true;
-      } catch (error) {
-        // Keep the rules armed: the notice never left this process.
-        this.log("pet.notice.emit_failed", {
-          sessionId,
-          dedupeKey: notice.dedupeKey,
-          error: errorMessage(error),
-        });
-        return false;
-      }
+    const delivery = ruleDelivery(plan);
+    if (!delivery) return false;
+    if (park && event !== "blocked" && delivery.composeBy === "session-reply") {
+      park.parked.push({ event, query, draft });
+      return true;
     }
-    if (emitted && event !== "blocked") await this.setState(sessionId, plan.rules, "spent");
-    return emitted;
+    const title = boundedText(this.options.sessionTitle?.(sessionId), MAX_FACT_LENGTH);
+    const notice: NoticeDraft = {
+      ...draft,
+      sessionId,
+      delivery,
+      facts: { ...(title ? { title } : {}), ...draft.facts },
+    };
+    try {
+      this.options.onNotice(notice);
+    } catch (error) {
+      // Keep the rules armed: the notice never left this process.
+      this.log("pet.notice.emit_failed", {
+        sessionId,
+        dedupeKey: notice.dedupeKey,
+        error: errorMessage(error),
+      });
+      return false;
+    }
+    if (event !== "blocked") await this.setState(sessionId, plan.rules, "spent");
+    return true;
   }
 
   private async setState(

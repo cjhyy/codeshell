@@ -12,7 +12,7 @@
  * | ----------------------------------------- | --------------------------------------- |
  * | a long task owns the run (done / failed)  | one `mimi-closure` entry for the task's origin: its IM conversation (`reply: true`) or the owner. Every matching rule is folded into it (the delegation rule is the same declaration), so the watcher sends nothing for that run. |
  * | the Session is bound to an IM chat (done / failed) | one `session-reply` entry per conversation: the reply the bridge forwards IS the delivery. Rules that address that conversation merge into it: no second message there. |
- * | rules only                                | one `template` entry.                   |
+ * | rules only, or a run that forwards no reply | one `template` entry.                 |
  * | a pending decision in an IM-started task (blocked) | one `template` entry for the task's origin, `reply: true`. |
  *
  * Rules that matched one outcome are one declaration ("tell me"), merged as
@@ -80,6 +80,12 @@ export interface DeliveryQuery {
   /** The run that produced a done / failed outcome, to find the long task that owns it. */
   runKey?: string;
   /**
+   * False: the run closed with nothing a bound conversation is sent
+   * (`SessionOutcome.reply`), so no conversation is served by a Session reply.
+   * Absent: the run forwards one (or has not closed yet, and is assumed to).
+   */
+  replyForwarded?: boolean;
+  /**
    * The long task this is about: the one whose closure is reported (done /
    * failed), or the active one a pending decision belongs to (blocked).
    */
@@ -103,7 +109,7 @@ export interface PetDeliveryResolver {
   /** The delivery plan for one outcome of a Session. Never rejects. */
   plan(query: DeliveryQuery): Promise<DeliveryPlan>;
   /** A blocked plan, synchronously: a decision is never served by a Session reply. */
-  planBlocked(query: Omit<DeliveryQuery, "event" | "scope" | "runKey">): DeliveryPlan;
+  planBlocked(query: Omit<DeliveryQuery, "event">): DeliveryPlan;
   /** The conversations a Session's turn reply is forwarded to. Rejects when they cannot be read. */
   replyRoutes(sessionId: string): Promise<ConversationSessionRoute[]>;
   /**
@@ -212,7 +218,17 @@ function servedByReply(
   entry: Pick<DeliveryPlanEntry, "key" | "target" | "channel">,
   route: DeliveryPlanEntry,
 ): boolean {
-  if (entry.target.kind === "route") return entry.key === route.key;
+  if (entry.target.kind === "route") {
+    if (entry.key === route.key) return true;
+    // A route recorded without its sender (an older task origin) is the same
+    // conversation when channel and chat match: binding is private-chat only.
+    const { channel, target, senderId } = entry.target.route;
+    return (
+      !senderId?.trim() &&
+      channel === route.replyRoute?.channel &&
+      target === route.replyRoute.target
+    );
+  }
   // Binding only happens in the owner's private chats: the bound conversation
   // is the owner, unless the rule asked for a different channel by name.
   return entry.channel === "auto" || entry.channel === route.channel;
@@ -222,12 +238,15 @@ function servedByReply(
  * The plan for one outcome, from facts already gathered (pure). `rules` are
  * the rules that matched the outcome; `task` is the long task that owns the
  * run (done / failed) or that a pending decision belongs to (blocked).
+ * `replyForwarded: false` means the run closed with nothing to forward: no
+ * conversation is served by a Session reply then.
  */
 export function buildDeliveryPlan(input: {
   event: NoticeEvent;
   rules: readonly NoticeRule[];
   task?: PetLongTask;
   replyRoutes: readonly ConversationSessionRoute[];
+  replyForwarded?: boolean;
   delegatedFromDesktop: "auto" | "desktop";
 }): DeliveryPlanEntry[] {
   const { event, rules, task } = input;
@@ -250,7 +269,7 @@ export function buildDeliveryPlan(input: {
     }
     return rules.length > 0 ? [{ ...ruleEntry(rules), composeBy: "template" }] : [];
   }
-  const replies = input.replyRoutes.map(replyEntry);
+  const replies = input.replyForwarded === false ? [] : input.replyRoutes.map(replyEntry);
   if (task) {
     const origin = taskOrigin(
       task,
@@ -282,6 +301,13 @@ export function buildDeliveryPlan(input: {
     replyRoute: route.replyRoute!,
   };
   return replies;
+}
+
+/** The one entry of a plan that notice rules asked for, if any (never a closure). */
+export function ruleDelivery(plan: DeliveryPlan): DeliveryPlanEntry | undefined {
+  return outcomeReporter(plan) === "rules"
+    ? plan.entries.find((entry) => entry.ruleIds.length > 0)
+    : undefined;
 }
 
 /**
@@ -328,6 +354,7 @@ export function createPetDeliveryResolver(sources: DeliveryPlanSources): PetDeli
         rules,
         ...(task ? { task } : {}),
         replyRoutes,
+        ...(query.replyForwarded === false ? { replyForwarded: false } : {}),
         delegatedFromDesktop: sources.delegatedFromDesktop(),
       }),
     };
@@ -347,17 +374,18 @@ export function createPetDeliveryResolver(sources: DeliveryPlanSources): PetDeli
     }
   };
 
+  const planBlocked: PetDeliveryResolver["planBlocked"] = (query) =>
+    build({ ...query, event: "blocked" }, query.task, []);
+
   return {
     async plan(query) {
-      if (query.event === "blocked") return build(query, query.task, []);
+      if (query.event === "blocked") return planBlocked(query);
       const task =
         query.task ??
         (query.runKey !== undefined ? owningTask(query.sessionId, query.runKey) : undefined);
       return build(query, task, await replyRoutesOrNone(query.sessionId));
     },
-    planBlocked(query) {
-      return build({ ...query, event: "blocked" }, query.task, []);
-    },
+    planBlocked,
     replyRoutes,
     async ruleTarget(sessionId) {
       const routes = await replyRoutesOrNone(sessionId);

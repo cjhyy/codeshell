@@ -31,6 +31,7 @@ import {
 } from "./session-conversation-bridge.js";
 import { createSessionBindHostAction, type BindActionContext } from "./session-bind-host-action.js";
 import type { PetReusableSessionCandidate } from "./pet-dispatch-service.js";
+import { assistantMessageText, forwardedReplyText } from "./session-outcome.js";
 
 export interface SessionBridgeWiringDeps {
   /** `<userData>/pet/conversation-session-routes.json`. */
@@ -240,27 +241,6 @@ const META = {
   meta: { origin: "host" as const, producer: "session-bridge" },
 };
 
-/**
- * Flatten one assistant message to plain text. `content` is either a string or
- * a block list; only text blocks are user-facing, so tool calls and thinking
- * never reach the chat.
- */
-function assistantMessageText(message: unknown): string | undefined {
-  if (!message || typeof message !== "object" || Array.isArray(message)) return undefined;
-  const content = (message as { content?: unknown }).content;
-  if (typeof content === "string") return content.trim() || undefined;
-  if (!Array.isArray(content)) return undefined;
-  const text = content
-    .map((block) =>
-      block && typeof block === "object" && (block as { type?: unknown }).type === "text"
-        ? String((block as { text?: unknown }).text ?? "")
-        : "",
-    )
-    .join("")
-    .trim();
-  return text || undefined;
-}
-
 /** Emitted when a Session finishes a turn and produced user-facing text. */
 export interface BoundSessionTurnResult {
   sessionId: string;
@@ -365,20 +345,8 @@ export function createBoundSessionRunner(
     if (type === "turn_complete") {
       const entry = running.get(sessionId);
       const matching = entry && belongsToRun(record, entry) ? entry : undefined;
-      // Core's completion text is the authoritative final answer. An explicit
-      // empty result must not resurrect an earlier progress message.
-      const failed = record.reason === "model_error";
-      const stopped = typeof record.reason === "string" && record.reason.startsWith("aborted");
-      const finalText = typeof record.text === "string" ? record.text.trim() : undefined;
-      const text =
-        finalText ||
-        (failed
-          ? "这个 Session 本轮执行失败，请在桌面端查看详情后重试。"
-          : stopped
-            ? "这个 Session 本轮已停止。你可以发送新消息继续。"
-            : finalText === undefined
-              ? matching?.lastAssistantText
-              : undefined);
+      // The same rule tells the notice plan whether this run forwards anything.
+      const text = forwardedReplyText(record, matching?.lastAssistantText);
       const turnId =
         (typeof record.runId === "string" && record.runId) ||
         matching?.runId ||
@@ -386,7 +354,7 @@ export function createBoundSessionRunner(
         matching?.clientMessageId ||
         matching?.fallbackTurnId;
       if (matching) endRun(sessionId, matching);
-      if (!text?.trim() || !turnId) return;
+      if (!text || !turnId) return;
       const key = `${sessionId}\u0000${turnId}`;
       if (completed.has(key) || publishing.has(key)) return;
       publishing.add(key);

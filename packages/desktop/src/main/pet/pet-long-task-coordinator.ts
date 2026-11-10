@@ -736,8 +736,16 @@ export class PetLongTaskCoordinator {
           await this.notifyClosed(failed);
           return;
         }
-        // A completion kind from a newer core: nothing is known about the run.
-        if (closing.kind === "unrecognized") return;
+        if (closing.kind === "unrecognized") {
+          // A completion kind from a newer core: the run has ended, so the task
+          // no longer owns the Session, but nothing says the objective was met.
+          await transition({
+            kind: "interrupted",
+            at,
+            reason: "The work session ended in a way this version does not recognise",
+          });
+          return;
+        }
         if (closing.kind === "aborted") {
           await transition({
             kind: "interrupted",

@@ -22,7 +22,7 @@
  * | done (goal) / cancelled, closing  | interrupted (Goal driving stopped) | none                 |
  * | aborted, closing                  | interrupted                  | none (drops carried work)  |
  * | waiting-worker, closing           | waiting-worker               | none                       |
- * | unrecognized, closing             | none                         | none                       |
+ * | unrecognized, closing             | interrupted                  | none                       |
  *
  * An exhausted Goal is read two ways on purpose, from the one outcome: the
  * task that was driving that Goal has failed and closes, while the owner is
@@ -53,6 +53,12 @@ interface SessionOutcomeBase {
   repeat?: true;
   /** Outcomes with the same value belong to the same turn of this Session. */
   turn: number;
+  /**
+   * Closing outcomes only: the run ended with text a bound IM conversation is
+   * sent (`forwardedReplyText`). False means nothing is forwarded for this
+   * run, so that conversation has not heard about it.
+   */
+  reply?: boolean;
 }
 
 export type SessionOutcome = SessionOutcomeBase &
@@ -77,7 +83,8 @@ export type SessionOutcome = SessionOutcomeBase &
     | { kind: "idle"; summary?: string }
     /**
      * The run ended with a completion kind this host does not know (a newer
-     * core). Nothing can be said about what it did, so no consumer acts on it.
+     * core). Nothing can be said about what it did: the long task is
+     * interrupted (the run is over) and no rule hears about it.
      */
     | { kind: "unrecognized"; completionKind: string }
   );
@@ -126,6 +133,51 @@ interface TurnState {
   blocked?: Exclude<SessionBlockReason, "limit">;
   /** The Goal was met or cleared this turn. */
   goal?: { state: "met" | "cleared"; goalId?: string };
+  /** The latest assistant text of this turn (a reply when the run closes without one). */
+  lastAssistantText?: string;
+}
+
+/**
+ * Flatten one assistant message to plain text. `content` is either a string or
+ * a block list; only text blocks are user-facing, so tool calls and thinking
+ * never reach a chat.
+ */
+export function assistantMessageText(message: unknown): string | undefined {
+  if (!message || typeof message !== "object" || Array.isArray(message)) return undefined;
+  const content = (message as { content?: unknown }).content;
+  if (typeof content === "string") return content.trim() || undefined;
+  if (!Array.isArray(content)) return undefined;
+  const text = content
+    .map((block) =>
+      block && typeof block === "object" && (block as { type?: unknown }).type === "text"
+        ? String((block as { text?: unknown }).text ?? "")
+        : "",
+    )
+    .join("")
+    .trim();
+  return text || undefined;
+}
+
+/**
+ * The text a bound IM conversation is sent for a run's `turn_complete`, or
+ * undefined when there is nothing to forward. The one rule shared by the
+ * bridge (which forwards it) and the outcome deriver (which reports whether
+ * anything is forwarded), so the two can never disagree.
+ *
+ * Core's completion text is the authoritative final answer; an explicit empty
+ * result must not resurrect an earlier progress message.
+ */
+export function forwardedReplyText(
+  event: { reason?: unknown; text?: unknown },
+  lastAssistantText: string | undefined,
+): string | undefined {
+  const finalText = typeof event.text === "string" ? event.text.trim() : undefined;
+  if (finalText) return finalText;
+  if (event.reason === "model_error")
+    return "这个 Session 本轮执行失败，请在桌面端查看详情后重试。";
+  if (typeof event.reason === "string" && event.reason.startsWith("aborted"))
+    return "这个 Session 本轮已停止。你可以发送新消息继续。";
+  return finalText === undefined ? lastAssistantText?.trim() || undefined : undefined;
 }
 
 /** A Session stream event from the top-level agent (child-agent events carry `agentId`). */
@@ -226,6 +278,11 @@ export class SessionOutcomeDeriver {
         const toolCall = event.toolCall as { toolName?: unknown } | undefined;
         const name = typeof toolCall?.toolName === "string" ? toolCall.toolName : undefined;
         if (!name || !NON_WORK_TOOLS.has(name)) this.turn(sessionId).work = true;
+        return [];
+      }
+      case "assistant_message": {
+        const text = assistantMessageText(event.message);
+        if (text) this.turn(sessionId).lastAssistantText = text;
         return [];
       }
       case "goal_progress":
@@ -345,7 +402,10 @@ export class SessionOutcomeDeriver {
     state: TurnState,
     event: Record<string, unknown>,
   ): SessionOutcome {
-    const base = this.base(sessionId, state, event, "completedAt", true);
+    const base: SessionOutcomeBase = {
+      ...this.base(sessionId, state, event, "completedAt", true),
+      reply: forwardedReplyText(event, state.lastAssistantText) !== undefined,
+    };
     const reason = event.reason;
     if (reason === "aborted_streaming" || reason === "aborted_tools")
       return { ...base, kind: "aborted" };

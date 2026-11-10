@@ -663,7 +663,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     deliveries,
     onNotice: (draft: NoticeDraft) => {
       const { delivery, ...rest } = draft;
-      const { attention, channel, target } = delivery;
+      const { attention, channel, target, ruleIds, requiresAway } = delivery;
       // The Session's own reply (or its failure text) in that conversation is
       // the delivery: the router keeps the desktop record and sends no IM.
       const served = delivery.composeBy === "session-reply";
@@ -674,6 +674,8 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
         });
       void submit({
         ...rest,
+        ruleIds,
+        ...(requiresAway ? { requiresAway: true } : {}),
         attention,
         channel,
         target,
@@ -876,8 +878,8 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     await ready;
     const event = task.status === "completed" ? "done" : "failed";
     const plan = await deliveries.plan({ sessionId: task.sessionId, event, task });
-    const delivery = plan.entries.find((entry) => entry.composeBy === "mimi-closure");
-    if (!delivery) return;
+    // A plan for a task opens with its closure entry.
+    const delivery = plan.entries[0]!;
     const title =
       textLine(workSession(task.sessionId)?.title, MAX_TITLE) ??
       textLine(task.objective, MAX_TITLE);

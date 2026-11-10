@@ -8,6 +8,7 @@ import {
 import {
   closingOutcome,
   createSessionOutcomeTap,
+  forwardedReplyText,
   runningOutcome,
   SessionOutcomeDeriver,
   type SessionOutcome,
@@ -83,7 +84,15 @@ function derive(events: Event[]): SessionOutcome[] {
 
 /** Fields every outcome of run-1 carries, by where it was raised. */
 const running = { sessionId: SID, runId: "run-1", runKey: "run-1", at: NOW + 1, final: false };
-const closing = { sessionId: SID, runId: "run-1", runKey: "run-1", at: NOW + 5, final: true };
+const closing = {
+  sessionId: SID,
+  runId: "run-1",
+  runKey: "run-1",
+  at: NOW + 5,
+  final: true,
+  // complete() ends with text, which a bound conversation is sent.
+  reply: true,
+};
 const summary = "All tests pass now.";
 
 interface Scenario {
@@ -129,7 +138,7 @@ const scenarios: Scenario[] = [
       started({ clientMessageId: undefined, trigger: "background_wake" }),
       complete({ text: "" }),
     ],
-    outcomes: [{ ...closing, kind: "done", scope: "turn" }],
+    outcomes: [{ ...closing, reply: false, kind: "done", scope: "turn" }],
   },
   {
     name: "a host-queued message that only acknowledges is idle",
@@ -300,6 +309,7 @@ const scenarios: Scenario[] = [
         runKey: String(NOW + 5),
         at: NOW + 5,
         final: true,
+        reply: false,
         kind: "done",
         scope: "turn",
       },
@@ -351,6 +361,33 @@ describe("SessionOutcomeDeriver", () => {
       ["blocked", false, false],
       ["blocked", true, true],
     ]);
+  });
+
+  test("closing outcomes say whether the run forwards a reply, by the bridge's own rule", () => {
+    const reply = (...events: Event[]) => closingOutcome(derive([started(), ...events]))!.reply;
+    const said = (content: unknown): Event => ({
+      type: "assistant_message",
+      message: { role: "assistant", content },
+    });
+    expect(reply(complete())).toBe(true);
+    // An explicit empty answer forwards nothing, even after progress text.
+    expect(reply(said("working on it"), complete({ text: "  " }))).toBe(false);
+    // No final text at all: the last assistant text stands in for it.
+    expect(reply(said([{ type: "text", text: "done" }]), complete({ text: undefined }))).toBe(true);
+    expect(reply(said([{ type: "tool_use", id: "t" }]), complete({ text: undefined }))).toBe(false);
+    expect(reply(complete({ text: undefined }))).toBe(false);
+    // A model error and a stop have canned replies; other failures do not.
+    expect(reply(complete({ reason: "model_error", text: undefined }))).toBe(true);
+    expect(reply(complete({ reason: "aborted_tools", text: "" }))).toBe(true);
+    expect(reply(complete({ reason: "max_turns", text: undefined }))).toBe(false);
+    expect(reply(complete({ reason: "max_turns" }))).toBe(true);
+    // A child agent's message is not the Session's reply.
+    expect(reply({ ...said("child text"), agentId: "a-1" }, complete({ text: undefined }))).toBe(
+      false,
+    );
+    // Outcomes raised while the run is going cannot know yet.
+    expect(runningOutcome(derive([started(), goal("met")]))).not.toHaveProperty("reply");
+    expect(forwardedReplyText({ reason: "completed", text: " 改好了 " }, "earlier")).toBe("改好了");
   });
 
   test("turn_complete.outcome wins over what the stream suggests", () => {
