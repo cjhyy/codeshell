@@ -809,22 +809,6 @@ export class PetLongTaskCoordinator {
       await this.reconcile(this.options.projection.getSnapshot());
       return;
     }
-    if (event.kind === "worker-state") {
-      if (event.state === "disconnected" || event.state === "reclaimed") {
-        for (const task of this.options.store.activeTasks()) {
-          if (task.status === "paused" || task.status === "interrupted") continue;
-          await this.options.store.transition(task.id, {
-            kind: "interrupted",
-            at: event.observedAt,
-            reason:
-              event.state === "disconnected"
-                ? "The worker disconnected; durable session state is available for resume"
-                : "The worker was reclaimed before task completion was observed",
-          });
-        }
-      }
-      return;
-    }
     if (event.kind === "pending-upsert") {
       const task = this.options.store.activeForSession(event.pending.agentSessionId);
       if (task && task.status !== "paused") {
@@ -968,7 +952,13 @@ export class PetLongTaskCoordinator {
           await this.options.store.transition(task.id, {
             kind: "interrupted",
             at: observedAt,
-            reason: "The durable work session is not currently live",
+            // The aggregator reports a lost worker as a reset of a snapshot in that state.
+            reason:
+              snapshot.workerState === "disconnected"
+                ? "The worker disconnected; durable session state is available for resume"
+                : snapshot.workerState === "reclaimed"
+                  ? "The worker was reclaimed before task completion was observed"
+                  : "The durable work session is not currently live",
           });
         }
         continue;

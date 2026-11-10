@@ -2018,6 +2018,8 @@ describe("PetLongTaskCoordinator", () => {
     expect(recoveredStore.get(launch.taskId)).toMatchObject({
       status: "interrupted",
       nextAction: "Resume from the durable work session",
+      // The snapshot says why the Session is gone: its worker was reclaimed.
+      waitingFor: "The worker was reclaimed before task completion was observed",
     });
   });
 });
