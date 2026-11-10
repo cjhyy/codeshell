@@ -1528,7 +1528,7 @@ export class AgentServer {
       return;
     }
 
-    let source;
+    let source: ChatSession | undefined;
     try {
       source = this.chatManager?.get(sourceSessionId);
       if (!source && this.chatManager) {

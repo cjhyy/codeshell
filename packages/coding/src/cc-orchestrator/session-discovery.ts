@@ -1,3 +1,4 @@
+import type { Stats } from "node:fs";
 import {
   readdirSync,
   readFileSync,
@@ -223,7 +224,7 @@ function listSessionStats(dir: string): { sessionId: string; file: string; mtime
   for (const name of readdirSync(dir)) {
     if (!name.endsWith(".jsonl")) continue;
     const file = join(dir, name);
-    let st;
+    let st: Stats;
     try {
       st = statSync(file);
     } catch {
@@ -390,7 +391,7 @@ export function discoverRecentClaudeSessions(
     // names proceed only to the small per-file identity read below.
     if (!claudeProjectDirEnabled(projectDir, scope)) continue;
     const dir = join(projects, projectDir);
-    let dirStat;
+    let dirStat: Stats;
     try {
       dirStat = statSync(dir);
     } catch {

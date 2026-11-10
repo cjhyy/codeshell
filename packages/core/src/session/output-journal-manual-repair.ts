@@ -263,7 +263,7 @@ function locate(root: string, sessionId: string, anchorIdentity?: FileIdentity):
     "head_unproved",
     "Original durable-head file proof is required",
   );
-  let head;
+  let head: ReturnType<typeof readPublishedOutputHead>;
   try {
     head = readPublishedOutputHead(dir, pin);
   } catch (cause) {

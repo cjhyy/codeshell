@@ -2511,7 +2511,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         input.onUncertain?.(clientMessageId);
         return false;
       }
-      let attachments;
+      let attachments: Awaited<ReturnType<typeof prepareMobileAttachments>>;
       if (roomId && roomsRef.current.find((room) => room.id === roomId)?.observing) {
         setNotice(t("mobile.notice.ccRoomObserving"));
         return false;

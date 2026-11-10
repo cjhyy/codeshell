@@ -213,6 +213,28 @@ const noTopLevelSideEffectsRule = {
   }),
 };
 
+const noUntypedUninitializedVariableRule = {
+  meta: {
+    type: "problem",
+    messages: {
+      forbidden: "add an explicit type or initializer; untyped empty declarations become any",
+    },
+  },
+  create: (context) => ({
+    VariableDeclarator(node) {
+      if (node.init || node.id.typeAnnotation) return;
+      const declaration = node.parent;
+      const loop = declaration.parent;
+      if (
+        (loop.type === "ForInStatement" || loop.type === "ForOfStatement") &&
+        loop.left === declaration
+      )
+        return;
+      context.report({ node, messageId: "forbidden" });
+    },
+  }),
+};
+
 const codeshellBoundaryImportsRule = {
   meta: {
     type: "problem",
@@ -351,6 +373,7 @@ export default [
           "no-process-cwd": noProcessCwdRule,
           "no-process-env-top-level": noProcessEnvTopLevelRule,
           "codeshell-boundary-imports": codeshellBoundaryImportsRule,
+          "no-untyped-uninitialized-variable": noUntypedUninitializedVariableRule,
         },
       },
       "react-hooks": {
@@ -420,6 +443,16 @@ export default [
       "no-useless-escape": "warn",
       "no-useless-assignment": "warn",
       "prefer-const": "warn",
+    },
+  },
+  {
+    files: [
+      "packages/{core,coding,server,web,host,pet,chat,link}/src/**/*.{ts,tsx}",
+      "packages/desktop/src/main/**/*.{ts,tsx}",
+    ],
+    ignores: ["**/*.{test,spec}.{ts,tsx}", "**/*.d.ts"],
+    rules: {
+      "custom-rules/no-untyped-uninitialized-variable": "error",
     },
   },
   {

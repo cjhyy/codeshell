@@ -169,7 +169,7 @@ export function createNativeModelTraceChannel(options: {
         return;
       }
       pending += typeof chunk === "string" ? chunk : decoder.write(Buffer.from(chunk));
-      for (let newline; (newline = pending.indexOf("\n")) >= 0; ) {
+      for (let newline: number; (newline = pending.indexOf("\n")) >= 0; ) {
         const line = pending.slice(0, newline);
         pending = pending.slice(newline + 1);
         if (Buffer.byteLength(line) > 256 * 1024) {

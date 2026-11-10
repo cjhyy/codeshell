@@ -230,7 +230,7 @@ export async function runClaudeTextInference(
           return fail(new Error("Claude text inference output exceeds its byte limit"));
         pending += chunk;
         try {
-          for (let newline; (newline = pending.indexOf("\n")) >= 0; ) {
+          for (let newline: number; (newline = pending.indexOf("\n")) >= 0; ) {
             const line = pending.slice(0, newline);
             pending = pending.slice(newline + 1);
             accept(line);

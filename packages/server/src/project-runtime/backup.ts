@@ -201,7 +201,7 @@ async function archive(
     // Opening the archive can fail before Promise.allSettled attaches its handlers.
     void finished.catch(() => undefined);
     if (restore) child.stdout?.resume();
-    let input;
+    let input: Awaited<ReturnType<typeof open>> | undefined;
     const hash = createHash("sha256");
     let bytes = 0;
     const hashing = new Transform({

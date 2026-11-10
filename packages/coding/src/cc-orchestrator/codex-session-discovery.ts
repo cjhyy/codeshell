@@ -1,3 +1,4 @@
+import type { Dirent, Stats } from "node:fs";
 import { readdirSync, statSync, existsSync, openSync, readSync, closeSync } from "node:fs";
 import { open, readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
@@ -68,7 +69,7 @@ export async function listCodexSessionsForCwds(
 /** Dirents avoid statting every directory and every file twice. Do not follow
  * directory symlinks: a cyclic link must not make interactive discovery hang. */
 async function listRolloutsAsync(root: string): Promise<string[]> {
-  let entries;
+  let entries: Dirent[];
   try {
     entries = await readdir(root, { withFileTypes: true });
   } catch {
@@ -309,7 +310,7 @@ function* walkRollouts(root: string): Generator<string> {
   }
   for (const name of entries) {
     const full = join(root, name);
-    let st;
+    let st: Stats;
     try {
       st = statSync(full);
     } catch {

@@ -10,7 +10,7 @@ if (!port) throw new Error("transcript cache requires a worker thread");
 const store = new SessionTranscriptCacheStore(workerData);
 port.on("message", async ({ id, method, input }: TranscriptCacheWorkerRequest) => {
   try {
-    let value;
+    let value: TranscriptCacheWorkerReply["value"];
     if (method === "write") await store.write(input as Parameters<typeof store.write>[0]);
     else if (method === "read") value = await store.read(input!);
     else if (method === "delete") await store.delete(input!);

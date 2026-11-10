@@ -3098,7 +3098,7 @@ export class PetDispatchService {
       // platform accepts a message but before completion is recorded, replay
       // sees the durable uncertainty receipt and does not send it again.
       if (canReplay) {
-        let claim;
+        let claim: Awaited<ReturnType<typeof receipts.claim>>;
         try {
           claim = await receipts.claim(
             replayIdentity.petSessionId,

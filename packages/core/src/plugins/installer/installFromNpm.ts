@@ -1,3 +1,4 @@
+import type { Stats } from "node:fs";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { mkdtemp, mkdir, open, readFile, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
@@ -95,7 +96,7 @@ async function verifyExtractedPackage(
   resolution: ResolvedNpmPlugin,
 ): Promise<void> {
   const manifestPath = join(packageDir, "package.json");
-  let manifestStat;
+  let manifestStat: Stats;
   try {
     manifestStat = await stat(manifestPath);
   } catch {

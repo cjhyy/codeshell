@@ -12,7 +12,7 @@ import { resolve as resolvePath } from "node:path";
 import { parsePatch } from "./parser.js";
 
 export function patchBackupTargets(patchText: string, cwd: string): string[] {
-  let parsed;
+  let parsed: ReturnType<typeof parsePatch>;
   try {
     parsed = parsePatch(patchText, "lenient");
   } catch {
@@ -38,7 +38,7 @@ export function patchBackupTargets(patchText: string, cwd: string): string[] {
  * each path's real before/after state rather than inferring a rename from text.
  */
 export function patchDiffTargets(patchText: string, cwd: string): string[] {
-  let parsed;
+  let parsed: ReturnType<typeof parsePatch>;
   try {
     parsed = parsePatch(patchText, "lenient");
   } catch {

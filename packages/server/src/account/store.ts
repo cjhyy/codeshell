@@ -1,3 +1,4 @@
+import type { Stats } from "node:fs";
 import {
   constants,
   closeSync,
@@ -103,7 +104,7 @@ export class CloudAccountStore {
     unlinkSync(this.temporary(bytes));
   }
   load(): SavedCloudAccount | undefined {
-    let metadata;
+    let metadata: Stats;
     try {
       metadata = lstatSync(this.path);
     } catch (error) {

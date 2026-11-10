@@ -1,3 +1,4 @@
+import type { Stats } from "node:fs";
 /**
  * state.json file mechanics for SessionManager's CAS writer.
  *
@@ -86,7 +87,7 @@ export function acquireStateLock(target: string): (() => void) | undefined {
 /** Recover only the old implementation's regular-file orphan lock. */
 function prepareLegacyStateLock(lockPath: string): boolean {
   if (!existsSync(lockPath)) return true;
-  let stat;
+  let stat: Stats;
   try {
     stat = lstatSync(lockPath);
   } catch {

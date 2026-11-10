@@ -448,7 +448,7 @@ export class OutputHistoryRecovery {
         join(directory, anchorName),
         fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0),
       );
-      let binding;
+      let binding: ReturnType<typeof createOutputJournalBinding>;
       try {
         binding = createOutputJournalBinding(
           root,

@@ -639,7 +639,7 @@ export class RemoteHostManager extends EventEmitter {
     const event = parseMobileClientEvent(input);
     if (!event) return { type: "error", message: "Invalid client event" };
     if (event.type === "pair.complete") {
-      let device;
+      let device: ReturnType<TrustedDeviceStore["authenticate"]>;
       try {
         device = this.pairing.commit(event.token, () =>
           this.opts.devices.addDevice({
@@ -679,7 +679,7 @@ export class RemoteHostManager extends EventEmitter {
     if (event.type === "auth.device") {
       if (this.opts.devices.isEphemeralDevice(event.deviceId) && event.deviceId !== accountDeviceId)
         return { type: "auth.failed", message: "Account device requires its Host access grant" };
-      let device;
+      let device: ReturnType<TrustedDeviceStore["authenticate"]>;
       try {
         device = this.opts.devices.authenticate(event.deviceId, event.secretHash);
       } catch {

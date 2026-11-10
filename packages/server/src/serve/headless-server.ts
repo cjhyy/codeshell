@@ -277,7 +277,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
     broadcast(JSON.stringify({ jsonrpc: "2.0", method, params }));
   };
   const publishStream = (sessionId: string, event: unknown): boolean => {
-    let cursor;
+    let cursor: ReturnType<typeof runReplay.append>;
     try {
       cursor = runReplay.append(sessionId, event);
     } catch {

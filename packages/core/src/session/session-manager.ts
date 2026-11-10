@@ -1,3 +1,4 @@
+import type { Dirent } from "node:fs";
 /**
  * Session lifecycle manager.
  *
@@ -610,7 +611,7 @@ export class SessionManager {
     const target = typeof profileName === "string" ? profileName.trim() : "";
     if (!target || target.length > 64 || limit <= 0) return [];
     const cap = Math.max(1, Math.min(100, Math.floor(limit)));
-    let entries;
+    let entries: Dirent[];
     try {
       entries = readdirSync(this.sessionsDir, { withFileTypes: true });
     } catch {

@@ -519,7 +519,7 @@ export async function completeRemoteLinkAuthorization(
   });
   const account = asRecord(authorization.account);
   const scopes = asArray(authorization.scopes);
-  let resourceGroups;
+  let resourceGroups: ReturnType<typeof parseRemoteLinkResourceGroups>;
   try {
     resourceGroups = parseRemoteLinkResourceGroups(providerId, authorization);
     if (attempt.resourceFiles !== undefined) {
@@ -600,7 +600,7 @@ export async function completeRemoteLinkAuthorization(
 /** Revoke a downstream grant without exporting or refreshing its private token. */
 export async function revokeRemoteLinkAuthorization(credential: Credential): Promise<void> {
   if (!isRemoteLinkCredential(credential)) throw new RemoteLinkError("invalid_request");
-  let secret;
+  let secret: ReturnType<typeof parseOAuthCredentialSecret>;
   try {
     secret = parseOAuthCredentialSecret(credential.secret ?? "");
   } catch {
@@ -804,7 +804,7 @@ export async function executeRemoteLinkAction(
   const parse = (credential: Credential) => {
     if (!isCredentialSecretAvailable(credential.secret))
       throw new RemoteLinkError("reconnect", { reason: "secret_unavailable" });
-    let value;
+    let value: ReturnType<typeof parseOAuthCredentialSecret>;
     try {
       value = parseOAuthCredentialSecret(credential.secret ?? "");
     } catch {

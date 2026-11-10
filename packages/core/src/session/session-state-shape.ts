@@ -1,3 +1,4 @@
+import type { Stats } from "node:fs";
 /**
  * Pure interpretation of persisted Session state fields.
  *
@@ -61,7 +62,7 @@ export async function validateResumeWorktreeRoot(
   workspaceCapability: SessionWorkspaceCapability,
 ): Promise<string | null> {
   if (!existsSync(root)) return "no longer exists";
-  let stat;
+  let stat: Stats;
   try {
     stat = lstatSync(root);
   } catch {

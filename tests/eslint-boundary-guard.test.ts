@@ -12,6 +12,51 @@ const repoRoot = process.cwd();
  */
 const LINT_PROBE_TIMEOUT_MS = 120_000;
 
+describe("ESLint explicit variable types", () => {
+  it("rejects untyped empty declarations only in the reviewed production scopes", async () => {
+    const { ESLint } = await import("eslint");
+    const eslint = new ESLint({ cwd: repoRoot });
+    const rule = "custom-rules/no-untyped-uninitialized-variable";
+    const scopes = ["core", "coding", "server", "web", "host", "pet", "chat", "link"]
+      .map((name) => `packages/${name}/src`)
+      .concat("packages/desktop/src/main");
+    const violations = async (filePath: string, source: string) => {
+      const [result] = await eslint.lintText(source, { filePath });
+      return result!.messages.filter((message) => message.ruleId === rule);
+    };
+    const untyped = "export function probe() { let value; var other; return [value, other]; }";
+    for (const scope of scopes) {
+      const messages = await violations(`${scope}/__lint_variable_probe__.ts`, untyped);
+      expect(messages).toHaveLength(2);
+      expect(
+        messages.every((message) => message.message.includes("explicit type or initializer")),
+      ).toBe(true);
+    }
+    expect(
+      await violations(
+        "packages/core/src/__lint_variable_probe__.ts",
+        [
+          "export function probe() {",
+          "  let typed: number;",
+          "  let initialized = 0;",
+          "  for (let item of [1, 2]) initialized += item;",
+          "  for (let key in { value: 1 }) initialized += key.length;",
+          "  typed = initialized;",
+          "  return typed;",
+          "}",
+        ].join("\n"),
+      ),
+    ).toHaveLength(0);
+    for (const filePath of [
+      "packages/core/src/__lint_variable_probe__.test.ts",
+      "packages/tui/src/render/__lint_variable_probe__.ts",
+      "packages/desktop/src/renderer/__lint_variable_probe__.ts",
+    ]) {
+      expect(await violations(filePath, untyped)).toHaveLength(0);
+    }
+  });
+});
+
 function lintStdin(filename: string, source: string) {
   return spawnSync("bunx", ["eslint", "--stdin", "--stdin-filename", filename], {
     cwd: repoRoot,

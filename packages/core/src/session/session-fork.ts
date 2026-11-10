@@ -1,3 +1,4 @@
+import type { Dirent } from "node:fs";
 /**
  * Session fork snapshot rules and target construction.
  *
@@ -69,7 +70,7 @@ const FORK_STAGING_CLEANUP_LIMIT = 32;
 
 export function cleanupStaleForkStaging(sessionsDir: string): void {
   let removed = 0;
-  let entries;
+  let entries: Dirent[];
   try {
     entries = readdirSync(sessionsDir, { withFileTypes: true });
   } catch {

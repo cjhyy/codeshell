@@ -621,7 +621,7 @@ export class AgentBridge implements PetStateBridge {
       this.workerRuns.observeWorker(append.sessionId, append.event);
       observeComputerUseRunEvent(append.sessionId, append.event);
     }
-    let snapshotEntry;
+    let snapshotEntry: (SnapshotEntry & { sessionId: string; epoch: string }) | undefined;
     try {
       snapshotEntry = append
         ? {
@@ -2726,7 +2726,7 @@ export class AgentBridge implements PetStateBridge {
     this.workerRuns.observeExternal(sessionId, event);
     observeComputerUseRunEvent(sessionId, event);
     const projected = annotateBrowserRuntimeStreamEvent(event, options.browserVisibility ?? "full");
-    let entry;
+    let entry: SnapshotEntry;
     try {
       entry = this.snapshots.append(sessionId, projected);
     } catch {

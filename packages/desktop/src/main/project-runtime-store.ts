@@ -1,3 +1,4 @@
+import type { Stats } from "node:fs";
 import { randomUUID } from "node:crypto";
 import {
   closeSync,
@@ -304,7 +305,7 @@ function checkedSnapshot(value: unknown): RuntimeSnapshot {
 }
 
 function readSnapshot(filePath: string): RuntimeSnapshot {
-  let metadata;
+  let metadata: Stats;
   try {
     metadata = lstatSync(filePath);
   } catch (cause) {

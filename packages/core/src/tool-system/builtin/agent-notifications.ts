@@ -1,3 +1,4 @@
+import type { Stats } from "node:fs";
 import {
   sanitizeExternalChangedFilesProvenance,
   type ExternalChangedFilesProvenance,
@@ -501,7 +502,7 @@ export class NotificationQueue {
     const file = this.persistence?.fileForSession(sessionId) ?? null;
     if (!file || !existsSync(file)) return 0;
 
-    let pathInfo;
+    let pathInfo: Stats;
     try {
       pathInfo = lstatSync(file);
     } catch (error) {

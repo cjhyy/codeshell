@@ -1,3 +1,4 @@
+import type { Stats } from "node:fs";
 import { createHash } from "node:crypto";
 import {
   closeSync,
@@ -127,7 +128,7 @@ function readBoundedRegularFile(installPath: string): Buffer | null | Error {
     return isMissingFileError(error) ? null : (error as Error);
   }
 
-  let pathStat;
+  let pathStat: Stats;
   try {
     pathStat = lstatSync(hooksPath);
   } catch (error) {
