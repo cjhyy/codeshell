@@ -21,6 +21,8 @@ import {
 
 export type NoticeDeliveryStatus =
   | "claimed"
+  /** Written to the gateway outbox; its delivery result has not come back yet. */
+  | "enqueued"
   | "accepted"
   | "failed"
   | "queued"
@@ -194,6 +196,7 @@ const OUTLETS: readonly RouteDecision["outlet"][] = [
 ];
 const STATUSES: readonly NoticeDeliveryStatus[] = [
   "claimed",
+  "enqueued",
   "accepted",
   "failed",
   "queued",
@@ -234,21 +237,32 @@ export function isPromptEnded(phase: NoticePromptPhase): boolean {
 }
 
 /** Work still owed to the owner; these records are never evicted. */
-const LIVE_STATUSES: ReadonlySet<NoticeDeliveryStatus> = new Set(["claimed", "queued", "held"]);
+const LIVE_STATUSES: ReadonlySet<NoticeDeliveryStatus> = new Set([
+  "claimed",
+  "enqueued",
+  "queued",
+  "held",
+]);
 
 /**
  * Delivery state machine. Rows are the current status ("none" = no delivery
  * yet); columns are the target (`claimed` via claim(), the rest via settle()).
  *
- *              claimed accepted failed unknown queued held revoked
- *   none         ok      -        -      -       ok    ok    ok
- *   held         ok      -        -      -       ok    ok    ok
- *   queued       ok      -        -      -       ok    ok    ok
- *   failed       ok      -        -      -       ok    ok    ok
- *   claimed      ok     ok       ok     ok       ok    -     ok
- *   unknown      m       -        -      -       -     -     ok
- *   accepted     x       x        x      x       x     x     x
- *   revoked      x       x        x      x       x     x     x
+ *              claimed enqueued accepted failed unknown queued held revoked
+ *   none         ok      -        -        -      -       ok    ok    ok
+ *   held         ok      -        -        -      -       ok    ok    ok
+ *   queued       ok      -        -        -      -       ok    ok    ok
+ *   failed       ok      -        -        -      -       ok    ok    ok
+ *   claimed      ok      ok       ok       ok     ok      ok    -     ok
+ *   enqueued     -       -        ok       ok     ok      ok    ok    ok
+ *   unknown      m       -        -        -      -       -     -     ok
+ *   accepted     x       x        x        x      x       x     x     x
+ *   revoked      x       x        x        x      x       x     x     x
+ *
+ * `enqueued`: the gateway outbox took the send and delivers (and retries)
+ * it; the outbox's result settles it: accepted, failed (then queued for the
+ * owner's next message), unknown, or held (expired before quiet hours, for
+ * the digest). The router never resends an enqueued notice itself.
  *
  * `-` throws invalid_transition; `x` throws notice_already_settled; `m` is
  * allowed only with `claim(..., { manualRetry: true })`.
@@ -265,7 +279,8 @@ const TRANSITIONS: Readonly<
   held: new Set(["claimed", "queued", "held", "revoked"]),
   queued: new Set(["claimed", "queued", "held", "revoked"]),
   failed: new Set(["claimed", "queued", "held", "revoked"]),
-  claimed: new Set(["claimed", "accepted", "failed", "unknown", "queued", "revoked"]),
+  claimed: new Set(["claimed", "enqueued", "accepted", "failed", "unknown", "queued", "revoked"]),
+  enqueued: new Set(["accepted", "failed", "unknown", "queued", "held", "revoked"]),
   unknown: new Set(["revoked"]),
   accepted: new Set(),
   revoked: new Set(),
@@ -739,6 +754,14 @@ export class PetNoticeLedger {
     );
   }
 
+  /** Records the gateway outbox is delivering, oldest first. */
+  enqueued(): NoticeRecord[] {
+    return [...this.state.records.values()]
+      .filter((record) => record.delivery?.status === "enqueued")
+      .sort((a, b) => a.createdAt - b.createdAt)
+      .map((record) => structuredClone(record));
+  }
+
   /** Records held for the next digest, oldest first. */
   held(): NoticeRecord[] {
     return (
@@ -761,7 +784,12 @@ export class PetNoticeLedger {
     for (const record of this.state.records.values()) {
       const delivery = record.delivery;
       if (!delivery?.channel || delivery.channel === "desktop") continue;
-      if (delivery.status !== "claimed" && delivery.status !== "accepted") continue;
+      if (
+        delivery.status !== "claimed" &&
+        delivery.status !== "enqueued" &&
+        delivery.status !== "accepted"
+      )
+        continue;
       if (this.localHourKey(delivery.claimedAt ?? delivery.at) !== hour) continue;
       if (record.priority === "P0") p0Sent += 1;
       else sent += 1;

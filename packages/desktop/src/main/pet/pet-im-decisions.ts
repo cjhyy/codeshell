@@ -526,7 +526,9 @@ export class PetImDecisions {
   ): Promise<DecisionPromptRecord> {
     if (record.prompt.phase !== "desktop" && record.prompt.phase !== "escalated") return record;
     for (const copy of record.copies) {
-      if (copy.status !== "accepted" || copy.channel === undefined) continue;
+      // Enqueued: the gateway outbox has it and delivers it, like an accepted send.
+      if ((copy.status !== "accepted" && copy.status !== "enqueued") || copy.channel === undefined)
+        continue;
       if (!this.answerableOn(entry.delivery.target, copy.channel)) continue;
       const patch = { phase: "im" as const, channel: copy.channel, imAt: this.now() };
       return (

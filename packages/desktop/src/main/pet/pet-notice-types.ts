@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { PetLongTaskCompletionTarget } from "@cjhyy/code-shell-pet";
 import type { NoticeAttention, NoticeChannel } from "@cjhyy/code-shell-pet/protocol";
 import type { NoticeFacts } from "./pet-notice-compose.js";
@@ -189,7 +190,10 @@ export interface NoticeRouterSettings {
   mergeWindowSec?: number;
 }
 
-export type NoticeImSendResult = { accepted: true } | { accepted: false; error: string };
+/** `enqueued`: written to the gateway outbox, whose delivery result settles the record later. */
+export type NoticeImSendResult =
+  | { accepted: true; enqueued?: true }
+  | { accepted: false; error: string };
 
 /** What an IM send carries besides the text; the same record always yields the same payload. */
 export interface NoticeImPayload {
@@ -197,7 +201,24 @@ export interface NoticeImPayload {
   media?: NoticeMedia;
   /** Send this instead when the owner target on that channel is not a private chat. */
   nonDirectBody?: string;
+  /**
+   * The gateway outbox delivers (and retries) it no later than this; past it
+   * the delivery settles `expired` (a P1/P2 owner notice then goes to the digest).
+   */
+  expiresAt?: number;
 }
+
+/** A gateway outbox delivery's final result, as the outbox reports it. */
+export type NoticeOutboxOutcome =
+  | "delivered"
+  | "failed"
+  | "unknown"
+  | "expired"
+  | "revoked"
+  | "unauthorized";
+
+/** Where an outbox delivery stands: under way, settled, or unknown to the outbox. */
+export type NoticeOutboxState = "pending" | { outcome: NoticeOutboxOutcome; error?: string };
 
 /** What one submission did: the routing decision and, when IM was tried, the send. */
 export interface NoticeSubmitResult {
@@ -253,8 +274,9 @@ export interface NoticeDecisionPrompts {
 export interface NoticeOutlets {
   desktop(notice: NoticeSubmission, body: string): void;
   /**
-   * Route targets get the record's claim key always (the gateway outbox keys
-   * its delivery progress by it); owner sends only on idempotent channels.
+   * Write one send to the gateway outbox, keyed by the record's claim key
+   * (see {@link noticeDeliveryKey}). Accepted = enqueued; the outbox reports
+   * the delivery's result later (`PetNoticeRouter.applyOutboxResult`).
    */
   im(
     channel: string,
@@ -263,6 +285,10 @@ export interface NoticeOutlets {
     idempotencyKey: string | undefined,
     payload: NoticeImPayload,
   ): Promise<NoticeImSendResult>;
+  /** Withdraw an enqueued delivery; it is never sent after this resolves. Throws when it could not be. */
+  revoke?(deliveryKey: string): Promise<void>;
+  /** Where an enqueued delivery stands in the outbox (startup recovery). */
+  outboxState?(deliveryKey: string): NoticeOutboxState | undefined;
 }
 
 /** The ledger surface the router uses; `PetNoticeLedger` satisfies it. */
@@ -276,6 +302,7 @@ export type NoticeLedgerPort = Pick<
   | "seenDedupeKeys"
   | "queued"
   | "held"
+  | "enqueued"
   | "recoverOnStartup"
   | "expireQueued"
   | "get"
@@ -365,6 +392,19 @@ export function unpackFacts(raw: unknown): {
     ...(typeof channel === "string" && channel && channel !== "auto" ? { channel } : {}),
     ...(media ? { media } : {}),
   };
+}
+
+/**
+ * The gateway outbox's delivery key for one notice record's send: derived
+ * from the record's claim key, so every resend of the record is the same
+ * delivery (the outbox dedupes it, the relay resumes it, and the platform
+ * client id derived from it lets a channel drop a duplicate).
+ */
+export function noticeDeliveryKey(claimKey: string, target: NoticeTarget): string {
+  return createHash("sha256")
+    .update(target.kind === "route" ? "pet-notice-route\0" : "pet-notice-owner\0")
+    .update(claimKey)
+    .digest("hex");
 }
 
 /** The IM address for `channel`: the origin route only when it lives on that channel. */

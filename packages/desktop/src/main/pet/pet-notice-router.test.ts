@@ -663,7 +663,8 @@ describe("PetNoticeRouter.submit", () => {
         channel: "lark",
         target: { kind: "route", route: routeA },
         key: expect.stringMatching(/^[0-9a-f]{24}$/u),
-        payload: { kind: "session.done" },
+        // A route reply is retried by the outbox for a day at most.
+        payload: { kind: "session.done", expiresAt: expect.any(Number) },
       }),
     ]);
     await h.router.submit(notice({ facts: { title: "Owner" }, channel: "lark" }));
@@ -728,7 +729,11 @@ describe("PetNoticeRouter.submit", () => {
     expect(await h.router.submit(notice({ channel: "lark", media }))).toMatchObject({
       outlet: "both",
     });
-    expect(h.im[0]!.payload).toEqual({ kind: "session.done", media });
+    expect(h.im[0]!.payload).toEqual({
+      kind: "session.done",
+      media,
+      expiresAt: expect.any(Number),
+    });
     expect(await h.router.submit(notice({ channel: "lark", attention: "digest", media }))).toEqual({
       outlet: "desktop",
       reason: "media-not-digested",
@@ -746,7 +751,11 @@ describe("PetNoticeRouter.submit", () => {
     // The resend runs in the background so it never delays the inbound turn.
     await h.router.resendsSettled();
     expect(h.im).toHaveLength(1);
-    expect(h.im[0]!.payload).toEqual({ kind: "session.done", media });
+    expect(h.im[0]!.payload).toEqual({
+      kind: "session.done",
+      media,
+      expiresAt: expect.any(Number),
+    });
     expect(h.ledger.queued()).toEqual([]);
   });
 
@@ -1063,7 +1072,11 @@ describe("PetNoticeRouter frozen media", () => {
       outlet: "both",
       im: "lark",
     });
-    expect(h.im[0]!.payload).toEqual({ kind: "session.done", media: { button } });
+    expect(h.im[0]!.payload).toEqual({
+      kind: "session.done",
+      media: { button },
+      expiresAt: expect.any(Number),
+    });
     expect(h.mediaLogs).toEqual(["pet.notice.media_freeze_failed"]);
     expect(await folders()).toEqual([]);
   });

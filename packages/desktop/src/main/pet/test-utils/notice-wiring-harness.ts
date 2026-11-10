@@ -10,6 +10,7 @@ import type { GatewayControlEventInput } from "../../im-gateway-control-server.j
 import type { ImGatewayOwnerChannel } from "../../im-gateway-service.js";
 import { collectImDecisions, PetImDecisions } from "../pet-im-decisions.js";
 import type { NoticeSubmission } from "../pet-notice-router.js";
+import type { NoticeOutboxOutcome, NoticeOutboxState } from "../pet-notice-types.js";
 import {
   wirePetNotices,
   type PetNoticeWiring,
@@ -97,8 +98,29 @@ export function longTask(overrides: Partial<PetLongTask> = {}): PetLongTask {
 export interface OwnerSend {
   targetId: string;
   text: string;
-  key?: string;
+  button?: { text: string; url: string };
   attachments?: string[];
+}
+
+/** The raw platform destinations behind the fake gateway's opaque owner target ids. */
+export const OWNER_DESTINATIONS: Readonly<Record<string, { channel: string; target: string }>> = {
+  "wechat:owner": { channel: "wechat", target: "owner-dm" },
+  "lark:owner": { channel: "lark", target: "dm-1" },
+};
+
+/**
+ * The fake gateway outbox: every IM notice lands here. By default each
+ * delivery settles `delivered` right away (as a healthy relay would report);
+ * `hold` keeps them pending, `outcome` picks another result per event.
+ */
+export interface FakeOutbox {
+  events: GatewayControlEventInput[];
+  revoked: string[];
+  hold: boolean;
+  outcome?: (event: GatewayControlEventInput) => NoticeOutboxOutcome | undefined;
+  state(deliveryKey: string): NoticeOutboxState | undefined;
+  /** Report a result the way the server does (`onEventResult`). */
+  settle(deliveryKey: string, outcome: NoticeOutboxOutcome, error?: string): void;
 }
 
 export interface Harness {
@@ -115,9 +137,11 @@ export interface Harness {
    * Waits on the work itself, not on a clock, so a loaded machine cannot race it.
    */
   idle(): Promise<void>;
+  /** Outbox events addressed to an IM conversation (route targets). */
   published: GatewayControlEventInput[];
+  /** Outbox events addressed to an owner target, as the owner would read them. */
   ownerSends: OwnerSend[];
-  materialized: string[][];
+  outbox: FakeOutbox;
   desktop: DesktopNotificationInput[];
   sessions: DesktopPetSession[];
   pending: DesktopPendingDecision[];
@@ -125,6 +149,8 @@ export interface Harness {
   routes: ConversationSessionRoute[];
   channels: ImGatewayOwnerChannel[];
   directTargets: Set<string>;
+  /** Owner targets with no stored WeChat context (`proactiveReady: "unknown"`). */
+  tokenlessTargets: Set<string>;
   snapshot(): DesktopPetProjectionSnapshot;
   setWorkerState(state: DesktopPetProjectionSnapshot["workerState"], generation?: number): void;
   emitProjection(event: DesktopPetProjectionEvent): void;
@@ -142,9 +168,28 @@ export function harness(overrides: Partial<PetNoticeWiringDeps> = {}): Harness {
   ];
   /** Owner targets confirmed as private chats (tests drop one to model a group). */
   const directTargets = new Set(["wechat:owner", "lark:owner"]);
+  const tokenlessTargets = new Set<string>();
   const published: GatewayControlEventInput[] = [];
   const ownerSends: OwnerSend[] = [];
-  const materialized: string[][] = [];
+  const states = new Map<string, NoticeOutboxState>();
+  /** Outbox results handed to the wiring, until it has applied them. */
+  const results: Promise<void>[] = [];
+  const ref: { wiring?: PetNoticeWiring } = {};
+  const outbox: FakeOutbox = {
+    events: [],
+    revoked: [],
+    hold: false,
+    state: (key) => states.get(key),
+    settle(key, outcome, error) {
+      states.set(key, { outcome, ...(error ? { error } : {}) });
+      const applied = ref.wiring?.outboxResult({
+        deliveryKey: key,
+        outcome,
+        ...(error ? { error } : {}),
+      });
+      if (applied) results.push(applied);
+    },
+  };
   const desktop: DesktopNotificationInput[] = [];
   const listeners = new Set<(event: DesktopPetProjectionEvent) => void>();
   let handler: HostActionHandler | undefined;
@@ -201,37 +246,45 @@ export function harness(overrides: Partial<PetNoticeWiringDeps> = {}): Harness {
           maxTextLength: 8_000,
           maxAttachments: 1,
           maxAttachmentBytes: 1_000,
-          proactiveReady: "ready" as const,
+          proactiveReady: tokenlessTargets.has(target.id)
+            ? ("unknown" as const)
+            : ("ready" as const),
           ...(directTargets.has(target.id) ? { isDirect: true as const } : {}),
         })) as never,
-      sendOwnerMessage: async (targetId, text, attachments, options) => {
-        ownerSends.push({
-          targetId,
-          text,
-          ...(options?.idempotencyKey ? { key: options.idempotencyKey } : {}),
-          ...(attachments.length > 0
-            ? { attachments: attachments.map((attachment) => attachment.name) }
-            : {}),
-        });
-        return {};
-      },
-      supportsIdempotentOwnerSend: (channel) => channel === "wechat",
+      resolveOwnerTarget: (targetId) => OWNER_DESTINATIONS[targetId],
       lastOwnerInboundChannel: () => "wechat",
       isOwnerConversation: (channel, target) =>
         (channel === "wechat" && target === "owner-dm") ||
         (channel === "lark" && target === "dm-1"),
     },
-    publishRoute: async (event) => {
-      published.push(event);
-    },
-    materializeAttachments: async (files) => {
-      materialized.push(files.map((file) => file.path));
-      return files.map((file) => ({
-        kind: file.kind,
-        name: file.name,
-        mimeType: file.mimeType,
-        data: new Uint8Array(),
-      }));
+    outbox: {
+      publish: async (event) => {
+        const key = event.deliveryKey!;
+        // Idempotent by key, like the real outbox.
+        if (states.get(key) === "pending") return;
+        states.set(key, "pending");
+        outbox.events.push(event);
+        const owner = Object.entries(OWNER_DESTINATIONS).find(
+          ([, raw]) => raw.channel === event.target?.channel && raw.target === event.target?.target,
+        );
+        if (owner)
+          ownerSends.push({
+            targetId: owner[0],
+            text: event.text,
+            ...(event.button ? { button: event.button } : {}),
+            ...(event.attachments?.length
+              ? { attachments: event.attachments.map((file) => file.name) }
+              : {}),
+          });
+        else published.push(event);
+        if (!outbox.hold)
+          queueMicrotask(() => outbox.settle(key, outbox.outcome?.(event) ?? "delivered"));
+      },
+      revoke: async (key) => {
+        outbox.revoked.push(key);
+        if (states.get(key) === "pending") states.set(key, { outcome: "revoked" });
+      },
+      state: (key) => states.get(key),
     },
     notifyDesktop: async (input) => {
       desktop.push(input);
@@ -247,6 +300,7 @@ export function harness(overrides: Partial<PetNoticeWiringDeps> = {}): Harness {
     ...overrides,
   } as PetNoticeWiringDeps);
   if (!handler) throw new Error("host action handler was not registered");
+  ref.wiring = wiring;
   const submitted: NoticeSubmission[] = [];
   const submissions: Promise<unknown>[] = [];
   const realSubmit = wiring.router.submit.bind(wiring.router);
@@ -258,12 +312,15 @@ export function harness(overrides: Partial<PetNoticeWiringDeps> = {}): Harness {
   };
   const idle = async (): Promise<void> => {
     // A round can submit more notices (a parked report, a digest): repeat until none appear.
-    for (let seen = -1; seen !== submissions.length; ) {
-      seen = submissions.length;
+    for (let seen = -1; seen !== submissions.length + results.length; ) {
+      seen = submissions.length + results.length;
       await wiring.ready;
       const ids = new Set(sessions.map((entry) => entry.agentSessionId));
       await Promise.all([...ids].map((id) => wiring.watcher.observe(id, [])));
       await Promise.allSettled(submissions);
+      // Outbox results the fake reported (right after a publish, by default).
+      await pause(0);
+      await Promise.allSettled(results);
     }
   };
   return {
@@ -281,7 +338,7 @@ export function harness(overrides: Partial<PetNoticeWiringDeps> = {}): Harness {
     idle,
     published,
     ownerSends,
-    materialized,
+    outbox,
     desktop,
     sessions,
     pending,
@@ -289,6 +346,7 @@ export function harness(overrides: Partial<PetNoticeWiringDeps> = {}): Harness {
     routes,
     channels,
     directTargets,
+    tokenlessTargets,
     snapshot,
     setWorkerState: (state, next) => {
       workerState = state;

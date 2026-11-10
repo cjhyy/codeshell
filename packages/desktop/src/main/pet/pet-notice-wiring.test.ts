@@ -162,7 +162,7 @@ describe("rule watcher wiring", () => {
 
 describe("startup", () => {
   test("a hanging resend during recovery does not hold up ready", async () => {
-    // A young claim from before the restart, on an idempotent channel: recovery resends it.
+    // A young claim from before the restart that the outbox never took: recovery writes it now.
     const before = new PetNoticeLedger({
       path: join(env.dir, "pet", "notices.json"),
       now: () => env.clock,
@@ -182,18 +182,13 @@ describe("startup", () => {
     const attempts: string[] = [];
     current = harness({
       imTimeoutMs: 60_000,
-      gateway: {
-        ownerChannels: () => [
-          { id: "wechat", label: "微信", ready: "ready", targetId: "wechat:owner", isDirect: true },
-        ],
-        listOwnerMessageTargets: () => [],
-        sendOwnerMessage: (_targetId, text) => {
-          attempts.push(text);
+      outbox: {
+        publish: (event) => {
+          attempts.push(event.text);
           return new Promise(() => undefined);
         },
-        supportsIdempotentOwnerSend: () => true,
-        lastOwnerInboundChannel: () => "wechat",
-        isOwnerConversation: () => false,
+        revoke: async () => undefined,
+        state: () => undefined,
       },
     });
     const outcome = await Promise.race([

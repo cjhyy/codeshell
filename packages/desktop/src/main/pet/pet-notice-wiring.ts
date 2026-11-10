@@ -63,8 +63,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
   const view = createNoticeProjectionView(deps);
   const outlets = createNoticeOutlets({
     gateway: deps.gateway,
-    publishRoute: (event) => deps.publishRoute(event),
-    materializeAttachments: (files) => deps.materializeAttachments(files),
+    outbox: deps.outbox,
     notifyDesktop: (input) => deps.notifyDesktop(input),
     log,
   });
@@ -90,7 +89,8 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     },
     imChannels: outlets.imChannels,
     lastInboundChannel: () => deps.gateway.lastOwnerInboundChannel(),
-    supportsIdempotentSend: (channel) => deps.gateway.supportsIdempotentOwnerSend(channel),
+    // Every IM send goes through the outbox, which dedupes a resend by its key.
+    supportsIdempotentSend: () => true,
     isDecisionStillPending: view.isDecisionStillPending,
     wasSessionViewedSince: (sessionId, ms) => {
       let focused: boolean;
@@ -272,6 +272,15 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
       if (outcomes.length === 0) return;
       // Chained on one promise, so per-Session order is preserved.
       void ready.then(() => (disposed ? undefined : watcher.observe(sessionId, outcomes)));
+    },
+    outboxResult(result) {
+      return ready
+        .then(() =>
+          disposed
+            ? undefined
+            : router.applyOutboxResult(result.deliveryKey, result.outcome, result.error),
+        )
+        .catch((error) => log("pet.notice.outbox_result_failed", { error: errorText(error) }));
     },
     notifyTaskClosed: closure.notifyTaskClosed,
     armDelegationRule: closure.armDelegationRule,

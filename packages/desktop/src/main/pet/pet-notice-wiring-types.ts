@@ -1,9 +1,7 @@
 import type { ConversationSessionRoute, PetLongTask } from "@cjhyy/code-shell-pet";
 import type { NoticeChannel, RuleEffect } from "@cjhyy/code-shell-pet/protocol";
-import type { OutgoingAttachment } from "@cjhyy/code-shell-chat";
 import type { DesktopNotificationInput } from "../desktop-notifier.js";
 import type { HostActionHandler } from "../host-action-dispatch.js";
-import type { GatewayControlEventInput } from "../im-gateway-control-server.js";
 import type { PetNotificationSettingsView } from "../../shared/pet-notices.js";
 import type { PetDeliveryResolver } from "./pet-delivery-plan.js";
 import type { PetIpcAttention } from "./pet-ipc.js";
@@ -14,12 +12,12 @@ import type {
   PetNoticePresenceTimers,
 } from "./pet-notice-decision-hooks.js";
 import type { PetNoticeLedger } from "./pet-notice-ledger.js";
-import type { PetNoticeWiringGateway } from "./pet-notice-outlets.js";
+import type { PetNoticeOutbox, PetNoticeWiringGateway } from "./pet-notice-outlets.js";
 import type { PetInboundOrigin, PetInboundReplay } from "./pet-notice-replay.js";
 import type { PetNoticeRouter } from "./pet-notice-router.js";
 import type { PetNotificationSettings } from "./pet-notice-settings.js";
 import type { PetTaskClosureNotice } from "./pet-notice-task-closure.js";
-import type { NoticeMediaAttachment, PetAttentionOptions } from "./pet-notice-types.js";
+import type { NoticeOutboxOutcome, PetAttentionOptions } from "./pet-notice-types.js";
 import type { PetReceiptStore } from "./pet-receipt-store.js";
 import type { NoticeRule, PetRuleStore } from "./pet-rule-store.js";
 import type { PetSessionRuleWatcher } from "./pet-session-rule-watcher.js";
@@ -59,12 +57,8 @@ export interface PetNoticeWiringDeps {
     | { notifyRoutesForSession(sessionId: string): Promise<ConversationSessionRoute[]> }
     | undefined;
   gateway: PetNoticeWiringGateway;
-  /** Durable gateway outbox publish (`publishGatewayControlEvent`), for replies to a route. */
-  publishRoute(event: GatewayControlEventInput): Promise<void>;
-  /** Reads validated attachment descriptors into sendable bytes (owner sends only). */
-  materializeAttachments(
-    attachments: readonly NoticeMediaAttachment[],
-  ): Promise<OutgoingAttachment[]>;
+  /** The durable gateway outbox every IM notice is written to (route and owner alike). */
+  outbox: PetNoticeOutbox;
   /** Native desktop notification (`DesktopNotifier.notify`); click opens `sessionId`. */
   notifyDesktop(input: DesktopNotificationInput): Promise<unknown>;
   /** The user settings object (raw); only `pet.notifications` is read. */
@@ -119,6 +113,12 @@ export interface PetNoticeWiring {
    * rule watcher, the task closure, decision prompts and the bound-Session bridge.
    */
   deliveries: PetDeliveryResolver;
+  /** The gateway outbox settled a delivery (`GatewayControlServer.onEventResult`). */
+  outboxResult(result: {
+    deliveryKey: string;
+    outcome: NoticeOutboxOutcome;
+    error?: string;
+  }): Promise<void>;
   /** Sends parked mid-run reports, then waits for pending rule and notice writes (shutdown). */
   flush(): Promise<void>;
   /** The settings this wiring currently routes with. */

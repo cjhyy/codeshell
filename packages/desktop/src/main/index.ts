@@ -1881,8 +1881,15 @@ async function createWindow(): Promise<BrowserWindow> {
       longTasks: longTaskStore,
       sessionRoutes: () => sessionBridge?.routes,
       gateway: imGatewayService,
-      publishRoute: publishGatewayControlEvent,
-      materializeAttachments: materializeOutgoingAttachments,
+      outbox: {
+        publish: publishGatewayControlEvent,
+        revoke: async (deliveryKey) => {
+          const gateway = gatewayControlServer;
+          if (!gateway) throw new Error("IM Gateway notification outbox is unavailable");
+          await gateway.revokeDelivery(deliveryKey, "notice-revoked");
+        },
+        state: (deliveryKey) => gatewayControlServer?.deliveryState(deliveryKey),
+      },
       notifyDesktop: async (input) => desktopNotifier?.notify(input),
       readSettings: () => new SettingsManager(resolveNoRepoCwd(), "full").getForScope("user"),
       presence: {
@@ -3451,8 +3458,10 @@ app.whenReady().then(async () => {
       (await petImDecisions?.replyToSession(request)) ??
       (sessionBridge ? sessionBridge.routeInbound(request) : { kind: "not-bound" }),
   });
-  // Retry copies the outbox appends get the same direct hand-off as a fresh publication.
+  // Delivery results settle the notices that made them; retry copies the
+  // outbox appends get the same direct hand-off as a fresh publication.
   const controlServer = gatewayControlServer;
+  controlServer.onEventResult((result) => void petNotices?.outboxResult(result));
   controlServer.onEventAppended((event) => handOffDirectDelivery(controlServer, event));
   await gatewayControlServer.start().catch((error) => {
     dlog("main", "im_gateway.desktop_control.start_failed", { error: String(error) });
