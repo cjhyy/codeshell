@@ -1,5 +1,7 @@
 # Architecture review implementation status — 2026-11-10
 
+> Latest host follow-up: the user requested direct implementation and a first local version, without further Codex/CC delegation. D2/E3 and the Bun lockfile are now implemented; a real macOS arm64 preview passed packaged UI acceptance. See [the current preview delivery](architecture-review-preview-20261110.md). The original Astra handoff below is retained as historical evidence; its pending-item state is superseded by that follow-up, not by a blanket claim of full CI completion.
+
 This is an implementation/validation handoff, not CC review and not a completion claim. No PR has been merged. The original checklist is preserved without false ✅ markers.
 
 ## Candidate and isolation
