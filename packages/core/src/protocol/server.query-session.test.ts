@@ -20,6 +20,7 @@ function fakeEngine(slice: EngineConfigSlice): Engine {
   return createFakeEngine({
     // Preserve the optional-capability fallbacks exercised by this fixture.
     dispose: undefined,
+    getComposition: undefined,
     getSessionManager: undefined,
     prepareSessionCloseFinalization: undefined,
 
