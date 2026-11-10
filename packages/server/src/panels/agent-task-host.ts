@@ -9,6 +9,7 @@ import { isAbsolute } from "node:path";
 import { SettingsManager } from "@cjhyy/code-shell-core";
 import { getMergedCatalog } from "@cjhyy/code-shell-core/internal";
 import { WorkerBridgeCore, type WorkerRpcOutcome } from "../worker-bridge-core.js";
+import { headlessWorkerEnv } from "../headless-worker-env.js";
 import {
   PanelAppAgentTaskService,
   type PanelAgentTaskOwner,
@@ -360,19 +361,14 @@ export function createPanelAgentTaskHost(options: PanelAgentTaskHostOptions = {}
           entryPath,
           execPath: options.execPath,
           fallbackCwd: () => scope.cwd,
-          buildEnv: () => ({
-            ...(options.buildEnv?.() ?? {
-              ...process.env,
-              CODE_SHELL_CAPABILITY_MODULES: `${import.meta.resolve("@cjhyy/code-shell-capability-coding")}#createCodingModule`,
-            }),
+          buildEnv: () =>
             // A task worker has no Desktop main bridge, even inside Desktop Web.
-            CODE_SHELL_REMOTE_LINK_CLIENT_SECRET: undefined,
-            CODE_SHELL_OPERATION_BATCH_ACCESS: undefined,
-            CODE_SHELL_MODEL_REQUEST_SIGNING: undefined,
-            CODE_SHELL_WORKSPACE_ACCESS: undefined,
-            CODE_SHELL_HOST_MCP_SERVERS: undefined,
-            CODE_SHELL_CREDENTIAL_ACCESS: "local",
-          }),
+            headlessWorkerEnv(
+              options.buildEnv?.() ?? {
+                ...process.env,
+                CODE_SHELL_CAPABILITY_MODULES: `${import.meta.resolve("@cjhyy/code-shell-capability-coding")}#createCodingModule`,
+              },
+            ),
           onWorkerStarted: ({ pid }) => {
             running.pid = pid;
           },

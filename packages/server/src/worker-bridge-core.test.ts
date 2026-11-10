@@ -18,6 +18,7 @@ import {
   type WorkerExitInfo,
   type WorkerFrameMeta,
 } from "./worker-bridge-core.js";
+import { headlessWorkerEnv } from "./index.worker.js";
 
 const TEST_META: WorkerFrameMeta = { origin: "host", producer: "worker-bridge-test" };
 
@@ -132,6 +133,53 @@ function waitForLine(core: WorkerBridgeCore, match: (line: string) => boolean): 
     });
   });
 }
+
+describe("headlessWorkerEnv", () => {
+  test("clears Desktop host access without mutating the base environment", () => {
+    const base = Object.freeze({
+      PATH: "/fixture/bin",
+      CODE_SHELL_CAPABILITY_MODULES: "fixture#capability",
+      CODE_SHELL_REMOTE_LINK_CLIENT_SECRET: "fixture-secret",
+      CODE_SHELL_OPERATION_BATCH_ACCESS: "host",
+      CODE_SHELL_MODEL_REQUEST_SIGNING: "host",
+      CODE_SHELL_WORKSPACE_ACCESS: "host",
+      CODE_SHELL_HOST_MCP_SERVERS: "fixture-mcp",
+      CODE_SHELL_CREDENTIAL_ACCESS: "host",
+    });
+
+    expect(headlessWorkerEnv(base)).toEqual({
+      PATH: "/fixture/bin",
+      CODE_SHELL_CAPABILITY_MODULES: "fixture#capability",
+      CODE_SHELL_REMOTE_LINK_CLIENT_SECRET: undefined,
+      CODE_SHELL_OPERATION_BATCH_ACCESS: undefined,
+      CODE_SHELL_MODEL_REQUEST_SIGNING: undefined,
+      CODE_SHELL_WORKSPACE_ACCESS: undefined,
+      CODE_SHELL_HOST_MCP_SERVERS: undefined,
+      CODE_SHELL_CREDENTIAL_ACCESS: "local",
+    });
+    expect(base.CODE_SHELL_CREDENTIAL_ACCESS).toBe("host");
+    expect(base.CODE_SHELL_REMOTE_LINK_CLIENT_SECRET).toBe("fixture-secret");
+  });
+
+  test("applies explicit caller overrides after headless defaults", () => {
+    expect(
+      headlessWorkerEnv(
+        { CODE_SHELL_DATA_ROOT: "/old", CODE_SHELL_CAPABILITY_MODULES: "old#capability" },
+        {
+          CODE_SHELL_DATA_ROOT: "/isolated",
+          CODE_SHELL_CAPABILITY_MODULES: "new#capability",
+          ELECTRON_RUN_AS_NODE: "1",
+          CODE_SHELL_CREDENTIAL_ACCESS: "explicit-access",
+        },
+      ),
+    ).toMatchObject({
+      CODE_SHELL_DATA_ROOT: "/isolated",
+      CODE_SHELL_CAPABILITY_MODULES: "new#capability",
+      ELECTRON_RUN_AS_NODE: "1",
+      CODE_SHELL_CREDENTIAL_ACCESS: "explicit-access",
+    });
+  });
+});
 
 describe("WorkerBridgeCore", () => {
   test.each(["accepted-run", 42])(
