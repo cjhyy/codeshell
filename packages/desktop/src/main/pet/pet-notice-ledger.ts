@@ -645,10 +645,10 @@ export class PetNoticeLedger {
     return found ? structuredClone(found) : undefined;
   }
 
-  /** Every record that carries a decision prompt, oldest first. */
-  prompts(): NoticeRecord[] {
+  /** Records that carry a decision prompt (`only` picks them by prompt), oldest first. */
+  prompts(only?: (prompt: NoticeDecisionPrompt) => boolean): NoticeRecord[] {
     return [...this.state.records.values()]
-      .filter((record) => record.prompt !== undefined)
+      .filter((record) => record.prompt !== undefined && (!only || only(record.prompt)))
       .sort((a, b) => a.createdAt - b.createdAt)
       .map((record) => structuredClone(record));
   }
@@ -659,6 +659,29 @@ export class PetNoticeLedger {
       .filter((record) => record.sessionId === sessionId && record.requestId === requestId)
       .sort((a, b) => a.createdAt - b.createdAt)
       .map((record) => structuredClone(record));
+  }
+
+  /**
+   * Give a record written before prompts were recorded (an older build) its
+   * prompt, in `phase`. A record that already has one is returned unchanged.
+   */
+  adoptPrompt(
+    id: string,
+    input: NonNullable<NoticeRecordInput["prompt"]>,
+    phase: Extract<NoticePromptPhase, "desktop" | "escalated">,
+  ): Promise<NoticeRecord> {
+    const snapshot = structuredClone(input);
+    return this.mutate((staged, touched) => {
+      const current = staged.records.get(id);
+      if (!current) throw new PetNoticeLedgerError("notice_not_found");
+      if (current.prompt) return current;
+      const prompt = parsePrompt(JSON.parse(JSON.stringify({ ...initialPrompt(snapshot), phase })));
+      if (!prompt) throw new PetNoticeLedgerError("invalid_notice");
+      const record = { ...current, prompt };
+      staged.records.set(id, record);
+      touched.add(id);
+      return record;
+    });
   }
 
   /**

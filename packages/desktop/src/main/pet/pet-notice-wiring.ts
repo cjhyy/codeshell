@@ -55,7 +55,10 @@ import { PetReceiptStore } from "./pet-receipt-store.js";
 import { PetRuleStore, type NoticeRule } from "./pet-rule-store.js";
 import { PetSessionRuleWatcher, type NoticeDraft } from "./pet-session-rule-watcher.js";
 import type { SessionOutcome } from "./session-outcome.js";
-import type { DesktopPetProjectionSnapshot } from "./pet-state-aggregator.js";
+import type {
+  DesktopPetProjectionEvent,
+  DesktopPetProjectionSnapshot,
+} from "./pet-state-aggregator.js";
 
 /** Notification preferences read from `settings.pet.notifications` (all optional). */
 export interface PetNotificationSettings extends Required<NoticeRouterSettings> {
@@ -67,6 +70,8 @@ export interface PetNotificationSettings extends Required<NoticeRouterSettings> 
 export const DEFAULT_QUIET_HOURS = { start: "23:00", end: "08:30" } as const;
 const DEFAULT_MERGE_WINDOW_SEC = 600;
 const SETTINGS_TTL_MS = 5_000;
+/** Window focus changes are re-checked this long after they settle. */
+const PRESENCE_SETTLE_MS = 1_000;
 const MAX_VIEWED_SESSIONS = 500;
 const MAX_TITLE = 200;
 const MAX_SUMMARY = 2_000;
@@ -129,7 +134,15 @@ export interface PetNoticeWiringDeps {
   longTasks: {
     activeForSession(sessionId: string): PetLongTask | undefined;
     getSnapshot(): { tasks: readonly PetLongTask[] };
+    /** Tasks changed (an IM-started task may now own where a prompt goes). */
+    subscribe?(listener: () => void): () => void;
   };
+  /**
+   * The worker process is alive. A failed projection snapshot reads as
+   * "disconnected" while it may still be running; only a worker that is
+   * really gone (or a new one) ends the runs it was driving.
+   */
+  hasLiveWorker?: () => boolean;
   /**
    * IM conversations that receive a Session's turn replies; resolved lazily
    * (built after this wiring). A done / failed notice for a conversation the
@@ -159,6 +172,11 @@ export interface PetNoticeWiringDeps {
   powerEvents?: PetNoticePowerEvents;
   /** Electron `app`: losing window focus can make the owner away at once. */
   focusEvents?: PetNoticeFocusEvents;
+  /** Test seam: the presence watch's timers (idle threshold, focus settling). */
+  presenceTimers?: {
+    setTimeout(callback: () => void, delay: number): unknown;
+    clearTimeout(timer: unknown): void;
+  };
   now?: () => number;
   log?: (event: string, data: Record<string, unknown>) => void;
   /** Test seams: the router's IM timeout and the owner's UTC offset. */
@@ -270,6 +288,8 @@ export interface PetDecisionNoticeHooks {
   ownerChannelIsDirect(channel: string): boolean;
   /** The projection's status for a decision; undefined once it is gone. */
   decisionStatus(sessionId: string, requestId: string): string | undefined;
+  /** The projection reflects a live worker (not a failed or lost snapshot). */
+  projectionLive(): boolean;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -655,15 +675,30 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
 
   /**
    * Presence flips, only while a listener waits for one. Window blur / focus
-   * and a screen lock are events; the idle threshold is not, so while the
-   * owner is present a timer looks again when it would pass without input.
+   * and a screen lock are events, re-checked after they settle (switching
+   * between CodeShell windows blurs one and focuses the next). The idle
+   * threshold is not an event, so while the owner is present a timer looks
+   * again when it would pass without input.
    */
   const awayListeners = new Set<() => void>();
+  const presenceTimers = deps.presenceTimers ?? {
+    setTimeout: (callback: () => void, delay: number) => {
+      const timer = setTimeout(callback, delay);
+      timer.unref?.();
+      return timer;
+    },
+    clearTimeout: (timer: unknown) => clearTimeout(timer as ReturnType<typeof setTimeout>),
+  };
   let lastPresent: boolean | undefined;
-  let idleTimer: ReturnType<typeof setTimeout> | undefined;
+  let idleTimer: unknown;
+  let settleTimer: unknown;
+  const stopPresenceTimers = (): void => {
+    if (idleTimer !== undefined) presenceTimers.clearTimeout(idleTimer);
+    if (settleTimer !== undefined) presenceTimers.clearTimeout(settleTimer);
+    idleTimer = settleTimer = undefined;
+  };
   const checkPresence = (): void => {
-    if (idleTimer !== undefined) clearTimeout(idleTimer);
-    idleTimer = undefined;
+    stopPresenceTimers();
     if (awayListeners.size === 0 || disposed) {
       lastPresent = undefined;
       return;
@@ -684,8 +719,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
         idle = 0;
       }
       const left = Math.max(1, settings().presenceIdleSec - (Number.isFinite(idle) ? idle : 0));
-      idleTimer = setTimeout(checkPresence, left * 1_000 + 250);
-      idleTimer.unref?.();
+      idleTimer = presenceTimers.setTimeout(checkPresence, left * 1_000 + 250);
     }
     if (!changed) return;
     for (const listener of [...awayListeners]) {
@@ -696,9 +730,16 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
       }
     }
   };
-  deps.focusEvents?.on("browser-window-blur", checkPresence);
-  deps.focusEvents?.on("browser-window-focus", checkPresence);
-  deps.powerEvents?.on("lock-screen", checkPresence);
+  /** Look once the focus has settled; a change that does not hold is not one. */
+  const presenceEvent = (): void => {
+    if (awayListeners.size === 0 || disposed) return;
+    if (settleTimer !== undefined) presenceTimers.clearTimeout(settleTimer);
+    settleTimer = presenceTimers.setTimeout(checkPresence, PRESENCE_SETTLE_MS);
+  };
+  deps.focusEvents?.on("browser-window-blur", presenceEvent);
+  deps.focusEvents?.on("browser-window-focus", presenceEvent);
+  deps.powerEvents?.on("lock-screen", presenceEvent);
+  const unsubscribeTasks = deps.longTasks.subscribe?.(() => nudgeDecisions(""));
 
   const decisions: PetDecisionNoticeHooks = {
     deliveryFor(sessionId, task) {
@@ -731,6 +772,11 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     onAwayChange(listener) {
       awayListeners.add(listener);
       if (awayListeners.size === 1) checkPresence();
+      // Already away: that is the change this listener is waiting for.
+      if (lastPresent === false)
+        queueMicrotask(() => {
+          if (awayListeners.has(listener)) listener();
+        });
       return () => {
         awayListeners.delete(listener);
         if (awayListeners.size === 0) checkPresence();
@@ -742,6 +788,9 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
       } catch {
         return false;
       }
+    },
+    projectionLive() {
+      return snapshot().workerState === "active";
     },
     decisionStatus(sessionId, requestId) {
       return snapshot().pending.find(
@@ -884,17 +933,35 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
   };
   deps.powerEvents?.on("resume", flushDueDigest);
   deps.powerEvents?.on("unlock-screen", flushDueDigest);
+  /**
+   * The worker that drove the Sessions' runs is gone, so those runs never
+   * close: their parked reports go out (as "no reply forwarded"). The
+   * aggregator reports a loss as a reset whose snapshot names the state, and
+   * also reads one failed snapshot as "disconnected" while the worker may be
+   * alive. Gone means: reclaimed, no live worker, or the next live snapshot
+   * comes from another worker generation.
+   */
+  let suspectGeneration: number | undefined;
+  const workerGone = (event: DesktopPetProjectionEvent): boolean => {
+    if (event.kind !== "reset" && event.kind !== "worker-state") return false;
+    const current = snapshot();
+    const state = event.kind === "worker-state" ? event.state : current.workerState;
+    if (state === "disconnected" || state === "reclaimed") {
+      if (state === "reclaimed" || deps.hasLiveWorker?.() === false) {
+        suspectGeneration = undefined;
+        return true;
+      }
+      suspectGeneration ??= current.generation;
+      return false;
+    }
+    if (state !== "active" || suspectGeneration === undefined) return false;
+    const replaced = current.generation !== suspectGeneration;
+    suspectGeneration = undefined;
+    return replaced;
+  };
   const unsubscribeProjection = deps.projection.subscribe((event) => {
     void ready.then(() => (disposed ? undefined : watcher.observeProjection(event)));
-    // The worker went away: runs it was driving never close, so reports
-    // parked until their run's end go out now (as "no reply forwarded"). The
-    // aggregator reports a loss as a reset whose snapshot names the state.
-    const lost = (state: string) => state === "disconnected" || state === "reclaimed";
-    if (
-      (event.kind === "worker-state" && lost(event.state)) ||
-      (event.kind === "reset" && lost(snapshot().workerState))
-    )
-      void ready.then(() => (disposed ? undefined : watcher.flush()));
+    if (workerGone(event)) void ready.then(() => (disposed ? undefined : watcher.flush()));
     // A decision answered anywhere (or timed out) must never be replayed later.
     const resolved =
       event.kind === "pending-remove"
@@ -1113,9 +1180,10 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
       unsubscribeProjection();
       deps.powerEvents?.removeListener("resume", flushDueDigest);
       deps.powerEvents?.removeListener("unlock-screen", flushDueDigest);
-      deps.powerEvents?.removeListener("lock-screen", checkPresence);
-      deps.focusEvents?.removeListener("browser-window-blur", checkPresence);
-      deps.focusEvents?.removeListener("browser-window-focus", checkPresence);
+      deps.powerEvents?.removeListener("lock-screen", presenceEvent);
+      deps.focusEvents?.removeListener("browser-window-blur", presenceEvent);
+      deps.focusEvents?.removeListener("browser-window-focus", presenceEvent);
+      unsubscribeTasks?.();
       awayListeners.clear();
       checkPresence();
       // Reports parked on runs that will now never close still reach the

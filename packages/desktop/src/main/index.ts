@@ -1855,6 +1855,7 @@ async function createWindow(): Promise<BrowserWindow> {
       },
       powerEvents: powerMonitor,
       focusEvents: app,
+      hasLiveWorker: () => bridge?.hasLiveWorker() ?? false,
     });
     petNotices = notices;
     const petMemoryStoreInstance = new PetMemoryStore(
@@ -2009,6 +2010,7 @@ async function createWindow(): Promise<BrowserWindow> {
       ownerChannelIsDirect: notices.decisions.ownerChannelIsDirect,
       isAway: notices.decisions.isAway,
       decisionStatus: notices.decisions.decisionStatus,
+      projectionLive: notices.decisions.projectionLive,
       projection: aggregator,
       nudges: [notices.decisions.onBlocked],
       onAwayChange: notices.decisions.onAwayChange,

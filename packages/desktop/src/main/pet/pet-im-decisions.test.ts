@@ -79,8 +79,16 @@ class FakeRouter implements NoticeDecisionPrompts {
     const record = this.records.get(code);
     return record ? structuredClone(record) : undefined;
   }
-  decisionRecords(): DecisionPromptRecord[] {
-    return [...this.records.values()].map((record) => structuredClone(record));
+  decisionRecords(
+    only?: (prompt: DecisionPromptRecord["prompt"]) => boolean,
+  ): DecisionPromptRecord[] {
+    return [...this.records.values()]
+      .filter((record) => !only || only(record.prompt))
+      .map((record) => structuredClone(record));
+  }
+  /** Records an older build wrote without a lifecycle (none here unless a test adds one). */
+  async adoptDecision(): Promise<DecisionPromptRecord | undefined> {
+    return undefined;
   }
   async updateDecision(
     code: string,
@@ -1279,6 +1287,109 @@ describe("decisions routed through the notice router", () => {
     g.snapshot.pending = [];
     await answered.relay.scan();
     expect(answered.submitted.map((notice) => notice.kind)).toEqual(["session.blocked"]);
+  });
+
+  /** Timers on `now.value`; `advance` runs what came due. */
+  function timersOn(now: { value: number }) {
+    const timers = new Set<{ at: number; run: () => void }>();
+    return {
+      setTimeout: (run: () => void, delay: number) => {
+        const timer = { at: now.value + delay, run };
+        timers.add(timer);
+        return timer;
+      },
+      clearTimeout: (timer: unknown) => void timers.delete(timer as never),
+      pending: () => [...timers].map((timer) => timer.at).sort((a, b) => a - b),
+      advance: (to: number) => {
+        now.value = to;
+        for (const timer of [...timers].sort((a, b) => a.at - b.at))
+          if (timer.at <= to) {
+            timers.delete(timer);
+            timer.run();
+          }
+      },
+    };
+  }
+
+  test("the away listener is held only while a prompt waits for the owner to leave", async () => {
+    const f = ruleFixture();
+    let listeners = 0;
+    let away = false;
+    const now = { value: 20_000 };
+    const h = relayWith(
+      f.read,
+      (notice) => (notice.dedupeKey.endsWith(":away") ? toIm() : toDesktop()),
+      now,
+      {
+        isAway: () => away,
+        sweepMs: 0,
+        ...timersOn(now),
+        onAwayChange: () => {
+          listeners += 1;
+          return () => (listeners -= 1);
+        },
+      },
+    );
+    h.relay.start();
+    await h.relay.scan();
+    expect(listeners).toBe(1);
+    away = true;
+    await h.relay.scan();
+    // Escalated: nothing waits for the owner to leave any more.
+    expect(h.submitted.map((notice) => notice.dedupeKey.endsWith(":away"))).toEqual([false, true]);
+    expect(listeners).toBe(0);
+    h.relay.stop();
+
+    // A prompt that ends while waiting lets go too.
+    const g = ruleFixture("ends");
+    listeners = 0;
+    away = false;
+    const ends = relayWith(g.read, toDesktop, now, {
+      isAway: () => away,
+      sweepMs: 0,
+      onAwayChange: () => {
+        listeners += 1;
+        return () => (listeners -= 1);
+      },
+    });
+    ends.relay.start();
+    await ends.relay.scan();
+    expect(listeners).toBe(1);
+    g.snapshot.pending = [];
+    await ends.relay.scan();
+    expect(listeners).toBe(0);
+    ends.relay.stop();
+  });
+
+  test("a decision past its grace whose prompt was not recorded is tried again in seconds", async () => {
+    const f = ruleFixture();
+    const now = { value: 20_000 };
+    const timers = timersOn(now);
+    let attempts = 0;
+    const router = new FakeRouter(() => {
+      attempts += 1;
+      if (attempts === 1) throw new Error("ledger busy");
+      return { decision: toIm(), sent: "accepted" };
+    });
+    const h = relayWith(
+      f.read,
+      toIm,
+      now,
+      { sweepMs: 0, ...timers, onError: () => undefined },
+      router,
+    );
+    // start() looks once; let that look finish.
+    h.relay.start();
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    expect(attempts).toBe(1);
+    expect(timers.pending()).toEqual([23_000]);
+    timers.advance(23_000);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    expect(attempts).toBe(2);
+    expect(router.decisionRecord(f.read()[0]!.code)?.prompt.phase).toBe("im");
+    // Recorded: the next moment is its deadline.
+    expect(timers.pending()).toEqual([100 + 10 * 60_000]);
+    h.relay.stop();
   });
 
   test("Sessions with neither an IM task nor a blocked rule are not candidates", () => {

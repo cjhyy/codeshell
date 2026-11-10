@@ -3,6 +3,7 @@ import { composeNoticeBody, MAX_NOTICE_BODY, noticeLine } from "./pet-notice-com
 import { NoticeDigest } from "./pet-notice-digest.js";
 import {
   newNoticeRecordId,
+  type NoticeDecisionPrompt,
   type NoticeDecisionPromptPatch,
   type NoticeRecord,
   type NoticeSettleStatus,
@@ -375,22 +376,47 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     const ledger = this.options.ledger;
     const record = ledger?.byPromptCode(code);
     if (!ledger || !record) return undefined;
-    return this.promptView(record, ledger.forRequest(record.sessionId!, record.requestId!));
+    return this.promptView(record);
   }
 
-  /** Every decision prompt the ledger still holds, oldest first. */
-  decisionRecords(): DecisionPromptRecord[] {
+  /** Decision prompts the ledger still holds (`only` filters before views are built). */
+  decisionRecords(only?: (prompt: NoticeDecisionPrompt) => boolean): DecisionPromptRecord[] {
     const ledger = this.options.ledger;
     if (!ledger) return [];
     const seen = new Set<string>();
     const views: DecisionPromptRecord[] = [];
-    for (const record of ledger.prompts()) {
+    for (const record of ledger.prompts(only)) {
       // A resubmitted code (a duplicate record) is the same prompt.
       if (seen.has(record.prompt!.code)) continue;
       seen.add(record.prompt!.code);
-      views.push(this.promptView(record, ledger.forRequest(record.sessionId!, record.requestId!)));
+      views.push(this.promptView(record));
     }
     return views;
+  }
+
+  async adoptDecision(
+    sessionId: string,
+    requestId: string,
+    dedupeKey: string,
+    prompt: NonNullable<NoticeSubmission["prompt"]>,
+  ): Promise<DecisionPromptRecord | undefined> {
+    const ledger = this.options.ledger;
+    if (!ledger) return undefined;
+    const related = ledger.forRequest(sessionId, requestId);
+    // The oldest: a later one with the same key is a duplicate the policy dropped.
+    const first = related.find(
+      (record) => record.dedupeKey === dedupeKey && record.kind === "session.blocked",
+    );
+    if (!first) return undefined;
+    const escalated = related.some((record) => record.dedupeKey === `${dedupeKey}:away`);
+    try {
+      return this.promptView(
+        await ledger.adoptPrompt(first.id, prompt, escalated ? "escalated" : "desktop"),
+      );
+    } catch (error) {
+      this.log("pet.notice.prompt_adopt_failed", { error: errorText(error) });
+      return undefined;
+    }
   }
 
   /** Persist one step of a decision prompt's lifecycle through the ledger's write queue. */
@@ -403,21 +429,32 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     if (!ledger || !record) return undefined;
     try {
       const next = await ledger.updatePrompt(record.id, patch);
-      return this.promptView(next, ledger.forRequest(next.sessionId!, next.requestId!));
+      return this.promptView(next);
     } catch (error) {
       this.log("pet.notice.prompt_update_failed", { phase: patch.phase, error: errorText(error) });
       return undefined;
     }
   }
 
-  private promptView(record: NoticeRecord, related: readonly NoticeRecord[]): DecisionPromptRecord {
+  private promptView(record: NoticeRecord): DecisionPromptRecord {
+    const ledger = this.options.ledger!;
     const { facts, target } = unpackFacts(record.facts);
     const title = noticeLine(facts.title);
+    let copies: DecisionPromptRecord["copies"] | undefined;
     // The prompt itself, then its other session.blocked copies (the escalation).
-    const copies = [
-      record,
-      ...related.filter((other) => other.id !== record.id && other.kind === record.kind),
-    ];
+    const readCopies = (): DecisionPromptRecord["copies"] =>
+      [
+        record,
+        ...ledger
+          .forRequest(record.sessionId!, record.requestId!)
+          .filter((other) => other.id !== record.id && other.kind === record.kind),
+      ].map((copy) => {
+        const channel = copy.delivery?.channel ?? copy.decision?.im;
+        return {
+          ...(copy.delivery ? { status: copy.delivery.status } : {}),
+          ...(channel !== undefined ? { channel } : {}),
+        };
+      });
     return {
       code: record.prompt!.code,
       sessionId: record.sessionId!,
@@ -427,13 +464,9 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
       ...(title !== undefined ? { title } : {}),
       prompt: record.prompt!,
       ...(record.decision ? { decision: record.decision } : {}),
-      copies: copies.map((copy) => {
-        const channel = copy.delivery?.channel ?? copy.decision?.im;
-        return {
-          ...(copy.delivery ? { status: copy.delivery.status } : {}),
-          ...(channel !== undefined ? { channel } : {}),
-        };
-      }),
+      get copies() {
+        return (copies ??= readCopies());
+      },
     };
   }
 

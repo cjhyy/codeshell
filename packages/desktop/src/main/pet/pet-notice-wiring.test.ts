@@ -103,7 +103,7 @@ interface Harness {
   channels: ImGatewayOwnerChannel[];
   directTargets: Set<string>;
   snapshot(): DesktopPetProjectionSnapshot;
-  setWorkerState(state: DesktopPetProjectionSnapshot["workerState"]): void;
+  setWorkerState(state: DesktopPetProjectionSnapshot["workerState"], generation?: number): void;
   emitProjection(event: DesktopPetProjectionEvent): void;
   subscribeProjection(listener: (event: DesktopPetProjectionEvent) => void): () => void;
 }
@@ -126,9 +126,10 @@ function harness(overrides: Partial<PetNoticeWiringDeps> = {}): Harness {
   const listeners = new Set<(event: DesktopPetProjectionEvent) => void>();
   let handler: HostActionHandler | undefined;
   let workerState: DesktopPetProjectionSnapshot["workerState"] = "active";
+  let generation = 1;
   const snapshot = (): DesktopPetProjectionSnapshot => ({
     version: 1,
-    generation: 1,
+    generation,
     workerState,
     sessions,
     pending,
@@ -249,8 +250,9 @@ function harness(overrides: Partial<PetNoticeWiringDeps> = {}): Harness {
     channels,
     directTargets,
     snapshot,
-    setWorkerState: (state) => {
+    setWorkerState: (state, next) => {
       workerState = state;
+      if (next !== undefined) generation = next;
     },
     emitProjection: (event) => {
       for (const listener of [...listeners]) listener(event);
@@ -1076,6 +1078,7 @@ function decisionRelay(
     ownerChannelIsDirect: h.wiring.decisions.ownerChannelIsDirect,
     isAway: h.wiring.decisions.isAway,
     decisionStatus: h.wiring.decisions.decisionStatus,
+    projectionLive: h.wiring.decisions.projectionLive,
     projection: { subscribe: h.subscribeProjection },
     nudges: [h.wiring.decisions.onBlocked],
     onAwayChange: h.wiring.decisions.onAwayChange,
@@ -1492,19 +1495,21 @@ describe("decision prompts through the router", () => {
     });
   });
 
-  test("the owner leaving escalates at once, and a restart never escalates again", async () => {
-    let present = true;
+  /** A blocked-rule Session whose owner is present: its prompt stays on the desktop. */
+  async function desktopKeptPrompt(idle = { sec: 0 }) {
+    const presence = { present: true };
     const focus = new EventEmitter();
+    const timers = fakeTimers();
     const overrides: Partial<PetNoticeWiringDeps> = {
       presence: {
-        getSystemIdleTimeSec: () => (present ? 0 : 3_600),
-        hasFocusedWindow: () => present,
+        getSystemIdleTimeSec: () => (presence.present ? idle.sec : 3_600),
+        hasFocusedWindow: () => presence.present,
       },
       focusEvents: focus as unknown as PetNoticeWiringDeps["focusEvents"],
+      presenceTimers: timers,
     };
     current = harness(overrides);
     await current.handler(SID, upsertArgs({ events: ["blocked"] }));
-    const timers = fakeTimers();
     const d = decisionRelay(current, timers);
     d.relay.start();
     const raisedAt = clock;
@@ -1514,25 +1519,163 @@ describe("decision prompts through the router", () => {
     await settle(() => promptOf(d.code()) !== undefined);
     expect(current.ownerSends).toEqual([]);
     expect(promptOf(d.code())).toMatchObject({ phase: "desktop" });
-    // No poll: the window losing focus is the event.
-    present = false;
+    return { d, presence, focus, timers, overrides, raisedAt };
+  }
+
+  test("the owner leaving escalates at once, and a restart never escalates again", async () => {
+    const { d, presence, focus, timers, overrides, raisedAt } = await desktopKeptPrompt();
+    // No poll: the window losing focus (once it has settled) is the event.
+    presence.present = false;
     focus.emit("browser-window-blur");
+    timers.advance(clock + 1_000);
     await settle(() => current!.ownerSends.length > 0);
-    expect(current.ownerSends).toHaveLength(1);
-    expect(current.ownerSends[0]!.text).toContain(`回答 ${d.code()} 1`);
+    expect(current!.ownerSends).toHaveLength(1);
+    expect(current!.ownerSends[0]!.text).toContain(`回答 ${d.code()} 1`);
     expect(promptOf(d.code())).toMatchObject({
       phase: "im",
       channel: "wechat",
-      escalatedAt: raisedAt + 15_000,
+      escalatedAt: raisedAt + 16_000,
     });
     d.relay.stop();
 
     await restart(overrides);
-    const again = decisionRelay(current);
+    const again = decisionRelay(current!);
     again.raise("req-1", raisedAt);
     await again.relay.scan();
     await settle();
+    expect(current!.ownerSends).toEqual([]);
+  });
+
+  test("switching between CodeShell windows is not leaving; a real leave escalates once", async () => {
+    const { d, presence, focus, timers } = await desktopKeptPrompt();
+    // Blur one window, focus the next within the settle time.
+    presence.present = false;
+    focus.emit("browser-window-blur");
+    timers.advance(clock + 300);
+    presence.present = true;
+    focus.emit("browser-window-focus");
+    timers.advance(clock + 1_000);
+    await settle();
+    expect(current!.ownerSends).toEqual([]);
+    expect(promptOf(d.code())).toMatchObject({ phase: "desktop" });
+    presence.present = false;
+    focus.emit("browser-window-blur");
+    timers.advance(clock + 1_000);
+    await settle(() => current!.ownerSends.length > 0);
+    focus.emit("browser-window-focus");
+    focus.emit("browser-window-blur");
+    timers.advance(clock + 1_000);
+    await settle();
+    expect(current!.ownerSends).toHaveLength(1);
+    d.relay.stop();
+  });
+
+  test("no input for the idle threshold counts as leaving, with no event", async () => {
+    const idle = { sec: 0 };
+    const { d, presence, timers } = await desktopKeptPrompt(idle);
+    // The presence watch looks again when the threshold (120 s) would pass.
+    const crossing = timers.pending().find((at) => at > clock + 100_000)!;
+    expect(crossing).toBeDefined();
+    presence.present = false;
+    timers.advance(crossing);
+    await settle(() => current!.ownerSends.length > 0);
+    expect(current!.ownerSends).toHaveLength(1);
+    expect(promptOf(d.code())).toMatchObject({ phase: "im" });
+    d.relay.stop();
+  });
+
+  test("a listener that subscribes while the owner is already away hears it at once", async () => {
+    current = harness();
+    const heard: number[] = [];
+    const unsubscribe = current.wiring.decisions.onAwayChange(() => heard.push(clock));
+    await settle(() => heard.length > 0);
+    expect(heard).toEqual([clock]);
+    unsubscribe();
+  });
+
+  test("a missed snapshot does not end a prompt; the decision carries on when it is back", async () => {
+    current = harness();
+    await current.handler(SID, upsertArgs({ events: ["blocked"] }));
+    const d = decisionRelay(current);
+    const raisedAt = clock;
+    d.raise();
+    await settle();
+    await d.poll(() => current!.ownerSends.length > 0);
+    const code = d.code()!;
+    // One failed snapshot: the aggregator empties pending and reports disconnected.
+    const [held] = current.pending.splice(0);
+    current.setWorkerState("disconnected");
+    current.emitProjection({ kind: "reset", version: 3, generation: 1, observedAt: clock });
+    await d.relay.scan();
+    expect(promptOf(code)).toMatchObject({ phase: "im" });
+    current.pending.push(held!);
+    current.setWorkerState("active");
+    current.emitProjection({ kind: "reset", version: 4, generation: 1, observedAt: clock });
+    expect(await d.relay.reply({ message: "1", origin: OWNER_DM })).toContain("单独的编号");
+    clock = raisedAt + 10 * 60_000;
+    await d.relay.scan();
+    await settle(() => current!.ownerSends.length > 1);
+    expect(d.approvals).toEqual([expect.objectContaining({ failure: "timed_out" })]);
+    expect(current.ownerSends[1]!.text).toContain("已超时");
+  });
+
+  test("a new IM-started task nudges the decisions: its conversation gets the prompt", async () => {
+    let changed: (() => void) | undefined;
+    const tasks: PetLongTask[] = [];
+    current = harness({
+      longTasks: {
+        activeForSession: (id) => tasks.find((task) => task.sessionId === id),
+        getSnapshot: () => ({ tasks }),
+        subscribe: (listener) => {
+          changed = listener;
+          return () => (changed = undefined);
+        },
+      },
+    });
+    const nudged: string[] = [];
+    current.wiring.decisions.onBlocked((sessionId) => nudged.push(sessionId));
+    tasks.push(longTask({ status: "running", completedAt: undefined }));
+    changed!();
+    expect(nudged).toHaveLength(1);
+    current.wiring.dispose();
+    expect(changed).toBeUndefined();
+  });
+
+  test("a request prompted before the upgrade continues from its record", async () => {
+    // What an older build left: the first prompt, sent to the owner's chat, with no lifecycle.
+    const before = new PetNoticeLedger({
+      path: join(dir, "pet", "notices.json"),
+      now: () => clock,
+    });
+    const old = await before.record({
+      kind: "session.blocked",
+      priority: "P0",
+      dedupeKey: `${SID}:req-1`,
+      sessionId: SID,
+      requestId: "req-1",
+      ruleIds: [],
+      facts: { target: { kind: "owner" } },
+      body: "确认 …",
+      decision: { outlet: "im", im: "wechat", reason: "away-last-inbound" },
+    });
+    await before.claim(old.id, "wechat", "确认 …");
+    await before.settle(old.id, "accepted");
+    await before.flush();
+    current = harness();
+    await current.wiring.ready;
+    await current.handler(SID, upsertArgs({ events: ["blocked"] }));
+    const d = decisionRelay(current);
+    d.raise();
+    clock += 16_000;
+    await d.relay.scan();
+    await settle();
     expect(current.ownerSends).toEqual([]);
+    expect(current.wiring.ledger.get(old.id)?.prompt).toMatchObject({
+      code: d.code(),
+      phase: "im",
+      channel: "wechat",
+    });
+    expect(await d.relay.reply({ message: "1", origin: OWNER_DM })).toContain("单独的编号");
   });
 
   test("the prompt's deadline timer denies it and tells the chat it went to", async () => {
@@ -1696,8 +1839,65 @@ describe("bound Session replies", () => {
     }
   });
 
+  /** A goal-scope rule in a bound Session whose Goal was met mid-run: the report is parked. */
+  async function parkGoalReport(overrides: Partial<PetNoticeWiringDeps> = {}): Promise<void> {
+    current = harness({
+      readSettings: () => ({ pet: { notifications: { mergeWindowSec: 0 } } }),
+      ...overrides,
+    });
+    current.routes.push(boundRoute());
+    await current.handler(SID, upsertArgs({ events: ["done"], scope: "goal" }));
+    clock = NOW + 1_000;
+    for (const event of [
+      { type: "session_started", runId: "run-1", clientMessageId: "cm-1" },
+      { type: "goal_progress", status: "met", goalId: "g-1", round: 1 },
+    ])
+      current.observeSessionEvent(SID, event);
+    await settle();
+    expect(current.submitted).toEqual([]);
+  }
+  const reset = () =>
+    current!.emitProjection({ kind: "reset", version: 2, generation: 1, observedAt: clock });
+
+  test("a missed snapshot is not a lost worker: the run closes and its reply serves it", async () => {
+    await parkGoalReport({ hasLiveWorker: () => true });
+    current!.setWorkerState("disconnected");
+    reset();
+    await settle();
+    expect(current!.submitted).toEqual([]);
+    current!.setWorkerState("active");
+    reset();
+    current!.observeSessionEvent(SID, {
+      type: "turn_complete",
+      reason: "completed",
+      completionKind: "goal_control_stop",
+      text: "目标完成",
+      runId: "run-1",
+    });
+    await settle(() => current!.submitted.length > 0);
+    // Exactly one message: the Session's own reply in the bound chat.
+    expect(current!.submitted.map((notice) => notice.boundReplyDelivered)).toEqual([true]);
+    expect(current!.published).toEqual([]);
+    expect(current!.ownerSends).toEqual([]);
+  });
+
+  test("a worker replaced after a missed snapshot sends the parked report", async () => {
+    await parkGoalReport({ hasLiveWorker: () => true });
+    current!.setWorkerState("disconnected");
+    reset();
+    await settle();
+    expect(current!.submitted).toEqual([]);
+    current!.setWorkerState("active", 2);
+    reset();
+    await settle(() => current!.published.length > 0);
+    expect(current!.published).toMatchObject([{ type: "pet.task.completed" }]);
+  });
+
   test("a report parked on a run the worker abandoned goes out when the worker is lost", async () => {
-    current = harness({ readSettings: () => ({ pet: { notifications: { mergeWindowSec: 0 } } }) });
+    current = harness({
+      readSettings: () => ({ pet: { notifications: { mergeWindowSec: 0 } } }),
+      hasLiveWorker: () => false,
+    });
     current.routes.push(boundRoute());
     await current.handler(SID, upsertArgs({ events: ["done"], scope: "goal" }));
     clock = NOW + 1_000;

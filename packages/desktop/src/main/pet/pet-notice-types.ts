@@ -220,8 +220,9 @@ export interface DecisionPromptRecord {
   /**
    * The delivery of each copy of the prompt, oldest first: the first prompt,
    * then its "owner left" escalation. `channel` is the claim's or queue's.
+   * Read lazily from the ledger.
    */
-  copies: Array<{ status?: NoticeDeliveryStatus; channel?: string }>;
+  readonly copies: Array<{ status?: NoticeDeliveryStatus; channel?: string }>;
 }
 
 /** The decision-prompt surface of the router (`PetNoticeRouter` implements it). */
@@ -230,7 +231,18 @@ export interface NoticeDecisionPrompts {
   /** Resolves once the records are readable (the ledger loaded, or failed to). */
   decisionsLoaded(): Promise<void>;
   decisionRecord(code: string): DecisionPromptRecord | undefined;
-  decisionRecords(): DecisionPromptRecord[];
+  /** Prompt records, oldest first; `only` picks them before any view is built. */
+  decisionRecords(only?: (prompt: NoticeDecisionPrompt) => boolean): DecisionPromptRecord[];
+  /**
+   * A request prompted by an older build has its first record (`dedupeKey`)
+   * but no lifecycle: give it one instead of prompting again.
+   */
+  adoptDecision(
+    sessionId: string,
+    requestId: string,
+    dedupeKey: string,
+    prompt: NonNullable<NoticeSubmission["prompt"]>,
+  ): Promise<DecisionPromptRecord | undefined>;
   /** Persist a lifecycle step; undefined when there is no such record or it could not be written. */
   updateDecision(
     code: string,
@@ -272,6 +284,7 @@ export type NoticeLedgerPort = Pick<
   | "prompts"
   | "forRequest"
   | "updatePrompt"
+  | "adoptPrompt"
 >;
 
 /**

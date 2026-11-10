@@ -23,7 +23,7 @@ import {
   type ExpirySource,
   type PromptMoment,
 } from "./pet-im-decision-text.js";
-import { KeyedTimers } from "./keyed-timers.js";
+import { KeyedTimers } from "./pet-notice-timers.js";
 import { isPromptEnded, type NoticeDecisionPromptPatch } from "./pet-notice-ledger.js";
 import type { RouteDecision } from "./pet-notice-policy.js";
 import type {
@@ -183,6 +183,8 @@ function decisionKey(sessionId: string, requestId: string): string {
  * changed where a prompt goes). Everything time-critical has its own trigger.
  */
 const SAFETY_SWEEP_MS = 60_000;
+/** A decision past its grace whose first prompt has no record yet is tried again this soon. */
+const UNRECORDED_RETRY_MS = 3_000;
 
 export interface PetImDecisionsOptions {
   read: () => ImDecision[];
@@ -203,6 +205,12 @@ export interface PetImDecisionsOptions {
   isAway?: () => boolean;
   /** The projection's status of a decision ("expired" = Core's deadline fired). */
   decisionStatus?: (sessionId: string, requestId: string) => string | undefined;
+  /**
+   * The projection reflects a live worker now. A failed snapshot reads as
+   * "disconnected" and empties the pending list while the worker may well be
+   * alive, so a decision missing from such a snapshot has not ended.
+   */
+  projectionLive?: () => boolean;
   /** Pending-decision projection events: a decision appeared or ended, the worker reset. */
   projection?: { subscribe(listener: (event: DesktopPetProjectionEvent) => void): () => void };
   /** Other moments worth a look now (a rule started watching a blocked Session). */
@@ -391,7 +399,10 @@ export class PetImDecisions {
       await this.router.decisionsLoaded();
       const entries = this.options.read();
       const live = new Set(entries.map((entry) => entry.code));
-      for (const record of this.router.decisionRecords()) {
+      // Ended prompts matter only while their expiry notice is still owed.
+      const open = (prompt: DecisionPromptRecord["prompt"]) =>
+        !isPromptEnded(prompt.phase) || prompt.expiryNotice?.sent === false;
+      for (const record of this.router.decisionRecords(open)) {
         if (this.answering.has(record.code)) continue;
         try {
           const owed = record.prompt.expiryNotice;
@@ -441,14 +452,27 @@ export class PetImDecisions {
   /** The first prompt: its record starts the lifecycle. */
   private async promptFirst(entry: ImDecision): Promise<void> {
     const end = this.expiresAt(entry);
+    const prompt = {
+      code: entry.code,
+      ...(Number.isFinite(end) ? { deadline: end } : {}),
+      ...(skippableEnvelope(entry.envelope) ? { skippable: true as const } : {}),
+      replies: shortReplies(entry),
+    };
+    const { first } = this.keys(entry);
+    // Prompted by a build that kept the lifecycle in memory: continue from its record.
+    const adopted = await this.router.adoptDecision(
+      entry.envelope.sessionId,
+      entry.envelope.requestId,
+      first,
+      prompt,
+    );
+    if (adopted) {
+      await this.catchUp(entry, adopted);
+      return;
+    }
     const result = await this.router.submitWithOutcome({
-      ...questionNotice(entry, this.keys(entry).first, this.moment(entry)),
-      prompt: {
-        code: entry.code,
-        ...(Number.isFinite(end) ? { deadline: end } : {}),
-        ...(skippableEnvelope(entry.envelope) ? { skippable: true as const } : {}),
-        replies: shortReplies(entry),
-      },
+      ...questionNotice(entry, first, this.moment(entry)),
+      prompt,
     });
     if (!result) return;
     await this.noteSent(entry, result, {});
@@ -570,6 +594,8 @@ export class PetImDecisions {
    * reached IM and timed out still tells its conversation.
    */
   private async endVanished(record: DecisionPromptRecord): Promise<void> {
+    // Not a live snapshot (a worker that missed one heartbeat): nothing is known to have ended.
+    if (this.options.projectionLive?.() === false) return;
     const status = this.options.decisionStatus?.(record.sessionId, record.requestId);
     // Still open, just not prompted from here right now.
     if (status === "pending") return;
@@ -601,8 +627,12 @@ export class PetImDecisions {
     for (const entry of entries) {
       const record = this.router.decisionRecord(entry.code);
       const end = this.expiresAt(entry);
+      const graceEnd = entry.createdAt + this.graceMs();
       const due = !record
-        ? entry.createdAt + this.graceMs()
+        ? // Past its grace with no record: the submission failed; try again soon.
+          graceEnd > now
+          ? graceEnd
+          : now + UNRECORDED_RETRY_MS
         : !isPromptEnded(record.prompt.phase) && Number.isFinite(end)
           ? end
           : undefined;
@@ -613,9 +643,11 @@ export class PetImDecisions {
 
   /** Listen for the owner leaving only while some prompt waits for that. */
   private watchAway(wanted: boolean): void {
-    if (wanted && !this.unsubscribeAway && this.started && this.options.onAwayChange)
+    if (wanted && !this.unsubscribeAway && this.started && this.options.onAwayChange) {
       this.unsubscribeAway = this.options.onAwayChange(() => this.scanNow());
-    else if (!wanted && this.unsubscribeAway) {
+      // The owner may have left between this look and the subscription.
+      if (this.options.isAway?.() === true) this.scanNow();
+    } else if (!wanted && this.unsubscribeAway) {
       this.unsubscribeAway();
       this.unsubscribeAway = undefined;
     }
@@ -635,7 +667,7 @@ export class PetImDecisions {
    */
   private recentlyPrompted(): DecisionPromptRecord[] {
     const now = this.now();
-    return this.router.decisionRecords().filter(({ prompt }) => {
+    return this.router.decisionRecords((prompt) => {
       if (prompt.channel === undefined || prompt.imAt === undefined) return false;
       return now <= Math.max(prompt.deadline ?? 0, prompt.imAt) + USER_DECISION_TIMEOUT_MS;
     });
