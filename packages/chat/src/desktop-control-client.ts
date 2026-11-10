@@ -194,7 +194,17 @@ export class DesktopControlClient {
 
   /** Report what became of one served event (see {@link DesktopControlEventResult}). */
   async reportEventResult(result: DesktopControlEventResult): Promise<void> {
-    await this.request("POST", "/v1/events/result", 10_000, result);
+    const body = await this.request<{ recorded?: unknown }>(
+      "POST",
+      "/v1/events/result",
+      10_000,
+      result,
+    );
+    // Desktop did not take it (the copy changed under it, or its stream did):
+    // read the page again rather than move past an unrecorded result.
+    if (body?.recorded === false) {
+      throw new DesktopControlUnavailableError("桌面端未记录该事件结果，将重新读取事件");
+    }
   }
 
   /** Whether Desktop still wants this event sent; asked right before each platform send. */

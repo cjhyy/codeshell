@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   GatewayControlServer,
+  SERVED_EXPIRY_GRACE_MS,
   type DesktopControlDescriptor,
   type GatewayControlEventInput,
   type OutboxDeliveryResult,
@@ -186,8 +187,83 @@ describe("gateway outbox deliveries", () => {
     expect((await o.page()).events).toHaveLength(1);
     o.clock.now = 5_000;
     expect((await o.page()).events).toEqual([]);
+    // It was read before the deadline: it may be mid-send, so it waits out the grace.
+    await o.server.runDueDeliveries();
+    expect(o.results).toEqual([]);
+    o.clock.now = 5_000 + SERVED_EXPIRY_GRACE_MS;
     await o.server.runDueDeliveries();
     expect(o.results).toEqual([{ deliveryKey: KEY_A, outcome: "expired" }]);
+  });
+
+  test("a copy being sent at its deadline is not expired; a late delivered still counts", async () => {
+    const o = await outbox();
+    const event = await o.server.publish(owner({ expiresAt: 5_000 }));
+    // The relay read it and is sending when the deadline passes.
+    expect((await o.page()).events).toHaveLength(1);
+    o.clock.now = 5_000;
+    await o.server.runDueDeliveries();
+    expect(o.results).toEqual([]);
+    await o.report(event.id, "delivered");
+    expect(o.results).toEqual([{ deliveryKey: KEY_A, outcome: "delivered" }]);
+
+    // Past the grace it does expire; a report after that still settles it delivered.
+    const late = await o.server.publish(owner({ deliveryKey: KEY_B, expiresAt: 6_000 }));
+    expect(await o.live(late.id)).toBe(true);
+    o.clock.now = 6_000 + SERVED_EXPIRY_GRACE_MS;
+    await o.server.runDueDeliveries();
+    expect(o.results.at(-1)).toEqual({ deliveryKey: KEY_B, outcome: "expired" });
+    await o.report(late.id, "delivered", { deliveryKey: KEY_B });
+    expect(o.results.at(-1)).toEqual({ deliveryKey: KEY_B, outcome: "delivered" });
+    expect(o.server.deliveryState(KEY_B)).toMatchObject({ outcome: "delivered" });
+  });
+
+  test("an acknowledged copy without a report is settled unknown (or expired)", async () => {
+    const o = await outbox();
+    await o.server.publish(owner());
+    await o.server.publish(owner({ deliveryKey: KEY_B, expiresAt: 1_500 }));
+    o.clock.now = 2_000;
+    // A cursor past both, with no result for either.
+    await o.page(2);
+    expect(o.results).toEqual([
+      { deliveryKey: KEY_A, outcome: "unknown" },
+      { deliveryKey: KEY_B, outcome: "expired" },
+    ]);
+  });
+
+  test("a report whose deliveryKey is not the copy's is rejected", async () => {
+    const o = await outbox();
+    const event = await o.server.publish(owner());
+    expect(await o.report(event.id, "delivered", { deliveryKey: KEY_B })).toMatchObject({
+      error: "operation_failed",
+    });
+    expect(o.results).toEqual([]);
+  });
+
+  test("a definite rejection is retried within its budget, never settled unknown", async () => {
+    const o = await outbox();
+    const event = await o.server.publish(owner({ target: { channel: "telegram", target: "1" } }));
+    await o.report(event.id, "failed", { attempted: false, idempotent: false });
+    expect(o.results).toEqual([]);
+    expect(o.server.deliveryState(KEY_A)).toBe("pending");
+  });
+
+  test("delivery state is not ready until the outbox has been read", () => {
+    const dir = mkdtempSync(join(tmpdir(), "codeshell-outbox-not-ready-"));
+    roots.push(dir);
+    const server = new GatewayControlServer({
+      descriptorPath: join(dir, "desktop-control.json"),
+      open: async () => ({ url: "", pairingUrl: "", expiresAt: 1, mode: "lan" }),
+      close: async () => undefined,
+      status: () => ({
+        running: false,
+        tunnelRunning: false,
+        tunnelConnected: false,
+        passcodeSet: true,
+        onlineDeviceCount: 0,
+      }),
+      pairingUrl: async () => ({ pairingUrl: "", expiresAt: 1 }),
+    });
+    expect(server.deliveryState(KEY_A)).toBe("not-ready");
   });
 
   test("publishing is idempotent by key; closed heads free their capacity", async () => {

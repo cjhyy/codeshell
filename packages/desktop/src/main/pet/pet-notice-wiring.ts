@@ -282,6 +282,11 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
         )
         .catch((error) => log("pet.notice.outbox_result_failed", { error: errorText(error) }));
     },
+    outboxReady() {
+      return ready
+        .then(() => (disposed ? undefined : router.recheckOutbox()))
+        .catch((error) => log("pet.notice.outbox_recheck_failed", { error: errorText(error) }));
+    },
     notifyTaskClosed: closure.notifyTaskClosed,
     armDelegationRule: closure.armDelegationRule,
     inboundReplay: replay.inboundReplay,

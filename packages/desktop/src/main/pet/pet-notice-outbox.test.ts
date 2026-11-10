@@ -111,6 +111,27 @@ describe("owner notices through the gateway outbox", () => {
     ]);
   });
 
+  test("sent just before quiet hours and delivered after its expiry: accepted, not digested", async () => {
+    current = harness();
+    env.clock = Date.UTC(2026, 10, 9, 22, 59, 0);
+    current.outbox.hold = true;
+    await current.wiring.router.submit(done({ dedupeKey: "done:late" }));
+    const key = current.outbox.events[0]!.deliveryKey!;
+    // The deadline passed while the relay was sending; then its report arrived.
+    env.clock = Date.UTC(2026, 10, 9, 23, 3, 0);
+    current.outbox.settle(key, "expired");
+    await current.idle();
+    expect(status(current, "done:late")).toBe("held");
+    current.outbox.settle(key, "delivered");
+    await current.idle();
+    expect(status(current, "done:late")).toBe("accepted");
+    current.outbox.hold = false;
+    env.clock = Date.UTC(2026, 10, 10, 8, 30, 0);
+    await current.wiring.router.flushDigest();
+    await current.idle();
+    expect(current.ownerSends.map((send) => send.text)).toEqual(["「修登录」做完了"]);
+  });
+
   test("a target without a stored WeChat context gets one tokenless try", async () => {
     current = harness();
     current.tokenlessTargets.add("wechat:owner");
@@ -206,6 +227,28 @@ describe("restart with the outbox as the only resender", () => {
     expect(status(h, "done:r1")).toBe("enqueued");
     expect(status(h, "done:r2")).toBe("accepted");
     expect(two).toBeDefined();
+  });
+
+  test("an outbox still starting is asked again once it is ready; nothing is marked lost", async () => {
+    const first = harness();
+    first.outbox.hold = true;
+    await first.wiring.router.submit(done({ dedupeKey: "done:nr" }));
+    const key = first.outbox.events[0]!.deliveryKey!;
+    await first.wiring.flush();
+    first.wiring.dispose();
+
+    let state: NoticeOutboxState | undefined = "not-ready";
+    const { h, publishes } = restartOn(() => state);
+    current = h;
+    await h.wiring.ready;
+    await h.wiring.router.recover();
+    expect(status(h, "done:nr")).toBe("enqueued");
+    // The control server came up; the delivery had been made meanwhile.
+    state = { outcome: "delivered" };
+    await h.wiring.outboxReady();
+    expect(status(h, "done:nr")).toBe("accepted");
+    expect(publishes).toEqual([]);
+    expect(key).toMatch(/^[0-9a-f]{64}$/u);
   });
 
   test("a claim that crashed before reaching the outbox is written once; one that did is not", async () => {

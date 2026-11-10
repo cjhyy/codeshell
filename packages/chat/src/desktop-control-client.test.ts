@@ -369,6 +369,35 @@ describe("DesktopControlClient", () => {
     expect(reported).toEqual([{ streamId: "a".repeat(32), eventId: 1, outcome: "delivered" }]);
   });
 
+  test("a result Desktop did not record re-reads the page instead of moving on", async () => {
+    const abort = new AbortController();
+    let polls = 0;
+    let reports = 0;
+    const client = new DesktopControlClient(baseConfig(), {
+      readDescriptor: async () => descriptor,
+      sleep: async () => undefined,
+      fetch: (async (url: string | URL | Request) => {
+        const path = new URL(String(url)).pathname;
+        if (path === "/v1/events/result") return Response.json({ recorded: ++reports > 1 });
+        polls++;
+        return Response.json({
+          streamId: "a".repeat(32),
+          cursor: 1,
+          events: [{ id: 1, createdAt: 1, type: "tunnel.connected", text: "ready" }],
+        });
+      }) as typeof fetch,
+    });
+    let handled = 0;
+    await client.watchEvents(
+      abort.signal,
+      async () => {
+        if (++handled === 2) abort.abort();
+      },
+      { retryBaseMs: 1, retryMaxMs: 1 },
+    );
+    expect({ polls, reports, handled }).toEqual({ polls: 2, reports: 2, handled: 2 });
+  });
+
   test("hands the handler a freshness check for the event it is sending", async () => {
     const abort = new AbortController();
     const asked: unknown[] = [];

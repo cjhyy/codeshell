@@ -119,6 +119,8 @@ export interface PetNoticeWiring {
     outcome: NoticeOutboxOutcome;
     error?: string;
   }): Promise<void>;
+  /** The gateway outbox finished starting: settle what recovery had to leave for it. */
+  outboxReady(): Promise<void>;
   /** Sends parked mid-run reports, then waits for pending rule and notice writes (shutdown). */
   flush(): Promise<void>;
   /** The settings this wiring currently routes with. */

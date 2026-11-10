@@ -250,7 +250,7 @@ const LIVE_STATUSES: ReadonlySet<NoticeDeliveryStatus> = new Set([
  *
  *              claimed enqueued accepted failed unknown queued held revoked
  *   none         ok      -        -        -      -       ok    ok    ok
- *   held         ok      -        -        -      -       ok    ok    ok
+ *   held         ok      -        a        -      -       ok    ok    ok
  *   queued       ok      -        -        -      -       ok    ok    ok
  *   failed       ok      -        -        -      -       ok    ok    ok
  *   claimed      ok      ok       ok       ok     ok      ok    -     ok
@@ -259,6 +259,8 @@ const LIVE_STATUSES: ReadonlySet<NoticeDeliveryStatus> = new Set([
  *   accepted     x       x        x        x      x       x     x     x
  *   revoked      x       x        x        x      x       x     x     x
  *
+ * `a` (held → accepted): an outbox send that expired into the digest was
+ * delivered after all (the relay was mid-send at its deadline).
  * `enqueued`: the gateway outbox took the send and delivers (and retries)
  * it; the outbox's result settles it: accepted, failed (then queued for the
  * owner's next message), unknown, or held (expired before quiet hours, for
@@ -276,7 +278,7 @@ const TRANSITIONS: Readonly<
   Record<NoticeDeliveryStatus | "none", ReadonlySet<NoticeDeliveryStatus>>
 > = {
   none: new Set(["claimed", "queued", "held", "revoked"]),
-  held: new Set(["claimed", "queued", "held", "revoked"]),
+  held: new Set(["claimed", "accepted", "queued", "held", "revoked"]),
   queued: new Set(["claimed", "queued", "held", "revoked"]),
   failed: new Set(["claimed", "queued", "held", "revoked"]),
   claimed: new Set(["claimed", "enqueued", "accepted", "failed", "unknown", "queued", "revoked"]),

@@ -300,7 +300,8 @@ describe("claim and settle", () => {
     // Independent copy of the table documented in pet-notice-ledger.ts.
     const table: Record<From, string[]> = {
       none: [ok, bad, bad, bad, ok, ok, ok],
-      held: [ok, bad, bad, bad, ok, ok, ok],
+      // held → accepted: an outbox send that expired into the digest, delivered after all.
+      held: [ok, ok, bad, bad, ok, ok, ok],
       queued: [ok, bad, bad, bad, ok, ok, ok],
       failed: [ok, bad, bad, bad, ok, ok, ok],
       claimed: [ok, ok, ok, ok, ok, bad, ok],

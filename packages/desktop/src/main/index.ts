@@ -3463,9 +3463,13 @@ app.whenReady().then(async () => {
   const controlServer = gatewayControlServer;
   controlServer.onEventResult((result) => void petNotices?.outboxResult(result));
   controlServer.onEventAppended((event) => handOffDirectDelivery(controlServer, event));
-  await gatewayControlServer.start().catch((error) => {
-    dlog("main", "im_gateway.desktop_control.start_failed", { error: String(error) });
-  });
+  await gatewayControlServer
+    .start()
+    // Notices recovered before the outbox could answer are settled now.
+    .then(() => void petNotices?.outboxReady())
+    .catch((error) => {
+      dlog("main", "im_gateway.desktop_control.start_failed", { error: String(error) });
+    });
 
   // A configured Chat Gateway is part of the Desktop runtime, not a panel
   // toggle. Start it on every owning app launch after the authenticated local

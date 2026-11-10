@@ -218,7 +218,11 @@ export type NoticeOutboxOutcome =
   | "unauthorized";
 
 /** Where an outbox delivery stands: under way, settled, or unknown to the outbox. */
-export type NoticeOutboxState = "pending" | { outcome: NoticeOutboxOutcome; error?: string };
+export type NoticeOutboxState =
+  | "pending"
+  /** The outbox has not been read yet (the control server is starting): ask again later. */
+  | "not-ready"
+  | { outcome: NoticeOutboxOutcome; error?: string };
 
 /** What one submission did: the routing decision and, when IM was tried, the send. */
 export interface NoticeSubmitResult {

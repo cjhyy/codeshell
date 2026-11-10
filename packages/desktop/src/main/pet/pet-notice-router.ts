@@ -123,6 +123,8 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
   private readonly sending = new Set<string>();
   /** Records revoked while their send was being written: withdrawn as soon as it lands. */
   private readonly revokeOnLanding = new Map<string, string>();
+  /** Young claims recovery left because the outbox was not ready to answer. */
+  private readonly awaitingOutbox = new Set<string>();
   /** Outbox results that arrived before their send was recorded as enqueued (by delivery key). */
   private readonly earlyResults = new Map<
     string,
@@ -739,6 +741,15 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
       await this.settleFromOutbox(record, outcome, error);
       return;
     }
+    // Expired into the digest while the relay was still sending it, then
+    // delivered after all: it is out of the digest for good.
+    if (outcome === "delivered") {
+      const held = ledger.held().find((candidate) => this.deliveryKeyOf(candidate) === deliveryKey);
+      if (held) {
+        await this.settleQuietly(held.id, "accepted");
+        return;
+      }
+    }
     // The outbox can answer before this process recorded the send as enqueued.
     for (const id of this.sending) {
       const sending = ledger.get(id);
@@ -1117,6 +1128,11 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     // The outbox is the only resender: a send it took is settled from its
     // state, never written again.
     const state = channel && body ? this.outboxState(record) : undefined;
+    if (state === "not-ready") {
+      // The outbox is still starting: decide once it can answer (recheckOutbox).
+      this.awaitingOutbox.add(record.id);
+      return;
+    }
     if (state !== undefined) {
       try {
         await ledger.settle(record.id, "enqueued");
@@ -1172,10 +1188,28 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     if (!this.options.outlets?.outboxState) return;
     for (const record of ledger.enqueued()) {
       const state = this.outboxState(record);
-      if (state === "pending") continue;
+      // Still starting: nothing is known yet, so nothing is lost either.
+      if (state === "pending" || state === "not-ready") continue;
       if (state) await this.settleFromOutbox(record, state.outcome, state.error);
       else await this.settleFromOutbox(record, "unknown", "outbox-lost");
     }
+  }
+
+  /**
+   * The outbox can answer now (the control server finished starting): settle
+   * what startup recovery had to leave, enqueued sends and young claims.
+   */
+  async recheckOutbox(): Promise<void> {
+    const ledger = this.options.ledger;
+    if (!ledger || this.disposed) return;
+    if (this.recovered) await this.recovered;
+    const waiting = [...this.awaitingOutbox];
+    this.awaitingOutbox.clear();
+    for (const id of waiting) {
+      const record = ledger.get(id);
+      if (record?.delivery?.status === "claimed") await this.recoverClaim(record);
+    }
+    await this.recoverEnqueued();
   }
 
   private async settleQuietly(
