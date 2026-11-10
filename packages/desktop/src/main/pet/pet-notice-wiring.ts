@@ -106,8 +106,18 @@ export interface PetNoticeWiringGateway {
 export interface PetNoticePowerEvents {
   on(event: "resume", listener: () => void): unknown;
   on(event: "unlock-screen", listener: () => void): unknown;
+  on(event: "lock-screen", listener: () => void): unknown;
   removeListener(event: "resume", listener: () => void): unknown;
   removeListener(event: "unlock-screen", listener: () => void): unknown;
+  removeListener(event: "lock-screen", listener: () => void): unknown;
+}
+
+/** Electron `app` window focus events: presence may have flipped without input. */
+export interface PetNoticeFocusEvents {
+  on(event: "browser-window-blur", listener: () => void): unknown;
+  on(event: "browser-window-focus", listener: () => void): unknown;
+  removeListener(event: "browser-window-blur", listener: () => void): unknown;
+  removeListener(event: "browser-window-focus", listener: () => void): unknown;
 }
 
 export interface PetNoticeWiringDeps {
@@ -147,6 +157,8 @@ export interface PetNoticeWiringDeps {
    * sent when the machine wakes or the screen unlocks.
    */
   powerEvents?: PetNoticePowerEvents;
+  /** Electron `app`: losing window focus can make the owner away at once. */
+  focusEvents?: PetNoticeFocusEvents;
   now?: () => number;
   log?: (event: string, data: Record<string, unknown>) => void;
   /** Test seams: the router's IM timeout and the owner's UTC offset. */
@@ -245,10 +257,15 @@ export interface PetDecisionNoticeHooks {
   deliveryFor: ImDecisionDeliveryResolver;
   /** An IM conversation that belongs to the owner (direct messages only). */
   isOwnerConversation(origin: { channel: string; target: string; senderId?: string }): boolean;
-  /** Hear about a pending decision in a rule-watched Session as it appears. */
+  /** Hear about a pending decision in a rule-watched Session as it appears, or a rule armed. */
   onBlocked(listener: (sessionId: string) => void): () => void;
   /** The owner is away (the router's presence): a desktop-kept prompt may now go to IM. */
   isAway(): boolean;
+  /**
+   * Hear when presence flips (window focus lost or regained, screen locked,
+   * the idle threshold passed). Watched only while someone listens.
+   */
+  onAwayChange(listener: () => void): () => void;
   /** The owner target the router would use on this channel is a confirmed private chat. */
   ownerChannelIsDirect(channel: string): boolean;
   /** The projection's status for a decision; undefined once it is gone. */
@@ -626,6 +643,62 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
   });
 
   const decisionListeners = new Set<(sessionId: string) => void>();
+  const nudgeDecisions = (sessionId: string): void => {
+    for (const listener of decisionListeners) {
+      try {
+        listener(sessionId);
+      } catch (error) {
+        log("pet.notice.decision_listener_failed", { sessionId, error: errorText(error) });
+      }
+    }
+  };
+
+  /**
+   * Presence flips, only while a listener waits for one. Window blur / focus
+   * and a screen lock are events; the idle threshold is not, so while the
+   * owner is present a timer looks again when it would pass without input.
+   */
+  const awayListeners = new Set<() => void>();
+  let lastPresent: boolean | undefined;
+  let idleTimer: ReturnType<typeof setTimeout> | undefined;
+  const checkPresence = (): void => {
+    if (idleTimer !== undefined) clearTimeout(idleTimer);
+    idleTimer = undefined;
+    if (awayListeners.size === 0 || disposed) {
+      lastPresent = undefined;
+      return;
+    }
+    let present: boolean;
+    try {
+      present = presence.isPresent();
+    } catch {
+      present = false;
+    }
+    const changed = lastPresent !== undefined && lastPresent !== present;
+    lastPresent = present;
+    if (present) {
+      let idle: number;
+      try {
+        idle = deps.presence.getSystemIdleTimeSec();
+      } catch {
+        idle = 0;
+      }
+      const left = Math.max(1, settings().presenceIdleSec - (Number.isFinite(idle) ? idle : 0));
+      idleTimer = setTimeout(checkPresence, left * 1_000 + 250);
+      idleTimer.unref?.();
+    }
+    if (!changed) return;
+    for (const listener of [...awayListeners]) {
+      try {
+        listener();
+      } catch (error) {
+        log("pet.notice.presence_listener_failed", { error: errorText(error) });
+      }
+    }
+  };
+  deps.focusEvents?.on("browser-window-blur", checkPresence);
+  deps.focusEvents?.on("browser-window-focus", checkPresence);
+  deps.powerEvents?.on("lock-screen", checkPresence);
 
   const decisions: PetDecisionNoticeHooks = {
     deliveryFor(sessionId, task) {
@@ -654,6 +727,14 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
       } catch {
         return false;
       }
+    },
+    onAwayChange(listener) {
+      awayListeners.add(listener);
+      if (awayListeners.size === 1) checkPresence();
+      return () => {
+        awayListeners.delete(listener);
+        if (awayListeners.size === 0) checkPresence();
+      };
     },
     ownerChannelIsDirect(channel) {
       try {
@@ -694,15 +775,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
       });
     },
     // PetImDecisions owns the prompt (with its reply code); nudge it now.
-    onPendingDecision: (sessionId) => {
-      for (const listener of decisionListeners) {
-        try {
-          listener(sessionId);
-        } catch (error) {
-          log("pet.notice.decision_listener_failed", { sessionId, error: errorText(error) });
-        }
-      }
-    },
+    onPendingDecision: (sessionId) => nudgeDecisions(sessionId),
     // A cancelled Goal's pauses must never be replayed or digested later.
     onGoalCleared: (sessionId) => router.revokeSessionBlocked(sessionId),
     // Queued user messages (core queue depth). Background work parks the turn
@@ -768,6 +841,8 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
       origin: "user",
       armedAt: now(),
     });
+    // A decision already pending in this Session may now have somewhere to go.
+    nudgeDecisions(upsert.sessionId);
     const im = predictedIm(rule.channel, rule.target, channels);
     const quietHours = quietHoursText(settings());
     const when = upsert.scope === "goal" ? "目标完成或卡住时" : "这个会话下一次完成实际工作后";
@@ -873,6 +948,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
         origin: "delegation",
         armedAt: now(),
       });
+      nudgeDecisions(task.sessionId);
     } catch (error) {
       log("pet.notice.delegation_rule_failed", {
         sessionId: task.sessionId,
@@ -1037,6 +1113,11 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
       unsubscribeProjection();
       deps.powerEvents?.removeListener("resume", flushDueDigest);
       deps.powerEvents?.removeListener("unlock-screen", flushDueDigest);
+      deps.powerEvents?.removeListener("lock-screen", checkPresence);
+      deps.focusEvents?.removeListener("browser-window-blur", checkPresence);
+      deps.focusEvents?.removeListener("browser-window-focus", checkPresence);
+      awayListeners.clear();
+      checkPresence();
       // Reports parked on runs that will now never close still reach the
       // router before it stops taking notices.
       if (!watcher.hasPending() && inFlight.size === 0) router.dispose();

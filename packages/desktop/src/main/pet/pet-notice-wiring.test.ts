@@ -105,6 +105,7 @@ interface Harness {
   snapshot(): DesktopPetProjectionSnapshot;
   setWorkerState(state: DesktopPetProjectionSnapshot["workerState"]): void;
   emitProjection(event: DesktopPetProjectionEvent): void;
+  subscribeProjection(listener: (event: DesktopPetProjectionEvent) => void): () => void;
 }
 
 function harness(overrides: Partial<PetNoticeWiringDeps> = {}): Harness {
@@ -252,7 +253,11 @@ function harness(overrides: Partial<PetNoticeWiringDeps> = {}): Harness {
       workerState = state;
     },
     emitProjection: (event) => {
-      for (const listener of listeners) listener(event);
+      for (const listener of [...listeners]) listener(event);
+    },
+    subscribeProjection: (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
     },
   };
 }
@@ -1019,8 +1024,35 @@ describe("pending-notice replay", () => {
   });
 });
 
+/** Timers on the test clock: `advance` runs every callback that came due. */
+function fakeTimers() {
+  const timers = new Set<{ at: number; callback: () => void }>();
+  return {
+    setTimeout: (callback: () => void, delay: number) => {
+      const timer = { at: clock + delay, callback };
+      timers.add(timer);
+      return timer;
+    },
+    clearTimeout: (timer: unknown) => {
+      timers.delete(timer as { at: number; callback: () => void });
+    },
+    pending: () => [...timers].map((timer) => timer.at).sort((a, b) => a - b),
+    advance: (to: number) => {
+      clock = to;
+      for (const timer of [...timers].sort((a, b) => a.at - b.at)) {
+        if (timer.at > clock) continue;
+        timers.delete(timer);
+        timer.callback();
+      }
+    },
+  };
+}
+
 /** PetImDecisions as main wires it: rule candidates from the wiring, sends through its router. */
-function decisionRelay(h: Harness) {
+function decisionRelay(
+  h: Harness,
+  extra: Partial<ConstructorParameters<typeof PetImDecisions>[0]> = {},
+) {
   const lines: string[] = [];
   const approvals: unknown[] = [];
   const relay = new PetImDecisions({
@@ -1039,17 +1071,22 @@ function decisionRelay(h: Harness) {
           observedAt: clock,
         });
     },
-    submit: (notice) => h.wiring.router.submitWithOutcome(notice),
-    prior: (dedupeKey) => h.wiring.router.priorDecision(dedupeKey),
+    router: h.wiring.router,
     isOwnerConversation: h.wiring.decisions.isOwnerConversation,
     ownerChannelIsDirect: h.wiring.decisions.ownerChannelIsDirect,
     isAway: h.wiring.decisions.isAway,
     decisionStatus: h.wiring.decisions.decisionStatus,
+    projection: { subscribe: h.subscribeProjection },
+    nudges: [h.wiring.decisions.onBlocked],
+    onAwayChange: h.wiring.decisions.onAwayChange,
+    sweepMs: 0,
     onError: (error) => {
       throw error;
     },
+    ...extra,
   });
-  const raise = (requestId = "req-1") => {
+  /** A pending request (again, after a restart: `createdAt` of the original). */
+  const raise = (requestId = "req-1", createdAt = clock) => {
     const pending = {
       agentSessionId: SID,
       requestId,
@@ -1057,7 +1094,7 @@ function decisionRelay(h: Harness) {
       workerGeneration: 1,
       kind: "tool_approval",
       title: "等待批准 Bash",
-      createdAt: clock,
+      createdAt,
       status: "pending",
     } as DesktopPendingDecision;
     h.pending.push(pending);
@@ -1081,11 +1118,11 @@ function decisionRelay(h: Harness) {
       observedAt: clock,
     });
   };
-  /** Past the 15 s grace, then a few polls. */
+  /** Past the 15 s grace, then a few looks (as the grace timer and events would). */
   const poll = async (until?: () => boolean) => {
     clock += 16_000;
-    for (let index = 0; index < 3; index += 1) await relay.tick();
-    await settle(until, () => relay.tick());
+    for (let index = 0; index < 3; index += 1) await relay.scan();
+    await settle(until, () => relay.scan());
   };
   const code = () => relay["options"].read()[0]?.code;
   return { relay, approvals, raise, poll, code };
@@ -1385,6 +1422,145 @@ describe("decision prompts through the router", () => {
     expect(current.desktop).toEqual([]);
   });
 
+  /** Stop this run (stores flushed) and start the next one on the same files. */
+  async function restart(overrides: Partial<PetNoticeWiringDeps> = {}): Promise<void> {
+    await current!.wiring.flush();
+    current!.wiring.dispose();
+    current = harness(overrides);
+    await current.wiring.ready;
+  }
+  const promptOf = (code: string | undefined) =>
+    current!.wiring.ledger.prompts().find((record) => record.prompt?.code === code)?.prompt;
+
+  test("a restart during the grace period prompts once, when the grace ends", async () => {
+    current = harness();
+    await current.handler(SID, upsertArgs({ events: ["blocked"] }));
+    const raisedAt = clock;
+    const before = decisionRelay(current);
+    before.raise();
+    clock = raisedAt + 5_000;
+    await before.relay.scan();
+    expect(current.ownerSends).toEqual([]);
+    // Grace has no record: it is derived from the decision's own createdAt.
+    expect(current.wiring.ledger.prompts()).toEqual([]);
+
+    await restart();
+    const timers = fakeTimers();
+    const d = decisionRelay(current, timers);
+    d.relay.start();
+    d.raise("req-1", raisedAt);
+    await settle();
+    expect(current.ownerSends).toEqual([]);
+    expect(timers.pending()).toContain(raisedAt + 15_000);
+    timers.advance(raisedAt + 15_000);
+    await settle(() => current!.ownerSends.length > 0);
+    expect(current.ownerSends).toHaveLength(1);
+    expect(promptOf(d.code())).toMatchObject({ phase: "im", channel: "wechat" });
+    d.relay.stop();
+  });
+
+  test("after a restart a prompt that reached IM is not sent again and still times out", async () => {
+    current = harness();
+    await current.handler(SID, upsertArgs({ events: ["blocked"] }));
+    const raisedAt = clock;
+    const before = decisionRelay(current);
+    before.raise();
+    await settle();
+    await before.poll(() => current!.ownerSends.length > 0);
+    const code = before.code()!;
+    expect(promptOf(code)).toMatchObject({ phase: "im", channel: "wechat" });
+
+    await restart();
+    const d = decisionRelay(current);
+    d.raise("req-1", raisedAt);
+    await d.relay.scan();
+    expect(current.ownerSends).toEqual([]);
+    // The record says the owner's chat got the code: a bare reply there counts.
+    expect(await d.relay.reply({ message: "1", origin: OWNER_DM })).toContain("单独的编号");
+    clock = raisedAt + 10 * 60_000;
+    await d.relay.scan();
+    await settle(() => current!.ownerSends.length > 0);
+    expect(d.approvals).toEqual([
+      expect.objectContaining({ approved: false, failure: "timed_out" }),
+    ]);
+    expect(current.ownerSends.map((send) => send.text)).toEqual([
+      expect.stringContaining(`确认 ${code} 已超时`),
+    ]);
+    expect(promptOf(code)).toMatchObject({
+      phase: "expired",
+      expiryNotice: { channel: "wechat", sent: true },
+    });
+  });
+
+  test("the owner leaving escalates at once, and a restart never escalates again", async () => {
+    let present = true;
+    const focus = new EventEmitter();
+    const overrides: Partial<PetNoticeWiringDeps> = {
+      presence: {
+        getSystemIdleTimeSec: () => (present ? 0 : 3_600),
+        hasFocusedWindow: () => present,
+      },
+      focusEvents: focus as unknown as PetNoticeWiringDeps["focusEvents"],
+    };
+    current = harness(overrides);
+    await current.handler(SID, upsertArgs({ events: ["blocked"] }));
+    const timers = fakeTimers();
+    const d = decisionRelay(current, timers);
+    d.relay.start();
+    const raisedAt = clock;
+    d.raise();
+    await settle();
+    timers.advance(raisedAt + 15_000);
+    await settle(() => promptOf(d.code()) !== undefined);
+    expect(current.ownerSends).toEqual([]);
+    expect(promptOf(d.code())).toMatchObject({ phase: "desktop" });
+    // No poll: the window losing focus is the event.
+    present = false;
+    focus.emit("browser-window-blur");
+    await settle(() => current!.ownerSends.length > 0);
+    expect(current.ownerSends).toHaveLength(1);
+    expect(current.ownerSends[0]!.text).toContain(`回答 ${d.code()} 1`);
+    expect(promptOf(d.code())).toMatchObject({
+      phase: "im",
+      channel: "wechat",
+      escalatedAt: raisedAt + 15_000,
+    });
+    d.relay.stop();
+
+    await restart(overrides);
+    const again = decisionRelay(current);
+    again.raise("req-1", raisedAt);
+    await again.relay.scan();
+    await settle();
+    expect(current.ownerSends).toEqual([]);
+  });
+
+  test("the prompt's deadline timer denies it and tells the chat it went to", async () => {
+    current = harness();
+    await current.handler(SID, upsertArgs({ events: ["blocked"] }));
+    const timers = fakeTimers();
+    const d = decisionRelay(current, timers);
+    d.relay.start();
+    const raisedAt = clock;
+    d.raise();
+    await settle();
+    timers.advance(raisedAt + 15_000);
+    await settle(() => current!.ownerSends.length > 0);
+    await settle(() => timers.pending().includes(raisedAt + 10 * 60_000));
+    expect(timers.pending()).toEqual([raisedAt + 10 * 60_000]);
+    timers.advance(raisedAt + 10 * 60_000);
+    await settle(() => current!.ownerSends.length > 1);
+    expect(d.approvals).toEqual([
+      expect.objectContaining({ approved: false, failure: "timed_out" }),
+    ]);
+    expect(current.ownerSends.map((send) => send.targetId)).toEqual([
+      "wechat:owner",
+      "wechat:owner",
+    ]);
+    expect(current.ownerSends[1]!.text).toContain("已超时");
+    d.relay.stop();
+  });
+
   test("owner present with an auto rule: no IM prompt, only the pet's pending surface", async () => {
     current = harness({
       presence: { getSystemIdleTimeSec: () => 0, hasFocusedWindow: () => true },
@@ -1447,6 +1623,9 @@ describe("decision prompts through the router", () => {
       status: "revoked",
       error: "resolved",
     });
+    // The prompt's own lifecycle ends too (it left the projection unanswered from here).
+    await d.relay.scan();
+    expect(current.wiring.ledger.get(queued[0]!.id)?.prompt).toMatchObject({ phase: "revoked" });
     current.channels[1] = {
       id: "lark",
       label: "飞书",

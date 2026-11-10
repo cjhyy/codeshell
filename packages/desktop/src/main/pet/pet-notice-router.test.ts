@@ -1102,3 +1102,54 @@ async function waitUntil(condition: () => Promise<boolean>): Promise<void> {
   }
   throw new Error("condition not met");
 }
+
+describe("decision prompt records", () => {
+  const prompt = (overrides: Partial<NoticeSubmission> = {}) =>
+    notice({
+      kind: "session.blocked",
+      priority: "P0",
+      dedupeKey: "s-q:req-1",
+      sessionId: "s-q",
+      requestId: "req-1",
+      prompt: { code: "0123456789AB", deadline: NOON + 10 * MINUTE },
+      ...overrides,
+    });
+
+  test("the first prompt's record carries the lifecycle; its escalation is a copy", async () => {
+    const h = harness();
+    h.state.present = true;
+    expect(await h.router.submit(prompt())).toMatchObject({ reason: "present-desktop" });
+    expect(h.router.decisionRecord("0123456789AB")).toMatchObject({
+      sessionId: "s-q",
+      requestId: "req-1",
+      target: { kind: "owner" },
+      decision: { reason: "present-desktop" },
+      prompt: { phase: "desktop", deadline: NOON + 10 * MINUTE },
+      copies: [{}],
+    });
+    h.state.present = false;
+    // The escalation copy carries no prompt of its own.
+    await h.router.submit(prompt({ dedupeKey: "s-q:req-1:away", prompt: undefined }));
+    expect(h.router.decisionRecords()).toHaveLength(1);
+    expect(h.router.decisionRecord("0123456789AB")?.copies).toEqual([
+      {},
+      { status: "accepted", channel: "lark" },
+    ]);
+    const updated = await h.router.updateDecision("0123456789AB", {
+      phase: "im",
+      channel: "lark",
+      imAt: h.clock.now,
+    });
+    expect(updated?.prompt).toMatchObject({ phase: "im", channel: "lark" });
+    // A step backwards is refused (logged), never thrown at the caller.
+    expect(await h.router.updateDecision("0123456789AB", { phase: "desktop" })).toBeUndefined();
+    expect(await h.router.updateDecision("FFFFFFFFFFFF", { phase: "answered" })).toBeUndefined();
+    expect(h.logs.map((entry) => entry.event)).toContain("pet.notice.prompt_update_failed");
+  });
+
+  test("a notice without a request id never carries a prompt", async () => {
+    const h = harness();
+    await h.router.submit(prompt({ requestId: undefined }));
+    expect(h.router.decisionRecords()).toEqual([]);
+  });
+});

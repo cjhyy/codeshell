@@ -1,7 +1,13 @@
 import type { PetLongTaskCompletionTarget } from "@cjhyy/code-shell-pet";
 import type { NoticeAttention, NoticeChannel } from "@cjhyy/code-shell-pet/protocol";
 import type { NoticeFacts } from "./pet-notice-compose.js";
-import type { NoticeDeliveryStatus, NoticeRecord, PetNoticeLedger } from "./pet-notice-ledger.js";
+import type {
+  NoticeDecisionPrompt,
+  NoticeDecisionPromptPatch,
+  NoticeDeliveryStatus,
+  NoticeRecord,
+  PetNoticeLedger,
+} from "./pet-notice-ledger.js";
 import {
   DEFAULT_MAX_P0_PER_HOUR,
   DEFAULT_MAX_PER_HOUR,
@@ -168,6 +174,11 @@ export interface NoticeSubmission {
    * goes to IM (or the digest), only the desktop.
    */
   boundReplyDelivered?: boolean;
+  /**
+   * The first prompt for a pending decision (needs `sessionId` and
+   * `requestId`): its record carries the prompt's lifecycle from now on.
+   */
+  prompt?: Pick<NoticeDecisionPrompt, "code" | "deadline" | "skippable" | "replies">;
 }
 
 export interface NoticeRouterSettings {
@@ -195,12 +206,36 @@ export interface NoticeSubmitResult {
   sent?: "accepted" | "failed" | "unknown";
 }
 
-/** A dedupe key's earlier record (decision and delivery), e.g. after a restart. */
-export interface NoticePriorDecision {
+/** One decision prompt as its ledger record has it. */
+export interface DecisionPromptRecord {
+  code: string;
+  sessionId: string;
+  requestId: string;
+  target: NoticeTarget;
+  ruleIds: string[];
+  title?: string;
+  prompt: NoticeDecisionPrompt;
+  /** The router's decision on the first prompt. */
   decision?: RouteDecision;
-  status?: NoticeDeliveryStatus;
-  /** The IM channel of the latest claim or queue entry. */
-  channel?: string;
+  /**
+   * The delivery of each copy of the prompt, oldest first: the first prompt,
+   * then its "owner left" escalation. `channel` is the claim's or queue's.
+   */
+  copies: Array<{ status?: NoticeDeliveryStatus; channel?: string }>;
+}
+
+/** The decision-prompt surface of the router (`PetNoticeRouter` implements it). */
+export interface NoticeDecisionPrompts {
+  submitWithOutcome(notice: NoticeSubmission): Promise<NoticeSubmitResult>;
+  /** Resolves once the records are readable (the ledger loaded, or failed to). */
+  decisionsLoaded(): Promise<void>;
+  decisionRecord(code: string): DecisionPromptRecord | undefined;
+  decisionRecords(): DecisionPromptRecord[];
+  /** Persist a lifecycle step; undefined when there is no such record or it could not be written. */
+  updateDecision(
+    code: string,
+    patch: NoticeDecisionPromptPatch,
+  ): Promise<DecisionPromptRecord | undefined>;
 }
 
 export interface NoticeOutlets {
@@ -233,6 +268,10 @@ export type NoticeLedgerPort = Pick<
   | "expireQueued"
   | "get"
   | "byDedupeKey"
+  | "byPromptCode"
+  | "prompts"
+  | "forRequest"
+  | "updatePrompt"
 >;
 
 /**

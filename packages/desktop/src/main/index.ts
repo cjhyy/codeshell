@@ -1854,6 +1854,7 @@ async function createWindow(): Promise<BrowserWindow> {
         hasFocusedWindow: () => BrowserWindow.getFocusedWindow() !== null,
       },
       powerEvents: powerMonitor,
+      focusEvents: app,
     });
     petNotices = notices;
     const petMemoryStoreInstance = new PetMemoryStore(
@@ -2001,17 +2002,18 @@ async function createWindow(): Promise<BrowserWindow> {
           decisionBridge.requestWorker(method, params, timeoutMs, options),
         (params) => mobileOrchestrator.broadcastApprovalResolved(params),
       ),
-      // The router decides whether a prompt goes to IM (presence, caps) and where.
-      submit: (notice) => notices.router.submitWithOutcome(notice),
-      prior: (dedupeKey) => notices.router.priorDecision(dedupeKey),
+      // The router decides whether a prompt goes to IM (presence, caps) and
+      // where; its ledger records hold each prompt's lifecycle.
+      router: notices.router,
       isOwnerConversation: notices.decisions.isOwnerConversation,
       ownerChannelIsDirect: notices.decisions.ownerChannelIsDirect,
       isAway: notices.decisions.isAway,
       decisionStatus: notices.decisions.decisionStatus,
+      projection: aggregator,
+      nudges: [notices.decisions.onBlocked],
+      onAwayChange: notices.decisions.onAwayChange,
       onError: (error) => dlog("main", "pet.im-decision.failed", { error: String(error) }),
     });
-    const imDecisions = petImDecisions;
-    notices.decisions.onBlocked(() => imDecisions.scanNow());
     petImDecisions.start();
     // One interpretation of each Session event, handed to the long task and
     // the notice rules (see createSessionOutcomeTap). Which of them reports a

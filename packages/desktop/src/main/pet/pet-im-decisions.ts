@@ -1,18 +1,34 @@
 import { createHash } from "node:crypto";
-import { USER_DECISION_TIMEOUT_MS, recommendedAnswer } from "@cjhyy/code-shell-core/internal";
+import { USER_DECISION_TIMEOUT_MS } from "@cjhyy/code-shell-core/internal";
 import type { PetLongTask } from "@cjhyy/code-shell-pet";
 import type { NoticeAttention, NoticeChannel } from "@cjhyy/code-shell-pet/protocol";
 import type { DeliveryPlanEntry } from "./pet-delivery-plan.js";
-import type { DesktopPetProjectionSnapshot } from "./pet-state-aggregator.js";
+import type {
+  DesktopPetProjectionEvent,
+  DesktopPetProjectionSnapshot,
+} from "./pet-state-aggregator.js";
 import type {
   PetChatControlRequest,
   SessionRouteControlRequest,
 } from "../im-gateway-control-server.js";
-import { MAX_NOTICE_BODY } from "./pet-notice-compose.js";
+import {
+  canReply,
+  choices,
+  entrySource,
+  expiredNotice,
+  questionBody,
+  questionNotice,
+  shortReplies,
+  skippableEnvelope,
+  type ExpirySource,
+  type PromptMoment,
+} from "./pet-im-decision-text.js";
+import { KeyedTimers } from "./keyed-timers.js";
+import { isPromptEnded, type NoticeDecisionPromptPatch } from "./pet-notice-ledger.js";
 import type { RouteDecision } from "./pet-notice-policy.js";
 import type {
-  NoticePriorDecision,
-  NoticeSubmission,
+  DecisionPromptRecord,
+  NoticeDecisionPrompts,
   NoticeSubmitResult,
   NoticeTarget,
 } from "./pet-notice-types.js";
@@ -70,11 +86,6 @@ const ESCALATING_REASONS: ReadonlySet<string> = new Set([
 ]);
 /** Not worth prompting over IM with less than this left before the deadline. */
 const ESCALATION_MIN_LEFT_MS = 60_000;
-
-/** Room left in a prompt for the code, instructions and deadline lines. */
-const PROMPT_OVERHEAD = 400;
-/** A question longer than this is only reviewable (and answerable) on the desktop. */
-const QUESTION_BODY_MAX = MAX_NOTICE_BODY - PROMPT_OVERHEAD;
 
 /**
  * Join only live, user-visible worker requests to where they are answered.
@@ -155,106 +166,6 @@ export function collectImDecisions(
   return result;
 }
 
-/** Model questions (AskUserQuestion*) — Core resolves their timeout itself. */
-function skippableEnvelope(envelope: Envelope): boolean {
-  return envelope.request.toolName === "__ask_user__" && envelope.request.args.skippable === true;
-}
-
-/** The recommended label(s) a timed-out model question defaults to (Core's rule). */
-function recommended(entry: ImDecision): string | undefined {
-  const args = entry.envelope.request.args;
-  const options = Array.isArray(args.options)
-    ? args.options.flatMap((option) =>
-        option && typeof option.label === "string"
-          ? [
-              {
-                label: option.label as string,
-                description: "",
-                recommended: option.recommended === true,
-              },
-            ]
-          : [],
-      )
-    : [];
-  return recommendedAnswer({ options, multiSelect: args.multiSelect === true });
-}
-
-function choices(entry: ImDecision): string[] {
-  const args = entry.envelope.request.args;
-  return Array.isArray(args.options)
-    ? args.options.flatMap((option) =>
-        option && typeof option.label === "string" ? [option.label] : [],
-      )
-    : [];
-}
-
-/**
- * Only a private chat with an authenticated sender may answer: a route must be
- * a direct message with a sender; owner prompts go to the owner's own direct
- * chats, recognised by `isOwnerConversation`.
- */
-function canReply(entry: ImDecision, ownerConversations: boolean): boolean {
-  const target = entry.delivery.target;
-  if (target.kind === "owner") return ownerConversations;
-  return target.route.isDirectMessage === true && !!target.route.senderId;
-}
-
-function questionBody(entry: ImDecision): string | undefined {
-  const { toolName, description, args } = entry.envelope.request;
-  const question =
-    toolName === "__ask_user__"
-      ? String(args.question ?? description ?? "需要你的回答")
-      : `${toolName}\n${description ?? "工具请求执行许可"}\n${JSON.stringify(args, null, 2)}`;
-  const options =
-    toolName !== "__ask_user__"
-      ? ["允许本次", "拒绝"]
-      : Array.isArray(args.options)
-        ? args.options.flatMap((option) =>
-            option && typeof option.label === "string"
-              ? [
-                  `${option.label}${option.recommended === true ? "（推荐）" : ""}${typeof option.description === "string" && option.description ? ` — ${option.description}` : ""}`,
-                ]
-              : [],
-          )
-        : [];
-  const body = [question, ...options.map((label, index) => `${index + 1}. ${label}`)].join("\n");
-  return body.length <= QUESTION_BODY_MAX ? body : undefined;
-}
-
-/**
- * The question and options as notice facts (digest lines, replayed context).
- * A conversation that cannot answer gets neither the details nor the code.
- */
-function decisionFacts(entry: ImDecision, answerable: boolean): NoticeSubmission["facts"] {
-  if (!answerable) return entry.title ? { title: entry.title } : {};
-  const { toolName, description, args } = entry.envelope.request;
-  const question =
-    toolName === "__ask_user__"
-      ? String(args.question ?? description ?? "需要你的回答")
-      : `${toolName}：${description ?? "工具请求执行许可"}`;
-  const options =
-    toolName !== "__ask_user__"
-      ? [{ label: "允许本次" }, { label: "拒绝" }]
-      : Array.isArray(args.options)
-        ? args.options.flatMap((option) =>
-            option && typeof option.label === "string"
-              ? [
-                  {
-                    label: option.label as string,
-                    ...(option.recommended === true ? { recommended: true } : {}),
-                  },
-                ]
-              : [],
-          )
-        : [];
-  return {
-    ...(entry.title ? { title: entry.title } : {}),
-    question,
-    ...(options.length > 0 ? { options } : {}),
-    code: entry.code,
-  };
-}
-
 /** The channel a submitted notice went out on over IM, if it did. */
 function imChannel(decision: RouteDecision | undefined): string | undefined {
   return decision && (decision.outlet === "im" || decision.outlet === "both")
@@ -262,87 +173,161 @@ function imChannel(decision: RouteDecision | undefined): string | undefined {
     : undefined;
 }
 
+function decisionKey(sessionId: string, requestId: string): string {
+  return `${sessionId}\0${requestId}`;
+}
+
+/**
+ * A look over every decision even without an event, for events that were
+ * missed (an envelope that arrived after its grace timer, a long task that
+ * changed where a prompt goes). Everything time-critical has its own trigger.
+ */
+const SAFETY_SWEEP_MS = 60_000;
+
+export interface PetImDecisionsOptions {
+  read: () => ImDecision[];
+  approve: (entry: ImDecision, decision: Decision) => Promise<void>;
+  /** Drop a model question's auto-resolve deadline (回答 码 等待). */
+  keepWaiting?: (entry: ImDecision) => Promise<void>;
+  /**
+   * The notice router: it decides whether a prompt goes to IM at all
+   * (presence, the all-sessions rule's "only while away", P0 caps) and where,
+   * and its ledger record of the first prompt holds the prompt's lifecycle.
+   */
+  router: NoticeDecisionPrompts;
+  /** A direct chat that belongs to the owner, for owner-targeted prompts. */
+  isOwnerConversation?: (origin: { channel: string; target: string; senderId?: string }) => boolean;
+  /** The owner target on this channel is a confirmed private chat. */
+  ownerChannelIsDirect?: (channel: string) => boolean;
+  /** The owner left the computer: a prompt kept on the desktop may now go to IM. */
+  isAway?: () => boolean;
+  /** The projection's status of a decision ("expired" = Core's deadline fired). */
+  decisionStatus?: (sessionId: string, requestId: string) => string | undefined;
+  /** Pending-decision projection events: a decision appeared or ended, the worker reset. */
+  projection?: { subscribe(listener: (event: DesktopPetProjectionEvent) => void): () => void };
+  /** Other moments worth a look now (a rule started watching a blocked Session). */
+  nudges?: ReadonlyArray<(listener: () => void) => () => void>;
+  /** Presence flips; subscribed only while a prompt waits for the owner to leave. */
+  onAwayChange?: (listener: () => void) => () => void;
+  onError: (error: unknown) => void;
+  now?: () => number;
+  graceMs?: number;
+  timeoutMs?: number;
+  setTimeout?: (callback: () => void, delay: number) => unknown;
+  clearTimeout?: (timer: unknown) => void;
+  /** The safety sweep's period (default 60 s); 0 turns it off. */
+  sweepMs?: number;
+}
+
 /**
  * Deterministic IM reply handling; no model may infer or manufacture consent.
  *
  * This is the only source of IM prompts for pending decisions: after a grace
  * period each prompt (with its reply code) is submitted to the notice router,
- * which decides whether it goes to IM at all (presence, the all-sessions
- * rule's "only while away", P0 caps) and where. A prompt the router kept on
- * the desktop is never sent; its code is never shown, so it cannot be
+ * which decides whether it goes to IM at all and where. A prompt the router
+ * kept on the desktop is never sent; its code is never shown, so it cannot be
  * answered from IM.
+ *
+ * Where a prompt stands lives on its ledger record (`NoticeDecisionPrompt`),
+ * so a restart picks up from there. This class only turns pending decisions
+ * into submissions, parses IM replies into decisions, and applies answers.
+ * It looks again when something can change the answer: a pending-decision
+ * projection event, a nudge (a rule now watches the Session), the owner
+ * leaving, or a prompt's own timer (its grace end, then its deadline).
  */
 export class PetImDecisions {
-  private timer?: ReturnType<typeof setInterval>;
-  private ticking = false;
-  private retick = false;
-  /** Code → the router's decision on its first prompt (sent or deliberately not). */
-  private readonly sent = new Map<string, RouteDecision>();
-  /** Code → the decision on its one "owner left" re-submission. */
-  private readonly escalated = new Map<string, RouteDecision>();
-  /** Codes whose prompt an owner private chat (or the origin route) accepted → that channel. */
-  private readonly prompted = new Map<string, string>();
-  private readonly submitting = new Set<string>();
-  private readonly notices = new Map<string, NoticeSubmission>();
-  /** Prompted codes whose end (timeout notice or answer) was already handled. */
-  private readonly ended = new Set<string>();
-  /** Retain delivered prompts briefly so late short replies receive an explicit ended notice. */
-  private readonly delivered = new Map<
-    string,
-    { entry: ImDecision; at: number; channel: string }
-  >();
-  constructor(
-    private readonly options: {
-      read: () => ImDecision[];
-      approve: (entry: ImDecision, decision: Decision) => Promise<void>;
-      /** Drop a model question's auto-resolve deadline (回答 码 等待). */
-      keepWaiting?: (entry: ImDecision) => Promise<void>;
-      /** The notice router (`PetNoticeRouter.submitWithOutcome`): decision and IM send. */
-      submit: (notice: NoticeSubmission) => Promise<NoticeSubmitResult | undefined>;
-      /**
-       * The router's record for a dedupe key (`PetNoticeRouter.priorDecision`):
-       * after a restart, and for a queued prompt that was sent later.
-       */
-      prior?: (dedupeKey: string) => NoticePriorDecision | undefined;
-      /** A direct chat that belongs to the owner, for owner-targeted prompts. */
-      isOwnerConversation?: (origin: {
-        channel: string;
-        target: string;
-        senderId?: string;
-      }) => boolean;
-      /** The owner target on this channel is a confirmed private chat. */
-      ownerChannelIsDirect?: (channel: string) => boolean;
-      /** The owner left the computer: a prompt kept on the desktop may now go to IM. */
-      isAway?: () => boolean;
-      /** The projection's status of a decision ("expired" = Core's deadline fired). */
-      decisionStatus?: (sessionId: string, requestId: string) => string | undefined;
-      onError: (error: unknown) => void;
-      now?: () => number;
-      graceMs?: number;
-      timeoutMs?: number;
-    },
-  ) {}
+  private started = false;
+  private running?: Promise<void>;
+  private rescan = false;
+  /** Codes being answered or auto-denied right now (one submission each). */
+  private readonly answering = new Set<string>();
+  /** One timer per decision: its grace end, then its deadline. */
+  private readonly wakes: KeyedTimers;
+  private readonly unsubscribe: Array<() => void> = [];
+  private unsubscribeAway?: () => void;
+  private sweep?: ReturnType<typeof setInterval>;
+
+  constructor(private readonly options: PetImDecisionsOptions) {
+    this.wakes = new KeyedTimers(
+      () => void this.scan(),
+      () => this.now(),
+      options,
+    );
+  }
+
+  private get router(): NoticeDecisionPrompts {
+    return this.options.router;
+  }
 
   start(): void {
-    if (this.timer) return;
-    this.timer = setInterval(() => void this.tick(), 5_000);
-    this.timer.unref?.();
-    void this.tick();
+    if (this.started) return;
+    this.started = true;
+    const projection = this.options.projection;
+    if (projection) this.unsubscribe.push(projection.subscribe((event) => this.observe(event)));
+    for (const nudge of this.options.nudges ?? [])
+      this.unsubscribe.push(nudge(() => this.scanNow()));
+    const sweepMs = this.options.sweepMs ?? SAFETY_SWEEP_MS;
+    if (sweepMs > 0) {
+      this.sweep = setInterval(() => void this.scan(), sweepMs);
+      this.sweep.unref?.();
+    }
+    void this.scan();
   }
+
   stop(): void {
-    if (this.timer) clearInterval(this.timer);
-    this.timer = undefined;
+    this.started = false;
+    for (const unsubscribe of this.unsubscribe.splice(0)) unsubscribe();
+    this.unsubscribeAway?.();
+    this.unsubscribeAway = undefined;
+    if (this.sweep) clearInterval(this.sweep);
+    this.sweep = undefined;
+    this.wakes.clearAll();
   }
-  /** A notice rule saw a Session block: run the full poll now instead of at the next tick. */
+
+  /** Something may have changed: look now instead of at the next timer. */
   scanNow(): void {
-    if (!this.timer) return;
-    void this.tick();
+    if (!this.started) return;
+    void this.scan();
   }
-  private canReply(entry: ImDecision): boolean {
-    return canReply(entry, this.options.isOwnerConversation !== undefined);
+
+  private observe(event: DesktopPetProjectionEvent): void {
+    switch (event.kind) {
+      case "pending-upsert":
+        // Its grace end, even if its envelope (and so its prompt) is not readable yet.
+        if (event.pending.status === "pending" && this.started)
+          this.wakes.set(
+            decisionKey(event.pending.agentSessionId, event.pending.requestId),
+            event.pending.createdAt + this.graceMs(),
+          );
+        else this.wakes.clear(decisionKey(event.pending.agentSessionId, event.pending.requestId));
+        break;
+      case "pending-remove":
+        this.wakes.clear(decisionKey(event.sessionId, event.requestId));
+        break;
+      case "reset":
+      case "worker-state":
+        break;
+      default:
+        return;
+    }
+    this.scanNow();
+  }
+
+  private moment(entry: ImDecision): PromptMoment {
+    return {
+      end: this.expiresAt(entry),
+      now: this.now(),
+      answerable: this.canReply(entry.delivery.target),
+    };
+  }
+  private canReply(target: NoticeTarget): boolean {
+    return canReply(target, this.options.isOwnerConversation !== undefined);
   }
   private now(): number {
     return this.options.now?.() ?? Date.now();
+  }
+  private graceMs(): number {
+    return this.options.graceMs ?? 15_000;
   }
   private expired(entry: ImDecision): boolean {
     return this.now() >= this.expiresAt(entry);
@@ -354,11 +339,10 @@ export class PetImDecisions {
     return entry.createdAt + (this.options.timeoutMs ?? USER_DECISION_TIMEOUT_MS);
   }
   private sameOrigin(
-    entry: ImDecision,
+    target: NoticeTarget,
     origin: Parameters<PetImDecisions["reply"]>[0]["origin"],
   ): boolean {
-    if (!origin || origin.isDirectMessage !== true || !this.canReply(entry)) return false;
-    const target = entry.delivery.target;
+    if (!origin || origin.isDirectMessage !== true || !this.canReply(target)) return false;
     if (target.kind === "owner") {
       return (
         this.options.isOwnerConversation?.({
@@ -374,62 +358,76 @@ export class PetImDecisions {
       origin.senderId === target.route.senderId
     );
   }
-  private pruneDelivered(): void {
-    for (const [code, item] of this.delivered) {
-      const end = this.expiresAt(item.entry);
-      if (this.now() > Math.max(Number.isFinite(end) ? end : 0, item.at) + USER_DECISION_TIMEOUT_MS)
-        this.delivered.delete(code);
-    }
-    while (this.delivered.size > 256) this.delivered.delete(this.delivered.keys().next().value!);
+  /**
+   * A copy accepted on this channel reached a conversation that may answer.
+   * An owner target that is not a confirmed private chat got the generic
+   * text: nothing there is answerable.
+   */
+  private answerableOn(target: NoticeTarget, channel: string): boolean {
+    return target.kind !== "owner" || this.options.ownerChannelIsDirect?.(channel) === true;
   }
 
-  async tick(): Promise<void> {
-    if (this.ticking) {
-      this.retick = true;
-      return;
+  /** Look over every decision; a call during a look runs one more afterwards. */
+  scan(): Promise<void> {
+    if (this.running) {
+      this.rescan = true;
+      return this.running;
     }
-    this.ticking = true;
-    try {
-      do {
-        this.retick = false;
-        await this.tickOnce();
-      } while (this.retick);
-    } finally {
-      this.ticking = false;
-    }
+    this.running = (async () => {
+      try {
+        do {
+          this.rescan = false;
+          await this.scanOnce();
+        } while (this.rescan);
+      } finally {
+        this.running = undefined;
+      }
+    })();
+    return this.running;
   }
 
-  private async tickOnce(): Promise<void> {
+  private async scanOnce(): Promise<void> {
     try {
+      await this.router.decisionsLoaded();
       const entries = this.options.read();
       const live = new Set(entries.map((entry) => entry.code));
-      this.noticeVanished(live);
-      this.pruneDelivered();
-      for (const map of [this.sent, this.escalated, this.prompted])
-        for (const code of map.keys()) if (!live.has(code)) map.delete(code);
-      for (const code of this.ended)
-        if (!live.has(code) && !this.delivered.has(code)) this.ended.delete(code);
+      for (const record of this.router.decisionRecords()) {
+        if (this.answering.has(record.code)) continue;
+        try {
+          const owed = record.prompt.expiryNotice;
+          if (isPromptEnded(record.prompt.phase)) {
+            // An expiry notice the router did not take yet (a failure, a restart).
+            if (owed && !owed.sent) await this.sendExpiryNotice(record, owed.channel, true);
+          } else if (!live.has(record.code)) await this.endVanished(record);
+        } catch (error) {
+          this.options.onError(error);
+        }
+      }
+      let awaitingAway = false;
       for (const entry of entries) {
-        if (this.submitting.has(entry.code)) continue;
-        if (this.expired(entry)) {
-          await this.expire(entry);
-          continue;
-        }
-        if (this.now() - entry.createdAt < (this.options.graceMs ?? 15_000)) continue;
+        if (this.answering.has(entry.code)) continue;
         try {
-          await this.route(entry);
+          if (this.expired(entry)) {
+            await this.expire(entry);
+            continue;
+          }
+          let record = this.router.decisionRecord(entry.code);
+          if (record) record = await this.catchUp(entry, record);
+          else {
+            if (this.now() - entry.createdAt < this.graceMs()) continue;
+            await this.promptFirst(entry);
+            record = this.router.decisionRecord(entry.code);
+            if (!record) continue;
+          }
+          if (!this.escalates(entry, record)) continue;
+          if (this.options.isAway?.() === true) await this.escalate(entry);
+          else awaitingAway = true;
         } catch (error) {
           this.options.onError(error);
         }
       }
-      for (const [code, notice] of this.notices) {
-        try {
-          await this.options.submit(notice);
-          this.notices.delete(code);
-        } catch (error) {
-          this.options.onError(error);
-        }
-      }
+      this.reschedule(entries);
+      this.watchAway(awaitingAway);
     } catch (error) {
       this.options.onError(error);
     }
@@ -440,85 +438,105 @@ export class PetImDecisions {
     return { first: `${sessionId}:${requestId}`, away: `${sessionId}:${requestId}:away` };
   }
 
-  /** First prompt, a queued prompt that went out later, or the "owner left" escalation. */
-  private async route(entry: ImDecision): Promise<void> {
-    const keys = this.keys(entry);
-    if (!this.sent.has(entry.code)) {
-      // After a restart the router may already have routed this request.
-      const prior = this.options.prior?.(keys.first);
-      if (prior?.decision) {
-        this.sent.set(entry.code, prior.decision);
-        this.notePrior(entry, prior);
-        const away = this.options.prior?.(keys.away);
-        if (away?.decision) {
-          this.escalated.set(entry.code, away.decision);
-          this.notePrior(entry, away);
-        }
-      } else {
-        const result = await this.options.submit(this.questionNotice(entry, keys.first));
-        if (!result) return;
-        this.sent.set(entry.code, result.decision);
-        this.noteResult(entry, result);
-        return;
-      }
-    }
-    if (this.prompted.has(entry.code)) return;
-    // A queued prompt (IM was down) may have been sent since.
-    for (const key of [keys.first, ...(this.escalated.has(entry.code) ? [keys.away] : [])]) {
-      const prior = this.options.prior?.(key);
-      if (prior) this.notePrior(entry, prior);
-    }
-    if (this.prompted.has(entry.code) || this.escalated.has(entry.code)) return;
-    const first = this.sent.get(entry.code)!;
-    // Only a prompt held back because the owner was at the computer escalates;
-    // a desktop-only rule, a mute, an unbound channel or the P0 cap never does.
-    if (!ESCALATING_REASONS.has(first.reason) || this.options.isAway?.() !== true) return;
-    if (this.expiresAt(entry) - this.now() < ESCALATION_MIN_LEFT_MS) return;
-    const result = await this.options.submit(this.questionNotice(entry, keys.away));
+  /** The first prompt: its record starts the lifecycle. */
+  private async promptFirst(entry: ImDecision): Promise<void> {
+    const end = this.expiresAt(entry);
+    const result = await this.router.submitWithOutcome({
+      ...questionNotice(entry, this.keys(entry).first, this.moment(entry)),
+      prompt: {
+        code: entry.code,
+        ...(Number.isFinite(end) ? { deadline: end } : {}),
+        ...(skippableEnvelope(entry.envelope) ? { skippable: true as const } : {}),
+        replies: shortReplies(entry),
+      },
+    });
     if (!result) return;
-    this.escalated.set(entry.code, result.decision);
-    this.noteResult(entry, result);
+    await this.noteSent(entry, result, {});
   }
 
-  private noteResult(entry: ImDecision, result: NoticeSubmitResult): void {
+  /** The one "owner left" re-submission of a prompt that was kept on the desktop. */
+  private async escalate(entry: ImDecision): Promise<void> {
+    const result = await this.router.submitWithOutcome(
+      questionNotice(entry, this.keys(entry).away, this.moment(entry)),
+    );
+    if (!result) return;
+    await this.noteSent(entry, result, { phase: "escalated", escalatedAt: this.now() });
+  }
+
+  /** Persist what a submission did: answerable over IM now, or just `patch`. */
+  private async noteSent(
+    entry: ImDecision,
+    result: NoticeSubmitResult,
+    patch: NoticeDecisionPromptPatch,
+  ): Promise<void> {
     const channel = imChannel(result.decision);
-    if (channel !== undefined && result.sent === "accepted") this.markPrompted(entry, channel);
-  }
-
-  private notePrior(entry: ImDecision, prior: NoticePriorDecision): void {
-    if (prior.status === "accepted" && prior.channel !== undefined)
-      this.markPrompted(entry, prior.channel);
+    if (
+      channel !== undefined &&
+      result.sent === "accepted" &&
+      this.answerableOn(entry.delivery.target, channel)
+    ) {
+      await this.router.updateDecision(entry.code, {
+        ...patch,
+        phase: "im",
+        channel,
+        imAt: this.now(),
+      });
+    } else if (patch.phase !== undefined) await this.router.updateDecision(entry.code, patch);
   }
 
   /**
-   * The prompt reached the conversation that may answer it. An owner target
-   * that is not a confirmed private chat got the generic text: nothing there
-   * is answerable, so it is not marked.
+   * A copy the router queued (IM was down) or that was sent around a restart
+   * may have reached the conversation since: the record catches up.
    */
-  private markPrompted(entry: ImDecision, channel: string): void {
-    if (this.prompted.has(entry.code)) return;
-    if (
-      entry.delivery.target.kind === "owner" &&
-      this.options.ownerChannelIsDirect?.(channel) !== true
-    )
-      return;
-    this.prompted.set(entry.code, channel);
-    this.delivered.set(entry.code, { entry, at: this.now(), channel });
+  private async catchUp(
+    entry: ImDecision,
+    record: DecisionPromptRecord,
+  ): Promise<DecisionPromptRecord> {
+    if (record.prompt.phase !== "desktop" && record.prompt.phase !== "escalated") return record;
+    for (const copy of record.copies) {
+      if (copy.status !== "accepted" || copy.channel === undefined) continue;
+      if (!this.answerableOn(entry.delivery.target, copy.channel)) continue;
+      const patch = { phase: "im" as const, channel: copy.channel, imAt: this.now() };
+      return (
+        (await this.router.updateDecision(entry.code, patch)) ?? {
+          ...record,
+          prompt: { ...record.prompt, ...patch },
+        }
+      );
+    }
+    return record;
+  }
+
+  /**
+   * Only a prompt held back because the owner was at the computer escalates;
+   * a desktop-only rule, a mute, an unbound channel or the P0 cap never does,
+   * and neither does a decision with under a minute left.
+   */
+  private escalates(entry: ImDecision, record: DecisionPromptRecord): boolean {
+    return (
+      record.prompt.phase === "desktop" &&
+      ESCALATING_REASONS.has(record.decision?.reason ?? "") &&
+      this.expiresAt(entry) - this.now() >= ESCALATION_MIN_LEFT_MS
+    );
   }
 
   /** This module's deadline backstop for a decision put to an IM conversation. */
   private async expire(entry: ImDecision): Promise<void> {
     // Core applies a model question's timeout (recommended option or skip).
     if (skippableEnvelope(entry.envelope)) return;
+    const found = this.router.decisionRecord(entry.code);
+    const record = found ? await this.catchUp(entry, found) : undefined;
+    // Answered here already; the projection has not caught up yet.
+    if (record && isPromptEnded(record.prompt.phase)) return;
     // Core enforces the same deadline itself; this backstop (and its notice)
     // is only for decisions that were put to an IM conversation.
     const channel =
-      this.prompted.get(entry.code) ??
+      (record?.prompt.phase === "im" ? record.prompt.channel : undefined) ??
       (entry.delivery.reply && entry.delivery.target.kind === "route"
         ? entry.delivery.target.route.channel
         : undefined);
     if (channel === undefined) return;
-    this.submitting.add(entry.code);
+    this.answering.add(entry.code);
     try {
       // Re-read immediately before submitting; cancellation/restart wins.
       if (!this.options.read().some((item) => item.code === entry.code)) return;
@@ -528,138 +546,79 @@ export class PetImDecisions {
         reason:
           "IM confirmation timed out without an answer. No permission was granted. Skip the blocked operation and report the limitation; do not retry it or assume consent.",
       });
-      this.ended.add(entry.code);
-      this.notices.set(entry.code, this.expiredNotice(entry, channel));
+      if (!record) {
+        // No record to owe the notice on (the prompt was never recorded): one attempt.
+        await this.sendExpiryNotice(entrySource(entry), channel, false);
+        return;
+      }
+      await this.router.updateDecision(entry.code, {
+        phase: "expired",
+        endedAt: this.now(),
+        expiryNotice: { channel, sent: false },
+      });
+      await this.sendExpiryNotice(entrySource(entry), channel, true);
     } catch (error) {
       this.options.onError(error);
     } finally {
-      this.submitting.delete(entry.code);
+      this.answering.delete(entry.code);
     }
   }
 
   /**
-   * A prompted decision that disappeared because Core's own deadline fired
-   * (before this module's tick saw it expire) still tells its conversation.
+   * The decision is no longer pending: it was answered elsewhere, cancelled,
+   * or Core's own deadline fired before this module's did. A prompt that
+   * reached IM and timed out still tells its conversation.
    */
-  private noticeVanished(live: ReadonlySet<string>): void {
-    for (const [code, item] of this.delivered) {
-      if (live.has(code) || this.ended.has(code)) continue;
-      this.ended.add(code);
-      const { entry } = item;
-      if (skippableEnvelope(entry.envelope)) continue;
-      const status = this.options.decisionStatus?.(
-        entry.envelope.sessionId,
-        entry.envelope.requestId,
-      );
-      const timedOut =
-        status === "expired" || (status === undefined && this.now() >= this.expiresAt(entry));
-      if (timedOut) this.notices.set(code, this.expiredNotice(entry, item.channel));
+  private async endVanished(record: DecisionPromptRecord): Promise<void> {
+    const status = this.options.decisionStatus?.(record.sessionId, record.requestId);
+    // Still open, just not prompted from here right now.
+    if (status === "pending") return;
+    const deadline = record.prompt.deadline ?? Number.POSITIVE_INFINITY;
+    const timedOut = status === "expired" || (status === undefined && this.now() >= deadline);
+    const channel = record.prompt.phase === "im" ? record.prompt.channel : undefined;
+    const notify = timedOut && channel !== undefined && record.prompt.skippable !== true;
+    await this.router.updateDecision(record.code, {
+      phase: timedOut ? "expired" : status === "resolved" ? "answered" : "revoked",
+      endedAt: this.now(),
+      ...(notify ? { expiryNotice: { channel, sent: false } } : {}),
+    });
+    if (notify) await this.sendExpiryNotice(record, channel, true);
+  }
+
+  private async sendExpiryNotice(
+    source: ExpirySource,
+    channel: string,
+    recorded: boolean,
+  ): Promise<void> {
+    await this.router.submitWithOutcome(expiredNotice(source, channel));
+    if (recorded)
+      await this.router.updateDecision(source.code, { expiryNotice: { channel, sent: true } });
+  }
+
+  /** Each decision's next moment: the end of its grace, then its deadline. */
+  private reschedule(entries: readonly ImDecision[]): void {
+    const now = this.now();
+    for (const entry of entries) {
+      const record = this.router.decisionRecord(entry.code);
+      const end = this.expiresAt(entry);
+      const due = !record
+        ? entry.createdAt + this.graceMs()
+        : !isPromptEnded(record.prompt.phase) && Number.isFinite(end)
+          ? end
+          : undefined;
+      const key = decisionKey(entry.envelope.sessionId, entry.envelope.requestId);
+      if (this.started && due !== undefined && due > now) this.wakes.set(key, due);
     }
   }
 
-  /** One P0 blocked notice per request; the router owns quiet hours, presence and caps. */
-  private questionNotice(entry: ImDecision, dedupeKey: string): NoticeSubmission {
-    const { sessionId, requestId } = entry.envelope;
-    const { delivery } = entry;
-    const end = this.expiresAt(entry);
-    const facts = decisionFacts(entry, this.canReply(entry));
-    return {
-      kind: "session.blocked",
-      priority: "P0",
-      dedupeKey,
-      sessionId,
-      requestId,
-      ...(Number.isFinite(end) ? { expiresAt: end } : {}),
-      ruleIds: delivery.ruleIds,
-      ...(delivery.requiresAway ? { requiresAway: true } : {}),
-      facts:
-        delivery.target.kind === "owner"
-          ? { ...facts, nonDirectBody: this.genericPrompt(entry) }
-          : facts,
-      attention: delivery.attention,
-      channel: delivery.channel,
-      target: delivery.target,
-      body: this.prompt(entry),
-      ...(delivery.reply ? { reply: true } : {}),
-    };
-  }
-
-  /** Tells the conversation that got the prompt that it ended unanswered. */
-  private expiredNotice(entry: ImDecision, channel: string): NoticeSubmission {
-    const { sessionId, requestId } = entry.envelope;
-    const text = `确认 ${entry.code} 已超时，本次操作未获授权。任务将收到阻塞原因；如需继续此操作，请重新发起任务。`;
-    return {
-      kind: "decision.expired",
-      priority: "P1",
-      dedupeKey: `${sessionId}:${requestId}:expired`,
-      sessionId,
-      ruleIds: entry.delivery.ruleIds,
-      facts: {
-        ...(entry.title ? { title: entry.title } : {}),
-        ...(entry.delivery.target.kind === "owner"
-          ? { nonDirectBody: "一项确认已超时，本次操作未获授权。" }
-          : {}),
-      },
-      attention: "always",
-      // The channel the prompt went out on, so the notice follows it there.
-      channel,
-      target: entry.delivery.target,
-      body: text,
-      reply: true,
-    };
-  }
-
-  private deadlineLine(entry: ImDecision): string {
-    const end = this.expiresAt(entry);
-    const remaining = Math.max(1, Math.ceil((end - this.now()) / 60_000));
-    return !skippableEnvelope(entry.envelope)
-      ? `剩余约 ${remaining} 分钟；电脑、微信和已连接的手机遥控共用截止时间，超时不会授权本次操作。`
-      : !Number.isFinite(end)
-        ? "这个问题会一直等你回答。"
-        : `剩余约 ${remaining} 分钟；超时未回答将自动按默认处理。`;
-  }
-
-  /** No question, options or code: for chats that cannot answer (groups, unknown senders). */
-  private genericPrompt(entry: ImDecision): string {
-    return `任务正在等待确认，请打开桌面 Session 处理。\n${this.deadlineLine(entry)}`;
-  }
-
-  private prompt(entry: ImDecision): string {
-    const question = skippableEnvelope(entry.envelope);
-    const end = this.expiresAt(entry);
-    const remaining = Math.max(1, Math.ceil((end - this.now()) / 60_000));
-    const deadline = this.deadlineLine(entry);
-    // Existing tasks lack sender identity; group conversations must not receive
-    // private permission details or gain authority through a guessed reply code.
-    if (!this.canReply(entry)) return this.genericPrompt(entry);
-    const fallback = question && Number.isFinite(end) ? recommended(entry) : undefined;
-    const timeout =
-      question && Number.isFinite(end)
-        ? `剩余约 ${remaining} 分钟；超时未回答将${fallback !== undefined ? `自动选择推荐项「${fallback}」` : "自动跳过"}。回复「回答 ${entry.code} 等待」可一直等。`
-        : deadline;
-    const request = entry.envelope.request;
-    const args = request.args;
-    const body = questionBody(entry);
-    if (!body)
-      return `确认 ${entry.code} 内容较长，请打开桌面 Session 查看完整内容后处理。\n${timeout}`;
-    const labels = choices(entry);
-    const options = request.toolName !== "__ask_user__" ? ["允许本次", "拒绝"] : labels;
-    const instructions =
-      args.multiSelect === true
-        ? `回复「回答 ${entry.code} 1,2」选择多个选项。`
-        : options.length > 0
-          ? `回复「回答 ${entry.code} 1」选择第 1 项。`
-          : `回复「回答 ${entry.code} 你的答案」。`;
-    return [
-      `确认 ${entry.code}`,
-      body,
-      instructions,
-      "回答时请保留确认码；无需进入 Session。",
-      `回复「回答 ${entry.code} ${question ? "跳过" : "拒绝"}」可跳过。`,
-      timeout,
-    ]
-      .filter(Boolean)
-      .join("\n");
+  /** Listen for the owner leaving only while some prompt waits for that. */
+  private watchAway(wanted: boolean): void {
+    if (wanted && !this.unsubscribeAway && this.started && this.options.onAwayChange)
+      this.unsubscribeAway = this.options.onAwayChange(() => this.scanNow());
+    else if (!wanted && this.unsubscribeAway) {
+      this.unsubscribeAway();
+      this.unsubscribeAway = undefined;
+    }
   }
 
   /** The gateway probes bound Sessions before it reaches the Pet chat endpoint. */
@@ -668,6 +627,18 @@ export class PetImDecisions {
   ): Promise<{ kind: "status"; text: string } | undefined> {
     const text = await this.reply({ message: request.text, origin: request });
     return text === undefined ? undefined : { kind: "status", text };
+  }
+
+  /**
+   * Prompts that reached an IM conversation (and so may still get a late bare
+   * reply there) stay addressable for 10 minutes past their deadline.
+   */
+  private recentlyPrompted(): DecisionPromptRecord[] {
+    const now = this.now();
+    return this.router.decisionRecords().filter(({ prompt }) => {
+      if (prompt.channel === undefined || prompt.imAt === undefined) return false;
+      return now <= Math.max(prompt.deadline ?? 0, prompt.imAt) + USER_DECISION_TIMEOUT_MS;
+    });
   }
 
   async reply(request: {
@@ -679,7 +650,7 @@ export class PetImDecisions {
   }): Promise<string | undefined> {
     const message = request.message.trim();
     const match = /^(?:回答|\/decision)\s+([a-f0-9]{12})\s+([\s\S]+)$/iu.exec(message);
-    this.pruneDelivered();
+    await this.router.decisionsLoaded();
     const entries = this.options.read();
     const origin = request.origin;
     let code: string;
@@ -690,32 +661,34 @@ export class PetImDecisions {
     } else {
       // Owner prompts reach whichever owner chat the router picked, so a bare
       // reply only counts on the channel the prompt actually went to.
-      const delivered = [...this.delivered.values()].filter(
-        (item) =>
-          this.sameOrigin(item.entry, origin) &&
-          (item.entry.delivery.target.kind === "route" || item.channel === origin?.channel),
+      const delivered = this.recentlyPrompted().filter(
+        (record) =>
+          this.sameOrigin(record.target, origin) &&
+          (record.target.kind === "route" || record.prompt.channel === origin?.channel),
       );
-      const matching = entries.filter(
-        (item) =>
-          this.sameOrigin(item, origin) &&
-          (item.delivery.target.kind === "route" ||
-            this.prompted.get(item.code) === origin?.channel),
-      );
+      const matching: ImDecision[] = [];
+      for (const item of entries) {
+        if (!this.sameOrigin(item.delivery.target, origin)) continue;
+        if (item.delivery.target.kind === "route") {
+          matching.push(item);
+          continue;
+        }
+        const record = this.router.decisionRecord(item.code);
+        const current = record ? await this.catchUp(item, record) : undefined;
+        if (current?.prompt.channel !== undefined && current.prompt.channel === origin?.channel)
+          matching.push(item);
+      }
       const shortReply =
         /^\d+(?:\s*[,，]\s*\d+)*$/u.test(message) ||
-        [...matching, ...delivered.map(({ entry }) => entry)].some((entry) =>
-          [
-            "拒绝",
-            // Only a model question can be skipped; a permission request is declined.
-            ...(skippableEnvelope(entry.envelope) ? ["跳过"] : []),
-            ...(entry.envelope.request.toolName === "__ask_user__" ? choices(entry) : ["允许本次"]),
-          ].includes(message),
-        );
+        [
+          ...matching.flatMap(shortReplies),
+          ...delivered.flatMap((record) => record.prompt.replies ?? []),
+        ].includes(message);
       if (!shortReply) return undefined;
       const candidates = matching.filter((item) => !this.expired(item));
       if (candidates.length === 0) {
         if (delivered.length === 0 && matching.length === 0) return undefined;
-        await this.tick();
+        await this.scan();
         return "这条确认已结束或超时，未采用这条回答。无需进入 Session；如仍需该操作，请重新发起。";
       }
       if (candidates.length > 1) {
@@ -732,14 +705,14 @@ export class PetImDecisions {
       ].join("\n");
     }
     const entry = entries.find((item) => item.code === code);
-    if (!entry || !this.sameOrigin(entry, origin)) {
+    if (!entry || !this.sameOrigin(entry.delivery.target, origin)) {
       return "该确认已结束，或不属于当前私聊。未执行任何操作。";
     }
     if (this.expired(entry)) {
-      await this.tick();
+      await this.scan();
       return "该确认已超时，未采用这条回答。";
     }
-    if (this.submitting.has(code)) return "该确认正在处理，请勿重复提交。";
+    if (this.answering.has(code)) return "该确认正在处理，请勿重复提交。";
     if (answer.length > 12_000) return "回答过长，请缩短后重试。";
     const question = skippableEnvelope(entry.envelope);
     // An option literally named 等待/跳过 is an answer, not a command.
@@ -790,15 +763,18 @@ export class PetImDecisions {
       }
       decision = { approved: true, answer: mapped };
     }
-    this.submitting.add(code);
+    this.answering.add(code);
     try {
       await this.options.approve(entry, decision);
+      const record = this.router.decisionRecord(code);
+      if (record && !isPromptEnded(record.prompt.phase))
+        await this.router.updateDecision(code, { phase: "answered", endedAt: this.now() });
       return `确认 ${code} 已处理${decision.approved ? "，回答已交给原任务" : question ? "，已跳过这个问题" : "，本次操作未授权"}。`;
     } catch (error) {
       this.options.onError(error);
       return "确认未提交成功，可能已在其他端处理。请查看任务状态后重试。";
     } finally {
-      this.submitting.delete(code);
+      this.answering.delete(code);
     }
   }
 }
@@ -821,7 +797,7 @@ export function imDecisionWorkerActions(
     approved: boolean;
     answer?: string;
   }) => void,
-): Pick<ConstructorParameters<typeof PetImDecisions>[0], "approve" | "keepWaiting"> {
+): Pick<PetImDecisionsOptions, "approve" | "keepWaiting"> {
   const send = async (method: string, params: Record<string, unknown>, producer: string) => {
     const outcome = await requestWorker(method, params, 15_000, {
       meta: { origin: "host", producer },

@@ -797,3 +797,97 @@ describe("load", () => {
     for (const r of saved) expect(b.get(r.id)).toBeDefined();
   });
 });
+
+describe("decision prompts", () => {
+  const prompted = (overrides: Partial<NoticeRecordInput> = {}) =>
+    draft({
+      kind: "session.blocked",
+      priority: "P0",
+      dedupeKey: "s1:req-1",
+      requestId: "req-1",
+      decision: { outlet: "desktop", reason: "present-desktop" },
+      prompt: {
+        code: "0123456789AB",
+        deadline: NOW + 600_000,
+        replies: ["拒绝", "允许本次", "拒绝"],
+      },
+      ...overrides,
+    });
+
+  test("a prompt starts on the desktop and moves forward only, persisted", async () => {
+    const first = ledger();
+    const record = await first.record(prompted());
+    expect(record.prompt).toEqual({
+      code: "0123456789AB",
+      phase: "desktop",
+      deadline: NOW + 600_000,
+      replies: ["拒绝", "允许本次"],
+    });
+    await first.updatePrompt(record.id, { phase: "escalated", escalatedAt: NOW + 1 });
+    await first.updatePrompt(record.id, { phase: "im", channel: "wechat", imAt: NOW + 2 });
+    await expect(first.updatePrompt(record.id, { phase: "desktop" })).rejects.toMatchObject({
+      code: "invalid_transition",
+    });
+    await first.updatePrompt(record.id, {
+      phase: "expired",
+      endedAt: NOW + 3,
+      expiryNotice: { channel: "wechat", sent: false },
+    });
+    // An ended prompt keeps its phase; its owed notice can still be settled.
+    await first.updatePrompt(record.id, { expiryNotice: { channel: "wechat", sent: true } });
+    await expect(first.updatePrompt(record.id, { phase: "answered" })).rejects.toMatchObject({
+      code: "invalid_transition",
+    });
+    const reread = ledger();
+    await reread.load();
+    expect(reread.byPromptCode("0123456789AB")?.prompt).toMatchObject({
+      phase: "expired",
+      channel: "wechat",
+      escalatedAt: NOW + 1,
+      expiryNotice: { channel: "wechat", sent: true },
+    });
+    expect(reread.forRequest("s1", "req-1").map((row) => row.id)).toEqual([record.id]);
+  });
+
+  test("only prompt records can be updated, and the code never changes", async () => {
+    const store = ledger();
+    const plain = await store.record(draft());
+    await expect(store.updatePrompt(plain.id, { phase: "im" })).rejects.toMatchObject({
+      code: "notice_not_found",
+    });
+    const record = await store.record(prompted());
+    await expect(
+      store.updatePrompt(record.id, { code: "BA9876543210" } as never),
+    ).rejects.toMatchObject({ code: "invalid_notice" });
+  });
+
+  test("an unreadable prompt loads as a plain notice; an older record loads unchanged", async () => {
+    const store = ledger();
+    const record = await store.record(prompted());
+    const older = await store.record(draft({ dedupeKey: "older" }));
+    const disk = await readDisk();
+    disk.records[0] = {
+      ...disk.records[0]!,
+      prompt: { code: "x", phase: "from-the-future" } as never,
+    };
+    await writeFile(filePath, JSON.stringify(disk));
+    const reread = ledger();
+    await reread.load();
+    expect(reread.get(record.id)).toMatchObject({ kind: "session.blocked", requestId: "req-1" });
+    expect(reread.get(record.id)?.prompt).toBeUndefined();
+    expect(reread.get(older.id)).toEqual(older);
+    expect(reread.prompts()).toEqual([]);
+  });
+
+  test("an open prompt is never evicted; an ended one may be", async () => {
+    const store = ledger({ maxRecords: 1 });
+    const open = await store.record(prompted());
+    clock += 1;
+    await store.record(draft({ dedupeKey: "a", decision: { outlet: "desktop", reason: "x" } }));
+    expect(store.get(open.id)).toBeDefined();
+    await store.updatePrompt(open.id, { phase: "answered", endedAt: clock });
+    clock += 1;
+    await store.record(draft({ dedupeKey: "b", decision: { outlet: "desktop", reason: "x" } }));
+    expect(store.get(open.id)).toBeUndefined();
+  });
+});

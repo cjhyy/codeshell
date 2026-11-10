@@ -3,6 +3,7 @@ import { composeNoticeBody, MAX_NOTICE_BODY, noticeLine } from "./pet-notice-com
 import { NoticeDigest } from "./pet-notice-digest.js";
 import {
   newNoticeRecordId,
+  type NoticeDecisionPromptPatch,
   type NoticeRecord,
   type NoticeSettleStatus,
 } from "./pet-notice-ledger.js";
@@ -24,9 +25,10 @@ import {
   sendWithTimeout,
   staleReason,
   unpackFacts,
+  type DecisionPromptRecord,
   type NoticeConversation,
+  type NoticeDecisionPrompts,
   type NoticeImPayload,
-  type NoticePriorDecision,
   type NoticeSubmitResult,
   type NoticeRouterSettings,
   type NoticeSubmission,
@@ -90,7 +92,7 @@ function receiptKey(pending: DesktopPendingDecision): string {
  *   the decision in the ledger, then delivers to the desktop and/or IM, holds
  *   it for the digest, or queues it for when the IM channel is back.
  */
-export class PetNoticeRouter {
+export class PetNoticeRouter implements NoticeDecisionPrompts {
   private readonly listeners = new Set<(event: PetAttentionEvent) => void>();
   private readonly timers = new Map<string, unknown>();
   private readonly now: () => number;
@@ -359,19 +361,79 @@ export class PetNoticeRouter {
     });
   }
 
-  /**
-   * What became of an earlier notice with this dedupe key: its decision and
-   * current delivery. Lets a caller that lost its memory (a restart) tell
-   * whether that notice ever reached IM. Undefined before the ledger loads.
-   */
-  priorDecision(dedupeKey: string): NoticePriorDecision | undefined {
-    const record = this.options.ledger?.byDedupeKey(dedupeKey);
-    if (!record) return undefined;
-    const channel = record.delivery?.channel ?? record.decision?.im;
+  /** Resolves once decision records are readable (the ledger loaded, or failed to). */
+  async decisionsLoaded(): Promise<void> {
+    try {
+      await this.options.ledger?.load();
+    } catch (error) {
+      this.log("pet.notice.ledger_read_failed", { error: errorText(error) });
+    }
+  }
+
+  /** The decision prompt with this reply code, from its record; undefined before the ledger loads. */
+  decisionRecord(code: string): DecisionPromptRecord | undefined {
+    const ledger = this.options.ledger;
+    const record = ledger?.byPromptCode(code);
+    if (!ledger || !record) return undefined;
+    return this.promptView(record, ledger.forRequest(record.sessionId!, record.requestId!));
+  }
+
+  /** Every decision prompt the ledger still holds, oldest first. */
+  decisionRecords(): DecisionPromptRecord[] {
+    const ledger = this.options.ledger;
+    if (!ledger) return [];
+    const seen = new Set<string>();
+    const views: DecisionPromptRecord[] = [];
+    for (const record of ledger.prompts()) {
+      // A resubmitted code (a duplicate record) is the same prompt.
+      if (seen.has(record.prompt!.code)) continue;
+      seen.add(record.prompt!.code);
+      views.push(this.promptView(record, ledger.forRequest(record.sessionId!, record.requestId!)));
+    }
+    return views;
+  }
+
+  /** Persist one step of a decision prompt's lifecycle through the ledger's write queue. */
+  async updateDecision(
+    code: string,
+    patch: NoticeDecisionPromptPatch,
+  ): Promise<DecisionPromptRecord | undefined> {
+    const ledger = this.options.ledger;
+    const record = ledger?.byPromptCode(code);
+    if (!ledger || !record) return undefined;
+    try {
+      const next = await ledger.updatePrompt(record.id, patch);
+      return this.promptView(next, ledger.forRequest(next.sessionId!, next.requestId!));
+    } catch (error) {
+      this.log("pet.notice.prompt_update_failed", { phase: patch.phase, error: errorText(error) });
+      return undefined;
+    }
+  }
+
+  private promptView(record: NoticeRecord, related: readonly NoticeRecord[]): DecisionPromptRecord {
+    const { facts, target } = unpackFacts(record.facts);
+    const title = noticeLine(facts.title);
+    // The prompt itself, then its other session.blocked copies (the escalation).
+    const copies = [
+      record,
+      ...related.filter((other) => other.id !== record.id && other.kind === record.kind),
+    ];
     return {
+      code: record.prompt!.code,
+      sessionId: record.sessionId!,
+      requestId: record.requestId!,
+      target,
+      ruleIds: record.ruleIds,
+      ...(title !== undefined ? { title } : {}),
+      prompt: record.prompt!,
       ...(record.decision ? { decision: record.decision } : {}),
-      ...(record.delivery ? { status: record.delivery.status } : {}),
-      ...(channel !== undefined ? { channel } : {}),
+      copies: copies.map((copy) => {
+        const channel = copy.delivery?.channel ?? copy.decision?.im;
+        return {
+          ...(copy.delivery ? { status: copy.delivery.status } : {}),
+          ...(channel !== undefined ? { channel } : {}),
+        };
+      }),
     };
   }
 
@@ -641,6 +703,10 @@ export class PetNoticeRouter {
           },
           body,
           decision,
+          // Only a request's own prompt carries its lifecycle.
+          ...(notice.prompt && notice.sessionId !== undefined && notice.requestId !== undefined
+            ? { prompt: notice.prompt }
+            : {}),
         },
         id !== undefined ? { id } : {},
       );
