@@ -1079,6 +1079,7 @@ function decisionRelay(
     isAway: h.wiring.decisions.isAway,
     decisionStatus: h.wiring.decisions.decisionStatus,
     projectionLive: h.wiring.decisions.projectionLive,
+    workerGone: h.wiring.decisions.workerGone,
     projection: { subscribe: h.subscribeProjection },
     nudges: [h.wiring.decisions.onBlocked],
     onAwayChange: h.wiring.decisions.onAwayChange,
@@ -1089,7 +1090,7 @@ function decisionRelay(
     ...extra,
   });
   /** A pending request (again, after a restart: `createdAt` of the original). */
-  const raise = (requestId = "req-1", createdAt = clock) => {
+  const raise = (requestId = "req-1", createdAt = clock, connectionId = "worker") => {
     const pending = {
       agentSessionId: SID,
       requestId,
@@ -1107,7 +1108,7 @@ function decisionRelay(
         params: {
           sessionId: SID,
           requestId,
-          connectionId: "worker",
+          connectionId,
           generation: 1,
           request: { toolName: "Bash", description: "List files", args: { command: "ls" } },
         },
@@ -1338,6 +1339,7 @@ describe("decision prompts through the router", () => {
     await settle();
     await d.poll(() => current!.ownerSends.length > 0);
     const code = d.code()!;
+    await reachedIm(code);
     expect(code).toMatch(/^[0-9A-F]{12}$/u);
     expect(current.ownerSends).toHaveLength(1);
     expect(current.ownerSends[0]!.targetId).toBe("wechat:owner");
@@ -1434,6 +1436,8 @@ describe("decision prompts through the router", () => {
   }
   const promptOf = (code: string | undefined) =>
     current!.wiring.ledger.prompts().find((record) => record.prompt?.code === code)?.prompt;
+  /** The send lands before the prompt's record says so: wait for the record. */
+  const reachedIm = (code: string | undefined) => settle(() => promptOf(code)?.phase === "im");
 
   test("a restart during the grace period prompts once, when the grace ends", async () => {
     current = harness();
@@ -1457,6 +1461,7 @@ describe("decision prompts through the router", () => {
     expect(timers.pending()).toContain(raisedAt + 15_000);
     timers.advance(raisedAt + 15_000);
     await settle(() => current!.ownerSends.length > 0);
+    await reachedIm(d.code());
     expect(current.ownerSends).toHaveLength(1);
     expect(promptOf(d.code())).toMatchObject({ phase: "im", channel: "wechat" });
     d.relay.stop();
@@ -1471,6 +1476,7 @@ describe("decision prompts through the router", () => {
     await settle();
     await before.poll(() => current!.ownerSends.length > 0);
     const code = before.code()!;
+    await reachedIm(code);
     expect(promptOf(code)).toMatchObject({ phase: "im", channel: "wechat" });
 
     await restart();
@@ -1529,6 +1535,7 @@ describe("decision prompts through the router", () => {
     focus.emit("browser-window-blur");
     timers.advance(clock + 1_000);
     await settle(() => current!.ownerSends.length > 0);
+    await reachedIm(d.code());
     expect(current!.ownerSends).toHaveLength(1);
     expect(current!.ownerSends[0]!.text).toContain(`回答 ${d.code()} 1`);
     expect(promptOf(d.code())).toMatchObject({
@@ -1579,6 +1586,7 @@ describe("decision prompts through the router", () => {
     presence.present = false;
     timers.advance(crossing);
     await settle(() => current!.ownerSends.length > 0);
+    await reachedIm(d.code());
     expect(current!.ownerSends).toHaveLength(1);
     expect(promptOf(d.code())).toMatchObject({ phase: "im" });
     d.relay.stop();
@@ -1602,6 +1610,7 @@ describe("decision prompts through the router", () => {
     await settle();
     await d.poll(() => current!.ownerSends.length > 0);
     const code = d.code()!;
+    await reachedIm(code);
     // One failed snapshot: the aggregator empties pending and reports disconnected.
     const [held] = current.pending.splice(0);
     current.setWorkerState("disconnected");
@@ -1617,6 +1626,58 @@ describe("decision prompts through the router", () => {
     await settle(() => current!.ownerSends.length > 1);
     expect(d.approvals).toEqual([expect.objectContaining({ failure: "timed_out" })]);
     expect(current.ownerSends[1]!.text).toContain("已超时");
+  });
+
+  test("a worker that is really gone revokes its open prompts at once", async () => {
+    let live = true;
+    current = harness({ hasLiveWorker: () => live });
+    await current.handler(SID, upsertArgs({ events: ["blocked"] }));
+    const d = decisionRelay(current);
+    const raisedAt = clock;
+    d.raise();
+    await settle();
+    await d.poll(() => current!.ownerSends.length > 0);
+    const code = d.code()!;
+    await reachedIm(code);
+    current.pending.length = 0;
+    live = false;
+    current.setWorkerState("disconnected");
+    current.emitProjection({ kind: "reset", version: 3, generation: 1, observedAt: clock });
+    // Even past its deadline: the request died with the worker, it did not time out.
+    clock = raisedAt + 10 * 60_000;
+    await d.relay.scan();
+    await settle();
+    expect(promptOf(code)).toMatchObject({ phase: "revoked" });
+    expect(current.ownerSends).toHaveLength(1);
+    expect(d.approvals).toEqual([]);
+  });
+
+  test("the same request on a new connection gets its own record, once, and no retry loop", async () => {
+    current = harness();
+    await current.handler(SID, upsertArgs({ events: ["blocked"] }));
+    const timers = fakeTimers();
+    const d = decisionRelay(current, timers);
+    const raisedAt = clock;
+    d.raise();
+    await settle();
+    await d.poll(() => current!.ownerSends.length > 0);
+    const oldCode = d.code()!;
+    await reachedIm(oldCode);
+    // The worker connection changed: the same request is republished with a new code.
+    d.raise("req-1", raisedAt, "worker-2");
+    const newCode = d.code()!;
+    expect(newCode).not.toBe(oldCode);
+    d.relay.start();
+    await settle(() => promptOf(newCode) !== undefined);
+    await d.relay.scan();
+    // The resubmission is the policy's duplicate: nothing more reaches the owner.
+    expect(current.ownerSends).toHaveLength(1);
+    expect(promptOf(oldCode)).toMatchObject({ phase: "im" });
+    // It catches up from the first copy, which reached the owner's chat.
+    expect(promptOf(newCode)).toMatchObject({ phase: "im", channel: "wechat" });
+    // Recorded: the next moment is its deadline, not a 3 s retry.
+    expect(timers.pending()).toEqual([raisedAt + 10 * 60_000]);
+    d.relay.stop();
   });
 
   test("a new IM-started task nudges the decisions: its conversation gets the prompt", async () => {

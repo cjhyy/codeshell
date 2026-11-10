@@ -1147,6 +1147,21 @@ describe("decision prompt records", () => {
     expect(h.logs.map((entry) => entry.event)).toContain("pet.notice.prompt_update_failed");
   });
 
+  test("adoption gives an older record its prompt, but never relabels another code", async () => {
+    const h = harness();
+    // An older build's first prompt: no lifecycle.
+    await h.router.submit(prompt({ prompt: undefined }));
+    const adopted = await h.router.adoptDecision("s-q", "req-1", "s-q:req-1", {
+      code: "0123456789AB",
+    });
+    expect(adopted?.prompt).toMatchObject({ code: "0123456789AB", phase: "desktop" });
+    // The same request under a new code (a new connection) is not adopted.
+    expect(
+      await h.router.adoptDecision("s-q", "req-1", "s-q:req-1", { code: "BA9876543210" }),
+    ).toBeUndefined();
+    expect(h.router.decisionRecord("0123456789AB")).toBeDefined();
+  });
+
   test("a notice without a request id never carries a prompt", async () => {
     const h = harness();
     await h.router.submit(prompt({ requestId: undefined }));

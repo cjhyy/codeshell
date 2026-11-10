@@ -211,6 +211,8 @@ export interface PetImDecisionsOptions {
    * alive, so a decision missing from such a snapshot has not ended.
    */
   projectionLive?: () => boolean;
+  /** The worker is really gone (reclaimed, or no live worker): its requests are cancelled. */
+  workerGone?: () => boolean;
   /** Pending-decision projection events: a decision appeared or ended, the worker reset. */
   projection?: { subscribe(listener: (event: DesktopPetProjectionEvent) => void): () => void };
   /** Other moments worth a look now (a rule started watching a blocked Session). */
@@ -594,8 +596,13 @@ export class PetImDecisions {
    * reached IM and timed out still tells its conversation.
    */
   private async endVanished(record: DecisionPromptRecord): Promise<void> {
-    // Not a live snapshot (a worker that missed one heartbeat): nothing is known to have ended.
-    if (this.options.projectionLive?.() === false) return;
+    if (this.options.projectionLive?.() === false) {
+      // A worker that missed one heartbeat: nothing is known to have ended.
+      if (this.options.workerGone?.() !== true) return;
+      // The worker is gone, and its requests with it: no answer, no timeout.
+      await this.router.updateDecision(record.code, { phase: "revoked", endedAt: this.now() });
+      return;
+    }
     const status = this.options.decisionStatus?.(record.sessionId, record.requestId);
     // Still open, just not prompted from here right now.
     if (status === "pending") return;

@@ -408,6 +408,10 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
       (record) => record.dedupeKey === dedupeKey && record.kind === "session.blocked",
     );
     if (!first) return undefined;
+    // Prompted already under another code (a new connection for the same
+    // request): the normal submission records this one and catches up from
+    // the copies; adopting here would never yield a record for this code.
+    if (first.prompt && first.prompt.code !== prompt.code) return undefined;
     const escalated = related.some((record) => record.dedupeKey === `${dedupeKey}:away`);
     try {
       return this.promptView(

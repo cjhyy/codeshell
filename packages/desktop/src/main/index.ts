@@ -2011,6 +2011,7 @@ async function createWindow(): Promise<BrowserWindow> {
       isAway: notices.decisions.isAway,
       decisionStatus: notices.decisions.decisionStatus,
       projectionLive: notices.decisions.projectionLive,
+      workerGone: notices.decisions.workerGone,
       projection: aggregator,
       nudges: [notices.decisions.onBlocked],
       onAwayChange: notices.decisions.onAwayChange,

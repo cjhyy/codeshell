@@ -290,6 +290,8 @@ export interface PetDecisionNoticeHooks {
   decisionStatus(sessionId: string, requestId: string): string | undefined;
   /** The projection reflects a live worker (not a failed or lost snapshot). */
   projectionLive(): boolean;
+  /** The worker is really gone: reclaimed, or no live worker. */
+  workerGone(): boolean;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -481,6 +483,9 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
   };
 
   const snapshot = (): DesktopPetProjectionSnapshot => deps.projection.getSnapshot();
+  /** Not a missed snapshot: the worker was reclaimed, or none is alive. */
+  const workerIsGone = (state: DesktopPetProjectionSnapshot["workerState"]): boolean =>
+    state === "reclaimed" || (state === "disconnected" && deps.hasLiveWorker?.() === false);
   const workSession = (sessionId: string) =>
     snapshot().sessions.find(
       (session) => session.agentSessionId === sessionId && !session.external,
@@ -797,6 +802,9 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     projectionLive() {
       return snapshot().workerState === "active";
     },
+    workerGone() {
+      return workerIsGone(snapshot().workerState);
+    },
     decisionStatus(sessionId, requestId) {
       return snapshot().pending.find(
         (pending) => pending.agentSessionId === sessionId && pending.requestId === requestId,
@@ -952,7 +960,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     const current = snapshot();
     const state = event.kind === "worker-state" ? event.state : current.workerState;
     if (state === "disconnected" || state === "reclaimed") {
-      if (state === "reclaimed" || deps.hasLiveWorker?.() === false) {
+      if (workerIsGone(state)) {
         suspectGeneration = undefined;
         return true;
       }
