@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
+import ts from "typescript";
 
 function source(path: string): string {
   return readFileSync(resolve(path), "utf8");
@@ -110,6 +111,200 @@ function sourceFiles(): string[] {
   return files.sort();
 }
 
+// L0 may depend on L1–L7; lower-level directories must not import upward.
+// Root entry files are outside this directory-layer guard. Keep builtin tools
+// distinct from the generic tool-system infrastructure that they build on.
+const CORE_LAYERS: readonly (readonly string[])[] = [
+  ["cli", "product"],
+  ["run", "protocol"],
+  ["engine"],
+  ["tool-system/builtin", "composition"],
+  [
+    "automation",
+    "skills",
+    "plugins",
+    "panel-apps",
+    "links",
+    "sources",
+    "operations",
+    "services",
+    "prompt",
+    "preset",
+    "hooks",
+    "context",
+    "capability-control",
+    "profile",
+    "themes",
+    "speech",
+    "stt",
+  ],
+  ["tool-system"],
+  [
+    "session",
+    "credentials",
+    "settings",
+    "model-catalog",
+    "llm",
+    "model-request-boundary",
+    "model-traces",
+    "cost-ledger",
+    "goal",
+    "workspace",
+  ],
+  ["utils", "runtime", "logging", "data", "agent", "remote", "testing", "capabilities"],
+];
+
+// Measured on fcd8406d5. These exceptions may only shrink: removing the import
+// must remove its allowance in the same change. New dependencies need a lower
+// layer, not another exception. Type-only dependencies do not consume a slot.
+const UPWARD_ALLOWLIST = new Set([
+  "automation/runner.ts -> run",
+  "composition/core-module.ts -> engine",
+  "credentials/access.ts -> links",
+  "credentials/access.ts -> services",
+  "credentials/use-credential-tool.ts -> tool-system",
+  "hooks/goal-stop-hook.ts -> tool-system/builtin",
+  "hooks/registry.ts -> composition",
+  "links/github-issue-batch.ts -> engine",
+  "links/operation-reader.ts -> engine",
+  "preset/index.ts -> tool-system/builtin",
+  "prompt/composer.ts -> tool-system/builtin",
+  "runtime/background-shell.ts -> session",
+  "runtime/background-shell.ts -> tool-system/builtin",
+  "session/background-continuation.ts -> tool-system/builtin",
+  "session/output-history-comparison.ts -> engine",
+  "session/output-history-native-comparison.ts -> engine",
+  "settings/schema.ts -> panel-apps",
+  "settings/schema.ts -> sources",
+  "settings/schema.ts -> tool-system",
+  "skills/isolated-instruction-run.ts -> protocol",
+  "tool-system/builtin/configure-model-connection.ts -> engine",
+  "tool-system/dynamic-tool-defs.ts -> tool-system/builtin",
+  "tool-system/executor.ts -> tool-system/builtin",
+  "tool-system/path-policy.ts -> plugins",
+  "tool-system/registry.ts -> composition",
+  "tool-system/registry.ts -> tool-system/builtin",
+  "tool-system/session-tool-host.ts -> engine",
+  "tool-system/session-tool-host.ts -> hooks",
+  "tool-system/session-tool-policy.ts -> capability-control",
+]);
+
+const SAME_LAYER_CYCLES = new Set([
+  "hooks <-> plugins",
+  "model-catalog <-> settings",
+  "panel-apps <-> plugins",
+  "plugins <-> skills",
+  "preset <-> prompt",
+  "profile <-> sources",
+]);
+
+const CORE_GRAPH_EXCLUDED_DIRS = new Set(["__fixtures__", "fixtures", "__tests__"]);
+
+function coreSourceFiles(root: string): string[] {
+  return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(root, entry.name);
+    if (entry.isDirectory()) {
+      return CORE_GRAPH_EXCLUDED_DIRS.has(entry.name) ? [] : coreSourceFiles(path);
+    }
+    return entry.isFile() &&
+      /\.tsx?$/.test(entry.name) &&
+      !/\.(test|spec|d)\.tsx?$/.test(entry.name)
+      ? [path]
+      : [];
+  });
+}
+
+function coreNode(path: string): string | undefined {
+  const parts = path.split("/");
+  if (parts.length < 2 || parts[0] === "..") return undefined;
+  return parts[0] === "tool-system" && parts[1] === "builtin" ? "tool-system/builtin" : parts[0];
+}
+
+function valueModuleSpecifiers(file: ts.SourceFile): string[] {
+  const specifiers: string[] = [];
+  const visit = (node: ts.Node) => {
+    let module: ts.Expression | undefined;
+    if (ts.isImportDeclaration(node)) {
+      const clause = node.importClause;
+      const bindings = clause?.namedBindings;
+      const onlyNamedTypes =
+        bindings &&
+        ts.isNamedImports(bindings) &&
+        bindings.elements.length > 0 &&
+        bindings.elements.every((item) => item.isTypeOnly);
+      if (!clause?.isTypeOnly && (clause?.name || !onlyNamedTypes)) module = node.moduleSpecifier;
+    } else if (
+      ts.isImportEqualsDeclaration(node) &&
+      !node.isTypeOnly &&
+      ts.isExternalModuleReference(node.moduleReference)
+    ) {
+      module = node.moduleReference.expression;
+    } else if (ts.isExportDeclaration(node)) {
+      const clause = node.exportClause;
+      const onlyNamedTypes =
+        clause &&
+        ts.isNamedExports(clause) &&
+        clause.elements.length > 0 &&
+        clause.elements.every((item) => item.isTypeOnly);
+      if (!node.isTypeOnly && !onlyNamedTypes) module = node.moduleSpecifier;
+    } else if (
+      ts.isCallExpression(node) &&
+      (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+        (ts.isIdentifier(node.expression) && node.expression.text === "require"))
+    ) {
+      module = node.arguments[0];
+    }
+    if (module && ts.isStringLiteralLike(module)) specifiers.push(module.text);
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
+  return specifiers;
+}
+
+function coreValueGraph() {
+  const root = resolve("packages/core/src");
+  const config = ts.readConfigFile(resolve("tsconfig.json"), ts.sys.readFile);
+  if (config.error)
+    throw new Error(ts.flattenDiagnosticMessageText(config.error.messageText, "\n"));
+  const parsed = ts.convertCompilerOptionsFromJson(config.config.compilerOptions, resolve("."));
+  if (parsed.errors.length) {
+    throw new Error(
+      parsed.errors
+        .map((error) => ts.flattenDiagnosticMessageText(error.messageText, "\n"))
+        .join("\n"),
+    );
+  }
+  const cache = ts.createModuleResolutionCache(resolve("."), (path) => path, parsed.options);
+  const nodes = new Set(
+    readdirSync(root, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && !CORE_GRAPH_EXCLUDED_DIRS.has(entry.name))
+      .map((entry) => entry.name),
+  );
+  const edges: Array<{ file: string; from: string; to: string }> = [];
+  for (const file of coreSourceFiles(root)) {
+    const path = relative(root, file).split("\\").join("/");
+    const from = coreNode(path);
+    if (!from) continue;
+    nodes.add(from);
+    const ast = ts.createSourceFile(file, source(file), ts.ScriptTarget.Latest, true);
+    for (const specifier of valueModuleSpecifiers(ast)) {
+      const target = ts.resolveModuleName(
+        specifier,
+        file,
+        parsed.options,
+        ts.sys,
+        cache,
+      ).resolvedModule;
+      if (!target) continue;
+      const to = coreNode(relative(root, target.resolvedFileName).split("\\").join("/"));
+      if (!to || from === to) continue;
+      nodes.add(to);
+      edges.push({ file: path, from, to });
+    }
+  }
+  return { nodes, edges };
+}
+
 describe("source file line caps", () => {
   test("no source file grows past its cap; split it into modules instead", () => {
     const over = sourceFiles()
@@ -132,6 +327,45 @@ describe("source file line caps", () => {
 });
 
 describe("architecture growth budgets", () => {
+  test("Core value imports keep layers and shrink known exceptions", () => {
+    const { nodes, edges } = coreValueGraph();
+    const layers = new Map(
+      CORE_LAYERS.flatMap((nodes, layer) => nodes.map((node) => [node, layer] as const)),
+    );
+    expect(
+      [...nodes].filter((node) => !layers.has(node)).sort(),
+      "Assign every new Core directory to CORE_LAYERS before adding dependencies.",
+    ).toEqual([]);
+    const upward = new Set(
+      edges
+        .filter(({ from, to }) => layers.get(from)! > layers.get(to)!)
+        .map(({ file, to }) => `${file} -> ${to}`),
+    );
+    expect(
+      [...upward].filter((edge) => !UPWARD_ALLOWLIST.has(edge)).sort(),
+      "Move new upward value imports to a lower layer; do not expand UPWARD_ALLOWLIST.",
+    ).toEqual([]);
+    expect(
+      [...UPWARD_ALLOWLIST].filter((edge) => !upward.has(edge)).sort(),
+      "Remove resolved upward imports from UPWARD_ALLOWLIST in the same change.",
+    ).toEqual([]);
+    const sameLayer = edges.filter(({ from, to }) => layers.get(from) === layers.get(to));
+    const directed = new Set(sameLayer.map(({ from, to }) => `${from} -> ${to}`));
+    const mutual = new Set(
+      sameLayer
+        .filter(({ from, to }) => directed.has(`${to} -> ${from}`))
+        .map(({ from, to }) => [from, to].sort().join(" <-> ")),
+    );
+    expect(
+      [...mutual].filter((pair) => !SAME_LAYER_CYCLES.has(pair)).sort(),
+      "Do not introduce new mutually dependent Core directories in the same layer.",
+    ).toEqual([]);
+    expect(
+      [...SAME_LAYER_CYCLES].filter((pair) => !mutual.has(pair)).sort(),
+      "Remove resolved mutual dependencies from SAME_LAYER_CYCLES in the same change.",
+    ).toEqual([]);
+  });
+
   test("IPC routes and preload invokes cannot grow silently", () => {
     // Count extracted registrations too: moving a route cannot hide API growth.
     // New explicit project-package, remote-Link and Cloud-window operations are
