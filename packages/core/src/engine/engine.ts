@@ -3563,7 +3563,7 @@ export class Engine {
     // persist: false is the per-session path (ChatSession) — switching one
     // session's model must not rewrite settings.defaults.text, the boot
     // default every future session inherits.
-    if (!perSession) persistActiveModel(entry);
+    if (!perSession) persistActiveModel(entry, this.getSettingsManager());
     return entry;
   }
 
