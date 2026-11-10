@@ -512,6 +512,16 @@ describe("SessionOutcomeDeriver", () => {
     expect(inside!.turn).not.toBe(late!.turn);
   });
 
+  test("an error that names a run is that run's, even when the host attached mid-run", () => {
+    const deriver = new SessionOutcomeDeriver({ now: () => NOW });
+    // Restarted mid-run: no session_started seen for run-7.
+    const [error] = deriver.derive(SID, { type: "error", error: "model down", runId: "run-7" });
+    expect(error).toMatchObject({ kind: "failed", inRun: true, runId: "run-7" });
+    const [closing] = deriver.derive(SID, complete({ reason: "model_error", runId: "run-7" }));
+    expect(closing).toMatchObject({ kind: "failed", final: true });
+    expect(closing!.turn).toBe(error!.turn);
+  });
+
   test("reset forgets in-flight turns: a new worker's events never inherit a run", () => {
     const deriver = new SessionOutcomeDeriver({ now: () => NOW });
     deriver.derive(SID, started());

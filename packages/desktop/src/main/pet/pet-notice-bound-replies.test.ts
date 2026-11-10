@@ -87,6 +87,22 @@ describe("bound Session replies", () => {
     expect(current.wiring.ruleStore.activeForSession(SID)).toEqual([]);
   });
 
+  test("a restart mid-run: the run's error and its model_error close are one failure", async () => {
+    current = harness({ readSettings: () => ({ pet: { notifications: { mergeWindowSec: 0 } } }) });
+    await current.handler(SID, upsertArgs({ events: ["failed"], channel: "wechat" }));
+    env.clock = NOW + 1_000;
+    // This process never saw the run start.
+    current.observeSessionEvent(SID, { type: "error", error: "model down", runId: "run-9" });
+    current.observeSessionEvent(SID, {
+      type: "turn_complete",
+      reason: "model_error",
+      runId: "run-9",
+    });
+    await settle(() => current!.submitted.length > 0);
+    await current.idle();
+    expect(current.submitted.map((notice) => notice.dedupeKey)).toEqual([`${SID}:failed:run-9`]);
+  });
+
   test("a lost worker's open run is forgotten: the new worker's error is not inherited", async () => {
     let live = true;
     current = harness({ hasLiveWorker: () => live });

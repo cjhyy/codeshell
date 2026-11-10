@@ -318,15 +318,7 @@ export class SessionOutcomeDeriver {
       case "error":
         return [
           {
-            // With no turn in flight (core reported it after the run boundary)
-            // the error is a turn of its own, and nothing will close it.
-            ...this.base(
-              sessionId,
-              this.turns.get(sessionId) ?? this.freshTurn(false),
-              event,
-              "timestamp",
-              false,
-            ),
+            ...this.base(sessionId, this.errorTurn(sessionId, event), event, "timestamp", false),
             kind: "failed",
             error: typeof event.error === "string" ? event.error : "Work session failed",
           },
@@ -356,6 +348,24 @@ export class SessionOutcomeDeriver {
   private freshTurn(inRun: boolean): TurnState {
     this.turnSequence += 1;
     return { turn: this.turnSequence, inRun, work: false };
+  }
+
+  /**
+   * The turn an `error` belongs to. One that names a run is that run's (the
+   * host may have attached mid-run, after its `session_started`): its
+   * closing `turn_complete` follows. Only a run-less error with no turn in
+   * flight is out of any run (core reported it after the run boundary): a
+   * turn of its own that nothing closes.
+   */
+  private errorTurn(sessionId: string, event: Record<string, unknown>): TurnState {
+    const open = this.turns.get(sessionId);
+    if (open) return open;
+    const runId = nonEmptyString(event.runId);
+    if (!runId) return this.freshTurn(false);
+    const state = this.freshTurn(true);
+    state.runId = runId;
+    this.turns.set(sessionId, state);
+    return state;
   }
 
   private turn(sessionId: string): TurnState {
