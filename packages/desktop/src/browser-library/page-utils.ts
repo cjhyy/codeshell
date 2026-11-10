@@ -1,3 +1,75 @@
+/** Default cap for extracted page text (chars). */
+export const CONTENT_CHAR_CAP = 12_000;
+/** Hard ceiling for one text chunk even if a caller requests more. */
+export const MAX_CONTENT_CHAR_CAP = 24_000;
+/** Cap for extracted links/images/videos per call. */
+export const EXTRACT_LINK_CAP = 200;
+/** Max image dimension (px) we keep — Claude caps at 1568, downscaling past it
+ *  is free token loss. Both image-fetch and screenshot downscale to this. */
+export const MAX_IMAGE_DIM = 1568;
+
+export interface CdpScreenshotRequest {
+  /** Optional visible element region in viewport-relative CSS pixels. */
+  region?: { x: number; y: number; width: number; height: number };
+  /** Maximum encoded image width or height in pixels. */
+  maxDim: number;
+}
+
+/** A captured image's raw bytes, ready to become a vision ContentBlock. */
+export interface CdpImageData {
+  ok: boolean;
+  /** base64 (no data: prefix). */
+  base64?: string;
+  /** e.g. "image/jpeg" | "image/png". */
+  mediaType?: string;
+  /** ref the image came from (img1/vid1…), echoed back for labeling. */
+  ref?: string;
+  /** True when a ref/node no longer resolves (DOM changed → re-observe). */
+  staleRef?: boolean;
+  detail?: string;
+}
+
+export function normalizePageText(raw: string): string {
+  return raw
+    .replace(/\r\n?/g, "\n")
+    .replace(/[ \t\f\v]+/g, " ")
+    .replace(/ *\n */g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+export function encodeReadCursor(documentId: string, offset: number): string {
+  return `${encodeURIComponent(documentId)}:${Math.max(0, Math.floor(offset))}`;
+}
+
+export function parseReadCursor(
+  cursor: string,
+): { documentId: string; offset: number } | undefined {
+  const split = cursor.lastIndexOf(":");
+  if (split <= 0) return undefined;
+  const rawOffset = cursor.slice(split + 1);
+  if (!/^\d+$/.test(rawOffset)) return undefined;
+  try {
+    const documentId = decodeURIComponent(cursor.slice(0, split));
+    if (!documentId) return undefined;
+    const offset = Number(rawOffset);
+    if (!Number.isSafeInteger(offset) || offset < 0) return undefined;
+    return { documentId, offset };
+  } catch {
+    return undefined;
+  }
+}
+
+/** Small deterministic FNV-1a hash; used only as a progress signature. */
+export function hashText(text: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < text.length; i += 1) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0");
+}
+
 /** Shared DOM observation for text reads and trusted wheel actions. The selected
  * region is based on visible area, not document height: app shells commonly
  * keep window.scrollY at zero while their main panel or canvas scrolls. */

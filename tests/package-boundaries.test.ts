@@ -298,7 +298,6 @@ describe("workspace package boundaries", () => {
     expect(PRIVATE_VERSIONED_PACKAGES.map((definition) => definition.name).sort()).toEqual([
       "@cjhyy/code-shell-browser-devtools",
       "@cjhyy/code-shell-capability-optimization-lab",
-      "@cjhyy/code-shell-cdp",
       "@cjhyy/code-shell-desktop",
     ]);
     expect(

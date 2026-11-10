@@ -172,7 +172,6 @@ jobs:
             # fake drivers, and splitting them out keeps this shard within its file budget.
             # The new Pet navigator suite runs below to retain the measured file budget.
             ignore: >-
-              --path-ignore-patterns '**/browser-driver/cdp-actions.integration.test.ts'
               --path-ignore-patterns '**/browser-runtime/playwright-driver.test.ts'
               --path-ignore-patterns '**/browser-library/puppeteer-browser-driver.test.ts'
               --path-ignore-patterns '**/browser-library/browser-inspector.integration.test.ts'
@@ -209,7 +208,7 @@ jobs:
           # runner's resolver cache (see tests/helpers/bundle-in-subprocess.ts).
           - shard: rest
             paths: >-
-              tests packages/coding packages/pet packages/chat packages/cdp
+              tests packages/coding packages/pet packages/chat
               packages/link packages/optimization-lab packages/browser-devtools packages/host
             # The native-trial cancel suite runs alone in the Desktop step: an earlier
             # file's electron mock (no `screen`) wins in a shared process, the import
@@ -460,9 +459,6 @@ jobs:
       # The large Desktop Bun process can stall real Chromium load callbacks.
       # Run each browser suite in its own process, keeping every assertion and
       # the same 30-second timeout as the rest of the shard.
-      - name: test Chromium CDP integration
-        if: matrix.shard == 'desktop'
-        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/browser-driver/cdp-actions.integration.test.ts
       - name: test Playwright driver integration
         if: matrix.shard == 'desktop'
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/browser-runtime/playwright-driver.test.ts

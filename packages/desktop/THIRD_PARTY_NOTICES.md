@@ -1,8 +1,8 @@
 # Third-party notices
 
 The CodeShell desktop application includes code derived from third-party open
-source projects through the bundled core, TUI rendering code, and CDP browser
-action layer, and character artwork credited below.
+source projects through the bundled core, TUI rendering code, and browser
+execution layer, and character artwork credited below.
 
 ## Love Live! character artwork
 
@@ -268,22 +268,12 @@ Yoga, Meta's flexbox layout engine.
 - License: MIT
 - Copyright: Copyright (c) Facebook, Inc. and its affiliates.
 
-## browser-use
-
-The bundled CDP browser action layer includes key mapping and key sequence
-planning logic translated from browser-use.
-
-- Source: https://github.com/browser-use/browser-use
-- License: MIT
-- Copyright: Copyright (c) 2024 Gregor Zunic
-
 ### MIT License
 
 ```
 MIT License
 
 Copyright (c) Facebook, Inc. and its affiliates.
-Copyright (c) 2024 Gregor Zunic
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

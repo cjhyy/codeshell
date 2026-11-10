@@ -217,7 +217,6 @@
   },
   "devDependencies": {
     "@cjhyy/code-shell-browser-devtools": "workspace:*",
-    "@cjhyy/code-shell-cdp": "workspace:*",
     "@cjhyy/code-shell-chat": "workspace:*",
     "@cjhyy/code-shell-host": "workspace:*",
     "@cjhyy/code-shell-link": "workspace:*",

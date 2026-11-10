@@ -14,7 +14,7 @@ Source-anchored architecture of CodeShell. The directory has two kinds of docume
     system and hooks; LLM, context and sessions; protocol, plugins, skills and Links;
     package entries, settings, composition and runtime);
   - `06` — the capability packages around core (coding, pet, host, link,
-    optimization-lab, cdp, browser-devtools);
+    optimization-lab, browser-devtools);
   - `07`–`10` — the hosts (TUI; Desktop main process; Desktop renderer, mobile and
     `packages/web`; server and the IM chat gateway).
 - **Topical chapters `11`–`16`** cut across packages: the flat feature inventory
@@ -67,7 +67,7 @@ see [`docs/todo/`](../todo/README.md).
 | 03  | [core: LLM, Context, Sessions](03-core-llm-session-context.md)                           | `llm/` `model-*` `context/` `session/` `prompt/` `cost-*`                                                  |
 | 04  | [core: Protocol, Plugins, Skills, Links](04-core-protocol-plugins-links.md)              | `protocol/` `plugins/` `skills/` `links/` `sources/`                                                       |
 | 05  | [core: Entries, Settings, Composition, Runtime](05-core-runtime-settings-composition.md) | Package entries, `settings/` `credentials/` `composition/` `preset/` `profile/` `panel-apps/` `runtime/`   |
-| 06  | [Capability Packages](06-capability-packages.md)                                         | coding, pet, host, link, optimization-lab, cdp, browser-devtools                                    |
+| 06  | [Capability Packages](06-capability-packages.md)                                         | coding, pet, host, link, optimization-lab, browser-devtools                                    |
 | 07  | [TUI](07-tui.md)                                                                         | `packages/tui` and the root meta package                                                                   |
 | 08  | [Desktop Main Process](08-desktop-main.md)                                               | Electron main / preload / shared / browser-library / chrome-extension                                      |
 | 09  | [Desktop Renderer, Mobile, Web](09-desktop-renderer-mobile-web.md)                       | Renderer UI, mobile entry, `packages/web`                                                                  |

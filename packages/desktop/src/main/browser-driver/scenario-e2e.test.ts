@@ -1,127 +1,108 @@
 import { describe, expect, test, beforeEach } from "bun:test";
 import { handleBrowserAction, releaseGuest, type AutomationDeps } from "./automation-host";
-import { CdpBrowserDriver } from "./cdp-driver.js";
+import type { BrowserBridge, BrowserElement } from "@cjhyy/code-shell-core";
 import type { WebContents } from "electron";
 
-/**
- * End-to-end scenario test: "去小红书 → 搜文章 → 打开 → 扒内容 → (交给模型)总结".
- * Drives the WHOLE main-side stack (handleBrowserAction → persistent
- * CdpBrowserDriver → fake CDP) across the multi-step tool loop, proving the
- * observe→act→read pipeline works with a stateful page (search → results →
- * article) and that refs survive across the separate tool calls.
- *
- * No Electron / no network — a scriptable fake guest whose CDP responses change
- * as the "page" navigates.
- */
-
+/** Exercises host routing across a stateful observe → act → read loop.
+ * BrowserBridge is injected directly; no legacy transport or network is involved. */
 beforeEach(() => releaseGuest(1));
 
-// A tiny stateful fake "site": current page determines the AX tree + innerText.
 function fakeXiaohongshu() {
   let page: "home" | "results" | "article" = "home";
-  const ax = () => {
-    if (page === "home")
-      return {
-        nodes: [
-          { nodeId: "1", role: { value: "textbox" }, name: { value: "搜索小红书" }, backendDOMNodeId: 10 },
-        ],
-      };
-    if (page === "results")
-      return {
-        nodes: [
-          { nodeId: "2", role: { value: "link" }, name: { value: "上海citywalk攻略" }, backendDOMNodeId: 20 },
-          { nodeId: "3", role: { value: "link" }, name: { value: "周末好去处" }, backendDOMNodeId: 21 },
-        ],
-      };
-    return {
-      nodes: [{ nodeId: "9", role: { value: "button" }, name: { value: "点赞" }, backendDOMNodeId: 90 }],
-    };
-  };
-  const innerText = () =>
-    page === "article"
-      ? "上海citywalk攻略\n\n第一站:武康路。梧桐树下的老洋房……\n第二站:安福路。咖啡店扎堆……"
-      : page === "results"
-        ? "搜索结果列表"
-        : "首页";
-  const cdp: Record<string, (p?: any) => any> = {
-    "Accessibility.getFullAXTree": () => ax(),
-    "DOM.getBoxModel": () => ({ model: { content: [0, 0, 100, 0, 100, 40, 0, 40] } }),
-    "Runtime.evaluate": (p) => {
-      if (typeof p?.expression === "string" && p.expression.includes("readyState")) return { result: { value: "complete" } };
-      if (typeof p?.expression === "string" && p.expression.includes("body?.innerText")) {
-        return {
-          result: {
-            value: {
-              text: innerText(),
-              scroll: {
-                x: 0,
-                y: 0,
-                maxX: 0,
-                maxY: 0,
-                viewportWidth: 1280,
-                viewportHeight: 800,
-                atTop: true,
-                atEnd: true,
-              },
-            },
-          },
-        };
-      }
-      return { result: { value: innerText() } };
-    },
-    // typing into search then Enter → results; clicking a result → article.
-    "Input.dispatchKeyEvent": () => {
-      if (page === "home") page = "results";
-      return {};
-    },
-    "Input.dispatchMouseEvent": (p) => {
-      // a click (mousePressed) on the results page opens the article
-      if (p?.type === "mousePressed" && page === "results") page = "article";
-      return {};
-    },
-    "Input.insertText": () => ({}),
-    "Page.navigate": () => {
-      page = "home";
-      return {};
-    },
-    "DOM.resolveNode": () => ({ object: { objectId: "search-input" } }),
-    "Runtime.callFunctionOn": () => ({ result: { value: { ok: true } } }),
-    "DOM.focus": () => ({}),
-    "DOM.enable": () => ({}),
-    "Accessibility.enable": () => ({}),
-    "DOM.scrollIntoViewIfNeeded": () => ({}),
-  };
-  let attached = false;
+  let query = "";
+  const calls: unknown[][] = [];
+  const url = () =>
+    page === "article" ? "https://www.xiaohongshu.com/explore/abc" : "https://www.xiaohongshu.com/";
   const guest = {
     id: 1,
     once: () => undefined,
     isDestroyed: () => false,
-    getURL: () => (page === "article" ? "https://www.xiaohongshu.com/explore/abc" : "https://www.xiaohongshu.com/"),
+    getURL: url,
     getTitle: () => "小红书",
-    debugger: {
-      isAttached: () => attached,
-      attach: () => { attached = true; },
-      detach: () => { attached = false; },
-      sendCommand: async (m: string, pr?: any) => (cdp[m] ? cdp[m](pr) : {}),
-    },
   } as unknown as WebContents;
-  return guest;
+  const unused = async () => {
+    throw new Error("Unexpected scenario BrowserBridge method");
+  };
+  const driver: BrowserBridge = {
+    snapshot: async () => {
+      calls.push(["snapshot"]);
+      const elements: Array<Omit<BrowserElement, "ref">> =
+        page === "home"
+          ? [{ role: "textbox", name: "搜索小红书" }]
+          : page === "results"
+            ? [
+                { role: "link", name: "上海citywalk攻略" },
+                { role: "link", name: "周末好去处" },
+              ]
+            : [{ role: "button", name: "点赞" }];
+      return {
+        url: url(),
+        snapshotId: page,
+        elements: elements.map((element, index) => ({ ...element, ref: `${page}:e${index + 1}` })),
+      };
+    },
+    type: async (ref, text) => {
+      calls.push(["type", ref, text]);
+      if (page !== "home" || ref !== "home:e1") throw new Error("Unexpected search input");
+      query = text;
+      return { ok: true };
+    },
+    pressKey: async (key, ref) => {
+      calls.push(["pressKey", key, ref]);
+      if (key !== "Enter" || ref !== "home:e1" || query !== "citywalk")
+        throw new Error("Unexpected search submission");
+      page = "results";
+      return { ok: true };
+    },
+    click: async (ref) => {
+      calls.push(["click", ref]);
+      if (page !== "results" || ref !== "results:e1") throw new Error("Unexpected article ref");
+      page = "article";
+      return { ok: true };
+    },
+    waitForLoad: async () => {
+      calls.push(["waitForLoad"]);
+      return { ok: true };
+    },
+    readContent: async (options) => {
+      calls.push(["readContent", options]);
+      return {
+        ok: true,
+        url: url(),
+        text:
+          page === "article"
+            ? "上海citywalk攻略\n\n第一站:武康路。梧桐树下的老洋房……\n第二站:安福路。咖啡店扎堆……"
+            : "首页",
+      };
+    },
+    navigate: unused,
+    scroll: unused,
+    extractLinks: unused,
+    hover: unused,
+    selectOption: unused,
+    fetchImages: unused,
+    screenshot: unused,
+    listTabs: unused,
+    switchTab: unused,
+  };
+  return { guest, driver, calls };
 }
 
 describe("E2E: 小红书 搜索→打开→扒内容", () => {
   test("full observe→act→read loop produces article text to summarize", async () => {
-    const guest = fakeXiaohongshu();
+    const { guest, driver, calls } = fakeXiaohongshu();
+    let created = 0;
     const deps: AutomationDeps = {
       activeGuest: () => guest,
       policy: () => ({ allowedDomains: [] }),
-      // Protocol script is only a deterministic test double for host routing.
-      createDriver: () =>
-        new CdpBrowserDriver(
-          (method, params) => guest.debugger.sendCommand(method, params),
-          () => ({ url: guest.getURL(), title: guest.getTitle() }),
-        ),
+      createDriver: (target) => {
+        expect(target).toBe(guest);
+        created++;
+        return driver;
+      },
     };
-    const act = (req: Parameters<typeof handleBrowserAction>[0]) => handleBrowserAction(req, deps).then(JSON.parse);
+    const act = (req: Parameters<typeof handleBrowserAction>[0]) =>
+      handleBrowserAction(req, deps).then(JSON.parse);
 
     // 1. snapshot home → find the search box
     const home = await act({ action: "snapshot" });
@@ -148,6 +129,16 @@ describe("E2E: 小红书 搜索→打开→扒内容", () => {
     expect(content.url).toContain("/explore/");
     expect(content.text).toContain("武康路");
     expect(content.text).toContain("安福路");
-    // (the agent now hands content.text to the model to 总结)
+    expect(created).toBe(1);
+    expect(calls).toEqual([
+      ["snapshot"],
+      ["type", "home:e1", "citywalk"],
+      ["pressKey", "Enter", "home:e1"],
+      ["waitForLoad"],
+      ["snapshot"],
+      ["click", "results:e1"],
+      ["waitForLoad"],
+      ["readContent", { cursor: undefined, maxChars: undefined }],
+    ]);
   });
 });

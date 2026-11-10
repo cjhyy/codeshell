@@ -246,7 +246,6 @@ packages/
 ├── web/       # 浏览器安全的远程客户端状态与 SPA
 ├── tui/       # Terminal CLI、Ink UI、renderer、commands、approvals
 ├── desktop/   # Electron desktop client、agent worker bridge、mobile remote app
-├── cdp/       # Environment-agnostic CDP browser-action layer (no Playwright)
 └── chat/      # 独立多渠道聊天网关与可选 CodeShell adapter
 
 package.json   # @cjhyy/code-shell 兼容 meta package

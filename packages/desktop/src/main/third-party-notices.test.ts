@@ -22,7 +22,6 @@ describe("desktop third-party notices", () => {
     expect(notice).toContain("OpenAI Codex apply-patch");
     expect(notice).toContain("Apache License 2.0");
     expect(notice).toContain("Yoga");
-    expect(notice).toContain("browser-use");
     expect(notice).toContain("MIT License");
   });
 });

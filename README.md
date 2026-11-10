@@ -262,7 +262,6 @@ packages/
 ├── web/       # Browser-safe remote client state and SPA
 ├── tui/       # Terminal CLI, Ink-based UI, renderer, commands, approvals
 ├── desktop/   # Electron desktop client + agent worker bridge + mobile remote app
-├── cdp/       # Environment-agnostic CDP browser-action layer (no Playwright)
 └── chat/      # Standalone multi-channel chat gateway + optional CodeShell adapter
 
 package.json   # @cjhyy/code-shell compatibility meta package

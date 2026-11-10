@@ -60,7 +60,7 @@ generated meta runtime
 desktop (private)
   ├─> core + core/internal
   ├─> coding / pet
-  ├─> server / web / chat / cdp
+  ├─> server / web / chat
   └─> Electron + renderer dependencies
 
 server
@@ -71,14 +71,13 @@ server
 pet ────────────────────> core/extension
 web ────────────────────> core types
 chat                     (no CodeShell package dependency)
-cdp                      (zero runtime dependencies)
 ```
 
 There are no workspace dependency cycles. The intended layer order is:
 
 | Layer | Packages                        | Meaning                                                   |
 | ----- | ------------------------------- | --------------------------------------------------------- |
-| L0    | `link`, `core`, `chat`, `cdp`   | Foundations with no dependency on another product package |
+| L0    | `link`, `core`, `chat`   | Foundations with no dependency on another product package |
 | L1    | `coding`, `pet`, `web` | Capabilities or clients built on core contracts           |
 | L2    | `tui`, `server`                 | Composition hosts                                         |
 | L3    | `desktop`, root meta package    | Product/distribution composition                          |
@@ -98,7 +97,6 @@ declares core as a regular dependency so emitted declarations can resolve.
 | `web`     | Browser logic root plus bundled SPA assets                                                | Good browser boundary: no Electron and no core runtime import. Keeping the reusable state/reducer layer and SPA in one package is reasonable at current scale.                                         |
 | `tui`     | Public root plus `code-shell` bin                                                         | Correct host boundary. Its extensive `/internal` use is acceptable for an in-repo, version-locked host, but prevents independent versioning from core.                                                 |
 | `desktop` | Private app                                                                               | Correct composition root. Code loaded only through bundling may live in dev dependencies, while worker-loaded packages must remain runtime dependencies and be copied by `predist`.                    |
-| `cdp`     | Private package                                                                           | Good zero-dependency technical boundary. It is intentionally not an npm release unit today; documentation must not call it published.                                                                  |
 | `chat`    | Root plus per-platform subpaths                                                           | Good domain independence. `/factory` now dynamically imports only the selected adapter, but all platform SDKs remain one default installation unit.                                                    |
 | root meta | Core re-export and TUI CLI shim                                                           | Correct compatibility package. Its direct runtime dependencies now match the generated artifacts: Core for the SDK re-export and TUI for the CLI shim. Coding remains a TUI-owned dependency. |
 
@@ -350,9 +348,9 @@ Suggested shape/status:
 ### Release package source and publish order
 
 `scripts/package-release-audit-config.ts` is the single declaration for every
-versioned workspace package. Ten entries are public release units; `cdp` and
-`desktop` are private but still participate in synchronized version and
-lockfile verification.
+versioned workspace package. Ten entries are public release units;
+`browser-devtools`, `optimization-lab`, and `desktop` are private but still
+participate in synchronized version and lockfile verification.
 
 The public list is also the npm publish order:
 
@@ -373,7 +371,8 @@ manifest without adding it to the declaration fails version verification.
 - Web now has a package-local README. Pet, Coding, Server and Web
   document their focused entry contracts locally.
 - Older architecture docs still described four packages and called CDP
-  published even though `packages/cdp/package.json` is private.
+  published even though that retired package was private. Its legacy driver
+  and package have now been removed; shared browser helpers live in Desktop.
 
 Package metadata, local READMEs, and the meta package's redundant dependency
 edges are fixed. The remaining item is documentation cleanup rather than a

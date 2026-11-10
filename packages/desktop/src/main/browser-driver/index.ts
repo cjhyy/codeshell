@@ -1,8 +1,5 @@
-/** BrowserBridge hosts. Production Electron actions use Puppeteer; the raw-CDP
- * bridge remains an explicit compatibility export for other embedders/tests. */
+/** BrowserBridge hosts. Production Electron actions use Puppeteer. */
 
-export { CdpBrowserDriver } from "./cdp-driver.js";
-export type { CdpSender, PageInfo } from "./cdp-driver.js";
 export {
   driverFor,
   acquireElectronBrowser,

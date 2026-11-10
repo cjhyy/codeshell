@@ -1,4 +1,4 @@
-import type { CdpImageData, CdpScreenshotRequest } from "@cjhyy/code-shell-cdp";
+import type { CdpImageData, CdpScreenshotRequest } from "../../browser-library/page-utils.js";
 import type { Rectangle, WebContents } from "electron";
 
 /** Capture the existing Electron target without opening another browser or CDP port. */

@@ -103,11 +103,6 @@ export const RELEASE_PACKAGES: readonly ReleasePackageDefinition[] = [
     buildArgs: ["run", "scripts/build-meta.ts"],
   },
   {
-    directory: "packages/cdp",
-    name: "@cjhyy/code-shell-cdp",
-    publish: false,
-  },
-  {
     directory: "packages/browser-devtools",
     name: "@cjhyy/code-shell-browser-devtools",
     publish: false,

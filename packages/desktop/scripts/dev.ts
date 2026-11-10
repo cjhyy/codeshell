@@ -38,9 +38,6 @@ const repoRoot = resolve(root, "..", "..");
 const linkDir = resolve(repoRoot, "packages/link");
 const coreDir = resolve(repoRoot, "packages/core");
 const codingDir = resolve(repoRoot, "packages/coding");
-// cdp is bundled into main by esbuild, so a stale dist ships old browser-action
-// code into the dev app just as silently as it did into installers.
-const cdpDir = resolve(repoRoot, "packages/cdp");
 const browserDevtoolsDir = resolve(repoRoot, "packages/browser-devtools");
 
 const VITE_PORT = 5273;
@@ -122,7 +119,6 @@ async function shutdown(code: number): Promise<void> {
   killTree(coreWatchProc);
   killTree(linkWatchProc);
   killTree(codingWatchProc);
-  killTree(cdpWatchProc);
   killTree(browserDevtoolsWatchProc);
 
   // esbuild watch contexts and vite servers hold their own child procs / ports;
@@ -193,7 +189,6 @@ function spawnElectron(): void {
 let coreWatchProc: ChildProcess | null = null;
 let linkWatchProc: ChildProcess | null = null;
 let codingWatchProc: ChildProcess | null = null;
-let cdpWatchProc: ChildProcess | null = null;
 let browserDevtoolsWatchProc: ChildProcess | null = null;
 
 /**
@@ -237,21 +232,7 @@ function startCoreWatch(): void {
     process.exit(codingBuilt.status ?? 1);
   }
 
-  // cdp is bundled INTO main (not external), so esbuild must be able to resolve
-  // its dist at bundle time. It is also not tracked by git, so on a fresh clone
-  // this is the only thing that creates it — without this build, `bun run dev`
-  // fails with `Could not resolve "@cjhyy/code-shell-cdp"`.
-  console.log("[dev] building @cjhyy/code-shell-cdp (once)…");
-  const cdpBuilt = spawnSync("bun", ["run", "build"], {
-    cwd: cdpDir,
-    stdio: "inherit",
-  });
-  if (cdpBuilt.status !== 0) {
-    console.error("[dev] cdp build failed; aborting");
-    process.exit(cdpBuilt.status ?? 1);
-  }
-
-  // Like cdp, browser-devtools is bundled into main and needs fresh dist.
+  // browser-devtools is bundled into main and needs fresh dist.
   console.log("[dev] building @cjhyy/code-shell-browser-devtools (once)…");
   const browserDevtoolsBuilt = spawnSync("bun", ["run", "build"], {
     cwd: browserDevtoolsDir,
@@ -277,11 +258,6 @@ function startCoreWatch(): void {
   });
   codingWatchProc = spawn("bun", ["run", "dev"], {
     cwd: codingDir,
-    stdio: "inherit",
-    detached: true,
-  });
-  cdpWatchProc = spawn("bun", ["run", "dev"], {
-    cwd: cdpDir,
     stdio: "inherit",
     detached: true,
   });
@@ -321,10 +297,10 @@ function startCoreWatch(): void {
     }, 150);
   });
 
-  // NOTE: cdp and browser-devtools deliberately get no fs.watch here. Unlike
-  // core and coding (both `external` in main's bundle), these packages are
+  // NOTE: browser-devtools deliberately gets no fs.watch here. Unlike
+  // core and coding (both `external` in main's bundle), this package is
   // bundled INTO out/main — esbuild tracks its dist as a bundle input, so
-  // their tsc emits already trigger the main-rebuild plugin above,
+  // its tsc emits already trigger the main-rebuild plugin above,
   // which restarts electron. Watching it here too would double-restart.
 }
 

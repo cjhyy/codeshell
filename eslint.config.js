@@ -23,7 +23,6 @@ const workspacePackageRoots = [
   "web",
   "tui",
   "chat",
-  "cdp",
   "browser-devtools",
   "desktop",
 ].map((name) => packageRoot("packages", name));
