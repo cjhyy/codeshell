@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, spyOn } from "bun:test";
 import type { SessionToolSelection, ToolDefinition } from "../types.js";
 import { callToolDef } from "./builtin/call-tool.js";
 import { resolveModelToolCall } from "./resolve-model-tool-call.js";
@@ -34,7 +34,7 @@ describe("RunToolSurface", () => {
     expect(surface.isCallable("Missing")).toBe(false);
     surface.select(["Read", "ToolSearch"]);
     expect(changes).toHaveLength(2);
-    changes[1].discovered.push("Other");
+    expect(() => changes[1].discovered.push("Other")).toThrow();
     expect(surface.getSelection().discovered).toEqual(["Write", "Read"]);
     surface.rebase();
     expect(names(surface)).toEqual(["ToolSearch", "CallTool", "Write", "Read"]);
@@ -281,7 +281,7 @@ describe("RunToolSurface", () => {
     expect(names(surface)).toEqual(["ToolSearch"]);
   });
 
-  it("freezes independent catalog and provider copies without losing nested schema data", () => {
+  it("shares immutable catalog schemas without losing nested data or retaining mutable inputs", () => {
     const tool: ToolDefinition = {
       name: "Dynamic",
       description: "authorized destination",
@@ -301,8 +301,8 @@ describe("RunToolSurface", () => {
     const snapshot = surface.snapshot();
     expect(snapshot).toEqual([expected]);
     expect(snapshot).not.toBe(catalog);
-    expect(snapshot[0]).not.toBe(catalog[0]);
-    expect(snapshot[0].inputSchema).not.toBe(catalog[0].inputSchema);
+    expect(snapshot[0]).toBe(catalog[0]);
+    expect(snapshot[0].inputSchema).toBe(catalog[0].inputSchema);
     expect(Object.isFrozen(catalog)).toBe(true);
     expect(Object.isFrozen(snapshot)).toBe(true);
     expect(Object.isFrozen(snapshot[0].inputSchema.$defs)).toBe(true);
@@ -328,6 +328,177 @@ describe("RunToolSurface", () => {
     expect(names(second)).toEqual(["ToolSearch"]);
     expect(first.isCallable("Read")).toBe(true);
     expect(second.isCallable("Read")).toBe(false);
+  });
+});
+
+describe("RunToolSurface cached snapshots", () => {
+  it("persists successful request timestamps without rebuilding schemas or behavior names", () => {
+    const changes: SessionToolSelection[] = [];
+    const surface = new RunToolSurface([], {
+      toolDiscovery: "tool-reference",
+      selection: {
+        version: 2,
+        names: ["ToolSearch"],
+        discovered: [],
+        cacheVersion: "fixture-version",
+        lastRequestAt: 100,
+      },
+      onSelectionChanged: (selection) => changes.push(selection),
+    });
+    surface.updateCatalog([definition("ToolSearch"), callToolDef, definition("Read")]);
+    const before = surface.getSelection();
+    const request = surface.requestSnapshot();
+    const behavior = surface.behaviorSnapshot();
+    expect(before).toMatchObject({ cacheVersion: "fixture-version", lastRequestAt: 100 });
+    surface.recordRequest(200);
+    const after = surface.getSelection();
+    expect(after).not.toBe(before);
+    expect(after).toMatchObject({ cacheVersion: "fixture-version", lastRequestAt: 200 });
+    expect(before.lastRequestAt).toBe(100);
+    expect(after.frozenDefinitions).toBe(before.frozenDefinitions);
+    expect(after.deferredDefinitions).toBe(before.deferredDefinitions);
+    expect(surface.requestSnapshot()).toBe(request);
+    expect(surface.behaviorSnapshot()).toBe(behavior);
+    expect(changes).toHaveLength(2);
+    surface.recordRequest(200);
+    expect(surface.getSelection()).toBe(after);
+    expect(changes).toHaveLength(2);
+    for (const at of [NaN, Infinity, -1, 0.5, Number.MAX_SAFE_INTEGER + 1])
+      expect(() => surface.recordRequest(at)).toThrow(RangeError);
+    expect(surface.getSelection()).toBe(after);
+    surface.rebase();
+    expect(surface.getSelection().lastRequestAt).toBeUndefined();
+    expect(surface.getSelection().cacheVersion).toBe("fixture-version");
+  });
+
+  it("rejects malformed optional cycle stamps instead of silently dropping them", () => {
+    const base = { version: 2, names: [], discovered: [] };
+    for (const cacheVersion of [null, 1, "", "v".repeat(257)])
+      expect(normalizeSessionToolSelection({ ...base, cacheVersion })).toBeUndefined();
+    for (const lastRequestAt of [null, "1", NaN, Infinity, -1, 0.5, Number.MAX_SAFE_INTEGER + 1])
+      expect(normalizeSessionToolSelection({ ...base, lastRequestAt })).toBeUndefined();
+    expect(
+      normalizeSessionToolSelection({ ...base, cacheVersion: "v".repeat(256), lastRequestAt: 0 }),
+    ).toEqual({ ...base, cacheVersion: "v".repeat(256), lastRequestAt: 0 });
+  });
+
+  it("changes selection identity only on discovery and schema identity only at cold boundaries", () => {
+    const surface = new RunToolSurface([], { toolDiscovery: "tool-reference" });
+    const catalog = [definition("ToolSearch"), callToolDef, definition("Read")];
+    surface.updateCatalog(catalog);
+    const eager = surface.snapshot();
+    const request = surface.requestSnapshot();
+    const saved = surface.getSelection();
+    expect(surface.snapshot()).toBe(eager);
+    expect(surface.requestSnapshot()).toBe(request);
+    expect(surface.getSelection()).toBe(saved);
+    expect(saved.frozenDefinitions).toBe(eager);
+    expect(request.at(-1)?.inputSchema).toBe(saved.deferredDefinitions?.[0].inputSchema);
+    expect(Object.isFrozen(saved)).toBe(true);
+    expect(Object.isFrozen(saved.names)).toBe(true);
+    expect(Object.isFrozen(saved.discovered)).toBe(true);
+    expect(Object.isFrozen(saved.deferredDefinitions)).toBe(true);
+    expect(Object.isFrozen(saved.behaviorToolNames)).toBe(true);
+    expect(Reflect.set(request.at(-1)!, "description", "mutated")).toBe(false);
+    surface.updateCatalog([...catalog, definition("Late")]);
+    expect(surface.getSelection()).toBe(saved);
+    expect(surface.requestSnapshot()).toBe(request);
+    surface.select(["Read"]);
+    const discovered = surface.getSelection();
+    expect(discovered).not.toBe(saved);
+    expect(saved.discovered).toEqual([]);
+    expect(discovered.discovered).toEqual(["Read"]);
+    expect(discovered.frozenDefinitions).toBe(eager);
+    expect(discovered.deferredDefinitions).toBe(saved.deferredDefinitions);
+    expect(surface.requestSnapshot()).toBe(request);
+    surface.select(["Read", "Missing"]);
+    expect(surface.getSelection()).toBe(discovered);
+    surface.rebase();
+    expect(surface.getSelection()).not.toBe(discovered);
+    expect(surface.snapshot()).not.toBe(eager);
+    expect(surface.requestSnapshot()).not.toBe(request);
+    expect(surface.getSelection().discovered).toEqual([]);
+    expect(request.map((tool) => tool.name)).toEqual(["ToolSearch", "CallTool", "Read"]);
+  });
+
+  for (const discovery of [false, true])
+    it(`does not clone large schemas in repeated getters (${discovery ? "deferred" : "all eager"})`, () => {
+      const catalog = Array.from({ length: 256 }, (_, index) => ({
+        ...definition(`Tool${index}`),
+        inputSchema: { type: "object", properties: { text: { description: "x".repeat(4096) } } },
+      }));
+      if (discovery) catalog.unshift(definition("ToolSearch") as (typeof catalog)[number]);
+      const surface = new RunToolSurface([], {
+        toolDiscovery: discovery ? "tool-reference" : "call-tool",
+      });
+      surface.updateCatalog(catalog);
+      const clone = spyOn(globalThis, "structuredClone");
+      try {
+        const eager = surface.snapshot();
+        const request = surface.requestSnapshot();
+        const selection = surface.getSelection();
+        for (let iteration = 0; iteration < 20; iteration++) {
+          expect(surface.snapshot()).toBe(eager);
+          expect(surface.requestSnapshot()).toBe(request);
+          expect(surface.getSelection()).toBe(selection);
+        }
+        expect(clone).not.toHaveBeenCalled();
+      } finally {
+        clone.mockRestore();
+      }
+    });
+});
+
+describe("RunToolSurface behavior catalog", () => {
+  it("freezes all initially eligible names independently of eager routing and current authority", () => {
+    const surface = new RunToolSurface([]);
+    expect(surface.behaviorSnapshot()).toEqual([]);
+    surface.getSelection(); // A pre-initialization read must not retain an empty snapshot.
+    surface.updateCatalog([definition("ToolSearch"), definition("Deferred")]);
+    const behavior = surface.behaviorSnapshot();
+    expect(behavior).toEqual(["ToolSearch", "Deferred"]);
+    expect(Object.isFrozen(behavior)).toBe(true);
+    expect(surface.getSelection().behaviorToolNames).toBe(behavior);
+    expect(surface.isCallable("Deferred")).toBe(false);
+    surface.select(["Deferred"]);
+    surface.updateCatalog([definition("ToolSearch"), definition("Late")]);
+    expect(surface.behaviorSnapshot()).toBe(behavior);
+    expect(surface.isCallable("Deferred")).toBe(false);
+    const resumed = new RunToolSurface([], { selection: surface.getSelection() });
+    resumed.updateCatalog([definition("ToolSearch"), definition("Late")]);
+    expect(resumed.behaviorSnapshot()).toEqual(behavior);
+    expect(resumed.isCallable("Deferred")).toBe(false);
+    expect(resumed.isCallable("Late")).toBe(false);
+    resumed.rebase();
+    expect(resumed.behaviorSnapshot()).toEqual(["ToolSearch", "Late"]);
+    expect(resumed.isCallable("Late")).toBe(false);
+    expect(behavior).toEqual(["ToolSearch", "Deferred"]);
+  });
+
+  it("treats a persisted empty behavior catalog as authoritative", () => {
+    const surface = new RunToolSurface([], {
+      selection: { version: 2, names: [], discovered: [], behaviorToolNames: [] },
+    });
+    surface.updateCatalog([definition("Late")]);
+    expect(surface.behaviorSnapshot()).toEqual([]);
+    expect(surface.getSelection().behaviorToolNames).toEqual([]);
+    surface.rebase();
+    expect(surface.behaviorSnapshot()).toEqual(["Late"]);
+  });
+
+  it("validates and copies optional behavior names without granting callable tools", () => {
+    const base = { version: 2, names: [], discovered: [] };
+    for (const behaviorToolNames of [null, {}, [7], ["bad\nname"], Array(4097).fill("Read")])
+      expect(normalizeSessionToolSelection({ ...base, behaviorToolNames })).toBeUndefined();
+    const raw = { ...base, behaviorToolNames: ["Hidden", "Hidden"] };
+    const normalized = normalizeSessionToolSelection(raw)!;
+    expect(normalized.behaviorToolNames).toEqual(["Hidden"]);
+    const surface = new RunToolSurface([], { selection: raw });
+    raw.behaviorToolNames.push("Later");
+    surface.updateCatalog([definition("Hidden"), definition("Later")]);
+    expect(surface.behaviorSnapshot()).toEqual(["Hidden"]);
+    expect(surface.isCallable("Hidden")).toBe(false);
+    expect(surface.isCallable("Later")).toBe(false);
   });
 });
 

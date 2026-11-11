@@ -2,6 +2,7 @@ import type { SessionToolSelection, ToolDefinition } from "../types.js";
 
 const MAX_NAMES = 4096;
 const MAX_FROZEN_DEFINITIONS_BYTES = 16 * 1024 * 1024;
+const EMPTY_NAMES: readonly string[] = Object.freeze([]);
 
 function validNames(value: unknown): value is string[] {
   return (
@@ -22,17 +23,38 @@ function validNames(value: unknown): value is string[] {
 export function normalizeSessionToolSelection(value: unknown): SessionToolSelection | undefined {
   if (!value || typeof value !== "object") return undefined;
   try {
-    const { version, names, discovered, frozenDefinitions, deferredDefinitions, cacheIdentity } =
-      value as Record<string, unknown>;
+    const {
+      version,
+      names,
+      discovered,
+      frozenDefinitions,
+      deferredDefinitions,
+      behaviorToolNames,
+      cacheIdentity,
+      cacheVersion,
+      lastRequestAt,
+    } = value as Record<string, unknown>;
     if ((version !== 1 && version !== 2) || !validNames(names)) return undefined;
     if (version === 2 && !validNames(discovered)) return undefined;
+    if (behaviorToolNames !== undefined && !validNames(behaviorToolNames)) return undefined;
+    if (
+      cacheVersion !== undefined &&
+      (typeof cacheVersion !== "string" || cacheVersion.length === 0 || cacheVersion.length > 256)
+    )
+      return undefined;
+    if (lastRequestAt !== undefined && !validRequestTime(lastRequestAt)) return undefined;
     const selection: SessionToolSelection = {
       version: 2,
       names: [...new Set(names)],
       discovered: version === 2 ? [...new Set(discovered as string[])] : [],
+      ...(behaviorToolNames !== undefined
+        ? { behaviorToolNames: [...new Set(behaviorToolNames as string[])] }
+        : {}),
       ...(typeof cacheIdentity === "string" && cacheIdentity.length <= 4096
         ? { cacheIdentity }
         : {}),
+      ...(cacheVersion !== undefined ? { cacheVersion: cacheVersion as string } : {}),
+      ...(lastRequestAt !== undefined ? { lastRequestAt: lastRequestAt as number } : {}),
     };
     if (version === 2 && frozenDefinitions !== undefined) {
       if (
@@ -101,7 +123,14 @@ export class RunToolSurface {
   private readonly hasPersistedDeferredSnapshot: boolean;
   private readonly migrateLegacySelection: boolean;
   private readonly cacheIdentity?: string;
+  private readonly cacheVersion?: string;
+  private lastRequestAt?: number;
   private readonly canExposeDefinition: (definition: ToolDefinition) => boolean;
+  private behaviorToolNames?: readonly string[];
+  private frozenSnapshot?: ToolDefinition[];
+  private deferredSnapshot?: ToolDefinition[];
+  private wireSnapshot?: ToolDefinition[];
+  private selectionSnapshot?: SessionToolSelection;
   private initialized = false;
   private catalog: readonly ToolDefinition[] = Object.freeze([]);
   private catalogByName = new Map<string, ToolDefinition>();
@@ -127,6 +156,10 @@ export class RunToolSurface {
     this.migrateLegacySelection =
       !!selection && (options.selection as { version?: unknown }).version === 1;
     this.cacheIdentity = selection?.cacheIdentity;
+    this.cacheVersion = selection?.cacheVersion;
+    this.lastRequestAt = selection?.lastRequestAt;
+    if (selection?.behaviorToolNames !== undefined)
+      this.behaviorToolNames = Object.freeze([...selection.behaviorToolNames]);
     for (const name of selection?.names ?? []) this.topNames.add(name);
     for (const name of selection?.discovered ?? []) this.discoveredNames.add(name);
     for (const definition of selection?.frozenDefinitions ?? []) {
@@ -146,6 +179,7 @@ export class RunToolSurface {
     this.catalog = Object.freeze([...byName.values()]);
     if (this.initialized) return;
     this.initialized = true;
+    this.behaviorToolNames ??= Object.freeze([...byName.keys()]);
     if (!this.hasPersistedSelection) {
       // Without discovery, all initially eligible tools must remain reachable.
       const initialNames = byName.has("ToolSearch")
@@ -181,6 +215,7 @@ export class RunToolSurface {
       }
     }
     if (!this.hasPersistedDeferredSnapshot) this.rebuildDeferredSnapshot();
+    this.invalidateSnapshots();
     this.onSelectionChanged?.(this.getSelection());
   }
 
@@ -206,6 +241,7 @@ export class RunToolSurface {
       }
     }
     if (this.discoveredNames.size !== previousSize) {
+      this.selectionSnapshot = undefined;
       this.onSelectionChanged?.(this.getSelection());
     }
     return { selected, unavailable };
@@ -230,41 +266,75 @@ export class RunToolSurface {
       }
     }
     this.rebuildDeferredSnapshot();
+    this.behaviorToolNames = Object.freeze([...this.catalogByName.keys()]);
+    this.lastRequestAt = undefined;
+    this.invalidateSnapshots();
     this.onSelectionChanged?.(this.getSelection());
   }
 
   getSelection(): SessionToolSelection {
-    return {
+    return (this.selectionSnapshot ??= Object.freeze({
       version: 2,
-      names: [...this.topNames],
-      discovered: [...this.discoveredNames],
+      names: Object.freeze([...this.topNames]) as unknown as string[],
+      discovered: Object.freeze([...this.discoveredNames]) as unknown as string[],
       frozenDefinitions: this.snapshot(),
       ...(this.toolDiscovery === "tool-reference" || this.hasPersistedDeferredSnapshot
-        ? { deferredDefinitions: [...this.deferredByName.values()].map(cloneDefinition) }
+        ? {
+            deferredDefinitions: (this.deferredSnapshot ??= Object.freeze([
+              ...this.deferredByName.values(),
+            ]) as unknown as ToolDefinition[]),
+          }
+        : {}),
+      ...(this.behaviorToolNames !== undefined
+        ? { behaviorToolNames: this.behaviorToolNames as string[] }
         : {}),
       ...(this.cacheIdentity !== undefined ? { cacheIdentity: this.cacheIdentity } : {}),
-    };
+      ...(this.cacheVersion !== undefined ? { cacheVersion: this.cacheVersion } : {}),
+      ...(this.lastRequestAt !== undefined ? { lastRequestAt: this.lastRequestAt } : {}),
+    }));
   }
 
-  /** Independent immutable schemas, including temporarily unavailable tools. */
+  /** Record only a successful primary response; schema/behavior snapshots stay frozen. */
+  recordRequest(at: number): void {
+    if (!validRequestTime(at)) throw new RangeError("Invalid tool-cache request timestamp");
+    if (this.lastRequestAt === at) return;
+    this.lastRequestAt = at;
+    this.selectionSnapshot = undefined;
+    this.onSelectionChanged?.(this.getSelection());
+  }
+
+  /** Frozen cycle-start catalog names for behavior text, never execution authority. */
+  behaviorSnapshot(): readonly string[] {
+    return this.behaviorToolNames ?? EMPTY_NAMES;
+  }
+
+  /** Shared immutable schemas, including temporarily unavailable tools. */
   snapshot(): ToolDefinition[] {
+    if (this.frozenSnapshot) return this.frozenSnapshot;
     const definitions: ToolDefinition[] = [];
     for (const name of this.topNames) {
       const definition = this.frozenByName.get(name);
-      if (definition) definitions.push(cloneFrozen(definition));
+      if (definition) definitions.push(definition);
     }
-    return Object.freeze(definitions) as unknown as ToolDefinition[];
+    return (this.frozenSnapshot = Object.freeze(definitions) as unknown as ToolDefinition[]);
   }
 
   /** Full wire catalog; deferred schemas never make a tool callable by themselves. */
   requestSnapshot(): ToolDefinition[] {
     if (this.toolDiscovery !== "tool-reference") return this.snapshot();
-    return Object.freeze([
+    return (this.wireSnapshot ??= Object.freeze([
       ...this.snapshot(),
       ...[...this.deferredByName.values()].map((definition) =>
-        cloneFrozen({ ...definition, deferLoading: true as const }),
+        Object.freeze({ ...definition, deferLoading: true as const }),
       ),
-    ]) as unknown as ToolDefinition[];
+    ]) as unknown as ToolDefinition[]);
+  }
+
+  private invalidateSnapshots(): void {
+    this.frozenSnapshot = undefined;
+    this.deferredSnapshot = undefined;
+    this.wireSnapshot = undefined;
+    this.selectionSnapshot = undefined;
   }
 
   private rebuildDeferredSnapshot(): void {
@@ -307,6 +377,10 @@ export class RunToolSurface {
 function cloneDefinition(definition: ToolDefinition): ToolDefinition {
   const { deferLoading: _deferLoading, ...schema } = definition;
   return cloneFrozen(schema);
+}
+
+function validRequestTime(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 }
 
 function cloneFrozen<T>(value: T): T {
