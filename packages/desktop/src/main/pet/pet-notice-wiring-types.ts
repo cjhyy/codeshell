@@ -82,6 +82,8 @@ export interface PetNoticeWiringDeps {
   /** The user settings object (raw); only `pet.notifications` is read. */
   readSettings(): unknown;
   presence: { getSystemIdleTimeSec(): number; hasFocusedWindow(): boolean };
+  /** A Session's last message from its user (a failure's `重试` resends it). */
+  lastUserMessage?: (sessionId: string) => Promise<string | undefined>;
   /** Mimi's own Sessions never fire notice rules. */
   isMimiSession?: (sessionId: string) => boolean;
   /**

@@ -409,6 +409,8 @@ describe("blocked", () => {
         sessionId: SID,
         ruleIds: ["rule-a"],
         facts: { title: "修复登录", summary: "All tests pass now." },
+        // What a reply code needs (继续 / 停止), never shown.
+        context: { reason: "limit" },
       },
     ]);
     expect(rules.rules[0]!.state).toBe("active");
@@ -430,6 +432,7 @@ describe("blocked", () => {
         sessionId: SID,
         ruleIds: ["rule-a"],
         facts: { title: "修复登录", question: "Which database?" },
+        context: { reason: "user", goalId: "g-1", revision: 3 },
       },
     ]);
   });

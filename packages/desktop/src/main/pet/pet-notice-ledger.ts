@@ -3,6 +3,12 @@ import { readdir, rm } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { dlog } from "../desktop-logger.js";
 import {
+  parseNoticeActions,
+  parseNoticeSlot,
+  type NoticeActions,
+  type NoticeSlot,
+} from "./pet-notice-action-codes.js";
+import {
   quarantineCorruptJson,
   readBoundedJson,
   serializeOwnerJson,
@@ -87,10 +93,15 @@ export interface NoticeDecisionPrompt {
   endedAt?: number;
   /** Expired after reaching IM: the "已超时" notice owed there, and whether the router took it. */
   expiryNotice?: { channel: string; sent: boolean };
+  /** The IM conversation's number for this open item (①②③), set when a copy goes out. */
+  slot?: NoticeSlot;
 }
 
 /** What a prompt update may change; the code never changes. */
 export type NoticeDecisionPromptPatch = Partial<Omit<NoticeDecisionPrompt, "code" | "replies">>;
+
+/** What an actions update may change: its one-shot use, a pending link, its slot. */
+export type NoticeActionsPatch = Partial<Pick<NoticeActions, "usedAt" | "confirm" | "slot">>;
 
 export interface NoticeRecord {
   id: string;
@@ -109,6 +120,8 @@ export interface NoticeRecord {
   delivery?: NoticeDelivery;
   /** Decision prompts only: where the prompt stands (see {@link NoticeDecisionPrompt}). */
   prompt?: NoticeDecisionPrompt;
+  /** The reply code of a goal pause, failure or result (pet-notice-action-codes.ts). */
+  actions?: NoticeActions;
   createdAt: number;
 }
 
@@ -121,7 +134,7 @@ export interface NoticeRecord {
 export type NoticeRecordInput = Omit<NoticeRecord, "id" | "createdAt" | "delivery" | "prompt"> & {
   delivery?: { status: "held" | "queued"; channel?: string };
   /** A decision prompt starts in phase `desktop`; replies that are not plain text are dropped. */
-  prompt?: Pick<NoticeDecisionPrompt, "code" | "deadline" | "skippable" | "replies">;
+  prompt?: Pick<NoticeDecisionPrompt, "code" | "deadline" | "skippable" | "replies" | "slot">;
 };
 
 export interface PetNoticeLedgerOptions {
@@ -390,6 +403,7 @@ const PROMPT_KEYS = [
   "escalatedAt",
   "endedAt",
   "expiryNotice",
+  "slot",
 ] as const;
 
 function parsePrompt(value: unknown): NoticeDecisionPrompt | undefined {
@@ -413,22 +427,26 @@ function parsePrompt(value: unknown): NoticeDecisionPrompt | undefined {
       (!isRecord(notice) ||
         !hasOnlyKeys(notice, ["channel", "sent"]) ||
         !isText(notice.channel, 64) ||
-        typeof notice.sent !== "boolean"))
+        typeof notice.sent !== "boolean")) ||
+    (value.slot !== undefined && !parseNoticeSlot(value.slot))
   )
     return undefined;
   return value as unknown as NoticeDecisionPrompt;
 }
 
 /**
- * Loading is tolerant of a prompt this build cannot read (a newer phase, a
- * malformed field): the record is kept as an ordinary notice without it.
+ * Loading is tolerant of a prompt or reply code this build cannot read (a
+ * newer phase or family, a malformed field): the record is kept as an
+ * ordinary notice without it.
  */
 function parseStoredRecord(value: unknown): NoticeRecord | undefined {
-  if (isRecord(value) && "prompt" in value && !parsePrompt(value.prompt)) {
-    const { prompt: _unreadable, ...rest } = value;
-    return parseNoticeRecord(rest);
-  }
-  return parseNoticeRecord(value);
+  if (!isRecord(value)) return parseNoticeRecord(value);
+  const { prompt, actions, ...rest } = value;
+  return parseNoticeRecord({
+    ...rest,
+    ...(prompt !== undefined && parsePrompt(prompt) ? { prompt } : {}),
+    ...(actions !== undefined && parseNoticeActions(actions) ? { actions } : {}),
+  });
 }
 
 /** Strict row validator; anything it rejects is quarantined, never dropped. */
@@ -449,6 +467,7 @@ function parseNoticeRecord(value: unknown): NoticeRecord | undefined {
       "decision",
       "delivery",
       "prompt",
+      "actions",
       "createdAt",
     ])
   )
@@ -471,6 +490,7 @@ function parseNoticeRecord(value: unknown): NoticeRecord | undefined {
     (value.decision !== undefined && !parseDecision(value.decision)) ||
     (value.delivery !== undefined && !parseDelivery(value.delivery)) ||
     (value.prompt !== undefined && !parsePrompt(value.prompt)) ||
+    (value.actions !== undefined && !parseNoticeActions(value.actions)) ||
     !isTimestamp(value.createdAt)
   )
     return undefined;
@@ -504,6 +524,7 @@ function initialPrompt(input: NoticeRecordInput["prompt"]): NoticeDecisionPrompt
     ...(input.deadline !== undefined ? { deadline: input.deadline } : {}),
     ...(input.skippable === true ? { skippable: true } : {}),
     ...(replies.length > 0 ? { replies } : {}),
+    ...(input.slot !== undefined ? { slot: input.slot } : {}),
   };
 }
 
@@ -543,6 +564,7 @@ function normalizeInput(input: NoticeRecordInput, id: string, createdAt: number)
     ...(input.body !== undefined ? { body: input.body } : {}),
     ...(input.decision !== undefined ? { decision: input.decision } : {}),
     ...(prompt !== undefined ? { prompt } : {}),
+    ...(input.actions !== undefined ? { actions: input.actions } : {}),
     ...(initial !== undefined
       ? {
           delivery: {
@@ -661,6 +683,43 @@ export class PetNoticeLedger {
       if (!found || record.createdAt < found.createdAt) found = record;
     }
     return found ? structuredClone(found) : undefined;
+  }
+
+  /** The record whose open item has this internal code. */
+  byActionCode(code: string): NoticeRecord | undefined {
+    for (const record of this.state.records.values())
+      if (record.actions?.code === code) return structuredClone(record);
+    return undefined;
+  }
+
+  /** Records that carry an open item (`actions`), oldest first. */
+  actionRecords(): NoticeRecord[] {
+    return [...this.state.records.values()]
+      .filter((record) => record.actions !== undefined)
+      .sort((a, b) => a.createdAt - b.createdAt)
+      .map((record) => structuredClone(record));
+  }
+
+  /** Record an item's use, a pending link or its slot; the code itself never changes. */
+  updateActions(id: string, patch: NoticeActionsPatch): Promise<NoticeRecord> {
+    const changes = structuredClone(patch);
+    return this.mutate((staged, touched) => {
+      const current = staged.records.get(id);
+      if (!current?.actions) throw new PetNoticeLedgerError("notice_not_found");
+      if (!isRecord(changes) || !hasOnlyKeys(changes, ["usedAt", "confirm", "slot"]))
+        throw new PetNoticeLedgerError("invalid_notice");
+      const actions = { ...current.actions } as Record<string, unknown>;
+      for (const [key, value] of Object.entries(changes)) {
+        if (value === undefined) delete actions[key];
+        else actions[key] = value;
+      }
+      const next = parseNoticeActions(JSON.parse(JSON.stringify(actions)));
+      if (!next) throw new PetNoticeLedgerError("invalid_notice");
+      const record = { ...current, actions: next };
+      staged.records.set(id, record);
+      touched.add(id);
+      return record;
+    });
   }
 
   /** Records that carry a decision prompt (`only` picks them by prompt), oldest first. */
