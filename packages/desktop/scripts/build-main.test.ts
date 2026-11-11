@@ -12,6 +12,7 @@ test("the shared main build delivers the worker Link and Cua proxy entries with 
     const options = desktopMainBuildOptions();
     const entries = options.entryPoints as Record<string, string>;
     expect(Object.keys(entries).sort()).toEqual([
+      "activity-history-worker",
       "cua-activity-proxy",
       "index",
       "link-provider-module",
@@ -74,6 +75,15 @@ test("the shared main build delivers the worker Link and Cua proxy entries with 
     expect(cache).toBeDefined();
     expect(
       [...externalsOf(cache!)].filter(
+        (specifier) => !isBuiltin(specifier) && !/^@cjhyy\/code-shell-core(?:\/|$)/.test(specifier),
+      ),
+    ).toEqual([]);
+    const history = [...outputs.keys()].find((path) =>
+      path.endsWith("activity-history-worker.mjs"),
+    );
+    expect(history).toBeDefined();
+    expect(
+      [...externalsOf(history!)].filter(
         (specifier) => !isBuiltin(specifier) && !/^@cjhyy\/code-shell-core(?:\/|$)/.test(specifier),
       ),
     ).toEqual([]);

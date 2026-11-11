@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeEach, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeEach, expect, spyOn, test } from "bun:test";
 import {
   lstatSync,
   mkdtempSync,
@@ -88,6 +88,71 @@ test("same SID in two Runtimes is isolated; restart requires its matching persis
   const foreign = new UsageLedger({ storageDir, namespace: "another-host" });
   expect(foreign.adoptSession("same", first.sessionState("same"))).toBe(false);
   expect(foreign.summary({ scope: "store" }).requests).toBe(0);
+});
+
+test("ownership references do not read or summarize historical receipts", () => {
+  const ledger = new UsageLedger({ storageDir: directory() });
+  const scan = spyOn(ledger, "summary").mockImplementation(() => {
+    throw new Error("history scan on admission");
+  });
+  try {
+    const reference = ledger.sessionReference("one", "/scope");
+    expect(reference).toMatchObject({ kind: "usage-ledger", sessionId: "one" });
+    expect(reference).not.toHaveProperty("summary");
+    const restarted = new UsageLedger();
+    expect(restarted.adoptSession("one", reference, "/scope")).toBe(true);
+    expect(restarted.adoptSession("one", reference, "/other")).toBe(false);
+    expect(scan).not.toHaveBeenCalled();
+  } finally {
+    scan.mockRestore();
+  }
+});
+
+test("fresh readers share parsed receipts without sharing runtime or Session owners", () => {
+  const storageDir = directory();
+  const writer = new UsageLedger({ storageDir });
+  const receipt = bill(writer, "same");
+  const reference = writer.sessionReference("same");
+  const originalParse = JSON.parse;
+  let receiptParses = 0;
+  const parse = spyOn(JSON, "parse").mockImplementation((raw, reviver) => {
+    if (typeof raw === "string" && raw.includes(receipt.requestId)) receiptParses++;
+    return originalParse(raw, reviver);
+  });
+  const now = spyOn(Date, "now").mockReturnValue(Date.now() + 60_000);
+  try {
+    const first = new UsageLedger({ storageDir });
+    expect(first.adoptSession("same", reference)).toBe(true);
+    expect(first.summary({ scope: "session", sessionId: "same" }).requests).toBe(1);
+    expect(receiptParses).toBe(1);
+    const second = new UsageLedger({ storageDir });
+    expect(second.summary({ scope: "session", sessionId: "same" }).requests).toBe(0);
+    expect(second.summary().requests).toBe(0);
+    expect(second.adoptSession("same", reference)).toBe(true);
+    expect(second.summary({ scope: "session", sessionId: "same" }).requests).toBe(1);
+    expect(receiptParses).toBe(1);
+    const folder = join(storageDir, readdirSync(storageDir)[0]!);
+    const file = join(folder, `${receipt.requestId}.json`);
+    writeFileSync(
+      `${file}.tmp`,
+      JSON.stringify({ ...receipt, usage: { ...usage, promptTokens: 300, totalTokens: 320 } }),
+    );
+    renameSync(`${file}.tmp`, file);
+    const third = new UsageLedger({ storageDir });
+    expect(third.adoptSession("same", reference)).toBe(true);
+    expect(third.summary({ scope: "session", sessionId: "same" }).promptTokens).toBe(300);
+    expect(receiptParses).toBe(2);
+    rmSync(file);
+    expect(first.summary({ scope: "session", sessionId: "same" }).requests).toBe(0);
+    const anotherRoot = new UsageLedger({ storageDir: directory() });
+    expect(anotherRoot.summary({ scope: "store" }).requests).toBe(0);
+    const anotherNamespace = new UsageLedger({ storageDir, namespace: "other" });
+    expect(anotherNamespace.summary({ scope: "store" }).requests).toBe(0);
+    expect(anotherNamespace.adoptSession("same", reference)).toBe(false);
+  } finally {
+    parse.mockRestore();
+    now.mockRestore();
+  }
 });
 
 test("parent rollup includes each child receipt once while Runtime sums only leaves", () => {

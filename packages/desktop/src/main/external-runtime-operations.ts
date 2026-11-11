@@ -66,9 +66,25 @@ export class ExternalRuntimeOperationRun {
       // receipts. Keep known Host costs without presenting their subtotal as an
       // exact total, even on the first turn with zero persisted tokens.
       this.usage.noteHistoricalGap(input.sessionId, this.root);
+      // Admission needs an accounting owner, not a fresh billing report. A cold
+      // sessionState() scanned every receipt in the shared store synchronously
+      // while holding this Session's state lock, freezing Electron on each send.
+      // Preserve the adopted checkpoint; explicit history queries recompute it
+      // off Main. The external CLI's own bill remains unknown in either case.
+      const previousSummary = adopted ? state.costState?.summary : undefined;
+      const checkpoint =
+        previousSummary && typeof previousSummary === "object" && !Array.isArray(previousSummary)
+          ? { ...previousSummary, partial: true }
+          : {
+              ...this.usage.summary(),
+              scope: "session",
+              sessionId: input.sessionId,
+              partial: true,
+            };
       return {
         costState: {
-          ...this.usage.sessionState(input.sessionId, this.root),
+          ...this.usage.sessionReference(input.sessionId, this.root),
+          summary: checkpoint,
           // Engine restores this opaque store when returning to the native loop.
           // Carry only its documented slot from a validated accounting owner.
           ...(adopted && state.costState?.legacyStore !== undefined

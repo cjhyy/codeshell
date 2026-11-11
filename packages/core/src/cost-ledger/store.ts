@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { linkSync, mkdirSync, opendirSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import type { TokenUsage } from "../types.js";
 import type { UsageOwner } from "./context.js";
 import { PinnedFileCache } from "./pinned-file-cache.js";
@@ -19,6 +19,11 @@ const MAX_RECEIPT_BYTES = 16_384;
 // A receipt changed this recently may still be rewritten within the same
 // timestamp tick, so its file identity cannot yet prove a parsed copy current.
 const RECEIPT_CACHE_SETTLE_MS = 2_000;
+// Share only parsed disk receipts, never runtime records or accounting owners.
+// Fresh history readers can reuse unchanged files without inheriting another
+// run's totals or a deleted/recreated Session's ownership.
+const receiptCaches = new Map<string, PinnedFileCache<UsageReceipt>>();
+const MAX_RECEIPT_CACHES = 4;
 const PURPOSES = new Set([
   "main",
   "aux_summary",
@@ -111,6 +116,38 @@ function validReceipt(value: unknown, namespace: string): value is UsageReceipt 
   );
 }
 
+function receiptCache(
+  directory: string | undefined,
+  namespace: string,
+  now?: () => number,
+): PinnedFileCache<UsageReceipt> {
+  // Custom clocks belong to their caller; do not share timestamp assumptions.
+  const cacheKey = directory && !now ? JSON.stringify([resolve(directory), namespace]) : undefined;
+  const cached = cacheKey ? receiptCaches.get(cacheKey) : undefined;
+  if (cached) {
+    receiptCaches.delete(cacheKey!);
+    receiptCaches.set(cacheKey!, cached);
+    return cached;
+  }
+  const cache = new PinnedFileCache<UsageReceipt>({
+    maxBytes: MAX_RECEIPT_BYTES,
+    maxEntries: MAX_RECEIPTS,
+    maxCachedBytes: 8 * 1024 * 1024,
+    settleMs: RECEIPT_CACHE_SETTLE_MS,
+    now: now ?? (() => Date.now()),
+    parse: (raw, id) => {
+      const receipt: unknown = JSON.parse(raw);
+      return validReceipt(receipt, namespace) && receipt.requestId === id ? receipt : undefined;
+    },
+  });
+  if (cacheKey) {
+    receiptCaches.set(cacheKey, cache);
+    while (receiptCaches.size > MAX_RECEIPT_CACHES)
+      receiptCaches.delete(receiptCaches.keys().next().value!);
+  }
+  return cache;
+}
+
 /** Per-request atomic files avoid a shared read/add/write total and asynchronous locks. */
 export class UsageLedger {
   readonly namespace: string;
@@ -124,17 +161,7 @@ export class UsageLedger {
    * every model step; re-reading thousands of unchanged files each time
    * dominated the gap between steps on long-lived installs.
    */
-  private readonly diskReceipts = new PinnedFileCache<UsageReceipt>({
-    maxBytes: MAX_RECEIPT_BYTES,
-    settleMs: RECEIPT_CACHE_SETTLE_MS,
-    now: () => this.now(),
-    parse: (raw, id) => {
-      const receipt: unknown = JSON.parse(raw);
-      return validReceipt(receipt, this.namespace) && receipt.requestId === id
-        ? receipt
-        : undefined;
-    },
-  });
+  private readonly diskReceipts: PinnedFileCache<UsageReceipt>;
   private readonly sessionAccountingIds = new Map<string, string>();
   private persistenceErrors = 0;
   private invalidReceipts = 0;
@@ -164,6 +191,7 @@ export class UsageLedger {
       options.storageDir &&
       join(options.storageDir, createHash("sha256").update(this.namespace).digest("hex"));
     this.now = options.now ?? Date.now;
+    this.diskReceipts = receiptCache(this.directory, this.namespace, options.now);
   }
 
   owner(
@@ -323,7 +351,8 @@ export class UsageLedger {
     return { receipt: structuredClone(receipt), recorded: true };
   }
 
-  sessionState(sessionId: string, sessionScope = "default"): Record<string, unknown> {
+  /** Ownership metadata only: opening a run must not require reading billing history. */
+  sessionReference(sessionId: string, sessionScope = "default"): Record<string, unknown> {
     const owner = this.owner(sessionId, undefined, [], "main", sessionScope);
     return {
       version: 1,
@@ -335,6 +364,12 @@ export class UsageLedger {
       historicalCoverageIncomplete:
         this.historicalGaps.has(JSON.stringify([sessionScope, sessionId])) ||
         this.persistenceErrors > 0,
+    };
+  }
+
+  sessionState(sessionId: string, sessionScope = "default"): Record<string, unknown> {
+    return {
+      ...this.sessionReference(sessionId, sessionScope),
       summary: this.summary({ scope: "session", sessionId }, sessionScope),
     };
   }

@@ -1,10 +1,14 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { createHash } from "node:crypto";
+import * as syncFs from "node:fs";
 import {
+  existsSync,
   mkdtempSync,
   mkdirSync,
   readFileSync,
   readdirSync,
+  renameSync,
+  promises as fs,
   rmSync,
   statSync,
   symlinkSync,
@@ -273,8 +277,222 @@ describe("ModelTraceStore", () => {
     // Other event-loop work runs before a whole historical directory is scanned.
     expect(readdirSync(events).length).toBeGreaterThan(0);
     await store.flushMaintenance();
-    expect(readdirSync(events)).toEqual([]);
+    expect(existsSync(events)).toBe(false);
     expect(store.get("new-request")?.status).toBe("completed");
+  });
+  test("pending retention I/O does not block writes, input turns, or finish flush early", async () => {
+    const store = new ModelTraceStore({ storageDir: directory });
+    store.write(record("old", { startedAt: Date.now() - 8 * 86_400_000 }));
+    const summaryFile = join(
+      directory,
+      "summaries",
+      `${createHash("sha256").update("old").digest("hex")}.json`,
+    );
+    const open = fs.open.bind(fs);
+    let release!: () => void;
+    const pendingRead = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let started!: () => void;
+    const readStarted = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const read = spyOn(fs, "open").mockImplementation(async (...args) => {
+      if (args[0] === summaryFile) {
+        started();
+        await pendingRead;
+      }
+      return open(...args);
+    });
+    let flushed = false;
+    const maintenance = store.flushMaintenance().then(() => {
+      flushed = true;
+    });
+    try {
+      await readStarted;
+      store.write(record("during-maintenance"));
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      expect(flushed).toBe(false);
+      expect(store.get("during-maintenance")?.status).toBe("completed");
+    } finally {
+      release();
+      await maintenance;
+      read.mockRestore();
+    }
+    expect(flushed).toBe(true);
+    expect(existsSync(summaryFile)).toBe(false);
+    expect(store.get("during-maintenance")?.status).toBe("completed");
+  });
+  test("extending retention while a file read is pending protects its summary and body", async () => {
+    const store = new ModelTraceStore({ storageDir: directory });
+    store.write(record("old", { startedAt: Date.now() - 8 * 86_400_000 }));
+    const summaryFile = join(
+      directory,
+      "summaries",
+      `${createHash("sha256").update("old").digest("hex")}.json`,
+    );
+    const open = fs.open.bind(fs);
+    let release!: () => void;
+    const pendingRead = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let started!: () => void;
+    const readStarted = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    let delayed = false;
+    const read = spyOn(fs, "open").mockImplementation(async (...args) => {
+      if (args[0] === summaryFile && !delayed) {
+        delayed = true;
+        started();
+        await pendingRead;
+      }
+      return open(...args);
+    });
+    const maintenance = store.flushMaintenance();
+    try {
+      await readStarted;
+      // A different store/process may change the policy while Main is awaiting I/O.
+      const peer = new ModelTraceStore({ storageDir: directory });
+      peer.setConfig({ retentionDays: 14 });
+      release();
+      await Promise.all([maintenance, peer.flushMaintenance()]);
+    } finally {
+      release();
+      await maintenance;
+      read.mockRestore();
+    }
+    expect(existsSync(summaryFile)).toBe(true);
+    expect(store.get("old")?.id).toBe("old");
+  });
+  test("flush includes a forced retention pass requested while a scan is pending", async () => {
+    const store = new ModelTraceStore({ storageDir: directory });
+    store.write(record("recent", { startedAt: Date.now() - 3 * 86_400_000 }));
+    const summaryFile = join(
+      directory,
+      "summaries",
+      `${createHash("sha256").update("recent").digest("hex")}.json`,
+    );
+    const open = fs.open.bind(fs);
+    let changed = false;
+    const read = spyOn(fs, "open").mockImplementation(async (...args) => {
+      const handle = await open(...args);
+      if (args[0] === summaryFile && !changed) {
+        changed = true;
+        store.setConfig({ retentionDays: 1 });
+      }
+      return handle;
+    });
+    try {
+      await store.flushMaintenance();
+    } finally {
+      read.mockRestore();
+    }
+    expect(changed).toBe(true);
+    expect(existsSync(summaryFile)).toBe(false);
+    expect(readdirSync(join(directory, "records"))).toEqual([]);
+  });
+  test("maintenance preserves an expired candidate atomically replaced during a read", async () => {
+    const store = new ModelTraceStore({ storageDir: directory });
+    store.write(record("same-id", { startedAt: Date.now() - 8 * 86_400_000 }));
+    const summaryFile = join(
+      directory,
+      "summaries",
+      `${createHash("sha256").update("same-id").digest("hex")}.json`,
+    );
+    const open = fs.open.bind(fs);
+    let replaced = false;
+    const read = spyOn(fs, "open").mockImplementation(async (...args) => {
+      const handle = await open(...args);
+      if (args[0] === summaryFile && !replaced) {
+        replaced = true;
+        store.write(record("same-id", { startedAt: Date.now(), output: { text: "replacement" } }));
+      }
+      return handle;
+    });
+    try {
+      await store.flushMaintenance();
+    } finally {
+      read.mockRestore();
+    }
+    expect(replaced).toBe(true);
+    expect(store.get("same-id")?.output).toEqual({ text: "replacement" });
+    expect(existsSync(summaryFile)).toBe(true);
+  });
+  test("a write queued at deletion cannot lose its fresh replacement body", async () => {
+    const store = new ModelTraceStore({ storageDir: directory });
+    store.write(record("same-id", { startedAt: Date.now() - 8 * 86_400_000 }));
+    const body = join(
+      directory,
+      "records",
+      `${createHash("sha256").update("same-id").digest("hex")}.json`,
+    );
+    let written!: () => void;
+    const replacement = new Promise<void>((resolve) => {
+      written = resolve;
+    });
+    let queued = false;
+    const queueReplacement = (file: unknown) => {
+      if (file !== body || queued) return;
+      queued = true;
+      setImmediate(() => {
+        store.write(record("same-id", { output: { text: "replacement" } }));
+        written();
+      });
+    };
+    const unlinkSync = syncFs.unlinkSync.bind(syncFs);
+    const synchronous = spyOn(syncFs, "unlinkSync").mockImplementation((file) => {
+      queueReplacement(file);
+      return unlinkSync(file);
+    });
+    const unlink = fs.unlink.bind(fs);
+    const asynchronous = spyOn(fs, "unlink").mockImplementation(async (file) => {
+      queueReplacement(file);
+      // A queued filesystem operation may complete on a later event-loop turn.
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      return unlink(file);
+    });
+    try {
+      await store.flushMaintenance();
+      expect(queued).toBe(true);
+      await replacement;
+      expect(store.get("same-id")?.output).toEqual({ text: "replacement" });
+    } finally {
+      synchronous.mockRestore();
+      asynchronous.mockRestore();
+    }
+  });
+  test("maintenance rejects symlinks introduced while opening a candidate", async () => {
+    const store = new ModelTraceStore({ storageDir: join(directory, "store") });
+    store.write(record("old", { startedAt: Date.now() - 8 * 86_400_000 }));
+    const summaryFile = join(
+      store.storageDir,
+      "summaries",
+      `${createHash("sha256").update("old").digest("hex")}.json`,
+    );
+    const outside = join(directory, "outside.json");
+    writeFileSync(
+      outside,
+      JSON.stringify(record("outside", { startedAt: Date.now() - 8 * 86_400_000 })),
+    );
+    const open = fs.open.bind(fs);
+    let replaced = false;
+    const read = spyOn(fs, "open").mockImplementation(async (...args) => {
+      if (args[0] === summaryFile && !replaced) {
+        replaced = true;
+        renameSync(summaryFile, join(directory, "original.json"));
+        symlinkSync(outside, summaryFile);
+      }
+      return open(...args);
+    });
+    try {
+      await store.flushMaintenance();
+    } finally {
+      read.mockRestore();
+    }
+    expect(replaced).toBe(true);
+    expect(JSON.parse(readFileSync(outside, "utf8")).id).toBe("outside");
+    expect(existsSync(summaryFile)).toBe(true);
   });
   test("corrupt events still yield and retain their bytes during maintenance", async () => {
     const events = join(directory, "events", "a".repeat(64));
@@ -332,13 +550,16 @@ describe("ModelTraceStore", () => {
     expect(readdirSync(join(directory, "records"))).toEqual([]);
     expect(store.get("orphan")).toBeNull();
   });
-  test("rejects symlink directories and malformed record files", () => {
+  test("rejects symlink directories and malformed record files", async () => {
     const outside = join(directory, "outside"),
       storePath = join(directory, "store");
     mkdirSync(outside);
     mkdirSync(storePath);
     const file = createHash("sha256").update("secret").digest("hex") + ".json";
-    writeFileSync(join(outside, file), JSON.stringify(record("secret")));
+    writeFileSync(
+      join(outside, file),
+      JSON.stringify(record("secret", { startedAt: Date.now() - 8 * 86_400_000 })),
+    );
     symlinkSync(outside, join(storePath, "records"));
     symlinkSync(outside, join(storePath, "summaries"));
     symlinkSync(outside, join(storePath, "events"));
@@ -347,6 +568,7 @@ describe("ModelTraceStore", () => {
     expect(store.list().items).toEqual([]);
     expect(store.events("run")).toEqual([]);
     expect(() => store.write(record("new"))).toThrow();
+    await store.flushMaintenance();
     expect(readdirSync(outside)).toEqual([file]);
   });
   test("caps oversized bodies and retains attempt identity and coverage", () => {
