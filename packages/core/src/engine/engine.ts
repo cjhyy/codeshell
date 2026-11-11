@@ -1,8 +1,4 @@
-import {
-  rebaseToolSelection,
-  toolCacheIdentity,
-  isToolCacheCompaction,
-} from "./tool-cache-cycle.js";
+import { rebaseToolSelection, isToolCacheCompaction } from "./tool-cache-cycle.js";
 import { normalizeSessionToolSelection } from "../tool-system/run-tool-surface.js";
 /**
  * Engine — the main facade that wires all components together.
@@ -2743,6 +2739,7 @@ export class Engine {
       ...(isEphemeralSessionState(session.state) ? { ephemeral: true } : {}),
     };
     const { modelFacade, getRunUsage } = wireRunModelFacade({
+      onPrimaryResponse: (startedAt) => toolCtx.runToolSurface?.recordRequest(startedAt),
       llmClient,
       auxSummaryClient,
       transcript: session.transcript,
@@ -3223,6 +3220,7 @@ export class Engine {
     // the toolDefs the model sees when its credential isn't configured for this
     // cwd. Recomputed every message, so configuring a key takes effect on the
     // NEXT message without a restart. Tools with no guard entry are always kept.
+    let ownedToolSelection: SessionState["toolSelection"];
     const toolDefs = initializeRunToolSurface(
       toolCtx,
       options?.toolAllowlist !== undefined || profile?.allowedToolNames
@@ -3252,7 +3250,7 @@ export class Engine {
         injected: options?.injected === true,
         selection: session.state.toolSelection,
         onSelectionChanged: (selection) => {
-          session.state.toolSelection = selection;
+          session.state.toolSelection = ownedToolSelection = selection;
         },
       },
     );
@@ -3262,15 +3260,21 @@ export class Engine {
       rebase: () => {
         toolCtx.refreshRunToolEligibility?.();
         surface.rebase();
-        return { ...surface.getSelection(), cacheIdentity: toolCacheIdentity(toolCtx.llmConfig) };
+        return surface.getSelection();
       },
     };
     if (this.runningSession?.state === session.state) {
-      this.runningSession.ownToolSelection = () =>
-        session.state.toolSelection !== undefined &&
-        !normalizeSessionToolSelection(session.state.toolSelection)
-          ? undefined
-          : { ...surface.getSelection(), cacheIdentity: toolCacheIdentity(toolCtx.llmConfig) };
+      this.runningSession.ownToolSelection = () => {
+        // Our snapshots are immutable and already validated. Validate only an
+        // externally replaced value, preserving damaged/future state verbatim.
+        if (
+          session.state.toolSelection !== ownedToolSelection &&
+          session.state.toolSelection !== undefined &&
+          !normalizeSessionToolSelection(session.state.toolSelection)
+        )
+          return undefined;
+        return (ownedToolSelection = surface.getSelection());
+      };
     }
 
     return {

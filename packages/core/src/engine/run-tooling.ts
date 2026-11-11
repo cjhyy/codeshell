@@ -6,6 +6,7 @@
  * `new Engine(` allowlist and RunEnvironmentResolver own them).
  */
 import { recordModelTraceEvent } from "../model-traces/context.js";
+import { VERSION } from "../version.js";
 import type {
   MCPServerConfig,
   PermissionMode,
@@ -41,6 +42,7 @@ import { callToolDef } from "../tool-system/builtin/call-tool.js";
 import {
   rebaseToolSelection,
   selectionForToolCacheCycle,
+  toolCacheIdleLimitMs,
   toolCacheIdentity,
 } from "./tool-cache-cycle.js";
 
@@ -59,7 +61,7 @@ export function snapshotRunMcpServers(
   );
 }
 
-/** Keep capability discovery complete while freezing schemas once per model step. */
+/** Keep current eligibility separate from schemas frozen for the cache cycle. */
 export function initializeRunToolSurface(
   toolCtx: ToolContext,
   initialToolNames: readonly string[] | undefined,
@@ -96,7 +98,11 @@ export function initializeRunToolSurface(
   const catalog = assembleModelCatalog();
   const identity = toolCacheIdentity(toolCtx.llmConfig);
   let selection = normalizeSessionToolSelection(
-    selectionForToolCacheCycle(routing?.selection, identity),
+    selectionForToolCacheCycle(routing?.selection, identity, {
+      now: Date.now(),
+      cacheVersion: VERSION,
+      idleLimitMs: toolCacheIdleLimitMs(toolCtx.llmConfig),
+    }),
   );
   // A legacy selection has no frozen native directory. Its first native request
   // is a cold boundary; an explicitly saved empty directory is already complete.
@@ -115,8 +121,7 @@ export function initializeRunToolSurface(
   const persistSelection =
     routing?.selection !== undefined && !selection
       ? undefined
-      : (next: SessionToolSelection) =>
-          routing?.onSelectionChanged?.({ ...next, cacheIdentity: identity });
+      : (next: SessionToolSelection) => routing?.onSelectionChanged?.(next);
   const routed =
     selection || routing?.injected
       ? {
@@ -149,6 +154,8 @@ export function initializeRunToolSurface(
           ? { ...selection, version: 1 }
           : selection,
       onSelectionChanged: persistSelection,
+      cacheVersion: VERSION,
+      cacheIdentity: identity,
       toolDiscovery,
       ...(toolDiscovery === "tool-reference"
         ? { canExposeDefinition: canExposeNativeToolDefinition }

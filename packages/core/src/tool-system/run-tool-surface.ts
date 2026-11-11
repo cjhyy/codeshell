@@ -141,6 +141,9 @@ export class RunToolSurface {
     options: {
       selection?: unknown;
       toolDiscovery?: "call-tool" | "tool-reference";
+      /** Current application version, including a newly initialized cycle. */
+      cacheVersion?: string;
+      cacheIdentity?: string;
       /** Transport compatibility only; never changes current execution eligibility. */
       canExposeDefinition?: (definition: ToolDefinition) => boolean;
       onSelectionChanged?: (selection: SessionToolSelection) => void;
@@ -155,8 +158,8 @@ export class RunToolSurface {
     this.hasPersistedDeferredSnapshot = selection?.deferredDefinitions !== undefined;
     this.migrateLegacySelection =
       !!selection && (options.selection as { version?: unknown }).version === 1;
-    this.cacheIdentity = selection?.cacheIdentity;
-    this.cacheVersion = selection?.cacheVersion;
+    this.cacheIdentity = options.cacheIdentity ?? selection?.cacheIdentity;
+    this.cacheVersion = options.cacheVersion ?? selection?.cacheVersion;
     this.lastRequestAt = selection?.lastRequestAt;
     if (selection?.behaviorToolNames !== undefined)
       this.behaviorToolNames = Object.freeze([...selection.behaviorToolNames]);

@@ -267,6 +267,7 @@ export function toolResultToBlock(result: ToolResult): ContentBlock {
 export class TurnLoop {
   private turnCount = 0;
   private modelStepTools: import("../types.js").ToolDefinition[] | undefined;
+  private modelStepBehaviorToolNames: readonly string[] | undefined;
 
   private get currentTools(): import("../types.js").ToolDefinition[] {
     return this.modelStepTools ?? this.deps.tools;
@@ -2243,17 +2244,23 @@ export class TurnLoop {
   private async refreshModelToolPrefix(): Promise<void> {
     const tools =
       this.deps.getTools?.() ?? this.deps.runToolSurface?.requestSnapshot() ?? this.deps.tools;
-    if (
-      this.deps.getSystemPrompt &&
-      JSON.stringify(tools) !== JSON.stringify(this.modelStepTools ?? this.deps.tools)
-    ) {
+    const previousTools = this.modelStepTools ?? this.deps.tools;
+    const behaviorToolNames = this.deps.runToolSurface?.behaviorSnapshot();
+    const toolsChanged =
+      tools !== previousTools && JSON.stringify(tools) !== JSON.stringify(previousTools);
+    const behaviorChanged =
+      behaviorToolNames !== this.modelStepBehaviorToolNames &&
+      JSON.stringify(behaviorToolNames) !== JSON.stringify(this.modelStepBehaviorToolNames);
+    if (this.deps.getSystemPrompt && (toolsChanged || behaviorChanged)) {
       // Deferred declarations belong only to the wire directory. Prompt tool
-      // listings and behavior gates continue to describe the frozen eager surface.
+      // listings use the frozen eager surface. The composer separately reads the
+      // cycle's behavior catalog, which can change on a behavior-only cold rebase.
       this.deps.systemPrompt = await this.deps.getSystemPrompt(
         this.deps.runToolSurface?.snapshot() ?? tools.filter((tool) => !tool.deferLoading),
       );
     }
     this.modelStepTools = tools;
+    this.modelStepBehaviorToolNames = behaviorToolNames;
   }
 
   private toolIdentityStream(onStream?: StreamCallback): StreamCallback | undefined {
