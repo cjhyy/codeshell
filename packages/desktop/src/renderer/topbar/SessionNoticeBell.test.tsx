@@ -43,6 +43,7 @@ const ON: PetSessionBellState = {
   channel: "auto",
   imLabel: "微信",
   ready: "ready",
+  watchesDone: true,
 };
 const DELEGATED: PetSessionBellState = {
   available: true,
@@ -51,6 +52,7 @@ const DELEGATED: PetSessionBellState = {
   delegated: true,
   ruleId: "rule-d",
   channel: "auto",
+  watchesDone: true,
 };
 const UNAVAILABLE: PetSessionBellState = { available: false, on: false, delegated: false };
 
@@ -283,11 +285,20 @@ describe("notifyAgentDone", () => {
     expect(await shown("s-a", { ...ON, firedRecently: true })).toBe(0);
   });
 
-  test("a Session with an active rule always leaves its outcome to the router", async () => {
-    // Even a rule that will not fire for this outcome (failures only, held by
-    // policy): the router decides, the renderer never adds a second notification.
+  test("a rule that asks for the done outcome always leaves it to the router", async () => {
+    // Whether or not it fires this time (held by policy, nothing done): the
+    // router decides, the renderer never adds a second notification.
     expect(await run("s-a", ON)).toEqual({ shown: 0, asked: 1 });
     expect(await run("s-a", DELEGATED)).toEqual({ shown: 0, asked: 1 });
+  });
+
+  test("a watching rule that does not cover done leaves the local notification", async () => {
+    // e.g. a rule for failures or blocks only: a normal finish is nobody else's.
+    const { watchesDone: _done, ...failuresOnly } = ON;
+    expect(await run("s-a", failuresOnly)).toEqual({ shown: 1, asked: 1 });
+    const { watchesDone: _delegatedDone, ...delegatedFailures } = DELEGATED;
+    expect(await shown("s-a", delegatedFailures)).toBe(1);
+    expect(await shown("s-a", new Error("ipc down"))).toBe(1);
   });
 
   test("otherwise the hidden window says the agent is done right away", async () => {

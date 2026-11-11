@@ -16,10 +16,11 @@ function bellApi(): BellApi | undefined {
 }
 
 /**
- * The hidden-window "agent done" notification, unless a notice rule watches
- * this Session (or just fired for it): main's notice router owns that
- * Session's outcomes then, with its own presence, quiet hours and dedupe,
- * so the renderer never adds a second notification beside it.
+ * The hidden-window "agent done" notification, unless a notice rule of this
+ * Session asks for its "done" outcome (or just fired): main's notice router
+ * owns that outcome then, with its own presence, quiet hours and dedupe, so
+ * the renderer never adds a second notification beside it. A rule that only
+ * watches failures or blocks leaves a normal finish to the renderer.
  */
 export async function notifyAgentDone(
   sessionId: string | null | undefined,
@@ -38,7 +39,7 @@ export async function notifyAgentDone(
       // Unknown: notify as before rather than stay silent.
       bell = undefined;
     }
-    if (bell?.on || bell?.firedRecently) return;
+    if (bell?.firedRecently || (bell?.on && bell.watchesDone)) return;
   }
   await deps.notify(input);
 }

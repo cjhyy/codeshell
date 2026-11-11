@@ -133,6 +133,7 @@ describe("Session bell", () => {
       channel: "auto",
       imLabel: "微信",
       ready: "unknown",
+      watchesDone: true,
     });
     const [rule] = wiring.ruleStore.activeForSession(SID);
     expect(rule).toMatchObject({
@@ -166,6 +167,24 @@ describe("Session bell", () => {
       delegated: false,
       firedRecently: true,
     });
+  });
+
+  test("a rule for failures or blocks only does not watch a normal finish", async () => {
+    const { controls, wiring } = fixture();
+    await wiring.ruleStore.upsertSessionRule({
+      sessionId: SID,
+      createdBy: "notify-me",
+      events: ["failed", "blocked"],
+      scope: "turn",
+      channel: "auto",
+      attention: "always",
+      target: { kind: "owner" },
+      origin: "user",
+      armedAt: NOW,
+    });
+    const bell = await controls.sessionBell(SID);
+    expect(bell).toMatchObject({ on: true, origin: "user" });
+    expect(bell.watchesDone).toBeUndefined();
   });
 
   test("waits for the Goal when one drives the Session, and follows a bound IM chat", async () => {
@@ -248,6 +267,7 @@ describe("Session bell", () => {
       // A rule from an IM conversation goes back to that conversation's channel.
       imLabel: "飞书",
       ready: "unavailable",
+      watchesDone: true,
     });
     const states = wiring.ruleStore
       .list()
