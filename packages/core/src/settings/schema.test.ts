@@ -303,4 +303,40 @@ describe("pet settings (Mimi global-view external-session visibility)", () => {
       SettingsSchema.parse({ pet: { notifications: "loud" } }).pet?.notifications,
     ).toBeUndefined();
   });
+
+  it("keeps the briefs, heartbeat and digest slots, dropping bad parts one by one", () => {
+    const proactive = {
+      briefs: { morning: { enabled: true, time: "08:45" }, evening: { enabled: false } },
+      heartbeat: { enabled: true, activeHours: { start: "10:00", end: "21:30" } },
+      digestSlots: ["12:00", "18:00"],
+    };
+    expect(SettingsSchema.parse({ pet: { notifications: proactive } }).pet?.notifications).toEqual(
+      proactive,
+    );
+    const parsed = SettingsSchema.parse({
+      pet: {
+        notifications: {
+          maxPerHour: 5,
+          briefs: { morning: { enabled: "yes", time: "9:00" }, evening: { time: "18:15" } },
+          heartbeat: { enabled: true, activeHours: { start: "10:00", end: "26:00" } },
+          digestSlots: ["12:00", "1200"],
+        },
+      },
+    }).pet?.notifications;
+    expect(parsed?.maxPerHour).toBe(5);
+    // Each malformed leaf falls back on its own; the rest of the object is kept.
+    expect(parsed?.briefs).toEqual({ morning: {}, evening: { time: "18:15" } });
+    expect(parsed?.heartbeat).toEqual({ enabled: true });
+    // A slot list is one value: any malformed slot (or more than six) drops the list.
+    expect(parsed?.digestSlots).toBeUndefined();
+    expect(
+      SettingsSchema.parse({
+        pet: {
+          notifications: {
+            digestSlots: ["01:00", "02:00", "03:00", "04:00", "05:00", "06:00", "07:00"],
+          },
+        },
+      }).pet?.notifications?.digestSlots,
+    ).toBeUndefined();
+  });
 });
