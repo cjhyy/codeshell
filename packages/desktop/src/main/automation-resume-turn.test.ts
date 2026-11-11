@@ -93,7 +93,11 @@ describe("automation resume turn", () => {
       failFast: true,
       settleOnExit: true,
     });
-    expect(calls[0]?.params).toMatchObject({ sessionId: "s-bound", requireExisting: true });
+    expect(calls[0]?.params).toMatchObject({
+      sessionId: "s-bound",
+      requireExisting: true,
+      trigger: "host_message",
+    });
     await new Promise((resolve) => setTimeout(resolve, 30));
     expect(events.map((event) => event.type)).toEqual(["job_start"]);
     scheduler.runNow(job.id);

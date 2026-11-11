@@ -1839,7 +1839,9 @@ export class AgentServer {
           displayText: displayText || undefined,
           injected: params.injected === true,
           attachments: Array.isArray(params.attachments) ? params.attachments : undefined,
-          trigger: "user",
+          // Host-injected reminders are automation, not renewed user consent.
+          // Explicit Goal Resume and actual asynchronous answers use their own routes.
+          trigger: params.trigger ?? (params.injected === true ? "host_message" : "user"),
           onStream: (event: StreamEvent) => {
             acceptance.observe(event);
             this.observeSessionStream(sid, event);

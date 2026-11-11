@@ -368,3 +368,62 @@ describe("ChatSessionManager serialized lifecycle", () => {
     expect(order).toEqual(["switch:new", "run:new", "switch:newest"]);
   });
 });
+
+describe("Stop policy across idle eviction", () => {
+  function stoppedManager() {
+    return new ChatSessionManager({
+      runtime: {} as never,
+      idleTtlMs: 0,
+      engineFactory: () =>
+        createFakeEngine({
+          getSessionManager: undefined,
+          prepareSessionCloseFinalization: undefined,
+          isHeadless: () => false,
+          async run(_task, options) {
+            return result(options?.sessionId ?? "stopped");
+          },
+        }),
+    });
+  }
+  it("holds Stop across host messages and clears it only for user input or explicit resume", async () => {
+    const manager = stoppedManager();
+    try {
+      let session = await manager.getOrCreate("stopped", {});
+      session.cancel();
+      await manager.unloadIdleSession("stopped");
+      session = await manager.getOrCreate("stopped", {}, { allowReopen: false });
+      expect(session.wasCancelledSinceLastTurn()).toBe(true);
+      await session.enqueueTurn("host context", { trigger: "host_message" });
+      expect(session.wasCancelledSinceLastTurn()).toBe(true);
+      await session.enqueueTurn("host reminder", { trigger: "user", injected: true });
+      expect(session.wasCancelledSinceLastTurn()).toBe(true);
+      await session.enqueueTurn("real answer", { trigger: "user" });
+      expect(session.wasCancelledSinceLastTurn()).toBe(false);
+      session.cancel();
+      await manager.unloadIdleSession("stopped");
+      await manager.close("stopped");
+      session = await manager.getOrCreate("stopped", {}, { allowReopen: true });
+      expect(session.wasCancelledSinceLastTurn()).toBe(false);
+    } finally {
+      await manager.closeAllAsync();
+    }
+  });
+  it("retention capacity keeps the stopped owner resident and reports a failed explicit unload", async () => {
+    const manager = stoppedManager();
+    try {
+      const session = await manager.getOrCreate("stopped", {});
+      session.cancel();
+      session.lastActivityAt = 0;
+      const retained = (manager as any).evictedStops as Set<string>;
+      for (let i = 0; i < CLOSED_CHAT_SESSION_TOMBSTONE_LIMIT; i++) retained.add(`older-${i}`);
+      manager.sweepIdle();
+      expect(manager.get("stopped")).toBe(session);
+      await expect(manager.unloadIdleSession("stopped")).rejects.toThrow("retention is full");
+      expect(retained.size).toBe(CLOSED_CHAT_SESSION_TOMBSTONE_LIMIT);
+      await manager.close("stopped");
+      expect(manager.isClosed("stopped")).toBe(true);
+    } finally {
+      await manager.closeAllAsync();
+    }
+  });
+});

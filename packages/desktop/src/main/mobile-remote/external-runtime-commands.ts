@@ -314,7 +314,7 @@ export class MobileExternalRuntimeCommands {
       this.deps.isExternal(sessionId) ||
       this.externalRoutes.get(viewer) === sessionId
     )
-      throw new Error("Native model selection requires the current native Session");
+      throw new Error("Native Session command requires the current native Session");
     this.assertSelection(viewer, device, selected);
     const authority = selected.authority;
     const owner = this.deps.owner(sessionId),

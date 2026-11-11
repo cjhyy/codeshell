@@ -525,3 +525,35 @@ describe("ChatSessionManager resident Engine root migration", () => {
     }
   }, 15_000);
 });
+
+it("explicit close during migration retires an evicted Stop before a later reopen", async () => {
+  const gate = deferred();
+  const old = fakeEngine(state());
+  old.dispose = async () => gate.promise;
+  let created = 0;
+  const manager = new ChatSessionManager({
+    runtime: {} as never,
+    idleTtlMs: 0,
+    engineFactory: () => {
+      const engine = ++created === 1 ? old : fakeEngine(state());
+      engine.prepareSessionCloseFinalization = undefined as any;
+      return engine;
+    },
+  });
+  try {
+    const session = await manager.getOrCreate("migration-stop", {});
+    session.cancel();
+    session.lastActivityAt = 0;
+    const migration = manager.migrateResidentSessionMainRoot(session.id, targetAuthority());
+    manager.sweepIdle();
+    const close = manager.close(session.id);
+    gate.resolve();
+    await Promise.all([migration, close]);
+    expect(manager.isClosed(session.id)).toBe(true);
+    const reopened = await manager.getOrCreate(session.id, {}, { allowReopen: true });
+    expect(reopened.wasCancelledSinceLastTurn()).toBe(false);
+  } finally {
+    gate.resolve();
+    await manager.closeAllAsync();
+  }
+});

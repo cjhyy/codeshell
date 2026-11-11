@@ -1,0 +1,15 @@
++     "type": "error",
++   },
++ ]
+
+- Expected  - 1
++ Received  + 17
+
+      at <anonymous> (/private/tmp/codeshell-goal-fixes-20261111/tests/engine-goal-startup-controls.test.ts:576:64)
+(fail) edit during actual background wake preserves controls and executes only the latest Goal [575.99ms]
+
+ 7 pass
+ 1 fail
+ 85 expect() calls
+Ran 8 tests across 1 file. [2.52s]
+Bun test process failed (1)

@@ -11,6 +11,11 @@
 >
 > 原 **3 P0 + 7 P1** 剩余验收范围保留。**2026-10-14 云端范围决定**继续有效：按[第 16 章](docs/architecture/16-platform-consolidation.md)决策 7，只做薄云端（配对、中继、推送、Link OAuth 回调）与一任务一容器沙箱，不扩展常驻云端工作台、持久云端工作区或云端 Panel 运行时。已有云端证据保留其历史范围。
 
+## Goal 控制后续（2026-11-11）
+
+- [ ] **L — 未消费 synthetic input 的持久历史身份。** startup hold 前 injected input 已写 transcript 和 protocol journal；同 Goal 编辑的一次有界重排会保留两个不同 runId 的相同输入。需统一 transcript/cache/journal/receipt 的未消费语义或延迟提交边界，保留审计历史，不能删除 JSONL、按文本去重或复用已完成 receipt。真实异步 gate 回归已断言该边界；见 [本轮交接](docs/todo/goal-control-fixes-20261111.md#2026-11-11-cc-后本地整改)。
+- [ ] **L — 冷 worker Goal 控制的 acceptance/deadline 契约。** 10 秒 transport 等待到期只移除 reply tap，已写入 stdin 的恢复请求仍可能稍后 CAS 并执行。当前 UI 明确结果未确认、仅刷新、不自动重发；如需保证到期后不执行，必须设计可验证的接受/过期/撤销协议，而非增加超时。真实 dispatcher + 受控延迟 stdin fixture 已覆盖，但物理 Electron/production worker 和实体手机验收仍未做。
+
 ## 2026-11-01 全仓审查：修复与剩余验收
 
 入口：[全仓审查报告](docs/todo/repo-audit-20261101.md)（基线 `82c6f37ab`，静态审查，未运行测试；含覆盖矩阵、证据行号与验收标准）· [Mimi 单入口 + 移动模式方案](docs/todo/mimi-single-entry-movement-plan.md)。本轮未发现 P0；下列条目只总结可行动问题，证据与验收见报告对应编号。

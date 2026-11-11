@@ -507,3 +507,33 @@ describe("parseMobileClientEvent keep waiting", () => {
       expect(parseMobileClientEvent({ ...event, generation })).toBeUndefined();
   });
 });
+
+test("Goal controls validate request correlation and require both CAS fields", () => {
+  const update = {
+    type: "goal.update",
+    sessionId: "session",
+    requestId: "request",
+    paused: false,
+    expectedGoalId: "goal",
+    expectedRevision: 7,
+  };
+  expect(parseMobileClientEvent(update)).toEqual(update);
+  expect(
+    parseMobileClientEvent({ type: "goal.get", sessionId: "session", requestId: "request" }),
+  ).toBeDefined();
+  for (const patch of [
+    { requestId: "" },
+    { expectedGoalId: undefined },
+    { expectedRevision: undefined },
+    { expectedRevision: 0 },
+    { expectedRevision: 1.5 },
+    { paused: true },
+  ])
+    expect(parseMobileClientEvent({ ...update, ...patch })).toBeUndefined();
+  expect(
+    parseMobileClientEvent({ type: "goal.clear", sessionId: "session", expectedGoalId: "goal" }),
+  ).toBeUndefined();
+  expect(
+    parseMobileClientEvent({ type: "goal.clear", sessionId: "session", expectedRevision: 7 }),
+  ).toBeUndefined();
+});

@@ -1,0 +1,10 @@
+HEAD: 9b27590221c7748f8654d99ab4852d117eb159fe
+Command: PATH=/Applications/code-shell.app/Contents/Resources/runtimes/node/bin:$PATH caffeinate -i node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/desktop-web-panels.test.ts
+Outer exit: 0. Inner child deadline unchanged at 20 seconds. One bounded control, after full run completed.
+Actual cases: direct 2921.53ms; tunnel 3880.32ms.
+
+ 2 pass
+ 0 fail
+ 2 expect() calls
+Ran 2 tests across 1 file. [6.83s]
+Completed Bun shard: 2 tests, 0 skipped; 0 failures.

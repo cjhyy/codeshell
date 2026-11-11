@@ -1,0 +1,25 @@
+5959 |       expect(hook.result.current.app.notice).toContain("external runtime owns this session");
+                                                    ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "external runtime owns this session"
+Received: "正在刷新目标状态，请确认后再操作。"
+
+      at <anonymous> (/private/tmp/codeshell-goal-fixes-20261111/packages/web/src/hooks/useRemoteApp.test.tsx:5959:46)
+(fail) versioned remote Goal controls > an unsupported external snapshot is silent and dispatches no native control [1.74ms]
+(pass) versioned remote Goal controls > old peer rejects idle resume clearly but keeps running extension and clear acknowledgments usable [0.96ms]
+(pass) pending Goal failure remains useful across blocked [0.14ms]
+(pass) pending Goal failure remains useful across reconnect [0.15ms]
+(pass) pending Goal failure remains useful across selection [0.02ms]
+(pass) Goal snapshot send failure can recover with a read before any mutation [0.40ms]
+(pass) Goal snapshot lost failure can recover with a read before any mutation [0.11ms]
+(pass) Goal snapshot reply failure can recover with a read before any mutation [0.32ms]
+
+1 tests failed:
+(fail) versioned remote Goal controls > an unsupported external snapshot is silent and dispatches no native control [1.74ms]
+
+ 120 pass
+ 1 fail
+ 699 expect() calls
+Ran 121 tests across 1 file. [17.72s]
+Bun test process failed (1)

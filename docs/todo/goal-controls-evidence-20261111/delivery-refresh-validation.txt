@@ -1,0 +1,71 @@
+Latest-main delivery refresh — 2026-11-11
+Source merge HEAD: 65c5949adabaa7f4e839819f2b02120d2a553913
+Fetched origin/main: 935f3fe9b72634b1f0a59f50da3c5d7a898e2b60 (PR #349)
+Normal conflict-free merge; no task production/test edits.
+Node v24.22.1 / Bun 1.3.11; command-local installed-runtime PATH; caffeinate -i for long commands.
+Package-release completed before all dist readers.
+
+$ bun run test:package-release
+exit=0
+✓ packed uploaded documents: memory-only index and untouched legacy files (Node)
+
+Package release smoke passed: 10 tarballs, 55 typed entries.
+
+$ bun run typecheck
+exit=0; elapsedMs=47447
+@cjhyy/code-shell-web typecheck: Exited with code 0
+@cjhyy/code-shell-server typecheck: Exited with code 0
+@cjhyy/code-shell-tui typecheck: Exited with code 0
+@cjhyy/code-shell-desktop typecheck: Exited with code 0
+
+$ bun run --cwd packages/desktop build
+exit=0; elapsedMs=13334
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 10.37s
+[build] main, preload, renderer, mobile, and Chrome extension OK
+
+$ bun run lint
+exit=0; elapsedMs=30203
+  20:3  warning  'writeFileSync' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+✖ 90 problems (0 errors, 90 warnings)
+
+
+$ bun run lint:engine-bypass
+exit=0; elapsedMs=1270
+$ bash scripts/check-no-engine-bypass.sh
+OK: 'new Engine(' is confined to the protocol layer.
+
+$ bun run lint:test-shards
+exit=0; elapsedMs=972
+    1 / 60   tests: test Puppeteer driver integration
+    1 / 60   tests: test browser inspector integration
+
+✓ 2561 test files covered; largest process 769 files
+
+$ node scripts/run-bun-test-shard.mjs --timeout 30000 tests/engine-goal-startup-controls.test.ts tests/engine-goal-background-video.test.ts packages/core/src/protocol/chat-session-goal-resume.test.ts packages/core/src/protocol/chat-session-manager.lifecycle.test.ts packages/desktop/src/main/automation-resume-turn.test.ts packages/server/src/serve/automation-worker.test.ts packages/core/src/settings/schema.test.ts
+exit=0; elapsedMs=4931
+
+ 74 pass
+ 0 fail
+ 332 expect() calls
+Ran 74 tests across 7 files. [4.87s]
+Completed Bun shard: 74 tests, 0 skipped; 0 failures.
+
+$ node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/pet/pet-proactive.test.ts packages/desktop/src/main/pet/pet-proactive-brief.test.ts packages/desktop/src/main/pet/pet-proactive-heartbeat.test.ts packages/desktop/src/main/pet/pet-proactive-rules.test.ts packages/desktop/src/main/pet/pet-notice-defer.test.ts packages/desktop/src/main/pet/pet-notice-digest.test.ts packages/desktop/src/main/pet/pet-follow-up-rules.test.ts packages/desktop/src/main/pet/pet-notice-wiring.test.ts
+exit=0; elapsedMs=1670
+
+ 78 pass
+ 0 fail
+ 303 expect() calls
+Ran 78 tests across 8 files. [1.62s]
+Completed Bun shard: 78 tests, 0 skipped; 0 failures.
+
+Targeted combined checks: 152 pass / 0 fail / 0 skip across 15 files.
+Independent read-only incremental review PASS: Pet system rules use their dedicated scheduler; briefs/heartbeat use a separate tool-free text client; notice/outbox/defer do not enter ChatSession ordinary user runs and do not implicitly resume Goal.
+Upstream PR #349 changed its Pet test membership in ci.yml; inherited unchanged. This task has no ci.yml diff versus current origin/main, and changes no budgets/skips.
+
+Previous candidate e296780cc2646f6dc53c35d35e16b5ed63c9ec42 completed real PR CI run 43000586450, attempt 1: all 14 required checks SUCCESS, no failures/reruns.
+Run: https://github.com/cjhyy/codeshell/actions/runs/43000586450
+That result is retained for the previous candidate only. The refreshed candidate must receive its own eligible PR CI before merging.

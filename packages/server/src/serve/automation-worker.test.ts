@@ -179,10 +179,12 @@ test("cancellation keeps exclusive Session ownership until the actual run result
   const executing = f.worker.execute(f.request("hold", signal.signal));
   await until(() => f.bridge.hasChild());
   expect(f.worker.ownsSession("session-a")).toBe(true);
+  const admitted = (await f.state()).run;
   await expect(f.worker.execute(f.request("approve"))).rejects.toThrow(/active automation/);
   signal.abort();
   expect(f.held()).toBe(true);
   await executing;
+  expect(admitted).toMatchObject({ trigger: "host_message", displayText: "hold" });
   expect(f.held()).toBe(false);
   expect(f.released()).toBe(1);
 });

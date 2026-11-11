@@ -367,6 +367,12 @@ export class TurnLoop {
     }
     const next = { ...normalized, goalId: normalized.goalId ?? randomUUID() };
     const wasPaused = !this.config.goal;
+    const preservesRunBudget = !wasPaused && this.goalTracker?.goal.goalId === next.goalId;
+    if (preservesRunBudget && this.goalTracker) {
+      // Edits change the persisted objective, not this run's user-extended caps.
+      next.tokenBudget = this.goalTracker.goal.tokenBudget;
+      next.timeBudgetMs = this.goalTracker.goal.timeBudgetMs;
+    }
     this.config = {
       ...this.config,
       goal: next,
@@ -374,7 +380,14 @@ export class TurnLoop {
         ? { maxTurns: Math.max(this.config.maxTurns, Math.floor(limits.maxTurns)) }
         : {}),
       ...(typeof limits?.maxStopBlocks === "number" && limits.maxStopBlocks > 0
-        ? { maxStopBlocks: Math.floor(limits.maxStopBlocks) }
+        ? {
+            maxStopBlocks: preservesRunBudget
+              ? Math.max(
+                  this.config.maxStopBlocks ?? GOAL_DEFAULT_MAX_STOP_BLOCKS,
+                  Math.floor(limits.maxStopBlocks),
+                )
+              : Math.floor(limits.maxStopBlocks),
+          }
         : {}),
     };
     this.goalControlStopRequested = false;

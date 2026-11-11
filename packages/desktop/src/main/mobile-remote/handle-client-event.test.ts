@@ -532,6 +532,22 @@ describe("injectAndAwaitResult timeouts", () => {
     expect(injected).toHaveLength(1);
   });
 
+  test("Goal timeout is an unconfirmed result and never resends the mutation", async () => {
+    const { bridge, injected } = silentBridge();
+    const result = await injectAndAwaitResult(
+      bridge,
+      "agent/goalUpdate",
+      { paused: false },
+      meta,
+      20,
+    );
+    expect(result).toEqual({
+      ok: false,
+      message: "目标操作结果未确认，主机可能仍在处理；请刷新状态后再操作。",
+    });
+    expect(injected).toHaveLength(1);
+  });
+
   test("a failed worker write reports a retryable error and releases its subscription", async () => {
     let listening = false;
     const bridge = {
@@ -1184,4 +1200,96 @@ describe("mobile keep-waiting on a model question", () => {
       },
     ]);
   });
+});
+
+test("versioned Goal commands reject lost native authority before worker or disk dispatch", async () => {
+  let injections = 0;
+  const replies: any[] = [];
+  const ctx = {
+    getBridge: () => ({
+      getLastRunContext: () => ({}),
+      injectWorkerMessage() {
+        injections++;
+      },
+      subscribeOutbound: () => () => {},
+    }),
+    deviceState: () => ({ selectedSessionId: "native" }),
+    externalCommands: {
+      observe() {},
+      isExternal: () => false,
+      authorizeNative: async () => ({
+        assertCurrent() {
+          throw new Error("owner changed");
+        },
+      }),
+    },
+    remote: { sendToDevice: (_id, reply) => replies.push(reply) },
+  } as unknown as OrchestratorCtx;
+  for (const type of ["goal.get", "goal.update", "goal.clear", "goal.extend"] as const) {
+    await handleClientEvent(ctx, {
+      type,
+      deviceId: "device",
+      viewerId: "viewer",
+      sessionId: "native",
+      requestId: type,
+      paused: false,
+      expectedGoalId: "goal",
+      expectedRevision: 1,
+      addTurns: 100,
+    } as any);
+  }
+  expect(injections).toBe(0);
+  expect(replies.map((reply) => [reply.requestId, reply.ok, reply.message])).toEqual([
+    ["goal.get", false, "owner changed"],
+    ["goal.update", false, "owner changed"],
+    ["goal.clear", false, "owner changed"],
+    ["goal.extend", false, "owner changed"],
+  ]);
+});
+
+test("a refused versioned clear reports a correlated refresh error", async () => {
+  const replies: any[] = [];
+  let listener: ((line: string) => void) | undefined;
+  const ctx = {
+    getBridge: () => ({
+      getLastRunContext: () => ({}),
+      subscribeOutbound: (tap: (line: string) => void) => {
+        listener = tap;
+        return () => {
+          listener = undefined;
+        };
+      },
+      injectWorkerMessage(line: string) {
+        const request = JSON.parse(line);
+        expect(request.method).toBe("agent/goalDelete");
+        listener?.(JSON.stringify({ id: request.id, result: { ok: true, deleted: false } }));
+      },
+    }),
+    deviceState: () => ({ selectedSessionId: "native" }),
+    externalCommands: {
+      observe() {},
+      isExternal: () => false,
+      authorizeNative: async () => ({ assertCurrent() {} }),
+    },
+    remote: { sendToDevice: (_id: string, reply: unknown) => replies.push(reply) },
+  } as unknown as OrchestratorCtx;
+  await handleClientEvent(ctx, {
+    type: "goal.clear",
+    deviceId: "device",
+    viewerId: "viewer",
+    sessionId: "native",
+    requestId: "stale-clear",
+    expectedGoalId: "previous",
+    expectedRevision: 7,
+  });
+  expect(replies).toEqual([
+    {
+      type: "goal.cleared",
+      sessionId: "native",
+      requestId: "stale-clear",
+      ok: false,
+      message: "Goal changed; refresh and retry",
+    },
+  ]);
+  expect(listener).toBeUndefined();
 });

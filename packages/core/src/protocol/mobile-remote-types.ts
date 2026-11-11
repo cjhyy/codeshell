@@ -233,13 +233,29 @@ export type MobileClientEvent =
   | { type: "runtime.models" }
   | {
       type: "goal.extend";
+      requestId?: string;
       sessionId: string;
       addTurns?: number;
       addTokenBudget?: number;
       addTimeBudgetMs?: number;
       addStopBlocks?: number;
     }
-  | { type: "goal.clear"; sessionId: string }
+  | { type: "goal.get"; sessionId: string; requestId: string }
+  | {
+      type: "goal.update";
+      sessionId: string;
+      requestId: string;
+      paused: false;
+      expectedGoalId: string;
+      expectedRevision: number;
+    }
+  | {
+      type: "goal.clear";
+      sessionId: string;
+      requestId?: string;
+      expectedGoalId?: string;
+      expectedRevision?: number;
+    }
   // ── Rooms (resident external-agent sessions) ──────────────────────────
   | { type: "room.list" }
   | { type: "room.projects" }
@@ -384,6 +400,7 @@ export type MobileServerEvent =
         outputJournalPageFrames?: 2048;
         historyView?: 1;
         turnQueue?: 1;
+        goalControls?: 1;
       };
     }
   | { type: "auth.failed"; message: string }
@@ -413,6 +430,7 @@ export type MobileServerEvent =
         outputJournalPageFrames?: 2048;
         historyView?: 1;
         turnQueue?: 1;
+        goalControls?: 1;
       };
     }
   | { type: "pair.failed"; message: string }
@@ -557,8 +575,24 @@ export type MobileServerEvent =
       }>;
       message?: string;
     }
-  | { type: "goal.extended"; sessionId: string; ok: boolean; message?: string }
-  | { type: "goal.cleared"; sessionId: string; ok: boolean; cleared?: boolean; message?: string }
+  | { type: "goal.extended"; sessionId: string; requestId?: string; ok: boolean; message?: string }
+  | {
+      type: "goal.cleared";
+      sessionId: string;
+      requestId?: string;
+      ok: boolean;
+      cleared?: boolean;
+      message?: string;
+    }
+  | {
+      type: "goal.state" | "goal.updated";
+      unsupported?: boolean;
+      sessionId: string;
+      requestId: string;
+      ok: boolean;
+      goal?: { objective: string; goalId: string; revision: number; paused: boolean } | null;
+      message?: string;
+    }
   // ── Rooms ─────────────────────────────────────────────────────────────
   | { type: "room.list.ok"; rooms: RoomPublic[] }
   | { type: "room.projects.ok"; projects: MobileProjectMeta[] }

@@ -1,0 +1,66 @@
+Source: follow-up working diff over 1dedce183, committed unchanged as 9b27590221c7748f8654d99ab4852d117eb159fe.
+Node: v24.22.1; Bun: 1.3.11.
+Command prefix: PATH=/Applications/code-shell.app/Contents/Resources/runtimes/node/bin:$PATH caffeinate -i
+Each stdout/stderr is redirected to artifacts/goal-controls-followup/<name>.log.
+Package-release completed before typecheck/build or other dist consumers began.
+
+Command: bun run test:package-release
+Outer exit: 0
+Package release smoke passed: 10 tarballs, 55 typed entries.
+
+Command: bun run typecheck
+Outer exit: 0
+@cjhyy/code-shell-link build: Exited with code 0
+@cjhyy/code-shell-core build: Exited with code 0
+@cjhyy/code-shell-host build: Exited with code 0
+@cjhyy/code-shell-pet build: Exited with code 0
+@cjhyy/code-shell-capability-optimization-lab build: Exited with code 0
+@cjhyy/code-shell-capability-coding build: Exited with code 0
+@cjhyy/code-shell-browser-devtools build: Exited with code 0
+@cjhyy/code-shell-web build: Exited with code 0
+@cjhyy/code-shell-server build: Exited with code 0
+@cjhyy/code-shell-tui build: Exited with code 0
+@cjhyy/code-shell-chat build: Exited with code 0
+@cjhyy/code-shell-browser-devtools typecheck: Exited with code 0
+@cjhyy/code-shell-link typecheck: Exited with code 0
+@cjhyy/code-shell-chat typecheck: Exited with code 0
+@cjhyy/code-shell-core typecheck: Exited with code 0
+@cjhyy/code-shell-host typecheck: Exited with code 0
+@cjhyy/code-shell-pet typecheck: Exited with code 0
+@cjhyy/code-shell-capability-coding typecheck: Exited with code 0
+@cjhyy/code-shell-capability-optimization-lab typecheck: Exited with code 0
+@cjhyy/code-shell-web typecheck: Exited with code 0
+@cjhyy/code-shell-server typecheck: Exited with code 0
+@cjhyy/code-shell-tui typecheck: Exited with code 0
+@cjhyy/code-shell-desktop typecheck: Exited with code 0
+
+Command: bun run lint
+Outer exit: 0
+✖ 90 problems (0 errors, 90 warnings)
+
+Command: bun run lint:engine-bypass
+Outer exit: 0
+OK: 'new Engine(' is confined to the protocol layer.
+
+Command: bun run build
+Outer exit: 0
+@cjhyy/code-shell-link build: Exited with code 0
+@cjhyy/code-shell-core build: Exited with code 0
+@cjhyy/code-shell-host build: Exited with code 0
+@cjhyy/code-shell-pet build: Exited with code 0
+@cjhyy/code-shell-capability-optimization-lab build: Exited with code 0
+@cjhyy/code-shell-capability-coding build: Exited with code 0
+@cjhyy/code-shell-browser-devtools build: Exited with code 0
+@cjhyy/code-shell-web build: (!) Some chunks are larger than 500 kB after minification. Consider:
+@cjhyy/code-shell-web build: Exited with code 0
+@cjhyy/code-shell-server build: Exited with code 0
+@cjhyy/code-shell-tui build: Exited with code 0
+@cjhyy/code-shell-chat build: Exited with code 0
+
+Command: bun run --cwd packages/desktop build
+Outer exit: 0
+(!) Some chunks are larger than 1000 kB after minification. Consider:
+✓ built in 8.96s
+(!) Some chunks are larger than 500 kB after minification. Consider:
+✓ built in 8.99s
+[build] main, preload, renderer, mobile, and Chrome extension OK

@@ -142,6 +142,7 @@ export class RemoteHostManager extends EventEmitter {
   /** Dev proxy target for /mobile (HMR); undefined in prod. */
   private readonly mobileDevUrl?: string;
   private turnQueueEnabled = false;
+  private goalControlsEnabled = false;
 
   constructor(private readonly opts: RemoteHostManagerOptions) {
     super();
@@ -155,6 +156,11 @@ export class RemoteHostManager extends EventEmitter {
   /** Install main-owned directory redemption; replacing it synchronously revokes old sessions. */
   setAccountRelayAccess(provider?: AccountRelayAccessProvider): void {
     this.accountAccess.setProvider(provider);
+  }
+
+  /** The attached Host supports versioned Goal snapshots and controls. */
+  advertiseGoalControls(): void {
+    this.goalControlsEnabled = true;
   }
 
   /** The attached command Host installed a pending-turn FIFO; advertise it on (re)auth. */
@@ -656,12 +662,16 @@ export class RemoteHostManager extends EventEmitter {
       return {
         type: "pair.ok",
         device,
-        ...(this.opts.outputJournal || this.opts.nativeModelSelection || this.turnQueueAdvertised
+        ...(this.opts.outputJournal ||
+        this.opts.nativeModelSelection ||
+        this.turnQueueAdvertised ||
+        this.goalControlsEnabled
           ? {
               capabilities: {
                 ...(this.opts.outputJournal ? { outputJournal: 1 as const } : {}),
                 ...(this.opts.nativeModelSelection ? { nativeModelSelection: 1 as const } : {}),
                 ...(this.turnQueueAdvertised ? { turnQueue: 1 as const } : {}),
+                ...(this.goalControlsEnabled ? { goalControls: 1 as const } : {}),
                 ...(this.opts.outputJournal && this.opts.historyView
                   ? { historyView: 1 as const }
                   : {}),
@@ -689,12 +699,16 @@ export class RemoteHostManager extends EventEmitter {
       return {
         type: "auth.ok",
         device,
-        ...(this.opts.outputJournal || this.opts.nativeModelSelection || this.turnQueueAdvertised
+        ...(this.opts.outputJournal ||
+        this.opts.nativeModelSelection ||
+        this.turnQueueAdvertised ||
+        this.goalControlsEnabled
           ? {
               capabilities: {
                 ...(this.opts.outputJournal ? { outputJournal: 1 as const } : {}),
                 ...(this.opts.nativeModelSelection ? { nativeModelSelection: 1 as const } : {}),
                 ...(this.turnQueueAdvertised ? { turnQueue: 1 as const } : {}),
+                ...(this.goalControlsEnabled ? { goalControls: 1 as const } : {}),
                 ...(this.opts.outputJournal && this.opts.historyView
                   ? { historyView: 1 as const }
                   : {}),

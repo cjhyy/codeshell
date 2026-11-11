@@ -1490,6 +1490,10 @@ export class SessionManager {
         const sameIdentity = current.goalId === armedGoal.goalId;
         const sameRevision = current.revision === (armedGoal.revision ?? 1);
         if (current.phase === "terminal" && sameIdentity && sameRevision) return false;
+        if (!options.replaceCurrent && sameIdentity && !sameRevision) {
+          rebaseLiveState(state, latest);
+          return false;
+        }
         if (current.phase !== "terminal" && !options.replaceCurrent && !sameIdentity) return false;
       }
       if (

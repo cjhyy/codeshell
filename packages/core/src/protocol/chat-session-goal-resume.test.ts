@@ -193,3 +193,109 @@ describe("ChatSession.enqueueGoalResumeTurn", () => {
     });
   }
 });
+
+for (const change of [
+  "edit",
+  "pause",
+  "delete",
+  "replace",
+  "stop",
+  "stop-then-user",
+  "waiting",
+  "repeat",
+  "supersede",
+] as const) {
+  it(`startup hold retries once, fenced by ${change}`, async () => {
+    const original: GoalConfig = { goalId: "held-goal", revision: 1, objective: "before" };
+    let current: GoalConfig | undefined = original;
+    let runs = 0;
+    let successor: Promise<boolean> | undefined;
+    let userTurn: Promise<EngineResult> | undefined;
+    const engine = createFakeEngine({
+      getGoal: () => current,
+      isGoalContinuationBlocked: () => change === "waiting",
+      async run(): Promise<EngineResult> {
+        runs++;
+        if (runs === 1 || change === "repeat") {
+          current = { ...original, revision: runs + 1, objective: "latest" };
+          if (change === "pause") current.paused = true;
+          if (change === "delete") current = undefined;
+          if (change === "replace") current.goalId = "replacement";
+          if (change === "stop") session.cancel();
+          if (change === "stop-then-user") {
+            session.cancel();
+            userTurn = session.enqueueTurn("actual user", { trigger: "user" });
+          }
+          if (change === "supersede") successor = session.enqueueGoalResumeTurn(current!);
+          return {
+            ...result("held"),
+            turnCount: 0,
+            reason: "aborted_streaming",
+            goalContinuationHeld: { retryGoalId: original.goalId },
+          };
+        }
+        expect(current?.objective).toBe("latest");
+        return result("held");
+      },
+    });
+    const session = new ChatSession({ id: "held", engine });
+    await expect(session.enqueueGoalResumeTurn(original)).resolves.toBe(change === "edit");
+    if (successor) await expect(successor).resolves.toBe(true);
+    if (userTurn) await userTurn;
+    await session.settled;
+    expect(runs).toBe(
+      change === "edit" ||
+        change === "repeat" ||
+        change === "supersede" ||
+        change === "stop-then-user"
+        ? 2
+        : 1,
+    );
+    expect(session.queueDepth()).toBe(0);
+    if (change === "stop") expect(session.wasCancelledSinceLastTurn()).toBe(true);
+  });
+}
+
+it("an injected host run cannot lift Stop even when labeled user", async () => {
+  const session = new ChatSession({
+    id: "stop",
+    engine: createFakeEngine({
+      async run() {
+        return result("stop");
+      },
+    }),
+  });
+  session.cancel();
+  await session.enqueueTurn("host reminder", { injected: true, trigger: "user" });
+  expect(session.wasCancelledSinceLastTurn()).toBe(true);
+  await session.enqueueTurn("host message", { trigger: "host_message" });
+  expect(session.wasCancelledSinceLastTurn()).toBe(true);
+  await session.enqueueTurn("actual user", { trigger: "user" });
+  expect(session.wasCancelledSinceLastTurn()).toBe(false);
+});
+
+it("does not replay a held client message receipt", async () => {
+  let runs = 0;
+  const session = new ChatSession({
+    id: "receipt",
+    engine: createFakeEngine({
+      getGoal: () => ({ goalId: "goal", revision: 2, objective: "latest" }),
+      async run() {
+        runs++;
+        return {
+          ...result("receipt"),
+          turnCount: 0,
+          reason: "aborted_streaming" as const,
+          goalContinuationHeld: { retryGoalId: "goal" },
+        };
+      },
+    }),
+  });
+  const held = await session.enqueueTurn("host input", {
+    injected: true,
+    trigger: "host_message",
+    clientMessageId: "receipt-id",
+  });
+  expect(held.goalContinuationHeld).toEqual({ retryGoalId: "goal" });
+  expect(runs).toBe(1);
+});

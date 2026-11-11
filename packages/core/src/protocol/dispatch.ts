@@ -115,6 +115,9 @@ export function runInputError(params: RunParams): string | null {
   ) {
     return "displayText must be a non-empty string up to 20000 characters";
   }
+  if (params.trigger !== undefined && params.trigger !== "host_message") {
+    return "trigger may only be host_message";
+  }
   if (params.injected !== undefined && typeof params.injected !== "boolean") {
     return "injected must be a boolean";
   }

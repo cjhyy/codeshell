@@ -1,0 +1,120 @@
+Second latest-main delivery refresh — 2026-11-11
+Source merge HEAD: e86fc4d22a6f32000b7d0fb17a59a284a12f8081
+Fetched origin/main: 7c2ae0c242f6f788c1c06496c1e320187fe2f451 (PRs #347 / #348)
+Normal conflict-free merge; no task production/test edits. New main and task-owned path sets are disjoint.
+Node v24.22.1 / Bun 1.3.11; command-local installed-runtime PATH and caffeinate -i.
+Package-release completed before typecheck/build/tests. Browser uses installed Playwright 1.64.0 headless Chromium 1248, isolated HOME and exact fixture-origin guards.
+
+ $ bun run test:package-release
+exit=0
+Package release smoke passed: 10 tarballs, 55 typed entries; 53 runtime imports.
+
+$ bun run typecheck
+exit=0; elapsedMs=65854
+@cjhyy/code-shell-web typecheck: Exited with code 0
+@cjhyy/code-shell-server typecheck: Exited with code 0
+@cjhyy/code-shell-tui typecheck: Exited with code 0
+@cjhyy/code-shell-desktop typecheck: Exited with code 0
+
+$ bun run --cwd packages/desktop build
+exit=0; elapsedMs=37828
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 33.53s
+[build] main, preload, renderer, mobile, and Chrome extension OK
+
+$ bun run lint
+exit=0; elapsedMs=34312
+  20:3  warning  'writeFileSync' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+✖ 90 problems (0 errors, 90 warnings)
+
+
+$ bun run lint:engine-bypass
+exit=0; elapsedMs=1106
+$ bash scripts/check-no-engine-bypass.sh
+OK: 'new Engine(' is confined to the protocol layer.
+
+$ bun run lint:test-shards
+exit=0; elapsedMs=778
+    1 / 60   tests: test Puppeteer driver integration
+    1 / 60   tests: test browser inspector integration
+
+✓ 2569 test files covered; largest process 769 files
+
+$ node scripts/run-bun-test-shard.mjs --timeout 30000 tests/sdk-legacy-ask-user.test.ts tests/engine-goal-startup-controls.test.ts packages/core/src/tool-system/builtin/ask-user.test.ts packages/core/src/protocol/server.user-decision-lifecycle.test.ts packages/core/src/protocol/chat-session-goal-resume.test.ts
+exit=0; elapsedMs=2727
+(pass) does not replay a held client message receipt [0.07ms]
+
+ 67 pass
+ 0 fail
+ 323 expect() calls
+Ran 67 tests across 5 files. [2.66s]
+Completed Bun shard: 67 tests, 0 skipped; 0 failures.
+
+$ node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/messages/AskUserMessageView.test.tsx packages/desktop/src/renderer/messages/askUserAnswerProjection.test.ts packages/desktop/src/renderer/ChatView.composer-variant.test.tsx packages/desktop/src/renderer/MessageStream.test.tsx
+exit=0; elapsedMs=1546
+(pass) MessageStream — restored user attachments > an image-only restored message still renders a user bubble
+
+ 61 pass
+ 0 fail
+ 298 expect() calls
+Ran 61 tests across 4 files. [1462.00ms]
+Completed Bun shard: 61 tests, 0 skipped; 0 failures.
+
+$ node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/external-runtime-goal-rpc.test.ts packages/desktop/src/main/external-runtime-service.test.ts packages/desktop/src/main/external-runtime-state.test.ts packages/desktop/src/renderer/activity/usageOverview.test.ts packages/desktop/src/renderer/activity/UsagePage.test.tsx
+exit=0; elapsedMs=32230
+(pass) failed or missing quota reads stay unknown and remain retryable [5.83ms]
+
+ 251 pass
+ 0 fail
+ 1158 expect() calls
+Ran 251 tests across 5 files. [32.12s]
+Completed Bun shard: 251 tests, 0 skipped; 0 failures.
+
+$ node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/pet/settings/MemorySection.test.tsx packages/desktop/src/renderer/pet/settings/PetNotificationsFields.test.tsx packages/desktop/src/renderer/pet/settings/PetSettingsShell.test.tsx packages/desktop/src/renderer/pet/PetSettingsPage.test.tsx packages/desktop/src/renderer/credentials/CredentialsPage.test.tsx packages/desktop/src/main/pet/pet-widget-menu.test.ts packages/desktop/src/shared/mimi-companion.test.ts
+exit=0; elapsedMs=929
+(pass) Mimi companion sizes > only the real maximum is called the largest [0.06ms]
+
+ 27 pass
+ 0 fail
+ 135 expect() calls
+Ran 27 tests across 7 files. [843.00ms]
+Completed Bun shard: 27 tests, 0 skipped; 0 failures.
+
+$ node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/app/useMimiSettingsNavigation.test.tsx packages/desktop/src/renderer/app/useMimiPresence.test.tsx packages/desktop/src/main/pet/pet-notice-settings.test.ts
+exit=0; elapsedMs=712
+(pass) parsePetNotificationSettings > briefs, heartbeat and digest slots: defaults per field, slots sorted and unique [0.38ms]
+
+ 18 pass
+ 0 fail
+ 61 expect() calls
+Ran 18 tests across 3 files. [647.00ms]
+Completed Bun shard: 18 tests, 0 skipped; 0 failures.
+
+$ node scripts/run-isolated-node-smoke.mjs packages/desktop/src/renderer/messages/AskUserMessageView.browser.fixture.mjs --output=/private/tmp/codeshell-goal-fixes-20261111/artifacts/goal-controls-delivery/main-refresh-7c2ae0c24/ask-browser
+exit=0; elapsedMs=26065
+PASS AskUser explicit selection, stable drafts, IME and 32 container layouts: /private/tmp/codeshell-goal-fixes-20261111/artifacts/goal-controls-delivery/main-refresh-7c2ae0c24/ask-browser
+
+$ node scripts/run-isolated-node-smoke.mjs packages/desktop/src/renderer/ChatView.goal-reply.browser.fixture.mjs
+exit=0; elapsedMs=9253
+PASS waiting is actionable without expansion; clock freezes and local image link opens
+PASS IME and plain Enter keep the answer; Ctrl+Enter sends exactly once to the session
+PASS Meta+Enter sends in English and double clicks cannot duplicate a reply
+PASS answers do not leak across session or question changes
+PASS blocking AskUser keeps one answer destination and manual pause hides reply action
+PASS old unknown accounting never shows creation age as running time
+PASS reject send failure preserves the answer, reports failure and permits retry
+PASS optimistic send failure preserves the answer, reports failure and permits retry
+PASS light narrow layout keeps answer and action within the pane
+PASS dark narrow layout keeps answer and action within the pane
+{"passed":10,"output":"/private/tmp/codeshell-goal-fixes-20261111/.tmp/goal-reply-qa"}
+
+Five guarded groups: 424 pass / 0 fail / 0 skip across 24 files, each invocation 3–7 explicit files.
+AskUser Chromium: explicit selection/stable drafts/IME and 32 container layouts PASS. Goal reply Chromium: 10/10 PASS.
+Read-only incremental review PASS: AskUser preserves expiresAt locking, requestId and keepWaiting; answer projection preserves the async answer envelope. CLI usage receipts are accounting-only. Cost-history fixture/trace renderer paths unchanged.
+Main PR #348 adds its bounded Mimi settings CI process; inherited unchanged. No task CI diff versus main, budget increase or new skips.
+
+Previous candidate da03216a7f3dc74c278e403564e7cb67365ccd3f real PR run 43005880567 attempt 1 first failed Electron cost-history selection (original 30000ms wait for Attempt 1 detail). Screenshot retained parent call selection despite attempt row existing. Unchanged fixture and renderer/trace blobs, previous candidate and main CI successes, and a possible queued requestAnimationFrame focus race support a timing-flake assessment; exact interleaving/root cause NOT proven.
+First job rerun API request was rejected while the workflow was active; no actual job rerun started. New candidate requires full eligible PR CI after this necessary main synchronization. If the same unresolved cost-history failure recurs, stop blocked without another rerun.
+Original failure log/screenshot/blob records remain in artifacts/goal-controls-delivery/. Older full local CI failure, two deferred L items, and physical Goal Electron/production-worker/mobile E2E limits remain unchanged.

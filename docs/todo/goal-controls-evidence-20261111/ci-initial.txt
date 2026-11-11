@@ -1,0 +1,276 @@
+HEAD: 1dedce1838d6735f7bf9ac7974be43c427120a2c (tracked clean throughout)
+Node: v24.22.1; Bun: 1.3.11
+Command: PATH=/Applications/code-shell.app/Contents/Resources/runtimes/node/bin:$PATH caffeinate -i bun run test > artifacts/goal-controls-followup/ci-initial.log 2>&1
+Outer exit: 0
+
+[0] typecheck: Isolated actual SDK MCP OAuth issuer boundary
+ 10 pass
+ 0 fail
+ 60 expect() calls
+Ran 10 tests across 1 file. [1117.00ms]
+Completed Bun shard: 10 tests, 0 skipped; 0 failures.
+
+[1] tests (core-engine)
+ 2486 pass
+ 3 skip
+ 0 fail
+ 8985 expect() calls
+Ran 2489 tests across 288 files. [160.03s]
+Completed Bun shard: 2489 tests, 3 skipped; 0 failures.
+
+[2] tests (core-rest)
+ 3367 pass
+ 0 fail
+ 22224 expect() calls
+Ran 3367 tests across 415 files. [201.47s]
+Completed Bun shard: 3367 tests, 0 skipped; 0 failures.
+
+[3] tests (desktop)
+ 7203 pass
+ 73 skip
+ 0 fail
+ 34261 expect() calls
+Ran 7276 tests across 768 files. [447.22s]
+Completed Bun shard: 7276 tests, 73 skipped; 0 failures.
+
+[4] tests (rest)
+ 3550 pass
+ 3 skip
+ 0 fail
+ 13670 expect() calls
+Ran 3553 tests across 383 files. [579.04s]
+Completed Bun shard: 3553 tests, 3 skipped; 0 failures.
+
+[5] tests (rest-server)
+ 2285 pass
+ 0 fail
+ 15428 expect() calls
+Ran 2285 tests across 240 files. [326.57s]
+Completed Bun shard: 2285 tests, 0 skipped; 0 failures.
+
+[6] tests: test Desktop suites that need their own Bun process
+ 23 pass
+ 0 fail
+ 437 expect() calls
+Ran 23 tests across 1 file. [2.20s]
+Completed Bun shard: 23 tests, 0 skipped; 0 failures.
+
+[7] tests: test Desktop suites that need their own Bun process
+ 5 pass
+ 0 fail
+ 230 expect() calls
+Ran 5 tests across 1 file. [864.00ms]
+Completed Bun shard: 5 tests, 0 skipped; 0 failures.
+
+[8] tests: test Desktop suites that need their own Bun process
+ 6 pass
+ 0 fail
+ 267 expect() calls
+Ran 6 tests across 1 file. [1323.00ms]
+Completed Bun shard: 6 tests, 0 skipped; 0 failures.
+
+[9] tests: test Desktop suites that need their own Bun process
+ 6 pass
+ 0 fail
+ 241 expect() calls
+Ran 6 tests across 1 file. [667.00ms]
+Completed Bun shard: 6 tests, 0 skipped; 0 failures.
+
+[10] tests: test Desktop suites that need their own Bun process
+ 10 pass
+ 0 fail
+ 25 expect() calls
+Ran 10 tests across 1 file. [635.00ms]
+Completed Bun shard: 10 tests, 0 skipped; 0 failures.
+
+[11] tests: test Desktop suites that need their own Bun process
+ 12 pass
+ 0 fail
+ 61 expect() calls
+Ran 12 tests across 1 file. [8.63s]
+Completed Bun shard: 12 tests, 0 skipped; 0 failures.
+
+[12] tests: test Desktop suites that need their own Bun process
+ 7 pass
+ 0 fail
+ 27 expect() calls
+Ran 7 tests across 1 file. [20.00ms]
+Completed Bun shard: 7 tests, 0 skipped; 0 failures.
+
+[13] tests: test Desktop suites that need their own Bun process
+ 2 pass
+ 0 fail
+ 11 expect() calls
+Ran 2 tests across 1 file. [57.00ms]
+Completed Bun shard: 2 tests, 0 skipped; 0 failures.
+
+[14] tests: test Desktop suites that need their own Bun process
+ 202 pass
+ 0 fail
+ 860 expect() calls
+Ran 202 tests across 19 files. [11.01s]
+Completed Bun shard: 202 tests, 0 skipped; 0 failures.
+
+[15] tests: test Desktop suites that need their own Bun process
+ 63 pass
+ 0 fail
+ 2821 expect() calls
+Ran 63 tests across 5 files. [805.00ms]
+Completed Bun shard: 63 tests, 0 skipped; 0 failures.
+
+[16] tests: test Desktop suites that need their own Bun process
+ 6 pass
+ 0 fail
+ 24 expect() calls
+Ran 6 tests across 1 file. [96.00ms]
+Completed Bun shard: 6 tests, 0 skipped; 0 failures.
+
+[17] tests: test Desktop suites that need their own Bun process
+ 60 pass
+ 0 fail
+ 386 expect() calls
+Ran 60 tests across 3 files. [6.71s]
+Completed Bun shard: 60 tests, 0 skipped; 0 failures.
+
+[18] tests: test Desktop suites that need their own Bun process
+ 631 pass
+ 0 fail
+ 2023 expect() calls
+Ran 631 tests across 28 files. [20.91s]
+Completed Bun shard: 631 tests, 0 skipped; 0 failures.
+
+[19] tests: test Desktop application state hooks
+ 312 pass
+ 0 fail
+ 1204 expect() calls
+Ran 312 tests across 29 files. [14.58s]
+Completed Bun shard: 312 tests, 0 skipped; 0 failures.
+
+[20] tests: test Desktop account feature entries
+ 96 pass
+ 0 fail
+ 117 expect() calls
+Ran 96 tests across 3 files. [60.10s]
+Completed Bun shard: 96 tests, 0 skipped; 0 failures.
+
+[21] tests: test Desktop native account boundaries
+ 106 pass
+ 0 fail
+ 1355 expect() calls
+Ran 106 tests across 10 files. [3.78s]
+Completed Bun shard: 106 tests, 0 skipped; 0 failures.
+
+[22] tests: test Desktop Cloud bundle boundary
+ 16 pass
+ 0 fail
+ 33 expect() calls
+Ran 16 tests across 1 file. [7.16s]
+Completed Bun shard: 16 tests, 0 skipped; 0 failures.
+
+[23] tests: test account policy and native credential lifecycles
+ 34 pass
+ 0 fail
+ 239 expect() calls
+Ran 34 tests across 5 files. [10.36s]
+Completed Bun shard: 34 tests, 0 skipped; 0 failures.
+
+[24] tests: test Hub Panel packages
+ 72 pass
+ 0 fail
+ 681 expect() calls
+Ran 72 tests across 7 files. [44.99s]
+Completed Bun shard: 72 tests, 0 skipped; 0 failures.
+
+[25] tests: test Hub Panel runtime and scopes
+ 121 pass
+ 0 fail
+ 1344 expect() calls
+Ran 121 tests across 6 files. [12.42s]
+Completed Bun shard: 121 tests, 0 skipped; 0 failures.
+
+[26] tests: test Hub Panel native processes
+ 43 pass
+ 0 fail
+ 1428 expect() calls
+Ran 43 tests across 5 files. [13.23s]
+Completed Bun shard: 43 tests, 0 skipped; 0 failures.
+
+[27] tests: test Hub Panel background services
+ 88 pass
+ 0 fail
+ 448 expect() calls
+Ran 88 tests across 4 files. [11.17s]
+Completed Bun shard: 88 tests, 0 skipped; 0 failures.
+
+[28] tests: test Hub Panel tasks
+ 75 pass
+ 0 fail
+ 380 expect() calls
+Ran 75 tests across 6 files. [9.41s]
+Completed Bun shard: 75 tests, 0 skipped; 0 failures.
+
+[29] tests: test Hub Panel resources and files
+ 85 pass
+ 0 fail
+ 723 expect() calls
+Ran 85 tests across 8 files. [18.90s]
+Completed Bun shard: 85 tests, 0 skipped; 0 failures.
+
+[30] tests: test Hub Panel connections and automations
+ 44 pass
+ 0 fail
+ 215 expect() calls
+Ran 44 tests across 4 files. [3.00s]
+Completed Bun shard: 44 tests, 0 skipped; 0 failures.
+
+[31] tests: test core plugins in their own Bun process
+ 362 pass
+ 0 fail
+ 1084 expect() calls
+Ran 362 tests across 49 files. [12.68s]
+Completed Bun shard: 362 tests, 0 skipped; 0 failures.
+
+[32] tests: test core session in its own Bun process
+ 623 pass
+ 0 fail
+ 5368 expect() calls
+Ran 623 tests across 57 files. [85.54s]
+Completed Bun shard: 623 tests, 0 skipped; 0 failures.
+
+[33] tests: test Playwright driver integration
+ 5 pass
+ 0 fail
+ 40 expect() calls
+Ran 5 tests across 1 file. [7.90s]
+Completed Bun shard: 5 tests, 0 skipped; 0 failures.
+
+[34] tests: test Puppeteer driver integration
+ 26 pass
+ 0 fail
+ 116 expect() calls
+Ran 26 tests across 1 file. [5.56s]
+Completed Bun shard: 26 tests, 0 skipped; 0 failures.
+
+[35] tests: test browser inspector integration
+ 1 pass
+ 0 fail
+ 13 expect() calls
+Ran 1 test across 1 file. [1.51s]
+Completed Bun shard: 1 tests, 0 skipped; 0 failures.
+
+[36] Desktop Bun script suites
+ 80 pass
+ 0 fail
+ 476 expect() calls
+Ran 80 tests across 12 files. [12.02s]
+Completed Bun shard: 80 tests, 0 skipped; 0 failures.
+
+Node script suite (final top-level runner):
+ℹ tests 549
+ℹ suites 0
+ℹ pass 549
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4061.606667

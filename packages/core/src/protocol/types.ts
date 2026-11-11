@@ -155,6 +155,8 @@ export interface RunParams {
    * transcript readers hide it as a user bubble while retaining the assistant reply.
    */
   injected?: boolean;
+  /** Explicit non-user input. This can only preserve, never lift, a prior Stop. */
+  trigger?: "host_message";
   /**
    * Working directory for this run. When omitted, the Engine uses its
    * configured cwd.

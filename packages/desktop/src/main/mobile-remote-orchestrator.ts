@@ -207,6 +207,7 @@ export class MobileRemoteOrchestrator {
     fenceMobileRunAdmissionsOnStop(deps.remote);
     // This command Host owns the FIFO, so it advertises the client capability.
     deps.remote.advertiseTurnQueue?.();
+    deps.remote.advertiseGoalControls?.();
   }
 
   private selectedSessionAuthorized(viewer: string, device: string, sessionId: string): boolean {

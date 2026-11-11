@@ -1,0 +1,122 @@
+Combined delivery validation — 2026-11-11
+Source merge HEAD: 2ce6488a9991b002c832af8dc0a09b4651be4cb8
+Latest fetched origin/main: 57fc7413f929926a6994bec128b730a3e86b3de3
+Command-local PATH: /Applications/code-shell.app/Contents/Resources/runtimes/node/bin:$PATH
+Node v24.22.1 / Bun 1.3.11. All long commands use caffeinate -i.
+Package-release completed before any build/typecheck/test dist readers.
+
+$ bun run test:package-release
+exit=0
+✓ packed uploaded documents: memory-only index and untouched legacy files (Node)
+
+Package release smoke passed: 10 tarballs, 55 typed entries.
+
+$ bun run typecheck
+exit=0; elapsedMs=44451
+@cjhyy/code-shell-web typecheck: Exited with code 0
+@cjhyy/code-shell-server typecheck: Exited with code 0
+@cjhyy/code-shell-tui typecheck: Exited with code 0
+@cjhyy/code-shell-desktop typecheck: Exited with code 0
+
+$ bun run build
+exit=0; elapsedMs=20608
+@cjhyy/code-shell-tui build: $ node -e "require('node:fs').rmSync('dist',{recursive:true,force:true})"
+@cjhyy/code-shell-tui build: Exited with code 0
+@cjhyy/code-shell-chat build: $ node -e "require('node:fs').rmSync('dist',{recursive:true,force:true})"
+@cjhyy/code-shell-chat build: Exited with code 0
+
+$ bun run --cwd packages/desktop build
+exit=0; elapsedMs=11470
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 7.85s
+[build] main, preload, renderer, mobile, and Chrome extension OK
+
+$ bun run lint
+exit=0; elapsedMs=27203
+
+✖ 90 problems (0 errors, 90 warnings)
+
+
+$ bun run lint:engine-bypass
+exit=0; elapsedMs=968
+$ bash scripts/check-no-engine-bypass.sh
+OK: 'new Engine(' is confined to the protocol layer.
+
+$ bun run lint:test-shards
+exit=0; elapsedMs=1128
+
+✓ 2554 test files covered; largest process 769 files
+
+$ node scripts/run-bun-test-shard.mjs --timeout 30000 tests/engine-goal-startup-controls.test.ts tests/sdk-legacy-ask-user.test.ts tests/engine-goal-background-video.test.ts tests/engine-goal-cancel.test.ts tests/engine-persistent-goal.test.ts
+exit=0; elapsedMs=11565
+
+ 26 pass
+ 0 fail
+ 162 expect() calls
+Ran 26 tests across 5 files. [11.49s]
+Completed Bun shard: 26 tests, 0 skipped; 0 failures.
+
+$ node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/engine/run-goal.test.ts packages/core/src/engine/turn-loop-goal-lifecycle.test.ts packages/core/src/engine/turn-loop-call-tool-goal.test.ts packages/core/src/engine/run-background-policy.test.ts packages/core/src/engine/engine.tool-selection-resume.test.ts packages/core/src/engine/engine.append-only-tools.test.ts packages/core/src/engine/tool-cache-cycle.test.ts packages/core/src/engine/run-tooling.deferred.test.ts
+exit=0; elapsedMs=40496
+
+ 135 pass
+ 0 fail
+ 1050 expect() calls
+Ran 135 tests across 8 files. [40.40s]
+Completed Bun shard: 135 tests, 0 skipped; 0 failures.
+
+$ node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/protocol/chat-session-goal-resume.test.ts packages/core/src/protocol/chat-session-manager.lifecycle.test.ts packages/core/src/protocol/chat-session-manager.migration.test.ts packages/core/src/protocol/run-input.test.ts packages/core/src/protocol/server.run-model.test.ts packages/core/src/protocol/server.user-decision-lifecycle.test.ts packages/core/src/protocol/background-result-wakeup.test.ts packages/core/src/protocol/server.goal-cold-resume.test.ts
+exit=0; elapsedMs=5851
+
+ 92 pass
+ 0 fail
+ 437 expect() calls
+Ran 92 tests across 8 files. [5.79s]
+Completed Bun shard: 92 tests, 0 skipped; 0 failures.
+
+$ node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/session/session-manager.goal-lifecycle.test.ts packages/core/src/session/session-manager.goal-controls.test.ts packages/core/src/session/session-manager.cleargoal-stale-writeback.test.ts packages/core/src/protocol/server.goalcontrols.test.ts packages/core/src/protocol/server.goal-resume-cold.test.ts packages/core/src/protocol/server.goalclear.test.ts packages/core/src/protocol/server.goalget.test.ts packages/core/src/tool-system/builtin/ask-user.test.ts
+exit=0; elapsedMs=904
+
+ 58 pass
+ 0 fail
+ 210 expect() calls
+Ran 58 tests across 8 files. [831.00ms]
+Completed Bun shard: 58 tests, 0 skipped; 0 failures.
+
+$ node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/automation-resume-turn.test.ts packages/server/src/serve/automation-worker.test.ts packages/desktop/src/main/agent-bridge.nochild.test.ts packages/desktop/src/main/mobile-remote/handle-client-event.test.ts packages/desktop/src/main/mobile-remote/mobile-client-event-validator.test.ts packages/server/src/mobile-remote/remote-host-manager.test.ts packages/desktop/src/main/external-runtime-goal-rpc.test.ts
+exit=0; elapsedMs=14169
+
+ 123 pass
+ 0 fail
+ 497 expect() calls
+Ran 123 tests across 6 files. [14.11s]
+Completed Bun shard: 123 tests, 0 skipped; 0 failures.
+
+$ node scripts/run-bun-test-shard.mjs --timeout 30000 packages/web/src/hooks/useRemoteApp.test.tsx
+exit=0; elapsedMs=17701
+
+ 121 pass
+ 0 fail
+ 703 expect() calls
+Ran 121 tests across 1 file. [17.61s]
+Completed Bun shard: 121 tests, 0 skipped; 0 failures.
+
+$ node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-goal-controls-browser.mjs
+exit=0; elapsedMs=5567
+{"output":"/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-goal-browser-bU4rKx","checks":["cold-paused-snapshot","versioned-resume","running-extend","clear-error","clear-success"],"errors":[],"blocked":[]}
+
+The host-producers-mobile invocation contained a nonexistent Desktop validator path; Bun ran the six real files (123 tests). The missing validator was then run from its actual Server path below. The original command/log is preserved, not described as seven tested files.
+
+$ node scripts/run-bun-test-shard.mjs --timeout 30000 packages/server/src/mobile-remote/mobile-client-event-validator.test.ts
+exit=0
+
+ 23 pass
+ 0 fail
+ 328 expect() calls
+Ran 23 tests across 1 file. [28.00ms]
+Completed Bun shard: 23 tests, 0 skipped; 0 failures.
+
+Total: 578 passed / 0 failed / 0 skipped across 37 actual test files; 5 browser checks passed.
+These are targeted combined-candidate checks, not a fresh complete local CI run.
+No CI workflow, partition, budget, skip or provider security changes were made.

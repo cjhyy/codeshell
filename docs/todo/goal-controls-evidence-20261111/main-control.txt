@@ -1,0 +1,15 @@
+Control archive: artifacts/goal-main-control (inside task worktree, not another checkout).
+Base: 9e6330c102e9d9b6e5a465a4cd92e50c977b1110.
+Read-only content verification against `git ls-tree -r -z <base>`: 8807 tracked entries, 0 differences (Git blob SHA-1 of each file/symlink target).
+Existing independent node_modules and built dist are local to this archive; no primary checkout links.
+Initial attempt failed before panel execution because coding/git dist was absent (0 pass / 2 fail, missing module); preserved separately as setup evidence, not a product comparison.
+Prerequisite build commands, both outer exit 0, run sequentially in this archive with the same Node PATH+caffeinate:
+  bun run --filter @cjhyy/code-shell-capability-coding build
+  bun run build
+No source/lock/dependency changes; artifacts built independently, no candidate dist sharing.
+Effective control command (after the complete final unit-partition run):
+  PATH=/Applications/code-shell.app/Contents/Resources/runtimes/node/bin:$PATH caffeinate -i node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/desktop-web-panels.test.ts
+Outer exit: 0. Internal child deadline remains 20 seconds.
+Result: 2 pass / 0 fail; direct 3415.37ms, tunnel 4096.30ms.
+Branch control: 2 pass / 0 fail; direct 2921.53ms, tunnel 3880.32ms.
+Conclusion: the timeout did not reproduce in either effective single-file control. Its triggering condition and precise fixture phase remain unknown; do not claim a pre-existing main failure or erase the final full-run failure.

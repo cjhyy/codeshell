@@ -1,3 +1,4 @@
+import { useRemoteGoalControls } from "./useRemoteGoalControls.js";
 import { localDeadline } from "../remote-deadline.js";
 import { RoomHistoryAccumulator } from "../lib/roomHistory.js";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
@@ -218,6 +219,7 @@ export interface RemoteApp {
    *  request is republished without one; rejects when that did not happen. */
   keepWaitingApproval: (requestId: string) => Promise<void>;
   setPermissionMode: (mode: PermissionMode) => void;
+  goalControlBusy: boolean;
   extendGoal: (sessionId: string) => void;
   clearGoal: (sessionId: string) => void;
   /** Leave the bound CC session (drops the room binding, clears the feed). */
@@ -283,6 +285,7 @@ function projectContextCwd(
 }
 
 type ChatAction =
+  | { kind: "goalProjection"; raw: unknown; expected: { goalId?: string; revision?: number } }
   | { kind: "raw"; raw: unknown }
   | {
       kind: "user";
@@ -299,6 +302,11 @@ type ChatAction =
 
 function chatReducer(state: ChatState, action: ChatAction): ChatState {
   switch (action.kind) {
+    case "goalProjection":
+      return state.goalId === action.expected.goalId &&
+        state.goalRevision === action.expected.revision
+        ? reduceStream(state, action.raw)
+        : state;
     case "raw":
       return reduceStream(state, action.raw);
     case "user":
@@ -1094,6 +1102,21 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     if (!outputClient.begin(sessionId)) requestSessionHistory(sessionId, true);
   }, [outputClient, requestSessionHistory, setLoadingKey]);
 
+  const goalControls = useRemoteGoalControls({
+    sessionId: activeRoomId ? undefined : activeSessionId,
+    epoch: conversationRevisionRef.current,
+    selection: () => ({
+      sessionId: activeRoomIdRef.current ? undefined : boundSessionRef.current,
+      epoch: conversationRevisionRef.current,
+    }),
+    loading: loading.sessionHistory,
+    blocked: !!activeSessionId && recoveryFencesRef.current.has(activeSessionId),
+    chat,
+    send: (event) => sendRef.current?.(event) ?? false,
+    publish: (event, expected) => dispatchChat({ kind: "goalProjection", raw: event, expected }),
+    notice: setNotice,
+  });
+
   const onServerEvent = useCallback(
     (event: MobileServerEvent) => {
       const unsent = unsentCreatedSessionRef.current;
@@ -1132,6 +1155,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         setLoadingKey("sessionHistory", false);
         setOutputHistory(undefined);
       }
+      if (goalControls.handle(event)) return;
       if (event.type === "auth.ok") {
         unsentCreatedSessionRef.current = null;
         nativeModelSelectionRef.current = event.capabilities?.nativeModelSelection === 1;
@@ -3076,18 +3100,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     [socket],
   );
 
-  const extendGoal = useCallback(
-    (sessionId: string) =>
-      !recoveryFencesRef.current.has(sessionId) &&
-      socket.send({ type: "goal.extend", sessionId, addTurns: 100 }),
-    [socket],
-  );
-
-  const clearGoal = useCallback(
-    (sessionId: string) =>
-      !recoveryFencesRef.current.has(sessionId) && socket.send({ type: "goal.clear", sessionId }),
-    [socket],
-  );
+  const extendGoal = goalControls.continueGoal;
+  const clearGoal = goalControls.clearGoal;
 
   // Leave the bound CC session: drop the room binding and clear the feed. (There
   // is no user-facing room create/open/close — CC sessions are opened via
@@ -3294,6 +3308,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     respondApproval,
     keepWaitingApproval,
     setPermissionMode,
+    goalControlBusy: goalControls.busy,
     extendGoal,
     clearGoal,
     leaveRoom,
