@@ -1,0 +1,77 @@
+Fourth latest-main delivery refresh — 2026-11-11
+Source merge HEAD: 247d9361884a155c21cad42fa167f1ca65179ff0
+Fetched origin/main: 84c558e3006f93de95f477f5dfd560ebd9445788 (PR #352)
+Normal conflict-free merge; no task/main path intersection and no task logic/test change.
+Node v24.22.1 / Bun 1.3.11; command-local runtime PATH and caffeinate.
+Package-release completed first: exit 0, 10 tarballs / 55 typed / 53 runtime entries.
+No real provider quota/probe or operator credential lookup was executed. Guarded unit tests inject owned paths and fake credentials/providers; browser fixture fulfills its exact owned origin and aborts other requests.
+
+$ bun run typecheck
+exit=0; elapsedMs=42963
+@cjhyy/code-shell-host typecheck: Exited with code 0
+@cjhyy/code-shell-pet typecheck: Exited with code 0
+@cjhyy/code-shell-capability-coding typecheck: Exited with code 0
+@cjhyy/code-shell-capability-optimization-lab typecheck: Exited with code 0
+@cjhyy/code-shell-web typecheck: Exited with code 0
+@cjhyy/code-shell-server typecheck: Exited with code 0
+@cjhyy/code-shell-tui typecheck: Exited with code 0
+@cjhyy/code-shell-desktop typecheck: Exited with code 0
+
+$ bun run --cwd packages/desktop build
+exit=0; elapsedMs=9331
+../../out/mobile/assets/index-BYv7Axz9.js   870.38 kB │ gzip: 268.66 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 7.01s
+[build] main, preload, renderer, mobile, and Chrome extension OK
+
+$ bun run lint
+exit=0; elapsedMs=25507
+/private/tmp/codeshell-goal-fixes-20261111/packages/tui/src/ui/components/ToolCall.tsx
+  107:25  warning  'setLocalExpanded' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/private/tmp/codeshell-goal-fixes-20261111/packages/tui/src/ui/input-history.ts
+  20:3  warning  'writeFileSync' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+✖ 90 problems (0 errors, 90 warnings)
+
+
+$ bun run lint:engine-bypass
+exit=0; elapsedMs=705
+$ bash scripts/check-no-engine-bypass.sh
+OK: 'new Engine(' is confined to the protocol layer.
+
+$ bun run lint:test-shards
+exit=0; elapsedMs=583
+    1 / 60   tests: test Desktop suites that need their own Bun process
+    1 / 60   tests: test Desktop suites that need their own Bun process
+    1 / 60   tests: test Desktop Cloud bundle boundary
+    1 / 60   tests: test Playwright driver integration
+    1 / 60   tests: test Puppeteer driver integration
+    1 / 60   tests: test browser inspector integration
+
+✓ 2584 test files covered; largest process 771 files
+
+$ node scripts/run-bun-test-shard.mjs --timeout 30000 packages/coding/src/quota/credentials.test.ts packages/coding/src/quota/index.test.ts packages/desktop/src/main/quota-ipc.test.ts packages/desktop/src/main/usage-provider-service.test.ts packages/desktop/src/renderer/activity/UsagePage.test.tsx packages/desktop/src/renderer/activity/usageOverview.test.ts packages/desktop/src/main/external-runtime-goal-rpc.test.ts packages/desktop/src/main/agent-bridge.nochild.test.ts
+exit=0; elapsedMs=11989
+(pass) AgentBridge host reservation maps > host reserve retains the authorized main root separately from the execution cwd [0.03ms]
+(pass) actual mobile ingress clears offline and observes delayed cold resume after timeout [11029.76ms]
+
+ 122 pass
+ 0 fail
+ 352 expect() calls
+Ran 122 tests across 8 files. [11.92s]
+Completed Bun shard: 122 tests, 0 skipped; 0 failures.
+
+$ node scripts/run-isolated-node-smoke.mjs packages/desktop/src/renderer/activity/UsagePage.browser.fixture.mjs --output=/private/tmp/codeshell-goal-fixes-20261111/artifacts/goal-controls-delivery/main-refresh-84c558e30/usage-browser
+exit=0; elapsedMs=11670
+{"result":"pass","layouts":12,"cases":["12 responsive/light-dark/language layouts, paginated totals, API/CLI units, dynamic providers, independent queries and query-cost hints","Failed, missing, empty-window, non-finite and auth-required provider queries stay unknown and independently retryable","An in-flight provider blocks duplicate clicks but not another provider; rediscovery and token refresh never repeat a probe","Empty/failed discovery is retryable; only discovered providers render, including a future adapter and unsupported model connection","A failed rediscovery retains existing cards and quota; discovery loading remains independent from provider queries","Failed/repeated-cursor history shows an error without fabricated zero totals and can retry","A successful empty history is distinct from a read error","All-unknown CLI tokens stay unknown while the known submission count remains visible","Unknown actual usage stays unknown when another request ended before transmission","An invalid receipt on an earlier page remains partial after a clean final page","Long model identifiers remain inside the local table scroller"],"errors":[],"blocked":[],"output":"/private/tmp/codeshell-goal-fixes-20261111/artifacts/goal-controls-delivery/main-refresh-84c558e30/usage-browser"}
+
+122 pass / 0 fail / 0 skip across 8 files. Actual isolated Chromium: 11 case groups and 12 responsive/theme/language layouts; no browser errors or unexpected network requests.
+Read-only PR352 integration review PASS: Usage quota discovery/query never enters ChatSession/Goal/wake paths; rooms-ipc only moves quota registration; all three quota channels validate trusted native window/main frame; CheckQuota preserves ctx.signal and Stop/timeout composition.
+Previous 5162 integration validation passed 489 tests / 37 files. Its pushed candidate 51567ac109be8dfbf50229ff09b2ea5ce3c8e4e8 was already superseded by this newer main. Only its own run 43019242312 was cancelled, after verifying no failed job; final conclusion cancelled. This is not passing CI or a rerun.
+All previous first failures and one actual successful Electron-job rerun are preserved. No further blind rerun allowance remains. New exact candidate requires all 14 real eligible PR checks; no workflow, dependency, lockfile, budget or skip changes relative to latest main.
+Two deferred L items and physical Goal Electron/production-worker/mobile E2E limitations remain unchanged.
