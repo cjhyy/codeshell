@@ -8,6 +8,8 @@ const effectiveVisible = (snapshot: MimiPresenceSnapshot) =>
 export function useMimiPresence() {
   const [petWidgetVisible, setPetWidgetVisible] = useState(false);
   const [mimiPresence, setMimiPresence] = useState<MimiPresenceSnapshot | null>(null);
+  // The last change or retry the owner refused; the settings page shows it.
+  const [presenceError, setPresenceError] = useState<string | null>(null);
   const revision = useRef(0);
   const requestId = useRef(0);
   const mounted = useRef(true);
@@ -81,11 +83,29 @@ export function useMimiPresence() {
     [accept],
   );
 
-  const changeMimiPresence = useCallback(
-    (patch: MimiPresencePatch): void => {
-      void run(() => window.codeshell.pet?.setPresence?.(patch)).catch(() => {});
+  /** A change or retry: its failure is kept in `presenceError` instead of being dropped. */
+  const report = useCallback(
+    (request: () => Promise<MimiPresenceSnapshot> | undefined): void => {
+      const settled = run(request);
+      // run() takes its request id synchronously; only the newest request
+      // reports, so an older failure cannot cover a newer success (or vice versa).
+      const id = requestId.current;
+      const latest = () => mounted.current && id === requestId.current;
+      void settled.then(
+        () => {
+          if (latest()) setPresenceError(null);
+        },
+        (error: unknown) => {
+          if (latest()) setPresenceError(error instanceof Error ? error.message : String(error));
+        },
+      );
     },
     [run],
+  );
+  const dismissPresenceError = useCallback(() => setPresenceError(null), []);
+  const changeMimiPresence = useCallback(
+    (patch: MimiPresencePatch): void => report(() => window.codeshell.pet?.setPresence?.(patch)),
+    [report],
   );
   const setPetWidgetVisibility = useCallback(
     (visible: boolean): void => {
@@ -114,12 +134,15 @@ export function useMimiPresence() {
     () => run(() => window.codeshell.pet?.previewPresence?.()),
     [run],
   );
-  const retryMimi = useCallback((): void => {
-    void run(() => window.codeshell.pet?.retryPresence?.()).catch(() => {});
-  }, [run]);
+  const retryMimi = useCallback(
+    (): void => report(() => window.codeshell.pet?.retryPresence?.()),
+    [report],
+  );
   return {
     petWidgetVisible,
     mimiPresence,
+    presenceError,
+    dismissPresenceError,
     setPetWidgetVisibility,
     togglePetWidget,
     changeMimiPresence,

@@ -25,4 +25,27 @@ describe("CredentialsPage", () => {
     expect(html).toContain("弹窗登录并保存");
     // 全局「AI 取用免审批」总开关已删(改逐条 autoUseByAI/autoInjectByAI 卡片开关)。
   });
+
+  test("the 沟通渠道 tab points to Mimi settings › 消息连接 instead of binding here", () => {
+    const html = renderToStaticMarkup(
+      <ToastProvider>
+        <DialogProvider>
+          <CredentialsPage
+            activeProjectPath={null}
+            initialTab="channels"
+            onOpenMimiConnections={() => undefined}
+          />
+        </DialogProvider>
+      </ToastProvider>,
+    );
+    expect(html).toContain("data-channels-moved");
+    expect(html).toContain("data-open-mimi-connections");
+    expect(html).toContain("消息渠道在 Mimi 设置里绑定");
+    expect(html).toContain("打开消息连接");
+    // The gateway controls themselves are gone from this page.
+    expect(html).not.toContain("CodeShell Chat Gateway");
+    // The other categories are untouched.
+    expect(html).toContain("网站登录");
+    expect(html).toContain("API 密钥");
+  });
 });

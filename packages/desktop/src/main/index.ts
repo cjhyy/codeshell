@@ -148,6 +148,7 @@ import { PetMetadataStore } from "./pet/pet-metadata-store.js";
 import { PetDispatchService, type PetHostActionExecution } from "./pet/pet-dispatch-service.js";
 import { enrichPetChatReplyWithHostActions } from "./pet/host-action-reply.js";
 import { PetMemoryStore } from "./pet/pet-memory-store.js";
+import { petWidgetMenuTemplate } from "./pet/pet-widget-menu.js";
 import { createPetMemoryHost, createPetMemoryWorldContext } from "./pet/pet-memory-host.js";
 import { PetWorkDelegationHost } from "./pet/pet-work-delegation-host.js";
 import { PetChatAttachmentContext } from "./pet/pet-chat-attachment-context.js";
@@ -4206,55 +4207,30 @@ registerMimiPresenceIpc({
 ipcMain.on("pet:widget-context-menu", (event) => {
   const win = petWidgetWindow();
   if (!win || win.isDestroyed() || event.sender !== win.webContents) return;
-  const chinese = app.getLocale().toLowerCase().startsWith("zh");
   const presence = mimiPresenceOwner.snapshot();
   const input = getComputerUseInputControl();
   const inputStatus = input?.status();
-  const template: Electron.MenuItemConstructorOptions[] = [
-    {
-      label: chinese ? "打开 Mimi" : "Open Mimi",
-      click: () => void openPetOverviewFromWidget(),
-    },
-    {
-      label: presence.movingAvailable
-        ? chinese
-          ? "切换到移动模式"
-          : "Switch to moving mode"
-        : chinese
-          ? `移动模式不可用：${presence.movingUnavailableReason ?? ""}`
-          : "Moving mode unavailable",
-      enabled: presence.movingAvailable,
-      click: () => void mimiPresenceOwner.set({ mode: "moving" }),
-    },
-  ];
-  // Docked keeps the stop/resume entry the moving character offers. These are
-  // requests to the execution gate; switching forms never changes the gate.
-  if (input && inputStatus) {
-    const resume = inputStatus.stopped || inputStatus.foregroundHeld;
-    template.push({
-      label: resume
-        ? chinese
-          ? "继续电脑操作"
-          : "Resume computer use"
-        : chinese
-          ? "停止电脑操作（⌘⇧Esc）"
-          : "Stop computer use (⌘⇧Esc)",
-      click: () => {
-        if (resume) input.resume();
-        else input.stop();
+  const template = petWidgetMenuTemplate({
+    locale: app.getLocale(),
+    movingAvailable: presence.movingAvailable,
+    movingUnavailableReason: presence.movingUnavailableReason,
+    computerInput:
+      input && inputStatus
+        ? { resume: inputStatus.stopped || inputStatus.foregroundHeld }
+        : undefined,
+    actions: {
+      open: () => void openPetOverviewFromWidget(),
+      switchToMoving: () => void mimiPresenceOwner.set({ mode: "moving" }),
+      stopOrResumeComputer: (resume) => {
+        if (resume) input?.resume();
+        else input?.stop();
         dlog("computer-use", resume ? "computer_input_resumed" : "computer_input_stopped", {
           source: "docked-mimi",
         });
       },
-    });
-  }
-  template.push(
-    { type: "separator" },
-    {
-      label: chinese ? "关闭 Mimi" : "Close Mimi",
-      click: () => void mimiPresenceOwner.set({ visible: false }),
+      close: () => void mimiPresenceOwner.set({ visible: false }),
     },
-  );
+  });
   Menu.buildFromTemplate(template).popup({ window: win });
 });
 
