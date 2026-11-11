@@ -7,6 +7,7 @@ import {
 } from "react";
 import {
   KeyRound,
+  Gauge,
   FlaskConical,
   ListTodo,
   MessageSquare,
@@ -91,6 +92,9 @@ const builtin = (entry: Omit<PageEntry, "owner">): PageEntry => ({
 const LogsView: LazyExoticComponent<ComponentType> = lazy(() =>
   import("../logs/LogsView").then((module) => ({ default: module.LogsView })),
 );
+const UsagePage: LazyExoticComponent<ComponentType> = lazy(() =>
+  import("../activity/UsagePage").then((module) => ({ default: module.UsagePage })),
+);
 const ModelTracesView: LazyExoticComponent<ComponentType<ModelTracesViewProps>> = lazy(() =>
   import("../activity/ModelTracesView").then((module) => ({ default: module.ModelTracesView })),
 );
@@ -122,6 +126,12 @@ const OptimizationLabPage = lazy(() =>
 );
 
 const BUILTIN_PAGE_ENTRIES: PageEntry[] = [
+  builtin({
+    key: "usage",
+    title: { kind: "i18n", key: "usagePage.title" },
+    icon: Gauge,
+    render: () => createElement(UsagePage),
+  }),
   builtin({
     key: "traces",
     title: { kind: "i18n", key: "observability.title" },

@@ -42,9 +42,11 @@ import { activity } from "./ns/activity";
 import { activityApprovals } from "./ns/activity-approvals";
 import { activitySessions } from "./ns/activity-sessions";
 import { observability } from "./ns/observability";
+import { usagePage } from "./ns/usage";
 
 export const messages = {
   zh: {
+    ...usagePage.zh,
     ...observability.zh,
     ...activity.zh,
     ...activityApprovals.zh,
@@ -66,6 +68,7 @@ export const messages = {
     ...optimizationLab.zh,
   },
   en: {
+    ...usagePage.en,
     ...observability.en,
     ...activity.en,
     ...activityApprovals.en,
