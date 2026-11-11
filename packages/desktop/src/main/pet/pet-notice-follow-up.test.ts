@@ -96,11 +96,9 @@ describe("follow-up reminders go through the notice router", () => {
     });
     await remind(current);
     expect(current.outbox.events).toHaveLength(0);
+    // Shown as the owner wrote it: their title, their text.
     expect(current.desktop).toEqual([
-      expect.objectContaining({
-        title: "Mimi 跟进提醒",
-        body: "「看一下发布」：检查 0.10.1 的发布结果",
-      }),
+      expect.objectContaining({ title: "看一下发布", body: "检查 0.10.1 的发布结果" }),
     ]);
   });
 
@@ -163,32 +161,92 @@ describe("follow-up reminders go through the notice router", () => {
     expect(current.outbox.events).toHaveLength(0);
   });
 
-  test("it skips the P1/P2 cap but shares the P0 backstop", async () => {
-    current = harness({
+  const capped = () =>
+    harness({
       readSettings: () => ({ pet: { notifications: { maxPerHour: 1, maxP0PerHour: 2 } } }),
     });
+  const due = (n: number) =>
+    createFollowUpNotifier({ submit: current!.wiring.submitNotice, now: () => env.clock })(
+      followUp({ id: `registered-followup-00000000000000000000000${n}` }),
+      `第 ${n} 条`,
+      `mimi-follow-up:registered-followup-00000000000000000000000${n}:1`,
+    );
+
+  test("it skips the P1/P2 cap but shares the P0 backstop", async () => {
+    current = capped();
     expect(DEFAULT_MAX_P0_PER_HOUR).toBeGreaterThan(2);
-    const due = (n: number) =>
-      createFollowUpNotifier({ submit: current!.wiring.submitNotice, now: () => env.clock })(
-        followUp({ id: `registered-followup-00000000000000000000000${n}` }),
-        `第 ${n} 条`,
-        `mimi-follow-up:registered-followup-00000000000000000000000${n}:1`,
-      );
     for (const n of [1, 2, 3]) await due(n);
     await current.idle();
-    // Two over IM despite maxPerHour 1; the third is over the P0 backstop and
-    // waits for the digest, which the P1/P2 budget (unused by follow-ups) sends.
+    // Two over IM despite maxPerHour 1; the third is over the P0 backstop.
     expect(current.ownerSends.map((send) => send.text)).toEqual([
       "「看一下发布」：第 1 条",
       "「看一下发布」：第 2 条",
-      "你不在时：\n- 「看一下发布」跟进提醒",
     ]);
     const third = current.wiring.ledger.byDedupeKey(
       "mimi-follow-up:registered-followup-000000000000000000000003:1",
     );
     expect(third?.decision).toMatchObject({ outlet: "digest", reason: "p0-cap" });
     // Held by the backstop, it is still shown on the desktop right away.
-    expect(current.desktop.map((entry) => entry.body)).toEqual(["「看一下发布」：第 3 条"]);
+    expect(current.desktop.map((entry) => entry.body)).toEqual(["第 3 条"]);
+  });
+
+  test("a follow-up held by the backstop goes out the next hour, even in quiet hours", async () => {
+    current = capped();
+    env.clock = QUIET_NIGHT;
+    for (const n of [1, 2, 3]) await due(n);
+    // A result in the same quiet night waits for the morning.
+    await current.wiring.submitNotice({
+      kind: "session.done",
+      priority: "P1",
+      dedupeKey: "s:turn:run-9",
+      ruleIds: [],
+      facts: { title: "修登录" },
+      attention: "always",
+      channel: "auto",
+      target: { kind: "owner" },
+    });
+    await current.idle();
+    expect(current.ownerSends).toHaveLength(2);
+    // Still this hour: the P0 backstop is full, nothing more goes out.
+    await current.wiring.router.flushDigest();
+    await current.idle();
+    expect(current.ownerSends).toHaveLength(2);
+    // Next hour, still quiet hours: the held follow-up goes out with its text.
+    env.clock = QUIET_NIGHT + 60 * 60_000;
+    await current.wiring.router.flushDigest();
+    await current.idle();
+    expect(current.ownerSends.map((send) => send.text)).toEqual([
+      "「看一下发布」：第 1 条",
+      "「看一下发布」：第 2 条",
+      "到点的跟进：\n- 「看一下发布」：第 3 条",
+    ]);
+    expect(current.wiring.ledger.held().map((record) => record.kind)).toEqual(["session.done"]);
+  });
+
+  test("held follow-ups and held results are separate digests", async () => {
+    current = capped();
+    // 20:13, so the next hour is not yet quiet hours.
+    env.clock = NOW - 2 * 60 * 60_000;
+    for (const n of [1, 2, 3]) await due(n);
+    await current.wiring.submitNotice({
+      kind: "session.done",
+      priority: "P1",
+      dedupeKey: "s:turn:run-9",
+      ruleIds: [],
+      facts: { title: "修登录" },
+      attention: "digest",
+      channel: "auto",
+      target: { kind: "owner" },
+    });
+    env.clock += 60 * 60_000;
+    await current.wiring.router.flushDigest();
+    await current.idle();
+    expect(
+      current.ownerSends
+        .slice(2)
+        .map((send) => send.text)
+        .sort(),
+    ).toEqual(["你不在时：\n- 「修登录」做完了", "到点的跟进：\n- 「看一下发布」：第 3 条"]);
   });
 });
 

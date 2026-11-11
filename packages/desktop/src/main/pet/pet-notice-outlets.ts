@@ -71,6 +71,16 @@ const ROUTE_EVENT_TYPES: Readonly<Record<string, GatewayControlEventInput["type"
   "session.failed": "pet.task.failed",
 };
 
+/**
+ * A follow-up shows as the owner wrote it: its title as the notification's
+ * title and its text as the body. Everything else: the kind's title and the body.
+ */
+function desktopText(notice: NoticeSubmission, body: string): { title: string; body: string } {
+  const { title, summary } = notice.facts;
+  if (notice.kind === "followup.due" && title && summary) return { title, body: summary };
+  return { title: DESKTOP_TITLES[notice.kind] ?? "Mimi", body };
+}
+
 /** Attachments this owner target accepts, in order, within its count and size limits. */
 function attachmentsFor(
   target: ImGatewayOwnerTarget | undefined,
@@ -125,12 +135,13 @@ export function createNoticeOutlets(deps: PetNoticeOutletDeps): PetNoticeOutletS
       .update(body)
       .digest("hex");
     const files = notice.media?.attachments?.length ?? 0;
+    const text = desktopText(notice, body);
     void Promise.resolve(
       deps.notifyDesktop({
         key,
-        title: DESKTOP_TITLES[notice.kind] ?? "Mimi",
+        title: text.title,
         // Clicking opens the Session, where the files are.
-        body: files > 0 ? `${body}\n（含 ${files} 个附件，打开会话查看）` : body,
+        body: files > 0 ? `${text.body}\n（含 ${files} 个附件，打开会话查看）` : text.body,
         ...(notice.priority === "P0" ? { urgent: true } : {}),
         ...(notice.sessionId ? { sessionId: notice.sessionId } : {}),
       }),

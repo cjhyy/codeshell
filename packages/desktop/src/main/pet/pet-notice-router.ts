@@ -168,6 +168,7 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
           return {
             quietHours: settings.quietHours,
             maxPerHour: settings.maxPerHour,
+            maxP0PerHour: settings.maxP0PerHour,
             mergeWindowMs: settings.mergeWindowSec * 1_000,
             timezoneOffsetMin: this.offset(now),
           };
@@ -176,11 +177,16 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
         stale: (record, now) => staleReason(record, now, this.options),
         submit: (digest) =>
           this.submit({
-            kind: "digest",
-            priority: "P2",
+            // Held follow-ups go out as one follow-up reminder: past quiet hours, on the P0 backstop.
+            ...(digest.timed
+              ? { kind: "followup.due", priority: "P1", facts: { title: "到点的跟进" } }
+              : {
+                  kind: "digest",
+                  priority: "P2",
+                  facts: { title: "你不在时", summary: `${digest.count} 条` },
+                }),
             dedupeKey: digest.dedupeKey,
             ruleIds: digest.ruleIds,
-            facts: { title: "你不在时", summary: `${digest.count} 条` },
             attention: "always",
             channel: digest.channel,
             target: digest.target,
