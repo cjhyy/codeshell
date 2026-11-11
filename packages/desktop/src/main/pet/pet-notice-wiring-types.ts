@@ -4,6 +4,7 @@ import type { DesktopNotificationInput } from "../desktop-notifier.js";
 import type { HostActionHandler } from "../host-action-dispatch.js";
 import type { PetNotificationSettingsView } from "../../shared/pet-notices.js";
 import type { PetDeliveryResolver } from "./pet-delivery-plan.js";
+import type { ExternalNoticeSessionCatalog } from "./pet-notice-external-sessions.js";
 import type { PetIpcAttention } from "./pet-ipc.js";
 import type {
   PetDecisionNoticeHooks,
@@ -45,9 +46,12 @@ export interface PetNoticeWiringDeps {
   /**
    * The worker is really gone (see `createWorkerLossDetector`): the Session
    * outcome deriver forgets its in-flight turns, so a new worker's events
-   * never inherit an old run's id.
+   * never inherit an old run's id. `keep` names the Sessions the worker never
+   * ran (desktop external runtimes), whose turns stay open.
    */
-  onWorkerLost?: () => void;
+  onWorkerLost?: (keep: (sessionId: string) => boolean) => void;
+  /** Desktop external-runtime Sessions: eligible, titled and busy without the projection. */
+  externalSessions?: ExternalNoticeSessionCatalog;
   /**
    * IM conversations that receive a Session's turn replies; resolved lazily
    * (built after this wiring). A done / failed notice for a conversation the
@@ -132,7 +136,7 @@ export interface PetNoticeWiring {
   onSettingsChange(listener: () => void): () => void;
   /** The IM a rule with this channel and target is predicted to use; undefined → desktop. */
   predictIm(channel: NoticeChannel, target: NoticeRule["target"]): RuleEffect["im"];
-  /** A top-level work Session (not Mimi's, not external) that rules may watch. */
+  /** A top-level work Session (not Mimi's, not a tailed CLI rollout) that rules may watch. */
   isEligibleSession(sessionId: string): boolean;
   dispose(): void;
 }

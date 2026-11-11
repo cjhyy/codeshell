@@ -273,6 +273,8 @@ export class ExternalRuntimeService {
       modelTrace?: ReturnType<typeof startExternalRuntimeTrace>;
       /** Serializes turns so one recorder can never be reset by an overlapping send. */
       turnTail: Promise<void>;
+      /** Submissions still waiting behind `turnTail` (the notice pipeline's "busy"). */
+      queuedTurns: number;
       /**
        * Invalidated before close so late provider events cannot enter a
        * replacement session. `faulted` marks a runtime whose last turn ended in
@@ -1487,6 +1489,7 @@ export class ExternalRuntimeService {
       },
       authority,
       turnTail: Promise.resolve(),
+      queuedTurns: 0,
       lifecycle,
       goalToolsAvailable,
       forwardEvent,
@@ -1926,6 +1929,7 @@ export class ExternalRuntimeService {
         : outcome;
     };
     const runTurn = async (): Promise<ExternalRuntimeTurnOutcome> => {
+      entry.queuedTurns -= 1;
       this.deps.memory?.cancel(sessionId);
       const outcome = await runTurnExclusive();
       if (
@@ -1975,6 +1979,7 @@ export class ExternalRuntimeService {
       }
       return outcome;
     };
+    entry.queuedTurns += 1;
     const outcome = entry.turnTail.then(runTurn, runTurn);
     const afterSubmission = () => {
       // A preserved old runtime can still own a claim while its replacement is
@@ -1993,6 +1998,14 @@ export class ExternalRuntimeService {
     return entry?.lifecycle.active && entry.recorder.hasOpenRun && entry.recorder.outputRunId
       ? { session: entry.session, runId: entry.recorder.outputRunId }
       : undefined;
+  }
+
+  /** Trusted Main probe for Mimi notices (`pet/pet-notice-external-sessions.ts`). */
+  noticeProbe(sessionId: string) {
+    const entry = this.sessions.get(sessionId);
+    if (!entry?.lifecycle.active) return undefined;
+    const { kind, queuedTurns } = entry;
+    return { kind, running: this.isSessionRunning(sessionId), queuedTurns };
   }
 
   /** Trusted Main probe: the Session has an open provider run (including Goal turns). */

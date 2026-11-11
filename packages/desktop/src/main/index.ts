@@ -152,6 +152,7 @@ import { PetWorkDelegationHost } from "./pet/pet-work-delegation-host.js";
 import { PetChatAttachmentContext } from "./pet/pet-chat-attachment-context.js";
 import { getSessionCwdIndex } from "./session-cwd-index.js";
 import { wirePetNotices, type PetNoticeWiring } from "./pet/pet-notice-wiring.js";
+import { createExternalSessionCatalog } from "./pet/pet-notice-external-sessions.js";
 import { createPetNoticeControls } from "./pet/pet-notice-ipc.js";
 import { PetWorkInboxStore } from "./pet/pet-work-inbox-store.js";
 import { PetHostActionReceiptStore } from "./pet/pet-host-action-receipts.js";
@@ -1887,7 +1888,11 @@ async function createWindow(): Promise<BrowserWindow> {
       powerEvents: powerMonitor,
       focusEvents: app,
       hasLiveWorker: () => bridge?.hasLiveWorker() ?? false,
-      onWorkerLost: () => sessionOutcomeDeriver.reset(),
+      externalSessions: createExternalSessionCatalog({
+        runtime: () => externalRuntime.service,
+        readState: (id) => new SessionManager().readSessionState(id),
+      }),
+      onWorkerLost: (keep) => sessionOutcomeDeriver.reset(keep),
     });
     petNotices = notices;
     const petMemoryStoreInstance = new PetMemoryStore(

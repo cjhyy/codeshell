@@ -189,12 +189,9 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     onGoalCleared: (sessionId) => router.revokeSessionBlocked(sessionId),
     // Queued user messages (core queue depth). Background work parks the turn
     // with completionKind background_wait, which the watcher already skips.
-    isSessionBusy: (sessionId) => {
-      const session = view.workSession(sessionId);
-      return !!session && (session.queueDepth > 0 || session.runState === "queued");
-    },
+    isSessionBusy: view.isSessionBusy,
     isEligibleSession: view.isEligibleSession,
-    sessionTitle: (sessionId) => view.workSession(sessionId)?.title,
+    sessionTitle: view.sessionTitle,
     activeTask: (sessionId) => deps.longTasks.activeForSession(sessionId),
     now,
     log,
@@ -231,15 +228,17 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     log,
   });
   const workerGone = createWorkerLossDetector(view);
+  const isExternal = (sessionId: string) => deps.externalSessions?.has(sessionId) === true;
   const unsubscribeProjection = deps.projection.subscribe((event) => {
     void ready.then(() => (disposed ? undefined : watcher.observeProjection(event)));
     if (workerGone(event)) {
       try {
-        deps.onWorkerLost?.();
+        deps.onWorkerLost?.(isExternal);
       } catch (error) {
         log("pet.notice.worker_lost_listener_failed", { error: errorText(error) });
       }
-      void ready.then(() => (disposed ? undefined : watcher.flush()));
+      // External runtimes do not run in the worker: their open runs still close.
+      void ready.then(() => (disposed ? undefined : watcher.flush((id) => !isExternal(id))));
     }
     // A decision answered anywhere (or timed out) must never be replayed later.
     const resolved = resolvedDecision(event);
@@ -255,7 +254,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     ready,
     submit,
     nudge: decisions.nudge,
-    sessionTitle: (sessionId) => view.workSession(sessionId)?.title,
+    sessionTitle: view.sessionTitle,
     now,
     log,
   });

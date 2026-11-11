@@ -27,7 +27,7 @@
  *
  * Some failures core reports after the run boundary, with no run in flight
  * (`inRun` false); nothing closes them, so no consumer may wait for a close.
- * `reset()` forgets every in-flight turn when the worker is lost.
+ * `reset()` forgets the worker's in-flight turns when it is lost.
  *
  * An exhausted Goal is read two ways on purpose, from the one outcome: the
  * task that was driving that Goal has failed and closes, while the owner is
@@ -338,11 +338,12 @@ export class SessionOutcomeDeriver {
   /**
    * Forget every Session's in-flight turn: the worker that ran them is gone,
    * so none of them will close, and a new worker's events must not inherit an
-   * old run's id or work.
+   * old run's id or work. `keep` spares Sessions the worker never ran (desktop
+   * external runtimes), whose turns still close.
    */
-  reset(): void {
-    this.turns.clear();
-    this.queuedUserMessages.clear();
+  reset(keep?: (sessionId: string) => boolean): void {
+    for (const state of [this.turns, this.queuedUserMessages])
+      for (const sessionId of [...state.keys()]) if (!keep?.(sessionId)) state.delete(sessionId);
   }
 
   private freshTurn(inRun: boolean): TurnState {

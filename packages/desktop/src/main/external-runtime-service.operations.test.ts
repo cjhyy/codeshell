@@ -310,3 +310,28 @@ test("new lease initialization failure never reuses the previous run's uncertain
   expect(turns).toBe(1);
   expect(events.filter((event) => event.type === "error").length).toBe(noticesBefore + 1);
 });
+
+test("the notice probe tells a running turn from work queued behind it", async () => {
+  expect(svc.noticeProbe(sessionId)).toEqual({ kind: "codex", running: false, queuedTurns: 0 });
+  let release!: () => void;
+  const entered: Array<() => void> = [];
+  providerBody = () =>
+    new Promise<void>((resolve) => {
+      entered.shift()?.();
+      release = resolve;
+    });
+  const firstEntered = new Promise<void>((resolve) => entered.push(resolve));
+  const first = svc.send(sessionId, { text: "first", disableGoal: true });
+  const second = svc.send(sessionId, { text: "second", disableGoal: true });
+  await firstEntered;
+  expect(svc.noticeProbe(sessionId)).toEqual({ kind: "codex", running: true, queuedTurns: 1 });
+  const secondEntered = new Promise<void>((resolve) => entered.push(resolve));
+  release();
+  await first;
+  await secondEntered;
+  expect(svc.noticeProbe(sessionId)).toMatchObject({ running: true, queuedTurns: 0 });
+  release();
+  await second;
+  expect(svc.noticeProbe(sessionId)).toEqual({ kind: "codex", running: false, queuedTurns: 0 });
+  expect(svc.noticeProbe("not-started")).toBeUndefined();
+});

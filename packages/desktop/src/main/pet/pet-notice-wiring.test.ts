@@ -284,3 +284,113 @@ describe("goal pauses", () => {
     expect(current.published).toEqual([]);
   });
 });
+
+describe("external runtime Sessions", () => {
+  const CODEX = "s-codex";
+  /** A desktop-run Codex Session: never in the worker projection. */
+  function externalHarness(
+    facts: { busy?: boolean; title?: string } = {},
+    overrides: Parameters<typeof harness>[0] = {},
+  ) {
+    const state = { busy: false, title: "Codex 修登录", ...facts };
+    const known = (id: string) =>
+      id === CODEX
+        ? { sessionId: id, runtime: "codex" as const, running: true, live: true, ...state }
+        : undefined;
+    return {
+      state,
+      harness: harness({
+        externalSessions: { get: known, has: (id) => known(id) !== undefined },
+        ...overrides,
+      }),
+    };
+  }
+  const turn = (runId: string, tools: string[] = ["Bash"]) => [
+    { type: "session_started", runId, clientMessageId: `cm-${runId}` },
+    ...tools.map((toolName) => ({
+      type: "tool_use_start",
+      toolCall: { id: `t-${runId}`, toolName, args: {} },
+    })),
+    { type: "turn_complete", reason: "completed", text: "测试都过了", runId },
+  ];
+
+  test("NotifyMe and the bell accept it; its done notice carries the catalog title", async () => {
+    current = externalHarness().harness;
+    expect(current.wiring.isEligibleSession(CODEX)).toBe(true);
+    expect(current.wiring.isEligibleSession("s-ghost")).toBe(false);
+    await current.handler(CODEX, upsertArgs({ sessionId: CODEX }));
+    await expect(current.handler("s-ghost", upsertArgs({ sessionId: "s-ghost" }))).rejects.toThrow(
+      "unknown work Session",
+    );
+    env.clock = NOW + 1_000;
+    for (const event of turn("run-1")) current.observeSessionEvent(CODEX, event);
+    await settle(() => current!.submitted.length > 0);
+    expect(current.submitted).toMatchObject([
+      { kind: "session.done", sessionId: CODEX, facts: { title: "Codex 修登录" } },
+    ]);
+  });
+
+  test("queued work behind its turn carries the done to the follow-up turn", async () => {
+    const external = externalHarness({ busy: true });
+    current = external.harness;
+    await current.handler(CODEX, upsertArgs({ sessionId: CODEX }));
+    env.clock = NOW + 1_000;
+    for (const event of turn("run-1")) current.observeSessionEvent(CODEX, event);
+    await settle();
+    expect(current.submitted).toEqual([]);
+    external.state.busy = false;
+    // The follow-up turn did nothing itself but reports the carried work.
+    for (const event of turn("run-2", [])) current.observeSessionEvent(CODEX, event);
+    await settle(() => current!.submitted.length > 0);
+    expect(current.submitted.map((notice) => notice.dedupeKey)).toEqual([`${CODEX}:turn:run-2`]);
+  });
+
+  /** The worker goes away for good (the same loss a reclaimed worker reports). */
+  const loseWorker = (target: Harness, gone: () => void) => {
+    gone();
+    target.setWorkerState("disconnected");
+    target.emitProjection({ kind: "reset", version: 2, generation: 1, observedAt: env.clock });
+  };
+
+  test("a lost worker does not forget its open turn's work", async () => {
+    let live = true;
+    current = externalHarness({}, { hasLiveWorker: () => live }).harness;
+    await current.handler(CODEX, upsertArgs({ sessionId: CODEX }));
+    env.clock = NOW + 1_000;
+    const [started, work, complete] = turn("run-1");
+    current.observeSessionEvent(CODEX, started);
+    current.observeSessionEvent(CODEX, work);
+    loseWorker(current, () => (live = false));
+    await settle();
+    // The closing event names no run: only the kept turn knows its id and its work.
+    current.observeSessionEvent(CODEX, { ...complete, runId: undefined });
+    await settle(() => current!.submitted.length > 0);
+    expect(current.submitted.map((notice) => notice.dedupeKey)).toEqual([`${CODEX}:turn:run-1`]);
+  });
+
+  test("a lost worker does not flush its parked report", async () => {
+    let live = true;
+    current = externalHarness({}, { hasLiveWorker: () => live }).harness;
+    current.routes.push({ ...boundRoute(), sessionId: CODEX });
+    await current.handler(CODEX, upsertArgs({ sessionId: CODEX, events: ["failed"] }));
+    env.clock = NOW + 1_000;
+    const [started, work] = turn("run-1");
+    current.observeSessionEvent(CODEX, started);
+    current.observeSessionEvent(CODEX, work);
+    // A failure inside the run: its report waits for the bound reply at the close.
+    current.observeSessionEvent(CODEX, { type: "error", error: "boom" });
+    await settle();
+    loseWorker(current, () => (live = false));
+    await settle();
+    // A native Session's parked report would go out now; the external run is still open.
+    expect(current.submitted).toEqual([]);
+    current.observeSessionEvent(CODEX, {
+      type: "turn_complete",
+      reason: "model_error",
+      runId: "run-1",
+    });
+    await settle(() => current!.submitted.length > 0);
+    await settle();
+    expect(current.submitted.map((notice) => notice.dedupeKey)).toEqual([`${CODEX}:failed:run-1`]);
+  });
+});
