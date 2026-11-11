@@ -178,6 +178,7 @@ export const pet = {
         newTime: "新时间（{timezone}）",
         remindAt: "提醒时间：{time}（{timezone}）",
         resumeAt: "续办时间：{time}（{timezone}）",
+        repeats: "重复：{recurrence}（{timezone}）",
         wakeState: {
           scheduled: "等待到时唤醒",
           claimed: "正在处理本次唤醒",
@@ -677,6 +678,7 @@ export const pet = {
         newTime: "New time ({timezone})",
         remindAt: "Reminder: {time} ({timezone})",
         resumeAt: "Resume: {time} ({timezone})",
+        repeats: "Repeats: {recurrence} ({timezone})",
         wakeState: {
           scheduled: "Waiting for scheduled wake",
           claimed: "Processing this wake",

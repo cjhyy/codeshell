@@ -1,10 +1,4 @@
-import type {
-  PetFollowUpItem,
-  PetFollowUpMutationPayload,
-  PetRegisteredFollowUp,
-  PetRegisteredFollowUpItem,
-  RegisterPetFollowUpInput,
-} from "@cjhyy/code-shell-pet";
+import type { PetFollowUpItem, PetRegisteredFollowUpItem } from "@cjhyy/code-shell-pet";
 import { sessionSelectorId } from "@cjhyy/code-shell-pet/disclosure";
 import { petFollowUpStateId } from "../../shared/pet-work-item-id.js";
 import type { DesktopPetSession } from "./pet-state-aggregator.js";
@@ -13,7 +7,7 @@ import { mapWithConcurrency } from "./map-with-concurrency.js";
 import type { PetSummaryService } from "./pet-summary-service.js";
 import type { PetSummaryStore } from "./pet-summary-store.js";
 import type { PetWorkInboxSnapshot } from "./pet-work-inbox-store.js";
-import type { PetRegisteredFollowUpStore } from "./pet-registered-follow-up-store.js";
+import type { PetFollowUpRuleView } from "./pet-follow-up-rules.js";
 
 const MAX_VISIBLE_FOLLOW_UPS = 20;
 const MAX_TRACKED_FOLLOW_UPS = 100;
@@ -37,7 +31,7 @@ export type PetRegisteredFollowUpSummaryRow = Omit<PetRegisteredFollowUpItem, "i
 export type PetFollowUpSummaryRow = PetDerivedFollowUpSummaryRow | PetRegisteredFollowUpSummaryRow;
 
 export interface PetFollowUpMutationResult {
-  action: "complete" | "dismiss" | "cancel" | "reschedule";
+  action: "complete" | "dismiss";
   followUpId: string;
   title: string;
   revision?: number;
@@ -53,25 +47,29 @@ export interface PetFollowUpService {
   collect(): Promise<PetFollowUpSummaryRow[]>;
   /** Canonical open feed injected into Mimi's FollowUps read capability. */
   listOpen(): Promise<PetFollowUpItem[]>;
-  /** Register an explicit user obligation; the caller supplies host-authored identity and route. */
-  register(input: RegisterPetFollowUpInput): Promise<PetRegisteredFollowUp>;
-  /** Exact, durable mutation behind Mimi's ManageFollowUp capability. */
-  mutate(
-    input: Exclude<PetFollowUpMutationPayload, { action: "register" }>,
-  ): Promise<PetFollowUpMutationResult>;
+  /**
+   * Handle a result-derived row (UI or Mimi's ManageFollowUp). Registered
+   * follow-ups are schedule rules and are changed through the rule table.
+   */
+  mutate(input: {
+    action: "complete" | "dismiss";
+    followUpId: string;
+    expectedRevision?: number;
+  }): Promise<PetFollowUpMutationResult>;
 }
 
 /**
  * One canonical feed for result-derived follow-ups and explicitly registered
  * obligations. The former retain their handled-state namespace; the latter
- * have a versioned durable record so UI handling also fences future wakes.
+ * are versioned schedule rules, so UI handling also fences future wakes.
  */
 export function createPetFollowUpService(deps: {
   listSessions(): readonly DesktopPetSession[];
   summaryStore: PetSummaryStore;
   summaryService: PetSummaryService;
   inbox: PetFollowUpInbox;
-  registered?: PetRegisteredFollowUpStore;
+  /** Follow-up schedule rules, as rows. */
+  registered?: { load(): Promise<void>; list(): PetFollowUpRuleView[] };
 }): PetFollowUpService {
   const rowOf = (
     session: DesktopPetSession,
@@ -87,33 +85,22 @@ export function createPetFollowUpService(deps: {
     text,
   });
 
-  function registeredRow(row: PetRegisteredFollowUp): PetRegisteredFollowUpSummaryRow {
-    const session = row.sourceSessionId
-      ? deps.listSessions().find((entry) => entry.agentSessionId === row.sourceSessionId)
+  function registeredRow(row: PetFollowUpRuleView): PetRegisteredFollowUpSummaryRow {
+    const { id, sourceSessionId, ...rest } = row;
+    const session = sourceSessionId
+      ? deps.listSessions().find((entry) => entry.agentSessionId === sourceSessionId)
       : undefined;
     return {
       kind: "registered",
-      followUpId: row.id,
-      title: row.title,
-      text: row.text,
-      revision: row.revision,
-      wakeAt: row.wakeAt,
-      timezone: row.timezone,
-      intent: row.intent,
-      missedPolicy: row.missedPolicy,
-      catchUpUntil: row.catchUpUntil,
-      status: row.status,
-      wakeState: row.wake.status,
-      createdAt: row.createdAt,
-      ...(row.wake.detail ? { wakeDetail: row.wake.detail } : {}),
-      ...(row.sourceSessionId
+      followUpId: id,
+      ...rest,
+      ...(sourceSessionId
         ? {
-            sourceSessionId: row.sourceSessionId,
-            sessionId: row.sourceSessionId,
-            sessionSelector: sessionSelectorId(row.sourceSessionId),
+            sourceSessionId,
+            sessionId: sourceSessionId,
+            sessionSelector: sessionSelectorId(sourceSessionId),
           }
         : {}),
-      ...((row.wake.taskId ?? row.taskId) ? { taskId: row.wake.taskId ?? row.taskId } : {}),
       ...(session?.workspaceDisplayName ? { workspace: session.workspaceDisplayName } : {}),
     };
   }
@@ -187,25 +174,8 @@ export function createPetFollowUpService(deps: {
   return {
     collect,
     listOpen,
-    async register(input) {
-      if (!deps.registered) throw new Error("registered follow-ups are unavailable");
-      return deps.registered.register(input);
-    },
     async mutate(input) {
       const { action, followUpId } = input;
-      if (followUpId.startsWith("registered-followup-")) {
-        if (!deps.registered) throw new Error("registered follow-ups are unavailable");
-        await deps.registered.load();
-        if (input.expectedRevision === undefined)
-          throw new Error("registered follow-up requires expectedRevision");
-        const row =
-          action === "reschedule"
-            ? await deps.registered.reschedule(followUpId, input.expectedRevision, input)
-            : action === "cancel"
-              ? await deps.registered.cancel(followUpId, input.expectedRevision)
-              : await deps.registered.handle(followUpId, input.expectedRevision, action);
-        return { action, followUpId, title: row.title, revision: row.revision };
-      }
       if (
         (action !== "complete" && action !== "dismiss") ||
         !/^followup-[A-Za-z0-9_-]{24}$/u.test(followUpId)

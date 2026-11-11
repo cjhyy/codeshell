@@ -159,11 +159,8 @@ import { createPetNoticeControls } from "./pet/pet-notice-ipc.js";
 import { PetWorkInboxStore } from "./pet/pet-work-inbox-store.js";
 import { PetHostActionReceiptStore } from "./pet/pet-host-action-receipts.js";
 import { archivePetSessionsBySelector } from "./pet/pet-session-archive.js";
-import { createPetFollowUpRuntime } from "./pet/pet-follow-up-runtime.js";
-import {
-  PetFollowUpWakeCoordinator,
-  isPetFollowUpWakeJob,
-} from "./pet/pet-follow-up-wake-coordinator.js";
+import { createPetFollowUpRules } from "./pet/pet-follow-up-rules.js";
+import { PetRuleScheduler, isPetRuleScheduleJob } from "./pet/pet-rule-schedule.js";
 import { PetContextLinkStore } from "./pet/pet-context-links.js";
 import { PetWorkMemoryStore } from "./pet/pet-work-memory-store.js";
 import { PetSegmentController, type PetArchiveAnchors } from "./pet/pet-segment-controller.js";
@@ -865,7 +862,7 @@ let petStateAggregator: PetStateAggregator | null = null;
 let petExternalVisibilityController: ExternalSessionVisibilityController | null = null;
 let reconcileExternalAdapters: (() => Promise<void>) | null = null;
 let petDispatchService: PetDispatchService | null = null;
-let petFollowUpWakeCoordinator: PetFollowUpWakeCoordinator | null = null;
+let petRuleScheduler: PetRuleScheduler | null = null;
 // The dispatcher exists before its worker and durable stores finish loading.
 // IM delivery shares the same completed initialization boundary as Pet IPC.
 let petRuntimeReady = false;
@@ -2158,8 +2155,11 @@ async function createWindow(): Promise<BrowserWindow> {
       store: petSummaryStore,
       cwd: resolveNoRepoCwd(),
     });
-    const followUpRuntime = await createPetFollowUpRuntime({
-      filePath: resolve(app.getPath("userData"), "pet", "follow-ups.json"),
+    // Follow-ups are schedule rules; the old follow-ups.json is deleted, not migrated.
+    const followUpRuntime = await createPetFollowUpRules({
+      rules: notices.ruleStore,
+      legacyFollowUpsPath: resolve(app.getPath("userData"), "pet", "follow-ups.json"),
+      powerEvents: powerMonitor,
       sessions: () => aggregator.getSnapshot().sessions,
       summaryStore: petSummaryStore,
       summaryService: petSummaryService,
@@ -2173,9 +2173,10 @@ async function createWindow(): Promise<BrowserWindow> {
       submitNotice: notices.submitNotice,
       dispatch: () => petDispatchService,
       onError: (error) => dlog("main", "pet.followUp.wake.failed", { error: String(error) }),
+      log: (event, data) => dlog("main", event, data),
     });
-    const { registeredFollowUps, petFollowUps, followUpHost } = followUpRuntime;
-    petFollowUpWakeCoordinator = followUpRuntime.coordinator;
+    const { petFollowUps, followUpHost } = followUpRuntime;
+    petRuleScheduler = followUpRuntime.coordinator;
     // Entering a Work Session from a chat: the store, bridge, bind executor
     // and reply delivery are composed in session-bridge-wiring.ts so this
     // root only names the collaborators it already owns.
@@ -2690,7 +2691,7 @@ async function createWindow(): Promise<BrowserWindow> {
       summaries: {
         collect: () => petFollowUps.collect(),
         control: (request) => followUpHost({ ...request }),
-        subscribe: (listener) => registeredFollowUps.subscribe(listener),
+        subscribe: followUpRuntime.subscribe,
       },
       journal: {
         list: async () => {
@@ -3625,25 +3626,25 @@ app.whenReady().then(async () => {
     automationHandle = startAutomation({
       store: new CronStore(defaultCronStorePath()),
       runner: async (request) => {
-        if (!isPetFollowUpWakeJob(request.job)) return automationRunner(request);
-        if (!petFollowUpWakeCoordinator)
+        if (!isPetRuleScheduleJob(request.job)) return automationRunner(request);
+        if (!petRuleScheduler)
           return {
             text: "Mimi 跟进服务不可用",
             reason: "unavailable",
             stop: { reason: "Mimi 跟进服务不可用" },
           };
-        await petFollowUpWakeCoordinator.wake(request.job);
-        return { text: "Registered follow-up wake handled", reason: "done" };
+        await petRuleScheduler.wake(request.job);
+        return { text: "Scheduled rule wake handled", reason: "done" };
       },
       onJobEvent: (event) => {
-        if (isPetFollowUpWakeJob(event.job)) {
+        if (isPetRuleScheduleJob(event.job)) {
           if (event.type === "job_missed")
-            void petFollowUpWakeCoordinator
+            void petRuleScheduler
               ?.missed(event.job)
               .catch((error) =>
                 dlog("main", "pet.followUp.missed.failed", { error: String(error) }),
               );
-          if (event.type === "job_error") petFollowUpWakeCoordinator?.repairSoon();
+          if (event.type === "job_error") petRuleScheduler?.repairSoon();
           return;
         }
         if (event.type !== "job_start") {
@@ -3660,7 +3661,7 @@ app.whenReady().then(async () => {
     });
     // Expose the live scheduler to the automation IPC service (Phase 3 UI).
     setAutomationScheduler(automationHandle.scheduler);
-    await petFollowUpWakeCoordinator?.start();
+    await petRuleScheduler?.start();
     // startAutomation installed the default executor (bindCronToEngine):
     // every cron job runs one headless codeshell turn. Driving Claude Code is
     // just one such turn calling DriveClaudeCode — no CC-specific scheduling.
@@ -4630,8 +4631,8 @@ registerDesktopShutdown(app, {
     petExternalVisibilityController = null;
     reconcileExternalAdapters = null;
     petDispatchService = null;
-    petFollowUpWakeCoordinator?.stop();
-    petFollowUpWakeCoordinator = null;
+    petRuleScheduler?.stop();
+    petRuleScheduler = null;
     petHostActionReceiptService = null;
     petImDecisions?.stop();
     petImDecisions = null;
