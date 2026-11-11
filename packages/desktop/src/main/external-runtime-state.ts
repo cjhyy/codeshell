@@ -208,6 +208,18 @@ export interface ExternalRuntimeTurnOutcome {
   streamed: true;
 }
 
+/** UTF-16 units of a final answer an external run's `turn_complete.text` carries. */
+export const EXTERNAL_TERMINAL_TEXT_MAX = 32 * 1024;
+
+function boundedTerminalText(text: string): string {
+  if (text.length <= EXTERNAL_TERMINAL_TEXT_MAX) return text;
+  let end = EXTERNAL_TERMINAL_TEXT_MAX;
+  // Never end on half a surrogate pair.
+  const last = text.charCodeAt(end - 1);
+  if (last >= 0xd800 && last <= 0xdbff) end -= 1;
+  return `${text.slice(0, end)}…`;
+}
+
 /**
  * Persists an externally-driven turn into the same transcript/state files the
  * native Engine owns, so replay, switching backends and app restart all see one
@@ -805,11 +817,14 @@ export class ExternalRuntimeSessionRecorder {
     return this.outcome!;
   }
 
-  /** The run's final answer, as native core puts it on `turn_complete.text`. */
+  /**
+   * The run's final answer, as native core puts it on `turn_complete.text`,
+   * bounded: the answer was already streamed (and journaled) as deltas, and a
+   * terminal larger than a Session's live snapshot would evict all of it.
+   */
   private completedText(reason: TerminalReason): { text?: string } {
-    return reason === "completed" && !this.lastError && this.replyText.trim()
-      ? { text: this.replyText }
-      : {};
+    if (reason !== "completed" || this.lastError || !this.replyText.trim()) return {};
+    return { text: boundedTerminalText(this.replyText) };
   }
 
   /** Whether this turn already received (or synthesized) its terminal boundary. */
