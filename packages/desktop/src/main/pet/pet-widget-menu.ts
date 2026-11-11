@@ -18,8 +18,8 @@ const STRINGS = {
   en: {
     open: "Open Mimi",
     moving: "Switch to moving mode",
-    movingUnavailable: (reason: string) =>
-      reason ? `Moving mode unavailable: ${reason}` : "Moving mode unavailable",
+    // Main's unavailability reasons are Chinese prose, not codes; English omits them.
+    movingUnavailable: (_reason: string) => "Moving mode unavailable",
     resumeComputer: "Resume computer use",
     stopComputer: "Stop computer use (⌘⇧Esc)",
     close: "Close Mimi",

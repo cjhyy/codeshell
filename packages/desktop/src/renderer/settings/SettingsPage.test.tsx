@@ -9,6 +9,7 @@ import {
   preferredModuleForScope,
   type SettingsScope,
 } from "./SettingsPage";
+import { translate } from "../i18n";
 import { DialogProvider } from "../ui/DialogProvider";
 import { ToastProvider } from "../ui/ToastProvider";
 
@@ -30,10 +31,13 @@ describe("SettingsPage", () => {
   });
 
   test("finds the Mimi entry by what its page holds, not only by its name", () => {
-    const keywords = "Mimi 宠物 通知 免打扰 微信 飞书 消息连接 记忆";
-    expect(matchesSettingsModule("微信", "Mimi", "", keywords)).toBe(true);
-    expect(matchesSettingsModule("免打扰", "Mimi", "", keywords)).toBe(true);
-    expect(matchesSettingsModule("微信", "Mimi", "")).toBe(false);
+    for (const lang of ["zh", "en"] as const) {
+      const label = translate(lang, "mimiSettings.entry.label");
+      const keywords = translate(lang, "mimiSettings.entry.keywords");
+      for (const query of lang === "zh" ? ["微信", "免打扰", "记忆"] : ["wechat", "quiet hours"])
+        expect(matchesSettingsModule(query, label, "", keywords)).toBe(true);
+      expect(matchesSettingsModule(lang === "zh" ? "微信" : "wechat", label, "")).toBe(false);
+    }
   });
 
   test("lists a Mimi entry that jumps to each Mimi settings section", () => {

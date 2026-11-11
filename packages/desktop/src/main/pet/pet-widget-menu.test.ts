@@ -18,6 +18,16 @@ describe("docked Mimi native menu", () => {
     expect(petWidgetMenuLanguage("ja")).toBe("en");
   });
 
+  test("the Chinese menu explains why moving mode is unavailable", () => {
+    const [, moving] = petWidgetMenuTemplate({
+      locale: "zh-CN",
+      movingAvailable: false,
+      movingUnavailableReason: "正在初始化",
+      actions: actions([]),
+    });
+    expect(moving).toMatchObject({ label: "移动模式不可用：正在初始化", enabled: false });
+  });
+
   test("lists open, moving, the computer-use gate and close", () => {
     const calls: string[] = [];
     const template = petWidgetMenuTemplate({
@@ -42,12 +52,13 @@ describe("docked Mimi native menu", () => {
     const template = petWidgetMenuTemplate({
       locale: "en-US",
       movingAvailable: false,
-      movingUnavailableReason: "driver missing",
+      movingUnavailableReason: "当前环境不支持移动模式",
       computerInput: { resume: true },
       actions: actions(calls),
     });
     expect(template[1]).toMatchObject({
-      label: "Moving mode unavailable: driver missing",
+      // The reason is Chinese prose from main; the English menu leaves it out.
+      label: "Moving mode unavailable",
       enabled: false,
     });
     expect(template[2].label).toBe("Resume computer use");
