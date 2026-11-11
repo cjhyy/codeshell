@@ -114,6 +114,23 @@ describe("Mimi presence projection", () => {
     expect(hook.result.current.presenceError).toBeNull();
   });
 
+  test("an older request's failure cannot replace a newer request's outcome", async () => {
+    hook = await renderHook(useMimiPresence);
+    await act(async () => initial.resolve(snapshot()));
+    let failFirst!: (error: Error) => void;
+    const first = new Promise<MimiPresenceSnapshot>((_, reject) => {
+      failFirst = reject;
+    });
+    pet.setPresence.mockImplementationOnce(() => first);
+    await act(async () => {
+      hook!.result.current.changeMimiPresence({ mode: "moving" });
+      hook!.result.current.changeMimiPresence({ mode: "docked" });
+    });
+    expect(hook.result.current.presenceError).toBeNull();
+    await act(async () => failFirst(new Error("stale failure")));
+    expect(hook.result.current.presenceError).toBeNull();
+  });
+
   test("unmount removes both listeners and ignores pending reads", async () => {
     hook = await renderHook(useMimiPresence);
     await hook.unmount();

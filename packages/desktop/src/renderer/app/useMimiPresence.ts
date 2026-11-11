@@ -86,13 +86,17 @@ export function useMimiPresence() {
   /** A change or retry: its failure is kept in `presenceError` instead of being dropped. */
   const report = useCallback(
     (request: () => Promise<MimiPresenceSnapshot> | undefined): void => {
-      void run(request).then(
+      const settled = run(request);
+      // run() takes its request id synchronously; only the newest request
+      // reports, so an older failure cannot cover a newer success (or vice versa).
+      const id = requestId.current;
+      const latest = () => mounted.current && id === requestId.current;
+      void settled.then(
         () => {
-          if (mounted.current) setPresenceError(null);
+          if (latest()) setPresenceError(null);
         },
         (error: unknown) => {
-          if (mounted.current)
-            setPresenceError(error instanceof Error ? error.message : String(error));
+          if (latest()) setPresenceError(error instanceof Error ? error.message : String(error));
         },
       );
     },
