@@ -805,8 +805,51 @@ describe("schedule rules", () => {
       occurrence: NINE + 24 * HOUR,
       status: "scheduled",
       detail: "写周报",
+      // The rule list's "last fired": structured, not read from the detail.
+      previous: { occurrence: NINE, status: "notified", completedAt: NINE + 30_000 },
     });
     expect(settled?.version).toBe(1);
+    // The next claim keeps it until that occurrence settles in turn.
+    clock = NINE + 24 * HOUR + 1_000;
+    const claimed = await s.claimOccurrence(ID, 1, NINE + 24 * HOUR);
+    expect(claimed?.wake.previous).toEqual({
+      occurrence: NINE,
+      status: "notified",
+      completedAt: NINE + 30_000,
+    });
+    const next = await s.settleOccurrence(ID, NINE + 24 * HOUR, { status: "failed" });
+    expect(next?.wake.previous).toEqual({
+      occurrence: NINE + 24 * HOUR,
+      status: "failed",
+      completedAt: NINE + 24 * HOUR + 1_000,
+    });
+  });
+
+  test("a repeating rule resumed after its occurrence passed counts from now", async () => {
+    const s = store();
+    await s.createScheduleRule(schedule({ when: daily }));
+    const paused = await s.update(ID, 1, { state: "paused" });
+    clock = NINE + 2 * 24 * HOUR + HOUR;
+    const resumed = await s.update(ID, paused.version, { state: "active" });
+    expect(resumed.wake).toEqual({ occurrence: NINE + 3 * 24 * HOUR, status: "scheduled" });
+  });
+
+  test("a repeating rule resumed before its occurrence keeps it; a one-shot keeps its instant", async () => {
+    const s = store();
+    await s.createScheduleRule(schedule({ when: daily }));
+    const paused = await s.update(ID, 1, { state: "paused" });
+    expect((await s.update(ID, paused.version, { state: "active" })).wake).toEqual({
+      occurrence: NINE,
+      status: "scheduled",
+    });
+    const once = "rule-00000000-0000-4000-8000-0000000000cc";
+    await s.createScheduleRule(schedule({ id: once }));
+    const off = await s.update(once, 1, { state: "paused" });
+    clock = NOW + 2 * HOUR;
+    // Its catch-up window decides, as for a sleep.
+    expect((await s.update(once, off.version, { state: "active" })).wake?.occurrence).toBe(
+      NOW + HOUR,
+    );
   });
 
   test("a sleep over several occurrences moves on from now, not one day at a time", async () => {

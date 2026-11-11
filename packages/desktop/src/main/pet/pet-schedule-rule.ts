@@ -77,6 +77,18 @@ export interface RuleWake {
   detail?: string;
   /** Long task a `run-mimi` occurrence launched. */
   taskId?: string;
+  /**
+   * A repeating rule's last settled occurrence, kept when it moves on to the
+   * next one (and through that one's claim), so the rule list can say when it
+   * last fired and how. Display only: nothing schedules from it.
+   */
+  previous?: RuleWakePrevious;
+}
+
+export interface RuleWakePrevious {
+  occurrence: number;
+  status: RuleWakeOutcome["status"];
+  completedAt: number;
 }
 
 export type RuleWakeOutcome = {
@@ -222,6 +234,18 @@ const WAKE_STATUSES: readonly RuleWakeStatus[] = [
   "unknown",
 ];
 
+const SETTLED_STATUSES: readonly RuleWakeStatus[] = ["notified", "launched", "failed", "unknown"];
+
+function isWakePrevious(value: unknown): value is RuleWakePrevious {
+  return (
+    isRecord(value) &&
+    hasOnlyKeys(value, ["occurrence", "status", "completedAt"]) &&
+    isFollowUpTimestamp(value.occurrence) &&
+    (SETTLED_STATUSES as readonly unknown[]).includes(value.status) &&
+    isFollowUpTimestamp(value.completedAt)
+  );
+}
+
 export function parseRuleWake(value: unknown): RuleWake | undefined {
   if (!isRecord(value)) return undefined;
   if (
@@ -233,8 +257,10 @@ export function parseRuleWake(value: unknown): RuleWake | undefined {
       "completedAt",
       "detail",
       "taskId",
+      "previous",
     ]) ||
     !isFollowUpTimestamp(value.occurrence) ||
+    (value.previous !== undefined && !isWakePrevious(value.previous)) ||
     (value.stagger !== undefined &&
       (typeof value.stagger !== "number" ||
         !Number.isSafeInteger(value.stagger) ||

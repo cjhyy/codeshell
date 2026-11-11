@@ -4,7 +4,8 @@ import type { PetNoticesState } from "../../../shared/pet-notices";
 
 export type NoticesReadApi = Pick<PetApi, "getNoticesState" | "onNoticesChanged">;
 
-function defaultApi(): NoticesReadApi | undefined {
+/** The preload's Mimi API, when this window has one. */
+export function defaultNoticesApi(): PetApi | undefined {
   try {
     return window.codeshell?.pet;
   } catch {
@@ -16,7 +17,7 @@ function defaultApi(): NoticesReadApi | undefined {
  * Main's notice state (channels, system rule, settings), read-only and kept
  * fresh on `onNoticesChanged`. For views that show rules without editing.
  */
-export function usePetNoticesState(api: NoticesReadApi | undefined = defaultApi()) {
+export function usePetNoticesState(api: NoticesReadApi | undefined = defaultNoticesApi()) {
   const [state, setState] = useState<PetNoticesState | null>(null);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
   const [loadError, setLoadError] = useState("");
@@ -25,15 +26,16 @@ export function usePetNoticesState(api: NoticesReadApi | undefined = defaultApi(
   const alive = useRef(false);
   const generation = useRef(0);
 
-  const reload = useCallback(() => {
+  /** Refetch; the promise settles (never rejects) once this read has landed or failed. */
+  const reload = useCallback((): Promise<void> => {
     const current = apiRef.current;
     const id = ++generation.current;
     if (!current?.getNoticesState) {
       setLoadError("unavailable");
       setLoadState("error");
-      return;
+      return Promise.resolve();
     }
-    current.getNoticesState().then(
+    return current.getNoticesState().then(
       (next) => {
         if (!alive.current || id !== generation.current) return;
         setState(next);
@@ -50,7 +52,7 @@ export function usePetNoticesState(api: NoticesReadApi | undefined = defaultApi(
 
   useEffect(() => {
     alive.current = true;
-    reload();
+    void reload();
     const off = apiRef.current?.onNoticesChanged?.(reload);
     return () => {
       alive.current = false;

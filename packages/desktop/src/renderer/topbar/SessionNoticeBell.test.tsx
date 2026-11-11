@@ -163,6 +163,37 @@ describe("SessionNoticeBell", () => {
     expect(delegated).toContain('aria-disabled="true"');
   });
 
+  test("says who set each rule up, so an IM chat's watch never reads as the owner's", async () => {
+    const watched: PetSessionBellState = {
+      available: true,
+      on: true,
+      origin: "watch",
+      sources: ["watch"],
+      delegated: false,
+      ruleId: "rule-w",
+      channel: "lark",
+      imLabel: "飞书",
+      ready: "ready",
+      watchesDone: true,
+    };
+    expect(sessionBellLabel(watched, t as never)).toBe(
+      "IM 里的对话在看这个会话，结束时会告诉那个对话；在 Mimi 设置 › 规则与跟进 里管理 · 来源：IM 里在看",
+    );
+    expect(isDelegatedOnly(watched)).toBe(true);
+    expect(sessionBellLabel({ ...ON, sources: ["owner", "delegation", "watch"] }, t as never)).toBe(
+      "会提醒你：微信 · 来源：自己设的、派活自动、IM 里在看",
+    );
+    expect(sessionBellLabel({ ...DELEGATED, sources: ["delegation"] }, t as never)).toBe(
+      "Mimi 派的活：完成和卡住都会告诉你 · 来源：派活自动",
+    );
+    const html = renderToStaticMarkup(
+      <SessionNoticeBellButton state={watched} onToggle={() => undefined} />,
+    );
+    expect(html).toContain('data-session-bell="delegated"');
+    expect(html).toContain('data-session-bell-origin="watch"');
+    expect(html).toContain('aria-disabled="true"');
+  });
+
   test("click toggles the bell through IPC and shows the new state", async () => {
     const api = fakeApi([["s-work", OFF]]);
     installApi(api);

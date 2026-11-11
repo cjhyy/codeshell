@@ -47,6 +47,19 @@ const noticesState: PetNoticesState = {
     presenceIdleSec: 120,
     delegatedFromDesktop: "auto",
   },
+  rules: [
+    {
+      id: "all-sessions",
+      version: 2,
+      kind: "all-sessions",
+      state: "active",
+      source: "system",
+      events: ["done", "blocked"],
+      target: { kind: "channel", label: "个人微信", ready: "ready" },
+      actions: ["pause"],
+      updatedAt: 1,
+    },
+  ],
 };
 
 describe("PetSettingsShell", () => {
@@ -193,10 +206,10 @@ describe("PetSettingsShell", () => {
     const [manage] = find(container, "data-pet-notices-manage-channels");
     act(() => reactPropsOf(manage).onClick());
     await mountPage("rules");
-    const [rule] = find(container, "data-pet-rule", "system");
+    const [rule] = find(container, "data-pet-rule", "all-sessions");
     expect(rule.getAttribute("data-state")).toBe("active");
-    expect(textOf(rule)).toContain("推到 个人微信");
-    expect(textOf(rule)).toContain("提醒：完成、卡住");
+    expect(textOf(rule)).toContain("发到个人微信");
+    expect(textOf(rule)).toContain("不在电脑前时，任何会话完成、卡住");
     const [open] = find(container, "data-pet-rules-open-notifications");
     act(() => reactPropsOf(open).onClick());
     expect(calls).toEqual(["connections", "notifications"]);

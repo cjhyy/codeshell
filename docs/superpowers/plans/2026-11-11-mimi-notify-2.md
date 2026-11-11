@@ -67,5 +67,10 @@
 
 ## 2d 规则列表界面
 
-- 配置中心"通知与主动"卡片列出主人建过的规则（会话规则、跟进、系统规则）：暂停/恢复/删除（删除 = `state: "cancelled"`）。复用 `pet:notices:get-state` 返回 `rules[]`，泛化一个现有变更通道（例如 `set-session-bell` → `update-rule`），不加新通道。
-- 会话铃铛显示该会话规则来源（自己说的 / 派活自动建的 / 看着它）。
+2d-1（已实现）：Mimi 设置页外壳与分区。2d-2（已实现）：
+
+1. 数据（`pet-notice-rule-list.ts`）：`pet:notices:get-state` 带 `rules: PetNoticeRuleSummary[]`（形状见设计稿 §11）；系统规则总在，终态只留最近 20 条；目标只给渠道名与私聊/群聊，不带对话 id。
+2. 变更：`pet:notices:set-system-rule` 改名 `pet:notices:update-rule`（路由数与 preload invoke 数不变，旧 patch 载荷照收），新载荷 `{ ruleId, expectedVersion, action }`；拒绝以结果返回（`version_conflict` / `not_allowed` / `not_found`）。晨报/收工/心跳写 settings 再同步规则；跟进删除走跟进控制；其余走规则表。
+3. 规则表：循环规则的 `wake.previous`（上一次结果，只用于显示，认领期间保留）；暂停后恢复的循环规则从现在往后算。旧版本（2c-2）读到带 `previous` 的行会逐条隔离，本版本加载时恢复（同 2c-1 的做法，不升 `SCHEMA_VERSION`）。
+4. 界面：`RulesSection` 分组列表 + 暂停/恢复/删除（确认）/打开会话；"通知与主动"下加"主动"卡片（`PetProactiveFields`，只写动过的叶子）。
+5. 会话铃铛：`sources` 列出每条规则的来源；只有 `watch-session` 规则时只读（`origin: "watch"`），关铃铛不再取消它。

@@ -53,6 +53,11 @@ export const pet = {
         bellOn: "会提醒你：{target}",
         bellDesktop: "桌面",
         bellDelegated: "Mimi 派的活：完成和卡住都会告诉你",
+        bellWatched:
+          "IM 里的对话在看这个会话，结束时会告诉那个对话；在 Mimi 设置 › 规则与跟进 里管理",
+        bellSources: " · 来源：{sources}",
+        bellSourceSeparator: "、",
+        bellSource: { owner: "自己设的", delegation: "派活自动", watch: "IM 里在看" },
         bellNotReady: "（{target} 未就绪）",
         bellFailed: "提醒设置失败：{error}",
         quietHoursLabel: "免打扰时段",
@@ -577,6 +582,11 @@ export const pet = {
         bellOn: "Will notify you: {target}",
         bellDesktop: "desktop",
         bellDelegated: "Work Mimi delegated: you will hear when it finishes or gets stuck",
+        bellWatched:
+          "An IM chat is watching this Session and will hear when it ends; manage it in Mimi settings › Rules & follow-ups",
+        bellSources: " · From: {sources}",
+        bellSourceSeparator: ", ",
+        bellSource: { owner: "set by you", delegation: "delegation", watch: "watched from IM" },
         bellNotReady: " ({target} not ready)",
         bellFailed: "Could not change the reminder: {error}",
         quietHoursLabel: "Quiet hours",

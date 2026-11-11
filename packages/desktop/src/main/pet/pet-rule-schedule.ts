@@ -42,7 +42,7 @@ const KEY_PATTERN =
 const JOB_PROMPT = "Mimi scheduled rule";
 const JOB_NAME_MAX = 512;
 /** The core scheduler's misfire grace: later than this, a `skip` occurrence is missed. */
-const MISFIRE_GRACE_MS = 90_000;
+export const MISFIRE_GRACE_MS = 90_000;
 const MISSED_ONCE = "已错过约定时间或补发期限，未自动执行。请重新改期。";
 const MISSED_REPEAT = "错过了一次（电脑睡眠或未运行），未补发；之后按时提醒。";
 
