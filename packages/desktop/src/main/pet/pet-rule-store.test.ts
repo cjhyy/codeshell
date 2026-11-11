@@ -683,3 +683,285 @@ describe("lock hook", () => {
     expect(entered).toBe(3);
   });
 });
+
+describe("schedule rules", () => {
+  const HOUR = 60 * 60_000;
+  const ID = "rule-00000000-0000-4000-8000-0000000000aa";
+  function schedule(
+    overrides: Partial<Parameters<PetRuleStore["createScheduleRule"]>[0]> = {},
+  ): Parameters<PetRuleStore["createScheduleRule"]>[0] {
+    return {
+      id: ID,
+      when: { kind: "schedule", at: NOW + HOUR, timezone: "UTC", missedPolicy: "fire-once" },
+      then: { mode: "remind", title: "交材料", text: "提醒我交材料" },
+      channel: "auto",
+      target: { kind: "owner" },
+      ...overrides,
+    };
+  }
+  /** 2023-11-15 09:00 UTC: the first "0 9 * * *" after NOW (2023-11-14 22:13 UTC). */
+  const NINE = Date.UTC(2023, 10, 15, 9, 0);
+  const daily = {
+    kind: "schedule" as const,
+    cron: "0 9 * * *",
+    timezone: "UTC",
+    missedPolicy: "fire-once" as const,
+  };
+
+  test("a one-shot is stored with its first occurrence scheduled", async () => {
+    const s = store();
+    const rule = await s.createScheduleRule(schedule());
+    expect(rule).toMatchObject({
+      id: ID,
+      version: 1,
+      origin: "user",
+      createdBy: "follow-up",
+      attention: "always",
+      state: "active",
+      when: { kind: "schedule", at: NOW + HOUR },
+      wake: { occurrence: NOW + HOUR, status: "scheduled" },
+    });
+    const reloaded = store();
+    await reloaded.load();
+    expect(reloaded.get(ID)).toEqual(rule);
+  });
+
+  test("the same id is a replay: it returns the rule as it is now, never re-creates it", async () => {
+    const s = store();
+    await s.createScheduleRule(schedule());
+    const moved = await s.rescheduleRule(ID, 1, { ...schedule().when, at: NOW + 2 * HOUR });
+    expect(await s.createScheduleRule(schedule())).toEqual(moved);
+    expect(s.list()).toHaveLength(1);
+  });
+
+  test("a repeating rule starts at the next cron occurrence", async () => {
+    const s = store();
+    const rule = await s.createScheduleRule(schedule({ when: daily }));
+    expect(rule.wake).toEqual({ occurrence: NINE, status: "scheduled" });
+  });
+
+  test("refuses a past one-shot, a too-frequent or a never-firing cron", async () => {
+    const s = store();
+    await expect(
+      s.createScheduleRule(schedule({ when: { ...schedule().when, at: NOW - 1 } })),
+    ).rejects.toThrow("schedule_in_past");
+    await expect(
+      s.createScheduleRule(schedule({ when: { ...daily, cron: "*/10 * * * *" } })),
+    ).rejects.toThrow("invalid_rule");
+    await expect(
+      s.createScheduleRule(schedule({ when: { ...daily, cron: "0 9 31 2 *" } })),
+    ).rejects.toThrow("schedule_never_fires");
+    await expect(
+      s.createScheduleRule(
+        schedule({ when: { ...daily, catchUpUntil: NOW + 2 * HOUR } as typeof daily }),
+      ),
+    ).rejects.toThrow("invalid_rule");
+    expect(s.list()).toEqual([]);
+  });
+
+  test("schedule rules never match a Session's events", async () => {
+    const s = store();
+    await s.createScheduleRule(schedule());
+    await s.upsertSessionRule(upsert());
+    expect(s.activeForSession("s-login").map((rule) => rule.when.kind)).toEqual(["session"]);
+  });
+
+  test("an occurrence is claimed once, only when due, and settles without a version bump", async () => {
+    const s = store();
+    await s.createScheduleRule(schedule());
+    expect(await s.claimOccurrence(ID, 1, NOW + HOUR)).toBeUndefined();
+    clock = NOW + HOUR;
+    expect(await s.claimOccurrence(ID, 2, NOW + HOUR)).toBeUndefined();
+    expect(await s.claimOccurrence(ID, 1, NOW)).toBeUndefined();
+    const claimed = await s.claimOccurrence(ID, 1, NOW + HOUR);
+    expect(claimed?.wake).toEqual({ occurrence: NOW + HOUR, status: "claimed", claimedAt: clock });
+    expect(await s.claimOccurrence(ID, 1, NOW + HOUR)).toBeUndefined();
+    clock += 5;
+    const settled = await s.settleOccurrence(ID, 1, NOW + HOUR, {
+      status: "notified",
+      detail: "提醒我交材料",
+    });
+    expect(settled).toMatchObject({
+      version: 1,
+      state: "active",
+      wake: { status: "notified", completedAt: clock, detail: "提醒我交材料" },
+    });
+    // Settling again (a duplicate callback) changes nothing.
+    expect(await s.settleOccurrence(ID, 1, NOW + HOUR, { status: "failed" })).toBeUndefined();
+  });
+
+  test("a repeating rule moves on to its next occurrence once settled", async () => {
+    const s = store();
+    await s.createScheduleRule(schedule({ when: daily }));
+    clock = NINE + 30_000;
+    await s.claimOccurrence(ID, 1, NINE);
+    const settled = await s.settleOccurrence(ID, 1, NINE, { status: "notified", detail: "写周报" });
+    expect(settled?.wake).toEqual({
+      occurrence: NINE + 24 * HOUR,
+      status: "scheduled",
+      detail: "写周报",
+    });
+    expect(settled?.version).toBe(1);
+  });
+
+  test("a sleep over several occurrences moves on from now, not one day at a time", async () => {
+    const s = store();
+    await s.createScheduleRule(schedule({ when: daily }));
+    clock = NINE + 3 * 24 * HOUR + HOUR;
+    await s.claimOccurrence(ID, 1, NINE);
+    const settled = await s.settleOccurrence(ID, 1, NINE, { status: "failed", detail: "错过" });
+    expect(settled?.wake?.occurrence).toBe(NINE + 4 * 24 * HOUR);
+  });
+
+  test("a surviving claim is recovered as unknown; a repeating rule moves on", async () => {
+    const s = store();
+    await s.createScheduleRule(schedule());
+    await s.createScheduleRule(
+      schedule({ id: "rule-00000000-0000-4000-8000-0000000000bb", when: daily }),
+    );
+    clock = NINE + 1_000;
+    await s.claimOccurrence(ID, 1, NOW + HOUR);
+    await s.claimOccurrence("rule-00000000-0000-4000-8000-0000000000bb", 1, NINE);
+    const reloaded = store();
+    expect(await reloaded.recoverClaims()).toBe(2);
+    expect(reloaded.get(ID)?.wake).toMatchObject({ status: "unknown", completedAt: clock });
+    expect(reloaded.get("rule-00000000-0000-4000-8000-0000000000bb")?.wake).toMatchObject({
+      occurrence: NINE + 24 * HOUR,
+      status: "scheduled",
+    });
+    expect(await reloaded.recoverClaims()).toBe(0);
+  });
+
+  test("reschedule bumps the version and starts a fresh occurrence; never while claimed", async () => {
+    const s = store();
+    await s.createScheduleRule(schedule());
+    const moved = await s.rescheduleRule(ID, 1, daily);
+    expect(moved).toMatchObject({
+      version: 2,
+      when: daily,
+      wake: { occurrence: NINE, status: "scheduled" },
+    });
+    await expect(s.rescheduleRule(ID, 1, daily)).rejects.toThrow("version_conflict");
+    clock = NINE;
+    await s.claimOccurrence(ID, 2, NINE);
+    await expect(s.rescheduleRule(ID, 2, schedule().when)).rejects.toThrow("rule_busy");
+    await expect(s.update(ID, 2, { state: "cancelled" })).rejects.toThrow("rule_busy");
+    await s.settleOccurrence(ID, 2, NINE, { status: "notified" });
+    const done = await s.update(ID, 2, { state: "completed" });
+    expect(done.state).toBe("completed");
+    await expect(s.rescheduleRule(ID, 3, daily)).rejects.toThrow("invalid_rule");
+  });
+
+  test("session-only patches and session rules with a wake are invalid", async () => {
+    const s = store();
+    await s.createScheduleRule(schedule());
+    await expect(s.update(ID, 1, { events: ["done"] })).rejects.toThrow("invalid_rule");
+    const session = await s.upsertSessionRule(upsert());
+    await expect(s.rescheduleRule(session.id, 1, daily)).rejects.toThrow("invalid_rule");
+  });
+
+  test("malformed schedule rows are quarantined one by one", async () => {
+    const s = store();
+    const good = await s.createScheduleRule(schedule());
+    const disk = await readDisk();
+    const row = disk.rules[0] as NoticeRule;
+    const bad = [
+      { ...row, id: "rule-00000000-0000-4000-8000-000000000001", wake: undefined },
+      { ...row, id: "rule-00000000-0000-4000-8000-000000000002", then: { mode: "compose" } },
+      {
+        ...row,
+        id: "rule-00000000-0000-4000-8000-000000000003",
+        when: { ...row.when, cron: "0 9 * * *" },
+      },
+      {
+        ...row,
+        id: "rule-00000000-0000-4000-8000-000000000004",
+        wake: { occurrence: 1, status: "claimed" },
+      },
+      { ...row, id: "rule-00000000-0000-4000-8000-000000000005", createdBy: "notify-me" },
+    ];
+    await writeFile(filePath, JSON.stringify({ ...disk, rules: [row, ...bad] }), { mode: 0o600 });
+    const reloaded = store();
+    await reloaded.load();
+    expect(reloaded.list()).toEqual([good]);
+    await reloaded.createScheduleRule(
+      schedule({ id: "rule-00000000-0000-4000-8000-0000000000cc" }),
+    );
+    expect((await readDisk()).quarantine).toHaveLength(bad.length);
+  });
+
+  test("a mutation that changes nothing writes nothing and tells no listener", async () => {
+    const s = store();
+    await s.createScheduleRule(schedule());
+    let calls = 0;
+    s.onChange(() => {
+      calls += 1;
+    });
+    const before = await readFile(filePath, "utf8");
+    expect(await s.claimOccurrence(ID, 1, NOW + HOUR)).toBeUndefined();
+    expect(await s.recoverClaims()).toBe(0);
+    expect(calls).toBe(0);
+    expect(await readFile(filePath, "utf8")).toBe(before);
+  });
+
+  test("the cap evicts fired one-shots after finished rules, never pending ones", async () => {
+    const s = store({ maxRules: 2 });
+    const fired = await s.createScheduleRule(schedule());
+    clock = NOW + HOUR;
+    await s.claimOccurrence(ID, 1, NOW + HOUR);
+    await s.settleOccurrence(ID, 1, NOW + HOUR, { status: "notified" });
+    await s.createScheduleRule(
+      schedule({
+        id: "rule-00000000-0000-4000-8000-0000000000bb",
+        when: { ...schedule().when, at: NOW + 5 * HOUR },
+      }),
+    );
+    await s.upsertSessionRule(upsert());
+    expect(s.get(fired.id)).toBeUndefined();
+    await expect(s.upsertSessionRule(upsert({ sessionId: "other" }))).rejects.toThrow(
+      "rule_store_full",
+    );
+  });
+});
+
+describe("schedule rules: stagger", () => {
+  const at = NOW + 60 * 60_000;
+  const one = (n: number, when: Record<string, unknown> = {}) => ({
+    id: `rule-00000000-0000-4000-8000-00000000000${n}`,
+    when: {
+      kind: "schedule" as const,
+      at,
+      timezone: "UTC",
+      missedPolicy: "fire-once" as const,
+      ...when,
+    },
+    then: { mode: "remind" as const, title: `t${n}`, text: "x" },
+    channel: "auto",
+    target: { kind: "owner" as const },
+  });
+
+  test("same-minute occurrences are spread a minute apart, fixed once assigned", async () => {
+    const s = store();
+    const a = await s.createScheduleRule(one(1));
+    const b = await s.createScheduleRule(one(2, { at: at + 20_000 }));
+    const c = await s.createScheduleRule(one(3));
+    const d = await s.createScheduleRule(one(4, { at: at + 60_000 }));
+    expect([a, b, c, d].map((rule) => rule.wake.stagger)).toEqual([
+      undefined,
+      60_000,
+      120_000,
+      undefined,
+    ]);
+    // a firing does not move b or c.
+    clock = at;
+    await s.claimOccurrence(a.id, 1, at);
+    await s.settleOccurrence(a.id, 1, at, { status: "notified" });
+    expect(s.get(b.id)?.wake?.stagger).toBe(60_000);
+    expect(s.get(c.id)?.wake?.stagger).toBe(120_000);
+    // A finished neighbour no longer counts.
+    await s.update(c.id, 1, { state: "cancelled" });
+    clock = NOW;
+    const e = await s.createScheduleRule(one(5));
+    expect(e.wake.stagger).toBe(120_000);
+  });
+});
