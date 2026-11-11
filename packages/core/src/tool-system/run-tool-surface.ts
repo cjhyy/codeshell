@@ -71,6 +71,7 @@ export class RunToolSurface {
   private readonly discoveredNames = new Set<string>();
   private readonly frozenByName = new Map<string, ToolDefinition>();
   private readonly hasPersistedSelection: boolean;
+  private readonly hasPersistedSnapshot: boolean;
   private readonly migrateLegacySelection: boolean;
   private readonly cacheIdentity?: string;
   private initialized = false;
@@ -88,6 +89,7 @@ export class RunToolSurface {
     this.initialToolNames = initialToolNames ? [...initialToolNames] : undefined;
     const selection = normalizeSessionToolSelection(options.selection);
     this.hasPersistedSelection = selection !== undefined;
+    this.hasPersistedSnapshot = selection?.frozenDefinitions !== undefined;
     this.migrateLegacySelection =
       !!selection && (options.selection as { version?: unknown }).version === 1;
     this.cacheIdentity = selection?.cacheIdentity;
@@ -124,9 +126,13 @@ export class RunToolSurface {
       byName.has("CallTool")
     )
       this.topNames.add("CallTool");
-    for (const name of this.topNames) {
-      const definition = byName.get(name);
-      if (definition && !this.frozenByName.has(name)) this.frozenByName.set(name, definition);
+    // An explicit snapshot is complete, even if a retained name had no schema
+    // at the cold boundary. Filling those holes on resume would grow the prefix.
+    if (!this.hasPersistedSnapshot) {
+      for (const name of this.topNames) {
+        const definition = byName.get(name);
+        if (definition) this.frozenByName.set(name, definition);
+      }
     }
     this.onSelectionChanged?.(this.getSelection());
   }
@@ -146,7 +152,7 @@ export class RunToolSurface {
     const unavailable: string[] = [];
     for (const name of new Set(names)) {
       if (this.isEligible(name)) {
-        if (!this.topNames.has(name)) this.discoveredNames.add(name);
+        if (!this.frozenByName.has(name)) this.discoveredNames.add(name);
         selected.push(name);
       } else {
         unavailable.push(name);
@@ -190,7 +196,7 @@ export class RunToolSurface {
   }
 
   isCallable(name: string): boolean {
-    return this.isEligible(name) && (this.topNames.has(name) || this.discoveredNames.has(name));
+    return this.isEligible(name) && (this.frozenByName.has(name) || this.discoveredNames.has(name));
   }
 
   /** @deprecated Use isCallable: discovery no longer changes the provider's tools. */

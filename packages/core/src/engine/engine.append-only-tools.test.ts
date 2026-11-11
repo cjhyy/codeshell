@@ -176,7 +176,13 @@ function registerAction(value: InstanceType<typeof Engine>, name: string, revisi
 
 function engine(
   root: string,
-  options: { revision?: string; maxContextTokens?: number; model?: string; baseUrl?: string } = {},
+  options: {
+    revision?: string;
+    maxContextTokens?: number;
+    model?: string;
+    baseUrl?: string;
+    contextStrategy?: "summary" | "notes";
+  } = {},
 ) {
   const value = new Engine({
     llm: {
@@ -190,7 +196,7 @@ function engine(
     sessionStorageDir: join(root, "sessions"),
     settingsScope: options.maxContextTokens ? "project" : "isolated",
     maxContextTokens: options.maxContextTokens,
-    contextStrategy: "summary",
+    contextStrategy: options.contextStrategy ?? "summary",
     headless: false,
     maxTurns: 24,
     customSystemPrompt: "Finish the local fixture.",
@@ -582,6 +588,91 @@ for (const change of ["model", "route"] as const) {
       discovered: [],
     });
     expect(executed).toContainEqual({ name: "ComplexA", args: complexArgs });
+    expect(script).toHaveLength(0);
+  });
+}
+
+for (const boundary of ["host-notes", "instruction-revocation"] as const) {
+  test(`${boundary} promotes schemas removed before the new run assembles its prefix`, async () => {
+    const root = directory();
+    const sessionId = `append-only-${boundary}`;
+    const options = {
+      contextStrategy: boundary === "host-notes" ? ("notes" as const) : ("summary" as const),
+    };
+    const value = engine(root, options);
+    select("ComplexA");
+    for (let index = 0; index < 4; index++) {
+      script.push({
+        tools: [{ id: `old-${index}`, toolName: "Warmup", args: {} }],
+        text: "OLD_DISCOVERY_CONTEXT " + "Earlier verified local work. ".repeat(150),
+      });
+    }
+    stop();
+    await value.run("Discover the local tool", { sessionId, behaviorMode });
+    const manager = value.getSessionManager();
+    const session = manager.resume(sessionId);
+    expect(session.state.toolSelection!.discovered).toEqual(["ComplexA"]);
+    const events = session.transcript.getEvents();
+    if (boundary === "host-notes") {
+      const { SessionContextNotes } = await import("../context/notes.js");
+      const notes = new SessionContextNotes(session.transcript);
+      notes.markModelBoundary();
+      notes.save("Continue the same task using the previously discovered local tool.");
+    } else {
+      // Resume a persisted instruction revision whose provider no longer owns it.
+      // Its derived assistant/tool history must be discarded, while user input remains.
+      manager.updateSessionState(sessionId, {
+        instructionContextStartEventId: events.find(
+          (event) => event.type === "message" && event.data.role === "assistant",
+        )!.id,
+        instructionSnapshots: [
+          {
+            bindingId: "00000000-0000-4000-8000-000000000001",
+            cwd: root,
+            provider,
+            model: "gpt-4o",
+            name: "revoked-fixture",
+            body: "Earlier instruction revision.",
+            bodyHash: "a".repeat(64),
+            sourceRevision: "b".repeat(64),
+            revision: "c".repeat(64),
+          },
+        ],
+      });
+    }
+    registerAction(value, "ComplexA", "v2");
+    const offset = calls.length;
+    step("after-history-boundary", "ComplexA", structuredClone(complexArgs));
+    stop();
+    expect(
+      (
+        await value.run("Continue the local task", {
+          sessionId,
+          behaviorMode,
+          clientMessageId: "next-intent",
+          ...(boundary === "host-notes"
+            ? { archiveBeforeCurrentTurn: { segmentId: "notes-boundary" } }
+            : {}),
+        })
+      ).reason,
+    ).toBe("completed");
+    const cycle = calls[offset]!;
+    expect(toolResult("select-ComplexA", cycle)).toBeUndefined();
+    expect(JSON.stringify(cycle.messages)).not.toContain("OLD_DISCOVERY_CONTEXT");
+    expect(cycle.tools.find((tool) => tool.name === "ComplexA")?.description).toContain("v2");
+    expect(cycle.systemPrompt).toContain("ComplexA");
+    const selection = manager.readSessionState(sessionId)!.toolSelection!;
+    expect(selection.discovered).toEqual([]);
+    expect(selection.names).toContain("ComplexA");
+    expect(toolResult("after-history-boundary")).not.toHaveProperty("is_error", true);
+    stablePrefix(calls.slice(offset), cycle);
+
+    await value.dispose();
+    const restarted = engine(root, { ...options, revision: "v3" });
+    const restartOffset = calls.length;
+    stop();
+    await restarted.run("Continue after restart", { sessionId, behaviorMode });
+    stablePrefix(calls.slice(restartOffset), cycle);
     expect(script).toHaveLength(0);
   });
 }
