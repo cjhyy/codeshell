@@ -19,7 +19,7 @@
 ## 2a 出口收口
 
 1. 跟进提醒（`pet-follow-up-runtime.ts:49-66`）改为提交 Notice（新 kind `followup.due`）：有 `completionTarget` → 目标为该路由，否则 `auto`（在场桌面、不在场最近 IM）。主人自己定的时间：不受免打扰压制（主人选了这个时刻），但计入每小时上限之外的 P0 兜底；有 ledger、去重键（唤醒键）、过期（`catchUpUntil`）。桌面通知走路由器的桌面出口，不再直接 `desktopNotifier.notify`。`resume` 意图不变（仍唤醒 Mimi / 长任务），只是它产生的提醒也过路由器。
-2. `ReportToMimi` 原路回传（`index.ts:2407-2502`、`pet-report-turn.ts:71-78`）改为提交 Notice（kind `session.report`），目标由送达计划决定（长任务来源路由 ∪ 会话规则 ∪ 绑定路由去重），受免打扰/频控（P1），合并进摘要。
+2. `ReportToMimi` 原路回传（`index.ts:2407-2502`、`pet-report-turn.ts:71-78`）改为提交 Notice（kind `session.report`），目标由送达计划的 `planReport` 决定，只有两类：活动长任务的 IM 来源（Mimi 汇报轮的草稿，同以前）与每条指向 IM 对话的 `watch-session` 规则（模板），按对话去重；不发给主人（`NotifyMe`/铃铛规则、桌面派活），不发绑定或通知模式的路由。受免打扰/频控（P1），合并进摘要。
 3. `WatchSession`：host handler（`index.ts:2233-2280`）改为建 `session` 规则（`createdBy: "watch-session"`、`target: route`），保留"已在看"和"已结束"的回复；长任务路径保留给真正的派活。对已有 watch 长任务的会话行为不变。
 4. 渲染层"会话完成"本地通知（`App.tsx:1567`）：会话有活动规则时整体让位给路由器（不只 60 秒内触发过）。
 5. 设计稿 §1.4/§8.1 出口表更新；§15 删掉"ReportToMimi 原路回传和跟进提醒自己发送"。

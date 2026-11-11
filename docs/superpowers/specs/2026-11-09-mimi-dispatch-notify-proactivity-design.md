@@ -55,17 +55,17 @@
 
 收口后（1a 起，2a 补齐）各出口的去向：
 
-| 出口                                           | 现在                                                                                                     | 期  |
-| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------- | --- |
-| 长任务收尾（`publish(pet.task.*)` + 桌面通知） | 收尾轮的 `GatewayReply` 只作草稿，Notice `session.done/failed` 过路由器                                  | 1a  |
-| 规则命中的完成 / 失败 / 卡住                   | Notice `session.*` 过路由器，目标来自送达计划                                                            | 1a  |
-| `PetImDecisions` 审批码                        | 决定提示是路由器记录（§16.2 C3）                                                                         | 1a  |
-| `ReportToMimi` 原路回传                        | Notice `session.report`（P1）：送达计划决定目标，受免打扰、频控、合并窗口约束，压下的进摘要              | 2a  |
-| 跟进提醒（`ManageFollowUp`）                   | Notice `followup.due`：主人定的时刻，不受免打扰和 P1/P2 上限约束，计入 P0 兜底；桌面走路由器的桌面出口   | 2a  |
-| `WatchSession`                                 | 建 `session` 规则（`createdBy: "watch-session"`，目标为发起的 IM 对话），之后同"规则命中"一行            | 2a  |
-| 渲染层"会话完成"本地通知                       | 会话有活动规则（或规则刚触发过）时让位给路由器                                                           | 2a  |
-| 绑定会话每轮 `session.reply`                   | 保持：会话原文由桥转发，送达计划据此不再重复发提醒                                                       | —   |
-| `RequestMimiDelivery` / `SendMessage`          | 保持：主人逐条批准的即时发送（`outboundMessage → sendOwnerMessage`），是主人的明确指令，不该被频控或摘要 | —   |
+| 出口                                           | 现在                                                                                                                                                                                                             | 期  |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- |
+| 长任务收尾（`publish(pet.task.*)` + 桌面通知） | 收尾轮的 `GatewayReply` 只作草稿，Notice `session.done/failed` 过路由器                                                                                                                                          | 1a  |
+| 规则命中的完成 / 失败 / 卡住                   | Notice `session.*` 过路由器，目标来自送达计划                                                                                                                                                                    | 1a  |
+| `PetImDecisions` 审批码                        | 决定提示是路由器记录（§16.2 C3）                                                                                                                                                                                 | 1a  |
+| `ReportToMimi` 原路回传                        | Notice `session.report`（P1），只发给问过这个会话的 IM 对话：IM 派活的来源（Mimi 汇报轮的草稿）与每条 `watch-session` 规则指向的对话（模板）；不发主人、不发绑定对话；受免打扰、频控、合并窗口约束，压下的进摘要 | 2a  |
+| 跟进提醒（`ManageFollowUp`）                   | Notice `followup.due`：主人定的时刻，不受免打扰和 P1/P2 上限约束，计入 P0 兜底；桌面走路由器的桌面出口                                                                                                           | 2a  |
+| `WatchSession`                                 | 建 `session` 规则（`createdBy: "watch-session"`，目标为发起的 IM 对话），之后同"规则命中"一行                                                                                                                    | 2a  |
+| 渲染层"会话完成"本地通知                       | 会话有关注"完成"的活动规则（或规则刚触发过）时让位给路由器                                                                                                                                                       | 2a  |
+| 绑定会话每轮 `session.reply`                   | 保持：会话原文由桥转发，送达计划据此不再重复发提醒                                                                                                                                                               | —   |
+| `RequestMimiDelivery` / `SendMessage`          | 保持：主人逐条批准的即时发送（`outboundMessage → sendOwnerMessage`），是主人的明确指令，不该被频控或摘要                                                                                                         | —   |
 
 ### 1.5 已有的定时能力
 
@@ -414,7 +414,7 @@ Codex / Claude Code 会话跑在桌面主进程里（`external-runtime-service.t
 
 ### 8.1 位置
 
-由 `pet-attention-policy.ts` 扩展而来，改名 `pet-notice-router.ts`：保留它已有的宽限期、连发合并、回执去重、当前会话不提醒；输入从"待决策"扩到所有 Notice，输出从"桌面卡片"扩到"桌面 / 微信 / 摘要"。`attention-receipts.json` 保留给桌面 peek 的回执；提醒记录另存 `notices.json`。模块拆分：`pet-notice-router`（流程）、`pet-notice-policy`（纯函数策略）、`pet-notice-ledger`（记录）、`pet-notice-compose`（模板）、`pet-notice-digest`（摘要）、`pet-presence`（在场）、`pet-notice-wiring`（接入主进程）。§1.4 收口表里的出口都改为调用它（`pet-notice-follow-up`、`pet-notice-session-report`、`pet-notice-session-watch` 是 2a 加的三个入口）；只有主人逐条批准的 `RequestMimiDelivery` / `SendMessage` 和绑定会话的每轮回复不经过它。渲染层"窗口隐藏时任务完成"的本地通知在会话有活动规则（或规则刚触发过）时整体让位给路由器。
+由 `pet-attention-policy.ts` 扩展而来，改名 `pet-notice-router.ts`：保留它已有的宽限期、连发合并、回执去重、当前会话不提醒；输入从"待决策"扩到所有 Notice，输出从"桌面卡片"扩到"桌面 / 微信 / 摘要"。`attention-receipts.json` 保留给桌面 peek 的回执；提醒记录另存 `notices.json`。模块拆分：`pet-notice-router`（流程）、`pet-notice-policy`（纯函数策略）、`pet-notice-ledger`（记录）、`pet-notice-compose`（模板）、`pet-notice-digest`（摘要）、`pet-presence`（在场）、`pet-notice-wiring`（接入主进程）。§1.4 收口表里的出口都改为调用它（`pet-notice-follow-up`、`pet-notice-session-report`、`pet-notice-session-watch` 是 2a 加的三个入口）；只有主人逐条批准的 `RequestMimiDelivery` / `SendMessage` 和绑定会话的每轮回复不经过它。渲染层"窗口隐藏时任务完成"的本地通知在会话有关注"完成"的活动规则（或规则刚触发过）时让位给路由器；只关注失败或卡住的规则不让位（铃铛状态带 `watchesDone`）。
 
 ### 8.2 Notice
 
@@ -509,8 +509,8 @@ flowchart TD
 - 同一会话在上一条 **P1** IM 发出后 10 分钟内的 P1 进摘要（决定提示不开启这个窗口，所以回答完审批后结果仍然立即发）；点名渠道被合并时桌面仍然显示。
 - 路由判定、落盘、认领按提交顺序串行；IM 发送在串行区之外，30 秒超时。
 - 免打扰的豁免只看 Notice 类型（审批、提问等 P0），不看正文里有没有"紧急"一类字样。
-- **跟进提醒**（`followup.due`，P1）的时刻是主人自己定的：按 P0 处理免打扰和上限——不进免打扰摘要、不占每小时 6 条，计入 P0 的 12 条兜底，超出时进摘要并立刻上桌面；发件箱过期取跟进的补发期限（`catchUpUntil`，至少留 10 分钟），不截到下一次免打扰开始；不开启也不受合并窗口约束。没有 IM 来源时目标为主人（`auto`），有来源时回原对话并在桌面留记录。
-- **会话汇报**（`session.report`，P1）照常受免打扰、上限、合并窗口约束；它自己不开启合并窗口，所以汇报之后的完成结果照常立即发。主人在桌面看过该会话后，压着的汇报不再补发。
+- **跟进提醒**（`followup.due`，P1）的时刻是主人自己定的：按 P0 处理免打扰和上限——不进免打扰摘要、不占每小时 6 条，计入 P0 的 12 条兜底，超出时立刻上桌面并进摘要——跟进的摘要单独成组（"到点的跟进"，每行带跟进原文），按跟进的规则发送：不等免打扰结束，只等 P0 兜底有余量（下一个整点）；发件箱过期取跟进的补发期限（`catchUpUntil`，至少留 10 分钟），不截到下一次免打扰开始；不开启也不受合并窗口约束。没有 IM 来源时目标为主人（`auto`），有来源时回原对话并在桌面留记录。
+- **会话汇报**（`session.report`，P1）只发给问过这个会话的 IM 对话：IM 派活的来源和 `WatchSession` 规则指向的对话。主人自己的规则（`NotifyMe`、铃铛）、桌面派活、绑定对话都不收进展——主人要的是结果，绑定对话已经收到会话的每轮回复。汇报照常受免打扰、上限、合并窗口约束；它自己不开启合并窗口，所以汇报之后的完成结果照常立即发。主人在桌面看过该会话后，压着的汇报不再补发。
 
 ### 8.4 成文
 
@@ -739,7 +739,7 @@ outcome?: {
 
 > **实现状态（2026-11-10）**：C2 第一步已落地为 `pet-delivery-plan.ts`。规则表、长任务的 `completionTarget`、绑定会话的路由仍各自存储，但"这次结果告诉谁"只由这个模块读它们，产出送达计划（每条消息一个条目：`template` / `mimi-closure` / `session-reply`）；观察器、任务收尾、决定提示、绑定回复转发都从计划取目标。绑定回复的等待与配对、`hasActiveLongTask`、按运行 id 配对已删除。尚未做：把绑定本身存成规则行。
 >
-> **实现状态（2a）**：`WatchSession` 存成规则行（`createdBy: "watch-session"`，目标为发起的 IM 对话；它的结果对那个对话算"回复"，和 IM 派活的结果一样不被免打扰压住）。跟进不存成规则行（§13 的收窄），但提醒经路由器发送。`ReportToMimi` 的目标由送达计划的 `planReport` 给出：与结果相同的那些人（长任务来源 ∪ 关注完成的会话规则 ∪ 收到会话回复的对话），每个对话一条；汇报不是会话回复，绑定对话也单独收到一条，长任务来源那一条用 Mimi 汇报轮写的草稿，其余用模板。
+> **实现状态（2a）**：`WatchSession` 存成规则行（`createdBy: "watch-session"`，目标为发起的 IM 对话；它的结果对那个对话算"回复"，和 IM 派活的结果一样不被免打扰压住）。跟进不存成规则行（§13 的收窄），但提醒经路由器发送。`ReportToMimi` 的目标由送达计划的 `planReport` 给出：IM 派活的来源（用 Mimi 汇报轮写的草稿）与每条 `watch-session` 规则指向的 IM 对话（模板），每个对话一条（来源记录缺发送者时按渠道 + 对象认作同一对话）；主人的规则、桌面派活、绑定对话不收进展。
 >
 > 两处有意保留的旧行为：同一次结果命中的多条规则仍合并成一条提醒（路由目标优先于主人），不按目标拆成多条；长任务收尾和绑定会话的回复即使落在同一个对话也各发一条（Mimi 的总结和会话原文是两条不同的消息）。
 >
