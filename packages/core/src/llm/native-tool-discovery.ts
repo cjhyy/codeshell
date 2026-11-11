@@ -1,4 +1,4 @@
-import type { LLMConfig } from "../types.js";
+import type { LLMConfig, ToolDefinition } from "../types.js";
 
 type DiscoveryConfig = Pick<
   LLMConfig,
@@ -58,5 +58,16 @@ export function nativeToolDiscoveryEnabled(config: DiscoveryConfig): boolean {
       !Array.isArray(thinking) &&
       Object.keys(thinking).length === 1 &&
       (thinking as { type?: unknown }).type === "disabled")
+  );
+}
+
+/** Unsupported declarations stay available through portable schema text + CallTool.
+ * https://platform.claude.com/docs/en/agents-and-tools/tool-use/define-tools
+ */
+export function canExposeNativeToolDefinition(definition: ToolDefinition): boolean {
+  return (
+    typeof definition.name === "string" &&
+    /^[a-zA-Z0-9_-]{1,128}$/.test(definition.name) &&
+    definition.inputSchema?.type === "object"
   );
 }

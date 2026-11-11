@@ -411,18 +411,26 @@ test("real Engine and SDK append three native discoveries, preserve frozen catal
 test("manual compaction promotes discoveries and freezes the next native catalog immediately", async () => {
   const value = engine(directory());
   const sessionId = "native-reference-rebase";
+  const portableName = "mcp_" + "x".repeat(125);
+  action(value, portableName);
   longHistory = true;
   select("Alpha");
   step("Alpha");
+  select(portableName, "select-portable");
+  step("CallTool", "call-portable", { name: portableName, args });
   for (let index = 0; index < 8; index++) step("Warmup", `history-${index}`);
   responses.push([]);
   await value.run("Perform checks", { sessionId, behaviorMode });
   const before = requests[0];
+  expect(before.tools.some((tool: any) => tool.name === portableName)).toBe(false);
+  expect(JSON.stringify(result("select-portable").content)).toContain("inputSchema");
+  expect(JSON.stringify(result("select-portable").content)).not.toContain('"tool_reference"');
   const compacted = await value.forceCompact(sessionId);
   expect(compacted.after).toBeLessThan(compacted.before);
   const offset = requests.length;
   select("Beta");
   step("Beta");
+  step("CallTool", "after-compact-portable", { name: portableName, args });
   responses.push([]);
   await value.run("Continue after compaction", { sessionId, behaviorMode });
   const after = requests[offset];

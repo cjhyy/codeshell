@@ -35,6 +35,7 @@ import type { EngineRunOptions, RunBehaviorProfile } from "./run-types.js";
 import { normalizeSessionToolSelection, RunToolSurface } from "../tool-system/run-tool-surface.js";
 import { routeInitialTools, type TaskToolRoutingPolicy } from "../preset/task-tool-routing.js";
 import { logger } from "../logging/logger.js";
+import { canExposeNativeToolDefinition } from "../llm/native-tool-discovery.js";
 import { resolvePromptCachePolicy } from "../llm/prompt-cache.js";
 import { callToolDef } from "../tool-system/builtin/call-tool.js";
 import {
@@ -102,7 +103,10 @@ export function initializeRunToolSurface(
   if (
     toolDiscovery === "tool-reference" &&
     selection &&
-    selection.deferredDefinitions === undefined
+    (selection.deferredDefinitions === undefined ||
+      [...(selection.frozenDefinitions ?? []), ...selection.deferredDefinitions].some(
+        (definition) => !canExposeNativeToolDefinition(definition),
+      ))
   )
     selection = rebaseToolSelection(selection);
   // Unknown future/damaged persisted state must survive without being overwritten.
@@ -144,6 +148,9 @@ export function initializeRunToolSurface(
           : selection,
       onSelectionChanged: persistSelection,
       toolDiscovery,
+      ...(toolDiscovery === "tool-reference"
+        ? { canExposeDefinition: canExposeNativeToolDefinition }
+        : {}),
     },
   );
   toolCtx.runToolSurface = surface;

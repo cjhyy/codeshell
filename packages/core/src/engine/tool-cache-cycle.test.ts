@@ -448,4 +448,23 @@ describe("native discovery cache cycles", () => {
     expect(emptyCtx.runToolSurface!.getSelection().discovered).toEqual(previous.discovered);
     expect(emptyCtx.refreshRunTools!().some((tool) => tool.deferLoading)).toBe(false);
   });
+  test("an incompatible saved native directory is cold-rebased into portable discoveries", () => {
+    const name = "mcp_" + "x".repeat(125);
+    const saved: SessionToolSelection = {
+      version: 2,
+      names: ["ToolSearch", "CallTool", name],
+      discovered: [],
+      frozenDefinitions: [definition("ToolSearch"), definition("CallTool"), definition(name)],
+      deferredDefinitions: [],
+      cacheIdentity: toolCacheIdentity(native),
+    };
+    const ctx = { cwd: "/repo", llmConfig: native } as ToolContext;
+    initializeRunToolSurface(ctx, [], () => [...catalog(), definition(name)], {
+      taskText: "",
+      selection: saved,
+    });
+    expect(ctx.refreshRunTools!().some((tool) => tool.name === name)).toBe(false);
+    expect(ctx.runToolSurface!.isCallable(name)).toBe(true);
+    expect(ctx.runToolSurface!.getSelection().discovered).toContain(name);
+  });
 });
