@@ -13,6 +13,12 @@ describe("parsePetNotificationSettings", () => {
       mergeWindowSec: 600,
       presenceIdleSec: 120,
       delegatedFromDesktop: "auto",
+      briefs: {
+        morning: { enabled: false, time: "09:00" },
+        evening: { enabled: false, time: "18:30" },
+      },
+      heartbeat: { enabled: false, activeHours: { start: "09:00", end: "22:00" } },
+      digestSlots: [],
     });
   });
 
@@ -37,6 +43,12 @@ describe("parsePetNotificationSettings", () => {
       mergeWindowSec: 600,
       presenceIdleSec: 300,
       delegatedFromDesktop: "desktop",
+      briefs: {
+        morning: { enabled: false, time: "09:00" },
+        evening: { enabled: false, time: "18:30" },
+      },
+      heartbeat: { enabled: false, activeHours: { start: "09:00", end: "22:00" } },
+      digestSlots: [],
     });
   });
 
@@ -80,5 +92,33 @@ describe("parsePetNotificationSettings", () => {
     expect(
       parsePetNotificationSettings({ pet: { notifications: { quietHours: null } } }).quietHours,
     ).toEqual({ start: "23:00", end: "08:30" });
+  });
+
+  test("briefs, heartbeat and digest slots: defaults per field, slots sorted and unique", () => {
+    const parsed = parsePetNotificationSettings({
+      pet: {
+        notifications: {
+          briefs: { morning: { enabled: true }, evening: { time: "19:05", enabled: true } },
+          heartbeat: { enabled: true, activeHours: { start: "10:00", end: "26:00" } },
+          digestSlots: ["18:00", "12:00", "18:00"],
+        },
+      },
+    });
+    expect(parsed.briefs).toEqual({
+      morning: { enabled: true, time: "09:00" },
+      evening: { enabled: true, time: "19:05" },
+    });
+    // A malformed active-hours window falls back to the default window, not "off".
+    expect(parsed.heartbeat).toEqual({
+      enabled: true,
+      activeHours: { start: "09:00", end: "22:00" },
+    });
+    expect(parsed.digestSlots).toEqual(["12:00", "18:00"]);
+    expect(petNotificationSettingsView({}).digestSlots).toEqual([]);
+    // A null is the writer's "delete": back to the defaults.
+    expect(
+      parsePetNotificationSettings({ pet: { notifications: { briefs: null, digestSlots: null } } })
+        .briefs.morning,
+    ).toEqual({ enabled: false, time: "09:00" });
   });
 });

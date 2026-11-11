@@ -1,6 +1,7 @@
 import {
   actionHints,
   NOTICE_ACTION_TTL_MS,
+  NOTICE_OPEN_ITEM_TTL_MS,
   noticeActionCode,
   type NoticeActions,
   type NoticeSlot,
@@ -15,6 +16,7 @@ import type { RouteDecision } from "./pet-notice-policy.js";
 import { actionItemKey, allocateSlot, decisionItemKey, isOpenActions } from "./pet-notice-slots.js";
 import {
   errorText,
+  targetKey,
   unpackFacts,
   type NoticeActionRecord,
   type NoticeLedgerPort,
@@ -51,11 +53,15 @@ export class NoticeItems {
     const input = notice.actions;
     if (!input || !this.deps.ledger) return { notice, body, ...(id ? { id } : {}) };
     const recordId = id ?? newNoticeRecordId();
-    const actions: NoticeActions = {
+    const actions = {
       ...input,
       code: noticeActionCode(["action", recordId, input.family]),
-      expiresAt: this.deps.now() + NOTICE_ACTION_TTL_MS,
-    };
+      // "Not now" is said right after it arrives: Mimi's own message is an item briefly,
+      // so the owner's later messages are not read against it for a whole day.
+      expiresAt:
+        this.deps.now() +
+        (input.family === "notice" ? NOTICE_OPEN_ITEM_TTL_MS : NOTICE_ACTION_TTL_MS),
+    } as NoticeActions;
     const hints = actionHints(actions);
     const room = MAX_NOTICE_BODY - hints.length - 1;
     const text = body.length > room ? `${body.slice(0, room - 1)}…` : body;
@@ -63,12 +69,13 @@ export class NoticeItems {
     return {
       notice: {
         ...notice,
+        // Also the text without the item's ①② label (a resend or a defer uses it).
         facts: {
           ...notice.facts,
           nonDirectBody: typeof nonDirect === "string" && nonDirect ? nonDirect : body,
         },
       },
-      body: `${text}\n${hints}`,
+      body: hints ? `${text}\n${hints}` : body,
       id: recordId,
       actions,
     };
@@ -110,6 +117,25 @@ export class NoticeItems {
       await this.slotPrompt(notice.sessionId, notice.requestId, slot);
     if (notice.sessionId && notice.kind.startsWith("session."))
       await this.close(notice.sessionId, "superseded", (record) => record.id !== recordId);
+    // Mimi's newer message there replaces the older one as the thing "not now" is about.
+    if (notice.actions?.family === "notice") await this.closeOlderNotices(notice, recordId);
+  }
+
+  private async closeOlderNotices(notice: NoticeSubmission, recordId: string): Promise<void> {
+    const ledger = this.deps.ledger;
+    if (!ledger) return;
+    const now = this.deps.now();
+    const here = targetKey(notice.target);
+    for (const record of ledger.actionRecords()) {
+      if (record.id === recordId || record.actions?.family !== "notice") continue;
+      if (!isOpenActions(record, now) || targetKey(unpackFacts(record.facts).target) !== here)
+        continue;
+      try {
+        await ledger.updateActions(record.id, { closedAt: now });
+      } catch (error) {
+        this.deps.log("pet.notice.action_update_failed", { error: errorText(error) });
+      }
+    }
   }
 
   /** The Session started another run: its goal / limit / failure items are moot. */

@@ -16,7 +16,9 @@ import type { PetLongTaskArtifact } from "@cjhyy/code-shell-pet";
  * structured sources only: changed files, long-task artifacts).
  */
 
-export type NoticeActionFamily = "goal" | "limit" | "failure" | "open";
+export type NoticeActionFamily = "goal" | "limit" | "failure" | "open" | "notice";
+/** The families tied to one work Session (all but Mimi's own `notice`). */
+export type SessionActionFamily = Exclude<NoticeActionFamily, "notice">;
 export type NoticeActionRuntime = "native" | "external";
 /** What an open item can be asked to do (the model picks one of an item's own). */
 export type NoticeActionVerb =
@@ -26,7 +28,9 @@ export type NoticeActionVerb =
   | "retry"
   | "handoff"
   | "open"
-  | "confirm";
+  | "confirm"
+  /** Put a brief or heartbeat message off ("现在别说，明早再说"). */
+  | "defer";
 
 /** Where an item went out over IM and its number there (①②③, stable while it is open). */
 export interface NoticeSlot {
@@ -39,11 +43,35 @@ export type NoticeArtifact =
   | { kind: "file"; path: string; label?: string }
   | { kind: "url"; url: string; label?: string };
 
-/** The open item a notice carries and what it may still do (one per notice). */
-export interface NoticeActions {
+/** What every open item has: its code, lifetime, one-shot state and IM number. */
+interface NoticeActionsBase {
   /** Internal id: 12 upper-case hex characters (never asked of the owner). */
   code: string;
-  family: NoticeActionFamily;
+  expiresAt: number;
+  /** An action ran (one-shot; open may repeat). */
+  usedAt?: number;
+  /** The Session moved on (a newer notice about it, another run): the item is closed. */
+  closedAt?: number;
+  /** open: a link outside the allowed hosts the owner was asked about. */
+  confirm?: { item: number; expiresAt: number; usedAt?: number };
+  /** Set by the router when the item goes out over IM. */
+  slot?: NoticeSlot;
+}
+
+/**
+ * Mimi's own message (a brief, a heartbeat): the owner may put it
+ * off ("明早再说"). Not tied to a Session.
+ */
+export interface MimiNoticeActions extends NoticeActionsBase {
+  family: "notice";
+}
+
+/** The open item a notice carries and what it may still do (one per notice). */
+export type NoticeActions = SessionNoticeActions | MimiNoticeActions;
+
+/** An item about one work Session: a goal pause, a limit stop, a failure, a result. */
+export interface SessionNoticeActions extends NoticeActionsBase {
+  family: SessionActionFamily;
   sessionId: string;
   runtime: NoticeActionRuntime;
   /** goal / limit: why the Session stopped. */
@@ -57,22 +85,13 @@ export interface NoticeActions {
   retry?: true;
   /** open: what 打开 opens, in list order. */
   artifacts?: NoticeArtifact[];
-  expiresAt: number;
-  /** An action ran (one-shot; open may repeat). */
-  usedAt?: number;
-  /** The Session moved on (a newer notice about it, another run): the item is closed. */
-  closedAt?: number;
-  /** open: a link outside the allowed hosts the owner was asked about. */
-  confirm?: { item: number; expiresAt: number; usedAt?: number };
-  /** Set by the router when the item goes out over IM. */
-  slot?: NoticeSlot;
 }
 
+type RouterSet = "code" | "expiresAt" | "usedAt" | "closedAt" | "confirm" | "slot";
 /** What a notice asks for; the router gives it its code and expiry when it records it. */
-export type NoticeActionsInput = Omit<
-  NoticeActions,
-  "code" | "expiresAt" | "usedAt" | "closedAt" | "confirm" | "slot"
->;
+export type NoticeActionsInput =
+  | Omit<SessionNoticeActions, RouterSet>
+  | Omit<MimiNoticeActions, RouterSet>;
 
 /** A result stays openable this long (or until the next notice about its Session). */
 export const NOTICE_OPEN_ITEM_TTL_MS = 2 * 60 * 60_000;
@@ -85,7 +104,8 @@ const MAX_PATH = 4_096;
 const MAX_URL = 2_048;
 const CODE = /^[0-9A-F]{12}$/u;
 const CONTROL_CHARS = /[\u0000-\u001f\u007f]/u;
-const FAMILIES: readonly NoticeActionFamily[] = ["goal", "limit", "failure", "open"];
+const FAMILIES: readonly NoticeActionFamily[] = ["goal", "limit", "failure", "open", "notice"];
+const MIMI_ACTION_KEYS = ["code", "family", "expiresAt", "usedAt", "closedAt", "slot"] as const;
 const REASONS = ["user", "limit", "goal_exhausted"] as const;
 const ACTION_KEYS = [
   "code",
@@ -173,6 +193,19 @@ function parseConfirm(value: unknown): NoticeActions["confirm"] | undefined {
 
 /** Strict validator for a stored `actions` field; undefined when anything is off. */
 export function parseNoticeActions(value: unknown): NoticeActions | undefined {
+  if (isRecord(value) && value.family === "notice") {
+    if (
+      !hasOnlyKeys(value, MIMI_ACTION_KEYS) ||
+      typeof value.code !== "string" ||
+      !CODE.test(value.code) ||
+      !isTimestamp(value.expiresAt) ||
+      (value.usedAt !== undefined && !isTimestamp(value.usedAt)) ||
+      (value.closedAt !== undefined && !isTimestamp(value.closedAt)) ||
+      (value.slot !== undefined && !parseNoticeSlot(value.slot))
+    )
+      return undefined;
+    return value as unknown as NoticeActions;
+  }
   if (!isRecord(value) || !hasOnlyKeys(value, ACTION_KEYS)) return undefined;
   const { artifacts } = value;
   if (
@@ -208,9 +241,13 @@ export function noticeActionCode(seed: readonly unknown[]): string {
 
 /** What an item of this family can be asked to do (a pending link adds `confirm`). */
 export function actionVerbs(
-  actions: Pick<NoticeActions, "family" | "retry" | "confirm">,
+  actions: { family: NoticeActionFamily } & Partial<
+    Pick<SessionNoticeActions, "retry" | "confirm">
+  >,
 ): NoticeActionVerb[] {
   switch (actions.family) {
+    case "notice":
+      return ["defer"];
     case "goal":
       return ["reply", "stop", "handoff"];
     case "limit":
@@ -226,10 +263,15 @@ export function actionVerbs(
 
 /** The line that ends the notice: what the owner can say, in plain words (no code). */
 export function actionHints(
-  actions: Pick<NoticeActions, "family" | "retry" | "artifacts">,
+  actions: { family: NoticeActionFamily } & Partial<
+    Pick<SessionNoticeActions, "retry" | "artifacts">
+  >,
 ): string {
   const count = actions.artifacts?.length ?? 0;
   switch (actions.family) {
+    // Mimi's own message reads as it is: "not now" needs no instructions.
+    case "notice":
+      return "";
     case "goal":
       return "直接回我要对它说的话就行；也可以让它停下，或交给 Mimi。";
     case "limit":

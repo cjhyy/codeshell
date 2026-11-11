@@ -8,6 +8,7 @@ import {
   type NoticeActionRuntime,
   type NoticeActionVerb,
   type NoticeArtifact,
+  type SessionNoticeActions,
 } from "./pet-notice-action-codes.js";
 import type { NoticeActionsPatch } from "./pet-notice-ledger.js";
 import type { ReplyItem } from "./pet-notice-reply-interpreter.js";
@@ -86,16 +87,28 @@ export interface NoticeActionControls {
   locateSession(sessionId: string): Promise<void> | void;
 }
 
+/** What putting a notice off did (`PetNoticeRouter.deferNotice`). */
+export type NoticeDeferResult =
+  | { ok: true; until: number }
+  | { ok: false; reason: "limit" | "gone" | "failed" };
+
 export interface NoticeActionRouter {
   actionRecord(code: string): NoticeActionRecord | undefined;
   useAction(code: string, patch: NoticeActionsPatch): Promise<NoticeActionRecord | undefined>;
+  /** Hold a copy of the notice until `until` (the host clamps it); absent: not supported. */
+  deferNotice?(code: string, until: number | undefined): Promise<NoticeDeferResult>;
 }
+
+/** A notice item about one work Session (every family but Mimi's own `notice`). */
+type SessionActionRecord = NoticeActionRecord & { actions: SessionNoticeActions };
 
 export interface NoticeActionExecutorDeps {
   router: NoticeActionRouter;
   controls: NoticeActionControls;
   /** Hosts open opens without asking besides GitHub / GitLab / Gitee / localhost. */
   openHosts?: () => readonly string[];
+  /** An instant as the owner reads it ("明天 09:00 "), for the defer confirmation. */
+  describeTime?: (ms: number) => string;
   now?: () => number;
   onError?: (error: unknown) => void;
 }
@@ -111,6 +124,8 @@ export interface NoticeActionRequest {
   handoff?: boolean;
   /** handoff: the owner's own message, passed on to Mimi with the notice. */
   message?: string;
+  /** defer: when the owner wants to hear it again (epoch ms, the model's reading). */
+  until?: number;
 }
 
 export interface NoticeActionExecutor {
@@ -158,7 +173,7 @@ function capped(value: unknown, max: number): string | undefined {
 }
 
 /** The model-facing request for Mimi's turn (the data is untrusted text). */
-export function handoffMessage(record: NoticeActionRecord, ownerMessage?: string): string {
+export function handoffMessage(record: SessionActionRecord, ownerMessage?: string): string {
   const { actions, facts } = record;
   const data = {
     ...(capped(ownerMessage, 2_000) ? { ownerSaid: capped(ownerMessage, 2_000) } : {}),
@@ -227,6 +242,13 @@ export function artifactLine(artifact: NoticeArtifact, index: number): string {
 export function actionReplyItem(record: NoticeActionRecord): Omit<ReplyItem, "ordinal" | "ref"> {
   const { actions, facts } = record;
   const title = capped(facts.title, 200);
+  if (actions.family === "notice")
+    return {
+      kind: "notice",
+      ...(title ? { title } : {}),
+      text: capped(facts.summary, 1_000) ?? "Mimi 发来的消息",
+      actions: actionVerbs(actions),
+    };
   const text =
     [capped(facts.question, 1_000), capped(facts.summary, 1_000), capped(facts.error, 500)]
       .filter((line): line is string => line !== undefined)
@@ -266,7 +288,7 @@ export function createNoticeActionExecutor(deps: NoticeActionExecutorDeps): Noti
   const clientMessageId = (code: string) => `pet-notice-action-${code.toLowerCase()}`;
 
   /** Undefined when the Session may be acted on; otherwise why not. */
-  async function recheck(record: NoticeActionRecord): Promise<string | undefined> {
+  async function recheck(record: SessionActionRecord): Promise<string | undefined> {
     const { sessionId, runtime, goalId, revision, reason } = record.actions;
     const state = controls.sessionState(sessionId, runtime);
     if (state === "running") return RUNNING;
@@ -285,7 +307,7 @@ export function createNoticeActionExecutor(deps: NoticeActionExecutorDeps): Noti
     return undefined;
   }
 
-  async function answer(record: NoticeActionRecord, text: string | undefined) {
+  async function answer(record: SessionActionRecord, text: string | undefined) {
     const { code, sessionId, runtime } = record.actions;
     if (!text) return "要对它说什么？直接回我那句话就行。";
     if (text.length > MAX_REPLY) return "回复过长，请缩短后重试。";
@@ -300,7 +322,7 @@ export function createNoticeActionExecutor(deps: NoticeActionExecutorDeps): Noti
     return "已把你的回复发给会话，它会接着做。";
   }
 
-  async function resume(record: NoticeActionRecord) {
+  async function resume(record: SessionActionRecord) {
     const { code, sessionId, runtime, reason, goalId } = record.actions;
     const blocked = await recheck(record);
     if (blocked) return blocked;
@@ -333,7 +355,7 @@ export function createNoticeActionExecutor(deps: NoticeActionExecutorDeps): Noti
       : "已让会话接着做。";
   }
 
-  async function stop(record: NoticeActionRecord) {
+  async function stop(record: SessionActionRecord) {
     const { code, sessionId, runtime, goalId, revision, taskId } = record.actions;
     const task = taskId ? controls.task(taskId) : undefined;
     if (taskId && task && !TERMINAL_TASKS.has(task.status)) {
@@ -369,7 +391,7 @@ export function createNoticeActionExecutor(deps: NoticeActionExecutorDeps): Noti
     return "已停止这个 Goal，不会再自己继续。";
   }
 
-  async function retry(record: NoticeActionRecord) {
+  async function retry(record: SessionActionRecord) {
     const { code, sessionId, runtime, taskId } = record.actions;
     if (taskId) {
       const task = controls.task(taskId);
@@ -394,7 +416,7 @@ export function createNoticeActionExecutor(deps: NoticeActionExecutorDeps): Noti
     return "已把上一条消息重新发给会话。";
   }
 
-  async function openFile(record: NoticeActionRecord, path: string) {
+  async function openFile(record: SessionActionRecord, path: string) {
     const { sessionId } = record.actions;
     const root = await controls.workspace(sessionId);
     const target = root ? await containedFile(root, path) : undefined;
@@ -411,7 +433,7 @@ export function createNoticeActionExecutor(deps: NoticeActionExecutorDeps): Noti
     return OPENED;
   }
 
-  async function open(record: NoticeActionRecord, index: number | undefined) {
+  async function open(record: SessionActionRecord, index: number | undefined) {
     const { code, sessionId, artifacts = [] } = record.actions;
     if (artifacts.length === 0) {
       await controls.locateSession(sessionId);
@@ -440,7 +462,7 @@ export function createNoticeActionExecutor(deps: NoticeActionExecutorDeps): Noti
     return `要打开 \`${link.host}\` 吗？回我一声就打开。`;
   }
 
-  async function confirmOpen(record: NoticeActionRecord) {
+  async function confirmOpen(record: SessionActionRecord) {
     const { code, artifacts = [] } = record.actions;
     const confirm = record.actions.confirm;
     if (!confirm || confirm.usedAt !== undefined) return NOT_ALLOWED;
@@ -452,7 +474,17 @@ export function createNoticeActionExecutor(deps: NoticeActionExecutorDeps): Noti
     return OPENED;
   }
 
-  async function run(record: NoticeActionRecord, request: NoticeActionRequest) {
+  /** "Not now": the router keeps a copy for later; the reply says when, in the owner's clock. */
+  async function defer(record: NoticeActionRecord, until: number | undefined) {
+    if (!router.deferNotice) return NOT_ALLOWED;
+    const result = await router.deferNotice(record.actions.code, until);
+    if (result.ok)
+      return `好，${deps.describeTime?.(result.until) ?? new Date(result.until).toISOString()}再说。`;
+    if (result.reason === "limit") return "这条已经推迟过两次了，不再推迟。";
+    return result.reason === "gone" ? GONE : FAILED;
+  }
+
+  async function run(record: SessionActionRecord, request: NoticeActionRequest) {
     switch (request.action) {
       case "handoff": {
         if (request.handoff === false)
@@ -492,6 +524,9 @@ export function createNoticeActionExecutor(deps: NoticeActionExecutorDeps): Noti
         return open(record, request.index);
       case "confirm":
         return confirmOpen(record);
+      case "defer":
+        // Only Mimi's own messages can be put off (handled before this).
+        return NOT_ALLOWED;
     }
   }
 
@@ -509,7 +544,8 @@ export function createNoticeActionExecutor(deps: NoticeActionExecutorDeps): Noti
       if (busy.has(record.recordId) || handedOff(record.recordId)) return BUSY;
       busy.add(record.recordId);
       try {
-        return await run(record, request);
+        if (actions.family === "notice") return await defer(record, request.until);
+        return await run(record as SessionActionRecord, request);
       } catch (error) {
         deps.onError?.(error);
         return FAILED;
