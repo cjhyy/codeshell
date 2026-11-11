@@ -80,7 +80,15 @@ describe("heartbeatPrecheck", () => {
         recent: [
           blocked("failed"),
           blocked("accepted"),
-          blocked("queued", { createdAt: SINCE - 1 }),
+          blocked("queued", {
+            createdAt: SINCE - 10,
+            delivery: {
+              key: "0".repeat(24),
+              status: "queued",
+              attempts: 1,
+              at: SINCE - 5,
+            } as never,
+          }),
           blocked("held", { prompt: { ...prompt, phase: "answered" } }),
           blocked("unknown", { sessionId: "unwatched" }),
         ],
@@ -90,6 +98,39 @@ describe("heartbeatPrecheck", () => {
     expect(facts.map((fact) => [fact.type, fact.key])).toEqual([
       ["blocked-undelivered", "blocked:b-failed"],
     ]);
+  });
+
+  test("a prompt created before the last heartbeat whose send failed after it is new", () => {
+    const facts = heartbeatPrecheck(
+      inputs({
+        recent: [
+          record({
+            id: "late-fail",
+            kind: "session.blocked",
+            requestId: "r",
+            createdAt: SINCE - 20 * MIN,
+            prompt: { code: "AAAAAAAAAAAA", phase: "desktop" },
+            delivery: {
+              key: "0".repeat(24),
+              status: "failed",
+              attempts: 1,
+              at: SINCE + MIN,
+            } as never,
+          }),
+        ],
+      }),
+    );
+    expect(facts).toMatchObject([{ key: "blocked:late-fail", at: SINCE + MIN }]);
+  });
+
+  test("over the bound, the newest facts are kept", () => {
+    const recent = Array.from({ length: 15 }, (_, index) =>
+      record({ id: `n${index}`, sessionId: `s${index}`, createdAt: SINCE + (index + 1) * MIN }),
+    );
+    const facts = heartbeatPrecheck(inputs({ recent }));
+    expect(facts).toHaveLength(12);
+    expect(facts[0]!.key).toBe("result:n3");
+    expect(facts.at(-1)!.key).toBe("result:n14");
   });
 
   test("a result since the last heartbeat the owner has not looked at (one per Session)", () => {
@@ -165,7 +206,7 @@ describe("the judgement", () => {
     const seen: string[] = [];
     const result = await judgeHeartbeat(
       [{ key: "result:new", type: "result-unviewed", title: "修登录", at: NOW, sessionId: "s1" }],
-      { now: NOW, saidToday: 1 },
+      { now: NOW, saidToday: 1, offsetMin: () => 480 },
       [
         async () => "maybe",
         async ({ user }) => {
@@ -177,10 +218,12 @@ describe("the judgement", () => {
     expect(result).toEqual({ say: false });
     const payload = JSON.parse(seen[0]!);
     expect(payload.saidToday).toBe(1);
+    // The owner's clock (UTC+8 here), not UTC or epoch ms.
+    expect(payload.now).toBe("2023-11-15T18:00:00+08:00");
     expect(payload.facts[0]).toEqual({
       type: "result-unviewed",
       title: "修登录",
-      at: new Date(NOW).toISOString(),
+      at: "2023-11-15T18:00:00+08:00",
       sessionId: "s1",
     });
   });

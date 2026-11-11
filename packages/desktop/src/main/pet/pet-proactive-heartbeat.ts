@@ -1,7 +1,7 @@
 import type { FollowUpRule } from "./pet-follow-up-rules.js";
 import { noticeLine } from "./pet-notice-compose.js";
 import { isPromptEnded, type NoticeRecord } from "./pet-notice-ledger.js";
-import type { ReplyModel } from "./pet-notice-reply-interpreter.js";
+import { localIsoTime, type ReplyModel } from "./pet-notice-reply-interpreter.js";
 import { unpackFacts } from "./pet-notice-types.js";
 import { askModels, hasOnlyKeys, oneLine, parseJsonObject } from "./pet-proactive-models.js";
 import { dueAt } from "./pet-schedule-rule.js";
@@ -51,7 +51,7 @@ export interface HeartbeatInputs {
   since: number;
   /** Keys already judged. */
   seen: ReadonlySet<string>;
-  /** Ledger records created since `since`. */
+  /** Ledger records created, or whose delivery changed, since `since`. */
   recent: readonly NoticeRecord[];
   followUps: readonly FollowUpRule[];
   sessions: readonly DesktopPetSession[];
@@ -64,7 +64,7 @@ function title(record: NoticeRecord): string {
   return noticeLine(unpackFacts(record.facts).facts.title, MAX_TITLE) ?? "一个会话";
 }
 
-/** The new facts, oldest first (bounded). Pure. */
+/** The new facts, oldest first; over the bound, the newest are kept. Pure. */
 export function heartbeatPrecheck(input: HeartbeatInputs): HeartbeatFact[] {
   const { now, since, seen } = input;
   const facts: HeartbeatFact[] = [];
@@ -73,8 +73,11 @@ export function heartbeatPrecheck(input: HeartbeatInputs): HeartbeatFact[] {
   };
   const results = new Map<string, NoticeRecord>();
   for (const record of input.recent) {
-    if (record.createdAt <= since || record.createdAt > now) continue;
+    if (record.createdAt > now) continue;
+    // A prompt whose send failed after the last heartbeat is new news too.
+    const changed = Math.max(record.createdAt, record.delivery?.at ?? 0);
     if (
+      changed > since &&
       record.prompt &&
       !isPromptEnded(record.prompt.phase) &&
       record.sessionId &&
@@ -86,10 +89,14 @@ export function heartbeatPrecheck(input: HeartbeatInputs): HeartbeatFact[] {
         type: "blocked-undelivered",
         title: title(record),
         detail: "等你决定，但第一条提醒没送到",
-        at: record.createdAt,
+        at: changed,
         sessionId: record.sessionId,
       });
-    if ((record.kind === "session.done" || record.kind === "session.failed") && record.sessionId)
+    if (
+      record.createdAt > since &&
+      (record.kind === "session.done" || record.kind === "session.failed") &&
+      record.sessionId
+    )
       results.set(record.sessionId, record);
   }
   for (const [sessionId, record] of results) {
@@ -122,7 +129,7 @@ export function heartbeatPrecheck(input: HeartbeatInputs): HeartbeatFact[] {
       sessionId,
     });
   }
-  return facts.sort((a, b) => a.at - b.at).slice(0, MAX_FACTS);
+  return facts.sort((a, b) => a.at - b.at).slice(-MAX_FACTS);
 }
 
 export type HeartbeatJudgement =
@@ -156,19 +163,20 @@ export function parseHeartbeatJudgement(raw: string): HeartbeatJudgement | undef
 
 export function judgeHeartbeat(
   facts: readonly HeartbeatFact[],
-  context: { now: number; saidToday: number },
+  context: { now: number; saidToday: number; offsetMin: (ms: number) => number },
   models: readonly ReplyModel[],
   options: { timeoutMs?: number; onError?: (error: unknown) => void } = {},
 ): Promise<HeartbeatJudgement | undefined> {
   return askModels({
     models,
     systemPrompt: HEARTBEAT_SYSTEM_PROMPT,
+    // Times in the owner's own clock, with its offset.
     user: JSON.stringify({
-      now: new Date(context.now).toISOString(),
+      now: localIsoTime(context.now, context.offsetMin(context.now)),
       saidToday: context.saidToday,
       facts: facts.map(({ key: _key, ...fact }) => ({
         ...fact,
-        at: new Date(fact.at).toISOString(),
+        at: localIsoTime(fact.at, context.offsetMin(fact.at)),
       })),
     }),
     parse: parseHeartbeatJudgement,

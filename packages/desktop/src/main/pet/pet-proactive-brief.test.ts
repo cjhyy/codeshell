@@ -5,6 +5,7 @@ import type { NoticeRecord } from "./pet-notice-ledger.js";
 import {
   collectBrief,
   parseBriefWriteUp,
+  renderBrief,
   templateBrief,
   writeBrief,
   type BriefSources,
@@ -151,6 +152,16 @@ describe("collectBrief", () => {
       ["r7", "follow-up", "交材料"],
     ]);
     expect(facts?.records[2]?.detail).toBe("超时");
+    // The host's status labels: an open failure item is "not done", not "failed".
+    expect(facts?.records.map((record) => record.status)).toEqual([
+      "【等你决定】",
+      "【没做完】",
+      "【失败】",
+      "【完成】",
+      "【进行中】",
+      "【进行中】",
+      "【今天到期】",
+    ]);
   });
 
   test("evening: what was dispatched today however it stands, what hangs, tomorrow's follow-ups", () => {
@@ -192,6 +203,7 @@ describe("collectBrief", () => {
       ["running", "今天派的"],
       ["follow-up", "明天的"],
     ]);
+    expect(facts?.records.at(-1)?.status).toBe("【明天到期】");
   });
 });
 
@@ -199,17 +211,25 @@ describe("the write-up", () => {
   const facts = {
     kind: "morning" as const,
     records: [
-      { ref: "r1", type: "decision" as const, title: "删库审批" },
-      { ref: "r2", type: "done" as const, title: "写周报" },
+      {
+        ref: "r1",
+        type: "decision" as const,
+        status: "【等你决定】",
+        title: "删库审批",
+        at: NOW - HOUR,
+      },
+      { ref: "r2", type: "failed" as const, status: "【失败】", title: "跑测试", detail: "超时" },
+      { ref: "r3", type: "done" as const, status: "【完成】", title: "写周报" },
     ],
   };
+  const morning = { now: NOW, offsetMin: () => 0 };
 
   test("every line names provided records, each at most once", () => {
     const valid = JSON.stringify({
       opening: "早！",
       items: [
         { refs: ["r1"], text: "删库那个等你审批" },
-        { refs: ["r2"], text: "周报写完了" },
+        { refs: ["r3"], text: "周报" },
       ],
       closing: "今天先做哪个？",
     });
@@ -217,7 +237,7 @@ describe("the write-up", () => {
       opening: "早！",
       items: [
         { refs: ["r1"], text: "删库那个等你审批" },
-        { refs: ["r2"], text: "周报写完了" },
+        { refs: ["r3"], text: "周报" },
       ],
       closing: "今天先做哪个？",
     });
@@ -238,28 +258,60 @@ describe("the write-up", () => {
     expect(parseBriefWriteUp("就是一段话", facts)).toBeUndefined();
   });
 
+  test("the host leads each line with the record's status and adds what must not be left out", () => {
+    const text = renderBrief(
+      facts,
+      // A write-up that calls the failure a success and skips the decision.
+      { items: [{ refs: ["r3", "r2"], text: "周报和测试都搞定了" }] },
+      morning,
+    );
+    expect(text).toBe(
+      [
+        "早上好，今天的情况：",
+        // The most important record named leads: the failure, not the success.
+        "- 【失败】周报和测试都搞定了",
+        "- 【等你决定】「删库审批」",
+      ].join("\n"),
+    );
+  });
+
   test("the model's write-up when valid; otherwise the next model; none: the template", async () => {
     const calls: string[] = [];
     const invalid = async () => {
       calls.push("aux");
-      return JSON.stringify({ items: [{ refs: ["r3"], text: "不存在" }] });
+      return JSON.stringify({ items: [{ refs: ["r9"], text: "不存在" }] });
     };
     const main = async ({ user }: { user: string }) => {
       calls.push("main");
-      expect(JSON.parse(user).records).toHaveLength(2);
-      return '```json\n{"items":[{"refs":["r1","r2"],"text":"审批一个，周报完了"}]}\n```';
+      const payload = JSON.parse(user);
+      // The owner's own clock, with its offset.
+      expect(payload.now).toBe(new Date(NOW).toISOString().slice(0, 19) + "+00:00");
+      expect(payload.records[0]).toMatchObject({
+        status: "【等你决定】",
+        at: "2023-11-15T08:00:00+00:00",
+      });
+      return '```json\n{"items":[{"refs":["r1"],"text":"删库要你批"},{"refs":["r2","r3"],"text":"测试超时，周报好了"}]}\n```';
     };
-    expect(await writeBrief(facts, [invalid, main])).toEqual({
-      text: "早上好，今天的情况：\n- 审批一个，周报完了",
+    expect(await writeBrief(facts, [invalid, main], morning)).toEqual({
+      text: "早上好，今天的情况：\n- 【等你决定】删库要你批\n- 【失败】测试超时，周报好了",
       by: "model",
     });
     expect(calls).toEqual(["aux", "main"]);
     const down = async () => {
       throw new Error("no model");
     };
-    expect(await writeBrief(facts, [down])).toEqual({ text: templateBrief(facts), by: "template" });
-    expect(templateBrief(facts)).toBe(
-      "早上好，今天的情况：\n- 「删库审批」等你决定\n- 「写周报」做完了",
+    expect(await writeBrief(facts, [down], morning)).toEqual({
+      text: templateBrief(facts, morning),
+      by: "template",
+    });
+    expect(templateBrief(facts, morning)).toBe(
+      "早上好，今天的情况：\n- 【等你决定】「删库审批」\n- 【失败】「跑测试」：超时\n- 【完成】「写周报」",
+    );
+  });
+
+  test("a morning brief caught up in the afternoon does not say good morning", () => {
+    expect(templateBrief(facts, { now: TODAY + 15 * HOUR, offsetMin: () => 0 })).toStartWith(
+      "今天到现在的情况：",
     );
   });
 });

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { ReplyModel } from "./pet-notice-reply-interpreter.js";
 import { createPetProactive, type PetProactive } from "./pet-proactive.js";
@@ -41,7 +42,11 @@ interface Setup {
   answers: Array<string | Error>;
 }
 
-async function setup(settings: Record<string, unknown>, existing?: Harness): Promise<Setup> {
+async function setup(
+  settings: Record<string, unknown>,
+  existing?: Harness,
+  zone: () => string = () => "UTC",
+): Promise<Setup> {
   notifications = settings;
   h = existing ?? harness({ readSettings: () => ({ pet: { notifications } }) });
   await h.wiring.ready;
@@ -73,7 +78,7 @@ async function setup(settings: Record<string, unknown>, existing?: Harness): Pro
     models: [model],
     now: () => env.clock,
     timezoneOffsetMin: () => 0,
-    timezone: () => "UTC",
+    timezone: zone,
     log: (event) => logs.push(event),
   });
   await proactive.start();
@@ -151,7 +156,9 @@ describe("briefs", () => {
     expect(f.h.submitted).toMatchObject([
       { kind: "brief.morning", priority: "P1", target: { kind: "owner" }, channel: "auto" },
     ]);
-    expect(f.h.ownerSends.map((send) => send.text)).toEqual(["早！\n- 登录修好了\n今天先做哪个？"]);
+    expect(f.h.ownerSends.map((send) => send.text)).toEqual([
+      "早！\n- 【完成】登录修好了\n今天先做哪个？",
+    ]);
     // The records went to the model as data, with refs.
     expect(JSON.parse(f.calls[0]!.user).records[0]).toMatchObject({ ref: "r1", type: "done" });
 
@@ -185,9 +192,9 @@ describe("briefs", () => {
     );
     await f.h.idle();
     expect(caughtUp.detail).toContain("已发送早报");
-    // No model answered: the template, still one line per record.
+    // No model answered: the template, one line per record, fitting the hour (13:00).
     expect(f.h.ownerSends.map((send) => send.text)).toEqual([
-      "早上好，今天的情况：\n- 「修复登录问题」做完了：登录修好了",
+      "今天到现在的情况：\n- 【完成】「修复登录问题」：登录修好了",
     ]);
   });
 
@@ -205,8 +212,31 @@ describe("briefs", () => {
     await f.h.wiring.router.flushDigest();
     await f.h.idle();
     expect(f.h.ownerSends.map((send) => send.text)).toEqual([
-      "早上好，今天的情况：\n- 「修复登录问题」做完了：登录修好了",
+      "早上好，今天的情况：\n- 【完成】「修复登录问题」：登录修好了",
     ]);
+  });
+
+  test("a brief the router did not take (shutting down) is not marked sent", async () => {
+    env.clock = NINE;
+    const f = await setup({ briefs: { morning: { enabled: true } } });
+    f.h.tasks.push(longTask({ completedAt: NINE - HOUR }));
+    f.h.wiring.router.dispose();
+    const result = await f.proactive.fire(
+      rule(f, "system-brief-morning"),
+      due(f, "system-brief-morning", NINE),
+    );
+    expect(result).toMatchObject({ status: "failed" });
+    expect(f.proactive.status().briefs.morning).toEqual({});
+  });
+
+  test("a fire in another timezone than the rule's retimes the rules", async () => {
+    env.clock = NINE;
+    let zone = "UTC";
+    const f = await setup({ briefs: { morning: { enabled: true } } }, undefined, () => zone);
+    zone = "Asia/Shanghai";
+    await f.proactive.fire(rule(f, "system-brief-morning"), due(f, "system-brief-morning", NINE));
+    await f.proactive.sync();
+    expect(rule(f, "system-brief-morning").when.timezone).toBe("Asia/Shanghai");
   });
 });
 
@@ -268,14 +298,40 @@ describe("heartbeat", () => {
     expect(f.calls).toHaveLength(2);
   });
 
-  test("daily caps survive a restart: 8 judgements, 4 messages", async () => {
+  test("4 messages a day: past that, no model is asked and the facts wait", async () => {
     env.clock = TEN;
-    let f = await setup({ heartbeat: { enabled: true } });
-    for (let index = 0; index < 9; index += 1) {
+    const f = await setup({ heartbeat: { enabled: true } });
+    for (let index = 0; index < 5; index += 1) {
       await newResult(f, `s-${index}`, env.clock);
       env.clock += MIN;
       f.answers.push('{"say":true,"text":"有事"}');
+      const result = await beat(f);
+      if (index === 4) expect(result.detail).toContain("已达上限");
+      env.clock += 30 * MIN;
+    }
+    expect(f.calls).toHaveLength(4);
+    expect(f.h.submitted.filter((notice) => notice.kind === "heartbeat")).toHaveLength(4);
+    // Not consumed: the fifth result is still unjudged (seen only once judged).
+    const stored = JSON.parse(await readFile(join(env.dir, "pet", "proactive.json"), "utf8"));
+    expect(stored.heartbeat.seen).toHaveLength(4);
+    expect(f.proactive.status().heartbeat).toMatchObject({
+      saidToday: 4,
+      atSayCap: true,
+      atJudgeCap: false,
+    });
+  });
+
+  test("8 judgements a day, counted durably across a restart", async () => {
+    env.clock = TEN;
+    let f = await setup({ heartbeat: { enabled: true } });
+    let calls = 0;
+    for (let index = 0; index < 9; index += 1) {
+      await newResult(f, `s-${index}`, env.clock);
+      env.clock += MIN;
+      f.answers.push('{"say":false}');
+      const before = f.calls.length;
       await beat(f);
+      calls += f.calls.length - before;
       env.clock += 30 * MIN;
       if (index === 3) {
         // A restart in between: a fresh store over the same file.
@@ -283,14 +339,47 @@ describe("heartbeat", () => {
         f = await setup({ heartbeat: { enabled: true } }, f.h);
       }
     }
-    expect(f.calls.length + 4).toBe(8);
-    expect(f.h.submitted.filter((notice) => notice.kind === "heartbeat")).toHaveLength(4);
-    expect(f.proactive.status().heartbeat).toMatchObject({
-      judgedToday: 8,
-      saidToday: 4,
-      atJudgeCap: true,
-      atSayCap: true,
+    expect(calls).toBe(8);
+    expect(f.proactive.status().heartbeat).toMatchObject({ judgedToday: 8, atJudgeCap: true });
+  });
+
+  test("after a long gap the heartbeat looks back two hours at most", async () => {
+    env.clock = TEN;
+    const f = await setup({ heartbeat: { enabled: true } });
+    expect((await beat(f)).detail).toContain("未调用模型");
+    // Off (or asleep) for five hours; one result came in early, one late.
+    env.clock = TEN + 60 * MIN;
+    await newResult(f, "s-old", env.clock);
+    env.clock = TEN + 4 * 60 * MIN;
+    await newResult(f, "s-new", env.clock);
+    env.clock = TEN + 5 * 60 * MIN;
+    f.answers.push('{"say":false}');
+    await beat(f);
+    const facts = JSON.parse(f.calls[0]!.user).facts as Array<{ title: string }>;
+    expect(facts.map((fact) => fact.title)).toEqual(["会话 s-new"]);
+  });
+
+  test("beats run one at a time: a recheck and a regular beat never both pass the cap", async () => {
+    env.clock = TEN;
+    const f = await setup({ heartbeat: { enabled: true } });
+    // Three messages already today.
+    for (let index = 0; index < 3; index += 1) {
+      env.clock += MIN;
+      await newResult(f, `s-${index}`, env.clock);
+      env.clock += MIN;
+      f.answers.push('{"say":true,"text":"有事"}');
+      await beat(f);
+    }
+    env.clock += MIN;
+    await newResult(f, "s-x", env.clock);
+    env.clock += MIN;
+    await f.h.wiring.ruleStore.setSystemSchedule("system-heartbeat-recheck", {
+      when: { kind: "schedule", at: env.clock + MIN, timezone: "UTC", missedPolicy: "skip" },
+      state: "active",
     });
+    f.answers.push('{"say":true,"text":"第四条"}', '{"say":true,"text":"第五条"}');
+    await Promise.all([beat(f), beat(f, env.clock, "system-heartbeat-recheck")]);
+    expect(f.h.submitted.filter((notice) => notice.kind === "heartbeat")).toHaveLength(4);
   });
 
   test('"look again in N minutes" arms one recheck; the recheck never arms another', async () => {

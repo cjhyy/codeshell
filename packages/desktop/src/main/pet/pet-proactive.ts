@@ -40,6 +40,8 @@ import type { DesktopPendingDecision, DesktopPetSession } from "./pet-state-aggr
  */
 
 const MINUTE = 60_000;
+/** How far back a heartbeat looks at most. */
+const HEARTBEAT_LOOKBACK_MS = 2 * 60 * MINUTE;
 const NOTICE_SUMMARY_MAX = 600;
 
 export interface PetProactiveDeps {
@@ -50,7 +52,7 @@ export interface PetProactiveDeps {
   state: PetProactiveStateStore;
   ledger: {
     load(): Promise<void>;
-    createdSince(ms: number): NoticeRecord[];
+    changedSince(ms: number): NoticeRecord[];
     actionRecords(): NoticeRecord[];
   };
   tasks(): readonly PetLongTask[];
@@ -128,10 +130,15 @@ export function createPetProactive(deps: PetProactiveDeps): PetProactive {
       },
     );
     if (!facts) return outcome(`没有需要汇报的事，${name}未发送。`);
-    const written = await writeBrief(facts, deps.models, {
-      ...(deps.modelTimeoutMs !== undefined ? { timeoutMs: deps.modelTimeoutMs } : {}),
-      onError: onError("pet.proactive.brief_model_failed"),
-    });
+    const written = await writeBrief(
+      facts,
+      deps.models,
+      { now: at, offsetMin: offset },
+      {
+        ...(deps.modelTimeoutMs !== undefined ? { timeoutMs: deps.modelTimeoutMs } : {}),
+        onError: onError("pet.proactive.brief_model_failed"),
+      },
+    );
     const decision = await deps.submit({
       kind: `brief.${kind}`,
       priority: "P1",
@@ -146,7 +153,11 @@ export function createPetProactive(deps: PetProactiveDeps): PetProactive {
       // "现在别说，明早再说": the owner may put it off.
       actions: { family: "notice" },
     });
-    if (decision.outlet === "drop") return outcome(`今天的${name}已经发过，未重复发送。`);
+    if (decision.outlet === "drop") {
+      if (decision.reason === "duplicate") return outcome(`今天的${name}已经发过，未重复发送。`);
+      // Not sent (the router was shutting down): not marked, so it may still go today.
+      return outcome(`${name}未发出（${decision.reason}）。`, "failed");
+    }
     await deps.state.update((draft) => {
       draft.briefs[kind] = { sentAt: at, day: today };
     });
@@ -191,12 +202,16 @@ export function createPetProactive(deps: PetProactiveDeps): PetProactive {
     await Promise.all([deps.state.load(), deps.ledger.load()]);
     const day = localDayIndex(at, zone);
     const beat = heartbeatToday(deps.state.get().heartbeat, day);
-    const since = beat.lastAt ?? at - HEARTBEAT_INTERVAL_MIN * MINUTE;
+    // Never further back than two hours (a long gap: switched off, asleep, capped).
+    const since = Math.max(
+      beat.lastAt ?? at - HEARTBEAT_INTERVAL_MIN * MINUTE,
+      at - HEARTBEAT_LOOKBACK_MS,
+    );
     const facts = heartbeatPrecheck({
       now: at,
       since,
       seen: new Set(beat.seen),
-      recent: deps.ledger.createdSince(since),
+      recent: deps.ledger.changedSince(since),
       followUps: followUps(),
       sessions: deps.sessions(),
       sessionWatched: (sessionId) => deps.rules.activeForSession(sessionId).length > 0,
@@ -215,10 +230,12 @@ export function createPetProactive(deps: PetProactiveDeps): PetProactive {
       await advance();
       return outcome("没有新情况，未调用模型。");
     }
-    if (beat.judged >= HEARTBEAT_JUDGE_CAP) {
-      await advance();
+    // At a cap the facts are left as they are (not judged, not consumed).
+    if (beat.judged >= HEARTBEAT_JUDGE_CAP)
       return outcome(`今天的判断次数已用完（${HEARTBEAT_JUDGE_CAP} 次），未调用模型。`);
-    }
+    // Nothing could be said today anyway: no judgement is spent on it.
+    if (beat.said >= HEARTBEAT_SAY_CAP)
+      return outcome(`今天的心跳消息已达上限（${HEARTBEAT_SAY_CAP} 条），未调用模型。`);
     // Counted before the call, so a crash mid-call cannot get past the cap.
     await deps.state.update((draft) => {
       const next = heartbeatToday(draft.heartbeat, day);
@@ -227,17 +244,15 @@ export function createPetProactive(deps: PetProactiveDeps): PetProactive {
       next.lastAt ??= since;
       draft.heartbeat = next;
     });
-    const judgement = await judgeHeartbeat(facts, { now: at, saidToday: beat.said }, deps.models, {
+    const context = { now: at, saidToday: beat.said, offsetMin: offset };
+    const judgement = await judgeHeartbeat(facts, context, deps.models, {
       ...(deps.modelTimeoutMs !== undefined ? { timeoutMs: deps.modelTimeoutMs } : {}),
       onError: onError("pet.proactive.judge_model_failed"),
     });
     // No valid answer is "judge again later", never "nothing to say".
     if (!judgement) return outcome("这次没能判断，下次再看。", "failed");
     if (judgement.say) {
-      if (heartbeatToday(deps.state.get().heartbeat, day).said >= HEARTBEAT_SAY_CAP) {
-        await advance();
-        return outcome(`今天的心跳消息已达上限（${HEARTBEAT_SAY_CAP} 条），未发送。`);
-      }
+      // Beats run one at a time, so the cap checked above still holds.
       await advance((next) => {
         next.said += 1;
       });
@@ -277,11 +292,19 @@ export function createPetProactive(deps: PetProactiveDeps): PetProactive {
     return run;
   };
 
+  /** One heartbeat at a time: a recheck and a regular beat never race the caps. */
+  let beating: Promise<unknown> = Promise.resolve();
+  const oneBeat = (rule: SystemScheduleNoticeRule, due: RuleScheduleDue) => {
+    const run = beating.catch(() => undefined).then(() => heartbeat(rule, due));
+    beating = run.catch(() => undefined);
+    return run;
+  };
+
   return {
     async fire(rule, due) {
-      return rule.then.mode === "compose"
-        ? brief(rule.then.brief, rule, due)
-        : heartbeat(rule, due);
+      // The host's timezone moved (travel, a settings change): retime the rules.
+      if (rule.when.timezone !== timezone()) void sync().catch(() => undefined);
+      return rule.then.mode === "compose" ? brief(rule.then.brief, rule, due) : oneBeat(rule, due);
     },
     sync,
     async start() {
