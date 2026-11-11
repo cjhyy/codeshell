@@ -4146,6 +4146,7 @@ registerProjectAuthorityIpc({
   applyGitPathFromSettings,
   projectStore,
   getBridge: () => bridge,
+  getExternalRuntimeService: () => externalRuntime.service,
   getTrust,
   assertSessionId: assertDesktopSessionId,
   trackGitRoot: (root) => knownGitRoots.add(root),

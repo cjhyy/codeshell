@@ -1,5 +1,5 @@
 import { BrowserWindow, ipcMain } from "electron";
-import { ExternalRuntimeService } from "./external-runtime-service.js";
+import type { ExternalRuntimeService } from "./external-runtime-service.js";
 import { assertWorkspaceProfileName } from "./external-runtime-profile.js";
 import { parseExternalGoalInput } from "./external-runtime-goal-rpc.js";
 import {
@@ -10,11 +10,9 @@ import { availableExternalRuntimes } from "./external-runtime-availability.js";
 import { ExternalRuntimeModelService } from "./external-runtime-model-service.js";
 import type { ExternalRuntimeAttachment } from "@cjhyy/code-shell-capability-coding/external-runtimes";
 import { parseExternalRuntimeModelKey } from "../shared/external-runtime-models.js";
-import {
-  requireRendererProjectEntryPath,
-  requireRendererProjectPath,
-} from "./renderer-project-path.js";
+import { requireRendererProjectEntryPath } from "./renderer-project-path.js";
 import { assertDesktopSessionId } from "./session-validation.js";
+import { resolveExternalRuntimeStartWorkspace } from "./external-runtime-start-workspace.js";
 
 // ─── External Agent Runtimes (Codex / Claude Code) ────────────────
 // The renderer picks these like any other model (`codex/gpt-5.6-sol`); these
@@ -69,7 +67,6 @@ export function registerExternalRuntimeIpc(deps: ExternalRuntimeIpcDeps) {
       if (!service) throw new Error("external runtime service is unavailable");
       const sessionId = typeof payload?.sessionId === "string" ? payload.sessionId : "";
       assertDesktopSessionId(sessionId);
-      const cwd = await requireRendererProjectPath(payload?.cwd);
       const modelKey = typeof payload?.modelKey === "string" ? payload.modelKey : "";
       if (!modelKey || modelKey.length > MAX_EXTERNAL_RUNTIME_ID_CHARS) {
         throw new Error("a bounded modelKey is required");
@@ -100,10 +97,11 @@ export function registerExternalRuntimeIpc(deps: ExternalRuntimeIpcDeps) {
       if (!ownerWindow || ownerWindow.isDestroyed()) {
         throw new Error("external runtime requires a live owner window");
       }
+      const workspace = await resolveExternalRuntimeStartWorkspace(sessionId, payload?.cwd);
       const session = await service.ensure({
         kind: parsed.kind,
         sessionId,
-        cwd,
+        ...workspace,
         modelKey,
         permissionMode,
         planMode: payload?.planMode === true,

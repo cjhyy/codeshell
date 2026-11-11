@@ -307,7 +307,9 @@ export class ExternalRuntimeSessionRecorder {
     // The resolver is main-owned and exact-root-only; this also safely upgrades
     // older cwd-only external sessions without trusting model/renderer input.
     if (!persistedProject && projectBinding) {
-      this.manager.migrateSessionMainRoot(sessionId, projectBinding, cwd);
+      // The main root already matched above. This is an identity upgrade, not
+      // a root migration: preserve any worktree the Session has selected.
+      this.manager.updateSessionState(sessionId, { project: { ...projectBinding } });
     }
     this.transcript = bundle.transcript;
     this.cwd = bundle.state.cwd;
