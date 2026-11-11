@@ -15,7 +15,7 @@
 
 import { randomUUID } from "node:crypto";
 import { createHash } from "node:crypto";
-import type { ConversationSessionRoute } from "@cjhyy/code-shell-pet";
+import { parseBoundSessionCommand, type ConversationSessionRoute } from "@cjhyy/code-shell-pet";
 import {
   injectMobileRunAndAwaitAcceptance,
   type MobileRunBridge,
@@ -235,7 +235,8 @@ export function sessionRouteHandler(deps: {
   return async (inbound) => {
     const bridge = deps.bridge();
     if (!bridge) return { kind: "not-bound" };
-    if (await bridge.isBound(inbound)) {
+    // /mimi and /session belong to the bridge and never reach a model.
+    if (!parseBoundSessionCommand(inbound.text) && (await bridge.isBound(inbound))) {
       const answered = await deps.replyToSession(inbound);
       if (answered) return answered;
     }

@@ -393,6 +393,10 @@ describe("the gateway's bound-Session probe", () => {
     expect(await handle(inbound)).toEqual({ kind: "status", text: "done" });
     expect(replied).toEqual(["交给 Mimi 吧"]);
     expect(routed).toEqual(["交给 Mimi 吧"]);
+    // The bridge's own commands never reach a model, even with items open.
+    for (const text of ["/mimi", " /Session ", "退出 session"]) await handle({ ...inbound, text });
+    expect(replied).toEqual(["交给 Mimi 吧"]);
+    expect(routed).toEqual(["交给 Mimi 吧", "/mimi", " /Session ", "退出 session"]);
   });
 
   test("a bound chat reads a reply with one model within the route budget", async () => {

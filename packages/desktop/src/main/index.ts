@@ -3181,8 +3181,20 @@ async function dispatchGatewayPetChat(
   const decisionReply = await petImDecisions?.reply(request);
   if (typeof decisionReply === "string") return { text: decisionReply, petSessionId: sessionId };
   // "交给 Mimi": Mimi's turn gets the notice's data with the owner's request;
-  // the item is used once that turn is dispatched.
-  const handoff = decisionReply;
+  // the item is used once that turn is dispatched, and freed if it never is.
+  try {
+    return await dispatchGatewayPetTurn(request, dispatcher, sessionId, decisionReply);
+  } finally {
+    decisionReply?.abandoned();
+  }
+}
+
+async function dispatchGatewayPetTurn(
+  request: PetChatControlRequest,
+  dispatcher: PetDispatchService,
+  sessionId: string,
+  handoff: Exclude<Awaited<ReturnType<PetImDecisions["reply"]>>, string>,
+): Promise<PetChatControlResult> {
   const message = handoff?.handoff ?? request.message;
   const cwd = resolveNoRepoCwd();
   const attachments: InputAttachmentMeta[] = [];

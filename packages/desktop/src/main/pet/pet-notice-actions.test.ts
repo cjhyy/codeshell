@@ -417,7 +417,11 @@ describe("actions", () => {
     expect(await h.run(code, "handoff")).toBe("这件事正在处理，请稍等。");
     reply.abandoned();
     const again = (await h.run(code, "handoff")) as NoticeHandoff;
-    await again.dispatched();
+    const marking = again.dispatched();
+    // The caller's finally after a dispatched turn frees nothing.
+    again.abandoned();
+    expect(await h.run(code, "handoff")).toBe("这件事正在处理，请稍等。");
+    await marking;
     expect(h.ledger.byActionCode(code)!.actions!.usedAt).toBe(NOON);
     expect(await h.run(code, "handoff")).toBe("这件事已经处理过了，没有再执行。");
   });

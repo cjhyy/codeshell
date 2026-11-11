@@ -28,7 +28,7 @@ export interface NoticeHandoff {
   handoff: string;
   /** Mimi's turn was dispatched: the item is used. */
   dispatched(): Promise<void>;
-  /** The turn did not happen: the item stays open. */
+  /** The turn did not happen: the item stays open (a no-op once dispatched). */
   abandoned(): void;
 }
 
@@ -255,8 +255,8 @@ export function createNoticeActionExecutor(deps: NoticeActionExecutorDeps): Noti
   const busy = new Set<string>();
   /** Records handed to Mimi whose turn has not been dispatched yet (→ since). */
   const handingOff = new Map<string, number>();
-  /** A handoff whose turn never reported back (it threw early) frees the item again. */
-  const HANDOFF_HOLD_MS = 2 * 60_000;
+  /** Backstop for a process that died mid-handoff (Mimi's turn itself may take minutes). */
+  const HANDOFF_HOLD_MS = 15 * 60_000;
   const handedOff = (recordId: string) => {
     const since = handingOff.get(recordId);
     return since !== undefined && now() - since < HANDOFF_HOLD_MS;
@@ -473,6 +473,8 @@ export function createNoticeActionExecutor(deps: NoticeActionExecutorDeps): Noti
             }
           },
           abandoned: () => {
+            // After dispatch it is (being) used: nothing to free.
+            if (settled) return;
             settled = true;
             handingOff.delete(recordId);
           },
