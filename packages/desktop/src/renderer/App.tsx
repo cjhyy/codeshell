@@ -2397,6 +2397,15 @@ function App() {
                   onPreviewMoving={previewMimi}
                   onRetryPresence={retryMimi}
                   onOpenMemoryCenter={() => openPetMemory("settings")}
+                  onOpenSession={(sessionId) => {
+                    const projection = petState.projection;
+                    if (!projection) return;
+                    void handleOpenPetTarget({
+                      agentSessionId: sessionId,
+                      snapshotVersion: projection.version,
+                      generation: projection.generation,
+                    });
+                  }}
                 />
               ) : isPetMemoryView ? (
                 <PetMemoryCenterPage onBack={leavePetMemory} />

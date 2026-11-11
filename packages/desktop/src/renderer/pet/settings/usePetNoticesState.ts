@@ -4,7 +4,8 @@ import type { PetNoticesState } from "../../../shared/pet-notices";
 
 export type NoticesReadApi = Pick<PetApi, "getNoticesState" | "onNoticesChanged">;
 
-function defaultApi(): NoticesReadApi | undefined {
+/** The preload's Mimi API, when this window has one. */
+export function defaultNoticesApi(): PetApi | undefined {
   try {
     return window.codeshell?.pet;
   } catch {
@@ -16,7 +17,7 @@ function defaultApi(): NoticesReadApi | undefined {
  * Main's notice state (channels, system rule, settings), read-only and kept
  * fresh on `onNoticesChanged`. For views that show rules without editing.
  */
-export function usePetNoticesState(api: NoticesReadApi | undefined = defaultApi()) {
+export function usePetNoticesState(api: NoticesReadApi | undefined = defaultNoticesApi()) {
   const [state, setState] = useState<PetNoticesState | null>(null);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
   const [loadError, setLoadError] = useState("");

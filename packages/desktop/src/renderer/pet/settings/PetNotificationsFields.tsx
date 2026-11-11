@@ -12,6 +12,7 @@ import { writeSettings } from "../../settingsBus";
 import { useTargetedDebouncedSave } from "../../settings/useTargetedDebouncedSave";
 import type { PetApi } from "../../../preload/pet-api";
 import {
+  PET_NOTIFICATION_DIGEST_SLOTS_MAX,
   PET_NOTIFICATION_MAX_P0_PER_HOUR_RANGE,
   PET_NOTIFICATION_MAX_PER_HOUR_RANGE,
   PET_NOTIFICATION_MERGE_WINDOW_SEC_RANGE,
@@ -20,6 +21,7 @@ import {
   type PetNoticeChannelReadiness,
   type PetNoticesState,
   type PetNotificationSettingsView,
+  type PetProactiveStatus,
 } from "../../../shared/pet-notices";
 
 const HH_MM = /^(?:[01]\d|2[0-3]):[0-5]\d$/u;
@@ -38,6 +40,17 @@ export interface PetNotificationsDraft {
   /** Seconds of system idle after which the owner counts as away. */
   presenceIdleSec: string;
   delegatedFromDesktop: "auto" | "desktop";
+  /** Morning brief and evening wrap-up: on/off and local "HH:MM". */
+  morningEnabled: boolean;
+  morningTime: string;
+  eveningEnabled: boolean;
+  eveningTime: string;
+  /** Heartbeat: on/off and its active window. */
+  heartbeatEnabled: boolean;
+  heartbeatStart: string;
+  heartbeatEnd: string;
+  /** Digest slots as typed (saved only when every one is a distinct "HH:MM"). */
+  digestSlots: string[];
 }
 
 type IntegerField = "maxPerHour" | "maxP0PerHour" | "mergeWindowSec" | "presenceIdleSec";
@@ -64,17 +77,68 @@ export function notificationsDraft(view: PetNotificationSettingsView): PetNotifi
     mergeWindowSec: String(view.mergeWindowSec),
     presenceIdleSec: String(view.presenceIdleSec),
     delegatedFromDesktop: view.delegatedFromDesktop,
+    morningEnabled: view.briefs?.morning.enabled ?? false,
+    morningTime: view.briefs?.morning.time ?? DEFAULT_BRIEF_TIMES.morning,
+    eveningEnabled: view.briefs?.evening.enabled ?? false,
+    eveningTime: view.briefs?.evening.time ?? DEFAULT_BRIEF_TIMES.evening,
+    heartbeatEnabled: view.heartbeat?.enabled ?? false,
+    heartbeatStart: view.heartbeat?.activeHours.start ?? DEFAULT_ACTIVE_HOURS.start,
+    heartbeatEnd: view.heartbeat?.activeHours.end ?? DEFAULT_ACTIVE_HOURS.end,
+    digestSlots: [...(view.digestSlots ?? [])],
   };
 }
 
-/** A key of `settings.pet.notifications`; the three quiet-hours inputs share one. */
-export type NotificationSettingKey = IntegerField | "quietHours" | "delegatedFromDesktop";
+/** Host defaults (main's `pet-notice-settings.ts`), for a view from an older main. */
+const DEFAULT_BRIEF_TIMES = { morning: "09:00", evening: "18:30" } as const;
+const DEFAULT_ACTIVE_HOURS = { start: "09:00", end: "22:00" } as const;
+
+export function isClockTime(value: string): boolean {
+  return HH_MM.test(value);
+}
+
+/** Digest slots are saved only as distinct, complete times, at most six (main drops the rest). */
+export function digestSlotsValid(slots: readonly string[]): boolean {
+  return (
+    slots.length <= PET_NOTIFICATION_DIGEST_SLOTS_MAX &&
+    slots.every(isClockTime) &&
+    new Set(slots).size === slots.length
+  );
+}
+
+/**
+ * A key of `settings.pet.notifications`, down to the leaf the owner edits:
+ * the three quiet-hours inputs share one, as do the heartbeat's two times;
+ * a brief's switch and its time are separate, so switching it on does not
+ * freeze its time at today's default.
+ */
+export type NotificationSettingKey =
+  | IntegerField
+  | "quietHours"
+  | "delegatedFromDesktop"
+  | "briefs.morning.enabled"
+  | "briefs.morning.time"
+  | "briefs.evening.enabled"
+  | "briefs.evening.time"
+  | "heartbeat.enabled"
+  | "heartbeat.activeHours"
+  | "digestSlots";
+
+const FIELD_KEYS: Partial<Record<keyof PetNotificationsDraft, NotificationSettingKey>> = {
+  quietEnabled: "quietHours",
+  quietStart: "quietHours",
+  quietEnd: "quietHours",
+  morningEnabled: "briefs.morning.enabled",
+  morningTime: "briefs.morning.time",
+  eveningEnabled: "briefs.evening.enabled",
+  eveningTime: "briefs.evening.time",
+  heartbeatEnabled: "heartbeat.enabled",
+  heartbeatStart: "heartbeat.activeHours",
+  heartbeatEnd: "heartbeat.activeHours",
+};
 
 /** The stored setting a draft field belongs to. */
 export function notificationSettingKey(field: keyof PetNotificationsDraft): NotificationSettingKey {
-  return field === "quietEnabled" || field === "quietStart" || field === "quietEnd"
-    ? "quietHours"
-    : field;
+  return FIELD_KEYS[field] ?? (field as IntegerField | "delegatedFromDesktop" | "digestSlots");
 }
 
 /**
@@ -101,6 +165,27 @@ export function notificationsSettingsPatch(
     const value = boundedInteger(draft[field], INTEGER_RANGES[field]);
     if (value !== undefined) notifications[field] = value;
   }
+  const briefs: Record<string, Record<string, unknown>> = {};
+  for (const brief of ["morning", "evening"] as const) {
+    const slot: Record<string, unknown> = {};
+    if (touched.has(`briefs.${brief}.enabled`)) slot.enabled = draft[`${brief}Enabled`];
+    const time = draft[`${brief}Time`];
+    if (touched.has(`briefs.${brief}.time`) && isClockTime(time)) slot.time = time;
+    if (Object.keys(slot).length > 0) briefs[brief] = slot;
+  }
+  if (Object.keys(briefs).length > 0) notifications.briefs = briefs;
+  const heartbeat: Record<string, unknown> = {};
+  if (touched.has("heartbeat.enabled")) heartbeat.enabled = draft.heartbeatEnabled;
+  if (
+    touched.has("heartbeat.activeHours") &&
+    isClockTime(draft.heartbeatStart) &&
+    isClockTime(draft.heartbeatEnd)
+  )
+    heartbeat.activeHours = { start: draft.heartbeatStart, end: draft.heartbeatEnd };
+  if (Object.keys(heartbeat).length > 0) notifications.heartbeat = heartbeat;
+  // The list replaces the stored one (arrays are not merged); empty = no fixed times.
+  if (touched.has("digestSlots") && digestSlotsValid(draft.digestSlots))
+    notifications.digestSlots = [...draft.digestSlots].sort();
   return { pet: { notifications } };
 }
 
@@ -139,6 +224,8 @@ export interface PetNotificationsController {
   systemPending: boolean;
   systemError: string;
   draft: PetNotificationsDraft | null;
+  /** Briefs' and heartbeat's state today, when main reports it. */
+  proactive?: PetProactiveStatus;
   saveError: string;
   update(patch: Partial<PetNotificationsDraft>): void;
   flush(): void;
@@ -168,9 +255,12 @@ export function usePetNotificationsController({
   apiRef.current = api;
 
   const persist = (value: PendingNotificationsWrite) => {
-    const operation = notificationWrites.then(() =>
-      write("user", notificationsSettingsPatch(value.draft, value.touched)),
-    );
+    const operation = notificationWrites.then(() => {
+      const patch = notificationsSettingsPatch(value.draft, value.touched);
+      // Nothing valid to save yet (a half-typed time): leave the settings alone.
+      const notifications = (patch.pet as { notifications: Record<string, unknown> }).notifications;
+      return Object.keys(notifications).length === 0 ? undefined : write("user", patch);
+    });
     notificationWrites = operation.catch(() => {});
     return operation.then(
       () => {
@@ -266,6 +356,7 @@ export function usePetNotificationsController({
     systemPending,
     systemError,
     draft,
+    ...(state?.proactive ? { proactive: state.proactive } : {}),
     saveError,
     update,
     flush,

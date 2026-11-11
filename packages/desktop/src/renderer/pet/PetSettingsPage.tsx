@@ -29,6 +29,8 @@ export interface PetSettingsPageProps {
   onPreviewMoving?: () => Promise<void>;
   onRetryPresence?: () => void;
   onOpenMemoryCenter: () => void;
+  /** Open a rule's work Session (the rule list's jump). */
+  onOpenSession?: (sessionId: string) => void;
 }
 
 /**
@@ -54,6 +56,7 @@ export function PetSettingsPage({
   onPreviewMoving,
   onRetryPresence,
   onOpenMemoryCenter,
+  onOpenSession,
 }: PetSettingsPageProps) {
   return (
     <PetSettingsShell
@@ -89,7 +92,10 @@ export function PetSettingsPage({
             <NotificationsSection onManageChannels={() => jumpTo("connections")} />
           )}
           {section === "rules" && (
-            <RulesSection onOpenNotifications={() => jumpTo("notifications")} />
+            <RulesSection
+              onOpenNotifications={() => jumpTo("notifications")}
+              onOpenSession={onOpenSession}
+            />
           )}
           {section === "memory" && <MemorySection onOpenMemoryCenter={onOpenMemoryCenter} />}
           {section === "connections" && <ChatGatewayPanel />}

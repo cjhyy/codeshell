@@ -44,20 +44,39 @@ export async function notifyAgentDone(
   await deps.notify(input);
 }
 
-/** Only Mimi's delegation rule watches the Session: shown, but not the bell's to switch off. */
+/**
+ * Only someone else's rule watches the Session (Mimi's delegation, or an IM
+ * chat watching it): shown, but not the bell's to switch off.
+ */
 export function isDelegatedOnly(state: PetSessionBellState): boolean {
-  return state.on && state.origin === "delegation";
+  return state.on && (state.origin === "delegation" || state.origin === "watch");
 }
 
-/** The bell's tooltip: what will happen, and whether that IM can deliver yet. */
+/** Who set the Session's rules up, as main reports it (never guessed from text). */
+function sourcesText(state: PetSessionBellState, t: TFunction): string {
+  if (!state.sources?.length) return "";
+  return t("pet.notices.bellSources", {
+    sources: state.sources
+      .map((source) => t(`pet.notices.bellSource.${source}`))
+      .join(t("pet.notices.bellSourceSeparator")),
+  });
+}
+
+/** The bell's tooltip: what will happen, who set it up, and whether that IM can deliver yet. */
 export function sessionBellLabel(state: PetSessionBellState, t: TFunction): string {
   if (!state.on) return t("pet.notices.bellOff");
-  if (isDelegatedOnly(state)) return t("pet.notices.bellDelegated");
+  if (isDelegatedOnly(state))
+    return (
+      t(state.origin === "watch" ? "pet.notices.bellWatched" : "pet.notices.bellDelegated") +
+      sourcesText(state, t)
+    );
   const target = state.imLabel ?? t("pet.notices.bellDesktop");
   const label = t("pet.notices.bellOn", { target });
-  return state.imLabel && state.ready && state.ready !== "ready"
-    ? label + t("pet.notices.bellNotReady", { target: state.imLabel })
-    : label;
+  const ready =
+    state.imLabel && state.ready && state.ready !== "ready"
+      ? t("pet.notices.bellNotReady", { target: state.imLabel })
+      : "";
+  return label + ready + sourcesText(state, t);
 }
 
 export function SessionNoticeBellButton({
@@ -85,6 +104,7 @@ export function SessionNoticeBellButton({
       // Read-only stays hoverable (a disabled button shows no tooltip).
       aria-disabled={readOnly || undefined}
       data-session-bell={readOnly ? "delegated" : state.on ? "on" : "off"}
+      data-session-bell-origin={state.on ? state.origin : undefined}
       data-session-bell-ready={notReady ? "not-ready" : undefined}
       onClick={readOnly ? undefined : onToggle}
     >
