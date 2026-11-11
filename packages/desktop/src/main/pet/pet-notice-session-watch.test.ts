@@ -202,6 +202,20 @@ describe("WatchSession arms a notice rule for the asking conversation", () => {
     expect(watchRules(current)).toEqual([]);
   });
 
+  test("a tailed CLI rollout (no rules) keeps the long-task watch it always had", async () => {
+    current = harness();
+    current.sessions[0] = { ...current.sessions[0]!, external: true } as never;
+    // No active task: the real watchSession creates one; the fixture answers with this row.
+    current.tasks.push(longTask({ status: "completed" }));
+    const fixture = watchAction(current);
+    const result = await fixture.watch({ sessionId: SID }, CONTEXT);
+    expect(result).toMatchObject({ watching: true });
+    expect(fixture.taskWatches).toEqual([
+      expect.objectContaining({ sessionId: SID, completionTarget: ROUTE }),
+    ]);
+    expect(watchRules(current)).toEqual([]);
+  });
+
   test("an idle Session is refused, as before", async () => {
     current = harness();
     current.sessions[0] = { ...current.sessions[0]!, runState: "idle" } as never;

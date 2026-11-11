@@ -332,6 +332,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
         ...host,
         rules: ruleStore,
         isEligibleSession: view.isEligibleSession,
+        ...(deps.isMimiSession ? { isMimiSession: deps.isMimiSession } : {}),
         nudge: decisions.nudge,
         now,
         log,

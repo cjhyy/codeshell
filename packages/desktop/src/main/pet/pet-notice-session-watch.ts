@@ -10,10 +10,12 @@ import { noticeTargetKey, type NoticeRule, type PetRuleStore } from "./pet-rule-
  * Session is done". It is a notice rule (`createdBy: "watch-session"`,
  * addressed to the conversation), so the rule watcher reports the Session's
  * done / failed / blocked like any other rule and decision prompts follow it.
- * No long task is created for a watch any more. A Session that already
- * belongs to a delegated long task keeps that task as its reporter; the watch
- * only points the task at this conversation (unchanged behaviour), and watch
- * tasks persisted by older builds keep working through the task path.
+ * No long task is created for a watch of a Session rules can watch. A
+ * Session that already belongs to a delegated long task keeps that task as
+ * its reporter; the watch only points the task at this conversation
+ * (unchanged behaviour). A Session rules never watch (a tailed CLI rollout)
+ * keeps the long-task watch it always had, and watch tasks persisted by older
+ * builds keep working through the task path.
  */
 
 /** What main supplies; the wiring adds the rule store and decision nudges. */
@@ -41,6 +43,8 @@ export interface SessionWatchHostDeps {
 export interface SessionWatchDeps extends SessionWatchHostDeps {
   rules: Pick<PetRuleStore, "load" | "activeForSession" | "upsertSessionRule" | "update">;
   isEligibleSession(sessionId: string): boolean;
+  /** Mimi's own Sessions are never watched, by rule or long task. */
+  isMimiSession?: (sessionId: string) => boolean;
   /** A decision already pending in the Session may now have somewhere to go. */
   nudge(sessionId: string): void;
   now(): number;
@@ -104,7 +108,11 @@ export function createSessionWatchAction(deps: SessionWatchDeps): PetHostActionE
     const title = session.title?.trim() || "未命名任务";
     if (session.terminal) return ended(title, session.terminal);
 
-    if (deps.longTasks.activeForSession(sessionId)) {
+    if (deps.isMimiSession?.(sessionId)) throw new Error("Mimi 自己的会话不能订阅完成通知");
+    // A delegated Session's long task already reports its result: point it
+    // here. A Session rules cannot watch (a tailed CLI rollout) keeps the
+    // long-task watch it always had.
+    if (deps.longTasks.activeForSession(sessionId) || !deps.isEligibleSession(sessionId)) {
       const watched = await deps.longTasks.watchSession({
         originClientMessageId: context.originClientMessageId,
         requestedAt: context.requestedAt,
@@ -124,7 +132,6 @@ export function createSessionWatchAction(deps: SessionWatchDeps): PetHostActionE
       };
     }
 
-    if (!deps.isEligibleSession(sessionId)) throw new Error("该工作 Session 不支持完成通知");
     if (!isUnderWay(session)) throw new Error("The selected Work Session is not active");
     await deps.rules.load();
     const target: NoticeRule["target"] = { kind: "route", route };
@@ -149,6 +156,9 @@ export function createSessionWatchAction(deps: SessionWatchDeps): PetHostActionE
       channel: route.channel,
       attention: "always",
       target,
+      // Phase 2d (rule list) decides how a watch shows in the bell and the list:
+      // for now it is the owner's ask, so the bell may switch it off and a
+      // delegation never rewrites it.
       origin: "user",
       armedAt: deps.now(),
     });
