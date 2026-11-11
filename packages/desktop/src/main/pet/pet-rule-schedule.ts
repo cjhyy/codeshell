@@ -38,13 +38,27 @@ const PREFIX = `${NAMESPACE}rule:`;
 /** Keys an unreleased pre-review build of this scheduler used; retired like the old store's. */
 const PRE_REVIEW_PREFIX = "mimi-rule:";
 const KEY_PATTERN =
-  /^mimi-follow-up:rule:(rule-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}):(\d+):(\d+)$/u;
+  /^mimi-follow-up:rule:(rule-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|system-(?:brief-morning|brief-evening|heartbeat|heartbeat-recheck)):(\d+):(\d+)$/u;
 const JOB_PROMPT = "Mimi scheduled rule";
 const JOB_NAME_MAX = 512;
 /** The core scheduler's misfire grace: later than this, a `skip` occurrence is missed. */
 const MISFIRE_GRACE_MS = 90_000;
 const MISSED_ONCE = "已错过约定时间或补发期限，未自动执行。请重新改期。";
 const MISSED_REPEAT = "错过了一次（电脑睡眠或未运行），未补发；之后按时提醒。";
+
+/** Mimi's own rules have no owner-written title; their jobs are named after what they do. */
+const SYSTEM_TITLES: Readonly<Record<string, string>> = {
+  "compose:morning": "Mimi 早报",
+  "compose:evening": "Mimi 收工小结",
+  "judge:heartbeat": "Mimi 心跳",
+};
+
+/** The core job's name for a rule's occurrence. */
+export function scheduleRuleTitle(rule: Pick<ScheduleNoticeRule, "then">): string {
+  const then = rule.then;
+  if ("title" in then) return then.title.slice(0, JOB_NAME_MAX);
+  return SYSTEM_TITLES[`${then.mode}:${then.mode === "compose" ? then.brief : then.kind}`]!;
+}
 
 export function ruleScheduleKey(id: string, version: number, occurrence: number): string {
   return `${PREFIX}${id}:${version}:${occurrence}`;
@@ -197,7 +211,7 @@ export class PetRuleScheduler {
         }
         for (const [key, rule] of desired) {
           if (kept.has(key)) continue;
-          scheduler.create(rule.then.title.slice(0, JOB_NAME_MAX), "once", JOB_PROMPT, {
+          scheduler.create(scheduleRuleTitle(rule), "once", JOB_PROMPT, {
             once: true,
             ...this.timing(rule),
             creationKey: key,
@@ -248,7 +262,7 @@ export class PetRuleScheduler {
     const timing = this.timing(rule);
     return (
       job.enabled &&
-      job.name === rule.then.title.slice(0, JOB_NAME_MAX) &&
+      job.name === scheduleRuleTitle(rule) &&
       job.prompt === JOB_PROMPT &&
       job.schedule === "once" &&
       job.once === true &&
