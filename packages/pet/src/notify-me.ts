@@ -249,7 +249,7 @@ function savedText(effect: RuleEffect, forMainSession = false): string {
     ...(effect.quietHours ? [`Quiet hours: ${effect.quietHours}.`] : []),
     ...(forMainSession
       ? [
-          "The rule is on the main Session, not this sub-agent: it fires when the main Session ends.",
+          "The rule is on the main Session, not this sub-agent: it fires when the main Session's turn or Goal ends.",
         ]
       : []),
     "Tell the owner exactly this; do not claim anything was sent.",

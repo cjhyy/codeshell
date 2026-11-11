@@ -64,7 +64,7 @@ function recorder(reply: unknown | (() => Promise<unknown>)) {
 }
 
 describe("NotifyMe visibility", () => {
-  test("is visible to native top-level Sessions only", () => {
+  test("is visible to native top-level Sessions and sub-agents with a trusted root", () => {
     expect(notifyMeAvailability(visibility())).toBe(true);
     expect(notifyMeAvailability(visibility({ hasGoal: true }))).toBe(true);
     // A sub-agent needs a trusted root Session id distinct from its own id;
@@ -384,23 +384,29 @@ describe("NotifyMe registration", () => {
   test("a sub-agent is routed on its root Session id, never its own", async () => {
     const module_ = createPetModule();
     const tool = toolOf(module_);
-    const observerHost = host();
-    const observer = module_.protocol!.createObserver!(observerHost);
-    observer.onSessionAttached?.(ROOT_ID, 1);
+    // Two hosts disable the single-host fallback, so only the root id routes.
+    const rootHost = host();
+    const otherHost = host();
+    const rootObserver = module_.protocol!.createObserver!(rootHost);
+    const otherObserver = module_.protocol!.createObserver!(otherHost);
+    rootObserver.onSessionAttached?.(ROOT_ID, 1);
     const child = {
       ...context(),
       isSubAgent: true,
       rootSessionId: ROOT_ID,
     } as ToolContext;
     expect(await tool.execute({}, child)).toContain("rule-1");
-    expect(observerHost.requests).toEqual([
+    expect(rootHost.requests).toEqual([
       expect.objectContaining({ sessionId: ROOT_ID, action: PET_RULE_UPSERT_ACTION }),
     ]);
-    // Missing root: fails closed without touching the host.
+    expect(otherHost.requests).toHaveLength(0);
+    // Missing root: fails closed without touching any host.
     const orphan = { ...context(), isSubAgent: true } as ToolContext;
     expect(await tool.execute({}, orphan)).toStartWith("Error:");
-    expect(observerHost.requests).toHaveLength(1);
-    observer.onServerClose?.();
+    expect(rootHost.requests).toHaveLength(1);
+    expect(otherHost.requests).toHaveLength(0);
+    rootObserver.onServerClose?.();
+    otherObserver.onServerClose?.();
   });
 
   test("is unavailable on a host without the action loopback", async () => {
