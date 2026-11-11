@@ -112,8 +112,8 @@ describe("slottedFlushAt", () => {
     expect(slottedFlushAt(at(12, 30), at(12, 31), slots, window)).toBe(at(18));
     expect(slottedFlushAt(at(12, 30), at(18), slots, window)).toBe(at(18));
     expect(slottedFlushAt(at(12, 30), at(18, 0) + 900, slots, window)).toBe(at(18) + 900);
-    // Asleep from 17:00 to 19:30: the 18:00 slot passed while it was ready.
-    expect(slottedFlushAt(at(12, 30), at(19, 30), slots, window)).toBe(at(19, 30));
+    // Asleep from 17:00 to 19:30: the 18:00 slot passed after it was held.
+    expect(slottedFlushAt(at(12, 30), at(19, 30), slots, window, at(12, 30))).toBe(at(19, 30));
     // Not ready until after quiet hours: the first slot after that.
     expect(slottedFlushAt(at(8), at(2), slots, window)).toBe(at(12));
   });
@@ -144,6 +144,46 @@ describe("digest slots through the router", () => {
     expect(h.im[2]!.body).toBe("你不在时：\n- 「Second」做完了");
     // A digest is no open item: the owner's next messages are not read against it.
     expect(h.ledger.actionRecords().filter((record) => record.kind === "digest")).toEqual([]);
+  });
+});
+
+describe("a slot missed while asleep", () => {
+  test("held at 10:00, slots 12:00 / 18:00, awake again at 14:00: sent then", async () => {
+    const h = setup(at(10), { quietHours: null, maxPerHour: 1, digestSlots: ["12:00", "18:00"] });
+    await h.router.submit(notice());
+    await h.router.submit(notice({ facts: { title: "Second" } }));
+    h.clock.now = at(14);
+    await h.router.flushDigest();
+    expect(h.im.map((call) => call.kind)).toEqual(["session.done", "digest"]);
+  });
+
+  test("a timer that fires a few minutes late still sends; held after the slot waits", async () => {
+    const late = setup(at(10), { quietHours: null, maxPerHour: 1, digestSlots: ["12:00"] });
+    await late.router.submit(notice());
+    await late.router.submit(notice());
+    late.clock.now = at(12, 2);
+    await late.router.flushDigest();
+    expect(late.im.map((call) => call.kind)).toEqual(["session.done", "digest"]);
+    // Held only after 12:00: waits for the next one.
+    expect(
+      slottedFlushAt(
+        at(12, 30),
+        at(14),
+        ["12:00", "18:00"],
+        { quietHours: null, timezoneOffsetMin: 480 },
+        at(12, 30),
+      ),
+    ).toBe(at(18));
+    // A slot that passed inside quiet hours does not count.
+    expect(
+      slottedFlushAt(
+        at(8),
+        at(9),
+        ["07:00", "18:00"],
+        { quietHours: { start: "23:00", end: "08:00" }, timezoneOffsetMin: 480 },
+        at(-2),
+      ),
+    ).toBe(at(18));
   });
 });
 

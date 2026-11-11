@@ -106,27 +106,35 @@ function slotAtOrBefore(at: number, minutes: readonly number[], offsetMin: numbe
 
 /**
  * With fixed digest slots ("12:00", "18:00"), a digest that could go at
- * `readyAt` waits for the next slot that is outside quiet hours. A slot that
- * passed after it became ready (the machine slept through it) sends now.
- * Without slots, `readyAt` itself.
+ * `readyAt` waits for the next slot that is outside quiet hours. A slot
+ * (outside quiet hours) that came after the earliest member was held, while
+ * the machine slept or the timer ran late, has been missed: once the digest
+ * is ready it goes now. Without slots, `readyAt` itself.
  */
 export function slottedFlushAt(
   readyAt: number,
   now: number,
   slots: readonly string[],
   window: Pick<RouteState, "quietHours" | "timezoneOffsetMin">,
+  heldSince: number = readyAt,
 ): number {
   const minutes = slotMinutes(slots);
   if (minutes.length === 0) return readyAt;
-  const quiet = (at: number) => isInQuietHours(window.quietHours, at, window.timezoneOffsetMin);
-  if (readyAt <= now) {
-    const passed = slotAtOrBefore(now, minutes, window.timezoneOffsetMin);
-    if (passed >= Math.floor(readyAt / MINUTE) * MINUTE && !quiet(now)) return now;
+  const zone = window.timezoneOffsetMin;
+  const quiet = (at: number) => isInQuietHours(window.quietHours, at, zone);
+  if (readyAt <= now && !quiet(now)) {
+    // The slots since it was held, newest first (a day's worth at most).
+    const since = Math.floor(heldSince / MINUTE) * MINUTE;
+    let slot = slotAtOrBefore(now, minutes, zone);
+    for (let seen = 0; seen <= minutes.length && slot >= since; seen += 1) {
+      if (!quiet(slot)) return now;
+      slot = slotAtOrBefore(slot - MINUTE, minutes, zone);
+    }
   }
-  let at = slotAtOrAfter(Math.max(readyAt, now), minutes, window.timezoneOffsetMin);
+  let at = slotAtOrAfter(Math.max(readyAt, now), minutes, zone);
   // Every slot may lie in quiet hours: give up after a day's worth and send at the next.
   for (let tries = 0; tries < minutes.length && quiet(at); tries += 1)
-    at = slotAtOrAfter(at + MINUTE, minutes, window.timezoneOffsetMin);
+    at = slotAtOrAfter(at + MINUTE, minutes, zone);
   return Math.max(at, readyAt);
 }
 
@@ -324,7 +332,13 @@ export class NoticeDigest {
       regular:
         ready === undefined
           ? undefined
-          : slottedFlushAt(ready, now, window.digestSlots ?? [], window),
+          : slottedFlushAt(
+              ready,
+              now,
+              window.digestSlots ?? [],
+              window,
+              Math.min(...regular.map((record) => record.delivery?.at ?? record.createdAt)),
+            ),
       // Its own time (when put off), and not before sending is allowed.
       solo: (record) => Math.max(record.deferredUntil ?? 0, allowedAt),
     };
