@@ -1,0 +1,113 @@
+5842 |       expect(sent().filter((e) => e.type === "goal.get")).toHaveLength(2);
+                                                                 ^
+error: expect(received).toHaveLength(expected)
+
+Expected length: 2
+Received length: 1
+
+      at <anonymous> (/private/tmp/codeshell-goal-fixes-20261111/packages/web/src/hooks/useRemoteApp.test.tsx:5842:59)
+(fail) versioned remote Goal controls > clear failure is visible, and late clear success cannot erase a replacement [4.14ms]
+(pass) versioned remote Goal controls > a same-batch replacement fences an older snapshot and reconnect reloads durable Goal state [1.10ms]
+6027 |     expect(notices.length).toBe(transition === "selection" ? 0 : 1);
+                                  ^
+error: expect(received).toBe(expected)
+
+Expected: 1
+Received: 0
+
+      at <anonymous> (/private/tmp/codeshell-goal-fixes-20261111/packages/web/src/hooks/useRemoteApp.test.tsx:6027:28)
+(fail) pending Goal failure remains useful across loading [1.56ms]
+6022 |     if (transition === "loading") { options.loading = true; await hook.rerender(); }
+6027 |     expect(notices.length).toBe(transition === "selection" ? 0 : 1);
+                                  ^
+error: expect(received).toBe(expected)
+
+Expected: 1
+Received: 0
+
+      at <anonymous> (/private/tmp/codeshell-goal-fixes-20261111/packages/web/src/hooks/useRemoteApp.test.tsx:6027:28)
+(fail) pending Goal failure remains useful across blocked [1.13ms]
+6022 |     if (transition === "loading") { options.loading = true; await hook.rerender(); }
+6027 |     expect(notices.length).toBe(transition === "selection" ? 0 : 1);
+                                  ^
+error: expect(received).toBe(expected)
+
+Expected: 1
+Received: 0
+
+      at <anonymous> (/private/tmp/codeshell-goal-fixes-20261111/packages/web/src/hooks/useRemoteApp.test.tsx:6027:28)
+(fail) pending Goal failure remains useful across reconnect [1.04ms]
+(pass) pending Goal failure remains useful across selection [0.15ms]
+-   "goal.get",
++   "goal.update",
+  ]
+
+- Expected  - 1
++ Received  + 1
+
+      at <anonymous> (/private/tmp/codeshell-goal-fixes-20261111/packages/web/src/hooks/useRemoteApp.test.tsx:6049:45)
+(fail) Goal snapshot send failure can recover with a read before any mutation [1.31ms]
+6044 |   const hook = await renderHook(() => useRemoteGoalControls(options));
+-   "goal.get",
++   "goal.update",
+  ]
+
+- Expected  - 1
++ Received  + 1
+
+      at <anonymous> (/private/tmp/codeshell-goal-fixes-20261111/packages/web/src/hooks/useRemoteApp.test.tsx:6049:45)
+(fail) Goal snapshot lost failure can recover with a read before any mutation [0.98ms]
+6044 |   const hook = await renderHook(() => useRemoteGoalControls(options));
+-   "goal.get",
++   "goal.update",
+  ]
+
+- Expected  - 1
++ Received  + 1
+
+      at <anonymous> (/private/tmp/codeshell-goal-fixes-20261111/packages/web/src/hooks/useRemoteApp.test.tsx:6049:45)
+(fail) Goal snapshot reply failure can recover with a read before any mutation [0.68ms]
+
+   operator: "match",
+       code: "ERR_ASSERTION"
+
+      at /private/tmp/codeshell-goal-fixes-20261111/packages/desktop/src/main/__fixtures__/agent-bridge-offline-goal.mjs:174:12
+
+Bun v1.3.11 (macOS arm64)
+
+      at <anonymous> (/private/tmp/codeshell-goal-fixes-20261111/packages/desktop/src/main/agent-bridge.nochild.test.ts:318:94)
+(fail) actual mobile ingress clears offline and observes delayed cold resume after timeout [10744.41ms]
+
++   "message": "worker did not respond",
+    "ok": false,
+  }
+
+- Expected  - 1
++ Received  + 1
+
+      at <anonymous> (/private/tmp/codeshell-goal-fixes-20261111/packages/desktop/src/main/mobile-remote/handle-client-event.test.ts:538:20)
+(fail) injectAndAwaitResult timeouts > Goal timeout is an unconfirmed result and never resends the mutation [23.50ms]
+(pass) injectAndAwaitResult timeouts > a failed worker write reports a retryable error and releases its subscription [0.14ms]
+(pass) desktop Stop for other-session fences only its in-flight workspace preparation [0.15ms]
+(pass) mobile keep-waiting on a model question > relays the worker route and reports a refusal (success: true) [0.20ms]
+(pass) mobile keep-waiting on a model question > relays the worker route and reports a refusal (success: false) [0.04ms]
+(pass) mobile keep-waiting on a model question > an unknown or mismatched question never reaches the worker
+(pass) versioned Goal commands reject lost native authority before worker or disk dispatch [0.25ms]
+(pass) a refused versioned clear reports a correlated refresh error
+
+9 tests failed:
+(fail) versioned remote Goal controls > clear failure is visible, and late clear success cannot erase a replacement [4.14ms]
+(fail) pending Goal failure remains useful across loading [1.56ms]
+(fail) pending Goal failure remains useful across blocked [1.13ms]
+(fail) pending Goal failure remains useful across reconnect [1.04ms]
+(fail) Goal snapshot send failure can recover with a read before any mutation [1.31ms]
+(fail) Goal snapshot lost failure can recover with a read before any mutation [0.98ms]
+(fail) Goal snapshot reply failure can recover with a read before any mutation [0.68ms]
+(fail) actual mobile ingress clears offline and observes delayed cold resume after timeout [10744.41ms]
+(fail) injectAndAwaitResult timeouts > Goal timeout is an unconfirmed result and never resends the mutation [23.50ms]
+
+ 169 pass
+ 9 fail
+ 882 expect() calls
+Ran 178 tests across 3 files. [30.64s]
+Bun test process failed (1)

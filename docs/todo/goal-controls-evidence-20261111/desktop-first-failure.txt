@@ -1,0 +1,30 @@
+Implementation HEAD: 9b27590221c7748f8654d99ab4852d117eb159fe.
+Command: PATH=/Applications/code-shell.app/Contents/Resources/runtimes/node/bin:$PATH caffeinate -i bun run test
+Actual CI Desktop partition; no source/test edits while running.
+The existing inner spawnSync deadline is 20 seconds; test deadline is 25 seconds, runner deadline 30 seconds. The child timed out before printing its final JSON; the exact fixture phase is unknown. Non-git stderr comes from ordinary temporary workspace directories and does not identify the cause.
+Initial merge-HEAD run: direct 3655.27ms, tunnel 4645.45ms, both passed.
+The panel test/fixture and main business path are unchanged in this follow-up. Goal producer/nochild tests run later; the root Goal fixtures belong to the later rest process. No causal claim or baseline exemption follows from this ordering.
+
+packages/desktop/src/main/desktop-web-panels.test.ts:
+(pass) Desktop Web panels use paired authority and Electron's existing storage (direct) [8129.07ms]
+38 |         { encoding: "utf8", timeout: 20_000, maxBuffer: 1024 * 1024 },
+39 |       );
+40 |       if (child.error || child.status !== 0)
+41 |         throw new Error(
+42 |           `Desktop panel integration failed: ${child.error ?? ""}\n${child.stderr}\n${child.stdout}`,
+43 |         );
+             ^
+error: Desktop panel integration failed: SystemError: spawnSync <Bun executable> ETIMEDOUT
+fatal: not a git repository (or any of the parent directories): .git
+fatal: not a git repository (or any of the parent directories): .git
+fatal: not a git repository (or any of the parent directories): .git
+
+
+      at <anonymous> (/private/tmp/codeshell-goal-fixes-20261111/packages/desktop/src/main/desktop-web-panels.test.ts:43:9)
+(fail) Desktop Web panels use paired authority and Electron's existing storage (tunnel passcode) [20219.13ms]
+
+ 7203 pass
+ 73 skip
+ 1 fail
+ 34174 expect() calls
+Ran 7277 tests across 768 files. [580.68s]

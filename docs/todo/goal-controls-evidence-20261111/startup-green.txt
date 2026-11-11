@@ -1,0 +1,15 @@
+575 |       expect(await waking).toBe(action === "edit");
+                                 ^
+error: expect(received).toBe(expected)
+
+Expected: true
+Received: false
+
+      at <anonymous> (/private/tmp/codeshell-goal-fixes-20261111/tests/engine-goal-startup-controls.test.ts:575:28)
+(fail) edit during actual background wake preserves controls and executes only the latest Goal [230.06ms]
+
+ 7 pass
+ 1 fail
+ 84 expect() calls
+Ran 8 tests across 1 file. [1.96s]
+Bun test process failed (1)

@@ -1,15 +1,62 @@
 # Goal control fixes — local development handoff (2026-11-11)
 
-Status: implemented on the dedicated task branch; **not pushed, not merged, no PR**. This is development evidence, not the separately requested CC acceptance review.
+Status: local follow-up implemented and verified with the timing limitation below, after the independent CC **code review PASS, no Critical / Important**. CC did not run tests. This round remains **local only: no push, PR, main integration or app installation**.
 
-- Worktree: `/private/tmp/codeshell-goal-fixes-20261111` only. Primary checkout and review worktree unchanged.
+- Worktree: `/private/tmp/codeshell-goal-fixes-20261111` only; primary and other worktrees untouched.
 - Branch: `codex/core/goal-controls-fixes-20261111`.
-- Base / fetched `origin/main`: `17e5524facb1a762505bc51b54676b21049a0142` (the prior review base was `e0152845d`; latest main was independently checked before writing).
-- Implementation commits: `9622facd4` (`fix(goal): preserve lifecycle controls across startup and remote recovery`) and final incremental `8d3db6dfd` (`fix(goal): report rejected remote clear revisions`). Documentation-only commit follows; use `git rev-parse HEAD` for the final handoff head.
-- A later comparison fetch advanced `origin/main` to `9e6330c102e9d9b6e5a465a4cd92e50c977b1110` (Mimi notification PR #338, no overlapping Goal implementation files). This development branch remains based on the user-specified base; integration/rebase and combined-main CI remain future work.
-- Independent dependencies: `bun install --frozen-lockfile`, no primary-checkout dependency links.
+- Tested combined diff base: this round initially fetched and merged `origin/main` **`9e6330c102e9d9b6e5a465a4cd92e50c977b1110`**; the normal conflict-free merge produced **`1dedce1838d6735f7bf9ac7974be43c427120a2c`**. At final read-only observation, the shared remote-tracking ref had advanced to **`57fc7413f929926a6994bec128b730a3e86b3de3`** (PR #344 merge, 2026-11-11T17:46:01+08:00), and this clean branch was ahead 6 / behind 62. Integration with those 62 commits is **unverified**; this round did not fetch again or chase the ref. Later protected integration must synchronize and revalidate the combined candidate; the results below remain tied to the recorded tested base and frozen implementation.
+- CC-follow-up implementation: `1dedce183..9b27590221c7748f8654d99ab4852d117eb159fe` (24 source/test files, 651 insertions / 117 deletions). Final handoff adds only documentation/evidence.
+- Historical first-stage base was `17e5524facb1a762505bc51b54676b21049a0142`; implementation `9622facd4` + `8d3db6dfd`, handoff `afb0f4e6a`. The old final-gates section below is historical and does not describe this round's CI entry point.
+- Independent dependencies, no upgrades or CI/release changes. Node `v24.22.1` from the installed app is read-only through command-local PATH; Bun `1.3.11`.
 
-## Six fixes and product behavior
+## 2026-11-11 CC 后本地整改
+
+1. **Startup edit liveness:** typed `goalContinuationHeld.retryGoalId` distinguishes a same-Goal active revision edit from pause/delete/replacement/user-wait. ChatSession keeps the original delivery promise and notification claim, retries once using current storage, and rechecks original admission guard, engine owner, Stop cancellation epoch, Goal identity and user-wait. A queued explicit resume supersedes the retry. Repeated edits settle held after the single budget; no busy loop. Resume no longer treats a typed zero-turn hold as success. Client-message receipts are not replayed.
+2. **Durable history boundary remains open:** the real async gate test reads actual transcript and protocol journal. Editing before startup validation yields two identical injected user inputs with distinct runIds after retry; pause yields one and zero provider calls. History is preserved without rollback. A coherent unconsumed-input projection spans transcript/cache/journal/receipts and is recorded as L in root TODO.md, not claimed fixed.
+3. **Web failure recovery:** a matching failed control refreshes the snapshot without replaying the mutation. Loading/blocked changes preserve the pending action; selection/epoch changes retire it silently; reconnect retires it with a visible uncertain-result notice in the same selection. Failed/lost/unsent reads fence stale revisions and an explicit click retries only the read. Automatic unsupported snapshots remain silent; explicit interaction displays the retained Host explanation. Fresh success releases the fence.
+4. **Cold worker boundary:** the actual dispatcher waits its unchanged default 10 seconds while an in-process worker stdin gate is closed. Timeout removes the tap and returns “结果未确认”; releasing the gate afterwards performs exactly one CAS and one fake provider call. There is no cancellation or automatic resend. This is real dispatcher/AgentBridge/Core execution behind a controlled stdin seam, not physical Electron/production worker E2E. Acceptance/expiry/cancellation semantics remain an L follow-up.
+5. **Stop authority:** injected host input cannot clear Stop even if internally mislabeled user. A protocol-validated downgrade-only `trigger: "host_message"` is set by Desktop scheduled automation and Hub automation, including non-injected runs. The authorized scheduled run can execute but does not lift suppression of later background wakes. Ordinary user/IM input, explicit resume and validated actual async answers retain their existing authority. The wire validator rejects forged `trigger: "user"`, including the real agent/run dispatch test.
+6. **Maintenance:** generic native Session error wording and Host capability/startup comments corrected. One synchronous fixture used `void engine.dispose()` before deleting its directory; it now awaits disposal. First actual CI rest partition passed before this change, so no cross-file pollution is claimed reproduced or hidden by repartitioning.
+
+Current source map (line numbers at implementation `9b2759022`):
+
+| Follow-up | Main source / regression |
+| --- | --- |
+| Typed hold and bounded retry | `packages/core/src/engine/run-goal.ts:35`, `run-finalize.ts:63`, `packages/core/src/protocol/chat-session.ts:606` |
+| Real startup + durable history boundary | `tests/engine-goal-startup-controls.test.ts:457` |
+| Web refresh, failure correlation and unsupported explanation | `packages/web/src/hooks/useRemoteGoalControls.ts:57`, `:148`, `:186` |
+| Cold timeout uncertainty | `packages/desktop/src/main/mobile-remote/handle-client-event.ts:228`; `packages/desktop/src/main/__fixtures__/agent-bridge-offline-goal.mjs:231` |
+| Stop / producer authority | `packages/core/src/protocol/server.ts:1844`; `packages/desktop/src/main/automation-resume-turn.ts:69`; `packages/server/src/serve/automation-worker.ts:101` |
+| Original six fixes | The historical table below names the original paths; use the current combined diff above for review, not the historical line numbers. |
+
+### Controlled evidence and verification
+
+All current concise evidence is reviewable in [goal-controls-evidence-20261111](goal-controls-evidence-20261111/README.md). Raw logs remain ignored in `artifacts/goal-controls-followup/`; no credentials or user data are included. The old `/tmp` logs below are historical, not required for this round's review.
+
+- First exact `bun run test`, frozen clean merge HEAD `1dedce183`: outer exit 0. The real CI rest process includes both root fixtures and all declared companion packages: **3553 tests / 383 files / 3550 pass / 3 skip / 0 fail**. The full partition footers and 549 passing Node tests are preserved. No CI edits, new skips or synthetic splitting were used; existing skips are preserved.
+- RED: actual startup edit wake 7 pass / 1 fail; Core/producer 37 pass / 15 fail plus one fixture-cleanup error; Web/cold 169 pass / 9 fail. The Hub cleanup error was caused by an early failed new assertion bypassing its normal cancellation/await, and was fixed independently of production behavior.
+- GREEN: Core/producer 52/52; Web/cold 178/178; actual startup 8/8. An intermediate startup GREEN attempt overasserted that the primary prompt contains Goal objective; actual objective use is in Goal judging. The corrected fixture checks the actual judge input contains the latest objective and excludes the old sentinel, current durable revision, zero stale provider entry, and the transcript/journal boundary. The intermediate fixture failure remains recorded, not presented as a production RED.
+- Additional unsupported-state RED: 120 pass / 1 fail, explicit click showed only generic refresh text. Final boundary GREEN and final full-gate results follow below.
+
+### Final follow-up gates
+
+Implementation frozen at **`9b27590221c7748f8654d99ab4852d117eb159fe`**. Before committing that unchanged source: package-release PASS (10 tarballs / 55 typed / 53 runtime entries), then typecheck PASS (all workspaces), root build PASS, Desktop build PASS (main/preload/renderer/mobile/Chrome extension), lint PASS (0 errors / 90 existing warnings), Engine bypass guard PASS. All outer exits 0; [actual command/footer evidence](goal-controls-evidence-20261111/build-checks.txt). Package-release finished before any dist reader began. Existing Vite chunk-size warnings remain.
+
+Current combined implementation diff: `git diff 9e6330c10..9b2759022` — **43 files, 3213 insertions / 146 deletions**, including the earlier handoff document. The narrower CC-follow-up implementation is `git diff 1dedce183..9b2759022` — **24 source/test files, 651 insertions / 117 deletions**. Final documentation-only additions are recorded separately at delivery.
+
+Final exact local CI unit-partition run (`bun run test`) completed against this frozen implementation with **outer exit 1**: **37 Bun partitions, 22227 tests = 22147 pass / 79 existing skips / 1 fail**, plus **549 Node tests / 0 fail**. Only documentation/evidence changed during the run. This is not a run of all GitHub platform jobs or smoke checks.
+
+The sole failure was the unchanged Desktop paired-panel tunnel fixture's inner `spawnSync` **20-second timeout** (not the runner's 30-second deadline). Desktop: 7277 tests = 7203 pass / 73 skip / 1 fail. Its direct case took 8.13 seconds; the tunnel case timed out before final JSON, so the blocked phase is unknown. The later Goal producer/nochild tests and later root fixtures cannot have left runtime state before this failure. The initial merge-HEAD run passed both modes, and the final-HEAD original-budget single-file control passed both (2.92s / 3.88s), but neither identifies the cause or erases the failed full run.
+
+The critical actual shared **rest process passed: 3554 tests / 383 files, 3551 pass / 3 existing skips / 0 fail**; both new root fixtures and subsequent packages ran together. Rest-server passed 2292/2292. No CI edits, new skips, test repartitioning, timeout increases or source changes were used. [Final partition footers](goal-controls-evidence-20261111/ci-final.txt) and [first failure excerpt](goal-controls-evidence-20261111/desktop-first-failure.txt) preserve the exact observations. The effective clean-main `9e6330c10` archive control also passed 2/2 (3.42s / 4.10s), with the same Node/runner/20-second budget. All 8807 tracked archive entries matched that Git tree. Its first attempt lacked coding/git dist and failed before the panel path; that setup failure is retained separately. Archive-only coding and full workspace builds completed before the effective comparison, without changing source, lockfile or dependencies. Both branch/main controls passing means **not reproduced, cause unresolved**, not a proven baseline defect. [Control details](goal-controls-evidence-20261111/main-control.txt).
+
+The existing isolated Chromium Goal smoke passed all **five checks** (cold paused snapshot, versioned resume, running extend, visible clear failure, successful clear), with `errors: []` and `blocked: []`, against actual production hooks/controller/buttons and an exact loopback Host protocol fixture. It is not physical Electron/production worker E2E. [Actual output](goal-controls-evidence-20261111/browser-final.txt).
+
+The single authorized original Desktop partition recheck (`bun run test --shard 3`) completed unchanged at implementation `9b2759022`: **outer exit 0, 7277 tests / 768 files = 7204 pass / 73 existing skips / 0 fail** (475.23s). The direct case and previously failed tunnel case passed at 4.06s / 4.64s. [Actual command and footer](goal-controls-evidence-20261111/desktop-partition-control.txt). No further repeat was run. Thus every actual partition has a passing result on this implementation, but the first complete final run remains **exit 1**, not a single all-green run; the intermittent timeout is an unresolved validation limitation.
+
+Final delivery is local implementation commit `9b2759022` followed by a documentation/evidence-only commit (23 files, 1198 insertions / 14 deletions). Combined delivery versus `9e6330c10`: 65 files, 4397 insertions / 146 deletions; this round versus `1dedce183`, including evidence: 47 files, 1849 insertions / 131 deletions. The exact delivery HEAD is returned with the final handoff (a document cannot embed its own commit hash). No push, PR, integration into main, installed-app operation or physical Goal Electron/worker/mobile acceptance was performed. The two L items in root TODO.md remain explicitly open. The two internal read-only reviewers found no new blockers in the final diff; they did not run tests and are not a replacement for independent CC acceptance.
+
+## Historical first-stage six fixes and product behavior
 
 | Finding                                                     | Root cause and fix                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | Main implementation                                                                                                                                                                                                                                                                                                                         |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -22,7 +69,7 @@ Status: implemented on the dedicated task branch; **not pushed, not merged, no P
 
 Native external runtimes retain their existing owner/routing policy. Automatic unsupported Goal snapshots are silent, explicit unsupported controls fail visibly; the mobile route never bypasses native ownership to call another runtime. Resume uses Core’s existing permission-aware continuation and rollback path.
 
-## TDD and focused evidence
+## Historical first-stage TDD and focused evidence
 
 All Bun invocations use `node scripts/run-bun-test-shard.mjs --timeout 30000` with 1–8 explicit files and isolated HOME. New Engine/SDK fixtures install network guards before Core imports and use fake providers. Fixed diskutil volume identity exists only in fixtures. No live provider, credential, release or user-data operation was used.
 
@@ -55,7 +102,7 @@ node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/protocol/c
 node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/mobile-remote/handle-client-event.test.ts packages/desktop/src/main/agent-bridge.nochild.test.ts packages/web/src/hooks/useRemoteApp.test.tsx packages/server/src/mobile-remote/remote-host-manager.test.ts packages/server/src/mobile-remote/mobile-client-event-validator.test.ts
 ```
 
-## Final gates
+## Historical first-stage final gates
 
 At implementation commit `9622facd4`:
 
@@ -80,7 +127,7 @@ Failure control completed for shard 0126: the single failing `panel-background-s
 node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/panel-background-services.integration.test.ts
 ```
 
-## Full-gate failures and controlled rechecks
+## Historical first-stage full-gate failures and controlled rechecks
 
 Initial failed groups are retained unchanged under `/tmp/goal-controls-unit/`:
 
@@ -108,13 +155,13 @@ env PATH="$goal_node_bin:$PATH" node scripts/run-bun-test-shard.mjs --timeout 30
 
 Control logs: `/tmp/goal-controls-{branch,main}-lab-control.log`, `/tmp/goal-controls-{branch,main}-perf-control.log`, `/tmp/goal-controls-main-server-default.log`, `/tmp/goal-controls-{branch,main}-node24.log`, `/tmp/goal-controls-main-custody-control.log`. Original full-run results were not overwritten. All 20 initially failing branch test cases passed in these bounded rechecks, while the first full run still has its four failed groups and is reported that way.
 
-## Browser and integration boundaries
+## Historical first-stage browser and integration boundaries
 
 `node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-goal-controls-browser.mjs` ran real Chromium with actual useRemoteApp/useDesktopController and actual Goal buttons, using an exact loopback mock Host protocol. Five checks passed: cold paused snapshot, CAS resume, running extend100, visible clear failure and successful clear; browser errors and blocked requests were empty. Evidence: `/tmp/goal-controls-browser-final.log` and its printed temporary report path. This is a browser + mocked transport acceptance fixture, **not** a full Electron-to-Core E2E.
 
 `agent-bridge-offline-goal.mjs` separately exercises real mobile dispatch, AgentBridge prepared injection, reviewed disk fallback, outbound reply correlation, and a real AgentServer/ChatSessionManager/Engine behind an in-process worker stdin boundary. It proves cold resume/one fake provider call, stale CAS rejection, real nochild clear with no spawned worker and a live-worker clear control. It does not launch a physical production worker/Electron process. Real shell completion is tested in the Core regression. Cross-process Stop persistence is intentionally outside scope; same-process bounded retention is the product contract.
 
-## Reviewable implementation diff
+## Historical first-stage implementation diff (17e5524fa..8d3db6dfd)
 
 `git diff 17e5524facb1a762505bc51b54676b21049a0142..8d3db6dfd` is the implementation and regression diff (documentation is additional).
 
@@ -152,9 +199,9 @@ Control logs: `/tmp/goal-controls-{branch,main}-lab-control.log`, `/tmp/goal-con
  30 files changed, 2504 insertions(+), 133 deletions(-)
 ```
 
-## Independent CC acceptance suggestions
+## Historical first-stage independent CC acceptance suggestions
 
-1. Review the implementation commit and final documentation diff against the recorded base; verify no primary checkout changes, pushes or merge occurred.
+1. Review the implementation commit and final documentation diff against the recorded base; verify no primary checkout changes, push, PR or integration into main occurred. This follow-up did normally merge origin/main into its task branch.
 2. Re-run guarded startup, run-goal, lifecycle/migration, SDK, nochild, dispatcher, validator, Host capability and Web hook suites (explicit groups of at most eight files). Inspect persisted revisions after turn settlement and notification claim restoration, not just events.
 3. Launch the actual Desktop/Web stack with a paused persisted Goal and a cold worker. Resume via Web, inspect one Core continuation with unchanged Goal identity/incremented revision; Stop and idle-evict with a long background shell, verify completion stays queued until new user input/resume.
 4. Stop the worker and clear from Web; verify prompt correlated success and disk deletion with no worker spawned. Race a replacement Goal and verify old resume/clear cannot mutate it. Exercise disconnected/old peers and owner/workspace revocation.

@@ -1,0 +1,24 @@
+             ^
+error: Desktop panel integration failed:
+error: Cannot find module '@cjhyy/code-shell-capability-coding/git' from '/private/tmp/codeshell-goal-fixes-20261111/artifacts/goal-main-control/packages/desktop/src/main/project-store.ts'
+
+Bun v1.3.11 (macOS arm64)
+
+
+      at <anonymous> (/private/tmp/codeshell-goal-fixes-20261111/artifacts/goal-main-control/packages/desktop/src/main/desktop-web-panels.test.ts:43:9)
+(fail) Desktop Web panels use paired authority and Electron's existing storage (direct) [895.62ms]
+38 |         { encoding: "utf8", timeout: 20_000, maxBuffer: 1024 * 1024 },
+             ^
+error: Desktop panel integration failed:
+error: Cannot find module '@cjhyy/code-shell-capability-coding/git' from '/private/tmp/codeshell-goal-fixes-20261111/artifacts/goal-main-control/packages/desktop/src/main/project-store.ts'
+
+Bun v1.3.11 (macOS arm64)
+
+
+      at <anonymous> (/private/tmp/codeshell-goal-fixes-20261111/artifacts/goal-main-control/packages/desktop/src/main/desktop-web-panels.test.ts:43:9)
+(fail) Desktop Web panels use paired authority and Electron's existing storage (tunnel passcode) [432.39ms]
+
+ 0 pass
+ 2 fail
+Ran 2 tests across 1 file. [1354.00ms]
+Bun test process failed (1)

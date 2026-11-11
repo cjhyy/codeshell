@@ -1,0 +1,6 @@
+Implementation HEAD: 9b27590221c7748f8654d99ab4852d117eb159fe
+Command: PATH=/Applications/code-shell.app/Contents/Resources/runtimes/node/bin:$PATH caffeinate -i node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-goal-controls-browser.mjs
+Outer exit: 0
+Actual Chromium + production useRemoteApp/useDesktopController + real Goal buttons, exact loopback mock Host protocol; isolated profile, user app untouched. Not physical Electron/production worker E2E.
+Actual stdout (temporary report location redacted):
+{"output": "<isolated-temp>/codeshell-goal-browser-<run>", "checks": ["cold-paused-snapshot", "versioned-resume", "running-extend", "clear-error", "clear-success"], "errors": [], "blocked": []}

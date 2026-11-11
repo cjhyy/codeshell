@@ -1,0 +1,13 @@
+Implementation HEAD: 9b27590221c7748f8654d99ab4852d117eb159fe (unchanged)
+Command: PATH=/Applications/code-shell.app/Contents/Resources/runtimes/node/bin:$PATH caffeinate -i bun run test --shard 3 > artifacts/goal-controls-followup/desktop-partition-control.log 2>&1
+Outer exit: 0. One bounded recheck of the exact original Desktop CI partition; no source/test/timeout/skip/partition changes.
+Cases in the previously failing file: direct 4060.04ms; tunnel 4642.12ms.
+This does not erase the first complete run's exit 1 or identify the timeout's cause.
+
+[3] tests (desktop)
+ 7204 pass
+ 73 skip
+ 0 fail
+ 34138 expect() calls
+Ran 7277 tests across 768 files. [475.23s]
+Completed Bun shard: 7277 tests, 73 skipped; 0 failures.
