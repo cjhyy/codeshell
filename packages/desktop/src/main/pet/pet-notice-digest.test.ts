@@ -142,6 +142,8 @@ describe("digest slots through the router", () => {
     await h.router.flushDigest();
     expect(h.im.map((call) => call.kind)).toEqual(["session.done", "session.blocked", "digest"]);
     expect(h.im[2]!.body).toBe("你不在时：\n- 「Second」做完了");
+    // A digest is no open item: the owner's next messages are not read against it.
+    expect(h.ledger.actionRecords().filter((record) => record.kind === "digest")).toEqual([]);
   });
 });
 

@@ -209,10 +209,6 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
             channel: digest.channel,
             target: digest.target,
             body: digest.body,
-            // The owner may put their digest off ("明早再说").
-            ...(!digest.timed && digest.target.kind === "owner"
-              ? { actions: { family: "notice" as const } }
-              : {}),
           }),
         settle: (id, status, error) => this.settleQuietly(id, status, error),
         log: this.log,

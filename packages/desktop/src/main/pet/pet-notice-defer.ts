@@ -22,9 +22,13 @@ export const DEFER_MIN_MS = 5 * MINUTE;
 /** No time named: the next morning, at this local time. */
 const DEFAULT_DEFER_MINUTE = 9 * 60;
 
-/** Mimi's own messages, which the owner may put off: briefs, the heartbeat, digests. */
+/**
+ * Mimi's own messages the owner may put off: briefs and the heartbeat. Not
+ * digests: an item open after every digest would send each of the owner's
+ * IM messages for the next two hours through the reply model first.
+ */
 export function isDeferrableKind(kind: string): boolean {
-  return kind === "digest" || isStandaloneKind(kind);
+  return isStandaloneKind(kind);
 }
 
 function localMinute(ms: number, offsetMin: number): number {

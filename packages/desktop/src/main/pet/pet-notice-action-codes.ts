@@ -29,7 +29,7 @@ export type NoticeActionVerb =
   | "handoff"
   | "open"
   | "confirm"
-  /** Put a brief, heartbeat or digest off ("现在别说，明早再说"). */
+  /** Put a brief or heartbeat message off ("现在别说，明早再说"). */
   | "defer";
 
 /** Where an item went out over IM and its number there (①②③, stable while it is open). */
@@ -59,7 +59,7 @@ interface NoticeActionsBase {
 }
 
 /**
- * Mimi's own message (a brief, a heartbeat, a digest): the owner may put it
+ * Mimi's own message (a brief, a heartbeat): the owner may put it
  * off ("明早再说"). Not tied to a Session.
  */
 export interface MimiNoticeActions extends NoticeActionsBase {

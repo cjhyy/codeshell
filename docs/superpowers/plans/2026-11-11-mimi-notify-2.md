@@ -61,7 +61,7 @@
 2. 晨报 / 收工（`pet-proactive-brief.ts`）：确定性收集 → 为空不发 → 辅助模型（再 Mimi 主模型）写严格 JSON，每行带 `refs` 并由代码复核 → 都不行用模板 → `brief.<kind>`（P1）过路由器。睡过了当天补一次，当天发过不再发。没有用宿主唤醒的 Mimi 轮：它的输出是不可核对的散文、还能调工具（见设计稿 §10.1 第 5 条）。
 3. 心跳（`pet-proactive-heartbeat.ts`、`pet-proactive.ts`）：三项预检（未送达的新决定、续办跟进将到期而会话闲着、结果没看过；"超过预估 2 倍"因长任务没有预估未做）→ 有才判断 → 严格 JSON → `heartbeat`（P1）或一次复查；上限计数先落盘（`pet/proactive.json`），重启不归零。
 4. 固定格子（`pet-notice-digest.ts` `slottedFlushAt`）：`digestSlots` 设了就只在格子发普通摘要；P0 与跟进摘要不变。晨报/心跳被压住时整条重发，不进摘要行。
-5. 推迟：新事项族 `notice`（动作 `defer`），回复解读模型给出 `until`（ISO，按给出的主人本地时间）；宿主夹到 [5 分钟, 36 小时]、最多 2 次，账本副本带 `deferredUntil/deferCount`，摘要冲刷到点整条重发（`pet-notice-defer.ts`）。原计划里的 `稍后 码` 命令和 `pet.notice.defer` 宿主动作没有做：回复一律由模型读，不加命令。
+5. 推迟：晨报、收工、心跳消息带新事项族 `notice`（动作 `defer`；摘要不带，免得每条摘要后 2 小时内的 IM 消息都多一次模型调用），回复解读模型给出 `until`（ISO，按给出的主人本地时间）；宿主夹到 [5 分钟, 36 小时]、最多 2 次，账本副本带 `deferredUntil/deferCount`，摘要冲刷到点整条重发（`pet-notice-defer.ts`）。原计划里的 `稍后 码` 命令和 `pet.notice.defer` 宿主动作没有做：回复一律由模型读，不加命令。
 6. 设置（只有数据和 IPC，界面在 2d-2）：`briefs`、`heartbeat`、`digestSlots`（core 设置 schema + `pet-notice-settings.ts`）；`pet:notices:get-state` 带设置与 `proactive` 状态，不加通道。
 7. "按字段覆盖、未改字段跟随升级"（§4.3）没有单独做：系统定时规则的 `then` 和形状由 id 决定、时间全在设置里，规则行没有主人能单独改的字段。
 
