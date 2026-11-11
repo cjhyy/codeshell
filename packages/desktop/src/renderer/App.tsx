@@ -18,7 +18,7 @@ import { useOptionalPetState } from "./pet/PetStateProvider";
 import { PetWorldPane } from "./pet/PetWorldPane";
 import { createPetTargetNavigator } from "./pet/createPetTargetNavigator";
 import { PetChatHost } from "./pet/PetChatHost";
-import { PetPersonalizationPage, PetSettingsPage } from "./pet/PetSettingsPage";
+import { PetSettingsPage } from "./pet/PetSettingsPage";
 import { PetMemoryCenterPage } from "./pet/PetMemoryCenterPage";
 import { PetPeekHost } from "./pet/PetPeekHost";
 import {
@@ -136,6 +136,7 @@ import { useRunController } from "./app/useRunController";
 import { submitAskUserAnswer } from "./app/submitAskUserAnswer";
 import { useGoalPendingBuckets } from "./app/useGoalPendingBuckets";
 import { usePetMemoryNavigation } from "./app/usePetMemoryNavigation";
+import { mimiSettingsBackLabel, useMimiSettingsNavigation } from "./app/useMimiSettingsNavigation";
 import { createChatLinkReadHandler } from "./chat/linkResourceIntents";
 import { usePanelBuckets } from "./app/usePanelBuckets";
 import { useViewTargets } from "./app/useViewTargets";
@@ -219,6 +220,8 @@ function App() {
   const {
     petWidgetVisible,
     mimiPresence,
+    presenceError: mimiPresenceError,
+    dismissPresenceError: dismissMimiPresenceError,
     setPetWidgetVisibility,
     togglePetWidget,
     changeMimiPresence,
@@ -324,6 +327,10 @@ function App() {
     window.addEventListener("codeshell:open-account-settings", openAccount);
     return () => window.removeEventListener("codeshell:open-account-settings", openAccount);
   }, []);
+  // A deep link targets one visit; afterwards Settings reopens on its last module.
+  useEffect(() => {
+    if (!isSettingsPage) setSettingsInitialModule(undefined);
+  }, [isSettingsPage]);
   const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(new Set());
   const [revealedSessionIds, setRevealedSessionIds] = useState<Record<string, string>>({});
 
@@ -1103,6 +1110,21 @@ function App() {
   } = runController;
 
   const { openPetMemory, leavePetMemory } = usePetMemoryNavigation({ openPetPage, setViewMode });
+  const {
+    mimiSettingsSection,
+    mimiSettingsOrigin,
+    selectMimiSettingsSection,
+    openMimiSettings,
+    leaveMimiSettings,
+  } = useMimiSettingsNavigation({
+    viewMode: view.viewMode,
+    setViewMode,
+    openPetPage,
+    openSettingsModule: (module) => {
+      setSettingsInitialModule(module);
+      setViewMode("settings_page");
+    },
+  });
 
   const {
     panelByBucket,
@@ -2084,10 +2106,8 @@ function App() {
   const platformClass = isMac ? "platform-darwin" : "";
   const isPetView = view.viewMode === "pet";
   const isPetSettingsView = view.viewMode === "pet_settings";
-  const isPetPersonalizationView = view.viewMode === "pet_personalization";
   const isPetMemoryView = view.viewMode === "pet_memory";
-  const isPetSurface =
-    isPetView || isPetSettingsView || isPetPersonalizationView || isPetMemoryView;
+  const isPetSurface = isPetView || isPetSettingsView || isPetMemoryView;
   const isChatView = view.viewMode === "chat";
   /**
    * Does the TopBar describe a live chat Session right now?
@@ -2355,32 +2375,33 @@ function App() {
                     defaultModelKey={quickChatDefaultModelKey}
                     modelOptions={quickChatModelOptions}
                     onOpenSession={(request) => void handleOpenPetTarget(request)}
-                    onOpenSettings={() => setViewMode("pet_settings")}
+                    onOpenSettings={() => openMimiSettings()}
                     onOpenMemory={() => openPetMemory("workspace")}
                   />
                 </PetPage>
               ) : isPetSettingsView ? (
                 <PetSettingsPage
+                  section={mimiSettingsSection}
+                  onSectionChange={selectMimiSettingsSection}
+                  backLabel={t(mimiSettingsBackLabel(mimiSettingsOrigin))}
+                  onBack={leaveMimiSettings}
                   activeModelKey={petChatModelKey ?? quickChatDefaultModelKey}
                   modelOptions={quickChatModelOptions}
                   hasModelOverride={petChatModelKey !== null}
-                  widgetVisible={petWidgetVisible}
-                  presence={mimiPresence}
                   onSelectModel={(option) => setPetChatModelKey(option.key)}
                   onResetModel={() => setPetChatModelKey(null)}
+                  widgetVisible={petWidgetVisible}
+                  presence={mimiPresence}
+                  presenceError={mimiPresenceError}
+                  onDismissPresenceError={dismissMimiPresenceError}
                   onWidgetVisibleChange={(visible) =>
                     mimiPresence ? changeMimiPresence({ visible }) : setPetWidgetVisibility(visible)
                   }
                   onPresenceChange={changeMimiPresence}
                   onPreviewMoving={previewMimi}
                   onRetryPresence={retryMimi}
-                  onOpenPersonalization={() => setViewMode("pet_personalization")}
-                  onOpenConnections={() => setViewMode("credentials")}
-                  onOpenMemory={() => openPetMemory("settings")}
-                  onBack={openPetPage}
+                  onOpenMemoryCenter={() => openPetMemory("settings")}
                 />
-              ) : isPetPersonalizationView ? (
-                <PetPersonalizationPage onBack={() => setViewMode("pet_settings")} />
               ) : isPetMemoryView ? (
                 <PetMemoryCenterPage onBack={leavePetMemory} />
               ) : registeredPageRender ? (
@@ -2529,6 +2550,7 @@ function App() {
                     activeProjectPath={activeProject?.path ?? null}
                     activeBucket={activeSessionId !== null ? activeBucket : null}
                     initialTab={credentialsInitialTab}
+                    onOpenMimiConnections={() => openMimiSettings({ section: "connections" })}
                   />
                 </React.Suspense>
               ) : view.viewMode === "automation" ? (
@@ -2902,7 +2924,12 @@ function App() {
                   isFullscreen={isFullscreen}
                   onBack={() => setViewMode("chat")}
                   onOpenDigitalHumans={() => setViewMode("digital_humans")}
-                  onOpenMimiSettings={() => setViewMode("pet_settings")}
+                  onOpenMimiSettings={({ section, fromModule }) =>
+                    openMimiSettings({
+                      section,
+                      origin: { view: "settings_page", settingsModule: fromModule },
+                    })
+                  }
                   onOpenLink={openLinkCredentials}
                 />
               ) : activeProject ? (
@@ -2922,7 +2949,9 @@ function App() {
                   isFullscreen={isFullscreen}
                   onBack={() => setViewMode("chat")}
                   onOpenDigitalHumans={() => setViewMode("digital_humans")}
-                  onOpenMimiSettings={() => setViewMode("pet_settings")}
+                  onOpenMimiSettings={({ section }) =>
+                    openMimiSettings({ section, origin: { view: "project_config" } })
+                  }
                   onOpenLink={openLinkCredentials}
                 />
               ) : null}

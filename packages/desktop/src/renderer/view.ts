@@ -1,3 +1,5 @@
+import { saveMimiSettingsSection } from "./pet/settings/mimiSettingsSections";
+
 /**
  * Built-in full-screen routes. The union is intentionally open: registered
  * pages (renderer/pages/PageRegistry.ts) contribute additional string keys,
@@ -7,7 +9,6 @@ export const BUILTIN_VIEW_MODES = [
   "chat",
   "pet", // first-class Pet workspace; never layered over chat
   "pet_settings", // Mimi-only settings, separate from the global settings center
-  "pet_personalization", // Mimi-only personalization editor, reached from Mimi settings
   "pet_memory", // Mimi memory center: durable memory + event journal
   "digital_humans", // catalog, installed digital humans, and teams
   "sessions",
@@ -63,6 +64,11 @@ export function loadView(isRegisteredPage?: (mode: string) => boolean): ViewStat
       merged.viewMode = "settings_page";
     }
     if (merged.viewMode === "runs") merged.viewMode = "traces";
+    // Personalization became the Conversation section of Mimi settings.
+    if (merged.viewMode === "pet_personalization") {
+      merged.viewMode = "pet_settings";
+      saveMimiSettingsSection("conversation");
+    }
     // Old builds persisted panel kinds (files/browser/review/terminal) as
     // ViewModes; those are now dock tabs, not full-screen views. Anything that
     // is neither builtin nor a registered page falls back to chat so a stale

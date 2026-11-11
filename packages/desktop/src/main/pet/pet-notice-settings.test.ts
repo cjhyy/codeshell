@@ -3,6 +3,12 @@ import {
   parsePetNotificationSettings,
   petNotificationSettingsView,
 } from "./pet-notice-settings.js";
+import {
+  PET_NOTIFICATION_MAX_P0_PER_HOUR_RANGE,
+  PET_NOTIFICATION_MAX_PER_HOUR_RANGE,
+  PET_NOTIFICATION_MERGE_WINDOW_SEC_RANGE,
+  PET_NOTIFICATION_PRESENCE_IDLE_SEC_RANGE,
+} from "../../shared/pet-notices.js";
 
 describe("parsePetNotificationSettings", () => {
   test("defaults until the settings schema exists", () => {
@@ -59,6 +65,26 @@ describe("parsePetNotificationSettings", () => {
       mergeWindowSec: 3_600,
       presenceIdleSec: 120,
     });
+  });
+
+  test("the settings form's bounds are the schema's bounds", () => {
+    const ranges = {
+      maxPerHour: PET_NOTIFICATION_MAX_PER_HOUR_RANGE,
+      maxP0PerHour: PET_NOTIFICATION_MAX_P0_PER_HOUR_RANGE,
+      mergeWindowSec: PET_NOTIFICATION_MERGE_WINDOW_SEC_RANGE,
+      presenceIdleSec: PET_NOTIFICATION_PRESENCE_IDLE_SEC_RANGE,
+    } as const;
+    for (const [field, { min, max }] of Object.entries(ranges)) {
+      const read = (value: number) =>
+        petNotificationSettingsView({ pet: { notifications: { [field]: value } } })[
+          field as keyof typeof ranges
+        ];
+      expect(read(min)).toBe(min);
+      expect(read(max)).toBe(max);
+      // Out of range falls back to the default, which is inside the range.
+      expect(read(max + 1)).not.toBe(max + 1);
+      expect(read(min - 1)).not.toBe(min - 1);
+    }
   });
 
   test("quiet hours switched off keep their times for the form", () => {

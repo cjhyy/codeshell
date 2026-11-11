@@ -1,23 +1,27 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { BellRing } from "lucide-react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SimpleSelect } from "@/components/ui/simple-select";
 import { Switch } from "@/components/ui/switch";
-import { useT } from "../i18n";
-import { writeSettings } from "../settingsBus";
-import { useTargetedDebouncedSave } from "../settings/useTargetedDebouncedSave";
-import type { PetApi } from "../../preload/pet-api";
+import { cn } from "@/lib/utils";
+import { useT } from "../../i18n";
+import { writeSettings } from "../../settingsBus";
+import { useTargetedDebouncedSave } from "../../settings/useTargetedDebouncedSave";
+import type { PetApi } from "../../../preload/pet-api";
 import {
+  PET_NOTIFICATION_MAX_P0_PER_HOUR_RANGE,
   PET_NOTIFICATION_MAX_PER_HOUR_RANGE,
+  PET_NOTIFICATION_MERGE_WINDOW_SEC_RANGE,
+  PET_NOTIFICATION_PRESENCE_IDLE_SEC_RANGE,
   type PetNoticeChannel,
   type PetNoticeChannelReadiness,
+  type PetNoticeSystemRule,
   type PetNoticesState,
   type PetNotificationSettingsView,
-} from "../../shared/pet-notices";
+} from "../../../shared/pet-notices";
 
 const HH_MM = /^(?:[01]\d|2[0-3]):[0-5]\d$/u;
 
@@ -26,9 +30,29 @@ export interface PetNotificationsDraft {
   quietEnabled: boolean;
   quietStart: string;
   quietEnd: string;
-  /** Input text; only an in-range integer is saved. */
+  /** Input text; only an in-range integer is saved (same for the limits below). */
   maxPerHour: string;
+  /** Decision pushes per hour. */
+  maxP0PerHour: string;
+  /** Seconds a burst of notices is merged into one digest. */
+  mergeWindowSec: string;
+  /** Seconds of system idle after which the owner counts as away. */
+  presenceIdleSec: string;
   delegatedFromDesktop: "auto" | "desktop";
+}
+
+type IntegerField = "maxPerHour" | "maxP0PerHour" | "mergeWindowSec" | "presenceIdleSec";
+
+const INTEGER_RANGES: Record<IntegerField, { min: number; max: number }> = {
+  maxPerHour: PET_NOTIFICATION_MAX_PER_HOUR_RANGE,
+  maxP0PerHour: PET_NOTIFICATION_MAX_P0_PER_HOUR_RANGE,
+  mergeWindowSec: PET_NOTIFICATION_MERGE_WINDOW_SEC_RANGE,
+  presenceIdleSec: PET_NOTIFICATION_PRESENCE_IDLE_SEC_RANGE,
+};
+
+function boundedInteger(text: string, { min, max }: { min: number; max: number }) {
+  const value = /^\d+$/u.test(text.trim()) ? Number(text.trim()) : NaN;
+  return Number.isSafeInteger(value) && value >= min && value <= max ? value : undefined;
 }
 
 export function notificationsDraft(view: PetNotificationSettingsView): PetNotificationsDraft {
@@ -37,6 +61,9 @@ export function notificationsDraft(view: PetNotificationSettingsView): PetNotifi
     quietStart: view.quietHours.start,
     quietEnd: view.quietHours.end,
     maxPerHour: String(view.maxPerHour),
+    maxP0PerHour: String(view.maxP0PerHour),
+    mergeWindowSec: String(view.mergeWindowSec),
+    presenceIdleSec: String(view.presenceIdleSec),
     delegatedFromDesktop: view.delegatedFromDesktop,
   };
 }
@@ -55,18 +82,18 @@ export function notificationsSettingsPatch(draft: PetNotificationsDraft): Record
       start: draft.quietStart,
       end: draft.quietEnd,
     };
-  const max = /^\d+$/u.test(draft.maxPerHour.trim()) ? Number(draft.maxPerHour.trim()) : NaN;
-  if (
-    Number.isSafeInteger(max) &&
-    max >= PET_NOTIFICATION_MAX_PER_HOUR_RANGE.min &&
-    max <= PET_NOTIFICATION_MAX_PER_HOUR_RANGE.max
-  )
-    notifications.maxPerHour = max;
+  for (const field of Object.keys(INTEGER_RANGES) as IntegerField[]) {
+    const value = boundedInteger(draft[field], INTEGER_RANGES[field]);
+    if (value !== undefined) notifications[field] = value;
+  }
   return { pet: { notifications } };
 }
 
-type NoticesApi = Pick<PetApi, "getNoticesState" | "setSystemNoticeRule" | "onNoticesChanged">;
-type SettingsWriter = (scope: "user", patch: Record<string, unknown>) => Promise<void>;
+export type NoticesApi = Pick<
+  PetApi,
+  "getNoticesState" | "setSystemNoticeRule" | "onNoticesChanged"
+>;
+export type SettingsWriter = (scope: "user", patch: Record<string, unknown>) => Promise<void>;
 
 function defaultApi(): NoticesApi | undefined {
   try {
@@ -87,6 +114,8 @@ export interface PetNotificationsController {
   loadState: "loading" | "ready" | "error";
   loadError: string;
   channels: PetNoticeChannel[];
+  /** The "every Session" rule as main reports it; null until loaded. */
+  systemRule: PetNoticeSystemRule | null;
   systemRuleOn: boolean;
   systemPending: boolean;
   systemError: string;
@@ -210,6 +239,7 @@ export function usePetNotificationsController({
     loadState,
     loadError,
     channels: state?.channels ?? [],
+    systemRule: state?.systemRule ?? null,
     systemRuleOn: state?.systemRule.state === "active",
     systemPending,
     systemError,
@@ -228,8 +258,67 @@ const READINESS_VARIANT: Record<PetNoticeChannelReadiness, "success" | "warning"
   unavailable: "error",
 };
 
-export function PetNotificationsFields({ controller }: { controller: PetNotificationsController }) {
+function LimitField({
+  id,
+  field,
+  label,
+  hint,
+  unit,
+  draft,
+  controller,
+}: {
+  id: string;
+  field: IntegerField;
+  label: string;
+  hint?: string;
+  unit?: string;
+  draft: PetNotificationsDraft;
+  controller: PetNotificationsController;
+}) {
+  const range = INTEGER_RANGES[field];
+  return (
+    <div className="flex flex-wrap items-center gap-3" data-pet-notices-field={field}>
+      <div className="min-w-0 flex-1 space-y-0.5">
+        <Label htmlFor={id}>{label}</Label>
+        {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+      </div>
+      <div className="flex items-center gap-2">
+        <Input
+          id={id}
+          type="number"
+          inputMode="numeric"
+          className="w-24"
+          min={range.min}
+          max={range.max}
+          step={1}
+          value={draft[field]}
+          onChange={(event) =>
+            controller.update({ [field]: event.target.value } as Partial<PetNotificationsDraft>)
+          }
+          onBlur={controller.flush}
+        />
+        {unit && <span className="text-xs text-muted-foreground">{unit}</span>}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The editable notification preferences. `onManageChannels` adds the jump to
+ * the binding UI (Mimi settings › 消息连接); the advanced limits start folded.
+ */
+export function PetNotificationsFields({
+  controller,
+  onManageChannels,
+  defaultAdvancedOpen = false,
+}: {
+  controller: PetNotificationsController;
+  onManageChannels?: () => void;
+  defaultAdvancedOpen?: boolean;
+}) {
   const { t } = useT();
+  const advancedId = useId();
+  const [advancedOpen, setAdvancedOpen] = useState(defaultAdvancedOpen);
   const { draft, loadState } = controller;
   const readiness: Record<PetNoticeChannelReadiness, string> = {
     ready: t("pet.notices.readyReady"),
@@ -254,7 +343,7 @@ export function PetNotificationsFields({ controller }: { controller: PetNotifica
       </div>
     );
   return (
-    <div className="grid gap-5">
+    <div className="grid min-w-0 gap-5 [&>*]:min-w-0">
       <div className="grid gap-2" data-pet-notices-field="quiet-hours">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0 space-y-0.5">
@@ -293,28 +382,14 @@ export function PetNotificationsFields({ controller }: { controller: PetNotifica
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3" data-pet-notices-field="max-per-hour">
-        <Label htmlFor="pet-notices-max-per-hour" className="min-w-0 flex-1">
-          {t("pet.notices.maxPerHourLabel")}
-        </Label>
-        <div className="flex items-center gap-2">
-          <Input
-            id="pet-notices-max-per-hour"
-            type="number"
-            inputMode="numeric"
-            className="w-20"
-            min={PET_NOTIFICATION_MAX_PER_HOUR_RANGE.min}
-            max={PET_NOTIFICATION_MAX_PER_HOUR_RANGE.max}
-            step={1}
-            value={draft.maxPerHour}
-            onChange={(event) => controller.update({ maxPerHour: event.target.value })}
-            onBlur={controller.flush}
-          />
-          {t("pet.notices.maxPerHourUnit") && (
-            <span className="text-xs text-muted-foreground">{t("pet.notices.maxPerHourUnit")}</span>
-          )}
-        </div>
-      </div>
+      <LimitField
+        id="pet-notices-max-per-hour"
+        field="maxPerHour"
+        label={t("pet.notices.maxPerHourLabel")}
+        unit={t("pet.notices.maxPerHourUnit")}
+        draft={draft}
+        controller={controller}
+      />
 
       <div className="flex flex-wrap items-center gap-3" data-pet-notices-field="delegated">
         <Label className="min-w-0 flex-1">{t("pet.notices.delegatedLabel")}</Label>
@@ -357,16 +432,31 @@ export function PetNotificationsFields({ controller }: { controller: PetNotifica
       </div>
 
       <div className="grid gap-2" data-pet-notices-field="channels">
-        <div className="text-sm font-medium">{t("pet.notices.channelsLabel")}</div>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="text-sm font-medium">{t("pet.notices.channelsLabel")}</div>
+          {onManageChannels && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              data-pet-notices-manage-channels
+              onClick={onManageChannels}
+            >
+              {controller.channels.length === 0
+                ? t("pet.notices.bindChannels")
+                : t("pet.notices.manageChannels")}
+            </Button>
+          )}
+        </div>
         {controller.channels.length === 0 ? (
           <p className="text-xs text-muted-foreground">{t("pet.notices.channelsEmpty")}</p>
         ) : (
-          <ul className="grid gap-1.5">
+          <ul className="grid min-w-0 gap-1.5">
             {controller.channels.map((channel) => (
               <li
                 key={channel.id}
                 data-pet-notices-channel={channel.id}
-                className="flex items-center justify-between gap-3 text-sm"
+                className="flex min-w-0 items-center justify-between gap-3 text-sm"
               >
                 <span className="min-w-0 truncate">{channel.label}</span>
                 <Badge variant={READINESS_VARIANT[channel.ready]} data-ready={channel.ready}>
@@ -379,6 +469,65 @@ export function PetNotificationsFields({ controller }: { controller: PetNotifica
         <p className="text-xs text-muted-foreground">{t("pet.notices.channelsNote")}</p>
       </div>
 
+      <div
+        className="rounded-xl border border-border/70"
+        data-pet-notices-advanced={advancedOpen ? "open" : "collapsed"}
+      >
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-auto w-full justify-between rounded-xl px-3 py-2.5 text-left font-normal whitespace-normal"
+          aria-expanded={advancedOpen}
+          aria-controls={advancedOpen ? advancedId : undefined}
+          onClick={() => setAdvancedOpen((open) => !open)}
+        >
+          <span className="min-w-0 space-y-0.5">
+            <span className="block text-sm font-medium">{t("pet.notices.advancedLabel")}</span>
+            <span className="block text-xs text-muted-foreground">
+              {t("pet.notices.advancedHint")}
+            </span>
+          </span>
+          <ChevronDown
+            className={cn(
+              "size-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none",
+              advancedOpen && "rotate-180",
+            )}
+            aria-hidden
+          />
+        </Button>
+        {advancedOpen && (
+          <div id={advancedId} className="grid gap-4 border-t border-border/60 px-3 py-3">
+            <LimitField
+              id="pet-notices-max-p0-per-hour"
+              field="maxP0PerHour"
+              label={t("pet.notices.maxP0PerHourLabel")}
+              hint={t("pet.notices.maxP0PerHourHint")}
+              unit={t("pet.notices.maxPerHourUnit")}
+              draft={draft}
+              controller={controller}
+            />
+            <LimitField
+              id="pet-notices-merge-window"
+              field="mergeWindowSec"
+              label={t("pet.notices.mergeWindowLabel")}
+              hint={t("pet.notices.mergeWindowHint")}
+              unit={t("pet.notices.secondsUnit")}
+              draft={draft}
+              controller={controller}
+            />
+            <LimitField
+              id="pet-notices-presence-idle"
+              field="presenceIdleSec"
+              label={t("pet.notices.presenceIdleLabel")}
+              hint={t("pet.notices.presenceIdleHint")}
+              unit={t("pet.notices.secondsUnit")}
+              draft={draft}
+              controller={controller}
+            />
+          </div>
+        )}
+      </div>
+
       {controller.saveError ? (
         <p role="alert" className="text-sm text-status-err [overflow-wrap:anywhere]">
           {t("pet.notices.saveFailed", { error: controller.saveError })}
@@ -387,32 +536,5 @@ export function PetNotificationsFields({ controller }: { controller: PetNotifica
         <p className="text-xs text-muted-foreground">{t("pet.notices.saveHint")}</p>
       )}
     </div>
-  );
-}
-
-/** "通知与主动": quiet hours, push budget, delegated results, the system rule, IM channels. */
-export function PetNotificationsCard({ api, write }: { api?: NoticesApi; write?: SettingsWriter }) {
-  const { t } = useT();
-  const controller = usePetNotificationsController({
-    ...(api ? { api } : {}),
-    ...(write ? { write } : {}),
-  });
-  return (
-    <Card data-pet-setting="notifications" className="rounded-2xl">
-      <CardHeader className="flex-row items-start gap-3 space-y-0">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-          <BellRing size={18} aria-hidden="true" />
-        </span>
-        <div className="min-w-0 flex-1 space-y-1.5">
-          <CardTitle className="text-base">{t("pet.notices.cardTitle")}</CardTitle>
-          <CardDescription className="leading-5">
-            {t("pet.notices.cardDescription")}
-          </CardDescription>
-        </div>
-      </CardHeader>
-      <CardContent className="pl-16">
-        <PetNotificationsFields controller={controller} />
-      </CardContent>
-    </Card>
   );
 }

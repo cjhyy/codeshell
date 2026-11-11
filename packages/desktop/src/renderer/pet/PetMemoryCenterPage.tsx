@@ -25,9 +25,9 @@ export interface PetMemoryCenterPageProps {
 
 /**
  * Mimi memory center: durable-memory management and the event journal, reached
- * from Mimi settings. The durable-memory tab is the full CRUD surface (the
- * workbench section is now a read-only preview that links here); the journal tab
- * is the archived-segment timeline with lazily-revealed transcript原文.
+ * from Mimi settings › 记忆 and the Mimi chat header. The durable-memory tab is
+ * the full CRUD surface; the journal tab is the archived-segment timeline with
+ * lazily-revealed transcript原文.
  */
 export function PetMemoryCenterPage({ onBack }: PetMemoryCenterPageProps) {
   const { t } = useT();
