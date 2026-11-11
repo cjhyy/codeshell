@@ -45,13 +45,20 @@ export async function checkQuotaTool(
   args: Record<string, unknown>,
   ctx?: ToolContext,
 ): Promise<string> {
+  if (
+    args.provider !== undefined &&
+    args.provider !== "claude" &&
+    args.provider !== "codex" &&
+    args.provider !== "both"
+  )
+    throw new Error("Invalid quota provider");
   const which: ("claude" | "codex")[] =
     args.provider === "claude"
       ? ["claude"]
       : args.provider === "codex"
         ? ["codex"]
         : ["claude", "codex"];
-  const creds = await resolveQuotaCredentials();
+  const creds = await resolveQuotaCredentials(which);
   const result = await checkQuota({
     creds,
     providers: which,

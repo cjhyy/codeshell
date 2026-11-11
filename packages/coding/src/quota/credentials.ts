@@ -14,18 +14,23 @@ import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import type { QuotaCredentials } from "./types.js";
+import type { QuotaCredentials, QuotaProvider } from "./types.js";
+import { selectedQuotaProviders } from "./providers.js";
 
-function userHome(): string {
-  return process.env.HOME || process.env.USERPROFILE || homedir();
+interface QuotaCredentialSources {
+  env?: NodeJS.ProcessEnv;
+  platform?: NodeJS.Platform;
+  readTextFile?: (path: string) => Promise<string>;
+  readClaudeKeychain?: () => Promise<string | null>;
 }
 
-/** Read the Codex OAuth token + account id from ~/.codex/auth.json. */
-async function readCodexCreds(): Promise<
-  Pick<QuotaCredentials, "codexAccessToken" | "codexAccountId">
-> {
+/** Read the Codex OAuth token + account id from the selected Codex home. */
+async function readCodexCreds(
+  path: string,
+  readTextFile: (path: string) => Promise<string>,
+): Promise<Pick<QuotaCredentials, "codexAccessToken" | "codexAccountId">> {
   try {
-    const raw = await readFile(join(userHome(), ".codex", "auth.json"), "utf8");
+    const raw = await readTextFile(path);
     const j = JSON.parse(raw) as Record<string, unknown>;
     const tokens = (j.tokens ?? {}) as Record<string, unknown>;
     const token = typeof tokens.access_token === "string" ? tokens.access_token : undefined;
@@ -39,18 +44,27 @@ async function readCodexCreds(): Promise<
 /**
  * Read the Claude Code OAuth access token.
  * macOS: Keychain generic-password "Claude Code-credentials".
- * Other platforms: fall back to a plaintext ~/.claude/.credentials.json if present.
+ * Other platforms: use the selected config directory's .credentials.json.
+ * A custom config directory must never fall back to the default account's
+ * Keychain entry; no custom Keychain service name is inferred here.
  */
-async function readClaudeCreds(): Promise<Pick<QuotaCredentials, "claudeAccessToken">> {
-  // macOS Keychain first.
-  if (process.platform === "darwin") {
-    const raw = await runSecurity();
-    const token = parseClaudeToken(raw);
-    if (token) return { claudeAccessToken: token };
+async function readClaudeCreds(
+  path: string,
+  useKeychain: boolean,
+  readTextFile: (path: string) => Promise<string>,
+  readKeychain: () => Promise<string | null>,
+): Promise<Pick<QuotaCredentials, "claudeAccessToken">> {
+  if (useKeychain) {
+    try {
+      const token = parseClaudeToken(await readKeychain());
+      if (token) return { claudeAccessToken: token };
+    } catch {
+      /* An unavailable Keychain may still have a file-based credential. */
+    }
   }
   // Cross-platform fallback: some installs keep a plaintext credentials file.
   try {
-    const raw = await readFile(join(userHome(), ".claude", ".credentials.json"), "utf8");
+    const raw = await readTextFile(path);
     const token = parseClaudeToken(raw);
     if (token) return { claudeAccessToken: token };
   } catch {
@@ -81,8 +95,31 @@ function runSecurity(): Promise<string | null> {
   });
 }
 
-/** Resolve all tokens from their standard local locations. Never throws. */
-export async function resolveQuotaCredentials(): Promise<QuotaCredentials> {
-  const [codex, claude] = await Promise.all([readCodexCreds(), readClaudeCreds()]);
-  return { ...codex, ...claude };
+/** Resolve only selected providers. Source failures are missing credentials; invalid selections throw. */
+export async function resolveQuotaCredentials(
+  providers?: readonly QuotaProvider[],
+  sources: QuotaCredentialSources = {},
+): Promise<QuotaCredentials> {
+  const selected = selectedQuotaProviders(providers);
+  if (selected.length === 0) return {};
+  const env = sources.env ?? process.env;
+  const home = env.HOME || env.USERPROFILE || homedir();
+  const readTextFile = sources.readTextFile ?? ((path: string) => readFile(path, "utf8"));
+  const resolved = await Promise.all(
+    selected.map((provider) =>
+      provider === "codex"
+        ? readCodexCreds(join(env.CODEX_HOME || join(home, ".codex"), "auth.json"), readTextFile)
+        : readClaudeCreds(
+            join(
+              (env.CLAUDE_CONFIG_DIR ?? join(home, ".claude")).normalize("NFC"),
+              ".credentials.json",
+            ),
+            (sources.platform ?? process.platform) === "darwin" &&
+              env.CLAUDE_CONFIG_DIR === undefined,
+            readTextFile,
+            sources.readClaudeKeychain ?? runSecurity,
+          ),
+    ),
+  );
+  return Object.assign({}, ...resolved);
 }

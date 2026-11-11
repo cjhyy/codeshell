@@ -40,15 +40,19 @@ export interface QuotaWindow {
   representative?: boolean;
 }
 
-/** Quota for one provider (claude | codex). */
+/** Protocol adapters implemented by this module. */
+export type QuotaProvider = "claude" | "codex";
+
+/** Quota for one provider; hosts may also describe providers without an adapter. */
 export interface ProviderQuota {
-  provider: "claude" | "codex";
+  provider: string;
   /** Present when the lookup succeeded. */
   windows?: QuotaWindow[];
   /** Subscription tier, when the source exposes it (e.g. "team", "pro"). */
   planType?: string | null;
   /** Human-readable failure reason when the lookup did not succeed. */
   error?: string;
+  errorCode?: "auth-required" | "unavailable" | "request-failed";
 }
 
 export interface QuotaResult {
