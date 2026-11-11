@@ -59,6 +59,58 @@ function inbox(initial: readonly string[] = []): {
 }
 
 describe("PetFollowUpService", () => {
+  test("a generation-disabled pull retains cached and registered rows without new summaries", async () => {
+    const view: PetFollowUpRuleView = {
+      id: "rule-00000000-0000-4000-8000-0000000000aa",
+      revision: 1,
+      title: "Existing scheduled reminder",
+      text: "Prepare the weekly report",
+      wakeAt: 5_000,
+      timezone: "UTC",
+      intent: "remind",
+      missedPolicy: "skip",
+      catchUpUntil: 5_000,
+      status: "open",
+      wakeState: "scheduled",
+      createdAt: 1_000,
+    };
+    const summaries = summaryStore({
+      cached: { terminalAt: 100, text: "Existing generated reminder" },
+    });
+    const generations: string[] = [];
+    const service = createPetFollowUpService({
+      listSessions: () => [
+        session("uncached", { terminalAt: 200 }),
+        session("cached", { terminalAt: 100 }),
+      ],
+      summaryStore: summaries,
+      summaryService: {
+        summarize: async (id, terminalAt) => {
+          generations.push(id);
+          summaries.set(id, terminalAt, "New reminder");
+          return { text: "New reminder" };
+        },
+      },
+      inbox: inbox(),
+      registered: { load: async () => undefined, list: () => [view] },
+    });
+    const rows = await service.collect({ allowGenerate: false });
+    expect(rows.map((row) => row.followUpId)).toEqual([view.id, petFollowUpId("cached", 100)]);
+    const open = await service.listOpen({ allowGenerate: false });
+    expect(open.map((row) => row.id)).toEqual([view.id, petFollowUpId("cached", 100)]);
+    expect(open[0]).toMatchObject({ kind: "registered", text: view.text });
+    expect(open[1]).toMatchObject({ kind: "derived-session", text: "Existing generated reminder" });
+    expect(generations).toEqual([]);
+    expect(summaries.get("uncached")).toBeUndefined();
+    const enabled = await service.listOpen();
+    expect(enabled.map((row) => row.id)).toEqual([
+      view.id,
+      petFollowUpId("uncached", 200),
+      petFollowUpId("cached", 100),
+    ]);
+    expect(generations).toEqual(["uncached"]);
+  });
+
   test("gives the workbench and Mimi one canonical Needs-follow-up feed", async () => {
     const workInbox = inbox();
     const summaries = summaryStore({

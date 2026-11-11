@@ -1,5 +1,5 @@
 /* Compiled Core ledger → production Main IPC/cold restart; per-call trace costs → current UI. No model requests. */
-/* global localStorage, window */
+/* global document, localStorage, window */
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { execFileSync, spawn } from "node:child_process";
@@ -167,6 +167,15 @@ async function selectTrace(id, sessionId, cost, status, { unknownAttempts = 0 } 
   // Let it finish before activating the request through its own keyboard target.
   await page.evaluate(() => new Promise((done) => window.requestAnimationFrame(done)));
   await page.locator(`[data-trace-request="${id}"]`).press("Enter");
+  // Request activation also moves focus on the next frame; wait before another keyboard action.
+  const detailHeadingId = await page
+    .getByRole("heading", { name: "Call details", level: 2, exact: true })
+    .getAttribute("id");
+  assert.ok(detailHeadingId);
+  await win.waitForFunction(
+    (headingId) => document.activeElement?.id === headingId,
+    detailHeadingId,
+  );
   const detail = page.locator(`[data-trace-detail-id="${id}"]`);
   await detail.waitFor();
   await detail.getByText(status, { exact: true }).waitFor();

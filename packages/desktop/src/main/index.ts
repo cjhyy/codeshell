@@ -201,6 +201,23 @@ import {
   petMemoryAutoExtractSettingsPatch,
   petPersonalizationFromSettings,
 } from "../shared/pet-settings.js";
+import {
+  sessionModelKeyFromSettings,
+  defaultSessionModelKeyFromSettings,
+} from "../shared/session-model-default.js";
+import { createExternalRuntimeHostSubmission } from "./external-runtime-host-submission.js";
+import {
+  persistedExternalRuntimeModelKey,
+  isPersistedExternalRuntime,
+} from "./mobile-remote/external-runtime-commands.js";
+import {
+  allowNativePetAuxiliary,
+  allowNativePetExtraction,
+} from "./pet/pet-native-extraction-policy.js";
+import { createPetRuntimeControlWorker } from "./pet/pet-runtime-control-worker.js";
+import { createPetExternalRuntime } from "./pet/pet-external-runtime.js";
+import { createPetExternalReplyModel } from "./pet/pet-external-reply-model.js";
+import { resolveExternalRuntimeStartWorkspace } from "./external-runtime-start-workspace.js";
 import { installedThemeToPack } from "./theme-pack-conversion.js";
 import { themeImportDialogOptions } from "./theme-import-dialog.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
@@ -1698,9 +1715,7 @@ async function createWindow(): Promise<BrowserWindow> {
           if (externalRuntime.service?.get(sessionId)) return true;
           // The canonical model wins over an old external-runtime sidecar after
           // a user switches this task back to the native runtime.
-          return !!parseExternalRuntimeModelKey(
-            externalGoalSessions.readSessionState(sessionId)?.model,
-          );
+          return isPersistedExternalRuntime(externalGoalSessions.readSessionState(sessionId));
         },
         authorize: (sessionId, callerId) => {
           assertDesktopSessionId(sessionId);
@@ -1718,9 +1733,11 @@ async function createWindow(): Promise<BrowserWindow> {
           if (!service) throw new Error("external runtime service is unavailable");
           if (service.canResumeGoal(sessionId, callerId)) return;
           const state = externalGoalSessions.readSessionState(sessionId);
-          const model = parseExternalRuntimeModelKey(state?.model);
+          const model = parseExternalRuntimeModelKey(persistedExternalRuntimeModelKey(state));
           if (!state || !model) throw new Error("external goal task is no longer available");
-          const cwd = await requireRendererProjectPath(state.cwd);
+          const workspace = await resolveExternalRuntimeStartWorkspace(sessionId, state.cwd, {
+            sessions: externalGoalSessions,
+          });
           const ownerWindow = [...mainWindows].find(
             (window) => !window.isDestroyed() && window.webContents.id === callerId,
           );
@@ -1729,10 +1746,30 @@ async function createWindow(): Promise<BrowserWindow> {
           if (existingOwner !== undefined && existingOwner !== callerId) {
             throw new Error("goal belongs to another window");
           }
+          const assertStartAuthority = () => {
+            workspace.assertStartAuthority();
+            const current = externalGoalSessions.readSessionState(sessionId);
+            const currentModel = parseExternalRuntimeModelKey(
+              persistedExternalRuntimeModelKey(current),
+            );
+            const owner = externalBridge.panelOwnerWebContentsId(sessionId);
+            if (
+              externalRuntime.service !== service ||
+              ownerWindow.isDestroyed() ||
+              (owner !== undefined && owner !== callerId) ||
+              current?.startedAt !== state.startedAt ||
+              current?.cwd !== state.cwd ||
+              currentModel?.kind !== model.kind ||
+              currentModel?.model !== model.model
+            )
+              throw new Error("external goal authority changed before startup");
+          };
           await service.ensure({
             kind: model.kind,
             sessionId,
-            cwd,
+            cwd: workspace.cwd,
+            mainRoot: workspace.mainRoot,
+            assertStartAuthority,
             modelKey: state.model,
             ...(model.model ? { model: model.model } : {}),
             permissionMode: "default",
@@ -1777,9 +1814,37 @@ async function createWindow(): Promise<BrowserWindow> {
     const petMetadata = new PetMetadataStore(
       resolve(app.getPath("userData"), "pet", "metadata.json"),
     );
+    const imRuntimeSessions = new SessionManager();
+    const imExternalSubmissions = createExternalRuntimeHostSubmission({
+      service: () => externalRuntime.service,
+      sessions: imRuntimeSessions,
+      ownerWindow: (sessionId) => {
+        const owner = bridge?.panelOwnerWebContentsId(sessionId);
+        return BrowserWindow.getAllWindows().find(
+          (window) =>
+            !window.isDestroyed() && (owner === undefined || window.webContents.id === owner),
+        );
+      },
+    });
     const petWorkDelegationHost = new PetWorkDelegationHost({
       bridge,
       noWorkspaceCwd: resolveNoRepoCwd(),
+      external: {
+        modelKey: async ({ sessionId, cwd, reused }) => {
+          const state = imRuntimeSessions.readSessionState(sessionId);
+          if (reused || state) {
+            if (!state) throw new Error("原工作会话不可用，未创建替代会话。");
+            if (isPersistedExternalRuntime(state)) {
+              const model = persistedExternalRuntimeModelKey(state);
+              if (!model) throw new Error("外部会话模型不可用，未切换到 API 模型。");
+              return model;
+            }
+            return state.modelConnectionId ?? null;
+          }
+          return sessionModelKeyFromSettings(new SettingsManager(cwd, "full").get());
+        },
+        run: imExternalSubmissions.run,
+      },
       resolveSessionCwd: async (sessionId) => {
         const entry = await getSessionCwdIndex().refresh(sessionId);
         return entry?.status === "confirmed" ? (entry.workspaceRoot ?? entry.cwd) : undefined;
@@ -1938,7 +2003,11 @@ async function createWindow(): Promise<BrowserWindow> {
     const longTaskCoordinator = new PetLongTaskCoordinator({
       store: longTaskStore,
       projection: aggregator,
-      worker: bridge,
+      worker: createPetRuntimeControlWorker({
+        worker: bridge,
+        isExternal: imExternalSubmissions.isExternal,
+        service: () => externalRuntime.service,
+      }),
       launcher: petWorkDelegationHost,
       onDelegationStarted: (task) => notices.armDelegationRule(task),
       onTaskClosed: async (task) => {
@@ -2084,6 +2153,10 @@ async function createWindow(): Promise<BrowserWindow> {
       ...createOwnerReplyHandling({
         router: notices.router,
         cwd: resolveNoRepoCwd(),
+        externalReplyModel: createPetExternalReplyModel({
+          service: () => externalRuntime.service,
+          cwd: resolveNoRepoCwd(),
+        }),
         worker: bridge,
         external: () => externalRuntime.service ?? undefined,
         sessions: () => aggregator.getSnapshot().sessions,
@@ -2156,12 +2229,21 @@ async function createWindow(): Promise<BrowserWindow> {
       sessionsRootDir: petSessionsRootDir,
       store: petSummaryStore,
       cwd: resolveNoRepoCwd(),
+      allowGenerate: () =>
+        allowNativePetAuxiliary(
+          new SettingsManager(resolveNoRepoCwd(), "full").getForScope("user"),
+          mimiSessionId ? imRuntimeSessions.readSessionState(mimiSessionId) : undefined,
+        ),
     });
     // Briefs and the heartbeat are system schedule rules on the same scheduler.
     const petProactive = wirePetProactive({
       notices,
       userDataDir: app.getPath("userData"),
       cwd: resolveNoRepoCwd(),
+      externalReplyModel: createPetExternalReplyModel({
+        service: () => externalRuntime.service,
+        cwd: resolveNoRepoCwd(),
+      }),
       tasks: () => longTaskStore.getSnapshot().tasks,
       projection: () => aggregator.getSnapshot(),
       log: (event, data) => dlog("main", event, data),
@@ -2198,9 +2280,13 @@ async function createWindow(): Promise<BrowserWindow> {
       routesFilePath: resolve(app.getPath("userData"), "pet", "conversation-session-routes.json"),
       resolveSelector: createReusableSessionResolver(petSessionsRootDir),
       createRunner: (onTurn) =>
-        // A chat bound to a Codex / CC Session sends to the worker: no turn of it is forwarded.
         createBoundSessionRunner(worker, aggregator, onTurn, sessionOutcomes, {
-          ignores: externalSessions.isLive,
+          external: {
+            isExternal: imExternalSubmissions.isExternal,
+            isRunning: imExternalSubmissions.isRunning,
+            run: imExternalSubmissions.runBound,
+            stop: imExternalSubmissions.stop,
+          },
         }),
       health: createBoundSessionHealth(aggregator, petSessionsRootDir),
       describeStatus: async (route) => `当前在「${route.sessionTitle}」中。发送 /mimi 可退出。`,
@@ -2222,8 +2308,14 @@ async function createWindow(): Promise<BrowserWindow> {
       hostCwd: resolveNoRepoCwd(),
       attachmentContext: new PetChatAttachmentContext(resolve(app.getPath("userData"), "pet")),
       sessionsRootDir: petSessionsRootDir,
-      managerModel: async () =>
-        petChatModelKeyFromSettings(await readSettings("user").catch(() => null)),
+      externalRuntime: createPetExternalRuntime({
+        service: () => externalRuntime.service,
+        cwd: resolveNoRepoCwd(),
+      }),
+      managerModel: async () => {
+        const settings = await readSettings("user");
+        return petChatModelKeyFromSettings(settings) ?? sessionModelKeyFromSettings(settings);
+      },
       personalization: async () =>
         petPersonalizationFromSettings(await readSettings("user").catch(() => null)),
       segmentController: {
@@ -2375,12 +2467,16 @@ async function createWindow(): Promise<BrowserWindow> {
           };
         },
       },
-      worldContext: createPetMemoryWorldContext(
-        petMemoryStoreInstance,
-        getMobileRemoteGatewayStatus,
-      ),
+      worldContext: async (input) => ({
+        ...(await createPetMemoryWorldContext(
+          petMemoryStoreInstance,
+          getMobileRemoteGatewayStatus,
+        )(input)),
+        defaultWorkSessionModel: defaultSessionModelKeyFromSettings(await readSettings("user")),
+      }),
       listWorkspaces: () => mobileOrchestrator.projectList(),
-      listFollowUps: () => petFollowUps.listOpen(),
+      listFollowUps: (model) =>
+        petFollowUps.listOpen({ allowGenerate: !parseExternalRuntimeModelKey(model) }),
       listOutboundTargets: async () =>
         imGatewayService.listOwnerMessageTargets().map((target) => ({
           id: target.id,
@@ -2545,11 +2641,16 @@ async function createWindow(): Promise<BrowserWindow> {
       // the same read of this preference.
       const autoExtractEnabled = (): boolean => {
         try {
-          return petMemoryAutoExtractFromSettings(
-            new SettingsManager(resolveNoRepoCwd(), "full").getForScope("user"),
+          const settings = new SettingsManager(resolveNoRepoCwd(), "full").getForScope("user");
+          // An external chat choice must not trigger a hidden native API call
+          // at the next topic boundary. Retain raw history; extraction resumes
+          // when the owner selects a native manager again.
+          return allowNativePetExtraction(
+            settings,
+            imRuntimeSessions.readSessionState(petSessionId),
           );
         } catch {
-          return true; // default ON if settings are unreadable
+          return false; // Unreadable settings must not authorize paid inference.
         }
       };
       // Segment-closure pipeline: distill a journal entry + auto-memories from

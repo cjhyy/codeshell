@@ -83,6 +83,148 @@ function makeRuntime(
 
 describe("CodexRuntime", () => {
   test.each(["thread/start", "thread/resume"])(
+    "%s confines manager execution to the Host bridge with no native environment",
+    async (method) => {
+      const events: StreamEvent[] = [];
+      const logs: unknown[] = [];
+      const runtime = makeRuntime(
+        `
+let threadParams;
+setOnLine((m) => {
+  if (m.method === "initialize") return send({ id: m.id, result: { userAgent: "codeshell/0.162.0 (test)" } });
+  if (m.method === "config/read") {
+    if (m.params.includeLayers !== false || typeof m.params.cwd !== "string")
+      return send({ id: m.id, error: { code: -32602, message: "invalid config inspection" } });
+    return send({ id: m.id, result: { config: { mcp_servers: {
+      codeshell_tools: { url: "http://127.0.0.1:1/mcp", bearer_token: "PRIVATE_CONFIG_CANARY" },
+      unrelated: { command: "should-not-start", env: { TOKEN: "PRIVATE_CONFIG_CANARY" } },
+      "server.with.dots": { url: "https://invalid.example", http_headers: { Token: "PRIVATE_CONFIG_CANARY" } },
+    } } } });
+  }
+  if (m.method === ${JSON.stringify(method)}) {
+    threadParams = m.params;
+    return send({ id: m.id, result: { thread: { id: "isolated-thread" } } });
+  }
+  if (m.method === "turn/start") {
+    send({ id: m.id, result: { turn: { id: "turn-manager" } } });
+    send({ method: "item/agentMessage/delta", params: {
+      threadId: "isolated-thread", turnId: "turn-manager", itemId: "manager-result",
+      delta: JSON.stringify({ threadParams, turnParams: m.params }),
+    } });
+    send({ method: "turn/completed", params: {
+      threadId: "isolated-thread", turn: { id: "turn-manager", status: "completed" },
+    } });
+  }
+});`,
+        (event) => events.push(event),
+        {
+          disableNativeTools: true,
+          log: (event, data) => logs.push({ event, data }),
+          ...(method === "thread/resume" ? { resumeRuntimeSessionId: "old-thread" } : {}),
+        },
+      );
+      await runtime.start();
+      const turn = await runtime.send({ text: "Manager turn" });
+      await turn.done;
+      const delta = events.find((event) => event.type === "text_delta");
+      expect(delta?.type).toBe("text_delta");
+      if (delta?.type !== "text_delta") throw new Error("Missing protocol proof");
+      const proof = JSON.parse(delta.text);
+      expect(proof.threadParams.config).toMatchObject({
+        "features.shell_tool": false,
+        "features.stable_environment_tools": false,
+        "features.view_image": false,
+        "features.multi_agent": false,
+        "features.apps": false,
+        "features.plugins": false,
+        "features.browser_use": false,
+        "features.computer_use": false,
+        web_search: "disabled",
+      });
+      expect(proof.threadParams.config.mcp_servers).toEqual({
+        codeshell_tools: { enabled: true },
+        unrelated: { enabled: false },
+        "server.with.dots": { enabled: false },
+      });
+      if (method === "thread/start") expect(proof.threadParams.environments).toEqual([]);
+      else expect(proof.threadParams).not.toHaveProperty("environments");
+      expect(proof.turnParams.environments).toEqual([]);
+      expect(JSON.stringify({ events, logs })).not.toContain("PRIVATE_CONFIG_CANARY");
+    },
+  );
+
+  test.each(["thread/start", "thread/resume"])(
+    "%s preserves normal runtime configuration unless native tools are explicitly disabled",
+    async (method) => {
+      const runtime = makeRuntime(
+        `
+setOnLine((m) => {
+  if (m.method === "initialize") return send({ id: m.id, result: { userAgent: "old/0.145.0" } });
+  if (m.method === "config/read") return send({ id: m.id, error: { code: -32602, message: "default runtime must not inspect config" } });
+  if (m.method === ${JSON.stringify(method)} || m.method === "turn/start") {
+    if ("config" in m.params || "environments" in m.params)
+      return send({ id: m.id, error: { code: -32602, message: "native defaults changed" } });
+    if (m.method === "turn/start") {
+      send({ id: m.id, result: { turn: { id: "native-turn" } } });
+      return send({ method: "turn/completed", params: { threadId: "normal-thread", turn: { id: "native-turn", status: "completed" } } });
+    }
+    return send({ id: m.id, result: { thread: { id: "normal-thread" } } });
+  }
+});`,
+        undefined,
+        method === "thread/resume" ? { resumeRuntimeSessionId: "old-thread" } : {},
+      );
+      await runtime.start();
+      await (
+        await runtime.send({ text: "Normal native-capable turn" })
+      ).done;
+    },
+  );
+
+  test.each([undefined, "fake/1", "codeshell/0.161.0 (test)"])(
+    "refuses manager execution before opening a thread when CLI version is %s",
+    async (userAgent) => {
+      const runtime = makeRuntime(
+        `
+setOnLine((m) => {
+  if (m.method === "initialize") return send({ id: m.id, result: ${JSON.stringify({ userAgent })} });
+  return send({ id: m.id, error: { code: -32602, message: "unexpected request after unsupported initialize" } });
+});`,
+        undefined,
+        { disableNativeTools: true },
+      );
+      await expect(runtime.start()).rejects.toThrow("Codex CLI 0.162.0 or newer");
+      expect(runtime.runtimeSessionId).toBeUndefined();
+    },
+  );
+
+  test.each(["rpc-error", "missing-bridge", "invalid-config"])(
+    "fails manager startup closed when native MCP isolation cannot be verified (%s)",
+    async (failure) => {
+      const runtime = makeRuntime(
+        `
+setOnLine((m) => {
+  if (m.method === "initialize") return send({ id: m.id, result: { userAgent: "codeshell/0.162.0 (test)" } });
+  if (m.method === "config/read") {
+    if (${JSON.stringify(failure)} === "rpc-error")
+      return send({ id: m.id, error: { code: -32602, message: "PRIVATE_CONFIG_CANARY" } });
+    return send({ id: m.id, result: ${JSON.stringify(
+      failure === "missing-bridge"
+        ? { config: { mcp_servers: { unrelated: {} } } }
+        : { config: [] },
+    )} });
+  }
+  return send({ id: m.id, error: { code: -32602, message: "unexpected model-thread request" } });
+});`,
+        undefined,
+        { disableNativeTools: true },
+      );
+      await expect(runtime.start()).rejects.toThrow("Could not verify");
+      expect(runtime.runtimeSessionId).toBeUndefined();
+    },
+  );
+
+  test.each(["thread/start", "thread/resume"])(
     "%s exposes the reported model instead of the requested alias",
     async (method) => {
       const runtime = makeRuntime(
@@ -390,11 +532,13 @@ setOnLine((m) => {
   async function nativeApprovalProbe(
     script: string,
     hook: CodexRuntimeHooks["onNativeApproval"],
+    extra: Partial<CodexRuntimeOptions> = {},
   ): Promise<unknown> {
     const file = fakeServerScript(`
       let answer = null;
       setOnLine((m) => {
-        if (m.method === "initialize") return send({ id: m.id, result: {} });
+        if (m.method === "initialize") return send({ id: m.id, result: { userAgent: "codeshell/0.162.0 (test)" } });
+        if (m.method === "config/read") return send({ id: m.id, result: { config: { mcp_servers: { codeshell_tools: {} } } } });
         if (m.method === "thread/start") {
           send({ id: m.id, result: { thread: { id: "t" } } });
           ${script}
@@ -410,6 +554,7 @@ setOnLine((m) => {
         businessSessionId: "sess-native",
         bridge,
         client: { command: process.execPath, args: [file] },
+        ...extra,
       },
       { onNativeApproval: hook },
     );
@@ -428,6 +573,21 @@ setOnLine((m) => {
     reason: "needs network",
     permissions: { network: { enabled: true }, fileSystem: null },
   } });`;
+
+  test("manager isolation declines native approvals even with a permissive host hook", async () => {
+    let hookCalls = 0;
+    expect(
+      await nativeApprovalProbe(
+        permissionsRequest,
+        () => {
+          hookCalls += 1;
+          return "accept";
+        },
+        { disableNativeTools: true },
+      ),
+    ).toEqual({ permissions: {}, scope: "turn" });
+    expect(hookCalls).toBe(0);
+  });
 
   test("a permissions approval grants exactly the requested profile for this turn", async () => {
     expect(await nativeApprovalProbe(permissionsRequest, () => "accept")).toEqual({

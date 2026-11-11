@@ -116,6 +116,8 @@ export interface ExternalRuntimeSessionOptions {
   sandbox?: string;
   /** Codex only. Kebab-case per protocol. */
   approvalPolicy?: string;
+  /** Restrict the external provider to the Host's reviewed bridge tools. */
+  disableNativeTools?: boolean;
   /** Claude Code only: extra CLI args. */
   claudeExtraArgs?: readonly string[];
   /**
@@ -284,6 +286,7 @@ export async function startExternalRuntimeSession(
             : {}),
           ...(options.sandbox ? { sandbox: options.sandbox } : {}),
           ...(options.approvalPolicy ? { approvalPolicy: options.approvalPolicy } : {}),
+          ...(options.disableNativeTools ? { disableNativeTools: true } : {}),
           ...(options.codexClient ? { client: options.codexClient } : {}),
           log,
         },
@@ -310,7 +313,11 @@ export async function startExternalRuntimeSession(
             : {}),
           permissionMode: claudePermissionMode,
           ...(claudePromptTool ? { permissionPromptTool: claudePromptTool } : {}),
-          ...(options.claudeExtraArgs ? { extraArgs: options.claudeExtraArgs } : {}),
+          ...(options.disableNativeTools
+            ? { extraArgs: [...(options.claudeExtraArgs ?? []), "--tools", ""] }
+            : options.claudeExtraArgs
+              ? { extraArgs: options.claudeExtraArgs }
+              : {}),
           ...(options.claudeCommand ? { command: options.claudeCommand } : {}),
           log,
         },

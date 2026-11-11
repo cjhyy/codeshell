@@ -144,6 +144,8 @@ describe("AgentServer AskUserQuestion timeout behavior", () => {
   });
 
   it("expires goal questions without granting permission", async () => {
+    const startedAt = Date.now();
+    const clockSpy = spyOn(Date, "now").mockReturnValue(startedAt);
     const scheduled: Array<{ timeout: number | undefined; run: () => void }> = [];
     const timeoutSpy = spyOn(globalThis, "setTimeout").mockImplementation(((
       handler: (...args: any[]) => void,
@@ -174,6 +176,10 @@ describe("AgentServer AskUserQuestion timeout behavior", () => {
 
       const session = chatManager.get("goal-sess")!;
       expect(session.pendingApprovals.size).toBe(1);
+      const pending = [...session.pendingApprovals.values()][0]!;
+      const deadline = startedAt + USER_DECISION_TIMEOUT_MS;
+      expect(pending.metadata.createdAt).toBe(startedAt);
+      expect(pending.metadata.expiresAt).toBe(deadline);
       // Every user-facing decision has the same server-owned deadline.
       const askTimer = scheduled.find((s) => s.timeout === USER_DECISION_TIMEOUT_MS);
       expect(askTimer).toBeDefined();
@@ -181,6 +187,7 @@ describe("AgentServer AskUserQuestion timeout behavior", () => {
       expect(state.answer).toBeUndefined();
 
       // Expiration retires the pending request without manufacturing consent.
+      clockSpy.mockReturnValue(deadline);
       askTimer!.run();
       await tick();
 
@@ -198,6 +205,7 @@ describe("AgentServer AskUserQuestion timeout behavior", () => {
       ).toBe(true);
     } finally {
       timeoutSpy.mockRestore();
+      clockSpy.mockRestore();
     }
   });
 

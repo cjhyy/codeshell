@@ -171,6 +171,8 @@ jobs:
             # Computer Use suites run as one process below: they spawn the MCP proxy and
             # fake drivers, and splitting them out keeps this shard within its file budget.
             # The new Pet navigator suite runs below to retain the measured file budget.
+            # Cross-channel defaults and external-manager boundaries run in bounded
+            # groups below; the general Desktop process is already at its ceiling.
             ignore: >-
               --path-ignore-patterns '**/browser-runtime/playwright-driver.test.ts'
               --path-ignore-patterns '**/browser-library/puppeteer-browser-driver.test.ts'
@@ -206,6 +208,14 @@ jobs:
               --path-ignore-patterns '**/src/main/pet/pet-session-rule-watcher.test.ts'
               --path-ignore-patterns '**/src/main/pet/session-outcome.test.ts'
               --path-ignore-patterns '**/src/main/pet/pet-presence.test.ts'
+              --path-ignore-patterns '**/src/main/external-runtime-host-submission.test.ts'
+              --path-ignore-patterns '**/src/main/external-runtime-profile-control.test.ts'
+              --path-ignore-patterns '**/src/main/pet/pet-dispatch-external-runtime.test.ts'
+              --path-ignore-patterns '**/src/main/pet/pet-external-*.test.ts'
+              --path-ignore-patterns '**/src/main/pet/pet-native-extraction-policy.test.ts'
+              --path-ignore-patterns '**/src/main/pet/pet-runtime-control-worker.test.ts'
+              --path-ignore-patterns '**/src/shared/session-model-default.test.ts'
+              --path-ignore-patterns '**/renderer/settings/SessionDefaultModelSelector.interaction.test.tsx'
               --path-ignore-patterns '**/renderer/pet/settings/**'
               --path-ignore-patterns '**/renderer/pet/PetSettingsPage.test.tsx'
               --path-ignore-patterns '**/renderer/credentials/CredentialsPage.test.tsx'
@@ -286,6 +296,12 @@ jobs:
       # the same package boundary that consumers receive.
       - name: build workspace packages
         run: bun run build
+      - name: test cross-channel model defaults and external manager boundaries
+        if: matrix.shard == 'desktop'
+        run: |
+          node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/external-runtime-host-submission.test.ts packages/desktop/src/main/external-runtime-profile-control.test.ts packages/desktop/src/main/pet/pet-dispatch-external-runtime.test.ts packages/desktop/src/main/pet/pet-external-runtime.test.ts packages/desktop/src/main/pet/pet-external-reply-model.test.ts packages/desktop/src/main/pet/pet-native-extraction-policy.test.ts packages/desktop/src/main/pet/pet-runtime-control-worker.test.ts packages/desktop/src/main/pet/pet-notice-reply-models.test.ts
+          node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/shared/session-model-default.test.ts packages/desktop/src/renderer/settings/SessionDefaultModelSelector.interaction.test.tsx
+          node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/pet/pet-proactive-models.test.ts packages/desktop/src/main/pet/pet-proactive-wiring.test.ts
       - name: test shard
         if: matrix.paths
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 ${{ matrix.ignore }} ${{ matrix.paths }}

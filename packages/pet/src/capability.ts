@@ -68,7 +68,7 @@ import {
   memoryToolDef,
   rewriteGatewayReplyDef,
 } from "./host-actions.js";
-import { PET_BEHAVIOR_PROFILE } from "./profile.js";
+import { PET_ALLOWED_TOOL_NAMES, PET_BEHAVIOR_PROFILE } from "./profile.js";
 import { createPetProjectionObserver, PET_HIDDEN_SESSION_KINDS } from "./projection-extension.js";
 import { PET_REPORT_TO_MIMI_METHOD, GET_PET_PROJECTION_SNAPSHOT_METHOD } from "./protocol.js";
 import {
@@ -87,6 +87,61 @@ import {
   type NoticeRuleHostRequester,
 } from "./notify-me.js";
 import { validatePetRunParams } from "./run-params.js";
+
+const PET_MANAGER_EXTERNAL_REASONS: Readonly<Record<string, string>> = {
+  DelegateWork:
+    "Records one delegation through the Host-owned per-turn Pet profile services. Workspace ids and reusable Session evidence are validated against that turn's bounded options; reporting a request does not launch work or grant a general execution tool.",
+  MobileRemote:
+    "Records a mobile-remote request only through the Host-owned per-turn Pet profile services and authorized host action kinds. The Host validates and executes it after the manager turn; the tool does not open a tunnel directly.",
+  ControlLongTask:
+    "Records a bounded task-control request through the Host-owned per-turn Pet profile services. The Host resolves task identity and validates the operation after the manager turn; acceptance is not execution.",
+  Memory:
+    "Records a bounded memory request through the Host-owned per-turn Pet profile services. The Host validates and applies it after the manager turn; the tool does not mutate a memory store directly.",
+  Gateway:
+    "Reads only the current turn's Host-provided Gateway channel catalog from Pet profile services. It cannot select another conversation, connect a channel, or send a message.",
+  GatewayReply:
+    "Records the current conversation's reply through the Host-owned per-turn Pet profile services. The capability bounds text and attachments, and the Host validates and delivers the final draft after the turn; acceptance is not delivery.",
+  Sessions:
+    "Reads bounded Session disclosures using only the Host-provided sessions directory and current turn's Pet profile services. It cannot execute, resume, or mutate a Work Session.",
+  FollowUps:
+    "Reads only the bounded follow-up items supplied by the Host-owned per-turn Pet profile services. It cannot inspect another store or mutate a follow-up.",
+  ManageFollowUp:
+    "Records a follow-up mutation through the Host-owned per-turn Pet profile services and authorized host action kinds. The Host validates identity and executes it after the manager turn; acceptance is not completion.",
+  WatchSession:
+    "Records a Session watch request through the Host-owned per-turn Pet profile services and authorized host action kinds. The Host validates the Session and delivery route after the turn; the tool cannot install a watch directly.",
+  ManageSessions:
+    "Records a Session archive request through the Host-owned per-turn Pet profile services and authorized host action kinds. The Host validates each Session after the turn; the tool cannot mutate the Session store directly.",
+  BindConversationSession:
+    "Records a conversation-binding request through the Host-owned per-turn Pet profile services and authorized host action kinds. The Host validates the current conversation and exact Session after the turn; the tool cannot reroute messages directly.",
+  CurrentTime:
+    "Returns the Host's local clock and timezone without input or side effects. The external declaration still requires explicit Mimi host opt-in and Pet profile visibility, so it adds no general manager execution surface.",
+  SendMessage:
+    "Records an outbound message through the Host-owned per-turn Pet profile services. Exact target ids, text and attachment limits come from that turn's authorized targets; the Host validates and delivers after the turn, and acceptance is not delivery.",
+};
+
+/** External compatibility is metadata only; the original executor and guards stay intact. */
+function withManagerExternalExposure(tool: BuiltinTool): BuiltinTool {
+  if (!PET_ALLOWED_TOOL_NAMES.has(tool.definition.name)) return tool;
+  const reason = PET_MANAGER_EXTERNAL_REASONS[tool.definition.name];
+  // Future manager tools require their own declaration and independent review.
+  if (!reason) return tool;
+  return {
+    ...tool,
+    exposure: {
+      ...tool.exposure,
+      external: {
+        kind: tool.definition.name === "CurrentTime" ? "self-contained" : "host-loopback",
+        status: "exposed",
+        requires: "mimi-host",
+        reason,
+      },
+    },
+  };
+}
+
+function withManagerExternalCatalog(tools: BuiltinTool[]): BuiltinTool[] {
+  return tools.map(withManagerExternalExposure);
+}
 
 /**
  * The Pet domain as a unified AgentModule. Wraps the legacy factory so the
@@ -191,7 +246,7 @@ function buildPetParts(): PetParts {
     createProtocolObserver,
     validateRunParams: validatePetRunParams,
     hiddenSessionKinds: PET_HIDDEN_SESSION_KINDS,
-    catalogTools: [
+    catalogTools: withManagerExternalCatalog([
       {
         definition: {
           ...requestMimiDeliveryToolDef,
@@ -465,6 +520,15 @@ function buildPetParts(): PetParts {
           rewriteDefinition: rewriteSendMessageDef,
         },
       },
-    ],
+    ]),
   };
 }
+
+/**
+ * The actual bounded Mimi manager tools, shared by native and external hosts.
+ * Hosts supply PET_BEHAVIOR_PROFILE's current visibility and run-scoped services;
+ * this catalog does not supply those capabilities or bypass the reviewed gate.
+ */
+export const PET_MANAGER_TOOL_CATALOG: readonly BuiltinTool[] = Object.freeze(
+  buildPetParts().catalogTools.filter((tool) => PET_ALLOWED_TOOL_NAMES.has(tool.definition.name)),
+);

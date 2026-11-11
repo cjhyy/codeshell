@@ -22,7 +22,8 @@ export const pet = {
         personalizationSaveHint: "自动保存，下一次 Mimi 回复时生效。",
         personalizationSaveFailed: "个性化设置保存失败，请重试。",
         modelTitle: "Mimi 对话模型",
-        modelDescription: "只用于 Mimi 的管理对话；长程工作 Session 继续使用自己的默认模型。",
+        modelDescription:
+          "单独选择会覆盖新会话默认模型；未单独指定时，Mimi 和微信沿用新会话默认模型。长程工作 Session 继续使用自己的默认模型。",
         useAppDefault: "跟随应用默认",
         followingAppDefault: "当前跟随应用默认模型",
         widgetTitle: "显示 Mimi",
@@ -549,7 +550,7 @@ export const pet = {
         personalizationSaveFailed: "Could not save personalization. Please retry.",
         modelTitle: "Mimi chat model",
         modelDescription:
-          "Used only for Mimi's manager chat. Long-running work Sessions keep their own default model.",
+          "An explicit choice overrides the new-chat default. Otherwise Mimi and WeChat follow the new-chat default. Long-running work Sessions keep their own default model.",
         useAppDefault: "Use app default",
         followingAppDefault: "Currently following the app default model",
         widgetTitle: "Show Mimi",

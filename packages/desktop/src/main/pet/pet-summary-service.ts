@@ -113,6 +113,8 @@ export function createPetSummaryService(deps: {
   readClosureInput?: (sessionDir: string) => Promise<string | null>;
   /** Injectable aux call; defaults to a real one-shot aux client. */
   generate?: (closureText: string) => Promise<string>;
+  /** Host policy for new paid inference; cached summaries remain readable. */
+  allowGenerate?: () => boolean;
   store: PetSummaryStore;
   /** cwd used to seed the default generator's settings read. */
   cwd?: string;
@@ -125,6 +127,16 @@ export function createPetSummaryService(deps: {
   // terminalAt too so a session that finished again (newer terminalAt) is not
   // collapsed into a stale in-flight generation.
   const inFlight = new Map<string, Promise<PetSessionSummary | null>>();
+
+  function generationAllowed(): boolean {
+    if (!deps.allowGenerate) return true;
+    try {
+      return deps.allowGenerate() === true;
+    } catch {
+      // A failed preference/identity read cannot authorize native API spend.
+      return false;
+    }
+  }
 
   function storeIfNewest(sessionId: string, terminalAt: number, text: string): void {
     // Distinct terminalAt generations may overlap. A slower result for an old
@@ -139,6 +151,9 @@ export function createPetSummaryService(deps: {
     terminalAt: number,
   ): Promise<PetSessionSummary | null> {
     const closure = await readClosureInput(join(deps.sessionsRootDir, sessionId));
+    // The owner may select an external manager while the transcript read is
+    // pending. Do not start inference or persist an empty cache marker then.
+    if (!generationAllowed()) return null;
     if (closure === null) {
       // No readable closure → record a no-value marker so we do not retry
       // until the transcript (and its terminalAt) changes.
@@ -174,6 +189,7 @@ export function createPetSummaryService(deps: {
       if (cached && cached.terminalAt === terminalAt) {
         return cached.text ? { text: cached.text } : null;
       }
+      if (!generationAllowed()) return null;
 
       const key = `${sessionId}:${terminalAt}`;
       const pending = inFlight.get(key);

@@ -3,10 +3,16 @@ import type { FollowUpRule } from "./pet-follow-up-rules.js";
 import { noticeLine } from "./pet-notice-compose.js";
 import type { NoticeRecord } from "./pet-notice-ledger.js";
 import { localMinuteOfDay } from "./pet-notice-policy.js";
-import { localIsoTime, type ReplyModel } from "./pet-notice-reply-interpreter.js";
+import { localIsoTime } from "./pet-notice-reply-interpreter.js";
 import { isOpenActions } from "./pet-notice-slots.js";
 import { unpackFacts } from "./pet-notice-types.js";
-import { askModels, hasOnlyKeys, oneLine, parseJsonObject } from "./pet-proactive-models.js";
+import {
+  askModels,
+  hasOnlyKeys,
+  oneLine,
+  parseJsonObject,
+  type ProactiveModelSource,
+} from "./pet-proactive-models.js";
 import type { BriefKind } from "./pet-proactive-state.js";
 import { dueAt } from "./pet-schedule-rule.js";
 import type { DesktopPendingDecision, DesktopPetSession } from "./pet-state-aggregator.js";
@@ -353,7 +359,7 @@ export function templateBrief(facts: BriefFacts, clock: BriefClock): string {
 /** The brief's text: the model's write-up when one is valid, else the template. */
 export async function writeBrief(
   facts: BriefFacts,
-  models: readonly ReplyModel[],
+  models: ProactiveModelSource,
   clock: BriefClock,
   options: { timeoutMs?: number; onError?: (error: unknown) => void } = {},
 ): Promise<{ text: string; by: "model" | "template" }> {
