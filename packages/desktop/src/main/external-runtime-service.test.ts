@@ -589,6 +589,56 @@ describe("ExternalRuntimeService workspace mutations", () => {
     },
   );
 
+  test("an earlier mutation cannot reopen runtime admission while a newer mutation is persisting", async () => {
+    const svc = service({ external_agent_runtime: true });
+    let enterFirst!: () => void;
+    let enterSecond!: () => void;
+    let releaseFirst!: () => void;
+    let releaseSecond!: () => void;
+    const firstEntered = new Promise<void>((resolve) => {
+      enterFirst = resolve;
+    });
+    const secondEntered = new Promise<void>((resolve) => {
+      enterSecond = resolve;
+    });
+    const firstBlocked = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+    const secondBlocked = new Promise<void>((resolve) => {
+      releaseSecond = resolve;
+    });
+    const first = svc.withWorkspaceMutation(
+      request.sessionId,
+      async () => {
+        enterFirst();
+        await firstBlocked;
+      },
+      77,
+    );
+    await firstEntered;
+    const second = svc.withWorkspaceMutation(
+      request.sessionId,
+      async () => {
+        enterSecond();
+        await secondBlocked;
+      },
+      77,
+    );
+    releaseFirst();
+    await first;
+    await secondEntered;
+    try {
+      await expect(svc.ensure(request)).rejects.toThrow("工作区正在切换");
+      expect(starts).toEqual([]);
+    } finally {
+      releaseSecond();
+      await second;
+    }
+    await svc.ensure(request);
+    expect(svc.hasSession(request.sessionId)).toBe(true);
+    await svc.stopAll();
+  });
+
   test("a start already in progress settles before a workspace mutation checks its owner", async () => {
     const svc = service({ external_agent_runtime: true });
     let ready!: () => void;
