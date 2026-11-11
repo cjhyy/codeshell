@@ -27,6 +27,8 @@ export interface SubAgentContinuation {
 export interface ContentBlock {
   type: "text" | "tool_use" | "tool_result" | "image" | "reasoning";
   text?: string;
+  /** Portable schema text; only a matching frozen declaration may render as a native reference. */
+  discoveredTool?: { version: 1; name: string; schemaDigest: string };
   id?: string;
   name?: string;
   input?: Record<string, unknown>;
@@ -57,6 +59,8 @@ export interface ToolDefinition {
   name: string;
   description: string;
   inputSchema: Record<string, unknown>;
+  /** Request-only discovery hint; never establishes execution eligibility. */
+  deferLoading?: true;
   /** Omit this tool's result body from retained Goal-judge evidence. */
   sensitiveResult?: boolean;
 }
@@ -321,6 +325,8 @@ export interface SessionToolSelection {
   discovered: string[];
   /** Frozen schemas retain the prefix even when a tool is unavailable on resume. */
   frozenDefinitions?: ToolDefinition[];
+  /** Complete frozen deferred catalog for native discovery; an empty array is authoritative. */
+  deferredDefinitions?: ToolDefinition[];
   /** Model, provider and endpoint identity defining the current cache cycle. */
   cacheIdentity?: string;
 }
