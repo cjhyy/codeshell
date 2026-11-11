@@ -179,6 +179,7 @@ interface NoticeRule {
         kind: "schedule"; // 2c-1：定时规则（跟进；晨报、收工、心跳在 2c-2）
         at?: number; // 一次性（epoch ms）；与 cron 恰好二选一
         cron?: string; // 5 段 cron，按 timezone 计算；最多每小时一次（分钟字段只能是一个数）
+        label?: string; // 有 cron 时必填：Mimi 用主人的说法写的名字（"工作日 09:00"），只当显示文本
         timezone: string; // IANA
         missedPolicy: "skip" | "fire-once";
         catchUpUntil?: number; // 只用于 at：错过后最晚补发到何时（默认 at + 24 小时）
@@ -209,7 +210,10 @@ interface NoticeRule {
 
 - **何时**：某个会话的事件、所有会话的事件（只在主人不在电脑前时）、定时（`schedule`：一次性 `at` 或循环 `cron`）。
 - **做什么**：`notify` 直接提醒（模板或 Mimi 成文）；`remind` 到点把主人要的那句话发给目标；`run-mimi` 先唤醒一轮 Mimi 只续办原会话，再把结果发给目标（原跟进的 `resume`）。晨报、收工的 `compose`、心跳的 `judge` 在 2c-2 加。
-- **定时规则的语义**（`pet-rule-schedule.ts`）：每条规则只有"当前这一次"；它投影成 core 调度器里的一个一次性任务（`creationKey` = `mimi-rule:<规则 id>:<version>:<occurrence>`），任务只是可重建的触发器。改期（新 version）或循环规则进入下一次（新 occurrence）都会换掉旧任务，过期的回调认领不到。到点先落盘认领再执行；执行抛错记 `unknown`、不重试；进程死在认领之后，重启时记 `unknown`。已过点的这一次不交给 core（冷启动它一律算错过，计时器还会被睡眠拖住），启动、任何规则变化、唤醒/解锁时都由宿主自己处理：`fire-once` 在期限内补发一次，`skip` 只在 90 秒宽限内发。循环规则的期限是"下一次之前"（最多一天），睡了几天也只补最近一次，之后从现在往后算下一次。
+- **定时规则的语义**（`pet-rule-schedule.ts`）：每条规则只有"当前这一次"；它投影成 core 调度器里的一个一次性任务（`creationKey` = `mimi-follow-up:rule:<规则 id>:<version>:<occurrence>`：旧版本已经把 `mimi-follow-up:` 开头的任务挡在自动化之外，降级后它们不会被列出、也不会被当成无头自动化执行，只会被旧版本删掉，回到本版本再重建），任务只是可重建的触发器。改期（新 version）或循环规则进入下一次（新 occurrence）都会换掉旧任务，过期的回调认领不到。到点先落盘认领再执行；执行抛错记 `unknown`、不重试；进程死在认领之后，重启时记 `unknown`。已过点的这一次不交给 core（冷启动它一律算错过，计时器还会被睡眠拖住），启动、任何规则变化、唤醒/解锁时都由宿主自己处理：`fire-once` 在期限内补发一次，`skip` 只在 90 秒宽限内发。循环规则的期限是"下一次之前"（最多一天），睡了几天也只补最近一次，之后从现在往后算下一次。
+- 认领期间主人仍可取消、完成或改期：取消/完成立即生效，这一次的结果照样记上（规则不再往下走）；改期换掉这一次，晚到的结算什么也不记；被唤醒的 Mimi 轮在启动前复核版本和状态，改动后不会再续办。认领以"到期时刻 + 错开"为准。
+- 下一次的计算（core `nextCronTime`）按字段跳跃，跨时区偏移变化时落在变化点重算，最多向后找约 8 年（2 月 29 日这类稀疏但存在的日期能找到）；登记时直接拒绝不存在的日期（2 月 30 日、4 月 31 日）。夏令时：拨快跳过的时刻当天不触发；拨慢重复的时刻只触发一次（第一次）。
+- 规则表由更新版本写入（只读）或读不出时，跟进停用并记日志，桌面其余部分照常启动；没有改动的写入（例如启动时没有残留认领）不受只读影响。旧版本把 `schedule` 行隔离后，本版本加载时把隔离区里能读懂的行恢复回来（同 id 取较新的 version）。
 - `version` 只随主人的修改增加，唤醒进度不改它，所以跟进的 `revision`（= version）在一次次触发间不变。
 - **打不打扰**：`always` 一定送到；`important` 由 Mimi 判断值不值得说（判断轮三期才有，1a 里按 `always` 处理）；`digest` 只进摘要；`muted` 只记录。
 - 主人原话由 Mimi 或工具映射：说"告诉我"→ `always`；"重要的才说"→ `important`；"每天汇总一下"→ `digest`；"记下来就行"→ `muted`。映射不确定时用 `always`。
@@ -506,7 +510,7 @@ interface NoticeRecord {
 | session.blocked | 决定：`${sessionId}:${requestId}`（离开后补推加 `:away`）；Goal 暂停：`${sessionId}:goal-pause:${goalId}:${revision}:${runId}` |
 | 长任务收尾      | `task:${taskId}:${attempt}:${status}`                                                                                          |
 | session.report  | `report:${reportId}:${对话身份的哈希}`（同一份汇报每个对话一条，重试不重复）                                                   |
-| followup.due    | 这一次的任务键 `mimi-rule:${规则 id}:${version}:${occurrence}`                                                                 |
+| followup.due    | 这一次的任务键 `mimi-follow-up:rule:${规则 id}:${version}:${occurrence}`                                                       |
 | digest          | `digest:${小时序号}:${成员 id 的哈希}`                                                                                         |
 
 去重键保留 7 天（索引里只存哈希，记录被淘汰后仍有效）。同一事实命中多条规则时合成一条 Notice；渠道取最明确的（点名的 IM 优先于 `auto`）；目标取最具体的（来源路由优先于主人）；打扰方式取最强的（`always` > `important` > `digest` > `muted`）。只命中 `all-sessions` 系统规则时带 `requiresAway`。
@@ -623,7 +627,7 @@ flowchart TD
 **只有一套定时系统：规则表。** 跟进（一次性和循环）、晨报、收工、心跳都是 `schedule` 规则，由同一个执行器（`pet-rule-schedule.ts`）投影进 core 调度器。2c-1 做了底座和跟进；晨报、收工、心跳在 2c-2。
 
 1. **跟进即规则**（2c-1）：`FollowUps` / `ManageFollowUp` 工具名不变（模型认得它们），背后是 `createdBy: "follow-up"` 的 `schedule` 规则：`intent: remind` → `then.mode: "remind"`，`intent: resume` → `"run-mimi"`；跟进 id 就是规则 id（由宿主从这一轮的操作键确定性派生，重放找回同一条规则），`revision` 就是规则 `version`。目标只取这一轮的 IM 来源，不信模型；外部会话不能续办。完成 → `completed`，取消、忽略 → `cancelled`。一次性跟进触发后仍是 `active`（还在"需要跟进"里，等主人处理），不会再触发。
-2. **循环跟进**：`ManageFollowUp` 的 `register` / `reschedule` 增加 `recurrence`（5 段 cron），与 `wake_at` 恰好二选一。把主人的话转成 cron 是模型的事（工具说明给了例子），代码只做确定性校验：分钟字段只能是一个数（所以最多每小时一次），宿主再用调度器的 cron 解析器解析、确认两年内会触发；不合格的直接返回清楚的错误。仍只在主人明确要求时登记。修改 cron 不补跑错过的次数（从现在往后算）；同一分钟的多条定时规则错开 0–5 分钟（每多一条晚 1 分钟，分配后不变）。每次触发是一条 Notice；`run-mimi` 每一次用自己的 `clientMessageId`（带 occurrence），不会被当成重放。工作台"需要跟进"显示重复规则；改循环规则请找 Mimi（界面的改期只针对一次性）。
+2. **循环跟进**：`ManageFollowUp` 的 `register` / `reschedule` 增加 `recurrence`（5 段 cron），与 `wake_at` 恰好二选一。把主人的话转成 cron 是模型的事（工具说明给了例子），代码只做确定性校验：分钟字段只能是一个数（所以最多每小时一次），宿主再用调度器的 cron 解析器解析、确认两年内会触发；不合格的直接返回清楚的错误。有 `recurrence` 时必须同时给 `schedule_label`（≤64 字，模型用主人的说法写，如"工作日 09:00"），存在规则上；登记回执和回复写出这个名字和接下来两次的时间，cron 原文放在后面（工作台作为悬停提示）。名字只当不可信文本：单行、截断、不渲染 HTML。仍只在主人明确要求时登记。修改 cron 不补跑错过的次数（从现在往后算）；同一分钟的多条定时规则错开 0–5 分钟（每多一条晚 1 分钟，分配后不变）。每次触发是一条 Notice；`run-mimi` 每一次用自己的 `clientMessageId`（带 occurrence），不会被当成重放。工作台"需要跟进"显示重复规则；改循环规则请找 Mimi（界面的改期只针对一次性）。
 3. **晨报**：确定性收集昨天以来完成/失败的任务、正在跑的、等你决定的、今天到期的跟进、记忆日志里未完成的事，交给 Mimi 成文；结尾可问"今天先做哪个？要我先开会话准备吗"，回复即进入正常对话。
 4. **收工小结**：今天派出的活结果如何、还挂着什么、明天要跟的。
 5. 收集为空时不发（或按设置只发一句短问候）；每一项必须对得上记录。
@@ -679,7 +683,7 @@ notifications?: {
 | **2 定时 + 可打开**                | `WatchSession` 改建规则；`ReportToMimi` 与跟进提醒改走路由器（2a，已实现）；Goal 暂停、上限停止与失败可在 IM 里回复，完成后可"打开"，回复一律由模型解读（2b，已实现，见 §7、§9）；定时规则底座、跟进改成规则、循环跟进（2c-1，已实现）；晨报、收工、心跳规则，固定格子摘要、推迟发送（2c-2）；规则列表界面（2d）。旧的跟进表已删除，见下                                                                             | G2（其余）、G3、G4                                 |
 | **3 心跳**                         | 预检 + 判断轮 + 复查 + 每日上限                                                                                                                                                                                                                                                                                                                                                                                      | 两周数据后评估                                     |
 
-**跟进表（已撤销的收窄）**：2a 时曾决定跟进表继续独立存在，理由是整表迁移风险高。2026-11-11 主人决定只要一套定时系统、旧数据可以删除，于是 2c-1 不迁移而是直接替换：规则表加上 `schedule` 规则和每条规则的唤醒子状态（`wake`），跟进 id 换成规则 id，cron 任务键换成 `mimi-rule:`，旧的跟进存储、执行器、运行时和 `follow-ups.json` 一并删除。`WatchSession` 改为建 `session` 规则（`createdBy: "watch-session"`，目标为来源路由），不再新建长任务；之前落盘的 watch 长任务照旧由长任务路径收尾。
+**跟进表（已撤销的收窄）**：2a 时曾决定跟进表继续独立存在，理由是整表迁移风险高。2026-11-11 主人决定只要一套定时系统、旧数据可以删除，于是 2c-1 不迁移而是直接替换：规则表加上 `schedule` 规则和每条规则的唤醒子状态（`wake`），跟进 id 换成规则 id，cron 任务键换成 `mimi-follow-up:rule:`，旧的跟进存储、执行器、运行时和 `follow-ups.json` 一并删除。`WatchSession` 改为建 `session` 规则（`createdBy: "watch-session"`，目标为来源路由），不再新建长任务；之前落盘的 watch 长任务照旧由长任务路径收尾。
 
 验收口径：
 

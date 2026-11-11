@@ -46,11 +46,12 @@
 主人决定（2026-11-11）：只有一套定时系统；跟进移进规则表，旧数据删除、不迁移，旧代码删除而不是并存；晨报、收工、心跳、循环与一次性跟进都是规则；自然语言一律交给模型，不对散文用正则。
 
 1. 规则模型：`when.kind: "schedule"`（`at` 一次性 xor `cron` 循环、`timezone`、`missedPolicy`、`catchUpUntil` 只用于 `at`）；`then.mode` 加 `"remind"`（`title`、`text`）和 `"run-mimi"`（`title`、`text`、`sourceSessionId`、`taskId?`）；`createdBy: "follow-up"`；规则带 `wake`（当前这一次：`occurrence`、`stagger?`、`status`、`claimedAt?`、`completedAt?`、`detail?`、`taskId?`）。唤醒进度不改 `version`。不升 `SCHEMA_VERSION`，旧版本逐条隔离新行。形状与时刻计算在 `pet-schedule-rule.ts`，存储方法在 `pet-rule-store.ts`（`createScheduleRule` / `rescheduleRule` / `claimOccurrence` / `settleOccurrence` / `recoverClaims`；没改动的写入不落盘、不通知）。
-2. 执行器 `pet-rule-schedule.ts`（`PetRuleScheduler`）：每条规则的当前这一次投影成一个一次性 core 任务，键 `mimi-rule:<id>:<version>:<occurrence>`；漂移的任务重建；先落盘认领再执行；抛错记 `unknown` 不重试；启动时恢复残留认领；已过点的由宿主在启动、规则变化、唤醒/解锁时处理（`fire-once` 期限内补一次、`skip` 只在 90 秒内）；循环规则睡了多天只补最近一次。同一分钟错开 0–5 分钟（存进 `wake.stagger`）。启动时删除 `follow-ups.json` 和 `mimi-follow-up:` 任务一次并记日志。
+2. 执行器 `pet-rule-schedule.ts`（`PetRuleScheduler`）：每条规则的当前这一次投影成一个一次性 core 任务，键 `mimi-follow-up:rule:<id>:<version>:<occurrence>`（旧版本已挡在自动化之外的命名空间）；漂移的任务重建；先落盘认领再执行；抛错记 `unknown` 不重试；启动时恢复残留认领；已过点的由宿主在启动、规则变化、唤醒/解锁时处理（`fire-once` 期限内补一次、`skip` 只在 90 秒内）；循环规则睡了多天只补最近一次。同一分钟错开 0–5 分钟（存进 `wake.stagger`）。启动时删除 `follow-ups.json` 和 `mimi-follow-up:` 任务一次并记日志。
 3. 跟进层 `pet-follow-up-rules.ts`：`followUpMutation` 宿主动作（操作键和目标仍由宿主从这一轮派生，规则 id 由操作键确定性派生；外部会话不能续办）、`FollowUps` 行视图、到点的 `remind` / `run-mimi`（`PetDispatchService.wakeFollowUp` 或长任务续办）→ `pet-notice-follow-up.ts` → 路由器 `followup.due`。
 4. 工具：`FollowUps`、`ManageFollowUp` 名字不变；`register` / `reschedule` 加 `recurrence`（cron，最多每小时一次，与 `wake_at` 二选一；工具与宿主都确定性校验并返回清楚的错误）。
-5. 界面：`PetFollowUpSection` 显示重复规则，循环规则不给改期（找 Mimi 改），其余操作不变；IPC 复用 `pet:follow-up-control`（id 改为规则 id）。automation 列表隐藏 `mimi-rule:`（及旧 `mimi-follow-up:`）任务。
-6. 删除：`pet-registered-follow-up-store.ts`、`pet-follow-up-wake-coordinator.ts`、`pet-follow-up-runtime.ts`、`pet-follow-up-host.ts` 及其测试；pet 包里的 `PetRegisteredFollowUp` / `RegisterPetFollowUpInput` / `PetFollowUpWakeOutcome`（换成 `PetFollowUpWake`）。
+5. 界面：`PetFollowUpSection` 显示重复规则，循环规则不给改期（找 Mimi 改），其余操作不变；IPC 复用 `pet:follow-up-control`（id 改为规则 id）。automation 列表隐藏 `mimi-follow-up:` 命名空间的任务。循环跟进带 `schedule_label`（模型写的说法），回执写名字 + 接下来两次。
+6. 评审修正（2026-11-11）：只读或读不出的规则表不再拖垮桌面启动；隔离区的行加载时恢复；core `nextCronTime` 改为按字段跳跃（约 8 年上限、拨慢重复时刻只触发一次）；认领期间允许取消/改期；只淘汰已送达的一次性跟进。
+7. 删除：`pet-registered-follow-up-store.ts`、`pet-follow-up-wake-coordinator.ts`、`pet-follow-up-runtime.ts`、`pet-follow-up-host.ts` 及其测试；pet 包里的 `PetRegisteredFollowUp` / `RegisterPetFollowUpInput` / `PetFollowUpWakeOutcome`（换成 `PetFollowUpWake`）。
 
 ## 2c-2 晨报、收工、心跳（待做）
 
