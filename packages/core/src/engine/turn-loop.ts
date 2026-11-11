@@ -1,3 +1,7 @@
+import {
+  resolveModelToolCalls,
+  orderModelToolResults,
+} from "../tool-system/resolve-model-tool-call.js";
 /**
  * Turn loop — state machine implementation.
  *
@@ -134,9 +138,11 @@ export interface TurnLoopDeps {
   hooks: HookRegistry;
   transcript: Transcript;
   systemPrompt: string;
+  getSystemPrompt?: (tools: import("../types.js").ToolDefinition[]) => Promise<string>;
   tools: import("../types.js").ToolDefinition[];
   /** One frozen active snapshot per model step, including retries and continuation. */
   getTools?: () => import("../types.js").ToolDefinition[];
+  runToolSurface?: import("../tool-system/run-tool-surface.js").RunToolSurface;
   /** Complete eligibility metadata, including deferred sensitive-result tools. */
   getEligibleTools?: () => readonly import("../types.js").ToolDefinition[];
   /** Per-sid overhead cache so the ctx bar doesn't drop between turns. */
@@ -1150,7 +1156,7 @@ export class TurnLoop {
           ...(this.turnBoundaryMs !== undefined ? { turnBoundaryMs: this.turnBoundaryMs } : {}),
         });
         // Model call (with streaming fallback and max_output_tokens continuation)
-        this.modelStepTools = this.deps.getTools?.() ?? this.deps.tools;
+        await this.refreshModelToolPrefix();
         retainSensitiveMetadata();
         this.config.onStream?.({
           type: "stream_request_start",
@@ -1190,7 +1196,12 @@ export class TurnLoop {
                 return { text: finalText, reason: "completed", messages };
               }
               tlog.warn("turn.ptl_recovery", { cat: "turn", retry, roundsToDrop: retry });
+              const previousMessageCount = messages.length;
               messages = dropOldestRounds(messages, retry);
+              if (messages.length < previousMessageCount) {
+                this.deps.runToolSurface?.rebase();
+                await this.refreshModelToolPrefix();
+              }
               try {
                 recovered = await this.callModelWithFallback(messages, assistantMessageId);
                 break;
@@ -1303,6 +1314,9 @@ export class TurnLoop {
           // "working" forever (often until a later context compaction hides
           // them), even though the loop has moved on to a retry.
           for (const toolCall of response.toolCalls) {
+            if (toolCall.toolName === "CallTool") {
+              this.config.onStream?.({ type: "tool_use_start", toolCall });
+            }
             this.config.onStream?.({
               type: "tool_result",
               result: {
@@ -1359,7 +1373,7 @@ export class TurnLoop {
                 this.deps.systemPrompt,
                 preparedContinuationMessages,
                 this.currentTools,
-                this.config.onStream,
+                this.toolIdentityStream(this.config.onStream),
                 this.config.signal,
                 this.modelCallRecordingOptions(preparedContinuationMessages),
               );
@@ -1726,7 +1740,9 @@ export class TurnLoop {
           cat: "turn",
           tools: response.toolCalls.map((t) => t.toolName),
         });
-        const toolCalls = response.toolCalls.slice(0, this.config.maxToolCallsPerTurn);
+        const wireCalls = response.toolCalls.slice(0, this.config.maxToolCallsPerTurn);
+        const resolved = resolveModelToolCalls(wireCalls, this.deps.runToolSurface);
+        const toolCalls = resolved.calls;
         // Per-turn cap: any calls beyond maxToolCallsPerTurn are NOT executed and
         // NOT added to the assistant message below, so the model never sees a
         // result for them. Without a heads-up it assumes all ran (acting on
@@ -1739,19 +1755,21 @@ export class TurnLoop {
         if (response.text) {
           assistantBlocks.push({ type: "text", text: response.text });
         }
-        for (const tc of toolCalls) {
+        for (const wireCall of wireCalls) {
+          const tc = toolCalls.find((call) => call.id === wireCall.id) ?? wireCall;
           assistantBlocks.push({
             type: "tool_use",
             id: tc.id,
-            name: tc.toolName,
-            input: tc.args,
+            name: wireCall.toolName,
+            input: wireCall.args,
           });
           // Only emit tool_use_start if not already emitted during streaming
           if (!this.streamedToolIds.has(tc.id)) {
-            this.config.onStream?.({ type: "tool_use_start", toolCall: tc });
+            const { wireToolName: _wireToolName, ...visibleCall } = tc;
+            this.config.onStream?.({ type: "tool_use_start", toolCall: visibleCall });
           }
           // Record in transcript
-          this.deps.transcript.appendToolUse(tc.toolName, tc.id, tc.args);
+          this.deps.transcript.appendToolUse(tc.toolName, tc.id, tc.args, tc.wireToolName);
         }
         messages.push({ role: "assistant", content: assistantBlocks });
 
@@ -1760,7 +1778,10 @@ export class TurnLoop {
         for (const tc of toolCalls) {
           streamingQueue.enqueue(tc);
         }
-        const results = await streamingQueue.drain();
+        const results = orderModelToolResults(wireCalls, [
+          ...resolved.errors,
+          ...(await streamingQueue.drain()),
+        ]);
 
         // Record results in transcript and stream
         const resultBlocks: ContentBlock[] = [];
@@ -1790,7 +1811,7 @@ export class TurnLoop {
         // including calls the cap dropped. Close those durably so replay and
         // full fork do not see pending calls; live messages omit them instead.
         for (const tc of droppedToolCalls) {
-          this.deps.transcript.appendToolUse(tc.toolName, tc.id, tc.args);
+          this.deps.transcript.appendToolUse(tc.toolName, tc.id, tc.args, tc.wireToolName);
           this.deps.transcript.appendToolResult(
             tc.id,
             tc.toolName,
@@ -1924,7 +1945,11 @@ export class TurnLoop {
         const completeGoalRequested =
           !!this.goalTracker &&
           isSameGoalVersion(requestedGoalVersion, this.config.goal) &&
-          toolCalls.some((tc) => tc.toolName === COMPLETE_GOAL_TOOL_NAME);
+          toolCalls.some(
+            (tc) =>
+              tc.toolName === COMPLETE_GOAL_TOOL_NAME &&
+              results.some((result) => result.id === tc.id && !result.isError),
+          );
         if (completeGoalRequested) {
           const persisted = this.deps.clearPersistedGoal?.("completed") !== false;
           if (persisted) {
@@ -1958,7 +1983,10 @@ export class TurnLoop {
         // persisted goal so it never re-arms; an unconfirmed call is a no-op here
         // (the tool's own result string already told the model it was ignored).
         const confirmedCancel = toolCalls.some(
-          (tc) => tc.toolName === CANCEL_GOAL_TOOL_NAME && tc.args?.confirm === true,
+          (tc) =>
+            tc.toolName === CANCEL_GOAL_TOOL_NAME &&
+            tc.args?.confirm === true &&
+            results.some((result) => result.id === tc.id && !result.isError),
         );
         if (
           this.goalTracker &&
@@ -2212,6 +2240,33 @@ export class TurnLoop {
    * Call model with streaming fallback.
    * If streaming fails, emit tombstone and retry non-streaming.
    */
+  private async refreshModelToolPrefix(): Promise<void> {
+    const tools = this.deps.getTools?.() ?? this.deps.runToolSurface?.snapshot() ?? this.deps.tools;
+    if (
+      this.deps.getSystemPrompt &&
+      JSON.stringify(tools) !== JSON.stringify(this.modelStepTools ?? this.deps.tools)
+    ) {
+      this.deps.systemPrompt = await this.deps.getSystemPrompt(tools);
+    }
+    this.modelStepTools = tools;
+  }
+
+  private toolIdentityStream(onStream?: StreamCallback): StreamCallback | undefined {
+    if (!onStream) return undefined;
+    const deferredWrapperIds = new Set<string>();
+    return (event) => {
+      // Wait for complete wrapper arguments, then publish one resolved start.
+      // Hosts ignore duplicate starts or render duplicate cards for the same id.
+      if (event.type === "tool_use_start" && event.toolCall.toolName === "CallTool") {
+        deferredWrapperIds.add(event.toolCall.id);
+        return;
+      }
+      if (event.type === "tool_use_args_delta" && deferredWrapperIds.has(event.toolCallId)) return;
+      if (event.type === "tool_use_start") this.streamedToolIds.add(event.toolCall.id);
+      return onStream(event);
+    };
+  }
+
   private async callModelWithFallback(messages: Message[], assistantMessageId: string) {
     const revokePartialStream = () => {
       this.config.onStream?.({ type: "tombstone", messageId: assistantMessageId });
@@ -2227,9 +2282,6 @@ export class TurnLoop {
     let reactiveBucket = -1;
     const wrappedStream: StreamCallback | undefined = this.config.onStream
       ? (event) => {
-          if (event.type === "tool_use_start" && event.toolCall?.id) {
-            this.streamedToolIds.add(event.toolCall.id);
-          }
           // Track accumulating response size for reactive compaction
           if (event.type === "text_delta" && event.text) {
             streamingResponseTokens += Math.ceil(event.text.length / 4);
@@ -2258,7 +2310,7 @@ export class TurnLoop {
         this.deps.systemPrompt,
         messages,
         this.currentTools,
-        wrappedStream,
+        this.toolIdentityStream(wrappedStream),
         this.config.signal,
         this.modelCallRecordingOptions(messages, assistantMessageId),
       );

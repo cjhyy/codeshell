@@ -130,6 +130,21 @@ function workspace(request: CreateMessageOptions): string {
   return (schema.properties.workspace_id.enum as string[]).find((id) => id !== "no-workspace")!;
 }
 
+function expectRefusedReceiptTools(request: CreateMessageOptions, ids: string[]): void {
+  const results = request.messages.flatMap((message) =>
+    Array.isArray(message.content)
+      ? message.content.filter(
+          (block) => block.type === "tool_result" && ids.includes(block.tool_use_id),
+        )
+      : [],
+  );
+  expect(results).toHaveLength(ids.length);
+  for (const result of results) {
+    expect(result.is_error).toBe(true);
+    expect(String(result.content)).toMatch(/not available|not allowed|not found|denied/i);
+  }
+}
+
 function createHarness(
   options: {
     failLaunch?: boolean;
@@ -481,6 +496,7 @@ describe("Mimi historical chat replay through the real manager stack", () => {
         expect(report.text).toContain("工作进程失败");
       },
     });
+    let deniedIds: string[];
     h.script.steps.push(
       (request) => {
         const delegated = response("DelegateWork", {
@@ -496,12 +512,21 @@ describe("Mimi historical chat replay through the real manager stack", () => {
       },
       (request) => {
         expectWorldFact(request, "fixture launch rejected");
-        expect(request.tools?.map((tool) => tool.name)).not.toContain("DelegateWork");
+        expect(request.tools).toEqual(h.script.requests[0].tools);
+        const forbidden = response("DelegateWork", {
+          workspace_id: workspace(request),
+          objective: "Receipt turns must not start more work.",
+        });
+        deniedIds = forbidden.toolCalls.map((call) => call.id);
+        return forbidden;
+      },
+      (request) => {
+        expectRefusedReceiptTools(request, deniedIds);
         return response(undefined, {}, "本次工作未启动，请重试。");
       },
     );
     await h.say("启动验证任务", "nested-closure");
-    expect(h.script.requests).toHaveLength(3);
+    expect(h.script.requests).toHaveLength(4);
     expect(h.launches).toHaveLength(1);
     expect(h.sent.map((item) => item.message.text)).toEqual(["本次工作未启动，请重试。"]);
     expect(h.outcomes[0]).toHaveProperty("delegationError");
@@ -566,15 +591,30 @@ describe("Mimi historical chat replay through the real manager stack", () => {
         return delegated;
       });
       if (failLaunch) {
-        h.script.steps.push((request) => {
-          expectWorldFact(request, "fixture launch rejected");
-          expect(request.tools?.map((tool) => tool.name)).not.toContain("DelegateWork");
-          expect(request.tools?.map((tool) => tool.name)).not.toContain("GatewayReply");
-          return response(undefined, {}, "工作会话未能启动，队列拒绝了这次派发。");
-        });
+        let deniedIds: string[];
+        h.script.steps.push(
+          (request) => {
+            expectWorldFact(request, "fixture launch rejected");
+            expect(request.tools).toEqual(h.script.requests[0].tools);
+            const forbidden = response("DelegateWork", {
+              workspace_id: workspace(request),
+              objective: "Receipt turns must not start more work.",
+            });
+            forbidden.toolCalls.push(
+              ...response("GatewayReply", { text: "Receipt turns must not send another reply." })
+                .toolCalls,
+            );
+            deniedIds = forbidden.toolCalls.map((call) => call.id);
+            return forbidden;
+          },
+          (request) => {
+            expectRefusedReceiptTools(request, deniedIds);
+            return response(undefined, {}, "工作会话未能启动，队列拒绝了这次派发。");
+          },
+        );
       }
       await h.say("新开一个session 然后做这个工作", "new-task");
-      expect(h.script.requests).toHaveLength(failLaunch ? 2 : 1);
+      expect(h.script.requests).toHaveLength(failLaunch ? 3 : 1);
       expect(h.launches).toHaveLength(1);
       expect(h.launches[0]?.targetSessionId).toBeUndefined();
       expect(h.launches[0]?.completionTarget).toMatchObject({

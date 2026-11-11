@@ -125,7 +125,26 @@ class CalculatorClient extends LLMClientBase {
       (tool) => `${toolPrefix}${tool}`,
     );
     if (scenario === "generic") requiredTools.push("MCPTool");
-    if (expectCuaTools && !requiredTools.every((tool) => snapshot.tools.includes(tool))) {
+    const discovery = resultBlocks(snapshot.messages).findLast(
+      (block) => block.tool_use_id === "discover-cua",
+    );
+    const discovered = new Set<string>();
+    if (discovery) {
+      assert.notEqual(discovery.is_error, true);
+      assert.equal(typeof discovery.content, "string");
+      for (const line of (discovery.content as string).split("\n")) {
+        if (!line.startsWith("{")) continue;
+        const definition = JSON.parse(line);
+        assert.equal(definition.inputSchema.type, "object");
+        discovered.add(definition.name);
+      }
+      for (const name of requiredTools) assert.ok(discovered.has(name), name);
+      assert.ok(snapshot.tools.includes("CallTool"));
+    }
+    if (
+      expectCuaTools &&
+      !requiredTools.every((tool) => snapshot.tools.includes(tool) || discovered.has(tool))
+    ) {
       assert.ok(snapshot.tools.includes("ToolSearch"));
       const response: LLMResponse = {
         text: "",
@@ -170,12 +189,9 @@ class CalculatorClient extends LLMClientBase {
     }
     const step = script.shift();
     if (expectCuaTools) {
-      assert.ok(
-        snapshot.tools.includes(`${toolPrefix}check_permissions`),
-        JSON.stringify(snapshot.tools),
-      );
-      assert.ok(snapshot.tools.includes(`${toolPrefix}observe`));
-      assert.ok(snapshot.tools.includes(`${toolPrefix}click`));
+      for (const name of requiredTools)
+        assert.ok(snapshot.tools.includes(name) || discovered.has(name), name);
+      if (discovery) assert.ok(snapshot.tools.every((tool) => !tool.startsWith(toolPrefix)));
     } else assert.ok(snapshot.tools.every((tool) => !tool.startsWith(toolPrefix)));
     const result: LLMResponse = {
       text: step ? "" : finalText,

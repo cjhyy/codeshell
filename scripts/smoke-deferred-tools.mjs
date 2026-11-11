@@ -16,7 +16,7 @@ const requests = [];
 let fixtureFailure;
 const server = createServer((req, res) => {
   void respond(req, res).catch((error) => {
-    fixtureFailure = error;
+    fixtureFailure ??= error;
     res.writeHead(500, { "content-type": "application/json" });
     res.end(JSON.stringify({ error: { message: "fixture assertion failed" } }));
   });
@@ -29,10 +29,12 @@ async function respond(req, res) {
   requests.push(body);
   const scenario = scenarios.get(body.model);
   assert.ok(scenario, "unexpected model request");
-  const auxiliary = [
-    "Generate a very brief (under 40 chars) summary of what these tools did.",
-    "You generate a very short title",
-  ].some((prefix) => body.messages[0]?.content?.startsWith(prefix));
+  const auxiliary =
+    !body.tools?.length ||
+    [
+      "Generate a very brief (under 40 chars) summary of what these tools did.",
+      "You generate a very short title",
+    ].some((prefix) => body.messages[0]?.content?.startsWith(prefix));
   if (!auxiliary) scenario.bodies.push(body);
   if (!auxiliary && scenario.failures > 0) {
     scenario.failures--;
@@ -91,6 +93,31 @@ const digest = (value) =>
     .update(JSON.stringify(canonical(value)))
     .digest("hex");
 const names = (body) => (body.tools ?? []).map((tool) => tool.function.name);
+function assertFrozenPrefix(bodies) {
+  const first = bodies[0];
+  for (let index = 0; index < bodies.length; index++) {
+    const body = bodies[index];
+    assert.equal(JSON.stringify(body.tools), JSON.stringify(first.tools), "frozen wire tool bytes");
+    assert.equal(
+      JSON.stringify(body.messages[0]),
+      JSON.stringify(first.messages[0]),
+      "frozen system bytes",
+    );
+    const previous = bodies[index - 1];
+    if (previous) {
+      assert.ok(
+        body.messages.length >= previous.messages.length,
+        "history only appends (or retries)",
+      );
+      assert.equal(
+        JSON.stringify(body.messages.slice(0, previous.messages.length)),
+        JSON.stringify(previous.messages),
+        "unchanged wire history prefix",
+      );
+    }
+  }
+}
+const call = (name, args = {}) => ({ name: "CallTool", args: { name, args } });
 try {
   const core = await import("@cjhyy/code-shell-core");
   const { installDefaultLinkProviders } = await import(linkProviderModuleUrl);
@@ -173,9 +200,10 @@ try {
       return {};
     });
   }
-  function approval(counters) {
+  function approval(counters, expectedName = "DeferredAction") {
     return {
-      requestApproval: async () => {
+      requestApproval: async (request) => {
+        assert.equal(request.toolName, expectedName, "approval sees the resolved target name");
         counters.approvals++;
         return { approved: true };
       },
@@ -186,29 +214,49 @@ try {
     const f = create(
       `progressive-${retry}`,
       (body, step) => {
+        assert.ok(names(body).includes("CallTool"));
+        assert.ok(!names(body).includes("DeferredAction"));
+        assert.ok(!JSON.stringify(body.tools).includes("SCHEMA_SENTINEL"));
         if (step <= 2) assert.ok(!JSON.stringify(body.messages).includes("SCHEMA_SENTINEL"));
         if (step === 1) {
-          assert.ok(names(body).length >= 8 && names(body).length <= 15);
-          assert.ok(!names(body).includes("DeferredAction"));
-          return [
-            { name: "ToolSearch", args: { query: "select:DeferredAction" } },
-            { name: "DeferredAction" },
-          ];
+          assert.ok(names(body).length >= 8 && names(body).length <= 16);
+          return [{ name: "DeferredAction" }];
         }
-        assert.ok(names(body).includes("DeferredAction"), JSON.stringify(body.messages.slice(-2)));
-        assert.ok(JSON.stringify(body.tools).includes("SCHEMA_SENTINEL"));
         if (step === 2) {
           assert.deepEqual(counters, { executions: 0, approvals: 0, hooks: 0, executionStarts: 0 });
-          assert.match(JSON.stringify(body.messages), /next model step/);
-          assert.ok(
+          assert.match(JSON.stringify(body.messages), /not loaded/);
+          return [{ name: "ToolSearch", args: { query: "select:DeferredAction" } }];
+        }
+        assert.match(JSON.stringify(body.messages), /SCHEMA_SENTINEL/);
+        assert.match(JSON.stringify(body.messages), /inputSchema/);
+        if (step === 3) return [call("DeferredAction", { selector: "SCHEMA_SENTINEL" })];
+        if (step === 4) {
+          assert.deepEqual(counters, { executions: 1, approvals: 1, hooks: 1, executionStarts: 1 });
+          assert.deepEqual(
+            f.streamEvents
+              .filter(
+                (event) => event.type === "tool_use_start" && event.toolCall?.id === "fixture-3-0",
+              )
+              .map((event) => event.toolCall),
+            [
+              {
+                id: "fixture-3-0",
+                toolName: "DeferredAction",
+                args: { selector: "SCHEMA_SENTINEL" },
+              },
+            ],
+            "stream exposes one resolved identity with target args and no wire metadata",
+          );
+          assert.equal(
             f.streamEvents.some(
-              (event) =>
-                event.type === "tool_use_start" && event.toolCall?.toolName === "DeferredAction",
+              (event) => event.type === "tool_use_args_delta" && event.toolCallId === "fixture-3-0",
             ),
+            false,
+            "wrapper args are never exposed as target args deltas",
           );
           return [{ name: "DeferredAction", args: { selector: "SCHEMA_SENTINEL" } }];
         }
-        assert.deepEqual(counters, { executions: 1, approvals: 1, hooks: 1, executionStarts: 1 });
+        assert.deepEqual(counters, { executions: 2, approvals: 2, hooks: 2, executionStarts: 2 });
         return [];
       },
       { approvalBackend: approval(counters) },
@@ -217,7 +265,8 @@ try {
     if (retry) f.scenario.failures = 1;
     assert.equal((await f.run()).reason, "completed");
     if (fixtureFailure) throw fixtureFailure;
-    assert.equal(f.scenario.steps, 3);
+    assert.equal(f.scenario.steps, 5);
+    assertFrozenPrefix(f.scenario.bodies);
     if (retry) assert.deepEqual(f.scenario.bodies[0].tools, f.scenario.bodies[1].tools);
     const events = readFileSync(
       join(root, `progressive-${retry}-sessions`, `s-progressive-${retry}`, "transcript.jsonl"),
@@ -226,6 +275,23 @@ try {
       .trim()
       .split("\n")
       .map((line) => JSON.parse(line));
+    assert.ok(
+      events.some(
+        (event) =>
+          event.type === "tool_use" &&
+          event.data.toolName === "DeferredAction" &&
+          event.data.wireToolName === "CallTool",
+      ),
+    );
+    assert.ok(
+      events.some(
+        (event) =>
+          event.type === "message" &&
+          event.data.role === "assistant" &&
+          JSON.stringify(event).includes('"name":"CallTool"'),
+      ),
+      "durable assistant history retains its wire wrapper",
+    );
     const attempts = events.filter((event) => event.type === "model_request_attempt");
     assert.equal(attempts.length, f.scenario.bodies.length);
     assert.deepEqual(
@@ -253,18 +319,28 @@ try {
           assert.equal(schemaRef, `select:${dynamicName}`);
           return [{ name: "ToolSearch", args: { query: schemaRef } }];
         }
-        const selected = body.tools.find((tool) => tool.function.name === dynamicName);
-        const receipt = body.messages.findLast((message) => message.role === "tool").content;
-        assert.equal(
-          receipt.match(/schemaRef: (select:DynamicFixture)/)?.[1],
-          `select:${dynamicName}`,
-        );
-        assert.deepEqual(selected.function.parameters, expectedSchema);
-        assert.match(JSON.stringify(body.messages), /Selected tools for this run: DynamicFixture/);
-        assert.ok(!JSON.stringify(body.messages).includes("fixture-rewritten"));
+        assert.ok(!names(body).includes(dynamicName));
+        assert.ok(!JSON.stringify(body.tools).includes("fixture-rewritten"));
+        if (step === 3) {
+          const receipt = body.messages.findLast((message) => message.role === "tool").content;
+          assert.equal(
+            receipt.match(/schemaRef: (select:DynamicFixture)/)?.[1],
+            `select:${dynamicName}`,
+          );
+          assert.ok(receipt.includes(`"inputSchema":${JSON.stringify(expectedSchema)}`));
+          assert.ok(!receipt.includes("RAW_SCHEMA"));
+          return [call(dynamicName, { mode: "fixture-rewritten" })];
+        }
+        assert.match(JSON.stringify(body.messages), /dynamic fixture done/);
         return [];
       },
       {
+        approvalBackend: {
+          requestApproval: async (request) => {
+            assert.equal(request.toolName, dynamicName);
+            return { approved: true };
+          },
+        },
         modules: [
           {
             id: "dynamic-fixture",
@@ -306,7 +382,7 @@ try {
       },
     );
     assert.equal((await f.run()).reason, "completed");
-    assert.equal(f.scenario.steps, 3);
+    assert.equal(f.scenario.steps, 4);
   }
   {
     const counters = { executions: 0, approvals: 0, hooks: 0, executionStarts: 0 };
@@ -315,9 +391,10 @@ try {
       (body, step) => {
         if (step === 1) return [{ name: "ToolSearch", args: { query: "select:DeferredAction" } }];
         if (step === 2) {
-          assert.ok(names(body).includes("DeferredAction"));
+          assert.ok(!names(body).includes("DeferredAction"));
+          assert.match(JSON.stringify(body.messages), /SCHEMA_SENTINEL/);
           f.engine.getToolRegistry().unregisterTool("DeferredAction");
-          return [{ name: "DeferredAction" }];
+          return [call("DeferredAction")];
         }
         assert.ok(!names(body).includes("DeferredAction"));
         assert.deepEqual(counters, { executions: 0, approvals: 0, hooks: 0, executionStarts: 0 });
@@ -332,15 +409,20 @@ try {
   {
     const f = create(
       "incremental-install",
-      (body) => {
+      (body, step) => {
         assert.ok(names(body).includes("ToolSearch"));
+        assert.ok(names(body).includes("CallTool"));
         assert.ok(!names(body).includes("ReadSource"));
         const catalog = body.messages[0].content.match(
           /# Available Tools\n\n[^\n]+\n([^\n]+)/,
         )?.[1];
-        assert.ok(catalog?.includes("ReadSource"));
+        assert.ok(!catalog?.includes("ReadSource"));
         assert.ok(catalog?.includes("ToolSearch"));
-        console.log(`Incremental ReadSource install eligible catalog: ${catalog}`);
+        if (step === 1) return [{ name: "ToolSearch", args: { query: "ReadSource" } }];
+        const receipt = body.messages.findLast((message) => message.role === "tool").content;
+        assert.match(receipt, /ReadSource/);
+        if (step === 2) return [{ name: "ToolSearch", args: { query: "select:ReadSource" } }];
+        assert.match(receipt, /inputSchema/);
         return [];
       },
       { enabledBuiltinTools: ["ReadSource"] },
@@ -360,7 +442,8 @@ try {
           },
         ];
       }
-      assert.ok(names(body).includes("DeferredAction"));
+      assert.ok(!names(body).includes("DeferredAction"));
+      assert.match(JSON.stringify(body.messages), /SCHEMA_SENTINEL/);
       return [];
     });
     registerAction(f.engine, counters);
@@ -371,7 +454,7 @@ try {
     const f = create(
       "ordinary-coding",
       (body) => {
-        assert.ok(names(body).length >= 8 && names(body).length <= 15);
+        assert.ok(names(body).length >= 8 && names(body).length <= 16);
         assert.ok(names(body).includes("ApplyPatch"));
         assert.ok(!names(body).includes("DriveAgent"));
         return [];
@@ -488,20 +571,17 @@ try {
         if (step === 1) return [{ name: "ToolSearch", args: { query: "select:ReadSource" } }];
         if (step === 2)
           return [
-            {
-              name: "ReadSource",
-              args: {
-                source: "fixture-view",
-                scope: "github:list_repositories",
-                resource: "result",
-              },
-            },
+            call("ReadSource", {
+              source: "fixture-view",
+              scope: "github:list_repositories",
+              resource: "result",
+            }),
           ];
         assert.equal(boundReads, 1);
         assert.match(JSON.stringify(body.messages), /bound consumer result/);
         return [];
       },
-      { preset: "general", approvalBackend: approval(counters) },
+      { preset: "general", approvalBackend: approval(counters, "ReadSource") },
     );
     host.saveSourceDefinition({
       id: "fixture-view",
@@ -521,8 +601,9 @@ try {
     core.setDefaultCredentialAccess(null);
   }
   if (fixtureFailure) throw fixtureFailure;
+  for (const scenario of scenarios.values()) assertFrozenPrefix(scenario.bodies);
   console.log(
-    `Deferred SDK smoke passed: ${requests.length} exact-origin HTTP requests; frozen provider tools, select, forged-call rejection, retry projections, coding/Pet/legacy/allowlist compatibility and bound source consumer.`,
+    `Deferred SDK smoke passed: ${requests.length} exact-origin HTTP requests; frozen provider bytes, appended schemas, CallTool target authority, forged-call rejection, retry projections, coding/Pet/legacy/allowlist compatibility and bound source consumer.`,
   );
 } finally {
   await Promise.all(engines.map((engine) => engine.dispose()));

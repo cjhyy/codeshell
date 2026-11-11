@@ -28,6 +28,7 @@ import { dirname, isAbsolute, join, relative, resolve, sep, win32 } from "node:p
 import type { ContentBlock, Message } from "../types.js";
 import { logger } from "../logging/logger.js";
 import { estimateStringTokens } from "./token-counter.js";
+import { toolSchemaResultIds } from "./tool-schema-results.js";
 import {
   DEFAULT_TOOL_OUTPUT_TOKEN_LIMIT,
   DEFAULT_TOOL_MESSAGE_TOKEN_LIMIT,
@@ -355,6 +356,7 @@ export function applyToolResultPersistence(
     state,
     onPersist,
   } = options;
+  const schemaResultIds = toolSchemaResultIds(messages);
 
   // Pass 1: figure out the replacement string for every block we need
   // to change in this call. Walks each user msg independently — parallel
@@ -363,7 +365,7 @@ export function applyToolResultPersistence(
 
   for (const msg of messages) {
     if (msg.role !== "user") continue;
-    const candidates = collectCandidates(msg);
+    const candidates = collectCandidates(msg).filter((c) => !schemaResultIds.has(c.toolUseId));
     if (candidates.length === 0) continue;
 
     // Partition by prior decision.
@@ -447,6 +449,7 @@ export function applyToolResultPersistence(
     let blockChanged = false;
     const newContent = msg.content.map((block) => {
       if (block.type !== "tool_result" || !block.tool_use_id) return block;
+      if (schemaResultIds.has(block.tool_use_id)) return block;
       const replacement = state.replacements.get(block.tool_use_id);
       if (replacement === undefined) return block;
       const text = toolResultText(block.content);

@@ -388,19 +388,13 @@ export class ToolExecutor {
         isError: true,
       };
     }
-    // The model may only call schemas advertised for its completed step. A
-    // ToolSearch selection in the same batch takes effect at the NEXT step.
-    // Executor-owned bound calls are implementation details (ReadSource calls
-    // LinkAction); they retain every authority/permission/hook gate below.
-    if (
-      surface &&
-      !constraint &&
-      !(this.toolCtx?.modelToolNames?.has(call.toolName) ?? surface.isSelected(call.toolName))
-    ) {
+    // Discovery is append-only; current eligibility and all authority gates still apply.
+    // Bound implementation calls retain authority gates but need no model discovery.
+    if (surface && !constraint && !surface.isCallable(call.toolName)) {
       return {
         id: call.id,
         toolName: call.toolName,
-        error: `Tool ${call.toolName} is available but not loaded for this model step. Use ToolSearch with query "select:${call.toolName}", then call it in the next model step.`,
+        error: `Tool ${call.toolName} is available but not loaded. Use ToolSearch with query "select:${call.toolName}" first.`,
         isError: true,
       };
     }

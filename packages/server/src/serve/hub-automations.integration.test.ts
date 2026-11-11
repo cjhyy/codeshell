@@ -109,6 +109,7 @@ test("Hub HTTP automation owns a real shared Worker Session across logout, compe
   const proof = join(cwd, "automation-proof.txt");
   const errors: unknown[] = [];
   let first = true,
+    discoveries = 0,
     writes = 0;
   let server: HeadlessServer | undefined;
   const sockets: WebSocket[] = [];
@@ -132,20 +133,33 @@ test("Hub HTTP automation owns a real shared Worker Session across logout, compe
         !body.messages.some((message: any) => message.tool_call_id === "write-result")
       ) {
         const writeActive = body.tools.some((tool: any) => tool.function.name === "Write");
-        if (writeActive) writes++;
+        const discovery = body.messages.find(
+          (message: any) => message.role === "tool" && message.tool_call_id === "load-write",
+        );
+        const writeReady = writeActive || discovery !== undefined;
+        if (discovery) {
+          expect(discovery.content).toContain("inputSchema");
+          expect(discovery.content).toContain("Write");
+          expect(body.tools.some((tool: any) => tool.function.name === "CallTool")).toBe(true);
+        }
+        if (writeReady) writes++;
+        else discoveries++;
+        const writeArgs = { file_path: proof, content: "cloud automation completed\n" };
         frame({
           role: "assistant",
           tool_calls: [
             {
               index: 0,
-              id: writeActive ? "write-result" : "load-write",
+              id: writeReady ? "write-result" : "load-write",
               type: "function",
               function: {
-                name: writeActive ? "Write" : "ToolSearch",
+                name: writeActive ? "Write" : writeReady ? "CallTool" : "ToolSearch",
                 arguments: JSON.stringify(
                   writeActive
-                    ? { file_path: proof, content: "cloud automation completed\n" }
-                    : { query: "select:Write" },
+                    ? writeArgs
+                    : writeReady
+                      ? { name: "Write", args: writeArgs }
+                      : { query: "select:Write" },
                 ),
               },
             },
@@ -360,6 +374,7 @@ test("Hub HTTP automation owns a real shared Worker Session across logout, compe
     expect(completed.id).toBe(job.id);
     expect(completed.runCount).toBe(1);
     expect(writes).toBe(1);
+    expect(discoveries).toBe(1);
     expect(errors).toEqual([]);
     for (const socket of sockets.splice(0)) socket.terminate();
     await server.close();
