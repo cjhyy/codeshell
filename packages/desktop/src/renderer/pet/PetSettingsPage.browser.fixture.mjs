@@ -35,14 +35,25 @@ window.fixture={
 };
 const notices={channels:[{id:'wechat',label:'个人微信 '+'LongChannelName'.repeat(6),ready:'ready'}],
   systemRule:{state:'active',channel:'auto',events:['done','failed','blocked']},
-  settings:{quietHours:{enabled:true,start:'23:00',end:'08:30'},maxPerHour:6,maxP0PerHour:12,mergeWindowSec:600,presenceIdleSec:120,delegatedFromDesktop:'auto'}};
+  settings:{quietHours:{enabled:true,start:'23:00',end:'08:30'},maxPerHour:6,maxP0PerHour:12,mergeWindowSec:600,presenceIdleSec:120,delegatedFromDesktop:'auto',
+    briefs:{morning:{enabled:true,time:'09:00'},evening:{enabled:false,time:'18:30'}},heartbeat:{enabled:true,activeHours:{start:'09:00',end:'22:00'}},digestSlots:['12:00','18:00','21:00']},
+  proactive:{briefs:{morning:{lastSentDay:'2026-11-11'},evening:{}},heartbeat:{judgedToday:3,saidToday:1,judgeCap:8,sayCap:4,atJudgeCap:false,atSayCap:false}},
+  // Long Session and follow-up titles: the rule list must wrap, not scroll sideways.
+  rules:[
+    {id:'all-sessions',version:1,kind:'all-sessions',state:'active',source:'system',events:['done','failed','blocked'],target:{kind:'auto',label:'个人微信'},actions:['pause'],updatedAt:1},
+    {id:'system-brief-morning',version:2,kind:'system-brief',state:'active',source:'system',brief:'morning',dailyAt:'09:00',schedule:{cron:'0 9 * * *',timezone:'Asia/Shanghai',nextAt:Date.UTC(2026,10,12,1)},lastFiredAt:Date.UTC(2026,10,11,1),lastOutcome:'notified',target:{kind:'auto',label:'个人微信'},actions:['pause'],updatedAt:2},
+    {id:'system-heartbeat',version:1,kind:'system-heartbeat',state:'active',source:'system',activeHours:{start:'09:00',end:'22:00'},target:{kind:'auto',label:'个人微信'},actions:['pause'],updatedAt:1},
+    {id:'rule-s',version:1,kind:'session',state:'active',source:'watch',sessionId:'s-1',sessionTitle:'修登录 '+'VeryLongSessionTitle'.repeat(8),events:['done','failed','blocked'],scope:'goal',target:{kind:'chat',label:'飞书',direct:false},actions:['pause','cancel'],updatedAt:3},
+    {id:'rule-f',version:1,kind:'schedule',state:'paused',source:'follow-up',title:'跟进 '+'LongFollowUpTitle'.repeat(8),followUp:'continue',sessionId:'s-2',schedule:{cron:'0 9 * * 1-5',label:'工作日 09:00',timezone:'Asia/Shanghai'},target:{kind:'channel',label:'Telegram',ready:'unknown'},actions:['resume','cancel'],updatedAt:4},
+    {id:'rule-e',version:2,kind:'session',state:'spent',source:'owner',sessionId:'s-3',sessionTitle:'旧会话',events:['done'],scope:'turn',lastFiredAt:Date.UTC(2026,10,10,3),target:{kind:'desktop'},actions:[],updatedAt:1},
+  ]};
 const presence={visible:true,mode:'docked',effectiveMode:'docked',size:200,appearance:'mimi-sprite',shown:'docked',movingAvailable:true,previewing:false};
 window.codeshell={
   getSettings:scope=>{if(scope!=='user')throw new Error('Wrong settings scope');return new Promise((resolve,reject)=>reads.push({resolve,reject}));},
   updateSettings:(scope,patch)=>{if(scope!=='user')throw new Error('Wrong write scope');return new Promise((resolve,reject)=>writes.push({value:structuredClone(patch.pet.personalization),resolve,reject}));},
   log:()=>{},
   pet:{
-    getNoticesState:async()=>structuredClone(notices),onNoticesChanged:()=>()=>{},setSystemNoticeRule:async patch=>({...notices.systemRule,...patch}),
+    getNoticesState:async()=>structuredClone(notices),onNoticesChanged:()=>()=>{},setSystemNoticeRule:async patch=>({...notices.systemRule,...patch}),updateNoticeRule:async()=>({ok:true}),
     listMemories:async()=>[{id:'m1',text:'Likes concise updates',source:'user'},{id:'m2',text:'Works on CodeShell',source:'auto'}],
     listJournal:async()=>[],onMemoriesChanged:()=>()=>{},onJournalChanged:()=>()=>{},
     getMemoryAutoExtract:async()=>true,setMemoryAutoExtract:async value=>value,

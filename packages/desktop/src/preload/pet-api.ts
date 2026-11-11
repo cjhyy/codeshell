@@ -13,6 +13,8 @@ import type {
 } from "../shared/mimi-presence";
 import type { MimiCompanionAttention } from "../shared/mimi-companion";
 import type {
+  PetNoticeRuleUpdate,
+  PetNoticeRuleUpdateResult,
   PetNoticesState,
   PetNoticeSystemRule,
   PetNoticeSystemRulePatch,
@@ -22,6 +24,9 @@ import type {
 export type { PetChatAttachment } from "../shared/pet-chat-attachments";
 export type {
   PetNoticeChannel,
+  PetNoticeRuleSummary,
+  PetNoticeRuleUpdate,
+  PetNoticeRuleUpdateResult,
   PetNoticesState,
   PetNoticeSystemRule,
   PetNoticeSystemRulePatch,
@@ -416,6 +421,8 @@ export interface PetApi {
   getSessionBell?(sessionId: string): Promise<PetSessionBellState>;
   setSessionBell?(sessionId: string, on: boolean): Promise<PetSessionBellState>;
   setSystemNoticeRule?(patch: PetNoticeSystemRulePatch): Promise<PetNoticeSystemRule>;
+  /** Pause, resume or cancel a rule from `getNoticesState().rules` (same channel as above). */
+  updateNoticeRule?(request: PetNoticeRuleUpdate): Promise<PetNoticeRuleUpdateResult>;
   /** Notice rules or notification settings changed. */
   onNoticesChanged?(listener: () => void): () => void;
   getWidgetVisibility(): Promise<boolean>;
@@ -452,6 +459,9 @@ export interface PetIpcRenderer {
 }
 
 export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
+  // One rule-mutation channel carries the every-Session patch and listed-rule actions.
+  const updateNoticeRule = (payload: PetNoticeSystemRulePatch | PetNoticeRuleUpdate) =>
+    ipcRenderer.invoke("pet:notices:update-rule", payload);
   return {
     getSnapshot: () => ipcRenderer.invoke("pet:get-snapshot") as Promise<PetProjectionSnapshot>,
     getWorkMemory: () => ipcRenderer.invoke("pet:get-work-memory") as Promise<PetWorkMemoryQuery>,
@@ -557,8 +567,8 @@ export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
         sessionId,
         on,
       }) as Promise<PetSessionBellState>,
-    setSystemNoticeRule: (patch) =>
-      ipcRenderer.invoke("pet:notices:set-system-rule", patch) as Promise<PetNoticeSystemRule>,
+    setSystemNoticeRule: (patch) => updateNoticeRule(patch) as Promise<PetNoticeSystemRule>,
+    updateNoticeRule: (request) => updateNoticeRule(request) as Promise<PetNoticeRuleUpdateResult>,
     onNoticesChanged: (listener) => {
       const handler = (): void => listener();
       ipcRenderer.on("pet:notices:changed", handler);

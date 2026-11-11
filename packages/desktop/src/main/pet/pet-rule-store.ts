@@ -681,6 +681,8 @@ export class PetRuleStore {
       }
       next.version = current.version + 1;
       next.updatedAt = Math.max(this.timestamp(), current.updatedAt);
+      if (isScheduleRule(next) && current.state === "paused" && next.state === "active")
+        this.renewOnResume(staged, next);
       if (!parseRule(next)) throw new PetRuleStoreError("invalid_rule");
       const key = ruleSessionKey(next);
       if (
@@ -789,6 +791,7 @@ export class PetRuleStore {
         ...(rule.wake.stagger !== undefined ? { stagger: rule.wake.stagger } : {}),
         status: "claimed",
         claimedAt: at,
+        ...(rule.wake.previous ? { previous: rule.wake.previous } : {}),
       };
       rule.updatedAt = Math.max(at, rule.updatedAt);
       return rule;
@@ -882,6 +885,26 @@ export class PetRuleStore {
       ...this.scheduledWake(staged, rule.id, next),
       ...(detail !== undefined ? { detail } : {}),
       ...(outcome.taskId !== undefined ? { taskId: outcome.taskId } : {}),
+      previous: { occurrence: rule.wake.occurrence, status: outcome.status, completedAt: at },
+    };
+  }
+
+  /**
+   * A repeating rule switched back on counts from now (like Mimi's own rules):
+   * an occurrence that came and went while it was paused is not sent late. A
+   * one-shot keeps its instant and its catch-up window; a claimed occurrence
+   * is left to settle.
+   */
+  private renewOnResume(staged: Map<string, NoticeRule>, rule: ScheduleNoticeRule): void {
+    if (rule.when.cron === undefined || rule.wake.status === "claimed") return;
+    const at = this.timestamp();
+    if (rule.wake.status === "scheduled" && dueAt(rule.wake) > at) return;
+    const { detail, taskId, previous } = rule.wake;
+    rule.wake = {
+      ...this.scheduledWake(staged, rule.id, this.firstOccurrenceOf(rule.when, at, rule.id)),
+      ...(detail !== undefined ? { detail } : {}),
+      ...(taskId !== undefined ? { taskId } : {}),
+      ...(previous ? { previous } : {}),
     };
   }
 

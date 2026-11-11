@@ -67,6 +67,22 @@ export function createTaskClosureAdapter(deps: PetTaskClosureDeps): PetTaskClosu
     }
   }
 
+  /**
+   * Mimi's rules for this Session that the owner paused: they belong to the
+   * task too, so its end spends them. Otherwise a paused delegation rule
+   * outlives its task and, resumed later, fires on the owner's own turns.
+   */
+  const pausedDelegation = (sessionId: string): NoticeRule[] =>
+    ruleStore
+      .list()
+      .filter(
+        (rule) =>
+          rule.origin === "delegation" &&
+          rule.state === "paused" &&
+          rule.when.kind === "session" &&
+          rule.when.sessionId === sessionId,
+      );
+
   async function armDelegationRule(task: PetLongTask): Promise<void> {
     try {
       await ready;
@@ -113,9 +129,12 @@ export function createTaskClosureAdapter(deps: PetTaskClosureDeps): PetTaskClosu
       // No notice for a cancelled delegation, but its automatic rule must not
       // outlive it and fire on the owner's own later turns in that Session.
       await ready;
-      await spend(
-        ruleStore.activeForSession(task.sessionId).filter((rule) => rule.origin === "delegation"),
-      );
+      await spend([
+        ...ruleStore
+          .activeForSession(task.sessionId)
+          .filter((rule) => rule.origin === "delegation"),
+        ...pausedDelegation(task.sessionId),
+      ]);
       return;
     }
     if (task.status !== "completed" && task.status !== "failed") return;
@@ -153,7 +172,7 @@ export function createTaskClosureAdapter(deps: PetTaskClosureDeps): PetTaskClosu
       ...(actions ? { actions } : {}),
     });
     // This notice satisfies every Session rule that was waiting for the outcome.
-    await spend(plan.rules);
+    await spend([...plan.rules, ...pausedDelegation(task.sessionId)]);
   }
 
   return { notifyTaskClosed, armDelegationRule };

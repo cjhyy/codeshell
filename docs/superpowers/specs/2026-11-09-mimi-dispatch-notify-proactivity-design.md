@@ -200,6 +200,11 @@ interface NoticeRule {
     completedAt?: number;
     detail?: string; // 结果说明；循环规则进入下一次后保留上一次的说明
     taskId?: string;
+    previous?: {
+      occurrence: number;
+      status: "notified" | "launched" | "failed" | "unknown";
+      completedAt: number;
+    }; // 2d-2：循环规则上一次的结果（规则列表的"上次"），认领期间保留，只用于显示
   };
   attention: "always" | "important" | "digest" | "muted";
   channel: NoticeChannel; // §4.6
@@ -237,7 +242,7 @@ interface NoticeRule {
 - **主人的规则优先于派活规则**：主人在已有派活规则的会话上说"做完告诉我"或点铃铛，这条规则转为主人的（`origin: "user"`，用主人的渠道和打扰方式）；之后派活重试、续派不会改写它，任务取消也不会带走它。主人已有规则（含暂停的）时不再自动建派活规则。
 - `spent / completed / cancelled` 是终态，不能改回 `active`。
 - 写入**落盘成功后**才返回规则 id。
-- **铃铛**：关 = 取消主人自己的规则；只有派活规则时铃铛显示为只读的"Mimi 派的活，会自动告诉你"；Mimi 自己的会话、外部运行时会话不显示铃铛。
+- **铃铛**：关 = 取消主人自己在这个会话上的规则（`bell` / `notify-me`，含暂停的，免得攒下一堆能恢复的旧规则）；只有派活规则时铃铛显示为只读的"Mimi 派的活，会自动告诉你"；只有 IM 对话的 `watch-session` 规则时同样只读（"IM 里的对话在看"），关铃铛不会取消它（2d-2；它在规则列表里管理）。铃铛提示列出该会话每条活动规则的来源（自己设的 / 派活自动 / IM 里在看，`PetSessionBellState.sources`，来自 `createdBy`）。Mimi 自己的会话、外部运行时会话不显示铃铛。
 
 ### 4.3 内置系统规则
 
@@ -680,7 +685,15 @@ notifications?: {
 
 晨报、收工、心跳的开关与时间在 settings 里（2c-2），改了就同步对应的系统规则（§4.1）。`pet:notices:get-state` 的 `settings` 带上这三项（已填默认值），另带 `proactive`：每种晨报最后发送的日期、心跳今天的判断次数/消息条数与上限、是否已到上限（只读，不加 IPC 通道）。界面在 2d-2。
 
-"不在电脑前全推"系统规则的开关存在规则表里（§4.3），不进 settings。配置中心 Mimi 页的"通知与主动"卡片（1a）：免打扰、每小时上限、桌面派活结果去向、"不在电脑前时所有会话都推我"开关、已绑定渠道及就绪度（只读）。主人建过的规则列表（暂停、删除）二期再加。工作会话顶栏有铃铛（§4.2）。
+"不在电脑前全推"系统规则的开关存在规则表里（§4.3），不进 settings。配置中心 Mimi 页的"通知与主动"卡片（1a）：免打扰、每小时上限、桌面派活结果去向、"不在电脑前时所有会话都推我"开关、已绑定渠道及就绪度（只读）；其下"主动"卡片（2d-2）：晨报、收工小结（开关 + 时间）、心跳（开关 + 活跃时段 + "今天判断 x/8 次，发了 y/4 条"）、摘要固定时间（最多 6 个 HH:MM，可增删，空 = 不设）。同样只写主人动过的叶子（例如只开晨报只写 `briefs.morning.enabled`，时间继续跟默认），时间不完整、格子重复或超过 6 个时不写；校验与 settings schema 一致。工作会话顶栏有铃铛（§4.2）。
+
+**规则列表（2d-2，"规则与跟进"分区）**：所有能触发的东西都在这一处看和管——路由器管"怎么发"，这里管"什么会触发"。规则由模型按主人的话建，界面只显示结构化字段，不解析散文。
+
+- 数据：`pet:notices:get-state` 多带 `rules: PetNoticeRuleSummary[]`（不加通道，变化仍走 `pet:notices:changed`）。每行：`id`、`version`、`kind`（`session` / `all-sessions` / `schedule` / `system-brief` / `system-heartbeat`）、`state`、`source`（由 `createdBy` 得出：`owner` 铃铛/NotifyMe、`delegation`、`watch` IM 在看、`follow-up`、`system`）、会话 id + 标题（会话规则；续办跟进是 `sourceSessionId`）、事件 + 范围、定时（`at` / `cron` + 模型写的 `label` + 时区 + 下一次 `nextAt`，晨报给 `dailyAt`，心跳给 `activeHours`）、目标（`desktop` / `auto` + 预计的 IM 名 / 点名渠道名 / 回到某渠道的私聊或群聊——不带任何对话或发送者 id）、`lastFiredAt` + `lastOutcome`（定时规则取 `wake` 或 `wake.previous`，会话规则取变成 `spent` 的时刻）、可做的 `actions`。Mimi 的四条系统规则总在列表里（没打开过也在，`version: 0`）；晨报/收工/心跳的开关与时间以 settings 为准。`system-heartbeat-recheck` 不单列。终态规则只保留最近 20 条（新的在前），界面默认折叠为"最近结束"。
+- 变更：原 `pet:notices:set-system-rule` 改名为唯一的规则变更通道 `pet:notices:update-rule`：旧载荷（"不在电脑前全推"的 patch）照收；新载荷 `{ ruleId, expectedVersion, action: pause | resume | cancel }`，版本不对返回 `version_conflict`（不抛错，界面刷新并提示），不适用返回 `not_allowed`（终态、恢复后会与同会话同目标的活动规则重复），找不到返回 `not_found`。分派：主人/派活/在看的会话规则与跟进的暂停、恢复走规则表 `update`；跟进删除走跟进控制（与 `pet:follow-up-control` 同一处）；"不在电脑前全推"走 `setSystemRule`；晨报、收工、心跳写 settings（`briefs.<kind>.enabled` / `heartbeat.enabled`，主进程写入后 `settingsChanged()`，由 2c-2 的同步重排规则），系统规则不能删除。删除 = `cancelled`，界面先确认。
+- 循环跟进暂停期间错过的那一次，恢复时从现在往后算（同系统规则）；一次性跟进恢复时保留原时刻，按它的补发期限处理：期限内列表标"恢复后会立即补发一次"并先确认，过了期限标"已过期"、只能删除（`overdue: "catch-up" | "expired"`，判断同执行器）。
+- 派活规则属于它的任务：主人可以暂停或删除，不能恢复；任务结束（完成、失败、取消）时连暂停的派活规则一起记为 `spent`，否则暂停的规则会比任务活得久、恢复后在主人自己的回合上触发。要接管就点铃铛（§4.2）。
+- 界面：分组"进行中的会话提醒 / 跟进 / 主动（不在电脑前全推、晨报、收工、心跳）/ 最近结束"，每行标题（会话标题 / 跟进标题 / 系统名）、来源徽标、何时（事件或模型写的说法 + 下次时间，cron 原文只作悬停提示）、目标、上次、状态；暂停/恢复/删除与"打开会话"（与工作台跟进列表同一导航）。空状态提示"也可以直接跟 Mimi 说：'把每天早上那个提醒停了'"。
 
 ## 12. 决策（2026-11-09 已确认）
 

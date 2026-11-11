@@ -161,7 +161,7 @@ describe("desktop IPC contract", () => {
       "pet:notices:get-state",
       "pet:notices:session-bell",
       "pet:notices:set-session-bell",
-      "pet:notices:set-system-rule",
+      "pet:notices:update-rule",
     ]) {
       expect(preloadInvokes).toContain(channel);
       expect(mainHandles).toContain(channel);
@@ -182,11 +182,13 @@ describe("desktop IPC contract", () => {
     await api.getSessionBell?.("s-work");
     await api.setSessionBell?.("s-work", true);
     await api.setSystemNoticeRule?.({ state: "active" });
+    await api.updateNoticeRule?.({ ruleId: "all-sessions", expectedVersion: 1, action: "pause" });
     expect(invoked).toEqual([
       ["pet:notices:get-state", undefined],
       ["pet:notices:session-bell", "s-work"],
       ["pet:notices:set-session-bell", { sessionId: "s-work", on: true }],
-      ["pet:notices:set-system-rule", { state: "active" }],
+      ["pet:notices:update-rule", { state: "active" }],
+      ["pet:notices:update-rule", { ruleId: "all-sessions", expectedVersion: 1, action: "pause" }],
     ]);
     let changes = 0;
     const off = api.onNoticesChanged?.(() => {

@@ -383,6 +383,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
         deps.gateway.lastOwnerInboundChannel(),
       ),
     isEligibleSession: view.isEligibleSession,
+    sessionTitle: view.sessionTitle,
     wasSessionViewedSince: viewedSince,
     upsertRule: (callerSessionId, args) => {
       if (disposed) return Promise.reject(new Error("notice rules are shutting down"));

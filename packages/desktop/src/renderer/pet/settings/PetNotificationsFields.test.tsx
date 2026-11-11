@@ -67,6 +67,18 @@ const ALL = new Set<NotificationSettingKey>([
   "delegatedFromDesktop",
 ]);
 
+/** The proactive half of a draft, all at its defaults (these tests leave it untouched). */
+const PROACTIVE = {
+  morningEnabled: false,
+  morningTime: "09:00",
+  eveningEnabled: false,
+  eveningTime: "18:30",
+  heartbeatEnabled: false,
+  heartbeatStart: "09:00",
+  heartbeatEnd: "22:00",
+  digestSlots: [] as string[],
+};
+
 async function settle(): Promise<void> {
   await act(async () => {
     for (let index = 0; index < 5; index += 1) await flushMicrotasks();
@@ -185,6 +197,7 @@ describe("PetNotificationsFields", () => {
     expect(
       notificationsSettingsPatch(
         {
+          ...PROACTIVE,
           quietEnabled: true,
           quietStart: "2",
           quietEnd: "07:00",
@@ -199,6 +212,7 @@ describe("PetNotificationsFields", () => {
     ).toEqual({ pet: { notifications: { delegatedFromDesktop: "auto" } } });
     const notifications = notificationsSettingsPatch(
       {
+        ...PROACTIVE,
         quietEnabled: true,
         quietStart: "23:00",
         quietEnd: "07:00",
@@ -220,6 +234,7 @@ describe("PetNotificationsFields", () => {
     expect(
       notificationsSettingsPatch(
         {
+          ...PROACTIVE,
           quietEnabled: false,
           quietStart: "23:00",
           quietEnd: "07:00",
