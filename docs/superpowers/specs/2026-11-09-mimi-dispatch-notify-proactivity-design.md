@@ -69,7 +69,7 @@
 
 ### 1.5 已有的定时能力
 
-- **跟进（follow-up）**：Mimi 用 `ManageFollowUp` 按用户明确要求登记，一次性，挂 core cron（`pet-follow-up-wake-coordinator.ts:123-130`），存 `pet/follow-ups.json`。
+- **跟进（follow-up）**：Mimi 用 `ManageFollowUp` 按用户明确要求登记，一次性，挂 core cron（`pet-follow-up-wake-coordinator.ts:123-130`），存 `pet/follow-ups.json`。（2c-1 起跟进是规则表里的 `schedule` 规则，见 §4.1、§10.1；旧文件与旧代码已删除。）
 - core `CronCreate/Delete/List` 不在 Mimi 白名单（`profile.ts:107-125`）。
 - 没有晨报、收工小结、心跳。
 
@@ -175,9 +175,28 @@ interface NoticeRule {
         armedAt: number; // 建规则的时刻（ms）；只对此后完成的回合生效，重启不受影响
       }
     | { kind: "all-sessions"; events: ("done" | "failed" | "blocked")[]; onlyWhenAway: true }
-    | { kind: "once"; at: number; catchUpUntil?: number } // 二期
-    | { kind: "cron"; expr: string; timezone: string; maxRuns?: number }; // 二期
-  then: { mode: "notify" } | { mode: "run-mimi"; instruction: string }; // run-mimi 二期
+    | {
+        kind: "schedule"; // 2c-1：定时规则（跟进；晨报、收工、心跳在 2c-2）
+        at?: number; // 一次性（epoch ms）；与 cron 恰好二选一
+        cron?: string; // 5 段 cron，按 timezone 计算；最多每小时一次（分钟字段只能是一个数）
+        timezone: string; // IANA
+        missedPolicy: "skip" | "fire-once";
+        catchUpUntil?: number; // 只用于 at：错过后最晚补发到何时（默认 at + 24 小时）
+      };
+  then:
+    | { mode: "notify" } // 事件规则
+    | { mode: "remind"; title: string; text: string } // 到点把 text 告诉目标（Notice followup.due）
+    | { mode: "run-mimi"; title: string; text: string; sourceSessionId: string; taskId?: string }; // 到点唤醒 Mimi 只续办这个会话，再告诉目标结果
+  wake?: {
+    // 只有 schedule 规则有：当前这一次的落盘状态（认领先于任何效果）
+    occurrence: number; // 这一次的计划时刻
+    stagger?: number; // 同一分钟已有别的定时规则时错开 1–5 分钟，分配后不变
+    status: "scheduled" | "claimed" | "notified" | "launched" | "failed" | "unknown";
+    claimedAt?: number;
+    completedAt?: number;
+    detail?: string; // 结果说明；循环规则进入下一次后保留上一次的说明
+    taskId?: string;
+  };
   attention: "always" | "important" | "digest" | "muted";
   channel: NoticeChannel; // §4.6
   target: { kind: "route"; route: PetChatRoute } | { kind: "owner" };
@@ -188,21 +207,23 @@ interface NoticeRule {
 }
 ```
 
-- **何时**：某个会话的事件、所有会话的事件（只在主人不在电脑前时）、一次性时间、cron。
-- **做什么**：`notify` 直接提醒（模板或 Mimi 成文）；`run-mimi` 先跑一轮 Mimi 处理再提醒（现有跟进 `resume`、晨报）。
+- **何时**：某个会话的事件、所有会话的事件（只在主人不在电脑前时）、定时（`schedule`：一次性 `at` 或循环 `cron`）。
+- **做什么**：`notify` 直接提醒（模板或 Mimi 成文）；`remind` 到点把主人要的那句话发给目标；`run-mimi` 先唤醒一轮 Mimi 只续办原会话，再把结果发给目标（原跟进的 `resume`）。晨报、收工的 `compose`、心跳的 `judge` 在 2c-2 加。
+- **定时规则的语义**（`pet-rule-schedule.ts`）：每条规则只有"当前这一次"；它投影成 core 调度器里的一个一次性任务（`creationKey` = `mimi-rule:<规则 id>:<version>:<occurrence>`），任务只是可重建的触发器。改期（新 version）或循环规则进入下一次（新 occurrence）都会换掉旧任务，过期的回调认领不到。到点先落盘认领再执行；执行抛错记 `unknown`、不重试；进程死在认领之后，重启时记 `unknown`。已过点的这一次不交给 core（冷启动它一律算错过，计时器还会被睡眠拖住），启动、任何规则变化、唤醒/解锁时都由宿主自己处理：`fire-once` 在期限内补发一次，`skip` 只在 90 秒宽限内发。循环规则的期限是"下一次之前"（最多一天），睡了几天也只补最近一次，之后从现在往后算下一次。
+- `version` 只随主人的修改增加，唤醒进度不改它，所以跟进的 `revision`（= version）在一次次触发间不变。
 - **打不打扰**：`always` 一定送到；`important` 由 Mimi 判断值不值得说（判断轮三期才有，1a 里按 `always` 处理）；`digest` 只进摘要；`muted` 只记录。
 - 主人原话由 Mimi 或工具映射：说"告诉我"→ `always`；"重要的才说"→ `important`；"每天汇总一下"→ `digest`；"记下来就行"→ `muted`。映射不确定时用 `always`。
 
 ### 4.2 入口
 
-| 入口                                   | 产生的规则                                                                                    | 期     |
-| -------------------------------------- | --------------------------------------------------------------------------------------------- | ------ |
-| 会话里说"做完微信告诉我"（`NotifyMe`） | `session`，`channel` 为主人点名的已绑定渠道                                                   | 1a     |
-| 工作会话头部铃铛                       | `session`，`channel: "auto"`                                                                  | 1a     |
-| 派活（`startDelegation`）              | `session`，IM 来源用来源路由，桌面来源 `owner` + `auto`                                       | 1a     |
-| Mimi `WatchSession`                    | `session`，`createdBy: "watch-session"`，目标为发起的 IM 对话；会话已属长任务时仍由长任务回告 | 2a     |
-| Mimi `ManageFollowUp`                  | 跟进表仍是时间的唯一记录（见 §13 的收窄），到点产出 Notice `followup.due`；循环跟进二期       | 2      |
-| 内置系统规则                           | 见 §4.3                                                                                       | 1a / 2 |
+| 入口                                   | 产生的规则                                                                                                            | 期        |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | --------- |
+| 会话里说"做完微信告诉我"（`NotifyMe`） | `session`，`channel` 为主人点名的已绑定渠道                                                                           | 1a        |
+| 工作会话头部铃铛                       | `session`，`channel: "auto"`                                                                                          | 1a        |
+| 派活（`startDelegation`）              | `session`，IM 来源用来源路由，桌面来源 `owner` + `auto`                                                               | 1a        |
+| Mimi `WatchSession`                    | `session`，`createdBy: "watch-session"`，目标为发起的 IM 对话；会话已属长任务时仍由长任务回告                         | 2a        |
+| Mimi `ManageFollowUp`                  | `schedule` 规则，`createdBy: "follow-up"`；IM 来源为来源路由，桌面为 `owner` + `auto`；到点产出 Notice `followup.due` | 2a / 2c-1 |
+| 内置系统规则                           | 见 §4.3                                                                                                               | 1a / 2    |
 
 - 同一会话、同一目标只保留一条活动的 `session` 规则；重复登记只更新 `events/channel/attention/note/scope/armedAt`。"同一目标"按会话身份判断（渠道 + 对象 + 发送者，`imConversationRouteKey`），不看回复能力字段。
 - **主人的规则优先于派活规则**：主人在已有派活规则的会话上说"做完告诉我"或点铃铛，这条规则转为主人的（`origin: "user"`，用主人的渠道和打扰方式）；之后派活重试、续派不会改写它，任务取消也不会带走它。主人已有规则（含暂停的）时不再自动建派活规则。
@@ -246,7 +267,8 @@ type NoticeRuleUpsertReply =
 - `rules.json` 与 `notices.json` 用 `bounded-json-store.ts` 的 `readBoundedJson / writeOwnerJsonAtomic`，紧凑 JSON。**桌面主进程是唯一写入者**，写入在进程内排队串行（与现有 pet 存储一致），没有用跨进程锁；以后若有第二个写入进程，必须先加锁。
 - 读到看不懂的条目隔离保存、写回时原样保留；文件版本比当前新时拒绝写入、不动文件；文件损坏按现有做法移到一边再从空开始。
 - 上限：规则 2,000 条（只淘汰终态规则）；提醒 5,000 条 / 8 MB（先淘汰终态记录，再压缩去重索引，再把隔离条目移到旁路文件，只保留最新 5 个）。
-- `follow-ups.json` 不迁入规则表（二期收窄，见 §13）：它仍是"什么时候提醒"的唯一记录，执行器仍是 wake coordinator + core cron，提醒本身经路由器发送。
+- 跟进存在规则表里（2c-1）。旧的 `follow-ups.json` 不迁移：主人决定旧数据可以删除，启动时删掉文件和 `mimi-follow-up:` 开头的 cron 任务一次并记日志（`pet.followUp.legacy_dropped`）。旧版本读到 `schedule` 行会逐条隔离（不升 `SCHEMA_VERSION`，不会整表只读）。
+- 上限淘汰顺序：先淘汰终态规则，再淘汰已经触发过的一次性跟进（它不会再触发，只是还挂在"需要跟进"里），未触发的定时规则和其他活动规则不淘汰。
 
 ### 4.6 渠道
 
@@ -484,7 +506,7 @@ interface NoticeRecord {
 | session.blocked | 决定：`${sessionId}:${requestId}`（离开后补推加 `:away`）；Goal 暂停：`${sessionId}:goal-pause:${goalId}:${revision}:${runId}` |
 | 长任务收尾      | `task:${taskId}:${attempt}:${status}`                                                                                          |
 | session.report  | `report:${reportId}:${对话身份的哈希}`（同一份汇报每个对话一条，重试不重复）                                                   |
-| followup.due    | 唤醒键 `mimi-follow-up:${跟进 id}:${revision}`                                                                                 |
+| followup.due    | 这一次的任务键 `mimi-rule:${规则 id}:${version}:${occurrence}`                                                                 |
 | digest          | `digest:${小时序号}:${成员 id 的哈希}`                                                                                         |
 
 去重键保留 7 天（索引里只存哈希，记录被淘汰后仍有效）。同一事实命中多条规则时合成一条 Notice；渠道取最明确的（点名的 IM 优先于 `auto`）；目标取最具体的（来源路由优先于主人）；打扰方式取最强的（`always` > `important` > `digest` > `muted`）。只命中 `all-sessions` 系统规则时带 `requiresAway`。
@@ -598,11 +620,14 @@ flowchart TD
 
 ### 10.1 L1 定时（二期）
 
-1. **循环跟进**：`ManageFollowUp` 增加 `recurrence`（cron，最小间隔 1 小时）；仍只在主人明确要求时登记。修改 cron 不补跑错过的次数；同一时刻的多条规则错开 0–5 分钟。
-2. **晨报**：确定性收集昨天以来完成/失败的任务、正在跑的、等你决定的、今天到期的跟进、记忆日志里未完成的事，交给 Mimi 成文；结尾可问"今天先做哪个？要我先开会话准备吗"，回复即进入正常对话。
-3. **收工小结**：今天派出的活结果如何、还挂着什么、明天要跟的。
-4. 收集为空时不发（或按设置只发一句短问候）；每一项必须对得上记录。
-5. 微信不可用时走待送队列，主人当天第一次找 Mimi 时补报。
+**只有一套定时系统：规则表。** 跟进（一次性和循环）、晨报、收工、心跳都是 `schedule` 规则，由同一个执行器（`pet-rule-schedule.ts`）投影进 core 调度器。2c-1 做了底座和跟进；晨报、收工、心跳在 2c-2。
+
+1. **跟进即规则**（2c-1）：`FollowUps` / `ManageFollowUp` 工具名不变（模型认得它们），背后是 `createdBy: "follow-up"` 的 `schedule` 规则：`intent: remind` → `then.mode: "remind"`，`intent: resume` → `"run-mimi"`；跟进 id 就是规则 id（由宿主从这一轮的操作键确定性派生，重放找回同一条规则），`revision` 就是规则 `version`。目标只取这一轮的 IM 来源，不信模型；外部会话不能续办。完成 → `completed`，取消、忽略 → `cancelled`。一次性跟进触发后仍是 `active`（还在"需要跟进"里，等主人处理），不会再触发。
+2. **循环跟进**：`ManageFollowUp` 的 `register` / `reschedule` 增加 `recurrence`（5 段 cron），与 `wake_at` 恰好二选一。把主人的话转成 cron 是模型的事（工具说明给了例子），代码只做确定性校验：分钟字段只能是一个数（所以最多每小时一次），宿主再用调度器的 cron 解析器解析、确认两年内会触发；不合格的直接返回清楚的错误。仍只在主人明确要求时登记。修改 cron 不补跑错过的次数（从现在往后算）；同一分钟的多条定时规则错开 0–5 分钟（每多一条晚 1 分钟，分配后不变）。每次触发是一条 Notice；`run-mimi` 每一次用自己的 `clientMessageId`（带 occurrence），不会被当成重放。工作台"需要跟进"显示重复规则；改循环规则请找 Mimi（界面的改期只针对一次性）。
+3. **晨报**：确定性收集昨天以来完成/失败的任务、正在跑的、等你决定的、今天到期的跟进、记忆日志里未完成的事，交给 Mimi 成文；结尾可问"今天先做哪个？要我先开会话准备吗"，回复即进入正常对话。
+4. **收工小结**：今天派出的活结果如何、还挂着什么、明天要跟的。
+5. 收集为空时不发（或按设置只发一句短问候）；每一项必须对得上记录。
+6. 微信不可用时走待送队列，主人当天第一次找 Mimi 时补报。
 
 ### 10.2 L2 心跳（三期，默认关）
 
@@ -651,10 +676,10 @@ notifications?: {
 | **1a 原生闭环（已实现，PR #332）** | 规则表（`session`、`all-sessions`）；`__host_action__` 回环与 `NotifyMe`；铃铛与设置卡片；派活说明（`displayText`）与自动建规则；事件 → Notice 映射；`PetImDecisions` 经路由器、离开后补推；路由器（去重、免打扰、两级频控、摘要、渠道、冻结发送与重启恢复、待送队列、媒体副本）；六个出口收口；网关渠道就绪度与幂等键；core：`session_started.trigger`、标题/预览用 `displayText`、审批与提问的 `notification` hook | G1（原生）、G2（审批与提问）、G5、G6；G7 待测      |
 | **1c 收敛（在 1b 之前）**          | §16.2 的四项：统一的会话结果事件；"谁该被告知"只留规则表一个来源；决定提示的状态落盘；路由器按职责拆开                                                                                                                                                                                                                                                                                                               | 行为不变：现有测试与回放全过；§16.3 的删除清单兑现 |
 | **1b 外部运行时（已实现）**        | §6.3 四项                                                                                                                                                                                                                                                                                                                                                                                                            | G1（Codex/CC）                                     |
-| **2 定时 + 可打开**                | `WatchSession` 改建规则；`ReportToMimi` 与跟进提醒改走路由器（2a，已实现）；Goal 暂停、上限停止与失败可在 IM 里回复，完成后可"打开"，回复一律由模型解读（2b，已实现，见 §7、§9）；循环跟进；晨报、收工；固定格子摘要、推迟发送；规则列表界面。**收窄**：`follow-ups.json` 不迁入规则表，见下                                                                                                                         | G2（其余）、G3、G4                                 |
+| **2 定时 + 可打开**                | `WatchSession` 改建规则；`ReportToMimi` 与跟进提醒改走路由器（2a，已实现）；Goal 暂停、上限停止与失败可在 IM 里回复，完成后可"打开"，回复一律由模型解读（2b，已实现，见 §7、§9）；定时规则底座、跟进改成规则、循环跟进（2c-1，已实现）；晨报、收工、心跳规则，固定格子摘要、推迟发送（2c-2）；规则列表界面（2d）。旧的跟进表已删除，见下                                                                             | G2（其余）、G3、G4                                 |
 | **3 心跳**                         | 预检 + 判断轮 + 复查 + 每日上限                                                                                                                                                                                                                                                                                                                                                                                      | 两周数据后评估                                     |
 
-**二期的一处收窄**：原计划把 `follow-ups.json` 整表迁入规则表。跟进记录的 id 被 `FollowUps` 工具行、cron 的 `creationKey` 和唤醒解析引用，记录还有认领/唤醒的子状态，规则表没有这些；整表迁移风险高，收益只在"存储统一"。二期改为：跟进表继续是"什么时候提醒"的唯一记录，提醒的发送一律经路由器（Notice `followup.due`）。§16 要的是"谁该被告知、怎么发"只有一处，这一点做到了。`WatchSession` 改为建 `session` 规则（`createdBy: "watch-session"`，目标为来源路由），不再新建长任务；之前落盘的 watch 长任务照旧由长任务路径收尾。
+**跟进表（已撤销的收窄）**：2a 时曾决定跟进表继续独立存在，理由是整表迁移风险高。2026-11-11 主人决定只要一套定时系统、旧数据可以删除，于是 2c-1 不迁移而是直接替换：规则表加上 `schedule` 规则和每条规则的唤醒子状态（`wake`），跟进 id 换成规则 id，cron 任务键换成 `mimi-rule:`，旧的跟进存储、执行器、运行时和 `follow-ups.json` 一并删除。`WatchSession` 改为建 `session` 规则（`createdBy: "watch-session"`，目标为来源路由），不再新建长任务；之前落盘的 watch 长任务照旧由长任务路径收尾。
 
 验收口径：
 
@@ -671,7 +696,7 @@ notifications?: {
 - core：`__host_action__` 回环（请求形状、成功、`ok:false`、会话不在线、超时）；`__workspace_action__` 行为不变；外部工具暴露清单更新后跑契约测试。
 - pet：`NotifyMe` 参数校验与可见性（原生与子代理可见，Mimi 不可见；子代理指向根会话）；派活说明拼装；规则请求失败路径。
 - desktop：
-  - 规则表读写、乐观并发、写入串行、坏条目隔离、主人规则接管派活规则；跟进迁移幂等（二期）；
+  - 规则表读写、乐观并发、写入串行、坏条目隔离、主人规则接管派活规则；定时规则的解析与隔离、认领/结算/恢复、错开、错过与补发、旧跟进文件与任务只删一次（2c-1）；
   - 事件 → Notice 映射（complete/cancel 区分、"只回好的"不触发、后台任务未结束不触发）；
   - 路由策略表驱动（去重、muted/digest、免打扰、两级频控、超额进摘要、渠道、明说微信不看在场、token 未知先试）；
   - 发送冻结与重启恢复；待送队列补发前撤销；六个出口收口后的重复检测；
@@ -758,7 +783,7 @@ outcome?: {
 
 > **实现状态（2026-11-10）**：C2 第一步已落地为 `pet-delivery-plan.ts`。规则表、长任务的 `completionTarget`、绑定会话的路由仍各自存储，但"这次结果告诉谁"只由这个模块读它们，产出送达计划（每条消息一个条目：`template` / `mimi-closure` / `session-reply`）；观察器、任务收尾、决定提示、绑定回复转发都从计划取目标。绑定回复的等待与配对、`hasActiveLongTask`、按运行 id 配对已删除。尚未做：把绑定本身存成规则行。
 >
-> **实现状态（2a）**：`WatchSession` 存成规则行（`createdBy: "watch-session"`，目标为发起的 IM 对话；它的结果对那个对话算"回复"，和 IM 派活的结果一样不被免打扰压住）。跟进不存成规则行（§13 的收窄），但提醒经路由器发送。`ReportToMimi` 的目标由送达计划的 `planReport` 给出：IM 派活的来源（用 Mimi 汇报轮写的草稿）与每条 `watch-session` 规则指向的 IM 对话（模板），每个对话一条（来源记录缺发送者时按渠道 + 对象认作同一对话）；主人的规则、桌面派活、绑定对话不收进展。
+> **实现状态（2a）**：`WatchSession` 存成规则行（`createdBy: "watch-session"`，目标为发起的 IM 对话；它的结果对那个对话算"回复"，和 IM 派活的结果一样不被免打扰压住）。跟进的提醒经路由器发送；2c-1 起跟进本身也是规则行（`schedule`）。`ReportToMimi` 的目标由送达计划的 `planReport` 给出：IM 派活的来源（用 Mimi 汇报轮写的草稿）与每条 `watch-session` 规则指向的 IM 对话（模板），每个对话一条（来源记录缺发送者时按渠道 + 对象认作同一对话）；主人的规则、桌面派活、绑定对话不收进展。
 >
 > 两处有意保留的旧行为：同一次结果命中的多条规则仍合并成一条提醒（路由目标优先于主人），不按目标拆成多条；长任务收尾和绑定会话的回复即使落在同一个对话也各发一条（Mimi 的总结和会话原文是两条不同的消息）。
 >
@@ -799,7 +824,8 @@ outcome?: {
 
 还剩下的：
 
-- 把绑定本身存成规则行（C2 尚未做）；规则表、`completionTarget`、绑定路由仍各自存储，只由 `pet-delivery-plan.ts` 统一读取。`WatchSession` 已是规则（2a）；跟进不存成规则行（§13 的收窄），只是提醒经路由器发送。
+- 把绑定本身存成规则行（C2 尚未做）；规则表、`completionTarget`、绑定路由仍各自存储，只由 `pet-delivery-plan.ts` 统一读取。`WatchSession` 已是规则（2a）；跟进已是 `schedule` 规则（2c-1）。
+- **只有一套定时系统**（2c-1）：跟进（含循环）走规则表 + `pet-rule-schedule.ts`，旧的跟进存储/执行器与 `follow-ups.json` 已删除，旧数据不迁移（主人决定）。晨报、收工、心跳会作为系统 `schedule` 规则加进来（2c-2），不另起调度。
 - `pet-notice-router.ts`（约 1,200 行，接了发件箱结果后变大）和 `pet-notice-ledger.ts`（约 1,190 行）这次没拆；`pet-dispatch-service.ts` 仍有约 2,400 行（对话轮、派活）；`im-gateway-control-server.ts` 接近它的 2,000 行上限。
 - 真机验收：微信对同一 `client_id` 的去重（G7）、无 token 的那一次尝试、发件箱重试与网关重启交错，都还没在真机上跑过。
 - `PetImDecisions` 的 60 秒兜底扫描（C3 有意保留）。
