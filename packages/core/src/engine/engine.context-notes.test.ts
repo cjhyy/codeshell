@@ -8,6 +8,12 @@ import { LLMClientBase } from "../llm/client-base.js";
 import { registerProvider } from "../llm/client-factory.js";
 import type { CreateMessageOptions } from "../llm/types.js";
 import type { LLMResponse, Message, StreamEvent } from "../types.js";
+import { ContextManager } from "../context/manager.js";
+import { PromptComposer } from "../prompt/composer.js";
+import { RunToolSurface } from "../tool-system/run-tool-surface.js";
+import { callToolDef } from "../tool-system/builtin/call-tool.js";
+import { saveContextNoteToolDef } from "../tool-system/builtin/context-notes.js";
+import { toolSearchToolDef } from "../tool-system/builtin/tool-search.js";
 
 const PROVIDER = "fake-engine-context-notes";
 const NOTE_TOOLS = ["SaveContextNote", "NewContext", "SearchHistory"];
@@ -151,6 +157,58 @@ function successfulTools(events: StreamEvent[]) {
 }
 
 describe("Engine notes context strategy", () => {
+  test("assembles deferred note instructions from frozen behavior and refreshes them at a cold boundary", async () => {
+    const { engine, dir, model } = makeEngine({ contextStrategy: "notes" });
+    const session = engine.getSessionManager().create(dir, model, PROVIDER, "notes-prompt");
+    const surface = new RunToolSurface(["ToolSearch"]);
+    const alwaysEligible = [toolSearchToolDef, callToolDef];
+    surface.updateCatalog([...alwaysEligible, saveContextNoteToolDef]);
+    const composer = new PromptComposer({
+      cwd: dir,
+      model,
+      behaviorToolNames: surface.behaviorSnapshot(),
+    });
+    const initialTools = JSON.stringify(surface.requestSnapshot());
+    const assembly = await (
+      engine as unknown as {
+        assembleRunPrompts(args: Record<string, unknown>): Promise<{
+          fullSystemPrompt: string;
+          rebuildSystemPrompt(tools: ReturnType<RunToolSurface["snapshot"]>): Promise<string>;
+        }>;
+      }
+    ).assembleRunPrompts({
+      session,
+      messages: [],
+      hookMessages: [],
+      mcpFailureSummary: "",
+      promptComposer: composer,
+      toolDefs: surface.snapshot(),
+      // Prompt assembly does not issue a model request.
+      llmClientPromise: Promise.resolve(undefined),
+      getBehaviorToolNames: () => surface.behaviorSnapshot(),
+      contextManager: new ContextManager(),
+      profileParams: {},
+      instructionSnapshots: [],
+    });
+    expect(surface.snapshot().map((tool) => tool.name)).not.toContain("SaveContextNote");
+    expect(surface.isEligible("SaveContextNote")).toBe(true);
+    expect(assembly.fullSystemPrompt).toContain("# Working notes and context continuity");
+    expect(assembly.fullSystemPrompt).toContain("\nToolSearch, CallTool\n");
+
+    surface.select(["SaveContextNote"]);
+    surface.updateCatalog(alwaysEligible);
+    expect(surface.isEligible("SaveContextNote")).toBe(false);
+    const warm = await assembly.rebuildSystemPrompt(surface.snapshot());
+    expect(warm).toBe(assembly.fullSystemPrompt);
+    expect(JSON.stringify(surface.requestSnapshot())).toBe(initialTools);
+
+    surface.rebase();
+    const cold = await assembly.rebuildSystemPrompt(surface.snapshot());
+    expect(JSON.stringify(surface.requestSnapshot())).toBe(initialTools);
+    expect(cold).not.toContain("# Working notes and context continuity");
+    expect(cold).toContain("\nToolSearch, CallTool\n");
+  });
+
   test("ordinary sessions default to summary and hide native notes controls", async () => {
     const { engine, dir, model, scenario } = makeEngine();
     const { sessionId } = seedSession(engine, dir, model);

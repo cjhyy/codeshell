@@ -8,14 +8,7 @@ import {
   recordModelTraceAttemptError,
   recordModelTraceAttemptResult,
 } from "../../model-traces/context.js";
-import type {
-  ClientDefaults,
-  LLMConfig,
-  LLMResponse,
-  ToolCall,
-  ToolDefinition,
-  TokenUsage,
-} from "../../types.js";
+import type { ClientDefaults, LLMConfig, LLMResponse, ToolCall, TokenUsage } from "../../types.js";
 import type { CreateMessageOptions } from "../types.js";
 import type { ReasoningSetting } from "../reasoning-setting.js";
 import { LLMClientBase } from "../client-base.js";
@@ -26,8 +19,13 @@ import { capabilitiesForConfig, type Capability } from "../capabilities/index.js
 import { resolveApiKey, resolveHeaders } from "../provider-auth.js";
 import { stripVisionFromHistory } from "../strip-vision.js";
 import {
+  anthropicMessagesEndpoint,
+  nativeToolDiscoveryEnabled,
+  supportsNativeToolDiscoveryModel,
+} from "../native-tool-discovery.js";
+import { anthropicMessages, anthropicSystem, anthropicTools } from "./anthropic-discovery-wire.js";
+import {
   resolvePromptCachePolicy,
-  uniquePromptCacheBreakpointIndexes,
   type PromptCachePolicy,
   type PromptCacheRequestContext,
 } from "../prompt-cache.js";
@@ -71,8 +69,8 @@ function tokenUsageFromAnthropic(usage: {
   };
 }
 
-/** Shape of the SDK's `thinking` request field when extended thinking is on. */
-type ThinkingParam = { type: "enabled"; budget_tokens: number };
+/** Bounded native support includes Sonnet 5's explicit thinking opt-out. */
+type ThinkingParam = { type: "enabled"; budget_tokens: number } | { type: "disabled" };
 
 export class AnthropicClient extends LLMClientBase {
   private _client: Anthropic | null = null;
@@ -88,10 +86,17 @@ export class AnthropicClient extends LLMClientBase {
   private get client(): Anthropic {
     if (!this._client) {
       const headers = resolveHeaders(this.config.httpHeaders);
+      const endpoint = anthropicMessagesEndpoint(this.config);
+      const openRouter = endpoint?.kind === "openrouter";
+      const key = resolveApiKey(
+        this.config,
+        openRouter ? process.env.OPENROUTER_API_KEY : process.env.ANTHROPIC_API_KEY,
+      );
       this._client = new Anthropic({
-        // explicit apiKey > authCommand stdout > ANTHROPIC_API_KEY (TODO 7.2).
-        apiKey: resolveApiKey(this.config, process.env.ANTHROPIC_API_KEY),
-        ...(this.config.baseUrl ? { baseURL: this.config.baseUrl } : {}),
+        ...(openRouter ? { apiKey: null, authToken: key ?? null } : { apiKey: key }),
+        ...((endpoint?.baseURL ?? this.config.baseUrl)
+          ? { baseURL: endpoint?.baseURL ?? this.config.baseUrl }
+          : {}),
         ...(Object.keys(headers).length > 0 ? { defaultHeaders: headers } : {}),
         ...(this.fetch ? { fetch: this.fetch } : {}),
         timeout: this.timeout,
@@ -112,11 +117,17 @@ export class AnthropicClient extends LLMClientBase {
     return this._capability;
   }
 
-  private promptCachePolicy(request?: PromptCacheRequestContext): PromptCachePolicy {
+  private promptCachePolicy(
+    request?: PromptCacheRequestContext,
+    reasoning = this.config.reasoning,
+  ): PromptCachePolicy {
     return resolvePromptCachePolicy({
       provider: this.provider,
       providerKind: this.config.providerKind,
       model: this.model,
+      baseUrl: this.config.baseUrl,
+      reasoning,
+      extraBody: this.config.extraBody,
       promptCaching: this.capability.promptCaching,
       request,
     });
@@ -138,6 +149,8 @@ export class AnthropicClient extends LLMClientBase {
    * Translate the resolved ReasoningSetting into Anthropic's `thinking` field,
    * honoring the model's reasoning shape (rules.ts):
    *
+   *  - Reviewed Sonnet 5 Messages routes: explicit off sends `disabled`.
+   *    Omitting this field would enable thinking by default on that model.
    *  - `anthropic-budget` (Claude 4.0–4.5): supports explicit
    *    `thinking:{type:"enabled", budget_tokens≥minBudgetTokens}`.
    *      · mode "budget" → use budgetTokens (clamped up to minBudgetTokens)
@@ -160,9 +173,11 @@ export class AnthropicClient extends LLMClientBase {
     reasoning: ReasoningSetting | undefined,
     maxTokens: number,
   ): ThinkingParam | undefined {
+    if (reasoning?.mode === "off" && supportsNativeToolDiscoveryModel(this.config))
+      return { type: "disabled" };
     const cap = this.capability;
     if (cap.reasoning.kind !== "anthropic-budget") {
-      // anthropic-adaptive and none: never send a thinking field.
+      // Other adaptive/unknown modes retain their existing request behavior.
       return undefined;
     }
     if (!reasoning || reasoning.mode === "off") {
@@ -189,11 +204,34 @@ export class AnthropicClient extends LLMClientBase {
   }
 
   async createMessage(options: CreateMessageOptions): Promise<LLMResponse> {
+    const reasoning = options.reasoning ?? this.config.reasoning;
+    const cachePolicy = this.promptCachePolicy(options.promptCache, reasoning);
+    if (
+      options.tools?.some((tool) => tool.deferLoading) &&
+      cachePolicy.toolDiscovery !== "tool-reference"
+    )
+      throw new LLMError(
+        "Native deferred tools require a supported Anthropic Messages route with thinking explicitly disabled; start a new tool-cache cycle before changing reasoning.",
+        "anthropic",
+      );
+    if (
+      supportsNativeToolDiscoveryModel(this.config) &&
+      reasoning?.mode === "off" &&
+      !nativeToolDiscoveryEnabled({ ...this.config, reasoning })
+    )
+      throw new LLMError(
+        "Explicitly disabled reasoning conflicts with extraBody.thinking; remove the conflicting override.",
+        "anthropic",
+      );
     return this.withRetry(
       async (requestSignal) => {
-        const cachePolicy = this.promptCachePolicy(options.promptCache);
-        const messages = this.buildMessages(options.messages, options.promptCache, cachePolicy);
-        const tools = options.tools ? this.convertTools(options.tools, cachePolicy) : undefined;
+        const messages = anthropicMessages(
+          stripVisionFromHistory(options.messages, this.capability.supportsVision),
+          options.promptCache,
+          cachePolicy,
+          options.tools,
+        );
+        const tools = options.tools ? anthropicTools(options.tools, cachePolicy) : undefined;
 
         // One span per outbound LLM request. Begin emits debug-level so the
         // info log isn't spammed during normal operation; end emits info with
@@ -247,13 +285,16 @@ export class AnthropicClient extends LLMClientBase {
       const requestBody = {
         model: this.model,
         max_tokens: maxTokens,
-        system: this.buildSystem(options.systemPrompt, this.promptCachePolicy(options.promptCache)),
+        system: anthropicSystem(
+          options.systemPrompt,
+          this.promptCachePolicy(options.promptCache, reasoning),
+        ),
         messages,
         ...(tools?.length ? { tools } : {}),
         ...(thinking ? { thinking } : {}),
-        ...(options.temperature !== undefined
-          ? { temperature: options.temperature }
-          : { temperature: this.temperature }),
+        ...(!this.capability.rejectedParams.has("temperature")
+          ? { temperature: options.temperature ?? this.temperature }
+          : {}),
       };
       const response = await withProviderRequestProjection(
         "anthropic-messages",
@@ -285,13 +326,16 @@ export class AnthropicClient extends LLMClientBase {
       const requestBody = {
         model: this.model,
         max_tokens: maxTokens,
-        system: this.buildSystem(options.systemPrompt, this.promptCachePolicy(options.promptCache)),
+        system: anthropicSystem(
+          options.systemPrompt,
+          this.promptCachePolicy(options.promptCache, reasoning),
+        ),
         messages,
         ...(tools?.length ? { tools } : {}),
         ...(thinking ? { thinking } : {}),
-        ...(options.temperature !== undefined
-          ? { temperature: options.temperature }
-          : { temperature: this.temperature }),
+        ...(!this.capability.rejectedParams.has("temperature")
+          ? { temperature: options.temperature ?? this.temperature }
+          : {}),
         stream: true as const,
       };
       const stream = withProviderRequestProjection(
@@ -410,167 +454,6 @@ export class AnthropicClient extends LLMClientBase {
       usage,
       stopReason: response.stop_reason ?? undefined,
     };
-  }
-
-  private buildSystem(systemPrompt: string, policy: PromptCachePolicy): Anthropic.TextBlockParam[] {
-    return [
-      {
-        type: "text",
-        text: systemPrompt,
-        ...(policy.breakpoints.includes("system")
-          ? { cache_control: { type: "ephemeral" as const } }
-          : {}),
-      },
-    ];
-  }
-
-  private buildMessages(
-    messages: import("../../types.js").Message[],
-    promptCache: PromptCacheRequestContext | undefined,
-    policy: PromptCachePolicy,
-  ): Anthropic.MessageParam[] {
-    messages = stripVisionFromHistory(messages, this.capability.supportsVision);
-    const result: Anthropic.MessageParam[] = [];
-    const stablePrefixMessageCount = Math.max(
-      0,
-      Math.min(messages.length, promptCache?.stablePrefixMessageCount ?? messages.length),
-    );
-    let stablePrefixEndMessage: Anthropic.MessageParam | undefined;
-
-    for (let sourceIndex = 0; sourceIndex < messages.length; sourceIndex++) {
-      if (sourceIndex === stablePrefixMessageCount) {
-        stablePrefixEndMessage = result[result.length - 1];
-      }
-      const msg = messages[sourceIndex]!;
-      if (msg.role === "system") continue;
-
-      const role = msg.role === "tool" ? "user" : msg.role;
-
-      if (typeof msg.content === "string") {
-        result.push({ role: role as "user" | "assistant", content: msg.content });
-      } else {
-        const blocks: Anthropic.ContentBlockParam[] = [];
-        for (const block of msg.content) {
-          if (block.type === "text" && block.text) {
-            blocks.push({ type: "text", text: block.text });
-          } else if (block.type === "tool_use" && block.id && block.name && block.input) {
-            blocks.push({
-              type: "tool_use",
-              id: block.id,
-              name: block.name,
-              input: block.input,
-            });
-          } else if (block.type === "tool_result" && block.tool_use_id) {
-            let content: Anthropic.ToolResultBlockParam["content"];
-            if (typeof block.content === "string") {
-              content = block.content;
-            } else if (Array.isArray(block.content)) {
-              const parts: Array<Anthropic.TextBlockParam | Anthropic.ImageBlockParam> = [];
-              for (const part of block.content) {
-                if (part.type === "text" && part.text) {
-                  parts.push({ type: "text", text: part.text });
-                } else if (part.type === "image" && part.source) {
-                  parts.push({
-                    type: "image",
-                    source: {
-                      type: "base64",
-                      media_type: part.source.media_type as
-                        | "image/jpeg"
-                        | "image/png"
-                        | "image/gif"
-                        | "image/webp",
-                      data: part.source.data,
-                    },
-                  });
-                }
-              }
-              content = parts;
-            } else {
-              content = "";
-            }
-            blocks.push({
-              type: "tool_result",
-              tool_use_id: block.tool_use_id,
-              content,
-              ...(block.is_error ? { is_error: true } : {}),
-            });
-          } else if (block.type === "image" && block.source) {
-            blocks.push({
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: block.source.media_type as
-                  | "image/jpeg"
-                  | "image/png"
-                  | "image/gif"
-                  | "image/webp",
-                data: block.source.data,
-              },
-            });
-          }
-        }
-        if (blocks.length > 0) {
-          result.push({ role: role as "user" | "assistant", content: blocks });
-        }
-      }
-    }
-
-    stablePrefixEndMessage ??= result[result.length - 1];
-    const stablePrefixEndIndex = stablePrefixEndMessage
-      ? result.indexOf(stablePrefixEndMessage)
-      : undefined;
-    const breakpointIndexes = uniquePromptCacheBreakpointIndexes([
-      policy.breakpoints.includes("stable-history") && stablePrefixEndIndex !== undefined
-        ? stablePrefixEndIndex
-        : undefined,
-      policy.breakpoints.includes("rolling-history") ? result.length - 1 : undefined,
-    ]);
-    for (const index of breakpointIndexes) {
-      this.markAnthropicCacheBreakpoint(result[index]);
-    }
-
-    return result;
-  }
-
-  private markAnthropicCacheBreakpoint(message: Anthropic.MessageParam | undefined): void {
-    if (!message) return;
-    if (typeof message.content === "string") {
-      message.content = [
-        {
-          type: "text",
-          text: message.content,
-          cache_control: { type: "ephemeral" },
-        },
-      ];
-      return;
-    }
-    for (let index = message.content.length - 1; index >= 0; index--) {
-      const block = message.content[index]!;
-      // Thinking blocks reject cache_control. Walk backward so a preceding
-      // cacheable text/tool block can still anchor the prefix.
-      if (block.type === "thinking" || block.type === "redacted_thinking") continue;
-      block.cache_control = { type: "ephemeral" };
-      return;
-    }
-  }
-
-  private convertTools(tools: ToolDefinition[], policy: PromptCachePolicy): Anthropic.Tool[] {
-    const converted: Anthropic.Tool[] = tools.map((t) => ({
-      name: t.name,
-      description: t.description,
-      input_schema: t.inputSchema as Anthropic.Tool.InputSchema,
-    }));
-    // Prompt-cache breakpoint: mark ONLY the last tool. The API caches every
-    // block up to and including a cache_control marker, so one marker on the
-    // tail makes the whole (stable) tools array a cached prefix — vs 73
-    // definitions re-billed as input every turn. CC does the same (one marker,
-    // not per-tool); a second marker here would waste a scarce cache_control
-    // slot (max 4) and risk KV eviction. See docs/todo/prompt-cache-optimization.md.
-    const last = converted[converted.length - 1];
-    if (last && policy.breakpoints.includes("tools")) {
-      last.cache_control = { type: "ephemeral" };
-    }
-    return converted;
   }
 
   private handleApiError(err: unknown): never {

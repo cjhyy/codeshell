@@ -91,6 +91,70 @@ describe("prompt cache policy", () => {
     }
   });
 
+  it("enables native references only for exact reviewed Messages models with explicit off", () => {
+    const direct = {
+      provider: "anthropic",
+      model: "claude-sonnet-5",
+      reasoning: { mode: "off" as const },
+    };
+    const router = {
+      ...direct,
+      providerKind: "openrouter",
+      model: "anthropic/claude-sonnet-5",
+      baseUrl: "https://openrouter.ai/api",
+    };
+    for (const config of [
+      direct,
+      { ...direct, baseUrl: "https://api.anthropic.com/v1" },
+      router,
+      { ...router, baseUrl: "https://openrouter.ai/api/v1/" },
+      { ...direct, extraBody: { thinking: { type: "disabled" } } },
+    ])
+      expect(resolvePromptCachePolicy(config).toolDiscovery).toBe("tool-reference");
+    for (const config of [
+      { ...direct, reasoning: undefined },
+      { ...direct, reasoning: { mode: "on" as const } },
+      { ...direct, reasoning: { mode: "effort" as const, effort: "high" } },
+      { ...direct, model: "claude-sonnet-5-20261111" },
+      { ...direct, model: "claude-sonnet-5.5" },
+      { ...direct, model: "anthropic/claude-sonnet-5" },
+      { ...direct, baseUrl: "https://custom.example/v1" },
+      { ...direct, baseUrl: "https://api.anthropic.com.evil.invalid" },
+      { ...direct, baseUrl: "http://api.anthropic.com" },
+      { ...direct, baseUrl: "https://api.anthropic.com/v1?route=custom" },
+      { ...direct, baseUrl: "https://api.anthropic.com:8443" },
+      { ...direct, providerKind: "custom" },
+      { ...router, provider: "openai" },
+      { ...router, baseUrl: undefined },
+      { ...router, baseUrl: "https://api.anthropic.com" },
+      { ...router, model: "claude-sonnet-5" },
+      { ...direct, extraBody: { thinking: { type: "enabled" } } },
+      { ...direct, extraBody: { thinking: { type: "disabled", budget_tokens: 1024 } } },
+    ])
+      expect(resolvePromptCachePolicy(config).toolDiscovery).toBe("call-tool");
+  });
+
+  it("keeps existing CallTool cache identity and honors independent cache opt-outs", () => {
+    const config = { provider: "anthropic", model: "claude-sonnet-5" };
+    expect(resolvePromptCachePolicy(config)).toEqual({
+      strategy: "anthropic-explicit",
+      toolDiscovery: "call-tool",
+      layoutVersion: "system-tools-stable-rolling-v2",
+      breakpoints: ["system", "tools", "stable-history", "rolling-history"],
+    });
+    expect(
+      resolvePromptCachePolicy({
+        ...config,
+        reasoning: { mode: "off" },
+        promptCaching: "provider-managed",
+      }),
+    ).toMatchObject({
+      strategy: "provider-managed",
+      breakpoints: [],
+      toolDiscovery: "tool-reference",
+    });
+  });
+
   it("falls back from explicit to implicit without changing the affinity key", () => {
     const base = {
       provider: "openai",

@@ -12,6 +12,7 @@
  */
 
 import type { ContentBlock, Message } from "../types.js";
+import { joinToolResultText } from "../utils/tool-schema-discovery.js";
 import { estimateMessagesTokens, estimateStringTokens } from "./token-counter.js";
 import { toolSchemaResultIds } from "./tool-schema-results.js";
 import {
@@ -915,15 +916,19 @@ export function buildSummarizationPrompt(
 /** Text of a scalar or structured tool result, with media named rather than dropped. */
 function summaryToolResultText(content: ContentBlock["content"]): string {
   if (typeof content === "string") return content;
-  return (content ?? [])
-    .map((part) =>
-      part.type === "text"
-        ? (part.text ?? "")
-        : part.type === "image"
-          ? `[image ${part.source?.media_type ?? "unknown"}]`
-          : `[${part.type}]`,
-    )
-    .join("\n");
+  return joinToolResultText(
+    (content ?? []).map((part) => ({
+      ...part,
+      type: "text",
+      text:
+        part.type === "text"
+          ? (part.text ?? "")
+          : part.type === "image"
+            ? `[image ${part.source?.media_type ?? "unknown"}]`
+            : `[${part.type}]`,
+    })),
+    "\n",
+  );
 }
 
 /** Target size for a portable context package (roughly one background page). */
@@ -970,7 +975,14 @@ function serializeContextPackageBlock(block: ContentBlock): SerializedContextPac
       return {
         text:
           `[tool_result tool_use_id=${block.tool_use_id ?? "unknown"}${block.is_error ? " is_error=true" : ""}]:\n` +
-          nested.map((item) => item.text).join("\n"),
+          joinToolResultText(
+            (block.content ?? []).map((part, index) => ({
+              ...part,
+              type: "text",
+              text: nested[index]!.text,
+            })),
+            "\n",
+          ),
         hasSummarizableContent: nested.some((item) => item.hasSummarizableContent),
       };
     }

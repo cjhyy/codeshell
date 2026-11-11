@@ -1,4 +1,5 @@
 import type { ContentBlock } from "../types.js";
+import { joinToolResultText } from "../utils/tool-schema-discovery.js";
 import { estimateStringTokens } from "./token-counter.js";
 
 /** Estimates, not a provider tokenizer contract. Character limits still apply. */
@@ -22,7 +23,7 @@ export function toolResultText(content: ContentBlock["content"]): string | undef
   if (typeof content === "string") return content;
   if (!Array.isArray(content)) return undefined;
   const texts = content.filter((part) => part.type === "text" && typeof part.text === "string");
-  return texts.length ? texts.map((part) => part.text).join("\n\n") : undefined;
+  return texts.length ? joinToolResultText(content, "\n\n") : undefined;
 }
 
 /** Keep non-text blocks, including their order and identity, when text is reduced. */
@@ -68,14 +69,14 @@ export function createToolTextReplacement(
   if (!Array.isArray(content)) {
     return { text: truncateToolOutput(typeof content === "string" ? content : "", budget) };
   }
-  const originalParts = content
-    .filter((part) => part.type === "text" && typeof part.text === "string")
-    .map((part) => part.text!);
-  const originalText = originalParts.join("\n\n");
+  const slots = content.filter((part) => part.type === "text" && typeof part.text === "string");
+  const originalParts = slots.map((part) => part.text!);
+  const originalText = joinToolResultText(content, "\n\n");
   if (!exceedsToolOutputBudget(originalText, budget)) {
     return { text: originalText, parts: originalParts };
   }
-  const separatorChars = Math.max(0, originalParts.length - 1) * 2;
+  const separatorChars =
+    originalText.length - originalParts.reduce((total, text) => total + text.length, 0);
   const separatorTokens = estimateStringTokens("\n".repeat(separatorChars));
   const availableTokens =
     budget.maxTokens === undefined
@@ -102,7 +103,10 @@ export function createToolTextReplacement(
         maxTokens: tokenAllocations[index]!,
       }),
     );
-    const text = parts.join("\n\n");
+    const text = joinToolResultText(
+      slots.map((part, index) => ({ ...part, text: parts[index]! })),
+      "\n\n",
+    );
     if (!exceedsToolOutputBudget(text, budget) || availableChars === 0) return { text, parts };
     // Content heuristics can change when text is shortened. Check the actual
     // joined view and retry from original slots, never from an earlier preview.

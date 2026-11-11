@@ -39,8 +39,13 @@ export const RULES: ReadonlyArray<CapabilityRule> = [
       supportsVision: true,
       tokenLimitField: "max_completion_tokens",
       rejectedParams: new Set([
-        "temperature", "top_p", "presence_penalty",
-        "frequency_penalty", "logit_bias", "logprobs", "top_logprobs",
+        "temperature",
+        "top_p",
+        "presence_penalty",
+        "frequency_penalty",
+        "logit_bias",
+        "logprobs",
+        "top_logprobs",
       ]),
       reasoning: {
         kind: "openai-effort",
@@ -71,8 +76,13 @@ export const RULES: ReadonlyArray<CapabilityRule> = [
       supportsVision: true,
       tokenLimitField: "max_completion_tokens",
       rejectedParams: new Set([
-        "temperature", "top_p", "presence_penalty",
-        "frequency_penalty", "logit_bias", "logprobs", "top_logprobs",
+        "temperature",
+        "top_p",
+        "presence_penalty",
+        "frequency_penalty",
+        "logit_bias",
+        "logprobs",
+        "top_logprobs",
       ]),
       reasoning: { kind: "openai-effort" },
       echoReasoning: "optional",
@@ -136,6 +146,21 @@ export const RULES: ReadonlyArray<CapabilityRule> = [
   },
 
   // ─── Anthropic direct ─────────────────────────────────────────
+  // https://platform.claude.com/docs/en/models/sonnet-5/overview
+  // Sampling controls are rejected; thinking defaults on unless explicitly disabled.
+  {
+    kind: "anthropic",
+    match: /^claude-sonnet-5$/,
+    capability: {
+      supportsVision: true,
+      rejectedParams: new Set(["temperature", "top_p"]),
+      reasoning: { kind: "anthropic-adaptive" },
+      echoReasoning: "when-tools",
+      parallelToolCalls: "anthropic-disable-flag",
+      streamUsage: "auto",
+    },
+    why: "Sonnet 5 Messages rejects sampling parameters; explicit disabled thinking is supported.",
+  },
   // Older Claude 4.x (≤4.5) accept explicit thinking:{type, budget_tokens}.
   // The newer 4.6+ family (Opus 4.7 included) is adaptive — sending the
   // opt-in field 400s. We check 4.6 boundary numerically below.
@@ -200,7 +225,8 @@ export const RULES: ReadonlyArray<CapabilityRule> = [
     // Most modern frontier models on OpenRouter are multimodal; flag the
     // big families explicitly. The catch-all below stays vision=false so
     // older/text-only routes don't get a green checkmark they don't earn.
-    match: /^~?(?:openai\/(?:gpt-4o|gpt-5|o[1-9])|anthropic\/claude-(?:3|4|opus|sonnet|haiku|fable)|google\/gemini-(?:[2-9]|pro)|x-ai\/grok-[4-9]|qwen\/qwen-?vl|meta\/llama-(?:3\.2|4))/i,
+    match:
+      /^~?(?:openai\/(?:gpt-4o|gpt-5|o[1-9])|anthropic\/claude-(?:3|4|opus|sonnet|haiku|fable)|google\/gemini-(?:[2-9]|pro)|x-ai\/grok-[4-9]|qwen\/qwen-?vl|meta\/llama-(?:3\.2|4))/i,
     capability: {
       supportsVision: true,
       reasoning: { kind: "openrouter-reasoning" },
