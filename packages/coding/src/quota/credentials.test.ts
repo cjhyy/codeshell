@@ -87,6 +87,24 @@ describe("selective quota credentials", () => {
     expect(f.keychainReads()).toBe(0);
   });
 
+  it("does not normalize the selected credential path into another account", async () => {
+    const path = join("/owned", "cafe\u0301", ".credentials.json");
+    const reads: string[] = [];
+    expect(
+      await resolveQuotaCredentials(["claude"], {
+        env: { HOME: "/owned", CLAUDE_CONFIG_DIR: join("/owned", "cafe\u0301") },
+        platform: "linux",
+        readTextFile: async (selected) => {
+          reads.push(selected);
+          return JSON.stringify({
+            claudeAiOauth: { accessToken: selected === path ? "selected" : "wrong-account" },
+          });
+        },
+      }),
+    ).toEqual({ claudeAccessToken: "selected" });
+    expect(reads).toEqual([path]);
+  });
+
   it("defaults to both while preserving platform-specific file fallback", async () => {
     const f = fixture();
     f.write(join(f.root, ".codex"), "auth.json", {

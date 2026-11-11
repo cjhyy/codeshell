@@ -110,10 +110,7 @@ export async function resolveQuotaCredentials(
       provider === "codex"
         ? readCodexCreds(join(env.CODEX_HOME || join(home, ".codex"), "auth.json"), readTextFile)
         : readClaudeCreds(
-            join(
-              (env.CLAUDE_CONFIG_DIR ?? join(home, ".claude")).normalize("NFC"),
-              ".credentials.json",
-            ),
+            join(env.CLAUDE_CONFIG_DIR ?? join(home, ".claude"), ".credentials.json"),
             (sources.platform ?? process.platform) === "darwin" &&
               env.CLAUDE_CONFIG_DIR === undefined,
             readTextFile,
