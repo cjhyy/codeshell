@@ -1,7 +1,7 @@
 import type { SessionToolSelection, ToolDefinition } from "../types.js";
 
 const MAX_NAMES = 4096;
-const MAX_FROZEN_DEFINITIONS_LENGTH = 16 * 1024 * 1024;
+const MAX_FROZEN_DEFINITIONS_BYTES = 16 * 1024 * 1024;
 
 function validNames(value: unknown): value is string[] {
   return (
@@ -22,10 +22,8 @@ function validNames(value: unknown): value is string[] {
 export function normalizeSessionToolSelection(value: unknown): SessionToolSelection | undefined {
   if (!value || typeof value !== "object") return undefined;
   try {
-    const { version, names, discovered, frozenDefinitions, cacheIdentity } = value as Record<
-      string,
-      unknown
-    >;
+    const { version, names, discovered, frozenDefinitions, deferredDefinitions, cacheIdentity } =
+      value as Record<string, unknown>;
     if ((version !== 1 && version !== 2) || !validNames(names)) return undefined;
     if (version === 2 && !validNames(discovered)) return undefined;
     const selection: SessionToolSelection = {
@@ -52,11 +50,37 @@ export function normalizeSessionToolSelection(value: unknown): SessionToolSelect
         ) ||
         new Set(frozenDefinitions.map((definition) => definition.name)).size !==
           frozenDefinitions.length ||
-        JSON.stringify(frozenDefinitions).length > MAX_FROZEN_DEFINITIONS_LENGTH
+        Buffer.byteLength(JSON.stringify(frozenDefinitions)) > MAX_FROZEN_DEFINITIONS_BYTES
       )
         return undefined;
       // JSON serialization preserves schema key order and rejects circular state.
       selection.frozenDefinitions = JSON.parse(JSON.stringify(frozenDefinitions));
+    }
+    if (version === 2 && deferredDefinitions !== undefined) {
+      if (
+        !Array.isArray(deferredDefinitions) ||
+        !validNames(deferredDefinitions.map((definition) => definition?.name)) ||
+        deferredDefinitions.some(
+          (definition) =>
+            !definition ||
+            typeof definition !== "object" ||
+            selection.names.includes(definition.name) ||
+            typeof definition.description !== "string" ||
+            !definition.inputSchema ||
+            typeof definition.inputSchema !== "object" ||
+            Array.isArray(definition.inputSchema),
+        ) ||
+        new Set(deferredDefinitions.map((definition) => definition.name)).size !==
+          deferredDefinitions.length
+      )
+        return undefined;
+      const combined = [...(selection.frozenDefinitions ?? []), ...deferredDefinitions];
+      if (
+        combined.length > MAX_NAMES ||
+        Buffer.byteLength(JSON.stringify(combined)) > MAX_FROZEN_DEFINITIONS_BYTES
+      )
+        return undefined;
+      selection.deferredDefinitions = JSON.parse(JSON.stringify(deferredDefinitions));
     }
     return selection;
   } catch {
@@ -66,12 +90,15 @@ export function normalizeSessionToolSelection(value: unknown): SessionToolSelect
 
 /** Current eligibility plus a frozen provider prefix, owned by one Engine run. */
 export class RunToolSurface {
+  readonly toolDiscovery: "call-tool" | "tool-reference";
   private readonly initialToolNames: readonly string[] | undefined;
   private readonly topNames = new Set<string>();
   private readonly discoveredNames = new Set<string>();
   private readonly frozenByName = new Map<string, ToolDefinition>();
+  private readonly deferredByName = new Map<string, ToolDefinition>();
   private readonly hasPersistedSelection: boolean;
   private readonly hasPersistedSnapshot: boolean;
+  private readonly hasPersistedDeferredSnapshot: boolean;
   private readonly migrateLegacySelection: boolean;
   private readonly cacheIdentity?: string;
   private initialized = false;
@@ -83,20 +110,26 @@ export class RunToolSurface {
     initialToolNames?: readonly string[],
     options: {
       selection?: unknown;
+      toolDiscovery?: "call-tool" | "tool-reference";
       onSelectionChanged?: (selection: SessionToolSelection) => void;
     } = {},
   ) {
     this.initialToolNames = initialToolNames ? [...initialToolNames] : undefined;
+    this.toolDiscovery = options.toolDiscovery ?? "call-tool";
     const selection = normalizeSessionToolSelection(options.selection);
     this.hasPersistedSelection = selection !== undefined;
     this.hasPersistedSnapshot = selection?.frozenDefinitions !== undefined;
+    this.hasPersistedDeferredSnapshot = selection?.deferredDefinitions !== undefined;
     this.migrateLegacySelection =
       !!selection && (options.selection as { version?: unknown }).version === 1;
     this.cacheIdentity = selection?.cacheIdentity;
     for (const name of selection?.names ?? []) this.topNames.add(name);
     for (const name of selection?.discovered ?? []) this.discoveredNames.add(name);
     for (const definition of selection?.frozenDefinitions ?? []) {
-      this.frozenByName.set(definition.name, cloneFrozen(definition));
+      this.frozenByName.set(definition.name, cloneDefinition(definition));
+    }
+    for (const definition of selection?.deferredDefinitions ?? []) {
+      this.deferredByName.set(definition.name, cloneDefinition(definition));
     }
     this.onSelectionChanged = options.onSelectionChanged;
   }
@@ -104,7 +137,7 @@ export class RunToolSurface {
   /** Refresh eligibility without changing an existing provider prefix. */
   updateCatalog(definitions: readonly ToolDefinition[]): void {
     const byName = new Map<string, ToolDefinition>();
-    for (const definition of definitions) byName.set(definition.name, cloneFrozen(definition));
+    for (const definition of definitions) byName.set(definition.name, cloneDefinition(definition));
     this.catalogByName = byName;
     this.catalog = Object.freeze([...byName.values()]);
     if (this.initialized) return;
@@ -121,7 +154,9 @@ export class RunToolSurface {
     }
     // Also upgrades legacy selections made before CallTool existed.
     if (
-      (!this.hasPersistedSelection || this.migrateLegacySelection) &&
+      (!this.hasPersistedSelection ||
+        this.migrateLegacySelection ||
+        (this.toolDiscovery === "tool-reference" && !this.hasPersistedSnapshot)) &&
       this.topNames.has("ToolSearch") &&
       byName.has("CallTool")
     )
@@ -134,6 +169,7 @@ export class RunToolSurface {
         if (definition) this.frozenByName.set(name, definition);
       }
     }
+    if (!this.hasPersistedDeferredSnapshot) this.rebuildDeferredSnapshot();
     this.onSelectionChanged?.(this.getSelection());
   }
 
@@ -172,6 +208,7 @@ export class RunToolSurface {
       const definition = this.catalogByName.get(name);
       if (definition) this.frozenByName.set(name, definition);
     }
+    this.rebuildDeferredSnapshot();
     this.onSelectionChanged?.(this.getSelection());
   }
 
@@ -181,6 +218,9 @@ export class RunToolSurface {
       names: [...this.topNames],
       discovered: [...this.discoveredNames],
       frozenDefinitions: this.snapshot(),
+      ...(this.toolDiscovery === "tool-reference" || this.hasPersistedDeferredSnapshot
+        ? { deferredDefinitions: [...this.deferredByName.values()].map(cloneDefinition) }
+        : {}),
       ...(this.cacheIdentity !== undefined ? { cacheIdentity: this.cacheIdentity } : {}),
     };
   }
@@ -195,6 +235,38 @@ export class RunToolSurface {
     return Object.freeze(definitions) as unknown as ToolDefinition[];
   }
 
+  /** Full wire catalog; deferred schemas never make a tool callable by themselves. */
+  requestSnapshot(): ToolDefinition[] {
+    if (this.toolDiscovery !== "tool-reference") return this.snapshot();
+    return Object.freeze([
+      ...this.snapshot(),
+      ...[...this.deferredByName.values()].map((definition) =>
+        cloneFrozen({ ...definition, deferLoading: true as const }),
+      ),
+    ]) as unknown as ToolDefinition[];
+  }
+
+  private rebuildDeferredSnapshot(): void {
+    this.deferredByName.clear();
+    if (this.toolDiscovery !== "tool-reference" || !this.frozenByName.has("ToolSearch")) return;
+    let count = this.frozenByName.size;
+    let length = Buffer.byteLength(JSON.stringify([...this.frozenByName.values()]));
+    for (const definition of this.catalog) {
+      if (
+        definition.name === "CallTool" ||
+        this.topNames.has(definition.name) ||
+        !validNames([definition.name])
+      )
+        continue;
+      const addedLength = Buffer.byteLength(JSON.stringify(definition)) + 1;
+      // A catalog beyond durable snapshot bounds remains available through text + CallTool.
+      if (count >= MAX_NAMES || length + addedLength > MAX_FROZEN_DEFINITIONS_BYTES) continue;
+      this.deferredByName.set(definition.name, definition);
+      count++;
+      length += addedLength;
+    }
+  }
+
   isCallable(name: string): boolean {
     return this.isEligible(name) && (this.frozenByName.has(name) || this.discoveredNames.has(name));
   }
@@ -207,6 +279,12 @@ export class RunToolSurface {
   isEligible(name: string): boolean {
     return this.catalogByName.has(name);
   }
+}
+
+/** Loading mode belongs to the request projection, never to registry or eager state. */
+function cloneDefinition(definition: ToolDefinition): ToolDefinition {
+  const { deferLoading: _deferLoading, ...schema } = definition;
+  return cloneFrozen(schema);
 }
 
 function cloneFrozen<T>(value: T): T {

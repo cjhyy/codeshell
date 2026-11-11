@@ -1,6 +1,10 @@
 /** Built-in ToolSearch — append eligible schemas without rewriting the tool prefix. */
 
-import type { ToolDefinition, RegisteredTool } from "../../types.js";
+import type { ContentBlock, ToolDefinition, RegisteredTool } from "../../types.js";
+import {
+  toolDiscoverySchemaBlock,
+  toolDiscoverySchemaText,
+} from "../../utils/tool-schema-discovery.js";
 import type { ToolRegistry } from "../registry.js";
 import type { ToolContext } from "../context.js";
 import { isRegisteredMcpToolAllowed } from "../mcp-tool-policy.js";
@@ -51,7 +55,7 @@ export const toolSearchToolDef: ToolDefinition = {
 export async function toolSearchTool(
   args: Record<string, unknown>,
   ctx?: ToolContext,
-): Promise<string> {
+): Promise<string | { result: string; contentBlocks: ContentBlock[] }> {
   if (typeof args.query !== "string" || !args.query.trim()) {
     return "Error: query is required and must be a non-empty string";
   }
@@ -105,10 +109,23 @@ export async function toolSearchTool(
       [...new Set(names)],
       MAX_SELECT_OUTPUT_LENGTH - (health ? health.length + 2 : 0),
       !!currentDefinitions,
-      ctx.runToolSurface ? CALL_TOOL_USAGE : DIRECT_TOOL_USAGE,
+      ctx.runToolSurface?.toolDiscovery === "tool-reference"
+        ? NATIVE_TOOL_USAGE
+        : ctx.runToolSurface
+          ? CALL_TOOL_USAGE
+          : DIRECT_TOOL_USAGE,
     );
     // A schema that did not fit must never become callable as a discovery side effect.
     ctx.runToolSurface?.select(selected.loaded);
+    if (ctx.runToolSurface?.toolDiscovery === "tool-reference" && selected.loaded.length) {
+      return {
+        result: withHealth(selected.output),
+        contentBlocks: [
+          ...(health ? [{ type: "text" as const, text: `${health}\n\n` }] : []),
+          ...selected.contentBlocks,
+        ],
+      };
+    }
     return withHealth(selected.output);
   }
 
@@ -118,6 +135,10 @@ export async function toolSearchTool(
 const CALL_TOOL_USAGE =
   "Use CallTool to call these tools: name is the exact tool name and args must match inputSchema.";
 const DIRECT_TOOL_USAGE = "Call each tool by its exact name with arguments matching inputSchema.";
+const NATIVE_TOOL_USAGE =
+  "Call tools loaded through native references by their exact names. " +
+  "For schemas shown as text, including late or changed tools, use CallTool: " +
+  "name is the exact tool name and args must match inputSchema.";
 
 function formatSelectedDefinitions(
   tools: readonly ToolDefinition[],
@@ -125,7 +146,7 @@ function formatSelectedDefinitions(
   budget: number,
   scoped: boolean,
   usage: string,
-): { output: string; loaded: string[] } {
+): { output: string; loaded: string[]; contentBlocks: ContentBlock[] } {
   const byName = new Map(tools.map((tool) => [tool.name, tool]));
   const candidates: ToolDefinition[] = [];
   const unavailable: string[] = [];
@@ -147,12 +168,7 @@ function formatSelectedDefinitions(
       .join("\n\n");
   let omitted = "";
   for (const [index, tool] of candidates.entries()) {
-    const schema = JSON.stringify({
-      name: tool.name,
-      description: tool.description,
-      inputSchema: tool.inputSchema,
-    });
-    const entry = `### ${tool.name}\nschemaRef: select:${tool.name}\n${schema}`;
+    const entry = toolDiscoverySchemaText(tool);
     if (assemble([...entries, entry], omittedNotice(candidates.slice(index + 1))).length > budget) {
       omitted = omittedNotice(candidates.slice(index));
       break;
@@ -160,7 +176,19 @@ function formatSelectedDefinitions(
     entries.push(entry);
     loaded.push(tool.name);
   }
-  return { output: assemble(entries, omitted), loaded };
+  const sections: ContentBlock[] = [
+    ...unavailable.map((text) => ({ type: "text" as const, text })),
+    ...loaded.map((name) => toolDiscoverySchemaBlock(byName.get(name)!)),
+    ...(omitted ? [{ type: "text" as const, text: omitted }] : []),
+    ...(entries.length ? [{ type: "text" as const, text: usage }] : []),
+  ];
+  return {
+    output: assemble(entries, omitted),
+    loaded,
+    contentBlocks: sections.flatMap((section, index) =>
+      index ? [{ type: "text" as const, text: "\n\n" }, section] : [section],
+    ),
+  };
 }
 
 function isVisible(tool: RegisteredTool, ctx: ToolContext): boolean {

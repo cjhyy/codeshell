@@ -329,3 +329,175 @@ describe("RunToolSurface", () => {
     expect(second.isCallable("Read")).toBe(false);
   });
 });
+
+describe("RunToolSurface native references", () => {
+  const bootstrap = [definition("ToolSearch"), callToolDef];
+  const native = (selection?: unknown) =>
+    new RunToolSurface(["Read"], { toolDiscovery: "tool-reference", selection });
+
+  it("freezes the full request catalog without granting deferred tools execution", () => {
+    const surface = native();
+    const write = {
+      ...definition("Write"),
+      inputSchema: { type: "object", properties: { z: {}, a: {} } },
+    };
+    surface.updateCatalog([...bootstrap, { ...definition("Read"), deferLoading: true }, write]);
+    expect(surface.toolDiscovery).toBe("tool-reference");
+    expect(names(surface)).toEqual(["Read", "ToolSearch", "CallTool"]);
+    expect(surface.snapshot().every((tool) => tool.deferLoading === undefined)).toBe(true);
+    const request = surface.requestSnapshot();
+    expect(request.at(-1)).toEqual({ ...write, deferLoading: true });
+    expect(Object.isFrozen(request.at(-1)?.inputSchema.properties)).toBe(true);
+    expect(surface.isEligible("Write")).toBe(true);
+    expect(surface.isCallable("Write")).toBe(false);
+    const before = JSON.stringify(request);
+    surface.select(["Write"]);
+    expect(surface.isCallable("Write")).toBe(true);
+    expect(JSON.stringify(surface.requestSnapshot())).toBe(before);
+    expect(surface.getSelection().deferredDefinitions).toEqual([write]);
+  });
+
+  it("preserves unavailable and changed deferred schemas over catalog refresh and disk resume", () => {
+    const first = native();
+    first.updateCatalog([...bootstrap, definition("Read"), definition("Write", "original")]);
+    const before = JSON.stringify(first.requestSnapshot());
+    first.select(["Write"]);
+    first.updateCatalog(bootstrap);
+    expect(first.isCallable("Write")).toBe(false);
+    expect(JSON.stringify(first.requestSnapshot())).toBe(before);
+    const saved = JSON.parse(JSON.stringify(first.getSelection()));
+    const resumed = native(saved);
+    saved.deferredDefinitions[0].description = "mutated caller";
+    resumed.updateCatalog([...bootstrap, definition("Write", "changed"), definition("Late")]);
+    expect(JSON.stringify(resumed.requestSnapshot())).toBe(before);
+    expect(resumed.getDefinition("Write")?.description).toBe("changed");
+    expect(resumed.isCallable("Write")).toBe(true);
+    expect(resumed.isCallable("Late")).toBe(false);
+    resumed.select(["Late"]);
+    expect(resumed.isCallable("Late")).toBe(true);
+    expect(JSON.stringify(resumed.requestSnapshot())).toBe(before);
+  });
+
+  it("treats an explicit empty deferred snapshot as authoritative", () => {
+    const first = native();
+    first.updateCatalog(bootstrap);
+    expect(first.getSelection().deferredDefinitions).toEqual([]);
+    const saved = JSON.parse(JSON.stringify(first.getSelection()));
+    const resumed = native(saved);
+    resumed.updateCatalog([...bootstrap, definition("Read"), definition("Late")]);
+    expect(resumed.requestSnapshot()).toEqual(first.requestSnapshot());
+    expect(resumed.isCallable("Read")).toBe(false);
+    expect(resumed.isCallable("Late")).toBe(false);
+    resumed.updateCatalog([...bootstrap, definition("Another")]);
+    expect(resumed.getSelection().deferredDefinitions).toEqual([]);
+  });
+
+  it("rebuilds deferred schemas immediately on rebase, then freezes them over restart", () => {
+    const surface = native();
+    surface.updateCatalog([
+      ...bootstrap,
+      definition("Read"),
+      definition("Write"),
+      definition("Other", "old"),
+    ]);
+    surface.select(["Write"]);
+    surface.updateCatalog([
+      ...bootstrap,
+      definition("Read"),
+      definition("Other", "new"),
+      definition("Late"),
+    ]);
+    surface.rebase();
+    expect(surface.getSelection().names).toContain("Write");
+    expect(surface.getSelection().discovered).toEqual([]);
+    expect(surface.requestSnapshot().find((tool) => tool.name === "Write")).toBeUndefined();
+    expect(surface.getSelection().deferredDefinitions).toEqual([
+      definition("Other", "new"),
+      definition("Late"),
+    ]);
+    const before = JSON.stringify(surface.requestSnapshot());
+    const resumed = native(JSON.parse(JSON.stringify(surface.getSelection())));
+    resumed.updateCatalog([
+      ...bootstrap,
+      definition("Write"),
+      definition("Other", "newest"),
+      definition("New"),
+    ]);
+    expect(JSON.stringify(resumed.requestSnapshot())).toBe(before);
+    expect(resumed.isCallable("Write")).toBe(false);
+    resumed.select(["Write"]);
+    expect(resumed.isCallable("Write")).toBe(true);
+    expect(JSON.stringify(resumed.requestSnapshot())).toBe(before);
+    resumed.rebase();
+    expect(resumed.snapshot().find((tool) => tool.name === "Write")).toBeDefined();
+    expect(resumed.getSelection().deferredDefinitions).toEqual([
+      definition("Other", "newest"),
+      definition("New"),
+    ]);
+  });
+
+  it("does not defer without ToolSearch and does not expose deferred hints in portable mode", () => {
+    const surface = native();
+    surface.updateCatalog([definition("Read"), definition("Write")]);
+    expect(surface.requestSnapshot()).toEqual(surface.snapshot());
+    expect(surface.getSelection().deferredDefinitions).toEqual([]);
+    const portable = new RunToolSurface([], {
+      selection: {
+        version: 2,
+        names: ["ToolSearch"],
+        discovered: [],
+        frozenDefinitions: [{ ...definition("ToolSearch"), deferLoading: true }],
+        deferredDefinitions: [definition("Write")],
+      },
+    });
+    portable.updateCatalog([...bootstrap, definition("Write")]);
+    expect(portable.requestSnapshot()).toEqual([definition("ToolSearch")]);
+    expect(portable.isCallable("Write")).toBe(false);
+  });
+
+  it("pairs CallTool only at a native cold boundary, never as a deferred schema", () => {
+    const state = { version: 2, names: ["ToolSearch"], discovered: [] };
+    const cold = native(state);
+    cold.updateCatalog([...bootstrap, definition("Write")]);
+    expect(names(cold)).toEqual(["ToolSearch", "CallTool"]);
+    expect(cold.getSelection().deferredDefinitions?.map((tool) => tool.name)).toEqual(["Write"]);
+    const warm = native({ ...state, frozenDefinitions: [definition("ToolSearch")] });
+    warm.updateCatalog([...bootstrap, definition("Write")]);
+    expect(names(warm)).toEqual(["ToolSearch"]);
+    expect(warm.requestSnapshot().some((tool) => tool.name === "CallTool")).toBe(false);
+  });
+
+  it("rejects damaged, duplicated, overlapping and oversized combined saved snapshots", () => {
+    const base = {
+      version: 2,
+      names: ["ToolSearch"],
+      discovered: [],
+      frozenDefinitions: [definition("ToolSearch")],
+    };
+    const circular: Record<string, unknown> = {};
+    circular.self = circular;
+    for (const deferredDefinitions of [
+      null,
+      {},
+      [null],
+      [definition("bad\nname")],
+      [definition("ToolSearch")],
+      [definition("Write"), definition("Write")],
+      [{ ...definition("Write"), inputSchema: [] }],
+      [{ ...definition("Write"), inputSchema: circular }],
+      Array.from({ length: 4096 }, (_, index) => definition("Tool" + index)),
+    ])
+      expect(normalizeSessionToolSelection({ ...base, deferredDefinitions })).toBeUndefined();
+    const big = "界".repeat(3_000_000);
+    expect(
+      normalizeSessionToolSelection({
+        ...base,
+        frozenDefinitions: [definition("ToolSearch", big)],
+        deferredDefinitions: [definition("Write", big)],
+      }),
+    ).toBeUndefined();
+    expect(
+      normalizeSessionToolSelection({ ...base, deferredDefinitions: [] })?.deferredDefinitions,
+    ).toEqual([]);
+  });
+});

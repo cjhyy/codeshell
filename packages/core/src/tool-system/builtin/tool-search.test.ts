@@ -4,6 +4,13 @@ import { ToolRegistry } from "../registry.js";
 import type { ToolContext } from "../context.js";
 import { browserDiscoveryScore } from "../browser-discovery.js";
 import { RunToolSurface } from "../run-tool-surface.js";
+import { callToolDef } from "./call-tool.js";
+import type { ToolDefinition } from "../../types.js";
+import {
+  joinToolResultText,
+  matchesToolDiscoverySchema,
+  toolDiscoverySchemaText,
+} from "../../utils/tool-schema-discovery.js";
 
 function registryWith(...defs: Array<{ name: string; description: string }>): ToolRegistry {
   const r = new ToolRegistry({ builtinTools: [] });
@@ -23,6 +30,109 @@ function registryWith(...defs: Array<{ name: string; description: string }>): To
 }
 
 const ctx = (r: ToolRegistry): ToolContext => ({ toolRegistry: r }) as unknown as ToolContext;
+
+describe("toolSearchTool — native reference metadata", () => {
+  const definition = (name: string, description = name): ToolDefinition => ({
+    name,
+    description,
+    inputSchema: { type: "object", properties: { z: {}, a: {} } },
+  });
+  const initial = [definition("ToolSearch"), callToolDef];
+  function nativeContext(definitions: ToolDefinition[]) {
+    const surface = new RunToolSurface([], { toolDiscovery: "tool-reference" });
+    surface.updateCatalog([...initial, ...definitions]);
+    return { runToolSurface: surface } as ToolContext;
+  }
+  async function select(context: ToolContext, query: string) {
+    const result = await toolSearchTool({ query }, context);
+    if (typeof result === "string") throw new Error("Expected structured discovery result");
+    return result;
+  }
+
+  it("preserves full deterministic text, health, missing receipts and schema key ordering", async () => {
+    const tool = definition("mcp_fixture_Read");
+    const context = nativeContext([tool]);
+    context.mcpServerFailures = new Map([["fixture", "Synthetic reconnect pending."]]);
+    const request = JSON.stringify(context.runToolSurface!.requestSnapshot());
+    const result = await select(context, "select:mcp_fixture_Read,Missing,mcp_fixture_Read");
+    expect(result.result).toContain("Synthetic reconnect pending.");
+    expect(result.result).toContain('Tool "Missing" is not available');
+    expect(result.result).toContain(toolDiscoverySchemaText(tool));
+    expect(result.result).toContain(
+      "Call tools loaded through native references by their exact names.",
+    );
+    expect(result.result).toContain("late or changed tools, use CallTool");
+    expect(joinToolResultText(result.contentBlocks, "legacy separator")).toBe(result.result);
+    const schema = result.contentBlocks.filter((block) => block.discoveredTool);
+    expect(schema).toHaveLength(1);
+    expect(matchesToolDiscoverySchema(schema[0], tool)).toBe(true);
+    expect(
+      result.contentBlocks
+        .filter((block) => !block.discoveredTool)
+        .every((block) => block.type === "text"),
+    ).toBe(true);
+    expect(context.runToolSurface!.isCallable(tool.name)).toBe(true);
+    expect(JSON.stringify(context.runToolSurface!.requestSnapshot())).toBe(request);
+    expect(await select(context, "select:mcp_fixture_Read,Missing,mcp_fixture_Read")).toEqual(
+      result,
+    );
+  });
+
+  it("annotates current schema while late or changed definitions cannot match frozen references", async () => {
+    const original = definition("Changed", "old schema");
+    const changed = definition("Changed", "new schema");
+    const late = definition("Late");
+    const context = nativeContext([original]);
+    const frozen = context.runToolSurface!.requestSnapshot();
+    context.runToolSurface!.updateCatalog([...initial, changed, late]);
+    const result = await select(context, "select:Changed,Late");
+    const blocks = result.contentBlocks.filter((block) => block.discoveredTool);
+    expect(matchesToolDiscoverySchema(blocks[0], original)).toBe(false);
+    expect(matchesToolDiscoverySchema(blocks[0], changed)).toBe(true);
+    expect(frozen.find((tool) => tool.name === "Late")).toBeUndefined();
+    expect(result.result).toContain("new schema");
+    expect(joinToolResultText(result.contentBlocks, "\n")).toBe(result.result);
+    expect(context.runToolSurface!.getSelection().discovered).toEqual(["Changed", "Late"]);
+    expect(context.runToolSurface!.requestSnapshot()).toEqual(frozen);
+  });
+
+  it("only marks and discovers complete schemas within the existing select budget", async () => {
+    const context = nativeContext([
+      definition("Large", "x".repeat(19_000)),
+      definition("Oversized", "y".repeat(6_000)),
+      definition("Small"),
+    ]);
+    const result = await select(context, "select:Large,Oversized,Small");
+    expect(result.result.length).toBeLessThanOrEqual(24_000);
+    expect(result.result).toContain("Not loaded: Oversized, Small.");
+    expect(
+      result.contentBlocks
+        .filter((block) => block.discoveredTool)
+        .map((block) => block.discoveredTool!.name),
+    ).toEqual(["Large"]);
+    expect(context.runToolSurface!.getSelection().discovered).toEqual(["Large"]);
+    expect(context.runToolSurface!.isCallable("Oversized")).toBe(false);
+    expect(joinToolResultText(result.contentBlocks, "\n\n")).toBe(result.result);
+  });
+
+  it("keeps keyword, unavailable, portable and external results as strings", async () => {
+    const context = nativeContext([definition("Read")]);
+    expect(typeof (await toolSearchTool({ query: "Read" }, context))).toBe("string");
+    expect(typeof (await toolSearchTool({ query: "select:Missing" }, context))).toBe("string");
+    const portable = new RunToolSurface([]);
+    portable.updateCatalog([...initial, definition("Read")]);
+    expect(
+      typeof (await toolSearchTool({ query: "select:Read" }, {
+        runToolSurface: portable,
+      } as ToolContext)),
+    ).toBe("string");
+    expect(
+      typeof (await toolSearchTool({ query: "select:Read" }, {
+        searchableToolDefinitions: [definition("Read")],
+      } as ToolContext)),
+    ).toBe("string");
+  });
+});
 
 describe("toolSearchTool", () => {
   it("explains failed MCP discovery without exposing hidden server health", async () => {
