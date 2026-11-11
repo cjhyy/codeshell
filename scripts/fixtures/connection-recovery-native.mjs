@@ -81,8 +81,34 @@ const model = track(
         (m) => m.role === "tool" && m.tool_call_id === "connection-write",
       );
       if (!afterWrite) {
-        const active = body.tools.some((t) => t.function.name === "Write");
-        if (!active) assert.ok(body.tools.some((t) => t.function.name === "ToolSearch"));
+        const tools = new Set((body.tools ?? []).map((tool) => tool.function.name));
+        const active = tools.has("Write");
+        const selectionReceipt = body.messages.findLast(
+          (message) =>
+            message.role === "tool" && message.tool_call_id === "connection-discover-write",
+        );
+        if (selectionReceipt) {
+          assert.equal(active, false, "Discovery must keep the top tool list frozen");
+          assert.ok(tools.has("CallTool"));
+          assert.equal(typeof selectionReceipt.content, "string");
+          assert.match(selectionReceipt.content, /schemaRef: select:Write/);
+          const definition = JSON.parse(
+            selectionReceipt.content.split("\n").find((line) => line.startsWith("{")),
+          );
+          assert.equal(definition.name, "Write");
+          assert.equal(definition.inputSchema.type, "object");
+          assert.equal(definition.inputSchema.properties.file_path.type, "string");
+          assert.equal(definition.inputSchema.properties.content.type, "string");
+          assert.deepEqual(definition.inputSchema.required, ["file_path", "content"]);
+        }
+        const writeReady = active || !!selectionReceipt;
+        if (!writeReady) assert.ok(tools.has("ToolSearch"));
+        const writeArgs = { file_path: proofFile, content: "one approved write\n" };
+        const call = active
+          ? { name: "Write", args: writeArgs }
+          : selectionReceipt
+            ? { name: "CallTool", args: { name: "Write", args: writeArgs } }
+            : { name: "ToolSearch", args: { query: "select:Write" } };
         send(
           {
             role: "assistant",
@@ -90,15 +116,11 @@ const model = track(
             tool_calls: [
               {
                 index: 0,
-                id: active ? "connection-write" : "connection-discover-write",
+                id: writeReady ? "connection-write" : "connection-discover-write",
                 type: "function",
                 function: {
-                  name: active ? "Write" : "ToolSearch",
-                  arguments: JSON.stringify(
-                    active
-                      ? { file_path: proofFile, content: "one approved write\n" }
-                      : { query: "select:Write" },
-                  ),
+                  name: call.name,
+                  arguments: JSON.stringify(call.args),
                 },
               },
             ],

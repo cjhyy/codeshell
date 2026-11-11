@@ -132,8 +132,18 @@ if (process.argv[2] === "--worker") {
             ? message.content.filter((block) => block.type === "tool_result")
             : [],
         );
-      if (!(request.tools ?? []).some((tool) => tool.name === "LinkAction")) {
-        assert.ok((request.tools ?? []).some((tool) => tool.name === "ToolSearch"));
+      const tools = new Set((request.tools ?? []).map((tool) => tool.name));
+      // Discovery survives resume in session state; its appended schema receipt
+      // can belong to the earlier run rather than the current intent.
+      const selectionReceipt = request.messages
+        .flatMap((message) =>
+          message.role === "user" && Array.isArray(message.content)
+            ? message.content.filter((block) => block.type === "tool_result")
+            : [],
+        )
+        .findLast((block) => block.tool_use_id === "fixture-select");
+      if (!selectionReceipt) {
+        assert.ok(tools.has("ToolSearch"));
         return {
           text: "Select the issue state adapter",
           stopReason: "tool_use",
@@ -143,16 +153,18 @@ if (process.argv[2] === "--worker") {
           ],
         };
       }
-      // A resumed session restores its selected tool schemas, so the discovery
-      // receipt may belong to the earlier run rather than the current intent.
-      const selectionReceipt = request.messages
-        .flatMap((message) =>
-          message.role === "user" && Array.isArray(message.content)
-            ? message.content.filter((block) => block.type === "tool_result")
-            : [],
-        )
-        .findLast((block) => block.tool_use_id === "fixture-select");
-      assert.match(JSON.stringify(selectionReceipt), /schemaRef: select:LinkAction/);
+      assert.equal(tools.has("LinkAction"), false, "Discovery must keep the top tool list frozen");
+      assert.ok(tools.has("CallTool"));
+      assert.equal(typeof selectionReceipt.content, "string");
+      assert.match(selectionReceipt.content, /schemaRef: select:LinkAction/);
+      const definition = JSON.parse(
+        selectionReceipt.content.split("\n").find((line) => line.startsWith("{")),
+      );
+      assert.equal(definition.name, "LinkAction");
+      assert.equal(definition.inputSchema.type, "object");
+      for (const name of ["provider", "action", "connectionId"])
+        assert.equal(definition.inputSchema.properties[name].type, "string");
+      assert.equal(definition.inputSchema.properties.params.type, "object");
       return results.some((block) => block.tool_use_id === "fixture-state")
         ? { text: "Model claims success", stopReason: "stop", usage, toolCalls: [] }
         : {
