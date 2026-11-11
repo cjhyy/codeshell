@@ -1,12 +1,14 @@
 import { recommendedAnswer } from "@cjhyy/code-shell-core/internal";
 import type { ImDecision } from "./pet-im-decisions.js";
 import { MAX_NOTICE_BODY } from "./pet-notice-compose.js";
+import type { ReplyItem } from "./pet-notice-reply-interpreter.js";
 import type { NoticeSubmission, NoticeTarget } from "./pet-notice-types.js";
 
 /**
- * What the owner reads about a pending decision: the code-bearing prompt,
+ * What the owner reads about a pending decision: the prompt (plain words,
+ * answered in the owner's own words and read by the reply model; no code),
  * the generic text for a chat that cannot answer, the expiry notice, and the
- * bare replies a prompt accepts. Pure: the deadline and clock are passed in.
+ * item the reply model is shown. Pure: the deadline and clock are passed in.
  */
 
 /** Room left in a prompt for the code, instructions and deadline lines. */
@@ -116,7 +118,34 @@ function decisionFacts(entry: ImDecision, answerable: boolean): NoticeSubmission
     ...(entry.title ? { title: entry.title } : {}),
     question,
     ...(options.length > 0 ? { options } : {}),
-    code: entry.code,
+  };
+}
+
+/** A pending decision as the reply model sees it (its number is the caller's). */
+export function decisionItem(
+  entry: ImDecision,
+  can: { skip: boolean; wait: boolean },
+): Omit<ReplyItem, "ordinal" | "ref"> {
+  const { toolName, args } = entry.envelope.request;
+  const body = questionBody(entry);
+  const title = entry.title ? { title: entry.title } : {};
+  const decline = can.skip ? "skip" : "deny";
+  if (toolName !== "__ask_user__")
+    return {
+      kind: "approval",
+      ...title,
+      text: body ?? `${toolName}（内容较长，只能在桌面查看）`,
+      actions: body ? ["approve", "deny"] : ["deny"],
+    };
+  const labels = choices(entry);
+  return {
+    kind: "question",
+    ...title,
+    text: body ?? "问题较长，只能在桌面查看",
+    // Too long to review in IM: only declining is offered, so no options either.
+    ...(body && labels.length > 0 ? { options: labels } : {}),
+    ...(args.multiSelect === true ? { multiSelect: true } : {}),
+    actions: body ? ["answer", decline, ...(can.wait ? (["wait"] as const) : [])] : [decline],
   };
 }
 
@@ -185,7 +214,7 @@ export function questionNotice(
 /** Tells the conversation that got the prompt that it ended unanswered. */
 export function expiredNotice(source: ExpirySource, channel: string): NoticeSubmission {
   const { sessionId, requestId } = source;
-  const text = `确认 ${source.code} 已超时，本次操作未获授权。任务将收到阻塞原因；如需继续此操作，请重新发起任务。`;
+  const text = `${source.title ? `「${source.title}」的` : ""}确认已超时，本次操作未获授权。任务将收到阻塞原因；如需继续此操作，请重新发起任务。`;
   return {
     kind: "decision.expired",
     priority: "P1",
@@ -225,34 +254,26 @@ function promptText(entry: ImDecision, at: PromptMoment): string {
   const question = skippableEnvelope(entry.envelope);
   const { end } = at;
   const remaining = Math.max(1, Math.ceil((end - at.now) / 60_000));
-  const deadline = deadlineLine(entry, at);
   // Existing tasks lack sender identity; group conversations must not receive
-  // private permission details or gain authority through a guessed reply code.
+  // private permission details.
   if (!at.answerable) return genericPrompt(entry, at);
   const fallback = question && Number.isFinite(end) ? recommended(entry) : undefined;
   const timeout =
     question && Number.isFinite(end)
-      ? `剩余约 ${remaining} 分钟；超时未回答将${fallback !== undefined ? `自动选择推荐项「${fallback}」` : "自动跳过"}。回复「回答 ${entry.code} 等待」可一直等。`
-      : deadline;
-  const request = entry.envelope.request;
-  const args = request.args;
+      ? `剩余约 ${remaining} 分钟；超时未回答将${fallback !== undefined ? `自动选择推荐项「${fallback}」` : "自动跳过"}。想让它一直等也可以直接说。`
+      : deadlineLine(entry, at);
+  const who = entry.title ? `「${entry.title}」` : "一个会话";
   const body = questionBody(entry);
-  if (!body)
-    return `确认 ${entry.code} 内容较长，请打开桌面 Session 查看完整内容后处理。\n${timeout}`;
-  const labels = choices(entry);
-  const options = request.toolName !== "__ask_user__" ? ["允许本次", "拒绝"] : labels;
-  const instructions =
-    args.multiSelect === true
-      ? `回复「回答 ${entry.code} 1,2」选择多个选项。`
-      : options.length > 0
-        ? `回复「回答 ${entry.code} 1」选择第 1 项。`
-        : `回复「回答 ${entry.code} 你的答案」。`;
+  if (!body) return `${who}在等你确认，内容较长，请打开桌面 Session 查看后处理。\n${timeout}`;
+  if (entry.envelope.request.toolName !== "__ask_user__")
+    return [`${who}想执行下面这一步，只允许这一次吗？直接回我就行。`, body, timeout].join("\n");
   return [
-    `确认 ${entry.code}`,
+    `${who}问你：`,
     body,
-    instructions,
-    "回答时请保留确认码；无需进入 Session。",
-    `回复「回答 ${entry.code} ${question ? "跳过" : "拒绝"}」可跳过。`,
+    entry.envelope.request.args.multiSelect === true
+      ? "可以选多个，直接回我就行。"
+      : "直接回我就行。",
+    question ? "不想回答可以说跳过。" : "",
     timeout,
   ]
     .filter(Boolean)

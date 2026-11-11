@@ -42,14 +42,14 @@ describe("decision prompts through the router", () => {
     expect(code).toMatch(/^[0-9A-F]{12}$/u);
     expect(current.ownerSends).toHaveLength(1);
     expect(current.ownerSends[0]!.targetId).toBe("wechat:owner");
-    expect(current.ownerSends[0]!.text).toContain(`回答 ${code} 1`);
+    expect(current.ownerSends[0]!.text).toContain("只允许这一次吗？直接回我就行。");
     expect(current.ownerSends[0]!.text).toContain("ls");
     expect(current.published).toEqual([]);
     // The pet's pending peek is the desktop surface; no native notification on top.
     expect(current.desktop).toEqual([]);
     expect(
       await d.relay.reply({ message: `回答 ${code} 1`, origin: { ...OWNER_DM, target: "x" } }),
-    ).toContain("不属于当前私聊");
+    ).toBeUndefined();
     expect(await d.relay.reply({ message: `回答 ${code} 1`, origin: OWNER_DM })).toContain(
       "已处理",
     );
@@ -93,9 +93,9 @@ describe("decision prompts through the router", () => {
     await d.poll();
     await d.poll(() => current!.ownerSends.length > 0);
     expect(current.ownerSends).toHaveLength(1);
-    expect(current.ownerSends[0]!.text).toContain(`回答 ${d.code()} 1`);
+    expect(current.ownerSends[0]!.text).toContain("只允许这一次吗？直接回我就行。");
     // Answered on the desktop: the escalation record shares the request id and is settled.
-    expect(await d.relay.reply({ message: "1", origin: OWNER_DM })).toContain("单独的编号");
+    expect(await d.relay.reply({ message: "1", origin: OWNER_DM })).toContain("已处理");
   });
 
   test("an IM-started task gets its prompt in its own conversation exactly once", async () => {
@@ -122,7 +122,7 @@ describe("decision prompts through the router", () => {
     expect(current.ownerSends).toEqual([]);
     expect(current.published).toHaveLength(1);
     expect(current.published[0]).toMatchObject({ target: { channel: "lark", target: "chat-9" } });
-    expect(current.published[0]!.text).toContain(`回答 ${d.code()} 1`);
+    expect(current.published[0]!.text).toContain("只允许这一次吗？直接回我就行。");
     expect(current.desktop).toEqual([]);
   });
 
@@ -183,8 +183,10 @@ describe("decision prompts through the router", () => {
     d.raise("req-1", raisedAt);
     await d.relay.scan();
     expect(current.ownerSends).toEqual([]);
-    // The record says the owner's chat got the code: a bare reply there counts.
-    expect(await d.relay.reply({ message: "1", origin: OWNER_DM })).toContain("单独的编号");
+    // The record says the owner's chat got the prompt: it is open there (the model reads it).
+    expect(await d.relay.reply({ message: `回答 ${d.code()} 9`, origin: OWNER_DM })).toContain(
+      "请回复选项",
+    );
     env.clock = raisedAt + 10 * 60_000;
     await d.relay.scan();
     await settle(() => current!.ownerSends.length > 0);
@@ -192,7 +194,7 @@ describe("decision prompts through the router", () => {
       expect.objectContaining({ approved: false, failure: "timed_out" }),
     ]);
     expect(current.ownerSends.map((send) => send.text)).toEqual([
-      expect.stringContaining(`确认 ${code} 已超时`),
+      expect.stringContaining("确认已超时"),
     ]);
     expect(promptOf(code)).toMatchObject({
       phase: "expired",
@@ -236,7 +238,7 @@ describe("decision prompts through the router", () => {
     await settle(() => current!.ownerSends.length > 0);
     await reachedIm(d.code());
     expect(current!.ownerSends).toHaveLength(1);
-    expect(current!.ownerSends[0]!.text).toContain(`回答 ${d.code()} 1`);
+    expect(current!.ownerSends[0]!.text).toContain("只允许这一次吗？直接回我就行。");
     expect(promptOf(d.code())).toMatchObject({
       phase: "im",
       channel: "wechat",
@@ -319,7 +321,9 @@ describe("decision prompts through the router", () => {
     current.pending.push(held!);
     current.setWorkerState("active");
     current.emitProjection({ kind: "reset", version: 4, generation: 1, observedAt: env.clock });
-    expect(await d.relay.reply({ message: "1", origin: OWNER_DM })).toContain("单独的编号");
+    expect(await d.relay.reply({ message: `回答 ${code} 9`, origin: OWNER_DM })).toContain(
+      "请回复选项",
+    );
     env.clock = raisedAt + 10 * 60_000;
     await d.relay.scan();
     await settle(() => current!.ownerSends.length > 1);
@@ -459,7 +463,7 @@ describe("decision prompts through the router", () => {
       phase: "im",
       channel: "wechat",
     });
-    expect(await d.relay.reply({ message: "1", origin: OWNER_DM })).toContain("单独的编号");
+    expect(await d.relay.reply({ message: "1", origin: OWNER_DM })).toContain("已处理");
   });
 
   test("the prompt's deadline timer denies it and tells the chat it went to", async () => {
@@ -518,7 +522,7 @@ describe("decision prompts through the router", () => {
     await settle();
     await d.poll(() => current!.ownerSends.length > 0);
     expect(current.ownerSends).toHaveLength(1);
-    expect(current.ownerSends[0]!.text).toContain(`回答 ${d.code()}`);
+    expect(current.ownerSends[0]!.text).toContain("只允许这一次吗？直接回我就行。");
   });
 
   test("a missed snapshot never makes a queued prompt stale; a live one without it does", async () => {

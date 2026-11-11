@@ -7,8 +7,6 @@ export interface NoticeFacts {
   error?: string;
   question?: string;
   options?: NoticeDraftOption[];
-  /** Reply code for answering a blocked decision over IM (PetImDecisions supplies it). */
-  code?: string;
   /**
    * Text for an owner target that is not a confirmed private chat: no
    * question, options or code. Without it the notice has nothing private.
@@ -30,7 +28,6 @@ const MAX_ERROR = 300;
 const MAX_QUESTION = 400;
 const MAX_OPTION = 120;
 const MAX_OPTIONS = 10;
-const MAX_CODE = 16;
 const UNTITLED = "一个会话";
 
 /** Bidi overrides / isolates, zero-width characters and line/paragraph separators. */
@@ -79,15 +76,6 @@ function blockedBody(facts: NoticeFacts): string {
     const label = line(option?.label, MAX_OPTION);
     if (label) lines.push(`${index + 1}. ${label}${option.recommended ? "（推荐）" : ""}`);
   });
-  const code = line(facts.code, MAX_CODE);
-  if (code) {
-    // PetImDecisions' reply grammar: "回答 <code> <answer>"; 拒绝 declines or skips.
-    lines.push(
-      options.length > 0
-        ? `回复：回答 ${code} 序号 / 回答 ${code} 拒绝`
-        : `回复：回答 ${code} 你的答复 / 回答 ${code} 拒绝`,
-    );
-  }
   return lines.join("\n");
 }
 
