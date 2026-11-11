@@ -147,16 +147,28 @@ describe("tool-cache cycle identity", () => {
 
 describe("tool cache compaction boundaries", () => {
   test.each(["summary", "snip", "window", "emergency", "notes", "range"])(
-    "%s starts a new cycle only after context actually shrinks",
+    "%s honors explicit history replacement and falls back to token progress",
     (strategy) => {
       expect(isToolCacheCompaction({ strategy, before: 1_000, after: 500 })).toBe(true);
       expect(isToolCacheCompaction({ strategy, before: 1_000, after: 1_000 })).toBe(false);
       expect(isToolCacheCompaction({ strategy, before: 1_000, after: 1_100 })).toBe(false);
+      expect(
+        isToolCacheCompaction({ strategy, before: 1_000, after: 1_000, historyChanged: true }),
+      ).toBe(true);
+      expect(
+        isToolCacheCompaction({ strategy, before: 1_000, after: 1_100, historyChanged: true }),
+      ).toBe(true);
+      expect(
+        isToolCacheCompaction({ strategy, before: 1_000, after: 500, historyChanged: false }),
+      ).toBe(false);
     },
   );
 
   test("microcompaction preserves the current cycle even when it clears ordinary results", () => {
     expect(isToolCacheCompaction({ strategy: "micro", before: 1_000, after: 500 })).toBe(false);
+    expect(
+      isToolCacheCompaction({ strategy: "micro", before: 1_000, after: 500, historyChanged: true }),
+    ).toBe(false);
   });
 });
 
@@ -292,3 +304,77 @@ describe("run surface persistence compatibility", () => {
     });
   });
 });
+
+test("cached summary replacement rebases discovered schemas even when tokens grow", async () => {
+  const { ContextManager } = await import("../context/manager.js");
+  const { estimateTokens } = await import("../context/compaction.js");
+  const messages = [
+    { role: "user" as const, content: "Initial request" },
+    {
+      role: "assistant" as const,
+      content: [
+        {
+          type: "tool_use" as const,
+          id: "discover",
+          name: "ToolSearch",
+          input: { query: "select:Deferred" },
+        },
+      ],
+    },
+    {
+      role: "user" as const,
+      content: [
+        {
+          type: "tool_result" as const,
+          tool_use_id: "discover",
+          content: JSON.stringify(definition("Deferred")),
+        },
+      ],
+    },
+    { role: "assistant" as const, content: "Earlier context" },
+    ...Array.from({ length: 8 }, (_, index) => ({
+      role: index % 2 ? ("assistant" as const) : ("user" as const),
+      content: "Recent context remains. ".repeat(220),
+    })),
+  ];
+  const manager = new ContextManager({ maxTokens: Math.ceil(estimateTokens(messages) / 0.86) });
+  manager.setSummarizeFn(async () => "Cached earlier decisions. ".repeat(40));
+  await manager.summarizeRange(
+    [{ role: "user", content: "Earlier lengthy history. ".repeat(400) }],
+    { start: 0, end: 1 },
+  );
+  const surface = new RunToolSurface(["ToolSearch", "Frozen"]);
+  surface.updateCatalog(catalog());
+  surface.select(["Deferred"]);
+  const events: Array<{ strategy: string; before: number; after: number }> = [];
+  manager.setOnCompact((event) => {
+    events.push(event);
+    if (isToolCacheCompaction(event)) surface.rebase();
+  });
+  const managed = manager.manage(messages);
+  expect(events.map((event) => event.strategy)).toEqual(["summary"]);
+  expect(events[0]!.after).toBeGreaterThan(events[0]!.before);
+  expect(JSON.stringify(managed)).not.toContain('"tool_use_id":"discover"');
+  expect(surface.snapshot().map((tool) => tool.name)).toContain("Deferred");
+  expect(surface.getSelection().discovered).toEqual([]);
+});
+
+test.each(["manage", "manageAsync", "forceSummarize"] as const)(
+  "%s does not rebase when every destructive tier leaves history intact",
+  async (method) => {
+    const { ContextManager } = await import("../context/manager.js");
+    const manager = new ContextManager({ maxTokens: 10 });
+    const messages = [
+      { role: "user" as const, content: "An oversized initial request. ".repeat(20) },
+      { role: "assistant" as const, content: "A recent answer that must remain. ".repeat(20) },
+    ];
+    const events: Array<{ historyChanged?: boolean }> = [];
+    manager.setOnCompact((event) => {
+      events.push(event);
+      expect(isToolCacheCompaction(event)).toBe(false);
+    });
+    expect(await manager[method](messages)).toEqual(messages);
+    expect(events.length).toBeGreaterThan(0);
+    expect(events.every((event) => event.historyChanged === false)).toBe(true);
+  },
+);
