@@ -1,15 +1,17 @@
 import { createHash, randomUUID } from "node:crypto";
 import {
   chmodSync,
+  constants,
   existsSync,
   lstatSync,
   mkdirSync,
   readFileSync,
   readdirSync,
   renameSync,
-  rmSync,
+  promises as fs,
   unlinkSync,
   writeFileSync,
+  type Stats,
 } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { deriveModelTraceCallType, isModelTraceCallType } from "./classification.js";
@@ -35,6 +37,12 @@ export const DEFAULT_MODEL_TRACE_CONFIG: Readonly<ModelTraceConfig> = Object.fre
 const MAX_RECORD_BYTES = 4 * 1024 * 1024;
 const MAX_SUMMARY_BYTES = 32 * 1024;
 const key = (id: string) => createHash("sha256").update(id).digest("hex");
+const retentionDays = (saved: any): number =>
+  Number.isSafeInteger(saved?.retentionDays) &&
+  saved.retentionDays >= 1 &&
+  saved.retentionDays <= 365
+    ? saved.retentionDays
+    : DEFAULT_MODEL_TRACE_CONFIG.retentionDays;
 const statuses = new Set(["running", "completed", "failed", "cancelled"]);
 
 function readJson(file: string, maxBytes: number): any {
@@ -96,12 +104,7 @@ export class ModelTraceStore {
         currentDefaults && typeof saved?.includeEphemeral === "boolean"
           ? saved.includeEphemeral
           : true,
-      retentionDays:
-        Number.isSafeInteger(saved?.retentionDays) &&
-        saved.retentionDays >= 1 &&
-        saved.retentionDays <= 365
-          ? saved.retentionDays
-          : 7,
+      retentionDays: retentionDays(saved),
     };
   }
   setConfig(patch: ModelTraceConfigPatch): ModelTraceConfig {
@@ -591,16 +594,16 @@ export class ModelTraceStore {
     }
     if (!force && Date.now() - this.lastPruned < 60_000) return;
     this.lastPruned = Date.now();
-    // Retention is observational work, never part of accepting a model request.
-    // In particular, do not synchronously open every historical tool result on
-    // the first write of a turn. Keep each callback bounded so Main can process
-    // input, Stop and other windows between batches.
+    // Scheduling synchronous scans in setImmediate still saturates Electron's
+    // main thread. Scan/read asynchronously with only one file in flight,
+    // independently of request admission. Only an expired file's final checked
+    // deletion is synchronous, so a same-process writer cannot interleave there.
     const candidates = this.retentionCandidates();
     this.maintenance = new Promise<void>((resolveDone) => {
       const queueStep = () => {
         this.maintenanceWake = setImmediate(() => {
           this.maintenanceWake = undefined;
-          step();
+          void step();
         });
         if (!this.maintenanceWaiters) this.maintenanceWake.unref?.();
       };
@@ -612,26 +615,25 @@ export class ModelTraceStore {
           this.prune(true);
         }
       };
-      const step = () => {
-        const until = performance.now() + 4;
-        // Re-read the policy between batches: extending retention must also
-        // protect records that a previously queued cleanup has not visited yet.
-        const cutoff = Date.now() - this.getConfig().retentionDays * 86_400_000;
+      const step = async () => {
         try {
+          const policy = await this.readRetentionJson(join(this.storageDir, "config.json"), 4096);
+          const cutoff = Date.now() - retentionDays(policy?.value) * 86_400_000;
           for (let count = 0; count < 8; count++) {
-            const next = candidates.next();
+            const next = await candidates.next();
             if (next.done) return finish();
-            const { file, startedAt } = next.value;
+            const { file, startedAt, info, directory } = next.value;
             try {
-              if (file && this.directorySafe(dirname(file))) {
-                const info = lstatSync(file);
+              if (directory && (await this.directorySafeAsync(directory))) {
+                // Never recurse: a concurrent writer makes rmdir fail harmlessly.
+                await fs.rmdir(directory);
+              } else if (file && info) {
                 const time = Number.isFinite(startedAt) ? startedAt! : info.mtimeMs;
-                if (info.isFile() && !info.isSymbolicLink() && time < cutoff) rmSync(file);
+                if (time < cutoff) this.removeExpired(file, info, time);
               }
             } catch {
               /* A writer or another process may replace/prune a record. */
             }
-            if (performance.now() >= until) break;
           }
           queueStep();
         } catch {
@@ -644,41 +646,147 @@ export class ModelTraceStore {
     });
   }
 
-  private *retentionCandidates(): Generator<{ file?: string; startedAt?: number }> {
-    const startedByName = new Map<string, number>();
-    for (const name of this.files("summaries")) {
+  private async directorySafeAsync(directory: string): Promise<boolean> {
+    const suffix = relative(this.storageDir, directory);
+    if (isAbsolute(suffix) || suffix === ".." || suffix.startsWith(`..${sep}`)) return false;
+    let current = this.storageDir;
+    try {
+      for (const segment of ["", ...suffix.split(sep).filter(Boolean)]) {
+        if (segment) current = join(current, segment);
+        const info = await fs.lstat(current);
+        if (info.isSymbolicLink() || !info.isDirectory()) return false;
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private async retentionEntries(directory: string): Promise<string[]> {
+    try {
+      return (await this.directorySafeAsync(directory)) ? await fs.readdir(directory) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private async readRetentionJson(
+    file: string,
+    maxBytes: number,
+  ): Promise<{ value: any; info: Stats } | null> {
+    if (!(await this.directorySafeAsync(dirname(file)))) return null;
+    let handle: Awaited<ReturnType<typeof fs.open>> | undefined;
+    try {
+      const before = await fs.lstat(file);
+      if (!before.isFile() || before.isSymbolicLink()) return null;
+      if (before.size > maxBytes) return { value: null, info: before };
+      // Do not follow a replaced leaf symlink or block on a special file. Read
+      // through the validated handle with a fixed bound, even if a writer grows it.
+      handle = await fs.open(
+        file,
+        constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0),
+      );
+      const info = await handle.stat();
+      if (
+        !info.isFile() ||
+        info.size > maxBytes ||
+        info.dev !== before.dev ||
+        info.ino !== before.ino
+      )
+        return null;
+      if (!(await this.directorySafeAsync(dirname(file)))) return null;
+      const bytes = Buffer.alloc(info.size + 1);
+      let length = 0;
+      while (length < bytes.length) {
+        const { bytesRead } = await handle.read(bytes, length, bytes.length - length, length);
+        if (!bytesRead) break;
+        length += bytesRead;
+      }
+      if (length > info.size) return null;
+      let value: any = null;
+      try {
+        value = JSON.parse(bytes.subarray(0, length).toString("utf8"));
+      } catch {
+        /* Corrupt summaries/bodies retain the existing mtime fallback. */
+      }
+      return { value, info };
+    } catch {
+      return null;
+    } finally {
+      await handle?.close().catch(() => {});
+    }
+  }
+
+  private removeExpired(file: string, original: Stats, startedAt: number): void {
+    // Commit one deletion in the same JS turn as its final validation. An async
+    // unlink can run after a writer replaces the checked file or extends policy.
+    // These bounded checks run only for expired candidates; the historical scan
+    // and content reads remain asynchronous, yielding before the next candidate.
+    if (startedAt >= Date.now() - this.getConfig().retentionDays * 86_400_000) return;
+    if (!this.directorySafe(dirname(file))) return;
+    const current = lstatSync(file);
+    if (
+      current.isFile() &&
+      !current.isSymbolicLink() &&
+      current.dev === original.dev &&
+      current.ino === original.ino &&
+      current.mtimeMs === original.mtimeMs &&
+      current.size === original.size
+    )
+      unlinkSync(file);
+  }
+
+  private async *retentionCandidates(): AsyncGenerator<{
+    file?: string;
+    startedAt?: number;
+    info?: Stats;
+    directory?: string;
+  }> {
+    const startedByName = new Map<string, { startedAt: number; mtimeMs: number }>();
+    for (const name of await this.retentionEntries(join(this.storageDir, "summaries"))) {
+      if (!/^[a-f0-9]{64}\.json$/.test(name)) continue;
       const file = join(this.storageDir, "summaries", name);
-      const row = readJson(file, MAX_SUMMARY_BYTES);
-      if (Number.isFinite(row?.startedAt)) startedByName.set(name, row.startedAt);
-      yield { file, startedAt: row?.startedAt };
+      const row = await this.readRetentionJson(file, MAX_SUMMARY_BYTES);
+      if (!row) continue;
+      if (Number.isFinite(row.value?.startedAt))
+        startedByName.set(name, { startedAt: row.value.startedAt, mtimeMs: row.info.mtimeMs });
+      yield { file, startedAt: row.value?.startedAt, info: row.info };
     }
     // A crash between atomic writes can leave a body without its summary. Inspect
-    // orphan bodies independently, while normal retention only reads small summaries.
-    for (const name of this.files("records")) {
+    // orphan or newly replaced bodies independently; normal retention only reads
+    // small summaries and stats the corresponding immutable body.
+    for (const name of await this.retentionEntries(join(this.storageDir, "records"))) {
+      if (!/^[a-f0-9]{64}\.json$/.test(name)) continue;
       const file = join(this.storageDir, "records", name);
-      let startedAt = startedByName.get(name);
-      if (startedAt === undefined) {
-        const row = readJson(file, MAX_RECORD_BYTES);
-        startedAt = row?.startedAt;
-      }
-      yield { file, startedAt };
-    }
-    try {
-      if (!this.directorySafe(join(this.storageDir, "events"))) return;
-      for (const directory of readdirSync(join(this.storageDir, "events"))) {
-        // Empty/invalid directories and unreadable records still consume work.
-        // Yield for them too, otherwise corruption bypasses the batch budget.
-        yield {};
-        if (!/^[a-f0-9]{64}$/.test(directory)) continue;
-        for (const name of this.files(join("events", directory))) {
-          const file = join(this.storageDir, "events", directory, name);
-          const event = readJson(file, MAX_RECORD_BYTES);
-          if (event) yield { file, startedAt: event.startedAt };
-          else yield {};
+      try {
+        if (!(await this.directorySafeAsync(dirname(file)))) continue;
+        let info = await fs.lstat(file);
+        if (!info.isFile() || info.isSymbolicLink()) continue;
+        const cached = startedByName.get(name);
+        let startedAt = cached?.startedAt;
+        if (!cached || info.mtimeMs >= cached.mtimeMs) {
+          const row = await this.readRetentionJson(file, MAX_RECORD_BYTES);
+          if (!row) continue;
+          startedAt = row.value?.startedAt;
+          info = row.info;
         }
+        yield { file, startedAt, info };
+      } catch {
+        /* The record may have been replaced or pruned. */
       }
-    } catch {
-      /* The store may not contain events yet. */
+    }
+    for (const name of await this.retentionEntries(join(this.storageDir, "events"))) {
+      if (!/^[a-f0-9]{64}$/.test(name)) continue;
+      const directory = join(this.storageDir, "events", name);
+      for (const name of await this.retentionEntries(directory)) {
+        if (!/^[a-f0-9]{64}\.json$/.test(name)) continue;
+        const file = join(directory, name);
+        const event = await this.readRetentionJson(file, MAX_RECORD_BYTES);
+        // Preserve unreadable/corrupt event bytes as before. Each attempted read
+        // awaits actual I/O, so corruption cannot turn this into a synchronous scan.
+        if (event?.value) yield { file, startedAt: event.value.startedAt, info: event.info };
+      }
+      yield { directory };
     }
   }
 }
