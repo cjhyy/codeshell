@@ -640,6 +640,17 @@ describe("Mimi's tools in an external Session", () => {
     }
   });
 
+  test("plan mode has neither the tools nor the guidance (native plan mode blocks them)", async () => {
+    await svc.start({ kind: "codex", sessionId: "s-codex-plan", cwd, planMode: true });
+    expect(lastStart!.mimiHost).toBe(false);
+    for (const tool of ["NotifyMe", "ReportToMimi"]) {
+      expect(lastStart!.exposure!.toolNames.has(tool)).toBe(false);
+      expect(lastStart!.registry.getTool(tool)).toBeUndefined();
+      expect(lastStart!.presetRules).not.toContainEqual({ tool, decision: "allow" });
+    }
+    expect(lastStart!.developerInstructions).not.toContain("NotifyMe");
+  });
+
   test("NotifyMe saves the rule for this Session; the turn that only did that is idle", async () => {
     current = noticeHarness();
     const outcomes: SessionOutcome[] = [];

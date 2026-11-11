@@ -979,7 +979,11 @@ export class ExternalRuntimeService {
     // with the reviewed exposure policy and the current capability settings;
     // registration alone never grants external access.
     const registry = new ToolRegistry({ toolCatalog: [...BUILTIN_TOOLS, ...CODING_TOOLS] });
-    const mimiHost = this.areHostToolsEnabled() ? this.deps.mimiTools?.() : undefined;
+    // Plan mode blocks them (not in PLAN_MODE_ALLOWED_TOOLS), so neither tools nor guidance.
+    // Known limitation: read once per start, so a runtime started before Main's
+    // notice wiring exists has no NotifyMe until it restarts.
+    const mimiHost =
+      this.areHostToolsEnabled() && !request.planMode ? this.deps.mimiTools?.() : undefined;
     const mimiTools = mimiHost
       ? registerExternalMimiTools(registry, {
           sessionId: request.sessionId,
