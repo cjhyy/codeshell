@@ -6,12 +6,14 @@ import { textLine } from "./pet-notice-task-closure.js";
 import { parseNoticeMedia, type NoticeMedia, type NoticeSubmission } from "./pet-notice-types.js";
 
 /**
- * A Session's explicit progress report (ReportToMimi), told to whoever waits
- * for that Session. Mimi's report turn still composes the update for an
- * IM-started task's origin (its validated GatewayReply draft); this module
- * only decides who gets it, through the delivery plan, and hands each
- * message to the notice router as a `session.report` (P1): quiet hours, the
- * hourly cap and the merge window apply, and held reports go to the digest.
+ * A Session's explicit progress report (ReportToMimi), told to the IM
+ * conversations that asked about that Session: an IM-started task's origin
+ * (Mimi's report turn still composes that update, its validated GatewayReply
+ * draft) and each conversation a WatchSession rule addresses (templated).
+ * The owner's own rules and bound conversations hear nothing extra (see
+ * `buildReportPlan`). Each message is a `session.report` (P1) for the notice
+ * router: quiet hours, the hourly cap and the merge window apply, and held
+ * reports go to the digest.
  */
 
 const MAX_TITLE = 200;
@@ -34,7 +36,7 @@ export interface SessionReportDelivery {
 
 export interface PetSessionReportNoticeDeps {
   deliveries: Pick<PetDeliveryResolver, "planReport">;
-  /** Hand one notice to the router; rejects when it could not be routed. */
+  /** Hand one notice to the router; rejects when it could not be routed (a `disposed` decision throws here). */
   submit(notice: NoticeSubmission): Promise<RouteDecision>;
   sessionTitle(sessionId: string): string | undefined;
   /** Mimi's own Sessions and tailed CLI rollouts are never watched by rules. */
@@ -69,7 +71,7 @@ export function createSessionReportNotices(
     for (const entry of plan.entries) {
       // Mimi wrote the update for the task's origin; everyone else gets the template.
       const mimi = entry.composeBy === "mimi-closure" && composedText ? composedText : undefined;
-      await deps.submit({
+      const decision = await deps.submit({
         kind: "session.report",
         priority: "P1",
         dedupeKey: `report:${report.reportId}:${conversationDigest(entry.key)}`,
@@ -83,6 +85,9 @@ export function createSessionReportNotices(
         ...(mimi ? { body: mimi } : {}),
         ...(mimi && media ? { media } : {}),
       });
+      // Not delivered (shutting down): the caller keeps the report for a retry,
+      // whose per-conversation dedupe keys skip what already went out.
+      if (decision.reason === "disposed") throw new Error("提醒通道已关闭，汇报未送出");
     }
     return plan.entries.length;
   };

@@ -26,6 +26,28 @@ const DAY = 24 * 60 * 60_000;
 /** 23:30 UTC on the NOW day: inside the default 23:00–08:30 quiet hours (offset 0). */
 const QUIET_NIGHT = Math.floor(NOW / DAY) * DAY + (23 * 60 + 30) * 60_000;
 const LARK_CHAT = { kind: "im-gateway" as const, channel: "lark", target: "chat-9" };
+const WATCHER = {
+  kind: "im-gateway" as const,
+  channel: "lark",
+  target: "chat-3",
+  senderId: "owner-3",
+  isDirectMessage: true,
+};
+
+/** A WatchSession rule for the WATCHER conversation, as the host action arms it. */
+async function watch(h: Harness): Promise<void> {
+  await h.wiring.ruleStore.upsertSessionRule({
+    sessionId: SID,
+    createdBy: "watch-session",
+    events: ["done", "failed", "blocked"],
+    scope: "turn",
+    channel: "lark",
+    attention: "always",
+    target: { kind: "route", route: WATCHER },
+    origin: "user",
+    armedAt: env.clock,
+  });
+}
 
 async function report(
   h: Harness,
@@ -73,46 +95,76 @@ describe("ReportToMimi goes through the delivery plan and the router", () => {
     ]);
   });
 
-  test("a Session with an owner rule tells the owner, from the template", async () => {
+  test("a watching conversation gets the template", async () => {
     current = harness();
-    await current.handler(SID, upsertArgs({ events: ["done", "failed", "blocked"] }));
+    await watch(current);
     expect(await report(current)).toBe(1);
-    expect(current.ownerSends).toEqual([
-      { targetId: "wechat:owner", text: "「修登录」：登录接口改好了，正在跑测试" },
+    expect(current.submitted[0]).toMatchObject({
+      target: { kind: "route", route: WATCHER },
+      channel: "lark",
+      facts: { title: "修登录", summary: "登录接口改好了，正在跑测试" },
+    });
+    expect(current.published).toEqual([
+      expect.objectContaining({
+        text: "「修登录」：登录接口改好了，正在跑测试",
+        target: { channel: "lark", target: "chat-3" },
+      }),
     ]);
+    expect(current.ownerSends).toHaveLength(0);
   });
 
-  test("a rule that only wants failures does not hear progress", async () => {
+  test("a NotifyMe rule gets no milestone: the owner hears the outcome, not progress", async () => {
     current = harness();
-    await current.handler(SID, upsertArgs({ events: ["failed"] }));
+    await current.handler(SID, upsertArgs({ events: ["done", "failed", "blocked"] }));
+    expect(await report(current)).toBe(0);
+    expect(current.outbox.events).toHaveLength(0);
+    expect(current.desktop).toHaveLength(0);
+  });
+
+  test("a desktop-delegated task sends no IM message (nor a desktop one)", async () => {
+    current = harness();
+    const task = longTask({ status: "running" });
+    current.tasks.push(task);
+    await current.wiring.armDelegationRule(task);
+    expect(await report(current, { task })).toBe(0);
+    expect(current.outbox.events).toHaveLength(0);
+    expect(current.desktop).toHaveLength(0);
+  });
+
+  test("a bound conversation gets no extra message (it already has the turn replies)", async () => {
+    current = harness();
+    current.routes.push(boundRoute());
+    await current.handler(SID, upsertArgs());
     expect(await report(current)).toBe(0);
     expect(current.outbox.events).toHaveLength(0);
   });
 
-  test("nobody waiting: the report stays with Mimi", async () => {
+  test("the all-sessions rule does not hear progress", async () => {
     current = harness();
     await current.wiring.ruleStore.setSystemRule("all-sessions", { state: "active" });
     expect(await report(current)).toBe(0);
     expect(current.submitted).toHaveLength(0);
   });
 
-  test("a bound conversation and an auto owner rule are one message there", async () => {
+  test("a watch of the task's own origin is one message there", async () => {
     current = harness();
-    current.routes.push(boundRoute());
-    await current.handler(SID, upsertArgs());
-    expect(await report(current)).toBe(1);
-    expect(current.ownerSends).toHaveLength(0);
-    expect(current.published).toEqual([
-      expect.objectContaining({
-        text: "「修登录」：登录接口改好了，正在跑测试",
-        target: { channel: "wechat", target: "chat-1" },
-      }),
-    ]);
+    const task = longTask({ status: "running", completionTarget: WATCHER });
+    current.tasks.push(task);
+    await watch(current);
+    expect(await report(current, { task, composed: { text: "Mimi 的进展" } })).toBe(1);
+    expect(current.published.map((event) => event.text)).toEqual(["Mimi 的进展"]);
+  });
+
+  test("a router that stopped taking notices is no delivery", async () => {
+    current = harness();
+    await watch(current);
+    current.wiring.router.dispose();
+    await expect(report(current)).rejects.toThrow("汇报未送出");
   });
 
   test("quiet hours hold a report for the digest", async () => {
     current = harness();
-    await current.handler(SID, upsertArgs());
+    await watch(current);
     env.clock = QUIET_NIGHT;
     await report(current);
     expect(current.outbox.events).toHaveLength(0);
@@ -125,7 +177,7 @@ describe("ReportToMimi goes through the delivery plan and the router", () => {
 
   test("a report does not hold back the Session's result (no merge window)", async () => {
     current = harness();
-    await current.handler(SID, upsertArgs());
+    await watch(current);
     await report(current);
     const decision = await current.wiring.submitNotice({
       kind: "session.done",
