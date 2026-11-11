@@ -205,6 +205,11 @@ jobs:
               --path-ignore-patterns '**/src/main/pet/pet-session-rule-watcher.test.ts'
               --path-ignore-patterns '**/src/main/pet/session-outcome.test.ts'
               --path-ignore-patterns '**/src/main/pet/pet-presence.test.ts'
+              --path-ignore-patterns '**/renderer/pet/settings/**'
+              --path-ignore-patterns '**/renderer/pet/PetSettingsPage.test.tsx'
+              --path-ignore-patterns '**/renderer/credentials/CredentialsPage.test.tsx'
+              --path-ignore-patterns '**/src/main/pet/pet-widget-menu.test.ts'
+              --path-ignore-patterns '**/src/shared/mimi-companion.test.ts'
           # rest is split in two only for wall time (470s as one shard). Together the two
           # path lists are the previous single list. The module losses seen when it was split
           # were not size: two suites bundled with an in-process Bun.build, which shares the
@@ -307,6 +312,11 @@ jobs:
       - name: test Desktop application state hooks
         if: matrix.shard == 'desktop'
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 --path-ignore-patterns '**/useMimiPresence.test.tsx' packages/desktop/src/renderer/app
+      # The Mimi settings page (shell, sections, credentials pointer) and Mimi's menus
+      # run as one bounded process; the general Desktop shard is at its budget.
+      - name: test Desktop Mimi settings
+        if: matrix.shard == 'desktop'
+        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/pet/settings packages/desktop/src/renderer/pet/PetSettingsPage.test.tsx packages/desktop/src/renderer/credentials/CredentialsPage.test.tsx packages/desktop/src/main/pet/pet-widget-menu.test.ts packages/desktop/src/shared/mimi-companion.test.ts
       - name: test Desktop account feature entries
         if: matrix.shard == 'desktop'
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/account-features.test.ts packages/desktop/src/renderer/account
