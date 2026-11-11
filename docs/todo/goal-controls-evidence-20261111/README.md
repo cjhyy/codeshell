@@ -1,5 +1,7 @@
 # Goal follow-up controlled evidence
 
+[delivery-refresh3-validation.txt](delivery-refresh3-validation.txt) records main `5162a5a4b` merged mechanically into `98b051b0d`, passing package/typecheck/Desktop/lint/guard checks and **489/489 tests across 37 files** around Goal/native-discovery/cache boundaries. Two read-only integration reviews found no combination blocker. Previous candidate `2bf3a2e13` reached all 14 required CI successes after exactly one actual unchanged Electron-job rerun; both earlier first failures remain recorded and no blind retry allowance resets for the new head.
+
 [delivery-refresh2-validation.txt](delivery-refresh2-validation.txt) records main `7c2ae0c24` merged into `e86fc4d22`, all refreshed build/guard checks, **424/424 tests across 24 files**, AskUser Chromium (32 layouts) and **10 Goal-reply Chromium checks**. It also preserves the previous candidate’s first cost-history CI failure and the unexecuted/rejected rerun request; a new full eligible CI run is required, with no reset of the same-failure retry limit.
 
 [delivery-refresh-validation.txt](delivery-refresh-validation.txt) records the later merge of main `935f3fe9b` into `65c5949ad`, the passing package/typecheck/Desktop/lint/guard checks and 152 additional combination tests. The previous candidate `e296780cc` received all 14 required real PR CI checks in run 43000586450, attempt 1; those checks are not substituted for the refreshed candidate.

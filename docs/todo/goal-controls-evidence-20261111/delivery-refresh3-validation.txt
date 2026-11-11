@@ -1,0 +1,104 @@
+Third latest-main delivery refresh — 2026-11-11
+Source merge HEAD: 98b051b0d95b2b4af7a221b1b1bf9839b5e8a0f0
+Fetched origin/main: 5162a5a4ba1f3f105b27e895119a64e166e5cf25 (PR #351)
+Normal conflict-free merge; turn-loop.ts merged mechanically, no task logic/test change.
+Only task/main path intersection: turn-loop.ts; task budget branch and upstream prefix/catalog changes are separate.
+Node v24.22.1 / Bun 1.3.11; command-local installed-runtime PATH and caffeinate -i.
+Package-release completed before all dist readers. No live/paid native-discovery probe was run.
+
+ $ bun run test:package-release
+exit=0
+Package release smoke passed: 10 tarballs, 55 typed entries; 53 runtime imports.
+
+$ bun run typecheck
+exit=0; elapsedMs=53479
+@cjhyy/code-shell-web typecheck: Exited with code 0
+@cjhyy/code-shell-server typecheck: Exited with code 0
+@cjhyy/code-shell-tui typecheck: Exited with code 0
+@cjhyy/code-shell-desktop typecheck: Exited with code 0
+
+$ bun run --cwd packages/desktop build
+exit=0; elapsedMs=27115
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 16.96s
+[build] main, preload, renderer, mobile, and Chrome extension OK
+
+$ bun run lint
+exit=0; elapsedMs=36165
+  20:3  warning  'writeFileSync' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+✖ 90 problems (0 errors, 90 warnings)
+
+
+$ bun run lint:engine-bypass
+exit=0; elapsedMs=906
+$ bash scripts/check-no-engine-bypass.sh
+OK: 'new Engine(' is confined to the protocol layer.
+
+$ bun run lint:test-shards
+exit=0; elapsedMs=1122
+    1 / 60   tests: test Puppeteer driver integration
+    1 / 60   tests: test browser inspector integration
+
+✓ 2581 test files covered; largest process 769 files
+
+$ node scripts/run-bun-test-shard.mjs --timeout 30000 tests/engine-goal-startup-controls.test.ts packages/core/src/engine/run-goal.test.ts packages/core/src/engine/run-finalize.test.ts packages/core/src/engine/run-state-persistence.test.ts packages/core/src/engine/model-facade-cache-lifecycle.test.ts packages/core/src/engine/engine.auto-compaction-goal.test.ts packages/core/src/engine/engine.native-tool-reference.test.ts packages/core/src/engine/turn-loop-goal-lifecycle.test.ts
+exit=0; elapsedMs=31125
+(pass) Engine persisted goal lifecycle > confirmed cancel_goal clears state.activeGoal so the next bare send cannot inherit it [253.17ms]
+
+ 109 pass
+ 0 fail
+ 755 expect() calls
+Ran 109 tests across 8 files. [31.04s]
+Completed Bun shard: 109 tests, 0 skipped; 0 failures.
+
+$ node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/engine/tool-cache-cycle.test.ts packages/core/src/engine/turn-loop-behavior-rebase.test.ts packages/core/src/engine/run-setup.test.ts packages/core/src/engine/engine.context-notes.test.ts packages/core/src/engine/turn-loop-context-notes.test.ts packages/core/src/engine/engine.append-only-tools.test.ts packages/core/src/engine/engine.tool-selection-resume.test.ts packages/core/src/engine/run-tooling.deferred.test.ts
+exit=0; elapsedMs=29511
+(pass) Run-local progressive tool surface > eager compatibility and late tool discovery do not change registry ownership [20.44ms]
+
+ 100 pass
+ 0 fail
+ 994 expect() calls
+Ran 100 tests across 8 files. [29.45s]
+Completed Bun shard: 100 tests, 0 skipped; 0 failures.
+
+$ node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/llm/providers/anthropic-native-discovery.test.ts packages/core/src/llm/providers/openai-tool-discovery-fallback.test.ts packages/core/src/llm/native-tool-discovery.test.ts packages/core/src/prompt/composer-frozen-behavior.test.ts packages/core/src/prompt/composer-tool-listing.test.ts packages/core/src/session/transcript-tool-discovery.test.ts packages/core/src/context/tool-schema-results.test.ts packages/core/src/tool-system/executor-discovery-context.test.ts
+exit=0; elapsedMs=737
+(pass) a deferred wire declaration grants no execution until discovery and still obeys revocation [14.52ms]
+
+ 45 pass
+ 0 fail
+ 339 expect() calls
+Ran 45 tests across 8 files. [682.00ms]
+Completed Bun shard: 45 tests, 0 skipped; 0 failures.
+
+$ node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/tool-system/run-tool-surface.test.ts packages/core/src/tool-system/builtin/tool-search.test.ts packages/core/src/tool-system/builtin/tool-search-budget.test.ts packages/core/src/utils/tool-schema-discovery.test.ts packages/core/src/llm/prompt-cache.test.ts packages/core/src/llm/capabilities/config.test.ts packages/core/src/version.test.ts
+exit=0; elapsedMs=524
+(pass) public VERSION > matches package.json version [1.46ms]
+
+ 127 pass
+ 0 fail
+ 1011 expect() calls
+Ran 127 tests across 7 files. [467.00ms]
+Completed Bun shard: 127 tests, 0 skipped; 0 failures.
+
+$ node scripts/run-bun-test-shard.mjs --timeout 30000 tests/sdk-legacy-ask-user.test.ts packages/core/src/engine/turn-loop-call-tool-goal.test.ts packages/core/src/engine/run-background-policy.test.ts packages/core/src/protocol/server.user-decision-lifecycle.test.ts tests/publish-release-packages.test.ts packages/desktop/scripts/production-dependencies.test.ts
+exit=0; elapsedMs=8798
+(pass) frozen installation supplies the matching lock and restores runtime exports on failure [40.06ms]
+
+ 108 pass
+ 0 fail
+ 647 expect() calls
+Ran 108 tests across 6 files. [8.74s]
+Completed Bun shard: 108 tests, 0 skipped; 0 failures.
+
+Five guarded groups: 489 pass / 0 fail / 0 skip across 37 files, each invocation 6–8 explicit files.
+Narrow independent read-only integration reviews PASS: all async startup preparation remains before authoritative resolveRunGoal; no new await is inserted after resolution before loop wiring. Primary successful responses stamp only the tool cache; held/budget-blocked/auxiliary paths do not stamp it. Owned persistence fields exclude Goal lifecycle. The mechanical merge retains the task budget branch and all upstream prefix logic. Deferred/behavior catalogs do not grant execution authority; executor late policy checks and Goal same-version terminal fences remain.
+No additional task source/test design changes; no CI workflow, package dependency, lockfile, budget or skip change versus latest main.
+
+Previous candidate2bf3a2e136a1a622c36416376fa471e551657155 real PR CI run43011314018: attempt1 13SUCCESS /1ElectronFAILURE, Desktop UI SUCCESS36m15s. The new failure was browser video recording region visibility timeout30000ms; three source waits use the locator, so exact phase/root cause are unproven. Current-main and earlier-candidate same-blob real CI controls passed. Video failure PNG/text were not uploaded; no recovery of those artifacts is claimed.
+Exactly one actual unchanged Electron job rerun was executed: attempt2/job130508507809 SUCCESS9m33s, all14requiredcontexts SUCCESS; other13results were carried forward from original execution. CostGUI passed12:05:48Z; video recording step passed12:08:04Z–12:08:10Z. Original logs and failed attempts remain preserved. No further blind rerun allowance remains for later heads.
+Earlier candidate da03216a7 run43005880567 retains its separate cost-history first failure. It did not receive an actual rerun (the API request was rejected); the next necessary candidate CI naturally passed that fixture. Exact causes for both CI timing-failure hypotheses remain unproven.
+At final pre-merge verification, main advanced to5162a5a4b, so prior14green cannot replace fresh eligible CI on this latest combination. Run/head/check/merge results are recorded in PR#350 and the delivery evidence archive.
+The historical full-local CI failure, two deferred L items, and physical Goal Electron/production-worker/mobile E2E limits remain unchanged.
