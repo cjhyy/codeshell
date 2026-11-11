@@ -6,7 +6,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { CodexRuntime, type CodexRuntimeOptions } from "./runtime.js";
+import { CodexRuntime, type CodexRuntimeHooks, type CodexRuntimeOptions } from "./runtime.js";
 import type { StreamEvent } from "@cjhyy/code-shell-core/extension";
 import type { McpBridgeHandle } from "../shared/mcp-bridge.js";
 
@@ -384,6 +384,98 @@ setOnLine((m) => {
       runtime as unknown as { client: { request(m: string): Promise<unknown> } }
     ).client.request("collect")) as { decision?: string };
     expect(collected.decision).toBe("accept");
+  });
+
+  /** One server request answered by `hook`; returns what the fake received back. */
+  async function nativeApprovalProbe(
+    script: string,
+    hook: CodexRuntimeHooks["onNativeApproval"],
+  ): Promise<unknown> {
+    const file = fakeServerScript(`
+      let answer = null;
+      setOnLine((m) => {
+        if (m.method === "initialize") return send({ id: m.id, result: {} });
+        if (m.method === "thread/start") {
+          send({ id: m.id, result: { thread: { id: "t" } } });
+          ${script}
+          return;
+        }
+        if (m.method === "collect") return send({ id: m.id, result: { answer } });
+        if (m.id === 900 && m.result) answer = m.result;
+      });
+    `);
+    const runtime = new CodexRuntime(
+      {
+        cwd: process.cwd(),
+        businessSessionId: "sess-native",
+        bridge,
+        client: { command: process.execPath, args: [file] },
+      },
+      { onNativeApproval: hook },
+    );
+    runtimes.push(runtime);
+    await runtime.start();
+    await Bun.sleep(250);
+    return (
+      (await (
+        runtime as unknown as { client: { request(m: string): Promise<unknown> } }
+      ).client.request("collect")) as { answer?: unknown }
+    ).answer;
+  }
+
+  const permissionsRequest = `send({ id: 900, method: "item/permissions/requestApproval", params: {
+    threadId: "t", turnId: "u", itemId: "p1", environmentId: null, startedAtMs: 1, cwd: "/repo",
+    reason: "needs network",
+    permissions: { network: { enabled: true }, fileSystem: null },
+  } });`;
+
+  test("a permissions approval grants exactly the requested profile for this turn", async () => {
+    expect(await nativeApprovalProbe(permissionsRequest, () => "accept")).toEqual({
+      permissions: { network: { enabled: true } },
+      scope: "turn",
+    });
+  });
+
+  test("a declined (or unanswered) permissions approval grants nothing", async () => {
+    expect(await nativeApprovalProbe(permissionsRequest, () => "decline")).toEqual({
+      permissions: {},
+      scope: "turn",
+    });
+    expect(await nativeApprovalProbe(permissionsRequest, undefined)).toEqual({
+      permissions: {},
+      scope: "turn",
+    });
+  });
+
+  test("a file-change approval carries the files its item announced", async () => {
+    const seen: unknown[] = [];
+    const answer = await nativeApprovalProbe(
+      `send({ method: "item/started", params: { threadId: "t", turnId: "u", startedAtMs: 1, item: {
+        type: "fileChange", id: "fc1", status: "inProgress",
+        changes: [{ path: "/repo/a.ts", kind: { type: "update", move_path: null }, diff: "@@" }],
+      } } });
+      send({ method: "item/fileChange/patchUpdated", params: { threadId: "t", turnId: "u", itemId: "fc1",
+        changes: [
+          { path: "/repo/a.ts", kind: { type: "update", move_path: "/repo/b.ts" }, diff: "@@" },
+          { path: "/repo/new.ts", kind: { type: "add" }, diff: "+x" },
+        ] } });
+      send({ id: 900, method: "item/fileChange/requestApproval", params: {
+        threadId: "t", turnId: "u", itemId: "fc1", startedAtMs: 2, reason: null } });`,
+      (request) => {
+        seen.push(request);
+        return "accept";
+      },
+    );
+    expect(answer).toEqual({ decision: "accept" });
+    expect(seen).toEqual([
+      expect.objectContaining({
+        method: "item/fileChange/requestApproval",
+        fileChanges: [
+          { path: "/repo/a.ts", kind: "update", movePath: "/repo/b.ts" },
+          { path: "/repo/new.ts", kind: "add" },
+        ],
+      }),
+    ]);
   });
 
   test("routes request_user_input through the owning host hook", async () => {

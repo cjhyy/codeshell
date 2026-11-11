@@ -69,12 +69,25 @@ export interface CodexTurnHandle {
  */
 export type NativeApprovalDecision = "accept" | "acceptForSession" | "decline" | "cancel";
 
+/** One file a pending Codex patch touches (`FileUpdateChange` without its diff). */
+export interface CodexFileChangeSummary {
+  path: string;
+  /** `add` / `delete` / `update`; an update that moves the file names the new path. */
+  kind: string;
+  movePath?: string;
+}
+
 export interface CodexRuntimeHooks {
   onEvent?: (event: StreamEvent) => void;
   /** Called for Codex's native tool approvals. Defaults to `decline`. */
   onNativeApproval?: (request: {
     method: string;
     params: unknown;
+    /**
+     * `item/fileChange/requestApproval` carries no file list: the files of the
+     * patch under review, as its `fileChange` item announced them.
+     */
+    fileChanges?: CodexFileChangeSummary[];
   }) => Promise<NativeApprovalDecision> | NativeApprovalDecision;
   /** Answer Codex's request_user_input tool through the owning CodeShell UI. */
   onUserInput?: (request: { method: string; params: unknown }) => Promise<unknown> | unknown;
@@ -102,6 +115,47 @@ interface ActiveTurn {
 }
 
 /** Read a turn id from a `turn/started` / `turn/completed` notification. */
+/** Patches remembered for their approval prompt; older ones are dropped first. */
+const MAX_TRACKED_FILE_CHANGES = 64;
+/** Files listed per patch; the rest are only counted on the desktop diff. */
+const MAX_FILE_CHANGES_LISTED = 50;
+
+function objectOf(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+/** `FileUpdateChange[]` → paths and kinds (the diffs stay out of prompts). */
+function summarizeFileChanges(changes: unknown): CodexFileChangeSummary[] | undefined {
+  if (!Array.isArray(changes)) return undefined;
+  return changes.slice(0, MAX_FILE_CHANGES_LISTED).flatMap((change) => {
+    const entry = objectOf(change);
+    if (!entry || typeof entry.path !== "string") return [];
+    const kind = objectOf(entry.kind);
+    const type = typeof kind?.type === "string" ? kind.type : "update";
+    const movePath = typeof kind?.move_path === "string" ? kind.move_path : undefined;
+    return [{ path: entry.path, kind: type, ...(movePath ? { movePath } : {}) }];
+  });
+}
+
+/**
+ * `item/permissions/requestApproval` answers with the permissions granted, not
+ * a decision: exactly the requested profile for this turn on accept, nothing
+ * on anything else.
+ */
+function permissionsResponse(params: unknown, decision: NativeApprovalDecision): unknown {
+  const requested = objectOf(objectOf(params)?.permissions);
+  const granted: Record<string, unknown> = {};
+  if (decision === "accept" || decision === "acceptForSession") {
+    const network = objectOf(requested?.network);
+    const fileSystem = objectOf(requested?.fileSystem);
+    if (network) granted.network = network;
+    if (fileSystem) granted.fileSystem = fileSystem;
+  }
+  return { permissions: granted, scope: "turn" };
+}
+
 function notificationTurnId(params: unknown): string | undefined {
   if (!params || typeof params !== "object") return undefined;
   const record = params as Record<string, unknown>;
@@ -122,6 +176,8 @@ export class CodexRuntime {
   private resumed = false;
   private firstTurn = true;
   private activeTurn?: ActiveTurn;
+  /** Files of each `fileChange` item still in flight, by item id (for its approval prompt). */
+  private readonly fileChanges = new Map<string, CodexFileChangeSummary[]>();
 
   constructor(
     private readonly options: CodexRuntimeOptions,
@@ -450,6 +506,7 @@ export class CodexRuntime {
   }
 
   private onNotification(method: string, params: unknown): void {
+    this.trackFileChanges(method, params);
     const events = this.translator?.translate({ method, params }) ?? [];
     for (const event of events) {
       // A fresh turn announced while ours has no id yet IS ours: the translator
@@ -467,6 +524,33 @@ export class CodexRuntime {
         turn?.pendingInterrupt?.resolve();
         turn?.resolve();
       }
+    }
+  }
+
+  /** Remember a patch's files from `item/started` / `patchUpdated` until `item/completed`. */
+  private trackFileChanges(method: string, params: unknown): void {
+    const record = objectOf(params);
+    const item = objectOf(record?.item);
+    let itemId: string | undefined;
+    let changes: unknown;
+    if ((method === "item/started" || method === "item/completed") && item?.type === "fileChange") {
+      itemId = typeof item.id === "string" ? item.id : undefined;
+      if (method === "item/completed") {
+        if (itemId) this.fileChanges.delete(itemId);
+        return;
+      }
+      changes = item.changes;
+    } else if (method === "item/fileChange/patchUpdated") {
+      itemId = typeof record?.itemId === "string" ? record.itemId : undefined;
+      changes = record?.changes;
+    } else return;
+    const summary = summarizeFileChanges(changes);
+    if (!itemId || !summary) return;
+    this.fileChanges.delete(itemId);
+    this.fileChanges.set(itemId, summary);
+    for (const oldest of this.fileChanges.keys()) {
+      if (this.fileChanges.size <= MAX_TRACKED_FILE_CHANGES) break;
+      this.fileChanges.delete(oldest);
     }
   }
 
@@ -512,10 +596,20 @@ export class CodexRuntime {
       // answers method-not-found rather than inventing consent.
       return undefined;
     }
+    const itemId = objectOf(params)?.itemId;
+    const fileChanges =
+      method === "item/fileChange/requestApproval" && typeof itemId === "string"
+        ? this.fileChanges.get(itemId)
+        : undefined;
     const decision = this.hooks.onNativeApproval
-      ? await this.hooks.onNativeApproval({ method, params })
+      ? await this.hooks.onNativeApproval({
+          method,
+          params,
+          ...(fileChanges ? { fileChanges } : {}),
+        })
       : "decline";
     this.log("runtime.native_approval", { method, decision });
+    if (method === "item/permissions/requestApproval") return permissionsResponse(params, decision);
     return { decision };
   }
 

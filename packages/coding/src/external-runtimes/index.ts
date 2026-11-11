@@ -40,6 +40,7 @@ export type { CodexDiscoveredModel } from "./codex/model-discovery.js";
 export { CodexRuntime } from "./codex/runtime.js";
 export type {
   CodexRuntimeOptions,
+  CodexFileChangeSummary,
   CodexRuntimeHooks,
   CodexTurnHandle,
   NativeApprovalDecision,
