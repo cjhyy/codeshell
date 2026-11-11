@@ -108,6 +108,21 @@ function RuleRow({
             {last}
           </p>
         )}
+        {rule.overdue && (
+          <p
+            className={cn(
+              "text-xs",
+              rule.overdue === "expired" ? "text-status-warn" : "text-muted-foreground",
+            )}
+            data-rule-overdue={rule.overdue}
+          >
+            {t(
+              rule.overdue === "expired"
+                ? "mimiSettings.rules.overdue.expired"
+                : "mimiSettings.rules.overdue.catchUp",
+            )}
+          </p>
+        )}
       </div>
       {(rule.actions.length > 0 || (rule.sessionId && onOpenSession)) && (
         <div className="flex flex-wrap items-center gap-2">
@@ -164,7 +179,7 @@ function RuleList({
           key={rule.id}
           rule={rule}
           proactive={row.proactive}
-          pending={row.pendingId === rule.id}
+          pending={row.pendingId !== null}
           onAction={row.onAction}
           onOpenSession={row.onOpenSession}
         />
@@ -230,6 +245,15 @@ export function RulesSection({
       });
       if (!ok) return;
     }
+    if (action === "resume" && rule.overdue === "catch-up") {
+      // Its time passed while paused: say plainly that resuming sends it now.
+      const ok = await ask({
+        title: t("mimiSettings.rules.confirmResume.title"),
+        message: t("mimiSettings.rules.confirmResume.message", { title }),
+        confirmLabel: t("mimiSettings.rules.confirmResume.confirm"),
+      });
+      if (!ok) return;
+    }
     setPendingId(rule.id);
     setMessage(null);
     try {
@@ -257,8 +281,9 @@ export function RulesSection({
         }),
       });
     } finally {
+      // Buttons stay disabled until the list shows the rule's new version.
+      await notices.reload();
       setPendingId(null);
-      notices.reload();
     }
   };
 

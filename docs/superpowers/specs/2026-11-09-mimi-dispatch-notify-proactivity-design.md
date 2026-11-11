@@ -242,7 +242,7 @@ interface NoticeRule {
 - **主人的规则优先于派活规则**：主人在已有派活规则的会话上说"做完告诉我"或点铃铛，这条规则转为主人的（`origin: "user"`，用主人的渠道和打扰方式）；之后派活重试、续派不会改写它，任务取消也不会带走它。主人已有规则（含暂停的）时不再自动建派活规则。
 - `spent / completed / cancelled` 是终态，不能改回 `active`。
 - 写入**落盘成功后**才返回规则 id。
-- **铃铛**：关 = 取消主人自己的规则（`bell` / `notify-me`）；只有派活规则时铃铛显示为只读的"Mimi 派的活，会自动告诉你"；只有 IM 对话的 `watch-session` 规则时同样只读（"IM 里的对话在看"），关铃铛不会取消它（2d-2；它在规则列表里管理）。铃铛提示列出该会话每条活动规则的来源（自己设的 / 派活自动 / IM 里在看，`PetSessionBellState.sources`，来自 `createdBy`）。Mimi 自己的会话、外部运行时会话不显示铃铛。
+- **铃铛**：关 = 取消主人自己在这个会话上的规则（`bell` / `notify-me`，含暂停的，免得攒下一堆能恢复的旧规则）；只有派活规则时铃铛显示为只读的"Mimi 派的活，会自动告诉你"；只有 IM 对话的 `watch-session` 规则时同样只读（"IM 里的对话在看"），关铃铛不会取消它（2d-2；它在规则列表里管理）。铃铛提示列出该会话每条活动规则的来源（自己设的 / 派活自动 / IM 里在看，`PetSessionBellState.sources`，来自 `createdBy`）。Mimi 自己的会话、外部运行时会话不显示铃铛。
 
 ### 4.3 内置系统规则
 
@@ -691,7 +691,8 @@ notifications?: {
 
 - 数据：`pet:notices:get-state` 多带 `rules: PetNoticeRuleSummary[]`（不加通道，变化仍走 `pet:notices:changed`）。每行：`id`、`version`、`kind`（`session` / `all-sessions` / `schedule` / `system-brief` / `system-heartbeat`）、`state`、`source`（由 `createdBy` 得出：`owner` 铃铛/NotifyMe、`delegation`、`watch` IM 在看、`follow-up`、`system`）、会话 id + 标题（会话规则；续办跟进是 `sourceSessionId`）、事件 + 范围、定时（`at` / `cron` + 模型写的 `label` + 时区 + 下一次 `nextAt`，晨报给 `dailyAt`，心跳给 `activeHours`）、目标（`desktop` / `auto` + 预计的 IM 名 / 点名渠道名 / 回到某渠道的私聊或群聊——不带任何对话或发送者 id）、`lastFiredAt` + `lastOutcome`（定时规则取 `wake` 或 `wake.previous`，会话规则取变成 `spent` 的时刻）、可做的 `actions`。Mimi 的四条系统规则总在列表里（没打开过也在，`version: 0`）；晨报/收工/心跳的开关与时间以 settings 为准。`system-heartbeat-recheck` 不单列。终态规则只保留最近 20 条（新的在前），界面默认折叠为"最近结束"。
 - 变更：原 `pet:notices:set-system-rule` 改名为唯一的规则变更通道 `pet:notices:update-rule`：旧载荷（"不在电脑前全推"的 patch）照收；新载荷 `{ ruleId, expectedVersion, action: pause | resume | cancel }`，版本不对返回 `version_conflict`（不抛错，界面刷新并提示），不适用返回 `not_allowed`（终态、恢复后会与同会话同目标的活动规则重复），找不到返回 `not_found`。分派：主人/派活/在看的会话规则与跟进的暂停、恢复走规则表 `update`；跟进删除走跟进控制（与 `pet:follow-up-control` 同一处）；"不在电脑前全推"走 `setSystemRule`；晨报、收工、心跳写 settings（`briefs.<kind>.enabled` / `heartbeat.enabled`，主进程写入后 `settingsChanged()`，由 2c-2 的同步重排规则），系统规则不能删除。删除 = `cancelled`，界面先确认。
-- 循环跟进暂停期间错过的那一次，恢复时从现在往后算（同系统规则）；一次性跟进恢复时保留原时刻，按它的补发期限处理。
+- 循环跟进暂停期间错过的那一次，恢复时从现在往后算（同系统规则）；一次性跟进恢复时保留原时刻，按它的补发期限处理：期限内列表标"恢复后会立即补发一次"并先确认，过了期限标"已过期"、只能删除（`overdue: "catch-up" | "expired"`，判断同执行器）。
+- 派活规则属于它的任务：主人可以暂停或删除，不能恢复；任务结束（完成、失败、取消）时连暂停的派活规则一起记为 `spent`，否则暂停的规则会比任务活得久、恢复后在主人自己的回合上触发。要接管就点铃铛（§4.2）。
 - 界面：分组"进行中的会话提醒 / 跟进 / 主动（不在电脑前全推、晨报、收工、心跳）/ 最近结束"，每行标题（会话标题 / 跟进标题 / 系统名）、来源徽标、何时（事件或模型写的说法 + 下次时间，cron 原文只作悬停提示）、目标、上次、状态；暂停/恢复/删除与"打开会话"（与工作台跟进列表同一导航）。空状态提示"也可以直接跟 Mimi 说：'把每天早上那个提醒停了'"。
 
 ## 12. 决策（2026-11-09 已确认）

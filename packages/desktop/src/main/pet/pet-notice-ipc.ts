@@ -192,7 +192,7 @@ export function createPetNoticeControls(deps: PetNoticeControlsDeps): PetNoticeC
     } catch (error) {
       if (!(error instanceof PetRuleStoreError) || error.code !== "version_conflict") throw error;
       const fresh = store.get(rule.id);
-      if (!fresh || fresh.state !== "active") return;
+      if (!fresh || (fresh.state !== "active" && fresh.state !== "paused")) return;
       await store.update(fresh.id, fresh.version, { state: "cancelled" });
     }
   };
@@ -212,6 +212,7 @@ export function createPetNoticeControls(deps: PetNoticeControlsDeps): PetNoticeC
     channels,
     predictIm: (channel, target) => notices.predictIm(channel, target),
     sessionTitle: (sessionId) => notices.sessionTitle(sessionId),
+    now,
     ...(deps.writeNotificationSettings
       ? { writeNotificationSettings: deps.writeNotificationSettings }
       : {}),
@@ -262,9 +263,11 @@ export function createPetNoticeControls(deps: PetNoticeControlsDeps): PetNoticeC
       } else {
         // Only the owner's own rules: Mimi's delegation rule follows its task, and
         // an IM chat's watch is that chat's (both are managed in the rule list).
-        for (const rule of sessionRules(store.activeForSession(sessionId), sessionId, "owner")) {
-          await cancel(rule);
-        }
+        // Paused ones too: the bell is off, so they must not pile up to be resumed.
+        const owned = sessionRules(store.list(), sessionId, "owner").filter(
+          (rule) => rule.state === "active" || rule.state === "paused",
+        );
+        for (const rule of owned) await cancel(rule);
       }
       return describe(sessionId);
     },

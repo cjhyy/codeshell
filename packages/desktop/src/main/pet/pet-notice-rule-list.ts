@@ -20,7 +20,8 @@ import {
   type ScheduleNoticeRule,
   type SystemScheduleRuleId,
 } from "./pet-rule-store.js";
-import { dueAt } from "./pet-schedule-rule.js";
+import { MISFIRE_GRACE_MS } from "./pet-rule-schedule.js";
+import { dueAt, occurrenceDeadline } from "./pet-schedule-rule.js";
 
 /**
  * The rule list (design §4, §11; phase 2d-2): every trigger that can fire,
@@ -50,6 +51,7 @@ export interface NoticeRuleListSource {
     target: NoticeRule["target"],
   ): { label: string; ready: PetNoticeChannel["ready"] } | undefined;
   sessionTitle(sessionId: string): string | undefined;
+  now?: () => number;
 }
 
 function isListedSystemSchedule(id: string): id is ListedSystemSchedule {
@@ -108,10 +110,32 @@ function nextAt(rule: ScheduleNoticeRule): number | undefined {
   return rule.state === "active" && rule.wake.status === "scheduled" ? dueAt(rule.wake) : undefined;
 }
 
-function liveActions(state: NoticeRule["state"]): PetNoticeRuleAction[] {
-  if (state === "active") return ["pause", "cancel"];
-  if (state === "paused") return ["resume", "cancel"];
+/**
+ * Mimi's delegation rule belongs to its task: the owner may pause or delete
+ * it, never resume it (the task's end spends it, paused or not, and a new
+ * delegation arms a fresh one). Taking it over is the bell's job.
+ */
+function liveActions(rule: NoticeRule): PetNoticeRuleAction[] {
+  if (rule.state === "active") return ["pause", "cancel"];
+  if (rule.state === "paused")
+    return rule.origin === "delegation" ? ["cancel"] : ["resume", "cancel"];
   return [];
+}
+
+/**
+ * A paused one-shot whose time came while it was paused: resumed inside its
+ * catch-up window it fires at once ("catch-up"); past it, it would only be
+ * recorded as missed ("expired", so it can only be deleted). Same rules as
+ * the scheduler's own handling of a missed occurrence.
+ */
+function overdueOf(rule: ScheduleNoticeRule, now: number): "catch-up" | "expired" | undefined {
+  if (rule.state !== "paused" || rule.when.at === undefined || rule.wake.status !== "scheduled")
+    return undefined;
+  const due = dueAt(rule.wake);
+  if (due > now) return undefined;
+  const deadline = Math.max(due, occurrenceDeadline(rule.when, rule.wake.occurrence));
+  const skipped = rule.when.missedPolicy === "skip" && now - due > MISFIRE_GRACE_MS;
+  return now > deadline || skipped ? "expired" : "catch-up";
 }
 
 function summarizeRule(
@@ -124,7 +148,7 @@ function summarizeRule(
     state: rule.state,
     source: sourceOf(rule),
     target: targetOf(rule, source),
-    actions: liveActions(rule.state),
+    actions: liveActions(rule),
     updatedAt: rule.updatedAt,
   };
   if (rule.when.kind === "session") {
@@ -148,6 +172,7 @@ function summarizeRule(
   const next = nextAt(rule);
   // A one-shot that already fired waits on the follow-up list; it can only be cancelled.
   const fired = rule.when.at !== undefined && rule.wake.status !== "scheduled";
+  const overdue = overdueOf(rule, (source.now ?? Date.now)());
   return {
     ...base,
     kind: "schedule",
@@ -163,7 +188,9 @@ function summarizeRule(
       ...(next !== undefined ? { nextAt: next } : {}),
     },
     ...lastFired(rule),
-    actions: fired && rule.state === "active" ? ["cancel"] : base.actions,
+    ...(overdue ? { overdue } : {}),
+    actions:
+      (fired && rule.state === "active") || overdue === "expired" ? ["cancel"] : base.actions,
   };
 }
 

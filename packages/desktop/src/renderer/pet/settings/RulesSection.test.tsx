@@ -162,6 +162,8 @@ describe("Mimi settings › 规则与跟进", () => {
   async function mount(options: {
     rules: PetNoticeRuleSummary[];
     update?: (request: PetNoticeRuleUpdate) => Promise<PetNoticeRuleUpdateResult>;
+    /** Holds each read after the first until it resolves. */
+    gate?: () => Promise<void>;
     confirm?: (options: ConfirmDialogOptions) => Promise<boolean>;
   }) {
     const state = { current: noticesState(options.rules) };
@@ -172,6 +174,7 @@ describe("Mimi settings › 规则与跟进", () => {
     const api = {
       getNoticesState: async () => {
         reads += 1;
+        if (reads > 1 && options.gate) await options.gate();
         return structuredClone(state.current);
       },
       onNoticesChanged: () => () => undefined,
@@ -335,6 +338,69 @@ describe("Mimi settings › 规则与跟进", () => {
     const [failed] = find(view.container, "data-rules-message", "error");
     expect(failed.getAttribute("role")).toBe("alert");
     expect(text(failed)).toContain("没改成：rules.json is read-only");
+  });
+
+  test("buttons stay disabled until the refresh after an action has landed", async () => {
+    let release: () => void = () => undefined;
+    const view = await mount({
+      rules: [...SYSTEM, SESSION],
+      gate: () => new Promise<void>((resolve) => (release = resolve)),
+    });
+    const pause = () =>
+      find(
+        find(view.container, "data-pet-rule", "rule-session")[0],
+        "data-rule-action",
+        "pause",
+      )[0];
+    await click(pause());
+    expect(view.calls).toHaveLength(1);
+    expect(reactPropsOf(pause()).disabled).toBe(true);
+    // Every row waits: a second change must start from the refreshed versions.
+    const [other] = find(view.container, "data-rule-action", "resume");
+    expect(reactPropsOf(other).disabled).toBe(true);
+    await act(async () => {
+      release();
+      for (let index = 0; index < 4; index += 1) await flushMicrotasks();
+    });
+    expect(reactPropsOf(pause()).disabled).toBe(false);
+  });
+
+  test("an overdue one-shot says what resuming does; an expired one offers only delete", async () => {
+    const catchUp: PetNoticeRuleSummary = {
+      ...FOLLOW_UP,
+      id: "rule-late",
+      schedule: { at: LAST, timezone: "Asia/Shanghai" },
+      overdue: "catch-up",
+    };
+    const expired: PetNoticeRuleSummary = {
+      ...FOLLOW_UP,
+      id: "rule-expired",
+      schedule: { at: LAST, timezone: "Asia/Shanghai" },
+      overdue: "expired",
+      actions: ["cancel"],
+    };
+    const answers = [false, true];
+    const asked: ConfirmDialogOptions[] = [];
+    const view = await mount({
+      rules: [...SYSTEM, catchUp, expired],
+      confirm: async (options) => {
+        asked.push(options);
+        return answers.shift() ?? false;
+      },
+    });
+    const [late] = find(view.container, "data-pet-rule", "rule-late");
+    expect(text(find(late, "data-rule-overdue", "catch-up")[0])).toContain("恢复后会立即补发一次");
+    const [gone] = find(view.container, "data-pet-rule", "rule-expired");
+    expect(text(find(gone, "data-rule-overdue", "expired")[0])).toContain("已过期");
+    expect(
+      find(gone, "data-rule-action").map((node: any) => node.getAttribute("data-rule-action")),
+    ).toEqual(["cancel"]);
+    const [resume] = find(late, "data-rule-action", "resume");
+    await click(resume);
+    expect(view.calls).toEqual([]);
+    expect(asked[0]?.message).toContain("恢复后会立即补发一次");
+    await click(resume);
+    expect(view.calls).toEqual([{ ruleId: "rule-late", expectedVersion: 1, action: "resume" }]);
   });
 
   test("jumps to the rule's Session and to 通知与主动", async () => {

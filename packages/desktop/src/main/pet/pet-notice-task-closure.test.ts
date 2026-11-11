@@ -290,6 +290,22 @@ describe("delegation rules", () => {
     expect(current.wiring.ruleStore.get(rule!.id)?.state).toBe("spent");
   });
 
+  for (const status of ["completed", "failed", "cancelled"] as const)
+    test(`a ${status} task also spends a delegation rule the owner paused, so it cannot come back`, async () => {
+      current = harness();
+      await current.wiring.armDelegationRule(running());
+      const [rule] = current.wiring.ruleStore.activeForSession(SID);
+      const paused = await current.wiring.ruleStore.update(rule!.id, rule!.version, {
+        state: "paused",
+      });
+      await current.wiring.notifyTaskClosed(longTask({ status }));
+      expect(current.wiring.ruleStore.get(paused.id)?.state).toBe("spent");
+      // Resuming it later is refused: ended rules are history.
+      await expect(
+        current.wiring.ruleStore.update(paused.id, paused.version + 1, { state: "active" }),
+      ).rejects.toThrow("invalid_rule");
+    });
+
   test("a cancelled delegation spends only its automatic rule, silently", async () => {
     current = harness();
     await current.wiring.armDelegationRule(

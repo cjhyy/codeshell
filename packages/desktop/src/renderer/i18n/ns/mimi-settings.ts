@@ -128,6 +128,15 @@ export const mimiSettings = {
           message: "“{title}”删除后不会再提醒，也不能恢复。要再提醒，跟 Mimi 说一声就行。",
           confirm: "删除",
         },
+        overdue: {
+          catchUp: "暂停期间已到时间：恢复后会立即补发一次。",
+          expired: "已过期：暂停期间错过了补发时间，只能删除。",
+        },
+        confirmResume: {
+          title: "恢复这条跟进？",
+          message: "“{title}”的时间已经过了，恢复后会立即补发一次。",
+          confirm: "恢复并补发",
+        },
         conflict: "这条规则刚被改过，已刷新，请再看一眼。",
         notAllowed: "这条规则现在不能这样改，列表已刷新。",
         notFound: "这条规则已经不在了。",
@@ -303,6 +312,15 @@ export const mimiSettings = {
           message:
             "\u201c{title}\u201d will not remind you again, and it cannot be restored. To be reminded again, just tell Mimi.",
           confirm: "Delete",
+        },
+        overdue: {
+          catchUp: "Its time came while paused: resuming sends it once, right away.",
+          expired: "Expired: its catch-up window passed while paused; it can only be deleted.",
+        },
+        confirmResume: {
+          title: "Resume this follow-up?",
+          message: "The time for “{title}” has passed; resuming sends it once, right away.",
+          confirm: "Resume and send",
         },
         conflict: "This rule just changed; the list is refreshed, take another look.",
         notAllowed: "This rule cannot be changed that way now; the list is refreshed.",

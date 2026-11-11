@@ -319,6 +319,17 @@ describe("Session bell", () => {
     expect(wiring.ruleStore.get(watch.id)?.state).toBe("active");
   });
 
+  test("off also cancels the owner's paused rules there, so none pile up to be resumed", async () => {
+    const { controls, wiring } = fixture();
+    const on = await controls.setSessionBell(SID, true);
+    const paused = await wiring.ruleStore.update(on.ruleId!, 1, { state: "paused" });
+    const again = await controls.setSessionBell(SID, true);
+    expect(again.ruleId).not.toBe(paused.id);
+    expect(await controls.setSessionBell(SID, false)).toMatchObject({ on: false });
+    expect(wiring.ruleStore.get(paused.id)?.state).toBe("cancelled");
+    expect(wiring.ruleStore.get(again.ruleId!)?.state).toBe("cancelled");
+  });
+
   test("the bell on a delegated Session takes Mimi's rule over, so off switches it off", async () => {
     const { controls, wiring, tasks } = fixture();
     const delegation = await armDelegation(wiring);

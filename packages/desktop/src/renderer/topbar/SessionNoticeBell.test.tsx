@@ -177,7 +177,7 @@ describe("SessionNoticeBell", () => {
       watchesDone: true,
     };
     expect(sessionBellLabel(watched, t as never)).toBe(
-      "IM 里的对话在看这个会话，结束时会告诉那个对话 · 来源：IM 里在看",
+      "IM 里的对话在看这个会话，结束时会告诉那个对话；在 Mimi 设置 › 规则与跟进 里管理 · 来源：IM 里在看",
     );
     expect(isDelegatedOnly(watched)).toBe(true);
     expect(sessionBellLabel({ ...ON, sources: ["owner", "delegation", "watch"] }, t as never)).toBe(

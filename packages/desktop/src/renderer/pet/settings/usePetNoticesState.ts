@@ -26,15 +26,16 @@ export function usePetNoticesState(api: NoticesReadApi | undefined = defaultNoti
   const alive = useRef(false);
   const generation = useRef(0);
 
-  const reload = useCallback(() => {
+  /** Refetch; the promise settles (never rejects) once this read has landed or failed. */
+  const reload = useCallback((): Promise<void> => {
     const current = apiRef.current;
     const id = ++generation.current;
     if (!current?.getNoticesState) {
       setLoadError("unavailable");
       setLoadState("error");
-      return;
+      return Promise.resolve();
     }
-    current.getNoticesState().then(
+    return current.getNoticesState().then(
       (next) => {
         if (!alive.current || id !== generation.current) return;
         setState(next);
@@ -51,7 +52,7 @@ export function usePetNoticesState(api: NoticesReadApi | undefined = defaultNoti
 
   useEffect(() => {
     alive.current = true;
-    reload();
+    void reload();
     const off = apiRef.current?.onNoticesChanged?.(reload);
     return () => {
       alive.current = false;

@@ -59,6 +59,7 @@ function harness(overrides: Partial<NoticeRuleUpdaterDeps> = {}) {
             ? { label: "微信", ready: "ready" }
             : { label: channel === "lark" ? "飞书" : channel, ready: "unknown" },
     sessionTitle: (id) => (id === SID ? "修登录" : undefined),
+    now: () => clock,
     writeNotificationSettings: async (notifications) => {
       writes.push(notifications);
       // Main's settings write deep-merges, then the proactive sync retimes the rules.
@@ -388,6 +389,37 @@ describe("update-rule", () => {
     await store.update(rule.id, 2, { state: "cancelled" });
     expect(
       await updateNoticeRule(deps, { ruleId: rule.id, expectedVersion: 3, action: "resume" }),
+    ).toMatchObject({ ok: false, reason: "not_allowed" });
+  });
+
+  test("Mimi's paused delegation rule can be deleted but never resumed", async () => {
+    const { store, deps } = harness();
+    const rule = await sessionRule(store, { createdBy: "delegation", origin: "delegation" });
+    const paused = await updateNoticeRule(deps, {
+      ruleId: rule.id,
+      expectedVersion: 1,
+      action: "pause",
+    });
+    expect(paused).toMatchObject({ ok: true, rule: { state: "paused", actions: ["cancel"] } });
+    expect(
+      await updateNoticeRule(deps, { ruleId: rule.id, expectedVersion: 2, action: "resume" }),
+    ).toMatchObject({ ok: false, reason: "not_allowed" });
+    expect(store.get(rule.id)?.state).toBe("paused");
+  });
+
+  test("a paused one-shot whose time passed says it catches up at once, or is expired", async () => {
+    const { store, deps } = harness();
+    await followUp(store);
+    await store.update(FOLLOW_UP, 1, { state: "paused" });
+    const row = () => noticeRuleSummaries(deps).find((summary) => summary.id === FOLLOW_UP);
+    expect(row()).not.toHaveProperty("overdue");
+    // Due an hour after NOW; its default catch-up window is a day.
+    clock = NOW + 2 * HOUR;
+    expect(row()).toMatchObject({ overdue: "catch-up", actions: ["resume", "cancel"] });
+    clock = NOW + HOUR + 25 * HOUR;
+    expect(row()).toMatchObject({ overdue: "expired", actions: ["cancel"] });
+    expect(
+      await updateNoticeRule(deps, { ruleId: FOLLOW_UP, expectedVersion: 2, action: "resume" }),
     ).toMatchObject({ ok: false, reason: "not_allowed" });
   });
 

@@ -143,6 +143,11 @@ export interface PetNoticeRuleSummary {
   target: PetNoticeRuleTarget;
   lastFiredAt?: number;
   lastOutcome?: "notified" | "launched" | "failed" | "unknown";
+  /**
+   * A paused one-shot whose time passed while paused: resuming it fires at
+   * once (`catch-up`), or it is past its catch-up window (`expired`: delete only).
+   */
+  overdue?: "catch-up" | "expired";
   /** What the owner may do with it now. */
   actions: PetNoticeRuleAction[];
   updatedAt: number;
