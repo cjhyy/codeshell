@@ -722,8 +722,10 @@ export class TurnLoop {
       if (!nearBudget) this.noteReminderIssued = false;
       const surface = this.deps.runToolSurface;
       const canSaveNotes =
-        surface?.isEligible("SaveContextNote") ??
-        this.deps.tools.some((tool) => tool.name === "SaveContextNote");
+        surface !== undefined
+          ? surface.isEligible("SaveContextNote") &&
+            (surface.isCallable("SaveContextNote") || surface.isCallable("ToolSearch"))
+          : this.deps.tools.some((tool) => tool.name === "SaveContextNote");
       if (nearBudget && !this.noteReminderIssued && canSaveNotes) {
         const loadNoteTool =
           surface && !surface.isCallable("SaveContextNote")
