@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { resolvePromptCachePolicy } from "../llm/prompt-cache.js";
 import type { LLMConfig, SessionToolSelection } from "../types.js";
 import { normalizeSessionToolSelection } from "../tool-system/run-tool-surface.js";
 
@@ -12,6 +13,9 @@ export function toolCacheIdentity(config: LLMConfig | undefined): string {
         config?.baseUrl,
         config?.model,
         config?.modelKey,
+        ...(config && resolvePromptCachePolicy(config).toolDiscovery === "tool-reference"
+          ? ["tool-reference-v1"]
+          : []),
       ]),
     )
     .digest("hex");
@@ -21,7 +25,7 @@ export function toolCacheIdentity(config: LLMConfig | undefined): string {
 export function rebaseToolSelection(value: unknown): SessionToolSelection | undefined {
   const selection = normalizeSessionToolSelection(value);
   if (!selection) return undefined;
-  const { frozenDefinitions: _definitions, ...rest } = selection;
+  const { frozenDefinitions: _definitions, deferredDefinitions: _deferred, ...rest } = selection;
   return {
     ...rest,
     names: [...new Set([...selection.names, ...selection.discovered])],

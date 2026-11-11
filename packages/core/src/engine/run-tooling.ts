@@ -35,6 +35,7 @@ import type { EngineRunOptions, RunBehaviorProfile } from "./run-types.js";
 import { normalizeSessionToolSelection, RunToolSurface } from "../tool-system/run-tool-surface.js";
 import { routeInitialTools, type TaskToolRoutingPolicy } from "../preset/task-tool-routing.js";
 import { logger } from "../logging/logger.js";
+import { resolvePromptCachePolicy } from "../llm/prompt-cache.js";
 import { callToolDef } from "../tool-system/builtin/call-tool.js";
 import { selectionForToolCacheCycle, toolCacheIdentity } from "./tool-cache-cycle.js";
 
@@ -116,6 +117,9 @@ export function initializeRunToolSurface(
           ? { ...selection, version: 1 }
           : selection,
       onSelectionChanged: persistSelection,
+      toolDiscovery: toolCtx.llmConfig
+        ? resolvePromptCachePolicy(toolCtx.llmConfig).toolDiscovery
+        : "call-tool",
     },
   );
   toolCtx.runToolSurface = surface;
@@ -139,7 +143,7 @@ export function initializeRunToolSurface(
       });
       previousNames = names;
     }
-    return snapshot;
+    return surface.requestSnapshot();
   };
   return surface.snapshot();
 }

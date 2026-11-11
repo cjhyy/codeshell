@@ -378,3 +378,60 @@ test.each(["manage", "manageAsync", "forceSummarize"] as const)(
     expect(events.every((event) => event.historyChanged === false)).toBe(true);
   },
 );
+
+describe("native discovery cache cycles", () => {
+  const native: LLMConfig = {
+    provider: "anthropic",
+    providerKind: "openrouter",
+    model: "anthropic/claude-sonnet-5",
+    baseUrl: "https://openrouter.ai/api/v1",
+    reasoning: { mode: "off" },
+  };
+  test("discovery mode changes the cycle without changing legacy CallTool identities", () => {
+    const off = toolCacheIdentity(native);
+    const on = toolCacheIdentity({ ...native, reasoning: { mode: "on" } });
+    expect(off).not.toBe(on);
+    expect(toolCacheIdentity({ ...native, reasoning: undefined })).toBe(on);
+    expect(toolCacheIdentity({ ...config, reasoning: { mode: "off" } })).toBe(
+      toolCacheIdentity(config),
+    );
+    expect(toolCacheIdentity({ ...native, apiKey: "rotated-key" })).toBe(off);
+  });
+  test("switching mode clears both schema snapshots and promotes discoveries once", () => {
+    const previous: SessionToolSelection = {
+      ...selection(),
+      cacheIdentity: toolCacheIdentity(native),
+      deferredDefinitions: [definition("Deferred"), definition("OtherDeferred")],
+    };
+    const result = selectionForToolCacheCycle(
+      previous,
+      toolCacheIdentity({ ...native, reasoning: { mode: "on" } }),
+    ) as SessionToolSelection;
+    expect(result).not.toHaveProperty("frozenDefinitions");
+    expect(result).not.toHaveProperty("deferredDefinitions");
+    expect(result.names).toContain("Deferred");
+    expect(result.discovered).toEqual([]);
+    expect(previous.deferredDefinitions).toHaveLength(2);
+  });
+  test("run initialization keeps deferred definitions out of the composer and model eager names", () => {
+    const ctx = { cwd: "/repo", llmConfig: native } as ToolContext;
+    const eager = initializeRunToolSurface(ctx, ["ToolSearch"], catalog);
+    expect(eager.map((tool) => tool.name)).toEqual(["ToolSearch", "CallTool"]);
+    const request = ctx.refreshRunTools!();
+    expect(request.filter((tool) => tool.deferLoading).map((tool) => tool.name)).toEqual([
+      "Frozen",
+      "Deferred",
+      "OtherDeferred",
+      "LateTool",
+    ]);
+    expect([...ctx.modelToolNames!]).toEqual(["ToolSearch", "CallTool"]);
+    expect(ctx.runToolSurface!.isCallable("Deferred")).toBe(false);
+    ctx.runToolSurface!.select(["Deferred"]);
+    const previous = JSON.stringify(request);
+    expect(JSON.stringify(ctx.refreshRunTools!())).toBe(previous);
+    ctx.runToolSurface!.rebase();
+    const next = ctx.refreshRunTools!();
+    expect(next.find((tool) => tool.name === "Deferred")?.deferLoading).toBeUndefined();
+    expect(ctx.modelToolNames!.has("Deferred")).toBe(true);
+  });
+});
