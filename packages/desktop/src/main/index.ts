@@ -172,6 +172,7 @@ import { PetLongTaskCoordinator } from "./pet/pet-long-task-coordinator.js";
 import {
   createSessionOutcomeFanout,
   createSessionOutcomeTap,
+  feedSessionOutcomeTap,
   SessionOutcomeDeriver,
 } from "./pet/session-outcome.js";
 import {
@@ -2069,8 +2070,12 @@ async function createWindow(): Promise<BrowserWindow> {
       },
       sessionOutcomeDeriver,
     );
-    unsubscribePetLongTaskStream = bridge.subscribeOutbound((_line, snapshotEntry) => {
-      if (snapshotEntry) observeSessionOutcome(snapshotEntry.sessionId, snapshotEntry.event);
+    // Native worker lines and desktop external runtimes (owner window or not).
+    unsubscribePetLongTaskStream = feedSessionOutcomeTap({
+      sources: bridge,
+      observe: observeSessionOutcome,
+      deriver: sessionOutcomeDeriver,
+      runtimeEnded: notices.externalRuntimeEnded,
     });
     // One root for both the Sessions disclosure tool and the resume resolver,
     // so the directory Mimi reads and the one selectors resolve against can

@@ -45,6 +45,8 @@ export interface ExternalGoalRun {
   yieldRequested?: boolean;
   /** The model called wait_for_user this turn; end the run and wait for a reply. */
   awaitingUser?: boolean;
+  /** complete_goal / cancel_goal ended the run (core's `goal_control_stop`). */
+  settled?: "completed" | "cancelled";
   /** Goal-level rounds/active time persisted before this run started. */
   progressBase: { rounds: number; activeMs: number };
   /** Frozen at pause/park/completion, even if the provider takes time to finish. */
@@ -422,7 +424,12 @@ export class ExternalRuntimeGoals {
     return true;
   }
 
-  pause(run: ExternalGoalRun, reason: string): void {
+  /**
+   * Pause the Goal on a budget or limit. Like native core's continuation cap,
+   * the pause asks the user (`waitingForUser`), so Mimi notices read it as
+   * blocked; a pause the user asked for (`byUser`) asks nothing.
+   */
+  pause(run: ExternalGoalRun, reason: string, byUser = false): void {
     if (!this.isCurrent(run)) return;
     const result = this.update(run.sessionId, {
       paused: true,
@@ -437,6 +444,7 @@ export class ExternalRuntimeGoals {
         status: "not_met",
         ...this.progress(run, run.turns),
         gaps: `${reason}；目标已暂停，可继续。`,
+        ...(byUser ? {} : { waitingForUser: `${reason}；目标已暂停，恢复后继续。` }),
       });
     }
   }
@@ -465,6 +473,7 @@ export class ExternalRuntimeGoals {
       return { ok: false, message: "Goal changed or could not be saved; no completion recorded." };
     }
     run.stopped = true;
+    run.settled = status;
     run.clockStoppedAtMs ??= this.now();
     this.pendingQuestions.delete(sessionId);
     if (status === "completed") {

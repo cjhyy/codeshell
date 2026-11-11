@@ -90,6 +90,11 @@ import type { ExternalRuntimeMemory } from "./external-runtime-memory.js";
 import { assertOutputHistoryWriteAvailable } from "./session-output-history-lease.js";
 import { ExternalRuntimeDeltaBuffer } from "./external-runtime-delta-buffer.js";
 import { notifyRunStopRequested } from "./run-stop-signals.js";
+import {
+  ExternalRunEnvelope,
+  externalRunTrigger,
+  type SessionRunTrigger,
+} from "./external-runtime-run-envelope.js";
 
 /**
  * `code` of the refusal to change a runtime's model/permission/instructions
@@ -104,6 +109,8 @@ export type DesktopExternalRuntimeTurnInput = ExternalRuntimeTurnInput & {
   transcriptContent?: string;
   /** Host observation label; never forwarded into vendor CLI input. */
   modelTraceSource?: string;
+  /** Why it runs (`session_started.trigger`); defaults to "user" unless `injected`. */
+  trigger?: SessionRunTrigger;
 };
 
 function askUserApprovalRequest(question: string, options?: Record<string, unknown>) {
@@ -219,6 +226,8 @@ export interface ExternalRuntimeServiceDeps {
   writeBinding?: typeof writeExternalRuntimeBinding;
   /** Resolve the executable before reserving resources; injectable for tests. */
   prepareCodexLaunch?: (cwd: string) => Promise<CodexLaunch>;
+  /** Start the provider runtime; injectable for tests (production: the real CLI). */
+  startSession?: typeof startExternalRuntimeSession;
   /** Separate background maintenance; never lends the foreground CLI or tool lease. */
   memory?: Pick<ExternalRuntimeMemory, "schedule" | "cancel" | "dispose">;
 }
@@ -559,6 +568,12 @@ export class ExternalRuntimeService {
         error: error instanceof Error ? error.message : String(error),
       });
     }
+  }
+
+  /** Running background work will wake the Session, and no result is queued yet. */
+  private awaitsBackground(sessionId: string): boolean {
+    const work = this.deps.backgroundWork;
+    return work?.hasRunning(sessionId) === true && !work.hasPending(sessionId);
   }
 
   private notifySessionStateSafely(
@@ -1003,6 +1018,10 @@ export class ExternalRuntimeService {
       request.kind,
       authority.projectBinding,
     );
+    recorder.envelope = new ExternalRunEnvelope(
+      (name) => registry.getTool(name)?.bookkeeping === true,
+      () => this.awaitsBackground(request.sessionId),
+    );
     // The recorder materializes the canonical Session, so the Profile pin can
     // be bound and resolved before instructions, tools or source access use it.
     const profile = bindExternalRuntimeProfile({
@@ -1265,7 +1284,7 @@ export class ExternalRuntimeService {
     assertStartAuthority?.();
     this.deps.registerSession(request.sessionId, request.cwd, ownerId);
     try {
-      session = await startExternalRuntimeSession({
+      session = await (this.deps.startSession ?? startExternalRuntimeSession)({
         kind: request.kind,
         ...(codexLaunch ? { codexClient: codexLaunch } : {}),
         cwd: request.cwd,
@@ -1676,6 +1695,7 @@ export class ExternalRuntimeService {
         goal: _goal,
         disableGoal: _disableGoal,
         modelTraceSource: _modelTraceSource,
+        trigger: _trigger,
         ...providerInput
       } = turnInput;
       const withBackground = (text: string, background?: string) =>
@@ -1714,6 +1734,7 @@ export class ExternalRuntimeService {
               const user = entry.recorder.beginTurn(
                 goalRun && providerRound === 0 ? providerInput : nextInput,
                 providerRound > 0,
+                externalRunTrigger(turnInput, initialBackground !== undefined),
               );
               prepared = true;
               const runId = entry.recorder.outputRunId;
@@ -1863,9 +1884,7 @@ export class ExternalRuntimeService {
               });
             }
             finalOutcome = entry.recorder.finishIfMissing();
-            const waitingForBackgroundWork =
-              this.deps.backgroundWork?.hasRunning(sessionId) === true &&
-              !this.deps.backgroundWork.hasPending(sessionId);
+            const waitingForBackgroundWork = this.awaitsBackground(sessionId);
             if (
               !goalRun ||
               finalOutcome.reason !== "completed" ||
@@ -1916,7 +1935,7 @@ export class ExternalRuntimeService {
               try {
                 const terminal = entry.recorder.completeRun(
                   entry.finalizeOperations(finalOutcome.reason),
-                  finalOutcome.completionKind,
+                  finalOutcome.completionKind ?? (goalRun.settled && "goal_control_stop"),
                 );
                 if (terminal) this.emitSafely(sessionId, terminal);
               } catch {
@@ -2081,7 +2100,7 @@ export class ExternalRuntimeService {
         this.backgroundWakePaused.add(sessionId);
       }
       if (run && this.goals.isCurrent(run)) {
-        this.goals.pause(run, "用户已停止本轮执行");
+        this.goals.pause(run, "用户已停止本轮执行", true);
       } else {
         // A background wait has released its live run. Stop must still pause
         // the persisted Goal, or the next completion would silently wake it.

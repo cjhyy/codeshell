@@ -286,6 +286,9 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
         .then(() => (disposed ? undefined : router.recheckOutbox()))
         .catch((error) => log("pet.notice.outbox_recheck_failed", { error: errorText(error) }));
     },
+    externalRuntimeEnded(sessionId) {
+      void ready.then(() => (disposed ? undefined : watcher.flush(sessionId)));
+    },
     notifyTaskClosed: closure.notifyTaskClosed,
     armDelegationRule: closure.armDelegationRule,
     inboundReplay: replay.inboundReplay,

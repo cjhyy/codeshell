@@ -119,6 +119,7 @@ function createBridge() {
   bridge.panelHostWindowRoutes = new PanelHostWindowRoutes();
   bridge.windows = new Set([owner]);
   bridge.ownedExternalTaps = new Set();
+  bridge.externalSessionTaps = new Set();
   bridge.ownedExternalOutputSources = new Map();
   return bridge;
 }
@@ -185,6 +186,13 @@ envelopes.length = 0;
 
 const taps = [];
 bridge.ownedExternalTaps.add((entry) => taps.push(entry));
+// Mimi notices hear every committed event, owner window or not, and each release.
+const observed = [];
+const releases = [];
+bridge.subscribeExternalSessionStream({
+  event: (id, event) => observed.push({ id, event }),
+  released: (id) => releases.push(id),
+});
 const foreign = [];
 bridge.windows.add({
   isDestroyed: () => false,
@@ -205,6 +213,13 @@ assert.equal(envelopes[0].event.text, "late provider output");
 assert.equal(envelopes[1].event.type, "background_agent_completed");
 assert.equal(taps.length, 2);
 assert.ok(taps.every((entry) => entry.ownerWebContentsId === 77));
+assert.deepEqual(
+  observed.map(({ id, event }) => [id, event.type, event.text]),
+  [
+    [sessionId, "text_delta", "late provider output"],
+    [sessionId, "background_agent_completed", undefined],
+  ],
+);
 const joinedSeq = bridge.getSnapshot(sessionId).nextSeq;
 bridge.ingestOwnedExternalEvent(sessionId, late);
 assert.equal(bridge.getSnapshot(sessionId).nextSeq, joinedSeq);
@@ -267,6 +282,7 @@ manager.startSessionRun(manager.readSessionState(sessionId), "successor");
 writer = new SessionOutputJournal(root, sessionId, "successor");
 publish({ type: "session_started", sessionId, runId: "successor", promptTokens: 0 });
 bridge.releaseExternalSession(sessionId);
+assert.deepEqual(releases, [sessionId]);
 assert.equal(bridge.getSnapshot(sessionId).topLevelRunning, true);
 assert.equal(forgottenOutput, 0);
 const absentOwnerSeq = bridge.getSnapshot(sessionId).nextSeq;
@@ -282,6 +298,7 @@ bridge.ingestOwnedExternalEvent(sessionId, {
 assert.ok(bridge.getSnapshot(sessionId).nextSeq > absentOwnerSeq);
 assert.equal(bridge.getSnapshot(sessionId).outputUnpaired, undefined);
 assert.equal(taps.length, tapsBeforeAbsentOwner);
+assert.equal(observed.at(-1).event.agentId, "owner-closed-job");
 assert.equal(envelopes.length, deliveriesBeforeAbsentOwner);
 assert.equal(foreign.length, 0);
 // A captured asynchronous producer cannot write into a recreated Session id.

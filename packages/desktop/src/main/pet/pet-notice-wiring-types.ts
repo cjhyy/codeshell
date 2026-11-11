@@ -101,6 +101,11 @@ export interface PetNoticeWiring {
   ready: Promise<void>;
   /** Feed what one Session stream event meant (from `createSessionOutcomeTap`). */
   observeSessionOutcomes(sessionId: string, outcomes: readonly SessionOutcome[]): void;
+  /**
+   * A desktop external runtime was released: a run it left open will never
+   * close, so the reports parked on it go out now (worker loss, for one Session).
+   */
+  externalRuntimeEnded(sessionId: string): void;
   /** A long task reached a terminal state and was not continued: one notice, then spend rules. */
   notifyTaskClosed(task: PetLongTask, closure?: PetTaskClosureNotice): Promise<void>;
   /**

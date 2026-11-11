@@ -2041,7 +2041,10 @@ describe("ExternalRuntimeService", () => {
         expect(manager.readSessionState(request.sessionId)).toMatchObject({
           goalLifecycle: { goalId: identity.goalId, phase: "terminal" },
         });
-        expect(manager.readSessionState(request.sessionId)?.lastCompletionKind).toBeUndefined();
+        // The wait is over; complete_goal ended the run (native core's goal_control_stop).
+        expect(manager.readSessionState(request.sessionId)?.lastCompletionKind).toBe(
+          "goal_control_stop",
+        );
       } finally {
         await svc.stopAll();
       }

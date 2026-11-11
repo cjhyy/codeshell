@@ -31,6 +31,7 @@ import {
   sanitizeContent,
 } from "@cjhyy/code-shell-core/internal";
 import type { ExternalMemorySnapshot } from "./external-runtime-memory.js";
+import type { ExternalRunEnvelope, SessionRunTrigger } from "./external-runtime-run-envelope.js";
 import {
   textWithAttachmentReferences,
   type ExternalRuntimeKind,
@@ -221,6 +222,10 @@ export class ExternalRuntimeSessionRecorder {
   private readonly accountingSessionId: string | undefined;
   private journal: SessionOutputJournal | undefined;
   private runId: string | undefined;
+  /** The native run envelope (trigger, run identity, outcome) on this Session's output. */
+  envelope: ExternalRunEnvelope | undefined;
+  /** The run this submission's `runId` replaced, and the submission's own id (`session_started`). */
+  private runOrigin: { previousRunId?: string; clientMessageId?: string } = {};
   private runClosed = true;
   private runTiming: ReturnType<typeof createRunTiming> | undefined;
   private persistenceFailed = false;
@@ -325,11 +330,18 @@ export class ExternalRuntimeSessionRecorder {
     return this.independentOutput.project(this.sessionId, event) as StreamEvent;
   }
 
-  beginTurn(input: RecordedExternalRuntimeTurnInput, continueRun = false): StreamEvent {
+  beginTurn(
+    input: RecordedExternalRuntimeTurnInput,
+    continueRun = false,
+    trigger?: SessionRunTrigger,
+  ): StreamEvent {
     this.assertNewSubmission(input);
     this.assertOwner(continueRun);
     if (this.persistenceFailed) throw new Error("Session output recovery is incomplete");
-    if (!continueRun) this.runTiming = createRunTiming();
+    if (!continueRun) {
+      this.runTiming = createRunTiming();
+      this.envelope?.open(trigger);
+    }
     this.textBuffer = "";
     this.finalText = "";
     this.pendingToolBlocks = [];
@@ -348,6 +360,10 @@ export class ExternalRuntimeSessionRecorder {
     if (!continueRun) {
       const state = this.manager.readSessionState(this.sessionId);
       if (!state) throw new Error("Session no longer exists");
+      this.runOrigin = {
+        ...(state.runId ? { previousRunId: state.runId } : {}),
+        ...(input.clientMessageId ? { clientMessageId: input.clientMessageId } : {}),
+      };
       this.runId = user.id;
       this.runClosed = false;
       this.manager.startSessionRun(state, user.id, input.clientMessageId);
@@ -394,6 +410,7 @@ export class ExternalRuntimeSessionRecorder {
       type: "session_started",
       sessionId: this.sessionId,
       runId: this.runId,
+      ...this.runOrigin,
       promptTokens: 0,
     });
   }
@@ -530,6 +547,7 @@ export class ExternalRuntimeSessionRecorder {
     if (this.transcript.flushFailed()) throw new Error("Transcript persistence is incomplete");
     event = this.runTiming?.prepareEvent(event) ?? event;
     if (event.type === "session_started") event = { ...event, runId: this.runId };
+    event = this.envelope?.prepare(event) ?? event;
     if (this.deltaBatch) {
       const pending = { ...event };
       this.deltaBatch.push(pending);
@@ -584,6 +602,7 @@ export class ExternalRuntimeSessionRecorder {
     const event = this.appendOutput({
       type: "turn_complete",
       reason,
+      ...this.completedText(reason),
       ...(kind ? { completionKind: kind } : {}),
     });
     this.runClosed = true;
@@ -731,6 +750,7 @@ export class ExternalRuntimeSessionRecorder {
         break;
     }
     if (event.type === "turn_complete" && providerTerminalOnly) return undefined;
+    if (event.type === "turn_complete") event = { ...event, ...this.completedText(event.reason) };
     if (event.type === "usage_update") {
       const state = this.manager.readSessionState(this.sessionId);
       const cache = normalizeCumulativeUsageCounters(state, state?.tokenUsage);
@@ -760,6 +780,13 @@ export class ExternalRuntimeSessionRecorder {
     if (!this.outcome)
       this.onEvent({ type: "turn_complete", reason: this.lastError ? "model_error" : "completed" });
     return this.outcome!;
+  }
+
+  /** The run's final answer, as native core puts it on `turn_complete.text`. */
+  private completedText(reason: TerminalReason): { text?: string } {
+    return reason === "completed" && !this.lastError && this.finalText.trim()
+      ? { text: this.finalText }
+      : {};
   }
 
   /** Whether this turn already received (or synthesized) its terminal boundary. */
