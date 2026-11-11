@@ -1,13 +1,13 @@
 import React, { memo, useEffect, useId, useRef, useState } from "react";
 import type { AskUserAnswerHandler, AskUserMessage } from "../types";
-import { Check, X } from "lucide-react";
+import { Check, ChevronRight, MessageSquare, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { useT } from "../i18n/I18nProvider";
-import { resolveAnswerTone, toneEchoStyle } from "./askUserTone";
+import { resolveAnswerTone } from "./askUserTone";
 import { recommendedAnswer } from "./askUserDefault";
 
 import { formatRemaining, useNow } from "./countdown";
@@ -26,7 +26,7 @@ interface Props {
  * AskUserQuestion rendered inline in the chat stream.
  *
  * Three layouts:
- *   - Resolved (m.answer is set): pill with the answer, no inputs
+ *   - Resolved (m.answer is set): question context and a user answer bubble
  *   - Multiple-choice (options given): list of selectable rows + "其它…"
  *     entry that reveals a free-text input
  *   - Free-text (no options): just a text input
@@ -81,33 +81,24 @@ function AskUserMessageViewImpl({ message, onAnswer, onKeepWaiting }: Props) {
   }, [submitting]);
 
   if (message.answer !== undefined) {
-    // Color the resolved echo by the chosen option's engine-supplied tone —
-    // an affirmative choice is green ✓, a deny is red ✕, anything we can't map
-    // (free text, multiSelect, LLM prompts without a tone) stays neutral. This
-    // is what keeps a "拒绝" answer from rendering with the approve styling.
-    const echo = toneEchoStyle(resolveAnswerTone(message.answer, message.options));
+    // An answered question becomes a user reply. Keep permission semantics on
+    // the status icon, without treating an ordinary preference as an approval.
+    const tone = resolveAnswerTone(message.answer, message.options);
     return (
-      // Sit in the same padded column as every other message view. A fixed
-      // pixel width left this card narrower than the surrounding cards and
-      // flush against the viewport edge at wide window sizes.
-      <div className="min-w-0 max-w-full px-4 py-1">
-        <div className="my-2 min-w-0 whitespace-pre-wrap rounded-md border bg-muted/30 p-3 text-sm [overflow-wrap:anywhere]">
-          <div className="mb-2 flex flex-col gap-1">
-            {message.header && (
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                {message.header}
-              </span>
+      <div className="min-w-0 max-w-full px-4 py-1.5">
+        <div className="mb-2 flex min-w-0 flex-col gap-1 whitespace-pre-wrap text-muted-foreground [overflow-wrap:anywhere]">
+          {message.header && <span className="text-xs font-medium">{message.header}</span>}
+          <span className="text-sm leading-6">{message.question}</span>
+        </div>
+        <div className="flex min-w-0 justify-end">
+          {/* Match UserMessageView's bubble, keeping answers as literal text. */}
+          <div className="inline-flex min-w-0 max-w-[80%] items-start gap-2 rounded-xl border border-border bg-muted/40 px-3 py-2 text-sm text-foreground">
+            {tone === "ok" && (
+              <Check size={12} className="mt-1 shrink-0 text-status-ok" aria-hidden />
             )}
-            <span className="font-medium text-foreground">{message.question}</span>
-          </div>
-          <div
-            className={cn(
-              "inline-flex min-w-0 max-w-full items-start gap-1.5 rounded-xl px-2 py-1 text-xs font-medium",
-              echo.className,
+            {tone === "danger" && (
+              <X size={12} className="mt-1 shrink-0 text-status-err" aria-hidden />
             )}
-          >
-            {echo.icon === "check" && <Check size={12} className="mt-0.5 shrink-0" aria-hidden />}
-            {echo.icon === "cross" && <X size={12} className="mt-0.5 shrink-0" aria-hidden />}
             <span className="min-w-0 whitespace-pre-wrap [overflow-wrap:anywhere]">
               {message.answer}
             </span>
@@ -120,7 +111,7 @@ function AskUserMessageViewImpl({ message, onAnswer, onKeepWaiting }: Props) {
   if (typeof message.question !== "string" || !message.question.trim()) {
     return (
       <div className="min-w-0 max-w-full px-4 py-1">
-        <div className="my-2 min-w-0 rounded-md border bg-card p-3 text-sm shadow-sm">
+        <div className="my-2 min-w-0 rounded-2xl border border-border/70 bg-card p-4 text-sm">
           <p role="alert" className="text-status-err">
             {t("msg.ask.questionUnavailable")}
           </p>
@@ -165,17 +156,15 @@ function AskUserMessageViewImpl({ message, onAnswer, onKeepWaiting }: Props) {
       <div
         role="group"
         aria-labelledby={questionId}
-        className="my-2 min-w-0 rounded-md border bg-card p-3 text-sm shadow-sm"
+        className="my-2 min-w-0 rounded-2xl border border-border/70 bg-card p-4 text-sm shadow-sm"
       >
-        <div className="mb-3 flex flex-col gap-1">
+        <div className="mb-3 flex flex-col gap-2">
           {message.header && (
-            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              {message.header}
-            </span>
+            <span className="text-xs font-medium text-muted-foreground">{message.header}</span>
           )}
           <span
             id={questionId}
-            className="break-words font-medium text-foreground [overflow-wrap:anywhere]"
+            className="break-words font-medium leading-6 text-foreground [overflow-wrap:anywhere]"
           >
             {message.question}
           </span>
@@ -188,81 +177,10 @@ function AskUserMessageViewImpl({ message, onAnswer, onKeepWaiting }: Props) {
           )}
         </div>
 
-        {(countdownActive || message.asynchronous || message.skippable) && (
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            {countdownActive ? (
-              <span
-                role="timer"
-                aria-live="off"
-                className={cn(
-                  "text-xs tabular-nums text-muted-foreground",
-                  deadline! - now <= 60_000 && "text-status-err",
-                )}
-              >
-                {t(
-                  !message.skippable
-                    ? "msg.ask.autoContinueIn"
-                    : timeoutDefault !== undefined
-                      ? "msg.ask.autoChooseIn"
-                      : "msg.ask.autoSkipIn",
-                  {
-                    time: formatRemaining(deadline! - now),
-                    label: timeoutDefault ?? "",
-                  },
-                )}
-              </span>
-            ) : (
-              <span className="text-xs text-muted-foreground">
-                {message.asynchronous ? t("msg.ask.asyncHint") : ""}
-              </span>
-            )}
-            <div className="flex flex-wrap items-center gap-1">
-              {countdownActive && (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  disabled={keepWaitingState === "pending" || locked}
-                  onClick={keepWaiting}
-                >
-                  {t("msg.ask.keepWaiting")}
-                </Button>
-              )}
-              {message.asynchronous && (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  aria-expanded={!deferred}
-                  onClick={() => setDeferred((value) => !value)}
-                >
-                  {t(deferred ? "msg.ask.resume" : "msg.ask.later")}
-                </Button>
-              )}
-              {message.skippable && (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  disabled={locked}
-                  onClick={() => submit("", true)}
-                >
-                  {t("msg.ask.skip")}
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
-        {keepWaitingState === "failed" && (
-          <p role="alert" className="mb-3 text-xs text-status-err">
-            {t("msg.ask.keepWaitingFailed")}
-          </p>
-        )}
-
         {!deferred &&
           (hasOptions ? (
             <>
-              <ul className="flex flex-col gap-2">
+              <ul className="flex flex-col gap-1">
                 {message.options!.map((option, index) => {
                   const isPicked = picked.has(index);
                   const titleId = `${questionId}-option-${index}`;
@@ -273,7 +191,7 @@ function AskUserMessageViewImpl({ message, onAnswer, onKeepWaiting }: Props) {
                       <span
                         id={titleId}
                         className={cn(
-                          "block min-w-0 break-words font-medium text-foreground [overflow-wrap:anywhere]",
+                          "block min-w-0 break-words font-medium leading-5 text-foreground [overflow-wrap:anywhere]",
                           option.tone === "danger" && "text-status-err",
                           option.tone === "ok" && "text-status-ok",
                         )}
@@ -282,7 +200,7 @@ function AskUserMessageViewImpl({ message, onAnswer, onKeepWaiting }: Props) {
                         {option.recommended && (
                           <Badge
                             variant="secondary"
-                            className="ml-2 px-1.5 align-middle font-normal"
+                            className="ml-2 border-0 bg-muted/70 px-1.5 py-0 align-middle text-[10px] font-normal text-muted-foreground"
                           >
                             {t("msg.ask.recommended")}
                           </Badge>
@@ -290,7 +208,7 @@ function AskUserMessageViewImpl({ message, onAnswer, onKeepWaiting }: Props) {
                       </span>
                       <span
                         id={descriptionId}
-                        className="mt-1 block break-words text-xs text-muted-foreground [overflow-wrap:anywhere]"
+                        className="mt-0.5 block break-words text-xs leading-5 text-muted-foreground [overflow-wrap:anywhere]"
                       >
                         {option.description}
                       </span>
@@ -302,8 +220,8 @@ function AskUserMessageViewImpl({ message, onAnswer, onKeepWaiting }: Props) {
                         <label
                           htmlFor={checkboxId}
                           className={cn(
-                            "flex cursor-pointer items-start gap-2 rounded-md border p-2 transition-colors hover:bg-accent focus-within:ring-2 focus-within:ring-ring",
-                            isPicked && "border-primary bg-primary/10",
+                            "flex cursor-pointer items-start gap-3 rounded-xl border border-transparent px-3 py-2.5 transition-colors hover:bg-muted/60 focus-within:ring-2 focus-within:ring-ring",
+                            isPicked && "border-primary/30 bg-primary/5",
                             locked && "cursor-default opacity-50",
                           )}
                         >
@@ -311,7 +229,7 @@ function AskUserMessageViewImpl({ message, onAnswer, onKeepWaiting }: Props) {
                             id={checkboxId}
                             checked={isPicked}
                             disabled={locked}
-                            className="mt-0.5"
+                            className="mt-0.5 shrink-0"
                             aria-labelledby={titleId}
                             aria-describedby={descriptionId}
                             onCheckedChange={(checked) => {
@@ -334,10 +252,14 @@ function AskUserMessageViewImpl({ message, onAnswer, onKeepWaiting }: Props) {
                           disabled={locked}
                           aria-labelledby={titleId}
                           aria-describedby={descriptionId}
-                          className="block h-auto w-full whitespace-normal rounded-md border p-2 text-left font-normal transition-colors hover:bg-accent"
+                          className="group flex h-auto w-full items-start justify-start gap-3 whitespace-normal rounded-xl border border-transparent px-3 py-2.5 text-left font-normal hover:bg-muted/60 focus-visible:border-primary/30"
                           onClick={() => submit(option.label)}
                         >
-                          {content}
+                          <span className="min-w-0 flex-1">{content}</span>
+                          <ChevronRight
+                            className="mt-0.5 text-muted-foreground/50 transition-colors group-hover:text-foreground group-focus-visible:text-foreground"
+                            aria-hidden
+                          />
                         </Button>
                       )}
                     </li>
@@ -352,29 +274,33 @@ function AskUserMessageViewImpl({ message, onAnswer, onKeepWaiting }: Props) {
                       aria-expanded={otherOpen}
                       aria-controls={otherId}
                       className={cn(
-                        "block h-auto w-full whitespace-normal rounded-md border p-2 text-left font-normal transition-colors hover:bg-accent",
-                        otherOpen && "border-primary bg-primary/10",
+                        "flex h-auto w-full items-start justify-start gap-3 whitespace-normal rounded-xl border border-transparent px-3 py-2.5 text-left font-normal hover:bg-muted/60",
+                        otherOpen && "border-primary/30 bg-primary/5",
                       )}
                       onClick={() => {
                         keepWaiting();
                         setOtherOpen((open) => !open);
                       }}
                     >
-                      <span className="block font-medium text-foreground">
-                        {t("msg.ask.other")}
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-medium leading-5 text-foreground">
+                          {t("msg.ask.other")}
+                        </span>
+                        <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">
+                          {t("msg.ask.otherDesc")}
+                        </span>
                       </span>
-                      <span className="mt-1 block text-xs text-muted-foreground">
-                        {t("msg.ask.otherDesc")}
-                      </span>
+                      <MessageSquare className="mt-0.5 text-muted-foreground/50" aria-hidden />
                     </Button>
                   </li>
                 )}
               </ul>
               <div id={otherId} hidden={!otherOpen && !message.multiSelect}>
                 {(otherOpen || message.multiSelect) && (
-                  <div className="mt-3 flex items-center gap-2">
+                  <div className="mt-3 flex items-center justify-end gap-2">
                     {otherOpen && (
                       <Input
+                        className="min-w-0 flex-1 rounded-lg"
                         autoFocus={!message.asynchronous}
                         disabled={locked}
                         aria-label={t("msg.ask.otherPlaceholder")}
@@ -412,6 +338,7 @@ function AskUserMessageViewImpl({ message, onAnswer, onKeepWaiting }: Props) {
                       <Button
                         type="button"
                         size="sm"
+                        className="h-9 shrink-0 rounded-lg px-3"
                         disabled={locked || (picked.size === 0 && !otherDraft.trim())}
                         onClick={submitMulti}
                       >
@@ -422,6 +349,7 @@ function AskUserMessageViewImpl({ message, onAnswer, onKeepWaiting }: Props) {
                         <Button
                           type="button"
                           size="sm"
+                          className="h-9 shrink-0 rounded-lg px-3"
                           disabled={locked || !otherDraft.trim()}
                           onClick={() => submit(otherDraft)}
                         >
@@ -436,6 +364,7 @@ function AskUserMessageViewImpl({ message, onAnswer, onKeepWaiting }: Props) {
           ) : (
             <div className="flex items-center gap-2">
               <Input
+                className="min-w-0 flex-1 rounded-lg"
                 autoFocus={!message.asynchronous}
                 disabled={locked}
                 aria-labelledby={questionId}
@@ -470,6 +399,7 @@ function AskUserMessageViewImpl({ message, onAnswer, onKeepWaiting }: Props) {
               <Button
                 type="button"
                 size="sm"
+                className="h-9 shrink-0 rounded-lg px-3"
                 disabled={locked || !draft.trim()}
                 onClick={() => submit(draft)}
               >
@@ -477,6 +407,80 @@ function AskUserMessageViewImpl({ message, onAnswer, onKeepWaiting }: Props) {
               </Button>
             </div>
           ))}
+        {(countdownActive || message.asynchronous || message.skippable) && (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-border/50 pt-2.5">
+            {countdownActive ? (
+              <span
+                role="timer"
+                aria-live="off"
+                className={cn(
+                  "min-w-0 grow basis-48 text-xs leading-5 tabular-nums text-muted-foreground [overflow-wrap:anywhere]",
+                  deadline! - now <= 60_000 && "text-status-warn",
+                )}
+              >
+                {t(
+                  !message.skippable
+                    ? "msg.ask.autoContinueIn"
+                    : timeoutDefault !== undefined
+                      ? "msg.ask.autoChooseIn"
+                      : "msg.ask.autoSkipIn",
+                  {
+                    time: formatRemaining(deadline! - now),
+                    label: timeoutDefault ?? "",
+                  },
+                )}
+              </span>
+            ) : message.asynchronous ? (
+              <span className="min-w-0 grow basis-48 text-xs leading-5 text-muted-foreground">
+                {t("msg.ask.asyncHint")}
+              </span>
+            ) : null}
+            <div className="ml-auto flex flex-wrap items-center gap-1">
+              {countdownActive && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 rounded-lg px-2 text-xs text-muted-foreground hover:text-foreground"
+                  disabled={keepWaitingState === "pending" || locked}
+                  onClick={keepWaiting}
+                >
+                  {t("msg.ask.keepWaiting")}
+                </Button>
+              )}
+              {message.asynchronous && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 rounded-lg px-2 text-xs text-muted-foreground hover:text-foreground"
+                  aria-expanded={!deferred}
+                  onClick={() => setDeferred((value) => !value)}
+                >
+                  {t(deferred ? "msg.ask.resume" : "msg.ask.later")}
+                </Button>
+              )}
+              {message.skippable && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 rounded-lg px-2 text-xs text-muted-foreground hover:text-foreground"
+                  disabled={locked}
+                  onClick={() => submit("", true)}
+                >
+                  {t("msg.ask.skip")}
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+        {keepWaitingState === "failed" && (
+          <p role="alert" className="mt-2 text-xs text-status-err">
+            {t("msg.ask.keepWaitingFailed")}
+          </p>
+        )}
+
         {submitting && (
           <p role="status" className="mt-2 text-xs text-muted-foreground">
             {t("msg.ask.sending")}

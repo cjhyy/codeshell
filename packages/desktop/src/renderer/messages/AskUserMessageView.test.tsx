@@ -282,7 +282,7 @@ describe("AskUserMessageView auto-continue countdown", () => {
         onKeepWaiting={async () => {}}
       />,
     );
-    expect(closing).toContain("text-status-err");
+    expect(closing).toContain("text-status-warn");
 
     // Waiting indefinitely, unsupported host, or a plain permission prompt: no clock.
     for (const html of [
