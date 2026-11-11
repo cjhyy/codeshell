@@ -1,10 +1,13 @@
 import { dlog } from "../desktop-logger.js";
 import type { NoticeActions } from "./pet-notice-action-codes.js";
 import { composeNoticeBody, MAX_NOTICE_BODY, noticeLine } from "./pet-notice-compose.js";
+import type { NoticeDeferResult } from "./pet-notice-actions.js";
+import { deferNotice, isDeferrableKind } from "./pet-notice-defer.js";
 import { NoticeDigest } from "./pet-notice-digest.js";
 import { NoticeItems } from "./pet-notice-items.js";
 import {
   isPromptEnded,
+  MAX_DEFERS,
   newNoticeRecordId,
   type NoticeDecisionPrompt,
   type NoticeActionsPatch,
@@ -206,6 +209,10 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
             channel: digest.channel,
             target: digest.target,
             body: digest.body,
+            // The owner may put their digest off ("明早再说").
+            ...(!digest.timed && digest.target.kind === "owner"
+              ? { actions: { family: "notice" as const } }
+              : {}),
           }),
         settle: (id, status, error) => this.settleQuietly(id, status, error),
         log: this.log,
@@ -387,6 +394,24 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
   /** Persist an item's use (or a pending link); a used item's waiting copies are withdrawn. */
   useAction(code: string, patch: NoticeActionsPatch): Promise<NoticeActionRecord | undefined> {
     return this.items.useAction(code, patch);
+  }
+
+  /** "Not now": keep a copy of the notice with this item for (about) `until` (clamped). */
+  async deferNotice(code: string, until: number | undefined): Promise<NoticeDeferResult> {
+    const ledger = this.options.ledger;
+    if (!ledger || this.disposed) return { ok: false, reason: "failed" };
+    return deferNotice(
+      {
+        ledger,
+        useAction: (actionCode, patch) => this.items.useAction(actionCode, patch),
+        now: this.now,
+        offset: (ms) => this.offset(ms),
+        schedule: () => this.digest?.schedule(),
+        log: this.log,
+      },
+      code,
+      until,
+    );
   }
 
   /** The Session started another run: its goal / limit / failure items close. */
@@ -774,6 +799,12 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
       target,
       ...(body ? { body } : {}),
       ...(record.deferCount !== undefined ? { deferCount: record.deferCount } : {}),
+      // Still put-off-able while under the limit.
+      ...(target.kind === "owner" &&
+      isDeferrableKind(record.kind) &&
+      (record.deferCount ?? 0) < MAX_DEFERS
+        ? { actions: { family: "notice" as const } }
+        : {}),
     });
   }
 

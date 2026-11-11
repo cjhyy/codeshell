@@ -143,6 +143,8 @@ export function createPetProactive(deps: PetProactiveDeps): PetProactive {
       attention: "always",
       channel: "auto",
       target: { kind: "owner" },
+      // "现在别说，明早再说": the owner may put it off.
+      actions: { family: "notice" },
     });
     if (decision.outlet === "drop") return outcome(`今天的${name}已经发过，未重复发送。`);
     await deps.state.update((draft) => {
@@ -249,6 +251,7 @@ export function createPetProactive(deps: PetProactiveDeps): PetProactive {
         attention: "always",
         channel: "auto",
         target: { kind: "owner" },
+        actions: { family: "notice" },
       });
       return outcome(`已提醒（${decision.reason}）。`);
     }

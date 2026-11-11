@@ -107,6 +107,20 @@ describe("ids, actions and the reply line", () => {
   });
 });
 
+describe("Mimi's own messages", () => {
+  test("a notice item is not tied to a Session and can only be put off, quietly", () => {
+    const item = { code: CODE, family: "notice", expiresAt: 1_000 };
+    expect(parseNoticeActions(item)).toEqual(item);
+    expect(parseNoticeActions({ ...item, slot: { channel: "wechat", ordinal: 2 } })).toBeDefined();
+    // Session fields do not belong on it.
+    expect(parseNoticeActions({ ...item, sessionId: "work-1", runtime: "native" })).toBeUndefined();
+    expect(parseNoticeActions({ ...item, code: "bad" })).toBeUndefined();
+    expect(actionVerbs({ family: "notice" })).toEqual(["defer"]);
+    // No hint line: the message reads as it is.
+    expect(actionHints({ family: "notice" })).toBe("");
+  });
+});
+
 describe("links and artifacts", () => {
   test("code hosts, extra hosts and localhost open; anything else asks", () => {
     expect(linkDisposition("https://github.com/o/r/pull/3")?.disposition).toBe("open");

@@ -108,6 +108,8 @@ export type RouteReason =
   | "media-not-digested"
   /** Router-only: a bound Session's reply already told that conversation; desktop only. */
   | "bound-reply-delivered"
+  /** Router-only: the owner put the notice off; its held copy goes out at its time. */
+  | "deferred"
   | "desktop-channel"
   | "named-im"
   | "im-unbound"
