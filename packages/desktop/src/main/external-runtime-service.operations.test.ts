@@ -67,6 +67,8 @@ const { ExternalRuntimeService } = await import("./external-runtime-service.js")
 let home: string, previousHome: string | undefined, cwd: string;
 let svc: InstanceType<typeof ExternalRuntimeService>;
 const events: any[] = [];
+/** The probe's queuedAtTerminal as each terminal is published (when the notices sample it). */
+const queuedAtTerminal: Array<number | undefined> = [];
 const sessionId = "external-operation-service";
 beforeEach(async () => {
   home = mkdtempSync(join(tmpdir(), "codeshell-external-service-ops-"));
@@ -76,13 +78,18 @@ beforeEach(async () => {
   mkdirSync(cwd);
   turns = 0;
   events.length = 0;
+  queuedAtTerminal.length = 0;
   providerBody = undefined;
   svc = new ExternalRuntimeService({
     featureFlags: () => ({ external_agent_runtime: true, external_host_tools: true }),
     registerSession: () => {},
     releaseSession: () => {},
     resolveProjectBinding: () => undefined,
-    emit: (_sessionId, event) => events.push(event),
+    emit: (_sessionId, event) => {
+      if (event.type === "turn_complete")
+        queuedAtTerminal.push(svc.noticeProbe(sessionId)?.queuedAtTerminal);
+      events.push(event);
+    },
     projectTrust: () => "untrusted",
     prepareCodexLaunch: async () => ({ command: "/fixture/codex", env: { PATH: "/fixture" } }),
   });
@@ -325,22 +332,22 @@ function heldTurns() {
     release: () => releases.shift()?.(),
   };
 }
-const idleProbe = { kind: "codex", running: false, queuedTurns: 0, queuedAtTerminal: 0 };
+const idleProbe = { queuedAtTerminal: 0 };
 
-test("the notice probe tells a running turn from work queued behind it", async () => {
+test("each terminal samples the user turns still queued behind it", async () => {
   expect(svc.noticeProbe(sessionId)).toEqual(idleProbe);
   const turns = heldTurns();
   const firstEntered = turns.entered();
   const first = svc.send(sessionId, { text: "first", disableGoal: true });
   const second = svc.send(sessionId, { text: "second", disableGoal: true });
   await firstEntered;
-  expect(svc.noticeProbe(sessionId)).toMatchObject({ running: true, queuedTurns: 1 });
   const secondEntered = turns.entered();
   turns.release();
   await first;
   await secondEntered;
   turns.release();
   await second;
+  expect(queuedAtTerminal).toEqual([1, 0]);
   expect(svc.noticeProbe(sessionId)).toEqual(idleProbe);
   expect(svc.noticeProbe("not-started")).toBeUndefined();
 });
@@ -367,7 +374,7 @@ test("busy is what was queued at the terminal, even once the next turn has start
     await first;
     await secondEntered;
     // Only now does the (late) watcher read busy for the first turn.
-    expect(svc.noticeProbe(sessionId)).toMatchObject({ queuedTurns: 0, queuedAtTerminal: 1 });
+    expect(svc.noticeProbe(sessionId)).toEqual({ queuedAtTerminal: 1 });
     expect(catalog.get(sessionId)?.busy).toBe(true);
     turns.release();
     await second;
@@ -378,7 +385,7 @@ test("busy is what was queued at the terminal, even once the next turn has start
   }
 });
 
-test("a failed turn and the turn queued behind it both leave the queue", async () => {
+test("a failed turn's terminal counts the turn queued behind it", async () => {
   const turns = heldTurns();
   const firstEntered = turns.entered();
   const failing = providerBody!;
@@ -389,10 +396,12 @@ test("a failed turn and the turn queued behind it both leave the queue", async (
   const first = svc.send(sessionId, { text: "first", disableGoal: true });
   const second = svc.send(sessionId, { text: "second", disableGoal: true });
   await firstEntered;
-  expect(svc.noticeProbe(sessionId)?.queuedTurns).toBe(1);
   turns.release();
-  await Promise.allSettled([first, second]);
-  expect(svc.noticeProbe(sessionId)).toMatchObject({ running: false, queuedTurns: 0 });
+  const outcomes = await Promise.all([first, second]);
+  // The failure's terminal is busy; the faulted runtime publishes nothing more
+  // (a replacement starts with an empty queue, below).
+  expect(outcomes.map((outcome) => outcome.reason)).toEqual(["model_error", "model_error"]);
+  expect(queuedAtTerminal).toEqual([1]);
   // A send that never reached the queue counts nothing.
   await expect(svc.send("not-started", "hello")).rejects.toThrow();
 });
@@ -402,14 +411,13 @@ test("an interrupt drains the queued turns it cancels", async () => {
   const firstEntered = turns.entered();
   const sends = [1, 2, 3].map((n) => svc.send(sessionId, { text: `turn ${n}`, disableGoal: true }));
   await firstEntered;
-  expect(svc.noticeProbe(sessionId)?.queuedTurns).toBe(2);
   const interrupting = svc.interrupt(sessionId);
-  // Cancelled at once, before the aborted slots even run.
-  expect(svc.noticeProbe(sessionId)?.queuedTurns).toBe(0);
   turns.release();
   await interrupting;
   await Promise.allSettled(sends);
-  expect(svc.noticeProbe(sessionId)).toMatchObject({ queuedTurns: 0, queuedAtTerminal: 0 });
+  // Cancelled at once: the interrupted turn's terminal leaves nothing queued behind it.
+  expect(queuedAtTerminal[0]).toBe(0);
+  expect(svc.noticeProbe(sessionId)).toEqual(idleProbe);
 });
 
 test("a replaced runtime starts with an empty queue", async () => {

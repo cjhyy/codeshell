@@ -276,6 +276,15 @@ export function createBoundSessionRunner(
   sessions: SessionOutcomeStream = sessionOutcomeStreamOf((listener) =>
     worker.subscribeOutbound(listener),
   ),
+  options: {
+    /**
+     * Sessions on that stream this runner does not drive: desktop external
+     * runtimes (Codex / Claude Code in Main). Messages from their bound chat
+     * still go to the worker, so their turns are neither tracked as its runs
+     * nor forwarded back to that chat. Asked per event: keep it cheap.
+     */
+    ignores?: (sessionId: string) => boolean;
+  } = {},
 ): BoundSessionRunner {
   const injected = new Set<string>();
   interface ObservedRun {
@@ -323,6 +332,7 @@ export function createBoundSessionRunner(
     // Child events share the parent's stream envelope. They cannot settle its
     // turn or become a private-chat reply.
     if (record.agentId !== undefined) return;
+    if (options.ignores?.(sessionId)) return;
     const type = record.type;
     if (type === "steer_injected" && typeof record.id === "string") {
       injected.add(`${sessionId}\u0000${record.id}`);

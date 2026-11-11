@@ -192,6 +192,12 @@ const UNRECORDED_RETRY_MAX_MS = 60_000;
 
 export interface PetImDecisionsOptions {
   read: () => ImDecision[];
+  /**
+   * Right after a `read`: the decisions it could not see (their source failed
+   * to read), or undefined when it saw everything. Missing from that read
+   * does not mean ended for them.
+   */
+  unreadDecisions?: () => ((sessionId: string, requestId: string) => boolean) | undefined;
   approve: (entry: ImDecision, decision: Decision) => Promise<void>;
   /** Drop a model question's auto-resolve deadline (回答 码 等待). */
   keepWaiting?: (entry: ImDecision) => Promise<void>;
@@ -413,6 +419,7 @@ export class PetImDecisions {
     try {
       await this.router.decisionsLoaded();
       const entries = this.options.read();
+      const unread = this.options.unreadDecisions?.();
       const live = new Set(entries.map((entry) => entry.code));
       // Ended prompts matter only while their expiry notice is still owed.
       const open = (prompt: DecisionPromptRecord["prompt"]) =>
@@ -424,7 +431,11 @@ export class PetImDecisions {
           if (isPromptEnded(record.prompt.phase)) {
             // An expiry notice the router did not take yet (a failure, a restart).
             if (owed && !owed.sent) await this.sendExpiryNotice(record, owed.channel, true);
-          } else if (!live.has(record.code)) await this.endVanished(record);
+          } else if (
+            !live.has(record.code) &&
+            unread?.(record.sessionId, record.requestId) !== true
+          )
+            await this.endVanished(record);
         } catch (error) {
           this.options.onError(error);
         }

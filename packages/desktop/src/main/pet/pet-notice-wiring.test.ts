@@ -293,14 +293,15 @@ describe("external runtime Sessions", () => {
     overrides: Parameters<typeof harness>[0] = {},
   ) {
     const state = { busy: false, title: "Codex 修登录", ...facts };
-    const known = (id: string) =>
-      id === CODEX
-        ? { sessionId: id, runtime: "codex" as const, running: true, live: true, ...state }
-        : undefined;
+    const known = (id: string) => (id === CODEX ? { sessionId: id, ...state } : undefined);
     return {
       state,
       harness: harness({
-        externalSessions: { get: known, has: (id) => known(id) !== undefined },
+        externalSessions: {
+          get: known,
+          has: (id) => known(id) !== undefined,
+          isLive: (id) => known(id) !== undefined,
+        },
         ...overrides,
       }),
     };
@@ -368,30 +369,29 @@ describe("external runtime Sessions", () => {
     expect(current.submitted.map((notice) => notice.dedupeKey)).toEqual([`${CODEX}:turn:run-1`]);
   });
 
-  test("a lost worker does not flush its parked report", async () => {
+  test("an external failure is told at once, bound chat or not; a lost worker adds nothing", async () => {
     let live = true;
     current = externalHarness({}, { hasLiveWorker: () => live }).harness;
+    // Bound or not, no reply of an external Session is forwarded: nothing parks.
     current.routes.push({ ...boundRoute(), sessionId: CODEX });
     await current.handler(CODEX, upsertArgs({ sessionId: CODEX, events: ["failed"] }));
     env.clock = NOW + 1_000;
     const [started, work] = turn("run-1");
     current.observeSessionEvent(CODEX, started);
     current.observeSessionEvent(CODEX, work);
-    // A failure inside the run: its report waits for the bound reply at the close.
     current.observeSessionEvent(CODEX, { type: "error", error: "boom" });
-    await settle();
+    await settle(() => current!.submitted.length > 0);
     loseWorker(current, () => (live = false));
     await settle();
-    // A native Session's parked report would go out now; the external run is still open.
-    expect(current.submitted).toEqual([]);
     current.observeSessionEvent(CODEX, {
       type: "turn_complete",
       reason: "model_error",
       runId: "run-1",
     });
-    await settle(() => current!.submitted.length > 0);
     await settle();
-    expect(current.submitted.map((notice) => notice.dedupeKey)).toEqual([`${CODEX}:failed:run-1`]);
+    expect(current.submitted.map((notice) => [notice.dedupeKey, notice.target.kind])).toEqual([
+      [`${CODEX}:failed:run-1`, "owner"],
+    ]);
   });
 
   test("with external Sessions present, a native Session is still reset and flushed", async () => {

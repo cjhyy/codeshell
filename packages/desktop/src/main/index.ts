@@ -1867,6 +1867,11 @@ async function createWindow(): Promise<BrowserWindow> {
     // the bound-Session bridge reads its outcomes from `sessionOutcomes`.
     const sessionOutcomeDeriver = new SessionOutcomeDeriver();
     const sessionOutcomes = createSessionOutcomeFanout();
+    // Desktop external-runtime Sessions (Codex / Claude Code run here in Main).
+    const externalSessions = createExternalSessionCatalog({
+      runtime: () => externalRuntime.service,
+      readState: (id) => externalGoalSessions.readSessionState(id),
+    });
     const notices = wirePetNotices({
       userDataDir: app.getPath("userData"),
       bridge,
@@ -1892,10 +1897,7 @@ async function createWindow(): Promise<BrowserWindow> {
       powerEvents: powerMonitor,
       focusEvents: app,
       hasLiveWorker: () => bridge?.hasLiveWorker() ?? false,
-      externalSessions: createExternalSessionCatalog({
-        runtime: () => externalRuntime.service,
-        readState: (id) => externalGoalSessions.readSessionState(id),
-      }),
+      externalSessions,
       externalApprovals: {
         approvals: () => externalRuntime.approvals,
         subscribe: (listener) => externalRuntime.subscribeApprovals(listener),
@@ -2032,25 +2034,30 @@ async function createWindow(): Promise<BrowserWindow> {
     const decisionBridge = bridge;
     petImDecisions = new PetImDecisions({
       // The worker's decisions and the desktop external runtimes' (Codex / Claude Code).
-      ...withExternalDecisions(notices.externalDecisions, {
-        read: () => {
-          pendingMobileApprovals.setWorkerState(
-            decisionBridge.workerGeneration(),
-            decisionBridge.hasLiveWorker(),
-          );
-          return collectImDecisions(
-            aggregator.getSnapshot(),
-            longTaskStore.getSnapshot().tasks,
-            pendingMobileApprovals.replayAllLines(),
-            notices.decisions.deliveryFor,
-          );
+      ...withExternalDecisions(
+        notices.externalDecisions,
+        {
+          read: () => {
+            pendingMobileApprovals.setWorkerState(
+              decisionBridge.workerGeneration(),
+              decisionBridge.hasLiveWorker(),
+            );
+            return collectImDecisions(
+              aggregator.getSnapshot(),
+              longTaskStore.getSnapshot().tasks,
+              pendingMobileApprovals.replayAllLines(),
+              notices.decisions.deliveryFor,
+            );
+          },
+          ...imDecisionWorkerActions(
+            (method, params, timeoutMs, options) =>
+              decisionBridge.requestWorker(method, params, timeoutMs, options),
+            (params) => mobileOrchestrator.broadcastApprovalResolved(params),
+          ),
         },
-        ...imDecisionWorkerActions(
-          (method, params, timeoutMs, options) =>
-            decisionBridge.requestWorker(method, params, timeoutMs, options),
-          (params) => mobileOrchestrator.broadcastApprovalResolved(params),
-        ),
-      }),
+        (source, error) =>
+          dlog("main", "pet.im-decision.read_failed", { source, error: String(error) }),
+      ),
       // The router decides whether a prompt goes to IM (presence, caps) and
       // where; its ledger records hold each prompt's lifecycle.
       router: notices.router,
@@ -2143,7 +2150,10 @@ async function createWindow(): Promise<BrowserWindow> {
       routesFilePath: resolve(app.getPath("userData"), "pet", "conversation-session-routes.json"),
       resolveSelector: createReusableSessionResolver(petSessionsRootDir),
       createRunner: (onTurn) =>
-        createBoundSessionRunner(worker, aggregator, onTurn, sessionOutcomes),
+        // A chat bound to a Codex / CC Session sends to the worker: no turn of it is forwarded.
+        createBoundSessionRunner(worker, aggregator, onTurn, sessionOutcomes, {
+          ignores: externalSessions.isLive,
+        }),
       health: createBoundSessionHealth(aggregator, petSessionsRootDir),
       describeStatus: async (route) => `当前在「${route.sessionTitle}」中。发送 /mimi 可退出。`,
       publish: (event) => publishGatewayControlEvent(event),

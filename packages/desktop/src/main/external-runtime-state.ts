@@ -592,6 +592,8 @@ export class ExternalRuntimeSessionRecorder {
   completeRun(
     reason: TerminalReason,
     completionKind?: TurnCompletionKind,
+    /** A limit interrupted the provider mid-answer: its text so far is no final reply. */
+    cutOff = false,
   ): StreamEvent | undefined {
     if (this.runClosed) return undefined;
     this.assertOwner();
@@ -612,7 +614,7 @@ export class ExternalRuntimeSessionRecorder {
     const event = this.appendOutput({
       type: "turn_complete",
       reason,
-      ...this.completedText(reason),
+      ...(cutOff ? {} : this.completedText(reason)),
       ...(kind ? { completionKind: kind } : {}),
     });
     this.runClosed = true;

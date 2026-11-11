@@ -1975,17 +1975,16 @@ export class ExternalRuntimeService {
             this.withGoalOutput(sessionId, publishGoalOutput, () => this.goals.end(goalRun));
             if (entry.lifecycle.active && finalOutcome && !entry.recorder.outputFailed) {
               try {
-                // A limit pause interrupts the provider: the run stopped on its limit.
+                // A limit pause interrupts the provider: the run stopped on its limit,
+                // and a reply it was writing is no final answer.
                 const limited =
                   goalRun.limited && acceptedGeneration === entry.lifecycle.interruptGeneration;
+                const cutOff = limited && finalOutcome.reason === "aborted_streaming";
                 const terminal = entry.recorder.completeRun(
-                  entry.finalizeOperations(
-                    limited && finalOutcome.reason === "aborted_streaming"
-                      ? "completed"
-                      : finalOutcome.reason,
-                  ),
+                  entry.finalizeOperations(cutOff ? "completed" : finalOutcome.reason),
                   finalOutcome.completionKind ??
                     (goalRun.settled ? "goal_control_stop" : limited ? "limit_stop" : undefined),
+                  cutOff,
                 );
                 if (terminal) this.emitSafely(sessionId, terminal);
               } catch {
@@ -2079,12 +2078,9 @@ export class ExternalRuntimeService {
   }
 
   /** Trusted Main probe for Mimi notices (`pet/pet-notice-external-sessions.ts`). */
-  noticeProbe(sessionId: string) {
+  noticeProbe(sessionId: string): { queuedAtTerminal: number } | undefined {
     const entry = this.sessions.get(sessionId);
-    if (!entry?.lifecycle.active) return undefined;
-    const { kind, queuedAtTerminal } = entry;
-    const running = this.isSessionRunning(sessionId);
-    return { kind, running, queuedTurns: this.queuedTurns(entry), queuedAtTerminal };
+    return entry?.lifecycle.active ? { queuedAtTerminal: entry.queuedAtTerminal } : undefined;
   }
 
   /** Queued turns an interrupt has not already cancelled. */

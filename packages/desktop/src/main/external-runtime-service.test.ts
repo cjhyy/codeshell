@@ -410,8 +410,13 @@ describe("ExternalRuntimeService", () => {
 
   test("a background wake queued behind a turn is not counted as queued work", async () => {
     const background = backgroundDelivery();
+    const queuedAtTerminal: Array<number | undefined> = [];
     const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
       backgroundWork: background.delivery,
+      emit: (_sessionId: string, event: StreamEvent) => {
+        if (event.type === "turn_complete")
+          queuedAtTerminal.push(svc.noticeProbe(request.sessionId)?.queuedAtTerminal);
+      },
     });
     let release!: () => void;
     let entered!: () => void;
@@ -427,15 +432,16 @@ describe("ExternalRuntimeService", () => {
       await started;
       background.complete(request.sessionId, "delegated result");
       await settleBackgroundWakeup();
-      expect(svc.noticeProbe(request.sessionId)).toMatchObject({ running: true, queuedTurns: 0 });
       // A user message behind the same turn is.
       providerSend = undefined;
       const queued = svc.send(request.sessionId, "follow-up", 77);
-      expect(svc.noticeProbe(request.sessionId)?.queuedTurns).toBe(1);
       release();
       await Promise.all([turn, queued]);
       await settleBackgroundWakeup();
-      expect(svc.noticeProbe(request.sessionId)?.queuedTurns).toBe(0);
+      // The user turn's terminal counts the follow-up only, not the wake ahead of it.
+      expect(queuedAtTerminal[0]).toBe(1);
+      expect(queuedAtTerminal.at(-1)).toBe(0);
+      expect(svc.noticeProbe(request.sessionId)).toEqual({ queuedAtTerminal: 0 });
     } finally {
       release?.();
       await svc.stopAll();

@@ -10,7 +10,7 @@ import {
   type ExternalApprovalEvent,
   type ExternalApprovalRequest,
 } from "../external-runtime-approvals.js";
-import { collectImDecisions, PetImDecisions } from "./pet-im-decisions.js";
+import { collectImDecisions, PetImDecisions, type ImDecision } from "./pet-im-decisions.js";
 import {
   externalDecisionCode,
   externalDecisionRequest,
@@ -37,18 +37,9 @@ import {
 const XID = "s-codex";
 
 const catalog: ExternalNoticeSessionCatalog = {
-  get: (id) =>
-    id === XID
-      ? {
-          sessionId: XID,
-          runtime: "codex",
-          title: "Codex 修 CI",
-          running: true,
-          busy: false,
-          live: true,
-        }
-      : undefined,
+  get: (id) => (id === XID ? { sessionId: XID, title: "Codex 修 CI", busy: false } : undefined),
   has: (id) => id === XID,
+  isLive: (id) => id === XID,
 };
 
 let current: Harness | undefined;
@@ -99,11 +90,20 @@ function setup(
   const lines: string[] = [];
   const nativeAnswers: unknown[] = [];
   const timers = fakeTimers();
+  let nativeReadFails = false;
+  const readFailures: string[] = [];
   const decisions = new PetImDecisions({
-    ...withExternalDecisions(h.wiring.externalDecisions, {
-      read: () => collectImDecisions(h.snapshot(), h.tasks, lines, h.wiring.decisions.deliveryFor),
-      approve: async (_entry, decision) => void nativeAnswers.push(decision),
-    }),
+    ...withExternalDecisions(
+      h.wiring.externalDecisions,
+      {
+        read: () => {
+          if (nativeReadFails) throw new Error("projection unreadable");
+          return collectImDecisions(h.snapshot(), h.tasks, lines, h.wiring.decisions.deliveryFor);
+        },
+        approve: async (_entry, decision) => void nativeAnswers.push(decision),
+      },
+      (source) => readFailures.push(source),
+    ),
     now: () => env.clock,
     router: h.wiring.router,
     isOwnerConversation: h.wiring.decisions.isOwnerConversation,
@@ -186,6 +186,8 @@ function setup(
     nativeAnswers,
     decisions,
     resolutions,
+    readFailures,
+    failNativeReads: (fails: boolean) => void (nativeReadFails = fails),
   };
 }
 
@@ -484,6 +486,33 @@ describe("external runtime decision prompts", () => {
     expect(t.nativeAnswers).toEqual([{ approved: true }]);
   });
 
+  test("a native read that fails still prompts external decisions, and ends no native prompt", async () => {
+    const t = setup();
+    await watchBlocked();
+    await watchBlocked(SID);
+    t.raiseNative();
+    await t.graceOver(() => t.h.ownerSends.length === 1);
+    const nativeCode = t.decisions["options"]
+      .read()
+      .find((entry) => entry.envelope.sessionId === SID)!.code;
+    await settle(() => t.promptOf(nativeCode)?.phase === "im");
+    t.failNativeReads(true);
+    // Answered on the desktop meanwhile: a read that saw nothing cannot tell.
+    t.h.pending.splice(0);
+    const { decision, code } = t.ask(bash);
+    await t.graceOver(() => t.promptOf(code)?.phase === "im");
+    expect(t.h.ownerSends).toHaveLength(2);
+    expect(t.promptOf(nativeCode)?.phase).toBe("im");
+    expect(t.readFailures[0]).toBe("native");
+    expect(await t.reply(`回答 ${code} 1`)).toContain("已处理");
+    await expect(decision).resolves.toEqual({ approved: true });
+    // Readable again: now its end is known.
+    t.failNativeReads(false);
+    await t.decisions.scan();
+    await settle(() => t.promptOf(nativeCode)?.phase === "revoked");
+    expect(t.promptOf(nativeCode)?.phase).toBe("revoked");
+  });
+
   test("a question: 回答 码 N picks the option, multi-select joins several, free text is the answer", async () => {
     const t = setup();
     await watchBlocked();
@@ -555,6 +584,46 @@ describe("external runtime decision prompts", () => {
       `${XID}:${requestId}`,
       `${XID}:${requestId}:away`,
     ]);
+  });
+});
+
+describe("reading both sources", () => {
+  const entry = (sessionId: string, requestId: string) =>
+    ({ code: requestId, envelope: { sessionId, requestId } }) as unknown as ImDecision;
+  const native = entry(SID, "req-1");
+  const external = entry(XID, "external-approval-1");
+
+  test("a source that fails to read is logged and leaves the other's decisions", () => {
+    const failing = new Set<string>();
+    const failures: Array<[string, string]> = [];
+    const source = (name: string, entries: ImDecision[]) => () => {
+      if (failing.has(name)) throw new Error(`${name} unreadable`);
+      return entries;
+    };
+    const both = withExternalDecisions(
+      {
+        read: source("external", [external]),
+        approve: async () => undefined,
+        isExternal: (sessionId) => sessionId === XID,
+      },
+      { read: source("native", [native]), approve: async () => undefined },
+      (name, error) => failures.push([name, String(error)]),
+    );
+    expect(both.read()).toEqual([native, external]);
+    expect(both.unreadDecisions?.()).toBeUndefined();
+    failing.add("native");
+    expect(both.read()).toEqual([external]);
+    // What the read could not see has not ended.
+    const missed = both.unreadDecisions?.();
+    expect([missed?.(SID, "req-1"), missed?.(XID, "external-approval-1")]).toEqual([true, false]);
+    failing.clear();
+    failing.add("external");
+    expect(both.read()).toEqual([native]);
+    expect(both.unreadDecisions?.()?.(XID, "external-approval-1")).toBe(true);
+    failing.add("native");
+    expect(both.read()).toEqual([]);
+    expect(failures.map(([name]) => name)).toEqual(["native", "external", "native", "external"]);
+    expect(failures[0]![1]).toContain("native unreadable");
   });
 });
 

@@ -28,12 +28,7 @@ function catalog(
   };
 }
 
-const probe = (
-  kind: "codex" | "claude-code",
-  running: boolean,
-  queuedAtTerminal = 0,
-  queuedTurns = queuedAtTerminal,
-) => ({ kind, running, queuedTurns, queuedAtTerminal });
+const probe = (queuedAtTerminal = 0) => ({ queuedAtTerminal });
 
 const codexState: PersistedExternalSessionState = {
   provider: "codex",
@@ -43,47 +38,36 @@ const codexState: PersistedExternalSessionState = {
 };
 
 describe("external Session catalog", () => {
-  test("a live runtime is known with its kind, title and queue", () => {
-    const { catalog: known } = catalog(
-      { "s-codex": probe("codex", true, 1) },
-      { "s-codex": codexState },
-    );
-    expect(known.get("s-codex")).toEqual({
-      sessionId: "s-codex",
-      runtime: "codex",
-      title: "修登录",
-      running: true,
-      busy: true,
-      live: true,
-    });
+  test("a live runtime is known with its title and queue", () => {
+    const { catalog: known } = catalog({ "s-codex": probe(1) }, { "s-codex": codexState });
+    expect(known.get("s-codex")).toEqual({ sessionId: "s-codex", title: "修登录", busy: true });
     expect(known.has("s-codex")).toBe(true);
+    expect(known.isLive("s-codex")).toBe(true);
   });
 
-  test("a running turn alone is not busy: busy means work queued behind it", () => {
-    const { catalog: known } = catalog({ "s-cc": probe("claude-code", true) });
-    expect(known.get("s-cc")).toMatchObject({ runtime: "claude-code", running: true, busy: false });
-    // No persisted state (yet): still live, just untitled.
-    expect(known.get("s-cc")?.title).toBeUndefined();
+  test("busy is the queue sampled at the last terminal: a running turn alone is not busy", () => {
+    const { catalog: known } = catalog({ "s-cc": probe(0) });
+    expect(known.get("s-cc")).toEqual({ sessionId: "s-cc", busy: false });
   });
 
-  test("busy is the queue sampled at the last terminal, not the live queue", () => {
-    // The next queued turn already started (live 0); the closed turn had one behind it.
-    const { catalog: started } = catalog({ s: probe("codex", true, 1, 0) });
-    expect(started.get("s")?.busy).toBe(true);
-    // Sent after the terminal: the follow-up turn reports itself.
-    const { catalog: later } = catalog({ s: probe("codex", true, 0, 1) });
-    expect(later.get("s")?.busy).toBe(false);
+  test("isLive asks the runtime only, never the persisted state", () => {
+    const { catalog: known, reads } = catalog({ live: probe() }, { idle: codexState });
+    expect([known.isLive("live"), known.isLive("idle"), known.isLive("missing")]).toEqual([
+      true,
+      false,
+      false,
+    ]);
+    expect(reads).toEqual([]);
+    for (const runtime of ["absent", "throws"] as const)
+      expect(catalog({ live: probe() }, {}, runtime).catalog.isLive("live")).toBe(false);
   });
 
   test("the title falls back to the first-message summary", () => {
-    const { catalog: known } = catalog(
-      { s: probe("codex", false) },
-      { s: { ...codexState, title: "  " } },
-    );
+    const { catalog: known } = catalog({ s: probe() }, { s: { ...codexState, title: "  " } });
     expect(known.get("s")?.title).toBe("帮我修登录");
   });
 
-  test("a persisted external work Session without a runtime is known, not live", () => {
+  test("a persisted external work Session without a runtime is known, not busy", () => {
     const { catalog: known } = catalog(
       {},
       {
@@ -92,15 +76,9 @@ describe("external Session catalog", () => {
         "s-keyed": { provider: "legacy-runtime", model: "claude-code/opus" },
       },
     );
-    expect(known.get("s-codex")).toEqual({
-      sessionId: "s-codex",
-      runtime: "codex",
-      title: "修登录",
-      running: false,
-      busy: false,
-      live: false,
-    });
-    expect(known.get("s-keyed")).toMatchObject({ runtime: "claude-code", live: false });
+    expect(known.get("s-codex")).toEqual({ sessionId: "s-codex", title: "修登录", busy: false });
+    expect(known.has("s-keyed")).toBe(true);
+    expect(known.isLive("s-codex")).toBe(false);
   });
 
   const excluded: Record<string, PersistedExternalSessionState> = {
@@ -128,7 +106,7 @@ describe("external Session catalog", () => {
   });
 
   test("a live runtime of a Session that is not top-level work is not eligible either", () => {
-    const live = Object.fromEntries(Object.keys(excluded).map((id) => [id, probe("codex", true)]));
+    const live = Object.fromEntries(Object.keys(excluded).map((id) => [id, probe()]));
     const { catalog: known } = catalog(live, excluded);
     for (const id of Object.keys(excluded)) expect(known.has(id)).toBe(false);
   });
@@ -146,24 +124,20 @@ describe("external Session catalog", () => {
     expect(known.has("s")).toBe(true);
   });
 
-  test("a live runtime's kind wins over a persisted provider; identity is still checked", () => {
+  test("a live runtime wins over a persisted native provider; identity is still checked", () => {
     const { catalog: known, reads } = catalog(
-      { s: probe("codex", false) },
+      { s: probe() },
       { s: { provider: "anthropic", model: "x" } },
     );
-    expect(known.get("s")).toMatchObject({ live: true, runtime: "codex" });
+    expect(known.has("s")).toBe(true);
     // One read: the identity filter and the title share it.
     expect(reads).toEqual(["s"]);
   });
 
   test("without the runtime service, only persisted Sessions are known", () => {
     for (const runtime of ["absent", "throws"] as const) {
-      const { catalog: known } = catalog(
-        { s: probe("codex", true, 2) },
-        { s: codexState },
-        runtime,
-      );
-      expect(known.get("s")).toMatchObject({ live: false, busy: false, running: false });
+      const { catalog: known } = catalog({ s: probe(2) }, { s: codexState }, runtime);
+      expect(known.get("s")).toMatchObject({ busy: false });
     }
   });
 });

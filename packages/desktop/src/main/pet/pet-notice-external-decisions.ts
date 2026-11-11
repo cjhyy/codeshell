@@ -225,17 +225,50 @@ export function externalDecisionRequest(
 
 /**
  * `PetImDecisions`' read and answer, over both the worker's decisions and the
- * external runtimes': each answer goes back to where its decision waits.
+ * external runtimes': each answer goes back to where its decision waits. One
+ * source that cannot be read leaves the other's decisions in the read (and is
+ * logged); its own are then unseen, not ended (`unreadDecisions`).
  */
 export function withExternalDecisions(
   external: Pick<PetExternalDecisions, "read" | "approve" | "isExternal">,
   native: Pick<PetImDecisionsOptions, "read" | "approve" | "keepWaiting">,
-): Pick<PetImDecisionsOptions, "read" | "approve" | "keepWaiting" | "isExternal"> {
+  onReadError?: (source: "native" | "external", error: unknown) => void,
+): Pick<
+  PetImDecisionsOptions,
+  "read" | "approve" | "keepWaiting" | "isExternal" | "unreadDecisions"
+> {
   const owns = (entry: ImDecision) =>
     external.isExternal(entry.envelope.sessionId, entry.envelope.requestId);
   const keepWaiting = native.keepWaiting;
+  /** The sources the last read could not see. */
+  let unread = { native: false, external: false };
+  const readSource = (source: "native" | "external", read: () => ImDecision[]) => {
+    try {
+      return read();
+    } catch (error) {
+      unread[source] = true;
+      try {
+        onReadError?.(source, error);
+      } catch {
+        // Logging must not cost the other source its decisions.
+      }
+      return [];
+    }
+  };
   return {
-    read: () => [...native.read(), ...external.read()],
+    read: () => {
+      unread = { native: false, external: false };
+      return [
+        ...readSource("native", () => native.read()),
+        ...readSource("external", () => external.read()),
+      ];
+    },
+    unreadDecisions: () => {
+      const missed = unread;
+      if (!missed.native && !missed.external) return undefined;
+      return (sessionId, requestId) =>
+        external.isExternal(sessionId, requestId) ? missed.external : missed.native;
+    },
     approve: (entry, decision) =>
       owns(entry) ? external.approve(entry, decision) : native.approve(entry, decision),
     ...(keepWaiting

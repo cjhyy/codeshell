@@ -155,7 +155,7 @@ interface NoticeRule {
     | {
         kind: "session";
         sessionId: string;
-        runtime: "native"; // "external" 留给 1b
+        runtime: "native"; // 外部会话（1b）的规则也存成 "native"：没有代码读这个字段
         events: ("done" | "failed" | "blocked")[];
         scope: "turn" | "goal";
         armedAt: number; // 建规则的时刻（ms）；只对此后完成的回合生效，重启不受影响
@@ -368,9 +368,11 @@ NotifyMe({
 Codex / Claude Code 会话跑在桌面主进程里（`external-runtime-service.ts`），不经过 worker。四处接入：
 
 1. **资格**：`pet-notice-external-sessions.ts` 给提醒管线一份外部会话目录。在跑的运行时，或落盘状态表明是 Codex/CC 的顶层工作会话（非 Mimi、非子代理、非临时、未归档）都算；运行时重启后规则仍然有效。"忙"取每次 `turn_complete` 发出那一刻排在后面的用户/宿主消息数，后台唤醒不算。原生 worker 断开只清原生会话的状态。
-2. **事件**：外部事件不论有无窗口都进同一个结果解释者。`session_started` 带 `trigger`（用户发送 `user`、宿主转发 `host_message`、后台唤醒 `background_wake`）和 `clientMessageId`；`turn_complete` 带 core 同一套 `outcome`（`bookkeeping` 工具不算工作，Codex/CC 自带工具算）和最终回复（最后一次工具调用之后的文字）。Goal 到达轮次/时间/token 上限暂停时按上限停止结束（`blockedOn: "limit"`），不当成等用户；`complete_goal` / `cancel_goal` 以 `goal_control_stop` 结束。运行时释放时只结束该会话未收尾的回合并冲刷暂存的汇报。宿主转发消息必须带 `displayText`。
+2. **事件**：外部事件不论有无窗口都进同一个结果解释者。`session_started` 带 `trigger`（用户发送 `user`、宿主转发 `host_message`、后台唤醒 `background_wake`）和 `clientMessageId`；`turn_complete` 带 core 同一套 `outcome`（`bookkeeping` 工具不算工作，Codex/CC 自带工具算）和最终回复（最后一次工具调用之后的文字）。Goal 到达轮次/时间/token 上限暂停时按上限停止结束（`blockedOn: "limit"`），不当成等用户；被时间/token 上限打断时写到一半的回复不算最终回复（`turn_complete` 不带 `text`）；`complete_goal` / `cancel_goal` 以 `goal_control_stop` 结束。运行时释放时只结束该会话未收尾的回合并冲刷暂存的汇报。宿主转发消息必须带 `displayText`。
 3. **工具**：`NotifyMe` 与 `ReportToMimi` 进外部工具表（`requires: "mimi-host"`，只有宿主提供处理器时才暴露），在主进程内直接调规则处理器和汇报观察者；会话身份取运行时绑定的会话，不看参数；免审批；计划模式下不暴露。已知限制：运行时在提醒接线完成前启动的，要重启运行时才有 `NotifyMe`。
 4. **审批与提问**：外部审批（CodeShell 工具审批、Codex 原生审批、Claude Code 权限）和提问进同一个 `PetImDecisions`，一个决定一条 IM 提示。码由 `["external", 会话, 请求]` 生成，不会和原生撞；回码直接结算外部审批路由（只允许本次，不授会话/项目范围）；桌面、手机、IM、超时、运行时停止任一处结算都会结束提示。外部提示的状态只看审批路由，不受 worker 状态影响；重启后路由里已不存在的提示静默撤销。Codex 原生审批的说明统一由 `external-runtime-codex-approvals.ts` 生成（命令、向终端输入、网络访问的主机、文件改动列表、权限），桌面卡片、手机、IM 看到的一致。
+
+已知限制：IM 会话绑定到 Codex/CC 会话的双向转发还没做（绑定桥忽略外部会话）。
 
 目前没有 Mimi 派活到外部会话的通道；以后加时，发送要带 `displayText`、`clientMessageId`（`petDelegationClientMessageId`）和 `trigger: "host_message"`，长任务即可按现有方式绑定。
 

@@ -62,6 +62,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
   const views = new SessionViewTracker();
   const settings = createNoticeSettings({ readSettings: () => deps.readSettings(), now, log });
   let disposed = false;
+  const isExternal = (sessionId: string) => deps.externalSessions?.has(sessionId) === true;
   // Read lazily: where a prompt goes needs the hooks and view built below.
   const externalDecisions = createExternalDecisions({
     ...(deps.externalApprovals ? { source: deps.externalApprovals } : {}),
@@ -153,8 +154,12 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
   const deliveries = createPetDeliveryResolver({
     rules: ruleStore,
     longTasks: deps.longTasks,
+    // The bound-Session bridge forwards no desktop external runtime's turns
+    // (its chat's messages still go to the worker): no chat is bound to one.
     replyRoutes: async (sessionId) =>
-      (await deps.sessionRoutes()?.notifyRoutesForSession(sessionId)) ?? [],
+      isExternal(sessionId)
+        ? []
+        : ((await deps.sessionRoutes()?.notifyRoutesForSession(sessionId)) ?? []),
     delegatedFromDesktop: () => settings.settings().delegatedFromDesktop,
     log,
   });
@@ -245,7 +250,6 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     log,
   });
   const workerGone = createWorkerLossDetector(view);
-  const isExternal = (sessionId: string) => deps.externalSessions?.has(sessionId) === true;
   const unsubscribeProjection = deps.projection.subscribe((event) => {
     void ready.then(() => (disposed ? undefined : watcher.observeProjection(event)));
     if (workerGone(event)) {

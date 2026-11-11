@@ -438,6 +438,29 @@ describe("outcomes of external runs", () => {
     expectLimitBlocked(outcomes);
   });
 
+  /** The provider is mid-answer when the limit interrupts it: that text is no final reply. */
+  async function cutOffMidReply(goal: { timeBudgetMs?: number; tokenBudget?: number }) {
+    const outcomes = deriveAll();
+    providerTurn = async (_args, emit) => {
+      for (const event of [...tool("commandExecution"), reply("迁移到一半，接下来")]) emit(event);
+      if (goal.tokenBudget)
+        emit({ type: "usage_update", promptTokens: 500, completionTokens: 100 });
+      await untilInterrupted(emit);
+    };
+    await svc.send(CODEX, { text: "迁移", goal: { objective: "迁移", ...goal } });
+    expectLimitBlocked(outcomes);
+    expect(ofType("turn_complete")[0]).not.toHaveProperty("text");
+    expect(outcomes.at(-1)).not.toHaveProperty("summary");
+  }
+
+  test("a reply cut off by the time limit is not the blocked notice's summary", async () => {
+    await cutOffMidReply({ timeBudgetMs: 30 });
+  });
+
+  test("a reply cut off by the token limit is not the blocked notice's summary", async () => {
+    await cutOffMidReply({ tokenBudget: 100 });
+  });
+
   test("a Stop the owner asked for pauses the Goal without asking anything", async () => {
     const outcomes = deriveAll();
     let release!: () => void;
@@ -519,7 +542,7 @@ describe("the external stream feeding the tap", () => {
     };
   }
 
-  test("a runtime released mid-run sends the report parked on its open run", async () => {
+  test("a mid-run failure goes out at once, even with a chat bound to the Session", async () => {
     current = noticeHarness();
     const bridge = sources();
     const stop = feedSessionOutcomeTap({
@@ -533,14 +556,17 @@ describe("the external stream feeding the tap", () => {
     env.clock = NOW + 1_000;
     bridge.event(CODEX, { type: "session_started", runId: "run-1", trigger: "user" });
     bridge.event(CODEX, { type: "tool_use_start", toolCall: { id: "t", toolName: "Bash" } });
-    // A failure inside the run: its report waits for the run's close.
+    // The bridge forwards no turn of an external Session, so no reply in that
+    // chat can serve the report: it does not wait for the run's close.
     bridge.event(CODEX, { type: "error", error: "boom", runId: "run-1" });
-    await settle();
-    expect(current.submitted).toEqual([]);
+    await settle(() => current!.submitted.length > 0);
+    expect(current.submitted.map((notice) => [notice.dedupeKey, notice.target.kind])).toEqual([
+      [`${CODEX}:failed:run-1`, "owner"],
+    ]);
     // The runtime goes away without a terminal (its output could not be published).
     bridge.released(CODEX);
-    await settle(() => current!.submitted.length > 0);
-    expect(current.submitted.map((notice) => notice.dedupeKey)).toEqual([`${CODEX}:failed:run-1`]);
+    await settle();
+    expect(current.submitted).toHaveLength(1);
     stop();
     bridge.event(CODEX, { type: "session_started", runId: "run-2" });
     expect(current.deriver.derive(CODEX, { type: "turn_complete", reason: "completed" })).toEqual([

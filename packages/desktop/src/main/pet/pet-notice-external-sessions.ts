@@ -1,7 +1,5 @@
-import { parseExternalRuntimeModelKey } from "../../shared/external-runtime-models.js";
+import { isExternalRuntimeModelKey } from "../../shared/external-runtime-models.js";
 import { persistedExternalRuntimeModelKey } from "../mobile-remote/external-runtime-commands.js";
-
-export type ExternalNoticeRuntimeKind = "codex" | "claude-code";
 
 /**
  * A work Session this desktop runs on an external runtime (Codex / Claude Code
@@ -11,10 +9,7 @@ export type ExternalNoticeRuntimeKind = "codex" | "claude-code";
  */
 export interface ExternalNoticeSession {
   sessionId: string;
-  runtime: ExternalNoticeRuntimeKind;
   title?: string;
-  /** A provider turn (or Goal run) is in flight. */
-  running: boolean;
   /**
    * User or host sends were queued behind the last turn when its turn_complete
    * was published. The rule watcher's "busy": a closing turn with queued work
@@ -25,8 +20,6 @@ export interface ExternalNoticeSession {
    * to an empty slot and never report the carried work.
    */
   busy: boolean;
-  /** A runtime is live in this desktop; false: known from its persisted state only. */
-  live: boolean;
 }
 
 /**
@@ -46,18 +39,17 @@ export interface ExternalNoticeSession {
 export interface ExternalNoticeSessionCatalog {
   get(sessionId: string): ExternalNoticeSession | undefined;
   has(sessionId: string): boolean;
+  /**
+   * A runtime of this Session is live in this desktop: every external Session
+   * event comes from one. Cheap (no persisted state is read), for per-event
+   * checks; says nothing about eligibility (`has`).
+   */
+  isLive(sessionId: string): boolean;
 }
 
 /** `ExternalRuntimeService.noticeProbe`: only live runtimes answer. */
 export interface ExternalRuntimeNoticeProbe {
-  noticeProbe(sessionId: string):
-    | {
-        kind: ExternalNoticeRuntimeKind;
-        running: boolean;
-        queuedTurns: number;
-        queuedAtTerminal: number;
-      }
-    | undefined;
+  noticeProbe(sessionId: string): { queuedAtTerminal: number } | undefined;
 }
 
 /** The fields of a Session's persisted state (core `SessionState`) read here. */
@@ -98,27 +90,18 @@ export function createExternalSessionCatalog(deps: {
     const persisted = state(sessionId);
     if (persisted && !isTopLevelWork(persisted)) return undefined;
     const title = text(persisted?.title) ?? text(persisted?.summary);
-    if (live)
-      return {
-        sessionId,
-        runtime: live.kind,
-        ...(title ? { title } : {}),
-        running: live.running,
-        busy: live.queuedAtTerminal > 0,
-        live: true,
-      };
-    const runtime = persistedRuntime(persisted);
-    if (!runtime) return undefined;
+    if (!live && !persistedOnExternalRuntime(persisted)) return undefined;
     return {
       sessionId,
-      runtime,
       ...(title ? { title } : {}),
-      running: false,
-      busy: false,
-      live: false,
+      busy: live !== undefined && live.queuedAtTerminal > 0,
     };
   };
-  return { get, has: (sessionId) => get(sessionId) !== undefined };
+  return {
+    get,
+    has: (sessionId) => get(sessionId) !== undefined,
+    isLive: (sessionId) => probe(sessionId) !== undefined,
+  };
 }
 
 /** Not Mimi's, a sub-agent's, a child, ephemeral or archived (pet `readWorkSessionOnDisk`). */
@@ -132,11 +115,8 @@ function isTopLevelWork(state: PersistedExternalSessionState): boolean {
   );
 }
 
-function persistedRuntime(
-  state: PersistedExternalSessionState | undefined,
-): ExternalNoticeRuntimeKind | undefined {
-  if (!state) return undefined;
-  return parseExternalRuntimeModelKey(persistedExternalRuntimeModelKey(state))?.kind;
+function persistedOnExternalRuntime(state: PersistedExternalSessionState | undefined): boolean {
+  return state !== undefined && isExternalRuntimeModelKey(persistedExternalRuntimeModelKey(state));
 }
 
 function text(value: string | undefined): string | undefined {
