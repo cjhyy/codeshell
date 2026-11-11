@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { scriptedReplyModel } from "./test-utils/scripted-reply-model.js";
 import { createPetLongTask, parsePetLongTask } from "../../../../pet/src/long-task.js";
 import type { DesktopPetProjectionSnapshot } from "./pet-state-aggregator.js";
 import type { PetChatControlRequest } from "../im-gateway-control-server.js";
@@ -129,7 +130,6 @@ function routerStub(sent: Sent[]): FakeRouter {
 }
 
 /** A router that never records anything (the ledger is unavailable). */
-const nullRouter = () => new FakeRouter(() => undefined);
 
 function fixture(id = "one") {
   const task = createPetLongTask({
@@ -201,6 +201,7 @@ function harness(...fixtures: ReturnType<typeof fixture>[]) {
   const approvals: Array<{ requestId: string; decision: unknown }> = [];
   const errors: unknown[] = [];
   const relay = new PetImDecisions({
+    interpret: scriptedReplyModel,
     read: () => fixtures.flatMap((item) => item.read()),
     now: () => now,
     approve: async (entry, decision) => {
@@ -211,7 +212,9 @@ function harness(...fixtures: ReturnType<typeof fixture>[]) {
     router: routerStub(published),
     onError: (error) => errors.push(error),
   });
-  const reply = (code: string, answer: string, origin = {}) =>
+  // The prompt is delivered first (a reply is only read in the chat it reached).
+  const reply = async (code: string, answer: string, origin = {}) => (
+    await relay.scan(),
     relay.reply({
       message: `回答 ${code} ${answer}`,
       origin: {
@@ -221,7 +224,8 @@ function harness(...fixtures: ReturnType<typeof fixture>[]) {
         isDirectMessage: true,
         ...origin,
       },
-    });
+    })
+  );
   return {
     relay,
     published,
@@ -251,7 +255,9 @@ describe("IM task confirmations", () => {
     await h.relay.scan();
     expect(h.published).toHaveLength(2);
     const code = b.read()[0]!.code;
-    expect(h.published[1]!.text).toContain(`回答 ${code} 1`);
+    // Plain words; the code is internal.
+    expect(h.published[1]!.text).toContain("直接回我就行。");
+    expect(h.published[1]!.text).not.toContain(code);
     expect(h.published[1]!.text).toContain("允许本次 — One read");
     expect(h.published[1]!.target).toEqual({ channel: "wechat", target: "conversation" });
     expect(await h.reply(code, "1")).toContain("已处理");
@@ -259,7 +265,8 @@ describe("IM task confirmations", () => {
       { requestId: "request-b", decision: { approved: true, answer: "允许本次" } },
     ]);
     expect(a.read()).toHaveLength(1);
-    expect(await h.reply(code, "1")).toContain("已结束");
+    // Answered: the model sees it as ended, and nothing is answered twice.
+    expect(await h.reply(code, "1")).toBeUndefined();
     expect(h.approvals).toHaveLength(1);
   });
   test("ordinary chat and ambiguous yes never manufacture approval", async () => {
@@ -267,12 +274,13 @@ describe("IM task confirmations", () => {
       h = harness(f),
       code = f.read()[0]!.code;
     expect(await h.relay.reply({ message: "继续啊" })).toBeUndefined();
-    expect(await h.reply(code, "好的")).toContain("选项无效");
+    await h.relay.scan();
+    expect(await h.reply(code, "好的")).toContain("只能从选项里选");
     expect(await h.reply(code, "3")).toContain("选项无效");
     expect(await h.reply(code, "1,2")).toContain("选项无效");
     expect(h.approvals).toHaveLength(0);
   });
-  test("a numbered reply gets the exact confirmation format without entering its Session", async () => {
+  test("a bare reply answers the one delivered prompt, never one that was not delivered", async () => {
     const f = fixture(),
       h = harness(f);
     const request = {
@@ -284,21 +292,16 @@ describe("IM task confirmations", () => {
         isDirectMessage: true,
       },
     };
-    // Even after a restart, short replies get deterministic guidance, never authorization.
-    expect(await h.relay.reply(request)).toContain(`回答 ${f.read()[0]!.code} 2`);
+    // Not prompted yet: nothing is open in this chat, so no model is asked.
+    expect(await h.relay.reply(request)).toBeUndefined();
     expect(h.approvals).toHaveLength(0);
     await h.relay.scan();
-    expect(h.published[0]!.text).toContain("无需进入 Session");
-    const code = f.read()[0]!.code;
-    const guidance = await h.relay.reply(request);
-    expect(guidance).toContain(`回答 ${code} 2`);
-    expect(guidance).toContain("Read /private/example?");
-    expect(h.approvals).toHaveLength(0);
-    expect(await h.reply(code, "2")).toContain("已处理");
+    expect(await h.relay.reply(request)).toContain("已处理");
     expect(h.approvals).toEqual([
       { requestId: "request-one", decision: { approved: true, answer: "拒绝" } },
     ]);
-    expect(await h.relay.reply(request)).toContain("已结束或超时");
+    // Only the ended prompt is left: nothing is open, the message goes on as usual.
+    expect(await h.relay.reply(request)).toBeUndefined();
     expect(h.approvals).toHaveLength(1);
   });
   test("short answers never select among multiple pending questions", async () => {
@@ -315,8 +318,8 @@ describe("IM task confirmations", () => {
         isDirectMessage: true,
       },
     });
-    expect(answer).toContain(`回答 ${a.read()[0]!.code}`);
-    expect(answer).toContain(`回答 ${b.read()[0]!.code}`);
+    // Two open items and no clue which: the model asks back.
+    expect(answer).toBe("是哪一件？");
     expect(h.approvals).toHaveLength(0);
     await h.reply(b.read()[0]!.code, "1");
     expect(h.approvals).toHaveLength(1);
@@ -364,7 +367,7 @@ describe("IM task confirmations", () => {
           isDirectMessage: true,
         },
       }),
-    ).toContain(`回答 ${replacement.read()[0]!.code}`);
+    ).toBeUndefined();
     expect(h.approvals).toHaveLength(0);
   });
   test("a late numbered reply to an answered question cannot authorize the next delivered question", async () => {
@@ -385,7 +388,8 @@ describe("IM task confirmations", () => {
         isDirectMessage: true,
       },
     });
-    expect(guidance).toContain(`回答 ${b.read()[0]!.code} 1`);
+    // The answered prompt is shown as ended beside the open one: the model asks back.
+    expect(guidance).toBe("是哪一件？");
     expect(h.approvals).toHaveLength(0);
   });
   test("the worker deadline controls both the displayed time and expiration", async () => {
@@ -396,7 +400,8 @@ describe("IM task confirmations", () => {
     expect(h.published[0]!.text).toContain("剩余约 2 分钟");
     const code = f.read()[0]!.code;
     h.time(140_000);
-    expect(await h.reply(code, "1")).toContain("超时");
+    // Past the deadline the backstop denies it; the reply is not an answer.
+    expect(await h.reply(code, "1")).toBeUndefined();
     expect(h.approvals[0]!.decision).toMatchObject({ approved: false, failure: "timed_out" });
   });
   test("a question resolved on desktop or mobile cannot be answered again through WeChat", async () => {
@@ -406,7 +411,7 @@ describe("IM task confirmations", () => {
     const code = f.read()[0]!.code;
     f.snapshot.pending = [];
     await h.relay.scan();
-    expect(await h.reply(code, "1")).toContain("已结束");
+    expect(await h.reply(code, "1")).toBeUndefined();
     expect(
       await h.relay.reply({
         message: "1",
@@ -417,20 +422,21 @@ describe("IM task confirmations", () => {
           isDirectMessage: true,
         },
       }),
-    ).toContain("已结束或超时");
+    ).toBeUndefined();
     expect(h.approvals).toHaveLength(0);
   });
   test("cannot answer from another sender, target, channel or group", async () => {
     const f = fixture(),
       h = harness(f),
       code = f.read()[0]!.code;
+    await h.relay.scan();
     for (const origin of [
       { senderId: "other" },
       { target: "elsewhere" },
       { channel: "telegram" },
       { isDirectMessage: false },
     ]) {
-      expect(await h.reply(code, "1", origin)).toContain("不属于当前私聊");
+      expect(await h.reply(code, "1", origin)).toBeUndefined();
     }
     expect(h.approvals).toHaveLength(0);
   });
@@ -440,18 +446,19 @@ describe("IM task confirmations", () => {
     const h = harness(f);
     await h.relay.scan();
     expect(h.published[0]!.text).not.toContain("/private/example");
-    expect(await h.reply(f.read()[0]!.code, "1")).toContain("不属于当前私聊");
+    expect(await h.reply(f.read()[0]!.code, "1")).toBeUndefined();
     expect(h.approvals).toHaveLength(0);
   });
   test("expired asks are explicitly denied, never defaulted to an allow option", async () => {
     const f = fixture(),
       h = harness(f),
       code = f.read()[0]!.code;
+    await h.relay.scan();
     h.time(600_100);
-    expect(await h.reply(code, "1")).toContain("超时");
+    expect(await h.reply(code, "1")).toBeUndefined();
     expect(h.approvals).toHaveLength(1);
     expect(h.approvals[0]!.decision).toMatchObject({ approved: false });
-    expect(h.published[0]!.text).toContain("本次操作未获授权");
+    expect(h.published.at(-1)!.text).toContain("本次操作未获授权");
     await h.relay.scan();
     expect(h.approvals).toHaveLength(1);
   });
@@ -461,7 +468,7 @@ describe("IM task confirmations", () => {
       oldCode = f.read()[0]!.code;
     f.params.generation++;
     expect(f.read()).toEqual([]);
-    expect(await h.reply(oldCode, "1")).toContain("已结束");
+    expect(await h.reply(oldCode, "1")).toBeUndefined();
     f.snapshot.pending[0]!.routeGeneration++;
     expect(f.read()[0]!.code).not.toBe(oldCode);
     f.task.status = "cancelled";
@@ -510,9 +517,10 @@ describe("IM task confirmations", () => {
     f.params.request.args.question = "x".repeat(12_001);
     const h = harness(f);
     await h.relay.scan();
-    expect(h.published[0]!.text).toContain("查看完整内容");
+    expect(h.published[0]!.text).toContain("内容较长，请打开桌面 Session 查看");
     const code = f.read()[0]!.code;
-    expect(await h.reply(code, "1")).toContain("查看完整确认内容");
+    // Too long to review in IM: it can only be declined there.
+    expect(await h.reply(code, "1")).not.toContain("已处理");
     expect(h.approvals).toHaveLength(0);
     await h.reply(code, "拒绝");
     expect(h.approvals[0]!.decision).toMatchObject({ approved: false });
@@ -528,6 +536,7 @@ describe("IM task confirmations", () => {
       return { decision: { outlet: "both", im: "wechat", reason: "named-im" }, sent: "accepted" };
     });
     const relay = new PetImDecisions({
+      interpret: scriptedReplyModel,
       read: f.read,
       now: () => 20_000,
       approve: async () => {},
@@ -546,6 +555,7 @@ describe("IM task confirmations", () => {
     let finish!: () => void;
     let calls = 0;
     const relay = new PetImDecisions({
+      interpret: scriptedReplyModel,
       read: f.read,
       now: () => 20_000,
       approve: async () => {
@@ -555,9 +565,10 @@ describe("IM task confirmations", () => {
         });
         f.snapshot.pending = [];
       },
-      router: nullRouter(),
+      router: routerStub([]),
       onError: () => {},
     });
+    await relay.scan();
     const request: PetChatControlRequest = {
       message: `回答 ${f.read()[0]!.code} 1`,
       origin: {
@@ -572,7 +583,7 @@ describe("IM task confirmations", () => {
       },
     };
     const first = relay.reply(request);
-    expect(await relay.reply(request)).toContain("正在处理");
+    expect(await relay.reply(request)).toContain("正在处理，请稍等");
     finish();
     await first;
     expect(calls).toBe(1);
@@ -665,6 +676,8 @@ test("HTTP gateway resolves exact decisions before bound Sessions and Mimi", asy
           ...overrides,
         },
       );
+    await h.relay.scan();
+    // Another sender, room, channel or a group has nothing open: never an answer.
     for (const origin of [
       { senderId: "other" },
       { target: "another-room" },
@@ -672,30 +685,22 @@ test("HTTP gateway resolves exact decisions before bound Sessions and Mimi", asy
       { isDirectMessage: false },
     ]) {
       await say(`回答 ${code} 1`, origin);
-      expect(replies.at(-1)).toContain("不属于当前私聊");
+      expect(replies.at(-1) ?? "").not.toContain("已处理");
     }
     expect(h.approvals).toHaveLength(0);
-    expect(boundMessages).toEqual([]);
-    expect(mimiMessages).toEqual([]);
-    await h.relay.scan();
+    const before = { bound: boundMessages.length, mimi: mimiMessages.length };
+    // The one open prompt in this chat: a plain reply answers it, before the bound Session or Mimi.
     await say("1");
-    expect(replies.at(-1)).toContain(`回答 ${code} 1`);
-    expect(h.approvals).toHaveLength(0);
-    expect(boundMessages).toEqual([]);
-    expect(mimiMessages).toEqual([]);
-    await say(`回答 ${code} 1`);
     expect(replies.at(-1)).toContain("已处理");
     expect(h.approvals).toHaveLength(1);
-    await say(`回答 ${code} 1`);
-    expect(replies.at(-1)).toContain("已结束");
-    expect(h.approvals).toHaveLength(1);
-    expect(boundMessages).toEqual([]);
-    expect(mimiMessages).toEqual([]);
+    expect(boundMessages).toHaveLength(before.bound);
+    expect(mimiMessages).toHaveLength(before.mimi);
     await say("ordinary bound chat");
-    expect(boundMessages).toEqual(["ordinary bound chat"]);
+    expect(boundMessages.at(-1)).toBe("ordinary bound chat");
     await say("ordinary unbound chat", { target: "unbound" });
-    expect(mimiMessages).toEqual(["ordinary unbound chat"]);
+    expect(mimiMessages.at(-1)).toBe("ordinary unbound chat");
     expect(replies.at(-1)).toBe("Mimi reply");
+    expect(h.approvals).toHaveLength(1);
   } finally {
     await server.stop();
     rmSync(root, { recursive: true, force: true });
@@ -794,8 +799,11 @@ test("worker protocol: IM answer releases the original write; Stop drains queued
       );
     };
     const relay = new PetImDecisions({
+      interpret: scriptedReplyModel,
       read,
-      router: nullRouter(),
+      router: routerStub([]),
+      // Prompted at once: an answer is only read in the chat a prompt reached.
+      graceMs: 0,
       onError: (error) => {
         throw error;
       },
@@ -812,6 +820,7 @@ test("worker protocol: IM answer releases the original write; Stop drains queued
       },
     });
     const code = read()[0]!.code;
+    await relay.scan();
     const reply = await relay.reply({
       message: `回答 ${code} 1`,
       origin: {
@@ -868,6 +877,7 @@ describe("IM model questions (skippable)", () => {
     const approvals: unknown[] = [];
     const kept: string[] = [];
     const relay = new PetImDecisions({
+      interpret: scriptedReplyModel,
       read: () => f.read(),
       now: () => now.value,
       approve: async (entry, decision) => {
@@ -882,7 +892,8 @@ describe("IM model questions (skippable)", () => {
       router: routerStub(published),
       onError: () => undefined,
     });
-    const reply = (code: string, answer: string) =>
+    const reply = async (code: string, answer: string) => (
+      await relay.scan(),
       relay.reply({
         message: `回答 ${code} ${answer}`,
         origin: {
@@ -891,7 +902,8 @@ describe("IM model questions (skippable)", () => {
           senderId: "owner",
           isDirectMessage: true,
         },
-      });
+      })
+    );
     return { relay, published, approvals, kept, reply };
   }
 
@@ -904,8 +916,9 @@ describe("IM model questions (skippable)", () => {
     const code = f.read()[0]!.code;
     expect(text).toContain("对照审阅页（推荐）");
     expect(text).toContain("超时未回答将自动选择推荐项「对照审阅页」");
-    expect(text).toContain(`回答 ${code} 等待`);
-    expect(text).toContain(`回答 ${code} 跳过`);
+    expect(text).toContain("不想回答可以说跳过。");
+    expect(text).toContain("想让它一直等也可以直接说。");
+    expect(text).not.toContain(code);
   });
 
   test("leaves the timeout to Core instead of submitting a denial", async () => {
@@ -931,10 +944,12 @@ describe("IM model questions (skippable)", () => {
     const f = modelQuestion(now.value + 120_000);
     const h = relayFor(f, now);
     const code = f.read()[0]!.code;
-    expect(await h.reply(code, "等待")).toContain("已改为一直等待");
+    expect(await h.reply(code, "等待")).toContain("它会一直等你回答");
     expect(h.kept).toEqual(["request-model"]);
     now.value += 60 * 60_000;
-    expect(await h.reply(code, "等待")).toContain("已经在一直等待");
+    // Waiting for good: "wait" is no longer offered for it.
+    expect(await h.reply(code, "等待")).not.toContain("已处理");
+    expect(h.kept).toEqual(["request-model"]);
     expect(await h.reply(code, "2")).toContain("回答已交给原任务");
     expect(h.approvals).toEqual([{ approved: true, answer: "对照审阅页" }]);
   });
@@ -1035,6 +1050,7 @@ describe("decisions routed through the notice router", () => {
     const approvals: unknown[] = [];
     const before = router.submitted.length;
     const relay = new PetImDecisions({
+      interpret: scriptedReplyModel,
       read,
       now: () => now.value,
       approve: async (_entry, decision) => {
@@ -1064,7 +1080,7 @@ describe("decisions routed through the notice router", () => {
   const toIm = (): RouteDecision => ({ outlet: "im", im: "lark", reason: "away-first-ready" });
   const toDesktop = (): RouteDecision => ({ outlet: "desktop", reason: "present-desktop" });
 
-  test("a rule-watched Session gets one code-bearing P0 prompt for the owner", async () => {
+  test("a rule-watched Session gets one P0 prompt for the owner, in plain words", async () => {
     const f = ruleFixture();
     const h = relayWith(f.read, toIm);
     await h.relay.scan();
@@ -1082,17 +1098,18 @@ describe("decisions routed through the notice router", () => {
       attention: "always",
       channel: "auto",
       target: { kind: "owner" },
-      facts: { question: "Read /private/example?", code },
+      facts: { question: "Read /private/example?" },
     });
     expect(h.submitted[0]!.reply).toBeUndefined();
-    expect(h.submitted[0]!.body).toContain(`回答 ${code} 1`);
+    expect(h.submitted[0]!.body).toContain("直接回我就行。");
+    expect(h.submitted[0]!.body).not.toContain(code);
     expect(h.submitted[0]!.body).toContain("允许本次 — One read");
 
-    // Only the owner's own direct chat can answer it.
+    // Only the owner's own direct chat it reached can answer it.
     const answer = (origin: Record<string, unknown>) =>
       h.relay.reply({ message: `回答 ${code} 1`, origin: { ...OWNER_DM, ...origin } as never });
-    expect(await answer({ isDirectMessage: false })).toContain("不属于当前私聊");
-    expect(await answer({ target: "someone-else" })).toContain("不属于当前私聊");
+    expect(await answer({ isDirectMessage: false })).toBeUndefined();
+    expect(await answer({ target: "someone-else" })).toBeUndefined();
     expect(h.approvals).toEqual([]);
     expect(await answer({})).toContain("已处理");
     expect(h.approvals).toEqual([{ approved: true, answer: "允许本次" }]);
@@ -1162,11 +1179,11 @@ describe("decisions routed through the notice router", () => {
     await h.relay.scan();
     const code = f.read()[0]!.code;
     expect(await h.relay.reply({ message: "1", origin: OTHER_OWNER_DM })).toBeUndefined();
-    expect(await h.relay.reply({ message: "1", origin: OWNER_DM })).toContain(`回答 ${code} 1`);
-    // A coded answer may come from any of the owner's private chats.
-    expect(await h.relay.reply({ message: `回答 ${code} 1`, origin: OTHER_OWNER_DM })).toContain(
-      "已处理",
-    );
+    // Not even naming its code works from a chat the prompt did not reach.
+    expect(
+      await h.relay.reply({ message: `回答 ${code} 1`, origin: OTHER_OWNER_DM }),
+    ).toBeUndefined();
+    expect(await h.relay.reply({ message: "1", origin: OWNER_DM })).toContain("已处理");
   });
 
   test("a prompt kept on the desktop goes to IM once the owner leaves", async () => {
@@ -1190,9 +1207,9 @@ describe("decisions routed through the notice router", () => {
     ]);
     expect(h.submitted[1]).toMatchObject({
       requestId: "request-rule",
-      facts: { code: f.read()[0]!.code },
+      facts: { question: "Read /private/example?" },
     });
-    expect(await h.relay.reply({ message: "1", origin: OWNER_DM })).toContain("单独的编号");
+    expect(await h.relay.reply({ message: "1", origin: OWNER_DM })).toContain("已处理");
   });
 
   test("no escalation for a desktop-only rule, the P0 cap, or a nearly expired decision", async () => {
@@ -1222,7 +1239,7 @@ describe("decisions routed through the notice router", () => {
     const restarted = relayWith(f.read, toIm, undefined, {}, first.router);
     await restarted.relay.scan();
     expect(restarted.submitted).toEqual([]);
-    expect(await restarted.relay.reply({ message: "1", origin: OWNER_DM })).toContain("单独的编号");
+    expect(await restarted.relay.reply({ message: "1", origin: OWNER_DM })).toContain("已处理");
   });
 
   test("after a restart a desktop-kept prompt can still escalate once", async () => {
@@ -1259,8 +1276,11 @@ describe("decisions routed through the notice router", () => {
     const code = f.read()[0]!.code;
     h.router.accept(code, "lark");
     // The reply itself reads the record: no scan needed in between.
-    expect(await h.relay.reply({ message: "1", origin: OWNER_DM })).toContain("单独的编号");
-    expect(h.router.decisionRecord(code)?.prompt).toMatchObject({ phase: "im", channel: "lark" });
+    expect(await h.relay.reply({ message: "1", origin: OWNER_DM })).toContain("已处理");
+    expect(h.router.decisionRecord(code)?.prompt).toMatchObject({
+      phase: "answered",
+      channel: "lark",
+    });
   });
 
   test("Core's deadline firing first still tells the prompted chat; an answer does not", async () => {

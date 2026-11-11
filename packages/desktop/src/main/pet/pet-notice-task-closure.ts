@@ -33,6 +33,8 @@ export interface PetTaskClosureDeps {
   ready: Promise<void>;
   /** Hand a notice to the router (tracked for shutdown, never rejects). */
   submit(notice: NoticeSubmission): Promise<unknown>;
+  /** The closure notice's open item (retry a failed task, open what it produced). */
+  actionsFor?(task: PetLongTask): NoticeSubmission["actions"];
   /** Tell the decision prompts a Session's delivery changed. */
   nudge(sessionId: string): void;
   sessionTitle(sessionId: string): string | undefined;
@@ -128,6 +130,7 @@ export function createTaskClosureAdapter(deps: PetTaskClosureDeps): PetTaskClosu
     const error = textLine(task.lastError, MAX_ERROR);
     const body = closure.text?.trim();
     const media = parseNoticeMedia(closure.media);
+    const actions = deps.actionsFor?.(task);
     await deps.submit({
       kind: event === "done" ? "session.done" : "session.failed",
       priority: "P1",
@@ -147,6 +150,7 @@ export function createTaskClosureAdapter(deps: PetTaskClosureDeps): PetTaskClosu
       // The owner asked for this over IM: their answer is never held back.
       ...(delivery.reply ? { reply: true } : {}),
       ...(media ? { media } : {}),
+      ...(actions ? { actions } : {}),
     });
     // This notice satisfies every Session rule that was waiting for the outcome.
     await spend(plan.rules);

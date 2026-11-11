@@ -2,6 +2,7 @@ import { join } from "node:path";
 import { PET_RULE_UPSERT_ACTION } from "@cjhyy/code-shell-pet/protocol";
 import { dlog } from "../desktop-logger.js";
 import { createPetDeliveryResolver } from "./pet-delivery-plan.js";
+import { createNoticeActionSources } from "./pet-notice-action-sources.js";
 import { createNoticeAttention, SessionViewTracker } from "./pet-notice-attention.js";
 import { createDecisionHooks } from "./pet-notice-decision-hooks.js";
 import { createExternalDecisions } from "./pet-notice-external-decisions.js";
@@ -26,6 +27,7 @@ import { createPresenceDetector } from "./pet-presence.js";
 import { PetReceiptStore } from "./pet-receipt-store.js";
 import { PetRuleStore } from "./pet-rule-store.js";
 import { PetSessionRuleWatcher, type NoticeDraft } from "./pet-session-rule-watcher.js";
+import { topLevelEvent } from "./session-outcome.js";
 
 // The public surface index.ts, pet IPC and the tests import from here.
 export type { PetNoticeWiring, PetNoticeWiringDeps } from "./pet-notice-wiring-types.js";
@@ -138,15 +140,25 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
 
   /** Notices still on their way into the router (shutdown waits for them). */
   const inFlight = new Set<Promise<unknown>>();
-  const submit = (notice: NoticeSubmission): Promise<unknown> => {
-    const sending = router.submit(notice).catch((error) => {
-      log("pet.notice.submit_failed", { kind: notice.kind, error: errorText(error) });
-      return undefined;
-    });
-    inFlight.add(sending);
-    void sending.finally(() => inFlight.delete(sending));
-    return sending;
+  const track = <T>(work: Promise<T>): Promise<T> => {
+    inFlight.add(work);
+    void work.finally(() => inFlight.delete(work));
+    return work;
   };
+  const submit = (notice: NoticeSubmission): Promise<unknown> =>
+    track(
+      router.submit(notice).catch((error) => {
+        log("pet.notice.submit_failed", { kind: notice.kind, error: errorText(error) });
+        return undefined;
+      }),
+    );
+  // What each notice's reply code offers (继续 / 重试 / 打开 …).
+  const actionSources = createNoticeActionSources({
+    isExternal,
+    activeTask: (sessionId) => deps.longTasks.activeForSession(sessionId),
+    ...(deps.lastUserMessage ? { lastUserMessage: deps.lastUserMessage } : {}),
+    log,
+  });
   /** {@link submit} for callers that must know the outcome: failures reach them. */
   const submitNotice = (notice: NoticeSubmission) => {
     const routed = router.submit(notice);
@@ -206,8 +218,9 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
           sessionId: draft.sessionId,
           dedupeKey: draft.dedupeKey,
         });
-      void submit({
-        ...rest,
+      const { context: _context, ...facts } = rest;
+      const notice = (actions: NoticeSubmission["actions"]): NoticeSubmission => ({
+        ...facts,
         ruleIds,
         ...(requiresAway ? { requiresAway: true } : {}),
         attention,
@@ -216,7 +229,11 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
         // The owner asked for this over IM: it is answered there, never held back.
         ...(reply ? { reply: true } : {}),
         ...(served ? { boundReplyDelivered: true } : {}),
+        ...(actions ? { actions } : {}),
       });
+      const actions = actionSources.forDraft(draft);
+      if (actions instanceof Promise) void track(actions.then((found) => submit(notice(found))));
+      else void submit(notice(actions));
     },
     // PetImDecisions owns the prompt (with its reply code); nudge it now.
     onPendingDecision: (sessionId) => decisions.nudge(sessionId),
@@ -284,6 +301,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     deliveries,
     ready,
     submit,
+    actionsFor: actionSources.forTask,
     nudge: decisions.nudge,
     sessionTitle: view.sessionTitle,
     now,
@@ -300,8 +318,14 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     ready,
     observeSessionOutcomes(sessionId, outcomes) {
       if (outcomes.length === 0) return;
+      actionSources.observe(sessionId, outcomes);
       // Chained on one promise, so per-Session order is preserved.
       void ready.then(() => (disposed ? undefined : watcher.observe(sessionId, outcomes)));
+    },
+    sessionEvent(sessionId, event) {
+      // Another run of the Session: its goal / limit / failure items are moot.
+      if (topLevelEvent(event)?.type !== "session_started") return;
+      void ready.then(() => (disposed ? undefined : router.sessionRunStarted(sessionId)));
     },
     outboxResult(result) {
       return ready

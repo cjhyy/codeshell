@@ -1,10 +1,13 @@
 import { dlog } from "../desktop-logger.js";
+import type { NoticeActions } from "./pet-notice-action-codes.js";
 import { composeNoticeBody, MAX_NOTICE_BODY, noticeLine } from "./pet-notice-compose.js";
 import { NoticeDigest } from "./pet-notice-digest.js";
+import { NoticeItems } from "./pet-notice-items.js";
 import {
   isPromptEnded,
   newNoticeRecordId,
   type NoticeDecisionPrompt,
+  type NoticeActionsPatch,
   type NoticeDecisionPromptPatch,
   type NoticeRecord,
   type NoticeSettleStatus,
@@ -32,6 +35,7 @@ import {
   staleReason,
   unpackFacts,
   type DecisionPromptRecord,
+  type NoticeActionRecord,
   type NoticeConversation,
   type NoticeDecisionPrompts,
   type NoticeImPayload,
@@ -93,6 +97,8 @@ interface NoticePlan {
   alsoDesktop: boolean;
   recordId?: string;
   claim?: { channel: string; key: string };
+  /** The IM text when the plan changed it (an open item's ①② label). */
+  body?: string;
   /** The decision could not be recorded or claimed; only desktop delivery is safe. */
   ledgerFailed: boolean;
 }
@@ -148,6 +154,7 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
   private decisionQueue: Promise<unknown> = Promise.resolve();
   private recovered?: Promise<void>;
   private disposed = false;
+  private readonly items: NoticeItems;
 
   constructor(private readonly options: PetNoticeRouterOptions) {
     this.now = options.now ?? Date.now;
@@ -157,6 +164,12 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     this.graceMs = options.graceMs ?? 15_000;
     this.burstMs = options.burstMs ?? 2_000;
     this.log = options.log ?? ((event, data) => dlog("main", event, data));
+    this.items = new NoticeItems({
+      ...(options.ledger ? { ledger: options.ledger } : {}),
+      now: this.now,
+      log: this.log,
+      revoke: (matches, reason) => this.revokeWaiting(matches, reason),
+    });
     if (options.ledger) {
       this.digest = new NoticeDigest({
         ledger: options.ledger,
@@ -331,9 +344,12 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     const body = composeNoticeBody(notice.kind, notice.facts, notice.body);
     // Files are copied before the decision queue, so a slow copy never holds up another notice.
     const frozen = await this.freezeMedia(notice);
+    const armed = this.items.arm(frozen.notice, body, frozen.id);
     try {
-      const plan = await this.serially(() => this.plan(frozen.notice, body, frozen.id));
-      const sent = await this.deliver(frozen.notice, body, plan);
+      const plan = await this.serially(() =>
+        this.plan(armed.notice, armed.body, armed.id, armed.actions),
+      );
+      const sent = await this.deliver(armed.notice, armed.body, plan, body);
       return { decision: plan.decision, ...(sent ? { sent } : {}) };
     } finally {
       if (frozen.id !== undefined) {
@@ -354,6 +370,32 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     const { media: _original, ...rest } = notice;
     const media = await store.freeze(id, notice.media);
     return { notice: media ? { ...rest, media } : rest, id };
+  }
+
+  /** The notice whose open item has this internal code; undefined before the ledger loads. */
+  actionRecord(code: string): NoticeActionRecord | undefined {
+    return this.items.actionRecord(code);
+  }
+
+  /** Open items that reached an IM conversation on `channel` (see NoticeItems). */
+  openActionItems(channel: string): NoticeActionRecord[] {
+    return this.items.openActionItems(channel);
+  }
+
+  /** Persist an item's use (or a pending link); a used item's waiting copies are withdrawn. */
+  useAction(code: string, patch: NoticeActionsPatch): Promise<NoticeActionRecord | undefined> {
+    return this.items.useAction(code, patch);
+  }
+
+  /** The Session started another run: its goal / limit / failure items close. */
+  async sessionRunStarted(sessionId: string): Promise<void> {
+    if (this.disposed) return;
+    try {
+      await this.options.ledger?.load();
+      await this.items.sessionRunStarted(sessionId);
+    } catch (error) {
+      this.log("pet.notice.ledger_read_failed", { error: errorText(error) });
+    }
   }
 
   /**
@@ -879,7 +921,12 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     return (this.options.timezoneOffsetMin ?? hostTimezoneOffsetMin)(ms);
   }
 
-  private async plan(notice: NoticeSubmission, body: string, id?: string): Promise<NoticePlan> {
+  private async plan(
+    notice: NoticeSubmission,
+    body: string,
+    id?: string,
+    actions?: NoticeActions,
+  ): Promise<NoticePlan> {
     const now = this.now();
     const ledger = this.options.ledger;
     let counts = { sent: 0, p0Sent: 0 };
@@ -898,6 +945,13 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     const { decision, alsoDesktop } = this.decide(notice, counts, seen, now);
     const plan: NoticePlan = { decision, alsoDesktop, ledgerFailed: true };
     if (!ledger || !ledgerReady) return plan;
+
+    // An open item going out over IM takes its number in that conversation.
+    const slotted = this.items.slot(notice, decision, id, actions);
+    if (slotted?.label) {
+      body = `${slotted.label}${body}`;
+      plan.body = body;
+    }
 
     try {
       const record = await ledger.record(
@@ -920,7 +974,10 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
           decision,
           // Only a request's own prompt carries its lifecycle.
           ...(notice.prompt && notice.sessionId !== undefined && notice.requestId !== undefined
-            ? { prompt: notice.prompt }
+            ? { prompt: { ...notice.prompt, ...(slotted ? { slot: slotted.slot } : {}) } }
+            : {}),
+          ...(actions
+            ? { actions: { ...actions, ...(slotted ? { slot: slotted.slot } : {}) } }
             : {}),
         },
         id !== undefined ? { id } : {},
@@ -930,6 +987,7 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
       this.log("pet.notice.record_failed", { kind: notice.kind, error: errorText(error) });
       return plan;
     }
+    await this.items.recorded(notice, plan.recordId, slotted?.slot);
     if ((decision.outlet !== "im" && decision.outlet !== "both") || !decision.im)
       return { ...plan, ledgerFailed: false };
     // Registered before the claim lands, so a concurrent recovery never sees it as orphaned.
@@ -1023,12 +1081,15 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     return { decision, alsoDesktop };
   }
 
+  /** `desktopBody`: the text without reply-code hints (a code is only answered over IM). */
   private async deliver(
     notice: NoticeSubmission,
     body: string,
     plan: NoticePlan,
+    desktopBody = body,
   ): Promise<"accepted" | "failed" | "unknown" | undefined> {
     const { decision } = plan;
+    body = plan.body ?? body;
     const desktopNow =
       decision.outlet === "desktop" || decision.outlet === "both" || plan.alsoDesktop;
     if (!plan.claim || plan.ledgerFailed) {
@@ -1036,14 +1097,14 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
       const handled = decision.outlet === "drop" || decision.outlet === "record";
       const fallback =
         plan.ledgerFailed && !handled && (usesP0Budget(notice) || decision.outlet === "im");
-      if (desktopNow || fallback) this.showDesktop(notice, body);
+      if (desktopNow || fallback) this.showDesktop(notice, desktopBody);
       else if (plan.ledgerFailed && !handled)
         this.log("pet.notice.lost", { kind: notice.kind, priority: notice.priority });
       if (decision.outlet === "digest" && !plan.ledgerFailed && !this.disposed)
         this.digest?.schedule();
       return undefined;
     }
-    if (desktopNow) this.showDesktop(notice, body);
+    if (desktopNow) this.showDesktop(notice, desktopBody);
     const { channel, key } = plan.claim;
     const target = imTarget(notice.target, channel);
     const outcome = await this.sendIm(
@@ -1054,7 +1115,7 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
       body,
       payloadOf(notice, this.outboxExpiry(notice, target)),
     );
-    if (outcome !== "accepted" && !desktopNow) this.showOutcome(notice, body, outcome);
+    if (outcome !== "accepted" && !desktopNow) this.showOutcome(notice, desktopBody, outcome);
     return outcome;
   }
 
