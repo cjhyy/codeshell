@@ -2,7 +2,69 @@ import { describe, expect, test } from "bun:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MessageStream } from "./MessageStream";
-import type { Message } from "./types";
+import type { AskUserMessage, Message, ToolMessage } from "./types";
+
+describe("MessageStream — asynchronous question answers", () => {
+  const question: AskUserMessage = {
+    kind: "ask_user",
+    id: "question",
+    requestId: "request-1",
+    question: "先处理哪一项？",
+    answer: "速度与流畅度",
+    multiSelect: false,
+    asynchronous: true,
+  };
+  const echo = {
+    kind: "user" as const,
+    id: "answer-echo",
+    clientMessageId: "ask-user-request-1",
+    text: `Answer to your earlier question:\n${question.question}\n\nUser answer:\n${question.answer}`,
+  };
+  const tool = (id: string): ToolMessage => ({
+    kind: "tool",
+    id,
+    toolName: "Read",
+    args: "{}",
+    result: "ok",
+    status: "succeeded",
+    startedAt: 1,
+    endedAt: 2,
+  });
+
+  test("shows one answer at its later user turn, without the transport wrapper", () => {
+    const messages: Message[] = [
+      question,
+      { kind: "assistant", id: "independent", text: "我先继续其他工作。", done: true },
+      echo,
+    ];
+    const html = renderToStaticMarkup(<MessageStream messages={messages} />);
+    expect(html.split(question.answer!).length - 1).toBe(1);
+    expect(html.split(question.question).length - 1).toBe(1);
+    expect(html.indexOf("我先继续其他工作。")).toBeLessThan(html.indexOf(question.answer!));
+    expect(html).not.toContain("Answer to your earlier question:");
+    expect(html).not.toContain("User answer:");
+  });
+
+  for (const liveTurnActive of [true, false]) {
+    test(`a steered answer remains visible once in a ${liveTurnActive ? "live" : "collapsed"} process`, () => {
+      const messages: Message[] = [
+        { kind: "user", id: "start", text: "继续检查" },
+        tool("before"),
+        question,
+        { ...echo, injected: true, steerId: question.requestId },
+        tool("after"),
+        { kind: "assistant", id: "tail", text: "检查结果", done: !liveTurnActive },
+      ];
+      const html = renderToStaticMarkup(
+        <MessageStream messages={messages} liveTurnActive={liveTurnActive} />,
+      );
+      expect(html).toContain('data-message-kind="process"');
+      expect(html.split(question.answer!).length - 1).toBe(1);
+      expect(html.split(question.question).length - 1).toBe(1);
+      expect(html).not.toContain("Answer to your earlier question:");
+    });
+  }
+});
 
 describe("MessageStream — empty streaming assistant guard", () => {
   test("hides assistant with empty text while streaming", () => {

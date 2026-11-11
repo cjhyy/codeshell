@@ -12,6 +12,7 @@ export const BUILTIN_VIEW_MODES = [
   "digital_humans", // catalog, installed digital humans, and teams
   "sessions",
   "traces",
+  "usage",
   "approvals",
   "automation", // scheduled automation jobs (cron) — list + detail + create
   "settings_page", // full-screen Settings page

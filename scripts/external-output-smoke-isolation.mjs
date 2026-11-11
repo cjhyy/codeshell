@@ -5,7 +5,7 @@ import net from "node:net";
 import tls from "node:tls";
 import childProcess from "node:child_process";
 import { syncBuiltinESMExports } from "node:module";
-import { appendFileSync, lstatSync, readFileSync, realpathSync } from "node:fs";
+import { appendFileSync, lstatSync, readFileSync, readdirSync, realpathSync } from "node:fs";
 import { createHash } from "node:crypto";
 
 const marker = Symbol.for("codeshell.external-output.fixture-guard");
@@ -59,6 +59,65 @@ export function installExternalOutputGuard() {
     )
   )
     throw new Error("Invalid fixture process allowlist");
+  // Match Core's bounded APFS UUID lookup, using the same binary and volume
+  // pinning as the mobile external-output fixture. No other command is allowed.
+  const fixtureRoot = process.env.CODESHELL_OUTPUT_ROOT;
+  const diskOptions = {
+    encoding: "utf8",
+    timeout: 5000,
+    maxBuffer: 256 * 1024,
+    stdio: ["ignore", "pipe", "pipe"],
+    env: { PATH: "/usr/bin:/bin:/usr/sbin:/sbin", LANG: "C", LC_ALL: "C" },
+  };
+  const exactKeys = (value, keys) => {
+    if (!value || typeof value !== "object") return false;
+    const prototype = Object.getPrototypeOf(value);
+    const ownKeys = Reflect.ownKeys(value);
+    return (
+      (prototype === Object.prototype || prototype === null) &&
+      ownKeys.length === keys.length &&
+      ownKeys.every((key) => keys.includes(key))
+    );
+  };
+  const checkDiskInfo = (command, args, options) => {
+    if (process.platform !== "darwin" || command !== "/usr/sbin/diskutil") return false;
+    const env = options?.env ?? {};
+    const devicePath = args?.[2];
+    if (
+      !exactKeys(options, Object.keys(diskOptions)) ||
+      !exactKeys(env, Object.keys(diskOptions.env)) ||
+      !Array.isArray(args) ||
+      args.length !== 3 ||
+      args[0] !== "info" ||
+      args[1] !== "-plist" ||
+      typeof devicePath !== "string" ||
+      !/^\/dev\/disk[0-9]+(?:s[0-9]+)*$/.test(devicePath) ||
+      !process.env.CODESHELL_OUTPUT_DISKUTIL_HASH ||
+      realpathSync(command) !== process.env.CODESHELL_OUTPUT_DISKUTIL ||
+      hashFile(command) !== process.env.CODESHELL_OUTPUT_DISKUTIL_HASH ||
+      options.encoding !== diskOptions.encoding ||
+      options.timeout !== diskOptions.timeout ||
+      options.maxBuffer !== diskOptions.maxBuffer ||
+      JSON.stringify(options.stdio) !== JSON.stringify(diskOptions.stdio) ||
+      env.PATH !== diskOptions.env.PATH ||
+      env.LANG !== "C" ||
+      env.LC_ALL !== "C"
+    )
+      deny();
+    const rootInfo = lstatSync(fixtureRoot);
+    const device = lstatSync(devicePath);
+    if (
+      !rootInfo.isDirectory() ||
+      rootInfo.isSymbolicLink() ||
+      realpathSync(fixtureRoot) !== fixtureRoot ||
+      !home.startsWith(`${fixtureRoot}/`) ||
+      !device.isBlockDevice() ||
+      device.rdev !== rootInfo.dev
+    )
+      deny();
+    record("allowed-volume-metadata");
+    return devicePath;
+  };
   const originalSpawn = childProcess.spawn;
   childProcess.spawn = function (command, args = [], options = {}) {
     if (options.shell || options.detached) deny();
@@ -94,7 +153,20 @@ export function installExternalOutputGuard() {
     record("allowed-spawn", { kind });
     return originalSpawn.call(this, command, args, options);
   };
-  for (const name of ["spawnSync", "exec", "execSync", "execFile", "execFileSync", "fork"])
+  const originalExecFileSync = childProcess.execFileSync;
+  childProcess.execFileSync = function (command, args = [], options = {}) {
+    const device = checkDiskInfo(command, args, options);
+    if (!device) deny();
+    // Do not forward caller objects: inherited options/getters must never turn
+    // a metadata lookup into a shell, alternate environment, or different IO.
+    return originalExecFileSync.call(this, command, ["info", "-plist", device], {
+      __proto__: null,
+      ...diskOptions,
+      stdio: [...diskOptions.stdio],
+      env: { __proto__: null, ...diskOptions.env },
+    });
+  };
+  for (const name of ["spawnSync", "exec", "execSync", "execFile", "fork"])
     childProcess[name] = deny;
   const assertOrigin = (input) => {
     const origin = new URL(input).origin;
@@ -156,19 +228,62 @@ export function installExternalOutputGuard() {
   syncBuiltinESMExports();
   globalThis[marker] = true;
   let refused = 0;
-  for (const probe of [
+  const fixtureDevice =
+    process.platform === "darwin"
+      ? readdirSync("/dev")
+          .filter((name) => /^disk[0-9]+(?:s[0-9]+)*$/.test(name))
+          .map((name) => `/dev/${name}`)
+          .find((path) => {
+            const info = lstatSync(path);
+            return info.isBlockDevice() && info.rdev === lstatSync(fixtureRoot).dev;
+          })
+      : "/dev/disk0";
+  if (!fixtureDevice) throw new Error("Fixture volume has no block device");
+  const inheritedOptions = Object.assign(Object.create({ env: diskOptions.env }), {
+    encoding: diskOptions.encoding,
+    timeout: diskOptions.timeout,
+    maxBuffer: diskOptions.maxBuffer,
+    stdio: diskOptions.stdio,
+    shell: "/bin/sh",
+  });
+  const probes = [
     () => globalThis.fetch("https://example.invalid/"),
     () => http.get("http://127.0.0.1:1/"),
     () => net.connect({ host: "127.0.0.1", port: 2 }),
     () => childProcess.spawn("sh", ["-c", "exit 0"]),
-  ]) {
+    () => childProcess.execFileSync("/usr/sbin/diskutil", ["list", "-plist"], diskOptions),
+    () =>
+      childProcess.execFileSync("/usr/sbin/diskutil", ["info", "-plist", "/dev/disk0"], {
+        ...diskOptions,
+        shell: true,
+      }),
+    () => childProcess.execFileSync("/usr/sbin/diskutil", ["info", "-plist", home], diskOptions),
+    () =>
+      childProcess.execFileSync("/usr/sbin/diskutil", ["info", "-plist", "/dev/disk0"], {
+        ...diskOptions,
+        env: { ...diskOptions.env, INJECTED: "refuse" },
+      }),
+    () =>
+      childProcess.execFileSync(
+        "/usr/sbin/diskutil",
+        ["info", "-plist", fixtureDevice],
+        inheritedOptions,
+      ),
+    () =>
+      childProcess.execFileSync("/usr/sbin/diskutil", ["info", "-plist", fixtureDevice], {
+        ...diskOptions,
+        env: Object.assign(Object.create({ INJECTED: "refuse" }), diskOptions.env),
+      }),
+  ];
+  for (const probe of probes) {
     try {
       probe();
     } catch {
       refused++;
     }
   }
-  if (refused !== 4) throw new Error("External output confinement negative probe failed");
+  if (refused !== probes.length)
+    throw new Error("External output confinement negative probe failed");
   record("pre-core", {
     negativeProbes: refused,
     nodeVersion: process.versions.node,

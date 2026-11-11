@@ -13,6 +13,7 @@ import { join } from "node:path";
 import { readOutputJournal, readOutputJournalLegacyBase } from "@cjhyy/code-shell-core/internal";
 import { SessionManager, UsageLedger, sessionsRoot } from "@cjhyy/code-shell-core";
 import { ExternalRuntimeMemory } from "./external-runtime-memory.js";
+import { captureExternalRuntimeUsage } from "./external-runtime-usage.js";
 import {
   EXTERNAL_TERMINAL_TEXT_MAX,
   ExternalRuntimeSessionRecorder,
@@ -1025,4 +1026,179 @@ test("trusted mobile attachment projection survives canonical journal recovery w
   ]);
   expect(JSON.stringify(user)).not.toContain("base64");
   expect(user.outputCursor).toBeDefined();
+});
+
+describe("external CLI usage receipts", () => {
+  function fixture(provider = "codex", sessionId = "cli-usage") {
+    const recorder = new ExternalRuntimeSessionRecorder(sessionId, testHome, "requested", provider);
+    const manager = new SessionManager();
+    const root = manager.getStorageDir();
+    const ledger = new UsageLedger({ storageDir: join(root, ".usage-ledger") });
+    manager.updateSessionState(sessionId, { costState: ledger.sessionReference(sessionId, root) });
+    const summary = () =>
+      new UsageLedger({ storageDir: join(root, ".usage-ledger") }).summary({ scope: "store" });
+    return { recorder, manager, root, ledger, sessionId, summary };
+  }
+
+  const usage = (
+    prompt: number,
+    completion: number,
+    cumulativePrompt = 1000 + prompt,
+    cumulativeCompletion = 100 + completion,
+    turnPrompt = prompt,
+  ) => ({
+    type: "usage_update" as const,
+    promptTokens: prompt,
+    completionTokens: completion,
+    cumulativePromptTokens: cumulativePrompt,
+    cumulativeCompletionTokens: cumulativeCompletion,
+    singleTurnPromptTokens: turnPrompt,
+    singleTurnCacheReadTokens: 0,
+  });
+
+  test("finalizes repeated cumulative snapshots once without any historical scan", () => {
+    const f = fixture();
+    const scan = spyOn(UsageLedger.prototype, "summary").mockImplementation(() => {
+      throw new Error("receipt recording must not summarize history");
+    });
+    const record = spyOn(UsageLedger.prototype, "recordExternalWithStatus");
+    try {
+      f.recorder.beginTurn({ text: "first" });
+      f.recorder.beginUsageSubmission();
+      f.recorder.onEvent(usage(20, 3));
+      f.recorder.onEvent(usage(40, 7, 1060, 110, 60));
+      f.recorder.onEvent(usage(40, 7, 1060, 110, 60));
+      expect(record).not.toHaveBeenCalled();
+      f.recorder.onEvent({ type: "turn_complete", reason: "completed" });
+      f.recorder.onEvent({ type: "turn_complete", reason: "completed" });
+      f.recorder.finishIfMissing();
+      expect(record).toHaveBeenCalledTimes(1);
+    } finally {
+      record.mockRestore();
+      scan.mockRestore();
+    }
+    expect(f.summary()).toMatchObject({
+      requests: 1,
+      promptTokens: 60,
+      completionTokens: 10,
+      totalTokens: 70,
+      unknownUsageRequests: 0,
+      unknownCostRequests: 1,
+      knownEstimatedCostUsd: 0,
+      byModel: [{ provider: "codex", providerKind: "external-cli", model: "cli-turn-aggregate" }],
+    });
+  });
+
+  test("Goal continuations have separate receipts while sharing the logical run", () => {
+    const f = fixture("claude-code");
+    f.recorder.beginTurn({ text: "goal" });
+    const runId = f.recorder.outputRunId;
+    for (let turn = 0; turn < 2; turn++) {
+      if (turn) f.recorder.beginTurn({ text: "continue", injected: true }, true);
+      expect(f.recorder.outputRunId).toBe(runId);
+      f.recorder.beginUsageSubmission();
+      f.recorder.onEvent({
+        type: "usage_update",
+        promptTokens: 15,
+        singleTurnPromptTokens: 45,
+        completionTokens: 5,
+        singleTurnCacheReadTokens: 30,
+      });
+      f.recorder.onEvent({ type: "turn_complete", reason: "completed" }, true);
+    }
+    expect(f.summary()).toMatchObject({
+      requests: 2,
+      promptTokens: 90,
+      completionTokens: 10,
+      totalTokens: 100,
+      cacheReadTokens: 60,
+    });
+  });
+
+  test("cold resume excludes previous provider history and resettable Session counters", () => {
+    const f = fixture();
+    f.manager.updateSessionState(f.sessionId, {
+      tokenUsage: { promptTokens: 9000, completionTokens: 9000, totalTokens: 18000 },
+    });
+    f.recorder.beginTurn({ text: "before restart" });
+    f.recorder.beginUsageSubmission();
+    f.recorder.onEvent(usage(20, 3));
+    f.recorder.onEvent({ type: "turn_complete", reason: "completed" });
+    const resumed = new ExternalRuntimeSessionRecorder(f.sessionId, testHome, "new-model", "codex");
+    resumed.beginTurn({ text: "after restart" });
+    resumed.beginUsageSubmission();
+    resumed.onEvent(usage(40, 7, 1060, 110));
+    resumed.onEvent({ type: "turn_complete", reason: "completed" });
+    expect(f.summary()).toMatchObject({ requests: 2, promptTokens: 60, completionTokens: 10 });
+    expect(f.manager.readSessionState(f.sessionId)?.tokenUsage.totalTokens).toBe(47);
+  });
+
+  test("unknown, partial, and malformed provider usage never become invented zero-token bills", () => {
+    const f = fixture();
+    for (const event of [
+      undefined,
+      { type: "usage_update" as const, promptTokens: 5, singleTurnPromptTokens: 5 },
+      {
+        type: "usage_update" as const,
+        promptTokens: 5,
+        singleTurnPromptTokens: 5,
+        completionTokens: 2,
+      },
+      usage(1.5, 2),
+    ]) {
+      f.recorder.beginTurn({ text: "incomplete" });
+      f.recorder.beginUsageSubmission();
+      if (event) f.recorder.onEvent(event);
+      f.recorder.onEvent({ type: "turn_complete", reason: "model_error" });
+    }
+    expect(f.summary()).toMatchObject({ requests: 4, unknownUsageRequests: 4, totalTokens: 0 });
+  });
+
+  test.each(["accountingSessionId", "sessionScopeId", "namespace"])(
+    "preflight and replaced accounting %s cannot create a CLI receipt",
+    (field) => {
+      const f = fixture("claude-code");
+      f.recorder.beginTurn({ text: "preflight rejected" });
+      f.recorder.onEvent({ type: "turn_complete", reason: "model_error" });
+      expect(f.summary().requests).toBe(0);
+      f.recorder.beginTurn({ text: "sent before replacement" });
+      f.recorder.beginUsageSubmission();
+      f.recorder.onEvent({
+        type: "usage_update",
+        promptTokens: 5,
+        singleTurnPromptTokens: 5,
+        completionTokens: 2,
+      });
+      f.manager.updateSessionState(f.sessionId, {
+        costState: {
+          ...f.manager.readSessionState(f.sessionId)?.costState,
+          [field]: "replacement",
+        },
+      });
+      expect(() => f.recorder.onEvent({ type: "turn_complete", reason: "completed" })).toThrow(
+        "owner changed",
+      );
+      expect(f.summary().requests).toBe(0);
+    },
+  );
+
+  test("durable submission identity deduplicates across ledger instances without borrowing another owner", () => {
+    const f = fixture("claude-code");
+    const capture = (root = f.root) =>
+      captureExternalRuntimeUsage({
+        root,
+        sessionId: f.sessionId,
+        runId: "shared-goal-run",
+        submissionId: "persisted-user-id",
+        provider: "claude-code",
+        costState: f.manager.readSessionState(f.sessionId)?.costState,
+        currentCostState: () => f.manager.readSessionState(f.sessionId)?.costState,
+      });
+    const tokens = { promptTokens: 8, completionTokens: 2, totalTokens: 10 };
+    capture()(tokens, "completed");
+    capture()(tokens, "completed");
+    expect(f.summary()).toMatchObject({ requests: 1, totalTokens: 10 });
+    expect(() => capture()(undefined, "completed")).toThrow("identity conflict");
+    expect(() => capture(join(testHome, "other-root"))).toThrow("accounting owner");
+  });
 });

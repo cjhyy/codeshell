@@ -364,25 +364,47 @@ process.env.CODESHELL_OUTPUT_PARTS = "1";
     expectedCostState.historicalCoverageIncomplete = true;
     expectedCostState.summary.partial = true;
     assert.deepEqual(state.costState, expectedCostState);
-    // Reopen the durable ledger independently: provider thread totals must not
-    // be mistaken for additional billed auxiliary receipts or a new owner.
+    // Reopen independently: keep the auxiliary API request and this CLI turn
+    // separate, without importing the provider's older thread totals.
     const restartedLedger = new core.UsageLedger({
       storageDir: join(ledgerRoot, ".usage-ledger"),
     });
     assert.equal(restartedLedger.adoptSession(id, state.costState, ledgerRoot), true);
     const summary = restartedLedger.summary({ scope: "session", sessionId: id }, ledgerRoot);
-    assert.equal(summary.requests, 1);
-    assert.equal(summary.promptTokens, 30);
-    assert.equal(summary.completionTokens, 3);
-    assert.equal(summary.totalTokens, 33);
-    assert.equal(summary.cacheReadTokens, 27);
+    assert.equal(summary.requests, 2);
+    assert.equal(summary.promptTokens, 50);
+    assert.equal(summary.completionTokens, 5);
+    assert.equal(summary.totalTokens, 55);
+    assert.equal(summary.cacheReadTokens, 31);
     assert.equal(summary.cacheCreationTokens, 1);
     assert.equal(summary.knownEstimatedCostUsd, receipt.estimatedCostUsd);
     assert(summary.knownEstimatedCostUsd > 0);
-    assert.deepEqual(
-      summary.byPurpose.map((item) => item.purpose),
-      ["aux_summary"],
-    );
+    assert.equal(summary.unknownCostRequests, 1);
+    assert.equal(summary.unknownUsageRequests, 0);
+    assert.deepEqual(summary.byPurpose.map((item) => item.purpose).sort(), [
+      "aux_summary",
+      "external",
+    ]);
+    const auxiliary = summary.byPurpose.find((item) => item.purpose === "aux_summary");
+    assert.equal(auxiliary.requests, 1);
+    assert.equal(auxiliary.totalTokens, 33);
+    assert.equal(auxiliary.knownEstimatedCostUsd, receipt.estimatedCostUsd);
+    assert.equal(auxiliary.unknownCostRequests, 0);
+    const external = summary.byPurpose.find((item) => item.purpose === "external");
+    assert.equal(external.requests, 1);
+    assert.equal(external.totalTokens, 22);
+    assert.equal(external.knownEstimatedCostUsd, 0);
+    assert.equal(external.unknownCostRequests, 1);
+    assert.equal(summary.byModel.length, 2);
+    const cli = summary.byModel.find((item) => item.providerKind === "external-cli");
+    assert.equal(cli.provider, "codex");
+    assert.equal(cli.model, "cli-turn-aggregate");
+    assert.equal(cli.requests, 1);
+    assert.equal(cli.promptTokens, 20);
+    assert.equal(cli.completionTokens, 2);
+    assert.equal(cli.cacheReadTokens, 4);
+    assert.equal(cli.cacheCreationTokens, 0);
+    assert.equal(cli.unknownCostRequests, 1);
     assert.equal(summary.partial, true);
     output.cases.push({
       case: "cold-aux-provider-accounting",
@@ -393,6 +415,11 @@ process.env.CODESHELL_OUTPUT_PARTS = "1";
       foregroundCacheRead: 24,
       auxiliaryPrompt: 30,
       auxiliaryCacheRead: 27,
+      ledgerRequests: summary.requests,
+      recordedTokens: summary.totalTokens,
+      cliTurns: cli.requests,
+      cliTokens: cli.totalTokens,
+      cliUnknownCost: cli.unknownCostRequests,
       cacheUsageVersion: 1,
       metadataRetained: true,
     });
@@ -846,7 +873,7 @@ assert(
       (entry) =>
         entry.pid === pid &&
         entry.event === "pre-core" &&
-        entry.negativeProbes === 4 &&
+        entry.negativeProbes === 10 &&
         entry.nodeVersion === process.versions.node &&
         entry.execPath === process.execPath &&
         entry.nodeBinaryHash === hash(readFileSync(process.execPath)) &&
@@ -856,7 +883,7 @@ assert(
 );
 output.guard = {
   observedPids: [...pids],
-  negativeProbesPerProcess: 4,
+  negativeProbesPerProcess: 10,
   processLocalOnly: true,
   guardHash: hash(readFileSync(process.env.CODESHELL_OUTPUT_GUARD_LOG)),
 };
