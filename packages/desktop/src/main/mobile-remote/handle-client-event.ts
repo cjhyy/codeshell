@@ -1116,6 +1116,8 @@ export async function handleClientEvent(
       };
       if (event.type === "goal.update" && !value.updated)
         throw new Error("Goal changed; refresh and retry");
+      if (event.type === "goal.clear" && event.expectedGoalId && !value.deleted)
+        throw new Error("Goal changed; refresh and retry");
       if (event.type === "goal.extend") {
         reply({
           type: "goal.extended",

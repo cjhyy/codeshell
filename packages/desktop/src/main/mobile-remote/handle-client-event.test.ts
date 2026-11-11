@@ -1230,3 +1230,50 @@ test("versioned Goal commands reject lost native authority before worker or disk
     ["goal.extend", false, "owner changed"],
   ]);
 });
+
+test("a refused versioned clear reports a correlated refresh error", async () => {
+  const replies: any[] = [];
+  let listener: ((line: string) => void) | undefined;
+  const ctx = {
+    getBridge: () => ({
+      getLastRunContext: () => ({}),
+      subscribeOutbound: (tap: (line: string) => void) => {
+        listener = tap;
+        return () => {
+          listener = undefined;
+        };
+      },
+      injectWorkerMessage(line: string) {
+        const request = JSON.parse(line);
+        expect(request.method).toBe("agent/goalDelete");
+        listener?.(JSON.stringify({ id: request.id, result: { ok: true, deleted: false } }));
+      },
+    }),
+    deviceState: () => ({ selectedSessionId: "native" }),
+    externalCommands: {
+      observe() {},
+      isExternal: () => false,
+      authorizeNative: async () => ({ assertCurrent() {} }),
+    },
+    remote: { sendToDevice: (_id: string, reply: unknown) => replies.push(reply) },
+  } as unknown as OrchestratorCtx;
+  await handleClientEvent(ctx, {
+    type: "goal.clear",
+    deviceId: "device",
+    viewerId: "viewer",
+    sessionId: "native",
+    requestId: "stale-clear",
+    expectedGoalId: "previous",
+    expectedRevision: 7,
+  });
+  expect(replies).toEqual([
+    {
+      type: "goal.cleared",
+      sessionId: "native",
+      requestId: "stale-clear",
+      ok: false,
+      message: "Goal changed; refresh and retry",
+    },
+  ]);
+  expect(listener).toBeUndefined();
+});
