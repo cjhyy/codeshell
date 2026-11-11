@@ -21,6 +21,20 @@ import {
   readBoundedJson,
   writeOwnerJsonAtomic,
 } from "./bounded-json-store.js";
+import {
+  dueAt,
+  firstOccurrence,
+  staggerFor,
+  nextOccurrence,
+  parseRuleWake,
+  parseScheduleThen,
+  parseScheduleWhen,
+  WAKE_DETAIL_MAX,
+  type RuleWake,
+  type RuleWakeOutcome,
+  type ScheduleThen,
+  type ScheduleWhen,
+} from "./pet-schedule-rule.js";
 import { imConversationRouteKey } from "./session-turn-scheduler.js";
 
 /** The IM origin a notice should go back to; same shape as a long task's completion target. */
@@ -29,23 +43,37 @@ export type PetChatRoute = PetLongTaskCompletionTarget;
 export type NoticeRuleState = "active" | "paused" | "spent" | "completed" | "cancelled";
 export type SystemNoticeRuleId = "all-sessions";
 
+export type { ScheduleThen, ScheduleWhen, RuleWake } from "./pet-schedule-rule.js";
+
+export interface SessionRuleWhen {
+  kind: "session";
+  sessionId: string;
+  runtime: "native";
+  events: NoticeEvent[];
+  scope: "turn" | "goal";
+  /** Epoch ms; only turns that complete at/after this instant can fire the rule. */
+  armedAt: number;
+}
+
+export interface AllSessionsRuleWhen {
+  kind: "all-sessions";
+  events: NoticeEvent[];
+  onlyWhenAway: true;
+}
+
 export interface NoticeRule {
   id: string;
+  /**
+   * Owner-intent revision: bumped by edits, not by a schedule's wake progress,
+   * so a follow-up's revision stays put while its occurrences come and go.
+   */
   version: number;
   origin: "user" | "delegation" | "system";
-  createdBy: NoticeRuleUpsert["createdBy"] | "system";
-  when:
-    | {
-        kind: "session";
-        sessionId: string;
-        runtime: "native";
-        events: NoticeEvent[];
-        scope: "turn" | "goal";
-        /** Epoch ms; only turns that complete at/after this instant can fire the rule. */
-        armedAt: number;
-      }
-    | { kind: "all-sessions"; events: NoticeEvent[]; onlyWhenAway: true };
-  then: { mode: "notify" };
+  createdBy: NoticeRuleUpsert["createdBy"] | "follow-up" | "system";
+  when: SessionRuleWhen | AllSessionsRuleWhen | ScheduleWhen;
+  then: { mode: "notify" } | ScheduleThen;
+  /** Schedule rules only: the current occurrence's durable state. */
+  wake?: RuleWake;
   attention: NoticeAttention;
   channel: NoticeChannel;
   target: { kind: "route"; route: PetChatRoute } | { kind: "owner" };
@@ -53,6 +81,32 @@ export interface NoticeRule {
   state: NoticeRuleState;
   createdAt: number;
   updatedAt: number;
+}
+
+/** A rule that fires on Session events (what the delivery plan and watcher read). */
+export type EventNoticeRule = NoticeRule & {
+  when: SessionRuleWhen | AllSessionsRuleWhen;
+  then: { mode: "notify" };
+};
+
+/** A time-triggered rule (follow-ups now; briefs and heartbeat later). */
+export type ScheduleNoticeRule = NoticeRule & {
+  when: ScheduleWhen;
+  then: ScheduleThen;
+  wake: RuleWake;
+};
+
+export function isScheduleRule(rule: NoticeRule): rule is ScheduleNoticeRule {
+  return rule.when.kind === "schedule";
+}
+
+export interface CreateScheduleRuleInput {
+  /** Host-derived and deterministic (from the turn's operation), so a replay finds it. */
+  id: string;
+  when: ScheduleWhen;
+  then: ScheduleThen;
+  channel: NoticeChannel;
+  target: NoticeRule["target"];
 }
 
 export type UpsertSessionNoticeRuleInput = NoticeRuleUpsert & {
@@ -90,7 +144,9 @@ export type PetRuleStoreErrorCode =
   | "duplicate_active_rule"
   | "rule_store_full"
   | "rule_store_unwritable"
-  | "invalid_rule";
+  | "invalid_rule"
+  | "schedule_in_past"
+  | "schedule_never_fires";
 
 export class PetRuleStoreError extends Error {
   constructor(readonly code: PetRuleStoreErrorCode) {
@@ -100,6 +156,18 @@ export class PetRuleStoreError extends Error {
 }
 
 const SCHEMA_VERSION = 1;
+/** An `apply` result that changed nothing: nothing is written and no listener runs. */
+const UNCHANGED = Symbol("unchanged");
+interface Unchanged<T> {
+  [UNCHANGED]: true;
+  value: T;
+}
+function unchanged<T>(value: T): Unchanged<T> {
+  return { [UNCHANGED]: true, value };
+}
+function isUnchanged<T>(value: T | Unchanged<T>): value is Unchanged<T> {
+  return typeof value === "object" && value !== null && UNCHANGED in value;
+}
 const DEFAULT_MAX_RULES = 2_000;
 const MAX_FILE_BYTES = 8 * 1024 * 1024;
 const MAX_LOADED_ROWS = 10_000;
@@ -107,7 +175,11 @@ const SYSTEM_RULE_ID: SystemNoticeRuleId = "all-sessions";
 const RULE_ID_PATTERN = /^rule-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;
 const ATTENTIONS: readonly NoticeAttention[] = ["always", "important", "digest", "muted"];
 const STATES: readonly NoticeRuleState[] = ["active", "paused", "spent", "completed", "cancelled"];
-const CREATORS: readonly NoticeRule["createdBy"][] = [...NOTICE_RULE_CREATORS, "system"];
+const CREATORS: readonly NoticeRule["createdBy"][] = [
+  ...NOTICE_RULE_CREATORS,
+  "follow-up",
+  "system",
+];
 /** Terminal rules are history; only they may be evicted to make room. */
 const EVICTABLE_STATES: ReadonlySet<NoticeRuleState> = new Set(["spent", "completed", "cancelled"]);
 const CONTROL_CHARS = /[\u0000-\u001f\u007f]/u;
@@ -219,6 +291,7 @@ function migrateLegacyRow(row: unknown): unknown {
 
 function parseWhen(value: unknown): NoticeRule["when"] | undefined {
   if (!isRecord(value)) return undefined;
+  if (value.kind === "schedule") return parseScheduleWhen(value);
   if (value.kind === "session") {
     if (
       !hasOnlyKeys(value, ["kind", "sessionId", "runtime", "events", "scope", "armedAt"]) ||
@@ -229,7 +302,7 @@ function parseWhen(value: unknown): NoticeRule["when"] | undefined {
       !isTimestamp(value.armedAt)
     )
       return undefined;
-    return value as NoticeRule["when"];
+    return value as unknown as NoticeRule["when"];
   }
   if (value.kind === "all-sessions") {
     if (
@@ -238,7 +311,7 @@ function parseWhen(value: unknown): NoticeRule["when"] | undefined {
       value.onlyWhenAway !== true
     )
       return undefined;
-    return value as NoticeRule["when"];
+    return value as unknown as NoticeRule["when"];
   }
   return undefined;
 }
@@ -261,19 +334,27 @@ function parseRule(value: unknown): NoticeRule | undefined {
       "state",
       "createdAt",
       "updatedAt",
+      "wake",
     ])
   )
     return undefined;
   const when = parseWhen(value.when);
   if (!when) return undefined;
+  const scheduled = when.kind === "schedule";
+  if (
+    scheduled
+      ? !parseScheduleThen(value.then) || !parseRuleWake(value.wake)
+      : !isRecord(value.then) ||
+        value.then.mode !== "notify" ||
+        !hasOnlyKeys(value.then, ["mode"]) ||
+        value.wake !== undefined
+  )
+    return undefined;
   if (
     typeof value.version !== "number" ||
     !Number.isSafeInteger(value.version) ||
     value.version < 1 ||
     !(CREATORS as readonly unknown[]).includes(value.createdBy) ||
-    !isRecord(value.then) ||
-    value.then.mode !== "notify" ||
-    !hasOnlyKeys(value.then, ["mode"]) ||
     !(ATTENTIONS as readonly unknown[]).includes(value.attention) ||
     !isChannel(value.channel) ||
     !isTarget(value.target) ||
@@ -284,12 +365,22 @@ function parseRule(value: unknown): NoticeRule | undefined {
     value.updatedAt < value.createdAt
   )
     return undefined;
-  if (when.kind === "session") {
+  if (scheduled) {
+    // Owner-asked follow-ups only, for now; system schedules (briefs) come later.
+    if (
+      typeof value.id !== "string" ||
+      !RULE_ID_PATTERN.test(value.id) ||
+      value.origin !== "user" ||
+      value.createdBy !== "follow-up"
+    )
+      return undefined;
+  } else if (when.kind === "session") {
     if (
       typeof value.id !== "string" ||
       !RULE_ID_PATTERN.test(value.id) ||
       (value.origin !== "user" && value.origin !== "delegation") ||
-      value.createdBy === "system"
+      value.createdBy === "system" ||
+      value.createdBy === "follow-up"
     )
       return undefined;
   } else if (
@@ -394,23 +485,22 @@ export class PetRuleStore {
   }
 
   /** Active rules that watch this Session, plus the all-sessions system rule when it is on. */
-  activeForSession(sessionId: string): NoticeRule[] {
-    const result: NoticeRule[] = [];
+  activeForSession(sessionId: string): EventNoticeRule[] {
+    const result: EventNoticeRule[] = [];
     for (const rule of this.rules.values()) {
       if (rule.state !== "active") continue;
-      if (rule.when.kind === "session" && rule.when.sessionId !== sessionId) continue;
-      if (rule.when.kind === "all-sessions") continue;
-      result.push(structuredClone(rule));
+      if (rule.when.kind !== "session" || rule.when.sessionId !== sessionId) continue;
+      result.push(structuredClone(rule) as EventNoticeRule);
     }
     const system = this.rules.get(SYSTEM_RULE_ID);
-    if (system?.state === "active") result.push(structuredClone(system));
+    if (system?.state === "active") result.push(structuredClone(system) as EventNoticeRule);
     return result;
   }
 
-  systemRule(id: SystemNoticeRuleId): NoticeRule {
+  systemRule(id: SystemNoticeRuleId): EventNoticeRule {
     if (id !== SYSTEM_RULE_ID) throw new PetRuleStoreError("rule_not_found");
     const rule = this.rules.get(SYSTEM_RULE_ID);
-    return rule ? structuredClone(rule) : defaultSystemRule();
+    return (rule ? structuredClone(rule) : defaultSystemRule()) as EventNoticeRule;
   }
 
   onChange(listener: () => void): () => void {
@@ -460,7 +550,7 @@ export class PetRuleStore {
         scope: upsert.scope,
         armedAt,
       };
-      if (existing?.origin === "user" && origin === "delegation") return existing;
+      if (existing?.origin === "user" && origin === "delegation") return unchanged(existing);
       if (existing) {
         const next: NoticeRule = {
           ...existing,
@@ -525,7 +615,8 @@ export class PetRuleStore {
         else next.note = snapshot.note;
       }
       if (snapshot.events !== undefined) {
-        if (!isEvents(snapshot.events)) throw new PetRuleStoreError("invalid_rule");
+        if (!isEvents(snapshot.events) || next.when.kind === "schedule")
+          throw new PetRuleStoreError("invalid_rule");
         next.when = { ...next.when, events: [...snapshot.events] } as NoticeRule["when"];
       }
       next.version = current.version + 1;
@@ -543,6 +634,213 @@ export class PetRuleStore {
       staged.set(id, next);
       return next;
     });
+  }
+
+  /**
+   * Create a schedule rule (an owner-asked follow-up). The id is derived by
+   * the host from the turn that asked, so a replayed request returns the rule
+   * as it is now (even edited or finished) instead of creating a second one.
+   */
+  createScheduleRule(input: CreateScheduleRuleInput): Promise<ScheduleNoticeRule> {
+    const snapshot = structuredClone(input);
+    return this.mutate((staged) => {
+      const existing = staged.get(snapshot.id);
+      if (existing) {
+        if (!isScheduleRule(existing)) throw new PetRuleStoreError("invalid_rule");
+        return unchanged(existing);
+      }
+      const target = normalizeTarget(snapshot.target);
+      if (!target || !isChannel(snapshot.channel)) throw new PetRuleStoreError("invalid_rule");
+      const at = this.timestamp();
+      const rule = {
+        id: snapshot.id,
+        version: 1,
+        origin: "user",
+        createdBy: "follow-up",
+        when: snapshot.when,
+        then: snapshot.then,
+        wake: this.scheduledWake(staged, snapshot.id, this.firstOccurrenceOf(snapshot.when, at)),
+        attention: "always",
+        channel: snapshot.channel,
+        target,
+        state: "active",
+        createdAt: at,
+        updatedAt: at,
+      } satisfies NoticeRule;
+      if (!parseRule(rule)) throw new PetRuleStoreError("invalid_rule");
+      staged.set(rule.id, rule);
+      return rule as ScheduleNoticeRule;
+    });
+  }
+
+  /**
+   * New timing for a live schedule rule: a new version and a fresh first
+   * occurrence. Allowed while an occurrence is claimed: that occurrence's
+   * effect is then superseded (its settle finds nothing to record) and a
+   * woken Mimi turn is fenced by the version change.
+   */
+  rescheduleRule(id: string, expectedVersion: number, when: ScheduleWhen): Promise<NoticeRule> {
+    const snapshot = structuredClone(when);
+    return this.mutate((staged) => {
+      const current = staged.get(id);
+      if (!current) throw new PetRuleStoreError("rule_not_found");
+      if (current.version !== expectedVersion) throw new PetRuleStoreError("version_conflict");
+      if (!isScheduleRule(current) || EVICTABLE_STATES.has(current.state))
+        throw new PetRuleStoreError("invalid_rule");
+      const at = this.timestamp();
+      const next: NoticeRule = {
+        ...current,
+        version: current.version + 1,
+        when: snapshot,
+        wake: this.scheduledWake(staged, id, this.firstOccurrenceOf(snapshot, at)),
+        updatedAt: Math.max(at, current.updatedAt),
+      };
+      if (!parseRule(next)) throw new PetRuleStoreError("invalid_rule");
+      staged.set(id, next);
+      return next;
+    });
+  }
+
+  /**
+   * Durable claim of a due occurrence, taken before any effect. Undefined
+   * (and nothing written) when it is not this rule's current, due, unclaimed
+   * occurrence of this version: a stale or duplicate trigger is a no-op.
+   */
+  claimOccurrence(
+    id: string,
+    version: number,
+    occurrence: number,
+  ): Promise<ScheduleNoticeRule | undefined> {
+    return this.mutate((staged) => {
+      const rule = staged.get(id);
+      const at = this.timestamp();
+      if (
+        !rule ||
+        !isScheduleRule(rule) ||
+        rule.state !== "active" ||
+        rule.version !== version ||
+        rule.wake.occurrence !== occurrence ||
+        rule.wake.status !== "scheduled" ||
+        dueAt(rule.wake) > at
+      )
+        return unchanged(undefined);
+      rule.wake = {
+        occurrence,
+        ...(rule.wake.stagger !== undefined ? { stagger: rule.wake.stagger } : {}),
+        status: "claimed",
+        claimedAt: at,
+      };
+      rule.updatedAt = Math.max(at, rule.updatedAt);
+      return rule;
+    });
+  }
+
+  /**
+   * Record what a claimed occurrence did. A repeating rule then moves on to
+   * its next occurrence after now (never replaying the ones slept through),
+   * keeping this outcome as `detail`; one that never fires again is spent.
+   * `nextAfter` lets a missed occurrence hand over to the latest one that is
+   * still inside its own catch-up window (the scheduler's one catch-up).
+   *
+   * Matched by the claim (occurrence + claimed), not the version: the owner
+   * may cancel or finish the rule while its occurrence runs, and the outcome
+   * is still recorded; a finished rule does not move on.
+   */
+  settleOccurrence(
+    id: string,
+    occurrence: number,
+    outcome: RuleWakeOutcome,
+    options: { nextAfter?: number } = {},
+  ): Promise<ScheduleNoticeRule | undefined> {
+    const snapshot = structuredClone(outcome);
+    return this.mutate((staged) => {
+      if (
+        !isPatchShape(snapshot, ["status", "detail", "taskId"]) ||
+        !["notified", "launched", "failed", "unknown"].includes(snapshot.status)
+      )
+        throw new PetRuleStoreError("invalid_rule");
+      const rule = staged.get(id);
+      if (
+        !rule ||
+        !isScheduleRule(rule) ||
+        rule.wake.occurrence !== occurrence ||
+        rule.wake.status !== "claimed"
+      )
+        return unchanged(undefined);
+      this.settle(staged, rule, snapshot, options.nextAfter);
+      return rule;
+    });
+  }
+
+  /**
+   * Startup: a claim that outlived its process may have had its effect, so it
+   * is recorded `unknown` and never retried; a repeating rule moves on.
+   */
+  recoverClaims(): Promise<number> {
+    return this.mutate((staged) => {
+      let count = 0;
+      for (const rule of staged.values()) {
+        if (!isScheduleRule(rule) || rule.wake.status !== "claimed") continue;
+        this.settle(staged, rule, {
+          status: "unknown",
+          detail: "上次唤醒已开始但结果未记录；未自动重试。",
+        });
+        count += 1;
+      }
+      return count === 0 ? unchanged(0) : count;
+    });
+  }
+
+  private settle(
+    staged: Map<string, NoticeRule>,
+    rule: ScheduleNoticeRule,
+    outcome: RuleWakeOutcome,
+    nextAfter?: number,
+  ): void {
+    const at = this.timestamp();
+    const detail = outcome.detail?.slice(0, WAKE_DETAIL_MAX);
+    rule.updatedAt = Math.max(at, rule.updatedAt);
+    const settled: RuleWake = {
+      ...rule.wake,
+      status: outcome.status,
+      completedAt: at,
+      ...(detail !== undefined ? { detail } : {}),
+      ...(outcome.taskId !== undefined ? { taskId: outcome.taskId } : {}),
+    };
+    // A one-shot, or a rule finished while this occurrence ran, stops here.
+    if (rule.when.cron === undefined || EVICTABLE_STATES.has(rule.state)) {
+      rule.wake = settled;
+      return;
+    }
+    const next = nextOccurrence(rule.when, Math.max(nextAfter ?? at, rule.wake.occurrence));
+    if (next === null) {
+      rule.state = "spent";
+      rule.wake = settled;
+      return;
+    }
+    rule.wake = {
+      ...this.scheduledWake(staged, rule.id, next),
+      ...(detail !== undefined ? { detail } : {}),
+      ...(outcome.taskId !== undefined ? { taskId: outcome.taskId } : {}),
+    };
+  }
+
+  /** A fresh occurrence, staggered behind other live schedule rules due that minute. */
+  private scheduledWake(staged: Map<string, NoticeRule>, id: string, occurrence: number): RuleWake {
+    const others = [...staged.values()]
+      .filter((rule) => rule.id !== id && !EVICTABLE_STATES.has(rule.state) && rule.wake)
+      .map((rule) => rule.wake!.occurrence);
+    const stagger = staggerFor(occurrence, others);
+    return { occurrence, ...(stagger > 0 ? { stagger } : {}), status: "scheduled" };
+  }
+
+  private firstOccurrenceOf(when: ScheduleWhen, at: number): number {
+    if (!parseScheduleWhen(when)) throw new PetRuleStoreError("invalid_rule");
+    // The one date search a registration does (a yearly cron scans ~a year of minutes).
+    const first = firstOccurrence(when, at);
+    if (first === null) throw new PetRuleStoreError("schedule_never_fires");
+    if (first <= at) throw new PetRuleStoreError("schedule_in_past");
+    return first;
   }
 
   /** Toggle / tune the "every Session" rule; creates it from the default on first use. */
@@ -579,17 +877,21 @@ export class PetRuleStore {
     return at;
   }
 
-  private mutate<T extends NoticeRule>(apply: (staged: Map<string, NoticeRule>) => T): Promise<T> {
+  private mutate<T>(apply: (staged: Map<string, NoticeRule>) => T | Unchanged<T>): Promise<T> {
     const run = this.queue
       .catch(() => undefined)
       .then(() => this.load())
       .then(() =>
         this.lock(async () => {
-          if (this.unwritable) throw new PetRuleStoreError("rule_store_unwritable");
           const staged = new Map(
             [...this.rules].map(([id, rule]) => [id, structuredClone(rule)] as const),
           );
-          const result = apply(staged);
+          const outcome = apply(staged);
+          // A no-op (a stale trigger, a replay, nothing to recover) writes
+          // nothing and tells no one: it works even on a read-only file.
+          if (isUnchanged(outcome)) return { result: outcome.value, changed: false };
+          if (this.unwritable) throw new PetRuleStoreError("rule_store_unwritable");
+          const result = outcome;
           this.enforceCap(staged);
           for (const rule of staged.values()) {
             if (!parseRule(rule)) throw new PetRuleStoreError("invalid_rule");
@@ -606,10 +908,11 @@ export class PetRuleStore {
             { compact: true },
           );
           this.rules = staged;
-          return structuredClone(result);
+          return { result: structuredClone(result), changed: true };
         }),
       )
-      .then((result) => {
+      .then(({ result, changed }) => {
+        if (!changed) return result;
         for (const listener of this.listeners) {
           try {
             listener();
@@ -624,15 +927,28 @@ export class PetRuleStore {
   }
 
   /**
-   * Make room by evicting the oldest finished rules. Active and paused rules
-   * (and the system rule) are live owner intent and are never evicted; if
+   * Make room by evicting the oldest finished rules, then the oldest one-shot
+   * follow-ups that already fired. Other active and paused rules (and the
+   * system rule) are live owner intent and are never evicted; if
    * there is still no room for a mutation that adds a rule, it is refused.
    */
   private enforceCap(staged: Map<string, NoticeRule>): void {
     if (staged.size <= this.maxRules) return;
-    const evictable = [...staged.values()]
-      .filter((rule) => EVICTABLE_STATES.has(rule.state))
-      .sort((a, b) => a.updatedAt - b.updatedAt || a.id.localeCompare(b.id));
+    const byAge = (a: NoticeRule, b: NoticeRule) =>
+      a.updatedAt - b.updatedAt || a.id.localeCompare(b.id);
+    // Then one-shot follow-ups that already reached the owner: kept on the
+    // list until handled, but they will never fire again. A failed or
+    // unknown one still needs the owner's attention and is kept.
+    const fired = (rule: NoticeRule) =>
+      isScheduleRule(rule) &&
+      rule.when.at !== undefined &&
+      (rule.wake.status === "notified" || rule.wake.status === "launched");
+    const evictable = [
+      ...[...staged.values()].filter((rule) => EVICTABLE_STATES.has(rule.state)).sort(byAge),
+      ...[...staged.values()]
+        .filter((rule) => !EVICTABLE_STATES.has(rule.state) && fired(rule))
+        .sort(byAge),
+    ];
     for (const rule of evictable) {
       if (staged.size <= this.maxRules) break;
       staged.delete(rule.id);
@@ -694,27 +1010,37 @@ export class PetRuleStore {
       return;
     }
     const loaded = new Map<string, NoticeRule>();
-    const quarantine: unknown[] = Array.isArray(parsed.quarantine) ? [...parsed.quarantine] : [];
+    const quarantine: unknown[] = [];
     let rejected = 0;
-    for (const stored of parsed.rules) {
+    let restored = 0;
+    // Quarantined rows are read again: an older build quarantines the rows it
+    // does not know (schedule rules) on its first write, and they come back
+    // here. Live rows first, so on a tie the live copy wins; else newest wins.
+    const live = parsed.rules.length;
+    const held: unknown[] = Array.isArray(parsed.quarantine) ? parsed.quarantine : [];
+    for (const [index, stored] of [...parsed.rules, ...held].entries()) {
+      const fromQuarantine = index >= live;
       const row = migrateLegacyRow(stored);
       const rule = parseRule(row);
       const seen = rule ? loaded.get(rule.id) : undefined;
       if (rule && !seen) {
         loaded.set(rule.id, rule);
+        if (fromQuarantine) restored += 1;
         continue;
       }
       if (rule && seen && rule.version > seen.version) {
         // Keep the newer copy of a duplicated id; the older one is kept aside.
         loaded.set(rule.id, rule);
         quarantine.push(seen);
+        if (fromQuarantine) restored += 1;
       } else {
         // Quarantine exactly what was on disk, not the migrated view.
         quarantine.push(stored);
       }
-      rejected += 1;
+      if (!fromQuarantine) rejected += 1;
     }
     if (rejected > 0) dlog("main", "pet.rules.quarantined_rows", { rejected });
+    if (restored > 0) dlog("main", "pet.rules.restored_rows", { restored });
     this.rules = loaded;
     this.quarantine = quarantine;
     this.unwritable = false;

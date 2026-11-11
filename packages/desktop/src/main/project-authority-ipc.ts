@@ -1,4 +1,5 @@
 import type { AgentBridge } from "./agent-bridge.js";
+import type { ExternalRuntimeService } from "./external-runtime-service.js";
 import { createLegacyProjectMigrationService } from "./legacy-project-migration.js";
 import type { ProjectStore } from "./project-store.js";
 import { requireRendererProjectRoot } from "./renderer-project-path.js";
@@ -8,10 +9,10 @@ import {
   getSessionWorkspaceAuthorityForUi,
   getSessionWorkspaceForUi,
   listSessionWorktreesForUi,
-  releaseManySessionWorkspacesForUi,
   releaseSessionWorkspaceForUi,
   requireUsableSessionRootAuthority,
   switchSessionWorkspaceForUi,
+  type SessionWorkspaceReleaseResult,
   type WorkspaceCleanupAction,
 } from "./session-workspace-service.js";
 import { listProfiles } from "./profiles-service.js";
@@ -31,6 +32,7 @@ export interface ProjectAuthorityIpcDependencies {
   applyGitPathFromSettings(): Promise<void>;
   projectStore: ProjectStore;
   getBridge(): AgentBridge | null | undefined;
+  getExternalRuntimeService?(): Pick<ExternalRuntimeService, "withWorkspaceMutation"> | null;
   getTrust: typeof import("./trust-store.js").getTrust;
   assertSessionId(value: unknown): asserts value is string;
   trackGitRoot(root: string): void;
@@ -42,6 +44,34 @@ export interface ProjectAuthorityIpcDependencies {
 }
 
 export function registerProjectAuthorityIpc(deps: ProjectAuthorityIpcDependencies): void {
+  function withWorkspaceOwner<T>(
+    sessionId: string,
+    ownerWebContentsId: number,
+    operation: (
+      bridge: AgentBridge | null | undefined,
+      beforePersist?: () => Promise<void>,
+    ) => Promise<T>,
+  ): Promise<T> {
+    const mutate = (beforePersist?: () => Promise<void>) =>
+      operation(beforePersist ? undefined : deps.getBridge(), beforePersist);
+    const external = deps.getExternalRuntimeService?.();
+    return external
+      ? external.withWorkspaceMutation(sessionId, mutate, ownerWebContentsId)
+      : mutate();
+  }
+
+  function releaseWorkspace(sessionId: string, ownerWebContentsId: number) {
+    return withWorkspaceOwner(sessionId, ownerWebContentsId, (bridge, beforePersist) =>
+      releaseSessionWorkspaceForUi(sessionId, {
+        releaseLiveWorkspace: beforePersist
+          ? () => beforePersist()
+          : bridge?.hasKnownSession(sessionId)
+            ? (id) => bridge.releaseWorkspace(id)
+            : undefined,
+      }),
+    );
+  }
+
   async function pickProjectDirectory(): Promise<string | null> {
     const result = await deps.showOpenDialog({
       title: "选择项目目录",
@@ -285,7 +315,7 @@ export function registerProjectAuthorityIpc(deps: ProjectAuthorityIpcDependencie
   });
   deps.ipcMain.handle(
     "workspace:switch",
-    async (_event, sessionId: string, cwd: string, target: string) => {
+    async (event, sessionId: string, cwd: string, target: string) => {
       deps.assertSessionId(sessionId);
       if (typeof cwd !== "string" || !cwd) throw new Error("workspace:switch requires cwd");
       if (
@@ -296,47 +326,42 @@ export function registerProjectAuthorityIpc(deps: ProjectAuthorityIpcDependencie
       ) {
         throw new Error("workspace:switch requires target");
       }
-      const currentBridge = deps.getBridge();
-      const list = await switchSessionWorkspaceForUi(sessionId, cwd, target, {
-        setLiveWorkspace:
-          currentBridge?.hasLiveWorker() && currentBridge.hasKnownSession(sessionId)
-            ? (id, workspace) => currentBridge.setWorkspace(id, workspace)
-            : undefined,
-      });
+      const list = await withWorkspaceOwner(sessionId, event.sender.id, (bridge, beforePersist) =>
+        switchSessionWorkspaceForUi(sessionId, cwd, target, {
+          beforePersist,
+          setLiveWorkspace:
+            bridge?.hasLiveWorker() && bridge.hasKnownSession(sessionId)
+              ? (id, workspace) => bridge.setWorkspace(id, workspace)
+              : undefined,
+        }),
+      );
       deps.trackGitRoot(list.mainRoot);
       broadcastWorkspaceChanged({ sessionId, workspace: list.current, mainRoot: list.mainRoot });
       return list;
     },
   );
-  deps.ipcMain.handle("workspace:release", async (_event, sessionId: string) => {
+  deps.ipcMain.handle("workspace:release", async (event, sessionId: string) => {
     deps.assertSessionId(sessionId);
-    const currentBridge = deps.getBridge();
-    const released = await releaseSessionWorkspaceForUi(sessionId, {
-      releaseLiveWorkspace:
-        currentBridge && currentBridge.hasKnownSession(sessionId)
-          ? (id) => currentBridge.releaseWorkspace(id)
-          : undefined,
-    });
+    const released = await releaseWorkspace(sessionId, event.sender.id);
     if (released.status === "released") {
       broadcastWorkspaceChanged({ sessionId, workspace: released.workspace });
     }
     return released;
   });
-  deps.ipcMain.handle("workspace:releaseMany", async (_event, sessionIds: string[]) => {
+  deps.ipcMain.handle("workspace:releaseMany", async (event, sessionIds: string[]) => {
     if (!Array.isArray(sessionIds) || sessionIds.length > 500) {
       throw new Error("workspace:releaseMany requires sessionIds");
     }
     for (const id of sessionIds) deps.assertSessionId(id);
     const ids = [...new Set(sessionIds)];
-    const currentBridge = deps.getBridge();
-    const released = await releaseManySessionWorkspacesForUi(ids, {
-      releaseLiveWorkspace: currentBridge
-        ? async (id) => {
-            if (!currentBridge.hasKnownSession(id)) return;
-            await currentBridge.releaseWorkspace(id);
-          }
-        : undefined,
-    });
+    const released: SessionWorkspaceReleaseResult[] = [];
+    for (const sessionId of ids) {
+      try {
+        released.push(await releaseWorkspace(sessionId, event.sender.id));
+      } catch (error) {
+        released.push({ sessionId, ok: false, status: "error", error: String(error) });
+      }
+    }
     for (const item of released) {
       if (item.status === "released") {
         broadcastWorkspaceChanged({ sessionId: item.sessionId, workspace: item.workspace });
@@ -347,7 +372,7 @@ export function registerProjectAuthorityIpc(deps: ProjectAuthorityIpcDependencie
   deps.ipcMain.handle(
     "workspace:cleanup",
     async (
-      _event,
+      event,
       sessionId: string,
       cwd: string,
       worktreePath: string,
@@ -366,13 +391,15 @@ export function registerProjectAuthorityIpc(deps: ProjectAuthorityIpcDependencie
       if (action !== "detach" && action !== "discard") {
         throw new Error("workspace:cleanup requires action detach or discard");
       }
-      const currentBridge = deps.getBridge();
-      const list = await cleanupSessionWorktreeForUi(sessionId, cwd, worktreePath, action, {
-        setLiveWorkspace:
-          currentBridge?.hasLiveWorker() && currentBridge.hasKnownSession(sessionId)
-            ? (id, workspace) => currentBridge.setWorkspace(id, workspace)
-            : undefined,
-      });
+      const list = await withWorkspaceOwner(sessionId, event.sender.id, (bridge, beforePersist) =>
+        cleanupSessionWorktreeForUi(sessionId, cwd, worktreePath, action, {
+          beforePersist,
+          setLiveWorkspace:
+            bridge?.hasLiveWorker() && bridge.hasKnownSession(sessionId)
+              ? (id, workspace) => bridge.setWorkspace(id, workspace)
+              : undefined,
+        }),
+      );
       deps.trackGitRoot(list.mainRoot);
       broadcastWorkspaceChanged({ sessionId, workspace: list.current, mainRoot: list.mainRoot });
       return list;

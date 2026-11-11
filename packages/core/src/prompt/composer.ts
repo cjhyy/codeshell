@@ -319,15 +319,14 @@ export class PromptComposer {
       });
     }
 
-    // Keep the complete eligible name index for discovery and capability guidance.
-    // The native tools field supplies definitions only for the run's active set.
+    // List only the frozen tool surface; discovery appends schemas to history.
     if (tools.length > 0) {
       sections.push({
         name: "tool_definitions",
         // A reused composer must reflect the current run's visible tool names.
         cacheBreak: true,
         compute: () =>
-          `# Available Tools\n\nDescriptions and input schemas for active tools are provided in the tools field.${tools.some((tool) => tool.name === "ToolSearch") ? ' Use ToolSearch for other available tools: keyword searches return compact metadata; "select:ToolName" loads its definition for the next model step. Selection does not grant permission.' : ""}\n${tools.map((tool) => tool.name).join(", ")}`,
+          `# Available Tools\n\nDescriptions and input schemas for active tools are provided in the tools field.${tools.some((tool) => tool.name === "ToolSearch") ? ' Use ToolSearch for other available tools: keyword searches return compact metadata; "select:ToolName" returns its full schema. Then use CallTool with the exact name and an args object matching that schema. Selection does not grant permission.' : ""}\n${tools.map((tool) => tool.name).join(", ")}`,
       });
     }
 

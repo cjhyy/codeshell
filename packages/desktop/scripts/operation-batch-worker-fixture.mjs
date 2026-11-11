@@ -9,6 +9,7 @@ import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { syncBuiltinESMExports } from "node:module";
 import { join } from "node:path";
+import { discoveredFixtureCall } from "./operation-tool-discovery-fixture.mjs";
 import {
   installOperationBatchNativeFixture,
   nativeBatchIds,
@@ -180,18 +181,6 @@ export async function startBatchWorkerWire(caseName, { ledgerPath }) {
           firstReached.resolve();
           await firstModel.promise;
         }
-        if (!tools.includes("LinkAction")) {
-          assert.ok(
-            tools.includes("ToolSearch"),
-            "Production request has no supported tool-discovery path",
-          );
-          assert.ok(++searchCount <= 2, "ToolSearch did not enable the actual LinkAction tool");
-          return sendModel(
-            response,
-            body,
-            toolMessage("ToolSearch", { query: "select:LinkAction" }, "batch-search"),
-          );
-        }
         const indexes = ["failed-readback", "item-cancel"].includes(caseName) ? [0, 0, 1] : [0, 1];
         const itemIndex = indexes[linkStep];
         if (itemIndex === undefined)
@@ -199,26 +188,34 @@ export async function startBatchWorkerWire(caseName, { ledgerPath }) {
             role: "assistant",
             content: "The fixed synthetic batch turn is complete.",
           });
-        if (itemIndex === 1 && !releasedSecond) {
-          secondWaiting = true;
-          secondReached.resolve();
-          await secondModel.promise;
-        }
-        linkStep++;
-        return sendModel(
-          response,
-          body,
-          toolMessage(
-            "LinkAction",
-            {
+        const call = discoveredFixtureCall(
+          tools,
+          (body.messages ?? []).findLast(
+            (message) => message.role === "tool" && message.tool_call_id === "batch-search",
+          ),
+          {
+            id: `batch-item-${linkStep + 1}`,
+            toolName: "LinkAction",
+            args: {
               provider: "github",
               action: "create_issue",
               connectionId: nativeBatchIds.connectionId,
               params: batchWorkerItems[itemIndex],
             },
-            `batch-item-${linkStep}`,
-          ),
+          },
+          "batch-search",
         );
+        if (call.toolName === "ToolSearch") {
+          assert.equal(++searchCount, 1, "ToolSearch did not return the LinkAction schema");
+        } else {
+          if (itemIndex === 1 && !releasedSecond) {
+            secondWaiting = true;
+            secondReached.resolve();
+            await secondModel.promise;
+          }
+          linkStep++;
+        }
+        return sendModel(response, body, toolMessage(call.toolName, call.args, call.id));
       }
       const action = path.match(
         /^\/api\/v1\/data\/connections\/00000000-0000-4000-8000-000000000009\/actions\/(list_issues|create_issue|get_issue)$/,

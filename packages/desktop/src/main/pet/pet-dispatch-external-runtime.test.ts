@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { PetLongTask, PetRegisteredFollowUp } from "@cjhyy/code-shell-pet";
+import type { PetLongTask, PetFollowUpWake } from "@cjhyy/code-shell-pet";
 import {
   PetDispatchService,
   type PetDispatchOptions,
@@ -39,24 +39,15 @@ const attachment = {
   createdAt: 1,
 };
 
-function resumeFollowUp(): PetRegisteredFollowUp {
+function resumeFollowUp(occurrence = 1): PetFollowUpWake {
   return {
     id: "wake-one",
-    operationKey: "wake-operation",
-    registrationKey: "wake-registration",
     revision: 1,
+    occurrence,
     title: "处理后续",
     text: "工作已完成",
-    wakeAt: 1,
-    timezone: "Asia/Singapore",
-    missedPolicy: "fire-once",
-    catchUpUntil: 2,
     intent: "resume",
-    status: "open",
-    createdAt: 1,
-    updatedAt: 1,
     sourceSessionId: "work-one",
-    wake: { revision: 1, status: "claimed" },
   };
 }
 
@@ -216,6 +207,34 @@ describe("Mimi external manager execution", () => {
       result: { text: "已恢复" },
     });
     expect(throwing.nativeCalls).toEqual([]);
+  });
+
+  test.each([
+    { configured: "codex/gpt-6.1-sol", override: undefined, expected: "codex/gpt-6.1-sol" },
+    {
+      configured: "openrouter/auto",
+      override: "claude-code/sonnet",
+      expected: "claude-code/sonnet",
+    },
+  ])("follow-up discovery receives the pinned external model ($expected)", async (selection) => {
+    const discoveredWith: Array<string | null | undefined> = [];
+    const { service, nativeCalls, externalCalls } = makeHarness({
+      managerModel: async () => selection.configured,
+      listFollowUps: async (model) => {
+        discoveredWith.push(model);
+        return [];
+      },
+    });
+    expect(
+      await service.dispatch({
+        type: "chat",
+        message: "现在有哪些后续事项？",
+        ...(selection.override ? { model: selection.override } : {}),
+      }),
+    ).toMatchObject({ ok: true, result: { text: "external reply" } });
+    expect(discoveredWith).toEqual([selection.expected]);
+    expect(externalCalls).toMatchObject([{ model: selection.expected }]);
+    expect(nativeCalls).toEqual([]);
   });
 
   test("queues same-route input with source-scoped dedup and attachments instead of native steering", async () => {
@@ -388,7 +407,7 @@ describe("Mimi external manager execution", () => {
       externalRuntime: {
         run: async (params) => {
           calls.push(params);
-          if (params.clientMessageId === "pet-followup-wake-one-1") {
+          if (params.clientMessageId === "pet-followup-wake-one-1-1") {
             started.resolve();
             return pending.promise;
           }
@@ -442,6 +461,42 @@ describe("Mimi external manager execution", () => {
     ]);
     expect(externalCalls).toEqual([]);
   });
+
+  test.each(["codex/gpt-6.1-sol", "claude-code/sonnet"])(
+    "repeating follow-up occurrences keep distinct external replay identities with %s",
+    async (model) => {
+      const calls: Record<string, unknown>[] = [];
+      const replies = new Map<string, string>();
+      const { service, nativeCalls } = makeHarness({
+        managerModel: async () => model,
+        externalRuntime: {
+          run: async (params) => {
+            calls.push(params);
+            const id = String(params.clientMessageId);
+            if (!replies.has(id)) replies.set(id, `Occurrence reply ${replies.size + 1}`);
+            return { ok: true, result: { text: replies.get(id), reason: "completed" } };
+          },
+          stop: async () => {},
+        },
+      });
+      expect(await service.wakeFollowUp(resumeFollowUp(100))).toEqual({
+        launched: false,
+        text: "Occurrence reply 1",
+      });
+      expect(await service.wakeFollowUp(resumeFollowUp(200))).toEqual({
+        launched: false,
+        text: "Occurrence reply 2",
+      });
+      expect(calls.map((params) => params.clientMessageId)).toEqual([
+        "pet-followup-wake-one-1-100",
+        "pet-followup-wake-one-1-200",
+      ]);
+      expect(calls.every((params) => params.model === model && params.injected === true)).toBe(
+        true,
+      );
+      expect(nativeCalls).toEqual([]);
+    },
+  );
 
   test("pins an explicit model for the chat and its read-only launch receipt", async () => {
     const calls: Record<string, unknown>[] = [];

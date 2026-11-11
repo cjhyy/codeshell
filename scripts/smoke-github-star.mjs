@@ -85,7 +85,16 @@ if (process.argv[2] === "--worker") {
         );
       const hasResult = results.some((block) => block.tool_use_id === "fixture-star");
       const tools = new Set((request.tools ?? []).map((tool) => tool.name));
-      if (!tools.has("LinkAction")) {
+      // Discovery survives resume in session state; its appended schema receipt
+      // can belong to the earlier run rather than the current intent.
+      const selectionReceipt = request.messages
+        .flatMap((message) =>
+          message.role === "user" && Array.isArray(message.content)
+            ? message.content.filter((block) => block.type === "tool_result")
+            : [],
+        )
+        .findLast((block) => block.tool_use_id === "fixture-select-link");
+      if (!selectionReceipt) {
         assert.ok(tools.has("ToolSearch"), "LinkAction must be discoverable before use");
         assert.equal(hasResult, false);
         return {
@@ -101,20 +110,18 @@ if (process.argv[2] === "--worker") {
           ],
         };
       }
-      // A resumed session restores its selected tool schemas, so the discovery
-      // receipt may belong to the earlier run rather than the current intent.
-      const selectionReceipt = request.messages
-        .flatMap((message) =>
-          message.role === "user" && Array.isArray(message.content)
-            ? message.content.filter((block) => block.type === "tool_result")
-            : [],
-        )
-        .findLast((block) => block.tool_use_id === "fixture-select-link");
-      assert.match(
-        JSON.stringify(selectionReceipt),
-        /schemaRef: select:LinkAction/,
-        "The next provider tool set must follow the actual ToolSearch selection receipt",
+      assert.equal(tools.has("LinkAction"), false, "Discovery must keep the top tool list frozen");
+      assert.ok(tools.has("CallTool"));
+      assert.equal(typeof selectionReceipt.content, "string");
+      assert.match(selectionReceipt.content, /schemaRef: select:LinkAction/);
+      const definition = JSON.parse(
+        selectionReceipt.content.split("\n").find((line) => line.startsWith("{")),
       );
+      assert.equal(definition.name, "LinkAction");
+      assert.equal(definition.inputSchema.type, "object");
+      for (const name of ["provider", "action", "connectionId"])
+        assert.equal(definition.inputSchema.properties[name].type, "string");
+      assert.equal(definition.inputSchema.properties.params.type, "object");
       const unknown = JSON.stringify(request.messages).includes("fixture unknown");
       const cli = JSON.stringify(request.messages).includes("fixture cli");
       const cliWrite = JSON.stringify(request.messages).includes("fixture cli-write");

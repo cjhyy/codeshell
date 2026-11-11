@@ -388,6 +388,8 @@ export interface ToolContext {
   refreshRunToolEligibility?(): void;
   /** Tools advertised for the current model step, fixed through retries and its tool batch. */
   modelToolNames?: ReadonlySet<string>;
+  /** Live Goal authority, rechecked after hooks and approvals. */
+  hasActiveGoal?(): boolean;
   /** Opaque services contributed by capability modules, keyed by capability id. */
   capabilityServices?: Readonly<Record<string, unknown>>;
   /**

@@ -2,13 +2,18 @@ import { describe, expect, test } from "bun:test";
 import { createPetSummaryService } from "./pet-summary-service.js";
 import type { PetSummaryEntry, PetSummaryStore } from "./pet-summary-store.js";
 
-function fakeStore(): PetSummaryStore & { entries: Map<string, PetSummaryEntry> } {
+function fakeStore(): PetSummaryStore & { entries: Map<string, PetSummaryEntry>; writes: number } {
   const entries = new Map<string, PetSummaryEntry>();
+  let writes = 0;
   return {
     entries,
+    get writes() {
+      return writes;
+    },
     load: async () => {},
     get: (id) => entries.get(id),
     set: (id, terminalAt, text) => {
+      writes += 1;
       entries.set(id, { terminalAt, text });
     },
     flush: async () => {},
@@ -16,6 +21,123 @@ function fakeStore(): PetSummaryStore & { entries: Map<string, PetSummaryEntry> 
 }
 
 describe("createPetSummaryService", () => {
+  test("disabled generation reads no transcript, calls no model and leaves no marker for re-enable", async () => {
+    const store = fakeStore();
+    let allowed = false;
+    let reads = 0;
+    let generations = 0;
+    const service = createPetSummaryService({
+      sessionsRootDir: "/root",
+      allowGenerate: () => allowed,
+      readClosureInput: async () => {
+        reads += 1;
+        return "Should the owner publish?";
+      },
+      generate: async () => {
+        generations += 1;
+        return "FOLLOW_UP: Decide whether to publish";
+      },
+      store,
+    });
+    expect(await service.summarize("session-a", 1_000)).toBeNull();
+    expect(await service.summarize("session-a", 1_000)).toBeNull();
+    expect({ reads, generations, writes: store.writes, entries: store.entries.size }).toEqual({
+      reads: 0,
+      generations: 0,
+      writes: 0,
+      entries: 0,
+    });
+    allowed = true;
+    expect(await service.summarize("session-a", 1_000)).toEqual({
+      text: "Decide whether to publish",
+    });
+    expect({ reads, generations, writes: store.writes }).toEqual({
+      reads: 1,
+      generations: 1,
+      writes: 1,
+    });
+  });
+
+  test("disabled generation does not overwrite a stale cached result", async () => {
+    const store = fakeStore();
+    store.set("session-a", 1_000, "Previously generated reminder");
+    const service = createPetSummaryService({
+      sessionsRootDir: "/root",
+      store,
+      allowGenerate: () => false,
+      readClosureInput: async () => {
+        throw new Error("Disabled generation must not read source");
+      },
+      generate: async () => {
+        throw new Error("Disabled generation must not call model");
+      },
+    });
+    expect(await service.summarize("session-a", 2_000)).toBeNull();
+    expect(store.get("session-a")).toEqual({
+      terminalAt: 1_000,
+      text: "Previously generated reminder",
+    });
+    expect(store.writes).toBe(1);
+  });
+
+  test("cached text and empty markers remain readable when the generation policy fails", async () => {
+    const store = fakeStore();
+    store.set("cached", 1_000, "Existing reminder");
+    store.set("empty", 1_000, "");
+    let policyCalls = 0;
+    const service = createPetSummaryService({
+      sessionsRootDir: "/root",
+      store,
+      allowGenerate: () => {
+        policyCalls += 1;
+        throw new Error("Settings unavailable");
+      },
+      readClosureInput: async () => {
+        throw new Error("Failed policy must not read source");
+      },
+      generate: async () => {
+        throw new Error("Failed policy must not call model");
+      },
+    });
+    expect(await service.summarize("cached", 1_000)).toEqual({ text: "Existing reminder" });
+    expect(await service.summarize("empty", 1_000)).toBeNull();
+    expect(policyCalls).toBe(0);
+    expect(await service.summarize("uncached", 1_000)).toBeNull();
+    expect(policyCalls).toBe(1);
+    expect(store.writes).toBe(2);
+    expect(store.get("uncached")).toBeUndefined();
+  });
+
+  test.each([null, "Closure that would require a model"])(
+    "policy changes during input read prevent inference and marker writes: %s",
+    async (closure) => {
+      const store = fakeStore();
+      let allowed = true;
+      let generations = 0;
+      let release!: (text: string | null) => void;
+      const input = new Promise<string | null>((resolve) => {
+        release = resolve;
+      });
+      const service = createPetSummaryService({
+        sessionsRootDir: "/root",
+        store,
+        allowGenerate: () => allowed,
+        readClosureInput: () => input,
+        generate: async () => {
+          generations += 1;
+          return "FOLLOW_UP: New reminder";
+        },
+      });
+      const pending = service.summarize("session-a", 1_000);
+      allowed = false;
+      release(closure);
+      expect(await pending).toBeNull();
+      expect(generations).toBe(0);
+      expect(store.writes).toBe(0);
+      expect(store.get("session-a")).toBeUndefined();
+    },
+  );
+
   test("value path: generates, stores, and returns the summary", async () => {
     const store = fakeStore();
     let generateCalls = 0;

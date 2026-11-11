@@ -110,8 +110,34 @@ const modelServer = createServer((req, res) => {
         .slice(userIndex)
         .some((m) => m.role === "tool" && m.tool_call_id === "call_hub_smoke_write")
     ) {
-      const writeActive = body.tools?.some((tool) => tool.function.name === "Write");
-      if (!writeActive) assert.ok(body.tools?.some((tool) => tool.function.name === "ToolSearch"));
+      const tools = new Set((body.tools ?? []).map((tool) => tool.function.name));
+      const writeActive = tools.has("Write");
+      const selectionReceipt = body.messages.findLast(
+        (message) =>
+          message.role === "tool" && message.tool_call_id === "call_hub_smoke_discover_write",
+      );
+      if (selectionReceipt) {
+        assert.equal(writeActive, false, "Discovery must keep the top tool list frozen");
+        assert.ok(tools.has("CallTool"));
+        assert.equal(typeof selectionReceipt.content, "string");
+        assert.match(selectionReceipt.content, /schemaRef: select:Write/);
+        const definition = JSON.parse(
+          selectionReceipt.content.split("\n").find((line) => line.startsWith("{")),
+        );
+        assert.equal(definition.name, "Write");
+        assert.equal(definition.inputSchema.type, "object");
+        assert.equal(definition.inputSchema.properties.file_path.type, "string");
+        assert.equal(definition.inputSchema.properties.content.type, "string");
+        assert.deepEqual(definition.inputSchema.required, ["file_path", "content"]);
+      }
+      const writeReady = writeActive || !!selectionReceipt;
+      if (!writeReady) assert.ok(tools.has("ToolSearch"));
+      const writeArgs = { file_path: proofFile, content: "approved by Hub\n" };
+      const call = writeActive
+        ? { name: "Write", args: writeArgs }
+        : selectionReceipt
+          ? { name: "CallTool", args: { name: "Write", args: writeArgs } }
+          : { name: "ToolSearch", args: { query: "select:Write" } };
       sse(
         res,
         chunk(body.model, {
@@ -119,15 +145,11 @@ const modelServer = createServer((req, res) => {
           tool_calls: [
             {
               index: 0,
-              id: writeActive ? "call_hub_smoke_write" : "call_hub_smoke_discover_write",
+              id: writeReady ? "call_hub_smoke_write" : "call_hub_smoke_discover_write",
               type: "function",
               function: {
-                name: writeActive ? "Write" : "ToolSearch",
-                arguments: JSON.stringify(
-                  writeActive
-                    ? { file_path: proofFile, content: "approved by Hub\n" }
-                    : { query: "select:Write" },
-                ),
+                name: call.name,
+                arguments: JSON.stringify(call.args),
               },
             },
           ],

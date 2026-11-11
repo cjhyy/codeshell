@@ -115,7 +115,7 @@ afterEach(async () => {
 });
 
 describe("Engine task routing consumer", () => {
-  test("retains loaded schemas while adding tools for a new user intent", async () => {
+  test("keeps the initial tool prefix across new user routing intents", async () => {
     const f = fixture();
     expect((await f.run("read file")).reason).toBe("completed");
     expect((await f.run("读取资料集文档")).reason).toBe("completed");
@@ -128,17 +128,18 @@ describe("Engine task routing consumer", () => {
     expect(files).toContain("Glob");
     expect(files).toContain("Grep");
     expect(files.length).toBeLessThanOrEqual(15);
-    expect(sources.slice(0, files.length)).toEqual(files);
-    expect(sources).toContain("ReadSource");
-    expect(sources).not.toEqual(files);
-    // Routing changes schemas, not registry installation or the full prompt catalog.
+    expect(sources).toEqual(files);
+    expect(sources).not.toContain("ReadSource");
+    expect(JSON.stringify(f.requests[1]!.tools)).toBe(JSON.stringify(f.requests[0]!.tools));
+    expect(f.requests[1]!.systemPrompt).toBe(f.requests[0]!.systemPrompt);
+    // Later task intent does not alter the prefix; the registry stays discoverable.
     expect(f.engine.getToolRegistry().hasTool("ReadSource")).toBe(true);
     expect(f.engine.getToolRegistry().hasTool("MemorySave")).toBe(true);
-    expect(f.requests[0]!.systemPrompt).toContain("ReadSource");
+    expect(f.requests[0]!.systemPrompt).not.toContain("ReadSource");
     expect(f.requests[1]!.systemPrompt).toContain("Glob");
   }, 15_000);
 
-  test("ToolSearch loads an inactive tool only for the next model step", async () => {
+  test("ToolSearch appends a schema before CallTool executes with normal authority checks", async () => {
     const counts = { approvals: 0, executions: 0, pre: 0, starts: 0 };
     let step = 0;
     const f = fixture(
@@ -148,14 +149,23 @@ describe("Engine task routing consumer", () => {
           expect(names(request)).not.toContain("RoutingAction");
           return [
             { id: "select", toolName: "ToolSearch", args: { query: "select:RoutingAction" } },
-            { id: "forged-inactive", toolName: "RoutingAction", args: {} },
+            {
+              id: "forged-inactive",
+              toolName: "CallTool",
+              args: { name: "RoutingAction", args: {} },
+            },
           ];
         }
-        expect(names(request)).toContain("RoutingAction");
+        expect(names(request)).not.toContain("RoutingAction");
+        expect(names(request)).toContain("CallTool");
         if (step === 2) {
           expect(counts).toEqual({ approvals: 0, executions: 0, pre: 0, starts: 0 });
-          expect(JSON.stringify(request.messages)).toContain("next model step");
-          return [{ id: "active", toolName: "RoutingAction", args: {} }];
+          expect(JSON.stringify(request.messages)).toContain("available but not loaded");
+          expect(JSON.stringify(request.messages)).toContain("Synthetic deferred action");
+          expect(JSON.stringify(request.messages)).toContain("inputSchema");
+          return [
+            { id: "active", toolName: "CallTool", args: { name: "RoutingAction", args: {} } },
+          ];
         }
         expect(counts).toEqual({ approvals: 1, executions: 1, pre: 1, starts: 1 });
         return [];
@@ -243,7 +253,7 @@ describe("Engine task routing consumer", () => {
       });
       await f.run("Find files and read data sources.");
       expect(names(f.requests[0]!)).toEqual(
-        eager ? ["Read", "Write", "ToolSearch", "Sleep"] : ["ToolSearch"],
+        eager ? ["Read", "Write", "ToolSearch", "Sleep", "CallTool"] : ["ToolSearch", "CallTool"],
       );
     }, 15_000);
   }

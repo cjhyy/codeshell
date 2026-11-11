@@ -7,10 +7,7 @@ import { petFollowUpId } from "./pet-follow-up-id.js";
 import type { PetSummaryService } from "./pet-summary-service.js";
 import type { PetSummaryEntry, PetSummaryStore } from "./pet-summary-store.js";
 import type { PetWorkInboxSnapshot } from "./pet-work-inbox-store.js";
-import { PetRegisteredFollowUpStore } from "./pet-registered-follow-up-store.js";
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import type { PetFollowUpRuleView } from "./pet-follow-up-rules.js";
 
 function session(
   id: string,
@@ -62,6 +59,58 @@ function inbox(initial: readonly string[] = []): {
 }
 
 describe("PetFollowUpService", () => {
+  test("a generation-disabled pull retains cached and registered rows without new summaries", async () => {
+    const view: PetFollowUpRuleView = {
+      id: "rule-00000000-0000-4000-8000-0000000000aa",
+      revision: 1,
+      title: "Existing scheduled reminder",
+      text: "Prepare the weekly report",
+      wakeAt: 5_000,
+      timezone: "UTC",
+      intent: "remind",
+      missedPolicy: "skip",
+      catchUpUntil: 5_000,
+      status: "open",
+      wakeState: "scheduled",
+      createdAt: 1_000,
+    };
+    const summaries = summaryStore({
+      cached: { terminalAt: 100, text: "Existing generated reminder" },
+    });
+    const generations: string[] = [];
+    const service = createPetFollowUpService({
+      listSessions: () => [
+        session("uncached", { terminalAt: 200 }),
+        session("cached", { terminalAt: 100 }),
+      ],
+      summaryStore: summaries,
+      summaryService: {
+        summarize: async (id, terminalAt) => {
+          generations.push(id);
+          summaries.set(id, terminalAt, "New reminder");
+          return { text: "New reminder" };
+        },
+      },
+      inbox: inbox(),
+      registered: { load: async () => undefined, list: () => [view] },
+    });
+    const rows = await service.collect({ allowGenerate: false });
+    expect(rows.map((row) => row.followUpId)).toEqual([view.id, petFollowUpId("cached", 100)]);
+    const open = await service.listOpen({ allowGenerate: false });
+    expect(open.map((row) => row.id)).toEqual([view.id, petFollowUpId("cached", 100)]);
+    expect(open[0]).toMatchObject({ kind: "registered", text: view.text });
+    expect(open[1]).toMatchObject({ kind: "derived-session", text: "Existing generated reminder" });
+    expect(generations).toEqual([]);
+    expect(summaries.get("uncached")).toBeUndefined();
+    const enabled = await service.listOpen();
+    expect(enabled.map((row) => row.id)).toEqual([
+      view.id,
+      petFollowUpId("uncached", 200),
+      petFollowUpId("cached", 100),
+    ]);
+    expect(generations).toEqual(["uncached"]);
+  });
+
   test("gives the workbench and Mimi one canonical Needs-follow-up feed", async () => {
     const workInbox = inbox();
     const summaries = summaryStore({
@@ -234,98 +283,83 @@ describe("PetFollowUpService", () => {
     expect(workInbox.flushes).toBe(1);
   });
 
-  test("unifies independently registered reminders and derived work without inventing a Session", async () => {
-    const root = await mkdtemp(join(tmpdir(), "pet-followup-feed-"));
-    try {
-      const registered = new PetRegisteredFollowUpStore(join(root, "registered.json"), {
-        now: () => 1_000,
-      });
-      const service = createPetFollowUpService({
-        listSessions: () => [session("session-a", { terminalAt: 100 })],
-        summaryStore: summaryStore({ "session-a": { terminalAt: 100, text: "发布前决定" } }),
-        summaryService: { summarize: async () => null },
-        inbox: inbox(),
-        registered,
-      });
-      const row = await service.register({
-        operationKey: "user-turn",
-        title: "交材料",
-        text: "提醒我交材料",
-        wakeAt: 5_000,
-        timezone: "Asia/Singapore",
-        intent: "remind",
-      });
-      const open = await service.listOpen();
-      expect(open).toHaveLength(2);
-      expect(open[0]).toMatchObject({
-        kind: "registered",
-        id: row.id,
-        revision: 1,
-        wakeAt: 5_000,
-        wakeState: "scheduled",
-        status: "open",
-      });
-      expect(open[0]!.sessionSelector).toBeUndefined();
-      expect(open[1]!.kind).toBe("derived-session");
-      await expect(service.mutate({ action: "complete", followUpId: row.id })).rejects.toThrow(
-        "expectedRevision",
-      );
-      await service.mutate({ action: "complete", followUpId: row.id, expectedRevision: 1 });
-      expect(await service.listOpen()).toHaveLength(1);
-      expect((await service.collect()).find((item) => item.followUpId === row.id)).toMatchObject({
-        kind: "registered",
-        status: "completed",
-        revision: 2,
-      });
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
+  test("unifies registered follow-up rules and derived work without inventing a Session", async () => {
+    const view: PetFollowUpRuleView = {
+      id: "rule-00000000-0000-4000-8000-0000000000aa",
+      revision: 2,
+      title: "周报",
+      text: "提醒我写周报",
+      wakeAt: 5_000,
+      recurrence: "0 17 * * 5",
+      timezone: "Asia/Shanghai",
+      intent: "remind",
+      missedPolicy: "fire-once",
+      catchUpUntil: 9_000,
+      status: "open",
+      wakeState: "scheduled",
+      wakeDetail: "上次已提醒",
+      createdAt: 1_000,
+    };
+    let rows = [view];
+    const service = createPetFollowUpService({
+      listSessions: () => [session("session-a", { terminalAt: 100 })],
+      summaryStore: summaryStore({ "session-a": { terminalAt: 100, text: "发布前决定" } }),
+      summaryService: { summarize: async () => null },
+      inbox: inbox(),
+      registered: { load: async () => undefined, list: () => rows },
+    });
+    const open = await service.listOpen();
+    expect(open).toHaveLength(2);
+    const { id, ...rest } = view;
+    expect(open[0]).toEqual({ kind: "registered", id, ...rest });
+    expect(open[1]!.kind).toBe("derived-session");
+    // Registered rows are rules: the service only handles result-derived rows.
+    await expect(
+      service.mutate({ action: "complete", followUpId: view.id, expectedRevision: 2 }),
+    ).rejects.toThrow("invalid follow-up mutation request");
+    rows = [{ ...view, status: "completed" }];
+    expect(await service.listOpen()).toHaveLength(1);
+    expect((await service.collect())[0]).toMatchObject({
+      kind: "registered",
+      followUpId: view.id,
+      status: "completed",
+    });
   });
 
-  test("canonical native controls fence wake callbacks and preserve unknown delivery detail", async () => {
-    const root = await mkdtemp(join(tmpdir(), "pet-followup-feed-"));
-    try {
-      let now = 1_000;
-      const registered = new PetRegisteredFollowUpStore(join(root, "registered.json"), {
-        now: () => now,
-      });
-      const service = createPetFollowUpService({
-        listSessions: () => [],
-        summaryStore: summaryStore(),
-        summaryService: { summarize: async () => null },
-        inbox: inbox(),
-        registered,
-      });
-      const row = await service.register({
-        operationKey: "turn",
-        title: "提醒",
-        text: "提醒",
-        wakeAt: 2_000,
-        timezone: "UTC",
-        intent: "remind",
-      });
-      now = 2_000;
-      await registered.claimWake(row.id, 1);
-      await registered.completeWake(row.id, 1, {
-        status: "unknown",
-        detail: "可能已发送，未盲目重试",
-      });
-      expect((await service.listOpen())[0]).toMatchObject({
-        wakeState: "unknown",
-        wakeDetail: "可能已发送，未盲目重试",
-      });
-      await service.mutate({
-        action: "reschedule",
-        followUpId: row.id,
-        expectedRevision: 1,
-        wakeAt: 3_000,
-        timezone: "Asia/Singapore",
-      });
-      expect(await registered.claimWake(row.id, 1)).toBeUndefined();
-      await service.mutate({ action: "cancel", followUpId: row.id, expectedRevision: 2 });
-      expect(await service.listOpen()).toEqual([]);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
+  test("a resume follow-up names its Session and workspace", async () => {
+    const service = createPetFollowUpService({
+      listSessions: () => [session("session-a")],
+      summaryStore: summaryStore(),
+      summaryService: { summarize: async () => null },
+      inbox: inbox(),
+      registered: {
+        load: async () => undefined,
+        list: () => [
+          {
+            id: "rule-00000000-0000-4000-8000-0000000000aa",
+            revision: 1,
+            title: "续办",
+            text: "继续核对",
+            wakeAt: 5_000,
+            timezone: "UTC",
+            intent: "resume",
+            missedPolicy: "skip",
+            catchUpUntil: 5_000,
+            status: "open",
+            wakeState: "launched",
+            createdAt: 1,
+            sourceSessionId: "session-a",
+            taskId: "task-a",
+          },
+        ],
+      },
+    });
+    expect((await service.collect())[0]).toMatchObject({
+      sessionId: "session-a",
+      sourceSessionId: "session-a",
+      sessionSelector: sessionSelectorId("session-a"),
+      workspace: "workspace",
+      taskId: "task-a",
+    });
   });
 });

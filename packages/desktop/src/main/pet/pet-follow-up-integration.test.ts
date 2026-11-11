@@ -2,14 +2,14 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { PetRegisteredFollowUp } from "@cjhyy/code-shell-pet";
+import type { CronScheduler } from "@cjhyy/code-shell-core/internal";
+import type { PetFollowUpWake } from "@cjhyy/code-shell-pet";
 import { sessionSelectorId } from "@cjhyy/code-shell-pet/disclosure";
 import { PetDispatchService, type PetWorldContextInput } from "./pet-dispatch-service.js";
-import { PetRegisteredFollowUpStore } from "./pet-registered-follow-up-store.js";
 import { PetHostActionReceiptStore } from "./pet-host-action-receipts.js";
-import { createPetFollowUpHost } from "./pet-follow-up-host.js";
+import { createPetFollowUpRules } from "./pet-follow-up-rules.js";
 import type { PetLongTaskStore } from "./pet-long-task-store.js";
-import type { PetFollowUpService } from "./pet-follow-up-service.js";
+import { PetRuleStore } from "./pet-rule-store.js";
 import type { DesktopPetProjectionSnapshot } from "./pet-state-aggregator.js";
 
 const roots: string[] = [];
@@ -22,25 +22,16 @@ async function root() {
   return path;
 }
 
-function followUp(): PetRegisteredFollowUp {
+function followUp(): PetFollowUpWake {
   return {
-    id: `registered-followup-${"a".repeat(24)}`,
-    operationKey: "op",
-    registrationKey: "b".repeat(64),
+    id: "rule-00000000-0000-4000-8000-0000000000aa",
     revision: 1,
+    occurrence: Date.now() - 1_000,
     title: "核对导出",
     text: "继续核对导出的校验和",
-    wakeAt: Date.now() - 1_000,
-    catchUpUntil: Date.now() + 60_000,
-    timezone: "Asia/Singapore",
     intent: "resume",
-    missedPolicy: "fire-once",
-    status: "open",
-    createdAt: 1,
-    updatedAt: 1,
     sourceSessionId: "original",
     taskId: "task-original",
-    wake: { revision: 1, status: "claimed", claimedAt: 1 },
   };
 }
 
@@ -228,6 +219,18 @@ describe("Mimi registered follow-up host integration", () => {
       expect(f.launches).toHaveLength(0);
     },
   );
+  test("each occurrence of a repeating follow-up is its own Mimi turn, never a replay", async () => {
+    const f = wakeService();
+    const first = followUp();
+    await f.service.wakeFollowUp(first);
+    await f.service.wakeFollowUp({ ...first, occurrence: first.occurrence + 86_400_000 });
+    const ids = f.requests
+      .map((request) => String(request.clientMessageId))
+      .filter((id) => id.startsWith("pet-followup-"));
+    expect(ids).toHaveLength(2);
+    expect(new Set(ids).size).toBe(2);
+    expect(ids[0]).toContain(String(first.occurrence));
+  });
   test("revalidates cancellation after the model decides, before launching", async () => {
     const f = wakeService({ blockLaunch: true });
     const result = await f.service.wakeFollowUp(followUp());
@@ -237,12 +240,32 @@ describe("Mimi registered follow-up host integration", () => {
   });
   test("host slot identity survives register replay after a later cancel", async () => {
     const path = await root();
-    const store = new PetRegisteredFollowUpStore(join(path, "follow-ups.json"));
-    const host = createPetFollowUpHost({
-      store,
-      service: {} as PetFollowUpService,
-      tasks: { getSnapshot: () => ({ tasks: [] }) } as unknown as PetLongTaskStore,
+    const store = new PetRuleStore({ path: join(path, "rules.json") });
+    const { followUpHost: host } = await createPetFollowUpRules({
+      rules: store,
       sessions: () => [],
+      summaryStore: {
+        load: async () => undefined,
+        get: () => undefined,
+        set: () => undefined,
+        flush: async () => undefined,
+      },
+      summaryService: { summarize: async () => null },
+      inbox: {
+        getSnapshot: () => ({ revision: 0, dismissedIds: [] }),
+        addIfAbsentDurably: async () => ({
+          added: false,
+          snapshot: { revision: 0, dismissedIds: [] },
+        }),
+      },
+      tasks: { getSnapshot: () => ({ tasks: [] }) } as unknown as PetLongTaskStore,
+      longTasks: { control: async () => ({ ok: false, message: "unused" }) } as never,
+      scheduler: () => ({}) as CronScheduler,
+      submitNotice: async () => {
+        throw new Error("unused");
+      },
+      dispatch: () => null,
+      onError: () => undefined,
     });
     const payload = {
       action: "register",
@@ -256,7 +279,7 @@ describe("Mimi registered follow-up host integration", () => {
     const first = await host(payload, context);
     const second = await host(payload, { ...context, actionIndex: 1 });
     expect(first.followUpId).not.toBe(second.followUpId);
-    await store.cancel(String(first.followUpId), 1);
+    await host({ action: "cancel", followUpId: String(first.followUpId), expectedRevision: 1 });
     expect(await host(payload, context)).toMatchObject({
       followUpId: first.followUpId,
       status: "cancelled",

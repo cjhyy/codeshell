@@ -12,7 +12,7 @@ import {
 } from "@cjhyy/code-shell-core/extension";
 import { createPetModule, PET_MANAGER_TOOL_CATALOG } from "./index.capability.js";
 import { delegateWorkTool } from "./delegate-work.js";
-import { gatewayReplyTool } from "./host-actions.js";
+import { gatewayReplyTool, isPetHostActionRequest } from "./host-actions.js";
 import { PET_ALLOWED_TOOL_NAMES, PET_BEHAVIOR_PROFILE } from "./profile.js";
 
 const MANAGER_NAMES = [
@@ -45,11 +45,17 @@ const PROFILE_PARAMS = {
   },
 };
 
-function createHost(options: { manager?: boolean; services?: boolean } = {}) {
+function createHost(
+  options: { manager?: boolean; services?: boolean; hostActions?: string[] } = {},
+) {
   const registry = new ToolRegistry({ toolCatalog: PET_MANAGER_TOOL_CATALOG });
   const reported: Record<string, unknown> = {};
+  const profileParams = {
+    ...PROFILE_PARAMS,
+    ...(options.hostActions ? { hostActions: options.hostActions } : {}),
+  };
   const services = PET_BEHAVIOR_PROFILE.createRunServices!({
-    profileParams: PROFILE_PARAMS,
+    profileParams,
     reportResult: (key, value) => {
       reported[key] = value;
     },
@@ -78,7 +84,7 @@ function createHost(options: { manager?: boolean; services?: boolean } = {}) {
         ? {}
         : {
             behaviorProfile: "pet",
-            profileMeta: PET_BEHAVIOR_PROFILE.buildVisibilityMeta!(PROFILE_PARAMS),
+            profileMeta: PET_BEHAVIOR_PROFILE.buildVisibilityMeta!(profileParams),
           }),
     },
     hooks: new HookRegistry(),
@@ -251,6 +257,135 @@ describe("reviewed external Mimi manager catalog", () => {
       ]);
     } finally {
       await host.dispose();
+    }
+  });
+
+  test("recurring follow-ups require the current turn's explicit Host action grant", async () => {
+    const { host, reported } = createHost();
+    try {
+      expect(host.listTools().some((tool) => tool.name === "ManageFollowUp")).toBe(false);
+      const result = await host.execute({
+        id: "ungranted-recurrence",
+        name: "ManageFollowUp",
+        input: {
+          action: "register",
+          title: "Weekly check",
+          text: "Review the week's tasks",
+          recurrence: "0 17 * * 5",
+          schedule_label: "每周五 17:00",
+          timezone: "Asia/Singapore",
+        },
+      });
+      expect(result.isError).toBe(true);
+      expect(reported).toEqual({});
+    } finally {
+      await host.dispose();
+    }
+  });
+
+  test("recurrence reaches the real external executor as one deferred Host-validated request", async () => {
+    const { host, reported } = createHost({ hostActions: ["followUpMutation"] });
+    try {
+      const input = {
+        action: "register",
+        title: "Weekly check",
+        text: "Review the week's tasks",
+        recurrence: "0 17 * * 5",
+        schedule_label: "每周五 17:00",
+        timezone: "Asia/Singapore",
+      };
+      const result = await host.execute({
+        id: "deferred-recurrence",
+        name: "ManageFollowUp",
+        input,
+      });
+      expect(result.isError).not.toBe(true);
+      expect(JSON.stringify(result)).toContain("host will append the authoritative result");
+      const expected = {
+        kind: "followUpMutation",
+        payload: {
+          action: "register",
+          title: input.title,
+          text: input.text,
+          intent: "remind",
+          recurrence: input.recurrence,
+          scheduleLabel: input.schedule_label,
+          timezone: input.timezone,
+        },
+      };
+      expect(reported.hostActions).toEqual([expected]);
+      expect(isPetHostActionRequest(expected)).toBe(true);
+      const accepted = reported.hostActions;
+      await host.execute({
+        id: "second-recurrence",
+        name: "ManageFollowUp",
+        input: { ...input, recurrence: "0 9 * * 1-5", schedule_label: "工作日 09:00" },
+      });
+      expect(reported.hostActions).toBe(accepted);
+    } finally {
+      await host.dispose();
+    }
+  });
+
+  test.each([
+    { recurrence: "*/15 * * * *" },
+    { recurrence: "0,30 9 * * *" },
+    { recurrence: "0 9 * *" },
+    { recurrence: "60 9 * * *" },
+    { recurrence: "0 9 * * *".repeat(8) },
+    { wake_at: 5_000 },
+    { catch_up_until: 5_000 },
+    { schedule_label: "" },
+    { schedule_label: "工作日\n09:00" },
+    { schedule_label: "x".repeat(65) },
+    { timezone: "Not/A_Timezone" },
+    { source_session_id: "foreign-session" },
+    { intent: "resume", task_id: "foreign-task" },
+    { completionTarget: { channel: "wechat", target: "foreign-owner" } },
+  ])("external recurrence rejects invalid bounds or forged authority: %j", async (invalid) => {
+    const { host, reported } = createHost({ hostActions: ["followUpMutation"] });
+    try {
+      const result = await host.execute({
+        id: "invalid-recurrence",
+        name: "ManageFollowUp",
+        input: {
+          action: "register",
+          title: "Weekly check",
+          text: "Review the week's tasks",
+          recurrence: "0 17 * * 5",
+          schedule_label: "每周五 17:00",
+          timezone: "Asia/Singapore",
+          ...invalid,
+        },
+      });
+      expect(result.isError === true || JSON.stringify(result).includes("Error:")).toBe(true);
+      expect(reported).toEqual({});
+    } finally {
+      await host.dispose();
+    }
+  });
+
+  test("the replayed recurring Host envelope rejects extra authority and frequency changes", () => {
+    const payload = {
+      action: "register",
+      title: "Weekly check",
+      text: "Review the week's tasks",
+      intent: "remind",
+      recurrence: "0 17 * * 5",
+      scheduleLabel: "每周五 17:00",
+      timezone: "Asia/Singapore",
+    };
+    for (const extra of [
+      { recurrence: "*/15 * * * *" },
+      { wakeAt: 5_000 },
+      { catchUpUntil: 5_000 },
+      { scheduleLabel: "bad\nlabel" },
+      { sourceSessionId: "foreign-session" },
+      { completionTarget: { channel: "wechat", target: "foreign-owner" } },
+    ]) {
+      expect(
+        isPetHostActionRequest({ kind: "followUpMutation", payload: { ...payload, ...extra } }),
+      ).toBe(false);
     }
   });
 

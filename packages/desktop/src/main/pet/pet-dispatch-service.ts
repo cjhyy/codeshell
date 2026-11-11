@@ -27,7 +27,7 @@ import type {
   PetWorkExecutionBackend,
   PetWorkspaceOption,
   PetFollowUpItem,
-  PetRegisteredFollowUp,
+  PetFollowUpWake,
   PetOutboundTargetOption,
 } from "@cjhyy/code-shell-pet";
 import type { InputAttachmentMeta } from "@cjhyy/code-shell-server/storage";
@@ -204,7 +204,7 @@ export type PetDispatchCommand =
       preferredProjectPath?: string;
       attachments?: InputAttachmentMeta[];
       /** Main-only wake authority; renderer IPC deliberately rejects this field. */
-      hostWake?: PetRegisteredFollowUp;
+      hostWake?: PetFollowUpWake;
       /** Main-only: notices queued for this IM conversation (renderer IPC rejects it). */
       pendingNotices?: PetPendingNoticeSource;
       source?: {
@@ -346,7 +346,7 @@ export interface PetDispatchOptions {
   listWorkspaces?(): Promise<Array<{ path: string; name: string }>>;
   listReusableSessions?(): Promise<PetReusableSessionCandidate[]>;
   /** The same actionable items shown in the desktop Needs follow-up section. */
-  listFollowUps?(): Promise<PetFollowUpItem[]>;
+  listFollowUps?(managerModel?: string | null): Promise<PetFollowUpItem[]>;
   /** Opaque, host-authorized proactive owner destinations. */
   listOutboundTargets?(): Promise<PetOutboundTargetOption[]>;
   /**
@@ -363,7 +363,7 @@ export interface PetDispatchOptions {
     delegation: PetAutoDelegation,
   ): Promise<{ sessionId: string; cwd: string; taskId?: string }>;
   /** Revalidate delayed authority immediately before launch, after manager admission/model work. */
-  validateFollowUpContinuation?(item: PetRegisteredFollowUp): Promise<void> | void;
+  validateFollowUpContinuation?(item: PetFollowUpWake): Promise<void> | void;
   /**
    * Atomic CodeShell capabilities executed on Mimi's behalf after her turn,
    * keyed by host-action kind (e.g. mobileRemote, longTaskControl, memory).
@@ -1197,7 +1197,7 @@ export class PetDispatchService {
 
   /** Rebuild trusted PetWorld at wake time and fence continuation to the exact source. */
   async wakeFollowUp(
-    item: PetRegisteredFollowUp,
+    item: PetFollowUpWake,
   ): Promise<{ launched: boolean; text: string; taskId?: string }> {
     if (item.intent !== "resume" || !item.sourceSessionId)
       throw new Error("invalid resume follow-up");
@@ -1209,7 +1209,8 @@ export class PetDispatchService {
         this.dispatchNow({
           type: "chat",
           hostWake: item,
-          clientMessageId: `pet-followup-${item.id}-${item.revision}`,
+          // Per occurrence: a repeating follow-up's next wake must not replay this one.
+          clientMessageId: `pet-followup-${item.id}-${item.revision}-${item.occurrence}`,
           ...(model ? { model } : {}),
           message:
             "The host is waking a previously authorized follow-up. Re-check current state and continue ONLY its exact original Session if still appropriate. " +
@@ -1560,7 +1561,7 @@ export class PetDispatchService {
             Promise.all([
               this.options.listWorkspaces?.() ?? [],
               this.options.listReusableSessions?.() ?? [],
-              this.options.listFollowUps?.() ?? [],
+              this.options.listFollowUps?.(command.model) ?? [],
               this.options.listOutboundTargets?.() ?? [],
               this.getReplyAttachmentRoots(),
             ]),

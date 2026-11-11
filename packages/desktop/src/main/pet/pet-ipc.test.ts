@@ -43,10 +43,14 @@ describe("registerPetIpc", () => {
     const control = handlers.get("pet:follow-up-control")!;
     const valid = {
       action: "cancel",
-      followUpId: `registered-followup-${"a".repeat(24)}`,
+      followUpId: "rule-00000000-0000-4000-8000-0000000000aa",
       expectedRevision: 3,
     };
     expect(await control({}, valid)).toEqual({ ok: true });
+    // Old follow-up store ids are gone with the store.
+    expect(() =>
+      control({}, { ...valid, followUpId: `registered-followup-${"a".repeat(24)}` }),
+    ).toThrow("invalid follow-up");
     expect(() => control({}, { ...valid, expectedRevision: undefined })).toThrow(
       "invalid follow-up",
     );

@@ -159,11 +159,8 @@ import { createPetNoticeControls } from "./pet/pet-notice-ipc.js";
 import { PetWorkInboxStore } from "./pet/pet-work-inbox-store.js";
 import { PetHostActionReceiptStore } from "./pet/pet-host-action-receipts.js";
 import { archivePetSessionsBySelector } from "./pet/pet-session-archive.js";
-import { createPetFollowUpRuntime } from "./pet/pet-follow-up-runtime.js";
-import {
-  PetFollowUpWakeCoordinator,
-  isPetFollowUpWakeJob,
-} from "./pet/pet-follow-up-wake-coordinator.js";
+import { createPetFollowUpRules } from "./pet/pet-follow-up-rules.js";
+import { PetRuleScheduler, isPetRuleScheduleJob } from "./pet/pet-rule-schedule.js";
 import { PetContextLinkStore } from "./pet/pet-context-links.js";
 import { PetWorkMemoryStore } from "./pet/pet-work-memory-store.js";
 import { PetSegmentController, type PetArchiveAnchors } from "./pet/pet-segment-controller.js";
@@ -211,10 +208,14 @@ import {
   persistedExternalRuntimeModelKey,
   isPersistedExternalRuntime,
 } from "./mobile-remote/external-runtime-commands.js";
-import { allowNativePetExtraction } from "./pet/pet-native-extraction-policy.js";
+import {
+  allowNativePetAuxiliary,
+  allowNativePetExtraction,
+} from "./pet/pet-native-extraction-policy.js";
 import { createPetRuntimeControlWorker } from "./pet/pet-runtime-control-worker.js";
 import { createPetExternalRuntime } from "./pet/pet-external-runtime.js";
 import { createPetExternalReplyModel } from "./pet/pet-external-reply-model.js";
+import { resolveExternalRuntimeStartWorkspace } from "./external-runtime-start-workspace.js";
 import { installedThemeToPack } from "./theme-pack-conversion.js";
 import { themeImportDialogOptions } from "./theme-import-dialog.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
@@ -878,7 +879,7 @@ let petStateAggregator: PetStateAggregator | null = null;
 let petExternalVisibilityController: ExternalSessionVisibilityController | null = null;
 let reconcileExternalAdapters: (() => Promise<void>) | null = null;
 let petDispatchService: PetDispatchService | null = null;
-let petFollowUpWakeCoordinator: PetFollowUpWakeCoordinator | null = null;
+let petRuleScheduler: PetRuleScheduler | null = null;
 // The dispatcher exists before its worker and durable stores finish loading.
 // IM delivery shares the same completed initialization boundary as Pet IPC.
 let petRuntimeReady = false;
@@ -1712,9 +1713,7 @@ async function createWindow(): Promise<BrowserWindow> {
           if (externalRuntime.service?.get(sessionId)) return true;
           // The canonical model wins over an old external-runtime sidecar after
           // a user switches this task back to the native runtime.
-          return !!parseExternalRuntimeModelKey(
-            externalGoalSessions.readSessionState(sessionId)?.model,
-          );
+          return isPersistedExternalRuntime(externalGoalSessions.readSessionState(sessionId));
         },
         authorize: (sessionId, callerId) => {
           assertDesktopSessionId(sessionId);
@@ -1732,9 +1731,11 @@ async function createWindow(): Promise<BrowserWindow> {
           if (!service) throw new Error("external runtime service is unavailable");
           if (service.canResumeGoal(sessionId, callerId)) return;
           const state = externalGoalSessions.readSessionState(sessionId);
-          const model = parseExternalRuntimeModelKey(state?.model);
+          const model = parseExternalRuntimeModelKey(persistedExternalRuntimeModelKey(state));
           if (!state || !model) throw new Error("external goal task is no longer available");
-          const cwd = await requireRendererProjectPath(state.cwd);
+          const workspace = await resolveExternalRuntimeStartWorkspace(sessionId, state.cwd, {
+            sessions: externalGoalSessions,
+          });
           const ownerWindow = [...mainWindows].find(
             (window) => !window.isDestroyed() && window.webContents.id === callerId,
           );
@@ -1743,10 +1744,30 @@ async function createWindow(): Promise<BrowserWindow> {
           if (existingOwner !== undefined && existingOwner !== callerId) {
             throw new Error("goal belongs to another window");
           }
+          const assertStartAuthority = () => {
+            workspace.assertStartAuthority();
+            const current = externalGoalSessions.readSessionState(sessionId);
+            const currentModel = parseExternalRuntimeModelKey(
+              persistedExternalRuntimeModelKey(current),
+            );
+            const owner = externalBridge.panelOwnerWebContentsId(sessionId);
+            if (
+              externalRuntime.service !== service ||
+              ownerWindow.isDestroyed() ||
+              (owner !== undefined && owner !== callerId) ||
+              current?.startedAt !== state.startedAt ||
+              current?.cwd !== state.cwd ||
+              currentModel?.kind !== model.kind ||
+              currentModel?.model !== model.model
+            )
+              throw new Error("external goal authority changed before startup");
+          };
           await service.ensure({
             kind: model.kind,
             sessionId,
-            cwd,
+            cwd: workspace.cwd,
+            mainRoot: workspace.mainRoot,
+            assertStartAuthority,
             modelKey: state.model,
             ...(model.model ? { model: model.model } : {}),
             permissionMode: "default",
@@ -2206,9 +2227,17 @@ async function createWindow(): Promise<BrowserWindow> {
       sessionsRootDir: petSessionsRootDir,
       store: petSummaryStore,
       cwd: resolveNoRepoCwd(),
+      allowGenerate: () =>
+        allowNativePetAuxiliary(
+          new SettingsManager(resolveNoRepoCwd(), "full").getForScope("user"),
+          mimiSessionId ? imRuntimeSessions.readSessionState(mimiSessionId) : undefined,
+        ),
     });
-    const followUpRuntime = await createPetFollowUpRuntime({
-      filePath: resolve(app.getPath("userData"), "pet", "follow-ups.json"),
+    // Follow-ups are schedule rules; the old follow-ups.json is deleted, not migrated.
+    const followUpRuntime = await createPetFollowUpRules({
+      rules: notices.ruleStore,
+      legacyFollowUpsPath: resolve(app.getPath("userData"), "pet", "follow-ups.json"),
+      powerEvents: powerMonitor,
       sessions: () => aggregator.getSnapshot().sessions,
       summaryStore: petSummaryStore,
       summaryService: petSummaryService,
@@ -2222,9 +2251,10 @@ async function createWindow(): Promise<BrowserWindow> {
       submitNotice: notices.submitNotice,
       dispatch: () => petDispatchService,
       onError: (error) => dlog("main", "pet.followUp.wake.failed", { error: String(error) }),
+      log: (event, data) => dlog("main", event, data),
     });
-    const { registeredFollowUps, petFollowUps, followUpHost } = followUpRuntime;
-    petFollowUpWakeCoordinator = followUpRuntime.coordinator;
+    const { petFollowUps, followUpHost } = followUpRuntime;
+    petRuleScheduler = followUpRuntime.coordinator;
     // Entering a Work Session from a chat: the store, bridge, bind executor
     // and reply delivery are composed in session-bridge-wiring.ts so this
     // root only names the collaborators it already owns.
@@ -2428,7 +2458,8 @@ async function createWindow(): Promise<BrowserWindow> {
         defaultWorkSessionModel: defaultSessionModelKeyFromSettings(await readSettings("user")),
       }),
       listWorkspaces: () => mobileOrchestrator.projectList(),
-      listFollowUps: () => petFollowUps.listOpen(),
+      listFollowUps: (model) =>
+        petFollowUps.listOpen({ allowGenerate: !parseExternalRuntimeModelKey(model) }),
       listOutboundTargets: async () =>
         imGatewayService.listOwnerMessageTargets().map((target) => ({
           id: target.id,
@@ -2757,7 +2788,7 @@ async function createWindow(): Promise<BrowserWindow> {
       summaries: {
         collect: () => petFollowUps.collect(),
         control: (request) => followUpHost({ ...request }),
-        subscribe: (listener) => registeredFollowUps.subscribe(listener),
+        subscribe: followUpRuntime.subscribe,
       },
       journal: {
         list: async () => {
@@ -3692,25 +3723,25 @@ app.whenReady().then(async () => {
     automationHandle = startAutomation({
       store: new CronStore(defaultCronStorePath()),
       runner: async (request) => {
-        if (!isPetFollowUpWakeJob(request.job)) return automationRunner(request);
-        if (!petFollowUpWakeCoordinator)
+        if (!isPetRuleScheduleJob(request.job)) return automationRunner(request);
+        if (!petRuleScheduler)
           return {
             text: "Mimi 跟进服务不可用",
             reason: "unavailable",
             stop: { reason: "Mimi 跟进服务不可用" },
           };
-        await petFollowUpWakeCoordinator.wake(request.job);
-        return { text: "Registered follow-up wake handled", reason: "done" };
+        await petRuleScheduler.wake(request.job);
+        return { text: "Scheduled rule wake handled", reason: "done" };
       },
       onJobEvent: (event) => {
-        if (isPetFollowUpWakeJob(event.job)) {
+        if (isPetRuleScheduleJob(event.job)) {
           if (event.type === "job_missed")
-            void petFollowUpWakeCoordinator
+            void petRuleScheduler
               ?.missed(event.job)
               .catch((error) =>
                 dlog("main", "pet.followUp.missed.failed", { error: String(error) }),
               );
-          if (event.type === "job_error") petFollowUpWakeCoordinator?.repairSoon();
+          if (event.type === "job_error") petRuleScheduler?.repairSoon();
           return;
         }
         if (event.type !== "job_start") {
@@ -3727,7 +3758,7 @@ app.whenReady().then(async () => {
     });
     // Expose the live scheduler to the automation IPC service (Phase 3 UI).
     setAutomationScheduler(automationHandle.scheduler);
-    await petFollowUpWakeCoordinator?.start();
+    await petRuleScheduler?.start();
     // startAutomation installed the default executor (bindCronToEngine):
     // every cron job runs one headless codeshell turn. Driving Claude Code is
     // just one such turn calling DriveClaudeCode — no CC-specific scheduling.
@@ -4212,6 +4243,7 @@ registerProjectAuthorityIpc({
   applyGitPathFromSettings,
   projectStore,
   getBridge: () => bridge,
+  getExternalRuntimeService: () => externalRuntime.service,
   getTrust,
   assertSessionId: assertDesktopSessionId,
   trackGitRoot: (root) => knownGitRoots.add(root),
@@ -4697,8 +4729,8 @@ registerDesktopShutdown(app, {
     petExternalVisibilityController = null;
     reconcileExternalAdapters = null;
     petDispatchService = null;
-    petFollowUpWakeCoordinator?.stop();
-    petFollowUpWakeCoordinator = null;
+    petRuleScheduler?.stop();
+    petRuleScheduler = null;
     petHostActionReceiptService = null;
     petImDecisions?.stop();
     petImDecisions = null;

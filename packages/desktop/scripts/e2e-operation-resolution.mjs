@@ -9,6 +9,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createBunTestEnvironment } from "../../../scripts/bun-test-completion.mjs";
+import { discoveredFixtureCall } from "./operation-tool-discovery-fixture.mjs";
 
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const root = await mkdtemp(join(tmpdir(), "codeshell-operation-resolution-"));
@@ -275,16 +276,6 @@ try {
             ? message.content.filter((block) => block.type === "tool_result")
             : [],
         );
-      const tools = new Set((request.tools ?? []).map((tool) => tool.name));
-      if (!tools.has("LinkAction"))
-        return {
-          text: "",
-          stopReason: "tool_use",
-          usage,
-          toolCalls: [
-            { id: "discover", toolName: "ToolSearch", args: { query: "select:LinkAction" } },
-          ],
-        };
       if (results.some((block) => block.tool_use_id === "create"))
         return { text: "Model claims success", usage, stopReason: "stop", toolCalls: [] };
       const unknown = request.messages[intent].content.includes("unknown");
@@ -293,21 +284,26 @@ try {
         stopReason: "tool_use",
         usage,
         toolCalls: [
-          {
-            id: "create",
-            toolName: "LinkAction",
-            args: {
-              provider: "github",
-              action: "create_issue",
-              connectionId: credential.id,
-              params: {
-                owner: "fixture",
-                repo: unknown ? "unknown" : "success",
-                title: "PRIVATE_TITLE",
-                body: "PRIVATE_BODY",
+          discoveredFixtureCall(
+            (request.tools ?? []).map((tool) => tool.name),
+            results.findLast((block) => block.tool_use_id === "discover"),
+            {
+              id: "create",
+              toolName: "LinkAction",
+              args: {
+                provider: "github",
+                action: "create_issue",
+                connectionId: credential.id,
+                params: {
+                  owner: "fixture",
+                  repo: unknown ? "unknown" : "success",
+                  title: "PRIVATE_TITLE",
+                  body: "PRIVATE_BODY",
+                },
               },
             },
-          },
+            "discover",
+          ),
         ],
       };
     }

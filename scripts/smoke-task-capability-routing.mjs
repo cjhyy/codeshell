@@ -88,13 +88,34 @@ async function respond(req, res) {
 }
 const names = (body) => (body.tools ?? []).map((tool) => tool.function.name);
 const bounded = (body) => {
-  assert.ok(names(body).length >= 8 && names(body).length <= 15);
+  assert.ok(names(body).length >= 8 && names(body).length <= 16);
   assert.ok(names(body).includes("ToolSearch"));
 };
+function assertFrozenPrefix(bodies, baseline = bodies[0]) {
+  for (let index = 0; index < bodies.length; index++) {
+    const body = bodies[index];
+    assert.equal(JSON.stringify(body.tools), JSON.stringify(baseline.tools), "frozen tool bytes");
+    assert.equal(
+      JSON.stringify(body.messages[0]),
+      JSON.stringify(baseline.messages[0]),
+      "frozen system bytes",
+    );
+    const previous = bodies[index - 1];
+    if (previous) {
+      assert.ok(body.messages.length >= previous.messages.length);
+      assert.equal(
+        JSON.stringify(body.messages.slice(0, previous.messages.length)),
+        JSON.stringify(previous.messages),
+        "append-only wire message prefix",
+      );
+    }
+  }
+}
+const call = (name, args = {}) => ({ name: "CallTool", args: { name, args } });
 const catalog = (body) => body.messages[0].content;
 const catalogNames = (body) => {
   const listing = catalog(body).match(/# Available Tools\n\n[^\n]+\n([^\n]+)/)?.[1];
-  assert.ok(listing, "the full eligible catalog is present");
+  assert.ok(listing, "the frozen top-level tool index is present");
   return new Set(listing.split(", "));
 };
 try {
@@ -165,6 +186,7 @@ try {
         if (fixtureFailure) throw fixtureFailure;
         assert.equal(result.reason, "completed");
         assert.ok(scenario.bodies.length > 0, "each Run reaches its actual primary schema request");
+        assertFrozenPrefix(scenario.bodies);
         return scenario.bodies;
       },
     };
@@ -182,7 +204,10 @@ try {
           names(body).includes("Grep"),
       );
       assert.ok(!names(body).includes("ReadSource"));
-      assert.ok(catalog(body).includes("ReadSource"), "complete eligible catalog");
+      assert.ok(
+        !catalogNames(body).has("ReadSource"),
+        "deferred tools are discovered through ToolSearch",
+      );
       return [{ name: "Read", args: { file_path: file } }];
     }
     assert.match(JSON.stringify(body.messages), /LOCAL_FILE_RESULT_319/);
@@ -209,21 +234,28 @@ try {
     readPolicy: "ask",
   });
   const sourceBodies = await general.run("读取资料集文档", (body, step) => {
-    if (step === 1) {
-      bounded(body);
-      assert.ok(names(body).includes("ListSources") && names(body).includes("ReadSource"));
-      assert.notDeepEqual(names(body), names(fileBodies[0]), "new Run changes its initial route");
-      assert.ok(catalog(body).includes("Glob"), "file tools remain discoverable");
+    bounded(body);
+    assert.deepEqual(
+      names(body),
+      names(fileBodies[0]),
+      "new Run keeps the session's initial route",
+    );
+    assert.ok(!names(body).includes("ReadSource"));
+    if (step === 1)
+      return [{ name: "ToolSearch", args: { query: "select:ListSources,ReadSource" } }];
+    assert.match(JSON.stringify(body.messages), /inputSchema/);
+    if (step === 2)
       return [
-        {
-          name: "ReadSource",
-          args: { source: "routing-library", scope: "reference", resource: "reference" },
-        },
+        call("ReadSource", {
+          source: "routing-library",
+          scope: "reference",
+          resource: "reference",
+        }),
       ];
-    }
     assert.match(JSON.stringify(body.messages), /LOCAL_COLLECTION_RESULT_821/);
     return [];
   });
+  assertFrozenPrefix(sourceBodies, fileBodies[0]);
   results.push({ case: "local-collection-consumer", initialTools: names(sourceBodies[0]) });
   assert.deepEqual(catalogNames(fileBodies[0]), catalogNames(sourceBodies[0]));
 
@@ -257,20 +289,26 @@ try {
     (body) => {
       bounded(body);
       assert.ok(!names(body).includes("ApplyPatch"));
-      assert.ok(catalog(body).includes("ApplyPatch"));
+      assert.ok(!catalogNames(body).has("ApplyPatch"));
+      assert.ok(
+        code.engine.getToolRegistry().hasTool("ApplyPatch"),
+        "coding capability stays discoverable",
+      );
       return [];
     },
     { sessionId: "s-coding-read" },
   );
   assert.notDeepEqual(names(codeBodies[0]), names(codeFileBodies[0]));
-  assert.deepEqual(catalogNames(codeBodies[0]), catalogNames(codeFileBodies[0]));
+  assert.deepEqual(catalogNames(codeBodies[0]), new Set(names(codeBodies[0])));
+  assert.deepEqual(catalogNames(codeFileBodies[0]), new Set(names(codeFileBodies[0])));
   assert.ok(code.engine.getToolRegistry().hasTool("DriveAgent"));
   results.push({ case: "coding-owned-patch-consumer", initialTools: names(codeBodies[0]) });
 
   const counters = { executions: 0, approvals: 0, pre: 0, starts: 0 };
   const deferred = create("deferred", {
     approvalBackend: {
-      requestApproval: async () => {
+      requestApproval: async (request) => {
+        assert.equal(request.toolName, "RoutingAction", "approval uses the resolved target name");
         counters.approvals++;
         return { approved: true };
       },
@@ -301,26 +339,23 @@ try {
   }
   deferred.scenario.failures = 1;
   const progressive = await deferred.run("read file", (body, step) => {
-    if (step === 1) {
-      bounded(body);
-      assert.ok(!names(body).includes("RoutingAction"));
-      assert.ok(!JSON.stringify(body.tools).includes("ROUTING_SCHEMA_4"));
-      return [
-        { name: "ToolSearch", args: { query: "select:RoutingAction" } },
-        { name: "RoutingAction" },
-      ];
-    }
-    assert.ok(names(body).includes("RoutingAction"));
-    assert.ok(JSON.stringify(body.tools).includes("ROUTING_SCHEMA_4"));
+    bounded(body);
+    assert.ok(names(body).includes("CallTool"));
+    assert.ok(!names(body).includes("RoutingAction"));
+    assert.ok(!JSON.stringify(body.tools).includes("ROUTING_SCHEMA_4"));
+    if (step === 1) return [{ name: "RoutingAction" }];
     if (step === 2) {
       assert.deepEqual(counters, { executions: 0, approvals: 0, pre: 0, starts: 0 });
-      assert.match(JSON.stringify(body.messages), /next model step/);
-      return [{ name: "RoutingAction", args: { marker: "ROUTING_SCHEMA_4" } }];
+      assert.match(JSON.stringify(body.messages), /not loaded/);
+      return [{ name: "ToolSearch", args: { query: "select:RoutingAction" } }];
     }
+    assert.match(JSON.stringify(body.messages), /inputSchema/);
+    assert.match(JSON.stringify(body.messages), /ROUTING_SCHEMA_4/);
+    if (step === 3) return [call("RoutingAction", { marker: "ROUTING_SCHEMA_4" })];
     assert.deepEqual(counters, { executions: 1, approvals: 1, pre: 1, starts: 1 });
     return [];
   });
-  assert.equal(progressive.length, 4, "one SDK retry and three model steps");
+  assert.equal(progressive.length, 5, "one SDK retry and four model steps");
   assert.deepEqual(
     progressive[0].tools,
     progressive[1].tools,
@@ -340,18 +375,46 @@ try {
     { sessionId: "s-deferred-other" },
   );
   results.push({
-    case: "discovery-next-step-retry-and-run-reset",
+    case: "append-only-discovery-retry-and-session-isolation",
     initialTools: names(progressive[0]),
   });
 
-  for (const extra of [{ toolAllowlist: ["Read", "Sleep"] }, { behaviorMode: restricted.id }]) {
+  const restrictedExisting = await general.run(
+    "Read an unavailable source",
+    (body, step) => {
+      assert.deepEqual(
+        names(body),
+        names(fileBodies[0]),
+        "restriction leaves frozen schemas unchanged",
+      );
+      if (step === 1)
+        return [
+          call("ReadSource", {
+            source: "routing-library",
+            scope: "reference",
+            resource: "reference",
+          }),
+        ];
+      assert.match(
+        body.messages.findLast((message) => message.role === "tool").content,
+        /not available|not allowed/,
+      );
+      return [];
+    },
+    { toolAllowlist: ["Read", "Sleep"] },
+  );
+  assertFrozenPrefix(restrictedExisting, fileBodies[0]);
+  for (const [index, extra] of [
+    { toolAllowlist: ["Read", "Sleep"] },
+    { behaviorMode: restricted.id },
+  ].entries()) {
     await general.run(
       "读取资料集文档",
       (body) => {
         assert.deepEqual(new Set(names(body)), new Set(["Read", "Sleep"]));
         return [];
       },
-      extra,
+      { ...extra, sessionId: `s-general-restricted-${index}` },
     );
   }
   results.push({ case: "run-and-behavior-allowlists" });
@@ -380,7 +443,7 @@ try {
     await legacy.run("read file", (body) => {
       assert.deepEqual(
         new Set(names(body)),
-        new Set(discovery ? ["ToolSearch"] : ["Read", "Sleep"]),
+        new Set(discovery ? ["ToolSearch", "CallTool"] : ["Read", "Sleep"]),
       );
       return [];
     });
@@ -400,7 +463,7 @@ try {
         .map((line) => JSON.parse(line)),
     )
     .filter((entry) => entry.msg === "tool.surface.routed");
-  assert.ok(routingEntries.length >= 6, "actual routing diagnostics exist");
+  assert.ok(routingEntries.length >= 5, "actual routing diagnostics exist");
   for (const entry of routingEntries) {
     assert.ok(!JSON.stringify(entry).includes(canary));
     assert.deepEqual(

@@ -166,7 +166,7 @@
     "status": "exposed",
     "requires": "mimi-host",
     "reason": "Records a follow-up mutation through the Host-owned per-turn Pet profile services and authorized host action kinds. The Host validates identity and executes it after the manager turn; acceptance is not completion.",
-    "contractFingerprint": "58e70b574d2ac214d44299243adb55d596f679450afd2c48e03daff1860abf3f"
+    "contractFingerprint": "8bbc275d1cbb280725228ade91ac9f790427e86ca2b1674a840c1a29bf3407fd"
   },
   {
     "tool": "ManageSessions",

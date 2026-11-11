@@ -1,11 +1,11 @@
-import type { PetRegisteredFollowUp } from "@cjhyy/code-shell-pet";
+import type { PetFollowUpWake } from "@cjhyy/code-shell-pet";
 import { noticeLine } from "./pet-notice-compose.js";
 import type { RouteDecision } from "./pet-notice-policy.js";
 import type { NoticeSubmission } from "./pet-notice-types.js";
 
 /**
- * A registered follow-up coming due, as a notice. The follow-up store stays
- * the record of WHEN to remind (and its wake coordinator the executor); the
+ * A follow-up occurrence coming due, as a notice. Its schedule rule is the
+ * record of WHEN to remind (and the rule scheduler the executor); the
  * reminder itself is sent by the notice router like every other push, so it
  * gets the ledger, dedupe, presence and channel selection.
  *
@@ -21,8 +21,14 @@ export const FOLLOW_UP_NOTICE_KIND = "followup.due";
 export const FOLLOW_UP_MIN_DELIVERY_MS = 10 * 60_000;
 const MAX_TEXT = 3_000;
 
+/** What the reminder needs of an occurrence: its wake plus its catch-up deadline. */
+export type FollowUpNoticeSource = Pick<
+  PetFollowUpWake,
+  "title" | "sourceSessionId" | "completionTarget"
+> & { catchUpUntil: number };
+
 export function followUpNotice(
-  item: PetRegisteredFollowUp,
+  item: FollowUpNoticeSource,
   text: string,
   wakeKey: string,
   now: number,
@@ -33,7 +39,7 @@ export function followUpNotice(
   return {
     kind: FOLLOW_UP_NOTICE_KIND,
     priority: "P1",
-    // One wake of one revision is one reminder, across restarts.
+    // One occurrence of one revision is one reminder, across restarts.
     dedupeKey: wakeKey,
     ...(item.sourceSessionId ? { sessionId: item.sourceSessionId } : {}),
     ruleIds: [],
@@ -54,7 +60,7 @@ export function followUpNotice(
 export function createFollowUpNotifier(deps: {
   submit(notice: NoticeSubmission): Promise<RouteDecision>;
   now?: () => number;
-}): (item: PetRegisteredFollowUp, text: string, wakeKey: string) => Promise<void> {
+}): (item: FollowUpNoticeSource, text: string, wakeKey: string) => Promise<void> {
   const now = deps.now ?? Date.now;
   return async (item, text, wakeKey) => {
     const decision = await deps.submit(followUpNotice(item, text, wakeKey, now()));

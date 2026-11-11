@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import type { ToolDefinition } from "../types.js";
+import type { SessionToolSelection, ToolDefinition } from "../types.js";
+import { callToolDef } from "./builtin/call-tool.js";
 import { normalizeSessionToolSelection, RunToolSurface } from "./run-tool-surface.js";
 
 function definition(name: string, description = `${name} purpose`): ToolDefinition {
@@ -9,42 +10,162 @@ function definition(name: string, description = `${name} purpose`): ToolDefiniti
 const names = (surface: RunToolSurface) => surface.snapshot().map((tool) => tool.name);
 
 describe("RunToolSurface", () => {
-  it("restores loading order with only fresh eligible schemas, including after revocation", () => {
-    const first = new RunToolSurface([]);
+  it("keeps discovered schemas out of the frozen provider prefix until rebase", () => {
+    const changes: SessionToolSelection[] = [];
+    const surface = new RunToolSurface([], {
+      onSelectionChanged: (selection) => changes.push(selection),
+    });
+    surface.updateCatalog([
+      definition("ToolSearch"),
+      callToolDef,
+      definition("Read"),
+      definition("Write"),
+    ]);
+    const before = JSON.stringify(surface.snapshot());
+    expect(surface.select(["Write", "Missing", "Read", "Write", "read", "Missing"])).toEqual({
+      selected: ["Write", "Read"],
+      unavailable: ["Missing", "read"],
+    });
+    expect(JSON.stringify(surface.snapshot())).toBe(before);
+    expect(surface.getSelection().names).toEqual(["ToolSearch", "CallTool"]);
+    expect(surface.getSelection().discovered).toEqual(["Write", "Read"]);
+    expect(surface.isCallable("Write")).toBe(true);
+    expect(surface.isCallable("Missing")).toBe(false);
+    surface.select(["Read", "ToolSearch"]);
+    expect(changes).toHaveLength(2);
+    changes[1].discovered.push("Other");
+    expect(surface.getSelection().discovered).toEqual(["Write", "Read"]);
+    surface.rebase();
+    expect(names(surface)).toEqual(["ToolSearch", "CallTool", "Write", "Read"]);
+    expect(surface.getSelection().discovered).toEqual([]);
+  });
+
+  it("retains unavailable top schemas across disk resume without restoring eligibility", () => {
+    const first = new RunToolSurface(["Write"]);
     first.updateCatalog([definition("ToolSearch"), definition("Write"), definition("Read")]);
-    first.select(["Write", "Read"]);
+    first.select(["Read"]);
+    const before = JSON.stringify(first.snapshot());
     first.updateCatalog([definition("ToolSearch"), definition("Read")]);
-    expect(names(first)).toEqual(["ToolSearch", "Read"]);
-    const saved = first.getSelection();
-    expect(saved.names).toEqual(["ToolSearch", "Write", "Read"]);
-    const resumed = new RunToolSurface([], { selection: saved });
+    expect(JSON.stringify(first.snapshot())).toBe(before);
+    expect(first.isCallable("Write")).toBe(false);
+    const saved = JSON.parse(JSON.stringify(first.getSelection()));
+    const resumed = new RunToolSurface(["NewRoute"], { selection: saved });
     saved.names.push("Unselected");
     resumed.updateCatalog([definition("Read", "fresh read"), definition("ToolSearch")]);
-    expect(names(resumed)).toEqual(["ToolSearch", "Read"]);
+    expect(JSON.stringify(resumed.snapshot())).toBe(before);
+    expect(resumed.isCallable("Read")).toBe(true);
+    expect(resumed.isCallable("Write")).toBe(false);
     resumed.updateCatalog([
       definition("Read", "fresh read"),
       definition("Write", "fresh write"),
       definition("Unselected"),
       definition("ToolSearch"),
     ]);
-    expect(names(resumed)).toEqual(["ToolSearch", "Write", "Read"]);
-    expect(resumed.snapshot()[1].description).toBe("fresh write");
-    expect(resumed.select(["Missing"])).toEqual({ selected: [], unavailable: ["Missing"] });
+    expect(JSON.stringify(resumed.snapshot())).toBe(before);
+    expect(resumed.isCallable("Write")).toBe(true);
+    expect(resumed.isCallable("Unselected")).toBe(false);
+    expect(resumed.getDefinition("Write")?.description).toBe("fresh write");
+    resumed.rebase();
+    expect(names(resumed)).toEqual(["Write", "ToolSearch", "Read"]);
+    expect(resumed.snapshot()[0].description).toBe("fresh write");
   });
 
-  it("publishes newly selected names immediately before a following model snapshot", () => {
-    const changes: string[][] = [];
-    const surface = new RunToolSurface([], {
-      onSelectionChanged: (selection) => changes.push(selection.names),
+  it("requires rediscovery when a tool was unavailable during promotion and returns later", () => {
+    const bootstrap = [definition("ToolSearch"), callToolDef];
+    const first = new RunToolSurface(["Read"]);
+    first.updateCatalog([...bootstrap, definition("Read", "old read schema"), definition("Write")]);
+    first.select(["Write"]);
+    first.updateCatalog(bootstrap);
+    first.rebase();
+    const prefix = JSON.stringify(first.snapshot());
+    expect(first.snapshot()[0].description).toBe("old read schema");
+    expect(first.getSelection().names).toContain("Write");
+    expect(first.getSelection().discovered).toEqual([]);
+
+    const returnedCatalog = [
+      ...bootstrap,
+      definition("Read", "new read schema"),
+      definition("Write", "returned schema"),
+    ];
+    first.updateCatalog(returnedCatalog);
+    expect(first.isCallable("Read")).toBe(true);
+    expect(first.isEligible("Write")).toBe(true);
+    expect(first.isCallable("Write")).toBe(false);
+    const resumed = new RunToolSurface([], {
+      selection: JSON.parse(JSON.stringify(first.getSelection())),
     });
-    surface.updateCatalog([definition("ToolSearch"), definition("Read")]);
-    surface.select(["Read"]);
-    expect(changes).toEqual([["ToolSearch"], ["ToolSearch", "Read"]]);
-    changes[1].push("Write");
-    expect(surface.getSelection().names).toEqual(["ToolSearch", "Read"]);
+    resumed.updateCatalog(returnedCatalog);
+    expect(JSON.stringify(resumed.snapshot())).toBe(prefix);
+    expect(resumed.isCallable("Write")).toBe(false);
+    resumed.select(["Write"]);
+    expect(resumed.getSelection().discovered).toEqual(["Write"]);
+    expect(resumed.isCallable("Write")).toBe(true);
+    expect(JSON.stringify(resumed.snapshot())).toBe(prefix);
+
+    const rediscovered = new RunToolSurface([], {
+      selection: JSON.parse(JSON.stringify(resumed.getSelection())),
+    });
+    rediscovered.updateCatalog(returnedCatalog);
+    expect(JSON.stringify(rediscovered.snapshot())).toBe(prefix);
+    expect(rediscovered.isCallable("Write")).toBe(true);
+    rediscovered.rebase();
+    expect(rediscovered.snapshot().find((tool) => tool.name === "Write")?.description).toBe(
+      "returned schema",
+    );
+    expect(rediscovered.getSelection().discovered).toEqual([]);
   });
 
-  it("rejects malformed persisted loading hints and deduplicates valid names", () => {
+  it("preserves an explicitly empty snapshot when retained tools return", () => {
+    const surface = new RunToolSurface(undefined, {
+      selection: { version: 2, names: ["Read"], discovered: [], frozenDefinitions: [] },
+    });
+    surface.updateCatalog([definition("Read")]);
+    expect(surface.snapshot()).toEqual([]);
+    expect(surface.isEligible("Read")).toBe(true);
+    expect(surface.isCallable("Read")).toBe(false);
+    surface.select(["Read"]);
+    expect(surface.isCallable("Read")).toBe(true);
+    expect(surface.snapshot()).toEqual([]);
+    surface.rebase();
+    expect(names(surface)).toEqual(["Read"]);
+  });
+
+  it("upgrades v1 loading order and gives it the static CallTool wrapper", () => {
+    expect(normalizeSessionToolSelection({ version: 1, names: ["Read", "Read"] })).toEqual({
+      version: 2,
+      names: ["Read"],
+      discovered: [],
+    });
+    const surface = new RunToolSurface(["Write"], {
+      selection: { version: 1, names: ["Read", "ToolSearch"] },
+    });
+    surface.updateCatalog([
+      definition("ToolSearch"),
+      callToolDef,
+      definition("Write"),
+      definition("Read"),
+    ]);
+    expect(names(surface)).toEqual(["Read", "ToolSearch", "CallTool"]);
+    expect(surface.isCallable("Write")).toBe(false);
+    expect(callToolDef.inputSchema.properties).toEqual({
+      name: { type: "string", description: "Exact tool name from ToolSearch." },
+      args: { type: "object", description: "Arguments matching the tool's schema." },
+    });
+  });
+
+  it("does not add a newly eligible wrapper to an existing v2 cache cycle", () => {
+    const original = new RunToolSurface([]);
+    original.updateCatalog([definition("ToolSearch"), definition("Read")]);
+    const saved = original.getSelection();
+    const resumed = new RunToolSurface([], { selection: saved });
+    resumed.updateCatalog([definition("ToolSearch"), callToolDef, definition("Read")]);
+    expect(resumed.snapshot()).toEqual(original.snapshot());
+    expect(resumed.isCallable("CallTool")).toBe(false);
+  });
+
+  it("normalizes malformed state without throwing or mutating the supplied state", () => {
+    const circular: any[] = [];
+    circular.push(circular);
     for (const selection of [
       null,
       { version: 2, names: ["Read"] },
@@ -52,38 +173,56 @@ describe("RunToolSurface", () => {
       { version: 1, names: ["bad\nname"] },
       { version: 1, names: [7] },
       { version: 1, names: Array(4097).fill("Read") },
+      { version: 3, names: [] },
+      { version: 2, names: [], discovered: [false] },
+      { version: 2, names: [], discovered: [], frozenDefinitions: [definition("Hidden")] },
+      { version: 2, names: ["Read"], discovered: [], frozenDefinitions: [{ name: "Read" }] },
+      {
+        version: 2,
+        names: ["Read"],
+        discovered: [],
+        frozenDefinitions: [definition("Read"), definition("Read")],
+      },
+      {
+        version: 2,
+        names: ["Read"],
+        discovered: [],
+        frozenDefinitions: [{ ...definition("Read"), inputSchema: { circular } }],
+      },
     ]) {
       expect(normalizeSessionToolSelection(selection)).toBeUndefined();
-      const surface = new RunToolSurface([], { selection });
-      surface.updateCatalog([definition("ToolSearch"), definition("Read")]);
-      expect(names(surface)).toEqual(["ToolSearch"]);
     }
-    expect(normalizeSessionToolSelection({ version: 1, names: ["Read", "Read"] })).toEqual({
-      version: 1,
+    const valid = {
+      version: 2,
+      names: ["Read", "Read"],
+      discovered: ["Write", "Write"],
+      cacheIdentity: "model-route",
+    };
+    const before = JSON.stringify(valid);
+    const normalized = normalizeSessionToolSelection(valid)!;
+    expect(normalized).toEqual({
+      version: 2,
       names: ["Read"],
+      discovered: ["Write"],
+      cacheIdentity: "model-route",
     });
+    expect(JSON.stringify(valid)).toBe(before);
+    const restored = new RunToolSurface([], { selection: valid });
+    restored.updateCatalog([definition("Read"), definition("Write")]);
+    expect(restored.getSelection().cacheIdentity).toBe("model-route");
   });
 
-  it("keeps an omitted initial list eager, including late catalog additions", () => {
+  it("freezes only the first eager catalog and does not absorb later additions", () => {
     const surface = new RunToolSurface();
     surface.updateCatalog([definition("Read"), definition("ToolSearch")]);
     expect(names(surface)).toEqual(["Read", "ToolSearch"]);
     surface.updateCatalog([definition("Late"), definition("ToolSearch"), definition("Read")]);
-    expect(names(surface)).toEqual(["Read", "ToolSearch", "Late"]);
+    expect(names(surface)).toEqual(["Read", "ToolSearch"]);
+    expect(surface.isEligible("Late")).toBe(true);
+    expect(surface.isCallable("Late")).toBe(false);
   });
 
-  it("loads only ToolSearch for an explicitly empty initial list", () => {
-    const surface = new RunToolSurface([]);
-    surface.updateCatalog([definition("Read"), definition("ToolSearch")]);
-    expect(names(surface)).toEqual(["ToolSearch"]);
-    expect(surface.getCatalog().map((tool) => tool.name)).toEqual(["Read", "ToolSearch"]);
-    expect(surface.isEligible("Read")).toBe(true);
-    expect(surface.isSelected("Read")).toBe(false);
-    surface.updateCatalog([definition("Late"), definition("ToolSearch"), definition("Read")]);
-    expect(names(surface)).toEqual(["ToolSearch"]);
-  });
-
-  it("copies configured initial names and loads them only when eligible", () => {
+  it("freezes copied initial names and registers CallTool only alongside ToolSearch", () => {
     const initial = ["Write", "Read", "Late"];
     const surface = new RunToolSurface(initial);
     initial.push("Other");
@@ -92,49 +231,43 @@ describe("RunToolSurface", () => {
       definition("Write"),
       definition("Other"),
       definition("ToolSearch"),
+      callToolDef,
     ]);
-    expect(names(surface)).toEqual(["Write", "Read", "ToolSearch"]);
-    expect(surface.isSelected("Late")).toBe(false);
+    expect(names(surface)).toEqual(["Write", "Read", "ToolSearch", "CallTool"]);
     surface.updateCatalog([
       definition("ToolSearch"),
+      callToolDef,
       definition("Late"),
       definition("Read"),
       definition("Write"),
-      definition("Other"),
     ]);
-    expect(names(surface)).toEqual(["Write", "Read", "ToolSearch", "Late"]);
+    expect(names(surface)).toEqual(["Write", "Read", "ToolSearch", "CallTool"]);
+    expect(surface.isCallable("Late")).toBe(false);
+    const eager = new RunToolSurface([]);
+    eager.updateCatalog([definition("Read"), callToolDef]);
+    expect(names(eager)).toEqual(["Read"]);
   });
 
-  it("retains the eager fallback when ToolSearch appears late", () => {
+  it("does not grow the prefix when discovery is revoked or appears late", () => {
     const surface = new RunToolSurface([]);
     surface.updateCatalog([definition("Read")]);
-    expect(names(surface)).toEqual(["Read"]);
-    expect(surface.isEligible("ToolSearch")).toBe(false);
-    surface.updateCatalog([definition("Read"), definition("ToolSearch"), definition("Late")]);
-    expect(names(surface)).toEqual(["Read", "ToolSearch"]);
-    expect(surface.isSelected("Read")).toBe(true);
-    expect(surface.isSelected("Late")).toBe(false);
-    surface.select(["Read"]);
-    surface.updateCatalog([definition("Read"), definition("Late")]);
-    expect(names(surface)).toEqual(["Read", "Late"]);
-    surface.updateCatalog([definition("Late"), definition("Read"), definition("ToolSearch")]);
-    expect(names(surface)).toEqual(["Read", "ToolSearch", "Late"]);
-  });
-
-  it("falls back to eager loading when ToolSearch is revoked and keeps that selection on restore", () => {
-    const surface = new RunToolSurface([]);
-    surface.updateCatalog([definition("ToolSearch"), definition("Read"), definition("Write")]);
-    surface.select(["Read"]);
-    surface.updateCatalog([definition("Write"), definition("Read"), definition("Late")]);
-    expect(names(surface)).toEqual(["Read", "Write", "Late"]);
-    expect(surface.isSelected("ToolSearch")).toBe(false);
     surface.updateCatalog([
-      definition("Late"),
-      definition("Write"),
-      definition("ToolSearch"),
       definition("Read"),
+      definition("ToolSearch"),
+      callToolDef,
+      definition("Late"),
     ]);
-    expect(names(surface)).toEqual(["ToolSearch", "Read", "Write", "Late"]);
+    expect(names(surface)).toEqual(["Read"]);
+    expect(surface.isCallable("ToolSearch")).toBe(false);
+    const deferred = new RunToolSurface([]);
+    deferred.updateCatalog([definition("ToolSearch"), callToolDef, definition("Read")]);
+    deferred.select(["Read"]);
+    const before = JSON.stringify(deferred.snapshot());
+    deferred.updateCatalog([definition("Read"), definition("Late")]);
+    expect(JSON.stringify(deferred.snapshot())).toBe(before);
+    expect(deferred.isCallable("ToolSearch")).toBe(false);
+    expect(deferred.isCallable("Read")).toBe(true);
+    expect(deferred.isCallable("Late")).toBe(false);
   });
 
   it("does not remember unavailable selections when that tool appears later", () => {
@@ -143,42 +276,8 @@ describe("RunToolSurface", () => {
     expect(surface.select(["Late"])).toEqual({ selected: [], unavailable: ["Late"] });
     surface.updateCatalog([definition("Late"), definition("ToolSearch")]);
     expect(surface.isEligible("Late")).toBe(true);
-    expect(surface.isSelected("Late")).toBe(false);
+    expect(surface.isCallable("Late")).toBe(false);
     expect(names(surface)).toEqual(["ToolSearch"]);
-  });
-
-  it("selects exact eligible names once and appends schemas in selection order", () => {
-    const surface = new RunToolSurface([]);
-    surface.updateCatalog([definition("ToolSearch"), definition("Read"), definition("Write")]);
-    expect(surface.select(["Write", "Missing", "Read", "Write", "read", "Missing"])).toEqual({
-      selected: ["Write", "Read"],
-      unavailable: ["Missing", "read"],
-    });
-    expect(names(surface)).toEqual(["ToolSearch", "Write", "Read"]);
-    expect(surface.isSelected("Write")).toBe(true);
-    expect(surface.isEligible("Missing")).toBe(false);
-    surface.select(["Read", "ToolSearch"]);
-    expect(names(surface)).toEqual(["ToolSearch", "Write", "Read"]);
-  });
-
-  it("shrinks revoked eligibility and restores selected history with rewritten definitions", () => {
-    const surface = new RunToolSurface([]);
-    surface.updateCatalog([definition("Read"), definition("Write"), definition("ToolSearch")]);
-    surface.select(["Write", "Read"]);
-    const previous = surface.snapshot();
-    surface.updateCatalog([definition("ToolSearch"), definition("Read", "rewritten read")]);
-    expect(names(surface)).toEqual(["ToolSearch", "Read"]);
-    expect(surface.isEligible("Write")).toBe(false);
-    expect(surface.isSelected("Write")).toBe(false);
-    expect(surface.select(["Write"])).toEqual({ selected: [], unavailable: ["Write"] });
-    surface.updateCatalog([
-      definition("Read", "rewritten read"),
-      definition("Write", "rewritten write"),
-      definition("ToolSearch"),
-    ]);
-    expect(names(surface)).toEqual(["ToolSearch", "Write", "Read"]);
-    expect(surface.snapshot()[1].description).toBe("rewritten write");
-    expect(previous[1].description).toBe("Write purpose");
   });
 
   it("freezes independent catalog and provider copies without losing nested schema data", () => {
@@ -205,54 +304,28 @@ describe("RunToolSurface", () => {
     expect(snapshot[0].inputSchema).not.toBe(catalog[0].inputSchema);
     expect(Object.isFrozen(catalog)).toBe(true);
     expect(Object.isFrozen(snapshot)).toBe(true);
-    expect(Object.isFrozen(snapshot[0])).toBe(true);
-    expect(Object.isFrozen(snapshot[0].inputSchema)).toBe(true);
-    expect(Object.isFrozen(snapshot[0].inputSchema.required)).toBe(true);
     expect(Object.isFrozen(snapshot[0].inputSchema.$defs)).toBe(true);
-    const schema = snapshot[0].inputSchema;
-    expect(Reflect.set(schema, "additionalProperties", true)).toBe(false);
-    expect(Reflect.set(schema.required as string[], 0, "mutated")).toBe(false);
+    expect(Reflect.set(snapshot[0].inputSchema, "additionalProperties", true)).toBe(false);
     tool.description = "mutated source";
     (tool.inputSchema.required as string[]).push("mutated");
     expect(surface.snapshot()).toEqual([expected]);
     expect(surface.getCatalog()).toEqual([expected]);
+    surface.updateCatalog([{ ...tool, description: "changed schema" }]);
+    expect(surface.snapshot()).toEqual([expected]);
+    surface.rebase();
+    expect(surface.snapshot()[0].description).toBe("changed schema");
   });
 
-  it("restores the latest authorized schema without changing any previous snapshots", () => {
-    const surface = new RunToolSurface([]);
-    const original = {
-      ...definition("Dynamic"),
-      inputSchema: { type: "object", properties: { target: { enum: ["original-target"] } } },
-    };
-    const rewritten = {
-      ...definition("Dynamic", "new authorized destination"),
-      sensitiveResult: true,
-      inputSchema: { type: "object", properties: { target: { enum: ["new-target"] } } },
-    };
-    surface.updateCatalog([definition("ToolSearch"), original]);
-    surface.select(["Dynamic"]);
-    const beforeRevocation = surface.snapshot();
-    surface.updateCatalog([definition("ToolSearch")]);
-    const revoked = surface.snapshot();
-    surface.updateCatalog([rewritten, definition("ToolSearch")]);
-    const restored = surface.snapshot();
-    expect(restored.map((tool) => tool.name)).toEqual(["ToolSearch", "Dynamic"]);
-    expect(restored[1]).toEqual(rewritten);
-    expect(beforeRevocation[1]).toEqual(original);
-    expect(revoked.map((tool) => tool.name)).toEqual(["ToolSearch"]);
-    expect(Object.isFrozen(restored[1].inputSchema.properties)).toBe(true);
-  });
-
-  it("keeps selection and snapshots independent between runs sharing a catalog", () => {
+  it("keeps discovery independent between runs sharing a catalog", () => {
     const catalog = [definition("ToolSearch"), definition("Read")];
     const first = new RunToolSurface([]);
     const second = new RunToolSurface([]);
     first.updateCatalog(catalog);
     second.updateCatalog(catalog);
-    const previous = first.snapshot();
     first.select(["Read"]);
-    expect(names(first)).toEqual(["ToolSearch", "Read"]);
+    expect(names(first)).toEqual(["ToolSearch"]);
     expect(names(second)).toEqual(["ToolSearch"]);
-    expect(previous.map((tool) => tool.name)).toEqual(["ToolSearch"]);
+    expect(first.isCallable("Read")).toBe(true);
+    expect(second.isCallable("Read")).toBe(false);
   });
 });

@@ -172,7 +172,7 @@ describe("toolSearchTool — current Session surface", () => {
     expect(exact).toContain("Do not retry");
   });
 
-  it("returns authorized rewritten metadata without exposing the schema", async () => {
+  it("returns the authorized rewritten schema for exact selection", async () => {
     const r = registryWith({ name: "Dynamic", description: "raw description" });
     const current = {
       ...ctx(r),
@@ -191,8 +191,8 @@ describe("toolSearchTool — current Session surface", () => {
     const out = await toolSearchTool({ query: "select:Dynamic" }, current);
     expect(out).toContain("rewritten authorized destination");
     expect(out).toContain("schemaRef: select:Dynamic");
-    expect(out).not.toContain("opaque-1");
-    expect(out).not.toContain("target_id");
+    expect(out).toContain("opaque-1");
+    expect(out).toContain("target_id");
     expect(out).not.toContain("raw description");
   });
 });
@@ -311,7 +311,7 @@ describe("toolSearchTool — deferred run selection", () => {
     expect(context.runToolSurface!.snapshot().map((tool) => tool.name)).toEqual(["ToolSearch"]);
   });
 
-  it("exact selection loads rewritten schemas and returns only a compact receipt", async () => {
+  it("exact selection appends rewritten schemas without changing the top-level tools", async () => {
     const r = registryWith({ name: "Dynamic", description: "raw description" });
     const context = deferredContext(r);
     context.runToolSurface!.updateCatalog([
@@ -330,18 +330,16 @@ describe("toolSearchTool — deferred run selection", () => {
       },
     ]);
     const result = await toolSearchTool({ query: "select:Dynamic,Missing,Dynamic" }, context);
-    expect(result).toContain("Selected tools for this run: Dynamic.");
+    expect(result).toContain("### Dynamic");
+    expect(result).toContain("Use CallTool");
     expect(result).toContain("schemaRef: select:Dynamic");
     expect(result).toContain('Tool "Missing" is not available in the current Session context.');
     expect(result).toContain("Do not retry unless the Session context changes.");
-    expect(result).not.toContain("target_id");
-    expect(result).not.toContain("opaque-secret-schema");
-    expect(result).not.toContain("Parameters:");
-    expect(context.runToolSurface!.snapshot()).toEqual(context.runToolSurface!.getCatalog());
-    expect(context.runToolSurface!.snapshot()[1].inputSchema).toEqual({
-      type: "object",
-      properties: { target_id: { type: "string", enum: ["opaque-secret-schema"] } },
-    });
+    expect(result).toContain('"target_id":{"type":"string","enum":["opaque-secret-schema"]}');
+    expect(result).toContain('"description":"rewritten authorized destination"');
+    expect(context.runToolSurface!.snapshot().map((tool) => tool.name)).toEqual(["ToolSearch"]);
+    expect(context.runToolSurface!.isCallable("Dynamic")).toBe(true);
+    expect(await toolSearchTool({ query: "select:Dynamic,Missing,Dynamic" }, context)).toBe(result);
   });
 
   it("prefers the run catalog over stale searchable definitions and the shared registry", async () => {
@@ -379,13 +377,13 @@ describe("toolSearchTool — deferred run selection", () => {
     };
     context.runToolSurface!.updateCatalog([rewritten]);
     expect(context.runToolSurface!.isSelected("Dynamic")).toBe(true);
-    expect(context.runToolSurface!.snapshot()).toEqual([rewritten]);
-    for (const query of ["authorized destination", "select:Dynamic"]) {
-      const result = await toolSearchTool({ query }, context);
-      expect(result).not.toContain("private_field");
-      expect(result).not.toContain("new-schema-only-marker");
-      expect(result).not.toContain("raw description");
-    }
+    expect(context.runToolSurface!.snapshot().map((tool) => tool.name)).toEqual(["ToolSearch"]);
+    const keyword = await toolSearchTool({ query: "authorized destination" }, context);
+    expect(keyword).not.toContain("private_field");
+    const selected = await toolSearchTool({ query: "select:Dynamic" }, context);
+    expect(selected).toContain("private_field");
+    expect(selected).toContain("new-schema-only-marker");
+    expect(selected).not.toContain("raw description");
   });
 
   it("keeps selection independent for concurrent runs sharing a registry", async () => {
@@ -516,11 +514,10 @@ describe("toolSearchTool — deferred run selection", () => {
     const query = `select:${[selected, ...missing].join(",")}`;
     expect(query.length).toBeLessThanOrEqual(2048);
     const result = await toolSearchTool({ query }, context);
-    expect(result.length).toBeLessThanOrEqual(8192);
+    expect(result.length).toBeLessThanOrEqual(24_000);
     expect(context.runToolSurface!.isSelected(selected)).toBe(true);
     for (const name of missing) expect(result).toContain(`Tool "${name}" is not available`);
-    if (result.includes("schemaRef:")) expect(result).toContain(`schemaRef: select:${selected}`);
-    else expect(result).toContain("Some matching tools were omitted");
+    expect(result).toContain(`schemaRef: select:${selected}`);
   });
 
   it("counts MCP health diagnostics within the final keyword output budget", async () => {
@@ -543,7 +540,7 @@ describe("toolSearchTool — deferred run selection", () => {
     expect(result).not.toContain("schema_only_marker");
   });
 
-  it("bounds legacy selection metadata while retaining every unavailable-name receipt", async () => {
+  it("bounds legacy selection schemas while retaining every unavailable-name receipt", async () => {
     const definitions = Array.from({ length: 19 }, (_, index) => ({
       name: `Tool${String(index).padStart(2, "0")}_${"x".repeat(93)}`,
       description: "long compact metadata ".repeat(100),
@@ -553,10 +550,48 @@ describe("toolSearchTool — deferred run selection", () => {
     const query = `select:${[...definitions.map((tool) => tool.name), missing].join(",")}`;
     expect(query.length).toBeLessThanOrEqual(2048);
     const result = await toolSearchTool({ query }, ctx(r));
-    expect(result.length).toBeLessThanOrEqual(8192);
+    expect(result.length).toBeLessThanOrEqual(24_000);
     expect(result).toContain('Tool "MissingTool" not found.');
-    expect(result).toContain("Some matching tools were omitted");
+    expect(result).toContain("Not loaded:");
     expect(result).not.toContain("Parameters:");
+  });
+
+  it("loads only complete schemas that fit the 24k select budget, in request order", async () => {
+    const context = deferredContext(registryWith());
+    context.runToolSurface!.updateCatalog([
+      { name: "ToolSearch", description: "discover", inputSchema: {} },
+      ...["First", "Second", "Third"].map((name) => ({
+        name,
+        description: `${name} schema`,
+        inputSchema: {
+          type: "object",
+          properties: { payload: { type: "string", description: "x".repeat(12_000) } },
+        },
+      })),
+    ]);
+    const result = await toolSearchTool({ query: "select:First,Second,Third" }, context);
+    expect(result.length).toBeLessThanOrEqual(24_000);
+    expect(result).toContain('"name":"First"');
+    expect(result).toContain("Not loaded: Second, Third.");
+    expect(result).toContain("select each tool separately");
+    expect(result).not.toContain('"name":"Second"');
+    expect(context.runToolSurface!.getSelection().discovered).toEqual(["First"]);
+    expect(context.runToolSurface!.isCallable("Second")).toBe(false);
+    expect(await toolSearchTool({ query: "select:First,Second,Third" }, context)).toBe(result);
+    const next = await toolSearchTool({ query: "select:Second" }, context);
+    expect(next).toContain('"name":"Second"');
+    expect(context.runToolSurface!.isCallable("Second")).toBe(true);
+  });
+
+  it("never marks an oversized individual schema as discovered", async () => {
+    const context = deferredContext(registryWith());
+    context.runToolSurface!.updateCatalog([
+      { name: "Huge", description: "x".repeat(24_000), inputSchema: {} },
+    ]);
+    const result = await toolSearchTool({ query: "select:Huge" }, context);
+    expect(result).toContain("Not loaded: Huge.");
+    expect(result.length).toBeLessThanOrEqual(24_000);
+    expect(context.runToolSurface!.isCallable("Huge")).toBe(false);
   });
 
   it("validates query type and size without changing selection", async () => {
@@ -598,9 +633,10 @@ describe("toolSearchTool — deferred run selection", () => {
       .slice(0, 20)
       .map((tool) => tool.name);
     expect(await toolSearchTool({ query: `select:${twenty.join(",")}` }, context)).toContain(
-      "Selected tools for this run:",
+      "Use CallTool",
     );
-    expect(context.runToolSurface!.snapshot()).toHaveLength(21);
+    expect(context.runToolSurface!.snapshot()).toHaveLength(1);
+    expect(context.runToolSurface!.getSelection().discovered).toEqual(twenty);
   });
 
   it("normalizes invalid max_results to a finite integer default and clamps the maximum", async () => {
@@ -616,13 +652,29 @@ describe("toolSearchTool — deferred run selection", () => {
     expect((result.match(/^### /gm) ?? []).length).toBe(20);
   });
 
-  it("keeps legacy exact selection compact without changing registry definitions", async () => {
+  it("uses direct invocation guidance for external contexts without a native wrapper", async () => {
+    const registry = registryWith({ name: "Read", description: "read" });
+    const external = ctx(registry);
+    external.searchableToolDefinitions = registry.getToolDefinitions();
+    const direct = await toolSearchTool({ query: "select:Read" }, external);
+    const native = await toolSearchTool({ query: "select:Read" }, deferredContext(registry));
+    expect(direct).toContain(
+      "Call each tool by its exact name with arguments matching inputSchema.",
+    );
+    expect(direct).not.toContain("Use CallTool");
+    expect(native).toContain("Use CallTool to call these tools");
+    expect(native).not.toContain("Call each tool by its exact name");
+  });
+
+  it("returns full schemas for legacy exact selection without changing registry definitions", async () => {
     const r = registryWith({ name: "Read", description: "read" });
     const before = r.getToolDefinitions();
     const result = await toolSearchTool({ query: "select:Read" }, ctx(r));
     expect(result).toContain("schemaRef: select:Read");
     expect(result).not.toContain("Parameters:");
-    expect(result).not.toContain("Selected tools for this run:");
+    expect(result).toContain('"inputSchema":{"type":"object","properties":{}}');
+    expect(result).toContain("Call each tool by its exact name");
+    expect(result).not.toContain("Use CallTool");
     expect(r.getToolDefinitions()).toEqual(before);
   });
 });

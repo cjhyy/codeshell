@@ -44,16 +44,12 @@ describe("builtin tool availability guards", () => {
     expect(names).toContain("GenerateVideo");
   });
 
-  test("goal-control tools are schema-visible only while a goal is active", () => {
-    const complete = BUILTIN_TOOL_GUARDS.get("complete_goal");
-    const cancel = BUILTIN_TOOL_GUARDS.get("cancel_goal");
-    expect(complete).toBeFunction();
-    expect(cancel).toBeFunction();
-
-    expect(complete!({ cwd: "/x", hasGoal: false })).toBe(false);
-    expect(cancel!({ cwd: "/x", hasGoal: false })).toBe(false);
-    expect(complete!({ cwd: "/x", hasGoal: true })).toBe(true);
-    expect(cancel!({ cwd: "/x", hasGoal: true })).toBe(true);
+  test("goal-control schemas stay visible independently of runtime goal state", () => {
+    expect(BUILTIN_TOOL_GUARDS.has("complete_goal")).toBe(false);
+    expect(BUILTIN_TOOL_GUARDS.has("cancel_goal")).toBe(false);
+    const names = resolveBuiltinToolNames({ preset: "general" });
+    expect(names).toContain("complete_goal");
+    expect(names).toContain("cancel_goal");
   });
 
   test("credential guards use metadata provider and honor project scope", () => {

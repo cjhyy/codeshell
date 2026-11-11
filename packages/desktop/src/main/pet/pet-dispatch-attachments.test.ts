@@ -530,22 +530,13 @@ describe("Mimi attachment delegation context", () => {
     });
     expect(worlds[0]?.inputAttachments).toHaveLength(1);
     const wake = await service.wakeFollowUp({
-      id: `registered-followup-${"a".repeat(24)}`,
-      operationKey: "op",
-      registrationKey: "b".repeat(64),
+      id: "rule-00000000-0000-4000-8000-0000000000aa",
       revision: 1,
+      occurrence: Date.now() - 1_000,
       title: "核对",
       text: "继续核对",
-      wakeAt: Date.now() - 1_000,
-      catchUpUntil: Date.now() + 60_000,
-      timezone: "Asia/Singapore",
       intent: "resume",
-      missedPolicy: "fire-once",
-      status: "open",
-      createdAt: 1,
-      updatedAt: 1,
       sourceSessionId: "original",
-      wake: { revision: 1, status: "claimed", claimedAt: 1 },
     });
     expect(wake.launched).toBe(true);
     expect(worlds.at(-1)).not.toHaveProperty("inputAttachments");

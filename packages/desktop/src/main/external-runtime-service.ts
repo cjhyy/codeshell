@@ -92,6 +92,7 @@ import type { ExternalRuntimeMemory } from "./external-runtime-memory.js";
 import { assertOutputHistoryWriteAvailable } from "./session-output-history-lease.js";
 import { ExternalRuntimeDeltaBuffer } from "./external-runtime-delta-buffer.js";
 import { notifyRunStopRequested } from "./run-stop-signals.js";
+import { ExternalRuntimeWorkspaceGate } from "./external-runtime-workspace-gate.js";
 import {
   announcesUserMessage,
   assertExternalSubmission,
@@ -301,6 +302,8 @@ export class ExternalRuntimeService {
       turnTail: Promise<void>;
       /** User/host submissions waiting behind `turnTail` (background wakes excluded). */
       queuedTurns: Set<{ generation: number }>;
+      /** Accepted submissions, including input preparation before a provider run opens. */
+      pendingSubmissions: number;
       /** `queuedTurns` when the last turn_complete was published (the notices' "busy"). */
       queuedAtTerminal: number;
       /**
@@ -321,6 +324,8 @@ export class ExternalRuntimeService {
   >();
   /** Serializes start/stop for one business id, including concurrent IPC calls. */
   private readonly lifecycleTails = new Map<string, Promise<void>>();
+  /** Refuse starts carrying a cwd captured while a workspace mutation is pending. */
+  private readonly workspaceMutations = new ExternalRuntimeWorkspaceGate();
   /** At most one notification-drain continuation may be scheduled per Session. */
   private readonly backgroundWakeups = new Set<string>();
   /** User Stop belongs to the business Session, including physical runtime replacements. */
@@ -554,6 +559,14 @@ export class ExternalRuntimeService {
       if (this.lifecycleTails.get(sessionId) === tail) this.lifecycleTails.delete(sessionId);
     });
     return result;
+  }
+
+  private async enqueueRuntimeStart(
+    sessionId: string,
+    operation: () => Promise<ExternalRuntimeSession>,
+  ): Promise<ExternalRuntimeSession> {
+    this.workspaceMutations.assertAvailable(sessionId);
+    return this.enqueueLifecycle(sessionId, operation);
   }
 
   private emitSafely(sessionId: string, event: StreamEvent): void {
@@ -822,7 +835,7 @@ export class ExternalRuntimeService {
    * being told would be debugging the wrong thing.
    */
   start(request: ExternalRuntimeStartRequest): Promise<ExternalRuntimeSession> {
-    return this.enqueueLifecycle(request.sessionId, () => this.startExclusive(request));
+    return this.enqueueRuntimeStart(request.sessionId, () => this.startExclusive(request));
   }
 
   /**
@@ -834,12 +847,12 @@ export class ExternalRuntimeService {
    * thread before sending its turn.
    */
   ensure(request: ExternalRuntimeStartRequest): Promise<ExternalRuntimeSession> {
-    return this.enqueueLifecycle(request.sessionId, () => this.ensureExclusive(request));
+    return this.enqueueRuntimeStart(request.sessionId, () => this.ensureExclusive(request));
   }
 
   /** A remote continuation cannot discard policy/instructions owned by the live Desktop runtime. */
   ensureContinuation(request: ExternalRuntimeStartRequest): Promise<ExternalRuntimeSession> {
-    return this.enqueueLifecycle(request.sessionId, () => {
+    return this.enqueueRuntimeStart(request.sessionId, () => {
       const entry = this.sessions.get(request.sessionId);
       const recovered = this.recoveryContinuations.get(request.sessionId);
       if (recovered && recovered.identity !== this.recoverySessionIdentity(request.sessionId))
@@ -1545,6 +1558,7 @@ export class ExternalRuntimeService {
       authority,
       turnTail: Promise.resolve(),
       queuedTurns: new Set(),
+      pendingSubmissions: 0,
       queuedAtTerminal: 0,
       lifecycle,
       goalToolsAvailable,
@@ -1608,6 +1622,7 @@ export class ExternalRuntimeService {
     hooks?: ExternalRuntimeSubmissionHooks,
     initialBackground?: () => BackgroundResultDelivery | undefined,
   ): Promise<ExternalRuntimeTurnOutcome> {
+    this.workspaceMutations.assertAvailable(sessionId);
     assertOutputHistoryWriteAvailable(sessionId);
     this.assertOwner(sessionId, callerWebContentsId);
     const entry = this.sessions.get(sessionId);
@@ -2064,8 +2079,10 @@ export class ExternalRuntimeService {
       return outcome;
     };
     if (queued) entry.queuedTurns.add(queued);
+    entry.pendingSubmissions++;
     const outcome = entry.turnTail.then(runTurn, runTurn);
     const afterSubmission = () => {
+      entry.pendingSubmissions--;
       // A preserved old runtime can still own a claim while its replacement is
       // starting. Once that submission settles, its accepted/returned claim no
       // longer blocks the current owner from delivering newer queued results.
@@ -2270,6 +2287,42 @@ export class ExternalRuntimeService {
       this.assertOwner(sessionId, callerWebContentsId);
       return this.stopExclusive(sessionId);
     });
+  }
+
+  /** Fence workspace persistence against provider starts and retire the old cwd before it changes. */
+  async withWorkspaceMutation<T>(
+    sessionId: string,
+    operation: (beforePersist?: () => Promise<void>) => Promise<T>,
+    callerWebContentsId?: number,
+  ): Promise<T> {
+    return this.workspaceMutations.mutate(sessionId, () =>
+      this.enqueueLifecycle(sessionId, async () => {
+        this.assertOwner(sessionId, callerWebContentsId);
+        const entry = this.sessions.get(sessionId);
+        if (!entry && !this.retainedBackgroundOwners.has(sessionId)) return operation();
+        const assertIdle = () => {
+          const current = this.sessions.get(sessionId);
+          if (
+            this.isSessionRunning(sessionId) ||
+            this.isRunActive(sessionId) ||
+            (current && current.pendingSubmissions > 0) ||
+            this.backgroundWakeups.has(sessionId) ||
+            this.deps.backgroundWork?.hasPending(sessionId) ||
+            this.deps.backgroundWork?.hasRunning(sessionId)
+          ) {
+            throw new Error("请先停止当前任务并处理排队或后台工作，再切换工作区。");
+          }
+        };
+        assertIdle();
+        return operation(async () => {
+          this.assertOwner(sessionId, callerWebContentsId);
+          assertIdle();
+          // The provider and tool closures capture cwd/authority at startup. Keep
+          // the old resume binding unchanged: a new cwd must not resume that grant.
+          await this.stopExclusive(sessionId);
+        });
+      }),
+    );
   }
 
   /** Persisted project-trust revocation, including starts still in preflight. */

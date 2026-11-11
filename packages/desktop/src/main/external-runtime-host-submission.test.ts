@@ -45,10 +45,13 @@ function harness(
     ensureFailure?: Error;
     duringEnsure?: () => void;
     hasOwner?: boolean;
+    resolvedWorkspace?: { cwd: string; mainRoot: string };
+    workspaceFailure?: Error;
   } = {},
 ) {
   const sessions = new SessionManager(storage);
   const starts: ExternalRuntimeStartRequest[] = [];
+  const workspaceRequests: Array<{ sessionId: string; requestedCwd: unknown }> = [];
   const sends: Array<{
     sessionId: string;
     input: DesktopExternalRuntimeTurnInput;
@@ -63,6 +66,7 @@ function harness(
   let ownerLookups = 0;
   let busy = options.busy === true;
   let runtimeExists = false;
+  let workspaceRevoked = false;
   const owner = {
     webContents: { id: 57 },
     isDestroyed: () => ownerClosed,
@@ -94,6 +98,28 @@ function harness(
   const submit = createExternalRuntimeHostSubmission({
     sessions,
     service: () => currentService,
+    resolveStartWorkspace: async (sessionId, requestedCwd) => {
+      workspaceRequests.push({ sessionId, requestedCwd });
+      if (options.workspaceFailure) throw options.workspaceFailure;
+      const existed = sessions.exists(sessionId);
+      const mainRoot = options.resolvedWorkspace?.mainRoot ?? String(requestedCwd);
+      const cwd =
+        options.resolvedWorkspace?.cwd ?? sessions.getSessionWorkspace(sessionId)?.root ?? mainRoot;
+      return {
+        cwd,
+        mainRoot,
+        assertStartAuthority: () => {
+          if (
+            workspaceRevoked ||
+            (existed && !sessions.exists(sessionId)) ||
+            (sessions.exists(sessionId) &&
+              (sessions.readSessionMainRoot(sessionId) !== mainRoot ||
+                sessions.getSessionWorkspace(sessionId)?.root !== cwd))
+          )
+            throw new Error("External runtime Session workspace changed before startup");
+        },
+      };
+    },
     ownerWindow: () => {
       ownerLookups++;
       return options.hasOwner === false ? undefined : owner;
@@ -103,6 +129,7 @@ function harness(
     submit,
     sessions,
     starts,
+    workspaceRequests,
     sends,
     sent: sent.promise,
     complete: completion.resolve,
@@ -116,6 +143,7 @@ function harness(
     setLive: (value: boolean) => (runtimeExists = value),
     closeOwner: () => (ownerClosed = true),
     clearService: () => (currentService = null),
+    revokeWorkspace: () => (workspaceRevoked = true),
     ownerLookups: () => ownerLookups,
   };
 }
@@ -127,6 +155,17 @@ const NEW_RUN = {
   task: "Inspect the supplied files",
   displayText: "用户原始请求",
   clientMessageId: "im-work:wechat:message-1",
+};
+
+const SELECTED_WORKTREE = {
+  kind: "worktree" as const,
+  root: "/selected/worktree",
+  worktree: {
+    path: "/selected/worktree",
+    branch: "codex/selected-worktree",
+    baseRef: "main",
+    createdBy: "codeshell" as const,
+  },
 };
 
 describe("Main-originated external runtime submissions", () => {
@@ -183,6 +222,7 @@ describe("Main-originated external runtime submissions", () => {
       kind: "codex",
       sessionId: NEW_RUN.sessionId,
       cwd: NEW_RUN.cwd,
+      mainRoot: NEW_RUN.cwd,
       modelKey: NEW_RUN.model,
       model: "gpt-6.1-sol",
       permissionMode: "default",
@@ -237,6 +277,7 @@ describe("Main-originated external runtime submissions", () => {
       modelKey: "claude-code/opus",
       model: "opus",
       cwd: "/persisted/claude-project",
+      mainRoot: "/persisted/claude-project",
     });
     expect(f.starts[0]!.ownerWindow).toBeUndefined();
     expect(f.sends[0]!.input).toMatchObject({
@@ -246,6 +287,140 @@ describe("Main-originated external runtime submissions", () => {
     });
     await f.accept();
     expect(await result).toEqual({ started: true });
+  });
+
+  test.each([
+    ["codex", "codex/gpt-6.1-sol"],
+    ["claude-code", "claude-code/opus"],
+  ])(
+    "a persisted %s worktree keeps its execution root and canonical project",
+    async (kind, model) => {
+      const f = harness({ hasOwner: false });
+      const sessionId = `bound-worktree-${kind}`;
+      f.sessions.create("/persisted/main-project", model, kind, sessionId);
+      f.sessions.setSessionWorkspace(sessionId, SELECTED_WORKTREE);
+      const result = f.submit.runBound({
+        sessionId,
+        text: "Continue in the selected workspace",
+        clientMessageId: `${sessionId}:followup`,
+      });
+      await f.sent;
+      expect(f.workspaceRequests).toEqual([{ sessionId, requestedCwd: "/persisted/main-project" }]);
+      expect(f.starts[0]).toMatchObject({
+        kind,
+        modelKey: model,
+        cwd: "/selected/worktree",
+        mainRoot: "/persisted/main-project",
+      });
+      await f.accept();
+      expect(await result).toEqual({ started: true });
+      expect(f.sessions.readSessionState(sessionId)?.cwd).toBe("/persisted/main-project");
+    },
+  );
+
+  test("a new Session uses the resolver's canonical workspace and project roots", async () => {
+    const f = harness({
+      resolvedWorkspace: { cwd: "/canonical/project", mainRoot: "/canonical/project" },
+      duringEnsure: () => {
+        f.sessions.create("/canonical/project", NEW_RUN.model, "codex", NEW_RUN.sessionId);
+      },
+    });
+    const result = f.submit.run(NEW_RUN);
+    await f.sent;
+    expect(f.workspaceRequests).toEqual([
+      { sessionId: NEW_RUN.sessionId, requestedCwd: NEW_RUN.cwd },
+    ]);
+    expect(f.starts[0]).toMatchObject({
+      cwd: "/canonical/project",
+      mainRoot: "/canonical/project",
+    });
+    await f.accept();
+    expect(await result).toEqual({ ok: true });
+  });
+
+  test("workspace resolution failure never starts or sends a replacement run", async () => {
+    const f = harness({ workspaceFailure: new Error("Session workspace unavailable") });
+    expect(await f.submit.run(NEW_RUN)).toEqual({
+      ok: false,
+      message: "Session workspace unavailable",
+    });
+    expect(f.starts).toEqual([]);
+    expect(f.sends).toEqual([]);
+  });
+
+  test("a persisted workspace change during ensure revokes startup without sending", async () => {
+    const sessionId = "worktree-changed-during-start";
+    const f = harness({
+      duringEnsure: () => {
+        f.sessions.setSessionWorkspace(sessionId, { kind: "main", root: "/persisted/main" });
+      },
+    });
+    f.sessions.create("/persisted/main", NEW_RUN.model, "codex", sessionId);
+    f.sessions.setSessionWorkspace(sessionId, SELECTED_WORKTREE);
+    expect(
+      await f.submit.runBound({ sessionId, text: "Continue", clientMessageId: "workspace-race" }),
+    ).toMatchObject({ started: false, reason: expect.stringContaining("workspace changed") });
+    expect(f.starts).toHaveLength(1);
+    expect(f.sends).toEqual([]);
+  });
+
+  test("new Session startup also retains the workspace authority fence", async () => {
+    const f = harness({ duringEnsure: () => f.revokeWorkspace() });
+    expect(await f.submit.run(NEW_RUN)).toMatchObject({
+      ok: false,
+      message: expect.stringContaining("workspace changed"),
+    });
+    expect(f.starts).toHaveLength(1);
+    expect(f.sends).toEqual([]);
+  });
+
+  test("provider identity remains fenced when workspace authority is unchanged", async () => {
+    const f = harness({
+      duringEnsure: () => {
+        f.sessions.updateSessionState(NEW_RUN.sessionId, {
+          provider: "claude-code",
+          model: "claude-code/opus",
+        });
+      },
+    });
+    f.sessions.create(NEW_RUN.cwd, NEW_RUN.model, "codex", NEW_RUN.sessionId);
+    expect(await f.submit.run(NEW_RUN)).toMatchObject({
+      ok: false,
+      message: expect.stringContaining("模型或工作目录已改变"),
+    });
+    expect(f.sends).toEqual([]);
+  });
+
+  test("a new Session cannot adopt another provider while retaining the authorized workspace", async () => {
+    const f = harness({
+      duringEnsure: () => {
+        f.sessions.create(NEW_RUN.cwd, "claude-code/opus", "claude-code", NEW_RUN.sessionId);
+      },
+    });
+    expect(await f.submit.run(NEW_RUN)).toMatchObject({
+      ok: false,
+      message: expect.stringContaining("模型或工作目录已改变"),
+    });
+    expect(f.sends).toEqual([]);
+  });
+
+  test("workspace authority is checked again immediately before accepting input", async () => {
+    const f = harness();
+    const result = f.submit.run(NEW_RUN);
+    await f.sent;
+    f.revokeWorkspace();
+    let rejected: unknown;
+    try {
+      await f.sends[0]!.hooks!.beforeInput();
+    } catch (error) {
+      rejected = error;
+    }
+    expect(rejected).toBeInstanceOf(Error);
+    expect((rejected as Error).message).toContain("workspace changed");
+    f.fail(rejected);
+    expect(await result).toMatchObject({ ok: false });
+    expect(f.starts).toHaveLength(1);
+    expect(f.sends).toHaveLength(1);
   });
 
   test("a string Goal reaches the external service unchanged", async () => {
@@ -326,6 +501,7 @@ describe("Main-originated external runtime submissions", () => {
     expect(f.starts).toEqual([]);
     expect(f.sends).toEqual([]);
     expect(f.ownerLookups()).toBe(0);
+    expect(f.workspaceRequests).toEqual([]);
   });
 
   test.each(["codex/", "claude-code/", "openrouter/gpt-6.1-sol", ""])(

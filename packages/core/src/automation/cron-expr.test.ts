@@ -103,16 +103,60 @@ describe("nextCronTime — DST and calendar boundaries", () => {
     expect(next).toBe(Date.UTC(2026, 2, 9, 6, 30, 0)); // Mar 9 02:30 EDT
   });
 
-  test("returns the second repeated wall-clock minute after fall-back", () => {
-    // 01:30 occurs twice on 2026-11-01. Starting at the first occurrence must
-    // return the second occurrence rather than skipping to the next day.
-    const firstOneThirty = Date.UTC(2026, 10, 1, 5, 30, 0); // 01:30 EDT
-    const next = nextCronTime(
-      parseCronExpression("30 1 * * *"),
-      "America/New_York",
-      firstOneThirty,
+  test("a wall-clock minute repeated by fall-back fires once, at its first occurrence", () => {
+    // 01:30 occurs twice on 2026-11-01 (EDT, then EST).
+    const cron = parseCronExpression("30 1 * * *");
+    const before = Date.UTC(2026, 10, 1, 4, 0, 0); // 00:00 EDT
+    expect(nextCronTime(cron, "America/New_York", before)).toBe(Date.UTC(2026, 10, 1, 5, 30, 0));
+    // From the first 01:30 the repeat is skipped: next is Nov 2 01:30 EST.
+    const firstOneThirty = Date.UTC(2026, 10, 1, 5, 30, 0);
+    expect(nextCronTime(cron, "America/New_York", firstOneThirty)).toBe(
+      Date.UTC(2026, 10, 2, 6, 30, 0),
     );
-    expect(next).toBe(Date.UTC(2026, 10, 1, 6, 30, 0)); // 01:30 EST
+  });
+
+  test("an hourly cron keeps its spacing across fall-back (both 01:00s fire)", () => {
+    const cron = parseCronExpression("0 * * * *");
+    let at = Date.UTC(2026, 10, 1, 3, 30, 0); // Nov 1 23:30 EDT (Oct 31)
+    const fired: number[] = [];
+    for (let i = 0; i < 4; i += 1) {
+      at = nextCronTime(cron, "America/New_York", at)!;
+      fired.push(at);
+    }
+    // 00:00 EDT, 01:00 EDT, 01:00 EST, 02:00 EST: an hour apart throughout.
+    expect(fired).toEqual([
+      Date.UTC(2026, 10, 1, 4),
+      Date.UTC(2026, 10, 1, 5),
+      Date.UTC(2026, 10, 1, 6),
+      Date.UTC(2026, 10, 1, 7),
+    ]);
+  });
+
+  test("a */15 cron fires every 15 minutes through the repeated hour", () => {
+    const cron = parseCronExpression("*/15 * * * *");
+    const lastEdt = Date.UTC(2026, 10, 1, 5, 45); // 01:45 EDT
+    // 15 minutes later is 01:00 EST: no 75-minute gap.
+    expect(nextCronTime(cron, "America/New_York", lastEdt)).toBe(Date.UTC(2026, 10, 1, 6, 0));
+  });
+
+  test("the parser records which time fields are *-based", () => {
+    expect(parseCronExpression("*/15 * * * *")).toMatchObject({ minuteStar: true, hourStar: true });
+    expect(parseCronExpression("0 */2 * * *")).toMatchObject({ minuteStar: false, hourStar: true });
+    expect(parseCronExpression("30 1-3 * * *")).toMatchObject({
+      minuteStar: false,
+      hourStar: false,
+    });
+  });
+
+  test("finds sparse but valid dates years away, quickly", () => {
+    const from = Date.UTC(2097, 0, 1);
+    const started = performance.now();
+    // 2100 is not a leap year: the next Feb 29 after 2096 is in 2104.
+    expect(nextCronTime(parseCronExpression("0 9 29 2 *"), "UTC", from)).toBe(
+      Date.UTC(2104, 1, 29, 9),
+    );
+    expect(nextCronTime(parseCronExpression("0 9 30 2 *"), "UTC", from)).toBeNull();
+    expect(performance.now() - started).toBeLessThan(1_000);
   });
 
   test("finds February 29 across a non-leap year boundary", () => {
@@ -160,4 +204,118 @@ describe("dayOfMonth + dayOfWeek — Vixie/POSIX OR semantics", () => {
     expect(neither.domRestricted).toBe(false);
     expect(neither.dowRestricted).toBe(false);
   });
+});
+
+/**
+ * Reference implementation: the original minute-by-minute scan, plus the
+ * fall-back rule (a fixed-time expression's repeated minute fires only once).
+ */
+function bruteNext(
+  expr: string,
+  timeZone: string,
+  fromMs: number,
+  maxMinutes: number,
+): number | null {
+  const cron = parseCronExpression(expr);
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    weekday: "short",
+  });
+  const days: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  const wall = (ms: number) => {
+    const parts = fmt.formatToParts(new Date(ms));
+    const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+    const hour = parseInt(get("hour"), 10) % 24;
+    return {
+      key: `${get("year")}-${get("month")}-${get("day")} ${hour}:${get("minute")}`,
+      minute: parseInt(get("minute"), 10),
+      hour,
+      day: parseInt(get("day"), 10),
+      month: parseInt(get("month"), 10),
+      dow: days[get("weekday")] ?? 0,
+    };
+  };
+  let candidate = Math.floor(fromMs / 60_000) * 60_000 + 60_000;
+  for (let i = 0; i < maxMinutes; i += 1, candidate += 60_000) {
+    const w = wall(candidate);
+    if (!cron.minutes.has(w.minute) || !cron.hours.has(w.hour) || !cron.months.has(w.month))
+      continue;
+    const dom = cron.daysOfMonth.has(w.day);
+    const dow = cron.daysOfWeek.has(w.dow);
+    const day =
+      cron.domRestricted && cron.dowRestricted
+        ? dom || dow
+        : cron.domRestricted
+          ? dom
+          : cron.dowRestricted
+            ? dow
+            : true;
+    if (!day) continue;
+    const fixedTime =
+      !expr.split(/\s+/)[0]!.startsWith("*") && !expr.split(/\s+/)[1]!.startsWith("*");
+    if (fixedTime && [30, 60].some((back) => wall(candidate - back * 60_000).key === w.key))
+      continue;
+    return candidate;
+  }
+  return null;
+}
+
+describe("nextCronTime — matches the brute-force scan", () => {
+  /** Deterministic PRNG so failures reproduce. */
+  function prng(seed: number) {
+    return () => {
+      seed = (seed * 1_103_515_245 + 12_345) % 2_147_483_648;
+      return seed / 2_147_483_648;
+    };
+  }
+  const zones: Record<string, number[]> = {
+    // Instants a few hours before 2026 transitions (and an ordinary day).
+    "America/New_York": [Date.UTC(2026, 2, 8, 3), Date.UTC(2026, 10, 1, 3), Date.UTC(2026, 5, 10)],
+    "Europe/London": [
+      Date.UTC(2026, 2, 29, 0),
+      Date.UTC(2026, 9, 25, 0),
+      Date.UTC(2026, 0, 31, 22),
+    ],
+    "Australia/Lord_Howe": [
+      Date.UTC(2026, 3, 4, 13),
+      Date.UTC(2026, 9, 3, 14),
+      Date.UTC(2026, 6, 1),
+    ],
+    "Asia/Kathmandu": [Date.UTC(2026, 1, 27, 18), Date.UTC(2026, 11, 31, 17)],
+  };
+  const pick = (random: () => number, options: string[]) =>
+    options[Math.floor(random() * options.length)]!;
+
+  for (const [zone, starts] of Object.entries(zones)) {
+    test(`agrees in ${zone}`, () => {
+      const random = prng(zone.length * 7_919);
+      let compared = 0;
+      for (let i = 0; i < 90; i += 1) {
+        const expr = [
+          pick(random, ["0", "30", "15", "45", "*/20", "0,30", "59", "*"]),
+          pick(random, ["*", "0", "1", "2", "3", "1-3", "*/6", "23", "0,12"]),
+          pick(random, ["*", "*", "*", "1", "15-20", "28-31", "29"]),
+          pick(random, ["*", "*", "*", "3,4", "10-12", "2"]),
+          pick(random, ["*", "*", "1-5", "0", "6"]),
+        ].join(" ");
+        const from =
+          starts[Math.floor(random() * starts.length)]! + Math.floor(random() * 6 * 60) * 60_000;
+        const reference = bruteNext(expr, zone, from, 14 * 24 * 60);
+        if (reference === null) continue; // beyond the reference window
+        compared += 1;
+        expect({ expr, from, next: nextCronTime(parseCronExpression(expr), zone, from) }).toEqual({
+          expr,
+          from,
+          next: reference,
+        });
+      }
+      expect(compared).toBeGreaterThanOrEqual(30);
+    });
+  }
 });

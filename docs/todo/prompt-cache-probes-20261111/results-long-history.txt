@@ -1,0 +1,76 @@
+== or:claude-sonnet-5 / hist-top
+  r1: {"prompt": 11055, "cached": 0, "write": 11053, "provider": "Claude Platform on AWS", "calls": [], "text": ""}
+  r2: {"prompt": 11072, "cached": 11053, "write": 17, "provider": "Claude Platform on AWS", "calls": [], "text": ""}
+  r3: {"prompt": 11190, "cached": 0, "write": 11188, "provider": "Claude Platform on AWS", "calls": [], "text": ""}
+== or:claude-sonnet-5 / hist-append
+  r1: {"prompt": 11097, "cached": 0, "write": 11095, "provider": "Claude Platform on AWS", "calls": [], "text": ""}
+  r2: {"prompt": 11114, "cached": 11095, "write": 17, "provider": "Claude Platform on AWS", "calls": [], "text": ""}
+  r3: {"prompt": 11308, "cached": 11112, "write": 194, "provider": "Claude Platform on AWS", "calls": [], "text": ""}
+== or:gpt-5.6-luna / hist-top
+  r1: {"prompt": 4979, "cached": 0, "write": 4976, "provider": "OpenAI", "calls": [], "text": "OK"}
+  r2: {"prompt": 4998, "cached": 4976, "write": 19, "provider": "OpenAI", "calls": [], "text": "OK"}
+  r3: {"prompt": 5051, "cached": 0, "write": 5048, "provider": "OpenAI", "calls": [["get_weather", "{\"city\":\"Paris\",\"unit\":\"c\"}"]], "text": ""}
+== or:gpt-5.6-luna / hist-append
+  r1: {"prompt": 5035, "cached": 0, "write": 5032, "provider": "OpenAI", "calls": [], "text": "OK"}
+  r2: {"prompt": 5054, "cached": 5032, "write": 19, "provider": "OpenAI", "calls": [], "text": "OK"}
+  r3: {"prompt": 5184, "cached": 5051, "write": 130, "provider": "OpenAI", "calls": [["CallTool", "{\"name\":\"get_weather\",\"args\":{\"city\":\"Paris\",\"unit\":\"c\"}}"]], "text": ""}
+== or:gemini-3.8-flash / hist-top
+  r1: {"prompt": 4740, "cached": 0, "write": 0, "provider": "Google", "calls": [], "text": "OK"}
+  r2: {"prompt": 4749, "cached": 0, "write": 0, "provider": "Google", "calls": [], "text": "OK"}
+  r3: {"prompt": 4923, "cached": 0, "write": 0, "provider": "Google AI Studio", "calls": [["get_weather", "{\"city\":\"Paris\"}"]], "text": ""}
+== or:gemini-3.8-flash / hist-append
+  r1: {"prompt": 4775, "cached": 0, "write": 0, "provider": "Google", "calls": [], "text": ""}
+  r2: {"prompt": 4784, "cached": 0, "write": 0, "provider": "Google", "calls": [], "text": "OK"}
+  r3: {"prompt": 4841, "cached": 0, "write": 0, "provider": "Google", "calls": [["CallTool", "{\"name\":\"get_weather\",\"args\":{\"city\":\"Paris\"}}"]], "text": ""}
+== or:deepseek-v4-flash / hist-top
+  r1: {"prompt": 5741, "cached": 0, "write": 0, "provider": "Wafer", "calls": [], "text": "OK"}
+  r2: {"prompt": 5754, "cached": 5632, "write": 0, "provider": "Wafer", "calls": [], "text": "OK"}
+  r3: {"prompt": 5841, "cached": 0, "write": 0, "provider": "Wafer", "calls": [["get_weather", "{\"city\": \"Paris\"}"]], "text": ""}
+== or:deepseek-v4-flash / hist-append
+  r1: {"prompt": 5821, "cached": 0, "write": 0, "provider": "Relace", "calls": [], "text": "OK"}
+  r2: {"prompt": 5835, "cached": 5632, "write": 0, "provider": "Relace", "calls": [], "text": "OK"}
+  r3: {"prompt": 5990, "cached": 5632, "write": 0, "provider": "Relace", "calls": [["CallTool", "{\"name\": \"get_weather\", \"args\": {\"city\": \"Paris\"}}"]], "text": ""}
+== or:kimi-k2.7-code / hist-top
+  r1: {"prompt": 5306, "cached": 96, "write": 0, "provider": "Inceptron", "calls": [], "text": " OK"}
+  r2: {"prompt": 5325, "cached": 5280, "write": 0, "provider": "Inceptron", "calls": [], "text": " OK"}
+  r3: {"prompt": 5382, "cached": 96, "write": 0, "provider": "Inceptron", "calls": [["get_weather", " {\"city\": \"Paris\"} "]], "text": ""}
+== or:kimi-k2.7-code / hist-append
+  r1: {"prompt": 5316, "cached": 96, "write": 0, "provider": "Inceptron", "calls": [], "text": " OK"}
+  r2: {"prompt": 5335, "cached": 5296, "write": 0, "provider": "Inceptron", "calls": [], "text": " OK"}
+  r3: {"prompt": 5469, "cached": 5312, "write": 0, "provider": "Inceptron", "calls": [["CallTool", " {\"args\": {\"city\": \"Paris\"}, \"name\": \"get_weather\"} "]], "text": ""}
+== or:glm-5.2 / hist-top
+  r1: {"prompt": 5196, "cached": 289, "write": 0, "provider": "Wafer", "calls": [], "text": "OK"}
+  r2: {"prompt": 5209, "cached": 5153, "write": 0, "provider": "Wafer", "calls": [], "text": "OK"}
+  r3: {"prompt": 5290, "cached": 161, "write": 0, "provider": "Wafer", "calls": [["get_weather", "{\"city\": \"Paris\"}"]], "text": ""}
+== or:glm-5.2 / hist-append
+  r1: {"prompt": 5230, "cached": 0, "write": 0, "provider": "Wafer", "calls": [], "text": "OK"}
+  r2: {"prompt": 5243, "cached": 5217, "write": 0, "provider": "Wafer", "calls": [], "text": "OK"}
+  r3: {"prompt": 5354, "cached": 5217, "write": 0, "provider": "Wafer", "calls": [["CallTool", "{\"name\": \"get_weather\", \"args\": {\"city\": \"Paris\"}}"]], "text": ""}
+== or:grok-4.6 / hist-top
+  r1: {"prompt": 5036, "cached": 128, "write": 0, "provider": "xAI", "calls": [], "text": "OK"}
+  r2: {"prompt": 5053, "cached": 4992, "write": 0, "provider": "xAI", "calls": [], "text": "OK"}
+  r3: {"prompt": 5138, "cached": 128, "write": 0, "provider": "xAI", "calls": [["get_weather", "{\"city\":\"Paris\"}"]], "text": ""}
+== or:grok-4.6 / hist-append
+  r1: {"prompt": 5056, "cached": 128, "write": 0, "provider": "xAI", "calls": [], "text": "OK"}
+  r2: {"prompt": 5073, "cached": 4992, "write": 0, "provider": "xAI", "calls": [], "text": "OK"}
+  r3: {"prompt": 5192, "cached": 4992, "write": 0, "provider": "xAI", "calls": [["CallTool", "{\"name\":\"get_weather\",\"args\":{\"city\":\"Paris\"}}"]], "text": ""}
+== direct:deepseek-v4-flash / hist-top
+  r1: {"prompt": 5699, "cached": 0, "write": null, "provider": null, "calls": [], "text": ""}
+  r2: {"prompt": 5713, "cached": 5504, "write": null, "provider": null, "calls": [], "text": "OK"}
+  r3: {"prompt": 5796, "cached": 256, "write": null, "provider": null, "calls": [["get_weather", "{\"city\": \"Paris\"}"]], "text": ""}
+== direct:deepseek-v4-flash / hist-append
+  r1: {"prompt": 5770, "cached": 0, "write": null, "provider": null, "calls": [], "text": ""}
+  r2: {"prompt": 5784, "cached": 5632, "write": null, "provider": null, "calls": [], "text": "OK"}
+  r3: {"error": "{\"http_error\": 400, \"body\": \"{\\\"error\\\":{\\\"message\\\":\\\"The `reasoning_content` in the thinking mode must be passed back to the API. (request_id: 3228b198-8af8-4f4b-a270-d972db8ca761)\\\",\\\"type\\\":\\\"invalid_request_error\\\",\\\"param\\\":null,\\\"code\\\":\\\"invalid_request_error\\\"}}\"}"}
+== or:claude-sonnet-5 / top
+  r1: {"prompt": 11090, "cached": 0, "write": 11088, "provider": "Claude Platform on AWS", "calls": [], "text": ""}
+  r2: {"prompt": 11107, "cached": 11088, "write": 17, "provider": "Claude Platform on AWS", "calls": [], "text": ""}
+  r3: {"prompt": 11225, "cached": 0, "write": 11223, "provider": "Claude Platform on AWS", "calls": [], "text": ""}
+== or:claude-sonnet-5 / append
+  r1: {"prompt": 11157, "cached": 0, "write": 11155, "provider": "Claude Platform on AWS", "calls": [], "text": ""}
+  r2: {"prompt": 11174, "cached": 11155, "write": 17, "provider": "Claude Platform on AWS", "calls": [], "text": ""}
+  r3: {"prompt": 11368, "cached": 11172, "write": 194, "provider": "Claude Platform on AWS", "calls": [], "text": ""}
+== or-messages:claude-sonnet-5 / native-ref
+  r1: {"input": 2, "cache_read": 0, "cache_write": 11096, "calls": [], "text": "", "stop": "refusal"}
+  r2: {"input": 2, "cache_read": 11096, "cache_write": 17, "calls": [], "text": "", "stop": "refusal"}
+  r3: {"input": 2, "cache_read": 11113, "cache_write": 189, "calls": [], "text": "", "stop": "refusal"}
