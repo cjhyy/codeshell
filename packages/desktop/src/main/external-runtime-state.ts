@@ -31,7 +31,11 @@ import {
   sanitizeContent,
 } from "@cjhyy/code-shell-core/internal";
 import type { ExternalMemorySnapshot } from "./external-runtime-memory.js";
-import type { ExternalRunEnvelope, SessionRunTrigger } from "./external-runtime-run-envelope.js";
+import {
+  announcesUserMessage,
+  type ExternalRunEnvelope,
+  type SessionRunTrigger,
+} from "./external-runtime-run-envelope.js";
 import {
   textWithAttachmentReferences,
   type ExternalRuntimeKind,
@@ -234,6 +238,8 @@ export class ExternalRuntimeSessionRecorder {
 
   private textBuffer = "";
   private finalText = "";
+  /** The text after the last tool call: the run's final answer (`turn_complete.text`). */
+  private replyText = "";
   private pendingToolBlocks: ContentBlock[] = [];
   /**
    * Tool calls opened but not yet written to the append-only transcript, keyed
@@ -344,6 +350,7 @@ export class ExternalRuntimeSessionRecorder {
     }
     this.textBuffer = "";
     this.finalText = "";
+    this.replyText = "";
     this.pendingToolBlocks = [];
     this.unresolvedTools.clear();
     this.usageAtTurnStart = { ...this.usage };
@@ -362,7 +369,10 @@ export class ExternalRuntimeSessionRecorder {
       if (!state) throw new Error("Session no longer exists");
       this.runOrigin = {
         ...(state.runId ? { previousRunId: state.runId } : {}),
-        ...(input.clientMessageId ? { clientMessageId: input.clientMessageId } : {}),
+        // Only an announced message has a bubble its run can be folded under.
+        ...(input.clientMessageId && announcesUserMessage(input)
+          ? { clientMessageId: input.clientMessageId }
+          : {}),
       };
       this.runId = user.id;
       this.runClosed = false;
@@ -629,9 +639,11 @@ export class ExternalRuntimeSessionRecorder {
         this.flushToolUseMessage();
         this.textBuffer += event.text;
         this.finalText += event.text;
+        this.replyText += event.text;
         break;
       case "tool_use_start": {
         this.flushAssistantText();
+        this.replyText = "";
         // Do NOT write the transcript record yet. Both external runtimes open a
         // tool before its arguments are known (codex reports `query: ""` on
         // item/started; claude-code opens with `{}` and streams the input as a
@@ -665,6 +677,7 @@ export class ExternalRuntimeSessionRecorder {
         break;
       }
       case "tool_result":
+        this.replyText = "";
         this.commitDeferredToolUse(event.result.id);
         this.flushToolUseMessage();
         this.transcript.appendToolResult(
@@ -746,7 +759,15 @@ export class ExternalRuntimeSessionRecorder {
         this.transcript.appendError(event.error, { source: "external-runtime" });
         break;
       case "turn_complete":
-        this.finish(event.reason, !providerTerminalOnly);
+        // A run that started background work which will wake the Session parks for it.
+        if (
+          !providerTerminalOnly &&
+          event.reason === "completed" &&
+          !event.completionKind &&
+          this.envelope?.yieldsToBackground()
+        )
+          event = { ...event, completionKind: "background_wait" };
+        this.finish(event.reason, !providerTerminalOnly, event.completionKind);
         break;
     }
     if (event.type === "turn_complete" && providerTerminalOnly) return undefined;
@@ -784,8 +805,8 @@ export class ExternalRuntimeSessionRecorder {
 
   /** The run's final answer, as native core puts it on `turn_complete.text`. */
   private completedText(reason: TerminalReason): { text?: string } {
-    return reason === "completed" && !this.lastError && this.finalText.trim()
-      ? { text: this.finalText }
+    return reason === "completed" && !this.lastError && this.replyText.trim()
+      ? { text: this.replyText }
       : {};
   }
 
@@ -836,8 +857,13 @@ export class ExternalRuntimeSessionRecorder {
     }
   }
 
-  private finish(reason: TerminalReason, terminalRun: boolean): void {
+  private finish(
+    reason: TerminalReason,
+    terminalRun: boolean,
+    completionKind?: TurnCompletionKind,
+  ): void {
     if (this.outcome) return;
+    const kind = reason === "completed" ? completionKind : undefined;
     this.flushAssistantText();
     // Before the synthetic results below: a tool_use record must precede its
     // tool_result in the transcript.
@@ -874,6 +900,7 @@ export class ExternalRuntimeSessionRecorder {
       const cache = normalizeCumulativeUsageCounters(state, state.tokenUsage);
       return {
         status: terminalRun ? reason : "active",
+        ...(terminalRun && kind ? { lastCompletionKind: kind } : {}),
         turnCount: (state.turnCount ?? 0) + 1,
         tokenUsage: {
           promptTokens: state.tokenUsage.promptTokens + turnPromptTokens,
@@ -907,6 +934,7 @@ export class ExternalRuntimeSessionRecorder {
     this.outcome = {
       ok: reason === "completed",
       reason,
+      ...(terminalRun && kind ? { completionKind: kind } : {}),
       streamed: true,
       ...(this.lastError
         ? { text: this.lastError }

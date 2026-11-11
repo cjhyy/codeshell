@@ -15,6 +15,7 @@ import {
 } from "@cjhyy/code-shell-core";
 import { readOutputJournal } from "@cjhyy/code-shell-core/internal";
 import type { PetLongTask } from "@cjhyy/code-shell-pet";
+import { INITIAL_STATE, applyStreamEvent } from "../../renderer/types.js";
 import { ExternalRunEnvelope, externalRunTrigger } from "../external-runtime-run-envelope.js";
 import {
   ExternalRuntimeService,
@@ -48,6 +49,11 @@ type ProviderTurn = (args: StartArgs, emit: (event: StreamEvent) => void) => Pro
 /** What the fake provider does in each provider turn (one per Goal round). */
 let providerTurn: ProviderTurn | undefined;
 let lastStart: StartArgs | undefined;
+/** The provider's interrupt (a limit pause or a Stop) ends its held turn. */
+let onInterrupt: (() => void) | undefined;
+let interrupted = false;
+/** Background work of the Session (DriveAgent jobs), for the run's park. */
+let backgroundRunning = false;
 /** The provider runtime, injected: no CLI process, no network. */
 const startSession = (async (args: StartArgs) => {
   lastStart = args;
@@ -57,7 +63,10 @@ const startSession = (async (args: StartArgs) => {
     runtimeSessionId: "fixture-provider-session",
     listTools: () => [],
     close: async () => {},
-    interrupt: async () => {},
+    interrupt: async () => {
+      interrupted = true;
+      onInterrupt?.();
+    },
     send: async (_input: unknown, onEvent: (event: StreamEvent) => void) => {
       await providerTurn?.(args, onEvent);
       return { done: Promise.resolve(), accepted: true as const };
@@ -85,6 +94,9 @@ beforeEach(async () => {
   mkdirSync(cwd);
   published.length = 0;
   providerTurn = undefined;
+  onInterrupt = undefined;
+  interrupted = false;
+  backgroundRunning = false;
   svc = new ExternalRuntimeService({
     featureFlags: () => ({ external_agent_runtime: true, external_host_tools: true }),
     registerSession: () => {},
@@ -97,6 +109,13 @@ beforeEach(async () => {
     projectTrust: () => "untrusted",
     prepareCodexLaunch: async () => ({ command: "/fixture/codex", env: { PATH: "/fixture" } }),
     startSession,
+    backgroundWork: {
+      subscribe: () => () => undefined,
+      claimResults: () => undefined,
+      hasPending: () => false,
+      hasRunning: () => backgroundRunning,
+      dropSession: () => undefined,
+    },
   });
   await svc.start({ kind: "codex", sessionId: CODEX, cwd });
   // Until the external NotifyMe executor lands, register its definition as
@@ -151,6 +170,19 @@ const tool = (toolName: string, id = `call-${toolName}`): StreamEvent[] => [
 const reply = (text: string): StreamEvent => ({ type: "text_delta", text });
 const ofType = <T extends StreamEvent["type"]>(type: T) =>
   published.filter((event) => event.type === type) as Extract<StreamEvent, { type: T }>[];
+/** The provider holds its turn until the host interrupts it, then ends it aborted. */
+const untilInterrupted = (emit: (event: StreamEvent) => void) =>
+  new Promise<void>((resolve) => {
+    onInterrupt = () => {
+      emit({ type: "turn_complete", reason: "aborted_streaming" });
+      resolve();
+    };
+    // A token budget interrupts synchronously, while the usage is reported.
+    if (interrupted) onInterrupt();
+  });
+/** The renderer's messages after folding these events, as on a journal replay. */
+const rendered = (events: readonly StreamEvent[]) =>
+  events.reduce((state, event) => applyStreamEvent(state, event, () => 1), INITIAL_STATE).messages;
 const goalIdentity = () => {
   const goal = svc.getGoal(CODEX);
   return { goalId: goal.goalId, revision: goal.revision };
@@ -161,7 +193,7 @@ describe("the external run envelope", () => {
     providerTurn = async (_args, emit) => {
       for (const event of [...tool("Bash"), reply("测试都过了")]) emit(event);
     };
-    await svc.send(CODEX, { text: "跑测试", clientMessageId: "cm-user" });
+    await svc.send(CODEX, { text: "跑测试", displayText: "跑测试", clientMessageId: "cm-user" });
     const [started] = ofType("session_started");
     expect(started).toMatchObject({ trigger: "user", clientMessageId: "cm-user" });
     const [complete] = ofType("turn_complete");
@@ -184,9 +216,64 @@ describe("the external run envelope", () => {
 
   test("a second run names the run it replaced; a host message says so", async () => {
     await svc.send(CODEX, { text: "第一轮" });
-    await svc.send(CODEX, { text: "Mimi 转来的", trigger: "host_message" });
+    await svc.send(CODEX, {
+      text: "Mimi 转来的",
+      displayText: "Mimi 转来的",
+      trigger: "host_message",
+    });
     const [first, second] = ofType("session_started");
     expect(second).toMatchObject({ trigger: "host_message", previousRunId: first!.runId });
+  });
+
+  test("a run carries a message id only when its message was announced", async () => {
+    providerTurn = async (_args, emit) => {
+      for (const event of [...tool("Bash"), reply("好了")]) emit(event);
+    };
+    // The renderer's own send has its bubble already; nothing was published for it.
+    await svc.send(CODEX, { text: "跑测试", clientMessageId: "cm-renderer" });
+    expect(published.filter((event) => event.clientMessageId !== undefined)).toEqual([]);
+    // An unannounced host message would have its run folded out of view.
+    expect(() =>
+      svc.send(CODEX, { text: "Mimi 转来的", clientMessageId: "cm-mimi", trigger: "host_message" }),
+    ).toThrow(/displayText/);
+    published.length = 0;
+    await svc.send(CODEX, {
+      text: "Mimi 转来的",
+      displayText: "Mimi 转来的",
+      clientMessageId: "cm-mimi",
+      trigger: "host_message",
+    });
+    expect(ofType("turn_complete")[0]).toMatchObject({ clientMessageId: "cm-mimi" });
+    // Live: the run is folded under Mimi's message, not dropped.
+    expect(rendered(published).slice(0, 2)).toMatchObject([
+      { kind: "user", text: "Mimi 转来的", clientMessageId: "cm-mimi" },
+      { kind: "tool", toolName: "Bash", status: "succeeded" },
+    ]);
+  });
+
+  test("Goal rounds keep the prompt: hidden continuations keep their own (no) message id", async () => {
+    providerTurn = async (_args, emit) => {
+      for (const event of [...tool("Bash", `call-${Math.random()}`), reply("round")]) emit(event);
+    };
+    await svc.send(CODEX, {
+      text: "做迁移",
+      displayText: "做迁移",
+      clientMessageId: "cm-1",
+      goal: { objective: "迁移", maxTurns: 3 },
+    });
+    const frames = readOutputJournal(sessionsRoot(), CODEX).frames.map((frame) => frame.event);
+    const users = frames.filter((event) => event.type === "session_user_message");
+    expect(users.map((event) => [event.injected === true, event.clientMessageId])).toEqual([
+      [false, "cm-1"],
+      [true, undefined],
+      [true, undefined],
+    ]);
+    // A reload replays the journal: the owner's prompt is still there.
+    const messages = rendered(frames);
+    expect(
+      messages.filter((message) => message.kind === "user" && !message.injected),
+    ).toMatchObject([{ text: "做迁移", clientMessageId: "cm-1" }]);
+    expect(messages.filter((message) => message.kind === "tool")).toHaveLength(3);
   });
 
   test("triggers follow native core: wakes are background_wake, a Goal resume has none", () => {
@@ -208,20 +295,43 @@ describe("the external run envelope", () => {
     });
   });
 
-  test("running background work makes the run yield to it", () => {
-    let running = true;
-    const envelope = new ExternalRunEnvelope(
-      () => false,
-      () => running,
+  test("a run parks for background work it started, not for an earlier run's", async () => {
+    const outcomes = deriveAll();
+    providerTurn = async (_args, emit) => {
+      for (const event of tool("DriveAgent")) emit(event);
+      backgroundRunning = true;
+    };
+    await svc.send(CODEX, { text: "后台跑评审" });
+    // The same work still runs: this run did not start it.
+    providerTurn = async (_args, emit) => {
+      for (const event of [...tool("Bash"), reply("另一个问题的答案")]) emit(event);
+    };
+    await svc.send(CODEX, { text: "顺便问一句" });
+    expect(
+      ofType("turn_complete").map((event) => [
+        event.completionKind,
+        event.outcome?.backgroundPending,
+      ]),
+    ).toEqual([
+      ["background_wait", true],
+      [undefined, false],
+    ]);
+    expect(outcomes.filter((outcome) => outcome.final).map((outcome) => outcome.kind)).toEqual([
+      "waiting-worker",
+      "done",
+    ]);
+    // The persisted state agrees with the stream (task inbox, session list).
+    const state = new SessionManager().readSessionState(CODEX);
+    expect(state?.lastCompletionKind).toBeUndefined();
+    providerTurn = async (_args, emit) => {
+      for (const event of tool("DriveAgent", "call-again")) emit(event);
+      backgroundRunning = true;
+    };
+    backgroundRunning = false;
+    await svc.send(CODEX, { text: "再后台跑一次" });
+    expect(new SessionManager().readSessionState(CODEX)?.lastCompletionKind).toBe(
+      "background_wait",
     );
-    for (const expected of [true, false]) {
-      running = expected;
-      envelope.open("user");
-      envelope.prepare({ type: "session_started", sessionId: CODEX, runId: "r", promptTokens: 0 });
-      expect(envelope.prepare({ type: "turn_complete", reason: "completed" })).toMatchObject({
-        outcome: { backgroundPending: expected },
-      });
-    }
   });
 });
 
@@ -253,27 +363,72 @@ describe("outcomes of external runs", () => {
         scope: "turn",
         runId: started!.runId,
         reply: true,
-        replyText: "先看看。修好了",
-        summary: "先看看。修好了",
+        // The final answer, after the last tool call (narration before it is not).
+        replyText: "修好了",
+        summary: "修好了",
       },
     ]);
   });
 
-  test("a Goal paused on its budget is blocked on the owner", async () => {
-    const outcomes = deriveAll();
+  /** The closing outcome is blocked on the limit; nothing asked the owner a question. */
+  function expectLimitBlocked(outcomes: readonly SessionOutcome[]) {
+    expect(svc.getGoal(CODEX)).toMatchObject({ paused: true });
+    expect(outcomes.filter((outcome) => outcome.kind === "blocked" || outcome.final)).toMatchObject(
+      [{ kind: "blocked", reason: "limit", final: true }],
+    );
+    expect(outcomes.at(-1)).not.toHaveProperty("repeat");
+    expect(ofType("goal_progress").some((event) => event.waitingForUser !== undefined)).toBe(false);
+    expect(ofType("turn_complete")).toMatchObject([
+      {
+        reason: "completed",
+        completionKind: "limit_stop",
+        outcome: { blockedOn: "limit", goal: "paused" },
+      },
+    ]);
+  }
+
+  test("a Goal paused on its turn limit is blocked on the limit, and the owner is told", async () => {
+    current = noticeHarness();
+    await current.handler(
+      CODEX,
+      upsertArgs({ sessionId: CODEX, scope: "goal", events: ["blocked"] }),
+    );
+    env.clock = NOW + 1_000;
+    const deriver = new SessionOutcomeDeriver();
+    const outcomes: SessionOutcome[] = [];
+    const notices = sink;
+    sink = (sessionId, event) => {
+      outcomes.push(...deriver.derive(sessionId, event));
+      notices(sessionId, event);
+    };
     providerTurn = async (_args, emit) => {
       for (const event of [...tool("commandExecution"), reply("还差一点")]) emit(event);
     };
     await svc.send(CODEX, { text: "做完整个迁移", goal: { objective: "迁移", maxTurns: 1 } });
-    expect(svc.getGoal(CODEX)).toMatchObject({ paused: true });
-    expect(outcomes.filter((outcome) => outcome.kind === "blocked")).toMatchObject([
-      { kind: "blocked", reason: "user", final: false },
-      { kind: "blocked", reason: "user", final: true, repeat: true },
-    ]);
-    expect(ofType("turn_complete").at(-1)?.outcome).toMatchObject({
-      blockedOn: "user",
-      goal: "paused",
-    });
+    expectLimitBlocked(outcomes);
+    await settle(() => current!.submitted.length > 0);
+    expect(current.submitted).toMatchObject([{ kind: "session.blocked", sessionId: CODEX }]);
+  });
+
+  test("a Goal out of time is blocked on the limit, not aborted by its interrupt", async () => {
+    const outcomes = deriveAll();
+    providerTurn = async (_args, emit) => {
+      for (const event of tool("commandExecution")) emit(event);
+      await untilInterrupted(emit);
+    };
+    await svc.send(CODEX, { text: "迁移", goal: { objective: "迁移", timeBudgetMs: 30 } });
+    expectLimitBlocked(outcomes);
+  });
+
+  test("a Goal out of tokens is blocked on the limit, not aborted by its interrupt", async () => {
+    const outcomes = deriveAll();
+    providerTurn = async (_args, emit) => {
+      for (const event of tool("commandExecution")) emit(event);
+      emit({ type: "usage_update", promptTokens: 500, completionTokens: 100 });
+      await untilInterrupted(emit);
+    };
+    await svc.send(CODEX, { text: "迁移", goal: { objective: "迁移", tokenBudget: 100 } });
+    expectLimitBlocked(outcomes);
   });
 
   test("a Stop the owner asked for pauses the Goal without asking anything", async () => {
@@ -287,6 +442,7 @@ describe("outcomes of external runs", () => {
     release();
     await running;
     expect(outcomes.some((outcome) => outcome.kind === "blocked")).toBe(false);
+    expect(outcomes.filter((outcome) => outcome.final)).toMatchObject([{ kind: "aborted" }]);
   });
 
   test("cancel_goal cancels the Goal's rules and the run's close is no done", async () => {
@@ -439,6 +595,7 @@ describe("long tasks Mimi hands to an external Session", () => {
           runs.push(
             svc.send(CODEX, {
               text: delegation.task,
+              displayText: delegation.task,
               clientMessageId: petDelegationClientMessageId(delegation.clientMessageId),
               trigger: "host_message",
             }),

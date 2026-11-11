@@ -47,6 +47,8 @@ export interface ExternalGoalRun {
   awaitingUser?: boolean;
   /** complete_goal / cancel_goal ended the run (core's `goal_control_stop`). */
   settled?: "completed" | "cancelled";
+  /** A budget or limit paused the Goal and ended the run (core's `limit_stop`). */
+  limited?: true;
   /** Goal-level rounds/active time persisted before this run started. */
   progressBase: { rounds: number; activeMs: number };
   /** Frozen at pause/park/completion, even if the provider takes time to finish. */
@@ -425,9 +427,9 @@ export class ExternalRuntimeGoals {
   }
 
   /**
-   * Pause the Goal on a budget or limit. Like native core's continuation cap,
-   * the pause asks the user (`waitingForUser`), so Mimi notices read it as
-   * blocked; a pause the user asked for (`byUser`) asks nothing.
+   * Pause the Goal. A budget or limit pause ends the run as `limit_stop`
+   * (Mimi notices read it as blocked on a limit); a pause the user asked for
+   * (`byUser`, a Stop) does not.
    */
   pause(run: ExternalGoalRun, reason: string, byUser = false): void {
     if (!this.isCurrent(run)) return;
@@ -437,6 +439,7 @@ export class ExternalRuntimeGoals {
       expectedRevision: run.goal.revision!,
     });
     if (result.updated) {
+      if (!byUser) run.limited = true;
       this.emit(run.sessionId, {
         type: "goal_progress",
         goalId: result.goalId,
@@ -444,7 +447,6 @@ export class ExternalRuntimeGoals {
         status: "not_met",
         ...this.progress(run, run.turns),
         gaps: `${reason}；目标已暂停，可继续。`,
-        ...(byUser ? {} : { waitingForUser: `${reason}；目标已暂停，恢复后继续。` }),
       });
     }
   }

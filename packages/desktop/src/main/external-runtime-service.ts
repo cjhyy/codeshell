@@ -91,6 +91,8 @@ import { assertOutputHistoryWriteAvailable } from "./session-output-history-leas
 import { ExternalRuntimeDeltaBuffer } from "./external-runtime-delta-buffer.js";
 import { notifyRunStopRequested } from "./run-stop-signals.js";
 import {
+  announcesUserMessage,
+  assertExternalSubmission,
   ExternalRunEnvelope,
   externalRunTrigger,
   type SessionRunTrigger,
@@ -109,7 +111,10 @@ export type DesktopExternalRuntimeTurnInput = ExternalRuntimeTurnInput & {
   transcriptContent?: string;
   /** Host observation label; never forwarded into vendor CLI input. */
   modelTraceSource?: string;
-  /** Why it runs (`session_started.trigger`); defaults to "user" unless `injected`. */
+  /**
+   * Why it runs (`session_started.trigger`); defaults to "user" unless
+   * `injected`. A "host_message" (Mimi, another Session) needs `displayText`.
+   */
   trigger?: SessionRunTrigger;
 };
 
@@ -1561,6 +1566,7 @@ export class ExternalRuntimeService {
     hooks?: ExternalRuntimeSubmissionHooks,
   ): Promise<ExternalRuntimeTurnOutcome> {
     const turnInput = typeof input === "string" ? { text: input } : input;
+    assertExternalSubmission(turnInput);
     return this.submit(sessionId, () => turnInput, callerWebContentsId, expectedGoal, hooks);
   }
 
@@ -1764,7 +1770,7 @@ export class ExternalRuntimeService {
               }
               // Match the journal order. A Panel input already has cursor N;
               // publishing start N+1 first would invalidate shared coverage.
-              if (nextInput.displayText && !nextInput.injected) this.emitSafely(sessionId, user);
+              if (announcesUserMessage(nextInput)) this.emitSafely(sessionId, user);
               if (providerRound === 0) {
                 logicalRunId = runId;
                 this.emitSafely(sessionId, entry.recorder.startEvent());
@@ -1933,9 +1939,17 @@ export class ExternalRuntimeService {
             this.withGoalOutput(sessionId, publishGoalOutput, () => this.goals.end(goalRun));
             if (entry.lifecycle.active && finalOutcome && !entry.recorder.outputFailed) {
               try {
+                // A limit pause interrupts the provider: the run stopped on its limit.
+                const limited =
+                  goalRun.limited && acceptedGeneration === entry.lifecycle.interruptGeneration;
                 const terminal = entry.recorder.completeRun(
-                  entry.finalizeOperations(finalOutcome.reason),
-                  finalOutcome.completionKind ?? (goalRun.settled && "goal_control_stop"),
+                  entry.finalizeOperations(
+                    limited && finalOutcome.reason === "aborted_streaming"
+                      ? "completed"
+                      : finalOutcome.reason,
+                  ),
+                  finalOutcome.completionKind ??
+                    (goalRun.settled ? "goal_control_stop" : limited ? "limit_stop" : undefined),
                 );
                 if (terminal) this.emitSafely(sessionId, terminal);
               } catch {
