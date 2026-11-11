@@ -3,8 +3,9 @@ import { runInNewContext } from "node:vm";
 import { nextProjectFixtureResponse } from "../scripts/smoke-project-model-fixture.mjs";
 
 const tool = (name) => ({ type: "function", function: { name, parameters: {} } });
-const selection = "Selected tools for this run: Write.\nschemaRef: select:Write";
-function request(marker = "SMOKE_MAIN_RW", names = ["ToolSearch", "Read"]) {
+const selection =
+  '### Write\nschemaRef: select:Write\n{"name":"Write","description":"write","inputSchema":{"type":"object"}}';
+function request(marker = "SMOKE_MAIN_RW", names = ["ToolSearch", "CallTool", "Read"]) {
   return {
     messages: [{ role: "user", content: `${marker}: read and update the shared proof file.` }],
     tools: names.map(tool),
@@ -24,7 +25,6 @@ function afterMainRead() {
 function afterSelection(content = selection) {
   const body = afterMainRead();
   complete(body, nextProjectFixtureResponse(body), content);
-  body.tools.push(tool("Write"));
   return body;
 }
 
@@ -42,15 +42,19 @@ test("default main Run reads, explicitly selects Write, then writes on a later m
   expect(call(search).name).toBe("ToolSearch");
   expect(argumentsOf(search)).toEqual({ query: "select:Write" });
   complete(body, search, selection);
-  body.tools.push(tool("Write")); // The real Engine refreshes only the next model step.
+  const frozenTools = JSON.stringify(body.tools);
 
   const write = nextProjectFixtureResponse(body);
   expect(write.stage).toBe("write");
-  expect(call(write).name).toBe("Write");
+  expect(call(write).name).toBe("CallTool");
   expect(argumentsOf(write)).toEqual({
-    file_path: "/workspace/downloads/shared-proof.txt",
-    content: "written by main agent after Read\n",
+    name: "Write",
+    args: {
+      file_path: "/workspace/downloads/shared-proof.txt",
+      content: "written by main agent after Read\n",
+    },
   });
+  expect(JSON.stringify(body.tools)).toBe(frozenTools);
   complete(body, write, "Successfully wrote file");
   expect(nextProjectFixtureResponse(body)).toEqual({
     stage: "completed",
@@ -69,9 +73,9 @@ test("explicit Panel Read/Write allowlist stays direct and preserves its prior-w
   expect(nextProjectFixtureResponse(body).stage).toBe("completed");
 });
 
-test("a successful selection without the next advertised Write schema fails closed", () => {
+test("a successful selection without the static CallTool wrapper fails closed", () => {
   const body = afterSelection();
-  body.tools = body.tools.filter((value) => value.function.name !== "Write");
+  body.tools = body.tools.filter((value) => value.function.name !== "CallTool");
   expect(() => nextProjectFixtureResponse(body)).toThrow("schema was not advertised");
 });
 
@@ -81,19 +85,16 @@ test.each([
   ["wrong tool", "Selected tools for this run: Read.\nschemaRef: select:Read"],
   ["missing schema receipt", "Selected tools for this run: Write."],
   ["private content", `private fixture token must not be echoed: ${"s".repeat(50)}`],
-])(
-  "failed discovery is rejected even if a later request advertises Write: %s",
-  (_label, result) => {
-    expect(() => nextProjectFixtureResponse(afterSelection(result))).toThrow(
-      "ToolSearch did not select Write",
-    );
-  },
-);
+])("incomplete schema discovery is rejected: %s", (_label, result) => {
+  expect(() => nextProjectFixtureResponse(afterSelection(result))).toThrow(
+    "ToolSearch did not select Write",
+  );
+});
 
 test("unselected Write never shortcuts the default main preset", () => {
   for (const body of [request(), afterMainRead()]) {
     body.tools.push(tool("Write"));
-    expect(() => nextProjectFixtureResponse(body)).toThrow("before explicit discovery");
+    expect(() => nextProjectFixtureResponse(body)).toThrow("changed the frozen tool prefix");
   }
 });
 
