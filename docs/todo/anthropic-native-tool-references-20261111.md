@@ -7,12 +7,12 @@
 
 ## 开工前四问
 
-| 问题 | 已知事实与验证方式 |
-|---|---|
-| 延迟定义是否进入初始上下文？ | Anthropic 文档说明不进入。新增探针比较 search-only、24 个 eager 工具、同一批 deferred 工具的总输入 token；真实结果是启用该路径的门槛。 |
-| OpenRouter 用哪条协议？ | 使用 Messages 的客户端搜索和 `tool_reference`，不依赖 Chat Completions 的透传猜测。既有 Chat 连接继续使用 `CallTool`；原生线路需要明确选择 Anthropic 协议。 |
-| 缓存断点放在哪里？ | 只放在最后一个非延迟工具；所有 deferred 定义都不带 `cache_control`，总断点仍不超过四个。 |
-| 换模型后的历史如何恢复？ | 会话保存完整、不可变的 schema 文本及中立的发现标记。只有请求序列化阶段将匹配的内容投影为引用，其他协议直接使用保存的文本。 |
+| 问题                         | 已知事实与验证方式                                                                                                                                          |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 延迟定义是否进入初始上下文？ | Anthropic 文档说明不进入。新增探针比较 search-only、24 个 eager 工具、同一批 deferred 工具的总输入 token；真实结果是启用该路径的门槛。                      |
+| OpenRouter 用哪条协议？      | 使用 Messages 的客户端搜索和 `tool_reference`，不依赖 Chat Completions 的透传猜测。既有 Chat 连接继续使用 `CallTool`；原生线路需要明确选择 Anthropic 协议。 |
+| 缓存断点放在哪里？           | 只放在最后一个非延迟工具；所有 deferred 定义都不带 `cache_control`，总断点仍不超过四个。                                                                    |
+| 换模型后的历史如何恢复？     | 会话保存完整、不可变的 schema 文本及中立的发现标记。只有请求序列化阶段将匹配的内容投影为引用，其他协议直接使用保存的文本。                                  |
 
 ## 实现边界
 
@@ -23,6 +23,17 @@
 5. 压缩提升、模型切换和协议切换允许重建目录；旧发现结果的降级只使用记录中的原始文本，不从当前注册表重构。资格撤销不改写既有历史投影。
 6. 结构化发现结果不能吞掉执行器追加的 guard 或 post-hook 上下文。纯文本调用方及外部工具 Host 保持原有结果契约。
 7. 不引入 Anthropic 服务端搜索工具，不启用 OpenRouter 的另一个 `deferred_tools` 会话协议，不升级 API 版本或批量升级 SDK。
+
+## 离线审查补充（实测前）
+
+- 统一连接链路已经按 catalog 的 `protocol: anthropic-style` 选择 Anthropic 客户端，无需新增路由开关或迁移现有 OpenRouter Chat 连接。
+- 首版拟限定为已知支持的 Messages 模型，并要求显式 `reasoning.mode: off`；发送 `thinking: {type: "disabled"}`。Sonnet 5 省略该字段会默认启用思考，因此不能用省略代替关闭。其他思考设置保留既有发现方式，不替用户关闭思考。
+- 当前 Anthropic 客户端会丢弃签名思考块。首版不把原生引用推广到思考模式，也不把 `CallTool` 回退描述为已经修复了这个既有续写问题。若单次调用覆盖了已冻结原生周期的思考设置，应在发送前明确拒绝，避免悄悄改变历史投影。
+- 原生引用匹配须同时检查工具名、schema 摘要及完整原始文本。共享格式函数只处理有序的 `{name, description, inputSchema}`；历史文本被截断或修改后，保留修改后的文本，不用旧标记展开完整 schema。
+- deferred 目录不能授予执行资格。运行中的 `rebase()` 当场重建 deferred 快照，纯持久化重建则删除 eager/deferred 两份快照；不能延迟到下一 run 才补目录。
+- 原始文本的拼接规则需覆盖跨协议回退；现有 OpenAI 与上下文处理对文本块使用不同的换行拼接方式。测试必须验证完整 schema 及 guard/post-hook 内容都保留下来。
+
+离线探针已通过 20 项测试和真实 Node dry-run；没有读取付费凭据或发送网络请求。真实探针仍等待单独授权，前置问题一尚未通过，生产实现尚未开工。
 
 ## 独立验收
 
@@ -39,6 +50,7 @@
 - [工具定义字段](https://platform.claude.com/docs/en/agents-and-tools/tool-use/tool-reference#tool-definition-properties)
 - [2026-02-17 发布记录：工具搜索无需 beta header](https://platform.claude.com/docs/en/release-notes/overview#february-17-2026)
 - [OpenRouter 客户端搜索](https://openrouter.ai/docs/guides/features/server-tools/tool-search#client-side-tool-search)
+- [Anthropic Sonnet 5 思考默认值](https://platform.claude.com/docs/en/models/sonnet-5/overview)
 - [OpenRouter Messages API](https://openrouter.ai/docs/api/api-reference/anthropic-messages/create-a-message)
 
 这些链接说明协议契约，不能代替本仓库实现的测试和真实用量记录。
