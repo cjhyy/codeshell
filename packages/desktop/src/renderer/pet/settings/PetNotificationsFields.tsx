@@ -68,25 +68,47 @@ export function notificationsDraft(view: PetNotificationSettingsView): PetNotifi
   };
 }
 
+/** A key of `settings.pet.notifications`; the three quiet-hours inputs share one. */
+export type NotificationSettingKey = IntegerField | "quietHours" | "delegatedFromDesktop";
+
+/** The stored setting a draft field belongs to. */
+export function notificationSettingKey(field: keyof PetNotificationsDraft): NotificationSettingKey {
+  return field === "quietEnabled" || field === "quietStart" || field === "quietEnd"
+    ? "quietHours"
+    : field;
+}
+
 /**
- * The settings patch for a draft. A half-typed time or an out-of-range count
- * is left out, so the stored value stays as it was until the input is valid.
+ * The settings patch for a draft: only the settings the owner `touched`, so an
+ * untouched field keeps following the host default instead of being frozen at
+ * today's value. A half-typed time or an out-of-range count is left out too,
+ * so the stored value stays as it was until the input is valid.
  */
-export function notificationsSettingsPatch(draft: PetNotificationsDraft): Record<string, unknown> {
-  const notifications: Record<string, unknown> = {
-    delegatedFromDesktop: draft.delegatedFromDesktop,
-  };
-  if (HH_MM.test(draft.quietStart) && HH_MM.test(draft.quietEnd))
+export function notificationsSettingsPatch(
+  draft: PetNotificationsDraft,
+  touched: ReadonlySet<NotificationSettingKey>,
+): Record<string, unknown> {
+  const notifications: Record<string, unknown> = {};
+  if (touched.has("delegatedFromDesktop"))
+    notifications.delegatedFromDesktop = draft.delegatedFromDesktop;
+  if (touched.has("quietHours") && HH_MM.test(draft.quietStart) && HH_MM.test(draft.quietEnd))
     notifications.quietHours = {
       enabled: draft.quietEnabled,
       start: draft.quietStart,
       end: draft.quietEnd,
     };
   for (const field of Object.keys(INTEGER_RANGES) as IntegerField[]) {
+    if (!touched.has(field)) continue;
     const value = boundedInteger(draft[field], INTEGER_RANGES[field]);
     if (value !== undefined) notifications[field] = value;
   }
   return { pet: { notifications } };
+}
+
+/** A draft and the settings edited in it, as one debounced write. */
+interface PendingNotificationsWrite {
+  draft: PetNotificationsDraft;
+  touched: ReadonlySet<NotificationSettingKey>;
 }
 
 export type NoticesApi = Pick<
@@ -139,6 +161,8 @@ export function usePetNotificationsController({
   const [systemPending, setSystemPending] = useState(false);
   const [systemError, setSystemError] = useState("");
   const draftRef = useRef<PetNotificationsDraft | null>(null);
+  // Settings the owner edited on this page; only these are written.
+  const touched = useRef(new Set<NotificationSettingKey>());
   // An edit not yet written: a refresh must not overwrite what the owner typed.
   const dirty = useRef(false);
   const alive = useRef(false);
@@ -146,14 +170,14 @@ export function usePetNotificationsController({
   const apiRef = useRef(api);
   apiRef.current = api;
 
-  const persist = (value: PetNotificationsDraft) => {
+  const persist = (value: PendingNotificationsWrite) => {
     const operation = notificationWrites.then(() =>
-      write("user", notificationsSettingsPatch(value)),
+      write("user", notificationsSettingsPatch(value.draft, value.touched)),
     );
     notificationWrites = operation.catch(() => {});
     return operation.then(
       () => {
-        if (draftRef.current === value) dirty.current = false;
+        if (draftRef.current === value.draft) dirty.current = false;
         if (alive.current) setSaveError("");
       },
       (cause: unknown) => {
@@ -207,10 +231,12 @@ export function usePetNotificationsController({
   const update = (patch: Partial<PetNotificationsDraft>): void => {
     if (!draftRef.current) return;
     const next = { ...draftRef.current, ...patch };
+    for (const field of Object.keys(patch) as Array<keyof PetNotificationsDraft>)
+      touched.current.add(notificationSettingKey(field));
     draftRef.current = next;
     dirty.current = true;
     setDraft(next);
-    schedule(next);
+    schedule({ draft: next, touched: new Set(touched.current) });
   };
 
   const setSystemRule = (on: boolean): void => {

@@ -7,7 +7,7 @@ import type {
   PetNoticeSystemRule,
   PetNoticeSystemRulePatch,
 } from "../../../shared/pet-notices";
-import type { PetNotificationsController } from "./PetNotificationsFields";
+import type { NotificationSettingKey, PetNotificationsController } from "./PetNotificationsFields";
 
 // Radix layout effects bind at import time: install the DOM before the card loads.
 ensureMiniDom();
@@ -57,6 +57,15 @@ function fakeApi(state: PetNoticesState) {
     },
   };
 }
+
+const ALL = new Set<NotificationSettingKey>([
+  "quietHours",
+  "maxPerHour",
+  "maxP0PerHour",
+  "mergeWindowSec",
+  "presenceIdleSec",
+  "delegatedFromDesktop",
+]);
 
 async function settle(): Promise<void> {
   await act(async () => {
@@ -109,7 +118,8 @@ describe("PetNotificationsFields", () => {
       hook.result.current.flush();
     });
     await settle();
-    // Debounced: one write with the latest draft.
+    // Debounced: one write with the latest draft, holding only what was edited.
+    // The untouched advanced limits keep following the host defaults.
     expect(writes).toEqual([
       {
         scope: "user",
@@ -119,41 +129,87 @@ describe("PetNotificationsFields", () => {
               delegatedFromDesktop: "auto",
               quietHours: { enabled: false, start: "22:30", end: "07:15" },
               maxPerHour: 12,
-              maxP0PerHour: 12,
-              mergeWindowSec: 600,
-              presenceIdleSec: 120,
             },
           },
         },
       },
     ]);
     expect(hook.result.current.draft?.quietEnabled).toBe(false);
+    // A later edit adds to what was touched; it never re-sends untouched defaults.
+    act(() => {
+      hook.result.current.update({ presenceIdleSec: "300" });
+      hook.result.current.flush();
+    });
+    await settle();
+    expect(writes[1]?.patch).toEqual({
+      pet: {
+        notifications: {
+          delegatedFromDesktop: "auto",
+          quietHours: { enabled: false, start: "22:30", end: "07:15" },
+          maxPerHour: 12,
+          presenceIdleSec: 300,
+        },
+      },
+    });
+    await hook.unmount();
+  });
+
+  test("a single edit writes only its own setting", async () => {
+    const { api } = fakeApi(noticesState());
+    const patches: Record<string, unknown>[] = [];
+    const hook = await renderHook(() =>
+      usePetNotificationsController({
+        api,
+        write: async (_scope, patch) => {
+          patches.push(patch);
+        },
+      }),
+    );
+    await settle();
+    act(() => {
+      hook.result.current.update({ quietStart: "21:00" });
+      hook.result.current.flush();
+    });
+    await settle();
+    expect(patches).toEqual([
+      {
+        pet: {
+          notifications: { quietHours: { enabled: true, start: "21:00", end: "07:15" } },
+        },
+      },
+    ]);
     await hook.unmount();
   });
 
   test("an invalid count or half-typed time is not written", () => {
     expect(
-      notificationsSettingsPatch({
-        quietEnabled: true,
-        quietStart: "2",
-        quietEnd: "07:00",
-        maxPerHour: "0",
-        maxP0PerHour: "",
-        mergeWindowSec: "-1",
-        presenceIdleSec: "29",
-        delegatedFromDesktop: "auto",
-      }),
+      notificationsSettingsPatch(
+        {
+          quietEnabled: true,
+          quietStart: "2",
+          quietEnd: "07:00",
+          maxPerHour: "0",
+          maxP0PerHour: "",
+          mergeWindowSec: "-1",
+          presenceIdleSec: "29",
+          delegatedFromDesktop: "auto",
+        },
+        ALL,
+      ),
     ).toEqual({ pet: { notifications: { delegatedFromDesktop: "auto" } } });
-    const notifications = notificationsSettingsPatch({
-      quietEnabled: true,
-      quietStart: "23:00",
-      quietEnd: "07:00",
-      maxPerHour: "61",
-      maxP0PerHour: "121",
-      mergeWindowSec: "3601",
-      presenceIdleSec: "1801",
-      delegatedFromDesktop: "desktop",
-    }).pet as { notifications: Record<string, unknown> };
+    const notifications = notificationsSettingsPatch(
+      {
+        quietEnabled: true,
+        quietStart: "23:00",
+        quietEnd: "07:00",
+        maxPerHour: "61",
+        maxP0PerHour: "121",
+        mergeWindowSec: "3601",
+        presenceIdleSec: "1801",
+        delegatedFromDesktop: "desktop",
+      },
+      ALL,
+    ).pet as { notifications: Record<string, unknown> };
     expect(notifications.notifications).toEqual({
       delegatedFromDesktop: "desktop",
       quietHours: { enabled: true, start: "23:00", end: "07:00" },
@@ -162,16 +218,19 @@ describe("PetNotificationsFields", () => {
 
   test("the advanced limits are written within the settings schema's bounds", () => {
     expect(
-      notificationsSettingsPatch({
-        quietEnabled: false,
-        quietStart: "23:00",
-        quietEnd: "07:00",
-        maxPerHour: "6",
-        maxP0PerHour: "120",
-        mergeWindowSec: "0",
-        presenceIdleSec: "30",
-        delegatedFromDesktop: "auto",
-      }),
+      notificationsSettingsPatch(
+        {
+          quietEnabled: false,
+          quietStart: "23:00",
+          quietEnd: "07:00",
+          maxPerHour: "6",
+          maxP0PerHour: "120",
+          mergeWindowSec: "0",
+          presenceIdleSec: "30",
+          delegatedFromDesktop: "auto",
+        },
+        ALL,
+      ),
     ).toEqual({
       pet: {
         notifications: {
