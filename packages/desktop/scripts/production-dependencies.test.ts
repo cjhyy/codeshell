@@ -71,6 +71,95 @@ function driftDiagnostic(directory: string) {
   return { message, details: JSON.parse(message.split("; diagnostics=")[1]) };
 }
 
+const productionFiles = ["core", "optimization-lab"].flatMap((name) =>
+  ["package.json", "bun.lock"].map((file) => `${artifactPath}/${name}/${file}`),
+);
+
+function autocrlfCheckout(attributes: string): string {
+  const directory = fixture();
+  writeFileSync(join(directory, ".gitattributes"), attributes);
+  for (const file of [
+    `${artifactPath}/other/package.json`,
+    `${artifactPath}/other/bun.lock`,
+    `${artifactPath}/core/package.json.backup`,
+    `${artifactPath}/core/bun.lock.backup`,
+    "packages/desktop/resources/chrome-extension/service-worker.js",
+    "packages/desktop/resources/chrome-extension/service-worker.js.LEGAL.txt",
+  ]) {
+    mkdirSync(dirname(join(directory, file)), { recursive: true });
+    writeFileSync(join(directory, file), "fixture\n");
+  }
+  const env = {
+    ...process.env,
+    GIT_CONFIG_NOSYSTEM: "1",
+    GIT_CONFIG_GLOBAL: join(directory, "absent-git-config"),
+    GIT_CONFIG_COUNT: "0",
+  };
+  const git = (...args: string[]) =>
+    execFileSync("git", args, { cwd: directory, env, encoding: "utf8", stdio: "pipe" });
+  git("init", "-q");
+  git("config", "core.autocrlf", "true");
+  git("config", "core.attributesFile", join(directory, "absent-git-attributes"));
+  git("add", ".");
+  // Force a real checkout from Git's tracked blobs, without any commit or remote.
+  for (const file of git("ls-files", "-z").split("\0").filter(Boolean)) {
+    if (file !== ".gitattributes") rmSync(join(directory, file));
+  }
+  git("checkout-index", "--all", "--force");
+  expect(git("check-attr", "linguist-generated", "--", "dist/fixture.js").trim()).toBe(
+    "dist/fixture.js: linguist-generated: true",
+  );
+  return directory;
+}
+
+test("autocrlf checkout without production attributes reproduces strict Windows drift", () => {
+  const attributes = readFileSync(join(repoRoot, ".gitattributes"), "utf8")
+    .split("\n")
+    .filter((line) => !line.startsWith(`${artifactPath}/`))
+    .join("\n");
+  const directory = autocrlfCheckout(attributes);
+  for (const file of productionFiles) {
+    const text = readFileSync(join(directory, file), "utf8");
+    expect(text).toContain("\r\n");
+    expect(text.replaceAll("\r\n", "")).not.toContain("\n");
+  }
+  const { details } = driftDiagnostic(directory);
+  for (const artifact of [details.manifest, details.lock]) {
+    expect(artifact.byteEqual).toBe(false);
+    expect(artifact.semanticEqual).toBe(true);
+    expect(artifact.saved.bytes - artifact.generated.bytes).toBe(artifact.saved.crlf);
+  }
+});
+
+test("autocrlf checkout keeps only production artifacts and existing LF rules byte-stable", () => {
+  const directory = autocrlfCheckout(readFileSync(join(repoRoot, ".gitattributes"), "utf8"));
+  for (const file of productionFiles) {
+    const text = readFileSync(join(directory, file), "utf8");
+    expect(text).toContain("\n");
+    expect(text).not.toContain("\r");
+    expect(text).toBe(readFileSync(join(repoRoot, file), "utf8"));
+  }
+  expect(loadProductionClosures(directory).size).toBe(2);
+  for (const file of [
+    "package.json",
+    "bun.lock",
+    `${artifactPath}/README.md`,
+    `${artifactPath}/other/package.json`,
+    `${artifactPath}/other/bun.lock`,
+    `${artifactPath}/core/package.json.backup`,
+    `${artifactPath}/core/bun.lock.backup`,
+  ]) {
+    const text = readFileSync(join(directory, file), "utf8");
+    expect(text).toContain("\r\n");
+    expect(text.replaceAll("\r\n", "")).not.toContain("\n");
+  }
+  for (const file of ["service-worker.js", "service-worker.js.LEGAL.txt"]) {
+    expect(
+      readFileSync(join(directory, "packages/desktop/resources/chrome-extension", file), "utf8"),
+    ).toBe("fixture\n");
+  }
+});
+
 const keyDigest = (key: string) => createHash("sha256").update(key).digest("hex");
 
 test("drift diagnostics distinguish LF/CRLF text from a changed production closure", () => {
