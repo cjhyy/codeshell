@@ -245,6 +245,8 @@ export interface ToolVisibilityContext {
   /** A browser bridge is wired for this run, independent of the host's name. */
   hasBrowserAutomation?: boolean;
   isSubAgent?: boolean;
+  /** Top-level Session this run belongs to: its own id, or the parent's for a sub-agent. */
+  rootSessionId?: string;
   behaviorProfile?: string;
   /** Host-authorized targets available to the cross-Session messaging builtin. */
   sessionMessageTargets?: readonly import("../session/session-message.js").SessionMessageTarget[];
@@ -481,6 +483,8 @@ export interface ToolContext {
    * narrow context, or standalone tool tests. (B2 — Gate 1, standard §S3.)
    */
   sessionId?: string;
+  /** Top-level Session id: own id, or the spawner-provided parent for a sub-agent (unset if unknown). */
+  rootSessionId?: string;
   /** Engine-owned, run-scoped cross-Session message sender. */
   sessionMessages?: import("../session/session-message.js").SessionMessageToolService;
   /** Stable id of the real user turn that owns async work launched here. */

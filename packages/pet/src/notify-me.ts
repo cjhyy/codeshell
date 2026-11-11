@@ -34,6 +34,7 @@ export const notifyMeToolDef: ToolDefinition = {
     "set channel to that gateway channel id (wechat, wecom, lark, telegram, slack…); " +
     "omit it when they don't name one; " +
     "if the id is wrong the host replies with the bound channels. " +
+    "In a sub-agent the rule attaches to the main Session and fires when its turn or Goal ends. " +
     "Call once; the host tracks completion — do not call RequestMimiDelivery at the end.",
   inputSchema: {
     type: "object",
@@ -77,12 +78,25 @@ export const notifyMeToolDef: ToolDefinition = {
   },
 };
 
+/**
+ * The Session the rule attaches to: the run's own id at top level, the
+ * spawner-provided root (parent) id in a sub-agent. Undefined fails closed.
+ */
+function targetSessionId(ctx: {
+  sessionId?: string;
+  isSubAgent?: boolean;
+  rootSessionId?: string;
+}): string | undefined {
+  if (!isReportableSessionId(ctx.sessionId)) return undefined;
+  if (ctx.isSubAgent !== true) return ctx.sessionId;
+  const root = ctx.rootSessionId;
+  return isReportableSessionId(root) && root !== ctx.sessionId ? root : undefined;
+}
+
 export function notifyMeAvailability(ctx: ToolVisibilityContext): boolean {
-  // Sub-agents stay hidden: their tool context carries no parent Session id,
-  // and the host loopback only serves live top-level Sessions.
-  return (
-    isReportableSessionId(ctx.sessionId) && ctx.isSubAgent !== true && ctx.behaviorProfile !== "pet"
-  );
+  // A sub-agent's rule goes on its top-level parent; without a trusted root id
+  // the tool stays hidden rather than mis-attaching.
+  return targetSessionId(ctx) !== undefined && ctx.behaviorProfile !== "pet";
 }
 
 export async function notifyMeTool(
@@ -92,15 +106,16 @@ export async function notifyMeTool(
 ): Promise<string> {
   if (!isReportableSessionId(ctx?.sessionId))
     return "Error: NotifyMe requires a valid current Session.";
-  if (ctx.isSubAgent === true) return "Error: NotifyMe is not available in a sub-agent.";
+  const target = targetSessionId(ctx);
+  if (!target) return "Error: NotifyMe is not available in a sub-agent without a main Session.";
   if (!requestHostAction) return "Error: the host rule channel is unavailable.";
   const parsed = parseArguments(args);
   if (typeof parsed === "string") return parsed;
   const upsert: NoticeRuleUpsert = {
-    sessionId: ctx.sessionId,
+    sessionId: target,
     createdBy: "notify-me",
     events: parsed.events,
-    scope: parsed.scope ?? (hasActiveGoal(ctx, ctx.sessionId) ? "goal" : "turn"),
+    scope: parsed.scope ?? (hasActiveGoal(ctx, target) ? "goal" : "turn"),
     channel: parsed.channel,
     attention: parsed.attention,
     ...(parsed.note ? { note: parsed.note } : {}),
@@ -108,7 +123,7 @@ export async function notifyMeTool(
   let raw: unknown;
   try {
     raw = await requestHostAction(
-      ctx.sessionId,
+      target,
       PET_RULE_UPSERT_ACTION,
       upsert as unknown as Record<string, unknown>,
     );
@@ -118,7 +133,7 @@ export async function notifyMeTool(
   const reply = parseNoticeRuleUpsertReply(raw);
   if (!reply) return notSaved("malformed host reply");
   if (reply.status === "unknown_channel") return unknownChannelText(upsert.channel, reply.channels);
-  return savedText(reply.effect);
+  return savedText(reply.effect, target !== ctx.sessionId);
 }
 
 interface ParsedArguments {
@@ -219,7 +234,7 @@ function unknownChannelText(requested: string, channels: readonly BoundChannel[]
   ].join("\n");
 }
 
-function savedText(effect: RuleEffect): string {
+function savedText(effect: RuleEffect, forMainSession = false): string {
   const im = effect.im
     ? `${effect.im.label} (${effect.im.channel}, ${readinessText(effect.im.ready)})`
     : undefined;
@@ -232,6 +247,11 @@ function savedText(effect: RuleEffect): string {
   return [
     `Notice rule ${effect.ruleId} saved: the owner will be told ${effect.fires}, via ${via}.`,
     ...(effect.quietHours ? [`Quiet hours: ${effect.quietHours}.`] : []),
+    ...(forMainSession
+      ? [
+          "The rule is on the main Session, not this sub-agent: it fires when the main Session ends.",
+        ]
+      : []),
     "Tell the owner exactly this; do not claim anything was sent.",
     "The host tracks completion; do not call RequestMimiDelivery for it.",
   ].join(" ");

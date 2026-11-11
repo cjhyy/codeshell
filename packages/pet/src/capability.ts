@@ -235,7 +235,12 @@ function buildPetParts(): PetParts {
           // Talking to the owner or Mimi is not work on the task.
           bookkeeping: true,
         },
-        execute: (args, ctx) => notifyMeTool(args, ctx, ruleRequesterFor(ctx?.sessionId)),
+        execute: (args, ctx) =>
+          notifyMeTool(
+            args,
+            ctx,
+            ruleRequesterFor(ctx?.isSubAgent === true ? ctx.rootSessionId : ctx?.sessionId),
+          ),
         exposure: {
           presetTags: ["harness-min", "general"],
           defaultPermissionRules: [{ tool: notifyMeToolDef.name, decision: "allow" }],

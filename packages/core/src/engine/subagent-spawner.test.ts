@@ -252,6 +252,7 @@ describe("subagent spawner", () => {
     parent.modelRequestSigner = signer;
     const spawner = createSubAgentSpawner({
       parentConfig: parent,
+      getParentSessionId: () => "live-parent",
       parentSandbox: parentConfig().sandbox!,
       presetName: "general",
       cwd: "/repo",
@@ -298,6 +299,7 @@ describe("subagent spawner", () => {
       readOnlySession: true,
       isSubAgent: true,
     });
+    expect(runs[0]!.config.parentSessionId).toBe("live-parent");
     expect(result).toMatchObject({ text: "child result", sessionId: "child-1" });
     expect(spawner.sessionExists?.("existing")).toBe(true);
   });

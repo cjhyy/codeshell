@@ -12,6 +12,7 @@ export interface ToolVisibilityInputs {
   host?: string;
   hasBrowserAutomation?: boolean;
   isSubAgent?: boolean;
+  rootSessionId?: string;
   behaviorProfile?: string;
   sessionMessageTargets?: readonly import("../session/session-message.js").SessionMessageTarget[];
   profileMeta?: Readonly<Record<string, unknown>>;
@@ -45,6 +46,7 @@ export function buildToolVisibility(
       ? { hasBrowserAutomation: inputs.hasBrowserAutomation }
       : {}),
     ...(inputs.isSubAgent !== undefined ? { isSubAgent: inputs.isSubAgent } : {}),
+    ...(inputs.rootSessionId ? { rootSessionId: inputs.rootSessionId } : {}),
     ...(inputs.behaviorProfile !== undefined ? { behaviorProfile: inputs.behaviorProfile } : {}),
     ...(inputs.sessionMessageTargets?.length
       ? { sessionMessageTargets: inputs.sessionMessageTargets }
