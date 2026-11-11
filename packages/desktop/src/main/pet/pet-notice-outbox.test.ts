@@ -152,7 +152,7 @@ describe("owner notices through the gateway outbox", () => {
     await settle();
     await d.poll(() => current!.outbox.events.length > 0);
     const [prompt] = current.outbox.events;
-    expect(prompt!.text).toContain(`回答 ${d.code()} 1`);
+    expect(prompt!.text).toContain("只允许这一次吗？直接回我就行。");
     // Answered on the desktop before the relay sent it.
     current.pending.length = 0;
     current.emitProjection({

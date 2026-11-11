@@ -902,3 +902,73 @@ describe("decision prompts", () => {
     expect(store.get(open.id)).toBeUndefined();
   });
 });
+
+describe("action codes", () => {
+  const actions = {
+    code: "0123456789AB",
+    family: "limit" as const,
+    sessionId: "s1",
+    runtime: "native" as const,
+    reason: "limit" as const,
+    goalId: "goal-1",
+    revision: 2,
+    expiresAt: NOW + 24 * HOUR,
+  };
+
+  test("a record keeps its actions, found by code; use, a pending link and a slot persist", async () => {
+    const store = ledger();
+    const record = await store.record(draft({ kind: "session.blocked", actions }));
+    expect(record.actions).toEqual(actions);
+    expect(store.byActionCode("0123456789AB")?.id).toBe(record.id);
+    expect(store.byActionCode("FFFFFFFFFFFF")).toBeUndefined();
+    expect(store.actionRecords().map((row) => row.id)).toEqual([record.id]);
+    const confirm = { item: 1, expiresAt: NOW + HOUR };
+    const slot = { channel: "wechat", ordinal: 2 };
+    await store.updateActions(record.id, { usedAt: NOW + 1, confirm, slot });
+    const reread = ledger();
+    await reread.load();
+    expect(reread.byActionCode("0123456789AB")?.actions).toEqual({
+      ...actions,
+      usedAt: NOW + 1,
+      confirm,
+      slot,
+    });
+    await expect(
+      store.updateActions(record.id, { slot: { channel: "wechat", ordinal: 0 } }),
+    ).rejects.toMatchObject({ code: "invalid_notice" });
+  });
+
+  test("the code, family and Session never change; a bad patch is refused", async () => {
+    const store = ledger();
+    const record = await store.record(draft({ actions }));
+    for (const patch of [{ code: "BA9876543210" }, { family: "open" }, { sessionId: "s2" }])
+      await expect(store.updateActions(record.id, patch as never)).rejects.toMatchObject({
+        code: "invalid_notice",
+      });
+    await expect(store.updateActions(record.id, { usedAt: -1 })).rejects.toMatchObject({
+      code: "invalid_notice",
+    });
+    const plain = await store.record(draft({ dedupeKey: "plain" }));
+    await expect(store.updateActions(plain.id, { usedAt: NOW })).rejects.toMatchObject({
+      code: "notice_not_found",
+    });
+  });
+
+  test("malformed actions are refused on record and dropped on load; older records load", async () => {
+    const store = ledger();
+    await expect(
+      store.record(draft({ actions: { ...actions, code: "lower-case-x" } })),
+    ).rejects.toMatchObject({ code: "invalid_notice" });
+    const record = await store.record(draft({ actions }));
+    const older = await store.record(draft({ dedupeKey: "older" }));
+    const disk = await readDisk();
+    disk.records[0] = { ...disk.records[0]!, actions: { ...actions, family: "future" } as never };
+    await writeFile(filePath, JSON.stringify(disk));
+    const reread = ledger();
+    await reread.load();
+    expect(reread.get(record.id)).toMatchObject({ dedupeKey: "session.done:s1:run-1" });
+    expect(reread.get(record.id)?.actions).toBeUndefined();
+    expect(reread.get(older.id)).toEqual(older);
+    expect(reread.byActionCode("0123456789AB")).toBeUndefined();
+  });
+});

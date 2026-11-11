@@ -15,7 +15,7 @@
 
 import { randomUUID } from "node:crypto";
 import { createHash } from "node:crypto";
-import type { ConversationSessionRoute } from "@cjhyy/code-shell-pet";
+import { parseBoundSessionCommand, type ConversationSessionRoute } from "@cjhyy/code-shell-pet";
 import {
   injectMobileRunAndAwaitAcceptance,
   type MobileRunBridge,
@@ -30,6 +30,8 @@ import {
   type BoundSessionRunner,
 } from "./session-conversation-bridge.js";
 import { createSessionBindHostAction, type BindActionContext } from "./session-bind-host-action.js";
+import { imConversationRouteKey } from "./session-turn-scheduler.js";
+import type { SessionRouteControlRequest } from "../im-gateway-control-server.js";
 import type { PetReusableSessionCandidate } from "./pet-dispatch-service.js";
 import {
   closingOutcome,
@@ -91,6 +93,8 @@ export interface SessionBridgeWiring {
   ): Promise<Record<string, unknown>>;
   /** Called by the gateway middleware for one inbound message. */
   routeInbound(inbound: BoundSessionInbound): Promise<BoundSessionDisposition>;
+  /** The conversation is bound to a Session now (its messages go there, not to Mimi). */
+  isBound(inbound: Pick<BoundSessionInbound, "channel" | "target" | "senderId">): Promise<boolean>;
   /** Deliver one Session turn's final answer back to every bound conversation. */
   deliverSessionReply(input: { sessionId: string; turnId: string; text: string }): Promise<void>;
   /** Downgrade routes that aged out while the app was closed. */
@@ -203,10 +207,40 @@ export function createSessionBridgeWiring(deps: SessionBridgeWiringDeps): Sessio
       return { ...result };
     },
     routeInbound: (inbound) => bridge.accept(inbound),
+    isBound: async (inbound) => {
+      const key = imConversationRouteKey(inbound);
+      if (!key) return false;
+      await routes.expireStaleBoundRoutes();
+      return (await routes.boundRoute(key)) !== undefined;
+    },
     deliverSessionReply,
     recoverOnStartup: async () => {
       await routes.expireStaleBoundRoutes();
     },
+  };
+}
+
+/**
+ * The gateway's bound-Session probe: only a conversation that is bound to a
+ * Session reads replies to open items here (no handoff to Mimi from there).
+ * Any other conversation goes on to the pet chat, where its reply is read
+ * once, with a handoff allowed.
+ */
+export function sessionRouteHandler(deps: {
+  bridge: () => Pick<SessionBridgeWiring, "isBound" | "routeInbound"> | undefined;
+  replyToSession: (
+    inbound: SessionRouteControlRequest,
+  ) => Promise<{ kind: "status"; text: string } | undefined>;
+}): (inbound: SessionRouteControlRequest) => Promise<BoundSessionDisposition> {
+  return async (inbound) => {
+    const bridge = deps.bridge();
+    if (!bridge) return { kind: "not-bound" };
+    // /mimi and /session belong to the bridge and never reach a model.
+    if (!parseBoundSessionCommand(inbound.text) && (await bridge.isBound(inbound))) {
+      const answered = await deps.replyToSession(inbound);
+      if (answered) return answered;
+    }
+    return bridge.routeInbound(inbound);
   };
 }
 

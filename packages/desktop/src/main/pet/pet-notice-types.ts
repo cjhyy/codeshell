@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import type { PetLongTaskCompletionTarget } from "@cjhyy/code-shell-pet";
 import type { NoticeAttention, NoticeChannel } from "@cjhyy/code-shell-pet/protocol";
+import type { NoticeActions, NoticeActionsInput } from "./pet-notice-action-codes.js";
 import type { NoticeFacts } from "./pet-notice-compose.js";
 import type {
   NoticeDecisionPrompt,
@@ -187,6 +188,22 @@ export interface NoticeSubmission {
    * `requestId`): its record carries the prompt's lifecycle from now on.
    */
   prompt?: Pick<NoticeDecisionPrompt, "code" | "deadline" | "skippable" | "replies">;
+  /**
+   * Make the notice an open item (a goal pause, a failure, a result to open):
+   * its record carries what it may do, and the IM text ends with a plain line
+   * saying what the owner can answer.
+   */
+  actions?: NoticeActionsInput;
+}
+
+/** A notice's open item as its ledger record has it (see `PetNoticeRouter.actionRecord`). */
+export interface NoticeActionRecord {
+  recordId: string;
+  kind: string;
+  createdAt: number;
+  target: NoticeTarget;
+  facts: NoticeFacts;
+  actions: NoticeActions;
 }
 
 export interface NoticeRouterSettings {
@@ -323,6 +340,9 @@ export type NoticeLedgerPort = Pick<
   | "forRequest"
   | "updatePrompt"
   | "adoptPrompt"
+  | "byActionCode"
+  | "actionRecords"
+  | "updateActions"
 >;
 
 /**
