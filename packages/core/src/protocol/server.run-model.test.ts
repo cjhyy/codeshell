@@ -570,3 +570,39 @@ describe("agent/run model", () => {
     expect(calls).toEqual([]);
   });
 });
+
+for (const source of ["user", "injected", "automation", "forged"] as const)
+  it(`agent/run ${source} preserves the correct Stop boundary`, async () => {
+    const { engine, calls } = makeEngine();
+    const manager = new ChatSessionManager({ runtime: {} as never, engineFactory: () => engine });
+    const t = makeTransport();
+    const server = new AgentServer({ transport: t.transport, chatManager: manager });
+    try {
+      const session = await manager.getOrCreate("sess-1", {});
+      session.cancel();
+      t.deliver({
+        jsonrpc: "2.0",
+        id: 900,
+        method: "agent/run",
+        params: {
+          sessionId: "sess-1",
+          task: "input",
+          ...(source === "injected" ? { injected: true } : {}),
+          ...(source === "automation" ? { trigger: "host_message" } : {}),
+          ...(source === "forged" ? { trigger: "user" } : {}),
+        },
+      });
+      const deadline = Date.now() + 5000;
+      while (!t.sent.some((frame) => frame.id === 900) && Date.now() < deadline) await Bun.sleep(5);
+      if (source === "forged") {
+        expect(t.sent.find((frame) => frame.id === 900)?.error?.code).toBe(
+          ErrorCodes.InvalidParams,
+        );
+        expect(calls).toEqual([]);
+      } else expect(t.sent.find((frame) => frame.id === 900)?.result?.reason).toBe("completed");
+      expect(session.wasCancelledSinceLastTurn()).toBe(source !== "user");
+    } finally {
+      await server.close();
+      await manager.closeAllAsync();
+    }
+  });

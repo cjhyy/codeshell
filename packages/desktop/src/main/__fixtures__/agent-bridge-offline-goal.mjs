@@ -149,11 +149,18 @@ try {
     },
   });
   let workerStarts = 0;
+  let ready = false;
+  const waitingInput = [];
   bridge.core.ensureWorker = (root) => {
     assert.equal(root, cwd);
     if (bridge.core.canSend()) return;
     workerStarts++;
-    bridge.core.child = { stdin: { destroyed: false, write: (line) => deliver(JSON.parse(line)) } };
+    bridge.core.child = {
+      stdin: {
+        destroyed: false,
+        write: (line) => (ready ? deliver(JSON.parse(line)) : waitingInput.push(line)),
+      },
+    };
   };
   try {
     await handleClientEvent(ctx, {
@@ -166,7 +173,16 @@ try {
       expectedGoalId: goal.goalId,
       expectedRevision: 1,
     });
-    assert.equal(replies.at(-1)?.ok, true, JSON.stringify(replies.at(-1)));
+    // The real control deadline expires while the cold worker is not ready.
+    // Expiring the response tap never cancels the command already in stdin.
+    assert.equal(replies.at(-1)?.ok, false, JSON.stringify(replies.at(-1)));
+    assert.match(replies.at(-1)?.message, /未确认/);
+    assert.equal(sessions.readActiveGoal(state.sessionId).paused, true);
+    assert.equal(calls, 0);
+    assert.equal(waitingInput.length, 1);
+    assert.equal(bridge.outboundTaps.size, 0);
+    ready = true;
+    for (const line of waitingInput.splice(0)) deliver(JSON.parse(line));
     await modelEntered;
     assert.equal(workerStarts, 1);
     assert.equal(calls, 1);
@@ -207,7 +223,13 @@ try {
     for (const [name, provider] of savedProviders) PROVIDER_REGISTRY.set(name, provider);
   }
   process.stdout.write(
-    JSON.stringify({ cleared: true, workerSpawned: false, coldResume: true, staleRejected: true }),
+    JSON.stringify({
+      cleared: true,
+      workerSpawned: false,
+      coldResume: true,
+      staleRejected: true,
+      delayedReadyAfterTimeout: true,
+    }),
   );
 } finally {
   network.restore();

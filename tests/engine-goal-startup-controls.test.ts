@@ -161,7 +161,7 @@ for (const action of ["pause", "edit"] as const) {
   });
 }
 
-test("saveActiveGoal with expected revision rejects a stale waiting snapshot", () => {
+test("saveActiveGoal with expected revision rejects a stale waiting snapshot", async () => {
   const cwd = mkdtempSync(join(tmpdir(), "engine-goal-fence-"));
   const engine = new Engine({
     cwd,
@@ -184,7 +184,7 @@ test("saveActiveGoal with expected revision rejects a stale waiting snapshot", (
     ).toBe(false);
     expect(manager.readActiveGoal(state.sessionId)).toEqual(updated?.goal);
   } finally {
-    void engine.dispose();
+    await engine.dispose();
     rmSync(cwd, { recursive: true, force: true });
   }
 });
@@ -257,7 +257,7 @@ test("objective-only live edit must preserve previously extended token and time 
     expect(edited?.objective).toBe("edited objective only");
     expect(edited?.revision).toBe((original.revision ?? 1) + 1);
     const actual = engine.extendGoalRun({});
-    // CONTROL: the turn extension is retained; only Goal budgets regress.
+    // CONTROL: all live extensions survive an objective edit; disk budgets remain original.
     expect(actual?.maxTurns).toBe(extended?.maxTurns);
     expect(actual?.maxStopBlocks).toBe(extended?.maxStopBlocks);
     expect(edited?.tokenBudget).toBe(1000); // Run-scoped extensions stay out of disk.
@@ -453,96 +453,178 @@ for (const evict of [false, true]) {
   });
 }
 
-test("pause during actual background wake restores the original notification without a model error", async () => {
-  const cwd = mkdtempSync(join(tmpdir(), "goal-wake-hold-"));
-  const saved = new Map(PROVIDER_REGISTRY);
-  let calls = 0;
-  const events: any[] = [];
-  class NoProvider extends LLMClientBase {
-    protected initClient() {}
-    async createMessage(): Promise<any> {
-      calls++;
-      throw new Error("held wake must not call a provider");
+for (const action of ["pause", "edit"] as const)
+  test(`${action} during actual background wake preserves controls and executes only the latest Goal`, async () => {
+    const cwd = mkdtempSync(join(tmpdir(), "goal-wake-hold-"));
+    const saved = new Map(PROVIDER_REGISTRY);
+    let calls = 0;
+    let providerCalls = 0;
+    let starts = 0;
+    const entered = deferred();
+    const release = deferred();
+    const events: any[] = [];
+    class NoProvider extends LLMClientBase {
+      protected initClient() {}
+      async createMessage(request: any): Promise<any> {
+        providerCalls++;
+        const usage = { promptTokens: 1, completionTokens: 1, totalTokens: 2 };
+        this.recordUsage(usage, request);
+        if (request.usagePurpose === "goal_judge") {
+          // Goal objectives are consumed by the judge, not repeated in the
+          // primary prompt's capability-only Goal tool guidance.
+          expect(JSON.stringify(request)).toContain("latest objective");
+          expect(JSON.stringify(request)).not.toContain("OLD_GOAL_OBJECTIVE_SENTINEL");
+          return {
+            text: JSON.stringify({
+              met: true,
+              waiting: false,
+              blockedOnUser: false,
+              gaps: "",
+            }),
+            toolCalls: [],
+            stopReason: "stop",
+            usage,
+          };
+        }
+        if (request.usagePurpose === "title")
+          return { text: "fixture", toolCalls: [], stopReason: "stop", usage };
+        calls++;
+        expect(action).toBe("edit");
+        expect(JSON.stringify(request)).not.toContain("OLD_GOAL_OBJECTIVE_SENTINEL");
+        expect(engine.getGoal("wake-held")).toMatchObject({
+          objective: "latest objective",
+          revision: 8,
+        });
+        return {
+          text: "done",
+          toolCalls: [],
+          stopReason: "stop",
+          usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+        };
+      }
     }
-  }
-  PROVIDER_REGISTRY.clear();
-  registerProvider("openai", NoProvider);
-  let engine: InstanceType<typeof Engine>;
-  const manager = new ChatSessionManager({
-    runtime: {} as never,
-    sessionStorageDir: join(cwd, "sessions"),
-    engineFactory: () =>
-      (engine = new Engine({
-        cwd,
-        sessionStorageDir: join(cwd, "sessions"),
-        enabledBuiltinTools: [],
-        maxTurns: 1,
-        llm: {
-          provider: "openai",
-          providerKind: "openai",
-          model: "fixture",
-          apiKey: "fixture",
-          enableStreaming: false,
-        },
-        hooks: [
-          {
-            event: "on_agent_start",
-            async handler() {
-              await Promise.resolve();
-              expect(
-                engine.updateGoal("wake-held", {
-                  paused: true,
-                  expectedGoalId: "wake",
-                  expectedRevision: 7,
-                })?.revision,
-              ).toBe(8);
-              return {};
-            },
+    PROVIDER_REGISTRY.clear();
+    registerProvider("openai", NoProvider);
+    let engine: InstanceType<typeof Engine>;
+    const manager = new ChatSessionManager({
+      runtime: {} as never,
+      sessionStorageDir: join(cwd, "sessions"),
+      engineFactory: () =>
+        (engine = new Engine({
+          cwd,
+          sessionStorageDir: join(cwd, "sessions"),
+          enabledBuiltinTools: [],
+          maxTurns: 3,
+          llm: {
+            provider: "openai",
+            providerKind: "openai",
+            model: "fixture",
+            apiKey: "fixture",
+            enableStreaming: false,
           },
-        ],
-      })),
-  });
-  try {
-    const session = await manager.getOrCreate("wake-held", { cwd });
-    const state = session.engine
-      .getSessionManager()
-      .create(cwd, "fixture", "openai", session.id).state;
-    const goal = { objective: "finish", goalId: "wake", revision: 7 };
-    session.engine.getSessionManager().saveActiveGoal(state, goal);
-    session.engine.getSessionManager().markGoalWaiting(state, goal, "background");
-    const original = notificationQueue.enqueue(
-      {
-        agentId: "job",
-        description: "result",
-        finalText: "done",
-        status: "completed",
-        enqueuedAt: 1,
-      },
-      session.id,
-    );
-    expect(
-      await wakeSessionForBackgroundResults({
+          hooks: [
+            {
+              event: "on_agent_start",
+              async handler() {
+                if (starts++ > 0) return {};
+                entered.resolve();
+                await release.promise;
+                return {};
+              },
+            },
+          ],
+        })),
+    });
+    try {
+      const session = await manager.getOrCreate("wake-held", { cwd });
+      const state = session.engine
+        .getSessionManager()
+        .create(cwd, "fixture", "openai", session.id).state;
+      const goal = { objective: "OLD_GOAL_OBJECTIVE_SENTINEL", goalId: "wake", revision: 7 };
+      session.engine.getSessionManager().saveActiveGoal(state, goal);
+      session.engine.getSessionManager().markGoalWaiting(state, goal, "background");
+      const original = notificationQueue.enqueue(
+        {
+          agentId: "job",
+          description: "result",
+          finalText: "done",
+          status: "completed",
+          enqueuedAt: 1,
+        },
+        session.id,
+      );
+      const waking = wakeSessionForBackgroundResults({
         sessionId: session.id,
         manager,
         rehydrate: async () => session,
         approvalRouter: new ApprovalRouter(),
         resolveWorkspace: async () => ({ cwd }),
         onStream: (event) => events.push(event),
-      }),
-    ).toBe(false);
-    expect(calls).toBe(0);
-    expect(events.some((event) => event.type === "error")).toBe(false);
-    expect(notificationQueue.getSnapshot(session.id)).toEqual([original]);
-    expect(session.engine.getGoal(session.id)).toMatchObject({
-      goalId: "wake",
-      revision: 8,
-      paused: true,
-    });
-  } finally {
-    await manager.closeAllAsync();
-    notificationQueue.reset();
-    PROVIDER_REGISTRY.clear();
-    for (const [name, provider] of saved) PROVIDER_REGISTRY.set(name, provider);
-    rmSync(cwd, { recursive: true, force: true });
-  }
-});
+      });
+      await Promise.race([
+        entered.promise,
+        waking.then(() => {
+          throw new Error("wake ended before startup gate");
+        }),
+      ]);
+      expect(providerCalls).toBe(0);
+      expect(
+        engine!.updateGoal("wake-held", {
+          ...(action === "pause" ? { paused: true } : { objective: "latest objective" }),
+          expectedGoalId: "wake",
+          expectedRevision: 7,
+        })?.revision,
+      ).toBe(8);
+      release.resolve();
+      const woke = await waking;
+      expect(events.filter((event) => event.type === "error")).toEqual([]);
+      expect({ woke, starts, calls }).toEqual({
+        woke: action === "edit",
+        starts: action === "edit" ? 2 : 1,
+        calls: action === "edit" ? 1 : 0,
+      });
+      expect(calls).toBe(action === "edit" ? 1 : 0);
+      if (action === "pause") expect(providerCalls).toBe(0);
+      else expect(providerCalls).toBeGreaterThan(0);
+      expect(starts).toBe(action === "edit" ? 2 : 1);
+      expect(events.some((event) => event.type === "error")).toBe(false);
+      expect(notificationQueue.getSnapshot(session.id)).toEqual(
+        action === "pause" ? [original] : [],
+      );
+      if (action === "pause")
+        expect(session.engine.getGoal(session.id)).toMatchObject({
+          goalId: "wake",
+          revision: 8,
+          paused: true,
+        });
+      else
+        expect(
+          session.engine.getSessionManager().readSessionState(session.id)?.goalLifecycle,
+        ).toMatchObject({
+          goalId: "wake",
+          revision: 8,
+          phase: "terminal",
+          config: { objective: "latest objective" },
+        });
+      // Known boundary: startup hold already has a durable input/run identity.
+      // A retry preserves that history and creates a second injected input; fixing
+      // projections/receipts together is tracked in TODO.md, not hidden by rollback.
+      const persisted = session.engine.getSessionManager().resume(session.id);
+      const injected = persisted.transcript.toMessages().filter((m) => m.role === "user");
+      expect(injected).toHaveLength(action === "edit" ? 2 : 1);
+      if (action === "edit") expect(injected[0].content).toEqual(injected[1].content);
+      const { readOutputJournal } = await import("../packages/core/src/session/output-journal.js");
+      const journal = readOutputJournal(join(cwd, "sessions"), session.id);
+      expect(journal.status).toBe("ok");
+      const inputs = journal.frames.filter((f) => f.event.type === "session_user_message");
+      expect(inputs).toHaveLength(action === "edit" ? 2 : 1);
+      expect(new Set(inputs.map((f) => f.event.runId)).size).toBe(inputs.length);
+    } finally {
+      release.resolve();
+      await manager.closeAllAsync();
+      notificationQueue.reset();
+      PROVIDER_REGISTRY.clear();
+      for (const [name, provider] of saved) PROVIDER_REGISTRY.set(name, provider);
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });

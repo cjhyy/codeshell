@@ -303,7 +303,7 @@ describe("AgentBridge host reservation maps", () => {
   });
 });
 
-test("actual mobile ingress answers disk Goal clear without a worker", () => {
+test("actual mobile ingress clears offline and observes delayed cold resume after timeout", () => {
   const directory = mkdtempSync(join(tmpdir(), "offline-goal-child-"));
   try {
     const child = spawnSync(
@@ -312,7 +312,7 @@ test("actual mobile ingress answers disk Goal clear without a worker", () => {
       {
         env: createBunTestEnvironment(process.env, directory),
         encoding: "utf8",
-        timeout: 15000,
+        timeout: 20000,
       },
     );
     if (child.status !== 0) throw new Error(`Offline ingress fixture failed: ${child.stderr}`);
@@ -321,6 +321,7 @@ test("actual mobile ingress answers disk Goal clear without a worker", () => {
       workerSpawned: false,
       coldResume: true,
       staleRejected: true,
+      delayedReadyAfterTimeout: true,
     });
   } finally {
     rmSync(directory, { recursive: true, force: true });

@@ -158,11 +158,12 @@ export class RemoteHostManager extends EventEmitter {
     this.accountAccess.setProvider(provider);
   }
 
-  /** The attached command Host installed a pending-turn FIFO; advertise it on (re)auth. */
+  /** The attached Host supports versioned Goal snapshots and controls. */
   advertiseGoalControls(): void {
     this.goalControlsEnabled = true;
   }
 
+  /** The attached command Host installed a pending-turn FIFO; advertise it on (re)auth. */
   advertiseTurnQueue(): void {
     this.turnQueueEnabled = true;
   }

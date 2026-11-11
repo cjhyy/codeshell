@@ -532,6 +532,22 @@ describe("injectAndAwaitResult timeouts", () => {
     expect(injected).toHaveLength(1);
   });
 
+  test("Goal timeout is an unconfirmed result and never resends the mutation", async () => {
+    const { bridge, injected } = silentBridge();
+    const result = await injectAndAwaitResult(
+      bridge,
+      "agent/goalUpdate",
+      { paused: false },
+      meta,
+      20,
+    );
+    expect(result).toEqual({
+      ok: false,
+      message: "目标操作结果未确认，主机可能仍在处理；请刷新状态后再操作。",
+    });
+    expect(injected).toHaveLength(1);
+  });
+
   test("a failed worker write reports a retryable error and releases its subscription", async () => {
     let listening = false;
     const bridge = {

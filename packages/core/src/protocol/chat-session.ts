@@ -124,6 +124,7 @@ interface QueuedTurn {
   reject: (e: unknown) => void;
   /** Stable Goal instance for a queued synthetic resume turn. */
   goalResumeId?: string;
+  goalStartupRetried?: boolean;
   /** Evaluated only when this entry reaches the head of the queue. */
   guard?: () => boolean;
   onSkipped?: () => void;
@@ -212,7 +213,7 @@ export class ChatSession {
       );
     this.lastActivityAt = Date.now();
     // Only user input can lift Stop; a background event is not new consent.
-    if (opts.trigger === "user" || (!opts.trigger && !opts.injected))
+    if (!opts.injected && (opts.trigger === "user" || !opts.trigger))
       this.cancelledSinceLastTurn = false;
     return new Promise((resolve, reject) => {
       this.queue.push({
@@ -445,11 +446,13 @@ export class ChatSession {
         // authority) did not resume anything; report it as a failure. A user
         // cancellation is not a failed resume.
         resolve: (result) =>
-          result.turnCount === 0 &&
-          result.reason !== "aborted_streaming" &&
-          result.reason !== "aborted_tools"
-            ? reject(new Error(result.text || `Goal resume did not start (${result.reason})`))
-            : resolve(true),
+          result.goalContinuationHeld
+            ? resolve(false)
+            : result.turnCount === 0 &&
+                result.reason !== "aborted_streaming" &&
+                result.reason !== "aborted_tools"
+              ? reject(new Error(result.text || `Goal resume did not start (${result.reason})`))
+              : resolve(true),
         reject,
       });
       void this.pump();
@@ -524,7 +527,7 @@ export class ChatSession {
     if (!next) return;
     // Scoped cancellation can preserve a previously queued successor. Starting
     // it re-enables its own background wakeups just like a fresh enqueue does.
-    if (next.opts.trigger === "user" || (!next.opts.trigger && !next.opts.injected))
+    if (!next.opts.injected && (next.opts.trigger === "user" || !next.opts.trigger))
       this.cancelledSinceLastTurn = false;
     this.active = next;
     this.settlePromise = new Promise<void>((resolve) => {
@@ -596,9 +599,44 @@ export class ChatSession {
         kind: next.opts.kind,
         approvalRouter: next.opts.approvalRouter,
       } satisfies EngineRunOptions & Record<keyof Omit<TurnOpts, "onStream" | "trigger">, unknown>;
-      const result = await this.engine.run(next.task, runOptions);
+      const ownerEngine = this.engine;
+      const stopEpoch = this.cancellationEpoch;
+      const result = await ownerEngine.run(next.task, runOptions);
       this.lastActivityAt = Date.now();
-      next.resolve(result);
+      const retryGoalId = result.goalContinuationHeld?.retryGoalId;
+      const resumeId = next.goalResumeId;
+      if (
+        retryGoalId &&
+        !next.goalStartupRetried &&
+        next.opts.injected &&
+        !next.opts.clientMessageId &&
+        !next.opts.goal &&
+        !next.opts.goalContinuation &&
+        (!resumeId || !this.queue.some((queued) => queued.goalResumeId === resumeId))
+      ) {
+        const original = next;
+        const guard = () => {
+          const goal = this.engine.getGoal(this.id);
+          return (
+            this.engine === ownerEngine &&
+            this.cancellationEpoch === stopEpoch &&
+            !this.cancelledSinceLastTurn &&
+            goal?.goalId === retryGoalId &&
+            goal.paused !== true &&
+            !this.engine.isGoalContinuationBlocked?.(this.id) &&
+            (original.guard?.() ?? true)
+          );
+        };
+        // Keep the original delivery promise/claim until the fresh attempt has
+        // settled. Never re-enter the explicit Resume API: it would clear Stop.
+        // One budget follows the queue entry, including edits on both attempts.
+        this.queue.push({
+          ...original,
+          goalStartupRetried: true,
+          guard,
+          onSkipped: () => original.resolve(result),
+        });
+      } else next.resolve(result);
     } catch (err) {
       // A user-initiated cancel (Stop, or the onboarding cancel+rerun flow)
       // aborts the in-flight run. That's not a failure — resolve it as a clean

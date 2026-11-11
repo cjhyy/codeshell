@@ -29,8 +29,9 @@ const RESUME_META: WorkerFrameMeta = { origin: "host", producer: "automation-res
 
 /**
  * "Continue this conversation" jobs (job.resumeSessionId) don't run a headless
- * Engine — they feed their prompt into the LIVE session as a new user turn,
- * exactly like a human typing at a scheduled time. agent/run with an existing
+ * Engine — they feed their authorized prompt into the LIVE session as a Host
+ * turn. This scheduled input must not lift an earlier user Stop's suppression
+ * of automatic background wakeups. agent/run with an existing
  * sessionId makes the worker resume it from disk if it isn't already live
  * (engine.ts: exists()→resume). The run then inherits that session's own cwd /
  * permission mode / tools / background-completion wakeup.
@@ -65,6 +66,7 @@ export function createAutomationResumeTurn(deps: {
         task: prompt,
         sessionId,
         requireExisting: true,
+        trigger: "host_message",
         ...(job?.projectId ? { projectId: job.projectId } : {}),
         ...(job?.rootId ? { rootId: job.rootId } : {}),
       },

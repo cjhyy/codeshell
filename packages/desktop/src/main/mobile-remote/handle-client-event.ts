@@ -221,7 +221,13 @@ export function injectAndAwaitResult(
     // Fallback: if the worker never answers (dead/slow), report failure rather
     // than hanging — the phone keeps showing its prior state.
     const timer = setTimeout(
-      () => done({ ok: false, message: "worker did not respond" }),
+      () =>
+        done({
+          ok: false,
+          message: method.startsWith("agent/goal")
+            ? "目标操作结果未确认，主机可能仍在处理；请刷新状态后再操作。"
+            : "worker did not respond",
+        }),
       timeoutMs,
     );
     try {

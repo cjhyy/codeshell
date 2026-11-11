@@ -32,7 +32,14 @@ import type { EngineConfig } from "./types.js";
 import type { EngineRunOptions } from "./run-types.js";
 
 /** A durable user control refused a synthetic run before provider dispatch. */
-export class GoalContinuationHeld extends Error {}
+export class GoalContinuationHeld extends Error {
+  constructor(
+    message: string,
+    readonly retryGoalId?: string,
+  ) {
+    super(message);
+  }
+}
 
 export type GoalStopHookHandler = ReturnType<typeof createGoalStopHook>;
 
@@ -107,6 +114,11 @@ export function resolveRunGoal(args: {
     // the next authorized continuation instead of dispatching that stale prompt.
     throw new GoalContinuationHeld(
       "Goal changed during initialization; retry with the current Goal version",
+      storedLifecycle &&
+        openedLifecycle.goalId === storedLifecycle.goalId &&
+        isGoalLifecycleCurrent(storedLifecycle)
+        ? storedLifecycle.goalId
+        : undefined,
     );
   }
   const storedGoal =

@@ -98,6 +98,7 @@ export function createHubAutomationWorker(options: HubAutomationWorkerOptions) {
           clientMessageId: requestId,
           displayText: request.prompt,
           disableGoal: true,
+          trigger: "host_message",
           permissionMode: request.permissionMode,
           sandboxMode: request.sandboxMode,
           allowBackgroundShells: false,

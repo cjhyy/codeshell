@@ -257,6 +257,9 @@ export interface EngineResult {
   text: string;
   reason: TerminalReason;
   completionKind?: TurnCompletionKind;
+  /** Startup refused this synthetic input before provider dispatch. Only an edit
+   * of this same active Goal permits one fresh queued attempt. */
+  goalContinuationHeld?: { retryGoalId?: string };
   /** Goal-specific stop outcome; omitted for ordinary completion/met verdicts. */
   goalTermination?: GoalTerminationReason;
   sessionId: string;

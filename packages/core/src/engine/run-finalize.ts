@@ -60,6 +60,7 @@ export function createRunFailureHandler(
         reason: "aborted_streaming",
         text: err.message,
         turnCount: 0,
+        goalContinuationHeld: { retryGoalId: err.retryGoalId },
         usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       };
       if (args.options?.clientMessageId)

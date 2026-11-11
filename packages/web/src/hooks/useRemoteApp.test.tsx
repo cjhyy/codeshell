@@ -2,6 +2,7 @@ import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { act } from "react";
 import { ensureMiniDom, flushMicrotasks, renderHook } from "../test-utils/renderHook";
 import { useRemoteApp } from "./useRemoteApp";
+import { useRemoteGoalControls } from "./useRemoteGoalControls";
 import { useDesktopController } from "../../app/DesktopApp.js";
 import { getApiWorkspace } from "../../app/api-context.js";
 
@@ -5837,11 +5838,23 @@ describe("versioned remote Goal controls", () => {
         await flushMicrotasks();
       });
       expect(hook.result.current.app.notice).toBe("worker did not respond");
+      const refresh = sent().findLast((e) => e.type === "goal.get");
+      expect(sent().filter((e) => e.type === "goal.get")).toHaveLength(2);
+      await act(async () => {
+        ws.message({
+          type: "goal.state",
+          sessionId: "goal-session",
+          requestId: refresh.requestId,
+          ok: true,
+          goal: { objective: "updated elsewhere", goalId: "original", revision: 8, paused: true },
+        });
+        await flushMicrotasks();
+      });
       await act(async () => {
         hook.result.current.app.clearGoal("goal-session");
         await flushMicrotasks();
         const request = sent().findLast((e) => e.type === "goal.clear");
-        expect(request).toMatchObject({ expectedGoalId: "original", expectedRevision: 7 });
+        expect(request).toMatchObject({ expectedGoalId: "original", expectedRevision: 8 });
         ws.message({
           method: "agent/streamEvent",
           params: {
@@ -5934,11 +5947,17 @@ describe("versioned remote Goal controls", () => {
           requestId: request.requestId,
           ok: false,
           unsupported: true,
-          error: "external runtime owns this session",
+          message: "external runtime owns this session",
         });
         await flushMicrotasks();
       });
       expect(hook.result.current.app.notice).toBe(priorNotice);
+      await act(async () => {
+        hook.result.current.app.extendGoal("goal-session");
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.app.notice).toContain("external runtime owns this session");
+      expect(sent().filter((event) => event.type === "goal.get")).toHaveLength(2);
       expect(hook.result.current.app.goalControlBusy).toBe(false);
       expect(
         sent().filter((event) => ["goal.update", "goal.clear", "goal.extend"].includes(event.type)),
@@ -5994,3 +6013,134 @@ describe("versioned remote Goal controls", () => {
     }
   });
 });
+
+for (const transition of ["loading", "blocked", "reconnect", "selection"] as const)
+  test(`pending Goal failure remains useful across ${transition}`, async () => {
+    setupBrowser();
+    const sent: any[] = [],
+      notices: string[] = [];
+    const options = {
+      sessionId: "first",
+      epoch: 1,
+      loading: false,
+      blocked: false,
+      selection: () => ({ sessionId: options.sessionId, epoch: options.epoch }),
+      chat: { goalId: "goal", goalRevision: 7, goalPaused: true, run: "idle" } as any,
+      send: (event: any) => {
+        sent.push(event);
+        return true;
+      },
+      publish() {},
+      notice: (message: string) => notices.push(message),
+    };
+    const hook = await renderHook(() => useRemoteGoalControls(options));
+    try {
+      await act(async () => {
+        hook.result.current.handle({ type: "auth.ok", capabilities: { goalControls: 1 } } as any);
+      });
+      await act(async () => {
+        hook.result.current.handle({
+          type: "goal.state",
+          sessionId: "first",
+          requestId: sent.at(-1).requestId,
+          ok: true,
+          goal: null,
+        });
+      });
+      await act(async () => {
+        hook.result.current.continueGoal("first");
+      });
+      const action = sent.findLast((e) => e.type === "goal.update");
+      if (transition === "loading") {
+        options.loading = true;
+        await hook.rerender();
+      }
+      if (transition === "blocked") {
+        options.blocked = true;
+        await hook.rerender();
+      }
+      if (transition === "selection") {
+        options.sessionId = "second";
+        options.epoch++;
+        await hook.rerender();
+      }
+      if (transition === "reconnect")
+        await act(async () => {
+          hook.result.current.handle({ type: "auth.ok", capabilities: { goalControls: 1 } } as any);
+        });
+      await act(async () => {
+        hook.result.current.handle({
+          type: "goal.updated",
+          sessionId: "first",
+          requestId: action.requestId,
+          ok: false,
+          message: "Goal changed; refresh and retry",
+        });
+      });
+      expect(notices.length).toBe(transition === "selection" ? 0 : 1);
+      if (transition === "loading") expect(notices[0]).toContain("Goal changed");
+      if (transition === "reconnect") expect(notices[0]).toContain("未确认");
+      expect(sent.filter((e) => e.type === "goal.update")).toHaveLength(1);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+for (const failure of ["send", "lost", "reply"] as const)
+  test(`Goal snapshot ${failure} failure can recover with a read before any mutation`, async () => {
+    setupBrowser();
+    const sent: any[] = [];
+    const options = {
+      sessionId: "first",
+      epoch: 1,
+      loading: false,
+      blocked: false,
+      selection: () => ({ sessionId: "first", epoch: 1 }),
+      chat: { goalId: "goal", goalRevision: 7, goalPaused: true, run: "idle" } as any,
+      send: (event: any) => {
+        sent.push(event);
+        return !(failure === "send" && sent.length === 1);
+      },
+      publish: (event: any) => {
+        options.chat.goalRevision = event.revision;
+      },
+      notice() {},
+    };
+    const hook = await renderHook(() => useRemoteGoalControls(options));
+    try {
+      await act(async () => {
+        hook.result.current.handle({ type: "auth.ok", capabilities: { goalControls: 1 } } as any);
+      });
+      if (failure === "reply")
+        await act(async () => {
+          hook.result.current.handle({
+            type: "goal.state",
+            sessionId: "first",
+            requestId: sent.at(-1).requestId,
+            ok: false,
+            message: "temporarily unavailable",
+          });
+        });
+      await act(async () => {
+        hook.result.current.continueGoal("first");
+      });
+      expect(sent.map((event) => event.type)).toEqual(["goal.get", "goal.get"]);
+      await act(async () => {
+        hook.result.current.handle({
+          type: "goal.state",
+          sessionId: "first",
+          requestId: sent.at(-1).requestId,
+          ok: true,
+          goal: { goalId: "goal", revision: 8, objective: "latest", paused: true },
+        });
+      });
+      await hook.rerender();
+      await act(async () => {
+        hook.result.current.continueGoal("first");
+      });
+      expect(sent.at(-1)).toMatchObject({ type: "goal.update", expectedRevision: 8 });
+      expect(sent.filter((event) => event.type === "goal.update")).toHaveLength(1);
+    } finally {
+      await hook.unmount();
+    }
+  });

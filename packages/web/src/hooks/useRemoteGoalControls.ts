@@ -4,6 +4,7 @@ import type { ChatState } from "../lib/streamReducer.js";
 
 type Pending = {
   legacy?: boolean;
+  unavailable?: string;
   kind?: "extend" | "clear" | "resume";
   id: string;
   sessionId: string;
@@ -64,8 +65,23 @@ export function useRemoteGoalControls(options: {
     read.current = undefined;
     clearTimeout(timer.current);
     setBusy(false);
-    if (supported && !options.loading && !options.blocked) refresh();
     return () => clearTimeout(timer.current);
+  }, [options.sessionId, options.epoch]);
+  useEffect(() => {
+    read.current = undefined;
+    const pending = action.current;
+    if (pending) {
+      action.current = undefined;
+      clearTimeout(timer.current);
+      setBusy(false);
+      if (owns(pending))
+        current.current.notice(
+          "目标操作结果未确认，主机可能仍在处理；正在刷新状态，请确认后再操作。",
+        );
+    }
+  }, [connection]);
+  useEffect(() => {
+    if (supported && !options.loading && !options.blocked) refresh();
   }, [
     supported,
     connection,
@@ -124,8 +140,13 @@ export function useRemoteGoalControls(options: {
         current.current.notice(event.message || "目标操作失败");
       return true;
     }
-    if (event.type === "goal.state") read.current = undefined;
-    else {
+    if (event.type === "goal.state") {
+      // Failed/lost reads keep stale revisions fenced; an explicit click can
+      // request another snapshot without resending the mutation.
+      if (event.ok) read.current = undefined;
+      else if (event.unsupported)
+        pending.unavailable = event.message || "当前会话不支持目标操作，请在所属主机中操作。";
+    } else {
       action.current = undefined;
       clearTimeout(timer.current);
       setBusy(false);
@@ -133,6 +154,9 @@ export function useRemoteGoalControls(options: {
     if (!event.ok) {
       if (event.type !== "goal.state" || !event.unsupported)
         current.current.notice(event.message || "目标操作失败");
+      // CAS refusal and timeout both require authoritative state, never a
+      // replay of the mutation using the captured, potentially stale revision.
+      if (event.type !== "goal.state" && !pending.legacy) refresh();
       return true;
     }
     if (event.type === "goal.extended") return true;
@@ -158,6 +182,12 @@ export function useRemoteGoalControls(options: {
         action.current
       )
         return;
+      if (supported && read.current) {
+        const unavailable = read.current.unavailable;
+        refresh();
+        o.notice(unavailable || "正在刷新目标状态，请确认后再操作。");
+        return;
+      }
       if (o.loading) {
         o.notice("目标状态尚未就绪，请稍后重试。");
         return;
@@ -203,7 +233,12 @@ export function useRemoteGoalControls(options: {
         if (action.current !== pending) return;
         action.current = undefined;
         setBusy(false);
-        if (owns(pending)) current.current.notice("目标操作未得到确认，请刷新后重试。");
+        if (owns(pending)) {
+          current.current.notice(
+            "目标操作结果未确认，主机可能仍在处理；正在刷新状态，请确认后再操作。",
+          );
+          if (!pending.legacy) refresh();
+        }
       };
       if (!sent) fail();
       else timer.current = setTimeout(fail, 12_000);

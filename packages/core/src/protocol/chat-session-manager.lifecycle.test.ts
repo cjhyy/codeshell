@@ -395,7 +395,9 @@ describe("Stop policy across idle eviction", () => {
       expect(session.wasCancelledSinceLastTurn()).toBe(true);
       await session.enqueueTurn("host context", { trigger: "host_message" });
       expect(session.wasCancelledSinceLastTurn()).toBe(true);
-      await session.enqueueTurn("real answer", { trigger: "user", injected: true });
+      await session.enqueueTurn("host reminder", { trigger: "user", injected: true });
+      expect(session.wasCancelledSinceLastTurn()).toBe(true);
+      await session.enqueueTurn("real answer", { trigger: "user" });
       expect(session.wasCancelledSinceLastTurn()).toBe(false);
       session.cancel();
       await manager.unloadIdleSession("stopped");
