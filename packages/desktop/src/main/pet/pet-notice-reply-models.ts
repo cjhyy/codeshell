@@ -17,9 +17,14 @@ type Settings = ReturnType<SettingsManager["get"]>;
 export type ExternalReplyModel = (modelKey: string, request: ReplyRequest) => Promise<string>;
 
 export interface ReplyModelOptions {
+  maxTokens?: number;
   external?: ExternalReplyModel;
   readSettings?: () => Settings;
-  callNative?: (config: LLMConfig, request: ReplyRequest) => Promise<string>;
+  callNative?: (
+    config: LLMConfig,
+    request: ReplyRequest,
+    bounds: { maxTokens: number },
+  ) => Promise<string>;
 }
 
 /**
@@ -53,7 +58,7 @@ export function createReplyModels(cwd: string, options: ReplyModelOptions = {}):
   const main = selected ?? undefined;
   const callNative =
     options.callNative ??
-    (async (resolved, { systemPrompt, user, signal }) => {
+    (async (resolved, { systemPrompt, user, signal }, bounds) => {
       const client = await createLLMClient(resolved);
       const response = await client.createMessage({
         systemPrompt,
@@ -61,7 +66,9 @@ export function createReplyModels(cwd: string, options: ReplyModelOptions = {}):
         tools: [],
         reasoning: { mode: "off" },
         requestVisible: false,
-        maxTokens: 1_000,
+        // A small JSON object: the owner's words are never echoed back at length
+        // (a brief's write-up asks for more).
+        maxTokens: bounds.maxTokens,
         signal,
       });
       return response.text ?? "";
@@ -76,7 +83,7 @@ export function createReplyModels(cwd: string, options: ReplyModelOptions = {}):
       const earlier = deduplicate ? resolveLLMConfigForTag(settings, "text", aux) : null;
       if (earlier && JSON.stringify(earlier) === JSON.stringify(resolved))
         throw new Error("same model as the auxiliary one");
-      return callNative(resolved, request);
+      return callNative(resolved, request, { maxTokens: options.maxTokens ?? 1_000 });
     };
   return [call(aux), call(main, true)];
 }

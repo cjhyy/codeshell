@@ -16,6 +16,8 @@ import {
   type ReplyItem,
   type ReplyModel,
 } from "./pet-notice-reply-interpreter.js";
+import { describeLocalTime } from "./pet-notice-defer.js";
+import { hostTimezoneOffsetMin } from "./pet-notice-policy.js";
 import { createReplyModels, type ExternalReplyModel } from "./pet-notice-reply-models.js";
 import type { NoticeActionRecord } from "./pet-notice-types.js";
 
@@ -219,6 +221,7 @@ export function createOwnerReplyHandling(
     models?: ReplyModel[];
     /** External selection is interpreted by a separate restricted Host runtime. */
     externalReplyModel?: ExternalReplyModel;
+    now?: () => number;
     onError: (error: unknown) => void;
   },
 ): {
@@ -232,10 +235,13 @@ export function createOwnerReplyHandling(
     execute: NoticeActionExecutor["execute"];
   };
 } {
+  const now = deps.now ?? Date.now;
   const executor = createNoticeActionExecutor({
     router: deps.router,
     controls: createNoticeActionControls(deps),
     onError: deps.onError,
+    now,
+    describeTime: (ms) => describeLocalTime(ms, now(), hostTimezoneOffsetMin),
   });
   return {
     interpret: (message, items, { bound }) => {
@@ -244,6 +250,7 @@ export function createOwnerReplyHandling(
       return interpretReply({
         message,
         items,
+        clock: { now: now(), timezoneOffsetMin: hostTimezoneOffsetMin(now()) },
         // A bound chat answers inside the gateway's 20 s route call: one model, 8 s.
         ...(bound ? { models: models.slice(0, 1), timeoutMs: BOUND_TIMEOUT_MS } : { models }),
         onError: (error) => deps.onError(error),

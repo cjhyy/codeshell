@@ -1,10 +1,13 @@
 import { dlog } from "../desktop-logger.js";
 import type { NoticeActions } from "./pet-notice-action-codes.js";
 import { composeNoticeBody, MAX_NOTICE_BODY, noticeLine } from "./pet-notice-compose.js";
+import type { NoticeDeferResult } from "./pet-notice-actions.js";
+import { deferNotice, isDeferrableKind } from "./pet-notice-defer.js";
 import { NoticeDigest } from "./pet-notice-digest.js";
 import { NoticeItems } from "./pet-notice-items.js";
 import {
   isPromptEnded,
+  MAX_DEFERS,
   newNoticeRecordId,
   type NoticeDecisionPrompt,
   type NoticeActionsPatch,
@@ -184,8 +187,10 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
             maxP0PerHour: settings.maxP0PerHour,
             mergeWindowMs: settings.mergeWindowSec * 1_000,
             timezoneOffsetMin: this.offset(now),
+            digestSlots: settings.digestSlots,
           };
         },
+        resend: (record) => this.resendHeld(record),
         unpack: (record) => unpackFacts(record.facts),
         stale: (record, now) => staleReason(record, now, this.options),
         submit: (digest) =>
@@ -385,6 +390,24 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
   /** Persist an item's use (or a pending link); a used item's waiting copies are withdrawn. */
   useAction(code: string, patch: NoticeActionsPatch): Promise<NoticeActionRecord | undefined> {
     return this.items.useAction(code, patch);
+  }
+
+  /** "Not now": keep a copy of the notice with this item for (about) `until` (clamped). */
+  async deferNotice(code: string, until: number | undefined): Promise<NoticeDeferResult> {
+    const ledger = this.options.ledger;
+    if (!ledger || this.disposed) return { ok: false, reason: "failed" };
+    return deferNotice(
+      {
+        ledger,
+        useAction: (actionCode, patch) => this.items.useAction(actionCode, patch),
+        now: this.now,
+        offset: (ms) => this.offset(ms),
+        schedule: () => this.digest?.schedule(),
+        log: this.log,
+      },
+      code,
+      until,
+    );
   }
 
   /** The Session started another run: its goal / limit / failure items close. */
@@ -751,6 +774,36 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     }
   }
 
+  /**
+   * A held standalone notice (a brief or heartbeat after quiet hours, a
+   * deferred one at its time) goes out again as a new notice with the same
+   * text, routed afresh; its dedupe key is the held record's own.
+   */
+  private resendHeld(record: NoticeRecord): Promise<RouteDecision> {
+    const { facts, target, channel = "auto" } = unpackFacts(record.facts);
+    // The text without an open item's ①② label (the item code keeps it as nonDirectBody).
+    const body = (typeof facts.nonDirectBody === "string" && facts.nonDirectBody) || record.body;
+    return this.submit({
+      kind: record.kind,
+      priority: record.priority,
+      dedupeKey: `again:${record.id}`,
+      ...(record.sessionId !== undefined ? { sessionId: record.sessionId } : {}),
+      ruleIds: record.ruleIds,
+      facts,
+      attention: "always",
+      channel,
+      target,
+      ...(body ? { body } : {}),
+      ...(record.deferCount !== undefined ? { deferCount: record.deferCount } : {}),
+      // Still put-off-able while under the limit.
+      ...(target.kind === "owner" &&
+      isDeferrableKind(record.kind) &&
+      (record.deferCount ?? 0) < MAX_DEFERS
+        ? { actions: { family: "notice" as const } }
+        : {}),
+    });
+  }
+
   /** The outbox delivery key of a record's (latest) send. */
   private deliveryKeyOf(record: NoticeRecord): string {
     const channel = record.delivery?.channel ?? record.decision?.im ?? "";
@@ -979,6 +1032,7 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
           ...(actions
             ? { actions: { ...actions, ...(slotted ? { slot: slotted.slot } : {}) } }
             : {}),
+          ...(notice.deferCount !== undefined ? { deferCount: notice.deferCount } : {}),
         },
         id !== undefined ? { id } : {},
       );

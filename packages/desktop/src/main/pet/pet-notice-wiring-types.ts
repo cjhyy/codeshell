@@ -175,6 +175,8 @@ export interface PetNoticeWiring {
   predictIm(channel: NoticeChannel, target: NoticeRule["target"]): RuleEffect["im"];
   /** A top-level work Session (not Mimi's, not a tailed CLI rollout) that rules may watch. */
   isEligibleSession(sessionId: string): boolean;
+  /** The owner looked at this Session on the desktop at or after `ms`. */
+  wasSessionViewedSince(sessionId: string, ms: number): boolean;
   /**
    * The NotifyMe host action (`PET_RULE_UPSERT_ACTION`) called in-process,
    * for desktop external runtimes; `callerSessionId` is the Host-bound Session.

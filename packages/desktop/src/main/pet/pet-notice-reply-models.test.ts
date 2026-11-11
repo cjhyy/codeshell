@@ -37,6 +37,23 @@ const ITEMS = [
 ];
 
 describe("provider-aware notice reply model chain", () => {
+  test.each([undefined, 2_000])(
+    "native calls preserve the maxTokens option %s",
+    async (maxTokens) => {
+      const bounds: Array<{ maxTokens: number }> = [];
+      const models = createReplyModels("/unused", {
+        maxTokens,
+        readSettings: () => settings(),
+        callNative: async (_config, _request, limits) => {
+          bounds.push(limits);
+          return '{"kind":"unrelated"}';
+        },
+      });
+      await interpretReply({ message: "你好", items: ITEMS, models });
+      expect(bounds).toEqual([{ maxTokens: maxTokens ?? 1_000 }]);
+    },
+  );
+
   test.each(["codex/gpt-6.1-sol", "claude-code/sonnet"])(
     "external default %s interprets with exactly one external candidate",
     async (model) => {

@@ -160,6 +160,7 @@ import { PetWorkInboxStore } from "./pet/pet-work-inbox-store.js";
 import { PetHostActionReceiptStore } from "./pet/pet-host-action-receipts.js";
 import { archivePetSessionsBySelector } from "./pet/pet-session-archive.js";
 import { createPetFollowUpRules } from "./pet/pet-follow-up-rules.js";
+import { wirePetProactive } from "./pet/pet-proactive-wiring.js";
 import { PetRuleScheduler, isPetRuleScheduleJob } from "./pet/pet-rule-schedule.js";
 import { PetContextLinkStore } from "./pet/pet-context-links.js";
 import { PetWorkMemoryStore } from "./pet/pet-work-memory-store.js";
@@ -2233,8 +2234,22 @@ async function createWindow(): Promise<BrowserWindow> {
           mimiSessionId ? imRuntimeSessions.readSessionState(mimiSessionId) : undefined,
         ),
     });
+    // Briefs and the heartbeat are system schedule rules on the same scheduler.
+    const petProactive = wirePetProactive({
+      notices,
+      userDataDir: app.getPath("userData"),
+      cwd: resolveNoRepoCwd(),
+      externalReplyModel: createPetExternalReplyModel({
+        service: () => externalRuntime.service,
+        cwd: resolveNoRepoCwd(),
+      }),
+      tasks: () => longTaskStore.getSnapshot().tasks,
+      projection: () => aggregator.getSnapshot(),
+      log: (event, data) => dlog("main", event, data),
+    });
     // Follow-ups are schedule rules; the old follow-ups.json is deleted, not migrated.
     const followUpRuntime = await createPetFollowUpRules({
+      fireSystem: () => petProactive.fire,
       rules: notices.ruleStore,
       legacyFollowUpsPath: resolve(app.getPath("userData"), "pet", "follow-ups.json"),
       powerEvents: powerMonitor,
@@ -2255,6 +2270,7 @@ async function createWindow(): Promise<BrowserWindow> {
     });
     const { petFollowUps, followUpHost } = followUpRuntime;
     petRuleScheduler = followUpRuntime.coordinator;
+    void petProactive.start();
     // Entering a Work Session from a chat: the store, bridge, bind executor
     // and reply delivery are composed in session-bridge-wiring.ts so this
     // root only names the collaborators it already owns.
@@ -2757,6 +2773,7 @@ async function createWindow(): Promise<BrowserWindow> {
         notices,
         ownerChannels: () => imGatewayService.ownerChannels(),
         goals: externalGoalSessions,
+        proactive: () => petProactive.status(),
       }),
       workInbox: petWorkInbox,
       // Read-only topic-segment view for the Mimi chat UI. `segments` carries

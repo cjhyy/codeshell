@@ -37,12 +37,26 @@ export interface ScheduleWhen {
   catchUpUntil?: number;
 }
 
-/** What a schedule rule does when it fires. */
-export type ScheduleThen =
+/** What an owner-asked follow-up does when it fires. */
+export type FollowUpThen =
   /** Tell the owner (or the IM conversation that asked) the text: Notice `followup.due`. */
   | { mode: "remind"; title: string; text: string }
   /** Wake Mimi to continue exactly `sourceSessionId`, then tell the owner what happened. */
   | { mode: "run-mimi"; title: string; text: string; sourceSessionId: string; taskId?: string };
+
+/** What one of Mimi's own (system) schedule rules does (design §10.1, §10.2). */
+export type SystemScheduleThen =
+  /** Collect the facts since the last brief, have them written up, send `brief.<brief>`. */
+  | { mode: "compose"; brief: "morning" | "evening" }
+  /** Heartbeat: look for new facts; only if there are any, ask a model whether to say something. */
+  | { mode: "judge"; kind: "heartbeat" };
+
+/** What a schedule rule does when it fires. */
+export type ScheduleThen = FollowUpThen | SystemScheduleThen;
+
+export function isSystemScheduleThen(then: ScheduleThen): then is SystemScheduleThen {
+  return then.mode === "compose" || then.mode === "judge";
+}
 
 export type RuleWakeStatus = PetFollowUpWakeStatus;
 
@@ -108,8 +122,8 @@ function isText(value: unknown, max: number): value is string {
  * parser then has the last word. Whether it ever fires is found by the first
  * occurrence search (`firstOccurrence` → null), done once at registration.
  */
-export function cronProblem(cron: unknown): string | undefined {
-  const shape = followUpRecurrenceProblem(cron);
+export function cronProblem(cron: unknown, options: CronOptions = {}): string | undefined {
+  const shape = followUpRecurrenceProblem(options.halfHourly ? hourlyForm(cron) : cron);
   if (shape) return shape;
   let parsed: ReturnType<typeof parseCronExpression>;
   try {
@@ -127,12 +141,34 @@ export function cronProblem(cron: unknown): string | undefined {
   return undefined;
 }
 
-/** Structural cron check only (no date search): cheap enough for every row load. */
-function isCronShape(value: unknown): value is string {
-  return cronProblem(value) === undefined;
+/**
+ * The one exemption from "at most hourly": Mimi's heartbeat (a system rule
+ * whose cron the host writes, never a model) may fire twice an hour, at
+ * minutes exactly 30 apart ("5,35 9-21 * * *"). Nothing else may.
+ */
+export interface CronOptions {
+  halfHourly?: boolean;
 }
 
-export function parseScheduleWhen(value: unknown): ScheduleWhen | undefined {
+const HALF_HOURLY_MINUTES = /^(\d{1,2}),(\d{1,2})(?=\s)/u;
+
+/** A half-hourly cron as its hourly twin (first minute only); anything else unchanged. */
+function hourlyForm(cron: unknown): unknown {
+  if (typeof cron !== "string") return cron;
+  const match = HALF_HOURLY_MINUTES.exec(cron);
+  if (!match || Number(match[1]) >= 30 || Number(match[2]) !== Number(match[1]) + 30) return cron;
+  return cron.replace(HALF_HOURLY_MINUTES, match[1]!);
+}
+
+/** Structural cron check only (no date search): cheap enough for every row load. */
+function isCronShape(value: unknown, options?: CronOptions): value is string {
+  return cronProblem(value, options) === undefined;
+}
+
+export function parseScheduleWhen(
+  value: unknown,
+  options: CronOptions = {},
+): ScheduleWhen | undefined {
   if (!isRecord(value) || value.kind !== "schedule") return undefined;
   if (
     !hasOnlyKeys(value, ["kind", "at", "cron", "label", "timezone", "missedPolicy", "catchUpUntil"])
@@ -140,7 +176,7 @@ export function parseScheduleWhen(value: unknown): ScheduleWhen | undefined {
     return undefined;
   const once = value.at !== undefined;
   if (once === (value.cron !== undefined)) return undefined;
-  if (once ? !isFollowUpTimestamp(value.at) : !isCronShape(value.cron)) return undefined;
+  if (once ? !isFollowUpTimestamp(value.at) : !isCronShape(value.cron, options)) return undefined;
   if (once ? value.label !== undefined : !isFollowUpScheduleLabel(value.label)) return undefined;
   if (!isFollowUpTimezone(value.timezone)) return undefined;
   if (value.missedPolicy !== "skip" && value.missedPolicy !== "fire-once") return undefined;
@@ -154,6 +190,15 @@ export function parseScheduleWhen(value: unknown): ScheduleWhen | undefined {
 
 export function parseScheduleThen(value: unknown): ScheduleThen | undefined {
   if (!isRecord(value)) return undefined;
+  if (value.mode === "compose")
+    return hasOnlyKeys(value, ["mode", "brief"]) &&
+      (value.brief === "morning" || value.brief === "evening")
+      ? (value as ScheduleThen)
+      : undefined;
+  if (value.mode === "judge")
+    return hasOnlyKeys(value, ["mode", "kind"]) && value.kind === "heartbeat"
+      ? (value as ScheduleThen)
+      : undefined;
   if (!isText(value.title, SCHEDULE_TITLE_MAX) || !isText(value.text, SCHEDULE_TEXT_MAX))
     return undefined;
   if (value.mode === "remind")
@@ -236,7 +281,10 @@ export function nextOccurrence(when: ScheduleWhen, after: number): number | null
  */
 export function occurrenceDeadline(when: ScheduleWhen, occurrence: number): number {
   if (when.at !== undefined) return when.catchUpUntil ?? when.at + DEFAULT_CATCH_UP_MS;
-  const hours = [...parseCronExpression(when.cron!).hours].sort((a, b) => a - b);
+  const parsed = parseCronExpression(when.cron!);
+  // Half-hourly (the heartbeat): the next occurrence can be 30 minutes away.
+  if (parsed.minutes.size > 1) return occurrence + HOUR_MS / 2 - CATCH_UP_MARGIN_MS;
+  const hours = [...parsed.hours].sort((a, b) => a - b);
   let gap = 24;
   for (let index = 0; index < hours.length; index += 1) {
     const next = hours[(index + 1) % hours.length]! + (index + 1 === hours.length ? 24 : 0);
