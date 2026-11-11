@@ -4,6 +4,7 @@ import { dlog } from "../desktop-logger.js";
 import { createPetDeliveryResolver } from "./pet-delivery-plan.js";
 import { createNoticeAttention, SessionViewTracker } from "./pet-notice-attention.js";
 import { createDecisionHooks } from "./pet-notice-decision-hooks.js";
+import { createExternalDecisions } from "./pet-notice-external-decisions.js";
 import { createNoticeRuleAction, predictedIm } from "./pet-notice-host-action.js";
 import { PetNoticeLedger } from "./pet-notice-ledger.js";
 import { PetNoticeMediaStore } from "./pet-notice-media.js";
@@ -60,7 +61,25 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
   const receipts = new PetReceiptStore(join(petDir, "attention-receipts.json"), now);
   const views = new SessionViewTracker();
   const settings = createNoticeSettings({ readSettings: () => deps.readSettings(), now, log });
-  const view = createNoticeProjectionView(deps);
+  let disposed = false;
+  // Read lazily: where a prompt goes needs the hooks and view built below.
+  const externalDecisions = createExternalDecisions({
+    ...(deps.externalApprovals ? { source: deps.externalApprovals } : {}),
+    tasks: () => deps.longTasks.getSnapshot().tasks,
+    deliveryFor: (sessionId, task) => decisions.hooks.deliveryFor(sessionId, task),
+    title: (sessionId) => view.sessionTitle(sessionId),
+    onChange: (event) => {
+      // PetImDecisions looks now (a prompt to send, or one to end).
+      decisions.nudge(event.sessionId);
+      // Answered anywhere, timed out or dropped: never replayed later.
+      if (event.type === "resolved")
+        void ready.then(() =>
+          disposed ? undefined : router.revokeDecision(event.sessionId, event.requestId),
+        );
+    },
+    now,
+  });
+  const view = createNoticeProjectionView({ ...deps, externalDecisions });
   const outlets = createNoticeOutlets({
     gateway: deps.gateway,
     outbox: deps.outbox,
@@ -143,6 +162,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
   const decisions = createDecisionHooks({
     view,
     deliveries,
+    external: externalDecisions,
     isPresent: presence.isPresent,
     getSystemIdleTimeSec: () => deps.presence.getSystemIdleTimeSec(),
     presenceIdleSec: () => settings.settings().presenceIdleSec,
@@ -218,7 +238,6 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     .then(() => router.recover())
     .catch((error) => log("pet.notice.recover_failed", { error: errorText(error) }));
 
-  let disposed = false;
   const replay = createNoticeReplay({
     router,
     ready,
@@ -291,6 +310,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     armDelegationRule: closure.armDelegationRule,
     inboundReplay: replay.inboundReplay,
     decisions: decisions.hooks,
+    externalDecisions,
     deliveries,
     flush: async () => {
       await flushParked();
@@ -316,6 +336,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
       replay.dispose();
       removeHostAction();
       unsubscribeProjection();
+      externalDecisions.dispose();
       decisions.dispose();
       // Reports parked on runs that will now never close still reach the
       // router before it stops taking notices.

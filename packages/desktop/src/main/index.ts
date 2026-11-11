@@ -153,6 +153,7 @@ import { PetWorkDelegationHost } from "./pet/pet-work-delegation-host.js";
 import { PetChatAttachmentContext } from "./pet/pet-chat-attachment-context.js";
 import { getSessionCwdIndex } from "./session-cwd-index.js";
 import { wirePetNotices, type PetNoticeWiring } from "./pet/pet-notice-wiring.js";
+import { withExternalDecisions } from "./pet/pet-notice-external-decisions.js";
 import { createExternalSessionCatalog } from "./pet/pet-notice-external-sessions.js";
 import { createPetNoticeControls } from "./pet/pet-notice-ipc.js";
 import { PetWorkInboxStore } from "./pet/pet-work-inbox-store.js";
@@ -1895,6 +1896,10 @@ async function createWindow(): Promise<BrowserWindow> {
         runtime: () => externalRuntime.service,
         readState: (id) => externalGoalSessions.readSessionState(id),
       }),
+      externalApprovals: {
+        approvals: () => externalRuntime.approvals,
+        subscribe: (listener) => externalRuntime.subscribeApprovals(listener),
+      },
       onWorkerLost: (keep) => sessionOutcomeDeriver.reset(keep),
     });
     petNotices = notices;
@@ -2026,23 +2031,26 @@ async function createWindow(): Promise<BrowserWindow> {
     petLongTaskCoordinator = longTaskCoordinator;
     const decisionBridge = bridge;
     petImDecisions = new PetImDecisions({
-      read: () => {
-        pendingMobileApprovals.setWorkerState(
-          decisionBridge.workerGeneration(),
-          decisionBridge.hasLiveWorker(),
-        );
-        return collectImDecisions(
-          aggregator.getSnapshot(),
-          longTaskStore.getSnapshot().tasks,
-          pendingMobileApprovals.replayAllLines(),
-          notices.decisions.deliveryFor,
-        );
-      },
-      ...imDecisionWorkerActions(
-        (method, params, timeoutMs, options) =>
-          decisionBridge.requestWorker(method, params, timeoutMs, options),
-        (params) => mobileOrchestrator.broadcastApprovalResolved(params),
-      ),
+      // The worker's decisions and the desktop external runtimes' (Codex / Claude Code).
+      ...withExternalDecisions(notices.externalDecisions, {
+        read: () => {
+          pendingMobileApprovals.setWorkerState(
+            decisionBridge.workerGeneration(),
+            decisionBridge.hasLiveWorker(),
+          );
+          return collectImDecisions(
+            aggregator.getSnapshot(),
+            longTaskStore.getSnapshot().tasks,
+            pendingMobileApprovals.replayAllLines(),
+            notices.decisions.deliveryFor,
+          );
+        },
+        ...imDecisionWorkerActions(
+          (method, params, timeoutMs, options) =>
+            decisionBridge.requestWorker(method, params, timeoutMs, options),
+          (params) => mobileOrchestrator.broadcastApprovalResolved(params),
+        ),
+      }),
       // The router decides whether a prompt goes to IM (presence, caps) and
       // where; its ledger records hold each prompt's lifecycle.
       router: notices.router,

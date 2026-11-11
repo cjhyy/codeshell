@@ -6,6 +6,8 @@
 import { describe, expect, test } from "bun:test";
 import {
   ExternalRuntimeApprovals,
+  EXTERNAL_APPROVAL_ID_PREFIX,
+  isExternalApprovalRequestId,
   parseExternalApprovalDecision,
   type ExternalApprovalEvent,
 } from "./external-runtime-approvals.js";
@@ -73,6 +75,7 @@ describe("ExternalRuntimeApprovals", () => {
       sessionId: "selected",
       requestId: selectedId,
       ownerWebContentsId: 1,
+      cause: "answered",
       approved: true,
       answer: "Yes",
     });
@@ -86,6 +89,7 @@ describe("ExternalRuntimeApprovals", () => {
         sessionId: "same-owner",
         requestId: sameOwnerId,
         ownerWebContentsId: 1,
+        cause: "cancelled",
         approved: false,
       },
       {
@@ -93,6 +97,7 @@ describe("ExternalRuntimeApprovals", () => {
         sessionId: "other-owner",
         requestId: otherOwnerId,
         ownerWebContentsId: 2,
+        cause: "cancelled",
         approved: false,
       },
     ]);
@@ -148,6 +153,7 @@ describe("ExternalRuntimeApprovals", () => {
       sessionId: "selected",
       requestId,
       ownerWebContentsId: 1,
+      cause: "timed_out",
     });
     expect(approvals.pendingForSession("selected", 1)).toEqual([]);
     expect(approvals.settleForSession("selected", requestId, { approved: true }, 1)).toBe(false);
@@ -388,5 +394,71 @@ describe("ExternalRuntimeApprovals", () => {
       scope: "session",
       pathScope: "dir",
     });
+  });
+
+  test("main reads every pending prompt with its deadline, for Mimi's decision prompts", async () => {
+    const owner = fakeWindow(1);
+    const other = fakeWindow(2);
+    let clock = 1_000;
+    const approvals = new ExternalRuntimeApprovals({
+      windows: () => [owner.window, other.window] as never,
+      ownerWebContentsId: (sessionId) => (sessionId === "two" ? 2 : 1),
+      timeoutMs: 60_000,
+      now: () => clock,
+    });
+    const first = approvals.request("one", request);
+    clock = 2_000;
+    void approvals.request("two", { toolName: "__ask_user__", args: { question: "Pick" } });
+    const firstId = (owner.sent[0]!.payload as { requestId: string }).requestId;
+    const secondId = (other.sent[0]!.payload as { requestId: string }).requestId;
+    expect(firstId.startsWith(EXTERNAL_APPROVAL_ID_PREFIX)).toBe(true);
+    expect(isExternalApprovalRequestId(firstId)).toBe(true);
+    expect(isExternalApprovalRequestId("req-1")).toBe(false);
+    expect(approvals.pendingAll()).toEqual([
+      { sessionId: "one", requestId: firstId, request, createdAt: 1_000, expiresAt: 61_000 },
+      {
+        sessionId: "two",
+        requestId: secondId,
+        request: { toolName: "__ask_user__", args: { question: "Pick" } },
+        createdAt: 2_000,
+        expiresAt: 62_000,
+      },
+    ]);
+    // Main answers without a window id (an IM reply has none).
+    expect(approvals.settle(firstId, { approved: true })).toBe(true);
+    await expect(first).resolves.toEqual({ approved: true });
+    expect(approvals.pendingAll().map((entry) => entry.requestId)).toEqual([secondId]);
+    approvals.cancelSession("two");
+    expect(approvals.pendingAll()).toEqual([]);
+  });
+
+  test("several observers each hear every change; one failing never stops the others", async () => {
+    const { window, sent } = fakeWindow(1);
+    const mobile: ExternalApprovalEvent[] = [];
+    const mimi: ExternalApprovalEvent[] = [];
+    const approvals = new ExternalRuntimeApprovals({
+      windows: () => [window] as never,
+      onPendingChange: (event) => {
+        mobile.push(event);
+        throw new Error("phone disconnected");
+      },
+    });
+    const unsubscribeBroken = approvals.subscribe(() => {
+      throw new Error("observer bug");
+    });
+    const unsubscribe = approvals.subscribe((event) => mimi.push(event));
+    const pending = approvals.request("one", request);
+    const { requestId } = sent[0]!.payload as { requestId: string };
+    expect(approvals.settle(requestId, { approved: false, reason: "no" })).toBe(true);
+    await expect(pending).resolves.toEqual({ approved: false, reason: "no" });
+    expect(mobile.map((event) => event.type)).toEqual(["requested", "resolved"]);
+    expect(mimi).toEqual(mobile);
+    expect(mimi[1]).toMatchObject({ type: "resolved", cause: "answered", approved: false });
+    unsubscribe();
+    unsubscribeBroken();
+    void approvals.request("one", request);
+    expect(mimi).toHaveLength(2);
+    expect(mobile).toHaveLength(3);
+    approvals.cancelSession("one");
   });
 });

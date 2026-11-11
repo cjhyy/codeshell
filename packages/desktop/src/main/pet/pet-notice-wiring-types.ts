@@ -4,6 +4,10 @@ import type { DesktopNotificationInput } from "../desktop-notifier.js";
 import type { HostActionHandler } from "../host-action-dispatch.js";
 import type { PetNotificationSettingsView } from "../../shared/pet-notices.js";
 import type { PetDeliveryResolver } from "./pet-delivery-plan.js";
+import type {
+  ExternalDecisionSource,
+  PetExternalDecisions,
+} from "./pet-notice-external-decisions.js";
 import type { ExternalNoticeSessionCatalog } from "./pet-notice-external-sessions.js";
 import type { PetIpcAttention } from "./pet-ipc.js";
 import type {
@@ -52,6 +56,8 @@ export interface PetNoticeWiringDeps {
   onWorkerLost?: (keep: (sessionId: string) => boolean) => void;
   /** Desktop external-runtime Sessions: eligible, titled and busy without the projection. */
   externalSessions?: ExternalNoticeSessionCatalog;
+  /** Desktop external runtimes' approval prompts and questions (`ExternalRuntimeApprovals`). */
+  externalApprovals?: ExternalDecisionSource;
   /**
    * IM conversations that receive a Session's turn replies; resolved lazily
    * (built after this wiring). A done / failed notice for a conversation the
@@ -117,6 +123,11 @@ export interface PetNoticeWiring {
   inboundReplay(origin: PetInboundOrigin | undefined): PetInboundReplay | undefined;
   /** Pending decisions: PetImDecisions asks here where a decision's prompt goes. */
   decisions: PetDecisionNoticeHooks;
+  /**
+   * Desktop external runtimes' pending decisions as IM decisions, merged into
+   * PetImDecisions' read and answer by `withExternalDecisions`.
+   */
+  externalDecisions: PetExternalDecisions;
   /**
    * Who must be told about a Session's outcome: the single source for the
    * rule watcher, the task closure, decision prompts and the bound-Session bridge.

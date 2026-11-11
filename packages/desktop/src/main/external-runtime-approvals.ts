@@ -34,6 +34,27 @@ export interface ExternalApprovalDecision {
   pathScope?: "file" | "dir" | "tool";
 }
 
+/** Every external request id starts with this, so no native (worker) request id can collide. */
+export const EXTERNAL_APPROVAL_ID_PREFIX = "external-approval-";
+
+/** A request id minted here (a desktop external runtime's approval or question). */
+export function isExternalApprovalRequestId(requestId: string): boolean {
+  return requestId.startsWith(EXTERNAL_APPROVAL_ID_PREFIX);
+}
+
+/** Why a prompt stopped waiting: someone answered it, its deadline passed, or its runtime/window went away. */
+export type ExternalApprovalCause = "answered" | "timed_out" | "cancelled";
+
+/** One unresolved prompt, as Main reads it (Mimi's IM decision prompts). */
+export interface ExternalPendingApproval {
+  sessionId: string;
+  requestId: string;
+  request: ExternalApprovalRequest;
+  createdAt: number;
+  /** When it is denied unanswered. */
+  expiresAt: number;
+}
+
 /** Main-owned notifications; consumers still authorize each receiving viewer. */
 export type ExternalApprovalEvent =
   | {
@@ -48,6 +69,7 @@ export type ExternalApprovalEvent =
       sessionId: string;
       requestId: string;
       ownerWebContentsId: number;
+      cause: ExternalApprovalCause;
       approved?: boolean;
       answer?: string;
     };
@@ -80,6 +102,8 @@ interface Pending {
   sessionId: string;
   request: ExternalApprovalRequest;
   targetWebContentsId: number;
+  createdAt: number;
+  expiresAt: number;
   resolve: (decision: ExternalApprovalDecision) => void;
   timer: ReturnType<typeof setTimeout>;
 }
@@ -95,6 +119,7 @@ const APPROVAL_TIMEOUT_MS = 10 * 60_000;
 
 export class ExternalRuntimeApprovals {
   private readonly pending = new Map<string, Pending>();
+  private readonly observers = new Set<(event: ExternalApprovalEvent) => void>();
 
   hasPendingSession(sessionId: string): boolean {
     return [...this.pending.values()].some((entry) => entry.sessionId === sessionId);
@@ -110,6 +135,8 @@ export class ExternalRuntimeApprovals {
       timeoutMs?: number;
       /** Mirrors successful prompts and their retirement without granting response authority. */
       onPendingChange?: (event: ExternalApprovalEvent) => void;
+      /** Test seam: the clock a prompt's `createdAt` / deadline is read from. */
+      now?: () => number;
     },
   ) {}
 
@@ -135,13 +162,15 @@ export class ExternalRuntimeApprovals {
 
     // A renderer may restore old transcript cards after Main restarts. Never
     // reuse their ids for an unrelated new prompt.
-    const requestId = `external-approval-${randomUUID()}`;
+    const requestId = `${EXTERNAL_APPROVAL_ID_PREFIX}${randomUUID()}`;
+    const timeoutMs = this.deps.timeoutMs ?? APPROVAL_TIMEOUT_MS;
+    const createdAt = this.deps.now?.() ?? Date.now();
     return new Promise<ExternalApprovalDecision>((resolve) => {
       const timer = setTimeout(() => {
-        if (!this.finish(requestId, { approved: false, reason: "approval timed out" }, true))
+        if (!this.finish(requestId, { approved: false, reason: "approval timed out" }, "timed_out"))
           return;
         dlog("external-runtime", "approval.timed_out", { sessionId, tool: request.toolName });
-      }, this.deps.timeoutMs ?? APPROVAL_TIMEOUT_MS);
+      }, timeoutMs);
       // `unref` so a parked prompt cannot keep the process alive at quit.
       (timer as unknown as { unref?: () => void }).unref?.();
 
@@ -149,6 +178,8 @@ export class ExternalRuntimeApprovals {
         sessionId,
         request,
         targetWebContentsId: target.webContents.id,
+        createdAt,
+        expiresAt: createdAt + timeoutMs,
         resolve,
         timer,
       });
@@ -200,7 +231,7 @@ export class ExternalRuntimeApprovals {
       dlog("external-runtime", "approval.wrong_window", { requestId });
       return false;
     }
-    this.finish(requestId, decision);
+    this.finish(requestId, decision, "answered");
     dlog("external-runtime", "approval.settled", { requestId, approved: decision.approved });
     return true;
   }
@@ -226,10 +257,11 @@ export class ExternalRuntimeApprovals {
   cancelSession(sessionId: string): void {
     for (const [requestId, entry] of [...this.pending]) {
       if (entry.sessionId !== sessionId) continue;
-      this.finish(requestId, {
-        approved: false,
-        reason: "session closed before the prompt was answered",
-      });
+      this.finish(
+        requestId,
+        { approved: false, reason: "session closed before the prompt was answered" },
+        "cancelled",
+      );
     }
   }
 
@@ -237,10 +269,11 @@ export class ExternalRuntimeApprovals {
   cancelWindow(webContentsId: number): void {
     for (const [requestId, entry] of [...this.pending]) {
       if (entry.targetWebContentsId !== webContentsId) continue;
-      this.finish(requestId, {
-        approved: false,
-        reason: "window closed before the prompt was answered",
-      });
+      this.finish(
+        requestId,
+        { approved: false, reason: "window closed before the prompt was answered" },
+        "cancelled",
+      );
     }
   }
 
@@ -260,6 +293,30 @@ export class ExternalRuntimeApprovals {
     );
   }
 
+  /**
+   * Every unresolved prompt, for Main itself (Mimi's IM decision prompts, which
+   * answer through {@link settle} without a window id). Never handed to a
+   * renderer or a paired client: those see only their own window's prompts.
+   */
+  pendingAll(): ExternalPendingApproval[] {
+    return [...this.pending].map(([requestId, entry]) => ({
+      sessionId: entry.sessionId,
+      requestId,
+      request: entry.request,
+      createdAt: entry.createdAt,
+      expiresAt: entry.expiresAt,
+    }));
+  }
+
+  /**
+   * Hear every prompt appear and retire, besides `onPendingChange`. Each
+   * observer is isolated: one that throws cannot keep another from hearing.
+   */
+  subscribe(listener: (event: ExternalApprovalEvent) => void): () => void {
+    this.observers.add(listener);
+    return () => this.observers.delete(listener);
+  }
+
   /** Reconnect replay must be scoped to both the selected Session and its owner. */
   pendingForSession(sessionId: string, ownerWebContentsId: number) {
     return this.pendingForWindow(ownerWebContentsId).filter(
@@ -267,7 +324,12 @@ export class ExternalRuntimeApprovals {
     );
   }
 
-  private finish(requestId: string, decision: ExternalApprovalDecision, timedOut = false): boolean {
+  private finish(
+    requestId: string,
+    decision: ExternalApprovalDecision,
+    cause: ExternalApprovalCause,
+  ): boolean {
+    const timedOut = cause === "timed_out";
     const entry = this.pending.get(requestId);
     if (!entry) return false;
     this.pending.delete(requestId);
@@ -295,6 +357,7 @@ export class ExternalRuntimeApprovals {
       sessionId: entry.sessionId,
       requestId,
       ownerWebContentsId: entry.targetWebContentsId,
+      cause,
       ...(timedOut ? {} : { approved: decision.approved }),
       ...(decision.answer !== undefined ? { answer: decision.answer } : {}),
     });
@@ -302,14 +365,17 @@ export class ExternalRuntimeApprovals {
   }
 
   private notify(event: ExternalApprovalEvent): void {
-    try {
-      this.deps.onPendingChange?.(event);
-    } catch (error) {
-      // A disconnected phone cannot strand or change the original approval.
-      dlog("external-runtime", "approval.observer_failed", {
-        requestId: event.requestId,
-        error: error instanceof Error ? error.message : String(error),
-      });
+    const first = this.deps.onPendingChange;
+    for (const observer of first ? [first, ...this.observers] : [...this.observers]) {
+      try {
+        observer(event);
+      } catch (error) {
+        // A disconnected phone cannot strand or change the original approval.
+        dlog("external-runtime", "approval.observer_failed", {
+          requestId: event.requestId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
   }
 

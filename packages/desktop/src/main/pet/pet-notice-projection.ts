@@ -1,3 +1,4 @@
+import type { PetExternalDecisions } from "./pet-notice-external-decisions.js";
 import type { ExternalNoticeSessionCatalog } from "./pet-notice-external-sessions.js";
 import type { PetAttentionOptions } from "./pet-notice-types.js";
 import type {
@@ -31,6 +32,8 @@ export function createNoticeProjectionView(options: {
   isMimiSession?: (sessionId: string) => boolean;
   /** Desktop external-runtime Sessions, which the worker projection never lists. */
   externalSessions?: ExternalNoticeSessionCatalog;
+  /** Desktop external runtimes' decisions: pending in their approval router, not the projection. */
+  externalDecisions?: Pick<PetExternalDecisions, "isExternal" | "status">;
 }): PetNoticeProjectionView {
   const snapshot = (): DesktopPetProjectionSnapshot => options.projection.getSnapshot();
   const workSession = (sessionId: string) =>
@@ -56,6 +59,9 @@ export function createNoticeProjectionView(options: {
       return options.externalSessions?.get(sessionId)?.busy === true;
     },
     isDecisionStillPending: (sessionId, requestId) => {
+      const external = options.externalDecisions;
+      if (external?.isExternal(sessionId, requestId))
+        return external.status(sessionId, requestId) === "pending";
       const current = snapshot();
       // A missed snapshot empties the pending list while the worker may be
       // alive: only a live snapshot without the decision says it was resolved.

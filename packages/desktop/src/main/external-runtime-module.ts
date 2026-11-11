@@ -1,9 +1,13 @@
-import { ExternalRuntimeApprovals } from "./external-runtime-approvals.js";
+import {
+  ExternalRuntimeApprovals,
+  type ExternalApprovalEvent,
+} from "./external-runtime-approvals.js";
 import { ExternalRuntimeMemory } from "./external-runtime-memory.js";
 import {
   ExternalRuntimeService,
   type ExternalRuntimeServiceDeps,
 } from "./external-runtime-service.js";
+import { dlog } from "./desktop-logger.js";
 import type { DesktopModule } from "./desktop-shutdown.js";
 
 interface ExternalRuntimeModuleOptions {
@@ -14,6 +18,11 @@ interface ExternalRuntimeModuleOptions {
 interface ExternalRuntimeModule extends DesktopModule {
   readonly service: ExternalRuntimeService | null;
   readonly approvals: ExternalRuntimeApprovals | null;
+  /**
+   * Hear every approval prompt appear and retire, from the current router and
+   * any later one (the module may start after the listener subscribes).
+   */
+  subscribeApprovals(listener: (event: ExternalApprovalEvent) => void): () => void;
 }
 
 /**
@@ -25,6 +34,7 @@ export function createExternalRuntimeModule(
 ): ExternalRuntimeModule {
   let service: ExternalRuntimeService | null = null;
   let approvals: ExternalRuntimeApprovals | null = null;
+  const approvalListeners = new Set<(event: ExternalApprovalEvent) => void>();
   return {
     name: "external-runtime",
     get service() {
@@ -33,9 +43,28 @@ export function createExternalRuntimeModule(
     get approvals() {
       return approvals;
     },
+    subscribeApprovals(listener) {
+      // A wrapper per subscription, so subscribing one listener twice is two subscriptions.
+      const entry = (event: ExternalApprovalEvent) => listener(event);
+      approvalListeners.add(entry);
+      return () => approvalListeners.delete(entry);
+    },
     start() {
       const deps = options();
       const runtimeApprovals = new ExternalRuntimeApprovals(deps.approvals);
+      // One observer for every listener, present and later; each is isolated.
+      runtimeApprovals.subscribe((event) => {
+        for (const listener of [...approvalListeners]) {
+          try {
+            listener(event);
+          } catch (error) {
+            dlog("external-runtime", "approval.observer_failed", {
+              requestId: event.requestId,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+        }
+      });
       approvals = runtimeApprovals;
       service = new ExternalRuntimeService({
         ...deps.service,

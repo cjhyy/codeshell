@@ -217,6 +217,13 @@ export interface PetImDecisionsOptions {
   projectionLive?: () => boolean;
   /** The worker is really gone (reclaimed, or no live worker): its requests are cancelled. */
   workerGone?: () => boolean;
+  /**
+   * A desktop external runtime's request (Codex / Claude Code in Main), not the
+   * worker's: the worker's liveness says nothing about it (`decisionStatus`
+   * answers for it alone), and the runtime denies it at its deadline, so it can
+   * be neither skipped nor kept waiting.
+   */
+  isExternal?: (sessionId: string, requestId: string) => boolean;
   /** Pending-decision projection events: a decision appeared or ended, the worker reset. */
   projection?: { subscribe(listener: (event: DesktopPetProjectionEvent) => void): () => void };
   /** Other moments worth a look now (a rule started watching a blocked Session). */
@@ -604,7 +611,8 @@ export class PetImDecisions {
    * reached IM and timed out still tells its conversation.
    */
   private async endVanished(record: DecisionPromptRecord): Promise<void> {
-    if (this.options.projectionLive?.() === false) {
+    const external = this.options.isExternal?.(record.sessionId, record.requestId) === true;
+    if (!external && this.options.projectionLive?.() === false) {
       // A worker that missed one heartbeat: nothing is known to have ended.
       if (this.options.workerGone?.() !== true) return;
       // The worker is gone, and its requests with it: no answer, no timeout.
@@ -677,6 +685,22 @@ export class PetImDecisions {
       this.unsubscribeAway();
       this.unsubscribeAway = undefined;
     }
+  }
+
+  /**
+   * An external runtime's question has no skip and no "wait longer": the
+   * runtime denies it at its deadline. Say so instead of taking 跳过 / 等待 as
+   * the answer (unless an option is literally named that).
+   */
+  private externalRefusal(entry: ImDecision, answer: string): string | undefined {
+    const { sessionId, requestId, request } = entry.envelope;
+    if (this.options.isExternal?.(sessionId, requestId) !== true) return undefined;
+    if (request.toolName !== "__ask_user__" || choices(entry).includes(answer)) return undefined;
+    if (answer === "跳过")
+      return `这个问题不能跳过。请回复选项编号或你的答案；不想回答请回复「回答 ${entry.code} 拒绝」。`;
+    if (["等待", "一直等"].includes(answer))
+      return `这个问题不能改为一直等待，截止前未回答将按拒绝处理。请回复「回答 ${entry.code} 你的答案」。`;
+    return undefined;
   }
 
   /** The gateway probes bound Sessions before it reaches the Pet chat endpoint. */
@@ -786,6 +810,8 @@ export class PetImDecisions {
         return "没能改为一直等待，可能已在其他端处理。请查看任务状态。";
       }
     }
+    const refused = this.externalRefusal(entry, answer);
+    if (refused) return refused;
     const skip = !option && (answer === "拒绝" || (question && answer === "跳过"));
     if (!skip && !questionBody(entry))
       return "请在桌面 Session 查看完整确认内容后处理；也可以回复拒绝。";

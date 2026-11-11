@@ -1,5 +1,6 @@
 import type { ImGatewayOwnerChannel } from "../im-gateway-service.js";
 import type { PetDeliveryResolver } from "./pet-delivery-plan.js";
+import type { PetExternalDecisions } from "./pet-notice-external-decisions.js";
 import type { ImDecisionDeliveryResolver } from "./pet-im-decisions.js";
 import type { PetNoticeProjectionView } from "./pet-notice-projection.js";
 import { errorText } from "./pet-notice-types.js";
@@ -51,17 +52,22 @@ export interface PetDecisionNoticeHooks {
   onAwayChange(listener: () => void): () => void;
   /** The owner target the router would use on this channel is a confirmed private chat. */
   ownerChannelIsDirect(channel: string): boolean;
-  /** The projection's status for a decision; undefined once it is gone. */
+  /**
+   * A decision's status; undefined once it is gone. A worker request's comes
+   * from the projection, a desktop external runtime's from its approval router.
+   */
   decisionStatus(sessionId: string, requestId: string): string | undefined;
-  /** The projection reflects a live worker (not a failed or lost snapshot). */
+  /** The projection reflects a live worker (not a failed or lost snapshot); worker requests only. */
   projectionLive(): boolean;
-  /** The worker is really gone: reclaimed, or no live worker. */
+  /** The worker is really gone: reclaimed, or no live worker; worker requests only. */
   workerGone(): boolean;
 }
 
 export interface PetDecisionHooksDeps {
   view: PetNoticeProjectionView;
   deliveries: Pick<PetDeliveryResolver, "planBlocked">;
+  /** Desktop external runtimes' decisions, which the projection never lists. */
+  external?: Pick<PetExternalDecisions, "isExternal" | "status">;
   /** The router's presence (settings-aware detector). */
   isPresent(): boolean;
   getSystemIdleTimeSec(): number;
@@ -226,6 +232,8 @@ export function createDecisionHooks(deps: PetDecisionHooksDeps): PetDecisionHook
       return view.workerIsGone(view.snapshot().workerState);
     },
     decisionStatus(sessionId, requestId) {
+      if (deps.external?.isExternal(sessionId, requestId))
+        return deps.external.status(sessionId, requestId);
       return view
         .snapshot()
         .pending.find(
