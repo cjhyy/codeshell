@@ -1,5 +1,6 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, expect, spyOn, test } from "bun:test";
 import { execFileSync, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   chmodSync,
   cpSync,
@@ -15,6 +16,7 @@ import { tmpdir } from "node:os";
 import { delimiter, dirname, join, resolve } from "node:path";
 import {
   createProductionManifest,
+  generateProductionClosures,
   installProductionClosure,
   loadProductionClosures,
 } from "./production-dependencies.js";
@@ -54,6 +56,297 @@ function changeJson(directory: string, file: string, change: (value: any) => voi
   change(value);
   writeFileSync(path, JSON.stringify(value, null, 2) + "\n");
 }
+
+function driftDiagnostic(directory: string) {
+  let message = "";
+  try {
+    loadProductionClosures(directory);
+  } catch (error) {
+    message = (error as Error).message;
+  }
+  expect(message).toStartWith("Production lock drift for packages/core;");
+  expect(message).toContain("; diagnostics=");
+  expect(message.length).toBeLessThan(4096);
+  expect(message).not.toContain(directory);
+  return { message, details: JSON.parse(message.split("; diagnostics=")[1]) };
+}
+
+const keyDigest = (key: string) => createHash("sha256").update(key).digest("hex");
+
+test("drift diagnostics distinguish LF/CRLF text from a changed production closure", () => {
+  const directory = fixture();
+  const native = generateProductionClosures(directory).get("packages/core")!;
+  for (const [field, file] of [
+    ["manifest", "core/package.json"],
+    ["lock", "core/bun.lock"],
+  ] as const) {
+    // Invert the observed native EOL rather than assuming Windows Bun writes LF.
+    const newline = native[field].includes("\r\n") ? "\n" : "\r\n";
+    writeFileSync(join(directory, artifactPath, file), native[field].replace(/\r?\n/g, newline));
+  }
+  const { details } = driftDiagnostic(directory);
+  expect(details.runtime).toEqual({
+    bun: Bun.version,
+    platform: process.platform,
+    arch: process.arch,
+  });
+  for (const artifact of [details.manifest, details.lock]) {
+    expect(artifact.byteEqual).toBe(false);
+    expect(artifact.semanticEqual).toBe(true);
+    if (artifact.generated.crlf === 0) {
+      expect(artifact.saved.crlf).toBeGreaterThan(0);
+      expect(artifact.saved.lf).toBe(0);
+    } else {
+      expect(artifact.saved.crlf).toBe(0);
+      expect(artifact.saved.lf).toBeGreaterThan(0);
+    }
+    expect(artifact.saved.sha256).not.toBe(artifact.generated.sha256);
+    expect(artifact.saved.semanticSha256).toBe(artifact.generated.semanticSha256);
+    expect(artifact.firstDifference).toBeUndefined();
+  }
+});
+
+test("drift diagnostics retain strict rejection of object ordering and whitespace differences", () => {
+  const directory = fixture();
+  for (const file of ["core/package.json", "core/bun.lock"]) {
+    const path = join(directory, artifactPath, file);
+    const value = Bun.JSONC.parse(readFileSync(path, "utf8"));
+    writeFileSync(
+      path,
+      JSON.stringify(value, (_key, item) =>
+        item && typeof item === "object" && !Array.isArray(item)
+          ? Object.fromEntries(Object.entries(item).reverse())
+          : item,
+      ),
+    );
+  }
+  const { details } = driftDiagnostic(directory);
+  for (const artifact of [details.manifest, details.lock]) {
+    expect(artifact.byteEqual).toBe(false);
+    expect(artifact.semanticEqual).toBe(true);
+    expect(artifact.saved.semanticSha256).toBe(artifact.generated.semanticSha256);
+  }
+});
+
+for (const { name, file, change, path } of [
+  {
+    name: "tuple integrity",
+    file: "bun.lock",
+    change: (v: any) => {
+      v.packages["tldts-core"][3] = "DO_NOT_LOG_INTEGRITY";
+    },
+    path: ["packages", "tldts-core", "3"],
+  },
+  {
+    name: "tuple array order",
+    file: "bun.lock",
+    change: (v: any) => {
+      v.packages["tldts-core"].reverse();
+    },
+    path: ["packages", "tldts-core", "0"],
+  },
+  {
+    name: "Windows optional record",
+    file: "bun.lock",
+    change: (v: any) => {
+      delete v.packages["@napi-rs/canvas-win32-x64-msvc"];
+    },
+    path: ["packages", "@napi-rs/canvas-win32-x64-msvc"],
+  },
+  {
+    name: "unknown lock field",
+    file: "bun.lock",
+    change: (v: any) => {
+      v.extra = { nested: "DO_NOT_LOG_UNKNOWN" };
+    },
+    path: ["extra"],
+  },
+  {
+    name: "manifest dependency",
+    file: "package.json",
+    change: (v: any) => {
+      v.dependencies.tldts = "DO_NOT_LOG_DEPENDENCY";
+    },
+    path: ["dependencies", "tldts"],
+  },
+  {
+    name: "manifest override",
+    file: "package.json",
+    change: (v: any) => {
+      v.overrides["proxy-addr"] = "DO_NOT_LOG_OVERRIDE";
+    },
+    path: ["overrides", "proxy-addr"],
+  },
+]) {
+  test(`drift diagnostics identify semantic ${name} changes without printing values`, () => {
+    const directory = fixture();
+    changeJson(directory, `${artifactPath}/core/${file}`, change);
+    const { message, details } = driftDiagnostic(directory);
+    const artifact = file === "bun.lock" ? details.lock : details.manifest;
+    expect(artifact.semanticEqual).toBe(false);
+    expect(artifact.saved.semanticSha256).not.toBe(artifact.generated.semanticSha256);
+    const safePath = JSON.parse(artifact.firstDifference.path);
+    const dynamicIndex = path.length === 1 ? 0 : 1;
+    if (dynamicIndex === 1) expect(safePath[0]).toBe(path[0]);
+    expect(safePath[dynamicIndex]).toMatch(
+      new RegExp(`^key#\\d+:sha256=${keyDigest(path[dynamicIndex])}$`),
+    );
+    if (path.length === 3) expect(safePath[2]).toBe(Number(path[2]));
+    if (name === "Windows optional record") {
+      const native = parseLock(readFileSync(join(repoRoot, artifactPath, "core/bun.lock"), "utf8"));
+      const index = Object.keys(native.packages).sort().indexOf(path[1]);
+      expect(safePath[1]).toBe(`key#${index}:sha256=${keyDigest(path[1])}`);
+    }
+    expect(artifact.firstDifference.truncated).toBe(false);
+    expect(message).not.toContain("DO_NOT_LOG_");
+  });
+}
+
+test("drift diagnostics bound and escape long field paths", () => {
+  const directory = fixture();
+  const key = "\n\u001b".repeat(2_000);
+  changeJson(directory, `${artifactPath}/core/bun.lock`, (value) => {
+    value[key] = "DO_NOT_LOG_VALUE";
+  });
+  const { message, details } = driftDiagnostic(directory);
+  expect(details.lock.firstDifference.path.length).toBeLessThanOrEqual(256);
+  expect(details.lock.firstDifference.truncated).toBe(false);
+  expect(JSON.parse(details.lock.firstDifference.path)[0]).toMatch(
+    new RegExp(`^key#\\d+:sha256=${keyDigest(key)}$`),
+  );
+  expect(details.lock.firstDifference.path).not.toContain("\\n");
+  expect(details.lock.firstDifference.path).not.toContain("\\u001b");
+  expect(details.lock.firstDifference.sha256).toMatch(/^[a-f0-9]{64}$/);
+  expect(message).not.toContain("\n");
+  expect(message).not.toContain("\u001b");
+  expect(message).not.toContain("DO_NOT_LOG_VALUE");
+});
+
+for (const location of [
+  "unknown",
+  "packages",
+  "optionalDependencies",
+  "overrides",
+  "schema-name",
+]) {
+  test(`drift diagnostics redact dynamic ${location} keys rather than logging credentials`, () => {
+    const directory = fixture();
+    const credential = "https://user:password@host/private-token\n\u001b[31m";
+    const key = location === "schema-name" ? "name" : credential;
+    const file = ["unknown", "packages"].includes(location) ? "bun.lock" : "package.json";
+    changeJson(directory, `${artifactPath}/core/${file}`, (value) => {
+      const dictionary =
+        location === "unknown"
+          ? value
+          : value[location === "schema-name" ? "optionalDependencies" : location];
+      dictionary[key] = "DO_NOT_LOG_VALUE";
+    });
+    const { message, details } = driftDiagnostic(directory);
+    const artifact = file === "bun.lock" ? details.lock : details.manifest;
+    expect(artifact.semanticEqual).toBe(false);
+    const safePath = JSON.parse(artifact.firstDifference.path);
+    expect(safePath.at(-1)).toMatch(new RegExp(`^key#\\d+:sha256=${keyDigest(key)}$`));
+    for (const forbidden of [
+      "user",
+      "password",
+      "host",
+      "private-token",
+      "DO_NOT_LOG_VALUE",
+      "\n",
+      "\u001b",
+    ])
+      expect(message).not.toContain(forbidden);
+    expect(artifact.firstDifference.path).not.toContain("\\n");
+    expect(artifact.firstDifference.path).not.toContain("\\u001b");
+  });
+}
+
+for (const operation of [
+  "byte statistics",
+  "raw hash",
+  "semantic hash",
+  "semantic stringify",
+  "path stringify",
+  "final stringify",
+]) {
+  test(`drift diagnostics preserve the original rejection when ${operation} throws`, () => {
+    const directory = fixture();
+    const sentinel = "DO_NOT_LOG_DIAGNOSTIC_VALUE";
+    changeJson(directory, `${artifactPath}/core/package.json`, (value) => {
+      value.diagnosticFixture = sentinel;
+    });
+    const saved = readFileSync(join(directory, artifactPath, "core/package.json"), "utf8");
+    let hits = 0;
+    const fail = () => {
+      hits++;
+      throw new Error("DO_NOT_LOG_DIAGNOSTIC_FAILURE");
+    };
+    let hook: { mockRestore(): void };
+    if (operation === "byte statistics") {
+      const byteLength = Buffer.byteLength;
+      hook = spyOn(Buffer, "byteLength").mockImplementation((value, ...args) => {
+        if (value === saved) fail();
+        return byteLength(value, ...args);
+      });
+    } else if (operation.endsWith("hash")) {
+      const prototype = Object.getPrototypeOf(createHash("sha256"));
+      const update = prototype.update;
+      hook = spyOn(prototype, "update").mockImplementation(function (
+        this: ReturnType<typeof createHash>,
+        value,
+        ...args
+      ) {
+        if (
+          operation === "raw hash"
+            ? value === saved
+            : typeof value === "string" && value !== saved && value.includes(sentinel)
+        )
+          fail();
+        return update.call(this, value, ...args);
+      });
+    } else {
+      const stringify = JSON.stringify;
+      hook = spyOn(JSON, "stringify").mockImplementation((value, ...args) => {
+        if (
+          operation === "semantic stringify"
+            ? value?.diagnosticFixture === sentinel
+            : operation === "path stringify"
+              ? Array.isArray(value) && args.length === 0
+              : value?.runtime?.bun === Bun.version && value?.manifest && value?.lock
+        )
+          fail();
+        return (stringify as any)(value, ...args);
+      });
+    }
+    let error: unknown;
+    try {
+      loadProductionClosures(directory);
+    } catch (caught) {
+      error = caught;
+    } finally {
+      hook.mockRestore();
+    }
+    expect(hits).toBeGreaterThan(0);
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).name).toBe("Error");
+    expect((error as Error).message).toBe(
+      'Production lock drift for packages/core; run bun packages/desktop/scripts/production-dependencies.ts --write; diagnostics={"unavailable":true}',
+    );
+  });
+}
+
+test("drift diagnostics report invalid JSON without exposing parser input", () => {
+  const directory = fixture();
+  for (const file of ["core/package.json", "core/bun.lock"])
+    writeFileSync(join(directory, artifactPath, file), "DO_NOT_LOG_INVALID_INPUT");
+  const { message, details } = driftDiagnostic(directory);
+  for (const artifact of [details.manifest, details.lock]) {
+    expect(artifact.semanticEqual).toBeNull();
+    expect(artifact.saved.parseError).toBe(true);
+    expect(artifact.saved.semanticSha256).toBeUndefined();
+  }
+  expect(message).not.toContain("DO_NOT_LOG_INVALID_INPUT");
+});
 
 function releaseFixture() {
   const directory = mkdtempSync(join(tmpdir(), "codeshell-production-release-"));

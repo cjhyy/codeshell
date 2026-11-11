@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
@@ -37,9 +38,131 @@ const readManifest = (file: string): Manifest => JSON.parse(readFileSync(file, "
 function canonical(value: unknown): string {
   return JSON.stringify(value, (_key, item) =>
     item && typeof item === "object" && !Array.isArray(item)
-      ? Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)))
+      ? Object.fromEntries(Object.entries(item).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
       : item,
   );
+}
+
+const sha256 = (text: string): string => createHash("sha256").update(text).digest("hex");
+
+const rootFields = [
+  "name",
+  "version",
+  "dependencies",
+  "optionalDependencies",
+  "overrides",
+  "packageManager",
+  "lockfileVersion",
+  "configVersion",
+  "workspaces",
+  "packages",
+];
+const metadataFields = [
+  "dependencies",
+  "optionalDependencies",
+  "peerDependencies",
+  "optionalPeers",
+  "bin",
+  "os",
+  "cpu",
+];
+
+function firstDifference(
+  a: unknown,
+  b: unknown,
+  path: string[] = [],
+  safePath: (string | number)[] = [],
+): (string | number)[] | undefined {
+  if (a === b) return;
+  if (
+    a !== null &&
+    b !== null &&
+    typeof a === "object" &&
+    typeof b === "object" &&
+    Array.isArray(a) === Array.isArray(b)
+  ) {
+    // Only fixed fields at known schema positions may be printed. Dictionary
+    // keys (including package names/URLs) remain private even if named "name".
+    const fields =
+      path.length === 0 || (path.length === 2 && path[0] === "workspaces")
+        ? rootFields
+        : path.length === 3 && path[0] === "packages" && path[2] === "2"
+          ? metadataFields
+          : [];
+    const keys = [...new Set([...Object.keys(a), ...Object.keys(b)])].sort();
+    for (const [index, key] of keys.entries()) {
+      const label = Array.isArray(a)
+        ? Number(key)
+        : fields.includes(key)
+          ? key
+          : `key#${index}:sha256=${sha256(key)}`;
+      const next = [...safePath, label];
+      if (!Object.hasOwn(a, key) || !Object.hasOwn(b, key)) return next;
+      const difference = firstDifference(
+        (a as Record<string, unknown>)[key],
+        (b as Record<string, unknown>)[key],
+        [...path, key],
+        next,
+      );
+      if (difference) return difference;
+    }
+    return;
+  }
+  return safePath;
+}
+
+/** Informational only: neither text-only nor semantic differences bypass the byte gate. */
+function describeDrift(saved: string, generated: string, parse: (text: string) => unknown) {
+  const summarize = (text: string) => {
+    const crlf = (text.match(/\r\n/g) ?? []).length;
+    const summary: {
+      bytes: number;
+      sha256: string;
+      crlf: number;
+      lf: number;
+      semanticSha256?: string;
+      parseError?: boolean;
+    } = {
+      bytes: Buffer.byteLength(text),
+      sha256: sha256(text),
+      crlf,
+      lf: (text.match(/\n/g) ?? []).length - crlf,
+    };
+    let value: unknown;
+    try {
+      value = parse(text);
+    } catch {
+      // Parser messages can contain input values. Never include them in CI logs.
+      summary.parseError = true;
+      return { summary, value };
+    }
+    summary.semanticSha256 = sha256(canonical(value));
+    return { summary, value };
+  };
+  const a = summarize(saved);
+  const b = summarize(generated);
+  const semanticEqual =
+    a.summary.parseError || b.summary.parseError
+      ? null
+      : a.summary.semanticSha256 === b.summary.semanticSha256;
+  let difference;
+  if (semanticEqual === false) {
+    // Only safe labels, indices and key digests, never dynamic keys or values.
+    const path = JSON.stringify(firstDifference(a.value, b.value));
+    if (path)
+      difference = {
+        path: path.slice(0, 256),
+        truncated: path.length > 256,
+        sha256: sha256(path),
+      };
+  }
+  return {
+    byteEqual: saved === generated,
+    saved: a.summary,
+    generated: b.summary,
+    semanticEqual,
+    firstDifference: difference,
+  };
 }
 
 export function createProductionManifest(pkg: Manifest, root: Manifest): Manifest {
@@ -154,8 +277,22 @@ export function loadProductionClosures(repoRoot: string): Map<string, Production
   // and wrong rehoisted versions that a tuple-membership check alone would miss.
   for (const [relativeDir, expected] of generateProductionClosures(repoRoot)) {
     const actual = saved.get(relativeDir)!;
-    if (actual.manifest !== expected.manifest || actual.lock !== expected.lock)
-      throw new Error(`Production lock drift for ${relativeDir}; run ${regenerate}`);
+    if (actual.manifest !== expected.manifest || actual.lock !== expected.lock) {
+      const error = new Error(`Production lock drift for ${relativeDir}; run ${regenerate}`);
+      let diagnostics = '{"unavailable":true}';
+      try {
+        diagnostics = JSON.stringify({
+          runtime: { bun: Bun.version, platform: process.platform, arch: process.arch },
+          manifest: describeDrift(actual.manifest, expected.manifest, JSON.parse),
+          lock: describeDrift(actual.lock, expected.lock, Bun.JSONC.parse),
+        });
+      } catch {
+        // All diagnostics are best-effort; never mask the original drift error
+        // or serialize an exception that may contain credentials/input values.
+      }
+      error.message += `; diagnostics=${diagnostics}`;
+      throw error;
+    }
   }
   return saved;
 }
