@@ -1434,6 +1434,7 @@ export class Engine {
       })
     )
       return;
+    this.rebaseSessionToolCache(session);
     this.compactedMessagesBySession.delete(session.state.sessionId);
     if (this.lastSessionId === session.state.sessionId) this.lastMessages = [];
     if (
@@ -1836,6 +1837,7 @@ export class Engine {
           });
         } else if (!freshImageMessage && contextNotes && tryNotesRollover(contextNotes, messages)) {
           // The note covers its own cursor; any newer messages remain verbatim.
+          this.rebaseSessionToolCache(session);
           this.compactedMessagesBySession.delete(session.state.sessionId);
           session.state.contextUsageAnchor = undefined;
           archiveStrategy = "notes";
