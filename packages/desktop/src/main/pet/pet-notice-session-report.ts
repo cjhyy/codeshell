@@ -85,8 +85,9 @@ export function createSessionReportNotices(
         ...(mimi ? { body: mimi } : {}),
         ...(mimi && media ? { media } : {}),
       });
-      // Not delivered (shutting down): the caller keeps the report for a retry,
-      // whose per-conversation dedupe keys skip what already went out.
+      // Not delivered (shutting down): the caller then does not mark the report
+      // delivered. Nothing retries it in this process; should the same report
+      // reach the host again, its per-conversation dedupe keys skip what went out.
       if (decision.reason === "disposed") throw new Error("提醒通道已关闭，汇报未送出");
     }
     return plan.entries.length;

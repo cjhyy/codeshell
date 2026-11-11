@@ -1872,8 +1872,15 @@ async function createWindow(): Promise<BrowserWindow> {
       runtime: () => externalRuntime.service,
       readState: (id) => externalGoalSessions.readSessionState(id),
     });
+    // Mimi's own Session id, once known: rules and watches never apply to it.
+    let mimiSessionId: string | undefined;
+    void petMetadata
+      .ensure()
+      .then((metadata) => (mimiSessionId = metadata.petSessionId))
+      .catch(() => undefined);
     const notices = wirePetNotices({
       userDataDir: app.getPath("userData"),
+      isMimiSession: (sessionId) => sessionId === mimiSessionId,
       bridge,
       projection: aggregator,
       longTasks: longTaskStore,
