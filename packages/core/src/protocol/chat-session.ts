@@ -12,6 +12,8 @@ import type { LegacyPetWorkspaceOption } from "../types.js";
 import { isSameGoalInstance, type GoalConfig } from "../goal/lifecycle.js";
 
 export interface ChatSessionOptions {
+  /** Same-process Stop policy restored after idle eviction. */
+  cancelledSinceLastTurn?: boolean;
   id: string;
   engine: Engine;
   onStream?: (event: StreamEvent) => void;
@@ -181,6 +183,7 @@ export class ChatSession {
     this.id = opts.id;
     this.currentEngine = opts.engine;
     this.defaultOnStream = opts.onStream;
+    this.cancelledSinceLastTurn = opts.cancelledSinceLastTurn === true;
   }
 
   get engine(): Engine {
@@ -208,10 +211,9 @@ export class ChatSession {
         new Error("Session is busy; a configured model selection cannot be queued"),
       );
     this.lastActivityAt = Date.now();
-    // The user (or a wakeup the guard already let through) is starting a turn —
-    // clear the post-Stop suppression so future background-job completions
-    // wake the session again.
-    this.cancelledSinceLastTurn = false;
+    // Only user input can lift Stop; a background event is not new consent.
+    if (opts.trigger === "user" || (!opts.trigger && !opts.injected))
+      this.cancelledSinceLastTurn = false;
     return new Promise((resolve, reject) => {
       this.queue.push({
         task,
@@ -522,7 +524,8 @@ export class ChatSession {
     if (!next) return;
     // Scoped cancellation can preserve a previously queued successor. Starting
     // it re-enables its own background wakeups just like a fresh enqueue does.
-    this.cancelledSinceLastTurn = false;
+    if (next.opts.trigger === "user" || (!next.opts.trigger && !next.opts.injected))
+      this.cancelledSinceLastTurn = false;
     this.active = next;
     this.settlePromise = new Promise<void>((resolve) => {
       this.resolveSettled = resolve;

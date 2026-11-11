@@ -191,6 +191,7 @@ export function parseMobileClientEvent(value: unknown): MobileClientEvent | unde
       break;
     case "goal.extend":
       valid =
+        optionalBoundedString(event.requestId, MAX_ID_LENGTH) &&
         boundedString(event.sessionId, MAX_ID_LENGTH) &&
         optionalPositiveInteger(event.addTurns) &&
         optionalPositiveInteger(event.addTokenBudget) &&
@@ -200,8 +201,28 @@ export function parseMobileClientEvent(value: unknown): MobileClientEvent | unde
           (amount) => amount !== undefined,
         );
       break;
+    case "goal.get":
+      valid =
+        boundedString(event.sessionId, MAX_ID_LENGTH) &&
+        boundedString(event.requestId, MAX_ID_LENGTH);
+      break;
+    case "goal.update":
+      valid =
+        boundedString(event.sessionId, MAX_ID_LENGTH) &&
+        boundedString(event.requestId, MAX_ID_LENGTH) &&
+        event.paused === false &&
+        boundedString(event.expectedGoalId, MAX_ID_LENGTH) &&
+        typeof event.expectedRevision === "number" &&
+        optionalPositiveInteger(event.expectedRevision);
+      break;
     case "goal.clear":
-      valid = boundedString(event.sessionId, MAX_ID_LENGTH);
+      valid =
+        boundedString(event.sessionId, MAX_ID_LENGTH) &&
+        optionalBoundedString(event.requestId, MAX_ID_LENGTH) &&
+        ((event.expectedGoalId === undefined && event.expectedRevision === undefined) ||
+          (boundedString(event.expectedGoalId, MAX_ID_LENGTH) &&
+            typeof event.expectedRevision === "number" &&
+            optionalPositiveInteger(event.expectedRevision)));
       break;
     case "room.create":
       valid =

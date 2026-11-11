@@ -165,6 +165,9 @@ export class ChatSessionManager {
   private readonly sessions = new Map<string, ChatSession>();
   private readonly closingSessions = new Map<string, Promise<void>>();
   private readonly closedSessions = new Set<string>();
+  // Only evicted owners need a second copy of Stop. Resident owners keep their
+  // own flag; at capacity we retain them instead of forgetting an old Stop.
+  private readonly evictedStops = new Set<string>();
   private readonly sessionGeneration = new Map<string, number>();
   private readonly sessionSlices = new Map<string, EngineConfigSlice>();
   private readonly migrationClaims = new Map<string, SessionMigrationClaim>();
@@ -449,12 +452,17 @@ export class ChatSessionManager {
       await this.disposeEngine(engine, sessionId);
       throw error;
     }
-    const session = new ChatSession({ id: sessionId, engine });
+    const session = new ChatSession({
+      id: sessionId,
+      engine,
+      cancelledSinceLastTurn: this.evictedStops.has(sessionId),
+    });
     const sessionManager = this.engineSessionManager(engine);
     const generation = sessionManager?.registerSessionGeneration(sessionId) ?? 1;
     this.sessionGeneration.set(sessionId, generation);
     this.sessionSlices.set(sessionId, { ...slice });
     this.sessions.set(sessionId, session);
+    this.evictedStops.delete(sessionId);
     // A direct user run is an explicit resume/open and may clear the tombstone.
     // Background wakeups must check isUnavailable() before reaching this path.
     this.closedSessions.delete(sessionId);
@@ -552,6 +560,11 @@ export class ChatSessionManager {
   }
 
   private closeSession(sessionId: string, markClosed: boolean): Promise<void> {
+    markClosed ||= this.closedSessions.has(sessionId);
+    if (markClosed) {
+      this.evictedStops.delete(sessionId);
+      this.rememberClosedSession(sessionId);
+    }
     const alreadyClosing = this.closingSessions.get(sessionId);
     if (alreadyClosing) return alreadyClosing;
     const migration = this.residentMigrations.get(sessionId);
@@ -582,6 +595,13 @@ export class ChatSessionManager {
       return Promise.resolve();
     }
 
+    if (!markClosed && s.wasCancelledSinceLastTurn()) {
+      if (this.evictedStops.size >= CLOSED_CHAT_SESSION_TOMBSTONE_LIMIT)
+        return Promise.reject(
+          new Error("Stopped Session retention is full; Session remains resident"),
+        );
+      this.evictedStops.add(sessionId);
+    }
     const sessionManager = this.engineSessionManager(s.engine);
     const generation = this.sessionGeneration.get(sessionId) ?? 0;
     const invalidated = sessionManager?.incrementSessionGeneration(sessionId) ?? generation + 1;
@@ -597,7 +617,7 @@ export class ChatSessionManager {
       sessionManager?.forgetEphemeralSession?.(sessionId);
       if (this.sessions.get(sessionId) === s) this.sessions.delete(sessionId);
       if (markClosed) this.rememberClosedSession(sessionId);
-      else this.closedSessions.delete(sessionId);
+
       this.sessionGeneration.delete(sessionId);
       this.sessionSlices.delete(sessionId);
       return this.disposeEngine(s.engine, sessionId);
@@ -646,6 +666,7 @@ export class ChatSessionManager {
   closeAllAsync(): Promise<void> {
     if (this.shutdown) return this.shutdown;
     this.shuttingDown = true;
+    this.evictedStops.clear();
     this.stopIdleSweeper();
     this.shutdown = this.finishShutdown();
     return this.shutdown;
@@ -692,7 +713,14 @@ export class ChatSessionManager {
       // An asynchronous question remains answerable after its requesting run ends.
       if (s.pendingApprovals.size > 0) continue;
       if (backgroundJobRegistry.hasRunningForSession(id)) continue;
-      void this.closeSession(id, false);
+      if (
+        s.wasCancelledSinceLastTurn() &&
+        this.evictedStops.size >= CLOSED_CHAT_SESSION_TOMBSTONE_LIMIT
+      )
+        continue;
+      void this.closeSession(id, false).catch((error) => {
+        logger.warn("chat_session.idle_eviction_failed", { sessionId: id, error: String(error) });
+      });
     }
   }
 

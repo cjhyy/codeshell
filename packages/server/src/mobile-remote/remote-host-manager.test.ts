@@ -1263,3 +1263,35 @@ test("legacy base requests pass the real WebSocket validator with socket-owned i
     await host.stop();
   }
 });
+
+test("Goal controls are advertised on pairing and auth only after the handler is installed", async () => {
+  dir = mkdtempSync(join(tmpdir(), "mobile-goal-capability-"));
+  const host = new RemoteHostManager({
+    devices: new TrustedDeviceStore(join(dir, "devices.json")),
+    onClientEvent() {},
+  });
+  await host.start({ host: "127.0.0.1", port: 0 });
+  try {
+    for (const installed of [false, true]) {
+      if (installed) host.advertiseGoalControls();
+      const pairing = host.createPairingUrl();
+      const paired = host.handleClientEvent({
+        type: "pair.complete",
+        token: pairing.token,
+        name: "Goal fixture",
+        secretHash: "synthetic",
+      });
+      if (paired?.type !== "pair.ok") throw new Error("pairing failed");
+      const authenticated = host.handleClientEvent({
+        type: "auth.device",
+        deviceId: paired.device.id,
+        secretHash: "synthetic",
+      });
+      if (authenticated?.type !== "auth.ok") throw new Error("auth failed");
+      expect(paired.capabilities?.goalControls).toBe(installed ? 1 : undefined);
+      expect(authenticated.capabilities?.goalControls).toBe(installed ? 1 : undefined);
+    }
+  } finally {
+    await host.stop();
+  }
+});

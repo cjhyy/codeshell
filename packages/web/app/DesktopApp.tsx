@@ -1136,10 +1136,22 @@ export function useDesktopController(
     goalActions:
       app.activeSessionId && !app.outputHistoryFailed ? (
         <>
-          <button className="library-button" onClick={() => app.extendGoal(app.activeSessionId!)}>
-            继续目标
+          <button
+            className="library-button"
+            disabled={app.goalControlBusy}
+            onClick={() => app.extendGoal(app.activeSessionId!)}
+          >
+            {app.goalControlBusy
+              ? "处理中…"
+              : app.chat.run === "running" && !app.chat.goalPaused
+                ? "追加轮次"
+                : "恢复目标"}
           </button>
-          <button className="library-button" onClick={() => app.clearGoal(app.activeSessionId!)}>
+          <button
+            className="library-button"
+            disabled={app.goalControlBusy}
+            onClick={() => app.clearGoal(app.activeSessionId!)}
+          >
             结束目标
           </button>
         </>

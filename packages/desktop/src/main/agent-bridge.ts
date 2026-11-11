@@ -970,7 +970,20 @@ export class AgentBridge implements PetStateBridge {
       }
       outLine = this.handleAgentRunMetadata(prepared);
     }
+    const resumeId = goalResumeSessionId(parsed);
+    if (resumeId) this.core.ensureWorker(this.sessionsForFallback().readSessionMainRoot(resumeId));
     return { line: outLine, method: parsed.method };
+  }
+
+  private publishFallbackReply(line: string): void {
+    this.safeSend("agent:msg", line);
+    for (const tap of this.outboundTaps) {
+      try {
+        tap(line);
+      } catch {
+        /* One observer must not swallow another request's reply. */
+      }
+    }
   }
 
   private cwdForSessionOrThrow(sessionId: string): string {
@@ -1163,7 +1176,7 @@ export class AgentBridge implements PetStateBridge {
         // button did nothing for an aborted goal session).
         const fallback = buildNoChildFallbackReply(parsed, this.sessionsForFallback());
         if (fallback !== null) {
-          this.safeSend("agent:msg", fallback);
+          this.publishFallbackReply(fallback);
         }
         dlog("bridge", "renderer→worker.dropped", {
           reason: this.core.hasChild() ? "stdin destroyed" : "no child",
@@ -2471,7 +2484,7 @@ export class AgentBridge implements PetStateBridge {
     const sessionId = parsed.params?.sessionId;
     if (typeof sessionId === "string") assertOutputHistoryWriteAvailable(sessionId);
     if (
-      parsed.method === "agent/run" &&
+      (parsed.method === "agent/run" || goalResumeSessionId(parsed)) &&
       (this.webConfiguration.runBlocked ||
         (typeof sessionId === "string" && this.sessionMainRootMigrationClaims.has(sessionId)))
     ) {
@@ -2493,8 +2506,11 @@ export class AgentBridge implements PetStateBridge {
     }
     try {
       this.core.injectWorkerMessage(line, meta);
-      if (!this.core.canSend() && parsed.id !== undefined)
+      if (!this.core.canSend() && parsed.id !== undefined) {
         this.webConfiguration.settleRun(parsed.id);
+        const fallback = buildNoChildFallbackReply(parsed, this.sessionsForFallback());
+        if (fallback !== null) this.publishFallbackReply(fallback);
+      }
     } catch (error) {
       if (parsed.id !== undefined) this.webConfiguration.settleRun(parsed.id);
       throw error;

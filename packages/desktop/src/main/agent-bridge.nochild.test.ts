@@ -9,6 +9,8 @@
 // aborted goal session (worker already exited) — the persistent goal lives
 // only in state.json and could never be cleared from the UI.
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
+import { spawnSync } from "node:child_process";
+import { createBunTestEnvironment } from "../../../../scripts/bun-test-completion.mjs";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -300,3 +302,27 @@ describe("AgentBridge host reservation maps", () => {
     expect(reservations.has("isolated-task")).toBe(false);
   });
 });
+
+test("actual mobile ingress answers disk Goal clear without a worker", () => {
+  const directory = mkdtempSync(join(tmpdir(), "offline-goal-child-"));
+  try {
+    const child = spawnSync(
+      process.execPath,
+      [join(import.meta.dir, "__fixtures__/agent-bridge-offline-goal.mjs")],
+      {
+        env: createBunTestEnvironment(process.env, directory),
+        encoding: "utf8",
+        timeout: 15000,
+      },
+    );
+    if (child.status !== 0) throw new Error(`Offline ingress fixture failed: ${child.stderr}`);
+    expect(JSON.parse(child.stdout)).toEqual({
+      cleared: true,
+      workerSpawned: false,
+      coldResume: true,
+      staleRejected: true,
+    });
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+}, 20000);

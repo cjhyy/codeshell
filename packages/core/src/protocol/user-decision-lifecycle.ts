@@ -40,6 +40,7 @@ interface UserDecisionHost {
 export class UserDecisionLifecycle {
   /** `notification` hooks for every registered user-facing decision. */
   readonly hooks = new DecisionNotificationHooks();
+  private readonly legacyQuestions = new Map<string, { keepWaiting(): void }>();
 
   constructor(private readonly host: UserDecisionHost) {}
 
@@ -190,7 +191,13 @@ export class UserDecisionLifecycle {
         generation: 0,
         requestId,
       };
-      const expiresAt = Date.now() + USER_DECISION_TIMEOUT_MS;
+      const autoResolveMs = opts?.autoResolveMs;
+      const keepWaitable =
+        typeof autoResolveMs === "number" && Number.isFinite(autoResolveMs) && autoResolveMs > 0;
+      const expiresAt = Date.now() + (keepWaitable ? autoResolveMs : USER_DECISION_TIMEOUT_MS);
+      const timeoutReason = keepWaitable
+        ? autoResolvedQuestionReason(autoResolveMs, recommendedAnswer(opts))
+        : "The confirmation deadline expired without an answer. No permission was granted.";
       const finish = (decision: ApprovalResult) => {
         const pending = this.host.pendingApprovals.get(requestId);
         if (!pending) return;
@@ -206,6 +213,9 @@ export class UserDecisionLifecycle {
           reason: "The tool that requested this answer was cancelled",
         });
       this.host.pendingApprovals.set(requestId, (result: ApprovalResult) => {
+        this.legacyQuestions.delete(requestId);
+        if (!result.approved && result.failure === "timed_out")
+          result = { ...result, reason: timeoutReason };
         opts?.signal?.removeEventListener("abort", cancelQuestion);
         this.host.pendingApprovalTargets.delete(requestId);
         this.host.clearTimer(requestId);
@@ -222,7 +232,10 @@ export class UserDecisionLifecycle {
           return;
         }
         resolve(
-          result.approved ? (result.answer ?? "") : (result.reason ?? "(user declined to answer)"),
+          result.approved
+            ? (result.answer ?? "")
+            : (result.reason ??
+                (keepWaitable ? SKIPPED_QUESTION_REASON : "(user declined to answer)")),
         );
       });
       this.host.pendingApprovalTargets.set(requestId, route);
@@ -230,14 +243,11 @@ export class UserDecisionLifecycle {
       this.host.approvalTimers.set(
         requestId,
         setTimeout(
-          () =>
-            finish({
-              approved: false,
-              failure: "timed_out",
-              reason:
-                "The confirmation deadline expired without an answer. No permission was granted.",
-            }),
-          USER_DECISION_TIMEOUT_MS,
+          () => {
+            if (this.host.approvalDeadlines.get(requestId) !== expiresAt) return;
+            finish({ approved: false, failure: "timed_out", reason: timeoutReason });
+          },
+          Math.max(0, expiresAt - Date.now()),
         ),
       );
       opts?.signal?.addEventListener("abort", cancelQuestion, { once: true });
@@ -250,17 +260,30 @@ export class UserDecisionLifecycle {
       if (opts?.options !== undefined) args.options = opts.options;
       if (opts?.multiSelect !== undefined) args.multiSelect = opts.multiSelect;
       if (opts?.optionsOnly !== undefined) args.optionsOnly = opts.optionsOnly;
-      try {
+      const announce = (deadline: number | undefined) =>
         this.host.notify(Methods.ApprovalRequest, {
           ...route,
-          expiresAt,
+          ...(deadline !== undefined ? { expiresAt: deadline } : {}),
           request: {
             toolName: "__ask_user__",
-            args,
+            args: {
+              ...args,
+              ...(keepWaitable ? { skippable: true } : {}),
+              ...(keepWaitable && deadline !== undefined ? { keepWaitable: true } : {}),
+            },
             description: question,
             riskLevel: "low" as const,
           },
         });
+      if (keepWaitable)
+        this.legacyQuestions.set(requestId, {
+          keepWaiting: () => {
+            this.host.clearTimer(requestId);
+            announce(undefined);
+          },
+        });
+      try {
+        announce(expiresAt);
       } catch (error) {
         finish({ approved: false, failure: "session_closed", reason: String(error) });
       }
@@ -347,6 +370,16 @@ export class UserDecisionLifecycle {
         ErrorCodes.InvalidParams,
         "Keep-waiting request does not match connectionId, sessionId, generation, and requestId",
       );
+    if (sessionId === "") {
+      const question = this.legacyQuestions.get(requestId);
+      if (!question || !this.host.pendingApprovals.has(requestId))
+        return fail(ErrorCodes.InvalidParams, `No pending model question: ${requestId}`);
+      const deadline = this.host.approvalDeadlines.get(requestId);
+      if (deadline !== undefined && Date.now() >= deadline)
+        return fail(ErrorCodes.InvalidParams, "This question has already closed");
+      if (deadline !== undefined) question.keepWaiting();
+      return createResponse(req.id, { ok: true });
+    }
     const session = sessions?.get(sessionId);
     if (!session) return fail(ErrorCodes.SessionClosed, `No such session: ${sessionId}`);
     const entry = session.pendingApprovals.get(requestId);

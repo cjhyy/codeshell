@@ -31,6 +31,9 @@ import type { TurnLoop } from "./turn-loop.js";
 import type { EngineConfig } from "./types.js";
 import type { EngineRunOptions } from "./run-types.js";
 
+/** A durable user control refused a synthetic run before provider dispatch. */
+export class GoalContinuationHeld extends Error {}
+
 export type GoalStopHookHandler = ReturnType<typeof createGoalStopHook>;
 
 export interface GoalRunSlots {
@@ -68,7 +71,7 @@ export function applyRunGoalUpdate(
 export function resolveRunGoal(args: {
   options: EngineRunOptions | undefined;
   session: SessionBundle;
-  sessionManager: Pick<SessionManager, "saveActiveGoal">;
+  sessionManager: Pick<SessionManager, "saveActiveGoal" | "readSessionState">;
   configGoal: EngineConfig["goal"];
   isSubAgent: boolean;
   sid: string;
@@ -77,12 +80,34 @@ export function resolveRunGoal(args: {
   const { options, session, sessionManager, configGoal, isSubAgent, sid, onStream } = args;
   const goalDisabled = options?.disableGoal === true;
   const explicitGoal = goalDisabled ? undefined : normalizeGoal(options?.goal);
-  const storedLifecycle = session.state.goalLifecycle;
+  // Initialization hooks and provider setup can yield after opening the bundle.
+  // Read the complete lifecycle (including user wait and terminal tombstones),
+  // without adopting a stateRevision that would authorize stale whole-state saves.
+  const openedLifecycle = session.state.goalLifecycle;
+  const latest = sessionManager.readSessionState(sid);
+  if (!latest) throw new Error(`Cannot read Goal lifecycle for session ${sid}`);
+  session.state.goalLifecycle = latest.goalLifecycle;
+  const storedLifecycle = latest.goalLifecycle;
   // Recheck inside the run as well as before the mailbox claim: workspace or
   // provider setup can yield while the user parks/pauses this goal. Synthetic
   // input must not re-arm it; a real answer follows the normal path below.
   if (!goalDisabled && options?.injected && goalBlocksAutomaticContinuation(storedLifecycle)) {
-    throw new Error("Goal is paused or waiting for the user's reply; automatic continuation held");
+    throw new GoalContinuationHeld(
+      "Goal is paused or waiting for the user's reply; automatic continuation held",
+    );
+  }
+  if (
+    !goalDisabled &&
+    options?.injected &&
+    openedLifecycle &&
+    (openedLifecycle.goalId !== storedLifecycle?.goalId ||
+      openedLifecycle.revision !== storedLifecycle?.revision)
+  ) {
+    // The prompt/tool context was assembled before the hook yielded. Rebuild on
+    // the next authorized continuation instead of dispatching that stale prompt.
+    throw new GoalContinuationHeld(
+      "Goal changed during initialization; retry with the current Goal version",
+    );
   }
   const storedGoal =
     !goalDisabled &&
@@ -96,9 +121,19 @@ export function resolveRunGoal(args: {
     storedGoal &&
     !explicitGoal &&
     session.state.goalLifecycle?.phase === "waiting" &&
-    !sessionManager.saveActiveGoal(session.state, storedGoal)
+    !sessionManager.saveActiveGoal(session.state, storedGoal, {
+      expectedGoalId: storedGoal.goalId,
+      expectedRevision: storedGoal.revision ?? 1,
+    })
   ) {
-    throw new Error(`Failed to arm waiting goal for session ${sid}`);
+    const current = sessionManager.readSessionState(sid);
+    if (options?.injected && goalBlocksAutomaticContinuation(current?.goalLifecycle))
+      throw new GoalContinuationHeld(
+        "Goal is paused or waiting for the user's reply; automatic continuation held",
+      );
+    throw new Error(
+      `Failed to arm waiting goal for session ${sid}; retry with the current Goal version`,
+    );
   }
   if (explicitGoal && isSubAgent !== true) {
     // Supplying a goal on a run is an explicit arm/resume operation.

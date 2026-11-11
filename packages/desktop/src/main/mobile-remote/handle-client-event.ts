@@ -400,7 +400,7 @@ export async function handleClientEvent(
     event.type === "approval.respond" ||
     event.type === "approval.keepWaiting" ||
     event.type === "run.stop" ||
-    (ctx.externalCommands && ["model.set", "goal.extend", "goal.clear"].includes(event.type));
+    (ctx.externalCommands && ["model.set"].includes(event.type));
   const explicitSessionId = "sessionId" in event ? event.sessionId : undefined;
   let implicitSessionId: string | undefined;
   if (
@@ -777,7 +777,7 @@ export async function handleClientEvent(
     }
   }
   if (
-    ["model.set", "goal.extend", "goal.clear"].includes(event.type) &&
+    ["model.set"].includes(event.type) &&
     ctx.externalCommands?.isExternal(resolveSessionId(explicitSessionId), event.viewerId)
   ) {
     if (event.viewerId)
@@ -1047,48 +1047,116 @@ export async function handleClientEvent(
     reply({ type: "error", message: "请在对话的模型选择器中选择模型。" });
     return;
   }
-  if (event.type === "goal.extend") {
-    const res = await injectAndAwaitResult(
-      bridge,
-      "agent/goalExtend",
-      {
+  if (
+    event.type === "goal.clear" ||
+    event.type === "goal.get" ||
+    event.type === "goal.update" ||
+    event.type === "goal.extend"
+  ) {
+    const responseType =
+      event.type === "goal.extend"
+        ? "goal.extended"
+        : event.type === "goal.clear"
+          ? "goal.cleared"
+          : event.type === "goal.get"
+            ? "goal.state"
+            : "goal.updated";
+    try {
+      if (!ctx.externalCommands) throw new Error("Native Session authority unavailable");
+      if (
+        event.type === "goal.get" &&
+        ctx.externalCommands.isExternal(event.sessionId, event.viewerId)
+      ) {
+        reply({
+          type: "goal.state",
+          sessionId: event.sessionId,
+          requestId: event.requestId,
+          ok: false,
+          unsupported: true,
+          message: "External Goal controls require the Desktop owner",
+        });
+        return;
+      }
+      const authority = await ctx.externalCommands.authorizeNative(
+        event.viewerId,
+        deviceId,
+        event.sessionId,
+      );
+      const method =
+        event.type === "goal.extend"
+          ? "agent/goalExtend"
+          : event.type === "goal.get"
+            ? "agent/goalGet"
+            : event.type === "goal.update"
+              ? "agent/goalUpdate"
+              : event.expectedGoalId
+                ? "agent/goalDelete"
+                : "agent/goalClear";
+      const {
+        type: _type,
+        deviceId: _device,
+        viewerId: _viewer,
+        requestId: _request,
+        ...params
+      } = event;
+      authority.assertCurrent();
+      const res = await injectAndAwaitResult(bridge, method, params, {
+        origin: "mobile",
+        producer: "mobile-goal-control",
+      });
+      if (!res.ok) throw new Error(res.message);
+      const value = res.result as {
+        updated?: boolean;
+        cleared?: boolean;
+        deleted?: boolean;
+        goal?: string | null;
+        goalId?: string;
+        revision?: number;
+        paused?: boolean;
+      };
+      if (event.type === "goal.update" && !value.updated)
+        throw new Error("Goal changed; refresh and retry");
+      if (event.type === "goal.extend") {
+        reply({
+          type: "goal.extended",
+          sessionId: event.sessionId,
+          requestId: event.requestId,
+          ok: true,
+        });
+      } else if (event.type === "goal.clear") {
+        reply({
+          type: "goal.cleared",
+          sessionId: event.sessionId,
+          requestId: event.requestId,
+          ok: true,
+          cleared: value.cleared ?? value.deleted,
+        });
+      } else {
+        reply({
+          type: responseType as "goal.state" | "goal.updated",
+          sessionId: event.sessionId,
+          requestId: event.requestId,
+          ok: true,
+          goal:
+            typeof value.goal === "string" && value.goalId && value.revision
+              ? {
+                  objective: value.goal,
+                  goalId: value.goalId,
+                  revision: value.revision,
+                  paused: value.paused === true,
+                }
+              : null,
+        });
+      }
+    } catch (error) {
+      reply({
+        type: responseType,
         sessionId: event.sessionId,
-        addTurns: event.addTurns,
-        addTokenBudget: event.addTokenBudget,
-        addTimeBudgetMs: event.addTimeBudgetMs,
-        addStopBlocks: event.addStopBlocks,
-      },
-      { origin: "mobile", producer: "mobile-goal-extend" },
-    );
-    // Report the REAL outcome (ok:false carries the worker's reason).
-    reply({
-      type: "goal.extended",
-      sessionId: event.sessionId,
-      ok: res.ok,
-      message: res.ok ? undefined : res.message,
-    });
-    return;
-  }
-  if (event.type === "goal.clear") {
-    const res = await injectAndAwaitResult(
-      bridge,
-      "agent/goalClear",
-      { sessionId: event.sessionId },
-      { origin: "mobile", producer: "mobile-goal-clear" },
-    );
-    // The worker's result carries { ok, cleared }; surface `cleared` so the
-    // phone can tell "there was a goal, now gone" from "nothing to clear".
-    const cleared =
-      res.ok && typeof (res.result as { cleared?: boolean } | undefined)?.cleared === "boolean"
-        ? (res.result as { cleared: boolean }).cleared
-        : undefined;
-    reply({
-      type: "goal.cleared",
-      sessionId: event.sessionId,
-      ok: res.ok,
-      cleared,
-      message: res.ok ? undefined : res.message,
-    });
+        requestId: event.requestId,
+        ok: false,
+        message: error instanceof Error ? error.message : String(error),
+      } as MobileServerEvent);
+    }
     return;
   }
 }

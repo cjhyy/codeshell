@@ -42,6 +42,7 @@ describe("resolveRunGoal", () => {
       const args = {
         session,
         sessionManager: {
+          readSessionState: () => session.state,
           saveActiveGoal: () => {
             saves++;
             return true;
@@ -79,6 +80,7 @@ describe("resolveRunGoal", () => {
         options: { injected: true },
         session,
         sessionManager: {
+          readSessionState: () => session.state,
           saveActiveGoal: () => {
             throw new Error("must not re-arm");
           },
@@ -116,6 +118,7 @@ describe("resolveRunGoal", () => {
         options: { goalContinuation: { goalId: "original", revision: 4 } },
         session,
         sessionManager: {
+          readSessionState: () => session.state,
           saveActiveGoal: (_state, value) => {
             expect(value).toEqual(goal);
             return true;
@@ -158,6 +161,7 @@ describe("resolveRunGoal", () => {
           },
           session,
           sessionManager: {
+            readSessionState: () => session.state,
             saveActiveGoal: () => {
               throw new Error("must not mutate Goal");
             },
@@ -187,6 +191,7 @@ describe("resolveRunGoal", () => {
       options: { goal: "explicit goal", disableGoal: true },
       session,
       sessionManager: {
+        readSessionState: () => session.state,
         saveActiveGoal: () => {
           saves += 1;
           return true;
@@ -202,3 +207,35 @@ describe("resolveRunGoal", () => {
     expect(saves).toBe(0);
   });
 });
+
+test.each([true, false])(
+  "waiting CAS failure is a normal hold only after an authoritative pause (%s)",
+  (paused) => {
+    const goal = { objective: "finish", goalId: "race", revision: 7 };
+    const waiting = waitGoalLifecycle(createGoalLifecycle(goal), 100, "background");
+    const session = { state: { goalLifecycle: waiting } } as SessionBundle;
+    let latest = session.state;
+    const attempt = () =>
+      resolveRunGoal({
+        options: { injected: true },
+        session,
+        sessionManager: {
+          readSessionState: () => latest,
+          saveActiveGoal: (_state, _goal, expected) => {
+            expect(expected).toEqual({ expectedGoalId: "race", expectedRevision: 7 });
+            if (paused)
+              latest = {
+                ...latest,
+                goalLifecycle: createGoalLifecycle({ ...goal, revision: 8 }, "paused"),
+              };
+            return false;
+          },
+        },
+        configGoal: undefined,
+        isSubAgent: false,
+        sid: "s",
+        onStream: undefined,
+      });
+    expect(attempt).toThrow(paused ? "automatic continuation held" : "Failed to arm waiting goal");
+  },
+);

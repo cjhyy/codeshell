@@ -21,6 +21,7 @@ import type { LegacyPetWorkDelegation, Message, TokenUsage } from "../types.js";
 import type { LLMUsageTracker } from "../llm/types.js";
 import type { LLMClientBase } from "../llm/client-base.js";
 import type { HookEventName, HookResult } from "../hooks/events.js";
+import { GoalContinuationHeld } from "./run-goal.js";
 import { buildSessionTitle } from "./session-title.js";
 import { formatFriendlyError } from "./friendly-error.js";
 import { stripInjectedContextMessages } from "./injected-context-cache.js";
@@ -43,6 +44,27 @@ export function createRunFailureHandler(
       args.sealForFinalization();
     } catch {
       /* Failure remains non-completed; in-memory fences were installed first. */
+    }
+    if (err instanceof GoalContinuationHeld) {
+      args.session.state.status = "aborted_streaming";
+      delete args.session.state.lastCompletionKind;
+      args.persistFinalRunState(args.session.state);
+      args.options?.onStream?.({
+        type: "turn_complete",
+        reason: "aborted_streaming",
+        text: err.message,
+      });
+      const held: EngineResult = {
+        runId: args.runId,
+        sessionId: args.session.state.sessionId,
+        reason: "aborted_streaming",
+        text: err.message,
+        turnCount: 0,
+        usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      };
+      if (args.options?.clientMessageId)
+        appendClientRunReceipt(args.session, args.options.clientMessageId, held);
+      return held;
     }
     const failed = buildRunFailureResult({
       ...args,

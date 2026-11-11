@@ -1185,3 +1185,48 @@ describe("mobile keep-waiting on a model question", () => {
     ]);
   });
 });
+
+test("versioned Goal commands reject lost native authority before worker or disk dispatch", async () => {
+  let injections = 0;
+  const replies: any[] = [];
+  const ctx = {
+    getBridge: () => ({
+      getLastRunContext: () => ({}),
+      injectWorkerMessage() {
+        injections++;
+      },
+      subscribeOutbound: () => () => {},
+    }),
+    deviceState: () => ({ selectedSessionId: "native" }),
+    externalCommands: {
+      observe() {},
+      isExternal: () => false,
+      authorizeNative: async () => ({
+        assertCurrent() {
+          throw new Error("owner changed");
+        },
+      }),
+    },
+    remote: { sendToDevice: (_id, reply) => replies.push(reply) },
+  } as unknown as OrchestratorCtx;
+  for (const type of ["goal.get", "goal.update", "goal.clear", "goal.extend"] as const) {
+    await handleClientEvent(ctx, {
+      type,
+      deviceId: "device",
+      viewerId: "viewer",
+      sessionId: "native",
+      requestId: type,
+      paused: false,
+      expectedGoalId: "goal",
+      expectedRevision: 1,
+      addTurns: 100,
+    } as any);
+  }
+  expect(injections).toBe(0);
+  expect(replies.map((reply) => [reply.requestId, reply.ok, reply.message])).toEqual([
+    ["goal.get", false, "owner changed"],
+    ["goal.update", false, "owner changed"],
+    ["goal.clear", false, "owner changed"],
+    ["goal.extend", false, "owner changed"],
+  ]);
+});
