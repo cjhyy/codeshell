@@ -13,7 +13,7 @@ import type { ReplyModel } from "./pet-notice-reply-interpreter.js";
  * read on every call, so a model change applies without a restart. A model
  * that is not configured throws, and the next one is tried.
  */
-export function createReplyModels(cwd: string): ReplyModel[] {
+export function createReplyModels(cwd: string, options: { maxTokens?: number } = {}): ReplyModel[] {
   type Settings = ReturnType<SettingsManager["get"]>;
   const aux = (settings: Settings) => resolveAuxKey(settings);
   const main = (settings: Settings) => petChatModelKeyFromSettings(settings) ?? undefined;
@@ -34,8 +34,9 @@ export function createReplyModels(cwd: string): ReplyModel[] {
         tools: [],
         reasoning: { mode: "off" },
         requestVisible: false,
-        // A small JSON object: the owner's words are never echoed back at length.
-        maxTokens: 1_000,
+        // A small JSON object: the owner's words are never echoed back at length
+        // (a brief's write-up asks for more).
+        maxTokens: options.maxTokens ?? 1_000,
         signal,
       });
       return response.text ?? "";

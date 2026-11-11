@@ -92,6 +92,16 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     log,
   });
 
+  const viewedSince = (sessionId: string, ms: number): boolean => {
+    let focused: boolean;
+    try {
+      focused = deps.presence.hasFocusedWindow();
+    } catch {
+      focused = false;
+    }
+    return views.viewedSince(sessionId, ms, focused);
+  };
+
   const presence = {
     isPresent: () =>
       createPresenceDetector({
@@ -117,15 +127,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     // Every IM send goes through the outbox, which dedupes a resend by its key.
     supportsIdempotentSend: () => true,
     isDecisionStillPending: view.isDecisionStillPending,
-    wasSessionViewedSince: (sessionId, ms) => {
-      let focused: boolean;
-      try {
-        focused = deps.presence.hasFocusedWindow();
-      } catch {
-        focused = false;
-      }
-      return views.viewedSince(sessionId, ms, focused);
-    },
+    wasSessionViewedSince: (sessionId, ms) => viewedSince(sessionId, ms),
     isGoalRuleCancelled: (ruleId) => {
       const rule = ruleStore.get(ruleId);
       return (
@@ -381,6 +383,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
         deps.gateway.lastOwnerInboundChannel(),
       ),
     isEligibleSession: view.isEligibleSession,
+    wasSessionViewedSince: viewedSince,
     upsertRule: (callerSessionId, args) => {
       if (disposed) return Promise.reject(new Error("notice rules are shutting down"));
       return upsertRule(callerSessionId, args);

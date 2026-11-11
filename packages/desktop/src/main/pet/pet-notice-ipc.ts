@@ -6,6 +6,7 @@ import {
 import type {
   PetNoticeChannel,
   PetNoticesState,
+  PetProactiveStatus,
   PetNoticeSystemRule,
   PetNoticeSystemRulePatch,
   PetSessionBellState,
@@ -50,6 +51,8 @@ export interface PetNoticeControlsDeps {
    * makes the bell wait for the Goal instead of the next turn.
    */
   goals: { readActiveGoal(sessionId: string): { paused?: boolean } | undefined };
+  /** Briefs' and heartbeat's state today (counts at their caps), once they run. */
+  proactive?: () => PetProactiveStatus | undefined;
   now?: () => number;
 }
 
@@ -160,7 +163,18 @@ export function createPetNoticeControls(deps: PetNoticeControlsDeps): PetNoticeC
   return {
     async getState() {
       await notices.ready;
-      return { channels: channels(), systemRule: systemRule(), settings: notices.settingsView() };
+      let proactive: PetProactiveStatus | undefined;
+      try {
+        proactive = deps.proactive?.();
+      } catch {
+        proactive = undefined;
+      }
+      return {
+        channels: channels(),
+        systemRule: systemRule(),
+        settings: notices.settingsView(),
+        ...(proactive ? { proactive } : {}),
+      };
     },
     async sessionBell(sessionId) {
       await notices.ready;
