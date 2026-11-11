@@ -53,14 +53,17 @@
 6. 评审修正（2026-11-11）：只读或读不出的规则表不再拖垮桌面启动；隔离区的行加载时恢复；core `nextCronTime` 改为按字段跳跃（约 8 年上限、拨慢重复时刻只触发一次）；认领期间允许取消/改期；只淘汰已送达的一次性跟进。
 7. 删除：`pet-registered-follow-up-store.ts`、`pet-follow-up-wake-coordinator.ts`、`pet-follow-up-runtime.ts`、`pet-follow-up-host.ts` 及其测试；pet 包里的 `PetRegisteredFollowUp` / `RegisterPetFollowUpInput` / `PetFollowUpWakeOutcome`（换成 `PetFollowUpWake`）。
 
-## 2c-2 晨报、收工、心跳（待做）
+## 2c-2 晨报、收工、心跳（已实现）
 
-1. 晨报 / 收工：系统 `schedule` 规则（默认关，配置中心开；默认工作日 09:30 / 18:30 本地），`then: { mode: "compose" }`。到点确定性收集：昨天以来完成/失败的长任务、正在跑的、等你决定的、今天到期的跟进；为空不发。交给 Mimi 成文（宿主唤醒轮，数据以 JSON 给，要求每一项对得上），结果作为 `brief.morning` / `brief.evening` Notice 过路由器（免打扰内顺延到结束）。错过（睡眠）由执行器按规则的 `missedPolicy` 当天补一次。IM 不可用时进待送队列。
-2. 心跳：系统 `schedule` 规则 `then: { mode: "judge" }`，默认关（D3）；预检只看新事实（§10.2），有才跑判断轮。
-3. 系统定时规则要"按字段覆盖、未改字段跟随升级"（§4.3）。
-4. 固定格子摘要：设置 `digestSlots?: string[]`（例如 `["12:00","18:00"]`），有设置时摘要只在格子发（P0 照旧）；`nextSendAllowedAt` 统一换算。
-5. 推迟："现在别说，明早再说"：IM 回 `稍后 码` / 自然语言由 Mimi 调宿主动作 `pet.notice.defer`（最多 36 小时、最多 2 次），ledger 字段 `deferredUntil/deferCount`；摘要冲刷跳过未到期的。
-6. 设置卡片加：晨报/收工开关与时间、摘要格子。
+主人决定（2026-11-11）：主动行为一律是规则、只有一套调度；自然语言只交给模型；默认全关，晨报 09:00、收工 18:30（本地，每天），心跳活跃时段 09:00–22:00 每 30 分钟、绝不在免打扰内，判断 ≤ 8 次/天、消息 ≤ 4 条/天。三期的心跳并入本期。
+
+1. 系统定时规则（`pet-rule-store.ts` `setSystemSchedule`，`pet-proactive-rules.ts`）：`system-brief-morning` / `system-brief-evening`（`then: compose`）、`system-heartbeat` / `system-heartbeat-recheck`（`then: judge`），`origin/createdBy: system`、目标主人、`auto`；第一次打开才建行，之后只暂停；设置改了就同步（新 version、从现在往后算）。只有 `system-heartbeat` 可以每小时两次（分钟恰好相差 30，由宿主写出）。执行器的任务键接受这四个 id；到点由跟进的调度器交给 `fireSystem`。
+2. 晨报 / 收工（`pet-proactive-brief.ts`）：确定性收集 → 为空不发 → 辅助模型（再 Mimi 主模型）写严格 JSON，每行带 `refs` 并由代码复核 → 都不行用模板 → `brief.<kind>`（P1）过路由器。睡过了当天补一次，当天发过不再发。没有用宿主唤醒的 Mimi 轮：它的输出是不可核对的散文、还能调工具（见设计稿 §10.1 第 5 条）。
+3. 心跳（`pet-proactive-heartbeat.ts`、`pet-proactive.ts`）：三项预检（未送达的新决定、续办跟进将到期而会话闲着、结果没看过；"超过预估 2 倍"因长任务没有预估未做）→ 有才判断 → 严格 JSON → `heartbeat`（P1）或一次复查；上限计数先落盘（`pet/proactive.json`），重启不归零。
+4. 固定格子（`pet-notice-digest.ts` `slottedFlushAt`）：`digestSlots` 设了就只在格子发普通摘要；P0 与跟进摘要不变。晨报/心跳被压住时整条重发，不进摘要行。
+5. 推迟：晨报、收工、心跳消息带新事项族 `notice`（动作 `defer`；摘要不带，免得每条摘要后 2 小时内的 IM 消息都多一次模型调用），回复解读模型给出 `until`（ISO，按给出的主人本地时间）；宿主夹到 [5 分钟, 36 小时]、最多 2 次，账本副本带 `deferredUntil/deferCount`，摘要冲刷到点整条重发（`pet-notice-defer.ts`）。原计划里的 `稍后 码` 命令和 `pet.notice.defer` 宿主动作没有做：回复一律由模型读，不加命令。
+6. 设置（只有数据和 IPC，界面在 2d-2）：`briefs`、`heartbeat`、`digestSlots`（core 设置 schema + `pet-notice-settings.ts`）；`pet:notices:get-state` 带设置与 `proactive` 状态，不加通道。
+7. "按字段覆盖、未改字段跟随升级"（§4.3）没有单独做：系统定时规则的 `then` 和形状由 id 决定、时间全在设置里，规则行没有主人能单独改的字段。
 
 ## 2d 规则列表界面
 

@@ -928,6 +928,7 @@ export class PetImDecisions {
         action: reading.action as NoticeActionVerb,
         ...(reading.answer !== undefined ? { text: reading.answer } : {}),
         ...(reading.index !== undefined ? { index: reading.index } : {}),
+        ...(reading.until !== undefined ? { until: reading.until } : {}),
         handoff: request.handoff !== false,
         message,
       });

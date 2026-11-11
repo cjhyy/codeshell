@@ -56,6 +56,7 @@ async function setup(
     wakeFollowUp?: (
       wake: PetFollowUpWake,
     ) => Promise<{ launched: boolean; text: string; taskId?: string }>;
+    fireSystem?: Parameters<typeof createPetFollowUpRules>[0]["fireSystem"];
   } = {},
 ) {
   const rules = new PetRuleStore({ path: join(dir, "rules.json"), now: () => clock });
@@ -118,6 +119,7 @@ async function setup(
           : { launched: true, text: "已交回原任务", taskId: "task-new" };
       },
     }),
+    ...(options.fireSystem ? { fireSystem: options.fireSystem } : {}),
     now: () => clock,
     onError: () => undefined,
   });
@@ -337,6 +339,45 @@ describe("startup", () => {
 });
 
 describe("firing", () => {
+  test("Mimi's own rules go to the system handler, never to the follow-up path", async () => {
+    const handled: string[] = [];
+    let ready = false;
+    const f = await setup({
+      fireSystem: () =>
+        ready
+          ? async (rule) => {
+              handled.push(rule.id);
+              return { status: "notified", detail: "早报已发" };
+            }
+          : undefined,
+    });
+    const daily = {
+      kind: "schedule" as const,
+      cron: "0 9 * * *",
+      label: "每天 09:00",
+      timezone: "UTC",
+      missedPolicy: "fire-once" as const,
+    };
+    const brief = await f.rules.setSystemSchedule("system-brief-morning", {
+      when: daily,
+      state: "active",
+    });
+    await f.runtime.coordinator.start();
+    clock = brief!.wake.occurrence;
+    // Not built yet: recorded as not run, never sent as a follow-up.
+    await f.runtime.coordinator.wake(f.jobs[0]!);
+    expect(f.rules.get("system-brief-morning")?.wake.detail).toContain("尚未就绪");
+    ready = true;
+    clock += 24 * HOUR;
+    // Due by now: the scheduler's own reconcile carries it out.
+    await f.runtime.coordinator.reconcile();
+    await f.runtime.coordinator.idle();
+    f.runtime.coordinator.stop();
+    expect(handled).toEqual(["system-brief-morning"]);
+    expect(f.submitted).toEqual([]);
+    expect(f.wakes).toEqual([]);
+  });
+
   test("remind: the text is the reminder, through the router", async () => {
     const f = await setup();
     const id = String((await f.host(remind, desktop)).followUpId);

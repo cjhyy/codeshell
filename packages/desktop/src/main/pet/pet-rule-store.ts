@@ -24,6 +24,7 @@ import {
 import {
   dueAt,
   firstOccurrence,
+  isSystemScheduleThen,
   staggerFor,
   nextOccurrence,
   parseRuleWake,
@@ -34,6 +35,7 @@ import {
   type RuleWakeOutcome,
   type ScheduleThen,
   type ScheduleWhen,
+  type SystemScheduleThen,
 } from "./pet-schedule-rule.js";
 import { imConversationRouteKey } from "./session-turn-scheduler.js";
 
@@ -44,6 +46,37 @@ export type NoticeRuleState = "active" | "paused" | "spent" | "completed" | "can
 export type SystemNoticeRuleId = "all-sessions";
 
 export type { ScheduleThen, ScheduleWhen, RuleWake } from "./pet-schedule-rule.js";
+
+/**
+ * Mimi's own schedule rules (design §10.1, §10.2): fixed ids, each with a
+ * fixed `then`. They are created on first switch-on and only paused after
+ * that; their timing follows the owner's settings.
+ */
+export type SystemScheduleRuleId =
+  | "system-brief-morning"
+  | "system-brief-evening"
+  | "system-heartbeat"
+  /** The heartbeat's one extra look ("recheck in N minutes"): a one-shot. */
+  | "system-heartbeat-recheck";
+
+export const SYSTEM_SCHEDULE_THEN: Readonly<Record<SystemScheduleRuleId, SystemScheduleThen>> = {
+  "system-brief-morning": { mode: "compose", brief: "morning" },
+  "system-brief-evening": { mode: "compose", brief: "evening" },
+  "system-heartbeat": { mode: "judge", kind: "heartbeat" },
+  "system-heartbeat-recheck": { mode: "judge", kind: "heartbeat" },
+};
+
+function systemScheduleThen(id: unknown): SystemScheduleThen | undefined {
+  return typeof id === "string" && Object.hasOwn(SYSTEM_SCHEDULE_THEN, id)
+    ? SYSTEM_SCHEDULE_THEN[id as SystemScheduleRuleId]
+    : undefined;
+}
+
+/** What the owner's settings ask of one system schedule rule. */
+export interface SystemScheduleInput {
+  when: ScheduleWhen;
+  state: "active" | "paused";
+}
 
 export interface SessionRuleWhen {
   kind: "session";
@@ -89,12 +122,22 @@ export type EventNoticeRule = NoticeRule & {
   then: { mode: "notify" };
 };
 
-/** A time-triggered rule (follow-ups now; briefs and heartbeat later). */
+/** A time-triggered rule: an owner's follow-up, or Mimi's brief / heartbeat. */
 export type ScheduleNoticeRule = NoticeRule & {
   when: ScheduleWhen;
   then: ScheduleThen;
   wake: RuleWake;
 };
+
+/** One of Mimi's own schedule rules. */
+export type SystemScheduleNoticeRule = ScheduleNoticeRule & {
+  id: SystemScheduleRuleId;
+  then: SystemScheduleThen;
+};
+
+export function isSystemScheduleRule(rule: NoticeRule): rule is SystemScheduleNoticeRule {
+  return isScheduleRule(rule) && systemScheduleThen(rule.id) !== undefined;
+}
 
 export function isScheduleRule(rule: NoticeRule): rule is ScheduleNoticeRule {
   return rule.when.kind === "schedule";
@@ -289,9 +332,11 @@ function migrateLegacyRow(row: unknown): unknown {
   return { ...row, when: { ...when, armedAt: row.updatedAt } };
 }
 
-function parseWhen(value: unknown): NoticeRule["when"] | undefined {
+function parseWhen(value: unknown, id: unknown): NoticeRule["when"] | undefined {
   if (!isRecord(value)) return undefined;
-  if (value.kind === "schedule") return parseScheduleWhen(value);
+  // Only the heartbeat, whose cron the host writes, may fire twice an hour.
+  if (value.kind === "schedule")
+    return parseScheduleWhen(value, { halfHourly: id === "system-heartbeat" });
   if (value.kind === "session") {
     if (
       !hasOnlyKeys(value, ["kind", "sessionId", "runtime", "events", "scope", "armedAt"]) ||
@@ -338,7 +383,7 @@ function parseRule(value: unknown): NoticeRule | undefined {
     ])
   )
     return undefined;
-  const when = parseWhen(value.when);
+  const when = parseWhen(value.when, value.id);
   if (!when) return undefined;
   const scheduled = when.kind === "schedule";
   if (
@@ -365,13 +410,28 @@ function parseRule(value: unknown): NoticeRule | undefined {
     value.updatedAt < value.createdAt
   )
     return undefined;
-  if (scheduled) {
-    // Owner-asked follow-ups only, for now; system schedules (briefs) come later.
+  const system = scheduled ? systemScheduleThen(value.id) : undefined;
+  if (system) {
+    // Mimi's own: owner-addressed, auto channel, the id's own `then`; never finished.
+    if (
+      value.origin !== "system" ||
+      value.createdBy !== "system" ||
+      value.target.kind !== "owner" ||
+      value.channel !== "auto" ||
+      value.attention !== "always" ||
+      canonicalJson(value.then) !== canonicalJson(system) ||
+      (value.state !== "active" && value.state !== "paused") ||
+      (value.id === "system-heartbeat-recheck") !== ((when as ScheduleWhen).at !== undefined)
+    )
+      return undefined;
+  } else if (scheduled) {
+    // Owner-asked follow-ups.
     if (
       typeof value.id !== "string" ||
       !RULE_ID_PATTERN.test(value.id) ||
       value.origin !== "user" ||
-      value.createdBy !== "follow-up"
+      value.createdBy !== "follow-up" ||
+      isSystemScheduleThen(value.then as ScheduleThen)
     )
       return undefined;
   } else if (when.kind === "session") {
@@ -834,13 +894,61 @@ export class PetRuleStore {
     return { occurrence, ...(stagger > 0 ? { stagger } : {}), status: "scheduled" };
   }
 
-  private firstOccurrenceOf(when: ScheduleWhen, at: number): number {
-    if (!parseScheduleWhen(when)) throw new PetRuleStoreError("invalid_rule");
+  private firstOccurrenceOf(when: ScheduleWhen, at: number, id?: string): number {
+    if (!parseScheduleWhen(when, { halfHourly: id === "system-heartbeat" }))
+      throw new PetRuleStoreError("invalid_rule");
     // The one date search a registration does (a yearly cron scans ~a year of minutes).
     const first = firstOccurrence(when, at);
     if (first === null) throw new PetRuleStoreError("schedule_never_fires");
     if (first <= at) throw new PetRuleStoreError("schedule_in_past");
     return first;
+  }
+
+  /**
+   * Bring one of Mimi's schedule rules in line with the owner's settings.
+   * Absent until first switched on; then only paused. A new timing, or
+   * switching back on, is a new version with a fresh first occurrence after
+   * now, so an occurrence slept through while it was off never fires late.
+   */
+  setSystemSchedule(
+    id: SystemScheduleRuleId,
+    input: SystemScheduleInput,
+  ): Promise<ScheduleNoticeRule | undefined> {
+    const snapshot = structuredClone(input);
+    return this.mutate((staged) => {
+      const then = systemScheduleThen(id);
+      if (!then || (snapshot.state !== "active" && snapshot.state !== "paused"))
+        throw new PetRuleStoreError("invalid_rule");
+      const current = staged.get(id);
+      if (current && !isScheduleRule(current)) throw new PetRuleStoreError("invalid_rule");
+      if (!current && snapshot.state === "paused") return unchanged(undefined);
+      const retimed = !current || canonicalJson(current.when) !== canonicalJson(snapshot.when);
+      if (current && !retimed && current.state === snapshot.state) return unchanged(current);
+      const at = this.timestamp();
+      const fresh = snapshot.state === "active" && (retimed || current?.state !== "active");
+      const rule = {
+        id,
+        version: (current?.version ?? 0) + 1,
+        origin: "system",
+        createdBy: "system",
+        when: snapshot.when,
+        then: structuredClone(then),
+        // A paused rule keeps its (stale) occurrence; it is renewed when switched back on.
+        wake:
+          fresh || !current
+            ? this.scheduledWake(staged, id, this.firstOccurrenceOf(snapshot.when, at, id))
+            : current.wake,
+        attention: "always",
+        channel: "auto",
+        target: { kind: "owner" },
+        state: snapshot.state,
+        createdAt: current?.createdAt ?? at,
+        updatedAt: Math.max(at, current?.updatedAt ?? at),
+      } satisfies NoticeRule;
+      if (!parseRule(rule)) throw new PetRuleStoreError("invalid_rule");
+      staged.set(id, rule);
+      return rule as ScheduleNoticeRule;
+    });
   }
 
   /** Toggle / tune the "every Session" rule; creates it from the default on first use. */
@@ -941,6 +1049,7 @@ export class PetRuleStore {
     // unknown one still needs the owner's attention and is kept.
     const fired = (rule: NoticeRule) =>
       isScheduleRule(rule) &&
+      rule.origin !== "system" &&
       rule.when.at !== undefined &&
       (rule.wake.status === "notified" || rule.wake.status === "launched");
     const evictable = [

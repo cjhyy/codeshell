@@ -34,12 +34,38 @@ export interface PetNotificationSettingsView {
   mergeWindowSec: number;
   presenceIdleSec: number;
   delegatedFromDesktop: "auto" | "desktop";
+  /** Morning brief and evening wrap-up: each on/off and its local "HH:MM" (always filled by main). */
+  briefs?: { morning: PetBriefSetting; evening: PetBriefSetting };
+  /** Mimi's heartbeat: every 30 min within active hours, never in quiet hours. */
+  heartbeat?: { enabled: boolean; activeHours: { start: string; end: string } };
+  /** Fixed local times the digest goes out at, sorted; empty: as soon as allowed. */
+  digestSlots?: string[];
+}
+
+export interface PetBriefSetting {
+  enabled: boolean;
+  time: string;
+}
+
+/** Where the briefs and the heartbeat stand today (read-only; counts reset at local midnight). */
+export interface PetProactiveStatus {
+  briefs: Record<"morning" | "evening", { lastSentDay?: string }>;
+  heartbeat: {
+    judgedToday: number;
+    saidToday: number;
+    judgeCap: number;
+    sayCap: number;
+    atJudgeCap: boolean;
+    atSayCap: boolean;
+  };
 }
 
 export interface PetNoticesState {
   channels: PetNoticeChannel[];
   systemRule: PetNoticeSystemRule;
   settings: PetNotificationSettingsView;
+  /** Present once main's proactive rules are running. */
+  proactive?: PetProactiveStatus;
 }
 
 /**

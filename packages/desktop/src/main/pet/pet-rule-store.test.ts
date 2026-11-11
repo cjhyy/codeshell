@@ -1097,3 +1097,163 @@ describe("schedule rules across builds", () => {
     expect(s.get(RULE)).toBeDefined();
   });
 });
+
+describe("system schedule rules", () => {
+  const TZ = "UTC";
+  const MORNING = {
+    kind: "schedule",
+    cron: "0 9 * * *",
+    label: "每天 09:00",
+    timezone: TZ,
+    missedPolicy: "fire-once",
+  } as const;
+  const HEARTBEAT = {
+    kind: "schedule",
+    cron: "0,30 9-21 * * *",
+    label: "活跃时段每 30 分钟",
+    timezone: TZ,
+    missedPolicy: "skip",
+  } as const;
+
+  test("absent until first switched on; then a fixed-shape owner rule", async () => {
+    const s = store();
+    await s.load();
+    expect(
+      await s.setSystemSchedule("system-brief-morning", { when: MORNING, state: "paused" }),
+    ).toBeUndefined();
+    expect(s.get("system-brief-morning")).toBeUndefined();
+    const rule = await s.setSystemSchedule("system-brief-morning", {
+      when: MORNING,
+      state: "active",
+    });
+    expect(rule).toMatchObject({
+      id: "system-brief-morning",
+      version: 1,
+      origin: "system",
+      createdBy: "system",
+      then: { mode: "compose", brief: "morning" },
+      target: { kind: "owner" },
+      channel: "auto",
+      state: "active",
+      wake: { occurrence: Date.UTC(2023, 10, 15, 9, 0), status: "scheduled" },
+    });
+    // Survives a reload: the row is valid on disk.
+    const reloaded = store();
+    await reloaded.load();
+    expect(reloaded.get("system-brief-morning")?.state).toBe("active");
+  });
+
+  test("pausing keeps the row; switching back on starts from now, never a slept-through occurrence", async () => {
+    const s = store();
+    await s.load();
+    await s.setSystemSchedule("system-brief-morning", { when: MORNING, state: "active" });
+    const paused = await s.setSystemSchedule("system-brief-morning", {
+      when: MORNING,
+      state: "paused",
+    });
+    expect(paused).toMatchObject({ state: "paused", version: 2 });
+    clock = Date.UTC(2023, 10, 16, 15, 0);
+    const again = await s.setSystemSchedule("system-brief-morning", {
+      when: MORNING,
+      state: "active",
+    });
+    expect(again).toMatchObject({
+      state: "active",
+      version: 3,
+      wake: { occurrence: Date.UTC(2023, 10, 17, 9, 0), status: "scheduled" },
+    });
+  });
+
+  test("a new time reschedules; the same settings write nothing", async () => {
+    const s = store();
+    await s.load();
+    await s.setSystemSchedule("system-brief-morning", { when: MORNING, state: "active" });
+    let changes = 0;
+    s.onChange(() => (changes += 1));
+    await s.setSystemSchedule("system-brief-morning", { when: MORNING, state: "active" });
+    expect(changes).toBe(0);
+    const moved = await s.setSystemSchedule("system-brief-morning", {
+      when: { ...MORNING, cron: "30 7 * * *", label: "每天 07:30" },
+      state: "active",
+    });
+    expect(moved?.version).toBe(2);
+    expect(moved?.wake.occurrence).toBe(Date.UTC(2023, 10, 15, 7, 30));
+    expect(changes).toBe(1);
+  });
+
+  test("only the heartbeat may fire twice an hour, and only at minutes 30 apart", async () => {
+    const s = store();
+    await s.load();
+    const beat = await s.setSystemSchedule("system-heartbeat", {
+      when: HEARTBEAT,
+      state: "active",
+    });
+    expect(beat?.then).toEqual({ mode: "judge", kind: "heartbeat" });
+    expect(beat?.wake.occurrence).toBe(Date.UTC(2023, 10, 15, 9, 0));
+    await expect(
+      s.setSystemSchedule("system-brief-evening", { when: HEARTBEAT, state: "active" }),
+    ).rejects.toMatchObject({ code: "invalid_rule" });
+    await expect(
+      s.setSystemSchedule("system-heartbeat", {
+        when: { ...HEARTBEAT, cron: "0,20 9-21 * * *" },
+        state: "active",
+      }),
+    ).rejects.toMatchObject({ code: "invalid_rule" });
+    // A follow-up is never exempt.
+    await expect(
+      s.createScheduleRule({
+        id: "rule-00000000-0000-4000-8000-0000000000cc",
+        when: HEARTBEAT,
+        then: { mode: "remind", title: "t", text: "x" },
+        channel: "auto",
+        target: { kind: "owner" },
+      }),
+    ).rejects.toMatchObject({ code: "invalid_rule" });
+  });
+
+  test("the recheck is a one-shot; a follow-up cannot carry a system `then`", async () => {
+    const s = store();
+    await s.load();
+    const at = NOW + 20 * 60_000;
+    const recheck = await s.setSystemSchedule("system-heartbeat-recheck", {
+      when: { kind: "schedule", at, timezone: TZ, missedPolicy: "skip" },
+      state: "active",
+    });
+    expect(recheck?.wake.occurrence).toBe(at);
+    await expect(
+      s.setSystemSchedule("system-heartbeat-recheck", { when: HEARTBEAT, state: "active" }),
+    ).rejects.toMatchObject({ code: "invalid_rule" });
+    await expect(
+      s.createScheduleRule({
+        id: "rule-00000000-0000-4000-8000-0000000000dd",
+        when: MORNING,
+        then: { mode: "compose", brief: "morning" } as never,
+        channel: "auto",
+        target: { kind: "owner" },
+      }),
+    ).rejects.toMatchObject({ code: "invalid_rule" });
+  });
+
+  test("hand-edited system rows that break the shape are quarantined", async () => {
+    await mkdir(dirname(filePath), { recursive: true });
+    const row = {
+      id: "system-brief-evening",
+      version: 1,
+      origin: "system",
+      createdBy: "system",
+      when: { ...MORNING, cron: "30 18 * * *" },
+      then: { mode: "compose", brief: "morning" },
+      wake: { occurrence: NOW + 1_000, status: "scheduled" },
+      attention: "always",
+      channel: "auto",
+      target: { kind: "owner" },
+      state: "active",
+      createdAt: NOW,
+      updatedAt: NOW,
+    };
+    await writeFile(filePath, JSON.stringify({ version: 1, rules: [row], quarantine: [] }));
+    const s = store();
+    await s.load();
+    expect(s.get("system-brief-evening")).toBeUndefined();
+  });
+});

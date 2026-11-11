@@ -12,6 +12,14 @@ import {
 const DEFAULT_WORKTREE_BRANCH_PREFIX = "worktree/";
 /** 24-hour local clock time, "00:00" to "23:59". */
 const PET_HH_MM = /^(?:[01]\d|2[0-3]):[0-5]\d$/u;
+/** One of Mimi's briefs: on/off and its local time; each field falls back on its own. */
+const PET_BRIEF_SLOT = z
+  .object({
+    enabled: z.boolean().optional().catch(undefined),
+    time: z.string().regex(PET_HH_MM).optional().catch(undefined),
+  })
+  .optional()
+  .catch(undefined);
 const McpToolNameListSchema = z
   .array(
     z
@@ -182,6 +190,24 @@ export const SettingsSchema = z
             presenceIdleSec: z.number().int().min(30).max(1_800).optional().catch(undefined),
             /** Where a desktop-started delegation's result goes when no rule names a channel. */
             delegatedFromDesktop: z.enum(["auto", "desktop"]).optional().catch(undefined),
+            /** Morning brief and evening wrap-up (system rules; both off by default). */
+            briefs: z
+              .object({ morning: PET_BRIEF_SLOT, evening: PET_BRIEF_SLOT })
+              .optional()
+              .catch(undefined),
+            /** Mimi's heartbeat: checks for new facts every 30 min within active hours (off by default). */
+            heartbeat: z
+              .object({
+                enabled: z.boolean().optional().catch(undefined),
+                activeHours: z
+                  .object({ start: z.string().regex(PET_HH_MM), end: z.string().regex(PET_HH_MM) })
+                  .optional()
+                  .catch(undefined),
+              })
+              .optional()
+              .catch(undefined),
+            /** Fixed local times ("HH:MM", at most six) the digest is sent at; absent: as soon as allowed. */
+            digestSlots: z.array(z.string().regex(PET_HH_MM)).max(6).optional().catch(undefined),
           })
           .optional()
           .catch(undefined),

@@ -14,20 +14,24 @@ import type { PetNoticePowerEvents } from "./pet-notice-decision-hooks.js";
 import { createFollowUpNotifier } from "./pet-notice-follow-up.js";
 import type { RouteDecision } from "./pet-notice-policy.js";
 import type { NoticeSubmission } from "./pet-notice-types.js";
-import { PetRuleScheduler } from "./pet-rule-schedule.js";
+import { PetRuleScheduler, type RuleScheduleDue } from "./pet-rule-schedule.js";
 import {
   isScheduleRule,
+  isSystemScheduleRule,
   PetRuleStoreError,
   type NoticeRule,
   type PetRuleStore,
   type ScheduleNoticeRule,
+  type SystemScheduleNoticeRule,
 } from "./pet-rule-store.js";
 import {
   cronProblem,
   DEFAULT_CATCH_UP_MS,
+  isSystemScheduleThen,
   occurrenceDeadline,
   upcomingOccurrences,
-  type ScheduleThen,
+  type FollowUpThen,
+  type RuleWakeOutcome,
   type ScheduleWhen,
 } from "./pet-schedule-rule.js";
 import type { DesktopPetSession } from "./pet-state-aggregator.js";
@@ -66,8 +70,11 @@ export function followUpRuleId(operationKey: string): string {
   return `rule-${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
 }
 
-export function isFollowUpRule(rule: NoticeRule): rule is ScheduleNoticeRule {
-  return isScheduleRule(rule) && rule.createdBy === "follow-up";
+/** An owner's follow-up: a schedule rule that reminds or wakes Mimi to continue. */
+export type FollowUpRule = ScheduleNoticeRule & { then: FollowUpThen };
+
+export function isFollowUpRule(rule: NoticeRule): rule is FollowUpRule {
+  return isScheduleRule(rule) && rule.createdBy === "follow-up" && !isSystemScheduleThen(rule.then);
 }
 
 /** A follow-up rule as the FollowUps tool and the workbench see it. */
@@ -98,7 +105,7 @@ function statusOf(rule: NoticeRule): PetRegisteredFollowUpStatus {
   return rule.state === "completed" ? "completed" : "cancelled";
 }
 
-export function followUpRuleView(rule: ScheduleNoticeRule): PetFollowUpRuleView {
+export function followUpRuleView(rule: FollowUpRule): PetFollowUpRuleView {
   const then = rule.then;
   const taskId = rule.wake.taskId ?? (then.mode === "run-mimi" ? then.taskId : undefined);
   return {
@@ -124,7 +131,7 @@ export function followUpRuleView(rule: ScheduleNoticeRule): PetFollowUpRuleView 
 }
 
 /** The occurrence handed to Mimi's wake turn and the reminder. */
-export function followUpWake(rule: ScheduleNoticeRule, occurrence: number): PetFollowUpWake {
+export function followUpWake(rule: FollowUpRule, occurrence: number): PetFollowUpWake {
   const then = rule.then;
   return {
     id: rule.id,
@@ -185,7 +192,7 @@ function scheduleWhen(payload: Timing): ScheduleWhen {
   };
 }
 
-function receipt(action: string, rule: ScheduleNoticeRule): Record<string, unknown> {
+function receipt(action: string, rule: FollowUpRule): Record<string, unknown> {
   const view = followUpRuleView(rule);
   return {
     action,
@@ -221,6 +228,13 @@ export interface PetFollowUpRulesDeps {
   submitNotice(notice: NoticeSubmission): Promise<RouteDecision>;
   dispatch(): Pick<PetDispatchService, "wakeFollowUp"> | null;
   powerEvents?: Pick<PetNoticePowerEvents, "on" | "removeListener">;
+  /**
+   * Mimi's own schedule rules (briefs, heartbeat) share the scheduler; their
+   * occurrences go to this handler (late-bound: it is built after this).
+   */
+  fireSystem?: () =>
+    | ((rule: SystemScheduleNoticeRule, due: RuleScheduleDue) => Promise<RuleWakeOutcome>)
+    | undefined;
   legacyFollowUpsPath?: string;
   now?: () => number;
   onError(error: unknown): void;
@@ -240,7 +254,7 @@ export async function createPetFollowUpRules(deps: PetFollowUpRulesDeps) {
     registered: { load: () => rules.load(), list: () => followUpRules().map(followUpRuleView) },
   });
 
-  const followUpRule = (id: string): ScheduleNoticeRule => {
+  const followUpRule = (id: string): FollowUpRule => {
     const rule = rules.get(id);
     if (!rule || !isFollowUpRule(rule)) throw new Error("跟进项不存在或已处理");
     return rule;
@@ -274,7 +288,7 @@ export async function createPetFollowUpRules(deps: PetFollowUpRulesDeps) {
         throw new Error("续办任务与来源 Session 不匹配");
       taskId = task?.id;
     }
-    const then: ScheduleThen =
+    const then: FollowUpThen =
       payload.intent === "resume"
         ? {
             mode: "run-mimi",
@@ -294,7 +308,7 @@ export async function createPetFollowUpRules(deps: PetFollowUpRulesDeps) {
         target: route ? { kind: "route", route } : { kind: "owner" },
       }),
     );
-    return receipt("register", rule);
+    return receipt("register", followUpRule(rule.id));
   }
 
   /** `followUpMutation` host action, and the workbench's controls (no context). */
@@ -370,7 +384,15 @@ export async function createPetFollowUpRules(deps: PetFollowUpRulesDeps) {
   const coordinator = new PetRuleScheduler({
     rules,
     scheduler: deps.scheduler,
-    fire: async (rule, due) => {
+    fire: async (scheduled, due) => {
+      if (isSystemScheduleRule(scheduled)) {
+        const handler = deps.fireSystem?.();
+        if (!handler)
+          return { status: "failed", detail: "Mimi 的定时功能尚未就绪，这一次未执行。" };
+        return handler(scheduled, due);
+      }
+      if (!isFollowUpRule(scheduled)) return { status: "failed", detail: "未知的定时规则。" };
+      const rule = scheduled;
       const wake = followUpWake(rule, due.occurrence);
       // The owner may cancel or finish the follow-up while Mimi's turn runs;
       // its fence then refuses the launch. That is their decision, not an

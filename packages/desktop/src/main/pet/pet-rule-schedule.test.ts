@@ -442,3 +442,25 @@ describe("older builds", () => {
     f.coordinator.stop();
   });
 });
+
+describe("system schedule rules", () => {
+  test("Mimi's own rules project under their fixed ids and fire through the same claim", async () => {
+    const f = setup({ fire: async () => ({ status: "notified", detail: "早报已发" }) });
+    await f.store.setSystemSchedule("system-brief-morning", { when: daily, state: "active" });
+    await f.coordinator.start();
+    const key = ruleScheduleKey("system-brief-morning", 1, NINE);
+    expect(f.scheduler.byKey(key)).toMatchObject({ name: "Mimi 早报", runAt: NINE });
+    clock = NINE;
+    await f.coordinator.wake({ creationKey: key });
+    expect(f.fired).toEqual([{ id: "system-brief-morning", occurrence: NINE, at: NINE }]);
+    expect(f.store.get("system-brief-morning")?.wake).toMatchObject({
+      occurrence: NINE + DAY,
+      status: "scheduled",
+      detail: "早报已发",
+    });
+    // A paused system rule has no job.
+    await f.store.setSystemSchedule("system-brief-morning", { when: daily, state: "paused" });
+    await settled(f.coordinator);
+    expect(f.scheduler.list()).toEqual([]);
+  });
+});
