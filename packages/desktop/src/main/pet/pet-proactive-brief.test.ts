@@ -262,17 +262,41 @@ describe("the write-up", () => {
     const text = renderBrief(
       facts,
       // A write-up that calls the failure a success and skips the decision.
-      { items: [{ refs: ["r3", "r2"], text: "周报和测试都搞定了" }] },
+      { items: [{ refs: ["r2"], text: "测试搞定了" }] },
       morning,
     );
     expect(text).toBe(
-      [
-        "早上好，今天的情况：",
-        // The most important record named leads: the failure, not the success.
-        "- 【失败】周报和测试都搞定了",
-        "- 【等你决定】「删库审批」",
-      ].join("\n"),
+      ["早上好，今天的情况：", "- 【失败】测试搞定了", "- 【等你决定】「删库审批」"].join("\n"),
     );
+  });
+
+  test("one line may only group records with the same status", () => {
+    const mixed = {
+      kind: "morning" as const,
+      records: [
+        { ref: "r1", type: "done" as const, status: "【完成】", title: "登录" },
+        { ref: "r2", type: "cancelled" as const, status: "【取消】", title: "支付" },
+        { ref: "r3", type: "decision" as const, status: "【等你决定】", title: "部署" },
+        { ref: "r4", type: "failed" as const, status: "【失败】", title: "迁移" },
+        { ref: "r5", type: "done" as const, status: "【完成】", title: "周报" },
+      ],
+    };
+    const read = (items: unknown) => parseBriefWriteUp(JSON.stringify({ items }), mixed);
+    // A cancelled record would read as done; a failure would vanish under the decision.
+    expect(read([{ refs: ["r1", "r2"], text: "登录和支付都处理好了" }])).toBeUndefined();
+    expect(read([{ refs: ["r3", "r4"], text: "部署要你拍板" }])).toBeUndefined();
+    expect(read([{ refs: ["r1", "r5"], text: "登录和周报" }])).toEqual({
+      items: [{ refs: ["r1", "r5"], text: "登录和周报" }],
+    });
+  });
+
+  test("a mixed-status answer is invalid: the next model, then the template", async () => {
+    const merged = async () =>
+      JSON.stringify({ items: [{ refs: ["r1", "r2"], text: "删库和测试都处理了" }] });
+    expect(await writeBrief(facts, [merged], morning)).toEqual({
+      text: templateBrief(facts, morning),
+      by: "template",
+    });
   });
 
   test("the model's write-up when valid; otherwise the next model; none: the template", async () => {
@@ -290,10 +314,10 @@ describe("the write-up", () => {
         status: "【等你决定】",
         at: "2023-11-15T08:00:00+00:00",
       });
-      return '```json\n{"items":[{"refs":["r1"],"text":"删库要你批"},{"refs":["r2","r3"],"text":"测试超时，周报好了"}]}\n```';
+      return '```json\n{"items":[{"refs":["r1"],"text":"删库要你批"},{"refs":["r2"],"text":"测试超时"},{"refs":["r3"],"text":"周报好了"}]}\n```';
     };
     expect(await writeBrief(facts, [invalid, main], morning)).toEqual({
-      text: "早上好，今天的情况：\n- 【等你决定】删库要你批\n- 【失败】测试超时，周报好了",
+      text: "早上好，今天的情况：\n- 【等你决定】删库要你批\n- 【失败】测试超时\n- 【完成】周报好了",
       by: "model",
     });
     expect(calls).toEqual(["aux", "main"]);
