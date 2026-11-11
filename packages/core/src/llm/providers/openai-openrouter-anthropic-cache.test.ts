@@ -4,27 +4,10 @@ import type { CreateMessageOptions } from "../types.js";
 import type { Message } from "../../types.js";
 
 /**
- * Prompt-cache breakpoints for Anthropic-family models routed through
- * OpenRouter's OpenAI-compatible endpoint.
- *
- * Anthropic caching is EXPLICIT: the request must carry `cache_control`
- * breakpoints or nothing is cached (verified live 2026-07-02 against
- * anthropic/claude-opus-4.7-fast via OpenRouter — plain string system →
- * cached_tokens 0 on every repeat; a system-block breakpoint → the whole
- * stable prefix, including tool definitions, becomes a cache hit on the
- * second call, cutting cost ~89%).
- *
- * OpenRouter accepts the OpenAI multimodal content-array wire form
- * (`content: [{type:"text", text, cache_control:{type:"ephemeral"}}]`), so
- * these breakpoints ride the normal /chat/completions body.
- *
- * Placement (mirrors the native anthropic provider, ≤4 breakpoints):
- *   1. System block  → caches the stable prefix (tools + system prompt).
- *   2. Last message  → one rolling breakpoint so growing history is cached.
- *
- * This ONLY fires for providerKind "openrouter" + an anthropic/* model slug.
- * Plain OpenAI (and non-Anthropic OpenRouter models) cache automatically and
- * must NOT get breakpoints.
+ * Anthropic cache markers translated to OpenRouter's chat completions format.
+ * Four semantic boundaries: tools, system, stable history and rolling history.
+ * A tool marker must live beside `type` and `function`; a marker inside
+ * `function` is ignored, so a system rewrite would invalidate the tools too.
  */
 
 function capturingClient(cfg: { providerKind: string; model: string }): {
@@ -80,12 +63,69 @@ describe("OpenAIClient OpenRouter+Anthropic prompt-cache breakpoints", () => {
 
     expect(anthropic.getPromptCacheConfigIdentity()).toMatchObject({
       cacheStrategy: "anthropic-explicit",
-      cacheLayoutVersion: "system-stable-rolling-v2",
+      cacheLayoutVersion: "system-tools-stable-rolling-v2",
     });
     expect(ordinary.getPromptCacheConfigIdentity()).toMatchObject({
       cacheStrategy: "openai-implicit",
       cacheLayoutVersion: "implicit-affinity-v1",
     });
+  });
+
+  it("marks four boundaries with the tool marker at the last entry's top level", async () => {
+    const { client, lastBody } = capturingClient({
+      providerKind: "openrouter",
+      model: "anthropic/claude-opus-4.7-fast",
+    });
+    const tools = [
+      { name: "First", description: "First tool", inputSchema: { type: "object" } },
+      { name: "Last", description: "Last tool", inputSchema: { type: "object" } },
+    ];
+    const originalTools = JSON.stringify(tools);
+    const request = {
+      ...opts(
+        [
+          { role: "user", content: "stable history" },
+          { role: "user", content: "rolling history" },
+        ],
+        tools,
+      ),
+      promptCache: { stablePrefixMessageCount: 1 },
+    };
+    await client.createMessage(request);
+    const body = lastBody();
+    expect(body.tools[0].cache_control).toBeUndefined();
+    expect(body.tools[1].cache_control).toEqual({ type: "ephemeral" });
+    expect(body.tools.every((tool: any) => tool.function.cache_control === undefined)).toBe(true);
+    expect(body.messages.map((message: any) => message.content.at(-1).cache_control)).toEqual([
+      { type: "ephemeral" },
+      { type: "ephemeral" },
+      { type: "ephemeral" },
+    ]);
+    expect(JSON.stringify(body).match(/"cache_control"/g)).toHaveLength(4);
+    expect(JSON.stringify(tools)).toBe(originalTools);
+
+    const firstToolBytes = JSON.stringify(body.tools);
+    await client.createMessage({ ...request, systemPrompt: "CHANGED SYSTEM PREFIX" });
+    expect(JSON.stringify(lastBody().tools)).toBe(firstToolBytes);
+    expect(lastBody().messages[0].content[0].text).toBe("CHANGED SYSTEM PREFIX");
+  });
+
+  it("keeps tool definitions unmarked for automatic and provider-managed caching", async () => {
+    const tools = [{ name: "Tool", description: "Tool", inputSchema: { type: "object" } }];
+    for (const cfg of [
+      { providerKind: "openai", model: "gpt-5.5" },
+      { providerKind: "openrouter", model: "openai/gpt-5.6-sol" },
+      { providerKind: "openrouter", model: "deepseek/deepseek-chat" },
+    ]) {
+      const { client, lastBody } = capturingClient(cfg);
+      await client.createMessage(opts([{ role: "user", content: "hi" }], tools));
+      expect(lastBody().tools).toEqual([
+        {
+          type: "function",
+          function: { name: "Tool", description: "Tool", parameters: { type: "object" } },
+        },
+      ]);
+    }
   });
 
   it("marks the system message as a content-array text block with cache_control", async () => {
