@@ -110,20 +110,40 @@ type Control = {
   messages: string[];
   results: unknown[];
   before?: () => Promise<void>;
+  discoveryAttempted?: boolean;
 };
 const provider = "profile-mcp-local-fixture";
 const controls = new Map<string, Control>();
 let toolCallSequence = 0;
-const tools = ["MCPTool", "ListMcpResources", "ReadMcpResource", "ReadSource", "ListSources"];
+const tools = [
+  "ToolSearch",
+  "MCPTool",
+  "ListMcpResources",
+  "ReadMcpResource",
+  "ReadSource",
+  "ListSources",
+];
 class LocalClient extends LLMClientBase {
   protected initClient(): void {}
   async createMessage(options: CreateMessageOptions): Promise<LLMResponse> {
     const c = controls.get(this.model)!;
     assert.ok(c, "No real provider fallback is permitted");
-    c.tools.push(options.tools?.map((tool) => tool.name) ?? []);
+    // Terminal summary requests intentionally omit every tool.
+    if (options.tools?.length) c.tools.push(options.tools.map((tool) => tool.name));
     c.messages.push(JSON.stringify(options.messages));
     if (c.calls++ === 0 && c.before) await c.before();
-    const actions = c.actions.splice(0);
+    const active = new Set(options.tools?.map((tool) => tool.name));
+    const missing = c.actions.filter((action) => !active.has(action.toolName));
+    const discover = missing.length > 0 && !c.discoveryAttempted;
+    c.discoveryAttempted ||= discover;
+    const actions = discover
+      ? [
+          {
+            toolName: "ToolSearch",
+            args: { query: `select:${missing.map((action) => action.toolName).join(",")}` },
+          },
+        ]
+      : c.actions.splice(0);
     const usage = { promptTokens: 1, completionTokens: 1, totalTokens: 2 };
     this.recordUsage(usage, options);
     return {
@@ -316,8 +336,10 @@ test("project on then inherit restores disabled baseline, and off then inherit r
     settings(e.cwd, { capabilityOverrides: { mcp: { fixture: "inherit" } } });
     e.reload();
     const inherited = await e.run(actions);
-    expect(hasTool(inherited)).toBe(enabled);
+    for (const names of inherited.tools) expect(names).toEqual(overridden.tools[0]);
+    expect(hasTool(inherited)).toBe(!enabled);
     expect(output(inherited).includes("LOCAL_MCP_ECHO")).toBe(enabled);
+    expect(output(inherited).includes("LOCAL_MCP_RESOURCE")).toBe(enabled);
     expect(e.baseline.fixture.enabled).toBe(enabled);
     await e.engine.dispose();
   }
@@ -325,15 +347,26 @@ test("project on then inherit restores disabled baseline, and off then inherit r
 
 test("Session Profile wins default snapshot, direct project wins Profile, and local wins project", async () => {
   const e = makeEngine("precedence", false);
+  const actions = [echo, resource, { toolName: "mcp_fixture_echo", args: {} }];
   settings(e.cwd, { profile: { active: "mcp-on", overrides: { mcp: { fixture: "off" } } } });
-  expect(hasTool(await e.run())).toBe(false);
-  expect(hasTool(await e.run([], { workspaceProfile: "mcp-on" }))).toBe(true);
+  const disabled = await e.run(actions);
+  expect(hasTool(disabled)).toBe(false);
+  expect(output(disabled)).not.toContain("LOCAL_MCP_ECHO");
+  const profile = await e.run(actions, { workspaceProfile: "mcp-on" });
+  expect(output(profile)).toContain("LOCAL_MCP_ECHO");
+  expect(output(profile)).toContain("LOCAL_MCP_RESOURCE");
   settings(e.cwd, { capabilityOverrides: { mcp: { fixture: "off" } } });
   e.reload();
-  expect(hasTool(await e.run())).toBe(false);
+  const project = await e.run(actions);
+  expect(output(project)).not.toContain("LOCAL_MCP_ECHO");
+  expect(output(project)).not.toContain("LOCAL_MCP_RESOURCE");
   settings(e.cwd, { capabilityOverrides: { mcp: { fixture: "on" } } }, true);
   e.reload();
-  expect(hasTool(await e.run())).toBe(true);
+  const local = await e.run(actions);
+  expect(output(local)).toContain("LOCAL_MCP_ECHO");
+  expect(output(local)).toContain("LOCAL_MCP_RESOURCE");
+  for (const c of [profile, project, local])
+    for (const names of c.tools) expect(names).toEqual(disabled.tools[0]);
 });
 
 test("hot reload keeps current Run snapshot and applies removal at the next Run", async () => {
@@ -344,7 +377,11 @@ test("hot reload keeps current Run snapshot and applies removal at the next Run"
   expect(hasTool(c)).toBe(true);
   expect(output(c)).toContain("LOCAL_MCP_ECHO");
   expect(output(c)).toContain("LOCAL_MCP_RESOURCE");
-  expect(hasTool(await e.run([echo, resource]))).toBe(false);
+  const removed = await e.run([echo, resource, { toolName: "mcp_fixture_echo", args: {} }]);
+  expect(hasTool(removed)).toBe(true);
+  for (const names of removed.tools) expect(names).toEqual(c.tools[0]);
+  expect(output(removed)).not.toContain("LOCAL_MCP_ECHO");
+  expect(output(removed)).not.toContain("LOCAL_MCP_RESOURCE");
   expect((e.engine as any).mcpManager.listServers()).toEqual([]);
 });
 
