@@ -14,6 +14,7 @@ import {
   boundRoute,
   cleanupNoticeEnv,
   env,
+  freshNoticeDir,
   harness,
   longTask,
   resetNoticeEnv,
@@ -135,7 +136,13 @@ describe("bound Session replies", () => {
       ["lark", false],
       ["auto", true],
     ] as const) {
-      current?.wiring.dispose();
+      if (current) {
+        // A fresh userData folder: the previous wiring's claimed send would
+        // otherwise be recovered (resent) by this one's startup recovery.
+        current.wiring.dispose();
+        await current.wiring.flush();
+        await freshNoticeDir();
+      }
       current = harness({
         readSettings: () => ({ pet: { notifications: { mergeWindowSec: 0 } } }),
       });
