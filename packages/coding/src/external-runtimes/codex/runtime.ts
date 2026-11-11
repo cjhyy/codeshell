@@ -47,6 +47,8 @@ export interface CodexRuntimeOptions {
   sandbox?: string;
   /** Codex approval policy. Also kebab-case. */
   approvalPolicy?: string;
+  /** Host-only manager mode: expose the reviewed bridge without native execution tools. */
+  disableNativeTools?: boolean;
   client?: AppServerClientOptions;
   log?: (event: string, data: Record<string, unknown>) => void;
 }
@@ -120,6 +122,33 @@ interface ActiveTurn {
 const MAX_TRACKED_FILE_CHANGES = 64;
 /** Files listed per patch; the rest are counted (`fileChangeCount`), not listed. */
 const MAX_FILE_CHANGES_LISTED = 50;
+
+/**
+ * Codex 0.162's empty environment selection removes shell, apply_patch and
+ * view_image handlers. StableEnvironmentTools must also stay off: it otherwise
+ * advertises environment tools even when no environment was selected.
+ */
+const NATIVE_TOOLS_DISABLED_CONFIG = Object.freeze({
+  "features.shell_tool": false,
+  "features.stable_environment_tools": false,
+  "features.view_image": false,
+  "features.multi_agent": false,
+  "features.apps": false,
+  "features.plugins": false,
+  "features.remote_plugin": false,
+  "features.browser_use": false,
+  "features.browser_use_external": false,
+  "features.computer_use": false,
+  "features.image_generation": false,
+  "features.hooks": false,
+  "features.memories": false,
+  "features.goals": false,
+  "features.code_mode.enabled": false,
+  "features.standalone_web_search": false,
+  "tools.update_plan.enabled": false,
+  "tools.experimental_request_user_input.enabled": false,
+  web_search: "disabled",
+});
 
 function objectOf(value: unknown): Record<string, unknown> | undefined {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -203,7 +232,10 @@ export class CodexRuntime {
         bridgeToken: { name: options.bridge.tokenEnvVar, value: options.bridge.token },
       }),
       // Point the thread at the bridge. The token travels by env var, not argv.
-      args: [...(options.client?.args ?? ["app-server"]), ...codexBridgeConfigArgs(options.bridge)],
+      args: [
+        ...(options.client?.args ?? ["app-server"]),
+        ...codexBridgeConfigArgs(options.bridge, options.bridgeServerName),
+      ],
       log: this.log,
     });
   }
@@ -235,7 +267,7 @@ export class CodexRuntime {
     this.client.onClose((reason) => this.onTransportClosed(reason));
     this.client.start();
 
-    await this.client.request(
+    const initialized = await this.client.request(
       "initialize",
       {
         clientInfo: { name: "codeshell", title: "CodeShell", version: "1" },
@@ -243,6 +275,9 @@ export class CodexRuntime {
       },
       CRITICAL_RPC_TIMEOUT_MS,
     );
+    const nativeToolConfig = this.options.disableNativeTools
+      ? await this.nativeToolsDisabledConfig(initialized)
+      : undefined;
 
     let thread: { thread?: { id?: string }; model?: unknown } | undefined;
     if (this.options.resumeRuntimeSessionId) {
@@ -255,6 +290,7 @@ export class CodexRuntime {
             ...(this.options.model ? { model: this.options.model } : {}),
             ...(this.options.sandbox ? { sandbox: this.options.sandbox } : {}),
             ...(this.options.approvalPolicy ? { approvalPolicy: this.options.approvalPolicy } : {}),
+            ...(nativeToolConfig ? { config: nativeToolConfig } : {}),
             ...(this.options.developerInstructions
               ? { developerInstructions: this.options.developerInstructions }
               : {}),
@@ -276,6 +312,7 @@ export class CodexRuntime {
         ...(this.options.model ? { model: this.options.model } : {}),
         ...(this.options.sandbox ? { sandbox: this.options.sandbox } : {}),
         ...(this.options.approvalPolicy ? { approvalPolicy: this.options.approvalPolicy } : {}),
+        ...(nativeToolConfig ? { config: nativeToolConfig, environments: [] } : {}),
         ...(this.options.developerInstructions
           ? { developerInstructions: this.options.developerInstructions }
           : {}),
@@ -309,6 +346,53 @@ export class CodexRuntime {
       sessionId: this.options.businessSessionId,
       promptTokens: 0,
     });
+  }
+
+  private async nativeToolsDisabledConfig(initialized: unknown): Promise<Record<string, unknown>> {
+    const userAgent = objectOf(initialized)?.userAgent;
+    // initialize reports the CLI build version after its originator prefix,
+    // independently of the clientInfo version supplied by CodeShell.
+    const version =
+      typeof userAgent === "string"
+        ? /^[^/\s]+\/(\d+)\.(\d+)\.(\d+)(?:\s|$)/u.exec(userAgent)
+        : undefined;
+    if (!version || (Number(version[1]) === 0 && Number(version[2]) < 162)) {
+      throw new Error(
+        "Mimi requires Codex CLI 0.162.0 or newer to disable native execution tools. " +
+          "Update Codex and retry; no model request was started.",
+      );
+    }
+
+    // An empty mcp_servers table merges with the user's config; it does not
+    // remove inherited servers. Read names only, then disable every server
+    // except this Host-owned bridge. Never log or expose configuration values.
+    let config: Record<string, unknown> | undefined;
+    try {
+      const response = await this.client.request(
+        "config/read",
+        { includeLayers: false, cwd: this.options.cwd },
+        CRITICAL_RPC_TIMEOUT_MS,
+      );
+      config = objectOf(objectOf(response)?.config);
+    } catch {
+      throw new Error(
+        "Could not verify Codex native-tool isolation configuration; no model request was started.",
+      );
+    }
+    const servers = objectOf(config?.mcp_servers);
+    const bridgeName = this.options.bridgeServerName ?? "codeshell_tools";
+    if (!servers || !Object.prototype.hasOwnProperty.call(servers, bridgeName)) {
+      throw new Error(
+        "Could not verify the CodeShell MCP bridge in Codex configuration; " +
+          "no model request was started.",
+      );
+    }
+    return {
+      ...NATIVE_TOOLS_DISABLED_CONFIG,
+      mcp_servers: Object.fromEntries(
+        Object.keys(servers).map((name) => [name, { enabled: name === bridgeName }]),
+      ),
+    };
   }
 
   /**
@@ -368,6 +452,8 @@ export class CodexRuntime {
           ...(input.clientMessageId ? { clientUserMessageId: input.clientMessageId } : {}),
           // `text_elements` is required by the protocol even when empty.
           input: [{ type: "text", text, text_elements: [] }, ...imageInputs],
+          // Resume has no environment field, so fence every turn as well.
+          ...(this.options.disableNativeTools ? { environments: [] } : {}),
         },
         CRITICAL_RPC_TIMEOUT_MS,
       )) as { turn?: { id?: string } } | undefined;
@@ -610,13 +696,14 @@ export class CodexRuntime {
       method === "item/fileChange/requestApproval" && typeof itemId === "string"
         ? this.fileChanges.get(itemId)
         : undefined;
-    const decision = this.hooks.onNativeApproval
-      ? await this.hooks.onNativeApproval({
-          method,
-          params,
-          ...(tracked ? { fileChanges: tracked.files, fileChangeCount: tracked.total } : {}),
-        })
-      : "decline";
+    const decision =
+      !this.options.disableNativeTools && this.hooks.onNativeApproval
+        ? await this.hooks.onNativeApproval({
+            method,
+            params,
+            ...(tracked ? { fileChanges: tracked.files, fileChangeCount: tracked.total } : {}),
+          })
+        : "decline";
     this.log("runtime.native_approval", { method, decision });
     if (method === "item/permissions/requestApproval") return permissionsResponse(params, decision);
     return { decision };

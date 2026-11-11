@@ -21,6 +21,38 @@
     "contractFingerprint": "026c8f9bb786f1835db1dd453bc4fb061bfc6872dbba646422bcfc2e176e6d3e"
   },
   {
+    "tool": "BindConversationSession",
+    "kind": "host-loopback",
+    "status": "exposed",
+    "requires": "mimi-host",
+    "reason": "Records a conversation-binding request through the Host-owned per-turn Pet profile services and authorized host action kinds. The Host validates the current conversation and exact Session after the turn; the tool cannot reroute messages directly.",
+    "contractFingerprint": "81d552e132884f2eaf3493523ec3c14269a0f8c3b99e583783653e10e98d9d0d"
+  },
+  {
+    "tool": "ControlLongTask",
+    "kind": "host-loopback",
+    "status": "exposed",
+    "requires": "mimi-host",
+    "reason": "Records a bounded task-control request through the Host-owned per-turn Pet profile services. The Host resolves task identity and validates the operation after the manager turn; acceptance is not execution.",
+    "contractFingerprint": "5570f9c81abc12132f0b41bb0a4eaaa174610ad5f28eb0cc063f7fd90e626b70"
+  },
+  {
+    "tool": "CurrentTime",
+    "kind": "self-contained",
+    "status": "exposed",
+    "requires": "mimi-host",
+    "reason": "Returns the Host's local clock and timezone without input or side effects. The external declaration still requires explicit Mimi host opt-in and Pet profile visibility, so it adds no general manager execution surface.",
+    "contractFingerprint": "74aeeaf831de7921f3fa1ac7e1d445c661a57aeb9d7075c99932ceeb3c59bac4"
+  },
+  {
+    "tool": "DelegateWork",
+    "kind": "host-loopback",
+    "status": "exposed",
+    "requires": "mimi-host",
+    "reason": "Records one delegation through the Host-owned per-turn Pet profile services. Workspace ids and reusable Session evidence are validated against that turn's bounded options; reporting a request does not launch work or grant a general execution tool.",
+    "contractFingerprint": "71f1a8ad602096640b57b240911c841ed3bef590444ca38d17ff3e7ed0e5b806"
+  },
+  {
     "tool": "DriveAgent",
     "kind": "self-contained",
     "status": "exposed",
@@ -54,6 +86,30 @@
     "status": "excluded",
     "reason": "Engine state-machine tool; same reason as EnterPlanMode.",
     "contractFingerprint": "8ef4d424db550029361ef273214c0ee8ce9080a41843aebbb3c4a57291a5bb1b"
+  },
+  {
+    "tool": "FollowUps",
+    "kind": "host-loopback",
+    "status": "exposed",
+    "requires": "mimi-host",
+    "reason": "Reads only the bounded follow-up items supplied by the Host-owned per-turn Pet profile services. It cannot inspect another store or mutate a follow-up.",
+    "contractFingerprint": "0ca4aa5f3e15485328dba505a38273be52a747c64bbf7d951a369b52ffa101e2"
+  },
+  {
+    "tool": "Gateway",
+    "kind": "host-loopback",
+    "status": "exposed",
+    "requires": "mimi-host",
+    "reason": "Reads only the current turn's Host-provided Gateway channel catalog from Pet profile services. It cannot select another conversation, connect a channel, or send a message.",
+    "contractFingerprint": "b4c947f25cfd59231277b6fdbb2a1186465a496e5f102928f3eab601d1dad600"
+  },
+  {
+    "tool": "GatewayReply",
+    "kind": "host-loopback",
+    "status": "exposed",
+    "requires": "mimi-host",
+    "reason": "Records the current conversation's reply through the Host-owned per-turn Pet profile services. The capability bounds text and attachments, and the Host validates and delivers the final draft after the turn; acceptance is not delivery.",
+    "contractFingerprint": "dd922ad6ab85e2003f1571fdf9eb61a6a2bf9e971d6ca930e802d4bab4893c43"
   },
   {
     "tool": "Glob",
@@ -105,6 +161,30 @@
     "contractFingerprint": "1a15792c4afa970c1e94e65077b8169ee3b67cca219ac0b2cf39048e7d1e54e5"
   },
   {
+    "tool": "ManageFollowUp",
+    "kind": "host-loopback",
+    "status": "exposed",
+    "requires": "mimi-host",
+    "reason": "Records a follow-up mutation through the Host-owned per-turn Pet profile services and authorized host action kinds. The Host validates identity and executes it after the manager turn; acceptance is not completion.",
+    "contractFingerprint": "58e70b574d2ac214d44299243adb55d596f679450afd2c48e03daff1860abf3f"
+  },
+  {
+    "tool": "ManageSessions",
+    "kind": "host-loopback",
+    "status": "exposed",
+    "requires": "mimi-host",
+    "reason": "Records a Session archive request through the Host-owned per-turn Pet profile services and authorized host action kinds. The Host validates each Session after the turn; the tool cannot mutate the Session store directly.",
+    "contractFingerprint": "44f34f0dec1b9b6da462924996d303322fab2e0ba463c141e222ca08d0ab5b47"
+  },
+  {
+    "tool": "Memory",
+    "kind": "host-loopback",
+    "status": "exposed",
+    "requires": "mimi-host",
+    "reason": "Records a bounded memory request through the Host-owned per-turn Pet profile services. The Host validates and applies it after the manager turn; the tool does not mutate a memory store directly.",
+    "contractFingerprint": "ebbe06e42e4f9ba7d4183e1604de08a1fd1053f66a8634ec43ed5c1f317591c4"
+  },
+  {
     "tool": "MemoryDelete",
     "kind": "self-contained",
     "status": "exposed",
@@ -131,6 +211,14 @@
     "status": "exposed",
     "reason": "Writes to the memory store, so it is a mutation — but a scoped one, into a store the user can read and edit, and it carries the same permission rules as on the native path.",
     "contractFingerprint": "9fdb9c7fd3f7e5957f739e06172e9fa62b3afefd41bb7d25deddc6b7af7fc028"
+  },
+  {
+    "tool": "MobileRemote",
+    "kind": "host-loopback",
+    "status": "exposed",
+    "requires": "mimi-host",
+    "reason": "Records a mobile-remote request only through the Host-owned per-turn Pet profile services and authorized host action kinds. The Host validates and executes it after the manager turn; the tool does not open a tunnel directly.",
+    "contractFingerprint": "8012aef23bb61b18717ea231ebf20be223e5c2991a02bb1e21b4510bb2b3a933"
   },
   {
     "tool": "NotifyMe",
@@ -180,6 +268,22 @@
     "contractFingerprint": "781a7b098ae887e0a54b41c2e4a0b4e7c16f42ee79c023656c5d5fd9da359e13"
   },
   {
+    "tool": "SendMessage",
+    "kind": "host-loopback",
+    "status": "exposed",
+    "requires": "mimi-host",
+    "reason": "Records an outbound message through the Host-owned per-turn Pet profile services. Exact target ids, text and attachment limits come from that turn's authorized targets; the Host validates and delivers after the turn, and acceptance is not delivery.",
+    "contractFingerprint": "99741aca639fe61ef33955fa4d3674f925a31b16279eec98d10acd52f0c86bdc"
+  },
+  {
+    "tool": "Sessions",
+    "kind": "host-loopback",
+    "status": "exposed",
+    "requires": "mimi-host",
+    "reason": "Reads bounded Session disclosures using only the Host-provided sessions directory and current turn's Pet profile services. It cannot execute, resume, or mutate a Work Session.",
+    "contractFingerprint": "bdb007b20e6478319038bc6c29ae5fefe6b9056259009b9568a25f0742c6c4f2"
+  },
+  {
     "tool": "Skill",
     "kind": "self-contained",
     "status": "exposed",
@@ -199,6 +303,14 @@
     "status": "exposed",
     "reason": "Discovers only the tools permitted by this session's allowedToolNames, availability guards and plan mode. The MCP bridge already advertises those schemas; search cannot register another tool, widen this allowlist or bypass execution checks.",
     "contractFingerprint": "77b3e96dc3be46a43554c4753a3da3524cea64a9965a2af26930ba1143ee918a"
+  },
+  {
+    "tool": "WatchSession",
+    "kind": "host-loopback",
+    "status": "exposed",
+    "requires": "mimi-host",
+    "reason": "Records a Session watch request through the Host-owned per-turn Pet profile services and authorized host action kinds. The Host validates the Session and delivery route after the turn; the tool cannot install a watch directly.",
+    "contractFingerprint": "c8f6d7303a35dc9b73be98b50a64d1f1c35174c84cc859f9d908ee508bab1ec1"
   },
   {
     "tool": "WebFetch",

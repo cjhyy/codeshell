@@ -542,6 +542,18 @@ export const settingsNs = {
         confirmDeleteOverride: "这会删除你的覆盖文件，恢复为内置定义。",
         confirmDeleteCustom: "这会删除该自定义子代理。",
       },
+      sessionDefault: {
+        title: "新会话默认模型",
+        description:
+          "新会话使用此模型。微信和 Mimi 未单独指定模型时也会沿用；聊天框切换模型只影响当前会话。",
+        followNative: "跟随 API 文本连接默认",
+        followGlobal: "跟随全局新会话默认",
+        projectDescription:
+          "此项目的新会话使用此模型；未单独指定时沿用全局新会话默认。聊天框切换模型只影响当前会话。",
+        unavailable: "{model}（当前不可用）",
+        unavailableHint: "已保留你的选择。模型不可用时会提示错误，请重新连接或更改默认模型。",
+        failed: "默认模型读取或保存失败，请重试。",
+      },
       textConn: {
         headingText: "文本模型",
         headingImage: "图片模型",
@@ -1793,6 +1805,19 @@ export const settingsNs = {
         confirmDeleteOverride:
           "This deletes your override file and restores the built-in definition.",
         confirmDeleteCustom: "This deletes the custom sub-agent.",
+      },
+      sessionDefault: {
+        title: "Default model for new chats",
+        description:
+          "New chats use this model. WeChat and Mimi also follow it when they have no model override. Changing the composer model only affects that session.",
+        followNative: "Follow the API text connection default",
+        followGlobal: "Follow the global new-chat default",
+        projectDescription:
+          "New chats in this project use this model, or inherit the global new-chat default when unset. Changing the composer model only affects that session.",
+        unavailable: "{model} (currently unavailable)",
+        unavailableHint:
+          "Your selection is retained. If the model is unavailable, an error is shown; reconnect it or choose another default.",
+        failed: "Could not read or save the default model. Please retry.",
       },
       textConn: {
         headingText: "Text models",

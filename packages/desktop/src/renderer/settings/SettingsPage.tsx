@@ -31,6 +31,7 @@ import {
   X,
 } from "lucide-react";
 import { TextConnectionsPanel } from "./TextConnectionsPanel";
+import { SessionDefaultModelSelector } from "./SessionDefaultModelSelector";
 import { ModelCatalogPanel } from "./ModelCatalogPanel";
 import { DigitalHumansSection } from "./DigitalHumansSection";
 import { DataSourcesModule } from "./DataSourcesModule";
@@ -786,6 +787,10 @@ export function SettingsPage({
               {active === "appearance" && <AppearanceSection />}
               {active === "config" && (
                 <>
+                  <SessionDefaultModelSelector
+                    scope={scope}
+                    activeProjectPath={scopeProjectPath ?? activeProjectPath}
+                  />
                   <TextConnectionsPanel
                     scope={scope}
                     activeProjectPath={scopeProjectPath ?? activeProjectPath}

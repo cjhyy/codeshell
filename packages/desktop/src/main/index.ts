@@ -200,6 +200,18 @@ import {
   petMemoryAutoExtractSettingsPatch,
   petPersonalizationFromSettings,
 } from "../shared/pet-settings.js";
+import {
+  sessionModelKeyFromSettings,
+  defaultSessionModelKeyFromSettings,
+} from "../shared/session-model-default.js";
+import { createExternalRuntimeHostSubmission } from "./external-runtime-host-submission.js";
+import {
+  persistedExternalRuntimeModelKey,
+  isPersistedExternalRuntime,
+} from "./mobile-remote/external-runtime-commands.js";
+import { allowNativePetExtraction } from "./pet/pet-native-extraction-policy.js";
+import { createPetRuntimeControlWorker } from "./pet/pet-runtime-control-worker.js";
+import { createPetExternalRuntime } from "./pet/pet-external-runtime.js";
 import { installedThemeToPack } from "./theme-pack-conversion.js";
 import { themeImportDialogOptions } from "./theme-import-dialog.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
@@ -1776,9 +1788,37 @@ async function createWindow(): Promise<BrowserWindow> {
     const petMetadata = new PetMetadataStore(
       resolve(app.getPath("userData"), "pet", "metadata.json"),
     );
+    const imRuntimeSessions = new SessionManager();
+    const imExternalSubmissions = createExternalRuntimeHostSubmission({
+      service: () => externalRuntime.service,
+      sessions: imRuntimeSessions,
+      ownerWindow: (sessionId) => {
+        const owner = bridge?.panelOwnerWebContentsId(sessionId);
+        return BrowserWindow.getAllWindows().find(
+          (window) =>
+            !window.isDestroyed() && (owner === undefined || window.webContents.id === owner),
+        );
+      },
+    });
     const petWorkDelegationHost = new PetWorkDelegationHost({
       bridge,
       noWorkspaceCwd: resolveNoRepoCwd(),
+      external: {
+        modelKey: async ({ sessionId, cwd, reused }) => {
+          const state = imRuntimeSessions.readSessionState(sessionId);
+          if (reused || state) {
+            if (!state) throw new Error("原工作会话不可用，未创建替代会话。");
+            if (isPersistedExternalRuntime(state)) {
+              const model = persistedExternalRuntimeModelKey(state);
+              if (!model) throw new Error("外部会话模型不可用，未切换到 API 模型。");
+              return model;
+            }
+            return state.modelConnectionId ?? null;
+          }
+          return sessionModelKeyFromSettings(new SettingsManager(cwd, "full").get());
+        },
+        run: imExternalSubmissions.run,
+      },
       resolveSessionCwd: async (sessionId) => {
         const entry = await getSessionCwdIndex().refresh(sessionId);
         return entry?.status === "confirmed" ? (entry.workspaceRoot ?? entry.cwd) : undefined;
@@ -1936,7 +1976,11 @@ async function createWindow(): Promise<BrowserWindow> {
     const longTaskCoordinator = new PetLongTaskCoordinator({
       store: longTaskStore,
       projection: aggregator,
-      worker: bridge,
+      worker: createPetRuntimeControlWorker({
+        worker: bridge,
+        isExternal: imExternalSubmissions.isExternal,
+        service: () => externalRuntime.service,
+      }),
       launcher: petWorkDelegationHost,
       onDelegationStarted: (task) => notices.armDelegationRule(task),
       onTaskClosed: async (task) => {
@@ -2156,9 +2200,13 @@ async function createWindow(): Promise<BrowserWindow> {
       routesFilePath: resolve(app.getPath("userData"), "pet", "conversation-session-routes.json"),
       resolveSelector: createReusableSessionResolver(petSessionsRootDir),
       createRunner: (onTurn) =>
-        // A chat bound to a Codex / CC Session sends to the worker: no turn of it is forwarded.
         createBoundSessionRunner(worker, aggregator, onTurn, sessionOutcomes, {
-          ignores: externalSessions.isLive,
+          external: {
+            isExternal: imExternalSubmissions.isExternal,
+            isRunning: imExternalSubmissions.isRunning,
+            run: imExternalSubmissions.runBound,
+            stop: imExternalSubmissions.stop,
+          },
         }),
       health: createBoundSessionHealth(aggregator, petSessionsRootDir),
       describeStatus: async (route) => `当前在「${route.sessionTitle}」中。发送 /mimi 可退出。`,
@@ -2180,8 +2228,14 @@ async function createWindow(): Promise<BrowserWindow> {
       hostCwd: resolveNoRepoCwd(),
       attachmentContext: new PetChatAttachmentContext(resolve(app.getPath("userData"), "pet")),
       sessionsRootDir: petSessionsRootDir,
-      managerModel: async () =>
-        petChatModelKeyFromSettings(await readSettings("user").catch(() => null)),
+      externalRuntime: createPetExternalRuntime({
+        service: () => externalRuntime.service,
+        cwd: resolveNoRepoCwd(),
+      }),
+      managerModel: async () => {
+        const settings = await readSettings("user");
+        return petChatModelKeyFromSettings(settings) ?? sessionModelKeyFromSettings(settings);
+      },
       personalization: async () =>
         petPersonalizationFromSettings(await readSettings("user").catch(() => null)),
       segmentController: {
@@ -2333,10 +2387,13 @@ async function createWindow(): Promise<BrowserWindow> {
           };
         },
       },
-      worldContext: createPetMemoryWorldContext(
-        petMemoryStoreInstance,
-        getMobileRemoteGatewayStatus,
-      ),
+      worldContext: async (input) => ({
+        ...(await createPetMemoryWorldContext(
+          petMemoryStoreInstance,
+          getMobileRemoteGatewayStatus,
+        )(input)),
+        defaultWorkSessionModel: defaultSessionModelKeyFromSettings(await readSettings("user")),
+      }),
       listWorkspaces: () => mobileOrchestrator.projectList(),
       listFollowUps: () => petFollowUps.listOpen(),
       listOutboundTargets: async () =>
@@ -2503,11 +2560,16 @@ async function createWindow(): Promise<BrowserWindow> {
       // the same read of this preference.
       const autoExtractEnabled = (): boolean => {
         try {
-          return petMemoryAutoExtractFromSettings(
-            new SettingsManager(resolveNoRepoCwd(), "full").getForScope("user"),
+          const settings = new SettingsManager(resolveNoRepoCwd(), "full").getForScope("user");
+          // An external chat choice must not trigger a hidden native API call
+          // at the next topic boundary. Retain raw history; extraction resumes
+          // when the owner selects a native manager again.
+          return allowNativePetExtraction(
+            settings,
+            imRuntimeSessions.readSessionState(petSessionId),
           );
         } catch {
-          return true; // default ON if settings are unreadable
+          return false; // Unreadable settings must not authorize paid inference.
         }
       };
       // Segment-closure pipeline: distill a journal entry + auto-memories from

@@ -312,6 +312,18 @@ export const SettingsSchema = z
       })
       .default({}),
 
+    /** Host session preference, independent of the native model connection default. */
+    sessionDefaults: z
+      .object({
+        model: z
+          .string()
+          .min(1)
+          .max(512)
+          .refine((value) => value.trim() === value && !/[\u0000-\u001f\u007f]/u.test(value))
+          .optional(),
+      })
+      .optional(),
+
     permissions: z
       .object({
         defaultMode: z

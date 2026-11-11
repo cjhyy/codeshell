@@ -52,4 +52,29 @@ describe("PetSettingsPage", () => {
     expect(html).toContain('id="pet-communication-style"');
     expect(html).toContain('id="pet-custom-instructions"');
   });
+
+  test("shows an inherited external default and explains the explicit Mimi override", () => {
+    const html = renderToStaticMarkup(
+      <PetSettingsPage
+        activeModelKey="codex/gpt-6.1-sol"
+        modelOptions={[
+          { key: "codex/gpt-6.1-sol", label: "Codex · GPT-6.1 Sol", provider: "codex" },
+        ]}
+        hasModelOverride={false}
+        widgetVisible
+        onSelectModel={() => undefined}
+        onResetModel={() => undefined}
+        onWidgetVisibleChange={() => undefined}
+        onOpenPersonalization={() => undefined}
+        onOpenConnections={() => undefined}
+        onOpenMemory={() => undefined}
+        onBack={() => undefined}
+      />,
+    );
+    expect(html).toContain('data-active-model="codex/gpt-6.1-sol"');
+    expect(html).toContain("Codex · GPT-6.1 Sol");
+    expect(html).toContain("当前跟随应用默认模型");
+    expect(html).toContain("单独选择会覆盖新会话默认模型");
+    expect(html).toContain("Mimi 和微信沿用新会话默认模型");
+  });
 });

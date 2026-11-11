@@ -2,6 +2,27 @@ import { describe, it, test, expect } from "bun:test";
 import { SettingsSchema } from "./schema.js";
 import { isProtectedSettingKey } from "./manager.js";
 
+describe("host session defaults", () => {
+  test("keeps an optional opaque model key separate from the native connection default", () => {
+    expect(SettingsSchema.parse({}).sessionDefaults).toBeUndefined();
+    const settings = SettingsSchema.parse({
+      sessionDefaults: { model: "host-runtime/model-choice" },
+      defaults: { text: "native-connection" },
+    });
+    expect(settings.sessionDefaults?.model).toBe("host-runtime/model-choice");
+    expect(settings.defaults.text).toBe("native-connection");
+  });
+
+  test("bounds model keys without encoding provider policy in Core", () => {
+    for (const model of ["", " padded ", "bad\nkey", "\u007f", "x".repeat(513), 1]) {
+      expect(SettingsSchema.safeParse({ sessionDefaults: { model } }).success).toBe(false);
+    }
+    expect(SettingsSchema.safeParse({ sessionDefaults: { model: "x".repeat(512) } }).success).toBe(
+      true,
+    );
+  });
+});
+
 describe("MCP startup policy", () => {
   test("preserves bounded per-server settings and plugin overrides", () => {
     const config = SettingsSchema.parse({

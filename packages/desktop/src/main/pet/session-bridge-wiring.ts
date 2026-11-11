@@ -252,8 +252,21 @@ export interface BoundSessionTurnResult {
   text: string;
 }
 
+/** Main-owned runtime route; identity must survive an inactive external process. */
+export interface BoundExternalSessionRunner {
+  isExternal(sessionId: string): boolean;
+  isRunning(sessionId: string): boolean;
+  /** Resolve on durable admission, while completion continues on the Session stream. */
+  run(input: {
+    sessionId: string;
+    text: string;
+    clientMessageId: string;
+  }): Promise<{ started: boolean; reason?: string }>;
+  stop?(sessionId: string): Promise<unknown>;
+}
+
 /**
- * Drive a native Work Session through the worker bridge.
+ * Drive a Work Session through its native worker or Main-owned external runtime.
  *
  * Two contracts matter here and both were wrong before:
  *
@@ -277,15 +290,14 @@ export function createBoundSessionRunner(
     worker.subscribeOutbound(listener),
   ),
   options: {
+    external?: BoundExternalSessionRunner;
     /**
-     * Sessions on that stream this runner does not drive: desktop external
-     * runtimes (Codex / Claude Code in Main). Messages from their bound chat
-     * still go to the worker, so their turns are neither tracked as its runs
-     * nor forwarded back to that chat. Asked per event: keep it cheap.
+     * Optional Host-owned stream exclusions. External Sessions this runner
+     * drives must remain on the shared stream for completion and reply delivery.
      */
     ignores?: (sessionId: string) => boolean;
   } = {},
-): BoundSessionRunner {
+): BoundSessionRunner & { stop(sessionId: string): Promise<unknown> } {
   const injected = new Set<string>();
   interface ObservedRun {
     done: Promise<void>;
@@ -401,8 +413,27 @@ export function createBoundSessionRunner(
     text: string;
     clientMessageId: string;
   }): Promise<{ started: boolean; reason?: string }> {
+    // Resolve identity before reserving a run, so a failed identity read neither
+    // dispatches natively nor leaves a synthetic run permanently active.
+    const external = options.external?.isExternal(sessionId) ? options.external : undefined;
     const existing = running.get(sessionId);
     const entry = beginRun(sessionId, clientMessageId);
+    // Persistent external identity owns this input even when no CLI process is
+    // live. An unavailable or refused external runtime must never spend a native
+    // API request as an implicit replacement.
+    if (external) {
+      try {
+        const acceptance = await external.run({ sessionId, text, clientMessageId });
+        if (!acceptance.started && !existing) endRun(sessionId, entry);
+        return acceptance;
+      } catch (error) {
+        if (!existing) endRun(sessionId, entry);
+        return {
+          started: false,
+          reason: error instanceof Error ? error.message : String(error),
+        };
+      }
+    }
     const acceptance = await injectMobileRunAndAwaitAcceptance(
       worker,
       {
@@ -433,6 +464,9 @@ export function createBoundSessionRunner(
   return {
     isRunning: async (sessionId) => {
       if (running.has(sessionId)) return true;
+      if (options.external?.isExternal(sessionId)) {
+        return options.external.isRunning(sessionId);
+      }
       const session = aggregator
         .getSnapshot()
         .sessions.find((entry) => entry.agentSessionId === sessionId);
@@ -440,6 +474,7 @@ export function createBoundSessionRunner(
     },
     run: submitRun,
     steer: async ({ sessionId, text, id, clientMessageId }) => {
+      if (options.external?.isExternal(sessionId)) return { accepted: false };
       const response = await worker.requestWorker(
         "agent/steer",
         { sessionId, text, id, clientMessageId },
@@ -448,26 +483,38 @@ export function createBoundSessionRunner(
       return { accepted: response.ok && workerBoolean(response.result, "accepted") === true };
     },
     unsteer: async ({ sessionId, id }) => {
+      if (options.external?.isExternal(sessionId)) return { removed: true };
       const response = await worker.requestWorker("agent/unsteer", { sessionId, id }, META);
       // Treat an unknown answer as "we took it back" so the message is re-run
       // rather than assumed delivered.
       return { removed: !response.ok || workerBoolean(response.result, "removed") !== false };
     },
-    wasInjected: (sessionId, id) => injected.has(`${sessionId}\u0000${id}`),
+    wasInjected: (sessionId, id) =>
+      !options.external?.isExternal(sessionId) && injected.has(`${sessionId}\u0000${id}`),
     runDone: (sessionId) => running.get(sessionId)?.done ?? Promise.resolve(),
     queueNextTurn: async (input) => {
-      // Core owns serialization; its acknowledgement confirms the successor
-      // is queued without waiting for the current or following turn to finish.
+      // The owning runtime serializes turns. Its acknowledgement confirms the
+      // successor is queued without waiting for either turn to finish.
       const result = await submitRun(input);
       if (!result.started) {
         throw new Error(result.reason ?? "the Session refused the queued message");
       }
     },
     supportsSteer: (sessionId) => {
+      if (options.external?.isExternal(sessionId)) return false;
       const session = aggregator
         .getSnapshot()
         .sessions.find((entry) => entry.agentSessionId === sessionId);
       return session !== undefined;
+    },
+    stop: async (sessionId) => {
+      if (options.external?.isExternal(sessionId)) {
+        if (!options.external.stop) throw new Error("External Session stop is unavailable");
+        return options.external.stop(sessionId);
+      }
+      const response = await worker.requestWorker("agent/cancel", { sessionId }, META);
+      if (!response.ok) throw new Error(response.message ?? "Session stop was refused");
+      return response.result;
     },
   };
 }

@@ -105,6 +105,22 @@ owner，并通过 `~/.code-shell/im-gateway/desktop-control.json`（`0600`）提
 | WhatsApp Business | Meta Cloud API webhook           | 需要，`/webhooks/whatsapp` |
 | Microsoft Teams   | Bot Framework messaging endpoint | 需要，`/webhooks/teams`    |
 
+### 默认聊天模型（Desktop / 微信）
+
+在 Desktop 的「设置 → 模型配置 → 新会话默认模型」选择 API 连接、Codex 或 Claude Code。
+用户级选择会同时用于桌面新会话、微信等 IM 的普通 Mimi 聊天和新委派的工作会话；项目级选择
+只覆盖该项目的新工作会话。Mimi 的单独模型覆盖优先，清除它后跟随新会话默认。聊天框内的
+临时切换仍只影响当前会话，已绑定或复用的工作会话保留自己的 provider。
+
+偏好保存为 `sessionDefaults.model`，与内置引擎的 `defaults.text` 分开。外部 provider
+禁用、未安装、未登录或执行失败时会明确报错，不会自动使用 OpenRouter 或其他 API 消费。
+Mimi 外部模式要求启用外部运行时和 Host 工具；Codex 需要 0.162.0 或更新版本。该模式仍使用
+Mimi 的结构化回复、Host 操作及任务委派，只开放经过审核的管理工具，不开放原生执行工具。
+外部聊天不会在话题结束时偷偷调用 API 做自动记忆提取；原始聊天记录和主动记忆工具仍保留。
+
+已绑定的外部工作会话正在运行时，新的 IM 消息会明确提示稍后重试，而不会把未持久化的队列
+误报为已接收。普通 Mimi 外部聊天仍按原有会话队列顺序处理后续消息。
+
 ### Gateway 能力矩阵
 
 下表描述的是 CodeShell 当前适配器已经实现并经过测试的能力，不代表上游平台 API 的全部潜在

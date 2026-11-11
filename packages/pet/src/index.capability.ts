@@ -4,4 +4,4 @@
  * Keep implementation helpers on the compatibility root; new hosts should
  * depend only on this factory.
  */
-export { createPetModule } from "./capability.js";
+export { createPetModule, PET_MANAGER_TOOL_CATALOG } from "./capability.js";

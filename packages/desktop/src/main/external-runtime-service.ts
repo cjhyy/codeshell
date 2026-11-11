@@ -18,6 +18,8 @@
  */
 import type { BrowserWindow } from "electron";
 import { lstatSync } from "node:fs";
+import { ExternalRuntimeProfileControl } from "./external-runtime-profile-control.js";
+import type { ExternalRuntimeToolProfile } from "./external-runtime-tool-profile.js";
 import { join } from "node:path";
 import {
   claudePermissionModeFor,
@@ -164,6 +166,8 @@ export interface ExternalRuntimeStartRequest {
   hasGoal?: boolean;
   initialContext?: string;
   developerInstructions?: string;
+  /** Main-owned capability restriction; never supplied by renderer/provider input. */
+  toolProfile?: ExternalRuntimeToolProfile;
   /**
    * Digital human to pin on the canonical Session (a new Session's first run).
    * Omitted means "keep the persisted pin"; Main resolves it either way.
@@ -281,7 +285,12 @@ export class ExternalRuntimeService {
       configurationKey: string;
       continuationConfiguration: Pick<
         ExternalRuntimeStartRequest,
-        "planMode" | "hasGoal" | "developerInstructions" | "workspaceProfile" | "permissionMode"
+        | "planMode"
+        | "hasGoal"
+        | "developerInstructions"
+        | "workspaceProfile"
+        | "permissionMode"
+        | "toolProfile"
       >;
       authority: ExternalRuntimeAuthority;
       ownerWebContentsId?: number;
@@ -292,6 +301,7 @@ export class ExternalRuntimeService {
       finalizeOperations: (reason: TerminalReason) => TerminalReason;
       toolTurnAbort?: AbortController;
       providerTurn?: symbol;
+      profileControl?: ExternalRuntimeProfileControl;
       modelTrace?: ReturnType<typeof startExternalRuntimeTrace>;
       /** Serializes turns so one recorder can never be reset by an overlapping send. */
       turnTail: Promise<void>;
@@ -327,7 +337,12 @@ export class ExternalRuntimeService {
       identity: string;
       configuration: Pick<
         ExternalRuntimeStartRequest,
-        "planMode" | "hasGoal" | "developerInstructions" | "workspaceProfile" | "permissionMode"
+        | "planMode"
+        | "hasGoal"
+        | "developerInstructions"
+        | "workspaceProfile"
+        | "permissionMode"
+        | "toolProfile"
       >;
     }
   >();
@@ -624,6 +639,7 @@ export class ExternalRuntimeService {
     return JSON.stringify({
       routingKey: this.routingKey(request),
       developerInstructions: request.developerInstructions ?? null,
+      toolProfile: request.toolProfile?.id ?? null,
     });
   }
 
@@ -971,7 +987,8 @@ export class ExternalRuntimeService {
     // Host tools are gated by their OWN flag, so the runtime can be trialled with
     // no tool surface at all (§20). An empty allowlist is the honest expression of
     // "off" — the bridge still exists, it just advertises nothing.
-    const goalToolsAvailable = this.areHostToolsEnabled() && !request.planMode;
+    const goalToolsAvailable =
+      this.areHostToolsEnabled() && !request.planMode && !request.toolProfile;
     // The registry must actually CONTAIN the tools the exposure policy allows.
     // `new ToolRegistry({})` registers none, which would make the allowlist
     // moot in the quietest possible way: `listTools()` returns [], the runtime
@@ -979,12 +996,18 @@ export class ExternalRuntimeService {
     // The registry contains the full catalog. SessionToolHost intersects it
     // with the reviewed exposure policy and the current capability settings;
     // registration alone never grants external access.
-    const registry = new ToolRegistry({ toolCatalog: [...BUILTIN_TOOLS, ...CODING_TOOLS] });
+    if (request.toolProfile && !this.areHostToolsEnabled())
+      throw new Error("External chat requires CodeShell Host tools. Enable external_host_tools.");
+    const registry = new ToolRegistry({
+      toolCatalog: request.toolProfile?.catalog ?? [...BUILTIN_TOOLS, ...CODING_TOOLS],
+    });
     // Plan mode blocks them (not in PLAN_MODE_ALLOWED_TOOLS), so neither tools nor guidance.
     // Known limitation: read once per start, so a runtime started before Main's
     // notice wiring exists has no NotifyMe until it restarts.
     const mimiHost =
-      this.areHostToolsEnabled() && !request.planMode ? this.deps.mimiTools?.() : undefined;
+      this.areHostToolsEnabled() && !request.planMode && !request.toolProfile
+        ? this.deps.mimiTools?.()
+        : undefined;
     const mimiTools = mimiHost
       ? registerExternalMimiTools(registry, {
           sessionId: request.sessionId,
@@ -995,26 +1018,32 @@ export class ExternalRuntimeService {
           },
         })
       : [];
-    const exposure = this.areHostToolsEnabled()
+    const exposure = request.toolProfile
       ? {
-          ...FIRST_PHASE_EXPOSURE,
-          toolNames: new Set([
-            ...FIRST_PHASE_EXPOSURE.toolNames,
-            ...(goalToolsAvailable ? EXTERNAL_GOAL_TOOLS : []),
-            ...mimiTools,
-          ]),
+          mode: "allowlist" as const,
+          toolNames: new Set(request.toolProfile.catalog.map((tool) => tool.definition.name)),
         }
-      : { mode: "allowlist" as const, toolNames: new Set<string>() };
+      : this.areHostToolsEnabled()
+        ? {
+            ...FIRST_PHASE_EXPOSURE,
+            toolNames: new Set([
+              ...FIRST_PHASE_EXPOSURE.toolNames,
+              ...(goalToolsAvailable ? EXTERNAL_GOAL_TOOLS : []),
+              ...mimiTools,
+            ]),
+          }
+        : { mode: "allowlist" as const, toolNames: new Set<string>() };
     const fullAccess = request.permissionMode === "bypassPermissions";
     // Keep host tool deny rules and exposure checks while honoring the user's
     // full-access selection for file paths and tool approval requests.
     const hostPermissionMode =
       request.permissionMode === "acceptEdits" || fullAccess ? "acceptEdits" : "default";
-    const sandbox = request.planMode
-      ? "read-only"
-      : fullAccess
-        ? "danger-full-access"
-        : "workspace-write";
+    const sandbox =
+      request.planMode || request.toolProfile?.readOnly
+        ? "read-only"
+        : fullAccess
+          ? "danger-full-access"
+          : "workspace-write";
     const approvalPolicy =
       fullAccess || request.permissionMode === "dontAsk" ? "never" : "on-request";
     // Claude Code's NATIVE tools follow the user's selection directly; host tools
@@ -1045,6 +1074,7 @@ export class ExternalRuntimeService {
       request.modelKey ?? `${request.kind}/${request.model ?? "default"}`,
       request.kind,
       authority.projectBinding,
+      request.toolProfile?.sessionKind,
     );
     recorder.envelope = new ExternalRunEnvelope(
       (name) => registry.getTool(name)?.bookkeeping === true,
@@ -1107,6 +1137,7 @@ export class ExternalRuntimeService {
       externalMimiToolInstructions(mimiTools),
       externalRuntimeProfileInstructions(profile),
       request.developerInstructions,
+      request.toolProfile?.instructions,
     ]
       .filter(Boolean)
       .join("\n\n");
@@ -1212,6 +1243,14 @@ export class ExternalRuntimeService {
           ? { ...event, sessionId: request.sessionId }
           : event;
       try {
+        const profileControl = this.sessions.get(request.sessionId)?.profileControl;
+        if (
+          profileControl?.replyCommitted &&
+          (normalized.type === "text_delta" || normalized.type === "assistant_message")
+        )
+          return;
+        if (normalized.type === "turn_complete" && profileControl)
+          normalized = { ...normalized, reason: profileControl.terminalReason(normalized.reason) };
         if (normalized.type === "turn_complete") {
           this.sessions.get(request.sessionId)?.toolTurnAbort?.abort("Provider turn ended");
           if (!lifecycle.goalRunActive || operations.current?.hasUnverifiedWrites())
@@ -1260,6 +1299,11 @@ export class ExternalRuntimeService {
     });
     const forwardEvent = (event: StreamEvent): void => {
       if (!lifecycle.active || !lifecycle.turnActive) return;
+      if (
+        this.sessions.get(request.sessionId)?.profileControl?.replyCommitted &&
+        (event.type === "text_delta" || event.type === "assistant_message")
+      )
+        return;
       try {
         output.push(event);
       } catch {
@@ -1269,6 +1313,7 @@ export class ExternalRuntimeService {
     const contextOverrides = {
       ...(this.deps.toolContextOverrides?.(request.sessionId) ?? {}),
       ...(profile.profileMemoryDir ? { profileMemoryDir: profile.profileMemoryDir } : {}),
+      ...request.toolProfile?.context,
       streamCallback: forwardEvent,
       externalRuntimeBackgroundDelivery: this.deps.backgroundWork !== undefined,
       ...(this.deps.requestApproval
@@ -1296,6 +1341,7 @@ export class ExternalRuntimeService {
       }
       return {
         ...hostContext.toolVisibility,
+        ...request.toolProfile?.visibility(),
         cwd: request.cwd,
         workspace: hostContext.workspace,
         hasGoal: this.goals.read(request.sessionId) !== undefined,
@@ -1324,7 +1370,11 @@ export class ExternalRuntimeService {
         presetRules: [
           ...BUILTIN_AGENT_PRESETS.general.defaultPermissionRules,
           // Goal controller and Mimi tools need no approval (design D5).
-          ...[...EXTERNAL_GOAL_TOOLS, ...mimiTools].map((tool) => ({
+          ...[
+            ...EXTERNAL_GOAL_TOOLS,
+            ...mimiTools,
+            ...(request.toolProfile?.catalog.map((tool) => tool.definition.name) ?? []),
+          ].map((tool) => ({
             tool,
             decision: "allow" as const,
           })),
@@ -1344,13 +1394,14 @@ export class ExternalRuntimeService {
         visibility: getVisibility(),
         getVisibility,
         goalController: goalToolsAvailable,
-        mimiHost: mimiTools.length > 0,
+        mimiHost: mimiTools.length > 0 || request.toolProfile?.mimiHost === true,
         ...(exposure ? { exposure } : {}),
         ...(request.model ? { model: request.model } : {}),
         ...(resumeRuntimeSessionId ? { resumeRuntimeSessionId } : {}),
         ...(request.initialContext ? { initialContext: request.initialContext } : {}),
         developerInstructions,
         sandbox,
+        ...(request.toolProfile?.readOnly ? { disableNativeTools: true } : {}),
         approvalPolicy,
         ...(request.kind === "claude-code" ? { claudePermissionMode } : {}),
         ...(toolApprovalBackend
@@ -1386,11 +1437,16 @@ export class ExternalRuntimeService {
           if (!run || !physicalTurn || !turnSignal) return undefined;
           return {
             ...run,
+            ...(request.toolProfile ? { runScopedServices: request.toolProfile.services() } : {}),
+            ...(entry.profileControl ? { runYield: entry.profileControl.runYield } : {}),
             signal: AbortSignal.any([run.signal, turnSignal]),
-            runToolWithTrace: (toolCallId, operation) =>
-              modelTrace
-                ? modelTrace.runHostTool(toolCallId, operation)
-                : withModelTraceContext(traceContext, operation),
+            runToolWithTrace: (toolCallId, operation) => {
+              const control = entry.profileControl;
+              const bounded = () => (control ? control.runTool(operation) : operation());
+              return modelTrace
+                ? modelTrace.runHostTool(toolCallId, bounded)
+                : withModelTraceContext(traceContext, bounded);
+            },
             assertCurrent: () => {
               run.assertCurrent();
               if (!lifecycle.turnActive || entry.providerTurn !== physicalTurn)
@@ -1403,7 +1459,11 @@ export class ExternalRuntimeService {
           ...(toolApprovalBackend
             ? {
                 onNativeApproval: async (nativeRequest) => {
-                  if (!lifecycle.active || !this.authorityStillCurrent(request.cwd, authority))
+                  if (
+                    request.toolProfile?.readOnly ||
+                    !lifecycle.active ||
+                    !this.authorityStillCurrent(request.cwd, authority)
+                  )
                     return "decline";
                   const decision = await toolApprovalBackend.requestApproval({
                     toolName: "Codex native tool",
@@ -1552,6 +1612,7 @@ export class ExternalRuntimeService {
         developerInstructions: request.developerInstructions,
         workspaceProfile: request.workspaceProfile,
         permissionMode: request.permissionMode,
+        toolProfile: request.toolProfile,
       },
       authority,
       turnTail: Promise.resolve(),
@@ -1760,6 +1821,23 @@ export class ExternalRuntimeService {
             try {
               const physicalTurn = Symbol("provider-turn");
               entry.providerTurn = physicalTurn;
+              const toolProfile = entry.continuationConfiguration.toolProfile;
+              entry.profileControl = toolProfile
+                ? new ExternalRuntimeProfileControl(
+                    toolProfile.maxToolCalls ?? 6,
+                    () =>
+                      this.sessions.get(sessionId) === entry &&
+                      entry.lifecycle.active &&
+                      entry.lifecycle.turnActive &&
+                      entry.providerTurn === physicalTurn &&
+                      acceptedGeneration === entry.lifecycle.interruptGeneration,
+                    () =>
+                      entry.session.interrupt().catch(async () => {
+                        entry.lifecycle.faulted = true;
+                        await entry.session.close();
+                      }),
+                  )
+                : undefined;
               if (providerRound > 0) {
                 background = this.backgroundContinuation(sessionId, false)?.claim();
                 nextInput = {
@@ -2011,6 +2089,7 @@ export class ExternalRuntimeService {
       const outcome = await runTurnExclusive();
       if (
         this.deps.memory &&
+        !entry.continuationConfiguration.toolProfile?.disableMemory &&
         outcome.reason === "completed" &&
         !entry.recorder.outputFailed &&
         this.sessions.get(sessionId) === entry &&

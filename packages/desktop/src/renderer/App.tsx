@@ -106,6 +106,7 @@ import {
 } from "../shared/external-runtime-models";
 import { catalogModelOptions, type ModelInstance } from "./settings/textConnections";
 import type { QuickChatSessionRef } from "./quickChatSession";
+import { defaultSessionModelKeyFromSettingsLayers } from "../shared/session-model-default";
 import type { SettingsModuleId } from "./settings/SettingsPage";
 import {
   agentPanelHostErrorResponse,
@@ -287,7 +288,8 @@ function App() {
   /** Cmd+P / sidebar 搜索 — cross-project session picker (modal). */
   const [sessionSearchOpen, setSessionSearchOpen] = useState(false);
   // The GLOBAL default model — the choice that seeds *new* sessions. Lives in
-  // settings.defaults.text (unified catalog). Composer changes are session-local;
+  // settings.sessionDefaults.model (with defaults.text as legacy/native fallback).
+  // Composer changes are session-local;
   // users change this global default explicitly in Settings.
   const [defaultActiveModelKey, setDefaultActiveModelKey] = useState<string | null>(null);
   const [configuredModelOptions, setConfiguredModelOptions] = useState<ModelOption[]>([]);
@@ -394,14 +396,36 @@ function App() {
         ])
       : null,
   );
-  const modelOptions = useMemo<ModelOption[]>(
-    () => [...configuredModelOptions, ...externalRuntimeModels],
-    [configuredModelOptions, externalRuntimeModels],
-  );
+  const modelOptions = useMemo<ModelOption[]>(() => {
+    const options: ModelOption[] = [...configuredModelOptions, ...externalRuntimeModels];
+    if (defaultActiveModelKey && !options.some((option) => option.key === defaultActiveModelKey)) {
+      options.push({
+        key: defaultActiveModelKey,
+        label: t("settingsX.sessionDefault.unavailable", { model: defaultActiveModelKey }),
+        provider: "",
+      });
+    }
+    return options;
+  }, [configuredModelOptions, externalRuntimeModels, defaultActiveModelKey, t]);
   const quickChatModelOptions = useMemo(
     () => modelOptions.filter((option) => !isExternalRuntimeModelKey(option.key)),
     [modelOptions],
   );
+  // Quick Chat's independent fork executor is native-only. Mimi's manager
+  // executor supports the full model list and inherits the explicit default.
+  const petModelOptions = useMemo(() => {
+    const options = [...modelOptions];
+    for (const key of [petChatModelKey, defaultActiveModelKey]) {
+      if (key && !options.some((option) => option.key === key)) {
+        options.push({
+          key,
+          label: t("settingsX.sessionDefault.unavailable", { model: key }),
+          provider: "",
+        });
+      }
+    }
+    return options;
+  }, [modelOptions, petChatModelKey, defaultActiveModelKey, t]);
   const quickChatDefaultModelKey = useMemo(() => {
     if (defaultActiveModelKey && !isExternalRuntimeModelKey(defaultActiveModelKey)) {
       return defaultActiveModelKey;
@@ -1488,12 +1512,11 @@ function App() {
         const merged: Record<string, unknown> = { ...userS, ...projectS };
         // Unified catalog (统一模型接入方案 §6): the composer picker lists text
         // `modelConnections` resolved through the catalog — the same store the
-        // engine pool keys by instance id. The active selection is
-        // `defaults.text` (engine priority #1), with legacy activeKey/model.name
-        // as fallback for un-migrated configs.
+        // engine pool keys by instance id. The explicit session preference can
+        // also select an external runtime; defaults.text remains the native default.
         const catalog = await window.codeshell.getModelCatalog().catch(() => []);
         if (cancelled) return;
-        const configuredDefault = resolveActiveKey(merged);
+        const configuredDefault = defaultSessionModelKeyFromSettingsLayers(userS, projectS);
         setDefaultActiveModelKey(
           configuredDefault ? normalizeExternalRuntimeModelKey(configuredDefault) : null,
         );
@@ -2352,8 +2375,8 @@ function App() {
                   />
                   <PetChatHost
                     defaultProjectPath={activeProject?.path ?? null}
-                    defaultModelKey={quickChatDefaultModelKey}
-                    modelOptions={quickChatModelOptions}
+                    defaultModelKey={defaultActiveModelKey}
+                    modelOptions={petModelOptions}
                     onOpenSession={(request) => void handleOpenPetTarget(request)}
                     onOpenSettings={() => setViewMode("pet_settings")}
                     onOpenMemory={() => openPetMemory("workspace")}
@@ -2361,8 +2384,8 @@ function App() {
                 </PetPage>
               ) : isPetSettingsView ? (
                 <PetSettingsPage
-                  activeModelKey={petChatModelKey ?? quickChatDefaultModelKey}
-                  modelOptions={quickChatModelOptions}
+                  activeModelKey={petChatModelKey ?? defaultActiveModelKey}
+                  modelOptions={petModelOptions}
                   hasModelOverride={petChatModelKey !== null}
                   widgetVisible={petWidgetVisible}
                   presence={mimiPresence}
@@ -2932,15 +2955,6 @@ function App() {
       )}
     </AppShell>
   );
-}
-
-function resolveActiveKey(s: Record<string, unknown>): string | null {
-  // Unified catalog: defaults.text holds the active text connection's instance
-  // id — the engine's priority #1 (engine.ts) and the picker's option key.
-  const defaults =
-    s.defaults && typeof s.defaults === "object" ? (s.defaults as Record<string, unknown>) : {};
-  if (typeof defaults.text === "string" && defaults.text) return defaults.text;
-  return null;
 }
 
 export { App };
