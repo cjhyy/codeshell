@@ -6,6 +6,7 @@ import type { ConversationSessionRoute, PetLongTask } from "@cjhyy/code-shell-pe
 import type { NoticeChannel, NoticeEvent } from "@cjhyy/code-shell-pet/protocol";
 import {
   buildDeliveryPlan,
+  buildReportPlan,
   createPetDeliveryResolver,
   mergeRuleAttributes,
   outcomeReporter,
@@ -427,6 +428,81 @@ describe("buildDeliveryPlan", () => {
       "im:lark\u0000chat-9\u0000owner-9",
       "im:wechat\u0000chat-1\u0000owner-1",
     ]);
+  });
+});
+
+describe("watch-session rules", () => {
+  const watch = (events?: NoticeEvent[]): NoticeRule => ({
+    ...rule("r-watch", { target: { kind: "route", route: LARK_CHAT }, channel: "lark", events }),
+    createdBy: "watch-session",
+  });
+
+  test("their outcome answers the conversation that asked, like an IM task's", () => {
+    for (const event of ["done", "failed", "blocked"] as const)
+      expect(
+        rows(
+          buildDeliveryPlan({
+            event,
+            rules: [watch()],
+            replyRoutes: [],
+            delegatedFromDesktop: "auto",
+          }),
+        ),
+      ).toEqual([["template", "lark:chat-9", "lark", ["r-watch"], true]]);
+  });
+
+  test("an owner rule beside it does not make it a reply to the owner", () => {
+    const owner = rule("r-owner");
+    expect(
+      rows(
+        buildDeliveryPlan({
+          event: "done",
+          rules: [owner],
+          replyRoutes: [],
+          delegatedFromDesktop: "auto",
+        }),
+      ),
+    ).toEqual([["template", "owner", "auto", ["r-owner"], false]]);
+  });
+});
+
+describe("buildReportPlan", () => {
+  const plan = (input: Partial<Parameters<typeof buildReportPlan>[0]>) =>
+    rows(buildReportPlan({ rules: [], ...input }));
+  const watch = (id: string, route: typeof LARK_CHAT | Record<string, unknown> = LARK_CHAT) => ({
+    ...rule(id, { target: { kind: "route", route: route as typeof LARK_CHAT }, channel: "lark" }),
+    createdBy: "watch-session" as const,
+  });
+
+  test("nobody watching: nobody is told", () => {
+    expect(plan({})).toEqual([]);
+  });
+
+  test("an IM-started task's origin gets Mimi's update; nothing is a reply", () => {
+    expect(plan({ task: task({ completionTarget: LARK_CHAT }) })).toEqual([
+      ["mimi-closure", "lark:chat-9", "lark", [], false],
+    ]);
+  });
+
+  test("the owner's rules and a desktop delegation get no milestone", () => {
+    expect(
+      plan({ task: task(), rules: [rule("r-owner"), rule("r-del", { origin: "delegation" })] }),
+    ).toEqual([]);
+  });
+
+  test("each watching conversation gets the template", () => {
+    const other = { ...LARK_CHAT, target: "chat-2", senderId: "owner-2" };
+    expect(plan({ rules: [watch("w-1"), watch("w-2", other)] })).toEqual([
+      ["template", "lark:chat-9", "lark", ["w-1"], false],
+      ["template", "lark:chat-2", "lark", ["w-2"], false],
+    ]);
+  });
+
+  test("a watch of the task's own origin is one message (also without a stored sender)", () => {
+    const { senderId: _sender, ...legacyOrigin } = LARK_CHAT;
+    expect(plan({ task: task({ completionTarget: legacyOrigin }), rules: [watch("w-1")] })).toEqual(
+      [["mimi-closure", "lark:chat-9", "lark", ["w-1"], false]],
+    );
   });
 });
 

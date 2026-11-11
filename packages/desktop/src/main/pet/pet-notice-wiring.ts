@@ -16,6 +16,8 @@ import {
 } from "./pet-notice-projection.js";
 import { createNoticeReplay } from "./pet-notice-replay.js";
 import { PetNoticeRouter, type NoticeSubmission } from "./pet-notice-router.js";
+import { createSessionReportNotices } from "./pet-notice-session-report.js";
+import { createSessionWatchAction } from "./pet-notice-session-watch.js";
 import { createNoticeSettings } from "./pet-notice-settings.js";
 import { createTaskClosureAdapter } from "./pet-notice-task-closure.js";
 import { errorText } from "./pet-notice-types.js";
@@ -144,6 +146,14 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     inFlight.add(sending);
     void sending.finally(() => inFlight.delete(sending));
     return sending;
+  };
+  /** {@link submit} for callers that must know the outcome: failures reach them. */
+  const submitNotice = (notice: NoticeSubmission) => {
+    const routed = router.submit(notice);
+    const tracked = routed.catch(() => undefined);
+    inFlight.add(tracked);
+    void tracked.finally(() => inFlight.delete(tracked));
+    return routed;
   };
   /** Hand every parked mid-run report to the router and wait until it took them. */
   const flushParked = async (): Promise<void> => {
@@ -310,6 +320,23 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     externalRuntimeEnded(sessionId) {
       void ready.then(() => (disposed ? undefined : watcher.flush(sessionId)));
     },
+    submitNotice,
+    notifySessionReport: createSessionReportNotices({
+      deliveries,
+      submit: submitNotice,
+      sessionTitle: view.sessionTitle,
+      isEligibleSession: view.isEligibleSession,
+    }),
+    sessionWatch: (host) =>
+      createSessionWatchAction({
+        ...host,
+        rules: ruleStore,
+        isEligibleSession: view.isEligibleSession,
+        ...(deps.isMimiSession ? { isMimiSession: deps.isMimiSession } : {}),
+        nudge: decisions.nudge,
+        now,
+        log,
+      }),
     notifyTaskClosed: closure.notifyTaskClosed,
     armDelegationRule: closure.armDelegationRule,
     inboundReplay: replay.inboundReplay,

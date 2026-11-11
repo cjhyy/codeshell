@@ -11,8 +11,10 @@ import {
 } from "./pet-notice-ledger.js";
 import {
   hostTimezoneOffsetMin,
+  isOwnerTimedKind,
   nextQuietHoursStart,
   route,
+  usesP0Budget,
   type DedupeLookup,
   type ImReadiness,
   type RouteDecision,
@@ -67,6 +69,13 @@ const MEDIA_RELEASED: ReadonlySet<NoticeSettleStatus> = new Set(["accepted", "re
 /** How long the gateway outbox keeps trying an owner notice (a route reply: a day). */
 export const OWNER_OUTBOX_TTL_MS = 30 * 60_000;
 export const ROUTE_OUTBOX_TTL_MS = 24 * 60 * 60_000;
+
+/** A result opens the P1 merge window for its Session; progress reports and follow-ups do not. */
+function opensMergeWindow(notice: NoticeSubmission): boolean {
+  return (
+    notice.priority === "P1" && notice.kind !== "session.report" && !isOwnerTimedKind(notice.kind)
+  );
+}
 
 function payloadOf(notice: NoticeSubmission, expiresAt?: number): NoticeImPayload {
   const nonDirect = notice.facts.nonDirectBody;
@@ -159,6 +168,7 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
           return {
             quietHours: settings.quietHours,
             maxPerHour: settings.maxPerHour,
+            maxP0PerHour: settings.maxP0PerHour,
             mergeWindowMs: settings.mergeWindowSec * 1_000,
             timezoneOffsetMin: this.offset(now),
           };
@@ -167,11 +177,16 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
         stale: (record, now) => staleReason(record, now, this.options),
         submit: (digest) =>
           this.submit({
-            kind: "digest",
-            priority: "P2",
+            // Held follow-ups go out as one follow-up reminder: past quiet hours, on the P0 backstop.
+            ...(digest.timed
+              ? { kind: "followup.due", priority: "P1", facts: { title: "到点的跟进" } }
+              : {
+                  kind: "digest",
+                  priority: "P2",
+                  facts: { title: "你不在时", summary: `${digest.count} 条` },
+                }),
             dedupeKey: digest.dedupeKey,
             ruleIds: digest.ruleIds,
-            facts: { title: "你不在时", summary: `${digest.count} 条` },
             attention: "always",
             channel: digest.channel,
             target: digest.target,
@@ -713,7 +728,7 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     let at = now + (target.kind === "route" ? ROUTE_OUTBOX_TTL_MS : OWNER_OUTBOX_TTL_MS);
     if (notice.expiresAt !== undefined) at = Math.min(at, notice.expiresAt);
     const immediate = notice.reply === true || notice.media !== undefined;
-    if (target.kind === "owner" && notice.priority !== "P0" && !immediate)
+    if (target.kind === "owner" && !usesP0Budget(notice) && !immediate)
       at = Math.min(at, nextQuietHoursStart(this.settings().quietHours, now, this.offset(now)));
     return at;
   }
@@ -781,7 +796,7 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
         if (!shown) this.showOutcome(notice, body, "unknown");
         return;
       case "expired":
-        if (notice.priority !== "P0" && !immediate && owner && this.digest) {
+        if (!usesP0Budget(notice) && !immediate && owner && this.digest) {
           await this.settleQuietly(record.id, "held", "outbox-expired");
           this.digest.schedule();
           return;
@@ -921,8 +936,9 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     this.sending.add(plan.recordId);
     try {
       const { key } = await ledger.claim(plan.recordId, decision.im, body);
-      // Only a result opens the merge window; a decision prompt must not hold back its outcome.
-      if (notice.sessionId && notice.priority === "P1")
+      // Only a result opens the merge window; a decision prompt, a progress
+      // report or a follow-up must not hold back the outcome.
+      if (notice.sessionId && opensMergeWindow(notice))
         this.lastImSendAt.set(notice.sessionId, now);
       return { ...plan, claim: { channel: decision.im, key }, ledgerFailed: false };
     } catch (error) {
@@ -955,6 +971,7 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     let decision = route(
       {
         priority: notice.priority,
+        ...(isOwnerTimedKind(notice.kind) ? { ownerTimed: true } : {}),
         dedupeKey: notice.dedupeKey,
         attention: notice.attention,
         channel,
@@ -987,10 +1004,11 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     // Files are never folded into a one-line digest entry.
     if (notice.media && decision.outlet === "digest")
       decision = { outlet: "desktop", reason: "media-not-digested" };
-    // A decision request held by the P0 cap still has to be in front of the owner.
-    let alsoDesktop = notice.priority === "P0" && decision.outlet === "digest";
+    // A decision request (or a follow-up) held by the P0 cap still has to be in front of the owner.
+    let alsoDesktop = usesP0Budget(notice) && decision.outlet === "digest";
     if (
       notice.priority === "P1" &&
+      !isOwnerTimedKind(notice.kind) &&
       !immediate &&
       notice.sessionId &&
       (decision.outlet === "im" || decision.outlet === "both")
@@ -1017,7 +1035,7 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
       // Never lose a decision request (or a notice meant for the owner now) to the ledger.
       const handled = decision.outlet === "drop" || decision.outlet === "record";
       const fallback =
-        plan.ledgerFailed && !handled && (notice.priority === "P0" || decision.outlet === "im");
+        plan.ledgerFailed && !handled && (usesP0Budget(notice) || decision.outlet === "im");
       if (desktopNow || fallback) this.showDesktop(notice, body);
       else if (plan.ledgerFailed && !handled)
         this.log("pet.notice.lost", { kind: notice.kind, priority: notice.priority });

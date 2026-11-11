@@ -12,7 +12,7 @@
  * | ----------------------------------------- | --------------------------------------- |
  * | a long task owns the run (done / failed)  | one `mimi-closure` entry for the task's origin: its IM conversation (`reply: true`) or the owner. Every matching rule is folded into it (the delegation rule is the same declaration), so the watcher sends nothing for that run. |
  * | the Session is bound to an IM chat (done / failed) | one `session-reply` entry per conversation: the reply the bridge forwards IS the delivery. Rules that address that conversation merge into it: no second message there. |
- * | rules only, or a run that forwards no reply | one `template` entry.                 |
+ * | rules only, or a run that forwards no reply | one `template` entry (`reply: true` when a WatchSession rule addressed it to the asking IM chat). |
  * | a pending decision in an IM-started task (blocked) | one `template` entry for the task's origin, `reply: true`. |
  *
  * Rules that matched one outcome are one declaration ("tell me"), merged as
@@ -110,6 +110,11 @@ export interface PetDeliveryResolver {
   plan(query: DeliveryQuery): Promise<DeliveryPlan>;
   /** A blocked plan, synchronously: a decision is never served by a Session reply. */
   planBlocked(query: Omit<DeliveryQuery, "event">): DeliveryPlan;
+  /**
+   * Who hears a Session's own progress report (ReportToMimi): an IM-started
+   * task's origin and the conversations watching it, each once. Never rejects.
+   */
+  planReport(query: Pick<DeliveryQuery, "sessionId" | "task" | "useRules">): Promise<DeliveryPlan>;
   /** The conversations a Session's turn reply is forwarded to. Rejects when they cannot be read. */
   replyRoutes(sessionId: string): Promise<ConversationSessionRoute[]>;
   /**
@@ -185,6 +190,14 @@ function taskOrigin(
     : { target: { kind: "owner" }, channel: fallbackChannel };
 }
 
+/**
+ * Mimi watches a Session for the IM conversation that asked (WatchSession):
+ * its outcome answers that conversation, like an IM-started task's result.
+ */
+function answersIm(rule: NoticeRule): boolean {
+  return rule.createdBy === "watch-session" && rule.target.kind === "route";
+}
+
 function ruleEntry(
   rules: readonly NoticeRule[],
 ): Omit<DeliveryPlanEntry, "composeBy" | "replyRoute"> {
@@ -193,7 +206,7 @@ function ruleEntry(
     key: noticeTargetKey(merged.target),
     ...merged,
     ruleIds: rules.map((rule) => rule.id),
-    reply: false,
+    reply: merged.target.kind === "route" && rules.some(answersIm),
     requiresAway: rules.every((rule) => rule.when.kind === "all-sessions"),
   };
 }
@@ -303,6 +316,65 @@ export function buildDeliveryPlan(input: {
   return replies;
 }
 
+/**
+ * The same IM conversation: the same identity, or the same channel and chat
+ * when one side was recorded without its sender (an older task origin).
+ */
+export function sameConversation(a: NoticeTarget, b: NoticeTarget): boolean {
+  if (a.kind !== "route" || b.kind !== "route") return a.kind === b.kind;
+  if (noticeTargetKey(a) === noticeTargetKey(b)) return true;
+  const left = a.route;
+  const right = b.route;
+  return (
+    (!left.senderId?.trim() || !right.senderId?.trim()) &&
+    left.channel === right.channel &&
+    left.target === right.target
+  );
+}
+
+/**
+ * The plan for a Session's progress report (pure). A milestone reaches only
+ * the IM conversations that asked about this Session: an IM-started task's
+ * origin (Mimi's report turn writes that message, `composeBy:
+ * "mimi-closure"`) and each conversation a WatchSession rule addresses
+ * (templated). The owner's own rules, a desktop delegation and bound
+ * conversations (which already get the Session's turn replies) hear
+ * nothing extra. One entry per conversation; none is a `reply`.
+ */
+export function buildReportPlan(input: {
+  rules: readonly NoticeRule[];
+  task?: PetLongTask;
+}): DeliveryPlanEntry[] {
+  const entries: DeliveryPlanEntry[] = [];
+  const add = (
+    target: Extract<NoticeTarget, { kind: "route" }>,
+    rule: NoticeRule | undefined,
+    composeBy: DeliveryPlanEntry["composeBy"],
+  ): void => {
+    const existing = entries.find((entry) => sameConversation(entry.target, target));
+    if (existing) {
+      if (rule) existing.ruleIds.push(rule.id);
+      return;
+    }
+    entries.push({
+      key: noticeTargetKey(target),
+      target,
+      channel: target.route.channel,
+      attention: rule?.attention ?? "always",
+      ruleIds: rule ? [rule.id] : [],
+      reply: false,
+      composeBy,
+      requiresAway: false,
+    });
+  };
+  const origin = input.task?.completionTarget;
+  if (origin) add({ kind: "route", route: origin }, undefined, "mimi-closure");
+  for (const rule of input.rules)
+    if (answersIm(rule) && rule.target.kind === "route" && rule.when.kind === "session")
+      add({ kind: "route", route: rule.target.route }, rule, "template");
+  return entries;
+}
+
 /** The one entry of a plan that notice rules asked for, if any (never a closure). */
 export function ruleDelivery(plan: DeliveryPlan): DeliveryPlanEntry | undefined {
   return outcomeReporter(plan) === "rules"
@@ -378,6 +450,17 @@ export function createPetDeliveryResolver(sources: DeliveryPlanSources): PetDeli
     build({ ...query, event: "blocked" }, query.task, []);
 
   return {
+    async planReport(query) {
+      // Only the IM conversations that asked to watch this Session.
+      const rules =
+        query.useRules === false
+          ? []
+          : sources.rules.activeForSession(query.sessionId).filter(answersIm);
+      return {
+        rules,
+        entries: buildReportPlan({ rules, ...(query.task ? { task: query.task } : {}) }),
+      };
+    },
     async plan(query) {
       if (query.event === "blocked") return planBlocked(query);
       const task =

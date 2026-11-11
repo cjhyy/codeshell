@@ -61,6 +61,12 @@ export interface PetSessionBellState {
   imLabel?: string;
   ready?: PetNoticeChannelReadiness;
   /**
+   * An active rule of this Session asks for its "done" outcome: main's notice
+   * router reports a finished turn, so the renderer adds no notification.
+   * Absent when the rules only watch failures or blocks.
+   */
+  watchesDone?: boolean;
+  /**
    * A rule of this Session fired within the last minute: main is already
    * telling the owner about that outcome (the renderer adds no notification).
    */

@@ -1,14 +1,14 @@
-import { createHash } from "node:crypto";
 import type { CronScheduler } from "@cjhyy/code-shell-core/internal";
 import type { PetRegisteredFollowUp } from "@cjhyy/code-shell-pet";
-import type { GatewayControlEventInput } from "../im-gateway-control-server.js";
-import type { DesktopNotificationInput, DesktopNotificationOutcome } from "../desktop-notifier.js";
 import type { PetDispatchService } from "./pet-dispatch-service.js";
 import { createPetFollowUpHost } from "./pet-follow-up-host.js";
 import { createPetFollowUpService, type PetFollowUpInbox } from "./pet-follow-up-service.js";
 import { PetFollowUpWakeCoordinator } from "./pet-follow-up-wake-coordinator.js";
 import type { PetLongTaskCoordinator } from "./pet-long-task-coordinator.js";
 import type { PetLongTaskStore } from "./pet-long-task-store.js";
+import { createFollowUpNotifier } from "./pet-notice-follow-up.js";
+import type { RouteDecision } from "./pet-notice-policy.js";
+import type { NoticeSubmission } from "./pet-notice-types.js";
 import { PetRegisteredFollowUpStore } from "./pet-registered-follow-up-store.js";
 import type { DesktopPetSession } from "./pet-state-aggregator.js";
 import type { PetSummaryService } from "./pet-summary-service.js";
@@ -24,8 +24,8 @@ export async function createPetFollowUpRuntime(deps: {
   tasks: PetLongTaskStore;
   longTasks: Pick<PetLongTaskCoordinator, "control">;
   scheduler(): CronScheduler;
-  publish(event: GatewayControlEventInput): Promise<void>;
-  notify(input: DesktopNotificationInput): Promise<DesktopNotificationOutcome | undefined>;
+  /** The notice router (`PetNoticeWiring.submitNotice`): every reminder is sent through it. */
+  submitNotice(notice: NoticeSubmission): Promise<RouteDecision>;
   dispatch(): Pick<PetDispatchService, "wakeFollowUp"> | null;
   onError(error: unknown): void;
 }) {
@@ -46,24 +46,8 @@ export async function createPetFollowUpRuntime(deps: {
   const coordinator = new PetFollowUpWakeCoordinator({
     store: registeredFollowUps,
     scheduler: deps.scheduler,
-    notify: async (item, text, key) => {
-      const deliveryKey = createHash("sha256").update(key).digest("hex");
-      if (item.completionTarget) {
-        await deps.publish({
-          deliveryKey,
-          type: "pet.task.reported",
-          title: item.title,
-          text,
-          target: {
-            channel: item.completionTarget.channel,
-            target: item.completionTarget.target,
-          },
-        });
-      }
-      const outcome = await deps.notify({ key: deliveryKey, title: item.title, body: text });
-      if (!item.completionTarget && outcome === "failed")
-        throw new Error("桌面提醒未能显示，请在需要跟进中查看");
-    },
+    // The router picks desktop / IM, records and dedupes the reminder (key: the wake key).
+    notify: createFollowUpNotifier({ submit: deps.submitNotice }),
     resume: async (item) => {
       const source = deps.sessions().find((row) => row.agentSessionId === item.sourceSessionId);
       if (!source || source.external)
