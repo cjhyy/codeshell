@@ -60,10 +60,6 @@ export class ToolRegistry {
     }
     const selectedNames = selectedBuiltinTools ? new Set(selectedBuiltinTools) : null;
 
-    if (selectedNames?.has("ToolSearch") && availableNames.has("CallTool"))
-      selectedNames.add("CallTool");
-    if (selectedNames && !selectedNames.has("ToolSearch")) selectedNames.delete("CallTool");
-
     if (selectedNames) {
       const unknown = [...selectedNames].filter((name) => !availableNames.has(name));
       if (unknown.length > 0) {

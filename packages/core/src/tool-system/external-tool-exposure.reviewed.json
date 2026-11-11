@@ -21,13 +21,6 @@
     "contractFingerprint": "026c8f9bb786f1835db1dd453bc4fb061bfc6872dbba646422bcfc2e176e6d3e"
   },
   {
-    "tool": "CallTool",
-    "kind": "self-contained",
-    "status": "excluded",
-    "reason": "Native model wire wrapper; resolves to the target tool before native authority and execution checks.",
-    "contractFingerprint": "3d5e4b66814cf9a8df583c7fd48a23e0082fa7c85a4ffa2cfe80259423ec014a"
-  },
-  {
     "tool": "DriveAgent",
     "kind": "self-contained",
     "status": "exposed",

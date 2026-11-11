@@ -396,8 +396,6 @@ describe("SessionToolHost live capability policy", () => {
       profileAllowedToolNames: undefined,
       runPlanMode: false,
     });
-    expect(native.map((tool) => tool.name)).toContain("CallTool");
-    expect(host.listTools().map((tool) => tool.name)).not.toContain("CallTool");
     expect(
       host
         .listTools()
@@ -405,7 +403,7 @@ describe("SessionToolHost live capability policy", () => {
         .sort(),
     ).toEqual(
       native
-        .filter((tool) => tool.name !== "Secret" && tool.name !== "CallTool")
+        .filter((tool) => tool.name !== "Secret")
         .map((tool) => tool.name)
         .sort(),
     );

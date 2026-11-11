@@ -35,7 +35,7 @@ export function resolveToolPolicySnapshot(snapshot: ToolPolicyInputSnapshot): To
   const allowed = snapshot.allowedToolNames && new Set(snapshot.allowedToolNames);
   const servers = new Set(snapshot.allowedMcpServers);
   const policies = new Map(snapshot.mcpPolicies.map((policy) => [policy.serverName, policy]));
-  const definitions = snapshot.tools
+  return snapshot.tools
     .filter(({ definition, available, featureEnabled, mcp }) => {
       const name = definition.name;
       if (!available || !featureEnabled || disabled.has(name)) return false;
@@ -51,7 +51,4 @@ export function resolveToolPolicySnapshot(snapshot: ToolPolicyInputSnapshot): To
       return !policy.disabledTools.includes(mcp.toolName);
     })
     .map(({ definition }) => definition);
-  return definitions.filter(
-    (tool) => tool.name !== "CallTool" || definitions.some((entry) => entry.name === "ToolSearch"),
-  );
 }

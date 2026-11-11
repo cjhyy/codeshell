@@ -91,10 +91,7 @@ describe("Run-local progressive tool surface", () => {
         profileAllowedToolNames: undefined,
         runPlanMode: false,
       });
-    expect(assemble({ DeferredAction: "off" }).map((tool) => tool.name)).toEqual([
-      "CallTool",
-      "ToolSearch",
-    ]);
+    expect(assemble({ DeferredAction: "off" }).map((tool) => tool.name)).toEqual(["ToolSearch"]);
     expect(f.ctx.disabledBuiltins!.has("DeferredAction")).toBe(true);
     expect(assemble().map((tool) => tool.name)).toContain("DeferredAction");
     expect(f.ctx.disabledBuiltins).toBeUndefined();
@@ -136,7 +133,7 @@ describe("Run-local progressive tool surface", () => {
     expect(f.counts()).toEqual({ executions: 1, approvals: 1, hookCalls: 2 });
     await toolSearchTool({ query: "select:DeferredAction" }, f.ctx);
     expect(f.ctx.refreshRunTools!()).toEqual(next);
-    expect(f.registry.getToolDefinitions()).toHaveLength(3);
+    expect(f.registry.getToolDefinitions()).toHaveLength(2);
   });
 
   test("revocation wins over selection and unknown names never reach approvals or hooks", async () => {

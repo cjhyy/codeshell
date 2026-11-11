@@ -35,6 +35,7 @@ import type { EngineRunOptions, RunBehaviorProfile } from "./run-types.js";
 import { normalizeSessionToolSelection, RunToolSurface } from "../tool-system/run-tool-surface.js";
 import { routeInitialTools, type TaskToolRoutingPolicy } from "../preset/task-tool-routing.js";
 import { logger } from "../logging/logger.js";
+import { callToolDef } from "../tool-system/builtin/call-tool.js";
 import { selectionForToolCacheCycle, toolCacheIdentity } from "./tool-cache-cycle.js";
 
 /** Fold once per Run from the unmodified transport baseline; unknown names cannot create servers. */
@@ -65,7 +66,14 @@ export function initializeRunToolSurface(
     onSelectionChanged?: (selection: SessionToolSelection) => void;
   },
 ): ToolDefinition[] {
-  const catalog = assembleCatalog();
+  // CallTool is a wire adapter, never a product capability or an external Host tool.
+  const assembleModelCatalog = () => {
+    const definitions = assembleCatalog();
+    return definitions.some((tool) => tool.name === "ToolSearch")
+      ? [...definitions.filter((tool) => tool.name !== "CallTool"), callToolDef]
+      : definitions.filter((tool) => tool.name !== "CallTool");
+  };
+  const catalog = assembleModelCatalog();
   const identity = toolCacheIdentity(toolCtx.llmConfig);
   const selection = normalizeSessionToolSelection(
     selectionForToolCacheCycle(routing?.selection, identity),
@@ -112,7 +120,7 @@ export function initializeRunToolSurface(
   toolCtx.runToolSurface = surface;
   surface.updateCatalog(catalog);
   persistSelection?.(surface.getSelection());
-  toolCtx.refreshRunToolEligibility = () => surface.updateCatalog(assembleCatalog());
+  toolCtx.refreshRunToolEligibility = () => surface.updateCatalog(assembleModelCatalog());
   let previousNames: string[] | undefined;
   toolCtx.refreshRunTools = () => {
     toolCtx.refreshRunToolEligibility!();
@@ -423,9 +431,7 @@ export function assembleRunToolDefs(args: {
     registry: args.toolRegistry,
     visibility,
     disabledBuiltinNames,
-    allowedToolNames: args.profileAllowedToolNames?.has("ToolSearch")
-      ? new Set([...args.profileAllowedToolNames, "CallTool"])
-      : args.profileAllowedToolNames,
+    allowedToolNames: args.profileAllowedToolNames,
     mcpServers: args.mcpServers,
     mcpDisabled: args.mcpDisabled,
     featureFlags: args.featureFlags,
