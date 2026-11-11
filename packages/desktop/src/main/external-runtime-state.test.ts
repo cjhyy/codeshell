@@ -336,6 +336,38 @@ describe("external runtime durable state", () => {
     });
   });
 
+  test("upgrading a cwd-only external session preserves its selected worktree", () => {
+    const manager = new SessionManager();
+    const sessionId = "external-worktree-upgrade";
+    const project = { projectId: "project-1", mainRootId: "root-1" };
+    manager.create("/tmp/project", "codex/gpt-test", "codex", sessionId);
+    const workspace = {
+      root: "/tmp/project-worktree",
+      kind: "worktree" as const,
+      worktree: {
+        path: "/tmp/project-worktree",
+        branch: "worktree/feature",
+        baseRef: "main",
+        createdBy: "codeshell" as const,
+      },
+    };
+    manager.setSessionWorkspace(sessionId, workspace);
+
+    new ExternalRuntimeSessionRecorder(
+      sessionId,
+      "/tmp/project",
+      "codex/gpt-test",
+      "codex",
+      project,
+    );
+
+    expect(manager.readSessionState(sessionId)).toMatchObject({
+      cwd: "/tmp/project",
+      workspace,
+      project,
+    });
+  });
+
   test("refuses to replace an existing stable project binding", () => {
     const sessionId = "external-project-binding-fence-test";
     new ExternalRuntimeSessionRecorder(sessionId, "/tmp/project", "codex/gpt-test", "codex", {

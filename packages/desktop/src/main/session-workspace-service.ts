@@ -90,6 +90,8 @@ export interface SessionWorkspaceReleaseOptions {
 }
 
 export interface SessionWorkspaceMutationOptions {
+  /** Quiesce a Main-owned external runtime after validation and before changing its cwd. */
+  beforePersist?: () => Promise<void>;
   /** Persist through the live worker so its in-memory bundle adopts the revision. */
   setLiveWorkspace?: (sessionId: string, workspace: SessionWorkspace) => Promise<void>;
 }
@@ -609,6 +611,7 @@ async function switchSessionWorkspace(
     }
   }
 
+  await opts.beforePersist?.();
   if (opts.setLiveWorkspace) await opts.setLiveWorkspace(sessionId, next);
   else sm.setSessionWorkspace(sessionId, next);
   getSessionCwdIndex().setWorkspaceRoot(sessionId, next.root);
@@ -720,6 +723,7 @@ async function cleanupSessionWorktree(
   // session already points at main and cannot later persist the removed root.
   if (current.kind === "worktree" && resolve(current.root) === resolve(match.path)) {
     const mainWorkspace: SessionWorkspace = { root: mainRoot, kind: "main" };
+    await opts.beforePersist?.();
     if (opts.setLiveWorkspace) await opts.setLiveWorkspace(sessionId, mainWorkspace);
     else sm.setSessionWorkspace(sessionId, mainWorkspace);
     getSessionCwdIndex().setWorkspaceRoot(sessionId, mainWorkspace.root);
