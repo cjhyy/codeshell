@@ -62,9 +62,9 @@ export class ExternalRuntimeOperationRun {
       const adopted = this.usage.adoptSession(input.sessionId, state.costState, this.root);
       if (!adopted && state.costState?.kind === "usage-ledger")
         throw new ExternalAccountingOwnershipError();
-      // The external provider owns its model loop and supplies no model billing
-      // receipts. Keep known Host costs without presenting their subtotal as an
-      // exact total, even on the first turn with zero persisted tokens.
+      // CLI turn receipts cover future observed submissions, not old history,
+      // individual model calls, or the subscription's actual bill. Keep known
+      // Host costs without presenting the subtotal as an exact lifetime total.
       this.usage.noteHistoricalGap(input.sessionId, this.root);
       // Admission needs an accounting owner, not a fresh billing report. A cold
       // sessionState() scanned every receipt in the shared store synchronously

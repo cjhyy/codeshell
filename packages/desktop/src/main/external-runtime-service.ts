@@ -1876,6 +1876,7 @@ export class ExternalRuntimeService {
                 });
               }
               entry.modelTrace = trace;
+              entry.recorder.beginUsageSubmission();
               const turn = await entry.session.send(nextInput, onEvent);
               if (turn.accepted) background?.accept();
               await turn.done;

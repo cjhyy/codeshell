@@ -23,6 +23,7 @@ import {
   sessionsRoot,
   SessionManager,
   SettingsManager,
+  UsageLedger,
   type StreamEvent,
   type ToolRegistry,
 } from "@cjhyy/code-shell-core";
@@ -323,6 +324,42 @@ afterEach(() => {
 });
 
 describe("ExternalRuntimeService", () => {
+  test.each(["codex", "claude-code"] as const)(
+    "%s persists observed CLI usage separately from its configured model and API costs",
+    async (kind) => {
+      const svc = service({ external_agent_runtime: true, external_host_tools: true });
+      try {
+        await svc.start({ ...request, kind });
+        providerSend = async (args) => {
+          const onEvent = (args.hooks as { onEvent: (event: StreamEvent) => void }).onEvent;
+          onEvent({
+            type: "usage_update",
+            promptTokens: 20,
+            singleTurnPromptTokens: 20,
+            completionTokens: 3,
+            cumulativePromptTokens: 1020,
+            cumulativeCompletionTokens: 103,
+          });
+          onEvent({ type: "turn_complete", reason: "completed" });
+        };
+        await svc.send(
+          request.sessionId,
+          { text: "record actual submission", clientMessageId: "cli-record" },
+          77,
+        );
+        const ledger = new UsageLedger({ storageDir: join(sessionsRoot(), ".usage-ledger") });
+        expect(ledger.summary({ scope: "store" })).toMatchObject({
+          requests: 1,
+          totalTokens: 23,
+          unknownCostRequests: 1,
+          byModel: [{ provider: kind, providerKind: "external-cli", model: "cli-turn-aggregate" }],
+        });
+      } finally {
+        await svc.stopAll();
+      }
+    },
+  );
+
   test.each(["codex", "claude-code"] as const)(
     "%s restores a failed background launch once, then delivers it to the replacement",
     async (kind) => {

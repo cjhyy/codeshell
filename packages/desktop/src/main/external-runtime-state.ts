@@ -19,6 +19,7 @@ import {
   type SessionProjectBinding,
   type StreamEvent,
   type TerminalReason,
+  type TokenUsage,
   type TurnCompletionKind,
 } from "@cjhyy/code-shell-core";
 import {
@@ -31,6 +32,7 @@ import {
   sanitizeContent,
 } from "@cjhyy/code-shell-core/internal";
 import type { ExternalMemorySnapshot } from "./external-runtime-memory.js";
+import { captureExternalRuntimeUsage } from "./external-runtime-usage.js";
 import {
   announcesUserMessage,
   type ExternalRunEnvelope,
@@ -238,6 +240,12 @@ export class ExternalRuntimeSessionRecorder {
   private readonly accountingSessionId: string | undefined;
   private journal: SessionOutputJournal | undefined;
   private runId: string | undefined;
+  private submissionId: string | undefined;
+  private recordUsage: ReturnType<typeof captureExternalRuntimeUsage> | undefined;
+  private usageReported = false;
+  private usageComplete = true;
+  private cacheReadReported = false;
+  private cacheCreationReported = false;
   /** The native run envelope (trigger, run identity, outcome) on this Session's output. */
   envelope: ExternalRunEnvelope | undefined;
   /** The run this submission's `runId` replaced, and the submission's own id (`session_started`). */
@@ -366,6 +374,11 @@ export class ExternalRuntimeSessionRecorder {
     this.pendingToolBlocks = [];
     this.unresolvedTools.clear();
     this.usageAtTurnStart = { ...this.usage };
+    this.recordUsage = undefined;
+    this.usageReported = false;
+    this.usageComplete = true;
+    this.cacheReadReported = false;
+    this.cacheCreationReported = false;
     this.providerBaseline = { ...this.providerCumulative };
     this.contextAnchorPromptTokens = 0;
     this.lastError = undefined;
@@ -376,6 +389,7 @@ export class ExternalRuntimeSessionRecorder {
       ...(input.displayText ? { displayText: input.displayText } : {}),
       ...(input.injected === true ? { injected: true } : {}),
     });
+    this.submissionId = user.id;
     if (!continueRun) {
       const state = this.manager.readSessionState(this.sessionId);
       if (!state) throw new Error("Session no longer exists");
@@ -425,6 +439,26 @@ export class ExternalRuntimeSessionRecorder {
     } catch {
       return false;
     }
+  }
+
+  /** Call immediately before invoking the CLI, after its accounting lease exists. */
+  beginUsageSubmission(): void {
+    this.assertOwner();
+    if (!this.submissionId || !this.runId || this.recordUsage || this.outcome)
+      throw new Error("External usage submission is not open");
+    const state = this.manager.readSessionState(this.sessionId);
+    this.recordUsage = captureExternalRuntimeUsage({
+      root: this.manager.getStorageDir(),
+      sessionId: this.sessionId,
+      runId: this.runId,
+      submissionId: this.submissionId,
+      provider: this.provider,
+      costState: state?.costState,
+      currentCostState: () => {
+        this.assertOwner();
+        return this.manager.readSessionState(this.sessionId)?.costState;
+      },
+    });
   }
 
   startEvent(): StreamEvent {
@@ -705,6 +739,21 @@ export class ExternalRuntimeSessionRecorder {
         break;
       case "usage_update": {
         event = { ...event, cacheUsageVersion: 1 };
+        const safeCount = (value: number | undefined) =>
+          value !== undefined && Number.isSafeInteger(value) && value >= 0;
+        this.usageReported = true;
+        // Claude's result is a per-submission aggregate. Codex needs both
+        // cumulative counters and its last output to exclude resumed history.
+        // Missing totals yield only a lower bound, never a complete receipt.
+        this.usageComplete &&=
+          safeCount(event.singleTurnPromptTokens) &&
+          safeCount(event.completionTokens) &&
+          (this.provider === "claude-code" ||
+            (this.provider === "codex" &&
+              safeCount(event.cumulativePromptTokens) &&
+              safeCount(event.cumulativeCompletionTokens)));
+        this.cacheReadReported ||= safeCount(event.singleTurnCacheReadTokens);
+        this.cacheCreationReported ||= safeCount(event.singleTurnCacheCreationTokens);
         // Provider totals belong to its thread, not Session aggregate accounting
         // (which can include another producer or auxiliary requests). A cold
         // resume's first total-last establishes only that provider's old history.
@@ -912,6 +961,23 @@ export class ExternalRuntimeSessionRecorder {
     const turnCacheCreationTokens = Math.max(
       0,
       this.usage.cacheCreationTokens - this.usageAtTurnStart.cacheCreationTokens,
+    );
+    const usage: TokenUsage = {
+      promptTokens: turnPromptTokens,
+      completionTokens: turnCompletionTokens,
+      totalTokens: turnPromptTokens + turnCompletionTokens,
+      ...(this.cacheReadReported ? { cacheReadTokens: turnCacheReadTokens } : {}),
+      ...(this.cacheCreationReported ? { cacheCreationTokens: turnCacheCreationTokens } : {}),
+    };
+    // The immutable receipt is written once, after normalization, before the
+    // Session's resettable display counters advance. Never import those counters.
+    this.recordUsage?.(
+      this.usageReported &&
+        this.usageComplete &&
+        Object.values(usage).every((value) => Number.isSafeInteger(value) && value >= 0)
+        ? usage
+        : undefined,
+      reason,
     );
     this.manager.updateSessionRunState(this.sessionId, this.runId!, (state) => {
       const cache = normalizeCumulativeUsageCounters(state, state.tokenUsage);
