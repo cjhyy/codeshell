@@ -1,4 +1,5 @@
 import { expect } from "bun:test";
+import { scriptedReplyModel } from "./scripted-reply-model.js";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -447,6 +448,7 @@ export function decisionRelay(
   const lines: string[] = [];
   const approvals: unknown[] = [];
   const relay = new PetImDecisions({
+    interpret: scriptedReplyModel,
     read: () => collectImDecisions(h.snapshot(), h.tasks, lines, h.wiring.decisions.deliveryFor),
     now: () => env.clock,
     approve: async (_entry, decision) => {
@@ -479,7 +481,16 @@ export function decisionRelay(
     ...extra,
   });
   /** A pending request (again, after a restart: `createdAt` of the original). */
-  const raise = (requestId = "req-1", createdAt = env.clock, connectionId = "worker") => {
+  const raise = (
+    requestId = "req-1",
+    createdAt = env.clock,
+    connectionId = "worker",
+    request: Record<string, unknown> = {
+      toolName: "Bash",
+      description: "List files",
+      args: { command: "ls" },
+    },
+  ) => {
     const pending = {
       agentSessionId: SID,
       requestId,
@@ -499,7 +510,7 @@ export function decisionRelay(
           requestId,
           connectionId,
           generation: 1,
-          request: { toolName: "Bash", description: "List files", args: { command: "ls" } },
+          request,
         },
       }),
     );

@@ -14,6 +14,7 @@ import type {
 import {
   canReply,
   choices,
+  decisionItem,
   entrySource,
   expiredNotice,
   questionBody,
@@ -23,11 +24,20 @@ import {
   type ExpirySource,
   type PromptMoment,
 } from "./pet-im-decision-text.js";
+import type { NoticeActionVerb } from "./pet-notice-action-codes.js";
+import {
+  actionReplyItem,
+  type NoticeActionReply,
+  type NoticeActionRequest,
+  type NoticeHandoff,
+} from "./pet-notice-actions.js";
+import type { ReplyInterpretation, ReplyItem } from "./pet-notice-reply-interpreter.js";
 import { KeyedTimers } from "./pet-notice-timers.js";
 import { isPromptEnded, type NoticeDecisionPromptPatch } from "./pet-notice-ledger.js";
 import type { RouteDecision } from "./pet-notice-policy.js";
 import type {
   DecisionPromptRecord,
+  NoticeActionRecord,
   NoticeDecisionPrompts,
   NoticeSubmitResult,
   NoticeTarget,
@@ -40,7 +50,12 @@ interface Envelope {
   connectionId?: string;
   generation?: number;
   expiresAt?: number;
-  request: { toolName: string; description?: string; args: Record<string, unknown> };
+  request: {
+    toolName: string;
+    description?: string;
+    args: Record<string, unknown>;
+    riskLevel?: "low" | "medium" | "high";
+  };
 }
 /** Where one decision's prompt is routed, and so who may answer it. */
 export interface ImDecisionDelivery {
@@ -244,7 +259,36 @@ export interface PetImDecisionsOptions {
   clearTimeout?: (timer: unknown) => void;
   /** The safety sweep's period (default 60 s); 0 turns it off. */
   sweepMs?: number;
+  /**
+   * Reads an owner's reply against the items open in its conversation (the
+   * reply model chain, pet-notice-reply-interpreter.ts). Undefined result: no
+   * model could read it. Without it no reply is ever interpreted.
+   */
+  interpret?: (message: string, items: ReplyItem[]) => Promise<ReplyInterpretation | undefined>;
+  /** Notice items (goal pauses, failures, results to open): listed per channel, executed on request. */
+  actions?: {
+    items(channel: string): NoticeActionRecord[];
+    execute(request: NoticeActionRequest): Promise<NoticeActionReply>;
+  };
 }
+
+type ReplyOrigin = Pick<
+  NonNullable<PetChatControlRequest["origin"]>,
+  "channel" | "target" | "senderId" | "isDirectMessage"
+>;
+
+/** One open item as the reply model sees it, with what executes it. */
+type OpenItem =
+  | { source: "decision"; code: string; entry: ImDecision; model: ReplyItem }
+  | { source: "action"; code: string; record: NoticeActionRecord; model: ReplyItem }
+  | { source: "ended"; code: string; model: ReplyItem };
+
+type DraftItem<T> = T extends OpenItem
+  ? Omit<T, "model"> & { model: Omit<ReplyItem, "ordinal" | "ref"> }
+  : never;
+
+/** No model could read the reply: never guess, leave every item open. */
+const NOT_UNDERSTOOD = "现在没法理解这条回复，请在桌面上处理。";
 
 /**
  * Deterministic IM reply handling; no model may infer or manufacture consent.
@@ -268,6 +312,8 @@ export class PetImDecisions {
   private rescan = false;
   /** Codes being answered or auto-denied right now (one submission each). */
   private readonly answering = new Set<string>();
+  /** High-risk approvals the owner was asked to confirm plainly (still open). */
+  private readonly confirming = new Set<string>();
   /** Failed first-prompt tries per code while its record could not be written. */
   private readonly unrecordedTries = new Map<string, number>();
   /** One timer per decision: its grace end, then its deadline. */
@@ -701,177 +747,243 @@ export class PetImDecisions {
     }
   }
 
-  /**
-   * An external runtime's question has no skip and no "wait longer": the
-   * runtime denies it at its deadline. Say so instead of taking 跳过 / 等待 as
-   * the answer (unless an option is literally named that).
-   */
-  private externalRefusal(entry: ImDecision, answer: string): string | undefined {
-    const { sessionId, requestId, request } = entry.envelope;
-    if (this.options.isExternal?.(sessionId, requestId) !== true) return undefined;
-    if (request.toolName !== "__ask_user__" || choices(entry).includes(answer)) return undefined;
-    if (answer === "跳过")
-      return `这个问题不能跳过。请回复选项编号或你的答案；不想回答请回复「回答 ${entry.code} 拒绝」。`;
-    if (["等待", "一直等"].includes(answer))
-      return `这个问题不能改为一直等待，截止前未回答将按拒绝处理。请回复「回答 ${entry.code} 你的答案」。`;
-    return undefined;
-  }
-
   /** The gateway probes bound Sessions before it reaches the Pet chat endpoint. */
   async replyToSession(
     request: SessionRouteControlRequest,
   ): Promise<{ kind: "status"; text: string } | undefined> {
-    const text = await this.reply({ message: request.text, origin: request });
-    return text === undefined ? undefined : { kind: "status", text };
+    // A bound conversation talks to its Session, not to Mimi: no handoff from here.
+    const text = await this.reply({ message: request.text, origin: request, handoff: false });
+    return typeof text === "string" ? { kind: "status", text } : undefined;
   }
 
   /**
-   * Prompts that reached an IM conversation (and so may still get a late bare
-   * reply there) stay addressable for 10 minutes past their deadline.
+   * The items open in the conversation `origin` is: decision prompts that
+   * reached it, and notice items delivered there. Numbered by their slot.
    */
-  private recentlyPrompted(): DecisionPromptRecord[] {
-    const now = this.now();
-    return this.router.decisionRecords((prompt) => {
-      if (prompt.channel === undefined || prompt.imAt === undefined) return false;
-      return now <= Math.max(prompt.deadline ?? 0, prompt.imAt) + USER_DECISION_TIMEOUT_MS;
+  private async openItems(
+    entries: readonly ImDecision[],
+    origin: ReplyOrigin | undefined,
+  ): Promise<{ items: OpenItem[]; expired: boolean }> {
+    if (!origin || origin.isDirectMessage !== true) return { items: [], expired: false };
+    const items: Array<DraftItem<OpenItem>> = [];
+    const ordinals: Array<number | undefined> = [];
+    let expired = false;
+    for (const entry of entries) {
+      if (!this.sameOrigin(entry.delivery.target, origin)) continue;
+      const found = this.router.decisionRecord(entry.code);
+      const record = found ? await this.catchUp(entry, found) : undefined;
+      const delivered =
+        entry.delivery.target.kind === "route"
+          ? record !== undefined && (record.prompt.phase === "im" || entry.delivery.reply)
+          : record?.prompt.phase === "im" && record.prompt.channel === origin.channel;
+      if (!delivered) continue;
+      // Past its deadline: the timeout backstop answers it, nobody else.
+      if (this.expired(entry)) {
+        expired = true;
+        continue;
+      }
+      items.push({
+        source: "decision",
+        code: entry.code,
+        entry,
+        model: decisionItem(entry, this.itemOptions(entry)),
+      });
+      const slot = record?.prompt.slot;
+      ordinals.push(slot?.channel === origin.channel ? slot.ordinal : undefined);
+    }
+    for (const record of this.options.actions?.items(origin.channel) ?? []) {
+      if (!this.sameOrigin(record.target, origin)) continue;
+      items.push({
+        source: "action",
+        code: record.actions.code,
+        record,
+        model: actionReplyItem(record),
+      });
+      ordinals.push(record.actions.slot?.ordinal);
+    }
+    // Nothing open: no model is asked. Otherwise prompts that ended here lately
+    // are shown too (no actions), so a late answer to one is never taken for another.
+    if (items.length === 0) return { items: [], expired };
+    const live = new Set(items.map((item) => item.code));
+    for (const record of this.recentlyEnded(origin)) {
+      if (live.has(record.code)) continue;
+      items.push({
+        source: "ended",
+        code: record.code,
+        model: {
+          kind: "ended",
+          ...(record.title ? { title: record.title } : {}),
+          text: "已经结束（已回答、超时或取消），不能再处理",
+          actions: [],
+        },
+      });
+      const slot = record.prompt.slot;
+      ordinals.push(slot?.channel === origin.channel ? slot.ordinal : undefined);
+    }
+    // An item without a slot (prompted by an older build) takes the next free number.
+    const taken = new Set(ordinals.filter((value): value is number => value !== undefined));
+    let next = 1;
+    const numbered = items.map((item, index) => {
+      let ordinal = ordinals[index];
+      if (
+        ordinal === undefined ||
+        items.some((other, at) => at < index && ordinals[at] === ordinal)
+      ) {
+        while (taken.has(next)) next += 1;
+        ordinal = next;
+        taken.add(next);
+      }
+      const confirming = this.confirming.has(item.code);
+      return {
+        ...item,
+        model: {
+          ...item.model,
+          ordinal,
+          ref: item.code,
+          ...(confirming ? { awaitingConfirmation: true } : {}),
+        },
+      } as OpenItem;
     });
+    return { items: numbered, expired };
   }
 
+  /** Prompts that reached this conversation and ended within the last 10 minutes. */
+  private recentlyEnded(origin: ReplyOrigin): DecisionPromptRecord[] {
+    const now = this.now();
+    return this.router
+      .decisionRecords(
+        (prompt) =>
+          isPromptEnded(prompt.phase) &&
+          prompt.channel === origin.channel &&
+          now - (prompt.endedAt ?? 0) <= USER_DECISION_TIMEOUT_MS,
+      )
+      .filter((record) => this.sameOrigin(record.target, origin));
+  }
+
+  private itemOptions(entry: ImDecision): { wait: boolean; skip: boolean } {
+    const { sessionId, requestId } = entry.envelope;
+    const external = this.options.isExternal?.(sessionId, requestId) === true;
+    const skippable = skippableEnvelope(entry.envelope) && !external;
+    return {
+      skip: skippable,
+      wait:
+        skippable &&
+        this.options.keepWaiting !== undefined &&
+        Number.isFinite(this.expiresAt(entry)),
+    };
+  }
+
+  /**
+   * An owner's IM message, read by the reply model against the items open in
+   * its conversation, before any other model (or Session) sees it. Undefined
+   * when it is not about them, or nothing is open there (no model is asked
+   * then): the message goes on as usual. A handoff ("交给 Mimi") comes back
+   * as a NoticeHandoff: the caller runs Mimi's turn with its text.
+   */
   async reply(request: {
     message: string;
-    origin?: Pick<
-      NonNullable<PetChatControlRequest["origin"]>,
-      "channel" | "target" | "senderId" | "isDirectMessage"
-    >;
-  }): Promise<string | undefined> {
+    origin?: ReplyOrigin;
+    /** False where no Mimi turn can follow (a conversation bound to a Session). */
+    handoff?: boolean;
+  }): Promise<string | NoticeHandoff | undefined> {
     const message = request.message.trim();
-    const match = /^(?:回答|\/decision)\s+([a-f0-9]{12})\s+([\s\S]+)$/iu.exec(message);
+    if (!message) return undefined;
     await this.router.decisionsLoaded();
-    const entries = this.options.read();
-    const origin = request.origin;
-    let code: string;
-    let answer: string;
-    if (match) {
-      code = match[1]!.toUpperCase();
-      answer = match[2]!.trim();
-    } else {
-      // Owner prompts reach whichever owner chat the router picked, so a bare
-      // reply only counts on the channel the prompt actually went to.
-      const delivered = this.recentlyPrompted().filter(
-        (record) =>
-          this.sameOrigin(record.target, origin) &&
-          (record.target.kind === "route" || record.prompt.channel === origin?.channel),
-      );
-      const matching: ImDecision[] = [];
-      for (const item of entries) {
-        if (!this.sameOrigin(item.delivery.target, origin)) continue;
-        if (item.delivery.target.kind === "route") {
-          matching.push(item);
-          continue;
-        }
-        const record = this.router.decisionRecord(item.code);
-        const current = record ? await this.catchUp(item, record) : undefined;
-        if (current?.prompt.channel !== undefined && current.prompt.channel === origin?.channel)
-          matching.push(item);
-      }
-      const shortReply =
-        /^\d+(?:\s*[,，]\s*\d+)*$/u.test(message) ||
-        [
-          ...matching.flatMap(shortReplies),
-          ...delivered.flatMap((record) => record.prompt.replies ?? []),
-        ].includes(message);
-      if (!shortReply) return undefined;
-      const candidates = matching.filter((item) => !this.expired(item));
-      if (candidates.length === 0) {
-        if (delivered.length === 0 && matching.length === 0) return undefined;
-        await this.scan();
-        return "这条确认已结束或超时，未采用这条回答。无需进入 Session；如仍需该操作，请重新发起。";
-      }
-      if (candidates.length > 1) {
-        return [
-          "当前无法唯一匹配已送达的待确认，请带确认码回答，避免选错任务：",
-          ...candidates.map((item) => `回答 ${item.code} <选项编号>`),
-        ].join("\n");
-      }
-      const candidate = candidates[0]!;
-      return [
-        "单独的编号或选项还没有提交确认。当前待确认内容：",
-        questionBody(candidate) ?? "请在电脑查看完整内容。",
-        `核对后请回复「回答 ${candidate.code} ${message}」。无需进入 Session。`,
-      ].join("\n");
+    const { items, expired } = await this.openItems(this.options.read(), request.origin);
+    // A reply to a prompt past its deadline: the timeout backstop runs now.
+    if (expired) await this.scan();
+    if (items.length === 0) return undefined;
+    const reading = await this.options.interpret?.(
+      message,
+      items.map((item) => item.model),
+    );
+    if (!reading) return NOT_UNDERSTOOD;
+    if (reading.kind === "unrelated") return undefined;
+    if (reading.kind === "ambiguous") return reading.question;
+    const item = items.find((entry) => entry.model.ordinal === reading.item)!;
+    if (item.source === "ended") return NOT_UNDERSTOOD;
+    if (item.source === "action") {
+      this.confirming.delete(item.code);
+      if (!this.options.actions) return NOT_UNDERSTOOD;
+      return this.options.actions.execute({
+        code: item.code,
+        action: reading.action as NoticeActionVerb,
+        ...(reading.answer !== undefined ? { text: reading.answer } : {}),
+        ...(reading.index !== undefined ? { index: reading.index } : {}),
+        handoff: request.handoff !== false,
+      });
     }
-    const entry = entries.find((item) => item.code === code);
-    if (!entry || !this.sameOrigin(entry.delivery.target, origin)) {
-      return "该确认已结束，或不属于当前私聊。未执行任何操作。";
-    }
+    return this.resolveDecision(item.entry, reading);
+  }
+
+  private async resolveDecision(
+    entry: ImDecision,
+    reading: Extract<ReplyInterpretation, { kind: "resolve" }>,
+  ): Promise<string> {
+    const { code } = entry;
+    if (this.answering.has(code)) return "这件事正在处理，请稍等。";
     if (this.expired(entry)) {
       await this.scan();
-      return "该确认已超时，未采用这条回答。";
+      return "这个确认已经超时，没有采用这条回答。";
     }
-    if (this.answering.has(code)) return "该确认正在处理，请勿重复提交。";
-    if (answer.length > 12_000) return "回答过长，请缩短后重试。";
-    const question = skippableEnvelope(entry.envelope);
-    // An option literally named 等待/跳过 is an answer, not a command.
-    const option = question && choices(entry).includes(answer);
-    if (question && !option && ["等待", "一直等"].includes(answer)) {
-      if (!Number.isFinite(this.expiresAt(entry))) return `确认 ${code} 已经在一直等待你的回答。`;
-      if (!this.options.keepWaiting) return "当前无法改为一直等待，请在电脑上处理。";
-      try {
-        await this.options.keepWaiting(entry);
-        return `确认 ${code} 已改为一直等待，想好后再回复「回答 ${code} 1」等即可。`;
-      } catch (error) {
-        this.options.onError(error);
-        return "没能改为一直等待，可能已在其他端处理。请查看任务状态。";
-      }
-    }
-    const refused = this.externalRefusal(entry, answer);
-    if (refused) return refused;
-    const skip = !option && (answer === "拒绝" || (question && answer === "跳过"));
-    if (!skip && !questionBody(entry))
-      return "请在桌面 Session 查看完整确认内容后处理；也可以回复拒绝。";
+    const request = entry.envelope.request;
+    const asked = request.toolName === "__ask_user__";
+    const skippable = skippableEnvelope(entry.envelope);
     let decision: Decision;
-    if (skip)
-      // No reason on a model question: Core reports a skip and the model continues.
-      decision = question
-        ? { approved: false }
-        : { approved: false, reason: "User declined via the originating IM conversation" };
-    else if (entry.envelope.request.toolName !== "__ask_user__") {
-      if (!["1", "2", "允许本次"].includes(answer)) return "请回复选项 1（允许本次）或 2（拒绝）。";
-      decision = {
-        approved: answer !== "2",
-        ...(answer === "2" ? { reason: "User declined via IM" } : {}),
-      };
-    } else {
-      const labels = choices(entry);
-      const args = entry.envelope.request.args;
-      const indexes = /^\d+(?:\s*[,，]\s*\d+)*$/u.test(answer)
-        ? answer.split(/\s*[,，]\s*/u).map(Number)
-        : [];
-      const valid =
-        indexes.length > 0 &&
-        indexes.every((index) => index >= 1 && index <= labels.length) &&
-        (args.multiSelect === true || indexes.length === 1);
-      const mapped = valid ? indexes.map((index) => labels[index - 1]!).join(", ") : answer;
-      if (
-        labels.length > 0 &&
-        ((indexes.length > 0 && !valid) ||
-          (args.optionsOnly === true && !valid && !labels.includes(answer)))
-      ) {
-        return "选项无效，请按确认消息中的编号回答。";
+    switch (reading.action) {
+      case "approve":
+        // A high-risk step needs the owner to say so plainly; the item stays open.
+        if (request.riskLevel === "high" && !reading.explicit) {
+          this.confirming.add(code);
+          return `这一步风险较高：${request.toolName}${request.description ? `（${request.description}）` : ""}。确定只允许这一次吗？明确回我一声就执行。`;
+        }
+        decision = { approved: true };
+        break;
+      case "deny":
+      case "skip":
+        // No reason on a model question: Core reports a skip and the model continues.
+        decision = skippable
+          ? { approved: false }
+          : { approved: false, reason: "User declined via the originating IM conversation" };
+        break;
+      case "wait":
+        if (!Number.isFinite(this.expiresAt(entry))) return "它已经在一直等你的回答了。";
+        try {
+          await this.options.keepWaiting!(entry);
+          return "好的，它会一直等你回答，想好了再回我。";
+        } catch (error) {
+          this.options.onError(error);
+          return "没能改为一直等待，可能已在其他端处理。请查看任务状态。";
+        }
+      case "answer": {
+        if (!questionBody(entry))
+          return "内容较长，请在桌面 Session 查看后处理；不想要也可以直接说。";
+        const labels = choices(entry);
+        const answer = reading.choices?.join(", ") ?? reading.answer;
+        if (!answer) return "想怎么回答它？直接回我答案就行。";
+        if (!reading.choices && labels.length > 0 && request.args.optionsOnly === true)
+          return "这个问题只能从选项里选，想选哪一个？";
+        decision = { approved: true, answer };
+        break;
       }
-      decision = { approved: true, answer: mapped };
+      default:
+        return "这件事不能这样处理，没有执行。";
     }
+    this.confirming.delete(code);
     this.answering.add(code);
     try {
       await this.options.approve(entry, decision);
       const record = this.router.decisionRecord(code);
       if (record && !isPromptEnded(record.prompt.phase))
         await this.router.updateDecision(code, { phase: "answered", endedAt: this.now() });
-      const asked = entry.envelope.request.toolName === "__ask_user__";
-      return `确认 ${code} 已处理${decision.approved ? "，回答已交给原任务" : asked ? "，已跳过这个问题" : "，本次操作未授权"}。`;
+      if (asked)
+        return decision.approved ? "已处理，回答已交给原任务。" : "已处理，已跳过这个问题。";
+      return decision.approved
+        ? `已处理：已允许这一次（${request.toolName}），会话继续了。`
+        : "已处理：已拒绝，本次操作未授权。";
     } catch (error) {
       this.options.onError(error);
-      return "确认未提交成功，可能已在其他端处理。请查看任务状态后重试。";
+      return "没能提交，可能已在其他端处理。请查看任务状态后重试。";
     } finally {
       this.answering.delete(code);
     }

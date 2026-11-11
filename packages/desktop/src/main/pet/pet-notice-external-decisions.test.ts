@@ -4,6 +4,7 @@
  * notice wiring and PetImDecisions, as main wires them.
  */
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { scriptedReplyModel } from "./test-utils/scripted-reply-model.js";
 import {
   ExternalRuntimeApprovals,
   type ExternalApprovalDecision,
@@ -93,6 +94,7 @@ function setup(
   let nativeReadFails = false;
   const readFailures: string[] = [];
   const decisions = new PetImDecisions({
+    interpret: scriptedReplyModel,
     ...withExternalDecisions(
       h.wiring.externalDecisions,
       {
@@ -222,21 +224,25 @@ describe("external runtime decision prompts", () => {
     await t.graceOver(() => t.h.ownerSends.length > 0 && t.promptOf(code)?.phase === "im");
     expect(t.h.ownerSends).toHaveLength(1);
     const text = t.h.ownerSends[0]!.text;
-    expect(text).toContain(`回答 ${code} 1`);
+    // Plain words, no code: the reply model reads the answer.
+    expect(text).toContain("只允许这一次吗？直接回我就行。");
+    expect(text).not.toContain(code);
     expect(text).toContain("rm -rf build");
     // One session.blocked record (the single path rule-watched decisions take).
     const records = t.h.wiring.ledger.forRequest(XID, requestId);
     expect(records).toEqual([
       expect.objectContaining({ kind: "session.blocked", priority: "P0", sessionId: XID }),
     ]);
-    expect(records[0]!.facts).toMatchObject({ title: "Codex 修 CI", code });
+    expect(records[0]!.facts).toMatchObject({ title: "Codex 修 CI" });
+    expect(records[0]!.prompt?.code).toBe(code);
 
     expect(await t.reply(`回答 ${code} 1`)).toContain("已处理");
     await expect(decision).resolves.toEqual({ approved: true });
     expect(t.router.pendingAll()).toEqual([]);
     await settle(() => t.promptOf(code)?.phase === "answered");
     expect(t.promptOf(code)?.phase).toBe("answered");
-    expect(await t.reply(`回答 ${code} 1`)).toContain("已结束");
+    // Nothing is open any more: the message is not an answer.
+    expect(await t.reply(`回答 ${code} 1`)).toBeUndefined();
     expect(t.h.ownerSends).toHaveLength(1);
   });
 
@@ -269,16 +275,15 @@ describe("external runtime decision prompts", () => {
     const { decision, requestId, code } = t.ask(bash);
     await t.graceOver(() => t.promptOf(code)?.phase === "im");
     const other = { ...OWNER_DM, target: "someone-else" };
-    expect(await t.decisions.reply({ message: `回答 ${code} 1`, origin: other })).toContain(
-      "不属于当前私聊",
-    );
+    // Another chat has nothing open: the message goes on to Mimi, nothing is answered.
+    expect(await t.decisions.reply({ message: `回答 ${code} 1`, origin: other })).toBeUndefined();
     expect(
       await t.decisions.reply({
         message: `回答 ${code} 1`,
         origin: { ...OWNER_DM, isDirectMessage: false },
       }),
-    ).toContain("不属于当前私聊");
-    expect(await t.decisions.reply({ message: `回答 ${code} 1` })).toContain("不属于当前私聊");
+    ).toBeUndefined();
+    expect(await t.decisions.reply({ message: `回答 ${code} 1` })).toBeUndefined();
     expect(t.router.pendingAll()).toHaveLength(1);
     // An entry claiming another Session for this request id settles nothing.
     const [entry] = t.h.wiring.externalDecisions.read();
@@ -333,7 +338,8 @@ describe("external runtime decision prompts", () => {
     await settle(() => t.promptOf(code)?.phase === "answered" && t.h.outbox.revoked.length > 0);
     expect(t.promptOf(code)?.phase).toBe("answered");
     expect(new Set(t.h.outbox.revoked).size).toBe(1);
-    expect(await t.reply(`回答 ${code} 1`)).toContain("已结束");
+    // Nothing is open any more: the message is not an answer.
+    expect(await t.reply(`回答 ${code} 1`)).toBeUndefined();
     // No "已超时": it was answered.
     expect(t.h.ownerSends).toHaveLength(1);
   });
@@ -347,8 +353,8 @@ describe("external runtime decision prompts", () => {
     await settle(() => t.h.ownerSends.length > 1);
     await expect(decision).resolves.toMatchObject({ approved: false });
     expect(t.h.ownerSends.map((send) => send.text)).toEqual([
-      expect.stringContaining(`回答 ${code} 1`),
-      expect.stringContaining(`确认 ${code} 已超时`),
+      expect.stringContaining("只允许这一次吗？"),
+      expect.stringContaining("确认已超时"),
     ]);
     await settle(() => t.promptOf(code)?.expiryNotice?.sent === true);
     expect(t.promptOf(code)).toMatchObject({ phase: "expired", expiryNotice: { sent: true } });
@@ -372,8 +378,8 @@ describe("external runtime decision prompts", () => {
     await settle(() => t.promptOf(code)?.expiryNotice?.sent === true);
     expect(t.promptOf(code)).toMatchObject({ phase: "expired", expiryNotice: { sent: true } });
     expect(t.h.ownerSends.map((send) => send.text)).toEqual([
-      expect.stringContaining(`回答 ${code} 1`),
-      expect.stringContaining(`确认 ${code} 已超时`),
+      expect.stringContaining("只允许这一次吗？"),
+      expect.stringContaining("确认已超时"),
     ]);
   });
 
@@ -387,7 +393,8 @@ describe("external runtime decision prompts", () => {
     await settle(() => t.promptOf(code)?.phase === "revoked");
     expect(t.promptOf(code)?.phase).toBe("revoked");
     expect(t.h.ownerSends).toHaveLength(1);
-    expect(await t.reply(`回答 ${code} 1`)).toContain("已结束");
+    // Nothing is open any more: the message is not an answer.
+    expect(await t.reply(`回答 ${code} 1`)).toBeUndefined();
   });
 
   test("losing the worker ends the worker's prompt only; the external one stays answerable", async () => {
@@ -540,12 +547,12 @@ describe("external runtime decision prompts", () => {
     const texts = t.h.ownerSends.map((send) => send.text).join("\n");
     expect(texts).toContain("用哪个包管理器？");
     expect(texts).toContain("1. pnpm");
-    expect(texts).toContain(`回答 ${multi.code} 1,2`);
-    expect(texts).toContain(`回答 ${free.code} 你的答案`);
+    expect(texts).toContain("可以选多个，直接回我就行。");
+    expect(texts).not.toContain(free.code);
     // Never skippable, never kept waiting: the runtime denies it at its deadline.
     expect(texts).not.toContain("等待");
-    expect(await t.reply(`回答 ${single.code} 跳过`)).toContain("不能跳过");
-    expect(await t.reply(`回答 ${single.code} 等待`)).toContain("不能改为一直等待");
+    // No skip and no "wait longer" is offered to the reply model for them.
+    expect(await t.reply(`回答 ${single.code} 等待`)).toContain("选项无效");
     expect(t.router.pendingAll()).toHaveLength(3);
 
     expect(await t.reply(`回答 ${single.code} 2`)).toContain("已处理");
@@ -579,7 +586,7 @@ describe("external runtime decision prompts", () => {
       () => t.decisions.scan(),
     );
     expect(t.h.ownerSends).toHaveLength(1);
-    expect(t.h.ownerSends[0]!.text).toContain(`回答 ${code} 1`);
+    expect(t.h.ownerSends[0]!.text).toContain("只允许这一次吗？");
     expect(t.h.wiring.ledger.forRequest(XID, requestId).map((record) => record.dedupeKey)).toEqual([
       `${XID}:${requestId}`,
       `${XID}:${requestId}:away`,
