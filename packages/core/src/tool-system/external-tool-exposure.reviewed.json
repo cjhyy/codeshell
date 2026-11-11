@@ -133,6 +133,14 @@
     "contractFingerprint": "9fdb9c7fd3f7e5957f739e06172e9fa62b3afefd41bb7d25deddc6b7af7fc028"
   },
   {
+    "tool": "NotifyMe",
+    "kind": "host-loopback",
+    "status": "exposed",
+    "requires": "mimi-host",
+    "reason": "Host-loopback to Mimi's handlers in Desktop Main for the Host-bound Session only. NotifyMe arms an owner notice rule for this Session (no message is sent); ReportToMimi starts a Mimi turn with the report. Both target only the owner and Mimi and are allowed without approval, like the native registration; registered only when Main provides the handler.",
+    "contractFingerprint": "e243fae6e21037d974b6cf4d026012eac0e3a8594b10a5cf4c6545bda325e9a6"
+  },
+  {
     "tool": "Panel",
     "kind": "host-loopback",
     "status": "exposed",
@@ -162,6 +170,14 @@
     "status": "exposed",
     "reason": "Reads an exact bound source, scope and resource through ToolExecutor approval and the existing source authorization recheck. Content remains bounded, redacted and untrusted; nested LinkAction reads use the same allowlist and account grants. Missing connector or parser capabilities remain unavailable rather than silently falling back.",
     "contractFingerprint": "370f0d052cf3d38a2f0218cb40940ac666cb0dffb0db299e3b712744ce14d9a6"
+  },
+  {
+    "tool": "ReportToMimi",
+    "kind": "host-loopback",
+    "status": "exposed",
+    "requires": "mimi-host",
+    "reason": "Host-loopback to Mimi's handlers in Desktop Main for the Host-bound Session only. NotifyMe arms an owner notice rule for this Session (no message is sent); ReportToMimi starts a Mimi turn with the report. Both target only the owner and Mimi and are allowed without approval, like the native registration; registered only when Main provides the handler.",
+    "contractFingerprint": "781a7b098ae887e0a54b41c2e4a0b4e7c16f42ee79c023656c5d5fd9da359e13"
   },
   {
     "tool": "Skill",

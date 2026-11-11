@@ -98,6 +98,8 @@ export interface ExternalRuntimeSessionOptions {
   mcpServers?: Parameters<typeof createSessionToolHost>[0]["mcpServers"];
   /** A Host-owned version-checked Goal controller is registered in this catalog. */
   goalController?: boolean;
+  /** Host-owned Mimi executors (NotifyMe, ReportToMimi) are registered in this catalog. */
+  mimiHost?: boolean;
   /**
    * Override the runtime's declared image capability (e.g. a host that knows
    * the selected model is text-only). Defaults per runtime kind.
@@ -173,8 +175,9 @@ export async function startExternalRuntimeSession(
   options: ExternalRuntimeSessionOptions,
 ): Promise<ExternalRuntimeSession> {
   const log = options.log ?? (() => {});
+  const hostControllers = { goalController: options.goalController, mimiHost: options.mimiHost };
   const exposure = intersectExternalToolExposure(
-    deriveExternalToolExposure(options.registry, { goalController: options.goalController }),
+    deriveExternalToolExposure(options.registry, hostControllers),
     options.exposure,
   );
   const pinnedThreadId = `codeshell-${options.businessSessionId}`;
@@ -217,7 +220,7 @@ export async function startExternalRuntimeSession(
       exposure,
       getExposure: () =>
         intersectExternalToolExposure(
-          deriveExternalToolExposure(options.registry, { goalController: options.goalController }),
+          deriveExternalToolExposure(options.registry, hostControllers),
           options.exposure,
         ),
       visibility: options.visibility,

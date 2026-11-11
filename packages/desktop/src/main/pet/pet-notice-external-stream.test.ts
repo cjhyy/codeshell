@@ -13,8 +13,13 @@ import {
   type StreamEvent,
   type ToolRegistry,
 } from "@cjhyy/code-shell-core";
+import {
+  createSessionToolHost,
+  deriveExternalToolExposure,
+  intersectExternalToolExposure,
+} from "@cjhyy/code-shell-core/extension";
 import { readOutputJournal } from "@cjhyy/code-shell-core/internal";
-import type { PetLongTask } from "@cjhyy/code-shell-pet";
+import type { PetLongTask, PetReportToMimiEvent } from "@cjhyy/code-shell-pet";
 import { INITIAL_STATE, applyStreamEvent } from "../../renderer/types.js";
 import { ExternalRunEnvelope, externalRunTrigger } from "../external-runtime-run-envelope.js";
 import {
@@ -82,6 +87,8 @@ let svc: ExternalRuntimeService;
 let current: Harness | undefined;
 /** Every event the service published, as the bridge would hand it on. */
 const published: StreamEvent[] = [];
+/** ReportToMimi events handed to Main's report observer. */
+const reports: PetReportToMimiEvent[] = [];
 /** Where published events go (the notice harness's tap by default). */
 let sink: (sessionId: string, event: StreamEvent) => void = () => undefined;
 
@@ -93,6 +100,7 @@ beforeEach(async () => {
   cwd = join(home, "workspace");
   mkdirSync(cwd);
   published.length = 0;
+  reports.length = 0;
   providerTurn = undefined;
   onInterrupt = undefined;
   interrupted = false;
@@ -116,21 +124,16 @@ beforeEach(async () => {
       hasRunning: () => backgroundRunning,
       dropSession: () => undefined,
     },
+    // Main's handlers, in-process: the notice wiring a test builds, and Mimi's report observer.
+    mimiTools: () => ({
+      upsertRule: (sessionId, args) => {
+        if (!current) throw new Error("no notice wiring");
+        return current.wiring.upsertRule(sessionId, args);
+      },
+      report: (event) => reports.push(event),
+    }),
   });
   await svc.start({ kind: "codex", sessionId: CODEX, cwd });
-  // Until the external NotifyMe executor lands, register its definition as
-  // the pet capability does: a bookkeeping tool.
-  (lastStart!.registry as ToolRegistry).registerTool(
-    {
-      name: "NotifyMe",
-      description: "fixture",
-      inputSchema: { type: "object", properties: {} },
-      source: "builtin",
-      permissionDefault: "allow",
-      bookkeeping: true,
-    } as never,
-    async () => "ok",
-  );
 });
 
 afterEach(async () => {
@@ -232,10 +235,14 @@ describe("the external run envelope", () => {
     // The renderer's own send has its bubble already; nothing was published for it.
     await svc.send(CODEX, { text: "跑测试", clientMessageId: "cm-renderer" });
     expect(published.filter((event) => event.clientMessageId !== undefined)).toEqual([]);
-    // An unannounced host message would have its run folded out of view.
-    expect(() =>
-      svc.send(CODEX, { text: "Mimi 转来的", clientMessageId: "cm-mimi", trigger: "host_message" }),
-    ).toThrow(/displayText/);
+    // An unannounced host message would have its run folded out of view; the
+    // refusal is a rejected promise, never a synchronous throw at the caller.
+    const refused = svc.send(CODEX, {
+      text: "Mimi 转来的",
+      clientMessageId: "cm-mimi",
+      trigger: "host_message",
+    });
+    await expect(refused).rejects.toThrow(/displayText/);
     published.length = 0;
     await svc.send(CODEX, {
       text: "Mimi 转来的",
@@ -563,6 +570,132 @@ describe("the external stream feeding the tap", () => {
     ]);
     expect(deriver.derive(CODEX, close)).toMatchObject([{ kind: "idle" }]);
     expect(deriver.derive(CODEX, close)[0]?.runId).toBeUndefined();
+  });
+});
+
+/** One tool call through the Session tool host the provider's bridge would build. */
+async function viaToolHost(args: StartArgs, name: string, input: Record<string, unknown>) {
+  const { hooks: _hooks, ...options } = args as StartArgs & { hooks?: unknown };
+  const reviewed = deriveExternalToolExposure(args.registry, {
+    goalController: args.goalController,
+    mimiHost: args.mimiHost,
+  });
+  const host = createSessionToolHost({
+    ...(options as unknown as Parameters<typeof createSessionToolHost>[0]),
+    exposure: intersectExternalToolExposure(reviewed, args.exposure),
+  });
+  try {
+    return await host.execute({ id: `call-${name}`, name, input });
+  } finally {
+    await host.dispose();
+  }
+}
+
+describe("Mimi's tools in an external Session", () => {
+  test("NotifyMe and ReportToMimi are advertised, allowed without approval, with guidance", () => {
+    const args = lastStart!;
+    expect(args.mimiHost).toBe(true);
+    expect([...args.exposure!.toolNames]).toEqual(
+      expect.arrayContaining(["NotifyMe", "ReportToMimi"]),
+    );
+    for (const tool of ["NotifyMe", "ReportToMimi"])
+      expect(args.presetRules).toContainEqual({ tool, decision: "allow" });
+    expect(args.developerInstructions).toContain("call NotifyMe once");
+  });
+
+  test("without Main's handlers, or with Host tools off, there are none", async () => {
+    for (const flags of [
+      { external_agent_runtime: true, external_host_tools: true },
+      { external_agent_runtime: true, external_host_tools: false },
+    ]) {
+      let consulted = false;
+      const plain = new ExternalRuntimeService({
+        featureFlags: () => flags,
+        registerSession: () => {},
+        releaseSession: () => {},
+        resolveProjectBinding: () => undefined,
+        emit: () => undefined,
+        projectTrust: () => "untrusted",
+        prepareCodexLaunch: async () => ({ command: "/fixture/codex", env: { PATH: "/fixture" } }),
+        startSession,
+        ...(flags.external_host_tools
+          ? {}
+          : {
+              mimiTools: () => {
+                consulted = true;
+                return { report: () => undefined };
+              },
+            }),
+      });
+      try {
+        await plain.start({ kind: "codex", sessionId: "s-codex-plain", cwd });
+        expect(lastStart!.mimiHost).toBe(false);
+        expect(lastStart!.exposure!.toolNames.has("NotifyMe")).toBe(false);
+        expect(lastStart!.registry.getTool("NotifyMe")).toBeUndefined();
+        expect(lastStart!.developerInstructions).not.toContain("NotifyMe");
+        expect(consulted).toBe(false);
+      } finally {
+        await plain.stopAll();
+      }
+    }
+  });
+
+  test("NotifyMe saves the rule for this Session; the turn that only did that is idle", async () => {
+    current = noticeHarness();
+    const outcomes: SessionOutcome[] = [];
+    const deriver = new SessionOutcomeDeriver();
+    const notices = sink;
+    sink = (sessionId, event) => {
+      outcomes.push(...deriver.derive(sessionId, event));
+      notices(sessionId, event);
+    };
+    let text = "";
+    providerTurn = async (args, emit) => {
+      const result = await viaToolHost(args, "NotifyMe", { channel: "wechat" });
+      expect(result.isError).toBeFalsy();
+      text = String(result.result);
+      for (const event of [...tool("NotifyMe"), reply("好的，做完微信告诉你")]) emit(event);
+    };
+    await svc.send(CODEX, { text: "做完微信告诉我" });
+    expect(text).toContain("saved: the owner will be told");
+    expect(text).toContain("微信 (wechat, ready)");
+    expect(current.wiring.ruleStore.activeForSession(CODEX)).toMatchObject([
+      { when: { kind: "session", sessionId: CODEX, scope: "turn" }, channel: "wechat" },
+    ]);
+    expect(outcomes.filter((outcome) => outcome.final)).toMatchObject([{ kind: "idle" }]);
+  });
+
+  test("in a Goal run the rule defaults to the Goal", async () => {
+    current = noticeHarness();
+    providerTurn = async (args, emit) => {
+      expect((await viaToolHost(args, "NotifyMe", {})).isError).toBeFalsy();
+      for (const event of [...tool("commandExecution"), reply("还差一点")]) emit(event);
+    };
+    await svc.send(CODEX, { text: "做迁移，做完告诉我", goal: { objective: "迁移", maxTurns: 1 } });
+    expect(current.wiring.ruleStore.activeForSession(CODEX)).toMatchObject([
+      { when: { scope: "goal" } },
+    ]);
+  });
+
+  test("a rule Main refuses is reported as not saved", async () => {
+    // No notice wiring: Main's handler throws, nothing is stored.
+    let result: Awaited<ReturnType<typeof viaToolHost>> | undefined;
+    providerTurn = async (args) => {
+      result = await viaToolHost(args, "NotifyMe", {});
+    };
+    await svc.send(CODEX, { text: "做完告诉我" });
+    expect(result?.isError).toBe(true);
+    expect(String(result?.error)).toContain("the notice rule was not saved (no notice wiring)");
+  });
+
+  test("ReportToMimi reaches Main's report observer as this Session", async () => {
+    providerTurn = async (args) => {
+      expect(
+        (await viaToolHost(args, "ReportToMimi", { message: "迁移做完了" })).isError,
+      ).toBeFalsy();
+    };
+    await svc.send(CODEX, { text: "做完跟 Mimi 说一声" });
+    expect(reports).toMatchObject([{ sessionId: CODEX, message: "迁移做完了" }]);
   });
 });
 

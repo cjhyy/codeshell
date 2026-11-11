@@ -197,19 +197,17 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     log,
   });
 
-  const removeHostAction = deps.bridge.setHostActionHandler(
-    PET_RULE_UPSERT_ACTION,
-    createNoticeRuleAction({
-      ruleStore,
-      deliveries,
-      ownerChannels: outlets.ownerChannels,
-      lastOwnerInboundChannel: () => deps.gateway.lastOwnerInboundChannel(),
-      isEligibleSession: view.isEligibleSession,
-      settings: settings.settings,
-      nudge: decisions.nudge,
-      now,
-    }),
-  );
+  const upsertRule = createNoticeRuleAction({
+    ruleStore,
+    deliveries,
+    ownerChannels: outlets.ownerChannels,
+    lastOwnerInboundChannel: () => deps.gateway.lastOwnerInboundChannel(),
+    isEligibleSession: view.isEligibleSession,
+    settings: settings.settings,
+    nudge: decisions.nudge,
+    now,
+  });
+  const removeHostAction = deps.bridge.setHostActionHandler(PET_RULE_UPSERT_ACTION, upsertRule);
 
   const ready: Promise<void> = Promise.all([ruleStore.load(), ledger.load(), receipts.load()])
     .then(() => undefined)
@@ -307,6 +305,10 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
         deps.gateway.lastOwnerInboundChannel(),
       ),
     isEligibleSession: view.isEligibleSession,
+    upsertRule: (callerSessionId, args) => {
+      if (disposed) return Promise.reject(new Error("notice rules are shutting down"));
+      return upsertRule(callerSessionId, args);
+    },
     dispose() {
       if (disposed) return;
       settings.dispose();

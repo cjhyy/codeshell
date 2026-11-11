@@ -80,6 +80,11 @@ import {
 import { createExternalRuntimeSourceContext } from "./external-runtime-source-context.js";
 import { EXTERNAL_GOAL_TOOL_CATALOG } from "./external-runtime-goal-tools.js";
 import {
+  externalMimiToolInstructions,
+  registerExternalMimiTools,
+  type ExternalRuntimeMimiHost,
+} from "./external-runtime-mimi-tools.js";
+import {
   bindExternalRuntimeProfile,
   externalRuntimeProfileInstructions,
   readExternalRuntimeProfileOverrides,
@@ -225,6 +230,8 @@ export interface ExternalRuntimeServiceDeps {
   ) => Promise<{ approved: boolean; reason?: string; answer?: string }>;
   /** Drop any prompt still on screen for a session that is going away. */
   cancelApprovals?: (sessionId: string) => void;
+  /** Mimi's handlers in Main (NotifyMe, ReportToMimi); read at each start, with Host tools on. */
+  mimiTools?: () => ExternalRuntimeMimiHost | undefined;
   /** Enables real DriveAgent background delivery for external runtimes. */
   backgroundWork?: ExternalRuntimeBackgroundWorkDelivery;
   /** Injectable sidecar writer; failure must never orphan an otherwise-live runtime. */
@@ -964,16 +971,6 @@ export class ExternalRuntimeService {
     // no tool surface at all (§20). An empty allowlist is the honest expression of
     // "off" — the bridge still exists, it just advertises nothing.
     const goalToolsAvailable = this.areHostToolsEnabled() && !request.planMode;
-    const exposure = this.areHostToolsEnabled()
-      ? {
-          ...FIRST_PHASE_EXPOSURE,
-          toolNames: new Set([
-            ...FIRST_PHASE_EXPOSURE.toolNames,
-            ...(goalToolsAvailable ? EXTERNAL_GOAL_TOOLS : []),
-          ]),
-        }
-      : { mode: "allowlist" as const, toolNames: new Set<string>() };
-
     // The registry must actually CONTAIN the tools the exposure policy allows.
     // `new ToolRegistry({})` registers none, which would make the allowlist
     // moot in the quietest possible way: `listTools()` returns [], the runtime
@@ -982,6 +979,27 @@ export class ExternalRuntimeService {
     // with the reviewed exposure policy and the current capability settings;
     // registration alone never grants external access.
     const registry = new ToolRegistry({ toolCatalog: [...BUILTIN_TOOLS, ...CODING_TOOLS] });
+    const mimiHost = this.areHostToolsEnabled() ? this.deps.mimiTools?.() : undefined;
+    const mimiTools = mimiHost
+      ? registerExternalMimiTools(registry, {
+          sessionId: request.sessionId,
+          host: mimiHost,
+          readGoal: () => this.goals.read(request.sessionId),
+          assertActive: () => {
+            if (!lifecycle.active) throw new Error("This external runtime has been replaced");
+          },
+        })
+      : [];
+    const exposure = this.areHostToolsEnabled()
+      ? {
+          ...FIRST_PHASE_EXPOSURE,
+          toolNames: new Set([
+            ...FIRST_PHASE_EXPOSURE.toolNames,
+            ...(goalToolsAvailable ? EXTERNAL_GOAL_TOOLS : []),
+            ...mimiTools,
+          ]),
+        }
+      : { mode: "allowlist" as const, toolNames: new Set<string>() };
     const fullAccess = request.permissionMode === "bypassPermissions";
     // Keep host tool deny rules and exposure checks while honoring the user's
     // full-access selection for file paths and tool approval requests.
@@ -1081,6 +1099,7 @@ export class ExternalRuntimeService {
         "Use LinkAction discovery for connected services and ListSources/ReadSource for " +
           "workspace data. These CodeShell host tools use normal authorization and approval; " +
           "do not claim a service is unsupported because this runtime has no native connector.",
+      externalMimiToolInstructions(mimiTools),
       externalRuntimeProfileInstructions(profile),
       request.developerInstructions,
     ]
@@ -1299,7 +1318,11 @@ export class ExternalRuntimeService {
         pathAccess: fullAccess ? "full" : "default",
         presetRules: [
           ...BUILTIN_AGENT_PRESETS.general.defaultPermissionRules,
-          ...EXTERNAL_GOAL_TOOLS.map((tool) => ({ tool, decision: "allow" as const })),
+          // Goal controller and Mimi tools need no approval (design D5).
+          ...[...EXTERNAL_GOAL_TOOLS, ...mimiTools].map((tool) => ({
+            tool,
+            decision: "allow" as const,
+          })),
         ],
         projectTrusted,
         planMode: request.planMode === true,
@@ -1316,6 +1339,7 @@ export class ExternalRuntimeService {
         visibility: getVisibility(),
         getVisibility,
         goalController: goalToolsAvailable,
+        mimiHost: mimiTools.length > 0,
         ...(exposure ? { exposure } : {}),
         ...(request.model ? { model: request.model } : {}),
         ...(resumeRuntimeSessionId ? { resumeRuntimeSessionId } : {}),
@@ -1558,7 +1582,7 @@ export class ExternalRuntimeService {
     return session;
   }
 
-  send(
+  async send(
     sessionId: string,
     input: DesktopExternalRuntimeTurnInput | string,
     callerWebContentsId?: number,

@@ -4,6 +4,7 @@ import { registerOperationBatchHost } from "./operation-batch-host.js";
 import { createDesktopRemoteServices } from "./desktop-remote-services.js";
 import { createDesktopModuleRegistry, registerDesktopShutdown } from "./desktop-shutdown.js";
 import { createExternalRuntimeModule } from "./external-runtime-module.js";
+import { externalRuntimeMimiHost } from "./external-runtime-mimi-tools.js";
 import { registerProjectPanelIpc } from "./project-panel-ipc.js";
 import { registerProfileSwitchIpc } from "./profile-switch-ipc.js";
 import { registerSourceCollectionIpc } from "./source-collections-ipc.js";
@@ -631,6 +632,7 @@ const externalRuntime = createExternalRuntimeModule(() => {
           externalRuntimeWorkspaceForSession(sessionId),
         ),
       backgroundWork: createExternalRuntimeBackgroundWork(),
+      mimiTools: () => externalRuntimeMimiHost(petNotices, externalBridge),
     },
   };
 });

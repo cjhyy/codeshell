@@ -203,8 +203,12 @@ function policyFromReviews(entries: readonly ExternalToolReview[]): ExternalTool
  */
 export function deriveExternalToolExposure(
   registry: ExternalExposureRegistry,
-  options: { goalController?: boolean } = {},
+  options: { goalController?: boolean; mimiHost?: boolean } = {},
 ): ExternalToolExposurePolicy {
+  const optedIn = {
+    "goal-controller": options.goalController === true,
+    "mimi-host": options.mimiHost === true,
+  } as const;
   const reviews = new Map(REVIEWED_EXTERNAL_TOOL_EXPOSURE.map((entry) => [entry.tool, entry]));
   const accepted: ExternalToolReview[] = [];
   const seen = new Set<string>();
@@ -216,7 +220,7 @@ export function deriveExternalToolExposure(
     const declaration = exposure?.external;
     const reviewed = reviews.get(definition.name);
     if (!exposure || !declaration || !reviewed || declaration.status !== "exposed") continue;
-    if (declaration.requires === "goal-controller" && options.goalController !== true) continue;
+    if (declaration.requires && !optedIn[declaration.requires]) continue;
     const actual = {
       tool: definition.name,
       ...declaration,

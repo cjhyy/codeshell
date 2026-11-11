@@ -1873,10 +1873,19 @@ export class AgentBridge implements PetStateBridge {
     const message = parsedLine.message as { method?: string; params?: unknown } | undefined;
     if (message === undefined) return false;
     if (message.method !== PET_REPORT_TO_MIMI_METHOD) return false;
-    const event = parsePetReportToMimiEvent(message.params);
+    this.publishPetReport(message.params);
+    return true;
+  }
+
+  /**
+   * One ReportToMimi event into the same observers the worker's notify line
+   * reaches; desktop external runtimes report from Main through this.
+   */
+  publishPetReport(params: unknown): void {
+    const event = parsePetReportToMimiEvent(params);
     if (!event) {
       dlog("bridge", "pet_report.invalid", {});
-      return true;
+      return;
     }
     for (const observer of this.petReportObservers) {
       try {
@@ -1893,7 +1902,6 @@ export class AgentBridge implements PetStateBridge {
         });
       }
     }
-    return true;
   }
 
   hasLiveWorker(): boolean {

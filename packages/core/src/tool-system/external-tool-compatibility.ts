@@ -8,8 +8,12 @@ export interface ExternalToolCompatibility {
   reason: string;
   /** OR of argument patterns, with an AND of anchored fields in each pattern. */
   argsPatterns?: readonly Readonly<Record<string, string>>[];
-  /** Host-owned controller, separate from a native Engine goal acknowledgement. */
-  requires?: "goal-controller";
+  /**
+   * A Host-owned executor the Host must register and opt into: the Goal
+   * controller (separate from a native Engine goal acknowledgement), or the
+   * Mimi notice/report host (NotifyMe, ReportToMimi run in the Host process).
+   */
+  requires?: "goal-controller" | "mimi-host";
 }
 
 /** Checked-in approval of a specific declaration, schema and execution policy. */
