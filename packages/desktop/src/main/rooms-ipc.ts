@@ -3,7 +3,6 @@ import type { RoomModeAuthority } from "./cc-room/room-mode-authority.js";
 import { MAX_EXTERNAL_RUNTIME_TEXT_CHARS } from "./external-runtime-ipc.js";
 import { BrowserWindow, ipcMain } from "electron";
 import {
-  checkQuota,
   DEFAULT_DISCOVER_LIMIT,
   DEFAULT_DISCOVER_SINCE_MS,
   listRelatedClaudeSessions,
@@ -12,8 +11,6 @@ import {
   probeCodexCli,
   readCodexRecentHistory,
   readRecentHistory,
-  resolveQuotaCredentials,
-  type QuotaResult,
 } from "@cjhyy/code-shell-capability-coding/orchestration";
 import { AgentBridge } from "./agent-bridge.js";
 import {
@@ -27,6 +24,8 @@ import { MobileRemoteOrchestrator } from "./mobile-remote-orchestrator.js";
 import { registerRoomModeIpc } from "./cc-room/room-mode-ipc.js";
 import { ApprovalBridge } from "./cc-room/approval-bridge.js";
 import { createTaskInboxBackgroundHost } from "./task-inbox/task-inbox-background-host.js";
+import { createDefaultUsageProviderService } from "./usage-provider-host.js";
+import { registerQuotaIpc } from "./quota-ipc.js";
 
 export interface RoomsIpcDeps {
   mainWindows: Set<BrowserWindow>;
@@ -135,17 +134,6 @@ export function registerRoomsIpc(deps: RoomsIpcDeps) {
     },
   );
 
-  // Remaining CC/Codex subscription quota. Reads tokens from Keychain / ~/.codex
-  // then hits each vendor's usage source. `provider` restricts the lookup
-  // ("codex" is free; "claude" sends a ~1-token probe). Never throws — a failed
-  // lookup lands in the per-provider `error` field.
-  ipcMain.handle(
-    "quota:get",
-    async (_e, provider?: "claude" | "codex" | "both"): Promise<QuotaResult> => {
-      const creds = await resolveQuotaCredentials();
-      const providers: ("claude" | "codex")[] =
-        provider === "claude" ? ["claude"] : provider === "codex" ? ["codex"] : ["claude", "codex"];
-      return checkQuota({ creds, providers });
-    },
-  );
+  const quota = createDefaultUsageProviderService();
+  registerQuotaIpc(ipcMain, () => mainWindows, quota.service, quota.getLegacyQuota);
 }

@@ -108,7 +108,7 @@ export async function queryCodexQuota(
     return {
       provider: "codex",
       error: `HTTP ${resp.status}${resp.status === 401 ? " (token 可能已过期)" : ""}`,
-      errorCode: "request-failed",
+      errorCode: resp.status === 401 ? "auth-required" : "request-failed",
     };
   }
   let body: Record<string, unknown>;
@@ -133,7 +133,7 @@ export async function queryCodexQuota(
     });
   }
   if (windows.length === 0)
-    return { provider: "codex", error: "响应无 rate_limit 窗口", errorCode: "request-failed" };
+    return { provider: "codex", error: "响应无 rate_limit 窗口", errorCode: "unavailable" };
   return {
     provider: "codex",
     windows,
@@ -182,12 +182,12 @@ export async function queryClaudeQuota(
     return {
       provider: "claude",
       error: `HTTP ${resp.status}${resp.status === 401 ? " (token 可能已过期)" : ""}`,
-      errorCode: "request-failed",
+      errorCode: resp.status === 401 ? "auth-required" : "request-failed",
     };
   }
   const windows = parseClaudeWindows(resp.headers);
   if (windows.length === 0)
-    return { provider: "claude", error: "响应头无 rate-limit 字段", errorCode: "request-failed" };
+    return { provider: "claude", error: "响应头无 rate-limit 字段", errorCode: "unavailable" };
   return { provider: "claude", windows };
 }
 

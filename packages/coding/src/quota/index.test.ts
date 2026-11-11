@@ -155,13 +155,13 @@ describe("queryCodexQuota", () => {
     const q = await queryCodexQuota(CREDS, codexResponse({}, false, 401), NEVER_ABORT);
     expect(q.error).toContain("401");
     expect(q.error).toContain("过期");
-    expect(q.errorCode).toBe("request-failed");
+    expect(q.errorCode).toBe("auth-required");
   });
 
   it("missing windows → error", async () => {
     const q = await queryCodexQuota(CREDS, codexResponse({ rate_limit: {} }), NEVER_ABORT);
     expect(q.error).toContain("无 rate_limit 窗口");
-    expect(q.errorCode).toBe("request-failed");
+    expect(q.errorCode).toBe("unavailable");
   });
 });
 
@@ -255,6 +255,7 @@ describe("queryClaudeQuota", () => {
   it("headers absent → error", async () => {
     const q = await queryClaudeQuota(CREDS, claudeResponse({}), NEVER_ABORT);
     expect(q.error).toContain("无 rate-limit 字段");
+    expect(q.errorCode).toBe("unavailable");
   });
 });
 
@@ -281,13 +282,26 @@ describe("coding checkQuota", () => {
         (async () => {
           throw new Error("fixture offline");
         }) as typeof fetch,
-        (async () => ({ ok: false, status: 401 }) as Response) as typeof fetch,
+        (async () => ({ ok: false, status: 403 }) as Response) as typeof fetch,
         (async () => ({ ok: false, status: 503 }) as Response) as typeof fetch,
       ]) {
         const result = await checkQuota({ creds: CREDS, providers: [provider], fetchImpl });
         expect(result[provider]).toMatchObject({ provider, errorCode: "request-failed" });
         expect(result[provider]?.windows).toBeUndefined();
       }
+    },
+  );
+
+  it.each(["claude", "codex"] as const)(
+    "%s marks rejected authentication as requiring a new login",
+    async (provider) => {
+      const result = await checkQuota({
+        creds: CREDS,
+        providers: [provider],
+        fetchImpl: (async () => ({ ok: false, status: 401 }) as Response) as typeof fetch,
+      });
+      expect(result[provider]).toMatchObject({ provider, errorCode: "auth-required" });
+      expect(result[provider]?.windows).toBeUndefined();
     },
   );
 
