@@ -26,6 +26,8 @@
 
 ## 2b 回复码与"打开"
 
+> **实现时的方向调整（主人决定）**：不让主人在 IM 里打固定格式，也不用正则解析回复。提示用自然语言，码只作内部 id；一个对话有多件打开的事项时用 ①②③ 编号；主人的回复由模型（辅助模型 → Mimi 主模型，严格 JSON）对照打开的事项解读，宿主校验后执行，模型都不可用时不猜。旧的 `回答 码` 命令与裸回复匹配删除；"打开"的产物只取结构化来源（不从正文抽链接）。下面的命令名（`继续 码` 等）保留为动作名，见设计稿 §7、§9。
+
 1. ledger 新字段 `actions`（与决定提示的 `prompt` 分开）：`{ code, family: "goal" | "failure" | "open", sessionId, runtime: native|external, goalId?, revision?, expiresAt, artifacts? }`，独立的按码索引与解析；不触发 `staleReason`/`endVanished` 的决定逻辑。
 2. 规则观察器的 blocked（Goal 等用户、上限停止）与 failed Notice 带上 `goalId/revision/reason`，生成动作码；正文附可用回复：
    - Goal 等用户：`回复 码 <文字>`（把文字作为回复发进会话）、`停止 码`、`交给 Mimi 码`；
