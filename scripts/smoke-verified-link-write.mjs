@@ -69,6 +69,8 @@ if (process.argv[2] === "--worker") {
       return response.json();
     },
   });
+  const frozenPrefixes = new Map();
+  const selections = new Map();
   class FixtureProvider extends core.LLMClientBase {
     initClient() {}
     async createMessage(request) {
@@ -89,9 +91,33 @@ if (process.argv[2] === "--worker") {
         );
       const hasResult = results.some((block) => block.tool_use_id === "fixture-create");
       const tools = new Set((request.tools ?? []).map((tool) => tool.name));
-      if (!tools.has("LinkAction")) {
-        assert.ok(tools.has("ToolSearch"), "LinkAction must be discoverable before use");
+      assert.ok(
+        tools.has("ToolSearch") && tools.has("CallTool"),
+        "discovery and invocation are available",
+      );
+      assert.equal(tools.has("LinkAction"), false, "discovery never grows the top-level tools");
+      const scope = request.promptCache?.scopeId;
+      assert.ok(scope, "each fixture request has a durable session cache scope");
+      const prefix = JSON.stringify({ tools: request.tools, systemPrompt: request.systemPrompt });
+      if (frozenPrefixes.has(scope))
+        assert.equal(
+          prefix,
+          frozenPrefixes.get(scope),
+          "frozen tools and system prompt survive discovery and restart",
+        );
+      else frozenPrefixes.set(scope, prefix);
+      // Discovery is appended to history and may belong to an earlier run.
+      // Write results above remain scoped to the current user intent.
+      const selectionReceipt = request.messages
+        .flatMap((message) =>
+          message.role === "user" && Array.isArray(message.content)
+            ? message.content.filter((block) => block.type === "tool_result")
+            : [],
+        )
+        .findLast((block) => block.tool_use_id === "fixture-select-link");
+      if (!selectionReceipt) {
         assert.equal(hasResult, false);
+        selections.set(scope, (selections.get(scope) ?? 0) + 1);
         return {
           text: "Select the synthetic Link action",
           stopReason: "tool_use",
@@ -105,21 +131,18 @@ if (process.argv[2] === "--worker") {
           ],
         };
       }
-      // A restarted session restores its selected tool schemas. Discovery may
-      // therefore belong to an earlier run, while writes above remain scoped
-      // to the current user intent.
-      const selectionReceipt = request.messages
-        .flatMap((message) =>
-          message.role === "user" && Array.isArray(message.content)
-            ? message.content.filter((block) => block.type === "tool_result")
-            : [],
-        )
-        .findLast((block) => block.tool_use_id === "fixture-select-link");
-      assert.match(
-        JSON.stringify(selectionReceipt),
-        /schemaRef: select:LinkAction/,
-        "The next provider tool set must follow the actual ToolSearch selection receipt",
-      );
+      assert.equal(selectionReceipt.is_error, undefined, "selection succeeded");
+      assert.match(JSON.stringify(selectionReceipt), /schemaRef: select:LinkAction/);
+      const definition = String(selectionReceipt.content)
+        .split("\n")
+        .find((line) => line.startsWith('{"name":"LinkAction"'));
+      assert.ok(definition, "discovery returns the complete LinkAction schema");
+      const schema = JSON.parse(definition);
+      assert.equal(schema.name, "LinkAction");
+      assert.ok(schema.inputSchema.properties.provider);
+      assert.ok(schema.inputSchema.properties.action);
+      assert.ok(schema.inputSchema.properties.params);
+      assert.match(String(selectionReceipt.content), /Use CallTool/);
       const unknown = JSON.stringify(request.messages).includes("fixture unknown");
       return hasResult
         ? { text: "Model claims success", toolCalls: [], stopReason: "stop", usage }
@@ -130,16 +153,19 @@ if (process.argv[2] === "--worker") {
             toolCalls: [
               {
                 id: "fixture-create",
-                toolName: "LinkAction",
+                toolName: "CallTool",
                 args: {
-                  provider: "github",
-                  action: "create_issue",
-                  connectionId: credential.id,
-                  params: {
-                    owner: "fixture",
-                    repo: unknown ? "unknown" : "success",
-                    title: "Synthetic issue",
-                    body: "Synthetic body",
+                  name: "LinkAction",
+                  args: {
+                    provider: "github",
+                    action: "create_issue",
+                    connectionId: credential.id,
+                    params: {
+                      owner: "fixture",
+                      repo: unknown ? "unknown" : "success",
+                      title: "Synthetic issue",
+                      body: "Synthetic body",
+                    },
                   },
                 },
               },
@@ -207,11 +233,36 @@ if (process.argv[2] === "--worker") {
       readFileSync(join(root, "sessions/unknown-session/state.json"), "utf8"),
     );
     assert.equal(state.status, "unverified_write");
+    assert.equal(state.toolSelection.version, 2);
+    assert.ok(state.toolSelection.discovered.includes("LinkAction"));
+    assert.ok(!state.toolSelection.names.includes("LinkAction"));
     const transcript = readFileSync(
       join(root, "sessions/unknown-session/transcript.jsonl"),
       "utf8",
     );
     assert.ok(transcript.includes("尚未通过独立回读验证"));
+    const transcriptEvents = transcript
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    assert.ok(
+      transcriptEvents.some(
+        (event) =>
+          event.type === "tool_use" &&
+          event.data.toolName === "LinkAction" &&
+          event.data.wireToolName === "CallTool",
+      ),
+      "authority and operation tracking use the real tool name",
+    );
+    assert.ok(
+      transcriptEvents.some(
+        (event) =>
+          event.type === "message" &&
+          event.data.role === "assistant" &&
+          JSON.stringify(event.data).includes('"name":"CallTool"'),
+      ),
+      "durable model history preserves the original wrapper",
+    );
     if (retainedReceipt) {
       const ledger = JSON.parse(
         readFileSync(join(root, "sessions/.operations/ledger.json"), "utf8"),
@@ -250,6 +301,11 @@ if (process.argv[2] === "--worker") {
     await restarted.dispose();
     core.setDefaultCredentialAccess(null);
   }
+  assert.equal(selections.size, 2);
+  assert.ok(
+    [...selections.values()].every((count) => count === 1),
+    "restart reuses discovered schemas without selecting again",
+  );
   process.stdout.write("compiled SDK Engine verified-write lifecycle passed\n");
   process.stdin.destroy();
 } else {
