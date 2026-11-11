@@ -214,6 +214,7 @@ import {
 import { allowNativePetExtraction } from "./pet/pet-native-extraction-policy.js";
 import { createPetRuntimeControlWorker } from "./pet/pet-runtime-control-worker.js";
 import { createPetExternalRuntime } from "./pet/pet-external-runtime.js";
+import { createPetExternalReplyModel } from "./pet/pet-external-reply-model.js";
 import { installedThemeToPack } from "./theme-pack-conversion.js";
 import { themeImportDialogOptions } from "./theme-import-dialog.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
@@ -2129,6 +2130,10 @@ async function createWindow(): Promise<BrowserWindow> {
       ...createOwnerReplyHandling({
         router: notices.router,
         cwd: resolveNoRepoCwd(),
+        externalReplyModel: createPetExternalReplyModel({
+          service: () => externalRuntime.service,
+          cwd: resolveNoRepoCwd(),
+        }),
         worker: bridge,
         external: () => externalRuntime.service ?? undefined,
         sessions: () => aggregator.getSnapshot().sessions,

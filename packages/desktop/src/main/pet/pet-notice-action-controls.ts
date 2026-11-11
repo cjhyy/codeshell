@@ -16,7 +16,7 @@ import {
   type ReplyItem,
   type ReplyModel,
 } from "./pet-notice-reply-interpreter.js";
-import { createReplyModels } from "./pet-notice-reply-models.js";
+import { createReplyModels, type ExternalReplyModel } from "./pet-notice-reply-models.js";
 import type { NoticeActionRecord } from "./pet-notice-types.js";
 
 type WorkerRequest = (
@@ -217,6 +217,8 @@ export function createOwnerReplyHandling(
     /** Settings cwd for the reply models. */
     cwd: string;
     models?: ReplyModel[];
+    /** External selection is interpreted by a separate restricted Host runtime. */
+    externalReplyModel?: ExternalReplyModel;
     onError: (error: unknown) => void;
   },
 ): {
@@ -235,16 +237,18 @@ export function createOwnerReplyHandling(
     controls: createNoticeActionControls(deps),
     onError: deps.onError,
   });
-  const models = deps.models ?? createReplyModels(deps.cwd);
   return {
-    interpret: (message, items, { bound }) =>
-      interpretReply({
+    interpret: (message, items, { bound }) => {
+      const models =
+        deps.models ?? createReplyModels(deps.cwd, { external: deps.externalReplyModel });
+      return interpretReply({
         message,
         items,
         // A bound chat answers inside the gateway's 20 s route call: one model, 8 s.
         ...(bound ? { models: models.slice(0, 1), timeoutMs: BOUND_TIMEOUT_MS } : { models }),
         onError: (error) => deps.onError(error),
-      }),
+      });
+    },
     actions: {
       items: (channel) => deps.router.openActionItems(channel),
       execute: (request) => executor.execute(request),
