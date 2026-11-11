@@ -417,13 +417,14 @@ describe("architecture growth budgets", () => {
     // existed but were not counted. This baseline grants no new routes.
     expect(
       countIpc("packages/desktop/src/main", /ipcMain\.handle\(/g, {
-        "packages/desktop/src/main/account-device-ipc.ts": /^    [a-z]+: \(/gm,
+        "packages/desktop/src/main/account-device-ipc.ts": /^ {4}[a-z]+: \(/gm,
         "packages/desktop/src/main/model-trace-ipc.ts": /handle\("modelTraces:/g,
         "packages/desktop/src/main/task-inbox/task-inbox-ipc.ts": /handle\("taskInbox:/g,
         "packages/desktop/src/main/optimization-lab-ipc.ts": /handle\("optimizationLab:/g,
         "packages/desktop/src/main/operation-resolution-ipc.ts":
           /handle\(\s*"operationResolution:/g,
         "packages/desktop/src/main/operation-batch-ipc.ts": /handle\("operationBatch:/g,
+        "packages/desktop/src/main/quota-ipc.ts": /handle\("quota:/g,
       }),
       // +1 read-only, bounded Session output-journal page route. Its file/owner
       // validation and recovery algorithm stay in Core and the extracted adapters.
@@ -459,8 +460,12 @@ describe("architecture growth budgets", () => {
       // feature snapshot and bounded refresh. No credential-read route is exposed.
       // +2 main-frame-owned account operations: browser sign-in and fixed account
       // management pages. PKCE, session custody and origin checks remain in Main.
-    ).toBeLessThanOrEqual(472);
-    expect(matches("packages/desktop/src/main/account-device-ipc.ts", /^    [a-z]+: \(/gm)).toBe(8);
+      // +2 main-frame-only usage provider operations: local metadata discovery
+      // and an explicit query of a registered provider. The existing quota:get
+      // moves into the same guarded registrar and is still counted.
+    ).toBeLessThanOrEqual(474);
+    expect(matches("packages/desktop/src/main/quota-ipc.ts", /handle\("quota:/g)).toBe(3);
+    expect(matches("packages/desktop/src/main/account-device-ipc.ts", /^ {4}[a-z]+: \(/gm)).toBe(8);
     expect(
       matches("packages/desktop/src/main/session-output-history-ipc.ts", /ipcMain\.handle\(/g),
     ).toBe(2);
@@ -496,7 +501,9 @@ describe("architecture growth budgets", () => {
       // +3 exact adapters for registration, feature snapshot and refresh above.
       // Browser sign-in and fixed account-management navigation add two typed
       // adapters within the existing ceiling; neither exposes credentials.
-    ).toBeLessThanOrEqual(481);
+      // +2 typed provider discovery/query invokes; credentials remain in Main.
+    ).toBeLessThanOrEqual(483);
+    expect(matches("packages/desktop/src/preload/quota-api.ts", /ipc\.invoke\(/g)).toBe(3);
     expect(
       matches("packages/desktop/src/preload/account-device-api.ts", /\binvoke(?:Raw)?\("/g),
     ).toBe(8);

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
 import { checkQuota, queryClaudeQuota, queryCodexQuota, formatQuota } from "./index.js";
-import type { QuotaCredentials } from "./types.js";
+import type { QuotaCredentials, QuotaProvider } from "./types.js";
 
 const NEVER_ABORT = new AbortController().signal;
 const CREDS: QuotaCredentials = {
@@ -147,6 +147,7 @@ describe("queryCodexQuota", () => {
     }) as unknown as typeof fetch;
     const q = await queryCodexQuota({}, fetchImpl, NEVER_ABORT);
     expect(q.error).toContain("no Codex token");
+    expect(q.errorCode).toBe("auth-required");
     expect(called).toBe(false);
   });
 
@@ -154,11 +155,13 @@ describe("queryCodexQuota", () => {
     const q = await queryCodexQuota(CREDS, codexResponse({}, false, 401), NEVER_ABORT);
     expect(q.error).toContain("401");
     expect(q.error).toContain("过期");
+    expect(q.errorCode).toBe("auth-required");
   });
 
   it("missing windows → error", async () => {
     const q = await queryCodexQuota(CREDS, codexResponse({ rate_limit: {} }), NEVER_ABORT);
     expect(q.error).toContain("无 rate_limit 窗口");
+    expect(q.errorCode).toBe("unavailable");
   });
 });
 
@@ -252,10 +255,98 @@ describe("queryClaudeQuota", () => {
   it("headers absent → error", async () => {
     const q = await queryClaudeQuota(CREDS, claudeResponse({}), NEVER_ABORT);
     expect(q.error).toContain("无 rate-limit 字段");
+    expect(q.errorCode).toBe("unavailable");
   });
 });
 
 describe("coding checkQuota", () => {
+  it.each(["claude", "codex"] as const)(
+    "%s missing credentials does not fetch",
+    async (provider) => {
+      const result = await checkQuota({
+        creds: {},
+        providers: [provider],
+        fetchImpl: (async () => {
+          throw new Error("missing credentials must not send a request");
+        }) as typeof fetch,
+      });
+      expect(result[provider]).toMatchObject({ provider, errorCode: "auth-required" });
+      expect(Object.keys(result)).toEqual([provider]);
+    },
+  );
+
+  it.each(["claude", "codex"] as const)(
+    "%s reports request failures without losing provider identity",
+    async (provider) => {
+      for (const fetchImpl of [
+        (async () => {
+          throw new Error("fixture offline");
+        }) as typeof fetch,
+        (async () => ({ ok: false, status: 403 }) as Response) as typeof fetch,
+        (async () => ({ ok: false, status: 503 }) as Response) as typeof fetch,
+      ]) {
+        const result = await checkQuota({ creds: CREDS, providers: [provider], fetchImpl });
+        expect(result[provider]).toMatchObject({ provider, errorCode: "request-failed" });
+        expect(result[provider]?.windows).toBeUndefined();
+      }
+    },
+  );
+
+  it.each(["claude", "codex"] as const)(
+    "%s marks rejected authentication as requiring a new login",
+    async (provider) => {
+      const result = await checkQuota({
+        creds: CREDS,
+        providers: [provider],
+        fetchImpl: (async () => ({ ok: false, status: 401 }) as Response) as typeof fetch,
+      });
+      expect(result[provider]).toMatchObject({ provider, errorCode: "auth-required" });
+      expect(result[provider]?.windows).toBeUndefined();
+    },
+  );
+
+  it.each(
+    [null, "codex", ["openclaw"], ["codex", "dsh"], [undefined], new Array(1)].map((providers) => ({
+      providers,
+    })),
+  )("rejects an invalid subset before sending any request: %j", async ({ providers }) => {
+    let requests = 0;
+    await expect(
+      checkQuota({
+        creds: CREDS,
+        providers: providers as readonly QuotaProvider[],
+        fetchImpl: (async () => {
+          requests++;
+          throw new Error("fixture refused request");
+        }) as typeof fetch,
+      }),
+    ).rejects.toThrow("Invalid quota provider");
+    expect(requests).toBe(0);
+  });
+
+  it("empty selection sends nothing and duplicates issue only one request", async () => {
+    let requests = 0;
+    const fetchImpl = (async (url) => {
+      expect(String(url)).toBe("https://chatgpt.com/backend-api/wham/usage");
+      requests++;
+      return {
+        ok: true,
+        json: async () => ({ rate_limit: { primary_window: { used_percent: 5 } } }),
+      } as Response;
+    }) as typeof fetch;
+    expect(await checkQuota({ creds: CREDS, providers: [], fetchImpl })).toEqual({});
+    expect(requests).toBe(0);
+    await checkQuota({ creds: CREDS, providers: ["codex", "codex"], fetchImpl });
+    expect(requests).toBe(1);
+  });
+
+  it("malformed Codex quota payloads return structured request failures", async () => {
+    for (const payload of [null, [], "unexpected", 42]) {
+      const result = await queryCodexQuota(CREDS, codexResponse(payload), NEVER_ABORT);
+      expect(result).toMatchObject({ provider: "codex", errorCode: "request-failed" });
+    }
+  });
+
   it("queries only the requested provider", async () => {
     const fetchImpl = codexResponse({
       rate_limit: { primary_window: { limit_window_seconds: 18000, used_percent: 5, reset_at: 1 } },

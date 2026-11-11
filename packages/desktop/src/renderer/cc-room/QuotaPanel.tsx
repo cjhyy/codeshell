@@ -104,12 +104,20 @@ function QuotaPanelContent({ which }: { which: Which }) {
   );
 }
 
-export function QuotaProviderBlock({ name, pq }: { name: string; pq: ProviderQuota }) {
+export function QuotaProviderBlock({
+  name,
+  pq,
+  hideName = false,
+}: {
+  name: string;
+  pq: ProviderQuota;
+  hideName?: boolean;
+}) {
   const { t } = useT();
   if (pq.error || !pq.windows?.length) {
     return (
       <div>
-        <div className="mb-0.5 font-medium">{name}</div>
+        {!hideName && <div className="mb-0.5 font-medium">{name}</div>}
         <div className={cn("text-xs", pq.error ? "text-status-err" : "text-muted-foreground")}>
           {pq.error
             ? t("usagePage.quotaQueryFailed", { error: pq.error })
@@ -125,7 +133,7 @@ export function QuotaProviderBlock({ name, pq }: { name: string; pq: ProviderQuo
   return (
     <div>
       <div className="mb-1 flex items-center gap-1.5">
-        <span className="font-medium">{name}</span>
+        {!hideName && <span className="font-medium">{name}</span>}
         {pq.planType && (
           <span className="rounded bg-muted px-1 text-[10px] text-muted-foreground">
             {pq.planType}

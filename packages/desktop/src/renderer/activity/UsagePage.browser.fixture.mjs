@@ -1,4 +1,4 @@
-/* Production UsagePage/CSS with owned history and quota replies; no provider calls. */
+/* Production UsagePage/CSS with owned discovery, history and quota replies; no provider calls. */
 /* global document, window */
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
@@ -16,7 +16,7 @@ const { compile } = tailwind("@tailwindcss/node");
 const { Scanner } = tailwind("@tailwindcss/oxide");
 const output =
   process.argv.find((arg) => arg.startsWith("--output="))?.slice(9) ||
-  "/tmp/codeshell-usage-page-qa";
+  "/tmp/codeshell-provider-usage-page-qa";
 await mkdir(output, { recursive: true });
 
 const source = String.raw`
@@ -36,15 +36,27 @@ function summary(rows,patch={}){
  const totals=zero();for(const row of rows)for(const key of fields)totals[key]+=row[key]??0;
  return {...totals,version:1,scope:'store',includesChildren:false,partial:false,persistenceErrors:0,invalidReceipts:0,scannedReceipts:rows.length,byModel:rows,bySession:[],byPurpose:[],...patch};
 }
+function providers(){
+ return [
+  {id:'cli:codex',displayName:'Codex',source:'cli',quota:{supported:true,queryCost:'none'}},
+  {id:'cli:claude',displayName:'Claude Code',source:'cli',quota:{supported:true,queryCost:'minimal-usage'}},
+  {id:'cli:future',displayName:'Future Agent',source:'cli',quota:{supported:true,queryCost:'none'}},
+  {id:'model:fixture',displayName:'Fixture model connection',source:'model-connection',connectionCount:2,quota:{supported:false}},
+ ];
+}
 function quotas(){
  const now=Math.floor(Date.now()/1000);
  return {
-  codex:{provider:'codex',planType:'Plus',windows:[{kind:'5h',usedPercent:35,resetsAt:now+3600},{kind:'7d',usedPercent:68,resetsAt:now+86400}]},
-  claude:{provider:'claude',planType:'Pro',windows:[{kind:'5h',usedPercent:12,resetsAt:now+7200},{kind:'7d',usedPercent:54,resetsAt:now+172800},{kind:'7d_sonnet',usedPercent:30,resetsAt:null}]},
+  'cli:codex':{provider:'codex',planType:'Plus',windows:[{kind:'5h',usedPercent:35,resetsAt:now+3600},{kind:'7d',usedPercent:68,resetsAt:now+86400}]},
+  'cli:claude':{provider:'claude',planType:'Pro',windows:[{kind:'5h',usedPercent:12,resetsAt:now+7200},{kind:'7d',usedPercent:54,resetsAt:now+172800},{kind:'7d_sonnet',usedPercent:30,resetsAt:null}]},
+  'cli:future':{provider:'future',planType:'Fixture plan',windows:[{kind:'monthly',usedPercent:42,resetsAt:now+86400}]},
  };
 }
-let pendingQuota;
-window.fixture={calls:[],historyMode:'ready',quotaMode:'ready',finishQuota(){if(!pendingQuota)throw new Error('No pending quota query');const resolve=pendingQuota;pendingQuota=undefined;resolve(quotas())}};
+const pendingQuota=new Map();let pendingDiscovery;
+window.fixture={calls:[],historyMode:'ready',quotaMode:'ready',quotaModes:{},discoveryMode:'ready',
+ finishQuota(id='cli:codex'){const resolve=pendingQuota.get(id);if(!resolve)throw new Error('No pending quota query: '+id);pendingQuota.delete(id);resolve(quotas()[id])},
+ finishDiscovery(){if(!pendingDiscovery)throw new Error('No pending discovery');const resolve=pendingDiscovery;pendingDiscovery=undefined;resolve(providers())},
+};
 window.codeshell={
  getUsageSummary:async query=>{
   window.fixture.calls.push({kind:'usage',query});
@@ -58,24 +70,39 @@ window.codeshell={
   if(query.cursor!=='a'.repeat(64))throw new Error('Unexpected fixture cursor');
   return summary([cli],{scannedReceipts:3});
  },
- quota:{get:async which=>{
-  window.fixture.calls.push({kind:'quota',which});
-  switch(window.fixture.quotaMode){
-   case 'error':throw new Error('Owned quota failure');
-   case 'missing':return {};
-   case 'provider-empty':return {codex:{provider:'codex',windows:[]}};
-   case 'provider-invalid':return {codex:{provider:'codex',windows:[{kind:'5h',usedPercent:NaN,resetsAt:null}]}};
-   case 'provider-error':return {codex:{provider:'codex',error:'Fixture signed-out'},claude:{provider:'claude',windows:[]}};
-   case 'pending':return new Promise(resolve=>{pendingQuota=resolve});
-   default:return quotas();
-  }
- }},
+ quota:{
+  listProviders:async()=>{
+   window.fixture.calls.push({kind:'discovery'});
+   switch(window.fixture.discoveryMode){
+    case 'error':throw new Error('Owned discovery failure');
+    case 'empty':return [];
+    case 'future-only':return providers().slice(2);
+    case 'pending':return new Promise(resolve=>{pendingDiscovery=resolve});
+    default:return providers();
+   }
+  },
+  query:async id=>{
+   window.fixture.calls.push({kind:'quota',id});
+   if(!providers().some(provider=>provider.id===id&&provider.quota.supported))throw new Error('Unexpected fixture provider: '+id);
+   const provider=quotas()[id].provider;
+   switch(window.fixture.quotaModes[id]??window.fixture.quotaMode){
+    case 'error':throw new Error('Owned quota failure');
+    case 'missing':return {};
+    case 'provider-empty':return {provider,windows:[]};
+    case 'provider-invalid':return {provider,windows:[{kind:'5h',usedPercent:NaN,resetsAt:null}]};
+    case 'provider-error':return {provider,error:'Fixture provider failure'};
+    case 'auth-required':return {provider,error:'Fixture missing subscription sign-in',errorCode:'auth-required'};
+    case 'pending':return new Promise(resolve=>{pendingQuota.set(id,resolve)});
+    default:return quotas()[id];
+   }
+  },
+ },
  openExternal:async url=>{window.fixture.calls.push({kind:'openExternal',url})},
 };
 const root=createRoot(document.getElementById('root'));let generation=0;
-window.mountFixture=({lang='zh',mode='light',historyMode='ready',quotaMode='ready'}={})=>{
+window.mountFixture=({lang='zh',mode='light',historyMode='ready',quotaMode='ready',quotaModes={},discoveryMode='ready'}={})=>{
  localStorage.clear();saveUILanguage(lang);saveTheme(mode);applyTheme(mode);
- window.fixture.calls=[];window.fixture.historyMode=historyMode;window.fixture.quotaMode=quotaMode;pendingQuota=undefined;
+ window.fixture.calls=[];window.fixture.historyMode=historyMode;window.fixture.quotaMode=quotaMode;window.fixture.quotaModes=quotaModes;window.fixture.discoveryMode=discoveryMode;pendingQuota.clear();pendingDiscovery=undefined;
  window.label=(key,params)=>translate(lang,key,params);
  const current=++generation;
  root.render(<I18nProvider key={current}><div className='flex h-screen min-h-0 flex-col bg-background text-foreground' data-fixture-generation={current}>
@@ -123,6 +150,8 @@ const calls = (page, kind) =>
   page.evaluate((kind) => window.fixture.calls.filter((call) => call.kind === kind), kind);
 const quotaSection = (page) =>
   page.locator('section[aria-labelledby="subscription-usage-heading"]');
+const providerCard = (page, id) => page.locator(`article[data-usage-provider="${id}"]`);
+const queryButton = (page, id) => providerCard(page, id).getByRole("button");
 const historySection = (page) => page.locator('section[aria-labelledby="recorded-usage-heading"]');
 
 async function mount(options = {}) {
@@ -154,6 +183,10 @@ async function mount(options = {}) {
   if (options.historyMode === "error" || options.historyMode === "repeated-cursor")
     await historySection(page).getByRole("alert").waitFor();
   else await page.getByRole("table").waitFor();
+  if (options.discoveryMode !== "pending")
+    await page
+      .getByRole("button", { name: await label(page, "usagePage.rediscover"), exact: true })
+      .waitFor();
   return page;
 }
 async function click(page, key) {
@@ -270,19 +303,55 @@ try {
         const allReads = await calls(page, "usage");
         assert.equal("since" in allReads.at(-1).query, false);
         assert.equal((await calls(page, "quota")).length, 0, "Date changes never probe quota");
-        await click(page, "usagePage.quotaLoad");
-        await quotaSection(page).getByRole("progressbar").first().waitFor();
-        assert.deepEqual(
-          (await calls(page, "quota")).map((call) => call.which),
-          ["both"],
+        assert.equal(
+          (await calls(page, "discovery")).length,
+          1,
+          "History controls never rediscover providers",
         );
+        assert.deepEqual(
+          await quotaSection(page)
+            .locator("article")
+            .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-usage-provider"))),
+          ["cli:codex", "cli:claude", "cli:future", "model:fixture"],
+        );
+        await providerCard(page, "cli:codex")
+          .getByText(await label(page, "usagePage.quotaFreeQuery"), { exact: true })
+          .waitFor();
+        await providerCard(page, "cli:claude")
+          .getByText(await label(page, "usagePage.quotaProbeCost"), { exact: true })
+          .waitFor();
+        await providerCard(page, "model:fixture")
+          .getByText(await label(page, "usagePage.providerConfigured", { count: "2" }), {
+            exact: true,
+          })
+          .waitFor();
+        await providerCard(page, "model:fixture")
+          .getByText(await label(page, "usagePage.quotaUnsupported"), { exact: true })
+          .waitFor();
+        assert.equal(await queryButton(page, "model:fixture").count(), 0);
+        const queried = [];
+        for (const id of ["cli:codex", "cli:claude", "cli:future"]) {
+          await queryButton(page, id).click();
+          await providerCard(page, id).getByRole("progressbar").first().waitFor();
+          queried.push(id);
+          assert.deepEqual(
+            (await calls(page, "quota")).map((call) => call.id),
+            queried,
+            "Only the clicked provider is queried",
+          );
+          assert.equal(
+            (await calls(page, "discovery")).length,
+            1,
+            "Queries do not trigger discovery",
+          );
+        }
         assert.deepEqual(
           await quotaSection(page)
             .getByRole("progressbar")
             .evaluateAll((nodes) =>
               nodes.map((node) => Number(node.getAttribute("aria-valuenow"))),
             ),
-          [35, 68, 12, 54, 30],
+          [35, 68, 12, 54, 30, 42],
         );
         if (lang === "en")
           assert.equal(
@@ -304,12 +373,12 @@ try {
         });
         if (scroll.scrollWidth > scroll.width)
           assert.ok(scroll.left > 0, "Narrow tables scroll locally");
-        assert.equal((await calls(page, "quota")).length, 1);
+        assert.equal((await calls(page, "quota")).length, 3);
         layouts.push({ viewport, lang, mode, dimensions, table: scroll });
         await page.close();
       }
   cases.push(
-    "12 responsive/light-dark/language layouts, paginated totals, API/CLI units and explicit quota querying",
+    "12 responsive/light-dark/language layouts, paginated totals, API/CLI units, dynamic providers, independent queries and query-cost hints",
   );
 
   for (const quotaMode of [
@@ -318,49 +387,171 @@ try {
     "provider-empty",
     "provider-error",
     "provider-invalid",
+    "auth-required",
   ]) {
     const page = await mount({ lang: "en", quotaMode, viewport: { width: 390, height: 844 } });
-    await click(page, "usagePage.quotaLoad");
-    if (quotaMode === "provider-empty" || quotaMode === "provider-invalid")
-      await quotaSection(page)
+    const card = providerCard(page, "cli:codex");
+    await queryButton(page, "cli:codex").click();
+    if (["missing", "provider-empty", "provider-invalid"].includes(quotaMode))
+      await card
         .getByText(await label(page, "usagePage.quotaUnavailable"), { exact: true })
         .waitFor();
-    else await quotaSection(page).locator(".text-status-err").first().waitFor();
+    else if (quotaMode === "auth-required")
+      await card
+        .getByRole("alert")
+        .getByText(await label(page, "usagePage.quotaAuthRequired"), { exact: true })
+        .waitFor();
+    else await card.locator(".text-status-err").first().waitFor();
     assert.equal(await quotaSection(page).getByRole("progressbar").count(), 0);
     assert.equal(
-      (await quotaSection(page).innerText()).includes("0%"),
+      (await card.innerText()).includes("0%"),
       false,
       "Failed/empty quota is unknown, never zero",
     );
-    const check = quotaSection(page).getByRole("button").first();
-    assert.equal(await check.isEnabled(), true);
+    assert.equal(await queryButton(page, "cli:codex").isEnabled(), true);
     await screenshot(page, "quota-" + quotaMode);
     await page.evaluate(() => {
       window.fixture.quotaMode = "ready";
     });
-    await check.click();
-    await quotaSection(page).getByRole("progressbar").first().waitFor();
-    assert.equal((await calls(page, "quota")).length, 2);
+    await queryButton(page, "cli:codex").click();
+    await card.getByRole("progressbar").first().waitFor();
+    assert.deepEqual(
+      (await calls(page, "quota")).map((call) => call.id),
+      ["cli:codex", "cli:codex"],
+    );
+    assert.equal((await calls(page, "discovery")).length, 1);
     await page.close();
   }
   cases.push(
-    "Failed, missing, empty-window, non-finite and per-provider errors stay unknown and retryable",
+    "Failed, missing, empty-window, non-finite and auth-required provider queries stay unknown and independently retryable",
   );
 
-  const pending = await mount({ quotaMode: "pending" });
-  await click(pending, "usagePage.quotaLoad");
-  const loading = quotaSection(pending).getByRole("button").first();
+  const pending = await mount({ quotaModes: { "cli:codex": "pending" } });
+  await queryButton(pending, "cli:codex").click();
+  const loading = queryButton(pending, "cli:codex");
   assert.equal(await loading.isDisabled(), true);
   await loading.dispatchEvent("click");
+  assert.equal(await queryButton(pending, "cli:claude").isEnabled(), true);
+  await queryButton(pending, "cli:claude").click();
+  await providerCard(pending, "cli:claude").getByRole("progressbar").first().waitFor();
+  await click(pending, "usagePage.rediscover");
+  await pending
+    .getByRole("button", { name: await label(pending, "usagePage.rediscover"), exact: true })
+    .waitFor();
+  assert.equal(
+    await loading.isDisabled(),
+    true,
+    "Rediscovery retains the same provider's in-flight query",
+  );
   await click(pending, "usagePage.refresh");
   await pending.getByRole("table").waitFor();
-  assert.equal((await calls(pending, "quota")).length, 1);
+  assert.deepEqual(
+    (await calls(pending, "quota")).map((call) => call.id),
+    ["cli:codex", "cli:claude"],
+  );
+  assert.equal((await calls(pending, "discovery")).length, 2);
+  await screenshot(pending, "independent-query-pending");
   await pending.evaluate(() => window.fixture.finishQuota());
-  await quotaSection(pending).getByRole("progressbar").first().waitFor();
+  await providerCard(pending, "cli:codex").getByRole("progressbar").first().waitFor();
   assert.equal(await loading.isEnabled(), true);
   await pending.close();
   cases.push(
-    "Pending explicit quota checks cannot duplicate; refreshing tokens leaves the request alone",
+    "An in-flight provider blocks duplicate clicks but not another provider; rediscovery and token refresh never repeat a probe",
+  );
+
+  for (const discoveryMode of ["empty", "error", "future-only"]) {
+    const page = await mount({ discoveryMode, lang: "en", viewport: { width: 390, height: 844 } });
+    if (discoveryMode === "empty") {
+      await quotaSection(page)
+        .getByText(await label(page, "usagePage.noProviders"), { exact: true })
+        .waitFor();
+      assert.equal(await quotaSection(page).locator("article").count(), 0);
+    } else if (discoveryMode === "error") {
+      await quotaSection(page)
+        .getByRole("alert")
+        .getByText(await label(page, "usagePage.discoveryFailed"), { exact: true })
+        .waitFor();
+      assert.equal(await quotaSection(page).locator("article").count(), 0);
+    } else {
+      assert.deepEqual(
+        await quotaSection(page)
+          .locator("article")
+          .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-usage-provider"))),
+        ["cli:future", "model:fixture"],
+      );
+      assert.equal(
+        /Codex|Claude/.test(await quotaSection(page).innerText()),
+        false,
+        "Absent providers never appear as fixed cards or hints",
+      );
+      await queryButton(page, "cli:future").click();
+      await providerCard(page, "cli:future").getByRole("progressbar").waitFor();
+      assert.deepEqual(
+        (await calls(page, "quota")).map((call) => call.id),
+        ["cli:future"],
+      );
+    }
+    await assertNoOverflow(page);
+    await screenshot(page, "discovery-" + discoveryMode);
+    const oldQueries = await calls(page, "quota");
+    await page.evaluate(() => {
+      window.fixture.discoveryMode = "ready";
+    });
+    await click(page, "usagePage.rediscover");
+    await providerCard(page, "cli:codex").waitFor();
+    assert.equal(await quotaSection(page).locator("article").count(), 4);
+    assert.deepEqual(
+      await calls(page, "quota"),
+      oldQueries,
+      "Rediscovery never queries a provider",
+    );
+    assert.equal((await calls(page, "discovery")).length, 2);
+    await page.close();
+  }
+  cases.push(
+    "Empty/failed discovery is retryable; only discovered providers render, including a future adapter and unsupported model connection",
+  );
+
+  const rediscovery = await mount({ lang: "en" });
+  await queryButton(rediscovery, "cli:future").click();
+  await providerCard(rediscovery, "cli:future").getByRole("progressbar").waitFor();
+  await rediscovery.evaluate(() => {
+    window.fixture.discoveryMode = "error";
+  });
+  await click(rediscovery, "usagePage.rediscover");
+  await quotaSection(rediscovery).getByRole("alert").waitFor();
+  assert.equal(await quotaSection(rediscovery).locator("article").count(), 4);
+  assert.equal(
+    await providerCard(rediscovery, "cli:future")
+      .getByRole("progressbar")
+      .getAttribute("aria-valuenow"),
+    "42",
+  );
+  await screenshot(rediscovery, "rediscovery-failed-retains-cards");
+  await rediscovery.evaluate(() => {
+    window.fixture.discoveryMode = "pending";
+  });
+  await click(rediscovery, "usagePage.rediscover");
+  const detecting = quotaSection(rediscovery).getByRole("button", {
+    name: await label(rediscovery, "usagePage.discovering"),
+    exact: true,
+  });
+  assert.equal(await detecting.isDisabled(), true);
+  assert.equal(await queryButton(rediscovery, "cli:codex").isEnabled(), true);
+  await queryButton(rediscovery, "cli:codex").click();
+  await providerCard(rediscovery, "cli:codex").getByRole("progressbar").first().waitFor();
+  await rediscovery.evaluate(() => window.fixture.finishDiscovery());
+  await rediscovery
+    .getByRole("button", { name: await label(rediscovery, "usagePage.rediscover"), exact: true })
+    .waitFor();
+  assert.deepEqual(
+    (await calls(rediscovery, "quota")).map((call) => call.id),
+    ["cli:future", "cli:codex"],
+  );
+  assert.equal((await calls(rediscovery, "discovery")).length, 3);
+  await rediscovery.close();
+  cases.push(
+    "A failed rediscovery retains existing cards and quota; discovery loading remains independent from provider queries",
   );
 
   for (const historyMode of ["error", "repeated-cursor"]) {
