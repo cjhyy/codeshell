@@ -694,6 +694,14 @@ export class PetNoticeLedger {
     return undefined;
   }
 
+  /** Records created after `ms`, oldest first (the heartbeat's "what is new"). */
+  createdSince(ms: number): NoticeRecord[] {
+    return [...this.state.records.values()]
+      .filter((record) => record.createdAt > ms)
+      .sort((a, b) => a.createdAt - b.createdAt)
+      .map((record) => structuredClone(record));
+  }
+
   /** Records that carry an open item (`actions`), oldest first. */
   actionRecords(): NoticeRecord[] {
     return [...this.state.records.values()]
