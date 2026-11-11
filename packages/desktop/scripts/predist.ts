@@ -41,12 +41,12 @@ import {
   readFileSync,
   readlinkSync,
   rmSync,
-  writeFileSync,
 } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildDesktopWorkspaceDependencies } from "./build-workspace-dependencies.js";
+import { installProductionClosure, loadProductionClosures } from "./production-dependencies.js";
 import {
   assertMaterializedWorkspaceDependencies,
   DESKTOP_MATERIALIZED_WORKSPACES,
@@ -87,6 +87,7 @@ function main(): void {
   // Fail before building or modifying node_modules if a new production workspace
   // dependency would make electron-builder follow a symlink outside this app.
   verifyWorkspaceMaterialization();
+  const productionClosures = loadProductionClosures(repoRoot);
   // Rebuild every direct desktop workspace dependency, in dependency order,
   // BEFORE the desktop bundle. Previously this step only asserted that
   // each `dist` existed (see copyDir) — so whatever a developer or CI job had
@@ -117,8 +118,16 @@ function main(): void {
   // Each materialized sibling owns its production closure.
   // Optimization Lab imports zod directly; core's nested node_modules cannot serve
   // sibling-package resolution in the packaged app.
-  for (const { label, source, target, installProductionDependencies } of materializedWorkspaces) {
-    if (installProductionDependencies) installProductionDeps(source, target, label);
+  for (const {
+    label,
+    relativeDir,
+    source,
+    target,
+    installProductionDependencies,
+  } of materializedWorkspaces) {
+    if (!installProductionDependencies) continue;
+    log(`installing ${label} locked production dependency closure`);
+    installProductionClosure(source, target, productionClosures.get(relativeDir)!);
   }
   verifyMaterializedCapabilities();
 
@@ -155,74 +164,6 @@ function materializePackage(source: string, target: string): void {
   mkdirSync(target, { recursive: true });
   copyDir(resolve(source, "dist"), resolve(target, "dist"));
   copyFile(resolve(source, "package.json"), resolve(target, "package.json"));
-}
-
-// Install core's FULL production dependency CLOSURE as real files under the
-// materialized target. We deliberately do NOT copy from bun's .bun store: that
-// store lays each package's transitive deps out as siblings inside the store
-// (e.g. @modelcontextprotocol/sdk's `cross-spawn` lives next to it in the
-// store, not in core/node_modules' top level). An earlier version walked only
-// core/node_modules' top level and dereferenced each package — which shipped
-// the SDK but NOT its transitive `cross-spawn`/`express`/`hono`/…, so the
-// packaged app crashed at runtime with `Cannot find package 'cross-spawn'`.
-//
-// Instead, let bun compute the closure: write a minimal package.json carrying
-// core's `dependencies` and `optionalDependencies`, then `bun install --production --linker=hoisted`.
-// `--production` drops devDependencies; `--linker=hoisted` produces a flat tree
-// of REAL directories (no symlinks into an absolute .bun store path that won't
-// exist on the user's machine). This is self-maintaining: when a dep bumps and
-// pulls in new transitive deps, they are installed automatically — no manual
-// store-walking to keep in sync.
-function installProductionDeps(source: string, target: string, label: string): void {
-  const pkg = JSON.parse(readFileSync(resolve(source, "package.json"), "utf8")) as {
-    name: string;
-    version: string;
-    dependencies?: Record<string, string>;
-    optionalDependencies?: Record<string, string>;
-  };
-  // Workspace siblings are materialized by this script and resolve through the
-  // desktop node_modules ancestor. Bun cannot install `workspace:*` from the
-  // isolated minimal manifest, and doing so would duplicate core inside a capability.
-  const dependencies = Object.fromEntries(
-    Object.entries(pkg.dependencies ?? {}).filter(
-      ([, version]) => !version.startsWith("workspace:"),
-    ),
-  );
-
-  // Minimal manifest: name/version + prod deps only. Omitting workspace fields
-  // (workspaces, scripts, devDependencies) keeps bun from re-linking the
-  // monorepo or running lifecycle scripts here.
-  writeFileSync(
-    resolve(target, "package.json"),
-    JSON.stringify(
-      {
-        name: pkg.name,
-        version: pkg.version,
-        dependencies,
-        optionalDependencies: pkg.optionalDependencies,
-      },
-      null,
-      2,
-    ) + "\n",
-  );
-
-  log(`installing ${label} production dependency closure (bun install --production)`);
-  execFileSync("bun", ["install", "--production", "--linker=hoisted"], {
-    cwd: target,
-    stdio: "inherit",
-  });
-
-  // Restore core's REAL package.json (with `main`/`exports` entry points) — the
-  // minimal manifest above was only a vehicle for the install. Use an explicit
-  // readFileSync→writeFileSync, NOT cpSync: `bun install` leaves the target
-  // package.json in a state where cpSync(dereference) silently fails to
-  // overwrite it, so the minimal manifest (no main/exports) would ship and the
-  // app would fail to resolve `@cjhyy/code-shell-core` and its
-  // `/bin/agent-server-stdio` subpath. The node_modules/ bun just created stays.
-  writeFileSync(
-    resolve(target, "package.json"),
-    readFileSync(resolve(source, "package.json"), "utf8"),
-  );
 }
 
 function copyDir(from: string, to: string): void {
