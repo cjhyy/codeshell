@@ -188,6 +188,14 @@ export default function PetFollowUpSectionView({
                     timezone: row.timezone ?? "",
                   })}
                 </p>
+                {row.recurrence && (
+                  <p data-pet-follow-up-recurrence={row.recurrence}>
+                    {t("pet.followUp.repeats", {
+                      recurrence: row.recurrence,
+                      timezone: row.timezone ?? "",
+                    })}
+                  </p>
+                )}
                 <p>{t(`pet.followUp.wakeState.${row.wakeState ?? "scheduled"}`)}</p>
                 {row.wakeDetail && (
                   <p className="whitespace-pre-wrap break-words">{row.wakeDetail}</p>
@@ -236,22 +244,25 @@ export default function PetFollowUpSectionView({
               )}
               {row.kind === "registered" && onControl && row.wakeState !== "claimed" && (
                 <>
-                  <button
-                    type="button"
-                    disabled={Boolean(busyId)}
-                    className="h-8 rounded-lg px-2.5 text-xs text-primary hover:bg-primary/10"
-                    onClick={() => {
-                      setEditingId(row.followUpId);
-                      const date = new Date(row.wakeAt ?? Date.now());
-                      setNextTime(
-                        new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
-                          .toISOString()
-                          .slice(0, 16),
-                      );
-                    }}
-                  >
-                    {t("pet.followUp.reschedule")}
-                  </button>
+                  {/* A repeating follow-up's recurrence is changed by asking Mimi. */}
+                  {!row.recurrence && (
+                    <button
+                      type="button"
+                      disabled={Boolean(busyId)}
+                      className="h-8 rounded-lg px-2.5 text-xs text-primary hover:bg-primary/10"
+                      onClick={() => {
+                        setEditingId(row.followUpId);
+                        const date = new Date(row.wakeAt ?? Date.now());
+                        setNextTime(
+                          new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+                            .toISOString()
+                            .slice(0, 16),
+                        );
+                      }}
+                    >
+                      {t("pet.followUp.reschedule")}
+                    </button>
+                  )}
                   <button
                     type="button"
                     disabled={Boolean(busyId)}
@@ -263,7 +274,7 @@ export default function PetFollowUpSectionView({
                 </>
               )}
             </div>
-            {editingId === row.followUpId && row.wakeState !== "claimed" && (
+            {editingId === row.followUpId && row.wakeState !== "claimed" && !row.recurrence && (
               <form
                 className="mt-2 flex flex-wrap items-center gap-2"
                 onSubmit={(event) => {

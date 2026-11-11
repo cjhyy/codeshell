@@ -314,7 +314,10 @@ export interface PetSessionSummaryRow {
   terminalAt?: number;
   text: string;
   revision?: number;
+  /** Next (or last fired) occurrence of a registered follow-up. */
   wakeAt?: number;
+  /** 5-field cron of a repeating follow-up, in `timezone`. */
+  recurrence?: string;
   timezone?: string;
   intent?: "remind" | "resume";
   wakeState?: "scheduled" | "claimed" | "notified" | "launched" | "failed" | "unknown";
