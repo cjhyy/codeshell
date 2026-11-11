@@ -1,5 +1,7 @@
 # Goal follow-up controlled evidence
 
+[delivery-refresh2-validation.txt](delivery-refresh2-validation.txt) records main `7c2ae0c24` merged into `e86fc4d22`, all refreshed build/guard checks, **424/424 tests across 24 files**, AskUser Chromium (32 layouts) and **10 Goal-reply Chromium checks**. It also preserves the previous candidate’s first cost-history CI failure and the unexecuted/rejected rerun request; a new full eligible CI run is required, with no reset of the same-failure retry limit.
+
 [delivery-refresh-validation.txt](delivery-refresh-validation.txt) records the later merge of main `935f3fe9b` into `65c5949ad`, the passing package/typecheck/Desktop/lint/guard checks and 152 additional combination tests. The previous candidate `e296780cc` received all 14 required real PR CI checks in run 43000586450, attempt 1; those checks are not substituted for the refreshed candidate.
 
 [delivery-validation.txt](delivery-validation.txt) records the later protected-delivery candidate after merging latest main `57fc7413f` into `2ce6488a9`: package/typecheck/build/lint/guard checks all pass, 578 targeted tests across 37 actual files pass, and five Chromium Goal checks pass. It preserves the corrected validator-path invocation and does not replace the historical full-run failure below. Eligible PR CI and merged-SHA verification are recorded at delivery.

@@ -2,6 +2,16 @@
 
 Status: the reviewed implementation is now prepared for protected PR delivery. Independent CC's second incremental **code review PASS, no Critical / Important** covered the frozen local delivery `e58b5cb5b4bcd2104a6b2e15bdb73ad4916dd21b`; CC did not run tests. The historical local-only reports below remain tied to their original commits.
 
+## Second latest-main refresh during PR CI (2026-11-11)
+
+- Main advanced through PRs #347 (usage/question UI) and #348 (Mimi settings) to **`7c2ae0c242f6f788c1c06496c1e320187fe2f451`**. Normal conflict-free merge produced **`e86fc4d22a6f32000b7d0fb17a59a284a12f8081`**. Task/main path sets are disjoint; no Goal production or regression source was changed.
+- Read-only incremental review **PASS**: the new AskUser UI retains requestId, expiration locking and keepWaiting; answer projection preserves the original async-answer envelope. External CLI usage receipts do not alter Goal routing/authority; Usage is an independent page. The cost-history fixture and relevant trace renderer paths are unchanged.
+- Refreshed package-release completed first (10 tarballs / 55 typed / 53 runtime entries), then typecheck, Desktop build, lint (90 warnings / 0 errors), Engine bypass and shard coverage **PASS**. Five guarded groups passed **424/424 tests across 24 files**, zero skips. Original isolated Chromium AskUser fixture passed explicit selection/draft/IME behavior and 32 layouts; Goal-reply fixture passed **10/10**. [Exact commands and footers](goal-controls-evidence-20261111/delivery-refresh2-validation.txt).
+- Upstream Mimi settings CI membership is inherited unchanged; this task still has no workflow diff versus main and adds no skips or budgets.
+- Previous candidate `da03216a7` [run 43005880567](https://github.com/cjhyy/codeshell/actions/runs/43005880567), attempt 1, first failed Electron's unchanged cost-history fixture: its original 30-second wait did not see the Attempt 1 detail, while the screenshot retained parent call selection. Matching blobs, prior candidate/main successes and static evidence of a possible queued animation-frame focus race support a timing-flake assessment, **not a proven cause**. First logs, PNG and blob evidence remain preserved. An earlier rerun API request was rejected while the workflow was active; **no actual job rerun started**.
+- Necessary latest-main integration now requires a fresh full eligible PR CI run. It naturally re-executes the unchanged cost fixture; recurrence of the same unresolved failure means blocked, with no additional retry. The preceding run's remaining Desktop UI job is allowed to finish naturally; its outcome is retained separately. No previous green head substitutes for the new candidate.
+- The historical full-local failure, two deferred L items and physical Goal E2E boundaries below remain unchanged. Raw refreshed logs: `artifacts/goal-controls-delivery/main-refresh-7c2ae0c24/`.
+
 ## Latest-main refresh during PR CI (2026-11-11)
 
 - PR [#350](https://github.com/cjhyy/codeshell/pull/350) first candidate `e296780cc2646f6dc53c35d35e16b5ed63c9ec42` received **14/14 required checks SUCCESS** in real `pull_request` / `.github/workflows/ci.yml` [run 43000586450](https://github.com/cjhyy/codeshell/actions/runs/43000586450), attempt 1, with no failures or reruns. Its long Desktop UI job completed normally.
