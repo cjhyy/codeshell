@@ -977,8 +977,7 @@ export class ExternalRuntimeService {
     const preserveBackgroundWork =
       authority.projectTrusted && current?.authority.key === authority.key;
 
-    // Replacing an existing session: close the old one first so two runtimes
-    // cannot interleave turns on the same business session.
+    // Close the old runtime first to prevent interleaved turns on the same business session.
     await this.stopExclusive(request.sessionId, preserveBackgroundWork);
     assertStartAuthority?.();
     if (!this.authorityStillCurrent(request.cwd, authority)) {
@@ -1897,6 +1896,7 @@ export class ExternalRuntimeService {
                 });
               }
               entry.modelTrace = trace;
+              entry.recorder.beginUsageSubmission();
               const turn = await entry.session.send(nextInput, onEvent);
               if (turn.accepted) background?.accept();
               await turn.done;

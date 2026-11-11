@@ -1,4 +1,4 @@
-/* Production personalization form; all Host calls and network are fixture-owned. */
+/* Production Mimi settings page (shell + sections); all Host calls and network are fixture-owned. */
 /* global window, document */
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
@@ -19,7 +19,7 @@ await mkdir(output, { recursive: true });
 const source = `
 import React from 'react';
 import {createRoot} from 'react-dom/client';
-import {PetPersonalizationPage} from './pet/PetSettingsPage';
+import {PetSettingsPage} from './pet/PetSettingsPage';
 import {I18nProvider} from './i18n/I18nProvider';
 import {saveUILanguage} from './uiLanguage';
 import {ToastProvider} from './ui/ToastProvider';
@@ -33,17 +33,40 @@ window.fixture={
   finishWrite(index,success){const operation=writes[index];if(!operation)throw new Error('Missing write');
     if(success){settings=structuredClone(operation.value);operation.resolve();}else operation.reject(new Error('Fixture settings write denied'));},
 };
+const notices={channels:[{id:'wechat',label:'个人微信 '+'LongChannelName'.repeat(6),ready:'ready'}],
+  systemRule:{state:'active',channel:'auto',events:['done','failed','blocked']},
+  settings:{quietHours:{enabled:true,start:'23:00',end:'08:30'},maxPerHour:6,maxP0PerHour:12,mergeWindowSec:600,presenceIdleSec:120,delegatedFromDesktop:'auto'}};
+const presence={visible:true,mode:'docked',effectiveMode:'docked',size:200,appearance:'mimi-sprite',shown:'docked',movingAvailable:true,previewing:false};
 window.codeshell={
   getSettings:scope=>{if(scope!=='user')throw new Error('Wrong settings scope');return new Promise((resolve,reject)=>reads.push({resolve,reject}));},
   updateSettings:(scope,patch)=>{if(scope!=='user')throw new Error('Wrong write scope');return new Promise((resolve,reject)=>writes.push({value:structuredClone(patch.pet.personalization),resolve,reject}));},
   log:()=>{},
+  pet:{
+    getNoticesState:async()=>structuredClone(notices),onNoticesChanged:()=>()=>{},setSystemNoticeRule:async patch=>({...notices.systemRule,...patch}),
+    listMemories:async()=>[{id:'m1',text:'Likes concise updates',source:'user'},{id:'m2',text:'Works on CodeShell',source:'auto'}],
+    listJournal:async()=>[],onMemoriesChanged:()=>()=>{},onJournalChanged:()=>()=>{},
+    getMemoryAutoExtract:async()=>true,setMemoryAutoExtract:async value=>value,
+  },
+  imGateway:{
+    status:async()=>({running:true,configPath:'/fixture/.code-shell/im-gateway/config.json',configExists:true,channels:['wechat','telegram'],wechatConnected:true,
+      channelStatuses:[{channel:'wechat',enabled:true,state:'running'},{channel:'telegram',enabled:true,state:'retrying',error:'Fixture telegram error '+'LongIdentifier'.repeat(12)}],
+      recentActivity:[{id:'a1',channel:'wechat',direction:'inbound',status:'ok',text:'Fixture message '+'LongWord'.repeat(20),createdAt:0,senderId:'owner',target:'mimi'}]}),
+    onEvent:()=>()=>{},start:async()=>undefined,stop:async()=>undefined,ensureConfig:async()=>'/fixture/config.json',
+  },
+  openInEditor:async()=>undefined,openPath:async()=>undefined,openExternal:async()=>undefined,
 };
 const root=createRoot(document.getElementById('root'));
 function Fixture(){
   const [open,setOpen]=React.useState(true);
+  const [section,setSection]=React.useState('conversation');
   window.leaveFixture=()=>setOpen(false);window.reopenFixture=()=>setOpen(true);
-  return <div className='flex h-full flex-col bg-background text-foreground'>
-    {open?<PetPersonalizationPage onBack={()=>setOpen(false)}/>:<p id='left-page'>Left personalization</p>}
+  return <div className='flex h-screen flex-col bg-background text-foreground'>
+    {open?<PetSettingsPage section={section} onSectionChange={setSection} backLabel='Back' onBack={()=>setOpen(false)}
+      activeModelKey='fixture-model' modelOptions={[{key:'fixture-model',label:'Fixture model',provider:'Fixture'}]} hasModelOverride={false}
+      onSelectModel={()=>{}} onResetModel={()=>{}} widgetVisible presence={presence}
+      presenceError={'Fixture presence failure '+'LongIdentifier'.repeat(10)} onDismissPresenceError={()=>{}}
+      onWidgetVisibleChange={()=>{}} onPresenceChange={()=>{}} onPreviewMoving={async()=>{}} onRetryPresence={()=>{}}
+      onOpenMemoryCenter={()=>{}}/>:<p id='left-page'>Left personalization</p>}
   </div>;
 }
 window.renderFixture=({lang,mode})=>{
@@ -57,7 +80,8 @@ const bundle = await build({
   write: false,
   platform: "browser",
   format: "iife",
-  loader: { ".png": "empty", ".webp": "empty", ".wav": "empty", ".css": "empty" },
+  // The page shows the Mimi sprite; inline images keep the fixture off the network.
+  loader: { ".png": "dataurl", ".webp": "dataurl", ".wav": "empty", ".css": "empty" },
   tsconfig: path.join(desktop, "tsconfig.json"),
   define: { "process.env.NODE_ENV": '"development"' },
 });
@@ -104,6 +128,67 @@ async function mount(width, lang, mode) {
   await page.waitForFunction(() => window.fixture.reads === 2);
   return page;
 }
+const SECTIONS = ["appearance", "conversation", "notifications", "rules", "memory", "connections"];
+async function noHorizontalOverflow(page, phase) {
+  const overflow = await page.evaluate(() => {
+    const main = document.querySelector("[data-pet-settings-section]");
+    return {
+      document: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      main: main ? main.scrollWidth - main.clientWidth : 0,
+    };
+  });
+  if (overflow.document > 1 || overflow.main > 1) {
+    await page.screenshot({ path: path.join(output, `overflow-${phase}.png`), fullPage: true });
+    const wide = await page.evaluate(() =>
+      [...document.querySelectorAll("[data-pet-settings-section] *")]
+        .filter(
+          (element) => element.scrollWidth > element.clientWidth + 1 && element.clientWidth > 0,
+        )
+        .slice(0, 5)
+        .map((element) => `${element.tagName}.${element.className}`.slice(0, 160)),
+    );
+    assert.fail(`${phase}: horizontal overflow ${JSON.stringify(overflow)} ${wide.join(" | ")}`);
+  }
+}
+// Wide windows show the section list; narrow ones a picker above the section.
+async function shellSections(page, width, lang, mode) {
+  const nav = page
+    .locator("nav[aria-label]")
+    .filter({ has: page.locator("[data-pet-settings-nav-item]") });
+  const picker = page.locator("[data-pet-settings-section-picker]");
+  const wide = width >= 720;
+  assert.equal(await nav.isVisible(), wide, `${width}: section list visibility`);
+  assert.equal(await picker.isVisible(), !wide, `${width}: section picker visibility`);
+  for (const section of SECTIONS) {
+    if (wide) await page.locator(`[data-pet-settings-nav-item="${section}"]`).click();
+    else {
+      await picker.click();
+      await page.getByRole("option").nth(SECTIONS.indexOf(section)).click();
+    }
+    await page.locator(`[data-pet-settings-section="${section}"]`).waitFor();
+    // Let async section content (notices, memory, gateway) arrive before measuring.
+    await page.waitForTimeout(50);
+    await noHorizontalOverflow(page, `${width}-${lang}-${mode}-${section}`);
+    await page.screenshot({
+      path: path.join(output, `shell-${section}-${width}-${lang}-${mode}.png`),
+    });
+  }
+  if (wide) {
+    await page.locator('[data-pet-settings-nav-item="appearance"]').focus();
+    await page.keyboard.press("ArrowDown");
+    assert.equal(
+      await page.evaluate(() => document.activeElement?.getAttribute("data-pet-settings-nav-item")),
+      "conversation",
+      "Arrow keys move through the section list",
+    );
+    await page.locator('[data-pet-settings-nav-item="conversation"]').click();
+  } else {
+    await picker.click();
+    await page.getByRole("option").nth(1).click();
+  }
+  await page.locator('[data-pet-settings-section="conversation"]').waitFor();
+  return SECTIONS.length;
+}
 async function geometry(page, phase) {
   const snapshot = await page.locator("[data-pet-personalization-fields]").evaluate((element) => {
     const rect = element.getBoundingClientRect();
@@ -126,7 +211,7 @@ try {
     for (const lang of ["zh", "en"]) {
       const mode = lang === "zh" ? "light" : "dark";
       const page = await mount(width, lang, mode);
-      const fields = page.locator("input,textarea");
+      const fields = page.locator("[data-pet-personalization-fields]").locator("input,textarea");
       for (const field of await fields.all())
         assert(await field.isDisabled(), "Fields wait for the settings snapshot");
       await page.evaluate(() => window.fixture.finishRead(1, false));
@@ -187,6 +272,7 @@ try {
       await page.screenshot({
         path: path.join(output, `personalization-${width}-${lang}-${mode}.png`),
       });
+      const sections = await shellSections(page, width, lang, mode);
       reports.push({
         width,
         lang,
@@ -194,6 +280,7 @@ try {
         readRecovery: true,
         draftPreserved: true,
         orderedWrites: true,
+        sections,
       });
       await page.close();
     }

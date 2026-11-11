@@ -381,10 +381,7 @@ export function Sidebar({
           <div className="[&>button]:rounded-lg [&>button]:px-2 [&>button]:text-[13px]">
             <PetSidebarEntry
               active={
-                viewMode === "pet" ||
-                viewMode === "pet_settings" ||
-                viewMode === "pet_personalization" ||
-                viewMode === "pet_memory"
+                viewMode === "pet" || viewMode === "pet_settings" || viewMode === "pet_memory"
               }
               pendingCount={petPendingCount}
               runningCount={petRunningCount}

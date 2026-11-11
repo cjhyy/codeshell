@@ -16,9 +16,12 @@ const hostSubscriptionsSource = readFileSync(
   "utf8",
 );
 const settingsMenuSource = readFileSync(join(rendererRoot, "settings", "SettingsMenu.tsx"), "utf8");
-const petSource = readdirSync(join(rendererRoot, "pet"))
-  .filter((name) => name.endsWith(".ts") || name.endsWith(".tsx"))
-  .map((name) => readFileSync(join(rendererRoot, "pet", name), "utf8"))
+const petSource = ["pet", join("pet", "settings")]
+  .flatMap((dir) =>
+    readdirSync(join(rendererRoot, dir))
+      .filter((name) => name.endsWith(".ts") || name.endsWith(".tsx"))
+      .map((name) => readFileSync(join(rendererRoot, dir, name), "utf8")),
+  )
   .join("\n");
 
 describe("App Pet lifecycle boundaries", () => {
@@ -66,9 +69,6 @@ describe("App Pet lifecycle boundaries", () => {
     expect(petSource).toContain('data-pet-page="standalone"');
     expect(appSource).toContain('const isPetView = view.viewMode === "pet"');
     expect(appSource).toContain('const isPetSettingsView = view.viewMode === "pet_settings"');
-    expect(appSource).toContain(
-      'const isPetPersonalizationView = view.viewMode === "pet_personalization"',
-    );
     expect(appSource).toContain("{isPetView ? (");
     expect(appSource).toContain("const sessionChromeVisible = !isPetSurface && isChatView");
     expect(appSource).toMatch(
@@ -81,12 +81,15 @@ describe("App Pet lifecycle boundaries", () => {
 
   test("opens a standalone Mimi settings page without leaking its model into work Sessions", () => {
     expect(viewSource).toContain('"pet_settings",');
-    expect(viewSource).toContain('"pet_personalization",');
+    // Personalization is the Conversation section now; the old route only redirects.
+    expect(viewSource).not.toContain('"pet_personalization",');
+    expect(viewSource).toContain('merged.viewMode === "pet_personalization"');
     expect(petSource).toContain('data-pet-settings-page="standalone"');
-    expect(petSource).toContain('data-pet-personalization-page="standalone"');
+    expect(petSource).not.toContain('data-pet-personalization-page="standalone"');
     expect(petSource).toContain('t("pet.settings.open")');
-    expect(appSource).toContain('onOpenSettings={() => setViewMode("pet_settings")}');
-    expect(appSource).toContain('onOpenPersonalization={() => setViewMode("pet_personalization")}');
+    expect(appSource).toContain("onOpenSettings={() => openMimiSettings()}");
+    expect(appSource).toContain("onBack={leaveMimiSettings}");
+    expect(appSource).toContain('openMimiSettings({ section: "connections" })');
     expect(appSource).toContain("hasModelOverride={petChatModelKey !== null}");
     const petChat = appSource.match(/<PetChatHost\b[\s\S]*?\/>/)?.[0];
     expect(petChat).toContain("defaultModelKey={defaultActiveModelKey}");

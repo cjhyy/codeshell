@@ -11,6 +11,10 @@ import { GoalProgressView } from "./messages/GoalProgressView";
 import { TurnEndMessageView } from "./messages/TurnEndMessageView";
 import { TurnUsageMessageView } from "./messages/TurnUsageMessageView";
 import { AskUserMessageView } from "./messages/AskUserMessageView";
+import {
+  projectAskUserAnswers,
+  type AskUserAnswerProjection,
+} from "./messages/askUserAnswerProjection";
 import { ToolGroupCard } from "./messages/ToolGroupCard";
 import { TurnProcessGroupCard } from "./messages/TurnProcessGroupCard";
 import { FilesChangedCard } from "./messages/FilesChangedCard";
@@ -445,6 +449,12 @@ export function MessageStream({
   // 50ms stream batches. prevItemsRef survives renders; the useMemo only
   // recomputes when messages/liveTurnActive change.
   const streamMessages = selectionOpen ? messages : (displayMessages ?? messages);
+  const previousAnswersRef = useRef<AskUserAnswerProjection | undefined>(undefined);
+  const questionAnswers = useMemo(() => {
+    const projection = projectAskUserAnswers(streamMessages, previousAnswersRef.current);
+    previousAnswersRef.current = projection;
+    return projection;
+  }, [streamMessages]);
   const prevItemsRef = useRef<StreamItem[]>([]);
   const items = useMemo(
     () =>
@@ -485,6 +495,7 @@ export function MessageStream({
             sessionMainRootId={rootId}
             rootStatus={rootStatus}
             onExtendGoal={onExtendGoal}
+            questionAnswers={questionAnswers}
           />
         );
       }
@@ -517,10 +528,15 @@ export function MessageStream({
               rootStatus={rootStatus}
             />
           );
-        case "user":
+        case "user": {
+          const answer = questionAnswers.answersByUserId.get(m.id);
+          if (answer) {
+            return <AskUserMessageView key={m.id} message={answer} onAnswer={NOOP_ON_ANSWER} />;
+          }
           return (
             <UserMessageView key={m.id} message={m} localRuntime={localRuntime} onZoom={openZoom} />
           );
+        }
         case "assistant":
           return (
             <AssistantMessageView
@@ -544,8 +560,8 @@ export function MessageStream({
           return <GoalProgressView key={m.id} message={m} onExtend={onExtendGoal} />;
         case "ask_user":
           // Unanswered questions are pinned above the composer (ChatView); the
-          // stream keeps only the answered record.
-          return m.answer !== undefined ? (
+          // stream keeps the answer at its user echo when that echo is present.
+          return m.answer !== undefined && !questionAnswers.hiddenAskIds.has(m.id) ? (
             <AskUserMessageView key={m.id} message={m} onAnswer={NOOP_ON_ANSWER} />
           ) : null;
         case "system":
@@ -578,6 +594,7 @@ export function MessageStream({
       localRuntime,
       onExtendGoal,
       openZoom,
+      questionAnswers,
       readOnly,
       rootId,
       rootStatus,

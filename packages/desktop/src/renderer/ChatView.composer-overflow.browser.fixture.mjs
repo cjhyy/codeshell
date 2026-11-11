@@ -638,12 +638,45 @@ try {
       });
       const state = await snapshot(pending);
       assert.equal(state.pending, "true");
-      assert.ok(state.composer.height <= state.root.height * 0.4 + 1);
-      assert.ok(
-        (await pending.locator(".cs-chat-sticky").boundingBox()).height <=
-          state.root.height * 0.6 + 1,
+      assert.equal(await pending.locator(".cs-chat-sticky").count(), 0);
+      const question = pending.locator(".cs-chat-composer-wrap .cs-chat-question-dock");
+      assert.equal(await question.count(), 1);
+      assert.ok(state.composer.height <= state.root.height + 1);
+      assert.ok(state.rootScrollHeight <= state.rootClientHeight + 1);
+      const choice = question.getByRole("button", { name: "Option 12", exact: true });
+      await choice.focus();
+      await pending.keyboard.press("Space");
+      const answer = question.getByRole("button", { name: "Send answer", exact: true });
+      await pending.keyboard.press("Tab");
+      assert.equal(await answer.evaluate((element) => element === document.activeElement), true);
+      assert.equal(
+        await hit(answer),
+        true,
+        "The answer action stays visible with a long draft and queued messages: " +
+          JSON.stringify({
+            variant,
+            question: await question.boundingBox(),
+            answer: await answer.boundingBox(),
+            composer: (await snapshot(pending)).composer,
+          }),
       );
-      cases.push(variant + " retains pending 60/40 bounds");
+      const currentDraft = await pending.locator("textarea").inputValue();
+      await pending.locator("textarea").focus();
+      await pending.locator("textarea").evaluate((element) => element.setSelectionRange(12, 20));
+      await pending.evaluate(() => window.fixture.setQueue(20));
+      await frames(pending);
+      assert.equal(await pending.locator("textarea").inputValue(), currentDraft);
+      assert.deepEqual(
+        await pending.locator("textarea").evaluate((element) => ({
+          active: element === document.activeElement,
+          start: element.selectionStart,
+          end: element.selectionEnd,
+        })),
+        { active: true, start: 12, end: 20 },
+      );
+      cases.push(
+        variant + " keeps question actions and the composing draft inside one bounded composer",
+      );
       await pending.close();
     }
   }

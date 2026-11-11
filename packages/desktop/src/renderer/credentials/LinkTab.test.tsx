@@ -127,14 +127,13 @@ mock.module("@/components/ui/dropdown-menu", () => ({
 
 const {
   buildCliLinkConnectionRequest,
-  ChatGatewayTab,
   CliQuickAuthPanel,
-  gatewayCapabilityLabels,
-  gatewayToolNames,
   LinkTab,
   resolveCliLiveness,
   resolvePreferredLinkRuntime,
 } = await import("./LinkTab");
+const { ChatGatewayPanel } = await import("./ChatGatewayPanel");
+const { gatewayCapabilityLabels, gatewayToolNames } = await import("./chatGatewayGuides");
 const { DialogProvider } = await import("../ui/DialogProvider");
 const { LinkConnectionDialog } = await import("./LinkConnectionDialog");
 const { FigmaConnectionCard } = await import("./FigmaConnectionCard");
@@ -2666,7 +2665,7 @@ describe("LinkTab integrations", () => {
       root?.render(
         <DialogProvider>
           <LinkTab cwd="/repo" />
-          <ChatGatewayTab />
+          <ChatGatewayPanel />
         </DialogProvider>,
       );
       await flushMicrotasks();

@@ -11,6 +11,7 @@ import type { ProviderQuota, QuotaResult } from "@cjhyy/code-shell-capability-co
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useT, type TFunction } from "../i18n/I18nProvider";
 
 type Which = "claude" | "codex" | "both";
 
@@ -86,8 +87,8 @@ function QuotaPanelContent({ which }: { which: Which }) {
         {!data && loading && <p className="text-xs text-muted-foreground">查询中…</p>}
         {data && (
           <div className="flex flex-col gap-3">
-            {data.claude && <ProviderBlock name="Claude Code" pq={data.claude} />}
-            {data.codex && <ProviderBlock name="Codex" pq={data.codex} />}
+            {data.claude && <QuotaProviderBlock name="Claude Code" pq={data.claude} />}
+            {data.codex && <QuotaProviderBlock name="Codex" pq={data.codex} />}
           </div>
         )}
 
@@ -103,12 +104,17 @@ function QuotaPanelContent({ which }: { which: Which }) {
   );
 }
 
-function ProviderBlock({ name, pq }: { name: string; pq: ProviderQuota }) {
-  if (pq.error || !pq.windows) {
+export function QuotaProviderBlock({ name, pq }: { name: string; pq: ProviderQuota }) {
+  const { t } = useT();
+  if (pq.error || !pq.windows?.length) {
     return (
       <div>
         <div className="mb-0.5 font-medium">{name}</div>
-        <div className="text-xs text-status-err">查询失败：{pq.error ?? "unknown"}</div>
+        <div className={cn("text-xs", pq.error ? "text-status-err" : "text-muted-foreground")}>
+          {pq.error
+            ? t("usagePage.quotaQueryFailed", { error: pq.error })
+            : t("usagePage.quotaUnavailable")}
+        </div>
       </div>
     );
   }
@@ -130,18 +136,18 @@ function ProviderBlock({ name, pq }: { name: string; pq: ProviderQuota }) {
         {other.map((w) => (
           <QuotaBar
             key={w.kind}
-            label={windowLabel(w.kind)}
+            label={windowLabel(w.kind, t)}
             usedPercent={w.usedPercent}
             resetsAt={w.resetsAt}
           />
         ))}
         {weekly.length > 0 && (
           <section className="mt-2 flex flex-col gap-2">
-            <h3 className="text-xs font-medium">每周限额</h3>
+            <h3 className="text-xs font-medium">{t("usagePage.quotaWeekly")}</h3>
             {weekly.map((w) => (
               <QuotaBar
                 key={w.kind}
-                label={weeklyLabel(w.kind)}
+                label={weeklyLabel(w.kind, t)}
                 usedPercent={w.usedPercent}
                 resetsAt={w.resetsAt}
               />
@@ -159,28 +165,28 @@ function ProviderBlock({ name, pq }: { name: string; pq: ProviderQuota }) {
             )
           }
         >
-          了解更多关于使用限额的信息
+          {t("usagePage.quotaLearnMore")}
         </button>
       )}
     </div>
   );
 }
 
-function windowLabel(kind: string): string {
+function windowLabel(kind: string, t: TFunction): string {
   switch (kind) {
     case "5h":
-      return "当前时段（5 小时）";
+      return t("usagePage.quotaCurrentWindow");
     case "7d":
-      return "每周限额";
+      return t("usagePage.quotaWeekly");
     case "overage":
-      return "额外用量";
+      return t("usagePage.quotaOverage");
     default:
       return kind;
   }
 }
 
-function weeklyLabel(kind: string): string {
-  if (kind === "7d") return "所有模型";
+function weeklyLabel(kind: string, t: TFunction): string {
+  if (kind === "7d") return t("usagePage.quotaAllModels");
   const model = kind.replace(/^7d[_-]/, "");
   switch (model) {
     case "fable":
@@ -205,17 +211,22 @@ function QuotaBar({
   usedPercent: number;
   resetsAt: number | null;
 }) {
+  const { t, lang } = useT();
+  if (!Number.isFinite(usedPercent))
+    return <p className="text-xs text-muted-foreground">{t("usagePage.quotaUnavailable")}</p>;
   const pct = Math.max(0, Math.min(100, usedPercent));
   const barColor = pct >= 90 ? "bg-status-err" : pct >= 75 ? "bg-status-warn" : "bg-status-running";
   return (
     <div>
       <div className="mb-0.5 flex items-center justify-between text-xs">
         <span className="text-muted-foreground">{label}</span>
-        <span className="tabular-nums">已使用 {pct.toFixed(0)}%</span>
+        <span className="tabular-nums">
+          {t("usagePage.quotaUsed", { percent: pct.toFixed(0) })}
+        </span>
       </div>
       <div
         role="progressbar"
-        aria-label={`${label}已使用`}
+        aria-label={t("usagePage.quotaUsedLabel", { label })}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={pct}
@@ -225,7 +236,7 @@ function QuotaBar({
       </div>
       {resetsAt != null && (
         <div className="mt-0.5 text-right text-[10px] text-muted-foreground">
-          {formatReset(resetsAt)}
+          {formatReset(resetsAt, lang === "zh" ? "zh-CN" : "en-US", t)}
         </div>
       )}
     </div>
@@ -245,18 +256,18 @@ function peakPercent(r: QuotaResult): number | null {
 }
 
 /** Show the provider's actual reset in the user's local timezone. */
-function formatReset(resetsAt: number): string {
+function formatReset(resetsAt: number, locale: string, t: TFunction): string {
   const delta = resetsAt - Math.floor(Date.now() / 1000);
-  if (delta <= 0) return "重置时间已到";
+  if (delta <= 0) return t("usagePage.quotaResetDue");
   const date = new Date(resetsAt * 1000);
-  const day = date.toLocaleDateString("zh-CN", {
+  const day = date.toLocaleDateString(locale, {
     ...(delta >= 7 * 86400 ? { year: "numeric", month: "numeric", day: "numeric" } : {}),
     weekday: "short",
   });
-  const time = date.toLocaleTimeString("zh-CN", {
+  const time = date.toLocaleTimeString(locale, {
     hour: "2-digit",
     minute: "2-digit",
     hourCycle: "h23",
   });
-  return `${day} ${time} 重置`;
+  return t("usagePage.quotaReset", { time: `${day} ${time}` });
 }

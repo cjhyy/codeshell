@@ -20,6 +20,7 @@ const source = String.raw`
 import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { ModelTracesView } from "./activity/ModelTracesView";
+import { UsagePage } from "./activity/UsagePage";
 import { ActivityNavigation } from "./activity/ActivityNavigation";
 import { AppMainView } from "./app/AppShell";
 import { LogsView } from "./logs/LogsView";
@@ -36,6 +37,8 @@ const history = Array.from({ length: 75 }, (_, i) => ({ envelope: envelope("hist
 const sessions = Array.from({ length: 120 }, (_, i) => ({ id: "session-" + i, title: "Session " + i, file: "/fixture/" + i, size: 1024, createdAt: 1800000000000, updatedAt: 1800000000000 + i }));
 const run = { runId: "run-original", objective: "Original run", status: "completed", cwd: "/original/project", createdAt: 1800000000000, updatedAt: 1800000000010, startedAt: 1800000000000, finishedAt: 1800000000010, sessionId: "original-session", error: null, summary: "Run completed", model: null, provider: null, durationMs: 10, usage: null, attemptCount: 1, latestCheckpointId: null, latestApprovalId: null, tags: [], metadata: {} };
 window.codeshell = {
+  getUsageSummary: async () => ({version:1,scope:"store",includesChildren:false,partial:false,persistenceErrors:0,invalidReceipts:0,scannedReceipts:0,requests:0,promptTokens:0,completionTokens:0,totalTokens:0,cacheReadTokens:0,cacheCreationTokens:0,knownEstimatedCostUsd:0,unknownCostRequests:0,unknownUsageRequests:0,byModel:[],bySession:[],byPurpose:[]}),
+  quota: { get: async () => ({}) },
   modelTraces: { sessions: async () => ({items:[], total:0}), list: async () => ({items:[], total:0}), get: async () => null, getConfig: async () => ({enabled:true,captureContent:true,includeEphemeral:true,retentionDays:7}), setConfig: async (patch) => ({enabled:true,captureContent:true,includeEphemeral:true,retentionDays:7,...patch}) },
   tailLog: async (bucket, limit) => {
     window.fixture.calls.push(["tail", bucket, limit]);
@@ -57,7 +60,7 @@ function App() {
   return <div className="flex h-screen min-h-0 flex-col bg-background text-foreground">
     <div className="h-11 shrink-0 border-b px-3 py-3 text-xs">CodeShell</div>
     <AppMainView lifecycle={null} searchLayer={null} navigation={<ActivityNavigation page={page} onNavigate={setPage} taskInboxEnabled={true} />}>
-      {page === "traces" ? <ModelTracesView /> : page === "logs" ? <LogsView /> : page === "approvals" ? <ApprovalsView queue={queue} history={history} onDecide={async (env) => {
+      {page === "usage" ? <UsagePage /> : page === "traces" ? <ModelTracesView /> : page === "logs" ? <LogsView /> : page === "approvals" ? <ApprovalsView queue={queue} history={history} onDecide={async (env) => {
         window.fixture.calls.push(["decide", env.requestId]);
         if (window.fixture.failApproval) throw new Error("Owned approval failure");
         setQueue([]);
@@ -183,8 +186,9 @@ try {
 
       const routes =
         lang === "zh"
-          ? ["执行观测", "后台工作", "会话管理", "审批记录", "诊断日志"]
+          ? ["用量", "执行观测", "后台工作", "会话管理", "审批记录", "诊断日志"]
           : [
+              "Usage",
               "Execution traces",
               "Background work",
               "Conversations",
@@ -193,7 +197,7 @@ try {
             ];
       // Use the actual navigation labels from the translated production tree.
       const navButtons = await nav.getByRole("button").all();
-      assert.equal(navButtons.length, 5, "Only current activity pages are reachable");
+      assert.equal(navButtons.length, 6, "Only current activity pages are reachable");
       assert.deepEqual(await nav.getByRole("button").allTextContents(), routes);
       for (let index = 0; index < navButtons.length; index += 1) {
         const button = navButtons[index];
@@ -216,7 +220,7 @@ try {
           path: path.join(output, `${lang}-${viewport.width}-${index}.png`),
         });
         cases.push({ lang, viewport, label });
-        if (index === 2) {
+        if (label === (lang === "zh" ? "会话管理" : "Conversations")) {
           await page
             .getByRole("button", { name: lang === "zh" ? "查看记录" : "View record", exact: true })
             .first()
@@ -246,7 +250,9 @@ try {
         }
       }
       assert.equal(routes.length, navButtons.length);
-      await nav.getByRole("button").nth(3).click();
+      await nav
+        .getByRole("button", { name: lang === "zh" ? "审批记录" : "Approvals", exact: true })
+        .click();
       await page
         .getByRole("button", { name: lang === "zh" ? "加载更多" : "Load more", exact: true })
         .click();

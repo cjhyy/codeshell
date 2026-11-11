@@ -101,3 +101,6 @@ export interface PetSessionBellState {
 
 /** Bounds of the editable settings; main's settings schema enforces the same. */
 export const PET_NOTIFICATION_MAX_PER_HOUR_RANGE = { min: 1, max: 60 } as const;
+export const PET_NOTIFICATION_MAX_P0_PER_HOUR_RANGE = { min: 1, max: 120 } as const;
+export const PET_NOTIFICATION_MERGE_WINDOW_SEC_RANGE = { min: 0, max: 3_600 } as const;
+export const PET_NOTIFICATION_PRESENCE_IDLE_SEC_RANGE = { min: 30, max: 1_800 } as const;
