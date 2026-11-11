@@ -38,7 +38,16 @@ export function nextProjectFixtureResponse(body) {
         typeof call.id === "string" && call.id.length > 0 && !calls.has(call.id),
         "invalid tool call identity",
       );
-      calls.set(call.id, { name: call.function?.name, index });
+      let name = call.function?.name;
+      if (name === "CallTool") {
+        const wrapped = JSON.parse(call.function.arguments);
+        check(
+          main && wrapped.name === "Write" && wrapped.args && typeof wrapped.args === "object",
+          "invalid deferred call",
+        );
+        name = wrapped.name;
+      }
+      calls.set(call.id, { name, index });
     } else if (message.role === "tool") {
       const call = calls.get(message.tool_call_id);
       check(call && call.name === sequence[results.length], "unexpected tool result sequence");
@@ -63,7 +72,8 @@ export function nextProjectFixtureResponse(body) {
   }
   if (main && results.length >= 2) {
     check(
-      results[1].content.includes("Selected tools for this run: Write.") &&
+      results[1].content.includes('"name":"Write"') &&
+        results[1].content.includes('"inputSchema":') &&
         results[1].content.includes("schemaRef: select:Write") &&
         !results[1].content.includes('Tool "Write" is not available'),
       "ToolSearch did not select Write",
@@ -73,10 +83,11 @@ export function nextProjectFixtureResponse(body) {
     return reply("Shared file Read and Write completed.", "completed");
 
   const name = sequence[results.length];
-  check(tools.has(name), "required tool schema was not advertised");
-  if (main && results.length < 2) {
+  const wireName = main && name === "Write" ? "CallTool" : name;
+  check(tools.has(wireName), "required tool schema was not advertised");
+  if (main) {
     check(tools.has("ToolSearch"), "default preset discovery is missing");
-    check(!tools.has("Write"), "Write appeared before explicit discovery");
+    check(!tools.has("Write"), "Write changed the frozen tool prefix");
   }
   const args =
     name === "ToolSearch"
@@ -100,7 +111,10 @@ export function nextProjectFixtureResponse(body) {
           index: 0,
           id: `smoke-${independent ? "panel" : "main"}-${name}`,
           type: "function",
-          function: { name, arguments: JSON.stringify(args) },
+          function: {
+            name: wireName,
+            arguments: JSON.stringify(wireName === "CallTool" ? { name, args } : args),
+          },
         },
       ],
     },
