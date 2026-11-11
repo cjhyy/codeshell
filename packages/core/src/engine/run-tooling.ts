@@ -71,18 +71,29 @@ export function initializeRunToolSurface(
     onSelectionChanged?: (selection: SessionToolSelection) => void;
   },
 ): ToolDefinition[] {
+  const toolDiscovery = toolCtx.llmConfig
+    ? resolvePromptCachePolicy(toolCtx.llmConfig).toolDiscovery
+    : "call-tool";
   // CallTool is a wire adapter, never a product capability or an external Host tool.
   const assembleModelCatalog = () => {
-    const definitions = assembleCatalog();
+    const definitions = assembleCatalog().map((definition) =>
+      toolDiscovery === "tool-reference" && definition.name === "ToolSearch"
+        ? {
+            ...definition,
+            description:
+              'Find available tools by keyword, then use "select:ToolName" (or comma-separated names) to load their definitions. ' +
+              "Invoke tools returned as native references directly by their exact names with schema-matching arguments. " +
+              "For tools returned as full schema text, use CallTool with the exact name and matching args. " +
+              "If an exact tool is unavailable, do not retry unless the Session context changes.",
+          }
+        : definition,
+    );
     return definitions.some((tool) => tool.name === "ToolSearch")
       ? [...definitions.filter((tool) => tool.name !== "CallTool"), callToolDef]
       : definitions.filter((tool) => tool.name !== "CallTool");
   };
   const catalog = assembleModelCatalog();
   const identity = toolCacheIdentity(toolCtx.llmConfig);
-  const toolDiscovery = toolCtx.llmConfig
-    ? resolvePromptCachePolicy(toolCtx.llmConfig).toolDiscovery
-    : "call-tool";
   let selection = normalizeSessionToolSelection(
     selectionForToolCacheCycle(routing?.selection, identity),
   );

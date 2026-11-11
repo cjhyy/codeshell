@@ -108,7 +108,13 @@ export function anthropicMessages(
     if (message.role === "system") continue;
     const role = message.role === "tool" ? "user" : message.role;
     if (typeof message.content === "string") {
-      result.push({ role, content: message.content });
+      result.push({
+        role,
+        content:
+          policy.toolDiscovery === "tool-reference"
+            ? [{ type: "text", text: message.content }]
+            : message.content,
+      });
       continue;
     }
     const blocks: Anthropic.ContentBlockParam[] = [];

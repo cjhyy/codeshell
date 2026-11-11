@@ -28,10 +28,18 @@ afterAll(() => {
 });
 
 const { Engine } = await import("./engine.js");
+const { EngineRuntime } = await import("./runtime.js");
+const { ModelPool } = await import("../llm/model-pool.js");
+const { ToolRegistry } = await import("../tool-system/registry.js");
+const { MCPManager } = await import("../tool-system/mcp-manager.js");
+const { SettingsManager } = await import("../settings/manager.js");
+const { CostTracker } = await import("../cost-tracker.js");
+const { currentUsageOwner } = await import("../cost-ledger/context.js");
 const cleanups: Array<() => Promise<void> | void> = [];
 const requests: any[] = [];
 const responses: ToolCall[][] = [];
 const executed: string[] = [];
+let longHistory = false;
 const behaviorMode = "native-discovery-fixture";
 const args = { target: { id: "测试", labels: ["one", "two"] }, limit: 3 };
 const schema = {
@@ -139,9 +147,12 @@ const fixtureFetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   if (!chat && request.url !== "https://openrouter.ai/api/v1/messages")
     throw new Error("Unexpected fixture endpoint");
   const body = await request.json();
+  const primary = currentUsageOwner()?.purpose === "main";
   if (chat) {
-    requests.push(body);
-    expect(responses.shift()).toEqual([]);
+    if (primary) {
+      requests.push(body);
+      expect(responses.shift()).toEqual([]);
+    } else expect(body.tools ?? []).toEqual([]);
     const completion = {
       id: "chat-fixture",
       object: "chat.completion",
@@ -173,7 +184,7 @@ const fixtureFetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   }
   expect(request.headers.get("authorization")).toBe("Bearer synthetic-fixture-key");
   expect(body.thinking).toEqual({ type: "disabled" });
-  if (JSON.stringify(body.system).includes("conversation summarizer")) {
+  if (!primary) {
     expect(body.tools ?? []).toEqual([]);
     return reply(body, [], true);
   }
@@ -194,12 +205,25 @@ function action(engine: InstanceType<typeof Engine>, name: string, revision = "v
     },
     async () => {
       executed.push(name);
-      return `Executed ${name}`;
+      return `Executed ${name}${longHistory ? " substantial local context".repeat(160) : ""}`;
     },
   );
 }
 function engine(root: string, revision = "v1", chat = false) {
+  // Hosts own model routing through EngineRuntime; avoid the legacy API-key
+  // onboarding path which selects a zero-config default from the endpoint.
+  const registry = new ToolRegistry({ builtinTools: ["ToolSearch"] });
+  const runtime = new EngineRuntime({
+    modelPool: new ModelPool(),
+    toolRegistry: registry,
+    settings: new SettingsManager(root, "isolated"),
+    mcpPool: new MCPManager(registry),
+    costTracker: new CostTracker(),
+    usageStorageDir: join(root, "usage"),
+  });
+  cleanups.push(() => runtime.close());
   const value = new Engine({
+    runtime,
     llm: {
       provider: chat ? "openai" : "anthropic",
       providerKind: "openrouter",
@@ -272,6 +296,7 @@ afterEach(async () => {
   requests.length = 0;
   responses.length = 0;
   executed.length = 0;
+  longHistory = false;
 });
 
 function directory() {
@@ -291,9 +316,9 @@ test("real Engine and SDK append three native discoveries, preserve frozen catal
     step(name);
   }
   responses.push([]);
-  expect((await first.run("Perform the local checks", { sessionId, behaviorMode })).reason).toBe(
-    "completed",
-  );
+  const outcome = await first.run("Perform the local checks", { sessionId, behaviorMode });
+
+  expect(outcome.reason).toBe("completed");
   expect(responses).toHaveLength(0);
   expect(requests).toHaveLength(9);
   assertPrefix(requests);
@@ -362,8 +387,10 @@ test("real Engine and SDK append three native discoveries, preserve frozen catal
 test("manual compaction promotes discoveries and freezes the next native catalog immediately", async () => {
   const value = engine(directory());
   const sessionId = "native-reference-rebase";
+  longHistory = true;
   select("Alpha");
   step("Alpha");
+  for (let index = 0; index < 8; index++) step("Warmup", `history-${index}`);
   responses.push([]);
   await value.run("Perform checks", { sessionId, behaviorMode });
   const before = requests[0];
