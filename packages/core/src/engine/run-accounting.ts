@@ -95,6 +95,7 @@ export function wireRunModelFacade(args: {
   accounting: RunUsageAccounting;
   assertInstructionsCurrent?: () => void;
   requestBinding?: ModelRequestBinding;
+  onPrimaryResponse?: (startedAt: number) => void;
 }): {
   modelFacade: ModelFacade;
   getRunUsage: () => ReturnType<ModelFacade["getUsage"]>;
@@ -102,7 +103,12 @@ export function wireRunModelFacade(args: {
   const { llmClient, auxSummaryClient, transcript, accounting } = args;
 
   // Create components (requires resolved llmClient).
-  const modelFacade = new ModelFacade(llmClient, transcript, args.requestBinding);
+  const modelFacade = new ModelFacade(
+    llmClient,
+    transcript,
+    args.requestBinding,
+    args.onPrimaryResponse,
+  );
   const getRunUsage = () => {
     const visible = modelFacade.getUsage();
     const externalRunUsage = accounting.getExternalRunUsage();
