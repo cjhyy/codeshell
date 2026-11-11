@@ -251,17 +251,15 @@ describe("notifyAgentDone", () => {
   const input = { title: "code-shell", body: "完成了" };
   async function run(
     sessionId: string | null,
-    answers: ReadonlyArray<PetSessionBellState | Error> | undefined,
-  ): Promise<{ shown: number; asked: number; waits: number[] }> {
+    answer: PetSessionBellState | Error | undefined,
+  ): Promise<{ shown: number; asked: number }> {
     const sent: unknown[] = [];
-    const waits: number[] = [];
     let asked = 0;
     await notifyAgentDone(sessionId, input, {
-      ...(answers
+      ...(answer
         ? {
             bell: {
               getSessionBell: async () => {
-                const answer = answers[Math.min(asked, answers.length - 1)]!;
                 asked += 1;
                 if (answer instanceof Error) throw answer;
                 return answer;
@@ -272,42 +270,31 @@ describe("notifyAgentDone", () => {
       notify: async (value) => {
         sent.push(value);
       },
-      wait: async (ms) => {
-        waits.push(ms);
-      },
     });
-    return { shown: sent.length, asked, waits };
+    return { shown: sent.length, asked };
   }
   const shown = async (
     sessionId: string | null,
     bell: PetSessionBellState | Error | undefined,
-  ): Promise<number> => (await run(sessionId, bell ? [bell] : undefined)).shown;
+  ): Promise<number> => (await run(sessionId, bell)).shown;
 
   test("main's notice router owns an outcome a rule just fired for", async () => {
     expect(await shown("s-a", { ...OFF, firedRecently: true })).toBe(0);
     expect(await shown("s-a", { ...ON, firedRecently: true })).toBe(0);
   });
 
-  test("a watching rule that has not fired yet gets one late re-check", async () => {
-    // Main records the fire after the renderer asked: the re-check sees it.
-    const late = await run("s-a", [ON, { ...OFF, firedRecently: true }]);
-    expect(late).toEqual({ shown: 0, asked: 2, waits: [1_500] });
-    const delegatedLate = await run("s-a", [DELEGATED, { ...OFF, firedRecently: true }]);
-    expect(delegatedLate.shown).toBe(0);
-  });
-
-  test("a watching rule that did not fire for this outcome leaves the local notification", async () => {
-    // e.g. a rule for failures only, or one Mimi's policy suppressed.
-    expect(await run("s-a", [ON, ON])).toEqual({ shown: 1, asked: 2, waits: [1_500] });
-    expect((await run("s-a", [DELEGATED, OFF])).shown).toBe(1);
-    expect((await run("s-a", [ON, new Error("ipc down")])).shown).toBe(1);
+  test("a Session with an active rule always leaves its outcome to the router", async () => {
+    // Even a rule that will not fire for this outcome (failures only, held by
+    // policy): the router decides, the renderer never adds a second notification.
+    expect(await run("s-a", ON)).toEqual({ shown: 0, asked: 1 });
+    expect(await run("s-a", DELEGATED)).toEqual({ shown: 0, asked: 1 });
   });
 
   test("otherwise the hidden window says the agent is done right away", async () => {
-    expect(await run("s-a", [OFF])).toEqual({ shown: 1, asked: 1, waits: [] });
+    expect(await run("s-a", OFF)).toEqual({ shown: 1, asked: 1 });
     expect(await shown("s-a", UNAVAILABLE)).toBe(1);
     expect(await shown(null, ON)).toBe(1);
     expect(await shown("s-a", undefined)).toBe(1);
-    expect(await run("s-a", [new Error("ipc down")])).toEqual({ shown: 1, asked: 1, waits: [] });
+    expect(await run("s-a", new Error("ipc down"))).toEqual({ shown: 1, asked: 1 });
   });
 });
