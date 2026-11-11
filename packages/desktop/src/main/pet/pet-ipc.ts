@@ -336,7 +336,8 @@ function parseFollowUpControl(value: unknown): PetFollowUpControlRequest {
     Object.keys(row).some((key) => !keys.includes(key)) ||
     !["cancel", "complete", "dismiss", "reschedule"].includes(String(row.action)) ||
     typeof row.followUpId !== "string" ||
-    !/^registered-followup-[a-f0-9]{24}$/u.test(row.followUpId) ||
+    // Registered follow-ups are schedule rules: the id is the rule id.
+    !/^rule-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u.test(row.followUpId) ||
     !Number.isSafeInteger(row.expectedRevision) ||
     Number(row.expectedRevision) < 1 ||
     (reschedule &&

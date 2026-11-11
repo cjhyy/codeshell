@@ -35,6 +35,32 @@ class AuthorityClient extends LLMClientBase {
     authorityCalls.set(this.model, calls);
     const usage = { promptTokens: 1, completionTokens: 1, totalTokens: 2 };
     this.recordUsage(usage, options);
+    if (
+      options.tools?.length &&
+      options.systemPrompt.includes("NEW_SETTINGS_PROMPT") &&
+      !JSON.stringify(options.messages).includes('"current-agent-schema"')
+    ) {
+      return {
+        text: "",
+        toolCalls: [
+          { id: "current-agent-schema", toolName: "ToolSearch", args: { query: "select:Agent" } },
+          {
+            id: "stale-agent-call",
+            toolName: "CallTool",
+            args: {
+              name: "Agent",
+              args: {
+                agent_type: "old-agent",
+                description: "Check old role rejection",
+                prompt: "Do not run; this role is no longer authorized.",
+              },
+            },
+          },
+        ],
+        stopReason: "tool_use",
+        usage,
+      };
+    }
     return { text: "ok", toolCalls: [], stopReason: "stop", usage };
   }
 }
@@ -380,7 +406,7 @@ describe("ChatSessionManager resident Engine root migration", () => {
             sessionStorageDir: sessionsDir,
             settingsScope: "project",
             headless: true,
-            maxTurns: 1,
+            maxTurns: 2,
             sandbox: defaultSandboxConfig("off"),
             mcpServers: settings.mcpServers,
             customSystemPrompt: settings.agent.customSystemPrompt,
@@ -468,8 +494,27 @@ describe("ChatSessionManager resident Engine root migration", () => {
       expect(nextTurnContext).not.toContain("OLD_PROFILE_MARKER");
       expect(nextTurnContext).not.toContain("OLD_SOURCE_MARKER");
       expect(nextTurnContext).not.toContain("OLD_SKILL_MARKER");
-      expect(nextTurn.tools).toContain("new-agent");
-      expect(nextTurn.tools).not.toContain("old-agent");
+      const originalTurn = authorityCalls
+        .get(model)!
+        .find((call) => call.tools.includes("old-agent"))!;
+      expect(nextTurn.tools).toBe(originalTurn.tools);
+      expect(nextTurn.tools).toContain("old-agent");
+      expect(nextTurn.tools).not.toContain("new-agent");
+      const results = JSON.parse(nextTurn.messages).flatMap((message: { content: unknown }) =>
+        Array.isArray(message.content) ? message.content : [],
+      );
+      const discovery = results.find(
+        (block: { type: string; tool_use_id?: string }) =>
+          block.type === "tool_result" && block.tool_use_id === "current-agent-schema",
+      );
+      expect(discovery.content).toContain('"enum":["new-agent"]');
+      expect(discovery.content).not.toContain("old-agent");
+      const rejected = results.find(
+        (block: { type: string; tool_use_id?: string }) =>
+          block.type === "tool_result" && block.tool_use_id === "stale-agent-call",
+      );
+      expect(rejected.content).toContain("unknown agent_type 'old-agent'");
+      expect(rejected.content).toContain("new-agent");
     } finally {
       authorityCalls.clear();
       if (previousCodeShellHome === undefined) delete process.env.CODE_SHELL_HOME;

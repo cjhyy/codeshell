@@ -417,3 +417,20 @@ test("authorized unique creation preserves one task and rejects a different sess
   ).rejects.toThrow(/different definition/);
   expect(listAutomations()).toHaveLength(1);
 });
+
+test("Mimi's schedule-rule jobs (and the retired follow-up store's) are not automations", () => {
+  sched.setExecutionEnabled(false);
+  const runAt = Date.now() + 60 * 60_000;
+  sched.create("交材料", "once", "Mimi scheduled rule", {
+    once: true,
+    runAt,
+    creationKey: `mimi-follow-up:rule:rule-00000000-0000-4000-8000-0000000000aa:1:${runAt}`,
+  });
+  sched.create("旧的跟进", "once", "Registered follow-up wake", {
+    once: true,
+    runAt,
+    creationKey: "mimi-follow-up:registered-followup-000000000000000000000001:1",
+  });
+  const visible = sched.create("daily", "1h", "p");
+  expect(listAutomations().map((job) => job.id)).toEqual([visible.id]);
+});

@@ -143,15 +143,19 @@ describe("shared MCP pool supplies each run's local registry", () => {
       const beforeConnection = run.context.refreshRunTools!();
       expect(local.hasTool("mcp_fixture_echo_a")).toBe(false);
       await run.connect();
-      expect(run.context.refreshRunTools!().map((tool) => tool.name)).toEqual(["ToolSearch"]);
+      expect(run.context.refreshRunTools!().map((tool) => tool.name)).toEqual([
+        "ToolSearch",
+        "CallTool",
+      ]);
       expect(await toolSearchTool({ query: "select:mcp_fixture_echo_a" }, run.context)).toContain(
         "mcp_fixture_echo_a",
       );
       expect(run.context.refreshRunTools!().map((tool) => tool.name)).toEqual([
         "ToolSearch",
-        "mcp_fixture_echo_a",
+        "CallTool",
       ]);
-      expect(beforeConnection.map((tool) => tool.name)).toEqual(["ToolSearch"]);
+      expect(run.context.runToolSurface!.isCallable("mcp_fixture_echo_a")).toBe(true);
+      expect(beforeConnection.map((tool) => tool.name)).toEqual(["ToolSearch", "CallTool"]);
       const result = await local.executeTool("mcp_fixture_echo_a", {}, { ctx: run.context });
       expect(result.isError).toBe(false);
       expect(result.result).toContain('"tool":"echo_a"');

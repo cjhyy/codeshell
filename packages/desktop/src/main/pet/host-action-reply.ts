@@ -283,10 +283,29 @@ function renderFollowUpMutationLine(execution: PetHostActionExecution): string {
   const label = labels[action] ?? "跟进项已更新";
   const wakeAt = execution.result?.wakeAt;
   const timezone = execution.result?.timezone;
-  const timing =
-    typeof wakeAt === "number" && typeof timezone === "string"
-      ? `时间：${new Intl.DateTimeFormat("zh-CN", { dateStyle: "medium", timeStyle: "short", timeZone: timezone }).format(wakeAt)}（${timezone}）。`
-      : "";
+  const format = (at: number) =>
+    new Intl.DateTimeFormat("zh-CN", {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: timezone as string,
+    }).format(at);
+  const recurrence = execution.result?.recurrence;
+  const upcoming = Array.isArray(execution.result?.upcoming)
+    ? execution.result.upcoming.filter((at): at is number => Number.isSafeInteger(at)).slice(0, 2)
+    : [];
+  let timing = "";
+  if (typeof timezone === "string" && typeof recurrence === "string" && upcoming.length > 0) {
+    // Mimi's label is untrusted text: one line, bounded; the cron stays visible.
+    const scheduleLabel =
+      typeof execution.result?.scheduleLabel === "string"
+        ? execution.result.scheduleLabel.replace(/\s+/gu, " ").trim().slice(0, 64)
+        : "";
+    timing =
+      `重复：${scheduleLabel || recurrence}；接下来 ${upcoming.map(format).join("、")}（${timezone}）。` +
+      `规则：${recurrence.slice(0, 64)}。`;
+  } else if (typeof wakeAt === "number" && typeof timezone === "string") {
+    timing = `时间：${format(wakeAt)}（${timezone}）。`;
+  }
   return (title ? `${label}：「${title}」。` : `${label}。`) + timing;
 }
 

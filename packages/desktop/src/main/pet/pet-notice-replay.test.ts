@@ -42,8 +42,13 @@ describe("pending-notice replay", () => {
 
     // Taken but the turn never started (e.g. it failed first): released.
     const first = current.wiring.inboundReplay(origin)!;
+    // The plain reply line rides along: the owner can answer the item in their own words.
     expect(await first.take()).toEqual([
-      { kind: "session.failed", title: "修登录", body: "「修登录」没做完：编译失败" },
+      {
+        kind: "session.failed",
+        title: "修登录",
+        body: "「修登录」没做完：编译失败\n要重试，还是交给 Mimi？直接回我就行。",
+      },
     ]);
     const concurrent = current.wiring.inboundReplay(origin)!;
     expect(await concurrent.take()).toEqual([]);

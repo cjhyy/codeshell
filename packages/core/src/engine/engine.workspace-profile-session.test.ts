@@ -42,20 +42,26 @@ class ProfileSessionClient extends LLMClientBase {
         return response;
       }
       if (call === 1) {
-        expect(options.tools?.map((tool) => tool.name)).toContain("MemorySave");
+        expect(options.tools?.map((tool) => tool.name)).not.toContain("MemorySave");
+        expect(options.tools?.map((tool) => tool.name)).toContain("CallTool");
+        expect(JSON.stringify(options.messages)).toContain("profile");
+        expect(JSON.stringify(options.messages)).toContain("inputSchema");
         const response: LLMResponse = {
           text: "",
           toolCalls: [
             {
               id: "save-profile-memory",
-              toolName: "MemorySave",
+              toolName: "CallTool",
               args: {
-                scope: "user",
-                location: "profile",
-                name: "profile-tool-wiring",
-                description: "Profile memory ToolContext wiring",
-                type: "project",
-                content: "This memory belongs to the active digital human.",
+                name: "MemorySave",
+                args: {
+                  scope: "user",
+                  location: "profile",
+                  name: "profile-tool-wiring",
+                  description: "Profile memory ToolContext wiring",
+                  type: "project",
+                  content: "This memory belongs to the active digital human.",
+                },
               },
             },
           ],

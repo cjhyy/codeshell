@@ -214,6 +214,26 @@ export class ToolExecutor {
   }
 
   private enforceArgumentPolicy(call: ToolCall): ToolResult | undefined {
+    if (
+      (call.toolName === COMPLETE_GOAL_TOOL_NAME || call.toolName === CANCEL_GOAL_TOOL_NAME) &&
+      (this.toolCtx?.hasActiveGoal?.() ?? this.toolCtx?.toolVisibility?.hasGoal) !== true
+    ) {
+      return {
+        id: call.id,
+        toolName: call.toolName,
+        error: `Tool ${call.toolName} is only available while an active goal is present. Do NOT retry this tool call unless a goal is active.`,
+        isError: true,
+      };
+    }
+    if (call.toolName === CANCEL_GOAL_TOOL_NAME && call.args.confirm !== true) {
+      return {
+        id: call.id,
+        toolName: call.toolName,
+        isError: true,
+        error:
+          "cancel_goal ignored: confirm must remain true after hooks and approval. The goal was not cancelled.",
+      };
+    }
     if (this.toolCtx?.validateToolArguments) {
       let error: string | undefined;
       try {
@@ -388,19 +408,13 @@ export class ToolExecutor {
         isError: true,
       };
     }
-    // The model may only call schemas advertised for its completed step. A
-    // ToolSearch selection in the same batch takes effect at the NEXT step.
-    // Executor-owned bound calls are implementation details (ReadSource calls
-    // LinkAction); they retain every authority/permission/hook gate below.
-    if (
-      surface &&
-      !constraint &&
-      !(this.toolCtx?.modelToolNames?.has(call.toolName) ?? surface.isSelected(call.toolName))
-    ) {
+    // Discovery is append-only; current eligibility and all authority gates still apply.
+    // Bound implementation calls retain authority gates but need no model discovery.
+    if (surface && !constraint && !surface.isCallable(call.toolName)) {
       return {
         id: call.id,
         toolName: call.toolName,
-        error: `Tool ${call.toolName} is available but not loaded for this model step. Use ToolSearch with query "select:${call.toolName}", then call it in the next model step.`,
+        error: `Tool ${call.toolName} is available but not loaded. Use ToolSearch with query "select:${call.toolName}" first.`,
         isError: true,
       };
     }
@@ -415,17 +429,6 @@ export class ToolExecutor {
         id: call.id,
         toolName: call.toolName,
         error: `Tool ${call.toolName} is disabled by this project's capability override and cannot be used. Do NOT retry this tool call.`,
-        isError: true,
-      };
-    }
-    if (
-      (call.toolName === COMPLETE_GOAL_TOOL_NAME || call.toolName === CANCEL_GOAL_TOOL_NAME) &&
-      this.toolCtx?.toolVisibility?.hasGoal !== true
-    ) {
-      return {
-        id: call.id,
-        toolName: call.toolName,
-        error: `Tool ${call.toolName} is only available while an active goal is present. Do NOT retry this tool call unless a goal is active.`,
         isError: true,
       };
     }

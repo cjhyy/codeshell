@@ -6,7 +6,7 @@ import { LLMClientBase } from "../llm/client-base.js";
 import { registerProvider } from "../llm/client-factory.js";
 import type { CreateMessageOptions } from "../llm/types.js";
 import type { RouteSessionMessageInput } from "../session/session-message.js";
-import type { LLMResponse } from "../types.js";
+import type { LLMResponse, ToolDefinition } from "../types.js";
 import { Engine } from "./engine.js";
 import { createWorkspaceContext } from "../workspace/workspace-context.js";
 
@@ -24,8 +24,17 @@ class SessionMessageClient extends LLMClientBase {
     }
     const call = callsByModel.get(this.model) ?? 0;
     callsByModel.set(this.model, call + 1);
-    const definition = options.tools?.find((tool) => tool.name === "SendMessageToSession");
-    if (definition) {
+    expect(options.tools.map((tool) => tool.name)).not.toContain("SendMessageToSession");
+    expect(options.tools.map((tool) => tool.name)).toContain("CallTool");
+    const discovery = options.messages
+      .flatMap((message) => (Array.isArray(message.content) ? message.content : []))
+      .find(
+        (block) => block.type === "tool_result" && block.tool_use_id === "load-session-messaging",
+      );
+    if (discovery && typeof discovery.content === "string") {
+      const definition = JSON.parse(
+        discovery.content.split("\n").find((line) => line.startsWith("{"))!,
+      ) as ToolDefinition;
       const properties = definition.inputSchema.properties as Record<string, { enum?: unknown }>;
       seenTargetEnums.set(this.model, properties.target_session_id?.enum);
     }
@@ -49,10 +58,13 @@ class SessionMessageClient extends LLMClientBase {
               toolCalls: [
                 {
                   id: "send-ui-work",
-                  toolName: "SendMessageToSession",
+                  toolName: "CallTool",
                   args: {
-                    target_session_id: "ui-session",
-                    message: "  Read docs/prd.md and design the UI.  ",
+                    name: "SendMessageToSession",
+                    args: {
+                      target_session_id: "ui-session",
+                      message: "  Read docs/prd.md and design the UI.  ",
+                    },
                   },
                 },
               ],

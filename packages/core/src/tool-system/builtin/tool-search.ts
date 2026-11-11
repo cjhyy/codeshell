@@ -1,4 +1,4 @@
-/** Built-in ToolSearch — discover eligible tools and load selected schemas for this run. */
+/** Built-in ToolSearch — append eligible schemas without rewriting the tool prefix. */
 
 import type { ToolDefinition, RegisteredTool } from "../../types.js";
 import type { ToolRegistry } from "../registry.js";
@@ -13,6 +13,7 @@ const MAX_RESULTS = 20;
 const MAX_PURPOSE_LENGTH = 180;
 const MAX_SERVER_DISPLAY_LENGTH = 120;
 const MAX_OUTPUT_LENGTH = 8192;
+const MAX_SELECT_OUTPUT_LENGTH = 24_000;
 const MAX_HEALTH_LENGTH = 2048;
 const METADATA_SEPARATOR = "\n\n---\n\n";
 const OMITTED_METADATA_NOTICE =
@@ -23,8 +24,9 @@ export const toolSearchToolDef: ToolDefinition = {
   description:
     "Find tools available in the current Session context by name or keyword. " +
     "Keyword searches return compact metadata and schemaRef values. " +
-    'Use "select:ToolName" (or comma-separated names) to load full schemas into the next ' +
-    "model request for this run. If an exact tool is reported unavailable, " +
+    'Use "select:ToolName" (or comma-separated names) to return full schemas here. ' +
+    "Use CallTool when available; otherwise invoke the exact tool name with schema-matching arguments. " +
+    "If an exact tool is reported unavailable, " +
     "do not retry unless the Session context changes.",
   inputSchema: {
     type: "object",
@@ -98,39 +100,67 @@ export async function toolSearchTool(
     if (names.some((name) => !name) || names.length > MAX_RESULTS) {
       return `Error: select requires between 1 and ${MAX_RESULTS} non-empty tool names`;
     }
-    if (ctx.runToolSurface) {
-      const { selected, unavailable } = ctx.runToolSurface.select(names);
-      const unavailableText = unavailable.map(unavailableTool).join("\n");
-      const receiptBudget = resultBudget - (unavailableText ? unavailableText.length + 2 : 0);
-      const receipt = selected.length
-        ? formatBoundedMetadata(
-            [
-              `Selected tools for this run: ${selected.join(", ")}.\n` +
-                `schemaRef: select:${selected.join(",")}`,
-            ],
-            receiptBudget,
-          )
-        : "";
-      return withHealth([receipt, unavailableText].filter(Boolean).join("\n\n"));
-    }
-    // Legacy contexts can discover metadata, but have no per-run loading state to mutate.
-    const byName = new Map(tools.map((tool) => [tool.name, tool]));
-    const metadata: string[] = [];
-    const unavailable: string[] = [];
-    for (const name of new Set(names)) {
-      const tool = byName.get(name);
-      if (tool) metadata.push(formatToolMetadata(tool));
-      else
-        unavailable.push(currentDefinitions ? unavailableTool(name) : `Tool "${name}" not found.`);
-    }
-    // Preserve every unavailable-name receipt; the bounded query limits their combined size.
-    const unavailableText = unavailable.join("\n");
-    const metadataBudget = resultBudget - (unavailableText ? unavailableText.length + 2 : 0);
-    const metadataText = formatBoundedMetadata(metadata, metadataBudget);
-    return withHealth([unavailableText, metadataText].filter(Boolean).join("\n\n"));
+    const selected = formatSelectedDefinitions(
+      tools,
+      [...new Set(names)],
+      MAX_SELECT_OUTPUT_LENGTH - (health ? health.length + 2 : 0),
+      !!currentDefinitions,
+      ctx.runToolSurface ? CALL_TOOL_USAGE : DIRECT_TOOL_USAGE,
+    );
+    // A schema that did not fit must never become callable as a discovery side effect.
+    ctx.runToolSurface?.select(selected.loaded);
+    return withHealth(selected.output);
   }
 
   return withHealth(searchByKeyword(tools, query, maxResults, resultBudget));
+}
+
+const CALL_TOOL_USAGE =
+  "Use CallTool to call these tools: name is the exact tool name and args must match inputSchema.";
+const DIRECT_TOOL_USAGE = "Call each tool by its exact name with arguments matching inputSchema.";
+
+function formatSelectedDefinitions(
+  tools: readonly ToolDefinition[],
+  names: string[],
+  budget: number,
+  scoped: boolean,
+  usage: string,
+): { output: string; loaded: string[] } {
+  const byName = new Map(tools.map((tool) => [tool.name, tool]));
+  const candidates: ToolDefinition[] = [];
+  const unavailable: string[] = [];
+  for (const name of names) {
+    const tool = byName.get(name);
+    if (tool) candidates.push(tool);
+    else unavailable.push(scoped ? unavailableTool(name) : `Tool "${name}" not found.`);
+  }
+  const entries: string[] = [];
+  const loaded: string[] = [];
+  const omittedNotice = (remaining: readonly ToolDefinition[]) =>
+    remaining.length
+      ? `Not loaded: ${remaining.map((tool) => tool.name).join(", ")}. ` +
+        "The complete schemas exceed the output budget; select each tool separately with ToolSearch select:<name>."
+      : "";
+  const assemble = (schemas: string[], omitted: string) =>
+    [...unavailable, ...schemas, omitted, ...(schemas.length ? [usage] : [])]
+      .filter(Boolean)
+      .join("\n\n");
+  let omitted = "";
+  for (const [index, tool] of candidates.entries()) {
+    const schema = JSON.stringify({
+      name: tool.name,
+      description: tool.description,
+      inputSchema: tool.inputSchema,
+    });
+    const entry = `### ${tool.name}\nschemaRef: select:${tool.name}\n${schema}`;
+    if (assemble([...entries, entry], omittedNotice(candidates.slice(index + 1))).length > budget) {
+      omitted = omittedNotice(candidates.slice(index));
+      break;
+    }
+    entries.push(entry);
+    loaded.push(tool.name);
+  }
+  return { output: assemble(entries, omitted), loaded };
 }
 
 function isVisible(tool: RegisteredTool, ctx: ToolContext): boolean {

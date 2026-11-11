@@ -70,3 +70,39 @@ test("retain drops entries whose files were not listed", () => {
   cache.read("a", file);
   expect(reads).toHaveLength(2);
 });
+
+test("cache entry and byte budgets evict least recently used files", () => {
+  const root = mkdtempSync(join(tmpdir(), "codeshell-pinned-budget-"));
+  roots.push(root);
+  let reads = 0;
+  const cache = new PinnedFileCache<{ value: number }>({
+    maxBytes: 1024,
+    maxEntries: 2,
+    maxCachedBytes: 22,
+    settleMs: 2_000,
+    now: () => Date.now() + 60_000,
+    parse: (raw) => JSON.parse(raw),
+    readText: (file) => {
+      reads++;
+      return readFileSync(file, "utf8");
+    },
+  });
+  for (const name of ["a", "b", "c"]) writeFileSync(join(root, name), '{"value":1}');
+  const read = (name: string) => cache.read(name, join(root, name));
+  read("a");
+  read("b");
+  read("a"); // b is now the least recently used entry.
+  read("c");
+  read("a");
+  expect(reads).toBe(3);
+  read("b");
+  expect(reads).toBe(4);
+  writeFileSync(join(root, "large"), '{"value":123456789012345}');
+  expect(read("large")?.value).toBe(123456789012345);
+  expect(read("large")?.value).toBe(123456789012345);
+  expect(reads).toBe(6); // Individually valid, but larger than the cache budget.
+  cache.retain(new Set());
+  read("a");
+  read("a");
+  expect(reads).toBe(7);
+});

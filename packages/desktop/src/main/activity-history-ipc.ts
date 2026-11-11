@@ -7,7 +7,7 @@ import { getSessionCwdIndex } from "./session-cwd-index.js";
 import { assertDesktopSessionId } from "./session-validation.js";
 import { listTitles, setTitle } from "./session-titles-store.js";
 import { tailLog, type LogBucket } from "./logs-service.js";
-import { readUsageHistory } from "./usage-history-service.js";
+import { ActivityHistoryWorker } from "./activity-history-worker-client.js";
 import { listRunsForUi, getRunHistory } from "./run-history-service.js";
 import { registerSessionTranscriptIpc } from "./session-transcript-ipc.js";
 import { registerModelTraceIpc } from "./model-trace-ipc.js";
@@ -18,6 +18,7 @@ export function registerActivityHistoryIpc(
   windows: () => BrowserWindow[],
 ) {
   configureModelTracing({ storageDir: join(sessionsRoot(), ".model-traces"), source: "desktop" });
+  const history = new ActivityHistoryWorker({ sessionsDir: sessionsRoot() });
   ipcMain.handle("sessions:setArchived", async (_event, id: string, archived: boolean) => {
     assertDesktopSessionId(id);
     if (typeof archived !== "boolean") throw new Error("archived must be a boolean");
@@ -45,7 +46,7 @@ export function registerActivityHistoryIpc(
     return tailLog(bucket, boundedLines);
   });
 
-  ipcMain.handle("usage:summary", async (_e, query) => readUsageHistory(query));
+  ipcMain.handle("usage:summary", async (_e, query) => history.usage(query));
 
   ipcMain.handle("runs:list", async (_e, options?: { includeSessions?: boolean }) =>
     listRunsForUi(options),
@@ -55,5 +56,12 @@ export function registerActivityHistoryIpc(
     return getRunHistory(runId);
   });
   registerSessionTranscriptIpc(ipcMain);
-  return registerModelTraceIpc(ipcMain, windows);
+  const traces = registerModelTraceIpc(ipcMain, windows, history);
+  return {
+    dispose: () => {
+      ipcMain.removeHandler("usage:summary");
+      traces.dispose();
+      return history.close();
+    },
+  };
 }

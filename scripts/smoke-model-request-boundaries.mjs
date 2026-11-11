@@ -211,6 +211,29 @@ if (process.argv[2] !== "--consume") {
     }
     if (
       body.stream &&
+      JSON.stringify(body.messages).includes("synthetic-private-hook") &&
+      !body.messages.some(
+        (message) =>
+          message.role === "tool" && message.tool_call_id === "synthetic-revoked-tool-call",
+      )
+    ) {
+      // Resuming with an empty allowlist revokes execution while preserving
+      // the frozen request schema. Exercise the executor gate, not just hashes.
+      assert.ok(body.tools.some((tool) => tool.function.name === "ListSources"));
+      response.choices[0].delta = {
+        tool_calls: [
+          {
+            index: 0,
+            id: "synthetic-revoked-tool-call",
+            type: "function",
+            function: { name: "ListSources", arguments: "{}" },
+          },
+        ],
+      };
+      response.choices[0].finish_reason = "tool_calls";
+    }
+    if (
+      body.stream &&
       JSON.stringify(body.messages).includes("proof-agent-parent") &&
       !body.messages.some((message) => message.role === "tool")
     ) {
@@ -644,7 +667,7 @@ if (process.argv[2] !== "--consume") {
     hookedProof.boundaries.at(-1).data.compositionDigest,
     richProof.boundaries[0].data.compositionDigest,
   );
-  assert.notEqual(
+  assert.equal(
     hookedProof.boundaries.at(-1).data.toolCatalogDigest,
     richProof.boundaries[0].data.toolCatalogDigest,
   );
@@ -656,6 +679,30 @@ if (process.argv[2] !== "--consume") {
     readLines(join(root, "requests.jsonl")).some((entry) =>
       JSON.stringify(entry.body.messages).includes("synthetic-private-hook"),
     ),
+  );
+  const richBodies = readLines(join(root, "requests.jsonl"))
+    .map((entry) => entry.body)
+    .filter((body) => body.stream && JSON.stringify(body.messages).includes("proof-rich"));
+  const frozenTools = JSON.stringify(richBodies[0].tools);
+  for (const body of richBodies) assert.equal(JSON.stringify(body.tools), frozenTools);
+  const revokedResults = transcriptEvents(engineConfig.sessionStorageDir, "proof-rich").filter(
+    (event) =>
+      event.type === "tool_result" && event.data.toolCallId === "synthetic-revoked-tool-call",
+  );
+  assert.equal(revokedResults.length, 1);
+  assert.equal(revokedResults[0].data.toolName, "ListSources");
+  assert.equal(revokedResults[0].data.result, undefined);
+  assert.match(revokedResults[0].data.error, /not allowed by this run profile/);
+  assert.ok(
+    richBodies.some((body) =>
+      body.messages.some(
+        (message) =>
+          message.role === "tool" &&
+          message.tool_call_id === "synthetic-revoked-tool-call" &&
+          /not allowed by this run profile/.test(message.content),
+      ),
+    ),
+    "the rejected call must be returned to the model without executing the frozen tool",
   );
 
   sdk = new core.Engine({
@@ -931,7 +978,7 @@ if (process.argv[2] !== "--consume") {
     console.log(
       JSON.stringify({
         sdk: "compiled SDK + transparent retry + stream parse fallback + resume/config/archive",
-        rich: "actual image/tool/steer/hook/catalog and composition change; Anthropic projection",
+        rich: "actual image/tool/steer/hook/composition change; frozen catalog with execution revocation; Anthropic projection",
         rejected: "real Engine custody and boundary/attempt writer failures zero fetch/fallback",
         desktopWorker:
           "actual stdio + private Host encrypted signing + restart/replay + pending shutdown",

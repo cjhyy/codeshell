@@ -37,7 +37,7 @@ describe("PromptComposer tool listing", () => {
     expect(tools).toEqual(originalDefinitions);
   });
 
-  it("retains eligible names and explains explicit schema selection without serializing schemas", async () => {
+  it("retains frozen names and explains appended schema selection without serializing schemas", async () => {
     const composer = new PromptComposer({ cwd: process.cwd(), model: "test-model" });
     const prompt = await composer.buildSystemPrompt([
       ...tools,
@@ -45,7 +45,8 @@ describe("PromptComposer tool listing", () => {
     ]);
     expect(prompt).toContain("\nRead, ToolSearch");
     expect(prompt).toContain('"select:ToolName"');
-    expect(prompt).toContain("next model step");
+    expect(prompt).toContain("returns its full schema");
+    expect(prompt).toContain("use CallTool with the exact name and an args object");
     expect(prompt).toContain("Selection does not grant permission.");
     expect(prompt).not.toContain("file_path");
   });

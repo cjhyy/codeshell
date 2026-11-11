@@ -1614,6 +1614,105 @@ describe("WorkspaceIndicator", () => {
     expect(textOf(container)).not.toContain("worktree/old-session");
   });
 
+  test("switching to an existing worktree updates the chip and current row despite a main branch probe", async () => {
+    ensureMiniDom();
+    let workspace: SessionWorkspace = { root: "/repo", kind: "main" };
+    const nextWorkspace: SessionWorkspace = {
+      root: "/repo/.worktrees/feature",
+      kind: "worktree",
+      worktree: {
+        path: "/repo/.worktrees/feature",
+        branch: "worktree/feature",
+        baseRef: "main",
+        createdBy: "codeshell",
+      },
+    };
+    const worktrees: SessionWorkspaceWorktreeInfo[] = [
+      { path: "/repo", branch: "main", head: "abc123", isMain: true },
+      {
+        path: "/repo/.worktrees/feature",
+        branch: "worktree/feature",
+        head: "def456",
+        isManaged: true,
+      },
+    ];
+    const switched = deferred<SessionWorkspaceList>();
+    const requests: unknown[][] = [];
+    let gitProbeCalls = 0;
+    (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
+      getSessionWorkspaceAuthority: async () =>
+        sessionAuthority("session", workspace, { mainRoot: "/repo", mainRootId: "root-main" }),
+      getSessionGitBranches: async () => {
+        gitProbeCalls += 1;
+        return { isRepo: true, current: "main", branches: ["main"] };
+      },
+      listSessionWorktrees: async () => ({ current: workspace, mainRoot: "/repo", worktrees }),
+      getSessionWorktreeDiff: async () => undefined,
+      switchSessionWorkspace: (...args: unknown[]) => {
+        requests.push(args);
+        return switched.promise;
+      },
+    };
+    const container = document.createElement("div");
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(
+        <WorkspaceIndicator sessionId="session" projectPath="/repo" projectName="repo" />,
+      );
+      await flushMicrotasks();
+    });
+    const trigger = () => findElement(container, (node) => node.tagName === "BUTTON");
+    expect(textOf(trigger())).toContain("main");
+
+    await act(async () => {
+      clickHostNode(trigger());
+      await flushMicrotasks();
+    });
+    const feature = findElement(
+      container,
+      (node) => node.tagName === "BUTTON" && textOf(node).includes("worktree/feature"),
+    );
+    expect(feature).not.toBeNull();
+    await act(async () => {
+      clickHostNode(feature);
+      await flushMicrotasks();
+    });
+    expect(requests).toEqual([["session", "/repo", "/repo/.worktrees/feature"]]);
+
+    await act(async () => {
+      workspace = nextWorkspace;
+      switched.resolve({ current: nextWorkspace, mainRoot: "/repo", worktrees });
+      await flushMicrotasks();
+    });
+    expect(textOf(trigger())).toContain("worktree/feature");
+    expect(textOf(trigger())).not.toContain("main");
+    expect(reactPropsOf(trigger())["aria-expanded"]).toBe(false);
+    expect(
+      findElement(container, (node) => reactPropsOf(node)["aria-current"] === "true"),
+    ).toBeNull();
+
+    await act(async () => {
+      clickHostNode(trigger());
+      await flushMicrotasks();
+    });
+    expect(gitProbeCalls).toBeGreaterThan(1);
+    expect(textOf(trigger())).toContain("worktree/feature");
+    const currentRow = findElement(
+      container,
+      (node) => node.tagName === "BUTTON" && reactPropsOf(node)["aria-current"] === "true",
+    );
+    expect(textOf(currentRow)).toContain("worktree/feature");
+    expect(textOf(currentRow)).not.toContain("main");
+    const mainRow = findElement(
+      container,
+      (node) =>
+        node.tagName === "BUTTON" &&
+        textOf(node).includes("main") &&
+        reactPropsOf(node)["aria-current"] === undefined,
+    );
+    expect(mainRow).not.toBeNull();
+  });
+
   test("a repeated switch while a workspace mutation is pending sends only one request", async () => {
     ensureMiniDom();
     const workspace: SessionWorkspace = { root: "/repo", kind: "main" };

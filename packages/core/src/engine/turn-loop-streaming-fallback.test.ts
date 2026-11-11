@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import type { LLMResponse, Message, StreamCallback, StreamEvent } from "../types.js";
 import { TurnLoop, type TurnLoopConfig, type TurnLoopDeps } from "./turn-loop.js";
+import { RunToolSurface } from "../tool-system/run-tool-surface.js";
 
 function finalResponse(text: string): LLMResponse {
   return {
@@ -200,3 +201,86 @@ it("revokes unexecuted streamed tool placeholders before committing fallback out
     text: "final",
   });
 });
+
+for (const mode of ["stream", "fallback", "continuation", "invalid", "truncated"] as const) {
+  it(`publishes one resolved tool identity after a ${mode} CallTool response`, async () => {
+    const events: StreamEvent[] = [];
+    const wrapped = {
+      id: "wrapped-read",
+      toolName: "CallTool",
+      args: { name: "Read", args: mode === "invalid" ? "bad JSON" : { path: "fixture.txt" } },
+    };
+    const direct = { id: "direct-read", toolName: "Read", args: { path: "direct.txt" } };
+    const response: LLMResponse = {
+      text: "",
+      toolCalls: [wrapped, direct],
+      stopReason: mode === "truncated" ? "length" : "tool_use",
+    };
+    const starts: StreamEvent[] = [
+      { type: "tool_use_start", toolCall: { ...wrapped, args: {} } },
+      { type: "tool_use_args_delta", toolCallId: wrapped.id, args: wrapped.args },
+      { type: "tool_use_start", toolCall: direct },
+      { type: "tool_use_args_delta", toolCallId: direct.id, args: direct.args },
+    ];
+    const deps = makeDeps(starts, response);
+    const failedStream = deps.model.call;
+    let attempts = 0;
+    deps.model.call = async (system, messages, tools, onStream) => {
+      if (tools.length === 0) return finalResponse("done");
+      attempts++;
+      if (mode === "fallback") return failedStream(system, messages, tools, onStream);
+      if (mode === "continuation" && attempts === 1)
+        return { ...finalResponse("partial"), stopReason: "length" };
+      starts.forEach((event) => onStream?.(event));
+      return response;
+    };
+    const surface = new RunToolSurface();
+    surface.updateCatalog([
+      { name: "Read", description: "Read fixture", inputSchema: { type: "object" } },
+    ]);
+    deps.runToolSurface = surface;
+    deps.tools = surface.snapshot();
+    const executed: string[] = [];
+    deps.toolExecutor.executeSingle = async (call) => {
+      executed.push(call.toolName);
+      return { id: call.id, toolName: call.toolName, result: "fixture content" };
+    };
+    await new TurnLoop(deps, {
+      maxTurns: 1,
+      maxToolCallsPerTurn: 10,
+      onStream: (event) => events.push(event),
+    }).run([{ role: "user", content: "read" }]);
+
+    expect(executed).toEqual(
+      mode === "truncated" ? [] : mode === "invalid" ? ["Read"] : ["Read", "Read"],
+    );
+    const wrapperEvents = events.filter(
+      (event) => event.type === "tool_use_start" && event.toolCall.id === wrapped.id,
+    );
+    expect(wrapperEvents).toEqual([
+      {
+        type: "tool_use_start",
+        toolCall:
+          mode === "invalid" || mode === "truncated"
+            ? wrapped
+            : { id: wrapped.id, toolName: "Read", args: { path: "fixture.txt" } },
+      },
+    ]);
+    expect(
+      events.some(
+        (event) =>
+          (event.type === "tool_use_args_delta" && event.toolCallId === wrapped.id) ||
+          (event.type === "tombstone" && event.messageId === wrapped.id),
+      ),
+    ).toBe(false);
+    expect(
+      events.filter((event) => event.type === "tool_use_start" && event.toolCall.id === direct.id),
+    ).toHaveLength(mode === "fallback" ? 2 : 1);
+    const wrapperResult = events.find(
+      (event) => event.type === "tool_result" && event.result.id === wrapped.id,
+    );
+    expect(wrapperResult?.type === "tool_result" && !!wrapperResult.result.isError).toBe(
+      mode === "invalid" || mode === "truncated",
+    );
+  });
+}

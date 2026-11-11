@@ -65,6 +65,8 @@ export interface ToolCall {
   id: string;
   toolName: string;
   serverName?: string;
+  /** Original provider-facing wrapper; execution uses the resolved toolName. */
+  wireToolName?: "CallTool";
   args: Record<string, unknown>;
   /** Provider could not decode an argument object. Never execute the fallback args. */
   invalidArguments?: true;
@@ -312,9 +314,15 @@ export interface SessionForkLineage {
 }
 
 export interface SessionToolSelection {
-  version: 1;
-  /** Ordered schema-loading hints; current eligibility and permissions remain authoritative. */
+  version: 2;
+  /** Ordered top-level tools, frozen for the current prompt-cache cycle. */
   names: string[];
+  /** Tools discovered in appended messages; eligibility still gates execution. */
+  discovered: string[];
+  /** Frozen schemas retain the prefix even when a tool is unavailable on resume. */
+  frozenDefinitions?: ToolDefinition[];
+  /** Model, provider and endpoint identity defining the current cache cycle. */
+  cacheIdentity?: string;
 }
 
 export interface SessionState {
@@ -333,7 +341,7 @@ export interface SessionState {
    * prompt, not the input box.
    */
   sessionBrief?: string;
-  /** Loaded tool names survive run boundaries without carrying schemas or authority. */
+  /** Prompt-cache tool state survives run boundaries without granting authority. */
   toolSelection?: SessionToolSelection;
   /**
    * Monotonic whole-state revision used by SessionManager.saveState as a CAS

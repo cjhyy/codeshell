@@ -61,7 +61,7 @@ describe("prompt cache policy", () => {
     ).toEqual([]);
   });
 
-  it("uses four semantic boundaries for native Anthropic and three through OpenRouter", () => {
+  it("uses four semantic boundaries for native Anthropic and OpenRouter", () => {
     expect(
       resolvePromptCachePolicy({
         provider: "anthropic",
@@ -74,7 +74,21 @@ describe("prompt cache policy", () => {
         providerKind: "openrouter",
         model: "anthropic/claude-sonnet-4.6",
       }).breakpoints,
-    ).toEqual(["system", "stable-history", "rolling-history"]);
+    ).toEqual(["system", "tools", "stable-history", "rolling-history"]);
+  });
+
+  it("uses append-only CallTool discovery for every cache strategy", () => {
+    for (const promptCaching of [
+      "anthropic-explicit",
+      "openai-hybrid",
+      "openai-implicit",
+      "provider-managed",
+    ] as const) {
+      expect(
+        resolvePromptCachePolicy({ provider: "openai", model: "custom", promptCaching })
+          .toolDiscovery,
+      ).toBe("call-tool");
+    }
   });
 
   it("falls back from explicit to implicit without changing the affinity key", () => {

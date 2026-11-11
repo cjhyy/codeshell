@@ -58,15 +58,19 @@ class ScriptedClient extends LLMClientBase {
     script.callCount += 1;
     const txt = JSON.stringify(options.messages ?? []);
     const sawV1Done = txt.includes("shot 1") && txt.includes("Video saved");
+    const discovery = options.messages
+      .flatMap((message) => (Array.isArray(message.content) ? message.content : []))
+      .findLast((block) => block.type === "tool_result" && block.tool_use_id === "load-video");
     if (
       (script.submitted === 0 || (sawV1Done && script.submitted === 1)) &&
-      !options.tools.some((tool) => tool.name === "GenerateVideo")
+      !options.tools.some((tool) => tool.name === "GenerateVideo") &&
+      !discovery
     ) {
       return {
         text: "",
         toolCalls: [
           {
-            id: `load-video-${script.submitted}`,
+            id: "load-video",
             toolName: "ToolSearch",
             args: { query: "select:GenerateVideo" },
           },
@@ -74,6 +78,16 @@ class ScriptedClient extends LLMClientBase {
         stopReason: "tool_use",
         usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
       };
+    }
+    if (discovery) {
+      expect(discovery.is_error).not.toBe(true);
+      expect(typeof discovery.content).toBe("string");
+      const definition = JSON.parse(
+        (discovery.content as string).split("\n").find((line) => line.startsWith("{"))!,
+      );
+      expect(definition.name).toBe("GenerateVideo");
+      expect(definition.inputSchema.properties.prompt.type).toBe("string");
+      expect(options.tools.some((tool) => tool.name === "GenerateVideo")).toBe(false);
     }
     const emit = (n: number): LLMResponse =>
       ({

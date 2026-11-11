@@ -1,4 +1,4 @@
-import { afterAll, afterEach, expect, test } from "bun:test";
+import { afterAll, afterEach, expect, spyOn, test } from "bun:test";
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -376,6 +376,28 @@ test("external model billing remains incomplete even before its first token even
     historicalCoverageIncomplete: true,
     summary: { partial: true, requests: 0 },
   });
+});
+
+test("cold external submissions never scan disk billing history", () => {
+  const summarize = UsageLedger.prototype.summary;
+  const scan = spyOn(UsageLedger.prototype, "summary").mockImplementation(function (query, scope) {
+    if (query?.scope && query.scope !== "runtime")
+      throw new Error("disk billing scan on the Desktop send path");
+    return summarize.call(this, query, scope);
+  });
+  try {
+    const f = fixture();
+    for (const origin of ["first-follow-up", "next-follow-up"]) {
+      f.begin(origin);
+      expect(f.sessions.readSessionState(f.sessionId)?.costState).toMatchObject({
+        kind: "usage-ledger",
+        historicalCoverageIncomplete: true,
+        summary: { partial: true },
+      });
+    }
+  } finally {
+    scan.mockRestore();
+  }
 });
 
 test("cold external leases retain the adopted cost store and auxiliary receipts", () => {

@@ -3147,6 +3147,19 @@ describe("useRemoteApp approval replay", () => {
     setupBrowser();
     const hook = await renderHook(() => useRemoteApp());
     const ws = FakeWebSocket.instances[0]!;
+    const now = Date.now();
+    const expiresAt = now + 600_000;
+    const clock = spyOn(Date, "now").mockReturnValue(now);
+    const originalSet = globalThis.setTimeout;
+    const expiryTimers: Array<{ handle: ReturnType<typeof setTimeout>; fire: () => void }> = [];
+    const restoreSet = defineTestProperty(globalThis, "setTimeout", {
+      value: (callback: (...args: unknown[]) => void, delay?: number, ...args: unknown[]) => {
+        const handle = originalSet(callback, delay, ...args);
+        if (delay === expiresAt - now) expiryTimers.push({ handle, fire: () => callback(...args) });
+        return handle;
+      },
+      writable: true,
+    });
     try {
       await act(async () => {
         ws.open();
@@ -3156,7 +3169,7 @@ describe("useRemoteApp approval replay", () => {
           params: {
             sessionId: "s1",
             requestId: "short-lived",
-            expiresAt: Date.now() + 40,
+            expiresAt,
             request: {
               toolName: "__ask_user__",
               description: "Use credential?",
@@ -3167,14 +3180,23 @@ describe("useRemoteApp approval replay", () => {
         await flushMicrotasks();
       });
       expect(hook.result.current.approvals).toHaveLength(1);
+      expect(expiryTimers).toHaveLength(1);
+      // Fire the actual scheduled expiry at the worker deadline. A 40ms
+      // timeout followed by a 60ms sleep raced the loaded CI event loop.
+      clock.mockReturnValue(expiresAt);
       await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 60));
+        clearTimeout(expiryTimers[0]!.handle);
+        expiryTimers[0]!.fire();
+        await flushMicrotasks();
       });
       expect(hook.result.current.approvals).toEqual([]);
       expect(
         ws.sent.map((line) => JSON.parse(line)).some((event) => event.type === "approval.respond"),
       ).toBe(false);
     } finally {
+      for (const timer of expiryTimers) clearTimeout(timer.handle);
+      restoreSet();
+      clock.mockRestore();
       await hook.unmount();
     }
   });

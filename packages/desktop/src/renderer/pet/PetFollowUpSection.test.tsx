@@ -47,7 +47,38 @@ describe("PetFollowUpSectionView", () => {
     expect(html).toContain("取消跟进");
     expect(html).not.toContain("data-pet-follow-up-open=");
   });
-  test("does not render cancelled registrations and disables handling while a wake is claimed", () => {
+  test("shows a repeating follow-up's recurrence; changing it is left to Mimi", () => {
+    const html = renderToStaticMarkup(
+      <PetFollowUpSectionView
+        rows={[
+          row({
+            kind: "registered",
+            followUpId: "rule-00000000-0000-4000-8000-0000000000aa",
+            status: "open",
+            sessionId: undefined,
+            terminalAt: undefined,
+            revision: 1,
+            wakeAt: 1_800_000_000_000,
+            recurrence: "0 9 * * 1-5",
+            scheduleLabel: "工作日 <b>09:00</b>",
+            timezone: "Asia/Shanghai",
+            intent: "remind",
+            wakeState: "scheduled",
+          }),
+        ]}
+        onControl={async () => {}}
+        onAskMimi={() => {}}
+      />,
+    );
+    // Mimi's label, escaped as text; the cron is the tooltip.
+    expect(html).toContain("重复：工作日 &lt;b&gt;09:00&lt;/b&gt;（Asia/Shanghai）");
+    expect(html).not.toContain("<b>");
+    expect(html).toContain('data-pet-follow-up-recurrence="0 9 * * 1-5" title="0 9 * * 1-5"');
+    expect(html).not.toContain("改期");
+    expect(html).toContain("取消跟进");
+    expect(html).toContain("交给 Mimi");
+  });
+  test("does not render cancelled registrations; a claimed wake can be cancelled, not handled or moved", () => {
     expect(
       renderToStaticMarkup(
         <PetFollowUpSectionView rows={[row({ kind: "registered", status: "cancelled" })]} />,
@@ -60,7 +91,8 @@ describe("PetFollowUpSectionView", () => {
       />,
     );
     expect(html).toContain("disabled");
-    expect(html).not.toContain("取消跟进");
+    expect(html).toContain("取消跟进");
+    expect(html).not.toContain("改期");
   });
   test("renders each row's title, workspace, and full follow-up text", () => {
     const html = renderToStaticMarkup(

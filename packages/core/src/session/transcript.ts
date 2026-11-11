@@ -602,8 +602,14 @@ export class Transcript {
     toolName: string,
     toolCallId: string,
     args: Record<string, unknown>,
+    wireToolName?: "CallTool",
   ): TranscriptEvent {
-    return this.append("tool_use", { toolName, toolCallId, args });
+    return this.append("tool_use", {
+      toolName,
+      toolCallId,
+      args,
+      ...(wireToolName ? { wireToolName } : {}),
+    });
   }
 
   appendToolResult(

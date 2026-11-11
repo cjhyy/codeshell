@@ -31,7 +31,7 @@
 import type { ConversationSessionRoute, PetLongTask } from "@cjhyy/code-shell-pet";
 import type { NoticeAttention, NoticeChannel, NoticeEvent } from "@cjhyy/code-shell-pet/protocol";
 import type { NoticeTarget } from "./pet-notice-types.js";
-import { noticeTargetKey, type NoticeRule } from "./pet-rule-store.js";
+import { noticeTargetKey, type EventNoticeRule, type NoticeRule } from "./pet-rule-store.js";
 
 export interface DeliveryPlanEntry {
   /** Conversation identity; entries with the same key reach the same conversation. */
@@ -93,7 +93,7 @@ export interface DeliveryQuery {
 }
 
 export interface DeliveryPlanSources {
-  rules: { activeForSession(sessionId: string): NoticeRule[] };
+  rules: { activeForSession(sessionId: string): EventNoticeRule[] };
   longTasks: {
     activeForSession(sessionId: string): PetLongTask | undefined;
     getSnapshot(): { tasks: readonly PetLongTask[] };

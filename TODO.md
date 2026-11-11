@@ -52,6 +52,7 @@ P2 / P3、统一工作台等后续增强和新增第三方 Link / OAuth / token 
 
 ## 小 feature（体量 M 及以下）
 
+- [ ] **上下文压缩样式与输入排队**（M，2026-11-11）。上下文压缩的状态展示和交互样式对标 Codex；压缩期间允许继续输入内容并加入消息队列，压缩完成后按序处理。本次仅登记，尚未实施。
 - [ ] **Diff 审查目标与完整任务范围不一致**（P2，M，2026-11-10 已复现）。后台 agent / Shell 在独立 worktree 提交后，原会话审查仍可能查询 main，显示空 diff；本轮文件卡片又只覆盖部分快照。补齐可信交付工作树与 base/head、目标/范围提示、快照完整性和跨工作树回归，保持 Host 授权边界；见[问题记录与验收标准](docs/todo/review-diff-worktree-scope-bug-20261110.md)。本次只登记，尚未修复。
 - **Server 部署性能与跨平台复验**（M）。[2026-10-27 首轮](docs/todo/server-flow-optimization-20261027.md)完成认证热路径、静态传输、关闭竞态与原生门禁；[第二轮](docs/todo/server-flow-optimization-round2-20261027.md)补静态 ETag/304、深页历史读取与账号页面恢复。后续在固定部署候选测端到端延迟，补 Linux/Windows 正式包、反向代理与实体手机弱网，评估历史索引与 Web bundle 拆分；受控源码/CI 验证不替代正式发布验收。
 - **账号上下文与跨端偏好**（M，跨仓）。已完成[可扩展模块机制设计](docs/todo/account-context-distribution-design.md)，尚未实现 context API 与同步。按 Account 注册表/存储/CAS/备份恢复 → Web 主题语言消费 → Desktop 覆盖层推进；首批资料、偏好、可用功能，后续模型/技能/MCP/策略分别接入。保留本机设置优先级、账号切换隔离和秘密引用边界，不把下发配置视为执行授权。

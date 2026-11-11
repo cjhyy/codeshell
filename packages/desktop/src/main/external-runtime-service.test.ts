@@ -322,6 +322,360 @@ afterEach(() => {
   rmSync(testHome, { recursive: true, force: true });
 });
 
+describe("ExternalRuntimeService workspace mutations", () => {
+  test("leaves native workspace lifecycle decisions to the native owner", async () => {
+    const background = backgroundDelivery();
+    const svc = service({ external_agent_runtime: true }, undefined, {
+      backgroundWork: background.delivery,
+    });
+    background.running.add("native-session");
+    let mutated = false;
+    await svc.withWorkspaceMutation(
+      "native-session",
+      async (beforePersist) => {
+        expect(beforePersist).toBeUndefined();
+        mutated = true;
+      },
+      77,
+    );
+    expect(mutated).toBe(true);
+    expect(closed).toEqual([]);
+    expect(background.dropped).toEqual([]);
+    await svc.stopAll();
+  });
+
+  test.each(["codex", "claude-code"] as const)(
+    "%s retires its old cwd before persistence and starts the new cwd without the old resume key",
+    async (kind) => {
+      const svc = service({ external_agent_runtime: true });
+      const manager = new SessionManager();
+      const nextRoot = join(testHome, "worktree");
+      mkdirSync(nextRoot);
+      await svc.ensure({ ...request, kind });
+      const bindingFile = join(sessionsRoot(), request.sessionId, "external-runtime.json");
+      const binding = readFileSync(bindingFile, "utf8");
+
+      await svc.withWorkspaceMutation(
+        request.sessionId,
+        async (beforePersist) => {
+          expect(beforePersist).toBeDefined();
+          await beforePersist!();
+          expect(svc.hasSession(request.sessionId)).toBe(false);
+          expect(closed).toEqual([request.sessionId]);
+          expect(released).toEqual([request.sessionId]);
+          manager.setSessionWorkspace(request.sessionId, {
+            root: nextRoot,
+            kind: "worktree",
+            worktree: {
+              path: nextRoot,
+              branch: "worktree/next",
+              baseRef: "main",
+              createdBy: "codeshell",
+            },
+          });
+        },
+        77,
+      );
+
+      expect(manager.getSessionWorkspace(request.sessionId)).toMatchObject({ root: nextRoot });
+      expect(readFileSync(bindingFile, "utf8")).toBe(binding);
+      expect(stateChanges.at(-1)).toMatchObject({ active: false, ownerWebContentsId: 77 });
+      await svc.ensure({ ...request, kind, cwd: nextRoot, mainRoot: request.cwd });
+      expect(starts.at(-1)).toMatchObject({ cwd: nextRoot });
+      expect(starts.at(-1)!.resumeRuntimeSessionId).toBeUndefined();
+      expect(svc.getCwd(request.sessionId, 77)).toBe(nextRoot);
+      await svc.stopAll();
+    },
+  );
+
+  test("rejects another window without closing the runtime or entering the mutation", async () => {
+    const svc = service({ external_agent_runtime: true });
+    await svc.ensure(request);
+    let entered = false;
+    await expect(
+      svc.withWorkspaceMutation(
+        request.sessionId,
+        async () => {
+          entered = true;
+        },
+        88,
+      ),
+    ).rejects.toThrow("owned by another window");
+    expect(entered).toBe(false);
+    expect(closed).toEqual([]);
+    expect(svc.hasSession(request.sessionId)).toBe(true);
+    await svc.stopAll();
+  });
+
+  test.each(["pending", "running"] as const)(
+    "rejects %s background work before mutation",
+    async (state) => {
+      const background = backgroundDelivery();
+      const svc = service({ external_agent_runtime: true }, undefined, {
+        backgroundWork: background.delivery,
+      });
+      await svc.ensure(request);
+      if (state === "pending") background.pending.set(request.sessionId, "undelivered result");
+      else background.running.add(request.sessionId);
+      let entered = false;
+      await expect(
+        svc.withWorkspaceMutation(
+          request.sessionId,
+          async () => {
+            entered = true;
+          },
+          77,
+        ),
+      ).rejects.toThrow("请先停止");
+      expect(entered).toBe(false);
+      expect(closed).toEqual([]);
+      expect(background.dropped).toEqual([]);
+      await svc.stopAll();
+    },
+  );
+
+  test("rejects active and queued turns without entering the mutation or closing their provider", async () => {
+    const svc = service({ external_agent_runtime: true });
+    await svc.ensure(request);
+    let ready!: () => void;
+    let release!: () => void;
+    const entered = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    const blocked = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    providerSend = async () => {
+      ready();
+      await blocked;
+    };
+    const running = svc.send(request.sessionId, "active turn", 77);
+    await entered;
+    const queued = svc.send(request.sessionId, "queued input", 77);
+    let mutated = false;
+    try {
+      expect(svc.isSessionRunning(request.sessionId)).toBe(true);
+      await expect(
+        svc.withWorkspaceMutation(
+          request.sessionId,
+          async () => {
+            mutated = true;
+          },
+          77,
+        ),
+      ).rejects.toThrow("请先停止");
+      expect(mutated).toBe(false);
+      expect(closed).toEqual([]);
+    } finally {
+      release();
+      await Promise.all([running, queued]);
+      await svc.stopAll();
+    }
+  });
+
+  test("rejects an accepted input while its preparation awaits before any provider run opens", async () => {
+    const svc = service({ external_agent_runtime: true });
+    await svc.ensure(request);
+    let ready!: () => void;
+    let release!: () => void;
+    const entered = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    const blocked = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const turn = svc.send(request.sessionId, "accepted input", 77, undefined, {
+      beforeInput: async () => {
+        ready();
+        await blocked;
+      },
+    });
+    await entered;
+    expect(svc.isRunActive(request.sessionId)).toBe(false);
+    let persisted = false;
+    try {
+      await expect(
+        svc.withWorkspaceMutation(
+          request.sessionId,
+          async () => {
+            persisted = true;
+          },
+          77,
+        ),
+      ).rejects.toThrow("请先停止");
+      expect(persisted).toBe(false);
+      expect(closed).toEqual([]);
+    } finally {
+      release();
+      await turn;
+      await svc.stopAll();
+    }
+  });
+
+  test("rechecks new work immediately before persistence and leaves an invalid target's runtime alive", async () => {
+    const background = backgroundDelivery();
+    const svc = service({ external_agent_runtime: true }, undefined, {
+      backgroundWork: background.delivery,
+    });
+    await svc.ensure(request);
+    await expect(
+      svc.withWorkspaceMutation(
+        request.sessionId,
+        async () => {
+          throw new Error("invalid target");
+        },
+        77,
+      ),
+    ).rejects.toThrow("invalid target");
+    expect(closed).toEqual([]);
+    let persisted = false;
+    await expect(
+      svc.withWorkspaceMutation(
+        request.sessionId,
+        async (beforePersist) => {
+          background.running.add(request.sessionId);
+          await beforePersist!();
+          persisted = true;
+        },
+        77,
+      ),
+    ).rejects.toThrow("请先停止");
+    expect(persisted).toBe(false);
+    expect(closed).toEqual([]);
+    await svc.stopAll();
+  });
+
+  test.each([false, true])(
+    "fences starts throughout persistence with resident=%s",
+    async (resident) => {
+      const svc = service({ external_agent_runtime: true });
+      if (resident) await svc.ensure(request);
+      let ready!: () => void;
+      let release!: () => void;
+      const entered = new Promise<void>((resolve) => {
+        ready = resolve;
+      });
+      const blocked = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const mutation = svc.withWorkspaceMutation(
+        request.sessionId,
+        async (beforePersist) => {
+          await beforePersist?.();
+          ready();
+          await blocked;
+        },
+        77,
+      );
+      // Admission is fenced before the lifecycle callback itself has started.
+      await expect(svc.ensure(request)).rejects.toThrow("工作区正在切换");
+      await entered;
+      try {
+        await expect(svc.start(request)).rejects.toThrow("工作区正在切换");
+        await expect(svc.ensureContinuation(request)).rejects.toThrow("工作区正在切换");
+        if (resident)
+          await expect(svc.send(request.sessionId, "stale input", 77)).rejects.toThrow(
+            "工作区正在切换",
+          );
+        // Another session can still start; this is not a global runtime lock.
+        await svc.ensure({ ...request, sessionId: "unrelated-session" });
+      } finally {
+        release();
+        await mutation;
+      }
+      await svc.ensure(request);
+      expect(svc.hasSession(request.sessionId)).toBe(true);
+      await svc.stopAll();
+    },
+  );
+
+  test("an earlier mutation cannot reopen runtime admission while a newer mutation is persisting", async () => {
+    const svc = service({ external_agent_runtime: true });
+    let enterFirst!: () => void;
+    let enterSecond!: () => void;
+    let releaseFirst!: () => void;
+    let releaseSecond!: () => void;
+    const firstEntered = new Promise<void>((resolve) => {
+      enterFirst = resolve;
+    });
+    const secondEntered = new Promise<void>((resolve) => {
+      enterSecond = resolve;
+    });
+    const firstBlocked = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+    const secondBlocked = new Promise<void>((resolve) => {
+      releaseSecond = resolve;
+    });
+    const first = svc.withWorkspaceMutation(
+      request.sessionId,
+      async () => {
+        enterFirst();
+        await firstBlocked;
+      },
+      77,
+    );
+    await firstEntered;
+    const second = svc.withWorkspaceMutation(
+      request.sessionId,
+      async () => {
+        enterSecond();
+        await secondBlocked;
+      },
+      77,
+    );
+    releaseFirst();
+    await first;
+    await secondEntered;
+    try {
+      await expect(svc.ensure(request)).rejects.toThrow("工作区正在切换");
+      expect(starts).toEqual([]);
+    } finally {
+      releaseSecond();
+      await second;
+    }
+    await svc.ensure(request);
+    expect(svc.hasSession(request.sessionId)).toBe(true);
+    await svc.stopAll();
+  });
+
+  test("a start already in progress settles before a workspace mutation checks its owner", async () => {
+    const svc = service({ external_agent_runtime: true });
+    let ready!: () => void;
+    let release!: () => void;
+    const entered = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    const blocked = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    providerStart = async () => {
+      ready();
+      await blocked;
+    };
+    const start = svc.ensure(request);
+    await entered;
+    let mutated = false;
+    const mutation = svc.withWorkspaceMutation(
+      request.sessionId,
+      async () => {
+        mutated = true;
+      },
+      88,
+    );
+    const outcome = mutation.then(
+      () => undefined,
+      (error: Error) => error,
+    );
+    release();
+    await start;
+    expect((await outcome)?.message).toContain("owned by another window");
+    expect(mutated).toBe(false);
+    expect(closed).toEqual([]);
+    await svc.stopAll();
+  });
+});
+
 describe("ExternalRuntimeService", () => {
   test.each(["codex", "claude-code"] as const)(
     "%s restores a failed background launch once, then delivers it to the replacement",

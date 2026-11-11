@@ -34,6 +34,9 @@
  * told the Session is stuck (it can still be continued by hand).
  */
 
+import { isAbsolute } from "node:path";
+import type { ChangedFiles } from "./pet-notice-action-codes.js";
+
 export type SessionBlockReason = "user" | "limit" | "goal_exhausted";
 
 interface SessionOutcomeBase {
@@ -83,7 +86,14 @@ interface SessionOutcomeBase {
 
 export type SessionOutcome = SessionOutcomeBase &
   (
-    | { kind: "done"; scope: "turn" | "goal"; summary?: string; goalId?: string }
+    | {
+        kind: "done";
+        scope: "turn" | "goal";
+        summary?: string;
+        goalId?: string;
+        /** Files this turn changed (its latest `turn_diff`), for "打开". */
+        changedFiles?: ChangedFiles;
+      }
     | { kind: "failed"; error: string; budgetExhausted?: true }
     | {
         kind: "blocked";
@@ -134,6 +144,8 @@ const NON_WORK_TOOLS: ReadonlySet<string> = new Set([
   // Loading a deferred tool schema (e.g. to reach NotifyMe) is not work either.
   "ToolSearch",
 ]);
+/** Changed files a done outcome carries at most (the notice offers fewer). */
+const MAX_CHANGED_FILES = 20;
 /** Undelivered host-queued user messages tracked per Session (bounds a stuck counter). */
 const MAX_QUEUED_USER_MESSAGES = 64;
 const MAX_SUMMARY_LENGTH = 2_000;
@@ -158,6 +170,21 @@ interface TurnState {
   goal?: { state: "met" | "cleared"; goalId?: string };
   /** The latest assistant text of this turn (a reply when the run closes without one). */
   lastAssistantText?: string;
+  /** The turn's latest `turn_diff` (cumulative): files it changed and did not delete. */
+  changedFiles?: ChangedFiles;
+}
+
+/** A `turn_diff` snapshot's surviving files: absolute paths, deleted ones left out. */
+function changedFilesOf(event: Record<string, unknown>): ChangedFiles | undefined {
+  if (typeof event.cwd !== "string" || !event.cwd || !Array.isArray(event.files)) return undefined;
+  const paths = event.files
+    .flatMap((file: unknown) => {
+      if (!file || typeof file !== "object") return [];
+      const { path, status } = file as { path?: unknown; status?: unknown };
+      return typeof path === "string" && isAbsolute(path) && status !== "deleted" ? [path] : [];
+    })
+    .slice(0, MAX_CHANGED_FILES);
+  return { cwd: event.cwd, paths };
 }
 
 /**
@@ -309,6 +336,11 @@ export class SessionOutcomeDeriver {
         if (text) this.turn(sessionId).lastAssistantText = text;
         return [];
       }
+      case "turn_diff": {
+        const changed = changedFilesOf(event);
+        if (changed) this.turn(sessionId).changedFiles = changed;
+        return [];
+      }
       case "goal_progress":
         return this.goalProgress(sessionId, this.turn(sessionId), event);
       case "goal_cleared": {
@@ -428,7 +460,8 @@ export class SessionOutcomeDeriver {
     const goalId = nonEmptyString(event.goalId);
     if (event.status === "met") {
       state.goal = { state: "met", ...(goalId ? { goalId } : {}) };
-      return [{ ...base, kind: "done", scope: "goal", ...(goalId ? { goalId } : {}) }];
+      const changed = state.changedFiles?.paths.length ? { changedFiles: state.changedFiles } : {};
+      return [{ ...base, kind: "done", scope: "goal", ...(goalId ? { goalId } : {}), ...changed }];
     }
     // Core carries the question itself in `waitingForUser`; accept a bare flag too.
     const question = boundedText(event.waitingForUser, MAX_FACT_LENGTH);
@@ -506,8 +539,9 @@ export class SessionOutcomeDeriver {
       : state.blocked;
     if (goalBlock) return { ...base, ...restated, kind: "blocked", reason: goalBlock };
     // The "OK, will do" turn that armed a rule did no work and must not read as done.
+    const changed = state.changedFiles?.paths.length ? { changedFiles: state.changedFiles } : {};
     return (reported ? reported.didWork : state.work)
-      ? { ...base, kind: "done", scope: "turn", ...withSummary }
+      ? { ...base, kind: "done", scope: "turn", ...withSummary, ...changed }
       : { ...base, kind: "idle", ...withSummary };
   }
 }

@@ -13,7 +13,7 @@ describe("composeNoticeBody", () => {
     expect(composeNoticeBody("session.done", {})).toBe("「一个会话」做完了");
   });
 
-  test("blocked lists options and adds the reply hint only with a code", () => {
+  test("blocked lists options and never shows a reply code", () => {
     const facts = {
       title: "Deploy",
       question: "Region?",
@@ -22,9 +22,8 @@ describe("composeNoticeBody", () => {
     expect(composeNoticeBody("session.blocked", facts)).toBe(
       "「Deploy」需要你决定：Region?\n1. us（推荐）\n2. eu",
     );
-    expect(composeNoticeBody("session.blocked", { ...facts, code: "Q3" })).toContain(
-      "回复：回答 Q3 序号 / 回答 Q3 拒绝",
-    );
+    // Replies are read by a model; the text carries no command grammar.
+    expect(composeNoticeBody("session.blocked", facts)).not.toContain("回答");
   });
 
   test("strips control, bidi and zero-width characters", () => {

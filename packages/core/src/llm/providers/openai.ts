@@ -441,8 +441,10 @@ export class OpenAIClient extends LLMClientBase {
           reasoning,
           options.promptCache,
         );
-        const tools = options.tools?.length ? this.convertTools(options.tools) : undefined;
         const cachePolicy = this.promptCachePolicy(options.promptCache);
+        const tools = options.tools?.length
+          ? this.convertTools(options.tools, cachePolicy)
+          : undefined;
         const stableBoundaryIndex = promptCacheBoundaryIndex(messages, stablePrefixEndIndex);
         let cachePlan: PromptCacheHistoryPlan | undefined;
         if (cachePolicy.strategy === "openai-hybrid" && options.promptCache?.scopeId) {
@@ -1346,14 +1348,23 @@ export class OpenAIClient extends LLMClientBase {
     for (const index of requested) mark(index);
   }
 
-  private convertTools(tools: ToolDefinition[]): OpenAI.ChatCompletionTool[] {
-    return tools.map((t) => ({
+  private convertTools(
+    tools: ToolDefinition[],
+    policy: PromptCachePolicy,
+  ): OpenAI.ChatCompletionTool[] {
+    const markTools =
+      policy.strategy === "anthropic-explicit" && policy.breakpoints.includes("tools");
+    return tools.map((t, index) => ({
       type: "function" as const,
       function: {
         name: t.name,
         description: t.description,
         parameters: t.inputSchema,
       },
+      // OpenRouter reads this on the tool entry, not inside `function`.
+      ...(markTools && index === tools.length - 1
+        ? { cache_control: { type: "ephemeral" as const } }
+        : {}),
     }));
   }
 

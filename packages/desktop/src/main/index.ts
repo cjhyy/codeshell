@@ -159,11 +159,8 @@ import { createPetNoticeControls } from "./pet/pet-notice-ipc.js";
 import { PetWorkInboxStore } from "./pet/pet-work-inbox-store.js";
 import { PetHostActionReceiptStore } from "./pet/pet-host-action-receipts.js";
 import { archivePetSessionsBySelector } from "./pet/pet-session-archive.js";
-import { createPetFollowUpRuntime } from "./pet/pet-follow-up-runtime.js";
-import {
-  PetFollowUpWakeCoordinator,
-  isPetFollowUpWakeJob,
-} from "./pet/pet-follow-up-wake-coordinator.js";
+import { createPetFollowUpRules } from "./pet/pet-follow-up-rules.js";
+import { PetRuleScheduler, isPetRuleScheduleJob } from "./pet/pet-rule-schedule.js";
 import { PetContextLinkStore } from "./pet/pet-context-links.js";
 import { PetWorkMemoryStore } from "./pet/pet-work-memory-store.js";
 import { PetSegmentController, type PetArchiveAnchors } from "./pet/pet-segment-controller.js";
@@ -182,6 +179,7 @@ import {
   collectImDecisions,
   imDecisionWorkerActions,
 } from "./pet/pet-im-decisions.js";
+import { createOwnerReplyHandling, lastUserMessageIn } from "./pet/pet-notice-action-controls.js";
 import { selectSessionsToArchive } from "./pet/pet-auto-archive.js";
 import { resolveLinkedSessionFromDisk } from "./cc-room/linked-session-resolver.js";
 import { DEFAULT_SEGMENT_IDLE_MS, buildMigrationSummary } from "@cjhyy/code-shell-pet";
@@ -192,6 +190,7 @@ import {
   createBoundSessionHealth,
   createBoundSessionRunner,
   createSessionBridgeWiring,
+  sessionRouteHandler,
   type SessionBridgeWiring,
 } from "./pet/session-bridge-wiring.js";
 import {
@@ -863,7 +862,7 @@ let petStateAggregator: PetStateAggregator | null = null;
 let petExternalVisibilityController: ExternalSessionVisibilityController | null = null;
 let reconcileExternalAdapters: (() => Promise<void>) | null = null;
 let petDispatchService: PetDispatchService | null = null;
-let petFollowUpWakeCoordinator: PetFollowUpWakeCoordinator | null = null;
+let petRuleScheduler: PetRuleScheduler | null = null;
 // The dispatcher exists before its worker and durable stores finish loading.
 // IM delivery shares the same completed initialization boundary as Pet IPC.
 let petRuntimeReady = false;
@@ -1910,6 +1909,7 @@ async function createWindow(): Promise<BrowserWindow> {
         subscribe: (listener) => externalRuntime.subscribeApprovals(listener),
       },
       onWorkerLost: (keep) => sessionOutcomeDeriver.reset(keep),
+      lastUserMessage: async (sessionId) => lastUserMessageIn(await getSessionEvents(sessionId)),
     });
     petNotices = notices;
     const petMemoryStoreInstance = new PetMemoryStore(
@@ -2078,6 +2078,28 @@ async function createWindow(): Promise<BrowserWindow> {
       nudges: [notices.decisions.onBlocked],
       onAwayChange: notices.decisions.onAwayChange,
       onError: (error) => dlog("main", "pet.im-decision.failed", { error: String(error) }),
+      // Owner replies are read by a model against the open items (no text patterns).
+      ...createOwnerReplyHandling({
+        router: notices.router,
+        cwd: resolveNoRepoCwd(),
+        worker: bridge,
+        external: () => externalRuntime.service ?? undefined,
+        sessions: () => aggregator.getSnapshot().sessions,
+        longTasks: {
+          get: (id) => longTaskStore.get(id),
+          control: (r) => longTaskCoordinator.control(r),
+        },
+        readEvents: (sessionId) => getSessionEvents(sessionId),
+        workspace: async (sessionId) => {
+          const entry = await getSessionCwdIndex().refresh(sessionId);
+          return entry?.status === "confirmed" ? (entry.workspaceRoot ?? entry.cwd) : undefined;
+        },
+        openPath: (path) => shell.openPath(path),
+        revealPath: (path) => shell.showItemInFolder(path),
+        openExternal: (url) => shell.openExternal(url),
+        locateSession: (sessionId) => revealSessionWindow(sessionId),
+        onError: (error) => dlog("main", "pet.notice.reply_failed", { error: String(error) }),
+      }),
     });
     petImDecisions.start();
     // One interpretation of each Session event, handed to the long task and
@@ -2090,7 +2112,10 @@ async function createWindow(): Promise<BrowserWindow> {
             .observeSessionEvent(sessionId, event, outcomes)
             .catch((error) => dlog("main", "pet.longTask.stream.failed", { error: String(error) })),
         watcher: (sessionId, outcomes) => notices.observeSessionOutcomes(sessionId, outcomes),
-        stream: sessionOutcomes.emit,
+        stream: (sessionId, event, outcomes) => {
+          notices.sessionEvent(sessionId, event);
+          sessionOutcomes.emit(sessionId, event, outcomes);
+        },
       },
       sessionOutcomeDeriver,
     );
@@ -2130,8 +2155,11 @@ async function createWindow(): Promise<BrowserWindow> {
       store: petSummaryStore,
       cwd: resolveNoRepoCwd(),
     });
-    const followUpRuntime = await createPetFollowUpRuntime({
-      filePath: resolve(app.getPath("userData"), "pet", "follow-ups.json"),
+    // Follow-ups are schedule rules; the old follow-ups.json is deleted, not migrated.
+    const followUpRuntime = await createPetFollowUpRules({
+      rules: notices.ruleStore,
+      legacyFollowUpsPath: resolve(app.getPath("userData"), "pet", "follow-ups.json"),
+      powerEvents: powerMonitor,
       sessions: () => aggregator.getSnapshot().sessions,
       summaryStore: petSummaryStore,
       summaryService: petSummaryService,
@@ -2145,9 +2173,10 @@ async function createWindow(): Promise<BrowserWindow> {
       submitNotice: notices.submitNotice,
       dispatch: () => petDispatchService,
       onError: (error) => dlog("main", "pet.followUp.wake.failed", { error: String(error) }),
+      log: (event, data) => dlog("main", event, data),
     });
-    const { registeredFollowUps, petFollowUps, followUpHost } = followUpRuntime;
-    petFollowUpWakeCoordinator = followUpRuntime.coordinator;
+    const { petFollowUps, followUpHost } = followUpRuntime;
+    petRuleScheduler = followUpRuntime.coordinator;
     // Entering a Work Session from a chat: the store, bridge, bind executor
     // and reply delivery are composed in session-bridge-wiring.ts so this
     // root only names the collaborators it already owns.
@@ -2662,7 +2691,7 @@ async function createWindow(): Promise<BrowserWindow> {
       summaries: {
         collect: () => petFollowUps.collect(),
         control: (request) => followUpHost({ ...request }),
-        subscribe: (listener) => registeredFollowUps.subscribe(listener),
+        subscribe: followUpRuntime.subscribe,
       },
       journal: {
         list: async () => {
@@ -3121,16 +3150,53 @@ async function cleanupKnownAttachments(sessionId?: string): Promise<void> {
   }
 }
 
+/** Bring a CodeShell window forward with this Session open (notification click, notice item). */
+function revealSessionWindow(sessionId: string): void {
+  void (async () => {
+    const target =
+      findNotificationWindow(mainWindows, bridge?.panelOwnerWebContentsId(sessionId)) ??
+      (await createWindow());
+    if (target.isDestroyed()) return;
+    if (target.isMinimized()) target.restore();
+    target.show();
+    target.focus();
+    const open = () => {
+      if (!target.isDestroyed()) target.webContents.send("notification:open-session", sessionId);
+    };
+    if (target.webContents.isLoadingMainFrame()) target.webContents.once("did-finish-load", open);
+    else open();
+  })().catch((error) =>
+    dlog("main", "desktop_notification.open_session.failed", { sessionId, error: String(error) }),
+  );
+}
+
 async function dispatchGatewayPetChat(
   request: PetChatControlRequest,
 ): Promise<PetChatControlResult> {
   const dispatcher = petDispatchService;
   if (!dispatcher) throw new Error("Mimi Pet 尚未就绪，请稍后重试");
   const sessionId = await dispatcher.getSessionId();
-  // Handle exact confirmation codes before any model, Session binding, or chat
-  // scheduler can consume the reply as a new task or inferred authorization.
+  // A reply to an open item (a decision prompt, a goal pause, a result) is read
+  // against those items first, before Mimi, a Session binding or the chat
+  // scheduler can take it as a new task or as inferred authorization.
   const decisionReply = await petImDecisions?.reply(request);
-  if (decisionReply !== undefined) return { text: decisionReply, petSessionId: sessionId };
+  if (typeof decisionReply === "string") return { text: decisionReply, petSessionId: sessionId };
+  // "交给 Mimi": Mimi's turn gets the notice's data with the owner's request;
+  // the item is used once that turn is dispatched, and freed if it never is.
+  try {
+    return await dispatchGatewayPetTurn(request, dispatcher, sessionId, decisionReply);
+  } finally {
+    decisionReply?.abandoned();
+  }
+}
+
+async function dispatchGatewayPetTurn(
+  request: PetChatControlRequest,
+  dispatcher: PetDispatchService,
+  sessionId: string,
+  handoff: Exclude<Awaited<ReturnType<PetImDecisions["reply"]>>, string>,
+): Promise<PetChatControlResult> {
+  const message = handoff?.handoff ?? request.message;
   const cwd = resolveNoRepoCwd();
   const attachments: InputAttachmentMeta[] = [];
   let totalBytes = 0;
@@ -3206,7 +3272,7 @@ async function dispatchGatewayPetChat(
   const result = await dispatcher
     .dispatch({
       type: "chat",
-      message: request.message,
+      message,
       ...(attachments.length > 0 ? { attachments } : {}),
       ...(replay ? { pendingNotices: replay } : {}),
       clientMessageId,
@@ -3223,6 +3289,17 @@ async function dispatchGatewayPetChat(
         ...(request.origin ? { target: request.origin.target } : {}),
       },
     })
+    .then(
+      (dispatched) => {
+        if (dispatched.ok) void handoff?.dispatched();
+        else handoff?.abandoned();
+        return dispatched;
+      },
+      (error: unknown) => {
+        handoff?.abandoned();
+        throw error;
+      },
+    )
     .finally(() => replay?.finish());
   if (!result.ok) throw new Error(result.message ?? result.code);
   if (result.type !== "chat") throw new Error("Mimi Pet 返回了非聊天结果");
@@ -3325,29 +3402,7 @@ app.whenReady().then(async () => {
       show: (input) =>
         showNativeDesktopNotification(input, {
           create: (options) => new Notification(options),
-          openSession: (sessionId) => {
-            void (async () => {
-              const target =
-                findNotificationWindow(mainWindows, bridge?.panelOwnerWebContentsId(sessionId)) ??
-                (await createWindow());
-              if (target.isDestroyed()) return;
-              if (target.isMinimized()) target.restore();
-              target.show();
-              target.focus();
-              const open = () => {
-                if (!target.isDestroyed())
-                  target.webContents.send("notification:open-session", sessionId);
-              };
-              if (target.webContents.isLoadingMainFrame())
-                target.webContents.once("did-finish-load", open);
-              else open();
-            })().catch((error) =>
-              dlog("main", "desktop_notification.open_session.failed", {
-                sessionId,
-                error: String(error),
-              }),
-            );
-          },
+          openSession: revealSessionWindow,
         }),
     },
   );
@@ -3424,9 +3479,10 @@ app.whenReady().then(async () => {
     isPetChatReady: () => petRuntimeReady && petDispatchService !== null,
     isSessionRouteReady: () =>
       petRuntimeReady && petDispatchService !== null && sessionBridge !== undefined,
-    routeSession: async (request) =>
-      (await petImDecisions?.replyToSession(request)) ??
-      (sessionBridge ? sessionBridge.routeInbound(request) : { kind: "not-bound" }),
+    routeSession: sessionRouteHandler({
+      bridge: () => sessionBridge,
+      replyToSession: async (request) => petImDecisions?.replyToSession(request),
+    }),
   });
   // Delivery results settle the notices that made them; retry copies the
   // outbox appends get the same direct hand-off as a fresh publication.
@@ -3570,25 +3626,25 @@ app.whenReady().then(async () => {
     automationHandle = startAutomation({
       store: new CronStore(defaultCronStorePath()),
       runner: async (request) => {
-        if (!isPetFollowUpWakeJob(request.job)) return automationRunner(request);
-        if (!petFollowUpWakeCoordinator)
+        if (!isPetRuleScheduleJob(request.job)) return automationRunner(request);
+        if (!petRuleScheduler)
           return {
             text: "Mimi 跟进服务不可用",
             reason: "unavailable",
             stop: { reason: "Mimi 跟进服务不可用" },
           };
-        await petFollowUpWakeCoordinator.wake(request.job);
-        return { text: "Registered follow-up wake handled", reason: "done" };
+        await petRuleScheduler.wake(request.job);
+        return { text: "Scheduled rule wake handled", reason: "done" };
       },
       onJobEvent: (event) => {
-        if (isPetFollowUpWakeJob(event.job)) {
+        if (isPetRuleScheduleJob(event.job)) {
           if (event.type === "job_missed")
-            void petFollowUpWakeCoordinator
+            void petRuleScheduler
               ?.missed(event.job)
               .catch((error) =>
                 dlog("main", "pet.followUp.missed.failed", { error: String(error) }),
               );
-          if (event.type === "job_error") petFollowUpWakeCoordinator?.repairSoon();
+          if (event.type === "job_error") petRuleScheduler?.repairSoon();
           return;
         }
         if (event.type !== "job_start") {
@@ -3605,7 +3661,7 @@ app.whenReady().then(async () => {
     });
     // Expose the live scheduler to the automation IPC service (Phase 3 UI).
     setAutomationScheduler(automationHandle.scheduler);
-    await petFollowUpWakeCoordinator?.start();
+    await petRuleScheduler?.start();
     // startAutomation installed the default executor (bindCronToEngine):
     // every cron job runs one headless codeshell turn. Driving Claude Code is
     // just one such turn calling DriveClaudeCode — no CC-specific scheduling.
@@ -4090,6 +4146,7 @@ registerProjectAuthorityIpc({
   applyGitPathFromSettings,
   projectStore,
   getBridge: () => bridge,
+  getExternalRuntimeService: () => externalRuntime.service,
   getTrust,
   assertSessionId: assertDesktopSessionId,
   trackGitRoot: (root) => knownGitRoots.add(root),
@@ -4433,6 +4490,7 @@ ipcMain.handle("agent:subscribe", async (_e, sessionId: string, sinceSeq?: numbe
     }
   );
 });
+let closeActivityHistory: (() => Promise<void>) | undefined;
 registerDesktopOutputHistoryHost({
   ipcMain,
   windows: () => [...mainWindows],
@@ -4442,6 +4500,9 @@ registerDesktopOutputHistoryHost({
   bridge: () => bridge,
   external: () => externalRuntime.service,
   mobile: mobileOrchestrator,
+  registerCleanup: (cleanup) => {
+    closeActivityHistory = cleanup;
+  },
 });
 const sessionCatalogStore = new SessionCatalogStore();
 const sessionCatalogIpc = registerSessionCatalogIpc(
@@ -4571,8 +4632,8 @@ registerDesktopShutdown(app, {
     petExternalVisibilityController = null;
     reconcileExternalAdapters = null;
     petDispatchService = null;
-    petFollowUpWakeCoordinator?.stop();
-    petFollowUpWakeCoordinator = null;
+    petRuleScheduler?.stop();
+    petRuleScheduler = null;
     petHostActionReceiptService = null;
     petImDecisions?.stop();
     petImDecisions = null;
@@ -4605,6 +4666,7 @@ registerDesktopShutdown(app, {
     petWidgetSurface?.dispose();
     mimiBubble?.surface.dispose();
     await Promise.allSettled([
+      closeActivityHistory?.(),
       mimiPresenceShutdown,
       imGatewayService.dispose(),
       mobileRemoteController.dispose(),

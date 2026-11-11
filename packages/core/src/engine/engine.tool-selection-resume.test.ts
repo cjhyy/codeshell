@@ -179,13 +179,13 @@ async function loadAndPark(value: InstanceType<typeof Engine>, sessionId: string
   expect(result).toMatchObject({ reason: "completed", completionKind: "background_wait" });
   expect(script).toHaveLength(0);
   const definitions = calls.at(-1)!.tools;
-  expect(definitions.map((tool) => tool.name)).toEqual([
-    "ToolSearch",
-    "CacheAction",
-    "CheckQuotaMock",
-  ]);
+  expect(definitions.map((tool) => tool.name)).toEqual(["ToolSearch", "CallTool"]);
   expect(value.getSessionManager().readSessionState(sessionId)).toMatchObject({
-    toolSelection: { version: 1, names: definitions.map((tool) => tool.name) },
+    toolSelection: {
+      version: 2,
+      names: definitions.map((tool) => tool.name),
+      discovered: ["CacheAction", "CheckQuotaMock"],
+    },
   });
   return definitions;
 }
@@ -241,10 +241,14 @@ test("selection in the same batch as a background yield is saved before another 
   expect(script).toHaveLength(0);
   expect(calls).toHaveLength(2);
   // The newly selected schema has never been sent to the provider when the run parks.
-  expect(calls.at(-1)!.tools.map((tool) => tool.name)).toEqual(["ToolSearch", "CacheAction"]);
-  const selectedNames = ["ToolSearch", "CacheAction", "CheckQuotaMock"];
+  expect(calls.at(-1)!.tools.map((tool) => tool.name)).toEqual(["ToolSearch", "CallTool"]);
+  const selectedNames = ["ToolSearch", "CallTool"];
   expect(first.getSessionManager().readSessionState(sessionId)).toMatchObject({
-    toolSelection: { version: 1, names: selectedNames },
+    toolSelection: {
+      version: 2,
+      names: selectedNames,
+      discovered: ["CacheAction", "CheckQuotaMock"],
+    },
   });
 
   await first.dispose();
@@ -258,7 +262,7 @@ test("selection in the same batch as a background yield is saved before another 
   expect(calls).toHaveLength(3);
 });
 
-test("a genuine new user intent appends routed tools without reordering previously loaded tools", async () => {
+test("a genuine new user intent preserves the frozen surface instead of rerouting tools", async () => {
   const value = engine(directory());
   const sessionId = "new-user-tool-intent";
   const definitions = await loadAndPark(value, sessionId);
@@ -269,15 +273,13 @@ test("a genuine new user intent appends routed tools without reordering previous
   ).toBe("completed");
   const nextDefinitions = calls.at(-1)!.tools;
   expect(nextDefinitions.slice(0, definitions.length)).toEqual(definitions);
-  expect(nextDefinitions.map((tool) => tool.name)).toEqual([
-    "ToolSearch",
-    "CacheAction",
-    "CheckQuotaMock",
-    "CronList",
-    "ListSources",
-  ]);
+  expect(nextDefinitions.map((tool) => tool.name)).toEqual(["ToolSearch", "CallTool"]);
   expect(value.getSessionManager().readSessionState(sessionId)).toMatchObject({
-    toolSelection: { version: 1, names: nextDefinitions.map((tool) => tool.name) },
+    toolSelection: {
+      version: 2,
+      names: nextDefinitions.map((tool) => tool.name),
+      discovered: ["CacheAction", "CheckQuotaMock"],
+    },
   });
 });
 
@@ -289,7 +291,7 @@ test("another Session and a legacy injected continuation do not inherit or rerou
     (await value.run("Perform another local fixture", { sessionId: "other-session", behaviorMode }))
       .reason,
   ).toBe("completed");
-  expect(calls.at(-1)!.tools.map((tool) => tool.name)).toEqual(["ToolSearch"]);
+  expect(calls.at(-1)!.tools.map((tool) => tool.name)).toEqual(["ToolSearch", "CallTool"]);
 
   completeNext();
   expect(
@@ -301,10 +303,10 @@ test("another Session and a legacy injected continuation do not inherit or rerou
       })
     ).reason,
   ).toBe("completed");
-  expect(calls.at(-1)!.tools.map((tool) => tool.name)).toEqual(["ToolSearch"]);
+  expect(calls.at(-1)!.tools.map((tool) => tool.name)).toEqual(["ToolSearch", "CallTool"]);
 });
 
-test("restored names respect the current allowlist and use current definitions after restart", async () => {
+test("restored top definitions remain frozen when current eligibility and schemas change", async () => {
   const root = directory();
   const sessionId = "revoked-tool-selection";
   const first = engine(root);
@@ -324,11 +326,7 @@ test("restored names respect the current allowlist and use current definitions a
     ).reason,
   ).toBe("completed");
   const resumed = calls.at(-1)!.tools;
-  expect(resumed.map((tool) => tool.name)).toEqual(["ToolSearch", "CacheAction"]);
+  expect(resumed.map((tool) => tool.name)).toEqual(["ToolSearch", "CallTool"]);
   expect(resumed[0]).toEqual(definitions[0]);
-  expect(resumed[1]).toMatchObject({
-    description: "Local CacheAction definition v2",
-    inputSchema: { properties: { revision: { enum: ["v2"] } } },
-  });
-  expect(resumed[1]).not.toEqual(definitions[1]);
+  expect(resumed).toEqual(definitions);
 });
