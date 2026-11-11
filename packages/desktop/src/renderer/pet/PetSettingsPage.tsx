@@ -62,35 +62,39 @@ export function PetSettingsPage({
       backLabel={backLabel}
       onBack={onBack}
     >
-      {section === "appearance" && (
-        <AppearanceSection
-          widgetVisible={widgetVisible}
-          presence={presence}
-          presenceError={presenceError}
-          onDismissPresenceError={onDismissPresenceError}
-          onVisibleChange={onWidgetVisibleChange}
-          onPresenceChange={onPresenceChange}
-          onPreviewMoving={onPreviewMoving}
-          onRetryPresence={onRetryPresence}
-        />
+      {(jumpTo) => (
+        <>
+          {section === "appearance" && (
+            <AppearanceSection
+              widgetVisible={widgetVisible}
+              presence={presence}
+              presenceError={presenceError}
+              onDismissPresenceError={onDismissPresenceError}
+              onVisibleChange={onWidgetVisibleChange}
+              onPresenceChange={onPresenceChange}
+              onPreviewMoving={onPreviewMoving}
+              onRetryPresence={onRetryPresence}
+            />
+          )}
+          {section === "conversation" && (
+            <ConversationSection
+              activeModelKey={activeModelKey}
+              modelOptions={modelOptions}
+              hasModelOverride={hasModelOverride}
+              onSelectModel={onSelectModel}
+              onResetModel={onResetModel}
+            />
+          )}
+          {section === "notifications" && (
+            <NotificationsSection onManageChannels={() => jumpTo("connections")} />
+          )}
+          {section === "rules" && (
+            <RulesSection onOpenNotifications={() => jumpTo("notifications")} />
+          )}
+          {section === "memory" && <MemorySection onOpenMemoryCenter={onOpenMemoryCenter} />}
+          {section === "connections" && <ChatGatewayPanel />}
+        </>
       )}
-      {section === "conversation" && (
-        <ConversationSection
-          activeModelKey={activeModelKey}
-          modelOptions={modelOptions}
-          hasModelOverride={hasModelOverride}
-          onSelectModel={onSelectModel}
-          onResetModel={onResetModel}
-        />
-      )}
-      {section === "notifications" && (
-        <NotificationsSection onManageChannels={() => onSectionChange("connections")} />
-      )}
-      {section === "rules" && (
-        <RulesSection onOpenNotifications={() => onSectionChange("notifications")} />
-      )}
-      {section === "memory" && <MemorySection onOpenMemoryCenter={onOpenMemoryCenter} />}
-      {section === "connections" && <ChatGatewayPanel />}
     </PetSettingsShell>
   );
 }

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useT } from "../../i18n";
 import type { PetNoticeChannel, PetNoticeSystemRule } from "../../../shared/pet-notices";
-import { usePetNotificationsController, type NoticesApi } from "./PetNotificationsFields";
+import { usePetNoticesState, type NoticesReadApi } from "./usePetNoticesState";
 
 function channelText(
   rule: PetNoticeSystemRule,
@@ -25,24 +25,24 @@ export function RulesSection({
   api,
 }: {
   onOpenNotifications: () => void;
-  api?: NoticesApi;
+  api?: NoticesReadApi;
 }) {
   const { t } = useT();
-  const controller = usePetNotificationsController(api ? { api } : {});
-  const rule = controller.systemRule;
+  const notices = usePetNoticesState(api);
+  const rule = notices.state?.systemRule ?? null;
   return (
     <Card data-pet-setting="rules" className="rounded-2xl">
       <CardContent className="grid gap-4 p-6 max-[480px]:p-4">
-        {controller.loadState === "loading" || (controller.loadState === "ready" && !rule) ? (
+        {notices.loadState === "loading" || (notices.loadState === "ready" && !rule) ? (
           <p role="status" className="text-sm text-muted-foreground">
             {t("ext.common.loading")}
           </p>
         ) : !rule ? (
           <div className="grid gap-2">
             <p role="alert" className="text-sm text-status-err [overflow-wrap:anywhere]">
-              {t("ext.common.loadFailed", { error: controller.loadError })}
+              {t("ext.common.loadFailed", { error: notices.loadError })}
             </p>
-            <Button type="button" className="justify-self-start" onClick={controller.reload}>
+            <Button type="button" className="justify-self-start" onClick={notices.reload}>
               {t("ext.common.retry")}
             </Button>
           </div>
@@ -70,7 +70,7 @@ export function RulesSection({
                   })}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {channelText(rule, controller.channels, t)}
+                  {channelText(rule, notices.state?.channels ?? [], t)}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {t("mimiSettings.rules.toggleHint")}

@@ -327,10 +327,6 @@ function App() {
     window.addEventListener("codeshell:open-account-settings", openAccount);
     return () => window.removeEventListener("codeshell:open-account-settings", openAccount);
   }, []);
-  // A deep link targets one visit; afterwards Settings reopens on its last module.
-  useEffect(() => {
-    if (!isSettingsPage) setSettingsInitialModule(undefined);
-  }, [isSettingsPage]);
   const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(new Set());
   const [revealedSessionIds, setRevealedSessionIds] = useState<Record<string, string>>({});
 

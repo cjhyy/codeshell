@@ -18,7 +18,6 @@ import {
   PET_NOTIFICATION_PRESENCE_IDLE_SEC_RANGE,
   type PetNoticeChannel,
   type PetNoticeChannelReadiness,
-  type PetNoticeSystemRule,
   type PetNoticesState,
   type PetNotificationSettingsView,
 } from "../../../shared/pet-notices";
@@ -136,8 +135,6 @@ export interface PetNotificationsController {
   loadState: "loading" | "ready" | "error";
   loadError: string;
   channels: PetNoticeChannel[];
-  /** The "every Session" rule as main reports it; null until loaded. */
-  systemRule: PetNoticeSystemRule | null;
   systemRuleOn: boolean;
   systemPending: boolean;
   systemError: string;
@@ -265,7 +262,6 @@ export function usePetNotificationsController({
     loadState,
     loadError,
     channels: state?.channels ?? [],
-    systemRule: state?.systemRule ?? null,
     systemRuleOn: state?.systemRule.state === "active",
     systemPending,
     systemError,

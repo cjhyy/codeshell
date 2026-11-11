@@ -103,6 +103,41 @@ describe("PetSettingsShell", () => {
     expect(find(container, "data-section-body", "appearance")).toHaveLength(1);
   });
 
+  test("a jump from inside a section focuses the target section's heading", async () => {
+    const calls: string[] = [];
+    let jump: ((section: MimiSettingsSection) => void) | null = null;
+    root = createRoot(container);
+    const render = async (section: MimiSettingsSection) =>
+      act(async () => {
+        root!.render(
+          <PetSettingsShell
+            section={section}
+            onSectionChange={(next) => calls.push(next)}
+            backLabel="返回 Mimi"
+            onBack={() => undefined}
+          >
+            {(jumpTo) => {
+              jump = jumpTo;
+              return <p>body</p>;
+            }}
+          </PetSettingsShell>,
+        );
+        await flushMicrotasks();
+      });
+    await render("notifications");
+    // A plain nav click keeps focus where it is.
+    const [rules] = find(container, "data-pet-settings-nav-item", "rules");
+    rules.focus();
+    await render("rules");
+    expect(document.activeElement).toBe(rules);
+    act(() => jump!("connections"));
+    expect(calls).toEqual(["connections"]);
+    await render("connections");
+    const heading = find(container, "tabindex", "-1").find((node) => node.tagName === "H1");
+    expect(heading).toBeDefined();
+    expect(document.activeElement).toBe(heading);
+  });
+
   test("arrow keys move through the sections and wrap around", async () => {
     await mountShell("appearance", []);
     const items = find(container, "data-pet-settings-nav-item");

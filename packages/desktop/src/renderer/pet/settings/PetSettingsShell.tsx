@@ -14,8 +14,12 @@ export interface PetSettingsShellProps {
   /** Names the surface "back" returns to (Mimi, Settings, Credentials…). */
   backLabel: string;
   onBack: () => void;
-  /** The active section's content. */
-  children: ReactNode;
+  /**
+   * The active section's content. As a function it gets `jumpTo`, for links
+   * inside a section ("管理消息连接"): it opens the target section and moves
+   * focus to that section's heading, as choosing from the narrow picker does.
+   */
+  children: ReactNode | ((jumpTo: (section: MimiSettingsSection) => void) => ReactNode);
 }
 
 /**
@@ -32,7 +36,7 @@ export function PetSettingsShell({
 }: PetSettingsShellProps) {
   const { t } = useT();
   const sprite = usePetSprite();
-  const contentRef = useRef<HTMLElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const navItems = useRef(new Map<MimiSettingsSection, HTMLButtonElement>());
   const focusHeading = useRef(false);
@@ -47,6 +51,11 @@ export function PetSettingsShell({
       headingRef.current?.focus({ preventScroll: true });
     }
   }, [section]);
+
+  const jumpTo = (next: MimiSettingsSection) => {
+    focusHeading.current = true;
+    onSectionChange(next);
+  };
 
   const moveFocus = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
     const last = MIMI_SETTINGS_SECTIONS.length - 1;
@@ -157,14 +166,11 @@ export function PetSettingsShell({
               value: id,
               label: t(MIMI_SETTINGS_SECTION_META[id].title),
             }))}
-            onChange={(next) => {
-              focusHeading.current = true;
-              onSectionChange(next);
-            }}
+            onChange={jumpTo}
           />
         </div>
 
-        <main
+        <div
           ref={contentRef}
           className="min-h-0 min-w-0 flex-1 overflow-y-auto [scrollbar-gutter:stable] px-8 pb-10 pt-8 @max-[1000px]/mimi-settings:px-6 @max-[720px]/mimi-settings:px-4 @max-[720px]/mimi-settings:pt-5"
           data-pet-settings-section={section}
@@ -187,9 +193,11 @@ export function PetSettingsShell({
                 </p>
               </div>
             </header>
-            <div className="grid min-w-0 gap-5 [&>*]:min-w-0">{children}</div>
+            <div className="grid min-w-0 gap-5 [&>*]:min-w-0">
+              {typeof children === "function" ? children(jumpTo) : children}
+            </div>
           </div>
-        </main>
+        </div>
       </div>
     </section>
   );
