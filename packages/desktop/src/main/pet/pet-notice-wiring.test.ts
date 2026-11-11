@@ -393,4 +393,28 @@ describe("external runtime Sessions", () => {
     await settle();
     expect(current.submitted.map((notice) => notice.dedupeKey)).toEqual([`${CODEX}:failed:run-1`]);
   });
+
+  test("with external Sessions present, a native Session is still reset and flushed", async () => {
+    let live = true;
+    current = externalHarness({}, { hasLiveWorker: () => live }).harness;
+    current.routes.push(boundRoute());
+    await current.handler(SID, upsertArgs({ events: ["failed"] }));
+    env.clock = NOW + 1_000;
+    const [started, work, complete] = turn("run-1");
+    current.observeSessionEvent(SID, started);
+    current.observeSessionEvent(SID, work);
+    current.observeSessionEvent(SID, { type: "error", error: "boom" });
+    await settle();
+    expect(current.submitted).toEqual([]);
+    loseWorker(current, () => (live = false));
+    // The native run will never close: its parked report goes out now.
+    await settle(() => current!.submitted.length > 0);
+    expect(current.submitted.map((notice) => notice.dedupeKey)).toEqual([`${SID}:failed:run-1`]);
+    // And its turn is forgotten: a close naming no run did no work of its own.
+    await current.handler(SID, upsertArgs({ events: ["done"] }));
+    current.observeSessionEvent(SID, { ...complete, runId: undefined });
+    await settle();
+    await current.idle();
+    expect(current.submitted).toHaveLength(1);
+  });
 });

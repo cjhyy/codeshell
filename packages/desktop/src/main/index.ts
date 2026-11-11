@@ -1890,7 +1890,7 @@ async function createWindow(): Promise<BrowserWindow> {
       hasLiveWorker: () => bridge?.hasLiveWorker() ?? false,
       externalSessions: createExternalSessionCatalog({
         runtime: () => externalRuntime.service,
-        readState: (id) => new SessionManager().readSessionState(id),
+        readState: (id) => externalGoalSessions.readSessionState(id),
       }),
       onWorkerLost: (keep) => sessionOutcomeDeriver.reset(keep),
     });

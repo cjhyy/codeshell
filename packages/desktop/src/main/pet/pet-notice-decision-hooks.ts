@@ -176,7 +176,7 @@ export function createDecisionHooks(deps: PetDecisionHooksDeps): PetDecisionHook
       return deps.deliveries.planBlocked({
         sessionId,
         ...(task ? { task } : {}),
-        // Mimi's own and external Sessions are never watched by rules.
+        // Mimi's own Sessions and tailed CLI rollouts are never watched by rules.
         useRules: view.isEligibleSession(sessionId),
       }).entries[0];
     },

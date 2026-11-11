@@ -408,6 +408,40 @@ describe("ExternalRuntimeService", () => {
     },
   );
 
+  test("a background wake queued behind a turn is not counted as queued work", async () => {
+    const background = backgroundDelivery();
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: background.delivery,
+    });
+    let release!: () => void;
+    let entered!: () => void;
+    const started = new Promise<void>((resolve) => (entered = resolve));
+    try {
+      await svc.start(request);
+      providerSend = () =>
+        new Promise<void>((resolve) => {
+          release = resolve;
+          entered();
+        });
+      const turn = svc.send(request.sessionId, "user turn", 77);
+      await started;
+      background.complete(request.sessionId, "delegated result");
+      await settleBackgroundWakeup();
+      expect(svc.noticeProbe(request.sessionId)).toMatchObject({ running: true, queuedTurns: 0 });
+      // A user message behind the same turn is.
+      providerSend = undefined;
+      const queued = svc.send(request.sessionId, "follow-up", 77);
+      expect(svc.noticeProbe(request.sessionId)?.queuedTurns).toBe(1);
+      release();
+      await Promise.all([turn, queued]);
+      await settleBackgroundWakeup();
+      expect(svc.noticeProbe(request.sessionId)?.queuedTurns).toBe(0);
+    } finally {
+      release?.();
+      await svc.stopAll();
+    }
+  });
+
   test("a closed delivery cannot restore its result or acknowledge a successor's result", async () => {
     const background = backgroundDelivery();
     const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {

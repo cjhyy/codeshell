@@ -273,8 +273,10 @@ export class ExternalRuntimeService {
       modelTrace?: ReturnType<typeof startExternalRuntimeTrace>;
       /** Serializes turns so one recorder can never be reset by an overlapping send. */
       turnTail: Promise<void>;
-      /** Submissions still waiting behind `turnTail` (the notice pipeline's "busy"). */
-      queuedTurns: number;
+      /** User/host submissions waiting behind `turnTail` (background wakes excluded). */
+      queuedTurns: Set<{ generation: number }>;
+      /** `queuedTurns` when the last turn_complete was published (the notices' "busy"). */
+      queuedAtTerminal: number;
       /**
        * Invalidated before close so late provider events cannot enter a
        * replacement session. `faulted` marks a runtime whose last turn ended in
@@ -543,6 +545,10 @@ export class ExternalRuntimeService {
         entry.outputFailure();
         return;
       }
+    }
+    if (event.type === "turn_complete") {
+      const entry = this.sessions.get(sessionId);
+      if (entry) entry.queuedAtTerminal = this.queuedTurns(entry);
     }
     try {
       this.deps.emit(sessionId, event);
@@ -1489,7 +1495,8 @@ export class ExternalRuntimeService {
       },
       authority,
       turnTail: Promise.resolve(),
-      queuedTurns: 0,
+      queuedTurns: new Set(),
+      queuedAtTerminal: 0,
       lifecycle,
       goalToolsAvailable,
       forwardEvent,
@@ -1928,8 +1935,10 @@ export class ExternalRuntimeService {
         ? entry.recorder.finishIfMissing()
         : outcome;
     };
+    // Native queue depth counts user messages only; a wake may resolve to an empty slot.
+    const queued = initialBackground ? undefined : { generation: acceptedGeneration };
     const runTurn = async (): Promise<ExternalRuntimeTurnOutcome> => {
-      entry.queuedTurns -= 1;
+      if (queued) entry.queuedTurns.delete(queued);
       this.deps.memory?.cancel(sessionId);
       const outcome = await runTurnExclusive();
       if (
@@ -1979,7 +1988,7 @@ export class ExternalRuntimeService {
       }
       return outcome;
     };
-    entry.queuedTurns += 1;
+    if (queued) entry.queuedTurns.add(queued);
     const outcome = entry.turnTail.then(runTurn, runTurn);
     const afterSubmission = () => {
       // A preserved old runtime can still own a claim while its replacement is
@@ -2004,8 +2013,20 @@ export class ExternalRuntimeService {
   noticeProbe(sessionId: string) {
     const entry = this.sessions.get(sessionId);
     if (!entry?.lifecycle.active) return undefined;
-    const { kind, queuedTurns } = entry;
-    return { kind, running: this.isSessionRunning(sessionId), queuedTurns };
+    const { kind, queuedAtTerminal } = entry;
+    const running = this.isSessionRunning(sessionId);
+    return { kind, running, queuedTurns: this.queuedTurns(entry), queuedAtTerminal };
+  }
+
+  /** Queued turns an interrupt has not already cancelled. */
+  private queuedTurns(entry: {
+    queuedTurns: Set<{ generation: number }>;
+    lifecycle: { interruptGeneration: number };
+  }): number {
+    let count = 0;
+    for (const { generation } of entry.queuedTurns)
+      if (generation === entry.lifecycle.interruptGeneration) count += 1;
+    return count;
   }
 
   /** Trusted Main probe: the Session has an open provider run (including Goal turns). */
