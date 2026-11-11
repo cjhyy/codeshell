@@ -1,7 +1,8 @@
 import React, { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { Cookie, KeyRound, Link2, MessagesSquare, type LucideIcon } from "lucide-react";
 import { TokenTab } from "./TokenTab";
-import { ChatGatewayTab, LinkTab } from "./LinkTab";
+import { LinkTab } from "./LinkTab";
+import { ChatGatewayPanel } from "./ChatGatewayPanel";
 import { CookieTab } from "./CookieTab";
 import { useT } from "../i18n/I18nProvider";
 import { Button } from "@/components/ui/button";
@@ -180,7 +181,7 @@ export function CredentialsPage({
           {tab === "cookie" && <CookieTab key={cwd} cwd={cwd} activeBucket={activeBucket} />}
           {tab === "token" && <TokenTab key={cwd} cwd={cwd} />}
           {tab === "link" && <LinkTab key={cwd} cwd={cwd} />}
-          {tab === "channels" && <ChatGatewayTab />}
+          {tab === "channels" && <ChatGatewayPanel />}
         </div>
       </div>
     </div>
