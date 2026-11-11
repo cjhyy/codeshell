@@ -70,6 +70,66 @@ describe("RunToolSurface", () => {
     expect(resumed.snapshot()[0].description).toBe("fresh write");
   });
 
+  it("requires rediscovery when a tool was unavailable during promotion and returns later", () => {
+    const bootstrap = [definition("ToolSearch"), callToolDef];
+    const first = new RunToolSurface(["Read"]);
+    first.updateCatalog([...bootstrap, definition("Read", "old read schema"), definition("Write")]);
+    first.select(["Write"]);
+    first.updateCatalog(bootstrap);
+    first.rebase();
+    const prefix = JSON.stringify(first.snapshot());
+    expect(first.snapshot()[0].description).toBe("old read schema");
+    expect(first.getSelection().names).toContain("Write");
+    expect(first.getSelection().discovered).toEqual([]);
+
+    const returnedCatalog = [
+      ...bootstrap,
+      definition("Read", "new read schema"),
+      definition("Write", "returned schema"),
+    ];
+    first.updateCatalog(returnedCatalog);
+    expect(first.isCallable("Read")).toBe(true);
+    expect(first.isEligible("Write")).toBe(true);
+    expect(first.isCallable("Write")).toBe(false);
+    const resumed = new RunToolSurface([], {
+      selection: JSON.parse(JSON.stringify(first.getSelection())),
+    });
+    resumed.updateCatalog(returnedCatalog);
+    expect(JSON.stringify(resumed.snapshot())).toBe(prefix);
+    expect(resumed.isCallable("Write")).toBe(false);
+    resumed.select(["Write"]);
+    expect(resumed.getSelection().discovered).toEqual(["Write"]);
+    expect(resumed.isCallable("Write")).toBe(true);
+    expect(JSON.stringify(resumed.snapshot())).toBe(prefix);
+
+    const rediscovered = new RunToolSurface([], {
+      selection: JSON.parse(JSON.stringify(resumed.getSelection())),
+    });
+    rediscovered.updateCatalog(returnedCatalog);
+    expect(JSON.stringify(rediscovered.snapshot())).toBe(prefix);
+    expect(rediscovered.isCallable("Write")).toBe(true);
+    rediscovered.rebase();
+    expect(rediscovered.snapshot().find((tool) => tool.name === "Write")?.description).toBe(
+      "returned schema",
+    );
+    expect(rediscovered.getSelection().discovered).toEqual([]);
+  });
+
+  it("preserves an explicitly empty snapshot when retained tools return", () => {
+    const surface = new RunToolSurface(undefined, {
+      selection: { version: 2, names: ["Read"], discovered: [], frozenDefinitions: [] },
+    });
+    surface.updateCatalog([definition("Read")]);
+    expect(surface.snapshot()).toEqual([]);
+    expect(surface.isEligible("Read")).toBe(true);
+    expect(surface.isCallable("Read")).toBe(false);
+    surface.select(["Read"]);
+    expect(surface.isCallable("Read")).toBe(true);
+    expect(surface.snapshot()).toEqual([]);
+    surface.rebase();
+    expect(names(surface)).toEqual(["Read"]);
+  });
+
   it("upgrades v1 loading order and gives it the static CallTool wrapper", () => {
     expect(normalizeSessionToolSelection({ version: 1, names: ["Read", "Read"] })).toEqual({
       version: 2,

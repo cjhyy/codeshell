@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { LLMConfig, SessionToolSelection, ToolDefinition } from "../types.js";
 import type { ToolContext } from "../tool-system/context.js";
 import { RunToolSurface } from "../tool-system/run-tool-surface.js";
+import { toolSearchTool } from "../tool-system/builtin/tool-search.js";
 import { initializeRunToolSurface } from "./run-tooling.js";
 import {
   isToolCacheCompaction,
@@ -160,6 +161,54 @@ describe("tool cache compaction boundaries", () => {
 });
 
 describe("run surface persistence compatibility", () => {
+  test.each(["manual compaction", "model change"])(
+    "%s cannot insert a returning tool into a saved partial snapshot",
+    async (boundary) => {
+      const previous = selection();
+      const runConfig = boundary === "model change" ? { ...config, model: "next-model" } : config;
+      const coldSelection =
+        boundary === "manual compaction" ? rebaseToolSelection(previous) : previous;
+      const absent = new Set(["Frozen", "Deferred"]);
+      const first = { cwd: "/repo", llmConfig: runConfig } as ToolContext;
+      const prefix = JSON.stringify(
+        initializeRunToolSurface(
+          first,
+          [],
+          () => catalog().filter((tool) => !absent.has(tool.name)),
+          { taskText: "cold cycle", selection: coldSelection },
+        ),
+      );
+      const saved = JSON.parse(JSON.stringify(first.runToolSurface!.getSelection()));
+      for (const name of absent) expect(saved.names).toContain(name);
+      expect(saved.discovered).toEqual([]);
+      const resumed = { cwd: "/repo", llmConfig: runConfig } as ToolContext;
+      initializeRunToolSurface(resumed, [], catalog, {
+        taskText: "tools have returned",
+        selection: saved,
+      });
+      expect(JSON.stringify(resumed.refreshRunTools!())).toBe(prefix);
+      for (const name of absent) {
+        expect(resumed.runToolSurface!.isEligible(name)).toBe(true);
+        expect(resumed.runToolSurface!.isCallable(name)).toBe(false);
+      }
+      const receipt = await toolSearchTool({ query: "select:Frozen,Deferred" }, resumed);
+      expect(receipt).toContain('"name":"Frozen","description":"updated schema"');
+      expect(receipt).toContain('"name":"Deferred"');
+      expect(receipt).toContain('"inputSchema":{"type":"object","properties":{}}');
+      expect(JSON.stringify(resumed.refreshRunTools!())).toBe(prefix);
+      for (const name of absent) expect(resumed.runToolSurface!.isCallable(name)).toBe(true);
+      expect(resumed.runToolSurface!.getSelection().discovered).toEqual(["Frozen", "Deferred"]);
+      resumed.runToolSurface!.rebase();
+      expect(resumed.refreshRunTools!().map((tool) => tool.name)).toEqual([
+        "ToolSearch",
+        "CallTool",
+        "Frozen",
+        "Deferred",
+        "OtherDeferred",
+      ]);
+    },
+  );
+
   test("resume keeps unavailable top schemas and ignores new initial routing choices", () => {
     const previous = selection();
     const ctx = { cwd: "/repo", llmConfig: config } as ToolContext;
