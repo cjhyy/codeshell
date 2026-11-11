@@ -171,6 +171,8 @@ jobs:
             # Computer Use suites run as one process below: they spawn the MCP proxy and
             # fake drivers, and splitting them out keeps this shard within its file budget.
             # The new Pet navigator suite runs below to retain the measured file budget.
+            # Cross-channel defaults and external-manager boundaries run in bounded
+            # groups below; the general Desktop process is already at its ceiling.
             ignore: >-
               --path-ignore-patterns '**/browser-runtime/playwright-driver.test.ts'
               --path-ignore-patterns '**/browser-library/puppeteer-browser-driver.test.ts'
@@ -204,6 +206,14 @@ jobs:
               --path-ignore-patterns '**/src/main/pet/pet-session-rule-watcher.test.ts'
               --path-ignore-patterns '**/src/main/pet/session-outcome.test.ts'
               --path-ignore-patterns '**/src/main/pet/pet-presence.test.ts'
+              --path-ignore-patterns '**/src/main/external-runtime-host-submission.test.ts'
+              --path-ignore-patterns '**/src/main/external-runtime-profile-control.test.ts'
+              --path-ignore-patterns '**/src/main/pet/pet-dispatch-external-runtime.test.ts'
+              --path-ignore-patterns '**/src/main/pet/pet-external-*.test.ts'
+              --path-ignore-patterns '**/src/main/pet/pet-native-extraction-policy.test.ts'
+              --path-ignore-patterns '**/src/main/pet/pet-runtime-control-worker.test.ts'
+              --path-ignore-patterns '**/src/shared/session-model-default.test.ts'
+              --path-ignore-patterns '**/renderer/settings/SessionDefaultModelSelector.interaction.test.tsx'
           # rest is split in two only for wall time (470s as one shard). Together the two
           # path lists are the previous single list. The module losses seen when it was split
           # were not size: two suites bundled with an in-process Bun.build, which shares the
@@ -303,6 +313,11 @@ jobs:
           # Mimi notice rules, delivery plan, session outcomes, watcher, router and ledger suites run as one bounded process;
           # the general Desktop shard is at its budget.
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/pet/pet-delivery-plan.test.ts packages/desktop/src/main/pet/pet-notice-compose.test.ts packages/desktop/src/main/pet/pet-notice-ipc.test.ts packages/desktop/src/main/pet/pet-notice-ledger.test.ts packages/desktop/src/main/pet/pet-notice-media.test.ts packages/desktop/src/main/pet/pet-notice-policy.test.ts packages/desktop/src/main/pet/pet-notice-router.test.ts packages/desktop/src/main/pet/pet-notice-timers.test.ts packages/desktop/src/main/pet/pet-notice-wiring.test.ts packages/desktop/src/main/pet/pet-notice-attention.test.ts packages/desktop/src/main/pet/pet-notice-bound-replies.test.ts packages/desktop/src/main/pet/pet-notice-decision-hooks.test.ts packages/desktop/src/main/pet/pet-notice-external-decisions.test.ts packages/desktop/src/main/pet/pet-notice-external-sessions.test.ts packages/desktop/src/main/pet/pet-notice-external-stream.test.ts packages/desktop/src/main/pet/pet-notice-host-action.test.ts packages/desktop/src/main/pet/pet-notice-outbox.test.ts packages/desktop/src/main/pet/pet-notice-outlets.test.ts packages/desktop/src/main/pet/pet-notice-replay.test.ts packages/desktop/src/main/pet/pet-notice-settings.test.ts packages/desktop/src/main/pet/pet-notice-task-closure.test.ts packages/desktop/src/main/pet/pet-notice-follow-up.test.ts packages/desktop/src/main/pet/pet-notice-session-report.test.ts packages/desktop/src/main/pet/pet-notice-session-watch.test.ts packages/desktop/src/main/pet/pet-notice-action-codes.test.ts packages/desktop/src/main/pet/pet-notice-action-controls.test.ts packages/desktop/src/main/pet/pet-notice-action-sources.test.ts packages/desktop/src/main/pet/pet-notice-actions.test.ts packages/desktop/src/main/pet/pet-notice-reply-interpreter.test.ts packages/desktop/src/main/pet/pet-rule-store.test.ts packages/desktop/src/main/pet/pet-session-rule-watcher.test.ts packages/desktop/src/main/pet/session-outcome.test.ts packages/desktop/src/main/pet/pet-presence.test.ts
+      - name: test cross-channel model defaults and external manager boundaries
+        if: matrix.shard == 'desktop'
+        run: |
+          node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/external-runtime-host-submission.test.ts packages/desktop/src/main/external-runtime-profile-control.test.ts packages/desktop/src/main/pet/pet-dispatch-external-runtime.test.ts packages/desktop/src/main/pet/pet-external-runtime.test.ts packages/desktop/src/main/pet/pet-external-reply-model.test.ts packages/desktop/src/main/pet/pet-native-extraction-policy.test.ts packages/desktop/src/main/pet/pet-runtime-control-worker.test.ts packages/desktop/src/main/pet/pet-notice-reply-models.test.ts
+          node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/shared/session-model-default.test.ts packages/desktop/src/renderer/settings/SessionDefaultModelSelector.interaction.test.tsx
       - name: test Desktop application state hooks
         if: matrix.shard == 'desktop'
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 --path-ignore-patterns '**/useMimiPresence.test.tsx' packages/desktop/src/renderer/app

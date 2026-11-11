@@ -87,7 +87,12 @@ export function SessionDefaultModelSelector({ scope, activeProjectPath }: Props)
   };
 
   return (
-    <section className="rounded-xl border border-border bg-card p-4" data-session-default-model>
+    // Keep SimpleSelect's absolute, visually hidden form control inside the
+    // scrolling section instead of the document's initial containing block.
+    <section
+      className="relative rounded-xl border border-border bg-card p-4"
+      data-session-default-model
+    >
       <h3 className="mb-2 text-[0.95rem] font-semibold">{t("settingsX.sessionDefault.title")}</h3>
       <p className="mb-3 text-xs leading-5 text-muted-foreground">
         {t(

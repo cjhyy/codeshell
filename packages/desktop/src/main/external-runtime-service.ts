@@ -19,25 +19,22 @@
 import type { BrowserWindow } from "electron";
 import { lstatSync } from "node:fs";
 import { ExternalRuntimeProfileControl } from "./external-runtime-profile-control.js";
-import type { ExternalRuntimeToolProfile } from "./external-runtime-tool-profile.js";
-import { join } from "node:path";
 import {
-  claudePermissionModeFor,
-  startExternalRuntimeSession,
-} from "@cjhyy/code-shell-capability-coding/external-runtimes";
+  createExternalRuntimeToolSurface,
+  externalRuntimePermissionPolicy,
+  type ExternalRuntimeToolProfile,
+} from "./external-runtime-tool-profile.js";
+import { join } from "node:path";
+import { startExternalRuntimeSession } from "@cjhyy/code-shell-capability-coding/external-runtimes";
 import { codexNativeApprovalPresentation } from "./external-runtime-codex-approvals.js";
 import type {
   ExternalRuntimeTurnInput,
   ExternalRuntimeKind,
   ExternalRuntimeSession,
 } from "@cjhyy/code-shell-capability-coding/external-runtimes";
-import { CODING_TOOLS } from "@cjhyy/code-shell-capability-coding/capability";
 import {
-  BUILTIN_AGENT_PRESETS,
-  BUILTIN_TOOLS,
   sessionsRoot,
   SessionManager,
-  ToolRegistry,
   type GoalConfig,
   type PermissionMode,
   type SessionProjectBinding,
@@ -45,7 +42,6 @@ import {
   type TerminalReason,
 } from "@cjhyy/code-shell-core";
 import {
-  FIRST_PHASE_EXPOSURE,
   isFeatureEnabled,
   type FeatureFlagOverrides,
   type ToolContext,
@@ -70,7 +66,6 @@ import {
   type ExternalRuntimeTurnOutcome,
 } from "./external-runtime-state.js";
 import {
-  EXTERNAL_GOAL_TOOLS,
   ExternalRuntimeGoals,
   type ExternalGoalExtension,
   type ExternalGoalUpdate,
@@ -84,7 +79,6 @@ import { createExternalRuntimeSourceContext } from "./external-runtime-source-co
 import { EXTERNAL_GOAL_TOOL_CATALOG } from "./external-runtime-goal-tools.js";
 import {
   externalMimiToolInstructions,
-  registerExternalMimiTools,
   type ExternalRuntimeMimiHost,
 } from "./external-runtime-mimi-tools.js";
 import {
@@ -984,75 +978,20 @@ export class ExternalRuntimeService {
     // stripped — and the layers below deliberately have no default for this.
     const projectTrusted = authority.projectTrusted;
 
-    // Host tools are gated by their OWN flag, so the runtime can be trialled with
-    // no tool surface at all (§20). An empty allowlist is the honest expression of
-    // "off" — the bridge still exists, it just advertises nothing.
-    const goalToolsAvailable =
-      this.areHostToolsEnabled() && !request.planMode && !request.toolProfile;
-    // The registry must actually CONTAIN the tools the exposure policy allows.
-    // `new ToolRegistry({})` registers none, which would make the allowlist
-    // moot in the quietest possible way: `listTools()` returns [], the runtime
-    // advertises nothing, and it looks like the policy denied everything.
-    // The registry contains the full catalog. SessionToolHost intersects it
-    // with the reviewed exposure policy and the current capability settings;
-    // registration alone never grants external access.
-    if (request.toolProfile && !this.areHostToolsEnabled())
-      throw new Error("External chat requires CodeShell Host tools. Enable external_host_tools.");
-    const registry = new ToolRegistry({
-      toolCatalog: request.toolProfile?.catalog ?? [...BUILTIN_TOOLS, ...CODING_TOOLS],
-    });
-    // Plan mode blocks them (not in PLAN_MODE_ALLOWED_TOOLS), so neither tools nor guidance.
-    // Known limitation: read once per start, so a runtime started before Main's
-    // notice wiring exists has no NotifyMe until it restarts.
-    const mimiHost =
-      this.areHostToolsEnabled() && !request.planMode && !request.toolProfile
-        ? this.deps.mimiTools?.()
-        : undefined;
-    const mimiTools = mimiHost
-      ? registerExternalMimiTools(registry, {
-          sessionId: request.sessionId,
-          host: mimiHost,
-          readGoal: () => this.goals.read(request.sessionId),
-          assertActive: () => {
-            if (!lifecycle.active) throw new Error("This external runtime has been replaced");
-          },
-        })
-      : [];
-    const exposure = request.toolProfile
-      ? {
-          mode: "allowlist" as const,
-          toolNames: new Set(request.toolProfile.catalog.map((tool) => tool.definition.name)),
-        }
-      : this.areHostToolsEnabled()
-        ? {
-            ...FIRST_PHASE_EXPOSURE,
-            toolNames: new Set([
-              ...FIRST_PHASE_EXPOSURE.toolNames,
-              ...(goalToolsAvailable ? EXTERNAL_GOAL_TOOLS : []),
-              ...mimiTools,
-            ]),
-          }
-        : { mode: "allowlist" as const, toolNames: new Set<string>() };
-    const fullAccess = request.permissionMode === "bypassPermissions";
-    // Keep host tool deny rules and exposure checks while honoring the user's
-    // full-access selection for file paths and tool approval requests.
-    const hostPermissionMode =
-      request.permissionMode === "acceptEdits" || fullAccess ? "acceptEdits" : "default";
-    const sandbox =
-      request.planMode || request.toolProfile?.readOnly
-        ? "read-only"
-        : fullAccess
-          ? "danger-full-access"
-          : "workspace-write";
-    const approvalPolicy =
-      fullAccess || request.permissionMode === "dontAsk" ? "never" : "on-request";
-    // Claude Code's NATIVE tools follow the user's selection directly; host tools
-    // keep hostPermissionMode above. Plan → plan, full access → bypassPermissions,
-    // and nothing else escalates.
-    const claudePermissionMode = claudePermissionModeFor({
-      permissionMode: request.permissionMode,
-      planMode: request.planMode === true,
-    });
+    const { registry, exposure, mimiTools, goalToolsAvailable, presetRules } =
+      createExternalRuntimeToolSurface({
+        toolProfile: request.toolProfile,
+        hostToolsEnabled: this.areHostToolsEnabled(),
+        planMode: request.planMode === true,
+        sessionId: request.sessionId,
+        mimiHost: () => this.deps.mimiTools?.(),
+        readGoal: () => this.goals.read(request.sessionId),
+        assertActive: () => {
+          if (!lifecycle.active) throw new Error("This external runtime has been replaced");
+        },
+      });
+    const { fullAccess, hostPermissionMode, sandbox, approvalPolicy, claudePermissionMode } =
+      externalRuntimePermissionPolicy(request);
     const toolApprovalBackend = fullAccess
       ? { requestApproval: async () => ({ approved: true }) }
       : request.permissionMode !== "dontAsk" && this.deps.requestApproval
@@ -1367,18 +1306,7 @@ export class ExternalRuntimeService {
         registry,
         permissionMode: hostPermissionMode,
         pathAccess: fullAccess ? "full" : "default",
-        presetRules: [
-          ...BUILTIN_AGENT_PRESETS.general.defaultPermissionRules,
-          // Goal controller and Mimi tools need no approval (design D5).
-          ...[
-            ...EXTERNAL_GOAL_TOOLS,
-            ...mimiTools,
-            ...(request.toolProfile?.catalog.map((tool) => tool.definition.name) ?? []),
-          ].map((tool) => ({
-            tool,
-            decision: "allow" as const,
-          })),
-        ],
+        presetRules,
         projectTrusted,
         planMode: request.planMode === true,
         // This is the same trusted Desktop scope used by its native stdio

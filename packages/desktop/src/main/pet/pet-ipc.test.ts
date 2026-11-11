@@ -762,9 +762,9 @@ describe("registerPetIpc", () => {
     expect(received).toEqual([]);
   });
 
-  test("passes a bounded Pet model selection through the IPC boundary", async () => {
+  test("passes bounded native and external Pet model selections through the IPC boundary", async () => {
     const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
-    let received: unknown;
+    const received: unknown[] = [];
     registerPetIpc({
       ipcMain: {
         handle: (channel, handler) => handlers.set(channel, handler),
@@ -777,7 +777,7 @@ describe("registerPetIpc", () => {
       },
       dispatcher: {
         dispatch: async (command) => {
-          received = command;
+          received.push(command);
           return { ok: true, type: "chat", petSessionId: "pet-one", result: {} };
         },
       },
@@ -785,17 +785,33 @@ describe("registerPetIpc", () => {
     });
     const dispatch = handlers.get("pet:dispatch")!;
 
-    await dispatch({}, { type: "chat", message: "hello", model: "fast-model" });
-    expect(received).toMatchObject({ type: "chat", message: "hello", model: "fast-model" });
-    expect(() => dispatch({}, { type: "chat", message: "hello", model: "bad\nmodel" })).toThrow(
-      "invalid pet command",
-    );
-    expect(() => dispatch({}, { type: "chat", message: "hello", model: " padded " })).toThrow(
-      "invalid pet command",
-    );
-    expect(() =>
-      dispatch({}, { type: "chat", message: "hello", model: "codex/gpt-5.6-sol" }),
-    ).toThrow("invalid pet command");
+    const accepted = [
+      "fast-model",
+      "codex/gpt-6.1-sol",
+      "codex/gpt-5.6-sol",
+      "claude-code/sonnet",
+      "x".repeat(256),
+    ];
+    for (const model of accepted) {
+      await dispatch({}, { type: "chat", message: "hello", model });
+      expect(received.at(-1)).toMatchObject({ type: "chat", message: "hello", model });
+    }
+    for (const model of [
+      "",
+      "bad\nmodel",
+      "bad\u0000model",
+      "bad\u007fmodel",
+      " padded ",
+      "x".repeat(257),
+      null,
+      42,
+      {},
+    ]) {
+      expect(() => dispatch({}, { type: "chat", message: "hello", model })).toThrow(
+        "invalid pet command",
+      );
+    }
+    expect(received).toHaveLength(accepted.length);
   });
 
   test("accepts only a structured navigation request and delegates revalidation", async () => {
