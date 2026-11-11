@@ -311,7 +311,7 @@ export interface PromptCachePolicy {
 - v2 状态额外保存可选 `frozenDefinitions`。仅保存名字不能在进程重启、MCP 已断开的情况下还原旧 schema；冻结副本保留 JSON 键序，执行资格和参数验证仍以当前目录／注册表为准。
 - v2 同时保存 `cacheIdentity`，对 provider、协议、端点、模型和连接 key 做哈希，避免端点中的私密字段落入该状态。模型或线路变化会合并发现列表并刷新定义。
 - 摘要之外，手动归档、notes rollover、实际丢弃历史的 snip/window/emergency、超长请求恢复同样会移走发现结果，因而也启动新周期。无效果的压缩不重建前缀。压缩后同时重建系统提示中的工具列表，避免下一轮 run 再次改写。
-- `CallTool` 仅在原生发现入口配对注册；外部工具 Host 的既定 allowlist 不会因此被扩大。真正执行前仍经过当前资格、权限、hook、计划模式、参数验证和超时等原有闸门。
+- `CallTool` 仅由原生模型请求的工具表与 `ToolSearch` 配对装配，不注册到产品 capability 目录，也不修改既有组合 golden。外部工具 Host 的既定 allowlist 不会因此被扩大。真正执行前仍经过当前资格、权限、hook、计划模式、参数验证和超时等原有闸门。
 - 失败的 `complete_goal`／`cancel_goal` 结果不再触发 Goal 终结；成功的真实工具结果才可更新持久状态。
 - 最新主线的 Goal 状态说明已在尾部动态上下文，未发现需另外移走的 Goal 系统提示内容。工具门控的行为提示和工具名索引均使用冻结顶部集合。
 - ToolSearch 完整 schema 豁免落盘预览、字符与 token 截断、整批结果预算；已有微压缩与浏览器 observation masking 不改写它们，测试锁定此行为。
