@@ -187,6 +187,23 @@ describe("a slot missed while asleep", () => {
   });
 });
 
+describe("a notice held just after a slot", () => {
+  test("held at 12:00:40, right after the 12:00 digest, waits for 18:00", async () => {
+    const window = { quietHours: null, timezoneOffsetMin: 480 };
+    const held = at(12) + 40_000;
+    expect(slottedFlushAt(held, held, ["12:00", "18:00"], window, held)).toBe(at(18));
+    expect(slottedFlushAt(held, at(12, 5), ["12:00", "18:00"], window, held)).toBe(at(18));
+    // Held before the slot, and the timer fires a moment after it: goes.
+    expect(slottedFlushAt(at(11), at(12) + 500, ["12:00"], window, at(11))).toBe(at(12) + 500);
+
+    const h = setup(at(12) + 40_000, { quietHours: null, digestSlots: ["12:00", "18:00"] });
+    await h.router.submit(notice({ attention: "digest" }));
+    await h.router.flushDigest();
+    expect(h.im).toEqual([]);
+    expect(h.clock.pendingAt()).toEqual([at(18)]);
+  });
+});
+
 describe("standalone notices held by the digest", () => {
   test("a brief held by quiet hours goes out whole when they end, once", async () => {
     const h = setup(at(7), { quietHours: { start: "23:00", end: "08:00" } });

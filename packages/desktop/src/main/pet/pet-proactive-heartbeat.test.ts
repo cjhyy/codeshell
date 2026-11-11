@@ -185,9 +185,10 @@ describe("the judgement", () => {
       say: false,
       recheckInMin: 10,
     });
+    // At most 90 minutes: a later look would no longer see its own trigger (2-h look-back).
     expect(parseHeartbeatJudgement('{"say":false,"recheckInMin":600}')).toEqual({
       say: false,
-      recheckInMin: 120,
+      recheckInMin: 90,
     });
     for (const bad of [
       '{"say":true}',

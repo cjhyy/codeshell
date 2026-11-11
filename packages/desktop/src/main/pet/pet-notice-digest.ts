@@ -123,15 +123,18 @@ export function slottedFlushAt(
   const zone = window.timezoneOffsetMin;
   const quiet = (at: number) => isInQuietHours(window.quietHours, at, zone);
   if (readyAt <= now && !quiet(now)) {
-    // The slots since it was held, newest first (a day's worth at most).
-    const since = Math.floor(heldSince / MINUTE) * MINUTE;
+    // The slots after it was held (exactly: a slot it was held just after does
+    // not count), newest first, a day's worth at most.
     let slot = slotAtOrBefore(now, minutes, zone);
-    for (let seen = 0; seen <= minutes.length && slot >= since; seen += 1) {
+    for (let seen = 0; seen <= minutes.length && slot > heldSince; seen += 1) {
       if (!quiet(slot)) return now;
       slot = slotAtOrBefore(slot - MINUTE, minutes, zone);
     }
   }
-  let at = slotAtOrAfter(Math.max(readyAt, now), minutes, zone);
+  // The next slot instant at or after then (not one earlier in the same minute).
+  const from = Math.max(readyAt, now);
+  let at = slotAtOrAfter(from, minutes, zone);
+  if (at < from) at = slotAtOrAfter(at + MINUTE, minutes, zone);
   // Every slot may lie in quiet hours: give up after a day's worth and send at the next.
   for (let tries = 0; tries < minutes.length && quiet(at); tries += 1)
     at = slotAtOrAfter(at + MINUTE, minutes, zone);
