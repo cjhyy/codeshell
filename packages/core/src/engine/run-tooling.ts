@@ -37,7 +37,11 @@ import { routeInitialTools, type TaskToolRoutingPolicy } from "../preset/task-to
 import { logger } from "../logging/logger.js";
 import { resolvePromptCachePolicy } from "../llm/prompt-cache.js";
 import { callToolDef } from "../tool-system/builtin/call-tool.js";
-import { selectionForToolCacheCycle, toolCacheIdentity } from "./tool-cache-cycle.js";
+import {
+  rebaseToolSelection,
+  selectionForToolCacheCycle,
+  toolCacheIdentity,
+} from "./tool-cache-cycle.js";
 
 /** Fold once per Run from the unmodified transport baseline; unknown names cannot create servers. */
 export function snapshotRunMcpServers(
@@ -76,9 +80,20 @@ export function initializeRunToolSurface(
   };
   const catalog = assembleModelCatalog();
   const identity = toolCacheIdentity(toolCtx.llmConfig);
-  const selection = normalizeSessionToolSelection(
+  const toolDiscovery = toolCtx.llmConfig
+    ? resolvePromptCachePolicy(toolCtx.llmConfig).toolDiscovery
+    : "call-tool";
+  let selection = normalizeSessionToolSelection(
     selectionForToolCacheCycle(routing?.selection, identity),
   );
+  // A legacy selection has no frozen native directory. Its first native request
+  // is a cold boundary; an explicitly saved empty directory is already complete.
+  if (
+    toolDiscovery === "tool-reference" &&
+    selection &&
+    selection.deferredDefinitions === undefined
+  )
+    selection = rebaseToolSelection(selection);
   // Unknown future/damaged persisted state must survive without being overwritten.
   const persistSelection =
     routing?.selection !== undefined && !selection
@@ -117,9 +132,7 @@ export function initializeRunToolSurface(
           ? { ...selection, version: 1 }
           : selection,
       onSelectionChanged: persistSelection,
-      toolDiscovery: toolCtx.llmConfig
-        ? resolvePromptCachePolicy(toolCtx.llmConfig).toolDiscovery
-        : "call-tool",
+      toolDiscovery,
     },
   );
   toolCtx.runToolSurface = surface;

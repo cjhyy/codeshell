@@ -2241,12 +2241,17 @@ export class TurnLoop {
    * If streaming fails, emit tombstone and retry non-streaming.
    */
   private async refreshModelToolPrefix(): Promise<void> {
-    const tools = this.deps.getTools?.() ?? this.deps.runToolSurface?.snapshot() ?? this.deps.tools;
+    const tools =
+      this.deps.getTools?.() ?? this.deps.runToolSurface?.requestSnapshot() ?? this.deps.tools;
     if (
       this.deps.getSystemPrompt &&
       JSON.stringify(tools) !== JSON.stringify(this.modelStepTools ?? this.deps.tools)
     ) {
-      this.deps.systemPrompt = await this.deps.getSystemPrompt(tools);
+      // Deferred declarations belong only to the wire directory. Prompt tool
+      // listings and behavior gates continue to describe the frozen eager surface.
+      this.deps.systemPrompt = await this.deps.getSystemPrompt(
+        this.deps.runToolSurface?.snapshot() ?? tools.filter((tool) => !tool.deferLoading),
+      );
     }
     this.modelStepTools = tools;
   }
