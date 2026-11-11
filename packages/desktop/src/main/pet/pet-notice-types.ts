@@ -147,7 +147,14 @@ export interface NoticeMediaFreezer {
 
 /** One notice handed to `PetNoticeRouter.submit`. */
 export interface NoticeSubmission {
-  kind: "session.done" | "session.failed" | "session.blocked" | "digest" | (string & {});
+  kind:
+    | "session.done"
+    | "session.failed"
+    | "session.blocked"
+    | "session.report"
+    | "followup.due"
+    | "digest"
+    | (string & {});
   priority: NoticePriority;
   dedupeKey: string;
   sessionId?: string;
@@ -486,7 +493,7 @@ export function normalizeSettings(
 /**
  * Why a queued or held notice should no longer be replayed or digested:
  * expired, its decision was resolved elsewhere, its Goal was cleared (a goal
- * pause whose goal rule is cancelled), or (done / failed) the owner already
+ * pause whose goal rule is cancelled), or (done / failed / report) the owner already
  * looked at the Session on the desktop.
  */
 export function staleReason(
@@ -511,7 +518,9 @@ export function staleReason(
     return "goal-cleared";
   if (
     sessionId &&
-    (record.kind === "session.done" || record.kind === "session.failed") &&
+    (record.kind === "session.done" ||
+      record.kind === "session.failed" ||
+      record.kind === "session.report") &&
     probes.wasSessionViewedSince?.(sessionId, record.createdAt) === true
   )
     return "viewed";

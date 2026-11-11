@@ -43,7 +43,7 @@ import { injectDesktopManagedRuntimePath } from "./managed-runtime-service.js";
 import { createDesktopManagedRuntimeWiring } from "./managed-runtime-wiring.js";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { AppRendererNavigation } from "./app-renderer-navigation.js";
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { dirname, resolve, isAbsolute, join } from "node:path";
 import {
   approvePluginHooks,
@@ -2135,8 +2135,7 @@ async function createWindow(): Promise<BrowserWindow> {
         if (!automationHandle) throw new Error("follow-up scheduler is not initialized");
         return automationHandle.scheduler;
       },
-      publish: publishGatewayControlEvent,
-      notify: async (input) => desktopNotifier?.notify(input),
+      submitNotice: notices.submitNotice,
       dispatch: () => petDispatchService,
       onError: (error) => dlog("main", "pet.followUp.wake.failed", { error: String(error) }),
     });
@@ -2240,54 +2239,17 @@ async function createWindow(): Promise<BrowserWindow> {
           if (!controlled.ok) throw new Error(controlled.message);
           return { action, objective: controlled.task.objective, status: controlled.task.status };
         },
-        sessionWatch: async (payload, context) => {
-          const sessionId = typeof payload.sessionId === "string" ? payload.sessionId : "";
-          const completionTarget = context?.completionTarget;
-          if (
-            !sessionId ||
-            !completionTarget ||
-            !context?.originClientMessageId ||
-            !Number.isFinite(context.requestedAt)
-          ) {
-            throw new Error("当前消息没有可用的完成回告路由");
-          }
-          // Reconcile immediately so a Session that ended while Mimi was
-          // composing her reply is reported as ended instead of registered as
-          // a watcher that can never receive another terminal event.
-          await aggregator.refreshCatalog(false).catch(() => undefined);
-          const session = aggregator
-            .getSnapshot()
-            .sessions.find((candidate) => candidate.agentSessionId === sessionId);
-          if (!session) throw new Error("指定的工作 Session 已不存在或不可见");
-          const title = session.title?.trim() || "未命名任务";
-          if (session.terminal) {
-            return {
-              watching: false,
-              title,
-              status: session.terminal.status,
-              endedAt: session.terminal.at,
-            };
-          }
-          const watched = await longTaskCoordinator.watchSession({
-            originClientMessageId: context.originClientMessageId,
-            requestedAt: context.requestedAt,
-            sessionId,
-            objective: title,
-            workspacePath: null,
-            completionTarget,
-          });
-          // Close the setup race: a terminal event may have landed after the
-          // first status check but before the durable watcher was created.
-          await aggregator.refreshCatalog(false).catch(() => undefined);
-          await longTaskCoordinator.reconcileNow();
-          return {
-            watching: true,
-            alreadyWatching: watched.alreadyWatching,
-            taskId: watched.task.id,
-            title,
-            status: watched.task.status,
-          };
-        },
+        // A notice rule for the asking conversation (an active long task keeps reporting).
+        sessionWatch: notices.sessionWatch({
+          refreshCatalog: () => aggregator.refreshCatalog(false),
+          sessions: () => aggregator.getSnapshot().sessions,
+          longTasks: {
+            activeForSession: (sessionId) => longTaskStore.activeForSession(sessionId),
+            watchSession: (input) => longTaskCoordinator.watchSession(input),
+            reconcileNow: () => longTaskCoordinator.reconcileNow(),
+          },
+          goals: externalGoalSessions,
+        }),
         memory: createPetMemoryHost(petMemoryStoreInstance),
         followUpMutation: followUpHost,
         sessionBind: async (payload, context) =>
@@ -2431,40 +2393,23 @@ async function createWindow(): Promise<BrowserWindow> {
           },
           task,
         );
-        if (report.routedToOrigin) {
-          const completionTarget = task?.completionTarget;
-          const gateway = gatewayControlServer;
-          if (!gateway || !completionTarget) {
-            throw new Error("The originating IM Gateway route is unavailable");
-          }
-          const enriched = await enrichPetChatReplyWithHostActions(
-            report.text,
-            report.hostActions,
-            {
-              qrDir: resolve(app.getPath("userData"), "pet", "qr"),
-              attachmentKinds: completionTarget.replyAttachmentKinds,
-            },
-          );
-          await publishGatewayControlEvent({
-            deliveryKey: createHash("sha256")
-              .update("pet-task-report\0")
-              .update(event.reportId)
-              .digest("hex"),
-            type: "pet.task.reported",
-            title: "Mimi 工作更新",
-            text: enriched.text,
-            ...(enriched.button ? { button: enriched.button } : {}),
-            ...(enriched.attachments.length > 0 ? { attachments: enriched.attachments } : {}),
-            target: {
-              channel: completionTarget.channel,
-              target: completionTarget.target,
-            },
+        if (!event.deliveryRequest) {
+          // Mimi's draft for an IM-started task's origin; the delivery plan
+          // names everyone else, and the router sends (quiet hours, caps, digest).
+          const enriched = report.routedToOrigin
+            ? await enrichPetChatReplyWithHostActions(report.text, report.hostActions, {
+                qrDir: resolve(app.getPath("userData"), "pet", "qr"),
+                attachmentKinds: task?.completionTarget?.replyAttachmentKinds,
+              })
+            : undefined;
+          await notices.notifySessionReport({
+            sessionId: event.sessionId,
+            reportId: event.reportId,
+            message: event.message,
+            ...(task ? { task } : {}),
+            ...(enriched ? { composed: enriched } : {}),
           });
-        } else if (
-          event.deliveryRequest &&
-          report.hostActions?.length &&
-          petHostActionReceiptService
-        ) {
+        } else if (report.hostActions?.length && petHostActionReceiptService) {
           const enriched = await enrichPetChatReplyWithHostActions(
             report.text,
             report.hostActions,

@@ -49,6 +49,8 @@ const DESKTOP_TITLES: Readonly<Record<string, string>> = {
   "session.failed": "Mimi 任务执行失败",
   "session.blocked": "Mimi：需要你决定",
   "decision.expired": "Mimi 任务确认",
+  "session.report": "Mimi 工作更新",
+  "followup.due": "Mimi 跟进提醒",
   digest: "Mimi：你不在时",
 };
 

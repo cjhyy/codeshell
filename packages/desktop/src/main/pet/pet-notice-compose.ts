@@ -99,6 +99,8 @@ const KIND_LABELS: Readonly<Record<string, string>> = {
   "session.done": "做完了",
   "session.failed": "没做完",
   "session.blocked": "等你决定",
+  "session.report": "有进展",
+  "followup.due": "跟进提醒",
 };
 
 /**

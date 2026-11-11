@@ -4,6 +4,7 @@ import type { DesktopNotificationInput } from "../desktop-notifier.js";
 import type { HostActionHandler } from "../host-action-dispatch.js";
 import type { PetNotificationSettingsView } from "../../shared/pet-notices.js";
 import type { PetDeliveryResolver } from "./pet-delivery-plan.js";
+import type { PetHostActionExecutor } from "./pet-dispatch-service.js";
 import type {
   ExternalDecisionSource,
   PetExternalDecisions,
@@ -20,9 +21,16 @@ import type { PetNoticeLedger } from "./pet-notice-ledger.js";
 import type { PetNoticeOutbox, PetNoticeWiringGateway } from "./pet-notice-outlets.js";
 import type { PetInboundOrigin, PetInboundReplay } from "./pet-notice-replay.js";
 import type { PetNoticeRouter } from "./pet-notice-router.js";
+import type { RouteDecision } from "./pet-notice-policy.js";
+import type { SessionReportNotifier } from "./pet-notice-session-report.js";
+import type { SessionWatchHostDeps } from "./pet-notice-session-watch.js";
 import type { PetNotificationSettings } from "./pet-notice-settings.js";
 import type { PetTaskClosureNotice } from "./pet-notice-task-closure.js";
-import type { NoticeOutboxOutcome, PetAttentionOptions } from "./pet-notice-types.js";
+import type {
+  NoticeOutboxOutcome,
+  NoticeSubmission,
+  PetAttentionOptions,
+} from "./pet-notice-types.js";
 import type { PetReceiptStore } from "./pet-receipt-store.js";
 import type { NoticeRule, PetRuleStore } from "./pet-rule-store.js";
 import type { PetSessionRuleWatcher } from "./pet-session-rule-watcher.js";
@@ -112,6 +120,15 @@ export interface PetNoticeWiring {
    * close, so the reports parked on it go out now (worker loss, for one Session).
    */
   externalRuntimeEnded(sessionId: string): void;
+  /**
+   * Route one notice (a follow-up coming due): resolves with the router's
+   * decision, rejects when it could not be routed. Shutdown waits for it.
+   */
+  submitNotice(notice: NoticeSubmission): Promise<RouteDecision>;
+  /** A Session's ReportToMimi: one `session.report` per conversation its delivery plan names. */
+  notifySessionReport: SessionReportNotifier;
+  /** The WatchSession host action, over main's catalog and long tasks. */
+  sessionWatch(host: SessionWatchHostDeps): PetHostActionExecutor;
   /** A long task reached a terminal state and was not continued: one notice, then spend rules. */
   notifyTaskClosed(task: PetLongTask, closure?: PetTaskClosureNotice): Promise<void>;
   /**

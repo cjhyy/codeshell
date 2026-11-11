@@ -6,6 +6,7 @@ import type { ConversationSessionRoute, PetLongTask } from "@cjhyy/code-shell-pe
 import type { NoticeChannel, NoticeEvent } from "@cjhyy/code-shell-pet/protocol";
 import {
   buildDeliveryPlan,
+  buildReportPlan,
   createPetDeliveryResolver,
   mergeRuleAttributes,
   outcomeReporter,
@@ -426,6 +427,76 @@ describe("buildDeliveryPlan", () => {
     expect(entries.map((entry) => entry.key)).toEqual([
       "im:lark\u0000chat-9\u0000owner-9",
       "im:wechat\u0000chat-1\u0000owner-1",
+    ]);
+  });
+});
+
+describe("watch-session rules", () => {
+  const watch = (events?: NoticeEvent[]): NoticeRule => ({
+    ...rule("r-watch", { target: { kind: "route", route: LARK_CHAT }, channel: "lark", events }),
+    createdBy: "watch-session",
+  });
+
+  test("their outcome answers the conversation that asked, like an IM task's", () => {
+    for (const event of ["done", "failed", "blocked"] as const)
+      expect(
+        rows(
+          buildDeliveryPlan({
+            event,
+            rules: [watch()],
+            replyRoutes: [],
+            delegatedFromDesktop: "auto",
+          }),
+        ),
+      ).toEqual([["template", "lark:chat-9", "lark", ["r-watch"], true]]);
+  });
+
+  test("an owner rule beside it does not make it a reply to the owner", () => {
+    const owner = rule("r-owner");
+    expect(
+      rows(
+        buildDeliveryPlan({
+          event: "done",
+          rules: [owner],
+          replyRoutes: [],
+          delegatedFromDesktop: "auto",
+        }),
+      ),
+    ).toEqual([["template", "owner", "auto", ["r-owner"], false]]);
+  });
+});
+
+describe("buildReportPlan", () => {
+  const plan = (input: Partial<Parameters<typeof buildReportPlan>[0]>) =>
+    rows(buildReportPlan({ rules: [], replyRoutes: [], delegatedFromDesktop: "auto", ...input }));
+
+  test("nobody waiting: nobody is told", () => {
+    expect(plan({})).toEqual([]);
+  });
+
+  test("an IM-started task's origin gets Mimi's update; nothing is a reply", () => {
+    expect(plan({ task: task({ completionTarget: LARK_CHAT }), rules: [rule("r-del")] })).toEqual([
+      ["mimi-closure", "lark:chat-9", "lark", ["r-del"], false],
+    ]);
+  });
+
+  test("a bound conversation gets the report as its own message, absorbing owner rules", () => {
+    expect(plan({ rules: [rule("r-1")], replyRoutes: [bound()] })).toEqual([
+      ["template", "wechat:chat-1", "wechat", ["r-1"], false],
+    ]);
+  });
+
+  test("each conversation once: a task origin and its bound chat are one message", () => {
+    const origin = { ...BOUND_TARGET.route, replyAttachmentKinds: [] } as never;
+    expect(plan({ task: task({ completionTarget: origin }), replyRoutes: [bound()] })).toEqual([
+      ["mimi-closure", "wechat:chat-1", "wechat", [], false],
+    ]);
+  });
+
+  test("an owner rule naming another IM stays a message of its own", () => {
+    expect(plan({ rules: [rule("r-1", { channel: "lark" })], replyRoutes: [bound()] })).toEqual([
+      ["template", "owner", "lark", ["r-1"], false],
+      ["template", "wechat:chat-1", "wechat", [], false],
     ]);
   });
 });
