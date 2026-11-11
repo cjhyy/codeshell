@@ -1,5 +1,7 @@
 # Goal follow-up controlled evidence
 
+[delivery-refresh5-validation.txt](delivery-refresh5-validation.txt) records main `f1e7bf2ea` merged into `f0e7f19cf`, passing package/build/typecheck/guards, **202/202 tests across 14 files**, and Pet settings Chromium **6 scenarios**. Notice-rule resume does not resume Goal. The upstream Pet CI membership change is inherited unchanged; the task has zero workflow diff against main. The preceding superseded CI preserves 13 successes and UI cancellation, not all-green status.
+
 [delivery-refresh4-validation.txt](delivery-refresh4-validation.txt) records main `84c558e30` merged into `247d93618`, all build/guard checks, **122/122 tests across 8 files**, and isolated Usage Chromium **11 case groups / 12 layouts**. Read-only review found no Goal interaction. The superseded preceding candidate’s CI was cancelled without a failed job; fresh eligible CI remains required. Previous failures and the sole actual job rerun are preserved.
 
 [delivery-refresh3-validation.txt](delivery-refresh3-validation.txt) records main `5162a5a4b` merged mechanically into `98b051b0d`, passing package/typecheck/Desktop/lint/guard checks and **489/489 tests across 37 files** around Goal/native-discovery/cache boundaries. Two read-only integration reviews found no combination blocker. Previous candidate `2bf3a2e13` reached all 14 required CI successes after exactly one actual unchanged Electron-job rerun; both earlier first failures remain recorded and no blind retry allowance resets for the new head.

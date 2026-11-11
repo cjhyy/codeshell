@@ -2,6 +2,13 @@
 
 Status: the reviewed implementation is now prepared for protected PR delivery. Independent CC's second incremental **code review PASS, no Critical / Important** covered the frozen local delivery `e58b5cb5b4bcd2104a6b2e15bdb73ad4916dd21b`; CC did not run tests. The historical local-only reports below remain tied to their original commits.
 
+## Fifth latest-main refresh (2026-11-11)
+
+- Main advanced through PR #353 to **`f1e7bf2ea3e1935fcd5d43d65c19d41ab097eddc`**. Normal conflict-free merge **`f0e7f19cfb92f109bb8881e73deb5f6f2e98544f`** has no task/main file intersection or Task logic change. Read-only review **PASS**: notice-rule resume is not Goal resume; injected/disableGoal host wakes, Stop authority and claimed-occurrence fences remain intact.
+- Package-release completed first; typecheck, Desktop build, lint (90 warnings / 0 errors), Engine bypass and shard coverage **PASS**. Guarded Goal/Stop/Pet rule and renderer/preload groups passed **202/202 across 14 files**, zero skips. Actual isolated Pet settings Chromium passed **6 scenarios** with no browser errors or external requests. [Exact commands, footers and output-path note](goal-controls-evidence-20261111/delivery-refresh5-validation.txt).
+- Upstream PR #353 adds one rule-list test to its existing Pet CI process; this task inherits it unchanged and has **zero CI workflow diff relative to latest main**, no budget/skip change. Candidate `8ba9d56ed` had 13 successful checks including Electron and shared rest; only its superseded [run 43020442235](https://github.com/cjhyy/codeshell/actions/runs/43020442235) was cancelled while UI remained pending, after verifying no failed job/step. Final UI/run conclusion is cancelled, not passed. Metadata, raw logs and actual counts remain preserved.
+- The latest exact candidate requires all 14 eligible checks. Commit/push use independent expected-main assertions. Both historical first failures, exactly one actual successful job rerun, two deferred L items and Goal E2E limits remain unchanged. Raw logs: `artifacts/goal-controls-delivery/main-refresh-f1e7bf2ea/`.
+
 ## Fourth latest-main refresh (2026-11-11)
 
 - Main advanced through PR #352 to **`84c558e3006f93de95f477f5dfd560ebd9445788`**. A normal conflict-free merge produced **`247d9361884a155c21cad42fa167f1ca65179ff0`**, with no task/main path overlap or Goal source/test change. Independent read-only review **PASS**: Usage discovery/query remains independent from ChatSession/Goal/wakes; quota IPC preserves trusted-window/main-frame checks and CheckQuota retains cancellation signals.
