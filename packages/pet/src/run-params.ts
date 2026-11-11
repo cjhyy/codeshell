@@ -169,11 +169,14 @@ function parseFollowUps(value: unknown): PetFollowUpItem[] | undefined {
           action: "register",
           title: entry.title,
           text: entry.text,
-          wakeAt: entry.wakeAt,
+          // A repeating row carries its next occurrence and that occurrence's
+          // catch-up deadline; both are checked as plain timestamps below.
+          ...(entry.recurrence !== undefined
+            ? { recurrence: entry.recurrence }
+            : { wakeAt: entry.wakeAt, catchUpUntil: entry.catchUpUntil }),
           timezone: entry.timezone,
           intent: entry.intent,
           missedPolicy: entry.missedPolicy,
-          catchUpUntil: entry.catchUpUntil,
           ...(entry.sourceSessionId !== undefined
             ? { sourceSessionId: entry.sourceSessionId }
             : {}),
@@ -182,6 +185,7 @@ function parseFollowUps(value: unknown): PetFollowUpItem[] | undefined {
             : {}),
         }) ||
         !isFollowUpRevision(entry.revision) ||
+        !isFollowUpTimestamp(entry.wakeAt) ||
         !isFollowUpTimestamp(entry.createdAt) ||
         (entry.missedPolicy !== "skip" && entry.missedPolicy !== "fire-once") ||
         !isFollowUpTimestamp(entry.catchUpUntil) ||
@@ -202,6 +206,7 @@ function parseFollowUps(value: unknown): PetFollowUpItem[] | undefined {
         text: entry.text,
         revision: entry.revision,
         wakeAt: Number(entry.wakeAt),
+        ...(typeof entry.recurrence === "string" ? { recurrence: entry.recurrence } : {}),
         timezone: String(entry.timezone),
         intent: entry.intent as "remind" | "resume",
         missedPolicy: entry.missedPolicy,
