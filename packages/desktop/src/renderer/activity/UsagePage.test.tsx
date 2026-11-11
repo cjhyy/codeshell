@@ -42,7 +42,7 @@ function textOf(node: Node): string {
 let root: Root | undefined;
 let container: HTMLDivElement;
 let originalApi: unknown;
-async function mount(api: unknown) {
+async function mount(api: unknown, strict = false) {
   ensureMiniDom();
   originalApi = window.codeshell;
   Object.assign(window, { codeshell: api });
@@ -50,7 +50,15 @@ async function mount(api: unknown) {
   document.body.appendChild(container);
   root = createRoot(container);
   await act(async () => {
-    root!.render(<UsagePage />);
+    root!.render(
+      strict ? (
+        <React.StrictMode>
+          <UsagePage />
+        </React.StrictMode>
+      ) : (
+        <UsagePage />
+      ),
+    );
     await flushMicrotasks();
   });
 }
@@ -343,4 +351,72 @@ test("discovery failure can retry without probing quota", async () => {
   });
   expect(card(future.id)).toBeTruthy();
   expect(queries).toBe(0);
+});
+
+test("StrictMode discovery replies cannot replace a newer catalog", async () => {
+  const pending: Array<(providers: unknown[]) => void> = [];
+  await mount(
+    {
+      getUsageSummary: async () => summary,
+      quota: {
+        listProviders: () => new Promise((resolve) => pending.push(resolve)),
+        query: async () => {
+          throw new Error("discovery must not query");
+        },
+      },
+    },
+    true,
+  );
+  expect(pending).toHaveLength(2);
+  await act(async () => {
+    pending[1]!([future]);
+    await flushMicrotasks();
+  });
+  await act(async () => {
+    pending[0]!([codex]);
+    await flushMicrotasks();
+  });
+  expect(card(future.id)).toBeTruthy();
+  expect(card(codex.id)).toBeUndefined();
+});
+
+test("a removed and rediscovered ID never adopts the old card's pending response", async () => {
+  let entries = [codex];
+  const pending: Array<(value: unknown) => void> = [];
+  await mount({
+    getUsageSummary: async () => summary,
+    quota: {
+      listProviders: async () => entries,
+      query: () => new Promise((resolve) => pending.push(resolve)),
+    },
+  });
+  await act(async () => {
+    props(button("查询套餐额度")).onClick();
+    await flushMicrotasks();
+  });
+  entries = [];
+  await act(async () => {
+    props(button("重新检测")).onClick();
+    await flushMicrotasks();
+  });
+  entries = [codex];
+  await act(async () => {
+    props(button("重新检测")).onClick();
+    await flushMicrotasks();
+  });
+  await act(async () => {
+    props(button("查询套餐额度")).onClick();
+    await flushMicrotasks();
+  });
+  expect(pending).toHaveLength(2);
+  await act(async () => {
+    pending[1]!({ provider: "codex", windows: [{ kind: "5h", usedPercent: 60, resetsAt: null }] });
+    await flushMicrotasks();
+  });
+  await act(async () => {
+    pending[0]!(successfulQuota);
+    await flushMicrotasks();
+  });
+  expect(textOf(card(codex.id))).toContain("已使用 60%");
+  expect(textOf(card(codex.id))).not.toContain("已使用 25%");
 });
