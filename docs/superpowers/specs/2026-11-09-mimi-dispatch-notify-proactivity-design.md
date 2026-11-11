@@ -165,6 +165,7 @@ interface NoticeRule {
   version: number; // 写入带 expectedVersion，乐观并发
   origin: "user" | "delegation" | "system";
   createdBy: "notify-me" | "bell" | "delegation" | "watch-session" | "follow-up" | "system";
+  // 系统定时规则（2c-2）的 id 固定：system-brief-morning / system-brief-evening / system-heartbeat / system-heartbeat-recheck
   when:
     | {
         kind: "session";
@@ -176,9 +177,9 @@ interface NoticeRule {
       }
     | { kind: "all-sessions"; events: ("done" | "failed" | "blocked")[]; onlyWhenAway: true }
     | {
-        kind: "schedule"; // 2c-1：定时规则（跟进；晨报、收工、心跳在 2c-2）
+        kind: "schedule"; // 2c-1：定时规则（跟进）；2c-2：晨报、收工、心跳（系统规则）
         at?: number; // 一次性（epoch ms）；与 cron 恰好二选一
-        cron?: string; // 5 段 cron，按 timezone 计算；最多每小时一次（分钟字段只能是一个数）
+        cron?: string; // 5 段 cron，按 timezone 计算；最多每小时一次（分钟字段只能是一个数）；唯一例外见下
         label?: string; // 有 cron 时必填：Mimi 用主人的说法写的名字（"工作日 09:00"），只当显示文本
         timezone: string; // IANA
         missedPolicy: "skip" | "fire-once";
@@ -187,7 +188,9 @@ interface NoticeRule {
   then:
     | { mode: "notify" } // 事件规则
     | { mode: "remind"; title: string; text: string } // 到点把 text 告诉目标（Notice followup.due）
-    | { mode: "run-mimi"; title: string; text: string; sourceSessionId: string; taskId?: string }; // 到点唤醒 Mimi 只续办这个会话，再告诉目标结果
+    | { mode: "run-mimi"; title: string; text: string; sourceSessionId: string; taskId?: string } // 到点唤醒 Mimi 只续办这个会话，再告诉目标结果
+    | { mode: "compose"; brief: "morning" | "evening" } // 2c-2：晨报 / 收工小结（§10.1）
+    | { mode: "judge"; kind: "heartbeat" }; // 2c-2：心跳（§10.2）
   wake?: {
     // 只有 schedule 规则有：当前这一次的落盘状态（认领先于任何效果）
     occurrence: number; // 这一次的计划时刻
@@ -209,13 +212,14 @@ interface NoticeRule {
 ```
 
 - **何时**：某个会话的事件、所有会话的事件（只在主人不在电脑前时）、定时（`schedule`：一次性 `at` 或循环 `cron`）。
-- **做什么**：`notify` 直接提醒（模板或 Mimi 成文）；`remind` 到点把主人要的那句话发给目标；`run-mimi` 先唤醒一轮 Mimi 只续办原会话，再把结果发给目标（原跟进的 `resume`）。晨报、收工的 `compose`、心跳的 `judge` 在 2c-2 加。
+- **做什么**：`notify` 直接提醒（模板或 Mimi 成文）；`remind` 到点把主人要的那句话发给目标；`run-mimi` 先唤醒一轮 Mimi 只续办原会话，再把结果发给目标（原跟进的 `resume`）；`compose` 收集记录后成文发晨报/收工小结，`judge` 预检后判断要不要说（2c-2，§10）。
+- **系统定时规则**（2c-2）：id 固定，`then` 固定（id 决定），`origin`/`createdBy` 为 `system`，目标为主人、渠道 `auto`；状态只有 `active` / `paused`，从不进终态，不被淘汰。第一次打开时才建行，之后关只是暂停；时间来自设置（§11），设置一改就同步（新 version、从现在往后算第一次）；重新打开同样从现在往后算，关着时错过的那一次不会补发。**最小间隔的唯一例外**：`system-heartbeat` 的 cron 可以每小时两次，分钟字段必须恰好是相差 30 的两个数（`0,30 9-21 * * *`）；这个 cron 由宿主从活跃时段写出，从不来自模型，其他任何定时规则（包括跟进）仍是最多每小时一次。
 - **定时规则的语义**（`pet-rule-schedule.ts`）：每条规则只有"当前这一次"；它投影成 core 调度器里的一个一次性任务（`creationKey` = `mimi-follow-up:rule:<规则 id>:<version>:<occurrence>`：旧版本已经把 `mimi-follow-up:` 开头的任务挡在自动化之外，降级后它们不会被列出、也不会被当成无头自动化执行，只会被旧版本删掉，回到本版本再重建），任务只是可重建的触发器。改期（新 version）或循环规则进入下一次（新 occurrence）都会换掉旧任务，过期的回调认领不到。到点先落盘认领再执行；执行抛错记 `unknown`、不重试；进程死在认领之后，重启时记 `unknown`。已过点的这一次不交给 core（冷启动它一律算错过，计时器还会被睡眠拖住），启动、任何规则变化、唤醒/解锁时都由宿主自己处理：`fire-once` 在期限内补发一次，`skip` 只在 90 秒宽限内发。循环规则的期限是"下一次之前"（最多一天），睡了几天也只补最近一次，之后从现在往后算下一次。
 - 认领期间主人仍可取消、完成或改期：取消/完成立即生效，这一次的结果照样记上（规则不再往下走）；改期换掉这一次，晚到的结算什么也不记（有意如此：恰好在改期前完成的续办，它的 `launched` / `taskId` 记录会丢，长任务本身照常收尾和汇报）；被取消时被唤醒的续办记"已取消，未续办"，不再提醒；被唤醒的 Mimi 轮在启动前复核版本和状态，改动后不会再续办。认领以"到期时刻 + 错开"为准。
 - 下一次的计算（core `nextCronTime`）按字段跳跃，跨时区偏移变化时落在变化点重算，最多向后找约 8 年（2 月 29 日这类稀疏但存在的日期能找到）；登记时直接拒绝不存在的日期（2 月 30 日、4 月 31 日）。夏令时：拨快跳过的时刻当天不触发；拨慢重复的时刻只触发一次（第一次）。
 - 规则表由更新版本写入（只读）或读不出时，跟进停用并记日志，桌面其余部分照常启动；没有改动的写入（例如启动时没有残留认领）不受只读影响。旧版本把 `schedule` 行隔离后，本版本加载时把隔离区里能读懂的行恢复回来（同 id 取较新的 version）。
 - `version` 只随主人的修改增加，唤醒进度不改它，所以跟进的 `revision`（= version）在一次次触发间不变。
-- **打不打扰**：`always` 一定送到；`important` 由 Mimi 判断值不值得说（判断轮三期才有，1a 里按 `always` 处理）；`digest` 只进摘要；`muted` 只记录。
+- **打不打扰**：`always` 一定送到；`important` 由 Mimi 判断值不值得说（会话规则的判断轮还没做，按 `always` 处理；心跳的判断见 §10.2）；`digest` 只进摘要；`muted` 只记录。
 - 主人原话由 Mimi 或工具映射：说"告诉我"→ `always`；"重要的才说"→ `important`；"每天汇总一下"→ `digest`；"记下来就行"→ `muted`。映射不确定时用 `always`。
 
 ### 4.2 入口
@@ -239,12 +243,12 @@ interface NoticeRule {
 
 随应用发布的默认规则。1a 只有 `all-sessions` 一条，存在规则表里（`systemRule / setSystemRule`），可改开关、渠道、事件。二期加入更多系统规则时再做"按字段覆盖、未改字段跟随升级"。主人暂停永远优先。
 
-| 规则                                                           | 默认             | 期  |
-| -------------------------------------------------------------- | ---------------- | --- |
-| 不在电脑前时，所有会话的完成/失败/卡住都推我（`all-sessions`） | 关（决策 D6）    | 1a  |
-| 晨报：工作日 09:30，`run-mimi` + `digest`                      | 关，配置中心可开 | 2   |
-| 收工小结：工作日 18:30                                         | 关               | 2   |
-| 心跳：活跃时段每 30 分钟，`important`                          | 关（决策 D3）    | 3   |
+| 规则                                                                        | 默认             | 期   |
+| --------------------------------------------------------------------------- | ---------------- | ---- |
+| 不在电脑前时，所有会话的完成/失败/卡住都推我（`all-sessions`）              | 关（决策 D6）    | 1a   |
+| 晨报：每天 09:00（`system-brief-morning`，`compose`）                       | 关，配置中心可开 | 2c-2 |
+| 收工小结：每天 18:30（`system-brief-evening`，`compose`）                   | 关               | 2c-2 |
+| 心跳：活跃时段（默认 09:00–22:00）每 30 分钟（`system-heartbeat`，`judge`） | 关（决策 D3）    | 2c-2 |
 
 ### 4.4 实际效果说明
 
@@ -473,7 +477,10 @@ interface NoticeRecord {
     | "session.blocked"
     | "session.report"
     | "followup.due"
-    | "digest";
+    | "digest"
+    | "brief.morning" // 2c-2
+    | "brief.evening"
+    | "heartbeat";
   priority: "P0" | "P1" | "P2"; // P0 需要你决定；P1 结果、跟进；P2 问候、摘要
   dedupeKey: string;
   sessionId?: string;
@@ -496,6 +503,8 @@ interface NoticeRecord {
     at: number;
     error?: string;
   };
+  deferredUntil?: number; // 2c-2：主人说"现在别说"后的副本，到这一刻再发一次
+  deferCount?: number; // 推迟过几次（最多 2）
   createdAt: number;
 }
 ```
@@ -503,15 +512,18 @@ interface NoticeRecord {
 - `held`：等摘要；`queued`：等渠道可用（默认 24 小时过期）；`revoked`：已撤销或已并入摘要；`unknown`：可能已发出。状态转换表写在 `pet-notice-ledger.ts` 顶部并强制执行：`accepted / revoked` 是终态；`unknown → claimed` 只能由主人显式"再发一次"触发，自动路径永远不会。
 - 提交时可带 `reply`（IM 来源任务的结果）和 `media`（附件、按钮）。带媒体的提醒在提交时把文件复制到 `userData/pet/notice-media/<记录 id>/`（≤4 个、每个 ≤10 MB，记大小和 sha256），重发用的是这份副本；复制失败就只发文字。记录到终态后删除副本，回 IM 原对话的保留 7 天（outbox 可能晚些才读），启动时清理无主目录。
 
-| kind            | dedupeKey                                                                                                                      |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| session.done    | turn：`${sessionId}:turn:${runId}`；goal：`${sessionId}:goal:${goalId ?? runId}`                                               |
-| session.failed  | `${sessionId}:failed:${runId}`                                                                                                 |
-| session.blocked | 决定：`${sessionId}:${requestId}`（离开后补推加 `:away`）；Goal 暂停：`${sessionId}:goal-pause:${goalId}:${revision}:${runId}` |
-| 长任务收尾      | `task:${taskId}:${attempt}:${status}`                                                                                          |
-| session.report  | `report:${reportId}:${对话身份的哈希}`（同一份汇报每个对话一条，重试不重复）                                                   |
-| followup.due    | 这一次的任务键 `mimi-follow-up:rule:${规则 id}:${version}:${occurrence}`                                                       |
-| digest          | `digest:${小时序号}:${成员 id 的哈希}`                                                                                         |
+| kind                          | dedupeKey                                                                                                                      |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| session.done                  | turn：`${sessionId}:turn:${runId}`；goal：`${sessionId}:goal:${goalId ?? runId}`                                               |
+| session.failed                | `${sessionId}:failed:${runId}`                                                                                                 |
+| session.blocked               | 决定：`${sessionId}:${requestId}`（离开后补推加 `:away`）；Goal 暂停：`${sessionId}:goal-pause:${goalId}:${revision}:${runId}` |
+| 长任务收尾                    | `task:${taskId}:${attempt}:${status}`                                                                                          |
+| session.report                | `report:${reportId}:${对话身份的哈希}`（同一份汇报每个对话一条，重试不重复）                                                   |
+| followup.due                  | 这一次的任务键 `mimi-follow-up:rule:${规则 id}:${version}:${occurrence}`                                                       |
+| digest                        | `digest:${小时序号}:${成员 id 的哈希}`                                                                                         |
+| brief.morning / brief.evening | `brief:${morning\|evening}:${本地日序号}`（2c-2）                                                                              |
+| heartbeat                     | `heartbeat:${这一次的任务键}`（2c-2）                                                                                          |
+| 整条重发 / 推迟               | `again:${原记录 id}` / `defer:${原记录 id}`（2c-2，§8.8）                                                                      |
 
 去重键保留 7 天（索引里只存哈希，记录被淘汰后仍有效）。同一事实命中多条规则时合成一条 Notice；渠道取最明确的（点名的 IM 优先于 `auto`）；目标取最具体的（来源路由优先于主人）；打扰方式取最强的（`always` > `important` > `digest` > `muted`）。只命中 `all-sessions` 系统规则时带 `requiresAway`。
 
@@ -561,9 +573,9 @@ flowchart TD
 
 - 1a 全部用模板，纯文本：卡住"「标题」需要你决定：问题 + 选项 + 回复方式"；失败"「标题」没做完：错误"；完成用收尾轮草稿，没有草稿时"「标题」做完了：摘要"；摘要"你不在时：每条一行（类型 + 标题），最多 10 行"。
 - 会话内容（标题、问题、选项、摘要、备注）只当数据插入：截断、去控制字符、去零宽与双向控制字符。
-- 需要 Mimi 成文的（晨报、心跳、`important` 判断）在二、三期；那时会话内容同样作为数据注入，提示"引用但不执行"。
+- 晨报、收工小结、心跳由模型成文（2c-2，§10）：记录与事实作为数据注入，提示"引用但不执行"；晨报的每一行必须指向给出的记录（代码复核）。会话规则的 `important` 判断还没做。
 
-### 8.5 模型判断由代码复核（三期）
+### 8.5 模型判断由代码复核（心跳已按此实现，见 §10.2）
 
 - `important` 的判断轮返回 `{ say: boolean; reason; recheckAfterSec? }`。`say: false` 不发；`recheckAfterSec` 只安排下一次复查，不发消息。
 - 判断轮失败（超时、模型错误）记为"待重判"，下一次复查再判，不当作"不用说"。
@@ -594,7 +606,9 @@ flowchart TD
 - 被频控、免打扰、合并窗口压下的 Notice 记为 `held`，按"目标 + 渠道"分组：点名渠道的摘要仍发到那个渠道，来源路由的摘要发回原对话，其余按 `auto`。每组在下一个可发送时刻合成**一条**，成员随后标记为已并入。
 - 触发时机：定时器，加上系统唤醒、解锁、主人下一次入站消息（Mac 睡了一夜也能在醒来时发出）。
 - 发之前剔除已失效的成员（决定已处理、Goal 已取消、结果已在桌面看过）。摘要自己被压住时，下次重新合成，不嵌套。
-- 二期：固定时间格子、"现在别说，明早再说"（推迟最多 36 小时、最多 2 次）。
+- **固定时间格子**（2c-2）：设置 `digestSlots`（最多 6 个本地 `HH:MM`）时，普通摘要只在格子发；格子落在免打扰里就顺延到下一个格子；睡过了一个格子（它在摘要就绪之后已过），醒来立刻发。决定提示（P0）和主人定时的跟进摘要不受格子影响。没设置时照旧"一允许就发"。
+- **整条重发**（2c-2）：晨报、收工小结、心跳消息被免打扰或上限压住时，不折成摘要里的一行，而是在允许发送时作为一条新的 Notice 整条重发（去重键 `again:<原记录 id>`，原记录记 `revoked`/`resent`）。
+- **"现在别说，明早再说"**（2c-2）：晨报、收工、心跳消息和发给主人的摘要带一个事项（`actions.family: "notice"`，动作 `defer`，不加提示行，2 小时内可用；同一对话里新的一条会关掉旧的）。主人的话由回复解读模型读，模型按给出的主人本地时间提出 `until`（ISO 时间，"明早" → 次日 09:00；没说时间就不给，宿主取下一个 09:00）；宿主把它夹在 [5 分钟, 36 小时] 内，每条最多推迟 2 次，在账本里另存一条 `held` 副本（`deferredUntil`、`deferCount`，原记录的事项记为已用；不升 `SCHEMA_VERSION`），摘要冲刷在到期前跳过它，到点整条重发一次（重发的那条在次数内还能再推迟）。回复主人"好，明天 09:00 再说。"
 
 ## 9. "做完了可以打开"（二期，2b 已实现）
 
@@ -613,8 +627,8 @@ flowchart TD
 ```mermaid
 flowchart TD
   L0["L0 事件（1a）<br/>session / all-sessions 规则"] --> R["提醒路由器"]
-  L1["L1 定时（2）<br/>跟进（含循环）· 晨报 · 收工"] --> PRE
-  L2["L2 心跳（3，默认关）<br/>每 30 分钟，活跃时段"] --> PRE
+  L1["L1 定时（2c-1 / 2c-2）<br/>跟进（含循环）· 晨报 · 收工"] --> PRE
+  L2["L2 心跳（2c-2，默认关）<br/>每 30 分钟，活跃时段"] --> PRE
   PRE{"确定性预检：<br/>有新事实？"} -->|没有| X["不跑模型"]
   PRE -->|有| MT["Mimi 判断轮<br/>say / 不说 / 过会儿再看"]
   MT -->|say| R
@@ -624,24 +638,27 @@ flowchart TD
 
 ### 10.1 L1 定时（二期）
 
-**只有一套定时系统：规则表。** 跟进（一次性和循环）、晨报、收工、心跳都是 `schedule` 规则，由同一个执行器（`pet-rule-schedule.ts`）投影进 core 调度器。2c-1 做了底座和跟进；晨报、收工、心跳在 2c-2。
+**只有一套定时系统：规则表。** 跟进（一次性和循环）、晨报、收工、心跳都是 `schedule` 规则，由同一个执行器（`pet-rule-schedule.ts`）投影进 core 调度器。2c-1 做了底座和跟进；晨报、收工、心跳在 2c-2（已实现，系统规则见 §4.1，代码在 `pet-proactive*.ts`）。
 
 1. **跟进即规则**（2c-1）：`FollowUps` / `ManageFollowUp` 工具名不变（模型认得它们），背后是 `createdBy: "follow-up"` 的 `schedule` 规则：`intent: remind` → `then.mode: "remind"`，`intent: resume` → `"run-mimi"`；跟进 id 就是规则 id（由宿主从这一轮的操作键确定性派生，重放找回同一条规则），`revision` 就是规则 `version`。目标只取这一轮的 IM 来源，不信模型；外部会话不能续办。完成 → `completed`，取消、忽略 → `cancelled`。一次性跟进触发后仍是 `active`（还在"需要跟进"里，等主人处理），不会再触发。
 2. **循环跟进**：`ManageFollowUp` 的 `register` / `reschedule` 增加 `recurrence`（5 段 cron），与 `wake_at` 恰好二选一。把主人的话转成 cron 是模型的事（工具说明给了例子），代码只做确定性校验：分钟字段只能是一个数（所以最多每小时一次），宿主再用调度器的 cron 解析器解析、确认两年内会触发；不合格的直接返回清楚的错误。有 `recurrence` 时必须同时给 `schedule_label`（≤64 字，模型用主人的说法写，如"工作日 09:00"），存在规则上；登记回执和回复写出这个名字和接下来两次的时间，cron 原文放在后面（工作台作为悬停提示）。名字只当不可信文本：单行、截断、不渲染 HTML。仍只在主人明确要求时登记。修改 cron 不补跑错过的次数（从现在往后算）；同一分钟的多条定时规则错开 0–5 分钟（每多一条晚 1 分钟，分配后不变）。每次触发是一条 Notice；`run-mimi` 每一次用自己的 `clientMessageId`（带 occurrence），不会被当成重放。工作台"需要跟进"显示重复规则；改循环规则请找 Mimi（界面的改期只针对一次性）。
-3. **晨报**：确定性收集昨天以来完成/失败的任务、正在跑的、等你决定的、今天到期的跟进、记忆日志里未完成的事，交给 Mimi 成文；结尾可问"今天先做哪个？要我先开会话准备吗"，回复即进入正常对话。
-4. **收工小结**：今天派出的活结果如何、还挂着什么、明天要跟的。
-5. 收集为空时不发（或按设置只发一句短问候）；每一项必须对得上记录。
-6. 微信不可用时走待送队列，主人当天第一次找 Mimi 时补报。
+3. **晨报**（2c-2 已实现）：确定性收集（不用模型）上次晨报以来（第一次：昨天 00:00 以来）完成/失败的长任务、还在跑或在等的长任务和会话、等你决定的、今天到期的跟进、还开着的会话事项（Goal 暂停、上限停止、失败）；每类最多 8 条、共 24 条，各带一个 `ref`。记忆日志里未完成的事没有收（没有结构化来源）。结尾可问"今天先做哪个？"，回复即进入正常对话。
+4. **收工小结**（2c-2 已实现）：今天派出的活（今天建的长任务，不论现在状态）、还挂着的、明天到期的跟进。
+5. **收集为空时不发**；每一项必须对得上记录：成文交给辅助模型（不可用时用 Mimi 的主模型，同 `pet-notice-reply-models.ts`），只收严格 JSON `{opening?, items:[{refs, text}], closing?}`，每一行的 `refs` 必须是给出的记录、一条记录只出现一次，否则整份作废换下一个模型；都不行就用模板（每条记录一行）。**为什么不是宿主唤醒的 Mimi 轮**：Mimi 轮的输出是写进她对话里的自由文字，还能调工具（例如派活），宿主无法不读散文就核对"每一项对得上记录"；单独的成文调用给出可校验的结构，失败可以诚实降级。代价：Mimi 自己的对话里没有这条晨报，主人回复时她要靠工具查。
+6. 成文后作为 `brief.morning` / `brief.evening`（P1，目标主人、渠道 `auto`，去重键 `brief:<kind>:<本地日序号>`）过路由器：在电脑前上桌面，不在发 IM；免打扰内被压住，结束后整条重发（§8.8）；IM 不可用按路由器的待送队列处理。规则 `missedPolicy: "fire-once"`：睡过了，唤醒/解锁时当天补一次，跨天不补；当天已经发过（例如改了时间）不再发。`pet/proactive.json` 记每种最后一次发送的时刻和日期。
 
-### 10.2 L2 心跳（三期，默认关）
+### 10.2 L2 心跳（2c-2 已实现，默认关）
 
-- 预检只看**新事实**，单纯时间流逝不算：
-  - 有规则的会话出现新的阻塞且首次提醒未送达；
-  - 长任务超过预估 2 倍且这段时间没有新事件；
-  - 跟进 2 小时内到期且相关会话没有准备动作；
-  - 自上次心跳以来新完成的结果主人还没看。
-- 判断轮每天最多 8 次，心跳消息每天最多 4 条。
-- 主人没回应不视为反感；只有主人明确说"这类别提醒了"才调低或关闭对应规则。
+- 系统规则 `system-heartbeat`：活跃时段（设置，默认 09:00–22:00）内每 30 分钟（cron 由宿主从活跃时段写出，`missedPolicy: "skip"`）；触发时再核对一次活跃时段和免打扰，不在就什么也不做。
+- 预检只看**新事实**，单纯时间流逝不算（`pet-proactive-heartbeat.ts`，"新"= 上次心跳以来出现且没判断过，判断过的事实键记在 `proactive.json`）：
+  - 有规则的会话出现新的决定，首条提示没送到（`failed / queued / held / unknown`），决定还开着；
+  - 主人续办类跟进（`run-mimi`）2 小时内到期，而原会话这两小时没有动静（不在跑、最后活动早于 2 小时前）；只提醒文字的跟进没有相关会话，不算；
+  - 自上次心跳以来有会话的结果（`session.done / failed` 提醒）进来，主人还没在桌面看过这个会话；
+  - **没做**："长任务超过预估 2 倍"——长任务没有预估字段，无从比较。
+- 没有新事实不调模型。有就交给辅助模型（不可用用 Mimi 主模型）判断，只收严格 JSON `{say: boolean, text?, recheckInMin?}`：`say: true` 必须带 `text`（≤300 字、单行）且不能带复查；`say: false` 不能带 `text`；`recheckInMin` 取整数，夹在 10–120。判断失败（都不可用或答案不合格）记为"待重判"：不推进游标，下一次再判，不当作"不用说"。
+- `say` → Notice `heartbeat`（P1，目标主人、`auto`）过路由器，带"现在别说"事项（§8.8）。`recheckInMin` → 一次性系统规则 `system-heartbeat-recheck` 在那时再看一次（只在活跃时段内；同时只挂一个；复查那次不再申请复查），事实保持"新"。
+- 判断轮每天最多 8 次、心跳消息每天最多 4 条，计数在调模型/发送**之前**写进 `proactive.json`，重启不归零，按本地日期换日。
+- 主人没回应不视为反感，不自动调低；只有主人明确说（关开关、改设置）才变。
 
 ## 11. 设置（`settings.pet.notifications`）
 
@@ -653,12 +670,17 @@ notifications?: {
   maxP0PerHour?: number;    // 默认 12
   mergeWindowSec?: number;  // 默认 600
   presenceIdleSec?: number; // 默认 120
+  briefs?: { morning?: { enabled?: boolean; time?: string }; evening?: { enabled?: boolean; time?: string } }; // 2c-2，默认关，09:00 / 18:30
+  heartbeat?: { enabled?: boolean; activeHours?: { start: string; end: string } }; // 2c-2，默认关，09:00–22:00
+  digestSlots?: string[]; // 2c-2，最多 6 个 "HH:MM"；不设 = 一允许就发
 };
 ```
 
-取值范围：`maxPerHour` 1–60，`maxP0PerHour` 1–120，`mergeWindowSec` 0–3600，`presenceIdleSec` 30–1800；非法值单项丢弃，不影响其他设置。设置写入会把 `null` 当成删除键，所以关闭免打扰用 `enabled: false`。上限按本地整点小时计。
+取值范围：`maxPerHour` 1–60，`maxP0PerHour` 1–120，`mergeWindowSec` 0–3600，`presenceIdleSec` 30–1800；非法值单项丢弃，不影响其他设置（`briefs` / `heartbeat` 里的每个字段也各自丢弃；`digestSlots` 是一个值，有一个格子不合法或超过 6 个就整列丢弃）。设置写入会把 `null` 当成删除键，所以关闭免打扰用 `enabled: false`。上限按本地整点小时计。
 
-系统规则的开关存在规则表里（§4.3），不进 settings。配置中心 Mimi 页的"通知与主动"卡片（1a）：免打扰、每小时上限、桌面派活结果去向、"不在电脑前时所有会话都推我"开关、已绑定渠道及就绪度（只读）。主人建过的规则列表（暂停、删除）二期再加。工作会话顶栏有铃铛（§4.2）。
+晨报、收工、心跳的开关与时间在 settings 里（2c-2），改了就同步对应的系统规则（§4.1）。`pet:notices:get-state` 的 `settings` 带上这三项（已填默认值），另带 `proactive`：每种晨报最后发送的日期、心跳今天的判断次数/消息条数与上限、是否已到上限（只读，不加 IPC 通道）。界面在 2d-2。
+
+"不在电脑前全推"系统规则的开关存在规则表里（§4.3），不进 settings。配置中心 Mimi 页的"通知与主动"卡片（1a）：免打扰、每小时上限、桌面派活结果去向、"不在电脑前时所有会话都推我"开关、已绑定渠道及就绪度（只读）。主人建过的规则列表（暂停、删除）二期再加。工作会话顶栏有铃铛（§4.2）。
 
 ## 12. 决策（2026-11-09 已确认）
 
@@ -680,8 +702,8 @@ notifications?: {
 | **1a 原生闭环（已实现，PR #332）** | 规则表（`session`、`all-sessions`）；`__host_action__` 回环与 `NotifyMe`；铃铛与设置卡片；派活说明（`displayText`）与自动建规则；事件 → Notice 映射；`PetImDecisions` 经路由器、离开后补推；路由器（去重、免打扰、两级频控、摘要、渠道、冻结发送与重启恢复、待送队列、媒体副本）；六个出口收口；网关渠道就绪度与幂等键；core：`session_started.trigger`、标题/预览用 `displayText`、审批与提问的 `notification` hook | G1（原生）、G2（审批与提问）、G5、G6；G7 待测      |
 | **1c 收敛（在 1b 之前）**          | §16.2 的四项：统一的会话结果事件；"谁该被告知"只留规则表一个来源；决定提示的状态落盘；路由器按职责拆开                                                                                                                                                                                                                                                                                                               | 行为不变：现有测试与回放全过；§16.3 的删除清单兑现 |
 | **1b 外部运行时（已实现）**        | §6.3 四项                                                                                                                                                                                                                                                                                                                                                                                                            | G1（Codex/CC）                                     |
-| **2 定时 + 可打开**                | `WatchSession` 改建规则；`ReportToMimi` 与跟进提醒改走路由器（2a，已实现）；Goal 暂停、上限停止与失败可在 IM 里回复，完成后可"打开"，回复一律由模型解读（2b，已实现，见 §7、§9）；定时规则底座、跟进改成规则、循环跟进（2c-1，已实现）；晨报、收工、心跳规则，固定格子摘要、推迟发送（2c-2）；规则列表界面（2d）。旧的跟进表已删除，见下                                                                             | G2（其余）、G3、G4                                 |
-| **3 心跳**                         | 预检 + 判断轮 + 复查 + 每日上限                                                                                                                                                                                                                                                                                                                                                                                      | 两周数据后评估                                     |
+| **2 定时 + 可打开**                | `WatchSession` 改建规则；`ReportToMimi` 与跟进提醒改走路由器（2a，已实现）；Goal 暂停、上限停止与失败可在 IM 里回复，完成后可"打开"，回复一律由模型解读（2b，已实现，见 §7、§9）；定时规则底座、跟进改成规则、循环跟进（2c-1，已实现）；晨报、收工、心跳规则，固定格子摘要、推迟发送（2c-2，已实现；三期的心跳并入这里）；规则列表界面（2d）。旧的跟进表已删除，见下                                                 | G2（其余）、G3、G4                                 |
+| **3 心跳（并入 2c-2）**            | 预检 + 判断轮 + 复查 + 每日上限，已随 2c-2 实现（§10.2）                                                                                                                                                                                                                                                                                                                                                             | 两周数据后评估                                     |
 
 **跟进表（已撤销的收窄）**：2a 时曾决定跟进表继续独立存在，理由是整表迁移风险高。2026-11-11 主人决定只要一套定时系统、旧数据可以删除，于是 2c-1 不迁移而是直接替换：规则表加上 `schedule` 规则和每条规则的唤醒子状态（`wake`），跟进 id 换成规则 id，cron 任务键换成 `mimi-follow-up:rule:`，旧的跟进存储、执行器、运行时和 `follow-ups.json` 一并删除。`WatchSession` 改为建 `session` 规则（`createdBy: "watch-session"`，目标为来源路由），不再新建长任务；之前落盘的 watch 长任务照旧由长任务路径收尾。
 
@@ -829,7 +851,7 @@ outcome?: {
 还剩下的：
 
 - 把绑定本身存成规则行（C2 尚未做）；规则表、`completionTarget`、绑定路由仍各自存储，只由 `pet-delivery-plan.ts` 统一读取。`WatchSession` 已是规则（2a）；跟进已是 `schedule` 规则（2c-1）。
-- **只有一套定时系统**（2c-1）：跟进（含循环）走规则表 + `pet-rule-schedule.ts`，旧的跟进存储/执行器与 `follow-ups.json` 已删除，旧数据不迁移（主人决定）。晨报、收工、心跳会作为系统 `schedule` 规则加进来（2c-2），不另起调度。
+- **只有一套定时系统**（2c-1）：跟进（含循环）走规则表 + `pet-rule-schedule.ts`，旧的跟进存储/执行器与 `follow-ups.json` 已删除，旧数据不迁移（主人决定）。晨报、收工、心跳已作为系统 `schedule` 规则加进来（2c-2），没有另起调度。
 - `pet-notice-router.ts`（约 1,200 行，接了发件箱结果后变大）和 `pet-notice-ledger.ts`（约 1,190 行）这次没拆；`pet-dispatch-service.ts` 仍有约 2,400 行（对话轮、派活）；`im-gateway-control-server.ts` 接近它的 2,000 行上限。
 - 真机验收：微信对同一 `client_id` 的去重（G7）、无 token 的那一次尝试、发件箱重试与网关重启交错，都还没在真机上跑过。
 - `PetImDecisions` 的 60 秒兜底扫描（C3 有意保留）。
