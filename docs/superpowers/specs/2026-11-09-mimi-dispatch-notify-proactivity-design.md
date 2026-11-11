@@ -1,7 +1,7 @@
 # Mimi 派活、完成通知与主动性：整体设计
 
 - 日期：2026-11-09
-- 状态：v5（2026-11-10）。1a 已实现（PR #332），正文按实际实现修订；新增 §16 架构评估，并在 1b 之前插入"1c 收敛"一期（§13）。1b / 1c / 2 / 3 是设计。§12 决策已由用户确认
+- 状态：v6（2026-11-11）。1a（PR #332）、1c（PR #334）、1b 与子代理 `NotifyMe` 已实现，§6.3、§13、§15 按实现修订。2 / 3 是设计。§12 决策已由用户确认
 - 基线：§1 的现状与行号对应 `main` @ `e19322c7f`（1a 之前）；1a 之后的结构见各节和 §15
 - 相关：`2026-11-09-mimi-persona-voice-responsiveness-design.md`（人设、微信正在输入、纯文本、分条发送）。那一版目前只有设计稿（#331），本稿不依赖它；它落地后路由器的正文直接进它的表达层。
 - 涉及包：`packages/pet`、`packages/desktop`（main/pet、im-gateway-service、external-runtime-service）、`packages/chat`（各 IM 适配器，微信约束最多）、`packages/core`（protocol、settings schema、external runtime 工具暴露）
@@ -345,7 +345,8 @@ NotifyMe({
 
 - 走请求/响应，不复用 `ReportToMimi` 的单向 `notify`：core 把现有审批回环（`__workspace_action__`，`server.ts:4515-4573`）泛化为 `__host_action__`，经 `ProtocolObserverHost.requestHostAction` 暴露给扩展；action 为 `pet.rule.upsert`。宿主落盘成功后返回 `RuleEffect`（§4.4）。
 - 默认允许，不弹审批（决策 D5）：目标只能是主人自己，工具只建规则不发消息。
-- 暴露给原生顶层会话。**子代理不可用**（工具上下文里没有父会话 id，宿主也找不到子会话；需要 core 改动，记在 §15）；Mimi 自己不可见；外部运行时见 §6.3。
+- 暴露给原生顶层会话和子代理；Mimi 自己不可见；外部运行时见 §6.3。
+- **子代理**：规则建在顶层会话上（子代理不能再派子代理，父即根）。core 在派生子代理时把父会话 id 写进子引擎配置，工具上下文由此得到 `rootSessionId`；不读会话目录里的 `state.json`（子代理能改它），也不接受模型传入的会话 id。没有可信的根 id 时工具隐藏。子代理里的规则在主会话这一轮或 Goal 结束时触发；默认 scope 看根会话的 Goal。
 - `scope` 的默认值在执行时读会话落盘的 Goal（活动且未暂停 → `goal`）。
 - 宿主返回的失败原因先清洗（去控制字符、截到 200 字）再进模型上下文。
 - `RequestMimiDelivery` 保留给"现在就把这段内容发给我"。
@@ -362,13 +363,16 @@ NotifyMe({
 - 一个回合最多一条 done、一条 failed。
 - 去重键用 core 的运行 id（见 §8.2），重启后不会重复，也不会撞键。
 
-### 6.3 外部运行时（1b）
+### 6.3 外部运行时（1b，已实现）
 
-三件事缺一不可：
+Codex / Claude Code 会话跑在桌面主进程里（`external-runtime-service.ts`），不经过 worker。四处接入：
 
-1. **工具注册**：外部工具表加入 `NotifyMe`、`ReportToMimi`（更新 `external-tool-exposure.reviewed.json`），经 `externalRuntimeToolContextForSession` 绑定会话身份，直接调宿主的规则/报告处理器，不经过 `reportFor()`。
-2. **事件接入**：`externalBridge` 的外部事件流（含 `turn_complete`，`external-runtime-service.ts:1136,1158`）喂给同一个观察器。
-3. **审批接入**：`externalRuntime:approvalRequest` 同时写入决策索引，微信回码走 external-runtime-approvals 的 resolve 通道。
+1. **资格**：`pet-notice-external-sessions.ts` 给提醒管线一份外部会话目录。在跑的运行时，或落盘状态表明是 Codex/CC 的顶层工作会话（非 Mimi、非子代理、非临时、未归档）都算；运行时重启后规则仍然有效。"忙"取每次 `turn_complete` 发出那一刻排在后面的用户/宿主消息数，后台唤醒不算。原生 worker 断开只清原生会话的状态。
+2. **事件**：外部事件不论有无窗口都进同一个结果解释者。`session_started` 带 `trigger`（用户发送 `user`、宿主转发 `host_message`、后台唤醒 `background_wake`）和 `clientMessageId`；`turn_complete` 带 core 同一套 `outcome`（`bookkeeping` 工具不算工作，Codex/CC 自带工具算）和最终回复（最后一次工具调用之后的文字）。Goal 到达轮次/时间/token 上限暂停时按上限停止结束（`blockedOn: "limit"`），不当成等用户；`complete_goal` / `cancel_goal` 以 `goal_control_stop` 结束。运行时释放时只结束该会话未收尾的回合并冲刷暂存的汇报。宿主转发消息必须带 `displayText`。
+3. **工具**：`NotifyMe` 与 `ReportToMimi` 进外部工具表（`requires: "mimi-host"`，只有宿主提供处理器时才暴露），在主进程内直接调规则处理器和汇报观察者；会话身份取运行时绑定的会话，不看参数；免审批；计划模式下不暴露。已知限制：运行时在提醒接线完成前启动的，要重启运行时才有 `NotifyMe`。
+4. **审批与提问**：外部审批（CodeShell 工具审批、Codex 原生审批、Claude Code 权限）和提问进同一个 `PetImDecisions`，一个决定一条 IM 提示。码由 `["external", 会话, 请求]` 生成，不会和原生撞；回码直接结算外部审批路由（只允许本次，不授会话/项目范围）；桌面、手机、IM、超时、运行时停止任一处结算都会结束提示。外部提示的状态只看审批路由，不受 worker 状态影响；重启后路由里已不存在的提示静默撤销。Codex 原生审批的说明统一由 `external-runtime-codex-approvals.ts` 生成（命令、向终端输入、网络访问的主机、文件改动列表、权限），桌面卡片、手机、IM 看到的一致。
+
+目前没有 Mimi 派活到外部会话的通道；以后加时，发送要带 `displayText`、`clientMessageId`（`petDelegationClientMessageId`）和 `trigger: "host_message"`，长任务即可按现有方式绑定。
 
 ## 7. 卡住时的选项
 
@@ -601,7 +605,7 @@ notifications?: {
 | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
 | **1a 原生闭环（已实现，PR #332）** | 规则表（`session`、`all-sessions`）；`__host_action__` 回环与 `NotifyMe`；铃铛与设置卡片；派活说明（`displayText`）与自动建规则；事件 → Notice 映射；`PetImDecisions` 经路由器、离开后补推；路由器（去重、免打扰、两级频控、摘要、渠道、冻结发送与重启恢复、待送队列、媒体副本）；六个出口收口；网关渠道就绪度与幂等键；core：`session_started.trigger`、标题/预览用 `displayText`、审批与提问的 `notification` hook | G1（原生）、G2（审批与提问）、G5、G6；G7 待测      |
 | **1c 收敛（在 1b 之前）**          | §16.2 的四项：统一的会话结果事件；"谁该被告知"只留规则表一个来源；决定提示的状态落盘；路由器按职责拆开                                                                                                                                                                                                                                                                                                               | 行为不变：现有测试与回放全过；§16.3 的删除清单兑现 |
-| **1b 外部运行时**                  | §6.3 三项                                                                                                                                                                                                                                                                                                                                                                                                            | G1（Codex/CC）                                     |
+| **1b 外部运行时（已实现）**        | §6.3 四项                                                                                                                                                                                                                                                                                                                                                                                                            | G1（Codex/CC）                                     |
 | **2 定时 + 可打开**                | `follow-ups.json` 与 `WatchSession` 迁入规则表；`ReportToMimi` 与跟进提醒改走路由器；循环跟进；晨报、收工；Goal 暂停与失败的回复码；固定格子摘要、推迟发送；规则列表界面；`打开 码`                                                                                                                                                                                                                                  | G2（其余）、G3、G4                                 |
 | **3 心跳**                         | 预检 + 判断轮 + 复查 + 每日上限                                                                                                                                                                                                                                                                                                                                                                                      | 两周数据后评估                                     |
 
@@ -618,7 +622,7 @@ notifications?: {
 ## 14. 测试
 
 - core：`__host_action__` 回环（请求形状、成功、`ok:false`、会话不在线、超时）；`__workspace_action__` 行为不变；外部工具暴露清单更新后跑契约测试。
-- pet：`NotifyMe` 参数校验与可见性（原生可见，子代理与 Mimi 不可见）；派活说明拼装；规则请求失败路径。
+- pet：`NotifyMe` 参数校验与可见性（原生与子代理可见，Mimi 不可见；子代理指向根会话）；派活说明拼装；规则请求失败路径。
 - desktop：
   - 规则表读写、乐观并发、写入串行、坏条目隔离、主人规则接管派活规则；跟进迁移幂等（二期）；
   - 事件 → Notice 映射（complete/cancel 区分、"只回好的"不触发、后台任务未结束不触发）；
@@ -633,8 +637,6 @@ notifications?: {
 
 **1a 没做、留给后续的**
 
-- Codex / Claude Code 会话（1b，§6.3）。
-- 子代理里的 `NotifyMe`：需要 core 在工具上下文里提供父会话 id，或让回环能把子会话路由到父会话。
 - `ReportToMimi` 的原路回传和跟进提醒仍然自己发送，不受免打扰和频控约束（二期收口）。
 - `important` 按 `always` 处理；Goal 暂停、上限停止、失败只提醒，不能在 IM 里回复继续。
 - 摘要每条只有类型和标题。
