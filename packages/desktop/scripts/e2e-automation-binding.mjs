@@ -26,7 +26,8 @@ const screenshotDir = process.env.CODESHELL_AUTOMATION_SCREENSHOT_DIR;
 const jobName = "每日工作摘要";
 const localTitle = "工作进度与计划";
 const diskTitle = "发布前的对话回顾";
-const followUpPath = join(isolated.userDataDir, "pet", "follow-ups.json");
+const rulesPath = join(isolated.userDataDir, "pet", "rules.json");
+const legacyFollowUpPath = join(isolated.userDataDir, "pet", "follow-ups.json");
 const cronPath = join(isolated.codeShellHome, "cron.json");
 let app;
 let win;
@@ -40,47 +41,41 @@ const mode = (name) => execution().getByRole("button", { name, exact: true });
 
 async function seedStartupReminder() {
   const now = Date.now();
-  const operationKey = "e2e-automation-binding:startup-reminder";
-  const definition = {
-    title: "启动时恢复的明确提醒",
-    text: "提醒我核对发布清单，不要启动工作会话。",
-    wakeAt: now - 5_000,
-    timezone: "Asia/Singapore",
-    intent: "remind",
-    missedPolicy: "fire-once",
-    catchUpUntil: now + 3_600_000,
-  };
-  const id = `registered-followup-${createHash("sha256").update(operationKey).digest("hex").slice(0, 24)}`;
-  const registrationKey = createHash("sha256")
-    .update(
-      JSON.stringify([
-        definition.title,
-        definition.text,
-        definition.wakeAt,
-        definition.timezone,
-        definition.intent,
-        null,
-        null,
-        null,
-        definition.missedPolicy,
-        definition.catchUpUntil,
-      ]),
-    )
-    .digest("hex");
+  // A follow-up is a schedule rule; this one came due while the app was closed.
+  const hex = createHash("sha256").update("e2e-automation-binding:startup-reminder").digest("hex");
+  const id = `rule-${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+  const at = now - 5_000;
   const reminder = {
     id,
-    operationKey,
-    registrationKey,
-    ...definition,
-    revision: 1,
-    status: "open",
+    version: 1,
+    origin: "user",
+    createdBy: "follow-up",
+    when: {
+      kind: "schedule",
+      at,
+      timezone: "Asia/Singapore",
+      missedPolicy: "fire-once",
+      catchUpUntil: now + 3_600_000,
+    },
+    then: {
+      mode: "remind",
+      title: "启动时恢复的明确提醒",
+      text: "提醒我核对发布清单，不要启动工作会话。",
+    },
+    wake: { occurrence: at, status: "scheduled" },
+    attention: "always",
+    channel: "auto",
+    target: { kind: "owner" },
+    state: "active",
     createdAt: now - 60_000,
     updatedAt: now - 60_000,
-    wake: { revision: 1, status: "scheduled" },
   };
-  const creationKey = `mimi-follow-up:${id}:1`;
-  await mkdir(dirname(followUpPath), { recursive: true, mode: 0o700 });
-  await writeFile(followUpPath, JSON.stringify({ version: 1, entries: [reminder] }), {
+  await mkdir(dirname(rulesPath), { recursive: true, mode: 0o700 });
+  await writeFile(rulesPath, JSON.stringify({ version: 1, rules: [reminder], quarantine: [] }), {
+    mode: 0o600,
+  });
+  // The retired follow-up store and its job: both must be gone after startup.
+  await writeFile(legacyFollowUpPath, JSON.stringify({ version: 1, entries: [] }), {
     mode: 0o600,
   });
   await writeFile(
@@ -89,41 +84,40 @@ async function seedStartupReminder() {
       version: 1,
       jobs: [
         {
-          id: "startup-reminder-cron",
-          name: definition.title,
+          id: "legacy-follow-up-cron",
+          name: "旧的跟进",
           prompt: "Registered follow-up wake",
           schedule: "once",
           once: true,
-          runAt: definition.wakeAt,
-          nextRun: definition.wakeAt,
-          timezone: definition.timezone,
-          missedPolicy: definition.missedPolicy,
-          catchUpUntil: definition.catchUpUntil,
-          creationKey,
+          runAt: now + 3_600_000,
+          nextRun: now + 3_600_000,
+          timezone: "Asia/Singapore",
+          missedPolicy: "fire-once",
+          catchUpUntil: now + 7_200_000,
+          creationKey: "mimi-follow-up:registered-followup-000000000000000000000001:1",
           enabled: true,
           runCount: 0,
-          createdAt: reminder.createdAt,
+          createdAt: now - 60_000,
         },
       ],
     }),
     { mode: 0o600 },
   );
-  return { ...reminder, creationKey };
+  return reminder;
 }
 
 async function checkStartupReminder(reminder) {
-  // Read the real ledger before replacing any IPC handler. A restored once job
-  // must not be consumed while createWindow is still preparing its coordinator.
+  // Read the real rule table before replacing any IPC handler.
   const deadline = Date.now() + 20_000;
   let row;
   let jobs;
   do {
-    const ledger = JSON.parse(await readFile(followUpPath, "utf8"));
-    row = ledger.entries.find((entry) => entry.id === reminder.id);
+    const table = JSON.parse(await readFile(rulesPath, "utf8"));
+    row = table.rules.find((entry) => entry.id === reminder.id);
     jobs = JSON.parse(await readFile(cronPath, "utf8")).jobs;
     if (
       row?.wake.status === "notified" &&
-      !jobs.some((job) => job.creationKey === reminder.creationKey)
+      !jobs.some((job) => /^mimi-(rule|follow-up):/u.test(job.creationKey ?? ""))
     )
       break;
     await new Promise((resolveWait) => setTimeout(resolveWait, 100));
@@ -133,20 +127,27 @@ async function checkStartupReminder(reminder) {
     `Cold-start reminder must settle as notified, got ${JSON.stringify(row?.wake)}`,
   );
   assert(
-    row.revision === 1 && row.status === "open" && row.wake.revision === 1,
-    "Waking preserves the canonical obligation and its revision",
+    row.version === 1 && row.state === "active" && row.wake.occurrence === reminder.when.at,
+    "Waking preserves the follow-up rule and its version",
   );
   assert(
-    row.wake.claimedAt >= reminder.wakeAt && row.wake.completedAt >= row.wake.claimedAt,
+    row.wake.claimedAt >= reminder.when.at && row.wake.completedAt >= row.wake.claimedAt,
     "Reminder persisted a claim before its terminal wake outcome",
   );
   assert(
-    row.wake.detail === reminder.text && row.wake.taskId === undefined,
+    row.wake.detail === reminder.then.text && row.wake.taskId === undefined,
     "Reminder reports its requested text without a fabricated Work Session",
   );
   assert(
-    !jobs.some((job) => job.creationKey === reminder.creationKey),
-    "Successful one-shot reminder consumed its cron projection",
+    !jobs.some((job) => /^mimi-(rule|follow-up):/u.test(job.creationKey ?? "")),
+    "No schedule job is left for a settled one-shot, and the legacy job is gone",
+  );
+  assert(
+    await readFile(legacyFollowUpPath, "utf8").then(
+      () => false,
+      () => true,
+    ),
+    "The retired follow-ups.json was deleted at startup",
   );
   const state = await win.evaluate(async () => ({
     summaries: await window.codeshell.pet.getSummaries(),
@@ -158,14 +159,14 @@ async function checkStartupReminder(reminder) {
     visible?.kind === "registered" &&
       visible.intent === "remind" &&
       visible.wakeState === "notified" &&
-      visible.wakeDetail === reminder.text,
+      visible.wakeDetail === reminder.then.text,
     "Production follow-up IPC exposes the canonical reminder outcome",
   );
   assert(
     state.projection.sessions.length === 0 && state.longTasks.tasks.length === 0,
     "Reminder waking creates no Work Session or long task",
   );
-  console.log("PASS: cold-start registered reminder settles once without a Work Session");
+  console.log("PASS: cold-start follow-up rule settles once without a Work Session");
 }
 
 async function screenshot(name) {

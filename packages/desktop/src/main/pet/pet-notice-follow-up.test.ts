@@ -1,18 +1,14 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { join } from "node:path";
-import type { CronScheduler } from "@cjhyy/code-shell-core/internal";
-import type { PetRegisteredFollowUp } from "@cjhyy/code-shell-pet";
+import type { CronJob, CronScheduler } from "@cjhyy/code-shell-core/internal";
+import { createPetFollowUpRules } from "./pet-follow-up-rules.js";
 import {
   createFollowUpNotifier,
   FOLLOW_UP_MIN_DELIVERY_MS,
   followUpNotice,
+  type FollowUpNoticeSource,
 } from "./pet-notice-follow-up.js";
 import { DEFAULT_MAX_P0_PER_HOUR } from "./pet-notice-policy.js";
-import {
-  PetFollowUpWakeCoordinator,
-  petFollowUpWakeKey,
-} from "./pet-follow-up-wake-coordinator.js";
-import { PetRegisteredFollowUpStore } from "./pet-registered-follow-up-store.js";
+import { ruleScheduleKey } from "./pet-rule-schedule.js";
 import {
   NOW,
   SID,
@@ -37,30 +33,19 @@ const DAY = 24 * 60 * 60_000;
 const QUIET_NIGHT = Math.floor(NOW / DAY) * DAY + (23 * 60 + 30) * 60_000;
 const ROUTE = { kind: "im-gateway" as const, channel: "lark", target: "chat-7", senderId: "me" };
 
-function followUp(extra: Partial<PetRegisteredFollowUp> = {}): PetRegisteredFollowUp {
-  return {
-    id: "registered-followup-000000000000000000000001",
-    operationKey: "op-1",
-    registrationKey: "reg-1",
-    revision: 1,
-    title: "看一下发布",
-    text: "检查 0.10.1 的发布结果",
-    wakeAt: env.clock,
-    timezone: "UTC",
-    missedPolicy: "fire-once",
-    catchUpUntil: env.clock + DAY,
-    intent: "remind",
-    status: "open",
-    createdAt: NOW - DAY,
-    updatedAt: NOW - DAY,
-    wake: { revision: 1, status: "claimed", claimedAt: env.clock },
-    ...extra,
-  };
+const RULE = "rule-00000000-0000-4000-8000-000000000001";
+
+function followUp(extra: Partial<FollowUpNoticeSource> = {}): FollowUpNoticeSource {
+  return { title: "看一下发布", catchUpUntil: env.clock + DAY, ...extra };
 }
 
-const KEY = petFollowUpWakeKey("registered-followup-000000000000000000000001", 1);
+const KEY = ruleScheduleKey(RULE, 1, NOW);
 
-async function remind(h: Harness, item = followUp(), text = item.text): Promise<void> {
+async function remind(
+  h: Harness,
+  item = followUp(),
+  text = "检查 0.10.1 的发布结果",
+): Promise<void> {
   await createFollowUpNotifier({ submit: h.wiring.submitNotice, now: () => env.clock })(
     item,
     text,
@@ -167,9 +152,9 @@ describe("follow-up reminders go through the notice router", () => {
     });
   const due = (n: number) =>
     createFollowUpNotifier({ submit: current!.wiring.submitNotice, now: () => env.clock })(
-      followUp({ id: `registered-followup-00000000000000000000000${n}` }),
+      followUp(),
       `第 ${n} 条`,
-      `mimi-follow-up:registered-followup-00000000000000000000000${n}:1`,
+      ruleScheduleKey(`rule-00000000-0000-4000-8000-00000000000${n}`, 1, NOW),
     );
 
   test("it skips the P1/P2 cap but shares the P0 backstop", async () => {
@@ -183,7 +168,7 @@ describe("follow-up reminders go through the notice router", () => {
       "「看一下发布」：第 2 条",
     ]);
     const third = current.wiring.ledger.byDedupeKey(
-      "mimi-follow-up:registered-followup-000000000000000000000003:1",
+      ruleScheduleKey("rule-00000000-0000-4000-8000-000000000003", 1, NOW),
     );
     expect(third?.decision).toMatchObject({ outlet: "digest", reason: "p0-cap" });
     // Held by the backstop, it is still shown on the desktop right away.
@@ -250,45 +235,101 @@ describe("follow-up reminders go through the notice router", () => {
   });
 });
 
-describe("the wake coordinator", () => {
-  async function wakeOnce(h: Harness) {
-    const store = new PetRegisteredFollowUpStore(join(env.dir, "follow-ups.json"), {
+describe("a follow-up rule coming due", () => {
+  /** Register through the host action, as Mimi's ManageFollowUp does, then let it fire. */
+  async function wakeOnce(h: Harness, context: Record<string, unknown> = {}) {
+    const jobs: CronJob[] = [];
+    const runtime = await createPetFollowUpRules({
+      rules: h.wiring.ruleStore,
+      sessions: () => [],
+      summaryStore: {
+        load: async () => undefined,
+        get: () => undefined,
+        set: () => undefined,
+        flush: async () => undefined,
+      },
+      summaryService: { summarize: async () => null },
+      inbox: {
+        getSnapshot: () => ({ revision: 0, dismissedIds: [] }),
+        addIfAbsentDurably: async () => ({
+          added: false,
+          snapshot: { revision: 0, dismissedIds: [] },
+        }),
+      },
+      tasks: { get: () => undefined, getSnapshot: () => ({ tasks: [] }) } as never,
+      longTasks: { control: async () => ({ ok: false, message: "unused" }) } as never,
+      scheduler: () =>
+        ({
+          list: () => jobs,
+          create: (_name: string, _schedule: string, _prompt: string, opts: Partial<CronJob>) => {
+            const job = { id: `job-${jobs.length}`, enabled: true, ...opts } as CronJob;
+            jobs.push(job);
+            return job;
+          },
+          delete: (id: string) => {
+            const index = jobs.findIndex((job) => job.id === id);
+            if (index >= 0) jobs.splice(index, 1);
+            return index >= 0;
+          },
+        }) as unknown as CronScheduler,
+      submitNotice: h.wiring.submitNotice,
+      dispatch: () => null,
       now: () => env.clock,
+      onError: () => undefined,
     });
-    const coordinator = new PetFollowUpWakeCoordinator({
-      store,
-      scheduler: () => ({ list: () => [], delete: () => true }) as unknown as CronScheduler,
-      now: () => env.clock,
-      notify: createFollowUpNotifier({ submit: h.wiring.submitNotice, now: () => env.clock }),
-      resume: async () => ({ launched: false, text: "unused" }),
-    });
-    await coordinator.prepare();
-    const row = await store.register({
-      operationKey: "op-wake",
-      title: "看一下发布",
-      text: "检查发布结果",
-      wakeAt: env.clock + 60_000,
-      timezone: "UTC",
-      intent: "remind",
-    });
+    await runtime.coordinator.start();
+    const receipt = await runtime.followUpHost(
+      {
+        action: "register",
+        title: "看一下发布",
+        text: "检查发布结果",
+        wakeAt: env.clock + 60_000,
+        timezone: "UTC",
+        intent: "remind",
+      },
+      { originClientMessageId: "turn-1", requestedAt: env.clock, ...context },
+    );
+    const id = String(receipt.followUpId);
     env.clock += 60_000;
-    await coordinator.wake({ creationKey: petFollowUpWakeKey(row.id, row.revision) });
-    return store.get(row.id)!;
+    const job = jobs.find((entry) => entry.creationKey?.startsWith(`mimi-rule:${id}:`));
+    expect(job).toBeDefined();
+    await runtime.coordinator.wake(job!);
+    runtime.coordinator.stop();
+    return { rule: h.wiring.ruleStore.get(id)!, key: job!.creationKey! };
   }
 
-  test("marks the wake notified once the router took the reminder", async () => {
+  test("is a followup.due notice keyed by its occurrence, and settles notified", async () => {
     current = harness();
-    const row = await wakeOnce(current);
-    expect(row.wake.status).toBe("notified");
+    const { rule, key } = await wakeOnce(current);
+    expect(rule.wake?.status).toBe("notified");
     await current.idle();
+    expect(current.submitted).toEqual([
+      expect.objectContaining({
+        kind: "followup.due",
+        dedupeKey: key,
+        target: { kind: "owner" },
+        channel: "auto",
+        body: "「看一下发布」：检查发布结果",
+      }),
+    ]);
     expect(current.ownerSends).toHaveLength(1);
+  });
+
+  test("a follow-up asked over IM goes back to that conversation", async () => {
+    current = harness();
+    await wakeOnce(current, { completionTarget: ROUTE });
+    await current.idle();
+    expect(current.submitted[0]).toMatchObject({
+      channel: "lark",
+      target: { kind: "route", route: { channel: "lark", target: "chat-7" } },
+    });
   });
 
   test("a router that no longer takes notices leaves the wake unknown, not notified", async () => {
     current = harness();
     current.wiring.router.dispose();
-    const row = await wakeOnce(current);
-    expect(row.wake.status).toBe("unknown");
+    const { rule } = await wakeOnce(current);
+    expect(rule.wake?.status).toBe("unknown");
   });
 
   test("a router that throws leaves the wake unknown", async () => {
@@ -296,7 +337,7 @@ describe("the wake coordinator", () => {
     current.wiring.router.submit = async () => {
       throw new Error("ledger unwritable");
     };
-    const row = await wakeOnce(current);
-    expect(row.wake.status).toBe("unknown");
+    const { rule } = await wakeOnce(current);
+    expect(rule.wake?.status).toBe("unknown");
   });
 });
