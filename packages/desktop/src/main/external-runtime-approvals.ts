@@ -236,6 +236,17 @@ export class ExternalRuntimeApprovals {
     return true;
   }
 
+  /**
+   * Deny a prompt as timed out, as its own timer does: Main's other deadline
+   * keeper (Mimi's IM prompt) fired first. Desktop and phone see a timeout.
+   */
+  expire(requestId: string): boolean {
+    if (!this.finish(requestId, { approved: false, reason: "approval timed out" }, "timed_out"))
+      return false;
+    dlog("external-runtime", "approval.timed_out", { requestId, by: "main" });
+    return true;
+  }
+
   /** Paired clients may answer only the selected Session's current owner prompt. */
   settleForSession(
     sessionId: string,

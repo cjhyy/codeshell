@@ -7,6 +7,7 @@ import {
   type ExternalApprovalRequest,
   type ExternalPendingApproval,
 } from "../external-runtime-approvals.js";
+import { codexNativeApprovalPresentation } from "../external-runtime-codex-approvals.js";
 import type {
   ImDecision,
   ImDecisionDeliveryResolver,
@@ -29,6 +30,8 @@ export interface ExternalDecisionApprovals {
   pendingAll(): ExternalPendingApproval[];
   /** Answer without a window id, as Main; false when it is no longer pending. */
   settle(requestId: string, decision: ExternalApprovalDecision): boolean;
+  /** Deny it as timed out (its deadline passed), exactly as the router's own timer would. */
+  expire(requestId: string): boolean;
 }
 
 /** What main hands the notice wiring: the router once it started, and its changes. */
@@ -62,17 +65,8 @@ export interface PetExternalDecisions {
 const RESOLUTION_MEMORY_MS = 30 * 60_000;
 const RESOLUTION_MEMORY_MAX = 500;
 
-/** Codex's native approvals carry `{ method, params }` instead of tool args. */
+/** Codex's native approvals carry `{ method, params }`; the service adds description/args. */
 const CODEX_NATIVE_TOOL = "Codex native tool";
-/** Codex routing ids: noise to the owner, never shown. */
-const CODEX_ROUTING_KEYS = new Set([
-  "threadId",
-  "turnId",
-  "itemId",
-  "conversationId",
-  "callId",
-  "approvalId",
-]);
 
 export function createExternalDecisions(deps: {
   source?: ExternalDecisionSource;
@@ -168,11 +162,15 @@ export function createExternalDecisions(deps: {
       // By request id alone the router would settle any Session's prompt.
       if (!approvals || !find(sessionId, requestId))
         throw new Error("the external runtime's prompt is no longer pending");
-      const settled = approvals.settle(requestId, {
-        approved: decision.approved,
-        ...(decision.answer !== undefined ? { answer: decision.answer } : {}),
-        ...(decision.reason !== undefined ? { reason: decision.reason } : {}),
-      });
+      // Mimi's deadline timer won the race: a timeout, so desktop and phone say so.
+      const settled =
+        decision.failure === "timed_out"
+          ? approvals.expire(requestId)
+          : approvals.settle(requestId, {
+              approved: decision.approved,
+              ...(decision.answer !== undefined ? { answer: decision.answer } : {}),
+              ...(decision.reason !== undefined ? { reason: decision.reason } : {}),
+            });
       if (!settled) throw new Error("the external runtime's prompt is no longer pending");
     },
     dispose() {
@@ -192,8 +190,8 @@ export function externalDecisionCode(sessionId: string, requestId: string): stri
 
 /**
  * The request as a prompt reads it. A question is never skippable or kept
- * open here (the runtime denies it at its deadline); a Codex native approval's
- * `{ method, params }` becomes a description and readable args.
+ * open here (the runtime denies it at its deadline). A Codex native approval
+ * already carries a description and readable args (`codexNativeApprovalPresentation`).
  */
 export function externalDecisionRequest(
   request: ExternalApprovalRequest,
@@ -212,60 +210,16 @@ export function externalDecisionRequest(
       args: { ...rest, question },
     };
   }
-  if (request.toolName === CODEX_NATIVE_TOOL && typeof request.method === "string")
-    return codexNativeRequest(request.method, record(request.params) ?? {});
+  // A request raised without the service's presentation (description/args).
+  if (!args && request.toolName === CODEX_NATIVE_TOOL && typeof request.method === "string")
+    return {
+      toolName: CODEX_NATIVE_TOOL,
+      ...codexNativeApprovalPresentation(request.method, request.params),
+    };
   return {
     toolName: request.toolName,
     ...(description ? { description } : {}),
     args: args ?? {},
-  };
-}
-
-/**
- * Codex app-server approvals: commands (`item/commandExecution/requestApproval`,
- * legacy `execCommandApproval`) and file changes (`item/fileChange/requestApproval`,
- * legacy `applyPatchApproval`); anything else shows its params without routing ids.
- */
-function codexNativeRequest(
-  method: string,
-  params: Record<string, unknown>,
-): ImDecision["envelope"]["request"] {
-  const reason = text(params.reason);
-  const cwd = text(params.cwd);
-  if (/commandExecution|execCommand/u.test(method)) {
-    const command = Array.isArray(params.command)
-      ? params.command.filter((part) => typeof part === "string").join(" ")
-      : text(params.command);
-    return {
-      toolName: CODEX_NATIVE_TOOL,
-      description: "Codex 想执行命令",
-      args: {
-        ...(command ? { command } : {}),
-        ...(cwd ? { cwd } : {}),
-        ...(reason ? { reason } : {}),
-      },
-    };
-  }
-  if (/fileChange|applyPatch/u.test(method)) {
-    const changes = record(params.fileChanges) ?? record(params.changes);
-    const files = changes ? Object.keys(changes) : [];
-    const grantRoot = text(params.grantRoot);
-    return {
-      toolName: CODEX_NATIVE_TOOL,
-      description: "Codex 想修改文件",
-      args: {
-        ...(files.length > 0 ? { files } : {}),
-        ...(grantRoot ? { grantRoot } : {}),
-        ...(reason ? { reason } : {}),
-      },
-    };
-  }
-  return {
-    toolName: CODEX_NATIVE_TOOL,
-    description: `Codex 请求批准（${method}）`,
-    args: Object.fromEntries(
-      Object.entries(params).filter(([key]) => !CODEX_ROUTING_KEYS.has(key)),
-    ),
   };
 }
 
@@ -300,8 +254,4 @@ function record(value: unknown): Record<string, unknown> | undefined {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : undefined;
-}
-
-function text(value: unknown): string | undefined {
-  return typeof value === "string" && value.trim() ? value : undefined;
 }

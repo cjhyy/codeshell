@@ -3904,6 +3904,43 @@ describe("ExternalRuntimeService", () => {
     await svc.stopAll();
   });
 
+  test("a native approval reaches the prompt with a readable description and the patch's files", async () => {
+    const seen: Array<Record<string, unknown>> = [];
+    const svc = service(
+      { external_agent_runtime: true, external_host_tools: true },
+      async (_sessionId, approvalRequest) => {
+        seen.push(approvalRequest);
+        return { approved: true };
+      },
+    );
+    await svc.start(request);
+    const hooks = starts[0]!.hooks as {
+      onNativeApproval(input: {
+        method: string;
+        params: unknown;
+        fileChanges?: Array<{ path: string; kind: string }>;
+      }): Promise<string>;
+    };
+    const params = { threadId: "t", turnId: "u", itemId: "fc1", startedAtMs: 1 };
+    await expect(
+      hooks.onNativeApproval({
+        method: "item/fileChange/requestApproval",
+        params,
+        fileChanges: [{ path: "/repo/a.ts", kind: "update" }],
+      }),
+    ).resolves.toBe("accept");
+    expect(seen).toEqual([
+      {
+        toolName: "Codex native tool",
+        method: "item/fileChange/requestApproval",
+        params,
+        description: "Codex 想修改文件",
+        args: { files: ["update /repo/a.ts"] },
+      },
+    ]);
+    await svc.stopAll();
+  });
+
   test("pending and future native approvals cannot accept after trust revocation", async () => {
     let release!: () => void,
       approvals = 0;

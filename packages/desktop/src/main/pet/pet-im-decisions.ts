@@ -623,7 +623,10 @@ export class PetImDecisions {
     // Still open, just not prompted from here right now.
     if (status === "pending") return;
     const deadline = record.prompt.deadline ?? Number.POSITIVE_INFINITY;
-    const timedOut = status === "expired" || (status === undefined && this.now() >= deadline);
+    // An external prompt the router no longer knows (Main restarted, and the
+    // runtime cancelled it on the way down) did not time out: it just ended.
+    const timedOut =
+      status === "expired" || (!external && status === undefined && this.now() >= deadline);
     const channel = record.prompt.phase === "im" ? record.prompt.channel : undefined;
     const notify = timedOut && channel !== undefined && record.prompt.skippable !== true;
     await this.router.updateDecision(record.code, {
@@ -853,7 +856,8 @@ export class PetImDecisions {
       const record = this.router.decisionRecord(code);
       if (record && !isPromptEnded(record.prompt.phase))
         await this.router.updateDecision(code, { phase: "answered", endedAt: this.now() });
-      return `确认 ${code} 已处理${decision.approved ? "，回答已交给原任务" : question ? "，已跳过这个问题" : "，本次操作未授权"}。`;
+      const asked = entry.envelope.request.toolName === "__ask_user__";
+      return `确认 ${code} 已处理${decision.approved ? "，回答已交给原任务" : asked ? "，已跳过这个问题" : "，本次操作未授权"}。`;
     } catch (error) {
       this.options.onError(error);
       return "确认未提交成功，可能已在其他端处理。请查看任务状态后重试。";

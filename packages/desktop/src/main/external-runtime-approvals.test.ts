@@ -461,4 +461,29 @@ describe("ExternalRuntimeApprovals", () => {
     expect(mobile).toHaveLength(3);
     approvals.cancelSession("one");
   });
+
+  test("main can expire a prompt exactly as its own timer would", async () => {
+    const { window, sent } = fakeWindow(1);
+    const events: ExternalApprovalEvent[] = [];
+    const approvals = new ExternalRuntimeApprovals({
+      windows: () => [window] as never,
+      onPendingChange: (event) => events.push(event),
+    });
+    const pending = approvals.request("one", request);
+    const { requestId } = sent[0]!.payload as { requestId: string };
+    expect(approvals.expire(requestId)).toBe(true);
+    await expect(pending).resolves.toEqual({ approved: false, reason: "approval timed out" });
+    expect(sent[1]).toEqual({
+      channel: "externalRuntime:approvalResolved",
+      payload: { sessionId: "one", requestId },
+    });
+    expect(events[1]).toEqual({
+      type: "resolved",
+      sessionId: "one",
+      requestId,
+      ownerWebContentsId: 1,
+      cause: "timed_out",
+    });
+    expect(approvals.expire(requestId)).toBe(false);
+  });
 });

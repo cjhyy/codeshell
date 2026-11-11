@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
   ExternalRuntimeApprovals,
   type ExternalApprovalDecision,
+  type ExternalApprovalEvent,
   type ExternalApprovalRequest,
 } from "../external-runtime-approvals.js";
 import { collectImDecisions, PetImDecisions } from "./pet-im-decisions.js";
@@ -86,6 +87,8 @@ function setup(
     ...(options.timeoutMs !== undefined ? { timeoutMs: options.timeoutMs } : {}),
   });
   approvals = router;
+  const resolutions: ExternalApprovalEvent[] = [];
+  router.subscribe((event) => void (event.type === "resolved" && resolutions.push(event)));
   const h = harness({
     externalSessions: catalog,
     externalApprovals: { approvals: () => router, subscribe: (l) => router.subscribe(l) },
@@ -182,6 +185,7 @@ function setup(
     reply,
     nativeAnswers,
     decisions,
+    resolutions,
   };
 }
 
@@ -246,6 +250,68 @@ describe("external runtime decision prompts", () => {
     });
   });
 
+  test("拒绝 on a question skips it, and says so", async () => {
+    const t = setup();
+    await watchBlocked();
+    const { decision, code } = t.ask(question({ question: "分支叫什么？" }));
+    await t.graceOver(() => t.promptOf(code)?.phase === "im");
+    const text = await t.reply(`回答 ${code} 拒绝`);
+    expect(text).toContain("已跳过这个问题");
+    expect(text).not.toContain("未授权");
+    await expect(decision).resolves.toMatchObject({ approved: false });
+  });
+
+  test("only the owner's private chat answers an external code; another Session's prompt is never settled", async () => {
+    const t = setup();
+    await watchBlocked();
+    const { decision, requestId, code } = t.ask(bash);
+    await t.graceOver(() => t.promptOf(code)?.phase === "im");
+    const other = { ...OWNER_DM, target: "someone-else" };
+    expect(await t.decisions.reply({ message: `回答 ${code} 1`, origin: other })).toContain(
+      "不属于当前私聊",
+    );
+    expect(
+      await t.decisions.reply({
+        message: `回答 ${code} 1`,
+        origin: { ...OWNER_DM, isDirectMessage: false },
+      }),
+    ).toContain("不属于当前私聊");
+    expect(await t.decisions.reply({ message: `回答 ${code} 1` })).toContain("不属于当前私聊");
+    expect(t.router.pendingAll()).toHaveLength(1);
+    // An entry claiming another Session for this request id settles nothing.
+    const [entry] = t.h.wiring.externalDecisions.read();
+    const forged = { ...entry!, envelope: { ...entry!.envelope, sessionId: SID } };
+    await expect(t.h.wiring.externalDecisions.approve(forged, { approved: true })).rejects.toThrow(
+      "no longer pending",
+    );
+    expect(t.router.pendingAll().map((item) => item.requestId)).toEqual([requestId]);
+    expect(await t.reply(`回答 ${code} 1`)).toContain("已处理");
+    await expect(decision).resolves.toEqual({ approved: true });
+  });
+
+  test("after a restart an open external prompt ends revoked, with no 已超时", async () => {
+    const before = setup();
+    await watchBlocked();
+    const { code } = before.ask(bash);
+    await before.graceOver(() => before.promptOf(code)?.phase === "im");
+    // Shutdown: the prompts stop first, then the runtime cancels its prompts.
+    before.decisions.stop();
+    before.router.cancelSession(XID);
+    await before.h.wiring.flush();
+    before.h.wiring.dispose();
+    current = undefined;
+
+    env.clock += 20 * 60_000;
+    const t = setup();
+    await t.h.wiring.ready;
+    await t.decisions.scan();
+    await settle(() => t.promptOf(code)?.phase === "revoked");
+    expect(t.promptOf(code)?.phase).toBe("revoked");
+    expect(t.promptOf(code)?.expiryNotice).toBeUndefined();
+    await settle();
+    expect(t.h.ownerSends).toEqual([]);
+  });
+
   test("without a rule or an IM task the decision stays on the desktop", async () => {
     const t = setup();
     const { code } = t.ask(bash);
@@ -286,6 +352,11 @@ describe("external runtime decision prompts", () => {
     expect(t.promptOf(code)).toMatchObject({ phase: "expired", expiryNotice: { sent: true } });
     await settle();
     expect(t.h.ownerSends).toHaveLength(2);
+    // Mimi's timer won, yet the router records a timeout: desktop and phone say so.
+    await expect(decision).resolves.toEqual({ approved: false, reason: "approval timed out" });
+    expect(t.resolutions.at(-1)).toMatchObject({ type: "resolved", cause: "timed_out" });
+    expect(t.resolutions.at(-1)).not.toHaveProperty("approved");
+    expect(t.sent.at(-1)!.payload).not.toHaveProperty("approved");
   });
 
   test("the runtime's own timeout ends the prompt as expired, with one 已超时 notice", async () => {
@@ -495,57 +566,17 @@ describe("external decision requests as prompts read them", () => {
     );
   });
 
-  test("Codex native approvals become a readable description and args", () => {
+  test("a Codex native approval without the service's presentation still reads", () => {
     expect(
       externalDecisionRequest({
         toolName: "Codex native tool",
         method: "item/commandExecution/requestApproval",
-        params: {
-          threadId: "t",
-          turnId: "u",
-          itemId: "i",
-          command: "npm test",
-          cwd: "/repo",
-          reason: "跑测试",
-        },
+        params: { threadId: "t", turnId: "u", itemId: "i", kind: "command", command: "npm test" },
       }),
     ).toEqual({
       toolName: "Codex native tool",
       description: "Codex 想执行命令",
-      args: { command: "npm test", cwd: "/repo", reason: "跑测试" },
-    });
-    expect(
-      externalDecisionRequest({
-        toolName: "Codex native tool",
-        method: "execCommandApproval",
-        params: { conversationId: "c", callId: "x", command: ["git", "push"], cwd: "/repo" },
-      }).args,
-    ).toEqual({ command: "git push", cwd: "/repo" });
-    expect(
-      externalDecisionRequest({
-        toolName: "Codex native tool",
-        method: "applyPatchApproval",
-        params: {
-          callId: "x",
-          fileChanges: { "/repo/a.ts": {}, "/repo/b.ts": {} },
-          grantRoot: "/repo",
-        },
-      }),
-    ).toEqual({
-      toolName: "Codex native tool",
-      description: "Codex 想修改文件",
-      args: { files: ["/repo/a.ts", "/repo/b.ts"], grantRoot: "/repo" },
-    });
-    expect(
-      externalDecisionRequest({
-        toolName: "Codex native tool",
-        method: "item/permissions/requestApproval",
-        params: { threadId: "t", permissions: ["network"] },
-      }),
-    ).toEqual({
-      toolName: "Codex native tool",
-      description: "Codex 请求批准（item/permissions/requestApproval）",
-      args: { permissions: ["network"] },
+      args: { command: "npm test" },
     });
   });
 

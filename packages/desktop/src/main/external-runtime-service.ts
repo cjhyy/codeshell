@@ -23,6 +23,7 @@ import {
   claudePermissionModeFor,
   startExternalRuntimeSession,
 } from "@cjhyy/code-shell-capability-coding/external-runtimes";
+import { codexNativeApprovalPresentation } from "./external-runtime-codex-approvals.js";
 import type {
   ExternalRuntimeTurnInput,
   ExternalRuntimeKind,
@@ -1408,6 +1409,12 @@ export class ExternalRuntimeService {
                     toolName: "Codex native tool",
                     method: nativeRequest.method,
                     params: nativeRequest.params,
+                    // The card and Mimi's IM prompt read description/args, not params.
+                    ...codexNativeApprovalPresentation(
+                      nativeRequest.method,
+                      nativeRequest.params,
+                      nativeRequest.fileChanges,
+                    ),
                   });
                   return lifecycle.active &&
                     this.authorityStillCurrent(request.cwd, authority) &&
