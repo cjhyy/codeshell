@@ -50,7 +50,29 @@ class FakeWorkspaceCwdClient extends LLMClientBase {
       usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
     };
     const active = new Set(options.tools!.map((tool) => tool.name));
-    const missing = response.toolCalls.filter((call) => !active.has(call.toolName));
+    const discovered = new Set<string>();
+    for (const message of options.messages) {
+      if (!Array.isArray(message.content)) continue;
+      for (const block of message.content) {
+        if (block.type !== "tool_result" || !block.tool_use_id.startsWith("load-workspace-tools-"))
+          continue;
+        expect(block.is_error).not.toBe(true);
+        expect(typeof block.content).toBe("string");
+        const definitions = (block.content as string)
+          .split("\n")
+          .filter((line) => line.startsWith("{"))
+          .map((line) => JSON.parse(line));
+        expect(definitions.length).toBeGreaterThan(0);
+        for (const definition of definitions) {
+          expect(definition.inputSchema.type).toBe("object");
+          expect(active.has(definition.name)).toBe(false);
+          discovered.add(definition.name);
+        }
+      }
+    }
+    const missing = response.toolCalls.filter(
+      (call) => !active.has(call.toolName) && !discovered.has(call.toolName),
+    );
     if (missing.length) {
       return {
         text: "",
