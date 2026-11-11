@@ -213,7 +213,7 @@ function buildReplacement(
     const parts = [...preview.parts];
     parts[0] = header + parts[0];
     parts[parts.length - 1] += footer;
-    return { replacement: parts.join("\n\n"), parts };
+    return { replacement: toolResultText(replaceToolResultText(content, "", parts))!, parts };
   }
   return { replacement: header + preview.text + footer };
 }
@@ -257,7 +257,7 @@ function readSavedReplacement(
       ? Array.isArray(record.parts) &&
         record.parts.length === textParts(original).length &&
         record.parts.every((part: unknown) => typeof part === "string") &&
-        record.parts.join("\n\n") === record.replacement
+        toolResultText(replaceToolResultText(original, "", record.parts)) === record.replacement
       : record.parts === undefined;
     if (
       record.version === 1 &&

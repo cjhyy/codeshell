@@ -6,6 +6,7 @@
  * `new Engine(` allowlist and RunEnvironmentResolver own them).
  */
 import { recordModelTraceEvent } from "../model-traces/context.js";
+import { VERSION } from "../version.js";
 import type {
   MCPServerConfig,
   PermissionMode,
@@ -35,8 +36,15 @@ import type { EngineRunOptions, RunBehaviorProfile } from "./run-types.js";
 import { normalizeSessionToolSelection, RunToolSurface } from "../tool-system/run-tool-surface.js";
 import { routeInitialTools, type TaskToolRoutingPolicy } from "../preset/task-tool-routing.js";
 import { logger } from "../logging/logger.js";
+import { canExposeNativeToolDefinition } from "../llm/native-tool-discovery.js";
+import { resolvePromptCachePolicy } from "../llm/prompt-cache.js";
 import { callToolDef } from "../tool-system/builtin/call-tool.js";
-import { selectionForToolCacheCycle, toolCacheIdentity } from "./tool-cache-cycle.js";
+import {
+  rebaseToolSelection,
+  selectionForToolCacheCycle,
+  toolCacheIdleLimitMs,
+  toolCacheIdentity,
+} from "./tool-cache-cycle.js";
 
 /** Fold once per Run from the unmodified transport baseline; unknown names cannot create servers. */
 export function snapshotRunMcpServers(
@@ -53,7 +61,7 @@ export function snapshotRunMcpServers(
   );
 }
 
-/** Keep capability discovery complete while freezing schemas once per model step. */
+/** Keep current eligibility separate from schemas frozen for the cache cycle. */
 export function initializeRunToolSurface(
   toolCtx: ToolContext,
   initialToolNames: readonly string[] | undefined,
@@ -66,24 +74,54 @@ export function initializeRunToolSurface(
     onSelectionChanged?: (selection: SessionToolSelection) => void;
   },
 ): ToolDefinition[] {
+  const toolDiscovery = toolCtx.llmConfig
+    ? resolvePromptCachePolicy(toolCtx.llmConfig).toolDiscovery
+    : "call-tool";
   // CallTool is a wire adapter, never a product capability or an external Host tool.
   const assembleModelCatalog = () => {
-    const definitions = assembleCatalog();
+    const definitions = assembleCatalog().map((definition) =>
+      toolDiscovery === "tool-reference" && definition.name === "ToolSearch"
+        ? {
+            ...definition,
+            description:
+              'Find available tools by keyword, then use "select:ToolName" (or comma-separated names) to load their definitions. ' +
+              "Invoke tools returned as native references directly by their exact names with schema-matching arguments. " +
+              "For tools returned as full schema text, use CallTool with the exact name and matching args. " +
+              "If an exact tool is unavailable, do not retry unless the Session context changes.",
+          }
+        : definition,
+    );
     return definitions.some((tool) => tool.name === "ToolSearch")
       ? [...definitions.filter((tool) => tool.name !== "CallTool"), callToolDef]
       : definitions.filter((tool) => tool.name !== "CallTool");
   };
   const catalog = assembleModelCatalog();
   const identity = toolCacheIdentity(toolCtx.llmConfig);
-  const selection = normalizeSessionToolSelection(
-    selectionForToolCacheCycle(routing?.selection, identity),
+  let selection = normalizeSessionToolSelection(
+    selectionForToolCacheCycle(routing?.selection, identity, {
+      now: Date.now(),
+      cacheVersion: VERSION,
+      idleLimitMs: toolCacheIdleLimitMs(toolCtx.llmConfig),
+    }),
   );
+  // A legacy selection has no frozen native directory. Its first native request
+  // is a cold boundary; an explicitly saved empty directory is already complete.
+  // Unsendable legacy declarations could not establish a native cache prefix;
+  // migrate them once into portable discoveries instead of repeating API errors.
+  if (
+    toolDiscovery === "tool-reference" &&
+    selection &&
+    (selection.deferredDefinitions === undefined ||
+      [...(selection.frozenDefinitions ?? []), ...selection.deferredDefinitions].some(
+        (definition) => !canExposeNativeToolDefinition(definition),
+      ))
+  )
+    selection = rebaseToolSelection(selection);
   // Unknown future/damaged persisted state must survive without being overwritten.
   const persistSelection =
     routing?.selection !== undefined && !selection
       ? undefined
-      : (next: SessionToolSelection) =>
-          routing?.onSelectionChanged?.({ ...next, cacheIdentity: identity });
+      : (next: SessionToolSelection) => routing?.onSelectionChanged?.(next);
   const routed =
     selection || routing?.injected
       ? {
@@ -116,6 +154,12 @@ export function initializeRunToolSurface(
           ? { ...selection, version: 1 }
           : selection,
       onSelectionChanged: persistSelection,
+      cacheVersion: VERSION,
+      cacheIdentity: identity,
+      toolDiscovery,
+      ...(toolDiscovery === "tool-reference"
+        ? { canExposeDefinition: canExposeNativeToolDefinition }
+        : {}),
     },
   );
   toolCtx.runToolSurface = surface;
@@ -139,7 +183,7 @@ export function initializeRunToolSurface(
       });
       previousNames = names;
     }
-    return snapshot;
+    return surface.requestSnapshot();
   };
   return surface.snapshot();
 }

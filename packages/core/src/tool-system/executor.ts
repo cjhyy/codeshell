@@ -827,6 +827,12 @@ export class ToolExecutor {
     // model sees it on its next turn alongside the content it just fetched.
     if (guardDecision?.prepend && !result.isError && result.result) {
       result.result = `${guardDecision.prepend}\n${result.result}`;
+      if (result.contentBlocks) {
+        result.contentBlocks = [
+          { type: "text", text: `${guardDecision.prepend}\n` },
+          ...result.contentBlocks,
+        ];
+      }
     }
     const observerResult = toolResultDisplayText(result);
     const payload = observerResult ?? result.error ?? "";
@@ -872,6 +878,10 @@ export class ToolExecutor {
     // failed tool would be confusing.
     if (postHook.additionalContext && !result.isError) {
       const tag = "--- additional context from post_tool_use hook ---";
+      const addition = `${result.result ? "\n\n" : ""}${tag}\n${postHook.additionalContext}`;
+      if (result.contentBlocks) {
+        result.contentBlocks = [...result.contentBlocks, { type: "text", text: addition }];
+      }
       result.result = result.result
         ? `${result.result}\n\n${tag}\n${postHook.additionalContext}`
         : `${tag}\n${postHook.additionalContext}`;

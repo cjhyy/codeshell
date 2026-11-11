@@ -53,7 +53,7 @@ import { collectReleaseChangelogErrors, verifyReleaseVersions } from "./verify-r
 const ROOT = resolve(import.meta.dir, "..");
 const PKG_FILES = RELEASE_PACKAGES.map(packageManifestPath);
 const LOCKFILE = "bun.lock";
-const CORE_VERSION_FILE = "packages/core/src/index.ts";
+const CORE_VERSION_FILE = "packages/core/src/version.ts";
 const VERSION_RE = /^(\d+)\.(\d+)\.(\d+)(?:-(rc|beta)\.(\d+))?$/;
 const CORE_VERSION_RE = /^export const VERSION = "([^"]+)";$/m;
 const VERSION_FORMAT = "X.Y.Z, X.Y.Z-rc.N, or X.Y.Z-beta.N";

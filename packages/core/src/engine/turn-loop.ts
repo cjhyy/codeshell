@@ -267,6 +267,7 @@ export function toolResultToBlock(result: ToolResult): ContentBlock {
 export class TurnLoop {
   private turnCount = 0;
   private modelStepTools: import("../types.js").ToolDefinition[] | undefined;
+  private modelStepBehaviorToolNames: readonly string[] | undefined;
 
   private get currentTools(): import("../types.js").ToolDefinition[] {
     return this.modelStepTools ?? this.deps.tools;
@@ -719,14 +720,22 @@ export class TurnLoop {
         this.stripVolatileContextMessages(messages),
       );
       if (!nearBudget) this.noteReminderIssued = false;
-      const canSaveNotes = this.deps.tools.some((tool) => tool.name === "SaveContextNote");
+      const surface = this.deps.runToolSurface;
+      const canSaveNotes =
+        surface !== undefined
+          ? surface.isEligible("SaveContextNote") &&
+            (surface.isCallable("SaveContextNote") || surface.isCallable("ToolSearch"))
+          : this.deps.tools.some((tool) => tool.name === "SaveContextNote");
       if (nearBudget && !this.noteReminderIssued && canSaveNotes) {
+        const loadNoteTool =
+          surface && !surface.isCallable("SaveContextNote")
+            ? ' First load SaveContextNote with ToolSearch query "select:SaveContextNote".'
+            : "";
         messages = [
           ...messages,
           {
             role: "user",
-            content:
-              "<system-reminder>Context budget is running low. Use SaveContextNote to preserve the current goal, latest corrections, decisions, verified work, pending questions and next steps. Then call NewContext in a separate tool batch and continue the same task. Original history remains available through SearchHistory.</system-reminder>",
+            content: `<system-reminder>Context budget is running low.${loadNoteTool} Use SaveContextNote to preserve the current goal, latest corrections, decisions, verified work, pending questions and next steps. Then call NewContext in a separate tool batch and continue the same task. Original history remains available through SearchHistory.</system-reminder>`,
           },
         ];
         this.noteReminderIssued = true;
@@ -2241,14 +2250,25 @@ export class TurnLoop {
    * If streaming fails, emit tombstone and retry non-streaming.
    */
   private async refreshModelToolPrefix(): Promise<void> {
-    const tools = this.deps.getTools?.() ?? this.deps.runToolSurface?.snapshot() ?? this.deps.tools;
-    if (
-      this.deps.getSystemPrompt &&
-      JSON.stringify(tools) !== JSON.stringify(this.modelStepTools ?? this.deps.tools)
-    ) {
-      this.deps.systemPrompt = await this.deps.getSystemPrompt(tools);
+    const tools =
+      this.deps.getTools?.() ?? this.deps.runToolSurface?.requestSnapshot() ?? this.deps.tools;
+    const previousTools = this.modelStepTools ?? this.deps.tools;
+    const behaviorToolNames = this.deps.runToolSurface?.behaviorSnapshot();
+    const toolsChanged =
+      tools !== previousTools && JSON.stringify(tools) !== JSON.stringify(previousTools);
+    const behaviorChanged =
+      behaviorToolNames !== this.modelStepBehaviorToolNames &&
+      JSON.stringify(behaviorToolNames) !== JSON.stringify(this.modelStepBehaviorToolNames);
+    if (this.deps.getSystemPrompt && (toolsChanged || behaviorChanged)) {
+      // Deferred declarations belong only to the wire directory. Prompt tool
+      // listings use the frozen eager surface. The composer separately reads the
+      // cycle's behavior catalog, which can change on a behavior-only cold rebase.
+      this.deps.systemPrompt = await this.deps.getSystemPrompt(
+        this.deps.runToolSurface?.snapshot() ?? tools.filter((tool) => !tool.deferLoading),
+      );
     }
     this.modelStepTools = tools;
+    this.modelStepBehaviorToolNames = behaviorToolNames;
   }
 
   private toolIdentityStream(onStream?: StreamCallback): StreamCallback | undefined {

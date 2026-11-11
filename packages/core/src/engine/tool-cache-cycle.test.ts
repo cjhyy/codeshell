@@ -4,11 +4,13 @@ import type { ToolContext } from "../tool-system/context.js";
 import { RunToolSurface } from "../tool-system/run-tool-surface.js";
 import { toolSearchTool } from "../tool-system/builtin/tool-search.js";
 import { initializeRunToolSurface } from "./run-tooling.js";
+import { VERSION } from "../version.js";
 import {
   isToolCacheCompaction,
   rebaseToolSelection,
   selectionForToolCacheCycle,
   toolCacheIdentity,
+  toolCacheIdleLimitMs,
 } from "./tool-cache-cycle.js";
 
 const config: LLMConfig = {
@@ -33,6 +35,9 @@ function selection(): SessionToolSelection {
       definition("Frozen", "original schema"),
     ],
     cacheIdentity: toolCacheIdentity(config),
+    cacheVersion: VERSION,
+    lastRequestAt: Date.now(),
+    behaviorToolNames: catalog().map((tool) => tool.name),
   };
 }
 
@@ -190,6 +195,7 @@ describe("run surface persistence compatibility", () => {
           { taskText: "cold cycle", selection: coldSelection },
         ),
       );
+      first.runToolSurface!.recordRequest(Date.now());
       const saved = JSON.parse(JSON.stringify(first.runToolSurface!.getSelection()));
       for (const name of absent) expect(saved.names).toContain(name);
       expect(saved.discovered).toEqual([]);
@@ -378,3 +384,197 @@ test.each(["manage", "manageAsync", "forceSummarize"] as const)(
     expect(events.every((event) => event.historyChanged === false)).toBe(true);
   },
 );
+
+describe("native discovery cache cycles", () => {
+  const native: LLMConfig = {
+    provider: "anthropic",
+    providerKind: "openrouter",
+    model: "anthropic/claude-sonnet-5",
+    baseUrl: "https://openrouter.ai/api/v1",
+    reasoning: { mode: "off" },
+  };
+  test("discovery mode changes the cycle without changing legacy CallTool identities", () => {
+    const off = toolCacheIdentity(native);
+    const on = toolCacheIdentity({ ...native, reasoning: { mode: "on" } });
+    expect(off).not.toBe(on);
+    expect(toolCacheIdentity({ ...native, reasoning: undefined })).toBe(on);
+    expect(toolCacheIdentity({ ...config, reasoning: { mode: "off" } })).toBe(
+      toolCacheIdentity(config),
+    );
+    expect(toolCacheIdentity({ ...native, apiKey: "rotated-key" })).toBe(off);
+  });
+  test("switching mode clears both schema snapshots and promotes discoveries once", () => {
+    const previous: SessionToolSelection = {
+      ...selection(),
+      cacheIdentity: toolCacheIdentity(native),
+      deferredDefinitions: [definition("Deferred"), definition("OtherDeferred")],
+    };
+    const result = selectionForToolCacheCycle(
+      previous,
+      toolCacheIdentity({ ...native, reasoning: { mode: "on" } }),
+    ) as SessionToolSelection;
+    expect(result).not.toHaveProperty("frozenDefinitions");
+    expect(result).not.toHaveProperty("deferredDefinitions");
+    expect(result.names).toContain("Deferred");
+    expect(result.discovered).toEqual([]);
+    expect(previous.deferredDefinitions).toHaveLength(2);
+  });
+  test("run initialization keeps deferred definitions out of the composer and model eager names", () => {
+    const ctx = { cwd: "/repo", llmConfig: native } as ToolContext;
+    const eager = initializeRunToolSurface(ctx, ["ToolSearch"], catalog);
+    expect(eager.map((tool) => tool.name)).toEqual(["ToolSearch", "CallTool"]);
+    const request = ctx.refreshRunTools!();
+    expect(request.filter((tool) => tool.deferLoading).map((tool) => tool.name)).toEqual([
+      "Frozen",
+      "Deferred",
+      "OtherDeferred",
+      "LateTool",
+    ]);
+    expect([...ctx.modelToolNames!]).toEqual(["ToolSearch", "CallTool"]);
+    expect(ctx.runToolSurface!.isCallable("Deferred")).toBe(false);
+    ctx.runToolSurface!.select(["Deferred"]);
+    const previous = JSON.stringify(request);
+    expect(JSON.stringify(ctx.refreshRunTools!())).toBe(previous);
+    ctx.runToolSurface!.rebase();
+    const next = ctx.refreshRunTools!();
+    expect(next.find((tool) => tool.name === "Deferred")?.deferLoading).toBeUndefined();
+    expect(ctx.modelToolNames!.has("Deferred")).toBe(true);
+  });
+  test("legacy native bootstrap rebases once while an empty deferred snapshot stays authoritative", () => {
+    const previous = { ...selection(), cacheIdentity: undefined };
+    const legacyCtx = { cwd: "/repo", llmConfig: native } as ToolContext;
+    initializeRunToolSurface(legacyCtx, [], catalog, { taskText: "", selection: previous });
+    expect(legacyCtx.runToolSurface!.getSelection().names).toContain("Deferred");
+    expect(legacyCtx.runToolSurface!.getSelection().discovered).toEqual([]);
+    const emptyCtx = { cwd: "/repo", llmConfig: native } as ToolContext;
+    initializeRunToolSurface(emptyCtx, [], catalog, {
+      taskText: "",
+      selection: { ...previous, deferredDefinitions: [] },
+    });
+    expect(emptyCtx.runToolSurface!.getSelection().discovered).toEqual(previous.discovered);
+    expect(emptyCtx.refreshRunTools!().some((tool) => tool.deferLoading)).toBe(false);
+  });
+  test("an incompatible saved native directory is cold-rebased into portable discoveries", () => {
+    const name = "mcp_" + "x".repeat(125);
+    const saved: SessionToolSelection = {
+      version: 2,
+      names: ["ToolSearch", "CallTool", name],
+      discovered: [],
+      frozenDefinitions: [definition("ToolSearch"), definition("CallTool"), definition(name)],
+      deferredDefinitions: [],
+      cacheIdentity: toolCacheIdentity(native),
+    };
+    const ctx = { cwd: "/repo", llmConfig: native } as ToolContext;
+    initializeRunToolSurface(ctx, [], () => [...catalog(), definition(name)], {
+      taskText: "",
+      selection: saved,
+    });
+    expect(ctx.refreshRunTools!().some((tool) => tool.name === name)).toBe(false);
+    expect(ctx.runToolSurface!.isCallable(name)).toBe(true);
+    expect(ctx.runToolSurface!.getSelection().discovered).toContain(name);
+  });
+});
+
+describe("restored tool-cache freshness", () => {
+  const now = 1_800_000_000_000;
+  const freshness = { now, cacheVersion: VERSION, idleLimitMs: 300_000 };
+  const saved = (): SessionToolSelection => ({
+    ...selection(),
+    lastRequestAt: now - 299_999,
+    deferredDefinitions: [definition("Deferred", "old deferred schema")],
+    behaviorToolNames: ["ToolSearch", "Frozen", "Deferred"],
+  });
+
+  test("warm restoration retains both directories, behavior gates and discovery byte-for-byte", () => {
+    const previous = saved();
+    const next = selectionForToolCacheCycle(
+      previous,
+      toolCacheIdentity(config),
+      freshness,
+    ) as SessionToolSelection;
+    expect(next).toEqual(previous);
+    for (const key of [
+      "frozenDefinitions",
+      "deferredDefinitions",
+      "behaviorToolNames",
+      "discovered",
+    ] as const)
+      expect(JSON.stringify(next[key])).toBe(JSON.stringify(previous[key]));
+    expect(previous.lastRequestAt).toBe(now - 299_999);
+  });
+
+  test.each([
+    { label: "exact idle deadline", patch: { lastRequestAt: now - 300_000 } },
+    { label: "expired idle period", patch: { lastRequestAt: now - 300_001 } },
+    { label: "application upgrade", patch: { cacheVersion: "older-version" } },
+    { label: "legacy version", patch: { cacheVersion: undefined } },
+    { label: "missing request stamp", patch: { lastRequestAt: undefined } },
+    { label: "clock rollback", patch: { lastRequestAt: now + 1 } },
+    { label: "legacy behavior snapshot", patch: { behaviorToolNames: undefined } },
+  ])("$label refreshes all cycle snapshots without losing discovery", ({ patch }) => {
+    const previous = { ...saved(), ...patch };
+    const original = JSON.stringify(previous);
+    const next = selectionForToolCacheCycle(
+      previous,
+      toolCacheIdentity(config),
+      freshness,
+    ) as SessionToolSelection;
+    expect(next).not.toHaveProperty("frozenDefinitions");
+    expect(next).not.toHaveProperty("deferredDefinitions");
+    expect(next).not.toHaveProperty("behaviorToolNames");
+    expect(next).not.toHaveProperty("lastRequestAt");
+    expect(next.names).toContain("Deferred");
+    expect(next.discovered).toEqual([]);
+    expect(next.cacheVersion).toBe(VERSION);
+    const surface = new RunToolSurface([], { selection: next, toolDiscovery: "tool-reference" });
+    surface.updateCatalog(catalog());
+    expect(surface.snapshot().find((tool) => tool.name === "Frozen")!.description).toBe(
+      "updated schema",
+    );
+    expect(surface.behaviorSnapshot()).toEqual(catalog().map((tool) => tool.name));
+    expect(surface.requestSnapshot().find((tool) => tool.name === "LateTool")!.deferLoading).toBe(
+      true,
+    );
+    expect(JSON.stringify(previous)).toBe(original);
+  });
+
+  test("run startup refreshes a stale MCP schema and then preserves it on a warm restart", () => {
+    const previous = { ...saved(), lastRequestAt: 0 };
+    const first = { cwd: "/repo", llmConfig: config } as ToolContext;
+    initializeRunToolSurface(first, [], catalog, { taskText: "resume", selection: previous });
+    expect(
+      first.runToolSurface!.snapshot().find((tool) => tool.name === "Frozen")!.description,
+    ).toBe("updated schema");
+    first.runToolSurface!.recordRequest(Date.now());
+    const state = JSON.parse(JSON.stringify(first.runToolSurface!.getSelection()));
+    const second = { cwd: "/repo", llmConfig: config } as ToolContext;
+    initializeRunToolSurface(
+      second,
+      [],
+      () => catalog().map((tool) => ({ ...tool, description: "newer live schema" })),
+      {
+        taskText: "warm restart",
+        selection: state,
+      },
+    );
+    expect(JSON.stringify(second.refreshRunTools!())).toBe(
+      JSON.stringify(first.refreshRunTools!()),
+    );
+    expect(second.runToolSurface!.behaviorSnapshot()).toEqual(state.behaviorToolNames);
+  });
+
+  test("explicit TTLs follow requests; unknown retention has a local one-day freshness ceiling", () => {
+    expect(toolCacheIdleLimitMs({ provider: "anthropic", model: "claude-sonnet-5" })).toBe(300_000);
+    expect(toolCacheIdleLimitMs({ provider: "openai", model: "gpt-5.6-sol" })).toBe(1_800_000);
+    expect(toolCacheIdleLimitMs(config)).toBe(86_400_000);
+    expect(toolCacheIdleLimitMs(undefined)).toBe(86_400_000);
+  });
+
+  test.each([
+    { version: 99, names: [], extra: "preserve" },
+    { ...saved(), lastRequestAt: -1 },
+    { ...saved(), cacheVersion: {} },
+  ])("never overwrites unknown or damaged state during freshness checks", (state) => {
+    expect(selectionForToolCacheCycle(state, "next-route", freshness)).toBe(state);
+  });
+});

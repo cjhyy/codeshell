@@ -9,6 +9,8 @@
 import { createHash } from "node:crypto";
 import { capabilitiesForConfig } from "./capabilities/index.js";
 import type { PromptCachingCapability } from "./capabilities/types.js";
+import type { LLMConfig } from "../types.js";
+import { nativeToolDiscoveryEnabled } from "./native-tool-discovery.js";
 
 export type PromptCacheStrategy =
   | "openai-explicit"
@@ -34,7 +36,7 @@ export interface PromptCachePolicy {
   strategy: PromptCacheStrategy;
   layoutVersion: string;
   /** How discovered tool schemas are represented in requests. */
-  toolDiscovery: "call-tool";
+  toolDiscovery: "call-tool" | "tool-reference";
   breakpoints: readonly PromptCacheBreakpoint[];
   /** Opaque and <=64 chars, as required by OpenAI's prompt_cache_key. */
   cacheKey?: string;
@@ -42,7 +44,10 @@ export interface PromptCachePolicy {
   promptCacheOptions?: { mode: "explicit" | "implicit"; ttl: "30m" };
 }
 
-export interface ResolvePromptCachePolicyInput {
+export interface ResolvePromptCachePolicyInput extends Pick<
+  LLMConfig,
+  "baseUrl" | "reasoning" | "extraBody"
+> {
   provider: string;
   providerKind?: string;
   model: string;
@@ -80,6 +85,7 @@ export function resolvePromptCachePolicy(input: ResolvePromptCachePolicyInput): 
   const kind = (input.providerKind ?? input.provider).toLowerCase();
   const model = normalizedModel(input.model);
   const capability = capabilitiesForConfig(input).promptCaching;
+  const toolDiscovery = nativeToolDiscoveryEnabled(input) ? "tool-reference" : "call-tool";
   const key = input.request?.scopeId
     ? createPromptCacheKey(input.request.scopeId, `${kind}:${model}`)
     : undefined;
@@ -87,8 +93,11 @@ export function resolvePromptCachePolicy(input: ResolvePromptCachePolicyInput): 
   if (capability === "anthropic-explicit") {
     return {
       strategy: "anthropic-explicit",
-      toolDiscovery: "call-tool",
-      layoutVersion: "system-tools-stable-rolling-v2",
+      toolDiscovery,
+      layoutVersion:
+        toolDiscovery === "tool-reference"
+          ? "system-deferred-tools-stable-rolling-v1"
+          : "system-tools-stable-rolling-v2",
       breakpoints: ANTHROPIC_BREAKPOINTS,
     };
   }
@@ -96,7 +105,7 @@ export function resolvePromptCachePolicy(input: ResolvePromptCachePolicyInput): 
   if (capability === "openai-hybrid" && input.explicitDisabled !== true) {
     return {
       strategy: "openai-hybrid",
-      toolDiscovery: "call-tool",
+      toolDiscovery,
       layoutVersion: "system-stable-resume-implicit-v3",
       breakpoints: OPENAI_EXPLICIT_BREAKPOINTS,
       ...(key ? { cacheKey: key } : {}),
@@ -107,7 +116,7 @@ export function resolvePromptCachePolicy(input: ResolvePromptCachePolicyInput): 
   if (capability === "openai-hybrid" || capability === "openai-implicit") {
     return {
       strategy: "openai-implicit",
-      toolDiscovery: "call-tool",
+      toolDiscovery,
       layoutVersion: "implicit-affinity-v1",
       breakpoints: [],
       ...(key ? { cacheKey: key } : {}),
@@ -116,7 +125,7 @@ export function resolvePromptCachePolicy(input: ResolvePromptCachePolicyInput): 
 
   return {
     strategy: "provider-managed",
-    toolDiscovery: "call-tool",
+    toolDiscovery,
     layoutVersion: "append-only-v1",
     breakpoints: [],
   };

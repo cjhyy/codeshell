@@ -1,0 +1,193 @@
+{
+  "mode": "live",
+  "endpoint": "https://openrouter.ai/api/v1/messages",
+  "model": "anthropic/claude-sonnet-5",
+  "credential": "settings.json credentials[id=openrouter-key]; read only in live mode",
+  "limits": {
+    "endpoint": "https://openrouter.ai/api/v1/messages",
+    "model": "anthropic/claude-sonnet-5",
+    "credentialId": "openrouter-key",
+    "requests": 8,
+    "plannedRequests": 7,
+    "outputTokens": 256,
+    "bodyBytes": 25000,
+    "responseBytes": 65536,
+    "overheadTokens": 4096,
+    "inputUsdPerMillion": 8,
+    "outputUsdPerMillion": 50,
+    "budgetUsd": 2
+  },
+  "conservativeReservationUsd": 1.964544,
+  "authorizedBudgetUsd": 2,
+  "requestCap": 8,
+  "stages": [
+    "baseline-search-only",
+    "baseline-eager-24",
+    "baseline-deferred-24",
+    "native-search",
+    "native-reference",
+    "native-synthetic-result",
+    "native-cache-repeat"
+  ],
+  "sources": [
+    "https://platform.claude.com/docs/en/agents-and-tools/tool-use/tool-search-tool",
+    "https://platform.claude.com/docs/en/agents-and-tools/tool-use/tool-use-with-prompt-caching",
+    "https://platform.claude.com/docs/en/release-notes/overview#february-17-2026",
+    "https://openrouter.ai/docs/guides/features/server-tools/tool-search#client-side-tool-search",
+    "https://openrouter.ai/docs/api/api-reference/anthropic-messages/create-a-message",
+    "https://openrouter.ai/docs/guides/routing/provider-selection#max-price"
+  ],
+  "costAssumption": "ASCII request bytes upper-bound prompt tokens plus 4096 server-overhead tokens; $8/M input includes cache writes, $50/M output. This is a conservative reservation, not a provider quote.",
+  "acceptance": "Eager minus search-only >=1000 input tokens; deferred retains at most 10% of that overhead (minimum tolerance 128 tokens); exact native target and tag; warm repeat reads cache.",
+  "safety": "Synthetic inputs only. No tools execute. No retries, redirects, endpoint overrides or environment credential lookup. Missing usage stops the sequence and remains unknown.",
+  "contextEvidence": {
+    "searchOnly": 4577,
+    "eager": 8417,
+    "deferred": 4670,
+    "eagerOverhead": 3840,
+    "deferredOverhead": 93,
+    "supported": true
+  },
+  "nativeCallVerified": true,
+  "frozenCatalogVerified": true,
+  "warmCacheVerified": true,
+  "status": "passed",
+  "requestsAttempted": 7,
+  "reservedUsd": 1.718976,
+  "reportedCostUsd": 0.05052460000000001,
+  "records": [
+    {
+      "stage": "baseline-search-only",
+      "reservedUsd": 0.245568,
+      "usage": {
+        "input": 89,
+        "cacheRead": 0,
+        "cacheWrite": 4488,
+        "output": 4,
+        "totalInput": 4577,
+        "reportedCostUsd": 0.011438
+      },
+      "responseMetadata": {
+        "model": "anthropic/claude-sonnet-5",
+        "provider": "Anthropic",
+        "id": "msg_011CgvxvZ5ya365Xbapws6hb",
+        "stopReason": "end_turn",
+        "openrouterMetadata": null
+      }
+    },
+    {
+      "stage": "baseline-eager-24",
+      "reservedUsd": 0.245568,
+      "usage": {
+        "input": 89,
+        "cacheRead": 0,
+        "cacheWrite": 8328,
+        "output": 4,
+        "totalInput": 8417,
+        "reportedCostUsd": 0.021038
+      },
+      "responseMetadata": {
+        "model": "anthropic/claude-sonnet-5",
+        "provider": "Anthropic",
+        "id": "msg_011CgvxvfH3L7GEigUQNXrkC",
+        "stopReason": "end_turn",
+        "openrouterMetadata": null
+      }
+    },
+    {
+      "stage": "baseline-deferred-24",
+      "reservedUsd": 0.245568,
+      "usage": {
+        "input": 89,
+        "cacheRead": 0,
+        "cacheWrite": 4581,
+        "output": 4,
+        "totalInput": 4670,
+        "reportedCostUsd": 0.0116705
+      },
+      "responseMetadata": {
+        "model": "anthropic/claude-sonnet-5",
+        "provider": "Anthropic",
+        "id": "msg_011CgvxvmKvqcxiGkXfApWVY",
+        "stopReason": "end_turn",
+        "openrouterMetadata": null
+      }
+    },
+    {
+      "stage": "native-search",
+      "reservedUsd": 0.245568,
+      "usage": {
+        "input": 123,
+        "cacheRead": 4581,
+        "cacheWrite": 0,
+        "output": 57,
+        "totalInput": 4704,
+        "reportedCostUsd": 0.0017322
+      },
+      "responseMetadata": {
+        "model": "anthropic/claude-sonnet-5",
+        "provider": "Anthropic",
+        "id": "msg_011CgvxvsZUpB7Pewi9tN8p8",
+        "stopReason": "tool_use",
+        "openrouterMetadata": null
+      }
+    },
+    {
+      "stage": "native-reference",
+      "reservedUsd": 0.245568,
+      "usage": {
+        "input": 2,
+        "cacheRead": 4581,
+        "cacheWrite": 354,
+        "output": 54,
+        "totalInput": 4937,
+        "reportedCostUsd": 0.0023452
+      },
+      "responseMetadata": {
+        "model": "anthropic/claude-sonnet-5",
+        "provider": "Anthropic",
+        "id": "msg_011Cgvxw1VUh23a659R474RA",
+        "stopReason": "tool_use",
+        "openrouterMetadata": null
+      }
+    },
+    {
+      "stage": "native-synthetic-result",
+      "reservedUsd": 0.245568,
+      "usage": {
+        "input": 2,
+        "cacheRead": 4935,
+        "cacheWrite": 81,
+        "output": 5,
+        "totalInput": 5018,
+        "reportedCostUsd": 0.0012435
+      },
+      "responseMetadata": {
+        "model": "anthropic/claude-sonnet-5",
+        "provider": "Anthropic",
+        "id": "msg_011Cgvxw9nJHQWsrUsGLD4pG",
+        "stopReason": "end_turn",
+        "openrouterMetadata": null
+      }
+    },
+    {
+      "stage": "native-cache-repeat",
+      "reservedUsd": 0.245568,
+      "usage": {
+        "input": 2,
+        "cacheRead": 5016,
+        "cacheWrite": 0,
+        "output": 5,
+        "totalInput": 5018,
+        "reportedCostUsd": 0.0010572
+      },
+      "responseMetadata": {
+        "model": "anthropic/claude-sonnet-5",
+        "provider": "Anthropic",
+        "id": "msg_011CgvxwFue6fRDvPWF9K5QS",
+        "stopReason": "end_turn",
+        "openrouterMetadata": null
+      }
+    }
+  ]
+}

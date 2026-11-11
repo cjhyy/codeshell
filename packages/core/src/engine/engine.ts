@@ -1,8 +1,4 @@
-import {
-  rebaseToolSelection,
-  toolCacheIdentity,
-  isToolCacheCompaction,
-} from "./tool-cache-cycle.js";
+import { rebaseToolSelection, isToolCacheCompaction } from "./tool-cache-cycle.js";
 import { normalizeSessionToolSelection } from "../tool-system/run-tool-surface.js";
 /**
  * Engine — the main facade that wires all components together.
@@ -27,6 +23,7 @@ import { resolveModelRequestSigner } from "../model-request-boundary/access.js";
 import { assertDurableRequestOwner } from "../model-request-boundary/session-owner.js";
 import type { ModelRequestSigner, ModelRequestSubject } from "../model-request-boundary/types.js";
 import { createLLMClient } from "../llm/client-factory.js";
+import { resolvePromptCachePolicy } from "../llm/prompt-cache.js";
 import { createRunBatchAuthority } from "../operations/run-batch-authority.js";
 import { createSessionOperationController } from "../operations/controller.js";
 import { CapabilityResolver } from "../operations/resolver.js";
@@ -1947,6 +1944,7 @@ export class Engine {
             promptComposer,
             toolDefs,
             llmClientPromise,
+            getBehaviorToolNames: () => toolCtx.runToolSurface!.behaviorSnapshot(),
             contextManager,
             profile,
             profileParams,
@@ -2291,6 +2289,7 @@ export class Engine {
     promptComposer: PromptComposer;
     toolDefs: import("../types.js").ToolDefinition[];
     llmClientPromise: ReturnType<typeof createLLMClient>;
+    getBehaviorToolNames: () => readonly string[];
     contextManager: ContextManager;
     profile: RunBehaviorProfile | undefined;
     profileParams: Readonly<Record<string, unknown>>;
@@ -2351,13 +2350,10 @@ export class Engine {
         (snapshot) => `# Frozen Skill: ${snapshot.name} (${snapshot.revision})\n${snapshot.body}`,
       )
       .join("\n\n");
-    const finishSystemPrompt = (
-      basePrompt: string,
-      tools: import("../types.js").ToolDefinition[],
-    ) =>
+    const finishSystemPrompt = (basePrompt: string) =>
       composeRunSystemPrompt({
         baseSystemPrompt: [
-          tools.some((tool) => tool.name === "SaveContextNote")
+          args.getBehaviorToolNames().includes("SaveContextNote")
             ? `${basePrompt}\n\n${loadSection("context-notes")}`
             : basePrompt,
           frozenInstructions,
@@ -2367,9 +2363,11 @@ export class Engine {
         profile,
         profileParams,
       });
-    const fullSystemPrompt = finishSystemPrompt(baseSystemPrompt, toolDefs);
+    const fullSystemPrompt = finishSystemPrompt(baseSystemPrompt);
     const rebuildSystemPrompt = async (tools: import("../types.js").ToolDefinition[]) =>
-      finishSystemPrompt(await promptComposer.buildSystemPrompt(tools), tools);
+      finishSystemPrompt(
+        await promptComposer.buildSystemPrompt(tools, args.getBehaviorToolNames()),
+      );
     const userContextMsg = promptComposer.buildUserContextMessage();
     const priorMessages = new Set(messages);
     assembleRunMessages({
@@ -2737,6 +2735,7 @@ export class Engine {
       ...(isEphemeralSessionState(session.state) ? { ephemeral: true } : {}),
     };
     const { modelFacade, getRunUsage } = wireRunModelFacade({
+      onPrimaryResponse: (startedAt) => toolCtx.runToolSurface?.recordRequest(startedAt),
       llmClient,
       auxSummaryClient,
       transcript: session.transcript,
@@ -3105,11 +3104,13 @@ export class Engine {
     const profileCanUseSkills =
       Boolean(this.toolRegistry.getTool(skillToolDef.name)) &&
       (!runAllowedToolNames || runAllowedToolNames.has(skillToolDef.name));
-    const promptComposer = new PromptComposer(
+    const createPromptComposerConfig = (behaviorToolNames: readonly string[]) =>
       buildPromptComposerConfig({
         cwd,
         workspace: workspaceContext,
         model: this.config.llm.model,
+        toolDiscovery: resolvePromptCachePolicy(this.config.llm).toolDiscovery,
+        behaviorToolNames,
         preset: this.preset,
         customSystemPrompt: profile?.disableInstructions
           ? undefined
@@ -3171,8 +3172,7 @@ export class Engine {
         dynamicContextProviders: this.capabilityDynamicContextProviders,
         getSettingsManager: () => this.getSettingsManager(),
         toolCatalog: this.toolCatalog,
-      }),
-    );
+      });
 
     const mcpServers = snapshotRunMcpServers(
       this.config.mcpServers ?? {},
@@ -3216,6 +3216,7 @@ export class Engine {
     // the toolDefs the model sees when its credential isn't configured for this
     // cwd. Recomputed every message, so configuring a key takes effect on the
     // NEXT message without a restart. Tools with no guard entry are always kept.
+    let ownedToolSelection: SessionState["toolSelection"];
     const toolDefs = initializeRunToolSurface(
       toolCtx,
       options?.toolAllowlist !== undefined || profile?.allowedToolNames
@@ -3245,7 +3246,7 @@ export class Engine {
         injected: options?.injected === true,
         selection: session.state.toolSelection,
         onSelectionChanged: (selection) => {
-          session.state.toolSelection = selection;
+          session.state.toolSelection = ownedToolSelection = selection;
         },
       },
     );
@@ -3255,19 +3256,25 @@ export class Engine {
       rebase: () => {
         toolCtx.refreshRunToolEligibility?.();
         surface.rebase();
-        return { ...surface.getSelection(), cacheIdentity: toolCacheIdentity(toolCtx.llmConfig) };
+        return surface.getSelection();
       },
     };
     if (this.runningSession?.state === session.state) {
-      this.runningSession.ownToolSelection = () =>
-        session.state.toolSelection !== undefined &&
-        !normalizeSessionToolSelection(session.state.toolSelection)
-          ? undefined
-          : { ...surface.getSelection(), cacheIdentity: toolCacheIdentity(toolCtx.llmConfig) };
+      this.runningSession.ownToolSelection = () => {
+        // Our snapshots are immutable and already validated. Validate only an
+        // externally replaced value, preserving damaged/future state verbatim.
+        if (
+          session.state.toolSelection !== ownedToolSelection &&
+          session.state.toolSelection !== undefined &&
+          !normalizeSessionToolSelection(session.state.toolSelection)
+        )
+          return undefined;
+        return (ownedToolSelection = surface.getSelection());
+      };
     }
 
     return {
-      promptComposer,
+      promptComposer: new PromptComposer(createPromptComposerConfig(surface.behaviorSnapshot())),
       toolDefs,
       mcpFailureSummary: formatMcpConnectionFailures(mcpFailures),
     };
