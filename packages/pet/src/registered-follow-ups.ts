@@ -13,6 +13,8 @@ export type PetFollowUpWakeStatus =
 
 /** A recurrence is a 5-field cron expression; this bounds its length. */
 export const FOLLOW_UP_RECURRENCE_MAX_LENGTH = 64;
+/** The model's plain-language name of a recurrence ("工作日 09:00"); untrusted text. */
+export const FOLLOW_UP_SCHEDULE_LABEL_MAX_LENGTH = 64;
 
 /**
  * One due occurrence of a follow-up, handed to Mimi's host-woken turn. The
@@ -36,6 +38,8 @@ export interface PetFollowUpWake {
 interface PetFollowUpTiming {
   wakeAt?: number;
   recurrence?: string;
+  /** Required with `recurrence`: how the owner would say it, shown with the dates. */
+  scheduleLabel?: string;
   timezone: string;
   missedPolicy?: PetFollowUpMissedPolicy;
   /** Only with `wakeAt`: last instant a missed wake may still catch up. */
@@ -114,6 +118,17 @@ export function isFollowUpRecurrence(value: unknown): value is string {
   return followUpRecurrenceProblem(value) === undefined;
 }
 
+/** A one-line label: no control characters, trimmed, bounded. */
+export function isFollowUpScheduleLabel(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    value.length <= FOLLOW_UP_SCHEDULE_LABEL_MAX_LENGTH &&
+    value === value.trim() &&
+    !/[\u0000-\u001f\u007f]/u.test(value)
+  );
+}
+
 function boundedText(value: unknown, max: number): value is string {
   return (
     typeof value === "string" &&
@@ -127,6 +142,8 @@ function validTiming(payload: Record<string, unknown>): boolean {
   const once = payload.wakeAt !== undefined;
   if (once === (payload.recurrence !== undefined)) return false;
   if (once ? !isFollowUpTimestamp(payload.wakeAt) : !isFollowUpRecurrence(payload.recurrence))
+    return false;
+  if (once ? payload.scheduleLabel !== undefined : !isFollowUpScheduleLabel(payload.scheduleLabel))
     return false;
   if (!isFollowUpTimezone(payload.timezone)) return false;
   if (
@@ -143,7 +160,14 @@ function validTiming(payload: Record<string, unknown>): boolean {
   );
 }
 
-const TIMING_KEYS = ["wakeAt", "recurrence", "timezone", "missedPolicy", "catchUpUntil"];
+const TIMING_KEYS = [
+  "wakeAt",
+  "recurrence",
+  "scheduleLabel",
+  "timezone",
+  "missedPolicy",
+  "catchUpUntil",
+];
 
 /** Shared defensive validator for tool requests and host-side replayed results. */
 export function isPetFollowUpMutationPayload(value: unknown): value is PetFollowUpMutationPayload {

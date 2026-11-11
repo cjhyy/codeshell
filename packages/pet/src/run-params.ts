@@ -172,7 +172,7 @@ function parseFollowUps(value: unknown): PetFollowUpItem[] | undefined {
           // A repeating row carries its next occurrence and that occurrence's
           // catch-up deadline; both are checked as plain timestamps below.
           ...(entry.recurrence !== undefined
-            ? { recurrence: entry.recurrence }
+            ? { recurrence: entry.recurrence, scheduleLabel: entry.scheduleLabel }
             : { wakeAt: entry.wakeAt, catchUpUntil: entry.catchUpUntil }),
           timezone: entry.timezone,
           intent: entry.intent,
@@ -206,7 +206,9 @@ function parseFollowUps(value: unknown): PetFollowUpItem[] | undefined {
         text: entry.text,
         revision: entry.revision,
         wakeAt: Number(entry.wakeAt),
-        ...(typeof entry.recurrence === "string" ? { recurrence: entry.recurrence } : {}),
+        ...(typeof entry.recurrence === "string"
+          ? { recurrence: entry.recurrence, scheduleLabel: String(entry.scheduleLabel) }
+          : {}),
         timezone: String(entry.timezone),
         intent: entry.intent as "remind" | "resume",
         missedPolicy: entry.missedPolicy,

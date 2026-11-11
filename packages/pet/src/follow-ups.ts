@@ -7,6 +7,7 @@ import { hostActionAvailability, hostActionService } from "./host-actions.js";
 import { hasOnlyDeclaredToolArguments } from "./tool-arguments.js";
 import {
   followUpRecurrenceProblem,
+  isFollowUpScheduleLabel,
   isPetFollowUpMutationPayload,
   type PetFollowUpIntent,
   type PetFollowUpMissedPolicy,
@@ -41,6 +42,8 @@ export interface PetRegisteredFollowUpItem extends PetFollowUpItemBase {
   wakeAt: number;
   /** 5-field cron in `timezone` for a repeating follow-up; absent for a one-shot. */
   recurrence?: string;
+  /** Plain-language name of the recurrence, written by Mimi when it was registered. */
+  scheduleLabel?: string;
   timezone: string;
   intent: PetFollowUpIntent;
   missedPolicy: PetFollowUpMissedPolicy;
@@ -90,6 +93,7 @@ export const manageFollowUpToolDef: ToolDefinition = {
     "For a follow-up the user explicitly asked to repeat, pass recurrence instead of wake_at: convert their words into a 5-field cron expression yourself " +
     "(minute hour day-of-month month day-of-week, in timezone), e.g. '0 9 * * 1-5' for weekdays at 09:00 or '30 17 * * 5' for Fridays 17:30. " +
     "It fires at most once an hour, so the minute field must be one number. Pass exactly one of wake_at and recurrence. " +
+    "With recurrence also pass schedule_label: how the user would say the schedule, short, in their language (e.g. '工作日 09:00', '每周五 17:30'); it is shown to them with the next dates. " +
     "missed_policy defaults to fire-once and catch_up_until (wake_at only) defaults to 24 hours after wake_at; respect an explicit expiry. " +
     "reschedule and cancel require follow_up_id and expected_revision from FollowUps. " +
     "complete/dismiss also require expected_revision for registered rows; derived-session rows retain their existing id-only controls. " +
@@ -115,6 +119,13 @@ export const manageFollowUpToolDef: ToolDefinition = {
         maxLength: 64,
         description:
           "5-field cron for a repeating follow-up, in timezone; at most hourly (single minute value). Not with wake_at.",
+      },
+      schedule_label: {
+        type: "string",
+        minLength: 1,
+        maxLength: 64,
+        description:
+          "Required with recurrence: the schedule in the user's words, e.g. '工作日 09:00'.",
       },
       timezone: {
         type: "string",
@@ -215,6 +226,7 @@ export async function manageFollowUpTool(
         "text",
         "wake_at",
         "recurrence",
+        "schedule_label",
         "timezone",
         "intent",
         "source_session_id",
@@ -241,6 +253,7 @@ export async function manageFollowUpTool(
         "expected_revision",
         "wake_at",
         "recurrence",
+        "schedule_label",
         "timezone",
         "missed_policy",
         "catch_up_until",
@@ -270,8 +283,15 @@ export async function manageFollowUpTool(
       if (problem) return `Error: ${problem}.`;
       if (args.catch_up_until !== undefined)
         return "Error: catch_up_until applies only to a one-time wake_at.";
+      if (!isFollowUpScheduleLabel(args.schedule_label))
+        return "Error: recurrence needs schedule_label: the schedule in the user's words, one line of at most 64 characters (e.g. '工作日 09:00').";
       payload.recurrence = args.recurrence;
-    } else payload.wakeAt = args.wake_at;
+      payload.scheduleLabel = args.schedule_label;
+    } else {
+      if (args.schedule_label !== undefined)
+        return "Error: schedule_label goes with recurrence only.";
+      payload.wakeAt = args.wake_at;
+    }
   }
   if (args.missed_policy !== undefined) payload.missedPolicy = args.missed_policy;
   if (args.catch_up_until !== undefined) payload.catchUpUntil = args.catch_up_until;

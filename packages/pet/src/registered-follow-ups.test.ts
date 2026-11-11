@@ -196,6 +196,7 @@ describe("recurring follow-ups", () => {
     timezone: "Asia/Shanghai",
     intent: "remind",
     recurrence: "0 17 * * 5",
+    scheduleLabel: "每周五 17:00",
   };
 
   test("the model passes a cron recurrence instead of wake_at", async () => {
@@ -208,6 +209,7 @@ describe("recurring follow-ups", () => {
           text: "提醒我写周报",
           timezone: "Asia/Shanghai",
           recurrence: "0 17 * * 5",
+          schedule_label: "每周五 17:00",
         },
         ctx,
       ),
@@ -264,6 +266,23 @@ describe("recurring follow-ups", () => {
     expect(isPetFollowUpMutationPayload({ ...recurring, missedPolicy: "skip" })).toBe(true);
   });
 
+  test("a recurrence needs a one-line schedule_label; a one-shot takes none", async () => {
+    const { ctx, actions } = manager();
+    const base = { action: "register", title: "x", text: "x", timezone: "UTC" };
+    for (const schedule_label of [undefined, "", "工作日\n09:00", " 前后空格 ", "长".repeat(65)]) {
+      expect(
+        await manageFollowUpTool({ ...base, recurrence: "0 9 * * 1-5", schedule_label }, ctx),
+      ).toContain("schedule_label");
+    }
+    expect(
+      await manageFollowUpTool({ ...base, wake_at: 5_000, schedule_label: "明天" }, ctx),
+    ).toContain("recurrence only");
+    expect(actions).toHaveLength(0);
+    const { scheduleLabel: _label, ...unlabelled } = recurring;
+    expect(isPetFollowUpMutationPayload(unlabelled)).toBe(false);
+    expect(isPetFollowUpMutationPayload({ ...register, scheduleLabel: "明天" })).toBe(false);
+  });
+
   test("reschedule can switch a follow-up to a recurrence", async () => {
     const { ctx, actions } = manager();
     expect(
@@ -274,6 +293,7 @@ describe("recurring follow-ups", () => {
           expected_revision: 2,
           timezone: "UTC",
           recurrence: "15 8 * * 1-5",
+          schedule_label: "工作日 08:15",
         },
         ctx,
       ),
@@ -286,6 +306,7 @@ describe("recurring follow-ups", () => {
         expectedRevision: 2,
         timezone: "UTC",
         recurrence: "15 8 * * 1-5",
+        scheduleLabel: "工作日 08:15",
       },
     });
   });
@@ -299,6 +320,7 @@ describe("recurring follow-ups", () => {
       revision: 1,
       wakeAt: 5_000,
       recurrence: "0 17 * * 5",
+      scheduleLabel: "每周五 17:00",
       timezone: "Asia/Shanghai",
       missedPolicy: "fire-once",
       catchUpUntil: 86_405_000,
