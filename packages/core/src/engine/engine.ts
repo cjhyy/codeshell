@@ -1948,6 +1948,7 @@ export class Engine {
             promptComposer,
             toolDefs,
             llmClientPromise,
+            getBehaviorToolNames: () => toolCtx.runToolSurface!.behaviorSnapshot(),
             contextManager,
             profile,
             profileParams,
@@ -2292,6 +2293,7 @@ export class Engine {
     promptComposer: PromptComposer;
     toolDefs: import("../types.js").ToolDefinition[];
     llmClientPromise: ReturnType<typeof createLLMClient>;
+    getBehaviorToolNames: () => readonly string[];
     contextManager: ContextManager;
     profile: RunBehaviorProfile | undefined;
     profileParams: Readonly<Record<string, unknown>>;
@@ -2370,7 +2372,10 @@ export class Engine {
       });
     const fullSystemPrompt = finishSystemPrompt(baseSystemPrompt, toolDefs);
     const rebuildSystemPrompt = async (tools: import("../types.js").ToolDefinition[]) =>
-      finishSystemPrompt(await promptComposer.buildSystemPrompt(tools), tools);
+      finishSystemPrompt(
+        await promptComposer.buildSystemPrompt(tools, args.getBehaviorToolNames()),
+        tools,
+      );
     const userContextMsg = promptComposer.buildUserContextMessage();
     const priorMessages = new Set(messages);
     assembleRunMessages({
@@ -3106,12 +3111,13 @@ export class Engine {
     const profileCanUseSkills =
       Boolean(this.toolRegistry.getTool(skillToolDef.name)) &&
       (!runAllowedToolNames || runAllowedToolNames.has(skillToolDef.name));
-    const promptComposer = new PromptComposer(
+    const createPromptComposerConfig = (behaviorToolNames: readonly string[]) =>
       buildPromptComposerConfig({
         cwd,
         workspace: workspaceContext,
         model: this.config.llm.model,
         toolDiscovery: resolvePromptCachePolicy(this.config.llm).toolDiscovery,
+        behaviorToolNames,
         preset: this.preset,
         customSystemPrompt: profile?.disableInstructions
           ? undefined
@@ -3173,8 +3179,7 @@ export class Engine {
         dynamicContextProviders: this.capabilityDynamicContextProviders,
         getSettingsManager: () => this.getSettingsManager(),
         toolCatalog: this.toolCatalog,
-      }),
-    );
+      });
 
     const mcpServers = snapshotRunMcpServers(
       this.config.mcpServers ?? {},
@@ -3269,7 +3274,7 @@ export class Engine {
     }
 
     return {
-      promptComposer,
+      promptComposer: new PromptComposer(createPromptComposerConfig(surface.behaviorSnapshot())),
       toolDefs,
       mcpFailureSummary: formatMcpConnectionFailures(mcpFailures),
     };

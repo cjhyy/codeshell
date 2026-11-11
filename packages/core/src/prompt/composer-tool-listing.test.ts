@@ -121,6 +121,44 @@ describe("PromptComposer tool listing", () => {
     expect(enabledAgain).toContain("## Browser automation");
   });
 
+  it.each(["call-tool", "tool-reference"] as const)(
+    "%s discovery retains deferred-tool instructions without adding eager declarations",
+    async (toolDiscovery) => {
+      const composer = new PromptComposer({
+        cwd: process.cwd(),
+        model: "test-model",
+        preset: BUILTIN_AGENT_PRESETS.general,
+        toolDiscovery,
+        behaviorToolNames: ["Read", "ToolSearch", "browser_navigate"],
+      });
+      const eager = [...tools, { name: "ToolSearch", description: "Discover", inputSchema: {} }];
+      const prompt = await composer.buildSystemPrompt(eager);
+      expect(prompt).toContain("## Browser automation");
+      expect(prompt).toContain("\nRead, ToolSearch\n");
+      expect(prompt).not.toContain("\nRead, ToolSearch, browser_navigate");
+      expect(prompt).not.toContain("file_path");
+      expect(eager.map((tool) => tool.name)).toEqual(["Read", "ToolSearch"]);
+    },
+  );
+
+  it("owns its behavior snapshot and accepts an explicit empty snapshot at a cold boundary", async () => {
+    const behaviorToolNames = ["Read", "browser_navigate"];
+    const composer = new PromptComposer({
+      cwd: process.cwd(),
+      model: "test-model",
+      preset: BUILTIN_AGENT_PRESETS.general,
+      behaviorToolNames,
+    });
+    const warm = await composer.buildSystemPrompt(tools);
+    expect(warm).toContain("## Browser automation");
+    behaviorToolNames.pop();
+    expect(await composer.buildSystemPrompt(tools)).toBe(warm);
+    const cold = await composer.buildSystemPrompt(tools, []);
+    expect(cold).not.toContain("## Browser automation");
+    expect(cold).toContain("\nRead\n");
+    expect(await composer.buildSystemPrompt(tools, ["browser_navigate"])).toBe(warm);
+  });
+
   it("omits the name index when no tools are visible", async () => {
     const composer = new PromptComposer({
       cwd: process.cwd(),

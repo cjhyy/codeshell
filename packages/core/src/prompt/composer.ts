@@ -46,6 +46,8 @@ export interface ComposerOptions {
   toolCatalog?: readonly BuiltinTool[];
   /** Calling guidance for this run's resolved, frozen discovery mode. */
   toolDiscovery?: "call-tool" | "tool-reference";
+  /** Eligible names frozen for this cache cycle; independent of eager declarations. */
+  behaviorToolNames?: readonly string[];
   /** User's preferred response language (free text), injected as a stable system section. */
   responseLanguage?: string;
   /** How to address the user / short profile (free text). */
@@ -135,6 +137,9 @@ export class PromptComposer {
   constructor(options: ComposerOptions) {
     this.options = {
       ...options,
+      ...(options.behaviorToolNames !== undefined
+        ? { behaviorToolNames: [...options.behaviorToolNames] }
+        : {}),
       workspace:
         options.workspace === undefined
           ? legacySingleRootWorkspace(options.cwd)
@@ -145,8 +150,11 @@ export class PromptComposer {
   /**
    * Build the system prompt from sections.
    */
-  async buildSystemPrompt(tools: ToolDefinition[]): Promise<string> {
-    const sections = this.getSections(tools);
+  async buildSystemPrompt(
+    tools: ToolDefinition[],
+    behaviorToolNames = this.options.behaviorToolNames,
+  ): Promise<string> {
+    const sections = this.getSections(tools, behaviorToolNames);
     const resolved = await this.sectionCache.resolve(sections);
     return resolved.join("\n\n");
   }
@@ -292,7 +300,10 @@ export class PromptComposer {
     }
   }
 
-  private getSections(tools: ToolDefinition[]): PromptSection[] {
+  private getSections(
+    tools: ToolDefinition[],
+    behaviorToolNames: readonly string[] | undefined,
+  ): PromptSection[] {
     const sections: PromptSection[] = [];
 
     // Runtime header
@@ -338,11 +349,10 @@ export class PromptComposer {
       });
     }
 
-    // Behavioral instructions — loaded from preset's section files. Pass the
-    // turn's effective tool names so tool-gated sections (e.g. "browser") drop
-    // when their tools are disabled: browser capability = tools + instructions
-    // as one on/off unit.
-    const activeToolNames = tools.map((t) => t.name);
+    // Discovery can defer declarations without deferring their usage instructions.
+    // Engine callers supply the cycle's frozen eligible names; legacy/preview
+    // callers continue to gate behavior with the visible definitions they provide.
+    const activeToolNames = behaviorToolNames ?? tools.map((t) => t.name);
     sections.push({
       name: "behavior",
       // cacheBreak: this section's content varies by activeToolNames (tool-gated

@@ -74,6 +74,7 @@ export interface RunPromptComposerConfigInput {
   getSettingsManager: () => SettingsManager;
   toolCatalog: ComposerOptions["toolCatalog"];
   toolDiscovery?: ComposerOptions["toolDiscovery"];
+  behaviorToolNames?: ComposerOptions["behaviorToolNames"];
 }
 
 /** Build the prompt-composer options for a run without capturing the Engine facade. */
@@ -108,6 +109,7 @@ export function buildPromptComposerConfig(args: RunPromptComposerConfigInput): C
     getSettingsManager,
     toolCatalog,
     toolDiscovery,
+    behaviorToolNames,
   } = args;
 
   return {
@@ -155,5 +157,6 @@ export function buildPromptComposerConfig(args: RunPromptComposerConfigInput): C
       }),
     toolCatalog,
     toolDiscovery,
+    behaviorToolNames,
   };
 }
