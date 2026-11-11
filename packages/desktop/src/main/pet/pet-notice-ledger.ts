@@ -124,6 +124,13 @@ export interface NoticeRecord {
   prompt?: NoticeDecisionPrompt;
   /** The reply code of a goal pause, failure or result (pet-notice-action-codes.ts). */
   actions?: NoticeActions;
+  /**
+   * The owner said "not now" ("明早再说"): this held copy goes out again at
+   * this instant, once (the digest skips it until then).
+   */
+  deferredUntil?: number;
+  /** How many times the owner has put this notice off (at most 2). */
+  deferCount?: number;
   createdAt: number;
 }
 
@@ -199,6 +206,8 @@ const MAX_TEXT = 1_024;
 const MAX_BODY = 32_000;
 const MAX_ERROR = 2_000;
 const MAX_RULE_IDS = 100;
+/** "Not now" at most twice per notice (design §8.8). */
+export const MAX_DEFERS = 2;
 const HEX24 = /^[0-9a-f]{24}$/u;
 const CONTROL_CHARS = /[\u0000-\u001f\u007f]/u;
 const PRIORITIES: readonly NoticePriority[] = ["P0", "P1", "P2"];
@@ -470,6 +479,8 @@ function parseNoticeRecord(value: unknown): NoticeRecord | undefined {
       "delivery",
       "prompt",
       "actions",
+      "deferredUntil",
+      "deferCount",
       "createdAt",
     ])
   )
@@ -493,6 +504,11 @@ function parseNoticeRecord(value: unknown): NoticeRecord | undefined {
     (value.delivery !== undefined && !parseDelivery(value.delivery)) ||
     (value.prompt !== undefined && !parsePrompt(value.prompt)) ||
     (value.actions !== undefined && !parseNoticeActions(value.actions)) ||
+    (value.deferredUntil !== undefined && !isTimestamp(value.deferredUntil)) ||
+    (value.deferCount !== undefined &&
+      (!Number.isSafeInteger(value.deferCount) ||
+        (value.deferCount as number) < 1 ||
+        (value.deferCount as number) > MAX_DEFERS)) ||
     !isTimestamp(value.createdAt)
   )
     return undefined;
@@ -567,6 +583,8 @@ function normalizeInput(input: NoticeRecordInput, id: string, createdAt: number)
     ...(input.decision !== undefined ? { decision: input.decision } : {}),
     ...(prompt !== undefined ? { prompt } : {}),
     ...(input.actions !== undefined ? { actions: input.actions } : {}),
+    ...(input.deferredUntil !== undefined ? { deferredUntil: input.deferredUntil } : {}),
+    ...(input.deferCount !== undefined ? { deferCount: input.deferCount } : {}),
     ...(initial !== undefined
       ? {
           delivery: {

@@ -108,8 +108,9 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     ledger,
     presence,
     settings: () => {
-      const { quietHours, maxPerHour, maxP0PerHour, mergeWindowSec } = settings.settings();
-      return { quietHours, maxPerHour, maxP0PerHour, mergeWindowSec };
+      const { quietHours, maxPerHour, maxP0PerHour, mergeWindowSec, digestSlots } =
+        settings.settings();
+      return { quietHours, maxPerHour, maxP0PerHour, mergeWindowSec, digestSlots };
     },
     imChannels: outlets.imChannels,
     lastInboundChannel: () => deps.gateway.lastOwnerInboundChannel(),

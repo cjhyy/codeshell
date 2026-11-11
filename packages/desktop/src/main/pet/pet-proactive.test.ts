@@ -200,6 +200,13 @@ describe("briefs", () => {
     await f.h.idle();
     expect(f.h.ownerSends).toEqual([]);
     expect(f.h.wiring.ledger.held().map((record) => record.kind)).toEqual(["brief.morning"]);
+    // Quiet hours over: the whole brief goes out (not a one-line digest entry).
+    env.clock = Date.UTC(2023, 10, 15, 8, 30);
+    await f.h.wiring.router.flushDigest();
+    await f.h.idle();
+    expect(f.h.ownerSends.map((send) => send.text)).toEqual([
+      "早上好，今天的情况：\n- 「修复登录问题」做完了：登录修好了",
+    ]);
   });
 });
 

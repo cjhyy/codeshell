@@ -23,6 +23,21 @@ export function isOwnerTimedKind(kind: string): boolean {
   return OWNER_TIMED_KINDS.has(kind);
 }
 
+/**
+ * Notices that are a message of their own (Mimi's briefs and heartbeat):
+ * held by quiet hours or a cap, they go out again whole, never folded into a
+ * one-line digest entry.
+ */
+const STANDALONE_KINDS: ReadonlySet<string> = new Set([
+  "brief.morning",
+  "brief.evening",
+  "heartbeat",
+]);
+
+export function isStandaloneKind(kind: string): boolean {
+  return STANDALONE_KINDS.has(kind);
+}
+
 /** A P0, or an owner-timed notice: exempt from quiet hours, counted in the P0 backstop. */
 export function usesP0Budget(notice: { priority: NoticePriority; kind: string }): boolean {
   return notice.priority === "P0" || isOwnerTimedKind(notice.kind);

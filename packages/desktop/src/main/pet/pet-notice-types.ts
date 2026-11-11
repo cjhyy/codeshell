@@ -194,6 +194,8 @@ export interface NoticeSubmission {
    * saying what the owner can answer.
    */
   actions?: NoticeActionsInput;
+  /** A notice the owner put off before (a deferred one going out again): kept on its record. */
+  deferCount?: number;
 }
 
 /** A notice's open item as its ledger record has it (see `PetNoticeRouter.actionRecord`). */

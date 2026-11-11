@@ -5,6 +5,7 @@ import type { NoticeRecord, NoticeSettleStatus, PetNoticeLedger } from "./pet-no
 import {
   isInQuietHours,
   isOwnerTimedKind,
+  isStandaloneKind,
   localHourIndex,
   localMinuteOfDay,
   type RouteDecision,
@@ -24,7 +25,21 @@ const BUNDLING_REASONS: ReadonlySet<string> = new Set(["merge-window", "digest-a
  * the owner's ordinary digest, or a bundle of follow-ups (kind `followup.due`).
  */
 function isDigestRecord(record: NoticeRecord): boolean {
+  if (isSolo(record)) return false;
   return record.kind === "digest" || record.dedupeKey.startsWith("digest:");
+}
+
+/**
+ * A held notice that goes out again as itself: a brief or heartbeat held by
+ * quiet hours or a cap, and anything the owner put off ("明早再说"), at its
+ * own time. Never a digest line, never bound to the digest slots.
+ */
+function isSolo(record: NoticeRecord): boolean {
+  return (
+    record.deferredUntil !== undefined ||
+    record.deferCount !== undefined ||
+    isStandaloneKind(record.kind)
+  );
 }
 
 /** Held follow-ups the owner timed: they wait for the P0 backstop only, never for quiet hours. */
@@ -64,6 +79,55 @@ export function nextSendAllowedAt(
     return nextHour * HOUR - Math.trunc(timezoneOffsetMin) * MINUTE;
   }
   return now;
+}
+
+const DAY_MINUTES = 24 * 60;
+
+function slotMinutes(slots: readonly string[]): number[] {
+  return slots
+    .map((slot) => slot.split(":").map(Number))
+    .filter(([hours, minutes]) => Number.isInteger(hours) && Number.isInteger(minutes))
+    .map(([hours, minutes]) => hours! * 60 + minutes!);
+}
+
+/** The first slot instant at or after the start of `at`'s minute. */
+function slotAtOrAfter(at: number, minutes: readonly number[], offsetMin: number): number {
+  const minute = localMinuteOfDay(at, offsetMin);
+  const ahead = Math.min(...minutes.map((slot) => (slot - minute + DAY_MINUTES) % DAY_MINUTES));
+  return Math.floor(at / MINUTE) * MINUTE + ahead * MINUTE;
+}
+
+/** The latest slot instant at or before `at` (within the last day). */
+function slotAtOrBefore(at: number, minutes: readonly number[], offsetMin: number): number {
+  const minute = localMinuteOfDay(at, offsetMin);
+  const behind = Math.min(...minutes.map((slot) => (minute - slot + DAY_MINUTES) % DAY_MINUTES));
+  return Math.floor(at / MINUTE) * MINUTE - behind * MINUTE;
+}
+
+/**
+ * With fixed digest slots ("12:00", "18:00"), a digest that could go at
+ * `readyAt` waits for the next slot that is outside quiet hours. A slot that
+ * passed after it became ready (the machine slept through it) sends now.
+ * Without slots, `readyAt` itself.
+ */
+export function slottedFlushAt(
+  readyAt: number,
+  now: number,
+  slots: readonly string[],
+  window: Pick<RouteState, "quietHours" | "timezoneOffsetMin">,
+): number {
+  const minutes = slotMinutes(slots);
+  if (minutes.length === 0) return readyAt;
+  const quiet = (at: number) => isInQuietHours(window.quietHours, at, window.timezoneOffsetMin);
+  if (readyAt <= now) {
+    const passed = slotAtOrBefore(now, minutes, window.timezoneOffsetMin);
+    if (passed >= Math.floor(readyAt / MINUTE) * MINUTE && !quiet(now)) return now;
+  }
+  let at = slotAtOrAfter(Math.max(readyAt, now), minutes, window.timezoneOffsetMin);
+  // Every slot may lie in quiet hours: give up after a day's worth and send at the next.
+  for (let tries = 0; tries < minutes.length && quiet(at); tries += 1)
+    at = slotAtOrAfter(at + MINUTE, minutes, window.timezoneOffsetMin);
+  return Math.max(at, readyAt);
 }
 
 /**
@@ -146,6 +210,8 @@ export interface NoticeDigestOptions {
     maxP0PerHour: number;
     mergeWindowMs: number;
     timezoneOffsetMin: number;
+    /** Fixed local "HH:MM" times for the ordinary digest; empty: whenever allowed. */
+    digestSlots?: readonly string[];
   };
   /** A held record's facts, stored target and the channel it asked for (absent: auto). */
   unpack: (record: NoticeRecord) => {
@@ -166,6 +232,11 @@ export interface NoticeDigestOptions {
     count: number;
     timed: boolean;
   }) => Promise<RouteDecision>;
+  /**
+   * Send one held standalone notice (a brief, a heartbeat, a deferred one)
+   * again as itself; its held record is then settled `revoked` (resent).
+   */
+  resend?: (record: NoticeRecord) => Promise<RouteDecision>;
   /** Why a held notice should no longer be sent (see `staleReason`); undefined keeps it. */
   stale?: (record: NoticeRecord, now: number) => string | undefined;
   /** Settle without throwing. */
@@ -185,8 +256,11 @@ export class NoticeDigest {
   private readonly timer: DigestTimer;
   private run: Promise<void> = Promise.resolve();
   private disposed = false;
+  /** Without a way to resend, every held notice is a digest line (as before). */
+  private readonly isSolo: (record: NoticeRecord) => boolean;
 
   constructor(private readonly options: NoticeDigestOptions) {
+    this.isSolo = options.resend ? isSolo : () => false;
     this.timer = new DigestTimer({
       now: options.now,
       setTimeout: options.setTimeout,
@@ -220,15 +294,19 @@ export class NoticeDigest {
     this.timer.dispose();
   }
 
-  /** When the held follow-ups / the other held notices may be bundled and sent. */
+  /** When the held follow-ups / the other held notices / each standalone one may be sent. */
   private flushTimes(
     held: readonly NoticeRecord[],
     now: number,
-  ): { timed: number | undefined; regular: number | undefined } {
+  ): {
+    timed: number | undefined;
+    regular: number | undefined;
+    solo: (record: NoticeRecord) => number;
+  } {
     const window = this.options.window(now);
     const counts = this.options.ledger.countsThisHour(now);
-    const timed = held.filter(isTimed);
-    const regular = held.filter((record) => !isTimed(record));
+    const timed = held.filter((record) => isTimed(record) && !this.isSolo(record));
+    const regular = held.filter((record) => !isTimed(record) && !this.isSolo(record));
     const allowedAt = nextSendAllowedAt({
       now,
       quietHours: window.quietHours,
@@ -240,16 +318,24 @@ export class NoticeDigest {
     const nextHour =
       (localHourIndex(now, window.timezoneOffsetMin) + 1) * HOUR -
       Math.trunc(window.timezoneOffsetMin) * MINUTE;
+    const ready = digestFlushAt(regular, allowedAt, window.mergeWindowMs);
     return {
       timed: timed.length === 0 ? undefined : counts.p0Sent < window.maxP0PerHour ? now : nextHour,
-      regular: digestFlushAt(regular, allowedAt, window.mergeWindowMs),
+      regular:
+        ready === undefined
+          ? undefined
+          : slottedFlushAt(ready, now, window.digestSlots ?? [], window),
+      // Its own time (when put off), and not before sending is allowed.
+      solo: (record) => Math.max(record.deferredUntil ?? 0, allowedAt),
     };
   }
 
   private flushAt(held: readonly NoticeRecord[], now: number): number | undefined {
-    const { timed, regular } = this.flushTimes(held, now);
-    if (timed === undefined) return regular;
-    return regular === undefined ? timed : Math.min(timed, regular);
+    const { timed, regular, solo } = this.flushTimes(held, now);
+    const times = [timed, regular, ...held.filter(this.isSolo).map(solo)].filter(
+      (at): at is number => at !== undefined,
+    );
+    return times.length > 0 ? Math.min(...times) : undefined;
   }
 
   private async flushNow(): Promise<void> {
@@ -268,15 +354,31 @@ export class NoticeDigest {
       else candidates.push(record);
     }
     const times = this.flushTimes(candidates, now);
+    const resend = this.options.resend;
+    const solos = candidates.filter(this.isSolo);
     const ready = (record: NoticeRecord) => {
       const at = isTimed(record) ? times.timed : times.regular;
-      return at !== undefined && at <= now;
+      return !this.isSolo(record) && at !== undefined && at <= now;
     };
     const members = candidates.filter(ready);
-    const later = [times.timed, times.regular].filter(
+    const later = [times.timed, times.regular, ...solos.map(times.solo)].filter(
       (at): at is number => at !== undefined && at > now,
     );
     if (later.length > 0) this.timer.arm(Math.min(...later));
+    for (const record of solos) {
+      if (times.solo(record) > now) continue;
+      try {
+        await resend!(record);
+      } catch (error) {
+        this.options.log("pet.notice.resend_failed", {
+          kind: record.kind,
+          error: errorText(error),
+        });
+        continue;
+      }
+      // Its new copy carries it now (sent, or held again on its own).
+      await this.options.settle(record.id, "revoked", "resent");
+    }
     if (members.length === 0) return;
     // One digest per destination: the owner's, and one per IM conversation a
     // held notice came from, so a group-chat notice is never rerouted to the

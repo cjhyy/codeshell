@@ -184,8 +184,10 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
             maxP0PerHour: settings.maxP0PerHour,
             mergeWindowMs: settings.mergeWindowSec * 1_000,
             timezoneOffsetMin: this.offset(now),
+            digestSlots: settings.digestSlots,
           };
         },
+        resend: (record) => this.resendHeld(record),
         unpack: (record) => unpackFacts(record.facts),
         stale: (record, now) => staleReason(record, now, this.options),
         submit: (digest) =>
@@ -751,6 +753,30 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     }
   }
 
+  /**
+   * A held standalone notice (a brief or heartbeat after quiet hours, a
+   * deferred one at its time) goes out again as a new notice with the same
+   * text, routed afresh; its dedupe key is the held record's own.
+   */
+  private resendHeld(record: NoticeRecord): Promise<RouteDecision> {
+    const { facts, target, channel = "auto" } = unpackFacts(record.facts);
+    // The text without an open item's ①② label (the item code keeps it as nonDirectBody).
+    const body = (typeof facts.nonDirectBody === "string" && facts.nonDirectBody) || record.body;
+    return this.submit({
+      kind: record.kind,
+      priority: record.priority,
+      dedupeKey: `again:${record.id}`,
+      ...(record.sessionId !== undefined ? { sessionId: record.sessionId } : {}),
+      ruleIds: record.ruleIds,
+      facts,
+      attention: "always",
+      channel,
+      target,
+      ...(body ? { body } : {}),
+      ...(record.deferCount !== undefined ? { deferCount: record.deferCount } : {}),
+    });
+  }
+
   /** The outbox delivery key of a record's (latest) send. */
   private deliveryKeyOf(record: NoticeRecord): string {
     const channel = record.delivery?.channel ?? record.decision?.im ?? "";
@@ -979,6 +1005,7 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
           ...(actions
             ? { actions: { ...actions, ...(slotted ? { slot: slotted.slot } : {}) } }
             : {}),
+          ...(notice.deferCount !== undefined ? { deferCount: notice.deferCount } : {}),
         },
         id !== undefined ? { id } : {},
       );
