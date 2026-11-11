@@ -720,14 +720,20 @@ export class TurnLoop {
         this.stripVolatileContextMessages(messages),
       );
       if (!nearBudget) this.noteReminderIssued = false;
-      const canSaveNotes = this.deps.tools.some((tool) => tool.name === "SaveContextNote");
+      const surface = this.deps.runToolSurface;
+      const canSaveNotes =
+        surface?.isEligible("SaveContextNote") ??
+        this.deps.tools.some((tool) => tool.name === "SaveContextNote");
       if (nearBudget && !this.noteReminderIssued && canSaveNotes) {
+        const loadNoteTool =
+          surface && !surface.isCallable("SaveContextNote")
+            ? ' First load SaveContextNote with ToolSearch query "select:SaveContextNote".'
+            : "";
         messages = [
           ...messages,
           {
             role: "user",
-            content:
-              "<system-reminder>Context budget is running low. Use SaveContextNote to preserve the current goal, latest corrections, decisions, verified work, pending questions and next steps. Then call NewContext in a separate tool batch and continue the same task. Original history remains available through SearchHistory.</system-reminder>",
+            content: `<system-reminder>Context budget is running low.${loadNoteTool} Use SaveContextNote to preserve the current goal, latest corrections, decisions, verified work, pending questions and next steps. Then call NewContext in a separate tool batch and continue the same task. Original history remains available through SearchHistory.</system-reminder>`,
           },
         ];
         this.noteReminderIssued = true;

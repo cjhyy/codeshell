@@ -5,6 +5,10 @@ import { estimateTokens } from "../context/compaction.js";
 import { Transcript, hasCompleteContextToolPairs } from "../session/transcript.js";
 import type { Message } from "../types.js";
 import { TurnLoop, type TurnLoopDeps } from "./turn-loop.js";
+import { RunToolSurface } from "../tool-system/run-tool-surface.js";
+import { callToolDef } from "../tool-system/builtin/call-tool.js";
+import { saveContextNoteToolDef } from "../tool-system/builtin/context-notes.js";
+import { toolSearchToolDef } from "../tool-system/builtin/tool-search.js";
 
 function history(): Transcript {
   const transcript = Transcript.inMemory("notes-loop");
@@ -27,6 +31,7 @@ function harness(
     retained?: Message[];
     volatile?: Message[];
     signal?: AbortSignal;
+    surface?: RunToolSurface;
   },
 ) {
   const notes = new SessionContextNotes(transcript);
@@ -35,7 +40,8 @@ function harness(
       transcript,
       contextManager: manager,
       contextNotes: notes,
-      tools: [{ name: "SaveContextNote", description: "", inputSchema: {} }],
+      tools: extras?.surface?.snapshot() ?? [saveContextNoteToolDef],
+      runToolSurface: extras?.surface,
     } as TurnLoopDeps,
     {
       maxTurns: 10,
@@ -57,6 +63,45 @@ function harness(
 }
 
 describe("TurnLoop notes context policy", () => {
+  test.each([false, true])(
+    "warns for eligible deferred note tools (discovered=%s) and loads the schema when needed",
+    async (discovered) => {
+      const transcript = history();
+      const original = transcript.toMessages();
+      const surface = new RunToolSurface(["ToolSearch"]);
+      surface.updateCatalog([toolSearchToolDef, callToolDef, saveContextNoteToolDef]);
+      if (discovered) surface.select(["SaveContextNote"]);
+      const { loop } = harness(
+        transcript,
+        new ContextManager({ maxTokens: estimateTokens(original) / 0.77 }),
+        { surface },
+      );
+      const warned = await loop.manageContextMessages(original);
+      expect(surface.snapshot().map((tool) => tool.name)).not.toContain("SaveContextNote");
+      expect(JSON.stringify(warned)).toContain("Context budget is running low");
+      expect(JSON.stringify(warned).includes("select:SaveContextNote")).toBe(!discovered);
+      const again = await loop.manageContextMessages(warned);
+      expect(JSON.stringify(again).match(/Context budget is running low/g)).toHaveLength(1);
+    },
+  );
+
+  test("does not recommend a revoked note tool retained in the frozen eager snapshot", async () => {
+    const transcript = history();
+    const original = transcript.toMessages();
+    const surface = new RunToolSurface();
+    surface.updateCatalog([toolSearchToolDef, callToolDef, saveContextNoteToolDef]);
+    const { loop } = harness(
+      transcript,
+      new ContextManager({ maxTokens: estimateTokens(original) / 0.77 }),
+      { surface },
+    );
+    surface.updateCatalog([toolSearchToolDef, callToolDef]);
+    expect(surface.snapshot().map((tool) => tool.name)).toContain("SaveContextNote");
+    expect(surface.isEligible("SaveContextNote")).toBe(false);
+    const managed = await loop.manageContextMessages(original);
+    expect(JSON.stringify(managed)).not.toContain("Context budget is running low");
+  });
+
   test("does not count retained instructions as removable history when checking shrinkage", () => {
     const transcript = Transcript.inMemory("short-history");
     transcript.appendMessage("user", "Earlier request.");

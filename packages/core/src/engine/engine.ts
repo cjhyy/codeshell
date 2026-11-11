@@ -2350,13 +2350,10 @@ export class Engine {
         (snapshot) => `# Frozen Skill: ${snapshot.name} (${snapshot.revision})\n${snapshot.body}`,
       )
       .join("\n\n");
-    const finishSystemPrompt = (
-      basePrompt: string,
-      tools: import("../types.js").ToolDefinition[],
-    ) =>
+    const finishSystemPrompt = (basePrompt: string) =>
       composeRunSystemPrompt({
         baseSystemPrompt: [
-          tools.some((tool) => tool.name === "SaveContextNote")
+          args.getBehaviorToolNames().includes("SaveContextNote")
             ? `${basePrompt}\n\n${loadSection("context-notes")}`
             : basePrompt,
           frozenInstructions,
@@ -2366,11 +2363,10 @@ export class Engine {
         profile,
         profileParams,
       });
-    const fullSystemPrompt = finishSystemPrompt(baseSystemPrompt, toolDefs);
+    const fullSystemPrompt = finishSystemPrompt(baseSystemPrompt);
     const rebuildSystemPrompt = async (tools: import("../types.js").ToolDefinition[]) =>
       finishSystemPrompt(
         await promptComposer.buildSystemPrompt(tools, args.getBehaviorToolNames()),
-        tools,
       );
     const userContextMsg = promptComposer.buildUserContextMessage();
     const priorMessages = new Set(messages);
