@@ -124,6 +124,8 @@ export type OnCompactFn = (info: {
   strategy: CompactStrategy;
   before: number;
   after: number;
+  /** Whether a destructive tier replaced history, independent of token estimates. */
+  historyChanged?: boolean;
 }) => void;
 type SummaryCompactLogEvent = "context.summary_compact" | "context.force_summary_compact";
 type SummaryCompactResult = {
@@ -189,7 +191,12 @@ export class ContextManager {
     this.lastActualProvider = undefined;
     this.lastActualModel = undefined;
     this.suppressNoOpMicroSummaryUntilCompact = false;
-    this.onCompact?.({ strategy: "notes", before, after: estimateTokens(afterMessages) });
+    this.onCompact?.({
+      strategy: "notes",
+      before,
+      after: estimateTokens(afterMessages),
+      historyChanged: true,
+    });
   }
 
   /**
@@ -353,7 +360,7 @@ export class ContextManager {
         summaryLen: summary.length,
         rolling: priorSummary !== undefined,
       });
-      this.onCompact?.({ strategy: "summary", before, after });
+      this.onCompact?.({ strategy: "summary", before, after, historyChanged: true });
       return { messages: compacted, tokens: after, compacted: true, noProgress: false };
     } catch (err) {
       this.consecutiveSummaryFailures++;
@@ -480,35 +487,58 @@ export class ContextManager {
     // Tier 2: prefer replaying a cached summary; otherwise snip
     if (tokens > snipGate) {
       const before = tokens;
+      const beforeMessages = result;
       if (this.lastSummary) {
         const keepN = Math.max(8, Math.floor(result.length * 0.3));
         result = applySummaryCompaction(result, this.lastSummary, keepN, this.transcriptPath);
         this.lastSummary = undefined;
         tokens = this.estimateTokensHybrid(result);
-        this.onCompact?.({ strategy: "summary", before, after: tokens });
+        this.onCompact?.({
+          strategy: "summary",
+          before,
+          after: tokens,
+          historyChanged: result !== beforeMessages,
+        });
       } else {
         result = snipCompact(result, 3, 8);
         tokens = this.estimateTokensHybrid(result);
-        this.onCompact?.({ strategy: "snip", before, after: tokens });
+        this.onCompact?.({
+          strategy: "snip",
+          before,
+          after: tokens,
+          historyChanged: result !== beforeMessages,
+        });
       }
     }
 
     // Tier 2b: snip didn't free enough — fall back to window compact
     if (tokens > windowGate) {
       const before = tokens;
+      const beforeMessages = result;
       const keepN = Math.max(10, Math.floor(result.length * 0.4));
       result = windowCompact(result, keepN);
       tokens = this.estimateTokensHybrid(result);
-      this.onCompact?.({ strategy: "window", before, after: tokens });
+      this.onCompact?.({
+        strategy: "window",
+        before,
+        after: tokens,
+        historyChanged: result !== beforeMessages,
+      });
     }
 
     // Tier 3: emergency window with a tiny tail — last resort before the
     // request would otherwise blow the model's context.
     if (tokens > emergencyGate) {
       const before = tokens;
+      const beforeMessages = result;
       result = windowCompact(result, 6);
       tokens = this.estimateTokensHybrid(result);
-      this.onCompact?.({ strategy: "emergency", before, after: tokens });
+      this.onCompact?.({
+        strategy: "emergency",
+        before,
+        after: tokens,
+        historyChanged: result !== beforeMessages,
+      });
     }
 
     return result;
@@ -636,26 +666,44 @@ export class ContextManager {
     // Tier 2 fallback: snip first (cheapest sync option)
     if (live > snipGate) {
       const before = live;
+      const beforeMessages = result;
       result = snipCompact(result, 3, 8);
       live = this.estimateTokensHybrid(result);
-      this.onCompact?.({ strategy: "snip", before, after: live });
+      this.onCompact?.({
+        strategy: "snip",
+        before,
+        after: live,
+        historyChanged: result !== beforeMessages,
+      });
     }
 
     // Tier 2b: window compact when snip didn't free enough
     if (live > windowGate) {
       const before = live;
+      const beforeMessages = result;
       const keepN = Math.max(10, Math.floor(result.length * 0.4));
       result = windowCompact(result, keepN);
       live = this.estimateTokensHybrid(result);
-      this.onCompact?.({ strategy: "window", before, after: live });
+      this.onCompact?.({
+        strategy: "window",
+        before,
+        after: live,
+        historyChanged: result !== beforeMessages,
+      });
     }
 
     // Tier 3: Emergency
     if (live > emergencyGate) {
       const before = live;
+      const beforeMessages = result;
       result = windowCompact(result, 6);
       live = this.estimateTokensHybrid(result);
-      this.onCompact?.({ strategy: "emergency", before, after: live });
+      this.onCompact?.({
+        strategy: "emergency",
+        before,
+        after: live,
+        historyChanged: result !== beforeMessages,
+      });
     }
 
     return result;
@@ -710,16 +758,24 @@ export class ContextManager {
     // shrinks the conversation instead of no-opping.
     {
       const before = tokens;
+      const beforeMessages = result;
       result = snipCompact(result, 3, 8);
       tokens = this.estimateTokensHybrid(result);
-      if (tokens < before) this.onCompact?.({ strategy: "snip", before, after: tokens });
+      if (result !== beforeMessages)
+        this.onCompact?.({ strategy: "snip", before, after: tokens, historyChanged: true });
     }
     if (this.estimateTokensHybrid(result) >= this.estimateTokensHybrid(messages)) {
       const before = tokens;
+      const beforeMessages = result;
       const keepN = Math.max(10, Math.floor(result.length * 0.4));
       result = windowCompact(result, keepN);
       tokens = this.estimateTokensHybrid(result);
-      this.onCompact?.({ strategy: "window", before, after: tokens });
+      this.onCompact?.({
+        strategy: "window",
+        before,
+        after: tokens,
+        historyChanged: result !== beforeMessages,
+      });
     }
 
     return result;
@@ -769,7 +825,7 @@ export class ContextManager {
     const before = this.estimateTokensHybrid(messages);
     const out = [...messages.slice(0, start), summaryMessage, ...messages.slice(end)];
     const after = this.estimateTokensHybrid(out);
-    this.onCompact?.({ strategy: "range", before, after });
+    this.onCompact?.({ strategy: "range", before, after, historyChanged: true });
     return out;
   }
 

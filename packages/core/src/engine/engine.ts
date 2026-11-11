@@ -3351,7 +3351,12 @@ export class Engine {
         this.compactedMessagesBySession.delete(sid);
       }
       pendingCompactInfo = info;
-      options?.onStream?.({ type: "context_compact", ...info });
+      options?.onStream?.({
+        type: "context_compact",
+        strategy: info.strategy,
+        before: info.before,
+        after: info.after,
+      });
     });
 
     // Run turn loop

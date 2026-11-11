@@ -45,9 +45,10 @@ export function isToolCacheCompaction(info: {
   strategy: string;
   before: number;
   after: number;
+  historyChanged?: boolean;
 }): boolean {
   return (
-    info.after < info.before &&
+    (info.historyChanged ?? info.after < info.before) &&
     ["summary", "snip", "window", "emergency", "notes", "range"].includes(info.strategy)
   );
 }
