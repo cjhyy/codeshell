@@ -145,7 +145,7 @@ describe("Engine quick-chat prompt guidance", () => {
     expect(restricted?.toolNames).not.toContain("Agent");
   });
 
-  it("keeps edit tools and loads Bash through ToolSearch after an explicit edit request", async () => {
+  it("discovers Bash without changing the prefix or bypassing the sub-agent restriction", async () => {
     const cwd = mkdtempSync(join(tmpdir(), "quick-chat-elevated-"));
     tempDirs.push(cwd);
     const model = `${provider}-${Date.now()}-${Math.random()}`;
@@ -153,6 +153,18 @@ describe("Engine quick-chat prompt guidance", () => {
     callsByModel.set(model, calls);
     scriptedToolCallsByModel.set(model, [
       [{ id: "load-bash", toolName: "ToolSearch", args: { query: "select:Bash" } }],
+      [
+        {
+          id: "run-bash",
+          toolName: "CallTool",
+          args: { name: "Bash", args: { command: "printf discovery-bash-ok" } },
+        },
+        {
+          id: "blocked-agent",
+          toolName: "CallTool",
+          args: { name: "Agent", args: { description: "Forbidden child", prompt: "must not run" } },
+        },
+      ],
       [],
     ]);
     const engine = new Engine({
@@ -162,7 +174,7 @@ describe("Engine quick-chat prompt guidance", () => {
       permissionMode: "bypassPermissions",
       settingsScope: "isolated",
       headless: true,
-      maxTurns: 2,
+      maxTurns: 3,
     });
     (engine as any).hooks.clear();
 
@@ -172,15 +184,22 @@ describe("Engine quick-chat prompt guidance", () => {
       behaviorMode: "quickChatRestricted",
     });
 
-    expect(calls).toHaveLength(2);
-    const [initial, elevated] = calls;
+    expect(calls).toHaveLength(3);
+    const [initial, elevated, completed] = calls;
     expect(initial?.systemPrompt).toContain("# Side Conversation Boundary");
     expect(initial?.toolNames).toEqual(expect.arrayContaining(["Write", "Edit", "ToolSearch"]));
     expect(initial?.toolNames).not.toContain("Bash");
     expect(initial?.toolNames).not.toContain("Agent");
     expect(elevated?.systemPrompt).toContain("# Side Conversation Boundary");
-    expect(elevated?.toolNames).toEqual(expect.arrayContaining(["Write", "Edit", "Bash"]));
-    expect(elevated?.messageText).toContain("Selected tools for this run: Bash");
+    expect(elevated?.toolNames).toEqual(initial?.toolNames);
+    expect(elevated?.systemPrompt).toBe(initial?.systemPrompt);
+    expect(elevated?.messageText).toContain("schemaRef: select:Bash");
+    expect(elevated?.messageText).toContain("inputSchema");
+    expect(completed?.toolNames).toEqual(initial?.toolNames);
+    expect(completed?.messageText).toContain("discovery-bash-ok");
+    expect(completed?.messageText).toContain(
+      "Tool Agent is not available in the current session context",
+    );
     expect(elevated?.toolNames).not.toContain("Agent");
   });
 

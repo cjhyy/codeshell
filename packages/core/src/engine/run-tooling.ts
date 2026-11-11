@@ -35,6 +35,7 @@ import type { EngineRunOptions, RunBehaviorProfile } from "./run-types.js";
 import { normalizeSessionToolSelection, RunToolSurface } from "../tool-system/run-tool-surface.js";
 import { routeInitialTools, type TaskToolRoutingPolicy } from "../preset/task-tool-routing.js";
 import { logger } from "../logging/logger.js";
+import { selectionForToolCacheCycle, toolCacheIdentity } from "./tool-cache-cycle.js";
 
 /** Fold once per Run from the unmodified transport baseline; unknown names cannot create servers. */
 export function snapshotRunMcpServers(
@@ -65,7 +66,16 @@ export function initializeRunToolSurface(
   },
 ): ToolDefinition[] {
   const catalog = assembleCatalog();
-  const selection = normalizeSessionToolSelection(routing?.selection);
+  const identity = toolCacheIdentity(toolCtx.llmConfig);
+  const selection = normalizeSessionToolSelection(
+    selectionForToolCacheCycle(routing?.selection, identity),
+  );
+  // Unknown future/damaged persisted state must survive without being overwritten.
+  const persistSelection =
+    routing?.selection !== undefined && !selection
+      ? undefined
+      : (next: SessionToolSelection) =>
+          routing?.onSelectionChanged?.({ ...next, cacheIdentity: identity });
   const routed = routing?.injected
     ? {
         // A host continuation carries results, not a new tool-routing intent.
@@ -91,18 +101,24 @@ export function initializeRunToolSurface(
   }
   const surface = new RunToolSurface(
     catalog.some((tool) => tool.name === "ToolSearch") ? routed.initialToolNames : undefined,
-    { selection, onSelectionChanged: routing?.onSelectionChanged },
+    {
+      selection:
+        selection && (routing?.selection as { version?: unknown })?.version === 1
+          ? { ...selection, version: 1 }
+          : selection,
+      onSelectionChanged: persistSelection,
+    },
   );
   toolCtx.runToolSurface = surface;
   surface.updateCatalog(catalog);
-  routing?.onSelectionChanged?.(surface.getSelection());
+  persistSelection?.(surface.getSelection());
   toolCtx.refreshRunToolEligibility = () => surface.updateCatalog(assembleCatalog());
   let previousNames: string[] | undefined;
   toolCtx.refreshRunTools = () => {
     toolCtx.refreshRunToolEligibility!();
     const snapshot = surface.snapshot();
     // Goal/domain state rebases may replace the live Session since selection changed.
-    routing?.onSelectionChanged?.(surface.getSelection());
+    persistSelection?.(surface.getSelection());
     const names = snapshot.map((tool) => tool.name);
     toolCtx.modelToolNames = new Set(names);
     if (JSON.stringify(names) !== JSON.stringify(previousNames)) {
@@ -116,7 +132,7 @@ export function initializeRunToolSurface(
     }
     return snapshot;
   };
-  return catalog;
+  return surface.snapshot();
 }
 
 /** engine.ts L1485-1522 —— ToolContext 组装(spawner、agentDefinitions、base 由调用方传入)。 */
@@ -407,7 +423,9 @@ export function assembleRunToolDefs(args: {
     registry: args.toolRegistry,
     visibility,
     disabledBuiltinNames,
-    allowedToolNames: args.profileAllowedToolNames,
+    allowedToolNames: args.profileAllowedToolNames?.has("ToolSearch")
+      ? new Set([...args.profileAllowedToolNames, "CallTool"])
+      : args.profileAllowedToolNames,
     mcpServers: args.mcpServers,
     mcpDisabled: args.mcpDisabled,
     featureFlags: args.featureFlags,

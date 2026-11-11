@@ -1,3 +1,9 @@
+import {
+  rebaseToolSelection,
+  toolCacheIdentity,
+  isToolCacheCompaction,
+} from "./tool-cache-cycle.js";
+import { normalizeSessionToolSelection } from "../tool-system/run-tool-surface.js";
 /**
  * Engine — the main facade that wires all components together.
  */
@@ -394,6 +400,10 @@ export class Engine {
   // run-boundary PermissionClassifier replacement/reconfiguration.
   private lastContextManager: ContextManager | undefined;
   private lastMessages: Message[] | undefined;
+  private lastToolCache?: {
+    sessionId: string;
+    rebase: () => import("../types.js").SessionToolSelection;
+  };
   private lastSessionId: string | undefined;
   private compactedMessagesBySession = new Map<string, Message[]>();
   private workspaceAuthorities = new SessionWorkspaceAuthorityTracker();
@@ -1923,6 +1933,7 @@ export class Engine {
           const {
             llmClient,
             fullSystemPrompt,
+            rebuildSystemPrompt,
             dynamicContextMsg,
             userContextMsg,
             retainedContextMessages,
@@ -1983,6 +1994,7 @@ export class Engine {
             llmClient,
             auxSummaryClient,
             fullSystemPrompt,
+            rebuildSystemPrompt,
             toolDefs,
             claimClientMessageId,
             releaseClientMessageId,
@@ -2284,6 +2296,7 @@ export class Engine {
   }): Promise<{
     llmClient: Awaited<ReturnType<typeof createLLMClient>>;
     fullSystemPrompt: string;
+    rebuildSystemPrompt: (tools: import("../types.js").ToolDefinition[]) => Promise<string>;
     dynamicContextMsg: Message | null;
     userContextMsg: Message | null;
     retainedContextMessages: Message[];
@@ -2336,18 +2349,25 @@ export class Engine {
         (snapshot) => `# Frozen Skill: ${snapshot.name} (${snapshot.revision})\n${snapshot.body}`,
       )
       .join("\n\n");
-    const fullSystemPrompt = composeRunSystemPrompt({
-      baseSystemPrompt: [
-        toolDefs.some((tool) => tool.name === "SaveContextNote")
-          ? `${baseSystemPrompt}\n\n${loadSection("context-notes")}`
-          : baseSystemPrompt,
-        frozenInstructions,
-      ]
-        .filter(Boolean)
-        .join("\n\n"),
-      profile,
-      profileParams,
-    });
+    const finishSystemPrompt = (
+      basePrompt: string,
+      tools: import("../types.js").ToolDefinition[],
+    ) =>
+      composeRunSystemPrompt({
+        baseSystemPrompt: [
+          tools.some((tool) => tool.name === "SaveContextNote")
+            ? `${basePrompt}\n\n${loadSection("context-notes")}`
+            : basePrompt,
+          frozenInstructions,
+        ]
+          .filter(Boolean)
+          .join("\n\n"),
+        profile,
+        profileParams,
+      });
+    const fullSystemPrompt = finishSystemPrompt(baseSystemPrompt, toolDefs);
+    const rebuildSystemPrompt = async (tools: import("../types.js").ToolDefinition[]) =>
+      finishSystemPrompt(await promptComposer.buildSystemPrompt(tools), tools);
     const userContextMsg = promptComposer.buildUserContextMessage();
     const priorMessages = new Set(messages);
     assembleRunMessages({
@@ -2379,6 +2399,7 @@ export class Engine {
     return {
       llmClient,
       fullSystemPrompt,
+      rebuildSystemPrompt,
       dynamicContextMsg,
       userContextMsg,
       retainedContextMessages,
@@ -2648,6 +2669,7 @@ export class Engine {
     llmClient: Awaited<ReturnType<typeof createLLMClient>>;
     auxSummaryClient: Awaited<ReturnType<typeof createLLMClient>>;
     fullSystemPrompt: string;
+    rebuildSystemPrompt: (tools: import("../types.js").ToolDefinition[]) => Promise<string>;
     toolDefs: import("../types.js").ToolDefinition[];
     claimClientMessageId: (
       bundle: SessionBundle,
@@ -2681,6 +2703,7 @@ export class Engine {
       llmClient,
       auxSummaryClient,
       fullSystemPrompt,
+      rebuildSystemPrompt,
       toolDefs,
       claimClientMessageId,
       releaseClientMessageId,
@@ -2852,6 +2875,7 @@ export class Engine {
       contextManager,
       session,
       fullSystemPrompt,
+      rebuildSystemPrompt,
       toolDefs,
       sid,
       options,
@@ -3222,8 +3246,20 @@ export class Engine {
       },
     );
     const surface = toolCtx.runToolSurface!;
+    this.lastToolCache = {
+      sessionId: session.state.sessionId,
+      rebase: () => {
+        toolCtx.refreshRunToolEligibility?.();
+        surface.rebase();
+        return { ...surface.getSelection(), cacheIdentity: toolCacheIdentity(toolCtx.llmConfig) };
+      },
+    };
     if (this.runningSession?.state === session.state) {
-      this.runningSession.ownToolSelection = () => surface.getSelection();
+      this.runningSession.ownToolSelection = () =>
+        session.state.toolSelection !== undefined &&
+        !normalizeSessionToolSelection(session.state.toolSelection)
+          ? undefined
+          : { ...surface.getSelection(), cacheIdentity: toolCacheIdentity(toolCtx.llmConfig) };
     }
 
     return {
@@ -3247,6 +3283,7 @@ export class Engine {
     contextManager: ContextManager;
     session: SessionBundle;
     fullSystemPrompt: string;
+    rebuildSystemPrompt: (tools: import("../types.js").ToolDefinition[]) => Promise<string>;
     toolDefs: import("../types.js").ToolDefinition[];
     sid: string;
     options: EngineRunOptions | undefined;
@@ -3276,6 +3313,7 @@ export class Engine {
       contextManager,
       session,
       fullSystemPrompt,
+      rebuildSystemPrompt,
       toolDefs,
       sid,
       options,
@@ -3302,6 +3340,10 @@ export class Engine {
     // know about HookRegistry — the buffer is the seam).
     let pendingCompactInfo: { strategy: string; before: number; after: number } | null = null;
     contextManager.setOnCompact((info) => {
+      if (isToolCacheCompaction(info)) {
+        toolCtx.refreshRunToolEligibility?.();
+        toolCtx.runToolSurface?.rebase();
+      }
       if (info.strategy === "notes") {
         session.state.contextUsageAnchor = undefined;
         this.compactedMessagesBySession.delete(sid);
@@ -3321,8 +3363,10 @@ export class Engine {
         hooks: this.hooks,
         transcript: session.transcript,
         systemPrompt: fullSystemPrompt,
+        getSystemPrompt: rebuildSystemPrompt,
         tools: toolDefs,
         getTools: toolCtx.refreshRunTools,
+        runToolSurface: toolCtx.runToolSurface,
         getEligibleTools: () => toolCtx.searchableToolDefinitions ?? toolDefs,
         sessionId: sid,
         cwd,
@@ -4090,6 +4134,22 @@ export class Engine {
     }
   }
 
+  private rebaseSessionToolCache(session: SessionBundle): void {
+    if (!normalizeSessionToolSelection(session.state.toolSelection)) return;
+    const sessionId = session.state.sessionId;
+    const live =
+      this.runningSession?.state.sessionId === sessionId &&
+      this.lastToolCache?.sessionId === sessionId;
+    const selection = live
+      ? this.lastToolCache!.rebase()
+      : rebaseToolSelection(session.state.toolSelection);
+    if (!selection) return;
+    session.state.toolSelection = selection;
+    if (this.runningSession?.state.sessionId === sessionId)
+      this.runningSession.state.toolSelection = selection;
+    this.sessionManager.updateSessionState(sessionId, { toolSelection: selection });
+  }
+
   /** Force context compaction and return token stats before/after. */
   async forceCompact(sessionId?: string): Promise<{
     before: number;
@@ -4117,6 +4177,7 @@ export class Engine {
         this.compactedMessagesBySession.set(effectiveSessionId, compacted);
         session.state.contextUsageAnchor = undefined;
         this.lastContextManager = undefined;
+        this.rebaseSessionToolCache(session);
         this.persistRunProgress(session.state);
         this.lastSessionId = effectiveSessionId;
         this.lastMessages = compacted;
@@ -4137,6 +4198,9 @@ export class Engine {
     let compactStrategy: CompactStrategy | undefined;
     contextManager.setOnCompact((info) => {
       if (info.after < info.before) compactStrategy = info.strategy;
+      if (isToolCacheCompaction(info)) {
+        this.rebaseSessionToolCache(session);
+      }
     });
 
     const compacted = await contextManager.forceSummarize(sourceMessages);
@@ -4268,6 +4332,7 @@ export class Engine {
     const archived = await contextManager.summarizeRange(sourceMessages, window);
     const after = estimateTokens(archived);
     persistArchivedRange(session, anchors, window, sourceMessages, archived);
+    if (archived !== sourceMessages) this.rebaseSessionToolCache(session);
     // In the anchored path this replaces any in-process-only cache state with
     // the fresh-replay-based result — safe, because the transcript is the
     // superset of the cache and pressure compaction re-runs if needed.
@@ -4288,6 +4353,7 @@ export class Engine {
   ): Promise<boolean> {
     const session = this.sessionManager.resume(sessionId);
     if (!appendSessionArchiveMarker(sessionId, session, marker)) return false;
+    this.rebaseSessionToolCache(session);
     // The in-memory cache (if any) predates the marker; drop it so the next
     // run rebuilds from the trimmed transcript replay.
     this.compactedMessagesBySession.delete(sessionId);

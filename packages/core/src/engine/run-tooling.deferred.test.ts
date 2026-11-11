@@ -91,7 +91,10 @@ describe("Run-local progressive tool surface", () => {
         profileAllowedToolNames: undefined,
         runPlanMode: false,
       });
-    expect(assemble({ DeferredAction: "off" }).map((tool) => tool.name)).toEqual(["ToolSearch"]);
+    expect(assemble({ DeferredAction: "off" }).map((tool) => tool.name)).toEqual([
+      "CallTool",
+      "ToolSearch",
+    ]);
     expect(f.ctx.disabledBuiltins!.has("DeferredAction")).toBe(true);
     expect(assemble().map((tool) => tool.name)).toContain("DeferredAction");
     expect(f.ctx.disabledBuiltins).toBeUndefined();
@@ -108,12 +111,12 @@ describe("Run-local progressive tool surface", () => {
     expect(f.counts()).toEqual({ executions: 0, approvals: 1, hookCalls: 2 });
     expect(advertised.map((tool) => tool.name)).toContain("DeferredAction");
     expect(f.ctx.modelToolNames!.has("DeferredAction")).toBe(true);
-    expect(f.ctx.refreshRunTools!().map((tool) => tool.name)).not.toContain("DeferredAction");
+    expect(f.ctx.refreshRunTools!().map((tool) => tool.name)).toContain("DeferredAction");
   });
-  test("keyword discovery is compact; selection only affects the next frozen model step", async () => {
+  test("keyword discovery is compact; selection appends schemas without changing the frozen surface", async () => {
     const f = fixture();
     const first = f.ctx.refreshRunTools!();
-    expect(first.map((tool) => tool.name)).toEqual(["ToolSearch"]);
+    expect(first.map((tool) => tool.name)).toEqual(["ToolSearch", "CallTool"]);
     const keyword = await toolSearchTool({ query: "fixture action" }, f.ctx);
     expect(keyword).toContain("DeferredAction");
     expect(keyword).not.toContain("SCHEMA_ONLY");
@@ -122,19 +125,18 @@ describe("Run-local progressive tool surface", () => {
       f.executor.executeSingle({ id: "forged", toolName: "DeferredAction", args: {} });
     expect((await forged()).error).toContain("not loaded");
     expect(f.counts()).toEqual({ executions: 0, approvals: 0, hookCalls: 0 });
-    expect(await toolSearchTool({ query: "select:DeferredAction" }, f.ctx)).not.toContain(
+    expect(await toolSearchTool({ query: "select:DeferredAction" }, f.ctx)).toContain(
       "SCHEMA_ONLY",
     );
-    expect((await forged()).error).toContain("next model step");
     const next = f.ctx.refreshRunTools!();
-    expect(next.map((tool) => tool.name)).toEqual(["ToolSearch", "DeferredAction"]);
-    expect(JSON.stringify(next)).toContain("SCHEMA_ONLY");
-    expect(first.map((tool) => tool.name)).toEqual(["ToolSearch"]);
+    expect(next.map((tool) => tool.name)).toEqual(["ToolSearch", "CallTool"]);
+    expect(JSON.stringify(next)).not.toContain("SCHEMA_ONLY");
+    expect(first.map((tool) => tool.name)).toEqual(["ToolSearch", "CallTool"]);
     expect((await forged()).isError).toBe(false);
     expect(f.counts()).toEqual({ executions: 1, approvals: 1, hookCalls: 2 });
     await toolSearchTool({ query: "select:DeferredAction" }, f.ctx);
     expect(f.ctx.refreshRunTools!()).toEqual(next);
-    expect(f.registry.getToolDefinitions()).toHaveLength(2);
+    expect(f.registry.getToolDefinitions()).toHaveLength(3);
   });
 
   test("revocation wins over selection and unknown names never reach approvals or hooks", async () => {
@@ -142,7 +144,7 @@ describe("Run-local progressive tool surface", () => {
     await toolSearchTool({ query: "select:DeferredAction" }, f.ctx);
     f.ctx.refreshRunTools!();
     f.hide();
-    expect(f.ctx.refreshRunTools!().map((tool) => tool.name)).toEqual(["ToolSearch"]);
+    expect(f.ctx.refreshRunTools!().map((tool) => tool.name)).toEqual(["ToolSearch", "CallTool"]);
     for (const toolName of ["DeferredAction", "UnknownAction"]) {
       const result = await f.executor.executeSingle({ id: toolName, toolName, args: {} });
       expect(result.error).toContain("not available");
@@ -155,7 +157,7 @@ describe("Run-local progressive tool surface", () => {
     const eager = fixture(undefined);
     // Passing undefined to fixture uses its default; explicitly initialize the eager host.
     initializeRunToolSurface(eager.ctx, undefined, () => eager.registry.getToolDefinitions());
-    expect(eager.ctx.refreshRunTools!()).toHaveLength(2);
+    expect(eager.ctx.refreshRunTools!()).toHaveLength(3);
     const noSearch = fixture([]);
     noSearch.registry.unregisterTool("ToolSearch");
     initializeRunToolSurface(noSearch.ctx, [], () => noSearch.registry.getToolDefinitions());
@@ -173,13 +175,10 @@ describe("Run-local progressive tool surface", () => {
       },
       async () => "late",
     );
-    expect(f.ctx.refreshRunTools!().map((tool) => tool.name)).toEqual(["ToolSearch"]);
+    expect(f.ctx.refreshRunTools!().map((tool) => tool.name)).toEqual(["ToolSearch", "CallTool"]);
     expect(await toolSearchTool({ query: "select:mcp_fixture_late" }, f.ctx)).toContain(
       "mcp_fixture_late",
     );
-    expect(f.ctx.refreshRunTools!().map((tool) => tool.name)).toEqual([
-      "ToolSearch",
-      "mcp_fixture_late",
-    ]);
+    expect(f.ctx.refreshRunTools!().map((tool) => tool.name)).toEqual(["ToolSearch", "CallTool"]);
   });
 });

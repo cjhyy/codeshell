@@ -13,6 +13,7 @@
 
 import type { ContentBlock, Message } from "../types.js";
 import { estimateMessagesTokens, estimateStringTokens } from "./token-counter.js";
+import { toolSchemaResultIds } from "./tool-schema-results.js";
 import {
   replaceToolResultText,
   createToolTextReplacement,
@@ -765,6 +766,7 @@ export function applyToolResultBudget(
   maxTotalChars = 100_000,
   maxTotalTokens = Number.POSITIVE_INFINITY,
 ): Message[] {
+  const schemaResultIds = toolSchemaResultIds(messages);
   return messages.map((msg) => {
     if (!Array.isArray(msg.content)) return msg;
 
@@ -779,7 +781,9 @@ export function applyToolResultBudget(
       if (text !== undefined) {
         const size = text.length;
         const tokens = estimateStringTokens(text);
-        resultBlocks.push({ index: i, size, tokens, text });
+        if (!schemaResultIds.has(block.tool_use_id ?? "")) {
+          resultBlocks.push({ index: i, size, tokens, text });
+        }
         totalSize += size;
         totalTokens += tokens;
       }

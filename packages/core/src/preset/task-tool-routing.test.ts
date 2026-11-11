@@ -256,17 +256,21 @@ describe("Preset task schema routing", () => {
       taskText: "alpha",
       policy: policy(),
     });
-    expect(catalog.map((definition) => definition.name)).toEqual(managed);
+    expect(catalog.map((definition) => definition.name)).toEqual(route("alpha").initialToolNames);
+    expect(ctx.runToolSurface!.getCatalog().map((definition) => definition.name)).toEqual(managed);
     const first = ctx.refreshRunTools!();
     expect(first.map((definition) => definition.name)).toContain("Tool12");
     expect(first.map((definition) => definition.name)).not.toContain("Tool14");
     ctx.runToolSurface!.select(["Tool14"]);
     available = managed.filter((name) => name !== "Tool12");
     const second = ctx.refreshRunTools!();
-    expect(second.map((definition) => definition.name)).toContain("Tool14");
-    expect(second.map((definition) => definition.name)).not.toContain("Tool12");
-    expect(first.map((definition) => definition.name)).toContain("Tool12");
+    expect(JSON.stringify(second)).toBe(JSON.stringify(first));
+    expect(second.map((definition) => definition.name)).not.toContain("Tool14");
+    expect(second.map((definition) => definition.name)).toContain("Tool12");
+    expect(ctx.runToolSurface!.isCallable("Tool14")).toBe(true);
+    expect(ctx.runToolSurface!.isCallable("Tool12")).toBe(false);
     available = [...managed];
-    expect(ctx.refreshRunTools!().map((definition) => definition.name)).toContain("Tool12");
+    expect(ctx.refreshRunTools!()).toEqual(first);
+    expect(ctx.runToolSurface!.isCallable("Tool12")).toBe(true);
   });
 });

@@ -53,6 +53,7 @@ export const PLAN_MODE_ALLOWED_TOOLS: ReadonlySet<string> = new Set([
   "AskUserQuestionAsync",
   "Agent",
   "ToolSearch",
+  "CallTool",
   // Skill: loads a skill's guidance text into context — read-only, no file
   // writes. Planning is exactly when methodology skills (brainstorming,
   // writing-plans, …) are most useful, so it belongs in the allow-list.

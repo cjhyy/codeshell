@@ -41,6 +41,7 @@ import {
   toolResultText,
 } from "./tool-output-budget.js";
 import { logger } from "../logging/logger.js";
+import { toolSchemaResultIds } from "./tool-schema-results.js";
 
 export interface ContextManagerConfig {
   maxTokens: number;
@@ -798,6 +799,7 @@ export class ContextManager {
    * Truncate oversized tool results in messages.
    */
   private truncateToolResults(messages: Message[]): Message[] {
+    const schemaResultIds = toolSchemaResultIds(messages);
     const budget = {
       maxChars: this.config.maxToolResultChars,
       maxTokens: this.config.toolOutputTokenLimit,
@@ -810,7 +812,8 @@ export class ContextManager {
       // later, unchanged messages to be spread-copied.
       let messageModified = false;
       const newContent = msg.content.map((block) => {
-        if (block.type !== "tool_result") return block;
+        if (block.type !== "tool_result" || schemaResultIds.has(block.tool_use_id ?? ""))
+          return block;
         const text = toolResultText(block.content);
         if (text === undefined) return block;
         const truncated = createToolTextReplacement(block.content, budget);

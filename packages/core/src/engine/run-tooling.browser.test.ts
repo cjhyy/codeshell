@@ -38,7 +38,7 @@ describe("browser host capability follows the actual run", () => {
   test("an unwired desktop child hides browser schemas, instructions, discovery, and execution", async () => {
     const { toolCtx, registry, assemble } = surface();
     const definitions = assemble();
-    expect(definitions.map((tool) => tool.name)).toEqual(["ToolSearch"]);
+    expect(definitions.map((tool) => tool.name)).toEqual(["CallTool", "ToolSearch"]);
     expect(
       buildPresetSystemPrompt(
         BUILTIN_AGENT_PRESETS.general,
@@ -71,7 +71,7 @@ describe("browser host capability follows the actual run", () => {
       "### browser_navigate",
     );
     delete toolCtx.browser;
-    expect(assemble().map((tool) => tool.name)).toEqual(["ToolSearch"]);
+    expect(assemble().map((tool) => tool.name)).toEqual(["CallTool", "ToolSearch"]);
     expect(await toolSearchTool({ query: "浏览器" }, toolCtx)).not.toContain("browser_navigate");
   });
 });
