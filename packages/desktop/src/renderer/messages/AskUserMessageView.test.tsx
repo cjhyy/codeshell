@@ -67,9 +67,10 @@ describe("AskUserMessageView missing question", () => {
 });
 
 describe("AskUserMessageView optionsOnly", () => {
-  test("normal multiple-choice shows the 其它… free-text escape hatch", () => {
+  test("normal multiple-choice always shows its custom answer field", () => {
     const html = renderToStaticMarkup(<AskUserMessageView message={ask()} onAnswer={() => {}} />);
-    expect(html).toContain("其它…");
+    expect(html).toContain("输入自定义回答");
+    expect(html).toContain("<input");
     expect(html).toContain("允许本次");
   });
 
@@ -101,7 +102,7 @@ function props(node: Element): Record<string, any> {
 }
 
 describe("AskUserMessageView asynchronous questions", () => {
-  test("explains answer-later behavior and does not auto-focus the input", () => {
+  test("explains answer-later behavior and neither question mode steals focus", () => {
     const html = renderToStaticMarkup(
       <AskUserMessageView
         message={ask({ asynchronous: true, options: undefined })}
@@ -114,7 +115,7 @@ describe("AskUserMessageView asynchronous questions", () => {
     const sync = renderToStaticMarkup(
       <AskUserMessageView message={ask({ options: undefined })} onAnswer={() => {}} />,
     );
-    expect(sync).toContain("autofocus");
+    expect(sync).not.toContain("autofocus");
     expect(sync).not.toContain("稍后回答");
   });
 
@@ -146,10 +147,6 @@ describe("AskUserMessageView asynchronous questions", () => {
       });
       const options = descendants(container).filter((node) => props(node).role === "checkbox");
       await click(options[0]!);
-      const other = descendants(container).find(
-        (node) => node.tagName === "BUTTON" && props(node)["aria-controls"],
-      )!;
-      await click(other);
       await act(async () => {
         const input = descendants(container).find((node) => node.tagName === "INPUT")!;
         props(input).onChange({ target: { value: "只处理文档" } });
@@ -160,7 +157,7 @@ describe("AskUserMessageView asynchronous questions", () => {
       await click(button("回答问题"));
       const input = descendants(container).find((node) => node.tagName === "INPUT")!;
       expect(props(input).value).toBe("只处理文档");
-      await click(button("提交"));
+      await click(button("发送"));
       expect(answers).toEqual(["允许本次, 只处理文档"]);
     } finally {
       await act(async () => root.unmount());
@@ -194,7 +191,7 @@ describe("AskUserMessageView asynchronous questions", () => {
       const input = () => descendants(container).find((node) => node.tagName === "INPUT")!;
       const answerButton = () =>
         descendants(container).find(
-          (node) => node.tagName === "BUTTON" && textOf(node) === "回答",
+          (node) => node.tagName === "BUTTON" && textOf(node) === "发送",
         )!;
       await act(async () => {
         props(input()).onChange({ target: { value: "先检查测试" } });
@@ -219,6 +216,85 @@ describe("AskUserMessageView asynchronous questions", () => {
       });
       expect(answers).toEqual(["先检查测试", "先检查测试"]);
       expect(textOf(container)).not.toContain("回答提交失败");
+    } finally {
+      await act(async () => root.unmount());
+      document.body.removeChild(container);
+    }
+  });
+});
+
+describe("AskUserMessageView explicit answer", () => {
+  test("selecting an option waits for Send and custom text replaces a single selection", async () => {
+    ensureMiniDom();
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    const answers: string[] = [];
+    const input = () => descendants(container).find((node) => node.tagName === "INPUT")!;
+    const choice = () =>
+      descendants(container).find((node) => props(node)["aria-pressed"] !== undefined)!;
+    const send = () =>
+      descendants(container).find((node) => props(node)["aria-label"] === "发送回答")!;
+    const click = async (node: Element) =>
+      act(async () => {
+        props(node).onClick();
+        await flushMicrotasks();
+      });
+    try {
+      await act(async () =>
+        root.render(
+          <AskUserMessageView
+            message={ask()}
+            onAnswer={(_id, answer) => {
+              answers.push(answer);
+            }}
+          />,
+        ),
+      );
+      expect(props(send()).disabled).toBe(true);
+      const field = input();
+      await click(choice());
+      expect(props(choice())["aria-pressed"]).toBe(true);
+      expect(input()).toBe(field);
+      expect(answers).toEqual([]);
+      expect(props(send()).disabled).toBe(false);
+      await click(send());
+      expect(answers).toEqual(["允许本次"]);
+      await act(async () => props(input()).onChange({ target: { value: "先只检查文档" } }));
+      expect(props(choice())["aria-pressed"]).toBe(false);
+      await click(send());
+      expect(answers).toEqual(["允许本次", "先只检查文档"]);
+      await click(choice());
+      expect(props(input()).value).toBe("");
+      expect(props(choice())["aria-pressed"]).toBe(true);
+    } finally {
+      await act(async () => root.unmount());
+      document.body.removeChild(container);
+    }
+  });
+
+  test("same-request updates preserve the input node and draft, while a new request resets them", async () => {
+    ensureMiniDom();
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    const input = () => descendants(container).find((node) => node.tagName === "INPUT")!;
+    const render = (requestId: string, question: string) =>
+      act(async () =>
+        root.render(
+          <AskUserMessageView message={ask({ requestId, question })} onAnswer={() => {}} />,
+        ),
+      );
+    try {
+      await render("first", "第一个问题");
+      const field = input();
+      await act(async () => props(field).onChange({ target: { value: "尚未提交的回答" } }));
+      await render("first", "第一个问题的更新");
+      expect(input()).toBe(field);
+      expect(props(input()).value).toBe("尚未提交的回答");
+      await render("second", "第二个问题");
+      expect(input()).not.toBe(field);
+      expect(props(input()).value).toBe("");
     } finally {
       await act(async () => root.unmount());
       document.body.removeChild(container);
@@ -454,7 +530,13 @@ describe("AskUserMessageView deadline", () => {
       <AskUserMessageView message={ask({ expiresAt: Date.now() + 125_000 })} onAnswer={() => {}} />,
     );
     expect(html).toMatch(/2:0\d 后未回答将自动跳过/);
-    expect(html).not.toMatch(/<button[^>]*\sdisabled=""/);
+    // The empty send action is disabled; choices remain available before expiry.
+    const buttons = html.match(/<button[^>]*>/g) ?? [];
+    expect(
+      buttons.some(
+        (button) => button.includes('aria-pressed="false"') && !button.includes('disabled=""'),
+      ),
+    ).toBe(true);
   });
 
   test("questions without a deadline and answered questions show no countdown", () => {

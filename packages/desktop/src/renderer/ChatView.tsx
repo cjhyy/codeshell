@@ -1651,9 +1651,8 @@ export function ChatView({
     }
   };
 
-  // Pin every unanswered AskUser above the composer so it stays visible as
-  // new chat messages roll in (the stream only keeps answered records, and a
-  // question emitted mid-run would otherwise fold into the process card).
+  // Keep unanswered questions in the composer's question region. They share
+  // its stable bottom edge; the stream only keeps answered records.
   // The blocking question leads; answer-later questions follow without
   // taking focus. The latest TaskList lives in the TopBar status popover.
   let openAsk: AskUserMessage | null = null;
@@ -1674,6 +1673,7 @@ export function ChatView({
   }, []);
   const previousQuestion = useRef<string | null>(null);
   const stickyQuestionRef = useRef<HTMLDivElement>(null);
+  const questionDockRef = useRef<HTMLDivElement>(null);
   const questionComposerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -1817,8 +1817,22 @@ export function ChatView({
   const showStickyApproval = !!pendingApproval && !!onApprovalDecide && !inlineApprovalVisible;
   // Keep the composer bound while the request exists. Tying this mode to
   // inline visibility makes its resizing feed back into IntersectionObserver.
-  const hasPendingInteraction =
-    !!openAsk || openAsyncAsks.length > 0 || (!!pendingApproval && !!onApprovalDecide);
+  const hasQuestions = !!openAsk || openAsyncAsks.length > 0;
+  const hasPendingApproval = !!pendingApproval && !!onApprovalDecide;
+  const hasPendingInteraction = hasQuestions || hasPendingApproval;
+  useLayoutEffect(() => {
+    if (!hasQuestions || contextSelectionOpen) return;
+    const pane = questionComposerRef.current?.closest<HTMLElement>("[data-chat-variant]");
+    if (!pane) return;
+    // Bound the question body by its actual pane, including short side docks.
+    // This changes a CSS limit only; it never resizes or focuses the textarea.
+    const measure = () => pane.style.setProperty("--cs-chat-pane-height", `${pane.clientHeight}px`);
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(pane);
+    return () => observer.disconnect();
+  }, [hasQuestions, contextSelectionOpen, variant, isNewChat]);
   useEffect(() => {
     if (
       (!hasPendingInteraction && variant !== "main") ||
@@ -1830,6 +1844,8 @@ export function ChatView({
       questionComposerRef.current?.closest<HTMLDivElement>(".cs-new-chat") ?? null;
     const scrollers = [
       stickyQuestionRef.current,
+      questionDockRef.current,
+      questionComposerRef.current?.querySelector<HTMLDivElement>(".cs-chat-composer"),
       questionComposerRef.current,
       newChatScroller,
     ].filter((element): element is HTMLDivElement => element !== null);
@@ -1958,6 +1974,7 @@ export function ChatView({
       data-chat-variant={variant}
       data-queued-input={queuedInputItems.length > 0 ? "true" : undefined}
       data-pending-interaction={!contextSelectionOpen && hasPendingInteraction ? "true" : undefined}
+      data-pending-approval={!contextSelectionOpen && hasPendingApproval ? "true" : undefined}
       data-theme-surface={variant === "main" ? "chat" : undefined}
       onDragEnter={onChatDragEnter}
       onDragOver={onChatDragOver}
@@ -2034,22 +2051,8 @@ export function ChatView({
         )
       )}
 
-      {!contextSelectionOpen && (openAsk || openAsyncAsks.length > 0 || showStickyApproval) && (
+      {!contextSelectionOpen && showStickyApproval && (
         <div ref={stickyQuestionRef} className="cs-chat-sticky w-full min-w-0">
-          {/* AskUserMessageView carries its own column padding so it lines up
-              with the message stream; ApprovalCard has none of its own. */}
-          {[...(openAsk ? [openAsk] : []), ...openAsyncAsks].map((question) => (
-            <AskUserMessageView
-              key={question.requestId}
-              message={question}
-              onAnswer={onAskUserAnswer ?? (() => undefined)}
-              onKeepWaiting={
-                question.engineSessionId && question.source !== "external-runtime"
-                  ? (onKeepWaitingQuestion ?? keepWaitingOnQuestion)
-                  : undefined
-              }
-            />
-          ))}
           {showStickyApproval && pendingApproval && onApprovalDecide && (
             <div className="px-4">
               <ApprovalCard
@@ -2103,6 +2106,7 @@ export function ChatView({
           ref={questionComposerRef}
           className={cn(
             "cs-chat-composer-wrap",
+            hasQuestions && "cs-chat-composer-with-questions",
             variant === "quickChat"
               ? "cs-quick-chat-composer-wrap w-full min-w-0 shrink-0 p-3"
               : isNewChat
@@ -2113,6 +2117,23 @@ export function ChatView({
                   ),
           )}
         >
+          {hasQuestions && (
+            <div ref={questionDockRef} className="cs-chat-question-dock">
+              {[...(openAsk ? [openAsk] : []), ...openAsyncAsks].map((question) => (
+                <AskUserMessageView
+                  key={question.requestId}
+                  embedded
+                  message={question}
+                  onAnswer={onAskUserAnswer ?? (() => undefined)}
+                  onKeepWaiting={
+                    question.engineSessionId && question.source !== "external-runtime"
+                      ? (onKeepWaitingQuestion ?? keepWaitingOnQuestion)
+                      : undefined
+                  }
+                />
+              ))}
+            </div>
+          )}
           {queuedInputItems.length > 0 && (
             <div className="mb-2 rounded-2xl border border-border/80 bg-background/80 px-3 py-2 shadow-sm">
               <div className="mb-1.5 flex items-center justify-between gap-2">
