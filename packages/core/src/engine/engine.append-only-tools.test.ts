@@ -327,6 +327,67 @@ test("three discovery batches append schemas and calls without changing one byte
   expect(toolResult("restored-direct")).not.toHaveProperty("is_error", true);
 });
 
+test("goal lifecycle, plan eligibility, late discovery and new routing intent preserve the session prefix", async () => {
+  const value = engine(directory());
+  const sessionId = "append-only-eligibility";
+  select("ComplexA");
+  invoke("ComplexA");
+  stop();
+  expect((await value.run("Warm the prefix", { sessionId, behaviorMode })).reason).toBe(
+    "completed",
+  );
+  const baseline = calls[0]!;
+  stablePrefix(calls);
+
+  let offset = calls.length;
+  step("finish-goal", "complete_goal", { summary: "Fixture goal complete" });
+  expect(
+    (
+      await value.run("Finish a local goal", {
+        sessionId,
+        behaviorMode,
+        goal: { objective: "Finish the local fixture" },
+      })
+    ).reason,
+  ).toBe("completed");
+  stablePrefix(calls.slice(offset), baseline);
+  expect(value.getGoal(sessionId)).toBeUndefined();
+
+  offset = calls.length;
+  step("no-goal", "complete_goal");
+  stop();
+  await value.run("Continue without a goal", { sessionId, behaviorMode });
+  stablePrefix(calls.slice(offset), baseline);
+  expect(toolResult("no-goal")).toMatchObject({ is_error: true });
+
+  offset = calls.length;
+  invoke("ComplexA", "plan-reject");
+  stop();
+  await value.run("Plan the next local action", { sessionId, behaviorMode, planMode: true });
+  stablePrefix(calls.slice(offset), baseline);
+  expect(toolResult("plan-reject")).toMatchObject({ is_error: true });
+  expect(executed.filter((entry) => entry.name === "ComplexA")).toHaveLength(1);
+
+  // A locally registered late adapter exercises catalog growth without an MCP socket.
+  registerAction(value, "mcp_fixture_late");
+  offset = calls.length;
+  select("mcp_fixture_late");
+  invoke("mcp_fixture_late");
+  invoke("ComplexA", "after-plan");
+  stop();
+  await value.run("Show the cron catalog and resume execution", {
+    sessionId,
+    behaviorMode,
+    planMode: false,
+  });
+  stablePrefix(calls.slice(offset), baseline);
+  expect(executed).toContainEqual({ name: "mcp_fixture_late", args: complexArgs });
+  expect(executed.filter((entry) => entry.name === "ComplexA")).toHaveLength(2);
+  expect(calls.at(-1)!.tools.map((tool) => tool.name)).not.toContain("RoutedAction");
+  expect(calls.at(-1)!.tools.map((tool) => tool.name)).not.toContain("mcp_fixture_late");
+  expect(script).toHaveLength(0);
+});
+
 test("summary compaction starts a new cycle and promotes discovered schemas before the next request", async () => {
   const root = directory();
   mkdirSync(join(root, ".code-shell"), { recursive: true });

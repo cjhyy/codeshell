@@ -214,6 +214,26 @@ export class ToolExecutor {
   }
 
   private enforceArgumentPolicy(call: ToolCall): ToolResult | undefined {
+    if (
+      (call.toolName === COMPLETE_GOAL_TOOL_NAME || call.toolName === CANCEL_GOAL_TOOL_NAME) &&
+      (this.toolCtx?.hasActiveGoal?.() ?? this.toolCtx?.toolVisibility?.hasGoal) !== true
+    ) {
+      return {
+        id: call.id,
+        toolName: call.toolName,
+        error: `Tool ${call.toolName} is only available while an active goal is present. Do NOT retry this tool call unless a goal is active.`,
+        isError: true,
+      };
+    }
+    if (call.toolName === CANCEL_GOAL_TOOL_NAME && call.args.confirm !== true) {
+      return {
+        id: call.id,
+        toolName: call.toolName,
+        isError: true,
+        error:
+          "cancel_goal ignored: confirm must remain true after hooks and approval. The goal was not cancelled.",
+      };
+    }
     if (this.toolCtx?.validateToolArguments) {
       let error: string | undefined;
       try {
@@ -409,17 +429,6 @@ export class ToolExecutor {
         id: call.id,
         toolName: call.toolName,
         error: `Tool ${call.toolName} is disabled by this project's capability override and cannot be used. Do NOT retry this tool call.`,
-        isError: true,
-      };
-    }
-    if (
-      (call.toolName === COMPLETE_GOAL_TOOL_NAME || call.toolName === CANCEL_GOAL_TOOL_NAME) &&
-      this.toolCtx?.toolVisibility?.hasGoal !== true
-    ) {
-      return {
-        id: call.id,
-        toolName: call.toolName,
-        error: `Tool ${call.toolName} is only available while an active goal is present. Do NOT retry this tool call unless a goal is active.`,
         isError: true,
       };
     }

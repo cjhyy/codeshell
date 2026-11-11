@@ -84,19 +84,20 @@ export function initializeRunToolSurface(
       ? undefined
       : (next: SessionToolSelection) =>
           routing?.onSelectionChanged?.({ ...next, cacheIdentity: identity });
-  const routed = routing?.injected
-    ? {
-        // A host continuation carries results, not a new tool-routing intent.
-        initialToolNames: selection && initialToolNames !== undefined ? [] : initialToolNames,
-        reason: "no_match" as const,
-        matchedRuleIds: [],
-      }
-    : routeInitialTools({
-        initialToolNames,
-        eligibleToolNames: catalog.map((tool) => tool.name),
-        taskText: routing?.taskText ?? "",
-        policy: routing?.policy,
-      });
+  const routed =
+    selection || routing?.injected
+      ? {
+          // A host continuation carries results, not a new tool-routing intent.
+          initialToolNames: selection && initialToolNames !== undefined ? [] : initialToolNames,
+          reason: "no_match" as const,
+          matchedRuleIds: [],
+        }
+      : routeInitialTools({
+          initialToolNames,
+          eligibleToolNames: catalog.map((tool) => tool.name),
+          taskText: routing?.taskText ?? "",
+          policy: routing?.policy,
+        });
   if (routed.reason === "matched") {
     logger.info("tool.surface.routed", {
       cat: "tool",

@@ -3079,6 +3079,8 @@ export class Engine {
       runPlanMode,
     } = args;
 
+    toolCtx.hasActiveGoal = () =>
+      this.goalControl.runtimeGoal !== null && this.goalControl.runtimeGoal.paused !== true;
     const visibilityExplicitGoal = normalizeGoal(options?.goal);
     const visibilityLifecycle = session.state.goalLifecycle;
     const visibilityStoredGoal =

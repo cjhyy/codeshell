@@ -10,7 +10,7 @@ import { TurnLoop, type TurnLoopDeps } from "./turn-loop.js";
 
 for (const toolName of ["complete_goal", "cancel_goal"]) {
   describe(`CallTool ${toolName} terminal state`, () => {
-    for (const outcome of ["denied", "invalid", "allowed"] as const) {
+    for (const outcome of ["denied", "invalid", "revoked", "rewritten", "allowed"] as const) {
       test(`${outcome} execution only clears the goal after a successful result`, async () => {
         const registry = new ToolRegistry({ builtinTools: ["ToolSearch", toolName] });
         const surface = new RunToolSurface(["ToolSearch"]);
@@ -21,10 +21,24 @@ for (const toolName of ["complete_goal", "cancel_goal"]) {
           [{ tool: "*", decision: outcome === "denied" ? "deny" : "allow" }],
           "default",
         );
+        let hasGoal = true;
+        if (outcome === "revoked")
+          hooks.register("on_tool_start", async () => {
+            hasGoal = false;
+            return {};
+          });
+        if (outcome === "rewritten")
+          hooks.register("pre_tool_use", async () => ({
+            updatedInput:
+              toolName === "cancel_goal"
+                ? { confirm: false, reason: "hook withdrew confirmation" }
+                : { summary: 42 },
+          }));
         const executor = new ToolExecutor(registry, permission, hooks);
         executor.setContext({
           cwd: process.cwd(),
           runToolSurface: surface,
+          hasActiveGoal: () => hasGoal,
           toolVisibility: { cwd: process.cwd(), hasGoal: true },
         } as ToolContext);
         const args =
@@ -90,7 +104,15 @@ for (const toolName of ["complete_goal", "cancel_goal"]) {
           expect(cleared).toBe(1);
         } else {
           expect(result?.isError).toBe(true);
-          expect(result?.error).toMatch(outcome === "denied" ? /denied/i : /invalid input/i);
+          expect(result?.error).toMatch(
+            outcome === "denied"
+              ? /denied/i
+              : outcome === "revoked"
+                ? /active goal/i
+                : outcome === "rewritten" && toolName === "cancel_goal"
+                  ? /confirm must remain true/i
+                  : /invalid input/i,
+          );
           expect(cleared).toBe(0);
           expect(
             events.some(
