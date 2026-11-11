@@ -6,6 +6,7 @@ import { activateWorkspaceProfile } from "../profile/activation.js";
 import { saveWorkspaceProfile } from "../profile/store.js";
 import type { WorkspaceProfile } from "../profile/types.js";
 import { SettingsManager } from "../settings/manager.js";
+import { PromptComposer } from "../prompt/composer.js";
 import {
   buildPromptComposerConfig,
   resolveRunProfileState,
@@ -118,6 +119,26 @@ describe("resolveRunProfileState", () => {
 });
 
 describe("buildPromptComposerConfig", () => {
+  test("passes the resolved discovery mode into the run's actual system guidance", async () => {
+    const tools = [{ name: "ToolSearch", description: "Discover", inputSchema: {} }];
+    const nativeConfig = buildPromptComposerConfig(
+      composerInput({ toolDiscovery: "tool-reference" }),
+    );
+    expect(nativeConfig.toolDiscovery).toBe("tool-reference");
+    const nativePrompt = await new PromptComposer(nativeConfig).buildSystemPrompt(tools);
+    expect(nativePrompt).toContain(
+      "Call tools loaded through native references by their exact names.",
+    );
+    expect(nativePrompt).not.toContain("Then use CallTool");
+    const portableConfig = buildPromptComposerConfig(composerInput({ toolDiscovery: "call-tool" }));
+    expect(portableConfig.toolDiscovery).toBe("call-tool");
+    const portablePrompt = await new PromptComposer(portableConfig).buildSystemPrompt(tools);
+    expect(portablePrompt).toContain("Then use CallTool");
+    const legacyConfig = buildPromptComposerConfig(composerInput());
+    expect(legacyConfig.toolDiscovery).toBeUndefined();
+    expect(await new PromptComposer(legacyConfig).buildSystemPrompt(tools)).toBe(portablePrompt);
+  });
+
   test("maps portable profile instruction and memory directory", () => {
     const config = buildPromptComposerConfig(
       composerInput({

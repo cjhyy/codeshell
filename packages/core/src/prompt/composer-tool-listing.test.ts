@@ -51,6 +51,49 @@ describe("PromptComposer tool listing", () => {
     expect(prompt).not.toContain("file_path");
   });
 
+  it("keeps the complete legacy tool section unchanged for explicit CallTool mode", async () => {
+    const options = { cwd: process.cwd(), model: "test-model" };
+    const definitions = [
+      ...tools,
+      { name: "ToolSearch", description: "Discover", inputSchema: {} },
+    ];
+    const legacy = await new PromptComposer(options).buildSystemPrompt(definitions);
+    const explicit = await new PromptComposer({
+      ...options,
+      toolDiscovery: "call-tool",
+    }).buildSystemPrompt(definitions);
+    expect(explicit).toBe(legacy);
+    expect(explicit).toContain(
+      '# Available Tools\n\nDescriptions and input schemas for active tools are provided in the tools field. Use ToolSearch for other available tools: keyword searches return compact metadata; "select:ToolName" returns its full schema. Then use CallTool with the exact name and an args object matching that schema. Selection does not grant permission.\nRead, ToolSearch',
+    );
+  });
+
+  it("guides native references to exact names and schema text to CallTool", async () => {
+    const composer = new PromptComposer({
+      cwd: process.cwd(),
+      model: "test-model",
+      toolDiscovery: "tool-reference",
+    });
+    const definitions = [
+      ...tools,
+      { name: "ToolSearch", description: "Discover", inputSchema: {} },
+      { name: "CallTool", description: "Call", inputSchema: {} },
+    ];
+    const prompt = await composer.buildSystemPrompt(definitions);
+    expect(prompt).toContain("Call tools loaded through native references by their exact names.");
+    expect(prompt).toContain(
+      "For schemas shown as text, including late or changed tools, use CallTool",
+    );
+    expect(prompt).toContain("Selection does not grant permission.");
+    expect(prompt).toContain("\nRead, ToolSearch, CallTool");
+    expect(prompt).not.toContain("Then use CallTool");
+    expect(prompt).not.toContain("file_path");
+    expect(await composer.buildSystemPrompt(definitions)).toBe(prompt);
+    const withoutDiscovery = await composer.buildSystemPrompt(tools);
+    expect(withoutDiscovery).not.toContain("native references");
+    expect(withoutDiscovery).not.toContain("CallTool");
+  });
+
   it("updates the name index and browser instructions when visible tools change", async () => {
     const composer = new PromptComposer({
       cwd: process.cwd(),

@@ -44,6 +44,8 @@ export interface ComposerOptions {
    */
   sourcesContextProvider?: () => string | Promise<string>;
   toolCatalog?: readonly BuiltinTool[];
+  /** Calling guidance for this run's resolved, frozen discovery mode. */
+  toolDiscovery?: "call-tool" | "tool-reference";
   /** User's preferred response language (free text), injected as a stable system section. */
   responseLanguage?: string;
   /** How to address the user / short profile (free text). */
@@ -325,8 +327,14 @@ export class PromptComposer {
         name: "tool_definitions",
         // A reused composer must reflect the current run's visible tool names.
         cacheBreak: true,
-        compute: () =>
-          `# Available Tools\n\nDescriptions and input schemas for active tools are provided in the tools field.${tools.some((tool) => tool.name === "ToolSearch") ? ' Use ToolSearch for other available tools: keyword searches return compact metadata; "select:ToolName" returns its full schema. Then use CallTool with the exact name and an args object matching that schema. Selection does not grant permission.' : ""}\n${tools.map((tool) => tool.name).join(", ")}`,
+        compute: () => {
+          const discoveryGuidance = !tools.some((tool) => tool.name === "ToolSearch")
+            ? ""
+            : this.options.toolDiscovery === "tool-reference"
+              ? ' Use ToolSearch for other available tools: keyword searches return compact metadata; "select:ToolName" loads native references when available and returns full schema text otherwise. Call tools loaded through native references by their exact names. For schemas shown as text, including late or changed tools, use CallTool with the exact name and an args object matching inputSchema. Selection does not grant permission.'
+              : ' Use ToolSearch for other available tools: keyword searches return compact metadata; "select:ToolName" returns its full schema. Then use CallTool with the exact name and an args object matching that schema. Selection does not grant permission.';
+          return `# Available Tools\n\nDescriptions and input schemas for active tools are provided in the tools field.${discoveryGuidance}\n${tools.map((tool) => tool.name).join(", ")}`;
+        },
       });
     }
 

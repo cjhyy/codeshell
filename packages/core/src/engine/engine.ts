@@ -27,6 +27,7 @@ import { resolveModelRequestSigner } from "../model-request-boundary/access.js";
 import { assertDurableRequestOwner } from "../model-request-boundary/session-owner.js";
 import type { ModelRequestSigner, ModelRequestSubject } from "../model-request-boundary/types.js";
 import { createLLMClient } from "../llm/client-factory.js";
+import { resolvePromptCachePolicy } from "../llm/prompt-cache.js";
 import { createRunBatchAuthority } from "../operations/run-batch-authority.js";
 import { createSessionOperationController } from "../operations/controller.js";
 import { CapabilityResolver } from "../operations/resolver.js";
@@ -3110,6 +3111,7 @@ export class Engine {
         cwd,
         workspace: workspaceContext,
         model: this.config.llm.model,
+        toolDiscovery: resolvePromptCachePolicy(this.config.llm).toolDiscovery,
         preset: this.preset,
         customSystemPrompt: profile?.disableInstructions
           ? undefined
