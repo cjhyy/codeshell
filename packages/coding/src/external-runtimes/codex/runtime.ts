@@ -85,9 +85,11 @@ export interface CodexRuntimeHooks {
     params: unknown;
     /**
      * `item/fileChange/requestApproval` carries no file list: the files of the
-     * patch under review, as its `fileChange` item announced them.
+     * patch under review, as its `fileChange` item announced them (at most 50).
      */
     fileChanges?: CodexFileChangeSummary[];
+    /** How many files the patch touches in all; more than `fileChanges` lists when truncated. */
+    fileChangeCount?: number;
   }) => Promise<NativeApprovalDecision> | NativeApprovalDecision;
   /** Answer Codex's request_user_input tool through the owning CodeShell UI. */
   onUserInput?: (request: { method: string; params: unknown }) => Promise<unknown> | unknown;
@@ -114,10 +116,9 @@ interface ActiveTurn {
   interruptSent: boolean;
 }
 
-/** Read a turn id from a `turn/started` / `turn/completed` notification. */
 /** Patches remembered for their approval prompt; older ones are dropped first. */
 const MAX_TRACKED_FILE_CHANGES = 64;
-/** Files listed per patch; the rest are only counted on the desktop diff. */
+/** Files listed per patch; the rest are counted (`fileChangeCount`), not listed. */
 const MAX_FILE_CHANGES_LISTED = 50;
 
 function objectOf(value: unknown): Record<string, unknown> | undefined {
@@ -126,10 +127,16 @@ function objectOf(value: unknown): Record<string, unknown> | undefined {
     : undefined;
 }
 
+/** A patch's files for its approval prompt: the first ones listed, all of them counted. */
+interface TrackedFileChanges {
+  files: CodexFileChangeSummary[];
+  total: number;
+}
+
 /** `FileUpdateChange[]` → paths and kinds (the diffs stay out of prompts). */
-function summarizeFileChanges(changes: unknown): CodexFileChangeSummary[] | undefined {
+function summarizeFileChanges(changes: unknown): TrackedFileChanges | undefined {
   if (!Array.isArray(changes)) return undefined;
-  return changes.slice(0, MAX_FILE_CHANGES_LISTED).flatMap((change) => {
+  const all = changes.flatMap((change) => {
     const entry = objectOf(change);
     if (!entry || typeof entry.path !== "string") return [];
     const kind = objectOf(entry.kind);
@@ -137,6 +144,7 @@ function summarizeFileChanges(changes: unknown): CodexFileChangeSummary[] | unde
     const movePath = typeof kind?.move_path === "string" ? kind.move_path : undefined;
     return [{ path: entry.path, kind: type, ...(movePath ? { movePath } : {}) }];
   });
+  return { files: all.slice(0, MAX_FILE_CHANGES_LISTED), total: all.length };
 }
 
 /**
@@ -156,6 +164,7 @@ function permissionsResponse(params: unknown, decision: NativeApprovalDecision):
   return { permissions: granted, scope: "turn" };
 }
 
+/** Read a turn id from a `turn/started` / `turn/completed` notification. */
 function notificationTurnId(params: unknown): string | undefined {
   if (!params || typeof params !== "object") return undefined;
   const record = params as Record<string, unknown>;
@@ -177,7 +186,7 @@ export class CodexRuntime {
   private firstTurn = true;
   private activeTurn?: ActiveTurn;
   /** Files of each `fileChange` item still in flight, by item id (for its approval prompt). */
-  private readonly fileChanges = new Map<string, CodexFileChangeSummary[]>();
+  private readonly fileChanges = new Map<string, TrackedFileChanges>();
 
   constructor(
     private readonly options: CodexRuntimeOptions,
@@ -597,7 +606,7 @@ export class CodexRuntime {
       return undefined;
     }
     const itemId = objectOf(params)?.itemId;
-    const fileChanges =
+    const tracked =
       method === "item/fileChange/requestApproval" && typeof itemId === "string"
         ? this.fileChanges.get(itemId)
         : undefined;
@@ -605,7 +614,7 @@ export class CodexRuntime {
       ? await this.hooks.onNativeApproval({
           method,
           params,
-          ...(fileChanges ? { fileChanges } : {}),
+          ...(tracked ? { fileChanges: tracked.files, fileChangeCount: tracked.total } : {}),
         })
       : "decline";
     this.log("runtime.native_approval", { method, decision });

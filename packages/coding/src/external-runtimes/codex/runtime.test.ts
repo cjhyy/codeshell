@@ -447,6 +447,24 @@ setOnLine((m) => {
     });
   });
 
+  test("a large patch lists its first 50 files and counts them all", async () => {
+    const seen: Array<{ fileChanges?: unknown[]; fileChangeCount?: number }> = [];
+    await nativeApprovalProbe(
+      `send({ method: "item/started", params: { threadId: "t", turnId: "u", startedAtMs: 1, item: {
+        type: "fileChange", id: "fc2", status: "inProgress",
+        changes: Array.from({ length: 53 }, (_, i) => ({ path: "/repo/f" + i + ".ts", kind: { type: "add" }, diff: "" })),
+      } } });
+      send({ id: 900, method: "item/fileChange/requestApproval", params: {
+        threadId: "t", turnId: "u", itemId: "fc2", startedAtMs: 2 } });`,
+      (request) => {
+        seen.push(request);
+        return "decline";
+      },
+    );
+    expect(seen[0]!.fileChanges).toHaveLength(50);
+    expect(seen[0]!.fileChangeCount).toBe(53);
+  });
+
   test("a file-change approval carries the files its item announced", async () => {
     const seen: unknown[] = [];
     const answer = await nativeApprovalProbe(
@@ -474,6 +492,7 @@ setOnLine((m) => {
           { path: "/repo/a.ts", kind: "update", movePath: "/repo/b.ts" },
           { path: "/repo/new.ts", kind: "add" },
         ],
+        fileChangeCount: 2,
       }),
     ]);
   });

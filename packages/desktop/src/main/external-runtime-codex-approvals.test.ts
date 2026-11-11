@@ -77,6 +77,19 @@ describe("codexNativeApprovalPresentation", () => {
     });
   });
 
+  test("a truncated file list says how many more files the patch touches", () => {
+    const listed = Array.from({ length: 50 }, (_, i) => ({ path: `/repo/f${i}.ts`, kind: "add" }));
+    const { description, args } = codexNativeApprovalPresentation(
+      "item/fileChange/requestApproval",
+      { ...routing },
+      listed,
+      53,
+    );
+    expect(description).toBe("Codex 想修改 53 个文件（只列出前 50 个，完整改动请在桌面查看）");
+    expect(args.files).toHaveLength(51);
+    expect((args.files as string[]).at(-1)).toBe("…还有 3 个文件");
+  });
+
   test("a file change with no known files sends the owner to the desktop diff", () => {
     expect(
       codexNativeApprovalPresentation("item/fileChange/requestApproval", { ...routing }),

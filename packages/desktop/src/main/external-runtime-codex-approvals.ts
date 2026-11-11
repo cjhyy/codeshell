@@ -8,13 +8,15 @@ import type { CodexFileChangeSummary } from "@cjhyy/code-shell-capability-coding
  * (`codex app-server generate-ts`, codex-cli 0.162.0): routing ids, a reason,
  * and per kind the command and its cwd, a network host, or a permission
  * profile. A file change names no files itself; the runtime attaches the
- * files its `fileChange` item announced (`fileChanges`). Only methods that
+ * files its `fileChange` item announced (`fileChanges`, the first 50 of
+ * `fileChangeCount`). Only methods that
  * contain `requestApproval` reach here (`CodexRuntime.onServerRequest`).
  */
 export function codexNativeApprovalPresentation(
   method: string,
   params: unknown,
   fileChanges?: readonly CodexFileChangeSummary[],
+  fileChangeCount?: number,
 ): { description: string; args: Record<string, unknown> } {
   const record = objectOf(params) ?? {};
   const reason = text(record.reason);
@@ -47,9 +49,16 @@ export function codexNativeApprovalPresentation(
         ? `${change.kind} ${change.path} → ${change.movePath}`
         : `${change.kind} ${change.path}`,
     );
+    // Only the first files are listed: say how many more there are.
+    const more = files ? Math.max(0, (fileChangeCount ?? files.length) - files.length) : 0;
+    if (files && more > 0) files.push(`…还有 ${more} 个文件`);
     return {
       description:
-        files && files.length > 0 ? "Codex 想修改文件" : "Codex 想修改文件（打开桌面查看改动）",
+        files && files.length > 0
+          ? more > 0
+            ? `Codex 想修改 ${fileChangeCount} 个文件（只列出前 ${files.length - 1} 个，完整改动请在桌面查看）`
+            : "Codex 想修改文件"
+          : "Codex 想修改文件（打开桌面查看改动）",
       args: {
         ...(files && files.length > 0 ? { files } : {}),
         ...(grantRoot ? { grantRoot } : {}),

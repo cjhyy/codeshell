@@ -1414,6 +1414,7 @@ export class ExternalRuntimeService {
                       nativeRequest.method,
                       nativeRequest.params,
                       nativeRequest.fileChanges,
+                      nativeRequest.fileChangeCount,
                     ),
                   });
                   return lifecycle.active &&
