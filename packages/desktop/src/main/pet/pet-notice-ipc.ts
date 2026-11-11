@@ -120,6 +120,9 @@ export function createPetNoticeControls(deps: PetNoticeControlsDeps): PetNoticeC
         ...(fired ? { firedRecently: true } : {}),
       };
     const im = notices.predictIm(rule.channel, rule.target);
+    const watchesDone = active.some(
+      (candidate) => candidate.when.kind === "session" && candidate.when.events.includes("done"),
+    );
     return {
       available: true,
       on: true,
@@ -128,6 +131,7 @@ export function createPetNoticeControls(deps: PetNoticeControlsDeps): PetNoticeC
       ruleId: rule.id,
       channel: rule.channel,
       ...(im ? { imLabel: im.label, ready: im.ready } : {}),
+      ...(watchesDone ? { watchesDone: true } : {}),
       ...(fired ? { firedRecently: true } : {}),
     };
   };

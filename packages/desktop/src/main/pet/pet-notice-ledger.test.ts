@@ -416,6 +416,16 @@ describe("countsThisHour", () => {
     expect(a.countsThisHour(hourStart + HOUR)).toEqual({ sent: 0, p0Sent: 1 });
   });
 
+  test("an owner-timed follow-up counts against the P0 backstop, not the P1/P2 cap", async () => {
+    const hourStart = Math.floor((NOW + 8 * HOUR) / HOUR) * HOUR - 8 * HOUR;
+    const a = ledger();
+    await a.load();
+    clock = hourStart + 1_000;
+    const r = await a.record(draft({ kind: "followup.due", dedupeKey: "fu", priority: "P1" }));
+    await a.claim(r.id, "wechat", "x");
+    expect(a.countsThisHour(hourStart + 30 * 60_000)).toEqual({ sent: 0, p0Sent: 1 });
+  });
+
   test("buckets by claim time, not settle time", async () => {
     const hourStart = Math.floor((NOW + 8 * HOUR) / HOUR) * HOUR - 8 * HOUR;
     const a = ledger();

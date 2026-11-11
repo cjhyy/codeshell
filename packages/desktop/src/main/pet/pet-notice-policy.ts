@@ -12,9 +12,27 @@ export type NoticePriority = "P0" | "P1" | "P2";
 export const DEFAULT_MAX_PER_HOUR = 6;
 export const DEFAULT_MAX_P0_PER_HOUR = 12;
 
+/**
+ * Notice kinds whose moment the owner chose (a follow-up they scheduled).
+ * Like a decision request they are never held for quiet hours or the P1/P2
+ * hourly cap; they count against the P0 hourly backstop instead.
+ */
+const OWNER_TIMED_KINDS: ReadonlySet<string> = new Set(["followup.due"]);
+
+export function isOwnerTimedKind(kind: string): boolean {
+  return OWNER_TIMED_KINDS.has(kind);
+}
+
+/** A P0, or an owner-timed notice: exempt from quiet hours, counted in the P0 backstop. */
+export function usesP0Budget(notice: { priority: NoticePriority; kind: string }): boolean {
+  return notice.priority === "P0" || isOwnerTimedKind(notice.kind);
+}
+
 export interface RouteNotice {
   /** P0 needs the owner's decision, P1 is a result / follow-up, P2 a greeting / digest. */
   priority: NoticePriority;
+  /** The owner chose this moment (a follow-up): routed like a P0 for quiet hours and caps. */
+  ownerTimed?: boolean;
   dedupeKey: string;
   attention: NoticeAttention;
   channel: NoticeChannel;
@@ -177,7 +195,7 @@ export function route(notice: RouteNotice, state: RouteState): RouteDecision {
   if (state.seenDedupeKeys.has(notice.dedupeKey)) return { outlet: "drop", reason: "duplicate" };
   if (notice.attention === "muted") return { outlet: "record", reason: "muted" };
   if (notice.attention === "digest") return { outlet: "digest", reason: "digest-attention" };
-  if (notice.priority === "P0") {
+  if (notice.priority === "P0" || notice.ownerTimed) {
     if (state.p0SentThisHour >= state.maxP0PerHour) return { outlet: "digest", reason: "p0-cap" };
   } else if (!notice.immediate) {
     if (isInQuietHours(state.quietHours, state.now, state.timezoneOffsetMin))

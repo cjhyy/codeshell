@@ -99,6 +99,8 @@ const KIND_LABELS: Readonly<Record<string, string>> = {
   "session.done": "做完了",
   "session.failed": "没做完",
   "session.blocked": "等你决定",
+  "session.report": "有进展",
+  "followup.due": "跟进提醒",
 };
 
 /**
@@ -120,11 +122,21 @@ export function composeNoticeBody(kind: string, facts: NoticeFacts, body?: strin
   }
 }
 
-/** "你不在时：" + one line per held notice, at most {@link DIGEST_MAX_LINES}. */
-export function composeDigestBody(members: readonly DigestMember[]): string {
-  const lines = ["你不在时："];
+/** A follow-up's own text belongs in its digest line; it is what the owner asked to hear. */
+const DIGEST_FOLLOW_UP_TEXT = 120;
+
+/**
+ * `header` ("你不在时：" by default) + one line per held notice, at most
+ * {@link DIGEST_MAX_LINES}. A follow-up's line carries its text.
+ */
+export function composeDigestBody(members: readonly DigestMember[], header = "你不在时："): string {
+  const lines = [header];
   for (const member of members.slice(0, DIGEST_MAX_LINES)) {
-    const label = KIND_LABELS[member.kind] ?? member.kind;
+    const text =
+      member.kind === "followup.due"
+        ? line(member.facts.summary, DIGEST_FOLLOW_UP_TEXT)
+        : undefined;
+    const label = text ? `：${text}` : (KIND_LABELS[member.kind] ?? member.kind);
     lines.push(`- 「${title(member.facts)}」${label}`);
   }
   if (members.length > DIGEST_MAX_LINES)

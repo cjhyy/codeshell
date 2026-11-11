@@ -86,6 +86,18 @@ const rows: Row[] = [
     expected: { outlet: "both", im: "wechat", reason: "named-im" },
   },
   {
+    name: "an owner-timed P1 (a follow-up) ignores quiet hours and the P1/P2 cap",
+    notice: { priority: "P1", ownerTimed: true, channel: "wechat" },
+    state: { sentThisHour: 99, quietHours: QUIET, p0SentThisHour: DEFAULT_MAX_P0_PER_HOUR - 1 },
+    expected: { outlet: "both", im: "wechat", reason: "named-im" },
+  },
+  {
+    name: "an owner-timed P1 shares the P0 backstop",
+    notice: { priority: "P1", ownerTimed: true, channel: "auto" },
+    state: { p0SentThisHour: DEFAULT_MAX_P0_PER_HOUR },
+    expected: { outlet: "digest", reason: "p0-cap" },
+  },
+  {
     name: "P1 in quiet hours goes to the digest",
     notice: { priority: "P1", channel: "wechat" },
     state: { quietHours: QUIET },

@@ -14,6 +14,7 @@ const COMPACT = { compact: true } as const;
 import {
   hostTimezoneOffsetMin,
   localHourIndex,
+  usesP0Budget,
   type DedupeLookup,
   type NoticePriority,
   type RouteDecision,
@@ -793,7 +794,8 @@ export class PetNoticeLedger {
       )
         continue;
       if (this.localHourKey(delivery.claimedAt ?? delivery.at) !== hour) continue;
-      if (record.priority === "P0") p0Sent += 1;
+      // A follow-up the owner timed shares the P0 backstop (see usesP0Budget).
+      if (usesP0Budget(record)) p0Sent += 1;
       else sent += 1;
     }
     return { sent, p0Sent };
