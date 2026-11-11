@@ -101,6 +101,7 @@ export class RunToolSurface {
   private readonly hasPersistedDeferredSnapshot: boolean;
   private readonly migrateLegacySelection: boolean;
   private readonly cacheIdentity?: string;
+  private readonly canExposeDefinition: (definition: ToolDefinition) => boolean;
   private initialized = false;
   private catalog: readonly ToolDefinition[] = Object.freeze([]);
   private catalogByName = new Map<string, ToolDefinition>();
@@ -111,11 +112,14 @@ export class RunToolSurface {
     options: {
       selection?: unknown;
       toolDiscovery?: "call-tool" | "tool-reference";
+      /** Transport compatibility only; never changes current execution eligibility. */
+      canExposeDefinition?: (definition: ToolDefinition) => boolean;
       onSelectionChanged?: (selection: SessionToolSelection) => void;
     } = {},
   ) {
     this.initialToolNames = initialToolNames ? [...initialToolNames] : undefined;
     this.toolDiscovery = options.toolDiscovery ?? "call-tool";
+    this.canExposeDefinition = options.canExposeDefinition ?? (() => true);
     const selection = normalizeSessionToolSelection(options.selection);
     this.hasPersistedSelection = selection !== undefined;
     this.hasPersistedSnapshot = selection?.frozenDefinitions !== undefined;
@@ -166,7 +170,14 @@ export class RunToolSurface {
     if (!this.hasPersistedSnapshot) {
       for (const name of this.topNames) {
         const definition = byName.get(name);
-        if (definition) this.frozenByName.set(name, definition);
+        if (!definition) continue;
+        if (this.canExposeDefinition(definition)) this.frozenByName.set(name, definition);
+        else {
+          // Initial selection already made this tool callable. Keep that grant
+          // through the fallback adapter without sending an incompatible schema.
+          this.topNames.delete(name);
+          this.discoveredNames.add(name);
+        }
       }
     }
     if (!this.hasPersistedDeferredSnapshot) this.rebuildDeferredSnapshot();
@@ -202,11 +213,21 @@ export class RunToolSurface {
 
   /** Start a cold cache cycle after compaction or a model/route change. */
   rebase(): void {
-    for (const name of this.discoveredNames) this.topNames.add(name);
-    this.discoveredNames.clear();
+    for (const name of this.discoveredNames) {
+      const definition = this.catalogByName.get(name);
+      if (definition && !this.canExposeDefinition(definition)) continue;
+      this.topNames.add(name);
+      this.discoveredNames.delete(name);
+    }
     for (const name of this.topNames) {
       const definition = this.catalogByName.get(name);
-      if (definition) this.frozenByName.set(name, definition);
+      if (!definition) continue;
+      if (this.canExposeDefinition(definition)) this.frozenByName.set(name, definition);
+      else {
+        this.topNames.delete(name);
+        this.frozenByName.delete(name);
+        this.discoveredNames.add(name);
+      }
     }
     this.rebuildDeferredSnapshot();
     this.onSelectionChanged?.(this.getSelection());
@@ -255,7 +276,8 @@ export class RunToolSurface {
       if (
         definition.name === "CallTool" ||
         this.topNames.has(definition.name) ||
-        !validNames([definition.name])
+        !validNames([definition.name]) ||
+        !this.canExposeDefinition(definition)
       )
         continue;
       const addedLength = Buffer.byteLength(JSON.stringify(definition)) + 1;

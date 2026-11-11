@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import type { SessionToolSelection, ToolDefinition } from "../types.js";
 import { callToolDef } from "./builtin/call-tool.js";
+import { resolveModelToolCall } from "./resolve-model-tool-call.js";
 import { normalizeSessionToolSelection, RunToolSurface } from "./run-tool-surface.js";
 
 function definition(name: string, description = `${name} purpose`): ToolDefinition {
@@ -334,6 +335,91 @@ describe("RunToolSurface native references", () => {
   const bootstrap = [definition("ToolSearch"), callToolDef];
   const native = (selection?: unknown) =>
     new RunToolSurface(["Read"], { toolDiscovery: "tool-reference", selection });
+
+  it("keeps transport-incompatible discovery callable through rebase and restart", () => {
+    const fallback = ["x".repeat(129), "命名工具", "extension:read", "NonObject"];
+    // The transport owns compatibility; the surface only consumes its decision.
+    const canExposeDefinition = (tool: ToolDefinition) => !fallback.includes(tool.name);
+    const catalog = [
+      ...bootstrap,
+      definition("Read"),
+      definition("Deferred"),
+      ...fallback.map((name) => definition(name)),
+    ];
+    const surface = new RunToolSurface(["Read"], {
+      toolDiscovery: "tool-reference",
+      canExposeDefinition,
+    });
+    surface.updateCatalog(catalog);
+    const before = JSON.stringify(surface.requestSnapshot());
+    expect(surface.getSelection().deferredDefinitions).toEqual([definition("Deferred")]);
+    for (const name of fallback) {
+      expect(surface.isEligible(name)).toBe(true);
+      expect(surface.isCallable(name)).toBe(false);
+    }
+    surface.select(fallback);
+    expect(JSON.stringify(surface.requestSnapshot())).toBe(before);
+    surface.rebase();
+    expect(surface.getSelection().discovered).toEqual(fallback);
+    expect(JSON.stringify(surface.requestSnapshot())).toBe(before);
+    const resumed = new RunToolSurface([], {
+      toolDiscovery: "tool-reference",
+      canExposeDefinition,
+      selection: JSON.parse(JSON.stringify(surface.getSelection())),
+    });
+    resumed.updateCatalog([...catalog, definition("Late")]);
+    expect(JSON.stringify(resumed.requestSnapshot())).toBe(before);
+    for (const name of fallback) {
+      expect(resumed.isCallable(name)).toBe(true);
+      expect(
+        resolveModelToolCall(
+          { id: "fallback", toolName: "CallTool", args: { name, args: {} } },
+          resumed,
+        ),
+      ).toMatchObject({ call: { toolName: name, wireToolName: "CallTool" } });
+    }
+    resumed.updateCatalog(bootstrap);
+    for (const name of fallback) expect(resumed.isCallable(name)).toBe(false);
+  });
+
+  it("preserves cold initial grants through fallback without discovering absent definitions", () => {
+    const surface = new RunToolSurface([], {
+      toolDiscovery: "tool-reference",
+      canExposeDefinition: (tool) => tool.name !== "extension:read",
+      selection: {
+        version: 2,
+        names: ["ToolSearch", "extension:read", "Absent"],
+        discovered: [],
+      },
+    });
+    surface.updateCatalog([...bootstrap, definition("extension:read")]);
+    expect(names(surface)).toEqual(["ToolSearch", "CallTool"]);
+    expect(surface.getSelection().names).toEqual(["ToolSearch", "Absent", "CallTool"]);
+    expect(surface.getSelection().discovered).toEqual(["extension:read"]);
+    expect(surface.isCallable("extension:read")).toBe(true);
+    expect(surface.isCallable("Absent")).toBe(false);
+    surface.updateCatalog([...bootstrap, definition("extension:read"), definition("Absent")]);
+    expect(surface.isCallable("Absent")).toBe(false);
+  });
+
+  it("demotes an incompatible eager definition only at a cold boundary", () => {
+    const canExposeDefinition = (tool: ToolDefinition) => tool.inputSchema.type === "object";
+    const surface = new RunToolSurface(["Read"], {
+      toolDiscovery: "tool-reference",
+      canExposeDefinition,
+    });
+    surface.updateCatalog([...bootstrap, definition("Read")]);
+    const before = JSON.stringify(surface.requestSnapshot());
+    const changed = { ...definition("Read"), inputSchema: { type: "array" } };
+    surface.updateCatalog([...bootstrap, changed]);
+    expect(JSON.stringify(surface.requestSnapshot())).toBe(before);
+    surface.rebase();
+    expect(names(surface)).toEqual(["ToolSearch", "CallTool"]);
+    expect(surface.getSelection().deferredDefinitions).toEqual([]);
+    expect(surface.getSelection().discovered).toEqual(["Read"]);
+    expect(surface.getDefinition("Read")).toEqual(changed);
+    expect(surface.isCallable("Read")).toBe(true);
+  });
 
   it("freezes the full request catalog without granting deferred tools execution", () => {
     const surface = native();
