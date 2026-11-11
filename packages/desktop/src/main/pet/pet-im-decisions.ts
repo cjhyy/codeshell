@@ -264,7 +264,11 @@ export interface PetImDecisionsOptions {
    * reply model chain, pet-notice-reply-interpreter.ts). Undefined result: no
    * model could read it. Without it no reply is ever interpreted.
    */
-  interpret?: (message: string, items: ReplyItem[]) => Promise<ReplyInterpretation | undefined>;
+  interpret?: (
+    message: string,
+    items: ReplyItem[],
+    options: { bound: boolean },
+  ) => Promise<ReplyInterpretation | undefined>;
   /** Notice items (goal pauses, failures, results to open): listed per channel, executed on request. */
   actions?: {
     items(channel: string): NoticeActionRecord[];
@@ -286,6 +290,16 @@ type OpenItem =
 type DraftItem<T> = T extends OpenItem
   ? Omit<T, "model"> & { model: Omit<ReplyItem, "ordinal" | "ref"> }
   : never;
+
+/** The exact step an approval allows, repeated back before a high-risk yes. */
+function exactRequest(request: Envelope["request"]): string {
+  const command = request.args.command;
+  const text =
+    typeof command === "string" && command.trim()
+      ? `${request.toolName} \`${command.trim()}\``
+      : `${request.toolName} ${JSON.stringify(request.args)}`;
+  return text.length > 500 ? `${text.slice(0, 499)}…` : text;
+}
 
 /** No model could read the reply: never guess, leave every item open. */
 const NOT_UNDERSTOOD = "现在没法理解这条回复，请在桌面上处理。";
@@ -893,11 +907,15 @@ export class PetImDecisions {
     // A reply to a prompt past its deadline: the timeout backstop runs now.
     if (expired) await this.scan();
     if (items.length === 0) return undefined;
+    // A chat bound to a Session answers within the gateway's route timeout.
     const reading = await this.options.interpret?.(
       message,
       items.map((item) => item.model),
+      { bound: request.handoff === false },
     );
-    if (!reading) return NOT_UNDERSTOOD;
+    if (!reading)
+      // Only notice items open: nothing waits on an answer, so Mimi takes the message.
+      return items.some((item) => item.source === "decision") ? NOT_UNDERSTOOD : undefined;
     if (reading.kind === "unrelated") return undefined;
     if (reading.kind === "ambiguous") return reading.question;
     const item = items.find((entry) => entry.model.ordinal === reading.item)!;
@@ -911,17 +929,23 @@ export class PetImDecisions {
         ...(reading.answer !== undefined ? { text: reading.answer } : {}),
         ...(reading.index !== undefined ? { index: reading.index } : {}),
         handoff: request.handoff !== false,
+        message,
       });
     }
     return this.resolveDecision(item.entry, reading);
   }
 
   private async resolveDecision(
-    entry: ImDecision,
+    offered: ImDecision,
     reading: Extract<ReplyInterpretation, { kind: "resolve" }>,
   ): Promise<string> {
-    const { code } = entry;
+    const { code } = offered;
     if (this.answering.has(code)) return "这件事正在处理，请稍等。";
+    // The model took a while: the decision may have been answered or ended meanwhile.
+    const entry = this.options.read().find((item) => item.code === code);
+    const prompted = this.router.decisionRecord(code);
+    if (!entry || (prompted && isPromptEnded(prompted.prompt.phase)))
+      return "这件事已经结束了，没有采用这条回答。";
     if (this.expired(entry)) {
       await this.scan();
       return "这个确认已经超时，没有采用这条回答。";
@@ -931,14 +955,19 @@ export class PetImDecisions {
     const skippable = skippableEnvelope(entry.envelope);
     let decision: Decision;
     switch (reading.action) {
-      case "approve":
-        // A high-risk step needs the owner to say so plainly; the item stays open.
-        if (request.riskLevel === "high" && !reading.explicit) {
+      case "approve": {
+        // Only a plain yes approves; a high-risk step always takes a second,
+        // explicit yes after the exact command was repeated back.
+        const high = request.riskLevel === "high";
+        if (!reading.explicit || (high && !this.confirming.has(code))) {
           this.confirming.add(code);
-          return `这一步风险较高：${request.toolName}${request.description ? `（${request.description}）` : ""}。确定只允许这一次吗？明确回我一声就执行。`;
+          return high
+            ? `这一步风险较高，要执行的是：${exactRequest(request)}\n确定只允许这一次吗？再明确回我一声就执行。`
+            : `要只允许这一次吗（${request.toolName}）？明确回我一声就执行。`;
         }
         decision = { approved: true };
         break;
+      }
       case "deny":
       case "skip":
         // No reason on a model question: Core reports a skip and the model continues.

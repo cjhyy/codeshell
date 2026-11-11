@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { BOUND_TIMEOUT_MS } from "./pet-notice-action-controls.js";
 import { createNoticeActionExecutor, type NoticeActionControls } from "./pet-notice-actions.js";
 import {
   interpretReply,
@@ -14,10 +15,12 @@ import {
   env,
   harness,
   resetNoticeEnv,
+  session,
   settle,
   upsertArgs,
   type Harness,
 } from "./test-utils/notice-wiring-harness.js";
+import { sessionRouteHandler } from "./session-bridge-wiring.js";
 
 const ITEMS: ReplyItem[] = [
   {
@@ -57,6 +60,19 @@ describe("parseInterpretation", () => {
       kind: "ambiguous",
       question: "哪一个？",
     });
+  });
+
+  test("free text is the owner's own: the whole message, or a verbatim part of it", () => {
+    const free = (extra: string) =>
+      parseInterpretation(
+        `{"kind":"resolve","item":1,"action":"answer",${extra},"explicit":true}`,
+        ITEMS,
+        "  就用 pnpm 吧，谢谢 ",
+      );
+    expect(free('"useWholeMessage":true')).toMatchObject({ answer: "就用 pnpm 吧，谢谢" });
+    expect(free('"answer":"用 pnpm"')).toMatchObject({ answer: "用 pnpm" });
+    expect(free('"answer":"请使用 pnpm"')).toBeUndefined();
+    expect(free('"useWholeMessage":false')).toBeUndefined();
   });
 
   test("anything not offered, or not the schema, is rejected", () => {
@@ -138,6 +154,8 @@ function controls(sent: unknown[]): NoticeActionControls {
     sessionState: () => "idle",
     send: async (sessionId, runtime, input) => void sent.push({ sessionId, runtime, ...input }),
     deleteGoal: async () => true,
+    resumeGoal: async () => true,
+    revealPath: () => {},
     task: () => undefined,
     controlTask: async () => ({ ok: true }),
     lastUserMessage: async () => undefined,
@@ -155,33 +173,42 @@ function relay(h: Harness, models: ReplyModel[], sent: unknown[] = []) {
     controls: controls(sent),
     now: () => env.clock,
   });
-  return decisionRelay(h, {
-    interpret: (message, items) => interpretReply({ message, items, models }),
+  const budgets: boolean[] = [];
+  const d = decisionRelay(h, {
+    interpret: (message, items, { bound }) => {
+      budgets.push(bound);
+      return interpretReply({ message, items, models: bound ? models.slice(0, 1) : models });
+    },
     actions: {
       items: (channel) => h.wiring.router.openActionItems(channel),
       execute: (request) => executor.execute(request),
     },
   });
+  return { ...d, budgets };
 }
 
-async function limitStop(h: Harness, runId = "run-1"): Promise<void> {
+async function limitStop(h: Harness, sessionId = SID, runId = "run-1"): Promise<void> {
   env.clock += 1_000;
+  const before = h.wiring.router.openActionItems("wechat").length;
   for (const event of [
     { type: "session_started", runId, clientMessageId: `cm-${runId}` },
     { type: "tool_use_start", toolCall: { id: "t1", toolName: "Edit", args: {} } },
     { type: "turn_complete", reason: "completed", runId, completionKind: "limit_stop" },
   ])
-    h.observeSessionEvent(SID, event);
-  await settle(() => h.wiring.router.openActionItems("wechat").length > 0);
+    h.observeSessionEvent(sessionId, event);
+  await settle(() => h.wiring.router.openActionItems("wechat").length > before);
   await h.idle();
 }
+
+const resolve = (item: number, action: string, extra: Record<string, unknown> = {}) =>
+  JSON.stringify({ kind: "resolve", item, action, explicit: true, ...extra });
 
 describe("owner replies read by the model", () => {
   test("a plain reply continues a stopped Session; the model only sees this chat's items", async () => {
     current = harness();
     await current.handler(SID, upsertArgs({ channel: "wechat", events: ["blocked"] }));
     const sent: unknown[] = [];
-    const m = model(() => '{"kind":"resolve","item":1,"action":"continue","explicit":true}');
+    const m = model(() => resolve(1, "continue"));
     const d = relay(current, [m.call], sent);
     // Nothing open yet: no model is asked.
     expect(await d.relay.reply({ message: "接着干吧", origin: OWNER_DM })).toBeUndefined();
@@ -209,7 +236,7 @@ describe("owner replies read by the model", () => {
     ]);
   });
 
-  test("unrelated goes on to Mimi; ambiguous asks back; no working model never guesses", async () => {
+  test("unrelated and unreadable go on to Mimi when only notice items are open; ambiguous asks back", async () => {
     current = harness();
     await current.handler(SID, upsertArgs({ channel: "wechat", events: ["blocked"] }));
     let reply = '{"kind":"unrelated"}';
@@ -219,22 +246,35 @@ describe("owner replies read by the model", () => {
     expect(await d.relay.reply({ message: "今天天气如何", origin: OWNER_DM })).toBeUndefined();
     reply = '{"kind":"ambiguous","question":"是要继续，还是停下？"}';
     expect(await d.relay.reply({ message: "嗯", origin: OWNER_DM })).toBe("是要继续，还是停下？");
-    // An item that was not offered is rejected, like a model that is down.
-    reply = '{"kind":"resolve","item":4,"action":"continue","explicit":true}';
-    expect(await d.relay.reply({ message: "继续", origin: OWNER_DM })).toBe(
-      "现在没法理解这条回复，请在桌面上处理。",
-    );
+    // An item that was not offered is rejected, like a model that is down: nothing
+    // waits on an answer, so Mimi gets the message.
+    reply = resolve(4, "continue");
+    expect(await d.relay.reply({ message: "继续", origin: OWNER_DM })).toBeUndefined();
     expect(sent).toEqual([]);
     expect(current.wiring.router.openActionItems("wechat")).toHaveLength(1);
   });
 
-  test("two open items are numbered ①②, in the text and for the model", async () => {
+  test("a new run of the Session closes its stopped item", async () => {
     current = harness();
     await current.handler(SID, upsertArgs({ channel: "wechat", events: ["blocked"] }));
-    const m = model(() => '{"kind":"resolve","item":2,"action":"stop","explicit":true}');
+    await limitStop(current);
+    current.observeSessionEvent(SID, { type: "session_started", runId: "run-2" });
+    await settle(() => current!.wiring.router.openActionItems("wechat").length === 0);
+    expect(current.wiring.router.openActionItems("wechat")).toEqual([]);
+  });
+
+  test("two open items are numbered ①②, in the text and for the model", async () => {
+    current = harness();
+    current.sessions.push(session("s-two"));
+    for (const id of [SID, "s-two"])
+      await current.handler(
+        id,
+        upsertArgs({ sessionId: id, channel: "wechat", events: ["blocked"] }),
+      );
+    const m = model(() => resolve(2, "stop"));
     const d = relay(current, [m.call]);
-    await limitStop(current, "run-1");
-    await limitStop(current, "run-2");
+    await limitStop(current, SID);
+    await limitStop(current, "s-two");
     expect(current.ownerSends.map((send) => send.text.slice(0, 2))).toEqual(["「修", "② "]);
     expect(await d.relay.reply({ message: "第二个停了吧", origin: OWNER_DM })).toBe(
       "它已经停了，不会自己再继续。",
@@ -243,13 +283,39 @@ describe("owner replies read by the model", () => {
     expect(current.wiring.router.openActionItems("wechat")).toHaveLength(1);
   });
 
-  test("a high-risk approval needs a plain yes; a vague one is asked back and stays open", async () => {
+  test("the owner's words reach the Session verbatim, or not at all", async () => {
+    current = harness();
+    await current.handler(SID, upsertArgs({ channel: "wechat", events: ["blocked"] }));
+    const sent: Array<{ text: string }> = [];
+    let reply = resolve(1, "continue");
+    const d = relay(current, [async () => reply], sent);
+    await limitStop(current);
+    // A paraphrase is not the owner's words: rejected (and with only notice items, Mimi takes it).
+    reply = resolve(1, "handoff", { answer: "请继续执行" });
+    expect(await d.relay.reply({ message: "交给你了", origin: OWNER_DM })).toBeUndefined();
+    expect(sent).toEqual([]);
+  });
+
+  test("a handoff from a private chat reaches Mimi with the owner's words", async () => {
+    current = harness();
+    await current.handler(SID, upsertArgs({ channel: "wechat", events: ["blocked"] }));
+    const d = relay(current, [async () => resolve(1, "handoff")]);
+    await limitStop(current);
+    const handoff = (await d.relay.reply({ message: "交给 Mimi 吧", origin: OWNER_DM })) as {
+      handoff: string;
+      dispatched(): Promise<void>;
+    };
+    expect(handoff.handoff).toContain('"ownerSaid":"交给 Mimi 吧"');
+    await handoff.dispatched();
+    expect(current.wiring.router.openActionItems("wechat")).toEqual([]);
+    expect(d.budgets).toEqual([false]);
+  });
+
+  test("an approval needs a plain yes; a high-risk one a second yes to its exact command", async () => {
     current = harness();
     await current.handler(SID, upsertArgs({ events: ["blocked"] }));
-    let explicit = false;
-    const m = model((items) =>
-      JSON.stringify({ kind: "resolve", item: items[0]!.ordinal, action: "approve", explicit }),
-    );
+    let answer = '{"kind":"nonsense"}';
+    const m = model(() => answer);
     const d = relay(current, [m.call]);
     d.raise("req-1", env.clock, "worker", {
       toolName: "Bash",
@@ -260,16 +326,97 @@ describe("owner replies read by the model", () => {
     await settle();
     await d.poll(() => current!.ownerSends.length > 0);
     await settle(() => current!.wiring.router.decisionRecord(d.code()!)?.prompt.phase === "im");
-    expect(await d.relay.reply({ message: "嗯", origin: OWNER_DM })).toContain(
-      "确定只允许这一次吗",
+    // A decision waits on the answer: no model, no guess.
+    expect(await d.relay.reply({ message: "嗯", origin: OWNER_DM })).toBe(
+      "现在没法理解这条回复，请在桌面上处理。",
     );
+    answer = resolve(1, "approve");
+    // Even a plain yes first gets the exact command repeated back.
+    const asked = await d.relay.reply({ message: "可以", origin: OWNER_DM });
+    expect(asked).toContain("Bash `rm -rf build`");
     expect(d.approvals).toEqual([]);
-    explicit = true;
     expect(await d.relay.reply({ message: "确定，执行吧", origin: OWNER_DM })).toContain(
       "已允许这一次",
     );
-    expect(m.seen[1]!.items[0]).toMatchObject({ kind: "approval", awaitingConfirmation: true });
+    expect(m.seen.at(-1)!.items[0]).toMatchObject({ kind: "approval", awaitingConfirmation: true });
     // Once only: an approval never carries a session or project scope.
     expect(d.approvals).toEqual([{ approved: true }]);
+  });
+
+  test("an ordinary approval with a vague yes is asked back first", async () => {
+    current = harness();
+    await current.handler(SID, upsertArgs({ events: ["blocked"] }));
+    let explicit = false;
+    const d = relay(current, [
+      async () => JSON.stringify({ kind: "resolve", item: 1, action: "approve", explicit }),
+    ]);
+    d.raise();
+    await settle();
+    await d.poll(() => current!.ownerSends.length > 0);
+    await settle(() => current!.wiring.router.decisionRecord(d.code()!)?.prompt.phase === "im");
+    expect(await d.relay.reply({ message: "嗯…", origin: OWNER_DM })).toContain("明确回我一声");
+    explicit = true;
+    expect(await d.relay.reply({ message: "允许", origin: OWNER_DM })).toContain("已允许这一次");
+    expect(d.approvals).toEqual([{ approved: true }]);
+  });
+});
+
+describe("the gateway's bound-Session probe", () => {
+  test("only a bound chat reads replies there; others go on to the pet chat", async () => {
+    const replied: string[] = [];
+    const routed: string[] = [];
+    let bound = false;
+    const handle = sessionRouteHandler({
+      bridge: () => ({
+        isBound: async () => bound,
+        routeInbound: async (inbound) => {
+          routed.push(inbound.text);
+          return { kind: "not-bound" };
+        },
+      }),
+      replyToSession: async (inbound) => {
+        replied.push(inbound.text);
+        return { kind: "status", text: "done" };
+      },
+    });
+    const inbound = {
+      channel: "wechat",
+      target: "dm",
+      senderId: "me",
+      text: "交给 Mimi 吧",
+      isDirectMessage: true,
+    };
+    // Not bound: never interpreted here (the pet chat reads it once, with handoff).
+    expect(await handle(inbound)).toEqual({ kind: "not-bound" });
+    expect(replied).toEqual([]);
+    bound = true;
+    expect(await handle(inbound)).toEqual({ kind: "status", text: "done" });
+    expect(replied).toEqual(["交给 Mimi 吧"]);
+    expect(routed).toEqual(["交给 Mimi 吧"]);
+  });
+
+  test("a bound chat reads a reply with one model within the route budget", async () => {
+    current = harness();
+    await current.handler(SID, upsertArgs({ channel: "wechat", events: ["blocked"] }));
+    const calls: string[] = [];
+    const d = relay(current, [
+      async () => {
+        calls.push("aux");
+        throw new Error("down");
+      },
+      async () => {
+        calls.push("main");
+        return resolve(1, "continue");
+      },
+    ]);
+    await limitStop(current);
+    const answered = await d.relay.replyToSession({
+      ...OWNER_DM,
+      text: "继续",
+    } as never);
+    expect(d.budgets).toEqual([true]);
+    expect(calls).toEqual(["aux"]);
+    expect(answered).toBeUndefined();
+    expect(BOUND_TIMEOUT_MS).toBeLessThan(20_000 / 2);
   });
 });

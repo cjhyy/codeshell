@@ -31,6 +31,10 @@ export interface NoticeExternalRuntime {
   get(sessionId: string): unknown;
   isSessionRunning(sessionId: string): boolean;
   getGoal(sessionId: string): unknown;
+  updateGoal(
+    sessionId: string,
+    patch: { paused: false; expectedGoalId: string; expectedRevision: number },
+  ): Promise<{ updated?: boolean }>;
   deleteGoal(
     sessionId: string,
     expected: { expectedGoalId: string; expectedRevision: number },
@@ -59,11 +63,14 @@ export interface NoticeActionControlsDeps {
   ) => Promise<Array<{ type: string; data: Record<string, unknown> }>>;
   workspace: (sessionId: string) => Promise<string | undefined>;
   openPath: (path: string) => Promise<string>;
+  revealPath: (path: string) => void;
   openExternal: (url: string) => Promise<void>;
   locateSession: (sessionId: string) => void;
 }
 
 const META = { meta: { origin: "host" as const, producer: "pet-notice-action" } };
+/** The reply model budget in a chat bound to a Session (its route call times out at 20 s). */
+export const BOUND_TIMEOUT_MS = 8_000;
 const MAX_MESSAGE = 12_000;
 
 function liveGoal(value: unknown): NoticeLiveGoal | null {
@@ -133,7 +140,9 @@ export function createNoticeActionControls(deps: NoticeActionControlsDeps): Noti
         return external.isSessionRunning(sessionId) ? "running" : "idle";
       }
       const session = deps.sessions().find((entry) => entry.agentSessionId === sessionId);
-      return session?.runState === "running" || session?.runState === "queued" ? "running" : "idle";
+      // A Session the catalog no longer lists was deleted (or archived away).
+      if (!session) return "missing";
+      return session.runState === "running" || session.runState === "queued" ? "running" : "idle";
     },
     async send(sessionId, runtime, input) {
       if (runtime === "external") {
@@ -158,6 +167,20 @@ export function createNoticeActionControls(deps: NoticeActionControlsDeps): Noti
       );
       if (!acceptance.ok) throw new Error(acceptance.message);
     },
+    async resumeGoal(sessionId, runtime, expected) {
+      const cas = { expectedGoalId: expected.goalId, expectedRevision: expected.revision };
+      if (runtime === "external") {
+        const external = deps.external();
+        if (!external) throw new Error("external runtime service is unavailable");
+        // It sends its own resume message: a new run, with fresh counters.
+        return (await external.updateGoal(sessionId, { paused: false, ...cas })).updated === true;
+      }
+      // Core schedules the resume turn itself.
+      const result = (await request("agent/goalUpdate", { sessionId, paused: false, ...cas })) as {
+        updated?: unknown;
+      };
+      return result?.updated === true;
+    },
     async deleteGoal(sessionId, runtime, expected) {
       const cas = { expectedGoalId: expected.goalId, expectedRevision: expected.revision };
       if (runtime === "external")
@@ -177,6 +200,7 @@ export function createNoticeActionControls(deps: NoticeActionControlsDeps): Noti
       const error = await deps.openPath(path);
       if (error) throw new Error(`failed to open: ${error}`);
     },
+    revealPath: deps.revealPath,
     openExternal: deps.openExternal,
     locateSession: deps.locateSession,
   };
@@ -196,7 +220,11 @@ export function createOwnerReplyHandling(
     onError: (error: unknown) => void;
   },
 ): {
-  interpret: (message: string, items: ReplyItem[]) => Promise<ReplyInterpretation | undefined>;
+  interpret: (
+    message: string,
+    items: ReplyItem[],
+    options: { bound: boolean },
+  ) => Promise<ReplyInterpretation | undefined>;
   actions: {
     items(channel: string): NoticeActionRecord[];
     execute: NoticeActionExecutor["execute"];
@@ -209,8 +237,14 @@ export function createOwnerReplyHandling(
   });
   const models = deps.models ?? createReplyModels(deps.cwd);
   return {
-    interpret: (message, items) =>
-      interpretReply({ message, items, models, onError: (error) => deps.onError(error) }),
+    interpret: (message, items, { bound }) =>
+      interpretReply({
+        message,
+        items,
+        // A bound chat answers inside the gateway's 20 s route call: one model, 8 s.
+        ...(bound ? { models: models.slice(0, 1), timeoutMs: BOUND_TIMEOUT_MS } : { models }),
+        onError: (error) => deps.onError(error),
+      }),
     actions: {
       items: (channel) => deps.router.openActionItems(channel),
       execute: (request) => executor.execute(request),

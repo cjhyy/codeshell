@@ -8,6 +8,7 @@ import {
   createNoticeActionExecutor,
   type NoticeActionControls,
   type NoticeActionRequest,
+  type NoticeHandoff,
   type NoticeLiveGoal,
 } from "./pet-notice-actions";
 import { PetNoticeLedger } from "./pet-notice-ledger";
@@ -35,6 +36,8 @@ interface Calls {
   opened: string[];
   links: string[];
   located: string[];
+  resumed: Array<{ sessionId: string; runtime: string; goalId: string; revision: number }>;
+  revealed: string[];
 }
 
 function harness(options: { imAccepted?: boolean } = {}) {
@@ -74,7 +77,16 @@ function harness(options: { imAccepted?: boolean } = {}) {
     },
     log: () => {},
   });
-  const calls: Calls = { sent: [], deleted: [], tasks: [], opened: [], links: [], located: [] };
+  const calls: Calls = {
+    sent: [],
+    deleted: [],
+    tasks: [],
+    opened: [],
+    links: [],
+    located: [],
+    resumed: [],
+    revealed: [],
+  };
   const state: {
     goal: NoticeLiveGoal | null | Error;
     session: "idle" | "running" | "missing";
@@ -95,6 +107,10 @@ function harness(options: { imAccepted?: boolean } = {}) {
       calls.deleted.push({ sessionId, runtime, ...expected });
       return true;
     },
+    resumeGoal: async (sessionId, runtime, expected) => {
+      calls.resumed.push({ sessionId, runtime, ...expected });
+      return true;
+    },
     task: (taskId) => (state.tasks[taskId] ? { status: state.tasks[taskId]! } : undefined),
     controlTask: async (taskId, action) => {
       calls.tasks.push({ taskId, action });
@@ -103,6 +119,7 @@ function harness(options: { imAccepted?: boolean } = {}) {
     lastUserMessage: async () => state.lastUser,
     workspace: async () => state.workspace,
     openPath: async (path) => void calls.opened.push(path),
+    revealPath: (path) => void calls.revealed.push(path),
     openExternal: async (url) => void calls.links.push(url),
     locateSession: (sessionId) => void calls.located.push(sessionId),
   };
@@ -166,14 +183,18 @@ describe("arming a notice", () => {
 
   test("open items in one chat are numbered ①②; one alone carries no number", async () => {
     const h = harness();
+    const other = (sessionId: string) => ({ sessionId });
     const first = await h.notify({ family: "goal", goalId: "goal-1", revision: 3 });
-    const second = await h.notify({ family: "limit", reason: "limit" });
+    const second = await h.notify(
+      { family: "limit", reason: "limit", ...other("work-2") },
+      other("work-2"),
+    );
     expect(h.im[0]!.body.startsWith("「登录页」")).toBe(true);
     expect(h.im[1]!.body.startsWith("② 「登录页」")).toBe(true);
     expect(h.ledger.byActionCode(second)!.actions!.slot).toEqual({ channel: "wechat", ordinal: 2 });
     // The first is used: its number is free again; the second keeps ②.
     await h.run(first, "reply", { text: "好" });
-    const third = await h.notify({ family: "failure" });
+    const third = await h.notify({ family: "failure", ...other("work-3") }, other("work-3"));
     expect(h.im[2]!.body.startsWith("① 「登录页」")).toBe(true);
     expect(h.ledger.byActionCode(third)!.actions!.slot!.ordinal).toBe(1);
     expect(h.router.openActionItems("wechat").map((item) => item.actions.code)).toEqual([
@@ -181,6 +202,32 @@ describe("arming a notice", () => {
       third,
     ]);
     expect(h.router.openActionItems("lark")).toEqual([]);
+  });
+
+  test("a Session that moved on closes its items; a result stays openable for 2 hours", async () => {
+    const h = harness();
+    const goal = await h.notify({ family: "goal", goalId: "goal-1", revision: 3 });
+    // A newer notice about the same Session closes the older item.
+    const failure = await h.notify({ family: "failure", retry: true });
+    expect(h.ledger.byActionCode(goal)!.actions!.closedAt).toBe(NOON);
+    expect(await h.run(goal, "reply", { text: "好" })).toContain("已经过时了");
+    // Another run of the Session closes goal / limit / failure items, not results.
+    const result = await h.notify({
+      family: "open",
+      artifacts: [{ kind: "file", path: "/w/a.ts" }],
+    });
+    expect(h.ledger.byActionCode(failure)!.actions!.closedAt).toBe(NOON);
+    const limit = await h.notify(
+      { family: "limit", reason: "limit", sessionId: "work-2" },
+      { sessionId: "work-2" },
+    );
+    await h.router.sessionRunStarted("work-2");
+    expect(h.ledger.byActionCode(limit)!.actions!.closedAt).toBe(NOON);
+    await h.router.sessionRunStarted("work-1");
+    expect(h.router.openActionItems("wechat").map((item) => item.actions.code)).toEqual([result]);
+    h.clock.now += 2 * HOUR;
+    expect(h.router.openActionItems("wechat")).toEqual([]);
+    expect(await h.run(result, "open")).toContain("已过期");
   });
 
   test("an item not delivered yet is not open in any chat", async () => {
@@ -311,6 +358,19 @@ describe("actions", () => {
     ]);
   });
 
+  test("continue resumes a paused Goal through its own control (native and external)", async () => {
+    for (const runtime of ["native", "external"] as const) {
+      const h = harness();
+      h.state.goal = { goalId: "goal-1", revision: 4, paused: true };
+      const code = await h.notify({ family: "limit", reason: "limit", runtime });
+      expect(await h.run(code, "continue")).toBe("已让这个 Goal 接着做。");
+      expect(h.calls.resumed).toEqual([
+        { sessionId: "work-1", runtime, goalId: "goal-1", revision: 4 },
+      ]);
+      expect(h.calls.sent).toEqual([]);
+    }
+  });
+
   test("continue after an exhausted Goal refuses once a new Goal was set", async () => {
     const h = harness();
     h.state.goal = { goalId: "goal-9", revision: 1, paused: false };
@@ -347,11 +407,18 @@ describe("actions", () => {
     const h = harness();
     const code = await h.notify({ family: "goal", goalId: "goal-1", revision: 3 });
     expect(await h.run(code, "handoff", { handoff: false })).toContain("/mimi");
-    const reply = await h.run(code, "handoff");
-    const message = (reply as { handoff: string }).handoff;
-    expect(message).toContain('"sessionId":"work-1"');
-    expect(message).toContain('"question":"用哪个方案？"');
-    expect(message).not.toContain(code);
+    const reply = (await h.run(code, "handoff", { message: "你看着办" })) as NoticeHandoff;
+    expect(reply.handoff).toContain('"ownerSaid":"你看着办"');
+    expect(reply.handoff).toContain('"sessionId":"work-1"');
+    expect(reply.handoff).toContain('"question":"用哪个方案？"');
+    expect(reply.handoff).not.toContain(code);
+    // Not used until Mimi's turn is dispatched; meanwhile nobody else takes it.
+    expect(h.ledger.byActionCode(code)!.actions!.usedAt).toBeUndefined();
+    expect(await h.run(code, "handoff")).toBe("这件事正在处理，请稍等。");
+    reply.abandoned();
+    const again = (await h.run(code, "handoff")) as NoticeHandoff;
+    await again.dispatched();
+    expect(h.ledger.byActionCode(code)!.actions!.usedAt).toBe(NOON);
     expect(await h.run(code, "handoff")).toBe("这件事已经处理过了，没有再执行。");
   });
 });
@@ -391,6 +458,29 @@ describe("open", () => {
     expect(await h.run(outside, "open")).toContain("只在电脑上打开了这个会话");
     expect(h.calls.opened).toHaveLength(2);
     expect(h.calls.located).toEqual(["work-1", "work-1"]);
+  });
+
+  test("scripts and launchers are shown in their folder, never opened", async () => {
+    const h = harness();
+    const root = join(dir, "ws");
+    await mkdir(root, { recursive: true });
+    for (const name of ["run.sh", "Start.command", "notes.md"])
+      await writeFile(join(root, name), "x");
+    h.state.workspace = root;
+    for (const name of ["run.sh", "Start.command"]) {
+      const code = await h.notify({
+        family: "open",
+        artifacts: [{ kind: "file", path: join(root, name) }],
+      });
+      expect(await h.run(code, "open")).toContain("所在的文件夹");
+    }
+    const doc = await h.notify({
+      family: "open",
+      artifacts: [{ kind: "file", path: join(root, "notes.md") }],
+    });
+    expect(await h.run(doc, "open")).toBe("在电脑上开好了。");
+    expect(h.calls.revealed).toEqual([join(root, "run.sh"), join(root, "Start.command")]);
+    expect(h.calls.opened).toEqual([join(root, "notes.md")]);
   });
 
   test("several items: listed when unclear, opened by index", async () => {

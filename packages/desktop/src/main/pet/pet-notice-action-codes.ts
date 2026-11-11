@@ -60,6 +60,8 @@ export interface NoticeActions {
   expiresAt: number;
   /** An action ran (one-shot; open may repeat). */
   usedAt?: number;
+  /** The Session moved on (a newer notice about it, another run): the item is closed. */
+  closedAt?: number;
   /** open: a link outside the allowed hosts the owner was asked about. */
   confirm?: { item: number; expiresAt: number; usedAt?: number };
   /** Set by the router when the item goes out over IM. */
@@ -69,9 +71,11 @@ export interface NoticeActions {
 /** What a notice asks for; the router gives it its code and expiry when it records it. */
 export type NoticeActionsInput = Omit<
   NoticeActions,
-  "code" | "expiresAt" | "usedAt" | "confirm" | "slot"
+  "code" | "expiresAt" | "usedAt" | "closedAt" | "confirm" | "slot"
 >;
 
+/** A result stays openable this long (or until the next notice about its Session). */
+export const NOTICE_OPEN_ITEM_TTL_MS = 2 * 60 * 60_000;
 /** Items (and a pending link confirmation) stay answerable this long. */
 export const NOTICE_ACTION_TTL_MS = 24 * 60 * 60_000;
 export const MAX_NOTICE_ARTIFACTS = 8;
@@ -96,6 +100,7 @@ const ACTION_KEYS = [
   "artifacts",
   "expiresAt",
   "usedAt",
+  "closedAt",
   "confirm",
   "slot",
 ] as const;
@@ -188,6 +193,7 @@ export function parseNoticeActions(value: unknown): NoticeActions | undefined {
         !artifacts.every((entry) => parseArtifact(entry) !== undefined))) ||
     !isTimestamp(value.expiresAt) ||
     (value.usedAt !== undefined && !isTimestamp(value.usedAt)) ||
+    (value.closedAt !== undefined && !isTimestamp(value.closedAt)) ||
     (value.confirm !== undefined && !parseConfirm(value.confirm)) ||
     (value.slot !== undefined && !parseNoticeSlot(value.slot))
   )

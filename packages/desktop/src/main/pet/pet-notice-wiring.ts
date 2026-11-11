@@ -27,6 +27,7 @@ import { createPresenceDetector } from "./pet-presence.js";
 import { PetReceiptStore } from "./pet-receipt-store.js";
 import { PetRuleStore } from "./pet-rule-store.js";
 import { PetSessionRuleWatcher, type NoticeDraft } from "./pet-session-rule-watcher.js";
+import { topLevelEvent } from "./session-outcome.js";
 
 // The public surface index.ts, pet IPC and the tests import from here.
 export type { PetNoticeWiring, PetNoticeWiringDeps } from "./pet-notice-wiring-types.js";
@@ -320,6 +321,11 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
       actionSources.observe(sessionId, outcomes);
       // Chained on one promise, so per-Session order is preserved.
       void ready.then(() => (disposed ? undefined : watcher.observe(sessionId, outcomes)));
+    },
+    sessionEvent(sessionId, event) {
+      // Another run of the Session: its goal / limit / failure items are moot.
+      if (topLevelEvent(event)?.type !== "session_started") return;
+      void ready.then(() => (disposed ? undefined : router.sessionRunStarted(sessionId)));
     },
     outboxResult(result) {
       return ready

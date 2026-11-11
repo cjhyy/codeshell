@@ -1,4 +1,8 @@
-import { ordinalLabel, type NoticeSlot } from "./pet-notice-action-codes.js";
+import {
+  NOTICE_OPEN_ITEM_TTL_MS,
+  ordinalLabel,
+  type NoticeSlot,
+} from "./pet-notice-action-codes.js";
 import { isPromptEnded, type NoticeRecord } from "./pet-notice-ledger.js";
 import {
   imTarget,
@@ -26,11 +30,15 @@ interface OpenSlot {
   target: NoticeTarget;
 }
 
-/** An item's actions can still be used: not expired and (except open) not used yet. */
+/**
+ * An item's actions can still be used: not expired, not closed (its Session
+ * moved on) and, except open, not used yet. A result is openable for 2 hours.
+ */
 export function isOpenActions(record: NoticeRecord, now: number): boolean {
   const actions = record.actions;
-  if (!actions || now >= actions.expiresAt) return false;
-  return actions.usedAt === undefined || actions.family === "open";
+  if (!actions || now >= actions.expiresAt || actions.closedAt !== undefined) return false;
+  if (actions.family === "open") return now - record.createdAt < NOTICE_OPEN_ITEM_TTL_MS;
+  return actions.usedAt === undefined;
 }
 
 export function decisionItemKey(sessionId: string, requestId: string): string {

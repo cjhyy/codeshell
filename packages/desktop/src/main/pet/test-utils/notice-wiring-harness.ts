@@ -331,6 +331,7 @@ export function harness(overrides: Partial<PetNoticeWiringDeps> = {}): Harness {
       {
         coordinator: () => undefined,
         watcher: (sessionId, outcomes) => wiring.observeSessionOutcomes(sessionId, outcomes),
+        stream: (sessionId, event) => wiring.sessionEvent(sessionId, event),
       },
       deriver,
     ),

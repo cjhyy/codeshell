@@ -100,8 +100,10 @@ export interface NoticeDecisionPrompt {
 /** What a prompt update may change; the code never changes. */
 export type NoticeDecisionPromptPatch = Partial<Omit<NoticeDecisionPrompt, "code" | "replies">>;
 
-/** What an actions update may change: its one-shot use, a pending link, its slot. */
-export type NoticeActionsPatch = Partial<Pick<NoticeActions, "usedAt" | "confirm" | "slot">>;
+/** What an actions update may change: its use, its closing, a pending link, its slot. */
+export type NoticeActionsPatch = Partial<
+  Pick<NoticeActions, "usedAt" | "closedAt" | "confirm" | "slot">
+>;
 
 export interface NoticeRecord {
   id: string;
@@ -706,7 +708,7 @@ export class PetNoticeLedger {
     return this.mutate((staged, touched) => {
       const current = staged.records.get(id);
       if (!current?.actions) throw new PetNoticeLedgerError("notice_not_found");
-      if (!isRecord(changes) || !hasOnlyKeys(changes, ["usedAt", "confirm", "slot"]))
+      if (!isRecord(changes) || !hasOnlyKeys(changes, ["usedAt", "closedAt", "confirm", "slot"]))
         throw new PetNoticeLedgerError("invalid_notice");
       const actions = { ...current.actions } as Record<string, unknown>;
       for (const [key, value] of Object.entries(changes)) {

@@ -1,9 +1,10 @@
 import { lstat, realpath } from "node:fs/promises";
-import { basename, isAbsolute, join, relative, sep } from "node:path";
+import { basename, extname, isAbsolute, join, relative, sep } from "node:path";
 import {
   actionVerbs,
   linkDisposition,
   NOTICE_ACTION_TTL_MS,
+  NOTICE_OPEN_ITEM_TTL_MS,
   type NoticeActionRuntime,
   type NoticeActionVerb,
   type NoticeArtifact,
@@ -25,6 +26,10 @@ import type { NoticeActionRecord } from "./pet-notice-types.js";
 export interface NoticeHandoff {
   /** Model-facing text for that turn: the owner's request plus the notice's data. */
   handoff: string;
+  /** Mimi's turn was dispatched: the item is used. */
+  dispatched(): Promise<void>;
+  /** The turn did not happen: the item stays open. */
+  abandoned(): void;
 }
 
 export type NoticeActionReply = string | NoticeHandoff;
@@ -47,6 +52,16 @@ export interface NoticeActionControls {
     runtime: NoticeActionRuntime,
     input: { text: string; displayText: string; clientMessageId: string },
   ): Promise<void>;
+  /**
+   * Resume a paused Goal, only if it is still this one at this revision
+   * (native `agent/goalUpdate paused:false` schedules its resume turn; an
+   * external runtime sends its own); false when it was not.
+   */
+  resumeGoal(
+    sessionId: string,
+    runtime: NoticeActionRuntime,
+    expected: { goalId: string; revision: number },
+  ): Promise<boolean>;
   /** Clear the Goal only if it is still this one; false when it was not. */
   deleteGoal(
     sessionId: string,
@@ -64,6 +79,8 @@ export interface NoticeActionControls {
   workspace(sessionId: string): Promise<string | undefined>;
   /** Throws when the file could not be opened. */
   openPath(path: string): Promise<void>;
+  /** Show the file in Finder / Explorer without opening it. */
+  revealPath(path: string): void;
   openExternal(url: string): Promise<void>;
   /** Show the Session in a CodeShell window. */
   locateSession(sessionId: string): Promise<void> | void;
@@ -92,6 +109,8 @@ export interface NoticeActionRequest {
   index?: number;
   /** False where no Mimi turn can follow (a conversation bound to a Session). */
   handoff?: boolean;
+  /** handoff: the owner's own message, passed on to Mimi with the notice. */
+  message?: string;
 }
 
 export interface NoticeActionExecutor {
@@ -101,26 +120,48 @@ export interface NoticeActionExecutor {
 
 const GONE = "这件事已经结束了，没有执行。";
 const EXPIRED = "这件事已过期（24 小时内有效），没有执行。";
+const CLOSED = "这件事已经过时了（会话后来又有了进展），没有执行。";
 const USED = "这件事已经处理过了，没有再执行。";
 const BUSY = "这件事正在处理，请稍等。";
 const NOT_ALLOWED = "这件事不能这样处理，没有执行。";
 const GOAL_CHANGED = "这个 Goal 已经变了，没有动它。";
 const GOAL_UNREADABLE = "现在读不到这个 Goal 的状态，没有动它。请稍后再试，或在电脑上处理。";
 const RUNNING = "会话已经又在跑了，没有动它。";
-const MISSING = "这个会话不在了（或没在电脑上运行），没有执行。请在电脑上打开它。";
+const MISSING = "这个会话不在了，没有执行。";
 const OPENED = "在电脑上开好了。";
 const FAILED = "没能执行，可能已在电脑上处理过。请在电脑上查看这个会话。";
 const MAX_REPLY = 12_000;
 const TERMINAL_TASKS = new Set(["completed", "failed", "cancelled"]);
+/**
+ * File types opened with their default app. Anything else (scripts,
+ * launchers, installers, bundles) is only shown in its folder.
+ */
+const OPENABLE = new Set(
+  (
+    "md markdown txt rtf pdf doc docx xls xlsx ppt pptx csv tsv pages numbers key odt ods odp " +
+    "png jpg jpeg gif webp svg bmp tif tiff heic ico " +
+    "html htm css scss less json jsonc yaml yml toml xml ini log " +
+    "ts tsx js jsx mjs cjs py rb go rs java kt swift c h cc cpp hpp cs php sql vue svelte " +
+    "mp3 wav m4a flac ogg aac mp4 mov m4v webm mkv avi"
+  )
+    .split(" ")
+    .map((extension) => `.${extension}`),
+);
+
+/** Whether a file is opened (a document, image, text, page, media) or only shown in its folder. */
+export function isOpenableFile(path: string): boolean {
+  return OPENABLE.has(extname(path).toLowerCase());
+}
 
 function capped(value: unknown, max: number): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim().slice(0, max) : undefined;
 }
 
 /** The model-facing request for Mimi's turn (the data is untrusted text). */
-export function handoffMessage(record: NoticeActionRecord): string {
+export function handoffMessage(record: NoticeActionRecord, ownerMessage?: string): string {
   const { actions, facts } = record;
   const data = {
+    ...(capped(ownerMessage, 2_000) ? { ownerSaid: capped(ownerMessage, 2_000) } : {}),
     sessionId: actions.sessionId,
     runtime: actions.runtime,
     notice: record.kind,
@@ -212,6 +253,14 @@ export function createNoticeActionExecutor(deps: NoticeActionExecutorDeps): Noti
   const now = deps.now ?? Date.now;
   /** Records an action is running for (one at a time per notice). */
   const busy = new Set<string>();
+  /** Records handed to Mimi whose turn has not been dispatched yet (→ since). */
+  const handingOff = new Map<string, number>();
+  /** A handoff whose turn never reported back (it threw early) frees the item again. */
+  const HANDOFF_HOLD_MS = 2 * 60_000;
+  const handedOff = (recordId: string) => {
+    const since = handingOff.get(recordId);
+    return since !== undefined && now() - since < HANDOFF_HOLD_MS;
+  };
 
   const use = (code: string) => router.useAction(code, { usedAt: now() });
   const clientMessageId = (code: string) => `pet-notice-action-${code.toLowerCase()}`;
@@ -252,9 +301,25 @@ export function createNoticeActionExecutor(deps: NoticeActionExecutorDeps): Noti
   }
 
   async function resume(record: NoticeActionRecord) {
-    const { code, sessionId, runtime, reason } = record.actions;
+    const { code, sessionId, runtime, reason, goalId } = record.actions;
     const blocked = await recheck(record);
     if (blocked) return blocked;
+    // A paused Goal resumes through its own control (a fresh run, fresh counters).
+    let live: NoticeLiveGoal | null = null;
+    if (reason !== "goal_exhausted") {
+      try {
+        live = await controls.goal(sessionId, runtime);
+      } catch {
+        return GOAL_UNREADABLE;
+      }
+    }
+    if (goalId && live && live.goalId !== goalId) return GOAL_CHANGED;
+    if (live?.paused && live.goalId && live.revision !== undefined) {
+      const expected = { goalId: live.goalId, revision: live.revision };
+      if (!(await controls.resumeGoal(sessionId, runtime, expected))) return GOAL_CHANGED;
+      await use(code);
+      return "已让这个 Goal 接着做。";
+    }
     // A stopped run cannot be extended in place (core's goalExtend needs a run
     // in flight): the next turn continues, and re-arms a Goal that is still live.
     await controls.send(sessionId, runtime, {
@@ -337,6 +402,11 @@ export function createNoticeActionExecutor(deps: NoticeActionExecutorDeps): Noti
       await controls.locateSession(sessionId);
       return "这个文件不在会话的工作区里（或已经不在了），只在电脑上打开了这个会话。";
     }
+    if (!isOpenableFile(target)) {
+      // A script or launcher is never run from IM: show where it is.
+      controls.revealPath(target);
+      return "这类文件不会直接打开，已在电脑上显示它所在的文件夹。";
+    }
     await controls.openPath(target);
     return OPENED;
   }
@@ -384,11 +454,30 @@ export function createNoticeActionExecutor(deps: NoticeActionExecutorDeps): Noti
 
   async function run(record: NoticeActionRecord, request: NoticeActionRequest) {
     switch (request.action) {
-      case "handoff":
+      case "handoff": {
         if (request.handoff === false)
           return "这个对话正连着一个会话。先发 /mimi 回到 Mimi，再让她接手。";
-        if (!(await use(record.actions.code))) return FAILED;
-        return { handoff: handoffMessage(record) };
+        // Used only once Mimi's turn is dispatched; until then nobody else takes it.
+        const { recordId } = record;
+        handingOff.set(recordId, now());
+        let settled = false;
+        return {
+          handoff: handoffMessage(record, request.message),
+          dispatched: async () => {
+            if (settled) return;
+            settled = true;
+            try {
+              await use(record.actions.code);
+            } finally {
+              handingOff.delete(recordId);
+            }
+          },
+          abandoned: () => {
+            settled = true;
+            handingOff.delete(recordId);
+          },
+        };
+      }
       case "reply":
         return answer(record, request.text?.trim());
       case "continue":
@@ -410,9 +499,12 @@ export function createNoticeActionExecutor(deps: NoticeActionExecutorDeps): Noti
       if (!record) return GONE;
       const { actions } = record;
       if (now() >= actions.expiresAt) return EXPIRED;
+      if (actions.family === "open" && now() - record.createdAt >= NOTICE_OPEN_ITEM_TTL_MS)
+        return EXPIRED;
+      if (actions.closedAt !== undefined) return CLOSED;
       if (actions.usedAt !== undefined && actions.family !== "open") return USED;
       if (!actionVerbs(actions).includes(request.action)) return NOT_ALLOWED;
-      if (busy.has(record.recordId)) return BUSY;
+      if (busy.has(record.recordId) || handedOff(record.recordId)) return BUSY;
       busy.add(record.recordId);
       try {
         return await run(record, request);

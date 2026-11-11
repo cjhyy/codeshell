@@ -193,6 +193,7 @@ import {
   createBoundSessionHealth,
   createBoundSessionRunner,
   createSessionBridgeWiring,
+  sessionRouteHandler,
   type SessionBridgeWiring,
 } from "./pet/session-bridge-wiring.js";
 import {
@@ -2097,6 +2098,7 @@ async function createWindow(): Promise<BrowserWindow> {
           return entry?.status === "confirmed" ? (entry.workspaceRoot ?? entry.cwd) : undefined;
         },
         openPath: (path) => shell.openPath(path),
+        revealPath: (path) => shell.showItemInFolder(path),
         openExternal: (url) => shell.openExternal(url),
         locateSession: (sessionId) => revealSessionWindow(sessionId),
         onError: (error) => dlog("main", "pet.notice.reply_failed", { error: String(error) }),
@@ -2113,7 +2115,10 @@ async function createWindow(): Promise<BrowserWindow> {
             .observeSessionEvent(sessionId, event, outcomes)
             .catch((error) => dlog("main", "pet.longTask.stream.failed", { error: String(error) })),
         watcher: (sessionId, outcomes) => notices.observeSessionOutcomes(sessionId, outcomes),
-        stream: sessionOutcomes.emit,
+        stream: (sessionId, event, outcomes) => {
+          notices.sessionEvent(sessionId, event);
+          sessionOutcomes.emit(sessionId, event, outcomes);
+        },
       },
       sessionOutcomeDeriver,
     );
@@ -3175,8 +3180,10 @@ async function dispatchGatewayPetChat(
   // scheduler can take it as a new task or as inferred authorization.
   const decisionReply = await petImDecisions?.reply(request);
   if (typeof decisionReply === "string") return { text: decisionReply, petSessionId: sessionId };
-  // "交给 Mimi": Mimi's turn gets the notice's data with the owner's request.
-  const message = decisionReply?.handoff ?? request.message;
+  // "交给 Mimi": Mimi's turn gets the notice's data with the owner's request;
+  // the item is used once that turn is dispatched.
+  const handoff = decisionReply;
+  const message = handoff?.handoff ?? request.message;
   const cwd = resolveNoRepoCwd();
   const attachments: InputAttachmentMeta[] = [];
   let totalBytes = 0;
@@ -3269,6 +3276,17 @@ async function dispatchGatewayPetChat(
         ...(request.origin ? { target: request.origin.target } : {}),
       },
     })
+    .then(
+      (dispatched) => {
+        if (dispatched.ok) void handoff?.dispatched();
+        else handoff?.abandoned();
+        return dispatched;
+      },
+      (error: unknown) => {
+        handoff?.abandoned();
+        throw error;
+      },
+    )
     .finally(() => replay?.finish());
   if (!result.ok) throw new Error(result.message ?? result.code);
   if (result.type !== "chat") throw new Error("Mimi Pet 返回了非聊天结果");
@@ -3448,9 +3466,10 @@ app.whenReady().then(async () => {
     isPetChatReady: () => petRuntimeReady && petDispatchService !== null,
     isSessionRouteReady: () =>
       petRuntimeReady && petDispatchService !== null && sessionBridge !== undefined,
-    routeSession: async (request) =>
-      (await petImDecisions?.replyToSession(request)) ??
-      (sessionBridge ? sessionBridge.routeInbound(request) : { kind: "not-bound" }),
+    routeSession: sessionRouteHandler({
+      bridge: () => sessionBridge,
+      replyToSession: async (request) => petImDecisions?.replyToSession(request),
+    }),
   });
   // Delivery results settle the notices that made them; retry copies the
   // outbox appends get the same direct hand-off as a fresh publication.

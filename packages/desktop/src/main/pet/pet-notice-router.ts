@@ -1,13 +1,8 @@
 import { dlog } from "../desktop-logger.js";
-import {
-  actionHints,
-  NOTICE_ACTION_TTL_MS,
-  noticeActionCode,
-  type NoticeActions,
-} from "./pet-notice-action-codes.js";
+import type { NoticeActions } from "./pet-notice-action-codes.js";
 import { composeNoticeBody, MAX_NOTICE_BODY, noticeLine } from "./pet-notice-compose.js";
 import { NoticeDigest } from "./pet-notice-digest.js";
-import { actionItemKey, allocateSlot, decisionItemKey, isOpenActions } from "./pet-notice-slots.js";
+import { NoticeItems } from "./pet-notice-items.js";
 import {
   isPromptEnded,
   newNoticeRecordId,
@@ -159,6 +154,7 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
   private decisionQueue: Promise<unknown> = Promise.resolve();
   private recovered?: Promise<void>;
   private disposed = false;
+  private readonly items: NoticeItems;
 
   constructor(private readonly options: PetNoticeRouterOptions) {
     this.now = options.now ?? Date.now;
@@ -168,6 +164,12 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     this.graceMs = options.graceMs ?? 15_000;
     this.burstMs = options.burstMs ?? 2_000;
     this.log = options.log ?? ((event, data) => dlog("main", event, data));
+    this.items = new NoticeItems({
+      ...(options.ledger ? { ledger: options.ledger } : {}),
+      now: this.now,
+      log: this.log,
+      revoke: (matches, reason) => this.revokeWaiting(matches, reason),
+    });
     if (options.ledger) {
       this.digest = new NoticeDigest({
         ledger: options.ledger,
@@ -342,7 +344,7 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     const body = composeNoticeBody(notice.kind, notice.facts, notice.body);
     // Files are copied before the decision queue, so a slow copy never holds up another notice.
     const frozen = await this.freezeMedia(notice);
-    const armed = this.armActions(frozen.notice, body, frozen.id);
+    const armed = this.items.arm(frozen.notice, body, frozen.id);
     try {
       const plan = await this.serially(() =>
         this.plan(armed.notice, armed.body, armed.id, armed.actions),
@@ -370,94 +372,30 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     return { notice: media ? { ...rest, media } : rest, id };
   }
 
-  /**
-   * A notice that is an open item gets its internal code now, bound to the
-   * record id it will be written under, and its IM text ends with a plain
-   * line saying what the owner can answer; the desktop and a chat that is
-   * not private get the text without it. Without a ledger there is no record
-   * to answer, so no item.
-   */
-  private armActions(
-    notice: NoticeSubmission,
-    body: string,
-    id: string | undefined,
-  ): { notice: NoticeSubmission; body: string; id?: string; actions?: NoticeActions } {
-    const input = notice.actions;
-    if (!input || !this.options.ledger) return { notice, body, ...(id ? { id } : {}) };
-    const recordId = id ?? newNoticeRecordId();
-    const actions: NoticeActions = {
-      ...input,
-      code: noticeActionCode(["action", recordId, input.family]),
-      expiresAt: this.now() + NOTICE_ACTION_TTL_MS,
-    };
-    const hints = actionHints(actions);
-    const room = MAX_NOTICE_BODY - hints.length - 1;
-    const text = body.length > room ? `${body.slice(0, room - 1)}…` : body;
-    const nonDirect = notice.facts.nonDirectBody;
-    return {
-      notice: {
-        ...notice,
-        facts: {
-          ...notice.facts,
-          nonDirectBody: typeof nonDirect === "string" && nonDirect ? nonDirect : body,
-        },
-      },
-      body: `${text}\n${hints}`,
-      id: recordId,
-      actions,
-    };
-  }
-
   /** The notice whose open item has this internal code; undefined before the ledger loads. */
   actionRecord(code: string): NoticeActionRecord | undefined {
-    const record = this.options.ledger?.byActionCode(code);
-    if (!record?.actions) return undefined;
-    const { facts, target } = unpackFacts(record.facts);
-    return { recordId: record.id, kind: record.kind, target, facts, actions: record.actions };
+    return this.items.actionRecord(code);
   }
 
-  /**
-   * Open items that reached an IM conversation on `channel` (enqueued or
-   * delivered), oldest first; the caller keeps those its conversation may answer.
-   */
+  /** Open items that reached an IM conversation on `channel` (see NoticeItems). */
   openActionItems(channel: string): NoticeActionRecord[] {
-    const ledger = this.options.ledger;
-    if (!ledger) return [];
-    const now = this.now();
-    return ledger
-      .actionRecords()
-      .filter(
-        (record) =>
-          record.actions?.slot?.channel === channel &&
-          isOpenActions(record, now) &&
-          (record.delivery?.status === "accepted" || record.delivery?.status === "enqueued"),
-      )
-      .flatMap((record) => {
-        const view = this.actionRecord(record.actions!.code);
-        return view ? [view] : [];
-      });
+    return this.items.openActionItems(channel);
   }
 
-  /**
-   * Persist an item's use (or a pending link). Once it is used, the notice
-   * is moot: a copy still waiting for a channel or the digest is withdrawn.
-   */
-  async useAction(
-    code: string,
-    patch: NoticeActionsPatch,
-  ): Promise<NoticeActionRecord | undefined> {
-    const ledger = this.options.ledger;
-    const record = ledger?.byActionCode(code);
-    if (!ledger || !record) return undefined;
+  /** Persist an item's use (or a pending link); a used item's waiting copies are withdrawn. */
+  useAction(code: string, patch: NoticeActionsPatch): Promise<NoticeActionRecord | undefined> {
+    return this.items.useAction(code, patch);
+  }
+
+  /** The Session started another run: its goal / limit / failure items close. */
+  async sessionRunStarted(sessionId: string): Promise<void> {
+    if (this.disposed) return;
     try {
-      await ledger.updateActions(record.id, patch);
+      await this.options.ledger?.load();
+      await this.items.sessionRunStarted(sessionId);
     } catch (error) {
-      this.log("pet.notice.action_update_failed", { error: errorText(error) });
-      return undefined;
+      this.log("pet.notice.ledger_read_failed", { error: errorText(error) });
     }
-    if (patch.usedAt !== undefined)
-      await this.revokeWaiting((other) => other.id === record.id, "action-used");
-    return this.actionRecord(code);
   }
 
   /**
@@ -1009,20 +947,7 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     if (!ledger || !ledgerReady) return plan;
 
     // An open item going out over IM takes its number in that conversation.
-    const imChannel =
-      decision.im && (decision.outlet === "im" || decision.outlet === "both" || decision.queued)
-        ? decision.im
-        : undefined;
-    const itemKey =
-      notice.kind === "session.blocked" && notice.sessionId && notice.requestId
-        ? decisionItemKey(notice.sessionId, notice.requestId)
-        : actions && id
-          ? actionItemKey(id)
-          : undefined;
-    const slotted =
-      imChannel && itemKey
-        ? allocateSlot(ledger, now, itemKey, imChannel, notice.target)
-        : undefined;
+    const slotted = this.items.slot(notice, decision, id, actions);
     if (slotted?.label) {
       body = `${slotted.label}${body}`;
       plan.body = body;
@@ -1062,9 +987,7 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
       this.log("pet.notice.record_failed", { kind: notice.kind, error: errorText(error) });
       return plan;
     }
-    // A later copy of a prompt (the owner left) puts the prompt in this conversation.
-    if (slotted && !notice.prompt && notice.sessionId && notice.requestId)
-      await this.slotPrompt(notice.sessionId, notice.requestId, slotted.slot);
+    await this.items.recorded(notice, plan.recordId, slotted?.slot);
     if ((decision.outlet !== "im" && decision.outlet !== "both") || !decision.im)
       return { ...plan, ledgerFailed: false };
     // Registered before the claim lands, so a concurrent recovery never sees it as orphaned.
@@ -1080,23 +1003,6 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
       this.sending.delete(plan.recordId);
       this.log("pet.notice.claim_failed", { kind: notice.kind, error: errorText(error) });
       return plan;
-    }
-  }
-
-  private async slotPrompt(
-    sessionId: string,
-    requestId: string,
-    slot: NonNullable<NoticeDecisionPrompt["slot"]>,
-  ): Promise<void> {
-    const ledger = this.options.ledger!;
-    const prompted = ledger.forRequest(sessionId, requestId).find((record) => record.prompt);
-    const current = prompted?.prompt?.slot;
-    if (!prompted || (current?.channel === slot.channel && current.ordinal === slot.ordinal))
-      return;
-    try {
-      await ledger.updatePrompt(prompted.id, { slot });
-    } catch (error) {
-      this.log("pet.notice.prompt_slot_failed", { error: errorText(error) });
     }
   }
 

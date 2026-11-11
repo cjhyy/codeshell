@@ -115,6 +115,8 @@ export interface PetNoticeWiring {
    * router's submit, replay and digest flush wait for it themselves.
    */
   ready: Promise<void>;
+  /** One raw Session stream event (a new run closes the Session's open notice items). */
+  sessionEvent(sessionId: string, event: unknown): void;
   /** Feed what one Session stream event meant (from `createSessionOutcomeTap`). */
   observeSessionOutcomes(sessionId: string, outcomes: readonly SessionOutcome[]): void;
   /**

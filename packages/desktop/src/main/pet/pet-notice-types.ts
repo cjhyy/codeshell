@@ -200,6 +200,7 @@ export interface NoticeSubmission {
 export interface NoticeActionRecord {
   recordId: string;
   kind: string;
+  createdAt: number;
   target: NoticeTarget;
   facts: NoticeFacts;
   actions: NoticeActions;
