@@ -18,6 +18,9 @@ const MAX_PURPOSE_LENGTH = 180;
 const MAX_SERVER_DISPLAY_LENGTH = 120;
 const MAX_OUTPUT_LENGTH = 8192;
 const MAX_SELECT_OUTPUT_LENGTH = 24_000;
+// Strictly below ContextManager's 30,000-character per-result truncation line.
+// Includes the complete schema, health diagnostics, separators and usage guidance.
+const MAX_SINGLE_SELECT_OUTPUT_LENGTH = 29_999;
 const MAX_HEALTH_LENGTH = 2048;
 const METADATA_SEPARATOR = "\n\n---\n\n";
 const OMITTED_METADATA_NOTICE =
@@ -73,20 +76,23 @@ export async function toolSearchTool(
     typeof rawMax === "number" && Number.isSafeInteger(rawMax) && rawMax > 0
       ? Math.min(rawMax, MAX_RESULTS)
       : 5;
-  const queryLower = query.toLowerCase();
-  const failures = new Map(
-    [...(ctx.mcpServerFailures ?? [])].filter(([server]) => {
-      if (ctx.allowedMcpServers && !ctx.allowedMcpServers.has(server)) return false;
-      return (
-        queryLower.includes("mcp") ||
-        server
-          .toLowerCase()
-          .split(":")
-          .some((part) => part.length > 0 && queryLower.includes(part))
-      );
-    }),
-  );
-  const health = truncateText(formatMcpConnectionFailures(failures), MAX_HEALTH_LENGTH);
+  const healthForQuery = (value: string) => {
+    const queryLower = value.toLowerCase();
+    const failures = new Map(
+      [...(ctx.mcpServerFailures ?? [])].filter(([server]) => {
+        if (ctx.allowedMcpServers && !ctx.allowedMcpServers.has(server)) return false;
+        return (
+          queryLower.includes("mcp") ||
+          server
+            .toLowerCase()
+            .split(":")
+            .some((part) => part.length > 0 && queryLower.includes(part))
+        );
+      }),
+    );
+    return truncateText(formatMcpConnectionFailures(failures), MAX_HEALTH_LENGTH);
+  };
+  const health = healthForQuery(query);
   const resultBudget = MAX_OUTPUT_LENGTH - (health ? health.length + 2 : 0);
   const withHealth = (result: string) => (health ? `${health}\n\n${result}` : result);
 
@@ -104,16 +110,22 @@ export async function toolSearchTool(
     if (names.some((name) => !name) || names.length > MAX_RESULTS) {
       return `Error: select requires between 1 and ${MAX_RESULTS} non-empty tool names`;
     }
+    const distinctNames = [...new Set(names)];
     const selected = formatSelectedDefinitions(
       tools,
-      [...new Set(names)],
-      MAX_SELECT_OUTPUT_LENGTH - (health ? health.length + 2 : 0),
+      distinctNames,
+      (distinctNames.length === 1 ? MAX_SINGLE_SELECT_OUTPUT_LENGTH : MAX_SELECT_OUTPUT_LENGTH) -
+        (health ? health.length + 2 : 0),
       !!currentDefinitions,
       ctx.runToolSurface?.toolDiscovery === "tool-reference"
         ? NATIVE_TOOL_USAGE
         : ctx.runToolSurface
           ? CALL_TOOL_USAGE
           : DIRECT_TOOL_USAGE,
+      (name) => {
+        const singleHealth = healthForQuery(`select:${name}`);
+        return MAX_SINGLE_SELECT_OUTPUT_LENGTH - (singleHealth ? singleHealth.length + 2 : 0);
+      },
     );
     // A schema that did not fit must never become callable as a discovery side effect.
     ctx.runToolSurface?.select(selected.loaded);
@@ -146,6 +158,7 @@ function formatSelectedDefinitions(
   budget: number,
   scoped: boolean,
   usage: string,
+  singleToolBudget: (name: string) => number,
 ): { output: string; loaded: string[]; contentBlocks: ContentBlock[] } {
   const byName = new Map(tools.map((tool) => [tool.name, tool]));
   const candidates: ToolDefinition[] = [];
@@ -157,11 +170,29 @@ function formatSelectedDefinitions(
   }
   const entries: string[] = [];
   const loaded: string[] = [];
-  const omittedNotice = (remaining: readonly ToolDefinition[]) =>
-    remaining.length
-      ? `Not loaded: ${remaining.map((tool) => tool.name).join(", ")}. ` +
-        "The complete schemas exceed the output budget; select each tool separately with ToolSearch select:<name>."
-      : "";
+  const omittedNotice = (remaining: readonly ToolDefinition[]) => {
+    if (!remaining.length) return "";
+    const retryable: string[] = [];
+    const oversized: string[] = [];
+    for (const tool of remaining) {
+      const fitsAlone =
+        toolDiscoverySchemaText(tool).length + 2 + usage.length <= singleToolBudget(tool.name);
+      (fitsAlone ? retryable : oversized).push(tool.name);
+    }
+    return [
+      `Not loaded: ${remaining.map((tool) => tool.name).join(", ")}.`,
+      ...(retryable.length
+        ? [
+            `For ${retryable.join(", ")}, select each tool separately with ToolSearch select:<name> to use the larger single-tool output budget.`,
+          ]
+        : []),
+      ...(oversized.length
+        ? [
+            `Unavailable for loading: ${oversized.join(", ")}. The complete schema plus required context exceeds the single-tool output limit. Do not retry ToolSearch select for these tools unless their schema or session context changes. Use another available tool or report that a smaller schema is required. Already-loaded tools remain callable.`,
+          ]
+        : []),
+    ].join(" ");
+  };
   const assemble = (schemas: string[], omitted: string) =>
     [...unavailable, ...schemas, omitted, ...(schemas.length ? [usage] : [])]
       .filter(Boolean)

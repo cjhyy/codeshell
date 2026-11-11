@@ -696,11 +696,14 @@ describe("toolSearchTool — deferred run selection", () => {
   it("never marks an oversized individual schema as discovered", async () => {
     const context = deferredContext(registryWith());
     context.runToolSurface!.updateCatalog([
-      { name: "Huge", description: "x".repeat(24_000), inputSchema: {} },
+      { name: "Huge", description: "x".repeat(30_000), inputSchema: {} },
     ]);
     const result = await toolSearchTool({ query: "select:Huge" }, context);
     expect(result).toContain("Not loaded: Huge.");
-    expect(result.length).toBeLessThanOrEqual(24_000);
+    expect(result).toContain("Unavailable for loading: Huge.");
+    expect(result).toContain("Do not retry ToolSearch select");
+    expect(result).not.toContain("select each tool separately");
+    expect(result.length).toBeLessThan(30_000);
     expect(context.runToolSurface!.isCallable("Huge")).toBe(false);
   });
 
