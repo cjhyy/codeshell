@@ -11,6 +11,7 @@ import { companionCueDuration } from "./sprite-animation";
 import { PoseActor } from "./PoseActor";
 import { spriteCharacter } from "./sprite-characters";
 import { SpriteActor } from "./SpriteActor";
+import { useT } from "../../i18n";
 import "./companion.css";
 
 declare global {
@@ -64,6 +65,10 @@ function hitsInteractiveContent(x: number, y: number): boolean {
 export function MimiCompanionWindow() {
   const [state, setState] = useState<MimiCompanionState | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { t } = useT();
+  // Callbacks registered once still speak the current language.
+  const tRef = useRef(t);
+  tRef.current = t;
   const [moving, setMoving] = useState<"left" | "right" | null>(null);
   const [hovered, setHovered] = useState(false);
   const [held, setHeld] = useState(false);
@@ -111,8 +116,9 @@ export function MimiCompanionWindow() {
       },
       () => {
         if (alive) {
-          setError("无法读取角色状态");
-          window.mimiCompanion.ready({ error: "无法读取角色状态" });
+          const message = tRef.current("pet.companion.stateUnavailable");
+          setError(message);
+          window.mimiCompanion.ready({ error: message });
         }
       },
     );
@@ -297,7 +303,7 @@ export function MimiCompanionWindow() {
       () => {
         hoverNeedsRefresh.current = true;
       },
-      () => setError("暂时无法打开聊天"),
+      () => setError(tRef.current("pet.companion.chatUnavailable")),
     );
   }, []);
   const finishGesture = useCallback(
@@ -389,7 +395,9 @@ export function MimiCompanionWindow() {
   const showAttention =
     Boolean(attention) && !state.preview && !menuOpen && !held && !state.handoff;
   const answerHandoff = (accept: boolean) => {
-    void window.mimiCompanion.handoff(accept).catch(() => setError("暂时无法打开聊天"));
+    void window.mimiCompanion
+      .handoff(accept)
+      .catch(() => setError(t("pet.companion.chatUnavailable")));
     if (!accept) interaction("leave");
   };
   return (
@@ -432,7 +440,7 @@ export function MimiCompanionWindow() {
           ref={body}
           type="button"
           className="mimi-companion__body"
-          aria-label="打开 Mimi 聊天，拖动可移动"
+          aria-label={t("pet.companion.bodyLabel")}
           aria-haspopup="menu"
           aria-expanded={menuOpen}
           onPointerEnter={() => {
@@ -534,14 +542,16 @@ export function MimiCompanionWindow() {
         {typing && state.perch !== "on-field" && (
           <div
             className={`mimi-keyboard${presented.activity.phase === "end" ? " mimi-keyboard--settling" : ""}`}
-            aria-label="输入动作提示"
+            aria-label={t("pet.companion.cueLabel")}
           >
             {Array.from({ length: 12 }, (_, index) => (
               <i key={index} style={{ animationDelay: `${-index * 90}ms` }} />
             ))}
           </div>
         )}
-        {state.preview && <div className="mimi-companion__preview">动作预览</div>}
+        {state.preview && (
+          <div className="mimi-companion__preview">{t("pet.companion.preview")}</div>
+        )}
         {(error || cueActive || state.control?.stopped) && (
           <div
             className="mimi-companion__activity"
@@ -549,11 +559,13 @@ export function MimiCompanionWindow() {
             data-notice={error || state.control?.stopped ? "true" : undefined}
           >
             {error ??
-              (state.control?.stopped && !cueActive ? "已停止电脑操作" : undefined) ??
+              (state.control?.stopped && !cueActive
+                ? t("pet.companion.computerStopped")
+                : undefined) ??
               (presented.activity.action === "type"
                 ? presented.activity.phase === "start"
-                  ? "正在输入"
-                  : "输入完成"
+                  ? t("pet.companion.typing")
+                  : t("pet.companion.typed")
                 : companionActionLabel(presented))}
           </div>
         )}
@@ -570,15 +582,15 @@ export function MimiCompanionWindow() {
             }
             aria-label={
               attentionCount > 0
-                ? `查看 Mimi 的工作：${attentionCount} 项待看`
-                : "查看 Mimi 正在做的工作"
+                ? t("pet.companion.attentionCount", { count: attentionCount })
+                : t("pet.companion.attentionNone")
             }
             onPointerEnter={() => interaction("hover")}
             onPointerLeave={() => interaction("leave")}
             onClick={() => {
               void window.mimiCompanion
                 .openActivity()
-                .catch(() => setError("暂时无法打开工作列表"));
+                .catch(() => setError(t("pet.companion.activityUnavailable")));
             }}
           >
             {attentionCount > 0 ? (attentionCount > 99 ? "99+" : attentionCount) : null}
@@ -588,25 +600,35 @@ export function MimiCompanionWindow() {
           <div
             className="mimi-companion__handoff"
             role="dialog"
-            aria-label={`让 ${spriteCharacter(state.appearance).name} 看看这个窗口`}
+            aria-label={t("pet.companion.handoffLabel", {
+              name: spriteCharacter(state.appearance).name,
+            })}
             onPointerEnter={() => interaction("hover")}
             onPointerLeave={() => interaction("leave")}
           >
             <p>
-              让 {spriteCharacter(state.appearance).name} 看看「{state.handoff.app}」？
+              {t("pet.companion.handoffPrompt", {
+                name: spriteCharacter(state.appearance).name,
+                app: state.handoff.app,
+              })}
             </p>
             <div>
               <button type="button" onClick={() => answerHandoff(true)}>
-                看看
+                {t("pet.companion.handoffAccept")}
               </button>
               <button type="button" onClick={() => answerHandoff(false)}>
-                算了
+                {t("pet.companion.handoffDecline")}
               </button>
             </div>
           </div>
         )}
         {menuOpen && (
-          <div ref={menu} className="mimi-companion__menu" role="menu" aria-label="Mimi 选项">
+          <div
+            ref={menu}
+            className="mimi-companion__menu"
+            role="menu"
+            aria-label={t("pet.companion.menuLabel")}
+          >
             <button
               type="button"
               role="menuitem"
@@ -615,7 +637,7 @@ export function MimiCompanionWindow() {
                 closeMenu();
               }}
             >
-              恢复跟随工作
+              {t("pet.companion.resumeFollowing")}
             </button>
             <button
               type="button"
@@ -626,22 +648,29 @@ export function MimiCompanionWindow() {
                 closeMenu();
               }}
             >
-              切换到停靠模式
+              {t("pet.companion.dock")}
             </button>
-            <div className="mimi-companion__sizes" role="group" aria-label="大小">
+            <div
+              className="mimi-companion__sizes"
+              role="group"
+              aria-label={t("pet.companion.sizes")}
+            >
               {MIMI_COMPANION_QUICK_SIZES.map((option) => (
                 <button
                   key={option.size}
                   type="button"
                   role="menuitemradio"
                   aria-checked={(state.chosenSize ?? state.size) === option.size}
-                  aria-label={`大小：${option.label}`}
+                  aria-label={t("pet.companion.sizeAria", {
+                    name: t(`pet.companion.size.${option.name}`),
+                    size: option.size,
+                  })}
                   onClick={() => {
                     window.mimiCompanion.resize(option.size);
                     closeMenu();
                   }}
                 >
-                  {option.label}
+                  {t(`pet.companion.size.${option.name}`)}
                 </button>
               ))}
             </div>
@@ -654,7 +683,7 @@ export function MimiCompanionWindow() {
                   closeMenu();
                 }}
               >
-                继续电脑操作
+                {t("pet.companion.resumeComputer")}
               </button>
             ) : (
               <button
@@ -665,7 +694,7 @@ export function MimiCompanionWindow() {
                   closeMenu();
                 }}
               >
-                停止电脑操作（⌘⇧Esc）
+                {t("pet.companion.stopComputer")}
               </button>
             )}
             <button
@@ -677,7 +706,7 @@ export function MimiCompanionWindow() {
                 closeMenu();
               }}
             >
-              关闭 Mimi
+              {t("pet.companion.close")}
             </button>
           </div>
         )}

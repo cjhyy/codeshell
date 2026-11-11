@@ -129,12 +129,20 @@ export const MIMI_COMPANION_MAX_SIZE = 480;
 export const MIMI_COMPANION_SIZE_OPTIONS = [160, 200, 240, 320, 400, 480] as const;
 /** The default before 2026-11: a saved 320 cannot be told apart from "never changed". */
 export const MIMI_COMPANION_LEGACY_DEFAULT_SIZE = 320;
-/** The character menu's quick sizes; the settings page keeps the full list. */
+/** Named sizes: the same name means the same height in the menu and in settings. */
+export type MimiCompanionSizeName = "small" | "default" | "large" | "largest";
+export const MIMI_COMPANION_SIZE_NAMES: Readonly<Record<number, MimiCompanionSizeName>> = {
+  160: "small",
+  [MIMI_COMPANION_DEFAULT_SIZE]: "default",
+  320: "large",
+  [MIMI_COMPANION_MAX_SIZE]: "largest",
+};
+/** The character menu's quick sizes, a subset of the settings list (which keeps all). */
 export const MIMI_COMPANION_QUICK_SIZES = [
-  { label: "小", size: 160 },
-  { label: "中", size: MIMI_COMPANION_DEFAULT_SIZE },
-  { label: "大", size: 320 },
-] as const;
+  { name: "small", size: 160 },
+  { name: "default", size: MIMI_COMPANION_DEFAULT_SIZE },
+  { name: "large", size: 320 },
+] as const satisfies ReadonlyArray<{ name: MimiCompanionSizeName; size: number }>;
 /** Drawn height of the working (scaled-down) character never goes below this. */
 export const MIMI_COMPANION_MIN_WORKING_SIZE = 96;
 

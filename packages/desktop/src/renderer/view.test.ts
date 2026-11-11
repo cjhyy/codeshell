@@ -58,6 +58,12 @@ describe("loadView", () => {
     expect(loadView().viewMode).toBe("settings_page");
   });
 
+  it("redirects the retired personalization page to Mimi settings › 对话", () => {
+    persist("pet_personalization");
+    expect(loadView().viewMode).toBe("pet_settings");
+    expect(localStorage.getItem("codeshell:mimi-settings:section")).toBe("conversation");
+  });
+
   it("redirects the removed run-history route to execution traces", () => {
     persist("runs");
     expect(loadView().viewMode).toBe("traces");

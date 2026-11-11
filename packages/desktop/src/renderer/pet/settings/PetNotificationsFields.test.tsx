@@ -1,18 +1,18 @@
 import { describe, expect, test } from "bun:test";
 import React, { act } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { ensureMiniDom, flushMicrotasks, renderHook } from "../test-utils/renderHook";
+import { ensureMiniDom, flushMicrotasks, renderHook } from "../../test-utils/renderHook";
 import type {
   PetNoticesState,
   PetNoticeSystemRule,
   PetNoticeSystemRulePatch,
-} from "../../shared/pet-notices";
-import type { PetNotificationsController } from "./PetNotificationsCard";
+} from "../../../shared/pet-notices";
+import type { NotificationSettingKey, PetNotificationsController } from "./PetNotificationsFields";
 
 // Radix layout effects bind at import time: install the DOM before the card loads.
 ensureMiniDom();
 const { PetNotificationsFields, notificationsSettingsPatch, usePetNotificationsController } =
-  await import("./PetNotificationsCard");
+  await import("./PetNotificationsFields");
 
 function noticesState(): PetNoticesState {
   return {
@@ -58,13 +58,22 @@ function fakeApi(state: PetNoticesState) {
   };
 }
 
+const ALL = new Set<NotificationSettingKey>([
+  "quietHours",
+  "maxPerHour",
+  "maxP0PerHour",
+  "mergeWindowSec",
+  "presenceIdleSec",
+  "delegatedFromDesktop",
+]);
+
 async function settle(): Promise<void> {
   await act(async () => {
     for (let index = 0; index < 5; index += 1) await flushMicrotasks();
   });
 }
 
-describe("PetNotificationsCard", () => {
+describe("PetNotificationsFields", () => {
   test("renders the loaded values, channel readiness and the WeChat note", async () => {
     const { api } = fakeApi(noticesState());
     const hook = await renderHook(() =>
@@ -109,7 +118,8 @@ describe("PetNotificationsCard", () => {
       hook.result.current.flush();
     });
     await settle();
-    // Debounced: one write with the latest draft.
+    // Debounced: one write with the latest draft, holding only what was edited.
+    // The untouched advanced limits keep following the host defaults.
     expect(writes).toEqual([
       {
         scope: "user",
@@ -125,30 +135,156 @@ describe("PetNotificationsCard", () => {
       },
     ]);
     expect(hook.result.current.draft?.quietEnabled).toBe(false);
+    // A later edit adds to what was touched; it never re-sends untouched defaults.
+    act(() => {
+      hook.result.current.update({ presenceIdleSec: "300" });
+      hook.result.current.flush();
+    });
+    await settle();
+    expect(writes[1]?.patch).toEqual({
+      pet: {
+        notifications: {
+          delegatedFromDesktop: "auto",
+          quietHours: { enabled: false, start: "22:30", end: "07:15" },
+          maxPerHour: 12,
+          presenceIdleSec: 300,
+        },
+      },
+    });
+    await hook.unmount();
+  });
+
+  test("a single edit writes only its own setting", async () => {
+    const { api } = fakeApi(noticesState());
+    const patches: Record<string, unknown>[] = [];
+    const hook = await renderHook(() =>
+      usePetNotificationsController({
+        api,
+        write: async (_scope, patch) => {
+          patches.push(patch);
+        },
+      }),
+    );
+    await settle();
+    act(() => {
+      hook.result.current.update({ quietStart: "21:00" });
+      hook.result.current.flush();
+    });
+    await settle();
+    expect(patches).toEqual([
+      {
+        pet: {
+          notifications: { quietHours: { enabled: true, start: "21:00", end: "07:15" } },
+        },
+      },
+    ]);
     await hook.unmount();
   });
 
   test("an invalid count or half-typed time is not written", () => {
     expect(
-      notificationsSettingsPatch({
-        quietEnabled: true,
-        quietStart: "2",
-        quietEnd: "07:00",
-        maxPerHour: "0",
-        delegatedFromDesktop: "auto",
-      }),
-    ).toEqual({ pet: { notifications: { delegatedFromDesktop: "auto" } } });
-    expect(
-      (
-        notificationsSettingsPatch({
+      notificationsSettingsPatch(
+        {
           quietEnabled: true,
+          quietStart: "2",
+          quietEnd: "07:00",
+          maxPerHour: "0",
+          maxP0PerHour: "",
+          mergeWindowSec: "-1",
+          presenceIdleSec: "29",
+          delegatedFromDesktop: "auto",
+        },
+        ALL,
+      ),
+    ).toEqual({ pet: { notifications: { delegatedFromDesktop: "auto" } } });
+    const notifications = notificationsSettingsPatch(
+      {
+        quietEnabled: true,
+        quietStart: "23:00",
+        quietEnd: "07:00",
+        maxPerHour: "61",
+        maxP0PerHour: "121",
+        mergeWindowSec: "3601",
+        presenceIdleSec: "1801",
+        delegatedFromDesktop: "desktop",
+      },
+      ALL,
+    ).pet as { notifications: Record<string, unknown> };
+    expect(notifications.notifications).toEqual({
+      delegatedFromDesktop: "desktop",
+      quietHours: { enabled: true, start: "23:00", end: "07:00" },
+    });
+  });
+
+  test("the advanced limits are written within the settings schema's bounds", () => {
+    expect(
+      notificationsSettingsPatch(
+        {
+          quietEnabled: false,
           quietStart: "23:00",
           quietEnd: "07:00",
-          maxPerHour: "61",
-          delegatedFromDesktop: "desktop",
-        }).pet as { notifications: Record<string, unknown> }
-      ).notifications.maxPerHour,
-    ).toBeUndefined();
+          maxPerHour: "6",
+          maxP0PerHour: "120",
+          mergeWindowSec: "0",
+          presenceIdleSec: "30",
+          delegatedFromDesktop: "auto",
+        },
+        ALL,
+      ),
+    ).toEqual({
+      pet: {
+        notifications: {
+          delegatedFromDesktop: "auto",
+          quietHours: { enabled: false, start: "23:00", end: "07:00" },
+          maxPerHour: 6,
+          maxP0PerHour: 120,
+          mergeWindowSec: 0,
+          presenceIdleSec: 30,
+        },
+      },
+    });
+  });
+
+  test("the advanced group starts collapsed and shows the loaded limits when opened", async () => {
+    const { api } = fakeApi(noticesState());
+    const hook = await renderHook(() =>
+      usePetNotificationsController({ api, write: async () => undefined }),
+    );
+    await settle();
+    const controller = hook.result.current as PetNotificationsController;
+    expect(controller.draft).toMatchObject({
+      maxP0PerHour: "12",
+      mergeWindowSec: "600",
+      presenceIdleSec: "120",
+    });
+    const collapsed = renderToStaticMarkup(<PetNotificationsFields controller={controller} />);
+    expect(collapsed).toContain('data-pet-notices-advanced="collapsed"');
+    expect(collapsed).not.toContain('id="pet-notices-max-p0-per-hour"');
+    const open = renderToStaticMarkup(
+      <PetNotificationsFields controller={controller} defaultAdvancedOpen />,
+    );
+    expect(open).toContain('data-pet-notices-advanced="open"');
+    expect(open).toContain('id="pet-notices-max-p0-per-hour"');
+    expect(open).toContain('value="600"');
+    expect(open).toContain('value="120"');
+    await hook.unmount();
+  });
+
+  test("the channel list offers a way to bind channels", async () => {
+    const { api } = fakeApi(noticesState());
+    const hook = await renderHook(() =>
+      usePetNotificationsController({ api, write: async () => undefined }),
+    );
+    await settle();
+    const html = renderToStaticMarkup(
+      <PetNotificationsFields
+        controller={hook.result.current as PetNotificationsController}
+        onManageChannels={() => undefined}
+      />,
+    );
+    expect(html).toContain("data-pet-notices-manage-channels");
+    expect(html).toContain("管理消息连接");
+    await hook.unmount();
   });
 
   test("the away switch toggles the system rule, and rolls back when it fails", async () => {
