@@ -1059,7 +1059,7 @@ const BUILTIN_CONTRIBUTIONS: Array<{
       isConcurrencySafe: true,
     },
     execute: completeGoalTool,
-    exposure: expose(HARNESS_TAGS, { availability: (ctx) => ctx.hasGoal === true }),
+    exposure: expose(HARNESS_TAGS),
   },
   // ─── Goal mode: user-initiated cancellation ────────────────────
   // Distinct from complete_goal — the user explicitly asked to abandon the
@@ -1075,7 +1075,7 @@ const BUILTIN_CONTRIBUTIONS: Array<{
       isConcurrencySafe: true,
     },
     execute: cancelGoalTool,
-    exposure: expose(HARNESS_TAGS, { availability: (ctx) => ctx.hasGoal === true }),
+    exposure: expose(HARNESS_TAGS),
   },
   // ─── Plugin marketplace: model-driven source registration ──────
   {

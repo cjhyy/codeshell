@@ -102,13 +102,9 @@ describe("first-party initial tool routing policies", () => {
           "TodoWrite",
         ]),
       );
-      for (const name of [
-        "complete_goal",
-        "cancel_goal",
-        "SaveContextNote",
-        "NewContext",
-        "SearchHistory",
-      ])
+      expect(result.initialToolNames).toContain("complete_goal");
+      expect(result.initialToolNames).toContain("cancel_goal");
+      for (const name of ["SaveContextNote", "NewContext", "SearchHistory"])
         expect(result.initialToolNames).not.toContain(name);
     }
   });
