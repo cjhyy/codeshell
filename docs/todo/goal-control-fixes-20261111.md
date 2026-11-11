@@ -1,6 +1,19 @@
-# Goal control fixes — local development handoff (2026-11-11)
+# Goal control fixes — delivery handoff (2026-11-11)
 
-Status: local follow-up implemented and verified with the timing limitation below, after the independent CC **code review PASS, no Critical / Important**. CC did not run tests. This round remains **local only: no push, PR, main integration or app installation**.
+Status: the reviewed implementation is now prepared for protected PR delivery. Independent CC's second incremental **code review PASS, no Critical / Important** covered the frozen local delivery `e58b5cb5b4bcd2104a6b2e15bdb73ad4916dd21b`; CC did not run tests. The historical local-only reports below remain tied to their original commits.
+
+## Protected delivery candidate (2026-11-11)
+
+- Fetched latest `origin/main` `57fc7413f929926a6994bec128b730a3e86b3de3` and normally merged it into the task branch, without conflicts, producing **`2ce6488a9991b002c832af8dc0a09b4651be4cb8`**. No production/test behavior was changed during integration. The four overlapping files merged mechanically; independent read-only combined review found no blocking interaction with main's tool-preparation/Goal behavior.
+- Combined validation: package-release **PASS** (10 tarballs, 55 typed / 53 runtime entries), then all-workspace typecheck, root build, Desktop build, lint (**0 errors / 90 existing warnings**), Engine bypass and test-shard coverage/budgets **PASS**. All commands exited 0; dist readers began only after package-release completed.
+- Targeted guarded composition checks: **578 pass / 0 fail / 0 skip across 37 actual files**, covering real startup/edit/pause/Stop, SDK AskUser, background Goal continuation, new main tool preparation/discovery, migration, RPC/storage, Desktop and Hub producers, mobile ingress/capabilities and Web hooks. Each invocation contained at most eight explicit paths. One wrong validator path was ignored by Bun; its six real companions passed, and the actual Server validator was separately run (23/23). Both exact commands are preserved.
+- Actual isolated Chromium/hooks/controller/buttons: **5/5 PASS**, no browser errors or blocked requests, using the exact loopback mock Host. This is still **not physical Goal Electron/production-worker/mobile E2E**.
+- Exact commands and footers: [delivery-validation.txt](goal-controls-evidence-20261111/delivery-validation.txt). Raw new logs: ignored `artifacts/goal-controls-delivery/`; previous logs and first failures are unchanged. These are meaningful combined-candidate rechecks, **not a fresh complete local CI run**. The prior full run remains exit 1 with its unresolved inner 20-second Desktop tunnel timeout and its single passing unchanged partition control.
+- PR delivery requires real eligible `ci.yml` checks on the pushed candidate, then a normal protected merge and merged-SHA verification. No workflow/partition/budget/skip edits, workflow-dispatch substitution, bypass, direct main push, release/tag or app installation are authorized or used.
+- The two explicitly deferred **L** items remain open: coherent unconsumed-input history across retry (two distinct runIds are preserved), and cold-worker timeout acceptance/expiry/cancellation (10-second uncertainty refreshes state; no automatic resend). Same-process bounded Stop retention is not cross-process persistence.
+- Primary checkout and other worktrees have not been modified during candidate preparation. Its pre-existing dirty prompt-cache document is outside this task; any eventual primary fast-forward requires fresh disjoint-path and preserved-byte checks. The review worktree's uncommitted reproductions must remain intact.
+
+## Historical local follow-up report
 
 - Worktree: `/private/tmp/codeshell-goal-fixes-20261111` only; primary and other worktrees untouched.
 - Branch: `codex/core/goal-controls-fixes-20261111`.

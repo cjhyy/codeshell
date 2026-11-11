@@ -1,5 +1,7 @@
 # Goal follow-up controlled evidence
 
+[delivery-validation.txt](delivery-validation.txt) records the later protected-delivery candidate after merging latest main `57fc7413f` into `2ce6488a9`: package/typecheck/build/lint/guard checks all pass, 578 targeted tests across 37 actual files pass, and five Chromium Goal checks pass. It preserves the corrected validator-path invocation and does not replace the historical full-run failure below. Eligible PR CI and merged-SHA verification are recorded at delivery.
+
 These are small printable excerpts from actual commands, not synthetic output. Raw logs are ignored in `artifacts/goal-controls-followup/` in the same worktree. They are not needed to read the preserved command, failure and footer evidence here. The Goal-specific cold-start fixture is not physical Electron/production-worker E2E. The current user app was untouched and no paid provider was invoked. Existing unit suites may exercise their own worker processes.
 
 All commands ran in `/private/tmp/codeshell-goal-fixes-20261111`, using Node `v24.22.1` and Bun `1.3.11`. The PATH prefix only reads the installed runtime. The guarded runner isolates HOME/provider credentials; real Engine fixtures install exact network guards before importing Core and use fake providers. Source base is merge HEAD `1dedce1838d6735f7bf9ac7974be43c427120a2c`; RED adds regression tests over that production, GREEN includes this follow-up's working diff. Final frozen implementation HEAD is recorded in the handoff.
