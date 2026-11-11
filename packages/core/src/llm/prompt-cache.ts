@@ -33,6 +33,8 @@ export interface PromptCacheRequestContext {
 export interface PromptCachePolicy {
   strategy: PromptCacheStrategy;
   layoutVersion: string;
+  /** How discovered tool schemas are represented in requests. */
+  toolDiscovery: "call-tool";
   breakpoints: readonly PromptCacheBreakpoint[];
   /** Opaque and <=64 chars, as required by OpenAI's prompt_cache_key. */
   cacheKey?: string;
@@ -53,7 +55,6 @@ export interface ResolvePromptCachePolicyInput {
 
 const OPENAI_EXPLICIT_BREAKPOINTS = ["system", "stable-history", "rolling-history"] as const;
 const ANTHROPIC_BREAKPOINTS = ["system", "tools", "stable-history", "rolling-history"] as const;
-const OPENROUTER_ANTHROPIC_BREAKPOINTS = ["system", "stable-history", "rolling-history"] as const;
 
 function normalizedModel(model: string): string {
   return model.startsWith("~") ? model.slice(1) : model;
@@ -83,27 +84,19 @@ export function resolvePromptCachePolicy(input: ResolvePromptCachePolicyInput): 
     ? createPromptCacheKey(input.request.scopeId, `${kind}:${model}`)
     : undefined;
 
-  if (capability === "anthropic-explicit" && kind !== "openrouter") {
-    return {
-      strategy: "anthropic-explicit",
-      layoutVersion: "system-tools-stable-rolling-v2",
-      breakpoints: ANTHROPIC_BREAKPOINTS,
-    };
-  }
-
   if (capability === "anthropic-explicit") {
     return {
       strategy: "anthropic-explicit",
-      // OpenRouter/Anthropic includes tools in the system-prefix cache entry,
-      // so a separate tool marker is unnecessary and preserves one slot.
-      layoutVersion: "system-stable-rolling-v2",
-      breakpoints: OPENROUTER_ANTHROPIC_BREAKPOINTS,
+      toolDiscovery: "call-tool",
+      layoutVersion: "system-tools-stable-rolling-v2",
+      breakpoints: ANTHROPIC_BREAKPOINTS,
     };
   }
 
   if (capability === "openai-hybrid" && input.explicitDisabled !== true) {
     return {
       strategy: "openai-hybrid",
+      toolDiscovery: "call-tool",
       layoutVersion: "system-stable-resume-implicit-v3",
       breakpoints: OPENAI_EXPLICIT_BREAKPOINTS,
       ...(key ? { cacheKey: key } : {}),
@@ -114,6 +107,7 @@ export function resolvePromptCachePolicy(input: ResolvePromptCachePolicyInput): 
   if (capability === "openai-hybrid" || capability === "openai-implicit") {
     return {
       strategy: "openai-implicit",
+      toolDiscovery: "call-tool",
       layoutVersion: "implicit-affinity-v1",
       breakpoints: [],
       ...(key ? { cacheKey: key } : {}),
@@ -122,6 +116,7 @@ export function resolvePromptCachePolicy(input: ResolvePromptCachePolicyInput): 
 
   return {
     strategy: "provider-managed",
+    toolDiscovery: "call-tool",
     layoutVersion: "append-only-v1",
     breakpoints: [],
   };
