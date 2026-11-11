@@ -11,6 +11,7 @@ import { performance } from "node:perf_hooks";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createBunTestEnvironment } from "../../../scripts/bun-test-completion.mjs";
+import { discoveredFixtureCall } from "./operation-tool-discovery-fixture.mjs";
 import {
   finiteSettingsHooks,
   finiteBoundSettings,
@@ -530,6 +531,16 @@ try {
       physicalRequests++;
       const usage = { promptTokens: 10, completionTokens: 1, totalTokens: 11 };
       this.recordUsage(usage, request);
+      if (request.usagePurpose === "tool_summary") {
+        assert.deepEqual(request.tools, []);
+        assert.match(request.messages[0]?.content, /^Tool: LinkAction\(/);
+        return {
+          text: "Reviewed synthetic Link operation",
+          usage,
+          stopReason: "stop",
+          toolCalls: [],
+        };
+      }
       const intent = request.messages.findLastIndex(
         (message) =>
           message.role === "user" &&
@@ -543,15 +554,6 @@ try {
             ? message.content.filter((block) => block.type === "tool_result")
             : [],
         );
-      if (!(request.tools ?? []).some((tool) => tool.name === "LinkAction"))
-        return {
-          text: "",
-          stopReason: "tool_use",
-          usage,
-          toolCalls: [
-            { id: "discover", toolName: "ToolSearch", args: { query: "select:LinkAction" } },
-          ],
-        };
       if (results.some((block) => block.tool_use_id === "star"))
         return { text: "Model claims success", usage, stopReason: "stop", toolCalls: [] };
       return {
@@ -559,16 +561,21 @@ try {
         stopReason: "tool_use",
         usage,
         toolCalls: [
-          {
-            id: "star",
-            toolName: "LinkAction",
-            args: {
-              provider: "github",
-              action: "set_starred",
-              connectionId: "synthetic-read-link",
-              params: { owner: "fixture", repo: "repo", starred: true },
+          discoveredFixtureCall(
+            (request.tools ?? []).map((tool) => tool.name),
+            results.findLast((block) => block.tool_use_id === "discover"),
+            {
+              id: "star",
+              toolName: "LinkAction",
+              args: {
+                provider: "github",
+                action: "set_starred",
+                connectionId: "synthetic-read-link",
+                params: { owner: "fixture", repo: "repo", starred: true },
+              },
             },
-          },
+            "discover",
+          ),
         ],
       };
     }
