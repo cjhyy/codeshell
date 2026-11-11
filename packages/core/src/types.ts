@@ -327,6 +327,12 @@ export interface SessionToolSelection {
   frozenDefinitions?: ToolDefinition[];
   /** Complete frozen deferred catalog for native discovery; an empty array is authoritative. */
   deferredDefinitions?: ToolDefinition[];
+  /** Cycle-start eligible catalog for behavior-section gates, independent of eager listings. */
+  behaviorToolNames?: string[];
+  /** Core version that captured this cycle's tool definitions. */
+  cacheVersion?: string;
+  /** Start time of the latest successful primary request, in Unix milliseconds. */
+  lastRequestAt?: number;
   /** Model, provider and endpoint identity defining the current cache cycle. */
   cacheIdentity?: string;
 }
