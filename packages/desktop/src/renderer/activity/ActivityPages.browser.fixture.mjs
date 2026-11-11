@@ -38,7 +38,7 @@ const sessions = Array.from({ length: 120 }, (_, i) => ({ id: "session-" + i, ti
 const run = { runId: "run-original", objective: "Original run", status: "completed", cwd: "/original/project", createdAt: 1800000000000, updatedAt: 1800000000010, startedAt: 1800000000000, finishedAt: 1800000000010, sessionId: "original-session", error: null, summary: "Run completed", model: null, provider: null, durationMs: 10, usage: null, attemptCount: 1, latestCheckpointId: null, latestApprovalId: null, tags: [], metadata: {} };
 window.codeshell = {
   getUsageSummary: async () => ({version:1,scope:"store",includesChildren:false,partial:false,persistenceErrors:0,invalidReceipts:0,scannedReceipts:0,requests:0,promptTokens:0,completionTokens:0,totalTokens:0,cacheReadTokens:0,cacheCreationTokens:0,knownEstimatedCostUsd:0,unknownCostRequests:0,unknownUsageRequests:0,byModel:[],bySession:[],byPurpose:[]}),
-  quota: { get: async () => ({}) },
+  quota: { listProviders: async () => [], query: async () => { throw new Error("No owned provider"); } },
   modelTraces: { sessions: async () => ({items:[], total:0}), list: async () => ({items:[], total:0}), get: async () => null, getConfig: async () => ({enabled:true,captureContent:true,includeEphemeral:true,retentionDays:7}), setConfig: async (patch) => ({enabled:true,captureContent:true,includeEphemeral:true,retentionDays:7,...patch}) },
   tailLog: async (bucket, limit) => {
     window.fixture.calls.push(["tail", bucket, limit]);

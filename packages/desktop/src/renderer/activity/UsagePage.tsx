@@ -1,8 +1,7 @@
 import React from "react";
 import { Gauge, RefreshCw } from "lucide-react";
-import type { QuotaResult } from "@cjhyy/code-shell-capability-coding/orchestration";
 import { Button } from "@/components/ui/button";
-import { QuotaProviderBlock } from "../cc-room/QuotaPanel";
+import { UsageProviders } from "./UsageProviders";
 import { useT } from "../i18n/I18nProvider";
 import {
   isCliUsage,
@@ -19,19 +18,6 @@ export function UsagePage() {
   const [overview, setOverview] = React.useState<UsageOverview>();
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState(false);
-  const [quota, setQuota] = React.useState<QuotaResult>();
-  const [quotaLoading, setQuotaLoading] = React.useState(false);
-  const [quotaError, setQuotaError] = React.useState(false);
-  const [quotaUpdatedAt, setQuotaUpdatedAt] = React.useState<number>();
-  const mounted = React.useRef(true);
-
-  React.useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
-
   React.useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -57,24 +43,6 @@ export function UsagePage() {
       cancelled = true;
     };
   }, [range, revision]);
-
-  const loadQuota = async () => {
-    if (quotaLoading) return;
-    setQuotaLoading(true);
-    setQuotaError(false);
-    try {
-      const result = await window.codeshell.quota.get("both");
-      if (mounted.current) {
-        setQuota(result);
-        setQuotaUpdatedAt(Date.now());
-        setQuotaError(!result.claude && !result.codex);
-      }
-    } catch {
-      if (mounted.current) setQuotaError(true);
-    } finally {
-      if (mounted.current) setQuotaLoading(false);
-    }
-  };
 
   const format = (value: number) =>
     new Intl.NumberFormat(lang === "zh" ? "zh-CN" : "en-US").format(value);
@@ -108,62 +76,7 @@ export function UsagePage() {
           <p className="mt-2 text-sm text-muted-foreground">{t("usagePage.description")}</p>
         </header>
 
-        <section
-          aria-labelledby="subscription-usage-heading"
-          className="rounded-2xl border border-border bg-card p-4 sm:p-5"
-        >
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2 id="subscription-usage-heading" className="font-medium">
-                {t("usagePage.quotaTitle")}
-              </h2>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                {t("usagePage.quotaDescription")}
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={quotaLoading}
-              onClick={() => void loadQuota()}
-            >
-              {quotaLoading
-                ? t("usagePage.loading")
-                : quota
-                  ? t("usagePage.quotaRefresh")
-                  : t("usagePage.quotaLoad")}
-            </Button>
-          </div>
-          {quota ? (
-            <div className="mt-5 grid gap-5 sm:grid-cols-2">
-              {quota.codex && (
-                <div className="rounded-xl bg-muted/40 p-4">
-                  <QuotaProviderBlock name="Codex" pq={quota.codex} />
-                </div>
-              )}
-              {quota.claude && (
-                <div className="rounded-xl bg-muted/40 p-4">
-                  <QuotaProviderBlock name="Claude Code" pq={quota.claude} />
-                </div>
-              )}
-            </div>
-          ) : (
-            <p className="my-5 text-sm text-muted-foreground">{t("usagePage.quotaEmpty")}</p>
-          )}
-          {quotaError && (
-            <p role="alert" className="mt-3 text-sm text-status-err">
-              {t("usagePage.quotaMissing")}
-            </p>
-          )}
-          <p className="mt-4 text-xs leading-5 text-muted-foreground">{t("usagePage.quotaHint")}</p>
-          {quotaUpdatedAt && (
-            <p className="mt-1 text-xs text-muted-foreground">
-              {t("usagePage.updated", {
-                time: new Date(quotaUpdatedAt).toLocaleString(lang === "zh" ? "zh-CN" : "en-US"),
-              })}
-            </p>
-          )}
-        </section>
+        <UsageProviders />
 
         <section aria-labelledby="recorded-usage-heading" className="min-w-0">
           <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
