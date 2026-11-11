@@ -1,0 +1,96 @@
+Sixth latest-main delivery refresh — 2026-11-11
+Source merge HEAD: c6e3bb3ab388aa415a2d7c829fe906527dd8357b
+Fetched origin/main: efc0145edbf9615e8c9a20c8e451a48a6a11faac (PR #346)
+Normal conflict-free merge; no task/main path intersection and no Task implementation/test edits.
+Package-release completed before dist readers: exit0, 10 tarballs /55 typed /53 runtime entries.
+Node24.22.1/Bun1.3.11, command-local runtime +caffeinate. Isolated HOME and fake provider/runtime fixtures only; no real external CLI/provider/probe.
+
+$ bun run typecheck
+exit=0; elapsedMs=42978
+@cjhyy/code-shell-capability-optimization-lab typecheck: Exited with code 0
+@cjhyy/code-shell-host typecheck: Exited with code 0
+@cjhyy/code-shell-pet typecheck: Exited with code 0
+@cjhyy/code-shell-capability-coding typecheck: Exited with code 0
+@cjhyy/code-shell-web typecheck: Exited with code 0
+@cjhyy/code-shell-server typecheck: Exited with code 0
+@cjhyy/code-shell-tui typecheck: Exited with code 0
+@cjhyy/code-shell-desktop typecheck: Exited with code 0
+
+$ bun run --cwd packages/desktop build
+exit=0; elapsedMs=9609
+../../out/mobile/assets/index-BYv7Axz9.js   870.38 kB │ gzip: 268.66 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 7.06s
+[build] main, preload, renderer, mobile, and Chrome extension OK
+
+$ bun run lint
+exit=0; elapsedMs=25606
+/private/tmp/codeshell-goal-fixes-20261111/packages/tui/src/ui/components/ToolCall.tsx
+  107:25  warning  'setLocalExpanded' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/private/tmp/codeshell-goal-fixes-20261111/packages/tui/src/ui/input-history.ts
+  20:3  warning  'writeFileSync' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+✖ 90 problems (0 errors, 90 warnings)
+
+
+$ bun run lint:engine-bypass
+exit=0; elapsedMs=720
+$ bash scripts/check-no-engine-bypass.sh
+OK: 'new Engine(' is confined to the protocol layer.
+
+$ bun run lint:test-shards
+exit=0; elapsedMs=628
+    1 / 60   tests: test Desktop suites that need their own Bun process
+    1 / 60   tests: test Desktop suites that need their own Bun process
+    1 / 60   tests: test Desktop Cloud bundle boundary
+    1 / 60   tests: test Playwright driver integration
+    1 / 60   tests: test Puppeteer driver integration
+    1 / 60   tests: test browser inspector integration
+
+✓ 2600 test files covered; largest process 771 files
+
+$ node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/external-runtime-host-submission.test.ts packages/desktop/src/main/external-runtime-profile-control.test.ts packages/desktop/src/main/pet/pet-dispatch-external-runtime.test.ts packages/desktop/src/main/pet/pet-external-runtime.test.ts packages/desktop/src/main/pet/pet-external-reply-model.test.ts packages/desktop/src/main/pet/pet-native-extraction-policy.test.ts packages/desktop/src/main/pet/pet-runtime-control-worker.test.ts packages/desktop/src/main/pet/pet-notice-reply-models.test.ts
+exit=0; elapsedMs=2548
+(pass) provider-aware notice reply model chain > a provider is pinned for this reply while the next chain reads changed settings [0.06ms]
+(pass) provider-aware notice reply model chain > settings failure does not authorize fallback inference [0.03ms]
+
+ 91 pass
+ 0 fail
+ 390 expect() calls
+Ran 91 tests across 8 files. [2.50s]
+Completed Bun shard: 91 tests, 0 skipped; 0 failures.
+
+$ node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/pet/bound-session-runner.test.ts packages/desktop/src/main/pet/pet-work-delegation-host.test.ts packages/desktop/src/main/external-runtime-goal-rpc.test.ts packages/desktop/src/main/mobile-remote/handle-client-event.test.ts packages/core/src/protocol/server.askuser-timeout.test.ts packages/core/src/protocol/chat-session-manager.lifecycle.test.ts packages/core/src/protocol/chat-session-goal-resume.test.ts tests/sdk-legacy-ask-user.test.ts
+exit=0; elapsedMs=5947
+(pass) legacy deadline expiry before its timer uses the recommended answer and grants no permission [2.59ms]
+(pass) legacy cancellation retires its model question and cannot be revived by keep-waiting [2.76ms]
+
+ 143 pass
+ 0 fail
+ 559 expect() calls
+Ran 143 tests across 8 files. [5.90s]
+Completed Bun shard: 143 tests, 0 skipped; 0 failures.
+
+$ node scripts/run-bun-test-shard.mjs --timeout 30000 tests/engine-goal-startup-controls.test.ts packages/core/src/tool-system/session-tool-host.run-context.test.ts packages/core/src/protocol/server.user-decision-lifecycle.test.ts packages/desktop/src/shared/session-model-default.test.ts packages/core/src/settings/schema.test.ts packages/desktop/src/renderer/settings/SessionDefaultModelSelector.interaction.test.tsx packages/coding/src/external-runtimes/codex/runtime.test.ts packages/coding/src/external-runtimes/session-factory.test.ts
+exit=0; elapsedMs=21611
+(pass) startExternalRuntimeSession > cleans up a rejected initialize before returning (ignores shutdown: true) [2562.56ms]
+(pass) startExternalRuntimeSession > security-relevant inputs are required by the type, not defaulted [0.90ms]
+
+ 143 pass
+ 0 fail
+ 529 expect() calls
+Ran 143 tests across 8 files. [21.53s]
+Completed Bun shard: 143 tests, 0 skipped; 0 failures.
+
+377 pass /0fail /0skip across 24 files:91external-manager +143Goal/Stop/AskUser +143startup/context/defaults; each invocation8explicitfiles.
+Two narrow read-only reviews PASS: new external routing preserves native Goal startup/CAS/retry/Stop paths; trusted SessionToolHost run is captured/asserted before await, combined cancellation and final executor guard remain. Per-turn profile control and interrupt-generation checks prevent stale replies from reclassifying Stop. Native SDK user-decision production paths have no incoming diff.
+Upstream PR346 adds three existing-budget external-default groups and their Desktop exclusions; all are inherited unchanged. Task versus latest main has zero workflow diff, no task budget/skip changes.
+Upstream commit a1825ace9 independently synchronizes the AskUser fixture clock with its actual ten-minute deadline and adds a request-to-detail focus barrier in e2e-runtime-cost-history.mjs. Historical same-blob evidence applies only to the recorded old candidates/bases; the newly inherited fixture is different. This is not a Task change to pass CI and does not prove the historical failure cause.
+Previous e6410bd4f run43022758492 had13successfulchecks, including real Electron 24/24suites, cost GUI and video, with zero newfailure/rerun. Main advanced while UI was pending; only this superseded own run was cancelled. FinalUI/run cancelled, not all-green. Complete ZIP confirms fresh counts and preserved same-shared-rest actual PASS output for both root fixtures.
+Earlier superseded cancellations and first failures remain preserved. Exactly one actual failed-job rerun has been used; no further blind rerun allowance resets. New exact head requires all14eligiblePRchecks.
+Two deferred L items, historical full-local failure and physical Goal Electron/production-worker/mobile E2E limits remain unchanged.

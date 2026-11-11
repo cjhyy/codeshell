@@ -2,6 +2,14 @@
 
 Status: the reviewed implementation is now prepared for protected PR delivery. Independent CC's second incremental **code review PASS, no Critical / Important** covered the frozen local delivery `e58b5cb5b4bcd2104a6b2e15bdb73ad4916dd21b`; CC did not run tests. The historical local-only reports below remain tied to their original commits.
 
+## Sixth latest-main refresh (2026-11-11)
+
+- Main advanced through PR #346 to **`efc0145edbf9615e8c9a20c8e451a48a6a11faac`**. Normal conflict-free merge **`c6e3bb3ab388aa415a2d7c829fe906527dd8357b`** has no task/main path intersection or Task source/test change. Two independent narrow reviews **PASS**: external default routing preserves Goal/Stop authority; trusted per-turn tool context, combined cancellation, final executor guard and interrupt-generation fencing remain intact.
+- Package-release completed first; typecheck, Desktop build, lint (90 warnings / 0 errors), Engine bypass and shard coverage **PASS**. Three guarded groups passed **377/377 across 24 files**, zero skips, covering external submissions, native Goal/Stop/AskUser and startup/context/defaults with fake runtimes. [Exact commands and footers](goal-controls-evidence-20261111/delivery-refresh6-validation.txt).
+- Upstream adds three external-default CI groups and matching Desktop exclusions; this task inherits them unchanged, with **zero workflow diff versus latest main** and no task budget/skip adjustment. Upstream `a1825ace9` also synchronizes AskUser fixture time and adds the cost-history request-to-detail focus barrier. Old same-blob evidence applies only to old candidates; this new inherited barrier does **not** prove the historical failure cause and is not a Task workaround.
+- Previous `e6410bd4f` [run43022758492](https://github.com/cjhyy/codeshell/actions/runs/43022758492) had13 successes including Electron 24/24suites, cost GUI/video, shared rest and Desktop. Only this superseded own run was cancelled while UI remained pending, with no failed step. Full logs, fresh counts and both root fixtures’ actual shared-rest PASS excerpts are preserved; cancelled UI is not a passing check.
+- New exact-head eligible CI remains required. All prior first failures, exactly one actual job rerun, deferred L items and physical Goal E2E boundaries remain unchanged. Raw logs: `artifacts/goal-controls-delivery/main-refresh-efc0145ed/`.
+
 ## Fifth latest-main refresh (2026-11-11)
 
 - Main advanced through PR #353 to **`f1e7bf2ea3e1935fcd5d43d65c19d41ab097eddc`**. Normal conflict-free merge **`f0e7f19cfb92f109bb8881e73deb5f6f2e98544f`** has no task/main file intersection or Task logic change. Read-only review **PASS**: notice-rule resume is not Goal resume; injected/disableGoal host wakes, Stop authority and claimed-occurrence fences remain intact.
