@@ -1,5 +1,6 @@
 import React, { memo, useState, useEffect, useId } from "react";
 import { AskUserMessageView } from "./AskUserMessageView";
+import type { AskUserAnswerProjection } from "./askUserAnswerProjection";
 import { ChevronRight, ChevronDown, LoaderCircle } from "lucide-react";
 import { ToolCard } from "../tool-cards";
 import { ToolGroupCard } from "./ToolGroupCard";
@@ -27,6 +28,7 @@ interface Props {
   sessionMainRootId?: string | null;
   rootStatus?: MarkdownRootStatus;
   onExtendGoal?: (opts: GoalExtendOpts) => void;
+  questionAnswers?: AskUserAnswerProjection;
 }
 
 /**
@@ -65,6 +67,7 @@ function TurnProcessGroupCardImpl({
   sessionMainRootId,
   rootStatus,
   onExtendGoal,
+  questionAnswers,
 }: Props) {
   const [open, setOpen] = useState(group.isLive);
   const detailsId = useId();
@@ -197,7 +200,7 @@ function TurnProcessGroupCardImpl({
     }
     if (m.kind === "ask_user") {
       // Answered record only: the open question itself is pinned by ChatView.
-      return m.answer !== undefined ? (
+      return m.answer !== undefined && !questionAnswers?.hiddenAskIds.has(m.id) ? (
         <AskUserMessageView key={m.id} message={m} onAnswer={NOOP_ANSWER} />
       ) : null;
     }
@@ -222,7 +225,18 @@ function TurnProcessGroupCardImpl({
     >
       {parts.map((part, index) => {
         if (part.kind === "user") {
-          if (part.message.pending || (!itemsVisible && !part.message.steerId)) return null;
+          if (part.message.pending) return null;
+          const answer = questionAnswers?.answersByUserId.get(part.message.id);
+          if (answer) {
+            return (
+              <AskUserMessageView
+                key={`user:${part.message.id}`}
+                message={answer}
+                onAnswer={NOOP_ANSWER}
+              />
+            );
+          }
+          if (!itemsVisible && !part.message.steerId) return null;
           return (
             <div
               key={`user:${part.message.id}`}

@@ -9,6 +9,7 @@ import {
   preferredModuleForScope,
   type SettingsScope,
 } from "./SettingsPage";
+import { translate } from "../i18n";
 import { DialogProvider } from "../ui/DialogProvider";
 import { ToastProvider } from "../ui/ToastProvider";
 
@@ -27,6 +28,50 @@ describe("SettingsPage", () => {
     expect(matchesSettingsModule("MCP", "MCP 服务器", "扩展能力")).toBe(true);
     expect(matchesSettingsModule("扩展", "子代理", "扩展能力")).toBe(true);
     expect(matchesSettingsModule("主题", "外观", "")).toBe(false);
+  });
+
+  test("finds the Mimi entry by what its page holds, not only by its name", () => {
+    for (const lang of ["zh", "en"] as const) {
+      const label = translate(lang, "mimiSettings.entry.label");
+      const keywords = translate(lang, "mimiSettings.entry.keywords");
+      for (const query of lang === "zh" ? ["微信", "免打扰", "记忆"] : ["wechat", "quiet hours"])
+        expect(matchesSettingsModule(query, label, "", keywords)).toBe(true);
+      expect(matchesSettingsModule(lang === "zh" ? "微信" : "wechat", label, "")).toBe(false);
+    }
+  });
+
+  test("lists a Mimi entry that jumps to each Mimi settings section", () => {
+    const html = renderToStaticMarkup(
+      <ToastProvider>
+        <DialogProvider>
+          <SettingsPage
+            activeProjectPath={null}
+            initialModule="mimi"
+            projects={[]}
+            sessionIndices={{}}
+            onRestoreArchivedSession={() => undefined}
+            onDeleteArchivedSession={() => undefined}
+            isMac={false}
+            isFullscreen={false}
+            onBack={() => undefined}
+            onOpenMimiSettings={() => undefined}
+          />
+        </DialogProvider>
+      </ToastProvider>,
+    );
+    expect(html).toContain('data-settings-module="mimi"');
+    expect(html).toContain("data-mimi-settings-entry");
+    expect(html).toContain("data-open-mimi-settings");
+    for (const section of [
+      "appearance",
+      "conversation",
+      "notifications",
+      "rules",
+      "memory",
+      "connections",
+    ])
+      expect(html).toContain(`data-open-mimi-section="${section}"`);
+    expect(html).toContain("消息连接");
   });
 
   test("renders ordinary settings without a project scope control", () => {

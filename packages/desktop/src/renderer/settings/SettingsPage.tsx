@@ -27,6 +27,7 @@ import {
   MessageSquare,
   Gauge,
   UsersRound,
+  PawPrint,
   ChevronRight,
   X,
 } from "lucide-react";
@@ -38,6 +39,8 @@ import { MemorySection } from "./MemorySection";
 import { McpSection } from "./McpSection";
 import { GeneralSection } from "./GeneralSection";
 import { ComputerUseSettings } from "./ComputerUseSettings";
+import { MimiSettingsEntry } from "./MimiSettingsEntry";
+import type { MimiSettingsSection } from "../pet/settings/mimiSettingsSections";
 import { CloudAccountSettings } from "./CloudAccountSettings";
 import { ExtensionsPage } from "../extensions/ExtensionsPage";
 import { ProjectInstructionsSection } from "../project-config/ProjectInstructionsSection";
@@ -85,6 +88,7 @@ export type SettingsModuleId =
   | "instructions"
   | "personalization"
   | "digital-humans"
+  | "mimi"
   | "shortcuts"
   | "mcp"
   | "hooks"
@@ -109,6 +113,8 @@ interface Module {
   id: SettingsModuleId;
   label: string;
   Icon: React.ComponentType<{ className?: string; size?: number }>;
+  /** Extra words search matches, for modules whose label does not say what is inside. */
+  keywords?: string;
   /** Which scopes this module can render in. Defaults to user-only. */
   scopes?: readonly SettingsScopeKind[];
   /** Draft-heavy editors keep their existing guarded scope picker until the
@@ -211,10 +217,15 @@ export function preferredModuleForScope<Id extends string>(
   return modules.find((module) => moduleSupportsScope(module, scope))?.id ?? current;
 }
 
-export function matchesSettingsModule(query: string, label: string, groupTitle: string): boolean {
+export function matchesSettingsModule(
+  query: string,
+  label: string,
+  groupTitle: string,
+  keywords = "",
+): boolean {
   const needle = query.trim().toLocaleLowerCase();
   if (!needle) return true;
-  return `${label} ${groupTitle}`.toLocaleLowerCase().includes(needle);
+  return `${label} ${groupTitle} ${keywords}`.toLocaleLowerCase().includes(needle);
 }
 
 /**
@@ -274,6 +285,13 @@ function buildModuleGroups(t: TFunction): ModuleGroup[] {
           label: t("settingsX.page.digitalHumans"),
           Icon: UsersRound,
           scopes: ["user", "project"],
+        },
+        // Mimi keeps its own settings page; this entry finds it and jumps there.
+        {
+          id: "mimi",
+          label: t("mimiSettings.entry.label"),
+          Icon: PawPrint,
+          keywords: t("mimiSettings.entry.keywords"),
         },
         { id: "shortcuts", label: t("settingsX.page.shortcuts"), Icon: Keyboard },
       ],
@@ -367,8 +385,11 @@ interface Props {
   onBack: () => void;
   /** Jump to the full digital-humans page (market / teams). */
   onOpenDigitalHumans?: () => void;
-  /** Mimi's single show/mode/size setting lives on the Mimi settings page. */
-  onOpenMimiSettings?: () => void;
+  /** Open the Mimi settings page (on a section); "back" there returns to `fromModule`. */
+  onOpenMimiSettings?: (target: {
+    section?: MimiSettingsSection;
+    fromModule: SettingsModuleId;
+  }) => void;
   /** Open account connections directly on the Link category. */
   onOpenLink?: () => void;
 }
@@ -460,7 +481,7 @@ export function SettingsPage({
         modules: group.modules.filter(
           (module) =>
             moduleSupportsScope(module, scopeState) &&
-            matchesSettingsModule(query, module.label, group.title),
+            matchesSettingsModule(query, module.label, group.title, module.keywords),
         ),
       })).filter((group) => group.modules.length > 0),
     [MODULE_GROUPS, query, scopeState],
@@ -780,7 +801,23 @@ export function SettingsPage({
                 />
               )}
               {active === "computer-use" && (
-                <ComputerUseSettings onOpenMimiSettings={onOpenMimiSettings} />
+                <ComputerUseSettings
+                  onOpenMimiSettings={
+                    onOpenMimiSettings
+                      ? () =>
+                          onOpenMimiSettings({ section: "appearance", fromModule: "computer-use" })
+                      : undefined
+                  }
+                />
+              )}
+              {active === "mimi" && (
+                <MimiSettingsEntry
+                  onOpen={
+                    onOpenMimiSettings
+                      ? (section) => onOpenMimiSettings({ section, fromModule: "mimi" })
+                      : undefined
+                  }
+                />
               )}
               {active === "account" && <CloudAccountSettings onOpenLink={onOpenLink} />}
               {active === "appearance" && <AppearanceSection />}

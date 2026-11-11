@@ -33,6 +33,7 @@ import { automation } from "./ns/automation";
 import { misc } from "./ns/misc";
 import { mobile } from "@cjhyy/code-shell-web";
 import { pet } from "./ns/pet";
+import { mimiSettings } from "./ns/mimi-settings";
 import { digitalHumans } from "./ns/digital-humans";
 import { taskInbox } from "./ns/task-inbox";
 import { optimizationLab } from "./ns/optimization-lab";
@@ -42,9 +43,11 @@ import { activity } from "./ns/activity";
 import { activityApprovals } from "./ns/activity-approvals";
 import { activitySessions } from "./ns/activity-sessions";
 import { observability } from "./ns/observability";
+import { usagePage } from "./ns/usage";
 
 export const messages = {
   zh: {
+    ...usagePage.zh,
     ...observability.zh,
     ...activity.zh,
     ...activityApprovals.zh,
@@ -59,6 +62,7 @@ export const messages = {
     ...misc.zh,
     ...mobile.zh,
     ...pet.zh,
+    ...mimiSettings.zh,
     ...digitalHumans.zh,
     ...projectConfig.zh,
     ...sourceCollections.zh,
@@ -66,6 +70,7 @@ export const messages = {
     ...optimizationLab.zh,
   },
   en: {
+    ...usagePage.en,
     ...observability.en,
     ...activity.en,
     ...activityApprovals.en,
@@ -80,6 +85,7 @@ export const messages = {
     ...misc.en,
     ...mobile.en,
     ...pet.en,
+    ...mimiSettings.en,
     ...digitalHumans.en,
     ...projectConfig.en,
     ...sourceCollections.en,

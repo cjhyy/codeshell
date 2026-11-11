@@ -1,10 +1,11 @@
-import { ListTodo, MessageSquare, ScrollText, ShieldCheck, Workflow } from "lucide-react";
+import { Gauge, ListTodo, MessageSquare, ScrollText, ShieldCheck, Workflow } from "lucide-react";
 import type { TranslationKey } from "../i18n/dict";
 
-export type ActivityPage = "traces" | "task_inbox" | "sessions" | "approvals" | "logs";
+export type ActivityPage = "usage" | "traces" | "task_inbox" | "sessions" | "approvals" | "logs";
 
 /** One catalog for the activity tabs, settings menu and command palette. */
 export const ACTIVITY_PAGES = [
+  { page: "usage", label: "usagePage.title", Icon: Gauge },
   { page: "traces", label: "observability.title", Icon: Workflow },
   { page: "task_inbox", label: "activity.backgroundWork", Icon: ListTodo },
   { page: "sessions", label: "activity.conversations", Icon: MessageSquare },

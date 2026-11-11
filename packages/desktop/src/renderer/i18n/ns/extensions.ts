@@ -538,7 +538,11 @@ export const extensions = {
         cookieDescription: "网站登录与账号切换",
         tokenDescription: "API Key 与访问令牌",
         linkDescription: "第三方应用授权",
-        channelsDescription: "消息收发与渠道接入",
+        channelsDescription: "已移到 Mimi 设置 › 消息连接",
+        channelsMovedTitle: "消息渠道在 Mimi 设置里绑定",
+        channelsMovedDescription:
+          "微信、飞书、Telegram、Slack、钉钉等消息渠道都由 Mimi 收发，所以绑定和登录统一放在 Mimi 设置 › 消息连接。",
+        channelsMovedAction: "打开消息连接",
         cookieSearch: "搜索账号、平台或域名",
         tokenSearch: "搜索名称、引用键或环境变量",
         clearSearch: "清空搜索",
@@ -972,12 +976,6 @@ export const extensions = {
         resetFilters: "清除筛选",
         gatewaySection: "聊天渠道",
         gatewayEyebrow: "COMMUNICATION CHANNELS",
-        gatewayTitle: "让消息成为任务入口",
-        gatewayHeroDescription: "连接微信、Telegram 等消息渠道，查看接入状态和收发能力。",
-        gatewayConfiguredCount: "已配置",
-        gatewayStateLabel: "网关状态",
-        gatewaySectionDescription:
-          "管理消息入口和运行状态；复杂配置收在卡片内部，不与应用连接混在一起。",
         gatewayDescription:
           "把个人微信、Telegram 等聊天软件接到 Mimi Pet。Mimi 统一调用 GatewayReply 工具发送文字、链接和渠道支持的附件；个人微信和 Telegram 还可接收图片、文件、语音和视频。",
         gatewayRunning: "运行中",
@@ -1770,7 +1768,11 @@ export const extensions = {
         cookieDescription: "Website sign-ins and accounts",
         tokenDescription: "API keys and access tokens",
         linkDescription: "Third-party app authorization",
-        channelsDescription: "Messaging and channel access",
+        channelsDescription: "Moved to Mimi settings › Messaging connections",
+        channelsMovedTitle: "Messaging channels are connected in Mimi settings",
+        channelsMovedDescription:
+          "WeChat, Lark, Telegram, Slack, DingTalk and other channels talk to Mimi, so connecting and signing in to them lives in Mimi settings › Messaging connections.",
+        channelsMovedAction: "Open messaging connections",
         cookieSearch: "Search accounts, platforms, or domains",
         tokenSearch: "Search names, keys, or environment variables",
         clearSearch: "Clear search",
@@ -2245,13 +2247,6 @@ export const extensions = {
         resetFilters: "Clear filters",
         gatewaySection: "Chat channels",
         gatewayEyebrow: "COMMUNICATION CHANNELS",
-        gatewayTitle: "Turn messages into task entry points",
-        gatewayHeroDescription:
-          "Connect WeChat, Telegram, and other messaging channels, and view their status and messaging capabilities.",
-        gatewayConfiguredCount: "Configured",
-        gatewayStateLabel: "Gateway state",
-        gatewaySectionDescription:
-          "Manage message entry points and runtime status. Advanced setup stays inside this section instead of mixing with app connections.",
         gatewayDescription:
           "Connect personal WeChat, Telegram, and other chat apps to Mimi Pet. Mimi uses GatewayReply for text, links, and route-supported attachments; personal WeChat and Telegram also receive images, files, audio, and video.",
         gatewayRunning: "Running",

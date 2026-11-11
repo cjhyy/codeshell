@@ -120,7 +120,8 @@ describe("desktop Pet window position", () => {
     expect(widgetSource).not.toContain("onClose();");
     expect(mainSource).toContain('ipcMain.on("pet:widget-context-menu"');
     expect(mainSource).toContain("event.sender !== win.webContents");
-    expect(mainSource).toContain('chinese ? "关闭 Mimi" : "Close Mimi"');
+    // The menu's strings and order live in pet-widget-menu.ts (tested there).
+    expect(mainSource).toContain("petWidgetMenuTemplate({");
     expect(mainSource).toContain("mimiPresenceOwner.set({ visible: false })");
   });
 

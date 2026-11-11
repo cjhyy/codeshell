@@ -93,6 +93,10 @@ try {
   env.CODESHELL_OUTPUT_GUARD_LOG = join(root, "guard.jsonl");
   env.CODESHELL_OUTPUT_REQUEST_LOG = join(root, "requests.jsonl");
   env.CODESHELL_OUTPUT_CHILDREN = JSON.stringify(children);
+  if (process.platform === "darwin") {
+    env.CODESHELL_OUTPUT_DISKUTIL = realpathSync("/usr/sbin/diskutil");
+    env.CODESHELL_OUTPUT_DISKUTIL_HASH = hashFile(env.CODESHELL_OUTPUT_DISKUTIL);
+  }
   env.CODESHELL_OUTPUT_COLD_ENTRY = join(repo, "scripts/smoke-external-output-journal.mjs");
   env.CODESHELL_OUTPUT_COLD_HASH = hashFile(env.CODESHELL_OUTPUT_COLD_ENTRY);
   env.NODE_OPTIONS = `--import=${pathToFileURL(join(repo, "scripts/external-output-smoke-isolation.mjs")).href}`;

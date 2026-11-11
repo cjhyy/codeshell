@@ -62,6 +62,7 @@ describe("PageRegistry", () => {
       "credentials",
       "optimization_lab",
       "traces",
+      "usage",
     ]) {
       expect(PAGE_REGISTRY.has(key)).toBe(true);
       expect(PAGE_REGISTRY.get(key)!.nav).toBeUndefined();

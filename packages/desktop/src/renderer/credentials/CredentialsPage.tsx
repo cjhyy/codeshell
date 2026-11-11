@@ -1,7 +1,8 @@
 import React, { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { Cookie, KeyRound, Link2, MessagesSquare, type LucideIcon } from "lucide-react";
 import { TokenTab } from "./TokenTab";
-import { ChatGatewayTab, LinkTab } from "./LinkTab";
+import { LinkTab } from "./LinkTab";
+import { CredentialsSectionHeader } from "./CredentialsSectionHeader";
 import { CookieTab } from "./CookieTab";
 import { useT } from "../i18n/I18nProvider";
 import { Button } from "@/components/ui/button";
@@ -23,16 +24,41 @@ function storedTab(): TabKey {
   }
 }
 
-/** Full-screen 凭证 page: Cookie / Permission Token / Link / 沟通渠道。 */
+/**
+ * IM channels are bound in Mimi settings › 消息连接. The old 沟通渠道 tab stays
+ * so existing habits (and the last-tab memory) land on a pointer, not a gap.
+ */
+function ChannelsMovedNotice({ onOpen }: { onOpen?: () => void }) {
+  const { t } = useT();
+  return (
+    <div className="space-y-5" data-channel-page data-channels-moved>
+      <CredentialsSectionHeader
+        title={t("ext.credentials.channelsMovedTitle")}
+        description={t("ext.credentials.channelsMovedDescription")}
+        stats={[]}
+      />
+      {onOpen && (
+        <Button type="button" size="sm" data-open-mimi-connections onClick={onOpen}>
+          {t("ext.credentials.channelsMovedAction")}
+        </Button>
+      )}
+    </div>
+  );
+}
+
+/** Full-screen 凭证 page: Cookie / Permission Token / Link, plus the 沟通渠道 pointer. */
 export function CredentialsPage({
   activeProjectPath,
   activeBucket = null,
   initialTab,
+  onOpenMimiConnections,
 }: {
   activeProjectPath: string | null;
   activeBucket?: string | null;
   /** Explicit entry destination; normal navigation restores the last category. */
   initialTab?: TabKey;
+  /** Open Mimi settings › 消息连接, where IM channels are bound. */
+  onOpenMimiConnections?: () => void;
 }) {
   const { t } = useT();
   const [tab, setTab] = useState<TabKey>(() => initialTab ?? storedTab());
@@ -180,7 +206,7 @@ export function CredentialsPage({
           {tab === "cookie" && <CookieTab key={cwd} cwd={cwd} activeBucket={activeBucket} />}
           {tab === "token" && <TokenTab key={cwd} cwd={cwd} />}
           {tab === "link" && <LinkTab key={cwd} cwd={cwd} />}
-          {tab === "channels" && <ChatGatewayTab />}
+          {tab === "channels" && <ChannelsMovedNotice onOpen={onOpenMimiConnections} />}
         </div>
       </div>
     </div>

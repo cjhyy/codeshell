@@ -336,28 +336,29 @@
   /* Ordinary main chats scroll the composer within the actual pane. Keep a
      readable slice of active output; queued previews share the space with it.
      New-chat welcome content already has its own scrolling parent. */
-  [data-chat-variant="main"]:not([data-pending-interaction="true"]) .cs-chat-composer-wrap {
+  [data-chat-variant="main"]:not([data-pending-approval="true"])
+    .cs-chat-composer-wrap:not(.cs-chat-composer-with-questions) {
     max-height: 100%;
     overflow-y: auto;
     overscroll-behavior-y: contain;
     scroll-padding-block: 0.75rem;
   }
 
-  [data-chat-variant="main"][data-mode="active"]:not([data-pending-interaction="true"])
-    .cs-chat-composer-wrap {
+  [data-chat-variant="main"][data-mode="active"]:not([data-pending-approval="true"])
+    .cs-chat-composer-wrap:not(.cs-chat-composer-with-questions) {
     max-height: max(60%, calc(100% - 4rem));
   }
 
   [data-chat-variant="main"][data-mode="active"][data-queued-input="true"]:not(
-      [data-pending-interaction="true"]
+      [data-pending-approval="true"]
     )
-    .cs-chat-composer-wrap {
+    .cs-chat-composer-wrap:not(.cs-chat-composer-with-questions) {
     max-height: 60%;
   }
 
-  /* Pending questions and approvals share the actual chat pane with the composer. Bound
+  /* Pending approvals share the actual chat pane with the composer. Bound
      both siblings by that pane's height, including short Quick Chat docks. */
-  [data-pending-interaction="true"] .cs-chat-sticky {
+  [data-pending-approval="true"] .cs-chat-sticky {
     min-height: 0;
     max-height: 60%;
     overflow-y: auto;
@@ -365,10 +366,51 @@
     scroll-padding-block: 0.5rem;
   }
 
-  [data-pending-interaction="true"] .cs-chat-composer-wrap {
+  [data-pending-approval="true"] .cs-chat-composer-wrap {
     max-height: 40%;
     overflow-y: auto;
     overscroll-behavior-y: contain;
+  }
+
+  /* Questions belong to the composer, with stable controls and no popover or
+     height animation. Only overflowing content scrolls within the actual pane. */
+  [data-chat-variant]:not([data-pending-approval="true"]) .cs-chat-composer-with-questions {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    max-height: 100%;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scroll-padding-block: 0.75rem;
+    border-radius: 1.125rem;
+    background: hsl(var(--cs-card));
+    box-shadow: inset 0 0 0 1px hsl(var(--cs-border) / 0.7);
+  }
+
+  .cs-chat-question-dock {
+    flex: 0 0 auto;
+    min-height: 0;
+    max-height: min(24rem, calc(var(--cs-chat-pane-height, 400px) * 0.5));
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scroll-padding-block: 0.5rem;
+    padding-inline: 0.25rem;
+    border-bottom: 1px solid hsl(var(--cs-border) / 0.6);
+  }
+
+  .cs-chat-question-dock > div + div {
+    border-top: 1px solid hsl(var(--cs-border) / 0.5);
+  }
+
+  [data-chat-variant] .cs-chat-composer-with-questions > .cs-chat-composer {
+    flex: 0 0 auto;
+    min-height: 0;
+    max-height: calc(var(--cs-chat-pane-height, 400px) * 0.4);
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scroll-padding-block: 0.5rem;
+    border-color: transparent;
+    box-shadow: none;
   }
 
   .cs-message-actions {
