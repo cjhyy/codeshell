@@ -256,8 +256,15 @@ describe("Preset task schema routing", () => {
       taskText: "alpha",
       policy: policy(),
     });
-    expect(catalog.map((definition) => definition.name)).toEqual(route("alpha").initialToolNames);
-    expect(ctx.runToolSurface!.getCatalog().map((definition) => definition.name)).toEqual(managed);
+    expect(catalog.map((definition) => definition.name)).toEqual([
+      ...route("alpha").initialToolNames!,
+      "CallTool",
+    ]);
+    expect(ctx.runToolSurface!.getCatalog().map((definition) => definition.name)).toEqual([
+      ...managed,
+      "CallTool",
+    ]);
+    expect(definitions().map((definition) => definition.name)).toEqual(managed);
     const first = ctx.refreshRunTools!();
     expect(first.map((definition) => definition.name)).toContain("Tool12");
     expect(first.map((definition) => definition.name)).not.toContain("Tool14");
