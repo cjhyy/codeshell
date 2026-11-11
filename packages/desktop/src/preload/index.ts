@@ -41,6 +41,7 @@ import { createComputerUseSettingsApi } from "./computer-use-api";
 import { createSessionTranscriptApi } from "./session-transcript-api";
 import { createBackgroundWorkApi, type BackgroundJobProgress } from "./background-work-api";
 import { createModelTraceApi } from "./model-trace-api";
+import { createQuotaApi } from "./quota-api";
 import { createBrowserPanelAccessApi } from "./browser-panel-access-api";
 import { createProfilePluginExportApi } from "./profile-plugin-export-api";
 import { createProfileMemoryPromotionApi } from "./profile-memory-promotion-api";
@@ -1843,8 +1844,6 @@ contextBridge.exposeInMainWorld("codeshell", {
     },
   },
 
-  // ── Remaining CC/Codex subscription quota ──
-  quota: {
-    get: (provider?: "claude" | "codex" | "both") => ipcRenderer.invoke("quota:get", provider),
-  },
+  // ── Provider discovery and subscription quota ──
+  quota: createQuotaApi(ipcRenderer),
 } satisfies CodeshellApi);

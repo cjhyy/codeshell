@@ -16,7 +16,14 @@
  * The `fetch` and credentials are injected so this is unit-testable offline and
  * so the host owns secret resolution (see types.ts boundary note).
  */
-import type { ProviderQuota, QuotaCredentials, QuotaResult, QuotaWindow } from "./types.js";
+import type {
+  ProviderQuota,
+  QuotaCredentials,
+  QuotaProvider,
+  QuotaResult,
+  QuotaWindow,
+} from "./types.js";
+import { selectedQuotaProviders } from "./providers.js";
 
 type FetchLike = typeof fetch;
 
@@ -29,7 +36,7 @@ const DEFAULT_TIMEOUT_MS = 8000;
 export interface CheckQuotaOptions {
   creds: QuotaCredentials;
   /** Restrict to specific providers; defaults to both. */
-  providers?: ("claude" | "codex")[];
+  providers?: readonly QuotaProvider[];
   /** Injected for tests; defaults to global fetch. */
   fetchImpl?: FetchLike;
   /** Caller's abort signal (user Stop); composed with an internal timeout. */
@@ -72,7 +79,11 @@ export async function queryCodexQuota(
   signal: AbortSignal,
 ): Promise<ProviderQuota> {
   if (!creds.codexAccessToken) {
-    return { provider: "codex", error: "no Codex token (是否已 codex login?)" };
+    return {
+      provider: "codex",
+      error: "no Codex token (是否已 codex login?)",
+      errorCode: "auth-required",
+    };
   }
   let resp: Response;
   try {
@@ -87,20 +98,27 @@ export async function queryCodexQuota(
       signal,
     });
   } catch (err) {
-    return { provider: "codex", error: `请求失败: ${(err as Error).message}` };
+    return {
+      provider: "codex",
+      error: `请求失败: ${(err as Error).message}`,
+      errorCode: "request-failed",
+    };
   }
   if (!resp.ok) {
     return {
       provider: "codex",
       error: `HTTP ${resp.status}${resp.status === 401 ? " (token 可能已过期)" : ""}`,
+      errorCode: resp.status === 401 ? "auth-required" : "request-failed",
     };
   }
   let body: Record<string, unknown>;
   try {
     body = (await resp.json()) as Record<string, unknown>;
   } catch {
-    return { provider: "codex", error: "响应非 JSON" };
+    return { provider: "codex", error: "响应非 JSON", errorCode: "request-failed" };
   }
+  if (!body || typeof body !== "object" || Array.isArray(body))
+    return { provider: "codex", error: "响应不是额度对象", errorCode: "request-failed" };
   const rl = (body.rate_limit ?? {}) as Record<string, unknown>;
   const windows: QuotaWindow[] = [];
   for (const slot of ["primary", "secondary"] as const) {
@@ -114,7 +132,8 @@ export async function queryCodexQuota(
       resetsAt: num(w.reset_at),
     });
   }
-  if (windows.length === 0) return { provider: "codex", error: "响应无 rate_limit 窗口" };
+  if (windows.length === 0)
+    return { provider: "codex", error: "响应无 rate_limit 窗口", errorCode: "unavailable" };
   return {
     provider: "codex",
     windows,
@@ -129,7 +148,11 @@ export async function queryClaudeQuota(
   signal: AbortSignal,
 ): Promise<ProviderQuota> {
   if (!creds.claudeAccessToken) {
-    return { provider: "claude", error: "no Claude Code token (是否已登录 Claude Code?)" };
+    return {
+      provider: "claude",
+      error: "no Claude Code token (是否已登录 Claude Code?)",
+      errorCode: "auth-required",
+    };
   }
   let resp: Response;
   try {
@@ -149,16 +172,22 @@ export async function queryClaudeQuota(
       signal,
     });
   } catch (err) {
-    return { provider: "claude", error: `请求失败: ${(err as Error).message}` };
+    return {
+      provider: "claude",
+      error: `请求失败: ${(err as Error).message}`,
+      errorCode: "request-failed",
+    };
   }
   if (!resp.ok) {
     return {
       provider: "claude",
       error: `HTTP ${resp.status}${resp.status === 401 ? " (token 可能已过期)" : ""}`,
+      errorCode: resp.status === 401 ? "auth-required" : "request-failed",
     };
   }
   const windows = parseClaudeWindows(resp.headers);
-  if (windows.length === 0) return { provider: "claude", error: "响应头无 rate-limit 字段" };
+  if (windows.length === 0)
+    return { provider: "claude", error: "响应头无 rate-limit 字段", errorCode: "unavailable" };
   return { provider: "claude", windows };
 }
 
@@ -223,7 +252,8 @@ export function parseClaudeWindows(h: Headers): QuotaWindow[] {
 /** Query both providers (or the subset requested), concurrently. */
 export async function checkQuota(opts: CheckQuotaOptions): Promise<QuotaResult> {
   const fetchImpl = opts.fetchImpl ?? fetch;
-  const providers = opts.providers ?? ["claude", "codex"];
+  const providers = selectedQuotaProviders(opts.providers);
+  if (providers.length === 0) return {};
   const signal = withTimeout(opts.signal, opts.timeoutMs ?? DEFAULT_TIMEOUT_MS);
   const result: QuotaResult = {};
   await Promise.all(
@@ -240,7 +270,8 @@ export function formatQuota(result: QuotaResult, nowSec: number): string {
   const lines: string[] = [];
   for (const pq of [result.claude, result.codex]) {
     if (!pq) continue;
-    const name = pq.provider === "claude" ? "Claude Code" : "Codex";
+    const name =
+      pq.provider === "claude" ? "Claude Code" : pq.provider === "codex" ? "Codex" : pq.provider;
     if (pq.error || !pq.windows) {
       lines.push(`${name}: 查询失败 — ${pq.error ?? "unknown"}`);
       continue;

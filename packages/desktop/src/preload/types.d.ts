@@ -57,9 +57,9 @@ import type {
 import type {
   CCAvailability,
   DiscoveredSession,
-  QuotaResult,
 } from "@cjhyy/code-shell-capability-coding/orchestration";
 import type { TaskInboxApi } from "./task-inbox-api";
+import type { QuotaApi } from "./quota-api";
 import type {
   AutomationPermissionLevel,
   AutomationSummary,
@@ -2520,10 +2520,8 @@ export interface CodeshellApi
     ): () => void;
   };
 
-  /** Remaining CC/Codex subscription quota. "codex" is free; "claude" costs ~1 token. */
-  quota: {
-    get(provider?: "claude" | "codex" | "both"): Promise<QuotaResult>;
-  };
+  /** Local provider discovery and explicit, provider-specific quota queries. */
+  quota: QuotaApi;
 }
 
 export interface MobileProjectMeta {
