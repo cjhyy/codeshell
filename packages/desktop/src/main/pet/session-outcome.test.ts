@@ -345,6 +345,39 @@ describe("SessionOutcomeDeriver", () => {
     });
   });
 
+  test("a done outcome carries the files its turn changed (latest turn_diff, no deletions)", () => {
+    const diff = (files: Array<{ path: string; status: string }>): Event => ({
+      type: "turn_diff",
+      turnId: "u-1",
+      cwd: "/work",
+      files: files.map((file) => ({ ...file, diff: "", added: 1, removed: 0 })),
+      trackedPaths: [],
+      toolCallIds: [],
+      complete: true,
+      omissions: [],
+    });
+    const [done] = derive([
+      started(),
+      tool("Edit"),
+      diff([{ path: "/work/a.ts", status: "modified" }]),
+      diff([
+        { path: "/work/a.ts", status: "modified" },
+        { path: "/work/b.ts", status: "added" },
+        { path: "/work/old.ts", status: "deleted" },
+        { path: "relative.ts", status: "added" },
+      ]),
+      complete(),
+    ]);
+    expect(done).toMatchObject({
+      kind: "done",
+      scope: "turn",
+      changedFiles: { cwd: "/work", paths: ["/work/a.ts", "/work/b.ts"] },
+    });
+    // A turn that changed nothing carries none; the next turn starts empty.
+    const [next] = derive([started(), tool("Bash"), complete()]);
+    expect(next).not.toHaveProperty("changedFiles");
+  });
+
   test("a host that attached mid-run reads the Goal pause from turn_complete.outcome", () => {
     // The goal_progress that raised the pause was published before this host
     // subscribed, so the closing outcome is the first (not a repeated) report.

@@ -7,7 +7,8 @@ import {
 import type { PetLongTask } from "@cjhyy/code-shell-pet";
 import type { NoticeRule, NoticeRuleState, PetRuleStore } from "./pet-rule-store.js";
 import type { DesktopPendingDecision, DesktopPetProjectionEvent } from "./pet-state-aggregator.js";
-import type { SessionOutcome } from "./session-outcome.js";
+import type { ChangedFiles } from "./pet-notice-action-codes.js";
+import type { SessionBlockReason, SessionOutcome } from "./session-outcome.js";
 
 export interface NoticeDraftOption {
   label: string;
@@ -32,6 +33,15 @@ export interface NoticeDraft {
     error?: string;
     question?: string;
     options?: NoticeDraftOption[];
+  };
+  /** What a reply code needs about the outcome (pet-notice-action-codes.ts); never shown. */
+  context?: {
+    /** blocked: why the Session stopped, and the Goal that stopped it. */
+    reason?: SessionBlockReason;
+    goalId?: string;
+    revision?: number;
+    /** done: the files the turn changed. */
+    changedFiles?: ChangedFiles;
   };
 }
 
@@ -305,6 +315,9 @@ export class PetSessionRuleWatcher {
         priority: "P1",
         dedupeKey: `${sessionId}:turn:${outcome.runKey}`,
         facts: outcome.summary ? { summary: outcome.summary } : {},
+        ...(outcome.kind === "done" && outcome.changedFiles
+          ? { context: { changedFiles: outcome.changedFiles } }
+          : {}),
       },
     );
   }
@@ -329,6 +342,7 @@ export class PetSessionRuleWatcher {
         priority: "P1",
         dedupeKey: `${sessionId}:goal:${outcome.goalId ?? outcome.runKey}`,
         facts: {},
+        ...(outcome.changedFiles ? { context: { changedFiles: outcome.changedFiles } } : {}),
       },
       // Only a run that is open can still forward a reply when it closes.
       outcome.inRun ? marks : undefined,
@@ -353,6 +367,11 @@ export class PetSessionRuleWatcher {
         priority: "P0",
         dedupeKey: `${sessionId}:goal-pause:${outcome.goalId ?? "-"}:${outcome.revision ?? "-"}:${outcome.runKey}`,
         facts: { ...(question ? { question } : {}), ...(summary ? { summary } : {}) },
+        context: {
+          reason: outcome.reason,
+          ...(outcome.goalId ? { goalId: outcome.goalId } : {}),
+          ...(outcome.revision !== undefined ? { revision: outcome.revision } : {}),
+        },
       },
     );
   }

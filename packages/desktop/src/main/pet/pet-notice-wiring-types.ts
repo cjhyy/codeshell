@@ -82,6 +82,8 @@ export interface PetNoticeWiringDeps {
   /** The user settings object (raw); only `pet.notifications` is read. */
   readSettings(): unknown;
   presence: { getSystemIdleTimeSec(): number; hasFocusedWindow(): boolean };
+  /** A Session's last message from its user (a failure's `重试` resends it). */
+  lastUserMessage?: (sessionId: string) => Promise<string | undefined>;
   /** Mimi's own Sessions never fire notice rules. */
   isMimiSession?: (sessionId: string) => boolean;
   /**
@@ -113,6 +115,8 @@ export interface PetNoticeWiring {
    * router's submit, replay and digest flush wait for it themselves.
    */
   ready: Promise<void>;
+  /** One raw Session stream event (a new run closes the Session's open notice items). */
+  sessionEvent(sessionId: string, event: unknown): void;
   /** Feed what one Session stream event meant (from `createSessionOutcomeTap`). */
   observeSessionOutcomes(sessionId: string, outcomes: readonly SessionOutcome[]): void;
   /**

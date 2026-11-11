@@ -182,6 +182,7 @@ import {
   collectImDecisions,
   imDecisionWorkerActions,
 } from "./pet/pet-im-decisions.js";
+import { createOwnerReplyHandling, lastUserMessageIn } from "./pet/pet-notice-action-controls.js";
 import { selectSessionsToArchive } from "./pet/pet-auto-archive.js";
 import { resolveLinkedSessionFromDisk } from "./cc-room/linked-session-resolver.js";
 import { DEFAULT_SEGMENT_IDLE_MS, buildMigrationSummary } from "@cjhyy/code-shell-pet";
@@ -192,6 +193,7 @@ import {
   createBoundSessionHealth,
   createBoundSessionRunner,
   createSessionBridgeWiring,
+  sessionRouteHandler,
   type SessionBridgeWiring,
 } from "./pet/session-bridge-wiring.js";
 import {
@@ -1910,6 +1912,7 @@ async function createWindow(): Promise<BrowserWindow> {
         subscribe: (listener) => externalRuntime.subscribeApprovals(listener),
       },
       onWorkerLost: (keep) => sessionOutcomeDeriver.reset(keep),
+      lastUserMessage: async (sessionId) => lastUserMessageIn(await getSessionEvents(sessionId)),
     });
     petNotices = notices;
     const petMemoryStoreInstance = new PetMemoryStore(
@@ -2078,6 +2081,28 @@ async function createWindow(): Promise<BrowserWindow> {
       nudges: [notices.decisions.onBlocked],
       onAwayChange: notices.decisions.onAwayChange,
       onError: (error) => dlog("main", "pet.im-decision.failed", { error: String(error) }),
+      // Owner replies are read by a model against the open items (no text patterns).
+      ...createOwnerReplyHandling({
+        router: notices.router,
+        cwd: resolveNoRepoCwd(),
+        worker: bridge,
+        external: () => externalRuntime.service ?? undefined,
+        sessions: () => aggregator.getSnapshot().sessions,
+        longTasks: {
+          get: (id) => longTaskStore.get(id),
+          control: (r) => longTaskCoordinator.control(r),
+        },
+        readEvents: (sessionId) => getSessionEvents(sessionId),
+        workspace: async (sessionId) => {
+          const entry = await getSessionCwdIndex().refresh(sessionId);
+          return entry?.status === "confirmed" ? (entry.workspaceRoot ?? entry.cwd) : undefined;
+        },
+        openPath: (path) => shell.openPath(path),
+        revealPath: (path) => shell.showItemInFolder(path),
+        openExternal: (url) => shell.openExternal(url),
+        locateSession: (sessionId) => revealSessionWindow(sessionId),
+        onError: (error) => dlog("main", "pet.notice.reply_failed", { error: String(error) }),
+      }),
     });
     petImDecisions.start();
     // One interpretation of each Session event, handed to the long task and
@@ -2090,7 +2115,10 @@ async function createWindow(): Promise<BrowserWindow> {
             .observeSessionEvent(sessionId, event, outcomes)
             .catch((error) => dlog("main", "pet.longTask.stream.failed", { error: String(error) })),
         watcher: (sessionId, outcomes) => notices.observeSessionOutcomes(sessionId, outcomes),
-        stream: sessionOutcomes.emit,
+        stream: (sessionId, event, outcomes) => {
+          notices.sessionEvent(sessionId, event);
+          sessionOutcomes.emit(sessionId, event, outcomes);
+        },
       },
       sessionOutcomeDeriver,
     );
@@ -3121,16 +3149,53 @@ async function cleanupKnownAttachments(sessionId?: string): Promise<void> {
   }
 }
 
+/** Bring a CodeShell window forward with this Session open (notification click, notice item). */
+function revealSessionWindow(sessionId: string): void {
+  void (async () => {
+    const target =
+      findNotificationWindow(mainWindows, bridge?.panelOwnerWebContentsId(sessionId)) ??
+      (await createWindow());
+    if (target.isDestroyed()) return;
+    if (target.isMinimized()) target.restore();
+    target.show();
+    target.focus();
+    const open = () => {
+      if (!target.isDestroyed()) target.webContents.send("notification:open-session", sessionId);
+    };
+    if (target.webContents.isLoadingMainFrame()) target.webContents.once("did-finish-load", open);
+    else open();
+  })().catch((error) =>
+    dlog("main", "desktop_notification.open_session.failed", { sessionId, error: String(error) }),
+  );
+}
+
 async function dispatchGatewayPetChat(
   request: PetChatControlRequest,
 ): Promise<PetChatControlResult> {
   const dispatcher = petDispatchService;
   if (!dispatcher) throw new Error("Mimi Pet 尚未就绪，请稍后重试");
   const sessionId = await dispatcher.getSessionId();
-  // Handle exact confirmation codes before any model, Session binding, or chat
-  // scheduler can consume the reply as a new task or inferred authorization.
+  // A reply to an open item (a decision prompt, a goal pause, a result) is read
+  // against those items first, before Mimi, a Session binding or the chat
+  // scheduler can take it as a new task or as inferred authorization.
   const decisionReply = await petImDecisions?.reply(request);
-  if (decisionReply !== undefined) return { text: decisionReply, petSessionId: sessionId };
+  if (typeof decisionReply === "string") return { text: decisionReply, petSessionId: sessionId };
+  // "交给 Mimi": Mimi's turn gets the notice's data with the owner's request;
+  // the item is used once that turn is dispatched, and freed if it never is.
+  try {
+    return await dispatchGatewayPetTurn(request, dispatcher, sessionId, decisionReply);
+  } finally {
+    decisionReply?.abandoned();
+  }
+}
+
+async function dispatchGatewayPetTurn(
+  request: PetChatControlRequest,
+  dispatcher: PetDispatchService,
+  sessionId: string,
+  handoff: Exclude<Awaited<ReturnType<PetImDecisions["reply"]>>, string>,
+): Promise<PetChatControlResult> {
+  const message = handoff?.handoff ?? request.message;
   const cwd = resolveNoRepoCwd();
   const attachments: InputAttachmentMeta[] = [];
   let totalBytes = 0;
@@ -3206,7 +3271,7 @@ async function dispatchGatewayPetChat(
   const result = await dispatcher
     .dispatch({
       type: "chat",
-      message: request.message,
+      message,
       ...(attachments.length > 0 ? { attachments } : {}),
       ...(replay ? { pendingNotices: replay } : {}),
       clientMessageId,
@@ -3223,6 +3288,17 @@ async function dispatchGatewayPetChat(
         ...(request.origin ? { target: request.origin.target } : {}),
       },
     })
+    .then(
+      (dispatched) => {
+        if (dispatched.ok) void handoff?.dispatched();
+        else handoff?.abandoned();
+        return dispatched;
+      },
+      (error: unknown) => {
+        handoff?.abandoned();
+        throw error;
+      },
+    )
     .finally(() => replay?.finish());
   if (!result.ok) throw new Error(result.message ?? result.code);
   if (result.type !== "chat") throw new Error("Mimi Pet 返回了非聊天结果");
@@ -3325,29 +3401,7 @@ app.whenReady().then(async () => {
       show: (input) =>
         showNativeDesktopNotification(input, {
           create: (options) => new Notification(options),
-          openSession: (sessionId) => {
-            void (async () => {
-              const target =
-                findNotificationWindow(mainWindows, bridge?.panelOwnerWebContentsId(sessionId)) ??
-                (await createWindow());
-              if (target.isDestroyed()) return;
-              if (target.isMinimized()) target.restore();
-              target.show();
-              target.focus();
-              const open = () => {
-                if (!target.isDestroyed())
-                  target.webContents.send("notification:open-session", sessionId);
-              };
-              if (target.webContents.isLoadingMainFrame())
-                target.webContents.once("did-finish-load", open);
-              else open();
-            })().catch((error) =>
-              dlog("main", "desktop_notification.open_session.failed", {
-                sessionId,
-                error: String(error),
-              }),
-            );
-          },
+          openSession: revealSessionWindow,
         }),
     },
   );
@@ -3424,9 +3478,10 @@ app.whenReady().then(async () => {
     isPetChatReady: () => petRuntimeReady && petDispatchService !== null,
     isSessionRouteReady: () =>
       petRuntimeReady && petDispatchService !== null && sessionBridge !== undefined,
-    routeSession: async (request) =>
-      (await petImDecisions?.replyToSession(request)) ??
-      (sessionBridge ? sessionBridge.routeInbound(request) : { kind: "not-bound" }),
+    routeSession: sessionRouteHandler({
+      bridge: () => sessionBridge,
+      replyToSession: async (request) => petImDecisions?.replyToSession(request),
+    }),
   });
   // Delivery results settle the notices that made them; retry copies the
   // outbox appends get the same direct hand-off as a fresh publication.

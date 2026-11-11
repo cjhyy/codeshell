@@ -78,10 +78,20 @@ describe("long-task closure", () => {
       facts: { error: "编译失败" },
     });
     expect(current.submitted[0]!.body).toBeUndefined();
-    // Named IM: both the desktop and the owner's Lark target.
+    // Named IM: both the desktop and the owner's Lark target; a failed task can be retried.
     expect(current.ownerSends).toEqual([
-      { targetId: "lark:owner", text: "「修登录」没做完：编译失败" },
+      {
+        targetId: "lark:owner",
+        text: "「修登录」没做完：编译失败\n要重试，还是交给 Mimi？直接回我就行。",
+      },
     ]);
+    expect(current.submitted[0]!.actions).toEqual({
+      sessionId: SID,
+      runtime: "native",
+      family: "failure",
+      taskId: "task-1",
+      retry: true,
+    });
     expect(current.desktop).toHaveLength(1);
     expect(current.desktop[0]).toMatchObject({ title: "Mimi 任务执行失败", sessionId: SID });
   });
