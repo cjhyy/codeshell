@@ -117,7 +117,7 @@ async function checkStartupReminder(reminder) {
     jobs = JSON.parse(await readFile(cronPath, "utf8")).jobs;
     if (
       row?.wake.status === "notified" &&
-      !jobs.some((job) => /^mimi-(rule|follow-up):/u.test(job.creationKey ?? ""))
+      !jobs.some((job) => /^mimi-follow-up:/u.test(job.creationKey ?? ""))
     )
       break;
     await new Promise((resolveWait) => setTimeout(resolveWait, 100));
@@ -139,7 +139,7 @@ async function checkStartupReminder(reminder) {
     "Reminder reports its requested text without a fabricated Work Session",
   );
   assert(
-    !jobs.some((job) => /^mimi-(rule|follow-up):/u.test(job.creationKey ?? "")),
+    !jobs.some((job) => /^mimi-follow-up:/u.test(job.creationKey ?? "")),
     "No schedule job is left for a settled one-shot, and the legacy job is gone",
   );
   assert(

@@ -26,6 +26,7 @@ import {
   cronProblem,
   DEFAULT_CATCH_UP_MS,
   occurrenceDeadline,
+  upcomingOccurrences,
   type ScheduleThen,
   type ScheduleWhen,
 } from "./pet-schedule-rule.js";
@@ -78,6 +79,8 @@ export interface PetFollowUpRuleView {
   /** The current occurrence (next to fire, or the one that last fired). */
   wakeAt: number;
   recurrence?: string;
+  /** Mimi's plain-language name of the recurrence (untrusted display text). */
+  scheduleLabel?: string;
   timezone: string;
   intent: "remind" | "resume";
   missedPolicy: "skip" | "fire-once";
@@ -104,7 +107,9 @@ export function followUpRuleView(rule: ScheduleNoticeRule): PetFollowUpRuleView 
     title: then.title,
     text: then.text,
     wakeAt: rule.wake.occurrence,
-    ...(rule.when.cron !== undefined ? { recurrence: rule.when.cron } : {}),
+    ...(rule.when.cron !== undefined
+      ? { recurrence: rule.when.cron, scheduleLabel: rule.when.label ?? rule.when.cron }
+      : {}),
     timezone: rule.when.timezone,
     intent: then.mode === "run-mimi" ? "resume" : "remind",
     missedPolicy: rule.when.missedPolicy,
@@ -136,7 +141,6 @@ export function followUpWake(rule: ScheduleNoticeRule, occurrence: number): PetF
 
 const STORE_ERRORS: Partial<Record<string, string>> = {
   version_conflict: "跟进项版本已更新，请重新读取",
-  rule_busy: "跟进项正在唤醒，结果记录前不能修改",
   rule_not_found: "跟进项不存在或已处理",
   invalid_rule: "跟进项不存在、已处理或请求无效",
   schedule_in_past: "跟进时间必须在未来",
@@ -163,7 +167,13 @@ function scheduleWhen(payload: Timing): ScheduleWhen {
   if (payload.recurrence !== undefined) {
     const problem = cronProblem(payload.recurrence);
     if (problem) throw new Error(problem);
-    return { kind: "schedule", cron: payload.recurrence, timezone: payload.timezone, missedPolicy };
+    return {
+      kind: "schedule",
+      cron: payload.recurrence,
+      label: payload.scheduleLabel!,
+      timezone: payload.timezone,
+      missedPolicy,
+    };
   }
   const at = payload.wakeAt!;
   return {
@@ -183,7 +193,14 @@ function receipt(action: string, rule: ScheduleNoticeRule): Record<string, unkno
     title: view.title,
     revision: view.revision,
     wakeAt: view.wakeAt,
-    ...(view.recurrence ? { recurrence: view.recurrence } : {}),
+    ...(view.recurrence
+      ? {
+          recurrence: view.recurrence,
+          scheduleLabel: view.scheduleLabel,
+          // What the owner is told: this one and the one after.
+          upcoming: upcomingOccurrences(rule.when, view.wakeAt),
+        }
+      : {}),
     timezone: view.timezone,
     intent: view.intent,
     status: view.status,
@@ -373,7 +390,12 @@ export async function createPetFollowUpRules(deps: PetFollowUpRulesDeps) {
     onError: deps.onError,
     ...(deps.log ? { log: deps.log } : {}),
   });
-  await coordinator.prepare();
+  // Not fatal: a rule table this build cannot write (or read) leaves
+  // follow-ups off, logged, while the rest of Mimi and the bridge start.
+  await coordinator.prepare().catch((error) => {
+    deps.log?.("pet.followUp.prepare_failed", { error: String(error) });
+    deps.onError(error);
+  });
 
   return {
     petFollowUps,

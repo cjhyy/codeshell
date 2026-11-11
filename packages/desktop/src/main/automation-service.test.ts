@@ -424,7 +424,7 @@ test("Mimi's schedule-rule jobs (and the retired follow-up store's) are not auto
   sched.create("交材料", "once", "Mimi scheduled rule", {
     once: true,
     runAt,
-    creationKey: `mimi-rule:rule-00000000-0000-4000-8000-0000000000aa:1:${runAt}`,
+    creationKey: `mimi-follow-up:rule:rule-00000000-0000-4000-8000-0000000000aa:1:${runAt}`,
   });
   sched.create("旧的跟进", "once", "Registered follow-up wake", {
     once: true,

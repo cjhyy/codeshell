@@ -15,9 +15,12 @@ import {
  * projected into the core scheduler as one absolute one-shot job, which is a
  * rebuildable trigger and nothing more.
  *
- * - Job identity `mimi-rule:<ruleId>:<version>:<occurrence>`: an edit (new
- *   version) or a repeating rule moving on (new occurrence) retires the old
- *   job, and a stale timer callback fails the durable claim.
+ * - Job identity `mimi-follow-up:rule:<ruleId>:<version>:<occurrence>`: an
+ *   edit (new version) or a repeating rule moving on (new occurrence) retires
+ *   the old job, and a stale timer callback fails the durable claim. The
+ *   `mimi-follow-up:` namespace is one older builds already keep away from
+ *   automations: after a downgrade they neither list nor run these jobs as
+ *   headless turns (they reject and delete them; this build rebuilds them).
  * - The claim is written before any effect; an effect that throws is
  *   recorded `unknown` and never retried; a claim that outlived its process
  *   is recovered as `unknown` at startup.
@@ -29,11 +32,11 @@ import {
  *   at most its latest missed occurrence.
  */
 
-const PREFIX = "mimi-rule:";
-/** The follow-up store this replaced (2c-1); its jobs are retired at startup. */
-const LEGACY_PREFIX = "mimi-follow-up:";
+/** Every Mimi schedule job, old and new, lives under this namespace. */
+const NAMESPACE = "mimi-follow-up:";
+const PREFIX = `${NAMESPACE}rule:`;
 const KEY_PATTERN =
-  /^mimi-rule:(rule-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}):(\d+):(\d+)$/u;
+  /^mimi-follow-up:rule:(rule-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}):(\d+):(\d+)$/u;
 const JOB_PROMPT = "Mimi scheduled rule";
 const JOB_NAME_MAX = 512;
 /** The core scheduler's misfire grace: later than this, a `skip` occurrence is missed. */
@@ -47,8 +50,12 @@ export function ruleScheduleKey(id: string, version: number, occurrence: number)
 
 /** Jobs owned by Mimi's schedule rules (and the retired follow-up store's): not automations. */
 export function isPetRuleScheduleJob(job: Pick<CronJob, "creationKey">): boolean {
-  const key = job.creationKey ?? "";
-  return key.startsWith(PREFIX) || key.startsWith(LEGACY_PREFIX);
+  return job.creationKey?.startsWith(NAMESPACE) === true;
+}
+
+/** A job of the follow-up store this replaced (2c-1), retired at startup. */
+function isLegacyJob(job: Pick<CronJob, "creationKey">): boolean {
+  return isPetRuleScheduleJob(job) && !job.creationKey!.startsWith(PREFIX);
 }
 
 export interface RuleScheduleDue {
@@ -108,9 +115,19 @@ export class PetRuleScheduler {
       }));
   }
 
+  /**
+   * Start firing. Never throws for a store that cannot load: follow-ups then
+   * stay off (logged) and the rest of the app starts normally.
+   */
   async start(): Promise<void> {
     if (this.started) return;
-    await this.prepare();
+    try {
+      await this.prepare();
+    } catch (error) {
+      this.deps.log?.("pet.followUp.scheduler_off", { error: String(error) });
+      this.deps.onError?.(error);
+      return;
+    }
     this.started = true;
     this.unsubscribe = this.deps.rules.onChange(() => {
       void this.reconcile().catch((error) => this.deps.onError?.(error));
@@ -200,7 +217,7 @@ export class PetRuleScheduler {
   async wake(job: Pick<CronJob, "creationKey">): Promise<void> {
     const parsed = KEY_PATTERN.exec(job.creationKey ?? "");
     if (!parsed) {
-      if (job.creationKey?.startsWith(LEGACY_PREFIX)) return;
+      if (isLegacyJob(job)) return;
       throw new Error("invalid schedule rule wake identity");
     }
     await this.prepare();
@@ -258,7 +275,6 @@ export class PetRuleScheduler {
       const repeating = rule.when.cron !== undefined;
       await this.deps.rules.settleOccurrence(
         id,
-        version,
         occurrence,
         { status: "failed", detail: repeating ? MISSED_REPEAT : MISSED_ONCE },
         // The latest occurrence still inside its own window gets the one catch-up.
@@ -280,26 +296,33 @@ export class PetRuleScheduler {
       };
       this.deps.onError?.(error);
     }
-    await this.deps.rules.settleOccurrence(id, version, occurrence, outcome);
+    await this.deps.rules.settleOccurrence(id, occurrence, outcome);
   }
 
-  /** Owner decision: old follow-up data is dropped, not migrated. Idempotent. */
+  /** Owner decision: old follow-up data is dropped, not migrated. Best effort, once. */
   private async retireLegacy(): Promise<void> {
     if (this.legacyRetired) return;
     this.legacyRetired = true;
-    const scheduler = this.deps.scheduler();
     let jobs = 0;
-    for (const job of scheduler.list()) {
-      if (job.creationKey?.startsWith(LEGACY_PREFIX) && scheduler.delete(job.id)) jobs += 1;
-    }
     let file = false;
-    const path = this.deps.legacyFollowUpsPath;
-    if (path) {
-      file = await stat(path).then(
-        () => true,
-        () => false,
-      );
-      if (file) await rm(path, { force: true });
+    try {
+      const scheduler = this.deps.scheduler();
+      for (const job of scheduler.list()) {
+        if (isLegacyJob(job) && scheduler.delete(job.id)) jobs += 1;
+      }
+      const path = this.deps.legacyFollowUpsPath;
+      if (path) {
+        const exists = await stat(path).then(
+          () => true,
+          () => false,
+        );
+        if (exists) {
+          await rm(path, { force: true });
+          file = true;
+        }
+      }
+    } catch (error) {
+      this.deps.log?.("pet.followUp.legacy_drop_failed", { error: String(error) });
     }
     if (jobs > 0 || file) this.deps.log?.("pet.followUp.legacy_dropped", { jobs, file });
   }

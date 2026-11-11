@@ -291,7 +291,7 @@ describe("a follow-up rule coming due", () => {
     );
     const id = String(receipt.followUpId);
     env.clock += 60_000;
-    const job = jobs.find((entry) => entry.creationKey?.startsWith(`mimi-rule:${id}:`));
+    const job = jobs.find((entry) => entry.creationKey?.startsWith(`mimi-follow-up:rule:${id}:`));
     expect(job).toBeDefined();
     await runtime.coordinator.wake(job!);
     runtime.coordinator.stop();

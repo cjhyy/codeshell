@@ -104,6 +104,7 @@ function once(at: number, extra: Partial<ScheduleWhen> = {}): ScheduleWhen {
 const daily: ScheduleWhen = {
   kind: "schedule",
   cron: "0 9 * * *",
+  label: "每天 09:00",
   timezone: "UTC",
   missedPolicy: "fire-once",
 };
@@ -353,6 +354,72 @@ describe("old follow-ups", () => {
     });
     expect(f.fired).toEqual([]);
     expect(await readFile(join(dir, "rules.json"), "utf8").catch(() => "none")).toBe("none");
+    f.coordinator.stop();
+  });
+});
+
+describe("robust startup", () => {
+  test("a rule table that cannot load leaves the scheduler off, without throwing", async () => {
+    const logs: string[] = [];
+    const coordinator = new PetRuleScheduler({
+      rules: {
+        load: async () => {
+          throw new Error("disk gone");
+        },
+      } as never,
+      scheduler: () => fakeScheduler() as unknown as CronScheduler,
+      fire: async () => ({ status: "notified" }),
+      log: (event) => logs.push(event),
+    });
+    await expect(coordinator.start()).resolves.toBeUndefined();
+    expect(logs).toEqual(["pet.followUp.scheduler_off"]);
+  });
+
+  test("a rules.json from a newer build: start succeeds and nothing is written", async () => {
+    await mkdir(dir, { recursive: true });
+    await writeFile(join(dir, "rules.json"), JSON.stringify({ version: 99, rules: [] }), {
+      mode: 0o600,
+    });
+    const f = setup();
+    await f.coordinator.start();
+    expect(f.errors).toEqual([]);
+    expect(JSON.parse(await readFile(join(dir, "rules.json"), "utf8"))).toEqual({
+      version: 99,
+      rules: [],
+    });
+    f.coordinator.stop();
+  });
+
+  test("cleaning up the old follow-ups is best effort: a failure still lets rules run", async () => {
+    const f = setup();
+    // A directory where the old file was: removing it fails.
+    await mkdir(join(dir, "follow-ups.json"), { recursive: true });
+    await create(f.store, once(NOW + HOUR));
+    await f.coordinator.start();
+    expect(f.logs.map((entry) => entry.event)).toEqual(["pet.followUp.legacy_drop_failed"]);
+    expect(f.scheduler.byKey(ruleScheduleKey(ID, 1, NOW + HOUR))).toBeDefined();
+    f.coordinator.stop();
+  });
+});
+
+describe("older builds", () => {
+  test("job keys live in the namespace older builds route away from automations", () => {
+    const key = ruleScheduleKey(ID, 2, NINE);
+    expect(key).toBe(`mimi-follow-up:rule:${ID}:2:${NINE}`);
+    // The old wake coordinator's identity check rejects it: it never runs it.
+    expect(/^mimi-follow-up:(registered-followup-[a-f0-9]{24}):(\d+)$/u.test(key)).toBe(false);
+  });
+
+  test("only old-store jobs are retired; a stray rule job is reconciled away, not logged", async () => {
+    const f = setup();
+    f.scheduler.create("stray", "once", "Mimi scheduled rule", {
+      once: true,
+      runAt: NOW + HOUR,
+      creationKey: ruleScheduleKey(ID2, 1, NOW + HOUR),
+    });
+    await f.coordinator.start();
+    expect(f.scheduler.list()).toEqual([]);
+    expect(f.logs).toEqual([]);
     f.coordinator.stop();
   });
 });

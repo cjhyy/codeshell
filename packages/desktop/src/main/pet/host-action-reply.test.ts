@@ -305,6 +305,36 @@ describe("enrichPetChatReplyWithHostActions", () => {
     expect(enriched.attachments).toEqual([]);
   });
 
+  test("a repeating follow-up's receipt names the schedule and its next two dates", async () => {
+    const enriched = await enrichPetChatReplyWithHostActions(
+      "",
+      [
+        {
+          kind: "followUpMutation",
+          payload: { action: "register" },
+          ok: true,
+          result: {
+            action: "register",
+            title: "写周报",
+            wakeAt: Date.UTC(2026, 10, 13, 9),
+            recurrence: "0 17 * * 5",
+            scheduleLabel: "每周五\n 17:00",
+            upcoming: [Date.UTC(2026, 10, 13, 9), Date.UTC(2026, 10, 20, 9)],
+            timezone: "Asia/Shanghai",
+          },
+        },
+      ],
+      { qrDir: join(tmpdir(), "unused") },
+    );
+    expect(enriched.text).toContain("跟进项已登记：「写周报」");
+    // The label is one line; the dates are the two upcoming ones; the cron stays visible.
+    expect(enriched.text).toContain("重复：每周五 17:00；接下来 ");
+    expect(enriched.text).toContain("11月13日");
+    expect(enriched.text).toContain("11月20日");
+    expect(enriched.text).toContain("（Asia/Shanghai）");
+    expect(enriched.text).toContain("规则：0 17 * * 5");
+  });
+
   test("confirms a live Session watch and reports a race that already ended", async () => {
     const enriched = await enrichPetChatReplyWithHostActions(
       "我来设置提醒。",

@@ -189,9 +189,12 @@ export default function PetFollowUpSectionView({
                   })}
                 </p>
                 {row.recurrence && (
-                  <p data-pet-follow-up-recurrence={row.recurrence}>
+                  // Mimi's label first (plain text, one line); the cron as a tooltip.
+                  <p data-pet-follow-up-recurrence={row.recurrence} title={row.recurrence}>
                     {t("pet.followUp.repeats", {
-                      recurrence: row.recurrence,
+                      recurrence: (row.scheduleLabel ?? row.recurrence)
+                        .replace(/\s+/gu, " ")
+                        .slice(0, 64),
                       timezone: row.timezone ?? "",
                     })}
                   </p>

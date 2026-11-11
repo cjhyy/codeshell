@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { CronJob, CronScheduler } from "@cjhyy/code-shell-core/internal";
@@ -203,20 +203,38 @@ describe("ManageFollowUp on schedule rules", () => {
   test("register with a recurrence stores a repeating rule at its next occurrence", async () => {
     const f = await setup();
     const { wakeAt: _once, ...base } = remind;
-    const receipt = await f.host({ ...base, recurrence: "0 9 * * 1-5" }, desktop);
-    // 2023-11-14 is a Tuesday: next is Wednesday 09:00 UTC.
-    expect(receipt).toMatchObject({ recurrence: "0 9 * * 1-5", wakeAt: Date.UTC(2023, 10, 15, 9) });
+    const label = { scheduleLabel: "工作日 09:00" };
+    const receipt = await f.host({ ...base, ...label, recurrence: "0 9 * * 1-5" }, desktop);
+    // 2023-11-14 is a Tuesday: next is Wednesday 09:00 UTC, then Thursday.
+    expect(receipt).toMatchObject({
+      recurrence: "0 9 * * 1-5",
+      scheduleLabel: "工作日 09:00",
+      wakeAt: Date.UTC(2023, 10, 15, 9),
+      upcoming: [Date.UTC(2023, 10, 15, 9), Date.UTC(2023, 10, 16, 9)],
+    });
     expect(f.rules.get(String(receipt.followUpId))?.when).toEqual({
       kind: "schedule",
       cron: "0 9 * * 1-5",
+      label: "工作日 09:00",
       timezone: "UTC",
       missedPolicy: "fire-once",
     });
+    expect((await f.runtime.petFollowUps.listOpen())[0]).toMatchObject({
+      recurrence: "0 9 * * 1-5",
+      scheduleLabel: "工作日 09:00",
+    });
+    // Dates that never exist are refused at registration, not left to search.
+    for (const [index, recurrence] of ["0 9 31 2 *", "0 9 30 2 *", "0 9 31 4,6 *"].entries()) {
+      await expect(
+        f.host({ ...base, ...label, recurrence }, { ...desktop, actionIndex: 2 + index }),
+      ).rejects.toThrow("never fires");
+    }
+    // Feb 29 exists (in leap years): accepted.
     await expect(
-      f.host({ ...base, recurrence: "0 9 31 2 *" }, { ...desktop, actionIndex: 2 }),
-    ).rejects.toThrow("不会触发");
+      f.host({ ...base, ...label, recurrence: "0 9 29 2 *" }, { ...desktop, actionIndex: 9 }),
+    ).resolves.toMatchObject({ wakeAt: Date.UTC(2024, 1, 29, 9) });
     await expect(
-      f.host({ ...base, recurrence: "*/20 * * * *" }, { ...desktop, actionIndex: 3 }),
+      f.host({ ...base, ...label, recurrence: "*/20 * * * *" }, { ...desktop, actionIndex: 10 }),
     ).rejects.toThrow("invalid follow-up request");
   });
 
@@ -247,6 +265,7 @@ describe("ManageFollowUp on schedule rules", () => {
         followUpId: id,
         expectedRevision: 1,
         recurrence: "30 8 * * *",
+        scheduleLabel: "每天 08:30",
         timezone: "UTC",
       }),
     ).toMatchObject({
@@ -305,6 +324,18 @@ describe("ManageFollowUp on schedule rules", () => {
   });
 });
 
+describe("startup", () => {
+  test("a rules.json from a newer build leaves follow-ups read-only, not the app broken", async () => {
+    await writeFile(join(dir, "rules.json"), JSON.stringify({ version: 99, rules: [] }), {
+      mode: 0o600,
+    });
+    const f = await setup();
+    await expect(f.runtime.coordinator.start()).resolves.toBeUndefined();
+    await expect(f.host(remind, desktop)).rejects.toThrow("更新版本");
+    f.runtime.coordinator.stop();
+  });
+});
+
 describe("firing", () => {
   test("remind: the text is the reminder, through the router", async () => {
     const f = await setup();
@@ -316,7 +347,7 @@ describe("firing", () => {
     expect(f.submitted).toEqual([
       expect.objectContaining({
         kind: "followup.due",
-        dedupeKey: `mimi-rule:${id}:1:${NOW + HOUR}`,
+        dedupeKey: `mimi-follow-up:rule:${id}:1:${NOW + HOUR}`,
         body: "「交材料」：提醒我交材料",
       }),
     ]);

@@ -2,6 +2,7 @@ import { nextCronTime, parseCronExpression } from "@cjhyy/code-shell-core/intern
 import {
   followUpRecurrenceProblem,
   isFollowUpOpaqueId,
+  isFollowUpScheduleLabel,
   isFollowUpTimestamp,
   isFollowUpTimezone,
   type PetFollowUpMissedPolicy,
@@ -25,6 +26,11 @@ export interface ScheduleWhen {
   at?: number;
   /** Recurring 5-field cron expression, evaluated in `timezone`. */
   cron?: string;
+  /**
+   * With `cron` (required): the schedule in the owner's words, written by
+   * Mimi ("工作日 09:00"). Untrusted display text, never parsed.
+   */
+  label?: string;
   timezone: string;
   missedPolicy: PetFollowUpMissedPolicy;
   /** One-shot only: last instant a missed occurrence may still catch up (>= at). */
@@ -76,6 +82,8 @@ const MINUTE_MS = 60_000;
 const STAGGER_SLOTS = 6;
 /** A repeating occurrence's catch-up ends this long before the next one is due. */
 const CATCH_UP_MARGIN_MS = 60_000;
+/** Longest each month can be (February: 29, in leap years). */
+const MONTH_DAYS = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
@@ -103,12 +111,20 @@ function isText(value: unknown, max: number): value is string {
 export function cronProblem(cron: unknown): string | undefined {
   const shape = followUpRecurrenceProblem(cron);
   if (shape) return shape;
+  let parsed: ReturnType<typeof parseCronExpression>;
   try {
-    parseCronExpression(cron as string);
-    return undefined;
+    parsed = parseCronExpression(cron as string);
   } catch (error) {
     return `recurrence is not a valid cron expression: ${error instanceof Error ? error.message : String(error)}`;
   }
+  // Only day-of-month restricts the date (with both, day-of-week can match):
+  // a day that exists in none of the months (30 February) never comes.
+  if (parsed.domRestricted && !parsed.dowRestricted) {
+    const longest = Math.max(...[...parsed.months].map((month) => MONTH_DAYS[month - 1]!));
+    if (Math.min(...parsed.daysOfMonth) > longest)
+      return "recurrence never fires: that day of the month does not exist in the chosen months";
+  }
+  return undefined;
 }
 
 /** Structural cron check only (no date search): cheap enough for every row load. */
@@ -118,11 +134,14 @@ function isCronShape(value: unknown): value is string {
 
 export function parseScheduleWhen(value: unknown): ScheduleWhen | undefined {
   if (!isRecord(value) || value.kind !== "schedule") return undefined;
-  if (!hasOnlyKeys(value, ["kind", "at", "cron", "timezone", "missedPolicy", "catchUpUntil"]))
+  if (
+    !hasOnlyKeys(value, ["kind", "at", "cron", "label", "timezone", "missedPolicy", "catchUpUntil"])
+  )
     return undefined;
   const once = value.at !== undefined;
   if (once === (value.cron !== undefined)) return undefined;
   if (once ? !isFollowUpTimestamp(value.at) : !isCronShape(value.cron)) return undefined;
+  if (once ? value.label !== undefined : !isFollowUpScheduleLabel(value.label)) return undefined;
   if (!isFollowUpTimezone(value.timezone)) return undefined;
   if (value.missedPolicy !== "skip" && value.missedPolicy !== "fire-once") return undefined;
   if (
@@ -240,4 +259,18 @@ export function staggerFor(occurrence: number, others: readonly number[]): numbe
   const minute = Math.floor(occurrence / MINUTE_MS);
   const neighbours = others.filter((other) => Math.floor(other / MINUTE_MS) === minute).length;
   return (neighbours % STAGGER_SLOTS) * MINUTE_MS;
+}
+
+/**
+ * The next `count` occurrences from `occurrence` on (inclusive), for the
+ * owner-facing confirmation. A one-shot has just its own.
+ */
+export function upcomingOccurrences(when: ScheduleWhen, occurrence: number, count = 2): number[] {
+  const result = [occurrence];
+  while (result.length < count) {
+    const next = nextOccurrence(when, result[result.length - 1]!);
+    if (next === null) break;
+    result.push(next);
+  }
+  return result;
 }

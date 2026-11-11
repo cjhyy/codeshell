@@ -22,6 +22,7 @@ import {
   writeOwnerJsonAtomic,
 } from "./bounded-json-store.js";
 import {
+  dueAt,
   firstOccurrence,
   staggerFor,
   nextOccurrence,
@@ -144,8 +145,6 @@ export type PetRuleStoreErrorCode =
   | "rule_store_full"
   | "rule_store_unwritable"
   | "invalid_rule"
-  /** A schedule occurrence is being carried out; edits wait until it is settled. */
-  | "rule_busy"
   | "schedule_in_past"
   | "schedule_never_fires";
 
@@ -157,6 +156,18 @@ export class PetRuleStoreError extends Error {
 }
 
 const SCHEMA_VERSION = 1;
+/** An `apply` result that changed nothing: nothing is written and no listener runs. */
+const UNCHANGED = Symbol("unchanged");
+interface Unchanged<T> {
+  [UNCHANGED]: true;
+  value: T;
+}
+function unchanged<T>(value: T): Unchanged<T> {
+  return { [UNCHANGED]: true, value };
+}
+function isUnchanged<T>(value: T | Unchanged<T>): value is Unchanged<T> {
+  return typeof value === "object" && value !== null && UNCHANGED in value;
+}
 const DEFAULT_MAX_RULES = 2_000;
 const MAX_FILE_BYTES = 8 * 1024 * 1024;
 const MAX_LOADED_ROWS = 10_000;
@@ -539,7 +550,7 @@ export class PetRuleStore {
         scope: upsert.scope,
         armedAt,
       };
-      if (existing?.origin === "user" && origin === "delegation") return existing;
+      if (existing?.origin === "user" && origin === "delegation") return unchanged(existing);
       if (existing) {
         const next: NoticeRule = {
           ...existing,
@@ -589,13 +600,6 @@ export class PetRuleStore {
       if (!isPatchShape(snapshot, ["state", "channel", "attention", "note", "events"]))
         throw new PetRuleStoreError("invalid_rule");
       if (
-        current.wake?.status === "claimed" &&
-        snapshot.state !== undefined &&
-        snapshot.state !== current.state
-      )
-        // Its effect may already be under way: the outcome is recorded first.
-        throw new PetRuleStoreError("rule_busy");
-      if (
         EVICTABLE_STATES.has(current.state) &&
         snapshot.state !== undefined &&
         snapshot.state !== current.state
@@ -643,7 +647,7 @@ export class PetRuleStore {
       const existing = staged.get(snapshot.id);
       if (existing) {
         if (!isScheduleRule(existing)) throw new PetRuleStoreError("invalid_rule");
-        return existing;
+        return unchanged(existing);
       }
       const target = normalizeTarget(snapshot.target);
       if (!target || !isChannel(snapshot.channel)) throw new PetRuleStoreError("invalid_rule");
@@ -669,7 +673,12 @@ export class PetRuleStore {
     });
   }
 
-  /** New timing for a live schedule rule: a new version and a fresh first occurrence. */
+  /**
+   * New timing for a live schedule rule: a new version and a fresh first
+   * occurrence. Allowed while an occurrence is claimed: that occurrence's
+   * effect is then superseded (its settle finds nothing to record) and a
+   * woken Mimi turn is fenced by the version change.
+   */
   rescheduleRule(id: string, expectedVersion: number, when: ScheduleWhen): Promise<NoticeRule> {
     const snapshot = structuredClone(when);
     return this.mutate((staged) => {
@@ -678,7 +687,6 @@ export class PetRuleStore {
       if (current.version !== expectedVersion) throw new PetRuleStoreError("version_conflict");
       if (!isScheduleRule(current) || EVICTABLE_STATES.has(current.state))
         throw new PetRuleStoreError("invalid_rule");
-      if (current.wake.status === "claimed") throw new PetRuleStoreError("rule_busy");
       const at = this.timestamp();
       const next: NoticeRule = {
         ...current,
@@ -713,9 +721,9 @@ export class PetRuleStore {
         rule.version !== version ||
         rule.wake.occurrence !== occurrence ||
         rule.wake.status !== "scheduled" ||
-        occurrence > at
+        dueAt(rule.wake) > at
       )
-        return undefined;
+        return unchanged(undefined);
       rule.wake = {
         occurrence,
         ...(rule.wake.stagger !== undefined ? { stagger: rule.wake.stagger } : {}),
@@ -733,10 +741,13 @@ export class PetRuleStore {
    * keeping this outcome as `detail`; one that never fires again is spent.
    * `nextAfter` lets a missed occurrence hand over to the latest one that is
    * still inside its own catch-up window (the scheduler's one catch-up).
+   *
+   * Matched by the claim (occurrence + claimed), not the version: the owner
+   * may cancel or finish the rule while its occurrence runs, and the outcome
+   * is still recorded; a finished rule does not move on.
    */
   settleOccurrence(
     id: string,
-    version: number,
     occurrence: number,
     outcome: RuleWakeOutcome,
     options: { nextAfter?: number } = {},
@@ -752,11 +763,10 @@ export class PetRuleStore {
       if (
         !rule ||
         !isScheduleRule(rule) ||
-        rule.version !== version ||
         rule.wake.occurrence !== occurrence ||
         rule.wake.status !== "claimed"
       )
-        return undefined;
+        return unchanged(undefined);
       this.settle(staged, rule, snapshot, options.nextAfter);
       return rule;
     });
@@ -777,7 +787,7 @@ export class PetRuleStore {
         });
         count += 1;
       }
-      return count;
+      return count === 0 ? unchanged(0) : count;
     });
   }
 
@@ -790,20 +800,22 @@ export class PetRuleStore {
     const at = this.timestamp();
     const detail = outcome.detail?.slice(0, WAKE_DETAIL_MAX);
     rule.updatedAt = Math.max(at, rule.updatedAt);
-    if (rule.when.cron === undefined) {
-      rule.wake = {
-        ...rule.wake,
-        status: outcome.status,
-        completedAt: at,
-        ...(detail !== undefined ? { detail } : {}),
-        ...(outcome.taskId !== undefined ? { taskId: outcome.taskId } : {}),
-      };
+    const settled: RuleWake = {
+      ...rule.wake,
+      status: outcome.status,
+      completedAt: at,
+      ...(detail !== undefined ? { detail } : {}),
+      ...(outcome.taskId !== undefined ? { taskId: outcome.taskId } : {}),
+    };
+    // A one-shot, or a rule finished while this occurrence ran, stops here.
+    if (rule.when.cron === undefined || EVICTABLE_STATES.has(rule.state)) {
+      rule.wake = settled;
       return;
     }
     const next = nextOccurrence(rule.when, Math.max(nextAfter ?? at, rule.wake.occurrence));
     if (next === null) {
       rule.state = "spent";
-      rule.wake = { ...rule.wake, status: outcome.status, completedAt: at };
+      rule.wake = settled;
       return;
     }
     rule.wake = {
@@ -865,20 +877,21 @@ export class PetRuleStore {
     return at;
   }
 
-  private mutate<T>(apply: (staged: Map<string, NoticeRule>) => T): Promise<T> {
+  private mutate<T>(apply: (staged: Map<string, NoticeRule>) => T | Unchanged<T>): Promise<T> {
     const run = this.queue
       .catch(() => undefined)
       .then(() => this.load())
       .then(() =>
         this.lock(async () => {
-          if (this.unwritable) throw new PetRuleStoreError("rule_store_unwritable");
           const staged = new Map(
             [...this.rules].map(([id, rule]) => [id, structuredClone(rule)] as const),
           );
-          const result = apply(staged);
-          // A no-op (a stale trigger, a replay) writes nothing and tells no one.
-          if (JSON.stringify([...staged]) === JSON.stringify([...this.rules]))
-            return { result: structuredClone(result), changed: false };
+          const outcome = apply(staged);
+          // A no-op (a stale trigger, a replay, nothing to recover) writes
+          // nothing and tells no one: it works even on a read-only file.
+          if (isUnchanged(outcome)) return { result: outcome.value, changed: false };
+          if (this.unwritable) throw new PetRuleStoreError("rule_store_unwritable");
+          const result = outcome;
           this.enforceCap(staged);
           for (const rule of staged.values()) {
             if (!parseRule(rule)) throw new PetRuleStoreError("invalid_rule");
@@ -923,13 +936,13 @@ export class PetRuleStore {
     if (staged.size <= this.maxRules) return;
     const byAge = (a: NoticeRule, b: NoticeRule) =>
       a.updatedAt - b.updatedAt || a.id.localeCompare(b.id);
-    // Then one-shot follow-ups that already fired: kept on the list until the
-    // owner handles them, but they will never fire again.
+    // Then one-shot follow-ups that already reached the owner: kept on the
+    // list until handled, but they will never fire again. A failed or
+    // unknown one still needs the owner's attention and is kept.
     const fired = (rule: NoticeRule) =>
       isScheduleRule(rule) &&
       rule.when.at !== undefined &&
-      rule.wake.status !== "scheduled" &&
-      rule.wake.status !== "claimed";
+      (rule.wake.status === "notified" || rule.wake.status === "launched");
     const evictable = [
       ...[...staged.values()].filter((rule) => EVICTABLE_STATES.has(rule.state)).sort(byAge),
       ...[...staged.values()]
@@ -997,27 +1010,37 @@ export class PetRuleStore {
       return;
     }
     const loaded = new Map<string, NoticeRule>();
-    const quarantine: unknown[] = Array.isArray(parsed.quarantine) ? [...parsed.quarantine] : [];
+    const quarantine: unknown[] = [];
     let rejected = 0;
-    for (const stored of parsed.rules) {
+    let restored = 0;
+    // Quarantined rows are read again: an older build quarantines the rows it
+    // does not know (schedule rules) on its first write, and they come back
+    // here. Live rows first, so on a tie the live copy wins; else newest wins.
+    const live = parsed.rules.length;
+    const held: unknown[] = Array.isArray(parsed.quarantine) ? parsed.quarantine : [];
+    for (const [index, stored] of [...parsed.rules, ...held].entries()) {
+      const fromQuarantine = index >= live;
       const row = migrateLegacyRow(stored);
       const rule = parseRule(row);
       const seen = rule ? loaded.get(rule.id) : undefined;
       if (rule && !seen) {
         loaded.set(rule.id, rule);
+        if (fromQuarantine) restored += 1;
         continue;
       }
       if (rule && seen && rule.version > seen.version) {
         // Keep the newer copy of a duplicated id; the older one is kept aside.
         loaded.set(rule.id, rule);
         quarantine.push(seen);
+        if (fromQuarantine) restored += 1;
       } else {
         // Quarantine exactly what was on disk, not the migrated view.
         quarantine.push(stored);
       }
-      rejected += 1;
+      if (!fromQuarantine) rejected += 1;
     }
     if (rejected > 0) dlog("main", "pet.rules.quarantined_rows", { rejected });
+    if (restored > 0) dlog("main", "pet.rules.restored_rows", { restored });
     this.rules = loaded;
     this.quarantine = quarantine;
     this.unwritable = false;

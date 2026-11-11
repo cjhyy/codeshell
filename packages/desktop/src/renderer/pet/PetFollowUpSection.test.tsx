@@ -60,6 +60,7 @@ describe("PetFollowUpSectionView", () => {
             revision: 1,
             wakeAt: 1_800_000_000_000,
             recurrence: "0 9 * * 1-5",
+            scheduleLabel: "工作日 <b>09:00</b>",
             timezone: "Asia/Shanghai",
             intent: "remind",
             wakeState: "scheduled",
@@ -69,8 +70,10 @@ describe("PetFollowUpSectionView", () => {
         onAskMimi={() => {}}
       />,
     );
-    expect(html).toContain("重复：0 9 * * 1-5（Asia/Shanghai）");
-    expect(html).toContain('data-pet-follow-up-recurrence="0 9 * * 1-5"');
+    // Mimi's label, escaped as text; the cron is the tooltip.
+    expect(html).toContain("重复：工作日 &lt;b&gt;09:00&lt;/b&gt;（Asia/Shanghai）");
+    expect(html).not.toContain("<b>");
+    expect(html).toContain('data-pet-follow-up-recurrence="0 9 * * 1-5" title="0 9 * * 1-5"');
     expect(html).not.toContain("改期");
     expect(html).toContain("取消跟进");
     expect(html).toContain("交给 Mimi");
