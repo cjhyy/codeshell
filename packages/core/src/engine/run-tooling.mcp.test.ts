@@ -185,8 +185,8 @@ describe("shared MCP pool supplies each run's local registry", () => {
     const second = runHost(pool, b, join(directory, "b"));
     try {
       await Promise.all([first.connect(), second.connect()]);
-      expect(a.listTools()).toEqual(["CallTool", "ToolSearch", "mcp_fixture_echo_a"]);
-      expect(b.listTools()).toEqual(["CallTool", "ToolSearch", "mcp_fixture_echo_b"]);
+      expect(a.listTools()).toEqual(["ToolSearch", "mcp_fixture_echo_a"]);
+      expect(b.listTools()).toEqual(["ToolSearch", "mcp_fixture_echo_b"]);
       const results = await Promise.all([
         a.executeTool("mcp_fixture_echo_a", {}, { ctx: first.context }),
         b.executeTool("mcp_fixture_echo_b", {}, { ctx: second.context }),

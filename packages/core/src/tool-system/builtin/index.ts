@@ -48,7 +48,6 @@ import {
   exitPlanModeTool,
 } from "./plan.js";
 import { toolSearchToolDef, toolSearchTool } from "./tool-search.js";
-import { callToolDef } from "./call-tool.js";
 import { todoWriteToolDef, todoWriteTool } from "./task.js";
 import {
   saveContextNoteToolDef,
@@ -690,23 +689,6 @@ const BUILTIN_CONTRIBUTIONS: Array<{
         reason: "Engine state-machine tool; same reason as EnterPlanMode.",
       },
       defaultPermissionRules: allow(exitPlanModeToolDef.name),
-    }),
-  },
-  {
-    definition: { ...callToolDef, source: "builtin", permissionDefault: "ask" },
-    execute: async () => {
-      throw new Error(
-        "CallTool must be resolved by the model execution pipeline before execution.",
-      );
-    },
-    exposure: expose(HARNESS_TAGS, {
-      requires: ["ToolSearch"],
-      external: {
-        kind: "self-contained",
-        status: "excluded",
-        reason:
-          "Native model wire wrapper; resolves to the target tool before native authority and execution checks.",
-      },
     }),
   },
   {

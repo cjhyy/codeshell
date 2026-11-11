@@ -30,11 +30,11 @@ describe("reviewed external tool declarations", () => {
   });
 
   test("the native CallTool wrapper remains excluded from external runtime discovery", () => {
-    const registry = new ToolRegistry({ builtinTools: ["ToolSearch", "CallTool"] });
-    expect(registry.hasTool("CallTool")).toBe(true);
+    const registry = new ToolRegistry({ builtinTools: ["ToolSearch"] });
+    expect(registry.hasTool("CallTool")).toBe(false);
     expect(deriveExternalToolExposure(registry).toolNames.has("CallTool")).toBe(false);
     const review = REVIEWED_EXTERNAL_TOOL_EXPOSURE.find((entry) => entry.tool === "CallTool");
-    expect(review?.status).toBe("excluded");
+    expect(review).toBeUndefined();
   });
 
   test("undeclared tools and unreviewed declarations default to excluded", () => {
