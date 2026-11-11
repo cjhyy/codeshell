@@ -607,7 +607,9 @@ describe("architecture growth budgets", () => {
       // same timeout default Core applies instead of keeping their own copies.
       // +1 the agent/goalGet payload builder, so Desktop's disk fallback and its
       // external runtime answer goalGet with the same shape (incl. goal progress).
-      "packages/core/src/index.internal.ts": 133,
+      // +1 the native turn-outcome tracker, so Desktop's external runtime stamps
+      // `turn_complete.outcome` (and its trigger) with the same rules as Engine.
+      "packages/core/src/index.internal.ts": 134,
       "packages/coding/src/index.ts": 12,
       // +1 for conversation-session.ts, which re-exports the four modules
       // behind entering a Work Session from a chat (route record, IM list,
