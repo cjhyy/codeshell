@@ -4,7 +4,7 @@
  * Public API exports.
  */
 
-export const VERSION = "0.10.1";
+export { VERSION } from "./version.js";
 
 // ─── Types ───────────────────────────────────────────────────────
 

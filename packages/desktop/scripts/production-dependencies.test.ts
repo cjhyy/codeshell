@@ -457,7 +457,8 @@ function releaseFixture() {
   ).version;
   const [, major, minor, patch] = currentVersion.match(/^(\d+)\.(\d+)\.(\d+)/)!;
   const targetVersion = `${major}.${minor}.${Number(patch) + 1}`;
-  write("packages/core/src/index.ts", `export const VERSION = "${currentVersion}";\n`);
+  write("packages/core/src/version.ts", `export const VERSION = "${currentVersion}";\n`);
+  write("packages/core/src/index.ts", 'export { VERSION } from "./version.js";\n');
   write(
     "CHANGELOG.md",
     `## [${targetVersion}]\n\nFixture next release.\n\n## [${currentVersion}]\n\nFixture baseline.\n`,
@@ -563,7 +564,11 @@ test("standard patch bump keeps production artifacts valid and stages every chan
     parseLock(readFileSync(join(repoRoot, "bun.lock"), "utf8")).packages,
   );
   expect(f.git("diff", "--cached", "--name-only").trim().split("\n").sort()).toEqual(
-    [...RELEASE_PACKAGES.map(packageManifestPath), "bun.lock", "packages/core/src/index.ts"].sort(),
+    [
+      ...RELEASE_PACKAGES.map(packageManifestPath),
+      "bun.lock",
+      "packages/core/src/version.ts",
+    ].sort(),
   );
   expect(f.git("diff", "--name-only")).toBe("");
   expect(snapshot(join(f.directory, artifactPath))).toEqual(artifacts);

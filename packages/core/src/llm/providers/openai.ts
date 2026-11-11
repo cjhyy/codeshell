@@ -16,6 +16,7 @@ import {
 } from "../../model-traces/context.js";
 import type {
   ClientDefaults,
+  ContentBlock,
   LLMConfig,
   LLMResponse,
   ToolCall,
@@ -42,6 +43,7 @@ import {
   type PromptCacheRequestContext,
 } from "../prompt-cache.js";
 import { STREAM_WATCHDOG_CONFIG, StreamIdleTimeoutError } from "../stream-watchdog.js";
+import { joinToolResultText } from "../../utils/tool-schema-discovery.js";
 
 /**
  * Extract prompt-cache counts from an OpenAI-compatible usage object.
@@ -1194,10 +1196,10 @@ export class OpenAIClient extends LLMClientBase {
                 // role:"tool" message can't carry an image, so split it: text stays
                 // in the tool message, image blocks are hoisted into imageParts and
                 // get emitted as their own user image_url message below.
-                const texts: string[] = [];
+                const texts: ContentBlock[] = [];
                 for (const inner of block.content) {
                   if (inner.type === "text" && inner.text) {
-                    texts.push(inner.text);
+                    texts.push(inner);
                   } else if (inner.type === "image" && inner.source) {
                     const wireDetail = mapImageDetailToOpenAI(this.imageDetail);
                     imageParts.push({
@@ -1211,7 +1213,10 @@ export class OpenAIClient extends LLMClientBase {
                 }
                 toolResults.push({
                   tool_use_id: block.tool_use_id,
-                  content: texts.length > 0 ? texts.join("\n") : "[image returned to user message]",
+                  content:
+                    texts.length > 0
+                      ? joinToolResultText(texts, "\n")
+                      : "[image returned to user message]",
                 });
               } else {
                 toolResults.push({

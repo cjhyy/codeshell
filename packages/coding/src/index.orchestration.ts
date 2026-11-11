@@ -10,4 +10,10 @@ export type {
 } from "./external-agents/types.js";
 export { checkQuota, formatQuota } from "./quota/index.js";
 export { resolveQuotaCredentials } from "./quota/credentials.js";
-export type { ProviderQuota, QuotaCredentials, QuotaResult, QuotaWindow } from "./quota/types.js";
+export type {
+  ProviderQuota,
+  QuotaCredentials,
+  QuotaProvider,
+  QuotaResult,
+  QuotaWindow,
+} from "./quota/types.js";

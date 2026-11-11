@@ -11,7 +11,7 @@ import {
 } from "./package-release-audit-config";
 
 const DEFAULT_REPO_ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
-const CORE_VERSION_FILE = "packages/core/src/index.ts";
+const CORE_VERSION_FILE = "packages/core/src/version.ts";
 const CORE_VERSION_RE =
   /^\s*export\s+const\s+VERSION(?:\s*:\s*[^\n=]+)?\s*=\s*["']([^"']+)["'](?:\s+as\s+const)?\s*;?/m;
 

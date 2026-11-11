@@ -73,6 +73,8 @@ export interface RunPromptComposerConfigInput {
   dynamicContextProviders: ComposerOptions["dynamicContextProviders"];
   getSettingsManager: () => SettingsManager;
   toolCatalog: ComposerOptions["toolCatalog"];
+  toolDiscovery?: ComposerOptions["toolDiscovery"];
+  behaviorToolNames?: ComposerOptions["behaviorToolNames"];
 }
 
 /** Build the prompt-composer options for a run without capturing the Engine facade. */
@@ -106,6 +108,8 @@ export function buildPromptComposerConfig(args: RunPromptComposerConfigInput): C
     dynamicContextProviders,
     getSettingsManager,
     toolCatalog,
+    toolDiscovery,
+    behaviorToolNames,
   } = args;
 
   return {
@@ -152,5 +156,7 @@ export function buildPromptComposerConfig(args: RunPromptComposerConfigInput): C
         isSourceProfileCurrent: args.isSourceProfileCurrent,
       }),
     toolCatalog,
+    toolDiscovery,
+    behaviorToolNames,
   };
 }

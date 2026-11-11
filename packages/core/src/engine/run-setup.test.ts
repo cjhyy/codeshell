@@ -6,6 +6,9 @@ import { activateWorkspaceProfile } from "../profile/activation.js";
 import { saveWorkspaceProfile } from "../profile/store.js";
 import type { WorkspaceProfile } from "../profile/types.js";
 import { SettingsManager } from "../settings/manager.js";
+import { PromptComposer } from "../prompt/composer.js";
+import { BUILTIN_AGENT_PRESETS } from "../preset/index.js";
+import { BUILTIN_TOOLS } from "../tool-system/builtin/index.js";
 import {
   buildPromptComposerConfig,
   resolveRunProfileState,
@@ -118,6 +121,54 @@ describe("resolveRunProfileState", () => {
 });
 
 describe("buildPromptComposerConfig", () => {
+  test("passes frozen eligible names separately from eager tool declarations", async () => {
+    const behaviorToolNames = Object.freeze(["ToolSearch", "browser_navigate"]);
+    const config = buildPromptComposerConfig(
+      composerInput({
+        preset: BUILTIN_AGENT_PRESETS.general,
+        behaviorToolNames,
+        toolCatalog: BUILTIN_TOOLS,
+      }),
+    );
+    expect(config.behaviorToolNames).toEqual(behaviorToolNames);
+    const eager = [{ name: "ToolSearch", description: "Discover", inputSchema: {} }];
+    const prompt = await new PromptComposer(config).buildSystemPrompt(eager);
+    expect(prompt).toContain("## Browser automation");
+    expect(prompt).toContain("\nToolSearch\n");
+    expect(prompt).not.toContain("\nToolSearch, browser_navigate");
+    const noBehavior = buildPromptComposerConfig(
+      composerInput({
+        preset: BUILTIN_AGENT_PRESETS.general,
+        behaviorToolNames: [],
+        toolCatalog: BUILTIN_TOOLS,
+      }),
+    );
+    expect(noBehavior.behaviorToolNames).toEqual([]);
+    expect(await new PromptComposer(noBehavior).buildSystemPrompt(eager)).not.toContain(
+      "## Browser automation",
+    );
+  });
+
+  test("passes the resolved discovery mode into the run's actual system guidance", async () => {
+    const tools = [{ name: "ToolSearch", description: "Discover", inputSchema: {} }];
+    const nativeConfig = buildPromptComposerConfig(
+      composerInput({ toolDiscovery: "tool-reference" }),
+    );
+    expect(nativeConfig.toolDiscovery).toBe("tool-reference");
+    const nativePrompt = await new PromptComposer(nativeConfig).buildSystemPrompt(tools);
+    expect(nativePrompt).toContain(
+      "Call tools loaded through native references by their exact names.",
+    );
+    expect(nativePrompt).not.toContain("Then use CallTool");
+    const portableConfig = buildPromptComposerConfig(composerInput({ toolDiscovery: "call-tool" }));
+    expect(portableConfig.toolDiscovery).toBe("call-tool");
+    const portablePrompt = await new PromptComposer(portableConfig).buildSystemPrompt(tools);
+    expect(portablePrompt).toContain("Then use CallTool");
+    const legacyConfig = buildPromptComposerConfig(composerInput());
+    expect(legacyConfig.toolDiscovery).toBeUndefined();
+    expect(await new PromptComposer(legacyConfig).buildSystemPrompt(tools)).toBe(portablePrompt);
+  });
+
   test("maps portable profile instruction and memory directory", () => {
     const config = buildPromptComposerConfig(
       composerInput({

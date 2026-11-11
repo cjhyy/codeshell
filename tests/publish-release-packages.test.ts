@@ -414,8 +414,12 @@ describe("release helper modes and target checkout", () => {
     }
     mkdirSync(join(target, "packages/core/src"), { recursive: true });
     writeFileSync(
-      join(target, "packages/core/src/index.ts"),
+      join(target, "packages/core/src/version.ts"),
       `export const VERSION = "${targetVersion}";\n`,
+    );
+    writeFileSync(
+      join(target, "packages/core/src/index.ts"),
+      'export { VERSION } from "./version.js";\n',
     );
     writeFileSync(
       join(target, "bun.lock"),

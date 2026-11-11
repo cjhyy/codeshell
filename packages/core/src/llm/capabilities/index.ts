@@ -12,6 +12,7 @@ import type { ProviderKindName } from "../provider-kinds.js";
 import type { LLMConfig } from "../../types.js";
 import { RULES } from "./rules.js";
 import { promptCachingForModel } from "./prompt-caching.js";
+import { supportsNativeToolDiscoveryModel } from "../native-tool-discovery.js";
 import { type Capability, DEFAULT_CAPABILITY } from "./types.js";
 
 export { DEFAULT_CAPABILITY } from "./types.js";
@@ -63,15 +64,18 @@ export function capabilitiesFor(kind: ProviderKindName, model: string): Capabili
 export function capabilitiesForConfig(
   config?: Pick<
     LLMConfig,
-    "provider" | "providerKind" | "model" | "supportsVision" | "promptCaching"
+    "provider" | "providerKind" | "model" | "supportsVision" | "promptCaching" | "baseUrl"
   >,
 ): Capability {
   if (!config?.model || !(config.providerKind ?? config.provider)) {
     return { ...DEFAULT_CAPABILITY, rejectedParams: new Set(DEFAULT_CAPABILITY.rejectedParams) };
   }
+  // Messages uses Anthropic request fields even when OpenRouter owns transport.
+  // Leave every Chat route and unreviewed deployment on its existing rules.
+  const nativeMessages = supportsNativeToolDiscoveryModel(config);
   const capability = capabilitiesFor(
-    (config.providerKind ?? config.provider) as ProviderKindName,
-    config.model,
+    nativeMessages ? "anthropic" : ((config.providerKind ?? config.provider) as ProviderKindName),
+    nativeMessages ? "claude-sonnet-5" : config.model,
   );
   return {
     ...capability,

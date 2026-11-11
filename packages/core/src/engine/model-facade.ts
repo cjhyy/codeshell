@@ -53,6 +53,8 @@ export class ModelFacade {
     private readonly client: LLMClientBase,
     private readonly transcript: Transcript,
     private readonly requestBinding?: ModelRequestBinding,
+    /** Successful primary calls only; timestamp is captured before the request starts. */
+    private readonly onPrimaryResponse?: (startedAt: number) => void,
   ) {}
 
   getPromptPrefixFingerprint(
@@ -153,6 +155,7 @@ export class ModelFacade {
       throw err;
     }
 
+    this.onPrimaryResponse?.(startMs);
     const latencyMs = Date.now() - startMs;
     const promptPrefix = this.getPromptPrefixFingerprint(systemPrompt, tools);
     logger.info("llm.request", {
@@ -235,6 +238,7 @@ export class ModelFacade {
       throw err;
     }
 
+    this.onPrimaryResponse?.(startMs);
     const latencyMs = Date.now() - startMs;
     const promptPrefix = this.getPromptPrefixFingerprint(systemPrompt, tools);
     logger.info("llm.request", {
