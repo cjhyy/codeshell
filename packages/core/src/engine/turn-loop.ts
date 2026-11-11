@@ -1314,6 +1314,9 @@ export class TurnLoop {
           // "working" forever (often until a later context compaction hides
           // them), even though the loop has moved on to a retry.
           for (const toolCall of response.toolCalls) {
+            if (toolCall.toolName === "CallTool") {
+              this.config.onStream?.({ type: "tool_use_start", toolCall });
+            }
             this.config.onStream?.({
               type: "tool_result",
               result: {
@@ -1370,7 +1373,7 @@ export class TurnLoop {
                 this.deps.systemPrompt,
                 preparedContinuationMessages,
                 this.currentTools,
-                this.config.onStream,
+                this.toolIdentityStream(this.config.onStream),
                 this.config.signal,
                 this.modelCallRecordingOptions(preparedContinuationMessages),
               );
@@ -1761,8 +1764,9 @@ export class TurnLoop {
             input: wireCall.args,
           });
           // Only emit tool_use_start if not already emitted during streaming
-          if (tc.wireToolName || !this.streamedToolIds.has(tc.id)) {
-            this.config.onStream?.({ type: "tool_use_start", toolCall: tc });
+          if (!this.streamedToolIds.has(tc.id)) {
+            const { wireToolName: _wireToolName, ...visibleCall } = tc;
+            this.config.onStream?.({ type: "tool_use_start", toolCall: visibleCall });
           }
           // Record in transcript
           this.deps.transcript.appendToolUse(tc.toolName, tc.id, tc.args, tc.wireToolName);
@@ -2247,6 +2251,22 @@ export class TurnLoop {
     this.modelStepTools = tools;
   }
 
+  private toolIdentityStream(onStream?: StreamCallback): StreamCallback | undefined {
+    if (!onStream) return undefined;
+    const deferredWrapperIds = new Set<string>();
+    return (event) => {
+      // Wait for complete wrapper arguments, then publish one resolved start.
+      // Hosts ignore duplicate starts or render duplicate cards for the same id.
+      if (event.type === "tool_use_start" && event.toolCall.toolName === "CallTool") {
+        deferredWrapperIds.add(event.toolCall.id);
+        return;
+      }
+      if (event.type === "tool_use_args_delta" && deferredWrapperIds.has(event.toolCallId)) return;
+      if (event.type === "tool_use_start") this.streamedToolIds.add(event.toolCall.id);
+      return onStream(event);
+    };
+  }
+
   private async callModelWithFallback(messages: Message[], assistantMessageId: string) {
     const revokePartialStream = () => {
       this.config.onStream?.({ type: "tombstone", messageId: assistantMessageId });
@@ -2262,9 +2282,6 @@ export class TurnLoop {
     let reactiveBucket = -1;
     const wrappedStream: StreamCallback | undefined = this.config.onStream
       ? (event) => {
-          if (event.type === "tool_use_start" && event.toolCall?.id) {
-            this.streamedToolIds.add(event.toolCall.id);
-          }
           // Track accumulating response size for reactive compaction
           if (event.type === "text_delta" && event.text) {
             streamingResponseTokens += Math.ceil(event.text.length / 4);
@@ -2293,7 +2310,7 @@ export class TurnLoop {
         this.deps.systemPrompt,
         messages,
         this.currentTools,
-        wrappedStream,
+        this.toolIdentityStream(wrappedStream),
         this.config.signal,
         this.modelCallRecordingOptions(messages, assistantMessageId),
       );
