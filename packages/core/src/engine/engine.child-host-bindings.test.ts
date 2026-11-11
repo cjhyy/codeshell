@@ -16,6 +16,16 @@ class ChildHostRunClient extends LLMClientBase {
   protected initClient(): void {}
   async createMessage(options: CreateMessageOptions): Promise<LLMResponse> {
     const scenario = scenarios.get(this.model)!;
+    if (options.tools?.some((tool) => tool.name === "RootProbe") && !scenario.parentCalls++) {
+      const probe: LLMResponse = {
+        text: "",
+        toolCalls: [{ id: "root-probe", toolName: "RootProbe", args: {} }],
+        stopReason: "tool_use",
+        usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+      };
+      this.recordUsage(probe.usage!, options);
+      return probe;
+    }
     const parentCall = options.tools?.some((tool) => tool.name === "SpawnHostProbe");
     const spawn = parentCall && scenario.spawn && scenario.parentCalls++ === 0;
     const result: LLMResponse = {
@@ -116,6 +126,65 @@ describe("Engine child host session initialization", () => {
           spawn ? [{ parentSessionId: "actual-parent", sessionId: "actual-child" }] : [],
         );
         expect(lifecycle).toEqual(spawn ? ["activate", "dispose"] : []);
+      },
+    );
+  }
+});
+
+describe("Engine rootSessionId on the tool context", () => {
+  for (const subAgent of [false, true]) {
+    test(
+      subAgent
+        ? "a sub-agent reports the spawner-provided parent as root"
+        : "a top-level session is its own root",
+      async () => {
+        const cwd = mkdtempSync(join(tmpdir(), "root-session-id-"));
+        const model = `${provider}-${nextModel++}`;
+        scenarios.set(model, { spawn: false, parentCalls: 0 });
+        const seen: Array<{ sessionId?: string; rootSessionId?: string }> = [];
+        const engine = new Engine({
+          llm: { provider, model, apiKey: "test" } as never,
+          modules: [initialToolsFixtureModule(["RootProbe"])],
+          cwd,
+          sessionStorageDir: join(cwd, "sessions"),
+          settingsScope: "isolated",
+          customSystemPrompt: "Finish the fixture task.",
+          headless: true,
+          maxTurns: 3,
+          permissionMode: "bypassPermissions",
+          ...(subAgent ? { isSubAgent: true, parentSessionId: "root-parent" } : {}),
+          behaviorProfiles: [
+            {
+              id: "host-probe",
+              disableSessionTitle: true,
+              disableHooks: true,
+              disableInstructions: true,
+              disableMemoryContext: true,
+              disableMcp: true,
+            },
+          ],
+        });
+        cleanup.push(async () => {
+          await engine.dispose();
+          rmSync(cwd, { recursive: true, force: true });
+        });
+        engine.registerCustomTool(
+          {
+            name: "RootProbe",
+            description: "Record the tool context identity.",
+            inputSchema: { type: "object", properties: {} },
+            source: "builtin",
+            permissionDefault: "allow",
+          },
+          async (_args, ctx) => {
+            seen.push({ sessionId: ctx?.sessionId, rootSessionId: ctx?.rootSessionId });
+            return "ok";
+          },
+        );
+        await engine.run("probe", { sessionId: "own-session", behaviorMode: "host-probe" });
+        expect(seen).toEqual([
+          { sessionId: "own-session", rootSessionId: subAgent ? "root-parent" : "own-session" },
+        ]);
       },
     );
   }

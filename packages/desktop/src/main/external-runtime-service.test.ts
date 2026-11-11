@@ -408,6 +408,46 @@ describe("ExternalRuntimeService", () => {
     },
   );
 
+  test("a background wake queued behind a turn is not counted as queued work", async () => {
+    const background = backgroundDelivery();
+    const queuedAtTerminal: Array<number | undefined> = [];
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: background.delivery,
+      emit: (_sessionId: string, event: StreamEvent) => {
+        if (event.type === "turn_complete")
+          queuedAtTerminal.push(svc.noticeProbe(request.sessionId)?.queuedAtTerminal);
+      },
+    });
+    let release!: () => void;
+    let entered!: () => void;
+    const started = new Promise<void>((resolve) => (entered = resolve));
+    try {
+      await svc.start(request);
+      providerSend = () =>
+        new Promise<void>((resolve) => {
+          release = resolve;
+          entered();
+        });
+      const turn = svc.send(request.sessionId, "user turn", 77);
+      await started;
+      background.complete(request.sessionId, "delegated result");
+      await settleBackgroundWakeup();
+      // A user message behind the same turn is.
+      providerSend = undefined;
+      const queued = svc.send(request.sessionId, "follow-up", 77);
+      release();
+      await Promise.all([turn, queued]);
+      await settleBackgroundWakeup();
+      // The user turn's terminal counts the follow-up only, not the wake ahead of it.
+      expect(queuedAtTerminal[0]).toBe(1);
+      expect(queuedAtTerminal.at(-1)).toBe(0);
+      expect(svc.noticeProbe(request.sessionId)).toEqual({ queuedAtTerminal: 0 });
+    } finally {
+      release?.();
+      await svc.stopAll();
+    }
+  });
+
   test("a closed delivery cannot restore its result or acknowledge a successor's result", async () => {
     const background = backgroundDelivery();
     const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
@@ -2007,7 +2047,10 @@ describe("ExternalRuntimeService", () => {
         expect(manager.readSessionState(request.sessionId)).toMatchObject({
           goalLifecycle: { goalId: identity.goalId, phase: "terminal" },
         });
-        expect(manager.readSessionState(request.sessionId)?.lastCompletionKind).toBeUndefined();
+        // The wait is over; complete_goal ended the run (native core's goal_control_stop).
+        expect(manager.readSessionState(request.sessionId)?.lastCompletionKind).toBe(
+          "goal_control_stop",
+        );
       } finally {
         await svc.stopAll();
       }
@@ -3864,6 +3907,43 @@ describe("ExternalRuntimeService", () => {
     await revoking;
     expect(starts).toHaveLength(1);
     expect(svc.get(request.sessionId)).toBeUndefined();
+    await svc.stopAll();
+  });
+
+  test("a native approval reaches the prompt with a readable description and the patch's files", async () => {
+    const seen: Array<Record<string, unknown>> = [];
+    const svc = service(
+      { external_agent_runtime: true, external_host_tools: true },
+      async (_sessionId, approvalRequest) => {
+        seen.push(approvalRequest);
+        return { approved: true };
+      },
+    );
+    await svc.start(request);
+    const hooks = starts[0]!.hooks as {
+      onNativeApproval(input: {
+        method: string;
+        params: unknown;
+        fileChanges?: Array<{ path: string; kind: string }>;
+      }): Promise<string>;
+    };
+    const params = { threadId: "t", turnId: "u", itemId: "fc1", startedAtMs: 1 };
+    await expect(
+      hooks.onNativeApproval({
+        method: "item/fileChange/requestApproval",
+        params,
+        fileChanges: [{ path: "/repo/a.ts", kind: "update" }],
+      }),
+    ).resolves.toBe("accept");
+    expect(seen).toEqual([
+      {
+        toolName: "Codex native tool",
+        method: "item/fileChange/requestApproval",
+        params,
+        description: "Codex 想修改文件",
+        args: { files: ["update /repo/a.ts"] },
+      },
+    ]);
     await svc.stopAll();
   });
 

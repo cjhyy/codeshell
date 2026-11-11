@@ -14,6 +14,7 @@ import { readOutputJournal, readOutputJournalLegacyBase } from "@cjhyy/code-shel
 import { SessionManager, UsageLedger, sessionsRoot } from "@cjhyy/code-shell-core";
 import { ExternalRuntimeMemory } from "./external-runtime-memory.js";
 import {
+  EXTERNAL_TERMINAL_TEXT_MAX,
   ExternalRuntimeSessionRecorder,
   readExternalRuntimeBinding,
   removeExternalRuntimeBinding,
@@ -152,6 +153,29 @@ describe("external runtime durable state", () => {
     expect(base.events).toHaveLength(4);
     expect(page.frames.some((frame) => frame.event?.type === "session_user_message")).toBe(true);
   });
+  test("the terminal's final answer is bounded; the outcome keeps all of it", () => {
+    const recorder = new ExternalRuntimeSessionRecorder(
+      "external-long-answer",
+      "/tmp/project",
+      "codex/gpt-test",
+      "codex",
+    );
+    recorder.beginTurn({ text: "write a lot" });
+    // Already streamed as deltas: an unbounded copy on the terminal would make
+    // one event larger than a Session's whole live snapshot.
+    const long = "汉🙂".repeat(64 * 1024);
+    recorder.onEvent({ type: "text_delta", text: long });
+    const terminal = recorder.onEvent({ type: "turn_complete", reason: "completed" }) as {
+      text?: string;
+    };
+    expect(terminal.text!.length).toBeLessThanOrEqual(EXTERNAL_TERMINAL_TEXT_MAX + 1);
+    expect(terminal.text!.endsWith("…")).toBe(true);
+    expect(long.startsWith(terminal.text!.slice(0, -1))).toBe(true);
+    // Never half a surrogate pair.
+    expect(/[\uD800-\uDBFF]$/.test(terminal.text!.slice(0, -1))).toBe(false);
+    expect(recorder.finishIfMissing().text).toBe(long);
+  });
+
   test("records one canonical turn with attachments, tools, usage, and completion", () => {
     const recorder = new ExternalRuntimeSessionRecorder(
       "external-state-test",

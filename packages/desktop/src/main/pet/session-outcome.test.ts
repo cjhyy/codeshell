@@ -539,6 +539,30 @@ describe("SessionOutcomeDeriver", () => {
     ]);
   });
 
+  test("reset keeps the Sessions it is told to: an external runtime outlives the worker", () => {
+    const deriver = new SessionOutcomeDeriver({ now: () => NOW });
+    deriver.derive("native", started({ sessionId: "native" }));
+    deriver.derive("native", tool("Bash"));
+    deriver.derive("codex", started({ sessionId: "codex" }));
+    deriver.derive("codex", tool("Bash"));
+    // A host-queued message waits behind the external run.
+    deriver.derive("codex", { type: "session_user_message", sessionId: "codex" });
+    deriver.reset((sessionId) => sessionId === "codex");
+    // The external run keeps its id and work; the native one is forgotten.
+    expect(deriver.derive("codex", complete({ runId: undefined }))).toMatchObject([
+      { sessionId: "codex", kind: "done", runId: "run-1", inRun: true },
+    ]);
+    expect(deriver.derive("native", complete({ runId: undefined }))).toMatchObject([
+      { sessionId: "native", kind: "idle" },
+    ]);
+    // And its queue: the next run is that message, not a background wake (which is work).
+    const next = started({ sessionId: "codex", runId: "run-2", clientMessageId: undefined });
+    deriver.derive("codex", next);
+    expect(deriver.derive("codex", complete({ runId: "run-2" }))).toMatchObject([
+      { sessionId: "codex", kind: "idle", runId: "run-2" },
+    ]);
+  });
+
   test("Sessions are tracked separately", () => {
     const deriver = new SessionOutcomeDeriver({ now: () => NOW });
     deriver.derive("a", started({ sessionId: "a" }));

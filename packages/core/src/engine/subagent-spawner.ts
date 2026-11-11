@@ -330,6 +330,7 @@ export function createSubAgentSpawner(deps: CreateSubAgentSpawnerDeps): SubAgent
         deps.parentConfig.disabledBuiltinTools,
         deps.parentConfig.enabledBuiltinTools,
       );
+      const parentSessionId = deps.getParentSessionId?.() ?? deps.parentSessionId;
       const childConfig: EngineConfig = {
         llm: resolveChildLlm(request.model, deps.modelPool, deps.parentConfig.llm),
         clientDefaults: {
@@ -372,10 +373,10 @@ export function createSubAgentSpawner(deps: CreateSubAgentSpawnerDeps): SubAgent
         mcpServers: resolveChildMcpServers(request.mcpAllowlist, deps.parentConfig.mcpServers),
         settingsScope: deps.parentConfig.settingsScope ?? "project",
         isSubAgent: true,
+        ...(parentSessionId ? { parentSessionId } : {}),
       };
       const destination = request.streamOverride ?? deps.parentStream;
       const childSessionId = request.resumeSessionId ?? request.agentId;
-      const parentSessionId = deps.getParentSessionId?.() ?? deps.parentSessionId;
       const host = parentSessionId
         ? deps.parentConfig.createChildHostBindings?.({
             parentSessionId,

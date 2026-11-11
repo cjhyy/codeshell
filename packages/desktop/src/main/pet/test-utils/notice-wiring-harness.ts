@@ -296,7 +296,7 @@ export function harness(overrides: Partial<PetNoticeWiringDeps> = {}): Harness {
     now: () => env.clock,
     log: () => undefined,
     timezoneOffsetMin: () => 0,
-    onWorkerLost: () => deriver.reset(),
+    onWorkerLost: (keep) => deriver.reset(keep),
     ...overrides,
   } as PetNoticeWiringDeps);
   if (!handler) throw new Error("host action handler was not registered");

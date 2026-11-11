@@ -22,6 +22,7 @@
 
 import {
   publishOwnedExternalStream,
+  type ExternalSessionStreamListener,
   type OwnedExternalStreamEntry,
 } from "./owned-external-stream.js";
 import {
@@ -348,6 +349,8 @@ export class AgentBridge implements PetStateBridge {
   // Kept separate from worker taps: native streams, RPC replies and approvals
   // must not be duplicated or impersonated by an in-Main producer.
   private readonly ownedExternalTaps = new Set<(entry: OwnedExternalStreamEntry) => void>();
+  /** Every committed external-runtime event, owner window or not (Mimi notices). */
+  private readonly externalSessionTaps = new Set<ExternalSessionStreamListener>();
   private readonly ownedExternalOutputSources = new Map<string, MainOutputSource>();
   /**
    * The cwd/sessionId of the most recent `agent/run` (from renderer OR mobile).
@@ -1870,10 +1873,19 @@ export class AgentBridge implements PetStateBridge {
     const message = parsedLine.message as { method?: string; params?: unknown } | undefined;
     if (message === undefined) return false;
     if (message.method !== PET_REPORT_TO_MIMI_METHOD) return false;
-    const event = parsePetReportToMimiEvent(message.params);
+    this.publishPetReport(message.params);
+    return true;
+  }
+
+  /**
+   * One ReportToMimi event into the same observers the worker's notify line
+   * reaches; desktop external runtimes report from Main through this.
+   */
+  publishPetReport(params: unknown): void {
+    const event = parsePetReportToMimiEvent(params);
     if (!event) {
       dlog("bridge", "pet_report.invalid", {});
-      return true;
+      return;
     }
     for (const observer of this.petReportObservers) {
       try {
@@ -1890,7 +1902,6 @@ export class AgentBridge implements PetStateBridge {
         });
       }
     }
-    return true;
   }
 
   hasLiveWorker(): boolean {
@@ -2340,6 +2351,13 @@ export class AgentBridge implements PetStateBridge {
    */
   releaseExternalSession(sessionId: string): void {
     this.releaseSessionResources(sessionId);
+    for (const listener of this.externalSessionTaps) {
+      try {
+        listener.released(sessionId);
+      } catch {
+        // Read-only observers cannot fail the release.
+      }
+    }
   }
 
   /**
@@ -2496,6 +2514,15 @@ export class AgentBridge implements PetStateBridge {
   ): () => void {
     this.outboundTaps.add(tap);
     return () => this.outboundTaps.delete(tap);
+  }
+
+  /**
+   * Observe every committed event of the external-runtime Sessions Main runs,
+   * whether or not an owner window is open, and their runtimes' release.
+   */
+  subscribeExternalSessionStream(listener: ExternalSessionStreamListener): () => void {
+    this.externalSessionTaps.add(listener);
+    return () => this.externalSessionTaps.delete(listener);
   }
 
   /** Observe the same committed snapshot entry delivered to its Desktop owner. */
@@ -2819,6 +2846,13 @@ export class AgentBridge implements PetStateBridge {
       sessionId,
       annotateBrowserRuntimeStreamEvent(event, "full"),
     );
+    for (const listener of entry ? this.externalSessionTaps : []) {
+      try {
+        listener.event(sessionId, entry!.event);
+      } catch {
+        // Read-only observers cannot turn a committed output into a retry.
+      }
+    }
     if (entry?.ownerWebContentsId !== undefined) {
       for (const tap of this.ownedExternalTaps) {
         try {

@@ -4,6 +4,7 @@ import { registerOperationBatchHost } from "./operation-batch-host.js";
 import { createDesktopRemoteServices } from "./desktop-remote-services.js";
 import { createDesktopModuleRegistry, registerDesktopShutdown } from "./desktop-shutdown.js";
 import { createExternalRuntimeModule } from "./external-runtime-module.js";
+import { externalRuntimeMimiHost } from "./external-runtime-mimi-tools.js";
 import { registerProjectPanelIpc } from "./project-panel-ipc.js";
 import { registerProfileSwitchIpc } from "./profile-switch-ipc.js";
 import { registerSourceCollectionIpc } from "./source-collections-ipc.js";
@@ -152,6 +153,8 @@ import { PetWorkDelegationHost } from "./pet/pet-work-delegation-host.js";
 import { PetChatAttachmentContext } from "./pet/pet-chat-attachment-context.js";
 import { getSessionCwdIndex } from "./session-cwd-index.js";
 import { wirePetNotices, type PetNoticeWiring } from "./pet/pet-notice-wiring.js";
+import { withExternalDecisions } from "./pet/pet-notice-external-decisions.js";
+import { createExternalSessionCatalog } from "./pet/pet-notice-external-sessions.js";
 import { createPetNoticeControls } from "./pet/pet-notice-ipc.js";
 import { PetWorkInboxStore } from "./pet/pet-work-inbox-store.js";
 import { PetHostActionReceiptStore } from "./pet/pet-host-action-receipts.js";
@@ -171,6 +174,7 @@ import { PetLongTaskCoordinator } from "./pet/pet-long-task-coordinator.js";
 import {
   createSessionOutcomeFanout,
   createSessionOutcomeTap,
+  feedSessionOutcomeTap,
   SessionOutcomeDeriver,
 } from "./pet/session-outcome.js";
 import {
@@ -629,6 +633,7 @@ const externalRuntime = createExternalRuntimeModule(() => {
           externalRuntimeWorkspaceForSession(sessionId),
         ),
       backgroundWork: createExternalRuntimeBackgroundWork(),
+      mimiTools: () => externalRuntimeMimiHost(petNotices, externalBridge),
     },
   };
 });
@@ -1862,6 +1867,11 @@ async function createWindow(): Promise<BrowserWindow> {
     // the bound-Session bridge reads its outcomes from `sessionOutcomes`.
     const sessionOutcomeDeriver = new SessionOutcomeDeriver();
     const sessionOutcomes = createSessionOutcomeFanout();
+    // Desktop external-runtime Sessions (Codex / Claude Code run here in Main).
+    const externalSessions = createExternalSessionCatalog({
+      runtime: () => externalRuntime.service,
+      readState: (id) => externalGoalSessions.readSessionState(id),
+    });
     const notices = wirePetNotices({
       userDataDir: app.getPath("userData"),
       bridge,
@@ -1887,7 +1897,12 @@ async function createWindow(): Promise<BrowserWindow> {
       powerEvents: powerMonitor,
       focusEvents: app,
       hasLiveWorker: () => bridge?.hasLiveWorker() ?? false,
-      onWorkerLost: () => sessionOutcomeDeriver.reset(),
+      externalSessions,
+      externalApprovals: {
+        approvals: () => externalRuntime.approvals,
+        subscribe: (listener) => externalRuntime.subscribeApprovals(listener),
+      },
+      onWorkerLost: (keep) => sessionOutcomeDeriver.reset(keep),
     });
     petNotices = notices;
     const petMemoryStoreInstance = new PetMemoryStore(
@@ -2018,22 +2033,30 @@ async function createWindow(): Promise<BrowserWindow> {
     petLongTaskCoordinator = longTaskCoordinator;
     const decisionBridge = bridge;
     petImDecisions = new PetImDecisions({
-      read: () => {
-        pendingMobileApprovals.setWorkerState(
-          decisionBridge.workerGeneration(),
-          decisionBridge.hasLiveWorker(),
-        );
-        return collectImDecisions(
-          aggregator.getSnapshot(),
-          longTaskStore.getSnapshot().tasks,
-          pendingMobileApprovals.replayAllLines(),
-          notices.decisions.deliveryFor,
-        );
-      },
-      ...imDecisionWorkerActions(
-        (method, params, timeoutMs, options) =>
-          decisionBridge.requestWorker(method, params, timeoutMs, options),
-        (params) => mobileOrchestrator.broadcastApprovalResolved(params),
+      // The worker's decisions and the desktop external runtimes' (Codex / Claude Code).
+      ...withExternalDecisions(
+        notices.externalDecisions,
+        {
+          read: () => {
+            pendingMobileApprovals.setWorkerState(
+              decisionBridge.workerGeneration(),
+              decisionBridge.hasLiveWorker(),
+            );
+            return collectImDecisions(
+              aggregator.getSnapshot(),
+              longTaskStore.getSnapshot().tasks,
+              pendingMobileApprovals.replayAllLines(),
+              notices.decisions.deliveryFor,
+            );
+          },
+          ...imDecisionWorkerActions(
+            (method, params, timeoutMs, options) =>
+              decisionBridge.requestWorker(method, params, timeoutMs, options),
+            (params) => mobileOrchestrator.broadcastApprovalResolved(params),
+          ),
+        },
+        (source, error) =>
+          dlog("main", "pet.im-decision.read_failed", { source, error: String(error) }),
       ),
       // The router decides whether a prompt goes to IM (presence, caps) and
       // where; its ledger records hold each prompt's lifecycle.
@@ -2064,8 +2087,12 @@ async function createWindow(): Promise<BrowserWindow> {
       },
       sessionOutcomeDeriver,
     );
-    unsubscribePetLongTaskStream = bridge.subscribeOutbound((_line, snapshotEntry) => {
-      if (snapshotEntry) observeSessionOutcome(snapshotEntry.sessionId, snapshotEntry.event);
+    // Native worker lines and desktop external runtimes (owner window or not).
+    unsubscribePetLongTaskStream = feedSessionOutcomeTap({
+      sources: bridge,
+      observe: observeSessionOutcome,
+      deriver: sessionOutcomeDeriver,
+      runtimeEnded: notices.externalRuntimeEnded,
     });
     // One root for both the Sessions disclosure tool and the resume resolver,
     // so the directory Mimi reads and the one selectors resolve against can
@@ -2123,7 +2150,10 @@ async function createWindow(): Promise<BrowserWindow> {
       routesFilePath: resolve(app.getPath("userData"), "pet", "conversation-session-routes.json"),
       resolveSelector: createReusableSessionResolver(petSessionsRootDir),
       createRunner: (onTurn) =>
-        createBoundSessionRunner(worker, aggregator, onTurn, sessionOutcomes),
+        // A chat bound to a Codex / CC Session sends to the worker: no turn of it is forwarded.
+        createBoundSessionRunner(worker, aggregator, onTurn, sessionOutcomes, {
+          ignores: externalSessions.isLive,
+        }),
       health: createBoundSessionHealth(aggregator, petSessionsRootDir),
       describeStatus: async (route) => `当前在「${route.sessionTitle}」中。发送 /mimi 可退出。`,
       publish: (event) => publishGatewayControlEvent(event),

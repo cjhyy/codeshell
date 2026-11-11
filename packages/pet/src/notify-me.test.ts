@@ -21,6 +21,7 @@ import {
 import { PET_ALLOWED_TOOL_NAMES } from "./profile.js";
 
 const SESSION_ID = "work-806bb2404fc122889366de82";
+const ROOT_ID = "work-11111111111111111111aaaa";
 
 function visibility(overrides: Partial<ToolVisibilityContext> = {}): ToolVisibilityContext {
   return { cwd: "/work", hasGoal: false, sessionId: SESSION_ID, isSubAgent: false, ...overrides };
@@ -63,12 +64,26 @@ function recorder(reply: unknown | (() => Promise<unknown>)) {
 }
 
 describe("NotifyMe visibility", () => {
-  test("is visible to native top-level Sessions only", () => {
+  test("is visible to native top-level Sessions and sub-agents with a trusted root", () => {
     expect(notifyMeAvailability(visibility())).toBe(true);
     expect(notifyMeAvailability(visibility({ hasGoal: true }))).toBe(true);
-    // No parent Session id reaches the tool context, so a sub-agent cannot
-    // attach a rule to its parent; it stays hidden rather than mis-attaching.
+    // A sub-agent needs a trusted root Session id distinct from its own id;
+    // otherwise it stays hidden rather than mis-attaching.
     expect(notifyMeAvailability(visibility({ isSubAgent: true }))).toBe(false);
+    expect(notifyMeAvailability(visibility({ isSubAgent: true, rootSessionId: ROOT_ID }))).toBe(
+      true,
+    );
+    expect(notifyMeAvailability(visibility({ isSubAgent: true, rootSessionId: SESSION_ID }))).toBe(
+      false,
+    );
+    expect(notifyMeAvailability(visibility({ isSubAgent: true, rootSessionId: " bad " }))).toBe(
+      false,
+    );
+    expect(
+      notifyMeAvailability(
+        visibility({ isSubAgent: true, rootSessionId: ROOT_ID, behaviorProfile: "pet" }),
+      ),
+    ).toBe(false);
     expect(notifyMeAvailability(visibility({ behaviorProfile: "pet" }))).toBe(false);
     expect(notifyMeAvailability(visibility({ sessionId: undefined }))).toBe(false);
     expect(notifyMeAvailability(visibility({ sessionId: " bad " }))).toBe(false);
@@ -125,6 +140,13 @@ describe("NotifyMe validation", () => {
     await expect(
       notifyMeTool({}, { ...context(), isSubAgent: true } as ToolContext, request),
     ).resolves.toStartWith("Error:");
+    await expect(
+      notifyMeTool(
+        {},
+        { ...context(), isSubAgent: true, rootSessionId: SESSION_ID } as ToolContext,
+        request,
+      ),
+    ).resolves.toStartWith("Error:");
     expect(calls).toHaveLength(0);
   });
 });
@@ -153,6 +175,31 @@ describe("NotifyMe execution", () => {
         } satisfies NoticeRuleUpsert,
       },
     ]);
+  });
+
+  test("a sub-agent files the rule on the root Session, including its Goal default", async () => {
+    const subContext = (goal?: { paused?: boolean }): ToolContext =>
+      ({
+        ...context(),
+        isSubAgent: true,
+        rootSessionId: ROOT_ID,
+        engine: {
+          getSessionManager: () => ({
+            readActiveGoal: (sessionId: string) =>
+              sessionId === ROOT_ID && goal ? { objective: "ship", ...goal } : undefined,
+          }),
+        },
+      }) as unknown as ToolContext;
+    const turn = recorder(OK_REPLY);
+    const text = await notifyMeTool({}, subContext(), turn.request);
+    expect(turn.calls).toHaveLength(1);
+    expect(turn.calls[0]!.sessionId).toBe(ROOT_ID);
+    expect(turn.calls[0]!.args.sessionId).toBe(ROOT_ID);
+    expect(turn.calls[0]!.args.scope).toBe("turn");
+    expect(text).toContain("main Session");
+    const goal = recorder(OK_REPLY);
+    await notifyMeTool({}, subContext({}), goal.request);
+    expect(goal.calls[0]!.args.scope).toBe("goal");
   });
 
   test("defaults scope to goal while the Session has an active, unpaused Goal", async () => {
@@ -332,6 +379,34 @@ describe("NotifyMe registration", () => {
     await expect(tool.execute({}, context())).resolves.toBe(
       "Error: the host rule channel is unavailable.",
     );
+  });
+
+  test("a sub-agent is routed on its root Session id, never its own", async () => {
+    const module_ = createPetModule();
+    const tool = toolOf(module_);
+    // Two hosts disable the single-host fallback, so only the root id routes.
+    const rootHost = host();
+    const otherHost = host();
+    const rootObserver = module_.protocol!.createObserver!(rootHost);
+    const otherObserver = module_.protocol!.createObserver!(otherHost);
+    rootObserver.onSessionAttached?.(ROOT_ID, 1);
+    const child = {
+      ...context(),
+      isSubAgent: true,
+      rootSessionId: ROOT_ID,
+    } as ToolContext;
+    expect(await tool.execute({}, child)).toContain("rule-1");
+    expect(rootHost.requests).toEqual([
+      expect.objectContaining({ sessionId: ROOT_ID, action: PET_RULE_UPSERT_ACTION }),
+    ]);
+    expect(otherHost.requests).toHaveLength(0);
+    // Missing root: fails closed without touching any host.
+    const orphan = { ...context(), isSubAgent: true } as ToolContext;
+    expect(await tool.execute({}, orphan)).toStartWith("Error:");
+    expect(rootHost.requests).toHaveLength(1);
+    expect(otherHost.requests).toHaveLength(0);
+    rootObserver.onServerClose?.();
+    otherObserver.onServerClose?.();
   });
 
   test("is unavailable on a host without the action loopback", async () => {

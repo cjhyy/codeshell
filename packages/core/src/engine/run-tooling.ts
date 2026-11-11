@@ -394,6 +394,7 @@ export function assembleRunToolDefs(args: {
     host: args.builtinToolHost,
     hasBrowserAutomation: toolCtx.browser !== undefined,
     isSubAgent: args.isSubAgent,
+    rootSessionId: toolCtx.rootSessionId,
     behaviorProfile: args.behaviorProfileId,
     sessionMessageTargets: toolCtx.sessionMessages?.targets,
     profileMeta: args.profileMeta,

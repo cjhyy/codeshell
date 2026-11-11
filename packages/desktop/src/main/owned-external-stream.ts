@@ -6,6 +6,13 @@ export interface OwnedExternalStreamEntry extends SnapshotEntry {
   ownerWebContentsId: number;
 }
 
+/** Committed external-runtime events, with or without an owner window (AgentBridge). */
+export interface ExternalSessionStreamListener {
+  event(sessionId: string, event: unknown): void;
+  /** The Session's runtime was released: a run it left open will never close. */
+  released(sessionId: string): void;
+}
+
 interface OwnedExternalStreamPublication extends SnapshotEntry {
   sessionId: string;
   epoch: string;

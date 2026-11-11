@@ -155,16 +155,19 @@ export class PetSessionRuleWatcher {
   }
 
   /**
-   * The runs of these Sessions (all, without `sessionId`) will never close:
+   * The runs of these Sessions (one id, those a predicate selects, or all)
+   * will never close:
    * the worker went away, or this process is shutting down. Their parked
    * reports go out now as "no reply forwarded" (templated), the same as when
    * the Session's next turn reports. Serialised behind each Session's queue.
    */
-  flush(sessionId?: string): Promise<void> {
+  flush(only?: string | ((sessionId: string) => boolean)): Promise<void> {
     const sessions =
-      sessionId !== undefined
-        ? [sessionId]
-        : [...new Set([...this.marks.keys(), ...this.queues.keys()])];
+      typeof only === "string"
+        ? [only]
+        : [...new Set([...this.marks.keys(), ...this.queues.keys()])].filter(
+            (id) => only?.(id) ?? true,
+          );
     return Promise.all(
       sessions.map((id) =>
         this.enqueue(id, async () => {

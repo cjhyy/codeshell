@@ -185,6 +185,11 @@ export interface EngineConfig {
    */
   isSubAgent?: boolean;
   /**
+   * Top-level parent Session id of a sub-agent, set in memory by the spawner
+   * (never read from disk). Sub-agents cannot nest, so the parent is the root.
+   */
+  parentSessionId?: string;
+  /**
    * Hard skill isolation for a sub-agent. When set, this Engine only lists
    * and invokes skills in this allowlist (applied on top of disabledSkills).
    * Set by the spawn() closure from the role definition's `skills:`

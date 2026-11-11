@@ -4,6 +4,7 @@ import { dlog } from "../desktop-logger.js";
 import { createPetDeliveryResolver } from "./pet-delivery-plan.js";
 import { createNoticeAttention, SessionViewTracker } from "./pet-notice-attention.js";
 import { createDecisionHooks } from "./pet-notice-decision-hooks.js";
+import { createExternalDecisions } from "./pet-notice-external-decisions.js";
 import { createNoticeRuleAction, predictedIm } from "./pet-notice-host-action.js";
 import { PetNoticeLedger } from "./pet-notice-ledger.js";
 import { PetNoticeMediaStore } from "./pet-notice-media.js";
@@ -60,7 +61,26 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
   const receipts = new PetReceiptStore(join(petDir, "attention-receipts.json"), now);
   const views = new SessionViewTracker();
   const settings = createNoticeSettings({ readSettings: () => deps.readSettings(), now, log });
-  const view = createNoticeProjectionView(deps);
+  let disposed = false;
+  const isExternal = (sessionId: string) => deps.externalSessions?.has(sessionId) === true;
+  // Read lazily: where a prompt goes needs the hooks and view built below.
+  const externalDecisions = createExternalDecisions({
+    ...(deps.externalApprovals ? { source: deps.externalApprovals } : {}),
+    tasks: () => deps.longTasks.getSnapshot().tasks,
+    deliveryFor: (sessionId, task) => decisions.hooks.deliveryFor(sessionId, task),
+    title: (sessionId) => view.sessionTitle(sessionId),
+    onChange: (event) => {
+      // PetImDecisions looks now (a prompt to send, or one to end).
+      decisions.nudge(event.sessionId);
+      // Answered anywhere, timed out or dropped: never replayed later.
+      if (event.type === "resolved")
+        void ready.then(() =>
+          disposed ? undefined : router.revokeDecision(event.sessionId, event.requestId),
+        );
+    },
+    now,
+  });
+  const view = createNoticeProjectionView({ ...deps, externalDecisions });
   const outlets = createNoticeOutlets({
     gateway: deps.gateway,
     outbox: deps.outbox,
@@ -134,8 +154,12 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
   const deliveries = createPetDeliveryResolver({
     rules: ruleStore,
     longTasks: deps.longTasks,
+    // The bound-Session bridge forwards no desktop external runtime's turns
+    // (its chat's messages still go to the worker): no chat is bound to one.
     replyRoutes: async (sessionId) =>
-      (await deps.sessionRoutes()?.notifyRoutesForSession(sessionId)) ?? [],
+      isExternal(sessionId)
+        ? []
+        : ((await deps.sessionRoutes()?.notifyRoutesForSession(sessionId)) ?? []),
     delegatedFromDesktop: () => settings.settings().delegatedFromDesktop,
     log,
   });
@@ -143,6 +167,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
   const decisions = createDecisionHooks({
     view,
     deliveries,
+    external: externalDecisions,
     isPresent: presence.isPresent,
     getSystemIdleTimeSec: () => deps.presence.getSystemIdleTimeSec(),
     presenceIdleSec: () => settings.settings().presenceIdleSec,
@@ -189,30 +214,25 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     onGoalCleared: (sessionId) => router.revokeSessionBlocked(sessionId),
     // Queued user messages (core queue depth). Background work parks the turn
     // with completionKind background_wait, which the watcher already skips.
-    isSessionBusy: (sessionId) => {
-      const session = view.workSession(sessionId);
-      return !!session && (session.queueDepth > 0 || session.runState === "queued");
-    },
+    isSessionBusy: view.isSessionBusy,
     isEligibleSession: view.isEligibleSession,
-    sessionTitle: (sessionId) => view.workSession(sessionId)?.title,
+    sessionTitle: view.sessionTitle,
     activeTask: (sessionId) => deps.longTasks.activeForSession(sessionId),
     now,
     log,
   });
 
-  const removeHostAction = deps.bridge.setHostActionHandler(
-    PET_RULE_UPSERT_ACTION,
-    createNoticeRuleAction({
-      ruleStore,
-      deliveries,
-      ownerChannels: outlets.ownerChannels,
-      lastOwnerInboundChannel: () => deps.gateway.lastOwnerInboundChannel(),
-      isEligibleSession: view.isEligibleSession,
-      settings: settings.settings,
-      nudge: decisions.nudge,
-      now,
-    }),
-  );
+  const upsertRule = createNoticeRuleAction({
+    ruleStore,
+    deliveries,
+    ownerChannels: outlets.ownerChannels,
+    lastOwnerInboundChannel: () => deps.gateway.lastOwnerInboundChannel(),
+    isEligibleSession: view.isEligibleSession,
+    settings: settings.settings,
+    nudge: decisions.nudge,
+    now,
+  });
+  const removeHostAction = deps.bridge.setHostActionHandler(PET_RULE_UPSERT_ACTION, upsertRule);
 
   const ready: Promise<void> = Promise.all([ruleStore.load(), ledger.load(), receipts.load()])
     .then(() => undefined)
@@ -223,7 +243,6 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     .then(() => router.recover())
     .catch((error) => log("pet.notice.recover_failed", { error: errorText(error) }));
 
-  let disposed = false;
   const replay = createNoticeReplay({
     router,
     ready,
@@ -235,11 +254,12 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     void ready.then(() => (disposed ? undefined : watcher.observeProjection(event)));
     if (workerGone(event)) {
       try {
-        deps.onWorkerLost?.();
+        deps.onWorkerLost?.(isExternal);
       } catch (error) {
         log("pet.notice.worker_lost_listener_failed", { error: errorText(error) });
       }
-      void ready.then(() => (disposed ? undefined : watcher.flush()));
+      // External runtimes do not run in the worker: their open runs still close.
+      void ready.then(() => (disposed ? undefined : watcher.flush((id) => !isExternal(id))));
     }
     // A decision answered anywhere (or timed out) must never be replayed later.
     const resolved = resolvedDecision(event);
@@ -255,7 +275,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     ready,
     submit,
     nudge: decisions.nudge,
-    sessionTitle: (sessionId) => view.workSession(sessionId)?.title,
+    sessionTitle: view.sessionTitle,
     now,
     log,
   });
@@ -287,10 +307,14 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
         .then(() => (disposed ? undefined : router.recheckOutbox()))
         .catch((error) => log("pet.notice.outbox_recheck_failed", { error: errorText(error) }));
     },
+    externalRuntimeEnded(sessionId) {
+      void ready.then(() => (disposed ? undefined : watcher.flush(sessionId)));
+    },
     notifyTaskClosed: closure.notifyTaskClosed,
     armDelegationRule: closure.armDelegationRule,
     inboundReplay: replay.inboundReplay,
     decisions: decisions.hooks,
+    externalDecisions,
     deliveries,
     flush: async () => {
       await flushParked();
@@ -305,6 +329,10 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
         deps.gateway.lastOwnerInboundChannel(),
       ),
     isEligibleSession: view.isEligibleSession,
+    upsertRule: (callerSessionId, args) => {
+      if (disposed) return Promise.reject(new Error("notice rules are shutting down"));
+      return upsertRule(callerSessionId, args);
+    },
     dispose() {
       if (disposed) return;
       settings.dispose();
@@ -312,6 +340,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
       replay.dispose();
       removeHostAction();
       unsubscribeProjection();
+      externalDecisions.dispose();
       decisions.dispose();
       // Reports parked on runs that will now never close still reach the
       // router before it stops taking notices.

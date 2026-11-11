@@ -1,3 +1,5 @@
+import type { PetExternalDecisions } from "./pet-notice-external-decisions.js";
+import type { ExternalNoticeSessionCatalog } from "./pet-notice-external-sessions.js";
 import type { PetAttentionOptions } from "./pet-notice-types.js";
 import type {
   DesktopPetProjectionEvent,
@@ -12,8 +14,14 @@ export interface PetNoticeProjectionView {
   workerIsGone(state: DesktopPetProjectionSnapshot["workerState"]): boolean;
   /** The top-level, non-external work Session with this id, if the projection lists it. */
   workSession(sessionId: string): DesktopPetSession | undefined;
-  /** A top-level work Session (not Mimi's, not external) that rules may watch. */
+  /**
+   * A top-level work Session (not Mimi's, not a tailed CLI rollout) that rules
+   * may watch: listed by the projection, or a desktop external-runtime Session.
+   */
   isEligibleSession(sessionId: string): boolean;
+  sessionTitle(sessionId: string): string | undefined;
+  /** Queued work behind the current turn: its done is left to the follow-up turn. */
+  isSessionBusy(sessionId: string): boolean;
   /** Whether a decision still waits; a missed snapshot never says it was resolved. */
   isDecisionStillPending(sessionId: string, requestId: string): boolean;
 }
@@ -22,6 +30,10 @@ export function createNoticeProjectionView(options: {
   projection: PetAttentionOptions["source"];
   hasLiveWorker?: () => boolean;
   isMimiSession?: (sessionId: string) => boolean;
+  /** Desktop external-runtime Sessions, which the worker projection never lists. */
+  externalSessions?: ExternalNoticeSessionCatalog;
+  /** Desktop external runtimes' decisions: pending in their approval router, not the projection. */
+  externalDecisions?: Pick<PetExternalDecisions, "isExternal" | "status">;
 }): PetNoticeProjectionView {
   const snapshot = (): DesktopPetProjectionSnapshot => options.projection.getSnapshot();
   const workSession = (sessionId: string) =>
@@ -35,8 +47,21 @@ export function createNoticeProjectionView(options: {
     workSession,
     // The projection only lists top-level work Sessions (no Mimi, child or hidden kinds).
     isEligibleSession: (sessionId) =>
-      options.isMimiSession?.(sessionId) !== true && workSession(sessionId) !== undefined,
+      options.isMimiSession?.(sessionId) !== true &&
+      (workSession(sessionId) !== undefined || options.externalSessions?.has(sessionId) === true),
+    sessionTitle: (sessionId) => {
+      const session = workSession(sessionId);
+      return session ? session.title : options.externalSessions?.get(sessionId)?.title;
+    },
+    isSessionBusy: (sessionId) => {
+      const session = workSession(sessionId);
+      if (session) return session.queueDepth > 0 || session.runState === "queued";
+      return options.externalSessions?.get(sessionId)?.busy === true;
+    },
     isDecisionStillPending: (sessionId, requestId) => {
+      const external = options.externalDecisions;
+      if (external?.isExternal(sessionId, requestId))
+        return external.status(sessionId, requestId) === "pending";
       const current = snapshot();
       // A missed snapshot empties the pending list while the worker may be
       // alive: only a live snapshot without the decision says it was resolved.

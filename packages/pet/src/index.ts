@@ -13,16 +13,21 @@ export * from "./delegation.js";
 export * from "./team.js";
 export * from "./protocol.js";
 export {
+  NOTIFY_ME_TOOL_NAME,
   REPORT_TO_MIMI_TOOL_NAME,
   REQUEST_MIMI_DELIVERY_TOOL_NAME,
+  notifyMeToolDef,
+  notifyMeTool,
+  notifyMeAvailability,
   reportToMimiToolDef,
   reportToMimiTool,
   reportToMimiAvailability,
   requestMimiDeliveryToolDef,
   requestMimiDeliveryTool,
   requestMimiDeliveryAvailability,
+  type NoticeRuleHostRequester,
   type PetReportToMimiSink,
-} from "./report-to-mimi.js";
+} from "./session-mimi-tools.js";
 export {
   PET_PENDING_NOTICE_BODY_MAX,
   PET_PENDING_NOTICE_TITLE_MAX,

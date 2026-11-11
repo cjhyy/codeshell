@@ -129,6 +129,8 @@ const expectedRuntimeExportsByPartition = {
     "restoreProjectSettings",
   ],
   sessionUsageAccounting: ["normalizeCumulativeUsageCounters"],
+  // Desktop's external runtime reports turn outcomes with the native rules.
+  turnOutcomes: ["createTurnOutcomeTracker", "withOutcomeTrigger"],
   memoryMaintenance: ["MemoryOrchestrator", "isEphemeralSessionState", "sanitizeContent"],
   sessionOutputRecovery: [
     "OutputHistoryRecovery",

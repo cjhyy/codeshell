@@ -21,7 +21,8 @@ describe("reviewed external tool declarations", () => {
   test("the core catalog exactly matches its checked-in review", () => {
     const names = new Set(BUILTIN_TOOLS.map((tool) => tool.definition.name));
     const expected = REVIEWED_EXTERNAL_TOOL_EXPOSURE.filter(
-      (entry) => names.has(entry.tool) && entry.requires !== "goal-controller",
+      // Host-registered executors (requires) are reviewed with their Host's catalog.
+      (entry) => names.has(entry.tool) && entry.requires === undefined,
     );
     expect(() =>
       assertExternalToolReviewSnapshot(createExternalToolReviewSnapshot(BUILTIN_TOOLS), expected),

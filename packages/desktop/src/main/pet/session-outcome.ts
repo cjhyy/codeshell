@@ -27,7 +27,7 @@
  *
  * Some failures core reports after the run boundary, with no run in flight
  * (`inRun` false); nothing closes them, so no consumer may wait for a close.
- * `reset()` forgets every in-flight turn when the worker is lost.
+ * `reset()` forgets the worker's in-flight turns when it is lost.
  *
  * An exhausted Goal is read two ways on purpose, from the one outcome: the
  * task that was driving that Goal has failed and closes, while the owner is
@@ -120,9 +120,10 @@ interface CoreTurnOutcome {
 }
 
 /**
- * Fallback for a core that does not report `turn_complete.outcome` (and for
- * external runtimes): tools that talk to the owner or Mimi. A turn that only
- * used these did no work. Core declares the same set as `bookkeeping` tools.
+ * Fallback for a core that does not report `turn_complete.outcome` (desktop
+ * external runtimes report it, external-runtime-run-envelope.ts): tools that
+ * talk to the owner or Mimi. A turn that only used these did no work. Core
+ * declares the same set as `bookkeeping` tools.
  */
 const NON_WORK_TOOLS: ReadonlySet<string> = new Set([
   "NotifyMe",
@@ -252,7 +253,7 @@ function coreOutcome(value: unknown): CoreTurnOutcome | undefined {
  *
  * When core reports `turn_complete.outcome`, it decides whether the run did
  * work, whether the Goal blocked it, and whether background work is pending.
- * Without it (an older core, an external runtime) the same facts are inferred
+ * Without it (an older core, a run whose close bypassed the envelope) the same facts are inferred
  * from the stream: a tool outside `NON_WORK_TOOLS` or a background wake is
  * work, and a Goal pause seen earlier in the turn blocks its completion.
  */
@@ -338,11 +339,12 @@ export class SessionOutcomeDeriver {
   /**
    * Forget every Session's in-flight turn: the worker that ran them is gone,
    * so none of them will close, and a new worker's events must not inherit an
-   * old run's id or work.
+   * old run's id or work. `keep` spares Sessions the worker never ran (desktop
+   * external runtimes), whose turns still close.
    */
-  reset(): void {
-    this.turns.clear();
-    this.queuedUserMessages.clear();
+  reset(keep?: (sessionId: string) => boolean): void {
+    for (const state of [this.turns, this.queuedUserMessages])
+      for (const sessionId of [...state.keys()]) if (!keep?.(sessionId)) state.delete(sessionId);
   }
 
   private freshTurn(inRun: boolean): TurnState {
@@ -588,6 +590,47 @@ export function createSessionOutcomeFanout(): SessionOutcomeStream & {
         }
       }
     },
+  };
+}
+
+/** Main's Session streams, as AgentBridge publishes them. */
+export interface SessionOutcomeSources {
+  /** Worker lines: native Sessions. */
+  subscribeOutbound(
+    listener: (line: string, entry?: { sessionId: string; event: unknown }) => void,
+  ): () => void;
+  /** Desktop external-runtime Sessions, owner window or not. */
+  subscribeExternalSessionStream(listener: {
+    event(sessionId: string, event: unknown): void;
+    released(sessionId: string): void;
+  }): () => void;
+}
+
+/**
+ * Feed the one outcome tap from every Session stream Main sees. A released
+ * external runtime leaves no run that will close: its open turn is forgotten
+ * (worker loss, for that one Session) and `runtimeEnded` sends what was parked on it.
+ */
+export function feedSessionOutcomeTap(input: {
+  sources: SessionOutcomeSources;
+  observe: (sessionId: string, event: unknown) => void;
+  deriver: SessionOutcomeDeriver;
+  runtimeEnded: (sessionId: string) => void;
+}): () => void {
+  const unsubscribers = [
+    input.sources.subscribeOutbound((_line, entry) => {
+      if (entry) input.observe(entry.sessionId, entry.event);
+    }),
+    input.sources.subscribeExternalSessionStream({
+      event: (sessionId, event) => input.observe(sessionId, event),
+      released: (sessionId) => {
+        input.deriver.reset((id) => id !== sessionId);
+        input.runtimeEnded(sessionId);
+      },
+    }),
+  ];
+  return () => {
+    for (const unsubscribe of unsubscribers) unsubscribe();
   };
 }
 

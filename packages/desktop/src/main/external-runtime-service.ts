@@ -23,6 +23,7 @@ import {
   claudePermissionModeFor,
   startExternalRuntimeSession,
 } from "@cjhyy/code-shell-capability-coding/external-runtimes";
+import { codexNativeApprovalPresentation } from "./external-runtime-codex-approvals.js";
 import type {
   ExternalRuntimeTurnInput,
   ExternalRuntimeKind,
@@ -80,6 +81,11 @@ import {
 import { createExternalRuntimeSourceContext } from "./external-runtime-source-context.js";
 import { EXTERNAL_GOAL_TOOL_CATALOG } from "./external-runtime-goal-tools.js";
 import {
+  externalMimiToolInstructions,
+  registerExternalMimiTools,
+  type ExternalRuntimeMimiHost,
+} from "./external-runtime-mimi-tools.js";
+import {
   bindExternalRuntimeProfile,
   externalRuntimeProfileInstructions,
   readExternalRuntimeProfileOverrides,
@@ -90,6 +96,13 @@ import type { ExternalRuntimeMemory } from "./external-runtime-memory.js";
 import { assertOutputHistoryWriteAvailable } from "./session-output-history-lease.js";
 import { ExternalRuntimeDeltaBuffer } from "./external-runtime-delta-buffer.js";
 import { notifyRunStopRequested } from "./run-stop-signals.js";
+import {
+  announcesUserMessage,
+  assertExternalSubmission,
+  ExternalRunEnvelope,
+  externalRunTrigger,
+  type SessionRunTrigger,
+} from "./external-runtime-run-envelope.js";
 
 /**
  * `code` of the refusal to change a runtime's model/permission/instructions
@@ -104,6 +117,11 @@ export type DesktopExternalRuntimeTurnInput = ExternalRuntimeTurnInput & {
   transcriptContent?: string;
   /** Host observation label; never forwarded into vendor CLI input. */
   modelTraceSource?: string;
+  /**
+   * Why it runs (`session_started.trigger`); defaults to "user" unless
+   * `injected`. A "host_message" (Mimi, another Session) needs `displayText`.
+   */
+  trigger?: SessionRunTrigger;
 };
 
 function askUserApprovalRequest(question: string, options?: Record<string, unknown>) {
@@ -213,12 +231,16 @@ export interface ExternalRuntimeServiceDeps {
   ) => Promise<{ approved: boolean; reason?: string; answer?: string }>;
   /** Drop any prompt still on screen for a session that is going away. */
   cancelApprovals?: (sessionId: string) => void;
+  /** Mimi's handlers in Main (NotifyMe, ReportToMimi); read at each start, with Host tools on. */
+  mimiTools?: () => ExternalRuntimeMimiHost | undefined;
   /** Enables real DriveAgent background delivery for external runtimes. */
   backgroundWork?: ExternalRuntimeBackgroundWorkDelivery;
   /** Injectable sidecar writer; failure must never orphan an otherwise-live runtime. */
   writeBinding?: typeof writeExternalRuntimeBinding;
   /** Resolve the executable before reserving resources; injectable for tests. */
   prepareCodexLaunch?: (cwd: string) => Promise<CodexLaunch>;
+  /** Start the provider runtime; injectable for tests (production: the real CLI). */
+  startSession?: typeof startExternalRuntimeSession;
   /** Separate background maintenance; never lends the foreground CLI or tool lease. */
   memory?: Pick<ExternalRuntimeMemory, "schedule" | "cancel" | "dispose">;
 }
@@ -273,6 +295,10 @@ export class ExternalRuntimeService {
       modelTrace?: ReturnType<typeof startExternalRuntimeTrace>;
       /** Serializes turns so one recorder can never be reset by an overlapping send. */
       turnTail: Promise<void>;
+      /** User/host submissions waiting behind `turnTail` (background wakes excluded). */
+      queuedTurns: Set<{ generation: number }>;
+      /** `queuedTurns` when the last turn_complete was published (the notices' "busy"). */
+      queuedAtTerminal: number;
       /**
        * Invalidated before close so late provider events cannot enter a
        * replacement session. `faulted` marks a runtime whose last turn ended in
@@ -542,6 +568,10 @@ export class ExternalRuntimeService {
         return;
       }
     }
+    if (event.type === "turn_complete") {
+      const entry = this.sessions.get(sessionId);
+      if (entry) entry.queuedAtTerminal = this.queuedTurns(entry);
+    }
     try {
       this.deps.emit(sessionId, event);
     } catch (error) {
@@ -551,6 +581,12 @@ export class ExternalRuntimeService {
         error: error instanceof Error ? error.message : String(error),
       });
     }
+  }
+
+  /** Running background work will wake the Session, and no result is queued yet. */
+  private awaitsBackground(sessionId: string): boolean {
+    const work = this.deps.backgroundWork;
+    return work?.hasRunning(sessionId) === true && !work.hasPending(sessionId);
   }
 
   private notifySessionStateSafely(
@@ -936,16 +972,6 @@ export class ExternalRuntimeService {
     // no tool surface at all (§20). An empty allowlist is the honest expression of
     // "off" — the bridge still exists, it just advertises nothing.
     const goalToolsAvailable = this.areHostToolsEnabled() && !request.planMode;
-    const exposure = this.areHostToolsEnabled()
-      ? {
-          ...FIRST_PHASE_EXPOSURE,
-          toolNames: new Set([
-            ...FIRST_PHASE_EXPOSURE.toolNames,
-            ...(goalToolsAvailable ? EXTERNAL_GOAL_TOOLS : []),
-          ]),
-        }
-      : { mode: "allowlist" as const, toolNames: new Set<string>() };
-
     // The registry must actually CONTAIN the tools the exposure policy allows.
     // `new ToolRegistry({})` registers none, which would make the allowlist
     // moot in the quietest possible way: `listTools()` returns [], the runtime
@@ -954,6 +980,31 @@ export class ExternalRuntimeService {
     // with the reviewed exposure policy and the current capability settings;
     // registration alone never grants external access.
     const registry = new ToolRegistry({ toolCatalog: [...BUILTIN_TOOLS, ...CODING_TOOLS] });
+    // Plan mode blocks them (not in PLAN_MODE_ALLOWED_TOOLS), so neither tools nor guidance.
+    // Known limitation: read once per start, so a runtime started before Main's
+    // notice wiring exists has no NotifyMe until it restarts.
+    const mimiHost =
+      this.areHostToolsEnabled() && !request.planMode ? this.deps.mimiTools?.() : undefined;
+    const mimiTools = mimiHost
+      ? registerExternalMimiTools(registry, {
+          sessionId: request.sessionId,
+          host: mimiHost,
+          readGoal: () => this.goals.read(request.sessionId),
+          assertActive: () => {
+            if (!lifecycle.active) throw new Error("This external runtime has been replaced");
+          },
+        })
+      : [];
+    const exposure = this.areHostToolsEnabled()
+      ? {
+          ...FIRST_PHASE_EXPOSURE,
+          toolNames: new Set([
+            ...FIRST_PHASE_EXPOSURE.toolNames,
+            ...(goalToolsAvailable ? EXTERNAL_GOAL_TOOLS : []),
+            ...mimiTools,
+          ]),
+        }
+      : { mode: "allowlist" as const, toolNames: new Set<string>() };
     const fullAccess = request.permissionMode === "bypassPermissions";
     // Keep host tool deny rules and exposure checks while honoring the user's
     // full-access selection for file paths and tool approval requests.
@@ -994,6 +1045,10 @@ export class ExternalRuntimeService {
       request.modelKey ?? `${request.kind}/${request.model ?? "default"}`,
       request.kind,
       authority.projectBinding,
+    );
+    recorder.envelope = new ExternalRunEnvelope(
+      (name) => registry.getTool(name)?.bookkeeping === true,
+      () => this.awaitsBackground(request.sessionId),
     );
     // The recorder materializes the canonical Session, so the Profile pin can
     // be bound and resolved before instructions, tools or source access use it.
@@ -1049,6 +1104,7 @@ export class ExternalRuntimeService {
         "Use LinkAction discovery for connected services and ListSources/ReadSource for " +
           "workspace data. These CodeShell host tools use normal authorization and approval; " +
           "do not claim a service is unsupported because this runtime has no native connector.",
+      externalMimiToolInstructions(mimiTools),
       externalRuntimeProfileInstructions(profile),
       request.developerInstructions,
     ]
@@ -1257,7 +1313,7 @@ export class ExternalRuntimeService {
     assertStartAuthority?.();
     this.deps.registerSession(request.sessionId, request.cwd, ownerId);
     try {
-      session = await startExternalRuntimeSession({
+      session = await (this.deps.startSession ?? startExternalRuntimeSession)({
         kind: request.kind,
         ...(codexLaunch ? { codexClient: codexLaunch } : {}),
         cwd: request.cwd,
@@ -1267,7 +1323,11 @@ export class ExternalRuntimeService {
         pathAccess: fullAccess ? "full" : "default",
         presetRules: [
           ...BUILTIN_AGENT_PRESETS.general.defaultPermissionRules,
-          ...EXTERNAL_GOAL_TOOLS.map((tool) => ({ tool, decision: "allow" as const })),
+          // Goal controller and Mimi tools need no approval (design D5).
+          ...[...EXTERNAL_GOAL_TOOLS, ...mimiTools].map((tool) => ({
+            tool,
+            decision: "allow" as const,
+          })),
         ],
         projectTrusted,
         planMode: request.planMode === true,
@@ -1284,6 +1344,7 @@ export class ExternalRuntimeService {
         visibility: getVisibility(),
         getVisibility,
         goalController: goalToolsAvailable,
+        mimiHost: mimiTools.length > 0,
         ...(exposure ? { exposure } : {}),
         ...(request.model ? { model: request.model } : {}),
         ...(resumeRuntimeSessionId ? { resumeRuntimeSessionId } : {}),
@@ -1348,6 +1409,13 @@ export class ExternalRuntimeService {
                     toolName: "Codex native tool",
                     method: nativeRequest.method,
                     params: nativeRequest.params,
+                    // The card and Mimi's IM prompt read description/args, not params.
+                    ...codexNativeApprovalPresentation(
+                      nativeRequest.method,
+                      nativeRequest.params,
+                      nativeRequest.fileChanges,
+                      nativeRequest.fileChangeCount,
+                    ),
                   });
                   return lifecycle.active &&
                     this.authorityStillCurrent(request.cwd, authority) &&
@@ -1487,6 +1555,8 @@ export class ExternalRuntimeService {
       },
       authority,
       turnTail: Promise.resolve(),
+      queuedTurns: new Set(),
+      queuedAtTerminal: 0,
       lifecycle,
       goalToolsAvailable,
       forwardEvent,
@@ -1524,7 +1594,7 @@ export class ExternalRuntimeService {
     return session;
   }
 
-  send(
+  async send(
     sessionId: string,
     input: DesktopExternalRuntimeTurnInput | string,
     callerWebContentsId?: number,
@@ -1532,6 +1602,7 @@ export class ExternalRuntimeService {
     hooks?: ExternalRuntimeSubmissionHooks,
   ): Promise<ExternalRuntimeTurnOutcome> {
     const turnInput = typeof input === "string" ? { text: input } : input;
+    assertExternalSubmission(turnInput);
     return this.submit(sessionId, () => turnInput, callerWebContentsId, expectedGoal, hooks);
   }
 
@@ -1666,6 +1737,7 @@ export class ExternalRuntimeService {
         goal: _goal,
         disableGoal: _disableGoal,
         modelTraceSource: _modelTraceSource,
+        trigger: _trigger,
         ...providerInput
       } = turnInput;
       const withBackground = (text: string, background?: string) =>
@@ -1704,6 +1776,7 @@ export class ExternalRuntimeService {
               const user = entry.recorder.beginTurn(
                 goalRun && providerRound === 0 ? providerInput : nextInput,
                 providerRound > 0,
+                externalRunTrigger(turnInput, initialBackground !== undefined),
               );
               prepared = true;
               const runId = entry.recorder.outputRunId;
@@ -1733,7 +1806,7 @@ export class ExternalRuntimeService {
               }
               // Match the journal order. A Panel input already has cursor N;
               // publishing start N+1 first would invalidate shared coverage.
-              if (nextInput.displayText && !nextInput.injected) this.emitSafely(sessionId, user);
+              if (announcesUserMessage(nextInput)) this.emitSafely(sessionId, user);
               if (providerRound === 0) {
                 logicalRunId = runId;
                 this.emitSafely(sessionId, entry.recorder.startEvent());
@@ -1853,9 +1926,7 @@ export class ExternalRuntimeService {
               });
             }
             finalOutcome = entry.recorder.finishIfMissing();
-            const waitingForBackgroundWork =
-              this.deps.backgroundWork?.hasRunning(sessionId) === true &&
-              !this.deps.backgroundWork.hasPending(sessionId);
+            const waitingForBackgroundWork = this.awaitsBackground(sessionId);
             if (
               !goalRun ||
               finalOutcome.reason !== "completed" ||
@@ -1904,9 +1975,16 @@ export class ExternalRuntimeService {
             this.withGoalOutput(sessionId, publishGoalOutput, () => this.goals.end(goalRun));
             if (entry.lifecycle.active && finalOutcome && !entry.recorder.outputFailed) {
               try {
+                // A limit pause interrupts the provider: the run stopped on its limit,
+                // and a reply it was writing is no final answer.
+                const limited =
+                  goalRun.limited && acceptedGeneration === entry.lifecycle.interruptGeneration;
+                const cutOff = limited && finalOutcome.reason === "aborted_streaming";
                 const terminal = entry.recorder.completeRun(
-                  entry.finalizeOperations(finalOutcome.reason),
-                  finalOutcome.completionKind,
+                  entry.finalizeOperations(cutOff ? "completed" : finalOutcome.reason),
+                  finalOutcome.completionKind ??
+                    (goalRun.settled ? "goal_control_stop" : limited ? "limit_stop" : undefined),
+                  cutOff,
                 );
                 if (terminal) this.emitSafely(sessionId, terminal);
               } catch {
@@ -1925,7 +2003,10 @@ export class ExternalRuntimeService {
         ? entry.recorder.finishIfMissing()
         : outcome;
     };
+    // Native queue depth counts user messages only; a wake may resolve to an empty slot.
+    const queued = initialBackground ? undefined : { generation: acceptedGeneration };
     const runTurn = async (): Promise<ExternalRuntimeTurnOutcome> => {
+      if (queued) entry.queuedTurns.delete(queued);
       this.deps.memory?.cancel(sessionId);
       const outcome = await runTurnExclusive();
       if (
@@ -1975,6 +2056,7 @@ export class ExternalRuntimeService {
       }
       return outcome;
     };
+    if (queued) entry.queuedTurns.add(queued);
     const outcome = entry.turnTail.then(runTurn, runTurn);
     const afterSubmission = () => {
       // A preserved old runtime can still own a claim while its replacement is
@@ -1993,6 +2075,23 @@ export class ExternalRuntimeService {
     return entry?.lifecycle.active && entry.recorder.hasOpenRun && entry.recorder.outputRunId
       ? { session: entry.session, runId: entry.recorder.outputRunId }
       : undefined;
+  }
+
+  /** Trusted Main probe for Mimi notices (`pet/pet-notice-external-sessions.ts`). */
+  noticeProbe(sessionId: string): { queuedAtTerminal: number } | undefined {
+    const entry = this.sessions.get(sessionId);
+    return entry?.lifecycle.active ? { queuedAtTerminal: entry.queuedAtTerminal } : undefined;
+  }
+
+  /** Queued turns an interrupt has not already cancelled. */
+  private queuedTurns(entry: {
+    queuedTurns: Set<{ generation: number }>;
+    lifecycle: { interruptGeneration: number };
+  }): number {
+    let count = 0;
+    for (const { generation } of entry.queuedTurns)
+      if (generation === entry.lifecycle.interruptGeneration) count += 1;
+    return count;
   }
 
   /** Trusted Main probe: the Session has an open provider run (including Goal turns). */
@@ -2047,7 +2146,7 @@ export class ExternalRuntimeService {
         this.backgroundWakePaused.add(sessionId);
       }
       if (run && this.goals.isCurrent(run)) {
-        this.goals.pause(run, "用户已停止本轮执行");
+        this.goals.pause(run, "用户已停止本轮执行", true);
       } else {
         // A background wait has released its live run. Stop must still pause
         // the persisted Goal, or the next completion would silently wake it.

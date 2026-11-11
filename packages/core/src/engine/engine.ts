@@ -2223,6 +2223,8 @@ export class Engine {
     // of the run, so tools launched after a steer attribute their side effects
     // to that steer rather than this original submit.
     toolCtx.sessionId = session.state.sessionId;
+    toolCtx.rootSessionId =
+      this.config.isSubAgent === true ? this.config.parentSessionId : session.state.sessionId;
     toolCtx.originClientMessageId = options?.clientMessageId;
     toolCtx.recordExternalFileChanges = (record) => {
       session.transcript.append("external_file_changes", { ...record });

@@ -29,6 +29,7 @@ function harness(
     { agentSessionId: "s-1", runState: "idle" },
   ],
   onTurn?: (turn: BoundSessionTurnResult) => void | Promise<void>,
+  options?: Parameters<typeof createBoundSessionRunner>[4],
 ) {
   const calls: Call[] = [];
   const turns: BoundSessionTurnResult[] = [];
@@ -67,10 +68,16 @@ function harness(
     getSnapshot: () => ({ sessions }),
     refreshCatalog: async () => undefined,
   };
-  const runner = createBoundSessionRunner(worker, aggregator, (turn) => {
-    turns.push(turn);
-    return onTurn?.(turn);
-  });
+  const runner = createBoundSessionRunner(
+    worker,
+    aggregator,
+    (turn) => {
+      turns.push(turn);
+      return onTurn?.(turn);
+    },
+    undefined,
+    options,
+  );
   const emit = (sessionId: string, event: unknown) => {
     for (const tap of taps) tap("", { sessionId, event });
   };
@@ -369,5 +376,22 @@ describe("external runtimes", () => {
       [{ agentSessionId: "s-1", runState: "running" }],
     );
     expect(runner.supportsSteer("s-1")).toBe(true);
+  });
+
+  test("a desktop external-runtime Session's turns are not the bridge's: no run, no reply", async () => {
+    const { runner, turns, emit } = harness(undefined, undefined, undefined, {
+      ignores: (sessionId) => sessionId === "s-codex",
+    });
+    emit("s-codex", { type: "session_started", runId: "x-run", clientMessageId: "x-input" });
+    emit("s-codex", { type: "steer_injected", id: "steer-x", text: "hi" });
+    expect(await runner.isRunning("s-codex")).toBe(false);
+    expect(runner.wasInjected("s-codex", "steer-x")).toBe(false);
+    emit("s-codex", { type: "turn_complete", runId: "x-run", reason: "completed", text: "修好了" });
+    expect(turns).toEqual([]);
+    // A native Session on the same stream is still the bridge's.
+    emit("s-1", { type: "session_started", runId: "n-run" });
+    expect(await runner.isRunning("s-1")).toBe(true);
+    emit("s-1", { type: "turn_complete", runId: "n-run", reason: "completed", text: "好了" });
+    expect(turns).toEqual([{ sessionId: "s-1", turnId: "n-run", text: "好了" }]);
   });
 });

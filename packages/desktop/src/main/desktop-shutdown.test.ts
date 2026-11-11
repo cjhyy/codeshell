@@ -176,6 +176,53 @@ test("external runtime registration stays lazy and owns one service subscription
   expect(calls).toEqual(["options", "subscribe", "unsubscribe"]);
 });
 
+test("approval listeners subscribed before the module starts hear its router, and stop when removed", async () => {
+  const { createExternalRuntimeModule } = await import("./external-runtime-module.js");
+  const sent: unknown[] = [];
+  const window = {
+    isDestroyed: () => false,
+    webContents: { id: 1, send: (_channel: string, payload: unknown) => void sent.push(payload) },
+  };
+  const mobile: string[] = [];
+  const external = createExternalRuntimeModule(() => ({
+    approvals: {
+      windows: () => [window] as never,
+      onPendingChange: (event) => void mobile.push(event.type),
+    },
+    service: {
+      featureFlags: () => ({}),
+      registerSession() {},
+      releaseSession() {},
+      resolveProjectBinding: () => undefined,
+      emit() {},
+    },
+  }));
+  const early: string[] = [];
+  const late: string[] = [];
+  const unsubscribeEarly = external.subscribeApprovals((event) => {
+    early.push(event.type);
+    throw new Error("listener bug");
+  });
+  const modules = createDesktopModuleRegistry([external]);
+  modules.start();
+  const unsubscribeLate = external.subscribeApprovals((event) => void late.push(event.type));
+  const decision = external.approvals!.request("s1", { toolName: "Bash" });
+  const { requestId } = sent[0] as { requestId: string };
+  expect(external.approvals!.settle(requestId, { approved: true })).toBe(true);
+  await expect(decision).resolves.toEqual({ approved: true });
+  expect(early).toEqual(["requested", "resolved"]);
+  expect(late).toEqual(["requested", "resolved"]);
+  expect(mobile).toEqual(["requested", "resolved"]);
+  unsubscribeEarly();
+  unsubscribeLate();
+  void external.approvals!.request("s1", { toolName: "Bash" });
+  expect(early).toHaveLength(2);
+  expect(late).toHaveLength(2);
+  expect(mobile).toHaveLength(3);
+  external.approvals!.cancelSession("s1");
+  await modules.dispose();
+});
+
 test("the external runtime pilot retains first-window start and the existing shutdown position", async () => {
   const { readFile } = await import("node:fs/promises");
   const source = await readFile(new URL("./index.ts", import.meta.url), "utf8");

@@ -284,3 +284,137 @@ describe("goal pauses", () => {
     expect(current.published).toEqual([]);
   });
 });
+
+describe("external runtime Sessions", () => {
+  const CODEX = "s-codex";
+  /** A desktop-run Codex Session: never in the worker projection. */
+  function externalHarness(
+    facts: { busy?: boolean; title?: string } = {},
+    overrides: Parameters<typeof harness>[0] = {},
+  ) {
+    const state = { busy: false, title: "Codex 修登录", ...facts };
+    const known = (id: string) => (id === CODEX ? { sessionId: id, ...state } : undefined);
+    return {
+      state,
+      harness: harness({
+        externalSessions: {
+          get: known,
+          has: (id) => known(id) !== undefined,
+          isLive: (id) => known(id) !== undefined,
+        },
+        ...overrides,
+      }),
+    };
+  }
+  const turn = (runId: string, tools: string[] = ["Bash"]) => [
+    { type: "session_started", runId, clientMessageId: `cm-${runId}` },
+    ...tools.map((toolName) => ({
+      type: "tool_use_start",
+      toolCall: { id: `t-${runId}`, toolName, args: {} },
+    })),
+    { type: "turn_complete", reason: "completed", text: "测试都过了", runId },
+  ];
+
+  test("NotifyMe and the bell accept it; its done notice carries the catalog title", async () => {
+    current = externalHarness().harness;
+    expect(current.wiring.isEligibleSession(CODEX)).toBe(true);
+    expect(current.wiring.isEligibleSession("s-ghost")).toBe(false);
+    await current.handler(CODEX, upsertArgs({ sessionId: CODEX }));
+    await expect(current.handler("s-ghost", upsertArgs({ sessionId: "s-ghost" }))).rejects.toThrow(
+      "unknown work Session",
+    );
+    env.clock = NOW + 1_000;
+    for (const event of turn("run-1")) current.observeSessionEvent(CODEX, event);
+    await settle(() => current!.submitted.length > 0);
+    expect(current.submitted).toMatchObject([
+      { kind: "session.done", sessionId: CODEX, facts: { title: "Codex 修登录" } },
+    ]);
+  });
+
+  test("queued work behind its turn carries the done to the follow-up turn", async () => {
+    const external = externalHarness({ busy: true });
+    current = external.harness;
+    await current.handler(CODEX, upsertArgs({ sessionId: CODEX }));
+    env.clock = NOW + 1_000;
+    for (const event of turn("run-1")) current.observeSessionEvent(CODEX, event);
+    await settle();
+    expect(current.submitted).toEqual([]);
+    external.state.busy = false;
+    // The follow-up turn did nothing itself but reports the carried work.
+    for (const event of turn("run-2", [])) current.observeSessionEvent(CODEX, event);
+    await settle(() => current!.submitted.length > 0);
+    expect(current.submitted.map((notice) => notice.dedupeKey)).toEqual([`${CODEX}:turn:run-2`]);
+  });
+
+  /** The worker goes away for good (the same loss a reclaimed worker reports). */
+  const loseWorker = (target: Harness, gone: () => void) => {
+    gone();
+    target.setWorkerState("disconnected");
+    target.emitProjection({ kind: "reset", version: 2, generation: 1, observedAt: env.clock });
+  };
+
+  test("a lost worker does not forget its open turn's work", async () => {
+    let live = true;
+    current = externalHarness({}, { hasLiveWorker: () => live }).harness;
+    await current.handler(CODEX, upsertArgs({ sessionId: CODEX }));
+    env.clock = NOW + 1_000;
+    const [started, work, complete] = turn("run-1");
+    current.observeSessionEvent(CODEX, started);
+    current.observeSessionEvent(CODEX, work);
+    loseWorker(current, () => (live = false));
+    await settle();
+    // The closing event names no run: only the kept turn knows its id and its work.
+    current.observeSessionEvent(CODEX, { ...complete, runId: undefined });
+    await settle(() => current!.submitted.length > 0);
+    expect(current.submitted.map((notice) => notice.dedupeKey)).toEqual([`${CODEX}:turn:run-1`]);
+  });
+
+  test("an external failure is told at once, bound chat or not; a lost worker adds nothing", async () => {
+    let live = true;
+    current = externalHarness({}, { hasLiveWorker: () => live }).harness;
+    // Bound or not, no reply of an external Session is forwarded: nothing parks.
+    current.routes.push({ ...boundRoute(), sessionId: CODEX });
+    await current.handler(CODEX, upsertArgs({ sessionId: CODEX, events: ["failed"] }));
+    env.clock = NOW + 1_000;
+    const [started, work] = turn("run-1");
+    current.observeSessionEvent(CODEX, started);
+    current.observeSessionEvent(CODEX, work);
+    current.observeSessionEvent(CODEX, { type: "error", error: "boom" });
+    await settle(() => current!.submitted.length > 0);
+    loseWorker(current, () => (live = false));
+    await settle();
+    current.observeSessionEvent(CODEX, {
+      type: "turn_complete",
+      reason: "model_error",
+      runId: "run-1",
+    });
+    await settle();
+    expect(current.submitted.map((notice) => [notice.dedupeKey, notice.target.kind])).toEqual([
+      [`${CODEX}:failed:run-1`, "owner"],
+    ]);
+  });
+
+  test("with external Sessions present, a native Session is still reset and flushed", async () => {
+    let live = true;
+    current = externalHarness({}, { hasLiveWorker: () => live }).harness;
+    current.routes.push(boundRoute());
+    await current.handler(SID, upsertArgs({ events: ["failed"] }));
+    env.clock = NOW + 1_000;
+    const [started, work, complete] = turn("run-1");
+    current.observeSessionEvent(SID, started);
+    current.observeSessionEvent(SID, work);
+    current.observeSessionEvent(SID, { type: "error", error: "boom" });
+    await settle();
+    expect(current.submitted).toEqual([]);
+    loseWorker(current, () => (live = false));
+    // The native run will never close: its parked report goes out now.
+    await settle(() => current!.submitted.length > 0);
+    expect(current.submitted.map((notice) => notice.dedupeKey)).toEqual([`${SID}:failed:run-1`]);
+    // And its turn is forgotten: a close naming no run did no work of its own.
+    await current.handler(SID, upsertArgs({ events: ["done"] }));
+    current.observeSessionEvent(SID, { ...complete, runId: undefined });
+    await settle();
+    await current.idle();
+    expect(current.submitted).toHaveLength(1);
+  });
+});

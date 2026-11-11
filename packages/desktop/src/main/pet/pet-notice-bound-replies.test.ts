@@ -323,9 +323,10 @@ describe("bound Session replies", () => {
    * `conversation`: the bridge's session.reply and anything the notice router
    * publishes to that route. `tapFirst` is the order the two hear an event
    * in; who tells the conversation is decided by the delivery plan, so it
-   * must not matter.
+   * must not matter. `external`: SID is a desktop Codex Session, as main's
+   * external Session catalog knows it.
    */
-  function realBridge(tapFirst = true) {
+  function realBridge(tapFirst = true, external = false) {
     const listeners: SessionOutcomeListener[] = [];
     const worker = {
       requestWorker: async () => ({ ok: true }),
@@ -339,7 +340,12 @@ describe("bound Session replies", () => {
       },
     };
     const replies: Array<{ text: string; target: { channel: string; target: string } }> = [];
-    current = harness({ sessionRoutes: () => wiringRef?.routes });
+    const externalSessions = {
+      get: (id: string) => (external && id === SID ? { sessionId: SID, busy: false } : undefined),
+      has: (id: string) => external && id === SID,
+      isLive: (id: string) => external && id === SID,
+    };
+    current = harness({ sessionRoutes: () => wiringRef?.routes, externalSessions });
     const h = current;
     const tap: SessionOutcomeListener = (sessionId, _event, outcomes) =>
       h.wiring.observeSessionOutcomes(sessionId, outcomes);
@@ -360,6 +366,7 @@ describe("bound Session replies", () => {
           { getSnapshot: () => ({ sessions: [] }), refreshCatalog: async () => undefined },
           onTurn,
           sessions,
+          { ignores: externalSessions.isLive },
         ),
       health: { check: async () => ({ ok: true }) },
       describeStatus: async () => "",
@@ -412,6 +419,28 @@ describe("bound Session replies", () => {
       // The owner still gets the desktop record of the outcome.
       expect(h.desktop.map((input) => input.title)).toEqual(["Mimi 任务已完成"]);
     }
+  });
+
+  test("a chat bound to a desktop external-runtime Session gets no forwarded reply", async () => {
+    // Its messages still go to the worker, so the binding does not carry the
+    // Session's turns back either (two-way forwarding is not built yet).
+    const { h, emit, bind, replies, conversation } = realBridge(true, true);
+    expect((await bind()).ok).toBe(true);
+    expect(await h.wiring.deliveries.replyRoutes(SID)).toEqual([]);
+    await h.handler(SID, upsertArgs({ events: ["done"] }));
+    env.clock = NOW + 1_000;
+    emit({ type: "session_started", runId: "run-x", clientMessageId: "cm-1" });
+    emit({ type: "tool_use_start", toolCall: { id: "t1", toolName: "Bash", args: {} } });
+    emit({ type: "turn_complete", reason: "completed", text: "改好了", runId: "run-x" });
+    // Nothing assumes the bridge told anyone: the done notice goes to the owner.
+    await settle(() => h.ownerSends.length > 0);
+    await settle();
+    expect(replies).toEqual([]);
+    expect(conversation()).toEqual([]);
+    expect(h.submitted.map((notice) => [notice.kind, notice.target.kind])).toEqual([
+      ["session.done", "owner"],
+    ]);
+    expect(h.ownerSends).toHaveLength(1);
   });
 
   test("a goal met mid-run posts exactly once: the run's closing reply", async () => {

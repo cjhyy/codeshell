@@ -57,6 +57,7 @@ export {
   type OutputHistoryRecoveryEvidence,
 } from "./session/output-history-recovery.js";
 export { createRunTiming } from "./session/stream-timing.js";
+export { createTurnOutcomeTracker, withOutcomeTrigger } from "./engine/turn-outcome.js";
 export { normalizeCumulativeUsageCounters } from "./session/usage.js";
 export { MemoryOrchestrator } from "./services/memory-orchestrator.js";
 export type { MemoryOrchestratorOptions } from "./services/memory-orchestrator.js";

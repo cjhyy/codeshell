@@ -67,6 +67,8 @@ const { ExternalRuntimeService } = await import("./external-runtime-service.js")
 let home: string, previousHome: string | undefined, cwd: string;
 let svc: InstanceType<typeof ExternalRuntimeService>;
 const events: any[] = [];
+/** The probe's queuedAtTerminal as each terminal is published (when the notices sample it). */
+const queuedAtTerminal: Array<number | undefined> = [];
 const sessionId = "external-operation-service";
 beforeEach(async () => {
   home = mkdtempSync(join(tmpdir(), "codeshell-external-service-ops-"));
@@ -76,13 +78,18 @@ beforeEach(async () => {
   mkdirSync(cwd);
   turns = 0;
   events.length = 0;
+  queuedAtTerminal.length = 0;
   providerBody = undefined;
   svc = new ExternalRuntimeService({
     featureFlags: () => ({ external_agent_runtime: true, external_host_tools: true }),
     registerSession: () => {},
     releaseSession: () => {},
     resolveProjectBinding: () => undefined,
-    emit: (_sessionId, event) => events.push(event),
+    emit: (_sessionId, event) => {
+      if (event.type === "turn_complete")
+        queuedAtTerminal.push(svc.noticeProbe(sessionId)?.queuedAtTerminal);
+      events.push(event);
+    },
     projectTrust: () => "untrusted",
     prepareCodexLaunch: async () => ({ command: "/fixture/codex", env: { PATH: "/fixture" } }),
   });
@@ -309,4 +316,122 @@ test("new lease initialization failure never reuses the previous run's uncertain
   expect(lastTerminal().reason).toBe("model_error");
   expect(turns).toBe(1);
   expect(events.filter((event) => event.type === "error").length).toBe(noticesBefore + 1);
+});
+
+/** Provider turns that wait for `release`; `entered` resolves as each one starts. */
+function heldTurns() {
+  const releases: Array<() => void> = [];
+  const waiting: Array<() => void> = [];
+  providerBody = () =>
+    new Promise<void>((resolve) => {
+      releases.push(resolve);
+      waiting.shift()?.();
+    });
+  return {
+    entered: () => new Promise<void>((resolve) => waiting.push(resolve)),
+    release: () => releases.shift()?.(),
+  };
+}
+const idleProbe = { queuedAtTerminal: 0 };
+
+test("each terminal samples the user turns still queued behind it", async () => {
+  expect(svc.noticeProbe(sessionId)).toEqual(idleProbe);
+  const turns = heldTurns();
+  const firstEntered = turns.entered();
+  const first = svc.send(sessionId, { text: "first", disableGoal: true });
+  const second = svc.send(sessionId, { text: "second", disableGoal: true });
+  await firstEntered;
+  const secondEntered = turns.entered();
+  turns.release();
+  await first;
+  await secondEntered;
+  turns.release();
+  await second;
+  expect(queuedAtTerminal).toEqual([1, 0]);
+  expect(svc.noticeProbe(sessionId)).toEqual(idleProbe);
+  expect(svc.noticeProbe("not-started")).toBeUndefined();
+});
+
+test("busy is what was queued at the terminal, even once the next turn has started", async () => {
+  const { createExternalSessionCatalog } = await import("./pet/pet-notice-external-sessions.js");
+  const catalog = createExternalSessionCatalog({ runtime: () => svc, readState: () => undefined });
+  const atTerminal: boolean[] = [];
+  const realEmit = events.push.bind(events);
+  events.push = (...items: any[]) => {
+    for (const item of items)
+      if (item.type === "turn_complete") atTerminal.push(catalog.get(sessionId)!.busy);
+    return realEmit(...items);
+  };
+  try {
+    const turns = heldTurns();
+    const firstEntered = turns.entered();
+    const first = svc.send(sessionId, { text: "first", disableGoal: true });
+    const second = svc.send(sessionId, { text: "second", disableGoal: true });
+    await firstEntered;
+    const secondEntered = turns.entered();
+    // Terminal event, then the submission settles, then the next queued turn starts.
+    turns.release();
+    await first;
+    await secondEntered;
+    // Only now does the (late) watcher read busy for the first turn.
+    expect(svc.noticeProbe(sessionId)).toEqual({ queuedAtTerminal: 1 });
+    expect(catalog.get(sessionId)?.busy).toBe(true);
+    turns.release();
+    await second;
+    expect(catalog.get(sessionId)?.busy).toBe(false);
+    expect(atTerminal).toEqual([true, false]);
+  } finally {
+    events.push = realEmit as typeof events.push;
+  }
+});
+
+test("a failed turn's terminal counts the turn queued behind it", async () => {
+  const turns = heldTurns();
+  const firstEntered = turns.entered();
+  const failing = providerBody!;
+  providerBody = async (args) => {
+    await failing(args);
+    throw new Error("provider process exited");
+  };
+  const first = svc.send(sessionId, { text: "first", disableGoal: true });
+  const second = svc.send(sessionId, { text: "second", disableGoal: true });
+  await firstEntered;
+  turns.release();
+  const outcomes = await Promise.all([first, second]);
+  // The failure's terminal is busy; the faulted runtime publishes nothing more
+  // (a replacement starts with an empty queue, below).
+  expect(outcomes.map((outcome) => outcome.reason)).toEqual(["model_error", "model_error"]);
+  expect(queuedAtTerminal).toEqual([1]);
+  // A send that never reached the queue counts nothing.
+  await expect(svc.send("not-started", "hello")).rejects.toThrow();
+});
+
+test("an interrupt drains the queued turns it cancels", async () => {
+  const turns = heldTurns();
+  const firstEntered = turns.entered();
+  const sends = [1, 2, 3].map((n) => svc.send(sessionId, { text: `turn ${n}`, disableGoal: true }));
+  await firstEntered;
+  const interrupting = svc.interrupt(sessionId);
+  turns.release();
+  await interrupting;
+  await Promise.allSettled(sends);
+  // Cancelled at once: the interrupted turn's terminal leaves nothing queued behind it.
+  expect(queuedAtTerminal[0]).toBe(0);
+  expect(svc.noticeProbe(sessionId)).toEqual(idleProbe);
+});
+
+test("a replaced runtime starts with an empty queue", async () => {
+  const turns = heldTurns();
+  const firstEntered = turns.entered();
+  const first = svc.send(sessionId, { text: "first", disableGoal: true });
+  const second = svc.send(sessionId, { text: "second", disableGoal: true });
+  await firstEntered;
+  const stopping = svc.stop(sessionId);
+  turns.release();
+  await stopping;
+  expect(svc.noticeProbe(sessionId)).toBeUndefined();
+  await Promise.allSettled([first, second]);
+  providerBody = undefined;
+  await svc.start({ kind: "codex", sessionId, cwd });
+  expect(svc.noticeProbe(sessionId)).toEqual(idleProbe);
 });
