@@ -18,7 +18,7 @@ import {
 } from "./pet-notice-reply-interpreter.js";
 import { describeLocalTime } from "./pet-notice-defer.js";
 import { hostTimezoneOffsetMin } from "./pet-notice-policy.js";
-import { createReplyModels } from "./pet-notice-reply-models.js";
+import { createReplyModels, type ExternalReplyModel } from "./pet-notice-reply-models.js";
 import type { NoticeActionRecord } from "./pet-notice-types.js";
 
 type WorkerRequest = (
@@ -219,6 +219,8 @@ export function createOwnerReplyHandling(
     /** Settings cwd for the reply models. */
     cwd: string;
     models?: ReplyModel[];
+    /** External selection is interpreted by a separate restricted Host runtime. */
+    externalReplyModel?: ExternalReplyModel;
     now?: () => number;
     onError: (error: unknown) => void;
   },
@@ -241,17 +243,19 @@ export function createOwnerReplyHandling(
     now,
     describeTime: (ms) => describeLocalTime(ms, now(), hostTimezoneOffsetMin),
   });
-  const models = deps.models ?? createReplyModels(deps.cwd);
   return {
-    interpret: (message, items, { bound }) =>
-      interpretReply({
+    interpret: (message, items, { bound }) => {
+      const models =
+        deps.models ?? createReplyModels(deps.cwd, { external: deps.externalReplyModel });
+      return interpretReply({
         message,
         items,
         clock: { now: now(), timezoneOffsetMin: hostTimezoneOffsetMin(now()) },
         // A bound chat answers inside the gateway's 20 s route call: one model, 8 s.
         ...(bound ? { models: models.slice(0, 1), timeoutMs: BOUND_TIMEOUT_MS } : { models }),
         onError: (error) => deps.onError(error),
-      }),
+      });
+    },
     actions: {
       items: (channel) => deps.router.openActionItems(channel),
       execute: (request) => executor.execute(request),

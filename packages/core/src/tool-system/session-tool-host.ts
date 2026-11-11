@@ -103,6 +103,9 @@ export interface SessionToolHost {
 
 /** Captured by the trusted Host, never decoded from a tool's JSON arguments. */
 export interface SessionToolHostRunContext {
+  /** Capability services captured for this exact submission, never a later turn. */
+  runScopedServices?: ToolContext["runScopedServices"];
+  runYield?: ToolContext["runYield"];
   /** Absent when a Host reminder has no recoverable real user intent. */
   operations: ToolContext["operations"];
   originClientMessageId: string;
@@ -528,7 +531,12 @@ export function createSessionToolHost(options: CreateSessionToolHostOptions): Se
         ...toolCtx,
         ...(options.getStreamCallback ? { streamCallback: options.getStreamCallback() } : {}),
         ...(run
-          ? { operations: run.operations, originClientMessageId: run.originClientMessageId }
+          ? {
+              operations: run.operations,
+              originClientMessageId: run.originClientMessageId,
+              ...(run.runScopedServices ? { runScopedServices: run.runScopedServices } : {}),
+              ...(run.runYield ? { runYield: run.runYield } : {}),
+            }
           : {}),
         signal,
         ...(run

@@ -91,8 +91,20 @@ describe("App Pet lifecycle boundaries", () => {
     expect(appSource).toContain("onBack={leaveMimiSettings}");
     expect(appSource).toContain('openMimiSettings({ section: "connections" })');
     expect(appSource).toContain("hasModelOverride={petChatModelKey !== null}");
-    expect(appSource).toContain("defaultModelKey={quickChatDefaultModelKey}");
-    expect(appSource).toContain("modelOptions={quickChatModelOptions}");
+    const petChat = appSource.match(/<PetChatHost\b[\s\S]*?\/>/)?.[0];
+    expect(petChat).toContain("defaultModelKey={defaultActiveModelKey}");
+    expect(petChat).toContain("modelOptions={petModelOptions}");
+    const petSettings = appSource.match(/<PetSettingsPage\b[\s\S]*?\/>/)?.[0];
+    expect(petSettings).toContain("activeModelKey={petChatModelKey ?? defaultActiveModelKey}");
+    expect(petSettings).toContain("modelOptions={petModelOptions}");
+    // Mimi supports external runtimes; the independent Quick Chat fork still
+    // uses the native executor and its own filtered model choices.
+    const panelDock = appSource.match(/<SessionPanelDock\b[\s\S]*?\/>/)?.[0];
+    expect(panelDock).toContain("defaultActiveModelKey={quickChatDefaultModelKey}");
+    expect(panelDock).toContain("modelOptions={quickChatModelOptions}");
+    expect(appSource).toContain(
+      "() => modelOptions.filter((option) => !isExternalRuntimeModelKey(option.key))",
+    );
     expect(appSource).not.toContain("model: petChatModelKey");
   });
 

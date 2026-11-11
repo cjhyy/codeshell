@@ -3,6 +3,7 @@ import {
   createBoundSessionRunner,
   type BridgeAggregatorLike,
   type BridgeWorkerLike,
+  type BoundExternalSessionRunner,
   type BoundSessionTurnResult,
 } from "./session-bridge-wiring.js";
 
@@ -363,6 +364,230 @@ describe("observing the live stream", () => {
 });
 
 describe("external runtimes", () => {
+  function externalHarness(
+    options: {
+      live?: boolean;
+      refuse?: boolean;
+      failure?: Error;
+      stop?: boolean;
+    } = {},
+  ) {
+    const submissions: Array<{ sessionId: string; text: string; clientMessageId: string }> = [];
+    const stopped: string[] = [];
+    let live = options.live === true;
+    const external: BoundExternalSessionRunner = {
+      // The persisted provider identifies a cold Session even when its process
+      // is absent and the projection happens to call it idle or running.
+      isExternal: (sessionId) => sessionId === "s-codex" || sessionId === "s-claude",
+      isRunning: () => live,
+      run: async (input) => {
+        submissions.push(input);
+        if (options.failure) throw options.failure;
+        return options.refuse
+          ? { started: false, reason: "External quota unavailable" }
+          : { started: true };
+      },
+      ...(options.stop === false
+        ? {}
+        : {
+            stop: async (sessionId: string) => {
+              stopped.push(sessionId);
+              live = false;
+            },
+          }),
+    };
+    return {
+      ...harness(
+        undefined,
+        [
+          { agentSessionId: "s-1", runState: "idle" },
+          { agentSessionId: "s-codex", runState: "idle" },
+          { agentSessionId: "s-claude", runState: "idle" },
+        ],
+        undefined,
+        { external },
+      ),
+      submissions,
+      stopped,
+    };
+  }
+
+  test.each(["s-codex", "s-claude"])(
+    "a cold persisted external Session %s admits input without native injection",
+    async (sessionId) => {
+      const { runner, calls, submissions } = externalHarness();
+      const input = { sessionId, text: "Continue this work", clientMessageId: "im:external:1" };
+      expect(await runner.isRunning(sessionId)).toBe(false);
+      expect(await runner.run(input)).toEqual({ started: true });
+      expect(submissions).toEqual([input]);
+      expect(calls).toEqual([]);
+      // Admission owns a pending run until the shared stream closes it.
+      expect(await runner.isRunning(sessionId)).toBe(true);
+    },
+  );
+
+  test("a live external turn queues its successor and never calls native steer", async () => {
+    const { runner, calls, submissions } = externalHarness({ live: true });
+    expect(await runner.isRunning("s-codex")).toBe(true);
+    expect(runner.supportsSteer("s-codex")).toBe(false);
+    expect(
+      await runner.steer({
+        sessionId: "s-codex",
+        text: "Next message",
+        id: "external-steer",
+        clientMessageId: "im:external:2",
+      }),
+    ).toEqual({ accepted: false });
+    expect(await runner.unsteer({ sessionId: "s-codex", id: "external-steer" })).toEqual({
+      removed: true,
+    });
+    await runner.queueNextTurn({
+      sessionId: "s-codex",
+      text: "Next message",
+      clientMessageId: "im:external:2",
+    });
+    expect(submissions).toEqual([
+      {
+        sessionId: "s-codex",
+        text: "Next message",
+        clientMessageId: "im:external:2",
+      },
+    ]);
+    expect(calls).toEqual([]);
+  });
+
+  test("external refusal and failure never fall back to a native API", async () => {
+    for (const options of [
+      { refuse: true },
+      { failure: new Error("External CLI is not logged in") },
+    ]) {
+      const { runner, calls, submissions } = externalHarness(options);
+      const result = await runner.run({
+        sessionId: "s-codex",
+        text: "Must stay external",
+        clientMessageId: "im:external:refused",
+      });
+      expect(result.started).toBe(false);
+      expect(result.reason).toMatch(/External/);
+      expect(submissions).toHaveLength(1);
+      expect(calls).toEqual([]);
+      expect(await runner.isRunning("s-codex")).toBe(false);
+    }
+  });
+
+  test("an unreadable provider identity fails closed without leaving a pending run", async () => {
+    let unreadable = true;
+    const { runner, calls } = harness(undefined, [], undefined, {
+      external: {
+        isExternal: () => {
+          if (unreadable) throw new Error("Provider identity is unavailable");
+          return true;
+        },
+        isRunning: () => false,
+        run: async () => ({ started: true }),
+      },
+    });
+    await expect(
+      runner.run({
+        sessionId: "s-codex",
+        text: "Must not reroute",
+        clientMessageId: "unknown-provider",
+      }),
+    ).rejects.toThrow("Provider identity is unavailable");
+    expect(calls).toEqual([]);
+    unreadable = false;
+    expect(await runner.isRunning("s-codex")).toBe(false);
+  });
+
+  test("a refused external successor does not settle its active turn", async () => {
+    const { runner, calls, emit } = externalHarness({ refuse: true });
+    emit("s-codex", {
+      type: "session_started",
+      runId: "external-current",
+      clientMessageId: "current",
+    });
+    let settled = false;
+    const done = runner.runDone("s-codex").then(() => {
+      settled = true;
+    });
+    await expect(
+      runner.queueNextTurn({
+        sessionId: "s-codex",
+        text: "Refused successor",
+        clientMessageId: "successor",
+      }),
+    ).rejects.toThrow("External quota unavailable");
+    expect(settled).toBe(false);
+    expect(calls).toEqual([]);
+    emit("s-codex", { type: "turn_complete", runId: "external-current", reason: "completed" });
+    await done;
+  });
+
+  test("external stream completion reaches the bound reply once and resolves runDone", async () => {
+    const { runner, calls, turns, emit } = externalHarness();
+    await runner.run({ sessionId: "s-codex", text: "Continue", clientMessageId: "external-input" });
+    emit("s-codex", {
+      type: "session_started",
+      runId: "external-run",
+      clientMessageId: "external-input",
+    });
+    let settled = false;
+    const done = runner.runDone("s-codex").then(() => {
+      settled = true;
+    });
+    emit("s-codex", {
+      type: "assistant_message",
+      message: { role: "assistant", content: "Progress" },
+    });
+    expect(settled).toBe(false);
+    expect(turns).toEqual([]);
+    const terminal = {
+      type: "turn_complete",
+      runId: "external-run",
+      reason: "completed",
+      text: "External final answer",
+    };
+    emit("s-codex", terminal);
+    emit("s-codex", terminal);
+    await done;
+    expect(settled).toBe(true);
+    expect(await runner.isRunning("s-codex")).toBe(false);
+    expect(turns).toEqual([
+      { sessionId: "s-codex", turnId: "external-run", text: "External final answer" },
+    ]);
+    expect(calls).toEqual([]);
+  });
+
+  test("stop preserves the external route and never sends a native cancellation", async () => {
+    const { runner, stopped, calls } = externalHarness({ live: true });
+    await runner.stop("s-codex");
+    expect(stopped).toEqual(["s-codex"]);
+    expect(calls).toEqual([]);
+    expect(await runner.isRunning("s-codex")).toBe(false);
+    const unavailable = externalHarness({ stop: false });
+    await expect(unavailable.runner.stop("s-codex")).rejects.toThrow(
+      "External Session stop is unavailable",
+    );
+    expect(unavailable.calls).toEqual([]);
+  });
+
+  test("native Sessions retain worker admission, steering and cancellation", async () => {
+    const { runner, calls, submissions } = externalHarness();
+    expect(
+      await runner.run({ sessionId: "s-1", text: "Native work", clientMessageId: "native-input" }),
+    ).toEqual({ started: true });
+    expect(runner.supportsSteer("s-1")).toBe(true);
+    await runner.steer({
+      sessionId: "s-1",
+      text: "Next",
+      id: "native-steer",
+      clientMessageId: "native-next",
+    });
+    await runner.stop("s-1");
+    expect(calls.map((call) => call.method)).toEqual(["agent/run", "agent/steer", "agent/cancel"]);
+    expect(submissions).toEqual([]);
+  });
+
   test("a session missing from the projection is not steerable", () => {
     // codex / claude-code turns never pass through agent/run or agent/steer,
     // so the bridge must queue rather than attempt a steer that cannot work.

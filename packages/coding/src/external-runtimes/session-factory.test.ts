@@ -114,6 +114,55 @@ function registry(): ToolRegistry {
 }
 
 describe("startExternalRuntimeSession", () => {
+  test("forwards manager native-tool isolation through the Codex composition", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "codeshell-factory-manager-"));
+    dirs.push(dir);
+    const file = join(dir, "server.mjs");
+    writeFileSync(
+      file,
+      `import { createInterface } from "node:readline";
+const send = (value) => process.stdout.write(JSON.stringify(value) + "\\n");
+createInterface({ input: process.stdin }).on("line", (line) => {
+  const m = JSON.parse(line);
+  if (m.method === "initialize") return send({ id: m.id, result: { userAgent: "codeshell/0.162.0 (test)" } });
+  if (m.method === "config/read") return send({ id: m.id, result: { config: { mcp_servers: { codeshell_tools: {}, other: {} } } } });
+  if (m.method === "thread/start") {
+    if (JSON.stringify(m.params.environments) !== "[]" ||
+        m.params.config?.["features.shell_tool"] !== false ||
+        m.params.config?.mcp_servers?.other?.enabled !== false)
+      return send({ id: m.id, error: { code: -32602, message: "manager isolation was not forwarded" } });
+    return send({ id: m.id, result: { thread: { id: "manager-composition" } } });
+  }
+});`,
+    );
+    const session = await startExternalRuntimeSession({
+      ...BASE,
+      kind: "codex",
+      disableNativeTools: true,
+      registry: registry(),
+      codexClient: { command: process.execPath, args: [file] },
+    });
+    sessions.push(session);
+    expect(session.runtimeSessionId).toBe("manager-composition");
+  });
+
+  test("disables Claude native tools through the same manager flag", async () => {
+    const fake = fakeClaudeCli();
+    const session = await startExternalRuntimeSession({
+      ...BASE,
+      kind: "claude-code",
+      disableNativeTools: true,
+      registry: registry(),
+      claudeCommand: fake.command,
+    });
+    sessions.push(session);
+    await (
+      await session.send({ text: "Manager reply" })
+    ).done;
+    const argv = readCaptures(fake.capture)[0]!.argv;
+    expect(argv[argv.lastIndexOf("--tools") + 1]).toBe("");
+  });
+
   test("forwards Codex's resolved model and leaves another session's default unknown", async () => {
     const resolved = await startExternalRuntimeSession({
       ...BASE,

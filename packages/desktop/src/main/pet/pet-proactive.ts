@@ -3,7 +3,7 @@ import type { PetProactiveStatus } from "../../shared/pet-notices.js";
 import { isFollowUpRule } from "./pet-follow-up-rules.js";
 import type { NoticeRecord } from "./pet-notice-ledger.js";
 import { hostTimezoneOffsetMin, isInQuietHours, type RouteDecision } from "./pet-notice-policy.js";
-import type { ReplyModel } from "./pet-notice-reply-interpreter.js";
+import type { ProactiveModelSource } from "./pet-proactive-models.js";
 import type { PetNotificationSettings } from "./pet-notice-settings.js";
 import type { NoticeSubmission } from "./pet-notice-types.js";
 import { briefName, collectBrief, writeBrief } from "./pet-proactive-brief.js";
@@ -63,8 +63,8 @@ export interface PetProactiveDeps {
   onSettingsChange(listener: () => void): () => void;
   /** The notice router (`PetNoticeWiring.submitNotice`). */
   submit(notice: NoticeSubmission): Promise<RouteDecision>;
-  /** The auxiliary model, then Mimi's main model. */
-  models: readonly ReplyModel[];
+  /** Snapshot the effective provider for each question; native selections use auxiliary → main. */
+  models: ProactiveModelSource;
   now?: () => number;
   timezoneOffsetMin?: (ms: number) => number;
   timezone?: () => string;

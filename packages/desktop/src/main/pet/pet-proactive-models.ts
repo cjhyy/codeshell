@@ -1,20 +1,30 @@
 import type { ReplyModel } from "./pet-notice-reply-interpreter.js";
 
+/** Build a fresh, provider-pinned chain once per question, or use an explicit fixed chain. */
+export type ProactiveModelSource = readonly ReplyModel[] | (() => readonly ReplyModel[]);
+
 /**
- * One strict-JSON question to the models in order (the auxiliary model, then
- * Mimi's main model; see pet-notice-reply-models.ts). The first answer the
- * parser accepts wins; undefined when none did (unavailable, failed, timed
- * out, or invalid output). The caller never guesses in that case.
+ * One strict-JSON question to a single provider snapshot: one external model,
+ * or native auxiliary → main (see pet-notice-reply-models.ts). The first
+ * answer the parser accepts wins; undefined when none did (unavailable,
+ * failed, timed out, or invalid output). The caller never guesses in that case.
  */
 export async function askModels<T>(input: {
-  models: readonly ReplyModel[];
+  models: ProactiveModelSource;
   systemPrompt: string;
   user: string;
   parse: (raw: string) => T | undefined;
   timeoutMs?: number;
   onError?: (error: unknown, model: number) => void;
 }): Promise<T | undefined> {
-  for (const [index, model] of input.models.entries()) {
+  let models: readonly ReplyModel[];
+  try {
+    models = typeof input.models === "function" ? input.models() : input.models;
+  } catch (error) {
+    input.onError?.(error, 0);
+    return undefined;
+  }
+  for (const [index, model] of models.entries()) {
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {

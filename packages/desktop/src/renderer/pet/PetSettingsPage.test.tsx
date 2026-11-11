@@ -89,4 +89,17 @@ describe("PetSettingsPage", () => {
     expect(connections).toContain("data-channel-page");
     expect(connections).toContain("CodeShell Chat Gateway");
   });
+
+  test("shows an inherited external default and explains the explicit Mimi override", () => {
+    const html = render("conversation", {
+      activeModelKey: "codex/gpt-6.1-sol",
+      modelOptions: [{ key: "codex/gpt-6.1-sol", label: "Codex · GPT-6.1 Sol", provider: "codex" }],
+      hasModelOverride: false,
+    });
+    expect(html).toContain('data-active-model="codex/gpt-6.1-sol"');
+    expect(html).toContain("Codex · GPT-6.1 Sol");
+    expect(html).toContain("当前跟随应用默认模型");
+    expect(html).toContain("单独选择会覆盖新会话默认模型");
+    expect(html).toContain("Mimi 和微信沿用新会话默认模型");
+  });
 });

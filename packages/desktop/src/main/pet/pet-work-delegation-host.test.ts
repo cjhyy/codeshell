@@ -5,7 +5,11 @@ import { join } from "node:path";
 import { listRecentAttachments, stageImageBytes } from "@cjhyy/code-shell-server/storage";
 import { buildInputAttachmentContext } from "../../../../core/src/engine/input-attachments.js";
 import { buildDelegationBrief, MAX_DELEGATION_DISPLAY_TEXT_LENGTH } from "./pet-delegation-brief";
-import { PetWorkDelegationHost, petDelegationSessionId } from "./pet-work-delegation-host";
+import {
+  PetWorkDelegationHost,
+  petDelegationClientMessageId,
+  petDelegationSessionId,
+} from "./pet-work-delegation-host";
 
 const DESKTOP_BRIEF = buildDelegationBrief({ origin: "desktop" });
 
@@ -88,6 +92,223 @@ describe("PetWorkDelegationHost", () => {
       inputAttachments: { cwd: managerCwd, sessionId: "pet-manager", attachments: [image] },
     };
   }
+
+  test("submits a new external-default delegation once with prepared images, Goal and permission", async () => {
+    const fixture = await stagedInput();
+    const fake = fakeBridge("rejected");
+    const selections: unknown[] = [];
+    const runs: Array<Record<string, any>> = [];
+    const host = new PetWorkDelegationHost({
+      bridge: fake.bridge,
+      noWorkspaceCwd: "/unused",
+      channelLabel: () => "微信",
+      external: {
+        modelKey: async (input) => {
+          selections.push(input);
+          return "codex/gpt-6.1-sol";
+        },
+        run: async (params) => {
+          runs.push(params);
+          return { ok: true };
+        },
+      },
+    });
+    const request = {
+      clientMessageId: "wechat:external-with-image",
+      task: `Diagnose the screenshot ${fixture.image.path}`,
+      workspacePath: fixture.workCwd,
+      inputAttachments: fixture.inputAttachments,
+      goalObjective: "Fix and verify the screenshot error",
+      completionTarget: { kind: "im-gateway" as const, channel: "wechat", target: "owner" },
+    };
+    const [launched, duplicate] = await Promise.all([host.start(request), host.start(request)]);
+    expect(duplicate).toEqual(launched);
+    expect(selections).toEqual([
+      { sessionId: launched.sessionId, cwd: fixture.workCwd, reused: false },
+    ]);
+    expect(runs).toHaveLength(1);
+    expect(fake.lines).toEqual([]);
+    expect(runs[0]).toMatchObject({
+      sessionId: launched.sessionId,
+      cwd: fixture.workCwd,
+      model: "codex/gpt-6.1-sol",
+      clientMessageId: petDelegationClientMessageId(request.clientMessageId),
+      displayText: request.task,
+      goal: request.goalObjective,
+      permissionMode: "default",
+    });
+    expect(runs[0]).not.toHaveProperty("requireExisting");
+    expect(runs[0]!.task).toContain("from 微信.");
+    expect(runs[0]!.attachments).toHaveLength(1);
+    expect(runs[0]!.attachments[0]).toMatchObject({ sessionId: launched.sessionId });
+    expect(runs[0]!.attachments[0].absPath).toStartWith(fixture.workCwd);
+    expect(runs[0]!.task).toContain(runs[0]!.attachments[0].absPath);
+    const sent = await listRecentAttachments({
+      cwd: fixture.workCwd,
+      sessionId: launched.sessionId,
+    });
+    expect(sent.map((image) => image.absPath)).toEqual([runs[0]!.attachments[0].absPath]);
+    expect(fake.reserved).toEqual([[launched.sessionId, fixture.workCwd]]);
+    expect(fake.forgotten).toEqual([]);
+    expect(fake.announcements).toEqual([
+      expect.objectContaining({ sessionId: launched.sessionId, prompt: request.task }),
+    ]);
+  });
+
+  test("uses the reused Session's selected external route and actual image workspace", async () => {
+    const fixture = await stagedInput();
+    const actualCwd = join(fixture.workCwd, "actual-worktree");
+    await mkdir(actualCwd);
+    const fake = fakeBridge("rejected", ["existing-external"]);
+    const selections: unknown[] = [];
+    const runs: Array<Record<string, any>> = [];
+    const host = new PetWorkDelegationHost({
+      bridge: fake.bridge,
+      noWorkspaceCwd: "/unused",
+      resolveSessionCwd: async () => actualCwd,
+      external: {
+        modelKey: async (input) => {
+          selections.push(input);
+          return input.reused ? "claude-code/sonnet" : "codex/gpt-6.1-sol";
+        },
+        run: async (params) => {
+          runs.push(params);
+          return { ok: true };
+        },
+      },
+    });
+    const launched = await host.start({
+      clientMessageId: "wechat:reuse-external-image",
+      targetSessionId: "existing-external",
+      task: `Read ${fixture.image.path}`,
+      workspacePath: fixture.workCwd,
+      inputAttachments: fixture.inputAttachments,
+      goalObjective: "Original objective",
+      goalContinuation: { goalId: "persisted-goal", revision: 4 },
+    });
+    expect(launched.cwd).toBe(actualCwd);
+    expect(selections).toEqual([{ sessionId: "existing-external", cwd: actualCwd, reused: true }]);
+    expect(runs[0]).toMatchObject({
+      sessionId: "existing-external",
+      cwd: actualCwd,
+      model: "claude-code/sonnet",
+      requireExisting: true,
+      goalContinuation: { goalId: "persisted-goal", revision: 4 },
+    });
+    expect(runs[0]).not.toHaveProperty("goal");
+    expect(runs[0]!.attachments[0].absPath).toStartWith(
+      join(actualCwd, ".code-shell", "attachments", "existing-external"),
+    );
+    expect(fake.lines).toEqual([]);
+    expect(fake.reserved).toEqual([]);
+    expect(fake.forgotten).toEqual([]);
+  });
+
+  test("a persisted native route stays native even when the reused Session is not in the host map", async () => {
+    const fake = fakeBridge();
+    const selections: unknown[] = [];
+    const externalRuns: unknown[] = [];
+    const host = new PetWorkDelegationHost({
+      bridge: fake.bridge,
+      noWorkspaceCwd: "/safe",
+      external: {
+        modelKey: async (input) => {
+          selections.push(input);
+          return input.reused ? "persisted-api-connection" : "codex/gpt-6.1-sol";
+        },
+        run: async (params) => {
+          externalRuns.push(params);
+          return { ok: true };
+        },
+      },
+    });
+    await host.start({
+      clientMessageId: "reuse-native-cold-map",
+      targetSessionId: "persisted-native",
+      task: "Continue",
+      workspacePath: "/work",
+    });
+    expect(selections).toEqual([{ sessionId: "persisted-native", cwd: "/work", reused: true }]);
+    expect(externalRuns).toEqual([]);
+    expect(JSON.parse(fake.lines[0]!).params).toMatchObject({
+      sessionId: "persisted-native",
+      requireExisting: true,
+      model: "persisted-api-connection",
+    });
+  });
+
+  test.each([false, true])(
+    "external rejection never falls back to API and preserves known Session=%s",
+    async (known) => {
+      const id = "wechat:external-rejected";
+      const sessionId = petDelegationSessionId(id);
+      const fake = fakeBridge("accepted", known ? [sessionId] : []);
+      let attempts = 0;
+      const host = new PetWorkDelegationHost({
+        bridge: fake.bridge,
+        noWorkspaceCwd: "/safe",
+        external: {
+          modelKey: async () => "codex/gpt-6.1-sol",
+          run: async () => {
+            attempts += 1;
+            return attempts === 1
+              ? { ok: false, message: "Codex quota unavailable" }
+              : { ok: true };
+          },
+        },
+      });
+      const request = { clientMessageId: id, task: "Do work", workspacePath: "/work" };
+      await expect(host.start(request)).rejects.toThrow("Codex quota unavailable");
+      expect(fake.lines).toEqual([]);
+      expect(fake.announcements).toEqual([]);
+      expect(fake.forgotten).toEqual(known ? [] : [sessionId]);
+      await host.start(request);
+      expect(attempts).toBe(2);
+      expect(fake.lines).toEqual([]);
+      expect(fake.announcements).toHaveLength(1);
+    },
+  );
+
+  test("an unavailable external submitter fails explicitly before any native launch", async () => {
+    const fake = fakeBridge();
+    const host = new PetWorkDelegationHost({
+      bridge: fake.bridge,
+      noWorkspaceCwd: "/safe",
+      external: { modelKey: async () => "codex/gpt-6.1-sol" },
+    });
+    await expect(
+      host.start({
+        clientMessageId: "missing-external-submitter",
+        task: "Do work",
+        workspacePath: "/work",
+      }),
+    ).rejects.toThrow("external runtime is unavailable");
+    expect(fake.lines).toEqual([]);
+    expect(fake.announcements).toEqual([]);
+    expect(fake.forgotten).toEqual([petDelegationSessionId("missing-external-submitter")]);
+  });
+
+  test("an invalid model route or selector failure cannot silently launch native work", async () => {
+    for (const modelKey of [
+      async () => " padded ",
+      async () => {
+        throw new Error("settings unavailable");
+      },
+    ]) {
+      const fake = fakeBridge();
+      const host = new PetWorkDelegationHost({
+        bridge: fake.bridge,
+        noWorkspaceCwd: "/safe",
+        external: { modelKey },
+      });
+      await expect(
+        host.start({ clientMessageId: "invalid-route", task: "Do work", workspacePath: "/work" }),
+      ).rejects.toThrow();
+      expect(fake.lines).toEqual([]);
+      expect(fake.announcements).toEqual([]);
+      expect(fake.forgotten).toEqual([petDelegationSessionId("invalid-route")]);
+    }
+  });
 
   test("sends target-owned images with the accepted Work run and retains them as sent", async () => {
     const fixture = await stagedInput();

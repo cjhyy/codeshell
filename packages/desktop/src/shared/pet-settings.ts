@@ -1,22 +1,13 @@
-import { isExternalRuntimeModelKey } from "./external-runtime-models.js";
+import { isSessionModelKey } from "./session-model-default.js";
 
 export const PET_CHAT_MODEL_SETTING = "chatModelKey";
 
 /**
- * Mimi manager turns run in CodeShell's in-process Engine because they depend
- * on the Pet behavior profile and its host tools. External Agent Runtime model
- * keys are valid for ordinary Work Sessions, but cannot be used as Mimi's
- * manager model.
+ * Mimi's explicit override uses the same model-key contract as ordinary
+ * sessions, including external runtimes supported by the desktop host.
  */
 export function isPetChatModelKey(value: unknown): value is string {
-  return (
-    typeof value === "string" &&
-    value.length > 0 &&
-    value.length <= 512 &&
-    value.trim() === value &&
-    !/[\u0000-\u001f\u007f]/u.test(value) &&
-    !isExternalRuntimeModelKey(value)
-  );
+  return isSessionModelKey(value);
 }
 
 export function petChatModelKeyFromSettings(settings: unknown): string | null {

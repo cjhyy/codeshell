@@ -5,6 +5,11 @@ import {
   type MobileRunBridge,
 } from "@cjhyy/code-shell-server/mobile-remote";
 import { markAttachmentsSent } from "@cjhyy/code-shell-server/storage";
+import {
+  isExternalRuntimeModelKey,
+  normalizeExternalRuntimeModelKey,
+} from "../../shared/external-runtime-models.js";
+import { isSessionModelKey } from "../../shared/session-model-default.js";
 import { preparePetDelegationAttachments } from "./pet-delegation-attachments.js";
 import { delegatedRunText } from "./pet-delegation-brief.js";
 import type { PetAutoDelegation } from "./pet-dispatch-service.js";
@@ -45,7 +50,7 @@ function delegationTitle(task: string): string {
 
 /**
  * Main-process execution boundary for Mimi's DelegateWork tool. A validated
- * decision becomes a normal worker Session here; renderer availability only
+ * decision becomes a normal Work Session here; renderer availability only
  * affects whether the new Session is visible immediately, never whether it runs.
  */
 export class PetWorkDelegationHost {
@@ -59,6 +64,15 @@ export class PetWorkDelegationHost {
       resolveSessionCwd?: (sessionId: string) => Promise<string | undefined>;
       /** Display name of an IM channel id for the delegation brief (微信, 飞书, …). */
       channelLabel?: (channel: string) => string | undefined;
+      /** Host model routing preserves reused Sessions and resolves defaults only for new ones. */
+      external?: {
+        modelKey: (input: {
+          sessionId: string;
+          cwd: string;
+          reused: boolean;
+        }) => Promise<string | null>;
+        run?: (params: Record<string, unknown>) => Promise<{ ok: boolean; message?: string }>;
+      };
     },
   ) {}
 
@@ -117,36 +131,55 @@ export class PetWorkDelegationHost {
         sessionId,
         inputAttachments: delegation.inputAttachments,
       });
-      const acceptance = await injectMobileRunAndAwaitAcceptance(
-        this.options.bridge,
-        {
-          id: runId,
-          params: {
-            task: prepared.task,
-            sessionId,
-            cwd,
-            clientMessageId: workClientMessageId,
-            ...(runText.displayText ? { displayText: runText.displayText } : {}),
-            ...(prepared.attachments.length > 0 ? { attachments: prepared.attachments } : {}),
-            // Delegation does not grant Mimi authority to bypass the user's normal
-            // permission and sensitive-path boundaries. A run that needs approval
-            // remains visible as waiting instead of silently receiving full access.
-            permissionMode: "default",
-            // Goal is opt-in. Ordinary Work Sessions can still use tools, span many
-            // model/tool steps, and resume from async notifications; forcing every
-            // loosely-worded delegation into persistent Goal mode caused ambiguous
-            // objectives to keep re-driving instead of returning a useful result.
-            ...(delegation.goalContinuation
-              ? { goalContinuation: delegation.goalContinuation }
-              : delegation.goalObjective
-                ? { goal: delegation.goalObjective }
-                : {}),
-            ...(delegation.targetSessionId ? { requireExisting: true } : {}),
-          },
-        },
-        { origin: "host", producer: "pet-work-delegation" },
-      );
-      if (!acceptance.ok) throw new Error(acceptance.message);
+      const selectedModel = await this.options.external?.modelKey({
+        sessionId,
+        cwd,
+        reused: Boolean(delegation.targetSessionId),
+      });
+      if (selectedModel != null && !isSessionModelKey(selectedModel)) {
+        throw new Error("The delegated Work Session model is invalid");
+      }
+      const model = selectedModel ? normalizeExternalRuntimeModelKey(selectedModel) : null;
+      const params: Record<string, unknown> = {
+        task: prepared.task,
+        sessionId,
+        cwd,
+        clientMessageId: workClientMessageId,
+        ...(model ? { model } : {}),
+        ...(runText.displayText ? { displayText: runText.displayText } : {}),
+        ...(prepared.attachments.length > 0 ? { attachments: prepared.attachments } : {}),
+        // Delegation does not grant Mimi authority to bypass the user's normal
+        // permission and sensitive-path boundaries. A run that needs approval
+        // remains visible as waiting instead of silently receiving full access.
+        permissionMode: "default",
+        // Goal is opt-in. Ordinary Work Sessions can still use tools, span many
+        // model/tool steps, and resume from async notifications; forcing every
+        // loosely-worded delegation into persistent Goal mode caused ambiguous
+        // objectives to keep re-driving instead of returning a useful result.
+        ...(delegation.goalContinuation
+          ? { goalContinuation: delegation.goalContinuation }
+          : delegation.goalObjective
+            ? { goal: delegation.goalObjective }
+            : {}),
+        ...(delegation.targetSessionId ? { requireExisting: true } : {}),
+      };
+      let acceptance: { ok: boolean; message?: string };
+      if (isExternalRuntimeModelKey(model)) {
+        const submit = this.options.external?.run;
+        if (!submit) {
+          throw new Error("The selected external runtime is unavailable for delegated work");
+        }
+        acceptance = await submit(params);
+      } else {
+        acceptance = await injectMobileRunAndAwaitAcceptance(
+          this.options.bridge,
+          { id: runId, params },
+          { origin: "host", producer: "pet-work-delegation" },
+        );
+      }
+      if (!acceptance.ok) {
+        throw new Error(acceptance.message || "The delegated Work Session run was rejected");
+      }
     } catch (error) {
       if (!wasKnownToHost) this.options.bridge.forgetSession(sessionId);
       throw error;

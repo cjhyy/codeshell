@@ -186,10 +186,11 @@ export function writeExternalRuntimeBinding(
   }
 }
 
-export function removeExternalRuntimeBinding(sessionId: string): void {
+export function removeExternalRuntimeBinding(sessionId: string, strict = false): void {
   try {
     rmSync(bindingPath(sessionId), { force: true });
   } catch {
+    if (strict) throw new Error("Could not clear the external conversation binding");
     // Deletion of the canonical Session still proceeds; this sidecar is best effort.
   }
 }
@@ -291,10 +292,11 @@ export class ExternalRuntimeSessionRecorder {
     private readonly model: string,
     private readonly provider: ExternalRuntimeKind,
     projectBinding?: SessionProjectBinding,
+    sessionKind = "work",
   ) {
     const bundle = this.manager.exists(sessionId)
       ? this.manager.resume(sessionId)
-      : this.manager.create(cwd, model, provider, sessionId, null, "desktop");
+      : this.manager.create(cwd, model, provider, sessionId, null, "desktop", sessionKind);
     if (canonicalCwd(bundle.state.cwd) !== canonicalCwd(cwd)) {
       throw new Error(`external runtime session project mismatch: ${sessionId}`);
     }

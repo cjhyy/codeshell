@@ -1,9 +1,15 @@
 import type { FollowUpRule } from "./pet-follow-up-rules.js";
 import { noticeLine } from "./pet-notice-compose.js";
 import { isPromptEnded, type NoticeRecord } from "./pet-notice-ledger.js";
-import { localIsoTime, type ReplyModel } from "./pet-notice-reply-interpreter.js";
+import { localIsoTime } from "./pet-notice-reply-interpreter.js";
 import { unpackFacts } from "./pet-notice-types.js";
-import { askModels, hasOnlyKeys, oneLine, parseJsonObject } from "./pet-proactive-models.js";
+import {
+  askModels,
+  hasOnlyKeys,
+  oneLine,
+  parseJsonObject,
+  type ProactiveModelSource,
+} from "./pet-proactive-models.js";
 import { dueAt } from "./pet-schedule-rule.js";
 import type { DesktopPetSession } from "./pet-state-aggregator.js";
 
@@ -165,7 +171,7 @@ export function parseHeartbeatJudgement(raw: string): HeartbeatJudgement | undef
 export function judgeHeartbeat(
   facts: readonly HeartbeatFact[],
   context: { now: number; saidToday: number; offsetMin: (ms: number) => number },
-  models: readonly ReplyModel[],
+  models: ProactiveModelSource,
   options: { timeoutMs?: number; onError?: (error: unknown) => void } = {},
 ): Promise<HeartbeatJudgement | undefined> {
   return askModels({

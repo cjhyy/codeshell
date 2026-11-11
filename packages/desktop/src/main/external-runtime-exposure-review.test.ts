@@ -9,6 +9,7 @@ import {
   REVIEWED_EXTERNAL_TOOL_EXPOSURE,
 } from "@cjhyy/code-shell-core/extension";
 import { CODING_TOOLS } from "@cjhyy/code-shell-capability-coding";
+import { PET_MANAGER_TOOL_CATALOG } from "@cjhyy/code-shell-pet/capability";
 import { EXTERNAL_GOAL_TOOL_CATALOG } from "./external-runtime-goal-tools.js";
 import { EXTERNAL_MIMI_TOOL_CATALOG } from "./external-runtime-mimi-tools.js";
 
@@ -21,6 +22,7 @@ describe("Desktop composed external exposure review", () => {
           ...CODING_TOOLS,
           ...EXTERNAL_GOAL_TOOL_CATALOG,
           ...EXTERNAL_MIMI_TOOL_CATALOG,
+          ...PET_MANAGER_TOOL_CATALOG,
         ].map((tool) => [tool.definition.name, tool]),
       ).values(),
     ];
@@ -69,5 +71,29 @@ describe("Desktop composed external exposure review", () => {
     // The bookkeeping flag rides on the registration (an "OK, I'll tell you" turn is idle).
     for (const name of ["NotifyMe", "ReportToMimi"])
       expect(registry.getTool(name)?.bookkeeping).toBe(true);
+  });
+
+  test("manager contracts require explicit Host opt-in without widening the default surface", () => {
+    const registry = new ToolRegistry({
+      toolCatalog: [...BUILTIN_TOOLS, ...CODING_TOOLS, ...PET_MANAGER_TOOL_CATALOG],
+    });
+    const original = [...FIRST_PHASE_EXPOSURE.toolNames].sort();
+    const managers = PET_MANAGER_TOOL_CATALOG.map((tool) => tool.definition.name).sort();
+    expect([...deriveExternalToolExposure(registry).toolNames].sort()).toEqual(original);
+    expect(
+      [...deriveExternalToolExposure(registry, { goalController: true }).toolNames].sort(),
+    ).toEqual(original);
+    expect([...deriveExternalToolExposure(registry, { mimiHost: true }).toolNames].sort()).toEqual(
+      [...original, ...managers].sort(),
+    );
+    const managerOnly = new ToolRegistry({ toolCatalog: PET_MANAGER_TOOL_CATALOG });
+    expect(deriveExternalToolExposure(managerOnly).toolNames.size).toBe(0);
+    expect(
+      [...deriveExternalToolExposure(managerOnly, { mimiHost: true }).toolNames].sort(),
+    ).toEqual(managers);
+    for (const name of ["Bash", "Read", "DriveAgent", "NotifyMe", "ReportToMimi"])
+      expect(deriveExternalToolExposure(managerOnly, { mimiHost: true }).toolNames.has(name)).toBe(
+        false,
+      );
   });
 });

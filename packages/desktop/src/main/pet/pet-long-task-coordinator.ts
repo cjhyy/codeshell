@@ -39,7 +39,7 @@ const MAX_PET_LONG_TASK_SUMMARY_LENGTH = 8_000;
 const PROJECTION_LAUNCH_GRACE_MS = 2_000;
 
 interface PetLongTaskWorker {
-  hasLiveWorker(): boolean;
+  hasLiveWorker(sessionId?: string): boolean;
   requestWorker(
     method: string,
     params: Record<string, unknown>,
@@ -1029,7 +1029,7 @@ export class PetLongTaskCoordinator {
       at: this.now(),
       reason: "Paused by user",
     });
-    if (this.options.worker.hasLiveWorker()) {
+    if (this.options.worker.hasLiveWorker(paused.sessionId)) {
       await this.pausePersistedGoal(paused).catch((error) =>
         this.options.onBackgroundError?.("pause-goal", error),
       );
@@ -1086,7 +1086,10 @@ export class PetLongTaskCoordinator {
       at: this.now(),
     });
     try {
-      if (this.options.worker.hasLiveWorker() && (await this.resumePersistedGoal(resumed))) {
+      if (
+        this.options.worker.hasLiveWorker(resumed.sessionId) &&
+        (await this.resumePersistedGoal(resumed))
+      ) {
         return { ok: true, task: this.options.store.get(task.id) ?? resumed };
       }
       await this.options.store.transition(task.id, {
@@ -1209,7 +1212,7 @@ export class PetLongTaskCoordinator {
     if (task.status === "cancelled" || task.status === "completed") {
       return { ok: false, code: "invalid-state", message: "This task is already closed" };
     }
-    const hadLiveWorker = this.options.worker.hasLiveWorker();
+    const hadLiveWorker = this.options.worker.hasLiveWorker(task.sessionId);
     if (hadLiveWorker) {
       try {
         const outcome = await this.options.worker.requestWorker(

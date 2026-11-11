@@ -667,6 +667,7 @@ async function mountApp(options: {
   subscribeSession?: (sessionId: string, sinceSeq?: number) => Promise<any>;
   goalGet?: (sessionId: string) => Promise<any>;
   settings?: Record<string, unknown>;
+  projectSettings?: Record<string, unknown>;
   externalRuntimeKinds?: string[];
   modelCatalog?: Array<Record<string, unknown>>;
   externalRuntimeModels?: () => Promise<ExternalRuntimeModelEntry[]>;
@@ -706,6 +707,9 @@ async function mountApp(options: {
     options.modelCatalog,
     options.externalRuntimeModels,
   );
+  if (options.projectSettings) {
+    window.codeshell.getConfigurationSettings = async () => options.projectSettings!;
+  }
   if (options.withSecondProject) {
     const list = window.codeshell.projectRegistry.list;
     window.codeshell.projectRegistry.list = async () => [
@@ -722,6 +726,9 @@ async function mountApp(options: {
       },
     ];
   }
+  // These lifecycle tests start from a mounted dock. Resolve its lazy module
+  // before rendering so project navigation cannot race a cold module load.
+  await import("./app/SessionPanelDock");
   container = document.createElement("div");
   root = createRoot(container);
   await act(async () => {
@@ -831,7 +838,7 @@ describe("App quick-chat integration", () => {
       sidebarCollapsed: false,
       panelTabs: [{ id: "browser-a", kind: "browser" }],
     });
-    await flushApp(20);
+    expect(panelMountCounts.get(ownerBucket)).toBe(1);
     let resolveSelection!: (value: { localProjectId: string; bindingId: null }) => void;
     const pendingSelection = new Promise<{ localProjectId: string; bindingId: null }>((resolve) => {
       resolveSelection = resolve;
@@ -872,7 +879,6 @@ describe("App quick-chat integration", () => {
       sidebarCollapsed: false,
       panelTabs: [{ id: "browser-a", kind: "browser" }],
     });
-    await flushApp(20);
     expect(panelMountCounts.get(ownerBucket)).toBe(1);
     await act(async () => {
       await sidebarProps!.onSelectSession("repoA", "session-b");
@@ -889,6 +895,62 @@ describe("App quick-chat integration", () => {
     expect(panelUnmountCounts.get(ownerBucket) ?? 0).toBe(0);
     expect(panelMountCounts.get(ownerBucket)).toBe(1);
     expect(panelAreaProps.get(ownerBucket)?.tabs).toEqual([{ id: "browser-a", kind: "browser" }]);
+  });
+
+  test("new draft chats use the explicit external default and composer changes remain session-local", async () => {
+    const settings = {
+      sessionDefaults: { model: "codex/gpt-6.1-sol" },
+      defaults: { text: "native-model" },
+    };
+    await mountApp({ withNormalSession: true, startInDraft: true, panelTabs: [], settings });
+    expect(chatProps?.activeModelKey).toBe("codex/gpt-6.1-sol");
+    await act(async () => {
+      chatProps?.onModelChange({
+        key: "claude-code/sonnet",
+        label: "Sonnet",
+        provider: "claude-code",
+      });
+      await flushMicrotasks();
+    });
+    expect(chatProps?.activeModelKey).toBe("claude-code/sonnet");
+    expect(settings.sessionDefaults.model).toBe("codex/gpt-6.1-sol");
+    expect(settings.defaults.text).toBe("native-model");
+    await act(async () => window.dispatchEvent(new Event("codeshell:settings-changed")));
+    await flushApp();
+    expect(chatProps?.activeModelKey).toBe("claude-code/sonnet");
+    expect(configureCalls.some((call) => String(call.model ?? "").startsWith("codex/"))).toBe(
+      false,
+    );
+  });
+
+  test("saved per-session models take precedence over a changed new-chat default", async () => {
+    await mountApp({
+      withNormalSession: true,
+      panelTabs: [],
+      modelOverrides: { "repoA::session-a": "claude-code/sonnet" },
+      settings: {
+        sessionDefaults: { model: "codex/gpt-6.1-sol" },
+        defaults: { text: "native-model" },
+      },
+    });
+    expect(chatProps?.activeModelKey).toBe("claude-code/sonnet");
+  });
+
+  test("clearing a project override preserves the user external default across settings refresh", async () => {
+    await mountApp({
+      withNormalSession: true,
+      startInDraft: true,
+      panelTabs: [],
+      settings: {
+        sessionDefaults: { model: "codex/gpt-6.1-sol" },
+        defaults: { text: "native-model" },
+      },
+      projectSettings: { sessionDefaults: {}, defaults: { image: "image-only" } },
+    });
+    expect(chatProps?.activeModelKey).toBe("codex/gpt-6.1-sol");
+    await act(async () => window.dispatchEvent(new Event("codeshell:settings-changed")));
+    await flushApp();
+    expect(chatProps?.activeModelKey).toBe("codex/gpt-6.1-sol");
   });
 
   test("loads native choices before runtime discovery and preserves selection when models refresh", async () => {
@@ -918,7 +980,10 @@ describe("App quick-chat integration", () => {
       ],
     });
 
-    expect(chatProps?.modelOptions.map((option) => option.key)).toEqual(["native-model"]);
+    expect(chatProps?.modelOptions.map((option) => option.key)).toEqual([
+      "native-model",
+      oldModel.key,
+    ]);
     expect(chatProps?.activeModelKey).toBe(oldModel.key);
     await act(async () => finishDiscovery([oldModel]));
     expect(chatProps?.modelOptions.map((option) => option.key)).toEqual([

@@ -34,6 +34,7 @@ import type { InputAttachmentMeta } from "@cjhyy/code-shell-server/storage";
 import type { WorkerFrameMeta } from "@cjhyy/code-shell-server/worker";
 import type { PetHostActionReceiptStore } from "./pet-host-action-receipts.js";
 import type { PetPersonalization } from "../../shared/pet-settings.js";
+import { parseExternalRuntimeModelKey } from "../../shared/external-runtime-models.js";
 import type { PetSegmentClosed, PetSegmentTurnStart } from "./pet-segment-controller.js";
 import type { PetChatAttachment } from "../../shared/pet-chat-attachments.js";
 import { dlog } from "../desktop-logger.js";
@@ -325,6 +326,14 @@ export interface PetDispatchOptions {
       listener: (line: string, snapshotEntry?: { sessionId: string; event: unknown }) => void,
     ): () => void;
   };
+  /** Host adapter retaining the same Pet profile/result contract for external managers. */
+  externalRuntime?: {
+    run(
+      params: Record<string, unknown>,
+    ): Promise<{ ok: true; result: unknown } | { ok: false; message: string; code?: number }>;
+    stop(sessionId: string): Promise<unknown>;
+    resetContext?(sessionId: string): Promise<void>;
+  };
   hostCwd: string;
   /** Bounded source-scoped attachment context retained across follow-up messages. */
   attachmentContext?: Pick<PetChatAttachmentContext, "remember" | "list" | "clear">;
@@ -337,7 +346,7 @@ export interface PetDispatchOptions {
   listWorkspaces?(): Promise<Array<{ path: string; name: string }>>;
   listReusableSessions?(): Promise<PetReusableSessionCandidate[]>;
   /** The same actionable items shown in the desktop Needs follow-up section. */
-  listFollowUps?(): Promise<PetFollowUpItem[]>;
+  listFollowUps?(managerModel?: string | null): Promise<PetFollowUpItem[]>;
   /** Opaque, host-authorized proactive owner destinations. */
   listOutboundTargets?(): Promise<PetOutboundTargetOption[]>;
   /**
@@ -592,9 +601,10 @@ interface PetActiveChatTurn {
   routeKey: string;
   sessionId: string;
   clientMessageId?: string;
-  /** Only the original user run accepts steers, never its host receipt turn. */
+  executor: "native" | "external";
+  /** Pending user run on the selected executor; native runs alone accept steers. */
   workerRunPending: boolean;
-  /** From admission until agent/run returns: same-route input joins this turn. */
+  /** From admission until completion: native same-route input may join this turn. */
   acceptingFollowers: boolean;
   /** Resolves true when agent/run starts, false if the turn ends without one. */
   runStarted: Promise<boolean>;
@@ -704,7 +714,13 @@ export class PetDispatchService {
       : undefined;
     options.worker.subscribeOutbound?.((_line, snapshotEntry) => {
       const active = this.activeChatTurn;
-      if (!active || snapshotEntry?.sessionId !== active.sessionId) return;
+      if (
+        !active ||
+        active.executor !== "native" ||
+        snapshotEntry?.sessionId !== active.sessionId
+      ) {
+        return;
+      }
       const event = snapshotEntry.event;
       if (!event || typeof event !== "object" || Array.isArray(event)) return;
       const record = event as Record<string, unknown>;
@@ -743,6 +759,7 @@ export class PetDispatchService {
     routeKey: string,
     sessionId: string,
     clientMessageId?: string,
+    executor: "native" | "external" = "native",
   ): PetActiveChatTurn {
     let resolveRunDone!: () => void;
     let resolveRunStarted!: (started: boolean) => void;
@@ -751,6 +768,7 @@ export class PetDispatchService {
       routeKey,
       sessionId,
       clientMessageId,
+      executor,
       workerRunPending: false,
       acceptingFollowers: true,
       runStarted: new Promise<boolean>((resolve) => {
@@ -814,17 +832,29 @@ export class PetDispatchService {
   private async runScheduledChat(command: PetChatCommand): Promise<PetDispatchResult> {
     const sessionId = (await this.options.metadata.ensure()).petSessionId;
     const routeKey = petChatRouteKey(command);
+    // Pin the selected manager before admission. External turns cannot consume
+    // native steers, including while their manager context is still being built.
+    const model = command.model ?? (await this.options.managerModel?.());
+    command = { ...command, ...(model ? { model } : {}) };
+    const executor = parseExternalRuntimeModelKey(model) ? "external" : "native";
 
     for (;;) {
       const admission = await this.withChatAdmission(() => {
         const active = this.activeChatTurn;
         if (!active) {
-          const leader = this.createActiveChatTurn(routeKey, sessionId, command.clientMessageId);
+          const leader = this.createActiveChatTurn(
+            routeKey,
+            sessionId,
+            command.clientMessageId,
+            executor,
+          );
           this.activeChatTurn = leader;
           return { kind: "leader" as const, active: leader };
         }
         if (
           active.routeKey === routeKey &&
+          active.executor === "native" &&
+          executor === "native" &&
           active.acceptingFollowers &&
           !active.stopRequested &&
           !isPetContextControl(command)
@@ -961,12 +991,17 @@ export class PetDispatchService {
   }
 
   /** Background reports reserve the same session as chat, without accepting steers. */
-  private async withManagerTurn<T>(operation: () => Promise<T>): Promise<T> {
+  private async withManagerTurn<T>(operation: () => Promise<T>, model?: string | null): Promise<T> {
     const sessionId = (await this.options.metadata.ensure()).petSessionId;
     for (;;) {
       const admission = await this.withChatAdmission(() => {
         if (this.activeChatTurn) return { wait: this.activeChatTurn.fullyDone };
-        const active = this.createActiveChatTurn(`internal:${randomUUID()}`, sessionId);
+        const active = this.createActiveChatTurn(
+          `internal:${randomUUID()}`,
+          sessionId,
+          undefined,
+          parseExternalRuntimeModelKey(model) ? "external" : "native",
+        );
         this.activeChatTurn = active;
         return { active };
       });
@@ -999,14 +1034,7 @@ export class PetDispatchService {
       active.resolveRunStarted(true);
     }
     try {
-      return await this.options.worker.requestWorker("agent/run", params, {
-        waitForRunCompletion: true,
-        // An exited worker cannot answer this turn. Release the chat and its
-        // queued inputs immediately instead of waiting for the RPC timeout.
-        settleOnExit: true,
-        failFast: true,
-        meta: { origin: "host", producer: "pet-dispatch" },
-      });
+      return await this.requestRoutedRun(params, "pet-dispatch");
     } finally {
       if (active) {
         active.workerRunPending = false;
@@ -1054,14 +1082,49 @@ export class PetDispatchService {
     ];
   }
 
-  private requestManagerRun(params: Record<string, unknown>, producer: string) {
-    return this.withManagerTurn(() =>
-      this.options.worker.requestWorker("agent/run", params, {
-        waitForRunCompletion: true,
-        settleOnExit: true,
-        failFast: true,
-        meta: { origin: "host", producer },
-      }),
+  private async requestRoutedRun(params: Record<string, unknown>, producer: string) {
+    // Internal reports/closures intentionally omit a per-turn model. Resolve
+    // their manager setting here as well, so they never fall back to an API.
+    const { model: suppliedModel, ...runParams } = params;
+    const model =
+      typeof suppliedModel === "string"
+        ? suppliedModel
+        : suppliedModel === null
+          ? undefined
+          : await this.options.managerModel?.();
+    const routedParams = { ...runParams, ...(model ? { model } : {}) };
+    if (parseExternalRuntimeModelKey(model)) {
+      if (!this.options.externalRuntime) {
+        return {
+          ok: false as const,
+          message: `Mimi 外部 provider ${model} 不可用，请检查安装和登录状态后重试`,
+        };
+      }
+      try {
+        return await this.options.externalRuntime.run(routedParams);
+      } catch (error) {
+        return {
+          ok: false as const,
+          message: error instanceof Error ? error.message : String(error),
+        };
+      }
+    }
+    return this.options.worker.requestWorker("agent/run", routedParams, {
+      waitForRunCompletion: true,
+      // An exited worker cannot answer this turn. Release the chat and its
+      // queued inputs immediately instead of waiting for the RPC timeout.
+      settleOnExit: true,
+      failFast: true,
+      meta: { origin: "host", producer },
+    });
+  }
+
+  private async requestManagerRun(params: Record<string, unknown>, producer: string) {
+    const model =
+      typeof params.model === "string" ? params.model : await this.options.managerModel?.();
+    return this.withManagerTurn(
+      () => this.requestRoutedRun({ ...params, model: model ?? null }, producer),
+      model,
     );
   }
 
@@ -1076,6 +1139,15 @@ export class PetDispatchService {
     }
     active.stopRequested = true;
     try {
+      if (active.executor === "external") {
+        if (!this.options.externalRuntime) {
+          active.stopRequested = false;
+          return { ok: false, code: "worker-error", message: "Mimi 外部 provider 不可用" };
+        }
+        await this.options.externalRuntime.stop(active.sessionId);
+        active.stopConfirmed = true;
+        return { ok: true, type: "chat_stopped", stopped: true };
+      }
       const response = await this.options.worker.requestWorker(
         "agent/cancel",
         { sessionId: active.sessionId, expectedClientMessageId: active.clientMessageId },
@@ -1129,22 +1201,28 @@ export class PetDispatchService {
   ): Promise<{ launched: boolean; text: string; taskId?: string }> {
     if (item.intent !== "resume" || !item.sourceSessionId)
       throw new Error("invalid resume follow-up");
-    const result = await this.withManagerTurn(() =>
-      this.dispatchNow({
-        type: "chat",
-        hostWake: item,
-        // Per occurrence: a repeating follow-up's next wake must not replay this one.
-        clientMessageId: `pet-followup-${item.id}-${item.revision}-${item.occurrence}`,
-        message:
-          "The host is waking a previously authorized follow-up. Re-check current state and continue ONLY its exact original Session if still appropriate. " +
-          "Never start a new Session, change the objective, bypass a pending decision, or treat launch as completion. " +
-          "If blocked or already resolved, briefly explain what the owner needs to do. Follow-up descriptive data: " +
-          JSON.stringify({
-            title: item.title,
-            text: item.text,
-            sourceSessionId: item.sourceSessionId,
-          }),
-      }),
+    // Scheduled wakes bypass user-chat admission. Pin their manager and executor
+    // before reserving the internal turn just as ordinary chat does.
+    const model = await this.options.managerModel?.();
+    const result = await this.withManagerTurn(
+      () =>
+        this.dispatchNow({
+          type: "chat",
+          hostWake: item,
+          // Per occurrence: a repeating follow-up's next wake must not replay this one.
+          clientMessageId: `pet-followup-${item.id}-${item.revision}-${item.occurrence}`,
+          ...(model ? { model } : {}),
+          message:
+            "The host is waking a previously authorized follow-up. Re-check current state and continue ONLY its exact original Session if still appropriate. " +
+            "Never start a new Session, change the objective, bypass a pending decision, or treat launch as completion. " +
+            "If blocked or already resolved, briefly explain what the owner needs to do. Follow-up descriptive data: " +
+            JSON.stringify({
+              title: item.title,
+              text: item.text,
+              sourceSessionId: item.sourceSessionId,
+            }),
+        }),
+      model,
     );
     if (!result.ok || result.type !== "chat")
       throw new Error(!result.ok ? (result.message ?? result.code) : "invalid follow-up reply");
@@ -1413,6 +1491,24 @@ export class PetDispatchService {
               message: "Mimi 上下文清理能力暂不可用",
             };
           }
+          if (parseExternalRuntimeModelKey(command.model)) {
+            if (!this.options.externalRuntime?.resetContext) {
+              return {
+                ok: false,
+                code: "worker-error",
+                message: "Mimi 外部 provider 上下文清理能力暂不可用",
+              };
+            }
+            try {
+              await this.options.externalRuntime.resetContext(metadata.petSessionId);
+            } catch (error) {
+              return {
+                ok: false,
+                code: "worker-error",
+                message: error instanceof Error ? error.message : String(error),
+              };
+            }
+          }
           await this.options.segmentController.requestContextClear();
           await this.options.attachmentContext?.clear(attachmentScope);
           return {
@@ -1465,9 +1561,8 @@ export class PetDispatchService {
             Promise.all([
               this.options.listWorkspaces?.() ?? [],
               this.options.listReusableSessions?.() ?? [],
-              this.options.listFollowUps?.() ?? [],
+              this.options.listFollowUps?.(command.model) ?? [],
               this.options.listOutboundTargets?.() ?? [],
-              this.options.managerModel?.() ?? null,
               this.getReplyAttachmentRoots(),
             ]),
           ),
@@ -1514,7 +1609,6 @@ export class PetDispatchService {
           listedReusableSessions,
           listedFollowUps,
           listedOutboundTargets,
-          configuredManagerModel,
           replyAttachmentRoots,
         ] = await sourcesTask;
         const reusableSessionCandidates = [...listedReusableSessions];
@@ -1545,7 +1639,7 @@ export class PetDispatchService {
             reusableSessionCandidates.push(resolved);
           }
         }
-        const managerModel = command.model ?? configuredManagerModel;
+        const managerModel = command.model;
         const workspacePathById = new Map<string, string | null>([[NO_WORKSPACE_ID, null]]);
         const workspaceIdByPath = new Map<string, string>();
         const petWorkspaces: PetWorkspaceOption[] = [
@@ -1812,7 +1906,9 @@ export class PetDispatchService {
           sessionId: metadata.petSessionId,
           task: command.message.trim(),
           ...(command.hostWake ? { injected: true, disableGoal: true, skillAllowlist: [] } : {}),
-          ...(managerModel ? { model: managerModel } : {}),
+          // Explicit null records a resolved native default without forwarding
+          // a wire model. An omitted model remains eligible for central lookup.
+          model: managerModel ?? null,
           ...(attachments.length > 0 ? { attachments } : {}),
           petRuntimeContext: runtimeContext,
           petWorkspaces,

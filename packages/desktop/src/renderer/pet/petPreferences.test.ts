@@ -27,11 +27,11 @@ describe("Pet model preference", () => {
     expect(await loadPetChatModelKey(settingsBridge(" padded "))).toBeNull();
   });
 
-  test("does not persist external runtime models as Mimi's manager model", async () => {
+  test("round-trips external runtime models as Mimi's explicit override", async () => {
     const bridge = settingsBridge("codex/gpt-5.6-sol");
-    expect(await loadPetChatModelKey(bridge)).toBeNull();
+    expect(await loadPetChatModelKey(bridge)).toBe("codex/gpt-5.6-sol");
 
-    await savePetChatModelKey("codex/gpt-5.6-sol", bridge);
-    expect(await loadPetChatModelKey(bridge)).toBeNull();
+    await savePetChatModelKey("claude-code/sonnet", bridge);
+    expect(await loadPetChatModelKey(bridge)).toBe("claude-code/sonnet");
   });
 });
