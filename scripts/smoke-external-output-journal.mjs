@@ -873,7 +873,7 @@ assert(
       (entry) =>
         entry.pid === pid &&
         entry.event === "pre-core" &&
-        entry.negativeProbes === 4 &&
+        entry.negativeProbes === 10 &&
         entry.nodeVersion === process.versions.node &&
         entry.execPath === process.execPath &&
         entry.nodeBinaryHash === hash(readFileSync(process.execPath)) &&
@@ -883,7 +883,7 @@ assert(
 );
 output.guard = {
   observedPids: [...pids],
-  negativeProbesPerProcess: 4,
+  negativeProbesPerProcess: 10,
   processLocalOnly: true,
   guardHash: hash(readFileSync(process.env.CODESHELL_OUTPUT_GUARD_LOG)),
 };
