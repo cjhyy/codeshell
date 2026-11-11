@@ -100,6 +100,8 @@ export function initializeRunToolSurface(
   );
   // A legacy selection has no frozen native directory. Its first native request
   // is a cold boundary; an explicitly saved empty directory is already complete.
+  // Unsendable legacy declarations could not establish a native cache prefix;
+  // migrate them once into portable discoveries instead of repeating API errors.
   if (
     toolDiscovery === "tool-reference" &&
     selection &&
