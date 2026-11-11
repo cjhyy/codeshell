@@ -372,10 +372,32 @@ export async function createPetFollowUpRules(deps: PetFollowUpRulesDeps) {
     scheduler: deps.scheduler,
     fire: async (rule, due) => {
       const wake = followUpWake(rule, due.occurrence);
-      const outcome =
-        rule.then.mode === "run-mimi"
-          ? await resume(wake)
-          : { launched: false, text: rule.then.text };
+      // The owner may cancel or finish the follow-up while Mimi's turn runs;
+      // its fence then refuses the launch. That is their decision, not an
+      // unknown effect, and they need no reminder about it.
+      const finishedMidRun = () => {
+        const current = rules.get(rule.id);
+        if (!current || current.state === "active" || current.state === "paused") return undefined;
+        return {
+          status: "failed" as const,
+          detail: current.state === "completed" ? "已标记为已处理，未续办。" : "已取消，未续办。",
+        };
+      };
+      let outcome: { launched: boolean; text: string; taskId?: string };
+      try {
+        outcome =
+          rule.then.mode === "run-mimi"
+            ? await resume(wake)
+            : { launched: false, text: rule.then.text };
+      } catch (error) {
+        const finished = finishedMidRun();
+        if (finished) return finished;
+        throw error;
+      }
+      if (!outcome.launched && rule.then.mode === "run-mimi") {
+        const finished = finishedMidRun();
+        if (finished) return finished;
+      }
       // The router picks desktop / IM, records and dedupes the reminder (key: the occurrence).
       await notify({ ...wake, catchUpUntil: due.deadline }, outcome.text, due.key);
       return {
@@ -413,7 +435,13 @@ export async function createPetFollowUpRules(deps: PetFollowUpRulesDeps) {
         current.wake.status !== "claimed" ||
         current.wake.occurrence !== wake.occurrence
       )
-        throw new Error("跟进授权已变化，未自动续办");
+        throw new Error(
+          current?.state === "cancelled"
+            ? "跟进已取消，未续办"
+            : current?.state === "completed"
+              ? "跟进已标记为已处理，未续办"
+              : "跟进授权已变化，未自动续办",
+        );
       if (wake.taskId) {
         const task = deps.tasks.get(wake.taskId);
         if (

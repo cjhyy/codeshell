@@ -18,8 +18,10 @@
  *
  * DST: a wall-clock time skipped by a spring-forward change does not exist, so
  * it does not fire that day (02:30 on the day clocks jump 02:00 → 03:00). A
- * wall-clock time repeated by a fall-back change fires once, at its first
- * occurrence.
+ * fixed-time expression (`30 1 * * *`) whose wall-clock time is repeated by a
+ * fall-back change fires once, at its first occurrence; one with a `*`-based
+ * minute or hour (`*\/15 * * * *`, `0 * * * *`) fires in both passes, so its
+ * spacing never doubles (Vixie cron's rule).
  */
 
 export interface ParsedCron {
@@ -38,6 +40,14 @@ export interface ParsedCron {
    */
   domRestricted: boolean;
   dowRestricted: boolean;
+  /**
+   * Whether the minute / hour field is `*`-based (`*` or `*\/n`). As in Vixie
+   * cron, only a fixed-time expression (neither) is de-duplicated when a
+   * fall-back change repeats wall-clock times; a `*`-based one keeps its
+   * spacing and fires in both passes.
+   */
+  minuteStar?: boolean;
+  hourStar?: boolean;
 }
 
 interface FieldSpec {
@@ -118,6 +128,8 @@ export function parseCronExpression(expr: string): ParsedCron {
     // "*/n") restricts the field for the OR rule below.
     domRestricted: parts[2].trim() !== "*",
     dowRestricted: parts[4].trim() !== "*",
+    minuteStar: parts[0].trim().startsWith("*"),
+    hourStar: parts[1].trim().startsWith("*"),
   };
 }
 
@@ -257,7 +269,8 @@ export function nextCronTime(cron: ParsedCron, timeZone: string, fromMs: number)
   while (candidate <= end) {
     const wc = wallClockInZone(candidate, timeZone);
     if (matches(cron, wc)) {
-      if (!isRepeatedWallClock(candidate, wc, timeZone)) return candidate;
+      const fixedTime = cron.minuteStar !== true && cron.hourStar !== true;
+      if (!fixedTime || !isRepeatedWallClock(candidate, wc, timeZone)) return candidate;
       candidate += MINUTE_MS;
       continue;
     }

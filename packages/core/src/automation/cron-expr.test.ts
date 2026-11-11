@@ -115,7 +115,7 @@ describe("nextCronTime — DST and calendar boundaries", () => {
     );
   });
 
-  test("an hourly cron fires once per wall-clock hour across fall-back", () => {
+  test("an hourly cron keeps its spacing across fall-back (both 01:00s fire)", () => {
     const cron = parseCronExpression("0 * * * *");
     let at = Date.UTC(2026, 10, 1, 3, 30, 0); // Nov 1 23:30 EDT (Oct 31)
     const fired: number[] = [];
@@ -123,13 +123,29 @@ describe("nextCronTime — DST and calendar boundaries", () => {
       at = nextCronTime(cron, "America/New_York", at)!;
       fired.push(at);
     }
-    // 00:00 EDT, 01:00 EDT, then (01:00 EST is a repeat) 02:00 EST, 03:00 EST.
+    // 00:00 EDT, 01:00 EDT, 01:00 EST, 02:00 EST: an hour apart throughout.
     expect(fired).toEqual([
       Date.UTC(2026, 10, 1, 4),
       Date.UTC(2026, 10, 1, 5),
+      Date.UTC(2026, 10, 1, 6),
       Date.UTC(2026, 10, 1, 7),
-      Date.UTC(2026, 10, 1, 8),
     ]);
+  });
+
+  test("a */15 cron fires every 15 minutes through the repeated hour", () => {
+    const cron = parseCronExpression("*/15 * * * *");
+    const lastEdt = Date.UTC(2026, 10, 1, 5, 45); // 01:45 EDT
+    // 15 minutes later is 01:00 EST: no 75-minute gap.
+    expect(nextCronTime(cron, "America/New_York", lastEdt)).toBe(Date.UTC(2026, 10, 1, 6, 0));
+  });
+
+  test("the parser records which time fields are *-based", () => {
+    expect(parseCronExpression("*/15 * * * *")).toMatchObject({ minuteStar: true, hourStar: true });
+    expect(parseCronExpression("0 */2 * * *")).toMatchObject({ minuteStar: false, hourStar: true });
+    expect(parseCronExpression("30 1-3 * * *")).toMatchObject({
+      minuteStar: false,
+      hourStar: false,
+    });
   });
 
   test("finds sparse but valid dates years away, quickly", () => {
@@ -192,7 +208,7 @@ describe("dayOfMonth + dayOfWeek — Vixie/POSIX OR semantics", () => {
 
 /**
  * Reference implementation: the original minute-by-minute scan, plus the
- * fall-back rule (a repeated wall-clock minute fires only the first time).
+ * fall-back rule (a fixed-time expression's repeated minute fires only once).
  */
 function bruteNext(
   expr: string,
@@ -241,7 +257,10 @@ function bruteNext(
             ? dow
             : true;
     if (!day) continue;
-    if ([30, 60].some((back) => wall(candidate - back * 60_000).key === w.key)) continue;
+    const fixedTime =
+      !expr.split(/\s+/)[0]!.startsWith("*") && !expr.split(/\s+/)[1]!.startsWith("*");
+    if (fixedTime && [30, 60].some((back) => wall(candidate - back * 60_000).key === w.key))
+      continue;
     return candidate;
   }
   return null;

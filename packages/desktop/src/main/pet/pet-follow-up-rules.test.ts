@@ -403,6 +403,36 @@ describe("firing", () => {
     expect(() => f.runtime.validateContinuation(f.wakes[0]!)).toThrow("授权已变化");
   });
 
+  test("run-mimi cancelled by the owner mid-run: recorded as cancelled, no reminder", async () => {
+    let id = "";
+    const f: Awaited<ReturnType<typeof setup>> = await setup({
+      sessions: [session("s-native")],
+      wakeFollowUp: async (wake) => {
+        // The owner cancels while Mimi's turn runs; the turn's fence refuses the launch.
+        await f.host({ action: "cancel", followUpId: id, expectedRevision: 1 });
+        try {
+          f.runtime.validateContinuation(wake);
+        } catch (error) {
+          return { launched: false, text: String((error as Error).message) };
+        }
+        return { launched: true, text: "不该启动" };
+      },
+    });
+    id = String(
+      (await f.host({ ...remind, intent: "resume", sourceSessionId: "s-native" }, desktop))
+        .followUpId,
+    );
+    await f.runtime.coordinator.start();
+    clock = NOW + HOUR;
+    await f.runtime.coordinator.wake(f.jobs[0]!);
+    f.runtime.coordinator.stop();
+    expect(f.submitted).toEqual([]);
+    expect(f.rules.get(id)).toMatchObject({
+      state: "cancelled",
+      wake: { status: "failed", detail: "已取消，未续办。" },
+    });
+  });
+
   test("run-mimi does not wake Mimi for a Session that is busy or waiting on a decision", async () => {
     const f = await setup({ sessions: [session("s-native", { pendingDecisionCount: 1 })] });
     await f.host({ ...remind, intent: "resume", sourceSessionId: "s-native" }, desktop);

@@ -245,10 +245,11 @@ export default function PetFollowUpSectionView({
                   {t("pet.followUp.complete")}
                 </button>
               )}
-              {row.kind === "registered" && onControl && row.wakeState !== "claimed" && (
+              {row.kind === "registered" && onControl && (
                 <>
-                  {/* A repeating follow-up's recurrence is changed by asking Mimi. */}
-                  {!row.recurrence && (
+                  {/* A repeating follow-up's recurrence is changed by asking Mimi;
+                      a running occurrence can still be cancelled, not moved. */}
+                  {!row.recurrence && row.wakeState !== "claimed" && (
                     <button
                       type="button"
                       disabled={Boolean(busyId)}

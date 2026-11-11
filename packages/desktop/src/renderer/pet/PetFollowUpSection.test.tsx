@@ -78,7 +78,7 @@ describe("PetFollowUpSectionView", () => {
     expect(html).toContain("取消跟进");
     expect(html).toContain("交给 Mimi");
   });
-  test("does not render cancelled registrations and disables handling while a wake is claimed", () => {
+  test("does not render cancelled registrations; a claimed wake can be cancelled, not handled or moved", () => {
     expect(
       renderToStaticMarkup(
         <PetFollowUpSectionView rows={[row({ kind: "registered", status: "cancelled" })]} />,
@@ -91,7 +91,8 @@ describe("PetFollowUpSectionView", () => {
       />,
     );
     expect(html).toContain("disabled");
-    expect(html).not.toContain("取消跟进");
+    expect(html).toContain("取消跟进");
+    expect(html).not.toContain("改期");
   });
   test("renders each row's title, workspace, and full follow-up text", () => {
     const html = renderToStaticMarkup(

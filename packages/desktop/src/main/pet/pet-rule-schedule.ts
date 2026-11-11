@@ -35,6 +35,8 @@ import {
 /** Every Mimi schedule job, old and new, lives under this namespace. */
 const NAMESPACE = "mimi-follow-up:";
 const PREFIX = `${NAMESPACE}rule:`;
+/** Keys an unreleased pre-review build of this scheduler used; retired like the old store's. */
+const PRE_REVIEW_PREFIX = "mimi-rule:";
 const KEY_PATTERN =
   /^mimi-follow-up:rule:(rule-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}):(\d+):(\d+)$/u;
 const JOB_PROMPT = "Mimi scheduled rule";
@@ -50,10 +52,11 @@ export function ruleScheduleKey(id: string, version: number, occurrence: number)
 
 /** Jobs owned by Mimi's schedule rules (and the retired follow-up store's): not automations. */
 export function isPetRuleScheduleJob(job: Pick<CronJob, "creationKey">): boolean {
-  return job.creationKey?.startsWith(NAMESPACE) === true;
+  const key = job.creationKey ?? "";
+  return key.startsWith(NAMESPACE) || key.startsWith(PRE_REVIEW_PREFIX);
 }
 
-/** A job of the follow-up store this replaced (2c-1), retired at startup. */
+/** A job of the follow-up store this replaced (or of a pre-review build), retired at startup. */
 function isLegacyJob(job: Pick<CronJob, "creationKey">): boolean {
   return isPetRuleScheduleJob(job) && !job.creationKey!.startsWith(PREFIX);
 }

@@ -410,6 +410,25 @@ describe("older builds", () => {
     expect(/^mimi-follow-up:(registered-followup-[a-f0-9]{24}):(\d+)$/u.test(key)).toBe(false);
   });
 
+  test("jobs of the pre-review build (mimi-rule:) are retired and never run", async () => {
+    const f = setup();
+    const stray = `mimi-rule:${ID}:1:${NOW + HOUR}`;
+    f.scheduler.create("pre-review", "once", "Mimi scheduled rule", {
+      once: true,
+      runAt: NOW + HOUR,
+      creationKey: stray,
+    });
+    expect(isPetRuleScheduleJob({ creationKey: stray })).toBe(true);
+    await f.coordinator.start();
+    expect(f.scheduler.list()).toEqual([]);
+    expect(f.logs).toEqual([
+      { event: "pet.followUp.legacy_dropped", data: { jobs: 1, file: false } },
+    ]);
+    await f.coordinator.wake({ creationKey: stray });
+    expect(f.fired).toEqual([]);
+    f.coordinator.stop();
+  });
+
   test("only old-store jobs are retired; a stray rule job is reconciled away, not logged", async () => {
     const f = setup();
     f.scheduler.create("stray", "once", "Mimi scheduled rule", {
