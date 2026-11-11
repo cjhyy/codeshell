@@ -3,7 +3,7 @@
 - 日期：2026-11-11
 - 基线：`origin/main` @ `57fc7413f`
 - 范围：在前三步的冻结工具与追加式发现之上，增加 Anthropic Messages 原生引用。
-- 当前阶段：四项前置条件已确认；开始独立实现与离线回归。
+- 当前阶段：四项前置条件、实现及针对性离线回归已完成；完整 CI 随独立 PR 验收。
 
 ## 开工前四问
 
@@ -54,3 +54,12 @@
 - [OpenRouter Messages API](https://openrouter.ai/docs/api/api-reference/anthropic-messages/create-a-message)
 
 这些链接说明协议契约，不能代替本仓库实现的测试和真实用量记录。
+
+## 首版启用条件与验证边界
+
+- 统一连接目录须显式选用 `protocol: anthropic-style`，最终 LLM 配置为 `provider: anthropic`；OpenRouter 仍以 `providerKind: openrouter` 标识认证和端点。现有 Chat 连接不会自动换协议。
+- 仅允许官方 Anthropic 的 `claude-sonnet-5`，或 OpenRouter Messages 的 `anthropic/claude-sonnet-5`，且 `reasoning.mode` 明确为 `off`。旧型号、未知端点、未设置或开启思考均保留原有发现方式；已冻结原生工具的请求不能在单次覆盖中悄悄开启思考。
+- Host 使用现有 EngineRuntime/统一模型连接来确定路线。旧的独立 Engine API-key 自动探测会按端点选择默认模型；本变更没有扩展或重写该入门流程。
+- 原生模式独立提供调用提示，系统工具清单仅包含 eager 工具；普通模式提示词逐字节保持原样。原生文本消息始终使用块数组，缓存标记移动不会改变消息表示。
+- Engine + 实际 SDK 的离线 fixture 覆盖三批发现、复杂参数传输、发现前拒绝执行、原生真实名调用、重启、schema 变化、晚到工具、计划模式撤销、Chat 回退和手动压缩。工具/system 序列化逐字节相同；历史去除缓存标记后逐字节追加。
+- 真实探针仅验证一个简单合成工具；复杂 schema 的模型调用准确率对照仍未做。直连 Anthropic 仅有协议 fixture 验证，没有真实凭据实测。签名思考块续写问题仍属于后续工作。

@@ -434,4 +434,18 @@ describe("native discovery cache cycles", () => {
     expect(next.find((tool) => tool.name === "Deferred")?.deferLoading).toBeUndefined();
     expect(ctx.modelToolNames!.has("Deferred")).toBe(true);
   });
+  test("legacy native bootstrap rebases once while an empty deferred snapshot stays authoritative", () => {
+    const previous = { ...selection(), cacheIdentity: undefined };
+    const legacyCtx = { cwd: "/repo", llmConfig: native } as ToolContext;
+    initializeRunToolSurface(legacyCtx, [], catalog, { taskText: "", selection: previous });
+    expect(legacyCtx.runToolSurface!.getSelection().names).toContain("Deferred");
+    expect(legacyCtx.runToolSurface!.getSelection().discovered).toEqual([]);
+    const emptyCtx = { cwd: "/repo", llmConfig: native } as ToolContext;
+    initializeRunToolSurface(emptyCtx, [], catalog, {
+      taskText: "",
+      selection: { ...previous, deferredDefinitions: [] },
+    });
+    expect(emptyCtx.runToolSurface!.getSelection().discovered).toEqual(previous.discovered);
+    expect(emptyCtx.refreshRunTools!().some((tool) => tool.deferLoading)).toBe(false);
+  });
 });

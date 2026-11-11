@@ -316,12 +316,23 @@ test("real Engine and SDK append three native discoveries, preserve frozen catal
     step(name);
   }
   responses.push([]);
-  const outcome = await first.run("Perform the local checks", { sessionId, behaviorMode });
+  const outcome = await first.run("Perform the local checks", {
+    sessionId,
+    behaviorMode,
+    onStream: () => {},
+  });
 
   expect(outcome.reason).toBe("completed");
   expect(responses).toHaveLength(0);
   expect(requests).toHaveLength(9);
   assertPrefix(requests);
+  expect(requests[0].system[0].text).toContain(
+    "Call tools loaded through native references by their exact names.",
+  );
+  expect(requests[0].system[0].text).not.toContain("ToolSearch, Warmup, CallTool, Alpha");
+  expect(requests[0].tools.find((tool: any) => tool.name === "ToolSearch").description).toContain(
+    "native references directly",
+  );
   expect(executed).toEqual(["Warmup", "Alpha", "Beta", "Gamma"]);
   expect(result("undiscovered").is_error).toBe(true);
   for (const name of ["Alpha", "Beta", "Gamma"]) {
@@ -367,6 +378,19 @@ test("real Engine and SDK append three native discoveries, preserve frozen catal
       .readSessionState(sessionId)
       ?.toolSelection?.deferredDefinitions?.map((tool) => tool.name),
   ).toEqual(["Alpha", "Beta", "Gamma"]);
+  const planOffset = requests.length;
+  step("Alpha", "plan-rejected");
+  responses.push([]);
+  expect(
+    (await restarted.run("Plan only", { sessionId, behaviorMode, planMode: true })).reason,
+  ).toBe("completed");
+  assertPrefix(requests.slice(planOffset), baseline);
+  expect(result("plan-rejected").is_error).toBe(true);
+  expect(result("select-Alpha").content).toContainEqual({
+    type: "tool_reference",
+    tool_name: "Alpha",
+  });
+  expect(executed.filter((name) => name === "Alpha")).toHaveLength(1);
   await restarted.dispose();
   const chat = engine(root, "v3", true);
   responses.push([]);
