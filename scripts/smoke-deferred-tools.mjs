@@ -232,13 +232,27 @@ try {
         if (step === 3) return [call("DeferredAction", { selector: "SCHEMA_SENTINEL" })];
         if (step === 4) {
           assert.deepEqual(counters, { executions: 1, approvals: 1, hooks: 1, executionStarts: 1 });
-          assert.ok(
+          assert.deepEqual(
+            f.streamEvents
+              .filter(
+                (event) => event.type === "tool_use_start" && event.toolCall?.id === "fixture-3-0",
+              )
+              .map((event) => event.toolCall),
+            [
+              {
+                id: "fixture-3-0",
+                toolName: "DeferredAction",
+                args: { selector: "SCHEMA_SENTINEL" },
+              },
+            ],
+            "stream exposes one resolved identity with target args and no wire metadata",
+          );
+          assert.equal(
             f.streamEvents.some(
-              (event) =>
-                event.type === "tool_use_start" &&
-                event.toolCall?.toolName === "DeferredAction" &&
-                event.toolCall?.wireToolName === "CallTool",
+              (event) => event.type === "tool_use_args_delta" && event.toolCallId === "fixture-3-0",
             ),
+            false,
+            "wrapper args are never exposed as target args deltas",
           );
           return [{ name: "DeferredAction", args: { selector: "SCHEMA_SENTINEL" } }];
         }
