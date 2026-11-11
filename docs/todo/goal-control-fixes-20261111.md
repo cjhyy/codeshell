@@ -2,7 +2,16 @@
 
 Status: the reviewed implementation is now prepared for protected PR delivery. Independent CC's second incremental **code review PASS, no Critical / Important** covered the frozen local delivery `e58b5cb5b4bcd2104a6b2e15bdb73ad4916dd21b`; CC did not run tests. The historical local-only reports below remain tied to their original commits.
 
-## Protected delivery candidate (2026-11-11)
+## Latest-main refresh during PR CI (2026-11-11)
+
+- PR [#350](https://github.com/cjhyy/codeshell/pull/350) first candidate `e296780cc2646f6dc53c35d35e16b5ed63c9ec42` received **14/14 required checks SUCCESS** in real `pull_request` / `.github/workflows/ci.yml` [run 43000586450](https://github.com/cjhyy/codeshell/actions/runs/43000586450), attempt 1, with no failures or reruns. Its long Desktop UI job completed normally.
+- During that run, main advanced via PR #349 to **`935f3fe9b72634b1f0a59f50da3c5d7a898e2b60`**. A normal conflict-free merge produced **`65c5949adabaa7f4e839819f2b02120d2a553913`**. Its Pet brief/heartbeat/defer changes do not overlap the Goal-owned paths. No Goal implementation or regression test was altered.
+- Independent read-only incremental review **PASS**: Pet system rules use their dedicated scheduler; brief/heartbeat use a separate tool-free text client, while notification/outbox/defer do not enter ordinary ChatSession user runs or implicitly resume Goal.
+- Refreshed candidate validation **PASS**: package-release (10 tarballs / 55 typed / 53 runtime entries) completed first; then all-workspace typecheck, Desktop build, lint (0 errors / 90 existing warnings), Engine bypass and shard coverage/budgets. Goal/background/producer/settings and new Pet Host integration checks: **152 pass / 0 fail / 0 skip across 15 files** in two explicit ≤8-file guarded invocations. [Exact commands and footers](goal-controls-evidence-20261111/delivery-refresh-validation.txt).
+- Main's own PR #349 updated membership of its existing Pet CI process to cover its new tests. This merge inherits that upstream workflow unchanged; **the task has no CI diff relative to current main**, no budget increase, new skips or synthetic repartitioning. New eligible PR checks are required for the refreshed candidate; the previous head's green results are not substituted.
+- All original local failures, two deferred L items and physical Goal E2E limits below remain unchanged. Raw refresh logs are under `artifacts/goal-controls-delivery/main-refresh-935f3fe9b/`. Historical follow-up logs have also been copied and SHA-256 verified outside the worktree at `/private/tmp/codeshell-goal-delivery-evidence-e296780cc/` for eventual safe cleanup.
+
+## First protected delivery candidate (2026-11-11)
 
 - Fetched latest `origin/main` `57fc7413f929926a6994bec128b730a3e86b3de3` and normally merged it into the task branch, without conflicts, producing **`2ce6488a9991b002c832af8dc0a09b4651be4cb8`**. No production/test behavior was changed during integration. The four overlapping files merged mechanically; independent read-only combined review found no blocking interaction with main's tool-preparation/Goal behavior.
 - Combined validation: package-release **PASS** (10 tarballs, 55 typed / 53 runtime entries), then all-workspace typecheck, root build, Desktop build, lint (**0 errors / 90 existing warnings**), Engine bypass and test-shard coverage/budgets **PASS**. All commands exited 0; dist readers began only after package-release completed.

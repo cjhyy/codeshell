@@ -1,5 +1,7 @@
 # Goal follow-up controlled evidence
 
+[delivery-refresh-validation.txt](delivery-refresh-validation.txt) records the later merge of main `935f3fe9b` into `65c5949ad`, the passing package/typecheck/Desktop/lint/guard checks and 152 additional combination tests. The previous candidate `e296780cc` received all 14 required real PR CI checks in run 43000586450, attempt 1; those checks are not substituted for the refreshed candidate.
+
 [delivery-validation.txt](delivery-validation.txt) records the later protected-delivery candidate after merging latest main `57fc7413f` into `2ce6488a9`: package/typecheck/build/lint/guard checks all pass, 578 targeted tests across 37 actual files pass, and five Chromium Goal checks pass. It preserves the corrected validator-path invocation and does not replace the historical full-run failure below. Eligible PR CI and merged-SHA verification are recorded at delivery.
 
 These are small printable excerpts from actual commands, not synthetic output. Raw logs are ignored in `artifacts/goal-controls-followup/` in the same worktree. They are not needed to read the preserved command, failure and footer evidence here. The Goal-specific cold-start fixture is not physical Electron/production-worker E2E. The current user app was untouched and no paid provider was invoked. Existing unit suites may exercise their own worker processes.
