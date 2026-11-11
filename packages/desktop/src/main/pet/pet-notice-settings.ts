@@ -5,13 +5,19 @@ import { errorText, type NoticeRouterSettings } from "./pet-notice-types.js";
 import { DEFAULT_PRESENCE_IDLE_SEC } from "./pet-presence.js";
 
 /** Notification preferences read from `settings.pet.notifications` (all optional). */
-export interface PetNotificationSettings extends Required<NoticeRouterSettings> {
+export interface PetNotificationSettings
+  extends
+    Required<NoticeRouterSettings>,
+    Required<Pick<PetNotificationSettingsView, "briefs" | "heartbeat">> {
   presenceIdleSec: number;
   /** Where a desktop-started delegation's result goes when no rule names a channel. */
   delegatedFromDesktop: "auto" | "desktop";
 }
 
 export const DEFAULT_QUIET_HOURS = { start: "23:00", end: "08:30" } as const;
+/** Owner decision (2026-11-11): briefs and the heartbeat are off until switched on. */
+export const DEFAULT_BRIEF_TIMES = { morning: "09:00", evening: "18:30" } as const;
+export const DEFAULT_ACTIVE_HOURS = { start: "09:00", end: "22:00" } as const;
 const DEFAULT_MERGE_WINDOW_SEC = 600;
 const SETTINGS_TTL_MS = 5_000;
 
@@ -51,15 +57,34 @@ export function petNotificationSettingsView(userSettings: unknown): PetNotificat
     mergeWindowSec: stored.mergeWindowSec ?? DEFAULT_MERGE_WINDOW_SEC,
     presenceIdleSec: stored.presenceIdleSec ?? DEFAULT_PRESENCE_IDLE_SEC,
     delegatedFromDesktop: stored.delegatedFromDesktop ?? "auto",
+    briefs: {
+      morning: {
+        enabled: stored.briefs?.morning?.enabled === true,
+        time: stored.briefs?.morning?.time ?? DEFAULT_BRIEF_TIMES.morning,
+      },
+      evening: {
+        enabled: stored.briefs?.evening?.enabled === true,
+        time: stored.briefs?.evening?.time ?? DEFAULT_BRIEF_TIMES.evening,
+      },
+    },
+    heartbeat: {
+      enabled: stored.heartbeat?.enabled === true,
+      activeHours: { ...(stored.heartbeat?.activeHours ?? DEFAULT_ACTIVE_HOURS) },
+    },
+    digestSlots: [...new Set(stored.digestSlots ?? [])].sort(),
   };
 }
 
 /** `settings.pet.notifications` with every field bounded; anything malformed falls back. */
 export function parsePetNotificationSettings(userSettings: unknown): PetNotificationSettings {
-  const { quietHours, ...rest } = petNotificationSettingsView(userSettings);
+  const { quietHours, briefs, heartbeat, digestSlots, ...rest } =
+    petNotificationSettingsView(userSettings);
   return {
     quietHours: quietHours.enabled ? { start: quietHours.start, end: quietHours.end } : null,
     ...rest,
+    briefs: briefs!,
+    heartbeat: heartbeat!,
+    digestSlots: digestSlots ?? [],
   };
 }
 

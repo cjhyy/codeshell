@@ -194,6 +194,8 @@ export interface NoticeSubmission {
    * saying what the owner can answer.
    */
   actions?: NoticeActionsInput;
+  /** A notice the owner put off before (a deferred one going out again): kept on its record. */
+  deferCount?: number;
 }
 
 /** A notice's open item as its ledger record has it (see `PetNoticeRouter.actionRecord`). */
@@ -212,6 +214,8 @@ export interface NoticeRouterSettings {
   maxP0PerHour?: number;
   /** A P1 for a Session that got an IM within this window is held for the digest. */
   mergeWindowSec?: number;
+  /** Local "HH:MM" times the digest may go out at (sorted); empty: whenever sending is allowed. */
+  digestSlots?: readonly string[];
 }
 
 /** `enqueued`: written to the gateway outbox, whose delivery result settles the record later. */
@@ -507,6 +511,7 @@ export function normalizeSettings(
     maxPerHour: value?.maxPerHour ?? DEFAULT_MAX_PER_HOUR,
     maxP0PerHour: value?.maxP0PerHour ?? DEFAULT_MAX_P0_PER_HOUR,
     mergeWindowSec: value?.mergeWindowSec ?? DEFAULT_MERGE_WINDOW_SEC,
+    digestSlots: value?.digestSlots ?? [],
   };
 }
 

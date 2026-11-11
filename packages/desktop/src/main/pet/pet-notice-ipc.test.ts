@@ -389,8 +389,45 @@ describe("notices state and system rule", () => {
         mergeWindowSec: 600,
         presenceIdleSec: 120,
         delegatedFromDesktop: "desktop",
+        briefs: {
+          morning: { enabled: false, time: "09:00" },
+          evening: { enabled: false, time: "18:30" },
+        },
+        heartbeat: { enabled: false, activeHours: { start: "09:00", end: "22:00" } },
+        digestSlots: [],
       },
     });
+  });
+
+  test("get-state carries the briefs' and heartbeat's state today (no new channel)", async () => {
+    const { wiring } = fixture();
+    const status = {
+      briefs: { morning: { lastSentDay: "2026-11-11" }, evening: {} },
+      heartbeat: {
+        judgedToday: 8,
+        saidToday: 2,
+        judgeCap: 8,
+        sayCap: 4,
+        atJudgeCap: true,
+        atSayCap: false,
+      },
+    };
+    const controls = createPetNoticeControls({
+      notices: wiring,
+      ownerChannels: () => [],
+      goals: { readActiveGoal: () => undefined },
+      proactive: () => status,
+    });
+    expect((await controls.getState()).proactive).toEqual(status);
+    const broken = createPetNoticeControls({
+      notices: wiring,
+      ownerChannels: () => [],
+      goals: { readActiveGoal: () => undefined },
+      proactive: () => {
+        throw new Error("not ready");
+      },
+    });
+    expect(await broken.getState()).not.toHaveProperty("proactive");
   });
 
   test("set-system-rule toggles and tunes the every-Session rule", async () => {
