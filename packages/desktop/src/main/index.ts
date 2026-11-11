@@ -4433,6 +4433,7 @@ ipcMain.handle("agent:subscribe", async (_e, sessionId: string, sinceSeq?: numbe
     }
   );
 });
+let closeActivityHistory: (() => Promise<void>) | undefined;
 registerDesktopOutputHistoryHost({
   ipcMain,
   windows: () => [...mainWindows],
@@ -4442,6 +4443,9 @@ registerDesktopOutputHistoryHost({
   bridge: () => bridge,
   external: () => externalRuntime.service,
   mobile: mobileOrchestrator,
+  registerCleanup: (cleanup) => {
+    closeActivityHistory = cleanup;
+  },
 });
 const sessionCatalogStore = new SessionCatalogStore();
 const sessionCatalogIpc = registerSessionCatalogIpc(
@@ -4605,6 +4609,7 @@ registerDesktopShutdown(app, {
     petWidgetSurface?.dispose();
     mimiBubble?.surface.dispose();
     await Promise.allSettled([
+      closeActivityHistory?.(),
       mimiPresenceShutdown,
       imGatewayService.dispose(),
       mobileRemoteController.dispose(),

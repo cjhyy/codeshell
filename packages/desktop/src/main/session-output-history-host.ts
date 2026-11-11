@@ -99,6 +99,7 @@ export function registerDesktopOutputHistoryHost(deps: {
   bridge: () => AgentBridge | null;
   external: () => ExternalRuntimeService | null;
   mobile: MobileRecoveryHost;
+  registerCleanup?: (cleanup: () => Promise<void>) => void;
 }): SessionOutputHistoryRecovery {
   const desktop = createDesktopOutputRecoveryAuthorizer(deps);
   const service = new SessionOutputHistoryRecovery({
@@ -114,7 +115,8 @@ export function registerDesktopOutputHistoryHost(deps: {
     },
   });
   deps.mobile.setOutputHistoryRecoveryService(service);
-  registerActivityHistoryIpc(deps.ipcMain, deps.historyWindows);
+  const history = registerActivityHistoryIpc(deps.ipcMain, deps.historyWindows);
+  deps.registerCleanup?.(() => history.dispose());
   registerSessionOutputHistoryIpc(deps.ipcMain, deps.windows, service);
   return service;
 }
