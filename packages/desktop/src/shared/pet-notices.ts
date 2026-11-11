@@ -66,18 +66,128 @@ export interface PetNoticesState {
   settings: PetNotificationSettingsView;
   /** Present once main's proactive rules are running. */
   proactive?: PetProactiveStatus;
+  /**
+   * Every trigger that can fire (design §4): the owner's and Mimi's Session
+   * rules, follow-ups, and Mimi's own system rules, plus the most recently
+   * ended ones. Absent from builds before the rule list.
+   */
+  rules?: PetNoticeRuleSummary[];
 }
+
+/** What kind of trigger a rule is, as the rule list groups it. */
+export type PetNoticeRuleKind =
+  | "session"
+  | "all-sessions"
+  | "schedule"
+  | "system-brief"
+  | "system-heartbeat";
+
+/**
+ * Who set the rule up (structured, from the rule's `createdBy`; never read
+ * from prose): the owner in a Session (bell / "tell me when done"), Mimi's
+ * delegation, an IM chat watching the Session, an owner-asked follow-up, or
+ * Mimi's own system rule.
+ */
+export type PetNoticeRuleSource = "owner" | "delegation" | "watch" | "follow-up" | "system";
+
+export type PetNoticeRuleState = "active" | "paused" | "spent" | "completed" | "cancelled";
+
+export type PetNoticeRuleAction = "pause" | "resume" | "cancel";
+
+/** Where a rule's notice goes. Never carries a raw conversation or sender id. */
+export type PetNoticeRuleTarget =
+  /** Desktop only. */
+  | { kind: "desktop" }
+  /** At the computer: desktop; away: the IM predicted by `label` (absent: desktop only). */
+  | { kind: "auto"; label?: string; ready?: PetNoticeChannelReadiness }
+  /** An IM channel the owner named. */
+  | { kind: "channel"; label: string; ready?: PetNoticeChannelReadiness }
+  /** Back to the IM conversation that asked (a chat watching, an IM delegation). */
+  | { kind: "chat"; label: string; direct: boolean };
+
+export interface PetNoticeRuleSchedule {
+  /** One-shot instant (epoch ms). */
+  at?: number;
+  /** Recurring 5-field cron (shown as a tooltip only). */
+  cron?: string;
+  /** Mimi's words for a recurring schedule ("工作日 09:00"): untrusted display text. */
+  label?: string;
+  timezone: string;
+  /** When it fires next (epoch ms); absent when paused, ended or already fired. */
+  nextAt?: number;
+}
+
+/** One row of the rule list. Display data only; main decides what each action does. */
+export interface PetNoticeRuleSummary {
+  id: string;
+  /** Optimistic-concurrency token for `updateNoticeRule` (0: never stored). */
+  version: number;
+  kind: PetNoticeRuleKind;
+  state: PetNoticeRuleState;
+  source: PetNoticeRuleSource;
+  /** The watched Session (Session rules), or the one a follow-up continues. */
+  sessionId?: string;
+  sessionTitle?: string;
+  /** Follow-up: the title Mimi wrote for it (untrusted display text). */
+  title?: string;
+  /** Follow-up: only remind, or continue the Session first. */
+  followUp?: "remind" | "continue";
+  brief?: "morning" | "evening";
+  /** Brief: its local "HH:MM", every day. */
+  dailyAt?: string;
+  events?: PetNoticeEvent[];
+  scope?: "turn" | "goal";
+  schedule?: PetNoticeRuleSchedule;
+  /** Heartbeat: the local window it looks in. */
+  activeHours?: { start: string; end: string };
+  target: PetNoticeRuleTarget;
+  lastFiredAt?: number;
+  lastOutcome?: "notified" | "launched" | "failed" | "unknown";
+  /** What the owner may do with it now. */
+  actions: PetNoticeRuleAction[];
+  updatedAt: number;
+}
+
+export interface PetNoticeRuleUpdate {
+  ruleId: string;
+  expectedVersion: number;
+  action: PetNoticeRuleAction;
+}
+
+export type PetNoticeRuleUpdateResult =
+  | { ok: true; rule?: PetNoticeRuleSummary }
+  | {
+      ok: false;
+      /**
+       * `version_conflict`: changed meanwhile (the list refreshes);
+       * `not_found`: gone; `not_allowed`: this action does not apply to it now
+       * (an ended rule, a second active rule for the same Session and target).
+       */
+      reason: "version_conflict" | "not_found" | "not_allowed";
+      rule?: PetNoticeRuleSummary;
+    };
+
+/** At most this many recently ended rules are listed (newest first). */
+export const PET_NOTICE_ENDED_RULES_LIMIT = 20;
+/** At most this many digest slots (`pet.notifications.digestSlots`). */
+export const PET_NOTIFICATION_DIGEST_SLOTS_MAX = 6;
 
 /**
  * The bell of one work Session. `available: false` means main does not watch
  * this Session (Mimi's own, an external runtime, unknown): the bell is hidden.
  * `origin` says whose rule the bell shows: the owner's own ("user") can be
- * switched off; Mimi's delegation rule alone ("delegation") is read-only.
+ * switched off; Mimi's delegation rule alone ("delegation") or an IM chat
+ * watching it alone ("watch") is read-only.
  */
 export interface PetSessionBellState {
   available: boolean;
   on: boolean;
-  origin?: "user" | "delegation";
+  origin?: "user" | "delegation" | "watch";
+  /**
+   * Who set up this Session's active rules, owner first: the bell's tooltip
+   * says each, so a chat's watch never reads as the owner's own.
+   */
+  sources?: Array<"owner" | "delegation" | "watch">;
   /** A delegation rule from Mimi also watches this Session (it stays after the bell is off). */
   delegated: boolean;
   ruleId?: string;

@@ -2674,6 +2674,12 @@ async function createWindow(): Promise<BrowserWindow> {
         ownerChannels: () => imGatewayService.ownerChannels(),
         goals: externalGoalSessions,
         proactive: () => petProactive.status(),
+        writeNotificationSettings: async (notifications) => {
+          await writeSettings("user", { pet: { notifications } });
+          notices.settingsChanged();
+        },
+        cancelFollowUp: (followUpId, expectedRevision) =>
+          followUpHost({ action: "cancel", followUpId, expectedRevision }),
       }),
       workInbox: petWorkInbox,
       // Read-only topic-segment view for the Mimi chat UI. `segments` carries

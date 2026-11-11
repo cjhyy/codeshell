@@ -128,6 +128,7 @@ describe("Session bell", () => {
       available: true,
       on: true,
       origin: "user",
+      sources: ["owner"],
       delegated: false,
       ruleId: expect.any(String),
       channel: "auto",
@@ -261,6 +262,7 @@ describe("Session bell", () => {
       available: true,
       on: true,
       origin: "delegation",
+      sources: ["delegation"],
       delegated: true,
       ruleId: delegation.id,
       channel: "auto",
@@ -285,6 +287,36 @@ describe("Session bell", () => {
     // Off again with only the delegation rule left changes nothing.
     await controls.setSessionBell(SID, false);
     expect(wiring.ruleStore.get(delegation.id)?.state).toBe("active");
+  });
+
+  test("an IM chat's watch shows as that chat's, read-only; off leaves it to the rule list", async () => {
+    const { controls, wiring } = fixture();
+    const watch = await wiring.ruleStore.upsertSessionRule({
+      sessionId: SID,
+      createdBy: "watch-session",
+      events: ["done", "failed", "blocked"],
+      scope: "turn",
+      channel: "lark",
+      attention: "always",
+      target: {
+        kind: "route",
+        route: { kind: "im-gateway", channel: "lark", target: "group-1", senderId: "u" },
+      },
+      // Stored as the owner's ask (a delegation never rewrites it), yet not the bell's.
+      origin: "user",
+      armedAt: NOW,
+    });
+    expect(await controls.sessionBell(SID)).toMatchObject({
+      on: true,
+      origin: "watch",
+      sources: ["watch"],
+      ruleId: watch.id,
+    });
+    const both = await controls.setSessionBell(SID, true);
+    expect(both).toMatchObject({ on: true, origin: "user", sources: ["owner", "watch"] });
+    const off = await controls.setSessionBell(SID, false);
+    expect(off).toMatchObject({ on: true, origin: "watch", sources: ["watch"] });
+    expect(wiring.ruleStore.get(watch.id)?.state).toBe("active");
   });
 
   test("the bell on a delegated Session takes Mimi's rule over, so off switches it off", async () => {
@@ -396,6 +428,13 @@ describe("notices state and system rule", () => {
         heartbeat: { enabled: false, activeHours: { start: "09:00", end: "22:00" } },
         digestSlots: [],
       },
+      // Mimi's own rules are listed even before they are first switched on.
+      rules: [
+        expect.objectContaining({ id: "all-sessions", kind: "all-sessions", version: 0 }),
+        expect.objectContaining({ id: "system-brief-morning", state: "paused", version: 0 }),
+        expect.objectContaining({ id: "system-brief-evening", state: "paused", version: 0 }),
+        expect.objectContaining({ id: "system-heartbeat", state: "paused", version: 0 }),
+      ],
     });
   });
 
@@ -501,7 +540,7 @@ describe("pet:notices IPC", () => {
       "pet:notices:get-state",
       "pet:notices:session-bell",
       "pet:notices:set-session-bell",
-      "pet:notices:set-system-rule",
+      "pet:notices:update-rule",
     ]);
     expect(await ipc.call("pet:notices:session-bell", SID)).toEqual({
       available: true,
@@ -512,12 +551,27 @@ describe("pet:notices IPC", () => {
       await ipc.call("pet:notices:set-session-bell", { sessionId: SID, on: true }),
     ).toMatchObject({ on: true });
     expect(ipc.sent).toEqual([{ channel: PET_NOTICES_CHANGED_CHANNEL, payload: null }]);
-    expect(await ipc.call("pet:notices:set-system-rule", { state: "active" })).toMatchObject({
+    expect(await ipc.call("pet:notices:update-rule", { state: "active" })).toMatchObject({
       state: "active",
     });
     expect(await ipc.call("pet:notices:get-state")).toMatchObject({
       systemRule: { state: "active" },
     });
+    // The same channel carries a listed rule's action, with its version.
+    expect(
+      await ipc.call("pet:notices:update-rule", {
+        ruleId: "all-sessions",
+        expectedVersion: 1,
+        action: "pause",
+      }),
+    ).toMatchObject({ ok: true, rule: { id: "all-sessions", state: "paused", version: 2 } });
+    expect(
+      await ipc.call("pet:notices:update-rule", {
+        ruleId: "all-sessions",
+        expectedVersion: 1,
+        action: "resume",
+      }),
+    ).toMatchObject({ ok: false, reason: "version_conflict", rule: { version: 2 } });
     ipc.dispose();
     expect(ipc.handlers.size).toBe(0);
   });
@@ -532,10 +586,15 @@ describe("pet:notices IPC", () => {
     expect(() =>
       ipc.call("pet:notices:set-session-bell", { sessionId: SID, on: true, scope: "goal" }),
     ).toThrow();
-    expect(() => ipc.call("pet:notices:set-system-rule", {})).toThrow();
-    expect(() => ipc.call("pet:notices:set-system-rule", { state: "spent" })).toThrow();
-    expect(() => ipc.call("pet:notices:set-system-rule", { events: ["done", "done"] })).toThrow();
-    expect(() => ipc.call("pet:notices:set-system-rule", { origin: "user" })).toThrow();
+    expect(() => ipc.call("pet:notices:update-rule", {})).toThrow();
+    expect(() => ipc.call("pet:notices:update-rule", { state: "spent" })).toThrow();
+    expect(() => ipc.call("pet:notices:update-rule", { events: ["done", "done"] })).toThrow();
+    expect(() => ipc.call("pet:notices:update-rule", { origin: "user" })).toThrow();
+    const update = { ruleId: "all-sessions", expectedVersion: 0, action: "pause" };
+    expect(() => ipc.call("pet:notices:update-rule", { ...update, action: "delete" })).toThrow();
+    expect(() => ipc.call("pet:notices:update-rule", { ...update, expectedVersion: -1 })).toThrow();
+    expect(() => ipc.call("pet:notices:update-rule", { ...update, ruleId: "../x" })).toThrow();
+    expect(() => ipc.call("pet:notices:update-rule", { ...update, state: "active" })).toThrow();
     ipc.dispose();
   });
 });
