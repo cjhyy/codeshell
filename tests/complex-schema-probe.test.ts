@@ -16,6 +16,7 @@ const {
   parseOptions,
   runStudy,
   scoreResponse,
+  summarize,
   surfaceFor,
   withoutMarkers,
 } = await import("../docs/todo/prompt-cache-probes-20261111/complex-schema-probe-20261112.ts");
@@ -76,9 +77,13 @@ function callResponse(mode: Mode, sample: any, args = structuredClone(sample.exp
     ],
   };
 }
+// Deliberately synthetic counts: model prefix matching, not a real tokenizer.
+function staticPrefixTokens(body: any): number {
+  return Math.ceil(JSON.stringify([body.tools, body.system]).length / 4);
+}
 function fixture(transform = (_index: number, response: any, _body: any) => response) {
   const requests: any[] = [];
-  const modesSeen = new Set<string>();
+  const cachedPrefixes = new Map<string, { messages: string[]; tokens: number }[]>();
   let credentialReads = 0;
   return {
     requests,
@@ -122,9 +127,24 @@ function fixture(transform = (_index: number, response: any, _body: any) => resp
       } else if (instruction === "Do not call any tool. Reply DONE only.")
         answer = { stop_reason: "end_turn", content: [{ type: "text", text: "DONE" }] };
       else throw new Error("Unexpected fixture instruction: " + instruction);
-      const cold =
-        !modesSeen.has(mode) || body.tools[0].description.startsWith("Cold-control prefix ");
-      modesSeen.add(mode);
+      const staticPrefix = JSON.stringify([body.tools, body.system]);
+      const staticTokens = staticPrefixTokens(body);
+      const messages = (withoutMarkers(body.messages) as any[]).map((message) =>
+        JSON.stringify(message),
+      );
+      const cacheableTokens =
+        staticTokens +
+        messages.reduce((total, message) => total + Math.ceil(message.length / 4), 0);
+      const cached = cachedPrefixes.get(staticPrefix) ?? [];
+      let read = cached.length ? staticTokens : 0;
+      for (const prefix of cached)
+        if (
+          prefix.messages.length <= messages.length &&
+          prefix.messages.every((message, position) => messages[position] === message)
+        )
+          read = Math.max(read, prefix.tokens);
+      cached.push({ messages, tokens: cacheableTokens });
+      cachedPrefixes.set(staticPrefix, cached);
       const response = transform(
         index,
         {
@@ -135,8 +155,8 @@ function fixture(transform = (_index: number, response: any, _body: any) => resp
           ...answer,
           usage: {
             input_tokens: 20,
-            cache_read_input_tokens: cold ? 0 : 5000,
-            cache_creation_input_tokens: cold ? 5000 : 0,
+            cache_read_input_tokens: read,
+            cache_creation_input_tokens: cacheableTokens - read,
             output_tokens: 100,
             cost: 0.001,
           },
@@ -228,7 +248,25 @@ test("all 70 injected requests retain 48 matched accuracy trials and production 
       warmFullPrefix: true,
       negativeControlCold: true,
       restoredWarm: true,
+      historyPrefixCovered: mode === "eager" ? null : true,
+      exactRepeatsWarm: true,
     });
+    const appends = report.summary.cache[mode].checks.filter((check: any) =>
+      check.kind.startsWith("cache-append-"),
+    );
+    expect(appends).toHaveLength(mode === "eager" ? 0 : 3);
+    for (const check of appends) {
+      const index = report.records.findIndex((record: any) => record.stage === check.stage);
+      const previous =
+        check.kind === "cache-append-discover"
+          ? report.records.find((record: any) => record.mode === mode && record.kind === "accuracy")
+          : report.records[index - 1];
+      expect(report.records[index].previousInputTokens).toBe(previous.usage.totalInput);
+      expect(check.previousInputTokens).toBe(previous.usage.totalInput);
+      expect(check.priorPrefixCovered).toBe(true);
+      expect(check.cacheRead).toBeGreaterThanOrEqual(previous.usage.totalInput - 32);
+      expect(check.cacheRead).toBeGreaterThan(staticPrefixTokens(transport.requests[index]));
+    }
     const rows = report.records.filter((record: any) => record.mode === mode);
     for (const sample of complexSchemaCases) {
       const pair = rows.filter(
@@ -342,6 +380,102 @@ test("all 70 injected requests retain 48 matched accuracy trials and production 
   expect(
     await readFile(join(options.outputDir, "01-eager-accuracy-response.json"), "utf8"),
   ).not.toContain(KEY);
+}, 30_000);
+
+test.each([968, 967])("history coverage enforces the exact 32-token allowance: read %i", (read) => {
+  const records = ["discover", "call", "receipt"].map((stage) => ({
+    mode: "native",
+    kind: `cache-append-${stage}`,
+    stage,
+    previousInputTokens: 1000,
+    usage: {
+      input: 20,
+      cacheRead: read,
+      cacheWrite: 1100 - 20 - read,
+      totalInput: 1100,
+      output: 10,
+    },
+  }));
+  const cache = summarize({ records }).cache;
+  expect(cache.native.historyPrefixCovered).toBe(read === 968);
+  expect(cache.native.checks.every((check: any) => check.priorPrefixCovered)).toBe(read === 968);
+  expect(cache.eager.historyPrefixCovered).toBeNull();
+  expect(summarize({ records: records.slice(0, 2) }).cache.native.historyPrefixCovered).toBe(false);
+});
+
+test("one missed exact repeat fails cache acceptance even when the last repeat and resume hit", async () => {
+  const injected = fixture((index, response) => {
+    if (index === 1) {
+      response.usage.cache_creation_input_tokens += response.usage.cache_read_input_tokens;
+      response.usage.cache_read_input_tokens = 0;
+    }
+    return response;
+  });
+  const report = await runStudy(await liveOptions(), injected);
+  expect(report.status).toBe("completed");
+  expect(report.records[1]).toMatchObject({ mode: "eager", kind: "accuracy", repetition: 1 });
+  expect(report.acceptance).toEqual({ allPrimaryCallsCorrect: true, cacheControlsPass: false });
+  const eager = report.summary.cache.eager;
+  expect(eager).toMatchObject({
+    exactRepeatsWarm: false,
+    warmFullPrefix: true,
+    negativeControlCold: true,
+    restoredWarm: true,
+  });
+  expect(eager.exactRepeatReads).toHaveLength(8);
+  expect(eager.exactRepeatReads[0].hitFraction).toBe(0);
+  expect(eager.exactRepeatReads.slice(1).every((row: any) => row.hitFraction >= 0.95)).toBe(true);
+  for (const mode of ["native", "call-tool"])
+    expect(report.summary.cache[mode]).toMatchObject({
+      exactRepeatsWarm: true,
+      historyPrefixCovered: true,
+    });
+}, 30_000);
+
+test("static-prefix hits cannot pass appended-history coverage despite passing repeat controls", async () => {
+  const weakened = new Set<string>();
+  const injected = fixture((_index, response, body) => {
+    const results = body.messages
+      .flatMap((message: any) => (Array.isArray(message.content) ? message.content : []))
+      .filter((part: any) => part.type === "tool_result");
+    const serialized = JSON.stringify(body);
+    if (
+      results.length >= 2 &&
+      !body.tools[0].description.startsWith("Cold-control prefix ") &&
+      !weakened.has(serialized)
+    ) {
+      weakened.add(serialized);
+      const cacheable =
+        response.usage.cache_read_input_tokens + response.usage.cache_creation_input_tokens;
+      response.usage.cache_read_input_tokens = staticPrefixTokens(body);
+      response.usage.cache_creation_input_tokens = cacheable - staticPrefixTokens(body);
+    }
+    return response;
+  });
+  const report = await runStudy(await liveOptions(), injected);
+  expect(report.status).toBe("completed");
+  expect(report.records).toHaveLength(70);
+  expect(weakened.size).toBe(6);
+  expect(report.acceptance).toEqual({ allPrimaryCallsCorrect: true, cacheControlsPass: false });
+  expect(report.summary.cache.eager.historyPrefixCovered).toBeNull();
+  for (const mode of ["native", "call-tool"]) {
+    expect(report.summary.cache[mode]).toMatchObject({
+      warmFullPrefix: true,
+      negativeControlCold: true,
+      restoredWarm: true,
+      historyPrefixCovered: false,
+      exactRepeatsWarm: true,
+    });
+    const checks = report.summary.cache[mode].checks.filter((check: any) =>
+      check.kind.startsWith("cache-append-"),
+    );
+    expect(checks).toHaveLength(3);
+    for (const check of checks) {
+      expect(check.cacheRead).toBeGreaterThan(0);
+      expect(check.cacheRead).toBeLessThan(check.previousInputTokens - 32);
+      expect(check.priorPrefixCovered).toBe(false);
+    }
+  }
 }, 30_000);
 
 test.each(["wrong semantic value", "max_tokens"])(
