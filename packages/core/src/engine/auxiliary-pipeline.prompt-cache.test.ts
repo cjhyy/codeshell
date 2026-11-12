@@ -41,7 +41,7 @@ function turn(index: number) {
   };
 }
 
-function setup(cacheStrategy = "openai-hybrid") {
+function setup(cacheStrategy = "openai-hybrid", extracted: unknown[] = []) {
   const calls: CreateMessageOptions[] = [];
   const client = {
     getPromptCacheConfigIdentity: () => ({ cacheStrategy }),
@@ -51,7 +51,9 @@ function setup(cacheStrategy = "openai-hybrid") {
       return {
         text: system.includes("session summariser")
           ? JSON.stringify({ summary: "s", keyTopics: [], decisions: [] })
-          : "[]",
+          : system.includes("write decision")
+            ? JSON.stringify({ action: "NOOP" })
+            : JSON.stringify(extracted),
         toolCalls: [],
         stopReason: "stop",
         usage,
@@ -160,5 +162,35 @@ describe("memory pipeline prompt cache", () => {
     }
     expect(text(fixture.calls[2]!).at(-1)).toContain("added between runs");
     expect(text(fixture.calls[2]!).slice(0, -1).join("")).not.toContain("added between runs");
+  });
+
+  test("the write decision sends the catalogue as stable messages under its own scope", async () => {
+    const dream = new MemoryManager({ projectDir: root, scope: "dream" });
+    for (let index = 0; index < 24; index++) {
+      dream.save({
+        type: "project",
+        name: `stored topic ${index}`,
+        description: `stored description ${index} ${"d".repeat(80)}`,
+        content: `stored body ${index}`,
+        origin: "auto",
+      });
+    }
+    const fixture = setup("openai-hybrid", [
+      { type: "project", scope: "project", name: "fresh", description: "d", content: "c" },
+    ]);
+    await fixture.run();
+
+    expect(fixture.calls).toHaveLength(3);
+    const decision = fixture.calls[1]!;
+    expect(decision.systemPrompt).toContain("write decision");
+    expect(decision.promptCache).toEqual({
+      scopeId: auxPromptCacheScope(sessionId, "memory-write-decision"),
+      stablePrefixMessageCount: decision.messages.length - 1,
+    });
+    expect(decision.messages.length).toBeGreaterThan(2);
+    const stable = text(decision).slice(0, -1).join("");
+    expect(stable).toContain("stored topic 0");
+    expect(stable).not.toContain("fresh");
+    expect(text(decision).at(-1)).toContain("Candidate:");
   });
 });
