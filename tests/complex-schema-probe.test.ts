@@ -234,7 +234,12 @@ test("all 70 injected requests retain 48 matched accuracy trials and production 
   expect(transport.credentialReads).toBe(1);
   expect(transport.requests).toHaveLength(PLANNED_REQUESTS);
   expect(report.records).toHaveLength(70);
-  expect(report.acceptance).toEqual({ allPrimaryCallsCorrect: true, cacheControlsPass: true });
+  expect(report.acceptance).toEqual({
+    allPrimaryCallsCorrect: true,
+    auxiliaryTargetCallsCorrect: true,
+    cacheControlsPass: true,
+  });
+  expect(report.summary.auxiliaryAccuracy).toEqual({ attempts: 2, correct: 2 });
   expect(report.records.filter((record: any) => record.kind === "accuracy")).toHaveLength(48);
   for (const mode of MODES) {
     expect(report.summary.accuracy[mode]).toEqual({
@@ -250,6 +255,7 @@ test("all 70 injected requests retain 48 matched accuracy trials and production 
       restoredWarm: true,
       historyPrefixCovered: mode === "eager" ? null : true,
       exactRepeatsWarm: true,
+      historyCacheExpired: false,
     });
     const appends = report.summary.cache[mode].checks.filter((check: any) =>
       check.kind.startsWith("cache-append-"),
@@ -262,7 +268,13 @@ test("all 70 injected requests retain 48 matched accuracy trials and production 
           ? report.records.find((record: any) => record.mode === mode && record.kind === "accuracy")
           : report.records[index - 1];
       expect(report.records[index].previousInputTokens).toBe(previous.usage.totalInput);
+      expect(report.records[index].previousRequestCompletedAt).toBe(previous.completedAt);
       expect(check.previousInputTokens).toBe(previous.usage.totalInput);
+      expect(check.previousRequestAgeMs).toBe(
+        Date.parse(report.records[index].startedAt) - Date.parse(previous.completedAt),
+      );
+      expect(check.previousRequestAgeMs).toBeGreaterThanOrEqual(0);
+      expect(check.priorPrefixWithinTtl).toBe(true);
       expect(check.priorPrefixCovered).toBe(true);
       expect(check.cacheRead).toBeGreaterThanOrEqual(previous.usage.totalInput - 32);
       expect(check.cacheRead).toBeGreaterThan(staticPrefixTokens(transport.requests[index]));
@@ -388,6 +400,8 @@ test.each([968, 967])("history coverage enforces the exact 32-token allowance: r
     kind: `cache-append-${stage}`,
     stage,
     previousInputTokens: 1000,
+    previousRequestCompletedAt: "2026-11-12T01:00:00.000Z",
+    startedAt: "2026-11-12T01:00:01.000Z",
     usage: {
       input: 20,
       cacheRead: read,
@@ -403,6 +417,61 @@ test.each([968, 967])("history coverage enforces the exact 32-token allowance: r
   expect(summarize({ records: records.slice(0, 2) }).cache.native.historyPrefixCovered).toBe(false);
 });
 
+test.each([299_999, 300_000, 300_001])(
+  "history cache expiry is explicit at the five-minute boundary: %i ms",
+  (ageMs) => {
+    const completedAt = Date.parse("2026-11-12T01:00:00.000Z");
+    const records = ["discover", "call", "receipt"].map((stage, index) => ({
+      mode: "native",
+      kind: `cache-append-${stage}`,
+      stage,
+      previousInputTokens: 1000,
+      previousRequestCompletedAt: new Date(completedAt).toISOString(),
+      startedAt: new Date(completedAt + (index === 0 ? ageMs : 1000)).toISOString(),
+      usage: { input: 20, cacheRead: 1000, cacheWrite: 80, totalInput: 1100, output: 10 },
+    }));
+    const cache = summarize({ records }).cache.native;
+    expect(cache.checks[0].previousRequestAgeMs).toBe(ageMs);
+    expect(cache.checks[0].priorPrefixWithinTtl).toBe(ageMs < 300_000);
+    expect(cache.checks.every((check: any) => check.priorPrefixCovered)).toBe(true);
+    expect(cache.historyPrefixCovered).toBe(ageMs < 300_000);
+    expect(cache.historyCacheExpired).toBe(ageMs >= 300_000);
+  },
+);
+
+test("an incorrect auxiliary target call is counted separately from all 48 primary samples", async () => {
+  let changed = 0;
+  const injected = fixture((_index, response, body) => {
+    const resultCount = body.messages
+      .flatMap((message: any) => (Array.isArray(message.content) ? message.content : []))
+      .filter((part: any) => part.type === "tool_result").length;
+    if (modeFor(body) === "native" && resultCount === 3 && response.stop_reason === "tool_use") {
+      response.content[0].input.batchId = "B-999";
+      changed++;
+    }
+    return response;
+  });
+  const report = await runStudy(await liveOptions(), injected);
+  expect(report.status).toBe("completed");
+  expect(changed).toBe(1);
+  expect(report.summary.auxiliaryAccuracy).toEqual({ attempts: 2, correct: 1 });
+  for (const mode of MODES)
+    expect(report.summary.accuracy[mode]).toMatchObject({ attempts: 16, correct: 16 });
+  const primary = report.records.filter((record: any) => record.kind === "accuracy");
+  expect(primary).toHaveLength(48);
+  expect(primary.every((record: any) => record.score.correct)).toBe(true);
+  expect(
+    report.records.find(
+      (record: any) => record.mode === "native" && record.kind === "cache-append-call",
+    ).score,
+  ).toMatchObject({ schemaValid: true, semanticValid: false, correct: false });
+  expect(report.acceptance).toEqual({
+    allPrimaryCallsCorrect: true,
+    auxiliaryTargetCallsCorrect: false,
+    cacheControlsPass: true,
+  });
+}, 30_000);
+
 test("one missed exact repeat fails cache acceptance even when the last repeat and resume hit", async () => {
   const injected = fixture((index, response) => {
     if (index === 1) {
@@ -414,7 +483,11 @@ test("one missed exact repeat fails cache acceptance even when the last repeat a
   const report = await runStudy(await liveOptions(), injected);
   expect(report.status).toBe("completed");
   expect(report.records[1]).toMatchObject({ mode: "eager", kind: "accuracy", repetition: 1 });
-  expect(report.acceptance).toEqual({ allPrimaryCallsCorrect: true, cacheControlsPass: false });
+  expect(report.acceptance).toEqual({
+    allPrimaryCallsCorrect: true,
+    auxiliaryTargetCallsCorrect: true,
+    cacheControlsPass: false,
+  });
   const eager = report.summary.cache.eager;
   expect(eager).toMatchObject({
     exactRepeatsWarm: false,
@@ -456,7 +529,11 @@ test("static-prefix hits cannot pass appended-history coverage despite passing r
   expect(report.status).toBe("completed");
   expect(report.records).toHaveLength(70);
   expect(weakened.size).toBe(6);
-  expect(report.acceptance).toEqual({ allPrimaryCallsCorrect: true, cacheControlsPass: false });
+  expect(report.acceptance).toEqual({
+    allPrimaryCallsCorrect: true,
+    auxiliaryTargetCallsCorrect: true,
+    cacheControlsPass: false,
+  });
   expect(report.summary.cache.eager.historyPrefixCovered).toBeNull();
   for (const mode of ["native", "call-tool"]) {
     expect(report.summary.cache[mode]).toMatchObject({
@@ -497,7 +574,11 @@ test.each(["wrong semantic value", "max_tokens"])(
       truncated: failure === "max_tokens" ? 1 : 0,
     });
     expect(report.summary.accuracy.eager.schemaValid).toBe(failure === "max_tokens" ? 15 : 16);
-    expect(report.acceptance).toEqual({ allPrimaryCallsCorrect: false, cacheControlsPass: true });
+    expect(report.acceptance).toEqual({
+      allPrimaryCallsCorrect: false,
+      auxiliaryTargetCallsCorrect: true,
+      cacheControlsPass: true,
+    });
   },
   30_000,
 );
