@@ -293,6 +293,11 @@ export function summarize(report: any) {
           ...(typeof record.previousInputTokens === "number"
             ? {
                 previousInputTokens: record.previousInputTokens,
+                previousRequestAgeMs:
+                  Date.parse(record.startedAt) - Date.parse(record.previousRequestCompletedAt),
+                priorPrefixWithinTtl:
+                  Date.parse(record.startedAt) - Date.parse(record.previousRequestCompletedAt) <
+                  toolCacheIdleLimitMs(CONFIG),
                 // Permit a small uncached transport tail, never an entire historical turn.
                 priorPrefixCovered: record.usage.cacheRead >= record.previousInputTokens - 32,
               }
@@ -327,12 +332,21 @@ export function summarize(report: any) {
               : checks.filter((r: any) => r.kind.startsWith("cache-append-")).length === 3 &&
                 checks
                   .filter((r: any) => r.kind.startsWith("cache-append-"))
-                  .every((r: any) => r.priorPrefixCovered),
+                  .every((r: any) => r.priorPrefixWithinTtl && r.priorPrefixCovered),
+          historyCacheExpired: checks.some((r: any) => r.priorPrefixWithinTtl === false),
         },
       ];
     }),
   );
-  return { accuracy, cache };
+  const auxiliary = report.records.filter((record: any) => record.kind === "cache-append-call");
+  return {
+    accuracy,
+    auxiliaryAccuracy: {
+      attempts: auxiliary.length,
+      correct: auxiliary.filter((record: any) => record.score?.correct).length,
+    },
+    cache,
+  };
 }
 
 export function parseOptions(args: string[]) {
@@ -477,6 +491,7 @@ export async function runStudy(options: ReturnType<typeof parseOptions>, depende
     }
     await ledger.settle(reservation.id, response);
     record.elapsedMs = Date.now() - start;
+    record.completedAt = new Date().toISOString();
     record.usage = usageEvidence(response);
     record.response = response;
     dependencies.onProgress?.({
@@ -562,6 +577,7 @@ export async function runStudy(options: ReturnType<typeof parseOptions>, depende
       assertAppendOnly(previousBody, body);
       const discovered = await send(mode, "cache-append-discover", body, {
         previousInputTokens: first.record.usage.totalInput,
+        previousRequestCompletedAt: first.record.completedAt,
       });
       previousBody = body;
       history = await appendDiscovery(
@@ -576,6 +592,7 @@ export async function runStudy(options: ReturnType<typeof parseOptions>, depende
       assertAppendOnly(previousBody, body);
       const invoked = await send(mode, "cache-append-call", body, {
         previousInputTokens: discovered.record.usage.totalInput,
+        previousRequestCompletedAt: discovered.record.completedAt,
       });
       invoked.record.score = scoreResponse(mode, nextSample, invoked.response);
       previousBody = body;
@@ -584,6 +601,7 @@ export async function runStudy(options: ReturnType<typeof parseOptions>, depende
       assertAppendOnly(previousBody, body);
       const completed = await send(mode, "cache-append-receipt", body, {
         previousInputTokens: invoked.record.usage.totalInput,
+        previousRequestCompletedAt: invoked.record.completedAt,
       });
       if (
         completed.response.stop_reason !== "end_turn" ||
@@ -644,6 +662,9 @@ export async function runStudy(options: ReturnType<typeof parseOptions>, depende
           report.summary.accuracy[mode].attempts === 16 &&
           report.summary.accuracy[mode].correct === 16,
       ),
+      auxiliaryTargetCallsCorrect:
+        report.summary.auxiliaryAccuracy.attempts === 2 &&
+        report.summary.auxiliaryAccuracy.correct === 2,
       cacheControlsPass: MODES.every((mode) => {
         const cache = report.summary.cache[mode];
         return (
