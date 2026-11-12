@@ -9,7 +9,7 @@ updates the sidebar account, and returns focus after completion. Services withou
 this capability retain their existing native login controls.
 The account entry is a compact avatar icon beside Settings in the sidebar footer;
 its hover text and accessible description retain the account name and state.
-The service address defaults to `https://115.159.45.55` and remains editable for
+The service address defaults to `https://codeshell.site` and remains editable for
 self-hosted deployments. Prefilling it does not initiate an account connection;
 the selected server must expose the account API before sign-in is available.
 Opening the account form checks the selected service's public sign-in capabilities.

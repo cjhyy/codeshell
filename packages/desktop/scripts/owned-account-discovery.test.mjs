@@ -8,7 +8,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { build } from "esbuild";
 import { withOwnedAccountDiscovery } from "./owned-account-discovery.cjs";
 
-const origin = "https://115.159.45.55";
+const origin = "https://codeshell.site";
 const url = `${origin}/api/v1/account/status`;
 const options = () => ({ method: "GET", headers: { Origin: origin, Accept: "application/json" } });
 function fixture() {
@@ -65,8 +65,9 @@ test("all other targets, request methods and credentials still invoke the origin
     [url + "?next=/", options()],
     [url + "#fragment", options()],
     [url.replace("https:", "http:"), options()],
-    [url.replace("115.159.45.55", "127.0.0.1"), options()],
-    [url.replace("115.159.45.55", "115.159.45.55.example.invalid"), options()],
+    [url.replace("codeshell.site", "127.0.0.1"), options()],
+    [url.replace("codeshell.site", "115.159.45.55"), options()],
+    [url.replace("codeshell.site", "codeshell.site.example.invalid"), options()],
     [url.replace("/status", "/login"), options()],
     [url.replace("/status", "/overview"), options()],
     [url.replace("https://", "https://user:pass@"), options()],
@@ -76,7 +77,7 @@ test("all other targets, request methods and credentials still invoke the origin
     [url, { ...options(), path: "/other" }],
     [url, { ...options(), host: "untrusted.invalid" }],
     [url, { ...options(), ca: "other" }],
-    [{ hostname: "115.159.45.55", path: "/api/v1/account/status" }, options()],
+    [{ hostname: "codeshell.site", path: "/api/v1/account/status" }, options()],
     ...["Authorization", "authorization", "Cookie", "Proxy-Authorization"].map((name) => [
       url,
       { ...options(), headers: { ...options().headers, [name]: "private" } },
