@@ -1,0 +1,204 @@
+
+== claude / M1-current(mask-old+move-block) / rep0
+  r1: {"prompt": 13730, "cached": 0, "write": 13728, "provider": "Claude Platform on AWS"}
+  r2: {"prompt": 16143, "cached": 13728, "write": 2413, "provider": "Claude Platform on AWS"}
+  r3: {"prompt": 16265, "cached": 6010, "write": 10253, "provider": "Claude Platform on AWS"}
+  -> r3 reused 6010 of r2's 16143 (37%)
+
+== claude / M1-current(mask-old+move-block) / rep1
+  r1: {"prompt": 13799, "cached": 0, "write": 13797, "provider": "Claude Platform on AWS"}
+  r2: {"prompt": 16201, "cached": 13797, "write": 2402, "provider": "Claude Platform on AWS"}
+  r3: {"prompt": 16304, "cached": 6041, "write": 10261, "provider": "Claude Platform on AWS"}
+  -> r3 reused 6041 of r2's 16201 (37%)
+
+== claude / M2-deferred(no-rewrite) / rep0
+  r1: {"prompt": 13777, "cached": 0, "write": 13775, "provider": "Claude Platform on AWS"}
+  r2: {"prompt": 16202, "cached": 13775, "write": 2425, "provider": "Claude Platform on AWS"}
+  r3: {"prompt": 18790, "cached": 16200, "write": 2588, "provider": "Claude Platform on AWS"}
+  -> r3 reused 16200 of r2's 16202 (100%)
+
+== claude / M2-deferred(no-rewrite) / rep1
+  r1: {"prompt": 13760, "cached": 0, "write": 13758, "provider": "Claude Platform on AWS"}
+  r2: {"prompt": 16191, "cached": 13758, "write": 2431, "provider": "Claude Platform on AWS"}
+  r3: {"prompt": 18797, "cached": 16189, "write": 2606, "provider": "Claude Platform on AWS"}
+  -> r3 reused 16189 of r2's 16191 (100%)
+
+== claude / M3-mask-old-only(block-stays) / rep0
+  r1: {"prompt": 13769, "cached": 0, "write": 13767, "provider": "Claude Platform on AWS"}
+  r2: {"prompt": 16180, "cached": 13767, "write": 2411, "provider": "Claude Platform on AWS"}
+  r3: {"prompt": 16285, "cached": 6010, "write": 10273, "provider": "Claude Platform on AWS"}
+  -> r3 reused 6010 of r2's 16180 (37%)
+
+== claude / M3-mask-old-only(block-stays) / rep1
+  r1: {"prompt": 13784, "cached": 0, "write": 13782, "provider": "Claude Platform on AWS"}
+  r2: {"prompt": 16198, "cached": 13782, "write": 2414, "provider": "Claude Platform on AWS"}
+  r3: {"prompt": 16300, "cached": 6021, "write": 10277, "provider": "Claude Platform on AWS"}
+  -> r3 reused 6021 of r2's 16198 (37%)
+
+== claude / M4-rewrite-after-run-start-marker / rep0
+  r1: {"prompt": 13778, "cached": 0, "write": 13776, "provider": "Claude Platform on AWS"}
+  r2: {"prompt": 16187, "cached": 13776, "write": 2409, "provider": "Claude Platform on AWS"}
+  r3: {"prompt": 16480, "cached": 11362, "write": 5116, "provider": "Claude Platform on AWS"}
+  -> r3 reused 11362 of r2's 16187 (70%)
+
+== claude / M4-rewrite-after-run-start-marker / rep1
+  r1: {"prompt": 13777, "cached": 0, "write": 13775, "provider": "Claude Platform on AWS"}
+  r2: {"prompt": 16183, "cached": 13775, "write": 2406, "provider": "Claude Platform on AWS"}
+  r3: {"prompt": 16481, "cached": 11372, "write": 5107, "provider": "Claude Platform on AWS"}
+  -> r3 reused 11372 of r2's 16183 (70%)
+
+== claude / X1-current(remove-old-block) / rep0
+  r1: {"prompt": 11151, "cached": 0, "write": 11149, "provider": "Claude Platform on AWS"}
+  r2: {"prompt": 13571, "cached": 11149, "write": 2420, "provider": "Claude Platform on AWS"}
+  r3: {"prompt": 13615, "cached": 6130, "write": 7483, "provider": "Claude Platform on AWS"}
+  -> r3 reused 6130 of r2's 13571 (45%)
+
+== claude / X1-current(remove-old-block) / rep1
+  r1: {"prompt": 11135, "cached": 0, "write": 11133, "provider": "Claude Platform on AWS"}
+  r2: {"prompt": 13531, "cached": 11133, "write": 2396, "provider": "Claude Platform on AWS"}
+  r3: {"prompt": 13575, "cached": 6121, "write": 7452, "provider": "Claude Platform on AWS"}
+  -> r3 reused 6121 of r2's 13531 (45%)
+
+== claude / X2-ledger(keep-block+delta) / rep0
+  r1: {"prompt": 11177, "cached": 0, "write": 11175, "provider": "Claude Platform on AWS"}
+  r2: {"prompt": 13581, "cached": 11175, "write": 2404, "provider": "Claude Platform on AWS"}
+  r3: {"prompt": 13647, "cached": 6047, "write": 7598, "provider": "Claude Platform on AWS"}
+  -> r3 reused 6047 of r2's 13581 (45%)
+
+== claude / X2-ledger(keep-block+delta) / rep1
+  r1: {"prompt": 11134, "cached": 0, "write": 11132, "provider": "Claude Platform on AWS"}
+  r2: {"prompt": 13539, "cached": 11132, "write": 2405, "provider": "Claude Platform on AWS"}
+  r3: {"prompt": 13605, "cached": 6017, "write": 7586, "provider": "Claude Platform on AWS"}
+  -> r3 reused 6017 of r2's 13539 (44%)
+
+== claude / X3-keep-block+full-resend / rep0
+  r1: {"prompt": 11155, "cached": 0, "write": 11153, "provider": "Claude Platform on AWS"}
+  r2: {"prompt": 13562, "cached": 11153, "write": 2407, "provider": "Claude Platform on AWS"}
+  r3: {"prompt": 16214, "cached": 6038, "write": 10174, "provider": "Claude Platform on AWS"}
+  -> r3 reused 6038 of r2's 13562 (45%)
+
+== claude / X3-keep-block+full-resend / rep1
+  r1: {"prompt": 11156, "cached": 0, "write": 11154, "provider": "Claude Platform on AWS"}
+  r2: {"prompt": 13553, "cached": 11154, "write": 2397, "provider": "Claude Platform on AWS"}
+  r3: {"prompt": 16213, "cached": 6047, "write": 10164, "provider": "Claude Platform on AWS"}
+  -> r3 reused 6047 of r2's 13553 (45%)
+
+== gpt / M1-current(mask-old+move-block) / rep0
+  r1: {"prompt": 8486, "cached": 0, "write": 8483, "provider": "OpenAI"}
+  r2: {"prompt": 10055, "cached": 8483, "write": 1569, "provider": "OpenAI"}
+  r3: {"prompt": 10108, "cached": 3629, "write": 6476, "provider": "OpenAI"}
+  -> r3 reused 3629 of r2's 10055 (36%)
+
+== gpt / M1-current(mask-old+move-block) / rep1
+  r1: {"prompt": 8491, "cached": 0, "write": 8488, "provider": "OpenAI"}
+  r2: {"prompt": 10054, "cached": 8488, "write": 1563, "provider": "OpenAI"}
+  r3: {"prompt": 10110, "cached": 3639, "write": 6468, "provider": "OpenAI"}
+  -> r3 reused 3639 of r2's 10054 (36%)
+
+== gpt / M1i-current(mask-old+move-block)/implicit-only / rep0
+  r1: {"prompt": 8470, "cached": 0, "write": 8467, "provider": "OpenAI"}
+  r2: {"prompt": 10031, "cached": 8467, "write": 1561, "provider": "OpenAI"}
+  r3: {"prompt": 10084, "cached": 3622, "write": 6459, "provider": "OpenAI"}
+  -> r3 reused 3622 of r2's 10031 (36%)
+
+== gpt / M1i-current(mask-old+move-block)/implicit-only / rep1
+  r1: {"prompt": 8487, "cached": 0, "write": 8484, "provider": "OpenAI"}
+  r2: {"prompt": 10047, "cached": 8484, "write": 1560, "provider": "OpenAI"}
+  r3: {"prompt": 10101, "cached": 3628, "write": 6470, "provider": "OpenAI"}
+  -> r3 reused 3628 of r2's 10047 (36%)
+
+== gpt / M2-deferred(no-rewrite) / rep0
+  r1: {"prompt": 8475, "cached": 0, "write": 8472, "provider": "OpenAI"}
+  r2: {"prompt": 10041, "cached": 8472, "write": 1566, "provider": "OpenAI"}
+  r3: {"prompt": 11667, "cached": 10038, "write": 1626, "provider": "OpenAI"}
+  -> r3 reused 10038 of r2's 10041 (100%)
+
+== gpt / M2-deferred(no-rewrite) / rep1
+  r1: {"prompt": 8473, "cached": 0, "write": 8470, "provider": "OpenAI"}
+  r2: {"prompt": 10042, "cached": 8470, "write": 1569, "provider": "OpenAI"}
+  r3: {"prompt": 11670, "cached": 10039, "write": 1628, "provider": "OpenAI"}
+  -> r3 reused 10039 of r2's 10042 (100%)
+
+== gpt / M3-mask-old-only(block-stays) / rep0
+  r1: {"prompt": 8479, "cached": 0, "write": 8476, "provider": "OpenAI"}
+  r2: {"prompt": 10044, "cached": 8476, "write": 1565, "provider": "OpenAI"}
+  r3: {"prompt": 10104, "cached": 3627, "write": 6474, "provider": "OpenAI"}
+  -> r3 reused 3627 of r2's 10044 (36%)
+
+== gpt / M3-mask-old-only(block-stays) / rep1
+  r1: {"prompt": 8484, "cached": 0, "write": 8481, "provider": "OpenAI"}
+  r2: {"prompt": 10057, "cached": 8481, "write": 1573, "provider": "OpenAI"}
+  r3: {"prompt": 10116, "cached": 3629, "write": 6484, "provider": "OpenAI"}
+  -> r3 reused 3629 of r2's 10057 (36%)
+
+== gpt / M3i-mask-old-only(block-stays)/implicit-only / rep0
+  r1: {"prompt": 8479, "cached": 0, "write": 8476, "provider": "OpenAI"}
+  r2: {"prompt": 10039, "cached": 8476, "write": 1560, "provider": "OpenAI"}
+  r3: {"prompt": 10097, "cached": 3628, "write": 6466, "provider": "OpenAI"}
+  -> r3 reused 3628 of r2's 10039 (36%)
+
+== gpt / M3i-mask-old-only(block-stays)/implicit-only / rep1
+  r1: {"prompt": 8478, "cached": 0, "write": 8475, "provider": "OpenAI"}
+  r2: {"prompt": 10048, "cached": 8475, "write": 1570, "provider": "OpenAI"}
+  r3: {"prompt": 10111, "cached": 3637, "write": 6471, "provider": "OpenAI"}
+  -> r3 reused 3637 of r2's 10048 (36%)
+
+== gpt / M4-rewrite-after-run-start-marker / rep0
+  r1: {"prompt": 8474, "cached": 0, "write": 8471, "provider": "OpenAI"}
+  r2: {"prompt": 10046, "cached": 8471, "write": 1572, "provider": "OpenAI"}
+  r3: {"prompt": 10162, "cached": 6902, "write": 3257, "provider": "OpenAI"}
+  -> r3 reused 6902 of r2's 10046 (69%)
+
+== gpt / M4-rewrite-after-run-start-marker / rep1
+  r1: {"prompt": 8475, "cached": 0, "write": 8472, "provider": "OpenAI"}
+  r2: {"prompt": 10043, "cached": 8472, "write": 1568, "provider": "OpenAI"}
+  r3: {"prompt": 10163, "cached": 6902, "write": 3258, "provider": "OpenAI"}
+  -> r3 reused 6902 of r2's 10043 (69%)
+
+== gpt / X1-current(remove-old-block) / rep0
+  r1: {"prompt": 6825, "cached": 0, "write": 6822, "provider": "OpenAI"}
+  r2: {"prompt": 8392, "cached": 6822, "write": 1567, "provider": "OpenAI"}
+  r3: {"prompt": 8428, "cached": 3641, "write": 4784, "provider": "OpenAI"}
+  -> r3 reused 3641 of r2's 8392 (43%)
+
+== gpt / X1-current(remove-old-block) / rep1
+  r1: {"prompt": 6822, "cached": 0, "write": 6819, "provider": "OpenAI"}
+  r2: {"prompt": 8378, "cached": 6819, "write": 1556, "provider": "OpenAI"}
+  r3: {"prompt": 8414, "cached": 3648, "write": 4763, "provider": "OpenAI"}
+  -> r3 reused 3648 of r2's 8378 (44%)
+
+== gpt / X1i-current(remove-old-block)/implicit-only / rep0
+  r1: {"prompt": 6812, "cached": 0, "write": 6809, "provider": "OpenAI"}
+  r2: {"prompt": 8387, "cached": 6809, "write": 1575, "provider": "OpenAI"}
+  r3: {"prompt": 8423, "cached": 3623, "write": 4797, "provider": "OpenAI"}
+  -> r3 reused 3623 of r2's 8387 (43%)
+
+== gpt / X1i-current(remove-old-block)/implicit-only / rep1
+  r1: {"prompt": 6834, "cached": 0, "write": 6831, "provider": "OpenAI"}
+  r2: {"prompt": 8394, "cached": 6831, "write": 1560, "provider": "OpenAI"}
+  r3: {"prompt": 8430, "cached": 3630, "write": 4797, "provider": "OpenAI"}
+  -> r3 reused 3630 of r2's 8394 (43%)
+
+== gpt / X2-ledger(keep-block+delta) / rep0
+  r1: {"prompt": 6835, "cached": 0, "write": 6832, "provider": "OpenAI"}
+  r2: {"prompt": 8400, "cached": 6832, "write": 1565, "provider": "OpenAI"}
+  r3: {"prompt": 8454, "cached": 8397, "write": 54, "provider": "OpenAI"}
+  -> r3 reused 8397 of r2's 8400 (100%)
+
+== gpt / X2-ledger(keep-block+delta) / rep1
+  r1: {"prompt": 6837, "cached": 0, "write": 6834, "provider": "OpenAI"}
+  r2: {"prompt": 8406, "cached": 6834, "write": 1569, "provider": "OpenAI"}
+  r3: {"prompt": 8460, "cached": 8403, "write": 54, "provider": "OpenAI"}
+  -> r3 reused 8403 of r2's 8406 (100%)
+
+== gpt / X3-keep-block+full-resend / rep0
+  r1: {"prompt": 6840, "cached": 0, "write": 6837, "provider": "OpenAI"}
+  r2: {"prompt": 8404, "cached": 6837, "write": 1564, "provider": "OpenAI"}
+  r3: {"prompt": 10056, "cached": 8401, "write": 1652, "provider": "OpenAI"}
+  -> r3 reused 8401 of r2's 8404 (100%)
+
+== gpt / X3-keep-block+full-resend / rep1
+  r1: {"prompt": 6820, "cached": 0, "write": 6817, "provider": "OpenAI"}
+  r2: {"prompt": 8388, "cached": 6817, "write": 1568, "provider": "OpenAI"}
+  r3: {"prompt": 10040, "cached": 8385, "write": 1652, "provider": "OpenAI"}
+  -> r3 reused 8385 of r2's 8388 (100%)
