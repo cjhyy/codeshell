@@ -9,6 +9,7 @@
 import type { ToolDefinition, Message } from "../types.js";
 import { SectionCache, type PromptSection } from "./section-cache.js";
 import { scanInstructions, combineInstructions, type ScanOptions } from "./instruction-scanner.js";
+import { dateChangeNotice, resolveSessionDates, type SessionDates } from "./session-date.js";
 import { MemoryManager } from "../session/memory.js";
 import { scanSkills } from "../skills/index.js";
 import {
@@ -121,6 +122,14 @@ export interface ComposerOptions {
    * See MemoryManager.buildInjectionIndex(currentProjectOnly).
    */
   memoryCurrentProjectOnly?: boolean;
+  /**
+   * When the session started (epoch ms, SessionState.startedAt). The head
+   * context message states this date for the session's whole life, so its
+   * bytes — and every cached prefix behind it — survive midnight.
+   */
+  sessionStartedAt?: number;
+  /** Clock for the date; injectable for tests. */
+  now?: () => Date;
   /** Isolated runs can omit repository/user instruction discovery entirely. */
   disableInstructions?: boolean;
   /** Isolated runs can omit persistent-memory context entirely. */
@@ -180,17 +189,31 @@ export class PromptComposer {
     // skills listing and other volatile capability context which have the identical problem.
     if (!instructions) return null;
 
-    // Local date, not UTC — toISOString() is UTC and would show the wrong
-    // "today" for users whose timezone has crossed midnight (review-2026-05-30).
-    const now = new Date();
-    const ymd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-    const currentDate = `Today's date is ${ymd}.`;
+    // The session's start date (local, not UTC), so this message — the head
+    // of every cached prefix — does not change at midnight. A later "today"
+    // is announced through the context ledger: see buildDateChangeNotice.
+    const currentDate = `Today's date is ${this.sessionDates().headDate}.`;
 
     let content = `<system-reminder>\n${currentDate}\n\n`;
     content += `${instructions}\n`;
     content += `</system-reminder>`;
 
     return { role: "user", content };
+  }
+
+  private sessionDates(): SessionDates {
+    return resolveSessionDates(this.options.sessionStartedAt, this.options.now?.() ?? new Date());
+  }
+
+  /**
+   * Text for the context ledger's "date" section: empty unless today's local
+   * date differs from the one frozen in the head message (and there is a head
+   * message stating one).
+   */
+  buildDateChangeNotice(): string {
+    if (this.options.disableInstructions === true || !this.getInstructions()) return "";
+    const { changedTo } = this.sessionDates();
+    return changedTo === undefined ? "" : dateChangeNotice(changedTo);
   }
 
   /** Build volatile context contributed by installed capability modules. */

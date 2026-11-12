@@ -42,6 +42,8 @@ export interface RunPromptComposerConfigInput {
   workspace: ComposerOptions["workspace"];
   /** Standing brief persisted on the Session (see SessionState.sessionBrief). */
   sessionBrief?: ComposerOptions["sessionBrief"];
+  /** SessionState.startedAt: the date the head context message states. */
+  sessionStartedAt?: ComposerOptions["sessionStartedAt"];
   model: ComposerOptions["model"];
   preset: ComposerOptions["preset"];
   customSystemPrompt: ComposerOptions["customSystemPrompt"];
@@ -130,6 +132,7 @@ export function buildPromptComposerConfig(args: RunPromptComposerConfigInput): C
     profileDeclaredSkills: workspaceProfile?.skills,
     skillListing,
     sessionBrief,
+    sessionStartedAt: args.sessionStartedAt,
     profileMemoryDir,
     instructionOptions: {
       compatFileNames: instructionCompatFileNames,
