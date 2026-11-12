@@ -81,6 +81,8 @@ async function mount(width, theme) {
   const calls = [];
   const state = {
     accountOffline: false,
+    confirmLeave: false,
+    dialogs: [],
     signedIn: false,
     failStart: true,
     projects: [],
@@ -171,6 +173,11 @@ async function mount(width, theme) {
       return json(session());
     }
     assert.equal(request.headers().authorization, undefined);
+    if (pathname === "/api/v1/account/web/logout") {
+      state.signedIn = false;
+      return json({ ok: true });
+    }
+    if (pathname === "/api/v1/cloud-browser/logout") return json({ ok: true });
     if (pathname === "/api/v1/account/web/overview") return json(session().overview);
     if (pathname === "/api/v1/account/web/cloud-tickets")
       return json({
@@ -180,7 +187,7 @@ async function mount(width, theme) {
         accountOrigin: origin,
         installationId,
       });
-    if (pathname === "/api/v1/cloud-browser/session")
+    if (["/api/v1/cloud-browser/session", "/api/v1/cloud-browser/status"].includes(pathname))
       return json({
         authenticated: true,
         mode: "cloud-account",
@@ -244,6 +251,11 @@ async function mount(width, theme) {
   const page = await context.newPage();
   page.setDefaultTimeout(8000);
   page.on("pageerror", (error) => errors.push(error.message));
+  page.on("dialog", async (dialog) => {
+    state.dialogs.push({ type: dialog.type(), message: dialog.message() });
+    if (state.confirmLeave) await dialog.accept();
+    else await dialog.dismiss();
+  });
   return { page, calls, state };
 }
 async function shot(page, name) {
@@ -299,6 +311,29 @@ try {
     await page.getByRole("heading", { name: "连接模型，开始对话" }).waitFor();
     await shot(page, `${prefix}-04-model`);
     await page.getByLabel("任务内容", { exact: true }).fill("帮我整理一个学习计划");
+    if (width < 760) await page.getByRole("button", { name: "展开侧栏", exact: true }).click();
+    await page.locator(".website-account-menu > summary:visible").click();
+    await page.getByRole("button", { name: "返回官网", exact: true }).click();
+    assert.equal(new URL(page.url()).pathname, "/app");
+    await page.getByRole("button", { name: "退出登录", exact: true }).click();
+    assert.equal(calls.filter((call) => call.path.endsWith("/logout")).length, 0);
+    assert.equal(
+      await page.getByLabel("任务内容", { exact: true }).inputValue(),
+      "帮我整理一个学习计划",
+    );
+    await page.getByRole("button", { name: "账号设置", exact: true }).click();
+    await page.getByRole("heading", { name: "账号资料", exact: true }).waitFor();
+    await page.locator(".website-account-menu > summary:visible").click();
+    await page.getByRole("button", { name: "退出登录", exact: true }).click();
+    assert.equal(calls.filter((call) => call.path.endsWith("/logout")).length, 0);
+    assert.equal(
+      state.dialogs.length,
+      3,
+      "Both visible and retained workbench drafts guard account exit",
+    );
+    await page.getByRole("button", { name: /返回工作台/ }).click();
+    if (width < 760)
+      await page.getByRole("button", { name: "收起侧栏", exact: true }).first().click();
     await page.getByRole("button", { name: "配置第一个模型" }).click();
     await page.getByRole("button", { name: "添加连接", exact: true }).click();
     await page.getByLabel("连接名称", { exact: true }).fill("owned-model");
@@ -353,6 +388,19 @@ try {
       1,
     );
     assert.equal(await page.evaluate(() => sessionStorage.length), 0);
+    await page.getByLabel("任务内容", { exact: true }).fill("只在确认后丢弃的草稿");
+    if (width < 760) await page.getByRole("button", { name: "展开侧栏", exact: true }).click();
+    await page.locator(".website-account-menu > summary:visible").click();
+    state.confirmLeave = true;
+    await page.getByRole("button", { name: "退出登录", exact: true }).click();
+    await page.getByRole("heading", { name: "继续你的工作", exact: true }).waitFor();
+    assert.equal(new URL(page.url()).pathname, "/login");
+    assert.equal(calls.filter((call) => call.path === "/api/v1/account/web/logout").length, 1);
+    assert.equal(calls.filter((call) => call.path === "/api/v1/cloud-browser/logout").length, 1);
+    assert.deepEqual(
+      state.dialogs.map((dialog) => dialog.type),
+      ["beforeunload", "confirm", "confirm", "confirm"],
+    );
   }
   assert.deepEqual(errors, []);
   assert.deepEqual(blocked, []);

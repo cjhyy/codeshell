@@ -34,6 +34,7 @@ import { parseAccountSession } from "./account-api.js";
 import { DesktopLoginPage, desktopLoginRequest } from "./DesktopLogin.js";
 import { WebsiteHome } from "./WebsiteHome.js";
 import { validProjectId } from "./api-context.js";
+import type { WorkbenchNavigation } from "./workbench-types.js";
 
 function WebsiteRedirect({ to }: { to: string }) {
   React.useEffect(() => {
@@ -213,6 +214,24 @@ function WebsiteAccountMenu({
   );
 }
 
+function WebsiteRuntimeAccountMenu({
+  navigation,
+  register,
+  go,
+  logout,
+}: {
+  navigation: WorkbenchNavigation;
+  register: (guard: WorkbenchNavigation["leaveWorkspace"] | null) => void;
+  go: (route: WebsiteRoute) => void;
+  logout: () => void;
+}) {
+  React.useLayoutEffect(() => {
+    register(navigation.leaveWorkspace);
+    return () => register(null);
+  }, [navigation.leaveWorkspace, register]);
+  return <WebsiteAccountMenu go={go} logout={() => navigation.leaveWorkspace(logout)} />;
+}
+
 function WebsiteShell({ capability }: { capability: WebsiteCloudCapability }) {
   const account = useAccountSession();
   const cloudFeature = useAccountFeature("cloud.projects");
@@ -226,6 +245,15 @@ function WebsiteShell({ capability }: { capability: WebsiteCloudCapability }) {
   const [loggingOut, setLoggingOut] = React.useState(false);
   const [attempt, setAttempt] = React.useState(0);
   const revision = React.useRef(0);
+  const workspaceLeaveGuard = React.useRef<WorkbenchNavigation["leaveWorkspace"] | null>(null);
+  const registerLeaveGuard = React.useCallback(
+    (guard: WorkbenchNavigation["leaveWorkspace"] | null) => {
+      workspaceLeaveGuard.current = guard;
+    },
+    [],
+  );
+  const leaveWorkspace = (action: () => void) =>
+    workspaceLeaveGuard.current ? workspaceLeaveGuard.current(action) : action();
   const identity = account.session?.authenticated
     ? `${account.session.account!.id}:${account.session.session!.id}`
     : null;
@@ -380,7 +408,7 @@ function WebsiteShell({ capability }: { capability: WebsiteCloudCapability }) {
     ) : (
       <WebsiteLogin />
     );
-  const menu = <WebsiteAccountMenu go={go} logout={logout} />;
+  const menu = <WebsiteAccountMenu go={go} logout={() => leaveWorkspace(logout)} />;
   const settings = route.kind !== "workbench";
   const administrator = account.session.account?.role === "admin";
   return (
@@ -415,10 +443,11 @@ function WebsiteShell({ capability }: { capability: WebsiteCloudCapability }) {
                   accountOrigin: target?.accountOrigin,
                 }}
                 renderAccountControl={(navigation) => (
-                  <WebsiteAccountMenu
+                  <WebsiteRuntimeAccountMenu
+                    navigation={navigation}
+                    register={registerLeaveGuard}
                     go={go}
-                    logout={() => navigation.guard(logout)}
-                    goHome={() => navigation.guard(() => window.location.assign("/"))}
+                    logout={logout}
                   />
                 )}
               />

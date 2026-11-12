@@ -404,6 +404,20 @@ export function Workbench({
         return;
       action();
     });
+  const leaveWorkspace = (action: () => void) => {
+    // This guard may be called from account settings while the workbench is
+    // retained but hidden. A native confirmation remains visible in that case.
+    if (
+      (navigationDirty ||
+        controller.hasUnsent ||
+        controller.uploadBusy ||
+        bindingPending ||
+        openedPanel) &&
+      !window.confirm("离开当前工作区会丢弃未保存的修改、草稿和附件，并关闭面板。确定继续？")
+    )
+      return;
+    action();
+  };
   const openConversation = (action: () => void, targetWorkspace?: string | null) =>
     guardWorkspaceNavigation(() => {
       setView("chat");
@@ -741,6 +755,7 @@ export function Workbench({
           {controller.renderSidebar?.({
             guard: guardWorkspaceNavigation,
             conversation: openConversation,
+            leaveWorkspace,
           })}
           <div className="rail-section-label history-label">
             <span>最近对话</span>
@@ -812,7 +827,11 @@ export function Workbench({
             </span>
           </div>
           {renderAccountControl ? (
-            renderAccountControl({ guard: requestNavigation, conversation: openConversation })
+            renderAccountControl({
+              guard: requestNavigation,
+              conversation: openConversation,
+              leaveWorkspace,
+            })
           ) : cloudAccount ? (
             <CloudAccountControls {...cloudAccount} />
           ) : null}

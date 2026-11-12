@@ -1,7 +1,7 @@
 import React from "react";
 import { useAccountSession } from "./AccountSessionProvider.js";
 import { WebsiteSetupSteps } from "./WebsiteSetupSteps.js";
-import { websiteAuthUrl } from "./website-routes.js";
+import { isPublicWebsiteOrigin, websiteAuthUrl } from "./website-routes.js";
 
 export function WebsiteLogin({
   registration = false,
@@ -15,6 +15,7 @@ export function WebsiteLogin({
   destination?: string;
 }) {
   const account = useAccountSession();
+  const officialWebsite = isPublicWebsiteOrigin(new URL(window.location.href));
   const [register, setRegister] = React.useState(registration || websiteAuth === "signup");
   const [username, setUsername] = React.useState("");
   const [displayName, setDisplayName] = React.useState("");
@@ -74,13 +75,19 @@ export function WebsiteLogin({
   return (
     <main className="website-login">
       <header className="website-brand">
-        <a href="/" aria-label="CodeShell 官网">
-          CodeShell
-        </a>{" "}
+        {officialWebsite ? (
+          <a href="/" aria-label="CodeShell 官网">
+            CodeShell
+          </a>
+        ) : (
+          "CodeShell"
+        )}{" "}
         <span>工作台</span>
-        <a className="website-home-link" href="/">
-          返回官网
-        </a>
+        {officialWebsite ? (
+          <a className="website-home-link" href="/">
+            返回官网
+          </a>
+        ) : null}
       </header>
       <div className="website-welcome">
         <section className="website-introduction">
@@ -127,7 +134,7 @@ export function WebsiteLogin({
                   ? "先创建账号，接下来为你的第一个想法建一个工作区。"
                   : "登录后继续上次的工作。首次使用？创建账号即可开始。"}
           </p>
-          {registration &&
+          {(registration || websiteAuth === "signup") &&
           account.ready &&
           !account.loginCapabilitiesLoading &&
           !account.loginCapabilitiesError &&
