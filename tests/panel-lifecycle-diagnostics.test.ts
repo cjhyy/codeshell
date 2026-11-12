@@ -14,7 +14,7 @@ const id = "design-studio";
 const secret = "private-password-cookie-grant-url-body-argv-never-print";
 const digest = (value) => createHash("sha256").update(value).digest("hex");
 
-test("catalog-follow, rollback and Design recovery failures retain their fixed diagnostic step", () => {
+test("catalog-follow, rollback and recovery failures retain their fixed diagnostic step", () => {
   for (const step of [
     "catalog-follow",
     "catalog-stale-grant",
@@ -30,6 +30,22 @@ test("catalog-follow, rollback and Design recovery failures retain their fixed d
     "design-save",
     "design-import-conflict",
     "design-import-copy",
+    "video-open-panel",
+    "video-ready",
+    "video-page-errors",
+    "video-edit",
+    "video-upgrade-backup",
+    "video-restore",
+    "video-restore-edit",
+    "video-status-probe",
+    "video-recording",
+    "video-media",
+    "video-final-document",
+    "video-restart-document",
+    "video-restart-tasks",
+    "video-restart-resources",
+    "video-restart-playback",
+    "video-restart-backup",
   ]) {
     const original = new Error(secret);
     const failure = panelLifecycleFailure(original, id, step);

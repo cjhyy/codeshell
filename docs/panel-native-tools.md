@@ -401,6 +401,13 @@ and detach with the Panel grant. Reconnect via `tasks.list/get`, then follow
 the process lifetime. Binding changes invalidate only the affected project's Web
 handlers; package replacement/removal still invalidates all affected projects.
 
+Video Studio's read-only status and voice probes do not create permanent Panel
+intent or recipe records. The cloud candidate checks the status task's successful
+FFmpeg receipt and a real editor render's request and output receipt through
+`tasks.get`; after project restart the same task IDs, inputs and results must
+remain available. Recorded, imported and rendered resources are separately
+checked against their exact bytes and scoped playback grants.
+
 Existing per-workspace `panel-web-tool-jobs` stores are not deleted or moved. On
 first access their unfinished records become interrupted and their records appear
 with `readOnly: true` and `historySource: "desktop-web-legacy"`. They cannot be
