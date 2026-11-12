@@ -32,6 +32,18 @@ export interface ContextSection {
   items?: ContextSectionItem[];
   header?: string;
   footer?: string;
+  /**
+   * "ids": the listing is a ranked/budgeted view whose row texts and visible
+   * rows vary between runs without anything being installed or removed. Such
+   * a section is compared by entry id only: an update lists added and removed
+   * ids, and a row whose id persists is never resent.
+   */
+  compare?: "ids";
+  /**
+   * With `compare: "ids"`: every id that exists, shown in `items` or not.
+   * Defaults to the ids of the listable items.
+   */
+  knownIds?: readonly string[];
 }
 
 /** The header/items/footer triple a list renderer returns. */
@@ -101,6 +113,13 @@ function listableItems(section: ContextSection): ContextSectionItem[] | undefine
   return entries;
 }
 
+/** Sorted id universe of an id-compared section, or undefined otherwise. */
+function comparedIds(section: ContextSection): string[] | undefined {
+  if (section.compare !== "ids") return undefined;
+  const ids = section.knownIds ?? listableItems(section)?.map((item) => item.id);
+  return ids === undefined ? undefined : [...new Set(ids)].sort();
+}
+
 function live(sections: readonly ContextSection[]): ContextSection[] {
   const seen = new Set<string>();
   return sections.filter((section) => {
@@ -116,6 +135,17 @@ export function ledgerStateForSections(sections: readonly ContextSection[]): Led
     version: 1,
     sections: Object.fromEntries(
       live(sections).map((section): [string, LedgerSectionState] => {
+        const ids = comparedIds(section);
+        if (ids !== undefined) {
+          // Identity only: the same ids are the same state whatever the text.
+          return [
+            section.key,
+            {
+              digest: digest(JSON.stringify(ids)),
+              items: Object.fromEntries(ids.map((id) => [id, ""])),
+            },
+          ];
+        }
         const entries = listableItems(section);
         return [
           section.key,
@@ -136,8 +166,28 @@ function fullSection(section: ContextSection): string {
   return `<context-section key="${section.key}">\n${section.text}\n</context-section>`;
 }
 
+function updateBlock(section: ContextSection, lines: string[]): string {
+  return `<context-update section="${section.key}">\n${lines.join("\n")}\n</context-update>`;
+}
+
+/** Added/removed ids of an id-compared section; undefined to resend it whole. */
+function idUpdate(section: ContextSection, known: LedgerSectionState): string | undefined {
+  const ids = comparedIds(section);
+  if (ids === undefined || known.items === undefined) return undefined;
+  const shown = new Map(listableItems(section)?.map((item) => [item.id, item.text]));
+  const lines = ids
+    .filter((id) => own(known.items!, id) === undefined)
+    .map((id) => `+ ${shown.get(id) ?? id}`);
+  const current = new Set(ids);
+  for (const id of Object.keys(known.items)) {
+    if (!current.has(id)) lines.push(`- ${id}`);
+  }
+  return lines.length === 0 ? undefined : updateBlock(section, lines);
+}
+
 /** Item-level block, or undefined when the whole section should be resent. */
 function itemUpdate(section: ContextSection, known: LedgerSectionState): string | undefined {
+  if (section.compare === "ids") return idUpdate(section, known);
   const entries = listableItems(section);
   if (entries === undefined || known.items === undefined) return undefined;
   if (known.frame !== frameDigest(section)) return undefined;
@@ -153,7 +203,7 @@ function itemUpdate(section: ContextSection, known: LedgerSectionState): string 
   }
   // No entry changed (only order or layout did), or most did: resend it whole.
   if (lines.length === 0 || lines.length * 2 > entries.length) return undefined;
-  return `<context-update section="${section.key}">\n${lines.join("\n")}\n</context-update>`;
+  return updateBlock(section, lines);
 }
 
 export function planLedgerEmission(

@@ -428,6 +428,36 @@ describe("pending 审批门 三态 + originProject", () => {
 });
 
 describe("buildInjectionIndex (two-layer, global + project)", () => {
+  it("orders entries by pinned, then name, whatever order they were saved in", () => {
+    const render = (names: string[]): string[] =>
+      withBase((base) => {
+        const mm = new MemoryManager({ baseDir: base });
+        for (const name of names) {
+          mm.save({
+            name,
+            description: `about ${name}`,
+            type: "user",
+            content: "x",
+            ...(name === "pin" ? { pinned: true } : {}),
+          });
+        }
+        const dream = new MemoryManager({ baseDir: base, scope: "dream" });
+        dream.save({ name: "c-dream", description: "about c-dream", type: "user", content: "x" });
+        return MemoryManager.buildInjectionIndexParts({ baseDir: base })!
+          .items.filter((item) => item.structural !== true)
+          .map((item) => item.text);
+      });
+    const first = render(["zeta", "pin", "alpha", "delta"]);
+    expect(first.map((line) => line.slice(line.lastIndexOf("] ") + 2))).toEqual([
+      "pin: about pin",
+      "alpha: about alpha",
+      "c-dream: about c-dream",
+      "delta: about delta",
+      "zeta: about zeta",
+    ]);
+    expect(render(["delta", "alpha", "zeta", "pin"])).toEqual(first);
+  });
+
   it("merges global and project memories and shows NO body content", () => {
     withBase((base) => {
       const globalMm = new MemoryManager({ baseDir: base });

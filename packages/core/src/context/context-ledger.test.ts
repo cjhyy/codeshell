@@ -214,6 +214,81 @@ describe("planLedgerEmission", () => {
   });
 });
 
+describe('compare: "ids" sections', () => {
+  const ranked = (
+    visible: [name: string, description: string][],
+    installed: string[] = visible.map(([name]) => name),
+  ): ContextSection => ({
+    ...contextListSection("skills", {
+      header: "# Available Skills\n\n",
+      items: [
+        { id: "## g", text: `## g (${visible.length})`, structural: true },
+        ...visible.map(([name, description]) => ({ id: name, text: `- ${name}: ${description}` })),
+      ],
+      footer: installed.length > visible.length ? "\n\nmore omitted." : "\n\nUse Skill.",
+    }),
+    compare: "ids",
+    knownIds: installed,
+  });
+  const first = ranked([
+    ["a", "long description of a"],
+    ["b", "about b"],
+    ["c", "about c"],
+  ]);
+
+  test("ranking, description, footer and visibility differences emit nothing", () => {
+    const state = ledgerStateForSections([first, goal]);
+    const reranked = ranked(
+      [
+        ["c", "about c, now with the long text"],
+        ["a", ""],
+      ],
+      ["c", "a", "b"],
+    );
+    expect(planLedgerEmission([reranked, goal], state)).toEqual({ kind: "none", state });
+  });
+
+  test("an installed skill is the only line of the update", () => {
+    const text = update(
+      [
+        ranked([
+          ["a", "rewritten text for a"],
+          ["b", "about b"],
+          ["c", "about c"],
+          ["d", "brand new"],
+        ]),
+        goal,
+      ],
+      ledgerStateForSections([first, goal]),
+    );
+    expect(text).toBe(
+      `<system-reminder>\n${LEDGER_UPDATE_PREAMBLE}\n\n` +
+        `<context-update section="skills">\n+ - d: brand new\n</context-update>\n</system-reminder>`,
+    );
+  });
+
+  test("a removed skill is listed by id; an added but unlisted one by its id alone", () => {
+    const text = update(
+      [ranked([["a", "long description of a"]], ["a", "c", "hidden"]), goal],
+      ledgerStateForSections([first, goal]),
+    );
+    expect(text).toContain('<context-update section="skills">\n+ hidden\n- b\n</context-update>');
+  });
+
+  test("the state survives a round trip and stays stable across plans", () => {
+    const state = parseLedgerState(serializeLedgerState(ledgerStateForSections([first])));
+    expect(state).toEqual(ledgerStateForSections([first]));
+    const next = planLedgerEmission([ranked([["b", "x"]], ["a", "b", "c"])], state);
+    expect(next.kind).toBe("none");
+    expect(next.state).toEqual(state!);
+  });
+
+  test("a section first seen in this mode is sent whole", () => {
+    const text = update([first, goal], ledgerStateForSections([goal]));
+    expect(text).toContain(`<context-section key="skills">\n${first.text}\n</context-section>`);
+  });
+});
+
 describe("parseLedgerState", () => {
   test("round-trips a state from JSON text or a parsed value", () => {
     const state = ledgerStateForSections(base());

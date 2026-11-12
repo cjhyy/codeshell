@@ -286,7 +286,17 @@ export class PromptComposer {
     const memoryIndex = this.getMemoryIndex();
 
     const sections: ContextSection[] = [
-      ...(skillsListing ? [contextListSection("skills", skillsListing)] : []),
+      // The listing is ranked and budgeted per run; only installs and removals
+      // are context changes worth telling the model about.
+      ...(skillsListing
+        ? [
+            {
+              ...contextListSection("skills", skillsListing),
+              compare: "ids" as const,
+              knownIds: skills.map((skill) => skill.name),
+            },
+          ]
+        : []),
       { key: "skill-gap", text: declaredSkillGap },
       { key: "capability", text: capabilityContext },
       ...(memoryIndex ? [contextListSection("memory", memoryIndex)] : []),
