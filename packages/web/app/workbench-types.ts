@@ -10,6 +10,8 @@ export interface WorkbenchNavigation {
   /** Supply the destination when an action replaces the current workspace. */
   guard: (action: () => void, targetWorkspace?: string | null) => void;
   conversation: (action: () => void, targetWorkspace?: string | null) => void;
+  /** Leaving the account/document also discards conversation drafts. */
+  leaveWorkspace: (action: () => void) => void;
 }
 
 export interface HistoryDetail {

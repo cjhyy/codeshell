@@ -109,7 +109,7 @@ async function mount({ signedIn = true, expiresAt = Date.now() + 600000 } = {}) 
       });
     if (url.pathname === "/api/v1/account/status")
       return json({ registrationAllowed: true, githubEnabled: false, features: {} });
-    if (url.pathname === "/api/v1/account/login") {
+    if (["/api/v1/account/login", "/api/v1/account/register"].includes(url.pathname)) {
       assert.equal(request.postDataJSON().username, "desktop-user");
       return json({
         accessToken: "A".repeat(43),
@@ -187,6 +187,20 @@ try {
   results.push(
     "one explicit approval completes browser confirmation without claiming native persistence",
   );
+
+  fixture = await mount({ signedIn: false });
+  await fixture.page.goto(`${origin}/desktop-login?request=${ticket}`);
+  await fixture.page.getByRole("button", { name: "没有账号？创建账号" }).click();
+  await fixture.page.getByLabel("昵称", { exact: true }).fill("桌面测试账号");
+  await fixture.page.getByLabel("用户名", { exact: true }).fill("desktop-user");
+  await fixture.page.getByLabel("密码", { exact: true }).fill("test-only-password");
+  await fixture.page.getByLabel("确认密码", { exact: true }).fill("test-only-password");
+  await fixture.page.getByRole("button", { name: "创建账号", exact: true }).click();
+  await fixture.page.getByRole("heading", { name: "确认登录这台电脑" }).waitFor();
+  assert.equal(new URL(fixture.page.url()).searchParams.get("request"), ticket);
+  assert.equal(fixture.calls.filter((call) => call.path.endsWith("/register")).length, 1);
+  assert.equal(fixture.calls.filter((call) => call.path.endsWith("/approve")).length, 0);
+  results.push("registration returns to the same computer request and never auto-approves it");
 
   fixture = await mount();
   await fixture.page.goto(`${origin}/desktop-login?request=${ticket}`);

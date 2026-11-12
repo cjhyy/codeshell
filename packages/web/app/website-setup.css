@@ -1,0 +1,89 @@
+.website-setup-steps {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 0;
+  margin: 28px 0;
+  list-style: none;
+}
+.website-setup-steps li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.website-setup-steps li > span:first-child {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.website-setup-steps strong {
+  font-weight: 450;
+}
+.website-setup-steps [aria-current="step"] {
+  color: var(--text);
+}
+.website-setup-steps [aria-current="step"] > span:first-child {
+  color: var(--surface);
+  border-color: var(--text);
+  background: var(--text);
+}
+.website-setup-steps .complete > span:first-child {
+  color: var(--success);
+}
+.empty-chat.website-model-setup {
+  max-width: 540px;
+  margin: 0 auto;
+  text-align: left;
+  padding: 28px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.empty-chat.website-model-setup .website-setup-steps {
+  margin: 0 0 28px;
+}
+.empty-chat.website-model-setup h1 {
+  font-size: 25px;
+}
+.empty-chat.website-model-setup .welcome-workspace {
+  margin-bottom: 16px;
+}
+.empty-chat.website-model-setup > button {
+  margin-top: 2px;
+}
+.empty-chat.website-model-setup small {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.7;
+  margin-top: 16px;
+}
+@media (max-width: 600px) {
+  .website-setup-steps {
+    gap: 16px;
+    justify-content: space-between;
+  }
+  .website-setup-steps li {
+    gap: 6px;
+    font-size: 11px;
+  }
+  .website-setup-steps li > span:first-child {
+    width: 23px;
+    height: 23px;
+  }
+  .empty-chat.website-model-setup {
+    padding: 20px;
+  }
+  .empty-chat.website-model-setup .website-setup-steps {
+    gap: 8px;
+  }
+}

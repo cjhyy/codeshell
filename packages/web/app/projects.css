@@ -6,6 +6,7 @@
   color: var(--text, #e5e7eb);
 }
 .projects-header {
+  position: relative;
   margin-bottom: 32px;
 }
 .projects-header h1 {
@@ -31,6 +32,68 @@
   flex: 1;
   gap: 8px;
   font-size: 13px;
+  min-width: 0;
+}
+.projects-first-workspace {
+  max-width: 1040px;
+  padding-top: 40px;
+}
+.projects-first-workspace .projects-header h1 {
+  font-size: clamp(28px, 4vw, 38px);
+  font-weight: 550;
+  margin-top: 64px;
+}
+.projects-first-workspace .projects-header > p {
+  max-width: 670px;
+  font-size: 14px;
+}
+.project-first-create {
+  max-width: 760px;
+  padding: 32px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.project-first-heading {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.project-first-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--muted);
+  font-size: 23px;
+}
+.project-first-heading h2 {
+  margin: 0 0 7px;
+  font-size: 19px;
+  font-weight: 550;
+}
+.project-first-heading p,
+.project-first-next,
+.project-progress {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.8;
+  margin: 0;
+}
+.project-first-create .project-create {
+  max-width: none;
+  margin: 28px 0 20px;
+}
+.project-first-next {
+  padding-top: 18px;
+  border-top: 1px solid var(--subtle);
+}
+.project-progress {
+  margin: 18px 0;
 }
 .project-create input {
   width: 100%;
@@ -127,5 +190,11 @@
   .project-create {
     align-items: stretch;
     flex-direction: column;
+  }
+  .project-first-create {
+    padding: 23px;
+  }
+  .projects-first-workspace .projects-header h1 {
+    margin-top: 44px;
   }
 }

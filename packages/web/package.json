@@ -51,6 +51,7 @@
     "test:settings-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-settings-browser.mjs",
     "test:skills-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-skills-browser.mjs",
     "test:model-actions-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-model-actions-browser.mjs",
+    "test:website-onboarding-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-website-onboarding-browser.mjs",
     "test:mcp-settings-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-mcp-settings-browser.mjs",
     "test:history-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-history-browser.mjs",
     "test:history-details-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-history-details-browser.mjs",

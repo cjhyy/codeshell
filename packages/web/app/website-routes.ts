@@ -19,6 +19,12 @@ export type WebsiteRoute =
 const accounts: AccountSection[] = ["profile", "security", "sessions", "connections"];
 const administrators: AdminSection[] = ["users", "summary", "audit"];
 
+/** This bundle also serves local/private Hosts. Only the official public
+ * deployment replaces the root with a product website. No network discovery. */
+export function isPublicWebsiteOrigin(url: URL): boolean {
+  return ["https://codeshell.site", "https://www.codeshell.site"].includes(url.origin);
+}
+
 /** Registration accepts no callback, redirect, token or mode from the URL. */
 export function isRegistrationRoute(url: URL): boolean {
   return url.pathname === "/register" || url.pathname === "/register/";
@@ -51,11 +57,33 @@ export function websiteRouteUrl(route: WebsiteRoute, current: URL): string {
     query.set("section", workbench.section);
   const path =
     route.kind === "workbench"
-      ? "/"
+      ? isPublicWebsiteOrigin(current)
+        ? "/app"
+        : "/"
       : route.kind === "account"
         ? `/settings/account/${route.section}`
         : `/admin/${route.section}`;
   return path + (query.size ? `?${query}` : "");
+}
+
+/** Only known same-origin workspace/settings routes may follow website login.
+ * Rebuild their query so tokens, redirect chains and unknown parameters never survive. */
+export function safeWebsiteReturn(value: string | null, origin: string): string {
+  if (!value || !value.startsWith("/") || value.startsWith("//") || /[\\\u0000-\u0020]/.test(value))
+    return "/app";
+  try {
+    const url = new URL(value, origin);
+    if (url.origin !== origin || url.hash) return "/app";
+    const route = parseWebsiteRoute(url);
+    if (route.kind === "workbench" && !["/app", "/app/"].includes(url.pathname)) return "/app";
+    return websiteRouteUrl(route, url);
+  } catch {
+    return "/app";
+  }
+}
+
+export function websiteAuthUrl(mode: "login" | "signup", destination = "/app"): string {
+  return `/${mode}${destination === "/app" ? "" : `?returnTo=${encodeURIComponent(destination)}`}`;
 }
 
 export function parseWorkbenchLocation(url: URL): {
