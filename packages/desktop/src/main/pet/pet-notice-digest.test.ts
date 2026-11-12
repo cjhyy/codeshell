@@ -29,6 +29,21 @@ class FakeClock {
   pendingAt(): number[] {
     return [...this.timers.values()].map((timer) => timer.at).sort((a, b) => a - b);
   }
+  /** Move the clock to `to` and run every timer due by then, as the event loop would. */
+  advance(to: number): void {
+    this.now = to;
+    for (const [id, timer] of [...this.timers]) {
+      if (timer.at > to) continue;
+      this.timers.delete(id);
+      timer.run();
+    }
+  }
+}
+
+/** Let fire-and-forget work (a timer's flush) finish: wait until `done` or give up. */
+async function until(done: () => boolean): Promise<void> {
+  for (let tries = 0; tries < 200 && !done(); tries += 1)
+    await new Promise((resolve) => setTimeout(resolve, 1));
 }
 
 let dir: string;
@@ -288,6 +303,37 @@ describe("a snooze held by the digest", () => {
     expect(h.im.map((call) => call.kind).sort()).toEqual(
       ["digest", "followup.due", "session.blocked"].sort(),
     );
+  });
+
+  test("its end alone sends the digest: the armed timer flushes, nobody else does", async () => {
+    const h = setup(at(10), { quietHours: null, snoozeUntil: at(12) });
+    await h.router.submit(notice());
+    await h.router.submit(notice());
+    h.clock.advance(at(11, 59));
+    await until(() => h.im.length > 0);
+    expect(h.im).toEqual([]);
+    h.clock.advance(at(12));
+    await until(() => h.im.length > 0);
+    expect(h.im.map((call) => call.kind)).toEqual(["digest"]);
+    expect(h.im[0]!.body).toBe(
+      "你不在时：\n- 「Task " + (seq - 1) + "」做完了\n- 「Task " + seq + "」做完了",
+    );
+  });
+
+  test("a restart during the snooze re-arms the digest for its end", async () => {
+    const settings: NoticeRouterSettings = { quietHours: null, snoozeUntil: at(12) };
+    const before = setup(at(10), settings);
+    await before.router.submit(notice());
+    before.router.dispose();
+    // A new process: same notices.json and settings, nothing armed yet.
+    const after = setup(at(11), settings);
+    expect(after.clock.pendingAt()).toEqual([]);
+    await after.router.recover();
+    expect(after.clock.pendingAt()).toEqual([at(12)]);
+    after.clock.advance(at(12));
+    await until(() => after.im.length > 0);
+    expect(after.im.map((call) => call.kind)).toEqual(["digest"]);
+    expect(before.im).toEqual([]);
   });
 
   test("cancelled early, the held notices go at the next flush", async () => {
