@@ -152,13 +152,15 @@ export async function drainHeadlessBackgroundAgents(args: {
       role: "user",
       content: `<system-reminder>\n${buildNotificationMessage(pending)}\n</system-reminder>`,
     };
+    // Mark injected: a synthetic notification, not the user's own input —
+    // the disk reader drops it on replay so no phantom user bubble. It is
+    // stored whether or not the loop is re-entered: the model is sent it, so
+    // a replay from disk must contain it at the same position.
+    session.transcript.appendMessage(injected.role, injected.content, { injected: true });
     if (aborted || args.getFirstGoalTermination()) {
-      // Mark injected: a synthetic notification, not the user's own input —
-      // the disk reader drops it on replay so no phantom user bubble.
       // A goal termination is also a hard boundary: retain the notification
       // for recovery, but never re-enter TurnLoop (which would reset its
       // run-scoped goal budget tracker and could overwrite the first reason).
-      session.transcript.appendMessage(injected.role, injected.content, { injected: true });
       result = { ...result, messages: [...result.messages, injected] };
       break;
     }

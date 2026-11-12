@@ -285,6 +285,8 @@ function toolResultContentBlock(event: TranscriptEvent): ContentBlock {
       : Array.isArray(contentBlocks) && contentBlocks.length > 0
         ? structuredClone(contentBlocks)
         : (result ?? "(no output)"),
+    // As the live block (toolResultToBlock): a replayed request must match it.
+    ...(error ? { is_error: true } : {}),
   };
 }
 

@@ -58,6 +58,7 @@ import { crossedReactiveThreshold } from "./reactive-threshold.js";
 import { COMPLETE_GOAL_TOOL_NAME } from "../tool-system/builtin/complete-goal.js";
 import { withoutLedgerMessages } from "../session/context-messages.js";
 import { moveVolatileContextToTail } from "./volatile-context-tail.js";
+import { persistContextReminder } from "./context-reminders.js";
 import { persistRemindersBeforeCheckpoint, withoutCheckpointDuplicates } from "./rollover-context.js";
 import { CANCEL_GOAL_TOOL_NAME } from "../tool-system/builtin/cancel-goal.js";
 import {
@@ -705,6 +706,7 @@ export class TurnLoop {
 
   private appendContextReminder(messages: Message[], message: Message, retainForRun = false): void {
     messages.push(message);
+    persistContextReminder(this.deps.transcript, message);
     if (!this.deps.contextNotes) return;
     const target = retainForRun ? this.retainedHookMessages : this.pendingContextReminders;
     target.set(JSON.stringify(message), message);
@@ -774,13 +776,12 @@ export class TurnLoop {
           surface && !surface.isCallable("SaveContextNote")
             ? ' First load SaveContextNote with ToolSearch query "select:SaveContextNote".'
             : "";
-        messages = [
-          ...messages,
-          {
-            role: "user",
-            content: `<system-reminder>Context budget is running low.${loadNoteTool} Use SaveContextNote to preserve the current goal, latest corrections, decisions, verified work, pending questions and next steps. Then call NewContext in a separate tool batch and continue the same task. Original history remains available through SearchHistory.</system-reminder>`,
-          },
-        ];
+        const budgetReminder: Message = {
+          role: "user",
+          content: `<system-reminder>Context budget is running low.${loadNoteTool} Use SaveContextNote to preserve the current goal, latest corrections, decisions, verified work, pending questions and next steps. Then call NewContext in a separate tool batch and continue the same task. Original history remains available through SearchHistory.</system-reminder>`,
+        };
+        persistContextReminder(this.deps.transcript, budgetReminder);
+        messages = [...messages, budgetReminder];
         this.noteReminderIssued = true;
       }
     }

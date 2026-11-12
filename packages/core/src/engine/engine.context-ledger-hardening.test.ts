@@ -306,6 +306,54 @@ describe("Engine context ledger hardening", () => {
     });
   });
 
+  describe("reminders added inside a run", () => {
+    it("are replayed from disk where the previous process sent them", async () => {
+      const sessionId = "s-hardening-turn-reminders";
+      const { requests } = scenario([toolStep("t1"), stop("first done"), stop("second done")]);
+      const hooked = (): Engine => {
+        const engine = newEngine();
+        let turn = 0;
+        (engine as any).hooks.register("on_turn_start", async () => ({
+          messages: [`TURN NOTE ${(turn += 1)}`],
+        }));
+        return engine;
+      };
+      await hooked().run("first task", { sessionId, cwd: repo });
+      expect(requests).toHaveLength(2);
+      expect(textOf(requests[1]!.at(-1)!)).toContain("TURN NOTE 2");
+
+      await hooked().run("second task", { sessionId, cwd: repo });
+      expect(requests).toHaveLength(3);
+      expectAppendOnly(requests.map(wire));
+      const notes = requests[2]!.map(textOf).filter((text) => text.includes("TURN NOTE"));
+      expect(notes.map((text) => text.split("\n")[1])).toEqual([
+        "TURN NOTE 1",
+        "TURN NOTE 2",
+        "TURN NOTE 1",
+      ]);
+
+      // Stored as engine context, never as something the user said.
+      const stored = events(sessionId).filter((event) =>
+        JSON.stringify(event.data.content ?? "").includes("TURN NOTE"),
+      );
+      expect(stored).toHaveLength(3);
+      for (const event of stored) {
+        expect(event.data.injected).toBe(true);
+        expect(event.data.hookReminder).toEqual({});
+      }
+      const conversation = new Engine({
+        llm: { provider, model, apiKey: "test" } as never,
+        cwd: repo,
+        sessionStorageDir: sessions,
+        headless: true,
+      })
+        .getSessionManager()
+        .resume(sessionId)
+        .transcript.toConversationMessages();
+      expect(JSON.stringify(conversation)).not.toContain("TURN NOTE");
+    });
+  });
+
   describe("non-durable runtime context (dynamic placement)", () => {
     const worldProfile = {
       id: "world-test",

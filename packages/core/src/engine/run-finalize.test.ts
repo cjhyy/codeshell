@@ -21,9 +21,15 @@ test("headless user waits keep background results queued until a real reply re-a
     },
     sid,
   );
+  const stored: unknown[] = [];
   const session = {
     state: {
       goalLifecycle: waitGoalLifecycle(createGoalLifecycle({ objective: "finish" }), 1_000, "user"),
+    },
+    transcript: {
+      appendMessage(role: string, content: unknown, opts: unknown) {
+        stored.push({ role, opts, content });
+      },
     },
   };
   const result = { text: "请确认", reason: "completed", messages: [] } as const;
@@ -51,6 +57,9 @@ test("headless user waits keep background results queued until a real reply re-a
     await drainHeadlessBackgroundAgents(args);
     expect(summarized).toBe(1);
     expect(notificationQueue.getSnapshot(sid)).toHaveLength(0);
+    // The notification the model is sent is stored, flagged as injected.
+    expect(stored).toHaveLength(1);
+    expect(stored[0]).toMatchObject({ role: "user", opts: { injected: true } });
   } finally {
     notificationQueue.reset(sid);
   }
