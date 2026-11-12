@@ -151,20 +151,48 @@ function singleLine(text: string): string {
   return text.replace(/[\r\n\u2028\u2029]+/g, " ");
 }
 
-/** A list section with every entry on one line; other sections unchanged. */
+/**
+ * The tags that frame ledger output. An opening or closing one inside section
+ * content (a memory description, a skill summary, a file name) would end the
+ * block early or start a forged one, so its `<` is written as `&lt;`. The
+ * escape is deterministic and leaves text without such a tag untouched.
+ */
+const LEDGER_DELIMITER_TAG = /<(\/?)(context-section|context-update|system-reminder)/gi;
+
+export function escapeLedgerDelimiters(text: string): string {
+  return text.includes("<") ? text.replace(LEDGER_DELIMITER_TAG, "&lt;$1$2") : text;
+}
+
+/**
+ * Section content made safe to frame: list entries on one line, ledger tags
+ * escaped everywhere. A section without either is returned unchanged.
+ */
 function normalized(section: ContextSection): ContextSection {
-  if (!section.items) return section;
+  if (!section.items) {
+    const text = escapeLedgerDelimiters(section.text);
+    return text === section.text ? section : { ...section, text };
+  }
   const items = section.items.map((item) => ({
     ...item,
-    text: singleLine(item.text),
-    ...(item.label === undefined ? {} : { label: singleLine(item.label) }),
+    text: escapeLedgerDelimiters(singleLine(item.text)),
+    ...(item.label === undefined ? {} : { label: escapeLedgerDelimiters(singleLine(item.label)) }),
   }));
-  if (items.every((item, index) => item.text === section.items![index]!.text)) {
+  const header = escapeLedgerDelimiters(section.header ?? "");
+  const footer = escapeLedgerDelimiters(section.footer ?? "");
+  if (
+    header === (section.header ?? "") &&
+    footer === (section.footer ?? "") &&
+    items.every((item, index) => item.text === section.items![index]!.text)
+  ) {
     return { ...section, items };
   }
-  const header = section.header ?? "";
-  const footer = section.footer ?? "";
-  return { ...section, items, text: joinContextListParts({ header, items, footer }) };
+  return {
+    ...section,
+    items,
+    ...(section.header === undefined ? {} : { header }),
+    ...(section.footer === undefined ? {} : { footer }),
+    text: joinContextListParts({ header, items, footer }),
+  };
 }
 
 function digest(text: string): string {
@@ -291,7 +319,7 @@ function updateBlock(section: ContextSection, changes: ItemChanges): string {
 
 /** The name the model was shown for a stored entry id. */
 function shownName(known: LedgerSectionState, id: string): string {
-  return (known.labels && own(known.labels, id)) ?? id;
+  return (known.labels && own(known.labels, id)) ?? escapeLedgerDelimiters(id);
 }
 
 /** Ids the model was told about that no longer exist, by shown name. */
@@ -313,7 +341,9 @@ function idUpdate(section: ContextSection, known: LedgerSectionState): string | 
   const shown = new Map(listableItems(section)?.map((item) => [item.id, item.text]));
   const changes: ItemChanges = {
     // An entry outside the visible listing has no row; its name stands alone.
-    added: ids.filter((id) => own(known.items!, id) === undefined).map((id) => shown.get(id) ?? id),
+    added: ids
+      .filter((id) => own(known.items!, id) === undefined)
+      .map((id) => shown.get(id) ?? escapeLedgerDelimiters(singleLine(id))),
     replaced: [],
     removed: removedNames(known, new Set(ids)),
   };
