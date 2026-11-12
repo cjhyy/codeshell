@@ -754,6 +754,42 @@
           "harness-min",
           "general"
         ]
+      },
+      {
+        "name": "Notices",
+        "moduleId": "pet",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "Triggers",
+        "moduleId": "pet",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "ManageTrigger",
+        "moduleId": "pet",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "NotificationSettings",
+        "moduleId": "pet",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
       }
     ],
     "presets": [

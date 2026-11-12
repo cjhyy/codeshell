@@ -86,6 +86,18 @@ import {
   notifyMeToolDef,
   type NoticeRuleHostRequester,
 } from "./notify-me.js";
+import {
+  manageTriggerTool,
+  manageTriggerToolDef,
+  noticesTool,
+  noticesToolDef,
+  noticeToolsAvailability,
+  notificationSettingsAvailability,
+  notificationSettingsTool,
+  notificationSettingsToolDef,
+  triggersTool,
+  triggersToolDef,
+} from "./notice-tools.js";
 import { validatePetRunParams } from "./run-params.js";
 
 const PET_MANAGER_EXTERNAL_REASONS: Readonly<Record<string, string>> = {
@@ -520,7 +532,45 @@ function buildPetParts(): PetParts {
           rewriteDefinition: rewriteSendMessageDef,
         },
       },
+      // Mimi's own notice tools (design §4.7). Reads ask the host synchronously;
+      // changes are deferred host actions. Not declared for external runtimes.
+      noticeTool(noticesToolDef, true, (args, ctx) =>
+        noticesTool(args, ctx, ruleRequesterFor(ctx?.sessionId)),
+      ),
+      noticeTool(triggersToolDef, true, (args, ctx) =>
+        triggersTool(args, ctx, ruleRequesterFor(ctx?.sessionId)),
+      ),
+      noticeTool(manageTriggerToolDef, false, manageTriggerTool),
+      noticeTool(
+        notificationSettingsToolDef,
+        false,
+        (args, ctx) => notificationSettingsTool(args, ctx, ruleRequesterFor(ctx?.sessionId)),
+        notificationSettingsAvailability,
+      ),
     ]),
+  };
+}
+
+function noticeTool(
+  definition: typeof noticesToolDef,
+  readOnly: boolean,
+  execute: BuiltinTool["execute"],
+  availability: NonNullable<BuiltinTool["exposure"]>["availability"] = noticeToolsAvailability,
+): BuiltinTool {
+  return {
+    definition: {
+      ...definition,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: readOnly,
+      isConcurrencySafe: readOnly,
+    },
+    execute,
+    exposure: {
+      presetTags: ["harness-min", "general"],
+      defaultPermissionRules: [{ tool: definition.name, decision: "allow" }],
+      availability,
+    },
   };
 }
 
@@ -530,5 +580,9 @@ function buildPetParts(): PetParts {
  * this catalog does not supply those capabilities or bypass the reviewed gate.
  */
 export const PET_MANAGER_TOOL_CATALOG: readonly BuiltinTool[] = Object.freeze(
-  buildPetParts().catalogTools.filter((tool) => PET_ALLOWED_TOOL_NAMES.has(tool.definition.name)),
+  // A manager tool without its own reviewed external declaration (Mimi's
+  // notice tools) stays native-only: it is never offered to an external runtime.
+  buildPetParts().catalogTools.filter(
+    (tool) => PET_ALLOWED_TOOL_NAMES.has(tool.definition.name) && tool.exposure.external,
+  ),
 );

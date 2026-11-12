@@ -31,6 +31,23 @@ export {
   type RuleEffect,
 } from "./notice-rule.js";
 export {
+  PET_NOTICE_KINDS,
+  PET_NOTICE_TEXT_MAX,
+  PET_NOTICES_QUERY_ACTION,
+  PET_NOTIFICATION_SETTINGS_QUERY_ACTION,
+  PET_SNOOZE_MAX_MINUTES,
+  PET_TRIGGERS_QUERY_ACTION,
+  isPetNotificationSettingsMutation,
+  isPetTriggerMutation,
+  parsePetNoticesQuery,
+  type PetNoticeKind,
+  type PetNoticesQuery,
+  type PetNotificationSettingsMutation,
+  type PetNotificationSettingsPatch,
+  type PetSnoozeRequest,
+  type PetTriggerMutation,
+} from "./notice-tools-protocol.js";
+export {
   LOCAL_PET_OWNER,
   type PendingDecisionKind,
   type PendingDecisionProjection,
