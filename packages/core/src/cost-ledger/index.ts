@@ -13,6 +13,7 @@ export type {
   UsageIdentity,
   UsageReceipt,
   UsageSummary,
+  UsageTimeBucket,
   UsageTotals,
   UsageQuery,
   ExternalBilledUsage,

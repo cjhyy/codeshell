@@ -72,7 +72,13 @@ export interface UsageSummary extends UsageTotals {
   byModel: Array<UsageTotals & UsageIdentity>;
   bySession: Array<UsageTotals & { sessionId: string; accountingSessionId: string }>;
   byPurpose: Array<UsageTotals & { purpose: UsagePurpose }>;
+  /** Present only when the query set `bucketMs`; covers this page's receipts. */
+  byTime?: UsageTimeBucket[];
 }
+
+/** One model and purpose inside one half-open `[bucketStart, bucketStart + bucketMs)` window. */
+export type UsageTimeBucket = UsageTotals &
+  UsageIdentity & { purpose: UsagePurpose; bucketStart: number };
 
 export interface UsageQuery {
   runId?: string;
@@ -83,6 +89,10 @@ export interface UsageQuery {
   until?: number;
   limit?: number;
   cursor?: string;
+  /** Adds `byTime`, grouping receipts by start time. At least five minutes. */
+  bucketMs?: number;
+  /** Shifts bucket edges, e.g. the viewer's UTC offset so daily buckets start at local midnight. */
+  bucketOffsetMs?: number;
 }
 
 export interface ExternalBilledUsage extends UsageIdentity {
