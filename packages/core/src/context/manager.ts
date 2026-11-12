@@ -168,6 +168,8 @@ export class ContextManager {
   private lastActualModel: string | undefined;
   /** Path to session transcript — passed to summary compaction for on-demand access. */
   private transcriptPath: string | undefined;
+  /** Cache-warmth key for a session without a transcript path (see rewrite-gate.ts). */
+  private sessionWarmthKey: string | undefined;
   /** Notified whenever any compaction tier fires, including microcompact. */
   private onCompact: OnCompactFn | undefined;
   /**
@@ -399,20 +401,42 @@ export class ContextManager {
   setTranscriptPath(path: string): void {
     this.transcriptPath = path;
     this.toolResultsDir = resolveToolResultsDir(path);
-    if (this.localLastRequestAt !== undefined) {
-      notePromptCacheRequest(path, this.localLastRequestAt);
+    this.publishLocalWarmth();
+  }
+
+  /**
+   * Warmth key for a session that has no persistent transcript. Without it
+   * such a session would look cold at every run start (a new ContextManager
+   * is created per run) and rewrite its history every time. A transcript
+   * path, when set, takes precedence.
+   */
+  setPromptCacheSessionKey(sessionId: string): void {
+    this.sessionWarmthKey = `session:${sessionId}`;
+    this.publishLocalWarmth();
+  }
+
+  /** Key under which this session's cache warmth is shared across instances. */
+  private warmthKey(): string | undefined {
+    return this.transcriptPath ?? this.sessionWarmthKey;
+  }
+
+  private publishLocalWarmth(): void {
+    const key = this.warmthKey();
+    if (key !== undefined && this.localLastRequestAt !== undefined) {
+      notePromptCacheRequest(key, this.localLastRequestAt);
     }
   }
 
   /**
    * Record a successful model response: the provider now holds a cached
    * prefix for this session, so retroactive rewrites stop being free.
-   * Warmth is keyed by transcript path and shared across instances, because
-   * a new ContextManager is created per run.
+   * Warmth is keyed by transcript path (else by session id) and shared
+   * across instances, because a new ContextManager is created per run.
    */
   noteModelRequestCompleted(at: number = this.now()): void {
     this.localLastRequestAt = Math.max(this.localLastRequestAt ?? at, at);
-    if (this.transcriptPath) notePromptCacheRequest(this.transcriptPath, at);
+    const key = this.warmthKey();
+    if (key !== undefined) notePromptCacheRequest(key, at);
   }
 
   /**
@@ -463,7 +487,8 @@ export class ContextManager {
     const kept = { messages: input, tokens: baseTokens, microNoOp: plan.microNoOp };
     if (!plan.changed) return { ...kept, microShrunk: false };
 
-    const shared = this.transcriptPath ? promptCacheLastRequestAt(this.transcriptPath) : undefined;
+    const warmthKey = this.warmthKey();
+    const shared = warmthKey === undefined ? undefined : promptCacheLastRequestAt(warmthKey);
     const reason = decideRewriteBatch({
       now: this.now(),
       lastRequestAt:

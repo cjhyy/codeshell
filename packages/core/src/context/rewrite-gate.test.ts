@@ -273,6 +273,44 @@ for (const [name, run] of runners) {
       expect(resultTexts(await run(other, messages))[0]).toContain("collapsed");
     });
 
+    test("a session without a transcript shares warmth by session id", async () => {
+      const clock = { now: 1_000_000 };
+      const messages = [...snapTurn("s1", prose(500, "old")), ...snapTurn("s2", prose(500, "new"))];
+      const firstRun = makeManager(clock);
+      firstRun.setPromptCacheSessionKey(`ephemeral-${name}`);
+      firstRun.noteModelRequestCompleted();
+
+      clock.now += 20_000;
+      const secondRun = makeManager(clock);
+      secondRun.setPromptCacheSessionKey(`ephemeral-${name}`);
+      expect(await run(secondRun, messages)).toEqual(messages);
+      expect(secondRun.getPendingRewriteBoundary()).toBe(1);
+
+      // Another non-persistent session has never made a request: cold.
+      const other = makeManager(clock);
+      other.setPromptCacheSessionKey(`ephemeral-${name}-other`);
+      expect(resultTexts(await run(other, messages))[0]).toContain("collapsed");
+      // And without any key a new instance is cold at every run start.
+      expect(resultTexts(await run(makeManager(clock), messages))[0]).toContain("collapsed");
+    });
+
+    test("the session key is set late or alongside a transcript path", async () => {
+      const clock = { now: 1_000_000 };
+      const messages = [...snapTurn("s1", prose(500, "old")), ...snapTurn("s2", prose(500, "new"))];
+      // A request noted before the key is known is published once it is set.
+      const firstRun = makeManager(clock);
+      firstRun.noteModelRequestCompleted();
+      firstRun.setPromptCacheSessionKey(`late-${name}`);
+      const secondRun = makeManager(clock);
+      secondRun.setPromptCacheSessionKey(`late-${name}`);
+      expect(await run(secondRun, messages)).toEqual(messages);
+
+      // The transcript path wins: a session id never makes a cold transcript warm.
+      const persistent = makeManager(clock, {}, `/tmp/rewrite-gate-${name}/session-c/t.jsonl`);
+      persistent.setPromptCacheSessionKey(`late-${name}`);
+      expect(resultTexts(await run(persistent, messages))[0]).toContain("collapsed");
+    });
+
     test("explicit timestamp is honoured by noteModelRequestCompleted", async () => {
       const clock = { now: 100 * MINUTE };
       const cm = makeManager(clock);
