@@ -25,6 +25,7 @@ import type { ModelRequestSigner, ModelRequestSubject } from "../model-request-b
 import { createLLMClient } from "../llm/client-factory.js";
 import { resolvePromptCachePolicy } from "../llm/prompt-cache.js";
 import { PromptCacheRouteMemory } from "./prompt-cache-route.js";
+import { replayEventIdOf } from "./rollover-context.js";
 import { createRunBatchAuthority } from "../operations/run-batch-authority.js";
 import { createSessionOperationController } from "../operations/controller.js";
 import { CapabilityResolver } from "../operations/resolver.js";
@@ -1901,6 +1902,7 @@ export class Engine {
             ? NO_HOOK_MESSAGES
             : await this.runSessionStartHooks({
                 session,
+                userMessageEventId: runId,
                 task,
                 cwd,
                 runPermissionMode,
@@ -2996,6 +2998,7 @@ export class Engine {
    */
   private async runSessionStartHooks(args: {
     session: SessionBundle;
+    userMessageEventId: string;
     task: string;
     cwd: string;
     runPermissionMode: NonNullable<EngineConfig["permissionMode"]>;
@@ -3075,6 +3078,11 @@ export class Engine {
           updatedChars: promptSubmitHook.updatedPrompt.length,
         });
         messages[lastIdx] = { role: "user", content: promptSubmitHook.updatedPrompt };
+        // Replay after a restart must send what the model saw here.
+        session.transcript.appendPromptRewrite({
+          messageEventId: replayEventIdOf(session.transcript, args.userMessageEventId),
+          content: promptSubmitHook.updatedPrompt,
+        });
       }
     }
 

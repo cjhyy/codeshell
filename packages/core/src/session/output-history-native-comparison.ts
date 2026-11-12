@@ -343,6 +343,9 @@ export function compareNativeOutputHistory(
           )
             return unsupported();
           break;
+        // Model-replay only: display keeps the user message's original text.
+        case "prompt_rewrite":
+          break;
         case "subagent":
           if (typeof data.agentId !== "string" || typeof data.description !== "string")
             return unsupported();

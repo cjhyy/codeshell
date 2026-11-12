@@ -62,6 +62,7 @@ const FORK_EVENT_POLICY = {
   run_result: "skip",
   goal_progress: "copy",
   turn_stopped: "copy",
+  prompt_rewrite: "copy",
   error: "copy",
 } as const satisfies Record<TranscriptEventType, ForkEventPolicy>;
 const FORK_STAGING_NAME = /^\.pending-fork-[A-Za-z0-9_.-]+-[A-Za-z0-9_-]{8}$/;
@@ -243,6 +244,13 @@ export function buildForkTranscript(
       const before = (reminder as { beforeEventId?: unknown }).beforeEventId;
       if (typeof before === "string" && copiedIds.has(before)) {
         event.data.hookReminder = { ...reminder, beforeEventId: copiedIds.get(before)! };
+      }
+    }
+    // A prompt rewrite names the user message whose replay content it replaces.
+    if (event.type === "prompt_rewrite") {
+      const target = event.data.messageEventId;
+      if (typeof target === "string" && copiedIds.has(target)) {
+        event.data.messageEventId = copiedIds.get(target)!;
       }
     }
     if (event.type !== "turn_diff") continue;
