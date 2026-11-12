@@ -14,7 +14,7 @@ const id = "design-studio";
 const secret = "private-password-cookie-grant-url-body-argv-never-print";
 const digest = (value) => createHash("sha256").update(value).digest("hex");
 
-test("catalog-follow and reviewed rollback failures retain their fixed diagnostic step", () => {
+test("catalog-follow, rollback and Design recovery failures retain their fixed diagnostic step", () => {
   for (const step of [
     "catalog-follow",
     "catalog-stale-grant",
@@ -22,6 +22,14 @@ test("catalog-follow and reviewed rollback failures retain their fixed diagnosti
     "catalog-storage",
     "rollback-before-selection",
     "rollback-stale-grant",
+    "design-open-panel",
+    "design-ready",
+    "design-export",
+    "design-import-review",
+    "design-open-copy",
+    "design-save",
+    "design-import-conflict",
+    "design-import-copy",
   ]) {
     const original = new Error(secret);
     const failure = panelLifecycleFailure(original, id, step);

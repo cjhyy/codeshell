@@ -31,6 +31,14 @@ const panelSteps = new Set([
   "other-project-pin",
   "other-project-page",
   "other-project-storage",
+  "design-open-panel",
+  "design-ready",
+  "design-export",
+  "design-import-review",
+  "design-open-copy",
+  "design-save",
+  "design-import-conflict",
+  "design-import-copy",
 ]);
 const panelUiSteps = new Set([
   "launch",
