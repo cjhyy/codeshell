@@ -25,7 +25,18 @@ describe("parsePetNotificationSettings", () => {
       },
       heartbeat: { enabled: false, activeHours: { start: "09:00", end: "22:00" } },
       digestSlots: [],
+      snoozeUntil: null,
     });
+  });
+
+  test("a stored snooze reaches the router and the settings view", () => {
+    const settings = { pet: { notifications: { snoozeUntil: 1_800_000_000_000 } } };
+    expect(parsePetNotificationSettings(settings).snoozeUntil).toBe(1_800_000_000_000);
+    expect(petNotificationSettingsView(settings).snoozeUntil).toBe(1_800_000_000_000);
+    expect(petNotificationSettingsView({})).not.toHaveProperty("snoozeUntil");
+    expect(
+      parsePetNotificationSettings({ pet: { notifications: { snoozeUntil: "soon" } } }).snoozeUntil,
+    ).toBeNull();
   });
 
   test("reads bounded values and falls back on malformed ones", () => {
@@ -55,6 +66,7 @@ describe("parsePetNotificationSettings", () => {
       },
       heartbeat: { enabled: false, activeHours: { start: "09:00", end: "22:00" } },
       digestSlots: [],
+      snoozeUntil: null,
     });
   });
 

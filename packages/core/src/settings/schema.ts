@@ -208,6 +208,11 @@ export const SettingsSchema = z
               .catch(undefined),
             /** Fixed local times ("HH:MM", at most six) the digest is sent at; absent: as soon as allowed. */
             digestSlots: z.array(z.string().regex(PET_HH_MM)).max(6).optional().catch(undefined),
+            /**
+             * Temporary snooze (epoch ms): until then only decisions are pushed;
+             * the rest waits for the digest. Past instants simply stop applying.
+             */
+            snoozeUntil: z.number().int().positive().optional().catch(undefined),
           })
           .optional()
           .catch(undefined),

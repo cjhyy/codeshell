@@ -90,6 +90,22 @@ export interface RouteState {
   imReady: Readonly<Record<string, ImReadiness>>;
   /** The channel the owner last used to message Mimi. */
   lastInboundChannel?: string;
+  /**
+   * The owner's temporary silence ("两小时别推"), epoch ms: until then only
+   * decisions and immediate answers go out. See {@link isSnoozed}.
+   */
+  snoozedUntil?: number | null;
+}
+
+/** A snooze lasts at most a day; a stored end further away is not honoured. */
+export const MAX_SNOOZE_MS = 24 * 60 * 60_000;
+
+/** Whether the owner's snooze holds at `state.now` (ended, absent or implausible: no). */
+export function isSnoozed(state: Pick<RouteState, "now" | "snoozedUntil">): boolean {
+  const until = state.snoozedUntil;
+  return (
+    typeof until === "number" && until > state.now && until - state.now <= MAX_SNOOZE_MS + 60_000
+  );
 }
 
 /** Stable, machine-readable reasons; callers and logs may switch on these. */
@@ -100,6 +116,8 @@ export type RouteReason =
   | "p0-cap"
   | "quiet-hours"
   | "hourly-cap"
+  /** The owner snoozed pushes for a while; held for the digest when it ends. */
+  | "snoozed"
   /** Router-only: a P1 for a Session that already got an IM within the merge window. */
   | "merge-window"
   /** Router-only: the router was disposed; nothing was recorded or sent. */
@@ -212,6 +230,9 @@ export function route(notice: RouteNotice, state: RouteState): RouteDecision {
   if (state.seenDedupeKeys.has(notice.dedupeKey)) return { outlet: "drop", reason: "duplicate" };
   if (notice.attention === "muted") return { outlet: "record", reason: "muted" };
   if (notice.attention === "digest") return { outlet: "digest", reason: "digest-attention" };
+  // The owner's own "not now" outranks the moment they once chose for a follow-up.
+  if (notice.priority !== "P0" && !notice.immediate && isSnoozed(state))
+    return { outlet: "digest", reason: "snoozed" };
   if (notice.priority === "P0" || notice.ownerTimed) {
     if (state.p0SentThisHour >= state.maxP0PerHour) return { outlet: "digest", reason: "p0-cap" };
   } else if (!notice.immediate) {

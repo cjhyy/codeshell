@@ -4,6 +4,7 @@ import {
   DEFAULT_MAX_PER_HOUR,
   hostTimezoneOffsetMin,
   isInQuietHours,
+  isSnoozed,
   localHourIndex,
   route,
   type RouteDecision,
@@ -355,5 +356,64 @@ describe("quiet hours", () => {
         state({ now: utcAt(8, 0), quietHours: { start: "08:00", end: "08:00" } }),
       ),
     ).toEqual({ outlet: "both", im: "wechat", reason: "named-im" });
+  });
+});
+
+describe("route: snooze (owner's temporary silence)", () => {
+  const snoozed = (overrides: Partial<RouteState> = {}) =>
+    state({ snoozedUntil: utcAt(14, 0), ...overrides });
+
+  test("holds a P1 or P2 for the digest until it ends, on any channel", () => {
+    for (const channel of ["auto", "desktop", "wechat"])
+      expect(route(notice({ channel }), snoozed())).toEqual({
+        outlet: "digest",
+        reason: "snoozed",
+      });
+    expect(route(notice({ priority: "P2" }), snoozed())).toEqual({
+      outlet: "digest",
+      reason: "snoozed",
+    });
+  });
+
+  test("holds an owner-timed follow-up too: the owner's newer ask wins", () => {
+    expect(route(notice({ ownerTimed: true }), snoozed())).toEqual({
+      outlet: "digest",
+      reason: "snoozed",
+    });
+  });
+
+  test("lets decisions (P0) and immediate answers through", () => {
+    expect(route(notice({ priority: "P0", channel: "wechat" }), snoozed())).toEqual({
+      outlet: "both",
+      im: "wechat",
+      reason: "named-im",
+    });
+    expect(route(notice({ channel: "wechat", immediate: true }), snoozed())).toEqual({
+      outlet: "both",
+      im: "wechat",
+      reason: "named-im",
+    });
+  });
+
+  test("still drops duplicates and only records muted ones", () => {
+    expect(route(notice(), snoozed({ seenDedupeKeys: new Set([notice().dedupeKey]) }))).toEqual({
+      outlet: "drop",
+      reason: "duplicate",
+    });
+    expect(route(notice({ attention: "muted" }), snoozed())).toEqual({
+      outlet: "record",
+      reason: "muted",
+    });
+  });
+
+  test("stops applying at its end and ignores an instant over a day away", () => {
+    expect(route(notice({ channel: "wechat" }), snoozed({ now: utcAt(14, 0) }))).toEqual({
+      outlet: "both",
+      im: "wechat",
+      reason: "named-im",
+    });
+    expect(isSnoozed(snoozed({ now: utcAt(13, 59) }))).toBe(true);
+    expect(isSnoozed(state({ snoozedUntil: utcAt(12, 0) + 25 * 60 * 60_000 }))).toBe(false);
+    expect(isSnoozed(state({ snoozedUntil: null }))).toBe(false);
   });
 });

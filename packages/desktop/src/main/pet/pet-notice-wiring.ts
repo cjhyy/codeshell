@@ -118,9 +118,9 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     ledger,
     presence,
     settings: () => {
-      const { quietHours, maxPerHour, maxP0PerHour, mergeWindowSec, digestSlots } =
+      const { quietHours, maxPerHour, maxP0PerHour, mergeWindowSec, digestSlots, snoozeUntil } =
         settings.settings();
-      return { quietHours, maxPerHour, maxP0PerHour, mergeWindowSec, digestSlots };
+      return { quietHours, maxPerHour, maxP0PerHour, mergeWindowSec, digestSlots, snoozeUntil };
     },
     imChannels: outlets.imChannels,
     lastInboundChannel: () => deps.gateway.lastOwnerInboundChannel(),
@@ -279,6 +279,13 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     ...(deps.powerEvents ? { powerEvents: deps.powerEvents } : {}),
     log,
   });
+  // A changed snooze, quiet window or cap moves when held notices may go:
+  // send what is now due (a snooze ended early) and re-arm the rest.
+  const offSettingsFlush = settings.onSettingsChange(() => {
+    void ready
+      .then(() => (disposed ? undefined : router.flushDigest()))
+      .catch((error) => log("pet.notice.digest_failed", { error: errorText(error) }));
+  });
   const workerGone = createWorkerLossDetector(view);
   const unsubscribeProjection = deps.projection.subscribe((event) => {
     void ready.then(() => (disposed ? undefined : watcher.observeProjection(event)));
@@ -391,6 +398,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     },
     dispose() {
       if (disposed) return;
+      offSettingsFlush();
       settings.dispose();
       disposed = true;
       replay.dispose();

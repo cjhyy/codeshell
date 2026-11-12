@@ -418,3 +418,30 @@ describe("external runtime Sessions", () => {
     expect(current.submitted).toHaveLength(1);
   });
 });
+
+describe("snooze wiring", () => {
+  test("a settings change that ends the snooze sends what it held", async () => {
+    let settings: Record<string, unknown> = {
+      pet: { notifications: { snoozeUntil: NOW + 3_600_000 } },
+    };
+    current = harness({ readSettings: () => settings });
+    await current.wiring.ready;
+    const decision = await current.wiring.submitNotice({
+      kind: "session.done",
+      priority: "P1",
+      dedupeKey: "snooze:1",
+      sessionId: SID,
+      ruleIds: [],
+      facts: { title: "修登录", summary: "测试都过了" },
+      attention: "always",
+      channel: "auto",
+      target: { kind: "owner" },
+    });
+    expect(decision).toMatchObject({ outlet: "digest", reason: "snoozed" });
+    expect(current.ownerSends).toEqual([]);
+    settings = {};
+    current.wiring.settingsChanged();
+    await settle(() => current!.ownerSends.length > 0);
+    expect(current.ownerSends[0]!.text).toContain("修登录");
+  });
+});

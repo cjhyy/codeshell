@@ -257,3 +257,61 @@ describe("standalone notices held by the digest", () => {
     expect(h.im).toHaveLength(1);
   });
 });
+
+describe("a snooze held by the digest", () => {
+  test("holds results and follow-ups until it ends, then sends one digest each", async () => {
+    const settings: NoticeRouterSettings = { quietHours: null, snoozeUntil: at(12) };
+    const h = setup(at(10), settings);
+    expect(await h.router.submit(notice())).toMatchObject({ outlet: "digest", reason: "snoozed" });
+    expect(
+      await h.router.submit(
+        notice({ kind: "followup.due", facts: { title: "交报告" }, sessionId: undefined }),
+      ),
+    ).toMatchObject({ outlet: "digest", reason: "snoozed" });
+    // A decision still gets through.
+    expect(
+      await h.router.submit(
+        notice({
+          kind: "session.blocked",
+          priority: "P0",
+          requestId: "r",
+          facts: { title: "Gate" },
+        }),
+      ),
+    ).toMatchObject({ outlet: "im" });
+    expect(h.clock.pendingAt()).toEqual([at(12)]);
+    h.clock.now = at(11);
+    await h.router.flushDigest();
+    expect(h.im.map((call) => call.kind)).toEqual(["session.blocked"]);
+    h.clock.now = at(12);
+    await h.router.flushDigest();
+    expect(h.im.map((call) => call.kind).sort()).toEqual(
+      ["digest", "followup.due", "session.blocked"].sort(),
+    );
+  });
+
+  test("cancelled early, the held notices go at the next flush", async () => {
+    const settings: NoticeRouterSettings = { quietHours: null, snoozeUntil: at(14) };
+    const h = setup(at(10), settings);
+    await h.router.submit(notice());
+    settings.snoozeUntil = null;
+    await h.router.flushDigest();
+    expect(h.im.map((call) => call.kind)).toEqual(["digest"]);
+  });
+
+  test("a held brief goes out whole when the snooze ends", async () => {
+    const h = setup(at(10), { quietHours: null, snoozeUntil: at(11) });
+    await h.router.submit(
+      notice({
+        kind: "brief.morning",
+        dedupeKey: "brief:morning:1",
+        body: "早上好：两件事",
+        sessionId: undefined,
+      }),
+    );
+    expect(h.clock.pendingAt()).toEqual([at(11)]);
+    h.clock.now = at(11);
+    await h.router.flushDigest();
+    expect(h.im).toEqual([{ kind: "brief.morning", body: "早上好：两件事" }]);
+  });
+});

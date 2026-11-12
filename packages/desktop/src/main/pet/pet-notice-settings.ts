@@ -72,12 +72,14 @@ export function petNotificationSettingsView(userSettings: unknown): PetNotificat
       activeHours: { ...(stored.heartbeat?.activeHours ?? DEFAULT_ACTIVE_HOURS) },
     },
     digestSlots: [...new Set(stored.digestSlots ?? [])].sort(),
+    // As stored: past instants no longer apply, and the router ignores one over a day away.
+    ...(stored.snoozeUntil !== undefined ? { snoozeUntil: stored.snoozeUntil } : {}),
   };
 }
 
 /** `settings.pet.notifications` with every field bounded; anything malformed falls back. */
 export function parsePetNotificationSettings(userSettings: unknown): PetNotificationSettings {
-  const { quietHours, briefs, heartbeat, digestSlots, ...rest } =
+  const { quietHours, briefs, heartbeat, digestSlots, snoozeUntil, ...rest } =
     petNotificationSettingsView(userSettings);
   return {
     quietHours: quietHours.enabled ? { start: quietHours.start, end: quietHours.end } : null,
@@ -85,6 +87,7 @@ export function parsePetNotificationSettings(userSettings: unknown): PetNotifica
     briefs: briefs!,
     heartbeat: heartbeat!,
     digestSlots: digestSlots ?? [],
+    snoozeUntil: snoozeUntil ?? null,
   };
 }
 

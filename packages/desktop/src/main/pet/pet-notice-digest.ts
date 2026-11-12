@@ -5,6 +5,7 @@ import type { NoticeRecord, NoticeSettleStatus, PetNoticeLedger } from "./pet-no
 import {
   isInQuietHours,
   isOwnerTimedKind,
+  isSnoozed,
   isStandaloneKind,
   localHourIndex,
   localMinuteOfDay,
@@ -63,9 +64,11 @@ export function digestDedupeKey(hourIndex: number, memberIds: readonly string[])
 export function nextSendAllowedAt(
   state: Pick<
     RouteState,
-    "now" | "quietHours" | "timezoneOffsetMin" | "sentThisHour" | "maxPerHour"
+    "now" | "quietHours" | "timezoneOffsetMin" | "sentThisHour" | "maxPerHour" | "snoozedUntil"
   >,
 ): number {
+  // A snooze holds everything but decisions; once it ends the usual limits apply.
+  if (isSnoozed(state)) return nextSendAllowedAt({ ...state, now: state.snoozedUntil! });
   const { now, quietHours, timezoneOffsetMin } = state;
   if (quietHours && isInQuietHours(quietHours, now, timezoneOffsetMin)) {
     const [hours, minutes] = quietHours.end.split(":").map(Number);
@@ -223,6 +226,8 @@ export interface NoticeDigestOptions {
     timezoneOffsetMin: number;
     /** Fixed local "HH:MM" times for the ordinary digest; empty: whenever allowed. */
     digestSlots?: readonly string[];
+    /** The owner's snooze end (epoch ms): nothing held goes out before it. */
+    snoozedUntil?: number | null;
   };
   /** A held record's facts, stored target and the channel it asked for (absent: auto). */
   unpack: (record: NoticeRecord) => {
@@ -324,14 +329,23 @@ export class NoticeDigest {
       timezoneOffsetMin: window.timezoneOffsetMin,
       sentThisHour: counts.sent,
       maxPerHour: window.maxPerHour,
+      snoozedUntil: window.snoozedUntil ?? null,
     });
-    // Follow-ups were held only by the P0 backstop: they go once it has room.
+    // Follow-ups were held by the P0 backstop or a snooze: they go once that is over.
     const nextHour =
       (localHourIndex(now, window.timezoneOffsetMin) + 1) * HOUR -
       Math.trunc(window.timezoneOffsetMin) * MINUTE;
+    const snoozed = isSnoozed({ now, snoozedUntil: window.snoozedUntil ?? null });
     const ready = digestFlushAt(regular, allowedAt, window.mergeWindowMs);
     return {
-      timed: timed.length === 0 ? undefined : counts.p0Sent < window.maxP0PerHour ? now : nextHour,
+      timed:
+        timed.length === 0
+          ? undefined
+          : snoozed
+            ? window.snoozedUntil!
+            : counts.p0Sent < window.maxP0PerHour
+              ? now
+              : nextHour,
       regular:
         ready === undefined
           ? undefined

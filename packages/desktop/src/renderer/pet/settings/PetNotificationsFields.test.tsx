@@ -343,4 +343,55 @@ describe("PetNotificationsFields", () => {
     expect(html).toContain("worker restarting");
     await hook.unmount();
   });
+
+  test("an active snooze shows when it ends, and cancelling clears only the snooze", async () => {
+    const state = noticesState();
+    const until = new Date(Date.now() + 2 * 60 * 60_000);
+    until.setSeconds(0, 0);
+    state.settings.snoozeUntil = until.getTime();
+    const { api } = fakeApi(state);
+    const patches: Record<string, unknown>[] = [];
+    const hook = await renderHook(() =>
+      usePetNotificationsController({
+        api,
+        write: async (_scope, patch) => {
+          patches.push(patch);
+          delete state.settings.snoozeUntil;
+        },
+      }),
+    );
+    await settle();
+    expect(hook.result.current.snoozeUntil).toBe(until.getTime());
+    const html = renderToStaticMarkup(
+      <PetNotificationsFields controller={hook.result.current as PetNotificationsController} />,
+    );
+    expect(html).toContain("data-pet-notices-snooze");
+    const clock = `${String(until.getHours()).padStart(2, "0")}:${String(until.getMinutes()).padStart(2, "0")}`;
+    expect(html).toContain("静音到 ");
+    expect(html).toContain(clock);
+    expect(html).toContain("取消静音");
+    await act(async () => {
+      hook.result.current.cancelSnooze();
+    });
+    await settle();
+    expect(patches).toEqual([{ pet: { notifications: { snoozeUntil: null } } }]);
+    expect(hook.result.current.snoozeUntil).toBeUndefined();
+    await hook.unmount();
+  });
+
+  test("an ended snooze is not shown", async () => {
+    const state = noticesState();
+    state.settings.snoozeUntil = Date.now() - 60_000;
+    const { api } = fakeApi(state);
+    const hook = await renderHook(() =>
+      usePetNotificationsController({ api, write: async () => undefined }),
+    );
+    await settle();
+    expect(hook.result.current.snoozeUntil).toBeUndefined();
+    const html = renderToStaticMarkup(
+      <PetNotificationsFields controller={hook.result.current as PetNotificationsController} />,
+    );
+    expect(html).not.toContain("data-pet-notices-snooze");
+    await hook.unmount();
+  });
 });

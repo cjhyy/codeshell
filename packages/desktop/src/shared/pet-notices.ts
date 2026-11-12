@@ -40,6 +40,11 @@ export interface PetNotificationSettingsView {
   heartbeat?: { enabled: boolean; activeHours: { start: string; end: string } };
   /** Fixed local times the digest goes out at, sorted; empty: as soon as allowed. */
   digestSlots?: string[];
+  /**
+   * The owner's temporary snooze end (epoch ms), as stored: until then only
+   * decisions are pushed. Absent: none; a past instant no longer applies.
+   */
+  snoozeUntil?: number;
 }
 
 export interface PetBriefSetting {
