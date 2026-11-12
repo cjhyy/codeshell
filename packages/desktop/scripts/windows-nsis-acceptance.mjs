@@ -58,7 +58,8 @@ export function assertProductionNsis(pkg) {
   assert.equal(pkg.build.appId, NSIS_IDENTITY.appId);
   assert.equal(pkg.build.productName, NSIS_IDENTITY.product);
   assert.equal(pkg.name, "@cjhyy/code-shell-desktop");
-  assert.match(pkg.version, /^\d+\.\d+\.\d+$/);
+  // Same grammar as scripts/release.ts: X.Y.Z, X.Y.Z-rc.N or X.Y.Z-beta.N.
+  assert.match(pkg.version, /^\d+\.\d+\.\d+(?:-(?:rc|beta)\.\d+)?$/);
   assert.deepEqual(pkg.build.win.target, ["nsis"]);
   assert.equal(pkg.build.directories.buildResources, "build");
   assert.deepEqual(pkg.build.nsis, {
