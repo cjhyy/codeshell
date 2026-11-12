@@ -66,3 +66,39 @@ describe("renderSessionMarkdown code fences", () => {
     expect(codeBlocks(md)).toEqual(["a\nb"]);
   });
 });
+
+describe("renderSessionMarkdown engine context", () => {
+  test("ledger and hook-reminder events are not exported as turns", () => {
+    const { md } = renderSessionMarkdown(
+      "fixture",
+      [
+        { type: "message", data: { role: "user", content: "real question" } },
+        {
+          type: "message",
+          data: {
+            role: "user",
+            injected: true,
+            content: "<system-reminder>MEMORY INDEX</system-reminder>",
+            contextLedger: { kind: "snapshot", state: "{}" },
+          },
+        },
+        {
+          type: "message",
+          data: {
+            role: "user",
+            injected: true,
+            content: "<system-reminder>HOOK RULES</system-reminder>",
+            hookReminder: { sessionStart: ["HOOK RULES"] },
+          },
+        },
+        { type: "message", data: { role: "assistant", content: "real answer" } },
+      ],
+      "/x",
+    );
+    expect(md).toContain("## turn 1 · user");
+    expect(md).toContain("## turn 2 · assistant");
+    expect(md).not.toContain("turn 3");
+    expect(md).not.toContain("MEMORY INDEX");
+    expect(md).not.toContain("HOOK RULES");
+  });
+});

@@ -13,6 +13,7 @@ import { MemoryOrchestrator } from "../services/memory-orchestrator.js";
 import { runDreamConsolidation } from "../services/dream-consolidation.js";
 import { resolveAuxKey } from "./aux-key.js";
 import type { CumulativeUsageCounters } from "../session/usage.js";
+import { contextMessageMark } from "../session/context-messages.js";
 import type { EngineConfig } from "./types.js";
 import type { UsagePurpose } from "../cost-ledger/types.js";
 
@@ -184,9 +185,15 @@ export class AuxiliaryPipeline {
   ): Promise<void> {
     try {
       const llmClient = await this.resolveExtractionClient(primaryClient);
+      // Engine context (memory index, skills, hook reminders) is not conversation:
+      // it must neither count as activity nor be extracted back into memory.
       const messages = transcript
         .toMessages()
-        .filter((message) => message.role === "user" || message.role === "assistant");
+        .filter(
+          (message) =>
+            (message.role === "user" || message.role === "assistant") &&
+            contextMessageMark(message) === undefined,
+        );
       if (messages.length < 8) return;
 
       const plainMessages = messages.map((message) => {

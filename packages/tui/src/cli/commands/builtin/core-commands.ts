@@ -534,6 +534,13 @@ export const coreCommands: SlashCommand[] = [
                 // separately via the outer "tool_use" event, so we only
                 // surface text + reasoning here. Reasoning is shown inline
                 // with a tag prefix since the UI has no dedicated entry type.
+                // Engine context (ledger, hook reminders) is not a chat entry.
+                if (
+                  event.data.contextLedger !== undefined ||
+                  event.data.hookReminder !== undefined
+                ) {
+                  break;
+                }
                 if (role === "user") {
                   const text =
                     typeof content === "string"

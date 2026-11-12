@@ -25,6 +25,8 @@ import type { EngineResult } from "../engine/types.js";
 import { logger } from "../logging/logger.js";
 import { syncDirectoryAncestors } from "../model-request-boundary/durability.js";
 import {
+  contextMessageMark,
+  isContextMessageEvent,
   markReplayedContextMessage,
   readHookReminderData,
   type ContextLedgerEventData,
@@ -714,6 +716,11 @@ export class Transcript {
     return this.toMessagesWithIndex().messages;
   }
 
+  /** toMessages() without engine context (ledger, hook reminders): what was said. */
+  toConversationMessages(): Message[] {
+    return this.toMessages().filter((message) => contextMessageMark(message) === undefined);
+  }
+
   /**
    * Marker-aware replay that ALSO reports, for every emitted message event
    * carrying a clientMessageId, the LIVE index (its position in the returned
@@ -1216,7 +1223,10 @@ export class Transcript {
     if (frozen[0]?.type === "session_meta" || frozen.at(-1)?.type === "session_meta") {
       throw new Error("Context range cannot use session metadata as a boundary");
     }
-    const selected = frozen.filter((event) => CONTEXT_EVENT_TYPES.has(event.type));
+    // A hand-picked range carries the conversation, not the engine's context.
+    const selected = frozen.filter(
+      (event) => CONTEXT_EVENT_TYPES.has(event.type) && !isContextMessageEvent(event),
+    );
     validateSelectedToolPairs(selected);
     return {
       events: selected,

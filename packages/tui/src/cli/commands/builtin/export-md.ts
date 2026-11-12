@@ -58,8 +58,13 @@ export function renderSessionMarkdown(
 
   let turnNumber = 0;
   for (const evRaw of events) {
-    const ev = evRaw as { type?: string; data?: { role?: string; content?: unknown } };
+    const ev = evRaw as {
+      type?: string;
+      data?: { role?: string; content?: unknown; contextLedger?: unknown; hookReminder?: unknown };
+    };
     if (ev.type !== "message") continue;
+    // Engine context (ledger, hook reminders) is not a conversation turn.
+    if (ev.data?.contextLedger !== undefined || ev.data?.hookReminder !== undefined) continue;
     turnNumber += 1;
     const role = ev.data?.role ?? "unknown";
     const content = ev.data?.content;

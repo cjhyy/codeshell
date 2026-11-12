@@ -150,6 +150,33 @@ describe("context messages in the transcript", () => {
     expect(messages.every((message) => contextMessageMark(message) === undefined)).toBe(true);
   });
 
+  test("toConversationMessages leaves engine context out", () => {
+    const transcript = Transcript.inMemory("conversation");
+    const task = transcript.appendMessage("user", "task");
+    transcript.appendMessage("user", "reminder", { hookReminder: { beforeEventId: task.id } });
+    transcript.appendMessage("user", "context", { contextLedger: ledger });
+    transcript.appendMessage("assistant", "reply");
+    expect(transcript.toMessages()).toHaveLength(4);
+    expect(transcript.toConversationMessages()).toEqual([
+      { role: "user", content: "task" },
+      { role: "assistant", content: "reply" },
+    ]);
+  });
+
+  test("a hand-picked context range leaves engine context out", () => {
+    const transcript = Transcript.inMemory("range");
+    const task = transcript.appendMessage("user", "task");
+    transcript.appendMessage("user", "reminder", { hookReminder: { beforeEventId: task.id } });
+    transcript.appendMessage("user", "context", { contextLedger: ledger });
+    const reply = transcript.appendMessage("assistant", "reply");
+    const selected = Transcript.selectContextRange(transcript.getEvents(), {
+      fromEventId: task.id,
+      toEventId: reply.id,
+    });
+    expect(selected.messages.map((message) => message.content)).toEqual(["task", "reply"]);
+    expect(selected.sourceEventCount).toBe(4);
+  });
+
   test("a fork keeps a reminder in front of its copied user message", () => {
     const transcript = Transcript.inMemory("fork-source");
     const task = transcript.appendMessage("user", "task");

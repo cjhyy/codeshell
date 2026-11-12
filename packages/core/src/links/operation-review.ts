@@ -296,7 +296,13 @@ export function legacyLinkOperationCandidates(
     const duplicates = new Set<string>();
     for (const event of events) {
       const data = event.data;
-      if (event.type === "message" && data?.role === "user") {
+      if (
+        event.type === "message" &&
+        data?.role === "user" &&
+        // Engine context mid-run is not a new user intent.
+        data.contextLedger === undefined &&
+        data.hookReminder === undefined
+      ) {
         originIntent =
           typeof data.clientMessageId === "string" && data.clientMessageId.length <= 400
             ? data.clientMessageId

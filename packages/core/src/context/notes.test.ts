@@ -383,6 +383,15 @@ describe("SessionContextNotes", () => {
     expect(notes.read(older.id)!.text).toHaveLength(MAX_CONTEXT_HISTORY_READ_CHARS);
     expect(notes.search("needle", 10, newer.id)[0]!.text.length).toBeLessThanOrEqual(600);
     expect(notes.search("IMAGE_SECRET")).toEqual([]);
+    // Engine context (ledger, hook reminders) is not searchable history.
+    const ledger = transcript.appendMessage("user", "needle in the memory index", {
+      contextLedger: { kind: "snapshot", state: "{}" },
+    });
+    transcript.appendMessage("user", "needle in a hook reminder", {
+      hookReminder: { sessionStart: ["needle in a hook reminder"] },
+    });
+    expect(notes.search("needle", 10).map((entry) => entry.eventId)).toEqual([newer.id, older.id]);
+    expect(notes.read(ledger.id)).toBeUndefined();
     expect(() => notes.search("needle", 1, "not-this-session")).toThrow("does not belong");
     expect(notes.read("../../other-session")).toBeUndefined();
   });
