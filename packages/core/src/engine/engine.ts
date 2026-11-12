@@ -194,6 +194,7 @@ import {
 import {
   NO_HOOK_MESSAGES,
   assembleRunMessages,
+  cleanedHookMessages,
   createRunContextLedger,
   engineContextSections,
   runtimeContextMessage,
@@ -2393,9 +2394,11 @@ export class Engine {
       userMessageEventId: args.runId,
       userContextMsg,
       hooks: hookMessages,
+      previousPromptSubmit: session.state.promptSubmitHookMessages,
       ledger: runContextLedger,
       volatileContextMsg,
     });
+    this.recordPromptSubmitHook(session, hookMessages);
     this.lastSessionId = session.state.sessionId;
     this.lastMessages = messages;
 
@@ -2425,6 +2428,19 @@ export class Engine {
       retainedContextMessages,
       runStartMessage,
     };
+  }
+
+  /** Remember what the prompt hook said for this prompt (run-context-ledger.ts). */
+  private recordPromptSubmitHook(session: SessionBundle, hooks: RunHookMessages): void {
+    const said = cleanedHookMessages(hooks.promptSubmit);
+    const before = session.state.promptSubmitHookMessages;
+    // Never recorded and nothing said: nothing to remember yet.
+    if (before === undefined ? said.length === 0 : JSON.stringify(before) === JSON.stringify(said))
+      return;
+    session.state.promptSubmitHookMessages = said;
+    session.state.stateRevision = this.sessionManager.updateSessionState(session.state.sessionId, {
+      promptSubmitHookMessages: said,
+    });
   }
 
   /**

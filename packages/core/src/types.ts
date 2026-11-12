@@ -384,6 +384,12 @@ export interface SessionState {
    */
   contextUsageAnchor?: ContextUsageAnchor;
   /**
+   * What the prompt-submit hook said for the latest prompt (empty when it
+   * said nothing). A hook reminder is repeated unless the hook said the same
+   * for the prompt just before — see engine/run-context-ledger.ts.
+   */
+  promptSubmitHookMessages?: string[];
+  /**
    * Exceptional boundary for the most recently persisted completed run.
    * Absent means `status === "completed"` is an ordinary final answer.
    */
