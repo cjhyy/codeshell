@@ -8,7 +8,55 @@ breaking.
 
 ## [Unreleased]
 
-## [0.10.1] - Unreleased
+## [0.11.0-rc.1] - 2026-11-12
+
+Release candidate. Mimi's notice system phase 2 and the settings rework have not
+been verified on a real device yet.
+
+### Changed (breaking)
+
+- Mimi follow-ups are now schedule rules in the notice rule table. On first
+  start the old `follow-ups.json` store and its scheduled jobs are removed;
+  existing follow-ups are not migrated.
+
+### Added
+
+- Mimi notices for Codex / Claude Code sessions run by the desktop and for
+  sub-agents: `NotifyMe`, `ReportToMimi`, completion outcomes, and approvals and
+  questions answerable over IM. Codex permission approvals now grant the
+  requested permissions for the turn (previously "allow" granted nothing).
+- Owners answer IM prompts in their own words: replies are interpreted by a
+  model, checked by the host, and never parsed with fixed commands. Goal pauses,
+  limit stops and failures can be continued, stopped, retried or handed to Mimi
+  from IM, and finished results can be opened on the desktop.
+- Recurring follow-ups, morning and evening briefs, a heartbeat, fixed digest
+  slots and "not now" deferral, all as rules on one scheduler (briefs and
+  heartbeat off by default).
+- Mimi settings page with sections; IM channel binding moved into Mimi settings;
+  one trigger list to pause, resume or delete every rule.
+- Mimi tools `Notices`, `Triggers`, `ManageTrigger` and `NotificationSettings`
+  (including a temporary snooze), available only in the owner's own turns.
+- External providers as defaults for new chats and WeChat; local usage provider
+  discovery with independent quota queries; bounded Anthropic native tool
+  discovery.
+
+### Changed
+
+- Follow-up reminders, `ReportToMimi` replies and `WatchSession` go through the
+  notice router, so quiet hours and rate limits apply.
+- Tool schemas are frozen per session and discovery results are appended;
+  unified usage reporting; a more stable question composer.
+- Faster cron next-occurrence search; at the DST fall-back, fixed-time
+  expressions fire once.
+
+### Fixed
+
+- Goal lifecycle authority and remote Goal controls; Goal tool eligibility and
+  session routing; Claude tool caching through OpenRouter; mixed native
+  references in complex schemas; external runtime workspace switching; removed
+  synchronous history scans from send and maintenance.
+
+## [0.10.1] - 2026-11-11
 
 ### Fixed
 
@@ -18,12 +66,6 @@ breaking.
 - Isolate each macOS target's Computer Use helper files before signing so shared
   files cannot invalidate a previously signed target. Preserve the signing order
   and Node integrity checks, and strictly verify the helper executable.
-
-### Release status
-
-- This patch is prepared but has not been published. The failed `v0.10.0` release
-  attempt did not create a GitHub Release and skipped npm publishing; its existing
-  tag remains unchanged.
 
 ## [0.10.0] - 2026-11-11
 
