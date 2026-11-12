@@ -57,6 +57,7 @@ function makeDeps(model: ReturnType<typeof scriptedModel>): {
       appendToolUse: () => {},
       appendToolResult: () => {},
       appendTurnBoundary: () => {},
+      appendMessage: () => {},
     },
     systemPrompt: "sys",
     tools: [],
