@@ -9,7 +9,8 @@ import {
   tickIndices,
 } from "./usageCacheFormat";
 
-const LEFT = 44;
+/** Width of the y-axis column, which stays put while the plot beside it scrolls. */
+const AXIS = 44;
 const RIGHT = 16;
 const TOP = 12;
 const RATE_HEIGHT = 168;
@@ -90,9 +91,9 @@ export function UsageCachePlot({
   }, []);
 
   const count = data.buckets.length;
-  const step = Math.max(MIN_STEP, (available - LEFT - RIGHT) / count);
-  const width = LEFT + RIGHT + step * count;
-  const x = (index: number) => LEFT + (index + 0.5) * step;
+  const step = Math.max(MIN_STEP, (available - RIGHT) / count);
+  const width = RIGHT + step * count;
+  const x = (index: number) => (index + 0.5) * step;
   const ticks = tickIndices(data.buckets, data.bucketMs, step);
   const volumeMax = niceMax(Math.max(0, ...volume.map((value) => value.cached + value.uncached)));
   const volumeY = (value: number) => VOLUME_BASE - (value / volumeMax) * VOLUME_HEIGHT;
@@ -105,9 +106,9 @@ export function UsageCachePlot({
     const element = scroller.current;
     if (!element) return;
     // Keep the bucket being read on screen when the plot is wider than its frame.
-    if (x(next) - step < element.scrollLeft) element.scrollLeft = Math.max(0, x(next) - LEFT);
+    if (x(next) - step < element.scrollLeft) element.scrollLeft = Math.max(0, x(next) - step);
     else if (x(next) + step > element.scrollLeft + element.clientWidth)
-      element.scrollLeft = x(next) + RIGHT - element.clientWidth;
+      element.scrollLeft = x(next) + step - element.clientWidth;
   };
   const onKeyDown = (event: React.KeyboardEvent) => {
     const from = current ?? (event.key === "ArrowLeft" ? count : -1);
@@ -120,12 +121,46 @@ export function UsageCachePlot({
     event.preventDefault();
   };
 
-  const anchor = current === undefined ? 0 : x(current) - scrollLeft;
+  const anchor = current === undefined ? 0 : AXIS + x(current) - scrollLeft;
   const rows =
     current === undefined ? [] : visible.filter((entry) => entry.points[current]!.requests > 0);
 
   return (
-    <div className="relative">
+    <div className="relative flex">
+      {/* Same height and scales as the plot, so each label sits on its gridline. */}
+      <svg
+        data-cache-axis=""
+        width={AXIS}
+        height={HEIGHT}
+        viewBox={`0 0 ${AXIS} ${HEIGHT}`}
+        aria-hidden
+        className="block shrink-0 text-[11px] tabular-nums"
+      >
+        {[0, 0.5, 1].map((rate) => (
+          <text
+            key={rate}
+            x={AXIS - 8}
+            y={rateY(rate)}
+            dy="0.32em"
+            textAnchor="end"
+            className="fill-muted-foreground"
+          >
+            {formatRate(rate)}
+          </text>
+        ))}
+        {[volumeMax, 0].map((value) => (
+          <text
+            key={value}
+            x={AXIS - 8}
+            y={volumeY(value)}
+            dy="0.32em"
+            textAnchor="end"
+            className="fill-muted-foreground"
+          >
+            {format.compact(value)}
+          </text>
+        ))}
+      </svg>
       <div
         ref={scroller}
         data-cache-plot=""
@@ -136,7 +171,7 @@ export function UsageCachePlot({
         onKeyDown={onKeyDown}
         onBlur={() => setActive(undefined)}
         onScroll={(event) => setScrollLeft(event.currentTarget.scrollLeft)}
-        className="overflow-x-auto rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+        className="min-w-0 flex-1 overflow-x-auto rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
       >
         <svg
           width={width}
@@ -148,51 +183,28 @@ export function UsageCachePlot({
           {[0, 0.25, 0.5, 0.75, 1].map((rate) => (
             <g key={rate}>
               <line
-                x1={LEFT}
+                x1={0}
                 x2={width - RIGHT}
                 y1={rateY(rate)}
                 y2={rateY(rate)}
                 className={rate === 0 ? "stroke-border" : "stroke-border/50"}
               />
-              {rate % 0.5 === 0 && (
-                <text
-                  x={LEFT - 8}
-                  y={rateY(rate)}
-                  dy="0.32em"
-                  textAnchor="end"
-                  className="fill-muted-foreground"
-                >
-                  {formatRate(rate)}
-                </text>
-              )}
             </g>
           ))}
           <line
-            x1={LEFT}
+            x1={0}
             x2={width - RIGHT}
             y1={VOLUME_TOP}
             y2={VOLUME_TOP}
             className="stroke-border/50"
           />
           <line
-            x1={LEFT}
+            x1={0}
             x2={width - RIGHT}
             y1={VOLUME_BASE}
             y2={VOLUME_BASE}
             className="stroke-border"
           />
-          {[volumeMax, 0].map((value) => (
-            <text
-              key={value}
-              x={LEFT - 8}
-              y={volumeY(value)}
-              dy="0.32em"
-              textAnchor="end"
-              className="fill-muted-foreground"
-            >
-              {format.compact(value)}
-            </text>
-          ))}
           {ticks.indices.map((index) => (
             <text
               key={index}
@@ -271,7 +283,7 @@ export function UsageCachePlot({
           })}
           <rect
             data-cache-hit-area=""
-            x={LEFT}
+            x={0}
             y={0}
             width={step * count}
             height={HEIGHT}
@@ -292,7 +304,7 @@ export function UsageCachePlot({
           data-cache-tooltip=""
           role="status"
           className="cs-popup-surface pointer-events-none absolute top-2 z-10 w-max max-w-[min(20rem,calc(100%-1rem))] rounded-lg px-3 py-2 text-xs"
-          style={tooltipPlacement(anchor, available)}
+          style={tooltipPlacement(anchor, AXIS + available)}
         >
           <p className="font-medium">
             {format.period(data.buckets[current]!, data.bucketEnds[current]!, data.bucketMs)}
