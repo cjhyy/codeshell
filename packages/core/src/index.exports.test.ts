@@ -131,7 +131,12 @@ const expectedRuntimeExportsByPartition = {
   sessionUsageAccounting: ["normalizeCumulativeUsageCounters"],
   // Desktop's external runtime reports turn outcomes with the native rules.
   turnOutcomes: ["createTurnOutcomeTracker", "withOutcomeTrigger"],
-  memoryMaintenance: ["MemoryOrchestrator", "isEphemeralSessionState", "sanitizeContent"],
+  memoryMaintenance: [
+    "MemoryOrchestrator",
+    "auxCachedRequest",
+    "isEphemeralSessionState",
+    "sanitizeContent",
+  ],
   sessionOutputRecovery: [
     "OutputHistoryRecovery",
     "SessionOutputJournal",
