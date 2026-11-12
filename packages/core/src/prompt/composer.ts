@@ -12,9 +12,15 @@ import { scanInstructions, combineInstructions, type ScanOptions } from "./instr
 import { MemoryManager } from "../session/memory.js";
 import { scanSkills } from "../skills/index.js";
 import {
-  buildSkillListing,
+  buildSkillListingParts,
   type SkillListingOptions,
 } from "../tool-system/builtin/skill-prompt.js";
+import {
+  contextListSection,
+  renderContextSnapshot,
+  type ContextListParts,
+  type ContextSection,
+} from "../context/context-ledger.js";
 import { resolveAgentPreset, buildPresetSystemPrompt, type AgentPreset } from "../preset/index.js";
 import type { BuiltinTool } from "../tool-system/builtin/index.js";
 import type { CapabilityDynamicContextProvider } from "../capabilities/index.js";
@@ -239,12 +245,22 @@ export class PromptComposer {
   }
 
   async buildDynamicContextMessage(): Promise<Message | null> {
+    const content = renderContextSnapshot(await this.buildDynamicContextSections());
+    return content === null ? null : { role: "user", content };
+  }
+
+  /**
+   * The dynamic context as ordered sections (empty ones omitted). Joined, they
+   * are exactly buildDynamicContextMessage; kept apart so the context ledger
+   * can resend only what changed since the model was last told.
+   */
+  async buildDynamicContextSections(): Promise<ContextSection[]> {
     const skills = scanSkills(this.options.cwd, {
       disabledSkills: this.options.disabledSkills,
       disabledPlugins: this.options.disabledPlugins,
       skillAllowlist: this.options.skillAllowlist,
     });
-    const skillsListing = buildSkillListing(skills, {
+    const skillsListing = buildSkillListingParts(skills, {
       ...this.options.skillListing,
       preferredSkills: this.options.skillAllowlist,
       declaredSkills: this.options.profileDeclaredSkills,
@@ -267,23 +283,17 @@ export class PromptComposer {
     // Memory rides here (tail, past the cache breakpoint) — not the system
     // prefix — so a memory change (extraction / recall usage++ / approve) never
     // re-bills the cached prefix. See buildUserContextMessage for the rationale.
-    const memoryContext = this.getMemoryContext();
-    const goalToolContext = this.buildGoalToolContext();
+    const memoryIndex = this.getMemoryIndex();
 
-    const parts = [
-      skillsListing,
-      declaredSkillGap,
-      capabilityContext,
-      memoryContext,
-      sourcesContext,
-      goalToolContext,
-    ].filter(Boolean);
-    if (parts.length === 0) return null;
-
-    return {
-      role: "user",
-      content: `<system-reminder>\n${parts.join("\n\n")}\n</system-reminder>`,
-    };
+    const sections: ContextSection[] = [
+      ...(skillsListing ? [contextListSection("skills", skillsListing)] : []),
+      { key: "skill-gap", text: declaredSkillGap },
+      { key: "capability", text: capabilityContext },
+      ...(memoryIndex ? [contextListSection("memory", memoryIndex)] : []),
+      { key: "sources", text: sourcesContext },
+      { key: "goal-tool", text: this.buildGoalToolContext() },
+    ];
+    return sections.filter((section) => Boolean(section.text));
   }
 
   private buildGoalToolContext(): string {
@@ -433,21 +443,21 @@ export class PromptComposer {
     return this.cachedInstructions;
   }
 
-  private getMemoryContext(): string {
-    if (this.options.disableMemoryContext === true) return "";
+  private getMemoryIndex(): ContextListParts | null {
+    if (this.options.disableMemoryContext === true) return null;
     try {
       // Three-layer injection (用户拍板): a compact index merging GLOBAL +
       // DIGITAL-HUMAN + PROJECT memories. Global memories are surfaced every
       // session; the portable middle layer is present only when the active
       // workspace profile opts in.
-      return MemoryManager.buildInjectionIndex({
+      return MemoryManager.buildInjectionIndexParts({
         projectDir: this.options.cwd,
         profileDir: this.options.profileMemoryDir,
         maxAgeDays: this.options.memoriesMaxAgeDays,
         currentProjectOnly: this.options.memoryCurrentProjectOnly,
       });
     } catch {
-      return "";
+      return null;
     }
   }
 }

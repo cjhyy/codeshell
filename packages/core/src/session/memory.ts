@@ -30,6 +30,7 @@ import { homedir } from "node:os";
 import { createHash, randomUUID } from "node:crypto";
 import { acquireFileLock, writeFileAtomic } from "../utils/file-mutex.js";
 import { prepareProjectMemoryRoot, projectMemoryRoot } from "./project-memory-root.js";
+import type { ContextListParts, ContextSectionItem } from "../context/context-ledger.js";
 
 /**
  * Memory scopes (storage subdirs under a memory root):
@@ -806,7 +807,23 @@ export class MemoryManager {
    * `projectDir` undefined → no project layer; `profileDir` undefined → no
    * digital-human layer.
    */
-  static buildInjectionIndex(opts: {
+  static buildInjectionIndex(
+    opts: Parameters<typeof MemoryManager.buildInjectionIndexParts>[0],
+  ): string {
+    const parts = MemoryManager.buildInjectionIndexParts(opts);
+    if (parts === null) return "";
+    return parts.header + parts.items.map((item) => item.text).join("\n") + parts.footer;
+  }
+
+  /**
+   * The injection index as header + one item per line, so a caller can tell
+   * the model about a single changed memory instead of resending the index.
+   * Memory lines are identified by location/scope/name (plus the entry id when
+   * a name repeats); group headings and
+   * the blank lines between groups are structural. Null when there is nothing
+   * to inject.
+   */
+  static buildInjectionIndexParts(opts: {
     projectDir?: string;
     profileDir?: string;
     baseDir?: string;
@@ -822,7 +839,7 @@ export class MemoryManager {
      * never work inside other repos (e.g. a manager/dispatcher session).
      */
     currentProjectOnly?: boolean;
-  }): string {
+  }): ContextListParts | null {
     const global = new MemoryManager({ baseDir: opts.baseDir });
     const project = opts.projectDir
       ? new MemoryManager({ baseDir: opts.baseDir, projectDir: opts.projectDir })
@@ -855,40 +872,49 @@ export class MemoryManager {
     const projectEntries = project ? collect(project) : [];
 
     if (globalEntries.length === 0 && profileEntries.length === 0 && projectEntries.length === 0) {
-      return "";
+      return null;
     }
 
-    const fmt = (e: MemoryEntry, location: "global" | "profile" | "project"): string =>
+    type Location = "global" | "profile" | "project";
+    const fmt = (e: MemoryEntry, location: Location): string =>
       `- ${e.pinned ? "[pinned] " : ""}[scope="${e.scope}" location="${location}" type="${e.type}"] ${e.name}: ${e.description}`;
     const readableLocations = profile ? "global, profile, or project" : "global or project";
 
-    const lines: string[] = [];
-    if (globalEntries.length > 0) {
-      lines.push("## Global memories (apply across all projects)");
-      for (const e of globalEntries) lines.push(fmt(e, "global"));
-    }
-    if (profileEntries.length > 0) {
-      if (lines.length > 0) lines.push("");
-      lines.push("## Digital-human memories (travel with the active profile)");
-      for (const e of profileEntries) lines.push(fmt(e, "profile"));
-    }
-    if (projectEntries.length > 0) {
-      if (lines.length > 0) lines.push("");
-      lines.push("## Project memories (this repo)");
-      for (const e of projectEntries) lines.push(fmt(e, "project"));
-    }
+    const items: ContextSectionItem[] = [];
+    const group = (location: Location, heading: string, entries: MemoryEntry[]): void => {
+      if (entries.length === 0) return;
+      if (items.length > 0) items.push({ id: `--- ${location}`, text: "", structural: true });
+      items.push({ id: `## ${location}`, text: heading, structural: true });
+      // Names are what the model sees, so they lead the id; they are not
+      // unique, so same-named entries are told apart by their stable id.
+      const named = (e: MemoryEntry): string => `${location}/${e.scope}/${e.name}`;
+      const seen = new Map<string, number>();
+      for (const e of entries) seen.set(named(e), (seen.get(named(e)) ?? 0) + 1);
+      for (const e of entries) {
+        const unique = seen.get(named(e)) === 1;
+        items.push({
+          id: unique ? named(e) : `${named(e)}#${e.id ?? e.fileName}`,
+          text: fmt(e, location),
+        });
+      }
+    };
+    group("global", "## Global memories (apply across all projects)", globalEntries);
+    group("profile", "## Digital-human memories (travel with the active profile)", profileEntries);
+    group("project", "## Project memories (this repo)", projectEntries);
 
-    return (
-      `# Persistent Memory (index)\n\n` +
-      `These are summaries of memories from previous sessions. Only the summary is shown here.\n` +
-      `When a memory looks relevant to the current task, read its full content with the ` +
-      `MemoryRead tool before relying on it. Every entry includes its exact scope and location; ` +
-      `copy both values exactly and never infer them from the memory name or type. ` +
-      `Readable locations for this run: ${readableLocations}.\n` +
-      `If MemoryRead reports that an entry is missing, do not repeat the same call. ` +
-      `Use MemoryList once to refresh that exact store, or continue without the memory.\n\n` +
-      lines.join("\n")
-    );
+    return {
+      header:
+        `# Persistent Memory (index)\n\n` +
+        `These are summaries of memories from previous sessions. Only the summary is shown here.\n` +
+        `When a memory looks relevant to the current task, read its full content with the ` +
+        `MemoryRead tool before relying on it. Every entry includes its exact scope and location; ` +
+        `copy both values exactly and never infer them from the memory name or type. ` +
+        `Readable locations for this run: ${readableLocations}.\n` +
+        `If MemoryRead reports that an entry is missing, do not repeat the same call. ` +
+        `Use MemoryList once to refresh that exact store, or continue without the memory.\n\n`,
+      items,
+      footer: "",
+    };
   }
 
   /**
