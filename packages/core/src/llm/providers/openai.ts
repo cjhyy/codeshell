@@ -42,6 +42,7 @@ import {
   type PromptCacheHistoryPlan,
   type PromptCacheRequestContext,
 } from "../prompt-cache.js";
+import { stabilizeExplicitCacheContent, usesExplicitCacheMarkers } from "./openai-cache-content.js";
 import { STREAM_WATCHDOG_CONFIG, StreamIdleTimeoutError } from "../stream-watchdog.js";
 import { joinToolResultText } from "../../utils/tool-schema-discovery.js";
 
@@ -444,6 +445,9 @@ export class OpenAIClient extends LLMClientBase {
           options.promptCache,
         );
         const cachePolicy = this.promptCachePolicy(options.promptCache);
+        // Before hashing and marking: a message's bytes must not depend on
+        // whether a breakpoint lands on it.
+        stabilizeExplicitCacheContent(messages, cachePolicy.strategy);
         const tools = options.tools?.length
           ? this.convertTools(options.tools, cachePolicy)
           : undefined;
@@ -1304,13 +1308,7 @@ export class OpenAIClient extends LLMClientBase {
     stablePrefixEndIndex: number | undefined,
     previousBoundaryIndex?: number,
   ): void {
-    if (
-      policy.strategy !== "anthropic-explicit" &&
-      policy.strategy !== "openai-explicit" &&
-      policy.strategy !== "openai-hybrid"
-    ) {
-      return;
-    }
+    if (!usesExplicitCacheMarkers(policy.strategy)) return;
 
     const markedMessages = new Set<OpenAI.ChatCompletionMessageParam>();
     const mark = (index: number): void => {
@@ -1323,8 +1321,8 @@ export class OpenAIClient extends LLMClientBase {
         policy.strategy === "anthropic-explicit"
           ? { cache_control: { type: "ephemeral" as const } }
           : { prompt_cache_breakpoint: { mode: "explicit" as const } };
-      // Lift a plain-string content to a text-block array so it can carry the
-      // marker. Non-text content already uses an array of parts.
+      // Text content is already a text-part array (stabilizeExplicitCacheContent);
+      // this lift only remains for callers that mark without stabilizing.
       if (typeof m.content === "string") {
         (m as { content: unknown }).content = [{ type: "text", text: m.content, ...marker }];
         return;
