@@ -59,7 +59,10 @@ import { COMPLETE_GOAL_TOOL_NAME } from "../tool-system/builtin/complete-goal.js
 import { withoutContextMessages } from "../session/context-messages.js";
 import { moveVolatileContextToTail } from "./volatile-context-tail.js";
 import { persistContextReminder } from "./context-reminders.js";
-import { persistRemindersBeforeCheckpoint, withoutCheckpointDuplicates } from "./rollover-context.js";
+import {
+  persistRemindersBeforeCheckpoint,
+  withoutCheckpointDuplicates,
+} from "./rollover-context.js";
 import { CANCEL_GOAL_TOOL_NAME } from "../tool-system/builtin/cancel-goal.js";
 import {
   redactSensitiveToolResultsInMessages,

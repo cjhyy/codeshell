@@ -710,7 +710,11 @@ describe("TurnLoop goal lifecycle guardrails", () => {
     markContextMessage(ledger, { kind: "ledger", eventId: "ledger-event" });
     // Neither are reminders: an earlier hook reminder is not a USER turn.
     const reminder: Message = { role: "user", content: "EARLIER_HOOK_REMINDER" };
-    markContextMessage(reminder, { kind: "hook-reminder", eventId: "reminder-event", reminder: {} });
+    markContextMessage(reminder, {
+      kind: "hook-reminder",
+      eventId: "reminder-event",
+      reminder: {},
+    });
     const { deps } = makeTurnLoopDeps(
       [
         toolResponse({ id: "check-1", toolName: "Bash", args: { command: "bun test" } }),
