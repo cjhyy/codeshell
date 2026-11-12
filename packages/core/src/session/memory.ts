@@ -891,6 +891,10 @@ export class MemoryManager {
     const readableLocations = profile ? "global, profile, or project" : "global or project";
 
     const items: ContextSectionItem[] = [];
+    const nameCount = new Map<string, number>();
+    for (const e of [...globalEntries, ...profileEntries, ...projectEntries]) {
+      nameCount.set(e.name, (nameCount.get(e.name) ?? 0) + 1);
+    }
     const group = (location: Location, heading: string, entries: MemoryEntry[]): void => {
       if (entries.length === 0) return;
       if (items.length > 0) items.push({ id: `--- ${location}`, text: "", structural: true });
@@ -905,6 +909,12 @@ export class MemoryManager {
         items.push({
           id: unique ? named(e) : `${named(e)}#${e.id ?? e.fileName}`,
           text: fmt(e, location),
+          // What a removal cites: the name as the row shows it, with the
+          // row's own scope/location tags when the name alone is ambiguous.
+          label:
+            (nameCount.get(e.name) ?? 0) > 1
+              ? `${e.name} [scope="${e.scope}" location="${location}"]`
+              : e.name,
         });
       }
     };

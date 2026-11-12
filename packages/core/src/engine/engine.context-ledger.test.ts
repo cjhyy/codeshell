@@ -280,7 +280,7 @@ describe("Engine context ledger", () => {
     expect(run2[1]).toEqual({ role: "user", content: "second task" });
     const update = textOf(run2[2]!);
     expect(update).toContain(LEDGER_UPDATE_PREAMBLE);
-    expect(update).toContain('<context-update section="memory">\n+ ');
+    expect(update).toContain('<context-update section="memory">\nAdded:\n');
     expect(update).toContain("m4: learned after the first run");
     for (const stale of ["m1:", "m2:", "m3:", "one.marker"]) expect(update).not.toContain(stale);
 
@@ -314,7 +314,7 @@ describe("Engine context ledger", () => {
     const run3 = added(requests, 2);
     expect(run3).toHaveLength(3);
     const update = textOf(run3[2]!);
-    expect(update).toContain('<context-update section="skills">\n+ ');
+    expect(update).toContain('<context-update section="skills">\nAdded:\n');
     expect(update).toContain("fresh-skill");
     expect(update).not.toContain("filler-");
     expectAppendOnly(requests);

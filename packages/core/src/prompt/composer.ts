@@ -273,7 +273,8 @@ export class PromptComposer {
   }
 
   /**
-   * The dynamic context as ordered sections (empty ones omitted). Joined, they
+   * The dynamic context as ordered sections (empty ones omitted, except a
+   * skills section whose listing did not fit). Rendered as a snapshot they
    * are exactly buildDynamicContextMessage; kept apart so the context ledger
    * can resend only what changed since the model was last told.
    */
@@ -319,14 +320,27 @@ export class PromptComposer {
               knownIds: skills.map((skill) => skill.name),
             },
           ]
-        : []),
+        : skills.length > 0
+          ? [
+              // No listing fits the budget this run, but the skills exist:
+              // the section stays (empty) so it is not announced as removed.
+              {
+                key: "skills",
+                text: "",
+                compare: "ids" as const,
+                knownIds: skills.map((skill) => skill.name),
+              },
+            ]
+          : []),
       { key: "skill-gap", text: declaredSkillGap },
       { key: "capability", text: capabilityContext },
       ...(memoryIndex ? [contextListSection("memory", memoryIndex)] : []),
       { key: "sources", text: sourcesContext },
       { key: "goal-tool", text: this.buildGoalToolContext() },
     ];
-    return sections.filter((section) => Boolean(section.text));
+    return sections.filter(
+      (section) => Boolean(section.text) || (section.knownIds?.length ?? 0) > 0,
+    );
   }
 
   private buildGoalToolContext(): string {

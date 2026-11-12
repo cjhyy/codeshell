@@ -6,6 +6,36 @@
  * what changed since the model was last told: item-level for list sections,
  * whole-section otherwise, and nothing when nothing changed.
  *
+ * Every section is sent inside a tag that names it, and an update refers to
+ * sections and entries only by what the model was shown:
+ *
+ *   <system-reminder>
+ *   <context-section key="memory">
+ *   # Persistent Memory (index)
+ *
+ *   - [scope="user" location="project" type="user"] build: use bun, not npm
+ *   - [scope="user" location="project" type="user"] style: no default exports
+ *   </context-section>
+ *
+ *   <context-section key="goal-tool">
+ *   Goal state: none.
+ *   </context-section>
+ *   </system-reminder>
+ *
+ * and later, when one memory was added, one removed and the goal went away:
+ *
+ *   <system-reminder>
+ *   Context update: …
+ *
+ *   <context-update section="memory">
+ *   Added:
+ *   - [scope="user" location="project" type="user"] tests: run the guarded runner
+ *   Removed: "style"
+ *   </context-update>
+ *
+ *   <context-section-removed key="goal-tool" />
+ *   </system-reminder>
+ *
  * Pure: no I/O, no clock, no engine imports. Same input → same bytes.
  */
 
@@ -14,7 +44,14 @@ import { createHash } from "node:crypto";
 /** One stable line/entry of a list-shaped section. */
 export interface ContextSectionItem {
   id: string;
+  /** The entry's row. Sent as a single line: line breaks become spaces. */
   text: string;
+  /**
+   * The entry's name as `text` shows it; quoted when the entry is removed, so
+   * a removal never cites an identifier the model has not seen. Defaults to
+   * `id`.
+   */
+  label?: string;
   /**
    * Layout-only line (group heading, blank separator). It is part of the
    * section text but never listed in an update: the entries carry their own
@@ -36,7 +73,10 @@ export interface ContextSection {
    * "ids": the listing is a ranked/budgeted view whose row texts and visible
    * rows vary between runs without anything being installed or removed. Such
    * a section is compared by entry id only: an update lists added and removed
-   * ids, and a row whose id persists is never resent.
+   * entries, and a row whose id persists is never resent. Such a section is
+   * kept while `knownIds` is non-empty even when its text is empty (nothing
+   * fitted the budget): the entries still exist, so it is not announced as
+   * removed.
    */
   compare?: "ids";
   /**
@@ -59,11 +99,14 @@ export interface LedgerSectionState {
   items?: Record<string, string>;
   /** Digest of the list section's header + footer. */
   frame?: string;
+  /** Item id → the name the model was shown, where that differs from the id. */
+  labels?: Record<string, string>;
 }
 
 /** What the model has been told so far in this cache cycle. */
 export interface LedgerState {
-  version: 1;
+  /** 2: sections are tagged in the snapshot. Older states start a new snapshot. */
+  version: 2;
   sections: Record<string, LedgerSectionState>;
 }
 
@@ -73,8 +116,14 @@ export type LedgerEmission =
   | { kind: "update"; text: string; state: LedgerState };
 
 export const LEDGER_UPDATE_PREAMBLE =
-  "Context update: the entries below supersede earlier context with the same section and id " +
-  "(+ added, ~ replaced by this full text, - removed by id); anything not listed is unchanged.";
+  "Context update: each block below changes the earlier <context-section> with the same key. " +
+  "In a <context-update>, entries under \"Added:\" are new, entries under \"Replaced:\" " +
+  "supersede the earlier entry of the same name, and a \"Removed:\" line names an entry that " +
+  "no longer exists. A <context-section> block replaces that whole section and a " +
+  "<context-section-removed> tag withdraws it. Anything not mentioned is unchanged.";
+
+/** frame value of an id-compared section whose listing was not shown. */
+const UNLISTED = "unlisted";
 
 /** Rendered text of a list section; the invariant every list renderer keeps. */
 export function joinContextListParts(parts: ContextListParts): string {
@@ -87,9 +136,35 @@ export function contextListSection(key: string, parts: ContextListParts): Contex
 
 /** Full snapshot message text, or null when there is nothing to say. */
 export function renderContextSnapshot(sections: readonly ContextSection[]): string | null {
-  const parts = sections.map((section) => section.text).filter(Boolean);
+  const parts = live(sections)
+    .filter((section) => Boolean(section.text))
+    .map(fullSection);
   if (parts.length === 0) return null;
   return `<system-reminder>\n${parts.join("\n\n")}\n</system-reminder>`;
+}
+
+/**
+ * Entries are line-based: a line break inside one (a multi-line memory
+ * description, say) would read as further rows, or as a line of an update.
+ */
+function singleLine(text: string): string {
+  return text.replace(/[\r\n\u2028\u2029]+/g, " ");
+}
+
+/** A list section with every entry on one line; other sections unchanged. */
+function normalized(section: ContextSection): ContextSection {
+  if (!section.items) return section;
+  const items = section.items.map((item) => ({
+    ...item,
+    text: singleLine(item.text),
+    ...(item.label === undefined ? {} : { label: singleLine(item.label) }),
+  }));
+  if (items.every((item, index) => item.text === section.items![index]!.text)) {
+    return { ...section, items };
+  }
+  const header = section.header ?? "";
+  const footer = section.footer ?? "";
+  return { ...section, items, text: joinContextListParts({ header, items, footer }) };
 }
 
 function digest(text: string): string {
@@ -120,29 +195,53 @@ function comparedIds(section: ContextSection): string[] | undefined {
   return ids === undefined ? undefined : [...new Set(ids)].sort();
 }
 
+/** True for an id-compared section whose entries exist but whose listing is empty. */
+function unlisted(section: ContextSection): boolean {
+  return !section.text && section.compare === "ids" && (section.knownIds?.length ?? 0) > 0;
+}
+
 function live(sections: readonly ContextSection[]): ContextSection[] {
   const seen = new Set<string>();
-  return sections.filter((section) => {
-    if (!section.text || seen.has(section.key)) return false;
-    seen.add(section.key);
-    return true;
-  });
+  return sections
+    .filter((section) => {
+      if ((!section.text && !unlisted(section)) || seen.has(section.key)) return false;
+      seen.add(section.key);
+      return true;
+    })
+    .map(normalized);
+}
+
+/** Names of the listable entries whose name differs from their id. */
+function labelsOf(entries: readonly ContextSectionItem[] | undefined): {
+  labels?: Record<string, string>;
+} {
+  const named = (entries ?? []).filter(
+    (item) => item.label !== undefined && item.label !== item.id,
+  );
+  return named.length === 0
+    ? {}
+    : { labels: Object.fromEntries(named.map((item) => [item.id, item.label!])) };
 }
 
 /** The state after the model has been told exactly these sections. */
 export function ledgerStateForSections(sections: readonly ContextSection[]): LedgerState {
   return {
-    version: 1,
+    version: 2,
     sections: Object.fromEntries(
       live(sections).map((section): [string, LedgerSectionState] => {
         const ids = comparedIds(section);
         if (ids !== undefined) {
           // Identity only: the same ids are the same state whatever the text.
+          // Whether the listing was shown is part of it, so the listing is
+          // sent once it fits.
+          const hidden = unlisted(section);
           return [
             section.key,
             {
-              digest: digest(JSON.stringify(ids)),
+              digest: digest(JSON.stringify(hidden ? [ids, UNLISTED] : ids)),
               items: Object.fromEntries(ids.map((id) => [id, ""])),
+              ...(hidden ? { frame: UNLISTED } : {}),
+              ...labelsOf(listableItems(section)),
             },
           ];
         }
@@ -155,6 +254,7 @@ export function ledgerStateForSections(sections: readonly ContextSection[]): Led
                 digest: digest(section.text),
                 frame: frameDigest(section),
                 items: Object.fromEntries(entries.map((item) => [item.id, digest(item.text)])),
+                ...labelsOf(entries),
               },
         ];
       }),
@@ -166,44 +266,99 @@ function fullSection(section: ContextSection): string {
   return `<context-section key="${section.key}">\n${section.text}\n</context-section>`;
 }
 
-function updateBlock(section: ContextSection, lines: string[]): string {
+interface ItemChanges {
+  /** Rows of new entries. */
+  added: string[];
+  /** Full new rows of entries whose text changed. */
+  replaced: string[];
+  /** Names (as shown) of entries that no longer exist. */
+  removed: string[];
+}
+
+function changeCount(changes: ItemChanges): number {
+  return changes.added.length + changes.replaced.length + changes.removed.length;
+}
+
+function updateBlock(section: ContextSection, changes: ItemChanges): string {
+  const lines = [
+    ...(changes.added.length > 0 ? ["Added:", ...changes.added] : []),
+    ...(changes.replaced.length > 0 ? ["Replaced:", ...changes.replaced] : []),
+    // Quoted and labelled, so a removal cannot be mistaken for a list row.
+    ...changes.removed.map((name) => `Removed: ${JSON.stringify(name)}`),
+  ];
   return `<context-update section="${section.key}">\n${lines.join("\n")}\n</context-update>`;
 }
 
-/** Added/removed ids of an id-compared section; undefined to resend it whole. */
-function idUpdate(section: ContextSection, known: LedgerSectionState): string | undefined {
-  const ids = comparedIds(section);
-  if (ids === undefined || known.items === undefined) return undefined;
-  const shown = new Map(listableItems(section)?.map((item) => [item.id, item.text]));
-  const lines = ids
-    .filter((id) => own(known.items!, id) === undefined)
-    .map((id) => `+ ${shown.get(id) ?? id}`);
-  const current = new Set(ids);
-  for (const id of Object.keys(known.items)) {
-    if (!current.has(id)) lines.push(`- ${id}`);
-  }
-  return lines.length === 0 ? undefined : updateBlock(section, lines);
+/** The name the model was shown for a stored entry id. */
+function shownName(known: LedgerSectionState, id: string): string {
+  return (known.labels && own(known.labels, id)) ?? id;
 }
 
-/** Item-level block, or undefined when the whole section should be resent. */
-function itemUpdate(section: ContextSection, known: LedgerSectionState): string | undefined {
+/** Ids the model was told about that no longer exist, by shown name. */
+function removedNames(known: LedgerSectionState, current: ReadonlySet<string>): string[] {
+  return Object.keys(known.items ?? {})
+    .filter((id) => !current.has(id))
+    .map((id) => shownName(known, id));
+}
+
+/**
+ * Added/removed entries of an id-compared section. Undefined to resend the
+ * section whole, null when there is nothing to tell.
+ */
+function idUpdate(section: ContextSection, known: LedgerSectionState): string | null | undefined {
+  const ids = comparedIds(section);
+  if (ids === undefined || known.items === undefined) return undefined;
+  // The listing was never shown in this cycle and now fits: send it.
+  if (known.frame === UNLISTED && section.text) return undefined;
+  const shown = new Map(listableItems(section)?.map((item) => [item.id, item.text]));
+  const changes: ItemChanges = {
+    // An entry outside the visible listing has no row; its name stands alone.
+    added: ids
+      .filter((id) => own(known.items!, id) === undefined)
+      .map((id) => shown.get(id) ?? id),
+    replaced: [],
+    removed: removedNames(known, new Set(ids)),
+  };
+  if (changeCount(changes) > 0) return updateBlock(section, changes);
+  // Same entries: only whether the listing is shown differs. A listing that
+  // no longer fits takes nothing back from what the model was told.
+  return section.text ? undefined : null;
+}
+
+/**
+ * Item-level block. Undefined when the whole section should be resent, null
+ * when there is nothing to tell.
+ */
+function itemUpdate(section: ContextSection, known: LedgerSectionState): string | null | undefined {
   if (section.compare === "ids") return idUpdate(section, known);
   const entries = listableItems(section);
   if (entries === undefined || known.items === undefined) return undefined;
   if (known.frame !== frameDigest(section)) return undefined;
-  const current = new Set(entries.map((item) => item.id));
-  const lines: string[] = [];
+  const changes: ItemChanges = {
+    added: [],
+    replaced: [],
+    removed: removedNames(known, new Set(entries.map((item) => item.id))),
+  };
   for (const item of entries) {
     const before = own(known.items, item.id);
-    if (before === undefined) lines.push(`+ ${item.text}`);
-    else if (before !== digest(item.text)) lines.push(`~ ${item.text}`);
-  }
-  for (const id of Object.keys(known.items)) {
-    if (!current.has(id)) lines.push(`- ${id}`);
+    if (before === undefined) changes.added.push(item.text);
+    else if (before !== digest(item.text)) changes.replaced.push(item.text);
   }
   // No entry changed (only order or layout did), or most did: resend it whole.
-  if (lines.length === 0 || lines.length * 2 > entries.length) return undefined;
-  return updateBlock(section, lines);
+  const count = changeCount(changes);
+  if (count === 0 || count * 2 > entries.length) return undefined;
+  return updateBlock(section, changes);
+}
+
+/** What to say about a section whose state differs from what the model was told. */
+function sectionUpdate(
+  section: ContextSection,
+  known: LedgerSectionState | undefined,
+): string | null {
+  const block = known ? itemUpdate(section, known) : undefined;
+  if (block !== undefined) return block;
+  // An unlisted section has no text to send; its entries are only recorded.
+  return section.text ? fullSection(section) : null;
 }
 
 export function planLedgerEmission(
@@ -221,11 +376,12 @@ export function planLedgerEmission(
   for (const section of current) {
     const known = own(previous.sections, section.key);
     if (known?.digest === own(state.sections, section.key)?.digest) continue;
-    blocks.push((known && itemUpdate(section, known)) ?? fullSection(section));
+    const block = sectionUpdate(section, known);
+    if (block !== null) blocks.push(block);
   }
   for (const key of Object.keys(previous.sections)) {
     if (own(state.sections, key) === undefined) {
-      blocks.push(`Section "${key}" no longer applies; disregard its earlier content.`);
+      blocks.push(`<context-section-removed key="${key}" />`);
     }
   }
   if (blocks.length === 0) return { kind: "none", state };
@@ -257,7 +413,7 @@ export function parseLedgerState(input: unknown): LedgerState | undefined {
       return undefined;
     }
   }
-  if (!isRecord(value) || value.version !== 1 || !isRecord(value.sections)) return undefined;
+  if (!isRecord(value) || value.version !== 2 || !isRecord(value.sections)) return undefined;
   const sections: [string, LedgerSectionState][] = [];
   for (const [key, raw] of Object.entries(value.sections)) {
     if (!isRecord(raw) || typeof raw.digest !== "string") return undefined;
@@ -274,7 +430,15 @@ export function parseLedgerState(input: unknown): LedgerState | undefined {
       }
       section.items = Object.fromEntries(items);
     }
+    if (raw.labels !== undefined) {
+      if (!isRecord(raw.labels)) return undefined;
+      const labels = Object.entries(raw.labels);
+      if (!labels.every((entry): entry is [string, string] => typeof entry[1] === "string")) {
+        return undefined;
+      }
+      section.labels = Object.fromEntries(labels);
+    }
     sections.push([key, section]);
   }
-  return { version: 1, sections: Object.fromEntries(sections) };
+  return { version: 2, sections: Object.fromEntries(sections) };
 }
