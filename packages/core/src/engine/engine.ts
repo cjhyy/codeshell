@@ -2393,6 +2393,8 @@ export class Engine {
     // Uses a lightweight call without tools
     if (session.transcript.isPersistent()) {
       contextManager.setTranscriptPath(session.transcript.getFilePath());
+    } else {
+      contextManager.setPromptCacheSessionKey(session.state.sessionId);
     }
     // Re-derive frozen persistence decisions from the messages we just
     // loaded. Skipped on cold start (messages == [userContextMsg] only).
@@ -4287,6 +4289,8 @@ export class Engine {
       });
       if (session.transcript.isPersistent()) {
         contextManager.setTranscriptPath(session.transcript.getFilePath());
+      } else {
+        contextManager.setPromptCacheSessionKey(effectiveSessionId);
       }
       contextManager.initReplacementStateFromMessages(sourceMessages);
       this.lastContextManager = contextManager;
