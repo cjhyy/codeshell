@@ -354,6 +354,56 @@ describe("Engine context ledger hardening", () => {
     });
   });
 
+  describe("hook reminder repetition", () => {
+    it("repeats a prompt hook after a silent prompt, in the same or a new process", async () => {
+      const sessionId = "s-hardening-hook-dedupe";
+      const { requests } = scenario([stop("done")]);
+      let prompt: string[] = [];
+      let start: string[] = [];
+      const hooked = (): Engine => {
+        const engine = newEngine();
+        (engine as any).hooks.register("user_prompt_submit", async () => ({ messages: prompt }));
+        (engine as any).hooks.register("on_session_start", async () => ({ messages: start }));
+        return engine;
+      };
+      const count = (needle: string): number =>
+        requests.at(-1)!.filter((message) => textOf(message).includes(needle)).length;
+      let engine = hooked();
+      const run = async (task: string, promptOut: string[], startOut: string[]) => {
+        prompt = promptOut;
+        start = startOut;
+        await engine.run(task, { sessionId, cwd: repo });
+      };
+
+      await run("one", ["CHECK SKILLS"], ["SESSION RULES"]);
+      expect([count("CHECK SKILLS"), count("SESSION RULES")]).toEqual([1, 1]);
+      // Same output for the next prompt: said once.
+      await run("two", ["CHECK SKILLS"], ["SESSION RULES"]);
+      expect([count("CHECK SKILLS"), count("SESSION RULES")]).toEqual([1, 1]);
+      // ...also when the next prompt is handled by a new process.
+      engine = hooked();
+      await run("three", ["CHECK SKILLS"], ["SESSION RULES"]);
+      expect([count("CHECK SKILLS"), count("SESSION RULES")]).toEqual([1, 1]);
+
+      // Both hooks stay silent for one prompt.
+      await run("four", [], []);
+      expect([count("CHECK SKILLS"), count("SESSION RULES")]).toEqual([1, 1]);
+
+      // The prompt hook speaks again: it is about this prompt, so it is sent
+      // again, just before it. The session hook's text is still in history.
+      engine = hooked();
+      await run("five", ["CHECK SKILLS"], ["SESSION RULES"]);
+      expect([count("CHECK SKILLS"), count("SESSION RULES")]).toEqual([2, 1]);
+      const last = requests.at(-1)!;
+      expect(last.at(-1)).toEqual({ role: "user", content: "five" });
+      expect(textOf(last.at(-2)!)).toBe("<system-reminder>\nCHECK SKILLS\n</system-reminder>");
+      // And once more is not needed for the prompt after that.
+      await run("six", ["CHECK SKILLS"], ["SESSION RULES"]);
+      expect([count("CHECK SKILLS"), count("SESSION RULES")]).toEqual([2, 1]);
+      expectAppendOnly(requests.map(wire));
+    });
+  });
+
   describe("non-durable runtime context (dynamic placement)", () => {
     const worldProfile = {
       id: "world-test",

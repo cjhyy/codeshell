@@ -142,6 +142,11 @@ export const NO_HOOK_MESSAGES: RunHookMessages = { sessionStart: [], promptSubmi
 
 type HookSource = "sessionStart" | "promptSubmit";
 
+/** Hook output as it is compared and stored: trimmed, empty messages dropped. */
+export function cleanedHookMessages(parts: readonly string[]): string[] {
+  return cleaned(parts);
+}
+
 function cleaned(parts: readonly string[]): string[] {
   return parts.map((part) => part.trim()).filter((part) => part.length > 0);
 }
@@ -152,9 +157,15 @@ function sameParts(a: readonly string[], b: readonly string[]): boolean {
 
 /**
  * Put this run's hook reminder just before its user task (the last message),
- * leaving out what history already says: a hook whose output equals its most
- * recent reminder still in `messages` is not repeated. A changed output is
- * appended as a new reminder; the old one stays where it is.
+ * leaving out what history already says. A changed output is appended as a
+ * new reminder; the old one stays where it is.
+ *
+ *   - `on_session_start` speaks about the session: output equal to its most
+ *     recent reminder still in `messages` is not repeated.
+ *   - `user_prompt_submit` speaks about one prompt: it is left out only when
+ *     the hook said the same for the prompt just before (and that reminder is
+ *     still in `messages`). After a prompt for which it was silent or said
+ *     something else, the same text is about a new prompt and is sent again.
  *
  * Returns the reminders in effect for this run — the new one and the earlier
  * ones it deferred to — which a notes rollover must carry over.
@@ -165,6 +176,12 @@ export function injectHookReminder(args: {
   hooks: RunHookMessages;
   /** Transcript id of the run's user message; replay puts the reminder before it. */
   userMessageEventId: string;
+  /**
+   * What the prompt-submit hook said for the previous prompt. Undefined when
+   * that was never recorded (a session from before it was): the hook is then
+   * compared with its latest reminder in history, like `on_session_start`.
+   */
+  previousPromptSubmit?: readonly string[];
 }): Message[] {
   const { messages } = args;
   const inEffect: Message[] = [];
@@ -178,7 +195,16 @@ export function injectHookReminder(args: {
       if (mark?.kind === "hook-reminder" && mark.reminder[source]) latest = messages[index];
     }
     const mark = latest && contextMessageMark(latest);
-    if (latest && mark?.kind === "hook-reminder" && sameParts(mark.reminder[source]!, parts)) {
+    const saidForPreviousPrompt =
+      source !== "promptSubmit" ||
+      args.previousPromptSubmit === undefined ||
+      sameParts(args.previousPromptSubmit, parts);
+    if (
+      saidForPreviousPrompt &&
+      latest &&
+      mark?.kind === "hook-reminder" &&
+      sameParts(mark.reminder[source]!, parts)
+    ) {
       if (!inEffect.includes(latest)) inEffect.push(latest);
     } else {
       fresh[source] = parts;
@@ -219,6 +245,8 @@ export function assembleRunMessages(args: {
   userMessageEventId: string;
   userContextMsg: Message | null;
   hooks: RunHookMessages;
+  /** See {@link injectHookReminder}. */
+  previousPromptSubmit?: readonly string[];
   ledger: RunContextLedger;
   volatileContextMsg: Message | null;
 }): { retained: Message[]; runStartMessage: Message | undefined } {
