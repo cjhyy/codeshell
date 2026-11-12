@@ -117,8 +117,8 @@ export type LedgerEmission =
 
 export const LEDGER_UPDATE_PREAMBLE =
   "Context update: each block below changes the earlier <context-section> with the same key. " +
-  "In a <context-update>, entries under \"Added:\" are new, entries under \"Replaced:\" " +
-  "supersede the earlier entry of the same name, and a \"Removed:\" line names an entry that " +
+  'In a <context-update>, entries under "Added:" are new, entries under "Replaced:" ' +
+  'supersede the earlier entry of the same name, and a "Removed:" line names an entry that ' +
   "no longer exists. A <context-section> block replaces that whole section and a " +
   "<context-section-removed> tag withdraws it. Anything not mentioned is unchanged.";
 
@@ -313,9 +313,7 @@ function idUpdate(section: ContextSection, known: LedgerSectionState): string | 
   const shown = new Map(listableItems(section)?.map((item) => [item.id, item.text]));
   const changes: ItemChanges = {
     // An entry outside the visible listing has no row; its name stands alone.
-    added: ids
-      .filter((id) => own(known.items!, id) === undefined)
-      .map((id) => shown.get(id) ?? id),
+    added: ids.filter((id) => own(known.items!, id) === undefined).map((id) => shown.get(id) ?? id),
     replaced: [],
     removed: removedNames(known, new Set(ids)),
   };

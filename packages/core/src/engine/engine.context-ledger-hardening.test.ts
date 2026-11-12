@@ -271,7 +271,10 @@ describe("Engine context ledger hardening", () => {
       expect(indexOfText(live, "<context-note>")).toBeGreaterThanOrEqual(0);
       expect(indexOfText(live, "long history")).toBe(-1);
       // The reminder sits just before the task it was issued for.
-      expect(live[indexOfText(live, "RULES") + 1]).toEqual({ role: "user", content: "second task" });
+      expect(live[indexOfText(live, "RULES") + 1]).toEqual({
+        role: "user",
+        content: "second task",
+      });
 
       const restarted = hooked();
       await restarted.run("third task", { sessionId, cwd: repo });

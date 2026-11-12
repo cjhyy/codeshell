@@ -50,8 +50,10 @@ export function engineContextSections(args: {
 /**
  * A profile's "dynamic" runtime context is declared non-durable: it must not
  * reach the transcript and an earlier run's status must not stay visible. It
- * therefore stays out of the ledger and remains a per-run volatile message at
- * the very tail, so removing it next run costs the least cached prefix.
+ * therefore stays out of the ledger and remains a per-run volatile message.
+ * It starts at the tail; on a route with explicit cache breakpoints the turn
+ * loop keeps it there for every request (engine/volatile-context-tail.ts), so
+ * removing it next run costs no cached history at all.
  */
 export function runtimeContextMessage(text: string | undefined): Message | null {
   return text ? { role: "user", content: [{ type: "text", text }] } : null;
