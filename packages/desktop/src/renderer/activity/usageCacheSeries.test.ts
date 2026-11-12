@@ -154,3 +154,48 @@ test("volume sums only the series still shown", () => {
     uncached: 3_000,
   });
 });
+
+test("external CLI turns count as main conversation when they carry cache data", () => {
+  const cli = { providerKind: "external-cli", purpose: "external" as const, provider: "claude" };
+  const rows = [
+    row(1, { ...cli, model: "cli-turn-aggregate" }),
+    row(2, { ...cli, provider: "codex", model: "cli-turn-aggregate", cacheReadTokens: 0 }),
+    row(2, { purpose: "title", cacheReadTokens: 0 }),
+  ];
+  const main = buildCacheSeries(timeline(rows), { mainOnly: true });
+  expect(main.series.map((entry) => [entry.provider, entry.providerKind])).toEqual([
+    ["claude", "external-cli"],
+  ]);
+  expect(main.series[0]!.points[1]!.rate).toBe(0.9);
+});
+
+test("auxiliary-only models cannot take a top slot, and slots survive the filter", () => {
+  const rows = ["m1", "m2", "m3", "m4", "m5", "m6"].map((model, index) =>
+    row(1, { model, promptTokens: 60_000 - index * 10_000 }),
+  );
+  // Far more input than any main model, but none of it main conversation.
+  rows.push(row(1, { model: "aux-big", purpose: "aux_summary", promptTokens: 900_000 }));
+  rows.push(row(2, { model: "m6", purpose: "title", promptTokens: 500_000 }));
+  const main = buildCacheSeries(timeline(rows), { mainOnly: true });
+  expect(main.series.map((entry) => entry.model)).toEqual(["m1", "m2", "m3", "m4", "m5", ""]);
+  expect(main.series[5]!.points[1]!.promptTokens).toBe(10_000);
+  const all = buildCacheSeries(timeline(rows), { mainOnly: false });
+  expect(all.series.map((entry) => [entry.model, entry.slot])).toEqual(
+    main.series.map((entry) => [entry.model, entry.slot]),
+  );
+  expect(all.series[5]!.points[1]!.promptTokens).toBe(910_000);
+});
+
+test("models without main-conversation rows fill spare slots by all-purpose input", () => {
+  const rows = [
+    row(1),
+    row(1, { model: "aux-small", purpose: "title", promptTokens: 3_000 }),
+    row(1, { model: "aux-big", purpose: "title", promptTokens: 8_000 }),
+  ];
+  const all = buildCacheSeries(timeline(rows), { mainOnly: false });
+  expect(all.series.map((entry) => [entry.model, entry.slot])).toEqual([
+    ["model-a", 0],
+    ["aux-big", 1],
+    ["aux-small", 2],
+  ]);
+});

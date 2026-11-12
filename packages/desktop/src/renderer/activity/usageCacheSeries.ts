@@ -44,6 +44,10 @@ export interface CacheVolume {
 const identityKey = (row: Pick<UsageTimeRow, "provider" | "model" | "providerKind">) =>
   JSON.stringify([row.provider, row.model, row.providerKind]);
 
+/** External CLI turns are the user's own conversation, not auxiliary calls. */
+const isMainConversation = (row: Pick<UsageTimeRow, "purpose">) =>
+  row.purpose === "main" || row.purpose === "external";
+
 function point(): CachePoint {
   return { requests: 0, promptTokens: 0, cacheReadTokens: 0, rate: null };
 }
@@ -63,8 +67,8 @@ function settle(points: CachePoint[]): number {
 /**
  * Turns bucket rows into one hit-rate series per model.
  *
- * Rank (and with it the colour slot) comes from every purpose in the range, so
- * switching the main-conversation filter never repaints a model.
+ * Rank (and with it the colour slot) is fixed for the range, independent of the
+ * filter, so switching it or hiding a model never repaints another.
  */
 export function buildCacheSeries(
   timeline: UsageTimeline,
@@ -79,7 +83,7 @@ export function buildCacheSeries(
   const eligible = timeline.rows.filter(
     (row) => !isCliUsage(row) || cliCached.has(identityKey(row)),
   );
-  const rows = options.mainOnly ? eligible.filter((row) => row.purpose === "main") : eligible;
+  const rows = options.mainOnly ? eligible.filter(isMainConversation) : eligible;
   if (!rows.length) return empty;
 
   let first = timeline.since ?? Infinity;
@@ -92,10 +96,19 @@ export function buildCacheSeries(
   if (buckets.length > MAX_BUCKETS) buckets.splice(0, buckets.length - MAX_BUCKETS);
   const indexOf = new Map(buckets.map((start, index) => [start, index]));
 
-  const rank = new Map<string, number>();
-  for (const row of eligible)
-    rank.set(identityKey(row), (rank.get(identityKey(row)) ?? 0) + row.promptTokens);
-  const ranked = [...rank].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1));
+  // One ranking for the whole range: main-conversation input first, so a model
+  // with only auxiliary calls cannot take a slot; all-purpose input orders the rest.
+  const rank = new Map<string, { main: number; all: number }>();
+  for (const row of eligible) {
+    const key = identityKey(row);
+    const totals = rank.get(key) ?? { main: 0, all: 0 };
+    totals.all += row.promptTokens;
+    if (isMainConversation(row)) totals.main += row.promptTokens;
+    rank.set(key, totals);
+  }
+  const ranked = [...rank].sort(
+    (a, b) => b[1].main - a[1].main || b[1].all - a[1].all || (a[0] < b[0] ? -1 : 1),
+  );
   const slots = new Map(ranked.slice(0, MAX_MODEL_SERIES).map(([key], index) => [key, index]));
 
   const series = new Map<string, CacheSeries>();
