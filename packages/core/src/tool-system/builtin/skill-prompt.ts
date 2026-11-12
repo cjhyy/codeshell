@@ -1,3 +1,8 @@
+import {
+  joinContextListParts,
+  type ContextListParts,
+  type ContextSectionItem,
+} from "../../context/context-ledger.js";
 import { estimateStringTokens } from "../../context/token-counter.js";
 import type { SkillDefinition } from "../../skills/scanner.js";
 
@@ -85,55 +90,78 @@ export function skillListingBudget(options: SkillListingOptions = {}): number {
     : 0;
 }
 
-/** Budget includes headings and discovery guidance. Bodies remain on demand. */
-export function buildSkillListing(
+const UNGROUPED = "用户 / 项目";
+
+/**
+ * The listing as header + one item per line + footer, so a caller can report a
+ * single added or changed skill. Skill rows are identified by skill name;
+ * group headings and the blank lines between groups are structural. Null when
+ * no listing fits the budget (or there are no skills).
+ */
+export function buildSkillListingParts(
   skills: readonly SkillDefinition[],
   options: SkillListingOptions = {},
-): string {
-  if (skills.length === 0) return "";
+): ContextListParts | null {
+  if (skills.length === 0) return null;
   const budget = skillListingBudget(options);
   const ranked = rankSkillsForDiscovery(skills, options);
   const selected = new Map<SkillDefinition, string>();
-  const render = (): string => {
-    const groups = new Map<string, string[]>();
+  const parts = (): ContextListParts => {
+    const groups = new Map<string, ContextSectionItem[]>();
     for (const [skill, description] of [...selected].sort(([a], [b]) =>
       a.name < b.name ? -1 : a.name > b.name ? 1 : 0,
     )) {
       const colon = skill.name.indexOf(":");
-      const group = colon > 0 ? skill.name.slice(0, colon) : "用户 / 项目";
+      const group = colon > 0 ? skill.name.slice(0, colon) : UNGROUPED;
       const rows = groups.get(group) ?? [];
-      rows.push(`- ${skill.name}:${description ? ` ${description}` : ""}`);
+      rows.push({
+        id: skill.name,
+        text: `- ${skill.name}:${description ? ` ${description}` : ""}`,
+      });
       groups.set(group, rows);
     }
-    const sections = [...groups]
-      .sort(([a], [b]) =>
-        a === "用户 / 项目" ? -1 : b === "用户 / 项目" ? 1 : a < b ? -1 : a > b ? 1 : 0,
-      )
-      .map(([group, rows]) => `## ${group} (${rows.length})\n${rows.join("\n")}`);
+    const items: ContextSectionItem[] = [];
+    for (const [group, rows] of [...groups].sort(([a], [b]) =>
+      a === UNGROUPED ? -1 : b === UNGROUPED ? 1 : a < b ? -1 : a > b ? 1 : 0,
+    )) {
+      if (items.length > 0) items.push({ id: `--- ${group}`, text: "", structural: true });
+      items.push({ id: `## ${group}`, text: `## ${group} (${rows.length})`, structural: true });
+      items.push(...rows);
+    }
     const omitted = skills.length - selected.size;
-    return [
-      "# Available Skills",
-      ...sections,
-      `${omitted ? `${omitted} more skills omitted. ` : ""}Use Skill({query: "keywords"}) to search metadata, then Skill({skill: "exact-name"}) to load instructions.`,
-    ].join("\n\n");
+    return {
+      header: "# Available Skills\n\n",
+      items,
+      footer: `${items.length > 0 ? "\n\n" : ""}${omitted ? `${omitted} more skills omitted. ` : ""}Use Skill({query: "keywords"}) to search metadata, then Skill({skill: "exact-name"}) to load instructions.`,
+    };
   };
-  if (estimateStringTokens(render()) > budget) return "";
+  const fits = (): boolean => estimateStringTokens(joinContextListParts(parts())) <= budget;
+  if (!fits()) return null;
   // Names first preserve broad discovery; expand descriptions in priority order.
   for (const skill of ranked) {
     selected.set(skill, "");
-    if (estimateStringTokens(render()) > budget) selected.delete(skill);
+    if (!fits()) selected.delete(skill);
   }
   for (const skill of ranked) {
     if (!selected.has(skill)) continue;
     const description = skillMetadataText(skill.description);
     for (const text of [description, skillMetadataText(description, 160)]) {
       selected.set(skill, text);
-      if (estimateStringTokens(render()) <= budget) break;
+      if (fits()) break;
       selected.set(skill, "");
     }
   }
-  const result = render();
-  return estimateStringTokens(result) <= budget ? result : "";
+  const result = parts();
+  return estimateStringTokens(joinContextListParts(result)) <= budget ? result : null;
+}
+
+/** Budget includes headings and discovery guidance. Bodies remain on demand. */
+export function buildSkillListing(
+  skills: readonly SkillDefinition[],
+  options: SkillListingOptions = {},
+): string {
+  const parts = buildSkillListingParts(skills, options);
+  return parts === null ? "" : joinContextListParts(parts);
 }
 
 /** Read-only metadata discovery with the same scanner visibility as invocation. */
