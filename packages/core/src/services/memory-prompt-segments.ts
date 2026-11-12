@@ -16,12 +16,34 @@ export interface MemoryPromptSegments {
   volatile: string;
 }
 
-export type MemoryPromptPurpose = "memory-extraction" | "session-summary";
+export type MemoryPromptPurpose = "memory-extraction" | "session-summary" | "memory-write-decision";
 
 /** Handed to `callLLM` next to the single-string prompt, which stays complete. */
 export interface MemoryPromptCachePlan extends MemoryPromptSegments {
   /** Separates cache scopes: prompts of different purposes share no prefix. */
   purpose: MemoryPromptPurpose;
+}
+
+/** A piece is sealed once it holds at least this many characters. */
+const SEALED_PIECE_CHARS = 2_000;
+
+/**
+ * Cut a growing list of text items into pieces at positions that survive
+ * appends: the pieces of a longer list start with the pieces of a shorter
+ * one. Each item must carry its own separator, so a sealed piece never
+ * depends on what follows it.
+ */
+export function sealMemoryPromptPieces(items: readonly string[]): MemoryTranscriptLayout {
+  const sealed: string[] = [];
+  let open = "";
+  for (const item of items) {
+    open += item;
+    if (open.length >= SEALED_PIECE_CHARS) {
+      sealed.push(open);
+      open = "";
+    }
+  }
+  return { sealed, open };
 }
 
 /**

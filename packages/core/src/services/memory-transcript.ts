@@ -1,3 +1,5 @@
+import { sealMemoryPromptPieces } from "./memory-prompt-segments.js";
+
 const MAX_CONVERSATION_CHARS = 30_000;
 const MESSAGE_OMISSION = "\n[... middle of message omitted ...]\n";
 const CONVERSATION_OMISSION = "[... earlier conversation omitted ...]";
@@ -9,8 +11,6 @@ const SEPARATOR = "\n\n";
  * for one session keep a byte-identical beginning (provider prompt cache).
  */
 const WINDOW_STEP_CHARS = 10_000;
-/** A piece is sealed once it holds at least this many characters. */
-const SEALED_PIECE_CHARS = 2_000;
 
 /**
  * A bounded transcript rendering split at positions that survive appends.
@@ -65,17 +65,10 @@ export function layoutMemoryTranscript(
   const start = windowStart(parts);
   const items = start > 1 ? [parts[0]!, CONVERSATION_OMISSION, ...parts.slice(start)] : parts;
 
-  const sealed: string[] = [];
-  let open = "";
-  for (const [index, item] of items.entries()) {
-    // The separator leads, so a sealed piece never depends on what follows it.
-    open += index === 0 ? item : `${SEPARATOR}${item}`;
-    if (open.length >= SEALED_PIECE_CHARS) {
-      sealed.push(open);
-      open = "";
-    }
-  }
-  return { sealed, open };
+  // The separator leads, so a sealed piece never depends on what follows it.
+  return sealMemoryPromptPieces(
+    items.map((item, index) => (index === 0 ? item : `${SEPARATOR}${item}`)),
+  );
 }
 
 export function formatMemoryTranscript(

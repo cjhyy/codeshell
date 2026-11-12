@@ -15,12 +15,35 @@ interface ComparedMemory {
   bodyExcerpt: { text: string; status: "complete" | "truncated" | "omitted"; totalChars: number };
 }
 
+/**
+ * The related memories as the model sees them, most similar first: catalogue
+ * metadata joined by id with the body excerpt that follows the candidate. A
+ * related entry without an excerpt line has its body omitted.
+ */
 function comparedMemories(prompt: string): ComparedMemory[] {
-  return prompt
-    .split("Related existing memories (JSON lines):\n")[1]!
-    .split("\n\nRespond with JSON:")[0]!
-    .split("\n")
-    .map((line) => JSON.parse(line));
+  const jsonLines = (text: string) =>
+    text
+      .split("\n")
+      .filter((line) => line.length > 0)
+      .map((line) => JSON.parse(line));
+  const catalogue = jsonLines(
+    prompt.split("Existing memories catalogue (JSON lines):\n")[1]!.split("\nCandidate:\n")[0]!,
+  );
+  const excerpts = jsonLines(
+    prompt
+      .split("Body excerpts of related memories (JSON lines):\n")[1]!
+      .split("\n\nRespond with JSON:")[0]!,
+  );
+  const ranked: string[] = JSON.parse(
+    prompt.split("Related catalogue ids, most similar first:\n")[1]!.split("\n")[0]!,
+  );
+  return ranked.map((id) => ({
+    ...catalogue.find((memory) => memory.id === id),
+    bodyExcerpt: excerpts.find((memory) => memory.id === id)?.bodyExcerpt ?? {
+      text: "",
+      status: "omitted",
+    },
+  }));
 }
 
 const first: ExtractedMemory = {
