@@ -7,6 +7,7 @@ import { createRequire } from "node:module";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { panelLifecycleFailure } from "./smoke-project-diagnostics.mjs";
 const { chromium } = createRequire(new URL("../packages/desktop/package.json", import.meta.url))(
   "playwright",
 );
@@ -15,6 +16,12 @@ const COPY = "designs/recovered.codesign.json";
 const PIXEL =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
 const hash = async (value) => createHash("sha256").update(value).digest("hex");
+
+export async function clickDesignToolbarAction(frame, selector) {
+  const action = frame.locator(selector);
+  if (!(await action.isVisible())) await frame.locator("#compact-actions > summary").click();
+  await action.click();
+}
 
 export async function verifyCloudDesignRecovery({
   browserGuard,
@@ -91,12 +98,14 @@ export async function verifyCloudDesignRecovery({
       404,
     );
   await mkdir(evidenceDir, { recursive: true });
+  let step = "design-open-panel";
   async function browserRun(action) {
     const browser = await chromium.launch({ channel: "chromium", chromiumSandbox: true });
     const pages = [],
       errors = [];
     try {
       const open = async (project) => {
+        step = "design-open-panel";
         const context = await browserGuard.createContext(browser, {
           viewport: { width: 1440, height: 1000 },
           acceptDownloads: true,
@@ -117,6 +126,7 @@ export async function verifyCloudDesignRecovery({
         const iframe = page.locator("iframe.panel-host-frame");
         await iframe.waitFor();
         const frame = await (await iframe.elementHandle()).contentFrame();
+        step = "design-ready";
         await frame.waitForFunction(
           () =>
             !document.querySelector(".topbar")?.inert &&
@@ -142,7 +152,7 @@ export async function verifyCloudDesignRecovery({
               .catch(() => "unavailable"),
           );
       }
-      throw error;
+      throw panelLifecycleFailure(error, "design-studio", step);
     } finally {
       await browser.close();
     }
@@ -153,7 +163,8 @@ export async function verifyCloudDesignRecovery({
       .filter({ hasText: text })
       .waitFor({ timeout: 150_000 });
   const download = async ({ page, frame }) => {
-    await frame.locator("#portable-backup-open").click();
+    step = "design-export";
+    await clickDesignToolbarAction(frame, "#portable-backup-open");
     const pending = page.waitForEvent("download", { timeout: 150_000 });
     await frame.locator("#portable-backup-export").click();
     const data = await readFile(await (await pending).path());
@@ -162,7 +173,8 @@ export async function verifyCloudDesignRecovery({
     return data;
   };
   const choose = async (frame, buffer) => {
-    await frame.locator("#portable-backup-open").click();
+    step = "design-import-review";
+    await clickDesignToolbarAction(frame, "#portable-backup-open");
     await frame
       .locator("#portable-backup-file")
       .setInputFiles({ name: "design-complete-backup.json", mimeType: "application/json", buffer });
@@ -170,6 +182,7 @@ export async function verifyCloudDesignRecovery({
     assert.equal(await frame.locator("#portable-backup-restore").isEnabled(), true);
   };
   const openCopy = async (frame) => {
+    step = "design-open-copy";
     await frame.locator("#open-files").click();
     await frame.locator("#files-dialog .file-row").filter({ hasText: COPY }).click();
     await frame.waitForFunction(
@@ -200,8 +213,9 @@ export async function verifyCloudDesignRecovery({
       indexed.primarySource,
       "Export does not rewrite the indexed source",
     );
+    step = "design-save";
     await a.frame.locator("#add-page").click();
-    await a.frame.locator("#save").click();
+    await clickDesignToolbarAction(a.frame, "#save");
     await a.frame
       .locator("#save-state")
       .filter({ hasText: "已保存" })
@@ -218,6 +232,7 @@ export async function verifyCloudDesignRecovery({
     );
     await choose(b.frame, buffer);
     await absent(projectB, COPY);
+    step = "design-import-conflict";
     await b.frame.locator("#portable-backup-path").fill(SOURCE);
     await b.frame.locator("#portable-backup-restore").click();
     await waitStatus(b.frame, "冲突");
@@ -226,6 +241,7 @@ export async function verifyCloudDesignRecovery({
       other,
       "Restore must preserve an existing target document",
     );
+    step = "design-import-copy";
     await b.frame.locator("#portable-backup-path").fill(COPY);
     await b.frame.locator("#portable-backup-restore").click();
     await waitStatus(b.frame, "已恢复到");

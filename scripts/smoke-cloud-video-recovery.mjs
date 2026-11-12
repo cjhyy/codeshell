@@ -8,6 +8,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { verifyCloudVideoMedia, verifyCloudSourcePlayback } from "./smoke-cloud-video-media.mjs";
 import { verifyCloudVideoRecording } from "./smoke-cloud-video-recording.mjs";
+import { panelLifecycleFailure } from "./smoke-project-diagnostics.mjs";
 const { chromium } = createRequire(new URL("../packages/desktop/package.json", import.meta.url))(
   "playwright",
 );
@@ -102,6 +103,7 @@ export async function verifyCloudVideoRecovery({
     throw new Error("Video save did not complete");
   };
   await mkdir(evidenceDir, { recursive: true });
+  let step = "video-open-panel";
   async function browserRun(action) {
     const browser = await chromium.launch({
       channel: "chromium",
@@ -132,6 +134,7 @@ export async function verifyCloudVideoRecovery({
     }, 200);
     try {
       const open = async (project) => {
+        step = "video-open-panel";
         const context = await browserGuard.createContext(browser, {
           viewport: { width: 1440, height: 1000 },
           acceptDownloads: true,
@@ -172,6 +175,7 @@ export async function verifyCloudVideoRecovery({
         const iframe = page.locator("iframe.panel-host-frame");
         await iframe.waitFor();
         const frame = await (await iframe.elementHandle()).contentFrame();
+        step = "video-ready";
         await frame.waitForFunction(
           () => {
             const status = document.querySelector("#save-state")?.textContent;
@@ -190,6 +194,7 @@ export async function verifyCloudVideoRecovery({
         return { page, frame, call };
       };
       await action(open);
+      step = "video-page-errors";
       assert.deepEqual(errors, [], "Installed Video must not raise page errors");
     } catch (error) {
       await writeFile(join(scratch, "video-bridge-timings.json"), JSON.stringify(bridgeTimings));
@@ -213,14 +218,14 @@ export async function verifyCloudVideoRecovery({
               .catch(() => "unavailable"),
           );
       }
-      throw error;
+      throw panelLifecycleFailure(error, "video-studio", step);
     } finally {
       clearInterval(timer);
       await browser.close();
     }
   }
 
-  let finalDocument, statusJobId, delivered, recorded;
+  let finalDocument, statusJob, delivered, recorded;
   const edit = async (frame, name) => {
     await frame.locator("#project-name").fill(name);
     await frame.locator("#project-name").press("Tab");
@@ -232,6 +237,7 @@ export async function verifyCloudVideoRecovery({
   await browserRun(async (open) => {
     const a = await open(projectA),
       b = await open(projectB);
+    step = "video-edit";
     assert.equal(await a.frame.locator("#project-name").inputValue(), original.name);
     assert.equal(await b.frame.locator("#project-name").inputValue(), other.name);
     const rectangle = a.frame.locator('#editor-workspace [data-ew-action="rectangle"]');
@@ -264,12 +270,14 @@ export async function verifyCloudVideoRecovery({
     const reopened = await open(projectA);
     assert.equal(await reopened.frame.locator("#project-name").inputValue(), "Cloud edited video");
     await a.page.close();
+    step = "video-upgrade-backup";
     await reopened.frame.locator('[data-action="versions"]').first().click();
     const downloading = reopened.page.waitForEvent("download", { timeout: 150000 });
     await reopened.frame.getByRole("button", { name: "导出原格式", exact: true }).click();
     const download = await downloading;
     assert.deepEqual(JSON.parse(await readFile(await download.path(), "utf8")), original);
     assert.deepEqual((await readDocument(projectA)).document, changed.document);
+    step = "video-restore";
     await reopened.frame.getByRole("button", { name: "恢复为当前工程", exact: true }).click();
     console.log("Video cloud recovery: original backup restoration requested");
     await reopened.frame
@@ -284,6 +292,7 @@ export async function verifyCloudVideoRecovery({
       false,
     );
     assert.ok(restored.storageRevision > changed.storageRevision);
+    step = "video-restore-edit";
     await edit(reopened.frame, "Cloud video after restore");
     finalDocument = (
       await until(async () => {
@@ -296,8 +305,9 @@ export async function verifyCloudVideoRecovery({
       0,
       "Restoring a cloud document must complete task/draft cleanup",
     );
+    step = "video-status-probe";
     await reopened.frame.locator('#studio .rail [data-tab="jobs"]').click();
-    const statusJob = await until(async () => {
+    statusJob = await until(async () => {
       const jobs = await reopened.call("tasks.list");
       for (const item of jobs) {
         if (item.entry?.name !== "media-runtime") continue;
@@ -309,21 +319,16 @@ export async function verifyCloudVideoRecovery({
       }
       return false;
     });
-    statusJobId = statusJob.id;
     assert.equal(
       statusJob.result.result.ffmpeg.available,
       true,
       "The actual container's FFmpeg must be usable",
     );
-    const journal = await readWorkspaceValue(projectA, "video-studio-native-media-v1");
-    assert.ok(
-      journal.data.recipes.some(
-        (recipe) => recipe.id === statusJobId && recipe.action === "status",
-      ),
-    );
+    // Read-only probes retain their Host task receipt, not a Panel recipe journal.
     console.log(
-      "PASS: actual cloud Video Studio completes restore cleanup and persists its reviewed native runtime probe recipe",
+      "PASS: actual cloud Video Studio completes restore cleanup and its reviewed native task confirms usable FFmpeg",
     );
+    step = "video-recording";
     await reopened.frame.locator('#studio .rail [data-tab="media"]').click();
     recorded = await verifyCloudVideoRecording({
       ...reopened,
@@ -331,14 +336,19 @@ export async function verifyCloudVideoRecovery({
       until,
       evidenceDir,
       readDocument: () => readDocument(projectA),
+      setStep: (value) => {
+        step = value;
+      },
     });
     reopened.frame = recorded.frame;
     reopened.call = recorded.call;
+    step = "video-media";
     delivered = await verifyCloudVideoMedia({
       ...reopened,
       until,
       readDocument: () => readDocument(projectA),
     });
+    step = "video-final-document";
     finalDocument = (await readDocument(projectA)).document;
     await reopened.page.screenshot({
       path: join(evidenceDir, "cloud-video-recovery.png"),
@@ -353,17 +363,28 @@ export async function verifyCloudVideoRecovery({
     browserRun(async (open) => {
       const a = await open(projectA),
         b = await open(projectB);
+      step = "video-restart-document";
       assert.equal(
         await a.frame.locator("#project-name").inputValue(),
         "Cloud video after restore",
       );
       assert.equal(await b.frame.locator("#project-name").inputValue(), other.name);
       assert.deepEqual((await readDocument(projectA)).document, finalDocument);
-      const journal = await readWorkspaceValue(projectA, "video-studio-native-media-v1");
-      assert.ok(journal.data.recipes.some((recipe) => recipe.id === statusJobId));
-      const native = await a.call("tasks.get", { id: statusJobId });
+      step = "video-restart-tasks";
+      const native = await a.call("tasks.get", { id: statusJob.id });
+      assert.equal(native.id, statusJob.id);
       assert.equal(native.status, "succeeded");
-      assert.equal((await a.call("tasks.get", { id: delivered.jobId })).status, "succeeded");
+      assert.deepEqual(native.input, statusJob.input);
+      assert.deepEqual(native.result, statusJob.result);
+      const rendered = await a.call("tasks.get", { id: delivered.jobId });
+      assert.equal(rendered.id, delivered.jobId);
+      assert.equal(rendered.status, "succeeded");
+      assert.deepEqual(rendered.input, delivered.taskInput);
+      assert.deepEqual(rendered.result, delivered.taskResult);
+      console.log(
+        "PASS: native probe and actual editor render retain the same task IDs, requests and successful receipts after project restart",
+      );
+      step = "video-restart-resources";
       for (const assetId of [delivered.source, delivered.video, recorded.resourceId]) {
         const { asset } = await a.call("resources.get", { id: assetId });
         assert.equal(asset.id, assetId);
@@ -380,6 +401,7 @@ export async function verifyCloudVideoRecovery({
         }
         assert.equal(`asset-${hash.digest("hex")}`, assetId);
       }
+      step = "video-restart-playback";
       assert.equal(await a.frame.locator(".editor-cleanup-warning").count(), 0);
       await verifyCloudSourcePlayback({
         frame: a.frame,
@@ -405,6 +427,7 @@ export async function verifyCloudVideoRecovery({
         "PASS: cloud recorded original and editor attachment survive project restart and still play through the scoped resource grant",
       );
 
+      step = "video-restart-backup";
       await a.frame.locator('[data-action="versions"]').first().click();
       const pending = a.page.waitForEvent("download", { timeout: 150000 });
       await a.frame.getByRole("button", { name: "导出原格式", exact: true }).click();

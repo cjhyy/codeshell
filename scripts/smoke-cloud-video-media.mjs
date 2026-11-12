@@ -195,6 +195,8 @@ export async function verifyCloudVideoMedia({ page, frame, call, readDocument, u
     sourceAsset: asset.id,
     videoAsset: imported.id,
     jobId: rendered.id,
+    taskInput: rendered.input,
+    taskResult: rendered.result,
     video: result.video.id,
   };
 }
