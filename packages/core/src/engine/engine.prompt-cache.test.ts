@@ -338,6 +338,9 @@ describe("Engine prompt-cache hygiene", () => {
       const scenario = scenarios.get(model)!;
       expect(JSON.stringify(scenario.primaryCalls[0]!.messages)).toContain(firstDynamicMarker);
       expect(scenario.summaryCalls.length).toBeGreaterThan(0);
+      // Engine context is re-sent after compaction, so it never enters a
+      // summary: a stale status cannot be baked into one.
+      expect(JSON.stringify(scenario.summaryCalls)).not.toContain(firstDynamicMarker);
 
       const cachedHistory = (engine as any).compactedMessagesBySession.get(sessionId) as
         | Message[]
@@ -350,7 +353,9 @@ describe("Engine prompt-cache hygiene", () => {
         (message) =>
           message.role === "user" &&
           typeof message.content === "string" &&
-          message.content.startsWith(`<system-reminder>\n${firstDynamicMarker}`),
+          message.content.startsWith(
+            `<system-reminder>\n<context-section key="capability">\n${firstDynamicMarker}`,
+          ),
       );
       expect(snapshots).toHaveLength(1);
       const lastRequest = scenario.primaryCalls.at(-1)!.messages;

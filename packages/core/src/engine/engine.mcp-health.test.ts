@@ -110,7 +110,7 @@ createInterface({ input: process.stdin }).on("line", (line) => {
       expect(recovered.match(/MCP connection status for this run:/g)).toHaveLength(1);
       const updates = recoveredMessages
         .map((message) => String(message.content))
-        .filter((text) => text.includes('Section "mcp-failures" no longer applies'));
+        .filter((text) => text.includes('<context-section-removed key="mcp-failures" />'));
       expect(updates).toHaveLength(1);
       expect(updates[0]).not.toContain("repairable-fixture");
       expect(ledgerEvents().map((event) => event.data.contextLedger.kind)).toEqual([

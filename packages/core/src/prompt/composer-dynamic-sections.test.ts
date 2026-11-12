@@ -75,7 +75,9 @@ describe("PromptComposer.buildDynamicContextSections", () => {
     const message = await composer.buildDynamicContextMessage();
     expect(message).toEqual({
       role: "user",
-      content: `<system-reminder>\n${sections.map((s) => s.text).join("\n\n")}\n</system-reminder>`,
+      content: `<system-reminder>\n${sections
+        .map((s) => `<context-section key="${s.key}">\n${s.text}\n</context-section>`)
+        .join("\n\n")}\n</system-reminder>`,
     });
     const snapshot = planLedgerEmission(sections, undefined);
     expect(snapshot.kind === "snapshot" && snapshot.text).toBe(String(message!.content));
@@ -146,7 +148,7 @@ describe("PromptComposer.buildDynamicContextSections", () => {
     expect(emission.kind).toBe("update");
     const text = emission.kind === "update" ? emission.text : "";
     expect(text).toContain(
-      '<context-update section="memory">\n+ - [scope="user" location="project" type="user"] p5: freshly learned\n</context-update>',
+      '<context-update section="memory">\nAdded:\n- [scope="user" location="project" type="user"] p5: freshly learned\n</context-update>',
     );
     expect(text).not.toContain("project fact p1");
     expect(text).not.toContain("Available Skills");
@@ -169,7 +171,7 @@ describe("PromptComposer.buildDynamicContextSections", () => {
     addSkill("gamma-skill", "third demo skill");
     const installed = planLedgerEmission(await sections("anything"), state);
     const text = installed.kind === "update" ? installed.text : "";
-    expect(text).toContain('<context-update section="skills">\n+ ');
+    expect(text).toContain('<context-update section="skills">\nAdded:\n');
     expect(text).toContain("gamma-skill");
     expect(text).not.toContain("filler-");
     expect(text).not.toContain("alpha-skill");
