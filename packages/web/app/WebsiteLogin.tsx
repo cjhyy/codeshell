@@ -1,16 +1,21 @@
 import React from "react";
 import { useAccountSession } from "./AccountSessionProvider.js";
 import { WebsiteSetupSteps } from "./WebsiteSetupSteps.js";
+import { websiteAuthUrl } from "./website-routes.js";
 
 export function WebsiteLogin({
   registration = false,
   desktopLogin = false,
+  websiteAuth,
+  destination = "/app",
 }: {
   registration?: boolean;
   desktopLogin?: boolean;
+  websiteAuth?: "login" | "signup";
+  destination?: string;
 }) {
   const account = useAccountSession();
-  const [register, setRegister] = React.useState(registration);
+  const [register, setRegister] = React.useState(registration || websiteAuth === "signup");
   const [username, setUsername] = React.useState("");
   const [displayName, setDisplayName] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -69,7 +74,13 @@ export function WebsiteLogin({
   return (
     <main className="website-login">
       <header className="website-brand">
-        CodeShell <span>工作台</span>
+        <a href="/" aria-label="CodeShell 官网">
+          CodeShell
+        </a>{" "}
+        <span>工作台</span>
+        <a className="website-home-link" href="/">
+          返回官网
+        </a>
       </header>
       <div className="website-welcome">
         <section className="website-introduction">
@@ -235,7 +246,14 @@ export function WebsiteLogin({
               {account.busy ? "正在连接…" : register ? "创建账号" : "登录"}
             </button>
           </form>
-          {account.registrationAllowed ? (
+          {account.registrationAllowed && websiteAuth ? (
+            <a
+              className="website-button website-wide"
+              href={websiteAuthUrl(register ? "login" : "signup", destination)}
+            >
+              {register ? "已有账号？登录" : "没有账号？创建账号"}
+            </a>
+          ) : account.registrationAllowed ? (
             <button
               className="ghost website-wide"
               disabled={account.busy || account.loginCapabilitiesLoading}
@@ -286,7 +304,7 @@ export function WebsiteRegistration() {
         <h1>账号已就绪</h1>
         <p>{account.session.account?.displayName}</p>
         <p>请返回 CodeShell 客户端，使用此账号登录。</p>
-        <a className="website-button" href="/">
+        <a className="website-button" href="/app">
           继续使用网页版
         </a>
         <button className="ghost" disabled={account.busy} onClick={() => void account.logout()}>

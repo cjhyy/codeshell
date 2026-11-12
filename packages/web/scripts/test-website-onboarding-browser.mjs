@@ -21,7 +21,7 @@ const bundle = await build({
       window.fixtureRuns=[];
       class OwnedSocket {
         static OPEN=1;readyState=0;
-        constructor(url){if(new URL(url).hostname!=='onboarding.fixture.invalid')throw Error('Unexpected socket origin');this.timer=setTimeout(()=>{if(this.readyState===3)return;this.readyState=1;this.onopen?.()},0)}
+        constructor(url){if(new URL(url).hostname!=='codeshell.site')throw Error('Unexpected socket origin');this.timer=setTimeout(()=>{if(this.readyState===3)return;this.readyState=1;this.onopen?.()},0)}
         close(){clearTimeout(this.timer);this.readyState=3}
         send(raw){const m=JSON.parse(raw);let result;
           if(m.method==='agent/query')result={type:'sessions',data:[]};
@@ -46,7 +46,7 @@ const bundle = await build({
 });
 const js = bundle.outputFiles.find((file) => file.path.endsWith(".js")).text;
 const css = bundle.outputFiles.find((file) => file.path.endsWith(".css"))?.text || "";
-const origin = "https://onboarding.fixture.invalid";
+const origin = "https://codeshell.site";
 const installationId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 const sessionId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const projectId = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
@@ -80,6 +80,7 @@ async function mount(width, theme) {
   });
   const calls = [];
   const state = {
+    accountOffline: false,
     signedIn: false,
     failStart: true,
     projects: [],
@@ -138,7 +139,7 @@ async function mount(width, theme) {
     if (pathname === "/fixture.js")
       return route.fulfill({ contentType: "text/javascript", body: js });
     if (pathname === "/fixture.css") return route.fulfill({ contentType: "text/css", body: css });
-    if (pathname === "/")
+    if (["/", "/login", "/signup", "/app"].includes(pathname))
       return route.fulfill({
         contentType: "text/html",
         body: '<!doctype html><html lang="zh-CN"><meta name="viewport" content="width=device-width,initial-scale=1"><div id="root"></div><link rel="stylesheet" href="/fixture.css"><script src="/fixture.js"></script></html>',
@@ -162,6 +163,7 @@ async function mount(width, theme) {
         accessTokenExpiresAt: Date.now() + 600000,
       });
     if (pathname === "/api/v1/account/web/session") {
+      if (state.accountOffline) return json({ error: "owned account unavailable" }, 503);
       if (request.method() === "POST") {
         assert.equal(request.headers().authorization, "Bearer " + "A".repeat(43));
         state.signedIn = true;
@@ -258,12 +260,30 @@ try {
     [1440, "light"],
     [390, "dark"],
   ]) {
-    const { page, calls } = await mount(width, theme);
+    const { page, calls, state } = await mount(width, theme);
     const prefix = `${width}-${theme}`;
+    state.accountOffline = true;
     await page.goto(origin);
-    await page.getByRole("button", { name: "没有账号？创建账号" }).waitFor();
+    await page.getByRole("heading", { name: /从一个想法开始/ }).waitFor();
+    assert.equal(await page.getByLabel("用户名", { exact: true }).count(), 0);
+    assert.ok(
+      !calls.some((call) => call.path.includes("cloud") || call.path.endsWith("/status")),
+      "Homepage never probes Cloud or waits for Account",
+    );
+    await shot(page, `${prefix}-00-home`);
+    await page.getByRole("button", { name: "产品与内容", exact: true }).click();
+    await page
+      .getByRole("heading", { name: "让讨论，有可以接着做的成果。", exact: true })
+      .waitFor();
+    state.accountOffline = false;
+    await page
+      .getByRole("navigation", { name: "官网导航" })
+      .locator("..")
+      .getByRole("link", { name: "登录", exact: true })
+      .click();
+    await page.getByRole("link", { name: "没有账号？创建账号" }).waitFor();
     await shot(page, `${prefix}-01-login`);
-    await page.getByRole("button", { name: "没有账号？创建账号" }).click();
+    await page.getByRole("link", { name: "没有账号？创建账号" }).click();
     await page.getByLabel("昵称", { exact: true }).fill("测试账号");
     await page.getByLabel("用户名", { exact: true }).fill("fixture-user");
     await page.getByLabel("密码", { exact: true }).fill("test-only-password");
@@ -300,8 +320,29 @@ try {
     await page.getByRole("button", { name: "发送", exact: true }).click();
     await page.getByText("这是隔离测试的回复。", { exact: true }).waitFor();
     assert.equal(await page.evaluate(() => window.fixtureRuns.length), 1);
-    await page.goto(origin);
+    if (width < 760) await page.getByRole("button", { name: "展开侧栏", exact: true }).click();
+    await page.getByLabel("打开账号菜单", { exact: true }).click();
+    await page.getByRole("button", { name: "返回官网", exact: true }).click();
+    await page.getByRole("heading", { name: /从一个想法开始/ }).waitFor();
+    assert.equal(new URL(page.url()).pathname, "/");
+    const homepageCalls = calls.length;
+    await page
+      .getByRole("navigation", { name: "官网导航" })
+      .locator("..")
+      .getByRole("link", { name: "进入工作台", exact: true })
+      .waitFor();
+    assert.ok(
+      !calls
+        .slice(homepageCalls)
+        .some((call) => call.path.includes("cloud") || call.path.endsWith("/projects")),
+    );
+    await page
+      .getByRole("navigation", { name: "官网导航" })
+      .locator("..")
+      .getByRole("link", { name: "进入工作台", exact: true })
+      .click();
     await page.getByLabel("任务内容", { exact: true }).waitFor();
+    assert.equal(new URL(page.url()).pathname, "/app");
     assert.equal(
       await page.locator(".website-model-setup").count(),
       0,

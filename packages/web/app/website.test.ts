@@ -14,6 +14,8 @@ import {
 } from "./website-cloud.js";
 import {
   isRegistrationRoute,
+  isPublicWebsiteOrigin,
+  safeWebsiteReturn,
   parseWebsiteRoute,
   websiteRouteUrl,
   parseWorkbenchLocation,
@@ -39,6 +41,53 @@ const webSession = () => ({
   cloudTarget: { enabled: true, ...target },
 });
 const capability = { ...target, version: 1 as const, mode: "cloud-browser" as const };
+
+test("only the official HTTPS origins enable the public website", () => {
+  for (const value of ["https://codeshell.site", "https://www.codeshell.site"])
+    expect(isPublicWebsiteOrigin(new URL(value))).toBe(true);
+  for (const value of [
+    "http://localhost",
+    "https://cloud.fixture.invalid",
+    "http://codeshell.site",
+    "https://codeshell.site.evil.invalid",
+    "https://codeshell.site:8443",
+  ])
+    expect(isPublicWebsiteOrigin(new URL(value))).toBe(false);
+  expect(
+    websiteRouteUrl(
+      { kind: "workbench" },
+      new URL("https://codeshell.site/settings/account/profile"),
+    ),
+  ).toBe("/app");
+});
+
+test("website login destinations reject external URLs, unknown routes and credential queries", () => {
+  const origin = "https://codeshell.site";
+  for (const destination of [
+    null,
+    "https://evil.invalid",
+    "//evil.invalid",
+    "/\\evil.invalid",
+    "javascript:alert(1)",
+    "/login",
+    "/desktop-login?request=secret",
+    "/api/v1/account/web/logout",
+    "/app#secret",
+    "/app\n",
+  ])
+    expect(safeWebsiteReturn(destination, origin)).toBe("/app");
+  expect(
+    safeWebsiteReturn(
+      `/app?project=${id}&session=chat_123&view=settings&section=models&token=secret&returnTo=https://evil.invalid`,
+      origin,
+    ),
+  ).toBe(`/app?project=${id}&session=chat_123&view=settings&section=models`);
+  expect(safeWebsiteReturn("/settings/account/security?accessToken=secret", origin)).toBe(
+    "/settings/account/security",
+  );
+  expect(safeWebsiteReturn("/admin/users", origin)).toBe("/admin/users");
+  expect(safeWebsiteReturn("/settings/account/not-real", origin)).toBe("/app");
+});
 
 test("profile DTOs carry display fields while account authority still requires a valid role", () => {
   const profile = { id, username: account.username, displayName: account.displayName };

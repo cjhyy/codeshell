@@ -20,7 +20,10 @@ import {
 } from "./website-cloud.js";
 import {
   isRegistrationRoute,
+  isPublicWebsiteOrigin,
   parseWebsiteRoute,
+  safeWebsiteReturn,
+  websiteAuthUrl,
   websiteRouteUrl,
   type WebsiteRoute,
 } from "./website-routes.js";
@@ -29,16 +32,70 @@ import "./website.css";
 import { withAccountCookieLock } from "./account-cookie-lock.js";
 import { parseAccountSession } from "./account-api.js";
 import { DesktopLoginPage, desktopLoginRequest } from "./DesktopLogin.js";
+import { WebsiteHome } from "./WebsiteHome.js";
+import { validProjectId } from "./api-context.js";
+
+function WebsiteRedirect({ to }: { to: string }) {
+  React.useEffect(() => {
+    window.location.replace(to);
+  }, [to]);
+  return (
+    <main className="auth-page">
+      <p role="status">正在打开页面…</p>
+      <a href={to}>继续</a>
+    </main>
+  );
+}
+
+function WebsiteSignIn({ url }: { url: URL }) {
+  const account = useAccountSession();
+  const destination = safeWebsiteReturn(url.searchParams.get("returnTo"), url.origin);
+  if (account.session?.authenticated) return <WebsiteRedirect to={destination} />;
+  return (
+    <WebsiteLogin
+      websiteAuth={url.pathname.replace(/\/$/, "") === "/signup" ? "signup" : "login"}
+      destination={destination}
+    />
+  );
+}
+
+function WebsiteRequireSignIn() {
+  const account = useAccountSession();
+  if (!account.ready || account.busy)
+    return (
+      <main className="auth-page">
+        <p role="status">正在读取登录状态…</p>
+        {account.error ? (
+          <>
+            <p role="alert">{account.error}</p>
+            <button className="website-button" onClick={() => void account.restore()}>
+              重试连接
+            </button>
+          </>
+        ) : null}
+      </main>
+    );
+  const url = new URL(window.location.href);
+  return (
+    <WebsiteRedirect
+      to={websiteAuthUrl("login", safeWebsiteReturn(url.pathname + url.search, url.origin))}
+    />
+  );
+}
 
 export function WebsiteEntry({ setupToken }: { setupToken: string }) {
   const url = new URL(window.location.href);
   const registration = isRegistrationRoute(url);
   const desktopLogin = url.pathname === "/desktop-login" || url.pathname === "/desktop-login/";
+  const publicWebsite = isPublicWebsiteOrigin(url) && !setupToken;
+  const publicHome = publicWebsite && url.pathname === "/";
+  const publicAuth =
+    publicWebsite && ["/login", "/login/", "/signup", "/signup/"].includes(url.pathname);
   const [capability, setCapability] = React.useState<WebsiteCloudCapability | null>();
   const [error, setError] = React.useState("");
   const [retry, setRetry] = React.useState(0);
   React.useEffect(() => {
-    if (registration || desktopLogin) return;
+    if (registration || desktopLogin || publicHome || publicAuth) return;
     const controller = new AbortController();
     setError("");
     void detectWebsiteCloud(globalThis.fetch, controller.signal)
@@ -50,7 +107,20 @@ export function WebsiteEntry({ setupToken }: { setupToken: string }) {
           setError(cause instanceof Error ? cause.message : "无法连接工作台，请重试。");
       });
     return () => controller.abort();
-  }, [retry, registration, desktopLogin]);
+  }, [retry, registration, desktopLogin, publicHome, publicAuth]);
+  if (publicHome) {
+    // Older desktop/project links explicitly selected a project at /. Keep
+    // those selections usable without turning an ordinary homepage visit into login.
+    if (validProjectId(url.searchParams.get("project")))
+      return <WebsiteRedirect to={websiteRouteUrl({ kind: "workbench" }, url)} />;
+    return <WebsiteHome />;
+  }
+  if (publicAuth)
+    return (
+      <AccountSessionProvider>
+        <WebsiteSignIn url={url} />
+      </AccountSessionProvider>
+    );
   if (desktopLogin)
     return (
       <AccountSessionProvider>
@@ -94,9 +164,11 @@ export function WebsiteEntry({ setupToken }: { setupToken: string }) {
 function WebsiteAccountMenu({
   go,
   logout,
+  goHome = () => window.location.assign("/"),
 }: {
   go: (route: WebsiteRoute) => void;
   logout: () => void;
+  goHome?: () => void;
 }) {
   const account = useAccountSession();
   const user = account.session?.account;
@@ -130,6 +202,9 @@ function WebsiteAccountMenu({
         {user?.role === "admin" ? (
           <button onClick={() => go({ kind: "admin", section: "users" })}>管理控制台</button>
         ) : null}
+        {isPublicWebsiteOrigin(new URL(window.location.href)) ? (
+          <button onClick={goHome}>返回官网</button>
+        ) : null}
         <button disabled={account.busy} onClick={logout}>
           退出登录
         </button>
@@ -148,6 +223,7 @@ function WebsiteShell({ capability }: { capability: WebsiteCloudCapability }) {
   } | null>(null);
   const [cloudError, setCloudError] = React.useState("");
   const [connecting, setConnecting] = React.useState(false);
+  const [loggingOut, setLoggingOut] = React.useState(false);
   const [attempt, setAttempt] = React.useState(0);
   const revision = React.useRef(0);
   const identity = account.session?.authenticated
@@ -281,6 +357,7 @@ function WebsiteShell({ capability }: { capability: WebsiteCloudCapability }) {
 
   const logout = () => {
     const expected = cloudSession;
+    setLoggingOut(true);
     revision.current++;
     setCloudGrant(null);
     void account
@@ -288,9 +365,21 @@ function WebsiteShell({ capability }: { capability: WebsiteCloudCapability }) {
       .then((confirmed) => {
         if (confirmed && expected) return logoutWebsiteCloudSession(expected);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setLoggingOut(false));
   };
-  if (!account.session?.authenticated) return <WebsiteLogin />;
+  if (loggingOut)
+    return (
+      <main className="auth-page">
+        <p role="status">正在退出登录…</p>
+      </main>
+    );
+  if (!account.session?.authenticated)
+    return isPublicWebsiteOrigin(new URL(window.location.href)) ? (
+      <WebsiteRequireSignIn />
+    ) : (
+      <WebsiteLogin />
+    );
   const menu = <WebsiteAccountMenu go={go} logout={logout} />;
   const settings = route.kind !== "workbench";
   const administrator = account.session.account?.role === "admin";
@@ -326,7 +415,11 @@ function WebsiteShell({ capability }: { capability: WebsiteCloudCapability }) {
                   accountOrigin: target?.accountOrigin,
                 }}
                 renderAccountControl={(navigation) => (
-                  <WebsiteAccountMenu go={go} logout={() => navigation.guard(logout)} />
+                  <WebsiteAccountMenu
+                    go={go}
+                    logout={() => navigation.guard(logout)}
+                    goHome={() => navigation.guard(() => window.location.assign("/"))}
+                  />
                 )}
               />
             )}

@@ -18,6 +18,16 @@
   border-radius: 5px;
   font-weight: 450;
 }
+.website-brand > a {
+  color: inherit;
+  text-decoration: none;
+}
+.website-brand > .website-home-link {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+  margin-left: auto;
+}
 .website-welcome {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 410px;
