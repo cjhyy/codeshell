@@ -25,6 +25,7 @@ import { foldToolDisplayRecords, isInvisibleAssistant } from "./toolDisplayRecor
 import { ToolActivity } from "./ToolActivity.js";
 import { ExpandedHistoryText } from "./ExpandedHistoryText.js";
 import { TurnQueueList } from "./TurnQueueList.js";
+import { WebsiteSetupSteps } from "./WebsiteSetupSteps.js";
 import "./app.css";
 import "./workbench-desktop.css";
 
@@ -539,6 +540,15 @@ export function Workbench({
   const empty = chat.items.length === 0 && approvals.length === 0;
   const defaultConnection = configuration?.connections.find(
     (item) => item.id === configuration.defaults.text,
+  );
+  // Only a confirmed empty website configuration needs first-use guidance.
+  // Unknown settings and Host-owned model selectors must not be called unconfigured.
+  const needsWebsiteModel = Boolean(
+    renderAccountControl &&
+    hub &&
+    !controller.modelSelector &&
+    configuration &&
+    !configuration.defaults.text,
   );
   const connectionLabel =
     connection === "open" ? "已连接" : connection === "connecting" ? "连接中" : "正在重连";
@@ -1193,17 +1203,44 @@ export function Workbench({
                 {/* A read-only conversation (recovery pending, observed CLI room) is not
                     a blank slate, so it gets no "start something" welcome. */}
                 {empty && !controller.readOnly ? (
-                  <div className="empty-chat">
-                    <span className="welcome-mark">
-                      <WorkbenchIcon name="brand" />
-                    </span>
-                    <h1>今天想完成什么？</h1>
-                    <p>从一个问题或想法开始，让 CodeShell 帮你一步步完成。</p>
-                    <span className="welcome-workspace">
-                      <WorkbenchIcon name="folder" />
-                      {projectName ?? workspaceName}
-                    </span>
-                  </div>
+                  needsWebsiteModel ? (
+                    <div className="empty-chat website-model-setup">
+                      <WebsiteSetupSteps current={3} />
+                      <span className="welcome-workspace">
+                        <WorkbenchIcon name="folder" />
+                        {projectName ?? workspaceName}
+                      </span>
+                      <h1>
+                        {configuration!.connections.some((item) => item.tag === "text")
+                          ? "选择默认对话模型"
+                          : "连接模型，开始对话"}
+                      </h1>
+                      <p>
+                        {configuration!.connections.some((item) => item.tag === "text")
+                          ? "你已经添加了模型连接。在模型设置中选择默认对话模型，然后回到这里发送第一条消息。"
+                          : "添加你使用的模型服务和 API Key，选择默认对话模型。设置完成后，回到这里开始对话。"}
+                      </p>
+                      <button
+                        className="library-button primary"
+                        onClick={() => openSettings("models", "chat")}
+                      >
+                        配置第一个模型 <span aria-hidden="true">→</span>
+                      </button>
+                      <small>可以先写下任务，再去设置模型。返回对话时，你的草稿会保留。</small>
+                    </div>
+                  ) : (
+                    <div className="empty-chat">
+                      <span className="welcome-mark">
+                        <WorkbenchIcon name="brand" />
+                      </span>
+                      <h1>今天想完成什么？</h1>
+                      <p>从一个问题或想法开始，让 CodeShell 帮你一步步完成。</p>
+                      <span className="welcome-workspace">
+                        <WorkbenchIcon name="folder" />
+                        {projectName ?? workspaceName}
+                      </span>
+                    </div>
+                  )
                 ) : null}
               </div>
             </div>

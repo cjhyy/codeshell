@@ -399,6 +399,41 @@ test("website create-and-open performs actual create and start before mounting a
   expect(view.child?.project?.status).toBe("running");
 });
 
+test("website startup failure retains the created workspace and retries without creating twice", async () => {
+  let failStart = true;
+  const view = await fixture({
+    projects: [],
+    startCreatedProject: true,
+    allowLegacy: false,
+    intercept: (path) =>
+      path.endsWith("/start") && failStart
+        ? Response.json({ error: "owned startup failure" }, { status: 503 })
+        : undefined,
+  });
+  await action(() =>
+    elements(view.tree)
+      .find((item) => item.type === "input")!
+      .props.onChange({ target: { value: "保留工作区" } }),
+  );
+  await action(() =>
+    elements(view.tree)
+      .find((item) => item.type === "form")!
+      .props.onSubmit({ preventDefault() {} }),
+  );
+  expect(view.child).toBeUndefined();
+  expect(text(view.tree)).toContain("工作区已创建，启动尚未完成");
+  expect(text(view.tree)).toContain("保留工作区");
+  expect(elements(view.tree).find((item) => item.type === "input")!.props.value).toBe("");
+  failStart = false;
+  await click(button(view.tree, "启动并打开"));
+  expect(view.child?.project?.status).toBe("running");
+  expect(
+    view.requests.filter(
+      (item) => item.path === "/api/v1/projects" && item.init?.method === "POST",
+    ),
+  ).toHaveLength(1);
+});
+
 test("website project capability errors never open the legacy shared workspace", async () => {
   const view = await fixture({
     allowLegacy: false,

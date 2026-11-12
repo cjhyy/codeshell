@@ -2,6 +2,7 @@ import { EnvironmentMenu } from "./EnvironmentMenu.js";
 import React from "react";
 import { api, ApiError } from "./auth.js";
 import { setApiProject, setApiWorkspace, validProjectId } from "./api-context.js";
+import { WebsiteSetupSteps } from "./WebsiteSetupSteps.js";
 import "./projects.css";
 
 export interface RuntimeProject {
@@ -95,6 +96,7 @@ export function ProjectsGate({
   const [error, setError] = React.useState("");
   const [checking, setChecking] = React.useState(true);
   const [busy, setBusy] = React.useState<string | null>(null);
+  const [startingCreated, setStartingCreated] = React.useState(false);
   const [name, setName] = React.useState("");
   const [stopTarget, setStopTarget] = React.useState<RuntimeProject | null>(null);
   const stopDialog = React.useRef<HTMLDialogElement>(null);
@@ -267,6 +269,7 @@ export function ProjectsGate({
     setBusy(item?.id ?? "create");
     setError("");
     refreshRevision.current++;
+    let created = false;
     try {
       const value = await api<{ project: RuntimeProject }>(
         operation === "create" ? "/api/v1/projects" : `/api/v1/projects/${item!.id}/${operation}`,
@@ -282,6 +285,23 @@ export function ProjectsGate({
         throw new Error("服务端返回了无效的项目状态，请刷新列表。");
       let next = value.project;
       if (operation === "create" && startCreatedProject) {
+        // Creation and startup are separate operations. Keep the created
+        // workspace visible even when startup fails, so retry cannot duplicate it.
+        created = true;
+        const createdProject = next;
+        setSnapshot((previous) =>
+          previous
+            ? {
+                ...previous,
+                projects: [
+                  ...previous.projects.filter((entry) => entry.id !== createdProject.id),
+                  createdProject,
+                ],
+              }
+            : previous,
+        );
+        setName("");
+        setStartingCreated(true);
         const started = await api<{ project: RuntimeProject }>(
           `/api/v1/projects/${next.id}/start`,
           {
@@ -326,10 +346,17 @@ export function ProjectsGate({
     } catch (cause) {
       if (controller.signal.aborted) return;
       if (cause instanceof ApiError && cause.status === 401) authLost.current();
-      else setError(cause instanceof Error ? cause.message : "项目操作失败，请重试。");
+      else
+        setError(
+          (created ? "工作区已创建，启动尚未完成。请在下方点击“启动并打开”重试。" : "") +
+            (cause instanceof Error ? cause.message : "项目操作失败，请重试。"),
+        );
     } finally {
       if (mutation.current === controller) mutation.current = null;
-      if (!controller.signal.aborted) setBusy(null);
+      if (!controller.signal.aborted) {
+        setBusy(null);
+        setStartingCreated(false);
+      }
     }
   };
 
@@ -346,16 +373,22 @@ export function ProjectsGate({
       </React.Fragment>
     );
 
+  const firstWorkspace = startCreatedProject && snapshot?.projects.length === 0;
   return (
-    <main className="projects-page">
+    <main className={`projects-page${firstWorkspace ? " projects-first-workspace" : ""}`}>
       <header className="projects-header">
         <div className="auth-brand">
           CodeShell <span>{accountControl ? "Cloud" : "Hub"}</span>
         </div>
         <EnvironmentMenu />
         {accountControl}
-        <h1>你的项目</h1>
-        <p>每个项目有独立的运行环境、文件、会话和配置。启动后进入同一个工作台。</p>
+        <h1>{firstWorkspace ? "为第一个想法，建一个工作区" : "你的项目"}</h1>
+        <p>
+          {firstWorkspace
+            ? "账号已就绪。给工作区起个名字，我们会为你准备好独立的文件、对话和运行环境。"
+            : "每个项目有独立的运行环境、文件、会话和配置。打开后继续你的工作。"}
+        </p>
+        {firstWorkspace ? <WebsiteSetupSteps current={2} /> : null}
       </header>
       {checking ? <p role="status">正在读取项目…</p> : null}
       {error ? (
@@ -369,41 +402,79 @@ export function ProjectsGate({
       {snapshot ? (
         <>
           {!snapshot.available ? (
-            <p className="form-error" role="alert">
+            <div className="form-error" role="alert">
               {startCreatedProject ? (
                 "云端执行环境暂时不可用，请稍后重试或联系管理员。"
               ) : (
                 <>项目运行环境暂不可用。{snapshot.error || "请检查服务端 Docker 是否已启动。"}</>
               )}
+              <button className="library-button" disabled={!!busy} onClick={() => void refresh()}>
+                重试连接运行环境
+              </button>
+            </div>
+          ) : null}
+          <section
+            className={firstWorkspace ? "project-first-create" : undefined}
+            aria-label={firstWorkspace ? "创建第一个工作区" : "创建项目"}
+          >
+            {firstWorkspace ? (
+              <div className="project-first-heading">
+                <span className="project-first-icon" aria-hidden="true">
+                  ＋
+                </span>
+                <div>
+                  <h2>从一个小目标开始</h2>
+                  <p>例如整理学习资料、规划一个产品，或完成一项日常任务。</p>
+                </div>
+              </div>
+            ) : null}
+            <form
+              className="project-create"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void change("create");
+              }}
+            >
+              <label>
+                {firstWorkspace ? "工作区名称" : "新项目名称"}
+                <input
+                  disabled={!!busy}
+                  value={name}
+                  maxLength={80}
+                  required
+                  placeholder={firstWorkspace ? "例如：我的第一个工作区" : "例如：个人网站"}
+                  onChange={(event) => setName(event.target.value)}
+                />
+              </label>
+              <button
+                className="library-button primary"
+                disabled={!!busy || !name.trim() || (startCreatedProject && !snapshot.available)}
+                type="submit"
+              >
+                {busy === "create"
+                  ? startingCreated
+                    ? "正在启动…"
+                    : "正在创建…"
+                  : startCreatedProject
+                    ? "创建并打开"
+                    : "创建项目"}
+              </button>
+            </form>
+            {firstWorkspace ? (
+              <p className="project-first-next">
+                下一步：连接你选择的模型，然后开始第一段对话。模型服务和 API Key 由你自行提供。
+              </p>
+            ) : null}
+          </section>
+          {busy === "create" ? (
+            <p className="project-progress" role="status">
+              {startingCreated
+                ? "工作区已创建，正在准备运行环境。完成后将自动打开工作台…"
+                : "正在创建工作区，请稍候…"}
             </p>
           ) : null}
-          <form
-            className="project-create"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void change("create");
-            }}
-          >
-            <label>
-              新项目名称
-              <input
-                value={name}
-                maxLength={80}
-                required
-                placeholder="例如：个人网站"
-                onChange={(event) => setName(event.target.value)}
-              />
-            </label>
-            <button
-              className="library-button primary"
-              disabled={!!busy || !name.trim()}
-              type="submit"
-            >
-              {busy === "create" ? "正在创建…" : startCreatedProject ? "创建并打开" : "创建项目"}
-            </button>
-          </form>
           <section className="projects-grid" aria-label="项目列表">
-            {snapshot.projects.length === 0 ? (
+            {snapshot.projects.length === 0 && !firstWorkspace ? (
               <p className="project-empty">创建第一个项目，开始配置模型、添加技能和使用面板。</p>
             ) : null}
             {snapshot.projects.map((item) => (

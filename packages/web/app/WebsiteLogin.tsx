@@ -1,5 +1,6 @@
 import React from "react";
 import { useAccountSession } from "./AccountSessionProvider.js";
+import { WebsiteSetupSteps } from "./WebsiteSetupSteps.js";
 
 export function WebsiteLogin({
   registration = false,
@@ -72,43 +73,48 @@ export function WebsiteLogin({
       </header>
       <div className="website-welcome">
         <section className="website-introduction">
-          <p className="website-eyebrow">给想法一个开始</p>
+          <p className="website-eyebrow">你的想法，你的工作空间</p>
           <h1>
-            从一句话，
+            给想法一个
             <br />
-            到真正完成。
+            开始的地方。
           </h1>
           <p>
-            与 CodeShell 对话，让 Agent 帮你处理任务。
+            与 CodeShell 对话，把问题、计划和想法变成行动。
             <br />
-            项目、工具与历史记录，都在你的工作空间。
+            对话、文件与工具，都在你的工作区。
           </p>
+          {!desktopLogin && !registration ? <WebsiteSetupSteps current={1} /> : null}
           <div className="website-features">
             <p>
-              <strong>继续你的工作</strong>
-              <span>随时回到对话、任务和项目文件。</span>
+              <strong>一个工作区，装下一个想法</strong>
+              <span>文件、对话和配置随项目保留，随时回来继续。</span>
             </p>
             <p>
-              <strong>选择执行环境</strong>
-              <span>任务在你选定的工作区里运行。</span>
+              <strong>连接你选择的模型</strong>
+              <span>创建工作区后，添加模型服务和 API Key，再开始对话。</span>
             </p>
             <p>
-              <strong>按需连接工具</strong>
-              <span>GitHub 登录身份与数据访问授权分别管理。</span>
+              <strong>需要时，再添加能力</strong>
+              <span>用 Skills、工具和面板，让工作区适合你的任务。</span>
             </p>
           </div>
         </section>
         <section className="auth-card website-auth" aria-labelledby="website-login-title">
-          <p className="website-eyebrow">欢迎来到 CodeShell</p>
+          <p className="website-eyebrow">{register ? "从这里开始" : "欢迎回来"}</p>
           <h2 id="website-login-title">
             {register ? "创建你的账号" : desktopLogin ? "登录 CodeShell 电脑端" : "继续你的工作"}
           </h2>
           <p className="website-muted">
             {desktopLogin
-              ? "先登录网页账号，再确认要登录的电脑。此页面会保留你的电脑登录请求。"
+              ? register
+                ? "创建账号后继续确认电脑登录，无需返回重新填写。"
+                : "先登录网页账号，再确认要登录的电脑。此页面会保留你的电脑登录请求。"
               : registration
                 ? "创建账号后，返回 CodeShell 客户端登录。"
-                : "登录后进入你的工作台。"}
+                : register
+                  ? "先创建账号，接下来为你的第一个想法建一个工作区。"
+                  : "登录后继续上次的工作。首次使用？创建账号即可开始。"}
           </p>
           {registration &&
           account.ready &&
@@ -119,14 +125,20 @@ export function WebsiteLogin({
               当前服务未开放注册，可使用已有账号登录。
             </p>
           ) : null}
-          <button
-            className="website-button website-wide"
-            disabled={account.busy || account.loginCapabilitiesLoading || !account.githubEnabled}
-            onClick={() => void account.github("login")}
-          >
-            使用 GitHub 继续
-          </button>
-          <p className="website-hint">首次使用 GitHub 登录会按服务设置创建账号。</p>
+          {account.githubEnabled ? (
+            <>
+              <button
+                className="website-button website-wide"
+                disabled={
+                  account.busy || account.loginCapabilitiesLoading || !account.githubEnabled
+                }
+                onClick={() => void account.github("login")}
+              >
+                使用 GitHub 继续
+              </button>
+              <p className="website-hint">首次登录会按服务设置创建账号，工具访问另行授权。</p>
+            </>
+          ) : null}
           {account.loginCapabilitiesLoading ? <p role="status">正在读取登录方式…</p> : null}
           {account.loginCapabilitiesError ? (
             <div>
@@ -142,7 +154,9 @@ export function WebsiteLogin({
               </button>
             </div>
           ) : null}
-          <div className="website-divider">或使用用户名和密码</div>
+          <div className="website-divider">
+            {account.githubEnabled ? "或使用用户名和密码" : "使用用户名和密码"}
+          </div>
           <form onSubmit={(event) => void submit(event)}>
             {register ? (
               <label>
@@ -162,17 +176,26 @@ export function WebsiteLogin({
               用户名
               <input
                 maxLength={64}
+                aria-label="用户名"
+                aria-describedby={register ? "website-username-help" : undefined}
                 autoComplete="username"
                 value={username}
                 disabled={account.busy}
                 onChange={(event) => setUsername(event.target.value)}
                 required
               />
+              {register ? (
+                <small id="website-username-help">
+                  3–64 位字母、数字、点、下划线或连字符，用于登录。
+                </small>
+              ) : null}
             </label>
             <label>
               密码
               <input
                 type="password"
+                aria-label="密码"
+                aria-describedby={register ? "website-password-help" : undefined}
                 maxLength={1024}
                 autoComplete={register ? "new-password" : "current-password"}
                 value={password}
@@ -180,6 +203,11 @@ export function WebsiteLogin({
                 onChange={(event) => setPassword(event.target.value)}
                 required
               />
+              {register ? (
+                <small id="website-password-help">
+                  至少 12 个字符，可以使用一段容易记住的短句。
+                </small>
+              ) : null}
             </label>
             {register ? (
               <label>

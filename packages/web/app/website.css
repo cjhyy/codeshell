@@ -1,6 +1,7 @@
 .website-login {
   min-height: 100dvh;
   padding: 30px max(24px, calc((100vw - 1200px) / 2));
+  background: radial-gradient(ellipse at 12% 8%, var(--panel) 0%, transparent 60%);
 }
 .website-brand {
   display: flex;
@@ -19,10 +20,10 @@
 }
 .website-welcome {
   display: grid;
-  grid-template-columns: 1fr 390px;
-  gap: 80px;
+  grid-template-columns: minmax(0, 1fr) 410px;
+  gap: 64px;
   max-width: 1060px;
-  margin: 75px auto 60px;
+  margin: 64px auto 48px;
   align-items: start;
 }
 .website-eyebrow {
@@ -35,7 +36,7 @@
   padding-top: 30px;
 }
 .website-introduction h1 {
-  font-size: clamp(40px, 5vw, 64px);
+  font-size: clamp(40px, 4.8vw, 60px);
   letter-spacing: -2px;
   line-height: 1.12;
   font-weight: 550;
@@ -70,6 +71,7 @@
   max-width: none;
   padding: 30px;
   box-shadow: var(--shadow);
+  border-radius: 16px;
 }
 .website-desktop-login > .website-auth {
   max-width: 560px;
@@ -454,15 +456,16 @@
   .website-welcome {
     display: flex;
     flex-direction: column;
-    gap: 30px;
-    margin: 35px auto;
+    gap: 24px;
+    margin: 28px auto;
     max-width: 440px;
   }
   .website-introduction {
     padding: 0;
   }
   .website-introduction h1 {
-    font-size: 40px;
+    font-size: 34px;
+    margin: 15px 0;
   }
   .website-introduction > p:not(.website-eyebrow) {
     font-size: 13px;
@@ -471,7 +474,10 @@
     display: none;
   }
   .website-auth {
-    padding: 25px;
+    padding: 24px;
+  }
+  .website-introduction .website-setup-steps {
+    margin: 23px 0 0;
   }
   .website-settings-shell {
     display: block;
