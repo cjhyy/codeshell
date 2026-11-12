@@ -584,6 +584,7 @@ describe("OpenAIClient prompt caching", () => {
       return completion();
     });
     const request = options();
+    expect(client.getEffectivePromptCacheStrategy()).toBe("openai-hybrid");
     await client.createMessage(request);
     appendUserTurn(request, "next question");
     await client.createMessage(request);
@@ -601,6 +602,7 @@ describe("OpenAIClient prompt caching", () => {
       cacheStrategy: "openai-implicit",
       disableExplicitPromptCache: true,
     });
+    expect(client.getEffectivePromptCacheStrategy()).toBe("openai-implicit");
   });
 
   it("can omit a rejected affinity key without disabling supported hybrid caching", async () => {

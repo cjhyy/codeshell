@@ -8,7 +8,7 @@ import {
   withModelRequestBoundary,
   type ModelRequestBinding,
 } from "../model-request-boundary/context.js";
-import type { PromptCacheRequestContext } from "../llm/prompt-cache.js";
+import type { PromptCacheRequestContext, PromptCacheStrategy } from "../llm/prompt-cache.js";
 import type { Message, ToolDefinition, LLMResponse, StreamCallback } from "../types.js";
 import { Transcript } from "../session/transcript.js";
 import { logger, getCurrentSid } from "../logging/logger.js";
@@ -56,6 +56,13 @@ export class ModelFacade {
     /** Successful primary calls only; timestamp is captured before the request starts. */
     private readonly onPrimaryResponse?: (startedAt: number) => void,
   ) {}
+
+  /** See LLMClientBase.getEffectivePromptCacheStrategy; `undefined`: as configured. */
+  getEffectivePromptCacheStrategy(): PromptCacheStrategy | undefined {
+    return (
+      this.client as { getEffectivePromptCacheStrategy?: () => PromptCacheStrategy | undefined }
+    ).getEffectivePromptCacheStrategy?.();
+  }
 
   getPromptPrefixFingerprint(
     systemPrompt: string,
