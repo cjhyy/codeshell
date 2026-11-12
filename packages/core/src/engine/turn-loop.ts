@@ -55,6 +55,7 @@ import { isTruncatedStop } from "../llm/stop-reason.js";
 import { isAbortError } from "../llm/client-base.js";
 import { crossedReactiveThreshold } from "./reactive-threshold.js";
 import { COMPLETE_GOAL_TOOL_NAME } from "../tool-system/builtin/complete-goal.js";
+import { withoutLedgerMessages } from "../session/context-messages.js";
 import { CANCEL_GOAL_TOOL_NAME } from "../tool-system/builtin/cancel-goal.js";
 import {
   redactSensitiveToolResultsInMessages,
@@ -99,9 +100,16 @@ export interface TurnLoopConfig {
   freshImageMessages?: Iterable<Message>;
   /**
    * Per-run injected context that must be visible to the model but must not be
-   * summarized into durable history. Engine uses this for dynamicContext.
+   * summarized into durable history. Engine uses this for a profile's
+   * non-durable runtime context; all other run context is ordinary history.
    */
   volatileContextMessages?: Iterable<Message>;
+  /**
+   * Called before every model request, after context management. The engine
+   * appends the run's context-ledger snapshot here when a rewrite dropped it
+   * from `messages` (it is ordinary history otherwise; nothing is appended).
+   */
+  syncRunContext?: (messages: Message[]) => void;
   /** Current instructions and lifecycle hooks, reattached after a notes transition. */
   retainedContextMessages?: Iterable<Message>;
   /**
@@ -1152,6 +1160,8 @@ export class TurnLoop {
             return { text: finalText, reason: "completed", messages };
           }
         }
+        // A rewrite above may have dropped the run's context; resend it now.
+        this.config.syncRunContext?.(messages);
         // No pre-llm ctx emit here: the messages-only estimate would be ~16k
         // smaller than the real prompt (system + tools not included), making
         // the bar visibly drop on every submit. Post-llm/post-tool-result
@@ -1562,7 +1572,10 @@ export class TurnLoop {
           // maxStopBlocks (consecutive) and the outer maxTurns ceiling.
           const maxStopBlocks = this.config.maxStopBlocks ?? GOAL_DEFAULT_MAX_STOP_BLOCKS;
           if (this.goalTracker) {
-            const judgeMessages = this.stripVolatileContextMessages(messages);
+            // The judge reads the conversation, not the engine's context framing.
+            const judgeMessages = withoutLedgerMessages(
+              this.stripVolatileContextMessages(messages),
+            );
             this.deps.publishGoalJudgeContext?.(
               buildGoalJudgeRuntimeContext(judgeMessages, {
                 sensitiveToolResultRedactions: this.sensitiveToolResultRedactions,
@@ -2200,6 +2213,7 @@ export class TurnLoop {
     } else {
       messages = this.manageContextMessagesSync(messages);
     }
+    this.config.syncRunContext?.(messages);
     if (this.goalControlStopRequested) {
       messages = this.redactConsumedSensitiveToolResults(messages);
       return { text: finalText, reason: "completed", messages };

@@ -215,15 +215,15 @@ export class PromptComposer {
   }
 
   /**
-   * Per-turn dynamic context, delivered as a trailing <system-reminder> user
-   * message rather than baked into the system prefix.
+   * Dynamic context, delivered as <system-reminder> user messages rather than
+   * baked into the system prefix.
    *
-   * Holds things that change *within* a session — the skills listing plus
-   * capability-owned volatile context. Keeping them out of the
-   * system prompt means installing a skill or editing a file no longer
-   * invalidates the cached system prefix. Placed at the END of the messages
-   * array (after the user task) so it sits past the conversation's cache
-   * breakpoint — a change here never re-bills the history prefix.
+   * Holds things that change *within* a session — the skills listing, memory
+   * and capability-owned context. Keeping them out of the system prompt means
+   * installing a skill or editing a file no longer invalidates the cached
+   * system prefix. The engine sends the sections through the context ledger
+   * (engine/run-context-ledger.ts): a snapshot once, then only what changed,
+   * always appended so earlier history is never rewritten.
    */
   /**
    * Declared-but-absent skills, stated plainly. Rides the dynamic context (not

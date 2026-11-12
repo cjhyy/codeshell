@@ -210,7 +210,7 @@ describe("Engine prompt-cache hygiene", () => {
     }
   });
 
-  it("does not retain injected userContext or dynamicContext in the compacted history cache", async () => {
+  it("drops the userContext head from the history cache but keeps the context snapshot as history", async () => {
     const sessionId = "s-prompt-cache-hygiene";
     const model = `${provider}-hygiene-${Date.now()}-${Math.random()}`;
     const firstUserContextMarker = `FIRST_USER_CONTEXT_${Date.now()}`;
@@ -248,7 +248,8 @@ describe("Engine prompt-cache hygiene", () => {
         | undefined;
       const cachedText = JSON.stringify(cachedHistory ?? []);
       expect(cachedText).not.toContain(firstUserContextMarker);
-      expect(cachedText).not.toContain(firstDynamicMarker);
+      // The context snapshot is history now: it stays where it was sent.
+      expect(cachedText).toContain(firstDynamicMarker);
 
       unlinkSync(join(repo, firstDynamicMarker));
       writeFileSync(
@@ -263,15 +264,22 @@ describe("Engine prompt-cache hygiene", () => {
       expect(scenario.primaryCalls).toHaveLength(2);
       const secondRequestText = JSON.stringify(scenario.primaryCalls[1]!.messages);
       expect(secondRequestText).not.toContain(firstUserContextMarker);
-      expect(secondRequestText).not.toContain(firstDynamicMarker);
       expect(secondRequestText).toContain(secondUserContextMarker);
-      expect(secondRequestText).toContain(secondDynamicMarker);
+      // The first run's snapshot is untouched; the change is appended as an
+      // update that supersedes the section.
+      const first = scenario.primaryCalls[0]!.messages;
+      const second = scenario.primaryCalls[1]!.messages;
+      expect(second.slice(1, first.length)).toEqual(first.slice(1));
+      expect(second.at(-1)!.content).toContain(
+        `<context-section key="capability">\n${secondDynamicMarker}\n</context-section>`,
+      );
+      expect(second.at(-1)!.content).not.toContain(firstDynamicMarker);
     } finally {
       scenarios.delete(model);
     }
   });
 
-  it("keeps dynamicContext out of real summary compaction anchored summaries", async () => {
+  it("re-sends the context after real summary compaction dropped it", async () => {
     const sessionId = "s-prompt-cache-summary-hygiene";
     const model = `${provider}-summary-${Date.now()}-${Math.random()}`;
     const firstDynamicMarker = `summary-dynamic-${Date.now()}.txt`;
@@ -330,14 +338,25 @@ describe("Engine prompt-cache hygiene", () => {
       const scenario = scenarios.get(model)!;
       expect(JSON.stringify(scenario.primaryCalls[0]!.messages)).toContain(firstDynamicMarker);
       expect(scenario.summaryCalls.length).toBeGreaterThan(0);
-      expect(JSON.stringify(scenario.summaryCalls)).not.toContain(firstDynamicMarker);
 
       const cachedHistory = (engine as any).compactedMessagesBySession.get(sessionId) as
         | Message[]
         | undefined;
       const cachedText = JSON.stringify(cachedHistory ?? []);
       expect(cachedText).toContain("<anchored-summary>");
-      expect(cachedText).not.toContain(firstDynamicMarker);
+      // Context is ordinary history, so compaction may summarize it away; the
+      // model then gets a fresh snapshot instead of running without it.
+      const snapshots = (cachedHistory ?? []).filter(
+        (message) =>
+          message.role === "user" &&
+          typeof message.content === "string" &&
+          message.content.startsWith(`<system-reminder>\n${firstDynamicMarker}`),
+      );
+      expect(snapshots).toHaveLength(1);
+      const lastRequest = scenario.primaryCalls.at(-1)!.messages;
+      expect(
+        lastRequest.filter((message) => message.content === snapshots[0]!.content),
+      ).toHaveLength(1);
     } finally {
       scenarios.delete(model);
     }
@@ -393,18 +412,14 @@ describe("Engine prompt-cache hygiene", () => {
           sessionId,
           previousCacheReadTokens: 1200,
           currentCacheReadTokens: 0,
-          // The head is unchanged. The first run's request ended with that
-          // run's volatile context message; the second run's request has the
-          // assistant reply in that slot. Nothing cached followed that last
-          // message, so the change is reported but cannot be the cause.
+          // The second run's request extends the first run's: the context
+          // snapshot stayed in place and only the reply and the new task
+          // were appended, so the message list cannot be the cause.
           cause: "no_tracked_prefix_change",
           changedPrefixes: [],
-          messageChange: "rewritten",
-          firstChangedMessageIndex: 2,
+          messageChange: "append_only",
           previousMessageCount: 3,
           currentMessageCount: 5,
-          changedMessageRole: "assistant",
-          changedMessageHasToolResult: false,
         }),
       );
     } finally {

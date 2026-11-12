@@ -43,6 +43,14 @@ export function contextMessageMark(message: Message): ContextMessageMark | undef
   return marks.get(message);
 }
 
+/**
+ * History without the context ledger's messages, for a reader that judges the
+ * conversation itself (they are the engine's framing, not something said).
+ */
+export function withoutLedgerMessages(messages: readonly Message[]): Message[] {
+  return messages.filter((message) => marks.get(message)?.kind !== "ledger");
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }

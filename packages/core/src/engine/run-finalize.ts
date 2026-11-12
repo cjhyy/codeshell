@@ -29,6 +29,7 @@ import { sessionCumulativeUsageUpdate } from "./run-state-persistence.js";
 import type { TurnLoop } from "./turn-loop.js";
 import type { EngineResult } from "./types.js";
 import type { EngineRunOptions, RunBehaviorProfile } from "./run-types.js";
+import { isContextMessageEvent } from "../session/context-messages.js";
 
 type TurnLoopRunResult = Awaited<ReturnType<TurnLoop["run"]>>;
 
@@ -331,8 +332,9 @@ export async function finalizeRunSuccess(args: {
   // title into the sidebar on receipt of the session_title stream event.
   if (!unverified && profile?.disableSessionTitle !== true) {
     const messageEvents = session.transcript.getEvents("message");
+    // Engine context (ledger, hook reminders) is not something the user said.
     const userMsgEvents = messageEvents.filter(
-      (e) => (e.data as { role?: string }).role === "user",
+      (e) => (e.data as { role?: string }).role === "user" && !isContextMessageEvent(e),
     );
     const userMsgCount = userMsgEvents.length;
     const onStream = options?.onStream;
