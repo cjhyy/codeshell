@@ -57,6 +57,7 @@ import { isAbortError } from "../llm/client-base.js";
 import { crossedReactiveThreshold } from "./reactive-threshold.js";
 import { COMPLETE_GOAL_TOOL_NAME } from "../tool-system/builtin/complete-goal.js";
 import { withoutLedgerMessages } from "../session/context-messages.js";
+import { moveVolatileContextToTail } from "./volatile-context-tail.js";
 import { CANCEL_GOAL_TOOL_NAME } from "../tool-system/builtin/cancel-goal.js";
 import {
   redactSensitiveToolResultsInMessages,
@@ -105,6 +106,8 @@ export interface TurnLoopConfig {
    * non-durable runtime context; all other run context is ordinary history.
    */
   volatileContextMessages?: Iterable<Message>;
+  /** Keep the volatile messages at the tail of every request (engine/volatile-context-tail.ts). */
+  volatileContextAtTail?: boolean;
   /** First message this run added to the history; see engine/stable-prefix.ts. */
   runStartMessage?: Message;
   /**
@@ -632,6 +635,13 @@ export class TurnLoop {
     return result.messages;
   }
 
+  /** Called on the message list of every model request, just before it is sent. */
+  private placeVolatileContext(messages: Message[]): void {
+    if (this.config.volatileContextAtTail) {
+      moveVolatileContextToTail(messages, this.volatileContextMessages);
+    }
+  }
+
   private stripVolatileContextMessages(messages: Message[]): Message[] {
     if (this.volatileContextMessages.size === 0) return messages;
     let changed = false;
@@ -814,6 +824,7 @@ export class TurnLoop {
         stablePrefixMessageCount: resolveStablePrefixMessageCount({
           messages,
           isVolatile: (message) => this.volatileContextMessages.has(message),
+          volatileAtTail: this.config.volatileContextAtTail,
           pendingRewriteMessage: this.deps.contextManager.getPendingRewriteBoundaryMessage?.(),
           runStartMessage: this.config.runStartMessage,
         }),
@@ -1421,6 +1432,7 @@ export class TurnLoop {
               },
             ];
             try {
+              this.placeVolatileContext(contMessages);
               const preparedContinuationMessages = this.prepareMessagesForModel(contMessages);
               this.noteRequestDispatched(preparedContinuationMessages);
               const contResponse = await this.deps.model.call(
@@ -2235,6 +2247,7 @@ export class TurnLoop {
         messages = this.redactConsumedSensitiveToolResults(messages);
         return { text: finalText, reason: "completed", messages };
       }
+      this.placeVolatileContext(messages);
       const summaryMessages = this.prepareMessagesForModel(messages);
       const summaryResponse = await this.deps.model.call(
         this.deps.systemPrompt,
@@ -2337,6 +2350,7 @@ export class TurnLoop {
   }
 
   private async callModelWithFallback(messages: Message[], assistantMessageId: string) {
+    this.placeVolatileContext(messages);
     this.noteRequestDispatched(messages);
     const revokePartialStream = () => {
       this.config.onStream?.({ type: "tombstone", messageId: assistantMessageId });
