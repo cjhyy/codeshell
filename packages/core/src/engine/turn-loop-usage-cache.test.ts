@@ -1,9 +1,12 @@
-import { describe, it, expect } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { TurnLoop, type TurnLoopDeps, type TurnLoopConfig } from "./turn-loop.js";
 import type { LLMResponse, Message, StreamEvent, TokenUsage, ToolCall } from "../types.js";
 import { estimateTokens } from "../context/compaction.js";
 import { ContextManager } from "../context/manager.js";
 import { hashPromptMessages } from "./prompt-cache-diagnostics.js";
+import { installPromptPrefixGuard } from "../testing/prompt-prefix-guard.js";
+
+installPromptPrefixGuard({ beforeEach, afterEach });
 
 /**
  * Prompt-cache visibility in the UI: the usage_update event that feeds the

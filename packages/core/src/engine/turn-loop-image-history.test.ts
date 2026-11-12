@@ -1,9 +1,13 @@
-import { describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { TurnLoop, type TurnLoopConfig, type TurnLoopDeps } from "./turn-loop.js";
 import type { ContentBlock, LLMResponse, Message, ToolCall, ToolResult } from "../types.js";
 import { IMAGE_HISTORY_PLACEHOLDER_SUFFIX } from "../context/compaction.js";
 import { ContextManager, type ManageOptions } from "../context/manager.js";
 import { resetPromptCacheWarmthForTests } from "../context/rewrite-gate.js";
+import { notePromptPrefixRewrite } from "../utils/prompt-prefix-events.js";
+import { installPromptPrefixGuard } from "../testing/prompt-prefix-guard.js";
+
+installPromptPrefixGuard({ beforeEach, afterEach });
 
 const userImageBase64 = "U".repeat(32_000);
 const toolImageBase64 = "T".repeat(32_000);
@@ -88,6 +92,7 @@ function makeDeps(
     const batch = options?.externalRewrite?.(m);
     if (!batch || batch.messages === m) return m;
     batch.commit();
+    notePromptPrefixRewrite("rewrite_batch"); // as the real ContextManager does
     return batch.messages;
   };
   const contextManager = (realContextManager ?? {

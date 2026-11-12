@@ -1,8 +1,11 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import type { Message, LLMResponse } from "../types.js";
 import type { PromptCacheStrategy } from "../llm/prompt-cache.js";
 import { PromptCacheRouteMemory } from "./prompt-cache-route.js";
 import { TurnLoop, type TurnLoopDeps } from "./turn-loop.js";
+import { installPromptPrefixGuard } from "../testing/prompt-prefix-guard.js";
+
+installPromptPrefixGuard({ beforeEach, afterEach });
 
 const HYBRID = { provider: "openai", model: "gpt-5.6-sol" };
 const MINUTE = 60_000;

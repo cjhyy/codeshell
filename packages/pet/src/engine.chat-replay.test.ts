@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -11,8 +11,12 @@ import {
   type StreamEvent,
 } from "@cjhyy/code-shell-core/extension";
 import { createPetModule } from "./capability.js";
+// Rule 5 of the prompt-cache design: unregistered prefix changes fail (shared via globalThis).
+import { installPromptPrefixGuard } from "../../core/src/testing/prompt-prefix-guard.js";
 import { sessionSelectorId } from "./disclosure/selector.js";
 import { PET_BEHAVIOR_PROFILE } from "./profile.js";
+
+installPromptPrefixGuard({ beforeEach, afterEach });
 
 /**
  * Script the LLM only; real Engine history, disclosure tools, profile services,

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 
 import type { GoalJudgeRuntimeContext } from "../hooks/goal-stop-hook.js";
 import type { HookResult } from "../hooks/events.js";
@@ -12,6 +12,9 @@ import { Transcript } from "../session/transcript.js";
 import type { LLMResponse, Message } from "../types.js";
 import { buildGoalJudgeRuntimeContext } from "./goal-judge-context.js";
 import { TurnLoop, type TurnLoopDeps } from "./turn-loop.js";
+import { installPromptPrefixGuard } from "../testing/prompt-prefix-guard.js";
+
+installPromptPrefixGuard({ beforeEach, afterEach });
 
 const VERDICT = "GOAL_NOT_MET: the integration test still fails";
 const TURN_START_REMINDER = "TURN_START_HOOK_REMINDER";

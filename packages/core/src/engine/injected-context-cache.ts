@@ -1,4 +1,5 @@
 import type { Message } from "../types.js";
+import { notePromptMessageLeft } from "../utils/prompt-prefix-events.js";
 
 /**
  * Remove run-scoped context messages before caching the durable conversation:
@@ -14,6 +15,10 @@ export function stripInjectedContextMessages(
   const withoutDynamicContext = dynamicContextMsg
     ? messages.filter((message) => message !== dynamicContextMsg)
     : [...messages];
+  // The next run's requests no longer carry this run's runtime context.
+  if (dynamicContextMsg && withoutDynamicContext.length < messages.length) {
+    notePromptMessageLeft(dynamicContextMsg);
+  }
   if (!userContextMsg || messages[0] !== userContextMsg) {
     return withoutDynamicContext;
   }

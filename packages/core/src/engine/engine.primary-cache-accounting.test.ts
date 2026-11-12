@@ -1,4 +1,4 @@
-import { afterAll, afterEach, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeEach, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import http from "node:http";
 import https from "node:https";
@@ -8,6 +8,9 @@ import { join } from "node:path";
 import { installLocalNetworkGuard } from "../../../../scripts/runtime-cost-smoke-isolation.mjs";
 import type { CreateMessageOptions } from "../llm/types.js";
 import type { LLMResponse, StreamEvent, TokenUsage } from "../types.js";
+import { installPromptPrefixGuard } from "../testing/prompt-prefix-guard.js";
+
+installPromptPrefixGuard({ beforeEach, afterEach });
 
 // Install confinement before importing Core, which can initialize user services.
 if (!process.env.CODE_SHELL_TEST_HOME || !process.env.HOME)

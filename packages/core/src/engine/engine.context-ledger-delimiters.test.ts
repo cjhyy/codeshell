@@ -12,6 +12,9 @@ import type { LLMResponse, Message } from "../types.js";
 import { LEDGER_UPDATE_PREAMBLE } from "../context/context-ledger.js";
 import { MemoryManager } from "../session/memory.js";
 import { invalidateSkillCache } from "../skills/scanner.js";
+import { installPromptPrefixGuard } from "../testing/prompt-prefix-guard.js";
+
+installPromptPrefixGuard({ beforeEach, afterEach });
 
 const provider = "fake-engine-context-ledger-delimiters";
 const env = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_SYSTEM: "/dev/null" };

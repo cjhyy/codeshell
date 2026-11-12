@@ -58,6 +58,11 @@ import { crossedReactiveThreshold } from "./reactive-threshold.js";
 import { COMPLETE_GOAL_TOOL_NAME } from "../tool-system/builtin/complete-goal.js";
 import { goalJudgeConversation, type HookReminderEventData } from "../session/context-messages.js";
 import { moveVolatileContextToTail } from "./volatile-context-tail.js";
+import {
+  notePromptMessageLeft,
+  notePromptPrefixRewrite,
+  notePromptRequest,
+} from "../utils/prompt-prefix-events.js";
 import { usesExplicitCacheMarkers } from "../llm/providers/openai-cache-content.js";
 import { persistContextReminder } from "./context-reminders.js";
 import {
@@ -645,6 +650,7 @@ export class TurnLoop {
     forced: boolean;
   }): Message[] {
     if (result.replacedCount > 0) {
+      if (result.forced) notePromptPrefixRewrite("image_batch");
       this.currentTurnLog.info("context.image_payload_downgrade", {
         cat: "context",
         images: result.replacedCount,
@@ -657,8 +663,11 @@ export class TurnLoop {
 
   /** Called on the message list of every model request, just before it is sent. */
   private placeVolatileContext(messages: Message[]): void {
-    if (this.volatileAtTail()) {
-      moveVolatileContextToTail(messages, this.volatileContextMessages);
+    if (
+      this.volatileAtTail() &&
+      moveVolatileContextToTail(messages, this.volatileContextMessages)
+    ) {
+      for (const message of this.volatileContextMessages) notePromptMessageLeft(message);
     }
   }
 
@@ -861,6 +870,7 @@ export class TurnLoop {
     messages: Message[],
     assistantMessageId: string = randomUUID(),
   ): ModelCallRecordingOptions {
+    notePromptRequest(this.deps.sessionId, messages);
     return {
       requestBoundary: { step: this.turnCount, assistantMessageId },
       ...(this.sensitiveToolResultRedactions.size > 0
@@ -1307,6 +1317,7 @@ export class TurnLoop {
               const previousMessageCount = messages.length;
               messages = dropOldestRounds(messages, retry);
               if (messages.length < previousMessageCount) {
+                notePromptPrefixRewrite("context_limit_recovery");
                 this.deps.runToolSurface?.rebase();
                 await this.refreshModelToolPrefix();
                 // The dropped rounds may have held the run's context.
@@ -1460,6 +1471,7 @@ export class TurnLoop {
         ) {
           let combinedText = response.text;
           let continuedResponse = false;
+          let sentContinuation = false;
           for (let retry = 0; retry < 3; retry++) {
             // Don't fire another continuation call if the user cancelled — without
             // this an abort during a truncated response could still issue up to 3
@@ -1470,6 +1482,9 @@ export class TurnLoop {
               : undefined;
             if (budgetTermination) break;
             tlog.info("turn.max_tokens_continuation", { cat: "turn", retry: retry + 1 });
+            // Each continuation re-sends the reply so far, longer than last time.
+            if (sentContinuation) notePromptPrefixRewrite("max_tokens_continuation");
+            sentContinuation = true;
             const contMessages = [
               ...messages,
               { role: "assistant" as const, content: combinedText },
@@ -1531,6 +1546,8 @@ export class TurnLoop {
             }
           }
           response = { ...response, text: combinedText };
+          // History keeps the whole reply, not the last continuation request's tail.
+          if (sentContinuation) notePromptPrefixRewrite("max_tokens_continuation");
           if (continuedResponse && response.usage?.promptTokens !== undefined) {
             this.emitCtxFromUsage(response.usage, messages);
           }
