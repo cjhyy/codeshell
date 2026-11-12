@@ -204,6 +204,10 @@ test.each([
   ["--budget-usd", "3"],
   ["--budget-usd", "NaN"],
   ["--endpoint", "https://example.com"],
+  ["--modes", "native,native"],
+  ["--modes", "native,unknown"],
+  ["--modes", ""],
+  ["--pure-eager-control", "--modes", "eager"],
   ["--live", "--live"],
 ])("incomplete or changed live authorization is rejected: %j", (...args) => {
   expect(() => parseOptions(args)).toThrow();
@@ -223,6 +227,65 @@ test("native search definition matches the actual production initializer", () =>
   initializeRunToolSurface(ctx, [], () => [toolSearchToolDef, ...complexSchemaDefinitions]);
   expect(discoveryDefinition("native")).toEqual(ctx.runToolSurface!.getDefinition("ToolSearch")!);
   expect(discoveryDefinition("call-tool")).toEqual(toolSearchToolDef);
+});
+
+test("explicit remaining arms avoid repeating completed eager requests", async () => {
+  const dry = await runStudy(parseOptions(["--modes", "native,call-tool"]));
+  expect(dry.modes).toEqual(["native", "call-tool"]);
+  expect(dry.plannedRequests).toBe(52);
+  expect(dry.templateBodies).toHaveLength(2);
+  const injected = fixture();
+  const report = await runStudy(
+    { ...(await liveOptions()), modes: ["native", "call-tool"] },
+    injected,
+  );
+  expect(report.records).toHaveLength(52);
+  expect(report.records.every((row: any) => row.mode !== "eager")).toBe(true);
+  expect(report.summary.accuracy.eager.attempts).toBe(0);
+  expect(report.acceptance).toEqual({
+    allPrimaryCallsCorrect: true,
+    auxiliaryTargetCallsCorrect: true,
+    cacheControlsPass: true,
+  });
+});
+
+test("post-hoc pure eager control removes only discovery tools and samples each original task once", async () => {
+  const dry = await runStudy(parseOptions(["--pure-eager-control"]));
+  expect(dry.modes).toEqual(["eager"]);
+  expect(dry.plannedRequests).toBe(8);
+  expect(dry.repetitions).toBe(1);
+  const injected = fixture();
+  const report = await runStudy(
+    { ...(await liveOptions()), modes: ["eager"], pureEagerControl: true },
+    injected,
+  );
+  expect(report.status).toBe("completed");
+  expect(report.records).toHaveLength(8);
+  expect(report.records.map((row: any) => row.caseId)).toEqual(
+    complexSchemaCases.map((sample: any) => sample.id),
+  );
+  expect(report.records.every((row: any) => row.kind === "accuracy" && row.repetition === 0)).toBe(
+    true,
+  );
+  for (const body of injected.requests) {
+    expect(body.tools).toHaveLength(4);
+    expect(
+      body.tools.some((tool: any) => tool.name === "CallTool" || tool.name === "ToolSearch"),
+    ).toBe(false);
+    expect(body.tools.filter((tool: any) => tool.cache_control)).toHaveLength(1);
+    expect(body.tools.at(-1).cache_control).toEqual({ type: "ephemeral" });
+    for (const tool of body.tools) {
+      expect(tool.input_schema).toEqual(
+        complexSchemaDefinitions.find((definition: any) => definition.name === tool.name)!
+          .inputSchema,
+      );
+    }
+  }
+  expect(report.acceptance).toEqual({
+    allPrimaryCallsCorrect: true,
+    auxiliaryTargetCallsCorrect: null,
+    cacheControlsPass: null,
+  });
 });
 
 test("all 70 injected requests retain 48 matched accuracy trials and production discovery projections", async () => {

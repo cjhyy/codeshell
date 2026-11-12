@@ -94,12 +94,19 @@ export function bodyFor(
   messages: Message[],
   stableCount: number,
   nonce: string,
+  pureEagerControl = false,
 ) {
+  if (pureEagerControl && mode !== "eager")
+    throw new Error("Pure eager control requires eager mode");
   const policy = {
     ...resolvePromptCachePolicy(CONFIG),
     toolDiscovery: mode === "native" ? ("tool-reference" as const) : ("call-tool" as const),
   };
-  const tools = surface.requestSnapshot();
+  const tools = pureEagerControl
+    ? surface
+        .requestSnapshot()
+        .filter((tool) => tool.name !== "ToolSearch" && tool.name !== "CallTool")
+    : surface.requestSnapshot();
   const guidance =
     mode === "call-tool"
       ? "After ToolSearch loads a schema, invoke CallTool with that exact name and its matching args object."
@@ -350,7 +357,15 @@ export function summarize(report: any) {
 }
 
 export function parseOptions(args: string[]) {
-  const options = { live: false, authorized: false, budgetUsd: 2, outputDir: "", ledgerPath: "" };
+  const options = {
+    live: false,
+    authorized: false,
+    budgetUsd: 2,
+    outputDir: "",
+    ledgerPath: "",
+    modes: [...MODES] as Mode[],
+    pureEagerControl: false,
+  };
   const seen = new Set<string>();
   for (let i = 0; i < args.length; i++) {
     const flag = args[i]!;
@@ -358,13 +373,28 @@ export function parseOptions(args: string[]) {
     seen.add(flag);
     if (flag === "--live") options.live = true;
     else if (flag === "--authorized-paid-probe") options.authorized = true;
-    else if (["--budget-usd", "--output-dir", "--ledger-path"].includes(flag)) {
+    else if (flag === "--pure-eager-control") options.pureEagerControl = true;
+    else if (["--budget-usd", "--output-dir", "--ledger-path", "--modes"].includes(flag)) {
       const value = args[++i];
       if (!value || value.startsWith("--")) throw new Error("Missing option value");
       if (flag === "--budget-usd") options.budgetUsd = Number(value);
       else if (flag === "--output-dir") options.outputDir = value;
-      else options.ledgerPath = value;
+      else if (flag === "--ledger-path") options.ledgerPath = value;
+      else {
+        const selected = value.split(",");
+        if (
+          !selected.length ||
+          selected.some((mode) => !MODES.includes(mode as Mode)) ||
+          new Set(selected).size !== selected.length
+        )
+          throw new Error("Select unique known study modes");
+        options.modes = MODES.filter((mode) => selected.includes(mode));
+      }
     } else throw new Error("Unknown option");
+  }
+  if (options.pureEagerControl) {
+    if (seen.has("--modes")) throw new Error("Pure eager control selects its own single arm");
+    options.modes = ["eager"];
   }
   if (options.budgetUsd !== 2) throw new Error("This authorization has a cumulative USD 2 ceiling");
   if (
@@ -378,6 +408,9 @@ export function parseOptions(args: string[]) {
 }
 
 export async function runStudy(options: ReturnType<typeof parseOptions>, dependencies: any = {}) {
+  const selectionArgs = options.pureEagerControl
+    ? ["--pure-eager-control"]
+    : ["--modes", options.modes.join(",")];
   const checked = parseOptions(
     options.live
       ? [
@@ -389,8 +422,9 @@ export async function runStudy(options: ReturnType<typeof parseOptions>, depende
           options.outputDir,
           "--ledger-path",
           options.ledgerPath,
+          ...selectionArgs,
         ]
-      : [],
+      : selectionArgs,
   );
   for (const definition of complexSchemaDefinitions)
     if (validateToolInputSchemaStrict(definition.inputSchema))
@@ -400,10 +434,13 @@ export async function runStudy(options: ReturnType<typeof parseOptions>, depende
     mode: options.live ? "live" : "dry-run",
     endpoint: LIMITS.endpoint,
     model: LIMITS.model,
-    plannedRequests: PLANNED_REQUESTS,
-    modes: MODES,
+    plannedRequests: checked.pureEagerControl
+      ? 8
+      : checked.modes.reduce((count, mode) => count + (mode === "eager" ? 18 : 26), 0),
+    modes: checked.modes,
     uniqueCases: complexSchemaCases.length,
-    repetitions: 2,
+    repetitions: checked.pureEagerControl ? 1 : 2,
+    pureEagerControl: checked.pureEagerControl,
     cacheCriteria: {
       exactRepeatMinimumHitFraction: 0.95,
       appendedHistoryMaximumUncachedPriorTokens: 32,
@@ -412,8 +449,9 @@ export async function runStudy(options: ReturnType<typeof parseOptions>, depende
     cumulativeBudgetUsd: 2,
     priorCostUsd: LIMITS.priorCostNanoUsd / 1e9,
     remainingBeforeRunUsd: (LIMITS.budgetNanoUsd - LIMITS.priorCostNanoUsd) / 1e9,
-    method:
-      "Matched post-discovery argument construction; 8 prose tasks twice per arm, independent histories without previous answers. Native and CallTool use actual model-generated ToolSearch turns and the production ToolSearch result/projector. Target tools never execute. Provider pin/rate filters are probe-only controls. Portable arm forces call-tool projection on the same thinking-disabled Messages route.",
+    method: checked.pureEagerControl
+      ? "Post-hoc diagnostic: eight original prose tasks once each, unchanged target schemas and eager instruction, with ToolSearch and CallTool removed from the catalog. Distinct from the preregistered mixed-catalog eager arm; no repeated-request or cache-control acceptance. Target tools never execute."
+      : "Matched post-discovery argument construction; 8 prose tasks twice per arm, independent histories without previous answers. Native and CallTool use actual model-generated ToolSearch turns and the production ToolSearch result/projector. Target tools never execute. Provider pin/rate filters are probe-only controls. Portable arm forces call-tool projection on the same thinking-disabled Messages route.",
     limitations:
       "Eight unique synthetic cases with two samples each are a conformance comparison, not a production accuracy estimate. Repeated trials are correlated; no latency or statistical equivalence claim. No direct Anthropic or thinking-mode test.",
     sources: [
@@ -426,19 +464,21 @@ export async function runStudy(options: ReturnType<typeof parseOptions>, depende
     prefixAssertions: [],
   };
   if (!checked.live) {
-    report.templateBodies = MODES.map((mode) =>
+    report.templateBodies = checked.modes.map((mode) =>
       bodyFor(
         mode,
         surfaceFor(mode),
         [text("Do not call a tool. Reply READY.")],
         0,
         "offline-template",
+        checked.pureEagerControl,
       ),
     );
     return report;
   }
   const output = await prepareEvidence(checked.outputDir);
   const ledger = await openBudgetLedger(checked.ledgerPath, { priorEvidencePath: PRIOR_EVIDENCE });
+  report.remainingBeforeRunUsd = ledger.snapshot().remainingNanoUsd / 1e9;
   let key = "";
   const save = async (name: string, value: unknown) => {
     let data = JSON.stringify(
@@ -509,7 +549,7 @@ export async function runStudy(options: ReturnType<typeof parseOptions>, depende
       ledgerPath: checked.ledgerPath,
     });
     key = await (dependencies.loadCredential ?? loadCredential)();
-    for (const mode of MODES) {
+    for (const mode of checked.modes) {
       const nonce = `${runId}-${mode}`;
       const branches = new Map<string, { surface: RunToolSurface; history: Message[] }>();
       let first: any;
@@ -544,8 +584,15 @@ export async function runStudy(options: ReturnType<typeof parseOptions>, depende
           ...branch.history,
           text(`Use ${sample.toolName} for this task. ${sample.instruction}`),
         ];
-        const body = bodyFor(mode, branch.surface, history, branch.history.length, nonce);
-        for (let repetition = 0; repetition < 2; repetition++) {
+        const body = bodyFor(
+          mode,
+          branch.surface,
+          history,
+          branch.history.length,
+          nonce,
+          checked.pureEagerControl,
+        );
+        for (let repetition = 0; repetition < report.repetitions; repetition++) {
           const result = await send(mode, "accuracy", body, { caseId: sample.id, repetition });
           result.record.score = scoreResponse(mode, sample, result.response);
           const state = {
@@ -559,6 +606,7 @@ export async function runStudy(options: ReturnType<typeof parseOptions>, depende
           last = state;
         }
       }
+      if (checked.pureEagerControl) continue;
       if (mode === "eager") {
         await send(mode, "cache-cold-control", coldControl(last.body, nonce + "-cold"));
         await send(mode, "cache-restored", last.body);
@@ -657,24 +705,28 @@ export async function runStudy(options: ReturnType<typeof parseOptions>, depende
       ),
     });
     report.acceptance = {
-      allPrimaryCallsCorrect: MODES.every(
+      allPrimaryCallsCorrect: checked.modes.every(
         (mode) =>
-          report.summary.accuracy[mode].attempts === 16 &&
-          report.summary.accuracy[mode].correct === 16,
+          report.summary.accuracy[mode].attempts === report.uniqueCases * report.repetitions &&
+          report.summary.accuracy[mode].correct === report.uniqueCases * report.repetitions,
       ),
-      auxiliaryTargetCallsCorrect:
-        report.summary.auxiliaryAccuracy.attempts === 2 &&
-        report.summary.auxiliaryAccuracy.correct === 2,
-      cacheControlsPass: MODES.every((mode) => {
-        const cache = report.summary.cache[mode];
-        return (
-          cache.exactRepeatsWarm &&
-          cache.warmFullPrefix &&
-          cache.negativeControlCold &&
-          cache.restoredWarm &&
-          (mode === "eager" || cache.historyPrefixCovered)
-        );
-      }),
+      auxiliaryTargetCallsCorrect: checked.pureEagerControl
+        ? null
+        : report.summary.auxiliaryAccuracy.attempts ===
+            checked.modes.filter((mode) => mode !== "eager").length &&
+          report.summary.auxiliaryAccuracy.correct === report.summary.auxiliaryAccuracy.attempts,
+      cacheControlsPass: checked.pureEagerControl
+        ? null
+        : checked.modes.every((mode) => {
+            const cache = report.summary.cache[mode];
+            return (
+              cache.exactRepeatsWarm &&
+              cache.warmFullPrefix &&
+              cache.negativeControlCold &&
+              cache.restoredWarm &&
+              (mode === "eager" || cache.historyPrefixCovered)
+            );
+          }),
     };
     try {
       await save("evidence.json", report);
