@@ -237,6 +237,14 @@ export function buildForkTranscript(
   Transcript.remapContextForkReferences(sourceEvents, copied);
   const copiedIds = new Map(sourceEvents.map((event, index) => [event.id, copied[index]!.id]));
   for (const event of copied) {
+    // A hook reminder names the user message it precedes; keep that link.
+    const reminder = event.type === "message" ? event.data.hookReminder : undefined;
+    if (reminder && typeof reminder === "object" && !Array.isArray(reminder)) {
+      const before = (reminder as { beforeEventId?: unknown }).beforeEventId;
+      if (typeof before === "string" && copiedIds.has(before)) {
+        event.data.hookReminder = { ...reminder, beforeEventId: copiedIds.get(before)! };
+      }
+    }
     if (event.type !== "turn_diff") continue;
     for (const key of ["turnId", "runId"] as const) {
       const original = event.data[key];

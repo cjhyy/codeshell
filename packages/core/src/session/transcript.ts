@@ -24,6 +24,12 @@ import type { TranscriptEvent, TranscriptEventType, Message, ContentBlock } from
 import type { EngineResult } from "../engine/types.js";
 import { logger } from "../logging/logger.js";
 import { syncDirectoryAncestors } from "../model-request-boundary/durability.js";
+import {
+  markReplayedContextMessage,
+  readHookReminderData,
+  type ContextLedgerEventData,
+  type HookReminderEventData,
+} from "./context-messages.js";
 
 type TranscriptWriter = (filePath: string, data: string, encoding: "utf-8") => void;
 
@@ -546,6 +552,10 @@ export class Transcript {
       source?: "agent-direction" | "goal-control";
       envelopeIds?: string[];
       correlationIds?: string[];
+      /** Context-ledger snapshot/update (see context-messages.ts). Always injected. */
+      contextLedger?: ContextLedgerEventData;
+      /** Lifecycle hook reminder (see context-messages.ts). Always injected. */
+      hookReminder?: HookReminderEventData;
     },
   ): TranscriptEvent {
     if (opts?.clientMessageId) {
@@ -562,7 +572,7 @@ export class Transcript {
     return this.append("message", {
       role,
       content,
-      ...(opts?.injected ? { injected: true } : {}),
+      ...(opts?.injected || opts?.contextLedger || opts?.hookReminder ? { injected: true } : {}),
       ...(opts?.steerId ? { steerId: opts.steerId } : {}),
       ...(opts?.clientMessageId ? { clientMessageId: opts.clientMessageId } : {}),
       ...(opts?.displayText ? { displayText: opts.displayText } : {}),
@@ -570,6 +580,8 @@ export class Transcript {
       ...(opts?.source ? { source: opts.source } : {}),
       ...(opts?.envelopeIds ? { envelopeIds: opts.envelopeIds } : {}),
       ...(opts?.correlationIds ? { correlationIds: opts.correlationIds } : {}),
+      ...(opts?.contextLedger ? { contextLedger: opts.contextLedger } : {}),
+      ...(opts?.hookReminder ? { hookReminder: opts.hookReminder } : {}),
     });
   }
 
@@ -791,6 +803,30 @@ export class Transcript {
       }
     }
 
+    // Hook reminders are appended after the user message they precede.
+    // Replay puts each back in front of its target; one whose target is not
+    // an earlier message of this replay stays where it was written.
+    const remindersBefore = new Map<string, TranscriptEvent[]>();
+    const movedReminders = new Set<TranscriptEvent>();
+    const seenMessageIds = new Set<string>();
+    for (const event of events) {
+      if (event.type !== "message") continue;
+      const target = readHookReminderData(event)?.beforeEventId;
+      if (target !== undefined && seenMessageIds.has(target)) {
+        remindersBefore.set(target, [...(remindersBefore.get(target) ?? []), event]);
+        movedReminders.add(event);
+      }
+      seenMessageIds.add(event.id);
+    }
+    const pushMessageEvent = (event: TranscriptEvent): void => {
+      const { role, content } = event.data as { role: string; content: string | ContentBlock[] };
+      // Tool results can be merged into this array below. Never mutate
+      // the source event (or a checkpoint) during a read-only replay.
+      const message = { role: role as Message["role"], content: structuredClone(content) };
+      markReplayedContextMessage(message, event);
+      messages.push(message);
+    };
+
     let activeSpan: ArchiveSpan | null = null;
     if (openingSpan) {
       activeSpan = openingSpan;
@@ -813,6 +849,10 @@ export class Transcript {
         if (activeSpan && clientMessageId === activeSpan.toClientMessageId) {
           activeSpan = null;
         }
+        // Before a span this message may open: the reminder precedes it and
+        // is therefore outside that span. Inside a span it is archived too.
+        if (!activeSpan) remindersBefore.get(event.id)?.forEach(pushMessageEvent);
+        if (movedReminders.has(event)) continue;
         if (!activeSpan && clientMessageId && spansByFromId.has(clientMessageId)) {
           activeSpan = spansByFromId.get(clientMessageId)!;
           // One-shot: a duplicate `from` message (e.g. from a torn JSONL
@@ -847,9 +887,7 @@ export class Transcript {
               }
             }
           }
-          // Tool results can be merged into this array below. Never mutate
-          // the source event (or a checkpoint) during a read-only replay.
-          messages.push({ role: role as Message["role"], content: structuredClone(content) });
+          pushMessageEvent(event);
           break;
         }
         case "tool_use": {
