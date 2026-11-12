@@ -21,12 +21,13 @@ import {
 } from "../session/memory.js";
 import { resolve } from "node:path";
 import {
-  buildExtractionPrompt,
+  buildExtractionPromptSegments,
   parseExtractionResponse,
   type ExistingMemorySummary,
   type ExtractedMemory,
 } from "./extract-memories.js";
-import { saveSessionMemory, buildSessionMemoryPrompt } from "./session-memory.js";
+import { saveSessionMemory, buildSessionMemoryPromptSegments } from "./session-memory.js";
+import { joinMemoryPrompt, type MemoryPromptCachePlan } from "./memory-prompt-segments.js";
 import { extractJSON } from "../utils/json.js";
 import { redactSecrets } from "../logging/sanitize-messages.js";
 import {
@@ -46,11 +47,19 @@ import { logger } from "../logging/logger.js";
 export interface MemoryOrchestratorOptions {
   /** Revalidate the background task's session/ownership before calls and mutations. */
   assertCurrent?: () => void;
-  /** Lightweight LLM call — must be a non-streaming summarisation call. */
+  /**
+   * Lightweight LLM call — must be a non-streaming summarisation call.
+   *
+   * `userMsg` is always the complete prompt. When `options.cache` is present,
+   * the same text is also available split into messages that the next call for
+   * this session repeats unchanged plus one final changing message; a caller
+   * with a message-based client should send those (in order, as user messages)
+   * and place its prompt-cache boundary after the last stable one.
+   */
   callLLM: (
     systemPrompt: string,
     userMsg: string,
-    options?: { maxTokens: number },
+    options?: { maxTokens: number; cache?: MemoryPromptCachePlan },
   ) => Promise<string>;
   /**
    * Auto-dream consolidation driver. Called when the dream cadence is due
@@ -214,13 +223,13 @@ export class MemoryOrchestrator {
         const existing = collectExistingMemorySummaries(mm, storage);
         const loadMs = Date.now() - t;
         t = Date.now();
-        const extractionPrompt = buildExtractionPrompt(transcript, existing);
+        const extractionPrompt = buildExtractionPromptSegments(transcript, existing);
         const promptMs = Date.now() - t;
         t = Date.now();
         const response = await this.callLLM(
           "You are a memory extraction assistant. Extract only durable, reusable information worth carrying into future sessions.",
-          extractionPrompt,
-          { maxTokens: 3072 },
+          joinMemoryPrompt(extractionPrompt),
+          { maxTokens: 3072, cache: { purpose: "memory-extraction", ...extractionPrompt } },
         );
         const llmMs = Date.now() - t;
         t = Date.now();
@@ -390,11 +399,11 @@ export class MemoryOrchestrator {
       // Only summarise sessions with enough content to be meaningful.
       const messageCount = transcript.filter((m) => m.role !== "system").length;
       if (messageCount >= 3) {
-        const smPrompt = buildSessionMemoryPrompt(transcript);
+        const smPrompt = buildSessionMemoryPromptSegments(transcript);
         const smResponse = await this.callLLM(
           "You are a session summariser. Output only valid JSON.",
-          smPrompt,
-          { maxTokens: 3072 },
+          joinMemoryPrompt(smPrompt),
+          { maxTokens: 3072, cache: { purpose: "session-summary", ...smPrompt } },
         );
         // LLM 摘要常带 markdown 围栏 / 围栏外解释文字 / 末尾逗号 → 裸 JSON.parse 易碎。
         // 复用 utils/json 的 extractJSON(剥围栏 + 花括号配平,识别字符串/转义)拿到候选,

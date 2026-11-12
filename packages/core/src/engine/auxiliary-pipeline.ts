@@ -12,6 +12,7 @@ import { sanitizeContent } from "../logging/sanitize-messages.js";
 import { MemoryOrchestrator } from "../services/memory-orchestrator.js";
 import { runDreamConsolidation } from "../services/dream-consolidation.js";
 import { resolveAuxKey } from "./aux-key.js";
+import { auxCachedRequest } from "./aux-prompt-cache.js";
 import type { CumulativeUsageCounters } from "../session/usage.js";
 import { contextMessageMark } from "../session/context-messages.js";
 import type { EngineConfig } from "./types.js";
@@ -208,7 +209,14 @@ export class AuxiliaryPipeline {
         callLLM: async (systemPrompt, userMessage, options) => {
           const response = await llmClient.createMessage({
             systemPrompt,
-            messages: [{ role: "user", content: userMessage }],
+            // Stable messages first and a cache boundary after them, so the
+            // next run's call for this session resumes from the provider cache.
+            ...auxCachedRequest({
+              client: llmClient,
+              sessionId,
+              prompt: userMessage,
+              plan: options?.cache,
+            }),
             tools: [],
             maxTokens: options?.maxTokens ?? 1024,
             billingEnabled: true,

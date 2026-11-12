@@ -1,12 +1,59 @@
 const MAX_CONVERSATION_CHARS = 30_000;
 const MESSAGE_OMISSION = "\n[... middle of message omitted ...]\n";
 const CONVERSATION_OMISSION = "[... earlier conversation omitted ...]";
+const SEPARATOR = "\n\n";
+/**
+ * When the conversation outgrows the budget, drop this much more than strictly
+ * needed. The window start then stays put for the next ~10k characters of
+ * conversation instead of moving on every call, so consecutive memory prompts
+ * for one session keep a byte-identical beginning (provider prompt cache).
+ */
+const WINDOW_STEP_CHARS = 10_000;
+/** A piece is sealed once it holds at least this many characters. */
+const SEALED_PIECE_CHARS = 2_000;
+
+/**
+ * A bounded transcript rendering split at positions that survive appends.
+ * `sealed.join("") + open` is the full text. Rendering a longer transcript
+ * yields the same sealed pieces followed by more, until the window start
+ * moves or an earlier message changes.
+ */
+export interface MemoryTranscriptLayout {
+  sealed: string[];
+  /** Newest messages that do not fill a piece yet. */
+  open: string;
+}
+
+/**
+ * Index of the first message kept after the opening one. Replays the growth of
+ * the conversation, so the answer for a longer transcript passes through the
+ * answers for its prefixes: the start only moves when the budget is exceeded,
+ * and then by a whole step.
+ */
+function windowStart(parts: readonly string[]): number {
+  if (parts.length <= 1) return 1;
+  const fullBudget = MAX_CONVERSATION_CHARS - parts[0]!.length;
+  const windowBudget = fullBudget - CONVERSATION_OMISSION.length - SEPARATOR.length;
+  let start = 1;
+  let omitted = false;
+  let size = 0;
+  for (let index = 1; index < parts.length; index++) {
+    size += parts[index]!.length + SEPARATOR.length;
+    if (size <= (omitted ? windowBudget : fullBudget)) continue;
+    omitted = true;
+    while (start < index && size > windowBudget - WINDOW_STEP_CHARS) {
+      size -= parts[start]!.length + SEPARATOR.length;
+      start++;
+    }
+  }
+  return start;
+}
 
 /** Keep the original intent and recent outcomes inside the memory prompt budget. */
-export function formatMemoryTranscript(
+export function layoutMemoryTranscript(
   messages: Array<{ role: string; content: string }>,
   maxMessageChars: number,
-): string {
+): MemoryTranscriptLayout {
   const parts = messages.map(({ role, content }) => {
     if (content.length > maxMessageChars) {
       const headChars = Math.ceil((maxMessageChars - MESSAGE_OMISSION.length) / 2);
@@ -15,17 +62,26 @@ export function formatMemoryTranscript(
     }
     return `[${role}]: ${content}`;
   });
-  const size = parts.reduce((length, part, index) => length + part.length + (index ? 2 : 0), 0);
-  if (size <= MAX_CONVERSATION_CHARS) return parts.join("\n\n");
+  const start = windowStart(parts);
+  const items = start > 1 ? [parts[0]!, CONVERSATION_OMISSION, ...parts.slice(start)] : parts;
 
-  const first = parts[0]!;
-  let remaining = MAX_CONVERSATION_CHARS - first.length - CONVERSATION_OMISSION.length - 4;
-  let start = parts.length;
-  for (let index = parts.length - 1; index > 0; index--) {
-    const needed = parts[index]!.length + (start < parts.length ? 2 : 0);
-    if (needed > remaining) break;
-    remaining -= needed;
-    start = index;
+  const sealed: string[] = [];
+  let open = "";
+  for (const [index, item] of items.entries()) {
+    // The separator leads, so a sealed piece never depends on what follows it.
+    open += index === 0 ? item : `${SEPARATOR}${item}`;
+    if (open.length >= SEALED_PIECE_CHARS) {
+      sealed.push(open);
+      open = "";
+    }
   }
-  return [first, CONVERSATION_OMISSION, ...parts.slice(start)].join("\n\n");
+  return { sealed, open };
+}
+
+export function formatMemoryTranscript(
+  messages: Array<{ role: string; content: string }>,
+  maxMessageChars: number,
+): string {
+  const { sealed, open } = layoutMemoryTranscript(messages, maxMessageChars);
+  return sealed.join("") + open;
 }
