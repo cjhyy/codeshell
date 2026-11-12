@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { SessionManager, UsageLedger, type SettingsManager } from "@cjhyy/code-shell-core";
 import { ModelTraceStore } from "@cjhyy/code-shell-core/internal";
 import {
+  EXTERNAL_MEMORY_CACHE_PURPOSE_PREFIX,
   ExternalRuntimeMemory,
   resolveExternalMemoryModel,
   type ExternalMemorySnapshot,
@@ -187,6 +188,85 @@ test("Codex can use an explicit API auxiliary connection with tools disabled", a
   expect(received).toHaveLength(1);
   expect(received[0]).toMatchObject({ tools: [], maxTokens: 3072 });
   expect(existsSync(summaryPath())).toBe(true);
+});
+
+test("API memory calls send core's segmented, cacheable request in an external scope", async () => {
+  const config = settings();
+  config.defaults!.auxText = "aux";
+  config.memories = { autoExtract: true };
+  type Request = {
+    messages: Array<{ role: string; content: string }>;
+    promptCache?: { scopeId: string; stablePrefixMessageCount?: number };
+  };
+  const received: Request[] = [];
+  const errors: unknown[] = [];
+  const memory = new ExternalRuntimeMemory({
+    storageDir: storage,
+    readSettings: () => config,
+    createClient: (async () => ({
+      getPromptCacheConfigIdentity: () => ({ cacheStrategy: "anthropic-explicit" }),
+      createMessage: async (request: Request) => {
+        received.push(request);
+        return { text: received.length === 1 ? "[]" : answer, toolCalls: [] };
+      },
+    })) as any,
+    infer: async () => {
+      throw new Error("unexpected CLI");
+    },
+    onError: (_snapshot, error) => errors.push(error),
+  });
+  jobs.push(memory);
+  memory.schedule(snapshot({ kind: "codex" }));
+  await memory.idle("memory-session");
+  expect(errors).toEqual([]);
+  const scopes = received.map((request) => request.promptCache?.scopeId);
+  expect(scopes).toContain(
+    `memory-session:aux:${EXTERNAL_MEMORY_CACHE_PURPOSE_PREFIX}memory-extraction`,
+  );
+  expect(scopes).toContain(
+    `memory-session:aux:${EXTERNAL_MEMORY_CACHE_PURPOSE_PREFIX}session-summary`,
+  );
+  // Never the main conversation's scope, nor core's own memory scopes.
+  expect(scopes).not.toContain("memory-session");
+  expect(scopes).not.toContain("memory-session:aux:memory-extraction");
+  const extraction = received.find((request) =>
+    request.promptCache?.scopeId.endsWith("memory-extraction"),
+  )!;
+  expect(extraction.messages.length).toBeGreaterThan(1);
+  expect(extraction.messages.every((message) => message.role === "user")).toBe(true);
+  expect(extraction.promptCache!.stablePrefixMessageCount).toBe(extraction.messages.length - 1);
+  // The segments join back into the single prompt the CLI route still sends.
+  const joined = extraction.messages.map((message) => message.content).join("");
+  expect(joined).toContain("turn 0");
+  expect(joined).toContain("turn 7");
+});
+
+test("without explicit cache markers the API call keeps one complete user message", async () => {
+  const config = settings();
+  config.defaults!.auxText = "aux";
+  const received: Array<{ messages: unknown[]; promptCache?: { scopeId: string } }> = [];
+  const memory = new ExternalRuntimeMemory({
+    storageDir: storage,
+    readSettings: () => config,
+    createClient: (async () => ({
+      createMessage: async (request: (typeof received)[number]) => {
+        received.push(request);
+        return { text: answer, toolCalls: [] };
+      },
+    })) as any,
+    infer: async () => {
+      throw new Error("unexpected CLI");
+    },
+    onError() {},
+  });
+  jobs.push(memory);
+  memory.schedule(snapshot({ kind: "codex" }));
+  await memory.idle("memory-session");
+  expect(received).toHaveLength(1);
+  expect(received[0]!.messages).toHaveLength(1);
+  expect(received[0]!.promptCache?.scopeId).toBe(
+    `memory-session:aux:${EXTERNAL_MEMORY_CACHE_PURPOSE_PREFIX}session-summary`,
+  );
 });
 
 test.each(["length", "max_tokens"])("CLI %s output cannot replace memory", async (stopReason) => {

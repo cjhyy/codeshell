@@ -59,8 +59,11 @@ export {
 export { createRunTiming } from "./session/stream-timing.js";
 export { createTurnOutcomeTracker, withOutcomeTrigger } from "./engine/turn-outcome.js";
 export { normalizeCumulativeUsageCounters } from "./session/usage.js";
-export { MemoryOrchestrator } from "./services/memory-orchestrator.js";
-export type { MemoryOrchestratorOptions } from "./services/memory-orchestrator.js";
+export {
+  MemoryOrchestrator,
+  type MemoryOrchestratorOptions,
+} from "./services/memory-orchestrator.js";
+export { auxCachedRequest } from "./engine/aux-prompt-cache.js";
 export { isEphemeralSessionState, listSessionEntries } from "./session/session-manager.js";
 export { sanitizeContent } from "./logging/sanitize-messages.js";
 export { McpResponseTooLargeError } from "./tool-system/mcp-results.js";
