@@ -46,6 +46,8 @@ import { toolSchemaResultIds } from "./tool-schema-results.js";
 import {
   DEFAULT_REWRITE_BATCH_CONFIG,
   decideRewriteBatch,
+  diffRewrittenMessages,
+  type ExternalRewritePlanner,
   notePromptCacheRequest,
   planRewriteBatch,
   promptCacheLastRequestAt,
@@ -139,6 +141,10 @@ export type OnCompactFn = (info: {
   /** Whether a destructive tier replaced history, independent of token estimates. */
   historyChanged?: boolean;
 }) => void;
+export interface ManageOptions {
+  /** Caller-owned retroactive rewrite that joins the batched cleanups (rewrite-gate.ts). */
+  externalRewrite?: ExternalRewritePlanner;
+}
 type SummaryCompactLogEvent = "context.summary_compact" | "context.force_summary_compact";
 type SummaryCompactResult = {
   messages: Message[];
@@ -475,15 +481,26 @@ export class ContextManager {
    * evaluated on a candidate copy and adopted only when rewrite-gate.ts says
    * the miss is free or worth it.
    */
-  private applyRewriteBatch(input: Message[]): {
+  private applyRewriteBatch(
+    input: Message[],
+    externalRewrite?: ExternalRewritePlanner,
+  ): {
     messages: Message[];
     tokens: number;
     microNoOp: boolean;
     microShrunk: boolean;
   } {
     const baseTokens = this.estimateTokensHybrid(input);
-    const plan = planRewriteBatch(input, {
-      baseTokens,
+    // A caller-owned rewrite (image placeholders) is planned first; the text
+    // passes run on its candidate so one adoption applies both.
+    const external = externalRewrite?.(input);
+    const externalChanged = external !== undefined && external.messages !== input;
+    const externalDiff = externalChanged
+      ? diffRewrittenMessages(input, external.messages)
+      : undefined;
+    const textInput = externalChanged ? external.messages : input;
+    const plan = planRewriteBatch(textInput, {
+      baseTokens: externalChanged ? this.estimateTokensHybrid(textInput) : baseTokens,
       microFloorTokens: this.config.maxTokens * this.config.microcompactFloorRatio,
       keepRecentN: this.config.microcompactKeepRecent ?? defaultKeepRecent(this.config.maxTokens),
       estimate: (messages) => this.estimateTokensHybrid(messages),
@@ -491,7 +508,12 @@ export class ContextManager {
     this.pendingRewriteBoundary = undefined;
     this.pendingRewriteBoundaryMessage = undefined;
     const kept = { messages: input, tokens: baseTokens, microNoOp: plan.microNoOp };
-    if (!plan.changed) return { ...kept, microShrunk: false };
+    if (!plan.changed && !externalChanged) return { ...kept, microShrunk: false };
+    const savedTokens = plan.savedTokens + (externalDiff?.savedTokens ?? 0);
+    const firstChangedIndex =
+      plan.firstChangedIndex === undefined || externalDiff?.firstChangedIndex === undefined
+        ? (plan.firstChangedIndex ?? externalDiff?.firstChangedIndex)
+        : Math.min(plan.firstChangedIndex, externalDiff.firstChangedIndex);
 
     const warmthKey = this.warmthKey();
     const shared = warmthKey === undefined ? undefined : promptCacheLastRequestAt(warmthKey);
@@ -502,23 +524,26 @@ export class ContextManager {
           ? (shared ?? this.localLastRequestAt)
           : Math.max(shared, this.localLastRequestAt),
       promptCacheTtlMs: this.config.promptCacheTtlMs,
-      pendingSavedTokens: plan.savedTokens,
+      pendingSavedTokens: savedTokens,
       totalTokens: baseTokens,
       minSavedTokens: this.config.rewriteBatchMinSavedTokens,
       savedRatio: this.config.rewriteBatchSavedRatio,
       pressureTokens: this.config.maxTokens * this.config.compactAtRatio,
+      forced: externalChanged && external.forced,
     });
     if (!reason) {
-      this.pendingRewriteBoundary = plan.firstChangedIndex;
+      this.pendingRewriteBoundary = firstChangedIndex;
       this.pendingRewriteBoundaryMessage =
-        plan.firstChangedIndex === undefined ? undefined : input[plan.firstChangedIndex];
-      logger.debug("context.rewrite_deferred", { pendingSavedTokens: plan.savedTokens });
+        firstChangedIndex === undefined ? undefined : input[firstChangedIndex];
+      logger.debug("context.rewrite_deferred", { pendingSavedTokens: savedTokens });
       return { ...kept, microShrunk: false };
     }
 
+    if (externalChanged) external.commit();
     logger.info("context.rewrite_batch_applied", {
       reason,
-      savedTokens: plan.savedTokens,
+      savedTokens,
+      externalSavedTokens: externalDiff?.savedTokens ?? 0,
       dedupedReads: plan.dedupedReads,
       maskedSnapshots: plan.maskedSnapshots,
       microcompacted: plan.micro?.clearedRounds ?? 0,
@@ -564,7 +589,7 @@ export class ContextManager {
    * Apply progressive context management (sync path).
    * For Tier 2 (LLM summary), call manageAsync instead.
    */
-  manage(messages: Message[]): Message[] {
+  manage(messages: Message[], options?: ManageOptions): Message[] {
     let result = messages;
 
     // Tier 0a: Persist large tool_results to disk + replace with preview.
@@ -584,7 +609,7 @@ export class ContextManager {
     // Tier 0d + Tier 1: retroactive cleanups (dedupe Reads, mask old browser
     // snapshots, microcompact above its floor), batched so they don't break
     // the prompt cache on every step — see applyRewriteBatch().
-    const batch = this.applyRewriteBatch(result);
+    const batch = this.applyRewriteBatch(result, options?.externalRewrite);
     result = batch.messages;
 
     // Hybrid token estimation walks every message; we cache it across the
@@ -672,7 +697,7 @@ export class ContextManager {
   async manageAsync(
     messages: Message[],
     signal?: AbortSignal,
-    options?: { preferNotes?: boolean },
+    options?: ManageOptions & { preferNotes?: boolean },
   ): Promise<Message[]> {
     let result = messages;
 
@@ -687,7 +712,7 @@ export class ContextManager {
     result = applyToolResultBudget(result, 100_000, this.config.toolMessageTokenLimit);
 
     // Tier 0d + Tier 1: batched retroactive cleanups — see manage().
-    const batch = this.applyRewriteBatch(result);
+    const batch = this.applyRewriteBatch(result, options?.externalRewrite);
     result = batch.messages;
     const microNoOpAtFloor = batch.microNoOp;
     if (batch.microShrunk) this.suppressNoOpMicroSummaryUntilCompact = false;

@@ -628,12 +628,21 @@ export class TurnLoop {
     return this.turnBoundaryMs;
   }
 
+  /** Applies only replacements that cannot wait for the rewrite gate (image-history-window.ts). */
   private prepareMessagesForModel(messages: Message[]): Message[] {
-    const result = this.imageHistory.prepare(messages);
+    return this.logImageDowngrade(this.imageHistory.prepare(messages));
+  }
+
+  private logImageDowngrade(result: {
+    messages: Message[];
+    replacedCount: number;
+    forced: boolean;
+  }): Message[] {
     if (result.replacedCount > 0) {
       this.currentTurnLog.info("context.image_payload_downgrade", {
         cat: "context",
         images: result.replacedCount,
+        forced: result.forced,
         pendingFresh: this.imageHistory.hasFreshImages,
       });
     }
@@ -796,21 +805,26 @@ export class TurnLoop {
     const stable = this.stripVolatileContextMessages(messages);
     const managed = await this.deps.contextManager.manageAsync(stable, this.config.signal, {
       preferNotes: notes !== undefined,
+      externalRewrite: this.planImageBatch,
     });
     return this.restoreVolatileAfterContextManagement(messages, stable, managed);
   }
 
   private manageContextMessagesSync(messages: Message[]): Message[] {
+    const options = { externalRewrite: this.planImageBatch };
     if (this.volatileContextMessages.size === 0) {
-      return this.deps.contextManager.manage(messages);
+      return this.deps.contextManager.manage(messages, options);
     }
     const stable = this.stripVolatileContextMessages(messages);
-    const managed = this.deps.contextManager.manage(stable);
+    const managed = this.deps.contextManager.manage(stable, options);
     return this.restoreVolatileAfterContextManagement(messages, stable, managed);
   }
 
+  /** Image placeholders join the context manager's batched rewrites (rewrite-gate.ts). */
+  private readonly planImageBatch = (messages: Message[]) => this.imageHistory.planBatch(messages);
+
   private markPendingImagesConsumed(messages: Message[]): Message[] {
-    return this.imageHistory.consume(messages);
+    return this.logImageDowngrade(this.imageHistory.consume(messages));
   }
 
   private redactConsumedSensitiveToolResults(messages: Message[]): Message[] {
