@@ -17,6 +17,7 @@ const MODEL_BOUNDARY_EVENT_TYPES = new Set<TranscriptEventType>([
   "range_archive",
   "context_note",
   "context_checkpoint",
+  "prompt_rewrite",
 ]);
 
 export interface ContextHistoryEntry {

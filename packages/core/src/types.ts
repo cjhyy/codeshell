@@ -243,6 +243,10 @@ export type TranscriptEventType =
   // turn loses its stopped flag on reload and wrongly folds behind the
   // "已处理 Xs ⌄" process-card header.
   | "turn_stopped"
+  // A user_prompt_submit hook rewrote the prompt of an earlier message event.
+  // Model replay uses the rewrite; display keeps the original. data = { messageEventId, content }
+  // (session/prompt-rewrites.ts).
+  | "prompt_rewrite"
   | "error";
 
 export interface TranscriptEvent {

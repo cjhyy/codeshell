@@ -38,6 +38,7 @@ const TYPES = new Set([
   "turn_diff",
   "goal_progress",
   "subagent",
+  "prompt_rewrite",
 ]);
 const object = (value: unknown): value is Record<string, unknown> =>
   !!value && typeof value === "object" && !Array.isArray(value);

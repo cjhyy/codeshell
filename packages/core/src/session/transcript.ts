@@ -32,6 +32,11 @@ import {
   type ContextLedgerEventData,
   type HookReminderEventData,
 } from "./context-messages.js";
+import {
+  modelContentOf,
+  promptRewritesOf,
+  type PromptRewriteEventData,
+} from "./prompt-rewrites.js";
 
 type TranscriptWriter = (filePath: string, data: string, encoding: "utf-8") => void;
 
@@ -258,6 +263,7 @@ const CONTEXT_EVENT_TYPES: ReadonlySet<TranscriptEventType> = new Set([
   "summary",
   "context_transfer",
   "range_archive",
+  "prompt_rewrite",
 ]);
 
 const INTERRUPTED_TOOL_RESULT_ERROR = "[Tool result missing due to interrupted session]";
@@ -647,6 +653,11 @@ export class Transcript {
   /** Anchor for a spawned sub-agent (see TranscriptEventType "subagent").
    *  Written at spawn time so replay can rebuild the sub-agent's card from
    *  sessions/<agentId>/ — agentId === the sub-agent's session id. */
+  /** Persist a hook's rewrite of a user prompt (session/prompt-rewrites.ts). */
+  appendPromptRewrite(data: PromptRewriteEventData): TranscriptEvent {
+    return this.append("prompt_rewrite", { ...data });
+  }
+
   appendSubagent(agentId: string, name: string | undefined, description: string): TranscriptEvent {
     return this.append("subagent", { agentId, name, description });
   }
@@ -827,8 +838,10 @@ export class Transcript {
       }
       seenMessageIds.add(event.id);
     }
+    const rewrites = promptRewritesOf(events);
     const pushMessageEvent = (event: TranscriptEvent): void => {
-      const { role, content } = event.data as { role: string; content: string | ContentBlock[] };
+      const role = event.data.role as string;
+      const content = modelContentOf(event, rewrites);
       // Tool results can be merged into this array below. Never mutate
       // the source event (or a checkpoint) during a read-only replay.
       const message = { role: role as Message["role"], content: structuredClone(content) };
@@ -1128,14 +1141,12 @@ export class Transcript {
     content: string | ContentBlock[];
   }> {
     const messages: Array<{ role: string; content: string | ContentBlock[] }> = [];
+    const rewrites = promptRewritesOf(events);
     for (const event of events) {
       switch (event.type) {
         case "message": {
-          const { role, content } = event.data as {
-            role: string;
-            content: string | ContentBlock[];
-          };
-          messages.push({ role, content });
+          const role = event.data.role as string;
+          messages.push({ role, content: modelContentOf(event, rewrites) });
           break;
         }
         case "tool_use":
