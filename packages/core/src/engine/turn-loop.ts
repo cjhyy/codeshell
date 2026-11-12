@@ -58,6 +58,7 @@ import { crossedReactiveThreshold } from "./reactive-threshold.js";
 import { COMPLETE_GOAL_TOOL_NAME } from "../tool-system/builtin/complete-goal.js";
 import { goalJudgeConversation, type HookReminderEventData } from "../session/context-messages.js";
 import { moveVolatileContextToTail } from "./volatile-context-tail.js";
+import { usesExplicitCacheMarkers } from "../llm/providers/openai-cache-content.js";
 import { persistContextReminder } from "./context-reminders.js";
 import {
   persistRemindersBeforeCheckpoint,
@@ -113,6 +114,11 @@ export interface TurnLoopConfig {
   volatileContextMessages?: Iterable<Message>;
   /** Keep the volatile messages at the tail of every request (engine/volatile-context-tail.ts). */
   volatileContextAtTail?: boolean;
+  /**
+   * The model client stopped sending explicit cache breakpoints mid-run
+   * (engine/prompt-cache-route.ts). Tail placement has already stopped.
+   */
+  onPromptCacheFallback?: () => void;
   /** First message this run added to the history; see engine/stable-prefix.ts. */
   runStartMessage?: Message;
   /**
@@ -651,9 +657,23 @@ export class TurnLoop {
 
   /** Called on the message list of every model request, just before it is sent. */
   private placeVolatileContext(messages: Message[]): void {
-    if (this.config.volatileContextAtTail) {
+    if (this.volatileAtTail()) {
       moveVolatileContextToTail(messages, this.volatileContextMessages);
     }
+  }
+
+  /**
+   * Tail placement only while the client still sends explicit breakpoints.
+   * After a fallback the end of the previous request is the only save point,
+   * so the volatile message stays where it is from then on.
+   */
+  private volatileAtTail(): boolean {
+    if (!this.config.volatileContextAtTail) return false;
+    const strategy = this.deps.model.getEffectivePromptCacheStrategy?.();
+    if (strategy === undefined || usesExplicitCacheMarkers(strategy)) return true;
+    this.config = { ...this.config, volatileContextAtTail: false };
+    this.config.onPromptCacheFallback?.();
+    return false;
   }
 
   private stripVolatileContextMessages(messages: Message[]): Message[] {
@@ -850,7 +870,7 @@ export class TurnLoop {
         stablePrefixMessageCount: resolveStablePrefixMessageCount({
           messages,
           isVolatile: (message) => this.volatileContextMessages.has(message),
-          volatileAtTail: this.config.volatileContextAtTail,
+          volatileAtTail: this.volatileAtTail(),
           pendingRewriteMessage: this.deps.contextManager.getPendingRewriteBoundaryMessage?.(),
           runStartMessage: this.config.runStartMessage,
         }),

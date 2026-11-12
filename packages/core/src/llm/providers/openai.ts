@@ -41,6 +41,7 @@ import {
   type PromptCachePolicy,
   type PromptCacheHistoryPlan,
   type PromptCacheRequestContext,
+  type PromptCacheStrategy,
 } from "../prompt-cache.js";
 import { stabilizeExplicitCacheContent, usesExplicitCacheMarkers } from "./openai-cache-content.js";
 import { STREAM_WATCHDOG_CONFIG, StreamIdleTimeoutError } from "../stream-watchdog.js";
@@ -397,6 +398,11 @@ export class OpenAIClient extends LLMClientBase {
     return this._disablePromptCacheKey && policy.cacheKey
       ? { ...policy, cacheKey: undefined }
       : policy;
+  }
+
+  /** Sticky per client: explicit → implicit once the endpoint rejected explicit fields. */
+  override getEffectivePromptCacheStrategy(): PromptCacheStrategy {
+    return this.promptCachePolicy().strategy;
   }
 
   override getPromptCacheConfigIdentity(): Readonly<Record<string, unknown>> {

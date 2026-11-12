@@ -23,11 +23,8 @@ import { resolveModelRequestSigner } from "../model-request-boundary/access.js";
 import { assertDurableRequestOwner } from "../model-request-boundary/session-owner.js";
 import type { ModelRequestSigner, ModelRequestSubject } from "../model-request-boundary/types.js";
 import { createLLMClient } from "../llm/client-factory.js";
-import {
-  promptCacheTtlMs,
-  promptCacheUsesExplicitBreakpoints,
-  resolvePromptCachePolicy,
-} from "../llm/prompt-cache.js";
+import { resolvePromptCachePolicy } from "../llm/prompt-cache.js";
+import { PromptCacheRouteMemory } from "./prompt-cache-route.js";
 import { createRunBatchAuthority } from "../operations/run-batch-authority.js";
 import { createSessionOperationController } from "../operations/controller.js";
 import { CapabilityResolver } from "../operations/resolver.js";
@@ -433,6 +430,8 @@ export class Engine {
    * LLM response arrives.
    */
   private ctxOverheadBySid = new Map<string, number>();
+  /** Routes whose endpoint rejected explicit cache fields in this process. */
+  private readonly promptCacheRoutes = new PromptCacheRouteMemory();
   private promptCacheDiagnostics = new PromptCacheDiagnosticRecorder({ maxSessions: 256 });
   /**
    * Step-gap steering queue (per sessionId, in-memory). Host pushes user
@@ -2486,7 +2485,7 @@ export class Engine {
       llmModel: this.config.llm.model,
       messages,
       needsCtxSeed: !this.ctxSeedSent.has(sid),
-      promptCacheTtlMs: promptCacheTtlMs(resolvePromptCachePolicy(this.config.llm)),
+      promptCacheTtlMs: this.promptCacheRoutes.ttlMs(this.config.llm),
     });
     this.lastContextManager = contextManager;
     if (!this.ctxSeedSent.has(sid)) this.ctxSeedSent.add(sid);
@@ -3565,9 +3564,17 @@ export class Engine {
         signal: options?.signal,
         freshImageMessages: freshImageMessage ? [freshImageMessage] : undefined,
         volatileContextMessages: volatileContextMsg ? [volatileContextMsg] : undefined,
-        volatileContextAtTail: promptCacheUsesExplicitBreakpoints(
-          resolvePromptCachePolicy(this.config.llm),
-        ),
+        volatileContextAtTail: this.promptCacheRoutes.usesExplicitBreakpoints(this.config.llm),
+        onPromptCacheFallback: () => {
+          if (
+            this.promptCacheRoutes.observe(
+              this.config.llm,
+              modelFacade.getEffectivePromptCacheStrategy(),
+            )
+          ) {
+            contextManager.setPromptCacheTtlMs(this.promptCacheRoutes.ttlMs(this.config.llm));
+          }
+        },
         syncRunContext: (runMessages) => void runContextLedger.sync(runMessages),
         retainedContextMessages,
         runStartMessage,
@@ -4312,7 +4319,7 @@ export class Engine {
     if (!contextManager || this.lastSessionId !== effectiveSessionId) {
       contextManager = new ContextManager({
         maxTokens: this.resolveMaxContextTokens(),
-        promptCacheTtlMs: promptCacheTtlMs(resolvePromptCachePolicy(this.config.llm)),
+        promptCacheTtlMs: this.promptCacheRoutes.ttlMs(this.config.llm),
         ...Object.fromEntries(
           Object.entries(this.resolveContextRatios()).filter(([, v]) => v !== undefined),
         ),

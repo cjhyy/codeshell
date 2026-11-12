@@ -197,6 +197,11 @@ export class ContextManager {
     this.config = { ...DEFAULT_CONFIG, ...config };
   }
 
+  /** The route's cache retention changed mid-process (engine/prompt-cache-route.ts). */
+  setPromptCacheTtlMs(ttlMs: number): void {
+    this.config = { ...this.config, promptCacheTtlMs: ttlMs };
+  }
+
   setOnCompact(fn: OnCompactFn): void {
     this.onCompact = fn;
   }
