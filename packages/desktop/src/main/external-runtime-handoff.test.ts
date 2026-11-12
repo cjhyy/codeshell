@@ -30,6 +30,27 @@ describe("buildExternalRuntimeHandoffFromEvents", () => {
     expect(handoff).not.toContain("short label");
   });
 
+  test("leaves out the engine's own context messages", () => {
+    const handoff = buildExternalRuntimeHandoffFromEvents([
+      event("user", "full task"),
+      event("user", "<system-reminder>\nMEMORY INDEX\n</system-reminder>", {
+        injected: true,
+        contextLedger: { kind: "snapshot", state: "{}" },
+      }),
+      event("user", "<system-reminder>\nHOOK RULES\n</system-reminder>", {
+        injected: true,
+        hookReminder: { sessionStart: ["HOOK RULES"] },
+      }),
+      event("assistant", [{ type: "text", text: "done" }]),
+    ]);
+
+    expect(handoff).toContain("USER: full task");
+    expect(handoff).toContain("ASSISTANT: done");
+    expect(handoff).not.toContain("MEMORY INDEX");
+    expect(handoff).not.toContain("HOOK RULES");
+    expect(handoff).not.toContain("SYSTEM NOTE");
+  });
+
   test("keeps only a bounded recent tail", () => {
     const handoff = buildExternalRuntimeHandoffFromEvents([
       ...Array.from({ length: 5 }, (_, index) =>

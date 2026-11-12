@@ -1,5 +1,6 @@
 import type { ContentBlock, Message, TranscriptEvent, TranscriptEventType } from "../types.js";
 import { Transcript, hasCompleteContextToolPairs } from "../session/transcript.js";
+import { isContextMessageEvent } from "../session/context-messages.js";
 import { downgradeImagePayloadsInHistory, estimateTokens } from "./compaction.js";
 import { logger } from "../logging/logger.js";
 
@@ -320,7 +321,8 @@ function contentText(content: unknown): string {
 function historyText(event: TranscriptEvent): string | undefined {
   switch (event.type) {
     case "message":
-      return contentText(event.data.content);
+      // Engine context is not conversation history worth searching.
+      return isContextMessageEvent(event) ? undefined : contentText(event.data.content);
     case "tool_use":
       return `${event.data.toolName ?? "tool"}: ${JSON.stringify(event.data.args)}`;
     case "tool_result":

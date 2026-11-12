@@ -250,6 +250,9 @@ export async function previewOptimizationLabEvidence(
           (event) =>
             event.type === "message" &&
             event.data?.role === "user" &&
+            // Engine context (ledger, hook reminders) is not interleaved input.
+            event.data?.contextLedger === undefined &&
+            event.data?.hookReminder === undefined &&
             event.data?.clientMessageId !== messageId,
         );
         if (interleaved)

@@ -72,6 +72,8 @@ function findSnippetsInSession(
     if (snippets.length >= maxSnippets) break;
     if (event.type !== "message") continue;
     const data = event.data ?? {};
+    // Engine context (ledger, hook reminders) is not something anyone said.
+    if (data.contextLedger !== undefined || data.hookReminder !== undefined) continue;
     // A user message matches as the user wrote it: the host's displayText, or
     // the content without Mimi's delegation brief (older transcripts).
     const text =

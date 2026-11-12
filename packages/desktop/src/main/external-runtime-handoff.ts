@@ -41,6 +41,9 @@ export function buildExternalRuntimeHandoffFromEvents(
 ): string | undefined {
   const lines = events.flatMap((event): string[] => {
     if (event.type !== "message") return [];
+    // Engine context (memory index, skills, hook reminders) is the previous
+    // runtime's own framing, not conversation to hand over.
+    if (event.data.contextLedger !== undefined || event.data.hookReminder !== undefined) return [];
     const text = contentText(event.data.content).trim();
     if (!text) return [];
     const role = event.data.role;
