@@ -12,6 +12,10 @@ import type {
   ToolVisibilityContext,
 } from "@cjhyy/code-shell-core/extension";
 import { isAbsolute } from "node:path";
+import {
+  isPetNotificationSettingsMutation,
+  isPetTriggerMutationRequest,
+} from "./notice-tools-protocol.js";
 import { isPetFollowUpMutationPayload } from "./registered-follow-ups.js";
 
 export const PET_HOST_ACTION_KINDS = [
@@ -24,6 +28,8 @@ export const PET_HOST_ACTION_KINDS = [
   "sessionArchive",
   "sessionBind",
   "outboundMessage",
+  "noticeTriggerMutation",
+  "notificationSettingsMutation",
 ] as const;
 export type PetHostActionKind = (typeof PET_HOST_ACTION_KINDS)[number];
 
@@ -171,6 +177,9 @@ export function isPetHostActionRequest(value: unknown): value is PetHostActionRe
   if (value.kind === "followUpMutation") {
     return isPetFollowUpMutationPayload(payload);
   }
+  if (value.kind === "noticeTriggerMutation") return isPetTriggerMutationRequest(payload);
+  if (value.kind === "notificationSettingsMutation")
+    return isPetNotificationSettingsMutation(payload);
   if (value.kind === "sessionWatch") {
     return hasExactKeys(payload, ["sessionId"]) && isOpaqueId(payload.sessionId);
   }

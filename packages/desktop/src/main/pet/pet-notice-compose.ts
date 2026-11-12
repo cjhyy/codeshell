@@ -12,6 +12,10 @@ export interface NoticeFacts {
    * question, options or code. Without it the notice has nothing private.
    */
   nonDirectBody?: string;
+  /** The long task a closure notice reports on (read back by Mimi's Notices tool). */
+  taskId?: string;
+  /** A brief's record references: what each of its lines pointed at. */
+  refs?: Array<{ ref: string; type: string; status: string; title: string; sessionId?: string }>;
 }
 
 /** One held notice as the digest lists it. */

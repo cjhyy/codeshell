@@ -216,6 +216,8 @@ export interface NoticeRouterSettings {
   mergeWindowSec?: number;
   /** Local "HH:MM" times the digest may go out at (sorted); empty: whenever sending is allowed. */
   digestSlots?: readonly string[];
+  /** The owner's temporary silence (epoch ms); null or past: none. */
+  snoozeUntil?: number | null;
 }
 
 /** `enqueued`: written to the gateway outbox, whose delivery result settles the record later. */
@@ -512,6 +514,7 @@ export function normalizeSettings(
     maxP0PerHour: value?.maxP0PerHour ?? DEFAULT_MAX_P0_PER_HOUR,
     mergeWindowSec: value?.mergeWindowSec ?? DEFAULT_MERGE_WINDOW_SEC,
     digestSlots: value?.digestSlots ?? [],
+    snoozeUntil: value?.snoozeUntil ?? null,
   };
 }
 

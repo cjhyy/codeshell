@@ -188,6 +188,7 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
             mergeWindowMs: settings.mergeWindowSec * 1_000,
             timezoneOffsetMin: this.offset(now),
             digestSlots: settings.digestSlots,
+            snoozedUntil: settings.snoozeUntil,
           };
         },
         resend: (record) => this.resendHeld(record),
@@ -1102,6 +1103,7 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
         seenDedupeKeys: seen,
         imReady,
         ...(lastInbound !== undefined ? { lastInboundChannel: lastInbound } : {}),
+        snoozedUntil: settings.snoozeUntil,
       },
     );
     if (pinned) decision = pinToRoute(decision, routeChannel);

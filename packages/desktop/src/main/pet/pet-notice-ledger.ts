@@ -723,6 +723,18 @@ export class PetNoticeLedger {
       .map((record) => structuredClone(record));
   }
 
+  /**
+   * Up to `limit` records that `match`, newest first (Mimi's Notices tool and
+   * her recent-brief context). Only the matches are copied.
+   */
+  newest(match: (record: Readonly<NoticeRecord>) => boolean, limit: number): NoticeRecord[] {
+    return [...this.state.records.values()]
+      .filter((record) => match(record))
+      .sort((a, b) => b.createdAt - a.createdAt || b.id.localeCompare(a.id))
+      .slice(0, Math.max(0, limit))
+      .map((record) => structuredClone(record));
+  }
+
   /** Records that carry an open item (`actions`), oldest first. */
   actionRecords(): NoticeRecord[] {
     return [...this.state.records.values()]

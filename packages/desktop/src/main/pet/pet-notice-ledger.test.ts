@@ -972,3 +972,22 @@ describe("action codes", () => {
     expect(reread.byActionCode("0123456789AB")).toBeUndefined();
   });
 });
+
+describe("PetNoticeLedger.newest", () => {
+  test("returns copies of the newest matches, bounded", async () => {
+    const store = ledger();
+    await store.load();
+    for (let index = 0; index < 4; index += 1) {
+      clock = NOW + index * 1_000;
+      await store.record(
+        draft({ dedupeKey: `k${index}`, kind: index % 2 ? "heartbeat" : "session.done" }),
+      );
+    }
+    const found = store.newest((record) => record.kind === "session.done", 5);
+    expect(found.map((record) => record.dedupeKey)).toEqual(["k2", "k0"]);
+    expect(store.newest(() => true, 1).map((record) => record.dedupeKey)).toEqual(["k3"]);
+    found[0]!.facts = { title: "changed" };
+    expect(store.newest(() => true, 2)[1]!.facts).toEqual({ title: "登录页", summary: "done" });
+    clock = NOW;
+  });
+});

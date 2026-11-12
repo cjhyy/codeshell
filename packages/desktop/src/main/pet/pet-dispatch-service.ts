@@ -6,12 +6,9 @@ import type {
   PetNavigationResult,
   DesktopPetProjectionSnapshot,
 } from "./pet-state-aggregator.js";
-import {
-  normalizePetWorkDelegation,
-  PET_PENDING_NOTICE_BODY_MAX,
-  PET_PENDING_NOTICE_TITLE_MAX,
-  PET_PENDING_NOTICES_MAX,
-} from "@cjhyy/code-shell-pet";
+import { normalizePetWorkDelegation } from "@cjhyy/code-shell-pet";
+import { petNoticeWorld, type PetRecentProactiveSource } from "./pet-notice-world.js";
+import * as noticeGate from "./pet-notice-turn-gate.js";
 import { readLatestWorkContext } from "@cjhyy/code-shell-pet/disclosure";
 import { createMtimeSessionCache } from "./mtime-session-cache.js";
 import { mapWithConcurrency } from "./map-with-concurrency.js";
@@ -381,6 +378,10 @@ export interface PetDispatchOptions {
    * one.
    */
   hostActionReceipts?: PetHostActionReceiptStore;
+  /** Mimi's own recent briefs / heartbeat for the conversation a chat turn answers. */
+  recentProactive?: PetRecentProactiveSource;
+  /** Whose turn it is, for Mimi's notice tools (shown and readable only in the owner's). */
+  noticeTurns?: noticeGate.PetNoticeTurnGate;
   /** Extra bounded world fields (memories, tunnel status, ...) for each turn. */
   worldContext?(
     input: PetWorldContextInput,
@@ -1034,7 +1035,9 @@ export class PetDispatchService {
       active.resolveRunStarted(true);
     }
     try {
-      return await this.requestRoutedRun(params, "pet-dispatch");
+      return await noticeGate.withNoticeTurn(this.options.noticeTurns, params, () =>
+        this.requestRoutedRun(params, "pet-dispatch"),
+      );
     } finally {
       if (active) {
         active.workerRunPending = false;
@@ -1760,7 +1763,10 @@ export class PetDispatchService {
           "outboundMessage",
           "memory",
           "mobileRemote",
+          "noticeTriggerMutation",
+          "notificationSettingsMutation",
         ]);
+        const noticeOwner = noticeGate.isNoticeOwnerTurn(command, this.options.noticeTurns);
         const hostActionKinds = command.hostWake
           ? []
           : command.source?.kind === "im-gateway"
@@ -1768,7 +1774,8 @@ export class PetDispatchService {
                 .filter(
                   (kind) =>
                     (kind !== "gatewayReply" || gatewayReplyCapability !== undefined) &&
-                    (kind !== "sessionWatch" || currentCompletionTarget !== undefined),
+                    (kind !== "sessionWatch" || currentCompletionTarget !== undefined) &&
+                    (noticeOwner || !noticeGate.NOTICE_TOOL_KINDS.has(kind)),
                 )
                 .sort()
             : Object.keys(this.options.hostActions ?? {})
@@ -1790,6 +1797,7 @@ export class PetDispatchService {
           "outboundTargets",
           "hostWake",
           "pendingNotices",
+          "recentProactive",
           "contextAssociation",
           "inputAttachments",
         ]);
@@ -1803,9 +1811,7 @@ export class PetDispatchService {
         );
         const longTaskContext = this.options.longTasks?.context();
         const taskInbox = await taskInboxTask;
-        const pendingNotices = command.pendingNotices
-          ? await command.pendingNotices.take().catch(() => [])
-          : [];
+        const noticeWorld = await petNoticeWorld(command, this.options.recentProactive);
         const world = {
           version: projectionWorld.version,
           generation: projectionWorld.generation,
@@ -1837,17 +1843,7 @@ export class PetDispatchService {
               }
             : {}),
           // Early, so the bounded serializer keeps them ahead of noisier arrays.
-          ...(pendingNotices.length
-            ? {
-                pendingNotices: pendingNotices
-                  .slice(0, PET_PENDING_NOTICES_MAX)
-                  .map(({ kind, title, body }) => ({
-                    kind: kind.slice(0, 64),
-                    ...(title ? { title: title.slice(0, PET_PENDING_NOTICE_TITLE_MAX) } : {}),
-                    body: body.slice(0, PET_PENDING_NOTICE_BODY_MAX),
-                  })),
-              }
-            : {}),
+          ...noticeWorld,
           ...(gatewayCatalog
             ? {
                 currentMessageCapabilities: {

@@ -226,6 +226,11 @@ export interface PetNotificationsController {
   draft: PetNotificationsDraft | null;
   /** Briefs' and heartbeat's state today, when main reports it. */
   proactive?: PetProactiveStatus;
+  /** The owner's snooze end (epoch ms) while it still holds; absent otherwise. */
+  snoozeUntil?: number;
+  snoozeError: string;
+  /** End the snooze now (writes only `snoozeUntil`, which main then forgets). */
+  cancelSnooze(): void;
   saveError: string;
   update(patch: Partial<PetNotificationsDraft>): void;
   flush(): void;
@@ -244,6 +249,9 @@ export function usePetNotificationsController({
   const [saveError, setSaveError] = useState("");
   const [systemPending, setSystemPending] = useState(false);
   const [systemError, setSystemError] = useState("");
+  const [snoozeError, setSnoozeError] = useState("");
+  // Re-render when a snooze ends by itself, so its line goes away.
+  const [, setTick] = useState(0);
   const draftRef = useRef<PetNotificationsDraft | null>(null);
   // Settings the owner edited on this page; only these are written.
   const touched = useRef(new Set<NotificationSettingKey>());
@@ -326,6 +334,41 @@ export function usePetNotificationsController({
     schedule({ draft: next, touched: new Set(touched.current) });
   };
 
+  const storedSnooze = state?.settings.snoozeUntil;
+  const snoozeUntil =
+    typeof storedSnooze === "number" && storedSnooze > Date.now() ? storedSnooze : undefined;
+  useEffect(() => {
+    if (snoozeUntil === undefined) return;
+    const timer = setTimeout(
+      () => setTick((tick) => tick + 1),
+      Math.min(snoozeUntil - Date.now() + 500, 2_147_483_647),
+    );
+    return () => clearTimeout(timer);
+  }, [snoozeUntil]);
+
+  const cancelSnooze = (): void => {
+    setSnoozeError("");
+    // Its own write, queued behind pending edits: null deletes the stored key.
+    const operation = notificationWrites.then(() =>
+      write("user", { pet: { notifications: { snoozeUntil: null } } }),
+    );
+    notificationWrites = operation.catch(() => {});
+    operation.then(
+      () => {
+        if (!alive.current) return;
+        setState((latest) => {
+          if (!latest) return latest;
+          const { snoozeUntil: _ended, ...settings } = latest.settings;
+          return { ...latest, settings };
+        });
+        reload();
+      },
+      (cause: unknown) => {
+        if (alive.current) setSnoozeError(errorText(cause));
+      },
+    );
+  };
+
   const setSystemRule = (on: boolean): void => {
     const current = apiRef.current;
     if (!current?.setSystemNoticeRule || !state || systemPending) return;
@@ -357,12 +400,25 @@ export function usePetNotificationsController({
     systemError,
     draft,
     ...(state?.proactive ? { proactive: state.proactive } : {}),
+    ...(snoozeUntil !== undefined ? { snoozeUntil } : {}),
+    snoozeError,
+    cancelSnooze,
     saveError,
     update,
     flush,
     setSystemRule,
     reload,
   };
+}
+
+/** "HH:MM" for a snooze ending today, "MM-DD HH:MM" for one ending tomorrow (local time). */
+export function snoozeClock(ms: number, now = Date.now()): string {
+  const end = new Date(ms);
+  const pad = (value: number) => String(value).padStart(2, "0");
+  const clock = `${pad(end.getHours())}:${pad(end.getMinutes())}`;
+  return end.toDateString() === new Date(now).toDateString()
+    ? clock
+    : `${pad(end.getMonth() + 1)}-${pad(end.getDate())} ${clock}`;
 }
 
 const READINESS_VARIANT: Record<PetNoticeChannelReadiness, "success" | "warning" | "error"> = {
@@ -457,6 +513,24 @@ export function PetNotificationsFields({
     );
   return (
     <div className="grid min-w-0 gap-5 [&>*]:min-w-0">
+      {controller.snoozeUntil !== undefined && (
+        <div
+          className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/70 px-3 py-2"
+          data-pet-notices-snooze
+        >
+          <p className="min-w-0 flex-1 text-sm">
+            {t("pet.notices.snoozedUntil", { time: snoozeClock(controller.snoozeUntil) })}
+          </p>
+          <Button type="button" variant="outline" size="sm" onClick={controller.cancelSnooze}>
+            {t("pet.notices.snoozeCancel")}
+          </Button>
+          {controller.snoozeError && (
+            <p role="alert" className="w-full text-xs text-status-err [overflow-wrap:anywhere]">
+              {t("pet.notices.snoozeCancelFailed", { error: controller.snoozeError })}
+            </p>
+          )}
+        </div>
+      )}
       <div className="grid gap-2" data-pet-notices-field="quiet-hours">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0 space-y-0.5">

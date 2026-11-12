@@ -360,4 +360,18 @@ describe("pet settings (Mimi global-view external-session visibility)", () => {
       }).pet?.notifications?.digestSlots,
     ).toBeUndefined();
   });
+
+  it("keeps a snooze end instant and drops a malformed one alone", () => {
+    const until = Date.UTC(2026, 10, 12, 7, 0);
+    expect(
+      SettingsSchema.parse({ pet: { notifications: { snoozeUntil: until } } }).pet?.notifications,
+    ).toEqual({ snoozeUntil: until });
+    for (const bad of [-1, 0, 1.5, "soon", true]) {
+      const parsed = SettingsSchema.parse({
+        pet: { notifications: { maxPerHour: 4, snoozeUntil: bad } },
+      }).pet?.notifications;
+      expect(parsed?.snoozeUntil).toBeUndefined();
+      expect(parsed?.maxPerHour).toBe(4);
+    }
+  });
 });

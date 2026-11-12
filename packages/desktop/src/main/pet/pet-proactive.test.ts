@@ -161,6 +161,10 @@ describe("briefs", () => {
     ]);
     // The records went to the model as data, with refs.
     expect(JSON.parse(f.calls[0]!.user).records[0]).toMatchObject({ ref: "r1", type: "done" });
+    // The notice keeps what each line pointed at, for Mimi's Notices tool.
+    expect(f.h.submitted[0]!.facts).toMatchObject({
+      refs: [{ ref: "r1", type: "done", status: "【完成】", title: "修复登录问题" }],
+    });
 
     // Fired again the same day (the owner moved the time): skipped.
     env.clock = NINE + 2 * HOUR;

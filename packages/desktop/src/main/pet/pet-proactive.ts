@@ -145,7 +145,18 @@ export function createPetProactive(deps: PetProactiveDeps): PetProactive {
       // One per local day: a retimed or caught-up brief never goes out twice.
       dedupeKey: `brief:${kind}:${today}`,
       ruleIds: [rule.id],
-      facts: { title: name, summary: written.text.slice(0, NOTICE_SUMMARY_MAX) },
+      facts: {
+        title: name,
+        summary: written.text.slice(0, NOTICE_SUMMARY_MAX),
+        // What each line pointed at, so Mimi can later say what the brief said (Notices).
+        refs: facts.records.map(({ ref, type, status, title, sessionId }) => ({
+          ref,
+          type,
+          status,
+          title,
+          ...(sessionId ? { sessionId } : {}),
+        })),
+      },
       body: written.text,
       attention: "always",
       channel: "auto",

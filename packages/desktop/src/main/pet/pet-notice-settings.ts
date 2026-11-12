@@ -72,12 +72,14 @@ export function petNotificationSettingsView(userSettings: unknown): PetNotificat
       activeHours: { ...(stored.heartbeat?.activeHours ?? DEFAULT_ACTIVE_HOURS) },
     },
     digestSlots: [...new Set(stored.digestSlots ?? [])].sort(),
+    // As stored: past instants no longer apply, and the router ignores one over a day away.
+    ...(stored.snoozeUntil !== undefined ? { snoozeUntil: stored.snoozeUntil } : {}),
   };
 }
 
 /** `settings.pet.notifications` with every field bounded; anything malformed falls back. */
 export function parsePetNotificationSettings(userSettings: unknown): PetNotificationSettings {
-  const { quietHours, briefs, heartbeat, digestSlots, ...rest } =
+  const { quietHours, briefs, heartbeat, digestSlots, snoozeUntil, ...rest } =
     petNotificationSettingsView(userSettings);
   return {
     quietHours: quietHours.enabled ? { start: quietHours.start, end: quietHours.end } : null,
@@ -85,7 +87,35 @@ export function parsePetNotificationSettings(userSettings: unknown): PetNotifica
     briefs: briefs!,
     heartbeat: heartbeat!,
     digestSlots: digestSlots ?? [],
+    snoozeUntil: snoozeUntil ?? null,
   };
+}
+
+/**
+ * The first field of a partial `pet.notifications` write the settings schema
+ * would drop (it drops rather than rejects a malformed field); undefined when
+ * every field survives as written. A null (the writer's "delete") is fine.
+ */
+export function notificationsWriteProblem(write: Record<string, unknown>): string | undefined {
+  const present = Object.fromEntries(Object.entries(write).filter(([, value]) => value !== null));
+  const parsed = NOTIFICATIONS_SCHEMA.safeParse(present);
+  const kept = (parsed.success ? parsed.data : undefined) ?? {};
+  for (const [key, value] of Object.entries(present))
+    if (canonical((kept as Record<string, unknown>)[key]) !== canonical(value)) return key;
+  return undefined;
+}
+
+/** JSON with object keys sorted, so field order never matters. */
+function canonical(value: unknown): string {
+  return JSON.stringify(value, (_key, inner: unknown) =>
+    isRecord(inner)
+      ? Object.fromEntries(
+          Object.keys(inner)
+            .sort()
+            .map((key) => [key, inner[key]]),
+        )
+      : inner,
+  );
 }
 
 /** The quiet-hours line NotifyMe's reply carries; undefined when there is no window. */
