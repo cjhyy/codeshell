@@ -17,6 +17,9 @@ import type {
 import type { AgentModule } from "../composition/types.js";
 import { estimateStringTokens } from "../context/token-counter.js";
 import { invalidateSkillCache } from "../skills/scanner.js";
+import { installPromptPrefixGuard } from "../testing/prompt-prefix-guard.js";
+
+installPromptPrefixGuard({ beforeEach, afterEach });
 
 const provider = "fake-engine-prompt-cache";
 const env = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_SYSTEM: "/dev/null" };

@@ -11,6 +11,9 @@ import type { CreateMessageOptions } from "../llm/types.js";
 import type { LLMResponse, Message, TranscriptEvent } from "../types.js";
 import type { AgentModule } from "../composition/types.js";
 import { LEDGER_UPDATE_PREAMBLE } from "../context/context-ledger.js";
+import { installPromptPrefixGuard } from "../testing/prompt-prefix-guard.js";
+
+installPromptPrefixGuard({ beforeEach, afterEach });
 
 const provider = "fake-engine-context-ledger-hardening";
 const env = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_SYSTEM: "/dev/null" };

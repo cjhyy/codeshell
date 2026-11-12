@@ -42,6 +42,7 @@ import {
   toolResultText,
 } from "./tool-output-budget.js";
 import { logger } from "../logging/logger.js";
+import { notePromptPrefixRewrite } from "../utils/prompt-prefix-events.js";
 import { toolSchemaResultIds } from "./tool-schema-results.js";
 import {
   DEFAULT_REWRITE_BATCH_CONFIG,
@@ -202,6 +203,14 @@ export class ContextManager {
     this.config = { ...this.config, promptCacheTtlMs: ttlMs };
   }
 
+  /** Every compaction that rewrote history is a registered prefix change (prompt-prefix-events.ts). */
+  private reportCompact(info: Parameters<OnCompactFn>[0]): void {
+    if (info.strategy !== "micro" && info.historyChanged !== false) {
+      notePromptPrefixRewrite("compaction");
+    }
+    this.onCompact?.(info);
+  }
+
   setOnCompact(fn: OnCompactFn): void {
     this.onCompact = fn;
   }
@@ -222,7 +231,7 @@ export class ContextManager {
     this.lastActualProvider = undefined;
     this.lastActualModel = undefined;
     this.suppressNoOpMicroSummaryUntilCompact = false;
-    this.onCompact?.({
+    this.reportCompact({
       strategy: "notes",
       before,
       after: estimateTokens(afterMessages),
@@ -398,7 +407,7 @@ export class ContextManager {
         summaryLen: summary.length,
         rolling: priorSummary !== undefined,
       });
-      this.onCompact?.({ strategy: "summary", before, after, historyChanged: true });
+      this.reportCompact({ strategy: "summary", before, after, historyChanged: true });
       return { messages: compacted, tokens: after, compacted: true, noProgress: false };
     } catch (err) {
       this.consecutiveSummaryFailures++;
@@ -545,6 +554,7 @@ export class ContextManager {
     }
 
     if (externalChanged) external.commit();
+    notePromptPrefixRewrite("rewrite_batch");
     logger.info("context.rewrite_batch_applied", {
       reason,
       savedTokens,
@@ -565,7 +575,7 @@ export class ContextManager {
         after: plan.candidateTokens,
         ...plan.micro,
       });
-      this.onCompact?.({
+      this.reportCompact({
         strategy: "micro",
         before: plan.preMicroTokens,
         after: plan.candidateTokens,
@@ -644,7 +654,7 @@ export class ContextManager {
         result = applySummaryCompaction(result, this.lastSummary, keepN, this.transcriptPath);
         this.lastSummary = undefined;
         tokens = this.estimateTokensHybrid(result);
-        this.onCompact?.({
+        this.reportCompact({
           strategy: "summary",
           before,
           after: tokens,
@@ -653,7 +663,7 @@ export class ContextManager {
       } else {
         result = snipCompact(result, 3, 8);
         tokens = this.estimateTokensHybrid(result);
-        this.onCompact?.({
+        this.reportCompact({
           strategy: "snip",
           before,
           after: tokens,
@@ -669,7 +679,7 @@ export class ContextManager {
       const keepN = Math.max(10, Math.floor(result.length * 0.4));
       result = windowCompact(result, keepN);
       tokens = this.estimateTokensHybrid(result);
-      this.onCompact?.({
+      this.reportCompact({
         strategy: "window",
         before,
         after: tokens,
@@ -684,7 +694,7 @@ export class ContextManager {
       const beforeMessages = result;
       result = windowCompact(result, 6);
       tokens = this.estimateTokensHybrid(result);
-      this.onCompact?.({
+      this.reportCompact({
         strategy: "emergency",
         before,
         after: tokens,
@@ -776,7 +786,7 @@ export class ContextManager {
       const beforeMessages = result;
       result = snipCompact(result, 3, 8);
       live = this.estimateTokensHybrid(result);
-      this.onCompact?.({
+      this.reportCompact({
         strategy: "snip",
         before,
         after: live,
@@ -791,7 +801,7 @@ export class ContextManager {
       const keepN = Math.max(10, Math.floor(result.length * 0.4));
       result = windowCompact(result, keepN);
       live = this.estimateTokensHybrid(result);
-      this.onCompact?.({
+      this.reportCompact({
         strategy: "window",
         before,
         after: live,
@@ -805,7 +815,7 @@ export class ContextManager {
       const beforeMessages = result;
       result = windowCompact(result, 6);
       live = this.estimateTokensHybrid(result);
-      this.onCompact?.({
+      this.reportCompact({
         strategy: "emergency",
         before,
         after: live,
@@ -869,7 +879,7 @@ export class ContextManager {
       result = snipCompact(result, 3, 8);
       tokens = this.estimateTokensHybrid(result);
       if (result !== beforeMessages)
-        this.onCompact?.({ strategy: "snip", before, after: tokens, historyChanged: true });
+        this.reportCompact({ strategy: "snip", before, after: tokens, historyChanged: true });
     }
     if (this.estimateTokensHybrid(result) >= this.estimateTokensHybrid(messages)) {
       const before = tokens;
@@ -877,7 +887,7 @@ export class ContextManager {
       const keepN = Math.max(10, Math.floor(result.length * 0.4));
       result = windowCompact(result, keepN);
       tokens = this.estimateTokensHybrid(result);
-      this.onCompact?.({
+      this.reportCompact({
         strategy: "window",
         before,
         after: tokens,
@@ -933,7 +943,7 @@ export class ContextManager {
     const before = this.estimateTokensHybrid(messages);
     const out = [...messages.slice(0, start), summaryMessage, ...messages.slice(end)];
     const after = this.estimateTokensHybrid(out);
-    this.onCompact?.({ strategy: "range", before, after, historyChanged: true });
+    this.reportCompact({ strategy: "range", before, after, historyChanged: true });
     return out;
   }
 

@@ -10,6 +10,9 @@ import { registerProvider } from "../llm/client-factory.js";
 import type { CreateMessageOptions } from "../llm/types.js";
 import type { LLMResponse, Message, TranscriptEvent } from "../types.js";
 import { Transcript } from "../session/transcript.js";
+import { installPromptPrefixGuard } from "../testing/prompt-prefix-guard.js";
+
+installPromptPrefixGuard({ beforeEach, afterEach });
 
 const provider = "fake-engine-prompt-rewrite";
 const env = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_SYSTEM: "/dev/null" };

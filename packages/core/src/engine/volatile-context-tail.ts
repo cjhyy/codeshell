@@ -15,20 +15,24 @@
  */
 import type { Message } from "../types.js";
 
-/** Move the volatile messages behind every other message, in place, keeping their order. */
+/**
+ * Move the volatile messages behind every other message, in place, keeping
+ * their order. Returns whether anything moved.
+ */
 export function moveVolatileContextToTail(
   messages: Message[],
   volatile: ReadonlySet<Message>,
-): void {
-  if (volatile.size === 0) return;
+): boolean {
+  if (volatile.size === 0) return false;
   let trailing = 0;
   while (trailing < messages.length && volatile.has(messages[messages.length - 1 - trailing]!)) {
     trailing += 1;
   }
   const head = messages.length - trailing;
   // Already at the tail: nothing volatile before the trailing run.
-  if (!messages.slice(0, head).some((message) => volatile.has(message))) return;
+  if (!messages.slice(0, head).some((message) => volatile.has(message))) return false;
   const moved = messages.filter((message) => volatile.has(message));
   const kept = messages.filter((message) => !volatile.has(message));
   messages.splice(0, messages.length, ...kept, ...moved);
+  return true;
 }
