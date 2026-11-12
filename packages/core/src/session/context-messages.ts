@@ -44,14 +44,6 @@ export function contextMessageMark(message: Message): ContextMessageMark | undef
 }
 
 /**
- * History without the context ledger's messages, for a reader that judges the
- * conversation itself (they are the engine's framing, not something said).
- */
-export function withoutLedgerMessages(messages: readonly Message[]): Message[] {
-  return messages.filter((message) => marks.get(message)?.kind !== "ledger");
-}
-
-/**
  * True for a hook reminder issued for one specific message, which it directly
  * precedes. It belongs to that message: a span that ends at the message ends
  * before its reminder, in a live list exactly as in a replay.

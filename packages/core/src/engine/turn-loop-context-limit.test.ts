@@ -109,6 +109,26 @@ describe("TurnLoop context-limit recovery", () => {
     expect(retryPayload).toContain("Earlier conversation context was removed");
   });
 
+  it("re-syncs the run context after dropping rounds, before the retry", async () => {
+    const { deps, callArgs } = makeDeps([new ContextLimitError("fake"), done("recovered")]);
+    const snapshot: Message = { role: "user", content: "RUN CONTEXT SNAPSHOT" };
+    // Stands in for the context ledger: resend when history no longer has it.
+    const syncRunContext = (messages: Message[]): void => {
+      if (!messages.includes(snapshot)) messages.push(snapshot);
+    };
+    const seeded: Message[] = [history[0]!, snapshot, ...history.slice(1)];
+    const result = await new TurnLoop(deps, { ...config, syncRunContext }).run(seeded);
+
+    expect(result.reason).toBe("completed");
+    const withSnapshot = (request: Message[]): number =>
+      request.filter((message) => message.content === snapshot.content).length;
+    expect(withSnapshot(callArgs[0]!)).toBe(1);
+    // The dropped round took the snapshot with it; the retry carries it again.
+    expect(JSON.stringify(callArgs[1])).not.toContain("round-0 user seed");
+    expect(withSnapshot(callArgs[1]!)).toBe(1);
+    expect(callArgs[1]!.at(-1)!.content).toBe(snapshot.content);
+  });
+
   it("returns prompt_too_long and emits an error after three failed recovery attempts", async () => {
     const events: StreamEvent[] = [];
     const { deps, calls } = makeDeps([
