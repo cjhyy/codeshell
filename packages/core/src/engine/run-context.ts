@@ -32,9 +32,12 @@ export function createRunContextManager(args: {
   llmModel: string;
   messages: Message[];
   needsCtxSeed: boolean;
+  /** Cache retention of the run's provider route (llm/prompt-cache.ts). */
+  promptCacheTtlMs: number;
 }): { contextManager: ContextManager; ctxSeed: RunContextSeed } {
   const contextManager = new ContextManager({
     maxTokens: args.maxTokens,
+    promptCacheTtlMs: args.promptCacheTtlMs,
     // Drop undefined fields so they don't clobber ContextManager defaults
     // (spread of `{x: undefined}` would override the default with undefined).
     ...Object.fromEntries(Object.entries(args.ratios).filter(([, v]) => v !== undefined)),
