@@ -4,7 +4,7 @@
 const { EventEmitter } = require("node:events");
 const { Readable } = require("node:stream");
 
-const DEFAULT_ACCOUNT_ORIGIN = "https://115.159.45.55";
+const DEFAULT_ACCOUNT_ORIGIN = "https://codeshell.site";
 const STATUS_URL = `${DEFAULT_ACCOUNT_ORIGIN}/api/v1/account/status`;
 const STATUS_BODY = JSON.stringify({
   registrationAllowed: false,
