@@ -533,8 +533,8 @@ Panel Apps directory.
 
 Hub management and runtime select these project packages together. Desktop now
 selects package variants per binding project, and its paired Web composition uses
-the same selection with the native coordinator. Native project upgrade UI and
-legacy binding migration remain incomplete.
+the same selection with the native coordinator. Unpinned bindings follow the
+installed catalog; binding migration does not capture a legacy package baseline.
 
 Core project package selection now reads the project-only `panelAppPins` record:
 
@@ -542,7 +542,11 @@ Core project package selection now reads the project-only `panelAppPins` record:
 {
   "panelAppBindings": ["example-panel"],
   "panelAppPins": {
-    "example-panel": { "version": "1.0.0", "packageDigest": "<64 lowercase hex characters>" }
+    "example-panel": {
+      "version": "1.0.0",
+      "packageDigest": "<64 lowercase hex characters>",
+      "pinnedAt": "2026-11-12T08:00:00.000Z"
+    }
   }
 }
 ```
@@ -551,13 +555,18 @@ This is the Host integration contract, not a finished settings UI. A pin contain
 no path and grants no binding or permission. The generic remote configuration
 writer cannot change `panelAppPins`; trusted Host binding/update code must perform
 its own review, active-task checks and conditional project mutation. User-layer
-pins are not inherited. Existing projects without a pin retain the legacy catalog
-selection until explicit migration is implemented.
+pins are not inherited. A pin is effective only when its `pinnedAt` is strictly
+later than the installed catalog's `lastUpdated`. An install or update supersedes
+earlier pins, including ties and pins without a timestamp; the old settings record
+may remain, but selection follows the installed package. Projects without a pin
+also follow that package. While the catalog is mid-swap and its timestamp is
+unavailable, a timed pin continues selecting its retained bytes.
 
-`listProjectPanelApps(bindingProjectPath)` selects a retained package independently
-of the mutable catalog directory while retaining global registry membership as a
+For an effective pin, `listProjectPanelApps(bindingProjectPath)` selects a retained
+package independently of the mutable catalog directory while retaining global registry membership as a
 discovery requirement. Removing a global registration still removes availability.
-Missing or mismatched pins fail, never select latest. `projectPanelAppPackagePins`
+Missing or mismatched bytes for an effective pin fail, never select latest.
+`projectPanelAppPackagePins`
 uses a strict, bounded raw project-layer read so corrupt JSON, invalid pins and
 linked settings cannot be mistaken for an absent pin. The new optional strict
 mode on `SettingsManager.getRawForScope` preserves the existing default reader.
@@ -571,28 +580,30 @@ even in the administrative include-disabled view. Other Skill sources keep their
 existing behavior.
 
 Hub `createPanelHttp` enables project package selection for both management and
-runtime. Reviewed installation and project binding persist the version/digest in
-one conditional settings mutation. An existing legacy install is retained before
-binding; unbinding removes this project's pin. Update reviews check both the
+runtime. Binding authority stays separate from package selection; unbinding
+removes this project's pin. Update reviews check both the
 selected project revision and the separate mutable catalog state, before and
 inside the install commit guard. After installing bytes, a project-state check
 under the settings lock prevents a concurrent device's binding change from being
-overwritten. A conflict may leave a new catalog package installed, but never
-silently moves the project's pin.
+overwritten. Installing a new catalog package supersedes earlier effective pins
+for all projects sharing that catalog, even if their stored pin records remain.
 
 The selected package supplies the HTML, native entries and background tool
 resolution. Runtime checks the package digest against its management snapshot;
 a concurrent version change cannot pair old permissions with new program bytes.
-Other pinned projects retain their revisions and open page grants across a
-catalog update. A real HTTP test executes both retained native versions and
-reopens the old project's completed task after a Host restart. Missing or corrupt
+Catalog changes invalidate the affected revisions and open page grants. A later
+reviewed restore selects retained bytes for one project until the next catalog
+install or update. Independent cloud containers have separate catalogs, so an
+install in one runtime does not update the other runtime's projects. The candidate
+smoke verifies catalog following, old-grant rejection, reviewed rollback and
+selection, storage preservation, the other runtime's isolation and restart recovery.
+Missing or corrupt
 retained bytes refuse access rather than falling back to the latest catalog.
 
 `projectPackages` is a Host composition option, not a guest request parameter.
 Current paired Desktop enables it explicitly. Existing unpinned bindings are not
-silently moved to the newest catalog: discovery migrates their captured legacy
-package baseline into explicit project pins. Native binding/update writes share
-the conditional project writer. Existing global uninstall
+given an implicit baseline pin: they use the installed package. Native
+binding/update writes share the conditional project writer. Existing global uninstall
 semantics remain: removing the registry entry revokes all projects even though
 retained package files are preserved.
 

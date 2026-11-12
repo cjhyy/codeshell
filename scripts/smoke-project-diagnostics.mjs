@@ -14,7 +14,12 @@ const panelIds = new Set([
 ]);
 const panelSteps = new Set([
   "controlled-update",
-  "catalog-pin",
+  "catalog-follow",
+  "catalog-stale-grant",
+  "catalog-page",
+  "catalog-storage",
+  "rollback-before-selection",
+  "rollback-stale-grant",
   "retained-page",
   "history",
   "select-updated",

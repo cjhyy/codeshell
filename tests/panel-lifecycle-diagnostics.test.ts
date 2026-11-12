@@ -14,6 +14,29 @@ const id = "design-studio";
 const secret = "private-password-cookie-grant-url-body-argv-never-print";
 const digest = (value) => createHash("sha256").update(value).digest("hex");
 
+test("catalog-follow and reviewed rollback failures retain their fixed diagnostic step", () => {
+  for (const step of [
+    "catalog-follow",
+    "catalog-stale-grant",
+    "catalog-page",
+    "catalog-storage",
+    "rollback-before-selection",
+    "rollback-stale-grant",
+  ]) {
+    const original = new Error(secret);
+    const failure = panelLifecycleFailure(original, id, step);
+    const summary = summarizeFailure(failure);
+    expect(failure.cause).toBe(original);
+    expect(summary.sha256).toBe(digest(secret));
+    expect(summary.panelLifecycle).toEqual({
+      source: "candidate-panel-lifecycle",
+      panelId: id,
+      step,
+    });
+    expect(JSON.stringify(summary)).not.toContain(secret);
+  }
+});
+
 test("nested Panel steps retain the original cause and fingerprint without its private text", () => {
   const original = new Error(secret);
   const ui = panelVersionUiFailure(original, id, "review-second");
