@@ -282,6 +282,58 @@ describe("TurnLoop usage_update carries cache tokens", () => {
     expect(calls[1]!.options.promptCache.stablePrefixMessageCount).toBe(calls[1]!.messages.length);
   });
 
+  it("puts the stable prefix at the run start, or before a pending rewrite", async () => {
+    const head: Message = { role: "user", content: "instructions" };
+    const oldTask: Message = { role: "user", content: "earlier task" };
+    const oldAnswer: Message = { role: "assistant", content: "earlier answer" };
+    const task: Message = { role: "user", content: "task" };
+    const volatileMessage: Message = { role: "user", content: "runtime status" };
+    const responses: LLMResponse[] = [
+      {
+        text: "part one",
+        toolCalls: [],
+        stopReason: "max_tokens",
+        usage: { promptTokens: 100, completionTokens: 10, totalTokens: 110 },
+      },
+      {
+        text: "done",
+        toolCalls: [],
+        stopReason: "stop",
+        usage: { promptTokens: 120, completionTokens: 10, totalTokens: 130 },
+      },
+    ];
+    const { deps } = makeDeps(responses);
+    const counts: number[] = [];
+    let responseIndex = 0;
+    const call = async (
+      _system: string,
+      _messages: Message[],
+      _tools: unknown,
+      _onStream: unknown,
+      _signal: unknown,
+      options: any,
+    ): Promise<LLMResponse> => {
+      counts.push(options.promptCache.stablePrefixMessageCount);
+      return responses[responseIndex++]!;
+    };
+    (deps.model as any).call = call;
+    (deps.model as any).callWithoutStreaming = call;
+    // The manager only ever sees the list without the volatile message; it
+    // reports the boundary by reference. Pending from the second request on.
+    (deps.contextManager as any).getPendingRewriteBoundaryMessage = () =>
+      counts.length > 0 ? oldAnswer : undefined;
+
+    await new TurnLoop(deps, {
+      maxTurns: 5,
+      maxToolCallsPerTurn: 10,
+      volatileContextMessages: [volatileMessage],
+      runStartMessage: task,
+    }).run([head, oldTask, oldAnswer, task, volatileMessage]);
+
+    // Run start (index of `task`), then just before the pending rewrite.
+    expect(counts).toEqual([3, 2]);
+  });
+
   it("forwards a primary diagnostic sample with the effective prefix fingerprint", async () => {
     const { deps } = makeDeps([respWithCache()]);
     const samples: any[] = [];

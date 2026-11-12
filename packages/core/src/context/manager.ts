@@ -181,6 +181,8 @@ export class ContextManager {
   private localLastRequestAt: number | undefined;
   /** Earliest index a deferred rewrite batch would touch in the last managed array. */
   private pendingRewriteBoundary: number | undefined;
+  /** The message at that index: an identity that survives re-indexing by the caller. */
+  private pendingRewriteBoundaryMessage: Message | undefined;
 
   constructor(config?: Partial<ContextManagerConfig>) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -370,6 +372,7 @@ export class ContextManager {
       this.consecutiveSummaryFailures = 0;
       this.lastSummary = summary;
       this.pendingRewriteBoundary = undefined; // indices no longer match
+      this.pendingRewriteBoundaryMessage = undefined;
       logger.info(logEvent, {
         before,
         after,
@@ -421,6 +424,16 @@ export class ContextManager {
     return this.pendingRewriteBoundary;
   }
 
+  /**
+   * The same boundary as a message reference. Callers that hold a differently
+   * shaped list (e.g. with volatile context messages put back) must locate the
+   * boundary by this object, not by the index; a reference that is no longer
+   * in their list means the boundary is unknown.
+   */
+  getPendingRewriteBoundaryMessage(): Message | undefined {
+    return this.pendingRewriteBoundaryMessage;
+  }
+
   private now(): number {
     return this.config.now?.() ?? Date.now();
   }
@@ -446,6 +459,7 @@ export class ContextManager {
       estimate: (messages) => this.estimateTokensHybrid(messages),
     });
     this.pendingRewriteBoundary = undefined;
+    this.pendingRewriteBoundaryMessage = undefined;
     const kept = { messages: input, tokens: baseTokens, microNoOp: plan.microNoOp };
     if (!plan.changed) return { ...kept, microShrunk: false };
 
@@ -465,6 +479,8 @@ export class ContextManager {
     });
     if (!reason) {
       this.pendingRewriteBoundary = plan.firstChangedIndex;
+      this.pendingRewriteBoundaryMessage =
+        plan.firstChangedIndex === undefined ? undefined : input[plan.firstChangedIndex];
       logger.debug("context.rewrite_deferred", { pendingSavedTokens: plan.savedTokens });
       return { ...kept, microShrunk: false };
     }

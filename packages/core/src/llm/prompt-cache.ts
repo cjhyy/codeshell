@@ -25,9 +25,12 @@ export interface PromptCacheRequestContext {
   /** Stable run/session namespace used for provider cache affinity. */
   scopeId?: string;
   /**
-   * Number of source messages before the first volatile context message.
-   * Providers use this to retain a reusable durable-history breakpoint while
-   * also advancing a rolling breakpoint over the append-only in-run tail.
+   * Number of leading source messages that are settled: nothing in them will
+   * be rewritten or removed by this run (it ends at the run start, before a
+   * pending retroactive rewrite, or before a volatile context message —
+   * engine/stable-prefix.ts). Providers put a durable-history breakpoint on
+   * its last message while also advancing a rolling breakpoint over the
+   * append-only in-run tail.
    */
   stablePrefixMessageCount?: number;
 }

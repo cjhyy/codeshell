@@ -191,9 +191,13 @@ export function injectHookReminder(args: {
  * ledger's snapshot or update after it, and a non-durable runtime context
  * message (if the profile has one) last. Mutates `messages`.
  *
- * Returns the messages a notes rollover must re-attach (instructions and the
- * hook reminders in effect). Ledger messages are not among them: after any
- * rewrite that drops them, the next {@link RunContextLedger.sync} resends.
+ * Returns `retained`, the messages a notes rollover must re-attach
+ * (instructions and the hook reminders in effect; ledger messages are not
+ * among them: after any rewrite that drops them, the next
+ * {@link RunContextLedger.sync} resends), and `runStartMessage`, the first
+ * message this run added to the resumed history — the hook reminder it put
+ * before the user task, else the user task. Everything before it is settled
+ * history (engine/stable-prefix.ts).
  */
 export function assembleRunMessages(args: {
   messages: Message[];
@@ -203,11 +207,17 @@ export function assembleRunMessages(args: {
   hooks: RunHookMessages;
   ledger: RunContextLedger;
   volatileContextMsg: Message | null;
-}): Message[] {
+}): { retained: Message[]; runStartMessage: Message | undefined } {
+  // The user task is the last message; everything before it is resumed history.
+  const historyCount = args.messages.length - 1;
   const reminders = injectHookReminder(args);
+  const runStartMessage = args.messages[historyCount];
   // Prepend userContext (CLAUDE.md) as first message (sync, fast)
   if (args.userContextMsg) args.messages.unshift(args.userContextMsg);
   args.ledger.sync(args.messages);
   if (args.volatileContextMsg) args.messages.push(args.volatileContextMsg);
-  return [...(args.userContextMsg ? [args.userContextMsg] : []), ...reminders];
+  return {
+    retained: [...(args.userContextMsg ? [args.userContextMsg] : []), ...reminders],
+    runStartMessage,
+  };
 }

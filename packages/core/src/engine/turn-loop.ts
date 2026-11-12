@@ -49,6 +49,7 @@ import { ContextLimitError } from "../exceptions.js";
 import { logger } from "../logging/logger.js";
 import { checkTokenBudget, createBudgetTracker } from "./token-budget.js";
 import { StreamingToolQueue } from "./streaming-tool-queue.js";
+import { resolveStablePrefixMessageCount } from "./stable-prefix.js";
 import { estimateTokens } from "../context/compaction.js";
 import { ImageHistoryWindow } from "../context/image-history-window.js";
 import { isTruncatedStop } from "../llm/stop-reason.js";
@@ -104,6 +105,8 @@ export interface TurnLoopConfig {
    * non-durable runtime context; all other run context is ordinary history.
    */
   volatileContextMessages?: Iterable<Message>;
+  /** First message this run added to the history; see engine/stable-prefix.ts. */
+  runStartMessage?: Message;
   /**
    * Called before every model request, after context management. The engine
    * appends the run's context-ledger snapshot here when a rewrite dropped it
@@ -802,16 +805,18 @@ export class TurnLoop {
     messages: Message[],
     assistantMessageId: string = randomUUID(),
   ): ModelCallRecordingOptions {
-    const volatileIndex = messages.findIndex((message) =>
-      this.volatileContextMessages.has(message),
-    );
     return {
       requestBoundary: { step: this.turnCount, assistantMessageId },
       ...(this.sensitiveToolResultRedactions.size > 0
         ? { sensitiveToolResultRedactions: new Map(this.sensitiveToolResultRedactions) }
         : {}),
       promptCache: {
-        stablePrefixMessageCount: volatileIndex >= 0 ? volatileIndex : messages.length,
+        stablePrefixMessageCount: resolveStablePrefixMessageCount({
+          messages,
+          isVolatile: (message) => this.volatileContextMessages.has(message),
+          pendingRewriteMessage: this.deps.contextManager.getPendingRewriteBoundaryMessage?.(),
+          runStartMessage: this.config.runStartMessage,
+        }),
       },
     };
   }

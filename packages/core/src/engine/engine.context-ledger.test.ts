@@ -17,7 +17,13 @@ import { invalidateSkillCache } from "../skills/scanner.js";
 const provider = "fake-engine-context-ledger";
 const env = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_SYSTEM: "/dev/null" };
 
-type Scenario = { requests: Message[][]; responses: LLMResponse[]; summaries: number };
+type Scenario = {
+  requests: Message[][];
+  /** promptCache.stablePrefixMessageCount of each request. */
+  stablePrefix: (number | undefined)[];
+  responses: LLMResponse[];
+  summaries: number;
+};
 const scenarios = new Map<string, Scenario>();
 
 class FakeLedgerClient extends LLMClientBase {
@@ -33,6 +39,7 @@ class FakeLedgerClient extends LLMClientBase {
       return response;
     }
     scenario.requests.push(JSON.parse(JSON.stringify(options.messages)) as Message[]);
+    scenario.stablePrefix.push(options.promptCache?.stablePrefixMessageCount);
     const response =
       scenario.responses[Math.min(scenario.requests.length - 1, scenario.responses.length - 1)]!;
     this.recordUsage(response.usage!, options);
@@ -111,7 +118,7 @@ describe("Engine context ledger", () => {
   let model: string;
 
   const scenario = (responses: LLMResponse[]): Scenario => {
-    const value: Scenario = { requests: [], responses, summaries: 0 };
+    const value: Scenario = { requests: [], stablePrefix: [], responses, summaries: 0 };
     scenarios.set(model, value);
     return value;
   };
@@ -180,6 +187,29 @@ describe("Engine context ledger", () => {
     if (prevCodeShellHome === undefined) delete process.env.CODE_SHELL_HOME;
     else process.env.CODE_SHELL_HOME = prevCodeShellHome;
     for (const dir of [repo, sessions, home]) rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("ends the stable cache prefix where each run started", async () => {
+    const sessionId = "s-ledger-stable-prefix";
+    const { requests, stablePrefix } = scenario([
+      toolStep("t1"),
+      stop("first done"),
+      stop("second done"),
+    ]);
+    const engine = newEngine();
+
+    await engine.run("first task", { sessionId, cwd: repo });
+    await engine.run("second task", { sessionId, cwd: repo });
+
+    expect(requests).toHaveLength(3);
+    const taskIndex = (request: Message[], task: string): number =>
+      request.findIndex((message) => message.content === task);
+    // The breakpoint lands on the message before the run's user task, on
+    // every request of that run — not on the growing tail.
+    expect(taskIndex(requests[0]!, "first task")).toBe(1);
+    expect(stablePrefix.slice(0, 2)).toEqual([1, 1]);
+    expect(stablePrefix[2]).toBe(taskIndex(requests[2]!, "second task"));
+    expect(stablePrefix[2]).toBeGreaterThan(requests[1]!.length - 1);
   });
 
   it("keeps every request a prefix of the next across runs and only appends what changed", async () => {

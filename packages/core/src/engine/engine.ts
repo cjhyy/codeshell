@@ -1945,6 +1945,7 @@ export class Engine {
             volatileContextMsg,
             userContextMsg,
             retainedContextMessages,
+            runStartMessage,
           } = await this.assembleRunPrompts({
             session,
             runId,
@@ -2012,6 +2013,7 @@ export class Engine {
             runContextLedger,
             volatileContextMsg,
             retainedContextMessages,
+            runStartMessage,
           });
           if (this.runningSession?.runId === runId) {
             this.runningSession.ownUsage = () =>
@@ -2315,6 +2317,7 @@ export class Engine {
     volatileContextMsg: Message | null;
     userContextMsg: Message | null;
     retainedContextMessages: Message[];
+    runStartMessage: Message | undefined;
   }> {
     const {
       session,
@@ -2374,7 +2377,7 @@ export class Engine {
         await promptComposer.buildSystemPrompt(tools, args.getBehaviorToolNames()),
       );
     const userContextMsg = promptComposer.buildUserContextMessage();
-    const retainedContextMessages = assembleRunMessages({
+    const { retained: retainedContextMessages, runStartMessage } = assembleRunMessages({
       messages,
       transcript: session.transcript,
       userMessageEventId: args.runId,
@@ -2408,6 +2411,7 @@ export class Engine {
       volatileContextMsg,
       userContextMsg,
       retainedContextMessages,
+      runStartMessage,
     };
   }
 
@@ -2686,6 +2690,7 @@ export class Engine {
     runContextLedger: RunContextLedger;
     volatileContextMsg: Message | null;
     retainedContextMessages: Message[];
+    runStartMessage: Message | undefined;
   }): Promise<{
     turnLoop: TurnLoop;
     applyGoalTermination: ReturnType<typeof createGoalTerminationApplier>;
@@ -2717,6 +2722,7 @@ export class Engine {
       runContextLedger,
       volatileContextMsg,
       retainedContextMessages,
+      runStartMessage,
     } = args;
 
     // eslint-disable-next-line prefer-const
@@ -2899,6 +2905,7 @@ export class Engine {
       runContextLedger,
       volatileContextMsg,
       retainedContextMessages,
+      runStartMessage,
       usageBaseline,
       getRunUsage,
       recordCumulativeUsage,
@@ -3325,6 +3332,7 @@ export class Engine {
     runContextLedger: RunContextLedger;
     volatileContextMsg: Message | null;
     retainedContextMessages: Message[];
+    runStartMessage: Message | undefined;
     usageBaseline: TokenUsage;
     getRunUsage: () => ReturnType<import("./model-facade.js").ModelFacade["getUsage"]>;
     recordCumulativeUsage: (usage: TokenUsage) => CumulativeUsageCounters;
@@ -3352,6 +3360,7 @@ export class Engine {
       runContextLedger,
       volatileContextMsg,
       retainedContextMessages,
+      runStartMessage,
       usageBaseline,
       getRunUsage,
       recordCumulativeUsage,
@@ -3528,6 +3537,7 @@ export class Engine {
         volatileContextMessages: volatileContextMsg ? [volatileContextMsg] : undefined,
         syncRunContext: (runMessages) => void runContextLedger.sync(runMessages),
         retainedContextMessages,
+        runStartMessage,
         // Goal mode: the active goal is surfaced to the on_stop handler via
         // ctx.data.goal; the GoalStopHook (registered above) judges it.
         goal: normalizedGoal,
