@@ -27,6 +27,12 @@ export interface HookReminderEventData {
   sessionStart?: string[];
   /** Cleaned `user_prompt_submit` / `agent_direction_submit` messages, if any. */
   promptSubmit?: string[];
+  /**
+   * The goal stop hook's verdict that kept the run going ("not met yet").
+   * Still engine context for every other reader, but the goal judge reads its
+   * own earlier verdicts as part of the conversation it judges.
+   */
+  goalStopBlock?: true;
 }
 
 export type ContextMessageMark =
@@ -41,6 +47,19 @@ export function markContextMessage(message: Message, mark: ContextMessageMark): 
 
 export function contextMessageMark(message: Message): ContextMessageMark | undefined {
   return marks.get(message);
+}
+
+/**
+ * The conversation the goal judge reads: history without engine context,
+ * except the judge's own earlier stop-block verdicts, which stay in place.
+ */
+export function goalJudgeConversation(messages: readonly Message[]): Message[] {
+  return messages.filter((message) => {
+    const mark = marks.get(message);
+    return (
+      mark === undefined || (mark.kind === "hook-reminder" && mark.reminder.goalStopBlock === true)
+    );
+  });
 }
 
 /**
@@ -89,6 +108,7 @@ export function readHookReminderData(event: TranscriptEvent): HookReminderEventD
     ...(typeof raw.beforeEventId === "string" ? { beforeEventId: raw.beforeEventId } : {}),
     ...(sessionStart ? { sessionStart } : {}),
     ...(promptSubmit ? { promptSubmit } : {}),
+    ...(raw.goalStopBlock === true ? { goalStopBlock: true as const } : {}),
   };
 }
 

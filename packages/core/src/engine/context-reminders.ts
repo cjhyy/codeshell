@@ -17,10 +17,13 @@ import type { Transcript } from "../session/transcript.js";
 import type { Message } from "../types.js";
 
 /** Store `message`, which was just appended to the live history, as engine context. */
-export function persistContextReminder(transcript: Transcript, message: Message): void {
+export function persistContextReminder(
+  transcript: Transcript,
+  message: Message,
+  data: HookReminderEventData = {},
+): void {
   // Reminders are plain text; anything else is not replayable as one.
   if (message.role !== "user" || typeof message.content !== "string") return;
-  const data: HookReminderEventData = {};
   const event = transcript.appendMessage("user", message.content, { hookReminder: data }) as
     | ReturnType<Transcript["appendMessage"]>
     | undefined;

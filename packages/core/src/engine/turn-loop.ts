@@ -56,7 +56,7 @@ import { isTruncatedStop } from "../llm/stop-reason.js";
 import { isAbortError } from "../llm/client-base.js";
 import { crossedReactiveThreshold } from "./reactive-threshold.js";
 import { COMPLETE_GOAL_TOOL_NAME } from "../tool-system/builtin/complete-goal.js";
-import { withoutContextMessages } from "../session/context-messages.js";
+import { goalJudgeConversation, type HookReminderEventData } from "../session/context-messages.js";
 import { moveVolatileContextToTail } from "./volatile-context-tail.js";
 import { persistContextReminder } from "./context-reminders.js";
 import {
@@ -707,9 +707,14 @@ export class TurnLoop {
   private readonly retainedHookMessages = new Map<string, Message>();
   private readonly pendingContextReminders = new Map<string, Message>();
 
-  private appendContextReminder(messages: Message[], message: Message, retainForRun = false): void {
+  private appendContextReminder(
+    messages: Message[],
+    message: Message,
+    retainForRun = false,
+    reminder?: HookReminderEventData,
+  ): void {
     messages.push(message);
-    persistContextReminder(this.deps.transcript, message);
+    persistContextReminder(this.deps.transcript, message, reminder);
     if (!this.deps.contextNotes) return;
     const target = retainForRun ? this.retainedHookMessages : this.pendingContextReminders;
     target.set(JSON.stringify(message), message);
@@ -1598,8 +1603,9 @@ export class TurnLoop {
           // maxStopBlocks (consecutive) and the outer maxTurns ceiling.
           const maxStopBlocks = this.config.maxStopBlocks ?? GOAL_DEFAULT_MAX_STOP_BLOCKS;
           if (this.goalTracker) {
-            // The judge reads the conversation, not the engine's context framing.
-            const judgeMessages = withoutContextMessages(
+            // The judge reads the conversation and its own earlier verdicts,
+            // not the engine's context framing.
+            const judgeMessages = goalJudgeConversation(
               this.stripVolatileContextMessages(messages),
             );
             this.deps.publishGoalJudgeContext?.(
@@ -1696,16 +1702,21 @@ export class TurnLoop {
             this.maybeAnnounceApproachingLimit();
             const injection = wrapHookMessages(stopHook.messages);
             if (injection) {
-              this.appendContextReminder(messages, injection, true);
+              this.appendContextReminder(messages, injection, true, { goalStopBlock: true });
             } else {
               // No guidance from the handler — inject a generic nudge so the
               // model knows it must keep going rather than re-emitting the
               // same final answer.
-              this.appendContextReminder(messages, {
-                role: "user",
-                content:
-                  "<system-reminder>The goal is not yet complete. Continue working toward it.</system-reminder>",
-              });
+              this.appendContextReminder(
+                messages,
+                {
+                  role: "user",
+                  content:
+                    "<system-reminder>The goal is not yet complete. Continue working toward it.</system-reminder>",
+                },
+                false,
+                { goalStopBlock: true },
+              );
             }
             tlog.info("turn.stop_blocked", {
               cat: "turn",
