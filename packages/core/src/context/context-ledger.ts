@@ -108,6 +108,12 @@ export interface LedgerState {
   /** 2: sections are tagged in the snapshot. Older states start a new snapshot. */
   version: 2;
   sections: Record<string, LedgerSectionState>;
+  /**
+   * The workspace the chain was emitted for (root and project). Context told
+   * for another workspace must not stay visible: see run-context-ledger.ts.
+   * Absent in states written before it was recorded: unknown.
+   */
+  scope?: string;
 }
 
 export type LedgerEmission =
@@ -468,5 +474,9 @@ export function parseLedgerState(input: unknown): LedgerState | undefined {
     }
     sections.push([key, section]);
   }
-  return { version: 2, sections: Object.fromEntries(sections) };
+  return {
+    version: 2,
+    sections: Object.fromEntries(sections),
+    ...(typeof value.scope === "string" ? { scope: value.scope } : {}),
+  };
 }
