@@ -134,6 +134,33 @@ export function resolvePromptCachePolicy(input: ResolvePromptCachePolicyInput): 
   };
 }
 
+const MINUTE_MS = 60_000;
+
+/**
+ * How long the provider keeps a cached prefix that is not read again, for a
+ * route with this policy. The context manager treats a session idle for
+ * longer as cold, i.e. free to rewrite (context/rewrite-gate.ts).
+ *
+ *   - openai-hybrid / openai-explicit: the request asks for `ttl: "30m"`.
+ *   - anthropic-explicit: markers are plain `{ type: "ephemeral" }`, which is
+ *     Anthropic's 5-minute default; no code path requests the 1-hour TTL.
+ *     Raise this together with the marker if one ever does.
+ *   - everything else: 5 minutes, the shortest retention the supported
+ *     providers document for automatic caching. Erring short only makes a
+ *     cleanup run earlier than strictly necessary.
+ */
+export function promptCacheTtlMs(policy: Pick<PromptCachePolicy, "strategy">): number {
+  switch (policy.strategy) {
+    case "openai-hybrid":
+    case "openai-explicit":
+      return 30 * MINUTE_MS;
+    case "anthropic-explicit":
+    case "openai-implicit":
+    case "provider-managed":
+      return 5 * MINUTE_MS;
+  }
+}
+
 /** Deduplicate semantic boundaries while preserving their left-to-right order. */
 export function uniquePromptCacheBreakpointIndexes(
   indexes: readonly (number | undefined)[],

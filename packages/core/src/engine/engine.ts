@@ -23,7 +23,7 @@ import { resolveModelRequestSigner } from "../model-request-boundary/access.js";
 import { assertDurableRequestOwner } from "../model-request-boundary/session-owner.js";
 import type { ModelRequestSigner, ModelRequestSubject } from "../model-request-boundary/types.js";
 import { createLLMClient } from "../llm/client-factory.js";
-import { resolvePromptCachePolicy } from "../llm/prompt-cache.js";
+import { promptCacheTtlMs, resolvePromptCachePolicy } from "../llm/prompt-cache.js";
 import { createRunBatchAuthority } from "../operations/run-batch-authority.js";
 import { createSessionOperationController } from "../operations/controller.js";
 import { CapabilityResolver } from "../operations/resolver.js";
@@ -2458,6 +2458,7 @@ export class Engine {
       llmModel: this.config.llm.model,
       messages,
       needsCtxSeed: !this.ctxSeedSent.has(sid),
+      promptCacheTtlMs: promptCacheTtlMs(resolvePromptCachePolicy(this.config.llm)),
     });
     this.lastContextManager = contextManager;
     if (!this.ctxSeedSent.has(sid)) this.ctxSeedSent.add(sid);
@@ -4279,6 +4280,7 @@ export class Engine {
     if (!contextManager || this.lastSessionId !== effectiveSessionId) {
       contextManager = new ContextManager({
         maxTokens: this.resolveMaxContextTokens(),
+        promptCacheTtlMs: promptCacheTtlMs(resolvePromptCachePolicy(this.config.llm)),
         ...Object.fromEntries(
           Object.entries(this.resolveContextRatios()).filter(([, v]) => v !== undefined),
         ),

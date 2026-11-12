@@ -210,6 +210,9 @@ describe("Engine context ledger", () => {
     expect(stablePrefix.slice(0, 2)).toEqual([1, 1]);
     expect(stablePrefix[2]).toBe(taskIndex(requests[2]!, "second task"));
     expect(stablePrefix[2]).toBeGreaterThan(requests[1]!.length - 1);
+    // The run's context manager is told the route's cache retention (the fake
+    // provider is provider-managed: 5 minutes, not the 30-minute default).
+    expect((engine as any).lastContextManager.config.promptCacheTtlMs).toBe(5 * 60_000);
   });
 
   it("keeps every request a prefix of the next across runs and only appends what changed", async () => {
