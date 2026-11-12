@@ -767,8 +767,13 @@ export class MemoryManager {
 
     // Pinned memories lead the list so the user's hand-picked context is what
     // the model reads first (sort is stable — unpinned keep their order).
+    // Directory order is not stable; the same memory set must render the same
+    // bytes on every run (pinned first, then name, then id).
+    const byCodeUnits = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
     const pinnedFirst = (a: MemoryEntry, b: MemoryEntry): number =>
-      Number(b.pinned ?? false) - Number(a.pinned ?? false);
+      Number(b.pinned ?? false) - Number(a.pinned ?? false) ||
+      byCodeUnits(a.name, b.name) ||
+      byCodeUnits(a.id ?? a.fileName, b.id ?? b.fileName);
     userEntries.sort(pinnedFirst);
 
     const lines: string[] = [];
@@ -848,8 +853,13 @@ export class MemoryManager {
     // MemoryManager 的常规布局落盘）。跟着 Profile 走、跨 workspace 复用。
     const profile = opts.profileDir ? new MemoryManager({ baseDir: opts.profileDir }) : null;
 
+    // Directory order is not stable; the same memory set must render the same
+    // bytes on every run (pinned first, then name, then id).
+    const byCodeUnits = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
     const pinnedFirst = (a: MemoryEntry, b: MemoryEntry): number =>
-      Number(b.pinned ?? false) - Number(a.pinned ?? false);
+      Number(b.pinned ?? false) - Number(a.pinned ?? false) ||
+      byCodeUnits(a.name, b.name) ||
+      byCodeUnits(a.id ?? a.fileName, b.id ?? b.fileName);
 
     const collect = (mm: MemoryManager): MemoryEntry[] =>
       filterByAge(

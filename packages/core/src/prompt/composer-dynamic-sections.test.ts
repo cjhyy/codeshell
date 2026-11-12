@@ -152,6 +152,29 @@ describe("PromptComposer.buildDynamicContextSections", () => {
     expect(text).not.toContain("Available Skills");
   });
 
+  test("a different task reranks the skills listing without a context update", async () => {
+    for (let i = 0; i < 40; i++) addSkill(`filler-${i}`, `filler capability ${i} `.repeat(30));
+    const sections = (task: string) =>
+      new PromptComposer({
+        ...options(),
+        skillListing: { task, maxContextTokens: 64_000 },
+      }).buildDynamicContextSections();
+    const before = await sections("please use filler-3 for this");
+    const after = await sections("now a job for filler-27 and beta-skill");
+    const skillsText = (all: typeof before) => all.find((s) => s.key === "skills")!.text;
+    expect(skillsText(after)).not.toBe(skillsText(before));
+    const state = planLedgerEmission(before, undefined).state;
+    expect(planLedgerEmission(after, state).kind).toBe("none");
+
+    addSkill("gamma-skill", "third demo skill");
+    const installed = planLedgerEmission(await sections("anything"), state);
+    const text = installed.kind === "update" ? installed.text : "";
+    expect(text).toContain('<context-update section="skills">\n+ ');
+    expect(text).toContain("gamma-skill");
+    expect(text).not.toContain("filler-");
+    expect(text).not.toContain("alpha-skill");
+  });
+
   test("same-named memories get distinct, stable item ids", async () => {
     const projectMemory = new MemoryManager({ projectDir: cwd });
     projectMemory.save({ name: "p1", description: "a second p1", type: "user", content: "y" });
