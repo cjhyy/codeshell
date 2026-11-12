@@ -2345,7 +2345,13 @@ export class Engine {
     // update instead of rewriting what was sent.
     const runContextLedger = createRunContextLedger({
       transcript: session.transcript,
-      sections: [...contextSections, ...engineContextSections({ mcpFailureSummary })],
+      sections: [
+        ...contextSections,
+        ...engineContextSections({
+          mcpFailureSummary,
+          dateChange: promptComposer.buildDateChangeNotice(),
+        }),
+      ],
     });
     // Runtime context with "dynamic" placement is non-durable by contract, so
     // it alone stays a volatile per-run message (kept out of the transcript).
@@ -3151,6 +3157,7 @@ export class Engine {
         // Read from the Session's own persisted state, so every turn — not just
         // the first — carries the standing brief.
         sessionBrief: session.state.sessionBrief,
+        sessionStartedAt: session.state.startedAt,
         profileMemoryDir,
         instructionCompatFileNames: compatFileNamesFrom(this.config.instructions),
         instructionBoundaryFinder: (scanCwd) =>

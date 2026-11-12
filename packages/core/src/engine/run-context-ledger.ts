@@ -30,11 +30,20 @@ import {
 import type { Transcript } from "../session/transcript.js";
 import type { Message } from "../types.js";
 
-/** Whole-text sections the engine adds to the composer's own. */
-export function engineContextSections(args: { mcpFailureSummary: string }): ContextSection[] {
-  return [{ key: "mcp-failures", text: args.mcpFailureSummary }].filter((section) =>
-    Boolean(section.text),
-  );
+/**
+ * Whole-text sections the engine adds to the composer's own. `dateChange` is
+ * PromptComposer.buildDateChangeNotice(): set only while today's date differs
+ * from the one frozen in the head message, so a new date is told once and
+ * stays told until the next date supersedes it.
+ */
+export function engineContextSections(args: {
+  mcpFailureSummary: string;
+  dateChange?: string;
+}): ContextSection[] {
+  return [
+    { key: "mcp-failures", text: args.mcpFailureSummary },
+    { key: "date", text: args.dateChange ?? "" },
+  ].filter((section) => Boolean(section.text));
 }
 
 /**

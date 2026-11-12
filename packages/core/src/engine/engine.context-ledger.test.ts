@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, setSystemTime } from "bun:test";
 import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -11,6 +11,7 @@ import type { CreateMessageOptions } from "../llm/types.js";
 import type { LLMResponse, Message, TranscriptEvent } from "../types.js";
 import type { AgentModule } from "../composition/types.js";
 import { LEDGER_UPDATE_PREAMBLE } from "../context/context-ledger.js";
+import { dateChangeNotice, localDateYmd } from "../prompt/session-date.js";
 import { MemoryManager } from "../session/memory.js";
 import { invalidateSkillCache } from "../skills/scanner.js";
 
@@ -180,6 +181,7 @@ describe("Engine context ledger", () => {
   });
 
   afterEach(() => {
+    setSystemTime();
     scenarios.delete(model);
     invalidateSkillCache();
     if (prevHome === undefined) delete process.env.HOME;
@@ -213,6 +215,38 @@ describe("Engine context ledger", () => {
     // The run's context manager is told the route's cache retention (the fake
     // provider is provider-managed: 5 minutes, not the 30-minute default).
     expect((engine as any).lastContextManager.config.promptCacheTtlMs).toBe(5 * 60_000);
+  });
+
+  it("keeps the head message across midnight and announces the new date once", async () => {
+    const sessionId = "s-ledger-date";
+    const { requests } = scenario([stop("first done"), stop("second done"), stop("third done")]);
+    const engine = newEngine();
+
+    const startDate = localDateYmd(new Date());
+    await engine.run("first task", { sessionId, cwd: repo });
+    const head = requests[0]![0]!;
+    expect(textOf(head)).toContain(`Today's date is ${startDate}.`);
+    expect(requests[0]!.map(textOf).join("\n")).not.toContain("The date has changed");
+
+    // The next day.
+    const tomorrow = new Date(Date.now() + 24 * 60 * 60_000);
+    setSystemTime(tomorrow);
+    expect(localDateYmd(new Date())).not.toBe(startDate);
+    await engine.run("second task", { sessionId, cwd: repo });
+    await engine.run("third task", { sessionId, cwd: repo });
+
+    expect(requests).toHaveLength(3);
+    // The head still states the start date, so the cached prefix survives.
+    expect(requests[1]![0]).toEqual(head);
+    expect(requests[2]![0]).toEqual(head);
+    expectAppendOnly(requests);
+
+    const notice = dateChangeNotice(localDateYmd(tomorrow));
+    const run2 = added(requests, 1).map(textOf);
+    expect(run2.filter((text) => text.includes(notice))).toHaveLength(1);
+    expect(run2.find((text) => text.includes(notice))).toContain(LEDGER_UPDATE_PREAMBLE);
+    // Same date on the third run: nothing about the date is added.
+    expect(added(requests, 2).map(textOf).join("\n")).not.toContain("The date has changed");
   });
 
   it("keeps every request a prefix of the next across runs and only appends what changed", async () => {
