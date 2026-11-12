@@ -19,7 +19,10 @@ export async function verifyCloudVideoRecording({
   const tab = () => frame.locator('#studio .rail [data-tab="recording"]').click();
   await tab();
   assert.equal(await frame.evaluate(() => window.origin), "null");
-  await frame.getByRole("button", { name: "打开录音器", exact: true }).click();
+  const microphone = frame.locator('[data-action="rec-host-mode:microphone"]');
+  await microphone.click();
+  assert.equal(await microphone.getAttribute("aria-pressed"), "true");
+  await frame.locator('[data-action="rec-host-start"]').click();
   const dialog = page.getByRole("region", { name: "录音", exact: true });
   await dialog.waitFor();
   await dialog.getByRole("button", { name: "开始录音", exact: true }).click();
@@ -70,7 +73,7 @@ export async function verifyCloudVideoRecording({
   frame = await (await iframe.elementHandle()).contentFrame();
   await frame.locator("#editor-workspace").waitFor({ timeout: 150000 });
   await tab();
-  await frame.getByRole("button", { name: "刷新项目音频", exact: true }).click();
+  await frame.locator('[data-action="rec-host-refresh"]').click();
   const recovered = frame.locator(`[data-recording-resource="${resourceId}"]`);
   await recovered.waitFor({ timeout: 150000 });
   await frame.locator("#host-recording-name").fill("Cloud recorded original");
