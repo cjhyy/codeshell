@@ -2,6 +2,7 @@
 
 import type { ContentBlock, ToolDefinition, RegisteredTool } from "../../types.js";
 import {
+  NATIVE_TOOL_DISCOVERY_USAGE,
   toolDiscoverySchemaBlock,
   toolDiscoverySchemaText,
 } from "../../utils/tool-schema-discovery.js";
@@ -118,7 +119,7 @@ export async function toolSearchTool(
         (health ? health.length + 2 : 0),
       !!currentDefinitions,
       ctx.runToolSurface?.toolDiscovery === "tool-reference"
-        ? NATIVE_TOOL_USAGE
+        ? NATIVE_TOOL_DISCOVERY_USAGE
         : ctx.runToolSurface
           ? CALL_TOOL_USAGE
           : DIRECT_TOOL_USAGE,
@@ -147,10 +148,6 @@ export async function toolSearchTool(
 const CALL_TOOL_USAGE =
   "Use CallTool to call these tools: name is the exact tool name and args must match inputSchema.";
 const DIRECT_TOOL_USAGE = "Call each tool by its exact name with arguments matching inputSchema.";
-const NATIVE_TOOL_USAGE =
-  "Call tools loaded through native references by their exact names. " +
-  "For schemas shown as text, including late or changed tools, use CallTool: " +
-  "name is the exact tool name and args must match inputSchema.";
 
 function formatSelectedDefinitions(
   tools: readonly ToolDefinition[],

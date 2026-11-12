@@ -2,6 +2,12 @@
 import { createHash } from "node:crypto";
 import type { ContentBlock, ToolDefinition } from "../types.js";
 
+/** Redundant native usage guidance; providers may omit this exact fixed text beside references. */
+export const NATIVE_TOOL_DISCOVERY_USAGE =
+  "Call tools loaded through native references by their exact names. " +
+  "For schemas shown as text, including late or changed tools, use CallTool: " +
+  "name is the exact tool name and args must match inputSchema.";
+
 function schemaJson(tool: ToolDefinition): string {
   return JSON.stringify({
     name: tool.name,

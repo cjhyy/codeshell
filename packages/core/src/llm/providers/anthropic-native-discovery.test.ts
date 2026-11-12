@@ -4,6 +4,7 @@ import https from "node:https";
 import { syncBuiltinESMExports } from "node:module";
 import { installLocalNetworkGuard } from "../../../../../scripts/runtime-cost-smoke-isolation.mjs";
 import type { ContentBlock, LLMConfig, ToolDefinition } from "../../types.js";
+import type { ToolContext } from "../../tool-system/context.js";
 import type { CreateMessageOptions } from "../types.js";
 
 // No fixture request may escape to a paid endpoint, even if SDK injection breaks.
@@ -24,6 +25,8 @@ afterAll(() => {
 const { AnthropicClient } = await import("./anthropic.js");
 const { toolDiscoverySchemaBlock, toolDiscoverySchemaText } =
   await import("../../utils/tool-schema-discovery.js");
+const { toolSearchTool } = await import("../../tool-system/builtin/tool-search.js");
+const { RunToolSurface } = await import("../../tool-system/run-tool-surface.js");
 
 const eager: ToolDefinition = {
   name: "ToolSearch",
@@ -99,6 +102,27 @@ function fixture(config: LLMConfig, url: string) {
     expect(init?.method).toBe("POST");
     const body = JSON.parse(String(init?.body));
     calls.push({ body, headers: new Headers(init?.headers) });
+    // Anthropic expands references into definitions and rejects mixed result content.
+    // This mirrors the real HTTP 400 missed by the original reference-only fixture.
+    for (const message of body.messages)
+      for (const block of Array.isArray(message.content) ? message.content : [])
+        if (
+          block.type === "tool_result" &&
+          Array.isArray(block.content) &&
+          block.content.some((part: any) => part.type === "tool_reference") &&
+          block.content.some((part: any) => part.type !== "tool_reference")
+        )
+          return Response.json(
+            {
+              type: "error",
+              error: {
+                type: "invalid_request_error",
+                message:
+                  "Tool definitions/code execution functions cannot be mixed with other content",
+              },
+            },
+            { status: 400 },
+          );
     const message = {
       id: "msg-fixture",
       type: "message",
@@ -137,6 +161,48 @@ function fixture(config: LLMConfig, url: string) {
 }
 
 describe("native Messages discovery wire", () => {
+  for (const config of [direct, router])
+    for (const stream of [false, true])
+      it(`${config.providerKind ?? "anthropic"} ${stream ? "stream" : "nonstream"}: actual ToolSearch results contain only native references on the wire`, async () => {
+        const second = { ...deferred, name: "SecondComplexTool" };
+        const surface = new RunToolSurface(["ToolSearch"], { toolDiscovery: "tool-reference" });
+        surface.updateCatalog([eager, deferred, second]);
+        const result = await toolSearchTool({ query: "select:ComplexTool,SecondComplexTool" }, {
+          cwd: "/fixture",
+          runToolSurface: surface,
+        } as ToolContext);
+        if (typeof result === "string") throw new Error("Expected structured discovery");
+        expect(result.contentBlocks.some((part) => part.text === "\n\n")).toBe(true);
+        expect(result.result).toContain("Call tools loaded through native references");
+        const original = JSON.stringify(result);
+        const options = {
+          ...request(result.contentBlocks),
+          tools: [eager, deferred, second],
+          stream,
+          onChunk: () => {},
+        };
+        const { client, calls } = fixture(
+          config,
+          config === direct
+            ? "https://api.anthropic.com/v1/messages"
+            : "https://openrouter.ai/api/v1/messages",
+        );
+        expect((await client.createMessage(options)).text).toBe("done");
+        expect(calls).toHaveLength(1);
+        expect(calls[0].body.messages[2].content).toEqual([
+          {
+            type: "tool_result",
+            tool_use_id: "search",
+            content: [deferred, second].map((definition) => ({
+              type: "tool_reference",
+              tool_name: definition.name,
+            })),
+            cache_control: { type: "ephemeral" },
+          },
+        ]);
+        expect(JSON.stringify(result)).toBe(original);
+      });
+
   for (const config of [direct, router])
     for (const stream of [false, true]) {
       it(`${config.providerKind ?? "anthropic"} ${stream ? "stream" : "nonstream"}: SDK URL/auth, disabled thinking, references and cache boundaries`, async () => {
@@ -220,6 +286,84 @@ describe("native Messages discovery wire", () => {
       is_error: true,
       content: [{ type: "text", text: valid.text }],
     });
+  });
+
+  for (const stream of [false, true])
+    it(`${stream ? "stream" : "nonstream"}: additional context makes the whole result portable without promoting tool output`, async () => {
+      const surface = new RunToolSurface(["ToolSearch"], { toolDiscovery: "tool-reference" });
+      surface.updateCatalog([eager, deferred]);
+      const found = await toolSearchTool({ query: "select:ComplexTool" }, {
+        cwd: "/fixture",
+        runToolSurface: surface,
+      } as ToolContext);
+      if (typeof found === "string") throw new Error("Expected structured discovery");
+      const extras: ContentBlock[] = [
+        {
+          type: "text",
+          text: "<system-reminder>Guard: confirmation remains required.</system-reminder>",
+        },
+        { type: "text", text: "Post-hook: preserve the approved destination." },
+        { type: "text", text: "MCP health: unavailable peer; do not retry." },
+        { type: "text", text: `${found.contentBlocks.at(-1)!.text} modified` },
+        toolDiscoverySchemaBlock({ ...deferred, name: "LateTool" }),
+        toolDiscoverySchemaBlock({ ...deferred, description: "Changed schema" }),
+        { type: "image", source: { type: "base64", media_type: "image/png", data: "AAAA" } },
+      ];
+      const { client, calls } = fixture(router, "https://openrouter.ai/api/v1/messages");
+      for (const extra of extras) {
+        const parts = [...found.contentBlocks, extra];
+        const original = JSON.stringify(parts);
+        expect(
+          (await client.createMessage({ ...request(parts), stream, onChunk: () => {} })).text,
+        ).toBe("done");
+        const content = calls.at(-1)!.body.messages[2].content;
+        expect(content).toHaveLength(1); // Never turn tool output into ordinary user instructions.
+        expect(content[0].content).toEqual(
+          parts.map((part) =>
+            part.type === "image"
+              ? { type: "image", source: part.source }
+              : { type: "text", text: part.text },
+          ),
+        );
+        expect(JSON.stringify(content)).not.toContain('"tool_reference"');
+        expect(JSON.stringify(parts)).toBe(original);
+      }
+    });
+
+  it("decides projection independently for parallel results and preserves error context", async () => {
+    const surface = new RunToolSurface(["ToolSearch"], { toolDiscovery: "tool-reference" });
+    surface.updateCatalog([eager, deferred]);
+    const found = await toolSearchTool({ query: "select:ComplexTool" }, {
+      cwd: "/fixture",
+      runToolSurface: surface,
+    } as ToolContext);
+    if (typeof found === "string") throw new Error("Expected structured discovery");
+    const options = request(found.contentBlocks);
+    (options.messages[1].content as ContentBlock[]).push({
+      type: "tool_use",
+      id: "other-search",
+      name: "ToolSearch",
+      input: { query: "select:ComplexTool" },
+    });
+    const failedParts = [
+      ...found.contentBlocks,
+      { type: "text" as const, text: "Guard rejected this result." },
+    ];
+    (options.messages[2].content as ContentBlock[]).push(
+      { type: "tool_result", tool_use_id: "other-search", content: failedParts, is_error: true },
+      { type: "text", text: "Original user follow-up" },
+    );
+    const { client, calls } = fixture(direct, "https://api.anthropic.com/v1/messages");
+    await client.createMessage(options);
+    const blocks = calls[0].body.messages[2].content;
+    expect(blocks.map((block: any) => block.type)).toEqual(["tool_result", "tool_result", "text"]);
+    expect(blocks[0].content).toEqual([{ type: "tool_reference", tool_name: deferred.name }]);
+    expect(blocks[1]).toMatchObject({
+      is_error: true,
+      tool_use_id: "other-search",
+      content: failedParts.map((part) => ({ type: "text", text: part.text })),
+    });
+    expect(blocks[2].text).toBe("Original user follow-up");
   });
 
   it("never inherits deferred definitions from prior requests", async () => {

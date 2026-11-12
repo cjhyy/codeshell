@@ -1,6 +1,9 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import type { ContentBlock, Message, ToolDefinition } from "../../types.js";
-import { matchesToolDiscoverySchema } from "../../utils/tool-schema-discovery.js";
+import {
+  matchesToolDiscoverySchema,
+  NATIVE_TOOL_DISCOVERY_USAGE,
+} from "../../utils/tool-schema-discovery.js";
 import {
   uniquePromptCacheBreakpointIndexes,
   type PromptCachePolicy,
@@ -66,14 +69,27 @@ function toolResult(
   let content: string | ResultPart[] = "";
   if (typeof block.content === "string") content = block.content;
   else if (Array.isArray(block.content)) {
-    content = [];
+    const portable: Array<Anthropic.TextBlockParam | Anthropic.ImageBlockParam> = [];
+    const references: Reference[] = [];
+    let referencesOnly = !block.is_error;
     for (const part of block.content) {
       const definition = part.discoveredTool ? deferred.get(part.discoveredTool.name) : undefined;
-      if (!block.is_error && definition && matchesToolDiscoverySchema(part, definition)) {
-        content.push({ type: "tool_reference", tool_name: definition.name });
-      } else if (part.type === "text" && part.text) content.push({ type: "text", text: part.text });
-      else if (part.type === "image" && part.source) content.push(imagePart(part));
+      if (definition && matchesToolDiscoverySchema(part, definition)) {
+        references.push({ type: "tool_reference", tool_name: definition.name });
+      } else if (
+        part.type !== "text" ||
+        typeof part.text !== "string" ||
+        (part.text.trim() !== "" && part.text !== NATIVE_TOOL_DISCOVERY_USAGE)
+      )
+        referencesOnly = false;
+      if (part.type === "text" && part.text) portable.push({ type: "text", text: part.text });
+      else if (part.type === "image" && part.source) portable.push(imagePart(part));
     }
+    // Anthropic forbids mixing references with other result content. Only omit
+    // redundant fixed guidance/separators; arbitrary output (including guards,
+    // hooks, health warnings and unmatched schemas) stays inside its tool_result.
+    // Fall back as a whole instead of silently dropping or promoting tool output.
+    content = referencesOnly && references.length ? references : portable;
   }
   return {
     type: "tool_result",
