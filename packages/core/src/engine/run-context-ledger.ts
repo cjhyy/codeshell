@@ -29,6 +29,7 @@ import {
 } from "../session/context-messages.js";
 import type { Transcript } from "../session/transcript.js";
 import type { Message } from "../types.js";
+import { replayEventIdOf } from "./rollover-context.js";
 
 /**
  * Whole-text sections the engine adds to the composer's own. `dateChange` is
@@ -186,7 +187,11 @@ export function injectHookReminder(args: {
   const reminder = wrapHookMessages([...(fresh.sessionStart ?? []), ...(fresh.promptSubmit ?? [])]);
   if (!reminder) return inEffect;
 
-  const data: HookReminderEventData = { beforeEventId: args.userMessageEventId, ...fresh };
+  const data: HookReminderEventData = {
+    // Where replay will find the user task (a checkpoint may have absorbed it).
+    beforeEventId: replayEventIdOf(args.transcript, args.userMessageEventId),
+    ...fresh,
+  };
   const event = args.transcript.appendMessage("user", reminder.content, { hookReminder: data });
   markContextMessage(reminder, { kind: "hook-reminder", eventId: event.id, reminder: data });
   // messages[length - 1] is the user task: CLAUDE.md → reminder → user request.

@@ -232,6 +232,80 @@ describe("Engine context ledger hardening", () => {
     });
   });
 
+  describe("hook reminder position, live versus replayed", () => {
+    const call = (id: string, toolName: string, args: Record<string, unknown>): LLMResponse => ({
+      text: "",
+      toolCalls: [{ id, toolName, args }],
+      stopReason: "tool_use",
+      usage: { promptTokens: 1000, completionTokens: 1, totalTokens: 1001 },
+    });
+    const indexOfText = (request: Message[], needle: string): number =>
+      request.findIndex((message) => textOf(message).includes(needle));
+
+    it("agrees after a notes rollover written before the run's hooks", async () => {
+      const sessionId = "s-hardening-prerun-rollover";
+      const { requests } = scenario([
+        call("n1", "SaveContextNote", { note: "Continue the task; nothing is finished yet." }),
+        stop("first done"),
+        stop("second done"),
+        stop("third done"),
+      ]);
+      const hooked = (): Engine => {
+        const engine = newEngine({
+          enabledBuiltinTools: ["SaveContextNote", "NewContext"],
+          contextStrategy: "notes",
+        });
+        (engine as any).hooks.register("on_session_start", async () => ({ messages: ["RULES"] }));
+        return engine;
+      };
+      const engine = hooked();
+      await engine.run(`first task ${"long history ".repeat(600)}`, { sessionId, cwd: repo });
+      await engine.run("second task", {
+        sessionId,
+        cwd: repo,
+        clientMessageId: "client-2",
+        archiveBeforeCurrentTurn: {},
+      } as never);
+      expect(requests).toHaveLength(3);
+      const live = requests[2]!;
+      expect(indexOfText(live, "<context-note>")).toBeGreaterThanOrEqual(0);
+      expect(indexOfText(live, "long history")).toBe(-1);
+      // The reminder sits just before the task it was issued for.
+      expect(live[indexOfText(live, "RULES") + 1]).toEqual({ role: "user", content: "second task" });
+
+      const restarted = hooked();
+      await restarted.run("third task", { sessionId, cwd: repo });
+      expect(requests).toHaveLength(4);
+      expectAppendOnly([wire(live), wire(requests[3]!)]);
+    });
+
+    it("agrees after an anchored archive that ends at a message with a reminder", async () => {
+      const sessionId = "s-hardening-anchored-archive";
+      scenario([stop("first done"), stop("second done")]);
+      const engine = newEngine();
+      let rules = "RULES v1";
+      (engine as any).hooks.register("on_session_start", async () => ({ messages: [rules] }));
+      await engine.run("first task", { sessionId, cwd: repo, clientMessageId: "client-1" });
+      rules = "RULES v2";
+      await engine.run("second task", { sessionId, cwd: repo, clientMessageId: "client-2" });
+
+      const stats = await engine.archiveTurnRange(
+        sessionId,
+        { start: 0, end: 0 },
+        { fromClientMessageId: "client-1", toClientMessageId: "client-2" },
+      );
+      expect(stats.after).not.toBe(stats.before);
+      const live = (engine as any).compactedMessagesBySession.get(sessionId) as Message[];
+      const replayed = engine.getSessionManager().resume(sessionId).transcript.toMessages();
+      expect(wire(live)).toEqual(wire(replayed));
+      // The boundary message keeps its reminder; the archived span lost its own.
+      const texts = live.map(textOf);
+      expect(texts.filter((text) => text.includes("RULES v2"))).toHaveLength(1);
+      expect(texts[texts.findIndex((text) => text.includes("RULES v2")) + 1]).toBe("second task");
+      expect(texts.some((text) => text.includes("first task"))).toBe(false);
+    });
+  });
+
   describe("non-durable runtime context (dynamic placement)", () => {
     const worldProfile = {
       id: "world-test",

@@ -51,6 +51,16 @@ export function withoutLedgerMessages(messages: readonly Message[]): Message[] {
   return messages.filter((message) => marks.get(message)?.kind !== "ledger");
 }
 
+/**
+ * True for a hook reminder issued for one specific message, which it directly
+ * precedes. It belongs to that message: a span that ends at the message ends
+ * before its reminder, in a live list exactly as in a replay.
+ */
+export function isAnchoredHookReminder(message: Message | undefined): boolean {
+  const mark = message && marks.get(message);
+  return mark?.kind === "hook-reminder" && mark.reminder.beforeEventId !== undefined;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
