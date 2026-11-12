@@ -370,11 +370,11 @@ test("all 70 injected requests retain 48 matched accuracy trials and production 
     if (mode === "native") {
       expect(firstAccuracy.tools.filter((tool: any) => tool.defer_loading)).toHaveLength(4);
       expect(resultParts(firstAccuracy).some((part) => part.type === "tool_reference")).toBe(true);
+      // Anthropic rejects references mixed with ordinary content in one tool result.
+      expect(resultParts(firstAccuracy).every((part) => part.type === "tool_reference")).toBe(true);
       expect(
-        resultParts(firstAccuracy).some((part) =>
-          part.text?.includes("Call tools loaded through native references"),
-        ),
-      ).toBe(true);
+        firstAccuracy.tools.find((tool: any) => tool.name === "ToolSearch").description,
+      ).toContain("Invoke tools returned as native references directly");
     } else if (mode === "call-tool") {
       expect(firstAccuracy.tools.map((tool: any) => tool.name)).toEqual(["ToolSearch", "CallTool"]);
       expect(resultParts(firstAccuracy).some((part) => part.type === "tool_reference")).toBe(false);
