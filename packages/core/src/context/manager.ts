@@ -42,8 +42,16 @@ import {
 } from "./tool-output-budget.js";
 import { logger } from "../logging/logger.js";
 import { toolSchemaResultIds } from "./tool-schema-results.js";
+import {
+  DEFAULT_REWRITE_BATCH_CONFIG,
+  decideRewriteBatch,
+  notePromptCacheRequest,
+  planRewriteBatch,
+  promptCacheLastRequestAt,
+  type RewriteBatchConfig,
+} from "./rewrite-gate.js";
 
-export interface ContextManagerConfig {
+export interface ContextManagerConfig extends RewriteBatchConfig {
   maxTokens: number;
   compactAtRatio: number;
   summarizeAtRatio: number;
@@ -65,6 +73,8 @@ export interface ContextManagerConfig {
    * from maxTokens when not set explicitly: bigger window → keep more.
    */
   microcompactKeepRecent?: number;
+  /** Clock for prompt-cache warmth; injectable for tests. */
+  now?: () => number;
 }
 
 type TokenEstimate = {
@@ -95,6 +105,7 @@ const DEFAULT_CONFIG: ContextManagerConfig = {
   // back at 130k and the cycle repeated. 0.7 → 140k floor, leaving
   // realistic headroom before we start churning.
   microcompactFloorRatio: 0.7,
+  ...DEFAULT_REWRITE_BATCH_CONFIG,
 };
 
 /**
@@ -166,6 +177,10 @@ export class ContextManager {
    */
   private replacementState: ContentReplacementState | undefined;
   private toolResultsDir: string | undefined;
+  /** Last successful model request seen by this instance (see rewrite-gate.ts). */
+  private localLastRequestAt: number | undefined;
+  /** Earliest index a deferred rewrite batch would touch in the last managed array. */
+  private pendingRewriteBoundary: number | undefined;
 
   constructor(config?: Partial<ContextManagerConfig>) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -354,6 +369,7 @@ export class ContextManager {
 
       this.consecutiveSummaryFailures = 0;
       this.lastSummary = summary;
+      this.pendingRewriteBoundary = undefined; // indices no longer match
       logger.info(logEvent, {
         before,
         after,
@@ -380,6 +396,110 @@ export class ContextManager {
   setTranscriptPath(path: string): void {
     this.transcriptPath = path;
     this.toolResultsDir = resolveToolResultsDir(path);
+    if (this.localLastRequestAt !== undefined) {
+      notePromptCacheRequest(path, this.localLastRequestAt);
+    }
+  }
+
+  /**
+   * Record a successful model response: the provider now holds a cached
+   * prefix for this session, so retroactive rewrites stop being free.
+   * Warmth is keyed by transcript path and shared across instances, because
+   * a new ContextManager is created per run.
+   */
+  noteModelRequestCompleted(at: number = this.now()): void {
+    this.localLastRequestAt = Math.max(this.localLastRequestAt ?? at, at);
+    if (this.transcriptPath) notePromptCacheRequest(this.transcriptPath, at);
+  }
+
+  /**
+   * Index, in the array returned by the last manage()/manageAsync() call, of
+   * the earliest message a deferred rewrite batch would change. `undefined`
+   * when nothing is pending.
+   */
+  getPendingRewriteBoundary(): number | undefined {
+    return this.pendingRewriteBoundary;
+  }
+
+  private now(): number {
+    return this.config.now?.() ?? Date.now();
+  }
+
+  /**
+   * Tier 0d + Tier 1 as one all-or-nothing batch: dedupe repeated Reads, mask
+   * superseded browser snapshots and (above its floor) microcompact. These
+   * rewrite old messages and so break the provider's cached prefix; they are
+   * evaluated on a candidate copy and adopted only when rewrite-gate.ts says
+   * the miss is free or worth it.
+   */
+  private applyRewriteBatch(input: Message[]): {
+    messages: Message[];
+    tokens: number;
+    microNoOp: boolean;
+    microShrunk: boolean;
+  } {
+    const baseTokens = this.estimateTokensHybrid(input);
+    const plan = planRewriteBatch(input, {
+      baseTokens,
+      microFloorTokens: this.config.maxTokens * this.config.microcompactFloorRatio,
+      keepRecentN: this.config.microcompactKeepRecent ?? defaultKeepRecent(this.config.maxTokens),
+      estimate: (messages) => this.estimateTokensHybrid(messages),
+    });
+    this.pendingRewriteBoundary = undefined;
+    const kept = { messages: input, tokens: baseTokens, microNoOp: plan.microNoOp };
+    if (!plan.changed) return { ...kept, microShrunk: false };
+
+    const shared = this.transcriptPath ? promptCacheLastRequestAt(this.transcriptPath) : undefined;
+    const reason = decideRewriteBatch({
+      now: this.now(),
+      lastRequestAt:
+        shared === undefined || this.localLastRequestAt === undefined
+          ? (shared ?? this.localLastRequestAt)
+          : Math.max(shared, this.localLastRequestAt),
+      promptCacheTtlMs: this.config.promptCacheTtlMs,
+      pendingSavedTokens: plan.savedTokens,
+      totalTokens: baseTokens,
+      minSavedTokens: this.config.rewriteBatchMinSavedTokens,
+      savedRatio: this.config.rewriteBatchSavedRatio,
+      pressureTokens: this.config.maxTokens * this.config.compactAtRatio,
+    });
+    if (!reason) {
+      this.pendingRewriteBoundary = plan.firstChangedIndex;
+      logger.debug("context.rewrite_deferred", { pendingSavedTokens: plan.savedTokens });
+      return { ...kept, microShrunk: false };
+    }
+
+    logger.info("context.rewrite_batch_applied", {
+      reason,
+      savedTokens: plan.savedTokens,
+      dedupedReads: plan.dedupedReads,
+      maskedSnapshots: plan.maskedSnapshots,
+      microcompacted: plan.micro?.clearedRounds ?? 0,
+    });
+    if (plan.dedupedReads > 0) {
+      logger.info("context.dedupe_file_reads", { cleared: plan.dedupedReads });
+    }
+    if (plan.maskedSnapshots > 0) {
+      logger.info("context.mask_browser_snapshots", { masked: plan.maskedSnapshots });
+    }
+    if (plan.micro) {
+      logger.info("context.microcompact", {
+        before: plan.preMicroTokens,
+        after: plan.candidateTokens,
+        ...plan.micro,
+      });
+      this.onCompact?.({
+        strategy: "micro",
+        before: plan.preMicroTokens,
+        after: plan.candidateTokens,
+      });
+    }
+    return {
+      messages: plan.messages,
+      tokens: plan.candidateTokens,
+      microNoOp: plan.microNoOp,
+      microShrunk: plan.candidateTokens < plan.preMicroTokens,
+    };
   }
 
   /**
@@ -414,61 +534,15 @@ export class ContextManager {
     // backstop for messages still over the limit after persistence.
     result = applyToolResultBudget(result, 100_000, this.config.toolMessageTokenLimit);
 
-    // Tier 0d: dedup complete, successful Reads of the same file range.
-    // Different pages and incomplete observations remain available. Runs
-    // independently of the pressure-/recency-gated tiers below, before
-    // microcompact so an
-    // already-deduped result isn't double-counted toward the keep-recent window.
-    const dedup = dedupeFileReads(result);
-    if (dedup.clearedCount > 0) {
-      result = dedup.messages;
-      logger.info("context.dedupe_file_reads", { cleared: dedup.clearedCount });
-    }
-
-    // Tier 0d': browser observation masking — keep only the latest
-    // browser_snapshot, collapse older ones (stale element lists, often large).
-    // Same always-on waste-removal class as dedupeFileReads. The research's
-    // top browser-token lever (folding old observations beats LLM summarizing).
-    const masked = maskOldObservations(result);
-    if (masked.maskedCount > 0) {
-      result = masked.messages;
-      logger.info("context.mask_browser_snapshots", { masked: masked.maskedCount });
-    }
-
-    // Tier 1: microcompact — fingerprint old whitelisted tool_results.
-    // Only runs above the floor ratio: under-pressure context keeps full
-    // detail so the model isn't forced to re-Read files it just looked at.
-    const preTier1Tokens = this.estimateTokensHybrid(result);
-    if (preTier1Tokens > this.config.maxTokens * this.config.microcompactFloorRatio) {
-      const keepRecentN =
-        this.config.microcompactKeepRecent ?? defaultKeepRecent(this.config.maxTokens);
-      // Capture rounds/tools synchronously from microcompact's onClear, but
-      // defer the token re-estimate until AFTER `result` has been reassigned
-      // to the compacted array — onClear fires before microcompact returns,
-      // so reading `result` inside it would see the pre-compact reference.
-      let clearedInfo: { clearedRounds: number; toolNames: string[] } | null = null;
-      result = microcompact(result, {
-        keepRecentN,
-        onClear: (info) => {
-          clearedInfo = info;
-        },
-      });
-      if (clearedInfo) {
-        const after = this.estimateTokensHybrid(result);
-        logger.info("context.microcompact", {
-          before: preTier1Tokens,
-          after,
-          keepRecentN,
-          clearedRounds: (clearedInfo as { clearedRounds: number }).clearedRounds,
-          toolNames: (clearedInfo as { toolNames: string[] }).toolNames,
-        });
-        this.onCompact?.({ strategy: "micro", before: preTier1Tokens, after });
-      }
-    }
+    // Tier 0d + Tier 1: retroactive cleanups (dedupe Reads, mask old browser
+    // snapshots, microcompact above its floor), batched so they don't break
+    // the prompt cache on every step — see applyRewriteBatch().
+    const batch = this.applyRewriteBatch(result);
+    result = batch.messages;
 
     // Hybrid token estimation walks every message; we cache it across the
     // tier checks below and only recompute after a compaction shrinks `result`.
-    let tokens = this.estimateTokensHybrid(result);
+    let tokens = batch.tokens;
 
     // Tiers run in increasing severity. Each tier short-circuits its own
     // arm but the next tier still runs if we're still above the next gate
@@ -565,57 +639,13 @@ export class ContextManager {
     // Tier 0c: Aggregate tool result budget (per-message)
     result = applyToolResultBudget(result, 100_000, this.config.toolMessageTokenLimit);
 
-    // Tier 0d: same always-on waste-removal passes as manage().
-    const dedup = dedupeFileReads(result);
-    if (dedup.clearedCount > 0) {
-      result = dedup.messages;
-      logger.info("context.dedupe_file_reads", { cleared: dedup.clearedCount });
-    }
+    // Tier 0d + Tier 1: batched retroactive cleanups — see manage().
+    const batch = this.applyRewriteBatch(result);
+    result = batch.messages;
+    const microNoOpAtFloor = batch.microNoOp;
+    if (batch.microShrunk) this.suppressNoOpMicroSummaryUntilCompact = false;
 
-    const masked = maskOldObservations(result);
-    if (masked.maskedCount > 0) {
-      result = masked.messages;
-      logger.info("context.mask_browser_snapshots", { masked: masked.maskedCount });
-    }
-
-    // Tier 1: microcompact — see manage() for the rationale on the floor.
-    const preTier1Tokens = this.estimateTokensHybrid(result);
-    const microFloorGate = this.config.maxTokens * this.config.microcompactFloorRatio;
-    let microNoOpAtFloor = false;
-    if (preTier1Tokens > microFloorGate) {
-      const keepRecentN =
-        this.config.microcompactKeepRecent ?? defaultKeepRecent(this.config.maxTokens);
-      // See manage(): onClear fires synchronously before microcompact returns,
-      // so defer the token re-estimate until result is reassigned.
-      let clearedInfo: { clearedRounds: number; toolNames: string[] } | null = null;
-      result = microcompact(result, {
-        keepRecentN,
-        onClear: (info) => {
-          clearedInfo = info;
-        },
-      });
-      const postTier1Tokens = this.estimateTokensHybrid(result);
-      microNoOpAtFloor = postTier1Tokens === preTier1Tokens;
-      if (postTier1Tokens < preTier1Tokens) {
-        this.suppressNoOpMicroSummaryUntilCompact = false;
-      }
-      if (clearedInfo) {
-        logger.info("context.microcompact", {
-          before: preTier1Tokens,
-          after: postTier1Tokens,
-          keepRecentN,
-          clearedRounds: (clearedInfo as { clearedRounds: number }).clearedRounds,
-          toolNames: (clearedInfo as { toolNames: string[] }).toolNames,
-        });
-        this.onCompact?.({
-          strategy: "micro",
-          before: preTier1Tokens,
-          after: postTier1Tokens,
-        });
-      }
-    }
-
-    let tokens = this.estimateTokensHybrid(result);
+    let tokens = batch.tokens;
     const ratio = tokens / this.config.maxTokens;
     if (ratio < this.config.microcompactFloorRatio) {
       this.suppressNoOpMicroSummaryUntilCompact = false;

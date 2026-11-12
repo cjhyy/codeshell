@@ -1305,6 +1305,8 @@ export class TurnLoop {
           );
           if (anchor) this.deps.recordContextUsageAnchor?.(anchor);
         }
+        // The provider now caches this prefix: rewriting history is no longer free.
+        this.deps.contextManager.noteModelRequestCompleted?.();
 
         this.pendingContextReminders.clear();
         messages = this.markPendingImagesConsumed(messages);
