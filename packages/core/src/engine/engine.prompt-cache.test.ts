@@ -395,8 +395,9 @@ describe("Engine prompt-cache hygiene", () => {
           currentCacheReadTokens: 0,
           // The head is unchanged. The first run's request ended with that
           // run's volatile context message; the second run's request has the
-          // assistant reply in that slot, so the message list is not append-only.
-          cause: "message_prefix_changed",
+          // assistant reply in that slot. Nothing cached followed that last
+          // message, so the change is reported but cannot be the cause.
+          cause: "no_tracked_prefix_change",
           changedPrefixes: [],
           messageChange: "rewritten",
           firstChangedMessageIndex: 2,
@@ -517,6 +518,47 @@ describe("Engine prompt-cache hygiene", () => {
       );
       const payload = warn.mock.calls.find(([event]) => event === "engine.cache_read_drop")?.[1];
       expect(JSON.stringify(payload)).not.toContain('"hash"');
+      warn.mockClear();
+
+      // A volatile message that sat in the middle of the previous request is
+      // gone: cached content followed it, so this explains the drop.
+      (engine as any).recordCacheReadDiagnostics("volatile-middle", {
+        ...diagnosticSample(1200),
+        messages: [digest("task"), digest("volatile"), digest("b", "assistant"), digest("c")],
+      });
+      (engine as any).recordCacheReadDiagnostics("volatile-middle", {
+        ...diagnosticSample(0),
+        messages: [digest("task"), digest("b", "assistant"), digest("c"), digest("volatile-2")],
+      });
+      expect(warn).toHaveBeenCalledWith(
+        "engine.cache_read_drop",
+        expect.objectContaining({
+          cause: "message_prefix_changed",
+          messageChange: "removed",
+          firstChangedMessageIndex: 1,
+        }),
+      );
+      warn.mockClear();
+
+      // Only the previous request's last message differs: reported, not blamed.
+      (engine as any).recordCacheReadDiagnostics("volatile-tail", {
+        ...diagnosticSample(1200),
+        messages: [digest("task"), digest("volatile")],
+      });
+      (engine as any).recordCacheReadDiagnostics("volatile-tail", {
+        ...diagnosticSample(0),
+        messages: [digest("task"), digest("b", "assistant"), digest("volatile-2")],
+      });
+      expect(warn).toHaveBeenCalledWith(
+        "engine.cache_read_drop",
+        expect.objectContaining({
+          cause: "no_tracked_prefix_change",
+          messageChange: "rewritten",
+          firstChangedMessageIndex: 1,
+          previousMessageCount: 2,
+          currentMessageCount: 3,
+        }),
+      );
       warn.mockClear();
 
       (engine as any).recordCacheReadDiagnostics("scope-change", diagnosticSample(1200));

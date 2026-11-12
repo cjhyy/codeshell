@@ -3,6 +3,7 @@ import { TurnLoop, type TurnLoopDeps, type TurnLoopConfig } from "./turn-loop.js
 import type { LLMResponse, Message, StreamEvent, TokenUsage, ToolCall } from "../types.js";
 import { estimateTokens } from "../context/compaction.js";
 import { ContextManager } from "../context/manager.js";
+import { hashPromptMessages } from "./prompt-cache-diagnostics.js";
 
 /**
  * Prompt-cache visibility in the UI: the usage_update event that feeds the
@@ -256,6 +257,30 @@ describe("TurnLoop usage_update carries cache tokens", () => {
       { ...digest, role: "user" },
     ]);
     expect(JSON.stringify(samples[0].messages)).not.toContain("hi");
+  });
+
+  it("hashes the request messages at dispatch, not when usage is recorded", async () => {
+    const { deps } = makeDeps([respWithCache()]);
+    const samples: any[] = [];
+    deps.recordCacheReadDiagnostics = (sample) => samples.push(sample);
+    const realCall = deps.model.call.bind(deps.model);
+    let sentChain: unknown;
+    (deps.model as any).call = async (sys: string, messages: Message[], ...rest: unknown[]) => {
+      sentChain = hashPromptMessages(messages);
+      // Rewrite a sent message in place while the request is in flight.
+      messages[0]!.content = "rewritten after dispatch";
+      return (realCall as any)(sys, messages, ...rest);
+    };
+
+    await new TurnLoop(deps, { maxTurns: 2, maxToolCallsPerTurn: 10 }).run([
+      { role: "user", content: "hi" },
+    ]);
+
+    expect(samples).toHaveLength(1);
+    expect(samples[0].messages).toEqual(sentChain);
+    expect(samples[0].messages[0].hash).toBe(
+      hashPromptMessages([{ role: "user", content: "hi" }])[0]!.hash,
+    );
   });
 
   it("does not let the no-tools max-turn summary replace the primary cache baseline", async () => {
