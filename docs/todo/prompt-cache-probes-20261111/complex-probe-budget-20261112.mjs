@@ -1,10 +1,11 @@
 // Offline on import. Only sendExact opens a connection; it never retries.
 import { createHash } from "node:crypto";
 import { request as httpsRequest } from "node:https";
+import { constants } from "node:fs";
 import { open, readFile, realpath, rename, unlink, lstat } from "node:fs/promises";
-import { dirname, isAbsolute, resolve, sep } from "node:path";
+import { basename, dirname, isAbsolute, resolve, sep } from "node:path";
 import { homedir } from "node:os";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { usageEvidence } from "./native-tool-reference-probe.mjs";
 
 export const LIMITS = Object.freeze({
@@ -36,6 +37,9 @@ const inside = (path, root) => path === root || path.startsWith(root + sep);
 const label = (value) =>
   typeof value === "string" && /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/.test(value);
 const onlyKeys = (value, allowed) => Object.keys(value).every((key) => allowed.includes(key));
+const digest = (value) => typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
+const archiveReason = (value) =>
+  typeof value === "string" && /^[\x20-\x7e]{1,512}$/.test(value) && value.trim() === value;
 
 /** Round decimal provider charges upward without binary floating-point undercount. */
 export function costNanoUsd(cost) {
@@ -217,6 +221,80 @@ function checkedUsage(response, record) {
   return { costNanoUsd: cost, usage };
 }
 
+async function readHttpErrorEvidence(path, expectedSha256, maxBytes) {
+  if (typeof path !== "string" || !isAbsolute(path) || !digest(expectedSha256))
+    throw new Error("Absolute evidence paths and explicit SHA256 digests are required");
+  const canonical = resolve(await realpath(dirname(path)), basename(path));
+  const file = await open(canonical, constants.O_RDONLY | constants.O_NOFOLLOW);
+  try {
+    const stat = await file.stat();
+    if (!stat.isFile() || stat.size > maxBytes) throw new Error("Invalid HTTP evidence file");
+    const bytes = await file.readFile();
+    if (bytes.length > maxBytes || sha256(bytes) !== expectedSha256)
+      throw new Error("HTTP evidence digest or size mismatch");
+    let value;
+    try {
+      value = JSON.parse(bytes.toString("utf8"));
+    } catch {
+      throw new Error("HTTP evidence is not valid JSON");
+    }
+    return { path: canonical, sha256: expectedSha256, value };
+  } finally {
+    await file.close();
+  }
+}
+
+/** Manual accounting conservatism, never a claim that the provider billed this amount. */
+async function verifiedHttpErrorArchive(record, options) {
+  if (options?.operatorAcknowledged !== true || !archiveReason(options.reason))
+    throw new Error("Explicit operator acknowledgement and an audit reason are required");
+  const request = await readHttpErrorEvidence(
+    options.requestEvidencePath,
+    options.requestEvidenceSha256,
+    LIMITS.maxBodyBytes * 4,
+  );
+  const response = await readHttpErrorEvidence(
+    options.responseEvidencePath,
+    options.responseEvidenceSha256,
+    LIMITS.maxResponseBytes * 2 + 65_536,
+  );
+  if (
+    dirname(request.path) !== dirname(response.path) ||
+    basename(request.path) !== record.stage + "-request.json" ||
+    basename(response.path) !== record.stage + "-response.json"
+  )
+    throw new Error("HTTP evidence files do not match the reserved stage");
+  if (request.value?.endpoint !== LIMITS.endpoint)
+    throw new Error("HTTP evidence endpoint does not match the authorization");
+  const original = reservationForBody(request.value.body);
+  if (
+    original.bodyHash !== record.bodyHash ||
+    original.bodyBytes !== record.bodyBytes ||
+    original.reservationNanoUsd !== record.reservationNanoUsd
+  )
+    throw new Error("HTTP request evidence does not match the pending reservation");
+  if (
+    !isObject(response.value) ||
+    !Number.isSafeInteger(response.value.status) ||
+    response.value.status < 400 ||
+    response.value.status > 599 ||
+    typeof response.value.rawBody !== "string"
+  )
+    throw new Error("Only recorded HTTP 4xx/5xx responses allow manual archival");
+  return {
+    previousStatus: "pending",
+    actualBill: "unknown",
+    operatorAcknowledged: true,
+    reason: options.reason,
+    archivedAt: Date.now(),
+    httpStatus: response.value.status,
+    requestEvidencePath: request.path,
+    requestEvidenceSha256: request.sha256,
+    responseEvidencePath: response.path,
+    responseEvidenceSha256: response.sha256,
+  };
+}
+
 function validateLedger(state) {
   if (
     !isObject(state) ||
@@ -241,7 +319,7 @@ function validateLedger(state) {
       record.bodyBytes > LIMITS.maxBodyBytes ||
       record.reservationNanoUsd !== reservationForBytes(record.bodyBytes) ||
       !integer(record.reservedAt) ||
-      !["pending", "settled"].includes(record.status) ||
+      !["pending", "settled", "charged-reservation"].includes(record.status) ||
       (record.status === "pending" &&
         (index !== state.records.length - 1 || record.costNanoUsd !== undefined)) ||
       (record.status === "settled" &&
@@ -250,6 +328,40 @@ function validateLedger(state) {
           !integer(record.settledAt)))
     )
       throw new Error("Invalid budget ledger record");
+    if (record.status === "charged-reservation") {
+      const archive = record.httpErrorArchive;
+      if (
+        record.costNanoUsd !== undefined ||
+        record.usage !== undefined ||
+        record.settledAt !== undefined ||
+        record.chargedReservationNanoUsd !== record.reservationNanoUsd ||
+        !isObject(archive) ||
+        archive.previousStatus !== "pending" ||
+        archive.actualBill !== "unknown" ||
+        archive.operatorAcknowledged !== true ||
+        !archiveReason(archive.reason) ||
+        !integer(archive.archivedAt) ||
+        archive.archivedAt < record.reservedAt ||
+        !Number.isSafeInteger(archive.httpStatus) ||
+        archive.httpStatus < 400 ||
+        archive.httpStatus > 599 ||
+        typeof archive.requestEvidencePath !== "string" ||
+        !isAbsolute(archive.requestEvidencePath) ||
+        typeof archive.responseEvidencePath !== "string" ||
+        !isAbsolute(archive.responseEvidencePath) ||
+        !digest(archive.requestEvidenceSha256) ||
+        !digest(archive.responseEvidenceSha256) ||
+        dirname(archive.requestEvidencePath) !== dirname(archive.responseEvidencePath) ||
+        basename(archive.requestEvidencePath) !== record.stage + "-request.json" ||
+        basename(archive.responseEvidencePath) !== record.stage + "-response.json"
+      )
+        throw new Error("Invalid manual reservation archival");
+    } else if (
+      record.httpErrorArchive !== undefined ||
+      record.chargedReservationNanoUsd !== undefined
+    ) {
+      throw new Error("Unexpected reservation archival metadata");
+    }
     if (record.status === "settled") {
       const usage = record.usage;
       if (
@@ -376,7 +488,7 @@ export async function openBudgetLedger(path, { priorEvidencePath } = {}) {
       busy = true;
       try {
         const next = globalThis.structuredClone(state);
-        const result = operation(next);
+        const result = await operation(next);
         validateLedger(next);
         try {
           await durableWrite(canonical, next);
@@ -418,9 +530,22 @@ export async function openBudgetLedger(path, { priorEvidencePath } = {}) {
         mutate((next) => {
           const record = next.records.find((entry) => entry.id === id);
           if (!record || record.status !== "pending")
-            throw new Error("Request is missing or already settled");
+            throw new Error("Request is missing or is no longer pending");
           const billed = checkedUsage(response, record);
           Object.assign(record, billed, { status: "settled", settledAt: Date.now() });
+          return record;
+        }),
+      chargePendingReservation: (id, options) =>
+        mutate(async (next) => {
+          const record = next.records.find((entry) => entry.id === id);
+          if (!record || record.status !== "pending")
+            throw new Error("Only an unresolved pending request can be archived");
+          const archive = await verifiedHttpErrorArchive(record, options);
+          Object.assign(record, {
+            status: "charged-reservation",
+            chargedReservationNanoUsd: record.reservationNanoUsd,
+            httpErrorArchive: archive,
+          });
           return record;
         }),
       snapshot: () =>
@@ -429,6 +554,14 @@ export async function openBudgetLedger(path, { priorEvidencePath } = {}) {
           exposureNanoUsd: exposure(state),
           remainingNanoUsd: LIMITS.budgetNanoUsd - exposure(state),
           pendingRequests: state.records.filter((entry) => entry.status === "pending").length,
+          chargedReservations: state.records.filter(
+            (entry) => entry.status === "charged-reservation",
+          ).length,
+          chargedReservationNanoUsd: state.records.reduce(
+            (sum, entry) =>
+              sum + (entry.status === "charged-reservation" ? entry.reservationNanoUsd : 0),
+            0,
+          ),
           newRequests: state.records.length,
           totalRequests: state.records.length + state.priorRequests,
         }),
@@ -505,4 +638,75 @@ export function sendExact({ endpoint, key, body, timeoutMs = 60_000 }, dependenc
       finish(undefined, true);
     }
   });
+}
+
+/** Explicit offline recovery only. This path never reads a credential or opens a socket. */
+export async function runReservationArchiveCli(args) {
+  const values = {};
+  const seen = new Set();
+  const flags = ["--charge-pending-reservation", "--operator-acknowledged"];
+  const options = [
+    "--ledger-path",
+    "--request-id",
+    "--request-evidence-path",
+    "--response-evidence-path",
+    "--request-sha256",
+    "--response-sha256",
+    "--reason",
+  ];
+  for (let index = 0; index < args.length; index++) {
+    const flag = args[index];
+    if (seen.has(flag)) throw new Error("Duplicate archival option");
+    seen.add(flag);
+    if (flags.includes(flag)) values[flag] = true;
+    else if (options.includes(flag)) {
+      const value = args[++index];
+      if (!value || value.startsWith("--")) throw new Error("Missing archival option value");
+      values[flag] = value;
+    } else throw new Error("Unknown archival option");
+  }
+  if ([...flags, ...options].some((flag) => !seen.has(flag)))
+    throw new Error("All archival options and explicit operator acknowledgement are required");
+  const id = Number(values["--request-id"]);
+  if (!Number.isSafeInteger(id) || id < 1 || id > LIMITS.maxRequests)
+    throw new Error("Invalid archival request id");
+  const path = values["--ledger-path"];
+  if (!isAbsolute(path)) throw new Error("An absolute existing ledger path is required");
+  const stat = await lstat(path);
+  if (!stat.isFile() || stat.isSymbolicLink())
+    throw new Error("An existing regular ledger is required");
+  const ledger = await openBudgetLedger(path, {
+    priorEvidencePath: resolve(
+      dirname(fileURLToPath(import.meta.url)),
+      "native-tool-reference-evidence-20261111.json",
+    ),
+  });
+  try {
+    const record = await ledger.chargePendingReservation(id, {
+      operatorAcknowledged: values["--operator-acknowledged"] === true,
+      reason: values["--reason"],
+      requestEvidencePath: values["--request-evidence-path"],
+      responseEvidencePath: values["--response-evidence-path"],
+      requestEvidenceSha256: values["--request-sha256"],
+      responseEvidenceSha256: values["--response-sha256"],
+    });
+    return {
+      status: record.status,
+      requestId: id,
+      actualBill: "unknown",
+      chargedReservationNanoUsd: record.reservationNanoUsd,
+      ledger: ledger.snapshot(),
+    };
+  } finally {
+    await ledger.close();
+  }
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+  runReservationArchiveCli(process.argv.slice(2))
+    .then((result) => process.stdout.write(JSON.stringify(result, null, 2) + "\n"))
+    .catch(() => {
+      console.error("Offline reservation archival failed; no request was sent.");
+      process.exitCode = 1;
+    });
 }

@@ -1,6 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
 import { EventEmitter } from "node:events";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import {
@@ -11,6 +12,7 @@ import {
   validateBody,
   reservationForBody,
   openBudgetLedger,
+  runReservationArchiveCli,
   sendExact,
 } from "../docs/todo/prompt-cache-probes-20261111/complex-probe-budget-20261112.mjs";
 
@@ -75,6 +77,32 @@ function response(cost = 0.01) {
       output_tokens: 10,
       cost,
     },
+  };
+}
+
+async function errorEvidence(stage: string, requestBody = body(), httpStatus = 400) {
+  const dir = await realpath(await directory());
+  const requestEvidencePath = join(dir, `${stage}-request.json`);
+  const responseEvidencePath = join(dir, `${stage}-response.json`);
+  const request = JSON.stringify({
+    endpoint: LIMITS.endpoint,
+    headers: { Authorization: "[REDACTED]" },
+    body: requestBody,
+  });
+  const result = JSON.stringify({
+    status: httpStatus,
+    headers: {},
+    rawBody: '{"error":{"message":"Synthetic schema rejection"}}',
+  });
+  await writeFile(requestEvidencePath, request);
+  await writeFile(responseEvidencePath, result);
+  return {
+    operatorAcknowledged: true,
+    reason: "HTTP rejection; bill remains unknown and full reservation stays charged to budget",
+    requestEvidencePath,
+    responseEvidencePath,
+    requestEvidenceSha256: createHash("sha256").update(request).digest("hex"),
+    responseEvidenceSha256: createHash("sha256").update(result).digest("hex"),
   };
 }
 
@@ -342,13 +370,16 @@ test("cumulative budget boundary blocks before dispatch rather than spending int
 
 test("request count persists independently of inexpensive settlements", async () => {
   const { path, ledger } = await ledgerAt();
+  const evidence = await errorEvidence("count");
   for (let index = 0; index < 80; index++) {
     const record = await ledger.reserve("count", body(), "run");
-    await ledger.settle(record.id, response(0));
+    if (index === 79) await ledger.chargePendingReservation(record.id, evidence);
+    else await ledger.settle(record.id, response(0));
   }
   await ledger.close();
   const reopened = (await ledgerAt(path)).ledger;
   expect(reopened.snapshot().newRequests).toBe(80);
+  expect(reopened.snapshot().chargedReservations).toBe(1);
   await expect(reopened.reserve("eighty-one", body(), "new-run")).rejects.toThrow("cap");
 });
 
@@ -377,6 +408,171 @@ test("failed ledger persistence prevents admission and poisons the open instance
   await expect(ledger.reserve("write-fails", body(), "run")).rejects.toThrow("write failed");
   await expect(ledger.reserve("later", body(), "run")).rejects.toThrow("failed");
   expect(await readFile(path + ".pending", "utf8")).toBe("unknown pending state");
+});
+
+test("explicit HTTP-error archival retains the complete reservation forever and permits later requests", async () => {
+  const { path, ledger } = await ledgerAt();
+  const pending = await ledger.reserve("20-native-accuracy", body(), "failed-run");
+  const evidence = await errorEvidence(pending.stage);
+  const before = ledger.snapshot();
+  const archived = await ledger.chargePendingReservation(pending.id, evidence);
+  const { status: _status, ...originalFields } = pending;
+  expect(archived).toMatchObject(originalFields);
+  expect(archived.status).toBe("charged-reservation");
+  expect(archived.chargedReservationNanoUsd).toBe(pending.reservationNanoUsd);
+  expect(archived.costNanoUsd).toBeUndefined();
+  expect(archived.usage).toBeUndefined();
+  expect(archived.httpErrorArchive).toMatchObject({
+    ...evidence,
+    previousStatus: "pending",
+    actualBill: "unknown",
+    httpStatus: 400,
+  });
+  expect(ledger.snapshot()).toMatchObject({
+    exposureNanoUsd: before.exposureNanoUsd,
+    remainingNanoUsd: before.remainingNanoUsd,
+    newRequests: 1,
+    totalRequests: 8,
+    pendingRequests: 0,
+    chargedReservations: 1,
+    chargedReservationNanoUsd: pending.reservationNanoUsd,
+  });
+  await expect(ledger.settle(pending.id, response(0))).rejects.toThrow("no longer pending");
+  await expect(ledger.chargePendingReservation(pending.id, evidence)).rejects.toThrow("pending");
+  await ledger.close();
+  const resumed = (await ledgerAt(path)).ledger;
+  expect(resumed.snapshot().records[0]).toEqual(archived);
+  expect(resumed.snapshot().exposureNanoUsd).toBe(before.exposureNanoUsd);
+  const next = await resumed.reserve("21-native-accuracy", body(), "remaining-study");
+  expect(next.id).toBe(2);
+  await resumed.settle(next.id, response(0.01));
+  expect(resumed.snapshot().exposureNanoUsd).toBe(before.exposureNanoUsd + 10_000_000);
+});
+
+test.each([
+  "acknowledgement",
+  "reason",
+  "digest",
+  "request-body",
+  "stage",
+  "http-success",
+  "redirect",
+  "missing-response",
+])("HTTP-error archival refuses mismatched or unapproved evidence: %s", async (mode) => {
+  const { path, ledger } = await ledgerAt();
+  const pending = await ledger.reserve("error-stage", body(), "run");
+  const otherBody = body();
+  otherBody.tools[0].description = "Different request";
+  const evidence = await errorEvidence(
+    mode === "stage" ? "different-stage" : pending.stage,
+    mode === "request-body" ? otherBody : body(),
+    mode === "http-success" ? 200 : mode === "redirect" ? 307 : 400,
+  );
+  if (mode === "acknowledgement") evidence.operatorAcknowledged = false;
+  if (mode === "reason") evidence.reason = "";
+  if (mode === "digest") evidence.responseEvidenceSha256 = "0".repeat(64);
+  if (mode === "missing-response") await rm(evidence.responseEvidencePath);
+  const bytes = await readFile(path, "utf8");
+  await expect(ledger.chargePendingReservation(pending.id, evidence)).rejects.toThrow();
+  expect(await readFile(path, "utf8")).toBe(bytes);
+  expect(ledger.snapshot().pendingRequests).toBe(1);
+  await expect(ledger.reserve("next", body(), "run")).rejects.toThrow("Unresolved");
+});
+
+test("changed evidence bytes and symlink evidence cannot authorize archival", async () => {
+  const { ledger } = await ledgerAt();
+  const pending = await ledger.reserve("error-stage", body(), "run");
+  const evidence = await errorEvidence(pending.stage);
+  const original = await readFile(evidence.responseEvidencePath, "utf8");
+  await writeFile(evidence.responseEvidencePath, original + " ");
+  await expect(ledger.chargePendingReservation(pending.id, evidence)).rejects.toThrow("digest");
+  const target = join(await directory(), "response.json");
+  await writeFile(target, original);
+  await rm(evidence.responseEvidencePath);
+  await symlink(target, evidence.responseEvidencePath);
+  await expect(ledger.chargePendingReservation(pending.id, evidence)).rejects.toThrow();
+  expect(ledger.snapshot().pendingRequests).toBe(1);
+});
+
+test("archived reservations still consume the cumulative budget and request cap", async () => {
+  const { ledger } = await ledgerAt();
+  const amount = reservationForBody(body()).reservationNanoUsd;
+  const count = Math.floor((LIMITS.budgetNanoUsd - LIMITS.priorCostNanoUsd) / amount);
+  const evidence = await errorEvidence("rejected");
+  for (let index = 0; index < count; index++) {
+    const pending = await ledger.reserve("rejected", body(), "run");
+    await ledger.chargePendingReservation(pending.id, evidence);
+  }
+  expect(ledger.snapshot().newRequests).toBe(count);
+  expect(ledger.snapshot().chargedReservations).toBe(count);
+  expect(ledger.snapshot().chargedReservationNanoUsd).toBe(count * amount);
+  await expect(ledger.reserve("over-budget", body(), "run")).rejects.toThrow("cap");
+});
+
+test("manual archival cannot turn an already settled bill back into a reservation", async () => {
+  const { ledger } = await ledgerAt();
+  const record = await ledger.reserve("settled", body(), "run");
+  await ledger.settle(record.id, response());
+  const before = ledger.snapshot();
+  await expect(
+    ledger.chargePendingReservation(record.id, await errorEvidence(record.stage)),
+  ).rejects.toThrow("pending");
+  expect(ledger.snapshot()).toEqual(before);
+});
+
+test("offline archival CLI requires all explicit inputs and records unknown billing without network", async () => {
+  const { path, ledger } = await ledgerAt();
+  const pending = await ledger.reserve("cli-error", body(), "run");
+  const evidence = await errorEvidence(pending.stage, body(), 429);
+  await ledger.close();
+  const args = [
+    "--charge-pending-reservation",
+    "--operator-acknowledged",
+    "--ledger-path",
+    path,
+    "--request-id",
+    String(pending.id),
+    "--request-evidence-path",
+    evidence.requestEvidencePath,
+    "--response-evidence-path",
+    evidence.responseEvidencePath,
+    "--request-sha256",
+    evidence.requestEvidenceSha256,
+    "--response-sha256",
+    evidence.responseEvidenceSha256,
+    "--reason",
+    evidence.reason,
+  ];
+  await expect(
+    runReservationArchiveCli(args.filter((flag) => flag !== "--operator-acknowledged")),
+  ).rejects.toThrow("acknowledgement");
+  await expect(runReservationArchiveCli([...args, "--live"])).rejects.toThrow("Unknown");
+  const archived = await runReservationArchiveCli(args);
+  expect(archived).toMatchObject({
+    status: "charged-reservation",
+    requestId: pending.id,
+    actualBill: "unknown",
+  });
+  expect(archived.ledger.pendingRequests).toBe(0);
+  expect(archived.ledger.exposureNanoUsd).toBe(
+    LIMITS.priorCostNanoUsd + pending.reservationNanoUsd,
+  );
+  expect(JSON.stringify(archived)).not.toContain(KEY);
+  await expect(runReservationArchiveCli(args)).rejects.toThrow("pending");
+});
+
+test("tampered archival amounts fail closed when reopening the ledger", async () => {
+  const { path, ledger } = await ledgerAt();
+  const pending = await ledger.reserve("error-stage", body(), "run");
+  await ledger.chargePendingReservation(pending.id, await errorEvidence(pending.stage));
+  await ledger.close();
+  const stored = JSON.parse(await readFile(path, "utf8"));
+  stored.records[0].chargedReservationNanoUsd = 0;
+  await writeFile(path, JSON.stringify(stored));
+  await expect(openBudgetLedger(path, { priorEvidencePath: PRIOR })).rejects.toThrow(
+    "initialization",
+  );
+  expect(JSON.parse(await readFile(path, "utf8")).records[0].chargedReservationNanoUsd).toBe(0);
 });
 
 test("one HTTPS request uses fixed TLS/headers, and redirects are returned without following", async () => {
