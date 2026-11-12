@@ -2371,6 +2371,7 @@ async function createWindow(): Promise<BrowserWindow> {
       // Atomic CodeShell capabilities Mimi may request via her host-action
       // tools; each runs only after her turn, and the real outcome is folded
       // into the reply. The key set gates which tools the worker exposes.
+      recentProactive: mimiNoticeTools.recentProactive,
       hostActions: {
         ...mimiNoticeTools.hostActions,
         mobileRemote: async (payload) => {

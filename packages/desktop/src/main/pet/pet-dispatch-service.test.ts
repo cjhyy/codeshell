@@ -424,6 +424,75 @@ describe("PetDispatchService", () => {
     expect(world.pendingNotices.every((notice) => notice.body.length <= 1_000)).toBe(true);
   });
 
+  test("injects Mimi's own recent briefs for the conversation, beside pending notices", async () => {
+    const requests: Array<Record<string, unknown>> = [];
+    const origins: unknown[] = [];
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (_method, params) => {
+          requests.push(params);
+          return { ok: true, result: { text: "好的" } };
+        },
+      },
+      hostCwd: "/safe/pet",
+      hostActions: {
+        noticeTriggerMutation: async () => ({}),
+        notificationSettingsMutation: async () => ({}),
+        sessionWatch: async () => ({}),
+      },
+      recentProactive: async (origin) => {
+        origins.push(origin);
+        return [
+          {
+            kind: "brief.morning",
+            sentAt: "2026-11-12T09:00:00+08:00",
+            text: "早上好：\n- 【完成】修登录",
+            refs: [{ type: "done", status: "【完成】", title: "修登录" }],
+          },
+        ];
+      },
+    });
+    await service.dispatch({
+      type: "chat",
+      message: "晨报里那个登录的事",
+      clientMessageId: "im:recent",
+      source: { ...imSource("owner"), isDirectMessage: true },
+    });
+    await service.dispatch({
+      type: "chat",
+      message: "早上说什么了",
+      clientMessageId: "desk:recent",
+    });
+    expect(origins).toEqual([
+      { kind: "im", channel: "wechat", target: "chat-one", isDirectMessage: true },
+      { kind: "desktop" },
+    ]);
+    for (const params of requests) {
+      const world = JSON.parse(String(params.petRuntimeContext)) as {
+        recentProactive: { about: string; notices: unknown[] };
+      };
+      expect(world.recentProactive.about).toContain("you (Mimi) sent this owner earlier");
+      expect(world.recentProactive.notices).toEqual([
+        {
+          kind: "brief.morning",
+          sentAt: "2026-11-12T09:00:00+08:00",
+          text: "早上好：\n- 【完成】修登录",
+          refs: [{ type: "done", status: "【完成】", title: "修登录" }],
+        },
+      ]);
+    }
+    // The notice tools' change actions are offered on the desktop too (the host checks who asks).
+    expect((requests[1]!.profileParams as { hostActions?: string[] }).hostActions).toEqual([
+      "noticeTriggerMutation",
+      "notificationSettingsMutation",
+    ]);
+  });
+
   test("marks desktop chat explicitly and withholds the route-bound reply capability", async () => {
     let request: { method: string; params: Record<string, unknown> } | undefined;
     const service = new PetDispatchService({

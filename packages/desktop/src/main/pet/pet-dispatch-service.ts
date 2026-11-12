@@ -6,12 +6,8 @@ import type {
   PetNavigationResult,
   DesktopPetProjectionSnapshot,
 } from "./pet-state-aggregator.js";
-import {
-  normalizePetWorkDelegation,
-  PET_PENDING_NOTICE_BODY_MAX,
-  PET_PENDING_NOTICE_TITLE_MAX,
-  PET_PENDING_NOTICES_MAX,
-} from "@cjhyy/code-shell-pet";
+import { normalizePetWorkDelegation } from "@cjhyy/code-shell-pet";
+import { petNoticeWorld, type PetRecentProactiveSource } from "./pet-notice-world.js";
 import { readLatestWorkContext } from "@cjhyy/code-shell-pet/disclosure";
 import { createMtimeSessionCache } from "./mtime-session-cache.js";
 import { mapWithConcurrency } from "./map-with-concurrency.js";
@@ -381,6 +377,8 @@ export interface PetDispatchOptions {
    * one.
    */
   hostActionReceipts?: PetHostActionReceiptStore;
+  /** Mimi's own recent briefs / heartbeat for the conversation a chat turn answers. */
+  recentProactive?: PetRecentProactiveSource;
   /** Extra bounded world fields (memories, tunnel status, ...) for each turn. */
   worldContext?(
     input: PetWorldContextInput,
@@ -1792,6 +1790,7 @@ export class PetDispatchService {
           "outboundTargets",
           "hostWake",
           "pendingNotices",
+          "recentProactive",
           "contextAssociation",
           "inputAttachments",
         ]);
@@ -1805,9 +1804,7 @@ export class PetDispatchService {
         );
         const longTaskContext = this.options.longTasks?.context();
         const taskInbox = await taskInboxTask;
-        const pendingNotices = command.pendingNotices
-          ? await command.pendingNotices.take().catch(() => [])
-          : [];
+        const noticeWorld = await petNoticeWorld(command, this.options.recentProactive);
         const world = {
           version: projectionWorld.version,
           generation: projectionWorld.generation,
@@ -1839,17 +1836,7 @@ export class PetDispatchService {
               }
             : {}),
           // Early, so the bounded serializer keeps them ahead of noisier arrays.
-          ...(pendingNotices.length
-            ? {
-                pendingNotices: pendingNotices
-                  .slice(0, PET_PENDING_NOTICES_MAX)
-                  .map(({ kind, title, body }) => ({
-                    kind: kind.slice(0, 64),
-                    ...(title ? { title: title.slice(0, PET_PENDING_NOTICE_TITLE_MAX) } : {}),
-                    body: body.slice(0, PET_PENDING_NOTICE_BODY_MAX),
-                  })),
-              }
-            : {}),
+          ...noticeWorld,
           ...(gatewayCatalog
             ? {
                 currentMessageCapabilities: {
