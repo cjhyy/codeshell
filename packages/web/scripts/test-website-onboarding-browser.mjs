@@ -260,7 +260,9 @@ async function mount(width, theme) {
 }
 async function shot(page, name) {
   assert.ok(
-    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    await page.evaluate(
+      () => globalThis.document.documentElement.scrollWidth <= globalThis.innerWidth,
+    ),
     "Page must fit the viewport",
   );
   const file = path.join(output, `${name}.png`);
@@ -354,7 +356,7 @@ try {
     await shot(page, `${prefix}-05-ready`);
     await page.getByRole("button", { name: "发送", exact: true }).click();
     await page.getByText("这是隔离测试的回复。", { exact: true }).waitFor();
-    assert.equal(await page.evaluate(() => window.fixtureRuns.length), 1);
+    assert.equal(await page.evaluate(() => globalThis.fixtureRuns.length), 1);
     if (width < 760) await page.getByRole("button", { name: "展开侧栏", exact: true }).click();
     await page.getByLabel("打开账号菜单", { exact: true }).click();
     await page.getByRole("button", { name: "返回官网", exact: true }).click();
@@ -387,7 +389,7 @@ try {
       calls.filter((call) => call.path === "/api/v1/projects" && call.method === "POST").length,
       1,
     );
-    assert.equal(await page.evaluate(() => sessionStorage.length), 0);
+    assert.equal(await page.evaluate(() => globalThis.sessionStorage.length), 0);
     await page.getByLabel("任务内容", { exact: true }).fill("只在确认后丢弃的草稿");
     if (width < 760) await page.getByRole("button", { name: "展开侧栏", exact: true }).click();
     await page.locator(".website-account-menu > summary:visible").click();
