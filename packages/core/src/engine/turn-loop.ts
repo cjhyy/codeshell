@@ -58,6 +58,7 @@ import { crossedReactiveThreshold } from "./reactive-threshold.js";
 import { COMPLETE_GOAL_TOOL_NAME } from "../tool-system/builtin/complete-goal.js";
 import { withoutLedgerMessages } from "../session/context-messages.js";
 import { moveVolatileContextToTail } from "./volatile-context-tail.js";
+import { persistRemindersBeforeCheckpoint, withoutCheckpointDuplicates } from "./rollover-context.js";
 import { CANCEL_GOAL_TOOL_NAME } from "../tool-system/builtin/cancel-goal.js";
 import {
   redactSensitiveToolResultsInMessages,
@@ -733,9 +734,11 @@ export class TurnLoop {
         ...this.pendingContextReminders.values(),
       ].map((message) => [JSON.stringify(message), message]),
     );
-    const retained = [...retainedByContent.values()];
-    const checkpoint = notes.applyRollover(stable, retained);
+    const candidates = [...retainedByContent.values()];
+    const checkpoint = notes.applyRollover(stable, candidates);
     if (!checkpoint) return messages;
+    const retained = withoutCheckpointDuplicates(candidates, checkpoint);
+    persistRemindersBeforeCheckpoint(this.deps.transcript, retained);
     const managed = [...retained, ...checkpoint];
     this.deps.contextManager.recordNotesCompaction(stable, managed);
     this.noteReminderIssued = false;

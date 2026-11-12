@@ -10,6 +10,7 @@ import { registerProvider } from "../llm/client-factory.js";
 import type { CreateMessageOptions } from "../llm/types.js";
 import type { LLMResponse, Message, TranscriptEvent } from "../types.js";
 import type { AgentModule } from "../composition/types.js";
+import { LEDGER_UPDATE_PREAMBLE } from "../context/context-ledger.js";
 
 const provider = "fake-engine-context-ledger-hardening";
 const env = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_SYSTEM: "/dev/null" };
@@ -156,6 +157,79 @@ describe("Engine context ledger hardening", () => {
     if (prevCodeShellHome === undefined) delete process.env.CODE_SHELL_HOME;
     else process.env.CODE_SHELL_HOME = prevCodeShellHome;
     for (const dir of [repo, sessions, home]) rmSync(dir, { recursive: true, force: true });
+  });
+
+  describe("notes rollover", () => {
+    const call = (id: string, toolName: string, args: Record<string, unknown>): LLMResponse => ({
+      text: "",
+      toolCalls: [{ id, toolName, args }],
+      stopReason: "tool_use",
+      usage: { promptTokens: 1000, completionTokens: 1, totalTokens: 1001 },
+    });
+    const containing = (request: Message[], needle: string): Message[] =>
+      request.filter((message) => textOf(message).includes(needle));
+
+    it("carries each reminder once and resends one fresh snapshot, marked as context", async () => {
+      const sessionId = "s-hardening-rollover";
+      const { requests } = scenario([
+        call("n1", "SaveContextNote", { note: "Continue the task; nothing is finished yet." }),
+        stop("first done"),
+        call("n2", "NewContext", {}),
+        stop("second done"),
+        stop("third done"),
+      ]);
+      let rules = "RULES v1";
+      const hooked = (): Engine => {
+        const engine = newEngine({
+          enabledBuiltinTools: ["SaveContextNote", "NewContext"],
+          contextStrategy: "notes",
+        });
+        (engine as any).hooks.register("on_session_start", async () => ({ messages: [rules] }));
+        return engine;
+      };
+      const engine = hooked();
+      await engine.run(`first task ${"long history ".repeat(600)}`, { sessionId, cwd: repo });
+      expect(requests).toHaveLength(2);
+
+      // Run 2 changes both the hook output and the context, so its reminder
+      // and its ledger update are written after the note's boundary.
+      rules = "RULES v2";
+      writeFileSync(join(repo, "two.marker"), "");
+      await engine.run("second task", { sessionId, cwd: repo });
+      expect(requests).toHaveLength(4);
+      expect(containing(requests[2]!, "RULES v2")).toHaveLength(1);
+      expect(containing(requests[2]!, LEDGER_UPDATE_PREAMBLE)).toHaveLength(1);
+
+      // The request after the rollover.
+      const after = requests[3]!;
+      expect(containing(after, "<context-note>")).toHaveLength(1);
+      expect(containing(after, "long history")).toHaveLength(0);
+      expect(containing(after, "RULES v2")).toHaveLength(1);
+      expect(containing(after, "RULES v1")).toHaveLength(0);
+      // No orphaned update; the context is told once, in full.
+      expect(containing(after, LEDGER_UPDATE_PREAMBLE)).toHaveLength(0);
+      expect(containing(after, "two.marker")).toHaveLength(1);
+      expect(textOf(containing(after, "two.marker")[0]!)).toContain("one.marker");
+
+      // Nothing engine-authored is left looking like something a person said.
+      const conversation = engine
+        .getSessionManager()
+        .resume(sessionId)
+        .transcript.toConversationMessages()
+        .map(textOf)
+        .join("\n");
+      expect(conversation).toContain("second task");
+      expect(conversation).not.toContain("RULES");
+      expect(conversation).not.toContain(".marker");
+
+      // A new process replays the same history.
+      const restarted = hooked();
+      await restarted.run("third task", { sessionId, cwd: repo });
+      expect(requests).toHaveLength(5);
+      expectAppendOnly([wire(requests[3]!), wire(requests[4]!)]);
+      expect(containing(requests[4]!, "RULES v2")).toHaveLength(1);
+      expect(containing(requests[4]!, "two.marker")).toHaveLength(1);
+    });
   });
 
   describe("non-durable runtime context (dynamic placement)", () => {

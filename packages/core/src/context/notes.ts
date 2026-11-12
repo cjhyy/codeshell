@@ -123,7 +123,10 @@ export class SessionContextNotes {
     const boundaryIndex = events.findIndex((event) => event.id === cursor);
     if (boundaryIndex < 0 || boundaryIndex >= noteIndex) return undefined;
 
-    const tail = events.slice(boundaryIndex + 1);
+    // Engine context (ledger, reminders) is not conversation: a copy in the
+    // checkpoint would lose its mark. The ledger resends a snapshot and the
+    // caller re-attaches the reminders in effect (engine/rollover-context.ts).
+    const tail = events.slice(boundaryIndex + 1).filter((event) => !isContextMessageEvent(event));
     // A misplaced boundary must not silently discard a late result whose
     // opening call was before that boundary. Normal model boundaries never
     // split a batch, but interrupted or corrupt transcripts can do so.
