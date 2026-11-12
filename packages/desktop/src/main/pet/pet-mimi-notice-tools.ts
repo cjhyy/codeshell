@@ -6,6 +6,7 @@ import {
 import type { HostActionHandler } from "../host-action-dispatch.js";
 import type { PetHostActionExecutor } from "./pet-dispatch-service.js";
 import type { PetNoticeControls } from "./pet-notice-ipc.js";
+import type { PetNoticeTurnGate } from "./pet-notice-turn-gate.js";
 import {
   createMimiNoticeChanges,
   type MimiNoticeChangesDeps,
@@ -51,10 +52,23 @@ export function wireMimiNoticeTools(deps: MimiNoticeToolsDeps) {
   };
   const reads = createMimiNoticeReads({ ...deps, rules });
   const changes = createMimiNoticeChanges({ ...deps, controls: ruleControls });
+  /** Mimi Sessions whose running turn is the owner's (set by the dispatcher per turn). */
+  const ownerTurns = new Set<string>();
+  const turnGate: PetNoticeTurnGate = {
+    isOwnerConversation: (channel, target) => deps.isOwnerConversation(channel, target),
+    begin: (sessionId, owner) => {
+      if (owner) ownerTurns.add(sessionId);
+      else ownerTurns.delete(sessionId);
+    },
+    end: (sessionId) => ownerTurns.delete(sessionId),
+  };
   const onlyMimi =
     (read: (args: Record<string, unknown>) => Promise<unknown>): HostActionHandler =>
     async (sessionId, args) => {
       if (!deps.isMimiSession(sessionId)) throw new Error("only Mimi's Session may read notices");
+      // Defence in depth: the tools are hidden outside the owner's turns anyway.
+      if (!ownerTurns.has(sessionId))
+        throw new Error("notices are readable only in the owner's turn");
       return read(args);
     };
   const removers = [
@@ -72,7 +86,10 @@ export function wireMimiNoticeTools(deps: MimiNoticeToolsDeps) {
   return {
     hostActions,
     recentProactive: reads.recentProactive,
+    /** For the dispatcher (`noticeTurns`): whose turn is running. */
+    turnGate,
     dispose() {
+      ownerTurns.clear();
       for (const remove of removers) remove();
     },
   };

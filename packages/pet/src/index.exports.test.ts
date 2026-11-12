@@ -42,11 +42,14 @@ describe("Pet package public entry contracts", () => {
       "PET_RULE_UPSERT_ACTION",
       "PET_SNOOZE_MAX_MINUTES",
       "PET_TRIGGERS_QUERY_ACTION",
+      "PET_TRIGGER_CHANGES_MAX",
       "isPetNotificationSettingsMutation",
       "isPetTriggerMutation",
+      "isPetTriggerMutationRequest",
       "parseNoticeEvents",
       "parseNoticeRuleUpsert",
       "parsePetNoticesQuery",
+      "petTriggerChanges",
     ]);
     expect(Object.keys(teamApi).sort()).toEqual([
       "DIGITAL_HUMAN_ID_RE",

@@ -188,6 +188,29 @@ export function isPetTriggerMutation(value: unknown): value is PetTriggerMutatio
   );
 }
 
+/** At most this many trigger changes in one ManageTrigger call. */
+export const PET_TRIGGER_CHANGES_MAX = 5;
+
+/** One change, or several applied in order (each checked on its own). */
+export type PetTriggerMutationRequest = PetTriggerMutation | { changes: PetTriggerMutation[] };
+
+export function isPetTriggerMutationRequest(value: unknown): value is PetTriggerMutationRequest {
+  if (!isRecord(value) || !("changes" in value)) return isPetTriggerMutation(value);
+  const changes = value.changes;
+  return (
+    Object.keys(value).length === 1 &&
+    Array.isArray(changes) &&
+    changes.length >= 1 &&
+    changes.length <= PET_TRIGGER_CHANGES_MAX &&
+    changes.every(isPetTriggerMutation)
+  );
+}
+
+/** The changes of a request, in order. */
+export function petTriggerChanges(request: PetTriggerMutationRequest): PetTriggerMutation[] {
+  return "changes" in request ? [...request.changes] : [request];
+}
+
 function isBriefSlotPatch(value: unknown): boolean {
   return (
     isRecord(value) &&

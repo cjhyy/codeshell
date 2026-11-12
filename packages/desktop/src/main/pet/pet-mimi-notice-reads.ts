@@ -8,6 +8,7 @@ import type {
   PetNoticeRuleSummary,
   PetNotificationSettingsView,
 } from "../../shared/pet-notices.js";
+import { actionHints, ordinalLabel } from "./pet-notice-action-codes.js";
 import { composeNoticeBody, noticeLine } from "./pet-notice-compose.js";
 import type { NoticeRecord, PetNoticeLedger } from "./pet-notice-ledger.js";
 import { hostTimezoneOffsetMin, isSnoozed } from "./pet-notice-policy.js";
@@ -90,6 +91,28 @@ function briefRefs(facts: Record<string, unknown>) {
   });
 }
 
+/**
+ * A notice's text for Mimi: the words the owner read, without what only
+ * answering it needs. A decision prompt is given as its question and
+ * options (its frozen text also says how to answer); an open item loses the
+ * ①② label it took in its chat and the host's reply hint line. Both are the
+ * host's own fixed strings, removed by exact match. Codes are never in it.
+ */
+function noticeText(record: NoticeRecord): string {
+  const { facts } = unpackFacts(record.facts);
+  if (record.prompt || record.kind === "session.blocked")
+    return cut(composeNoticeBody(record.kind, facts));
+  let body = record.body;
+  if (body !== undefined && record.actions) {
+    const slot = record.actions.slot;
+    const label = slot ? `${ordinalLabel(slot.ordinal)} ` : undefined;
+    if (label && body.startsWith(label)) body = body.slice(label.length);
+    const hints = actionHints(record.actions);
+    if (hints && body.endsWith(`\n${hints}`)) body = body.slice(0, -hints.length - 1);
+  }
+  return cut(composeNoticeBody(record.kind, facts, body));
+}
+
 function deliveryOf(record: NoticeRecord): string {
   const status = record.delivery?.status;
   if (status === "accepted") return "sent";
@@ -158,7 +181,7 @@ export function createMimiNoticeReads(deps: MimiNoticeReadsDeps) {
       id: record.id,
       kind: record.kind,
       ...(title ? { title } : {}),
-      text: cut(composeNoticeBody(record.kind, facts, record.body)),
+      text: noticeText(record),
       createdAt: iso(record.createdAt),
       to:
         target.kind === "owner"
@@ -287,14 +310,13 @@ export function createMimiNoticeReads(deps: MimiNoticeReadsDeps) {
       );
     }, RECENT_PROACTIVE_MAX);
     return found.map((record) => {
-      const { facts } = unpackFacts(record.facts);
       const refs = briefRefs(isRecord(record.facts) ? record.facts : {}).map(
         ({ type, status, title }) => ({ type, status, title }),
       );
       return {
         kind: record.kind,
         sentAt: iso(record.createdAt),
-        text: cut(composeNoticeBody(record.kind, facts, record.body)),
+        text: noticeText(record),
         ...(refs.length > 0 ? { refs } : {}),
       };
     });

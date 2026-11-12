@@ -2372,6 +2372,7 @@ async function createWindow(): Promise<BrowserWindow> {
       // tools; each runs only after her turn, and the real outcome is folded
       // into the reply. The key set gates which tools the worker exposes.
       recentProactive: mimiNoticeTools.recentProactive,
+      noticeTurns: mimiNoticeTools.turnGate,
       hostActions: {
         ...mimiNoticeTools.hostActions,
         mobileRemote: async (payload) => {

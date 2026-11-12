@@ -367,7 +367,7 @@ describe("enrichPetChatReplyWithHostActions", () => {
           kind: "noticeTriggerMutation",
           payload: { ruleId: "system-brief-morning", action: "disable" },
           ok: true,
-          result: { message: "晨报已关闭。", ruleId: "system-brief-morning" },
+          result: { message: "晨报已关闭。\n心跳已关闭。\u0007", ruleId: "system-brief-morning" },
         },
         {
           kind: "notificationSettingsMutation",
@@ -379,7 +379,7 @@ describe("enrichPetChatReplyWithHostActions", () => {
       { qrDir: join(tmpdir(), "unused"), attachmentKinds: [] },
     );
     expect(enriched.text).toBe(
-      "好的，我来改。\n\n晨报已关闭。\n通知设置操作失败：群聊里不能修改提醒和通知设置，没有修改。请在桌面或和 Mimi 的私聊里说。",
+      "好的，我来改。\n\n晨报已关闭。\n心跳已关闭。\n通知设置操作失败：群聊里不能修改提醒和通知设置，没有修改。请在桌面或和 Mimi 的私聊里说。",
     );
   });
 

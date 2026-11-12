@@ -39,6 +39,9 @@ export {
   PET_TRIGGERS_QUERY_ACTION,
   isPetNotificationSettingsMutation,
   isPetTriggerMutation,
+  isPetTriggerMutationRequest,
+  PET_TRIGGER_CHANGES_MAX,
+  petTriggerChanges,
   parsePetNoticesQuery,
   type PetNoticeKind,
   type PetNoticesQuery,
@@ -46,6 +49,7 @@ export {
   type PetNotificationSettingsPatch,
   type PetSnoozeRequest,
   type PetTriggerMutation,
+  type PetTriggerMutationRequest,
 } from "./notice-tools-protocol.js";
 export {
   LOCAL_PET_OWNER,

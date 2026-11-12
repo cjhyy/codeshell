@@ -8,6 +8,7 @@ import type {
 } from "./pet-state-aggregator.js";
 import { normalizePetWorkDelegation } from "@cjhyy/code-shell-pet";
 import { petNoticeWorld, type PetRecentProactiveSource } from "./pet-notice-world.js";
+import * as noticeGate from "./pet-notice-turn-gate.js";
 import { readLatestWorkContext } from "@cjhyy/code-shell-pet/disclosure";
 import { createMtimeSessionCache } from "./mtime-session-cache.js";
 import { mapWithConcurrency } from "./map-with-concurrency.js";
@@ -379,6 +380,8 @@ export interface PetDispatchOptions {
   hostActionReceipts?: PetHostActionReceiptStore;
   /** Mimi's own recent briefs / heartbeat for the conversation a chat turn answers. */
   recentProactive?: PetRecentProactiveSource;
+  /** Whose turn it is, for Mimi's notice tools (shown and readable only in the owner's). */
+  noticeTurns?: noticeGate.PetNoticeTurnGate;
   /** Extra bounded world fields (memories, tunnel status, ...) for each turn. */
   worldContext?(
     input: PetWorldContextInput,
@@ -1032,7 +1035,9 @@ export class PetDispatchService {
       active.resolveRunStarted(true);
     }
     try {
-      return await this.requestRoutedRun(params, "pet-dispatch");
+      return await noticeGate.withNoticeTurn(this.options.noticeTurns, params, () =>
+        this.requestRoutedRun(params, "pet-dispatch"),
+      );
     } finally {
       if (active) {
         active.workerRunPending = false;
@@ -1761,6 +1766,7 @@ export class PetDispatchService {
           "noticeTriggerMutation",
           "notificationSettingsMutation",
         ]);
+        const noticeOwner = noticeGate.isNoticeOwnerTurn(command, this.options.noticeTurns);
         const hostActionKinds = command.hostWake
           ? []
           : command.source?.kind === "im-gateway"
@@ -1768,7 +1774,8 @@ export class PetDispatchService {
                 .filter(
                   (kind) =>
                     (kind !== "gatewayReply" || gatewayReplyCapability !== undefined) &&
-                    (kind !== "sessionWatch" || currentCompletionTarget !== undefined),
+                    (kind !== "sessionWatch" || currentCompletionTarget !== undefined) &&
+                    (noticeOwner || !noticeGate.NOTICE_TOOL_KINDS.has(kind)),
                 )
                 .sort()
             : Object.keys(this.options.hostActions ?? {})

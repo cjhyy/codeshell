@@ -13,6 +13,7 @@ import type { NoticeRuleHostRequester } from "./notify-me.js";
 import {
   isPetNotificationSettingsMutation,
   isPetTriggerMutation,
+  isPetTriggerMutationRequest,
   PET_DIGEST_SLOTS_MAX,
   PET_NOTICE_KINDS,
   PET_NOTICES_DEFAULT_LIMIT,
@@ -22,10 +23,12 @@ import {
   PET_NOTIFICATION_SETTINGS_QUERY_ACTION,
   PET_SNOOZE_MAX_MINUTES,
   PET_TRIGGER_ACTIONS,
+  PET_TRIGGER_CHANGES_MAX,
   PET_TRIGGERS_QUERY_ACTION,
   parsePetNoticesQuery,
   type PetNotificationSettingsMutation,
   type PetSnoozeRequest,
+  type PetTriggerMutationRequest,
 } from "./notice-tools-protocol.js";
 import { hasOnlyDeclaredToolArguments } from "./tool-arguments.js";
 
@@ -93,14 +96,27 @@ export const triggersToolDef: ToolDefinition = {
   },
 };
 
+const TRIGGER_CHANGE_PROPERTIES = {
+  rule_id: { type: "string", minLength: 1, maxLength: 128 },
+  action: { type: "string", enum: [...PET_TRIGGER_ACTIONS] },
+  expected_version: { type: "integer", minimum: 0 },
+  time: { ...CLOCK, description: "set_time: the brief's new local time." },
+  start: { ...CLOCK, description: "set_active_hours: start of the heartbeat window." },
+  end: { ...CLOCK, description: "set_active_hours: end of the heartbeat window." },
+} as const;
+const TRIGGER_CHANGE_FIELDS = Object.keys(TRIGGER_CHANGE_PROPERTIES);
+
 export const manageTriggerToolDef: ToolDefinition = {
   name: MANAGE_TRIGGER_TOOL_NAME,
   description:
-    "Change one trigger from Triggers: pause, resume or cancel it; for Mimi's system triggers enable / disable " +
+    "Change one trigger from Triggers, or up to 5 in one call with changes=[…] (applied in order, each checked " +
+    "on its own): pause, resume or cancel it; for Mimi's system triggers enable / disable " +
     "(system-brief-morning, system-brief-evening, system-heartbeat, all-sessions), set_time a brief (time 'HH:MM', " +
     "owner-local) or set_active_hours the heartbeat (start / end 'HH:MM'). Use only an action the row lists, or the " +
     "system-trigger ones. Pass the row's version as expected_version; a stale one is refused, so re-read Triggers. " +
-    "Example: '把每天早上那个提醒停了' → Triggers, then ManageTrigger rule_id=system-brief-morning action=disable. " +
+    "Example: '把每天早上那个提醒停了' → Triggers, then ManageTrigger rule_id=system-brief-morning action=disable; " +
+    "'停掉晨报和心跳' → one call with changes=[{rule_id: system-brief-morning, action: disable}, " +
+    "{rule_id: system-heartbeat, action: disable}]. " +
     "Creating a reminder or follow-up is ManageFollowUp, not this tool. Only the owner may change triggers, from the " +
     "desktop or their private chat with Mimi; the host applies it after this turn and appends the real outcome, so do " +
     "not claim it changed.",
@@ -108,14 +124,20 @@ export const manageTriggerToolDef: ToolDefinition = {
     type: "object",
     additionalProperties: false,
     properties: {
-      rule_id: { type: "string", minLength: 1, maxLength: 128 },
-      action: { type: "string", enum: [...PET_TRIGGER_ACTIONS] },
-      expected_version: { type: "integer", minimum: 0 },
-      time: { ...CLOCK, description: "set_time: the brief's new local time." },
-      start: { ...CLOCK, description: "set_active_hours: start of the heartbeat window." },
-      end: { ...CLOCK, description: "set_active_hours: end of the heartbeat window." },
+      ...TRIGGER_CHANGE_PROPERTIES,
+      changes: {
+        type: "array",
+        minItems: 1,
+        maxItems: PET_TRIGGER_CHANGES_MAX,
+        items: {
+          type: "object",
+          additionalProperties: false,
+          properties: TRIGGER_CHANGE_PROPERTIES,
+          required: ["rule_id", "action"],
+        },
+        description: "Several changes in one call, instead of the single rule_id / action.",
+      },
     },
-    required: ["rule_id", "action"],
   },
 };
 
@@ -287,37 +309,54 @@ export async function triggersTool(
   })}`;
 }
 
+/** One snake_case change as the host payload. */
+function triggerChange(row: Record<string, unknown>): Record<string, unknown> {
+  return {
+    ruleId: row.rule_id,
+    action: row.action,
+    ...(row.expected_version !== undefined ? { expectedVersion: row.expected_version } : {}),
+    ...(row.time !== undefined ? { time: row.time } : {}),
+    ...(row.start !== undefined ? { start: row.start } : {}),
+    ...(row.end !== undefined ? { end: row.end } : {}),
+  };
+}
+
 export async function manageTriggerTool(
   args: Record<string, unknown>,
   ctx?: ToolContext,
 ): Promise<string> {
   const request = hostActionService(ctx);
   if (!request) return "Error: ManageTrigger is available only in a Mimi manager turn.";
-  if (
-    !hasOnlyDeclaredToolArguments(args, [
-      "rule_id",
-      "action",
-      "expected_version",
-      "time",
-      "start",
-      "end",
-    ])
-  )
-    return "Error: ManageTrigger accepts only rule_id, action, expected_version, time, start and end.";
-  const payload: Record<string, unknown> = {
-    ruleId: args.rule_id,
-    action: args.action,
-    ...(args.expected_version !== undefined ? { expectedVersion: args.expected_version } : {}),
-    ...(args.time !== undefined ? { time: args.time } : {}),
-    ...(args.start !== undefined ? { start: args.start } : {}),
-    ...(args.end !== undefined ? { end: args.end } : {}),
-  };
-  if (!isPetTriggerMutation(payload))
-    return (
-      "Error: ManageTrigger needs an exact rule_id from Triggers and one action; set_time takes only time " +
-      "('HH:MM'), set_active_hours only start and end ('HH:MM', different), the others neither."
-    );
-  const decision = request({ kind: "noticeTriggerMutation", payload });
+  if (!hasOnlyDeclaredToolArguments(args, [...TRIGGER_CHANGE_FIELDS, "changes"]))
+    return "Error: ManageTrigger accepts only rule_id, action, expected_version, time, start, end or changes.";
+  const invalid =
+    "Error: ManageTrigger needs an exact rule_id from Triggers and one action per change; set_time takes only " +
+    "time ('HH:MM'), set_active_hours only start and end ('HH:MM', different), the others neither.";
+  let payload: PetTriggerMutationRequest;
+  if (args.changes !== undefined) {
+    if (TRIGGER_CHANGE_FIELDS.some((field) => args[field] !== undefined))
+      return "Error: ManageTrigger takes either changes or one rule_id / action, not both.";
+    const rows = args.changes;
+    if (!Array.isArray(rows) || rows.length < 1 || rows.length > PET_TRIGGER_CHANGES_MAX)
+      return `Error: changes must list 1 to ${PET_TRIGGER_CHANGES_MAX} trigger changes.`;
+    const changes: unknown[] = [];
+    for (const row of rows) {
+      if (!isPlainRecord(row) || !hasOnlyDeclaredToolArguments(row, TRIGGER_CHANGE_FIELDS))
+        return invalid;
+      changes.push(triggerChange(row));
+    }
+    const request = { changes };
+    if (!isPetTriggerMutationRequest(request)) return invalid;
+    payload = request;
+  } else {
+    const change = triggerChange(args);
+    if (!isPetTriggerMutation(change)) return invalid;
+    payload = change;
+  }
+  const decision = request({
+    kind: "noticeTriggerMutation",
+    payload: payload as unknown as Record<string, unknown>,
+  });
   if (!decision.ok) return `Error: ${decision.error ?? "the trigger change was rejected"}`;
   return (
     "Trigger change recorded for the host. It checks that the owner asked for it and applies it after this " +

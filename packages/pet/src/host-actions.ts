@@ -14,7 +14,7 @@ import type {
 import { isAbsolute } from "node:path";
 import {
   isPetNotificationSettingsMutation,
-  isPetTriggerMutation,
+  isPetTriggerMutationRequest,
 } from "./notice-tools-protocol.js";
 import { isPetFollowUpMutationPayload } from "./registered-follow-ups.js";
 
@@ -177,7 +177,7 @@ export function isPetHostActionRequest(value: unknown): value is PetHostActionRe
   if (value.kind === "followUpMutation") {
     return isPetFollowUpMutationPayload(payload);
   }
-  if (value.kind === "noticeTriggerMutation") return isPetTriggerMutation(payload);
+  if (value.kind === "noticeTriggerMutation") return isPetTriggerMutationRequest(payload);
   if (value.kind === "notificationSettingsMutation")
     return isPetNotificationSettingsMutation(payload);
   if (value.kind === "sessionWatch") {

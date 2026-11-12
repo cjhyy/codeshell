@@ -175,6 +175,7 @@ function draft(overrides: Partial<NoticeRecordInput> = {}): NoticeRecordInput {
 }
 
 async function read(f: ReturnType<typeof fixture>, action: string, args = {}) {
+  f.tools.turnGate.begin(MIMI, true);
   return (await f.handlers.get(action)!(MIMI, args)) as Record<string, unknown>;
 }
 
@@ -262,6 +263,60 @@ describe("Notices query", () => {
       expect(serialized).not.toContain(secret);
   });
 
+  test("never returns reply codes, item labels or reply hints", async () => {
+    const f = fixture();
+    await f.ledger.load();
+    const slot = { channel: "wechat", ordinal: 2 };
+    clock = NOW - HOUR;
+    await f.ledger.record(
+      draft({
+        kind: "session.failed",
+        dedupeKey: "fail:1",
+        facts: { title: "修登录", error: "编译失败", target: { kind: "owner" } },
+        body: "② 「修登录」没做完：编译失败\n要重试，还是交给 Mimi？直接回我就行。",
+        actions: {
+          family: "failure",
+          code: "ABCDEF012345",
+          expiresAt: NOW + HOUR,
+          sessionId: SID,
+          runtime: "native",
+          retry: true,
+          slot,
+        },
+        decision: { outlet: "im", im: "wechat", reason: "away-last-inbound" },
+      }),
+    );
+    clock = NOW;
+    await f.ledger.record(
+      draft({
+        kind: "session.blocked",
+        dedupeKey: "blocked:1",
+        requestId: "req-1",
+        facts: {
+          title: "部署",
+          question: "要推到生产吗？",
+          options: [{ label: "推" }, { label: "先别" }],
+          nonDirectBody: "「部署」需要你决定，请打开桌面处理。",
+          target: { kind: "owner" },
+        },
+        body: "① 「部署」需要你决定：要推到生产吗？\n1. 推\n2. 先别\n直接回我你的决定；10:30 前有效。",
+        prompt: { code: "FEDCBA987654", deadline: NOW + HOUR, replies: ["推", "先别"], slot },
+        decision: { outlet: "im", im: "wechat", reason: "away-last-inbound" },
+      }),
+    );
+    const result = await read(f, PET_NOTICES_QUERY_ACTION, { limit: 5 });
+    const texts = (result.notices as Array<{ kind: string; text: string }>).map(
+      (notice) => notice.text,
+    );
+    expect(texts).toEqual([
+      "「部署」需要你决定：要推到生产吗？\n1. 推\n2. 先别",
+      "「修登录」没做完：编译失败",
+    ]);
+    const serialized = JSON.stringify(result);
+    for (const secret of ["ABCDEF012345", "FEDCBA987654", "①", "②", "直接回我", "10:30 前有效"])
+      expect(serialized).not.toContain(secret);
+  });
+
   test("filters by kind, session and time, and reports more past the limit", async () => {
     const f = fixture();
     await f.ledger.load();
@@ -288,8 +343,24 @@ describe("Notices query", () => {
     await expect(read(f, PET_NOTICES_QUERY_ACTION, { limit: 99 })).rejects.toThrow("invalid");
   });
 
+  test("reads only in the owner's running turn", async () => {
+    const f = fixture();
+    const notices = f.handlers.get(PET_NOTICES_QUERY_ACTION)!;
+    await expect(notices(MIMI, { limit: 3 })).rejects.toThrow("only in the owner's turn");
+    f.tools.turnGate.begin(MIMI, false); // a group chat's turn
+    await expect(notices(MIMI, { limit: 3 })).rejects.toThrow("only in the owner's turn");
+    f.tools.turnGate.begin(MIMI, true);
+    expect(await notices(MIMI, { limit: 3 })).toMatchObject({ ok: true });
+    f.tools.turnGate.end(MIMI);
+    await expect(f.handlers.get(PET_TRIGGERS_QUERY_ACTION)!(MIMI, {})).rejects.toThrow(
+      "only in the owner's turn",
+    );
+    expect(f.tools.turnGate.isOwnerConversation("wechat", "owner-dm")).toBe(true);
+  });
+
   test("answers only Mimi's own Session", async () => {
     const f = fixture();
+    f.tools.turnGate.begin(SID, true);
     await expect(f.handlers.get(PET_NOTICES_QUERY_ACTION)!(SID, { limit: 3 })).rejects.toThrow(
       "only Mimi",
     );
@@ -413,6 +484,59 @@ describe("ManageTrigger host action", () => {
     await change({ ruleId: "system-brief-morning", action: "disable" }, DESKTOP);
     expect(f.writes.at(-1)).toEqual({ briefs: { morning: { enabled: false } } });
     expect(f.wiring.settingsView().briefs?.morning).toEqual({ enabled: false, time: "08:30" });
+  });
+
+  test("several changes apply in order, each checked and reported on its own line", async () => {
+    const f = fixture();
+    const change = f.tools.hostActions.noticeTriggerMutation!;
+    await change({ ruleId: "system-brief-morning", action: "enable" }, DESKTOP);
+    const bell = await f.controls.setSessionBell(SID, true);
+    const version = f.wiring.ruleStore.get(bell.ruleId!)!.version;
+    const result = await change(
+      {
+        changes: [
+          { ruleId: "system-brief-morning", action: "disable" },
+          { ruleId: "system-heartbeat", action: "disable" },
+          { ruleId: bell.ruleId!, action: "pause", expectedVersion: version + 7 },
+          { ruleId: "rule-gone", action: "cancel" },
+          { ruleId: bell.ruleId!, action: "pause", expectedVersion: version },
+        ],
+      },
+      OWNER_DM,
+    );
+    expect(String(result.message).split("\n")).toEqual([
+      "晨报已关闭。",
+      "心跳本来就是关着的，没有变化。",
+      "会话「修登录」的提醒：这条提醒刚被改过，没有修改；请重新查看后再说。",
+      "rule-gone：找不到这条提醒（可能已经结束或被删除），没有修改。",
+      "会话「修登录」的提醒已暂停。",
+    ]);
+    expect((result.results as Array<{ ok: boolean }>).map((row) => row.ok)).toEqual([
+      true,
+      true,
+      false,
+      false,
+      true,
+    ]);
+    expect(f.wiring.settingsView().briefs?.morning.enabled).toBe(false);
+    expect(f.wiring.ruleStore.get(bell.ruleId!)!.state).toBe("paused");
+    // None applied: the action itself fails, with every row's reason.
+    await expect(
+      change(
+        {
+          changes: [
+            { ruleId: "rule-gone", action: "cancel" },
+            { ruleId: "all-sessions", action: "cancel" },
+          ],
+        },
+        DESKTOP,
+      ),
+    ).rejects.toThrow("不能删除");
+    // And a batch from a group chat changes nothing at all.
+    await expect(
+      change({ changes: [{ ruleId: "system-brief-morning", action: "enable" }] }, GROUP),
+    ).rejects.toThrow("群聊");
+    expect(f.wiring.settingsView().briefs?.morning.enabled).toBe(false);
   });
 
   test("the every-Session rule goes through its system-rule path", async () => {

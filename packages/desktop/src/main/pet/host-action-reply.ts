@@ -316,14 +316,14 @@ function renderFollowUpMutationLine(execution: PetHostActionExecution): string {
   return (title ? `${label}：「${title}」。` : `${label}。`) + timing;
 }
 
-/** Mimi's notice changes: the host wrote the exact outcome; one bounded line of it. */
+/** Mimi's notice changes: the host wrote the exact outcome (one line per change), bounded. */
 function renderHostMessageLine(execution: PetHostActionExecution): string {
   const message =
     typeof execution.result?.message === "string"
       ? execution.result.message
-          .replace(/[\u0000-\u001f\u007f]+/gu, " ")
+          .replace(/[\u0000-\u0009\u000b-\u001f\u007f]+/gu, " ")
           .trim()
-          .slice(0, 600)
+          .slice(0, 1_200)
       : "";
   return message || `${HOST_ACTION_LABELS[execution.kind] ?? execution.kind}已更新。`;
 }

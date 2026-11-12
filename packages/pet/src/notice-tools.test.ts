@@ -238,6 +238,49 @@ describe("ManageTrigger", () => {
     for (const request of recorded) expect(isPetHostActionRequest(request)).toBe(true);
   });
 
+  test("records several changes in one call, in order, and keeps the single form", async () => {
+    const { ctx, recorded } = hostContext();
+    expect(
+      await manageTriggerTool(
+        {
+          changes: [
+            { rule_id: "system-brief-morning", action: "disable", expected_version: 2 },
+            { rule_id: "system-heartbeat", action: "disable" },
+          ],
+        },
+        ctx,
+      ),
+    ).toContain("do not say it changed");
+    expect(recorded).toEqual([
+      {
+        kind: "noticeTriggerMutation",
+        payload: {
+          changes: [
+            { ruleId: "system-brief-morning", action: "disable", expectedVersion: 2 },
+            { ruleId: "system-heartbeat", action: "disable" },
+          ],
+        },
+      },
+    ]);
+    expect(isPetHostActionRequest(recorded[0])).toBe(true);
+    expect(PET_SYSTEM_PROMPT).toContain("停掉晨报和心跳");
+  });
+
+  test("refuses a malformed batch without recording it", async () => {
+    const { ctx, recorded } = hostContext();
+    const row = { rule_id: "system-heartbeat", action: "disable" };
+    for (const args of [
+      { changes: [] },
+      { changes: Array.from({ length: 6 }, () => row) },
+      { changes: [row, { rule_id: "r", action: "set_time" }] },
+      { changes: [{ ...row, channel: "wechat" }] },
+      { changes: [row], rule_id: "r", action: "pause" },
+      { changes: "all" },
+    ])
+      expect(await manageTriggerTool(args, ctx)).toStartWith("Error:");
+    expect(recorded).toEqual([]);
+  });
+
   test("refuses malformed changes without recording them", async () => {
     const { ctx, recorded } = hostContext();
     for (const args of [

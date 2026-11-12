@@ -1,6 +1,7 @@
 import {
   isPetNotificationSettingsMutation,
-  isPetTriggerMutation,
+  isPetTriggerMutationRequest,
+  petTriggerChanges,
   PET_SNOOZE_MAX_MINUTES,
   type PetNotificationSettingsMutation,
   type PetTriggerMutation,
@@ -123,16 +124,45 @@ export function createMimiNoticeChanges(deps: MimiNoticeChangesDeps) {
     await deps.writeNotificationSettings(notifications);
   };
 
+  /**
+   * One ManageTrigger call: a single change (its refusal fails the action),
+   * or up to five applied in order against fresh versions, each reported on
+   * its own line; only when none of them applied does the action fail.
+   */
   async function changeTrigger(
     payload: Record<string, unknown>,
     context?: PetHostActionContext,
   ): Promise<Record<string, unknown>> {
     const refusal = ownerTurnRefusal(context, deps.isOwnerConversation);
     if (refusal) throw new Error(refusal);
-    if (!isPetTriggerMutation(payload)) throw new Error("invalid trigger change");
-    const change: PetTriggerMutation = payload;
+    if (!isPetTriggerMutationRequest(payload)) throw new Error("invalid trigger change");
     const controls = deps.controls();
     if (!controls) throw new Error("提醒规则还没有准备好，没有修改。");
+    if (!("changes" in payload)) return changeOne(controls, payload);
+    const lines: string[] = [];
+    const results: Array<Record<string, unknown>> = [];
+    for (const change of petTriggerChanges(payload)) {
+      try {
+        const result = await changeOne(controls, change);
+        results.push({ ok: true, ...result });
+        lines.push(String(result.message));
+      } catch (error) {
+        const rule = (await controls.rules().catch(() => [])).find(
+          (row) => row.id === change.ruleId,
+        );
+        const reason = error instanceof Error ? error.message : String(error);
+        results.push({ ok: false, ruleId: change.ruleId, error: reason });
+        lines.push(`${rule ? triggerName(rule) : change.ruleId}：${reason}`);
+      }
+    }
+    if (results.every((result) => result.ok === false)) throw new Error(lines.join("\n"));
+    return { message: lines.join("\n"), results };
+  }
+
+  async function changeOne(
+    controls: MimiNoticeRuleControls,
+    change: PetTriggerMutation,
+  ): Promise<Record<string, unknown>> {
     const rule = (await controls.rules()).find((row) => row.id === change.ruleId);
     if (!rule) throw new Error(REFUSALS.not_found);
     if (change.expectedVersion !== undefined && change.expectedVersion !== rule.version)
