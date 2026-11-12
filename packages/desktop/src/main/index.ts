@@ -156,7 +156,8 @@ import { getSessionCwdIndex } from "./session-cwd-index.js";
 import { wirePetNotices, type PetNoticeWiring } from "./pet/pet-notice-wiring.js";
 import { withExternalDecisions } from "./pet/pet-notice-external-decisions.js";
 import { createExternalSessionCatalog } from "./pet/pet-notice-external-sessions.js";
-import { createPetNoticeControls } from "./pet/pet-notice-ipc.js";
+import { createPetNoticeControls, type PetNoticeControls } from "./pet/pet-notice-ipc.js";
+import { wireMimiNoticeTools } from "./pet/pet-mimi-notice-tools.js";
 import { PetWorkInboxStore } from "./pet/pet-work-inbox-store.js";
 import { PetHostActionReceiptStore } from "./pet/pet-host-action-receipts.js";
 import { archivePetSessionsBySelector } from "./pet/pet-session-archive.js";
@@ -1979,6 +1980,24 @@ async function createWindow(): Promise<BrowserWindow> {
       lastUserMessage: async (sessionId) => lastUserMessageIn(await getSessionEvents(sessionId)),
     });
     petNotices = notices;
+    let petNoticeControls: PetNoticeControls | undefined;
+    const writePetNotificationSettings = async (notifications: Record<string, unknown>) => {
+      await writeSettings("user", { pet: { notifications } });
+      notices.settingsChanged();
+    };
+    // Mimi's Notices / Triggers / ManageTrigger / NotificationSettings (design §4.7).
+    const mimiNoticeTools = wireMimiNoticeTools({
+      bridge,
+      isMimiSession: (sessionId) => sessionId === mimiSessionId,
+      ledger: notices.ledger,
+      controls: () => petNoticeControls,
+      settingsView: notices.settingsView,
+      writeNotificationSettings: writePetNotificationSettings,
+      channels: () => imGatewayService.ownerChannels(),
+      sessionTitle: notices.sessionTitle,
+      isOwnerConversation: (channel, target) =>
+        imGatewayService.isOwnerConversation(channel, target),
+    });
     const petMemoryStoreInstance = new PetMemoryStore(
       resolve(app.getPath("userData"), "pet", "memories.json"),
     );
@@ -2353,6 +2372,7 @@ async function createWindow(): Promise<BrowserWindow> {
       // tools; each runs only after her turn, and the real outcome is folded
       // into the reply. The key set gates which tools the worker exposes.
       hostActions: {
+        ...mimiNoticeTools.hostActions,
         mobileRemote: async (payload) => {
           if (payload.action === "close") {
             await stopMobileRemote();
@@ -2770,18 +2790,15 @@ async function createWindow(): Promise<BrowserWindow> {
       aggregator,
       dispatcher: petDispatchService,
       attention: notices.attention,
-      notices: createPetNoticeControls({
+      notices: (petNoticeControls = createPetNoticeControls({
         notices,
         ownerChannels: () => imGatewayService.ownerChannels(),
         goals: externalGoalSessions,
         proactive: () => petProactive.status(),
-        writeNotificationSettings: async (notifications) => {
-          await writeSettings("user", { pet: { notifications } });
-          notices.settingsChanged();
-        },
+        writeNotificationSettings: writePetNotificationSettings,
         cancelFollowUp: (followUpId, expectedRevision) =>
           followUpHost({ action: "cancel", followUpId, expectedRevision }),
-      }),
+      })),
       workInbox: petWorkInbox,
       // Read-only topic-segment view for the Mimi chat UI. `segments` carries
       // the message-keyed boundary history (keyed by each segment's first-turn
@@ -2851,6 +2868,11 @@ async function createWindow(): Promise<BrowserWindow> {
       windows: () => BrowserWindow.getAllWindows(),
       ready: petInitialization,
     });
+    const disposePetIpcRoutes = disposePetIpc;
+    disposePetIpc = () => {
+      mimiNoticeTools.dispose();
+      disposePetIpcRoutes();
+    };
     // The renderer immediately publishes its active session and reads Mimi's
     // state. Register those handlers before loading it; handlers themselves
     // await hydration, so the interface can still load while indexes recover.

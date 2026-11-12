@@ -20,6 +20,8 @@ const HOST_ACTION_LABELS: Record<string, string> = {
   sessionArchive: "Session 归档",
   sessionBind: "进入 Session",
   outboundMessage: "主动消息",
+  noticeTriggerMutation: "提醒规则",
+  notificationSettingsMutation: "通知设置",
 };
 
 const LONG_TASK_ACTION_LABELS: Record<string, string> = {
@@ -108,6 +110,11 @@ export async function enrichPetChatReplyWithHostActions(
       lines.push(renderSessionBindLine(execution));
     } else if (execution.kind === "outboundMessage") {
       lines.push(renderOutboundMessageLine(execution));
+    } else if (
+      execution.kind === "noticeTriggerMutation" ||
+      execution.kind === "notificationSettingsMutation"
+    ) {
+      lines.push(renderHostMessageLine(execution));
     } else if (execution.kind === "gatewayReply") {
       const rendered = renderGatewayReply(execution, attachmentKinds);
       if (!rendered) {
@@ -307,6 +314,18 @@ function renderFollowUpMutationLine(execution: PetHostActionExecution): string {
     timing = `时间：${format(wakeAt)}（${timezone}）。`;
   }
   return (title ? `${label}：「${title}」。` : `${label}。`) + timing;
+}
+
+/** Mimi's notice changes: the host wrote the exact outcome; one bounded line of it. */
+function renderHostMessageLine(execution: PetHostActionExecution): string {
+  const message =
+    typeof execution.result?.message === "string"
+      ? execution.result.message
+          .replace(/[\u0000-\u001f\u007f]+/gu, " ")
+          .trim()
+          .slice(0, 600)
+      : "";
+  return message || `${HOST_ACTION_LABELS[execution.kind] ?? execution.kind}已更新。`;
 }
 
 function renderSessionArchiveLine(execution: PetHostActionExecution): string {

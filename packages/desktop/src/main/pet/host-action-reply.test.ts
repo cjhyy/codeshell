@@ -359,6 +359,30 @@ describe("enrichPetChatReplyWithHostActions", () => {
     expect(enriched.text).toContain("任务「另一个任务」在订阅前就已完成");
   });
 
+  test("appends the host's own outcome for Mimi's notice changes, and refusals as failures", async () => {
+    const enriched = await enrichPetChatReplyWithHostActions(
+      "好的，我来改。",
+      [
+        {
+          kind: "noticeTriggerMutation",
+          payload: { ruleId: "system-brief-morning", action: "disable" },
+          ok: true,
+          result: { message: "晨报已关闭。", ruleId: "system-brief-morning" },
+        },
+        {
+          kind: "notificationSettingsMutation",
+          payload: { snooze: { minutes: 120 } },
+          ok: false,
+          error: "群聊里不能修改提醒和通知设置，没有修改。请在桌面或和 Mimi 的私聊里说。",
+        },
+      ],
+      { qrDir: join(tmpdir(), "unused"), attachmentKinds: [] },
+    );
+    expect(enriched.text).toBe(
+      "好的，我来改。\n\n晨报已关闭。\n通知设置操作失败：群聊里不能修改提醒和通知设置，没有修改。请在桌面或和 Mimi 的私聊里说。",
+    );
+  });
+
   test("shows the delivered body above the outbound receipt", async () => {
     const sourceClientMessageId = "message-with-body";
     const enriched = await enrichPetChatReplyWithHostActions(

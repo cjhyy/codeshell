@@ -49,7 +49,7 @@ describe("long-task closure", () => {
       reply: true,
       target: { kind: "route", route },
       body: "登录修好了，测试全过。",
-      facts: { title: "修登录", summary: "登录修好了" },
+      facts: { title: "修登录", summary: "登录修好了", taskId: "task-1" },
     });
     // The replay of the same closure is a duplicate: exactly one message goes out.
     expect(current.published).toHaveLength(1);

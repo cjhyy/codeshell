@@ -164,6 +164,8 @@ export function createTaskClosureAdapter(deps: PetTaskClosureDeps): PetTaskClosu
         ...(title ? { title } : {}),
         ...(summary ? { summary } : {}),
         ...(error ? { error } : {}),
+        // The long task it closes, for Mimi's Notices tool.
+        taskId: task.id,
       },
       ...(body ? { body } : {}),
       // The owner asked for this over IM: their answer is never held back.

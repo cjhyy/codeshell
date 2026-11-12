@@ -1760,6 +1760,8 @@ export class PetDispatchService {
           "outboundMessage",
           "memory",
           "mobileRemote",
+          "noticeTriggerMutation",
+          "notificationSettingsMutation",
         ]);
         const hostActionKinds = command.hostWake
           ? []

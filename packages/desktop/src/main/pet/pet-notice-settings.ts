@@ -91,6 +91,33 @@ export function parsePetNotificationSettings(userSettings: unknown): PetNotifica
   };
 }
 
+/**
+ * The first field of a partial `pet.notifications` write the settings schema
+ * would drop (it drops rather than rejects a malformed field); undefined when
+ * every field survives as written. A null (the writer's "delete") is fine.
+ */
+export function notificationsWriteProblem(write: Record<string, unknown>): string | undefined {
+  const present = Object.fromEntries(Object.entries(write).filter(([, value]) => value !== null));
+  const parsed = NOTIFICATIONS_SCHEMA.safeParse(present);
+  const kept = (parsed.success ? parsed.data : undefined) ?? {};
+  for (const [key, value] of Object.entries(present))
+    if (canonical((kept as Record<string, unknown>)[key]) !== canonical(value)) return key;
+  return undefined;
+}
+
+/** JSON with object keys sorted, so field order never matters. */
+function canonical(value: unknown): string {
+  return JSON.stringify(value, (_key, inner: unknown) =>
+    isRecord(inner)
+      ? Object.fromEntries(
+          Object.keys(inner)
+            .sort()
+            .map((key) => [key, inner[key]]),
+        )
+      : inner,
+  );
+}
+
 /** The quiet-hours line NotifyMe's reply carries; undefined when there is no window. */
 export function quietHoursText(settings: PetNotificationSettings): string | undefined {
   const window = settings.quietHours;
