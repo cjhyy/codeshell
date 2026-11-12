@@ -228,6 +228,60 @@ describe("TurnLoop usage_update carries cache tokens", () => {
     expect(calls[1]!.options.promptCache.stablePrefixMessageCount).toBe(1);
   });
 
+  it("asks the engine to sync the run context before each model request", async () => {
+    const userMessage: Message = { role: "user", content: "task" };
+    const contextMessage: Message = { role: "user", content: "<context>snapshot</context>" };
+    const responses: LLMResponse[] = [
+      {
+        text: "part one",
+        toolCalls: [],
+        stopReason: "max_tokens",
+        usage: { promptTokens: 100, completionTokens: 10, totalTokens: 110 },
+      },
+      {
+        text: "part two",
+        toolCalls: [],
+        stopReason: "stop",
+        usage: { promptTokens: 120, completionTokens: 10, totalTokens: 130 },
+      },
+    ];
+    const { deps } = makeDeps(responses);
+    const calls: Array<{ messages: Message[]; options: any }> = [];
+    let responseIndex = 0;
+    const call = async (
+      _system: string,
+      messages: Message[],
+      _tools: unknown,
+      _onStream: unknown,
+      _signal: unknown,
+      options: any,
+    ): Promise<LLMResponse> => {
+      calls.push({ messages: [...messages], options });
+      return responses[responseIndex++]!;
+    };
+    (deps.model as any).call = call;
+    (deps.model as any).callWithoutStreaming = call;
+    let syncCalls = 0;
+
+    await new TurnLoop(deps, {
+      maxTurns: 5,
+      maxToolCallsPerTurn: 10,
+      // The engine appends context that history lacks; here, on the first ask.
+      syncRunContext: (messages) => {
+        syncCalls += 1;
+        if (!messages.includes(contextMessage)) messages.push(contextMessage);
+      },
+    }).run([userMessage]);
+
+    expect(calls).toHaveLength(2);
+    expect(syncCalls).toBe(1);
+    expect(calls[0]!.messages).toEqual([userMessage, contextMessage]);
+    // It is ordinary history afterwards: in place, and not a volatile boundary.
+    expect(calls[1]!.messages[1]).toBe(contextMessage);
+    expect(calls[0]!.options.promptCache.stablePrefixMessageCount).toBe(2);
+    expect(calls[1]!.options.promptCache.stablePrefixMessageCount).toBe(calls[1]!.messages.length);
+  });
+
   it("forwards a primary diagnostic sample with the effective prefix fingerprint", async () => {
     const { deps } = makeDeps([respWithCache()]);
     const samples: any[] = [];
