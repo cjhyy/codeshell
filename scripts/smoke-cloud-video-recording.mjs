@@ -15,7 +15,9 @@ export async function verifyCloudVideoRecording({
   readDocument,
   until,
   evidenceDir,
+  setStep = () => {},
 }) {
+  setStep("video-record-mode");
   const tab = () => frame.locator('#studio .rail [data-tab="recording"]').click();
   await tab();
   assert.equal(await frame.evaluate(() => window.origin), "null");
@@ -25,6 +27,7 @@ export async function verifyCloudVideoRecording({
   await frame.locator('[data-action="rec-host-start"]').click();
   const dialog = page.getByRole("region", { name: "录音", exact: true });
   await dialog.waitFor();
+  setStep("video-record-capture");
   await dialog.getByRole("button", { name: "开始录音", exact: true }).click();
   await page.waitForFunction(
     () => {
@@ -37,6 +40,7 @@ export async function verifyCloudVideoRecording({
     null,
     { timeout: 15000 },
   );
+  setStep("video-record-review");
   await dialog.getByRole("button", { name: "停止录音", exact: true }).click();
   await dialog.locator("audio").waitFor();
   await dialog.locator("audio").evaluate((audio) => audio.play());
@@ -46,14 +50,17 @@ export async function verifyCloudVideoRecording({
     path: join(evidenceDir, "cloud-video-recording-review.png"),
     fullPage: true,
   });
+  setStep("video-record-backup");
   const backup = page.waitForEvent("download");
   await dialog.getByRole("link", { name: "下载本机备份" }).click();
   const bytes = await readFile(await (await backup).path());
   assert.equal(bytes.subarray(0, 4).toString("hex"), "1a45dfa3");
   const resourceId = `asset-${createHash("sha256").update(bytes).digest("hex")}`;
+  setStep("video-record-upload");
   await dialog.getByRole("button", { name: "保存到当前项目", exact: true }).click();
   const row = frame.locator(`[data-recording-resource="${resourceId}"]`);
   await row.waitFor({ timeout: 150000 });
+  setStep("video-record-resource");
   assert.equal(
     (await readDocument()).document.assets.some((asset) => asset.resourceId === resourceId),
     false,
@@ -62,6 +69,7 @@ export async function verifyCloudVideoRecording({
   assert.equal(resource.bytes, bytes.length);
   assert.equal(resource.mimeType, "audio/webm");
   await assert.rejects(otherCall("resources.get", { id: resourceId }));
+  setStep("video-record-reopen");
   await page.getByRole("button", { name: "返回面板", exact: true }).click();
   await page
     .locator(".panels-card")
@@ -76,6 +84,7 @@ export async function verifyCloudVideoRecording({
   await frame.locator('[data-action="rec-host-refresh"]').click();
   const recovered = frame.locator(`[data-recording-resource="${resourceId}"]`);
   await recovered.waitFor({ timeout: 150000 });
+  setStep("video-record-attach");
   await frame.locator("#host-recording-name").fill("Cloud recorded original");
   await recovered.getByRole("button", { name: "保存到素材库", exact: true }).click();
   const asset = await until(async () => {
@@ -89,6 +98,7 @@ export async function verifyCloudVideoRecording({
   assert.equal(asset.name, "Cloud recorded original");
   assert.ok(Number.isSafeInteger(asset.duration) && asset.duration > 0);
   await frame.getByText("录音已加入本工程素材库。", { exact: true }).waitFor({ timeout: 150000 });
+  setStep("video-record-deduplicate");
   await recovered.getByRole("button", { name: "保存到素材库", exact: true }).click();
   await frame.getByText("录音已加入本工程素材库。", { exact: true }).waitFor({ timeout: 150000 });
   await until(() =>
@@ -98,6 +108,7 @@ export async function verifyCloudVideoRecording({
     (await readDocument()).document.assets.filter((item) => item.resourceId === resourceId).length,
     1,
   );
+  setStep("video-record-playback");
   await verifyCloudSourcePlayback({ frame, assetId: asset.id, kind: "audio", until });
   await page.screenshot({
     path: join(evidenceDir, "cloud-video-recording-imported.png"),

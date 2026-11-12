@@ -336,6 +336,9 @@ export async function verifyCloudVideoRecovery({
       until,
       evidenceDir,
       readDocument: () => readDocument(projectA),
+      setStep: (value) => {
+        step = value;
+      },
     });
     reopened.frame = recorded.frame;
     reopened.call = recorded.call;

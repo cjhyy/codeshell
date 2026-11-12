@@ -243,6 +243,186 @@ function withFixture(run: (value: ReturnType<typeof fixture>) => void) {
   }
 }
 
+// Exact default audio prepare calls from Panel 6036db38's media-processors.ts.
+function recordedAudio(f: ReturnType<typeof fixture>) {
+  const input = join(f.cwd, "inputs/source-0.bin");
+  const work = join(f.cwd, "work");
+  const thumbnail = join(f.cwd, "outputs", `thumbnail-${UUID}.png`);
+  const proxy = join(f.cwd, "outputs", `proxy-${UUID}.m4a`);
+  f.file(input);
+  mkdirSync(work, { mode: 0o700 });
+  mkdirSync(dirname(thumbnail), { mode: 0o700 });
+  const sourceOptions = [
+    "-protocol_whitelist",
+    "file,pipe",
+    "-format_whitelist",
+    "mov,matroska,webm,avi,mp3,wav,aiff,flac,ogg,aac,png_pipe,jpeg_pipe,webp_pipe,bmp_pipe,tiff_pipe,gif,j2k_pipe",
+  ];
+  const encode = ["-hide_banner", "-nostdin", "-y", "-progress", "pipe:1", "-nostats"];
+  return {
+    input,
+    work,
+    thumbnail,
+    proxy,
+    metadata: [
+      "-v",
+      "error",
+      "-show_format",
+      "-show_streams",
+      "-of",
+      "json",
+      ...sourceOptions,
+      input,
+    ],
+    packets: [
+      "-v",
+      "error",
+      "-show_entries",
+      "packet=stream_index,pts_time,dts_time,duration_time",
+      "-of",
+      "compact=p=0:nk=0",
+      ...sourceOptions,
+      input,
+    ],
+    image: [
+      ...encode,
+      ...sourceOptions,
+      "-i",
+      input,
+      "-filter_complex",
+      "showwavespic=s=480x160:colors=0x8fd6ad",
+      "-frames:v",
+      "1",
+      thumbnail,
+    ],
+    audio: [
+      ...encode,
+      ...sourceOptions,
+      "-i",
+      input,
+      "-vn",
+      "-map",
+      "0:a:0?",
+      "-c:a",
+      "aac",
+      "-b:a",
+      "128k",
+      "-movflags",
+      "+faststart",
+      "-t",
+      "2.123",
+      proxy,
+    ],
+    waveform: [
+      "-hide_banner",
+      "-nostdin",
+      "-v",
+      "error",
+      "-progress",
+      "pipe:2",
+      ...sourceOptions,
+      "-i",
+      input,
+      "-vn",
+      "-ac",
+      "1",
+      "-ar",
+      "8000",
+      "-f",
+      "f32le",
+      "pipe:1",
+    ],
+    silence: [
+      "-hide_banner",
+      "-nostdin",
+      "-progress",
+      "pipe:1",
+      ...sourceOptions,
+      "-i",
+      input,
+      "-vn",
+      "-af",
+      "silencedetect=noise=-35dB:d=0.45",
+      "-f",
+      "null",
+      "-",
+    ],
+  };
+}
+
+test("recorded WebM permits exact packet duration and all four default audio preparations", () =>
+  withFixture((f) => {
+    const r = recordedAudio(f);
+    for (const args of [r.metadata, r.packets]) expect(validate("ffprobe", args, f.cwd)).toBe(true);
+    for (const args of [r.image, r.audio]) expect(validate("ffmpeg", args, r.work)).toBe(true);
+    for (const args of [r.waveform, r.silence]) expect(validate("ffmpeg", args, f.cwd)).toBe(true);
+    // The new input is not available to the separate canonical editor consumers.
+    expect(validate("ffprobe", [...f.sourceProbe.slice(0, -1), r.input], f.cwd)).toBe(false);
+    expect(() => validate("ffmpeg", r.image, f.cwd)).toThrow("custody refused");
+    expect(() => validate("ffprobe", r.metadata, r.work)).toThrow("custody refused");
+  }));
+
+test("recorded audio refuses changed source, network, filters, durations, outputs and extra argv", () =>
+  withFixture((f) => {
+    const r = recordedAudio(f);
+    const replace = (args: string[], from: string, to: string) =>
+      args.map((arg) => (arg === from ? to : arg));
+    for (const input of [
+      join(f.cwd, "inputs/source-1.bin"),
+      join(f.root, "inputs/source-0.bin"),
+      "http://127.0.0.1:18791/a.webm",
+      "concat:/etc/passwd|/etc/shadow",
+    ])
+      expect(validate("ffprobe", replace(r.metadata, r.input, input), f.cwd)).toBe(false);
+    for (const args of [
+      replace(r.packets, "file,pipe", "file,pipe,http,tcp"),
+      [...r.packets, "-i", r.input],
+      replace(r.packets, "packet=stream_index,pts_time,dts_time,duration_time", "packet=data"),
+    ])
+      expect(validate("ffprobe", args, f.cwd)).toBe(false);
+    for (const args of [
+      replace(r.image, "showwavespic=s=480x160:colors=0x8fd6ad", "amovie=/etc/passwd"),
+      replace(r.image, r.thumbnail, join(f.cwd, "outputs/other.png")),
+      replace(r.audio, r.proxy, join(f.root, `proxy-${UUID}.m4a`)),
+      ...["0", "601", "NaN", "1+1"].map((value) => replace(r.audio, "2.123", value)),
+      [...r.audio, "-filter_complex_script", "/tmp/filter.txt"],
+    ])
+      expect(validate("ffmpeg", args, r.work)).toBe(false);
+    expect(
+      validate(
+        "ffmpeg",
+        replace(r.silence, "silencedetect=noise=-35dB:d=0.45", "silencedetect=noise=-20dB:d=0.1"),
+        f.cwd,
+      ),
+    ).toBe(false);
+    expect(validate("ffmpeg", replace(r.waveform, "8000", "48000"), f.cwd)).toBe(false);
+  }));
+
+test("recorded audio retains owned private parent, no-link input and new-output custody", () => {
+  withFixture((f) => {
+    const r = recordedAudio(f);
+    f.file(r.thumbnail);
+    expect(() => validate("ffmpeg", r.image, r.work)).toThrow("custody refused");
+    rmSync(r.thumbnail);
+    chmodSync(dirname(r.thumbnail), 0o755);
+    expect(() => validate("ffmpeg", r.image, r.work)).toThrow("custody refused");
+  });
+  withFixture((f) => {
+    const r = recordedAudio(f);
+    rmSync(r.input);
+    symlinkSync(f.input, r.input);
+    expect(() => validate("ffprobe", r.metadata, f.cwd)).toThrow("custody refused");
+    rmSync(r.input);
+    linkSync(f.input, r.input);
+    expect(() => validate("ffprobe", r.metadata, f.cwd)).toThrow("custody refused");
+  });
+  withFixture((f) => {
+    const r = recordedAudio(f);
+    chmodSync(r.work, 0o755);
+    expect(() => validate("ffmpeg", r.audio, r.work)).toThrow("custody refused");
+  });
+});
+
 test("frozen WAV import uses both actual source metadata and decoded frame probes", () =>
   withFixture((f) => {
     expect(validate("ffprobe", f.sourceProbe, f.cwd)).toBe(true);

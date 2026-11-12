@@ -39,6 +39,16 @@ test("catalog-follow, rollback and recovery failures retain their fixed diagnost
     "video-restore-edit",
     "video-status-probe",
     "video-recording",
+    "video-record-mode",
+    "video-record-capture",
+    "video-record-review",
+    "video-record-backup",
+    "video-record-upload",
+    "video-record-resource",
+    "video-record-reopen",
+    "video-record-attach",
+    "video-record-deduplicate",
+    "video-record-playback",
     "video-media",
     "video-final-document",
     "video-restart-document",
@@ -59,6 +69,17 @@ test("catalog-follow, rollback and recovery failures retain their fixed diagnost
     });
     expect(JSON.stringify(summary)).not.toContain(secret);
   }
+});
+
+test("recording guard failures expose a fixed category, step and fingerprint only", () => {
+  const message = `Docker candidate native argv refused ${secret}`;
+  const summary = summarizeFailure(
+    panelLifecycleFailure(new Error(message), "video-studio", "video-record-attach"),
+  );
+  expect(summary.categories).toEqual(["native-argv-refusal"]);
+  expect(summary.panelLifecycle.step).toBe("video-record-attach");
+  expect(summary.sha256).toBe(digest(message));
+  expect(JSON.stringify(summary)).not.toContain(secret);
 });
 
 test("nested Panel steps retain the original cause and fingerprint without its private text", () => {
