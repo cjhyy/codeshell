@@ -147,7 +147,7 @@ export function UsageCacheChart({ timeline }: { timeline: UsageTimeline }) {
                     {tableRows.map(({ start, index }) => (
                       <tr key={start} className="border-t border-border">
                         <th scope="row" className="whitespace-nowrap px-3 py-2 font-normal">
-                          {format.period(start, data.bucketMs)}
+                          {format.period(start, data.bucketEnds[index]!, data.bucketMs)}
                         </th>
                         {visible.map((entry) => {
                           const value = entry.points[index]!;

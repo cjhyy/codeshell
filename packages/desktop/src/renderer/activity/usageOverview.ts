@@ -1,9 +1,9 @@
 import type { UsageQuery, UsageSummary } from "@cjhyy/code-shell-core";
 import {
-  bucketSizeFor,
   finishTimeline,
-  localOffsetMs,
+  localOffsetAt,
   mergeTimeRows,
+  planBuckets,
   rangeWindowMs,
   type UsageTimeline,
   type UsageTimeRow,
@@ -50,11 +50,11 @@ export async function readUsageOverview(
   range: UsageRange,
   cancelled: () => boolean,
   capturedAt = Date.now(),
-  offsetMs = localOffsetMs(capturedAt),
+  offsetAt = localOffsetAt,
 ): Promise<UsageOverview | undefined> {
   const windowMs = rangeWindowMs(range);
   const since = windowMs === undefined ? undefined : Math.max(0, capturedAt - windowMs);
-  const bucketMs = bucketSizeFor(range);
+  const { bucketMs, queryBucketMs, offsetMs } = planBuckets(range, since, capturedAt, offsetAt);
   const timeRows = new Map<string, UsageTimeRow>();
   const totals = emptyTotals();
   const models = new Map<string, UsageTotals & UsageIdentity>();
@@ -71,7 +71,7 @@ export async function readUsageOverview(
       until: capturedAt,
       ...(since === undefined ? {} : { since }),
       limit: 10_000,
-      bucketMs,
+      bucketMs: queryBucketMs,
       bucketOffsetMs: offsetMs,
       ...(cursor ? { cursor } : {}),
     });
@@ -111,7 +111,14 @@ export async function readUsageOverview(
     partial: partial || !complete,
     scannedReceipts,
     capturedAt,
-    timeline: finishTimeline(timeRows, { range, bucketMs, offsetMs, since, until: capturedAt }),
+    timeline: finishTimeline(timeRows, {
+      range,
+      bucketMs,
+      offsetMs,
+      offsetAt,
+      since,
+      until: capturedAt,
+    }),
   };
 }
 

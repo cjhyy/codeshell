@@ -294,7 +294,9 @@ export function UsageCachePlot({
           className="cs-popup-surface pointer-events-none absolute top-2 z-10 w-max max-w-[min(20rem,calc(100%-1rem))] rounded-lg px-3 py-2 text-xs"
           style={tooltipPlacement(anchor, available)}
         >
-          <p className="font-medium">{format.period(data.buckets[current]!, data.bucketMs)}</p>
+          <p className="font-medium">
+            {format.period(data.buckets[current]!, data.bucketEnds[current]!, data.bucketMs)}
+          </p>
           {!rows.length && (
             <p className="mt-1 text-muted-foreground">{t("usagePage.cacheChartNoRequests")}</p>
           )}

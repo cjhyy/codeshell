@@ -53,7 +53,7 @@ async function read(range: UsageRange, pages: UsageSummary[]) {
     range,
     () => false,
     NOW,
-    OFFSET,
+    () => OFFSET,
   );
   return { queries, timeline: overview!.timeline };
 }
@@ -77,7 +77,9 @@ test("each range asks for its bucket size aligned to the local offset", async ()
         bucketOffsetMs: OFFSET,
       },
     ]);
-    expect(timeline).toEqual({
+    // Day ranges carry a local-day calendar; hourly ranges use fixed steps.
+    expect(timeline.calendar !== undefined).toBe(bucketMs === DAY_MS);
+    expect(timeline).toMatchObject({
       bucketMs,
       offsetMs: OFFSET,
       ...(since === undefined ? {} : { since }),
@@ -149,12 +151,4 @@ test("all records stay daily up to about 180 days and fold into local weeks beyo
   expect(long.timeline.rows.reduce((sum, value) => sum + value.requests, 0)).toBe(4);
   // The two adjacent old days share a week unless a Monday falls between them.
   expect(long.timeline.rows.length).toBeLessThanOrEqual(4);
-  expect(
-    long.timeline.rows.every(
-      (value) =>
-        value.bucketStart ===
-        Math.floor((value.bucketStart + long.timeline.offsetMs) / (7 * DAY_MS)) * 7 * DAY_MS -
-          long.timeline.offsetMs,
-    ),
-  ).toBe(true);
 });

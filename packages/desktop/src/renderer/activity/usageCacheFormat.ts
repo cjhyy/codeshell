@@ -11,7 +11,7 @@ export interface CacheFormatters {
   compact(value: number): string;
   full(value: number): string;
   /** The span one bucket covers, for tooltips and the table. */
-  period(start: number, bucketMs: number): string;
+  period(start: number, end: number, bucketMs: number): string;
   /** A short axis label for a bucket start. */
   tick(start: number, bucketMs: number, daysOnly: boolean): string;
 }
@@ -30,12 +30,12 @@ export function cacheFormatters(lang: string): CacheFormatters {
   return {
     compact: (value) => compact.format(value),
     full: (value) => full.format(value),
-    period(start, bucketMs) {
+    period(start, end, bucketMs) {
       if (bucketMs < DAY_MS)
-        return `${day.format(start)} ${time.format(start)}–${time.format(start + bucketMs)}`;
+        return `${day.format(start)} ${time.format(start)}–${time.format(end)}`;
       if (bucketMs === DAY_MS) return day.format(start);
       // The last instant of the bucket still belongs to its final day.
-      return `${day.format(start)} – ${day.format(start + bucketMs - 1)}`;
+      return `${day.format(start)} – ${day.format(end - 1)}`;
     },
     tick: (start, bucketMs, daysOnly) =>
       bucketMs < DAY_MS && !daysOnly ? time.format(start) : shortDay.format(start),

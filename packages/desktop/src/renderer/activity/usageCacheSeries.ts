@@ -1,5 +1,5 @@
 import { isCliUsage } from "./usageOverview";
-import { bucketStartOf, type UsageTimeline, type UsageTimeRow } from "./usageTimeline";
+import { fixedCalendar, type UsageTimeline, type UsageTimeRow } from "./usageTimeline";
 
 /** Below this many input tokens a bucket's ratio is noise, not a caching signal. */
 export const MIN_PROMPT_TOKENS = 2_000;
@@ -33,6 +33,8 @@ export interface CacheChartData {
   bucketMs: number;
   /** Contiguous bucket starts, oldest first. */
   buckets: number[];
+  /** Exclusive end of each bucket; local days are not all the same length. */
+  bucketEnds: number[];
   series: CacheSeries[];
 }
 
@@ -74,8 +76,9 @@ export function buildCacheSeries(
   timeline: UsageTimeline,
   options: { mainOnly: boolean },
 ): CacheChartData {
-  const { bucketMs, offsetMs } = timeline;
-  const empty: CacheChartData = { bucketMs, buckets: [], series: [] };
+  const { bucketMs } = timeline;
+  const calendar = timeline.calendar ?? fixedCalendar(bucketMs, timeline.offsetMs);
+  const empty: CacheChartData = { bucketMs, buckets: [], bucketEnds: [], series: [] };
   // CLI turn aggregates without cache data would only draw a false 0% line.
   const cliCached = new Set<string>();
   for (const row of timeline.rows)
@@ -89,11 +92,12 @@ export function buildCacheSeries(
   let first = timeline.since ?? Infinity;
   if (timeline.since === undefined)
     for (const row of rows) first = Math.min(first, row.bucketStart);
-  const last = bucketStartOf(timeline.until, bucketMs, offsetMs);
-  const buckets: number[] = [];
-  for (let start = bucketStartOf(first, bucketMs, offsetMs); start <= last; start += bucketMs)
+  const last = calendar.startOf(timeline.until);
+  let buckets: number[] = [];
+  for (let start = calendar.startOf(first); start <= last; start = calendar.next(start))
     buckets.push(start);
-  if (buckets.length > MAX_BUCKETS) buckets.splice(0, buckets.length - MAX_BUCKETS);
+  buckets = buckets.slice(-MAX_BUCKETS);
+  const bucketEnds = buckets.map((start) => calendar.next(start));
   const indexOf = new Map(buckets.map((start, index) => [start, index]));
 
   // One ranking for the whole range: main-conversation input first, so a model
@@ -145,7 +149,12 @@ export function buildCacheSeries(
   }
   if (!series.size) return empty;
   for (const entry of series.values()) entry.promptTokens = settle(entry.points);
-  return { bucketMs, buckets, series: [...series.values()].sort((a, b) => a.slot - b.slot) };
+  return {
+    bucketMs,
+    buckets,
+    bucketEnds,
+    series: [...series.values()].sort((a, b) => a.slot - b.slot),
+  };
 }
 
 /** Input volume per bucket for the series still shown; gaps count here because volume is exact. */
