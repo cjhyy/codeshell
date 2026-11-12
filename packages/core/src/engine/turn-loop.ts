@@ -56,7 +56,7 @@ import { isTruncatedStop } from "../llm/stop-reason.js";
 import { isAbortError } from "../llm/client-base.js";
 import { crossedReactiveThreshold } from "./reactive-threshold.js";
 import { COMPLETE_GOAL_TOOL_NAME } from "../tool-system/builtin/complete-goal.js";
-import { withoutLedgerMessages } from "../session/context-messages.js";
+import { withoutContextMessages } from "../session/context-messages.js";
 import { moveVolatileContextToTail } from "./volatile-context-tail.js";
 import { persistContextReminder } from "./context-reminders.js";
 import { persistRemindersBeforeCheckpoint, withoutCheckpointDuplicates } from "./rollover-context.js";
@@ -1267,6 +1267,8 @@ export class TurnLoop {
               if (messages.length < previousMessageCount) {
                 this.deps.runToolSurface?.rebase();
                 await this.refreshModelToolPrefix();
+                // The dropped rounds may have held the run's context.
+                this.config.syncRunContext?.(messages);
               }
               try {
                 recovered = await this.callModelWithFallback(messages, assistantMessageId);
@@ -1594,7 +1596,7 @@ export class TurnLoop {
           const maxStopBlocks = this.config.maxStopBlocks ?? GOAL_DEFAULT_MAX_STOP_BLOCKS;
           if (this.goalTracker) {
             // The judge reads the conversation, not the engine's context framing.
-            const judgeMessages = withoutLedgerMessages(
+            const judgeMessages = withoutContextMessages(
               this.stripVolatileContextMessages(messages),
             );
             this.deps.publishGoalJudgeContext?.(

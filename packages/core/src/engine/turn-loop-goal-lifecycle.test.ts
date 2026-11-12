@@ -708,6 +708,9 @@ describe("TurnLoop goal lifecycle guardrails", () => {
     // Context-ledger messages are history for the model but not conversation.
     const ledger: Message = { role: "user", content: "LEDGER_CONTEXT_SNAPSHOT" };
     markContextMessage(ledger, { kind: "ledger", eventId: "ledger-event" });
+    // Neither are reminders: an earlier hook reminder is not a USER turn.
+    const reminder: Message = { role: "user", content: "EARLIER_HOOK_REMINDER" };
+    markContextMessage(reminder, { kind: "hook-reminder", eventId: "reminder-event", reminder: {} });
     const { deps } = makeTurnLoopDeps(
       [
         toolResponse({ id: "check-1", toolName: "Bash", args: { command: "bun test" } }),
@@ -738,7 +741,7 @@ describe("TurnLoop goal lifecycle guardrails", () => {
       maxToolCallsPerTurn: 10,
       goal: { objective: "ship only after tests pass" },
       volatileContextMessages: [volatile],
-    }).run([{ role: "user", content: "go" }, ledger, volatile]);
+    }).run([reminder, { role: "user", content: "go" }, ledger, volatile]);
 
     expect(order).toEqual(["publish", "hook"]);
     expect(snapshots).toHaveLength(1);
@@ -751,6 +754,7 @@ describe("TurnLoop goal lifecycle guardrails", () => {
     expect(snapshots[0]!.renderedConversation).toContain("current final assistant");
     expect(snapshots[0]!.renderedConversation).not.toContain("VOLATILE_GOAL_GUIDANCE");
     expect(snapshots[0]!.renderedConversation).not.toContain("LEDGER_CONTEXT_SNAPSHOT");
+    expect(snapshots[0]!.renderedConversation).not.toContain("EARLIER_HOOK_REMINDER");
     expect(publicStopData).not.toHaveProperty("messages");
     expect(publicStopData).not.toHaveProperty("conversation");
     expect(publicStopData).not.toHaveProperty("toolResults");
