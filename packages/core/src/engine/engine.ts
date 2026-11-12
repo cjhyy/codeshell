@@ -23,7 +23,11 @@ import { resolveModelRequestSigner } from "../model-request-boundary/access.js";
 import { assertDurableRequestOwner } from "../model-request-boundary/session-owner.js";
 import type { ModelRequestSigner, ModelRequestSubject } from "../model-request-boundary/types.js";
 import { createLLMClient } from "../llm/client-factory.js";
-import { promptCacheTtlMs, resolvePromptCachePolicy } from "../llm/prompt-cache.js";
+import {
+  promptCacheTtlMs,
+  promptCacheUsesExplicitBreakpoints,
+  resolvePromptCachePolicy,
+} from "../llm/prompt-cache.js";
 import { createRunBatchAuthority } from "../operations/run-batch-authority.js";
 import { createSessionOperationController } from "../operations/controller.js";
 import { CapabilityResolver } from "../operations/resolver.js";
@@ -3545,6 +3549,9 @@ export class Engine {
         signal: options?.signal,
         freshImageMessages: freshImageMessage ? [freshImageMessage] : undefined,
         volatileContextMessages: volatileContextMsg ? [volatileContextMsg] : undefined,
+        volatileContextAtTail: promptCacheUsesExplicitBreakpoints(
+          resolvePromptCachePolicy(this.config.llm),
+        ),
         syncRunContext: (runMessages) => void runContextLedger.sync(runMessages),
         retainedContextMessages,
         runStartMessage,

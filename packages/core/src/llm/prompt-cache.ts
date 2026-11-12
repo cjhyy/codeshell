@@ -134,6 +134,17 @@ export function resolvePromptCachePolicy(input: ResolvePromptCachePolicyInput): 
   };
 }
 
+/**
+ * True when requests on this route carry explicit history breakpoints, i.e. a
+ * prefix can be resumed from a chosen message rather than only from the end
+ * of the previous request.
+ */
+export function promptCacheUsesExplicitBreakpoints(
+  policy: Pick<PromptCachePolicy, "breakpoints">,
+): boolean {
+  return policy.breakpoints.includes("stable-history");
+}
+
 const MINUTE_MS = 60_000;
 
 /**
