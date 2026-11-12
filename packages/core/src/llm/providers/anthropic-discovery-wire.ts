@@ -118,6 +118,8 @@ export function anthropicMessages(
     Math.min(messages.length, promptCache?.stablePrefixMessageCount ?? messages.length),
   );
   let stablePrefixEndMessage: Anthropic.MessageParam | undefined;
+  const textAsBlocks =
+    policy.toolDiscovery === "tool-reference" || policy.strategy === "anthropic-explicit";
   for (const [sourceIndex, message] of messages.entries()) {
     if (sourceIndex === stablePrefixMessageCount)
       stablePrefixEndMessage = result[result.length - 1];
@@ -126,8 +128,11 @@ export function anthropicMessages(
     if (typeof message.content === "string") {
       result.push({
         role,
+        // A marked message must be a block array, so an unmarked one is too:
+        // its bytes may not change when a breakpoint moves onto or off it.
+        // An empty text block is invalid; an empty string is never marked.
         content:
-          policy.toolDiscovery === "tool-reference"
+          textAsBlocks && message.content.length > 0
             ? [{ type: "text", text: message.content }]
             : message.content,
       });

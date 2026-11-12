@@ -183,7 +183,8 @@ describe("OpenAIClient prompt caching", () => {
     }
     expect(markedIndexes(bodies[0])).toEqual([0, 1]);
     expect(markedIndexes(bodies[1])).toEqual([0, 1, 2]);
-    expect(bodies[1].messages[4].content).toBe("next question");
+    // Unmarked, in the same text-part form a marked message has.
+    expect(bodies[1].messages[4].content).toEqual([{ type: "text", text: "next question" }]);
   });
 
   it("retains the previous successful user boundary across three append-only requests", async () => {
@@ -224,7 +225,7 @@ describe("OpenAIClient prompt caching", () => {
     expect(bodies[1].messages[9]).toMatchObject({
       role: "tool",
       tool_call_id: "second-c",
-      content: "result for second-c",
+      content: [{ type: "text", text: "result for second-c" }],
     });
     expect(canonicalMessages(bodies[1]).slice(0, bodies[0].messages.length)).toEqual(
       canonicalMessages(bodies[0]),
@@ -422,7 +423,9 @@ describe("OpenAIClient prompt caching", () => {
     request.messages.push({ role: "user", content: "next question" });
     await client.createMessage(request);
     expect(markedIndexes(bodies[1])).toEqual([0, 1, 2]);
-    expect(bodies[1].messages[3].content).toBe("trailing assistant text");
+    expect(bodies[1].messages[3].content).toEqual([
+      { type: "text", text: "trailing assistant text" },
+    ]);
   });
 
   it("shares successful boundaries across clients for the same session", async () => {
