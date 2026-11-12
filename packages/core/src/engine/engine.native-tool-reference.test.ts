@@ -184,6 +184,25 @@ const fixtureFetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   }
   expect(request.headers.get("authorization")).toBe("Bearer synthetic-fixture-key");
   expect(body.thinking).toEqual({ type: "disabled" });
+  for (const message of body.messages)
+    for (const block of Array.isArray(message.content) ? message.content : [])
+      if (
+        block.type === "tool_result" &&
+        Array.isArray(block.content) &&
+        block.content.some((part: any) => part.type === "tool_reference") &&
+        block.content.some((part: any) => part.type !== "tool_reference")
+      )
+        return Response.json(
+          {
+            type: "error",
+            error: {
+              type: "invalid_request_error",
+              message:
+                "Tool definitions/code execution functions cannot be mixed with other content",
+            },
+          },
+          { status: 400 },
+        );
   if (!primary) {
     expect(body.tools ?? []).toEqual([]);
     return reply(body, [], true);
