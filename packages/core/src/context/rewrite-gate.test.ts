@@ -124,6 +124,8 @@ for (const [name, run] of runners) {
       const out1 = await run(cm, first);
       expect(out1).toEqual(first);
       expect(cm.getPendingRewriteBoundary()).toBe(2);
+      // The boundary is also exposed by identity, for callers that re-index the list.
+      expect(cm.getPendingRewriteBoundaryMessage()).toBe(first[2]);
 
       cm.noteModelRequestCompleted();
       clock.now += 5_000;
@@ -251,6 +253,7 @@ for (const [name, run] of runners) {
       expect(texts[2]).toBe(prose(950, "file2"));
       expect(compactions).toContain("micro");
       expect(cm.getPendingRewriteBoundary()).toBeUndefined();
+      expect(cm.getPendingRewriteBoundaryMessage()).toBeUndefined();
     });
 
     test("warmth is shared across ContextManager instances of the same session", async () => {
