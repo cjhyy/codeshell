@@ -20,7 +20,7 @@ import {
   microcompact,
 } from "./compaction.js";
 
-export type RewriteBatchReason = "cold" | "worth_it" | "pressure";
+export type RewriteBatchReason = "cold" | "worth_it" | "pressure" | "hard_cap";
 
 export interface RewriteBatchConfig {
   /** A prefix not re-read for this long is assumed evicted by the provider. */
@@ -50,12 +50,16 @@ export interface RewriteBatchDecisionInput {
   savedRatio: number;
   /** First non-micro compaction gate (maxTokens × compactAtRatio). */
   pressureTokens: number;
+  /** A member of the batch exceeds a hard request bound (e.g. image count/bytes). */
+  forced?: boolean;
 }
 
 /** Why a pending batch may be applied now, or `undefined` to keep deferring. */
 export function decideRewriteBatch(
   input: RewriteBatchDecisionInput,
 ): RewriteBatchReason | undefined {
+  // A hard bound keeps the request valid for the provider; the cache yields.
+  if (input.forced) return "hard_cap";
   // Cold: nothing to lose. A process that has not completed a request for
   // this session (fresh start, resume from disk) replays history anyway.
   if (input.lastRequestAt === undefined) return "cold";
@@ -95,6 +99,20 @@ export function resetPromptCacheWarmthForTests(): void {
 }
 
 // ─── Speculative batch ──────────────────────────────────────────────
+
+/**
+ * A retroactive rewrite owned by the caller that joins the batch, e.g. image
+ * placeholders (context/image-history-window.ts). `plan` is pure; `commit` is
+ * called only when the batch containing it is adopted.
+ */
+export interface ExternalRewrite {
+  messages: Message[];
+  /** A hard bound is exceeded: apply regardless of cache warmth. */
+  forced: boolean;
+  commit(): void;
+}
+
+export type ExternalRewritePlanner = (messages: Message[]) => ExternalRewrite | undefined;
 
 export interface RewriteBatchPlan {
   /** Candidate history with every pending rewrite applied. */
@@ -163,7 +181,7 @@ export function planRewriteBatch(
   }
 
   const changed = candidate !== input;
-  const diff = changed ? diffRewrite(input, candidate) : undefined;
+  const diff = changed ? diffRewrittenMessages(input, candidate) : undefined;
   return {
     messages: candidate,
     changed,
@@ -184,7 +202,7 @@ export function planRewriteBatch(
  * reference, so a message changed iff one of its blocks is a new object.
  * Only changed messages are token-estimated.
  */
-function diffRewrite(
+export function diffRewrittenMessages(
   before: Message[],
   after: Message[],
 ): { savedTokens: number; firstChangedIndex: number | undefined } {

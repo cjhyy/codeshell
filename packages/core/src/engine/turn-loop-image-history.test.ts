@@ -2,6 +2,8 @@ import { describe, expect, it } from "bun:test";
 import { TurnLoop, type TurnLoopConfig, type TurnLoopDeps } from "./turn-loop.js";
 import type { ContentBlock, LLMResponse, Message, ToolCall, ToolResult } from "../types.js";
 import { IMAGE_HISTORY_PLACEHOLDER_SUFFIX } from "../context/compaction.js";
+import { ContextManager, type ManageOptions } from "../context/manager.js";
+import { resetPromptCacheWarmthForTests } from "../context/rewrite-gate.js";
 
 const userImageBase64 = "U".repeat(32_000);
 const toolImageBase64 = "T".repeat(32_000);
@@ -39,6 +41,7 @@ function makeDeps(
     toolName: call.toolName,
     result: "ok",
   }),
+  realContextManager?: ContextManager,
 ): {
   deps: TurnLoopDeps;
   callArgs: Message[][];
@@ -80,18 +83,25 @@ function makeDeps(
     summarize: undefined,
   } as unknown as TurnLoopDeps["model"];
 
-  const contextManager = {
-    async manageAsync(m: Message[]) {
-      return m;
+  // A cache that is always cold: every pending rewrite batch is adopted.
+  const adopt = (m: Message[], options?: ManageOptions): Message[] => {
+    const batch = options?.externalRewrite?.(m);
+    if (!batch || batch.messages === m) return m;
+    batch.commit();
+    return batch.messages;
+  };
+  const contextManager = (realContextManager ?? {
+    async manageAsync(m: Message[], _signal?: AbortSignal, options?: ManageOptions) {
+      return adopt(m, options);
     },
-    manage(m: Message[]) {
-      return m;
+    manage(m: Message[], options?: ManageOptions) {
+      return adopt(m, options);
     },
     recordActualUsage() {},
     shouldReactiveCompact() {
       return false;
     },
-  } as unknown as TurnLoopDeps["contextManager"];
+  }) as unknown as TurnLoopDeps["contextManager"];
 
   const hooks = {
     async emit() {
@@ -203,6 +213,82 @@ describe("TurnLoop image-history evidence window", () => {
     expect(JSON.stringify(callArgs[6])).not.toContain(userImageBase64);
     expect(JSON.stringify(callArgs[6])).toContain(placeholder);
     expect(JSON.stringify(result.messages)).not.toContain(userImageBase64);
+  });
+
+  it("defers an expired image while the cache is warm and the saving is small", async () => {
+    resetPromptCacheWarmthForTests();
+    const clock = { now: 1_000_000 };
+    const contextManager = new ContextManager({ maxTokens: 200_000, now: () => clock.now });
+    const firstUserMessage: Message = {
+      role: "user",
+      content: [{ type: "text", text: "inspect this" }, imageBlock(userImageBase64)],
+    };
+    const { deps, callArgs } = makeDeps(
+      [...Array.from({ length: 7 }, () => toolResp()), doneResp()],
+      undefined,
+      contextManager,
+    );
+    const result = await new TurnLoop(deps, {
+      maxTurns: 10,
+      maxToolCallsPerTurn: 10,
+      freshImageMessages: [firstUserMessage],
+    }).run([firstUserMessage]);
+
+    expect(result.reason).toBe("completed");
+    expect(callArgs).toHaveLength(8);
+    // Past the six-response window, but replacing it would break the cached prefix.
+    for (const request of callArgs) expect(JSON.stringify(request)).toContain(userImageBase64);
+    expect(contextManager.getPendingRewriteBoundaryMessage()).toBe(firstUserMessage);
+  });
+
+  it("applies the deferred image batch once the cache has gone cold", async () => {
+    resetPromptCacheWarmthForTests();
+    const clock = { now: 1_000_000 };
+    const contextManager = new ContextManager({ maxTokens: 200_000, now: () => clock.now });
+    const firstUserMessage: Message = {
+      role: "user",
+      content: [{ type: "text", text: "inspect this" }, imageBlock(userImageBase64)],
+    };
+    const { deps, callArgs } = makeDeps(
+      [...Array.from({ length: 7 }, () => toolResp()), doneResp()],
+      async (call) => {
+        // The seventh tool call sits idle past the prompt-cache TTL.
+        if (callArgs.length === 7) clock.now += 31 * 60_000;
+        return { id: call.id, toolName: call.toolName, result: "ok" };
+      },
+      contextManager,
+    );
+    const result = await new TurnLoop(deps, {
+      maxTurns: 10,
+      maxToolCallsPerTurn: 10,
+      freshImageMessages: [firstUserMessage],
+    }).run([firstUserMessage]);
+
+    expect(result.reason).toBe("completed");
+    expect(JSON.stringify(callArgs[6])).toContain(userImageBase64);
+    expect(JSON.stringify(callArgs[7])).not.toContain(userImageBase64);
+    expect(JSON.stringify(callArgs[7])).toContain(placeholder);
+  });
+
+  it("replaces images over the hard count cap immediately, even while warm", async () => {
+    resetPromptCacheWarmthForTests();
+    const contextManager = new ContextManager({ maxTokens: 200_000 });
+    const images = Array.from({ length: 5 }, (_, i) => imageBlock(`${i}`.repeat(1_000)));
+    const firstUserMessage: Message = {
+      role: "user",
+      content: [{ type: "text", text: "compare these" }, ...images],
+    };
+    const { deps, callArgs } = makeDeps([toolResp(), doneResp()], undefined, contextManager);
+    await new TurnLoop(deps, {
+      maxTurns: 5,
+      maxToolCallsPerTurn: 10,
+      freshImageMessages: [firstUserMessage],
+    }).run([firstUserMessage]);
+
+    // Fresh images always get their first request; then only four may remain.
+    expect(JSON.stringify(callArgs[0])).toContain("0".repeat(1_000));
+    expect(JSON.stringify(callArgs[1])).not.toContain("0".repeat(1_000));
+    expect(JSON.stringify(callArgs[1])).toContain("4".repeat(1_000));
   });
 
   it("keeps tool-result evidence across unrelated tool calls and preserves transcript bytes", async () => {
