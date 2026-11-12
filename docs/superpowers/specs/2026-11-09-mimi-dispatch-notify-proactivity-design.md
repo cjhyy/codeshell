@@ -421,9 +421,9 @@ Codex / Claude Code 会话跑在桌面主进程里（`external-runtime-service.t
 3. **工具**：`NotifyMe` 与 `ReportToMimi` 进外部工具表（`requires: "mimi-host"`，只有宿主提供处理器时才暴露），在主进程内直接调规则处理器和汇报观察者；会话身份取运行时绑定的会话，不看参数；免审批；计划模式下不暴露。已知限制：运行时在提醒接线完成前启动的，要重启运行时才有 `NotifyMe`。
 4. **审批与提问**：外部审批（CodeShell 工具审批、Codex 原生审批、Claude Code 权限）和提问进同一个 `PetImDecisions`，一个决定一条 IM 提示。码由 `["external", 会话, 请求]` 生成，不会和原生撞；回码直接结算外部审批路由（只允许本次，不授会话/项目范围）；桌面、手机、IM、超时、运行时停止任一处结算都会结束提示。外部提示的状态只看审批路由，不受 worker 状态影响；重启后路由里已不存在的提示静默撤销。Codex 原生审批的说明统一由 `external-runtime-codex-approvals.ts` 生成（命令、向终端输入、网络访问的主机、文件改动列表、权限），桌面卡片、手机、IM 看到的一致。
 
-已知限制：IM 会话绑定到 Codex/CC 会话的双向转发还没做（绑定桥忽略外部会话）。
+不做（2026-11-12 确认）：IM 会话绑定到 Codex/CC 会话的双向转发不做，绑定桥忽略外部会话；外部会话的结果按提醒规则发给主人。
 
-目前没有 Mimi 派活到外部会话的通道；以后加时，发送要带 `displayText`、`clientMessageId`（`petDelegationClientMessageId`）和 `trigger: "host_message"`，长任务即可按现有方式绑定。
+不做（2026-11-12 确认）：Mimi 不把活派到外部会话，Mimi 的派活只走原生会话。服务层仍要求宿主转发的消息带 `displayText`，这条约束保留。
 
 ## 7. 卡住时的选项
 
