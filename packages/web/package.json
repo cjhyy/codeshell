@@ -1,6 +1,6 @@
 {
   "name": "@cjhyy/code-shell-web",
-  "version": "0.10.1",
+  "version": "0.11.0-rc.1",
   "description": "CodeShell browser client — reusable state, stream reducers, reconnecting WebSocket and authorization helpers, plus the full web/app SPA built to dist-app for Server hosting and reused by Desktop mobile. Browser-only; no Electron or Node runtime.",
   "type": "module",
   "main": "./dist/index.js",
