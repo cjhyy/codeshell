@@ -41,6 +41,7 @@ import { buildGoalJudgeRuntimeContext } from "./goal-judge-context.js";
 import {
   hashPromptMessages,
   type PromptCacheDiagnosticSample,
+  type PromptMessageDigest,
 } from "./prompt-cache-diagnostics.js";
 import { wrapHookMessages } from "../hooks/inject.js";
 import { Transcript } from "../session/transcript.js";
@@ -277,8 +278,8 @@ export class TurnLoop {
   }
   /** Tool IDs already emitted as tool_use_start during streaming (to avoid duplicates). */
   private streamedToolIds = new Set<string>();
-  /** Messages of the latest primary/continuation request, for cache diagnostics. */
-  private lastRequestMessages?: readonly Message[];
+  /** Hash chain of the latest primary/continuation request, taken at dispatch. */
+  private lastRequestMessageChain?: PromptMessageDigest[];
   /**
    * Turn-scoped child logger set at the top of each loop iteration. Class
    * methods invoked inside the iteration (callModelWithFallback,
@@ -860,6 +861,13 @@ export class TurnLoop {
     });
   }
 
+  /** Hash what is about to be sent: later in-place edits must not alter it. */
+  private noteRequestDispatched(messages: readonly Message[]): void {
+    this.lastRequestMessageChain = this.deps.recordCacheReadDiagnostics
+      ? hashPromptMessages(messages)
+      : undefined;
+  }
+
   private recordResponseUsage(
     usage: NonNullable<LLMResponse["usage"]>,
     requestKind: PromptCacheDiagnosticSample["requestKind"] = "primary",
@@ -876,9 +884,7 @@ export class TurnLoop {
           this.deps.systemPrompt,
           this.currentTools,
         ),
-        ...(this.lastRequestMessages
-          ? { messages: hashPromptMessages(this.lastRequestMessages) }
-          : {}),
+        ...(this.lastRequestMessageChain ? { messages: this.lastRequestMessageChain } : {}),
       });
     }
   }
@@ -1401,7 +1407,7 @@ export class TurnLoop {
             ];
             try {
               const preparedContinuationMessages = this.prepareMessagesForModel(contMessages);
-              this.lastRequestMessages = preparedContinuationMessages;
+              this.noteRequestDispatched(preparedContinuationMessages);
               const contResponse = await this.deps.model.call(
                 this.deps.systemPrompt,
                 preparedContinuationMessages,
@@ -2312,7 +2318,7 @@ export class TurnLoop {
   }
 
   private async callModelWithFallback(messages: Message[], assistantMessageId: string) {
-    this.lastRequestMessages = messages;
+    this.noteRequestDispatched(messages);
     const revokePartialStream = () => {
       this.config.onStream?.({ type: "tombstone", messageId: assistantMessageId });
       // Streamed tool placeholders have not executed or entered the durable

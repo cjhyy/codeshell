@@ -237,8 +237,9 @@ function tailIsPrefix(
 /**
  * Compare two request message chains. A later tail may always have grown, so
  * "lines up" means the previous remainder is a prefix of the current one.
- * Shifts by one message need at least one surviving message as evidence;
- * anything larger (compaction, several removals) is `diverged`.
+ * Only single-message shifts are named; anything larger (compaction, several
+ * removals) is `diverged`. Hashes carry no identity, so among equal adjacent
+ * messages the reported index is the first position where the lists differ.
  */
 export function diffPromptMessageChain(
   previous: readonly PromptMessageDigest[],
@@ -254,9 +255,14 @@ export function diffPromptMessageChain(
   if (index === current.length) {
     // The current list is a strict prefix of the previous one: tail dropped.
     messageChange = "removed";
+  } else if (previous.length === index + 1) {
+    // The previous list's last message: no later message can show a removal.
+    // It either moved down by one (something was inserted before it) or its
+    // slot now holds something else.
+    messageChange = tailIsPrefix(previous, index, current, index + 1) ? "inserted" : "rewritten";
   } else if (tailIsPrefix(previous, index + 1, current, index + 1)) {
     messageChange = "rewritten";
-  } else if (previous.length > index + 1 && tailIsPrefix(previous, index + 1, current, index)) {
+  } else if (tailIsPrefix(previous, index + 1, current, index)) {
     messageChange = "removed";
   } else if (tailIsPrefix(previous, index, current, index + 1)) {
     messageChange = "inserted";
@@ -271,6 +277,19 @@ export function diffPromptMessageChain(
     changedMessageRole: changed.role,
     changedMessageHasToolResult: changed.hasToolResult,
   };
+}
+
+/**
+ * A change can only explain a cache-read drop when previously cached content
+ * followed it. When the first difference is the previous request's LAST
+ * message (a one-step run's trailing volatile context, say), everything before
+ * it was still reusable, so the drop has another cause (TTL, eviction).
+ */
+export function messageChangeInvalidatesCachedPrefix(diff: PromptMessageChainDiff): boolean {
+  return (
+    diff.firstChangedMessageIndex !== undefined &&
+    diff.firstChangedMessageIndex < diff.previousMessageCount - 1
+  );
 }
 
 export function diffPromptPrefix(
@@ -371,7 +390,7 @@ export class PromptCacheDiagnosticRecorder {
       attribution.messages = diffPromptMessageChain(previous.messages, current.messages);
       if (
         attribution.cause === "no_tracked_prefix_change" &&
-        attribution.messages.messageChange !== "append_only"
+        messageChangeInvalidatesCachedPrefix(attribution.messages)
       ) {
         attribution.cause = "message_prefix_changed";
       }

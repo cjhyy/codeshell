@@ -421,6 +421,75 @@ describe("prompt cache diagnostics", () => {
     });
   });
 
+  describe("message chain edge cases", () => {
+    it("classifies an emptied current list as removed at index 0", () => {
+      expect(diffPromptMessageChain(chain(HISTORY), [])).toEqual({
+        messageChange: "removed",
+        firstChangedMessageIndex: 0,
+        previousMessageCount: 5,
+        currentMessageCount: 0,
+        changedMessageRole: "user",
+        changedMessageHasToolResult: false,
+      });
+    });
+
+    it("classifies two empty lists as append_only", () => {
+      expect(diffPromptMessageChain([], [])).toEqual({
+        messageChange: "append_only",
+        previousMessageCount: 0,
+        currentMessageCount: 0,
+      });
+    });
+
+    it("classifies a message inserted before the previous last message as inserted", () => {
+      const previous = [user("a"), user("b")];
+      const current = [user("a"), assistant("note"), user("b"), assistant("reply")];
+      expect(diffPromptMessageChain(chain(previous), chain(current))).toMatchObject({
+        messageChange: "inserted",
+        firstChangedMessageIndex: 1,
+        changedMessageRole: "assistant",
+      });
+    });
+
+    it("reports a dropped adjacent duplicate as removed at the first differing index, deterministically", () => {
+      const previous = [user("same"), user("same"), assistant("reply")];
+      const current = [user("same"), assistant("reply")];
+      const expected = {
+        messageChange: "removed",
+        firstChangedMessageIndex: 1,
+        previousMessageCount: 3,
+        currentMessageCount: 2,
+        changedMessageRole: "assistant",
+        changedMessageHasToolResult: false,
+      } as const;
+      expect(diffPromptMessageChain(chain(previous), chain(current))).toEqual(expected);
+      expect(diffPromptMessageChain(chain(previous), chain(current))).toEqual(expected);
+    });
+
+    it("reports an added adjacent duplicate as inserted after the run of duplicates, deterministically", () => {
+      const previous = [user("same"), user("same"), assistant("reply")];
+      const current = [user("same"), user("same"), user("same"), assistant("reply")];
+      const expected = {
+        messageChange: "inserted",
+        // Equal hashes are indistinguishable: the lists first differ at index 2.
+        firstChangedMessageIndex: 2,
+        previousMessageCount: 3,
+        currentMessageCount: 4,
+        changedMessageRole: "user",
+        changedMessageHasToolResult: false,
+      } as const;
+      expect(diffPromptMessageChain(chain(previous), chain(current))).toEqual(expected);
+      expect(diffPromptMessageChain(chain(previous), chain(current))).toEqual(expected);
+    });
+
+    it("treats an all-duplicate list that only grew as append_only", () => {
+      const previous = [user("same"), user("same")];
+      expect(
+        diffPromptMessageChain(chain(previous), chain([...previous, user("same")])).messageChange,
+      ).toBe("append_only");
+    });
+  });
+
   describe("message attribution of cache-read drops", () => {
     function messageSample(cacheReadTokens: number, messages: Message[], head = {}) {
       return {
@@ -518,6 +587,81 @@ describe("prompt cache diagnostics", () => {
         messageChange: "rewritten",
         firstChangedMessageIndex: 0,
         hint: promptCacheDropHint({ cause: "tools_changed", changedPrefixes: ["tools"] }),
+      });
+    });
+
+    it("keeps the old cause when only the previous request's last message changed", () => {
+      const volatileOne = user("<context run=1>");
+      const volatileTwo = user("<context run=2>");
+      const firstRun = [user("task one"), volatileOne];
+      const cases: Array<[Message[], string, number]> = [
+        // Next run: the reply takes the volatile slot, new volatile at the tail.
+        [[user("task one"), assistant("done"), user("task two"), volatileTwo], "rewritten", 1],
+        // Something inserted directly before the previous last message.
+        [[user("task one"), assistant("done"), volatileOne], "inserted", 1],
+        // The previous last message dropped, nothing else touched.
+        [[user("task one")], "removed", 1],
+      ];
+      for (const [current, messageChange, index] of cases) {
+        const recorder = new PromptCacheDiagnosticRecorder();
+        recorder.record("sid", messageSample(256_000, firstRun));
+        const drop = recorder.record("sid", messageSample(0, current));
+        if (drop.kind !== "drop") throw new Error("expected drop");
+        expect(drop.attribution.cause).toBe("no_tracked_prefix_change");
+        const fields = promptCacheDropLogFields(drop.attribution);
+        expect(fields).toMatchObject({
+          cause: "no_tracked_prefix_change",
+          messageChange,
+          firstChangedMessageIndex: index,
+          previousMessageCount: 2,
+        });
+        expect(fields.hint).toBe(
+          promptCacheDropHint({ cause: "no_tracked_prefix_change", changedPrefixes: [] }),
+        );
+      }
+    });
+
+    it("keeps a head cause when only the previous request's last message changed", () => {
+      const recorder = new PromptCacheDiagnosticRecorder();
+      recorder.record("sid", messageSample(256_000, HISTORY));
+      const current = [...HISTORY.slice(0, 4), user("edited")];
+      const drop = recorder.record("sid", messageSample(0, current, { systemHash: "system-2" }));
+      if (drop.kind !== "drop") throw new Error("expected drop");
+      expect(promptCacheDropLogFields(drop.attribution)).toMatchObject({
+        cause: "system_changed",
+        messageChange: "rewritten",
+        firstChangedMessageIndex: 4,
+      });
+    });
+
+    it("reports message_prefix_changed when a volatile message leaves the middle of history", () => {
+      const volatile = user("<context run=1>");
+      // A multi-step run: the volatile message kept its place while tool
+      // rounds were appended after it, so cached content follows it.
+      const previous = [
+        user("task one"),
+        volatile,
+        assistant("calling a tool"),
+        toolResult("call-1", "tool output"),
+      ];
+      const current = [
+        user("task one"),
+        assistant("calling a tool"),
+        toolResult("call-1", "tool output"),
+        assistant("done"),
+        user("task two"),
+        user("<context run=2>"),
+      ];
+      const recorder = new PromptCacheDiagnosticRecorder();
+      recorder.record("sid", messageSample(256_000, previous));
+      const drop = recorder.record("sid", messageSample(20_000, current));
+      if (drop.kind !== "drop") throw new Error("expected drop");
+      expect(promptCacheDropLogFields(drop.attribution)).toMatchObject({
+        cause: "message_prefix_changed",
+        messageChange: "removed",
+        firstChangedMessageIndex: 1,
+        previousMessageCount: 4,
+        currentMessageCount: 6,
       });
     });
 
