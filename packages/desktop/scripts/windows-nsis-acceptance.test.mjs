@@ -337,6 +337,16 @@ test("the committed production NSIS settings remain intact and reject unreviewed
   const associations = clone(pkg);
   associations.build.fileAssociations = [{ ext: "owned" }];
   assert.throws(() => assertProductionNsis(associations));
+  for (const version of ["1.2.3", "1.2.3-rc.4", "1.2.3-beta.1"]) {
+    const copy = clone(pkg);
+    copy.version = version;
+    assert.equal(assertProductionNsis(copy), `code-shell-Setup-${version}.exe`);
+  }
+  for (const version of ["1.2", "1.2.3-alpha.1", "1.2.3-rc", "1.2.3 ", "1.2.3-rc.1;x"]) {
+    const copy = clone(pkg);
+    copy.version = version;
+    assert.throws(() => assertProductionNsis(copy));
+  }
 });
 
 test("direct Node vectors preserve silent current-user/raw final tails without a shell", () => {
