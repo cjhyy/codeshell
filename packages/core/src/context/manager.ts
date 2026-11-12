@@ -6,6 +6,7 @@
  * Tier 3: window compact (sync, emergency) — aggressive truncation fallback
  */
 
+import { withoutContextMessages } from "../session/context-messages.js";
 import type {
   Message,
   ContextUsageAnchor,
@@ -344,7 +345,12 @@ export class ContextManager {
       // session), feed it back so the LLM merges-updates rather than
       // re-summarizes from scratch.
       const priorSummary = extractAnchoredSummary(messages) ?? this.lastSummary;
-      const prompt = buildSummarizationPrompt(messagesToSummarize, priorSummary);
+      // Engine context is re-sent after compaction (run-context-ledger.ts), so
+      // it stays out of the summary: a stale status must not be baked into one.
+      const prompt = buildSummarizationPrompt(
+        withoutContextMessages(messagesToSummarize),
+        priorSummary,
+      );
       const summary = await this.summarizeFn(prompt, signal);
 
       if (!summary || summary.length <= 50) {
@@ -884,7 +890,8 @@ export class ContextManager {
     // every prior one, so N archived spans produced N copies of the same
     // growing summary instead of N independent summaries.
     const priorSummary = extractAnchoredSummary(window);
-    const prompt = buildSummarizationPrompt(window, priorSummary);
+    // As in trySummaryCompact: engine context is not summarized.
+    const prompt = buildSummarizationPrompt(withoutContextMessages(window), priorSummary);
     const summary = await this.summarizeFn(prompt, opts.signal);
     if (!summary || summary.length <= 50) return messages;
 

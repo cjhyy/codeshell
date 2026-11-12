@@ -61,6 +61,14 @@ export function isAnchoredHookReminder(message: Message | undefined): boolean {
   return mark?.kind === "hook-reminder" && mark.reminder.beforeEventId !== undefined;
 }
 
+/**
+ * History without any engine context (ledger messages and reminders): the
+ * conversation itself, for a reader that summarizes or judges what was said.
+ */
+export function withoutContextMessages(messages: readonly Message[]): Message[] {
+  return messages.filter((message) => !marks.has(message));
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
