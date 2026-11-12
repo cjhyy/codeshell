@@ -156,7 +156,7 @@ import { detectProviderFromApiKey, buildModelPool } from "../onboarding.js";
 import { detectPastedNoise } from "../utils/task-sanitizer.js";
 import {
   PromptCacheDiagnosticRecorder,
-  promptCacheDropHint,
+  promptCacheDropLogFields,
   type PromptCacheDiagnosticSample,
 } from "./prompt-cache-diagnostics.js";
 import { EngineRuntime } from "./runtime.js";
@@ -4399,11 +4399,9 @@ export class Engine {
       previousCacheReadTokens: result.previous.cacheReadTokens,
       currentCacheReadTokens: result.current.cacheReadTokens,
       dropRatio: result.dropRatio,
-      cause: result.attribution.cause,
-      changedPrefixes: result.attribution.changedPrefixes,
       previousPrefix: result.previous.fingerprint,
       currentPrefix: result.current.fingerprint,
-      hint: promptCacheDropHint(result.attribution),
+      ...promptCacheDropLogFields(result.attribution),
     });
   }
 

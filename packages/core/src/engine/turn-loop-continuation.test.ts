@@ -128,6 +128,14 @@ describe("TurnLoop max-output continuation", () => {
 
     expect(samples.map((sample) => sample.requestKind)).toEqual(["primary", "continuation"]);
     expect(samples[0].fingerprint).toEqual(samples[1].fingerprint);
+    // The continuation request appends to the primary request's messages.
+    expect(samples[0].messages).toHaveLength(1);
+    expect(samples[1].messages.map((digest: any) => digest.role)).toEqual([
+      "user",
+      "assistant",
+      "user",
+    ]);
+    expect(samples[1].messages[0]).toEqual(samples[0].messages[0]);
   });
 
   it("continues when an OpenAI stream stops with 'length' (output cap)", async () => {

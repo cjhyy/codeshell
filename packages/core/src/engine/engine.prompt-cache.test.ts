@@ -393,8 +393,17 @@ describe("Engine prompt-cache hygiene", () => {
           sessionId,
           previousCacheReadTokens: 1200,
           currentCacheReadTokens: 0,
-          cause: "no_tracked_prefix_change",
+          // The head is unchanged. The first run's request ended with that
+          // run's volatile context message; the second run's request has the
+          // assistant reply in that slot, so the message list is not append-only.
+          cause: "message_prefix_changed",
           changedPrefixes: [],
+          messageChange: "rewritten",
+          firstChangedMessageIndex: 2,
+          previousMessageCount: 3,
+          currentMessageCount: 5,
+          changedMessageRole: "assistant",
+          changedMessageHasToolResult: false,
         }),
       );
     } finally {
@@ -474,6 +483,41 @@ describe("Engine prompt-cache hygiene", () => {
         );
         warn.mockClear();
       }
+
+      const digest = (
+        hash: string,
+        role: "user" | "assistant" = "user",
+        hasToolResult = false,
+      ) => ({
+        hash,
+        role,
+        hasToolResult,
+      });
+      (engine as any).recordCacheReadDiagnostics("message-change", {
+        ...diagnosticSample(1200),
+        messages: [digest("a"), digest("b", "assistant"), digest("c", "user", true), digest("d")],
+      });
+      (engine as any).recordCacheReadDiagnostics("message-change", {
+        ...diagnosticSample(0),
+        messages: [digest("a"), digest("b", "assistant"), digest("c2", "user", true), digest("d")],
+      });
+      expect(warn).toHaveBeenCalledWith(
+        "engine.cache_read_drop",
+        expect.objectContaining({
+          cause: "message_prefix_changed",
+          changedPrefixes: [],
+          messageChange: "rewritten",
+          firstChangedMessageIndex: 2,
+          previousMessageCount: 4,
+          currentMessageCount: 4,
+          changedMessageRole: "user",
+          changedMessageHasToolResult: true,
+          hint: expect.stringContaining("rewritten"),
+        }),
+      );
+      const payload = warn.mock.calls.find(([event]) => event === "engine.cache_read_drop")?.[1];
+      expect(JSON.stringify(payload)).not.toContain('"hash"');
+      warn.mockClear();
 
       (engine as any).recordCacheReadDiagnostics("scope-change", diagnosticSample(1200));
       (engine as any).recordCacheReadDiagnostics(

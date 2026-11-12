@@ -248,6 +248,14 @@ describe("TurnLoop usage_update carries cache tokens", () => {
         configHash: "config",
       },
     });
+    // The chain covers the messages sent in that request: hashes only.
+    // (this fixture's request is the user message plus one context message).
+    const digest = { hash: expect.stringMatching(/^[0-9a-f]{16}$/), hasToolResult: false };
+    expect(samples[0].messages).toEqual([
+      { ...digest, role: "user" },
+      { ...digest, role: "user" },
+    ]);
+    expect(JSON.stringify(samples[0].messages)).not.toContain("hi");
   });
 
   it("does not let the no-tools max-turn summary replace the primary cache baseline", async () => {
