@@ -14,6 +14,11 @@ import type { Message, TranscriptEvent } from "../types.js";
 export interface ContextLedgerEventData {
   kind: "snapshot" | "update";
   state: string;
+  /**
+   * A snapshot that revokes every earlier ledger message: the workspace
+   * changed, so replay drops them. With empty content it only revokes.
+   */
+  revokesEarlier?: true;
 }
 
 /** `data.hookReminder` of a persisted lifecycle hook reminder. */
@@ -95,7 +100,31 @@ export function readContextLedgerData(event: TranscriptEvent): ContextLedgerEven
   const raw = event.type === "message" ? event.data.contextLedger : undefined;
   if (!isRecord(raw) || typeof raw.state !== "string") return undefined;
   if (raw.kind !== "snapshot" && raw.kind !== "update") return undefined;
-  return { kind: raw.kind, state: raw.state };
+  return {
+    kind: raw.kind,
+    state: raw.state,
+    ...(raw.kind === "snapshot" && raw.revokesEarlier === true ? { revokesEarlier: true } : {}),
+  };
+}
+
+/**
+ * Ledger events replay must leave out: everything before the latest revoking
+ * snapshot, and a revoking snapshot without content (it only revokes).
+ */
+export function revokedLedgerEvents(events: readonly TranscriptEvent[]): Set<TranscriptEvent> {
+  const revoked = new Set<TranscriptEvent>();
+  let revoking = false;
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    const event = events[index]!;
+    const data = readContextLedgerData(event);
+    if (!data) continue;
+    if (revoking) revoked.add(event);
+    else if (data.revokesEarlier) {
+      revoking = true;
+      if (event.data.content === "") revoked.add(event);
+    }
+  }
+  return revoked;
 }
 
 /** Stored hook-reminder data of an event, or undefined when absent or not understood. */

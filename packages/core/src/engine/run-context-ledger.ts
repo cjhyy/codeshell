@@ -30,6 +30,7 @@ import {
 import type { Transcript } from "../session/transcript.js";
 import type { Message } from "../types.js";
 import { replayEventIdOf } from "./rollover-context.js";
+import { notePromptPrefixRewrite } from "../utils/prompt-prefix-events.js";
 
 /**
  * Whole-text sections the engine adds to the composer's own. `dateChange` is
@@ -97,8 +98,15 @@ export function createRunContextLedger(args: {
   transcript: Transcript;
   /** This run's context; fixed for the run, like the message it replaces. */
   sections: readonly ContextSection[];
+  /**
+   * The workspace this context belongs to (PromptComposer.contextScope()).
+   * Skills, sources and memory are scoped to it: context told for another
+   * workspace is revoked — dropped from history and from replay — and told
+   * afresh. A chain without a recorded scope is never revoked.
+   */
+  scope?: string;
 }): RunContextLedger {
-  const { transcript, sections } = args;
+  const { transcript, sections, scope } = args;
   // Only this run appends ledger events while it is active.
   let chain: LedgerChain | undefined;
   let loaded = false;
@@ -108,6 +116,15 @@ export function createRunContextLedger(args: {
         chain = readLedgerChain(transcript);
         loaded = true;
       }
+      const revoke =
+        chain?.state.scope !== undefined && scope !== undefined && chain.state.scope !== scope;
+      if (revoke) {
+        for (let index = messages.length - 1; index >= 0; index -= 1) {
+          if (contextMessageMark(messages[index]!)?.kind === "ledger") messages.splice(index, 1);
+        }
+        notePromptPrefixRewrite("workspace_root_changed");
+        chain = undefined;
+      }
       const present = new Set<string>();
       for (const message of messages) {
         const mark = contextMessageMark(message);
@@ -115,16 +132,26 @@ export function createRunContextLedger(args: {
       }
       const told = chain?.eventIds.every((id) => present.has(id)) ? chain : undefined;
       const emission = planLedgerEmission(sections, told?.state);
-      if (emission.kind === "none") return undefined;
+      const state = scope === undefined ? emission.state : { ...emission.state, scope };
+      const revocation = revoke ? { revokesEarlier: true as const } : {};
+      if (emission.kind === "none") {
+        // Nothing to tell, but the revocation must still reach replay.
+        if (revoke) {
+          transcript.appendMessage("user", "", {
+            contextLedger: { kind: "snapshot", state: serializeLedgerState(state), ...revocation },
+          });
+        }
+        return undefined;
+      }
 
       const message: Message = { role: "user", content: emission.text };
       const event = transcript.appendMessage("user", emission.text, {
-        contextLedger: { kind: emission.kind, state: serializeLedgerState(emission.state) },
+        contextLedger: { kind: emission.kind, state: serializeLedgerState(state), ...revocation },
       });
       markContextMessage(message, { kind: "ledger", eventId: event.id });
       messages.push(message);
       chain = {
-        state: emission.state,
+        state,
         eventIds: emission.kind === "update" && told ? [...told.eventIds, event.id] : [event.id],
       };
       return message;

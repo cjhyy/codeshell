@@ -29,6 +29,7 @@ import {
   isContextMessageEvent,
   markReplayedContextMessage,
   readHookReminderData,
+  revokedLedgerEvents,
   type ContextLedgerEventData,
   type HookReminderEventData,
 } from "./context-messages.js";
@@ -839,6 +840,7 @@ export class Transcript {
       seenMessageIds.add(event.id);
     }
     const rewrites = promptRewritesOf(events);
+    const revokedLedger = revokedLedgerEvents(events);
     const pushMessageEvent = (event: TranscriptEvent): void => {
       const role = event.data.role as string;
       const content = modelContentOf(event, rewrites);
@@ -863,6 +865,7 @@ export class Transcript {
     const emittedToolUseIds = new Set<string>();
 
     for (const event of events) {
+      if (revokedLedger.has(event)) continue; // context told for another workspace
       // Span bookkeeping runs on message events only: exit before entry so
       // adjacent spans (A.to === B.from) hand over on the boundary message.
       if (event.type === "message") {

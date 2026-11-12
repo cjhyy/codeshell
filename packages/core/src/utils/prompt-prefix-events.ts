@@ -26,6 +26,8 @@ export type PromptPrefixRewrite =
   | "clear_context"
   /** The run's user-context head (instructions) differs from the previous run's. */
   | "user_context_head"
+  /** The workspace changed: context told for the old one was revoked (run-context-ledger.ts). */
+  | "workspace_root_changed"
   /** Context-limit recovery dropped the oldest rounds. */
   | "context_limit_recovery"
   /** A truncated reply continued: the trailing assistant text is re-sent longer. */

@@ -273,6 +273,15 @@ export class PromptComposer {
   }
 
   /**
+   * The workspace the dynamic context is scoped to: skills and memory are read
+   * from the working directory, sources from the project. Context told under a
+   * different scope must not stay visible (engine/run-context-ledger.ts).
+   */
+  contextScope(): string {
+    return JSON.stringify([this.options.cwd, this.options.workspace.projectId]);
+  }
+
+  /**
    * The dynamic context as ordered sections (empty ones omitted, except a
    * skills section whose listing did not fit). Rendered as a snapshot they
    * are exactly buildDynamicContextMessage; kept apart so the context ledger

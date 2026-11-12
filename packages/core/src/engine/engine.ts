@@ -2356,6 +2356,7 @@ export class Engine {
     // update instead of rewriting what was sent.
     const runContextLedger = createRunContextLedger({
       transcript: session.transcript,
+      scope: promptComposer.contextScope(),
       sections: [
         ...contextSections,
         ...engineContextSections({
