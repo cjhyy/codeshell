@@ -511,7 +511,7 @@ export function AccountSessionProvider({ children }: { children: React.ReactNode
     deployment: window.location.origin === origin ? offered : undefined,
     account: entitled,
     signedIn: session?.authenticated === true,
-    supported: ["links.remote", "cloud.projects", "relay.phone"],
+    supported: ["links.remote", "cloud.projects", "relay.phone", "devices.directory"],
     reachable: deploymentReachable && accountReachable,
   });
   return (

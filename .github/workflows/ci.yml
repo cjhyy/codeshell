@@ -366,6 +366,7 @@ jobs:
         run: |
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-account-features-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-desktop-login-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-website-destinations-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-website-onboarding-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-file-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-latest-messages.mjs

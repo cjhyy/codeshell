@@ -304,6 +304,8 @@ try {
     await page.getByLabel("确认密码", { exact: true }).fill("test-only-password");
     await shot(page, `${prefix}-02-register`);
     await page.getByRole("button", { name: "创建账号", exact: true }).click();
+    await page.getByRole("heading", { name: "选择云端或电脑" }).waitFor();
+    await page.getByRole("button", { name: "进入云端" }).click();
     await page.getByRole("heading", { name: "为第一个想法，建一个工作区" }).waitFor();
     await page.getByLabel("工作区名称", { exact: true }).fill("我的第一个工作区");
     await shot(page, `${prefix}-03-workspace`);
@@ -378,6 +380,8 @@ try {
       .locator("..")
       .getByRole("link", { name: "进入工作台", exact: true })
       .click();
+    await page.getByRole("heading", { name: "选择云端或电脑" }).waitFor();
+    await page.getByRole("button", { name: "进入云端" }).click();
     await page.getByLabel("任务内容", { exact: true }).waitFor();
     assert.equal(new URL(page.url()).pathname, "/app");
     assert.equal(

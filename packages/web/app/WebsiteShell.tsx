@@ -6,11 +6,7 @@ import { EnvironmentApiContext } from "./EnvironmentMenu.js";
 import { AccountSessionProvider, useAccountSession } from "./AccountSessionProvider.js";
 import { AccountSettings } from "./AccountSettings.js";
 import { WebsiteLogin, WebsiteRegistration } from "./WebsiteLogin.js";
-import {
-  AccountFeatureEntry,
-  accountFeatureMessage,
-  useAccountFeature,
-} from "./useAccountFeature.js";
+import { accountFeatureMessage, useAccountFeature } from "./useAccountFeature.js";
 import {
   detectWebsiteCloud,
   logoutWebsiteCloudSession,
@@ -25,6 +21,7 @@ import {
   safeWebsiteReturn,
   websiteAuthUrl,
   websiteRouteUrl,
+  websiteCloudSelected,
   type WebsiteRoute,
 } from "./website-routes.js";
 import type { CloudManagementSession } from "./auth.js";
@@ -33,6 +30,7 @@ import { withAccountCookieLock } from "./account-cookie-lock.js";
 import { parseAccountSession } from "./account-api.js";
 import { DesktopLoginPage, desktopLoginRequest } from "./DesktopLogin.js";
 import { WebsiteHome } from "./WebsiteHome.js";
+import { WebsiteDestinations } from "./WebsiteDestinations.js";
 import { validProjectId } from "./api-context.js";
 import type { WorkbenchNavigation } from "./workbench-types.js";
 
@@ -165,10 +163,12 @@ export function WebsiteEntry({ setupToken }: { setupToken: string }) {
 function WebsiteAccountMenu({
   go,
   logout,
+  chooseDestination,
   goHome = () => window.location.assign("/"),
 }: {
   go: (route: WebsiteRoute) => void;
   logout: () => void;
+  chooseDestination: () => void;
   goHome?: () => void;
 }) {
   const account = useAccountSession();
@@ -181,9 +181,7 @@ function WebsiteAccountMenu({
       <div className="website-account-popover">
         <strong>{user?.displayName}</strong>
         <small>@{user?.username}</small>
-        <AccountFeatureEntry id="relay.phone" onClick={() => window.location.assign("/devices")}>
-          我的电脑
-        </AccountFeatureEntry>
+        <button onClick={chooseDestination}>切换云端或电脑</button>
         <button
           onClick={(event) => {
             event.currentTarget.closest("details")?.removeAttribute("open");
@@ -219,23 +217,34 @@ function WebsiteRuntimeAccountMenu({
   register,
   go,
   logout,
+  chooseDestination,
 }: {
   navigation: WorkbenchNavigation;
   register: (guard: WorkbenchNavigation["leaveWorkspace"] | null) => void;
   go: (route: WebsiteRoute) => void;
   logout: () => void;
+  chooseDestination: () => void;
 }) {
   React.useLayoutEffect(() => {
     register(navigation.leaveWorkspace);
     return () => register(null);
   }, [navigation.leaveWorkspace, register]);
-  return <WebsiteAccountMenu go={go} logout={() => navigation.leaveWorkspace(logout)} />;
+  return (
+    <WebsiteAccountMenu
+      go={go}
+      logout={() => navigation.leaveWorkspace(logout)}
+      chooseDestination={() => navigation.leaveWorkspace(chooseDestination)}
+    />
+  );
 }
 
 function WebsiteShell({ capability }: { capability: WebsiteCloudCapability }) {
   const account = useAccountSession();
   const cloudFeature = useAccountFeature("cloud.projects");
   const [route, setRoute] = React.useState(() => parseWebsiteRoute(new URL(window.location.href)));
+  const [cloudSelected, setCloudSelected] = React.useState(() =>
+    websiteCloudSelected(new URL(window.location.href)),
+  );
   const [cloudGrant, setCloudGrant] = React.useState<{
     session: CloudManagementSession;
     identity: string;
@@ -266,9 +275,19 @@ function WebsiteShell({ capability }: { capability: WebsiteCloudCapability }) {
     account.clearError();
     if (account.oauthPending) account.cancelGithub();
   };
+  const selectDestination = (cloud: boolean) => {
+    const current = new URL(window.location.href);
+    const next = new URL(websiteRouteUrl({ kind: "workbench" }, current), current);
+    next.searchParams.set("target", cloud ? "cloud" : "choose");
+    window.history.pushState(null, "", next.pathname + next.search);
+    setCloudSelected(cloud);
+    setRoute({ kind: "workbench" });
+    account.clearError();
+  };
   React.useEffect(() => {
     const pop = () => {
       setRoute(parseWebsiteRoute(new URL(window.location.href)));
+      setCloudSelected(websiteCloudSelected(new URL(window.location.href)));
       if (account.oauthPending) account.cancelGithub();
     };
     window.addEventListener("popstate", pop);
@@ -280,7 +299,7 @@ function WebsiteShell({ capability }: { capability: WebsiteCloudCapability }) {
     setCloudGrant(null);
     setCloudError("");
     setConnecting(false);
-    if (!identity || !accountId) return () => controller.abort();
+    if (!identity || !accountId || !cloudSelected) return () => controller.abort();
     if (cloudFeature.state !== "ready") return () => controller.abort();
     if (!target) {
       setCloudError("当前账号尚未分配云端环境。你仍可管理账号设置。");
@@ -380,6 +399,7 @@ function WebsiteShell({ capability }: { capability: WebsiteCloudCapability }) {
     account.request,
     cloudFeature.state,
     cloudFeature.params?.cloudOrigin,
+    cloudSelected,
     attempt,
   ]);
 
@@ -408,12 +428,24 @@ function WebsiteShell({ capability }: { capability: WebsiteCloudCapability }) {
     ) : (
       <WebsiteLogin />
     );
-  const menu = <WebsiteAccountMenu go={go} logout={() => leaveWorkspace(logout)} />;
+  const menu = (
+    <WebsiteAccountMenu
+      go={go}
+      logout={() => leaveWorkspace(logout)}
+      chooseDestination={() => leaveWorkspace(() => selectDestination(false))}
+    />
+  );
   const settings = route.kind !== "workbench";
   const administrator = account.session.account?.role === "admin";
   return (
     <EnvironmentApiContext.Provider value="/api/v1/cloud-browser/environment">
-      {cloudSession && cloudFeature.state === "ready" ? (
+      {!settings && !cloudSelected ? (
+        <WebsiteDestinations
+          key={identity}
+          accountControl={menu}
+          onCloud={() => selectDestination(true)}
+        />
+      ) : cloudSession && cloudFeature.state === "ready" ? (
         <div hidden={settings} className="website-workbench-root">
           <ProjectsGate
             key={identity}
@@ -448,6 +480,7 @@ function WebsiteShell({ capability }: { capability: WebsiteCloudCapability }) {
                     register={registerLeaveGuard}
                     go={go}
                     logout={logout}
+                    chooseDestination={() => selectDestination(false)}
                   />
                 )}
               />
@@ -489,12 +522,9 @@ function WebsiteShell({ capability }: { capability: WebsiteCloudCapability }) {
                 重试连接账号服务
               </button>
             ) : null}
-            <AccountFeatureEntry
-              id="relay.phone"
-              onClick={() => window.location.assign("/devices")}
-            >
-              我的电脑
-            </AccountFeatureEntry>
+            <button className="website-button" onClick={() => selectDestination(false)}>
+              选择云端或其他电脑
+            </button>
             <button className="ghost" onClick={() => go({ kind: "account", section: "profile" })}>
               账号设置
             </button>
