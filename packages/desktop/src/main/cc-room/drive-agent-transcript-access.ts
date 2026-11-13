@@ -1,7 +1,10 @@
 import { realpath, stat } from "node:fs/promises";
 import { isAbsolute, resolve } from "node:path";
 import type { LinkedSessionTarget } from "@cjhyy/code-shell-server/mobile-remote";
-import type { TaskInboxSourcesDeps } from "../task-inbox/task-inbox-sources.js";
+import type {
+  TaskInboxBackgroundEntry,
+  TaskInboxSourcesDeps,
+} from "../task-inbox/task-inbox-sources.js";
 
 type BackgroundHost = NonNullable<TaskInboxSourcesDeps["background"]>;
 
@@ -11,7 +14,10 @@ type BackgroundHost = NonNullable<TaskInboxSourcesDeps["background"]>;
 export class DriveAgentTranscriptAccess {
   private readonly observations = new Map<number, Map<string, LinkedSessionTarget>>();
 
-  constructor(private readonly list: BackgroundHost["list"]) {}
+  constructor(
+    private readonly list: BackgroundHost["list"],
+    private readonly readLocal?: () => TaskInboxBackgroundEntry[],
+  ) {}
 
   async open<T extends { roomId: string; cwd: string }>(
     senderId: number,
@@ -31,15 +37,17 @@ export class DriveAgentTranscriptAccess {
     }
     const cwd = await canonicalDirectory(target.cwd);
     const cli = target.kind === "codex" ? "codex" : "claude";
-    const job = (await this.list()).find(
-      (item) =>
-        item.kind === "job" &&
-        item.jobKind === "drive-agent" &&
-        item.jobId === reference.jobId &&
-        item.sourceSession.sessionId === reference.sourceSessionId &&
-        item.externalSessionId === target.externalSessionId &&
-        item.cli === cli,
-    );
+    const matches = (item: TaskInboxBackgroundEntry) =>
+      item.kind === "job" &&
+      item.jobKind === "drive-agent" &&
+      item.jobId === reference.jobId &&
+      item.sourceSession.sessionId === reference.sourceSessionId &&
+      item.externalSessionId === target.externalSessionId &&
+      item.cli === cli;
+    // Observation needs the persisted identity, not the live cancellation
+    // controller. A busy worker must not hold up opening an already-known
+    // transcript; ask it only when the local snapshot is not available yet.
+    const job = this.readLocal?.().find(matches) ?? (await this.list()).find(matches);
     if (!job || job.kind !== "job" || (await canonicalDirectory(job.cwd)) !== cwd) {
       throw new Error("DriveAgent transcript does not match the requested job");
     }
