@@ -137,6 +137,10 @@ jobs:
           # each. Keeping each invocation small keeps them fast.
           - shard: core-engine
             paths: packages/core/src/engine packages/core/src/tool-system
+            ignore: >-
+              --path-ignore-patterns '**/src/engine/*context*.test.ts'
+              --path-ignore-patterns '**/src/engine/*cache*.test.ts'
+              --path-ignore-patterns '**/src/engine/*prefix*.test.ts'
           # Exclusion, not an enumerated list: a hand-written directory list
           # silently drops any subtree or top-level test file added later, and
           # bun errors out entirely if one listed path has no tests.
@@ -466,12 +470,54 @@ jobs:
         run: |
           node scripts/run-isolated-node-smoke.mjs scripts/test-hub-smoke-lifecycle.mjs
           bun run test:server-smoke
+      # Keep the cache feature suites within a separate 60-file process budget.
+      - name: test engine context and cache contracts
+        if: matrix.shard == 'core-engine'
+        run: >-
+          node scripts/run-bun-test-shard.mjs --timeout 30000
+          packages/core/src/engine/aux-prompt-cache.test.ts
+          packages/core/src/engine/auxiliary-pipeline.context-messages.test.ts
+          packages/core/src/engine/auxiliary-pipeline.prompt-cache.test.ts
+          packages/core/src/engine/cache-hit-rate.test.ts
+          packages/core/src/engine/engine-instruction-context.test.ts
+          packages/core/src/engine/engine.context-anchor.test.ts
+          packages/core/src/engine/engine.context-ledger-delimiters.test.ts
+          packages/core/src/engine/engine.context-ledger-hardening.test.ts
+          packages/core/src/engine/engine.context-ledger-scope.test.ts
+          packages/core/src/engine/engine.context-ledger.test.ts
+          packages/core/src/engine/engine.context-notes.test.ts
+          packages/core/src/engine/engine.context-package.test.ts
+          packages/core/src/engine/engine.primary-cache-accounting.test.ts
+          packages/core/src/engine/engine.prompt-cache.test.ts
+          packages/core/src/engine/goal-judge-context.test.ts
+          packages/core/src/engine/injected-context-cache.test.ts
+          packages/core/src/engine/model-facade-cache-lifecycle.test.ts
+          packages/core/src/engine/prompt-cache-diagnostics.test.ts
+          packages/core/src/engine/prompt-cache-route.test.ts
+          packages/core/src/engine/prompt-prefix-heads.test.ts
+          packages/core/src/engine/rollover-context.test.ts
+          packages/core/src/engine/run-context-ledger-mcp-health.test.ts
+          packages/core/src/engine/run-context-ledger-scope.test.ts
+          packages/core/src/engine/run-context-ledger-snapshot-only.test.ts
+          packages/core/src/engine/run-context.test.ts
+          packages/core/src/engine/runtime.sandbox-cache.test.ts
+          packages/core/src/engine/sandbox-cache-key.test.ts
+          packages/core/src/engine/stable-prefix.test.ts
+          packages/core/src/engine/tool-cache-cycle.test.ts
+          packages/core/src/engine/turn-loop-context-limit.test.ts
+          packages/core/src/engine/turn-loop-context-notes.test.ts
+          packages/core/src/engine/turn-loop-usage-cache.test.ts
+          packages/core/src/engine/turn-loop-volatile-prefix.test.ts
+          packages/core/src/engine/volatile-context-tail.test.ts
       - name: test core plugins in their own Bun process
         if: matrix.shard == 'core-rest'
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/plugins
       - name: test core session in its own Bun process
         if: matrix.shard == 'core-rest'
-        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/session
+        run: node scripts/run-bun-test-shard.mjs --timeout 30000 --path-ignore-patterns '**/src/session/*.privacy.test.ts' packages/core/src/session
+      - name: test context privacy export boundary
+        if: matrix.shard == 'core-rest'
+        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/session/context-messages.privacy.test.ts
       - name: Compiled isolated instruction adoption lifecycle
         if: matrix.shard == 'rest'
         run: |
