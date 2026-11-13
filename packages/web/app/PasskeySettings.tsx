@@ -150,6 +150,7 @@ function PasskeySettingsContent() {
   const [busy, setBusy] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState("");
+  const [listError, setListError] = React.useState("");
   const [status, setStatus] = React.useState("");
   const [revision, refresh] = React.useState(0);
   const [readyToCreate, setReadyToCreate] = React.useState(false);
@@ -159,19 +160,27 @@ function PasskeySettingsContent() {
   React.useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
+    setListError("");
     void account
       .request("/passkeys", "GET", undefined, controller.signal)
       .then((value) => {
         if (!controller.signal.aborted) setList(parsePasskeys(value));
       })
       .catch((cause) => {
-        if (!controller.signal.aborted) setError(passkeyFailure(cause));
+        if (!controller.signal.aborted)
+          setListError(`未能读取最新 Passkey 列表。${passkeyFailure(cause)}`);
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
   }, [account.request, revision]);
+  const reload = () => {
+    setList(undefined);
+    setError("");
+    setLoading(true);
+    refresh((value) => value + 1);
+  };
   const run = async (work: (signal: AbortSignal) => Promise<string>) => {
     if (pending.current || account.busy) return;
     const controller = new AbortController();
@@ -183,10 +192,13 @@ function PasskeySettingsContent() {
       const message = await work(controller.signal);
       if (!controller.signal.aborted) {
         setStatus(message);
-        refresh((value) => value + 1);
+        reload();
       }
     } catch (cause) {
-      if (!controller.signal.aborted) setError(passkeyFailure(cause));
+      if (!controller.signal.aborted) {
+        setStatus("");
+        setError(passkeyFailure(cause));
+      }
     } finally {
       if (pending.current === controller) {
         pending.current = null;
@@ -242,14 +254,23 @@ function PasskeySettingsContent() {
       );
       const response = await createBrowserPasskey(options.optionsJSON, signal);
       signal.throwIfAborted();
-      const result = await account.request<{ verified?: boolean }>(
-        "/passkeys/registration/verify",
-        "POST",
-        { ceremonyId: options.ceremonyId, response },
-        signal,
-      );
-      if (result.verified !== true) throw new Error("Passkey 尚未保存，请重试。");
-      return "Passkey 已添加。连接电脑时可使用系统验证，无需另设远程口令。";
+      setStatus("系统验证已完成，正在确认服务器保存…");
+      try {
+        const result = await account.request<{ verified?: boolean }>(
+          "/passkeys/registration/verify",
+          "POST",
+          { ceremonyId: options.ceremonyId, response },
+          signal,
+        );
+        if (result.verified !== true) throw new Error("服务器尚未确认保存结果。");
+      } catch (cause) {
+        if (!signal.aborted) setList(undefined);
+        throw new Error(
+          `系统验证已完成，但尚未确认 Passkey 已保存到此账号。${passkeyFailure(cause)} 请重试读取列表确认结果；系统中可能保留了尚未关联此账号的凭据。`,
+          { cause },
+        );
+      }
+      return "Passkey 已保存到此账号。连接电脑时可使用系统验证，无需另设远程口令。";
     });
   };
   const remove = (item: PasskeyEntry) => {
@@ -269,7 +290,13 @@ function PasskeySettingsContent() {
   return (
     <section className="website-settings-card" aria-labelledby="passkey-title">
       <h2 id="passkey-title">Passkey</h2>
+      <p>
+        所属账号：{account.session?.account?.displayName}（@{account.session?.account?.username}）
+      </p>
       <p>{PASSKEY_EXPLANATION} 连接电脑和批准新的桌面端登录时都会验证。</p>
+      <p className="website-hint">
+        系统验证完成后，还需服务器确认保存。下方列表显示此账号已保存的 Passkey。
+      </p>
       {loading ? <p role="status">正在读取 Passkey…</p> : null}
       {error ? (
         <p className="form-error" role="alert">
@@ -281,14 +308,13 @@ function PasskeySettingsContent() {
           {status}
         </p>
       ) : null}
+      {listError ? (
+        <p className="form-error" role="alert">
+          {listError}
+        </p>
+      ) : null}
       {!loading && !list ? (
-        <button
-          className="website-button"
-          onClick={() => {
-            setError("");
-            refresh((value) => value + 1);
-          }}
-        >
+        <button className="website-button" onClick={reload}>
           重试读取
         </button>
       ) : null}
@@ -357,7 +383,7 @@ function PasskeySettingsContent() {
                   disabled={busy || account.busy || !name.trim()}
                   type="submit"
                 >
-                  {busy ? "等待系统验证…" : "添加 Passkey"}
+                  {busy ? "正在处理…" : "添加 Passkey"}
                 </button>
               ) : null}
               {readyToCreate ? (

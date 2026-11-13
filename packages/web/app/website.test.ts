@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { afterEach, expect, test } from "bun:test";
 import {
   AccountWebClient,
   accountError,
@@ -41,6 +41,21 @@ const webSession = () => ({
   cloudTarget: { enabled: true, ...target },
 });
 const capability = { ...target, version: 1 as const, mode: "cloud-browser" as const };
+const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+afterEach(() => {
+  if (originalNavigator) Object.defineProperty(globalThis, "navigator", originalNavigator);
+  else delete (globalThis as any).navigator;
+});
+function installCookieLock() {
+  Object.defineProperty(globalThis, "navigator", {
+    configurable: true,
+    value: {
+      locks: {
+        request: (_name: string, _options: unknown, work: () => Promise<unknown>) => work(),
+      },
+    },
+  });
+}
 
 test("only the official HTTPS origins enable the public website", () => {
   for (const value of ["https://codeshell.site", "https://www.codeshell.site"])
@@ -318,6 +333,171 @@ test("an expired OAuth receipt cannot invalidate an otherwise valid browser acco
     }),
   ).rejects.toThrow("授权请求已失效");
   expect(lost).toBe(false);
+});
+
+test("Passkey business 401s preserve the account and never replay one-use requests", async () => {
+  for (const [path, code] of [
+    ["/passkeys/registration/options", "passkey_bootstrap_required"],
+    ["/passkeys/registration/verify", "passkey_ceremony_expired"],
+    ["/passkeys/registration/verify", "passkey_verification_failed"],
+    ["/passkeys/authentication/verify", "passkey_verification_failed"],
+    ["/passkeys/registration/options", "passkey_required"],
+    ["/passkeys/bootstrap/password", "invalid_credentials"],
+    ["/browser/approve", "passkey_required"],
+  ]) {
+    const calls: string[] = [];
+    const client = new AccountWebClient((async (url) => {
+      calls.push(String(url));
+      return Response.json({ error: code }, { status: 401 });
+    }) as typeof fetch);
+    client.setSession(parseAccountSession(webSession()));
+    let lost = 0;
+    client.onSessionLost = () => lost++;
+    await expect(client.request(path!, "POST", { ceremonyId: "one-use" })).rejects.toMatchObject({
+      code,
+      status: 401,
+    });
+    expect(calls).toEqual(["/api/v1/account/web" + path]);
+    expect(lost).toBe(0);
+  }
+});
+
+test("Passkey requests retry only a pre-ceremony authentication rejection with the same restored root", async () => {
+  installCookieLock();
+  const calls: string[] = [];
+  const client = new AccountWebClient((async (url) => {
+    const path = String(url).replace("/api/v1/account/web", "");
+    calls.push(path);
+    if (path === "/session")
+      return Response.json({
+        authenticated: false,
+        refreshRequired: true,
+        csrfToken: "C".repeat(43),
+        cloudTarget: { enabled: false },
+      });
+    if (path === "/refresh") return Response.json(webSession());
+    return calls.length === 1
+      ? Response.json({ error: "authentication_required" }, { status: 401 })
+      : Response.json({ verified: true });
+  }) as typeof fetch);
+  client.setSession(parseAccountSession(webSession()));
+  let lost = 0;
+  client.onSessionLost = () => lost++;
+  await expect(client.request("/passkeys/registration/verify", "POST", {})).resolves.toEqual({
+    verified: true,
+  });
+  expect(calls).toEqual([
+    "/passkeys/registration/verify",
+    "/session",
+    "/refresh",
+    "/passkeys/registration/verify",
+  ]);
+  expect(lost).toBe(0);
+});
+
+test("expired roots and unknown Passkey 401s fail closed without replaying the ceremony", async () => {
+  installCookieLock();
+  for (const code of ["authentication_required", "invalid_session", "unknown_rejection"]) {
+    const calls: string[] = [];
+    const client = new AccountWebClient((async (url) => {
+      const path = String(url).replace("/api/v1/account/web", "");
+      calls.push(path);
+      return path === "/session"
+        ? Response.json({
+            authenticated: false,
+            refreshRequired: false,
+            cloudTarget: { enabled: false },
+          })
+        : Response.json({ error: code }, { status: 401 });
+    }) as typeof fetch);
+    client.setSession(parseAccountSession(webSession()));
+    let lost = 0;
+    client.onSessionLost = () => lost++;
+    await expect(client.request("/passkeys/registration/verify", "POST", {})).rejects.toMatchObject(
+      { code },
+    );
+    expect(calls).toEqual(
+      code === "unknown_rejection"
+        ? ["/passkeys/registration/verify"]
+        : ["/passkeys/registration/verify", "/session"],
+    );
+    expect(lost).toBe(1);
+  }
+});
+
+test("a Passkey rejection after safe authentication recovery keeps its original error and login", async () => {
+  installCookieLock();
+  let verifications = 0,
+    lost = 0;
+  const client = new AccountWebClient((async (url) => {
+    if (String(url).endsWith("/session")) return Response.json(webSession());
+    return Response.json(
+      { error: ++verifications === 1 ? "authentication_required" : "passkey_verification_failed" },
+      { status: 401 },
+    );
+  }) as typeof fetch);
+  client.setSession(parseAccountSession(webSession()));
+  client.onSessionLost = () => lost++;
+  await expect(client.request("/passkeys/registration/verify", "POST", {})).rejects.toMatchObject({
+    code: "passkey_verification_failed",
+  });
+  expect(verifications).toBe(2);
+  expect(lost).toBe(0);
+});
+
+test("an access token expiring during a Passkey ceremony reconciles the account without replay", async () => {
+  installCookieLock();
+  for (const sessionResponse of ["valid", "unavailable"] as const) {
+    const calls: string[] = [];
+    const client = new AccountWebClient((async (url) => {
+      const path = String(url).replace("/api/v1/account/web", "");
+      calls.push(path);
+      if (path === "/session") {
+        if (sessionResponse === "unavailable") throw new TypeError("Owned network interruption");
+        return Response.json(webSession());
+      }
+      return Response.json({ error: "invalid_session" }, { status: 401 });
+    }) as typeof fetch);
+    client.setSession(parseAccountSession(webSession()));
+    let lost = 0;
+    client.onSessionLost = () => lost++;
+    await expect(client.request("/passkeys/registration/verify", "POST", {})).rejects.toMatchObject(
+      { code: "invalid_session" },
+    );
+    expect(calls).toEqual(["/passkeys/registration/verify", "/session"]);
+    expect(lost).toBe(0);
+  }
+});
+
+test("Passkey recovery never retries or retains an old login when cookies switch roots", async () => {
+  installCookieLock();
+  for (const code of ["authentication_required", "invalid_session"]) {
+    for (const differentAccount of [false, true]) {
+      let verifications = 0,
+        lost = 0;
+      const otherId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+      const restored = webSession();
+      restored.session.id = otherId;
+      if (differentAccount) {
+        restored.account = { ...account, id: otherId };
+        restored.overview = { ...overview, account: restored.account };
+      }
+      const client = new AccountWebClient((async (url) => {
+        if (String(url).endsWith("/session")) return Response.json(restored);
+        verifications++;
+        return Response.json({ error: code, message: "private credential value" }, { status: 401 });
+      }) as typeof fetch);
+      client.setSession(parseAccountSession(webSession()));
+      client.onSessionLost = () => lost++;
+      const cause = await client
+        .request("/passkeys/registration/verify", "POST", {})
+        .catch((error: unknown) => error);
+      expect(cause).toMatchObject({ code });
+      expect((cause as Error).message).not.toContain("private credential");
+      expect(verifications).toBe(1);
+      expect(lost).toBe(1);
+    }
+  }
 });
 
 test("registration selection uses only the fixed path and ignores untrusted redirect parameters", () => {

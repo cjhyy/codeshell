@@ -55,6 +55,8 @@ async function mount({
   github = false,
   initial = "/settings/account/security",
   width = 1280,
+  registrationOutcome = "success",
+  failListAfterSave = false,
 } = {}) {
   await context?.close();
   context = await browser.newContext({ viewport: { width, height: 900 }, serviceWorkers: "block" });
@@ -67,6 +69,7 @@ async function mount({
       githubStarted: false,
       githubMode: "",
       linked: github,
+      listFailures: 0,
     };
   const account = {
     id: accountId,
@@ -162,11 +165,16 @@ async function mount({
       state.signedIn = false;
       return json({ ok: true });
     }
-    if (url.pathname === "/api/v1/account/web/passkeys")
+    if (url.pathname === "/api/v1/account/web/passkeys") {
+      if (state.listFailures > 0) {
+        state.listFailures--;
+        return json({ error: "owned_list_unavailable" }, 503);
+      }
       return json({ passkeys: state.passkeys, bootstrap: { password: !github, github } });
+    }
     if (url.pathname === "/api/v1/account/web/passkeys/bootstrap/password") {
       if (body.currentPassword !== "fixture-account-password")
-        return json({ error: "incorrect_password" }, 400);
+        return json({ error: "invalid_credentials" }, 401);
       state.bootstrapVerified = true;
       return json({ bootstrapProof: bootstrap, expiresAt: Date.now() + 60000 });
     }
@@ -211,7 +219,12 @@ async function mount({
     }
     if (url.pathname === "/api/v1/account/web/passkeys/registration/verify") {
       const result = await passkeys.register(body);
+      if (registrationOutcome === "reject")
+        return json({ error: "passkey_verification_failed" }, 401);
       state.passkeys.push(result.passkey);
+      if (registrationOutcome === "unconfirmed")
+        return json({ error: "owned_response_unavailable" }, 503);
+      if (failListAfterSave) state.listFailures++;
       return json(result);
     }
     if (url.pathname.startsWith("/api/v1/account/web/passkeys/") && request.method() === "DELETE") {
@@ -261,7 +274,8 @@ async function screenshot(page, name) {
 }
 try {
   let f = await mount();
-  const settings = f.page.getByRole("region", { name: "Passkey", exact: true });
+  let settings = f.page.getByRole("region", { name: "Passkey", exact: true });
+  await settings.getByText("所属账号：测试账号（@fixture-user）", { exact: true }).waitFor();
   await settings
     .getByText("尚未添加 Passkey。首次添加需要重新验证账号身份。", { exact: true })
     .waitFor();
@@ -271,7 +285,7 @@ try {
   );
   await settings.getByLabel("验证账号密码", { exact: true }).fill("wrong-password-value");
   await settings.getByRole("button", { name: "添加 Passkey", exact: true }).click();
-  await settings.getByRole("alert").filter({ hasText: "当前密码不正确" }).waitFor();
+  await settings.getByRole("alert").filter({ hasText: "当前账号密码不正确" }).waitFor();
   assert.equal(await settings.getByLabel("验证账号密码", { exact: true }).inputValue(), "");
   assert.equal(
     f.calls.some((call) => call.path.endsWith("/registration/options")),
@@ -285,6 +299,9 @@ try {
     true,
   );
   await screenshot(f.page, "passkey-settings-desktop");
+  await f.page.reload();
+  await settings.getByText("我的 Passkey", { exact: true }).waitFor();
+  assert.equal(f.state.passkeys.length, 1, "A full page reload reads the saved server credential");
   await settings.getByLabel("Passkey 名称", { exact: true }).fill("备用 Passkey");
   await settings.getByRole("button", { name: "添加 Passkey", exact: true }).click();
   await settings.getByText("备用 Passkey", { exact: true }).waitFor();
@@ -317,6 +334,52 @@ try {
   await f.page.goto(origin + "/settings/account/connections");
   await f.page.getByRole("button", { name: "关联 GitHub 登录身份", exact: true }).click();
   await f.page.getByText("已关联", { exact: true }).waitFor();
+
+  f = await mount({ registrationOutcome: "reject", width: 390 });
+  settings = f.page.getByRole("region", { name: "Passkey", exact: true });
+  await settings.getByLabel("验证账号密码", { exact: true }).fill("fixture-account-password");
+  await settings.getByRole("button", { name: "添加 Passkey", exact: true }).click();
+  await settings.getByRole("alert").filter({ hasText: "Passkey 验证未通过" }).waitFor();
+  assert.equal(f.calls.filter((call) => call.path.endsWith("/registration/verify")).length, 1);
+  assert.equal(f.calls.filter((call) => call.path.endsWith("/session")).length, 1);
+  assert.equal(f.state.signedIn, true);
+  assert.equal(f.state.passkeys.length, 0);
+  assert.equal(await f.page.getByRole("heading", { name: "登录", exact: true }).count(), 0);
+  assert.equal(await settings.getByRole("status").filter({ hasText: "已保存到此账号" }).count(), 0);
+  await settings.getByText("系统中可能保留了尚未关联此账号的凭据。", { exact: false }).waitFor();
+  await screenshot(f.page, "passkey-rejected-after-system-verification");
+  await settings.getByRole("button", { name: "重试读取", exact: true }).click();
+  await settings
+    .getByText("尚未添加 Passkey。首次添加需要重新验证账号身份。", { exact: true })
+    .waitFor();
+  assert.equal(await settings.getByRole("alert").count(), 0);
+
+  f = await mount({ failListAfterSave: true });
+  settings = f.page.getByRole("region", { name: "Passkey", exact: true });
+  await settings.getByLabel("验证账号密码", { exact: true }).fill("fixture-account-password");
+  await settings.getByRole("button", { name: "添加 Passkey", exact: true }).click();
+  await settings.getByRole("alert").filter({ hasText: "未能读取最新 Passkey 列表" }).waitFor();
+  await settings.getByRole("status").filter({ hasText: "Passkey 已保存到此账号" }).waitFor();
+  assert.equal(await settings.getByText("尚未添加 Passkey。", { exact: false }).count(), 0);
+  assert.equal(f.state.passkeys.length, 1);
+  await screenshot(f.page, "passkey-saved-list-retry");
+  await settings.getByRole("button", { name: "重试读取", exact: true }).click();
+  await settings.getByText("我的 Passkey", { exact: true }).waitFor();
+  assert.equal(await settings.getByRole("alert").count(), 0);
+  assert.equal(f.calls.filter((call) => call.path.endsWith("/registration/verify")).length, 1);
+
+  f = await mount({ registrationOutcome: "unconfirmed" });
+  settings = f.page.getByRole("region", { name: "Passkey", exact: true });
+  await settings.getByLabel("验证账号密码", { exact: true }).fill("fixture-account-password");
+  await settings.getByRole("button", { name: "添加 Passkey", exact: true }).click();
+  await settings
+    .getByRole("alert")
+    .filter({ hasText: "尚未确认 Passkey 已保存到此账号" })
+    .waitFor();
+  assert.equal(await settings.getByRole("status").filter({ hasText: "已保存到此账号" }).count(), 0);
+  await settings.getByRole("button", { name: "重试读取", exact: true }).click();
+  await settings.getByText("我的 Passkey", { exact: true }).waitFor();
+  assert.equal(f.calls.filter((call) => call.path.endsWith("/registration/verify")).length, 1);
 
   f = await mount({ github: true });
   await f.page.getByRole("button", { name: "通过 GitHub 验证并添加", exact: true }).click();
@@ -371,6 +434,10 @@ try {
         checks: [
           "password bootstrap required",
           "real registration",
+          "Passkey ownership is visible",
+          "business 401 preserves login and original rejection without replay",
+          "saved credential survives list failure with explicit retry",
+          "unconfirmed save never claims success and can reconcile the server list",
           "existing-key UV add/delete",
           "last-key protection",
           "cancel ceremony",

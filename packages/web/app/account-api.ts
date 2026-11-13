@@ -3,6 +3,12 @@ import { parseAccountFeatures, type AccountFeatureMap } from "../src/account/fea
 export const ACCOUNT_WEB_PREFIX = "/api/v1/account/web";
 const UUID = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/;
 const OPAQUE = /^[A-Za-z0-9_-]{43}$/;
+const PASSKEY_BUSINESS_UNAUTHORIZED = new Set([
+  "passkey_bootstrap_required",
+  "passkey_ceremony_expired",
+  "passkey_verification_failed",
+  "passkey_required",
+]);
 
 export interface WebsiteProfile {
   id: string;
@@ -90,6 +96,10 @@ export class AccountWebError extends Error {
 export function accountError(value: unknown, status: number, path: string): AccountWebError {
   const body = value as { error?: unknown; reason?: unknown } | undefined;
   const code = typeof body?.error === "string" ? body.error : undefined;
+  if (path === "/passkeys/bootstrap/password" && code === "invalid_credentials")
+    return new AccountWebError("当前账号密码不正确，请重新输入。", status, code);
+  if (path.startsWith("/passkeys/") && code === "invalid_session")
+    return new AccountWebError("本次验证已失效，请重新发起 Passkey 验证。", status, code);
   if (path === "/github/poll" && code === "github_login_failed") {
     if (body?.reason === "provider_timeout")
       return new AccountWebError("服务器连接 GitHub 超时，请重新发起授权。", status, code);
@@ -495,8 +505,20 @@ export class AccountWebClient {
       if (value?.accessToken !== undefined || value?.refreshToken !== undefined)
         throw new AccountWebError("账号服务返回了不支持的授权结果。");
       if (!response.ok) {
+        const passkeyRequest = path === "/passkeys" || path.startsWith("/passkeys/");
+        const passkeyBusinessFailure =
+          PASSKEY_BUSINESS_UNAUTHORIZED.has(value?.error) ||
+          (path === "/passkeys/bootstrap/password" && value?.error === "invalid_credentials");
+        // Only authentication_required is rejected before a Passkey ceremony is consumed.
+        // invalid_session can instead mean the access credential expired during verification:
+        // reconcile the root, but never replay that one-use response.
+        const reconcileOnly = passkeyRequest && value?.error === "invalid_session";
+        let sessionLost = response.status === 401 && !passkeyBusinessFailure;
+        let retry = false;
         if (
           response.status === 401 &&
+          !passkeyBusinessFailure &&
+          (!passkeyRequest || value?.error === "authentication_required" || reconcileOnly) &&
           attempt === 0 &&
           path !== "/session" &&
           path !== "/refresh" &&
@@ -513,16 +535,20 @@ export class AccountWebClient {
               this.rootId === requestRoot
             ) {
               this.setSession(refreshed);
-              return await this.request<T>(path, method, body, signal, beforeFence, 1);
+              retry = !reconcileOnly;
+              sessionLost = false;
             }
-          } catch {
+          } catch (cause) {
             /* An expired root cannot be restored or retried as another account. */
+            if (reconcileOnly && !(cause instanceof AccountWebError && cause.status === 401))
+              sessionLost = false;
           }
         }
+        if (retry) return this.request<T>(path, method, body, signal, beforeFence, 1);
         if (epoch !== this.epoch || requestRoot !== this.rootId)
           throw new AccountWebError("账号状态已改变。");
         if (
-          response.status === 401 &&
+          sessionLost &&
           path !== "/session" &&
           path !== "/refresh" &&
           !path.startsWith("/github/")
