@@ -30,7 +30,7 @@ describe("volatile context at the request tail", () => {
     expect(none).toHaveLength(1);
   });
 
-  it("ends the stable prefix just before a tail-placed volatile message", () => {
+  it("keeps an earlier pending rewrite outside the stable prefix when volatile context moves", () => {
     const world = user("world");
     const runStart = user("task");
     const rewrite = user("old");
@@ -43,11 +43,25 @@ describe("volatile context at the request tail", () => {
     };
     // In place: the settled line (here the pending rewrite) wins.
     expect(resolveStablePrefixMessageCount(input)).toBe(0);
-    // At the tail: everything before the volatile message is the prefix.
-    expect(resolveStablePrefixMessageCount({ ...input, volatileAtTail: true })).toBe(4);
+    // Moving volatile context cannot settle an earlier pending rewrite.
+    expect(resolveStablePrefixMessageCount({ ...input, volatileAtTail: true })).toBe(0);
     // No volatile message this run: the flag changes nothing.
     expect(
       resolveStablePrefixMessageCount({ ...input, isVolatile: () => false, volatileAtTail: true }),
     ).toBe(0);
+  });
+
+  it("ends the stable prefix before tail-placed volatile context when no rewrite is pending", () => {
+    const world = user("world");
+    const runStart = user("task");
+    const messages = [user("old"), assistant("old answer"), runStart, assistant("step"), world];
+    expect(
+      resolveStablePrefixMessageCount({
+        messages,
+        isVolatile: (message) => message === world,
+        runStartMessage: runStart,
+        volatileAtTail: true,
+      }),
+    ).toBe(4);
   });
 });
