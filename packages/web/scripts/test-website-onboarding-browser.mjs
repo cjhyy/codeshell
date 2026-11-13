@@ -306,7 +306,7 @@ try {
     await page.getByRole("button", { name: "创建账号", exact: true }).click();
     await page.getByRole("heading", { name: "选择云端或电脑" }).waitFor();
     await page.getByRole("button", { name: "进入云端" }).click();
-    await page.getByRole("heading", { name: "为第一个想法，建一个工作区" }).waitFor();
+    await page.getByRole("heading", { name: "按需使用云端" }).waitFor();
     await page.getByLabel("工作区名称", { exact: true }).fill("我的第一个工作区");
     await shot(page, `${prefix}-03-workspace`);
     await page.getByRole("button", { name: "创建并打开", exact: true }).click();

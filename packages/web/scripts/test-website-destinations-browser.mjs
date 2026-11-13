@@ -150,6 +150,11 @@ async function mount(width = 1440, initial = "/app") {
       return json({ registrationAllowed: true, githubEnabled: false, features });
     if (url.pathname === "/api/v1/account/web/session") return json(session());
     if (url.pathname === "/api/v1/account/web/overview") return json(session().overview);
+    if (url.pathname === "/api/v1/account/web/passkeys")
+      return json({
+        passkeys: [{ id: passkeys.id, name: "Fixture Passkey", createdAt: 1770000000000 }],
+        bootstrap: { password: false, github: false },
+      });
     if (url.pathname === "/api/v1/account/web/passkeys/authentication/options") {
       assert.deepEqual(entry.body, { purpose: "remote-access", target: hosts[0].hostId });
       return json(passkeys.options(entry.body));
@@ -254,16 +259,28 @@ try {
     );
     await shot(page, `destinations-${width}`);
     await page.getByRole("button", { name: "进入云端" }).click();
-    await page.getByRole("heading", { name: "为第一个想法，建一个工作区" }).waitFor();
+    await page.getByRole("heading", { name: "按需使用云端" }).waitFor();
     assert.equal(new URL(page.url()).searchParams.get("target"), "cloud");
-    await page.getByLabel("打开账号菜单").click();
-    await page.getByRole("button", { name: "切换云端或电脑" }).click();
+    await shot(page, `optional-cloud-${width}`);
+    await page.getByRole("button", { name: "暂不创建", exact: true }).click();
     await page.getByRole("heading", { name: "选择云端或电脑" }).waitFor();
     assert.equal(new URL(page.url()).searchParams.get("target"), "choose");
     state.hosts = [];
     await page.getByRole("button", { name: "刷新电脑列表" }).click();
     await page.getByRole("heading", { name: "还没有登录的电脑" }).waitFor();
     await shot(page, `destinations-empty-${width}`);
+    await page.getByLabel("打开账号菜单").click();
+    await page.getByRole("button", { name: "账号设置", exact: true }).click();
+    await page.getByRole("button", { name: "安全", exact: true }).click();
+    await page.getByRole("heading", { name: "安全", exact: true }).waitFor();
+    await page.getByRole("region", { name: "Passkey", exact: true }).waitFor();
+    assert.equal(
+      calls.some((call) => call.path === "/api/v1/projects" && call.method === "POST"),
+      false,
+      "Skipping Cloud setup and opening security never creates a project",
+    );
+    await page.getByRole("button", { name: "← 返回工作台", exact: true }).click();
+    await page.getByRole("heading", { name: "选择云端或电脑" }).waitFor();
     state.hosts = globalThis.structuredClone(hosts);
     await page.getByRole("button", { name: "刷新电脑列表" }).click();
     await page.getByRole("button", { name: "连接 我的 MacBook", exact: true }).waitFor();
@@ -281,7 +298,7 @@ try {
     );
   }
   const deep = await mount(1440, "/app?target=cloud");
-  await deep.page.getByRole("heading", { name: "为第一个想法，建一个工作区" }).waitFor();
+  await deep.page.getByRole("heading", { name: "按需使用云端" }).waitFor();
   assert.ok(!deep.calls.some((call) => call.path === "/api/v1/account/web/remote-hosts"));
   const stale = await mount();
   await stale.page.getByRole("button", { name: "连接 我的 MacBook", exact: true }).waitFor();
@@ -329,7 +346,8 @@ try {
           "logout fences late claim",
           "logout fences late directory",
           "Cloud deep link",
-          "back to chooser",
+          "optional Cloud setup returns to chooser without project creation",
+          "empty account opens security and Passkey settings",
           "empty desktop onboarding",
         ],
         screenshots,

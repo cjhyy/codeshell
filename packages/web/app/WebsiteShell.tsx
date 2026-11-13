@@ -520,6 +520,7 @@ function WebsiteShell({ capability }: { capability?: WebsiteCloudCapability }) {
             allowLegacy={false}
             autoEnterSingle
             startCreatedProject
+            onSkipSetup={() => selectDestination(false)}
             canRequest={() => account.workspaceActive(identity!)}
             onAuthLost={() => {
               setCloudGrant(null);

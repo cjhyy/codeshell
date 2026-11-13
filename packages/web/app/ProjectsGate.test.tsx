@@ -64,6 +64,7 @@ async function fixture(
     strict?: boolean;
     autoEnterSingle?: boolean;
     startCreatedProject?: boolean;
+    onSkipSetup?: () => void;
     allowLegacy?: boolean;
   } = {},
 ) {
@@ -153,6 +154,7 @@ async function fixture(
     tree = ProjectsGate({
       autoEnterSingle: options.autoEnterSingle,
       startCreatedProject: options.startCreatedProject,
+      onSkipSetup: options.onSkipSetup,
       allowLegacy: options.allowLegacy,
       onAuthLost: () => {
         authLost++;
@@ -381,6 +383,24 @@ test("website mode auto-opens only one running authorized project and respects r
   await view.focus();
   expect(view.child).toBeUndefined();
   expect(text(view.tree)).toContain("你的项目");
+});
+
+test("an empty website Cloud account can skip setup without creating or mounting a runtime", async () => {
+  let skipped = 0;
+  const view = await fixture({
+    projects: [],
+    startCreatedProject: true,
+    allowLegacy: false,
+    onSkipSetup: () => {
+      skipped++;
+    },
+  });
+  expect(text(view.tree)).toContain("创建云端项目是可选的");
+  await click(button(view.tree, "暂不创建"));
+  expect(skipped).toBe(1);
+  expect(view.requests.some((item) => item.init?.method === "POST")).toBe(false);
+  expect(view.child).toBeUndefined();
+  expect(view.mounts).toBe(0);
 });
 
 test("website create-and-open performs actual create and start before mounting a runtime", async () => {
