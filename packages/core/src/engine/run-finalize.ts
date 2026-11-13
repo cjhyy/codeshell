@@ -30,6 +30,7 @@ import type { TurnLoop } from "./turn-loop.js";
 import type { EngineResult } from "./types.js";
 import type { EngineRunOptions, RunBehaviorProfile } from "./run-types.js";
 import { isContextMessageEvent } from "../session/context-messages.js";
+import { persistContextReminder } from "./context-reminders.js";
 
 type TurnLoopRunResult = Awaited<ReturnType<TurnLoop["run"]>>;
 
@@ -152,11 +153,12 @@ export async function drainHeadlessBackgroundAgents(args: {
       role: "user",
       content: `<system-reminder>\n${buildNotificationMessage(pending)}\n</system-reminder>`,
     };
-    // Mark injected: a synthetic notification, not the user's own input —
-    // the disk reader drops it on replay so no phantom user bubble. It is
-    // stored whether or not the loop is re-entered: the model is sent it, so
-    // a replay from disk must contain it at the same position.
-    session.transcript.appendMessage(injected.role, injected.content, { injected: true });
+    // Engine context, not the user's input: stored as a context reminder, so
+    // no user bubble, title, memory extraction or interleaving check counts
+    // it, live or replayed. It is stored whether or not the loop is
+    // re-entered: the model is sent it, so a replay from disk must contain it
+    // at the same position.
+    persistContextReminder(session.transcript, injected);
     if (aborted || args.getFirstGoalTermination()) {
       // A goal termination is also a hard boundary: retain the notification
       // for recovery, but never re-enter TurnLoop (which would reset its
