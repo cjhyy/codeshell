@@ -692,6 +692,25 @@ test.each([false, true])(
       if (outputRecovery) {
         const detail = (result.result as { data: SessionDetailData }).data;
         expect(detail.legacyBaseComplete).toBe(true);
+        expect(detail.outputCoverage?.incarnation).toBe(detail.outputJournal?.coverageIdentity);
+        expect(detail.outputCoverage?.journalIdentity).toBeString();
+        expect(detail.liveStream).toBeUndefined();
+        const coverageReply = nextMessage(ws, (message) => message.id === "private-coverage");
+        ws.send(
+          JSON.stringify({
+            jsonrpc: "2.0",
+            id: "private-coverage",
+            method: "agent/query",
+            params: { type: "output_coverage", sessionId: "private-context" },
+          }),
+        );
+        const coverageResult = await coverageReply;
+        expect(coverageResult.error).toBeUndefined();
+        expect(coverageResult.result.data).toMatchObject({
+          incarnation: detail.outputCoverage!.incarnation,
+          journalIdentity: detail.outputCoverage!.journalIdentity,
+          unpaired: false,
+        });
         const restored = await chatFromOutputJournal(detail, async () => {
           throw new Error("Complete fixture journal must not need another page");
         }, []);

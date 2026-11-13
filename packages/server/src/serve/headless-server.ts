@@ -1005,7 +1005,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
           sessionManager,
           workspaceCwd,
           isRunning,
-          hubAuth ? runReplay : undefined,
+          runReplay,
         );
         if (hostReply) {
           sendToTab(ws, hostReply, "host-session-query");
