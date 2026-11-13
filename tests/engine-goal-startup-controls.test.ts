@@ -610,7 +610,10 @@ for (const action of ["pause", "edit"] as const)
       // A retry preserves that history and creates a second injected input; fixing
       // projections/receipts together is tracked in TODO.md, not hidden by rollback.
       const persisted = session.engine.getSessionManager().resume(session.id);
-      const injected = persisted.transcript.toMessages().filter((m) => m.role === "user");
+      // Engine context (ledger snapshot, hook reminders) is history but not input.
+      const injected = persisted.transcript
+        .toConversationMessages()
+        .filter((m) => m.role === "user");
       expect(injected).toHaveLength(action === "edit" ? 2 : 1);
       if (action === "edit") expect(injected[0].content).toEqual(injected[1].content);
       const { readOutputJournal } = await import("../packages/core/src/session/output-journal.js");

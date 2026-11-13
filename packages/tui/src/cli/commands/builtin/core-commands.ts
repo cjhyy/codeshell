@@ -10,7 +10,11 @@ import { gitDiff, gitDiffStat } from "./git-diff.js";
 import { existsSync, writeFileSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
-import { resolveApiKey } from "@cjhyy/code-shell-core/internal";
+import {
+  isContextEvent,
+  resolveApiKey,
+  withoutContextEvents,
+} from "@cjhyy/code-shell-core/internal";
 import { initCommand } from "./init/index.js";
 
 const REDACTED_SETTING_VALUE = "[REDACTED]";
@@ -534,6 +538,8 @@ export const coreCommands: SlashCommand[] = [
                 // separately via the outer "tool_use" event, so we only
                 // surface text + reasoning here. Reasoning is shown inline
                 // with a tag prefix since the UI has no dedicated entry type.
+                // Engine context (ledger, hook reminders) is not a chat entry.
+                if (isContextEvent(event)) break;
                 if (role === "user") {
                   const text =
                     typeof content === "string"
@@ -728,7 +734,8 @@ export const coreCommands: SlashCommand[] = [
       try {
         const detailResult = await ctx.client.query("session_detail", ctx.sessionId);
         const session = detailResult.data as any;
-        const events = session?.transcript ?? [];
+        // An export carries the conversation; engine context stays on disk.
+        const events = withoutContextEvents<unknown>(session?.transcript ?? []);
 
         if (format === "json") {
           const outPath = join(ctx.cwd, `session-${ctx.sessionId}.json`);

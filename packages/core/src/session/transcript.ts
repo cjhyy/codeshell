@@ -24,6 +24,20 @@ import type { TranscriptEvent, TranscriptEventType, Message, ContentBlock } from
 import type { EngineResult } from "../engine/types.js";
 import { logger } from "../logging/logger.js";
 import { syncDirectoryAncestors } from "../model-request-boundary/durability.js";
+import {
+  contextMessageMark,
+  isContextMessageEvent,
+  markReplayedContextMessage,
+  readHookReminderData,
+  revokedLedgerEvents,
+  type ContextLedgerEventData,
+  type HookReminderEventData,
+} from "./context-messages.js";
+import {
+  modelContentOf,
+  promptRewritesOf,
+  type PromptRewriteEventData,
+} from "./prompt-rewrites.js";
 
 type TranscriptWriter = (filePath: string, data: string, encoding: "utf-8") => void;
 
@@ -250,6 +264,7 @@ const CONTEXT_EVENT_TYPES: ReadonlySet<TranscriptEventType> = new Set([
   "summary",
   "context_transfer",
   "range_archive",
+  "prompt_rewrite",
 ]);
 
 const INTERRUPTED_TOOL_RESULT_ERROR = "[Tool result missing due to interrupted session]";
@@ -277,6 +292,8 @@ function toolResultContentBlock(event: TranscriptEvent): ContentBlock {
       : Array.isArray(contentBlocks) && contentBlocks.length > 0
         ? structuredClone(contentBlocks)
         : (result ?? "(no output)"),
+    // As the live block (toolResultToBlock): a replayed request must match it.
+    ...(error ? { is_error: true } : {}),
   };
 }
 
@@ -546,6 +563,10 @@ export class Transcript {
       source?: "agent-direction" | "goal-control";
       envelopeIds?: string[];
       correlationIds?: string[];
+      /** Context-ledger snapshot/update (see context-messages.ts). Always injected. */
+      contextLedger?: ContextLedgerEventData;
+      /** Lifecycle hook reminder (see context-messages.ts). Always injected. */
+      hookReminder?: HookReminderEventData;
     },
   ): TranscriptEvent {
     if (opts?.clientMessageId) {
@@ -562,7 +583,7 @@ export class Transcript {
     return this.append("message", {
       role,
       content,
-      ...(opts?.injected ? { injected: true } : {}),
+      ...(opts?.injected || opts?.contextLedger || opts?.hookReminder ? { injected: true } : {}),
       ...(opts?.steerId ? { steerId: opts.steerId } : {}),
       ...(opts?.clientMessageId ? { clientMessageId: opts.clientMessageId } : {}),
       ...(opts?.displayText ? { displayText: opts.displayText } : {}),
@@ -570,6 +591,8 @@ export class Transcript {
       ...(opts?.source ? { source: opts.source } : {}),
       ...(opts?.envelopeIds ? { envelopeIds: opts.envelopeIds } : {}),
       ...(opts?.correlationIds ? { correlationIds: opts.correlationIds } : {}),
+      ...(opts?.contextLedger ? { contextLedger: opts.contextLedger } : {}),
+      ...(opts?.hookReminder ? { hookReminder: opts.hookReminder } : {}),
     });
   }
 
@@ -631,6 +654,11 @@ export class Transcript {
   /** Anchor for a spawned sub-agent (see TranscriptEventType "subagent").
    *  Written at spawn time so replay can rebuild the sub-agent's card from
    *  sessions/<agentId>/ — agentId === the sub-agent's session id. */
+  /** Persist a hook's rewrite of a user prompt (session/prompt-rewrites.ts). */
+  appendPromptRewrite(data: PromptRewriteEventData): TranscriptEvent {
+    return this.append("prompt_rewrite", { ...data });
+  }
+
   appendSubagent(agentId: string, name: string | undefined, description: string): TranscriptEvent {
     return this.append("subagent", { agentId, name, description });
   }
@@ -700,6 +728,11 @@ export class Transcript {
    */
   toMessages(): Message[] {
     return this.toMessagesWithIndex().messages;
+  }
+
+  /** toMessages() without engine context (ledger, hook reminders): what was said. */
+  toConversationMessages(): Message[] {
+    return this.toMessages().filter((message) => contextMessageMark(message) === undefined);
   }
 
   /**
@@ -791,6 +824,33 @@ export class Transcript {
       }
     }
 
+    // Hook reminders are appended after the user message they precede.
+    // Replay puts each back in front of its target; one whose target is not
+    // an earlier message of this replay stays where it was written.
+    const remindersBefore = new Map<string, TranscriptEvent[]>();
+    const movedReminders = new Set<TranscriptEvent>();
+    const seenMessageIds = new Set<string>();
+    for (const event of events) {
+      if (event.type !== "message") continue;
+      const target = readHookReminderData(event)?.beforeEventId;
+      if (target !== undefined && seenMessageIds.has(target)) {
+        remindersBefore.set(target, [...(remindersBefore.get(target) ?? []), event]);
+        movedReminders.add(event);
+      }
+      seenMessageIds.add(event.id);
+    }
+    const rewrites = promptRewritesOf(events);
+    const revokedLedger = revokedLedgerEvents(events);
+    const pushMessageEvent = (event: TranscriptEvent): void => {
+      const role = event.data.role as string;
+      const content = modelContentOf(event, rewrites);
+      // Tool results can be merged into this array below. Never mutate
+      // the source event (or a checkpoint) during a read-only replay.
+      const message = { role: role as Message["role"], content: structuredClone(content) };
+      markReplayedContextMessage(message, event);
+      messages.push(message);
+    };
+
     let activeSpan: ArchiveSpan | null = null;
     if (openingSpan) {
       activeSpan = openingSpan;
@@ -805,6 +865,7 @@ export class Transcript {
     const emittedToolUseIds = new Set<string>();
 
     for (const event of events) {
+      if (revokedLedger.has(event)) continue; // context told for another workspace
       // Span bookkeeping runs on message events only: exit before entry so
       // adjacent spans (A.to === B.from) hand over on the boundary message.
       if (event.type === "message") {
@@ -813,6 +874,10 @@ export class Transcript {
         if (activeSpan && clientMessageId === activeSpan.toClientMessageId) {
           activeSpan = null;
         }
+        // Before a span this message may open: the reminder precedes it and
+        // is therefore outside that span. Inside a span it is archived too.
+        if (!activeSpan) remindersBefore.get(event.id)?.forEach(pushMessageEvent);
+        if (movedReminders.has(event)) continue;
         if (!activeSpan && clientMessageId && spansByFromId.has(clientMessageId)) {
           activeSpan = spansByFromId.get(clientMessageId)!;
           // One-shot: a duplicate `from` message (e.g. from a torn JSONL
@@ -847,9 +912,7 @@ export class Transcript {
               }
             }
           }
-          // Tool results can be merged into this array below. Never mutate
-          // the source event (or a checkpoint) during a read-only replay.
-          messages.push({ role: role as Message["role"], content: structuredClone(content) });
+          pushMessageEvent(event);
           break;
         }
         case "tool_use": {
@@ -1081,14 +1144,12 @@ export class Transcript {
     content: string | ContentBlock[];
   }> {
     const messages: Array<{ role: string; content: string | ContentBlock[] }> = [];
+    const rewrites = promptRewritesOf(events);
     for (const event of events) {
       switch (event.type) {
         case "message": {
-          const { role, content } = event.data as {
-            role: string;
-            content: string | ContentBlock[];
-          };
-          messages.push({ role, content });
+          const role = event.data.role as string;
+          messages.push({ role, content: modelContentOf(event, rewrites) });
           break;
         }
         case "tool_use":
@@ -1178,7 +1239,10 @@ export class Transcript {
     if (frozen[0]?.type === "session_meta" || frozen.at(-1)?.type === "session_meta") {
       throw new Error("Context range cannot use session metadata as a boundary");
     }
-    const selected = frozen.filter((event) => CONTEXT_EVENT_TYPES.has(event.type));
+    // A hand-picked range carries the conversation, not the engine's context.
+    const selected = frozen.filter(
+      (event) => CONTEXT_EVENT_TYPES.has(event.type) && !isContextMessageEvent(event),
+    );
     validateSelectedToolPairs(selected);
     return {
       events: selected,

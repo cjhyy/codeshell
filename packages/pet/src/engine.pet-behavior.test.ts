@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -9,6 +9,10 @@ import type { LLMResponse, Message, StreamEvent } from "@cjhyy/code-shell-core/e
 import type { ToolDefinition } from "@cjhyy/code-shell-core/extension";
 import { Engine } from "@cjhyy/code-shell-core";
 import { createPetModule } from "./capability.js";
+// Rule 5 of the prompt-cache design: unregistered prefix changes fail (shared via globalThis).
+import { installPromptPrefixGuard } from "../../core/dist/testing/prompt-prefix-guard.js";
+
+installPromptPrefixGuard({ beforeEach, afterEach });
 
 const provider = "fake-pet-behavior";
 const calls = new Map<

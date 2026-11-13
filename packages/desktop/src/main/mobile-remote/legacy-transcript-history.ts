@@ -10,6 +10,7 @@ import {
   realpathSync,
 } from "node:fs";
 import { join } from "node:path";
+import { isContextEvent } from "@cjhyy/code-shell-core/internal";
 import { transcriptToStreamEvents } from "@cjhyy/code-shell-web";
 import type { Snapshot } from "../SessionSnapshotStore.js";
 
@@ -38,6 +39,7 @@ const TYPES = new Set([
   "turn_diff",
   "goal_progress",
   "subagent",
+  "prompt_rewrite",
 ]);
 const object = (value: unknown): value is Record<string, unknown> =>
   !!value && typeof value === "object" && !Array.isArray(value);
@@ -184,8 +186,12 @@ export function readLegacyExternalHistory(root: string, sessionId: string) {
       throw new Error("Legacy transcript is incomplete");
     // Older resumptions append same-Session metadata updates. They are not a
     // second conversation and must not reset the already projected history.
+    // Engine context (ledger, reminders, prompt rewrites) stays on this machine.
     const events = transcriptToStreamEvents(
-      records.filter((record, index) => index === 0 || record.type !== "session_meta"),
+      records.filter(
+        (record, index) =>
+          (index === 0 || record.type !== "session_meta") && !isContextEvent(record),
+      ),
     );
     if (Buffer.byteLength(JSON.stringify(events)) > 32 * LIMIT)
       throw new Error("Legacy history exceeds its display bound");

@@ -19,6 +19,12 @@ import { SessionManager, type MobileServerEvent, type StreamEvent } from "@cjhyy
 import { SessionOutputJournal, SessionOutputCoverageStore } from "@cjhyy/code-shell-core/internal";
 import { SessionSnapshotStore } from "../SessionSnapshotStore.js";
 import { MobileOutputRecovery } from "./output-recovery.js";
+import {
+  CONTEXT_CANARY,
+  PUBLIC_PROMPT,
+  PUBLIC_ANSWER,
+  contextPrivacySession,
+} from "../../../../../tests/helpers/context-privacy.js";
 import { recoverMobileOutput } from "../../../../web/src/lib/mobileOutputRecovery.js";
 
 const roots: string[] = [];
@@ -29,11 +35,14 @@ function fixture(
   legacy: Record<string, unknown>[] = [],
   preliminary: Record<string, unknown>[] = [],
   oldHeader = false,
+  privateContext = false,
 ) {
   const root = mkdtempSync(join(tmpdir(), "mobile-journal-"));
   roots.push(root);
   const manager = new SessionManager(root);
-  let session = manager.create(root, "fixture", "fixture", "native");
+  let session = privateContext
+    ? contextPrivacySession(root, root, "native").bundle
+    : manager.create(root, "fixture", "fixture", "native");
   if (legacy.length > 1000) {
     // Bulk-seed the persisted historical log; per-record canonical appends are
     // unrelated to the read-path event-budget stress case and make it quadratic.
@@ -1267,4 +1276,23 @@ test("replacing the Session directory between pages rejects the old cursor and p
     reason: "incomplete",
   });
   expect(readFileSync(join(retired, "transcript.jsonl"))).toEqual(evidence);
+});
+
+test("mobile journal recovery and paged legacy bases exclude NewContext rewrite bodies", async () => {
+  const f = fixture([], [], false, true);
+  await f.select();
+  const journal = await f.read();
+  expect(journal.page.status).toBe("ok");
+  const base = await f.readBase({ throughEventId: journal.page.legacyBaseThroughEventId });
+  expect(base.ok).toBe(true);
+  expect(base.complete).toBe(true);
+  for (const reply of [journal, base]) {
+    const wire = JSON.stringify(reply);
+    expect(wire).not.toContain(CONTEXT_CANARY);
+    expect(wire).toContain(PUBLIC_PROMPT);
+    expect(wire).toContain(PUBLIC_ANSWER);
+  }
+  expect(readFileSync(join(f.root, "native", "transcript.jsonl"), "utf8")).toContain(
+    CONTEXT_CANARY,
+  );
 });

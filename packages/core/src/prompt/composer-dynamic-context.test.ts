@@ -3,6 +3,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { PromptComposer } from "./composer.js";
+import { renderContextSnapshot } from "../context/context-ledger.js";
 import { invalidateSkillCache } from "../skills/index.js";
 
 /**
@@ -46,55 +47,58 @@ describe("PromptComposer dynamic context (skills out of system prefix)", () => {
       skillListing: { maxTokens: 0 },
     });
     expect(await composer.buildSystemPrompt([])).not.toContain("Available Skills");
-    const msg = await composer.buildDynamicContextMessage();
-    expect(String(msg?.content ?? "")).not.toContain("Available Skills");
-    expect(String(msg?.content ?? "")).not.toContain("demo-skill");
+    const msg = renderContextSnapshot(await composer.buildDynamicContextSections());
+    expect(String(msg ?? "")).not.toContain("Available Skills");
+    expect(String(msg ?? "")).not.toContain("demo-skill");
   });
 
   it("puts the skills listing INTO a trailing user-role <system-reminder> message", async () => {
     const composer = new PromptComposer({ cwd, model: "test-model" });
-    const msg = await composer.buildDynamicContextMessage();
+    const msg = renderContextSnapshot(await composer.buildDynamicContextSections());
     expect(msg).not.toBeNull();
-    expect(msg!.role).toBe("user");
-    expect(msg!.content).toContain("demo-skill");
-    expect(msg!.content).toContain("<system-reminder>");
-    expect(msg!.content).toContain("</system-reminder>");
+    expect(msg).toContain("demo-skill");
+    expect(msg).toContain("<system-reminder>");
+    expect(msg).toContain("</system-reminder>");
   });
 
   it("puts volatile goal-tool guidance in the trailing dynamic-context message", async () => {
-    const withoutGoal = await new PromptComposer({
-      cwd,
-      model: "test-model",
-      goalToolState: { hasGoal: false },
-    }).buildDynamicContextMessage();
-    expect(withoutGoal!.role).toBe("user");
-    expect(withoutGoal!.content).toContain("本会话没有持久 Goal");
-    expect(withoutGoal!.content).toContain("不要调用 complete_goal/cancel_goal");
-    expect(withoutGoal!.content).toContain("不代表没有后台任务");
+    const withoutGoal = renderContextSnapshot(
+      await new PromptComposer({
+        cwd,
+        model: "test-model",
+        goalToolState: { hasGoal: false },
+      }).buildDynamicContextSections(),
+    );
+    expect(withoutGoal).toContain("本会话没有持久 Goal");
+    expect(withoutGoal).toContain("不要调用 complete_goal/cancel_goal");
+    expect(withoutGoal).toContain("不代表没有后台任务");
 
-    const withGoal = await new PromptComposer({
-      cwd,
-      model: "test-model",
-      goalToolState: { hasGoal: true },
-    }).buildDynamicContextMessage();
-    expect(withGoal!.content).toContain("本会话存在一个持久 Goal");
-    expect(withGoal!.content).toContain("complete_goal");
-    expect(withGoal!.content).toContain("cancel_goal");
+    const withGoal = renderContextSnapshot(
+      await new PromptComposer({
+        cwd,
+        model: "test-model",
+        goalToolState: { hasGoal: true },
+      }).buildDynamicContextSections(),
+    );
+    expect(withGoal).toContain("本会话存在一个持久 Goal");
+    expect(withGoal).toContain("complete_goal");
+    expect(withGoal).toContain("cancel_goal");
   });
 
   it("returns a trailing dynamic message with goal guidance even when it is the only dynamic context", async () => {
     const bare = mkdtempSync(join(tmpdir(), "cs-goal-only-"));
     invalidateSkillCache();
     try {
-      const msg = await new PromptComposer({
-        cwd: bare,
-        model: "test-model",
-        goalToolState: { hasGoal: false },
-      }).buildDynamicContextMessage();
+      const msg = renderContextSnapshot(
+        await new PromptComposer({
+          cwd: bare,
+          model: "test-model",
+          goalToolState: { hasGoal: false },
+        }).buildDynamicContextSections(),
+      );
       expect(msg).not.toBeNull();
-      expect(msg!.role).toBe("user");
-      expect(msg!.content).toContain("本会话没有持久 Goal");
-      expect(msg!.content).not.toContain("demo-skill");
+      expect(msg).toContain("本会话没有持久 Goal");
+      expect(msg).not.toContain("demo-skill");
     } finally {
       rmSync(bare, { recursive: true, force: true });
     }
@@ -106,7 +110,7 @@ describe("PromptComposer dynamic context (skills out of system prefix)", () => {
     invalidateSkillCache();
     try {
       const composer = new PromptComposer({ cwd: bare, model: "test-model" });
-      const msg = await composer.buildDynamicContextMessage();
+      const msg = renderContextSnapshot(await composer.buildDynamicContextSections());
       expect(msg).toBeNull();
     } finally {
       rmSync(bare, { recursive: true, force: true });
@@ -140,9 +144,9 @@ describe("PromptComposer dynamic context (skills out of system prefix)", () => {
       },
     });
 
-    const msg = await composer.buildDynamicContextMessage();
-    expect(msg!.content).toContain("capability-part");
-    expect(msg!.content).toContain("sources-part");
+    const msg = renderContextSnapshot(await composer.buildDynamicContextSections());
+    expect(msg).toContain("capability-part");
+    expect(msg).toContain("sources-part");
     expect(overlapped).toBe(true);
   });
 
@@ -162,7 +166,7 @@ describe("PromptComposer dynamic context (skills out of system prefix)", () => {
     });
 
     expect(composer.buildUserContextMessage()).toBeNull();
-    expect(await composer.buildDynamicContextMessage()).toBeNull();
+    expect(renderContextSnapshot(await composer.buildDynamicContextSections())).toBeNull();
   });
 
   // Cache fix: memory mutates constantly (extraction / recall usage++ / approve),
@@ -184,12 +188,12 @@ describe("PromptComposer dynamic context (skills out of system prefix)", () => {
       const composer = new PromptComposer({ cwd: bare, model: "test-model" });
       const sysPrompt = await composer.buildSystemPrompt([]);
       const userCtx = composer.buildUserContextMessage();
-      const dyn = await composer.buildDynamicContextMessage();
+      const dyn = renderContextSnapshot(await composer.buildDynamicContextSections());
       // Not in the cacheable prefix:
       expect(sysPrompt).not.toContain("my-global-pref");
       expect(userCtx?.content ?? "").not.toContain("my-global-pref");
       // In the trailing dynamic message:
-      expect(dyn?.content ?? "").toContain("my-global-pref");
+      expect(dyn ?? "").toContain("my-global-pref");
     } finally {
       if (prevCsHome === undefined) delete process.env.CODE_SHELL_HOME;
       else process.env.CODE_SHELL_HOME = prevCsHome;

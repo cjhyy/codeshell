@@ -49,7 +49,9 @@ function makeDeps(opts: {
     appendToolUse() {},
     appendToolResult() {},
     appendTurnBoundary() {},
-    appendMessage() {},
+    appendMessage() {
+      return { id: crypto.randomUUID() };
+    },
   } as unknown as TurnLoopDeps["transcript"];
   const toolExecutor = {
     setLogger() {},

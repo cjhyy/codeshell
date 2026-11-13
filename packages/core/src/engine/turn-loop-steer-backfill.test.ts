@@ -75,7 +75,10 @@ function makeDeps(
         appendToolResult() {},
         appendTurnBoundary() {},
         appendMessage(role: string, content: unknown, opts: unknown) {
-          appended.push({ role, content, opts });
+          // Engine reminders are persisted too; these tests watch steers only.
+          if (!(opts as { hookReminder?: unknown } | undefined)?.hookReminder)
+            appended.push({ role, content, opts });
+          return { id: crypto.randomUUID() };
         },
       } as unknown as TurnLoopDeps["transcript"],
       systemPrompt: "sys",
@@ -194,7 +197,10 @@ describe("TurnLoop steer finalize backfill", () => {
         appendToolResult() {},
         appendTurnBoundary() {},
         appendMessage(role: string, content: unknown, opts: unknown) {
-          appended.push({ role, content, opts });
+          // Engine reminders are persisted too; these tests watch steers only.
+          if (!(opts as { hookReminder?: unknown } | undefined)?.hookReminder)
+            appended.push({ role, content, opts });
+          return { id: crypto.randomUUID() };
         },
       } as unknown as TurnLoopDeps["transcript"],
       systemPrompt: "sys",

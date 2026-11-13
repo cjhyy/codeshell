@@ -115,6 +115,7 @@ export type { ExtensionQueryHandler, ExtensionTool } from "./tool-system/capabil
 export type {
   CapabilityArtifactDetector,
   CapabilityDynamicContextProvider,
+  CapabilityDynamicContextSection,
   CapabilityToolServiceHost,
 } from "./capabilities/index.js";
 export type {

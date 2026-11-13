@@ -8,6 +8,7 @@ import type {
   ToolContext,
 } from "@cjhyy/code-shell-core/extension";
 import { getCurrentBranch, getGitLog, getGitStatus } from "./git/utils.js";
+import { GIT_SNAPSHOT_COMMIT_LIMIT, renderGitContextSnapshot } from "./git/context-snapshot.js";
 
 export const CODING_CAPABILITY_ID = "coding";
 
@@ -73,23 +74,16 @@ export const gitDynamicContextProvider: CapabilityDynamicContextProvider = ({ cw
   if (preset.name !== "terminal-coding") return undefined;
   const branch = getCurrentBranch(cwd);
   if (!branch) return undefined;
-  const status = getGitStatus(cwd);
-  const log = getGitLog(cwd, 5);
-  const parts = [`gitStatus: Current branch: ${branch}`];
-  if (status.length > 0) {
-    const lines = status.map((entry) =>
-      entry.origPath
-        ? `${entry.status} ${entry.origPath} -> ${entry.path}`
-        : `${entry.status} ${entry.path}`,
-    );
-    parts.push(`Status:\n${lines.join("\n")}`);
-  }
-  if (log.length > 0) {
-    parts.push(
-      `Recent commits:\n${log.map((entry) => `${entry.hash} ${entry.message}`).join("\n")}`,
-    );
-  }
-  return parts.join("\n\n");
+  return {
+    key: "git-status",
+    text: renderGitContextSnapshot({
+      branch,
+      status: getGitStatus(cwd),
+      log: getGitLog(cwd, GIT_SNAPSHOT_COMMIT_LIMIT),
+    }),
+    // Changes on almost every run: shown once per context snapshot, never resent.
+    compare: "snapshot-only",
+  };
 };
 
 export const codingArtifactDetector: CapabilityArtifactDetector = ({ toolName, args }) => {

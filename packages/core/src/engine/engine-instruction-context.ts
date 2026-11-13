@@ -1,5 +1,6 @@
 /** Frozen instruction resolution and derived-context persistence, independent of Engine run slots. */
 import { realpathSync } from "node:fs";
+import { isContextMessageEvent } from "../session/context-messages.js";
 import { Transcript } from "../session/transcript.js";
 import type { SessionBundle, SessionManager } from "../session/session-manager.js";
 import type {
@@ -36,13 +37,17 @@ export function clearSessionInstructionContext({
     const start = events.findIndex(
       (event) => event.id === session.state.instructionContextStartEventId,
     );
+    // Engine context (ledger, reminders) is left out: copied into the
+    // checkpoint it would lose its mark and read as user input. The next run
+    // sends a fresh snapshot and its own reminders.
     const retainedEvents = events.filter(
       (event, index) =>
-        (start >= 0 && index < start) ||
-        (event.type === "message" &&
-          event.data.role === "user" &&
-          event.data.injected !== true &&
-          event.data.authority !== "agent"),
+        !isContextMessageEvent(event) &&
+        ((start >= 0 && index < start) ||
+          (event.type === "message" &&
+            event.data.role === "user" &&
+            event.data.injected !== true &&
+            event.data.authority !== "agent")),
     );
     const retained = Transcript.fromMemoryEvents(
       "instruction-revocation",

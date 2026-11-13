@@ -1,4 +1,7 @@
-import { sanitizeExternalChangedFilesProvenance } from "@cjhyy/code-shell-core/internal";
+import {
+  isContextEvent,
+  sanitizeExternalChangedFilesProvenance,
+} from "@cjhyy/code-shell-core/internal";
 /**
  * Read a persisted engine transcript (~/.code-shell/sessions/<id>/transcript.jsonl)
  * and convert it to an ordered list of FoldItems the renderer can replay
@@ -418,6 +421,7 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
         });
         break;
       case "message": {
+        if (isContextEvent(ev)) break;
         const role = String(d.role ?? "");
         if (role === "user") {
           // Synthetic system-reminder turns (background-job completion

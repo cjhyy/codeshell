@@ -21,9 +21,16 @@ test("headless user waits keep background results queued until a real reply re-a
     },
     sid,
   );
+  const stored: unknown[] = [];
   const session = {
     state: {
       goalLifecycle: waitGoalLifecycle(createGoalLifecycle({ objective: "finish" }), 1_000, "user"),
+    },
+    transcript: {
+      appendMessage(role: string, content: unknown, opts: unknown) {
+        stored.push({ role, opts, content });
+        return { id: `event-${stored.length}`, type: "message", data: { role, content } };
+      },
     },
   };
   const result = { text: "请确认", reason: "completed", messages: [] } as const;
@@ -51,6 +58,9 @@ test("headless user waits keep background results queued until a real reply re-a
     await drainHeadlessBackgroundAgents(args);
     expect(summarized).toBe(1);
     expect(notificationQueue.getSnapshot(sid)).toHaveLength(0);
+    // The notification the model is sent is stored as engine context.
+    expect(stored).toHaveLength(1);
+    expect(stored[0]).toMatchObject({ role: "user", opts: { hookReminder: {} } });
   } finally {
     notificationQueue.reset(sid);
   }
@@ -107,6 +117,7 @@ describe("finalizeRunSuccess", () => {
           transcript: {
             appendMessage: (role: string, content: string, options: unknown) => {
               persistedMessages.push({ role, content, options });
+              return { id: crypto.randomUUID() };
             },
             flushFailed: () => false,
             getEvents: () => [
@@ -356,7 +367,7 @@ describe("finalizeRunSuccess", () => {
       session: {
         state,
         transcript: {
-          appendMessage: () => {},
+          appendMessage: () => ({ id: crypto.randomUUID() }),
           flushFailed: () => false,
           getEvents: () => [{ id: "user-event", data: { role: "user", content: "hi" } }],
         },

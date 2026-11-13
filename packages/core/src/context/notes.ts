@@ -1,5 +1,6 @@
 import type { ContentBlock, Message, TranscriptEvent, TranscriptEventType } from "../types.js";
 import { Transcript, hasCompleteContextToolPairs } from "../session/transcript.js";
+import { isContextMessageEvent } from "../session/context-messages.js";
 import { downgradeImagePayloadsInHistory, estimateTokens } from "./compaction.js";
 import { logger } from "../logging/logger.js";
 
@@ -16,6 +17,7 @@ const MODEL_BOUNDARY_EVENT_TYPES = new Set<TranscriptEventType>([
   "range_archive",
   "context_note",
   "context_checkpoint",
+  "prompt_rewrite",
 ]);
 
 export interface ContextHistoryEntry {
@@ -122,7 +124,10 @@ export class SessionContextNotes {
     const boundaryIndex = events.findIndex((event) => event.id === cursor);
     if (boundaryIndex < 0 || boundaryIndex >= noteIndex) return undefined;
 
-    const tail = events.slice(boundaryIndex + 1);
+    // Engine context (ledger, reminders) is not conversation: a copy in the
+    // checkpoint would lose its mark. The ledger resends a snapshot and the
+    // caller re-attaches the reminders in effect (engine/rollover-context.ts).
+    const tail = events.slice(boundaryIndex + 1).filter((event) => !isContextMessageEvent(event));
     // A misplaced boundary must not silently discard a late result whose
     // opening call was before that boundary. Normal model boundaries never
     // split a batch, but interrupted or corrupt transcripts can do so.
@@ -320,7 +325,8 @@ function contentText(content: unknown): string {
 function historyText(event: TranscriptEvent): string | undefined {
   switch (event.type) {
     case "message":
-      return contentText(event.data.content);
+      // Engine context is not conversation history worth searching.
+      return isContextMessageEvent(event) ? undefined : contentText(event.data.content);
     case "tool_use":
       return `${event.data.toolName ?? "tool"}: ${JSON.stringify(event.data.args)}`;
     case "tool_result":

@@ -8,6 +8,7 @@
 import { buildAnchoredSummaryMessage, estimateTokens } from "../context/compaction.js";
 import type { SessionContextNotes } from "../context/notes.js";
 import { logger } from "../logging/logger.js";
+import { isAnchoredHookReminder } from "../session/context-messages.js";
 import type { SessionBundle } from "../session/session-manager.js";
 import type { Message } from "../types.js";
 
@@ -71,7 +72,17 @@ export function resolveArchiveWindow(
     anchors.fromClientMessageId !== undefined
       ? liveIndexByClientMessageId.get(anchors.fromClientMessageId)
       : 0;
-  const end = liveIndexByClientMessageId.get(anchors.toClientMessageId);
+  let end = liveIndexByClientMessageId.get(anchors.toClientMessageId);
+  // The `to` message's hook reminder sits just before it and is not part of
+  // the span: replay closes the span at `to` and then emits that reminder.
+  while (
+    end !== undefined &&
+    start !== undefined &&
+    end > start &&
+    isAnchoredHookReminder(sourceMessages[end - 1])
+  ) {
+    end -= 1;
+  }
   if (start === undefined || end === undefined || end <= start) {
     // Fail open: no summarization, no persistence. Falling back to the
     // caller's raw range is exactly the bug this path exists to fix —

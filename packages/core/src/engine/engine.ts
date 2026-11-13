@@ -24,6 +24,10 @@ import { assertDurableRequestOwner } from "../model-request-boundary/session-own
 import type { ModelRequestSigner, ModelRequestSubject } from "../model-request-boundary/types.js";
 import { createLLMClient } from "../llm/client-factory.js";
 import { resolvePromptCachePolicy } from "../llm/prompt-cache.js";
+import { PromptCacheRouteMemory } from "./prompt-cache-route.js";
+import { replayEventIdOf } from "./rollover-context.js";
+import { notePromptPrefixRewrite } from "../utils/prompt-prefix-events.js";
+import { PromptPrefixHeads } from "./prompt-prefix-heads.js";
 import { createRunBatchAuthority } from "../operations/run-batch-authority.js";
 import { createSessionOperationController } from "../operations/controller.js";
 import { CapabilityResolver } from "../operations/resolver.js";
@@ -156,7 +160,7 @@ import { detectProviderFromApiKey, buildModelPool } from "../onboarding.js";
 import { detectPastedNoise } from "../utils/task-sanitizer.js";
 import {
   PromptCacheDiagnosticRecorder,
-  promptCacheDropHint,
+  promptCacheDropLogFields,
   type PromptCacheDiagnosticSample,
 } from "./prompt-cache-diagnostics.js";
 import { EngineRuntime } from "./runtime.js";
@@ -186,8 +190,17 @@ import {
   createRunContextManager,
   composeRunSystemPrompt,
   runtimeContextDynamicText,
-  assembleRunMessages,
 } from "./run-context.js";
+import {
+  NO_HOOK_MESSAGES,
+  assembleRunMessages,
+  cleanedHookMessages,
+  createRunContextLedger,
+  engineContextSections,
+  runtimeContextMessage,
+  type RunContextLedger,
+  type RunHookMessages,
+} from "./run-context-ledger.js";
 import {
   resolveRunGoal,
   armRunGoalHook,
@@ -420,6 +433,10 @@ export class Engine {
    * LLM response arrives.
    */
   private ctxOverheadBySid = new Map<string, number>();
+  /** Bounded instruction hashes, retained only for an installed prefix guard. */
+  private readonly userContextHeads = new PromptPrefixHeads();
+  /** Routes whose endpoint rejected explicit cache fields in this process. */
+  private readonly promptCacheRoutes = new PromptCacheRouteMemory();
   private promptCacheDiagnostics = new PromptCacheDiagnosticRecorder({ maxSessions: 256 });
   /**
    * Step-gap steering queue (per sessionId, in-memory). Host pushes user
@@ -1431,6 +1448,7 @@ export class Engine {
       })
     )
       return;
+    notePromptPrefixRewrite(session.state.sessionId, "clear_context");
     this.rebaseSessionToolCache(session);
     this.compactedMessagesBySession.delete(session.state.sessionId);
     if (this.lastSessionId === session.state.sessionId) this.lastMessages = [];
@@ -1813,6 +1831,7 @@ export class Engine {
     // the anchor is dead; too late and the first new-topic prompt still sees
     // the entire old topic. Fail open to full history if summarization fails.
     if (options?.archiveBeforeCurrentTurn && options.clientMessageId) {
+      notePromptPrefixRewrite(session.state.sessionId, "archive");
       try {
         const anchors = {
           toClientMessageId: options.clientMessageId,
@@ -1886,9 +1905,10 @@ export class Engine {
       withUsageOwner(billingOwner, () =>
         runWithSid(session.state.sessionId, async () => {
           const hookMessages = profile?.disableHooks
-            ? []
+            ? NO_HOOK_MESSAGES
             : await this.runSessionStartHooks({
                 session,
+                userMessageEventId: runId,
                 task,
                 cwd,
                 runPermissionMode,
@@ -1933,11 +1953,14 @@ export class Engine {
             llmClient,
             fullSystemPrompt,
             rebuildSystemPrompt,
-            dynamicContextMsg,
+            runContextLedger,
+            volatileContextMsg,
             userContextMsg,
             retainedContextMessages,
+            runStartMessage,
           } = await this.assembleRunPrompts({
             session,
+            runId,
             messages,
             hookMessages,
             mcpFailureSummary,
@@ -1999,8 +2022,10 @@ export class Engine {
             claimClientMessageId,
             releaseClientMessageId,
             freshImageMessage,
-            dynamicContextMsg,
+            runContextLedger,
+            volatileContextMsg,
             retainedContextMessages,
+            runStartMessage,
           });
           if (this.runningSession?.runId === runId) {
             this.runningSession.ownUsage = () =>
@@ -2048,7 +2073,7 @@ export class Engine {
             getRunUsage,
             usageBaseline,
             userContextMsg,
-            dynamicContextMsg,
+            dynamicContextMsg: volatileContextMsg,
             options,
             cwd,
             llmClient,
@@ -2276,15 +2301,16 @@ export class Engine {
 
   /**
    * Await the parallel prompt/context assembly (LLM client handshake, system
-   * prompt, dynamic + user context messages), splice the hook-injected and
-   * context messages into `messages`, publish this run's last-session snapshot,
+   * prompt, context sections + user context message), splice the hook reminder
+   * and context-ledger messages into `messages`, publish this run's last-session snapshot,
    * and prime the {@link ContextManager}'s transcript path + replacement state.
    * Extracted verbatim from the {@link runExclusive} skeleton.
    */
   private async assembleRunPrompts(args: {
     session: SessionBundle;
+    runId: string;
     messages: Message[];
-    hookMessages: string[];
+    hookMessages: RunHookMessages;
     mcpFailureSummary: string;
     promptComposer: PromptComposer;
     toolDefs: import("../types.js").ToolDefinition[];
@@ -2298,9 +2324,12 @@ export class Engine {
     llmClient: Awaited<ReturnType<typeof createLLMClient>>;
     fullSystemPrompt: string;
     rebuildSystemPrompt: (tools: import("../types.js").ToolDefinition[]) => Promise<string>;
-    dynamicContextMsg: Message | null;
+    runContextLedger: RunContextLedger;
+    /** The profile's non-durable runtime context: never persisted, removed after the run. */
+    volatileContextMsg: Message | null;
     userContextMsg: Message | null;
     retainedContextMessages: Message[];
+    runStartMessage: Message | undefined;
   }> {
     const {
       session,
@@ -2315,35 +2344,34 @@ export class Engine {
       profileParams,
     } = args;
 
-    const [llmClient, baseSystemPrompt, baseDynamicContextMsg] = await Promise.all([
+    const [llmClient, baseSystemPrompt, contextSections] = await Promise.all([
       llmClientPromise,
-      // System prompt is now the STABLE prefix only — skills + git status moved
-      // out to a trailing per-turn message so they no longer bust the cache.
+      // System prompt is the STABLE prefix only — skills, memory and capability
+      // context ride the context ledger so they never bust the cached prefix.
       promptComposer.buildSystemPrompt(toolDefs),
-      promptComposer.buildDynamicContextMessage(),
+      promptComposer.buildDynamicContextSections(),
     ]);
-    // Capability health is current-run context. Keep it out of durable history
-    // and summaries so a recovered service is not described as offline later.
-    // Runtime context with "dynamic" placement rides here too.
-    const runtimeDynamicText = runtimeContextDynamicText(profile, profileParams);
-    const extraDynamicBlocks = [
-      ...(runtimeDynamicText ? [runtimeDynamicText] : []),
-      ...(mcpFailureSummary ? [`<system-reminder>${mcpFailureSummary}</system-reminder>`] : []),
-    ];
-    const dynamicContextMsg: Message | null =
-      extraDynamicBlocks.length > 0
-        ? {
-            role: "user",
-            content: [
-              ...(baseDynamicContextMsg
-                ? typeof baseDynamicContextMsg.content === "string"
-                  ? [{ type: "text" as const, text: baseDynamicContextMsg.content }]
-                  : baseDynamicContextMsg.content
-                : []),
-              ...extraDynamicBlocks.map((text) => ({ type: "text" as const, text })),
-            ],
-          }
-        : baseDynamicContextMsg;
+    // Context is append-only history: this run adds what changed since the
+    // model was last told, and nothing when nothing did (run-context-ledger.ts).
+    // Capability health is a section like the rest; a recovery is told as an
+    // update instead of rewriting what was sent.
+    const runContextLedger = createRunContextLedger({
+      transcript: session.transcript,
+      scope: promptComposer.contextScope(),
+      sessionId: session.state.sessionId,
+      sections: [
+        ...contextSections,
+        ...engineContextSections({
+          mcpFailureSummary,
+          dateChange: promptComposer.buildDateChangeNotice(),
+        }),
+      ],
+    });
+    // Runtime context with "dynamic" placement is non-durable by contract, so
+    // it alone stays a volatile per-run message (kept out of the transcript).
+    const volatileContextMsg = runtimeContextMessage(
+      runtimeContextDynamicText(profile, profileParams),
+    );
     this.loadedInstructionSnapshots = structuredClone([...args.instructionSnapshots]);
     const frozenInstructions = args.instructionSnapshots
       .map(
@@ -2369,16 +2397,19 @@ export class Engine {
         await promptComposer.buildSystemPrompt(tools, args.getBehaviorToolNames()),
       );
     const userContextMsg = promptComposer.buildUserContextMessage();
-    const priorMessages = new Set(messages);
-    assembleRunMessages({
+    // Changed instructions rebuild the head: the whole history after it misses.
+    this.userContextHeads.note(session.state.sessionId, userContextMsg);
+    const { retained: retainedContextMessages, runStartMessage } = assembleRunMessages({
       messages,
+      transcript: session.transcript,
+      userMessageEventId: args.runId,
       userContextMsg,
-      hookMessages,
-      dynamicContextMsg,
+      hooks: hookMessages,
+      previousPromptSubmit: session.state.promptSubmitHookMessages,
+      ledger: runContextLedger,
+      volatileContextMsg,
     });
-    const retainedContextMessages = messages.filter(
-      (message) => !priorMessages.has(message) && message !== dynamicContextMsg,
-    );
+    this.recordPromptSubmitHook(session, hookMessages);
     this.lastSessionId = session.state.sessionId;
     this.lastMessages = messages;
 
@@ -2387,6 +2418,7 @@ export class Engine {
     if (session.transcript.isPersistent()) {
       contextManager.setTranscriptPath(session.transcript.getFilePath());
     }
+    contextManager.setPromptCacheSessionKey(session.state.sessionId);
     // Re-derive frozen persistence decisions from the messages we just
     // loaded. Skipped on cold start (messages == [userContextMsg] only).
     // Critical for resume — otherwise a result that was persisted last
@@ -2400,10 +2432,25 @@ export class Engine {
       llmClient,
       fullSystemPrompt,
       rebuildSystemPrompt,
-      dynamicContextMsg,
+      runContextLedger,
+      volatileContextMsg,
       userContextMsg,
       retainedContextMessages,
+      runStartMessage,
     };
+  }
+
+  /** Remember what the prompt hook said for this prompt (run-context-ledger.ts). */
+  private recordPromptSubmitHook(session: SessionBundle, hooks: RunHookMessages): void {
+    const said = cleanedHookMessages(hooks.promptSubmit);
+    const before = session.state.promptSubmitHookMessages;
+    // Never recorded and nothing said: nothing to remember yet.
+    if (before === undefined ? said.length === 0 : JSON.stringify(before) === JSON.stringify(said))
+      return;
+    session.state.promptSubmitHookMessages = said;
+    session.state.stateRevision = this.sessionManager.updateSessionState(session.state.sessionId, {
+      promptSubmitHookMessages: said,
+    });
   }
 
   /**
@@ -2449,6 +2496,7 @@ export class Engine {
       llmModel: this.config.llm.model,
       messages,
       needsCtxSeed: !this.ctxSeedSent.has(sid),
+      promptCacheTtlMs: this.promptCacheRoutes.ttlMs(this.config.llm),
     });
     this.lastContextManager = contextManager;
     if (!this.ctxSeedSent.has(sid)) this.ctxSeedSent.add(sid);
@@ -2678,8 +2726,10 @@ export class Engine {
     ) => boolean;
     releaseClientMessageId: (clientMessageId: string) => void;
     freshImageMessage: Message | undefined;
-    dynamicContextMsg: Message | null;
+    runContextLedger: RunContextLedger;
+    volatileContextMsg: Message | null;
     retainedContextMessages: Message[];
+    runStartMessage: Message | undefined;
   }): Promise<{
     turnLoop: TurnLoop;
     applyGoalTermination: ReturnType<typeof createGoalTerminationApplier>;
@@ -2708,8 +2758,10 @@ export class Engine {
       claimClientMessageId,
       releaseClientMessageId,
       freshImageMessage,
-      dynamicContextMsg,
+      runContextLedger,
+      volatileContextMsg,
       retainedContextMessages,
+      runStartMessage,
     } = args;
 
     // eslint-disable-next-line prefer-const
@@ -2889,8 +2941,10 @@ export class Engine {
       goalHookHandler,
       normalizedGoal,
       freshImageMessage,
-      dynamicContextMsg,
+      runContextLedger,
+      volatileContextMsg,
       retainedContextMessages,
+      runStartMessage,
       usageBaseline,
       getRunUsage,
       recordCumulativeUsage,
@@ -2948,11 +3002,12 @@ export class Engine {
    * Record the session start and fire the once-per-run `on_session_start` and
    * per-turn `user_prompt_submit` / `agent_direction_submit` hooks, applying any
    * `updatedPrompt` rewrite in place on `messages`. Extracted verbatim from the
-   * {@link runExclusive} skeleton; returns the combined hook-injected messages
+   * {@link runExclusive} skeleton; returns the hook-injected messages, by hook,
    * for {@link assembleRunMessages}.
    */
   private async runSessionStartHooks(args: {
     session: SessionBundle;
+    userMessageEventId: string;
     task: string;
     cwd: string;
     runPermissionMode: NonNullable<EngineConfig["permissionMode"]>;
@@ -2960,7 +3015,7 @@ export class Engine {
     options: EngineRunOptions | undefined;
     taskText: string;
     messages: Message[];
-  }): Promise<string[]> {
+  }): Promise<RunHookMessages> {
     const { session, task, cwd, runPermissionMode, resumedFromDisk, options, taskText, messages } =
       args;
 
@@ -3032,10 +3087,18 @@ export class Engine {
           updatedChars: promptSubmitHook.updatedPrompt.length,
         });
         messages[lastIdx] = { role: "user", content: promptSubmitHook.updatedPrompt };
+        // Replay after a restart must send what the model saw here.
+        session.transcript.appendPromptRewrite({
+          messageEventId: replayEventIdOf(session.transcript, args.userMessageEventId),
+          content: promptSubmitHook.updatedPrompt,
+        });
       }
     }
 
-    return [...(sessionStartHook.messages ?? []), ...(promptSubmitHook.messages ?? [])];
+    return {
+      sessionStart: sessionStartHook.messages ?? [],
+      promptSubmit: promptSubmitHook.messages ?? [],
+    };
   }
 
   /**
@@ -3130,6 +3193,7 @@ export class Engine {
         // Read from the Session's own persisted state, so every turn — not just
         // the first — carries the standing brief.
         sessionBrief: session.state.sessionBrief,
+        sessionStartedAt: session.state.startedAt,
         profileMemoryDir,
         instructionCompatFileNames: compatFileNamesFrom(this.config.instructions),
         instructionBoundaryFinder: (scanCwd) =>
@@ -3311,8 +3375,10 @@ export class Engine {
     goalHookHandler: import("./run-goal.js").GoalStopHookHandler | null;
     normalizedGoal: GoalConfig | undefined;
     freshImageMessage: Message | undefined;
-    dynamicContextMsg: Message | null;
+    runContextLedger: RunContextLedger;
+    volatileContextMsg: Message | null;
     retainedContextMessages: Message[];
+    runStartMessage: Message | undefined;
     usageBaseline: TokenUsage;
     getRunUsage: () => ReturnType<import("./model-facade.js").ModelFacade["getUsage"]>;
     recordCumulativeUsage: (usage: TokenUsage) => CumulativeUsageCounters;
@@ -3337,8 +3403,10 @@ export class Engine {
       goalHookHandler,
       normalizedGoal,
       freshImageMessage,
-      dynamicContextMsg,
+      runContextLedger,
+      volatileContextMsg,
       retainedContextMessages,
+      runStartMessage,
       usageBaseline,
       getRunUsage,
       recordCumulativeUsage,
@@ -3512,8 +3580,21 @@ export class Engine {
         onStream: options?.onStream,
         signal: options?.signal,
         freshImageMessages: freshImageMessage ? [freshImageMessage] : undefined,
-        volatileContextMessages: dynamicContextMsg ? [dynamicContextMsg] : undefined,
+        volatileContextMessages: volatileContextMsg ? [volatileContextMsg] : undefined,
+        volatileContextAtTail: this.promptCacheRoutes.usesExplicitBreakpoints(this.config.llm),
+        onPromptCacheFallback: () => {
+          if (
+            this.promptCacheRoutes.observe(
+              this.config.llm,
+              modelFacade.getEffectivePromptCacheStrategy(),
+            )
+          ) {
+            contextManager.setPromptCacheTtlMs(this.promptCacheRoutes.ttlMs(this.config.llm));
+          }
+        },
+        syncRunContext: (runMessages) => void runContextLedger.sync(runMessages),
         retainedContextMessages,
+        runStartMessage,
         // Goal mode: the active goal is surfaced to the on_stop handler via
         // ctx.data.goal; the GoalStopHook (registered above) judges it.
         goal: normalizedGoal,
@@ -4255,12 +4336,15 @@ export class Engine {
     if (!contextManager || this.lastSessionId !== effectiveSessionId) {
       contextManager = new ContextManager({
         maxTokens: this.resolveMaxContextTokens(),
+        promptCacheTtlMs: this.promptCacheRoutes.ttlMs(this.config.llm),
         ...Object.fromEntries(
           Object.entries(this.resolveContextRatios()).filter(([, v]) => v !== undefined),
         ),
       });
       if (session.transcript.isPersistent()) {
         contextManager.setTranscriptPath(session.transcript.getFilePath());
+      } else {
+        contextManager.setPromptCacheSessionKey(effectiveSessionId);
       }
       contextManager.initReplacementStateFromMessages(sourceMessages);
       this.lastContextManager = contextManager;
@@ -4323,6 +4407,7 @@ export class Engine {
   ): Promise<{ before: number; after: number }> {
     const effectiveSessionId = sessionId || this.lastSessionId;
     if (!effectiveSessionId) return { before: 0, after: 0 };
+    notePromptPrefixRewrite(effectiveSessionId, "archive");
 
     const session = this.sessionManager.resume(effectiveSessionId);
     const { sourceMessages, window } = resolveArchiveWindow(
@@ -4369,6 +4454,7 @@ export class Engine {
   ): Promise<boolean> {
     const session = this.sessionManager.resume(sessionId);
     if (!appendSessionArchiveMarker(sessionId, session, marker)) return false;
+    notePromptPrefixRewrite(sessionId, "archive");
     this.rebaseSessionToolCache(session);
     // The in-memory cache (if any) predates the marker; drop it so the next
     // run rebuilds from the trimmed transcript replay.
@@ -4399,11 +4485,9 @@ export class Engine {
       previousCacheReadTokens: result.previous.cacheReadTokens,
       currentCacheReadTokens: result.current.cacheReadTokens,
       dropRatio: result.dropRatio,
-      cause: result.attribution.cause,
-      changedPrefixes: result.attribution.changedPrefixes,
       previousPrefix: result.previous.fingerprint,
       currentPrefix: result.current.fingerprint,
-      hint: promptCacheDropHint(result.attribution),
+      ...promptCacheDropLogFields(result.attribution),
     });
   }
 

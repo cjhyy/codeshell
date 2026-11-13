@@ -71,7 +71,9 @@ function makeDeps(
     appendToolUse() {},
     appendToolResult() {},
     appendTurnBoundary() {},
-    appendMessage() {},
+    appendMessage() {
+      return { id: crypto.randomUUID() };
+    },
     appendTurnStopped() {},
   } as unknown as TurnLoopDeps["transcript"];
 

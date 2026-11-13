@@ -17,6 +17,9 @@ import type {
 import type { AgentModule } from "../composition/types.js";
 import { estimateStringTokens } from "../context/token-counter.js";
 import { invalidateSkillCache } from "../skills/scanner.js";
+import { installPromptPrefixGuard } from "../testing/prompt-prefix-guard.js";
+
+installPromptPrefixGuard({ beforeEach, afterEach });
 
 const provider = "fake-engine-prompt-cache";
 const env = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_SYSTEM: "/dev/null" };
@@ -210,7 +213,7 @@ describe("Engine prompt-cache hygiene", () => {
     }
   });
 
-  it("does not retain injected userContext or dynamicContext in the compacted history cache", async () => {
+  it("drops the userContext head from the history cache but keeps the context snapshot as history", async () => {
     const sessionId = "s-prompt-cache-hygiene";
     const model = `${provider}-hygiene-${Date.now()}-${Math.random()}`;
     const firstUserContextMarker = `FIRST_USER_CONTEXT_${Date.now()}`;
@@ -248,7 +251,8 @@ describe("Engine prompt-cache hygiene", () => {
         | undefined;
       const cachedText = JSON.stringify(cachedHistory ?? []);
       expect(cachedText).not.toContain(firstUserContextMarker);
-      expect(cachedText).not.toContain(firstDynamicMarker);
+      // The context snapshot is history now: it stays where it was sent.
+      expect(cachedText).toContain(firstDynamicMarker);
 
       unlinkSync(join(repo, firstDynamicMarker));
       writeFileSync(
@@ -263,15 +267,22 @@ describe("Engine prompt-cache hygiene", () => {
       expect(scenario.primaryCalls).toHaveLength(2);
       const secondRequestText = JSON.stringify(scenario.primaryCalls[1]!.messages);
       expect(secondRequestText).not.toContain(firstUserContextMarker);
-      expect(secondRequestText).not.toContain(firstDynamicMarker);
       expect(secondRequestText).toContain(secondUserContextMarker);
-      expect(secondRequestText).toContain(secondDynamicMarker);
+      // The first run's snapshot is untouched; the change is appended as an
+      // update that supersedes the section.
+      const first = scenario.primaryCalls[0]!.messages;
+      const second = scenario.primaryCalls[1]!.messages;
+      expect(second.slice(1, first.length)).toEqual(first.slice(1));
+      expect(second.at(-1)!.content).toContain(
+        `<context-section key="capability">\n${secondDynamicMarker}\n</context-section>`,
+      );
+      expect(second.at(-1)!.content).not.toContain(firstDynamicMarker);
     } finally {
       scenarios.delete(model);
     }
   });
 
-  it("keeps dynamicContext out of real summary compaction anchored summaries", async () => {
+  it("re-sends the context after real summary compaction dropped it", async () => {
     const sessionId = "s-prompt-cache-summary-hygiene";
     const model = `${provider}-summary-${Date.now()}-${Math.random()}`;
     const firstDynamicMarker = `summary-dynamic-${Date.now()}.txt`;
@@ -330,6 +341,8 @@ describe("Engine prompt-cache hygiene", () => {
       const scenario = scenarios.get(model)!;
       expect(JSON.stringify(scenario.primaryCalls[0]!.messages)).toContain(firstDynamicMarker);
       expect(scenario.summaryCalls.length).toBeGreaterThan(0);
+      // Engine context is re-sent after compaction, so it never enters a
+      // summary: a stale status cannot be baked into one.
       expect(JSON.stringify(scenario.summaryCalls)).not.toContain(firstDynamicMarker);
 
       const cachedHistory = (engine as any).compactedMessagesBySession.get(sessionId) as
@@ -337,7 +350,21 @@ describe("Engine prompt-cache hygiene", () => {
         | undefined;
       const cachedText = JSON.stringify(cachedHistory ?? []);
       expect(cachedText).toContain("<anchored-summary>");
-      expect(cachedText).not.toContain(firstDynamicMarker);
+      // Context is ordinary history, so compaction may summarize it away; the
+      // model then gets a fresh snapshot instead of running without it.
+      const snapshots = (cachedHistory ?? []).filter(
+        (message) =>
+          message.role === "user" &&
+          typeof message.content === "string" &&
+          message.content.startsWith(
+            `<system-reminder>\n<context-section key="capability">\n${firstDynamicMarker}`,
+          ),
+      );
+      expect(snapshots).toHaveLength(1);
+      const lastRequest = scenario.primaryCalls.at(-1)!.messages;
+      expect(
+        lastRequest.filter((message) => message.content === snapshots[0]!.content),
+      ).toHaveLength(1);
     } finally {
       scenarios.delete(model);
     }
@@ -393,8 +420,14 @@ describe("Engine prompt-cache hygiene", () => {
           sessionId,
           previousCacheReadTokens: 1200,
           currentCacheReadTokens: 0,
+          // The second run's request extends the first run's: the context
+          // snapshot stayed in place and only the reply and the new task
+          // were appended, so the message list cannot be the cause.
           cause: "no_tracked_prefix_change",
           changedPrefixes: [],
+          messageChange: "append_only",
+          previousMessageCount: 3,
+          currentMessageCount: 5,
         }),
       );
     } finally {
@@ -474,6 +507,82 @@ describe("Engine prompt-cache hygiene", () => {
         );
         warn.mockClear();
       }
+
+      const digest = (
+        hash: string,
+        role: "user" | "assistant" = "user",
+        hasToolResult = false,
+      ) => ({
+        hash,
+        role,
+        hasToolResult,
+      });
+      (engine as any).recordCacheReadDiagnostics("message-change", {
+        ...diagnosticSample(1200),
+        messages: [digest("a"), digest("b", "assistant"), digest("c", "user", true), digest("d")],
+      });
+      (engine as any).recordCacheReadDiagnostics("message-change", {
+        ...diagnosticSample(0),
+        messages: [digest("a"), digest("b", "assistant"), digest("c2", "user", true), digest("d")],
+      });
+      expect(warn).toHaveBeenCalledWith(
+        "engine.cache_read_drop",
+        expect.objectContaining({
+          cause: "message_prefix_changed",
+          changedPrefixes: [],
+          messageChange: "rewritten",
+          firstChangedMessageIndex: 2,
+          previousMessageCount: 4,
+          currentMessageCount: 4,
+          changedMessageRole: "user",
+          changedMessageHasToolResult: true,
+          hint: expect.stringContaining("rewritten"),
+        }),
+      );
+      const payload = warn.mock.calls.find(([event]) => event === "engine.cache_read_drop")?.[1];
+      expect(JSON.stringify(payload)).not.toContain('"hash"');
+      warn.mockClear();
+
+      // A volatile message that sat in the middle of the previous request is
+      // gone: cached content followed it, so this explains the drop.
+      (engine as any).recordCacheReadDiagnostics("volatile-middle", {
+        ...diagnosticSample(1200),
+        messages: [digest("task"), digest("volatile"), digest("b", "assistant"), digest("c")],
+      });
+      (engine as any).recordCacheReadDiagnostics("volatile-middle", {
+        ...diagnosticSample(0),
+        messages: [digest("task"), digest("b", "assistant"), digest("c"), digest("volatile-2")],
+      });
+      expect(warn).toHaveBeenCalledWith(
+        "engine.cache_read_drop",
+        expect.objectContaining({
+          cause: "message_prefix_changed",
+          messageChange: "removed",
+          firstChangedMessageIndex: 1,
+        }),
+      );
+      warn.mockClear();
+
+      // Only the previous request's last message differs: reported, not blamed.
+      (engine as any).recordCacheReadDiagnostics("volatile-tail", {
+        ...diagnosticSample(1200),
+        messages: [digest("task"), digest("volatile")],
+      });
+      (engine as any).recordCacheReadDiagnostics("volatile-tail", {
+        ...diagnosticSample(0),
+        messages: [digest("task"), digest("b", "assistant"), digest("volatile-2")],
+      });
+      expect(warn).toHaveBeenCalledWith(
+        "engine.cache_read_drop",
+        expect.objectContaining({
+          cause: "no_tracked_prefix_change",
+          messageChange: "rewritten",
+          firstChangedMessageIndex: 1,
+          previousMessageCount: 2,
+          currentMessageCount: 3,
+        }),
+      );
+      warn.mockClear();
 
       (engine as any).recordCacheReadDiagnostics("scope-change", diagnosticSample(1200));
       (engine as any).recordCacheReadDiagnostics(

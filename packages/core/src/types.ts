@@ -243,6 +243,10 @@ export type TranscriptEventType =
   // turn loses its stopped flag on reload and wrongly folds behind the
   // "已处理 Xs ⌄" process-card header.
   | "turn_stopped"
+  // A user_prompt_submit hook rewrote the prompt of an earlier message event.
+  // Model replay uses the rewrite; display keeps the original. data = { messageEventId, content }
+  // (session/prompt-rewrites.ts).
+  | "prompt_rewrite"
   | "error";
 
 export interface TranscriptEvent {
@@ -383,6 +387,12 @@ export interface SessionState {
    * before the next provider response.
    */
   contextUsageAnchor?: ContextUsageAnchor;
+  /**
+   * What the prompt-submit hook said for the latest prompt (empty when it
+   * said nothing). A hook reminder is repeated unless the hook said the same
+   * for the prompt just before — see engine/run-context-ledger.ts.
+   */
+  promptSubmitHookMessages?: string[];
   /**
    * Exceptional boundary for the most recently persisted completed run.
    * Absent means `status === "completed"` is an ordinary final answer.

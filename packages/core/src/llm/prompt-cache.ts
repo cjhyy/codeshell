@@ -24,10 +24,15 @@ export type PromptCacheBreakpoint = "system" | "tools" | "stable-history" | "rol
 export interface PromptCacheRequestContext {
   /** Stable run/session namespace used for provider cache affinity. */
   scopeId?: string;
+  /** Auxiliary traffic has its own bounded history, independent of main sessions. */
+  scopeKind?: "auxiliary";
   /**
-   * Number of source messages before the first volatile context message.
-   * Providers use this to retain a reusable durable-history breakpoint while
-   * also advancing a rolling breakpoint over the append-only in-run tail.
+   * Number of leading source messages that are settled: nothing in them will
+   * be rewritten or removed by this run (it ends at the run start, before a
+   * pending retroactive rewrite, or before a volatile context message —
+   * engine/stable-prefix.ts). Providers put a durable-history breakpoint on
+   * its last message while also advancing a rolling breakpoint over the
+   * append-only in-run tail.
    */
   stablePrefixMessageCount?: number;
 }
@@ -54,7 +59,7 @@ export interface ResolvePromptCachePolicyInput extends Pick<
   /** Resolved model capability; explicit catalog declarations take precedence. */
   promptCaching?: PromptCachingCapability;
   request?: PromptCacheRequestContext;
-  /** Sticky compatibility fallback after an endpoint rejects explicit fields. */
+  /** Sticky fallback after an endpoint rejects explicit fields or content arrays. */
   explicitDisabled?: boolean;
 }
 
@@ -90,7 +95,7 @@ export function resolvePromptCachePolicy(input: ResolvePromptCachePolicyInput): 
     ? createPromptCacheKey(input.request.scopeId, `${kind}:${model}`)
     : undefined;
 
-  if (capability === "anthropic-explicit") {
+  if (capability === "anthropic-explicit" && input.explicitDisabled !== true) {
     return {
       strategy: "anthropic-explicit",
       toolDiscovery,
@@ -129,6 +134,44 @@ export function resolvePromptCachePolicy(input: ResolvePromptCachePolicyInput): 
     layoutVersion: "append-only-v1",
     breakpoints: [],
   };
+}
+
+/**
+ * True when requests on this route carry explicit history breakpoints, i.e. a
+ * prefix can be resumed from a chosen message rather than only from the end
+ * of the previous request.
+ */
+export function promptCacheUsesExplicitBreakpoints(
+  policy: Pick<PromptCachePolicy, "breakpoints">,
+): boolean {
+  return policy.breakpoints.includes("stable-history");
+}
+
+const MINUTE_MS = 60_000;
+
+/**
+ * How long the provider keeps a cached prefix that is not read again, for a
+ * route with this policy. The context manager treats a session idle for
+ * longer as cold, i.e. free to rewrite (context/rewrite-gate.ts).
+ *
+ *   - openai-hybrid / openai-explicit: the request asks for `ttl: "30m"`.
+ *   - anthropic-explicit: markers are plain `{ type: "ephemeral" }`, which is
+ *     Anthropic's 5-minute default; no code path requests the 1-hour TTL.
+ *     Raise this together with the marker if one ever does.
+ *   - everything else: 5 minutes, the shortest retention the supported
+ *     providers document for automatic caching. Erring short only makes a
+ *     cleanup run earlier than strictly necessary.
+ */
+export function promptCacheTtlMs(policy: Pick<PromptCachePolicy, "strategy">): number {
+  switch (policy.strategy) {
+    case "openai-hybrid":
+    case "openai-explicit":
+      return 30 * MINUTE_MS;
+    case "anthropic-explicit":
+    case "openai-implicit":
+    case "provider-managed":
+      return 5 * MINUTE_MS;
+  }
 }
 
 /** Deduplicate semantic boundaries while preserving their left-to-right order. */

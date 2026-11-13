@@ -178,8 +178,9 @@ describe("Engine notes context strategy", () => {
       }
     ).assembleRunPrompts({
       session,
+      runId: "run",
       messages: [],
-      hookMessages: [],
+      hookMessages: { sessionStart: [], promptSubmit: [] },
       mcpFailureSummary: "",
       promptComposer: composer,
       toolDefs: surface.snapshot(),

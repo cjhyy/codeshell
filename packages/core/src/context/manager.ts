@@ -6,6 +6,7 @@
  * Tier 3: window compact (sync, emergency) — aggressive truncation fallback
  */
 
+import { withoutContextMessages } from "../session/context-messages.js";
 import type {
   Message,
   ContextUsageAnchor,
@@ -41,9 +42,20 @@ import {
   toolResultText,
 } from "./tool-output-budget.js";
 import { logger } from "../logging/logger.js";
+import { notePromptPrefixRewrite } from "../utils/prompt-prefix-events.js";
 import { toolSchemaResultIds } from "./tool-schema-results.js";
+import {
+  DEFAULT_REWRITE_BATCH_CONFIG,
+  decideRewriteBatch,
+  diffRewrittenMessages,
+  type ExternalRewritePlanner,
+  notePromptCacheRequest,
+  planRewriteBatch,
+  promptCacheLastRequestAt,
+  type RewriteBatchConfig,
+} from "./rewrite-gate.js";
 
-export interface ContextManagerConfig {
+export interface ContextManagerConfig extends RewriteBatchConfig {
   maxTokens: number;
   compactAtRatio: number;
   summarizeAtRatio: number;
@@ -65,6 +77,8 @@ export interface ContextManagerConfig {
    * from maxTokens when not set explicitly: bigger window → keep more.
    */
   microcompactKeepRecent?: number;
+  /** Clock for prompt-cache warmth; injectable for tests. */
+  now?: () => number;
 }
 
 type TokenEstimate = {
@@ -95,6 +109,7 @@ const DEFAULT_CONFIG: ContextManagerConfig = {
   // back at 130k and the cycle repeated. 0.7 → 140k floor, leaving
   // realistic headroom before we start churning.
   microcompactFloorRatio: 0.7,
+  ...DEFAULT_REWRITE_BATCH_CONFIG,
 };
 
 /**
@@ -127,6 +142,10 @@ export type OnCompactFn = (info: {
   /** Whether a destructive tier replaced history, independent of token estimates. */
   historyChanged?: boolean;
 }) => void;
+export interface ManageOptions {
+  /** Caller-owned retroactive rewrite that joins the batched cleanups (rewrite-gate.ts). */
+  externalRewrite?: ExternalRewritePlanner;
+}
 type SummaryCompactLogEvent = "context.summary_compact" | "context.force_summary_compact";
 type SummaryCompactResult = {
   messages: Message[];
@@ -157,6 +176,9 @@ export class ContextManager {
   private lastActualModel: string | undefined;
   /** Path to session transcript — passed to summary compaction for on-demand access. */
   private transcriptPath: string | undefined;
+  /** Cache-warmth key for a session without a transcript path (see rewrite-gate.ts). */
+  private sessionWarmthKey: string | undefined;
+  private promptPrefixScope: string | undefined;
   /** Notified whenever any compaction tier fires, including microcompact. */
   private onCompact: OnCompactFn | undefined;
   /**
@@ -166,9 +188,26 @@ export class ContextManager {
    */
   private replacementState: ContentReplacementState | undefined;
   private toolResultsDir: string | undefined;
+  /** Last successful model request seen by this instance (see rewrite-gate.ts). */
+  private localLastRequestAt: number | undefined;
+  /** Earliest pending rewrite message; its identity survives re-indexing by the caller. */
+  private pendingRewriteBoundaryMessage: Message | undefined;
 
   constructor(config?: Partial<ContextManagerConfig>) {
     this.config = { ...DEFAULT_CONFIG, ...config };
+  }
+
+  /** The route's cache retention changed mid-process (engine/prompt-cache-route.ts). */
+  setPromptCacheTtlMs(ttlMs: number): void {
+    this.config = { ...this.config, promptCacheTtlMs: ttlMs };
+  }
+
+  /** Every compaction that rewrote history is a registered prefix change (prompt-prefix-events.ts). */
+  private reportCompact(info: Parameters<OnCompactFn>[0]): void {
+    if (info.strategy !== "micro" && info.historyChanged !== false) {
+      notePromptPrefixRewrite(this.promptPrefixScope, "compaction");
+    }
+    this.onCompact?.(info);
   }
 
   setOnCompact(fn: OnCompactFn): void {
@@ -191,7 +230,7 @@ export class ContextManager {
     this.lastActualProvider = undefined;
     this.lastActualModel = undefined;
     this.suppressNoOpMicroSummaryUntilCompact = false;
-    this.onCompact?.({
+    this.reportCompact({
       strategy: "notes",
       before,
       after: estimateTokens(afterMessages),
@@ -325,7 +364,12 @@ export class ContextManager {
       // session), feed it back so the LLM merges-updates rather than
       // re-summarizes from scratch.
       const priorSummary = extractAnchoredSummary(messages) ?? this.lastSummary;
-      const prompt = buildSummarizationPrompt(messagesToSummarize, priorSummary);
+      // Engine context is re-sent after compaction (run-context-ledger.ts), so
+      // it stays out of the summary: a stale status must not be baked into one.
+      const prompt = buildSummarizationPrompt(
+        withoutContextMessages(messagesToSummarize),
+        priorSummary,
+      );
       const summary = await this.summarizeFn(prompt, signal);
 
       if (!summary || summary.length <= 50) {
@@ -354,13 +398,14 @@ export class ContextManager {
 
       this.consecutiveSummaryFailures = 0;
       this.lastSummary = summary;
+      this.pendingRewriteBoundaryMessage = undefined;
       logger.info(logEvent, {
         before,
         after,
         summaryLen: summary.length,
         rolling: priorSummary !== undefined,
       });
-      this.onCompact?.({ strategy: "summary", before, after, historyChanged: true });
+      this.reportCompact({ strategy: "summary", before, after, historyChanged: true });
       return { messages: compacted, tokens: after, compacted: true, noProgress: false };
     } catch (err) {
       this.consecutiveSummaryFailures++;
@@ -380,6 +425,157 @@ export class ContextManager {
   setTranscriptPath(path: string): void {
     this.transcriptPath = path;
     this.toolResultsDir = resolveToolResultsDir(path);
+    this.publishLocalWarmth();
+  }
+
+  /**
+   * Warmth key for a session that has no persistent transcript. Without it
+   * such a session would look cold at every run start (a new ContextManager
+   * is created per run) and rewrite its history every time. A transcript
+   * path, when set, takes precedence. Also scopes prefix diagnostics for
+   * persistent sessions, so callers supply the session id in both cases.
+   */
+  setPromptCacheSessionKey(sessionId: string): void {
+    this.sessionWarmthKey = `session:${sessionId}`;
+    this.promptPrefixScope = sessionId;
+    this.publishLocalWarmth();
+  }
+
+  /** Key under which this session's cache warmth is shared across instances. */
+  private warmthKey(): string | undefined {
+    return this.transcriptPath ?? this.sessionWarmthKey;
+  }
+
+  private publishLocalWarmth(): void {
+    const key = this.warmthKey();
+    if (key !== undefined && this.localLastRequestAt !== undefined) {
+      notePromptCacheRequest(key, this.localLastRequestAt);
+    }
+  }
+
+  /**
+   * Record a successful model response: the provider now holds a cached
+   * prefix for this session, so retroactive rewrites stop being free.
+   * Warmth is keyed by transcript path (else by session id) and shared
+   * across instances, because a new ContextManager is created per run.
+   */
+  noteModelRequestCompleted(at: number = this.now()): void {
+    this.localLastRequestAt = Math.max(this.localLastRequestAt ?? at, at);
+    const key = this.warmthKey();
+    if (key !== undefined) notePromptCacheRequest(key, at);
+  }
+
+  /**
+   * The earliest message a deferred rewrite batch would change. Callers that hold a differently
+   * shaped list (e.g. with volatile context messages put back) must locate the
+   * boundary by this object, not by the index; a reference that is no longer
+   * in their list means the boundary is unknown.
+   */
+  getPendingRewriteBoundaryMessage(): Message | undefined {
+    return this.pendingRewriteBoundaryMessage;
+  }
+
+  private now(): number {
+    return this.config.now?.() ?? Date.now();
+  }
+
+  /**
+   * Tier 0d + Tier 1 as one all-or-nothing batch: dedupe repeated Reads, mask
+   * superseded browser snapshots and (above its floor) microcompact. These
+   * rewrite old messages and so break the provider's cached prefix; they are
+   * evaluated on a candidate copy and adopted only when rewrite-gate.ts says
+   * the miss is free or worth it.
+   */
+  private applyRewriteBatch(
+    input: Message[],
+    externalRewrite?: ExternalRewritePlanner,
+  ): {
+    messages: Message[];
+    tokens: number;
+    microNoOp: boolean;
+    microShrunk: boolean;
+  } {
+    const baseTokens = this.estimateTokensHybrid(input);
+    // A caller-owned rewrite (image placeholders) is planned first; the text
+    // passes run on its candidate so one adoption applies both.
+    const external = externalRewrite?.(input);
+    const externalChanged = external !== undefined && external.messages !== input;
+    const externalDiff = externalChanged
+      ? diffRewrittenMessages(input, external.messages)
+      : undefined;
+    const textInput = externalChanged ? external.messages : input;
+    const plan = planRewriteBatch(textInput, {
+      baseTokens: externalChanged ? this.estimateTokensHybrid(textInput) : baseTokens,
+      microFloorTokens: this.config.maxTokens * this.config.microcompactFloorRatio,
+      keepRecentN: this.config.microcompactKeepRecent ?? defaultKeepRecent(this.config.maxTokens),
+      estimate: (messages) => this.estimateTokensHybrid(messages),
+    });
+    this.pendingRewriteBoundaryMessage = undefined;
+    const kept = { messages: input, tokens: baseTokens, microNoOp: plan.microNoOp };
+    if (!plan.changed && !externalChanged) return { ...kept, microShrunk: false };
+    const savedTokens = plan.savedTokens + (externalDiff?.savedTokens ?? 0);
+    const firstChangedIndex =
+      plan.firstChangedIndex === undefined || externalDiff?.firstChangedIndex === undefined
+        ? (plan.firstChangedIndex ?? externalDiff?.firstChangedIndex)
+        : Math.min(plan.firstChangedIndex, externalDiff.firstChangedIndex);
+
+    const warmthKey = this.warmthKey();
+    const shared = warmthKey === undefined ? undefined : promptCacheLastRequestAt(warmthKey);
+    const reason = decideRewriteBatch({
+      now: this.now(),
+      lastRequestAt:
+        shared === undefined || this.localLastRequestAt === undefined
+          ? (shared ?? this.localLastRequestAt)
+          : Math.max(shared, this.localLastRequestAt),
+      promptCacheTtlMs: this.config.promptCacheTtlMs,
+      pendingSavedTokens: savedTokens,
+      totalTokens: baseTokens,
+      minSavedTokens: this.config.rewriteBatchMinSavedTokens,
+      savedRatio: this.config.rewriteBatchSavedRatio,
+      pressureTokens: this.config.maxTokens * this.config.compactAtRatio,
+      forced: externalChanged && external.forced,
+    });
+    if (!reason) {
+      this.pendingRewriteBoundaryMessage =
+        firstChangedIndex === undefined ? undefined : input[firstChangedIndex];
+      logger.debug("context.rewrite_deferred", { pendingSavedTokens: savedTokens });
+      return { ...kept, microShrunk: false };
+    }
+
+    if (externalChanged) external.commit();
+    notePromptPrefixRewrite(this.promptPrefixScope, "rewrite_batch");
+    logger.info("context.rewrite_batch_applied", {
+      reason,
+      savedTokens,
+      externalSavedTokens: externalDiff?.savedTokens ?? 0,
+      dedupedReads: plan.dedupedReads,
+      maskedSnapshots: plan.maskedSnapshots,
+      microcompacted: plan.micro?.clearedRounds ?? 0,
+    });
+    if (plan.dedupedReads > 0) {
+      logger.info("context.dedupe_file_reads", { cleared: plan.dedupedReads });
+    }
+    if (plan.maskedSnapshots > 0) {
+      logger.info("context.mask_browser_snapshots", { masked: plan.maskedSnapshots });
+    }
+    if (plan.micro) {
+      logger.info("context.microcompact", {
+        before: plan.preMicroTokens,
+        after: plan.candidateTokens,
+        ...plan.micro,
+      });
+      this.reportCompact({
+        strategy: "micro",
+        before: plan.preMicroTokens,
+        after: plan.candidateTokens,
+      });
+    }
+    return {
+      messages: plan.messages,
+      tokens: plan.candidateTokens,
+      microNoOp: plan.microNoOp,
+      microShrunk: plan.candidateTokens < plan.preMicroTokens,
+    };
   }
 
   /**
@@ -397,7 +593,7 @@ export class ContextManager {
    * Apply progressive context management (sync path).
    * For Tier 2 (LLM summary), call manageAsync instead.
    */
-  manage(messages: Message[]): Message[] {
+  manage(messages: Message[], options?: ManageOptions): Message[] {
     let result = messages;
 
     // Tier 0a: Persist large tool_results to disk + replace with preview.
@@ -414,61 +610,15 @@ export class ContextManager {
     // backstop for messages still over the limit after persistence.
     result = applyToolResultBudget(result, 100_000, this.config.toolMessageTokenLimit);
 
-    // Tier 0d: dedup complete, successful Reads of the same file range.
-    // Different pages and incomplete observations remain available. Runs
-    // independently of the pressure-/recency-gated tiers below, before
-    // microcompact so an
-    // already-deduped result isn't double-counted toward the keep-recent window.
-    const dedup = dedupeFileReads(result);
-    if (dedup.clearedCount > 0) {
-      result = dedup.messages;
-      logger.info("context.dedupe_file_reads", { cleared: dedup.clearedCount });
-    }
-
-    // Tier 0d': browser observation masking — keep only the latest
-    // browser_snapshot, collapse older ones (stale element lists, often large).
-    // Same always-on waste-removal class as dedupeFileReads. The research's
-    // top browser-token lever (folding old observations beats LLM summarizing).
-    const masked = maskOldObservations(result);
-    if (masked.maskedCount > 0) {
-      result = masked.messages;
-      logger.info("context.mask_browser_snapshots", { masked: masked.maskedCount });
-    }
-
-    // Tier 1: microcompact — fingerprint old whitelisted tool_results.
-    // Only runs above the floor ratio: under-pressure context keeps full
-    // detail so the model isn't forced to re-Read files it just looked at.
-    const preTier1Tokens = this.estimateTokensHybrid(result);
-    if (preTier1Tokens > this.config.maxTokens * this.config.microcompactFloorRatio) {
-      const keepRecentN =
-        this.config.microcompactKeepRecent ?? defaultKeepRecent(this.config.maxTokens);
-      // Capture rounds/tools synchronously from microcompact's onClear, but
-      // defer the token re-estimate until AFTER `result` has been reassigned
-      // to the compacted array — onClear fires before microcompact returns,
-      // so reading `result` inside it would see the pre-compact reference.
-      let clearedInfo: { clearedRounds: number; toolNames: string[] } | null = null;
-      result = microcompact(result, {
-        keepRecentN,
-        onClear: (info) => {
-          clearedInfo = info;
-        },
-      });
-      if (clearedInfo) {
-        const after = this.estimateTokensHybrid(result);
-        logger.info("context.microcompact", {
-          before: preTier1Tokens,
-          after,
-          keepRecentN,
-          clearedRounds: (clearedInfo as { clearedRounds: number }).clearedRounds,
-          toolNames: (clearedInfo as { toolNames: string[] }).toolNames,
-        });
-        this.onCompact?.({ strategy: "micro", before: preTier1Tokens, after });
-      }
-    }
+    // Tier 0d + Tier 1: retroactive cleanups (dedupe Reads, mask old browser
+    // snapshots, microcompact above its floor), batched so they don't break
+    // the prompt cache on every step — see applyRewriteBatch().
+    const batch = this.applyRewriteBatch(result, options?.externalRewrite);
+    result = batch.messages;
 
     // Hybrid token estimation walks every message; we cache it across the
     // tier checks below and only recompute after a compaction shrinks `result`.
-    let tokens = this.estimateTokensHybrid(result);
+    let tokens = batch.tokens;
 
     // Tiers run in increasing severity. Each tier short-circuits its own
     // arm but the next tier still runs if we're still above the next gate
@@ -493,7 +643,7 @@ export class ContextManager {
         result = applySummaryCompaction(result, this.lastSummary, keepN, this.transcriptPath);
         this.lastSummary = undefined;
         tokens = this.estimateTokensHybrid(result);
-        this.onCompact?.({
+        this.reportCompact({
           strategy: "summary",
           before,
           after: tokens,
@@ -502,7 +652,7 @@ export class ContextManager {
       } else {
         result = snipCompact(result, 3, 8);
         tokens = this.estimateTokensHybrid(result);
-        this.onCompact?.({
+        this.reportCompact({
           strategy: "snip",
           before,
           after: tokens,
@@ -518,7 +668,7 @@ export class ContextManager {
       const keepN = Math.max(10, Math.floor(result.length * 0.4));
       result = windowCompact(result, keepN);
       tokens = this.estimateTokensHybrid(result);
-      this.onCompact?.({
+      this.reportCompact({
         strategy: "window",
         before,
         after: tokens,
@@ -533,7 +683,7 @@ export class ContextManager {
       const beforeMessages = result;
       result = windowCompact(result, 6);
       tokens = this.estimateTokensHybrid(result);
-      this.onCompact?.({
+      this.reportCompact({
         strategy: "emergency",
         before,
         after: tokens,
@@ -551,7 +701,7 @@ export class ContextManager {
   async manageAsync(
     messages: Message[],
     signal?: AbortSignal,
-    options?: { preferNotes?: boolean },
+    options?: ManageOptions & { preferNotes?: boolean },
   ): Promise<Message[]> {
     let result = messages;
 
@@ -565,57 +715,13 @@ export class ContextManager {
     // Tier 0c: Aggregate tool result budget (per-message)
     result = applyToolResultBudget(result, 100_000, this.config.toolMessageTokenLimit);
 
-    // Tier 0d: same always-on waste-removal passes as manage().
-    const dedup = dedupeFileReads(result);
-    if (dedup.clearedCount > 0) {
-      result = dedup.messages;
-      logger.info("context.dedupe_file_reads", { cleared: dedup.clearedCount });
-    }
+    // Tier 0d + Tier 1: batched retroactive cleanups — see manage().
+    const batch = this.applyRewriteBatch(result, options?.externalRewrite);
+    result = batch.messages;
+    const microNoOpAtFloor = batch.microNoOp;
+    if (batch.microShrunk) this.suppressNoOpMicroSummaryUntilCompact = false;
 
-    const masked = maskOldObservations(result);
-    if (masked.maskedCount > 0) {
-      result = masked.messages;
-      logger.info("context.mask_browser_snapshots", { masked: masked.maskedCount });
-    }
-
-    // Tier 1: microcompact — see manage() for the rationale on the floor.
-    const preTier1Tokens = this.estimateTokensHybrid(result);
-    const microFloorGate = this.config.maxTokens * this.config.microcompactFloorRatio;
-    let microNoOpAtFloor = false;
-    if (preTier1Tokens > microFloorGate) {
-      const keepRecentN =
-        this.config.microcompactKeepRecent ?? defaultKeepRecent(this.config.maxTokens);
-      // See manage(): onClear fires synchronously before microcompact returns,
-      // so defer the token re-estimate until result is reassigned.
-      let clearedInfo: { clearedRounds: number; toolNames: string[] } | null = null;
-      result = microcompact(result, {
-        keepRecentN,
-        onClear: (info) => {
-          clearedInfo = info;
-        },
-      });
-      const postTier1Tokens = this.estimateTokensHybrid(result);
-      microNoOpAtFloor = postTier1Tokens === preTier1Tokens;
-      if (postTier1Tokens < preTier1Tokens) {
-        this.suppressNoOpMicroSummaryUntilCompact = false;
-      }
-      if (clearedInfo) {
-        logger.info("context.microcompact", {
-          before: preTier1Tokens,
-          after: postTier1Tokens,
-          keepRecentN,
-          clearedRounds: (clearedInfo as { clearedRounds: number }).clearedRounds,
-          toolNames: (clearedInfo as { toolNames: string[] }).toolNames,
-        });
-        this.onCompact?.({
-          strategy: "micro",
-          before: preTier1Tokens,
-          after: postTier1Tokens,
-        });
-      }
-    }
-
-    let tokens = this.estimateTokensHybrid(result);
+    let tokens = batch.tokens;
     const ratio = tokens / this.config.maxTokens;
     if (ratio < this.config.microcompactFloorRatio) {
       this.suppressNoOpMicroSummaryUntilCompact = false;
@@ -669,7 +775,7 @@ export class ContextManager {
       const beforeMessages = result;
       result = snipCompact(result, 3, 8);
       live = this.estimateTokensHybrid(result);
-      this.onCompact?.({
+      this.reportCompact({
         strategy: "snip",
         before,
         after: live,
@@ -684,7 +790,7 @@ export class ContextManager {
       const keepN = Math.max(10, Math.floor(result.length * 0.4));
       result = windowCompact(result, keepN);
       live = this.estimateTokensHybrid(result);
-      this.onCompact?.({
+      this.reportCompact({
         strategy: "window",
         before,
         after: live,
@@ -698,7 +804,7 @@ export class ContextManager {
       const beforeMessages = result;
       result = windowCompact(result, 6);
       live = this.estimateTokensHybrid(result);
-      this.onCompact?.({
+      this.reportCompact({
         strategy: "emergency",
         before,
         after: live,
@@ -762,7 +868,7 @@ export class ContextManager {
       result = snipCompact(result, 3, 8);
       tokens = this.estimateTokensHybrid(result);
       if (result !== beforeMessages)
-        this.onCompact?.({ strategy: "snip", before, after: tokens, historyChanged: true });
+        this.reportCompact({ strategy: "snip", before, after: tokens, historyChanged: true });
     }
     if (this.estimateTokensHybrid(result) >= this.estimateTokensHybrid(messages)) {
       const before = tokens;
@@ -770,7 +876,7 @@ export class ContextManager {
       const keepN = Math.max(10, Math.floor(result.length * 0.4));
       result = windowCompact(result, keepN);
       tokens = this.estimateTokensHybrid(result);
-      this.onCompact?.({
+      this.reportCompact({
         strategy: "window",
         before,
         after: tokens,
@@ -813,7 +919,8 @@ export class ContextManager {
     // every prior one, so N archived spans produced N copies of the same
     // growing summary instead of N independent summaries.
     const priorSummary = extractAnchoredSummary(window);
-    const prompt = buildSummarizationPrompt(window, priorSummary);
+    // As in trySummaryCompact: engine context is not summarized.
+    const prompt = buildSummarizationPrompt(withoutContextMessages(window), priorSummary);
     const summary = await this.summarizeFn(prompt, opts.signal);
     if (!summary || summary.length <= 50) return messages;
 
@@ -825,7 +932,7 @@ export class ContextManager {
     const before = this.estimateTokensHybrid(messages);
     const out = [...messages.slice(0, start), summaryMessage, ...messages.slice(end)];
     const after = this.estimateTokensHybrid(out);
-    this.onCompact?.({ strategy: "range", before, after, historyChanged: true });
+    this.reportCompact({ strategy: "range", before, after, historyChanged: true });
     return out;
   }
 

@@ -40,7 +40,7 @@
 | [GitHub Link 本地优先](github-link-local-first-tech-design.md)                                                       | PAT/CLI、读操作、逐次写审批和断开机制已实现；旧 WorkspaceLinkGrant/ActionSpec 架构未照搬，真账号验证另计 |
 | [MCP HTTP Auth / OAuth](mcp-http-auth-oauth-link-tech-design.md)                                                     | 认证配置、login/refresh/logout 与 host 服务已实现；不再以早期“未动手”作状态结论                          |
 | [IM Gateway](im-gateway-remote-orchestration.md)                                                                     | Phase 1–3 代码闭环、通道、inbox/outbox 与运维入口已实现；真实平台 canary 要显式提供测试条件              |
-| [Prompt cache](prompt-cache-optimization.md) / [09-06 实现验证](gpt-cache-optimization-2026-09-06.md)                | 通用缓存与 GPT hybrid 已实现并有短样本真实证据；Responses/20+轮基线与长期成本仍待评估                    |
+| [Prompt cache](prompt-cache-optimization.md) / [09-06 实现验证](gpt-cache-optimization-2026-09-06.md) | 通用缓存已实现；跨 run 账本、改写攒批、提醒持久化、远程过滤和辅助缓存已在当前任务分支实现，尚未合并。历史短样本 GPT/Sonnet run-start reuse 为 99.97% / 99.99%，不代表最终提交验证；长会话/TTL/Responses 仍待专项推进。见 [上下文账本实现与限制](prompt-cache-cross-run-context-ledger-20261112.md)。 |
 | [Session 累计 cache usage](session-cumulative-cache-usage-plan.md)                                                   | 累计、落盘、恢复与切模型处理已实现；旧“方案未动手”过期                                                   |
 | [会话 notes 策略](context-notes-strategy.md)                                                                         | 原生 notes/save/new-context/history 已实现；连续长程笔记质量与成本仍需真实使用评估                       |
 | [Mimi 架构复核](mimi-architecture-review-2026-09-05.md) / [聊天回放](mimi-chat-replay-2026-09-06.md)                 | 设计与后续实现并存；离线回放不能替代全部真实 IM 长程验收                                                 |

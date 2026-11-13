@@ -106,8 +106,15 @@ export async function chatFromOutputJournal(
   )
     throw new Error("Output recovery has no complete legacy base");
   const anchor = data.transcript.findIndex((event) => event.id === page.legacyBaseThroughEventId);
-  if (anchor < 0) throw new Error("Output recovery legacy anchor was not retained");
-  let chat = replayTranscript(data.transcript.slice(0, anchor + 1));
+  // The Host removes local-only context after cutting this base. A checkpoint
+  // or reminder can own the cutover id, so its absence is valid only when the
+  // same response explicitly proves the complete base for this journal anchor.
+  const completeFilteredBase =
+    data.legacyBaseComplete === true &&
+    data.outputJournal?.legacyBaseThroughEventId === page.legacyBaseThroughEventId;
+  if (anchor < 0 && !completeFilteredBase)
+    throw new Error("Output recovery legacy anchor was not retained");
+  let chat = replayTranscript(anchor < 0 ? data.transcript : data.transcript.slice(0, anchor + 1));
   let state: OutputJournalRecovery = { incomplete: false };
   let pages = 0;
   const fold = async () => {

@@ -11,9 +11,11 @@ import {
 } from "@cjhyy/code-shell-core";
 import {
   MemoryOrchestrator,
+  auxCachedRequest,
   recordExternalModelTrace,
   recordModelTraceEvent,
   withModelTraceContext,
+  type MemoryOrchestratorOptions,
 } from "@cjhyy/code-shell-core/internal";
 import {
   runClaudeTextInference,
@@ -44,6 +46,11 @@ export interface ExternalMemorySnapshot {
 }
 
 type MemoryJob = { abort: AbortController; done: Promise<void> };
+type ExternalMemoryCachePlan = NonNullable<
+  Parameters<MemoryOrchestratorOptions["callLLM"]>[2]
+>["cache"];
+/** External-runtime memory calls are cached apart from core's own memory calls. */
+export const EXTERNAL_MEMORY_CACHE_PURPOSE_PREFIX = "external-runtime-";
 const MAINTENANCE_TIMEOUT_MS = 180_000;
 
 /** Release the queue on cancellation even if an injected transport settles late. */
@@ -255,13 +262,24 @@ export class ExternalRuntimeMemory {
     const callLLM = async (
       systemPrompt: string,
       userMessage: string,
-      options?: { maxTokens: number },
+      options?: { maxTokens: number; cache?: ExternalMemoryCachePlan },
     ) => {
       assertCurrent();
       if (client) {
         const response = await client.createMessage({
           systemPrompt,
-          messages: [{ role: "user", content: userMessage }],
+          // Same segmented, cacheable request as core's memory pipeline, in a
+          // scope of its own: this session's main conversation and core's own
+          // memory calls never share these prefixes.
+          ...auxCachedRequest({
+            client,
+            sessionId: snapshot.sessionId,
+            prompt: userMessage,
+            plan: options?.cache && {
+              ...options.cache,
+              purpose: `${EXTERNAL_MEMORY_CACHE_PURPOSE_PREFIX}${options.cache.purpose}`,
+            },
+          }),
           tools: [],
           maxTokens: options?.maxTokens ?? 1024,
           signal,

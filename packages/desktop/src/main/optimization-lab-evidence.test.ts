@@ -213,3 +213,45 @@ test("metadata-only and missing messages never manufacture an input; interleaved
   expect(JSON.stringify(bundle)).not.toContain("unselected concurrent private data");
   expect(JSON.stringify(bundle)).not.toContain("ambiguous private tool result");
 });
+test("engine context messages inside a run are not interleaved submissions", async () => {
+  const preview = async (name: string, context: Record<string, unknown>) => {
+    const s = await setup();
+    const dir = join(s.sessionsDir, name);
+    await mkdir(dir);
+    await writeFile(join(dir, "state.json"), JSON.stringify({ cwd: s.cwd }));
+    const rows = [
+      {
+        id: "input",
+        type: "message",
+        data: { role: "user", content: "q", clientMessageId: "one" },
+      },
+      {
+        id: "context",
+        type: "message",
+        data: { role: "user", injected: true, content: "memory index", ...context },
+      },
+      {
+        id: "receipt",
+        type: "run_result",
+        data: { clientMessageId: "one", result: { sessionId: name, text: "answer" } },
+      },
+    ];
+    await writeFile(
+      join(dir, "transcript.jsonl"),
+      rows.map((row) => JSON.stringify(row)).join("\n") + "\n",
+    );
+    const bundle = await previewOptimizationLabEvidence(s.cwd, [`session:${name}:receipt`], s);
+    return bundle.runs[0]!.missingEvidence.join(" ");
+  };
+  // An unmarked second user message is treated as a concurrent submission…
+  expect(await preview("plain", {})).toContain("Interleaved submissions");
+  // …the engine's ledger snapshot and hook reminder are not.
+  expect(
+    await preview("ledger", { contextLedger: { kind: "snapshot", state: "{}" } }),
+  ).not.toContain("Interleaved submissions");
+  expect(await preview("hook", { hookReminder: { sessionStart: ["rules"] } })).not.toContain(
+    "Interleaved submissions",
+  );
+  // A headless run's background-agent notice is stored as a context reminder.
+  expect(await preview("notice", { hookReminder: {} })).not.toContain("Interleaved submissions");
+});

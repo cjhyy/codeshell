@@ -29,6 +29,8 @@ import { sessionCumulativeUsageUpdate } from "./run-state-persistence.js";
 import type { TurnLoop } from "./turn-loop.js";
 import type { EngineResult } from "./types.js";
 import type { EngineRunOptions, RunBehaviorProfile } from "./run-types.js";
+import { isContextMessageEvent } from "../session/context-messages.js";
+import { persistContextReminder } from "./context-reminders.js";
 
 type TurnLoopRunResult = Awaited<ReturnType<TurnLoop["run"]>>;
 
@@ -151,13 +153,16 @@ export async function drainHeadlessBackgroundAgents(args: {
       role: "user",
       content: `<system-reminder>\n${buildNotificationMessage(pending)}\n</system-reminder>`,
     };
+    // Engine context, not the user's input: stored as a context reminder, so
+    // no user bubble, title, memory extraction or interleaving check counts
+    // it, live or replayed. It is stored whether or not the loop is
+    // re-entered: the model is sent it, so a replay from disk must contain it
+    // at the same position.
+    persistContextReminder(session.transcript, injected);
     if (aborted || args.getFirstGoalTermination()) {
-      // Mark injected: a synthetic notification, not the user's own input —
-      // the disk reader drops it on replay so no phantom user bubble.
       // A goal termination is also a hard boundary: retain the notification
       // for recovery, but never re-enter TurnLoop (which would reset its
       // run-scoped goal budget tracker and could overwrite the first reason).
-      session.transcript.appendMessage(injected.role, injected.content, { injected: true });
       result = { ...result, messages: [...result.messages, injected] };
       break;
     }
@@ -272,6 +277,7 @@ export async function finalizeRunSuccess(args: {
     result.messages,
     userContextMsg,
     dynamicContextMsg,
+    session.state.sessionId,
   );
   args.setCompactedMessages(session.state.sessionId, cachedMessages);
 
@@ -331,8 +337,9 @@ export async function finalizeRunSuccess(args: {
   // title into the sidebar on receipt of the session_title stream event.
   if (!unverified && profile?.disableSessionTitle !== true) {
     const messageEvents = session.transcript.getEvents("message");
+    // Engine context (ledger, hook reminders) is not something the user said.
     const userMsgEvents = messageEvents.filter(
-      (e) => (e.data as { role?: string }).role === "user",
+      (e) => (e.data as { role?: string }).role === "user" && !isContextMessageEvent(e),
     );
     const userMsgCount = userMsgEvents.length;
     const onStream = options?.onStream;

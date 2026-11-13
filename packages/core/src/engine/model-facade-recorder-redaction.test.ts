@@ -105,7 +105,7 @@ async function expectRecorderRedactionFor(method: "call" | "callWithoutStreaming
           };
         },
       };
-      const transcript = { appendMessage() {} };
+      const transcript = { appendMessage() { return { id: crypto.randomUUID() }; } };
       const facade = new ModelFacade(client, transcript);
       const messages = [
         { role: "assistant", content: [{ type: "tool_use", id: "cred", name: "UseCredential", input: {} }] },
