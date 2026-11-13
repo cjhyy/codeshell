@@ -5,6 +5,7 @@ export { CloudAccountStore } from "../../packages/desktop/src/main/cloud-account
 export { MobileRemoteController } from "../../packages/desktop/src/main/mobile-remote-controller.js";
 export { DeviceRelayStore } from "../../packages/desktop/src/main/device-relay-store.js";
 export { AccountDeviceService } from "../../packages/desktop/src/main/account-device-service.js";
+export { createAccountRemoteAuthorizer } from "../../packages/desktop/src/main/account-device-passkey.js";
 export {
   AccessPasscode,
   RemoteHostManager,
