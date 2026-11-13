@@ -64,6 +64,9 @@ function DesktopLoginConfirmation({ request }: { request: string }) {
     };
   }, []);
   React.useEffect(() => {
+    if (result === "approved") window.location.replace("/app");
+  }, [result]);
+  React.useEffect(() => {
     const controller = new AbortController();
     let expiry: ReturnType<typeof setTimeout> | undefined;
     setDetails(undefined);
@@ -146,7 +149,7 @@ function DesktopLoginConfirmation({ request }: { request: string }) {
       <section className="auth-card website-auth" aria-labelledby="desktop-login-title">
         <h1 id="desktop-login-title">
           {result === "approved"
-            ? "已确认，请返回 CodeShell"
+            ? "已确认，正在打开远程工作台"
             : result === "denied"
               ? "已取消电脑登录"
               : "确认登录这台电脑"}
@@ -161,11 +164,16 @@ function DesktopLoginConfirmation({ request }: { request: string }) {
           </p>
         ) : null}
         {result ? (
-          <p role="status">
-            {result === "approved"
-              ? "网页登录确认已完成。请返回 CodeShell 查看登录结果，可以关闭此页面。"
-              : "此请求已取消，网页账号保持登录。可以关闭此页面。"}
-          </p>
+          <>
+            <p role="status">
+              {result === "approved"
+                ? "电脑端将继续完成登录。你也可以在远程工作台选择云端工作区或账号下的电脑。"
+                : "此请求已取消，网页账号保持登录。"}
+            </p>
+            <a className="website-button primary" href="/app">
+              进入远程工作台
+            </a>
+          </>
         ) : (
           <>
             <p className="website-hint">

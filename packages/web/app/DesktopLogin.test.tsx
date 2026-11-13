@@ -59,6 +59,8 @@ async function fixture({
 } = {}) {
   ensureMiniDom();
   const url = new URL(`/desktop-login?${query}`, origin);
+  const navigations: string[] = [];
+  Object.assign(url, { replace: (destination: string) => navigations.push(destination) });
   install(window, "location", { get: () => url });
   install(globalThis, "location", { get: () => url });
   let queue = Promise.resolve();
@@ -140,6 +142,7 @@ async function fixture({
     container,
     calls,
     url,
+    navigations,
     button,
     unmount,
     async click(name: string) {
@@ -175,6 +178,7 @@ test("a signed-out browser keeps the desktop request while presenting normal acc
   expect(view.url.searchParams.get("request")).toBe(ticket);
   expect(view.calls.some((call) => call.path.includes("/browser/"))).toBe(false);
   expect(view.calls.some((call) => call.path.includes("cloud"))).toBe(false);
+  expect(view.navigations).toEqual([]);
 });
 
 test("restoring a browser account never approves a computer until explicitly confirmed", async () => {
@@ -183,13 +187,19 @@ test("restoring a browser account never approves a computer until explicitly con
   expect(text(view.container)).toContain("用户 A");
   expect(text(view.container)).toContain("我的 Mac");
   expect(view.calls.filter((call) => call.init?.method === "POST")).toHaveLength(0);
+  expect(view.navigations).toEqual([]);
   await view.click("登录这台电脑");
-  await until(() => text(view.container).includes("已确认，请返回 CodeShell"));
+  await until(() => view.navigations.length === 1);
   const approved = view.calls.filter((call) => call.path.endsWith("/approve"));
   expect(approved).toHaveLength(1);
   expect(JSON.parse(String(approved[0].init?.body))).toEqual({ request: ticket });
   expect(new Headers(approved[0].init?.headers).get("X-CodeShell-CSRF")).toBe("C".repeat(43));
-  expect(text(view.container)).toContain("请返回 CodeShell 查看登录结果");
+  expect(view.navigations).toEqual(["/app"]);
+  expect(text(view.container)).toContain("选择云端工作区或账号下的电脑");
+  const workbench = nodes(view.container).find(
+    (node) => node.tagName === "A" && text(node) === "进入远程工作台",
+  );
+  expect(props(workbench).href).toBe("/app");
   expect(view.button("登录这台电脑")).toBeUndefined();
 });
 
@@ -200,6 +210,16 @@ test("cancelling a computer request leaves the browser account signed in", async
   await until(() => text(view.container).includes("已取消电脑登录"));
   expect(view.calls.filter((call) => call.path.endsWith("/deny"))).toHaveLength(1);
   expect(view.calls.some((call) => call.path.endsWith("/logout"))).toBe(false);
+  expect(view.navigations).toEqual([]);
+});
+
+test("an unconfirmed approval stays on the request instead of navigating to the workbench", async () => {
+  const view = await fixture({ decide: async () => Response.json({ approved: false }) });
+  await until(() => !!view.button("登录这台电脑"));
+  await view.click("登录这台电脑");
+  await until(() => text(view.container).includes("服务器尚未确认操作结果"));
+  expect(view.navigations).toEqual([]);
+  expect(view.button("登录这台电脑")).toBeDefined();
 });
 
 test("expired and malformed requests cannot display an approval action", async () => {
@@ -223,6 +243,7 @@ test("an unauthorized approval is not automatically retried after session refres
   await until(() => text(view.container).includes("登录 CodeShell 电脑端"));
   expect(view.calls.filter((call) => call.path.endsWith("/approve"))).toHaveLength(1);
   expect(view.calls.some((call) => call.path.endsWith("/refresh"))).toBe(false);
+  expect(view.navigations).toEqual([]);
 });
 
 test("switching the browser account aborts an outstanding approval and discards its late result", async () => {
@@ -241,7 +262,7 @@ test("switching the browser account aborts an outstanding approval and discards 
   await view.switchAccount();
   expect(signal?.aborted).toBe(true);
   await action(() => finish?.(Response.json({ approved: true })));
-  expect(text(view.container)).not.toContain("已确认，请返回 CodeShell");
+  expect(view.navigations).toEqual([]);
   expect(text(view.container)).toContain("用户 B");
   expect(view.calls.filter((call) => call.path.endsWith("/approve"))).toHaveLength(1);
 });
@@ -262,4 +283,5 @@ test("leaving the confirmation page aborts its outstanding approval", async () =
   await view.unmount();
   expect(signal?.aborted).toBe(true);
   await action(() => finish?.(Response.json({ approved: true })));
+  expect(view.navigations).toEqual([]);
 });

@@ -107,6 +107,16 @@ async function mount({ signedIn = true, expiresAt = Date.now() + 600000 } = {}) 
         contentType: "text/html; charset=utf-8",
         body: '<meta name="viewport" content="width=device-width,initial-scale=1"><div id="root"></div><link rel="stylesheet" href="/fixture.css"><script src="/fixture.js"></script>',
       });
+    // The workbench's execution picker has its own production fixture. This
+    // boundary proves the desktop confirmation reaches its fixed public route.
+    if (url.pathname === "/app") {
+      assert.equal(url.search, "");
+      assert.equal(state.signedIn, true);
+      return route.fulfill({
+        contentType: "text/html; charset=utf-8",
+        body: "<main><h1>Workbench route boundary</h1></main>",
+      });
+    }
     if (url.pathname === "/api/v1/account/status")
       return json({ registrationAllowed: true, githubEnabled: false, features: {} });
     if (["/api/v1/account/login", "/api/v1/account/register"].includes(url.pathname)) {
@@ -177,15 +187,15 @@ try {
   assert.ok(width.body <= width.viewport, "Desktop confirmation fits a narrow browser");
   await screenshot(fixture.page, "03-confirm-mobile");
   await fixture.page.getByRole("button", { name: "登录这台电脑", exact: true }).click();
-  await fixture.page.getByRole("heading", { name: "已确认，请返回 CodeShell" }).waitFor();
-  await screenshot(fixture.page, "04-confirmed");
+  await fixture.page.waitForURL(`${origin}/app`);
+  await fixture.page.getByRole("heading", { name: "Workbench route boundary" }).waitFor();
   assert.equal(fixture.calls.filter((call) => call.path.endsWith("/approve")).length, 1);
   assert.equal(
     await fixture.page.getByRole("button", { name: "登录这台电脑", exact: true }).count(),
     0,
   );
   results.push(
-    "one explicit approval completes browser confirmation without claiming native persistence",
+    "one explicit approval opens the fixed workbench route without request identifiers or native credentials",
   );
 
   fixture = await mount({ signedIn: false });
@@ -207,11 +217,16 @@ try {
   await fixture.page.getByRole("button", { name: "取消电脑登录", exact: true }).click();
   await fixture.page.getByRole("heading", { name: "已取消电脑登录" }).waitFor();
   assert.equal(fixture.state.signedIn, true);
+  assert.equal(new URL(fixture.page.url()).pathname, "/desktop-login");
+  const workbench = fixture.page.getByRole("link", { name: "进入远程工作台" });
+  assert.equal(await workbench.getAttribute("href"), "/app");
   assert.equal(
     fixture.calls.some((call) => call.path.endsWith("/approve")),
     false,
   );
-  results.push("an existing website account may deny the computer without logging out");
+  results.push(
+    "denying the computer keeps the website account and offers a separate workbench entry",
+  );
 
   fixture = await mount({ expiresAt: Date.now() - 1 });
   await fixture.page.goto(`${origin}/desktop-login?request=${ticket}`);
