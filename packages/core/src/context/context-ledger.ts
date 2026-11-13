@@ -77,8 +77,13 @@ export interface ContextSection {
    * kept while `knownIds` is non-empty even when its text is empty (nothing
    * fitted the budget): the entries still exist, so it is not announced as
    * removed.
+   *
+   * "snapshot-only": a point-in-time snapshot (a git status) whose text says
+   * it will not update. It is part of a snapshot and never of an update: a
+   * change, an appearance and a disappearance are all left for the next
+   * snapshot, so the snapshot's copy is the only one in history.
    */
-  compare?: "ids";
+  compare?: "ids" | "snapshot-only";
   /**
    * With `compare: "ids"`: every id that exists, shown in `items` or not.
    * Defaults to the ids of the listable items.
@@ -101,6 +106,8 @@ export interface LedgerSectionState {
   frame?: string;
   /** Item id → the name the model was shown, where that differs from the id. */
   labels?: Record<string, string>;
+  /** A snapshot-only section: kept as the snapshot showed it until the next snapshot. */
+  snapshotOnly?: true;
 }
 
 /** What the model has been told so far in this cache cycle. */
@@ -279,6 +286,9 @@ export function ledgerStateForSections(sections: readonly ContextSection[]): Led
             },
           ];
         }
+        if (section.compare === "snapshot-only") {
+          return [section.key, { digest: digest(section.text), snapshotOnly: true }];
+        }
         const entries = listableItems(section);
         return [
           section.key,
@@ -400,14 +410,16 @@ export function planLedgerEmission(
   previous: LedgerState | undefined,
 ): LedgerEmission {
   const current = live(sections);
-  const state = ledgerStateForSections(current);
   if (previous === undefined) {
+    const state = ledgerStateForSections(current);
     const text = renderContextSnapshot(current);
     return text === null ? { kind: "none", state } : { kind: "snapshot", text, state };
   }
 
+  const state = withSnapshotOnlyAsTold(ledgerStateForSections(current), previous);
   const blocks: string[] = [];
   for (const section of current) {
+    if (section.compare === "snapshot-only") continue;
     const known = own(previous.sections, section.key);
     if (known?.digest === own(state.sections, section.key)?.digest) continue;
     const block = sectionUpdate(section, known);
@@ -424,6 +436,19 @@ export function planLedgerEmission(
     text: `<system-reminder>\n${[LEDGER_UPDATE_PREAMBLE, ...blocks].join("\n\n")}\n</system-reminder>`,
     state,
   };
+}
+
+/**
+ * Snapshot-only sections stay as the latest snapshot showed them: the model
+ * was told nothing since, whatever the current text is.
+ */
+function withSnapshotOnlyAsTold(state: LedgerState, previous: LedgerState): LedgerState {
+  const kept = Object.entries(state.sections).filter(([, section]) => !section.snapshotOnly);
+  const keys = new Set(kept.map(([key]) => key));
+  const told = Object.entries(previous.sections).filter(
+    ([key, section]) => section.snapshotOnly === true && !keys.has(key),
+  );
+  return { ...state, sections: Object.fromEntries([...kept, ...told]) };
 }
 
 export function serializeLedgerState(state: LedgerState): string {
@@ -463,6 +488,10 @@ export function parseLedgerState(input: unknown): LedgerState | undefined {
         return undefined;
       }
       section.items = Object.fromEntries(items);
+    }
+    if (raw.snapshotOnly !== undefined) {
+      if (raw.snapshotOnly !== true) return undefined;
+      section.snapshotOnly = true;
     }
     if (raw.labels !== undefined) {
       if (!isRecord(raw.labels)) return undefined;

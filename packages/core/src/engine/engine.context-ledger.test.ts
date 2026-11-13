@@ -295,6 +295,38 @@ describe("Engine context ledger", () => {
     expect(ledgerKinds(sessionId)).toEqual(["snapshot", "update"]);
   });
 
+  it("shows a snapshot-only section once per snapshot however often it changes", async () => {
+    const sessionId = "s-ledger-snapshot-only";
+    const { requests } = scenario([stop("done")]);
+    const statusContext: AgentModule = {
+      id: "context-ledger-test-status",
+      engine: {
+        dynamicContextProviders: [
+          ({ cwd }) => ({
+            key: "git-status",
+            text: `status snapshot:\n${readdirSync(cwd)
+              .filter((name) => name.endsWith(".dirty"))
+              .sort()
+              .join("\n")}`,
+            compare: "snapshot-only",
+          }),
+        ],
+      },
+    };
+    const engine = newEngine({ modules: [markerContext, statusContext] });
+    for (let run = 1; run <= 5; run += 1) {
+      writeFileSync(join(repo, `change-${run}.dirty`), "");
+      await engine.run(`task ${run}`, { sessionId, cwd: repo });
+    }
+    expect(requests).toHaveLength(5);
+    expectAppendOnly(requests);
+    expect(ledgerKinds(sessionId)).toEqual(["snapshot"]);
+    const all = requests[4]!.map(textOf).join("\n");
+    expect(all).toContain('<context-section key="capability-git-status">');
+    expect(all).toContain("change-1.dirty");
+    for (const later of [2, 3, 4, 5]) expect(all).not.toContain(`change-${later}.dirty`);
+  });
+
   it("does not resend skills when only their ranking changed, and sends just an installed one", async () => {
     const sessionId = "s-ledger-skills";
     for (let i = 0; i < 40; i++) addSkill(`filler-${i}`, `filler capability ${i} `.repeat(30));
