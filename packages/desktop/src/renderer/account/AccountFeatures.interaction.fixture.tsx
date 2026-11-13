@@ -53,7 +53,8 @@ const { NewProjectDialog } = await import("../projects/NewProjectDialog");
 const { CloudProjectManager } = await import("../projects/CloudProjectManager");
 const { RemoteProviderSection } = await import("../credentials/RemoteLinkSection");
 const { UnavailableLinkCleanup } = await import("../credentials/UnavailableLinkCleanup");
-const [scenario, requestedState = "ready"] = process.argv.slice(2);
+const [scenario, requestedState = "ready", pendingReason = "relay_connecting"] =
+  process.argv.slice(2);
 const state = scenario.startsWith("remote-cleanup")
   ? scenario.endsWith("pending")
     ? "pending"
@@ -63,7 +64,7 @@ const snapshot = featureSnapshot(state as AccountFeatureView["state"], {
   cloudOrigin: "https://cloud.example",
 });
 for (const view of Object.values(snapshot))
-  if (view.state === "pending") view.reason = "relay_connecting";
+  if (view.state === "pending") view.reason = pendingReason as AccountFeatureView["reason"];
 // Directory preparation remains independently available while phone business access is pending.
 snapshot["devices.directory"] = { id: "devices.directory", state: "ready" };
 let resolve!: (snapshot: AccountFeatureSnapshot) => void;
@@ -367,8 +368,14 @@ try {
       await update(() => props(gated).onClick());
       assert.equal(signIns, 1);
     } else if (state === "pending") {
-      assert.equal(props(gated).disabled, true);
-      assert.ok(text(gated).includes("中继连接中"));
+      assert.equal(props(gated).disabled, scenario !== "devices");
+      if (pendingReason === "relay_connecting") assert.ok(text(gated).includes("中继连接中"));
+      if (scenario === "devices") {
+        await update(() => props(gated).onClick());
+        assert.equal(opened, 1, "Pending devices can open the recovery workspace");
+        assert.equal(resumed, 0, "Opening recovery does not itself start remote access");
+        assert.equal(enrolled, 0);
+      }
       if (scenario === "phone") {
         assert.equal(props(button("重试")).disabled, false);
         const nameInput = nodes(container).find(

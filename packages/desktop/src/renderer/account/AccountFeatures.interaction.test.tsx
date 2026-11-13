@@ -46,3 +46,27 @@ for (const scenario of [
       error: "",
     });
   });
+
+for (const reason of [
+  "device_not_registered",
+  "relay_disconnected",
+  "service_unreachable",
+  "storage_error",
+])
+  test(`account device recovery stays reachable when ${reason}`, () => {
+    const result = Bun.spawnSync({
+      cmd: [
+        process.execPath,
+        fileURLToPath(new URL("./AccountFeatures.interaction.fixture.tsx", import.meta.url)),
+        "devices",
+        "pending",
+        reason,
+      ],
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    expect({ code: result.exitCode, error: result.stderr.toString() }).toEqual({
+      code: 0,
+      error: "",
+    });
+  });

@@ -19,12 +19,14 @@ const source = String.raw`
 import React from "react";
 import {createRoot} from "react-dom/client";
 import {AccountDeviceWorkspace} from "./runtime/AccountDeviceWorkspace";
-window.calls=[]; window.listeners=[]; let accountListener;
+window.calls=[]; window.listeners=[]; let accountListener, relayListener;
+window.relay={state:"stopped",registered:true,hostId:"a"};
+window.setRelay=state=>{window.relay={state,registered:state!=="unregistered",hostId:"a"};relayListener?.(window.relay)};
 window.devices=["a","b"].map(hostId=>({hostId,environmentId:"env-"+hostId,name:hostId==="a"?"Mac Studio":"Linux Builder",online:true,revoked:false,protocolVersion:1}));
 window.connections={};
 window.codeshell={
- cloudAccount:{status:async()=>({state:"signed-in",origin:"https://account.fixture.invalid",account:{id:"account-a",username:"fixture"}}),onStatus:callback=>{accountListener=callback;return()=>{}}},
- mobileRemote:{relay:{status:async()=>({state:"ready",registered:true,hostId:"a"}),onStatus:()=>()=>{}}},
+ cloudAccount:{status:async()=>({state:"signed-in",origin:"https://account.fixture.invalid",account:{id:"account-a",username:"fixture"}}),onStatus:callback=>{accountListener=callback;return()=>{}},resume:async()=>{window.calls.push(["account-resume"]);if(window.resumeFailure)throw new Error(window.resumeFailure);window.setRelay("ready")}},
+ mobileRemote:{relay:{status:()=>window.deferInitialRelayStatus?new Promise(resolve=>{window.finishInitialRelayStatus=resolve}):Promise.resolve(window.relay),onStatus:callback=>{relayListener=callback;return()=>{}}}},
  accountDevices:{
  list:async()=>window.devices,
  projects:async({hostId})=>[{id:"project",name:hostId==="a"?"Desktop project":"Builder project",path:"/"+hostId+"/real-project"}],
@@ -36,6 +38,7 @@ window.codeshell={
 window.emit=(hostId,event,type="event")=>{const c=window.connections[hostId];for(const callback of window.listeners)callback({connectionId:c.id,hostId,environmentId:c.environmentId,projectId:c.projectId,sessionId:c.sessionId,type,event})};
 window.output=(hostId,text)=>window.emit(hostId,{type:"session.stream",sessionId:"session-"+hostId,event:{method:"agent/streamEvent",params:{sessionId:"session-"+hostId,event:{type:"text_delta",text}}}});
 window.signOut=()=>accountListener({state:"signed-out"});
+window.signIn=(id="account-a")=>accountListener({state:"signed-in",origin:"https://account.fixture.invalid",account:{id,username:id}});
 window.closeCalls=0;
 createRoot(document.getElementById("root")).render(<AccountDeviceWorkspace open onClose={()=>{window.closeCalls+=1}}/>);
 `;
@@ -99,7 +102,86 @@ try {
   const page = await context.newPage();
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(fixtureOrigin);
+  await page.evaluate(() => {
+    window.deferInitialRelayStatus = true;
+  });
   await page.addScriptTag({ content: result.outputFiles[0].text });
+  const recover = page.getByRole("button", { name: "恢复设备协作", exact: true });
+  await recover.waitFor();
+  await page.evaluate(() => window.setRelay("storage-error"));
+  await page.getByText("本机：安全存储不可用", { exact: true }).waitFor();
+  await page.evaluate(async () => {
+    window.finishInitialRelayStatus({ state: "ready", registered: true, hostId: "a" });
+    await new Promise(window.requestAnimationFrame);
+  });
+  assert.equal(await recover.isVisible(), true, "A stale snapshot cannot hide storage recovery");
+  await page.getByText("本机：安全存储不可用", { exact: true }).waitFor();
+  await page.evaluate(() => window.setRelay("stopped"));
+  assert.equal(
+    await page.evaluate(() => window.calls.filter((call) => call[0] === "account-resume").length),
+    0,
+    "A saved login opens recovery without starting the relay",
+  );
+  await recover.click();
+  await recover.waitFor({ state: "hidden" });
+  for (const state of [
+    "unregistered",
+    "disconnected",
+    "unavailable",
+    "storage-error",
+    "unauthorized",
+  ]) {
+    await page.evaluate((state) => window.setRelay(state), state);
+    await recover.click();
+    await recover.waitFor({ state: "hidden" });
+  }
+  await page.evaluate(() => {
+    window.setRelay("stopped");
+    window.resumeFailure = "恢复连接失败，请重试。";
+  });
+  await recover.click();
+  await page.getByRole("alert").filter({ hasText: "恢复连接失败，请重试。" }).waitFor();
+  assert.equal(await recover.isEnabled(), true);
+  await page.evaluate(() => {
+    window.resumeFailure = undefined;
+  });
+  await recover.click();
+  await recover.waitFor({ state: "hidden" });
+  await page.evaluate(() => window.setRelay("connecting"));
+  await page.getByText("本机：连接中", { exact: true }).waitFor();
+  assert.equal(await recover.count(), 0, "An active connection attempt is not duplicated");
+  await page.evaluate(() => {
+    window.baseAccountResume = window.codeshell.cloudAccount.resume;
+    window.pendingAccountResumes = [];
+    window.codeshell.cloudAccount.resume = () =>
+      new Promise((resolve, reject) => {
+        window.pendingAccountResumes.push({ resolve, reject });
+      });
+    window.setRelay("stopped");
+  });
+  await recover.click();
+  const resuming = page.getByRole("button", { name: "正在恢复…", exact: true });
+  await resuming.waitFor();
+  assert.equal(await resuming.isDisabled(), true);
+  await page.evaluate(() => window.signIn("account-b"));
+  await recover.click();
+  await resuming.waitFor();
+  await page.evaluate(async () => {
+    window.pendingAccountResumes[0].reject(new Error("旧账号恢复失败"));
+    await new Promise(window.requestAnimationFrame);
+  });
+  assert.equal(await resuming.isDisabled(), true, "An old account cannot finish the new recovery");
+  assert.equal(await page.getByText("旧账号恢复失败", { exact: true }).count(), 0);
+  await page.evaluate(() => window.pendingAccountResumes[1].reject(new Error("当前账号恢复失败")));
+  await page.getByRole("alert").filter({ hasText: "当前账号恢复失败" }).waitFor();
+  assert.equal(await recover.isEnabled(), true, "The current failure releases its own retry");
+  await page.evaluate(() => {
+    window.codeshell.cloudAccount.resume = window.baseAccountResume;
+    window.signIn();
+  });
+  await recover.click();
+  await recover.waitFor({ state: "hidden" });
+  await page.evaluate(() => window.setRelay("ready"));
   await page.getByRole("button", { name: /Mac Studio/ }).click();
   await page.getByLabel("执行项目").selectOption("project");
   await page.getByText(/已连接.*Mac Studio/).waitFor();
@@ -381,7 +463,7 @@ try {
     JSON.stringify({
       ok: true,
       assertions:
-        "device/project selection; output, drafts, attachments, approvals and Stop isolation; worker-generation approval fencing; fast completion before IPC reply; oversized-frame preflight; original-session restoration without task replay; late directory responses; offline rejection; logout; back button and Escape close; 390px layout",
+        "explicit saved-session and failed-enrollment recovery; recoverable errors; device/project selection; output, drafts, attachments, approvals and Stop isolation; worker-generation approval fencing; fast completion before IPC reply; oversized-frame preflight; original-session restoration without task replay; late directory responses; offline rejection; logout; back button and Escape close; 390px layout",
       screenshots: output,
     }),
   );

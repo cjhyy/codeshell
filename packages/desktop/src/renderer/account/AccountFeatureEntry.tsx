@@ -10,12 +10,15 @@ export function AccountFeatureEntry({
   label,
   children,
   onSignIn = openAccountSettings,
+  onPending,
   className,
 }: {
   feature: AccountFeatureView;
   label: string;
   children: ReactNode;
   onSignIn?: () => void;
+  /** Open setup/status only; business operations still require the Host's ready gate. */
+  onPending?: () => void;
   className?: string;
 }) {
   const { t } = useT();
@@ -36,9 +39,10 @@ export function AccountFeatureEntry({
       data-account-feature-state={feature.state}
       aria-label={label}
       title={detail}
-      disabled={feature.state === "pending"}
+      disabled={feature.state === "pending" && !onPending}
       onClick={() => {
         if (feature.state === "sign-in") onSignIn();
+        else if (feature.state === "pending") onPending?.();
       }}
     >
       <span>{label}</span>

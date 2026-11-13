@@ -92,7 +92,9 @@ export function AccountDeviceWorkspace({ open, onClose }: { open: boolean; onClo
     }
   }, []);
   useEffect(() => {
+    let active = true;
     const apply = (next: CloudAccountStatus) => {
+      if (!active) return;
       const id = next.state === "signed-in" ? JSON.stringify([next.origin, next.account?.id]) : "";
       if (id !== identity.current) {
         revision.current++;
@@ -124,10 +126,16 @@ export function AccountDeviceWorkspace({ open, onClose }: { open: boolean; onClo
       })
       .catch(() => {});
     const relay = window.codeshell.mobileRemote?.relay;
-    const unsubscribeRelay = relay?.onStatus(setLocal);
+    let relayChanged = false;
+    const unsubscribeRelay = relay?.onStatus((next) => {
+      relayChanged = true;
+      if (active) setLocal(next);
+    });
     void relay
       ?.status()
-      .then(setLocal)
+      .then((next) => {
+        if (active && !relayChanged) setLocal(next);
+      })
       .catch(() => {});
     const unsubscribeEvents = window.codeshell.accountDevices.onEvent((envelope) => {
       const target = keyFor(envelope.hostId, envelope.projectId);
@@ -210,6 +218,7 @@ export function AccountDeviceWorkspace({ open, onClose }: { open: boolean; onClo
       });
     });
     return () => {
+      active = false;
       unsubscribe();
       unsubscribeRelay?.();
       unsubscribeEvents();
@@ -465,11 +474,16 @@ export function AccountDeviceWorkspace({ open, onClose }: { open: boolean; onClo
                       ? "未授权"
                       : local.state === "unavailable"
                         ? "服务不可用 / 需升级"
-                        : "离线"}
+                        : local.state === "storage-error"
+                          ? "安全存储不可用"
+                          : local.state === "unregistered"
+                            ? "尚未登记"
+                            : "离线"}
                 {local.message ? ` · ${local.message}` : ""}
               </p>
             )}
-            {(local?.state === "unavailable" || local?.state === "stopped") &&
+            {local?.state !== "ready" &&
+              local?.state !== "connecting" &&
               window.codeshell.cloudAccount.resume && (
                 <button
                   type="button"
@@ -484,7 +498,9 @@ export function AccountDeviceWorkspace({ open, onClose }: { open: boolean; onClo
                       .catch((failure) => {
                         if (epoch === revision.current) setError(message(failure));
                       })
-                      .finally(() => setResuming(false));
+                      .finally(() => {
+                        if (epoch === revision.current) setResuming(false);
+                      });
                   }}
                   className="mb-3 rounded-md border border-border px-3 py-1.5 text-sm disabled:opacity-50"
                 >
