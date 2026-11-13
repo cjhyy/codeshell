@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { ensureMiniDom, flushMicrotasks } from "../src/test-utils/renderHook.js";
 import { AccountSessionProvider, useAccountSession } from "./AccountSessionProvider.js";
 import { AccountSettings } from "./AccountSettings.js";
+import { AdminConsole } from "./AdminConsole.js";
 import { WebsiteLogin } from "./WebsiteLogin.js";
 import type { WebsiteRoute } from "./website-routes.js";
 import { AccountFeaturesContext } from "./useAccountFeature.js";
@@ -207,10 +208,18 @@ async function fixture({
       ? { kind: "admin", section: "users" }
       : { kind: "account", section: section as any };
     return context.session?.authenticated ? (
-      <AccountSettings
-        key={`${context.session.account!.id}:${context.session.session!.id}`}
-        route={route}
-      />
+      route.kind === "admin" ? (
+        <AdminConsole
+          key={`${context.session.account!.id}:${context.session.session!.id}`}
+          section={route.section}
+          go={() => {}}
+        />
+      ) : (
+        <AccountSettings
+          key={`${context.session.account!.id}:${context.session.session!.id}`}
+          route={route}
+        />
+      )
     ) : renderLogin ? (
       <WebsiteLogin registration={registration} />
     ) : (

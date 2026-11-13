@@ -255,7 +255,7 @@ jobs:
             # The panels-only process later hit another native lifecycle failure at
             # 34 files. Bound every Panel group below; lint:test-shards checks exact
             # coverage and budgets while lifecycle diagnostics remain enabled.
-            ignore: "--path-ignore-patterns '**/server/src/panels/**' --path-ignore-patterns '**/server/src/account/**' --path-ignore-patterns '**/web/src/account/**' --path-ignore-patterns '**/web/app/WebsiteEntry.test.tsx'"
+            ignore: "--path-ignore-patterns '**/server/src/panels/**' --path-ignore-patterns '**/server/src/account/**' --path-ignore-patterns '**/web/src/account/**' --path-ignore-patterns '**/web/app/WebsiteEntry.test.tsx' --path-ignore-patterns '**/web/app/admin-data.test.ts'"
           # Browser fixtures, not a Bun shard. The overlay and Web suites took 28 of the
           # desktop shard's 44 minutes (2026-10-22) and share nothing with its Bun tests,
           # so they run beside it instead of after it.
@@ -354,7 +354,7 @@ jobs:
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/cloud-management.test.ts
       - name: test account policy and native credential lifecycles
         if: matrix.shard == 'rest-server'
-        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/server/src/account packages/web/src/account packages/web/app/WebsiteEntry.test.tsx
+        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/server/src/account packages/web/src/account packages/web/app/WebsiteEntry.test.tsx packages/web/app/admin-data.test.ts
       - name: test Desktop script suites with their own runners
         if: matrix.shard == 'desktop'
         run: |
@@ -371,6 +371,7 @@ jobs:
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-account-features-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-desktop-login-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-website-onboarding-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-admin-console-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-file-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-latest-messages.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-sidebar-navigation.mjs
