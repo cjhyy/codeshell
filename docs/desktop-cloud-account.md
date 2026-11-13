@@ -175,11 +175,17 @@ still validates the live bridge.
 
 ## Local credentials and remote access
 
-Signing in does not register this computer, start remote access, upload projects,
-or authorize a phone. In Mobile Remote, “Register with current account” explicitly
-registers the computer at the signed-in service origin. Connecting still requires
-the computer's access passcode and separate phone pairing. The existing self-hosted
-directory ticket flow, LAN mode, and temporary Cloudflare tunnel remain available.
+When the selected Account service advertises compatible relay and account-handoff
+capabilities, successful Desktop sign-in registers this execution computer and
+starts account device collaboration at that same service origin. It does not
+upload projects or pair a phone. A service without relay support still permits
+account sign-in and local work. After an application restart, open **执行电脑 /
+设备** and choose **恢复设备协作** to explicitly resume the saved registration;
+this entry stays available when setup or reconnection is needed. Recovery failures
+remain visible and may be retried. Phone access still requires the computer's
+access passcode and separate pairing. The existing manual registration,
+self-hosted directory ticket flow, LAN mode, and temporary Cloudflare tunnel
+remain available.
 
 The native account and relay directory use the same canonical HTTPS origin in
 this version. The account management token is never sent to a separately entered

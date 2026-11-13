@@ -124,13 +124,16 @@ service's enrollment, directory or full proxy has passed its own acceptance.
 
 ## Desktop settings
 
-Desktop password/GitHub login and the ready main window's explicit saved-session
-resume now enable device collaboration automatically when the same Account origin
+Desktop password/GitHub/browser login and the execution-computer workspace's
+explicit **恢复设备协作** action enable device collaboration when the same Account origin
 advertises `relay: { enabled: true, directoryOrigin, protocolVersion: 1,
 accountHandoffVersion: 1 }`. Discovery rejects another origin or unsupported
 versions before sending a bearer. Missing capabilities do not roll back account
 login or disable local projects. Construction and read-only status remain local;
-a website account login never registers an execution computer.
+application restart does not connect until the user resumes device collaboration.
+The execution-computer entry remains available while setup or recovery is pending,
+and failed initial registration can be retried from that workspace. A website
+account login alone never registers an execution computer.
 
 The main process keeps `environmentIdentity(desktopDataDir)` stable and uses
 `POST /api/v1/remote-hosts/ensure` for initial registration. An encrypted saved

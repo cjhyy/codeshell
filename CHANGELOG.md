@@ -8,6 +8,27 @@ breaking.
 
 ## [Unreleased]
 
+## [0.11.0-rc.2] - 2026-11-13
+
+Release candidate for the desktop, website and account device collaboration flow.
+Public relay availability requires the matching Services deployment, device DNS
+and TLS configuration; a successful account login alone does not enable relay.
+
+### Added
+
+- Default desktop account service at `https://codeshell.site`, with browser sign-in,
+  registration and explicit confirmation of the computer being signed in.
+- Public website separated from the signed-in account workbench, with account
+  onboarding and protection for unsaved workspace drafts when leaving an account.
+
+### Fixed
+
+- Keep the desktop execution-computer entry available when device collaboration
+  needs setup or recovery. A saved account can explicitly reconnect after restart
+  and retry failed initial registration without navigating into advanced settings.
+- Keep recovery state scoped to the current account and prevent duplicate resume
+  attempts while its relay is connecting.
+
 ## [0.11.0-rc.1] - 2026-11-12
 
 Release candidate. Mimi's notice system phase 2 and the settings rework have not
