@@ -1,9 +1,14 @@
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect, spyOn } from "bun:test";
+import * as fs from "node:fs";
 import { mkdtempSync, mkdirSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { listCodexSessionsForCwds } from "./codex-session-discovery.js";
-import { parseCodexTranscriptLine, readCodexRecentHistory } from "./codex-session-history.js";
+import {
+  findCodexRolloutFile,
+  parseCodexTranscriptLine,
+  readCodexRecentHistory,
+} from "./codex-session-history.js";
 
 /** Build one codex rollout JSONL file under <home>/sessions/YYYY/MM/DD/. */
 function writeRollout(
@@ -269,6 +274,54 @@ describe("readCodexRecentHistory", () => {
       hasMore: false,
       totalCount: 0,
     });
+  });
+});
+
+describe("findCodexRolloutFile", () => {
+  it("opens only the requested modern rollout metadata, regardless of unrelated history", () => {
+    const home = mkdtempSync(join(tmpdir(), "codex-home-"));
+    const cwd = "/tmp/requested";
+    const id = "019e8971-b4ce-7582-9d44-bb3a9253c331";
+    for (let index = 0; index < 80; index++) {
+      const other = `019e8971-b4ce-7582-9d44-${index.toString(16).padStart(12, "0")}`;
+      writeRollout(home, "2026/06/20", `rollout-2026-06-20T00-00-00-${other}.jsonl`, [
+        metaLine(other, cwd),
+      ]);
+    }
+    const filename = `rollout-2026-06-24T00-00-00-${id}.jsonl`;
+    writeRollout(home, "2026/06/24", filename, [metaLine(id, cwd), userItem("latest")]);
+    const open = spyOn(fs, "openSync");
+    try {
+      expect(findCodexRolloutFile(home, cwd, id)).toBe(
+        join(home, "sessions", "2026/06/24", filename),
+      );
+      expect(open).toHaveBeenCalledTimes(1);
+    } finally {
+      open.mockRestore();
+    }
+  });
+
+  it("validates metadata and keeps newer renamed rollouts with canonical cwd matches", () => {
+    const home = mkdtempSync(join(tmpdir(), "codex-home-"));
+    const cwd = "/tmp/requested";
+    const id = "019e8971-b4ce-7582-9d44-bb3a9253c331";
+    const filename = `rollout-2026-06-24T00-00-00-${id}.jsonl`;
+    writeRollout(home, "2026/06/24", filename, [metaLine("different-id", cwd)]);
+    expect(findCodexRolloutFile(home, cwd, id)).toBeUndefined();
+    writeRollout(home, "2026/06/24", filename, [metaLine(id, "/tmp/different")]);
+    expect(findCodexRolloutFile(home, cwd, id)).toBeUndefined();
+    writeRollout(home, "2026/06/24", filename, [metaLine(id, `${cwd}/`)]);
+    writeRollout(home, "2026/06/25", "rollout-renamed.jsonl", [metaLine(id, cwd)]);
+    const original = join(home, "sessions", "2026/06/24", filename);
+    const renamed = join(home, "sessions", "2026/06/25", "rollout-renamed.jsonl");
+    const older = new Date("2026-06-24T00:00:00Z");
+    const newer = new Date("2026-06-25T00:00:00Z");
+    utimesSync(original, older, older);
+    utimesSync(renamed, newer, newer);
+    expect(findCodexRolloutFile(home, cwd, id)).toBe(renamed);
+    utimesSync(original, newer, newer);
+    utimesSync(renamed, older, older);
+    expect(findCodexRolloutFile(home, cwd, id)).toBe(original);
   });
 });
 

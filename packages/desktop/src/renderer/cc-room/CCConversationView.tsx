@@ -1,4 +1,13 @@
-import { useEffect, useReducer, useRef, useState, useCallback, type DragEvent } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useReducer,
+  useRef,
+  useState,
+  useCallback,
+  type DragEvent,
+  type ReactNode,
+} from "react";
 import {
   Bot,
   ChevronDown,
@@ -31,6 +40,8 @@ import {
   pathForRendererFile,
 } from "../chat/localFilePaths";
 import { CcAskUserQuestions, type CcAskUserQuestion } from "./CcAskUserQuestions";
+import { useStickToBottom } from "../chat/stickToBottom";
+import { TranscriptScrollContext, useAnchoredLayoutChange } from "../chat/TranscriptScrollContext";
 
 /**
  * CCConversationView — one resident Claude Code (external CLI) conversation.
@@ -102,6 +113,7 @@ export function CCConversationView({
   active = true,
   observing = false,
   hideHeader = false,
+  latestRequest,
   observeHint,
   onTakeOver,
   onBack,
@@ -126,6 +138,8 @@ export function CCConversationView({
   observing?: boolean;
   /** Task details supply their own status/navigation header. */
   hideHeader?: boolean;
+  /** A new progress-link click jumps to the latest output in a resident view. */
+  latestRequest?: number;
   observeHint?: string;
   onTakeOver?: () => Promise<void>;
   onBack: () => void;
@@ -583,7 +597,7 @@ export function CCConversationView({
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto p-4">
+      <ConversationHistory jumpKey={`${roomId}:${sessionId}:${active}:${latestRequest ?? 0}`}>
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
           {historyError && (
             <div role="alert" className="flex items-center gap-2 text-sm text-destructive">
@@ -615,7 +629,7 @@ export function CCConversationView({
             />
           ))}
         </div>
-      </div>
+      </ConversationHistory>
 
       <div className="flex flex-col gap-2 border-t border-border p-2">
         {localFilePaths.length > 0 && (
@@ -678,6 +692,38 @@ export function CCConversationView({
           </Button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Mount separately so returning from a subagent view restores scroll listeners. */
+function ConversationHistory({ children, jumpKey }: { children: ReactNode; jumpKey: string }) {
+  const { t } = useT();
+  const stick = useStickToBottom<HTMLDivElement>({ trigger: children, jumpKey });
+  // The snapshot arrives asynchronously. Position it before paint, just like
+  // opening a resident view, instead of flashing the oldest visible message.
+  useLayoutEffect(() => {
+    if (stick.following) stick.scrollToBottom();
+  }, [children, stick.following, stick.scrollToBottom]);
+  return (
+    <div className="relative min-h-0 flex-1">
+      <div ref={stick.ref} data-cc-room-history className="h-full overflow-y-auto p-4">
+        <TranscriptScrollContext.Provider value={stick.preserveScrollOnChange}>
+          {children}
+        </TranscriptScrollContext.Provider>
+      </div>
+      {stick.showJump && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="absolute bottom-3 right-3 rounded-full shadow-md"
+          aria-label={t("chat.stream.jumpToBottomAria")}
+          onClick={stick.scrollToBottom}
+        >
+          <ChevronDown size={14} />
+          {t("chat.stream.jumpToBottomTitle")}
+        </Button>
+      )}
     </div>
   );
 }
@@ -790,6 +836,7 @@ function CcToolCard({
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  const anchoredChange = useAnchoredLayoutChange();
   const argStr = tool.args ? JSON.stringify(tool.args) : "";
   const hasBody = Boolean(argStr && argStr !== "{}") || Boolean(tool.result);
   return (
@@ -801,7 +848,9 @@ function CcToolCard({
     >
       <button
         type="button"
-        onClick={() => hasBody && setOpen((o) => !o)}
+        onClick={(event) => {
+          if (hasBody) anchoredChange(event.currentTarget, () => setOpen((o) => !o));
+        }}
         className="flex w-full items-center gap-2 px-3 py-2 text-left"
       >
         <TerminalSquare className="size-3.5 shrink-0 text-muted-foreground" />

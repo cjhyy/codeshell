@@ -155,6 +155,7 @@ describe("DriveAgentTaskView", () => {
     expect(conversation).toMatchObject({
       sessionId: "thread-1",
       observing: true,
+      latestRequest: request.nonce,
       onTakeOver: undefined,
     });
     // The linked transcript shows the work; the raw CLI summary would repeat it.
@@ -182,6 +183,38 @@ describe("DriveAgentTaskView", () => {
     await render(true);
     expect(reads).toEqual(["parent"]);
     expect(opens).toHaveLength(1);
+  });
+
+  test("a late running status keeps an in-flight progress connection instead of opening twice", async () => {
+    let resolveStatus!: (value: { items: Job[] }) => void;
+    let resolveOpen!: (value: any) => void;
+    window.codeshell.listBackgroundWork = () =>
+      new Promise((resolve) => {
+        resolveStatus = resolve;
+      });
+    window.codeshell.ccRoom.openLinkedSession = (...args: unknown[]) => {
+      opens.push(args);
+      return new Promise((resolve) => {
+        resolveOpen = resolve;
+      });
+    };
+    await act(async () => {
+      root!.render(
+        <DriveAgentTaskView request={{ ...request, externalSessionId: "thread-1" }} active />,
+      );
+      await flushMicrotasks();
+    });
+    expect(opens).toHaveLength(1);
+    await act(async () => {
+      resolveStatus({ items: [job({ externalSessionId: "thread-1" })] });
+      await flushMicrotasks();
+    });
+    expect(opens).toHaveLength(1);
+    await act(async () => {
+      resolveOpen({ roomId: "room-1", status: "observing", mode: "default", cwd: "/repo" });
+      await flushMicrotasks();
+    });
+    expect(conversation).toMatchObject({ sessionId: "thread-1", latestRequest: 1 });
   });
 
   test("recovers a live transcript that appears after the initial retry window", async () => {

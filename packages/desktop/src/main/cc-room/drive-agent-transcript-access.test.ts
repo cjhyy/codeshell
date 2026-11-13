@@ -41,6 +41,63 @@ async function fixture() {
 }
 
 describe("DriveAgent transcript observation authority", () => {
+  test("opens a retained exact identity without waiting for the live worker", async () => {
+    const f = await fixture();
+    let workerReads = 0;
+    const access = new DriveAgentTranscriptAccess(
+      async () => {
+        workerReads += 1;
+        throw new Error("Worker is busy");
+      },
+      () => [{ ...f.job, status: "unknown", canCancel: false }],
+    );
+    await expect(access.open(10, f.source, f.target, f.open)).resolves.toEqual({
+      roomId: "room-1",
+      cwd: f.cwd,
+    });
+    expect(workerReads).toBe(0);
+    await expect(access.requireSubscription(10, "room-1", f.target)).resolves.toBe(f.cwd);
+    await expect(access.requireSubscription(11, "room-1", f.target)).rejects.toThrow();
+  });
+
+  test("falls back to the live worker when the retained identity is not ready", async () => {
+    const f = await fixture();
+    let workerReads = 0;
+    const access = new DriveAgentTranscriptAccess(
+      async () => {
+        workerReads += 1;
+        return [f.job];
+      },
+      () => [{ ...f.job, externalSessionId: undefined }],
+    );
+    await expect(access.open(10, f.source, f.target, f.open)).resolves.toMatchObject({
+      roomId: "room-1",
+    });
+    expect(workerReads).toBe(1);
+  });
+
+  test("retained observations still require every job identity field and the launch directory", async () => {
+    const f = await fixture();
+    const access = new DriveAgentTranscriptAccess(
+      async () => [],
+      () => [f.job],
+    );
+    for (const source of [
+      { ...f.source, jobId: "other" },
+      { ...f.source, sourceSessionId: "other" },
+    ]) {
+      await expect(access.open(10, source, f.target, f.open)).rejects.toThrow();
+    }
+    for (const target of [
+      { ...f.target, externalSessionId: "other" },
+      { ...f.target, kind: "claude-code" },
+      { ...f.target, cwd: f.project },
+    ]) {
+      await expect(access.open(10, f.source, target, f.open)).rejects.toThrow();
+    }
+    await expect(access.requireSubscription(10, "room-1", f.target)).rejects.toThrow();
+  });
+
   test("reads a delegated Codex transcript outside project roots without spawning or granting takeover", async () => {
     const f = await fixture();
     const codexHome = join(f.root, "codex");
