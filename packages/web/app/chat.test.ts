@@ -360,6 +360,7 @@ test("Hub recovers a sanitized checkpoint anchor only with its bundled complete-
         state: {},
         transcript,
         outputJournal: page,
+        outputCoverage: new SessionOutputCoverageStore(() => root).read(bundle.state.sessionId),
         legacyBaseComplete: true,
       },
       async () => page,

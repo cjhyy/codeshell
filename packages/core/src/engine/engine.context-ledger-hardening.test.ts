@@ -347,7 +347,7 @@ describe("Engine context ledger hardening", () => {
 
       await hooked().run("second task", { sessionId, cwd: repo });
       expect(requests).toHaveLength(3);
-      expectAppendOnly(requests.map(wire));
+      expectAppendOnly(requests);
       const notes = requests[2]!.map(textOf).filter((text) => text.includes("TURN NOTE"));
       expect(notes.map((text) => text.split("\n")[1])).toEqual([
         "TURN NOTE 1",
@@ -423,7 +423,7 @@ describe("Engine context ledger hardening", () => {
       // And once more is not needed for the prompt after that.
       await run("six", ["CHECK SKILLS"], ["SESSION RULES"]);
       expect([count("CHECK SKILLS"), count("SESSION RULES")]).toEqual([2, 1]);
-      expectAppendOnly(requests.map(wire));
+      expectAppendOnly(requests);
     });
   });
 

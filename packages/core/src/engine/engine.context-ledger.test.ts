@@ -402,7 +402,7 @@ describe("Engine context ledger", () => {
     await second.run("third task", { sessionId, cwd: repo });
 
     expect(requests).toHaveLength(3);
-    expectAppendOnly(requests.map(wire));
+    expectAppendOnly(requests);
     expect(added(requests, 2)).toEqual([
       { role: "assistant", content: "second done" },
       { role: "user", content: "third task" },
