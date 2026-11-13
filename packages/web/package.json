@@ -67,6 +67,7 @@
   "dependencies": {
     "@cjhyy/code-shell-core": "workspace:*",
     "@cjhyy/code-shell-link": "workspace:*",
+    "@simplewebauthn/browser": "14.0.0",
     "@types/react": "^19.2.14",
     "qrcode": "1.5.4"
   },

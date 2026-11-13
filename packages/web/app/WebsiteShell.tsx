@@ -29,6 +29,7 @@ import "./website.css";
 import { withAccountCookieLock } from "./account-cookie-lock.js";
 import { parseAccountSession } from "./account-api.js";
 import { DesktopLoginPage, desktopLoginRequest } from "./DesktopLogin.js";
+import { DesktopRemoteAccessPage, desktopRemoteAccessRequest } from "./DesktopRemoteAccess.js";
 import { WebsiteHome } from "./WebsiteHome.js";
 import { WebsiteDestinations } from "./WebsiteDestinations.js";
 import { validProjectId } from "./api-context.js";
@@ -86,6 +87,7 @@ export function WebsiteEntry({ setupToken }: { setupToken: string }) {
   const url = new URL(window.location.href);
   const registration = isRegistrationRoute(url);
   const desktopLogin = url.pathname === "/desktop-login" || url.pathname === "/desktop-login/";
+  const desktopRemote = url.pathname === "/remote-access" || url.pathname === "/remote-access/";
   const publicWebsite = isPublicWebsiteOrigin(url) && !setupToken;
   const publicHome = publicWebsite && url.pathname === "/";
   const publicAuth =
@@ -94,7 +96,7 @@ export function WebsiteEntry({ setupToken }: { setupToken: string }) {
   const [error, setError] = React.useState("");
   const [retry, setRetry] = React.useState(0);
   React.useEffect(() => {
-    if (registration || desktopLogin || publicHome || publicAuth) return;
+    if (registration || desktopLogin || desktopRemote || publicHome || publicAuth) return;
     const controller = new AbortController();
     setError("");
     void detectWebsiteCloud(globalThis.fetch, controller.signal)
@@ -106,7 +108,7 @@ export function WebsiteEntry({ setupToken }: { setupToken: string }) {
           setError(cause instanceof Error ? cause.message : "无法连接工作台，请重试。");
       });
     return () => controller.abort();
-  }, [retry, registration, desktopLogin, publicHome, publicAuth]);
+  }, [retry, registration, desktopLogin, desktopRemote, publicHome, publicAuth]);
   if (publicHome) {
     // Older desktop/project links explicitly selected a project at /. Keep
     // those selections usable without turning an ordinary homepage visit into login.
@@ -124,6 +126,12 @@ export function WebsiteEntry({ setupToken }: { setupToken: string }) {
     return (
       <AccountSessionProvider>
         <DesktopLoginPage request={desktopLoginRequest(url)} />
+      </AccountSessionProvider>
+    );
+  if (desktopRemote)
+    return (
+      <AccountSessionProvider>
+        <DesktopRemoteAccessPage request={desktopRemoteAccessRequest(url)} />
       </AccountSessionProvider>
     );
   if (registration)

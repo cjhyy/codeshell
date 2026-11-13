@@ -11,6 +11,7 @@ import {
 } from "./account-api.js";
 import type { WebsiteRoute } from "./website-routes.js";
 import { useAccountFeature, accountFeatureMessage } from "./useAccountFeature.js";
+import { PasskeySettings } from "./PasskeySettings.js";
 
 function useAccountData<T>(path: string | null) {
   const { request } = useAccountSession();
@@ -261,6 +262,7 @@ function SecuritySettings({ overview }: { overview: AccountOverview }) {
   return (
     <>
       <SettingsHeading title="安全" description="管理密码与账号登录方式。" />
+      <PasskeySettings />
       <div className="website-settings-card">
         <h2>密码</h2>
         {overview.capabilities.passwordChange ? (

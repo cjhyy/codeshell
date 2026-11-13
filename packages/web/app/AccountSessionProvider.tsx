@@ -1,6 +1,7 @@
 import React from "react";
 import { readAccountFeatures, resolveAccountFeatures } from "../src/account/features.js";
 import { AccountFeaturesContext } from "./useAccountFeature.js";
+import { requirePasskey } from "./passkey-browser.js";
 import {
   AccountWebClient,
   AccountWebError,
@@ -17,6 +18,7 @@ interface OAuthFlow {
   accountId?: string;
   rootId?: string;
   cleanup?: Promise<void>;
+  controller: AbortController;
 }
 interface AccountSessionContext {
   session: AccountWebSession | null;
@@ -153,6 +155,7 @@ export function AccountSessionProvider({ children }: { children: React.ReactNode
     sessionRef.current = cleared;
   };
   const cleanup = (flow: OAuthFlow): Promise<void> => {
+    flow.controller.abort();
     flow.popup.close();
     if (
       flow.mode === "link" &&
@@ -381,6 +384,7 @@ export function AccountSessionProvider({ children }: { children: React.ReactNode
       cancelled: false,
       accountId: sessionRef.current?.account?.id,
       rootId: sessionRef.current?.session?.id,
+      controller: new AbortController(),
     };
     pending.current = flow;
     const accountId = sessionRef.current?.account?.id;
@@ -403,6 +407,22 @@ export function AccountSessionProvider({ children }: { children: React.ReactNode
         : "请在 GitHub 页面完成登录，最终结果会显示在这里。",
     );
     try {
+      if (mode === "link") {
+        // Reserve the popup during the user's click, then keep the originating
+        // document focused for the system's Passkey prompt.
+        popup.blur();
+        window.focus();
+      }
+      const stepUp =
+        mode === "link"
+          ? await requirePasskey(
+              (path, method, body, signal) => api.request(path, method, body, signal),
+              "github-link",
+              accountId!,
+              flow.controller.signal,
+            )
+          : undefined;
+      if (!live()) return;
       const codeChallenge = encode(
         new Uint8Array(
           await crypto.subtle.digest("SHA-256", new TextEncoder().encode(flow.verifier)),
@@ -425,7 +445,7 @@ export function AccountSessionProvider({ children }: { children: React.ReactNode
           : await api.request<Start>(
               "/github/start",
               "POST",
-              { codeChallenge, mode },
+              { codeChallenge, mode, stepUpToken: stepUp!.stepUpToken },
               undefined,
               beforeFence,
             );

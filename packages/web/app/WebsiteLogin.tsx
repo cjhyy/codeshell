@@ -6,11 +6,13 @@ import { isPublicWebsiteOrigin, websiteAuthUrl } from "./website-routes.js";
 export function WebsiteLogin({
   registration = false,
   desktopLogin = false,
+  remoteAccess = false,
   websiteAuth,
   destination = "/app",
 }: {
   registration?: boolean;
   desktopLogin?: boolean;
+  remoteAccess?: boolean;
   websiteAuth?: "login" | "signup";
   destination?: string;
 }) {
@@ -102,7 +104,9 @@ export function WebsiteLogin({
             <br />
             对话、文件与工具，都在你的工作区。
           </p>
-          {!desktopLogin && !registration ? <WebsiteSetupSteps current={1} /> : null}
+          {!desktopLogin && !remoteAccess && !registration ? (
+            <WebsiteSetupSteps current={1} />
+          ) : null}
           <div className="website-features">
             <p>
               <strong>一个工作区，装下一个想法</strong>
@@ -121,7 +125,13 @@ export function WebsiteLogin({
         <section className="auth-card website-auth" aria-labelledby="website-login-title">
           <p className="website-eyebrow">{register ? "从这里开始" : "欢迎回来"}</p>
           <h2 id="website-login-title">
-            {register ? "创建你的账号" : desktopLogin ? "登录 CodeShell 电脑端" : "继续你的工作"}
+            {register
+              ? "创建你的账号"
+              : remoteAccess
+                ? "登录以确认远程访问"
+                : desktopLogin
+                  ? "登录 CodeShell 电脑端"
+                  : "继续你的工作"}
           </h2>
           <p className="website-muted">
             {desktopLogin

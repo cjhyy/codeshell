@@ -7,6 +7,12 @@ import {
   type WebsiteComputer,
 } from "./website-devices.js";
 import "./website-destinations.css";
+import {
+  requirePasskey,
+  passkeyFailure,
+  PASSKEY_SETTINGS_URL,
+  PASSKEY_EXPLANATION,
+} from "./passkey-browser.js";
 
 function DestinationIcon({
   kind,
@@ -115,10 +121,17 @@ export function WebsiteDestinations({
     setOpening(host.hostId);
     setError("");
     try {
+      const proof = await requirePasskey(
+        account.request,
+        "remote-access",
+        host.hostId,
+        controller.signal,
+      );
+      controller.signal.throwIfAborted();
       const value = await account.request(
         `/remote-hosts/${host.hostId}/client-access`,
         "POST",
-        { client: "browser" },
+        { client: "browser", stepUpToken: proof.stepUpToken },
         controller.signal,
       );
       const destination = websiteComputerClaim(value, host);
@@ -128,9 +141,9 @@ export function WebsiteDestinations({
         account.workspaceActive(identity)
       )
         window.location.assign(destination);
-    } catch {
+    } catch (cause) {
       if (!controller.signal.aborted && epoch === generation.current)
-        setError("无法打开这台电脑。请确认电脑在线后重试，或选择云端或其他电脑。");
+        setError(passkeyFailure(cause));
     } finally {
       if (pendingOpen.current === controller) {
         pendingOpen.current = null;
@@ -152,6 +165,9 @@ export function WebsiteDestinations({
         <h1 id="destination-heading">选择云端或电脑</h1>
         <p className="website-muted">
           在云端开始工作，或连接你已登录的电脑，继续使用那里的项目和工具。
+        </p>
+        <p className="website-hint">
+          连接电脑时，{PASSKEY_EXPLANATION} <a href={PASSKEY_SETTINGS_URL}>管理 Passkey</a>
         </p>
         <article className="website-destination-card website-cloud-destination">
           <span className="website-destination-icon">

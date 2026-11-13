@@ -2,6 +2,12 @@ import React from "react";
 import { useAccountSession } from "./AccountSessionProvider.js";
 import { AccountWebError } from "./account-api.js";
 import { WebsiteLogin } from "./WebsiteLogin.js";
+import {
+  requirePasskey,
+  passkeyFailure,
+  PASSKEY_EXPLANATION,
+  PASSKEY_SETTINGS_URL,
+} from "./passkey-browser.js";
 
 /** This public request identifies a pending login; it is never a session credential. */
 export function desktopLoginRequest(url: URL): string | undefined {
@@ -124,10 +130,15 @@ function DesktopLoginConfirmation({ request }: { request: string }) {
     setBusy(true);
     setError("");
     try {
+      const proof =
+        decision === "approve"
+          ? await requirePasskey(account.request, "desktop-login", request, controller.signal)
+          : undefined;
+      controller.signal.throwIfAborted();
       const value = await account.request<{ approved?: boolean; denied?: boolean }>(
         `/browser/${decision}`,
         "POST",
-        { request },
+        { request, ...(proof ? { stepUpToken: proof.stepUpToken } : {}) },
         controller.signal,
       );
       if (!alive.current || controller.signal.aborted) return;
@@ -135,7 +146,7 @@ function DesktopLoginConfirmation({ request }: { request: string }) {
         throw new Error("服务器尚未确认操作结果，请返回 CodeShell 查看登录状态。");
       setResult(decision === "approve" ? "approved" : "denied");
     } catch (cause) {
-      if (alive.current && !controller.signal.aborted) setError(failure(cause));
+      if (alive.current && !controller.signal.aborted) setError(passkeyFailure(cause));
     } finally {
       working.current = false;
       if (alive.current && !controller.signal.aborted) setBusy(false);
@@ -178,6 +189,12 @@ function DesktopLoginConfirmation({ request }: { request: string }) {
           <>
             <p className="website-hint">
               仅在你刚刚从这台电脑的 CodeShell 发起登录时确认。GitHub 仓库访问权限另行选择。
+            </p>
+            <p className="website-hint">
+              {PASSKEY_EXPLANATION}{" "}
+              <a href={PASSKEY_SETTINGS_URL} target="_blank" rel="noreferrer">
+                在新页面设置 Passkey
+              </a>
             </p>
             {loading ? <p role="status">正在读取电脑登录请求…</p> : null}
             {expired ? (

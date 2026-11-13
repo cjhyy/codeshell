@@ -5,6 +5,7 @@ import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { passkeyBrowserFixture } from "./fixtures/passkey-browser.mjs";
 
 assert.equal(process.env.NODE_ENV, "test", "Use the isolated smoke runner");
 assert.equal(process.env.CODE_SHELL_TEST_HOME, path.join(process.env.HOME, ".code-shell"));
@@ -78,6 +79,7 @@ async function mount(width = 1440, initial = "/app") {
     releaseList: null,
   };
   const calls = [];
+  const passkeys = passkeyBrowserFixture(origin, accountId);
   const account = {
     id: accountId,
     username: "fixture-user",
@@ -148,6 +150,12 @@ async function mount(width = 1440, initial = "/app") {
       return json({ registrationAllowed: true, githubEnabled: false, features });
     if (url.pathname === "/api/v1/account/web/session") return json(session());
     if (url.pathname === "/api/v1/account/web/overview") return json(session().overview);
+    if (url.pathname === "/api/v1/account/web/passkeys/authentication/options") {
+      assert.deepEqual(entry.body, { purpose: "remote-access", target: hosts[0].hostId });
+      return json(passkeys.options(entry.body));
+    }
+    if (url.pathname === "/api/v1/account/web/passkeys/authentication/verify")
+      return json(passkeys.verify(entry.body));
     if (url.pathname === "/api/v1/account/web/logout") {
       state.signedIn = false;
       return json({ ok: true });
@@ -162,7 +170,8 @@ async function mount(width = 1440, initial = "/app") {
     }
     if (url.pathname === `/api/v1/account/web/remote-hosts/${hosts[0].hostId}/client-access`) {
       assert.equal(request.method(), "POST");
-      assert.deepEqual(entry.body, { client: "browser" });
+      assert.equal(entry.body.client, "browser");
+      passkeys.consume(entry.body.stepUpToken, "remote-access", hosts[0].hostId);
       assert.equal(entry.headers["x-codeshell-csrf"], csrf);
       if (state.holdClaim)
         await new Promise((done) => {
@@ -213,6 +222,7 @@ async function mount(width = 1440, initial = "/app") {
     return route.abort();
   });
   const page = await context.newPage();
+  await passkeys.install(page);
   page.setDefaultTimeout(10000);
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(origin + initial);
@@ -259,7 +269,7 @@ try {
     await page.getByRole("button", { name: "连接 我的 MacBook", exact: true }).waitFor();
     state.foreignClaim = true;
     await page.getByRole("button", { name: "连接 我的 MacBook", exact: true }).click();
-    await page.getByRole("alert").filter({ hasText: "无法打开这台电脑" }).waitFor();
+    await page.getByRole("alert").waitFor();
     assert.equal(new URL(page.url()).origin, origin);
     state.foreignClaim = false;
     await page.getByRole("button", { name: "连接 我的 MacBook", exact: true }).click();
@@ -276,7 +286,11 @@ try {
   const stale = await mount();
   await stale.page.getByRole("button", { name: "连接 我的 MacBook", exact: true }).waitFor();
   stale.state.holdClaim = true;
+  const claimStarted = stale.page.waitForRequest((request) =>
+    request.url().endsWith("/client-access"),
+  );
   await stale.page.getByRole("button", { name: "连接 我的 MacBook", exact: true }).click();
+  await claimStarted;
   await stale.page.getByLabel("打开账号菜单").click();
   await stale.page.getByRole("button", { name: "退出登录", exact: true }).click();
   await stale.page.getByRole("heading", { name: "继续你的工作", exact: true }).waitFor();

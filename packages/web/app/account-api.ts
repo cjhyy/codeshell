@@ -63,6 +63,17 @@ const messages: Record<string, string> = {
   link_management_disabled: "当前服务尚未开放数据连接管理。",
   link_management_unavailable: "数据连接服务暂时不可用，请稍后重试。",
   cloud_management_disabled: "当前服务尚未配置云端工作区。",
+  passkey_not_configured: "请先在账号安全中添加 Passkey，再确认此操作。",
+  passkey_bootstrap_required: "首次添加 Passkey 需要重新验证账号密码或已关联的 GitHub 身份。",
+  passkey_required: "请用 Passkey 重新确认此操作。",
+  passkey_ceremony_expired: "Passkey 验证已过期，请重新发起。",
+  passkey_verification_failed: "Passkey 验证未通过，请重试。",
+  passkey_credentials_changed: "Passkey 列表已发生变化，请刷新后重试。",
+  passkey_already_configured: "账号已有 Passkey，请用现有 Passkey 确认添加。",
+  last_passkey_required: "请先添加另一把 Passkey，再移除最后一把。",
+  passkey_bootstrap_identity_mismatch: "请使用当前账号已关联的 GitHub 身份完成验证。",
+  passkey_not_found: "此 Passkey 已不存在，请刷新列表。",
+  passkey_request_limit: "Passkey 请求过于频繁，请稍后重试。",
 };
 
 export class AccountWebError extends Error {

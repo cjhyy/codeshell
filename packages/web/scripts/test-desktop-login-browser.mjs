@@ -7,6 +7,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { passkeyBrowserFixture } from "./fixtures/passkey-browser.mjs";
 
 assert.equal(process.env.NODE_ENV, "test", "Use the isolated smoke runner");
 assert.equal(process.env.CODE_SHELL_TEST_HOME, path.join(process.env.HOME, ".code-shell"));
@@ -65,6 +66,7 @@ async function mount({ signedIn = true, expiresAt = Date.now() + 600000 } = {}) 
   context = await browser.newContext({ serviceWorkers: "block" });
   const calls = [];
   const state = { signedIn };
+  const passkeys = passkeyBrowserFixture(origin, user.id);
   const session = () => ({
     authenticated: state.signedIn,
     refreshRequired: false,
@@ -137,6 +139,12 @@ async function mount({ signedIn = true, expiresAt = Date.now() + 600000 } = {}) 
       return json(session());
     }
     assert.equal(request.headers().authorization, undefined);
+    if (url.pathname === "/api/v1/account/web/passkeys/authentication/options") {
+      assert.deepEqual(request.postDataJSON(), { purpose: "desktop-login", target: ticket });
+      return json(passkeys.options(request.postDataJSON()));
+    }
+    if (url.pathname === "/api/v1/account/web/passkeys/authentication/verify")
+      return json(passkeys.verify(request.postDataJSON()));
     if (url.pathname === "/api/v1/account/web/browser/request") {
       assert.equal(url.searchParams.get("request"), ticket);
       return json({ deviceName: "测试用 MacBook", expiresAt });
@@ -146,7 +154,12 @@ async function mount({ signedIn = true, expiresAt = Date.now() + 600000 } = {}) 
         url.pathname,
       )
     ) {
-      assert.deepEqual(request.postDataJSON(), { request: ticket });
+      const body = request.postDataJSON();
+      if (url.pathname.endsWith("approve")) {
+        passkeys.consume(body.stepUpToken, "desktop-login", ticket);
+        assert.deepEqual(Object.keys(body).sort(), ["request", "stepUpToken"]);
+      } else assert.deepEqual(body, { request: ticket });
+      assert.equal(body.request, ticket);
       assert.equal(request.headers()["x-codeshell-csrf"], "C".repeat(43));
       return json(url.pathname.endsWith("approve") ? { approved: true } : { denied: true });
     }
@@ -154,6 +167,7 @@ async function mount({ signedIn = true, expiresAt = Date.now() + 600000 } = {}) 
     return route.abort();
   });
   const page = await context.newPage();
+  await passkeys.install(page);
   page.on("pageerror", (error) => errors.push(error.message));
   return { page, calls, state };
 }

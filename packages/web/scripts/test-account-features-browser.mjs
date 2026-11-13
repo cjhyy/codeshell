@@ -39,6 +39,7 @@ const installationId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 const available = {
   "links.remote": { version: 1, enabled: true },
   "relay.phone": { version: 1, enabled: true },
+  "devices.directory": { version: 1, enabled: true },
   "cloud.projects": { version: 1, enabled: true, params: { cloudOrigin: origin } },
 };
 const browser = await chromium.launch({
@@ -106,11 +107,6 @@ async function mount({
     if (pathname === "/fixture.js")
       return route.fulfill({ contentType: "text/javascript", body: js });
     if (pathname === "/fixture.css") return route.fulfill({ contentType: "text/css", body: css });
-    if (pathname === "/devices")
-      return route.fulfill({
-        contentType: "text/html; charset=utf-8",
-        body: "<h1>独立设备目录</h1>",
-      });
     if (pathname === "/" || pathname === "/register")
       return route.fulfill({
         contentType: "text/html; charset=utf-8",
@@ -140,6 +136,20 @@ async function mount({
     if (pathname === "/api/v1/account/web/cloud-tickets")
       return json({ error: "owned_cloud_unavailable" }, 503);
     if (pathname === "/api/v1/account/web/links") return json({ links: [] });
+    if (pathname === "/api/v1/account/web/remote-hosts")
+      return json({
+        hosts: [
+          {
+            hostId: installationId,
+            environmentId: installationId,
+            name: "测试电脑",
+            online: true,
+            revoked: false,
+            publicOrigin: `https://${installationId}.devices.fixture.invalid`,
+            protocolVersion: 1,
+          },
+        ],
+      });
     blocked.push(url.href);
     return route.abort();
   });
@@ -187,13 +197,27 @@ try {
   );
   results.push("explicit empty account features hide cloud, phone and remote Link requests");
 
-  fixture = await mount({ features: { "relay.phone": available["relay.phone"] } });
+  fixture = await mount({
+    features: {
+      "relay.phone": available["relay.phone"],
+      "devices.directory": available["devices.directory"],
+    },
+  });
   await fixture.page.goto(origin);
-  await fixture.page.getByRole("button", { name: "我的电脑", exact: true }).last().click();
-  await fixture.page.getByRole("heading", { name: "独立设备目录" }).waitFor();
-  assert.equal(fixture.page.url(), origin + "/devices");
-  assert.equal(fixture.calls.find((call) => call.path === "/devices")?.query, "");
-  results.push("ready phone entry opens only the fixed credential-free device portal");
+  await fixture.page.getByRole("button", { name: "选择云端或其他电脑", exact: true }).click();
+  await fixture.page.getByRole("heading", { name: "选择云端或电脑", exact: true }).waitFor();
+  await fixture.page.getByRole("button", { name: "连接 测试电脑", exact: true }).waitFor();
+  assert.equal(
+    fixture.calls.some((call) => call.path === "/devices"),
+    false,
+  );
+  assert.equal(
+    fixture.calls.some((call) => call.path.endsWith("/client-access")),
+    false,
+  );
+  results.push(
+    "ready directory uses the website account picker and waits for an explicit connection",
+  );
 
   fixture = await mount({ features: available });
   await fixture.page.goto(origin);
@@ -202,12 +226,14 @@ try {
   fixture.state.offline = true;
   await fixture.page.evaluate(() => globalThis.dispatchEvent(new globalThis.Event("focus")));
   await fixture.page.getByRole("button", { name: "重试连接账号服务" }).waitFor();
+  await fixture.page.getByRole("button", { name: "选择云端或其他电脑", exact: true }).click();
   assert.equal(
-    await fixture.page
-      .getByRole("button", { name: /我的电脑/ })
-      .last()
-      .isDisabled(),
+    await fixture.page.getByRole("button", { name: "刷新电脑列表", exact: true }).isDisabled(),
     true,
+  );
+  assert.equal(
+    fixture.calls.some((call) => call.path.endsWith("/remote-hosts")),
+    false,
   );
   assert.equal(fixture.calls.filter((call) => call.path.endsWith("/cloud-tickets")).length, 1);
   results.push("known features become pending on service loss and do not start cloud requests");

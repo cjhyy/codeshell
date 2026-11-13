@@ -56,6 +56,7 @@ async function fixture({
   detail = () => Response.json({ deviceName: "我的 Mac", expiresAt: Date.now() + 600000 }),
   decide = async (_path: string, _init?: RequestInit) =>
     Response.json({ approved: true, denied: true }),
+  passkey = "ok",
 } = {}) {
   ensureMiniDom();
   const url = new URL(`/desktop-login?${query}`, origin);
@@ -63,9 +64,28 @@ async function fixture({
   Object.assign(url, { replace: (destination: string) => navigations.push(destination) });
   install(window, "location", { get: () => url });
   install(globalThis, "location", { get: () => url });
+  install(window, "isSecureContext", { value: true });
+  install(globalThis, "PublicKeyCredential", { value: function PublicKeyCredential() {} });
   let queue = Promise.resolve();
   install(globalThis, "navigator", {
     value: {
+      credentials: {
+        async get() {
+          if (passkey === "cancel") throw new DOMException("Cancelled", "NotAllowedError");
+          const bytes = new Uint8Array([1, 2, 3]).buffer;
+          return {
+            id: "AQID",
+            rawId: bytes,
+            type: "public-key",
+            response: {
+              authenticatorData: bytes,
+              clientDataJSON: bytes,
+              signature: bytes,
+            },
+            getClientExtensionResults: () => ({}),
+          };
+        },
+      },
       locks: {
         request(_name: string, _options: unknown, operation: () => Promise<unknown>) {
           const value = queue.then(operation);
@@ -116,6 +136,19 @@ async function fixture({
     if (path === "/api/v1/account/status")
       return Response.json({ registrationAllowed: true, githubEnabled: false, features: {} });
     if (path === "/api/v1/account/web/session") return Response.json(session());
+    if (path === "/api/v1/account/web/passkeys/authentication/options") {
+      expect(JSON.parse(String(init?.body))).toEqual({ purpose: "desktop-login", target: ticket });
+      return Response.json({
+        ceremonyId: "K".repeat(43),
+        optionsJSON: {
+          rpId: new URL(origin).hostname,
+          challenge: "Q".repeat(43),
+          userVerification: passkey === "weak" ? "preferred" : "required",
+        },
+      });
+    }
+    if (path === "/api/v1/account/web/passkeys/authentication/verify")
+      return Response.json({ stepUpToken: "S".repeat(43), expiresAt: Date.now() + 60000 });
     if (path === `/api/v1/account/web/browser/request?request=${ticket}`) return detail();
     if (["/api/v1/account/web/browser/approve", "/api/v1/account/web/browser/deny"].includes(path))
       return decide(path, init);
@@ -192,7 +225,10 @@ test("restoring a browser account never approves a computer until explicitly con
   await until(() => view.navigations.length === 1);
   const approved = view.calls.filter((call) => call.path.endsWith("/approve"));
   expect(approved).toHaveLength(1);
-  expect(JSON.parse(String(approved[0].init?.body))).toEqual({ request: ticket });
+  expect(JSON.parse(String(approved[0].init?.body))).toEqual({
+    request: ticket,
+    stepUpToken: "S".repeat(43),
+  });
   expect(new Headers(approved[0].init?.headers).get("X-CodeShell-CSRF")).toBe("C".repeat(43));
   expect(view.navigations).toEqual(["/app"]);
   expect(text(view.container)).toContain("选择云端工作区或账号下的电脑");
@@ -201,6 +237,24 @@ test("restoring a browser account never approves a computer until explicitly con
   );
   expect(props(workbench).href).toBe("/app");
   expect(view.button("登录这台电脑")).toBeUndefined();
+});
+
+test("a cancelled or weakened Passkey ceremony never approves a new Desktop session", async () => {
+  for (const passkey of ["cancel", "weak"]) {
+    const view = await fixture({ passkey });
+    await until(() => !!view.button("登录这台电脑"));
+    await view.click("登录这台电脑");
+    await until(() =>
+      text(view.container).includes(passkey === "cancel" ? "已取消或超时" : "验证请求无效"),
+    );
+    expect(
+      view.calls.some(
+        (call) => call.path.endsWith("/approve") || call.path.endsWith("/authentication/verify"),
+      ),
+    ).toBe(false);
+    expect(view.navigations).toEqual([]);
+    await view.unmount();
+  }
 });
 
 test("cancelling a computer request leaves the browser account signed in", async () => {
