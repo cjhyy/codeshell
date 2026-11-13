@@ -123,6 +123,10 @@ Anthropic 显式辅助调用额外记住**上次成功请求实际写入的稳�
 
 使用隔离 HOME 的 guarded runner；依赖用 bun 安装；最终还需完整 CI partitions、workspaces typecheck、变更文件 lint 和精确 PR head 的必需检查。历史线上样本不替代最终代码的验证，未授权的新付费 API 测试不在本次收尾范围内。
 
+2026-11-13 收尾离线检查：完整 build、全部 workspace typecheck、Host/Link 测试 typecheck 和 lint 通过；lint 保持已有的 90 条 warning。架构预算检查没有提高上限：合并已有的同源 type/value 导出后，内部入口仍在原预算内。完整 ToolSearch、volatile/stable-prefix、架构/导出契约套件分别通过 53、13、10 项，覆盖审查中发现的旧措辞断言、旧边界断言和导出预算回归。
+
+本机尝试了全部 44 个 CI 分区，结果为 19 个通过、22 个失败、3 个未完成；三个中断分区未执行到的所有文件另以独立 guarded 进程尝试。未完成的原分区仍记为未完成，不能用补跑计数宣称全绿。受限 macOS 宿主的 DiskManagement、监听端口、Seatbelt 和原生进程条件造成多项失败；主要失败类别已在 `006bee8c5` 的独立源码快照复现，但尚未独立归因的失败不能一概称为基线问题。依赖安装也遇到 registry 连接限制，本机验证使用审计过的独立依赖副本。这些结果不替代精确候选提交的必需 PR CI，尚不具备合入验收结论。
+
 ## 6. 历史探针（2026-11-12）
 
 OpenRouter 上 `gpt-6.1-sol` 和 `claude-sonnet-5` 各两遍的短探针，读数是被测请求 cache read / 上次 prompt：
