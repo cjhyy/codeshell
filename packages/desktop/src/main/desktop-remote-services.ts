@@ -24,6 +24,7 @@ import { registerCloudWorkbenchIpc } from "./cloud-workbench-ipc.js";
 import type { PrepareAccountGitHubLink } from "./account-github-link.js";
 import { CloudManagementManager, type ManagedCloudWindows } from "./cloud-management-manager.js";
 import { createLinkAccountAccess } from "./link-account-access.js";
+import { bindDesktopAccountLifecycle } from "./desktop-account-lifecycle.js";
 
 /** Compose optional cloud identity and its remote-access lifecycle without starting either. */
 export function createDesktopRemoteServices(options: {
@@ -181,6 +182,13 @@ export function createDesktopRemoteServices(options: {
     controller: mobileRemoteController,
     isMainWindow,
   });
+  if (options.app)
+    bindDesktopAccountLifecycle(
+      options.app,
+      cloudAccountManager,
+      mobileRemoteController,
+      options.windows,
+    );
   return {
     captureLinkAccount: createLinkAccountAccess(cloudAccountManager, () =>
       accountFeatures.requireReady("links.remote"),

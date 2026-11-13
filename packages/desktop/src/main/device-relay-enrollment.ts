@@ -110,6 +110,8 @@ export async function enrollAccountRelayComputer(
     ...(data as object),
     relayOrigin: input.relayOrigin,
     name: input.name.trim(),
+    // Remote access is a local user choice, never an enrollment-server instruction.
+    remoteAccessEnabled: false,
   } as RelayRegistration;
   if (
     !validRegistration(registration) ||

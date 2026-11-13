@@ -318,7 +318,7 @@ test("stopping during a committed device refresh preserves its rotated credentia
   }
 });
 
-test("Desktop login recovers a first network failure, enrolls once and reconnects the stable device without a passcode or extra buttons", async () => {
+test("Desktop login binds automatically after network recovery but requires separate permission to accept remote access", async () => {
   const root = mkdtempSync(join(tmpdir(), "account-relay-auto-"));
   const identity = { origin: "https://account.example", accountId: randomUUID() };
   let saved: RelayRegistration | undefined;
@@ -401,6 +401,7 @@ test("Desktop login recovers a first network failure, enrolls once and reconnect
         credentialExpiresAt: Date.now() + 600_000,
         credentialEpoch: 1,
         protocolVersion: 1,
+        remoteAccessEnabled: true, // An enrollment response cannot grant local consent.
       };
     },
     connectorFactory: (options) =>
@@ -420,7 +421,7 @@ test("Desktop login recovers a first network failure, enrolls once and reconnect
     expect(controller.relayStatus().state).toBe("unregistered");
     await expect(controller.activateAccountRelay(identity, () => true)).rejects.toThrow();
     const deadline = Date.now() + 2_000;
-    while (controller.relayStatus().state !== "ready") {
+    while (!controller.relayStatus().registered) {
       if (Date.now() > deadline) throw new Error("Automatic first-login recovery did not occur");
       await new Promise((resolve) => setTimeout(resolve, 5));
     }
@@ -428,10 +429,22 @@ test("Desktop login recovers a first network failure, enrolls once and reconnect
       controller.activateAccountRelay(identity, () => true),
       controller.activateAccountRelay(identity, () => true),
     ]);
-    expect(controller.relayStatus().state).toBe("ready");
+    expect(controller.relayStatus()).toMatchObject({
+      state: "stopped",
+      remoteAccessEnabled: false,
+    });
     expect(enrollments).toBe(1);
-    expect(starts).toBe(1);
+    expect(starts).toBe(0);
+    expect(configured).toBeUndefined();
     const binding = [saved!.hostId, saved!.environmentId, saved!.credentialEpoch];
+    expect(
+      await controller.accountRelaySource(identity, new AbortController().signal),
+    ).toMatchObject({
+      sourceHostId: saved!.hostId,
+    });
+    await controller.start({ mode: "relay" });
+    expect(controller.relayStatus()).toMatchObject({ state: "ready", remoteAccessEnabled: true });
+    expect(starts).toBe(1);
     expect(configured.hostId).toBe(saved!.hostId);
     expect(await configured.listProjects()).toEqual([
       { id: "actual-project", name: "My project", path: "/target/project" },
@@ -439,6 +452,12 @@ test("Desktop login recovers a first network failure, enrolls once and reconnect
     await controller.stop();
     await controller.activateAccountRelay(identity, () => true);
     expect(enrollments).toBe(1);
+    expect(starts).toBe(1);
+    expect(controller.relayStatus()).toMatchObject({
+      state: "stopped",
+      remoteAccessEnabled: false,
+    });
+    await controller.start({ mode: "relay" });
     expect(starts).toBe(2);
     expect([saved!.hostId, saved!.environmentId, saved!.credentialEpoch]).toEqual(binding);
     const publicState = JSON.stringify(controller.relayStatus());
@@ -451,6 +470,61 @@ test("Desktop login recovers a first network failure, enrolls once and reconnect
   } finally {
     await controller.dispose();
     rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("turning remote access off still stops and retires stale saved permission if secure storage fails", async () => {
+  let saved: RelayRegistration | undefined = {
+    relayOrigin: "https://account.example",
+    publicOrigin: "https://device.example",
+    hostId: randomUUID(),
+    environmentId: randomUUID(),
+    accountId: randomUUID(),
+    name: "Computer",
+    protocolVersion: 1,
+    credentialEpoch: 1,
+    credential: token(),
+    refreshToken: token(),
+    credentialExpiresAt: Date.now() + 600_000,
+    remoteAccessEnabled: true,
+  };
+  let active = true;
+  const retired: string[] = [];
+  const controller = new MobileRemoteController({
+    host: {
+      status: () => (active ? { mode: "relay" } : undefined),
+      stop: async () => {
+        active = false;
+      },
+      onlineDeviceIds: () => [],
+    } as any,
+    tunnel: { stop: async () => {}, isRunning: () => false, isConnected: () => false } as any,
+    binary: {} as any,
+    passcode: {} as any,
+    store: {
+      load: () => saved,
+      save: () => {
+        throw new Error("keychain locked");
+      },
+      forget: () => {
+        saved = undefined;
+      },
+    } as any,
+    accountRequest: async (request) => {
+      retired.push(request.path);
+      return {};
+    },
+    environmentDir: "/unused",
+    changed: () => {},
+  });
+  try {
+    await expect(controller.stop()).rejects.toThrow("keychain locked");
+    expect(active).toBe(false);
+    expect(saved).toBeUndefined();
+    expect(controller.relayStatus()).toMatchObject({ state: "storage-error", registered: false });
+    expect(retired).toEqual(["/api/v1/account/logout"]);
+  } finally {
+    await controller.dispose();
   }
 });
 

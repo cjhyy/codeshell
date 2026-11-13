@@ -30,6 +30,7 @@ for (const scenario of [
   "remote-cleanup-hidden",
   "remote-cleanup-pending",
   "credential-cleanup",
+  "remote-access",
 ])
   test(`account feature lifecycle: ${scenario}`, () => {
     const result = Bun.spawnSync({

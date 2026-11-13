@@ -425,7 +425,7 @@ export function AccountDeviceWorkspace({ open, onClose }: { open: boolean; onClo
     <section
       role="dialog"
       aria-modal="true"
-      aria-label="执行电脑 / 设备"
+      aria-label="我的电脑"
       className="absolute inset-0 z-50 flex min-h-0 flex-col bg-background text-foreground"
     >
       {/* This page replaces the shell's TopBar, so it owns the window drag
@@ -438,8 +438,8 @@ export function AccountDeviceWorkspace({ open, onClose }: { open: boolean; onClo
         style={{ WebkitAppRegion: "drag" } as CSSProperties}
       >
         <div>
-          <h1 className="text-lg font-semibold">执行电脑 / 设备</h1>
-          <p className="text-xs text-muted-foreground">同账号电脑 · 任务在所选电脑的项目中执行</p>
+          <h1 className="text-lg font-semibold">我的电脑</h1>
+          <p className="text-xs text-muted-foreground">选择账号下的电脑，访问它的项目</p>
         </div>
         <button
           type="button"
@@ -452,7 +452,7 @@ export function AccountDeviceWorkspace({ open, onClose }: { open: boolean; onClo
       </header>
       {account.state !== "signed-in" ? (
         <p role="status" className="p-6">
-          请先登录账号，登录后本机将自动加入设备协作。
+          请先登录账号，这台电脑会自动加入你的账号。
         </p>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col sm:flex-row">
@@ -466,23 +466,26 @@ export function AccountDeviceWorkspace({ open, onClose }: { open: boolean; onClo
             {local && (
               <p className="mb-3 text-xs text-muted-foreground">
                 本机：
-                {local.state === "ready"
-                  ? "在线"
-                  : local.state === "connecting"
-                    ? "连接中"
-                    : local.state === "unauthorized"
-                      ? "未授权"
-                      : local.state === "unavailable"
-                        ? "服务不可用 / 需升级"
-                        : local.state === "storage-error"
-                          ? "安全存储不可用"
-                          : local.state === "unregistered"
-                            ? "尚未登记"
-                            : "离线"}
+                {local.registered && local.remoteAccessEnabled === false
+                  ? "远程访问已关闭，可在账号设置中开启"
+                  : local.state === "ready"
+                    ? "在线"
+                    : local.state === "connecting"
+                      ? "连接中"
+                      : local.state === "unauthorized"
+                        ? "未授权"
+                        : local.state === "unavailable"
+                          ? "服务不可用 / 需升级"
+                          : local.state === "storage-error"
+                            ? "安全存储不可用"
+                            : local.state === "unregistered"
+                              ? "正在同步账号"
+                              : "离线"}
                 {local.message ? ` · ${local.message}` : ""}
               </p>
             )}
-            {local?.state !== "ready" &&
+            {(!local?.registered || local.remoteAccessEnabled !== false) &&
+              local?.state !== "ready" &&
               local?.state !== "connecting" &&
               window.codeshell.cloudAccount.resume && (
                 <button
@@ -504,7 +507,7 @@ export function AccountDeviceWorkspace({ open, onClose }: { open: boolean; onClo
                   }}
                   className="mb-3 rounded-md border border-border px-3 py-1.5 text-sm disabled:opacity-50"
                 >
-                  {resuming ? "正在恢复…" : "恢复设备协作"}
+                  {resuming ? "正在连接…" : "重试连接"}
                 </button>
               )}
             {devices.map((device) => (

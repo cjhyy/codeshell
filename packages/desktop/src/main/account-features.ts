@@ -37,7 +37,9 @@ export function accountLocalConditions(
     relay.relayOrigin === status.origin &&
     relay.accountId === status.account.id;
   const registered = matches && relay.registered;
-  const dispatch = registered && relay.state === "ready";
+  // Outgoing access uses this computer's account grant; it does not require
+  // allowing other devices to connect to this computer.
+  const dispatch = registered;
   const reason =
     relay.state === "storage-error"
       ? "storage_error"

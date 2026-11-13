@@ -176,16 +176,22 @@ still validates the live bridge.
 ## Local credentials and remote access
 
 When the selected Account service advertises compatible relay and account-handoff
-capabilities, successful Desktop sign-in registers this execution computer and
-starts account device collaboration at that same service origin. It does not
-upload projects or pair a phone. A service without relay support still permits
-account sign-in and local work. After an application restart, open **执行电脑 /
-设备** and choose **恢复设备协作** to explicitly resume the saved registration;
-this entry stays available when setup or reconnection is needed. Recovery failures
-remain visible and may be retried. Phone access still requires the computer's
-access passcode and separate pairing. The existing manual registration,
-self-hosted directory ticket flow, LAN mode, and temporary Cloudflare tunnel
-remain available.
+capabilities, Desktop sign-in automatically associates this computer with the
+account at that same service origin. This applies to browser, GitHub and password
+sign-in, and to saved sessions restored after Electron is ready. Failed account
+synchronization retries in the background and when the main window regains focus;
+**我的电脑** and account settings also offer **重试连接** for connection errors.
+No manual computer registration is required for account users.
+
+Association does not start a remote Host, open a relay connection, upload projects,
+or pair a phone. **允许远程访问这台电脑** is a separate, initially off switch in
+account settings and Mobile Remote settings. Turning it on permits incoming access;
+turning it off closes the Host and relay while keeping this computer in the account
+and local tasks running. A computer can still access other available computers
+while its own incoming access is off. The setting is encrypted with its account
+registration, survives normal application restarts, and is cleared on logout.
+Older saved registrations without the preference default to off. Self-hosted
+directory tickets, LAN mode, and temporary Cloudflare tunnels remain available.
 
 The native account and relay directory use the same canonical HTTPS origin in
 this version. The account management token is never sent to a separately entered
@@ -203,7 +209,9 @@ in main, and no CodeShell token is placed in a browser URL. Cloud workbench
 cookies remain isolated from the native account.
 
 Logout immediately clears local account authority and stops/removes that account's
-relay registration. It preserves a running LAN Host and local tasks. Server
+relay registration. The service removes computers with no live device grant from
+the selectable account list; turning off remote access retains the grant and the
+list entry. Logout preserves a running LAN Host and local tasks. Server
 revocation uses a fresh access token, sharing an in-flight refresh when needed;
 late responses cannot restore a logged-out or replaced identity. If the server
 cannot confirm revocation, the UI reports that local logout succeeded and asks
@@ -215,9 +223,10 @@ removal still clears the local file and stops its transports; no unknown device
 credential is guessed or sent. Remote revocation cannot be confirmed in that
 case and remains available through the account service's session management.
 
-Construction and status reads perform no network requests. Stored sign-in state
-is checked/refreshed only when cloud functionality is used, and never blocks local
-startup. No remote connection is started automatically after application restart.
+Construction and status reads perform no network requests. After Electron is ready,
+the application restores saved account authority without blocking local startup.
+Incoming remote access resumes only when the user previously enabled its switch
+for the same saved account registration.
 
 Guarded tests cover anonymous/offline operation, token confidentiality, encrypted
 storage, singleflight refresh, account/origin isolation, logout and account-switch

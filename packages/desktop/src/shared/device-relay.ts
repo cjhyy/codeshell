@@ -18,6 +18,7 @@ export interface DesktopRelayStatus {
   hostId?: string;
   name?: string;
   accountId?: string;
+  remoteAccessEnabled?: boolean;
   environmentId?: string;
   message?: string;
 }

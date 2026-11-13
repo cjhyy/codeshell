@@ -106,7 +106,7 @@ try {
     window.deferInitialRelayStatus = true;
   });
   await page.addScriptTag({ content: result.outputFiles[0].text });
-  const recover = page.getByRole("button", { name: "恢复设备协作", exact: true });
+  const recover = page.getByRole("button", { name: "重试连接", exact: true });
   await recover.waitFor();
   await page.evaluate(() => window.setRelay("storage-error"));
   await page.getByText("本机：安全存储不可用", { exact: true }).waitFor();
@@ -160,7 +160,7 @@ try {
     window.setRelay("stopped");
   });
   await recover.click();
-  const resuming = page.getByRole("button", { name: "正在恢复…", exact: true });
+  const resuming = page.getByRole("button", { name: "正在连接…", exact: true });
   await resuming.waitFor();
   assert.equal(await resuming.isDisabled(), true);
   await page.evaluate(() => window.signIn("account-b"));
@@ -442,7 +442,7 @@ try {
     true,
   );
   await page.evaluate(() => window.signOut());
-  await page.getByText("请先登录账号，登录后本机将自动加入设备协作。", { exact: true }).waitFor();
+  await page.getByText("请先登录账号，这台电脑会自动加入你的账号。", { exact: true }).waitFor();
   assert.equal(await page.getByLabel("电脑任务", { exact: true }).count(), 0);
   // The page replaces the shell TopBar: its header is the window drag surface
   // and the only way back must stay clickable, even when signed out.
