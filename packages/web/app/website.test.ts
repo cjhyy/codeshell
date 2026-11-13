@@ -86,6 +86,8 @@ test("website login destinations reject external URLs, unknown routes and creden
     "/settings/account/security",
   );
   expect(safeWebsiteReturn("/admin/users", origin)).toBe("/admin/users");
+  expect(safeWebsiteReturn("/admin?token=secret", origin)).toBe("/admin/summary");
+  expect(safeWebsiteReturn("/admin/", origin)).toBe("/admin/summary");
   expect(safeWebsiteReturn("/settings/account/not-real", origin)).toBe("/app");
 });
 
@@ -111,6 +113,8 @@ test("account settings and administrator URLs restore the selected page and pres
       kind: "account",
       section,
     });
+  for (const path of ["/admin", "/admin/"])
+    expect(parseWebsiteRoute(new URL(path, origin))).toEqual({ kind: "admin", section: "summary" });
   for (const section of ["users", "summary", "audit"] as const)
     expect(parseWebsiteRoute(new URL(`/admin/${section}`, origin))).toEqual({
       kind: "admin",

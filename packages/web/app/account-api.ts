@@ -54,6 +54,7 @@ const messages: Record<string, string> = {
   invalid_github_receipt: "GitHub 授权请求已失效，请重新发起。",
   provider_already_linked: "这个 GitHub 身份已关联到其他账号，或当前账号已有不同的 GitHub 身份。",
   account_login_required: "登录已失效，请重新登录后关联 GitHub。",
+  invalid_admin_request: "筛选条件无效，请检查搜索内容后重试。",
   administrator_required: "当前账号没有管理员权限。",
   protected_administrator: "不能停用当前账号或其他管理员。",
   too_many_attempts: "操作过于频繁，请稍后再试。",
@@ -451,7 +452,12 @@ export class AccountWebClient {
     beforeFence?: (value: T) => void,
     attempt = 0,
   ): Promise<T> {
-    if (!/^\/[A-Za-z0-9/?=&_-]+$/.test(path) || path.startsWith("//"))
+    if (
+      path.length > 4096 ||
+      !/^\/[A-Za-z0-9/_-]+(?:\?[A-Za-z0-9%+.*~=&_-]*)?$/.test(path) ||
+      path.startsWith("//") ||
+      /%(?![0-9a-f]{2})/i.test(path)
+    )
       throw new AccountWebError("账号请求地址无效。");
     if (method !== "GET" && !this.csrfToken)
       throw new AccountWebError("页面验证尚未完成，请刷新后重试。");

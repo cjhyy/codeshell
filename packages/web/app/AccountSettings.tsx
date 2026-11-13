@@ -6,7 +6,6 @@ import {
   type AccountOverview,
   type WebsiteAccount,
   type WebsiteProfile,
-  validWebsiteAccount,
   validWebsiteProfile,
 } from "./account-api.js";
 import type { WebsiteRoute } from "./website-routes.js";
@@ -60,11 +59,7 @@ const date = (value: number) =>
 const uuid = (value: unknown): value is string =>
   typeof value === "string" && /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(value);
 
-export function AccountSettings({
-  route,
-}: {
-  route: Exclude<WebsiteRoute, { kind: "workbench" }>;
-}) {
+export function AccountSettings({ route }: { route: Extract<WebsiteRoute, { kind: "account" }> }) {
   const account = useAccountSession();
   const data = useAccountData<unknown>("/overview");
   let overview: AccountOverview | undefined,
@@ -76,8 +71,6 @@ export function AccountSettings({
       validation = (cause as Error).message;
     }
   }
-  const isAdmin =
-    overview?.capabilities.admin === true && account.session?.account?.role === "admin";
   return (
     <section className="website-settings-content">
       <Notice error={data.error || validation} />
@@ -100,13 +93,6 @@ export function AccountSettings({
             <ConnectionSettings overview={overview} reload={data.reload} />
           ) : null}
         </>
-      ) : null}
-      {overview && route.kind === "admin" ? (
-        isAdmin ? (
-          <AdminSettings section={route.section} />
-        ) : (
-          <p role="alert">当前账号没有管理员权限。</p>
-        )
       ) : null}
     </section>
   );
@@ -617,218 +603,6 @@ function ConnectionSettings({
       )}
       {feature.state !== "hidden" ? (
         <p className="website-hint">退出登录不会自动撤销已有 Link 数据授权。</p>
-      ) : null}
-    </>
-  );
-}
-
-interface AdminUser extends WebsiteAccount {
-  disabled: boolean;
-  createdAt: number;
-  sessionCount: number;
-}
-function AdminSettings({ section }: { section: "users" | "summary" | "audit" }) {
-  const account = useAccountSession();
-  const [cursor, setCursor] = React.useState<string | null>(null);
-  const data = useAccountData<any>(
-    section === "summary"
-      ? "/admin/summary"
-      : `/admin/${section}?limit=30${cursor ? `&cursor=${cursor}` : ""}`,
-  );
-  const [busy, setBusy] = React.useState(false);
-  const [error, setError] = React.useState("");
-  const controller = React.useRef<AbortController | undefined>(undefined);
-  React.useEffect(() => () => controller.current?.abort(), []);
-  const change = async (user: AdminUser, sessions = false) => {
-    if (
-      busy ||
-      !window.confirm(
-        sessions
-          ? `退出 ${user.username} 的所有登录会话？`
-          : `${user.disabled ? "恢复" : "停用"}账号 ${user.username}？`,
-      )
-    )
-      return;
-    const operation = new AbortController();
-    controller.current = operation;
-    setBusy(true);
-    setError("");
-    try {
-      await account.request(
-        `/admin/users/${user.id}${sessions ? "/revoke-sessions" : ""}`,
-        sessions ? "POST" : "PATCH",
-        sessions ? {} : { disabled: !user.disabled },
-        operation.signal,
-      );
-      if (!operation.signal.aborted) data.reload();
-    } catch (cause) {
-      if (!operation.signal.aborted) {
-        setError((cause as Error).message);
-        if (cause instanceof AccountWebError && cause.status === 403) void account.restore();
-      }
-    } finally {
-      if (!operation.signal.aborted) setBusy(false);
-    }
-  };
-  const nextCursor = uuid(data.value?.nextCursor) ? data.value.nextCursor : null;
-  const paginationValid = data.value?.nextCursor === null || uuid(data.value?.nextCursor);
-  const users =
-    section === "users" &&
-    Array.isArray(data.value?.users) &&
-    data.value.users.length <= 30 &&
-    paginationValid &&
-    data.value.users.every(
-      (item: AdminUser) =>
-        validWebsiteAccount(item) &&
-        typeof item.disabled === "boolean" &&
-        Number.isSafeInteger(item.createdAt) &&
-        item.createdAt >= 0 &&
-        Number.isSafeInteger(item.sessionCount) &&
-        item.sessionCount >= 0,
-    )
-      ? (data.value.users as AdminUser[])
-      : null;
-  const events =
-    section === "audit" &&
-    Array.isArray(data.value?.events) &&
-    data.value.events.length <= 30 &&
-    paginationValid &&
-    data.value.events.every(
-      (item: any) =>
-        uuid(item.id) &&
-        uuid(item.actorId) &&
-        uuid(item.targetId) &&
-        ["admin.account.disabled", "admin.account.enabled", "admin.sessions.revoked"].includes(
-          item.action,
-        ),
-    )
-      ? (data.value.events as Array<{
-          id: string;
-          actorId: string;
-          targetId: string;
-          action: string;
-          createdAt: number;
-        }>)
-      : null;
-  const summary =
-    section === "summary" &&
-    data.value?.users &&
-    [
-      data.value.users.total,
-      data.value.users.active,
-      data.value.users.disabled,
-      data.value.users.administrators,
-      data.value.sessions?.active,
-      data.value.auditEvents,
-    ].every((item) => Number.isSafeInteger(item) && item >= 0)
-      ? data.value
-      : null;
-  return (
-    <>
-      <SettingsHeading
-        title={section === "users" ? "用户管理" : section === "summary" ? "系统统计" : "操作记录"}
-        description="管理员控制台 · 权限由服务端核验。"
-      />
-      <button
-        className="website-button"
-        disabled={busy}
-        onClick={() => {
-          setCursor(null);
-          data.reload();
-        }}
-      >
-        刷新
-      </button>
-      <Notice error={error || data.error} />
-      {data.loading ? <p role="status">正在读取…</p> : null}
-      {users ? (
-        <div className="website-list">
-          {users.map((user) => (
-            <article key={user.id}>
-              <div>
-                <strong>{user.displayName}</strong>
-                <p>
-                  @{user.username} · {user.role === "admin" ? "管理员" : "成员"} ·{" "}
-                  {user.disabled ? "已停用" : "正常"}
-                </p>
-                <p>
-                  {user.sessionCount} 个登录会话 · 创建于 {date(user.createdAt)}
-                </p>
-              </div>
-              <div className="website-action-row">
-                {user.role !== "admin" && user.id !== account.session?.account?.id ? (
-                  <button
-                    className="website-button"
-                    disabled={busy}
-                    onClick={() => void change(user)}
-                  >
-                    {user.disabled ? "恢复" : "停用"}
-                  </button>
-                ) : null}
-                <button
-                  className="website-button"
-                  disabled={busy}
-                  onClick={() => void change(user, true)}
-                >
-                  退出会话
-                </button>
-              </div>
-            </article>
-          ))}
-        </div>
-      ) : null}
-      {events ? (
-        <div className="website-list">
-          {events.map((item) => (
-            <article key={item.id}>
-              <div>
-                <strong>
-                  {
-                    {
-                      "admin.account.disabled": "停用账号",
-                      "admin.account.enabled": "恢复账号",
-                      "admin.sessions.revoked": "撤销登录会话",
-                    }[item.action]
-                  }
-                </strong>
-                <p>
-                  操作人 {item.actorId} · 目标 {item.targetId}
-                </p>
-                <p>{date(item.createdAt)}</p>
-              </div>
-            </article>
-          ))}
-          {!events.length ? <p className="website-muted">暂无操作记录。</p> : null}
-        </div>
-      ) : null}
-      {summary ? (
-        <div className="website-statistics">
-          {[
-            ["账号总数", summary.users.total],
-            ["正常账号", summary.users.active],
-            ["停用账号", summary.users.disabled],
-            ["管理员", summary.users.administrators],
-            ["有效登录", summary.sessions.active],
-            ["审计事件", summary.auditEvents],
-          ].map(([label, value]) => (
-            <article key={label}>
-              <span>{label}</span>
-              <strong>{value}</strong>
-            </article>
-          ))}
-        </div>
-      ) : null}
-      {data.value && !users && !events && !summary ? (
-        <p role="alert">管理员数据无效，请刷新后重试。</p>
-      ) : null}
-      {nextCursor ? (
-        <button
-          className="website-button"
-          disabled={busy || data.loading}
-          onClick={() => setCursor(nextCursor)}
-        >
-          下一页
-        </button>
       ) : null}
     </>
   );

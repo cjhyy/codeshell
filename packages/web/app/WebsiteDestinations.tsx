@@ -164,7 +164,7 @@ export function WebsiteDestinations({
         <p className="website-eyebrow">远程工作台</p>
         <h1 id="destination-heading">选择云端或电脑</h1>
         <p className="website-muted">
-          在云端开始工作，或连接你已登录的电脑，继续使用那里的项目和工具。
+          在云端开始工作，或连接你已登录的电脑，继续使用那里的项目和工具，无需重新创建工作区。
         </p>
         <p className="website-hint">
           连接电脑时，{PASSKEY_EXPLANATION} <a href={PASSKEY_SETTINGS_URL}>管理 Passkey</a>
@@ -174,11 +174,11 @@ export function WebsiteDestinations({
             <DestinationIcon kind="cloud" size={24} />
           </span>
           <div>
-            <h2>云端工作区</h2>
+            <h2>云端</h2>
             <p>
               {cloud.state === "ready"
                 ? "使用云端项目，电脑离线时也能工作。"
-                : "当前服务尚未开放云端工作区。"}
+                : "当前服务尚未开放云端功能。"}
             </p>
           </div>
           <button
@@ -257,7 +257,8 @@ export function WebsiteDestinations({
           </ul>
         )}
         <p className="website-hint">
-          连接电脑前，请在桌面端打开“允许远程访问这台电脑”。首次连接仍需该电脑的访问口令。
+          连接电脑前，请在桌面端打开“允许远程访问这台电脑”。连接时在当前设备用 Passkey
+          确认，无需在目标电脑逐次点击允许。
         </p>
       </section>
     </main>

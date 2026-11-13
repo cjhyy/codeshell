@@ -439,7 +439,9 @@ export function AccountDeviceWorkspace({ open, onClose }: { open: boolean; onClo
       >
         <div>
           <h1 className="text-lg font-semibold">我的电脑</h1>
-          <p className="text-xs text-muted-foreground">选择账号下的电脑，访问它的项目</p>
+          <p className="text-xs text-muted-foreground">
+            打开这台电脑已有的项目，无需重新创建工作区
+          </p>
         </div>
         <button
           type="button"
