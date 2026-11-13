@@ -77,6 +77,38 @@ function reference(memory: WriteDecisionMemory): { id?: string; name?: string } 
   return memory.id ? { id: memory.id } : { name: memory.name };
 }
 
+interface BodyExcerpt<T extends WriteDecisionMemory> {
+  memory: T;
+  text: string;
+  totalChars: number;
+}
+
+/** Body excerpts budgeted over `related` in rank order; a memory past the budget has none. */
+function bodyExcerpts<T extends WriteDecisionMemory>(related: readonly T[]): BodyExcerpt<T>[] {
+  let bodyCharsRemaining = MAX_DECISION_TOTAL_BODY_CHARS;
+  const excerpts: BodyExcerpt<T>[] = [];
+  for (const memory of related) {
+    // Redact before truncating, so a secret crossing the excerpt boundary
+    // cannot evade the sanitizer.
+    const body = redactSecrets(memory.entry.content);
+    const text = body.slice(0, Math.min(MAX_DECISION_BODY_CHARS, bodyCharsRemaining));
+    bodyCharsRemaining -= text.length;
+    // Budget exhausted: the catalogue line alone says "body omitted".
+    if (text.length === 0 && body.length > 0) continue;
+    excerpts.push({ memory, text, totalChars: body.length });
+  }
+  return excerpts;
+}
+
+/**
+ * The related memories the prompt shows a body excerpt for. An UPDATE or
+ * DELETE may only target one of these: the catalogue lists every memory, but
+ * the model must not replace or delete a body it never saw.
+ */
+export function memoriesWithBodyExcerpt<T extends WriteDecisionMemory>(related: readonly T[]): T[] {
+  return bodyExcerpts(related).map((excerpt) => excerpt.memory);
+}
+
 /**
  * `catalogue` is every existing memory the decision may target, in any order;
  * `related` is the ranked selection for this candidate, most similar first.
@@ -100,27 +132,17 @@ export function buildWriteDecisionPromptSegments(
       })}\n`,
   );
 
-  let bodyCharsRemaining = MAX_DECISION_TOTAL_BODY_CHARS;
-  const excerptLines: string[] = [];
-  for (const memory of related) {
-    // Redact before truncating, so a secret crossing the excerpt boundary
-    // cannot evade the sanitizer. JSON keeps stored prose inside data.
-    const body = redactSecrets(memory.entry.content);
-    const excerpt = body.slice(0, Math.min(MAX_DECISION_BODY_CHARS, bodyCharsRemaining));
-    bodyCharsRemaining -= excerpt.length;
-    // Budget exhausted: the catalogue line alone says "body omitted".
-    if (excerpt.length === 0 && body.length > 0) continue;
-    excerptLines.push(
-      JSON.stringify({
-        ...reference(memory),
-        bodyExcerpt: {
-          text: excerpt,
-          status: excerpt.length === body.length ? "complete" : "truncated",
-          totalChars: body.length,
-        },
-      }),
-    );
-  }
+  // JSON keeps stored prose inside data.
+  const excerptLines = bodyExcerpts(related).map(({ memory, text, totalChars }) =>
+    JSON.stringify({
+      ...reference(memory),
+      bodyExcerpt: {
+        text,
+        status: text.length === totalChars ? "complete" : "truncated",
+        totalChars,
+      },
+    }),
+  );
 
   const tail = [
     "",
