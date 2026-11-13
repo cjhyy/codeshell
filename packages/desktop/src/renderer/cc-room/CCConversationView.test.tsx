@@ -39,6 +39,159 @@ afterEach(async () => {
   root = null;
 });
 
+describe("CCConversationView latest progress", () => {
+  async function renderProgress() {
+    ensureMiniDom();
+    let receive: (event: { roomId: string; msg: unknown }) => void = () => undefined;
+    let resolveSnapshot!: (snapshot: unknown) => void;
+    let cursor = 20;
+    const snapshot = new Promise((resolve) => {
+      resolveSnapshot = resolve;
+    });
+    const subscriptions: unknown[][] = [];
+    const off = () => undefined;
+    Object.assign(window, {
+      codeshell: {
+        ccRoom: {
+          onApprovalRequest: () => off,
+          onApprovalResolved: () => off,
+          onRoomMessage: (listener: typeof receive) => {
+            receive = listener;
+            return off;
+          },
+          subscribeTranscript: async (...args: unknown[]) => {
+            subscriptions.push(args);
+            if (subscriptions.length === 1) return snapshot;
+            return {
+              active: true,
+              messages: [{ role: "assistant", text: "Latest after reopening" }],
+              roomCursor: cursor,
+            };
+          },
+          unsubscribeTranscript: async () => undefined,
+          roomHistoryPage: async (_roomId: string, request: { sinceSeq?: number }) => ({
+            snapshotId: "snapshot",
+            throughSeq: request.sinceSeq ?? 0,
+            messages: [],
+            complete: true,
+          }),
+        },
+      },
+    });
+    const container = document.createElement("div");
+    root = createRoot(container);
+    const render = async (latestRequest = 1, active = true) => {
+      await act(async () => {
+        root!.render(
+          <CCConversationView
+            roomId="progress-room"
+            sessionId="progress-session"
+            cwd="/repo"
+            mode="default"
+            cliKind="codex"
+            observing
+            latestRequest={latestRequest}
+            active={active}
+            onBack={() => undefined}
+          />,
+        );
+        await flushMicrotasks();
+      });
+    };
+    await render();
+    const scroller = findElementByProp(container, "data-cc-room-history") as HTMLElement;
+    let height = 300;
+    let top = 0;
+    // MiniDOM has no layout engine; model real scrollTop clamping while the
+    // component's actual effects and wheel listeners control its position.
+    Object.defineProperties(scroller, {
+      scrollHeight: { configurable: true, get: () => height },
+      clientHeight: { configurable: true, value: 300 },
+      scrollTop: {
+        configurable: true,
+        get: () => top,
+        set: (value: number) => {
+          top = Math.max(0, Math.min(value, height - 300));
+        },
+      },
+    });
+    const completeSnapshot = async () => {
+      await act(async () => {
+        height = 1800;
+        resolveSnapshot({
+          active: true,
+          messages: [
+            { role: "user", text: "Earlier question" },
+            { role: "assistant", text: "Latest progress" },
+          ],
+          roomCursor: cursor,
+        });
+        await flushMicrotasks();
+      });
+    };
+    const append = async () => {
+      await act(async () => {
+        height += 250;
+        receive({
+          roomId: "progress-room",
+          msg: { seq: ++cursor, from: "agent", type: "text", text: `Progress ${cursor}` },
+        });
+        await flushMicrotasks();
+      });
+    };
+    const scrollEarlier = async () => {
+      await act(async () => {
+        scroller.dispatchEvent(Object.assign(new Event("wheel"), { deltaY: -120 }));
+        scroller.scrollTop = 150;
+        await flushMicrotasks();
+      });
+    };
+    return { container, scroller, subscriptions, render, completeSnapshot, append, scrollEarlier };
+  }
+
+  test("opens an asynchronous recent snapshot at the end and follows only while reading latest", async () => {
+    const view = await renderProgress();
+    expect(view.subscriptions).toEqual([
+      ["progress-room", "/repo", "progress-session", "codex", 50],
+    ]);
+    await view.completeSnapshot();
+    expect(renderedText(view.container)).toContain("Latest progress");
+    expect(view.scroller.scrollTop).toBe(1500);
+    await view.append();
+    expect(view.scroller.scrollTop).toBe(1750);
+    await view.scrollEarlier();
+    await view.append();
+    expect(view.scroller.scrollTop).toBe(150);
+    const jump = findElementByProp(view.container, "aria-label");
+    expect(reactPropsOf(jump)["aria-label"]).toBe("回到底部");
+    await act(async () => {
+      reactPropsOf(jump).onClick();
+      await flushMicrotasks();
+    });
+    expect(view.scroller.scrollTop).toBe(2000);
+    await view.append();
+    expect(view.scroller.scrollTop).toBe(2250);
+    expect(view.subscriptions).toHaveLength(1);
+  });
+
+  test("a repeated progress click jumps without reloading and reopening follows the latest", async () => {
+    const view = await renderProgress();
+    await view.completeSnapshot();
+    await view.scrollEarlier();
+    await view.append();
+    expect(view.scroller.scrollTop).toBe(150);
+    await view.render(2);
+    expect(view.scroller.scrollTop).toBe(1750);
+    expect(view.subscriptions).toHaveLength(1);
+    await view.scrollEarlier();
+    await view.render(2, false);
+    await view.render(2, true);
+    expect(view.scroller.scrollTop).toBe(1750);
+    expect(view.subscriptions).toHaveLength(2);
+    expect(renderedText(view.container)).toContain("Latest after reopening");
+  });
+});
+
 describe("CCConversationView transcript ownership", () => {
   test("switching foreground rooms unsubscribes A, subscribes B, then resubscribes A", async () => {
     ensureMiniDom();

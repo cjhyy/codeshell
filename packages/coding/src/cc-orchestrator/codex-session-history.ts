@@ -1,4 +1,4 @@
-import type { Stats } from "node:fs";
+import type { Dirent } from "node:fs";
 import {
   readdirSync,
   readFileSync,
@@ -8,7 +8,7 @@ import {
   readSync,
   closeSync,
 } from "node:fs";
-import { join } from "node:path";
+import { isAbsolute, join, resolve } from "node:path";
 import { homedir } from "node:os";
 import type { HistoryMessage, SessionTailEvent } from "./session-history.js";
 import { codexUserText } from "./codex-user-text.js";
@@ -203,41 +203,53 @@ export function findCodexRolloutFile(
   const root = join(codexHome, "sessions");
   if (!existsSync(root)) return undefined;
   let best: { file: string; mtimeMs: number } | undefined;
-  for (const file of walkRollouts(root)) {
+  for (const file of walkRollouts(root, threadId)) {
     let meta: { id?: string; cwd?: string } | undefined;
     let mtimeMs: number;
     try {
       meta = readSessionMeta(file);
+      if (
+        !meta ||
+        meta.id !== threadId ||
+        typeof meta.cwd !== "string" ||
+        (meta.cwd !== cwd &&
+          !(isAbsolute(meta.cwd) && isAbsolute(cwd) && resolve(meta.cwd) === resolve(cwd)))
+      )
+        continue;
       mtimeMs = statSync(file).mtimeMs;
     } catch {
       continue;
     }
-    if (!meta || meta.id !== threadId || meta.cwd !== cwd) continue;
     if (!best || mtimeMs > best.mtimeMs) best = { file, mtimeMs };
   }
   return best?.file;
 }
 
-/** Recursively yield every `rollout-*.jsonl` file under `root`. */
-function* walkRollouts(root: string): Generator<string> {
-  let entries: string[];
+// Modern Codex filenames carry the complete UUID. Use that cheap hint before
+// opening metadata, while still checking the authoritative session_meta below.
+// Legacy/renamed filenames have no UUID hint and remain eligible, including a
+// newer resumed rollout, so newest-by-mtime selection remains consistent.
+const ROLLOUT_THREAD_ID =
+  /-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.jsonl$/iu;
+
+function* walkRollouts(root: string, threadId: string): Generator<string> {
+  let entries: Dirent[];
   try {
-    entries = readdirSync(root);
+    entries = readdirSync(root, { withFileTypes: true });
   } catch {
     return;
   }
-  for (const name of entries) {
-    const full = join(root, name);
-    let st: Stats;
-    try {
-      st = statSync(full);
-    } catch {
-      continue;
-    }
-    if (st.isDirectory()) {
-      yield* walkRollouts(full);
-    } else if (name.startsWith("rollout-") && name.endsWith(".jsonl")) {
-      yield full;
+  for (const entry of entries) {
+    const full = join(root, entry.name);
+    if (entry.isDirectory()) {
+      yield* walkRollouts(full, threadId);
+    } else if (
+      entry.isFile() &&
+      entry.name.startsWith("rollout-") &&
+      entry.name.endsWith(".jsonl")
+    ) {
+      const filenameId = ROLLOUT_THREAD_ID.exec(entry.name)?.[1];
+      if (!filenameId || filenameId === threadId) yield full;
     }
   }
 }
