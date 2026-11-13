@@ -142,14 +142,53 @@ export function readHookReminderData(event: TranscriptEvent): HookReminderEventD
 }
 
 /**
+ * True for a transcript event that carries engine context text rather than
+ * the conversation: a context-ledger snapshot or update, a hook or in-run
+ * reminder, a hook's rewrite of a prompt (`prompt_rewrite`), or a runtime
+ * checkpoint containing already-rewritten messages. Takes any
+ * value, since remote and export paths read events as untyped JSON.
+ *
+ * These events stay on local disk — resume replays them so the model sees
+ * the same history — but are never sent off the machine or exported: a
+ * memory index or a plugin's reminder is not part of the conversation a
+ * person shares. See {@link withoutContextEvents}.
+ */
+export function isContextEvent(event: unknown): boolean {
+  if (!isRecord(event)) return false;
+  // Checkpoints are model-only snapshots, not display history. Their message
+  // bodies have lost event marks and can contain applied prompt rewrites, so
+  // filtering just the top-level message events cannot make them shareable.
+  // Original user/assistant events remain in the append-only transcript.
+  if (event.type === "prompt_rewrite" || event.type === "context_checkpoint") return true;
+  return (
+    event.type === "message" &&
+    isRecord(event.data) &&
+    (event.data.contextLedger !== undefined || event.data.hookReminder !== undefined)
+  );
+}
+
+/** `events` without engine context ({@link isContextEvent}), for remote clients and exports. */
+export function withoutContextEvents<T>(events: readonly T[]): T[] {
+  return events.filter((event) => !isContextEvent(event));
+}
+
+/**
+ * Session state without the fields that hold engine context text
+ * (`promptSubmitHookMessages`), for remote clients and exports. Anything
+ * else is returned as it is.
+ */
+export function withoutLocalContextState<T>(state: T): T {
+  if (!isRecord(state) || !Object.hasOwn(state, "promptSubmitHookMessages")) return state;
+  const { promptSubmitHookMessages: _local, ...shared } = state;
+  return shared as T;
+}
+
+/**
  * True for a message event that is engine context rather than conversation:
  * it must never be shown, counted or quoted as something a person said.
  */
 export function isContextMessageEvent(event: TranscriptEvent): boolean {
-  return (
-    event.type === "message" &&
-    (event.data.contextLedger !== undefined || event.data.hookReminder !== undefined)
-  );
+  return event.type === "message" && isContextEvent(event);
 }
 
 /** Mark `message` as the replay of `event` when the event is a context message. */

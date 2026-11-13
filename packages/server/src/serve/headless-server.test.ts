@@ -11,6 +11,14 @@ import { join } from "node:path";
 import { randomBytes } from "node:crypto";
 import { WebSocket } from "ws";
 import { startHeadlessServer, type HeadlessServer } from "./headless-server.js";
+import {
+  CONTEXT_CANARY,
+  PUBLIC_PROMPT,
+  PUBLIC_ANSWER,
+  contextPrivacySession,
+} from "../../../../tests/helpers/context-privacy.js";
+import { chatFromOutputJournal } from "../../../web/app/chat.js";
+import type { SessionDetailData } from "../../../web/app/protocol.js";
 import { SessionOutputJournal } from "@cjhyy/code-shell-core/internal";
 
 const WORKER_SCRIPT = `
@@ -63,6 +71,7 @@ afterEach(async () => {
 async function boot(
   options: {
     seedSession?: boolean;
+    privateContext?: boolean;
     largeHistory?: boolean;
     workerEntryPath?: string;
     pendingWorkerResponseTtlMs?: number;
@@ -135,6 +144,23 @@ async function boot(
         turnCount: 1,
       }),
     );
+  }
+  if (options.privateContext) {
+    const { manager, bundle, checkpoint } = contextPrivacySession(
+      sessionRootDir,
+      dir,
+      "private-context",
+    );
+    manager.startSessionRun(bundle.state, "privacy-run");
+    new SessionOutputJournal(
+      sessionRootDir,
+      "private-context",
+      "privacy-run",
+      checkpoint.id,
+    ).append({
+      type: "text_delta",
+      text: "Public journal answer",
+    });
   }
   const server = await startHeadlessServer({
     host: "127.0.0.1",
@@ -639,3 +665,42 @@ describe("headless serve — WS pipe", () => {
     expect(server.pendingResponseCount()).toBe(0);
   });
 });
+
+test.each([false, true])(
+  "headless session_detail strips nested context (output recovery=%s)",
+  async (outputRecovery) => {
+    const server = await boot({ privateContext: true });
+    const ws = await openWs(server, { "x-access-passcode": PASSCODE });
+    try {
+      const reply = nextMessage(ws, (message) => message.id === "private-context");
+      ws.send(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: "private-context",
+          method: "agent/query",
+          params: { type: "session_detail", sessionId: "private-context", outputRecovery },
+        }),
+      );
+      const result = await reply;
+      expect(result.error).toBeUndefined();
+      const wire = JSON.stringify(result);
+      expect(wire).not.toContain(CONTEXT_CANARY);
+      expect(wire).not.toContain("promptSubmitHookMessages");
+      expect(wire).not.toContain("context_checkpoint");
+      expect(wire).toContain(PUBLIC_PROMPT);
+      expect(wire).toContain(PUBLIC_ANSWER);
+      if (outputRecovery) {
+        const detail = (result.result as { data: SessionDetailData }).data;
+        expect(detail.legacyBaseComplete).toBe(true);
+        const restored = await chatFromOutputJournal(detail, async () => {
+          throw new Error("Complete fixture journal must not need another page");
+        }, []);
+        expect(JSON.stringify(restored)).not.toContain(CONTEXT_CANARY);
+        expect(JSON.stringify(restored)).toContain(PUBLIC_PROMPT);
+        expect(JSON.stringify(restored)).toContain("Public journal answer");
+      }
+    } finally {
+      ws.close();
+    }
+  },
+);

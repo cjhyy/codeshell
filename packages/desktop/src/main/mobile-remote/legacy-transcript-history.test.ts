@@ -12,6 +12,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SessionManager, type MobileServerEvent } from "@cjhyy/code-shell-core";
 import { SessionOutputJournal } from "@cjhyy/code-shell-core/internal";
+import {
+  CONTEXT_CANARY,
+  PUBLIC_PROMPT,
+  PUBLIC_ANSWER,
+  contextPrivacySession,
+} from "../../../../../tests/helpers/context-privacy.js";
 import { SessionSnapshotStore } from "../SessionSnapshotStore.js";
 import { MobileOutputRecovery } from "./output-recovery.js";
 import { MobileOutputClient } from "../../../../web/src/hooks/mobileOutputClient.js";
@@ -424,4 +430,19 @@ test("model-error history remains a read-only historical projection and active l
   f.patch({ status: "active" });
   expect(await f.select()).toBe(false);
   expect(f.replies.at(-1)).toMatchObject({ type: "session.recovery.ready", ok: false });
+});
+
+test("legacy mobile projection leaves checkpoint rewrites and reminders on disk", () => {
+  const root = mkdtempSync(join(tmpdir(), "legacy-context-privacy-"));
+  roots.push(root);
+  const { manager, bundle } = contextPrivacySession(root, root);
+  manager.updateSessionState(bundle.state.sessionId, { provider: "claude-code" });
+  const before = readFileSync(bundle.transcript.getFilePath(), "utf8");
+  const history = readLegacyExternalHistory(root, bundle.state.sessionId);
+  expect(history).toBeDefined();
+  const wire = JSON.stringify(history);
+  expect(wire).not.toContain(CONTEXT_CANARY);
+  expect(wire).toContain(PUBLIC_PROMPT);
+  expect(wire).toContain(PUBLIC_ANSWER);
+  expect(readFileSync(bundle.transcript.getFilePath(), "utf8")).toBe(before);
 });

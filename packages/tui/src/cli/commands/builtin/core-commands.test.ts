@@ -1,8 +1,14 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { CommandContext } from "../registry.js";
+import {
+  CONTEXT_CANARY,
+  PUBLIC_PROMPT,
+  PUBLIC_ANSWER,
+  contextPrivacySession,
+} from "../../../../../../tests/helpers/context-privacy.js";
 import { coreCommands } from "./core-commands.js";
 
 const tempDirs: string[] = [];
@@ -117,4 +123,30 @@ describe("/config command", () => {
       'mcpServers.github.headers.Authorization = "[REDACTED]"',
     ]);
   });
+});
+
+describe("/export local context privacy", () => {
+  test.each(["json", "md"])(
+    "%s excludes local context even from an unfiltered client",
+    async (format) => {
+      const cwd = mkdtempSync(join(tmpdir(), "tui-context-export-"));
+      tempDirs.push(cwd);
+      const { bundle } = contextPrivacySession(join(cwd, "sessions"), cwd);
+      const { ctx, statuses } = makeCtx(cwd);
+      ctx.sessionId = bundle.state.sessionId;
+      ctx.client = {
+        query: async () => ({
+          data: { state: bundle.state, transcript: bundle.transcript.getEvents() },
+        }),
+      } as unknown as CommandContext["client"];
+      const command = coreCommands.find((entry) => entry.name === "/export")!;
+      await command.execute(format, ctx);
+      expect(statuses.join("\n")).toContain("Exported");
+      const output = readFileSync(join(cwd, `session-${ctx.sessionId}.${format}`), "utf8");
+      expect(output).not.toContain(CONTEXT_CANARY);
+      expect(output).toContain(PUBLIC_PROMPT);
+      expect(output).toContain(PUBLIC_ANSWER);
+      expect(JSON.stringify(bundle.transcript.toMessages())).toContain(`${CONTEXT_CANARY}:rewrite`);
+    },
+  );
 });

@@ -137,6 +137,8 @@ const expectedRuntimeExportsByPartition = {
     "isEphemeralSessionState",
     "sanitizeContent",
   ],
+  // Hosts strip engine context text from what leaves the machine.
+  sessionContextPrivacy: ["isContextEvent", "withoutContextEvents", "withoutLocalContextState"],
   sessionOutputRecovery: [
     "OutputHistoryRecovery",
     "SessionOutputJournal",
@@ -379,6 +381,7 @@ const hostOnlySamples = [
   ...expectedRuntimeExportsByPartition.mcpCredentialBinding,
   ...expectedRuntimeExportsByPartition.linkHostServices,
   ...expectedRuntimeExportsByPartition.sessionUsageAccounting,
+  ...expectedRuntimeExportsByPartition.sessionContextPrivacy,
   "acquireWorkspaceWriteLock",
   "backupOutputJournal",
   "restoreOutputJournalBackup",

@@ -1,5 +1,6 @@
 import { afterAll, afterEach, expect, test } from "bun:test";
-import { createServer, type Server } from "node:http";
+import { createServer, type Server, type IncomingMessage, type ServerResponse } from "node:http";
+import { Readable } from "node:stream";
 import {
   mkdtempSync,
   mkdirSync,
@@ -12,6 +13,12 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  CONTEXT_CANARY,
+  PUBLIC_PROMPT,
+  PUBLIC_ANSWER,
+  contextPrivacySession,
+} from "../../../../tests/helpers/context-privacy.js";
 import { installFixtureNetworkGuard } from "../../../../tests/helpers/network-fixture.js";
 const network = installFixtureNetworkGuard();
 afterAll(() => network.restore());
@@ -294,4 +301,81 @@ test("Markdown exports bound fence scanning without a spread-argument overflow",
     { type: "tool_result", data: { toolCallId: "many", result: "`x".repeat(200_000) } },
   ]);
   expect(markdown).toContain("```\n`x`x");
+});
+
+test("JSON and Markdown exports omit rewritten checkpoint context while local archives retain it", async () => {
+  const f = await fixture();
+  const { manager, bundle } = contextPrivacySession(join(f.root, "sessions"), f.cwd);
+  const id = bundle.state.sessionId;
+  const before = readFileSync(bundle.transcript.getFilePath(), "utf8");
+  for (const format of ["json", "markdown"]) {
+    const response = await f.request(`/${id}/export?format=${format}`);
+    expect(response.status).toBe(200);
+    const output = await response.text();
+    expect(output).not.toContain(CONTEXT_CANARY);
+    expect(output).not.toContain("promptSubmitHookMessages");
+    expect(output).not.toContain("context_checkpoint");
+    expect(output).toContain(PUBLIC_PROMPT);
+    expect(output).toContain(PUBLIC_ANSWER);
+  }
+  expect((await f.request(`/${id}`, "PATCH", { archived: true })).status).toBe(200);
+  expect(readFileSync(bundle.transcript.getFilePath(), "utf8")).toBe(before);
+  const local = manager.resume(id);
+  expect(local.state.promptSubmitHookMessages).toEqual([CONTEXT_CANARY]);
+  expect(JSON.stringify(local.transcript.toMessages())).toContain(`${CONTEXT_CANARY}:rewrite`);
+});
+
+test("in-process Hub handlers redact nested checkpoints and preserve local archive bytes", async () => {
+  const root = mkdtempSync(join(tmpdir(), "hub-context-handler-"));
+  try {
+    const { manager, bundle } = contextPrivacySession(join(root, "sessions"), root);
+    const id = bundle.state.sessionId;
+    const original = readFileSync(bundle.transcript.getFilePath(), "utf8");
+    const service = createHubSessions({
+      cwd: root,
+      sessionRootDir: join(root, "sessions"),
+      dataDir: join(root, "hub"),
+      isAuthorized: async (request) => request.headers.authorization === "Bearer fixture",
+      isRunning: () => false,
+      onChanged: () => {},
+    });
+    const request = async (suffix: string, body?: unknown) => {
+      const req = Readable.from(
+        body === undefined ? [] : [JSON.stringify(body)],
+      ) as IncomingMessage;
+      req.url = `/api/v1/sessions/${id}${suffix}`;
+      req.method = body === undefined ? "GET" : "PATCH";
+      req.headers = { authorization: "Bearer fixture", "content-type": "application/json" };
+      let status = 0,
+        text = "";
+      const res = {
+        writeHead(code: number) {
+          status = code;
+        },
+        end(value: string) {
+          text = value;
+        },
+      } as unknown as ServerResponse;
+      expect(await service.handle(req, res)).toBe(true);
+      expect(status).toBe(200);
+      return text;
+    };
+    for (const format of ["json", "markdown"]) {
+      const exported = await request(`/export?format=${format}`);
+      expect(exported).not.toContain(CONTEXT_CANARY);
+      expect(exported).not.toContain("promptSubmitHookMessages");
+      expect(exported).not.toContain("context_checkpoint");
+      expect(exported).toContain(PUBLIC_PROMPT);
+      expect(exported).toContain(PUBLIC_ANSWER);
+    }
+    await request("", { archived: true });
+    expect(manager.readSessionArchivedAt(id)).toBeGreaterThan(0);
+    expect(readFileSync(bundle.transcript.getFilePath(), "utf8")).toBe(original);
+    expect(manager.resume(id).state.promptSubmitHookMessages).toEqual([CONTEXT_CANARY]);
+    expect(JSON.stringify(manager.resume(id).transcript.toMessages())).toContain(
+      `${CONTEXT_CANARY}:rewrite`,
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

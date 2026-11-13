@@ -8,13 +8,15 @@ import { Engine } from "./engine.js";
 import { LLMClientBase } from "../llm/client-base.js";
 import { registerProvider } from "../llm/client-factory.js";
 import type { CreateMessageOptions } from "../llm/types.js";
-import type { LLMResponse, Message, TranscriptEvent } from "../types.js";
+import type { LLMResponse, Message, TranscriptEvent, StreamEvent } from "../types.js";
+import { readOutputJournal } from "../session/output-journal.js";
 import { Transcript } from "../session/transcript.js";
 import { installPromptPrefixGuard } from "../testing/prompt-prefix-guard.js";
 
 installPromptPrefixGuard({ beforeEach, afterEach });
 
 const provider = "fake-engine-prompt-rewrite";
+const reminderCanary = "LOCAL_ONLY_STREAM_REMINDER_D672";
 const env = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_SYSTEM: "/dev/null" };
 const requestsByModel = new Map<string, Message[][]>();
 
@@ -37,17 +39,6 @@ class FakeClient extends LLMClientBase {
 }
 registerProvider(provider, FakeClient);
 
-/** A finished reply is a string live and a text block on replay; providers send both alike. */
-function wire(messages: Message[]): Message[] {
-  return messages.map((message) =>
-    message.role === "assistant" &&
-    Array.isArray(message.content) &&
-    message.content.every((block) => block.type === "text")
-      ? { role: "assistant", content: message.content.map((block) => block.text).join("\n") }
-      : message,
-  );
-}
-
 describe("Engine replays a hook-rewritten prompt as the model saw it", () => {
   let repo: string;
   let sessions: string;
@@ -68,7 +59,10 @@ describe("Engine replays a hook-rewritten prompt as the model saw it", () => {
     (engine as any).hooks.clear();
     (engine as any).hooks.register("user_prompt_submit", async (ctx: { data: unknown }) => {
       const prompt = (ctx.data as { prompt?: string }).prompt;
-      return prompt === "first task" ? { updatedPrompt: "first task [expanded by hook]" } : {};
+      return {
+        messages: [reminderCanary],
+        ...(prompt === "first task" ? { updatedPrompt: "first task [expanded by hook]" } : {}),
+      };
     });
     return engine;
   };
@@ -104,7 +98,24 @@ describe("Engine replays a hook-rewritten prompt as the model saw it", () => {
   it("the first request after a restart extends the previous process's last request", async () => {
     const sessionId = "s-prompt-rewrite";
     const requests = requestsByModel.get(model)!;
-    await newEngine().run("first task", { sessionId, cwd: repo });
+    const stream: StreamEvent[] = [];
+    const first = await newEngine().run("first task", {
+      sessionId,
+      cwd: repo,
+      onStream: (event) => {
+        stream.push(event);
+      },
+    });
+    expect(first).toMatchObject({ reason: "completed" });
+    expect(stream.find((event) => event.type === "error")).toBeUndefined();
+    expect(JSON.stringify(stream)).not.toContain("[expanded by hook]");
+    expect(stream.length).toBeGreaterThan(0);
+    expect(JSON.stringify(stream)).not.toContain(reminderCanary);
+    const journal = readOutputJournal(sessions, sessionId);
+    expect(journal).toMatchObject({ status: "ok" });
+    expect(JSON.stringify(journal)).not.toContain("[expanded by hook]");
+    expect(JSON.stringify(journal)).toContain("first task");
+    expect(JSON.stringify(journal)).not.toContain(reminderCanary);
     expect(requests).toHaveLength(1);
     const contents = requests[0]!.map((message) => message.content);
     expect(contents).toContain("first task [expanded by hook]");
@@ -113,8 +124,8 @@ describe("Engine replays a hook-rewritten prompt as the model saw it", () => {
     // A new process: history comes from disk.
     await newEngine().run("second task", { sessionId, cwd: repo });
     expect(requests).toHaveLength(2);
-    const earlier = wire(requests[0]!);
-    expect(wire(requests[1]!).slice(0, earlier.length)).toEqual(earlier);
+    const earlier = requests[0]!;
+    expect(requests[1]!.slice(0, earlier.length)).toEqual(earlier);
 
     // Display keeps what the user typed.
     const stored = events(sessionId);

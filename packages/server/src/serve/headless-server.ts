@@ -29,6 +29,8 @@ import {
   SessionOutputCoverageStore,
   readOutputJournal,
   readOutputJournalLegacyBase,
+  withoutContextEvents,
+  withoutLocalContextState,
 } from "@cjhyy/code-shell-core/internal";
 import { AccessPasscode } from "../mobile-remote/access-passcode.js";
 import { resolveSafe } from "../mobile-remote/mobile-static.js";
@@ -1646,15 +1648,21 @@ function replyToHostSessionQuery(
     const transcript = legacy
       ? legacy.events
       : readHubTranscript(sessionManager.getStorageDir(), sessionId);
+    // The replay baseline counts raw events, so engine context is left out
+    // only after the snapshot is cut: it never leaves the machine.
+    const snapshot = runReplay
+      ? runReplay.snapshot(sessionId, transcript, !!legacy)
+      : { transcript };
     return JSON.stringify({
       jsonrpc: "2.0",
       id: message.id,
       result: {
         type: "session_detail",
         data: {
-          state,
+          state: withoutLocalContextState(state),
           ...(legacy ? { outputJournal: journal, legacyBaseComplete: legacy.complete } : {}),
-          ...(runReplay ? runReplay.snapshot(sessionId, transcript, !!legacy) : { transcript }),
+          ...snapshot,
+          transcript: withoutContextEvents<unknown>(snapshot.transcript),
           running: isRunning(sessionId),
         },
       },

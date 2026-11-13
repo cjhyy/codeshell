@@ -14,7 +14,15 @@ import {
   readOutputJournal,
   readOutputJournalLegacyBase,
   SessionOutputJournal,
+  type OutputJournalPage,
 } from "../../core/src/session/output-journal.js";
+import { withoutContextEvents } from "../../core/src/session/context-messages.js";
+import {
+  CONTEXT_CANARY,
+  PUBLIC_PROMPT,
+  PUBLIC_ANSWER,
+  contextPrivacySession,
+} from "../../../tests/helpers/context-privacy.js";
 import { SessionManager } from "../../core/src/session/session-manager.js";
 import { SessionOutputCoverageStore } from "../../core/src/session/output-coverage-state.js";
 import {
@@ -334,4 +342,105 @@ describe("Hub atomic history and live snapshots", () => {
     });
     expect(sessionTitle(restored.chat, "s1")).toBe("附件：notes.txt");
   });
+});
+
+test("Hub recovers a sanitized checkpoint anchor only with its bundled complete-base proof", async () => {
+  const root = mkdtempSync(join(tmpdir(), "hub-context-anchor-"));
+  try {
+    const { manager, bundle, checkpoint } = contextPrivacySession(root, root);
+    manager.startSessionRun(bundle.state, "new-run");
+    const writer = new SessionOutputJournal(root, bundle.state.sessionId, "new-run", checkpoint.id);
+    writer.append({ type: "text_delta", text: "Public answer after checkpoint" });
+    writer.append({ type: "turn_complete", reason: "completed" });
+    const page = readOutputJournal(root, bundle.state.sessionId);
+    const transcript = withoutContextEvents(bundle.transcript.getEvents());
+    expect(transcript.some((event) => event.id === checkpoint.id)).toBe(false);
+    const result = await chatFromOutputJournal(
+      {
+        state: {},
+        transcript,
+        outputJournal: page,
+        legacyBaseComplete: true,
+      },
+      async () => page,
+      [],
+    );
+    const wire = JSON.stringify(result);
+    expect(wire).not.toContain(CONTEXT_CANARY);
+    expect(wire).toContain(PUBLIC_PROMPT);
+    expect(wire).toContain(PUBLIC_ANSWER);
+    expect(wire).toContain("Public answer after checkpoint");
+    for (const data of [
+      { state: {}, transcript, outputJournal: page },
+      { state: {}, transcript, outputJournal: page, legacyBaseComplete: false },
+      { state: {}, transcript, legacyBaseComplete: true },
+    ]) {
+      await expect(chatFromOutputJournal(data, async () => page, [])).rejects.toThrow(
+        "anchor was not retained",
+      );
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("browser recovery folds a complete redacted base without platform journal I/O", async () => {
+  const root = mkdtempSync(join(tmpdir(), "hub-context-wire-"));
+  try {
+    const { bundle, checkpoint } = contextPrivacySession(root, root);
+    const transcript = withoutContextEvents(bundle.transcript.getEvents());
+    const cursor = (sequence: number) =>
+      Buffer.from(
+        JSON.stringify({
+          identity: "privacy-journal",
+          sequence,
+          offset: sequence + 1,
+        }),
+      ).toString("base64url");
+    // A wire fixture exercises the browser's framing/coverage checks. The
+    // integration test above independently exercises real durable journal I/O.
+    const page: OutputJournalPage = {
+      version: 1,
+      status: "ok",
+      from: cursor(0),
+      coverageStart: cursor(0),
+      next: cursor(2),
+      through: cursor(2),
+      complete: true,
+      legacyBaseThroughEventId: checkpoint.id,
+      frames: [
+        {
+          cursor: cursor(1),
+          sequence: 1,
+          event: { type: "text_delta", text: "Public wire reply" },
+        },
+        { cursor: cursor(2), sequence: 2, event: { type: "turn_complete", reason: "completed" } },
+      ],
+    };
+    const recovered = await chatFromOutputJournal(
+      {
+        state: {},
+        transcript,
+        outputJournal: page,
+        legacyBaseComplete: true,
+      },
+      async () => page,
+      [],
+    );
+    const wire = JSON.stringify(recovered);
+    expect(wire).not.toContain(CONTEXT_CANARY);
+    expect(wire).toContain(PUBLIC_PROMPT);
+    expect(wire).toContain(PUBLIC_ANSWER);
+    expect(wire).toContain("Public wire reply");
+    for (const data of [
+      { state: {}, transcript, outputJournal: page },
+      { state: {}, transcript, outputJournal: page, legacyBaseComplete: false },
+      { state: {}, transcript, legacyBaseComplete: true },
+    ])
+      await expect(chatFromOutputJournal(data, async () => page, [])).rejects.toThrow(
+        "anchor was not retained",
+      );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

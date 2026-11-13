@@ -64,6 +64,12 @@ export {
   type MemoryOrchestratorOptions,
 } from "./services/memory-orchestrator.js";
 export { auxCachedRequest } from "./engine/aux-prompt-cache.js";
+// Engine context stays on local disk; remote clients and exports leave it out.
+export {
+  isContextEvent,
+  withoutContextEvents,
+  withoutLocalContextState,
+} from "./session/context-messages.js";
 export { isEphemeralSessionState, listSessionEntries } from "./session/session-manager.js";
 export { sanitizeContent } from "./logging/sanitize-messages.js";
 export { McpResponseTooLargeError } from "./tool-system/mcp-results.js";
