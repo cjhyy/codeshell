@@ -30,6 +30,7 @@ import { saveSessionMemory, buildSessionMemoryPromptSegments } from "./session-m
 import { joinMemoryPrompt, type MemoryPromptCachePlan } from "./memory-prompt-segments.js";
 import {
   buildWriteDecisionPromptSegments,
+  memoriesWithBodyExcerpt,
   WRITE_DECISION_SYSTEM_PROMPT,
 } from "./memory-write-decision-prompt.js";
 import { extractJSON } from "../utils/json.js";
@@ -589,17 +590,16 @@ async function decideWriteAction(
   callLLM: MemoryOrchestratorOptions["callLLM"],
 ): Promise<WriteDecision> {
   const fallback = fallbackWriteDecision(candidate, existing);
-  const related = rankRelated(candidate, existing).slice(0, 40);
-  const llmDecision = await askLLMForWriteDecision(
-    candidate,
-    existing,
-    related.map((r) => r.summary),
-    callLLM,
-  );
+  const related = rankRelated(candidate, existing)
+    .slice(0, 40)
+    .map((r) => r.summary);
+  const llmDecision = await askLLMForWriteDecision(candidate, existing, related, callLLM);
   if (!llmDecision) return fallback;
 
+  // Only a related memory whose body the model was shown may be updated or
+  // deleted; any other target falls back to the deterministic decision.
   const target = llmDecision.target?.id
-    ? existing.find((m) => m.id === llmDecision.target?.id)
+    ? memoriesWithBodyExcerpt(related).find((m) => m.id === llmDecision.target?.id)
     : undefined;
   if ((llmDecision.action === "UPDATE" || llmDecision.action === "DELETE") && target) {
     if (target.origin === "manual") {
