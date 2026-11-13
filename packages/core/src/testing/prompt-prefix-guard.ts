@@ -35,62 +35,52 @@ function canonical(value: unknown): string {
   return JSON.stringify(value) ?? "null";
 }
 
-/**
- * A finished text reply is a string in the live history and a text block on
- * replay; providers serialize both the same.
- */
-function wireForm(message: Message): unknown {
-  if (
-    message.role === "assistant" &&
-    Array.isArray(message.content) &&
-    message.content.length > 0 &&
-    message.content.every((block) => block.type === "text")
-  ) {
-    return { role: "assistant", content: message.content.map((block) => block.text).join("\n") };
-  }
-  return message;
-}
-
 export class PromptPrefixGuard implements PromptPrefixObserver {
   readonly violations: PromptPrefixViolation[] = [];
   readonly rewrites: PromptPrefixRewrite[] = [];
-  private epoch = 0;
-  private readonly last = new Map<string, { messages: string[]; epoch: number }>();
+  private readonly pendingRewrites = new Set<string>();
+  private readonly last = new Map<string, string[]>();
 
-  rewrite(kind: PromptPrefixRewrite): void {
-    this.epoch += 1;
+  rewrite(scope: string, kind: PromptPrefixRewrite): void {
+    this.pendingRewrites.add(scope);
     this.rewrites.push(kind);
   }
 
-  messageLeft(message: Message): void {
-    const left = canonical(wireForm(message));
-    for (const previous of this.last.values()) {
-      const index = previous.messages.lastIndexOf(left);
-      if (index !== -1) previous.messages.splice(index, 1);
-    }
+  messageLeft(scope: string, message: Message): void {
+    const previous = this.last.get(scope);
+    const index = previous?.lastIndexOf(canonical(message)) ?? -1;
+    if (index !== -1) previous!.splice(index, 1);
   }
 
   request(scope: string, messages: readonly Message[]): void {
-    const serialized = messages.map((message) => canonical(wireForm(message)));
+    // Keep content shapes exact. Providers differ in whether a text block and
+    // a string serialize alike; the provider-neutral guard cannot assume that.
+    const serialized = messages.map(canonical);
     const previous = this.last.get(scope);
-    if (previous && previous.epoch === this.epoch) {
-      const index = previous.messages.findIndex((message, i) => serialized[i] !== message);
+    const rewritten = this.pendingRewrites.delete(scope);
+    if (previous && !rewritten) {
+      const index = previous.findIndex((message, i) => serialized[i] !== message);
       if (index !== -1) {
         this.violations.push({
           scope,
           index,
-          previous: previous.messages[index]!,
+          previous: previous[index]!,
           next: serialized[index],
         });
       }
     }
-    this.last.set(scope, { messages: serialized, epoch: this.epoch });
+    this.last.set(scope, serialized);
   }
 
   /** Forget a scope's previous request, e.g. after an intentional fresh start. */
   reset(scope?: string): void {
-    if (scope === undefined) this.last.clear();
-    else this.last.delete(scope);
+    if (scope === undefined) {
+      this.last.clear();
+      this.pendingRewrites.clear();
+    } else {
+      this.last.delete(scope);
+      this.pendingRewrites.delete(scope);
+    }
   }
 
   assertClean(): void {

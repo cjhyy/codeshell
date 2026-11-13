@@ -277,6 +277,7 @@ export async function finalizeRunSuccess(args: {
     result.messages,
     userContextMsg,
     dynamicContextMsg,
+    session.state.sessionId,
   );
   args.setCompactedMessages(session.state.sessionId, cachedMessages);
 

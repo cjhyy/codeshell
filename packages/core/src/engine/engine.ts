@@ -27,6 +27,7 @@ import { resolvePromptCachePolicy } from "../llm/prompt-cache.js";
 import { PromptCacheRouteMemory } from "./prompt-cache-route.js";
 import { replayEventIdOf } from "./rollover-context.js";
 import { notePromptPrefixRewrite } from "../utils/prompt-prefix-events.js";
+import { PromptPrefixHeads } from "./prompt-prefix-heads.js";
 import { createRunBatchAuthority } from "../operations/run-batch-authority.js";
 import { createSessionOperationController } from "../operations/controller.js";
 import { CapabilityResolver } from "../operations/resolver.js";
@@ -432,8 +433,8 @@ export class Engine {
    * LLM response arrives.
    */
   private ctxOverheadBySid = new Map<string, number>();
-  /** Last user-context head per session (prompt-prefix-events.ts). */
-  private readonly userContextHeads = new Map<string, string>();
+  /** Bounded instruction hashes, retained only for an installed prefix guard. */
+  private readonly userContextHeads = new PromptPrefixHeads();
   /** Routes whose endpoint rejected explicit cache fields in this process. */
   private readonly promptCacheRoutes = new PromptCacheRouteMemory();
   private promptCacheDiagnostics = new PromptCacheDiagnosticRecorder({ maxSessions: 256 });
@@ -1447,7 +1448,7 @@ export class Engine {
       })
     )
       return;
-    notePromptPrefixRewrite("clear_context");
+    notePromptPrefixRewrite(session.state.sessionId, "clear_context");
     this.rebaseSessionToolCache(session);
     this.compactedMessagesBySession.delete(session.state.sessionId);
     if (this.lastSessionId === session.state.sessionId) this.lastMessages = [];
@@ -1830,7 +1831,7 @@ export class Engine {
     // the anchor is dead; too late and the first new-topic prompt still sees
     // the entire old topic. Fail open to full history if summarization fails.
     if (options?.archiveBeforeCurrentTurn && options.clientMessageId) {
-      notePromptPrefixRewrite("archive");
+      notePromptPrefixRewrite(session.state.sessionId, "archive");
       try {
         const anchors = {
           toClientMessageId: options.clientMessageId,
@@ -2357,6 +2358,7 @@ export class Engine {
     const runContextLedger = createRunContextLedger({
       transcript: session.transcript,
       scope: promptComposer.contextScope(),
+      sessionId: session.state.sessionId,
       sections: [
         ...contextSections,
         ...engineContextSections({
@@ -2396,12 +2398,7 @@ export class Engine {
       );
     const userContextMsg = promptComposer.buildUserContextMessage();
     // Changed instructions rebuild the head: the whole history after it misses.
-    const head = userContextMsg ? JSON.stringify(userContextMsg.content) : "";
-    const previousHead = this.userContextHeads.get(session.state.sessionId);
-    if (previousHead !== undefined && previousHead !== head) {
-      notePromptPrefixRewrite("user_context_head");
-    }
-    this.userContextHeads.set(session.state.sessionId, head);
+    this.userContextHeads.note(session.state.sessionId, userContextMsg);
     const { retained: retainedContextMessages, runStartMessage } = assembleRunMessages({
       messages,
       transcript: session.transcript,
@@ -2420,9 +2417,8 @@ export class Engine {
     // Uses a lightweight call without tools
     if (session.transcript.isPersistent()) {
       contextManager.setTranscriptPath(session.transcript.getFilePath());
-    } else {
-      contextManager.setPromptCacheSessionKey(session.state.sessionId);
     }
+    contextManager.setPromptCacheSessionKey(session.state.sessionId);
     // Re-derive frozen persistence decisions from the messages we just
     // loaded. Skipped on cold start (messages == [userContextMsg] only).
     // Critical for resume — otherwise a result that was persisted last
@@ -4411,7 +4407,7 @@ export class Engine {
   ): Promise<{ before: number; after: number }> {
     const effectiveSessionId = sessionId || this.lastSessionId;
     if (!effectiveSessionId) return { before: 0, after: 0 };
-    notePromptPrefixRewrite("archive");
+    notePromptPrefixRewrite(effectiveSessionId, "archive");
 
     const session = this.sessionManager.resume(effectiveSessionId);
     const { sourceMessages, window } = resolveArchiveWindow(
@@ -4458,7 +4454,7 @@ export class Engine {
   ): Promise<boolean> {
     const session = this.sessionManager.resume(sessionId);
     if (!appendSessionArchiveMarker(sessionId, session, marker)) return false;
-    notePromptPrefixRewrite("archive");
+    notePromptPrefixRewrite(sessionId, "archive");
     this.rebaseSessionToolCache(session);
     // The in-memory cache (if any) predates the marker; drop it so the next
     // run rebuilds from the trimmed transcript replay.

@@ -11,13 +11,14 @@ export function stripInjectedContextMessages(
   messages: Message[],
   userContextMsg: Message | null,
   dynamicContextMsg: Message | null,
+  sessionId?: string,
 ): Message[] {
   const withoutDynamicContext = dynamicContextMsg
     ? messages.filter((message) => message !== dynamicContextMsg)
     : [...messages];
   // The next run's requests no longer carry this run's runtime context.
   if (dynamicContextMsg && withoutDynamicContext.length < messages.length) {
-    notePromptMessageLeft(dynamicContextMsg);
+    notePromptMessageLeft(sessionId, dynamicContextMsg);
   }
   if (!userContextMsg || messages[0] !== userContextMsg) {
     return withoutDynamicContext;

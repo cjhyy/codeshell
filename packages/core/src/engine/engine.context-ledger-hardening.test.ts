@@ -85,17 +85,6 @@ const markerContext: AgentModule = {
 const textOf = (message: Message): string =>
   typeof message.content === "string" ? message.content : JSON.stringify(message.content);
 
-/** A finished text reply is a string live but one text block when replayed. */
-function wire(messages: Message[]): Message[] {
-  return messages.map((message) =>
-    message.role === "assistant" &&
-    Array.isArray(message.content) &&
-    message.content.every((block) => block.type === "text")
-      ? { role: "assistant", content: message.content.map((block) => block.text).join("\n") }
-      : message,
-  );
-}
-
 /** Every later request must begin with the full earlier request. */
 function expectAppendOnly(requests: Message[][]): void {
   expect(requests.length).toBeGreaterThan(1);
@@ -160,6 +149,34 @@ describe("Engine context ledger hardening", () => {
     if (prevCodeShellHome === undefined) delete process.env.CODE_SHELL_HOME;
     else process.env.CODE_SHELL_HOME = prevCodeShellHome;
     for (const dir of [repo, sessions, home]) rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("preserves reasoning and exact assistant shapes across live runs and disk restart", async () => {
+    const sessionId = "s-hardening-reasoning-shapes";
+    const { requests } = scenario([
+      { ...toolStep("reasoning-tool"), reasoningContent: "reason before tool" },
+      { ...stop("first done"), reasoningContent: "reason before answer" },
+      stop("second done"),
+      stop("third done"),
+    ]);
+    const engine = newEngine();
+    await engine.run("first task", { sessionId, cwd: repo });
+    await engine.run("second task", { sessionId, cwd: repo });
+    const restarted = newEngine();
+    await restarted.run("third task", { sessionId, cwd: repo });
+    expect(requests).toHaveLength(4);
+    expectAppendOnly(requests);
+    const reasoningOf = (messages: Message[]) =>
+      messages.flatMap((message) =>
+        Array.isArray(message.content)
+          ? message.content
+              .filter((block) => block.type === "reasoning")
+              .map((block) => block.reasoningContent)
+          : [],
+      );
+    expect(reasoningOf(requests[1]!)).toEqual(["reason before tool"]);
+    expect(reasoningOf(requests[2]!)).toEqual(["reason before tool", "reason before answer"]);
+    expect(reasoningOf(requests[3]!)).toEqual(reasoningOf(requests[2]!));
   });
 
   describe("notes rollover", () => {
@@ -229,7 +246,7 @@ describe("Engine context ledger hardening", () => {
       const restarted = hooked();
       await restarted.run("third task", { sessionId, cwd: repo });
       expect(requests).toHaveLength(5);
-      expectAppendOnly([wire(requests[3]!), wire(requests[4]!)]);
+      expectAppendOnly([requests[3]!, requests[4]!]);
       expect(containing(requests[4]!, "RULES v2")).toHaveLength(1);
       expect(containing(requests[4]!, "two.marker")).toHaveLength(1);
     });
@@ -282,7 +299,7 @@ describe("Engine context ledger hardening", () => {
       const restarted = hooked();
       await restarted.run("third task", { sessionId, cwd: repo });
       expect(requests).toHaveLength(4);
-      expectAppendOnly([wire(live), wire(requests[3]!)]);
+      expectAppendOnly([live, requests[3]!]);
     });
 
     it("agrees after an anchored archive that ends at a message with a reminder", async () => {
@@ -303,7 +320,7 @@ describe("Engine context ledger hardening", () => {
       expect(stats.after).not.toBe(stats.before);
       const live = (engine as any).compactedMessagesBySession.get(sessionId) as Message[];
       const replayed = engine.getSessionManager().resume(sessionId).transcript.toMessages();
-      expect(wire(live)).toEqual(wire(replayed));
+      expect(live).toEqual(replayed);
       // The boundary message keeps its reminder; the archived span lost its own.
       const texts = live.map(textOf);
       expect(texts.filter((text) => text.includes("RULES v2"))).toHaveLength(1);

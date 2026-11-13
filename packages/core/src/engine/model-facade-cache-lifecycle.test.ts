@@ -61,12 +61,32 @@ describe("ModelFacade primary cache lifecycle", () => {
           expect(stamps).toEqual([1000]);
           expect(events).toEqual(["provider-completed", "recorded", "logged"]);
           expect(client.calls.map((call) => call.stream)).toEqual([method === "call"]);
-          expect(transcript.toMessages()).toHaveLength(1);
+          expect(transcript.toMessages()).toEqual([{ role: "assistant", content: "done" }]);
         } finally {
           log.mockRestore();
           clock.mockRestore();
         }
       });
+
+  it("retains reasoning and tool blocks while preserving plain reply shapes", async () => {
+    const transcript = Transcript.inMemory("response-shapes");
+    const client = new OfflineClient(async () => ({
+      ...response(),
+      reasoningContent: "private reasoning",
+      toolCalls: [{ id: "call", toolName: "Read", args: { path: "file" } }],
+    }));
+    await new ModelFacade(client, transcript).callWithoutStreaming("system", [], []);
+    expect(transcript.toMessages()).toEqual([
+      {
+        role: "assistant",
+        content: [
+          { type: "reasoning", reasoningContent: "private reasoning" },
+          { type: "text", text: "done" },
+          { type: "tool_use", id: "call", name: "Read", input: { path: "file" } },
+        ],
+      },
+    ]);
+  });
 
   for (const method of ["call", "callWithoutStreaming"] as const)
     it(`${method} leaves cache freshness untouched on failure`, async () => {

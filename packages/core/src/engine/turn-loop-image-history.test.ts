@@ -57,6 +57,7 @@ function makeDeps(
     contentBlocks?: ContentBlock[];
   }>;
 } {
+  realContextManager?.setPromptCacheSessionKey("test");
   let i = 0;
   const callArgs: Message[][] = [];
   const toolResultAppends: Array<{
@@ -92,7 +93,7 @@ function makeDeps(
     const batch = options?.externalRewrite?.(m);
     if (!batch || batch.messages === m) return m;
     batch.commit();
-    notePromptPrefixRewrite("rewrite_batch"); // as the real ContextManager does
+    notePromptPrefixRewrite("test", "rewrite_batch"); // as the real ContextManager does
     return batch.messages;
   };
   const contextManager = (realContextManager ?? {
@@ -127,7 +128,9 @@ function makeDeps(
     },
     appendTurnBoundary() {},
     appendTurnStopped() {},
-    appendMessage() {},
+    appendMessage() {
+      return { id: crypto.randomUUID() };
+    },
   } as unknown as TurnLoopDeps["transcript"];
 
   const toolExecutor = {

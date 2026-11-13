@@ -18,7 +18,8 @@
  *     rides the tail of every request (engine/volatile-context-tail.ts) and
  *     the breakpoint goes immediately before it: that is the only place from
  *     which both the next step and the next run can resume, and a breakpoint
- *     further back would re-bill this run's whole tail on every step.
+ *     further back would re-bill this run's whole tail on every step. A
+ *     pending rewrite still takes precedence when its boundary is earlier.
  *
  * See docs/todo/prompt-cache-optimization.md §五.
  */
@@ -45,9 +46,11 @@ export function resolveStablePrefixMessageCount(input: StablePrefixInput): numbe
     message === undefined ? -1 : messages.indexOf(message);
 
   const volatileIndex = messages.findIndex(input.isVolatile);
-  if (input.volatileAtTail && volatileIndex >= 0) return volatileIndex;
-
   let settled = indexOf(input.pendingRewriteMessage);
+  if (input.volatileAtTail && volatileIndex >= 0) {
+    return settled < 0 ? volatileIndex : Math.min(volatileIndex, settled);
+  }
+
   if (settled < 0) settled = indexOf(input.runStartMessage);
   // The reference was compacted away (or replaced): nothing narrower is known.
   if (settled < 0) settled = messages.length;

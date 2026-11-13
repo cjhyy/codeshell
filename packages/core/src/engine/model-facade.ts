@@ -2,6 +2,7 @@
  * Model call facade — wraps LLM client with transcript integration.
  */
 
+import { assistantHistoryContent } from "./assistant-history-content.js";
 import type { LLMClientBase } from "../llm/client-base.js";
 import { randomUUID } from "node:crypto";
 import {
@@ -283,35 +284,7 @@ export class ModelFacade {
 
   private recordResponse(response: LLMResponse): void {
     if (response.text || response.toolCalls.length > 0 || response.reasoningContent) {
-      const contentBlocks: import("../types.js").ContentBlock[] = [];
-
-      // DeepSeek V4 thinking mode emits reasoning_content alongside the
-      // reply; we echo it back on the next turn so the model can resume
-      // its chain of thought. Persist as a dedicated block so transcript
-      // -> message round-tripping preserves it without mixing into
-      // displayable text. Goes first so it sits adjacent to the
-      // assistant turn it belongs to even after compaction.
-      if (response.reasoningContent) {
-        contentBlocks.push({
-          type: "reasoning",
-          reasoningContent: response.reasoningContent,
-        });
-      }
-
-      if (response.text) {
-        contentBlocks.push({ type: "text", text: response.text });
-      }
-
-      for (const tc of response.toolCalls) {
-        contentBlocks.push({
-          type: "tool_use",
-          id: tc.id,
-          name: tc.toolName,
-          input: tc.args,
-        });
-      }
-
-      this.transcript.appendMessage("assistant", contentBlocks);
+      this.transcript.appendMessage("assistant", assistantHistoryContent(response));
     }
   }
 

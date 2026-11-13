@@ -88,21 +88,6 @@ const markerContext: AgentModule = {
 const textOf = (message: Message): string =>
   typeof message.content === "string" ? message.content : JSON.stringify(message.content);
 
-/**
- * A finished text reply is a string in the live message list but is stored
- * (and replayed) as a single text block; providers serialize both the same.
- * Comparing a live request with a replayed one has to look past that.
- */
-function wire(messages: Message[]): Message[] {
-  return messages.map((message) =>
-    message.role === "assistant" &&
-    Array.isArray(message.content) &&
-    message.content.every((block) => block.type === "text")
-      ? { role: "assistant", content: message.content.map((block) => block.text).join("\n") }
-      : message,
-  );
-}
-
 /** Every later request must begin with the full earlier request. */
 function expectAppendOnly(requests: Message[][]): void {
   expect(requests.length).toBeGreaterThan(1);
@@ -203,7 +188,8 @@ describe("Engine context ledger", () => {
     ]);
     const engine = newEngine();
 
-    await engine.run("first task", { sessionId, cwd: repo });
+    const result = await engine.run("first task", { sessionId, cwd: repo });
+    if (result.reason !== "completed") throw new Error(JSON.stringify(result));
     await engine.run("second task", { sessionId, cwd: repo });
 
     expect(requests).toHaveLength(3);
@@ -417,7 +403,7 @@ describe("Engine context ledger", () => {
 
     expect(requests).toHaveLength(3);
     expectAppendOnly(requests.map(wire));
-    expect(wire(added(requests, 2))).toEqual([
+    expect(added(requests, 2)).toEqual([
       { role: "assistant", content: "second done" },
       { role: "user", content: "third task" },
     ]);

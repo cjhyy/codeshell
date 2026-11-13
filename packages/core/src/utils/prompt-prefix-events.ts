@@ -34,13 +34,13 @@ export type PromptPrefixRewrite =
   | "max_tokens_continuation";
 
 export interface PromptPrefixObserver {
-  rewrite(kind: PromptPrefixRewrite): void;
+  rewrite(scope: string, kind: PromptPrefixRewrite): void;
   /**
    * One message left its place in history: a run's non-durable runtime
    * context moved to the request tail or was removed after the run. Every
    * other message must still extend the previous request.
    */
-  messageLeft(message: Message): void;
+  messageLeft(scope: string, message: Message): void;
   /** `scope` is the session; `messages` are exactly what the request carries. */
   request(scope: string, messages: readonly Message[]): void;
 }
@@ -48,12 +48,15 @@ export interface PromptPrefixObserver {
 const OBSERVER = Symbol.for("codeshell.promptPrefixObserver");
 type Holder = { [OBSERVER]?: PromptPrefixObserver };
 
-export function notePromptPrefixRewrite(kind: PromptPrefixRewrite): void {
-  (globalThis as Holder)[OBSERVER]?.rewrite(kind);
+export function notePromptPrefixRewrite(
+  scope: string | undefined,
+  kind: PromptPrefixRewrite,
+): void {
+  if (scope !== undefined) (globalThis as Holder)[OBSERVER]?.rewrite(scope, kind);
 }
 
-export function notePromptMessageLeft(message: Message): void {
-  (globalThis as Holder)[OBSERVER]?.messageLeft(message);
+export function notePromptMessageLeft(scope: string | undefined, message: Message): void {
+  if (scope !== undefined) (globalThis as Holder)[OBSERVER]?.messageLeft(scope, message);
 }
 
 export function notePromptRequest(scope: string, messages: readonly Message[]): void {
@@ -69,4 +72,9 @@ export function setPromptPrefixObserver(
   if (observer) holder[OBSERVER] = observer;
   else delete holder[OBSERVER];
   return previous;
+}
+
+/** Cheap opt-in check before preparing diagnostic data such as instruction hashes. */
+export function hasPromptPrefixObserver(): boolean {
+  return (globalThis as Holder)[OBSERVER] !== undefined;
 }

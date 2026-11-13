@@ -237,20 +237,28 @@ export function buildForkTranscript(
   }));
   Transcript.remapContextForkReferences(sourceEvents, copied);
   const copiedIds = new Map(sourceEvents.map((event, index) => [event.id, copied[index]!.id]));
+  const remapMessageId = (id: string): string => {
+    const separator = id.indexOf(":");
+    const eventId = separator < 0 ? id : id.slice(0, separator);
+    const copiedId = copiedIds.get(eventId);
+    return copiedId ? copiedId + (separator < 0 ? "" : id.slice(separator)) : id;
+  };
   for (const event of copied) {
+    // Checkpoint messages use synthetic ids, `<checkpointId>:<index>`.
+    // Remap their owning event as well as ordinary message event ids.
     // A hook reminder names the user message it precedes; keep that link.
     const reminder = event.type === "message" ? event.data.hookReminder : undefined;
     if (reminder && typeof reminder === "object" && !Array.isArray(reminder)) {
       const before = (reminder as { beforeEventId?: unknown }).beforeEventId;
-      if (typeof before === "string" && copiedIds.has(before)) {
-        event.data.hookReminder = { ...reminder, beforeEventId: copiedIds.get(before)! };
+      if (typeof before === "string") {
+        event.data.hookReminder = { ...reminder, beforeEventId: remapMessageId(before) };
       }
     }
     // A prompt rewrite names the user message whose replay content it replaces.
     if (event.type === "prompt_rewrite") {
       const target = event.data.messageEventId;
-      if (typeof target === "string" && copiedIds.has(target)) {
-        event.data.messageEventId = copiedIds.get(target)!;
+      if (typeof target === "string") {
+        event.data.messageEventId = remapMessageId(target);
       }
     }
     if (event.type !== "turn_diff") continue;

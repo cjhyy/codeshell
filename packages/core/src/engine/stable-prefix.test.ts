@@ -85,6 +85,36 @@ describe("resolveStablePrefixMessageCount", () => {
     ).toBe(1);
   });
 
+  it("keeps tail runtime context behind the pending rewrite boundary", () => {
+    const messages = [head, old1, old2, task, step, volatile];
+    expect(
+      resolveStablePrefixMessageCount({
+        messages,
+        isVolatile,
+        volatileAtTail: true,
+        pendingRewriteMessage: old2,
+        runStartMessage: task,
+      }),
+    ).toBe(2);
+    expect(
+      resolveStablePrefixMessageCount({
+        messages,
+        isVolatile,
+        volatileAtTail: true,
+        runStartMessage: task,
+      }),
+    ).toBe(5);
+    expect(
+      resolveStablePrefixMessageCount({
+        messages,
+        isVolatile,
+        volatileAtTail: true,
+        pendingRewriteMessage: user("compacted away"),
+        runStartMessage: task,
+      }),
+    ).toBe(5);
+  });
+
   it("falls back to the run start when the pending message is gone", () => {
     expect(
       resolveStablePrefixMessageCount({

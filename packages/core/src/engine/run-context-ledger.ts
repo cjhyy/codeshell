@@ -105,6 +105,7 @@ export function createRunContextLedger(args: {
    * afresh. A chain without a recorded scope is never revoked.
    */
   scope?: string;
+  sessionId?: string;
 }): RunContextLedger {
   const { transcript, sections, scope } = args;
   // Only this run appends ledger events while it is active.
@@ -122,7 +123,7 @@ export function createRunContextLedger(args: {
         for (let index = messages.length - 1; index >= 0; index -= 1) {
           if (contextMessageMark(messages[index]!)?.kind === "ledger") messages.splice(index, 1);
         }
-        notePromptPrefixRewrite("workspace_root_changed");
+        notePromptPrefixRewrite(args.sessionId, "workspace_root_changed");
         chain = undefined;
       }
       const present = new Set<string>();

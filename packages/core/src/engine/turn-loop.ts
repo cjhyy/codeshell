@@ -1,3 +1,4 @@
+import { assistantHistoryContent } from "./assistant-history-content.js";
 import {
   resolveModelToolCalls,
   orderModelToolResults,
@@ -650,7 +651,7 @@ export class TurnLoop {
     forced: boolean;
   }): Message[] {
     if (result.replacedCount > 0) {
-      if (result.forced) notePromptPrefixRewrite("image_batch");
+      if (result.forced) notePromptPrefixRewrite(this.deps.sessionId, "image_batch");
       this.currentTurnLog.info("context.image_payload_downgrade", {
         cat: "context",
         images: result.replacedCount,
@@ -667,7 +668,8 @@ export class TurnLoop {
       this.volatileAtTail() &&
       moveVolatileContextToTail(messages, this.volatileContextMessages)
     ) {
-      for (const message of this.volatileContextMessages) notePromptMessageLeft(message);
+      for (const message of this.volatileContextMessages)
+        notePromptMessageLeft(this.deps.sessionId, message);
     }
   }
 
@@ -1317,7 +1319,7 @@ export class TurnLoop {
               const previousMessageCount = messages.length;
               messages = dropOldestRounds(messages, retry);
               if (messages.length < previousMessageCount) {
-                notePromptPrefixRewrite("context_limit_recovery");
+                notePromptPrefixRewrite(this.deps.sessionId, "context_limit_recovery");
                 this.deps.runToolSurface?.rebase();
                 await this.refreshModelToolPrefix();
                 // The dropped rounds may have held the run's context.
@@ -1428,7 +1430,7 @@ export class TurnLoop {
             toolCount: response.toolCalls.length,
           });
           if (response.text) {
-            messages.push({ role: "assistant", content: response.text });
+            messages.push({ role: "assistant", content: assistantHistoryContent(response, []) });
           }
           // Anthropic streams tool_use_start as soon as the content block
           // opens. If max_tokens cuts the JSON arguments off, we deliberately
@@ -1483,7 +1485,8 @@ export class TurnLoop {
             if (budgetTermination) break;
             tlog.info("turn.max_tokens_continuation", { cat: "turn", retry: retry + 1 });
             // Each continuation re-sends the reply so far, longer than last time.
-            if (sentContinuation) notePromptPrefixRewrite("max_tokens_continuation");
+            if (sentContinuation)
+              notePromptPrefixRewrite(this.deps.sessionId, "max_tokens_continuation");
             sentContinuation = true;
             const contMessages = [
               ...messages,
@@ -1547,7 +1550,8 @@ export class TurnLoop {
           }
           response = { ...response, text: combinedText };
           // History keeps the whole reply, not the last continuation request's tail.
-          if (sentContinuation) notePromptPrefixRewrite("max_tokens_continuation");
+          if (sentContinuation)
+            notePromptPrefixRewrite(this.deps.sessionId, "max_tokens_continuation");
           if (continuedResponse && response.usage?.promptTokens !== undefined) {
             this.emitCtxFromUsage(response.usage, messages);
           }
@@ -1609,7 +1613,10 @@ export class TurnLoop {
             turnNumber: this.turnCount,
             hasToolUse: false,
           });
-          messages.push({ role: "assistant", content: finalText });
+          messages.push({
+            role: "assistant",
+            content: assistantHistoryContent(response, [], finalText),
+          });
           this.finalizeModelTurn();
           if (await this.consumeQueuedSteer(messages, "finalize_backfill")) {
             continue;
@@ -1891,18 +1898,9 @@ export class TurnLoop {
         const droppedToolCalls = response.toolCalls.slice(this.config.maxToolCallsPerTurn);
 
         // Add assistant message with tool_use blocks to messages
-        const assistantBlocks: ContentBlock[] = [];
-        if (response.text) {
-          assistantBlocks.push({ type: "text", text: response.text });
-        }
+        const assistantContent = assistantHistoryContent(response, wireCalls);
         for (const wireCall of wireCalls) {
           const tc = toolCalls.find((call) => call.id === wireCall.id) ?? wireCall;
-          assistantBlocks.push({
-            type: "tool_use",
-            id: tc.id,
-            name: wireCall.toolName,
-            input: wireCall.args,
-          });
           // Only emit tool_use_start if not already emitted during streaming
           if (!this.streamedToolIds.has(tc.id)) {
             const { wireToolName: _wireToolName, ...visibleCall } = tc;
@@ -1911,7 +1909,7 @@ export class TurnLoop {
           // Record in transcript
           this.deps.transcript.appendToolUse(tc.toolName, tc.id, tc.args, tc.wireToolName);
         }
-        messages.push({ role: "assistant", content: assistantBlocks });
+        messages.push({ role: "assistant", content: assistantContent });
 
         // Execute tools — enqueue concurrency-safe tools for early start,
         // drain remaining (unsafe) tools sequentially.
@@ -2180,7 +2178,10 @@ export class TurnLoop {
             messageId: assistantMessageId,
             message: { role: "assistant", content: finalText },
           });
-          messages.push({ role: "assistant", content: finalText });
+          messages.push({
+            role: "assistant",
+            content: assistantHistoryContent(response, [], finalText),
+          });
           this.finalizeModelTurn();
           if (await this.consumeQueuedSteer(messages, "finalize_backfill")) {
             continue;
@@ -2313,6 +2314,7 @@ export class TurnLoop {
     });
     this.emitCtxFromMessages(messages);
 
+    let summaryContent: Message["content"] | undefined;
     try {
       if (this.goalControlStopRequested) {
         messages = this.redactConsumedSensitiveToolResults(messages);
@@ -2346,6 +2348,7 @@ export class TurnLoop {
       messages = this.markPendingImagesConsumed(messages);
       if (summaryResponse.text) {
         finalText = summaryResponse.text;
+        summaryContent = assistantHistoryContent(summaryResponse, [], finalText);
       }
     } catch (err) {
       if (isAbortError(err) || this.config.signal?.aborted) {
@@ -2366,7 +2369,7 @@ export class TurnLoop {
         type: "assistant_message",
         message: { role: "assistant", content: finalText },
       });
-      messages.push({ role: "assistant", content: finalText });
+      messages.push({ role: "assistant", content: summaryContent ?? finalText });
     }
     messages = this.redactConsumedSensitiveToolResults(messages);
     return {

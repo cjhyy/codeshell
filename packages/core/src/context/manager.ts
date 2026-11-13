@@ -178,6 +178,7 @@ export class ContextManager {
   private transcriptPath: string | undefined;
   /** Cache-warmth key for a session without a transcript path (see rewrite-gate.ts). */
   private sessionWarmthKey: string | undefined;
+  private promptPrefixScope: string | undefined;
   /** Notified whenever any compaction tier fires, including microcompact. */
   private onCompact: OnCompactFn | undefined;
   /**
@@ -189,9 +190,7 @@ export class ContextManager {
   private toolResultsDir: string | undefined;
   /** Last successful model request seen by this instance (see rewrite-gate.ts). */
   private localLastRequestAt: number | undefined;
-  /** Earliest index a deferred rewrite batch would touch in the last managed array. */
-  private pendingRewriteBoundary: number | undefined;
-  /** The message at that index: an identity that survives re-indexing by the caller. */
+  /** Earliest pending rewrite message; its identity survives re-indexing by the caller. */
   private pendingRewriteBoundaryMessage: Message | undefined;
 
   constructor(config?: Partial<ContextManagerConfig>) {
@@ -206,7 +205,7 @@ export class ContextManager {
   /** Every compaction that rewrote history is a registered prefix change (prompt-prefix-events.ts). */
   private reportCompact(info: Parameters<OnCompactFn>[0]): void {
     if (info.strategy !== "micro" && info.historyChanged !== false) {
-      notePromptPrefixRewrite("compaction");
+      notePromptPrefixRewrite(this.promptPrefixScope, "compaction");
     }
     this.onCompact?.(info);
   }
@@ -399,7 +398,6 @@ export class ContextManager {
 
       this.consecutiveSummaryFailures = 0;
       this.lastSummary = summary;
-      this.pendingRewriteBoundary = undefined; // indices no longer match
       this.pendingRewriteBoundaryMessage = undefined;
       logger.info(logEvent, {
         before,
@@ -434,10 +432,12 @@ export class ContextManager {
    * Warmth key for a session that has no persistent transcript. Without it
    * such a session would look cold at every run start (a new ContextManager
    * is created per run) and rewrite its history every time. A transcript
-   * path, when set, takes precedence.
+   * path, when set, takes precedence. Also scopes prefix diagnostics for
+   * persistent sessions, so callers supply the session id in both cases.
    */
   setPromptCacheSessionKey(sessionId: string): void {
     this.sessionWarmthKey = `session:${sessionId}`;
+    this.promptPrefixScope = sessionId;
     this.publishLocalWarmth();
   }
 
@@ -466,16 +466,7 @@ export class ContextManager {
   }
 
   /**
-   * Index, in the array returned by the last manage()/manageAsync() call, of
-   * the earliest message a deferred rewrite batch would change. `undefined`
-   * when nothing is pending.
-   */
-  getPendingRewriteBoundary(): number | undefined {
-    return this.pendingRewriteBoundary;
-  }
-
-  /**
-   * The same boundary as a message reference. Callers that hold a differently
+   * The earliest message a deferred rewrite batch would change. Callers that hold a differently
    * shaped list (e.g. with volatile context messages put back) must locate the
    * boundary by this object, not by the index; a reference that is no longer
    * in their list means the boundary is unknown.
@@ -519,7 +510,6 @@ export class ContextManager {
       keepRecentN: this.config.microcompactKeepRecent ?? defaultKeepRecent(this.config.maxTokens),
       estimate: (messages) => this.estimateTokensHybrid(messages),
     });
-    this.pendingRewriteBoundary = undefined;
     this.pendingRewriteBoundaryMessage = undefined;
     const kept = { messages: input, tokens: baseTokens, microNoOp: plan.microNoOp };
     if (!plan.changed && !externalChanged) return { ...kept, microShrunk: false };
@@ -546,7 +536,6 @@ export class ContextManager {
       forced: externalChanged && external.forced,
     });
     if (!reason) {
-      this.pendingRewriteBoundary = firstChangedIndex;
       this.pendingRewriteBoundaryMessage =
         firstChangedIndex === undefined ? undefined : input[firstChangedIndex];
       logger.debug("context.rewrite_deferred", { pendingSavedTokens: savedTokens });
@@ -554,7 +543,7 @@ export class ContextManager {
     }
 
     if (externalChanged) external.commit();
-    notePromptPrefixRewrite("rewrite_batch");
+    notePromptPrefixRewrite(this.promptPrefixScope, "rewrite_batch");
     logger.info("context.rewrite_batch_applied", {
       reason,
       savedTokens,
