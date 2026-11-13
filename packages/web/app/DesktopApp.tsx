@@ -6,8 +6,7 @@ import {
   type MobileSessionCreateTarget,
 } from "../src/hooks/useRemoteApp.js";
 import { admittedOwnIntents } from "../src/hooks/turnQueueState.js";
-import { deviceStore } from "../src/lib/storage.js";
-import { generateSecret } from "../src/lib/deviceCredential.js";
+import { remoteDeviceCredential } from "../src/lib/accountRelaySession.js";
 import { projectForCwd, sameProjectPath } from "../src/lib/format.js";
 import {
   MOBILE_MAX_ATTACHMENTS,
@@ -53,9 +52,7 @@ export function DesktopApp() {
     if (app.status !== "online") return;
     let current = true;
     setAuthError("");
-    const deviceId = deviceStore.getId();
-    const secretHash = deviceStore.getOrCreateSecret(generateSecret);
-    void ensureDesktopHttpSession({ deviceId, secretHash })
+    void ensureDesktopHttpSession(remoteDeviceCredential())
       .then((next) => {
         if (current) setSession(next);
       })
@@ -89,7 +86,15 @@ export function DesktopApp() {
   }, [app.accessRequired, controller.hasUnsent]);
   if (app.accessRequired)
     return (
-      <DesktopAccessChallenge draft={controller.draft} onVerify={() => window.location.reload()} />
+      <DesktopAccessChallenge
+        draft={controller.draft}
+        account={app.accountAccessRequired}
+        onVerify={() =>
+          app.accountAccessRequired && app.accountEntryUrl
+            ? window.location.assign(app.accountEntryUrl)
+            : window.location.reload()
+        }
+      />
     );
   if (!session) {
     const unpaired = app.status === "unpaired";

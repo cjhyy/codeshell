@@ -124,6 +124,8 @@ export interface PendingApproval {
 export interface RemoteApp {
   status: ConnStatus;
   accessRequired?: boolean;
+  accountAccessRequired?: boolean;
+  accountEntryUrl?: string;
   deviceName: string;
   chat: ChatState;
   sessions: MobileSessionMeta[];
@@ -3253,6 +3255,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     emptySessionReplacement,
     retryEmptySessionReplacement,
     accessRequired: socket.accessRequired,
+    accountAccessRequired: socket.accountAccessRequired,
+    accountEntryUrl: socket.accountEntryUrl,
     deviceName: socket.deviceName,
     chat,
     sessions,

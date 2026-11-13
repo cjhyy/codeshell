@@ -18,6 +18,8 @@ import type { RelayLocalTarget } from "../remote-relay/connector.js";
 import { isRelayOrigin } from "../remote-relay/protocol.js";
 import {
   AccountRelayAccessGate,
+  ACCOUNT_RELAY_COOKIE,
+  hasAccountRelayCookie,
   readRelayHandoff,
   type AccountRelayAccessProvider,
 } from "./account-relay-access.js";
@@ -204,6 +206,41 @@ export class RemoteHostManager extends EventEmitter {
     response.end(JSON.stringify(body));
   }
 
+  private accountAccessPage(
+    request: IncomingMessage,
+    response: ServerResponse,
+    pathname: string,
+  ): boolean {
+    const entry = this.accountAccess.accountEntryUrl;
+    if (
+      !entry ||
+      !["GET", "HEAD"].includes(request.method ?? "") ||
+      !["/", "/mobile", "/mobile/"].includes(pathname) ||
+      !request.headers.accept?.includes("text/html")
+    )
+      return false;
+    const escape = (value: string) =>
+      value.replace(
+        /[&<>"']/g,
+        (character) =>
+          ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]!,
+      );
+    response.writeHead(401, {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-store",
+      "x-content-type-options": "nosniff",
+      "referrer-policy": "no-referrer",
+      "content-security-policy":
+        "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+    });
+    response.end(
+      request.method === "HEAD"
+        ? undefined
+        : `<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>远程连接授权已结束 · CodeShell</title><style>body{font:16px/1.6 system-ui,sans-serif;max-width:32rem;margin:15vh auto;padding:24px}h1{font-size:24px}a{display:inline-block;padding:10px 16px;border-radius:8px;background:#2563eb;color:white;text-decoration:none}</style><main><h1>远程连接授权已结束</h1><p>返回电脑列表，用 Passkey 确认后重新连接这台电脑。</p><a href="${escape(entry)}" rel="noreferrer">返回电脑列表</a></main></html>`,
+    );
+    return true;
+  }
+
   /** Device ids with at least one live socket right now. */
   onlineDeviceIds(): string[] {
     return [...this.onlineCounts.keys()];
@@ -269,6 +306,21 @@ export class RemoteHostManager extends EventEmitter {
         return;
       }
       if (relay && pathname === "/api/v1/relay/session") {
+        if (req.method === "GET" && this.relayRequestOrigin(req)) {
+          const credential = this.accountAccess.browserCredential(req);
+          this.relayJson(
+            res,
+            credential || !hasAccountRelayCookie(req) ? 200 : 401,
+            credential
+              ? { active: true, ...credential }
+              : {
+                  active: false,
+                  accountRelay: this.accountAccess.available,
+                  accountEntryUrl: this.accountAccess.accountEntryUrl,
+                },
+          );
+          return;
+        }
         if (
           req.method !== "POST" ||
           !this.accountAccess.available ||
@@ -285,10 +337,30 @@ export class RemoteHostManager extends EventEmitter {
               throw new Error("Relay Host stopped");
             return this.accountAccess.exchange(handoff);
           })
-          .then((session) => this.relayJson(res, 200, session))
+          .then((session) => {
+            res.setHeader(
+              "set-cookie",
+              `${ACCOUNT_RELAY_COOKIE}=${session.hostAccessToken}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${Math.max(0, Math.floor((session.expiresAt - Date.now()) / 1000))}`,
+            );
+            this.relayJson(res, 200, session);
+          })
           .catch(() =>
             this.relayJson(res, 401, { error: "Account relay handoff expired or invalid" }),
           );
+        return;
+      }
+      if (relay && pathname === "/api/v1/relay/session/logout") {
+        if (req.method !== "POST" || !this.relayRequestOrigin(req, true)) {
+          this.relayJson(res, 403, { error: "Account relay session is unavailable" });
+        } else {
+          this.accountAccess.revokeRequest(req);
+          res.setHeader(
+            "set-cookie",
+            `${ACCOUNT_RELAY_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0`,
+          );
+          this.relayJson(res, 200, { ok: true });
+        }
+        req.resume();
         return;
       }
       const serve = () => {
@@ -297,7 +369,13 @@ export class RemoteHostManager extends EventEmitter {
         const account =
           relay && this.relayRequestOrigin(req) ? this.accountAccess.capture(req) : undefined;
         if (!account) {
-          if (relay && (req.headers["x-codeshell-host-access"] !== undefined || !gate?.isSet())) {
+          if (
+            relay &&
+            (req.headers["x-codeshell-host-access"] !== undefined ||
+              hasAccountRelayCookie(req) ||
+              !gate?.isSet())
+          ) {
+            if (this.accountAccessPage(req, res, pathname)) return;
             this.relayJson(res, 401, { error: "Account relay authorization is required" });
             req.resume();
             return;
@@ -426,7 +504,8 @@ export class RemoteHostManager extends EventEmitter {
         const account = relay ? this.accountAccess.capture(req) : undefined;
         if (
           !account &&
-          ((relay && req.headers["x-codeshell-host-access"] !== undefined) ||
+          ((relay &&
+            (req.headers["x-codeshell-host-access"] !== undefined || hasAccountRelayCookie(req))) ||
             !gate?.allows(
               req as unknown as {
                 url?: string;

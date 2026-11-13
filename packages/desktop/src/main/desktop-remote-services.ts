@@ -13,6 +13,7 @@ import type {
   TunnelManager,
 } from "@cjhyy/code-shell-server/mobile-remote";
 import { AccountDeviceService } from "./account-device-service.js";
+import { createAccountRemoteAuthorizer } from "./account-device-passkey.js";
 import { registerAccountDeviceIpc } from "./account-device-ipc.js";
 import { CloudAccountManager } from "./cloud-account-manager.js";
 import { CloudAccountStore } from "./cloud-account-store.js";
@@ -129,6 +130,7 @@ export function createDesktopRemoteServices(options: {
   });
   if (options.app) bindAccountFeatureLifecycle(options.app, accountFeatures, options.windows);
   const accountDeviceService = new AccountDeviceService({
+    authorizeTarget: createAccountRemoteAuthorizer({ openExternal: options.openExternal }),
     identity: () => {
       const status = cloudAccountManager.status();
       return status.state === "signed-in" && status.origin && status.account

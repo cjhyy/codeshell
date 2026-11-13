@@ -360,6 +360,7 @@ export class MobileRemoteController {
       hostId: registration.hostId,
       environmentId: registration.environmentId,
       accountId: registration.accountId,
+      accountOrigin: registration.relayOrigin,
       listProjects: this.deps.listProjects ?? (async () => []),
       redeem: async (handoff) => {
         const signal = this.operation.signal;

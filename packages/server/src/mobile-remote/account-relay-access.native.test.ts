@@ -91,10 +91,10 @@ const host = new RemoteHostManager({
 });
 host.on("host-error", error => { throw error; });
 host.setAccountRelayAccess({
-  hostId:"host-a", environmentId:"env-a",accountId:"account-a",
+  hostId:"host-a", environmentId:"env-a",accountId:"account-a",accountOrigin:"https://account.example.test",
   redeem:async () => {
     redeemed++;
-    return {authorizationId:"authorization-a",accountId:"account-a",rootSessionId:"root-a",hostId:"host-a",environmentId:"env-a",leaseId:"lease-a",expiresAt:Date.now()+1200};
+    return {authorizationId:"authorization-a",authorizationKind:"passkey-remote",sourceKind:"device",sourceHostId:"source-host",accountId:"account-a",rootSessionId:"root-a",hostId:"host-a",environmentId:"env-a",leaseId:"lease-a",expiresAt:Date.now()+1200};
   },
   listProjects:async () => [{id:"real-project",name:"Actual project",path:"/actual/project"}],
 });
@@ -113,7 +113,7 @@ const request = (pathname, method="GET", headers={}, input, ordinary=false) => n
   const req = http.request((ordinary?local.url:started.url)+pathname, {method,headers:{Host:new URL(targetOrigin).host,Origin:targetOrigin,...(withPasscode?{"X-Access-Passcode":"synthetic-passcode"}:{}),...(body?{"Content-Type":"application/json","Content-Length":Buffer.byteLength(body)}:{}),...headers}}, response => {
     let text="";
     response.on("data", chunk => text+=chunk);
-    response.on("end", () => resolve({status:response.statusCode,headers:response.headers,body:JSON.parse(text)}));
+    response.on("end", () => resolve({status:response.statusCode,headers:response.headers,body:response.headers["content-type"]?.includes("application/json")?JSON.parse(text):text}));
   });
   req.on("error",reject);
   req.setTimeout(2000,() => req.destroy(new Error("Native fixture request deadline")));
@@ -123,11 +123,24 @@ let socket;
 let localSocket;
 try {
   assert.equal((await request("/api/v1/relay/projects")).status,401);
+  assert.deepEqual((await request("/api/v1/relay/session")).body,{active:false,accountRelay:true,accountEntryUrl:"https://account.example.test/app"});
   assert.equal((await request("/api/v1/relay/session","POST",{Origin:"https://other.example.test"},{handoff:"a".repeat(43)})).status,403);
   assert.equal(redeemed,0);
   const handshake = await request("/api/v1/relay/session","POST",{}, {handoff:"a".repeat(43)});
   assert.equal(handshake.status,200);
   const grant = handshake.body;
+  const hostCookieHeader = handshake.headers["set-cookie"][0];
+  assert.match(hostCookieHeader,/^__Host-cs_host_access=/);
+  assert.match(hostCookieHeader,/HttpOnly; Secure; SameSite=Strict/);
+  assert.doesNotMatch(hostCookieHeader,/Domain=/i);
+  const hostCookie = hostCookieHeader.split(";",1)[0];
+  const restored = await request("/api/v1/relay/session","GET",{Cookie:hostCookie});
+  assert.equal(restored.body.active,true);
+  assert.equal(restored.body.deviceId,grant.deviceId);
+  assert.equal(restored.body.secretHash,grant.secretHash);
+  assert.equal(restored.body.hostAccessToken,undefined);
+  assert.equal((await request("/api/v1/relay/session","GET",{Cookie:hostCookie,Origin:"https://foreign.test"})).status,403);
+  assert.equal((await request("/api/v1/relay/projects","GET",{Cookie:hostCookie+"; "+hostCookie})).status,401);
   assert.equal(grant.hostId,"host-a");
   assert.equal((await request("/api/v1/relay/session","POST",{}, {handoff:"a".repeat(43)})).status,401);
   assert.equal(redeemed,1);
@@ -157,7 +170,7 @@ try {
   const projects = await request("/api/v1/relay/projects","GET",headers);
   assert.deepEqual(projects.body,{hostId:"host-a",environmentId:"env-a",projects:[{id:"real-project",name:"Actual project",path:"/actual/project"}]});
   assert.equal((await request("/api/v1/relay/projects","GET",{...headers,Host:"wrong.example.test"})).status,401);
-  socket = new WebSocket(started.url.replace("http:","ws:")+"/ws", {headers:{Host:new URL(origin).host,Origin:origin,...headers}});
+  socket = new WebSocket(started.url.replace("http:","ws:")+"/ws", {headers:{Host:new URL(origin).host,Origin:origin,...(withPasscode?{Cookie:hostCookie}:headers)}});
   socket.on("error",()=>{});
   await once(socket,"open",{signal:AbortSignal.timeout(2000)});
   const exchange = async event => {
@@ -186,6 +199,14 @@ try {
   }
   await once(socket,"close",{signal:AbortSignal.timeout(2000)});
   assert.equal((await request("/api/v1/relay/projects","GET",headers)).status,401);
+  assert.equal((await request("/api/v1/relay/session","GET",{Cookie:hostCookie})).status,401);
+  const expiredPage = await request("/mobile","GET",{Accept:"text/html",Cookie:hostCookie});
+  assert.equal(expiredPage.status,401);
+  assert.match(expiredPage.body,/href="https:\/\/account.example.test\/app"/);
+  assert.match(expiredPage.body,/Passkey/);
+  assert.equal(expiredPage.headers["cache-control"],"no-store");
+  assert.match(expiredPage.headers["content-security-policy"],/default-src 'none'/);
+  assert.equal((await request("/mobile/assets/app.js","GET",{Accept:"text/html",Cookie:hostCookie})).headers["content-type"],"application/json; charset=utf-8");
   assert.equal(devices.authenticate(grant.deviceId,grant.secretHash),undefined);
   assert.equal((await request("/api/v1/auth/status","GET",{Cookie:cookie},undefined,true)).body.authenticated,false);
   assert.deepEqual(host.onlineDeviceIds(),[]);
