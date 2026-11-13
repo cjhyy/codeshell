@@ -252,4 +252,6 @@ test("engine context messages inside a run are not interleaved submissions", asy
   expect(await preview("hook", { hookReminder: { sessionStart: ["rules"] } })).not.toContain(
     "Interleaved submissions",
   );
+  // A headless run's background-agent notice is stored as a context reminder.
+  expect(await preview("notice", { hookReminder: {} })).not.toContain("Interleaved submissions");
 });
