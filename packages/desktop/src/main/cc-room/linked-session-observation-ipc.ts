@@ -1,6 +1,9 @@
 import type { BrowserWindow, IpcMain, IpcMainInvokeEvent } from "electron";
 import type { RoomKind, RoomManager } from "@cjhyy/code-shell-server/mobile-remote";
-import type { TaskInboxSourcesDeps } from "../task-inbox/task-inbox-sources.js";
+import type {
+  TaskInboxBackgroundEntry,
+  TaskInboxSourcesDeps,
+} from "../task-inbox/task-inbox-sources.js";
 import { DriveAgentTranscriptAccess } from "./drive-agent-transcript-access.js";
 import { openLinkedSessionFromIpc, takeOverLinkedSessionFromIpc } from "./linked-session-ipc.js";
 import type { TranscriptSubscriptionManager } from "./transcript-subscriptions.js";
@@ -10,6 +13,7 @@ interface LinkedSessionObservationDeps {
   windows: Iterable<Pick<BrowserWindow, "isDestroyed" | "webContents">>;
   roomManager: Pick<RoomManager, "openLinkedSession" | "takeOverLinkedSession" | "close">;
   listBackgroundWork: NonNullable<TaskInboxSourcesDeps["background"]>["list"];
+  readLocalBackgroundWork?(): TaskInboxBackgroundEntry[];
   requirePath(cwd: unknown): Promise<string>;
   subscriptions: Pick<
     TranscriptSubscriptionManager,
@@ -22,7 +26,10 @@ interface LinkedSessionObservationDeps {
 /** Own the read-only room IPC boundary and its window/room observation lifetime. */
 export function registerLinkedSessionObservationIpc(deps: LinkedSessionObservationDeps): void {
   const { ipcMain, roomManager, subscriptions } = deps;
-  const access = new DriveAgentTranscriptAccess(deps.listBackgroundWork);
+  const access = new DriveAgentTranscriptAccess(
+    deps.listBackgroundWork,
+    deps.readLocalBackgroundWork,
+  );
   const cleanupSenders = new Set<number>();
   const requireApplicationWindow = (event: IpcMainInvokeEvent): void => {
     if (

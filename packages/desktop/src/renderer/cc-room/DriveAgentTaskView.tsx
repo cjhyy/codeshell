@@ -131,6 +131,8 @@ export function DriveAgentTaskView({
   const status = readFailed ? "unknown" : (job?.status ?? "unknown");
   const terminal = driveAgentTaskIsTerminal(status);
   const running = status === "running" || status === "cancelling";
+  const runningRef = useRef(running);
+  runningRef.current = running;
   useEffect(() => {
     setLinked(null);
     setTakenOver(false);
@@ -162,7 +164,7 @@ export function DriveAgentTaskView({
         // A live CLI may flush its transcript later than its session identity.
         // Keep trying at a lower rate while visible, then give the final flush
         // a fresh retry window when the task leaves its running state.
-        if (attempts < 5 || running)
+        if (attempts < 5 || runningRef.current)
           timer = setTimeout(() => void connect(), attempts < 5 ? 1500 : 10_000);
       }
     };
@@ -177,7 +179,9 @@ export function DriveAgentTaskView({
     cwd,
     cliKind,
     linked,
-    running,
+    // Learning that an initially unknown task is running must not restart an
+    // in-flight connection. Completion still gives the final flush a retry.
+    terminal,
     connectionRevision,
     request.jobId,
     request.sourceSessionId,
@@ -423,6 +427,7 @@ export function DriveAgentTaskView({
             active={active}
             observing={!takenOver}
             hideHeader
+            latestRequest={request.nonce}
             observeHint={
               !terminal
                 ? t(running ? "panels.shells.taskRunningHint" : "panels.shells.taskUnknownTakeover")
