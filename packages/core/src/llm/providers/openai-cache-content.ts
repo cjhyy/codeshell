@@ -19,6 +19,29 @@
 import type OpenAI from "openai";
 import type { PromptCacheStrategy } from "../prompt-cache.js";
 
+// Gateway compatibility is process-local and keyed by the credential-free
+// route identity. Recreating an auxiliary/main client must not repeat the 400.
+const stringOnlyRoutes = new Set<string>();
+
+export function explicitCacheContentDisabled(identity: Readonly<Record<string, unknown>>): boolean {
+  return stringOnlyRoutes.has(JSON.stringify(identity));
+}
+
+export function disableExplicitCacheContent(identity: Readonly<Record<string, unknown>>): void {
+  stringOnlyRoutes.add(JSON.stringify(identity));
+}
+
+/** Match the same explicit API-error wording approach as cache-field fallback. */
+export function isExplicitCacheContentRejection(message: string): boolean {
+  return (
+    message.includes("content") &&
+    (message.includes("must be a string") ||
+      message.includes("expected a string") ||
+      message.includes("expected string") ||
+      message.includes("invalid content type"))
+  );
+}
+
 export function usesExplicitCacheMarkers(strategy: PromptCacheStrategy): boolean {
   return (
     strategy === "anthropic-explicit" ||

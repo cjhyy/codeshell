@@ -185,6 +185,7 @@ describe("memory pipeline prompt cache", () => {
     expect(decision.systemPrompt).toContain("write decision");
     expect(decision.promptCache).toEqual({
       scopeId: auxPromptCacheScope(sessionId, "memory-write-decision"),
+      scopeKind: "auxiliary",
       stablePrefixMessageCount: decision.messages.length - 1,
     });
     expect(decision.messages.length).toBeGreaterThan(2);

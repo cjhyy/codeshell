@@ -24,6 +24,8 @@ export type PromptCacheBreakpoint = "system" | "tools" | "stable-history" | "rol
 export interface PromptCacheRequestContext {
   /** Stable run/session namespace used for provider cache affinity. */
   scopeId?: string;
+  /** Auxiliary traffic has its own bounded history, independent of main sessions. */
+  scopeKind?: "auxiliary";
   /**
    * Number of leading source messages that are settled: nothing in them will
    * be rewritten or removed by this run (it ends at the run start, before a
@@ -57,7 +59,7 @@ export interface ResolvePromptCachePolicyInput extends Pick<
   /** Resolved model capability; explicit catalog declarations take precedence. */
   promptCaching?: PromptCachingCapability;
   request?: PromptCacheRequestContext;
-  /** Sticky compatibility fallback after an endpoint rejects explicit fields. */
+  /** Sticky fallback after an endpoint rejects explicit fields or content arrays. */
   explicitDisabled?: boolean;
 }
 
@@ -93,7 +95,7 @@ export function resolvePromptCachePolicy(input: ResolvePromptCachePolicyInput): 
     ? createPromptCacheKey(input.request.scopeId, `${kind}:${model}`)
     : undefined;
 
-  if (capability === "anthropic-explicit") {
+  if (capability === "anthropic-explicit" && input.explicitDisabled !== true) {
     return {
       strategy: "anthropic-explicit",
       toolDiscovery,
