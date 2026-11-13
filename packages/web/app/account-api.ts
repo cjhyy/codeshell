@@ -519,7 +519,7 @@ export class AccountWebClient {
           response.status === 401 &&
           !passkeyBusinessFailure &&
           (!passkeyRequest || value?.error === "authentication_required" || reconcileOnly) &&
-          attempt === 0 &&
+          (attempt === 0 || reconcileOnly) &&
           path !== "/session" &&
           path !== "/refresh" &&
           !path.startsWith("/github/") &&

@@ -427,22 +427,24 @@ test("expired roots and unknown Passkey 401s fail closed without replaying the c
 
 test("a Passkey rejection after safe authentication recovery keeps its original error and login", async () => {
   installCookieLock();
-  let verifications = 0,
-    lost = 0;
-  const client = new AccountWebClient((async (url) => {
-    if (String(url).endsWith("/session")) return Response.json(webSession());
-    return Response.json(
-      { error: ++verifications === 1 ? "authentication_required" : "passkey_verification_failed" },
-      { status: 401 },
+  for (const code of ["passkey_verification_failed", "invalid_session"]) {
+    let verifications = 0,
+      lost = 0;
+    const client = new AccountWebClient((async (url) => {
+      if (String(url).endsWith("/session")) return Response.json(webSession());
+      return Response.json(
+        { error: ++verifications === 1 ? "authentication_required" : code },
+        { status: 401 },
+      );
+    }) as typeof fetch);
+    client.setSession(parseAccountSession(webSession()));
+    client.onSessionLost = () => lost++;
+    await expect(client.request("/passkeys/registration/verify", "POST", {})).rejects.toMatchObject(
+      { code },
     );
-  }) as typeof fetch);
-  client.setSession(parseAccountSession(webSession()));
-  client.onSessionLost = () => lost++;
-  await expect(client.request("/passkeys/registration/verify", "POST", {})).rejects.toMatchObject({
-    code: "passkey_verification_failed",
-  });
-  expect(verifications).toBe(2);
-  expect(lost).toBe(0);
+    expect(verifications).toBe(2);
+    expect(lost).toBe(0);
+  }
 });
 
 test("an access token expiring during a Passkey ceremony reconciles the account without replay", async () => {
