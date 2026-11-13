@@ -31,6 +31,8 @@ export function isRegistrationRoute(url: URL): boolean {
 }
 
 export function parseWebsiteRoute(url: URL): WebsiteRoute {
+  if (url.pathname === "/admin" || url.pathname === "/admin/")
+    return { kind: "admin", section: "summary" };
   if (url.pathname === "/api/v1/account/manage" || url.pathname === "/settings/account")
     return { kind: "account", section: "profile" };
   const account = /^\/settings\/account\/([^/]+)\/?$/.exec(url.pathname);
