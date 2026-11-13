@@ -10,9 +10,8 @@ breaking.
 
 ## [0.11.0-rc.2] - 2026-11-13
 
-Release candidate for the desktop, website and account device collaboration flow.
-Public relay availability requires the matching Services deployment, device DNS
-and TLS configuration; a successful account login alone does not enable relay.
+Release candidate for the desktop, website and account computer flow. Public
+remote access requires the matching Services deployment, device DNS and TLS.
 
 ### Added
 
@@ -20,14 +19,20 @@ and TLS configuration; a successful account login alone does not enable relay.
   registration and explicit confirmation of the computer being signed in.
 - Public website separated from the signed-in account workbench, with account
   onboarding and protection for unsaved workspace drafts when leaving an account.
+- After explicit desktop sign-in confirmation, enter a shared remote workbench
+  that offers Cloud or an online computer on the current account. Computer access
+  reuses the website session and the existing relay pairing and passcode checks.
+- Automatically associate this computer after desktop sign-in and restore the
+  association when the app reopens. Remote control has a separate explicit switch
+  and is off by default. Signing out removes the computer from the account list.
 
 ### Fixed
 
-- Keep the desktop execution-computer entry available when device collaboration
-  needs setup or recovery. A saved account can explicitly reconnect after restart
-  and retry failed initial registration without navigating into advanced settings.
-- Keep recovery state scoped to the current account and prevent duplicate resume
-  attempts while its relay is connecting.
+- Replace the manual computer registration step with automatic account sync and
+  a clear **My computers** entry. A computer can connect to another computer
+  without enabling incoming remote control on itself.
+- Keep recovery and connection attempts scoped to the current account; late
+  responses after sign-out cannot restore its computer list or open a computer.
 
 ## [0.11.0-rc.1] - 2026-11-12
 
