@@ -277,6 +277,17 @@ function WebsiteShell({ capability }: { capability?: WebsiteCloudCapability }) {
   const cloudSession = cloudGrant?.identity === identity ? cloudGrant.session : null;
   const target = account.session?.cloudTarget;
   const accountId = account.session?.account?.id;
+  // Once mounted, route-only navigation must not cancel an in-flight renewal:
+  // cancellation after its cookie write would revoke the still-active workspace.
+  const cloudAdmissionNeeded =
+    route.kind === "workbench" ||
+    !!(
+      cloudSession &&
+      cloudFeature.state === "ready" &&
+      cloudSession.audience === target?.cloudOrigin &&
+      cloudSession.accountOrigin === target?.accountOrigin &&
+      cloudSession.installationId === target?.installationId
+    );
   const go = (next: WebsiteRoute) => {
     window.history.pushState(null, "", websiteRouteUrl(next, new URL(window.location.href)));
     setRoute(next);
@@ -307,7 +318,7 @@ function WebsiteShell({ capability }: { capability?: WebsiteCloudCapability }) {
         ? previous
         : null;
     setCloudGrant(retainedGrant);
-    if (route.kind !== "workbench" && !retainedGrant) return () => controller.abort();
+    if (!cloudAdmissionNeeded) return () => controller.abort();
     setCloudError("");
     setConnecting(false);
     if (!identity || !accountId) return () => controller.abort();
@@ -406,7 +417,7 @@ function WebsiteShell({ capability }: { capability?: WebsiteCloudCapability }) {
       clearTimeout(refreshTimer);
     };
   }, [
-    route.kind,
+    cloudAdmissionNeeded,
     identity,
     target?.cloudOrigin,
     target?.installationId,

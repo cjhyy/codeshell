@@ -15,6 +15,12 @@ function text(node: any): string {
     .map(text)
     .join("")}`;
 }
+function all(node: any): any[] {
+  return [node, ...Array.from(node.childNodes ?? []).flatMap(all)];
+}
+function props(node: any) {
+  return node[Object.keys(node).find((key) => key.startsWith("__reactProps"))!];
+}
 async function mount(
   address: string,
   mode: "passcode" | "cloud" | "offline",
@@ -49,6 +55,7 @@ async function mount(
       : delete (globalThis as any).navigator,
   );
   const calls: string[] = [];
+  const pending = { cloudSession: undefined as Promise<void> | undefined };
   const features = {
     "cloud.projects": { version: 1, enabled: true, params: { cloudOrigin: origin } },
   };
@@ -117,7 +124,8 @@ async function mount(
         accountOrigin: origin,
         installationId: id,
       });
-    if (path === "/api/v1/cloud-browser/session")
+    if (path === "/api/v1/cloud-browser/session") {
+      await pending.cloudSession;
       return Response.json({
         authenticated: true,
         mode: "cloud-account",
@@ -132,6 +140,8 @@ async function mount(
           expiresAt: Date.now() + (options.cloudSessionMs ?? 600000),
         },
       });
+    }
+    if (path === "/api/v1/cloud-browser/logout") return Response.json({ ok: true });
     if (path === "/api/v1/projects")
       return Response.json({ runtime: "docker", available: true, projects: [] });
     if (path === "/api/v1/cloud-browser/environment") return Response.json({}, { status: 404 });
@@ -166,7 +176,7 @@ async function mount(
       await act(async () => {
         await flushMicrotasks();
       });
-  return { container, calls, redirects };
+  return { container, calls, redirects, pending };
 }
 
 test("a local Host root still discovers and renders its passcode gate", async () => {
@@ -235,12 +245,6 @@ test("a mounted workspace continues renewing while admin and account pages retai
     role: "admin",
     cloudSessionMs: 31000,
   });
-  function all(node: any): any[] {
-    return [node, ...Array.from(node.childNodes ?? []).flatMap(all)];
-  }
-  function props(node: any) {
-    return node[Object.keys(node).find((key) => key.startsWith("__reactProps"))!];
-  }
   const projectInput = () =>
     all(view.container).find(
       (node) => node.tagName === "INPUT" && props(node)?.placeholder === "例如：我的第一个工作区",
@@ -275,5 +279,56 @@ test("a mounted workspace continues renewing while admin and account pages retai
     ).toBeGreaterThan(admissionCount);
     expect(projectInput()).toBe(input);
     expect(props(input).value).toBe("保留的工作区草稿");
+  }
+});
+
+test("navigation during a delayed Cloud renewal does not revoke the mounted workspace", async () => {
+  const view = await mount("https://codeshell.site/app", "cloud", {
+    role: "admin",
+    cloudSessionMs: 31000,
+  });
+  const projectInput = () =>
+    all(view.container).find(
+      (node) => node.tagName === "INPUT" && props(node)?.placeholder === "例如：我的第一个工作区",
+    );
+  const input = projectInput();
+  expect(input).toBeDefined();
+  await act(async () => {
+    props(input).onChange({ target: { value: "续期中保留的草稿" } });
+    await flushMicrotasks();
+  });
+  let release!: () => void;
+  view.pending.cloudSession = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  try {
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 1100));
+    });
+    const sessionRequests = () =>
+      view.calls.filter((path) => path === "/api/v1/cloud-browser/session").length;
+    expect(sessionRequests()).toBe(2);
+    for (const pathname of ["/admin", "/settings/account/profile"]) {
+      await act(async () => {
+        window.location.href = `https://codeshell.site${pathname}`;
+        window.dispatchEvent({ type: "popstate" } as Event);
+        await flushMicrotasks();
+      });
+      expect(projectInput()).toBe(input);
+    }
+    await act(async () => {
+      release();
+      await flushMicrotasks();
+    });
+    for (let i = 0; i < 5; i++)
+      await act(async () => {
+        await flushMicrotasks();
+      });
+    expect(view.calls).not.toContain("/api/v1/cloud-browser/logout");
+    expect(sessionRequests()).toBe(2);
+    expect(projectInput()).toBe(input);
+    expect(props(input).value).toBe("续期中保留的草稿");
+  } finally {
+    release();
   }
 });
