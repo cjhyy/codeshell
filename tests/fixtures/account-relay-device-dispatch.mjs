@@ -5,7 +5,6 @@ import http from "node:http";
 import https from "node:https";
 import net from "node:net";
 import { syncBuiltinESMExports } from "node:module";
-import { once } from "node:events";
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
 import { createCipheriv, createDecipheriv, randomBytes, randomUUID } from "node:crypto";
@@ -491,27 +490,44 @@ try {
   await a.account.signIn("register", { origin: directoryOrigin, username: "alice", password });
   await b.account.signIn("login", { origin: directoryOrigin, username: "alice", password });
   await c.account.signIn("register", { origin: directoryOrigin, username: "bob", password });
-  for (const item of computers)
+  for (const item of computers) {
     assert.equal(
       item.controller.relayStatus().state,
-      "ready",
+      "stopped",
       JSON.stringify({
         label: item.label,
         status: item.controller.relayStatus(),
         paths: requests.map((item) => item.path),
       }),
     );
+    assert.equal(item.controller.relayStatus().registered, true);
+    assert.equal(item.controller.relayStatus().remoteAccessEnabled, false);
+    assert.ok(!item.host.status(), "Account sign-in must not start a remote Host");
+  }
+  assert.equal(connectorSockets.size, 0, "Account sign-in must not open relay sockets");
   const aId = a.controller.relayStatus().hostId,
     bId = b.controller.relayStatus().hostId,
     cId = c.controller.relayStatus().hostId;
   const aliceHosts = await b.client.list();
   assert.deepEqual(new Set(aliceHosts.map((host) => host.hostId)), new Set([aId, bId]));
-  assert.ok(aliceHosts.every((host) => host.online));
+  assert.ok(
+    aliceHosts.every((host) => !host.online),
+    "Signed-in computers are visible with remote control off",
+  );
   assert.deepEqual(
     (await c.client.list()).map((host) => host.hostId),
     [cId],
   );
+  await assert.rejects(b.client.connect(7, { hostId: aId, projectId: a.projectId }), /离线/);
+  await a.controller.start({ mode: "relay" });
+  await c.controller.start({ mode: "relay" });
+  assert.equal(a.controller.relayStatus().remoteAccessEnabled, true);
+  assert.equal(a.controller.relayStatus().state, "ready");
+  assert.equal(b.controller.relayStatus().remoteAccessEnabled, false);
+  assert.equal(b.controller.relayStatus().state, "stopped");
+  assert.equal((await b.client.list()).find((host) => host.hostId === aId).online, true);
   await assert.rejects(c.client.connect(8, { hostId: aId, projectId: a.projectId }), /账号授权/);
+  // Source device authority is independent of allowing inbound remote control.
   const projects = await b.client.projects(7, { hostId: aId });
   assert.deepEqual(projects, [
     { id: a.projectId, name: "computer-a actual project", path: a.projectPath },
@@ -537,6 +553,12 @@ try {
   );
   b.client.send(7, { connectionId: one.id, text: "long" });
   await waitFor(() => JSON.stringify(b.events).includes("computer-a:long"), "first target running");
+  assert.equal(
+    b.controller.relayStatus().state,
+    "stopped",
+    "Viewing another computer must not enable this source computer",
+  );
+  await b.controller.start({ mode: "relay" });
   const two = await b.client.connect(7, { hostId: bId, projectId: b.projectId });
   b.client.send(7, { connectionId: two.id, text: "quick" });
   await waitFor(
@@ -569,11 +591,17 @@ try {
   const saved = a.accountStore.load();
   a.accountStore.save({ ...saved, accessTokenExpiresAt: Date.now() - 1 });
   const epoch = a.relayStore.load().credentialEpoch;
-  await a.controller.stop();
+  await a.controller.dispose();
   a.make();
   await a.account.resume();
   assert.equal(a.controller.relayStatus().hostId, aId);
   assert.equal(a.relayStore.load().credentialEpoch, epoch);
+  assert.equal(
+    a.controller.relayStatus().remoteAccessEnabled,
+    true,
+    "Restart preserves an explicit remote-control opt-in",
+  );
+  assert.equal(a.controller.relayStatus().state, "ready");
   assert.equal(requests.filter((request) => request.path.endsWith("/ensure")).length, before);
   assert.ok(requests.some((request) => request.path === "/api/v1/account/refresh"));
   await waitFor(
@@ -616,12 +644,38 @@ try {
   assert.equal(b.controller.relayStatus().state, "ready");
   await assert.rejects(b.client.connect(7, { hostId: aId, projectId: a.projectId }), /授权/);
   await b.controller.stop();
+  assert.equal(b.controller.relayStatus().remoteAccessEnabled, false);
+  assert.equal(
+    b.controller.relayStatus().registered,
+    true,
+    "Turning remote control off preserves account visibility",
+  );
   assert.equal((await b.client.list()).find((host) => host.hostId === bId).online, false);
   await assert.rejects(b.client.connect(7, { hostId: bId, projectId: b.projectId }), /离线/);
+  await b.account.resume();
+  assert.equal(
+    b.controller.relayStatus().state,
+    "stopped",
+    "Session resume cannot override the off switch",
+  );
+  assert.equal((await a.client.list()).find((host) => host.hostId === bId).online, false);
   await b.account.logout();
   await assert.rejects(b.client.list(), /登录/);
+  assert.equal(b.controller.relayStatus().registered, false);
+  assert.ok(
+    !(await a.client.list()).some((host) => host.hostId === bId),
+    "Signing out removes this computer from the account directory",
+  );
   assert.equal(c.controller.relayStatus().state, "ready");
   assert.equal((await c.client.list())[0].hostId, cId);
+  await b.account.signIn("login", { origin: directoryOrigin, username: "alice", password });
+  assert.equal(b.controller.relayStatus().hostId, bId);
+  assert.equal(b.controller.relayStatus().remoteAccessEnabled, false);
+  assert.equal(b.controller.relayStatus().state, "stopped");
+  assert.ok(
+    (await a.client.list()).some((host) => host.hostId === bId),
+    "Signing in again restores the same computer without a separate enrollment action",
+  );
   const publicState = JSON.stringify({
     list: aliceHosts,
     projects,
@@ -645,12 +699,16 @@ try {
     JSON.stringify({
       ok: true,
       transport: "native HTTP/ws parsers over isolated memory bytes; no TCP/TLS claim",
-      automaticLoginOnline: 3,
+      automaticLoginRegistered: 3,
+      remoteControlDefaultOff: 3,
       accounts: 2,
       projects: "actual per-Host fixture directories",
       controlledStdio: ["output", "approval", "cancel"],
       verified: [
         "same-account discovery",
+        "login visible without opening remote access",
+        "remote-control off source can view and dispatch to another computer",
+        "explicit on/off and persisted restart preference",
         "foreign-account denied",
         "selected Host/project/session ownership",
         "old-target Stop after switch",
@@ -658,6 +716,7 @@ try {
         "target and source revocation disconnect",
         "offline dispatch denied",
         "logout isolation",
+        "logout removes computer and relogin restores it with remote control off",
         "main-only credentials",
       ],
     }),
