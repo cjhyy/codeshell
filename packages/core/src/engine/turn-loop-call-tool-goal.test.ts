@@ -80,7 +80,9 @@ for (const toolName of ["complete_goal", "cancel_goal"]) {
             appendToolUse() {},
             appendToolResult() {},
             appendTurnBoundary() {},
-            appendMessage() {},
+            appendMessage() {
+              return { id: crypto.randomUUID() };
+            },
           } as unknown as TurnLoopDeps["transcript"],
           systemPrompt: "system",
           tools: surface.snapshot(),

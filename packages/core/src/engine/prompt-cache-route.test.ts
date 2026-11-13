@@ -95,7 +95,9 @@ describe("TurnLoop follows the client's effective cache strategy", () => {
         appendToolResult() {},
         appendTurnBoundary() {},
         appendTurnStopped() {},
-        appendMessage() {},
+        appendMessage() {
+          return { id: crypto.randomUUID() };
+        },
       },
       systemPrompt: "sys",
       tools: [],

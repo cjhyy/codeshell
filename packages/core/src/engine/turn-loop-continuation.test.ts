@@ -69,7 +69,9 @@ function makeDeps(responses: Array<LLMResponse | Error>): {
     appendToolUse() {},
     appendToolResult() {},
     appendTurnBoundary() {},
-    appendMessage() {},
+    appendMessage() {
+      return { id: crypto.randomUUID() };
+    },
     appendTurnStopped() {
       stopped++;
     },

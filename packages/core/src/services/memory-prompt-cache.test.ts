@@ -5,7 +5,7 @@ import {
   type ExistingMemorySummary,
 } from "./extract-memories.js";
 import { buildSessionMemoryPrompt, buildSessionMemoryPromptSegments } from "./session-memory.js";
-import { formatMemoryTranscript, layoutMemoryTranscript } from "./memory-transcript.js";
+import { layoutMemoryTranscript } from "./memory-transcript.js";
 import type { MemoryPromptSegments } from "./memory-prompt-segments.js";
 
 type Turn = { role: string; content: string };
@@ -54,7 +54,6 @@ describe("append-only memory transcript layout", () => {
     expect(layout.sealed.join("") + layout.open).toBe(
       messages.map(({ role, content }) => `[${role}]: ${content}`).join("\n\n"),
     );
-    expect(formatMemoryTranscript(messages, 2000)).toBe(layout.sealed.join("") + layout.open);
     expect(layout.sealed.length).toBeGreaterThan(1);
   });
 
@@ -130,7 +129,8 @@ describe.each([
 
     // The stable messages carry the instructions and nearly all of T.
     const stableChars = before.stable.join("").length;
-    const rendered = formatMemoryTranscript(transcript, 3000).length;
+    const layout = layoutMemoryTranscript(transcript, 3000);
+    const rendered = layout.sealed.join("").length + layout.open.length;
     expect(before.stable[0]).not.toContain("TURN_");
     expect(before.stable.join("")).toContain("TURN_0 ");
     expect(stableChars).toBeGreaterThan(before.stable[0]!.length + rendered * 0.8);

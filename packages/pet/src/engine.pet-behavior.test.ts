@@ -10,7 +10,7 @@ import type { ToolDefinition } from "@cjhyy/code-shell-core/extension";
 import { Engine } from "@cjhyy/code-shell-core";
 import { createPetModule } from "./capability.js";
 // Rule 5 of the prompt-cache design: unregistered prefix changes fail (shared via globalThis).
-import { installPromptPrefixGuard } from "../../core/src/testing/prompt-prefix-guard.js";
+import { installPromptPrefixGuard } from "../../core/dist/testing/prompt-prefix-guard.js";
 
 installPromptPrefixGuard({ beforeEach, afterEach });
 

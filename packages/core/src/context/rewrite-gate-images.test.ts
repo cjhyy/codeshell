@@ -88,7 +88,7 @@ for (const [name, run] of runners) {
       expect(out).toEqual(messages);
       expect(out[1]).toBe(message);
       expect(collectBase64Images(out)).toHaveLength(1);
-      expect(cm.getPendingRewriteBoundary()).toBe(1);
+      expect(cm.getPendingRewriteBoundaryMessage()).toBe(messages[1]);
       expect(cm.getPendingRewriteBoundaryMessage()).toBe(message);
     });
 
@@ -136,7 +136,7 @@ for (const [name, run] of runners) {
       expect(collectBase64Images(out)).toHaveLength(0);
       expect(JSON.stringify(out[1])).toContain("pixels omitted");
       expect(JSON.stringify(out[3])).toContain("collapsed");
-      expect(cm.getPendingRewriteBoundary()).toBeUndefined();
+      expect(cm.getPendingRewriteBoundaryMessage()).toBeUndefined();
       // Committed: the image stays replaced even where its bytes reappear.
       expect(collectBase64Images(window.prepare(messages).messages)).toHaveLength(0);
     });
@@ -159,7 +159,7 @@ for (const [name, run] of runners) {
       const out = await run(cm, sent, { externalRewrite: (m) => window.planBatch(m) });
 
       expect(collectBase64Images(out)).toHaveLength(IMAGE_HISTORY_WINDOW.maxImages);
-      expect(cm.getPendingRewriteBoundary()).toBeUndefined();
+      expect(cm.getPendingRewriteBoundaryMessage()).toBeUndefined();
     });
   });
 }

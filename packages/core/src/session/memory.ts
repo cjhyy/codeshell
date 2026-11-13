@@ -811,16 +811,7 @@ export class MemoryManager {
    * Static because it must construct the managers for each configured layer.
    * `projectDir` undefined → no project layer; `profileDir` undefined → no
    * digital-human layer.
-   */
-  static buildInjectionIndex(
-    opts: Parameters<typeof MemoryManager.buildInjectionIndexParts>[0],
-  ): string {
-    const parts = MemoryManager.buildInjectionIndexParts(opts);
-    if (parts === null) return "";
-    return parts.header + parts.items.map((item) => item.text).join("\n") + parts.footer;
-  }
-
-  /**
+   *
    * The injection index as header + one item per line, so a caller can tell
    * the model about a single changed memory instead of resending the index.
    * Memory lines are identified by location/scope/name (plus the entry id when

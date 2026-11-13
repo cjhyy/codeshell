@@ -1,3 +1,4 @@
+import { joinContextListParts } from "../context/context-ledger.js";
 import { describe, it, expect } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -484,7 +485,7 @@ describe("buildInjectionIndex (two-layer, global + project)", () => {
         content: "SECRET-BODY-DREAM",
       });
 
-      const idx = MemoryManager.buildInjectionIndex({ projectDir: projDir, baseDir: base });
+      const idx = injectionText({ projectDir: projDir, baseDir: base });
       expect(idx).toContain("Global memories");
       expect(idx).toContain("grep-first");
       expect(idx).toContain('[scope="user" location="global" type="feedback"] grep-first');
@@ -508,7 +509,7 @@ describe("buildInjectionIndex (two-layer, global + project)", () => {
     withBase((base) => {
       const globalMm = new MemoryManager({ baseDir: base });
       globalMm.save({ name: "g", description: "global lesson", type: "feedback", content: "x" });
-      const idx = MemoryManager.buildInjectionIndex({ baseDir: base });
+      const idx = injectionText({ baseDir: base });
       expect(idx).toContain("Global memories");
       expect(idx).not.toContain("Project memories");
     });
@@ -516,7 +517,7 @@ describe("buildInjectionIndex (two-layer, global + project)", () => {
 
   it("returns empty string when there are no memories", () => {
     withBase((base) => {
-      expect(MemoryManager.buildInjectionIndex({ projectDir: "/tmp/p", baseDir: base })).toBe("");
+      expect(injectionText({ projectDir: "/tmp/p", baseDir: base })).toBe("");
     });
   });
 
@@ -558,7 +559,7 @@ describe("buildInjectionIndex (two-layer, global + project)", () => {
         content: "x",
       });
 
-      const trimmed = MemoryManager.buildInjectionIndex({
+      const trimmed = injectionText({
         projectDir: projDir,
         baseDir: base,
         currentProjectOnly: true,
@@ -570,9 +571,16 @@ describe("buildInjectionIndex (two-layer, global + project)", () => {
       expect(trimmed).not.toContain("dream-consolidated");
 
       // The trim is opt-in — the default index still carries everything.
-      const full = MemoryManager.buildInjectionIndex({ projectDir: projDir, baseDir: base });
+      const full = injectionText({ projectDir: projDir, baseDir: base });
       expect(full).toContain("other-repo-fact");
       expect(full).toContain("dream-consolidated");
     });
   });
 });
+
+function injectionText(
+  options: Parameters<typeof MemoryManager.buildInjectionIndexParts>[0],
+): string {
+  const parts = MemoryManager.buildInjectionIndexParts(options);
+  return parts ? joinContextListParts(parts) : "";
+}

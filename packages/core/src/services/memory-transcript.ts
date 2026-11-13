@@ -70,11 +70,3 @@ export function layoutMemoryTranscript(
     items.map((item, index) => (index === 0 ? item : `${SEPARATOR}${item}`)),
   );
 }
-
-export function formatMemoryTranscript(
-  messages: Array<{ role: string; content: string }>,
-  maxMessageChars: number,
-): string {
-  const { sealed, open } = layoutMemoryTranscript(messages, maxMessageChars);
-  return sealed.join("") + open;
-}

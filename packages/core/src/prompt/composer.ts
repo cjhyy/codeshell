@@ -18,7 +18,6 @@ import {
 } from "../tool-system/builtin/skill-prompt.js";
 import {
   contextListSection,
-  renderContextSnapshot,
   type ContextListParts,
   type ContextSection,
 } from "../context/context-ledger.js";
@@ -120,7 +119,7 @@ export interface ComposerOptions {
    * When true (set from the active behavior profile, e.g. the Pet manager),
    * the injected memory index keeps only memories relevant to this cwd —
    * global-layer project/dream records tied to other projects are dropped.
-   * See MemoryManager.buildInjectionIndex(currentProjectOnly).
+   * See MemoryManager.buildInjectionIndexParts(currentProjectOnly).
    */
   memoryCurrentProjectOnly?: boolean;
   /**
@@ -186,7 +185,7 @@ export class PromptComposer {
     // constantly (extraction, recall usage++/lastUsed, approve/demote), and this
     // message sits in the cacheable system prefix — so every memory change
     // invalidated the whole prefix and re-billed it. Memory now rides
-    // buildDynamicContextMessage (tail, past the cache breakpoint), same as the
+    // buildDynamicContextSections (tail, past the cache breakpoint), same as the
     // skills listing and other volatile capability context which have the identical problem.
     if (!instructions) return null;
 
@@ -239,17 +238,6 @@ export class PromptComposer {
   }
 
   /**
-   * Dynamic context, delivered as <system-reminder> user messages rather than
-   * baked into the system prefix.
-   *
-   * Holds things that change *within* a session — the skills listing, memory
-   * and capability-owned context. Keeping them out of the system prompt means
-   * installing a skill or editing a file no longer invalidates the cached
-   * system prefix. The engine sends the sections through the context ledger
-   * (engine/run-context-ledger.ts): a snapshot once, then only what changed,
-   * always appended so earlier history is never rewritten.
-   */
-  /**
    * Declared-but-absent skills, stated plainly. Rides the dynamic context (not
    * the cached system prefix) because it depends on what is installed right now.
    */
@@ -268,11 +256,6 @@ export class PromptComposer {
     ].join("\n");
   }
 
-  async buildDynamicContextMessage(): Promise<Message | null> {
-    const content = renderContextSnapshot(await this.buildDynamicContextSections());
-    return content === null ? null : { role: "user", content };
-  }
-
   /**
    * The workspace the dynamic context is scoped to: skills and memory are read
    * from the working directory, sources from the project. Context told under a
@@ -283,10 +266,19 @@ export class PromptComposer {
   }
 
   /**
+   * Dynamic context, delivered as <system-reminder> user messages rather than
+   * baked into the system prefix.
+   *
+   * Holds things that change *within* a session — the skills listing, memory
+   * and capability-owned context. Keeping them out of the system prompt means
+   * installing a skill or editing a file no longer invalidates the cached
+   * system prefix. The engine sends the sections through the context ledger
+   * (engine/run-context-ledger.ts): a snapshot once, then only what changed,
+   * always appended so earlier history is never rewritten.
+   *
    * The dynamic context as ordered sections (empty ones omitted, except a
-   * skills section whose listing did not fit). Rendered as a snapshot they
-   * are exactly buildDynamicContextMessage; kept apart so the context ledger
-   * can resend only what changed since the model was last told.
+   * skills section whose listing did not fit). The context ledger renders a
+   * snapshot or resends only what changed since the model was last told.
    */
   async buildDynamicContextSections(): Promise<ContextSection[]> {
     const skills = scanSkills(this.options.cwd, {
@@ -462,7 +454,7 @@ export class PromptComposer {
     // Skills listing is intentionally NOT a system section: it changes when a
     // skill is installed/disabled, which would invalidate the whole cached
     // system prefix on every change. It rides in the per-turn dynamic-context
-    // message instead (buildDynamicContextMessage). Same reasoning keeps the
+    // message instead (buildDynamicContextSections). Same reasoning keeps the
     // capability-owned volatile context out of the system prefix — see
     // buildCapabilitySections.
 

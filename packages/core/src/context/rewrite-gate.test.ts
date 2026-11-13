@@ -105,7 +105,7 @@ for (const [name, run] of runners) {
       const out = await run(cm, messages);
 
       expect(resultTexts(out)[0]).toContain("collapsed");
-      expect(cm.getPendingRewriteBoundary()).toBeUndefined();
+      expect(cm.getPendingRewriteBoundaryMessage()).toBeUndefined();
     });
 
     test("warm + small saving → nothing rewritten, even when another snapshot arrives", async () => {
@@ -123,8 +123,7 @@ for (const [name, run] of runners) {
       clock.now += 5_000;
       const out1 = await run(cm, first);
       expect(out1).toEqual(first);
-      expect(cm.getPendingRewriteBoundary()).toBe(2);
-      // The boundary is also exposed by identity, for callers that re-index the list.
+      // The boundary is exposed by identity, for callers that re-index the list.
       expect(cm.getPendingRewriteBoundaryMessage()).toBe(first[2]);
 
       cm.noteModelRequestCompleted();
@@ -134,7 +133,7 @@ for (const [name, run] of runners) {
       expect(out2).toEqual(second);
       // Untouched history keeps the very same message objects (byte-identical prefix).
       for (let i = 0; i < first.length; i++) expect(out2[i]).toBe(first[i]);
-      expect(cm.getPendingRewriteBoundary()).toBe(2);
+      expect(cm.getPendingRewriteBoundaryMessage()).toBe(first[2]);
       expect(compactions).toEqual([]);
     });
 
@@ -150,7 +149,7 @@ for (const [name, run] of runners) {
       clock.now += 2 * MINUTE;
       const out = await run(cm, messages);
       expect(resultTexts(out)[0]).toContain("collapsed");
-      expect(cm.getPendingRewriteBoundary()).toBeUndefined();
+      expect(cm.getPendingRewriteBoundaryMessage()).toBeUndefined();
     });
 
     test("promptCacheTtlMs is configurable", async () => {
@@ -177,7 +176,7 @@ for (const [name, run] of runners) {
       messages = await run(cm, messages);
       messages = await run(cm, [...messages, ...snapTurn("s3", prose(1_500, "three"))]);
       expect(resultTexts(messages).some((t) => t.includes("collapsed"))).toBe(false);
-      expect(cm.getPendingRewriteBoundary()).toBe(4);
+      expect(cm.getPendingRewriteBoundaryMessage()).toBe(messages[4]);
 
       // A duplicate Read plus a 4th snapshot push pending savings past 4k.
       const next = [
@@ -192,7 +191,7 @@ for (const [name, run] of runners) {
       expect(texts[2]).toContain("collapsed");
       expect(texts[3]).toContain("collapsed");
       expect(texts[5]).toBe(prose(1_500, "four"));
-      expect(cm.getPendingRewriteBoundary()).toBeUndefined();
+      expect(cm.getPendingRewriteBoundaryMessage()).toBeUndefined();
     });
 
     test("thresholds are configurable", async () => {
@@ -224,7 +223,7 @@ for (const [name, run] of runners) {
       expect(resultTexts(out)[0]).toContain("collapsed");
       expect(resultTexts(out)[1]).toBe(prose(2_000, "new"));
       expect(compactions).toEqual([]);
-      expect(cm.getPendingRewriteBoundary()).toBeUndefined();
+      expect(cm.getPendingRewriteBoundaryMessage()).toBeUndefined();
     });
 
     test("microcompact joins the batch only above its floor, and is deferred while warm", async () => {
@@ -242,7 +241,7 @@ for (const [name, run] of runners) {
       // ~1.9k saving < max(4k, 15%) → deferred, earliest rewrite is round 0's result.
       const deferred = await run(cm, messages);
       expect(deferred).toEqual(messages);
-      expect(cm.getPendingRewriteBoundary()).toBe(2);
+      expect(cm.getPendingRewriteBoundaryMessage()).toBe(messages[2]);
       expect(compactions).toEqual([]);
 
       clock.now += 31 * MINUTE;
@@ -252,7 +251,6 @@ for (const [name, run] of runners) {
       expect(texts[1]).toContain("Old tool result cleared");
       expect(texts[2]).toBe(prose(950, "file2"));
       expect(compactions).toContain("micro");
-      expect(cm.getPendingRewriteBoundary()).toBeUndefined();
       expect(cm.getPendingRewriteBoundaryMessage()).toBeUndefined();
     });
 
@@ -266,7 +264,7 @@ for (const [name, run] of runners) {
       const messages = [...snapTurn("s1", prose(500, "old")), ...snapTurn("s2", prose(500, "new"))];
       const secondRun = makeManager(clock, {}, path);
       expect(await run(secondRun, messages)).toEqual(messages);
-      expect(secondRun.getPendingRewriteBoundary()).toBe(1);
+      expect(secondRun.getPendingRewriteBoundaryMessage()).toBe(messages[1]);
 
       // A different session in the same process has never made a request: cold.
       const other = makeManager(clock, {}, `/tmp/rewrite-gate-${name}/session-b/transcript.jsonl`);
@@ -284,7 +282,7 @@ for (const [name, run] of runners) {
       const secondRun = makeManager(clock);
       secondRun.setPromptCacheSessionKey(`ephemeral-${name}`);
       expect(await run(secondRun, messages)).toEqual(messages);
-      expect(secondRun.getPendingRewriteBoundary()).toBe(1);
+      expect(secondRun.getPendingRewriteBoundaryMessage()).toBe(messages[1]);
 
       // Another non-persistent session has never made a request: cold.
       const other = makeManager(clock);

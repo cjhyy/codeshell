@@ -47,12 +47,18 @@ function depsWithThrowingManage(): TurnLoopDeps {
       isConcurrencySafe: () => false,
     } as unknown as TurnLoopDeps["toolExecutor"],
     contextManager,
-    hooks: { async emit() { return {}; } } as unknown as TurnLoopDeps["hooks"],
+    hooks: {
+      async emit() {
+        return {};
+      },
+    } as unknown as TurnLoopDeps["hooks"],
     transcript: {
       appendToolUse() {},
       appendToolResult() {},
       appendTurnBoundary() {},
-      appendMessage() {},
+      appendMessage() {
+        return { id: crypto.randomUUID() };
+      },
     } as unknown as TurnLoopDeps["transcript"],
     systemPrompt: "sys",
     tools: [],

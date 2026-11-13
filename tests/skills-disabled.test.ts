@@ -15,15 +15,13 @@ import { join } from "node:path";
 
 import { scanSkills, invalidateSkillCache } from "../packages/core/src/skills/scanner.js";
 import { skillTool } from "../packages/core/src/tool-system/builtin/skill.js";
+import { renderContextSnapshot } from "../packages/core/src/context/context-ledger.js";
 import { PromptComposer } from "../packages/core/src/prompt/composer.js";
 
 function makeSkill(base: string, name: string, description: string, body: string) {
   const dir = join(base, name);
   mkdirSync(dir, { recursive: true });
-  writeFileSync(
-    join(dir, "SKILL.md"),
-    `---\ndescription: ${description}\n---\n${body}`,
-  );
+  writeFileSync(join(dir, "SKILL.md"), `---\ndescription: ${description}\n---\n${body}`);
 }
 
 describe("settings.disabledSkills — scanner", () => {
@@ -67,10 +65,7 @@ describe("settings.disabledSkills — scanner", () => {
     try {
       const skillDir = join(cache, "skills", "foo");
       mkdirSync(skillDir, { recursive: true });
-      writeFileSync(
-        join(skillDir, "SKILL.md"),
-        "---\ndescription: foo desc\n---\nfoo body",
-      );
+      writeFileSync(join(skillDir, "SKILL.md"), "---\ndescription: foo desc\n---\nfoo body");
 
       const pluginsDir = join(fakeHome, ".code-shell", "plugins");
       mkdirSync(pluginsDir, { recursive: true });
@@ -139,10 +134,7 @@ describe("settings.disabledSkills — scanner", () => {
       for (const name of ["foo", "bar"]) {
         const dir = join(cache, "skills", name);
         mkdirSync(dir, { recursive: true });
-        writeFileSync(
-          join(dir, "SKILL.md"),
-          `---\ndescription: ${name} desc\n---\n${name} body`,
-        );
+        writeFileSync(join(dir, "SKILL.md"), `---\ndescription: ${name} desc\n---\n${name} body`);
       }
       const pluginsDir = join(fakeHome, ".code-shell", "plugins");
       mkdirSync(pluginsDir, { recursive: true });
@@ -193,10 +185,7 @@ describe("settings.disabledSkills — scanner", () => {
       for (const name of ["keep", "also"]) {
         const dir = join(cache, "other", "skills", name);
         mkdirSync(dir, { recursive: true });
-        writeFileSync(
-          join(dir, "SKILL.md"),
-          `---\ndescription: ${name}\n---\n${name}`,
-        );
+        writeFileSync(join(dir, "SKILL.md"), `---\ndescription: ${name}\n---\n${name}`);
       }
       const pluginsDir = join(fakeHome, ".code-shell", "plugins");
       mkdirSync(pluginsDir, { recursive: true });
@@ -276,20 +265,20 @@ describe("settings.disabledSkills — skillTool", () => {
     const userBase = join(fakeHome, ".code-shell", "skills");
     makeSkill(userBase, "alpha", "first", "alpha body");
 
-    const out = await skillTool(
-      { skill: "alpha" },
-      { cwd: fakeHome, disabledSkills: ["alpha"] } as never,
-    );
+    const out = await skillTool({ skill: "alpha" }, {
+      cwd: fakeHome,
+      disabledSkills: ["alpha"],
+    } as never);
     expect(out.toLowerCase()).toContain("disabled");
     // Must distinguish from "not found".
     expect(out.toLowerCase()).not.toContain("not found");
   });
 
   it("still returns a 'not found' message for unknown skills", async () => {
-    const out = await skillTool(
-      { skill: "nope" },
-      { cwd: fakeHome, disabledSkills: ["alpha"] } as never,
-    );
+    const out = await skillTool({ skill: "nope" }, {
+      cwd: fakeHome,
+      disabledSkills: ["alpha"],
+    } as never);
     expect(out.toLowerCase()).toContain("not found");
   });
 
@@ -298,10 +287,10 @@ describe("settings.disabledSkills — skillTool", () => {
     makeSkill(userBase, "alpha", "first", "alpha body");
     makeSkill(userBase, "beta", "second", "beta body");
 
-    const out = await skillTool(
-      { skill: "beta" },
-      { cwd: fakeHome, disabledSkills: ["alpha"] } as never,
-    );
+    const out = await skillTool({ skill: "beta" }, {
+      cwd: fakeHome,
+      disabledSkills: ["alpha"],
+    } as never);
     expect(out).toContain("beta body");
   });
 
@@ -314,10 +303,7 @@ describe("settings.disabledSkills — skillTool", () => {
     try {
       const skillDir = join(cache, "skills", "foo");
       mkdirSync(skillDir, { recursive: true });
-      writeFileSync(
-        join(skillDir, "SKILL.md"),
-        "---\ndescription: foo\n---\nfoo body",
-      );
+      writeFileSync(join(skillDir, "SKILL.md"), "---\ndescription: foo\n---\nfoo body");
       const pluginsDir = join(fakeHome, ".code-shell", "plugins");
       mkdirSync(pluginsDir, { recursive: true });
       writeFileSync(
@@ -338,10 +324,10 @@ describe("settings.disabledSkills — skillTool", () => {
         }),
       );
 
-      const out = await skillTool(
-        { skill: "fake-plugin:foo" },
-        { cwd: fakeHome, disabledPlugins: ["fake-plugin"] } as never,
-      );
+      const out = await skillTool({ skill: "fake-plugin:foo" }, {
+        cwd: fakeHome,
+        disabledPlugins: ["fake-plugin"],
+      } as never);
       expect(out.toLowerCase()).toContain("disabled plugin");
       // Make sure it is NOT the per-skill phrasing nor not-found.
       expect(out.toLowerCase()).not.toContain("not found");
@@ -382,9 +368,9 @@ describe("settings.disabledSkills — PromptComposer dynamic skills section", ()
       model: "test-model",
       disabledSkills: ["alpha"],
     });
-    const prompt = (await composer.buildDynamicContextMessage())?.content ?? "";
+    const prompt = renderContextSnapshot(await composer.buildDynamicContextSections()) ?? "";
 
-    // The exact format of the listing is owned by buildSkillListing; we
+    // The exact format of the listing is owned by buildSkillListingParts; we
     // only assert that the disabled name (and its description) does not
     // show up anywhere in the assembled prompt while the enabled one does.
     expect(prompt).toContain("beta");
@@ -401,7 +387,7 @@ describe("settings.disabledSkills — PromptComposer dynamic skills section", ()
       cwd: projectRoot,
       model: "test-model",
     });
-    const prompt = (await composer.buildDynamicContextMessage())?.content ?? "";
+    const prompt = renderContextSnapshot(await composer.buildDynamicContextSections()) ?? "";
     expect(prompt).toContain("alpha");
     expect(prompt).toContain("beta");
   });
@@ -409,7 +395,7 @@ describe("settings.disabledSkills — PromptComposer dynamic skills section", ()
   it("omits every skill from a disabled plugin in the dynamic context prompt", async () => {
     // Install a fake plugin with two skills; disabledPlugins:
     // ["fake-plugin"] removes both. We assert by namespace prefix so
-    // the test stays robust if buildSkillListing formatting changes.
+    // the test stays robust if buildSkillListingParts formatting changes.
     const cache = mkdtempSync(join(tmpdir(), "disabled-comp-plugin-"));
     try {
       for (const name of ["foo", "bar"]) {
@@ -445,7 +431,7 @@ describe("settings.disabledSkills — PromptComposer dynamic skills section", ()
         model: "test-model",
         disabledPlugins: ["fake-plugin"],
       });
-      const prompt = (await composer.buildDynamicContextMessage())?.content ?? "";
+      const prompt = renderContextSnapshot(await composer.buildDynamicContextSections()) ?? "";
       expect(prompt).not.toContain("fake-plugin:foo");
       expect(prompt).not.toContain("fake-plugin:bar");
     } finally {

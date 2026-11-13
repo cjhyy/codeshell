@@ -117,6 +117,7 @@ describe("finalizeRunSuccess", () => {
           transcript: {
             appendMessage: (role: string, content: string, options: unknown) => {
               persistedMessages.push({ role, content, options });
+              return { id: crypto.randomUUID() };
             },
             flushFailed: () => false,
             getEvents: () => [
@@ -366,7 +367,7 @@ describe("finalizeRunSuccess", () => {
       session: {
         state,
         transcript: {
-          appendMessage: () => {},
+          appendMessage: () => ({ id: crypto.randomUUID() }),
           flushFailed: () => false,
           getEvents: () => [{ id: "user-event", data: { role: "user", content: "hi" } }],
         },

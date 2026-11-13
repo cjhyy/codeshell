@@ -63,7 +63,9 @@ function makeDeps(script: Array<LLMResponse | Error>): {
       appendToolUse() {},
       appendToolResult() {},
       appendTurnBoundary() {},
-      appendMessage() {},
+      appendMessage() {
+        return { id: crypto.randomUUID() };
+      },
     } as unknown as TurnLoopDeps["transcript"],
     systemPrompt: "sys",
     tools: [],

@@ -12,7 +12,7 @@ import {
 } from "@cjhyy/code-shell-core/extension";
 import { createPetModule } from "./capability.js";
 // Rule 5 of the prompt-cache design: unregistered prefix changes fail (shared via globalThis).
-import { installPromptPrefixGuard } from "../../core/src/testing/prompt-prefix-guard.js";
+import { installPromptPrefixGuard } from "../../core/dist/testing/prompt-prefix-guard.js";
 import { sessionSelectorId } from "./disclosure/selector.js";
 import { PET_BEHAVIOR_PROFILE } from "./profile.js";
 

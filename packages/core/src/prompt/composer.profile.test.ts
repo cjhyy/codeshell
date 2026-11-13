@@ -3,6 +3,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PromptComposer } from "./composer.js";
+import { renderContextSnapshot } from "../context/context-ledger.js";
 
 const cwd = mkdtempSync(join(tmpdir(), "cs-composer-profile-"));
 
@@ -39,8 +40,8 @@ describe("composer declared-skill gap notice", () => {
       // user-wide — scanSkills reads the real ~/.code-shell/skills too.
       profileDeclaredSkills: ["cs-absent-skill-a", "cs-absent-skill-b"],
     });
-    const message = await composer.buildDynamicContextMessage();
-    const text = typeof message?.content === "string" ? message.content : "";
+    const message = renderContextSnapshot(await composer.buildDynamicContextSections());
+    const text = message ?? "";
     // A session bound to video-director called /hyperframes, got "Skill not
     // found", then flailed with Glob before giving up. Say it up front instead.
     expect(text).toContain("cs-absent-skill-a");
@@ -54,15 +55,15 @@ describe("composer declared-skill gap notice", () => {
       model: "test-model",
       profileDeclaredSkills: [],
     });
-    const message = await composer.buildDynamicContextMessage();
-    const text = typeof message?.content === "string" ? message.content : "";
+    const message = renderContextSnapshot(await composer.buildDynamicContextSections());
+    const text = message ?? "";
     expect(text).not.toMatch(/not installed/i);
   });
 
   test("no declaration means no notice", async () => {
     const composer = new PromptComposer({ cwd, model: "test-model" });
-    const message = await composer.buildDynamicContextMessage();
-    const text = typeof message?.content === "string" ? message.content : "";
+    const message = renderContextSnapshot(await composer.buildDynamicContextSections());
+    const text = message ?? "";
     expect(text).not.toMatch(/not installed/i);
   });
 });
