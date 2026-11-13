@@ -11,6 +11,12 @@ import {
   findCodingInstructionBoundary,
   gitDynamicContextProvider,
 } from "./capability-runtime.js";
+import {
+  GIT_SNAPSHOT_COMMIT_LIMIT,
+  GIT_SNAPSHOT_NOTE,
+  GIT_SNAPSHOT_STATUS_LIMIT,
+  renderGitContextSnapshot,
+} from "./git/context-snapshot.js";
 
 const dirs: string[] = [];
 
@@ -43,9 +49,37 @@ describe("coding capability runtime", () => {
         defaultPermissionRules: [],
       },
     });
-    expect(context).toContain("Current branch:");
-    expect(context).toContain("untracked.txt");
-    expect(context).toContain("initial");
+    expect(context).toMatchObject({ key: "git-status", compare: "snapshot-only" });
+    const text = typeof context === "object" ? context.text : "";
+    expect(text).toContain(GIT_SNAPSHOT_NOTE);
+    expect(text).toContain("Current branch:");
+    expect(text).toContain("untracked.txt");
+    expect(text).toContain("initial");
+    // A point-in-time snapshot carries no clock: the same tree renders the same bytes.
+    expect(text).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+  });
+
+  it("caps the git snapshot's status and commit lists deterministically", () => {
+    const status = Array.from({ length: 47 }, (_, index) => ({
+      status: "M",
+      path: `src/file-${String(index).padStart(2, "0")}.ts`,
+    }));
+    const log = Array.from({ length: 8 }, (_, index) => ({
+      hash: `h${index}`,
+      message: index === 0 ? "x".repeat(400) : `commit ${index}`,
+      author: "a",
+      date: "2026-11-12",
+    }));
+    const text = renderGitContextSnapshot({ branch: "main", status, log });
+    expect(text).toBe(renderGitContextSnapshot({ branch: "main", status, log }));
+    const statusLines = text.split("Status:\n")[1]!.split("\n\n")[0]!.split("\n");
+    expect(statusLines).toHaveLength(GIT_SNAPSHOT_STATUS_LIMIT + 1);
+    expect(statusLines.at(-2)).toBe("M src/file-39.ts");
+    expect(statusLines.at(-1)).toBe("… 7 more");
+    const commits = text.split("Recent commits:\n")[1]!.split("\n");
+    expect(commits).toHaveLength(GIT_SNAPSHOT_COMMIT_LIMIT);
+    expect(commits[0]!.length).toBeLessThan(200);
+    expect(text).not.toContain("2026-11-12");
   });
 
   it("builds worktree configuration as a coding-private tool service", async () => {

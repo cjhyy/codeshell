@@ -25,6 +25,7 @@ import {
 import { resolveAgentPreset, buildPresetSystemPrompt, type AgentPreset } from "../preset/index.js";
 import type { BuiltinTool } from "../tool-system/builtin/index.js";
 import type { CapabilityDynamicContextProvider } from "../capabilities/index.js";
+import { capabilityContextSections } from "./capability-context.js";
 import {
   legacySingleRootWorkspace,
   validateWorkspaceContext,
@@ -216,9 +217,9 @@ export class PromptComposer {
     return changedTo === undefined ? "" : dateChangeNotice(changedTo);
   }
 
-  /** Build volatile context contributed by installed capability modules. */
-  async buildSystemContext(): Promise<string> {
-    if (this.options.disableCapabilityContext === true) return "";
+  /** Volatile context contributed by installed capability modules, as ledger sections. */
+  private async buildCapabilitySections(): Promise<ContextSection[]> {
+    if (this.options.disableCapabilityContext === true) return [];
     const preset = this.options.preset ?? resolveAgentPreset();
     const parts = await Promise.all(
       (this.options.dynamicContextProviders ?? []).map(async (provider) => {
@@ -234,7 +235,7 @@ export class PromptComposer {
         }
       }),
     );
-    return parts.filter((part): part is string => Boolean(part)).join("\n\n");
+    return capabilityContextSections(parts);
   }
 
   /**
@@ -301,8 +302,8 @@ export class PromptComposer {
     const declaredSkillGap = this.buildDeclaredSkillGap(skills);
     // Capability and sources context are independent I/O — resolve them
     // concurrently instead of serially.
-    const [capabilityContext, sourcesContext] = await Promise.all([
-      this.buildSystemContext(),
+    const [capabilitySections, sourcesContext] = await Promise.all([
+      this.buildCapabilitySections(),
       (async () => {
         if (this.options.disableSourcesContext === true) return "";
         try {
@@ -342,7 +343,7 @@ export class PromptComposer {
             ]
           : []),
       { key: "skill-gap", text: declaredSkillGap },
-      { key: "capability", text: capabilityContext },
+      ...capabilitySections,
       ...(memoryIndex ? [contextListSection("memory", memoryIndex)] : []),
       { key: "sources", text: sourcesContext },
       { key: "goal-tool", text: this.buildGoalToolContext() },
@@ -462,8 +463,8 @@ export class PromptComposer {
     // skill is installed/disabled, which would invalidate the whole cached
     // system prefix on every change. It rides in the per-turn dynamic-context
     // message instead (buildDynamicContextMessage). Same reasoning keeps the
-    // capability-owned volatile context out of the system prefix — see buildSystemContext's
-    // callers.
+    // capability-owned volatile context out of the system prefix — see
+    // buildCapabilitySections.
 
     // Append system prompt
     if (this.options.appendSystemPrompt) {

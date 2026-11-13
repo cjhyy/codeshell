@@ -191,6 +191,41 @@ describe("PromptComposer.buildDynamicContextSections", () => {
     expect(await ids()).toEqual(first);
   });
 
+  test("a provider's own section follows the shared capability text, compared on its terms", async () => {
+    const sections = await new PromptComposer({
+      ...options(),
+      dynamicContextProviders: [
+        () => "capability context",
+        () => ({ key: "git-status", text: "gitStatus: snapshot", compare: "snapshot-only" }),
+        () => ({ key: "notes", text: "own notes" }),
+        // Unusable or repeated keys are not lost: the text joins the shared section.
+        () => ({ key: 'bad" key', text: "unkeyed text" }),
+        () => ({ key: "notes", text: "repeated notes" }),
+        () => undefined,
+      ],
+    }).buildDynamicContextSections();
+    expect(sections.map((section) => section.key)).toEqual([
+      "skills",
+      "skill-gap",
+      "capability",
+      "capability-git-status",
+      "capability-notes",
+      "memory",
+      "sources",
+      "goal-tool",
+    ]);
+    const byKey = new Map(sections.map((section) => [section.key, section]));
+    expect(byKey.get("capability")!.text).toBe(
+      "capability context\n\nunkeyed text\n\nrepeated notes",
+    );
+    expect(byKey.get("capability-git-status")).toEqual({
+      key: "capability-git-status",
+      text: "gitStatus: snapshot",
+      compare: "snapshot-only",
+    });
+    expect(byKey.get("capability-notes")).toEqual({ key: "capability-notes", text: "own notes" });
+  });
+
   test("empty sections are omitted and an empty context is null", async () => {
     const empty = mkdtempSync(join(tmpdir(), "cs-sections-empty-"));
     process.env.HOME = empty;
