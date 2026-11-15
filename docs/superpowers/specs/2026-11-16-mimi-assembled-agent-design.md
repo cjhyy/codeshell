@@ -17,7 +17,9 @@ Mimi 不再靠"pet 模块的工具注入到所有会话 + 每轮按来源决定�
 2. **工具注册表由 worker 的种子 preset 决定**：desktop worker 用默认 preset（`terminal-coding`）建一个种子 Engine，所有会话共享它的工具注册表（`cli/agent-server-stdio.ts`）。会话自己的 preset 只影响提示词段和权限规则，不影响有哪些工具。
 3. **Mimi 拿到的是"编码助手 + 一层人设"**：Mimi 的运行请求不带 preset，所以她用的是 worker 默认的 `terminal-coding`：base / orchestration / coding / tone 提示词段，目录是 git 仓库时还有 git 状态，然后再叠上 `PET_SYSTEM_PROMPT`。她真正需要的能力集合从来没被显式写出来过。
 4. **能力随每轮变化**：Mimi 的工具是否可见取决于 `profileMeta`（`petHostActionKinds`、`petGateway`、`petSessions`、`petOutboundTargets`……），而这些由 desktop 每轮按消息来源重新计算（桌面 / IM / 群聊 / 跟进唤醒 / 是否主人回合，`pet-dispatch-service.ts`、`pet-notice-turn-gate.ts`）。同一个会话，这一轮和下一轮能用的工具、提示词都可能不同。实测 Mimi 会话每一轮的 `systemPromptDigest` 与 `toolCatalogDigest` 都不一样，连相隔一分钟的两轮也是。
-5. **hooks 选不了、也看不见是谁**：模块 hooks 在每个 Engine 上都注册（含子代理），preset 无法选择；hook 与动态上下文提供者拿不到会话种类、preset、行为档和这一轮的输入，所以 Mimi 的"每轮世界状态"只能由 desktop 拼成一个字符串（`profileParams.runtimeContext`）塞进去。
+5. **工具定义每轮被改写**：`DelegateWork`（`pet/src/delegate-work.ts`）把工作区和可复用会话列表（含 `updated=<时间>`、对话摘录、"当前活动"标记）写进描述和 `workspace_id` / `session_id` 枚举；`SendMessage` 把发送目标与就绪度、`GatewayReply` 把渠道限制写进描述。这些数据本来就在每轮世界状态里，重复了一份，还让工具定义每轮都不同。收尾轮、汇报轮各用一套更小的工具（closure 轮只有 8 个）。
+6. **0.11 的"冻结工具清单"在 Mimi 上有功能问题**：冻结周期内沿用首轮的 `DelegateWork` 描述和枚举，之后的轮次看到的是过期的工作区 / 会话 id；冻结的工具名只在新周期开始时取一次，周期若从收尾轮或桌面轮开始，`MobileRemote`、`GatewayReply` 等就被排除在外，调用会被拒；已有 Mimi 会话保存的 17 个工具名早于提醒工具，导致她看不到 `Notices` / `Triggers` 等。根子还是上面几条：能力集合不固定、工具定义不固定。
+7. **hooks 选不了、也看不见是谁**：模块 hooks 在每个 Engine 上都注册（含子代理），preset 无法选择；hook 与动态上下文提供者拿不到会话种类、preset、行为档和这一轮的输入，所以 Mimi 的"每轮世界状态"只能由 desktop 拼成一个字符串（`profileParams.runtimeContext`）塞进去。
 
 ## 2. 目标与不做
 
@@ -88,7 +90,11 @@ interface AgentPreset {
 - 新增一个 hook 输出 `turnContext`（文本块），写入现有的"动态上下文消息"——它已经排在用户消息之后、压缩前会被剥掉，正好用来放每轮事实。这是现在唯一缺的 hook 能力。
 - **工具可见性只依赖会话级、慢变的事实**（preset、会话种类、宿主是否配置了某项服务）。每轮的权限（这轮能不能改规则、能不能发 IM、是不是主人回合）一律在**调用时**由运行期服务和宿主拒绝，工具始终在清单里。工具描述写得通用，不在描述里泄露具体渠道或会话。
 
-### 3.5 用 hooks 改变行为
+### 3.5 工具定义是静态的
+
+工具的名字、描述、参数 schema 只由模块声明决定，不随每轮数据改写，不放会话 / 工作区 id 枚举。工作区、可复用会话、发送目标、渠道能力这些数据只在每轮上下文里出现，描述指向它们；参数合法性由宿主在调用时校验（今天已有 `normalizePetWorkDelegation`、`gatewayReplyResultFits` 等）。删除 `rewriteDelegateWorkDef`、`rewriteSendMessageDef`、`rewriteGatewayReplyDef`。
+
+### 3.6 用 hooks 改变行为
 
 模块 hook 是改 Mimi 行为的主要手段，例如：
 
@@ -137,7 +143,7 @@ preset：
 | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **A 显式选择**    | 删 `presetInjectedTools()` 与 `always`；preset 显式选工具 / hooks / 提供者 / 行为档；每个 Engine 按自己的 preset fork 有效工具集合；依赖校验；按 preset 的 golden | G2 两条测试通过；现有会话行为不变（回放与契约测试全过）                                                                                                |
 | **B 每轮输入**    | `runInput` 通道；hook / 提供者上下文扩展；`turnContext` 写入动态上下文消息                                                                                        | 一个测试模块能按会话种类注入每轮文本，不改系统提示词                                                                                                   |
-| **C Mimi 模块化** | 拆出 `mimi-*` 模块、preset `mimi` 与 `mimi-link`；desktop 改发 preset 与 `runInput`；门禁改为调用时拒绝；外部运行时目录由 preset 推出                             | Mimi 不再带 coding 提示词与 git 上下文；不同来源的两轮，Mimi 的工具清单与系统提示词逐字节相同；群聊回合调用提醒工具被拒；`NotifyMe` 在工作会话首轮可用 |
+| **C Mimi 模块化** | 拆出 `mimi-*` 模块、preset `mimi` 与 `mimi-link`；desktop 改发 preset 与 `runInput`；门禁改为调用时拒绝；工具定义改为静态；外部运行时目录由 preset 推出           | Mimi 不再带 coding 提示词与 git 上下文；不同来源的两轮，Mimi 的工具清单与系统提示词逐字节相同；群聊回合调用提醒工具被拒；`NotifyMe` 在工作会话首轮可用 |
 | **D 清理**        | 删 core 里的 pet 残留与遗留字段；更新架构文档 05 / 06 / 14                                                                                                        | 全仓契约 / 预算测试通过                                                                                                                                |
 
 A 是 core 改动，B 是 core 的一个小扩展，C、D 只动 pet 与 desktop。A、B 可以先合，C 合入前 Mimi 的现状不变。
