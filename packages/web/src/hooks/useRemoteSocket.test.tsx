@@ -170,6 +170,83 @@ describe("useRemoteSocket resync", () => {
     },
   );
 
+  test("an expired outer relay grant requires account authorization before constructing a socket", async () => {
+    setupBrowser();
+    window.location.origin = "https://computer.fixture.test";
+    window.location.search = "?pairing=old-token";
+    const calls: string[] = [];
+    globalThis.fetch = (async (url: string) => {
+      expect(url).toBe("/api/v1/relay/session");
+      calls.push(url);
+      return Response.json({ error: "invalid_relay_authorization" }, { status: 401 });
+    }) as typeof fetch;
+    const hook = await renderHook(() => useRemoteSocket({}));
+    try {
+      expect(hook.result.current.status).toBe("offline");
+      expect(hook.result.current.accessRequired).toBe(true);
+      expect(hook.result.current.accountAccessRequired).toBe(true);
+      // A cold page has no validated account destination; its existing navigation
+      // fallback must ask the gateway, rather than inventing a URL from this error.
+      expect(hook.result.current.accountEntryUrl).toBeUndefined();
+      expect(FakeWebSocket.instances).toHaveLength(0);
+      expect(hook.result.current.send({ type: "chat.send", text: "keep this draft" })).toBe(false);
+      expect(
+        hook.result.current.send({
+          type: "approval.respond",
+          approvalId: "pending",
+          decision: "approve",
+        }),
+      ).toBe(false);
+      await act(async () => {
+        for (const name of ["online", "focus", "pageshow"]) window.dispatchEvent(new Event(name));
+        document.dispatchEvent(new Event("visibilitychange"));
+        await flushMicrotasks();
+      });
+      expect(calls).toEqual(["/api/v1/relay/session"]);
+      expect(FakeWebSocket.instances).toHaveLength(0);
+      expect(localStorage.getItem("cs.deviceId")).toBe("device-1");
+      expect(localStorage.getItem("cs.deviceSecret")).toBe("secret-1");
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  test.each([
+    { name: "older Host without a bootstrap endpoint", status: 404, error: undefined },
+    { name: "unrelated unauthorized response", status: 401, error: "passcode_required" },
+    {
+      name: "matching error with a different status",
+      status: 403,
+      error: "invalid_relay_authorization",
+    },
+    { name: "matching error without rejection", status: 200, error: "invalid_relay_authorization" },
+  ])("$name retains the existing legacy bootstrap behavior", async ({ status, error }) => {
+    setupBrowser();
+    window.location.origin = "https://computer.fixture.test";
+    globalThis.fetch = (async (url: string) => {
+      expect(url).toBe("/api/v1/relay/session");
+      return error === undefined
+        ? new Response("not found", { status, headers: { "content-type": "text/plain" } })
+        : Response.json({ error }, { status });
+    }) as typeof fetch;
+    const hook = await renderHook(() => useRemoteSocket({}));
+    try {
+      expect(hook.result.current.accessRequired).toBe(false);
+      expect(hook.result.current.accountAccessRequired).toBe(false);
+      expect(FakeWebSocket.instances).toHaveLength(1);
+      const ws = FakeWebSocket.instances[0]!;
+      await act(async () => {
+        ws.open();
+        await flushMicrotasks();
+      });
+      expect(ws.sent.map((line) => JSON.parse(line))).toEqual([
+        { type: "auth.device", deviceId: "device-1", secretHash: "secret-1" },
+      ]);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
   test("a paired browser authenticates without consuming a bookmarked pairing link", async () => {
     setupBrowser();
     window.location.search = "?pairing=expired-test-token&view=panels";

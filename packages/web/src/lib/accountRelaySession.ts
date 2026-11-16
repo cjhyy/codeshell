@@ -58,7 +58,13 @@ export async function loadAccountRelayCredential(
   } catch {
     /* Missing or malformed navigation is not followed. */
   }
-  if (value?.accountRelay === true && value.active !== true)
+  // The public gateway rejects an expired outer grant before the request can
+  // reach the Host's accountRelay envelope. It is an account handoff, never a
+  // signal to try this origin's legacy pairing or retry WebSocket admission.
+  if (
+    (response.status === 401 && value?.error === "invalid_relay_authorization") ||
+    (value?.accountRelay === true && value.active !== true)
+  )
     throw new AccountRelaySessionExpired(
       "账号远程授权已结束，请返回电脑列表并用 Passkey 重新连接。",
       accountEntryUrl,

@@ -5260,7 +5260,8 @@ describe("useRemoteApp native output journal", () => {
       publish({ type: "text_delta", text: "汉🙂".repeat(12000) });
     setupBrowser();
     const hook = await renderHook(() => useRemoteApp());
-    const ws = FakeWebSocket.instances[0]!;
+    let ws = FakeWebSocket.instances[0]!;
+    let viewerId = "tab";
     let revoked = false;
     const replies: unknown[] = [];
     let beforeWire:
@@ -5311,7 +5312,7 @@ describe("useRemoteApp native output journal", () => {
               ].includes(event.type)
             ) {
               beforeReply?.(event);
-              await service.handle({ ...event, viewerId: "tab", deviceId: "device-1" });
+              await service.handle({ ...event, viewerId, deviceId: "device-1" });
             }
           }
           await flushMicrotasks();
@@ -5320,9 +5321,36 @@ describe("useRemoteApp native output journal", () => {
     };
     return {
       hook,
-      ws,
+      get ws() {
+        return ws;
+      },
       pump,
       publish,
+      disconnect: async () => {
+        service.revoke(viewerId);
+        await act(async () => {
+          ws.close();
+          await flushMicrotasks();
+        });
+      },
+      reconnect: async () => {
+        await act(async () => {
+          window.dispatchEvent(new Event("focus"));
+          await flushMicrotasks();
+        });
+        ws = FakeWebSocket.instances.at(-1)!;
+        viewerId = `tab-${FakeWebSocket.instances.length}`;
+        readIndex = 0;
+        await act(async () => {
+          ws.open();
+          ws.message({
+            type: "auth.ok",
+            device: { id: "device-1", name: "Phone" },
+            capabilities: { outputJournal: 1, ...(largeBase ? { legacyBasePages: 1 } : {}) },
+          });
+          await flushMicrotasks();
+        });
+      },
       observe: (raw: Record<string, unknown>) => ({
         type: "session.stream",
         sessionId: "native",
@@ -5356,6 +5384,50 @@ describe("useRemoteApp native output journal", () => {
       .filter((item) => item.kind === "assistant")
       .map((item) => item.text)
       .join("");
+
+  test("reconnecting restores a durable code-block tail and terminal missed while offline without another send", async () => {
+    const f = await connectedJournal();
+    const prefix = "汉🙂".repeat(12000 * 30) + "\n```\ncodex/testing/c4-str";
+    const tail = "eam\ncodex/testing/another-branch\n```\nSaved final paragraph.";
+    try {
+      f.publish({ type: "text_delta", text: "\n```\ncodex/testing/c4-str" });
+      await f.pump();
+      expect(text(f.hook.result.current.chat)).toBe(prefix);
+      expect(f.hook.result.current.chat.run).toBe("running");
+      const first = f.ws;
+      await f.disconnect();
+      // The producer completes independently; neither notification reaches this tab.
+      f.publish({ type: "text_delta", text: tail });
+      f.publish({ type: "turn_complete", reason: "completed" });
+      expect(f.hook.result.current.status).toBe("offline");
+      expect(text(f.hook.result.current.chat)).toBe(prefix);
+      await f.reconnect();
+      expect(f.ws).not.toBe(first);
+      expect(f.hook.result.current.status).toBe("online");
+      await f.pump();
+      expect(f.hook.result.current.activeSessionId).toBe("native");
+      expect(text(f.hook.result.current.chat)).toBe(prefix + tail);
+      expect(f.hook.result.current.chat.run).toBe("completed");
+      expect(f.hook.result.current.loading.sessionHistory).toBe(false);
+      expect(f.hook.result.current.outputHistoryFailed).toBe(false);
+      expect(
+        f.hook.result.current.chat.items
+          .filter((item) => item.kind === "assistant")
+          .every((item) => item.done),
+      ).toBe(true);
+      const sent = FakeWebSocket.instances.flatMap((socket) =>
+        socket.sent.map((line) => JSON.parse(line)),
+      );
+      expect(sent.filter((event) => event.type === "session.select")).toHaveLength(2);
+      expect(
+        sent.some((event) =>
+          ["chat.send", "approval.respond", "session.create"].includes(event.type),
+        ),
+      ).toBe(false);
+    } finally {
+      await f.cleanup();
+    }
+  });
 
   test("actual hook hydrates evicted multi-page native output then repairs a same-epoch gap without showing suffix", async () => {
     const f = await connectedJournal();

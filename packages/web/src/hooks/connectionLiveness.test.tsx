@@ -375,6 +375,78 @@ test("paired Mobile missing ACK retires an OPEN wire; old generations and foregr
   expect(clock.jobs.size).toBe(0);
 });
 
+test.each(["gateway", "Host"])(
+  "HTTPS %s grant expiry after disconnect preserves the validated account entry and stops retries without replay",
+  async (source) => {
+    browser();
+    const clock = new Clock();
+    window.location.origin = "https://computer.fixture.test";
+    let calls = 0;
+    property(globalThis, "fetch", {
+      value: async (url: string) => {
+        expect(url).toBe("/api/v1/relay/session");
+        calls++;
+        return calls === 1
+          ? Response.json({
+              active: true,
+              deviceId: "account-browser",
+              secretHash: "a".repeat(43),
+              expiresAt: Date.now() + 60_000,
+              accountEntryUrl: "https://account.fixture.test/app",
+            })
+          : Response.json(
+              source === "gateway"
+                ? { error: "invalid_relay_authorization" }
+                : { active: false, accountRelay: true },
+              { status: 401 },
+            );
+      },
+    });
+    const hook = await renderHook(() => useRemoteSocket({}));
+    cleanup = () => hook.unmount();
+    const socket = Socket.instances[0];
+    await act(async () => {
+      socket.open();
+      socket.receive({ type: "auth.ok", device: { id: "account-browser" } });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.send({ type: "chat.send", text: "one original request" })).toBe(
+      true,
+    );
+    await act(async () => {
+      // Lose the wire before its final output arrives; even without a close event
+      // the unanswered control probe retires this authenticated generation.
+      clock.advance(20_000);
+      await flushMicrotasks();
+    });
+    expect(socket.closeCalls).toBe(1);
+    expect(hook.result.current.status).toBe("offline");
+    await act(async () => {
+      clock.advance(800);
+      await flushMicrotasks();
+    });
+    expect(calls).toBe(2);
+    expect(hook.result.current.accessRequired).toBe(true);
+    expect(hook.result.current.accountAccessRequired).toBe(true);
+    expect(hook.result.current.accountEntryUrl).toBe("https://account.fixture.test/app");
+    expect(hook.result.current.send({ type: "chat.send", text: "unsent draft" })).toBe(false);
+    await act(async () => {
+      for (const name of ["online", "focus", "pageshow"]) window.dispatchEvent(new Event(name));
+      document.dispatchEvent(new Event("visibilitychange"));
+      clock.advance(100_000);
+      await flushMicrotasks();
+    });
+    expect(calls).toBe(2);
+    expect(Socket.instances).toHaveLength(1);
+    expect(socket.sent.filter((event) => event.type === "chat.send")).toEqual([
+      { type: "chat.send", text: "one original request" },
+    ]);
+    expect(socket.sent.some((event) => event.type === "approval.respond")).toBe(false);
+    expect(localStorage.getItem("cs.deviceId")).toBe("phone");
+    expect(clock.jobs.size).toBe(0);
+  },
+);
+
 test("paired Mobile background expiry, rejected read-only probe, logout and no-auth deadlines preserve lifetime", async () => {
   browser();
   const clock = new Clock();

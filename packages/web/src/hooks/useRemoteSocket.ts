@@ -172,7 +172,10 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
             setStatus("offline");
             setAccessRequired(true);
             setAccountAccessRequired(true);
-            setAccountEntryUrl(error.accountEntryUrl);
+            // Gateway rejections can omit a navigation URL. Retain the entry
+            // already validated on this account connection instead of guessing
+            // an origin or losing the control-side verification handoff.
+            if (error.accountEntryUrl) setAccountEntryUrl(error.accountEntryUrl);
           } else scheduleReconnect();
         }
         return;
