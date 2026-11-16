@@ -8,7 +8,12 @@ import type { RemoteApp } from "../src/hooks/useRemoteApp.js";
 import { useDesktopController } from "./DesktopApp.js";
 import { getApiWorkspace } from "./api-context.js";
 import { Workbench } from "./Workbench.js";
-import { DesktopApproval, DesktopChatControls, DesktopSidebar } from "./DesktopControls.js";
+import {
+  DesktopApproval,
+  DesktopChatControls,
+  DesktopSidebar,
+  cliModeSwitchNotice,
+} from "./DesktopControls.js";
 import { OutputHistoryRecovery } from "../src/components/OutputHistoryRecovery.js";
 import { DesktopModelPicker, CURRENT_NATIVE_MODEL } from "./DesktopModelPicker.js";
 import { DesktopCliModelPicker } from "./DesktopCliModelPicker.js";
@@ -1291,8 +1296,7 @@ function textOf(node: any): string {
   return node.childNodes?.length ? node.childNodes.map(textOf).join("") : (node.textContent ?? "");
 }
 
-test("CLI room mode switch restarts through the Host and explains when it applies", async () => {
-  ensureMiniDom();
+test("CLI room permission picker explains the next turn and retains the Host-confirmed mode", () => {
   const room = {
     id: "room-1",
     name: "CLI",
@@ -1305,75 +1309,31 @@ test("CLI room mode switch restarts through the Host and explains when it applie
     observing: false,
     sessionId: "thread-1",
   };
-  const requested: string[] = [];
-  const confirms: string[] = [];
-  const originalConfirm = window.confirm;
-  window.confirm = (message?: string) => {
-    confirms.push(String(message));
-    return true;
-  };
-  const host = document.createElement("div");
-  const root = createRoot(host);
-  try {
-    await act(async () => {
-      root.render(
-        <DesktopChatControls
-          app={remoteApp({
-            activeRoomId: room.id,
-            activeRoom: room,
-            setCcRoomPermissionMode: (mode) => requested.push(mode),
-          })}
-        />,
-      );
-      await flushMicrotasks();
-    });
-    const select = elementsByTag(host, "SELECT")[0]!;
-    expect(reactProps(select).disabled).toBe(false);
-    // Codex has no resident process: the new mode applies to the next turn's process.
-    expect(textOf(host)).toContain("下一条消息");
-    expect(textOf(host)).toContain("工作区读写");
-    expect(textOf(host)).toContain("只读");
-    expect(textOf(host)).not.toContain("逐次确认");
-    await act(async () => {
-      reactProps(select).onChange({ target: { value: "bypassPermissions" } });
-      await flushMicrotasks();
-    });
-    expect(requested).toEqual(["bypassPermissions"]);
-    // Routine permission changes apply directly; only elevated access confirms.
-    await act(async () => {
-      reactProps(select).onChange({ target: { value: "acceptEdits" } });
-      await flushMicrotasks();
-    });
-    expect(requested).toEqual(["bypassPermissions", "acceptEdits"]);
-    expect(confirms).toHaveLength(1);
-    // Codex bypass is described as turning the sandbox off, before anything is sent.
-    expect(confirms[0]).toContain("关闭沙箱");
-    expect(confirms[0]).toContain("从下一条消息开始生效");
-
-    // While the Host is deciding, the room keeps its running mode and cannot
-    // start a second switch.
-    await act(async () => {
-      root.render(
-        <DesktopChatControls
-          app={remoteApp({
-            activeRoomId: room.id,
-            activeRoom: room,
-            setCcRoomPermissionMode: (mode) => requested.push(mode),
-            ccModeRequest: { mode: "bypassPermissions", switching: true },
-          })}
-        />,
-      );
-      await flushMicrotasks();
-    });
-    const pending = elementsByTag(host, "SELECT")[0]!;
-    expect(reactProps(pending).disabled).toBe(true);
-    expect(reactProps(pending).value).toBe("default");
-    expect(textOf(host)).toContain("等待电脑确认");
-  } finally {
-    await act(async () => root.unmount());
-    window.confirm = originalConfirm;
-  }
-
+  const markup = (patch: Partial<RemoteApp> = {}) =>
+    renderToStaticMarkup(
+      <DesktopChatControls
+        app={remoteApp({
+          activeRoomId: room.id,
+          activeRoom: room,
+          setCcRoomPermissionMode: noop,
+          ...patch,
+        })}
+      />,
+    );
+  const idle = markup();
+  expect(idle).toContain('aria-haspopup="dialog"');
+  expect(idle).toContain('value="default"');
+  expect(idle).toContain("只读");
+  expect(idle).toContain("下一条消息");
+  expect(idle).not.toContain("<select");
+  expect(idle).not.toContain('disabled=""');
+  const pending = markup({ ccModeRequest: { mode: "bypassPermissions", switching: true } });
+  expect(pending).toMatch(/<button[^>]*disabled=""/);
+  expect(pending).toContain('value="default"');
+  expect(pending).toContain("等待电脑确认");
+  expect(cliModeSwitchNotice("codex", "bypassPermissions")).toContain("关闭沙箱");
+  expect(cliModeSwitchNotice("codex", "bypassPermissions")).toContain("从下一条消息开始生效");
+  expect(cliModeSwitchNotice("claude-code", "bypassPermissions")).toContain("跳过工具操作确认");
   const native = renderToStaticMarkup(
     <DesktopChatControls
       app={remoteApp({
@@ -1409,16 +1369,19 @@ test("CLI room chat controls show the room's actual mode and cannot change it na
   const markup = (patch: Partial<RemoteApp>) =>
     renderToStaticMarkup(<DesktopChatControls app={remoteApp(patch)} />);
   const inRoom = markup({ activeRoomId: room.id, activeRoom: room, permissionMode: "default" });
-  expect(inRoom).toMatch(/<select[^>]*disabled=""/);
-  expect(inRoom).toContain('<option value="bypassPermissions" selected="">');
-  expect(inRoom).not.toContain('<option value="default" selected="">');
+  expect(inRoom).toMatch(/<button[^>]*disabled=""/);
+  expect(inRoom).toContain('value="bypassPermissions"');
+  expect(inRoom).toContain("跳过确认");
+  expect(inRoom).not.toContain('value="default"');
   // Metadata not loaded yet: show no mode rather than the stricter native one.
   const pending = markup({ activeRoomId: room.id, permissionMode: "default" });
-  expect(pending).toMatch(/<select[^>]*disabled=""/);
-  expect(pending).not.toContain('<option value="default" selected="">');
+  expect(pending).toMatch(/<button[^>]*disabled=""/);
+  expect(pending).not.toContain('value="default"');
+  expect(pending).toContain("读取中…");
   const native = markup({ permissionMode: "acceptEdits" });
-  expect(native).not.toMatch(/<select[^>]*disabled=""/);
-  expect(native).toContain('<option value="acceptEdits" selected="">');
+  expect(native).not.toMatch(/<button[^>]*disabled=""/);
+  expect(native).toContain('value="acceptEdits"');
+  expect(native).toContain("允许编辑");
 });
 
 test("a multi-question CLI clarification answers every question in one response", async () => {
@@ -2403,7 +2366,7 @@ test("CLI composer blocks both settings during pending work and uses confirmed v
     const current = { ...app, ...patch };
     expect(cliSessionControlBlock(current)).toBeTruthy();
     const permissions = renderToStaticMarkup(<DesktopChatControls app={current} />);
-    expect(permissions).toMatch(/<select[^>]*disabled=""/);
+    expect(permissions).toMatch(/<button[^>]*disabled=""/);
     const model = renderToStaticMarkup(<DesktopCliModelPicker app={current} />);
     expect(model).toMatch(/<button[^>]*disabled=""/);
     if (current.activeRoom) expect(model).toContain('value="codex/current"');

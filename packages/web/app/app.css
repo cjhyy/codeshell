@@ -810,7 +810,7 @@ button.workspace-button:hover {
     border-color 150ms ease,
     box-shadow 150ms ease;
 }
-.composer:focus-within {
+.composer:has(textarea:focus) {
   border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
   box-shadow:
     0 0 0 3px color-mix(in srgb, var(--accent) 7%, transparent),

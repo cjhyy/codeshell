@@ -19,6 +19,10 @@ export function ModelChoicePicker({
   disabled,
   className = "",
   triggerRef,
+  searchable = true,
+  closeLabel = "关闭模型选择",
+  descriptionId,
+  title,
   status,
   onChange,
 }: {
@@ -29,6 +33,10 @@ export function ModelChoicePicker({
   disabled?: boolean;
   className?: string;
   triggerRef?: React.Ref<HTMLButtonElement>;
+  searchable?: boolean;
+  closeLabel?: string;
+  descriptionId?: string;
+  title?: string;
   status?: string;
   onChange(value: string): void;
 }) {
@@ -117,7 +125,8 @@ export function ModelChoicePicker({
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={open ? id : undefined}
-        title={selected?.label ?? placeholder}
+        aria-describedby={descriptionId}
+        title={title ?? selected?.label ?? placeholder}
         disabled={disabled}
         value={value}
         onClick={() => {
@@ -137,7 +146,7 @@ export function ModelChoicePicker({
           <dialog
             ref={dialog}
             id={id}
-            className="model-choice-dialog"
+            className={`model-choice-dialog${searchable ? "" : " model-choice-compact"}`}
             aria-labelledby={`${id}-title`}
             style={
               viewport
@@ -168,28 +177,30 @@ export function ModelChoicePicker({
           >
             <div className="model-choice-head">
               <h2 id={`${id}-title`}>{label}</h2>
-              <button type="button" aria-label="关闭模型选择" onClick={() => setOpen(false)}>
+              <button type="button" aria-label={closeLabel} onClick={() => setOpen(false)}>
                 ×
               </button>
             </div>
-            <input
-              className="model-choice-search"
-              type="search"
-              aria-label="搜索模型"
-              placeholder="搜索模型或运行时"
-              value={query}
-              onChange={(event) => {
-                setQuery(event.target.value);
-                setVisibleCount(80);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Escape") {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  setOpen(false);
-                } else if (event.key === "Enter") event.preventDefault();
-              }}
-            />
+            {searchable && (
+              <input
+                className="model-choice-search"
+                type="search"
+                aria-label="搜索模型"
+                placeholder="搜索模型或运行时"
+                value={query}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  setVisibleCount(80);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setOpen(false);
+                  } else if (event.key === "Enter") event.preventDefault();
+                }}
+              />
+            )}
             <div
               ref={list}
               className="model-choice-list"

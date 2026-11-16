@@ -100,14 +100,30 @@ try {
           cause: error,
         });
       });
-      const permission = page.getByRole("combobox", { name: "权限模式", exact: true });
-      assert.equal(await permission.inputValue(), "acceptEdits");
+      const permission = page.getByRole("button", { name: "权限模式", exact: true });
+      assert.equal(await permission.getAttribute("value"), "acceptEdits");
       assert.equal(await permission.evaluate((node) => Boolean(node.closest(".composer"))), true);
       assert.equal(await page.locator(".transcript [aria-label='权限模式']").count(), 0);
       assert.deepEqual(await page.evaluate(() => window.permissionChanges), []);
       page.once("dialog", (dialog) => dialog.dismiss());
-      await permission.selectOption("bypassPermissions");
-      assert.equal(await permission.inputValue(), "acceptEdits");
+      await permission.tap();
+      const permissionPicker = page.getByRole("dialog", { name: "权限模式", exact: true });
+      await permissionPicker.waitFor();
+      assert.equal(await permissionPicker.getByRole("searchbox").count(), 0);
+      const permissionBounds = await permissionPicker.boundingBox();
+      assert.ok(
+        permissionBounds.x >= 10 &&
+          permissionBounds.x + permissionBounds.width <= initialWidth - 10,
+      );
+      assert.ok(
+        permissionBounds.y >= 10 &&
+          permissionBounds.y + permissionBounds.height <= initialHeight - 10,
+      );
+      await page.screenshot({
+        path: path.join(output, `permissions-${theme}-${initialWidth}x${initialHeight}.png`),
+      });
+      await permissionPicker.getByRole("option", { name: /^跳过确认/ }).tap();
+      assert.equal(await permission.getAttribute("value"), "acceptEdits");
       assert.deepEqual(await page.evaluate(() => window.permissionChanges), []);
       const models = page.getByRole("button", { name: "选择模型或外部运行时" });
       const picker = page.getByRole("dialog", { name: "选择模型或外部运行时" });

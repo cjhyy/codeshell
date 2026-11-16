@@ -9,6 +9,7 @@ import type { WorkbenchNavigation } from "./workbench-types.js";
 import { autoResolveText, useNow } from "./deadline.js";
 import { relativeTime } from "../src/lib/format.js";
 import { cliSessionControlBlock } from "./cliSessionControls.js";
+import { ModelChoicePicker } from "./ModelChoicePicker.js";
 
 const permissionModes: Array<{
   value: MobileRemotePermissionMode;
@@ -69,6 +70,7 @@ export function cliModeSwitchNotice(
 }
 
 export function DesktopChatControls({ app, busy = false }: { app: RemoteApp; busy?: boolean }) {
+  const hintId = React.useId();
   const inRoom = Boolean(app.activeRoomId || app.activeRoom);
   const room = app.activeRoom;
   const blocked = inRoom
@@ -90,44 +92,42 @@ export function DesktopChatControls({ app, busy = false }: { app: RemoteApp; bus
       : "下次发送生效。";
   return (
     <div className="desktop-chat-controls">
-      <label>
-        <span className="desktop-permission-label">权限模式</span>
-        <select
-          aria-label="权限模式"
-          title={hint}
-          value={inRoom ? (room?.permissionMode ?? "") : app.permissionMode}
-          disabled={inRoom ? !roomSwitchable : nativeBlocked}
-          onChange={(event) => {
-            const mode = event.target.value as MobileRemotePermissionMode;
-            if (inRoom) {
-              if (!room || !roomSwitchable || mode === room.permissionMode) return;
-              if (
-                mode === "bypassPermissions" &&
-                !window.confirm(cliModeSwitchNotice(room.kind, mode))
-              )
-                return;
-              app.setCcRoomPermissionMode?.(mode);
-              return;
-            }
-            if (nativeBlocked) return;
+      <ModelChoicePicker
+        label="权限模式"
+        className="model-button desktop-permission-picker"
+        searchable={false}
+        closeLabel="关闭权限选择"
+        placeholder="读取中…"
+        choices={permissionsFor(inRoom ? room?.kind : activeSession?.provider)}
+        descriptionId={hintId}
+        status={hint}
+        title={hint}
+        value={inRoom ? (room?.permissionMode ?? "") : app.permissionMode}
+        disabled={inRoom ? !roomSwitchable : nativeBlocked}
+        onChange={(value) => {
+          const mode = value as MobileRemotePermissionMode;
+          if (inRoom) {
+            if (!room || !roomSwitchable || mode === room.permissionMode) return;
             if (
               mode === "bypassPermissions" &&
-              app.permissionMode !== mode &&
-              !window.confirm("切换后将自动批准工具操作。确定跳过权限确认吗？")
+              !window.confirm(cliModeSwitchNotice(room.kind, mode))
             )
               return;
-            app.setPermissionMode(mode);
-          }}
-        >
-          {inRoom && !room ? <option value="">读取中…</option> : null}
-          {permissionsFor(inRoom ? room?.kind : activeSession?.provider).map((mode) => (
-            <option key={mode.value} value={mode.value}>
-              {mode.label}
-            </option>
-          ))}
-        </select>
-      </label>
+            app.setCcRoomPermissionMode?.(mode);
+            return;
+          }
+          if (nativeBlocked) return;
+          if (
+            mode === "bypassPermissions" &&
+            app.permissionMode !== mode &&
+            !window.confirm("切换后将自动批准工具操作。确定跳过权限确认吗？")
+          )
+            return;
+          app.setPermissionMode(mode);
+        }}
+      />
       <span
+        id={hintId}
         className="desktop-permission-hint"
         role="note"
         aria-live="polite"

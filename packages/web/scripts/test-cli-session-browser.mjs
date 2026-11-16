@@ -2,7 +2,7 @@
  * and an isolated browser. No real CLI, user session, credentials or remote are accessed.
  * Run through scripts/run-isolated-node-smoke.mjs; --source-repo checks another checkout.
  */
-/* global window, document, requestAnimationFrame */
+/* global window, document, requestAnimationFrame, getComputedStyle */
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
@@ -109,7 +109,7 @@ const patch = async (page, value) => {
 };
 const modelButton = (page) => page.getByRole("button", { name: "选择 CLI 模型", exact: true });
 const modelDialog = (page) => page.getByRole("dialog", { name: "选择 CLI 模型", exact: true });
-const permission = (page) => page.getByRole("combobox", { name: "权限模式", exact: true });
+const permission = (page) => page.getByRole("button", { name: "权限模式", exact: true });
 const input = (page) => page.getByRole("textbox", { name: "任务内容", exact: true });
 const check = (name, evidence = {}) => report.checks.push({ name, passed: true, ...evidence });
 async function dimensions(page, label, width) {
@@ -329,18 +329,83 @@ try {
       await dialog.dismiss();
     };
     page.on("dialog", dismiss);
-    await permission(page).selectOption("acceptEdits");
+    await permission(page).click();
+    const permissions = page.getByRole("dialog", { name: "权限模式", exact: true });
+    await permissions.waitFor();
+    assert.equal(await permissions.getByRole("searchbox").count(), 0);
+    assert.equal(await permissions.getByRole("option").count(), 3);
+    assert.equal(
+      await permissions.getByRole("option", { selected: true }).getAttribute("value"),
+      "default",
+    );
+    const permissionBounds = await permissions.boundingBox();
+    assert.ok(
+      permissionBounds.x >= 10 && permissionBounds.x + permissionBounds.width <= width - 10,
+    );
+    assert.ok(
+      permissionBounds.y >= 10 && permissionBounds.y + permissionBounds.height <= height - 10,
+    );
+    assert.ok(permissionBounds.height < 500, "three permission choices use a compact dialog");
+    for (const option of await permissions.getByRole("option").all()) {
+      const bounds = await option.boundingBox();
+      assert.ok(bounds.height >= 44, "permission choices remain touchable");
+      assert.equal(
+        await option
+          .locator("span")
+          .first()
+          .evaluate((node) => getComputedStyle(node).webkitLineClamp),
+        "none",
+      );
+    }
+    await page.screenshot({ path: path.join(output, `permissions-${width}.png`) });
+    await page.keyboard.press("End");
+    assert.equal(
+      await permissions
+        .getByRole("option")
+        .last()
+        .evaluate((node) => node === document.activeElement),
+      true,
+    );
+    await page.keyboard.press("Home");
+    await page.keyboard.press("ArrowDown");
+    assert.equal(
+      await permissions
+        .getByRole("option")
+        .nth(1)
+        .evaluate((node) => node === document.activeElement),
+      true,
+    );
+    await page.keyboard.press("Escape");
+    await permissions.waitFor({ state: "detached" });
+    assert.equal(await permission(page).evaluate((node) => node === document.activeElement), true);
+    assert.deepEqual(await page.evaluate(() => window.fixture.permissionRequests), []);
+    await permission(page).click();
+    await permissions.getByRole("option", { name: /^工作区读写/ }).click();
     assert.deepEqual(dialogs, []);
-    assert.equal(await permission(page).inputValue(), "default");
+    assert.equal(await permission(page).getAttribute("value"), "default");
     await page.evaluate(() => window.fixture.accept());
     await frames(page);
-    assert.equal(await permission(page).inputValue(), "acceptEdits");
-    await permission(page).selectOption("bypassPermissions");
+    assert.equal(await permission(page).getAttribute("value"), "acceptEdits");
+    await permission(page).click();
+    await permissions.getByRole("option", { name: /^完全访问/ }).click();
     assert.equal(dialogs.length, 1);
     assert.deepEqual(await page.evaluate(() => window.fixture.permissionRequests), ["acceptEdits"]);
-    assert.equal(await permission(page).inputValue(), "acceptEdits");
+    assert.equal(await permission(page).getAttribute("value"), "acceptEdits");
     page.off("dialog", dismiss);
-    check(`permission-confirmation-${width}`);
+    page.once("dialog", (dialog) => dialog.accept());
+    await permission(page).click();
+    await permissions.getByRole("option", { name: /^完全访问/ }).click();
+    assert.deepEqual(await page.evaluate(() => window.fixture.permissionRequests), [
+      "acceptEdits",
+      "bypassPermissions",
+    ]);
+    assert.equal(await permission(page).getAttribute("value"), "acceptEdits");
+    assert.equal(await permission(page).isDisabled(), true);
+    await page.evaluate(() => window.fixture.accept());
+    await frames(page);
+    assert.equal(await permission(page).getAttribute("value"), "bypassPermissions");
+    assert.equal(await input(page).inputValue(), "保留这条尚未发送的草稿");
+    check(`permission-keyboard-confirmation-and-host-ack-${width}`);
 
     for (const [name, blocked] of [
       ["offline", { status: "offline" }],
