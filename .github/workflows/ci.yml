@@ -222,6 +222,7 @@ jobs:
               --path-ignore-patterns '**/renderer/credentials/CredentialsPage.test.tsx'
               --path-ignore-patterns '**/src/main/pet/pet-widget-menu.test.ts'
               --path-ignore-patterns '**/src/shared/mimi-companion.test.ts'
+              --path-ignore-patterns '**/renderer/activity/**'
           # rest is split in two only for wall time (470s as one shard). Together the two
           # path lists are the previous single list. The module losses seen when it was split
           # were not size: two suites bundled with an in-process Bun.build, which shares the
@@ -321,6 +322,9 @@ jobs:
           # Keep new presence suites in their own bounded process; the general Desktop shard is full.
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/pet/mimi-presence-controller.test.ts packages/desktop/src/main/pet/mimi-presence-state.test.ts packages/desktop/src/main/pet/mimi-presence-ipc.test.ts packages/desktop/src/main/pet/pet-widget-surface.test.ts packages/desktop/src/renderer/app/useMimiPresence.test.tsx
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/pet/createPetTargetNavigator.test.ts
+          # Activity pages (usage history, cache chart, model traces) run as one bounded process;
+          # the general Desktop shard is at its budget.
+          node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/activity
           # Host turn-queue and CLI room-mode lifecycle suites (real RoomManager with mock
           # CLIs) run as one bounded process; the general Desktop shard is at its budget.
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/mobile-remote/turn-queue-host.test.ts packages/desktop/src/main/cc-room/room-mode-authority.test.ts packages/desktop/src/main/cc-room/room-mode-host-boundary.test.ts
