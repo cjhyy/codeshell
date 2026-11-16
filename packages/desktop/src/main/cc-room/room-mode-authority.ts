@@ -66,6 +66,8 @@ export interface RoomModeAuthorityDeps {
     requester: RoomModeRequester,
     signal: AbortSignal,
   ) => Promise<{ approved: boolean; reason?: string }>;
+  /** Validate an explicit selection against the Host-owned runtime catalog. */
+  validateModel?: (modelKey: string, kind: RoomKind) => Promise<void>;
   approvalTimeoutMs?: number;
 }
 
@@ -252,6 +254,8 @@ export class RoomModeAuthority {
 
   /** Open (or switch) the room bound to an external CLI session under `mode`. */
   async openSession(input: {
+    roomId?: string;
+    modelKey?: string | null;
     sessionId: string;
     cwd: string;
     kind: RoomKind;
@@ -279,6 +283,15 @@ export class RoomModeAuthority {
       }
     };
     try {
+      assertRequester();
+      if (input.modelKey !== undefined) {
+        if (!input.roomId) throw new Error("切换模型需要指定当前 CLI 房间。");
+        if (input.modelKey !== null) {
+          if (!this.deps.validateModel) throw new Error("Host 不支持切换 CLI 模型。");
+          await this.deps.validateModel(input.modelKey, input.kind);
+          assertRequester();
+        }
+      }
       const cwd = await this.deps.requireProjectPath(input.cwd);
       assertRequester();
       // The approval must name the CLI's real session, not the client's tuple.
@@ -288,6 +301,8 @@ export class RoomModeAuthority {
       await this.deps.roomManager.settleSessionRoom(input.sessionId, input.kind);
       assertRequester();
       const plan = this.deps.roomManager.planSessionOpen({
+        roomId: input.roomId,
+        modelKey: input.modelKey,
         sessionId: input.sessionId,
         cwd,
         kind: input.kind,

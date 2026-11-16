@@ -88,6 +88,8 @@ export async function handleCcRoomEvent(
         const viewerId = event.viewerId;
         const result = await ctx.roomModes.openSession({
           sessionId: event.sessionId,
+          ...(event.roomId ? { roomId: event.roomId } : {}),
+          ...(event.modelKey !== undefined ? { modelKey: event.modelKey } : {}),
           cwd: event.cwd,
           kind: event.kind ?? "claude-code",
           mode: event.mode,
@@ -108,6 +110,7 @@ export async function handleCcRoomEvent(
           status: result.status,
           // The mode the process actually runs in, never just the request.
           permissionMode: result.mode,
+          modelKey: result.modelKey ?? null,
           changed: result.changed,
           ...(requestId ? { requestId } : {}),
         });

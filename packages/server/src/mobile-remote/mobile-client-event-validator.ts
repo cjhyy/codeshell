@@ -287,6 +287,13 @@ export function parseMobileClientEvent(value: unknown): MobileClientEvent | unde
         boundedPath(event.cwd) &&
         member(event.mode, PERMISSION_MODES) &&
         optionalMember(event.kind, KINDS) &&
+        optionalBoundedString(event.roomId, MAX_ID_LENGTH) &&
+        (event.modelKey === undefined ||
+          (boundedString(event.roomId, MAX_ID_LENGTH) &&
+            boundedString(event.requestId, MAX_ID_LENGTH) &&
+            (event.modelKey === null ||
+              (boundedString(event.modelKey, MAX_ID_LENGTH) &&
+                /^(codex|claude-code)\/[^\r\n\0]+$/.test(event.modelKey))))) &&
         optionalBoundedString(event.requestId, MAX_ID_LENGTH);
       break;
     case "ccRoom.subscribeTranscript":

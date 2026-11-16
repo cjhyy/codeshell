@@ -8,6 +8,7 @@ import { useToast } from "../ui/ToastProvider";
 import { useConfirm } from "../ui/ConfirmDialog";
 import type { CloudAccountStatus } from "../../shared/cloud-account.js";
 import { accountComputerListUrl, type DesktopRelayStatus } from "../../shared/device-relay.js";
+import { AccountRemoteAccessSettings } from "./AccountRemoteAccessSettings";
 
 export function DeviceRelaySettings({
   status,
@@ -20,7 +21,6 @@ export function DeviceRelaySettings({
 }) {
   const { t } = useT();
   const phoneFeature = useAccountFeature("relay.phone");
-  const directoryFeature = useAccountFeature("devices.directory");
   const toast = useToast();
   const confirm = useConfirm();
   const [origin, setOrigin] = useState("");
@@ -62,27 +62,6 @@ export function DeviceRelaySettings({
       cancelled = true;
     };
   }, [phoneEntryUrl]);
-  const enrollAccount = async () => {
-    if (account.state !== "signed-in" || !account.origin) return;
-    setSaving(true);
-    try {
-      await window.codeshell.mobileRemote.relay.enroll({
-        relayOrigin: account.origin,
-        authorization: "account",
-        name: name.trim(),
-      });
-      await refresh();
-      toast({ message: t("settingsX.adv.relaySaved"), variant: "success" });
-    } catch (error) {
-      toast({
-        message: error instanceof Error ? error.message : t("settingsX.adv.relayFailed"),
-        variant: "error",
-      });
-      await refresh();
-    } finally {
-      setSaving(false);
-    }
-  };
   const enroll = async () => {
     setSaving(true);
     const input = {
@@ -128,6 +107,32 @@ export function DeviceRelaySettings({
       setSaving(false);
     }
   };
+  if (account.state === "signed-in" && account.origin && account.account) {
+    return (
+      <div className="mt-3 space-y-3">
+        <AccountRemoteAccessSettings
+          key={`${account.origin}:${account.account.id}`}
+          identity={{ origin: account.origin, accountId: account.account.id }}
+        />
+        <AccountFeatureEntry feature={phoneFeature} label={t("settingsX.adv.relayPhoneEntry")}>
+          <span />
+        </AccountFeatureEntry>
+        {phoneEntryUrl && (
+          <div className="space-y-2 text-sm">
+            <p>{t("settingsX.adv.relayPhoneEntryHint")}</p>
+            {phoneEntryQr && (
+              <img
+                src={phoneEntryQr}
+                alt={t("settingsX.adv.relayPhoneEntry")}
+                className="h-[180px] w-[180px] rounded border border-border bg-white"
+              />
+            )}
+            <p className="break-all text-xs text-muted-foreground">{phoneEntryUrl}</p>
+          </div>
+        )}
+      </div>
+    );
+  }
   return (
     <div className="mt-3 space-y-3 rounded-md border border-border p-3">
       <p className="text-xs text-muted-foreground">{t("settingsX.adv.relayTrust")}</p>
@@ -218,20 +223,6 @@ export function DeviceRelaySettings({
           disabled={saving || busy}
         />
       </label>
-      {directoryFeature.state === "ready" && account.state === "signed-in" && account.origin ? (
-        <div className="space-y-2">
-          <p className="text-xs text-muted-foreground">
-            {t("settingsX.adv.relayAccountHint", { origin: account.origin })}
-          </p>
-          <Button
-            variant="outline"
-            disabled={saving || busy || !name.trim()}
-            onClick={() => void enrollAccount()}
-          >
-            {t("settingsX.adv.relayAccountEnroll")}
-          </Button>
-        </div>
-      ) : null}
       <label className="block space-y-1 text-sm">
         {t("settingsX.adv.relayTicket")}
         <Input

@@ -257,6 +257,7 @@
   top: 0;
 }
 .projects-header > .website-account-menu .website-account-popover,
+.website-destinations-header .website-account-popover,
 .website-environment-empty .website-account-popover {
   bottom: auto;
   top: 43px;

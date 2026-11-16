@@ -57,16 +57,22 @@ describe("room CLI agents under a stub CLI", () => {
         cwd: cli.dir,
         permissionMode: mode,
         resumeSessionId: "claude-session-1",
+        model: "fixture-model",
         onEvent: () => undefined,
       });
       agent.start();
       await agent.whenStarted();
       const args = await argsWritten(argsFile);
       expect(args).toEqual(
-        ResidentAgentProcess.argsFor({ permissionMode: mode, resumeSessionId: "claude-session-1" }),
+        ResidentAgentProcess.argsFor({
+          permissionMode: mode,
+          resumeSessionId: "claude-session-1",
+          model: "fixture-model",
+        }),
       );
       expect(args.slice(-2)).toEqual(["--permission-mode", mode]);
       expect(args).toContain("--resume");
+      expect(args[args.indexOf("--model") + 1]).toBe("fixture-model");
       const pid = (agent as unknown as { lastChild?: { pid?: number } }).lastChild?.pid;
       expect(alive(pid)).toBe(true);
       await expect(agent.stopAndWait(5_000)).resolves.toBe(true);
@@ -87,6 +93,7 @@ describe("room CLI agents under a stub CLI", () => {
         cwd: cli.dir,
         permissionMode: mode,
         resumeThreadId: "thread-1",
+        model: "fixture-model",
         onEvent: () => undefined,
       });
       agent.start();
@@ -102,7 +109,7 @@ describe("room CLI agents under a stub CLI", () => {
         "--skip-git-repo-check",
       ]);
       expect(args.slice(5, 5 + expected.length)).toEqual([...expected]);
-      expect(args.slice(-3)).toEqual(["resume", "thread-1", "-"]);
+      expect(args.slice(-5)).toEqual(["--model", "fixture-model", "resume", "thread-1", "-"]);
       if (mode !== "bypassPermissions")
         expect(args).not.toContain("--dangerously-bypass-approvals-and-sandbox");
       await expect(agent.stopAndWait(5_000)).resolves.toBe(true);

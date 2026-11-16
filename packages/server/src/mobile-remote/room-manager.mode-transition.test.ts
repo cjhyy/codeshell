@@ -505,3 +505,96 @@ describe("RoomManager permission-mode handoff", () => {
     expect(starts).toEqual([]);
   });
 });
+
+describe("RoomManager model handoff", () => {
+  test("changes the same room/thread without applying a stale permission snapshot, persists, and restores CLI default", async () => {
+    const f = makeManager();
+    const room = await f.open("acceptEdits", "codex");
+    const select = (modelKey: string | null) =>
+      f.manager.planSessionOpen({
+        roomId: room.roomId,
+        sessionId: "thread-1",
+        cwd: f.project,
+        kind: "codex",
+        mode: "bypassPermissions",
+        modelKey,
+      });
+    const switched = await f.manager.applySessionOpen(select("codex/fixture-model"));
+    expect(switched).toMatchObject({
+      roomId: room.roomId,
+      mode: "acceptEdits",
+      modelKey: "codex/fixture-model",
+      changed: true,
+    });
+    expect(f.latest().meta).toMatchObject({
+      claudeSessionId: "thread-1",
+      modelKey: "codex/fixture-model",
+      permissionMode: "acceptEdits",
+    });
+    // A subsequent permission change preserves the selected model on disk and in argv metadata.
+    await f.open("default", "codex");
+    expect(f.latest().meta.modelKey).toBe("codex/fixture-model");
+    expect(f.manager.getRoom(room.roomId)?.modelKey).toBe("codex/fixture-model");
+    await f.manager.applySessionOpen(select(null));
+    expect(f.latest().meta.modelKey).toBeUndefined();
+    expect(f.manager.getRoom(room.roomId)?.modelKey).toBeUndefined();
+    expect(f.manager.getRoom(room.roomId)?.permissionMode).toBe("default");
+  });
+
+  test("refuses wrong room identity, observation, active turns and Host queued inputs before stopping a process", async () => {
+    const f = makeManager();
+    const room = await f.open("default", "codex");
+    const input = {
+      roomId: room.roomId,
+      sessionId: "thread-1",
+      cwd: f.project,
+      kind: "codex" as const,
+      mode: "default" as const,
+      modelKey: "codex/fixture-model",
+    };
+    for (const patch of [
+      { roomId: undefined },
+      { roomId: "room_wrong_1" },
+      { sessionId: "other-thread" },
+      { kind: "claude-code" as const },
+    ])
+      expect(() => f.manager.planSessionOpen({ ...input, ...patch })).toThrow();
+    f.latest().busy = true;
+    expect(() => f.manager.planSessionOpen(input)).toThrow(RoomBusyError);
+    f.latest().busy = false;
+    f.manager.setHostTurnHooks({ hasPendingTurns: () => true });
+    expect(() => f.manager.planSessionOpen(input)).toThrow(RoomBusyError);
+    expect(f.agents).toHaveLength(1);
+    expect(f.latest().running).toBe(true);
+    expect(f.log.some((entry) => entry.startsWith("stop"))).toBe(false);
+    const observed = f.manager.createRoom({
+      cwd: f.project,
+      kind: "codex",
+      claudeSessionId: "observed",
+      linkedSessionMode: "observe-only",
+    });
+    expect(() =>
+      f.manager.planSessionOpen({ ...input, roomId: observed.id, sessionId: "observed" }),
+    ).toThrow("仅供查看");
+  });
+
+  test("rollback restores the previous model when the replacement cannot start", async () => {
+    const f = makeManager();
+    const room = await f.open("default", "codex");
+    const plan = () =>
+      f.manager.planSessionOpen({
+        roomId: room.roomId,
+        sessionId: "thread-1",
+        cwd: f.project,
+        kind: "codex",
+        mode: "default",
+        modelKey: "codex/fixture-model",
+      });
+    f.configureNext((agent) => {
+      agent.spawnError = new Error("fixture spawn failure");
+    });
+    await expect(f.manager.applySessionOpen(plan())).rejects.toThrow("fixture spawn failure");
+    expect(f.manager.getRoom(room.roomId)?.modelKey).toBeUndefined();
+    expect(f.manager.isOpen(room.roomId)).toBe(false);
+  });
+});

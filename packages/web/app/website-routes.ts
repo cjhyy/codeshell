@@ -25,12 +25,22 @@ export function isPublicWebsiteOrigin(url: URL): boolean {
   return ["https://codeshell.site", "https://www.codeshell.site"].includes(url.origin);
 }
 
+export function websiteCloudSelected(url: URL): boolean {
+  if (url.searchParams.get("target") === "choose") return false;
+  if (url.searchParams.get("target") === "cloud" || validProjectId(url.searchParams.get("project")))
+    return true;
+  // Preserve existing private Host/root entry. Public /app starts with a choice.
+  return !isPublicWebsiteOrigin(url) && !["/app", "/app/"].includes(url.pathname);
+}
+
 /** Registration accepts no callback, redirect, token or mode from the URL. */
 export function isRegistrationRoute(url: URL): boolean {
   return url.pathname === "/register" || url.pathname === "/register/";
 }
 
 export function parseWebsiteRoute(url: URL): WebsiteRoute {
+  if (url.pathname === "/admin" || url.pathname === "/admin/")
+    return { kind: "admin", section: "summary" };
   if (url.pathname === "/api/v1/account/manage" || url.pathname === "/settings/account")
     return { kind: "account", section: "profile" };
   const account = /^\/settings\/account\/([^/]+)\/?$/.exec(url.pathname);
@@ -45,6 +55,8 @@ export function parseWebsiteRoute(url: URL): WebsiteRoute {
 /** Only public project/session selections survive a settings round trip. */
 export function websiteRouteUrl(route: WebsiteRoute, current: URL): string {
   const query = new URLSearchParams();
+  const target = current.searchParams.get("target");
+  if (target === "cloud" || target === "choose") query.set("target", target);
   const project = current.searchParams.get("project");
   const session = current.searchParams.get("session");
   if (validProjectId(project)) {

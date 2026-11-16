@@ -589,7 +589,7 @@ describe("Host turn queue in the remote composer", () => {
       });
       const select = elementsByTag(host, "SELECT")[0]!;
       expect(reactProps(select).disabled).toBe(true);
-      expect(textOf(host)).toContain("1 条排队消息按当前模式提交");
+      expect(textOf(host)).toContain("1 条排队消息，执行完或取消后可调整");
       await act(async () => {
         reactProps(select).onChange({ target: { value: "bypassPermissions" } });
         await flushMicrotasks();

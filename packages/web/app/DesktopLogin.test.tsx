@@ -56,14 +56,36 @@ async function fixture({
   detail = () => Response.json({ deviceName: "我的 Mac", expiresAt: Date.now() + 600000 }),
   decide = async (_path: string, _init?: RequestInit) =>
     Response.json({ approved: true, denied: true }),
+  passkey = "ok",
 } = {}) {
   ensureMiniDom();
   const url = new URL(`/desktop-login?${query}`, origin);
+  const navigations: string[] = [];
+  Object.assign(url, { replace: (destination: string) => navigations.push(destination) });
   install(window, "location", { get: () => url });
   install(globalThis, "location", { get: () => url });
+  install(window, "isSecureContext", { value: true });
+  install(globalThis, "PublicKeyCredential", { value: function PublicKeyCredential() {} });
   let queue = Promise.resolve();
   install(globalThis, "navigator", {
     value: {
+      credentials: {
+        async get() {
+          if (passkey === "cancel") throw new DOMException("Cancelled", "NotAllowedError");
+          const bytes = new Uint8Array([1, 2, 3]).buffer;
+          return {
+            id: "AQID",
+            rawId: bytes,
+            type: "public-key",
+            response: {
+              authenticatorData: bytes,
+              clientDataJSON: bytes,
+              signature: bytes,
+            },
+            getClientExtensionResults: () => ({}),
+          };
+        },
+      },
       locks: {
         request(_name: string, _options: unknown, operation: () => Promise<unknown>) {
           const value = queue.then(operation);
@@ -114,6 +136,19 @@ async function fixture({
     if (path === "/api/v1/account/status")
       return Response.json({ registrationAllowed: true, githubEnabled: false, features: {} });
     if (path === "/api/v1/account/web/session") return Response.json(session());
+    if (path === "/api/v1/account/web/passkeys/authentication/options") {
+      expect(JSON.parse(String(init?.body))).toEqual({ purpose: "desktop-login", target: ticket });
+      return Response.json({
+        ceremonyId: "K".repeat(43),
+        optionsJSON: {
+          rpId: new URL(origin).hostname,
+          challenge: "Q".repeat(43),
+          userVerification: passkey === "weak" ? "preferred" : "required",
+        },
+      });
+    }
+    if (path === "/api/v1/account/web/passkeys/authentication/verify")
+      return Response.json({ stepUpToken: "S".repeat(43), expiresAt: Date.now() + 60000 });
     if (path === `/api/v1/account/web/browser/request?request=${ticket}`) return detail();
     if (["/api/v1/account/web/browser/approve", "/api/v1/account/web/browser/deny"].includes(path))
       return decide(path, init);
@@ -140,6 +175,7 @@ async function fixture({
     container,
     calls,
     url,
+    navigations,
     button,
     unmount,
     async click(name: string) {
@@ -175,6 +211,7 @@ test("a signed-out browser keeps the desktop request while presenting normal acc
   expect(view.url.searchParams.get("request")).toBe(ticket);
   expect(view.calls.some((call) => call.path.includes("/browser/"))).toBe(false);
   expect(view.calls.some((call) => call.path.includes("cloud"))).toBe(false);
+  expect(view.navigations).toEqual([]);
 });
 
 test("restoring a browser account never approves a computer until explicitly confirmed", async () => {
@@ -183,14 +220,41 @@ test("restoring a browser account never approves a computer until explicitly con
   expect(text(view.container)).toContain("用户 A");
   expect(text(view.container)).toContain("我的 Mac");
   expect(view.calls.filter((call) => call.init?.method === "POST")).toHaveLength(0);
+  expect(view.navigations).toEqual([]);
   await view.click("登录这台电脑");
-  await until(() => text(view.container).includes("已确认，请返回 CodeShell"));
+  await until(() => view.navigations.length === 1);
   const approved = view.calls.filter((call) => call.path.endsWith("/approve"));
   expect(approved).toHaveLength(1);
-  expect(JSON.parse(String(approved[0].init?.body))).toEqual({ request: ticket });
+  expect(JSON.parse(String(approved[0].init?.body))).toEqual({
+    request: ticket,
+    stepUpToken: "S".repeat(43),
+  });
   expect(new Headers(approved[0].init?.headers).get("X-CodeShell-CSRF")).toBe("C".repeat(43));
-  expect(text(view.container)).toContain("请返回 CodeShell 查看登录结果");
+  expect(view.navigations).toEqual(["/app"]);
+  expect(text(view.container)).toContain("选择云端工作区或账号下的电脑");
+  const workbench = nodes(view.container).find(
+    (node) => node.tagName === "A" && text(node) === "进入远程工作台",
+  );
+  expect(props(workbench).href).toBe("/app");
   expect(view.button("登录这台电脑")).toBeUndefined();
+});
+
+test("a cancelled or weakened Passkey ceremony never approves a new Desktop session", async () => {
+  for (const passkey of ["cancel", "weak"]) {
+    const view = await fixture({ passkey });
+    await until(() => !!view.button("登录这台电脑"));
+    await view.click("登录这台电脑");
+    await until(() =>
+      text(view.container).includes(passkey === "cancel" ? "已取消或超时" : "验证请求无效"),
+    );
+    expect(
+      view.calls.some(
+        (call) => call.path.endsWith("/approve") || call.path.endsWith("/authentication/verify"),
+      ),
+    ).toBe(false);
+    expect(view.navigations).toEqual([]);
+    await view.unmount();
+  }
 });
 
 test("cancelling a computer request leaves the browser account signed in", async () => {
@@ -200,6 +264,16 @@ test("cancelling a computer request leaves the browser account signed in", async
   await until(() => text(view.container).includes("已取消电脑登录"));
   expect(view.calls.filter((call) => call.path.endsWith("/deny"))).toHaveLength(1);
   expect(view.calls.some((call) => call.path.endsWith("/logout"))).toBe(false);
+  expect(view.navigations).toEqual([]);
+});
+
+test("an unconfirmed approval stays on the request instead of navigating to the workbench", async () => {
+  const view = await fixture({ decide: async () => Response.json({ approved: false }) });
+  await until(() => !!view.button("登录这台电脑"));
+  await view.click("登录这台电脑");
+  await until(() => text(view.container).includes("服务器尚未确认操作结果"));
+  expect(view.navigations).toEqual([]);
+  expect(view.button("登录这台电脑")).toBeDefined();
 });
 
 test("expired and malformed requests cannot display an approval action", async () => {
@@ -223,6 +297,7 @@ test("an unauthorized approval is not automatically retried after session refres
   await until(() => text(view.container).includes("登录 CodeShell 电脑端"));
   expect(view.calls.filter((call) => call.path.endsWith("/approve"))).toHaveLength(1);
   expect(view.calls.some((call) => call.path.endsWith("/refresh"))).toBe(false);
+  expect(view.navigations).toEqual([]);
 });
 
 test("switching the browser account aborts an outstanding approval and discards its late result", async () => {
@@ -241,7 +316,7 @@ test("switching the browser account aborts an outstanding approval and discards 
   await view.switchAccount();
   expect(signal?.aborted).toBe(true);
   await action(() => finish?.(Response.json({ approved: true })));
-  expect(text(view.container)).not.toContain("已确认，请返回 CodeShell");
+  expect(view.navigations).toEqual([]);
   expect(text(view.container)).toContain("用户 B");
   expect(view.calls.filter((call) => call.path.endsWith("/approve"))).toHaveLength(1);
 });
@@ -262,4 +337,5 @@ test("leaving the confirmation page aborts its outstanding approval", async () =
   await view.unmount();
   expect(signal?.aborted).toBe(true);
   await action(() => finish?.(Response.json({ approved: true })));
+  expect(view.navigations).toEqual([]);
 });

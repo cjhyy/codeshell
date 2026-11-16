@@ -57,6 +57,14 @@ export const settingsNs = {
       cloudAccount: {
         title: "CodeShell 云账号（可选）",
         manage: "账号管理",
+        remoteAccess: "远程访问这台电脑",
+        remoteAccessHint:
+          "登录后，这台电脑会自动出现在账号中。开启后，同一账号的手机或其他电脑才能访问本机项目；关闭后本地任务继续运行。",
+        remoteAccessToggle: "允许远程访问这台电脑",
+        remoteAccessSyncing: "正在同步这台电脑，联网后会自动完成。",
+        remoteAccessOff: "远程访问已关闭。你仍可以访问账号下其他已开启远程访问的电脑。",
+        remoteAccessOn: "已允许远程访问这台电脑。",
+        remoteAccessRetry: "重试连接",
         profileTitle: "账号资料",
         editProfile: "编辑账号资料",
         displayName: "昵称",
@@ -88,7 +96,7 @@ export const settingsNs = {
         checkAgain: "重新检查",
         registrationUnavailable: "此云服务暂未开放注册。",
         optional:
-          "不登录也可使用本地项目、模型和 MCP。桌面登录后，本机会自动加入该账号的设备协作，可切换电脑和项目派发任务。",
+          "不登录也可使用本地项目、模型和 MCP。登录后，这台电脑会自动加入账号；是否允许远程访问由你单独设置。",
         origin: "云服务地址",
         username: "账号名称",
         password: "密码（至少 12 位）",
@@ -169,7 +177,7 @@ export const settingsNs = {
         cancel: "取消登录",
         failed: "云账号操作未完成。",
         "state_signed-out": "本地使用中，尚未登录云账号",
-        "state_signed-in": "云账号已登录；电脑与项目仍由你单独授权",
+        "state_signed-in": "云账号已登录；可单独开启本机远程访问",
         "state_signing-in": "正在登录，请在浏览器完成授权…",
         "state_storage-error": "账号安全存储不可用；本地使用不受影响",
       },
@@ -1278,6 +1286,15 @@ export const settingsNs = {
       cloudAccount: {
         title: "CodeShell cloud account (optional)",
         manage: "Manage account",
+        remoteAccess: "Remote access to this computer",
+        remoteAccessHint:
+          "Signing in automatically adds this computer to your account. Turn this on to let your phone or other computers access its projects. Turning it off keeps local tasks running.",
+        remoteAccessToggle: "Allow remote access to this computer",
+        remoteAccessSyncing: "Syncing this computer. This will finish automatically when online.",
+        remoteAccessOff:
+          "Remote access is off. You can still access your other available computers.",
+        remoteAccessOn: "Remote access to this computer is allowed.",
+        remoteAccessRetry: "Retry connection",
         profileTitle: "Account profile",
         editProfile: "Edit account profile",
         displayName: "Nickname",
@@ -1314,7 +1331,7 @@ export const settingsNs = {
         checkAgain: "Check again",
         registrationUnavailable: "Registration is not available on this cloud service.",
         optional:
-          "Local projects, models and MCP work without an account. Desktop sign-in automatically joins device collaboration so you can choose a computer and project for tasks.",
+          "Local projects, models and MCP work without an account. Signing in automatically adds this computer to your account; you choose whether to allow remote access.",
         origin: "Cloud service address",
         username: "Username",
         password: "Password (at least 12 characters)",
@@ -1407,8 +1424,7 @@ export const settingsNs = {
         cancel: "Cancel sign-in",
         failed: "Cloud account operation failed.",
         "state_signed-out": "Using locally, not signed in",
-        "state_signed-in":
-          "Signed in; computer and project access still require separate authorization",
+        "state_signed-in": "Signed in; choose separately whether to allow remote access",
         "state_signing-in": "Signing in; complete authorization in your browser…",
         "state_storage-error": "Secure account storage is unavailable; local use still works",
       },

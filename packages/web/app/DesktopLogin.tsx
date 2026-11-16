@@ -2,6 +2,12 @@ import React from "react";
 import { useAccountSession } from "./AccountSessionProvider.js";
 import { AccountWebError } from "./account-api.js";
 import { WebsiteLogin } from "./WebsiteLogin.js";
+import {
+  requirePasskey,
+  passkeyFailure,
+  PASSKEY_EXPLANATION,
+  PASSKEY_SETTINGS_URL,
+} from "./passkey-browser.js";
 
 /** This public request identifies a pending login; it is never a session credential. */
 export function desktopLoginRequest(url: URL): string | undefined {
@@ -64,6 +70,9 @@ function DesktopLoginConfirmation({ request }: { request: string }) {
     };
   }, []);
   React.useEffect(() => {
+    if (result === "approved") window.location.replace("/app");
+  }, [result]);
+  React.useEffect(() => {
     const controller = new AbortController();
     let expiry: ReturnType<typeof setTimeout> | undefined;
     setDetails(undefined);
@@ -121,10 +130,15 @@ function DesktopLoginConfirmation({ request }: { request: string }) {
     setBusy(true);
     setError("");
     try {
+      const proof =
+        decision === "approve"
+          ? await requirePasskey(account.request, "desktop-login", request, controller.signal)
+          : undefined;
+      controller.signal.throwIfAborted();
       const value = await account.request<{ approved?: boolean; denied?: boolean }>(
         `/browser/${decision}`,
         "POST",
-        { request },
+        { request, ...(proof ? { stepUpToken: proof.stepUpToken } : {}) },
         controller.signal,
       );
       if (!alive.current || controller.signal.aborted) return;
@@ -132,7 +146,7 @@ function DesktopLoginConfirmation({ request }: { request: string }) {
         throw new Error("服务器尚未确认操作结果，请返回 CodeShell 查看登录状态。");
       setResult(decision === "approve" ? "approved" : "denied");
     } catch (cause) {
-      if (alive.current && !controller.signal.aborted) setError(failure(cause));
+      if (alive.current && !controller.signal.aborted) setError(passkeyFailure(cause));
     } finally {
       working.current = false;
       if (alive.current && !controller.signal.aborted) setBusy(false);
@@ -146,7 +160,7 @@ function DesktopLoginConfirmation({ request }: { request: string }) {
       <section className="auth-card website-auth" aria-labelledby="desktop-login-title">
         <h1 id="desktop-login-title">
           {result === "approved"
-            ? "已确认，请返回 CodeShell"
+            ? "已确认，正在打开远程工作台"
             : result === "denied"
               ? "已取消电脑登录"
               : "确认登录这台电脑"}
@@ -161,15 +175,26 @@ function DesktopLoginConfirmation({ request }: { request: string }) {
           </p>
         ) : null}
         {result ? (
-          <p role="status">
-            {result === "approved"
-              ? "网页登录确认已完成。请返回 CodeShell 查看登录结果，可以关闭此页面。"
-              : "此请求已取消，网页账号保持登录。可以关闭此页面。"}
-          </p>
+          <>
+            <p role="status">
+              {result === "approved"
+                ? "电脑端将继续完成登录。你也可以在远程工作台选择云端工作区或账号下的电脑。"
+                : "此请求已取消，网页账号保持登录。"}
+            </p>
+            <a className="website-button primary" href="/app">
+              进入远程工作台
+            </a>
+          </>
         ) : (
           <>
             <p className="website-hint">
               仅在你刚刚从这台电脑的 CodeShell 发起登录时确认。GitHub 仓库访问权限另行选择。
+            </p>
+            <p className="website-hint">
+              {PASSKEY_EXPLANATION}{" "}
+              <a href={PASSKEY_SETTINGS_URL} target="_blank" rel="noreferrer">
+                在新页面设置 Passkey
+              </a>
             </p>
             {loading ? <p role="status">正在读取电脑登录请求…</p> : null}
             {expired ? (

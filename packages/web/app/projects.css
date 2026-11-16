@@ -47,6 +47,15 @@
   max-width: 670px;
   font-size: 14px;
 }
+.project-setup-skip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+  color: var(--muted);
+  font-size: 13px;
+}
 .project-first-create {
   max-width: 760px;
   padding: 32px;

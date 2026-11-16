@@ -60,6 +60,7 @@ async function fixture() {
   };
   let registered = false;
   let list = async (): Promise<TaskInboxBackgroundEntry[]> => [job];
+  let local: TaskInboxBackgroundEntry[] = [];
   let requirePath = async (value: unknown): Promise<string> => {
     if (!registered || value !== cwd) throw new Error("path is not registered");
     return cwd;
@@ -79,6 +80,7 @@ async function fixture() {
       close: (roomId) => void calls.close.push(roomId),
     },
     listBackgroundWork: () => list(),
+    readLocalBackgroundWork: () => local,
     requirePath: (value) => requirePath(value),
     subscriptions: {
       subscribe: (request) => {
@@ -105,6 +107,7 @@ async function fixture() {
     invoke,
     setRegistered: (value: boolean) => (registered = value),
     setList: (value: typeof list) => (list = value),
+    setLocal: (value: TaskInboxBackgroundEntry[]) => (local = value),
     setRequirePath: (value: typeof requirePath) => (requirePath = value),
     open: (event = owner.event) =>
       invoke("ccRoom:openLinkedSession", event, "thread-1", cwd, "codex", source),
@@ -114,6 +117,20 @@ async function fixture() {
 }
 
 describe("linked session observation IPC registrar", () => {
+  test("opens a retained delegation when the worker cannot answer without granting takeover", async () => {
+    const f = await fixture();
+    f.setLocal([{ ...f.job, status: "unknown", canCancel: false }]);
+    f.setList(async () => {
+      throw new Error("Worker is busy");
+    });
+    await expect(f.open()).resolves.toMatchObject({ status: "observing" });
+    await expect(f.subscribe()).resolves.toMatchObject({ active: true });
+    await expect(
+      f.invoke("ccRoom:takeOverLinkedSession", f.owner.event, "room-1", "thread-1", f.cwd, "codex"),
+    ).rejects.toThrow("not registered");
+    expect(f.calls.takeover).toEqual([]);
+  });
+
   test("preserves project-authorized open, transcript snapshots and explicit takeover", async () => {
     const f = await fixture();
     f.setRegistered(true);

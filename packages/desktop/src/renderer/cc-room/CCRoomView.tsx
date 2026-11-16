@@ -43,7 +43,7 @@ interface DiscoveredSession {
   cwd?: string;
   firstMessage: string;
   lastModified: number;
-  messageCount: number;
+  messageCount?: number;
 }
 
 interface Availability {
@@ -127,6 +127,7 @@ function CliRoomBrowser({
     roomId: string;
     sessionId: string;
     mode: string;
+    modelKey?: string | null;
     cwd: string;
     cliKind: CliKind;
     status: "observing" | "running";
@@ -153,8 +154,9 @@ function CliRoomBrowser({
     () =>
       window.codeshell.ccRoom.onRoomState?.((room) =>
         setConv((current) =>
-          current?.roomId === room.id && current.mode !== room.permissionMode
-            ? { ...current, mode: room.permissionMode }
+          current?.roomId === room.id &&
+          (current.mode !== room.permissionMode || current.modelKey !== room.modelKey)
+            ? { ...current, mode: room.permissionMode, modelKey: room.modelKey }
             : current,
         ),
       ),
@@ -296,7 +298,13 @@ function CliRoomBrowser({
       openingRequestRef.current = request;
       setOpening(true);
       try {
-        const { roomId, status, permissionMode } = await window.codeshell.ccRoom.openSession(
+        const {
+          roomId,
+          status,
+          permissionMode,
+          modelKey,
+          cwd: canonicalCwd,
+        } = await window.codeshell.ccRoom.openSession(
           picking.sessionId,
           picking.cwd,
           mode,
@@ -309,7 +317,8 @@ function CliRoomBrowser({
           sessionId: picking.sessionId,
           // The mode Main actually started the CLI with, not just the request.
           mode: permissionMode ?? mode,
-          cwd: picking.cwd,
+          modelKey,
+          cwd: canonicalCwd ?? picking.cwd,
           cliKind,
           status: status === "observing" ? "observing" : "running",
         });
@@ -423,6 +432,14 @@ function CliRoomBrowser({
         cwd={conv.cwd}
         sessionId={conv.sessionId}
         mode={conv.mode}
+        modelKey={conv.modelKey}
+        onSettingsApplied={(settings) =>
+          setConv((current) =>
+            current?.roomId === conv.roomId
+              ? { ...current, mode: settings.permissionMode, modelKey: settings.modelKey }
+              : current,
+          )
+        }
         cliKind={conv.cliKind}
         cliLabel={CLI_LABEL[conv.cliKind]}
         active={active}
@@ -558,8 +575,7 @@ function CliRoomBrowser({
               <div className="min-w-0">
                 <div className="truncate font-medium">{s.firstMessage || "(无消息)"}</div>
                 <div className="text-xs text-muted-foreground">
-                  {/* messageCount isn't tracked for codex (would need a full scan) → omit it there. */}
-                  {s.messageCount > 0 && <span>{s.messageCount} 条消息 · </span>}
+                  {s.messageCount !== undefined && <span>{s.messageCount} 条消息 · </span>}
                   {new Date(s.lastModified).toLocaleString()}
                 </div>
                 {s.cwd && s.cwd !== cwd && (
@@ -592,27 +608,28 @@ function CliRoomBrowser({
           <DialogHeader>
             <DialogTitle>选择权限模式</DialogTitle>
             <DialogDescription>
-              default = 工具调用需你逐个批准；acceptEdits = 自动接受编辑；bypassPermissions =
-              全自动放行（谨慎）。
+              {cliKind === "codex"
+                ? "只读模式限制文件写入；工作区读写允许在项目中修改文件；完全访问会关闭沙箱，电脑可能要求再次批准。"
+                : "逐次确认会询问工具权限；允许编辑会自动批准文件编辑；跳过确认会自动批准工具操作，电脑可能要求再次批准。"}
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-2">
             <Button disabled={opening} onClick={() => void openWithMode("default")}>
-              default
+              {cliKind === "codex" ? "只读" : "逐次确认"}
             </Button>
             <Button
               disabled={opening}
               variant="outline"
               onClick={() => void openWithMode("acceptEdits")}
             >
-              acceptEdits
+              {cliKind === "codex" ? "工作区读写" : "允许编辑"}
             </Button>
             <Button
               disabled={opening}
               variant="outline"
               onClick={() => void openWithMode("bypassPermissions")}
             >
-              bypassPermissions
+              {cliKind === "codex" ? "完全访问" : "跳过确认"}
             </Button>
           </div>
         </DialogContent>

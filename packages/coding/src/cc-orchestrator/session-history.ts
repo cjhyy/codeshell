@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
-import { encodeCwd } from "./session-discovery.js";
+import { encodeCwd } from "./claude-session-paths.js";
 
 /** Normalized external coding-agent history message. */
 export interface HistoryMessage {

@@ -4,6 +4,14 @@ import { deviceStore } from "../lib/storage.js";
 import { generateSecret } from "../lib/deviceCredential.js";
 import { parsePairingToken } from "../lib/pairing.js";
 import { ConnectionLiveness, connectionPageHidden } from "../lib/connectionLiveness.js";
+import {
+  AccountRelaySessionExpired,
+  endAccountRelaySession,
+  hasAccountRelayCredential,
+  loadAccountRelayCredential,
+  remoteDeviceCredential,
+  setAccountRelayCredential,
+} from "../lib/accountRelaySession.js";
 
 export type ConnStatus =
   | "connecting" // socket opening
@@ -21,6 +29,8 @@ export interface RemoteSocket {
   status: ConnStatus;
   /** The public entrance passcode changed; revalidate HTTP without losing pairing. */
   accessRequired?: boolean;
+  accountAccessRequired?: boolean;
+  accountEntryUrl?: string;
   deviceName: string;
   /** Monotonic id of the currently authenticated socket. */
   connectionGeneration: number;
@@ -45,6 +55,8 @@ const RECONNECT_MAX_MS = 8000;
 export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
   const [status, setStatus] = useState<ConnStatus>("connecting");
   const [accessRequired, setAccessRequired] = useState(false);
+  const [accountAccessRequired, setAccountAccessRequired] = useState(false);
+  const [accountEntryUrl, setAccountEntryUrl] = useState<string>();
   const [deviceName, setDeviceName] = useState<string>("");
   const [connectionGeneration, setConnectionGeneration] = useState(0);
   const wsRef = useRef<WebSocket | null>(null);
@@ -77,7 +89,8 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
   }, []);
 
   const logout = useCallback(() => {
-    deviceStore.clearId();
+    if (hasAccountRelayCredential()) void endAccountRelaySession().catch(() => {});
+    else deviceStore.clearId();
     closedByUs.current = true;
     stopSocket.current?.();
     // Drop the pairing token from the URL and reload into the unpaired state.
@@ -90,6 +103,8 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
     closedByUs.current = false;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
     let health: ConnectionLiveness | undefined;
+    let bootstrap: AbortController | undefined;
+    let accountSession = false;
 
     /** Schedule a reconnect with jittered exponential backoff. Cancels any
      *  pending timer so a manual/event-driven reconnect can pre-empt it. */
@@ -136,9 +151,32 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
       connect();
     };
 
-    const connect = (): void => {
+    const connect = async (): Promise<void> => {
       if (closedByUs.current) return;
       retryTimer = undefined;
+      bootstrap?.abort();
+      const attempt = new AbortController();
+      bootstrap = attempt;
+      try {
+        const credential = window.location.origin.startsWith("https://")
+          ? await loadAccountRelayCredential(attempt.signal)
+          : undefined;
+        if (attempt.signal.aborted || closedByUs.current || bootstrap !== attempt) return;
+        setAccountRelayCredential(credential);
+        accountSession = !!credential;
+        if (credential) setAccountEntryUrl(credential.accountEntryUrl);
+      } catch (error) {
+        if (!attempt.signal.aborted && !closedByUs.current && bootstrap === attempt) {
+          if (error instanceof AccountRelaySessionExpired) {
+            closedByUs.current = true;
+            setStatus("offline");
+            setAccessRequired(true);
+            setAccountAccessRequired(true);
+            setAccountEntryUrl(error.accountEntryUrl);
+          } else scheduleReconnect();
+        }
+        return;
+      }
       const wsUrl = window.location.origin.replace(/^http/, "ws") + "/ws";
       const ws = new WebSocket(wsUrl);
       let pairingFallback: { token: string; name: string; secretHash: string } | undefined;
@@ -170,13 +208,13 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
         socketHealth.authenticating();
         retryRef.current = 0;
         const pairingToken = parsePairingToken(window.location.search);
-        const secret = deviceStore.getOrCreateSecret(() => generateSecret());
+        const { deviceId, secretHash: secret } = remoteDeviceCredential();
         const name = deviceStore.getOrCreateName();
         setDeviceName(name);
-        pairingFallback = pairingToken
-          ? { token: pairingToken, name, secretHash: secret }
-          : undefined;
-        const deviceId = deviceStore.getId();
+        pairingFallback =
+          pairingToken && !accountSession
+            ? { token: pairingToken, name, secretHash: secret }
+            : undefined;
         if (deviceId) {
           // Bookmarked one-use links must not displace an already trusted browser.
           statusRef.current = "authenticating";
@@ -254,7 +292,7 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
             return;
           }
           closedByUs.current = true;
-          if (obj.type === "auth.failed") deviceStore.clearId();
+          if (obj.type === "auth.failed" && !accountSession) deviceStore.clearId();
           statusRef.current = "unpaired";
           setStatus("unpaired");
           handlersRef.current.onServerEvent?.(msg as MobileServerEvent);
@@ -279,9 +317,10 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
           statusRef.current = "offline";
           setStatus("offline");
           setAccessRequired(true);
+          setAccountAccessRequired(accountSession);
         } else if (event?.code === 4401 || event?.code === 4403) {
           closedByUs.current = true;
-          deviceStore.clearId();
+          if (!accountSession) deviceStore.clearId();
           statusRef.current = "unpaired";
           setStatus("unpaired");
         }
@@ -325,6 +364,7 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
     connect();
     const stop = () => {
       closedByUs.current = true;
+      bootstrap?.abort();
       if (retryTimer) clearTimeout(retryTimer);
       health?.stop();
       health = undefined;
@@ -338,9 +378,19 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
     stopSocket.current = stop;
     return () => {
       stop();
+      setAccountRelayCredential(undefined);
       if (stopSocket.current === stop) stopSocket.current = undefined;
     };
   }, []);
 
-  return { status, accessRequired, deviceName, connectionGeneration, send, logout };
+  return {
+    status,
+    accessRequired,
+    accountAccessRequired,
+    accountEntryUrl,
+    deviceName,
+    connectionGeneration,
+    send,
+    logout,
+  };
 }

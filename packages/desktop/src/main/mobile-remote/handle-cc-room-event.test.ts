@@ -90,6 +90,7 @@ test("phone open goes through the Host authority, echoes requestId and reports t
       sessionId: "thread-a",
       status: "running",
       permissionMode: "bypassPermissions",
+      modelKey: null,
       changed: true,
       requestId: "open-1",
     },
@@ -189,4 +190,41 @@ test("returning to a CLI room replays its still-pending approvals to that viewer
   });
   expect(viewers.map(([, event]) => event.type)).toEqual(["ccRoom.transcriptSubscribed"]);
   bridge.cancelRoom("room-b");
+});
+
+test("model changes forward the exact room binding and echo the actual Host model", async () => {
+  const f = harness();
+  f.setOpenResult(async () => ({
+    roomId: "room-a",
+    status: "running",
+    mode: "acceptEdits",
+    modelKey: "codex/fixture",
+    changed: true,
+  }));
+  await handleCcRoomEvent(f.ctx, {
+    type: "ccRoom.openSession",
+    roomId: "room-a",
+    sessionId: "thread-a",
+    cwd: "/repo",
+    kind: "codex",
+    mode: "default",
+    modelKey: "codex/fixture",
+    requestId: "model-1",
+    deviceId: "device",
+    viewerId: "tab-1",
+  });
+  expect(f.opens[0]).toMatchObject({
+    roomId: "room-a",
+    sessionId: "thread-a",
+    kind: "codex",
+    modelKey: "codex/fixture",
+  });
+  expect(f.viewers[0]?.[1]).toMatchObject({
+    type: "ccRoom.opened",
+    roomId: "room-a",
+    requestId: "model-1",
+    permissionMode: "acceptEdits",
+    modelKey: "codex/fixture",
+  });
+  expect(f.broadcasts).toEqual(["room-a"]);
 });

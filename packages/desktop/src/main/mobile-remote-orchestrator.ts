@@ -651,6 +651,7 @@ export class MobileRemoteOrchestrator {
     cwd: string;
     kind: "claude-code" | "codex";
     permissionMode: "default" | "acceptEdits" | "bypassPermissions";
+    modelKey?: string;
     createdAt: number;
     lastActiveAt: number;
     linkedSessionMode?: "observe-only";
@@ -658,6 +659,7 @@ export class MobileRemoteOrchestrator {
   }): RoomPublic {
     return {
       ...room,
+      modelKey: room.modelKey ?? null,
       open: this.deps.roomManager.isOpen(room.id),
       observing: room.linkedSessionMode === "observe-only",
       ...(room.claudeSessionId ? { sessionId: room.claudeSessionId } : {}),

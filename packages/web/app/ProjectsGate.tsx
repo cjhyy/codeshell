@@ -80,6 +80,7 @@ export function ProjectsGate({
   allowLegacy = true,
   autoEnterSingle = false,
   startCreatedProject = false,
+  onSkipSetup,
   canRequest,
 }: {
   children: (project: RuntimeProject | null, onBack?: () => void) => React.ReactNode;
@@ -88,6 +89,7 @@ export function ProjectsGate({
   allowLegacy?: boolean;
   autoEnterSingle?: boolean;
   startCreatedProject?: boolean;
+  onSkipSetup?: () => void;
   canRequest?: () => boolean;
 }) {
   const [snapshot, setSnapshot] = React.useState<ProjectSnapshot | null>(null);
@@ -382,13 +384,37 @@ export function ProjectsGate({
         </div>
         <EnvironmentMenu />
         {accountControl}
-        <h1>{firstWorkspace ? "为第一个想法，建一个工作区" : "你的项目"}</h1>
+        <h1>
+          {firstWorkspace
+            ? onSkipSetup
+              ? "按需使用云端"
+              : "为第一个想法，建一个工作区"
+            : "你的项目"}
+        </h1>
         <p>
           {firstWorkspace
-            ? "账号已就绪。给工作区起个名字，我们会为你准备好独立的文件、对话和运行环境。"
+            ? onSkipSetup
+              ? "创建云端项目是可选的，需要云端运行环境时再创建。你可以先连接电脑已有的项目，或管理账号与安全设置。"
+              : "账号已就绪。给工作区起个名字，我们会为你准备好独立的文件、对话和运行环境。"
             : "每个项目有独立的运行环境、文件、会话和配置。打开后继续你的工作。"}
         </p>
-        {firstWorkspace ? <WebsiteSetupSteps current={2} /> : null}
+        {firstWorkspace ? (
+          onSkipSetup ? (
+            <div className="project-setup-skip">
+              <button
+                className="library-button"
+                type="button"
+                disabled={!!busy}
+                onClick={onSkipSetup}
+              >
+                暂不创建
+              </button>
+              <span>返回云端或电脑选择</span>
+            </div>
+          ) : (
+            <WebsiteSetupSteps current={2} />
+          )
+        ) : null}
       </header>
       {checking ? <p role="status">正在读取项目…</p> : null}
       {error ? (
@@ -423,7 +449,7 @@ export function ProjectsGate({
                   ＋
                 </span>
                 <div>
-                  <h2>从一个小目标开始</h2>
+                  <h2>{onSkipSetup ? "需要时，再创建云端项目" : "从一个小目标开始"}</h2>
                   <p>例如整理学习资料、规划一个产品，或完成一项日常任务。</p>
                 </div>
               </div>
