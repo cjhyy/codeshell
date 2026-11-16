@@ -1404,6 +1404,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           sessionListCursorRef.current = event.nextCursor ?? null;
           setSessionsHasMore(Boolean(event.nextCursor));
           const refreshedIds = new Set(event.sessions.map((session) => session.id));
+          const retainLoadedSessions =
+            optionsRef.current.sessionCatalog === "all" && Boolean(event.nextCursor);
           setSessions((previous) =>
             pending?.append
               ? [
@@ -1411,7 +1413,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
                     [...previous, ...event.sessions].map((session) => [session.id, session]),
                   ).values(),
                 ]
-              : optionsRef.current.sessionCatalog === "all" && event.nextCursor
+              : retainLoadedSessions
                 ? [
                     ...event.sessions,
                     // A refreshed first page cannot prove that older loaded
@@ -1456,7 +1458,9 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
             }
             const active = event.sessions.find((s) => s.id === event.activeSessionId);
             if (active) setActiveSessionCwd(active.cwd || null);
-            else if (!pending?.append && !sessionListScopeRef.current)
+            // A retained older row keeps its confirmed root (including null).
+            // Its absence from a refreshed first page cannot retire that target.
+            else if (!pending?.append && !sessionListScopeRef.current && !retainLoadedSessions)
               setActiveSessionCwd(undefined);
           }
           break;

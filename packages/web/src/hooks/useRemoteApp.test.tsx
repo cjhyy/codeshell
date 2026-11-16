@@ -230,6 +230,144 @@ test("all-project navigation keeps loaded pages while another project's history 
   }
 });
 
+for (const { label, cwd } of [
+  { label: "a secondary project root", cwd: "/secondary" },
+  { label: "an explicit no-project target", cwd: null },
+]) {
+  test(`all-project refresh preserves ${label} for an older selected conversation`, async () => {
+    setupBrowser();
+    const restoreFetch = defineTestProperty(window, "fetch", {
+      value: async () => {
+        throw new Error("catalog refresh send tests make no HTTP requests");
+      },
+      writable: true,
+    });
+    const hook = await renderHook(() => {
+      const app = useRemoteApp({ sessionCatalog: "all" });
+      return { app, controller: useDesktopController(app, undefined, () => {}) };
+    });
+    const ws = FakeWebSocket.instances[0]!;
+    const latest = (type: string) =>
+      ws.sent
+        .map((line) => JSON.parse(line))
+        .filter((event) => event.type === type)
+        .at(-1)!;
+    const recent = { id: "recent", cwd: "/primary", title: "Recent", updatedAt: 2 };
+    const selected = { id: "older", cwd, title: "Older", updatedAt: 1 };
+    try {
+      await act(async () => {
+        ws.open();
+        ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+        ws.message({
+          type: "room.projects.ok",
+          projects: [
+            {
+              id: "project",
+              name: "Project",
+              path: "/primary",
+              roots: [{ path: "/primary" }, { path: "/secondary" }],
+            },
+          ],
+        });
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        ws.message({
+          type: "session.list.ok",
+          requestId: latest("session.list").requestId,
+          sessions: [recent],
+          nextCursor: "page-2",
+        });
+        await flushMicrotasks();
+        hook.result.current.app.loadMoreSessions!();
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        ws.message({
+          type: "session.list.ok",
+          requestId: latest("session.list").requestId,
+          sessions: [selected],
+          nextCursor: null,
+        });
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        hook.result.current.controller.selectSession(selected.id);
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        ws.message({ type: "session.history.ok", sessionId: selected.id, events: [] });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.app.activeCwd).toBe(cwd);
+      expect(hook.result.current.app.activeProjectCwd).toBe(cwd === null ? null : "/primary");
+      await act(async () => {
+        window.dispatchEvent(new Event("focus"));
+        await flushMicrotasks();
+      });
+      expect(latest("session.list").cursor).toBeUndefined();
+      expect(latest("session.list").cwds).toBeUndefined();
+      await act(async () => {
+        // The Host names the selected conversation even when it is not on this page.
+        ws.message({
+          type: "session.list.ok",
+          requestId: latest("session.list").requestId,
+          sessions: [recent],
+          activeSessionId: selected.id,
+          nextCursor: "refreshed-page-2",
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.app.activeCwd).toBe(cwd);
+      expect(hook.result.current.controller.workspaceCwd).toBe(cwd);
+      expect(getApiWorkspace()).toBe(cwd ?? undefined);
+      expect(
+        hook.result.current.controller.navigationSessions.map((item) => item.sessionId),
+      ).toEqual([recent.id, selected.id]);
+      await act(async () => {
+        hook.result.current.controller.setDraft("Continue the older conversation");
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        expect(hook.result.current.controller.send()).toBe(true);
+        await flushMicrotasks();
+      });
+      const sent = latest("chat.send");
+      expect(sent.sessionId).toBe(selected.id);
+      await act(async () => {
+        ws.message({
+          type: "chat.accepted",
+          sessionId: selected.id,
+          clientMessageId: sent.clientMessageId,
+          cwd,
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.controller.error).toBe("");
+      await act(async () => {
+        hook.result.current.app.refreshSessions();
+        await flushMicrotasks();
+        // A complete catalog still retires metadata for a missing conversation.
+        ws.message({
+          type: "session.list.ok",
+          requestId: latest("session.list").requestId,
+          sessions: [recent],
+          activeSessionId: selected.id,
+          nextCursor: null,
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.app.activeCwd).toBeUndefined();
+      expect(
+        hook.result.current.controller.navigationSessions.map((item) => item.sessionId),
+      ).toEqual([recent.id]);
+    } finally {
+      await hook.unmount();
+      restoreFetch();
+    }
+  });
+}
+
 test("all-project catalog retention is retired when the paired identity changes or is revoked", async () => {
   setupBrowser();
   const hook = await renderHook(() => useRemoteApp({ sessionCatalog: "all" }));
