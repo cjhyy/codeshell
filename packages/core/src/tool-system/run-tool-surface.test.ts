@@ -120,7 +120,7 @@ describe("RunToolSurface", () => {
     const surface = new RunToolSurface(undefined, {
       selection: { version: 2, names: ["Read"], discovered: [], frozenDefinitions: [] },
     });
-    surface.updateCatalog([definition("Read")]);
+    surface.updateCatalog([definition("Read"), definition("ToolSearch")]);
     expect(surface.snapshot()).toEqual([]);
     expect(surface.isEligible("Read")).toBe(true);
     expect(surface.isCallable("Read")).toBe(false);
@@ -269,6 +269,76 @@ describe("RunToolSurface", () => {
     expect(deferred.isCallable("ToolSearch")).toBe(false);
     expect(deferred.isCallable("Read")).toBe(true);
     expect(deferred.isCallable("Late")).toBe(false);
+  });
+
+  describe("without ToolSearch", () => {
+    it("admits a tool that becomes eligible mid-cycle and keeps it when it leaves", () => {
+      const changes: SessionToolSelection[] = [];
+      const surface = new RunToolSurface(undefined, {
+        onSelectionChanged: (selection) => changes.push(selection),
+      });
+      surface.updateCatalog([definition("Reply")]);
+      expect(names(surface)).toEqual(["Reply"]);
+      surface.updateCatalog([definition("Delegate")]);
+      expect(names(surface)).toEqual(["Reply", "Delegate"]);
+      expect(surface.isCallable("Delegate")).toBe(true);
+      // Reply left this run's catalog: still visible, refused as ineligible.
+      expect(surface.isEligible("Reply")).toBe(false);
+      expect(surface.isCallable("Reply")).toBe(false);
+      expect(changes.at(-1)?.names).toEqual(["Reply", "Delegate"]);
+      const before = changes.length;
+      surface.updateCatalog([definition("Reply"), definition("Delegate")]);
+      expect(names(surface)).toEqual(["Reply", "Delegate"]);
+      expect(changes.length).toBe(before);
+    });
+
+    it("joins tools added since a persisted selection at the next cold boundary", () => {
+      const surface = new RunToolSurface(undefined, {
+        selection: { version: 1, names: ["Reply", "Memory"] },
+      });
+      surface.updateCatalog([definition("Reply"), definition("Memory"), definition("Notices")]);
+      expect(names(surface)).toEqual(["Reply", "Memory", "Notices"]);
+      expect(surface.getSelection().names).toEqual(["Reply", "Memory", "Notices"]);
+    });
+
+    it("fills a name a warm snapshot froze without a schema", () => {
+      const surface = new RunToolSurface(undefined, {
+        selection: {
+          version: 2,
+          names: ["Reply", "Delegate"],
+          discovered: [],
+          frozenDefinitions: [definition("Delegate")],
+          lastRequestAt: 1,
+        },
+      });
+      surface.updateCatalog([definition("Delegate")]);
+      expect(names(surface)).toEqual(["Delegate"]);
+      surface.updateCatalog([definition("Reply"), definition("Delegate")]);
+      expect(names(surface)).toEqual(["Reply", "Delegate"]);
+      expect(surface.isCallable("Reply")).toBe(true);
+      expect(surface.getSelection().lastRequestAt).toBe(1);
+    });
+
+    it("keeps an existing frozen schema instead of a rewritten one", () => {
+      const surface = new RunToolSurface();
+      surface.updateCatalog([definition("Delegate", "first")]);
+      surface.updateCatalog([definition("Delegate", "second"), definition("Reply")]);
+      expect(surface.snapshot().map((tool) => tool.description)).toEqual([
+        "first",
+        "Reply purpose",
+      ]);
+    });
+
+    it("admits current tools into an explicitly empty snapshot and keeps them across rebase", () => {
+      const surface = new RunToolSurface(undefined, {
+        selection: { version: 2, names: ["Reply"], discovered: [], frozenDefinitions: [] },
+      });
+      surface.updateCatalog([]);
+      expect(names(surface)).toEqual([]);
+      surface.updateCatalog([definition("Memory")]);
+      surface.rebase();
+      expect(names(surface)).toEqual(["Memory"]);
+    });
   });
 
   it("does not remember unavailable selections when that tool appears later", () => {
@@ -495,7 +565,7 @@ describe("RunToolSurface behavior catalog", () => {
     expect(normalized.behaviorToolNames).toEqual(["Hidden"]);
     const surface = new RunToolSurface([], { selection: raw });
     raw.behaviorToolNames.push("Later");
-    surface.updateCatalog([definition("Hidden"), definition("Later")]);
+    surface.updateCatalog([definition("Hidden"), definition("Later"), definition("ToolSearch")]);
     expect(surface.behaviorSnapshot()).toEqual(["Hidden"]);
     expect(surface.isCallable("Hidden")).toBe(false);
     expect(surface.isCallable("Later")).toBe(false);

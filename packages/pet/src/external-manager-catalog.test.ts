@@ -175,9 +175,8 @@ describe("reviewed external Mimi manager catalog", () => {
       const visible = host.listTools();
       expect(visible.map((tool) => tool.name)).toContain("GatewayReply");
       const delegation = visible.find((tool) => tool.name === "DelegateWork")!;
-      expect(delegation.inputSchema.properties?.workspace_id).toMatchObject({
-        enum: ["workspace-owned"],
-      });
+      // Static definition: Workspace ids travel in the runtime context.
+      expect(delegation.inputSchema.properties?.workspace_id).not.toHaveProperty("enum");
       for (const name of ["Bash", "Read", "DriveAgent", "NotifyMe", "ReportToMimi"]) {
         expect(visible.some((tool) => tool.name === name)).toBe(false);
         expect((await host.execute({ id: `general-${name}`, name, input: {} })).isError).toBe(true);
@@ -397,7 +396,10 @@ describe("reviewed external Mimi manager catalog", () => {
     for (const name of ["DelegateWork", "GatewayReply", "SendMessage"]) {
       const tool = PET_MANAGER_TOOL_CATALOG.find((entry) => entry.definition.name === name)!;
       expect(typeof tool.exposure.availability).toBe("function");
-      expect(typeof tool.exposure.rewriteDefinition).toBe("function");
+      // Only GatewayReply still rewrites (channel limits); the other two are static.
+      expect(typeof tool.exposure.rewriteDefinition).toBe(
+        name === "GatewayReply" ? "function" : "undefined",
+      );
       expect(tool.exposure.defaultPermissionRules).toContainEqual({
         tool: name,
         decision: "allow",

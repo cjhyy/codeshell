@@ -44,6 +44,8 @@ export async function queryUsage(
       limit: params.limit,
       cursor: params.cursor,
       runId: params.runId,
+      ...(params.bucketMs === undefined ? {} : { bucketMs: params.bucketMs }),
+      ...(params.bucketOffsetMs === undefined ? {} : { bucketOffsetMs: params.bucketOffsetMs }),
     });
     context.send(createResponse(req.id, { type: "usage", data }));
   } catch (error) {

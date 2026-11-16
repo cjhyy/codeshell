@@ -35,6 +35,23 @@ const PURPOSES = new Set([
   "subagent",
   "external",
 ]);
+const MIN_BUCKET_MS = 5 * 60_000;
+const MAX_BUCKET_MS = 366 * 86_400_000;
+const MAX_BUCKET_OFFSET_MS = 7 * 86_400_000;
+
+/** Integer bounds keep every bucket edge an exact epoch millisecond. */
+function validBucket(query: UsageQuery): boolean {
+  const { bucketMs, bucketOffsetMs } = query;
+  if (bucketMs === undefined) return bucketOffsetMs === undefined;
+  return (
+    Number.isSafeInteger(bucketMs) &&
+    bucketMs >= MIN_BUCKET_MS &&
+    bucketMs <= MAX_BUCKET_MS &&
+    (bucketOffsetMs === undefined ||
+      (Number.isSafeInteger(bucketOffsetMs) && Math.abs(bucketOffsetMs) <= MAX_BUCKET_OFFSET_MS))
+  );
+}
+
 function textId(value: unknown): value is string {
   return (
     typeof value === "string" &&
@@ -421,7 +438,8 @@ export class UsageLedger {
       (query.runId !== undefined && !textId(query.runId)) ||
       (query.cursor !== undefined &&
         (typeof query.cursor !== "string" || !/^[a-f0-9]{64}$/.test(query.cursor))) ||
-      (query.since !== undefined && query.until !== undefined && query.since > query.until)
+      (query.since !== undefined && query.until !== undefined && query.since > query.until) ||
+      !validBucket(query)
     )
       throw new Error("Invalid usage query");
     const ids = new Set(this.records.keys());
@@ -481,22 +499,28 @@ export class UsageLedger {
         continue;
       receipts.push(receipt);
     }
-    return summarizeReceipts(receipts, {
-      version: 1,
-      scope,
-      ...(query.sessionId ? { sessionId: query.sessionId } : {}),
-      includesChildren: query.includeChildren === true,
-      partial:
-        partial ||
-        this.persistenceErrors > 0 ||
-        this.invalidReceipts > 0 ||
-        (scope === "session" &&
-          this.historicalGaps.has(JSON.stringify([sessionScope, query.sessionId]))),
-      persistenceErrors: this.persistenceErrors,
-      invalidReceipts: this.invalidReceipts,
-      scannedReceipts: selected.length,
-      ...(partial ? { nextCursor: selected.at(-1) } : {}),
-    });
+    return summarizeReceipts(
+      receipts,
+      {
+        version: 1,
+        scope,
+        ...(query.sessionId ? { sessionId: query.sessionId } : {}),
+        includesChildren: query.includeChildren === true,
+        partial:
+          partial ||
+          this.persistenceErrors > 0 ||
+          this.invalidReceipts > 0 ||
+          (scope === "session" &&
+            this.historicalGaps.has(JSON.stringify([sessionScope, query.sessionId]))),
+        persistenceErrors: this.persistenceErrors,
+        invalidReceipts: this.invalidReceipts,
+        scannedReceipts: selected.length,
+        ...(partial ? { nextCursor: selected.at(-1) } : {}),
+      },
+      query.bucketMs === undefined
+        ? undefined
+        : { sizeMs: query.bucketMs, offsetMs: query.bucketOffsetMs ?? 0 },
+    );
   }
 
   private read(id: string): UsageReceipt | undefined {

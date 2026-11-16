@@ -497,6 +497,9 @@ export interface QueryParams {
   until?: number;
   limit?: number;
   cursor?: string;
+  /** Usage only: adds per-time-bucket rows; see `UsageQuery`. */
+  bucketMs?: number;
+  bucketOffsetMs?: number;
   /** Session output recovery: exclusive durable cursor and frozen upper bound. */
   after?: string;
   through?: string;

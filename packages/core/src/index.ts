@@ -778,6 +778,7 @@ export {
 export type {
   UsageOwner,
   UsageSummary,
+  UsageTimeBucket,
   UsageQuery,
   UsageReceipt,
   ExternalBilledUsage,

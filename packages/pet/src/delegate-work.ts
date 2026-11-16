@@ -7,8 +7,6 @@ import {
   DELEGATE_WORK_TOOL_NAME,
   isPetWorkExecutionBackend,
   normalizePetWorkDelegation,
-  petDelegationDisplay,
-  type PetReusableSessionOption,
   type PetSessionContinuationEvidence,
   type PetWorkspaceOption,
 } from "./delegation.js";
@@ -30,14 +28,15 @@ export const delegateWorkToolDef: ToolDefinition = {
     "Titles may describe old work: inspect recent request/result data and use Sessions search/describe before dismissing a possible continuation. " +
     "A shared Workspace, URL, filename, entity, or broad topic alone does not prove continuity. " +
     "If the user asked for a new Session, omit session_id regardless of how continuous the work looks. " +
-    "workspace_id must be copied exactly from the available Workspace list.",
+    "The available Workspaces are the workspaces entries of the trusted runtime context; copy workspace_id exactly from one of them. " +
+    "Reusable Session candidates are the reusableSessions entries there, each naming its Workspace; being listed is not a reason to reuse a Session.",
   inputSchema: {
     type: "object",
     additionalProperties: false,
     properties: {
       workspace_id: {
         type: "string",
-        description: "Exact opaque Workspace id from the host-provided list.",
+        description: "Exact opaque id of one workspaces entry from the trusted runtime context.",
       },
       objective: {
         type: "string",
@@ -53,7 +52,7 @@ export const delegateWorkToolDef: ToolDefinition = {
       session_id: {
         type: "string",
         description:
-          "Optional exact id from the reusable Session list. Pass it only after deciding this objective clearly continues that Session; omit it for new or uncertain work, and whenever the user asked to start a new Session. The host never infers an omitted id.",
+          "Optional exact id of one reusableSessions entry from the trusted runtime context, in the same Workspace as workspace_id. Pass it only after deciding this objective clearly continues that Session; omit it for new or uncertain work, whenever the user asked to start a new Session, and when no reusable Session is listed. The host never infers an omitted id.",
       },
       session_continuation: {
         type: "object",
@@ -86,82 +85,8 @@ function visibleWorkspaces(ctx: ToolVisibilityContext): readonly PetWorkspaceOpt
   return Array.isArray(workspaces) ? (workspaces as readonly PetWorkspaceOption[]) : [];
 }
 
-function visibleReusableSessions(ctx: ToolVisibilityContext): readonly PetReusableSessionOption[] {
-  const sessions = ctx.profileMeta?.petReusableSessions;
-  return Array.isArray(sessions) ? (sessions as readonly PetReusableSessionOption[]) : [];
-}
-
 export function delegateWorkAvailability(ctx: ToolVisibilityContext): boolean {
   return ctx.behaviorProfile === "pet" && visibleWorkspaces(ctx).length > 0;
-}
-
-export function rewriteDelegateWorkDef(
-  def: ToolDefinition,
-  ctx: ToolVisibilityContext,
-): ToolDefinition {
-  const dynamic = delegateWorkToolDefFor(visibleWorkspaces(ctx), visibleReusableSessions(ctx));
-  return { ...def, description: dynamic.description, inputSchema: dynamic.inputSchema };
-}
-
-export function delegateWorkToolDefFor(
-  workspaces: readonly PetWorkspaceOption[] | undefined,
-  reusableSessions: readonly PetReusableSessionOption[] | undefined = [],
-): ToolDefinition {
-  const available = workspaces ?? [];
-  const sessions = reusableSessions ?? [];
-  const workspaceListing = available.length
-    ? available
-        .map(
-          (workspace) =>
-            `- ${JSON.stringify(workspace.id)}: ${petDelegationDisplay(workspace.name, 256)}${
-              workspace.description
-                ? ` — ${petDelegationDisplay(workspace.description, 4_096)}`
-                : ""
-            }`,
-        )
-        .join("\n")
-    : "- (no Workspace is currently available)";
-  const sessionListing = sessions.length
-    ? sessions
-        .map(
-          (session) =>
-            `- ${JSON.stringify(session.id)}: ${petDelegationDisplay(session.name, 256)} (Workspace ${JSON.stringify(session.workspaceId)})${
-              session.description ? ` — ${petDelegationDisplay(session.description, 4_096)}` : ""
-            }`,
-        )
-        .join("\n")
-    : "- (no existing Session is currently eligible for reuse; omit session_id)";
-  const {
-    session_id: _sessionId,
-    session_continuation: sessionContinuation,
-    ...baseProperties
-  } = delegateWorkToolDef.inputSchema.properties as Record<string, unknown>;
-  return {
-    ...delegateWorkToolDef,
-    description: `${delegateWorkToolDef.description}\n\nAvailable Workspaces:\n${workspaceListing}\n\nReusable Sessions (candidates only — listing one here is not a reason to reuse it):\n${sessionListing}`,
-    inputSchema: {
-      ...delegateWorkToolDef.inputSchema,
-      properties: {
-        ...baseProperties,
-        workspace_id: {
-          type: "string",
-          enum: available.map((workspace) => workspace.id),
-          description: "Exact opaque Workspace id from the available list.",
-        },
-        ...(sessions.length > 0
-          ? {
-              session_id: {
-                type: "string",
-                enum: sessions.map((session) => session.id),
-                description:
-                  "Optional exact id from the reusable Session list. Pass it only for a clear continuation of the same concrete work thread; omit it to create a new Session, including whenever the user asked for a new one. The host never infers an omitted id.",
-              },
-              session_continuation: sessionContinuation,
-            }
-          : {}),
-      },
-    },
-  };
 }
 
 export async function delegateWorkTool(
@@ -217,7 +142,11 @@ export async function delegateWorkTool(
 
   const workspace = workspaces.find((candidate) => candidate?.id === workspaceId);
   if (!workspace) {
-    return `Error: unknown workspace_id ${JSON.stringify(workspaceId)}. Copy one exact id from the available Workspace list.`;
+    return `Error: unknown workspace_id ${JSON.stringify(workspaceId)}. Copy one exact id from workspaces: ${
+      workspaces.length
+        ? workspaces.map((candidate) => JSON.stringify(candidate.id)).join(", ")
+        : "(none available this turn)"
+    }.`;
   }
   const reusableSession = reusableSessionId
     ? reusableSessions.find((candidate) => candidate?.id === reusableSessionId)

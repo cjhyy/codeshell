@@ -33,7 +33,10 @@ export const sendMessageToolDef: ToolDefinition = {
     "Proactively send text and optional existing local attachments to one host-authorized owner " +
     "destination. This is distinct " +
     "from GatewayReply, which only replies to the current inbound conversation. target_id must be " +
-    "copied from the host-provided destination list; raw channel/user ids are never accepted. " +
+    "copied exactly from an entry of outboundTargets in the trusted runtime context; raw " +
+    "channel/user ids are never accepted. Each entry states that destination's text limit, " +
+    "accepted attachment kinds and limits, and whether a proactive push may wait until the owner " +
+    "messages first. " +
     "Tool acceptance only records a request and is never proof of delivery. After calling it, do " +
     "not say or imply that the message was sent; the host replaces your reply with an authoritative " +
     "platform-acceptance or failure receipt, which still is not recipient-device delivery proof.",
@@ -41,7 +44,12 @@ export const sendMessageToolDef: ToolDefinition = {
     type: "object",
     additionalProperties: false,
     properties: {
-      target_id: { type: "string", minLength: 1, maxLength: 128 },
+      target_id: {
+        type: "string",
+        minLength: 1,
+        maxLength: 128,
+        description: "Exact id of one outboundTargets entry from the trusted runtime context.",
+      },
       text: { type: "string", minLength: 1, maxLength: 8_000 },
       attachment_paths: {
         type: "array",
@@ -75,51 +83,6 @@ export function sendMessageAvailability(ctx: ToolVisibilityContext): boolean {
   return hostActionAvailability("outboundMessage")(ctx) && targetsFromVisibility(ctx).length > 0;
 }
 
-export function rewriteSendMessageDef(
-  def: ToolDefinition,
-  ctx: ToolVisibilityContext,
-): ToolDefinition {
-  const targets = targetsFromVisibility(ctx);
-  const properties = sendMessageToolDef.inputSchema.properties as Record<string, unknown>;
-  const { attachment_paths: attachmentPaths, ...textProperties } = properties;
-  const attachmentTargets = targets.filter((target) => target.attachments.length > 0);
-  return {
-    ...def,
-    description:
-      `${sendMessageToolDef.description}\n\nAuthorized destinations:\n` +
-      targets
-        .map((target) => {
-          const media = target.attachments.length
-            ? `; attachments=${target.attachments.join("/")} max=${target.maxAttachments}x${target.maxAttachmentBytes}B`
-            : "; text only";
-          const readiness =
-            target.proactiveReady === "unknown"
-              ? "; readiness=unknown: may not deliver until the owner messages first"
-              : "";
-          return `- ${JSON.stringify(target.id)}: ${target.label} (${target.channel}${media}${readiness})`;
-        })
-        .join("\n"),
-    inputSchema: {
-      ...sendMessageToolDef.inputSchema,
-      properties: {
-        ...textProperties,
-        target_id: {
-          type: "string",
-          enum: targets.map((target) => target.id),
-        },
-        ...(attachmentTargets.length > 0 && attachmentPaths
-          ? {
-              attachment_paths: {
-                ...(attachmentPaths as Record<string, unknown>),
-                maxItems: Math.max(...attachmentTargets.map((target) => target.maxAttachments)),
-              },
-            }
-          : {}),
-      },
-    },
-  };
-}
-
 export async function sendMessageTool(
   args: Record<string, unknown>,
   ctx?: ToolContext,
@@ -139,7 +102,11 @@ export async function sendMessageTool(
     return "Error: target_id must be one exact authorized destination id.";
   }
   const target = targets.find((candidate) => candidate.id === targetId);
-  if (!target) return "Error: unknown target_id. Copy one exact authorized destination id.";
+  if (!target) {
+    return `Error: unknown target_id. Copy one exact id from outboundTargets: ${targets
+      .map((candidate) => JSON.stringify(candidate.id))
+      .join(", ")}.`;
+  }
   if (!text || text.length > target.maxTextLength || OUTBOUND_CONTROL_CHARACTER_RE.test(text)) {
     return `Error: message text must be 1 to ${target.maxTextLength} characters.`;
   }
