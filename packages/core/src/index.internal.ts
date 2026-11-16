@@ -16,27 +16,25 @@ export {
   recordModelTraceEvent,
   recordExternalModelTrace,
   clearModelTracingConfiguration,
+  type ModelTraceContentState,
+  type ModelTraceStatus,
+  type ModelTraceCallType,
+  type ModelTraceConfig,
+  type ModelTraceConfigPatch,
+  type ModelTraceOutput,
+  type ModelTraceAttempt,
+  type ModelTraceRecord,
+  type ModelTraceSummary,
+  type ModelTraceListQuery,
+  type ModelTracePage,
+  type ModelTraceSessionSummary,
+  type ModelTraceSessionPage,
+  type ModelTraceEvent,
+  type ModelTraceEventInput,
+  type ModelTraceContext,
+  type ExternalModelTraceInput,
 } from "./model-traces/index.js";
 export { createNativeModelTraceFrameDecoder } from "./model-traces/native-frames.js";
-export type {
-  ModelTraceContentState,
-  ModelTraceStatus,
-  ModelTraceCallType,
-  ModelTraceConfig,
-  ModelTraceConfigPatch,
-  ModelTraceOutput,
-  ModelTraceAttempt,
-  ModelTraceRecord,
-  ModelTraceSummary,
-  ModelTraceListQuery,
-  ModelTracePage,
-  ModelTraceSessionSummary,
-  ModelTraceSessionPage,
-  ModelTraceEvent,
-  ModelTraceEventInput,
-  ModelTraceContext,
-  ExternalModelTraceInput,
-} from "./model-traces/index.js";
 
 export {
   SessionOutputCoverageStore,
@@ -64,6 +62,13 @@ export {
   type MemoryOrchestratorOptions,
 } from "./services/memory-orchestrator.js";
 export { auxCachedRequest } from "./engine/aux-prompt-cache.js";
+// Engine context stays on local disk; remote clients and exports leave it out.
+export {
+  isContextEvent,
+  redactContextEvents,
+  withoutContextEvents,
+  withoutLocalContextState,
+} from "./session/context-messages.js";
 export { isEphemeralSessionState, listSessionEntries } from "./session/session-manager.js";
 export { sanitizeContent } from "./logging/sanitize-messages.js";
 export { McpResponseTooLargeError } from "./tool-system/mcp-results.js";

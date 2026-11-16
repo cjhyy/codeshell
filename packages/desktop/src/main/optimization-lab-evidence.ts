@@ -2,6 +2,7 @@ import { constants, promises as fs } from "node:fs";
 import { basename, join } from "node:path";
 import { homedir } from "node:os";
 import { sessionsRoot } from "@cjhyy/code-shell-core";
+import { isContextEvent } from "@cjhyy/code-shell-core/internal";
 import {
   buildEvidenceBundle,
   type EvidenceBundle,
@@ -251,8 +252,7 @@ export async function previewOptimizationLabEvidence(
             event.type === "message" &&
             event.data?.role === "user" &&
             // Engine context (ledger, hook reminders) is not interleaved input.
-            event.data?.contextLedger === undefined &&
-            event.data?.hookReminder === undefined &&
+            !isContextEvent(event) &&
             event.data?.clientMessageId !== messageId,
         );
         if (interleaved)

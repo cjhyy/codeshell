@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { CommandContext } from "../registry.js";
@@ -116,5 +116,40 @@ describe("/config command", () => {
       'mcpServers.github.env.GITHUB_TOKEN = "[REDACTED]"',
       'mcpServers.github.headers.Authorization = "[REDACTED]"',
     ]);
+  });
+});
+
+describe("/export command", () => {
+  test("exports the conversation without engine context, even from an older server", async () => {
+    const cwd = mkdtempSync(join(tmpdir(), "codeshell-export-command-"));
+    tempDirs.push(cwd);
+    const transcript = [
+      { id: "q", type: "message", data: { role: "user", content: "real question" } },
+      // An older server sends context events with their text.
+      {
+        id: "l",
+        type: "message",
+        data: { role: "user", content: "LEDGER_TEXT", contextLedger: { kind: "snapshot" } },
+      },
+      { id: "r", type: "prompt_rewrite", data: { messageEventId: "q", content: "REWRITE_TEXT" } },
+      // A current server sends text-free stubs.
+      { id: "s", type: "message", data: { redactedContext: true } },
+      { id: "a", type: "message", data: { role: "assistant", content: "real answer" } },
+    ];
+    const { ctx, statuses } = makeCtx(cwd);
+    Object.assign(ctx, {
+      sessionId: "fixture",
+      client: { query: async () => ({ data: { transcript } }) },
+    });
+    const cmd = coreCommands.find((entry) => entry.name === "/export");
+    if (!cmd) throw new Error("missing /export command");
+    await cmd.execute("json", ctx);
+    const exported = JSON.parse(readFileSync(join(cwd, "session-fixture.json"), "utf-8"));
+    expect(exported.map((event: { id: string }) => event.id)).toEqual(["q", "a"]);
+    await cmd.execute("", ctx);
+    const md = readFileSync(join(cwd, "session-fixture.md"), "utf-8");
+    for (const local of ["LEDGER_TEXT", "REWRITE_TEXT"]) expect(md).not.toContain(local);
+    expect(md).toContain("real answer");
+    expect(statuses.some((status) => status.startsWith("Export failed"))).toBe(false);
   });
 });

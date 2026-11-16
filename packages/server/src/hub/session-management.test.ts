@@ -222,6 +222,33 @@ test("exports use actual raw transcript data and shared browser projection", asy
   expect((await f.request(`/${state.sessionId}/export`)).status).toBe(413);
 });
 
+test("exports leave engine context text on the local disk", async () => {
+  const f = await fixture();
+  const { state, transcript } = f.manager.create(f.cwd, "model", "provider");
+  const task = transcript.appendMessage("user", "the user's words");
+  transcript.appendMessage("user", "LEDGER_TEXT", {
+    contextLedger: { kind: "snapshot", state: "{}" },
+  });
+  transcript.appendMessage("user", "HOOK_TEXT", {
+    hookReminder: { beforeEventId: task.id, promptSubmit: ["HOOK_TEXT"] },
+  });
+  transcript.appendPromptRewrite({ messageEventId: task.id, content: "REWRITE_TEXT" });
+  transcript.appendMessage("assistant", "the answer");
+  f.manager.updateSessionState(state.sessionId, { promptSubmitHookMessages: ["HOOK_TEXT"] });
+  for (const format of ["markdown", "json"]) {
+    const body = await (await f.request(`/${state.sessionId}/export?format=${format}`)).text();
+    for (const local of ["LEDGER_TEXT", "HOOK_TEXT", "REWRITE_TEXT", "promptSubmitHookMessages"])
+      expect(body).not.toContain(local);
+    expect(body).toContain("the user's words");
+    expect(body).toContain("the answer");
+  }
+  const onDisk = readFileSync(
+    join(f.root, "sessions", state.sessionId, "transcript.jsonl"),
+    "utf8",
+  );
+  expect(onDisk).toContain("REWRITE_TEXT");
+});
+
 test("Markdown tool results cannot terminate their own code fence", () => {
   const markdown = transcriptMarkdown("Fixture", [
     { type: "tool_use", data: { toolCallId: "call", toolName: "Read", args: { file: "sample" } } },

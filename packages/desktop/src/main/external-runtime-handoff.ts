@@ -1,3 +1,4 @@
+import { isContextEvent } from "@cjhyy/code-shell-core/internal";
 import type { RawTranscriptEvent } from "./rawTranscript.js";
 
 const MAX_HANDOFF_CHARS = 48_000;
@@ -43,7 +44,7 @@ export function buildExternalRuntimeHandoffFromEvents(
     if (event.type !== "message") return [];
     // Engine context (memory index, skills, hook reminders) is the previous
     // runtime's own framing, not conversation to hand over.
-    if (event.data.contextLedger !== undefined || event.data.hookReminder !== undefined) return [];
+    if (isContextEvent(event)) return [];
     const text = contentText(event.data.content).trim();
     if (!text) return [];
     const role = event.data.role;

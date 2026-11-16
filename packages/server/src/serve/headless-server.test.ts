@@ -64,6 +64,7 @@ async function boot(
   options: {
     seedSession?: boolean;
     largeHistory?: boolean;
+    contextHistory?: boolean;
     workerEntryPath?: string;
     pendingWorkerResponseTtlMs?: number;
     pendingWorkerResponseReaperMs?: number;
@@ -85,6 +86,7 @@ async function boot(
         status: "completed",
         turnCount: 1,
         runId: "run",
+        ...(options.contextHistory ? { promptSubmitHookMessages: ["HOOK_TEXT"] } : {}),
       }),
     );
     writeFileSync(
@@ -117,6 +119,42 @@ async function boot(
         legacy.map((event) => JSON.stringify(event) + "\n").join(""),
       );
       new SessionOutputJournal(sessionRootDir, "session-in-workspace", "run", "old-2").append({
+        type: "text_delta",
+        text: "new reply",
+      });
+    }
+    if (options.contextHistory) {
+      // Engine context events end the pre-journal base: its anchor is one.
+      const event = (id: string, type: string, data: Record<string, unknown>) => ({
+        id,
+        type,
+        timestamp: 123,
+        turnNumber: 1,
+        data,
+      });
+      const history = [
+        event("meta", "session_meta", { sessionId: "session-in-workspace" }),
+        event("task", "message", { role: "user", content: "the user's words" }),
+        event("ledger", "message", {
+          role: "user",
+          content: "LEDGER_TEXT",
+          injected: true,
+          contextLedger: { kind: "snapshot", state: "{}" },
+        }),
+        event("rewrite", "prompt_rewrite", { messageEventId: "task", content: "REWRITE_TEXT" }),
+        event("answer", "message", { role: "assistant", content: "the answer" }),
+        event("ctx-anchor", "message", {
+          role: "user",
+          content: "HOOK_TEXT",
+          injected: true,
+          hookReminder: { promptSubmit: ["HOOK_TEXT"] },
+        }),
+      ];
+      writeFileSync(
+        join(sessionDir, "transcript.jsonl"),
+        history.map((entry) => JSON.stringify(entry) + "\n").join(""),
+      );
+      new SessionOutputJournal(sessionRootDir, "session-in-workspace", "run", "ctx-anchor").append({
         type: "text_delta",
         text: "new reply",
       });
@@ -447,6 +485,55 @@ describe("headless serve — WS pipe", () => {
         },
       });
       expect(JSON.stringify(reply.result)).toContain("中".repeat(220000));
+    } finally {
+      ws.close();
+    }
+  });
+
+  test("session detail keeps engine context text on this machine", async () => {
+    const server = await boot({ seedSession: true, contextHistory: true });
+    const ws = await openWs(server, { "x-access-passcode": PASSCODE });
+    try {
+      for (const outputRecovery of [false, true]) {
+        const id = `context-${outputRecovery}`;
+        ws.send(
+          JSON.stringify({
+            jsonrpc: "2.0",
+            id,
+            method: "agent/query",
+            params: { type: "session_detail", sessionId: "session-in-workspace", outputRecovery },
+          }),
+        );
+        const reply = await nextMessage(ws, (m) => m.id === id);
+        const wire = JSON.stringify(reply.result);
+        for (const local of [
+          "LEDGER_TEXT",
+          "HOOK_TEXT",
+          "REWRITE_TEXT",
+          "promptSubmitHookMessages",
+        ])
+          expect(wire).not.toContain(local);
+        expect(wire).toContain("the user's words");
+        expect(wire).toContain("the answer");
+        // Context events stay as text-free stubs, so the legacy-base anchor
+        // and the event positions a client recovers from are unchanged.
+        const { transcript } = (reply.result as { data: { transcript: any[] } }).data;
+        expect(transcript.map((event) => event.id)).toEqual([
+          "meta",
+          "task",
+          "ledger",
+          "rewrite",
+          "answer",
+          "ctx-anchor",
+        ]);
+        expect(transcript.at(-1)).toEqual({
+          id: "ctx-anchor",
+          type: "message",
+          timestamp: 123,
+          turnNumber: 1,
+          data: { redactedContext: true },
+        });
+      }
     } finally {
       ws.close();
     }

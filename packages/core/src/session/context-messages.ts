@@ -142,14 +142,64 @@ export function readHookReminderData(event: TranscriptEvent): HookReminderEventD
 }
 
 /**
- * True for a message event that is engine context rather than conversation:
- * it must never be shown, counted or quoted as something a person said.
+ * True for a transcript event that carries engine context text rather than
+ * the conversation: a context-ledger snapshot or update, a hook or in-run
+ * reminder, or a hook's rewrite of a prompt (`prompt_rewrite`). Takes any
+ * value, since remote and export paths read events as untyped JSON.
+ *
+ * These events stay on local disk — resume replays them so the model sees
+ * the same history — but are never sent off the machine or exported: a
+ * memory index or a plugin's reminder is not part of the conversation a
+ * person shares. See {@link withoutContextEvents}.
  */
-export function isContextMessageEvent(event: TranscriptEvent): boolean {
+export function isContextEvent(event: unknown): boolean {
+  if (!isRecord(event) || !isRecord(event.data)) return false;
+  if (event.data.redactedContext === true) return true;
+  if (event.type === "prompt_rewrite") return true;
   return (
     event.type === "message" &&
     (event.data.contextLedger !== undefined || event.data.hookReminder !== undefined)
   );
+}
+
+/** `events` without engine context ({@link isContextEvent}), for exports. */
+export function withoutContextEvents<T>(events: readonly T[]): T[] {
+  return events.filter((event) => !isContextEvent(event));
+}
+
+/**
+ * `events` with every engine-context event ({@link isContextEvent}) replaced
+ * by a stub that keeps its id, type, time and turn but no text
+ * (`data: { redactedContext: true }`). For a remote client that locates
+ * transcript events by id or position — an output journal's legacy-base
+ * anchor may be any event — so dropping events would break its recovery.
+ * A stub is still a context event, so readers skip it as before.
+ */
+export function redactContextEvents<T>(events: readonly T[]): T[] {
+  return events.map((event) => {
+    if (!isContextEvent(event)) return event;
+    const { id, type, timestamp, turnNumber } = event as Record<string, unknown>;
+    return { id, type, timestamp, turnNumber, data: { redactedContext: true } } as T;
+  });
+}
+
+/**
+ * Session state without the fields that hold engine context text
+ * (`promptSubmitHookMessages`), for remote clients and exports. Anything
+ * else is returned as it is.
+ */
+export function withoutLocalContextState<T>(state: T): T {
+  if (!isRecord(state) || !Object.hasOwn(state, "promptSubmitHookMessages")) return state;
+  const { promptSubmitHookMessages: _local, ...shared } = state;
+  return shared as T;
+}
+
+/**
+ * True for a message event that is engine context rather than conversation:
+ * it must never be shown, counted or quoted as something a person said.
+ */
+export function isContextMessageEvent(event: TranscriptEvent): boolean {
+  return event.type === "message" && isContextEvent(event);
 }
 
 /** Mark `message` as the replay of `event` when the event is a context message. */

@@ -101,4 +101,18 @@ describe("renderSessionMarkdown engine context", () => {
     expect(md).not.toContain("MEMORY INDEX");
     expect(md).not.toContain("HOOK RULES");
   });
+
+  test("a redacted context stub from a remote session detail is not a turn", () => {
+    const { md } = renderSessionMarkdown(
+      "fixture",
+      [
+        { type: "message", data: { role: "user", content: "real question" } },
+        { id: "c", type: "message", data: { redactedContext: true } },
+        { type: "message", data: { role: "assistant", content: "real answer" } },
+      ],
+      "/x",
+    );
+    expect(md).toContain("## turn 2 · assistant");
+    expect(md).not.toContain("turn 3");
+  });
 });

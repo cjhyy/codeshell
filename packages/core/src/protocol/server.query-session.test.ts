@@ -352,6 +352,47 @@ describe("AgentServer query wire contracts before registry extraction", () => {
     }
   });
 
+  test("session list and detail leave engine context on the local disk", async () => {
+    const root = mkdtempSync(join(tmpdir(), "query-context-privacy-"));
+    try {
+      const manager = new SessionManager(root);
+      const session = manager.create(root, "fixture", "fixture", "private-context");
+      const task = session.transcript.appendMessage("user", "the user's words");
+      session.transcript.appendMessage("user", "LEDGER_TEXT", {
+        contextLedger: { kind: "snapshot", state: "{}" },
+      });
+      session.transcript.appendMessage("user", "HOOK_TEXT", {
+        hookReminder: { beforeEventId: task.id, promptSubmit: ["HOOK_TEXT"] },
+      });
+      session.transcript.appendPromptRewrite({ messageEventId: task.id, content: "REWRITE_TEXT" });
+      session.transcript.appendMessage("assistant", "the answer");
+      manager.updateSessionState("private-context", { promptSubmitHookMessages: ["HOOK_TEXT"] });
+      const engine = { getSessionManager: () => manager };
+
+      const wire = JSON.stringify([
+        await queryWire({ type: "sessions" }, engine),
+        await queryWire({ type: "session_detail", sessionId: "private-context" }, engine),
+      ]);
+      for (const local of [
+        "LEDGER_TEXT",
+        "HOOK_TEXT",
+        "REWRITE_TEXT",
+        "promptSubmitHookMessages",
+      ]) {
+        expect(wire).not.toContain(local);
+      }
+      expect(wire).toContain("the user's words");
+      expect(wire).toContain("the answer");
+      expect(wire).toContain('"redactedContext":true');
+      // Still on disk, where resume needs it.
+      const local = manager.resume("private-context");
+      expect(local.state.promptSubmitHookMessages).toEqual(["HOOK_TEXT"]);
+      expect(JSON.stringify(local.transcript.toMessages())).toContain("REWRITE_TEXT");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test.each(["session_detail", "output_journal"])("%s requires sessionId", async (type) => {
     expect(await queryWire({ type })).toEqual(
       queryError(ErrorCodes.InvalidParams, `sessionId required for ${type}`),

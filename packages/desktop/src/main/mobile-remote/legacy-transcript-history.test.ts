@@ -412,6 +412,41 @@ test("older same-Session metadata updates, empty tool receipts and child descrip
   expect(() => readLegacyExternalHistory(f.root, "legacy")).toThrow(LegacyHistoryUnavailable);
 });
 
+test("legacy display leaves engine context text on this machine", () => {
+  const f = fixture();
+  // Raw records without the injected flag: the context markers alone decide.
+  appendFileSync(
+    f.transcript,
+    [
+      {
+        id: "ledger",
+        type: "message",
+        data: { role: "user", content: "LEDGER_TEXT", contextLedger: { kind: "snapshot" } },
+      },
+      {
+        id: "reminder",
+        type: "message",
+        data: { role: "user", content: "HOOK_TEXT", hookReminder: {} },
+      },
+      {
+        id: "rewrite",
+        type: "prompt_rewrite",
+        data: { messageEventId: "x", content: "REWRITE_TEXT" },
+      },
+      { id: "answer", type: "message", data: { role: "assistant", content: "answer after" } },
+    ]
+      .map((value) => JSON.stringify(value))
+      .join("\n") + "\n",
+  );
+  const history = readLegacyExternalHistory(f.root, "legacy")!;
+  const wire = JSON.stringify(history.events);
+  for (const local of ["LEDGER_TEXT", "HOOK_TEXT", "REWRITE_TEXT"])
+    expect(wire).not.toContain(local);
+  expect(wire).toContain("owned prompt");
+  expect(wire).toContain("answer after");
+  expect(history.throughEventId).toBe("answer");
+});
+
 test("model-error history remains a read-only historical projection and active legacy metadata is terminally refused", async () => {
   const f = fixture();
   f.patch({ status: "model_error" });
