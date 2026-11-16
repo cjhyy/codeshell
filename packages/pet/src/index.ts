@@ -47,10 +47,8 @@ export {
 export { createPetProjectionObserver, PET_HIDDEN_SESSION_KINDS } from "./projection-extension.js";
 export {
   delegateWorkToolDef,
-  delegateWorkToolDefFor,
   delegateWorkTool,
   delegateWorkAvailability,
-  rewriteDelegateWorkDef,
 } from "./delegate-work.js";
 export {
   MOBILE_REMOTE_TOOL_NAME,
@@ -117,7 +115,6 @@ export {
   sendMessageToolDef,
   sendMessageTool,
   sendMessageAvailability,
-  rewriteSendMessageDef,
   type PetOutboundTargetOption,
 } from "./outbound-message.js";
 export {
