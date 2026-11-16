@@ -5713,6 +5713,151 @@ describe("useRemoteApp CLI room controls", () => {
     }
   });
 
+  for (const setting of ["model", "permission"] as const)
+    test(`CLI ${setting} confirmation blocks sending and queue admission without consuming the draft`, async () => {
+      const { hook, ws, sent } = await openRoom(true);
+      const file = new File([new Uint8Array(256 * 1024 + 1)], "held.png", { type: "image/png" });
+      const draft = { text: "keep this draft", attachments: [{ clientId: "held-image", file }] };
+      try {
+        await act(async () => {
+          ws.message({
+            type: "auth.ok",
+            device: { id: "device-1", name: "Phone" },
+            capabilities: { ccRoomModelSelection: 1, turnQueue: 1 },
+          });
+          ws.message({
+            type: "runtime.models.ok",
+            models: [
+              {
+                key: "claude-code/fixture",
+                label: "Fixture",
+                kind: "claude-code",
+                provider: "claude-code",
+                maxContextTokens: 100,
+              },
+            ],
+          });
+          await flushMicrotasks();
+        });
+        await act(async () => {
+          if (setting === "model") hook.result.current.setCcRoomModel!("claude-code/fixture");
+          else hook.result.current.setCcRoomPermissionMode!("default");
+          await flushMicrotasks();
+        });
+        expect(hook.result.current.ccModeRequest?.switching).toBe(true);
+        const before = sent().length;
+        await act(async () => {
+          expect(await hook.result.current.sendChat(draft)).toBe(false);
+          await flushMicrotasks();
+        });
+        expect(sent()).toHaveLength(before);
+        expect(hook.result.current.notice).toContain("设置确认");
+        expect(draft.text).toBe("keep this draft");
+        expect(draft.attachments[0]!.file).toBe(file);
+        expect(hook.result.current.ccModeRequest?.switching).toBe(true);
+      } finally {
+        await hook.unmount();
+      }
+    });
+
+  test("CLI attachment preparation, admission wait and uncertain delivery fence local model and permission changes", async () => {
+    const { hook, ws, sent } = await openRoom(true);
+    const puts: string[] = [];
+    const restoreFetch = defineTestProperty(window, "fetch", {
+      value: async (url: string) => {
+        puts.push(url);
+        return new Response(null, { status: 201 });
+      },
+      writable: true,
+    });
+    const draft = {
+      text: "send with current settings",
+      attachments: [
+        {
+          clientId: "room-image",
+          file: new File([new Uint8Array(256 * 1024 + 1)], "large.png", { type: "image/png" }),
+        },
+      ],
+    };
+    let delivery!: Promise<boolean>;
+    try {
+      await act(async () => {
+        ws.message({
+          type: "runtime.models.ok",
+          models: [
+            {
+              key: "claude-code/fixture",
+              label: "Fixture",
+              kind: "claude-code",
+              provider: "claude-code",
+              maxContextTokens: 100,
+            },
+          ],
+        });
+        await flushMicrotasks();
+        delivery = hook.result.current.sendChat(draft);
+        await flushMicrotasks();
+      });
+      const requests = () => sent().filter((event) => event.type === "ccRoom.openSession").length;
+      const before = requests();
+      const trySwitch = async () =>
+        act(async () => {
+          hook.result.current.setCcRoomModel!("claude-code/fixture");
+          hook.result.current.setCcRoomPermissionMode!("default");
+          await flushMicrotasks();
+          expect(requests()).toBe(before);
+          expect(hook.result.current.ccModeRequest).toBeUndefined();
+        });
+      await trySwitch();
+      expect(sent().filter((event) => event.type === "room.send")).toHaveLength(0);
+      await act(async () => {
+        ws.message({
+          type: "attachment.upload.ready",
+          clientId: "room-image",
+          uploadId: "room-upload",
+          putUrl: "/api/mobile/uploads/room-fixture",
+          expiresAt: Date.now() + 10000,
+        });
+        await flushMicrotasks();
+      });
+      expect(puts).toEqual(["/api/mobile/uploads/room-fixture"]);
+      const message = sent().findLast((event) => event.type === "room.send")!;
+      expect(message.text).toBe(draft.text);
+      await trySwitch();
+      await act(async () => {
+        ws.message({
+          type: "room.error",
+          roomId: room.id,
+          clientMessageId: message.clientMessageId,
+          uncertain: true,
+          message: "fixture uncertain",
+        });
+        expect(await delivery).toBe(false);
+      });
+      await trySwitch();
+      await act(async () => {
+        delivery = hook.result.current.sendChat({
+          ...draft,
+          clientMessageId: message.clientMessageId,
+        });
+        await flushMicrotasks();
+        ws.message({
+          type: "room.accepted",
+          roomId: room.id,
+          clientMessageId: message.clientMessageId,
+        });
+        expect(await delivery).toBe(true);
+        hook.result.current.setCcRoomModel!("claude-code/fixture");
+        await flushMicrotasks();
+      });
+      expect(requests()).toBe(before + 1);
+      expect(sent().filter((event) => event.type === "attachment.upload.begin")).toHaveLength(1);
+    } finally {
+      await hook.unmount();
+      restoreFetch();
+    }
+  });
+
   test("CLI model switching refuses legacy Hosts and an observing room", async () => {
     const { hook, ws, sent } = await openRoom();
     try {

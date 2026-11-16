@@ -517,10 +517,20 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       {
         signature: string;
         sessionId?: string;
+        roomId?: string;
         sources: MobileComposerAttachment[];
         attachments: Awaited<ReturnType<typeof prepareMobileAttachments>>;
       }
     >(),
+  );
+  // A room's send owns its settings while attachments are preparing, and
+  // preparedMessages keeps the fence until admission is confirmed or refused.
+  const preparingRoomInputsRef = useRef(new Map<string, number>());
+  const hasPendingRoomInput = useCallback(
+    (roomId: string) =>
+      preparingRoomInputsRef.current.has(roomId) ||
+      [...preparedMessagesRef.current.values()].some((message) => message.roomId === roomId),
+    [],
   );
   const pendingCreateRef = useRef<{
     clientRequestId: string;
@@ -2530,6 +2540,13 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       const text = input.text.trim();
       if (!text && input.attachments.length === 0) return false;
       if (socket.status !== "online") return false;
+      const refusePendingRoomSwitch = (roomId: string | undefined): boolean => {
+        const pending = pendingCcOpenRef.current;
+        if (!roomId || !pending?.switching || pending.roomId !== roomId) return false;
+        setNotice("请等待此会话的模型或权限设置确认后再发送。草稿已保留。");
+        return true;
+      };
+      if (refusePendingRoomSwitch(activeRoomIdRef.current)) return false;
       if (
         input.nativeConnectionId &&
         (!nativeModelSelectionRef.current || activeRoomIdRef.current || input.modelKey)
@@ -2602,6 +2619,11 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       }
       const upload = new AbortController();
       uploadAbortsRef.current.add(upload);
+      if (roomId)
+        preparingRoomInputsRef.current.set(
+          roomId,
+          (preparingRoomInputsRef.current.get(roomId) ?? 0) + 1,
+        );
       try {
         attachments =
           prepared?.attachments ??
@@ -2624,7 +2646,13 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         return false;
       } finally {
         uploadAbortsRef.current.delete(upload);
+        if (roomId) {
+          const remaining = (preparingRoomInputsRef.current.get(roomId) ?? 1) - 1;
+          if (remaining > 0) preparingRoomInputsRef.current.set(roomId, remaining);
+          else preparingRoomInputsRef.current.delete(roomId);
+        }
       }
+      if (refusePendingRoomSwitch(roomId)) return false;
       if (outputWriteGeneration !== outputWriteGenerationRef.current) {
         input.onRetired?.();
         return false;
@@ -2638,6 +2666,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       preparedMessagesRef.current.set(clientMessageId, {
         signature,
         sessionId,
+        roomId,
         sources: input.attachments.map((source) => ({ ...source })),
         attachments,
       });
@@ -2902,6 +2931,10 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       const sessionId = ccHistorySessionRef.current;
       const cwd = ccHistoryCwdRef.current;
       if (!roomId || !sessionId || !cwd) return;
+      if (hasPendingRoomInput(roomId)) {
+        setNotice("此会话的消息正在发送或等待确认，请确认发送结果后再切换模型或权限。草稿已保留。");
+        return;
+      }
       if (!socketOnlineRef.current) {
         setNotice(t("mobile.connection.offlineTitle"));
         return;
@@ -2933,7 +2966,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         setNotice(t("mobile.connection.offlineTitle"));
       }
     },
-    [socket, setNotice],
+    [socket, setNotice, hasPendingRoomInput],
   );
 
   const setCcRoomModel = useCallback(
@@ -2943,6 +2976,10 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       const sessionId = ccHistorySessionRef.current;
       const cwd = ccHistoryCwdRef.current;
       if (!room || !sessionId || !cwd) return;
+      if (hasPendingRoomInput(room.id)) {
+        setNotice("此会话的消息正在发送或等待确认，请确认发送结果后再切换模型或权限。草稿已保留。");
+        return;
+      }
       if (!socketOnlineRef.current) {
         setNotice(t("mobile.connection.offlineTitle"));
         return;
@@ -2998,7 +3035,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         setNotice(t("mobile.connection.offlineTitle"));
       }
     },
-    [socket, setNotice, runtimeModels],
+    [socket, setNotice, runtimeModels, hasPendingRoomInput],
   );
 
   const respondCcApproval = useCallback(
