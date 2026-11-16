@@ -29,6 +29,7 @@ const source = `
   import {createRoot} from 'react-dom/client';
   import {Workbench} from './Workbench';
   import {DesktopSidebar} from './DesktopControls';
+  import {EnvironmentApiContext} from './EnvironmentMenu';
   function Fixture(){
     const [model,setModel]=React.useState(null);
     const read=async(url='/fixture/state')=>setModel(await (await fetch(url)).json());
@@ -38,8 +39,8 @@ const source = `
     const noop=()=>{};
     const controller={panelSessionId:undefined,...model,host:model.host??'hub',workspaceApi:true,
       chat:{items:[],run:'idle',seq:1,liveByAgent:{}},configuration:null,
-      configurationVersion:0,sessionsVersion:0,draft:'',files:[],uploading:false,
-      uploadBusy:false,hasUnsent:false,uncertain:false,running:false,localDrafts:[],approvals:[],
+      configurationVersion:0,sessionsVersion:0,draft:model.draft??'',files:[],uploading:false,
+      uploadBusy:false,hasUnsent:model.hasUnsent??false,uncertain:false,running:false,localDrafts:[],approvals:[],
       approvalCount:()=>0,approvalContent:null,error:'',clearError:noop,setDraft:noop,
       removeFile:noop,selectSession:id=>read('/fixture/session?id='+encodeURIComponent(id)),
       newSession:noop,send:()=>false,stop:noop,addFiles:noop,refreshSessions:noop,
@@ -53,8 +54,10 @@ const source = `
         }}/>,
       }:{}),
     };
-    return <Workbench controller={controller} projectName="导航审查项目"
-      onBackToProjects={()=>{window.backCount=(window.backCount??0)+1}}/>;
+    return <EnvironmentApiContext.Provider value={model.environmentApi??'/api/v1/environment'}>
+      <Workbench controller={controller} projectName="导航审查项目"
+        onBackToProjects={()=>{window.backCount=(window.backCount??0)+1}}/>
+    </EnvironmentApiContext.Provider>;
   }
   createRoot(document.getElementById('root')).render(<Fixture/>);
 `;
@@ -109,6 +112,7 @@ let model = {
   title: "最近对话 0",
   session: { username: "导航测试账号", deviceName: "Owned fixture" },
 };
+let environmentReply;
 const requests = [],
   unexpected = [],
   external = [],
@@ -142,7 +146,12 @@ const server = createServer((request, response) => {
     model = { ...model, activeId, title: `已打开 ${activeId}` };
     return reply(model);
   }
-  if (url.pathname === "/api/v1/environment") return reply({ error: "环境信息暂时无法读取" }, 503);
+  if (["/api/v1/environment", "/api/v1/cloud-browser/environment"].includes(url.pathname))
+    return environmentReply
+      ? reply(environmentReply)
+      : reply({ error: "环境信息暂时无法读取" }, 503);
+  if (url.pathname === "/app" || url.pathname === "/mobile")
+    return reply("<h1>Owned destination</h1>", 200, "text/html");
   if (url.pathname === "/api/v1/auth/sessions") return reply({ sessions: [] });
   if (url.pathname === "/api/v1/configuration")
     return reply({
@@ -337,9 +346,14 @@ try {
         .getByRole("dialog", { name: "账号与设备", exact: true })
         .waitFor({ state: "detached" });
       await open();
-      await page.getByRole("button", { name: "连接环境", exact: false }).click();
+      await page.getByRole("button", { name: "电脑与云端", exact: false }).click();
       const environment = page.getByRole("dialog", { name: "电脑与云端", exact: true });
       await environment.waitFor();
+      assert.equal(await environment.locator("form, input, details").count(), 0);
+      assert.doesNotMatch(
+        await environment.textContent(),
+        /高级|手动添加|选择项目|当前地址|https?:\/\//,
+      );
       assert.match(await environment.getByRole("alert").textContent(), /环境信息暂时无法读取/);
       await page.keyboard.press("Escape");
       await environment.waitFor({ state: "detached" });
@@ -440,6 +454,97 @@ try {
     await inspectTrace();
     reports.push({ host: "desktop", size, keyboardStops: count });
   }
+  // The real workbench's existing dirty-navigation guard remains in charge of
+  // both account directory navigation and previously saved connections.
+  const savedAddress = origin + "/mobile";
+  await page.evaluate((address) => {
+    window.localStorage.setItem(
+      "codeshell.environments.v1",
+      JSON.stringify([{ name: "原来的电脑", address }]),
+    );
+  }, savedAddress);
+  for (const cloud of [false, true]) {
+    environmentReply = {
+      version: 1,
+      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      name: cloud ? "云端" : "我的电脑",
+      kind: cloud ? "project-host" : "desktop",
+      entryPath: cloud ? "/" : "/mobile",
+      ...(cloud ? {} : { accountComputers: origin + "/ignored-path" }),
+    };
+    model = {
+      ...model,
+      host: "hub",
+      sessions,
+      connection: "open",
+      environmentApi: cloud ? "/api/v1/cloud-browser/environment" : "/api/v1/environment",
+      draft: "仍然保留的未发送草稿",
+      hasUnsent: true,
+    };
+    await page.setViewportSize({ width: cloud ? 1280 : 390, height: 780 });
+    await page.goto(origin);
+    await page.locator(".messages").waitFor();
+    await open();
+    await page.locator(".environment-trigger").click();
+    const menu = page.getByRole("dialog", { name: "电脑与云端", exact: true });
+    const choose = menu.getByRole("button", { name: "选择电脑或云端", exact: true });
+    await choose.waitFor();
+    assert.match(await menu.textContent(), cloud ? /当前在云端/ : /当前正在使用这台电脑/);
+    assert.equal(await menu.locator("form, input, details").count(), 0);
+    assert.doesNotMatch(await menu.textContent(), /高级|手动添加|选择项目|当前地址|https?:\/\//);
+    await menu.getByText("原来的电脑", { exact: true }).waitFor();
+    const bounds = await menu.boundingBox();
+    assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= (cloud ? 1280 : 390));
+    await page.screenshot({
+      path: path.join(output, `computer-cloud-menu-${cloud ? "cloud" : "computer"}.png`),
+    });
+    const originalUrl = page.url();
+    await choose.click();
+    const guard = page.getByRole("dialog", { name: "还有未保存的修改", exact: true });
+    await guard.waitFor();
+    assert.equal(page.url(), originalUrl);
+    await guard.getByRole("button", { name: "留在此页", exact: true }).click();
+    assert.equal(await page.locator(".composer textarea").inputValue(), model.draft);
+    await page.locator(".environment-trigger").click();
+    await choose.click();
+    await guard.getByRole("button", { name: "放弃修改并离开", exact: true }).click();
+    await page.waitForURL(origin + "/app?target=choose");
+    reports.push({ menu: cloud ? "cloud" : "computer", draftGuard: true, accountDirectory: true });
+  }
+  environmentReply = {
+    version: 1,
+    id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    name: "我的电脑",
+    kind: "desktop",
+    entryPath: "/mobile",
+  };
+  model = { ...model, environmentApi: "/api/v1/environment", draft: "", hasUnsent: false };
+  await page.goto(origin);
+  await page.locator(".messages").waitFor();
+  await open();
+  await page.locator(".environment-trigger").click();
+  const reconnect = page.getByRole("dialog", { name: "电脑与云端", exact: true });
+  await reconnect
+    .getByText("请在这台电脑的 CodeShell 中登录账号并开启远程访问", { exact: false })
+    .waitFor();
+  assert.equal(
+    await reconnect.getByRole("button", { name: "选择电脑或云端", exact: true }).count(),
+    0,
+  );
+  environmentReply = { ...environmentReply, accountComputers: origin + "/" };
+  await reconnect.getByRole("button", { name: "重新读取", exact: true }).click();
+  await reconnect.getByRole("button", { name: "选择电脑或云端", exact: true }).waitFor();
+  await reconnect.getByRole("button", { name: "打开", exact: true }).click();
+  await page.waitForURL(savedAddress);
+  assert.equal(
+    JSON.parse(
+      await page.evaluate(() => window.localStorage.getItem("codeshell.environments.v1")),
+    )[0].address,
+    savedAddress,
+  );
+  await page.evaluate(() => window.localStorage.removeItem("codeshell.environments.v1"));
+  environmentReply = undefined;
+  reports.push({ menu: "unavailable", retry: true, savedConnectionPreserved: true });
   model = { ...model, host: "hub", sessions, connection: "open" };
   await page.goto(`${origin}/?view=activity`);
   await inspectTrace();

@@ -5,7 +5,6 @@ import {
   environmentAddress,
   readEnvironments,
   removeEnvironment,
-  saveEnvironment,
   verifyCurrentEnvironment,
   type SavedEnvironment,
 } from "./environments.js";
@@ -28,9 +27,9 @@ export function EnvironmentMenu({
   const [open, setOpen] = React.useState(false);
   const [environment, setEnvironment] = React.useState<EnvironmentDescriptor>();
   const [saved, setSaved] = React.useState<SavedEnvironment[]>([]);
-  const [name, setName] = React.useState("");
-  const [address, setAddress] = React.useState("");
   const [error, setError] = React.useState("");
+  const [retry, setRetry] = React.useState(0);
+  const [discovering, setDiscovering] = React.useState(discover);
   const trigger = React.useRef<HTMLButtonElement>(null);
   const dialog = React.useRef<HTMLDialogElement>(null);
   const closeButton = React.useRef<HTMLButtonElement>(null);
@@ -44,13 +43,20 @@ export function EnvironmentMenu({
   }, []);
 
   React.useEffect(() => {
-    if (!discover) return;
+    if (!discover) {
+      setEnvironment(undefined);
+      setDiscovering(false);
+      return;
+    }
     const controller = new AbortController();
+    setDiscovering(true);
+    setEnvironment(undefined);
     void api<unknown>(environmentApi, { signal: controller.signal })
       .then((value) => {
         if (controller.signal.aborted) return;
         if (!isEnvironmentDescriptor(value)) throw new Error("环境信息无效，请更新工作台后重试。");
         setEnvironment(value);
+        setError("");
         verifyCurrentEnvironment(
           readEnvironments(window.localStorage),
           window.location.origin,
@@ -64,9 +70,12 @@ export function EnvironmentMenu({
         )
           return;
         setError(cause instanceof Error ? cause.message : "无法读取环境信息。");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setDiscovering(false);
       });
     return () => controller.abort();
-  }, [discover, environmentApi]);
+  }, [discover, environmentApi, retry]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -90,6 +99,13 @@ export function EnvironmentMenu({
     else window.location.assign(target);
   };
   const go = (value: string) => leave(environmentAddress(value));
+  const cloud = environmentApi === "/api/v1/cloud-browser/environment";
+  const accountOrigin = environment?.accountComputers
+    ? new URL(environment.accountComputers).origin
+    : cloud
+      ? window.location.origin
+      : undefined;
+  const computers = accountOrigin ? new URL("/app?target=choose", accountOrigin).href : undefined;
 
   return (
     <div className="environment-switcher">
@@ -99,7 +115,7 @@ export function EnvironmentMenu({
         className="ghost environment-trigger"
         onClick={() => setOpen(true)}
       >
-        {environment?.name ?? "连接环境"}
+        {environment?.name ?? "电脑与云端"}
         <span aria-hidden="true"> ▾</span>
       </button>
       {open ? (
@@ -121,38 +137,65 @@ export function EnvironmentMenu({
               关闭
             </button>
           </header>
-          <p>打开目标环境后选择项目。切换入口不会移动文件或正在运行的任务。</p>
-          <p className="environment-location">当前地址：{window.location.origin}</p>
+          <p>选择电脑或云端，继续原来的聊天，也可以直接开始新聊天。</p>
+          {cloud || environment ? (
+            <p className="environment-hint">
+              {cloud
+                ? "当前在云端，聊天保存在云端。"
+                : environment?.kind === "desktop"
+                  ? "当前正在使用这台电脑的聊天和文件。"
+                  : "当前正在使用此工作台的聊天和文件。"}
+              已开始的任务会在原来的电脑或云端继续运行。
+            </p>
+          ) : null}
           {error ? (
             <p role="alert" className="form-error">
               {error}
             </p>
           ) : null}
-          {environment?.accountComputers ? (
+          {computers ? (
             <section className="environment-account" aria-labelledby="environment-account-title">
-              <strong id="environment-account-title">账号下的电脑</strong>
-              <p>用登记这台电脑的账号登录，在列表里选择要打开的电脑。</p>
+              <strong id="environment-account-title">我的电脑与云端</strong>
+              <p>进入账号列表，选择要使用的电脑或云端。</p>
               <button
                 type="button"
                 className="library-button primary"
-                onClick={() => leave(environment.accountComputers!)}
+                onClick={() => leave(computers)}
               >
-                用账号打开我的电脑
+                选择电脑或云端
               </button>
             </section>
-          ) : environment?.kind === "desktop" ? (
-            <p className="environment-hint">
-              在桌面端登录 CodeShell 账号后，这台电脑会登记到账号下（见「设置 ›
-              手机遥控」），这里就能直接打开账号下的所有电脑。
-            </p>
-          ) : null}
+          ) : (
+            <section className="environment-account" aria-labelledby="environment-account-title">
+              <strong id="environment-account-title">我的电脑与云端</strong>
+              <p>
+                {discovering
+                  ? "正在读取电脑与云端入口…"
+                  : environment?.kind === "desktop"
+                    ? "请在这台电脑的 CodeShell 中登录账号并开启远程访问，随后可从账号列表打开这台电脑。"
+                    : discover
+                      ? "账号列表暂时不可用，请检查当前连接或在 CodeShell 中确认账号登录状态。"
+                      : "请先完成当前电脑的连接验证，再打开账号列表。"}
+              </p>
+              {discover ? (
+                <button
+                  type="button"
+                  className="library-button"
+                  disabled={discovering}
+                  onClick={() => setRetry((value) => value + 1)}
+                >
+                  重新读取
+                </button>
+              ) : null}
+            </section>
+          )}
           {saved.length ? (
-            <ul className="environment-list">
+            <ul className="environment-list" aria-label="已保存的连接">
               {saved.map((item) => (
                 <li key={item.address}>
                   <div>
                     <strong>{item.name}</strong>
-                    <small>{item.address}</small>
+                    <small>已保存的连接</small>
                   </div>
                   <button type="button" className="library-button" onClick={() => go(item.address)}>
                     打开
@@ -169,62 +212,6 @@ export function EnvironmentMenu({
               ))}
             </ul>
           ) : null}
-          {/* Hand-entered addresses are for LAN or self-hosted workbenches; an
-              account computer is opened from the account's own list above. */}
-          <details className="environment-manual">
-            <summary>高级 · 手动添加地址</summary>
-            {environment ? (
-              <button
-                type="button"
-                className="library-button"
-                onClick={() =>
-                  edit(() =>
-                    saveEnvironment(window.localStorage, {
-                      name: environment.name,
-                      address: window.location.origin + environment.entryPath,
-                      environmentId: environment.id,
-                    }),
-                  )
-                }
-              >
-                保存当前环境
-              </button>
-            ) : null}
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                edit(() => saveEnvironment(window.localStorage, { name, address: address.trim() }));
-              }}
-            >
-              <label>
-                连接名称
-                <input
-                  required
-                  maxLength={80}
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  placeholder="例如：家里的电脑"
-                />
-              </label>
-              <label>
-                工作台地址
-                <input
-                  required
-                  type="url"
-                  maxLength={2048}
-                  value={address}
-                  onChange={(event) => setAddress(event.target.value)}
-                  placeholder="https://example.com/"
-                />
-              </label>
-              <button type="submit" className="library-button primary">
-                添加连接
-              </button>
-            </form>
-            <p className="environment-hint">
-              连接记录保存在当前工作台的浏览器存储中。目标环境需要单独登录或配对，请勿保存带配对令牌的地址。未连接的环境不会显示为在线。
-            </p>
-          </details>
         </dialog>
       ) : null}
     </div>
