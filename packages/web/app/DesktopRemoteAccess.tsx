@@ -1,6 +1,7 @@
 import React from "react";
 import { useAccountSession } from "./AccountSessionProvider.js";
 import { WebsiteLogin } from "./WebsiteLogin.js";
+import { AccountWebError } from "./account-api.js";
 import {
   requirePasskey,
   passkeyFailure,
@@ -65,6 +66,12 @@ export function DesktopRemoteAccessPage({ request }: { request?: string }) {
     />
   );
 }
+function endedRequest(cause: unknown): "invalid" | "completed" | "unavailable" | undefined {
+  if (!(cause instanceof AccountWebError)) return;
+  if (cause.code === "invalid_remote_access_request") return "invalid";
+  if (cause.code === "remote_access_completed") return "completed";
+  if (cause.code === "remote_access_expired") return "unavailable";
+}
 function RemoteConfirmation({ request }: { request: string }) {
   const account = useAccountSession();
   const [detail, setDetail] = React.useState<AccessRequest>();
@@ -72,6 +79,7 @@ function RemoteConfirmation({ request }: { request: string }) {
   const [loading, setLoading] = React.useState(true);
   const [busy, setBusy] = React.useState(false);
   const [expired, setExpired] = React.useState(false);
+  const [ended, setEnded] = React.useState<ReturnType<typeof endedRequest>>();
   const [result, setResult] = React.useState<"approved" | "denied">();
   const [retry, setRetry] = React.useState(0);
   const pending = React.useRef<AbortController | null>(null);
@@ -83,6 +91,7 @@ function RemoteConfirmation({ request }: { request: string }) {
     setDetail(undefined);
     setError("");
     setExpired(false);
+    setEnded(undefined);
     void account
       .request(`/remote-access/request?request=${request}`, "GET", undefined, controller.signal)
       .then((value) => {
@@ -90,10 +99,22 @@ function RemoteConfirmation({ request }: { request: string }) {
         const next = parseDesktopRemoteAccess(value);
         setDetail(next);
         setExpired(next.expiresAt <= Date.now());
-        timer = setTimeout(() => setExpired(true), Math.max(0, next.expiresAt - Date.now()));
+        if (next.expiresAt > Date.now())
+          timer = setTimeout(
+            () => {
+              setExpired(true);
+              pending.current?.abort();
+              pending.current = null;
+              setBusy(false);
+            },
+            Math.max(0, next.expiresAt - Date.now()),
+          );
       })
       .catch((cause) => {
-        if (!controller.signal.aborted) setError(passkeyFailure(cause));
+        if (!controller.signal.aborted) {
+          setError(passkeyFailure(cause));
+          setEnded(endedRequest(cause));
+        }
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
@@ -110,6 +131,7 @@ function RemoteConfirmation({ request }: { request: string }) {
       !account.ready ||
       !detail ||
       detail.expiresAt <= Date.now() ||
+      ended ||
       result
     )
       return;
@@ -139,7 +161,10 @@ function RemoteConfirmation({ request }: { request: string }) {
         throw new Error("服务器尚未确认结果，请返回 CodeShell 查看状态。");
       setResult(decision === "approve" ? "approved" : "denied");
     } catch (cause) {
-      if (!controller.signal.aborted) setError(passkeyFailure(cause));
+      if (!controller.signal.aborted) {
+        setError(passkeyFailure(cause));
+        setEnded(endedRequest(cause));
+      }
     } finally {
       if (pending.current === controller) {
         pending.current = null;
@@ -158,7 +183,11 @@ function RemoteConfirmation({ request }: { request: string }) {
             ? "已确认远程访问"
             : result === "denied"
               ? "已取消远程访问"
-              : "确认连接这台电脑"}
+              : ended === "completed"
+                ? "连接请求已处理"
+                : expired || ended
+                  ? "连接请求已失效"
+                  : "确认连接这台电脑"}
         </h1>
         <p>
           当前账号：<strong>{account.session!.account!.displayName}</strong> · @
@@ -187,12 +216,16 @@ function RemoteConfirmation({ request }: { request: string }) {
           </>
         ) : (
           <>
-            <p className="website-hint">
-              仅在你刚刚从 CodeShell 发起此连接时确认。{PASSKEY_EXPLANATION}
-            </p>
-            <a href={PASSKEY_SETTINGS_URL} target="_blank" rel="noreferrer">
-              在新页面设置 Passkey
-            </a>
+            {!expired && !ended ? (
+              <>
+                <p className="website-hint">
+                  仅在你刚刚从 CodeShell 发起此连接时确认。{PASSKEY_EXPLANATION}
+                </p>
+                <a href={PASSKEY_SETTINGS_URL} target="_blank" rel="noreferrer">
+                  在新页面设置 Passkey
+                </a>
+              </>
+            ) : null}
             {loading ? <p role="status">正在读取远程访问请求…</p> : null}
             {expired ? <p role="alert">请求已过期，请返回 CodeShell 重新连接。</p> : null}
             {error ? (
@@ -200,12 +233,22 @@ function RemoteConfirmation({ request }: { request: string }) {
                 {error}
               </p>
             ) : null}
-            {!loading && !detail ? (
+            {(expired || ended) && (
+              <a
+                className="website-button primary"
+                href="/app?target=choose"
+                target="_blank"
+                rel="noreferrer"
+              >
+                打开电脑列表
+              </a>
+            )}
+            {!loading && !detail && !ended ? (
               <button className="website-button" onClick={() => setRetry((value) => value + 1)}>
                 重试读取请求
               </button>
             ) : null}
-            {detail && !expired ? (
+            {detail && !expired && !ended ? (
               <div className="website-action-row">
                 <button
                   className="website-button primary"

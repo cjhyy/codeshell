@@ -509,3 +509,27 @@ test("registration selection uses only the fixed path and ignores untrusted redi
   expect(isRegistrationRoute(new URL("/?register=true", origin))).toBe(false);
   expect(isRegistrationRoute(new URL("/register/../../admin", origin))).toBe(false);
 });
+
+test("an ended native remote-access request never retries or signs out its browser account", async () => {
+  for (const [path, method] of [
+    ["/remote-access/request?request=" + "R".repeat(43), "GET"],
+    ["/remote-access/approve", "POST"],
+    ["/remote-access/deny", "POST"],
+  ]) {
+    const calls: string[] = [];
+    const client = new AccountWebClient((async (url) => {
+      calls.push(String(url));
+      return Response.json({ error: "remote_access_expired" }, { status: 401 });
+    }) as typeof fetch);
+    client.setSession(webSession());
+    let lost = false;
+    client.onSessionLost = () => {
+      lost = true;
+    };
+    await expect(client.request(path!, method, method === "POST" ? {} : undefined)).rejects.toThrow(
+      "已失效，或不属于当前账号",
+    );
+    expect(calls).toEqual(["/api/v1/account/web" + path]);
+    expect(lost).toBe(false);
+  }
+});

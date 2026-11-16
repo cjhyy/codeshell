@@ -81,6 +81,13 @@ const messages: Record<string, string> = {
   passkey_bootstrap_identity_mismatch: "请使用当前账号已关联的 GitHub 身份完成验证。",
   passkey_not_found: "此 Passkey 已不存在，请刷新列表。",
   passkey_request_limit: "Passkey 请求过于频繁，请稍后重试。",
+  remote_access_expired:
+    "此连接请求已失效，或不属于当前账号。请返回 CodeShell 重新连接，也可打开电脑列表。",
+  remote_access_completed: "此连接请求已处理，请返回 CodeShell 查看结果，或从电脑列表重新连接。",
+  invalid_remote_access_request: "远程连接链接无效，请返回 CodeShell 重新连接。",
+  remote_access_denied: "此次远程连接已取消，请重新发起连接。",
+  remote_access_limit: "远程连接请求过于频繁，请稍后重新连接。",
+  relay_unavailable: "电脑连接服务暂时不可用，请稍后重试。",
 };
 
 export class AccountWebError extends Error {
@@ -513,11 +520,17 @@ export class AccountWebClient {
         // invalid_session can instead mean the access credential expired during verification:
         // reconcile the root, but never replay that one-use response.
         const reconcileOnly = passkeyRequest && value?.error === "invalid_session";
-        let sessionLost = response.status === 401 && !passkeyBusinessFailure;
+        // A native source/target lease can expire while this browser account remains valid.
+        // Never retry that one-use request or sign out the independent browser session.
+        const remoteAccessBusinessFailure =
+          /^\/remote-access\/(?:request(?:\?|$)|approve$|deny$)/.test(path) &&
+          value?.error === "remote_access_expired";
+        const businessFailure = passkeyBusinessFailure || remoteAccessBusinessFailure;
+        let sessionLost = response.status === 401 && !businessFailure;
         let retry = false;
         if (
           response.status === 401 &&
-          !passkeyBusinessFailure &&
+          !businessFailure &&
           (!passkeyRequest || value?.error === "authentication_required" || reconcileOnly) &&
           (attempt === 0 || reconcileOnly) &&
           path !== "/session" &&
