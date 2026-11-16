@@ -369,6 +369,7 @@ jobs:
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-passkeys-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-website-destinations-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-website-onboarding-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-selected-computer-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-admin-console-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-file-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-latest-messages.mjs
