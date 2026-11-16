@@ -426,6 +426,13 @@ try {
       });
       assert.equal(await modelButton(page).isDisabled(), true, `${name}: model disabled`);
       assert.equal(await permission(page).isDisabled(), true, `${name}: permission disabled`);
+      if (name === "queued") {
+        const requested = await page.evaluate(() => window.fixture.permissionRequests);
+        await permission(page).evaluate((button) => button.click());
+        await frames(page);
+        assert.equal(await permissions.count(), 0, "queued turns prevent opening the picker");
+        assert.deepEqual(await page.evaluate(() => window.fixture.permissionRequests), requested);
+      }
       assert.equal(await input(page).inputValue(), "保留这条尚未发送的草稿");
       if (name === "readonly") assert.equal(await input(page).isDisabled(), true);
       await dimensions(page, `${name}-${width}`, width);
