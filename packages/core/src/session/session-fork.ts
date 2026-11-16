@@ -237,21 +237,24 @@ export function buildForkTranscript(
   }));
   Transcript.remapContextForkReferences(sourceEvents, copied);
   const copiedIds = new Map(sourceEvents.map((event, index) => [event.id, copied[index]!.id]));
+  const checkpointIds = new Set(
+    sourceEvents.filter((event) => event.type === "context_checkpoint").map((event) => event.id),
+  );
   for (const event of copied) {
     // A hook reminder names the user message it precedes; keep that link.
     const reminder = event.type === "message" ? event.data.hookReminder : undefined;
     if (reminder && typeof reminder === "object" && !Array.isArray(reminder)) {
-      const before = (reminder as { beforeEventId?: unknown }).beforeEventId;
-      if (typeof before === "string" && copiedIds.has(before)) {
-        event.data.hookReminder = { ...reminder, beforeEventId: copiedIds.get(before)! };
-      }
+      const before = remapMessageLink(
+        (reminder as { beforeEventId?: unknown }).beforeEventId,
+        copiedIds,
+        checkpointIds,
+      );
+      if (before) event.data.hookReminder = { ...reminder, beforeEventId: before };
     }
     // A prompt rewrite names the user message whose replay content it replaces.
     if (event.type === "prompt_rewrite") {
-      const target = event.data.messageEventId;
-      if (typeof target === "string" && copiedIds.has(target)) {
-        event.data.messageEventId = copiedIds.get(target)!;
-      }
+      const target = remapMessageLink(event.data.messageEventId, copiedIds, checkpointIds);
+      if (target) event.data.messageEventId = target;
     }
     if (event.type !== "turn_diff") continue;
     for (const key of ["turnId", "runId"] as const) {
@@ -261,6 +264,29 @@ export function buildForkTranscript(
     }
   }
   return [meta, ...copied];
+}
+
+/**
+ * The copy's id for a link to a message event. A message a context
+ * checkpoint absorbed replays as `<checkpointId>:<index>` (see
+ * Transcript.contextReplayEvents), so such a link follows the copied
+ * checkpoint. Undefined leaves the link as it was.
+ */
+function remapMessageLink(
+  link: unknown,
+  copiedIds: ReadonlyMap<string, string>,
+  checkpointIds: ReadonlySet<string>,
+): string | undefined {
+  if (typeof link !== "string") return undefined;
+  const direct = copiedIds.get(link);
+  if (direct) return direct;
+  const separator = link.indexOf(":");
+  if (separator <= 0) return undefined;
+  const checkpointId = link.slice(0, separator);
+  const copiedCheckpoint = checkpointIds.has(checkpointId)
+    ? copiedIds.get(checkpointId)
+    : undefined;
+  return copiedCheckpoint ? `${copiedCheckpoint}${link.slice(separator)}` : undefined;
 }
 
 function validateForkToolPairs(events: readonly TranscriptEvent[]): void {
