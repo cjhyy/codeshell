@@ -57,6 +57,7 @@ async function mount({
   width = 1280,
   registrationOutcome = "success",
   failListAfterSave = false,
+  remoteRequestStatus = 200,
 } = {}) {
   await context?.close();
   context = await browser.newContext({ viewport: { width, height: 900 }, serviceWorkers: "block" });
@@ -236,6 +237,8 @@ async function mount({
     }
     if (url.pathname === "/api/v1/account/web/remote-access/request") {
       assert.equal(url.searchParams.get("request"), requestId);
+      if (remoteRequestStatus !== 200)
+        return json({ error: "remote_access_expired" }, remoteRequestStatus);
       return json({
         deviceName: "随身 MacBook",
         target: { hostId, environmentId: hostId, name: "家里的工作电脑" },
@@ -253,6 +256,14 @@ async function mount({
     }
     blocked.push(url.href);
     return route.abort();
+  });
+  await context.addInitScript(() => {
+    globalThis.__ownedPasskeyGetCount = 0;
+    const originalGet = globalThis.navigator.credentials.get.bind(globalThis.navigator.credentials);
+    globalThis.navigator.credentials.get = (...args) => {
+      globalThis.__ownedPasskeyGetCount++;
+      return originalGet(...args);
+    };
   });
   const page = await context.newPage();
   page.on("pageerror", (error) => errors.push(error.message));
@@ -417,6 +428,45 @@ try {
     f.calls.some((call) => call.path.includes("/passkeys/")),
     false,
   );
+  for (const remoteRequestStatus of [404, 401]) {
+    f = await mount({
+      initial: `/remote-access?request=${requestId}`,
+      width: remoteRequestStatus === 404 ? 390 : 1280,
+      remoteRequestStatus,
+    });
+    await f.page.getByRole("heading", { name: "连接请求已失效", exact: true }).waitFor();
+    await f.page.getByRole("alert").filter({ hasText: "已失效，或不属于当前账号" }).waitFor();
+    await f.page.getByText("测试账号", { exact: true }).waitFor();
+    assert.equal(
+      await f.page.getByRole("button", { name: "重试读取请求", exact: true }).count(),
+      0,
+    );
+    assert.equal(
+      await f.page.getByRole("button", { name: "用 Passkey 确认连接", exact: true }).count(),
+      0,
+    );
+    assert.equal(
+      await f.page.getByRole("link", { name: "在新页面设置 Passkey", exact: true }).count(),
+      0,
+    );
+    const recovery = f.page.getByRole("link", { name: "打开电脑列表", exact: true });
+    assert.equal(await recovery.getAttribute("href"), "/app?target=choose");
+    assert.equal(await recovery.getAttribute("target"), "_blank");
+    assert.equal(
+      await f.page.getByRole("button", { name: "换个账号登录", exact: true }).count(),
+      1,
+    );
+    assert.equal(await f.page.getByRole("heading", { name: "登录", exact: true }).count(), 0);
+    assert.equal(f.state.signedIn, true);
+    assert.equal(f.calls.filter((call) => call.path.endsWith("/session")).length, 1);
+    assert.equal(f.calls.filter((call) => call.path.endsWith("/remote-access/request")).length, 1);
+    assert.equal(
+      f.calls.some((call) => call.method === "POST" || call.path.includes("/passkeys/")),
+      false,
+    );
+    assert.equal(await f.page.evaluate(() => globalThis.__ownedPasskeyGetCount), 0);
+    await screenshot(f.page, `desktop-remote-access-ended-${remoteRequestStatus}`);
+  }
   f = await mount({
     initial: `/remote-access?request=${requestId}&redirect=https://outside.invalid`,
   });
@@ -445,6 +495,7 @@ try {
           "GitHub association requires existing Passkey UV",
           "native remote target + UV",
           "deny without UV",
+          "ended native requests offer recovery without retry, logout or Passkey prompt",
           "invalid route refused",
         ],
         screenshots,
