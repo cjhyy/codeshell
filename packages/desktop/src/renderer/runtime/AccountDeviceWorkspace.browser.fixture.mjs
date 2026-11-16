@@ -32,7 +32,7 @@ import {AccountDeviceWorkspace} from "./runtime/AccountDeviceWorkspace";
 const boot=window.fixtureConfig??{};
 const localId=${JSON.stringify(LOCAL)};
 const origin=${JSON.stringify(ACCOUNT_ORIGIN)};
-window.calls=[];window.pendingLists=[];window.pendingOpens=[];
+window.calls=[];window.pendingLists=[];window.pendingOpens=[];window.pendingLocals=[];
 window.account=boot.account??{state:"signed-in",origin,account:{id:"account-a",username:"fixture"}};
 window.relay=boot.relay??{state:"ready",registered:true,hostId:localId,accountId:"account-a",relayOrigin:origin,remoteAccessEnabled:true,name:"Mac Studio"};
 window.features={"devices.directory":{id:"devices.directory",state:boot.featureState??"ready"}};
@@ -42,7 +42,7 @@ window.devices=boot.devices??[
  {hostId:${JSON.stringify(OFFLINE)},environmentId:"env-offline",name:"Travel Laptop",online:false,revoked:false,protocolVersion:1},
  {hostId:${JSON.stringify(REVOKED)},environmentId:"env-revoked",name:"Revoked Computer",online:true,revoked:true,protocolVersion:1}
 ];
-window.listMode=boot.listMode;window.openMode=boot.openMode;
+window.listMode=boot.listMode;window.openMode=boot.openMode;window.localMode=boot.localMode;
 const accountListeners=new Set(),relayListeners=new Set(),featureListeners=new Set();
 window.setAccount=state=>{window.account=state;for(const fn of accountListeners)fn(state)};
 window.setRelay=state=>{window.relay=state;for(const fn of relayListeners)fn(state)};
@@ -75,7 +75,7 @@ function Fixture(){
  window.showChooser=()=>setOpen(true);
  return <>
   <main hidden={open} aria-label="原有本机工作台"><h1>原有聊天</h1><span>existing-session</span><textarea aria-label="原有聊天草稿" value={draft} onChange={e=>setDraft(e.target.value)}/></main>
-  <AccountDeviceWorkspace open={open} onClose={()=>{window.calls.push(["back"]);setOpen(false)}} onOpenLocal={()=>{window.calls.push(["local"]);setOpen(false)}}/>
+  <AccountDeviceWorkspace open={open} onClose={()=>{window.calls.push(["back"]);setOpen(false)}} onOpenLocal={async isCurrent=>{window.calls.push(["local"]);if(window.localMode==="defer")await new Promise((resolve,reject)=>window.pendingLocals.push({resolve,reject,isCurrent}));if(!isCurrent()){window.calls.push(["stale-local"]);return;}setOpen(false)}}/>
  </>;
 }
 window.addEventListener("codeshell:open-account-settings",()=>window.calls.push(["account-settings"]));
@@ -302,6 +302,77 @@ try {
     assert.equal(await localWhileOpening.getByText("已离开的连接失败", { exact: true }).count(), 0);
   });
   await closePage(localWhileOpening);
+
+  const delayedLocal = await createPage({ localMode: "defer" });
+  await checkpoint("closing and reopening invalidates an earlier local navigation", async () => {
+    await localButton(delayedLocal).click();
+    await delayedLocal.waitForFunction(() => window.pendingLocals.length === 1);
+    assert.equal(await delayedLocal.evaluate(() => window.pendingLocals[0].isCurrent()), true);
+    await delayedLocal.getByRole("button", { name: "返回工作台", exact: true }).click();
+    await delayedLocal.getByRole("main", { name: "原有本机工作台" }).waitFor();
+    assert.equal(await delayedLocal.evaluate(() => window.pendingLocals[0].isCurrent()), false);
+    await delayedLocal.evaluate(() => window.showChooser());
+    await localButton(delayedLocal).click();
+    await delayedLocal.waitForFunction(() => window.pendingLocals.length === 2);
+    assert.deepEqual(
+      await delayedLocal.evaluate(() => window.pendingLocals.map((entry) => entry.isCurrent())),
+      [false, true],
+    );
+    await delayedLocal.evaluate(() => window.pendingLocals[0].resolve());
+    await settle(delayedLocal);
+    assert.equal(
+      await delayedLocal.getByRole("dialog", { name: "我的电脑", exact: true }).isVisible(),
+      true,
+    );
+    assert.equal(
+      await localButton(delayedLocal).isDisabled(),
+      true,
+      "An old completion cannot release the new local operation",
+    );
+    await delayedLocal.evaluate(() => window.pendingLocals[1].resolve());
+    await delayedLocal.getByRole("main", { name: "原有本机工作台" }).waitFor();
+    assert.equal(await delayedLocal.getByLabel("原有聊天草稿").inputValue(), "原有聊天草稿");
+  });
+  await closePage(delayedLocal);
+
+  const localAccountSwitch = await createPage({ localMode: "defer" });
+  await remoteButton(localAccountSwitch).waitFor();
+  await checkpoint(
+    "account changes invalidate pending local navigation without closing the chooser",
+    async () => {
+      await localButton(localAccountSwitch).click();
+      await localAccountSwitch.waitForFunction(() => window.pendingLocals.length === 1);
+      assert.equal(
+        await localAccountSwitch.evaluate(() => window.pendingLocals[0].isCurrent()),
+        true,
+      );
+      await localAccountSwitch.evaluate(() =>
+        window.setAccount({
+          state: "signed-in",
+          origin: "https://account.fixture.invalid",
+          account: { id: "account-b", username: "second" },
+        }),
+      );
+      await settle(localAccountSwitch);
+      assert.equal(
+        await localAccountSwitch.evaluate(() => window.pendingLocals[0].isCurrent()),
+        false,
+      );
+      await localAccountSwitch.evaluate(() => window.pendingLocals[0].resolve());
+      await settle(localAccountSwitch);
+      assert.equal(
+        await localAccountSwitch.getByRole("dialog", { name: "我的电脑", exact: true }).isVisible(),
+        true,
+      );
+      assert.equal(await localButton(localAccountSwitch).isEnabled(), true);
+      await localAccountSwitch.evaluate(() => {
+        window.localMode = undefined;
+      });
+      await localButton(localAccountSwitch).click();
+      await localAccountSwitch.getByRole("main", { name: "原有本机工作台" }).waitFor();
+    },
+  );
+  await closePage(localAccountSwitch);
 
   const switched = await createPage({ listMode: "defer" });
   await switched.waitForFunction(() => window.pendingLists.length === 1);
