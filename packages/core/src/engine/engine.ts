@@ -2358,7 +2358,14 @@ export class Engine {
     const runContextLedger = createRunContextLedger({
       transcript: session.transcript,
       sessionId: session.state.sessionId,
-      scope: promptComposer.contextScope(),
+      // A model or route change starts with an empty provider cache, so the
+      // context is told afresh there too: a skill disabled meanwhile disappears
+      // from the request instead of lingering in the old snapshot.
+      scope: JSON.stringify([
+        promptComposer.contextScope(),
+        this.config.llm.provider,
+        this.config.llm.model,
+      ]),
       sections: [
         ...contextSections,
         ...engineContextSections({

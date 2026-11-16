@@ -126,13 +126,13 @@ describe("Engine context ledger: a workspace change revokes the earlier context"
     // An ordinary run in the same workspace adds no ledger message.
     await engine.run("second task", { sessionId, cwd: oldRoot });
     expect(ledgerEvents()).toHaveLength(1);
-    expect(guard.current.rewrites).not.toContain("workspace_root_changed");
+    expect(guard.current.rewrites).not.toContain("context_scope_changed");
     expect(JSON.stringify(requests[1])).toContain("OLD_ROOT_MEMORY_MARKER");
 
     // The session moves to another root; the same resident Engine runs on.
     engine.migrateSessionMainRoot(sessionId, { projectId: "p-new", mainRootId: "r-new" }, newRoot);
     await engine.run("third task", { sessionId, workspaceContext: workspace() });
-    expect(guard.current.rewrites).toContain("workspace_root_changed");
+    expect(guard.current.rewrites).toContain("context_scope_changed");
     const live = JSON.stringify(requests[2]);
     expect(live).not.toContain("OLD_ROOT_MEMORY_MARKER");
     expect(live).toContain("NEW_ROOT_MEMORY_MARKER");
@@ -159,8 +159,33 @@ describe("Engine context ledger: a workspace change revokes the earlier context"
       expect(text.split("NEW_ROOT_MEMORY_MARKER")).toHaveLength(2);
     }
     expect(ledgerEvents()).toHaveLength(2);
-    expect(guard.current.rewrites.filter((kind) => kind === "workspace_root_changed")).toHaveLength(
+    expect(guard.current.rewrites.filter((kind) => kind === "context_scope_changed")).toHaveLength(
       1,
     );
+  });
+
+  it("tells the context afresh when the session moves to another model", async () => {
+    const first = requestsByModel.get(model)!;
+    await newEngine(oldRoot).run("first task", { sessionId, cwd: oldRoot });
+    expect(ledgerEvents()).toHaveLength(1);
+
+    // Same session and workspace, another model: the provider cache is empty
+    // anyway, so the earlier snapshot is dropped and the context told once more.
+    const firstModel = model;
+    model = `${firstModel}-other`;
+    requestsByModel.set(model, []);
+    await newEngine(oldRoot).run("second task", { sessionId, cwd: oldRoot });
+    const second = requestsByModel.get(model)!;
+    requestsByModel.delete(model);
+    model = firstModel;
+
+    expect(guard.current.rewrites).toContain("context_scope_changed");
+    const text = JSON.stringify(second[0]);
+    expect(text.split("OLD_ROOT_MEMORY_MARKER")).toHaveLength(2);
+    expect(text).toContain("first task");
+    const events = ledgerEvents();
+    expect(events).toHaveLength(2);
+    expect(events[1]!.data.contextLedger).toMatchObject({ kind: "snapshot", revokesEarlier: true });
+    expect(JSON.stringify(first[0])).toContain("OLD_ROOT_MEMORY_MARKER");
   });
 });

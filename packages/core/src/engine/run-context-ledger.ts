@@ -99,10 +99,12 @@ export function createRunContextLedger(args: {
   /** This run's context; fixed for the run, like the message it replaces. */
   sections: readonly ContextSection[];
   /**
-   * The workspace this context belongs to (PromptComposer.contextScope()).
-   * Skills, sources and memory are scoped to it: context told for another
-   * workspace is revoked — dropped from history and from replay — and told
-   * afresh. A chain without a recorded scope is never revoked.
+   * What this context belongs to: the workspace (PromptComposer.contextScope())
+   * and the model route. Skills, sources and memory are scoped to the
+   * workspace, and a new model route starts with an empty provider cache, so
+   * context told under another scope is revoked — dropped from history and
+   * from replay — and told afresh. A chain without a recorded scope is never
+   * revoked.
    */
   scope?: string;
   /** The session, which a revocation's prefix change belongs to (prompt-prefix-events.ts). */
@@ -124,7 +126,7 @@ export function createRunContextLedger(args: {
         for (let index = messages.length - 1; index >= 0; index -= 1) {
           if (contextMessageMark(messages[index]!)?.kind === "ledger") messages.splice(index, 1);
         }
-        notePromptPrefixRewrite("workspace_root_changed", sessionId);
+        notePromptPrefixRewrite("context_scope_changed", sessionId);
         chain = undefined;
       }
       const present = new Set<string>();
