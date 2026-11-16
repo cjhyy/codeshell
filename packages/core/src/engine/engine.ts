@@ -2033,6 +2033,7 @@ export class Engine {
             task,
             cwd,
             options,
+            profileColdNotesRolloverTokens: profile?.notesRolloverWhenColdTokens,
             profileMaxTurns:
               typeof profile?.maxTurns === "number" &&
               Number.isSafeInteger(profile.maxTurns) &&
@@ -2739,6 +2740,7 @@ export class Engine {
     cwd: string;
     options: EngineRunOptions | undefined;
     profileMaxTurns: number | undefined;
+    profileColdNotesRolloverTokens?: number;
     toolCtx: ToolContext;
     toolExecutor: import("../tool-system/executor.js").ToolExecutor;
     contextManager: ContextManager;
@@ -2775,6 +2777,7 @@ export class Engine {
       cwd,
       options,
       profileMaxTurns,
+      profileColdNotesRolloverTokens,
       toolCtx,
       toolExecutor,
       contextManager,
@@ -2961,6 +2964,7 @@ export class Engine {
       sid,
       options,
       profileMaxTurns,
+      profileColdNotesRolloverTokens,
       cwd,
       claimClientMessageId,
       releaseClientMessageId,
@@ -3398,6 +3402,7 @@ export class Engine {
     sid: string;
     options: EngineRunOptions | undefined;
     profileMaxTurns: number | undefined;
+    profileColdNotesRolloverTokens?: number;
     cwd: string;
     claimClientMessageId: (
       bundle: SessionBundle,
@@ -3430,6 +3435,7 @@ export class Engine {
       sid,
       options,
       profileMaxTurns,
+      profileColdNotesRolloverTokens,
       cwd,
       claimClientMessageId,
       releaseClientMessageId,
@@ -3630,6 +3636,11 @@ export class Engine {
         syncRunContext: (runMessages) => void runContextLedger.sync(runMessages),
         retainedContextMessages,
         runStartMessage,
+        // A rebased tool-cache cycle has no last request: this run starts cold.
+        ...(profileColdNotesRolloverTokens !== undefined &&
+        toolCtx.runToolSurface?.getSelection().lastRequestAt === undefined
+          ? { coldNotesRolloverTokens: profileColdNotesRolloverTokens }
+          : {}),
         // Goal mode: the active goal is surfaced to the on_stop handler via
         // ctx.data.goal; the GoalStopHook (registered above) judges it.
         goal: normalizedGoal,
