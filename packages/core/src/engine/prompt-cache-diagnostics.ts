@@ -1,7 +1,55 @@
 import { createHmac, randomBytes } from "node:crypto";
+import { linkSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import type { Message, TokenUsage, ToolDefinition } from "../types.js";
+import { codeShellHome } from "../utils/paths.js";
 
-const PROCESS_DIAGNOSTIC_KEY = randomBytes(32);
+const DIAGNOSTIC_KEY_BYTES = 32;
+
+/**
+ * One local key per installation, so the same prefix keeps the same
+ * fingerprint across process restarts and logs from different runs can be
+ * compared. The key never leaves the machine; fingerprints stay HMACs so a log
+ * reveals no prompt text. Falls back to a process-local key when the home
+ * directory is unavailable.
+ */
+function loadDiagnosticKey(): Uint8Array {
+  try {
+    const home = codeShellHome();
+    const path = join(home, "prompt-cache-diagnostics.key");
+    try {
+      const existing = readFileSync(path);
+      if (existing.length === DIAGNOSTIC_KEY_BYTES) return existing;
+    } catch {
+      // Created below.
+    }
+    mkdirSync(home, { recursive: true });
+    // Write a complete file beside it, then link: concurrent processes either
+    // win the link or read the winner's complete key.
+    const temporary = `${path}.${process.pid}.${randomBytes(4).toString("hex")}`;
+    writeFileSync(temporary, randomBytes(DIAGNOSTIC_KEY_BYTES), { mode: 0o600 });
+    try {
+      linkSync(temporary, path);
+    } catch {
+      // Another process created it first.
+    } finally {
+      rmSync(temporary, { force: true });
+    }
+    const key = readFileSync(path);
+    if (key.length === DIAGNOSTIC_KEY_BYTES) return key;
+  } catch {
+    // Fall through to a process-local key.
+  }
+  return randomBytes(DIAGNOSTIC_KEY_BYTES);
+}
+
+let diagnosticKey: Uint8Array | undefined;
+/** Sentinel default: resolved to the installation key on first use. */
+const PROCESS_DIAGNOSTIC_KEY = new Uint8Array(0);
+
+function defaultKey(key: Uint8Array): Uint8Array {
+  return key === PROCESS_DIAGNOSTIC_KEY ? (diagnosticKey ??= loadDiagnosticKey()) : key;
+}
 const DEFAULT_MAX_SESSIONS = 256;
 const DROP_MIN_PREVIOUS_TOKENS = 100;
 const DROP_MAX_CURRENT_TOKENS = 64;
@@ -144,7 +192,8 @@ function stableSerialize(value: unknown): string {
   return JSON.stringify(canonicalize(value));
 }
 
-function hmac(value: unknown, key: Uint8Array = PROCESS_DIAGNOSTIC_KEY): string {
+function hmac(value: unknown, keyArg: Uint8Array = PROCESS_DIAGNOSTIC_KEY): string {
+  const key = defaultKey(keyArg);
   return createHmac("sha256", key).update(stableSerialize(value)).digest("hex").slice(0, 16);
 }
 
@@ -206,8 +255,9 @@ function messageHasToolResult(message: Message): boolean {
  */
 export function hashPromptMessages(
   messages: readonly Message[],
-  key: Uint8Array = PROCESS_DIAGNOSTIC_KEY,
+  keyArg: Uint8Array = PROCESS_DIAGNOSTIC_KEY,
 ): PromptMessageDigest[] {
+  const key = defaultKey(keyArg);
   return messages.map((message) => ({
     hash: createHmac("sha256", key)
       .update("message-v1\n")
