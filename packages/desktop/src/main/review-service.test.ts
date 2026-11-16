@@ -5,11 +5,43 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ReviewWorkspace } from "./review-service.js";
 
+type SharedElectronMockState = {
+  sessions?: Map<
+    string,
+    { session: Electron.Session; onFromPartition?: (partition: string) => void }
+  >;
+  openExternal?: (...args: unknown[]) => Promise<void>;
+  openPath?: (...args: unknown[]) => Promise<string>;
+  showItemInFolder?: (...args: unknown[]) => void;
+};
+
+const electronMockGlobal = globalThis as typeof globalThis & {
+  __codeshellElectronMockState?: SharedElectronMockState;
+};
+
+// Bun keeps the first Electron mock's exports for later suites. Review can run
+// before credential and theme tests, so preserve their shared session contract.
 mock.module("electron", () => ({
+  session: {
+    fromPartition(partition: string) {
+      const entry = electronMockGlobal.__codeshellElectronMockState?.sessions?.get(partition);
+      entry?.onFromPartition?.(partition);
+      return (
+        entry?.session ??
+        ({
+          cookies: { get: async () => [], set: async () => undefined },
+          clearStorageData: async () => undefined,
+        } as Electron.Session)
+      );
+    },
+  },
   shell: {
-    openExternal: async () => undefined,
-    showItemInFolder: () => undefined,
-    openPath: async () => "",
+    openExternal: (...args: unknown[]) =>
+      electronMockGlobal.__codeshellElectronMockState?.openExternal?.(...args) ?? Promise.resolve(),
+    showItemInFolder: (...args: unknown[]) =>
+      electronMockGlobal.__codeshellElectronMockState?.showItemInFolder?.(...args),
+    openPath: (...args: unknown[]) =>
+      electronMockGlobal.__codeshellElectronMockState?.openPath?.(...args) ?? Promise.resolve(""),
   },
 }));
 
