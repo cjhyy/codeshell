@@ -202,3 +202,27 @@ describe("provider-aware notice reply model chain", () => {
     expect(calls).toBe(0);
   });
 });
+
+describe("notice reply accounting", () => {
+  test("native calls resolve Mimi's Session at call time and still return the model text", async () => {
+    const lookups: string[] = [];
+    const current: { sessionId?: string } = {};
+    const models = createReplyModels("/unused", {
+      readSettings: () => settings(),
+      accounting: {
+        sessionsRootDir: "/nonexistent-sessions-root",
+        sessionId: () => {
+          lookups.push(current.sessionId ?? "none");
+          return current.sessionId;
+        },
+        purpose: "pet_notice_reply",
+      },
+      callNative: async () => '{"ok":true}',
+    });
+    const request = { systemPrompt: "s", user: "u", signal: new AbortController().signal };
+    expect(await models[0]!(request as never)).toBe('{"ok":true}');
+    current.sessionId = "pet-session";
+    expect(await models[0]!(request as never)).toBe('{"ok":true}');
+    expect(lookups).toEqual(["none", "pet-session"]);
+  });
+});

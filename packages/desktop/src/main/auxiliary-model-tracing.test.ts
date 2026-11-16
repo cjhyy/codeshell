@@ -8,7 +8,7 @@ import {
   recordModelTraceEvent,
   withModelTraceContext,
 } from "@cjhyy/code-shell-core/internal";
-import { withDesktopSessionModelTrace } from "./auxiliary-model-tracing.js";
+import { usageOwnerFor, withDesktopSessionModelTrace } from "./auxiliary-model-tracing.js";
 
 const roots: string[] = [];
 afterEach(() => {
@@ -83,4 +83,32 @@ test("temporary auxiliary sources obey the independent ephemeral switch; an unkn
   );
   expect(unknown.workspacePath).toBeUndefined();
   expect(unknown.runId).toBeUndefined();
+});
+
+test("helper usage is charged to the source Session's ledger under an auxiliary purpose", () => {
+  const { root, sessions } = fixture();
+  sessions.create("/workspace/mimi", "fixture", "fixture", "mimi-source");
+  const writer = new UsageLedger({ storageDir: join(root, ".usage-ledger") });
+  const reference = writer.sessionReference("mimi-source", root);
+  sessions.updateSessionState("mimi-source", { costState: reference });
+  const state = sessions.readSessionState("mimi-source");
+  const owner = usageOwnerFor(root, "mimi-source", state, "pet_notice_reply");
+  expect(owner).toMatchObject({
+    sessionId: "mimi-source",
+    accountingSessionId: reference.accountingSessionId,
+    purpose: "aux_summary",
+  });
+  expect(owner?.runId).toBeUndefined();
+  expect(usageOwnerFor(root, "mimi-source", state, "goal_judge")?.purpose).toBe("goal_judge");
+});
+
+test("a source without a ledger reference keeps tracing and gets no owner", () => {
+  const { root, sessions } = fixture();
+  sessions.create("/workspace/plain", "fixture", "fixture", "plain-source");
+  expect(
+    usageOwnerFor(root, "plain-source", sessions.readSessionState("plain-source"), "pet_brief"),
+  ).toBe(undefined);
+  expect(withDesktopSessionModelTrace(root, "plain-source", "pet_brief", () => "result")).toBe(
+    "result",
+  );
 });
