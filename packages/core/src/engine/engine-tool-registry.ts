@@ -19,7 +19,7 @@ export function withInjectedTools(
   composition: ResolvedComposition,
   preset: AgentPreset,
 ): AgentPreset {
-  const injected = presetInjectedTools(composition);
+  const injected = presetInjectedTools(composition, preset.name);
   if (injected.length === 0) return preset;
   return {
     ...preset,
@@ -47,7 +47,9 @@ export function presetToolNames(input: PresetToolRegistryInput): string[] {
     host: input.host,
     enabledBuiltinTools: [
       ...input.enabledBuiltinTools,
-      ...presetInjectedTools(input.composition).map((tool) => tool.definition.name),
+      ...presetInjectedTools(input.composition, input.preset.name).map(
+        (tool) => tool.definition.name,
+      ),
     ],
     disabledBuiltinTools: [...input.disabledBuiltinTools],
     adjusters: input.composition.engine.toolSelectionAdjusters.map((a) => a.value),

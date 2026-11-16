@@ -6,6 +6,7 @@ import { computeCompositionDigest, toCompositionSnapshot } from "./snapshot.js";
 import { assertPublicToolName } from "../tool-system/tool-name.js";
 import type {
   AgentModule,
+  AgentPresetExtension,
   CompileCompositionOptions,
   CompositionDiagnostic,
   ResolvedComposition,
@@ -240,6 +241,39 @@ function collectEngine(
     }
   }
 
+  // Extensions may only add the module's own preset-tags tools to presets
+  // that exist; the target decides membership at use time (resolve-preset).
+  const presetNames = new Set(presets.map((p) => p.key));
+  const presetExtensions: Array<ResolvedContribution<AgentPresetExtension>> = [];
+  for (const { module } of registered) {
+    (module.engine?.presetExtensions ?? []).forEach((extension, index) => {
+      for (const toolName of extension.tools) {
+        const tool = presetTagTools.find((t) => t.tool.definition.name === toolName);
+        if (!tool || tool.moduleId !== module.id) {
+          throw new CompositionError(
+            `Preset extension of "${module.id}" references tool "${toolName}" it does not own`,
+            { code: "unknown_preset_tool", key: toolName, firstModuleId: module.id },
+          );
+        }
+      }
+      const named =
+        "presets" in extension.target ? extension.target.presets : extension.target.allExcept;
+      for (const name of named) {
+        if (!presetNames.has(name)) {
+          throw new CompositionError(
+            `Preset extension of "${module.id}" targets unknown preset "${name}"`,
+            { code: "unknown_preset_tool", key: name, firstModuleId: module.id },
+          );
+        }
+      }
+      presetExtensions.push({
+        key: `${module.id}#${index}`,
+        moduleId: module.id,
+        value: extension,
+      });
+    });
+  }
+
   const promptSections = collectKeyed(registered, "prompt section", (m) =>
     Object.entries(m.engine?.promptSections ?? {}),
   );
@@ -274,6 +308,7 @@ function collectEngine(
   return {
     tools,
     presets,
+    presetExtensions,
     defaultPreset: defaultPresetName,
     promptSections,
     dynamicContextProviders: collectMany(registered, (m) => m.engine?.dynamicContextProviders),

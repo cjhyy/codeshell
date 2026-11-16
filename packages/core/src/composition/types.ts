@@ -59,9 +59,23 @@ export type AgentModuleToolContribution =
   | { readonly kind: "preset-tags"; readonly tool: BuiltinTool }
   | { readonly kind: "always"; readonly tool: ExtensionTool };
 
+export interface AgentPresetExtension {
+  /** The presets named, or every preset except the ones named. */
+  readonly target:
+    | { readonly presets: readonly string[] }
+    | { readonly allExcept: readonly string[] };
+  /** Names of tools this module contributes with preset-tags exposure. */
+  readonly tools: readonly string[];
+}
+
 export interface AgentEngineContributions {
   readonly tools?: readonly AgentModuleToolContribution[];
   readonly presets?: readonly AgentPreset[];
+  /**
+   * Add this module's own preset-tags tools to other modules' presets. A
+   * module with neither presets nor extensions joins every preset (default).
+   */
+  readonly presetExtensions?: readonly AgentPresetExtension[];
   /** Preset used when the host does not choose one. At most one module may declare it. */
   readonly defaultPreset?: string;
   readonly promptSections?: Readonly<Record<string, string>>;
@@ -130,6 +144,7 @@ export interface ResolvedEngineComposition {
    */
   readonly tools: readonly ResolvedToolContribution[];
   readonly presets: readonly ResolvedContribution<AgentPreset>[];
+  readonly presetExtensions: readonly ResolvedContribution<AgentPresetExtension>[];
   readonly defaultPreset: string;
   readonly promptSections: readonly ResolvedContribution<string>[];
   readonly dynamicContextProviders: readonly ResolvedContribution<CapabilityDynamicContextProvider>[];
@@ -205,6 +220,12 @@ export interface CompositionSnapshot {
     presetTags: string[];
   }>;
   presets: Array<{ name: string; moduleId: string; isDefault: boolean }>;
+  presetExtensions?: Array<{
+    moduleId: string;
+    presets?: string[];
+    allExcept?: string[];
+    tools: string[];
+  }>;
   promptSections: Array<{ name: string; moduleId: string }>;
   hooks: Array<{ event: string; name: string; priority: number; moduleId: string }>;
   behaviorProfiles: Array<{ id: string; moduleId: string }>;

@@ -96,6 +96,7 @@ function createReplay(script: Script) {
     llm: { provider, model, apiKey: "test" } as never,
     cwd,
     modules: [createPetModule()],
+    preset: "mimi",
     sessionStorageDir: sessionsRootDir,
     settingsScope: "isolated",
     headless: true,

@@ -522,7 +522,8 @@ try {
         assert.ok(names(body).every((name) => pet.PET_ALLOWED_TOOL_NAMES.has(name)));
         return [];
       },
-      { modules: [pet.createPetModule()], isSubAgent: false },
+      // Mimi runs with the pet module's own preset, as the desktop host requests it.
+      { modules: [pet.createPetModule()], preset: "mimi", isSubAgent: false },
     );
     assert.equal(
       (await f.run({ behaviorMode: "pet", kind: "pet", ephemeral: true })).reason,

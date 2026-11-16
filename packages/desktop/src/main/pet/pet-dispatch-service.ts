@@ -1928,6 +1928,7 @@ export class PetDispatchService {
           cwd: this.options.hostCwd,
           behaviorMode: "pet",
           kind: "pet",
+          preset: "mimi",
           permissionMode: "default",
           clientMessageId: command.clientMessageId,
           ...(segmentTurn?.closedSegment && command.clientMessageId
@@ -2223,6 +2224,7 @@ export class PetDispatchService {
                 cwd: this.options.hostCwd,
                 behaviorMode: "pet",
                 kind: "pet",
+                preset: "mimi",
                 permissionMode: "default",
                 disableGoal: true,
                 toolAllowlist: [],
