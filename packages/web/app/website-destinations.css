@@ -134,3 +134,15 @@
     align-items: flex-start;
   }
 }
+
+.website-computer-entry-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 18px;
+  margin-top: 24px;
+}
+.website-computer-entry-actions > a {
+  color: var(--muted);
+  font-size: 13px;
+}

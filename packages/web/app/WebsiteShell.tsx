@@ -23,6 +23,7 @@ import {
   websiteAuthUrl,
   websiteRouteUrl,
   websiteCloudSelected,
+  websiteComputerTarget,
   type WebsiteRoute,
 } from "./website-routes.js";
 import type { CloudManagementSession } from "./auth.js";
@@ -276,6 +277,9 @@ function WebsiteShell({ capability }: { capability?: WebsiteCloudCapability }) {
   const [cloudSelected, setCloudSelected] = React.useState(() =>
     websiteCloudSelected(new URL(window.location.href)),
   );
+  const [computerTarget, setComputerTarget] = React.useState(() =>
+    websiteComputerTarget(new URL(window.location.href)),
+  );
   const [cloudGrant, setCloudGrant] = React.useState<{
     session: CloudManagementSession;
     identity: string;
@@ -323,7 +327,9 @@ function WebsiteShell({ capability }: { capability?: WebsiteCloudCapability }) {
   const selectDestination = (cloud: boolean) => {
     const current = new URL(window.location.href);
     const next = new URL(websiteRouteUrl({ kind: "workbench" }, current), current);
+    next.searchParams.delete("computer");
     next.searchParams.set("target", cloud ? "cloud" : "choose");
+    setComputerTarget(undefined);
     window.history.pushState(null, "", next.pathname + next.search);
     setCloudSelected(cloud);
     setRoute({ kind: "workbench" });
@@ -336,7 +342,10 @@ function WebsiteShell({ capability }: { capability?: WebsiteCloudCapability }) {
       setRoute(next);
       // Account/admin routes keep the selected workspace and its renewal alive.
       // Only returning to a workbench URL changes the execution destination.
-      if (next.kind === "workbench") setCloudSelected(websiteCloudSelected(url));
+      if (next.kind === "workbench") {
+        setCloudSelected(websiteCloudSelected(url));
+        setComputerTarget(websiteComputerTarget(url));
+      }
       if (account.oauthPending) account.cancelGithub();
     };
     window.addEventListener("popstate", pop);
@@ -512,6 +521,7 @@ function WebsiteShell({ capability }: { capability?: WebsiteCloudCapability }) {
           key={identity}
           accountControl={menu}
           onCloud={() => selectDestination(true)}
+          requestedComputer={computerTarget}
         />
       ) : cloudSession && cloudFeature.state === "ready" ? (
         <div hidden={settings} className="website-workbench-root">

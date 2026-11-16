@@ -1,6 +1,11 @@
 import { expect, test } from "bun:test";
 import { parseWebsiteComputers, websiteComputerClaim } from "./website-devices.js";
-import { safeWebsiteReturn, websiteCloudSelected, websiteRouteUrl } from "./website-routes.js";
+import {
+  safeWebsiteReturn,
+  websiteCloudSelected,
+  websiteComputerTarget,
+  websiteRouteUrl,
+} from "./website-routes.js";
 
 const origin = "https://codeshell.site";
 const host = {
@@ -55,4 +60,36 @@ test("destination navigation preserves public project selections without accepti
   expect(safeWebsiteReturn("/app?target=https://foreign.example&token=secret", origin)).toBe(
     "/app",
   );
+});
+
+test("selected computer URLs survive login and account settings without Cloud or project authority", () => {
+  const current = new URL(
+    `/app?target=cloud&computer=${host.hostId}&project=${host.environmentId}&session=old-chat&view=files&token=private`,
+    origin,
+  );
+  const destination = `/app?target=choose&computer=${host.hostId}`;
+  expect(websiteComputerTarget(current)).toBe(host.hostId);
+  expect(websiteCloudSelected(current)).toBe(false);
+  expect(safeWebsiteReturn(current.pathname + current.search, origin)).toBe(destination);
+  const settings = websiteRouteUrl({ kind: "account", section: "security" }, current);
+  expect(settings).toBe(`/settings/account/security?target=choose&computer=${host.hostId}`);
+  expect(websiteRouteUrl({ kind: "workbench" }, new URL(settings, origin))).toBe(destination);
+  expect(websiteComputerTarget(new URL("/app?target=choose", origin))).toBeUndefined();
+});
+
+test("invalid or duplicate selected computer hints stay visibly invalid across login without copying input", () => {
+  for (const query of [
+    "computer=",
+    "computer=../../foreign",
+    "computer=https://foreign.invalid",
+    "computer=" + host.hostId.toUpperCase().replace("11111111", "AAAAAAAA"),
+    `computer=${host.hostId}&computer=${host.environmentId}`,
+  ]) {
+    const url = new URL(`/app?target=cloud&${query}&project=${host.environmentId}`, origin);
+    expect(websiteComputerTarget(url)).toBeNull();
+    expect(websiteCloudSelected(url)).toBe(false);
+    expect(safeWebsiteReturn(url.pathname + url.search, origin)).toBe(
+      "/app?target=choose&computer=",
+    );
+  }
 });

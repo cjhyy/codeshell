@@ -7,6 +7,7 @@ import {
   type WebsiteComputer,
 } from "./website-devices.js";
 import "./website-destinations.css";
+import { websiteRouteUrl } from "./website-routes.js";
 import {
   requirePasskey,
   passkeyFailure,
@@ -55,9 +56,12 @@ function DestinationIcon({
 export function WebsiteDestinations({
   onCloud,
   accountControl,
+  requestedComputer,
 }: {
   onCloud: () => void;
   accountControl: React.ReactNode;
+  /** Public ID only. Authorization always comes from the current account and Passkey. */
+  requestedComputer?: string | null;
 }) {
   const account = useAccountSession();
   const cloud = useAccountFeature("cloud.projects");
@@ -67,10 +71,13 @@ export function WebsiteDestinations({
   const [computers, setComputers] = React.useState<WebsiteComputer[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState("");
+  const [directoryError, setDirectoryError] = React.useState("");
   const [opening, setOpening] = React.useState<string | null>(null);
   const [refresh, setRefresh] = React.useState(0);
   const pendingOpen = React.useRef<AbortController | null>(null);
   const generation = React.useRef(0);
+  const availableComputers = React.useRef<WebsiteComputer[]>([]);
+  const openingTarget = React.useRef<WebsiteComputer | null>(null);
   React.useEffect(() => {
     const epoch = ++generation.current;
     const controller = new AbortController();
@@ -78,9 +85,12 @@ export function WebsiteDestinations({
     pendingOpen.current = null;
     setOpening(null);
     setComputers([]);
+    availableComputers.current = [];
+    openingTarget.current = null;
     setError("");
-    setLoading(directory.state === "ready");
-    if (directory.state !== "ready") return () => controller.abort();
+    setDirectoryError("");
+    setLoading(directory.state === "ready" && requestedComputer !== null);
+    if (directory.state !== "ready" || requestedComputer === null) return () => controller.abort();
     let active = false;
     const load = async () => {
       if (active) return;
@@ -89,12 +99,31 @@ export function WebsiteDestinations({
         const value = await account.request("/remote-hosts", "GET", undefined, controller.signal);
         const next = parseWebsiteComputers(value, window.location.origin);
         if (!controller.signal.aborted && epoch === generation.current) {
-          setComputers(next.filter((host) => !host.revoked));
-          setError("");
+          const available = next.filter((host) => !host.revoked);
+          availableComputers.current = available;
+          setComputers(available);
+          setDirectoryError("");
+          const selected = openingTarget.current;
+          if (
+            selected &&
+            !available.some(
+              (host) =>
+                host.hostId === selected.hostId &&
+                host.environmentId === selected.environmentId &&
+                host.publicOrigin === selected.publicOrigin &&
+                host.online,
+            )
+          ) {
+            pendingOpen.current?.abort();
+            pendingOpen.current = null;
+            openingTarget.current = null;
+            setOpening(null);
+            setError("这台电脑已离线或授权发生变化，请确认状态后重新连接。");
+          }
         }
       } catch {
         if (!controller.signal.aborted && epoch === generation.current)
-          setError("暂时无法读取电脑列表，请重试。不会自动切换云端或电脑。");
+          setDirectoryError("暂时无法读取电脑列表，请重试。不会自动切换云端或电脑。");
       } finally {
         active = false;
         if (!controller.signal.aborted && epoch === generation.current) setLoading(false);
@@ -111,12 +140,13 @@ export function WebsiteDestinations({
       clearInterval(timer);
       window.removeEventListener("focus", focus);
     };
-  }, [identity, directory.state, refresh, account.request]);
+  }, [identity, directory.state, refresh, account.request, requestedComputer]);
 
   async function openComputer(host: WebsiteComputer) {
     if (pendingOpen.current || !host.online || host.revoked || phone.state !== "ready") return;
     const controller = new AbortController();
     pendingOpen.current = controller;
+    openingTarget.current = host;
     const epoch = generation.current;
     setOpening(host.hostId);
     setError("");
@@ -138,7 +168,15 @@ export function WebsiteDestinations({
       if (
         !controller.signal.aborted &&
         epoch === generation.current &&
-        account.workspaceActive(identity)
+        account.workspaceActive(identity) &&
+        availableComputers.current.some(
+          (current) =>
+            current.hostId === host.hostId &&
+            current.environmentId === host.environmentId &&
+            current.publicOrigin === host.publicOrigin &&
+            current.online &&
+            !current.revoked,
+        )
       )
         window.location.assign(destination);
     } catch (cause) {
@@ -147,9 +185,103 @@ export function WebsiteDestinations({
     } finally {
       if (pendingOpen.current === controller) {
         pendingOpen.current = null;
+        openingTarget.current = null;
         setOpening(null);
       }
     }
+  }
+
+  const selected = computers.find((host) => host.hostId === requestedComputer);
+  const passkeySettings = websiteRouteUrl(
+    { kind: "account", section: "security" },
+    new URL(window.location.href),
+  );
+  if (requestedComputer !== undefined) {
+    const unavailable =
+      requestedComputer === null
+        ? "电脑链接无效，请返回桌面端重新打开。"
+        : directory.state !== "ready"
+          ? directory.state === "pending"
+            ? "账号服务暂时无法连接，请稍后重试。"
+            : "当前账号服务尚未开放电脑连接。"
+          : loading || directoryError
+            ? ""
+            : !selected
+              ? "当前账号里找不到这台电脑。请在右上角确认账号，或返回桌面端重新打开。"
+              : !selected.online
+                ? "这台电脑暂时无法连接。请让它保持在线，并开启允许远程访问。"
+                : phone.state !== "ready"
+                  ? "远程访问暂不可用，请稍后重试。"
+                  : "";
+    return (
+      <main className="website-destinations">
+        <header className="website-destinations-header">
+          <a className="website-brand" href="/">
+            CodeShell
+          </a>
+          {accountControl}
+        </header>
+        <section className="website-destinations-content" aria-labelledby="computer-heading">
+          <p className="website-eyebrow">连接电脑</p>
+          <h1 id="computer-heading">{selected?.name ?? "打开电脑"}</h1>
+          <p className="website-muted">
+            验证后直接进入这台电脑的工作台，继续原来的聊天，也可以直接开始新对话，无需先选项目。
+          </p>
+          {loading ? <p role="status">正在确认所选电脑…</p> : null}
+          {directoryError || error || unavailable ? (
+            <p role="alert" className="form-error">
+              {directoryError || error || unavailable}
+            </p>
+          ) : null}
+          {selected ? (
+            <article className="website-destination-card">
+              <span className="website-destination-icon">
+                <DestinationIcon kind="computer" size={24} />
+              </span>
+              <div>
+                <h2>{selected.name}</h2>
+                <p className={selected.online ? "website-computer-online" : ""}>
+                  {selected.online ? "在线" : "暂不可连接"}
+                </p>
+              </div>
+              <button
+                className="website-button primary"
+                disabled={
+                  !selected.online || !!opening || phone.state !== "ready" || !!directoryError
+                }
+                onClick={() => void openComputer(selected)}
+              >
+                {opening ? "正在验证并连接…" : "使用指纹连接"}
+              </button>
+            </article>
+          ) : null}
+          {opening ? (
+            <p role="status" className="website-hint">
+              请完成当前设备的身份验证，随后会打开这台电脑原有的聊天。
+            </p>
+          ) : null}
+          <p className="website-hint">
+            {PASSKEY_EXPLANATION} <a href={passkeySettings}>管理 Passkey</a>
+          </p>
+          <div className="website-computer-entry-actions">
+            {requestedComputer !== null ? (
+              <button
+                className="website-button"
+                disabled={loading || !!opening}
+                onClick={() => {
+                  setRefresh((value) => value + 1);
+                  if (directory.state !== "ready" || phone.state !== "ready")
+                    void account.restore();
+                }}
+              >
+                <DestinationIcon kind="refresh" size={15} /> 刷新状态
+              </button>
+            ) : null}
+            <a href="/app?target=choose">选择其他电脑</a>
+          </div>
+        </section>
+      </main>
+    );
   }
 
   return (
@@ -205,9 +337,9 @@ export function WebsiteDestinations({
             <DestinationIcon kind="refresh" size={15} /> 刷新
           </button>
         </div>
-        {error ? (
+        {directoryError || error ? (
           <p role="alert" className="form-error">
-            {error}
+            {directoryError || error}
           </p>
         ) : null}
         {loading ? (
@@ -221,7 +353,7 @@ export function WebsiteDestinations({
               ? "账号服务暂时无法连接，请刷新页面后重试。"
               : "当前服务尚未开放电脑连接。"}
           </p>
-        ) : !loading && !computers.length && !error ? (
+        ) : !loading && !computers.length && !directoryError ? (
           <div className="website-computers-empty">
             <DestinationIcon kind="computer" size={25} />
             <h3>还没有登录的电脑</h3>

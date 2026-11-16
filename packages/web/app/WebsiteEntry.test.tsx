@@ -362,3 +362,16 @@ test("choosing another destination retires the Cloud workspace before account na
     admissionCount,
   );
 });
+
+test("anonymous selected-computer visits retain only that public target through login", async () => {
+  const computer = "11111111-1111-4111-8111-111111111111";
+  const view = await mount(
+    `https://codeshell.site/app?target=choose&computer=${computer}&token=private`,
+    "cloud",
+  );
+  expect(view.redirects).toContain(
+    `/login?returnTo=${encodeURIComponent(`/app?target=choose&computer=${computer}`)}`,
+  );
+  expect(view.calls.some((path) => path === "/api/v1/account/web/cloud-tickets")).toBe(false);
+  expect(view.calls.some((path) => path.includes("/remote-hosts"))).toBe(false);
+});
