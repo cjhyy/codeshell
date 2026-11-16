@@ -12,7 +12,6 @@ import {
   MEMORY_TOOL_NAME,
   memoryAvailability,
   memoryTool,
-  rewriteGatewayReplyDef,
 } from "./host-actions.js";
 import { mobileRemoteAvailability, mobileRemoteTool } from "./mobile-remote.js";
 import { GATEWAY_TOOL_NAME } from "./gateway.js";
@@ -237,27 +236,21 @@ describe("GatewayReply tool", () => {
     expect(textOnly.yields).toEqual([]);
   });
 
-  test("rewrites the visible schema to the exact Gateway route", () => {
-    const rich = rewriteGatewayReplyDef(gatewayReplyToolDef, {
-      profileMeta: { petGatewayReply: richGatewayReply },
+  test("keeps one static schema; the current route's limits are enforced when called", async () => {
+    // Route limits live in the runtime context, so the frozen tool table never changes with the route.
+    expect(gatewayReplyToolDef.inputSchema.properties).toHaveProperty("attachment_paths");
+    expect(gatewayReplyToolDef.description).toContain("currentMessageCapabilities.gatewayReply");
+    const { ctx } = context({
+      button: "link",
+      attachments: [],
+      maxTextLength: 10,
+      maxAttachments: 4,
+      maxAttachmentBytes: 10 * 1024 * 1024,
     } as never);
-    expect(rich.inputSchema.properties).toHaveProperty("attachment_paths");
-    expect(rich.description).toContain("native channel button");
-    expect(rich.description).toContain("image/file/audio/video");
-
-    const textOnly = rewriteGatewayReplyDef(gatewayReplyToolDef, {
-      profileMeta: {
-        petGatewayReply: {
-          button: "link",
-          attachments: [],
-          maxTextLength: 8_000,
-          maxAttachments: 4,
-          maxAttachmentBytes: 10 * 1024 * 1024,
-        },
-      },
-    } as never);
-    expect(textOnly.inputSchema.properties).not.toHaveProperty("attachment_paths");
-    expect(textOnly.description).toContain("does not accept outgoing attachments");
+    expect(await gatewayReplyTool({ text: "this text is too long" }, ctx)).toContain("at most 10");
+    expect(
+      await gatewayReplyTool({ text: "ok", attachment_paths: ["/safe/pet/result.png"] }, ctx),
+    ).toContain("cannot send attachments");
   });
 });
 
@@ -270,15 +263,15 @@ describe("host-action availability", () => {
       profileMeta: { petHostActionKinds: kinds },
     }) as never;
 
-  test("each tool is visible only when the host declared its kind", () => {
-    expect(mobileRemoteAvailability(meta(["mobileRemote"]))).toBe(true);
-    expect(mobileRemoteAvailability(meta(["memory"]))).toBe(false);
-    expect(controlLongTaskAvailability(meta(["longTaskControl"]))).toBe(true);
-    expect(controlLongTaskAvailability(meta([]))).toBe(false);
-    expect(memoryAvailability(meta(["memory"]))).toBe(true);
-    expect(memoryAvailability(meta(["mobileRemote", "longTaskControl"]))).toBe(false);
-    expect(gatewayReplyAvailability(meta(["gatewayReply"]))).toBe(true);
-    expect(gatewayReplyAvailability(meta(["memory"]))).toBe(false);
+  test("each tool is visible on every Mimi turn, whatever this turn's grants", () => {
+    // The grant is checked when called (run services refuse undeclared kinds).
+    expect(mobileRemoteAvailability(meta(["memory"]))).toBe(true);
+    expect(controlLongTaskAvailability(meta([]))).toBe(true);
+    expect(memoryAvailability(meta(["mobileRemote", "longTaskControl"]))).toBe(true);
+    expect(gatewayReplyAvailability(meta(["memory"]))).toBe(true);
+    const general = { cwd: "/x", hasGoal: false, behaviorProfile: "general" } as never;
+    expect(memoryAvailability(general)).toBe(false);
+    expect(gatewayReplyAvailability(general)).toBe(false);
   });
 });
 
@@ -603,7 +596,7 @@ describe("pet profile host-action integration", () => {
     expect(PET_BEHAVIOR_PROFILE.buildVisibilityMeta!({}).petHostActionKinds).toEqual([]);
   });
 
-  test("exposes WatchSession only when the host declares the session-watch action", () => {
+  test("exposes WatchSession on every Mimi turn; an undeclared watch is refused when called", () => {
     expect(
       watchSessionAvailability({
         behaviorProfile: "pet",
@@ -615,7 +608,7 @@ describe("pet profile host-action integration", () => {
         behaviorProfile: "pet",
         profileMeta: { petHostActionKinds: [] },
       } as never),
-    ).toBe(false);
+    ).toBe(true);
   });
 
   test("mobile-remote tool rides the same host-action service", async () => {

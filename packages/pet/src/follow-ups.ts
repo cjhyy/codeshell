@@ -155,7 +155,7 @@ export const manageFollowUpToolDef: ToolDefinition = {
 };
 
 export function followUpsAvailability(ctx: ToolVisibilityContext): boolean {
-  return ctx.behaviorProfile === "pet" && ctx.profileMeta?.petFollowUps === true;
+  return ctx.behaviorProfile === "pet";
 }
 
 export const manageFollowUpAvailability = hostActionAvailability("followUpMutation");

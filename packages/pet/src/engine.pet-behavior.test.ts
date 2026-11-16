@@ -9,6 +9,7 @@ import type { LLMResponse, Message, StreamEvent } from "@cjhyy/code-shell-core/e
 import type { ToolDefinition } from "@cjhyy/code-shell-core/extension";
 import { Engine } from "@cjhyy/code-shell-core";
 import { createPetModule } from "./capability.js";
+import { PET_ALLOWED_TOOL_NAMES } from "./profile.js";
 // Rule 5 of the prompt-cache design: unregistered prefix changes fail (shared via globalThis).
 import { installPromptPrefixGuard } from "../../core/dist/testing/prompt-prefix-guard.js";
 
@@ -211,6 +212,7 @@ describe("Engine pet behavior", () => {
       llm: { provider, model, apiKey: "test" } as never,
       cwd,
       modules: [createPetModule()],
+      preset: "mimi",
       sessionStorageDir: join(cwd, "sessions"),
       permissionMode: "bypassPermissions",
       settingsScope: "isolated",
@@ -259,17 +261,8 @@ describe("Engine pet behavior", () => {
     expect(JSON.stringify(first.messages)).not.toContain("Goal 工具状态");
     expect(JSON.stringify(first.messages)).not.toContain("pet-invisible-skill");
     expect(JSON.stringify(first.messages)).not.toContain("active goal");
-    expect([...first.tools].sort()).toEqual(
-      [
-        "DelegateWork",
-        "Sessions",
-        "FollowUps",
-        "CurrentTime",
-        "SaveContextNote",
-        "NewContext",
-        "SearchHistory",
-      ].sort(),
-    );
+    // Every Mimi turn sees her whole tool set; this turn's limits apply at call time.
+    expect([...first.tools].sort()).toEqual([...PET_ALLOWED_TOOL_NAMES].sort());
     expect(result.petWorkDelegation).toBeUndefined();
     expect(result.extensions?.pet).not.toHaveProperty("workDelegation");
     expect(existsSync(join(cwd, "should-not-exist.txt"))).toBe(false);
@@ -293,6 +286,7 @@ describe("Engine pet behavior", () => {
       llm: { provider, model, apiKey: "test" } as never,
       cwd,
       modules: [createPetModule()],
+      preset: "mimi",
       sessionStorageDir: join(cwd, "sessions"),
       permissionMode: "bypassPermissions",
       settingsScope: "isolated",
@@ -305,9 +299,9 @@ describe("Engine pet behavior", () => {
     calls.set(model, []);
     await engine.run("second", { sessionId: "pet" });
     expect(calls.get(model)![0]!.tools).not.toContain("Write");
-    // No host-provided sessionsRootDir on this turn, so the Sessions tool must
-    // stay invisible instead of surfacing as a permanently-broken tool.
-    expect(calls.get(model)![0]!.tools).not.toContain("Sessions");
+    // Sessions stays in Mimi's tool table; without a host sessions root on this
+    // turn its handler refuses the call.
+    expect(calls.get(model)![0]!.tools).toContain("Sessions");
 
     await expect(engine.run("rewrite", { sessionId: "pet", kind: "work" })).rejects.toThrow(
       "session kind mismatch",
@@ -328,6 +322,7 @@ describe("Engine pet behavior", () => {
       llm: { provider, model, apiKey: "test" } as never,
       cwd,
       modules: [createPetModule()],
+      preset: "mimi",
       sessionStorageDir: join(cwd, "sessions"),
       settingsScope: "project",
       headless: true,
@@ -338,7 +333,11 @@ describe("Engine pet behavior", () => {
     await engine.run("global status", { sessionId: "pet-summary", kind: "pet" });
 
     const first = calls.get(model)![0]!;
-    expect(first.tools).toEqual(["FollowUps", "CurrentTime"]);
+    expect([...first.tools].sort()).toEqual(
+      [...PET_ALLOWED_TOOL_NAMES]
+        .filter((name) => !["SaveContextNote", "NewContext", "SearchHistory"].includes(name))
+        .sort(),
+    );
     expect(first.tools).not.toContain("SaveContextNote");
     expect(first.tools).not.toContain("NewContext");
     expect(first.tools).not.toContain("SearchHistory");
@@ -355,6 +354,7 @@ describe("Engine pet behavior", () => {
       llm: { provider, model, apiKey: "test" } as never,
       cwd,
       modules: [createPetModule()],
+      preset: "mimi",
       sessionStorageDir: join(cwd, "sessions"),
       permissionMode: "bypassPermissions",
       settingsScope: "isolated",
@@ -403,18 +403,7 @@ describe("Engine pet behavior", () => {
     });
 
     const first = calls.get(model)![0]!;
-    expect([...first.tools].sort()).toEqual(
-      [
-        "Gateway",
-        "GatewayReply",
-        "Sessions",
-        "FollowUps",
-        "CurrentTime",
-        "SaveContextNote",
-        "NewContext",
-        "SearchHistory",
-      ].sort(),
-    );
+    expect([...first.tools].sort()).toEqual([...PET_ALLOWED_TOOL_NAMES].sort());
     expect(
       first.toolDefinitions.find((tool) => tool.name === "Gateway")?.inputSchema.properties.action,
     ).toMatchObject({
@@ -422,7 +411,7 @@ describe("Engine pet behavior", () => {
     });
     expect(
       first.toolDefinitions.find((tool) => tool.name === "GatewayReply")?.inputSchema.properties,
-    ).not.toHaveProperty("attachment_paths");
+    ).toHaveProperty("attachment_paths"); // static; the route's limits are refused at call time
     expect(events.filter((event) => event.type === "stream_request_start")).toHaveLength(1);
     expect(result.reason).toBe("completed");
     expect(result.extensions?.pet).toEqual({
@@ -448,6 +437,7 @@ describe("Engine pet behavior", () => {
       llm: { provider, model, apiKey: "test" } as never,
       cwd,
       modules: [createPetModule()],
+      preset: "mimi",
       sessionStorageDir: join(cwd, "sessions"),
       permissionMode: "bypassPermissions",
       settingsScope: "isolated",
@@ -513,6 +503,7 @@ describe("Engine pet behavior", () => {
       llm: { provider, model, apiKey: "test" } as never,
       cwd,
       modules: [createPetModule()],
+      preset: "mimi",
       sessionStorageDir: join(cwd, "sessions"),
       permissionMode: "bypassPermissions",
       settingsScope: "isolated",
@@ -582,6 +573,7 @@ describe("Engine pet behavior", () => {
       llm: { provider, model, apiKey: "test" } as never,
       cwd,
       modules: [createPetModule()],
+      preset: "mimi",
       sessionStorageDir: join(cwd, "sessions"),
       permissionMode: "bypassPermissions",
       settingsScope: "isolated",

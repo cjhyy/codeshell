@@ -37,9 +37,8 @@ describe("BindConversationSession wiring", () => {
     expect(PET_ALLOWED_TOOL_NAMES.has(BIND_CONVERSATION_SESSION_TOOL_NAME)).toBe(true);
   });
 
-  test("is visible only when the host declared it for this turn", () => {
-    // Same posture as sessionWatch: a turn without the host wiring must not
-    // expose a permanently-broken tool.
+  test("is visible on every Mimi turn; this turn's grant is checked when called", () => {
+    // Mimi's tool table must not change with the message source.
     const visible = {
       behaviorProfile: "pet",
       profileMeta: { petHostActionKinds: ["sessionBind"] },
@@ -57,7 +56,7 @@ describe("BindConversationSession wiring", () => {
       true,
     );
     expect(bindConversationSessionAvailability(hidden as unknown as ToolVisibilityContext)).toBe(
-      false,
+      true,
     );
     expect(bindConversationSessionAvailability(notPet as unknown as ToolVisibilityContext)).toBe(
       false,

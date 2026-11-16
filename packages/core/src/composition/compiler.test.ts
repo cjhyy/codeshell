@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { compileComposition } from "./compiler.js";
+import { presetInjectedTools } from "./resolve-preset.js";
 import { CompositionError } from "../exceptions.js";
 import type { AgentModule } from "./types.js";
 import type { BuiltinTool } from "../tool-system/builtin/index.js";
@@ -256,5 +257,50 @@ describe("compileComposition contributions", () => {
         name: "capability:alpha:named",
       },
     ]);
+  });
+});
+
+describe("preset extensions", () => {
+  const owner = (
+    extensions: NonNullable<AgentModule["engine"]>["presetExtensions"],
+  ): AgentModule => ({
+    id: "owner",
+    engine: {
+      tools: [presetTagsTool("OwnerA"), presetTagsTool("OwnerB")],
+      presets: [{ ...preset("owned"), builtinTools: ["OwnerA", "OwnerB"] }],
+      presetExtensions: extensions,
+    },
+  });
+  const plain: AgentModule = { id: "plain", engine: { tools: [presetTagsTool("PlainTool")] } };
+  const injected = (composition: ReturnType<typeof compileComposition>, name: string) =>
+    presetInjectedTools(composition, name).map((tool) => tool.definition.name);
+
+  test("adds only the targeted tools, and plain modules still join every preset", () => {
+    const composition = compileComposition({
+      modules: [owner([{ target: { allExcept: ["owned"] }, tools: ["OwnerA"] }]), plain],
+    });
+    expect(injected(composition, "general")).toEqual(["OwnerA", "PlainTool"]);
+    expect(injected(composition, "owned")).toEqual(["PlainTool"]);
+  });
+
+  test("a named target applies only to the named presets", () => {
+    const composition = compileComposition({
+      modules: [owner([{ target: { presets: ["harness-min"] }, tools: ["OwnerB"] }])],
+    });
+    expect(injected(composition, "harness-min")).toEqual(["OwnerB"]);
+    expect(injected(composition, "general")).toEqual([]);
+  });
+
+  test("an extension may not add another module's tool or target an unknown preset", () => {
+    expect(() =>
+      compileComposition({
+        modules: [owner([{ target: { allExcept: [] }, tools: ["PlainTool"] }]), plain],
+      }),
+    ).toThrow(CompositionError);
+    expect(() =>
+      compileComposition({
+        modules: [owner([{ target: { presets: ["missing"] }, tools: ["OwnerA"] }])],
+      }),
+    ).toThrow(CompositionError);
   });
 });

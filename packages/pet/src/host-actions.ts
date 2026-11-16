@@ -249,11 +249,14 @@ export function isPetHostActionRequest(value: unknown): value is PetHostActionRe
   );
 }
 
-export function hostActionAvailability(kind: PetHostActionKind) {
-  return (ctx: ToolVisibilityContext): boolean => {
-    const kinds = ctx.profileMeta?.petHostActionKinds;
-    return ctx.behaviorProfile === "pet" && Array.isArray(kinds) && kinds.includes(kind);
-  };
+/**
+ * Mimi's tools are visible on every Mimi turn so her tool table is the same
+ * whatever the message source. Whether this turn may perform an action is
+ * decided when the tool is called: the run services refuse host actions the
+ * turn does not allow, and each tool refuses when its turn data is absent.
+ */
+export function hostActionAvailability(_kind: PetHostActionKind) {
+  return (ctx: ToolVisibilityContext): boolean => ctx.behaviorProfile === "pet";
 }
 
 export function hostActionService(ctx?: ToolContext): PetHostActionService | undefined {
@@ -278,6 +281,9 @@ export const gatewayReplyToolDef: ToolDefinition = {
     "that owns IM reply text, optional URL buttons, and optional existing local image/file/audio/video " +
     "attachments. The host and Gateway validate the exact route capability after the turn. " +
     "Use only attachment paths supplied by the user or trusted runtime context; never invent one. " +
+    "The current route's text limit, accepted attachment kinds and limits, and button style are in " +
+    "currentMessageCapabilities.gatewayReply of the trusted runtime context; when it is absent, this " +
+    "turn cannot reply through a Gateway. " +
     "Tool acceptance is pending, not delivery, so do not repeat the reply in assistant text or " +
     "claim that it was sent.",
   inputSchema: {
@@ -328,49 +334,6 @@ function gatewayReplyCapability(ctx?: ToolContext): PetGatewayReplyCapability | 
     | { petGatewayReply?: PetGatewayReplyCapability }
     | undefined;
   return services?.petGatewayReply;
-}
-
-function gatewayReplyCapabilityFromVisibility(
-  ctx: ToolVisibilityContext,
-): PetGatewayReplyCapability | undefined {
-  const value = ctx.profileMeta?.petGatewayReply;
-  if (!isRecord(value)) return undefined;
-  return value as unknown as PetGatewayReplyCapability;
-}
-
-export function rewriteGatewayReplyDef(
-  def: ToolDefinition,
-  ctx: ToolVisibilityContext,
-): ToolDefinition {
-  const capability = gatewayReplyCapabilityFromVisibility(ctx);
-  if (!capability) return def;
-  const properties = gatewayReplyToolDef.inputSchema.properties as Record<string, unknown>;
-  const { attachment_paths: attachmentPaths, ...textAndButton } = properties;
-  const textProperty = textAndButton.text as Record<string, unknown>;
-  const attachmentDescription = capability.attachments.length
-    ? ` This route also accepts ${capability.attachments.join("/")} attachments (maximum ${capability.maxAttachments}, ${capability.maxAttachmentBytes} bytes each).`
-    : " This route does not accept outgoing attachments.";
-  return {
-    ...def,
-    description:
-      `${gatewayReplyToolDef.description} The button is rendered as a ${capability.button === "native" ? "native channel button" : "labelled text link"}.` +
-      attachmentDescription,
-    inputSchema: {
-      ...gatewayReplyToolDef.inputSchema,
-      properties: {
-        ...textAndButton,
-        text: { ...textProperty, maxLength: capability.maxTextLength },
-        ...(capability.attachments.length > 0 && attachmentPaths
-          ? {
-              attachment_paths: {
-                ...(attachmentPaths as Record<string, unknown>),
-                maxItems: capability.maxAttachments,
-              },
-            }
-          : {}),
-      },
-    },
-  };
 }
 
 export async function gatewayReplyTool(

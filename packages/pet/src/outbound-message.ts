@@ -65,11 +65,6 @@ export const sendMessageToolDef: ToolDefinition = {
   },
 };
 
-function targetsFromVisibility(ctx: ToolVisibilityContext): readonly PetOutboundTargetOption[] {
-  const targets = ctx.profileMeta?.petOutboundTargets;
-  return Array.isArray(targets) ? (targets as readonly PetOutboundTargetOption[]) : [];
-}
-
 function targetsFromContext(ctx?: ToolContext): readonly PetOutboundTargetOption[] {
   const targets = (
     ctx?.runScopedServices as
@@ -80,7 +75,7 @@ function targetsFromContext(ctx?: ToolContext): readonly PetOutboundTargetOption
 }
 
 export function sendMessageAvailability(ctx: ToolVisibilityContext): boolean {
-  return hostActionAvailability("outboundMessage")(ctx) && targetsFromVisibility(ctx).length > 0;
+  return hostActionAvailability("outboundMessage")(ctx);
 }
 
 export async function sendMessageTool(

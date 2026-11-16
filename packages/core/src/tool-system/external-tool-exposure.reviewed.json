@@ -109,7 +109,7 @@
     "status": "exposed",
     "requires": "mimi-host",
     "reason": "Records the current conversation's reply through the Host-owned per-turn Pet profile services. The capability bounds text and attachments, and the Host validates and delivers the final draft after the turn; acceptance is not delivery.",
-    "contractFingerprint": "dd922ad6ab85e2003f1571fdf9eb61a6a2bf9e971d6ca930e802d4bab4893c43"
+    "contractFingerprint": "b5581f74d9e1cfc1c540b70b8eb19138f8e8eb33fd33d43364a89459e437867e"
   },
   {
     "tool": "Glob",

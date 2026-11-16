@@ -133,7 +133,6 @@ export {
   gatewayReplyToolDef,
   gatewayReplyTool,
   gatewayReplyAvailability,
-  rewriteGatewayReplyDef,
   type PetGatewayReplyAttachmentKind,
   type PetGatewayReplyCapability,
   type PetHostActionKind,

@@ -175,6 +175,7 @@ export async function runLongTaskClosureTurn(
                 tool: "GatewayReply",
                 destination: "current originating IM conversation",
                 allowedRoots: replyAttachmentRoots,
+                ...gatewayReplyCapability,
               },
             },
           }
@@ -204,6 +205,7 @@ export async function runLongTaskClosureTurn(
         cwd: host.options.hostCwd,
         behaviorMode: "pet",
         kind: "pet",
+        preset: "mimi",
         permissionMode: "default",
         injected: true,
         requireExisting: true,
