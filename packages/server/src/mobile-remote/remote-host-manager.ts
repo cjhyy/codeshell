@@ -96,6 +96,8 @@ export interface RemoteHostManagerOptions {
   historyView?: boolean;
   /** The attached command Host resolves native text connections per authorized Session. */
   nativeModelSelection?: boolean;
+  /** The attached Host supports guarded, catalog-validated CLI room model changes. */
+  ccRoomModelSelection?: boolean;
   /** The attached command Host owns a pending-turn FIFO (queue.* events, chat.queued). */
   turnQueue?: boolean;
   onClientEvent: (event: unknown, ws: WebSocket) => void | Promise<void>;
@@ -743,12 +745,14 @@ export class RemoteHostManager extends EventEmitter {
         device,
         ...(this.opts.outputJournal ||
         this.opts.nativeModelSelection ||
+        this.opts.ccRoomModelSelection ||
         this.turnQueueAdvertised ||
         this.goalControlsEnabled
           ? {
               capabilities: {
                 ...(this.opts.outputJournal ? { outputJournal: 1 as const } : {}),
                 ...(this.opts.nativeModelSelection ? { nativeModelSelection: 1 as const } : {}),
+                ...(this.opts.ccRoomModelSelection ? { ccRoomModelSelection: 1 as const } : {}),
                 ...(this.turnQueueAdvertised ? { turnQueue: 1 as const } : {}),
                 ...(this.goalControlsEnabled ? { goalControls: 1 as const } : {}),
                 ...(this.opts.outputJournal && this.opts.historyView
@@ -780,12 +784,14 @@ export class RemoteHostManager extends EventEmitter {
         device,
         ...(this.opts.outputJournal ||
         this.opts.nativeModelSelection ||
+        this.opts.ccRoomModelSelection ||
         this.turnQueueAdvertised ||
         this.goalControlsEnabled
           ? {
               capabilities: {
                 ...(this.opts.outputJournal ? { outputJournal: 1 as const } : {}),
                 ...(this.opts.nativeModelSelection ? { nativeModelSelection: 1 as const } : {}),
+                ...(this.opts.ccRoomModelSelection ? { ccRoomModelSelection: 1 as const } : {}),
                 ...(this.turnQueueAdvertised ? { turnQueue: 1 as const } : {}),
                 ...(this.goalControlsEnabled ? { goalControls: 1 as const } : {}),
                 ...(this.opts.outputJournal && this.opts.historyView

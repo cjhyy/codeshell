@@ -24,11 +24,16 @@ export function sandboxForMode(mode: RoomPermissionMode): {
 
 /** Build `codex exec` argv for one turn. Prompt is fed over stdin (trailing `-`).
  *  Pure → unit-testable. */
-export function codexArgsForTurn(opts: { mode: RoomPermissionMode; threadId?: string }): string[] {
+export function codexArgsForTurn(opts: {
+  mode: RoomPermissionMode;
+  threadId?: string;
+  model?: string;
+}): string[] {
   const args = ["exec", "--json", "--color", "never", "--skip-git-repo-check"];
   const { bypass, sandbox } = sandboxForMode(opts.mode);
   if (bypass) args.push("--dangerously-bypass-approvals-and-sandbox");
   else if (sandbox) args.push("--sandbox", sandbox);
+  if (opts.model) args.push("--model", opts.model);
   if (opts.threadId) args.push("resume", opts.threadId, "-");
   else args.push("-");
   return args;
@@ -92,6 +97,7 @@ export interface CodexRoomAgentOptions {
   command: string; // e.g. "codex"
   cwd: string;
   permissionMode: RoomPermissionMode;
+  model?: string;
   /** Resume an existing codex thread (across app restarts). */
   resumeThreadId?: string;
   onEvent: (event: ResidentAgentEvent) => void;
@@ -129,7 +135,11 @@ export class CodexRoomAgent implements RoomAgent {
     if (!this.started) return false;
     if (this.child) return false; // a turn is already running; one turn at a time
     let turnSealed = false; // This child owns only its own turn and callbacks.
-    const args = codexArgsForTurn({ mode: this.opts.permissionMode, threadId: this.threadId });
+    const args = codexArgsForTurn({
+      mode: this.opts.permissionMode,
+      threadId: this.threadId,
+      model: this.opts.model,
+    });
     const child = spawn(this.opts.command, args, {
       cwd: this.opts.cwd,
       env: { ...process.env, PATH: pathWithCommonBins() },

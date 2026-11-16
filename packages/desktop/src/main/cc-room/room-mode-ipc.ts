@@ -13,6 +13,10 @@ import {
 import { readSettings } from "../settings-service.js";
 import { requireRendererProjectPath } from "../renderer-project-path.js";
 import { desktopRoomModeHostBoundary } from "./room-mode-host-boundary.js";
+import {
+  parseExternalRuntimeModelKey,
+  type ExternalRuntimeModelEntry,
+} from "../../shared/external-runtime-models.js";
 
 type PermissionMode = "default" | "acceptEdits" | "bypassPermissions";
 type Decision = { approved: boolean; reason?: string };
@@ -26,9 +30,21 @@ type Decision = { approved: boolean; reason?: string };
 export function createDesktopRoomModeAuthority(deps: {
   roomManager: RoomManager;
   approvalBridge: Pick<ApprovalBridge, "request" | "respond">;
+  externalRuntimeModels?: () => Promise<ExternalRuntimeModelEntry[]>;
 }): RoomModeAuthority {
   return new RoomModeAuthority({
     roomManager: deps.roomManager,
+    validateModel: async (key, kind) => {
+      const parsed = parseExternalRuntimeModelKey(key);
+      if (
+        !parsed?.model ||
+        parsed.kind !== kind ||
+        !((await deps.externalRuntimeModels?.()) ?? []).some(
+          (entry) => entry.key === key && entry.kind === kind,
+        )
+      )
+        throw new Error("该模型不在此电脑当前 CLI 的可用模型中，请刷新模型列表后重试。");
+    },
     // Project roots, their subdirectories and registered linked worktrees
     // (realpath-checked), plus the CLI's own on-disk session identity.
     ...desktopRoomModeHostBoundary(),

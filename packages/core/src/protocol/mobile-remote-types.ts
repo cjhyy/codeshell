@@ -294,6 +294,11 @@ export type MobileClientEvent =
   | { type: "ccRoom.listSessions"; cwd: string; kind?: "claude-code" | "codex"; all?: boolean }
   | {
       type: "ccRoom.openSession";
+      /** Required for model changes: bind the exact already-open room. */
+      roomId?: string;
+      /** Omitted preserves the selection; null restores the CLI default.
+       * When present, changes only the model and preserves the Host's current mode. */
+      modelKey?: string | null;
       sessionId: string;
       cwd: string;
       mode: PermissionMode;
@@ -396,6 +401,7 @@ export type MobileServerEvent =
       device: TrustedDevicePublic;
       capabilities?: {
         nativeModelSelection?: 1;
+        ccRoomModelSelection?: 1;
         outputJournal?: 1;
         legacyBasePages?: 1;
         outputJournalPageFrames?: 2048;
@@ -426,6 +432,7 @@ export type MobileServerEvent =
       device: TrustedDevicePublic;
       capabilities?: {
         nativeModelSelection?: 1;
+        ccRoomModelSelection?: 1;
         outputJournal?: 1;
         legacyBasePages?: 1;
         outputJournalPageFrames?: 2048;
@@ -678,6 +685,8 @@ export type MobileServerEvent =
       status: "running" | "missing" | "observing";
       /** Mode the room's CLI runs in (a spawn-time argument); omitted by older hosts. */
       permissionMode?: "default" | "acceptEdits" | "bypassPermissions";
+      /** Host-applied selection; null means CLI default, absent on older hosts. */
+      modelKey?: string | null;
       /** Echo of ccRoom.openSession.requestId. */
       requestId?: string;
       /** True when the process was (re)started under a new mode. */
@@ -713,6 +722,8 @@ export interface RoomPublic {
   cwd: string;
   kind: "claude-code" | "codex";
   permissionMode: "default" | "acceptEdits" | "bypassPermissions";
+  /** Explicit CLI model override; null/absent uses the CLI default. */
+  modelKey?: string | null;
   createdAt: number;
   lastActiveAt: number;
   open: boolean;

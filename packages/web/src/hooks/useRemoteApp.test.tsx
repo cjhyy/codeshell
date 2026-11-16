@@ -5576,13 +5576,17 @@ describe("useRemoteApp CLI room controls", () => {
     observing: false,
   };
 
-  async function openRoom() {
+  async function openRoom(modelSelection = false) {
     setupBrowser();
     const hook = await renderHook(() => useRemoteApp());
     const ws = FakeWebSocket.instances[0]!;
     await act(async () => {
       ws.open();
-      ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+      ws.message({
+        type: "auth.ok",
+        device: { id: "device-1", name: "Phone" },
+        capabilities: modelSelection ? { ccRoomModelSelection: 1 } : {},
+      });
       ws.message({ type: "room.projects.ok", projects: [{ path: "/repo", name: "repo" }] });
       await flushMicrotasks();
     });
@@ -5608,6 +5612,136 @@ describe("useRemoteApp CLI room controls", () => {
       });
     return { hook, ws, sent, approval };
   }
+
+  test("CLI model switching preserves transcript and accepts only the exact Host selection acknowledgement", async () => {
+    const { hook, ws, sent } = await openRoom(true);
+    try {
+      await act(async () => {
+        ws.message({
+          type: "runtime.models.ok",
+          models: [
+            {
+              key: "claude-code/fixture",
+              label: "Fixture",
+              kind: "claude-code",
+              provider: "claude-code",
+              maxContextTokens: 100,
+            },
+            {
+              key: "codex/fixture",
+              label: "Other CLI",
+              kind: "codex",
+              provider: "codex",
+              maxContextTokens: 100,
+            },
+          ],
+        });
+        ws.message({
+          type: "ccRoom.transcriptSubscribed",
+          roomId: room.id,
+          sessionId: "thread-cli",
+          active: true,
+          messages: [{ role: "user", text: "kept transcript" }],
+          hasMore: false,
+          totalCount: 1,
+          roomCursor: 1,
+        });
+        await flushMicrotasks();
+      });
+      const transcript = hook.result.current.chat;
+      const opens = () => sent().filter((event) => event.type === "ccRoom.openSession");
+      const before = opens().length;
+      await act(async () => {
+        hook.result.current.setCcRoomModel!("codex/fixture");
+        await flushMicrotasks();
+      });
+      expect(opens()).toHaveLength(before);
+      await act(async () => {
+        hook.result.current.setCcRoomModel!("claude-code/fixture");
+        await flushMicrotasks();
+      });
+      const request = opens().at(-1)!;
+      expect(request).toMatchObject({
+        roomId: room.id,
+        sessionId: "thread-cli",
+        cwd: "/repo",
+        kind: "claude-code",
+        modelKey: "claude-code/fixture",
+      });
+      expect(hook.result.current.activeRoom?.modelKey).toBeUndefined();
+      expect(hook.result.current.ccModeRequest?.modelKey).toBe("claude-code/fixture");
+      const applied = {
+        type: "ccRoom.opened",
+        roomId: room.id,
+        sessionId: "thread-cli",
+        status: "running",
+        permissionMode: "acceptEdits",
+        modelKey: "claude-code/fixture",
+        requestId: request.requestId,
+      };
+      await act(async () => {
+        ws.message({ ...applied, roomId: "other-room" });
+        ws.message({ ...applied, sessionId: "other-session" });
+        ws.message({ ...applied, requestId: "stale" });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.activeRoom?.modelKey).toBeUndefined();
+      expect(hook.result.current.ccModeRequest?.modelKey).toBe("claude-code/fixture");
+      await act(async () => {
+        ws.message(applied);
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.activeRoom?.modelKey).toBe("claude-code/fixture");
+      expect(hook.result.current.activeRoom?.permissionMode).toBe("acceptEdits");
+      expect(hook.result.current.chat).toBe(transcript);
+      expect(hook.result.current.ccModeRequest).toBeUndefined();
+      await act(async () => {
+        hook.result.current.setCcRoomModel!(null);
+        await flushMicrotasks();
+      });
+      const reset = opens().at(-1)!;
+      expect(reset.modelKey).toBeNull();
+      await act(async () => {
+        ws.message({ ...applied, requestId: reset.requestId, modelKey: null });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.activeRoom?.modelKey).toBeNull();
+      expect(hook.result.current.chat).toBe(transcript);
+      expect(sent().filter((event) => event.type === "ccRoom.subscribeTranscript")).toHaveLength(1);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  test("CLI model switching refuses legacy Hosts and an observing room", async () => {
+    const { hook, ws, sent } = await openRoom();
+    try {
+      const count = () => sent().filter((event) => event.type === "ccRoom.openSession").length;
+      const before = count();
+      await act(async () => {
+        hook.result.current.setCcRoomModel!("claude-code/fixture");
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.ccRoomModelSelection).toBe(false);
+      expect(count()).toBe(before);
+      expect(hook.result.current.notice).toContain("更新桌面端");
+      await act(async () => {
+        ws.message({
+          type: "auth.ok",
+          device: { id: "device-1", name: "Phone" },
+          capabilities: { ccRoomModelSelection: 1 },
+        });
+        ws.message({ type: "room.list.ok", rooms: [{ ...room, observing: true }] });
+        await flushMicrotasks();
+        hook.result.current.setCcRoomModel!("claude-code/fixture");
+        await flushMicrotasks();
+      });
+      expect(count()).toBe(before);
+      expect(hook.result.current.ccModeRequest).toBeUndefined();
+    } finally {
+      await hook.unmount();
+    }
+  });
 
   test("CLI history loads the full catalog and ignores a delayed default-window response", async () => {
     const { hook, ws, sent } = await openRoom();

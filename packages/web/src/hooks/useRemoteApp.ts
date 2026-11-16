@@ -241,7 +241,10 @@ export interface RemoteApp {
   /** Restart the viewed CLI room under another mode (Host may require approval). */
   setCcRoomPermissionMode?: (mode: PermissionMode) => void;
   /** This tab's in-flight CLI open / mode switch, until the Host answers. */
-  ccModeRequest?: { mode: PermissionMode; switching: boolean };
+  ccModeRequest?: { mode: PermissionMode; switching: boolean; modelKey?: string | null };
+  ccRoomModelSelection?: boolean;
+  /** Changes only this room model, preserving the Host's current permission mode. */
+  setCcRoomModel?: (modelKey: string | null) => void;
   respondCcApproval: (roomId: string, requestId: string, decision: CcApprovalDecision) => void;
   /** The Host owns a pending-turn FIFO (turnQueue capability). */
   turnQueueSupported?: boolean;
@@ -391,6 +394,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   const [runtimeModels, setRuntimeModels] = useState<MobileRuntimeModel[]>([]);
   const [nativeModelSelection, setNativeModelSelection] = useState(false);
   const nativeModelSelectionRef = useRef(false);
+  const [ccRoomModelSelection, setCcRoomModelSelection] = useState(false);
+  const ccRoomModelSelectionRef = useRef(false);
   const [turnQueueSupported, setTurnQueueSupported] = useState(false);
   const turnQueueSupportedRef = useRef(false);
   const [turnQueues, setTurnQueues] = useState<TurnQueueStates>({});
@@ -725,6 +730,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
    * user navigated elsewhere be discarded instead of navigating back. */
   const pendingCcOpenRef = useRef<{
     requestId: string;
+    roomId?: string;
+    modelKey?: string | null;
     sessionId: string;
     cwd: string;
     mode: PermissionMode;
@@ -733,7 +740,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     switching: boolean;
   } | null>(null);
   const [ccModeRequest, setCcModeRequest] = useState<
-    { mode: PermissionMode; switching: boolean } | undefined
+    { mode: PermissionMode; switching: boolean; modelKey?: string | null } | undefined
   >(undefined);
   const ccBacklogLoadedRef = useRef(false);
   /** Which CLI the currently-open cc session belongs to — selects the on-disk
@@ -1178,6 +1185,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         unsentCreatedSessionRef.current = null;
         nativeModelSelectionRef.current = event.capabilities?.nativeModelSelection === 1;
         setNativeModelSelection(nativeModelSelectionRef.current);
+        ccRoomModelSelectionRef.current = event.capabilities?.ccRoomModelSelection === 1;
+        setCcRoomModelSelection(ccRoomModelSelectionRef.current);
         turnQueueSupportedRef.current = event.capabilities?.turnQueue === 1;
         setTurnQueueSupported(turnQueueSupportedRef.current);
       }
@@ -1929,12 +1938,19 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
             !!request &&
             (event.requestId !== undefined
               ? event.requestId === request.requestId
-              : event.sessionId === request.sessionId);
+              : request.modelKey === undefined && event.sessionId === request.sessionId) &&
+            event.sessionId === request.sessionId &&
+            (!request.roomId || event.roomId === request.roomId);
           if (!request || !matches) break;
           pendingCcOpenRef.current = null;
           setCcModeRequest(undefined);
           // Only this browser's latest open request may change navigation.
           if (request.revision !== conversationRevisionRef.current) break;
+          if (request.modelKey !== undefined && event.modelKey === undefined) {
+            setNotice("此电脑未确认 CLI 模型设置，请更新桌面端后重试。");
+            sendRef.current?.({ type: "room.list" });
+            break;
+          }
           if (event.status === "missing") {
             setNotice(t("mobile.notice.ccRoomOpenFailed"));
             break;
@@ -1950,6 +1966,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
                       open: event.status === "running",
                       observing: event.status === "observing",
                       ...(event.permissionMode ? { permissionMode: event.permissionMode } : {}),
+                      ...(event.modelKey !== undefined ? { modelKey: event.modelKey } : {}),
                     }
                   : room,
               ),
@@ -1979,6 +1996,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
                     open: event.status === "running",
                     observing: event.status === "observing",
                     ...(event.permissionMode ? { permissionMode: event.permissionMode } : {}),
+                    ...(event.modelKey !== undefined ? { modelKey: event.modelKey } : {}),
                   }
                 : room,
             ),
@@ -2891,6 +2909,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       const requestId = `cc-mode-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
       pendingCcOpenRef.current = {
         requestId,
+        roomId,
         sessionId,
         cwd,
         mode,
@@ -2900,6 +2919,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       setCcModeRequest({ mode, switching: true });
       const sent = socket.send({
         type: "ccRoom.openSession",
+        roomId,
         sessionId,
         cwd,
         mode,
@@ -2914,6 +2934,71 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       }
     },
     [socket, setNotice],
+  );
+
+  const setCcRoomModel = useCallback(
+    (modelKey: string | null) => {
+      const roomId = activeRoomIdRef.current;
+      const room = roomsRef.current.find((candidate) => candidate.id === roomId);
+      const sessionId = ccHistorySessionRef.current;
+      const cwd = ccHistoryCwdRef.current;
+      if (!room || !sessionId || !cwd) return;
+      if (!socketOnlineRef.current) {
+        setNotice(t("mobile.connection.offlineTitle"));
+        return;
+      }
+      if (!ccRoomModelSelectionRef.current) {
+        setNotice("此电脑尚不支持切换 CLI 模型，请更新桌面端。");
+        return;
+      }
+      if (room.observing) {
+        setNotice(t("mobile.notice.ccRoomObserving"));
+        return;
+      }
+      if (pendingCcOpenRef.current || turnQueuesRef.current[`room:${roomId}`]?.entries.length) {
+        setNotice("请先等待设置完成或处理此会话的排队消息，再切换模型。");
+        return;
+      }
+      if (
+        modelKey !== null &&
+        !runtimeModels.some((model) => model.key === modelKey && model.kind === room.kind)
+      ) {
+        setNotice("该模型不在此 CLI 的可用列表中，请刷新模型列表。");
+        return;
+      }
+      if ((room.modelKey ?? null) === modelKey) return;
+      const mode = room.permissionMode;
+      const requestId = `cc-model-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+      pendingCcOpenRef.current = {
+        requestId,
+        roomId,
+        sessionId,
+        cwd,
+        mode,
+        modelKey,
+        revision: conversationRevisionRef.current,
+        switching: true,
+      };
+      setCcModeRequest({ mode, switching: true, modelKey });
+      if (
+        !socket.send({
+          type: "ccRoom.openSession",
+          roomId,
+          sessionId,
+          cwd,
+          mode,
+          modelKey,
+          kind: room.kind,
+          requestId,
+        }) &&
+        pendingCcOpenRef.current?.requestId === requestId
+      ) {
+        pendingCcOpenRef.current = null;
+        setCcModeRequest(undefined);
+        setNotice(t("mobile.connection.offlineTitle"));
+      }
+    },
+    [socket, setNotice, runtimeModels],
   );
 
   const respondCcApproval = useCallback(
@@ -3373,6 +3458,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     setCcCliKind,
     openCcSession,
     setCcRoomPermissionMode,
+    setCcRoomModel,
+    ccRoomModelSelection,
     ccModeRequest,
     respondCcApproval,
   };

@@ -537,3 +537,28 @@ test("Goal controls validate request correlation and require both CAS fields", (
     parseMobileClientEvent({ type: "goal.clear", sessionId: "session", expectedRevision: 7 }),
   ).toBeUndefined();
 });
+
+test("CLI model changes require an exact room and correlation id with a bounded model key", () => {
+  const event = {
+    type: "ccRoom.openSession",
+    roomId: "room_fixture_1",
+    sessionId: "thread",
+    cwd: "/fixture",
+    kind: "codex",
+    mode: "default",
+    requestId: "change-1",
+    modelKey: "codex/fixture",
+  };
+  expect(parseMobileClientEvent(event)).toEqual(event);
+  expect(parseMobileClientEvent({ ...event, modelKey: null })).toBeDefined();
+  for (const patch of [
+    { roomId: undefined },
+    { requestId: undefined },
+    { modelKey: 42 },
+    { modelKey: "codex/" },
+    { modelKey: "native-model" },
+    { modelKey: "codex/a\nb" },
+    { modelKey: "codex/" + "a".repeat(512) },
+  ])
+    expect(parseMobileClientEvent({ ...event, ...patch })).toBeUndefined();
+});

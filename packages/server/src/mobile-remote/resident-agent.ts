@@ -157,6 +157,7 @@ export interface ResidentAgentOptions {
   cwd: string;
   permissionMode: "default" | "acceptEdits" | "bypassPermissions";
   resumeSessionId?: string;
+  model?: string;
   /** Optional host policy appended to the external agent's system prompt. */
   appendSystemPrompt?: string;
   onEvent: (event: ResidentAgentEvent) => void;
@@ -178,7 +179,10 @@ export class ResidentAgentProcess {
 
   /** Exact argv for one resident process. Pure → unit-testable. */
   static argsFor(
-    opts: Pick<ResidentAgentOptions, "permissionMode" | "resumeSessionId" | "appendSystemPrompt">,
+    opts: Pick<
+      ResidentAgentOptions,
+      "permissionMode" | "resumeSessionId" | "appendSystemPrompt" | "model"
+    >,
   ): string[] {
     const args = [
       "--print",
@@ -191,6 +195,7 @@ export class ResidentAgentProcess {
       "stdio",
     ];
     if (opts.appendSystemPrompt) args.push("--append-system-prompt", opts.appendSystemPrompt);
+    if (opts.model) args.push("--model", opts.model);
     if (opts.resumeSessionId) args.push("--resume", opts.resumeSessionId);
     args.push("--permission-mode", opts.permissionMode);
     return args;
