@@ -27,15 +27,15 @@ export const delegateWorkToolDef: ToolDefinition = {
     "Titles may describe old work: inspect recent request/result data and use Sessions search/describe before dismissing a possible continuation. " +
     "A shared Workspace, URL, filename, entity, or broad topic alone does not prove continuity. " +
     "If the user asked for a new Session, omit session_id regardless of how continuous the work looks. " +
-    "The available Workspaces are the workspaces entries of the trusted runtime context; copy workspace_id exactly from one of them. " +
-    "Reusable Session candidates are the reusableSessions entries there, each naming its Workspace; being listed is not a reason to reuse a Session.",
+    "The available Workspaces are the entries of the workspaces list in your context; copy workspace_id exactly from one of them. " +
+    "Reusable Session candidates are the entries of the reusableSessions list, each naming its Workspace; being listed is not a reason to reuse a Session.",
   inputSchema: {
     type: "object",
     additionalProperties: false,
     properties: {
       workspace_id: {
         type: "string",
-        description: "Exact opaque id of one workspaces entry from the trusted runtime context.",
+        description: "Exact opaque id of one entry of the workspaces list in your context.",
       },
       objective: {
         type: "string",
@@ -51,7 +51,7 @@ export const delegateWorkToolDef: ToolDefinition = {
       session_id: {
         type: "string",
         description:
-          "Optional exact id of one reusableSessions entry from the trusted runtime context, in the same Workspace as workspace_id. Pass it only after deciding this objective clearly continues that Session; omit it for new or uncertain work, whenever the user asked to start a new Session, and when no reusable Session is listed. The host never infers an omitted id.",
+          "Optional exact id of one entry of the reusableSessions list in your context, in the same Workspace as workspace_id. Pass it only after deciding this objective clearly continues that Session; omit it for new or uncertain work, whenever the user asked to start a new Session, and when no reusable Session is listed. The host never infers an omitted id.",
       },
       session_continuation: {
         type: "object",

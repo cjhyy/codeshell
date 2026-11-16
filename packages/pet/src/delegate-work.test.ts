@@ -55,10 +55,10 @@ describe("DelegateWork", () => {
     // Workspaces and reusable Sessions come from the trusted runtime context,
     // never from the frozen tool table.
     expect(properties.workspace_id?.enum).toBeUndefined();
-    expect(properties.workspace_id?.description).toContain("workspaces entry");
+    expect(properties.workspace_id?.description).toContain("workspaces list");
     expect(properties.session_id?.enum).toBeUndefined();
-    expect(properties.session_id?.description).toContain("reusableSessions entry");
-    expect(definition.description).toContain("reusableSessions entries");
+    expect(properties.session_id?.description).toContain("reusableSessions list");
+    expect(definition.description).toContain("reusableSessions list");
     expect(definition.description).toContain(
       "A shared Workspace, URL, filename, entity, or broad topic alone does not prove continuity",
     );

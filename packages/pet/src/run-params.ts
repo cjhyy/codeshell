@@ -12,6 +12,7 @@ import {
   isPetFollowUpMutationPayload,
 } from "./registered-follow-ups.js";
 import type { PetOutboundTargetOption } from "./outbound-message.js";
+import { MAX_MIMI_LEDGER_CONTEXT_LENGTH } from "./world-ledger.js";
 
 const MAX_RUNTIME_CONTEXT_LENGTH = 32_768;
 /** Reusable Sessions inactive longer than this are trimmed from the turn snapshot. */
@@ -552,6 +553,25 @@ export function validatePetRunParams(params: Record<string, unknown>): string | 
       hasCanonicalRuntimeContext ? "profileParams.runtimeContext" : "petRuntimeContext",
     );
     if (error) return error;
+  }
+
+  if (
+    profileParams !== undefined &&
+    Object.prototype.hasOwnProperty.call(profileParams, "ledgerContext")
+  ) {
+    const ledgerContext = profileParams.ledgerContext;
+    let parsed: unknown;
+    try {
+      parsed =
+        typeof ledgerContext === "string" && ledgerContext.length <= MAX_MIMI_LEDGER_CONTEXT_LENGTH
+          ? JSON.parse(ledgerContext)
+          : undefined;
+    } catch {
+      parsed = undefined;
+    }
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return `profileParams.ledgerContext must be a JSON object of at most ${MAX_MIMI_LEDGER_CONTEXT_LENGTH} characters`;
+    }
   }
 
   const workspaces = hasCanonicalWorkspaces ? profileParams.workspaces : params.petWorkspaces;

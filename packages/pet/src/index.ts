@@ -42,6 +42,8 @@ export {
   PET_BEHAVIOR_PROFILE,
   PET_SYSTEM_PROMPT,
   PET_ALLOWED_TOOL_NAMES,
+  MIMI_LEDGER_LISTS,
+  MAX_MIMI_LEDGER_CONTEXT_LENGTH,
   type PetRunScopedServices,
 } from "./profile.js";
 export { createPetProjectionObserver, PET_HIDDEN_SESSION_KINDS } from "./projection-extension.js";

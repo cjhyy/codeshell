@@ -51,7 +51,10 @@ import {
   readPetHostActionRequests,
   readPetWorkDelegations,
   reusableSessionId,
+  splitPetWorld,
   stringifyBoundedPetWorld,
+  withMergedPetWorld,
+  withPetLedgerContext,
   workspaceIdForPath,
   type PetManagerTurnHost,
   type PetWorldContextInput,
@@ -698,6 +701,8 @@ export class PetDispatchService {
     }
   }
   private readonly recentWorkContext;
+  /** Mimi's last durable lists; internal turns resend them to the ledger unchanged. */
+  private lastLedgerContext?: string;
   private activeChatTurn?: PetActiveChatTurn;
   private chatAdmissionTail: Promise<void> = Promise.resolve();
   private readonly chatInputs = new Map<
@@ -1095,7 +1100,10 @@ export class PetDispatchService {
         : suppliedModel === null
           ? undefined
           : await this.options.managerModel?.();
-    const routedParams = { ...runParams, ...(model ? { model } : {}) };
+    const routedParams = withPetLedgerContext(
+      { ...runParams, ...(model ? { model } : {}) },
+      this.lastLedgerContext,
+    );
     if (parseExternalRuntimeModelKey(model)) {
       if (!this.options.externalRuntime) {
         return {
@@ -1104,7 +1112,7 @@ export class PetDispatchService {
         };
       }
       try {
-        return await this.options.externalRuntime.run(routedParams);
+        return await this.options.externalRuntime.run(withMergedPetWorld(routedParams));
       } catch (error) {
         return {
           ok: false as const,
@@ -1864,8 +1872,7 @@ export class PetDispatchService {
                 },
               }
             : {}),
-          // DelegateWork and SendMessage take their ids only from these lists,
-          // so they go before anything stringifyBoundedPetWorld may trim.
+          // Durable lists: splitPetWorld sends them through the context ledger.
           workspaces: petWorkspaces,
           reusableSessions: petReusableSessions,
           outboundTargets: listedOutboundTargets.slice(0, 32),
@@ -1897,7 +1904,8 @@ export class PetDispatchService {
           ...(carryoverBrief ? { carryoverBrief } : {}),
           ...remainingWorldExtras,
         };
-        const runtimeContext = stringifyBoundedPetWorld(world);
+        const { runtimeContext, ledgerContext } = splitPetWorld(world);
+        this.lastLedgerContext = ledgerContext;
         timer.done();
         const activeChat = this.activeChatTurn;
         command.pendingNotices?.started();
@@ -1913,6 +1921,7 @@ export class PetDispatchService {
           petWorkspaces,
           profileParams: {
             runtimeContext,
+            ledgerContext,
             workspaces: petWorkspaces,
             reusableSessions: petReusableSessions,
             ...(hostActionKinds.length > 0 ? { hostActions: hostActionKinds } : {}),
