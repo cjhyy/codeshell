@@ -92,6 +92,23 @@ describe("AnthropicClient history prompt-cache breakpoint", () => {
     expect(sent[2].content[0].cache_control).toEqual({ type: "ephemeral" });
   });
 
+  it("puts the rolling boundary before volatile context at the tail, never on it", async () => {
+    const { client, lastBody } = clientCapturing();
+    await client.createMessage({
+      ...opts([
+        { role: "user", content: "durable history" },
+        { role: "assistant", content: "in-run tail" },
+        { role: "user", content: "volatile context" },
+      ]),
+      promptCache: { scopeId: "s-cache", stablePrefixMessageCount: 1, volatileTailMessageCount: 1 },
+    });
+    const sent = lastBody().messages;
+    expect(sent[0].content[0].cache_control).toEqual({ type: "ephemeral" });
+    expect(sent[1].content[0].cache_control).toEqual({ type: "ephemeral" });
+    // Resent every step and never read back, so a marker here would only pay a write.
+    expect(sent[2].content).toEqual([{ type: "text", text: "volatile context" }]);
+  });
+
   it("marks the tool_result block when it is the last block (pairing intact)", async () => {
     const { client, lastBody } = clientCapturing();
     await client.createMessage(

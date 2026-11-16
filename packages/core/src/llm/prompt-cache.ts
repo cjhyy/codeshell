@@ -35,6 +35,12 @@ export interface PromptCacheRequestContext {
    * append-only in-run tail.
    */
   stablePrefixMessageCount?: number;
+  /**
+   * Number of trailing source messages that are volatile context moved to the
+   * request tail: they are resent every step and never read from the cache, so
+   * a rolling breakpoint belongs on the message before them.
+   */
+  volatileTailMessageCount?: number;
 }
 
 export interface PromptCachePolicy {

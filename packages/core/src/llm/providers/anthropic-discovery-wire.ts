@@ -118,11 +118,17 @@ export function anthropicMessages(
     Math.min(messages.length, promptCache?.stablePrefixMessageCount ?? messages.length),
   );
   let stablePrefixEndMessage: Anthropic.MessageParam | undefined;
+  // The rolling breakpoint ends before volatile tail context (resent every step).
+  const rollingSourceEnd =
+    messages.length -
+    Math.max(0, Math.min(messages.length, promptCache?.volatileTailMessageCount ?? 0));
+  let rollingEndMessage: Anthropic.MessageParam | undefined;
   const textAsBlocks =
     policy.toolDiscovery === "tool-reference" || policy.strategy === "anthropic-explicit";
   for (const [sourceIndex, message] of messages.entries()) {
     if (sourceIndex === stablePrefixMessageCount)
       stablePrefixEndMessage = result[result.length - 1];
+    if (sourceIndex === rollingSourceEnd) rollingEndMessage = result[result.length - 1];
     if (message.role === "system") continue;
     const role = message.role === "tool" ? "user" : message.role;
     if (typeof message.content === "string") {
@@ -150,12 +156,14 @@ export function anthropicMessages(
     if (blocks.length) result.push({ role, content: blocks });
   }
   stablePrefixEndMessage ??= result[result.length - 1];
+  rollingEndMessage ??= result[result.length - 1];
   const stablePrefixEndIndex = stablePrefixEndMessage
     ? result.indexOf(stablePrefixEndMessage)
     : undefined;
+  const rollingEndIndex = rollingEndMessage ? result.indexOf(rollingEndMessage) : undefined;
   for (const index of uniquePromptCacheBreakpointIndexes([
     policy.breakpoints.includes("stable-history") ? stablePrefixEndIndex : undefined,
-    policy.breakpoints.includes("rolling-history") ? result.length - 1 : undefined,
+    policy.breakpoints.includes("rolling-history") ? rollingEndIndex : undefined,
   ]))
     markBreakpoint(result[index]);
   return result;

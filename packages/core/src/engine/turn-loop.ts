@@ -886,8 +886,19 @@ export class TurnLoop {
           pendingRewriteMessage: this.deps.contextManager.getPendingRewriteBoundaryMessage?.(),
           runStartMessage: this.config.runStartMessage,
         }),
+        ...(this.volatileAtTail() ? { volatileTailMessageCount: this.volatileTail(messages) } : {}),
       },
     };
+  }
+
+  private volatileTail(messages: readonly Message[]): number {
+    let count = 0;
+    while (
+      count < messages.length &&
+      this.volatileContextMessages.has(messages[messages.length - 1 - count]!)
+    )
+      count++;
+    return count;
   }
 
   private trackFreshImageMessage(message: Message): void {
