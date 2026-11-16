@@ -1,6 +1,7 @@
 import { describe, it, expect } from "bun:test";
 import { TurnLoop, type TurnLoopDeps, type TurnLoopConfig } from "./turn-loop.js";
 import type { LLMResponse, Message, ToolCall, ToolResult } from "../types.js";
+import { fakeTranscriptEvent } from "../testing/fake-transcript-event.js";
 
 /**
  * B-3: when a model emits more tool calls than maxToolCallsPerTurn, the excess
@@ -59,7 +60,7 @@ function makeDeps(responses: LLMResponse[]): {
     appendToolUse() {},
     appendToolResult() {},
     appendTurnBoundary() {},
-    appendMessage() {},
+    appendMessage: fakeTranscriptEvent,
   } as unknown as TurnLoopDeps["transcript"];
 
   const toolExecutor = {

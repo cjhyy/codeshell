@@ -7,6 +7,7 @@ import {
 import type { StreamEvent } from "../types.js";
 import { armGoalLifecycle, createGoalLifecycle, waitGoalLifecycle } from "../goal/lifecycle.js";
 import { notificationQueue } from "../tool-system/builtin/agent-notifications.js";
+import { fakeTranscriptEvent } from "../testing/fake-transcript-event.js";
 
 test("headless user waits keep background results queued until a real reply re-arms the goal", async () => {
   const sid = "headless-user-wait-results";
@@ -366,7 +367,7 @@ describe("finalizeRunSuccess", () => {
       session: {
         state,
         transcript: {
-          appendMessage: () => {},
+          appendMessage: fakeTranscriptEvent,
           flushFailed: () => false,
           getEvents: () => [{ id: "user-event", data: { role: "user", content: "hi" } }],
         },

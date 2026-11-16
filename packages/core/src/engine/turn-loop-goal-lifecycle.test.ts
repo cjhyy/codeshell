@@ -24,6 +24,7 @@ import { Engine } from "./engine.js";
 import { goalConfigFromLifecycle } from "../goal/lifecycle.js";
 import { TurnLoop, type TurnLoopConfig, type TurnLoopDeps } from "./turn-loop.js";
 import { markContextMessage } from "../session/context-messages.js";
+import { fakeTranscriptEvent } from "../testing/fake-transcript-event.js";
 
 const TEST_WORKSPACE_MODULE: AgentModule = {
   id: "test-workspace-switch",
@@ -192,7 +193,7 @@ function makeTurnLoopDeps(
         transcriptTurn++;
         boundaryTurns.push(transcriptTurn);
       },
-      appendMessage() {},
+      appendMessage: fakeTranscriptEvent,
     } as unknown as TurnLoopDeps["transcript"],
     systemPrompt: "system",
     tools: [],

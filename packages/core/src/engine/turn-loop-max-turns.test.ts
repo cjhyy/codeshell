@@ -1,6 +1,7 @@
 import { describe, it, expect } from "bun:test";
 import { TurnLoop, type TurnLoopDeps, type TurnLoopConfig } from "./turn-loop.js";
 import type { LLMResponse, Message, StreamEvent, ToolCall, ToolResult } from "../types.js";
+import { fakeTranscriptEvent } from "../testing/fake-transcript-event.js";
 
 /**
  * §4.3 coverage gap: the maxTurns ceiling. Existing turn-loop tests cover the
@@ -72,7 +73,7 @@ function makeDeps(
     appendToolUse() {},
     appendToolResult() {},
     appendTurnBoundary() {},
-    appendMessage() {},
+    appendMessage: fakeTranscriptEvent,
     appendTurnStopped() {
       stopped++;
     },

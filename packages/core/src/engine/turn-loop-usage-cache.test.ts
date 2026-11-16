@@ -5,6 +5,7 @@ import { estimateTokens } from "../context/compaction.js";
 import { ContextManager } from "../context/manager.js";
 import { hashPromptMessages } from "./prompt-cache-diagnostics.js";
 import { installPromptPrefixGuard } from "../testing/prompt-prefix-guard.js";
+import { fakeTranscriptEvent } from "../testing/fake-transcript-event.js";
 
 installPromptPrefixGuard({ beforeEach, afterEach });
 
@@ -79,7 +80,7 @@ function makeDeps(
     appendToolUse() {},
     appendToolResult() {},
     appendTurnBoundary() {},
-    appendMessage() {},
+    appendMessage: fakeTranscriptEvent,
   } as unknown as TurnLoopDeps["transcript"];
 
   const toolExecutor = {

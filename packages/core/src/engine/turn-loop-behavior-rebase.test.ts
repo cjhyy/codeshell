@@ -5,6 +5,7 @@ import { PromptComposer } from "../prompt/composer.js";
 import { callToolDef } from "../tool-system/builtin/call-tool.js";
 import { RunToolSurface } from "../tool-system/run-tool-surface.js";
 import { TurnLoop, type TurnLoopDeps } from "./turn-loop.js";
+import { fakeTranscriptEvent } from "../testing/fake-transcript-event.js";
 
 const definition = (name: string): ToolDefinition => ({
   name,
@@ -116,7 +117,7 @@ describe("TurnLoop refreshes frozen behavior at cold boundaries", () => {
           appendToolUse() {},
           appendToolResult() {},
           appendTurnBoundary() {},
-          appendMessage() {},
+          appendMessage: fakeTranscriptEvent,
         } as unknown as TurnLoopDeps["transcript"],
         systemPrompt: initialPrompt,
         tools: getTools(),

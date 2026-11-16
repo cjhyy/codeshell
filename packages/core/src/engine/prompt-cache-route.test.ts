@@ -4,6 +4,7 @@ import type { PromptCacheStrategy } from "../llm/prompt-cache.js";
 import { PromptCacheRouteMemory } from "./prompt-cache-route.js";
 import { TurnLoop, type TurnLoopDeps } from "./turn-loop.js";
 import { installPromptPrefixGuard } from "../testing/prompt-prefix-guard.js";
+import { fakeTranscriptEvent } from "../testing/fake-transcript-event.js";
 
 installPromptPrefixGuard({ beforeEach, afterEach });
 
@@ -109,7 +110,7 @@ describe("TurnLoop follows the client's effective cache strategy", () => {
         appendToolResult() {},
         appendTurnBoundary() {},
         appendTurnStopped() {},
-        appendMessage() {},
+        appendMessage: fakeTranscriptEvent,
       },
       systemPrompt: "sys",
       tools: [],

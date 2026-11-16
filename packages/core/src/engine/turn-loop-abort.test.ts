@@ -1,6 +1,7 @@
 import { describe, it, expect } from "bun:test";
 import { TurnLoop, type TurnLoopDeps, type TurnLoopConfig } from "./turn-loop.js";
 import type { LLMResponse, Message } from "../types.js";
+import { fakeTranscriptEvent } from "../testing/fake-transcript-event.js";
 
 /**
  * Abort-propagation tests for the sub-agent leak fix.
@@ -71,7 +72,7 @@ function makeDeps(
     appendToolUse() {},
     appendToolResult() {},
     appendTurnBoundary() {},
-    appendMessage() {},
+    appendMessage: fakeTranscriptEvent,
     appendTurnStopped() {},
   } as unknown as TurnLoopDeps["transcript"];
 

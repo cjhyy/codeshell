@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import type { LLMResponse, Message, StreamCallback, StreamEvent } from "../types.js";
 import { TurnLoop, type TurnLoopConfig, type TurnLoopDeps } from "./turn-loop.js";
 import { RunToolSurface } from "../tool-system/run-tool-surface.js";
+import { fakeTranscriptEvent } from "../testing/fake-transcript-event.js";
 
 function finalResponse(text: string): LLMResponse {
   return {
@@ -74,7 +75,7 @@ function makeDeps(
       appendToolResult() {},
       appendTurnBoundary() {},
       appendTurnStopped() {},
-      appendMessage() {},
+      appendMessage: fakeTranscriptEvent,
     } as unknown as TurnLoopDeps["transcript"],
     systemPrompt: "sys",
     tools: [],

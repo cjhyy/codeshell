@@ -3,6 +3,7 @@ import { TurnLoop, type TurnLoopConfig, type TurnLoopDeps } from "./turn-loop.js
 import type { ContentBlock, LLMResponse, Message, ToolCall, ToolResult } from "../types.js";
 import type { InputAttachmentMeta } from "../protocol/types.js";
 import type { SteerItem } from "./steer-queue.js";
+import { fakeTranscriptEvent } from "../testing/fake-transcript-event.js";
 
 function makeDeps(
   responses: LLMResponse[],
@@ -76,8 +77,10 @@ function makeDeps(
         appendTurnBoundary() {},
         appendMessage(role: string, content: unknown, opts: unknown) {
           // Engine reminders are persisted too; these tests watch steers only.
-          if ((opts as { hookReminder?: unknown } | undefined)?.hookReminder) return;
+          if ((opts as { hookReminder?: unknown } | undefined)?.hookReminder)
+            return fakeTranscriptEvent();
           appended.push({ role, content, opts });
+          return fakeTranscriptEvent();
         },
       } as unknown as TurnLoopDeps["transcript"],
       systemPrompt: "sys",
@@ -197,8 +200,10 @@ describe("TurnLoop steer finalize backfill", () => {
         appendTurnBoundary() {},
         appendMessage(role: string, content: unknown, opts: unknown) {
           // Engine reminders are persisted too; these tests watch steers only.
-          if ((opts as { hookReminder?: unknown } | undefined)?.hookReminder) return;
+          if ((opts as { hookReminder?: unknown } | undefined)?.hookReminder)
+            return fakeTranscriptEvent();
           appended.push({ role, content, opts });
+          return fakeTranscriptEvent();
         },
       } as unknown as TurnLoopDeps["transcript"],
       systemPrompt: "sys",

@@ -4,6 +4,7 @@ import { SENSITIVE_TOOL_RESULT_PLACEHOLDER } from "../tool-system/tool-result-re
 import type { LLMResponse, Message, ToolCall, ToolResult } from "../types.js";
 import type { ModelCallRecordingOptions } from "./model-facade.js";
 import { TurnLoop, type TurnLoopConfig, type TurnLoopDeps } from "./turn-loop.js";
+import { fakeTranscriptEvent } from "../testing/fake-transcript-event.js";
 
 const SECRET = "tok-secret-123";
 const SECRET_A = "tok-secret-a";
@@ -190,7 +191,7 @@ function makeHarness(options: HarnessOptions = {}) {
       transcriptResults.push({ toolCallId, toolName, result, error, contentBlocks });
     },
     appendTurnBoundary() {},
-    appendMessage() {},
+    appendMessage: fakeTranscriptEvent,
     appendTurnStopped() {},
   } as unknown as TurnLoopDeps["transcript"];
 

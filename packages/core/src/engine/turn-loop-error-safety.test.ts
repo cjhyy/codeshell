@@ -1,6 +1,7 @@
 import { describe, it, expect } from "bun:test";
 import { TurnLoop, type TurnLoopDeps, type TurnLoopConfig } from "./turn-loop.js";
 import type { Message } from "../types.js";
+import { fakeTranscriptEvent } from "../testing/fake-transcript-event.js";
 
 /**
  * A1/A4: TurnLoop.run must never reject. The engine's post-run bookkeeping
@@ -47,12 +48,16 @@ function depsWithThrowingManage(): TurnLoopDeps {
       isConcurrencySafe: () => false,
     } as unknown as TurnLoopDeps["toolExecutor"],
     contextManager,
-    hooks: { async emit() { return {}; } } as unknown as TurnLoopDeps["hooks"],
+    hooks: {
+      async emit() {
+        return {};
+      },
+    } as unknown as TurnLoopDeps["hooks"],
     transcript: {
       appendToolUse() {},
       appendToolResult() {},
       appendTurnBoundary() {},
-      appendMessage() {},
+      appendMessage: fakeTranscriptEvent,
     } as unknown as TurnLoopDeps["transcript"],
     systemPrompt: "sys",
     tools: [],

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "bun:test";
 import { TurnLoop, type TurnLoopDeps, type TurnLoopConfig } from "./turn-loop.js";
 import type { LLMResponse, Message, ToolCall, ToolResult } from "../types.js";
+import { fakeTranscriptEvent } from "../testing/fake-transcript-event.js";
 
 /**
  * B-2: the fire-and-forget tool-use summary chain must never surface as an
@@ -49,7 +50,7 @@ function makeDeps(opts: {
     appendToolUse() {},
     appendToolResult() {},
     appendTurnBoundary() {},
-    appendMessage() {},
+    appendMessage: fakeTranscriptEvent,
   } as unknown as TurnLoopDeps["transcript"];
   const toolExecutor = {
     setLogger() {},

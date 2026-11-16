@@ -6,6 +6,7 @@ import { ContextManager, type ManageOptions } from "../context/manager.js";
 import { resetPromptCacheWarmthForTests } from "../context/rewrite-gate.js";
 import { notePromptPrefixRewrite } from "../utils/prompt-prefix-events.js";
 import { installPromptPrefixGuard } from "../testing/prompt-prefix-guard.js";
+import { fakeTranscriptEvent } from "../testing/fake-transcript-event.js";
 
 installPromptPrefixGuard({ beforeEach, afterEach });
 
@@ -127,7 +128,7 @@ function makeDeps(
     },
     appendTurnBoundary() {},
     appendTurnStopped() {},
-    appendMessage() {},
+    appendMessage: fakeTranscriptEvent,
   } as unknown as TurnLoopDeps["transcript"];
 
   const toolExecutor = {

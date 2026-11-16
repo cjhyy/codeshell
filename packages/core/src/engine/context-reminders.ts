@@ -24,10 +24,6 @@ export function persistContextReminder(
 ): void {
   // Reminders are plain text; anything else is not replayable as one.
   if (message.role !== "user" || typeof message.content !== "string") return;
-  const event = transcript.appendMessage("user", message.content, { hookReminder: data }) as
-    | ReturnType<Transcript["appendMessage"]>
-    | undefined;
-  // A sink that stores nothing (a stand-in transcript) leaves it memory-only.
-  if (!event) return;
+  const event = transcript.appendMessage("user", message.content, { hookReminder: data });
   markContextMessage(message, { kind: "hook-reminder", eventId: event.id, reminder: data });
 }

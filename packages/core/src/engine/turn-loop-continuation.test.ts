@@ -1,6 +1,7 @@
 import { describe, it, expect } from "bun:test";
 import { TurnLoop, type TurnLoopDeps, type TurnLoopConfig } from "./turn-loop.js";
 import type { LLMResponse, Message, StreamEvent } from "../types.js";
+import { fakeTranscriptEvent } from "../testing/fake-transcript-event.js";
 
 /**
  * Build minimal fake deps for TurnLoop. Only the methods exercised by the
@@ -69,7 +70,7 @@ function makeDeps(responses: Array<LLMResponse | Error>): {
     appendToolUse() {},
     appendToolResult() {},
     appendTurnBoundary() {},
-    appendMessage() {},
+    appendMessage: fakeTranscriptEvent,
     appendTurnStopped() {
       stopped++;
     },

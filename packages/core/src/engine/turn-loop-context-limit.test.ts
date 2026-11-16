@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { ContextLimitError } from "../exceptions.js";
 import type { LLMResponse, Message, StreamEvent } from "../types.js";
 import { TurnLoop, type TurnLoopConfig, type TurnLoopDeps } from "./turn-loop.js";
+import { fakeTranscriptEvent } from "../testing/fake-transcript-event.js";
 
 function makeDeps(script: Array<LLMResponse | Error>): {
   deps: TurnLoopDeps;
@@ -63,7 +64,7 @@ function makeDeps(script: Array<LLMResponse | Error>): {
       appendToolUse() {},
       appendToolResult() {},
       appendTurnBoundary() {},
-      appendMessage() {},
+      appendMessage: fakeTranscriptEvent,
     } as unknown as TurnLoopDeps["transcript"],
     systemPrompt: "sys",
     tools: [],

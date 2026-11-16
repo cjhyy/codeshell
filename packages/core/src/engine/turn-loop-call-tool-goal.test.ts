@@ -7,6 +7,7 @@ import { RunToolSurface } from "../tool-system/run-tool-surface.js";
 import type { ToolContext } from "../tool-system/context.js";
 import type { LLMResponse, Message, StreamEvent, ToolCall } from "../types.js";
 import { TurnLoop, type TurnLoopDeps } from "./turn-loop.js";
+import { fakeTranscriptEvent } from "../testing/fake-transcript-event.js";
 
 for (const toolName of ["complete_goal", "cancel_goal"]) {
   describe(`CallTool ${toolName} terminal state`, () => {
@@ -80,7 +81,7 @@ for (const toolName of ["complete_goal", "cancel_goal"]) {
             appendToolUse() {},
             appendToolResult() {},
             appendTurnBoundary() {},
-            appendMessage() {},
+            appendMessage: fakeTranscriptEvent,
           } as unknown as TurnLoopDeps["transcript"],
           systemPrompt: "system",
           tools: surface.snapshot(),

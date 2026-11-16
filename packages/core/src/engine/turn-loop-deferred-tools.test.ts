@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { TurnLoop, type TurnLoopDeps } from "./turn-loop.js";
 import type { LLMResponse, ToolCall, ToolDefinition } from "../types.js";
+import { fakeTranscriptEvent } from "../testing/fake-transcript-event.js";
 
 describe("TurnLoop deferred model snapshots", () => {
   test("fallback and continuation retain snapshots; revocation preserves sensitive Goal metadata", async () => {
@@ -87,7 +88,7 @@ describe("TurnLoop deferred model snapshots", () => {
         appendToolUse() {},
         appendToolResult: (...args: unknown[]) => retainedResults.push(args),
         appendTurnBoundary() {},
-        appendMessage() {},
+        appendMessage: fakeTranscriptEvent,
       },
       systemPrompt: "fixture",
       sessionId: "fixture",

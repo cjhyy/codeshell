@@ -3,6 +3,7 @@ import { TurnLoop } from "../packages/core/src/engine/turn-loop.ts";
 import type { TurnLoopConfig, TurnLoopDeps } from "../packages/core/src/engine/turn-loop.ts";
 import { HookRegistry } from "../packages/core/src/hooks/registry.ts";
 import type { LLMResponse, Message } from "../packages/core/src/types.ts";
+import { fakeTranscriptEvent } from "../packages/core/src/testing/fake-transcript-event.js";
 
 /**
  * Scripted model: returns the next queued response per call. All responses
@@ -57,7 +58,7 @@ function makeDeps(model: ReturnType<typeof scriptedModel>): {
       appendToolUse: () => {},
       appendToolResult: () => {},
       appendTurnBoundary: () => {},
-      appendMessage: () => {},
+      appendMessage: fakeTranscriptEvent,
     },
     systemPrompt: "sys",
     tools: [],
