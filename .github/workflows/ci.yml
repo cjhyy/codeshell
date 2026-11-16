@@ -137,6 +137,19 @@ jobs:
           # each. Keeping each invocation small keeps them fast.
           - shard: core-engine
             paths: packages/core/src/engine packages/core/src/tool-system
+            # Prompt-cache, context-ledger and auxiliary-prompt suites run in their own bounded
+            # process below; the engine + tool-system process is at its file budget.
+            ignore: >-
+              --path-ignore-patterns '**/src/engine/engine.context-ledger*.test.ts'
+              --path-ignore-patterns '**/src/engine/run-context-ledger*.test.ts'
+              --path-ignore-patterns '**/src/engine/prompt-cache-*.test.ts'
+              --path-ignore-patterns '**/src/engine/aux*.test.ts'
+              --path-ignore-patterns '**/src/engine/engine.prompt-cache.test.ts'
+              --path-ignore-patterns '**/src/engine/engine.primary-cache-accounting.test.ts'
+              --path-ignore-patterns '**/src/engine/engine.prompt-rewrite-replay.test.ts'
+              --path-ignore-patterns '**/src/engine/stable-prefix.test.ts'
+              --path-ignore-patterns '**/src/engine/volatile-context-tail.test.ts'
+              --path-ignore-patterns '**/src/engine/rollover-context.test.ts'
           # Exclusion, not an enumerated list: a hand-written directory list
           # silently drops any subtree or top-level test file added later, and
           # bun errors out entirely if one listed path has no tests.
@@ -480,7 +493,13 @@ jobs:
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/plugins
       - name: test core session in its own Bun process
         if: matrix.shard == 'core-rest'
-        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/session
+        # Context-message replay suites run as a second bounded process; one process is at its budget.
+        run: |
+          node scripts/run-bun-test-shard.mjs --timeout 30000 --path-ignore-patterns '**/src/session/context-messages.privacy.test.ts' --path-ignore-patterns '**/src/session/transcript.context-messages.test.ts' --path-ignore-patterns '**/src/session/prompt-rewrites.test.ts' --path-ignore-patterns '**/src/session/session-fork.links.test.ts' packages/core/src/session
+          node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/session/context-messages.privacy.test.ts packages/core/src/session/transcript.context-messages.test.ts packages/core/src/session/prompt-rewrites.test.ts packages/core/src/session/session-fork.links.test.ts
+      - name: test core prompt cache and context ledger in their own Bun process
+        if: matrix.shard == 'core-engine'
+        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/engine/aux-key.test.ts packages/core/src/engine/aux-prompt-cache.test.ts packages/core/src/engine/auxiliary-pipeline.context-messages.test.ts packages/core/src/engine/auxiliary-pipeline.memory-output.test.ts packages/core/src/engine/auxiliary-pipeline.prompt-cache.test.ts packages/core/src/engine/auxiliary-pipeline.test.ts packages/core/src/engine/engine.context-ledger-delimiters.test.ts packages/core/src/engine/engine.context-ledger-hardening.test.ts packages/core/src/engine/engine.context-ledger-scope.test.ts packages/core/src/engine/engine.context-ledger.test.ts packages/core/src/engine/engine.primary-cache-accounting.test.ts packages/core/src/engine/engine.prompt-cache.test.ts packages/core/src/engine/engine.prompt-rewrite-replay.test.ts packages/core/src/engine/prompt-cache-diagnostics.test.ts packages/core/src/engine/prompt-cache-route.test.ts packages/core/src/engine/rollover-context.test.ts packages/core/src/engine/run-context-ledger-scope.test.ts packages/core/src/engine/run-context-ledger-snapshot-only.test.ts packages/core/src/engine/stable-prefix.test.ts packages/core/src/engine/volatile-context-tail.test.ts
       - name: Compiled isolated instruction adoption lifecycle
         if: matrix.shard == 'rest'
         run: |
