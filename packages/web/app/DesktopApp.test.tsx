@@ -1331,6 +1331,9 @@ test("CLI room mode switch restarts through the Host and explains when it applie
     expect(reactProps(select).disabled).toBe(false);
     // Codex has no resident process: the new mode applies to the next turn's process.
     expect(textOf(host)).toContain("下一条消息");
+    expect(textOf(host)).toContain("工作区读写");
+    expect(textOf(host)).toContain("只读");
+    expect(textOf(host)).not.toContain("逐次确认");
     await act(async () => {
       reactProps(select).onChange({ target: { value: "bypassPermissions" } });
       await flushMicrotasks();

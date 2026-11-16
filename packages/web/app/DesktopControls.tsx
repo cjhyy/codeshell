@@ -32,15 +32,36 @@ const permissionModes: Array<{
   },
 ];
 
-const permissionLabel = (mode: MobileRemotePermissionMode): string =>
-  permissionModes.find((entry) => entry.value === mode)?.label ?? mode;
+function permissionsFor(kind?: string): typeof permissionModes {
+  if (kind !== "codex") return permissionModes;
+  return [
+    {
+      value: "default",
+      label: "只读",
+      description: "可以读取文件；文件写入和修改命令受沙箱限制。",
+    },
+    {
+      value: "acceptEdits",
+      label: "工作区读写",
+      description: "允许在当前工作区内修改文件，工作区外写入受沙箱限制。",
+    },
+    {
+      value: "bypassPermissions",
+      label: "完全访问",
+      description: "关闭沙箱，可执行命令并修改文件，不再逐次确认。电脑可能要求再次批准。",
+    },
+  ];
+}
+
+const permissionLabel = (mode: MobileRemotePermissionMode, kind?: string): string =>
+  permissionsFor(kind).find((entry) => entry.value === mode)?.label ?? mode;
 
 /** Explain the user-visible effect before elevated permission is requested. */
 export function cliModeSwitchNotice(
   kind: "claude-code" | "codex",
   mode: MobileRemotePermissionMode,
 ): string {
-  const base = `切换为「${permissionLabel(mode)}」，从下一条消息开始生效。`;
+  const base = `切换为「${permissionLabel(mode, kind)}」，从下一条消息开始生效。`;
   if (mode !== "bypassPermissions") return base;
   return kind === "codex"
     ? `${base}\nCodex 会关闭沙箱，命令执行和文件修改不再逐次确认。电脑可能要求再次批准。`
@@ -99,7 +120,7 @@ export function DesktopChatControls({ app, busy = false }: { app: RemoteApp; bus
           }}
         >
           {inRoom && !room ? <option value="">读取中…</option> : null}
-          {permissionModes.map((mode) => (
+          {permissionsFor(inRoom ? room?.kind : activeSession?.provider).map((mode) => (
             <option key={mode.value} value={mode.value}>
               {mode.label}
             </option>
@@ -300,6 +321,7 @@ export function DesktopSidebar({
       {picking ? (
         <CcModeDialog
           title={picking.label}
+          kind={app.ccCliKind}
           returnFocus={picking.returnFocus}
           onClose={() => setPicking(null)}
           onChoose={(mode) => {
@@ -318,11 +340,13 @@ export function DesktopSidebar({
 
 function CcModeDialog({
   title,
+  kind,
   returnFocus,
   onChoose,
   onClose,
 }: {
   title: string;
+  kind: "codex" | "claude-code";
   returnFocus: HTMLButtonElement;
   onChoose: (mode: MobileRemotePermissionMode) => void;
   onClose: () => void;
@@ -349,7 +373,7 @@ function CcModeDialog({
       <h2 id="desktop-cli-mode-title">选择 CLI 权限模式</h2>
       <p>{title}</p>
       <div className="desktop-mode-options">
-        {permissionModes.map((mode) => (
+        {permissionsFor(kind).map((mode) => (
           <button key={mode.value} className="library-button" onClick={() => onChoose(mode.value)}>
             <strong>{mode.label}</strong>
             <span>{mode.description}</span>
