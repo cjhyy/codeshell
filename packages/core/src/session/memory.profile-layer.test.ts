@@ -1,3 +1,4 @@
+import { joinContextListParts } from "../context/context-ledger.js";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -41,7 +42,7 @@ describe("buildInjectionIndex profile layer", () => {
       content: "project body",
     });
 
-    const index = MemoryManager.buildInjectionIndex({
+    const index = injectionText({
       baseDir: home,
       projectDir,
       profileDir,
@@ -66,9 +67,16 @@ describe("buildInjectionIndex profile layer", () => {
       type: "user",
       content: "global body",
     });
-    const index = MemoryManager.buildInjectionIndex({ baseDir: home });
+    const index = injectionText({ baseDir: home });
     expect(index).not.toContain("Digital-human memories");
     expect(index).toContain("Readable locations for this run: global or project");
     expect(index).not.toContain("global, profile, or project");
   });
 });
+
+function injectionText(
+  options: Parameters<typeof MemoryManager.buildInjectionIndexParts>[0],
+): string {
+  const parts = MemoryManager.buildInjectionIndexParts(options);
+  return parts ? joinContextListParts(parts) : "";
+}

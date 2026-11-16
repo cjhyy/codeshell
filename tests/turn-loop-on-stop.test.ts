@@ -57,6 +57,7 @@ function makeDeps(model: ReturnType<typeof scriptedModel>): {
       appendToolUse: () => {},
       appendToolResult: () => {},
       appendTurnBoundary: () => {},
+      appendMessage: () => ({ id: crypto.randomUUID() }),
     },
     systemPrompt: "sys",
     tools: [],

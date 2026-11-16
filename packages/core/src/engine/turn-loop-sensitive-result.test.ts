@@ -190,7 +190,9 @@ function makeHarness(options: HarnessOptions = {}) {
       transcriptResults.push({ toolCallId, toolName, result, error, contentBlocks });
     },
     appendTurnBoundary() {},
-    appendMessage() {},
+    appendMessage() {
+      return { id: crypto.randomUUID() };
+    },
     appendTurnStopped() {},
   } as unknown as TurnLoopDeps["transcript"];
 

@@ -72,8 +72,8 @@ describe("AnthropicClient history prompt-cache breakpoint", () => {
     );
     const sent = lastBody().messages;
     const first = sent[0];
-    // First message stays a plain string (untouched, no marker).
-    expect(first.content).toBe("first");
+    // First message carries no marker, in the same block form a marked one has.
+    expect(first.content).toEqual([{ type: "text", text: "first" }]);
   });
 
   it("keeps a durable boundary before volatile context and a rolling tail boundary", async () => {
@@ -88,7 +88,7 @@ describe("AnthropicClient history prompt-cache breakpoint", () => {
     });
     const sent = lastBody().messages;
     expect(sent[0].content[0].cache_control).toEqual({ type: "ephemeral" });
-    expect(sent[1].content).toBe("volatile context");
+    expect(sent[1].content).toEqual([{ type: "text", text: "volatile context" }]);
     expect(sent[2].content[0].cache_control).toEqual({ type: "ephemeral" });
   });
 

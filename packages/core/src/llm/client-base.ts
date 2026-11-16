@@ -2,6 +2,7 @@
  * Abstract base class for all LLM provider clients.
  */
 
+import type { PromptCacheStrategy } from "./prompt-cache.js";
 import type { ClientDefaults, LLMConfig, LLMResponse, TokenUsage } from "../types.js";
 import type { CreateMessageOptions, LLMUsageTracker } from "./types.js";
 import { LLMError, ContextLimitError, LLMQuotaError, LLMRateLimitError } from "../exceptions.js";
@@ -151,6 +152,15 @@ export abstract class LLMClientBase {
 
   getUsage(): LLMUsageTracker {
     return { ...this.usage };
+  }
+
+  /**
+   * The prompt-cache strategy requests are sent with right now, when it can
+   * differ from the configured route (a client that fell back after its
+   * endpoint rejected explicit cache fields). `undefined`: as configured.
+   */
+  getEffectivePromptCacheStrategy(): PromptCacheStrategy | undefined {
+    return undefined;
   }
 
   /**

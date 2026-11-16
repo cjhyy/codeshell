@@ -5,7 +5,12 @@
  * worth persisting across sessions.
  */
 
-import { formatMemoryTranscript } from "./memory-transcript.js";
+import { layoutMemoryTranscript } from "./memory-transcript.js";
+import {
+  joinMemoryPrompt,
+  memoryPromptSegments,
+  type MemoryPromptSegments,
+} from "./memory-prompt-segments.js";
 
 export interface ExtractedMemory {
   type: "user" | "feedback" | "project" | "reference";
@@ -37,40 +42,10 @@ export interface ExistingMemorySummary {
 }
 
 /**
- * Build the prompt for extracting memories from a conversation.
+ * Everything that is the same for every extraction call, in one message: the
+ * provider can serve it from its prompt cache. No dates, counts or names here.
  */
-export function buildExtractionPrompt(
-  transcript: Array<{ role: string; content: string }>,
-  existingMemories: ExistingMemorySummary[],
-): string {
-  const conversationText = formatMemoryTranscript(transcript, 3000);
-
-  const existingList =
-    existingMemories.length > 0
-      ? existingMemories
-          .map((m) => {
-            const meta = [
-              m.id ? `id:${m.id}` : null,
-              m.location ? `location:${m.location}` : null,
-              m.memoryScope ? `scope:${m.memoryScope}` : null,
-              m.origin ? `origin:${m.origin}` : null,
-              typeof m.useCount === "number" ? `use:${m.useCount}` : null,
-              typeof m.updateCount === "number" ? `updates:${m.updateCount}` : null,
-            ]
-              .filter(Boolean)
-              .join(", ");
-            return `  - [${m.type}] ${m.name}${meta ? ` (${meta})` : ""}: ${m.description}`;
-          })
-          .join("\n")
-      : "  (none)";
-
-  return `Analyze the following conversation and extract any information worth remembering for future sessions.
-
-## Existing Memories
-${existingList}
-
-## Conversation
-${conversationText}
+const EXTRACTION_HEAD = `Analyze the following conversation and extract any information worth remembering for future sessions.
 
 ## Instructions
 Identify candidate information that may be saved as persistent memories. The extractor only proposes candidates; code will route automatic candidates into dream memory first, never directly into user memory. Categories (type):
@@ -91,7 +66,7 @@ Rules:
 - Respect the latest corrections and outcomes in the conversation. Omitted material is unavailable; do not reconstruct it.
 - AT MOST 1 of the extracted memories may be "global". The global layer is injected every session, so keep it tiny and high-value. If two candidates both seem global, keep the single most universal one global and make the other "project".
 - Only extract information that would be useful in FUTURE conversations
-- Do not duplicate existing memories (re-read the "Existing Memories" list above carefully).
+- Do not duplicate existing memories (re-read the "Existing Memories" list after the conversation carefully).
 - If an existing auto/dream memory has the same durable topic, reuse that topic in the candidate instead of creating a date-stamped variant; the write decision layer will update the existing id.
 - Manual user memories are read-only curated memories. Do not re-extract the same topic just because the wording or date differs.
 - Avoid dates, version stamps, batch names, and progress-snapshot suffixes in names. Names should be stable topic identifiers, not "today" variants.
@@ -101,9 +76,56 @@ Rules:
 - NEVER include secrets: API keys, tokens, passwords, private URLs with credentials. If the durable fact involves a credential, describe WHERE it lives (e.g. "key is in .env as FOO_KEY"), never the value itself
 - Each memory should have a clear, specific description
 
-Respond with a JSON array of objects with fields: type, scope, name, description, content
+## Conversation
+`;
+
+const EXTRACTION_RESPONSE_FORMAT = `Respond with a JSON array of objects with fields: type, scope, name, description, content
 (scope must be "global" or "project")
 If nothing worth remembering, respond with an empty array: []`;
+
+/**
+ * The extraction prompt in cache order: fixed instructions, then the
+ * conversation (append-only between calls for one session), then the existing
+ * memories and the response format, which change or depend on what precedes.
+ */
+export function buildExtractionPromptSegments(
+  transcript: Array<{ role: string; content: string }>,
+  existingMemories: ExistingMemorySummary[],
+): MemoryPromptSegments {
+  const existingList =
+    existingMemories.length > 0
+      ? existingMemories
+          .map((m) => {
+            const meta = [
+              m.id ? `id:${m.id}` : null,
+              m.location ? `location:${m.location}` : null,
+              m.memoryScope ? `scope:${m.memoryScope}` : null,
+              m.origin ? `origin:${m.origin}` : null,
+              typeof m.useCount === "number" ? `use:${m.useCount}` : null,
+              typeof m.updateCount === "number" ? `updates:${m.updateCount}` : null,
+            ]
+              .filter(Boolean)
+              .join(", ");
+            return `  - [${m.type}] ${m.name}${meta ? ` (${meta})` : ""}: ${m.description}`;
+          })
+          .join("\n")
+      : "  (none)";
+
+  return memoryPromptSegments(
+    EXTRACTION_HEAD,
+    layoutMemoryTranscript(transcript, 3000),
+    `\n\n## Existing Memories\n${existingList}\n\n${EXTRACTION_RESPONSE_FORMAT}`,
+  );
+}
+
+/**
+ * Build the prompt for extracting memories from a conversation.
+ */
+export function buildExtractionPrompt(
+  transcript: Array<{ role: string; content: string }>,
+  existingMemories: ExistingMemorySummary[],
+): string {
+  return joinMemoryPrompt(buildExtractionPromptSegments(transcript, existingMemories));
 }
 
 /** Max memories to accept from a single extraction pass. Code-side cap that

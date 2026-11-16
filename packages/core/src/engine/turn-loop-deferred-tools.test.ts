@@ -87,7 +87,9 @@ describe("TurnLoop deferred model snapshots", () => {
         appendToolUse() {},
         appendToolResult: (...args: unknown[]) => retainedResults.push(args),
         appendTurnBoundary() {},
-        appendMessage() {},
+        appendMessage() {
+          return { id: crypto.randomUUID() };
+        },
       },
       systemPrompt: "fixture",
       sessionId: "fixture",

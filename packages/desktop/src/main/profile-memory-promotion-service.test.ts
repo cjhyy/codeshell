@@ -117,9 +117,11 @@ test("review is read-only; commit preserves source bytes and creates manual user
   expect(saved.useCount).toBe(0);
   expect(saved.updateCount).toBe(0);
   expect(saved.pinned).toBe(true);
-  expect(MemoryManager.buildInjectionIndex({ profileDir: workspaceProfileDir("pm") })).toContain(
-    draft.name,
-  );
+  expect(
+    MemoryManager.buildInjectionIndexParts({ profileDir: workspaceProfileDir("pm") })
+      ?.items.map((item) => item.text)
+      .join("\n"),
+  ).toContain(draft.name);
   expect(() => commit(result.reviewId)).toThrow("expired");
   expect(target().loadAll()).toHaveLength(1);
 });
@@ -510,8 +512,8 @@ test("run profile selection injects copied memory only when portableMemory is en
       disableCapabilityContext: true,
       disableSourcesContext: true,
     });
-    const message = await composer.buildDynamicContextMessage();
-    const content = typeof message?.content === "string" ? message.content : "";
+    const sections = await composer.buildDynamicContextSections();
+    const content = sections.map((section) => section.text).join("\n");
     expect(content.includes(draft.name)).toBe(enabled);
     expect(readWorkspaceProfile("pm")?.portableMemory).toBe(enabled);
   }

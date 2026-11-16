@@ -25,7 +25,7 @@ class McpHealthClient extends LLMClientBase {
 registerProvider(provider, McpHealthClient);
 
 describe("Engine per-run MCP health context", () => {
-  it("reports initialization failure to the model without persisting it or leaking it after recovery", async () => {
+  it("reports initialization failure to the model and tells it about the recovery without rewriting history", async () => {
     const dir = mkdtempSync(join(tmpdir(), "engine-mcp-health-"));
     const readyFile = join(dir, "ready");
     const server = join(dir, "server.mjs");
@@ -77,15 +77,27 @@ createInterface({ input: process.stdin }).on("line", (line) => {
     const state = () => readFileSync(join(dir, "sessions", sessionId, "state.json"), "utf8");
 
     try {
-      expect(
-        (await engine.run("Inspect available capabilities.", { sessionId, cwd: dir })).reason,
-      ).toBe("completed");
+      const result = await engine.run("Inspect available capabilities.", { sessionId, cwd: dir });
+      if (result.reason !== "completed") throw new Error(JSON.stringify(result));
       const first = JSON.stringify(requests.get(model)![0]);
-      expect(first).toContain("MCP connection status for this run:");
+      expect(first).toContain("MCP connection status:");
       expect(first).toContain("repairable-fixture");
-      expect(first).toContain("tools are unavailable in this run");
-      expect(transcript()).not.toContain("MCP connection status for this run:");
-      expect(state()).not.toContain("MCP connection status for this run:");
+      expect(first).toContain(
+        "tools are currently unavailable; an update will follow if this changes",
+      );
+      expect(first).not.toContain("unavailable in this run");
+      // Context is append-only history: the status is part of the first run's
+      // snapshot, which is persisted so a resumed session sends the same bytes.
+      const ledgerEvents = () =>
+        transcript()
+          .split("\n")
+          .filter(Boolean)
+          .map((line) => JSON.parse(line))
+          .filter((event) => event.data?.contextLedger !== undefined);
+      expect(ledgerEvents()).toHaveLength(1);
+      expect(ledgerEvents()[0].data.injected).toBe(true);
+      expect(ledgerEvents()[0].data.content).toContain("MCP connection status:");
+      expect(state()).not.toContain("MCP connection status:");
 
       writeFileSync(readyFile, "ready");
       requests.set(model, []);
@@ -94,10 +106,20 @@ createInterface({ input: process.stdin }).on("line", (line) => {
       ).toBe("completed");
       const recovered = JSON.stringify(requests.get(model)![0]);
       expect(recovered).toContain("Inspect available capabilities.");
-      expect(recovered).not.toContain("MCP connection status for this run:");
-      expect(recovered).not.toContain("tools are unavailable in this run");
-      expect(transcript()).not.toContain("MCP connection status for this run:");
-      expect(state()).not.toContain("MCP connection status for this run:");
+      // The earlier status stays where it was sent; the recovery is told as an
+      // update at the tail instead of rewriting history.
+      const recoveredMessages = requests.get(model)![0] as { content: unknown }[];
+      expect(recovered.match(/MCP connection status:/g)).toHaveLength(1);
+      const updates = recoveredMessages
+        .map((message) => String(message.content))
+        .filter((text) => text.includes('<context-section-removed key="mcp-failures" />'));
+      expect(updates).toHaveLength(1);
+      expect(updates[0]).not.toContain("repairable-fixture");
+      expect(ledgerEvents().map((event) => event.data.contextLedger.kind)).toEqual([
+        "snapshot",
+        "update",
+      ]);
+      expect(state()).not.toContain("MCP connection status:");
     } finally {
       await engine.dispose();
       requests.delete(model);

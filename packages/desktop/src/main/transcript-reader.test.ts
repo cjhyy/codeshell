@@ -8,6 +8,13 @@ import {
   getSessionTranscriptPage,
 } from "./transcript-reader";
 import { foldTranscript } from "../renderer/automation/foldTranscript";
+import { buildSessionHistory } from "@cjhyy/code-shell-server/mobile-remote";
+import {
+  CONTEXT_CANARY,
+  PUBLIC_PROMPT,
+  PUBLIC_ANSWER,
+  contextPrivacySession,
+} from "../../../../tests/helpers/context-privacy.js";
 import { listDiskSessions, listSessions } from "@cjhyy/code-shell-server/storage";
 
 function line(type: string, data: Record<string, unknown>): string {
@@ -1158,4 +1165,28 @@ describe("getSessionTranscript", () => {
     const items = await getSessionTranscript("p3", dir);
     expect(evTypes(items)).toEqual(["agent_start"]); // bare → card shows running
   });
+});
+
+it("native mobile history keeps public conversation and a notes boundary without local context", async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "native-mobile-privacy-"));
+  try {
+    const { bundle } = contextPrivacySession(root, root);
+    const raw = fs.readFileSync(bundle.transcript.getFilePath(), "utf8");
+    const events = await buildSessionHistory(bundle.state.sessionId, async () =>
+      transcriptToFoldItems(raw),
+    );
+    const wire = JSON.stringify(events);
+    expect(wire).not.toContain(CONTEXT_CANARY);
+    expect(wire).toContain(PUBLIC_PROMPT);
+    expect(wire).toContain(PUBLIC_ANSWER);
+    expect(events).toContainEqual({
+      type: "context_compact",
+      strategy: "notes",
+      before: 0,
+      after: 0,
+    });
+    expect(fs.readFileSync(bundle.transcript.getFilePath(), "utf8")).toBe(raw);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });

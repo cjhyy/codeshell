@@ -235,6 +235,7 @@ export type {
   CapabilityArtifactDetector,
   CapabilityDynamicContext,
   CapabilityDynamicContextProvider,
+  CapabilityDynamicContextSection,
   CapabilityFileHistoryContribution,
   CapabilityEngineHookContribution,
   CapabilityInstructionBoundaryFinder,

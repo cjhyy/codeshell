@@ -34,14 +34,25 @@ import { clampMaxTokens } from "../clamp-max-tokens.js";
 import { resolveApiKey, resolveHeaders } from "../provider-auth.js";
 import { stripVisionFromHistory } from "../strip-vision.js";
 import {
-  createPromptCacheKey,
   PromptCacheHistory,
   resolvePromptCachePolicy,
   uniquePromptCacheBreakpointIndexes,
   type PromptCachePolicy,
-  type PromptCacheHistoryPlan,
   type PromptCacheRequestContext,
+  type PromptCacheStrategy,
 } from "../prompt-cache.js";
+import {
+  disableExplicitCacheContent,
+  explicitCacheContentDisabled,
+  isExplicitCacheContentRejection,
+  stabilizeExplicitCacheContent,
+  usesExplicitCacheMarkers,
+} from "./openai-cache-content.js";
+import {
+  prepareOpenAICacheHistory,
+  sharedAuxPromptCacheHistory,
+  sharedPromptCacheHistory,
+} from "./openai-cache-history.js";
 import { STREAM_WATCHDOG_CONFIG, StreamIdleTimeoutError } from "../stream-watchdog.js";
 import { joinToolResultText } from "../../utils/tool-schema-discovery.js";
 
@@ -235,10 +246,6 @@ export async function runStreamWithWatchdog<T = any>(
 const MISSING_TOOL_RESULT_WIRE_TEXT =
   "Error: Tool execution did not complete before the conversation resumed.";
 
-// Clients are recreated between Engine runs. Keep only bounded, expiring
-// boundary hashes across those recreations; never retain conversation text.
-const sharedPromptCacheHistory = new PromptCacheHistory();
-
 /** Resolve the same actual message used by the wire marker and history hash. */
 function promptCacheBoundaryIndex(
   messages: readonly OpenAI.ChatCompletionMessageParam[],
@@ -316,6 +323,7 @@ function normalizeOpenAIToolMessagePairs(
 export class OpenAIClient extends LLMClientBase {
   private _client: OpenAI | null = null;
   private readonly promptCacheHistory: PromptCacheHistory;
+  private readonly auxPromptCacheHistory: PromptCacheHistory;
   private readonly dangerouslyAllowBrowser: boolean;
   // Sticky override: once the endpoint tells us `max_tokens` is rejected for
   // this model, switch to `max_completion_tokens` for the lifetime of the
@@ -339,10 +347,13 @@ export class OpenAIClient extends LLMClientBase {
     runtimeOptions: {
       dangerouslyAllowBrowser?: boolean;
       promptCacheHistory?: PromptCacheHistory;
+      auxPromptCacheHistory?: PromptCacheHistory;
     } = {},
   ) {
     super(config, defaults);
     this.promptCacheHistory = runtimeOptions.promptCacheHistory ?? sharedPromptCacheHistory;
+    this.auxPromptCacheHistory =
+      runtimeOptions.auxPromptCacheHistory ?? sharedAuxPromptCacheHistory;
     this.dangerouslyAllowBrowser = runtimeOptions.dangerouslyAllowBrowser === true;
   }
 
@@ -391,11 +402,18 @@ export class OpenAIClient extends LLMClientBase {
       model: this.model,
       promptCaching: this.capability.promptCaching,
       request,
-      explicitDisabled: this._disableExplicitPromptCache,
+      explicitDisabled:
+        this._disableExplicitPromptCache ||
+        explicitCacheContentDisabled(this.getPromptCacheScopeIdentity()),
     });
     return this._disablePromptCacheKey && policy.cacheKey
       ? { ...policy, cacheKey: undefined }
       : policy;
+  }
+
+  /** Effective fallback after rejected cache fields or marker-carrying content arrays. */
+  override getEffectivePromptCacheStrategy(): PromptCacheStrategy {
+    return this.promptCachePolicy().strategy;
   }
 
   override getPromptCacheConfigIdentity(): Readonly<Record<string, unknown>> {
@@ -414,6 +432,7 @@ export class OpenAIClient extends LLMClientBase {
       forceMaxCompletionTokens: this._forceMaxCompletionTokens,
       dropReasoningEffort: this._dropReasoningEffort,
       disableExplicitPromptCache: this._disableExplicitPromptCache,
+      disableExplicitCacheContent: explicitCacheContentDisabled(this.getPromptCacheScopeIdentity()),
       disablePromptCacheKey: this._disablePromptCacheKey,
     };
   }
@@ -444,51 +463,44 @@ export class OpenAIClient extends LLMClientBase {
           options.promptCache,
         );
         const cachePolicy = this.promptCachePolicy(options.promptCache);
+        // Before hashing and marking: a message's bytes must not depend on
+        // whether a breakpoint lands on it.
+        stabilizeExplicitCacheContent(messages, cachePolicy.strategy);
         const tools = options.tools?.length
           ? this.convertTools(options.tools, cachePolicy)
           : undefined;
         const stableBoundaryIndex = promptCacheBoundaryIndex(messages, stablePrefixEndIndex);
-        let cachePlan: PromptCacheHistoryPlan | undefined;
-        if (cachePolicy.strategy === "openai-hybrid" && options.promptCache?.scopeId) {
-          let latestEligibleIndex = -1;
-          for (let index = messages.length - 1; index >= 0; index--) {
-            const message = messages[index]!;
-            if (
-              (message.role === "user" || message.role === "tool") &&
-              (typeof message.content === "string"
-                ? message.content.length > 0
-                : Array.isArray(message.content) && message.content.length > 0)
-            ) {
-              latestEligibleIndex = index;
-              break;
-            }
-          }
-          // Hash the effective request settings, including tools and passthrough
-          // schemas. Transport streaming does not alter the rendered prefix.
-          const { messages: _cacheMessages, ...requestIdentity } = this.buildRequestBody(
-            options,
-            messages,
-            tools,
-            reasoning,
-            false,
-          );
-          cachePlan = this.promptCacheHistory.prepare({
-            scopeKey: createPromptCacheKey(
-              options.promptCache.scopeId,
-              JSON.stringify(this.getPromptCacheScopeIdentity()),
-            ),
-            messages,
-            latestBoundaryIndex: latestEligibleIndex,
-            stableBoundaryIndex,
-            requestIdentity,
-          });
-        }
+        const history =
+          options.promptCache?.scopeKind === "auxiliary"
+            ? this.auxPromptCacheHistory
+            : this.promptCacheHistory;
+        const cachePlan = prepareOpenAICacheHistory({
+          history,
+          policy: cachePolicy,
+          request: options.promptCache,
+          scopeIdentity: this.getPromptCacheScopeIdentity(),
+          messages,
+          stableBoundaryIndex,
+          requestIdentity: () => {
+            // Hash effective request settings and tools; transport streaming
+            // does not change the prefix represented by these messages.
+            const { messages: _cacheMessages, ...identity } = this.buildRequestBody(
+              options,
+              messages,
+              tools,
+              reasoning,
+              false,
+            );
+            return identity;
+          },
+        });
         if (options.promptCache || cachePolicy.strategy === "anthropic-explicit") {
           this.applyPromptCacheBreakpoints(
             messages,
             cachePolicy,
             stableBoundaryIndex,
             cachePlan?.readBoundaryIndex,
+            cachePolicy.strategy === "anthropic-explicit" && tools?.length ? 3 : 4,
           );
         }
 
@@ -507,7 +519,7 @@ export class OpenAIClient extends LLMClientBase {
               ? await this.streamMessage(streamOptions, messages, tools, reasoning, requestSignal)
               : await this.nonStreamMessage(options, messages, tools, reasoning, requestSignal);
           if (cachePlan && !requestSignal?.aborted && (response.usage?.promptTokens ?? 0) > 0) {
-            this.promptCacheHistory.commit(cachePlan);
+            history.commit(cachePlan);
           }
           recordModelTraceAttemptResult(response);
           span.end({
@@ -1303,14 +1315,9 @@ export class OpenAIClient extends LLMClientBase {
     policy: PromptCachePolicy,
     stablePrefixEndIndex: number | undefined,
     previousBoundaryIndex?: number,
+    messageBreakpointLimit = 4,
   ): void {
-    if (
-      policy.strategy !== "anthropic-explicit" &&
-      policy.strategy !== "openai-explicit" &&
-      policy.strategy !== "openai-hybrid"
-    ) {
-      return;
-    }
+    if (!usesExplicitCacheMarkers(policy.strategy)) return;
 
     const markedMessages = new Set<OpenAI.ChatCompletionMessageParam>();
     const mark = (index: number): void => {
@@ -1323,8 +1330,8 @@ export class OpenAIClient extends LLMClientBase {
         policy.strategy === "anthropic-explicit"
           ? { cache_control: { type: "ephemeral" as const } }
           : { prompt_cache_breakpoint: { mode: "explicit" as const } };
-      // Lift a plain-string content to a text-block array so it can carry the
-      // marker. Non-text content already uses an array of parts.
+      // Text content is already a text-part array (stabilizeExplicitCacheContent);
+      // this lift only remains for callers that mark without stabilizing.
       if (typeof m.content === "string") {
         (m as { content: unknown }).content = [{ type: "text", text: m.content, ...marker }];
         return;
@@ -1344,13 +1351,15 @@ export class OpenAIClient extends LLMClientBase {
       // Hybrid uses at most three explicit boundaries, leaving the fourth slot
       // for the implicit tail. The longest matching prior stable/rolling boundary
       // permits reuse even when a run's dynamic snapshot has been removed.
-      policy.strategy === "openai-hybrid"
-        ? previousBoundaryIndex
-        : policy.breakpoints.includes("rolling-history")
-          ? messages.length - 1
-          : undefined,
+      previousBoundaryIndex,
+      policy.strategy !== "openai-hybrid" && policy.breakpoints.includes("rolling-history")
+        ? messages.length - 1
+        : undefined,
     ]);
-    for (const index of requested) mark(index);
+    // Auxiliary Anthropic calls need the prior stable save point as well as
+    // today's stable end. With tools, prefer that read point over a fourth
+    // message marker so the total remains within Anthropic's four slots.
+    for (const index of requested.slice(0, messageBreakpointLimit)) mark(index);
   }
 
   private convertTools(
@@ -1409,6 +1418,20 @@ export class OpenAIClient extends LLMClientBase {
       // the corrected body — fixing the call that triggered it, not just the
       // next one.
       let selfCorrected = false;
+
+      if (
+        err.status === 400 &&
+        usesExplicitCacheMarkers(this.promptCachePolicy().strategy) &&
+        isExplicitCacheContentRejection(msg)
+      ) {
+        disableExplicitCacheContent(this.getPromptCacheScopeIdentity());
+        selfCorrected = true;
+        logger.warn("llm.prompt_cache_content_unsupported", {
+          cat: "llm",
+          provider: this.provider,
+          model: this.model,
+        });
+      }
 
       // New GPT-5.6 cache fields may reach an OpenAI-compatible gateway before
       // that gateway supports them. Downgrade sticky-per-client and retry once:

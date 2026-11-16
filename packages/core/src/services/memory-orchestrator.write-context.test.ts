@@ -15,12 +15,35 @@ interface ComparedMemory {
   bodyExcerpt: { text: string; status: "complete" | "truncated" | "omitted"; totalChars: number };
 }
 
+/**
+ * The related memories as the model sees them, most similar first: catalogue
+ * metadata joined by id with the body excerpt that follows the candidate. A
+ * related entry without an excerpt line has its body omitted.
+ */
 function comparedMemories(prompt: string): ComparedMemory[] {
-  return prompt
-    .split("Related existing memories (JSON lines):\n")[1]!
-    .split("\n\nRespond with JSON:")[0]!
-    .split("\n")
-    .map((line) => JSON.parse(line));
+  const jsonLines = (text: string) =>
+    text
+      .split("\n")
+      .filter((line) => line.length > 0)
+      .map((line) => JSON.parse(line));
+  const catalogue = jsonLines(
+    prompt.split("Existing memories catalogue (JSON lines):\n")[1]!.split("\nCandidate:\n")[0]!,
+  );
+  const excerpts = jsonLines(
+    prompt
+      .split("Body excerpts of related memories (JSON lines):\n")[1]!
+      .split("\n\nRespond with JSON:")[0]!,
+  );
+  const ranked: string[] = JSON.parse(
+    prompt.split("Related catalogue ids, most similar first:\n")[1]!.split("\n")[0]!,
+  );
+  return ranked.map((id) => ({
+    ...catalogue.find((memory) => memory.id === id),
+    bodyExcerpt: excerpts.find((memory) => memory.id === id)?.bodyExcerpt ?? {
+      text: "",
+      status: "omitted",
+    },
+  }));
 }
 
 const first: ExtractedMemory = {
@@ -261,6 +284,63 @@ describe("MemoryOrchestrator bounded old-body comparisons", () => {
   });
 
   for (const action of ["UPDATE", "DELETE"]) {
+    it(`never lets ${action} target a memory whose body the model was not shown`, async () => {
+      await withStorage(async (storage) => {
+        const dream = new MemoryManager({ ...storage, scope: "dream" });
+        for (let index = 0; index < 12; index++) {
+          dream.save({
+            ...first,
+            id: `old-${index}`,
+            name: `${first.name}-${index}`,
+            description: `Project package manager policy ${index}`,
+            content: `Policy ${index}. ${"x".repeat(1_400)}`,
+            origin: "auto",
+          });
+        }
+        for (let index = 0; index < 33; index++) {
+          dream.save({
+            ...first,
+            id: `unrelated-${index}`,
+            name: `release-note-${index}`,
+            description: `Release note archive ${index}`,
+            content: `Unrelated note ${index}.`,
+            origin: "auto",
+          });
+        }
+        const targets: string[] = [];
+        await new MemoryOrchestrator({
+          memoryManager: new MemoryManager(storage),
+          callLLM: async (system, prompt) => {
+            if (!system.includes("write decision")) {
+              return JSON.stringify([first, { ...first, content: "Use Bun for every project." }]);
+            }
+            const compared = comparedMemories(prompt);
+            const catalogue = prompt
+              .split("Existing memories catalogue (JSON lines):\n")[1]!
+              .split("\nCandidate:\n")[0]!
+              .split("\n")
+              .filter(Boolean)
+              .map((line) => JSON.parse(line) as { id: string });
+            // First decision: a related memory whose body was left out by the
+            // budget. Second: a catalogue entry outside the related list.
+            const target =
+              targets.length === 0
+                ? compared.find((memory) => memory.bodyExcerpt.status === "omitted")!
+                : catalogue.find((memory) => !compared.some((c) => c.id === memory.id))!;
+            expect(target).toBeDefined();
+            targets.push(target.id);
+            return JSON.stringify({ action, target: { ...target, scope: "dream" } });
+          },
+        }).run([{ role: "user", content: "Remember the policy" }], `unseen-${action}`);
+
+        expect(targets).toHaveLength(2);
+        for (const id of targets) {
+          expect(dream.findById(id)).toMatchObject({ updateCount: 0 });
+          expect(dream.findById(id)!.content).not.toContain("Use Bun");
+        }
+      });
+    });
+
     it(`protects manual memory when the model requests ${action} after seeing its body`, async () => {
       await withStorage(async (storage) => {
         const user = new MemoryManager(storage);

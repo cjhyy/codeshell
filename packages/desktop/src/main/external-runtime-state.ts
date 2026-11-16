@@ -500,8 +500,10 @@ export class ExternalRuntimeSessionRecorder {
         current.costState?.accountingSessionId,
       ]);
     const capturedSource = sourceKey(state);
+    // A session that also ran on the native engine carries its context
+    // messages (memory index, skills); they are not conversation to remember.
     const messages = this.transcript
-      .toMessages()
+      .toConversationMessages()
       .filter((message) => message.role === "user" || message.role === "assistant")
       .map((message) => {
         const content = sanitizeContent(message.content);
