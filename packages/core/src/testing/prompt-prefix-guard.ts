@@ -14,6 +14,10 @@ import {
   type PromptPrefixRewrite,
 } from "../utils/prompt-prefix-events.js";
 import type { Message } from "../types.js";
+import { createHash } from "node:crypto";
+
+/** Sessions whose user-context head a guard remembers; the oldest is forgotten first. */
+const MAX_REMEMBERED_HEADS = 256;
 
 export interface PromptPrefixViolation {
   scope: string;
@@ -56,10 +60,23 @@ export class PromptPrefixGuard implements PromptPrefixObserver {
   readonly rewrites: PromptPrefixRewrite[] = [];
   private epoch = 0;
   private readonly last = new Map<string, { messages: string[]; epoch: number }>();
+  /** Digest of each scope's latest user-context head. */
+  private readonly heads = new Map<string, string>();
 
   rewrite(kind: PromptPrefixRewrite): void {
     this.epoch += 1;
     this.rewrites.push(kind);
+  }
+
+  userContextHead(scope: string, head: string): void {
+    const digest = createHash("sha256").update(head).digest("hex");
+    const previous = this.heads.get(scope);
+    if (previous !== undefined && previous !== digest) this.rewrite("user_context_head");
+    this.heads.delete(scope);
+    this.heads.set(scope, digest);
+    if (this.heads.size > MAX_REMEMBERED_HEADS) {
+      this.heads.delete(this.heads.keys().next().value!);
+    }
   }
 
   messageLeft(message: Message): void {

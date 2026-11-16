@@ -26,7 +26,10 @@ import { createLLMClient } from "../llm/client-factory.js";
 import { resolvePromptCachePolicy } from "../llm/prompt-cache.js";
 import { PromptCacheRouteMemory } from "./prompt-cache-route.js";
 import { replayEventIdOf } from "./rollover-context.js";
-import { notePromptPrefixRewrite } from "../utils/prompt-prefix-events.js";
+import {
+  notePromptPrefixRewrite,
+  notePromptUserContextHead,
+} from "../utils/prompt-prefix-events.js";
 import { createRunBatchAuthority } from "../operations/run-batch-authority.js";
 import { createSessionOperationController } from "../operations/controller.js";
 import { CapabilityResolver } from "../operations/resolver.js";
@@ -432,8 +435,6 @@ export class Engine {
    * LLM response arrives.
    */
   private ctxOverheadBySid = new Map<string, number>();
-  /** Last user-context head per session (prompt-prefix-events.ts). */
-  private readonly userContextHeads = new Map<string, string>();
   /** Routes whose endpoint rejected explicit cache fields in this process. */
   private readonly promptCacheRoutes = new PromptCacheRouteMemory();
   private promptCacheDiagnostics = new PromptCacheDiagnosticRecorder({ maxSessions: 256 });
@@ -2396,12 +2397,9 @@ export class Engine {
       );
     const userContextMsg = promptComposer.buildUserContextMessage();
     // Changed instructions rebuild the head: the whole history after it misses.
-    const head = userContextMsg ? JSON.stringify(userContextMsg.content) : "";
-    const previousHead = this.userContextHeads.get(session.state.sessionId);
-    if (previousHead !== undefined && previousHead !== head) {
-      notePromptPrefixRewrite("user_context_head");
-    }
-    this.userContextHeads.set(session.state.sessionId, head);
+    notePromptUserContextHead(session.state.sessionId, () =>
+      userContextMsg ? JSON.stringify(userContextMsg.content) : "",
+    );
     const { retained: retainedContextMessages, runStartMessage } = assembleRunMessages({
       messages,
       transcript: session.transcript,

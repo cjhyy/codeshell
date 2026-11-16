@@ -43,6 +43,11 @@ export interface PromptPrefixObserver {
   messageLeft(message: Message): void;
   /** `scope` is the session; `messages` are exactly what the request carries. */
   request(scope: string, messages: readonly Message[]): void;
+  /**
+   * The user-context head (instructions) a run of `scope` starts with. A
+   * head that differs from the scope's previous one rebuilds the prefix.
+   */
+  userContextHead(scope: string, head: string): void;
 }
 
 const OBSERVER = Symbol.for("codeshell.promptPrefixObserver");
@@ -58,6 +63,16 @@ export function notePromptMessageLeft(message: Message): void {
 
 export function notePromptRequest(scope: string, messages: readonly Message[]): void {
   (globalThis as Holder)[OBSERVER]?.request(scope, messages);
+}
+
+/**
+ * Report a run's user-context head. `head` is built only while a guard is
+ * installed, and production keeps no copy of it: the guard alone remembers
+ * what it needs to compare.
+ */
+export function notePromptUserContextHead(scope: string, head: () => string): void {
+  const observer = (globalThis as Holder)[OBSERVER];
+  if (observer) observer.userContextHead(scope, head());
 }
 
 /** Install (or with `undefined`, remove) the observer; returns the previous one. */

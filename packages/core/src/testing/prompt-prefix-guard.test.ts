@@ -3,6 +3,7 @@ import {
   notePromptMessageLeft,
   notePromptPrefixRewrite,
   notePromptRequest,
+  notePromptUserContextHead,
   setPromptPrefixObserver,
 } from "../utils/prompt-prefix-events.js";
 import type { Message } from "../types.js";
@@ -72,10 +73,40 @@ describe("PromptPrefixGuard", () => {
 
   test("reports are no-ops without an installed guard", () => {
     setPromptPrefixObserver(undefined);
+    let built = false;
     expect(() => {
       notePromptRequest("a", [user("1")]);
       notePromptPrefixRewrite("archive");
+      notePromptUserContextHead("a", () => {
+        built = true;
+        return "instructions";
+      });
     }).not.toThrow();
+    // Without a guard the head is never even built.
+    expect(built).toBe(false);
+  });
+
+  test("a changed user-context head is a registered rewrite of that session", () => {
+    const guard = withGuard(() => {
+      notePromptUserContextHead("a", () => "rules v1");
+      notePromptRequest("a", [user("rules v1"), user("1")]);
+      notePromptUserContextHead("a", () => "rules v1");
+      notePromptUserContextHead("a", () => "rules v2");
+      notePromptRequest("a", [user("rules v2"), user("1"), user("2")]);
+    });
+    expect(guard.rewrites).toEqual(["user_context_head"]);
+    expect(guard.violations).toEqual([]);
+  });
+
+  test("the guard remembers a bounded number of heads", () => {
+    const guard = withGuard(() => {
+      for (let index = 0; index <= 256; index += 1)
+        notePromptUserContextHead(`s${index}`, () => "x");
+      // The oldest session was forgotten: its next head is a first sighting.
+      notePromptUserContextHead("s0", () => "changed");
+      notePromptUserContextHead("s256", () => "changed");
+    });
+    expect(guard.rewrites).toEqual(["user_context_head"]);
   });
 });
 
