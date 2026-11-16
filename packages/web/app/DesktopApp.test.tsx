@@ -1156,7 +1156,9 @@ describe("Desktop workbench controller", () => {
       expect(html).not.toContain("<span>Link</span>");
       expect(html).toContain('aria-label="任务内容"');
     }
-    expect(desktop).toContain('aria-label="选择项目"');
+    expect(desktop).toContain('aria-label="项目会话"');
+    expect(desktop).toContain("无项目对话");
+    expect(desktop).not.toContain('aria-label="选择项目"');
     expect(desktop).toContain('aria-label="拍照"');
     expect(
       desktop.slice(desktop.indexOf('<footer class="composer'), desktop.indexOf("</footer>")),

@@ -83,7 +83,7 @@ async function pairedController(
     ? { id: "paired", username: "owned", deviceName: "Phone" }
     : undefined;
   const hook = await renderHook(() => {
-    const app = useRemoteApp();
+    const app = useRemoteApp({ sessionCatalog: "all" });
     return {
       app,
       controller: useDesktopController(app, session, () => {}),
@@ -700,25 +700,12 @@ test("an accepted native choice survives actual worker persistence and a fresh p
       });
       await flushMicrotasks();
     });
-    // Discovering this previously unbound Session's cwd causes the real
-    // controller to request its authorized project page. Answer that distinct
-    // request too, as Main would; an unscoped page is not a scoped cache hit.
-    const scopedList = fresh.sent.findLast((frame) => frame.type === "session.list")!;
-    expect(scopedList.requestId).not.toBe(list.requestId);
-    expect(scopedList.cwds).toEqual([dir]);
-    const scopedPage = await listDiskSessions(
-      { limit: 100, cwds: scopedList.cwds },
-      join(dir, "sessions"),
-    );
-    await act(async () => {
-      fresh.message({
-        type: "session.list.ok",
-        requestId: scopedList.requestId,
-        activeSessionId: "native",
-        ...scopedPage,
-      });
-      await flushMicrotasks();
-    });
+    // Discovering the bound cwd updates execution context without replacing
+    // the computer-wide navigation catalog or requesting another project page.
+    const latestList = fresh.sent.findLast((frame) => frame.type === "session.list")!;
+    expect(latestList.requestId).toBe(list.requestId);
+    expect(latestList.cwds).toBeUndefined();
+    expect(hook.result.current.controller.navigationSessions[0]?.sessionId).toBe("native");
     expect(hook.result.current.app.sessions[0]).toMatchObject({
       provider: state.provider,
       model: state.model,
