@@ -73,8 +73,9 @@ function Fixture(){
  const [open,setOpen]=React.useState(true);
  const [draft,setDraft]=React.useState("原有聊天草稿");
  window.showChooser=()=>setOpen(true);
+ window.hideChooser=()=>setOpen(false);
  return <>
-  <main hidden={open} aria-label="原有本机工作台"><h1>原有聊天</h1><span>existing-session</span><textarea aria-label="原有聊天草稿" value={draft} onChange={e=>setDraft(e.target.value)}/></main>
+  <main hidden={open} aria-label="原有本机工作台"><button onClick={()=>setOpen(true)}>打开我的电脑</button><h1>原有聊天</h1><span>existing-session</span><textarea aria-label="原有聊天草稿" value={draft} onChange={e=>setDraft(e.target.value)}/></main>
   <AccountDeviceWorkspace open={open} onClose={()=>{window.calls.push(["back"]);setOpen(false)}} onOpenLocal={async isCurrent=>{window.calls.push(["local"]);if(window.localMode==="defer")await new Promise((resolve,reject)=>window.pendingLocals.push({resolve,reject,isCurrent}));if(!isCurrent()){window.calls.push(["stale-local"]);return;}setOpen(false)}}/>
  </>;
 }
@@ -170,6 +171,45 @@ async function settle(page) {
 try {
   const page = await createPage();
   await remoteButton(page).waitFor();
+  await checkpoint(
+    "chooser focuses its return control and Escape restores the visible opener",
+    async () => {
+      const back = page.getByRole("button", { name: "返回工作台", exact: true });
+      assert.equal(await back.evaluate((node) => document.activeElement === node), true);
+      await page.keyboard.press("Escape");
+      const opener = page.getByRole("button", { name: "打开我的电脑", exact: true });
+      await opener.click();
+      await back.waitFor();
+      assert.equal(await back.evaluate((node) => document.activeElement === node), true);
+      await page.keyboard.press("Escape");
+      await opener.waitFor();
+      assert.equal(await opener.evaluate((node) => document.activeElement === node), true);
+      await opener.click();
+      await back.waitFor();
+    },
+  );
+  await checkpoint(
+    "closing chooser preserves focus deliberately moved by later navigation",
+    async () => {
+      await page.evaluate(() => {
+        const next = document.createElement("input");
+        next.id = "next-page-focus";
+        next.setAttribute("aria-label", "后续页面焦点");
+        document.body.append(next);
+        next.focus();
+        window.hideChooser();
+      });
+      await page.getByRole("main", { name: "原有本机工作台" }).waitFor();
+      await settle(page);
+      assert.equal(
+        await page.getByLabel("后续页面焦点").evaluate((node) => document.activeElement === node),
+        true,
+      );
+      await page.evaluate(() => document.getElementById("next-page-focus").remove());
+      await page.getByRole("button", { name: "打开我的电脑", exact: true }).click();
+      await remoteButton(page).waitFor();
+    },
+  );
   await checkpoint("chooser has no separate project/task form or execution calls", async () => {
     for (const name of ["执行项目", "电脑任务", "添加图片", "发送到此电脑", "停止此电脑任务"])
       assert.equal(await page.getByLabel(name, { exact: true }).count(), 0);
