@@ -168,6 +168,7 @@ export async function runSessionReportTurn(
       cwd: host.options.hostCwd,
       behaviorMode: "pet",
       kind: "pet",
+      preset: "mimi",
       permissionMode: "default",
       injected: true,
       requireExisting: true,

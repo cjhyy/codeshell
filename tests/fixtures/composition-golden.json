@@ -1,5 +1,5 @@
 {
-  "baselineCommit": "6286331af412f2a8176e9c326db7596f34b71093",
+  "baselineCommit": "5569752758693260f155e6ea589351d3cefa1bf5",
   "snapshot": {
     "version": 1,
     "modules": [
@@ -807,6 +807,24 @@
         "name": "terminal-coding",
         "moduleId": "coding",
         "isDefault": true
+      },
+      {
+        "name": "mimi",
+        "moduleId": "pet",
+        "isDefault": false
+      }
+    ],
+    "presetExtensions": [
+      {
+        "moduleId": "pet",
+        "allExcept": [
+          "mimi"
+        ],
+        "tools": [
+          "ReportToMimi",
+          "NotifyMe",
+          "RequestMimiDelivery"
+        ]
       }
     ],
     "promptSections": [

@@ -160,12 +160,57 @@ function withManagerExternalCatalog(tools: BuiltinTool[]): BuiltinTool[] {
  * report-to-mimi sink closure keeps binding the observer to the tools of the
  * SAME module instance.
  */
+/** The preset Mimi's own Session runs with; work Sessions never use it. */
+const MIMI_PRESET_NAME = "mimi";
+/** Pet tools work Sessions use to reach Mimi; every other pet tool is Mimi's own. */
+const MIMI_LINK_TOOL_NAMES = [
+  reportToMimiToolDef.name,
+  notifyMeToolDef.name,
+  requestMimiDeliveryToolDef.name,
+];
+/** Core tools Mimi uses for her notes-based context. */
+const MIMI_CORE_TOOL_NAMES = ["SaveContextNote", "NewContext", "SearchHistory"];
+
+type PetModuleEngine = NonNullable<AgentModule["engine"]>;
+
+/**
+ * Mimi's preset: exactly the tools her behavior profile allows, all eager (no
+ * ToolSearch). Prompt sections are the general agent sections without the
+ * coding section, which only the coding module provides and Mimi never uses.
+ */
+function mimiPreset(
+  catalogTools: readonly BuiltinTool[],
+): NonNullable<PetModuleEngine["presets"]>[number] {
+  const builtinTools = [...PET_ALLOWED_TOOL_NAMES];
+  const own = new Set(builtinTools);
+  return {
+    name: MIMI_PRESET_NAME,
+    label: "Mimi",
+    description: "Mimi, the owner's assistant: delegates work, reports and reminds.",
+    promptSections: ["base", "orchestration", "browser", "tone"],
+    builtinTools,
+    defaultPermissionRules: [
+      ...catalogTools
+        .filter((tool) => own.has(tool.definition.name))
+        .flatMap((tool) => [...(tool.exposure.defaultPermissionRules ?? [])]),
+      ...MIMI_CORE_TOOL_NAMES.map((tool) => ({ tool, decision: "allow" as const })),
+    ],
+  };
+}
+
 export function createPetModule(): AgentModule {
   const legacy = buildPetParts();
+  const catalogTools = legacy.catalogTools ?? [];
   return {
     id: legacy.id,
     engine: {
-      tools: (legacy.catalogTools ?? []).map((tool) => ({ kind: "preset-tags" as const, tool })),
+      tools: catalogTools.map((tool) => ({ kind: "preset-tags" as const, tool })),
+      presets: [mimiPreset(catalogTools)],
+      // Work Sessions keep the tools that report to Mimi; Mimi's own manager
+      // tools stay in her preset.
+      presetExtensions: [
+        { target: { allExcept: [MIMI_PRESET_NAME] }, tools: MIMI_LINK_TOOL_NAMES },
+      ],
       behaviorProfiles: legacy.behaviorProfiles,
     },
     protocol: {
