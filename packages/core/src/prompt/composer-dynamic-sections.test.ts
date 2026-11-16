@@ -7,7 +7,7 @@ import { invalidateSkillCache, scanSkills } from "../skills/index.js";
 import { buildSkillListingParts } from "../tool-system/builtin/skill-prompt.js";
 import { MemoryManager } from "../session/memory.js";
 import { joinContextListParts, planLedgerEmission } from "../context/context-ledger.js";
-import { dynamicContextSnapshot } from "../testing/dynamic-context-snapshot.js";
+import { dynamicContextSnapshot } from "./dynamic-context-snapshot.fixture.js";
 
 /** The listing text the skills section carries (production: buildSkillListingParts). */
 function listingText(...args: Parameters<typeof buildSkillListingParts>): string {

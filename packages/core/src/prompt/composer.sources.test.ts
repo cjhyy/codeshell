@@ -3,7 +3,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PromptComposer } from "./composer.js";
-import { dynamicContextSnapshot } from "../testing/dynamic-context-snapshot.js";
+import { dynamicContextSnapshot } from "./dynamic-context-snapshot.fixture.js";
 
 const cwd = mkdtempSync(join(tmpdir(), "cs-composer-src-"));
 

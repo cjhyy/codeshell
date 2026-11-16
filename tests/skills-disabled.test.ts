@@ -16,7 +16,7 @@ import { join } from "node:path";
 import { scanSkills, invalidateSkillCache } from "../packages/core/src/skills/scanner.js";
 import { skillTool } from "../packages/core/src/tool-system/builtin/skill.js";
 import { PromptComposer } from "../packages/core/src/prompt/composer.js";
-import { dynamicContextSnapshot } from "../packages/core/src/testing/dynamic-context-snapshot.js";
+import { dynamicContextSnapshot } from "../packages/core/src/prompt/dynamic-context-snapshot.fixture.js";
 
 function makeSkill(base: string, name: string, description: string, body: string) {
   const dir = join(base, name);

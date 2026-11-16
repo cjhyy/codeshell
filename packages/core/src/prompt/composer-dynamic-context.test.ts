@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { PromptComposer } from "./composer.js";
 import { invalidateSkillCache } from "../skills/index.js";
-import { dynamicContextSnapshot } from "../testing/dynamic-context-snapshot.js";
+import { dynamicContextSnapshot } from "./dynamic-context-snapshot.fixture.js";
 
 /**
  * Skills + git status are volatile (a skill install or a file edit changes

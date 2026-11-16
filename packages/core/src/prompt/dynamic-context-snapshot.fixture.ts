@@ -4,7 +4,7 @@
  * production functions.
  */
 import { renderContextSnapshot } from "../context/context-ledger.js";
-import type { PromptComposer } from "../prompt/composer.js";
+import type { PromptComposer } from "./composer.js";
 import type { Message } from "../types.js";
 
 export async function dynamicContextSnapshot(
