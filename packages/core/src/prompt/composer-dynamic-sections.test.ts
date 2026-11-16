@@ -196,6 +196,49 @@ describe("PromptComposer.buildDynamicContextSections", () => {
     expect(await ids()).toEqual(first);
   });
 
+  test("a provider may return a list section compared by entry or by id", async () => {
+    const sections = await new PromptComposer({
+      ...options(),
+      dynamicContextProviders: [
+        () => ({
+          key: "mimi-workspaces",
+          header: "Workspaces:\n",
+          items: [
+            { id: "w1", text: "- w1: Alpha\nsecond line" },
+            { id: "w2", text: "- w2: Beta", label: "Beta" },
+          ],
+        }),
+        () => ({
+          key: "mimi-sessions",
+          compare: "ids",
+          items: [{ id: "s1", text: "- s1: Login work" }],
+          knownIds: ["s1", "s0"],
+        }),
+        // Duplicate ids are not a list; nothing is sent for this provider.
+        () => ({
+          key: "broken",
+          items: [
+            { id: "x", text: "a" },
+            { id: "x", text: "b" },
+          ],
+        }),
+      ],
+    }).buildDynamicContextSections();
+    const byKey = Object.fromEntries(sections.map((section) => [section.key, section]));
+    expect(byKey["capability-mimi-workspaces"]).toMatchObject({
+      text: "Workspaces:\n- w1: Alpha second line\n- w2: Beta",
+      items: [
+        { id: "w1", text: "- w1: Alpha second line" },
+        { id: "w2", text: "- w2: Beta", label: "Beta" },
+      ],
+    });
+    expect(byKey["capability-mimi-sessions"]).toMatchObject({
+      compare: "ids",
+      knownIds: ["s1", "s0"],
+    });
+    expect(byKey["capability-broken"]).toBeUndefined();
+  });
+
   test("providers receive the Session identity and this run's parameters", async () => {
     const seen: unknown[] = [];
     await new PromptComposer({

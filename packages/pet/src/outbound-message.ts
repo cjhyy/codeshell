@@ -33,7 +33,7 @@ export const sendMessageToolDef: ToolDefinition = {
     "Proactively send text and optional existing local attachments to one host-authorized owner " +
     "destination. This is distinct " +
     "from GatewayReply, which only replies to the current inbound conversation. target_id must be " +
-    "copied exactly from an entry of outboundTargets in the trusted runtime context; raw " +
+    "copied exactly from an entry of the outboundTargets list in your context; raw " +
     "channel/user ids are never accepted. Each entry states that destination's text limit, " +
     "accepted attachment kinds and limits, and whether a proactive push may wait until the owner " +
     "messages first. " +
@@ -48,7 +48,7 @@ export const sendMessageToolDef: ToolDefinition = {
         type: "string",
         minLength: 1,
         maxLength: 128,
-        description: "Exact id of one outboundTargets entry from the trusted runtime context.",
+        description: "Exact id of one entry of the outboundTargets list in your context.",
       },
       text: { type: "string", minLength: 1, maxLength: 8_000 },
       attachment_paths: {

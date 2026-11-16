@@ -89,7 +89,7 @@ function makeHarness(overrides: Partial<PetDispatchOptions> = {}) {
 }
 
 describe("Mimi external manager execution", () => {
-  test("passes the native Pet context unchanged and consumes the external host-action envelope", async () => {
+  test("passes the native Pet context, lists merged into one world, and consumes the external host-action envelope", async () => {
     const externalCalls: Record<string, unknown>[] = [];
     const actions: Record<string, unknown>[] = [];
     const reply = {
@@ -142,9 +142,24 @@ describe("Mimi external manager execution", () => {
     expect(external.nativeCalls).toEqual([]);
     expect(native.externalCalls).toEqual([]);
     expect(externalCalls).toHaveLength(1);
+    // An external runtime has no context ledger: it gets one world with the
+    // durable lists merged back in, and otherwise the native parameters.
+    const nativeParams = native.nativeCalls[0]!.params as Record<string, unknown>;
+    const { ledgerContext, ...nativeProfile } = nativeParams.profileParams as Record<
+      string,
+      unknown
+    >;
     expect(externalCalls[0]).toEqual({
-      ...native.nativeCalls[0]!.params,
+      ...nativeParams,
       model: "codex/gpt-6.1-sol",
+      profileParams: { ...nativeProfile, runtimeContext: expect.any(String) },
+    });
+    const externalWorld = JSON.parse(
+      String((externalCalls[0]!.profileParams as Record<string, unknown>).runtimeContext),
+    );
+    expect(externalWorld).toEqual({
+      ...JSON.parse(String(nativeProfile.runtimeContext)),
+      ...JSON.parse(String(ledgerContext)),
     });
     expect(externalCalls[0]).toMatchObject({
       behaviorMode: "pet",

@@ -113,7 +113,11 @@ describe("PetDispatchService", () => {
       },
       worker: {
         requestWorker: async (_method, params) => {
-          managerWorld = JSON.parse(String(params.petRuntimeContext));
+          // Durable lists travel in profileParams.ledgerContext, the rest per turn.
+          managerWorld = {
+            ...JSON.parse(String(params.petRuntimeContext)),
+            ...JSON.parse(String((params.profileParams as Record<string, unknown>).ledgerContext)),
+          };
           return { ok: true, result: { text: "shared tasks" } };
         },
       },
@@ -358,8 +362,9 @@ describe("PetDispatchService", () => {
     expect(String(request?.params.task)).toContain("What is running?");
     expect(String(request?.params.task)).not.toContain("<pet-world>");
     expect(String(request?.params.task)).not.toContain("requestId");
-    expect(String(request?.params.petRuntimeContext)).toContain('"runState":"running"');
-    expect(String(request?.params.petRuntimeContext)).toContain('"taskId":"pet-task-one"');
+    const ledger = String((request?.params.profileParams as Record<string, unknown>).ledgerContext);
+    expect(ledger).toContain('"runState":"running"');
+    expect(ledger).toContain('"taskId":"pet-task-one"');
     expect(String(request?.params.petRuntimeContext)).toContain(
       '"currentMessageSource":{"kind":"im-gateway","channel":"telegram"}',
     );
@@ -2176,7 +2181,10 @@ describe("PetDispatchService", () => {
       worker: {
         requestWorker: async (_method, params) => {
           task = String(params.task);
-          runtimeContext = String(params.petRuntimeContext);
+          // Both parts of the world: per turn and the durable lists.
+          runtimeContext = `${String(params.petRuntimeContext)}\n${String(
+            (params.profileParams as Record<string, unknown> | undefined)?.ledgerContext ?? "",
+          )}`;
           return { ok: true, result: { text: "safe" } };
         },
       },
@@ -2202,7 +2210,10 @@ describe("PetDispatchService", () => {
       },
       worker: {
         requestWorker: async (_method, params) => {
-          runtimeContext = String(params.petRuntimeContext);
+          // Both parts of the world: per turn and the durable lists.
+          runtimeContext = `${String(params.petRuntimeContext)}\n${String(
+            (params.profileParams as Record<string, unknown> | undefined)?.ledgerContext ?? "",
+          )}`;
           return { ok: true, result: { text: "hi" } };
         },
       },
@@ -2281,6 +2292,7 @@ describe("PetDispatchService", () => {
       worker: {
         requestWorker: async (_method, params) => {
           task = String(params.task);
+          // Personalization is per turn: the per-turn world alone.
           runtimeContext = String(params.petRuntimeContext);
           return { ok: true, result: { text: "hi" } };
         },

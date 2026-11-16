@@ -96,6 +96,7 @@ import {
   triggersToolDef,
 } from "./notice-tools.js";
 import { validatePetRunParams } from "./run-params.js";
+import { mimiWorldLedgerProviders } from "./world-ledger.js";
 
 const PET_MANAGER_EXTERNAL_REASONS: Readonly<Record<string, string>> = {
   DelegateWork:
@@ -209,6 +210,8 @@ export function createPetModule(): AgentModule {
         { target: { allExcept: [MIMI_PRESET_NAME] }, tools: MIMI_LINK_TOOL_NAMES },
       ],
       behaviorProfiles: legacy.behaviorProfiles,
+      // Mimi's durable lists reach her through the context ledger.
+      dynamicContextProviders: mimiWorldLedgerProviders(),
     },
     protocol: {
       queries: {
