@@ -1,6 +1,9 @@
 import { deviceStore } from "./storage.js";
 import { generateSecret } from "./deviceCredential.js";
 
+const MAX_ACCOUNT_RELAY_AGE_MS = 10 * 60_000;
+const ACCOUNT_RELAY_CLOCK_SKEW_MS = 30_000;
+
 export interface AccountRelayCredential {
   deviceId: string;
   secretHash: string;
@@ -70,6 +73,7 @@ export async function loadAccountRelayCredential(
       accountEntryUrl,
     );
   if (!response.ok || value?.active !== true) return;
+  const now = Date.now();
   if (
     typeof value.deviceId !== "string" ||
     !value.deviceId ||
@@ -77,14 +81,17 @@ export async function loadAccountRelayCredential(
     typeof value.secretHash !== "string" ||
     !/^[A-Za-z0-9_-]{43}$/.test(value.secretHash) ||
     !Number.isSafeInteger(value.expiresAt) ||
-    value.expiresAt <= Date.now() ||
-    value.expiresAt > Date.now() + 10 * 60_000
+    value.expiresAt <= now ||
+    value.expiresAt > now + MAX_ACCOUNT_RELAY_AGE_MS + ACCOUNT_RELAY_CLOCK_SKEW_MS
   )
     throw new AccountRelaySessionExpired("账号远程授权无效，请重新连接。");
   return {
     deviceId: value.deviceId,
     secretHash: value.secretHash,
-    expiresAt: value.expiresAt,
+    // A small clock difference must not reject a fresh Host grant. The browser
+    // still treats it as valid for at most ten minutes on its own clock; Host
+    // and gateway expiry remain authoritative for every connection.
+    expiresAt: Math.min(value.expiresAt, now + MAX_ACCOUNT_RELAY_AGE_MS),
     accountEntryUrl,
   };
 }

@@ -3,6 +3,8 @@ import type { IncomingMessage } from "node:http";
 import type { TrustedDeviceStore } from "./trusted-device-store.js";
 
 export const ACCOUNT_RELAY_COOKIE = "__Host-cs_host_access";
+const MAX_LOCAL_GRANT_MS = 10 * 60_000;
+const DIRECTORY_CLOCK_SKEW_MS = 30_000;
 
 export function hasAccountRelayCookie(request: IncomingMessage): boolean {
   return (request.headers.cookie ?? "")
@@ -173,31 +175,36 @@ export class AccountRelayAccessGate {
         (provider.accountId !== undefined && binding.accountId !== provider.accountId) ||
         !Number.isSafeInteger(binding.expiresAt) ||
         binding.expiresAt <= now ||
-        binding.expiresAt > now + 10 * 60_000
+        binding.expiresAt > now + MAX_LOCAL_GRANT_MS + DIRECTORY_CLOCK_SKEW_MS
       )
         throw new Error("Account relay handoff target is invalid");
+      // A slightly ahead directory clock must not reject a fresh handoff, but
+      // local authority still lasts at most ten minutes from this redemption.
+      const expiresAt = Math.min(binding.expiresAt, now + MAX_LOCAL_GRANT_MS);
+      // Keep the replay fence through the original directory expiry, including
+      // the small interval after the capped local grant has expired.
       this.consumed.set(digest, binding.expiresAt);
       const hostAccessToken = randomBytes(32).toString("base64url");
       const secretHash = randomBytes(32).toString("base64url");
       const device = this.devices.addEphemeralDevice({
         name: "Account device session",
         secretHash,
-        expiresAt: binding.expiresAt,
+        expiresAt,
       });
-      const timer = setTimeout(() => this.retire(hostAccessToken), binding.expiresAt - now);
+      const timer = setTimeout(() => this.retire(hostAccessToken), expiresAt - now);
       timer.unref();
       this.grants.set(hostAccessToken, {
         provider,
         deviceId: device.id,
         secretHash,
-        expiresAt: binding.expiresAt,
+        expiresAt,
         timer,
       });
       return {
         hostAccessToken,
         deviceId: device.id,
         secretHash,
-        expiresAt: binding.expiresAt,
+        expiresAt,
         hostId: binding.hostId,
         environmentId: binding.environmentId,
       };

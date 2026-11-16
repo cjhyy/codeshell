@@ -92,9 +92,10 @@ const host = new RemoteHostManager({
 host.on("host-error", error => { throw error; });
 host.setAccountRelayAccess({
   hostId:"host-a", environmentId:"env-a",accountId:"account-a",accountOrigin:"https://account.example.test",
-  redeem:async () => {
+  redeem:async (handoff) => {
     redeemed++;
-    return {authorizationId:"authorization-a",authorizationKind:"passkey-remote",sourceKind:"device",sourceHostId:"source-host",accountId:"account-a",rootSessionId:"root-a",hostId:"host-a",environmentId:"env-a",leaseId:"lease-a",expiresAt:Date.now()+1200};
+    const remaining = handoff === "b".repeat(43) ? 600_400 : handoff === "c".repeat(43) ? 631_000 : handoff === "d".repeat(43) ? -1 : 1200;
+    return {authorizationId:"authorization-a",authorizationKind:"passkey-remote",sourceKind:"device",sourceHostId:"source-host",accountId:"account-a",rootSessionId:"root-a",hostId:"host-a",environmentId:"env-a",leaseId:"lease-a",expiresAt:Date.now()+remaining};
   },
   listProjects:async () => [{id:"real-project",name:"Actual project",path:"/actual/project"}],
 });
@@ -210,6 +211,19 @@ try {
   assert.equal(devices.authenticate(grant.deviceId,grant.secretHash),undefined);
   assert.equal((await request("/api/v1/auth/status","GET",{Cookie:cookie},undefined,true)).body.authenticated,false);
   assert.deepEqual(host.onlineDeviceIds(),[]);
+  const beforeSkewed = Date.now();
+  const skewed = await request("/api/v1/relay/session","POST",{}, {handoff:"b".repeat(43)});
+  assert.equal(skewed.status,200);
+  assert.ok(skewed.body.expiresAt >= beforeSkewed+600_000);
+  assert.ok(skewed.body.expiresAt <= Date.now()+600_000);
+  const skewedCookie = skewed.headers["set-cookie"][0];
+  const maxAge = Number(/Max-Age=(\d+)/.exec(skewedCookie)[1]);
+  assert.ok(maxAge > 0 && maxAge <= 600);
+  const skewedRestored = await request("/api/v1/relay/session","GET",{Cookie:skewedCookie.split(";",1)[0]});
+  assert.equal(skewedRestored.body.active,true);
+  assert.equal(skewedRestored.body.expiresAt,skewed.body.expiresAt);
+  assert.equal((await request("/api/v1/relay/session","POST",{}, {handoff:"c".repeat(43)})).status,401);
+  assert.equal((await request("/api/v1/relay/session","POST",{}, {handoff:"d".repeat(43)})).status,401);
   console.log(JSON.stringify({ok:true,httpAndWs:true,singleUse:true,expired:true,noPersistentCredential:true}));
 } finally {
   socket?.terminate();

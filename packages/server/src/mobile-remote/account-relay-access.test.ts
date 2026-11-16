@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, expect, spyOn, test } from "bun:test";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import type { IncomingMessage } from "node:http";
 import { tmpdir } from "node:os";
@@ -12,6 +12,21 @@ import { TrustedDeviceStore } from "./trusted-device-store.js";
 
 const roots: string[] = [];
 afterEach(() => roots.splice(0).forEach((root) => rmSync(root, { recursive: true, force: true })));
+
+function directoryBinding(expiresAt: number): AccountRelayBinding {
+  return {
+    authorizationId: "auth-a",
+    authorizationKind: "passkey-remote",
+    sourceKind: "device",
+    sourceHostId: "source-host",
+    accountId: "account-a",
+    rootSessionId: "root-a",
+    hostId: "host-a",
+    environmentId: "env-a",
+    leaseId: "lease-a",
+    expiresAt,
+  };
+}
 
 function fixture(redeem?: (handoff: string) => Promise<AccountRelayBinding>) {
   const root = mkdtempSync(join(tmpdir(), "account-relay-gate-"));
@@ -64,6 +79,65 @@ test("account handoff is single use and creates only an in-memory target-bound d
     expect(access.isAuthorized()).toBe(false);
     expect(f.devices.authenticate(grant.deviceId, grant.secretHash)).toBeUndefined();
     expect(f.revoked).toEqual([grant.deviceId]);
+  } finally {
+    f.gate.clear();
+  }
+});
+
+test.each([400, 30_000])(
+  "a directory clock %sms ahead cannot extend local authority or release the replay fence",
+  async (skewMs) => {
+    let now = Date.now();
+    const localExpiry = now + 10 * 60_000;
+    const clock = spyOn(Date, "now").mockImplementation(() => now);
+    const f = fixture(async () => directoryBinding(localExpiry + skewMs));
+    try {
+      const grant = await f.gate.exchange("clock-skew-handoff");
+      expect(grant.expiresAt).toBe(localExpiry);
+      const request = {
+        headers: { cookie: `${ACCOUNT_RELAY_COOKIE}=${grant.hostAccessToken}` },
+      } as IncomingMessage;
+      const access = f.gate.capture(request)!;
+      expect(f.gate.browserCredential(request)?.expiresAt).toBe(localExpiry);
+      now = localExpiry - 1;
+      expect(access.isAuthorized()).toBe(true);
+      expect(f.devices.authenticate(grant.deviceId, grant.secretHash)?.id).toBe(grant.deviceId);
+      now = localExpiry;
+      expect(access.isAuthorized()).toBe(false);
+      expect(f.gate.browserCredential(request)).toBeUndefined();
+      expect(f.devices.authenticate(grant.deviceId, grant.secretHash)).toBeUndefined();
+      await expect(f.gate.exchange("clock-skew-handoff")).rejects.toThrow(/unavailable/);
+    } finally {
+      f.gate.clear();
+      clock.mockRestore();
+    }
+  },
+);
+
+test.each([-1, 0, 10 * 60_000 + 30_001, 60_000.5])(
+  "expired, excessive, or non-integral directory lifetime %sms fails closed",
+  async (remainingMs) => {
+    const now = Date.now();
+    const clock = spyOn(Date, "now").mockReturnValue(now);
+    const f = fixture(async () => directoryBinding(now + remainingMs));
+    try {
+      await expect(f.gate.exchange("invalid-expiry-handoff")).rejects.toThrow(/target/);
+      expect(f.devices.listDevices()).toEqual([]);
+      expect(existsSync(f.path)).toBe(false);
+    } finally {
+      f.gate.clear();
+      clock.mockRestore();
+    }
+  },
+);
+
+test("shorter directory authorization keeps its exact remaining expiry", async () => {
+  const expiresAt = Date.now() + 60_000;
+  const f = fixture(async () => directoryBinding(expiresAt));
+  try {
+    const grant = await f.gate.exchange("shorter-expiry-handoff");
+    expect(grant.expiresAt).toBe(expiresAt);
+    expect(f.devices.authenticate(grant.deviceId, grant.secretHash)?.id).toBe(grant.deviceId);
   } finally {
     f.gate.clear();
   }

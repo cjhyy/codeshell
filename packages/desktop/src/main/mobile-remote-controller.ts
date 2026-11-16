@@ -1,6 +1,7 @@
 import { hostname } from "node:os";
 import type {
   AccessPasscode,
+  AccountRelayBinding,
   CloudflaredBinary,
   RemoteHostManager,
   TunnelManager,
@@ -32,6 +33,7 @@ import {
   type CloudAccountTransport,
 } from "./cloud-account-http.js";
 import { validCloudAccountGrant } from "./cloud-account-store.js";
+import { dlog } from "./desktop-logger.js";
 
 /** One owner for all three transports. Stop fences pending starts/enrollment immediately. */
 export class MobileRemoteController {
@@ -363,18 +365,43 @@ export class MobileRemoteController {
       accountOrigin: registration.relayOrigin,
       listProjects: this.deps.listProjects ?? (async () => []),
       redeem: async (handoff) => {
-        const signal = this.operation.signal;
-        const credential = await this.accountDeviceCredential(signal);
-        const value = await (this.deps.accountRequest ?? createCloudAccountTransport())({
-          origin: registration.relayOrigin,
-          path: "/api/v1/remote-hosts/handoffs/redeem",
-          token: credential,
-          body: { handoff, hostId: registration.hostId, environmentId: registration.environmentId },
-          signal,
-        });
-        signal.throwIfAborted();
-        if (this.registration?.hostId !== registration.hostId) throw new Error("设备授权已更换。");
-        return value as any;
+        try {
+          const signal = this.operation.signal;
+          const credential = await this.accountDeviceCredential(signal);
+          const value = await (this.deps.accountRequest ?? createCloudAccountTransport())({
+            origin: registration.relayOrigin,
+            path: "/api/v1/remote-hosts/handoffs/redeem",
+            token: credential,
+            body: { handoff, hostId: registration.hostId, environmentId: registration.environmentId },
+            signal,
+          });
+          signal.throwIfAborted();
+          if (this.registration?.hostId !== registration.hostId) throw new Error("设备授权已更换。");
+          const binding =
+            value && typeof value === "object" ? (value as Partial<AccountRelayBinding>) : undefined;
+          // Only timing and a target-match boolean; never persist handoffs,
+          // credentials, binding identifiers, response bodies, or error text.
+          dlog("main", "mobile.account_relay.redeem_received", {
+            ...(Number.isSafeInteger(binding?.expiresAt)
+              ? { expiresInMs: binding!.expiresAt! - Date.now() }
+              : {}),
+            targetMatches:
+              binding?.hostId === registration.hostId &&
+              binding?.environmentId === registration.environmentId &&
+              binding?.accountId === registration.accountId,
+          });
+          return value as AccountRelayBinding;
+        } catch (error) {
+          dlog("main", "mobile.account_relay.redeem_failed", {
+            ...(error instanceof CloudAccountHttpError &&
+            Number.isInteger(error.status) &&
+            error.status >= 100 &&
+            error.status <= 599
+              ? { status: error.status }
+              : {}),
+          });
+          throw error;
+        }
       },
     });
   }

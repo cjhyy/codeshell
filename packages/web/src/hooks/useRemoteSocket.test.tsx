@@ -2,7 +2,11 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { act } from "react";
 import { ensureMiniDom, flushMicrotasks, renderHook } from "../test-utils/renderHook";
 import { useRemoteSocket, type ResyncReason } from "./useRemoteSocket";
-import { remoteDeviceCredential } from "../lib/accountRelaySession.js";
+import {
+  AccountRelaySessionExpired,
+  loadAccountRelayCredential,
+  remoteDeviceCredential,
+} from "../lib/accountRelaySession.js";
 
 class MemoryStorage {
   private readonly values = new Map<string, string>();
@@ -108,6 +112,54 @@ afterEach(() => {
 });
 
 describe("useRemoteSocket resync", () => {
+  test.each([60_000, 600_400, 630_000])(
+    "account bootstrap tolerates bounded clock skew at %d ms while preserving its local lifetime cap",
+    async (remaining) => {
+      setupBrowser();
+      const now = 1_800_000_000_000;
+      const restoreNow = defineTestProperty(Date, "now", { value: () => now });
+      globalThis.fetch = (async (url: string) => {
+        expect(url).toBe("/api/v1/relay/session");
+        return Response.json({
+          active: true,
+          deviceId: "account-browser",
+          secretHash: "a".repeat(43),
+          expiresAt: now + remaining,
+        });
+      }) as typeof fetch;
+      try {
+        const credential = await loadAccountRelayCredential(new AbortController().signal);
+        expect(credential?.expiresAt).toBe(now + Math.min(remaining, 600_000));
+        expect(localStorage.getItem("cs.deviceId")).toBe("device-1");
+      } finally {
+        restoreNow();
+      }
+    },
+  );
+
+  test.each([-1, 630_001])(
+    "account bootstrap rejects expired or out-of-range grants at %d ms",
+    async (remaining) => {
+      setupBrowser();
+      const now = 1_800_000_000_000;
+      const restoreNow = defineTestProperty(Date, "now", { value: () => now });
+      globalThis.fetch = (async () =>
+        Response.json({
+          active: true,
+          deviceId: "account-browser",
+          secretHash: "a".repeat(43),
+          expiresAt: now + remaining,
+        })) as typeof fetch;
+      try {
+        await expect(
+          loadAccountRelayCredential(new AbortController().signal),
+        ).rejects.toBeInstanceOf(AccountRelaySessionExpired);
+      } finally {
+        restoreNow();
+      }
+    },
+  );
+
   test("an account browser uses an in-memory grant without replacing its legacy pairing", async () => {
     setupBrowser();
     window.location.origin = "https://computer.fixture.test";
