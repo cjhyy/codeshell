@@ -69,7 +69,7 @@ describe("ToolSearch complete single-schema budgets", () => {
         expect(ctx.runToolSurface!.getSelection().discovered).toEqual([tool.name]);
         expect(ctx.runToolSurface!.isCallable(tool.name)).toBe(true);
         expect(JSON.stringify(ctx.runToolSurface!.requestSnapshot())).toBe(prefix);
-        if (health) expect(output).toContain("MCP connection status for this run:");
+        if (health) expect(output).toContain("MCP connection status:");
         if (mode === "call-tool") expect(typeof result).toBe("string");
         else {
           if (typeof result === "string")

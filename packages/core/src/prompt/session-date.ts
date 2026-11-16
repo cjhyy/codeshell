@@ -40,5 +40,5 @@ export function resolveSessionDates(sessionStartedAt: number | undefined, now: D
 
 /** Text of the ledger's "date" section. */
 export function dateChangeNotice(today: string): string {
-  return `The date has changed since this conversation began. Today's date is now ${today}; this supersedes any date stated earlier.`;
+  return `The date has changed since this conversation began. Today's date is ${today}; this supersedes any date stated earlier, and a later notice will follow if the date changes again.`;
 }

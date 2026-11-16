@@ -76,6 +76,8 @@ describe("PromptComposer session date", () => {
       dateChangeNotice("2026-11-13"),
     );
     expect(dateChangeNotice("2026-11-13")).toContain("2026-11-13");
+    // Persisted history: a state that holds until the next notice, not "now".
+    expect(dateChangeNotice("2026-11-13")).not.toMatch(/\bnow\b/);
   });
 
   it("announces no date when there is no head message stating one", () => {

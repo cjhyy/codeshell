@@ -81,9 +81,13 @@ createInterface({ input: process.stdin }).on("line", (line) => {
         (await engine.run("Inspect available capabilities.", { sessionId, cwd: dir })).reason,
       ).toBe("completed");
       const first = JSON.stringify(requests.get(model)![0]);
-      expect(first).toContain("MCP connection status for this run:");
+      expect(first).toContain("MCP connection status:");
       expect(first).toContain("repairable-fixture");
-      expect(first).toContain("tools are unavailable in this run");
+      expect(first).toContain(
+        "tools are currently unavailable; an update will follow if this changes",
+      );
+      // Persisted history stays true until an update: no "this run".
+      expect(first).not.toContain("this run");
       // Context is append-only history: the status is part of the first run's
       // snapshot, which is persisted so a resumed session sends the same bytes.
       const ledgerEvents = () =>
@@ -94,8 +98,8 @@ createInterface({ input: process.stdin }).on("line", (line) => {
           .filter((event) => event.data?.contextLedger !== undefined);
       expect(ledgerEvents()).toHaveLength(1);
       expect(ledgerEvents()[0].data.injected).toBe(true);
-      expect(ledgerEvents()[0].data.content).toContain("MCP connection status for this run:");
-      expect(state()).not.toContain("MCP connection status for this run:");
+      expect(ledgerEvents()[0].data.content).toContain("MCP connection status:");
+      expect(state()).not.toContain("MCP connection status:");
 
       writeFileSync(readyFile, "ready");
       requests.set(model, []);
@@ -107,7 +111,7 @@ createInterface({ input: process.stdin }).on("line", (line) => {
       // The earlier status stays where it was sent; the recovery is told as an
       // update at the tail instead of rewriting history.
       const recoveredMessages = requests.get(model)![0] as { content: unknown }[];
-      expect(recovered.match(/MCP connection status for this run:/g)).toHaveLength(1);
+      expect(recovered.match(/MCP connection status:/g)).toHaveLength(1);
       const updates = recoveredMessages
         .map((message) => String(message.content))
         .filter((text) => text.includes('<context-section-removed key="mcp-failures" />'));
@@ -117,7 +121,7 @@ createInterface({ input: process.stdin }).on("line", (line) => {
         "snapshot",
         "update",
       ]);
-      expect(state()).not.toContain("MCP connection status for this run:");
+      expect(state()).not.toContain("MCP connection status:");
     } finally {
       await engine.dispose();
       requests.delete(model);
