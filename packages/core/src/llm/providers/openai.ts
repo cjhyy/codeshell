@@ -498,12 +498,19 @@ export class OpenAIClient extends LLMClientBase {
           : undefined;
         const stableBoundaryIndex = promptCacheBoundaryIndex(messages, stablePrefixEndIndex);
         let cachePlan: PromptCacheHistoryPlan | undefined;
-        const cacheHistory = options.promptCache?.auxiliary
-          ? this.auxPromptCacheHistory
-          : this.promptCacheHistory;
-        if (cachePolicy.strategy === "openai-hybrid" && options.promptCache?.scopeId) {
-          let latestEligibleIndex = -1;
-          for (let index = messages.length - 1; index >= 0; index--) {
+        const auxiliary = options.promptCache?.auxiliary === true;
+        const cacheHistory = auxiliary ? this.auxPromptCacheHistory : this.promptCacheHistory;
+        // On the Claude route a read lands only on a breakpoint an earlier
+        // request wrote (no longest-prefix match). An auxiliary call never
+        // repeats its last message, so the next one can only resume from this
+        // one's stable end: remember it and mark it again next time.
+        const auxiliaryAnthropic = auxiliary && cachePolicy.strategy === "anthropic-explicit";
+        if (
+          (cachePolicy.strategy === "openai-hybrid" || auxiliaryAnthropic) &&
+          options.promptCache?.scopeId
+        ) {
+          let latestEligibleIndex = auxiliaryAnthropic ? (stableBoundaryIndex ?? -1) : -1;
+          for (let index = messages.length - 1; !auxiliaryAnthropic && index >= 0; index--) {
             const message = messages[index]!;
             if (
               (message.role === "user" || message.role === "tool") &&
@@ -541,6 +548,7 @@ export class OpenAIClient extends LLMClientBase {
             cachePolicy,
             stableBoundaryIndex,
             cachePlan?.readBoundaryIndex,
+            auxiliary,
           );
         }
 
@@ -1355,6 +1363,7 @@ export class OpenAIClient extends LLMClientBase {
     policy: PromptCachePolicy,
     stablePrefixEndIndex: number | undefined,
     previousBoundaryIndex?: number,
+    auxiliary = false,
   ): void {
     if (!usesExplicitCacheMarkers(policy.strategy)) return;
 
@@ -1389,8 +1398,10 @@ export class OpenAIClient extends LLMClientBase {
       policy.breakpoints.includes("stable-history") ? stablePrefixEndIndex : undefined,
       // Hybrid uses at most three explicit boundaries, leaving the fourth slot
       // for the implicit tail. The longest matching prior stable/rolling boundary
-      // permits reuse even when a run's dynamic snapshot has been removed.
-      policy.strategy === "openai-hybrid"
+      // permits reuse even when a run's dynamic snapshot has been removed. An
+      // auxiliary call's tail is never repeated, so it reads the previous
+      // call's boundary instead of writing a rolling one.
+      policy.strategy === "openai-hybrid" || auxiliary
         ? previousBoundaryIndex
         : policy.breakpoints.includes("rolling-history")
           ? messages.length - 1

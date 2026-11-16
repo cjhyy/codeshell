@@ -14,14 +14,20 @@ function turns(count: number) {
   }));
 }
 
-/** An OpenRouter GPT route (openai-hybrid) that records request bodies. */
-function capturingClient(histories: { main?: PromptCacheHistory; aux?: PromptCacheHistory } = {}) {
+/**
+ * An OpenRouter route that records request bodies: GPT (openai-hybrid) unless
+ * another model is given.
+ */
+function capturingClient(
+  histories: { main?: PromptCacheHistory; aux?: PromptCacheHistory } = {},
+  model = "openai/gpt-5.6-sol",
+) {
   const bodies: any[] = [];
   const client = new OpenAIClient(
     {
       provider: "openai",
       providerKind: "openrouter",
-      model: "openai/gpt-5.6-sol",
+      model,
       apiKey: "test",
       baseUrl: "https://openrouter.ai/api/v1",
     },
@@ -47,10 +53,9 @@ function capturingClient(histories: { main?: PromptCacheHistory; aux?: PromptCac
   return { client, bodies };
 }
 
-function breakpoints(body: any): number[] {
+function breakpoints(body: any, field = "prompt_cache_breakpoint"): number[] {
   return body.messages.flatMap((message: any, index: number) =>
-    Array.isArray(message.content) &&
-    message.content.some((part: any) => part.prompt_cache_breakpoint)
+    Array.isArray(message.content) && message.content.some((part: any) => part[field])
       ? [index]
       : [],
   );
@@ -216,4 +221,46 @@ describe("auxiliary prompt cache request", () => {
     await aux(18);
     expect(breakpoints(bodies.at(-1))).toContain(first.stable.length);
   });
+
+  test.each(["memory-extraction", "session-summary"] as const)(
+    "%s on the Claude route: the next call marks this call's stable end again",
+    async (purpose) => {
+      // Claude reads only at a breakpoint an earlier request wrote, so the
+      // second call must carry a marker exactly where the first call's stable
+      // part ended, or it reads nothing past the system prompt.
+      const { client, bodies } = capturingClient({}, "anthropic/claude-sonnet-4.5");
+      const send = async (count: number) => {
+        const segments =
+          purpose === "memory-extraction"
+            ? buildExtractionPromptSegments(turns(count), [])
+            : buildSessionMemoryPromptSegments(turns(count));
+        await client.createMessage({
+          systemPrompt: "aux system",
+          ...auxCachedRequest({
+            client,
+            sessionId: "s-claude",
+            prompt: joinMemoryPrompt(segments),
+            plan: { purpose, ...segments },
+          }),
+          tools: [],
+        });
+        return segments;
+      };
+      const first = await send(14);
+      const second = await send(18);
+      const [one, two] = bodies;
+      expect(second.stable.length).toBeGreaterThan(first.stable.length);
+      // System, then this call's stable end; no marker on the volatile tail,
+      // which the next call never repeats.
+      expect(breakpoints(one, "cache_control")).toEqual([0, first.stable.length]);
+      expect(breakpoints(two, "cache_control")).toEqual([
+        0,
+        first.stable.length,
+        second.stable.length,
+      ]);
+      expect(two.messages.slice(0, first.stable.length + 1).map(wireText)).toEqual(
+        one.messages.slice(0, first.stable.length + 1).map(wireText),
+      );
+    },
+  );
 });
