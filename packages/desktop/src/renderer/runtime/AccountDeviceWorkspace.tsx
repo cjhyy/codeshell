@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { accountPublicOrigin } from "@cjhyy/code-shell-web";
 import type { AccountExecutionDevice } from "../../shared/account-device.js";
 import type { CloudAccountStatus } from "../../shared/cloud-account.js";
@@ -36,7 +36,22 @@ export function AccountDeviceWorkspace({
   const [refresh, setRefresh] = useState(0);
   const revision = useRef(0);
   const pending = useRef<string | null>(null);
+  const surface = useRef<HTMLElement>(null);
+  const returnButton = useRef<HTMLButtonElement>(null);
   const identity = identityOf(account);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const opener = document.activeElement;
+    const container = surface.current;
+    returnButton.current?.focus({ preventScroll: true });
+    return () => {
+      const focused = document.activeElement;
+      if (focused !== document.body && !container?.contains(focused)) return;
+      if (opener instanceof HTMLElement && opener.isConnected && opener.getClientRects().length)
+        opener.focus({ preventScroll: true });
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -181,6 +196,7 @@ export function AccountDeviceWorkspace({
   if (!open) return null;
   return (
     <section
+      ref={surface}
       role="dialog"
       aria-modal="true"
       aria-label="我的电脑"
@@ -195,6 +211,7 @@ export function AccountDeviceWorkspace({
       >
         <h1 className="text-lg font-semibold">我的电脑</h1>
         <button
+          ref={returnButton}
           type="button"
           onClick={onClose}
           className="min-h-11 shrink-0 rounded-md border border-border px-3 py-2 text-sm"
