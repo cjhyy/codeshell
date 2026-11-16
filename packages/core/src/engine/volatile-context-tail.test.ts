@@ -43,8 +43,16 @@ describe("volatile context at the request tail", () => {
     };
     // In place: the settled line (here the pending rewrite) wins.
     expect(resolveStablePrefixMessageCount(input)).toBe(0);
-    // At the tail: everything before the volatile message is the prefix.
-    expect(resolveStablePrefixMessageCount({ ...input, volatileAtTail: true })).toBe(4);
+    // At the tail: everything before the volatile message is the prefix…
+    expect(
+      resolveStablePrefixMessageCount({
+        ...input,
+        pendingRewriteMessage: undefined,
+        volatileAtTail: true,
+      }),
+    ).toBe(4);
+    // …unless a pending rewrite batch will change something before it.
+    expect(resolveStablePrefixMessageCount({ ...input, volatileAtTail: true })).toBe(0);
     // No volatile message this run: the flag changes nothing.
     expect(
       resolveStablePrefixMessageCount({ ...input, isVolatile: () => false, volatileAtTail: true }),

@@ -85,6 +85,18 @@ describe("resolveStablePrefixMessageCount", () => {
     ).toBe(1);
   });
 
+  it("on the tail route, ends before a pending rewrite that precedes the tail", () => {
+    const messages = [head, old1, old2, task, ledger, step, volatile];
+    const atTail = { messages, isVolatile, runStartMessage: task, volatileAtTail: true };
+    expect(resolveStablePrefixMessageCount(atTail)).toBe(6);
+    expect(resolveStablePrefixMessageCount({ ...atTail, pendingRewriteMessage: old2 })).toBe(2);
+    expect(resolveStablePrefixMessageCount({ ...atTail, pendingRewriteMessage: step })).toBe(5);
+    // A pending message no longer in the list narrows nothing.
+    expect(
+      resolveStablePrefixMessageCount({ ...atTail, pendingRewriteMessage: user("gone") }),
+    ).toBe(6);
+  });
+
   it("falls back to the run start when the pending message is gone", () => {
     expect(
       resolveStablePrefixMessageCount({
