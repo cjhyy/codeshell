@@ -917,9 +917,18 @@ describe("PetDispatchService", () => {
     expect(String(request?.params.petRuntimeContext)).toContain(
       '"currentMessageSource":{"kind":"im-gateway","channel":"wechat"}',
     );
-    expect(String(request?.params.petRuntimeContext)).toContain(
-      '"currentMessageCapabilities":{"gatewayReply":{"tool":"GatewayReply","destination":"current originating IM conversation","allowedRoots":["/safe/pet","/Users/admin/Downloads"]}}',
-    );
+    // The route's limits ride with the capability, since GatewayReply's definition is static.
+    expect(
+      JSON.parse(String(request?.params.petRuntimeContext)).currentMessageCapabilities,
+    ).toMatchObject({
+      gatewayReply: {
+        tool: "GatewayReply",
+        destination: "current originating IM conversation",
+        allowedRoots: ["/safe/pet", "/Users/admin/Downloads"],
+        maxTextLength: expect.any(Number),
+        attachments: expect.any(Array),
+      },
+    });
     expect((request?.params.profileParams as Record<string, unknown>).gateway).toBeUndefined();
     expect(String(request?.params.task)).toContain("MUST call GatewayReply exactly once");
     expect(String(request?.params.task)).toContain(
@@ -2731,6 +2740,8 @@ describe("PetDispatchService", () => {
           tool: "GatewayReply",
           destination: "current IM conversation",
           allowedRoots: ["/safe/pet", "/Users/admin/Downloads"],
+          // The route's limits ride with the capability; GatewayReply is static.
+          ...(profiles[index + 1]?.gatewayReply as Record<string, unknown>),
         },
       });
       expect(profiles[index + 1]?.gatewayReply).toEqual({
@@ -2757,7 +2768,7 @@ describe("PetDispatchService", () => {
     }
     const whatsappContext =
       contexts[channelEntries.findIndex(([channel]) => channel === "whatsapp") + 1];
-    expect(whatsappContext?.currentMessageCapabilities).toEqual({
+    expect(whatsappContext?.currentMessageCapabilities).toMatchObject({
       gateway: {
         tool: "Gateway",
         discovery: ["search", "describe"],
@@ -2770,7 +2781,7 @@ describe("PetDispatchService", () => {
     });
     const telegramContext =
       contexts[channelEntries.findIndex(([channel]) => channel === "telegram") + 1];
-    expect(telegramContext?.currentMessageCapabilities).toEqual({
+    expect(telegramContext?.currentMessageCapabilities).toMatchObject({
       gateway: {
         tool: "Gateway",
         discovery: ["search", "describe"],

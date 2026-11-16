@@ -64,7 +64,6 @@ import {
   memoryAvailability,
   memoryTool,
   memoryToolDef,
-  rewriteGatewayReplyDef,
 } from "./host-actions.js";
 import { PET_ALLOWED_TOOL_NAMES, PET_BEHAVIOR_PROFILE } from "./profile.js";
 import { createPetProjectionObserver, PET_HIDDEN_SESSION_KINDS } from "./projection-extension.js";
@@ -173,8 +172,8 @@ type PetModuleEngine = NonNullable<AgentModule["engine"]>;
 
 /**
  * Mimi's preset: exactly the tools her behavior profile allows, all eager (no
- * ToolSearch). Prompt sections are the general agent sections without the
- * coding section, which only the coding module provides and Mimi never uses.
+ * ToolSearch). Prompt sections are the general system and tone sections; the
+ * coding, orchestration and browser sections describe tools Mimi never has.
  */
 function mimiPreset(
   catalogTools: readonly BuiltinTool[],
@@ -185,7 +184,7 @@ function mimiPreset(
     name: MIMI_PRESET_NAME,
     label: "Mimi",
     description: "Mimi, the owner's assistant: delegates work, reports and reminds.",
-    promptSections: ["base", "orchestration", "browser", "tone"],
+    promptSections: ["base", "tone"],
     builtinTools,
     defaultPermissionRules: [
       ...catalogTools
@@ -449,7 +448,6 @@ function buildPetParts(): PetParts {
           presetTags: ["harness-min", "general"],
           defaultPermissionRules: [{ tool: gatewayReplyToolDef.name, decision: "allow" }],
           availability: gatewayReplyAvailability,
-          rewriteDefinition: rewriteGatewayReplyDef,
         },
       },
       {

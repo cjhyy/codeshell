@@ -84,7 +84,7 @@ export const gatewayToolDef: ToolDefinition = {
 };
 
 export function gatewayAvailability(ctx: ToolVisibilityContext): boolean {
-  return Boolean(ctx.profileMeta?.petGateway);
+  return ctx.behaviorProfile === "pet";
 }
 
 export async function gatewayTool(

@@ -123,6 +123,7 @@ export async function runSessionReportTurn(
               tool: "GatewayReply",
               destination: "current originating IM conversation",
               allowedRoots: replyAttachmentRoots,
+              ...gatewayReplyCapability,
             },
           },
         }

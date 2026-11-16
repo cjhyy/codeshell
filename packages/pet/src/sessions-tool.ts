@@ -54,14 +54,12 @@ export const sessionsToolDef: ToolDefinition = {
 };
 
 /**
- * Sessions is visible only when the host declared a sessions root for this
- * turn (profile.ts buildVisibilityMeta publishes `petSessions` from
- * profileParams.sessionsRootDir), mirroring gatewayAvailability: a turn
- * without the host wiring must not expose a permanently-broken tool. The
- * runtime handler still fails closed as a second layer.
+ * Sessions is visible on every Mimi turn so her tool table does not change
+ * with the message source. A turn without a host-declared sessions root
+ * (profileParams.sessionsRootDir) is refused by the runtime handler.
  */
 export function sessionsAvailability(ctx: ToolVisibilityContext): boolean {
-  return Boolean(ctx.profileMeta?.petSessions);
+  return ctx.behaviorProfile === "pet";
 }
 
 /**

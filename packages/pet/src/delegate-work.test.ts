@@ -281,7 +281,7 @@ describe("DelegateWork", () => {
 });
 
 describe("delegateWorkAvailability", () => {
-  test("visible only for a Pet turn with host-provided Workspaces", () => {
+  test("visible on every Pet turn, whether or not this turn lists Workspaces", () => {
     expect(
       delegateWorkAvailability({
         cwd: "/x",
@@ -297,7 +297,7 @@ describe("delegateWorkAvailability", () => {
         behaviorProfile: "pet",
         profileMeta: { petWorkspaces: [] },
       } as never),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       delegateWorkAvailability({
         cwd: "/x",

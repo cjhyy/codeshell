@@ -8,7 +8,6 @@ import {
   isPetWorkExecutionBackend,
   normalizePetWorkDelegation,
   type PetSessionContinuationEvidence,
-  type PetWorkspaceOption,
 } from "./delegation.js";
 import type { PetRunScopedServices } from "./profile.js";
 import { hasOnlyDeclaredToolArguments } from "./tool-arguments.js";
@@ -80,13 +79,8 @@ export const delegateWorkToolDef: ToolDefinition = {
   },
 };
 
-function visibleWorkspaces(ctx: ToolVisibilityContext): readonly PetWorkspaceOption[] {
-  const workspaces = ctx.profileMeta?.petWorkspaces;
-  return Array.isArray(workspaces) ? (workspaces as readonly PetWorkspaceOption[]) : [];
-}
-
 export function delegateWorkAvailability(ctx: ToolVisibilityContext): boolean {
-  return ctx.behaviorProfile === "pet" && visibleWorkspaces(ctx).length > 0;
+  return ctx.behaviorProfile === "pet";
 }
 
 export async function delegateWorkTool(
