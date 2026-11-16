@@ -58,6 +58,8 @@ mock.module("@/components/ui/dialog", () => ({
 }));
 const { I18nProvider } = await import("../i18n/I18nProvider");
 const { AccountDeviceEntry } = await import("./AccountDeviceEntry");
+const { AccountFeatureEntry } = await import("./AccountFeatureEntry");
+const { useAccountFeature } = await import("./useAccountFeature");
 const { DeviceRelaySettings } = await import("../settings/DeviceRelaySettings");
 const { AccountRemoteAccessSettings } = await import("../settings/AccountRemoteAccessSettings");
 const { NewProjectDialog } = await import("../projects/NewProjectDialog");
@@ -219,11 +221,21 @@ const update = async (run: () => unknown) => {
     await flushMicrotasks();
   });
 };
+function FeatureLifecycleProbe() {
+  const feature = useAccountFeature("devices.dispatch");
+  return (
+    <AccountFeatureEntry feature={feature} label="测试账号功能" onSignIn={() => signIns++}>
+      <button type="button">测试账号功能</button>
+    </AccountFeatureEntry>
+  );
+}
 const render = async () =>
   update(() =>
     root.render(
       <I18nProvider>
-        {scenario === "remote-access" ? (
+        {scenario.startsWith("late-") || scenario === "unmount" ? (
+          <FeatureLifecycleProbe />
+        ) : scenario === "remote-access" ? (
           <AccountRemoteAccessSettings
             identity={{ origin: "https://account.example", accountId: "account" }}
           />
@@ -303,7 +315,7 @@ const render = async () =>
             onChanged={() => {}}
           />
         ) : (
-          <AccountDeviceEntry onOpen={() => opened++} onSignIn={() => signIns++} />
+          <AccountDeviceEntry onOpen={() => opened++} />
         )}
       </I18nProvider>,
     ),
@@ -324,12 +336,12 @@ try {
     assert.equal(enrolled, 0);
     assert.equal(resumed, 0);
   } else if (scenario.startsWith("late-")) {
-    assert.equal(button("我的电脑"), undefined);
+    assert.equal(button("测试账号功能"), undefined);
     await update(() => subscribed!(featureSnapshot("sign-in")));
     if (scenario === "late-failure") await update(() => reject(new Error("old response")));
     else await update(() => resolve(featureSnapshot("hidden")));
-    assert.ok(button("我的电脑"));
-    await update(() => props(button("我的电脑")).onClick());
+    assert.ok(button("测试账号功能"));
+    await update(() => props(button("测试账号功能")).onClick());
     assert.equal(signIns, 1);
   } else if (scenario === "unmount") {
     await update(() => root.unmount());
@@ -407,9 +419,17 @@ try {
             ? "远程连接"
             : "手机访问入口";
     const gated = nodes(container).find((n) => props(n)["data-account-feature"]);
-    if (state === "hidden") {
+    if (scenario === "devices") {
+      assert.ok(button(label), "Computer selection remains available without account features");
+      assert.notEqual(props(button(label)).disabled, true);
+      assert.equal(gated, undefined, "Only remote computer access is account-gated");
+      await update(() => props(button(label)).onClick());
+      assert.equal(opened, 1);
+      assert.equal(signIns, 0);
+      assert.equal(resumed, 0);
+      assert.equal(enrolled, 0);
+    } else if (state === "hidden") {
       assert.equal(gated, undefined);
-      if (scenario === "devices") assert.equal(button(label), undefined);
       if (scenario === "cloud") assert.equal(button(label), undefined);
       if (scenario === "remote")
         assert.equal(
@@ -426,14 +446,8 @@ try {
       await update(() => props(gated).onClick());
       assert.equal(signIns, 1);
     } else if (state === "pending") {
-      assert.equal(props(gated).disabled, scenario !== "devices");
+      assert.equal(props(gated).disabled, true);
       if (pendingReason === "relay_connecting") assert.ok(text(gated).includes("正在连接"));
-      if (scenario === "devices") {
-        await update(() => props(gated).onClick());
-        assert.equal(opened, 1, "Pending devices can open the recovery workspace");
-        assert.equal(resumed, 0, "Opening recovery does not itself start remote access");
-        assert.equal(enrolled, 0);
-      }
       if (scenario === "phone") {
         assert.equal(button("通过当前账号登记电脑"), undefined);
         assert.equal(props(button("重试连接")).disabled, false);
@@ -443,9 +457,6 @@ try {
         assert.equal(resumed, 1);
         assert.deepEqual(retryOrder, ["resume"]);
       }
-    } else if (scenario === "devices") {
-      await update(() => props(button(label)).onClick());
-      assert.equal(opened, 1);
     } else if (scenario === "remote")
       assert.ok(nodes(container).some((n) => props(n)["data-link-runtime"] === "server"));
     else if (scenario === "phone") {

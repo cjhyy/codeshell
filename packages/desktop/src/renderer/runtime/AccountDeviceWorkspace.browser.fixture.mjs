@@ -1,8 +1,8 @@
-/* Production device workspace, isolated bridge, no network or paid provider. */
+/* Production computer chooser, synthetic main bridge, no account or model traffic. */
 /* global window, document */
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,33 +14,72 @@ const tailwind = createRequire(require.resolve("@tailwindcss/vite"));
 const { compile } = tailwind("@tailwindcss/node");
 const { Scanner } = tailwind("@tailwindcss/oxide");
 const renderer = path.join(desktop, "src/renderer");
-const output = await mkdtemp(path.join(tmpdir(), "codeshell-account-devices-ui-"));
+const outputIndex = process.argv.indexOf("--output-dir");
+const output =
+  outputIndex >= 0
+    ? path.resolve(process.argv[outputIndex + 1])
+    : await mkdtemp(path.join(tmpdir(), "codeshell-computer-chooser-ui-"));
+await mkdir(output, { recursive: true });
+const LOCAL = "11111111-1111-4111-8111-111111111111";
+const REMOTE = "22222222-2222-4222-8222-222222222222";
+const OFFLINE = "33333333-3333-4333-8333-333333333333";
+const REVOKED = "44444444-4444-4444-8444-444444444444";
+const ACCOUNT_ORIGIN = "https://account.fixture.invalid";
 const source = String.raw`
 import React from "react";
 import {createRoot} from "react-dom/client";
 import {AccountDeviceWorkspace} from "./runtime/AccountDeviceWorkspace";
-window.calls=[]; window.listeners=[]; let accountListener, relayListener;
-window.relay={state:"stopped",registered:true,hostId:"a"};
-window.setRelay=state=>{window.relay={state,registered:state!=="unregistered",hostId:"a"};relayListener?.(window.relay)};
-window.devices=["a","b"].map(hostId=>({hostId,environmentId:"env-"+hostId,name:hostId==="a"?"Mac Studio":"Linux Builder",online:true,revoked:false,protocolVersion:1}));
-window.connections={};
+const boot=window.fixtureConfig??{};
+const localId=${JSON.stringify(LOCAL)};
+const origin=${JSON.stringify(ACCOUNT_ORIGIN)};
+window.calls=[];window.pendingLists=[];window.pendingOpens=[];
+window.account=boot.account??{state:"signed-in",origin,account:{id:"account-a",username:"fixture"}};
+window.relay=boot.relay??{state:"ready",registered:true,hostId:localId,accountId:"account-a",relayOrigin:origin,remoteAccessEnabled:true,name:"Mac Studio"};
+window.features={"devices.directory":{id:"devices.directory",state:boot.featureState??"ready"}};
+window.devices=boot.devices??[
+ {hostId:localId,environmentId:"env-local",name:"Mac Studio",online:true,revoked:false,protocolVersion:1},
+ {hostId:${JSON.stringify(REMOTE)},environmentId:"env-remote",name:"Linux Builder",online:true,revoked:false,protocolVersion:1},
+ {hostId:${JSON.stringify(OFFLINE)},environmentId:"env-offline",name:"Travel Laptop",online:false,revoked:false,protocolVersion:1},
+ {hostId:${JSON.stringify(REVOKED)},environmentId:"env-revoked",name:"Revoked Computer",online:true,revoked:true,protocolVersion:1}
+];
+window.listMode=boot.listMode;window.openMode=boot.openMode;
+const accountListeners=new Set(),relayListeners=new Set(),featureListeners=new Set();
+window.setAccount=state=>{window.account=state;for(const fn of accountListeners)fn(state)};
+window.setRelay=state=>{window.relay=state;for(const fn of relayListeners)fn(state)};
+window.setFeature=state=>{window.features={"devices.directory":{id:"devices.directory",state}};for(const fn of featureListeners)fn(window.features)};
+const subscribe=set=>fn=>{set.add(fn);return()=>set.delete(fn)};
+const forbidden=name=>(...args)=>{window.calls.push(["forbidden",name,args]);throw new Error("Chooser must not call "+name)};
 window.codeshell={
- cloudAccount:{status:async()=>({state:"signed-in",origin:"https://account.fixture.invalid",account:{id:"account-a",username:"fixture"}}),onStatus:callback=>{accountListener=callback;return()=>{}},resume:async()=>{window.calls.push(["account-resume"]);if(window.resumeFailure)throw new Error(window.resumeFailure);window.setRelay("ready")}},
- mobileRemote:{relay:{status:()=>window.deferInitialRelayStatus?new Promise(resolve=>{window.finishInitialRelayStatus=resolve}):Promise.resolve(window.relay),onStatus:callback=>{relayListener=callback;return()=>{}}}},
+ platform:"darwin",
+ cloudAccount:{
+  status:()=>boot.deferAccount?new Promise(resolve=>{window.finishAccount=resolve}):Promise.resolve(window.account),
+  onStatus:subscribe(accountListeners),resume:forbidden("account.resume")
+ },
+ mobileRemote:{relay:{
+  status:()=>boot.deferRelay?new Promise(resolve=>{window.finishRelay=resolve}):Promise.resolve(window.relay),
+  onStatus:subscribe(relayListeners)
+ }},
+ accountFeatures:{
+  snapshot:()=>boot.deferFeatures?new Promise(resolve=>{window.finishFeatures=resolve}):Promise.resolve(window.features),
+  onChanged:subscribe(featureListeners)
+ },
  accountDevices:{
- list:async()=>window.devices,
- projects:async({hostId})=>[{id:"project",name:hostId==="a"?"Desktop project":"Builder project",path:"/"+hostId+"/real-project"}],
- connect:async({hostId,projectId})=>{const c={id:"connection-"+hostId,hostId,environmentId:"env-"+hostId,projectId,sessionId:"session-"+hostId};window.connections[hostId]=c;window.calls.push(["connect",hostId,projectId]);return c},
- resume:async({connectionId})=>{window.calls.push(["resume",connectionId]);return {...Object.values(window.connections).find(c=>c.id===connectionId),historyNeedsReview:true}},
- send:async(input)=>{window.calls.push(["send",input]);return {ok:true}},stop:async(input)=>window.calls.push(["stop",input]),approve:async(input)=>window.calls.push(["approve",input]),close:async(input)=>window.calls.push(["close",input]),
- onEvent:callback=>{window.listeners.push(callback);return()=>{}}
- }};
-window.emit=(hostId,event,type="event")=>{const c=window.connections[hostId];for(const callback of window.listeners)callback({connectionId:c.id,hostId,environmentId:c.environmentId,projectId:c.projectId,sessionId:c.sessionId,type,event})};
-window.output=(hostId,text)=>window.emit(hostId,{type:"session.stream",sessionId:"session-"+hostId,event:{method:"agent/streamEvent",params:{sessionId:"session-"+hostId,event:{type:"text_delta",text}}}});
-window.signOut=()=>accountListener({state:"signed-out"});
-window.signIn=(id="account-a")=>accountListener({state:"signed-in",origin:"https://account.fixture.invalid",account:{id,username:id}});
-window.closeCalls=0;
-createRoot(document.getElementById("root")).render(<AccountDeviceWorkspace open onClose={()=>{window.closeCalls+=1}}/>);
+  list:async()=>{window.calls.push(["list",window.account.account?.id]);if(window.listMode==="defer")return new Promise((resolve,reject)=>window.pendingLists.push({resolve,reject}));if(window.listMode==="fail")throw new Error("目录暂时不可用");return [...window.devices]},
+  ...Object.fromEntries(["projects","connect","resume","send","stop","approve","close","onEvent"].map(name=>[name,forbidden(name)]))
+ },
+ openExternal:async url=>{window.calls.push(["external",url]);if(window.openMode==="defer")return new Promise((resolve,reject)=>window.pendingOpens.push({resolve,reject}));if(window.openMode==="fail")throw new Error("浏览器未能打开");}
+};
+function Fixture(){
+ const [open,setOpen]=React.useState(true);
+ const [draft,setDraft]=React.useState("原有聊天草稿");
+ window.showChooser=()=>setOpen(true);
+ return <>
+  <main hidden={open} aria-label="原有本机工作台"><h1>原有聊天</h1><span>existing-session</span><textarea aria-label="原有聊天草稿" value={draft} onChange={e=>setDraft(e.target.value)}/></main>
+  <AccountDeviceWorkspace open={open} onClose={()=>{window.calls.push(["back"]);setOpen(false)}} onOpenLocal={()=>{window.calls.push(["local"]);setOpen(false)}}/>
+ </>;
+}
+window.addEventListener("codeshell:open-account-settings",()=>window.calls.push(["account-settings"]));
+createRoot(document.getElementById("root")).render(<Fixture/>);
 `;
 const result = await build({
   stdin: { contents: source, resolveDir: renderer, loader: "tsx" },
@@ -61,22 +100,18 @@ const scanner = new Scanner({
   sources: [{ base: renderer, pattern: "**/*.{ts,tsx}", negated: false }],
 });
 const css = compiled.build(scanner.scan());
+const html = `<html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CodeShell computer chooser fixture</title><style>${css}</style><body><div id="root"></div></body></html>`;
 if (process.argv.includes("--build-only")) {
-  const visualBridge = `
-window.codeshell.accountDevices.send=async(input)=>{window.calls.push(["send",input]);const hostId=input.connectionId.slice(-1);setTimeout(()=>{window.emit(hostId,{type:"chat.accepted",sessionId:"session-"+hostId});window.output(hostId,"受控 producer 已在 "+hostId+" 项目输出。任务保持原电脑归属。\\n");window.emit(hostId,{method:"agent/approvalRequest",params:{sessionId:"session-"+hostId,requestId:"approval-"+hostId,request:{toolName:"Write",description:"允许在所选电脑的项目写入 fixture 文件？"}}});},40)};
-window.codeshell.accountDevices.approve=async(input)=>{window.calls.push(["approve",input]);const hostId=input.connectionId.slice(-1);window.emit(hostId,{type:"approval.resolved",sessionId:"session-"+hostId,approvalId:input.approvalId});window.output(hostId,input.approved?"审批已允许这一次，继续原任务。\\n":"审批已拒绝。\\n")};
-window.codeshell.accountDevices.stop=async(input)=>{window.calls.push(["stop",input]);const hostId=input.connectionId.slice(-1);window.output(hostId,"已向原执行电脑 "+hostId+" 发送取消。\\n");window.emit(hostId,{type:"session.stream",sessionId:"session-"+hostId,event:{method:"agent/streamEvent",params:{sessionId:"session-"+hostId,event:{type:"turn_complete",reason:"aborted_streaming"}}}})};
-`;
-  const html = path.join(output, "devices-visual.html");
+  const file = path.join(output, "computer-chooser.html");
   await writeFile(
-    html,
-    `<html><meta charset="utf-8"><title>CodeShell isolated account devices fixture</title><style>${css}</style><body><div id="root"></div><script>${result.outputFiles[0].text}</script><script>${visualBridge}</script></body></html>`,
+    file,
+    html.replace("</body>", `<script>${result.outputFiles[0].text}</script></body>`),
   );
   console.log(
     JSON.stringify({
-      html,
+      html: file,
       boundary:
-        "standalone production component with isolated synthetic bridge; no network, account credentials or model",
+        "production component with synthetic bridge; no credentials, account calls, task or model",
     }),
   );
   process.exit(0);
@@ -85,388 +120,398 @@ const browser = await chromium.launch({
   headless: true,
   executablePath: process.env.CODESHELL_TEST_CHROMIUM || undefined,
 });
-try {
-  const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
-  const errors = [];
-  const unexpected = [];
-  const fixtureOrigin = "https://devices-ui.fixture.invalid/";
-  await context.route("**/*", (route) => {
-    if (route.request().url() === fixtureOrigin)
-      return route.fulfill({
-        contentType: "text/html",
-        body: `<html><head><style>${css}</style></head><body><div id="root"></div></body></html>`,
-      });
-    unexpected.push(route.request().url());
-    return route.abort();
-  });
+const checks = [];
+const screenshots = [];
+const errors = [];
+const unexpected = [];
+const fixtureOrigin = "https://computer-chooser.fixture.invalid/";
+const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+await context.route("**/*", (route) => {
+  if (route.request().url() === fixtureOrigin)
+    return route.fulfill({ contentType: "text/html", body: html });
+  unexpected.push(route.request().url());
+  return route.abort();
+});
+const localButton = (page) => page.getByRole("button", { name: "打开本机聊天", exact: true });
+const remoteButton = (page) =>
+  page.getByRole("button", { name: "连接 Linux Builder", exact: true });
+const refreshButton = (page) => page.getByRole("button", { name: "刷新电脑列表", exact: true });
+async function createPage(boot = {}) {
   const page = await context.newPage();
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(fixtureOrigin);
-  await page.evaluate(() => {
-    window.deferInitialRelayStatus = true;
-  });
+  await page.evaluate((config) => {
+    window.fixtureConfig = config;
+  }, boot);
   await page.addScriptTag({ content: result.outputFiles[0].text });
-  const recover = page.getByRole("button", { name: "重试连接", exact: true });
-  await recover.waitFor();
-  await page.evaluate(() => window.setRelay("storage-error"));
-  await page.getByText("本机：安全存储不可用", { exact: true }).waitFor();
-  await page.evaluate(async () => {
-    window.finishInitialRelayStatus({ state: "ready", registered: true, hostId: "a" });
-    await new Promise(window.requestAnimationFrame);
-  });
-  assert.equal(await recover.isVisible(), true, "A stale snapshot cannot hide storage recovery");
-  await page.getByText("本机：安全存储不可用", { exact: true }).waitFor();
-  await page.evaluate(() => window.setRelay("stopped"));
-  assert.equal(
-    await page.evaluate(() => window.calls.filter((call) => call[0] === "account-resume").length),
-    0,
-    "A saved login opens recovery without starting the relay",
+  await localButton(page).waitFor();
+  return page;
+}
+async function closePage(page) {
+  assert.deepEqual(
+    await page.evaluate(() => window.calls.filter((c) => c[0] === "forbidden")),
+    [],
+    "Computer selection must never create, send, stop, approve or subscribe to a task",
   );
-  await recover.click();
-  await recover.waitFor({ state: "hidden" });
-  for (const state of [
-    "unregistered",
-    "disconnected",
-    "unavailable",
-    "storage-error",
-    "unauthorized",
+  await page.close();
+}
+async function checkpoint(name, run) {
+  await run();
+  checks.push(name);
+}
+async function settle(page) {
+  await page.evaluate(
+    () =>
+      new Promise((resolve) =>
+        window.requestAnimationFrame(() => window.requestAnimationFrame(resolve)),
+      ),
+  );
+}
+try {
+  const page = await createPage();
+  await remoteButton(page).waitFor();
+  await checkpoint("chooser has no separate project/task form or execution calls", async () => {
+    for (const name of ["执行项目", "电脑任务", "添加图片", "发送到此电脑", "停止此电脑任务"])
+      assert.equal(await page.getByLabel(name, { exact: true }).count(), 0);
+    assert.equal(await page.locator("select").count(), 0);
+    assert.equal(await page.locator("textarea:visible").count(), 0);
+    assert.equal(await page.getByText("Revoked Computer", { exact: true }).count(), 0);
+    assert.equal(
+      await page.getByRole("button", { name: "连接 Mac Studio", exact: true }).count(),
+      0,
+    );
+    assert.equal(
+      await page.getByRole("button", { name: "连接 Travel Laptop", exact: true }).isDisabled(),
+      true,
+    );
+    assert.deepEqual(
+      await page.evaluate(() => window.calls.filter((c) => c[0] === "forbidden")),
+      [],
+    );
+  });
+  await checkpoint("local selection returns to existing chat and preserves its draft", async () => {
+    await localButton(page).click();
+    await page.getByRole("main", { name: "原有本机工作台" }).waitFor();
+    assert.equal(await page.getByLabel("原有聊天草稿").inputValue(), "原有聊天草稿");
+    assert.equal(await page.getByText("existing-session", { exact: true }).count(), 1);
+    assert.deepEqual(
+      await page.evaluate(() =>
+        window.calls.filter((c) => ["external", "forbidden"].includes(c[0])),
+      ),
+      [],
+    );
+    await page.evaluate(() => window.showChooser());
+    await remoteButton(page).waitFor();
+  });
+  await checkpoint(
+    "online remote opens exact selected computer in the account workbench",
+    async () => {
+      await remoteButton(page).click();
+      assert.deepEqual(await page.evaluate(() => window.calls.filter((c) => c[0] === "external")), [
+        ["external", `${ACCOUNT_ORIGIN}/app?target=choose&computer=${REMOTE}`],
+      ]);
+      assert.deepEqual(
+        await page.evaluate(() => window.calls.filter((c) => c[0] === "forbidden")),
+        [],
+      );
+    },
+  );
+  await closePage(page);
+
+  for (const [name, boot] of [
+    ["signed out", { account: { state: "signed-out" }, featureState: "sign-in" }],
+    ["safe storage unavailable", { account: { state: "storage-error" }, featureState: "pending" }],
+    ["remote feature disabled", { featureState: "hidden" }],
+    ["directory unavailable", { listMode: "fail" }],
+    ["directory still loading", { listMode: "defer" }],
+    ["local registration unavailable", { relay: { state: "unregistered", registered: false } }],
   ]) {
-    await page.evaluate((state) => window.setRelay(state), state);
-    await recover.click();
-    await recover.waitFor({ state: "hidden" });
+    const page = await createPage(boot);
+    await checkpoint(`local chat remains available when ${name}`, async () => {
+      assert.equal(await localButton(page).isEnabled(), true);
+      await localButton(page).click();
+      await page.getByRole("main", { name: "原有本机工作台" }).waitFor();
+      assert.deepEqual(
+        await page.evaluate(() =>
+          window.calls.filter((c) => ["external", "forbidden"].includes(c[0])),
+        ),
+        [],
+      );
+      assert.equal(await page.getByLabel("原有聊天草稿").inputValue(), "原有聊天草稿");
+    });
+    await closePage(page);
   }
-  await page.evaluate(() => {
-    window.setRelay("stopped");
-    window.resumeFailure = "恢复连接失败，请重试。";
-  });
-  await recover.click();
-  await page.getByRole("alert").filter({ hasText: "恢复连接失败，请重试。" }).waitFor();
-  assert.equal(await recover.isEnabled(), true);
-  await page.evaluate(() => {
-    window.resumeFailure = undefined;
-  });
-  await recover.click();
-  await recover.waitFor({ state: "hidden" });
-  await page.evaluate(() => window.setRelay("connecting"));
-  await page.getByText("本机：连接中", { exact: true }).waitFor();
-  assert.equal(await recover.count(), 0, "An active connection attempt is not duplicated");
-  await page.evaluate(() => {
-    window.baseAccountResume = window.codeshell.cloudAccount.resume;
-    window.pendingAccountResumes = [];
-    window.codeshell.cloudAccount.resume = () =>
-      new Promise((resolve, reject) => {
-        window.pendingAccountResumes.push({ resolve, reject });
+
+  const retry = await createPage({ openMode: "fail" });
+  await remoteButton(retry).waitFor();
+  await checkpoint(
+    "browser launch failure leaves explicit retry and local chat available",
+    async () => {
+      await remoteButton(retry).click();
+      await retry.getByRole("alert").filter({ hasText: "浏览器未能打开" }).waitFor();
+      assert.equal(await remoteButton(retry).isEnabled(), true);
+      assert.equal(await localButton(retry).isEnabled(), true);
+      await retry.evaluate(() => {
+        window.openMode = undefined;
       });
-    window.setRelay("stopped");
-  });
-  await recover.click();
-  const resuming = page.getByRole("button", { name: "正在连接…", exact: true });
-  await resuming.waitFor();
-  assert.equal(await resuming.isDisabled(), true);
-  await page.evaluate(() => window.signIn("account-b"));
-  await recover.click();
-  await resuming.waitFor();
-  await page.evaluate(async () => {
-    window.pendingAccountResumes[0].reject(new Error("旧账号恢复失败"));
-    await new Promise(window.requestAnimationFrame);
-  });
-  assert.equal(await resuming.isDisabled(), true, "An old account cannot finish the new recovery");
-  assert.equal(await page.getByText("旧账号恢复失败", { exact: true }).count(), 0);
-  await page.evaluate(() => window.pendingAccountResumes[1].reject(new Error("当前账号恢复失败")));
-  await page.getByRole("alert").filter({ hasText: "当前账号恢复失败" }).waitFor();
-  assert.equal(await recover.isEnabled(), true, "The current failure releases its own retry");
-  await page.evaluate(() => {
-    window.codeshell.cloudAccount.resume = window.baseAccountResume;
-    window.signIn();
-  });
-  await recover.click();
-  await recover.waitFor({ state: "hidden" });
-  await page.evaluate(() => window.setRelay("ready"));
-  await page.getByRole("button", { name: /Mac Studio/ }).click();
-  await page.getByLabel("执行项目").selectOption("project");
-  await page.getByText(/已连接.*Mac Studio/).waitFor();
-  await page.getByLabel("电脑任务", { exact: true }).fill("Run the isolated producer on A");
-  await page.getByRole("button", { name: "发送到此电脑" }).click();
-  await page.evaluate(() => window.output("a", "Producer A output — original executor"));
-  await page.getByText("Producer A output — original executor", { exact: true }).waitFor();
-  await page.getByLabel("电脑任务", { exact: true }).fill("A draft survives switching");
-  await page.getByLabel("添加图片", { exact: true }).setInputFiles({
-    name: "a-only.png",
-    mimeType: "image/png",
-    buffer: Buffer.from("iVBORw0KGgo=", "base64"),
-  });
-  await page.getByRole("button", { name: "a-only.png ×" }).waitFor();
-  await page.getByRole("button", { name: /Linux Builder/ }).click();
-  await page.getByLabel("执行项目").selectOption("project");
-  await page.getByText(/已连接.*Linux Builder/).waitFor();
-  assert.equal(await page.getByLabel("电脑任务", { exact: true }).inputValue(), "");
-  assert.equal(await page.getByText("a-only.png ×").count(), 0);
-  assert.equal(
-    await page.getByText("Producer A output — original executor", { exact: true }).count(),
-    0,
+      await remoteButton(retry).click();
+      assert.equal(
+        await retry.evaluate(() => window.calls.filter((c) => c[0] === "external").length),
+        2,
+      );
+    },
   );
-  await page.getByLabel("电脑任务", { exact: true }).fill("B draft");
-  await page.getByRole("button", { name: "停止此电脑任务" }).click();
-  await page.evaluate(() => window.output("a", " continued while B selected"));
-  await page.getByRole("button", { name: /Mac Studio/ }).click();
-  await page.getByLabel("执行项目").selectOption("project");
-  assert.equal(
-    await page.getByLabel("电脑任务", { exact: true }).inputValue(),
-    "A draft survives switching",
-  );
-  await page.getByRole("button", { name: "a-only.png ×" }).waitFor();
-  await page.getByText(/Producer A output.*continued while B selected/).waitFor();
-  await page.getByRole("button", { name: "停止此电脑任务" }).click();
-  await page.evaluate(() =>
-    window.emit("a", {
-      method: "agent/approvalRequest",
-      params: {
-        sessionId: "session-a",
-        requestId: "approval-a",
-        request: { toolName: "Write", description: "Write in A project" },
-      },
-    }),
-  );
-  await page.getByLabel("审批回答").fill("Approved fixture answer");
-  await page.getByRole("button", { name: "允许这一次" }).click();
-  const calls = await page.evaluate(() => window.calls);
-  assert.deepEqual(
-    calls.filter((call) => call[0] === "stop"),
-    [
-      ["stop", { connectionId: "connection-b" }],
-      ["stop", { connectionId: "connection-a" }],
-    ],
-  );
-  assert.equal(calls.filter((call) => call[0] === "send").length, 1);
-  assert.equal(calls.find((call) => call[0] === "send")[1].connectionId, "connection-a");
-  assert.equal(calls.find((call) => call[0] === "approve")[1].approvalId, "approval-a");
-  await page.evaluate(() => {
-    window.emit("a", {
-      method: "agent/approvalResolved",
-      params: {
-        sessionId: "session-a",
-        requestId: "approval-a",
-      },
+  await closePage(retry);
+
+  const pending = await createPage({ openMode: "defer" });
+  await remoteButton(pending).waitFor();
+  await checkpoint("one pending browser launch cannot be duplicated", async () => {
+    await remoteButton(pending).click();
+    assert.equal(await remoteButton(pending).isDisabled(), true);
+    assert.equal(await localButton(pending).isEnabled(), true);
+    assert.equal(
+      await pending.evaluate(() => window.calls.filter((c) => c[0] === "external").length),
+      1,
+    );
+  });
+  await checkpoint("closing chooser ignores a late launch error", async () => {
+    await pending.getByRole("button", { name: "返回工作台", exact: true }).click();
+    await pending.evaluate(() => window.pendingOpens[0].reject(new Error("旧页面打开失败")));
+    await settle(pending);
+    assert.equal(await pending.getByText("旧页面打开失败", { exact: true }).count(), 0);
+    await pending.evaluate(() => {
+      window.openMode = undefined;
+      window.showChooser();
     });
-    for (const generation of [1, 2])
-      window.emit("a", {
-        method: "agent/approvalRequest",
-        params: {
-          sessionId: "session-a",
-          requestId: "reused-id",
-          connectionId: "worker-a",
-          generation,
-          request: { toolName: "Write", description: "Approval generation " + generation },
-        },
+    await remoteButton(pending).waitFor();
+    assert.equal(await remoteButton(pending).isEnabled(), true);
+  });
+  await closePage(pending);
+
+  const localWhileOpening = await createPage({ openMode: "defer" });
+  await remoteButton(localWhileOpening).waitFor();
+  await checkpoint("opening a browser never blocks returning to local chat", async () => {
+    await remoteButton(localWhileOpening).click();
+    await localButton(localWhileOpening).click();
+    await localWhileOpening.getByRole("main", { name: "原有本机工作台" }).waitFor();
+    assert.equal(await localWhileOpening.getByLabel("原有聊天草稿").inputValue(), "原有聊天草稿");
+    await localWhileOpening.evaluate(() =>
+      window.pendingOpens[0].reject(new Error("已离开的连接失败")),
+    );
+    await settle(localWhileOpening);
+    assert.equal(await localWhileOpening.getByText("已离开的连接失败", { exact: true }).count(), 0);
+  });
+  await closePage(localWhileOpening);
+
+  const switched = await createPage({ listMode: "defer" });
+  await switched.waitForFunction(() => window.pendingLists.length === 1);
+  await checkpoint(
+    "late old-account directory response cannot populate the new account",
+    async () => {
+      await switched.evaluate(() => {
+        window.setAccount({ state: "signed-out" });
+        window.setAccount({
+          state: "signed-in",
+          origin: "https://account.fixture.invalid",
+          account: { id: "account-b", username: "second" },
+        });
       });
-    window.emit("a", {
-      method: "agent/approvalResolved",
-      params: {
-        sessionId: "session-a",
-        requestId: "reused-id",
-        connectionId: "worker-a",
-        generation: 1,
-      },
+      await switched.waitForFunction(() => window.pendingLists.length >= 2);
+      await switched.evaluate(() => window.pendingLists[0].resolve(window.devices));
+      await settle(switched);
+      assert.equal(await remoteButton(switched).count(), 0);
+      await switched.evaluate(() => window.pendingLists[1].resolve([]));
+      await settle(switched);
+      assert.equal(await remoteButton(switched).count(), 0);
+      assert.equal(await localButton(switched).isEnabled(), true);
+    },
+  );
+  await closePage(switched);
+
+  const openSwitch = await createPage({ openMode: "defer" });
+  await remoteButton(openSwitch).waitFor();
+  await checkpoint(
+    "old-account launch completion cannot clear a new launch or show its error",
+    async () => {
+      await remoteButton(openSwitch).click();
+      await openSwitch.evaluate(() =>
+        window.setAccount({
+          state: "signed-in",
+          origin: "https://account.fixture.invalid",
+          account: { id: "account-b", username: "second" },
+        }),
+      );
+      await remoteButton(openSwitch).waitFor();
+      await openSwitch.waitForFunction(() =>
+        [...document.querySelectorAll("button")].some(
+          (button) =>
+            button.getAttribute("aria-label") === "连接 Linux Builder" && !button.disabled,
+        ),
+      );
+      await remoteButton(openSwitch).click();
+      await openSwitch.waitForFunction(() => window.pendingOpens.length === 2);
+      await openSwitch.evaluate(() => window.pendingOpens[0].reject(new Error("旧账号打开失败")));
+      await settle(openSwitch);
+      assert.equal(await remoteButton(openSwitch).isDisabled(), true);
+      assert.equal(await openSwitch.getByText("旧账号打开失败", { exact: true }).count(), 0);
+      await openSwitch.evaluate(() => window.pendingOpens[1].reject(new Error("当前账号打开失败")));
+      await openSwitch.getByRole("alert").filter({ hasText: "当前账号打开失败" }).waitFor();
+      assert.equal(await remoteButton(openSwitch).isEnabled(), true);
+    },
+  );
+  await closePage(openSwitch);
+
+  const relayMismatch = await createPage({
+    relay: {
+      state: "ready",
+      registered: true,
+      hostId: REMOTE,
+      accountId: "old-account",
+      relayOrigin: ACCOUNT_ORIGIN,
+    },
+  });
+  await checkpoint(
+    "another account's stale relay cannot hide or mislabel the remote computer",
+    async () => {
+      await remoteButton(relayMismatch).waitFor();
+      assert.equal(await remoteButton(relayMismatch).isEnabled(), true);
+      await remoteButton(relayMismatch).click();
+      assert.deepEqual(
+        await relayMismatch.evaluate(() => window.calls.filter((c) => c[0] === "external")),
+        [["external", `${ACCOUNT_ORIGIN}/app?target=choose&computer=${REMOTE}`]],
+      );
+    },
+  );
+  await closePage(relayMismatch);
+
+  const relayRace = await createPage({ deferRelay: true });
+  await remoteButton(relayRace).waitFor();
+  await checkpoint(
+    "late relay snapshot cannot replace the current local-computer identity",
+    async () => {
+      await relayRace.evaluate(
+        ({ localId, remoteId, origin }) => {
+          window.setRelay({
+            state: "ready",
+            registered: true,
+            hostId: localId,
+            accountId: "account-a",
+            relayOrigin: origin,
+          });
+          window.finishRelay({
+            state: "ready",
+            registered: true,
+            hostId: remoteId,
+            accountId: "account-a",
+            relayOrigin: origin,
+          });
+        },
+        { localId: LOCAL, remoteId: REMOTE, origin: ACCOUNT_ORIGIN },
+      );
+      await settle(relayRace);
+      assert.equal(await remoteButton(relayRace).count(), 1);
+      assert.equal(
+        await relayRace.getByRole("button", { name: "连接 Mac Studio", exact: true }).count(),
+        0,
+      );
+    },
+  );
+  await closePage(relayRace);
+
+  const status = await createPage({ deferAccount: true, deferRelay: true, deferFeatures: true });
+  await checkpoint(
+    "live account and feature events take precedence over initial snapshots",
+    async () => {
+      await status.evaluate(() => {
+        window.setAccount({ state: "signed-out" });
+        window.setFeature("sign-in");
+        window.finishAccount({
+          state: "signed-in",
+          origin: "https://old.fixture.invalid",
+          account: { id: "old", username: "old" },
+        });
+        window.finishFeatures({ "devices.directory": { id: "devices.directory", state: "ready" } });
+        window.finishRelay({
+          state: "ready",
+          registered: true,
+          hostId: "11111111-1111-4111-8111-111111111111",
+          accountId: "old",
+          relayOrigin: "https://old.fixture.invalid",
+        });
+      });
+      await settle(status);
+      assert.equal(await remoteButton(status).count(), 0);
+      assert.equal(
+        await status.evaluate(() => window.calls.filter((c) => c[0] === "list").length),
+        0,
+      );
+      await localButton(status).click();
+      await status.getByRole("main", { name: "原有本机工作台" }).waitFor();
+    },
+  );
+  await closePage(status);
+
+  const refresh = await createPage();
+  await remoteButton(refresh).waitFor();
+  await checkpoint("directory refresh keeps existing choices while loading", async () => {
+    await refresh.evaluate(() => {
+      window.listMode = "defer";
     });
+    await refreshButton(refresh).click();
+    await refresh.waitForFunction(() => window.pendingLists.length === 1);
+    assert.equal(await remoteButton(refresh).count(), 1);
+    assert.equal(await localButton(refresh).isEnabled(), true);
+    await refresh.evaluate(() => window.pendingLists[0].reject(new Error("稍后再试")));
+    await refresh.getByRole("alert").filter({ hasText: "暂时无法读取其他电脑" }).waitFor();
+    assert.equal(await localButton(refresh).isEnabled(), true);
   });
-  await page.getByText("Approval generation 2", { exact: true }).waitFor();
-  assert.equal(await page.getByText("Approval generation 1", { exact: true }).count(), 0);
-  await page.getByRole("button", { name: "拒绝", exact: true }).click();
-  const routed = await page.evaluate(
-    () => window.calls.filter((call) => call[0] === "approve").at(-1)[1],
-  );
-  assert.equal(routed.workerConnectionId, "worker-a");
-  assert.equal(routed.generation, 2);
-  assert.equal(await page.getByRole("button", { name: "允许这一次" }).isDisabled(), true);
-  await page.evaluate(() =>
-    window.emit("a", {
-      method: "agent/approvalResolved",
-      params: {
-        sessionId: "session-a",
-        requestId: "reused-id",
-        connectionId: "worker-a",
-        generation: 2,
+  await closePage(refresh);
+
+  for (const width of [360, 640, 1280]) {
+    const page = await createPage();
+    await page.setViewportSize({ width, height: 820 });
+    await remoteButton(page).waitFor();
+    await checkpoint(
+      `${width}px chooser fits and exposes working local/back controls`,
+      async () => {
+        assert.equal(
+          await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
+          true,
+        );
+        assert.equal(await localButton(page).isEnabled(), true);
+        const back = page.getByRole("button", { name: "返回工作台", exact: true });
+        assert.deepEqual(
+          await back.evaluate((button) => [
+            window
+              .getComputedStyle(button.closest("header"))
+              .getPropertyValue("-webkit-app-region"),
+            window.getComputedStyle(button).getPropertyValue("-webkit-app-region"),
+          ]),
+          ["drag", "no-drag"],
+        );
+        const file = path.join(output, `computer-chooser-${width}.png`);
+        await page.screenshot({ path: file, fullPage: true });
+        screenshots.push(file);
+        await page.keyboard.press("Escape");
+        await page.getByRole("main", { name: "原有本机工作台" }).waitFor();
       },
-    }),
-  );
-  await page.getByText("Approval generation 2", { exact: true }).waitFor({ state: "hidden" });
-  // A fast Host may finish while the main-process IPC reply is still pending.
-  // The reply must not erase a newer draft or turn completion back into running.
-  await page.evaluate(() => {
-    window.emit("a", { type: "chat.accepted", sessionId: "session-a" });
-    window.emit("a", {
-      type: "session.stream",
-      sessionId: "session-a",
-      event: {
-        method: "agent/streamEvent",
-        params: { event: { type: "turn_complete", reason: "completed" } },
-      },
-    });
-    window.codeshell.accountDevices.send = (input) => {
-      window.calls.push(["send", input]);
-      window.emit("a", { type: "chat.accepted", sessionId: "session-a" });
-      window.output("a", "fast task finished before IPC reply");
-      window.emit("a", {
-        type: "session.stream",
-        sessionId: "session-a",
-        event: {
-          method: "agent/streamEvent",
-          params: { event: { type: "turn_complete", reason: "completed" } },
-        },
-      });
-      return new Promise((resolve, reject) => {
-        window.finishSend = resolve;
-        window.failSend = reject;
-      });
-    };
-  });
-  await page.getByLabel("电脑任务", { exact: true }).fill("Fast task");
-  await page.getByRole("button", { name: "发送到此电脑" }).click();
-  await page.getByText(/fast task finished before IPC reply/).waitFor();
-  await page.getByLabel("电脑任务", { exact: true }).fill("New draft while IPC is pending");
-  assert.equal(await page.getByRole("button", { name: "发送到此电脑" }).isDisabled(), true);
-  await page.evaluate(() => window.failSend(new Error("late transport reply lost")));
-  await page.waitForFunction(() =>
-    [...document.querySelectorAll("button")].some(
-      (button) => button.textContent === "发送到此电脑" && !button.disabled,
-    ),
-  );
-  assert.equal(
-    await page.getByLabel("电脑任务", { exact: true }).inputValue(),
-    "New draft while IPC is pending",
-  );
-  assert.equal(await page.getByText("Fast task", { exact: true }).count(), 1);
-  // The Host's actual frame limit applies to all text and attachments together.
-  const sentBeforeLargeImage = await page.evaluate(
-    () => window.calls.filter((call) => call[0] === "send").length,
-  );
-  await page.getByLabel("添加图片", { exact: true }).setInputFiles({
-    name: "too-large.png",
-    mimeType: "image/png",
-    buffer: Buffer.alloc(800_000, 1),
-  });
-  await page.getByRole("button", { name: "too-large.png ×" }).waitFor();
-  await page.getByRole("button", { name: "发送到此电脑" }).click();
-  await page.getByText(/任务与图片合计超过 1 MiB/).waitFor();
-  assert.equal(
-    await page.evaluate(() => window.calls.filter((call) => call[0] === "send").length),
-    sentBeforeLargeImage,
-  );
-  await page.getByRole("button", { name: "too-large.png ×" }).click();
-  // Restore the original long task after access expires; never create or resend it.
-  await page.evaluate(() => {
-    window.output("a", "long task still runs on A");
-    window.emit("a", undefined, "disconnected");
-  });
-  await page.getByRole("button", { name: "恢复原会话" }).click();
-  await page.getByText(/已恢复原会话。断线期间的历史需要核对/).waitFor();
-  assert.equal(
-    await page.getByLabel("电脑任务", { exact: true }).inputValue(),
-    "New draft while IPC is pending",
-  );
-  await page.getByRole("button", { name: "停止此电脑任务" }).click();
-  const resumedCalls = await page.evaluate(() => window.calls);
-  assert.deepEqual(
-    resumedCalls.filter((call) => call[0] === "resume"),
-    [["resume", "connection-a"]],
-  );
-  assert.equal(resumedCalls.filter((call) => call[0] === "connect").length, 2);
-  assert.equal(resumedCalls.filter((call) => call[0] === "send").length, sentBeforeLargeImage);
-  assert.deepEqual(resumedCalls.filter((call) => call[0] === "stop").at(-1), [
-    "stop",
-    { connectionId: "connection-a" },
-  ]);
-  // Completion after reconnect is sufficient even if chat.accepted was lost.
-  await page.evaluate(() =>
-    window.emit("a", {
-      type: "session.stream",
-      event: {
-        method: "agent/streamEvent",
-        params: {
-          event: {
-            type: "turn_complete",
-            reason: "completed",
-            agentId: "child",
-          },
-        },
-      },
-    }),
-  );
-  assert.equal(await page.getByRole("button", { name: "发送到此电脑" }).isDisabled(), true);
-  await page.evaluate(() =>
-    window.emit("a", {
-      type: "session.stream",
-      event: {
-        method: "agent/streamEvent",
-        params: { event: { type: "turn_complete", reason: "completed" } },
-      },
-    }),
-  );
-  await page.waitForFunction(() =>
-    [...document.querySelectorAll("button")].some(
-      (button) => button.textContent === "发送到此电脑" && !button.disabled,
-    ),
-  );
-  assert.equal(
-    await page.evaluate(() => window.calls.filter((call) => call[0] === "send").length),
-    sentBeforeLargeImage,
-  );
-  await page.screenshot({ path: path.join(output, "devices-desktop.png") });
-  // An older online directory response cannot undo a newer offline response.
-  await page.evaluate(() => {
-    const previous = window.structuredClone(window.devices);
-    window.codeshell.accountDevices.list = () => {
-      window.codeshell.accountDevices.list = async () => window.devices;
-      return new Promise((resolve) => {
-        window.finishOldList = () => resolve(previous);
-      });
-    };
-  });
-  await page.getByRole("button", { name: "刷新", exact: true }).click();
-  await page.waitForFunction(() => typeof window.finishOldList === "function");
-  await page.evaluate(() => {
-    window.devices = window.devices.map((device) => ({ ...device, online: false }));
-  });
-  await page.getByRole("button", { name: "刷新", exact: true }).click();
-  await page.waitForFunction(() => document.querySelector('button[aria-pressed="true"]')?.disabled);
-  await page.evaluate(async () => {
-    window.finishOldList();
-    await new Promise(window.requestAnimationFrame);
-  });
-  assert.equal(await page.getByRole("button", { name: /Mac Studio/ }).isDisabled(), true);
-  assert.equal(await page.getByRole("button", { name: "发送到此电脑" }).isDisabled(), true);
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.screenshot({ path: path.join(output, "devices-narrow.png") });
-  assert.equal(
-    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
-    true,
-  );
-  await page.evaluate(() => window.signOut());
-  await page.getByText("请先登录账号，这台电脑会自动加入你的账号。", { exact: true }).waitFor();
-  assert.equal(await page.getByLabel("电脑任务", { exact: true }).count(), 0);
-  // The page replaces the shell TopBar: its header is the window drag surface
-  // and the only way back must stay clickable, even when signed out.
-  const back = page.getByRole("button", { name: "返回工作台" });
-  assert.deepEqual(
-    await back.evaluate((button) => [
-      window.getComputedStyle(button.closest("header")).getPropertyValue("-webkit-app-region"),
-      window.getComputedStyle(button).getPropertyValue("-webkit-app-region"),
-    ]),
-    ["drag", "no-drag"],
-  );
-  await back.click();
-  await page.keyboard.press("Escape");
-  assert.equal(await page.evaluate(() => window.closeCalls), 2);
+    );
+    await closePage(page);
+  }
   assert.deepEqual(errors, []);
   assert.deepEqual(unexpected, []);
-  console.log(
-    JSON.stringify({
-      ok: true,
-      assertions:
-        "explicit saved-session and failed-enrollment recovery; recoverable errors; device/project selection; output, drafts, attachments, approvals and Stop isolation; worker-generation approval fencing; fast completion before IPC reply; oversized-frame preflight; original-session restoration without task replay; late directory responses; offline rejection; logout; back button and Escape close; 390px layout",
-      screenshots: output,
-    }),
-  );
+  const report = {
+    ok: true,
+    checks,
+    count: checks.length,
+    screenshots,
+    errors,
+    unexpected,
+    boundary:
+      "Production chooser, synthetic main bridge, isolated browser context; no real account, credentials, host project, task or provider",
+  };
+  await writeFile(path.join(output, "report.json"), JSON.stringify(report, null, 2) + "\n");
+  console.log(JSON.stringify(report));
 } finally {
   await browser.close();
 }
