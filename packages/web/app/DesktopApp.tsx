@@ -40,6 +40,7 @@ export function DesktopApp() {
   );
   const app = useRemoteApp({
     onNotification: (method, params) => notificationRef.current(method, params),
+    sessionCatalog: "all",
   });
   const [session, setSession] = React.useState<AuthSession>();
   const [authError, setAuthError] = React.useState("");
@@ -127,11 +128,15 @@ export function DesktopApp() {
   return <Workbench controller={controller} />;
 }
 
+function activeTargetCwd(app: RemoteApp): string | null {
+  return app.activeCwd === undefined ? app.activeProjectCwd : app.activeCwd;
+}
+
 function selectedTargetCwd(
   app: RemoteApp,
   target: MobileSessionCreateTarget | undefined,
 ): string | null | undefined {
-  if (target === undefined) return app.activeProjectCwd ?? app.activeCwd;
+  if (target === undefined) return activeTargetCwd(app);
   if (target === null || typeof target === "string") return target;
   if (target.projectId === null) return null;
   const project = app.projects.find((item) => item.id === target.projectId);
@@ -157,6 +162,10 @@ export function useDesktopController(
   onAuthLost: () => void,
 ): WorkbenchController & {
   onHostNotification: (method: string, params: Record<string, unknown>) => void;
+  navigationSessions: WorkbenchController["sessions"];
+  navigationSessionsLoading: boolean;
+  navigationSessionsHasMore: boolean;
+  loadMoreNavigationSessions?: () => void;
 } {
   const [workspaceOverride, setWorkspaceOverride] = React.useState<string | null | undefined>(
     () => {
@@ -177,24 +186,17 @@ export function useDesktopController(
       ? app.activeCwd
       : undefined;
   const workspaceCwd =
-    selectedSessionCwd ??
-    (workspaceOverride === undefined
-      ? (app.activeCwd ?? app.activeProjectCwd ?? null)
-      : workspaceOverride);
+    selectedSessionCwd !== undefined
+      ? selectedSessionCwd
+      : workspaceOverride === undefined
+        ? activeTargetCwd(app)
+        : workspaceOverride;
   React.useLayoutEffect(() => {
     // A paged or reconnecting catalog may temporarily omit the selected row.
     // Keep its last authoritative root instead of falling back to an older one.
-    if (selectedSessionCwd != null) setWorkspaceOverride(selectedSessionCwd);
+    if (selectedSessionCwd !== undefined) setWorkspaceOverride(selectedSessionCwd);
   }, [selectedSessionCwd]);
   const workspaceKey = workspaceCwd ?? "desktop-unbound";
-  const sessionProject = projectForCwd(workspaceCwd, app.projects);
-  const sessionScopeKey = JSON.stringify(
-    workspaceCwd
-      ? sessionProject?.roots?.length
-        ? sessionProject.roots.map((root) => root.path).sort()
-        : [sessionProject?.path ?? workspaceCwd]
-      : [],
-  );
   // Layout effects run before any keyed management view issues passive fetches.
   React.useLayoutEffect(() => {
     setApiWorkspace(workspaceCwd ?? undefined);
@@ -248,12 +250,16 @@ export function useDesktopController(
     void refreshConfiguration();
   }, [workspaceCwd, refreshConfiguration]);
   React.useEffect(() => {
+    // The navigation catalog belongs to the connected computer. Selecting a
+    // conversation changes execution/management context, never this directory.
+    if (app.status === "online") appRef.current.refreshSessions([]);
+  }, [app.status]);
+  React.useEffect(() => {
     if (app.status === "online") {
-      appRef.current.refreshSessions(JSON.parse(sessionScopeKey));
       appRef.current.refreshRuntimeModels?.();
       void refreshConfiguration();
     }
-  }, [app.status, sessionScopeKey, refreshConfiguration]);
+  }, [app.status, refreshConfiguration]);
   React.useEffect(() => {
     const refresh = () => {
       if (document.visibilityState !== "hidden") {
@@ -533,7 +539,7 @@ export function useDesktopController(
       const selected = app.sessions.find((item) => item.id === id);
       // Shared history is scoped to the current workspace and may contain
       // older rows absent from the paired protocol's recent-session cache.
-      const cwd = selected?.cwd ?? workspaceCwd;
+      const cwd = selected?.cwd === undefined ? workspaceCwd : selected.cwd;
       setWorkspaceOverride(cwd);
       if (cwd) {
         const project = projectForCwd(cwd, app.projects);
@@ -579,22 +585,32 @@ export function useDesktopController(
     },
   };
   const currentProject = workspaceCwd ? projectForCwd(workspaceCwd, app.projects) : undefined;
-  const visibleSessions = app.sessions.filter(
-    (item) =>
-      !workspaceCwd ||
-      item.cwd === workspaceCwd ||
-      (currentProject && projectForCwd(item.cwd, app.projects)?.path === currentProject.path),
+  const navigationSessions = React.useMemo(
+    () =>
+      app.sessions.map((item) => ({
+        sessionId: item.id,
+        title: item.title,
+        cwd: item.cwd,
+        startedAt: item.updatedAt,
+        lastActiveAt: item.updatedAt,
+        model: item.model ?? "",
+        status: item.id === app.activeSessionId ? app.chat.run : "saved",
+        turnCount: 0,
+      })),
+    [app.sessions, app.activeSessionId, app.chat.run],
   );
-  const sessions = visibleSessions.map((item) => ({
-    sessionId: item.id,
-    title: item.title,
-    cwd: item.cwd,
-    startedAt: item.updatedAt,
-    lastActiveAt: item.updatedAt,
-    model: item.model ?? "",
-    status: item.id === app.activeSessionId ? app.chat.run : "saved",
-    turnCount: 0,
-  }));
+  // Panel association and other management views remain scoped to the actual
+  // execution workspace, including an explicitly unbound conversation.
+  const sessions = React.useMemo(
+    () =>
+      navigationSessions.filter((item) =>
+        workspaceCwd === null
+          ? item.cwd == null
+          : item.cwd === workspaceCwd ||
+            (currentProject && projectForCwd(item.cwd, app.projects)?.path === currentProject.path),
+      ),
+    [navigationSessions, workspaceCwd, currentProject, app.projects],
+  );
   const associatePanelSession = (sessionId?: string): Promise<string> => {
     if (!mounted.current || workspaceRef.current !== workspaceCwd)
       return Promise.reject(new Error("工作区已改变，请重新关联对话。"));
@@ -671,7 +687,7 @@ export function useDesktopController(
       return;
     // Creation only acquires an active ID after its correlated Host acceptance;
     // selecting an existing ID also waits for history recovery to finish.
-    if ((app.activeCwd ?? app.activeProjectCwd ?? null) !== pending.workspaceCwd) {
+    if (activeTargetCwd(app) !== pending.workspaceCwd) {
       finishPanelSession(new Error("对话不属于当前工作区，请重新选择。"));
       return;
     }
@@ -701,7 +717,7 @@ export function useDesktopController(
       return false;
     if (pendingCreate.current || creationNeedsRetry) return false;
     if (selectedModel && (app.loading.sessionHistory || !app.activeSessionId)) return false;
-    if ((app.activeCwd ?? app.activeProjectCwd ?? null) !== workspaceCwd) {
+    if (activeTargetCwd(app) !== workspaceCwd) {
       setError("当前会话属于另一个工作区。请选择本项目的会话，或新建任务。");
       return false;
     }
@@ -981,6 +997,10 @@ export function useDesktopController(
         : app.activeSessionId,
     chat: app.chat,
     sessions,
+    navigationSessions,
+    navigationSessionsLoading: app.loading.sessions,
+    navigationSessionsHasMore: Boolean(app.sessionsHasMore),
+    loadMoreNavigationSessions: app.loadMoreSessions,
     workspaceCwd,
     workspaceKey,
     projects: app.projects,
@@ -988,7 +1008,7 @@ export function useDesktopController(
     selectProject: actions.selectProject,
     selectPanelSession: (id) => associatePanelSession(id),
     newPanelSession: () => associatePanelSession(),
-    workspaceName: workspaceCwd?.split(/[\\/]/).filter(Boolean).pop() || "桌面工作区",
+    workspaceName: workspaceCwd?.split(/[\\/]/).filter(Boolean).pop() || "无项目",
     title,
     configuration,
     configurationVersion,
@@ -1037,10 +1057,7 @@ export function useDesktopController(
     renderSidebar: (navigation) => (
       <DesktopSidebar
         cliCwd={
-          app.activeProjectCwd ??
-          (app.activeCwd
-            ? (projectForCwd(app.activeCwd, app.projects)?.path ?? app.activeCwd)
-            : null)
+          workspaceCwd ? (projectForCwd(workspaceCwd, app.projects)?.path ?? workspaceCwd) : null
         }
         app={{
           ...actions,

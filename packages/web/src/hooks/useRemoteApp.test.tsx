@@ -105,6 +105,194 @@ afterEach(() => {
   visibilityState = "visible";
 });
 
+test("all-project navigation keeps loaded pages while another project's history loads", async () => {
+  setupBrowser();
+  const hook = await renderHook(() => {
+    const app = useRemoteApp({ sessionCatalog: "all" });
+    return { app, controller: useDesktopController(app, undefined, () => {}) };
+  });
+  const ws = FakeWebSocket.instances[0]!;
+  const requests = () =>
+    ws.sent.map((line) => JSON.parse(line)).filter((event) => event.type === "session.list");
+  const latest = () => requests().at(-1)!;
+  const row = (id: string, cwd: string | null) => ({ id, cwd, title: id, updatedAt: 1 });
+  try {
+    await act(async () => {
+      ws.open();
+      ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+      ws.message({
+        type: "room.projects.ok",
+        projects: [
+          { id: "a", path: "/a", name: "A" },
+          { id: "b", path: "/b", name: "B" },
+        ],
+      });
+      await flushMicrotasks();
+    });
+    expect(latest().cwds).toBeUndefined();
+    await act(async () => {
+      ws.message({
+        type: "session.list.ok",
+        requestId: latest().requestId,
+        sessions: [row("a1", "/a"), row("unbound", null)],
+        nextCursor: "page-2",
+      });
+      await flushMicrotasks();
+    });
+    const firstPageRequests = requests().length;
+    expect(firstPageRequests).toBe(1);
+    await act(async () => {
+      hook.result.current.app.loadMoreSessions!();
+      await flushMicrotasks();
+    });
+    expect(latest().cursor).toBe("page-2");
+    await act(async () => {
+      ws.message({
+        type: "session.list.ok",
+        requestId: latest().requestId,
+        sessions: [row("b1", "/b")],
+        nextCursor: "page-3",
+      });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      hook.result.current.controller.selectSession("b1");
+      await flushMicrotasks();
+    });
+    expect(requests()).toHaveLength(firstPageRequests + 1);
+    expect(hook.result.current.app.loading.sessionHistory).toBe(true);
+    expect(hook.result.current.controller.navigationSessionsLoading).toBe(false);
+    expect(hook.result.current.controller.navigationSessions.map((item) => item.sessionId)).toEqual(
+      ["a1", "unbound", "b1"],
+    );
+    expect(hook.result.current.controller.sessions.map((item) => item.sessionId)).toEqual(["b1"]);
+    expect(getApiWorkspace()).toBe("/b");
+    await act(async () => {
+      hook.result.current.controller.selectSession("unbound");
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.controller.workspaceCwd).toBeNull();
+    expect(hook.result.current.app.activeProjectCwd).toBeNull();
+    expect(hook.result.current.app.activeProjectId).toBeNull();
+    expect(getApiWorkspace()).toBeUndefined();
+    expect(hook.result.current.controller.sessions.map((item) => item.sessionId)).toEqual([
+      "unbound",
+    ]);
+    await expect(hook.result.current.controller.selectPanelSession!("b1")).rejects.toThrow(
+      "此对话不在当前项目中",
+    );
+    expect(hook.result.current.controller.navigationSessions).toHaveLength(3);
+    await act(async () => {
+      // Visibility/focus refresh must keep the already loaded second page.
+      window.dispatchEvent(new Event("focus"));
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.controller.navigationSessionsLoading).toBe(true);
+    expect(hook.result.current.controller.navigationSessions).toHaveLength(3);
+    expect(latest().cursor).toBeUndefined();
+    expect(latest().cwds).toBeUndefined();
+    await act(async () => {
+      ws.message({
+        type: "session.list.ok",
+        requestId: latest().requestId,
+        sessions: [{ ...row("a1", "/a"), title: "Updated A" }],
+        nextCursor: "refreshed-page-2",
+      });
+      ws.message({ type: "session.history.ok", sessionId: "b1", events: [] });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.app.loading.sessionHistory).toBe(true);
+    expect(hook.result.current.controller.navigationSessionsLoading).toBe(false);
+    expect(hook.result.current.controller.navigationSessions.map((item) => item.sessionId)).toEqual(
+      ["a1", "unbound", "b1"],
+    );
+    expect(hook.result.current.controller.navigationSessions[0]?.title).toBe("Updated A");
+    await act(async () => {
+      hook.result.current.app.refreshSessions(["/b"]);
+      await flushMicrotasks();
+    });
+    expect(latest().cwds).toBeUndefined();
+    await act(async () => {
+      // A complete catalog can authoritatively remove an archived/deleted row.
+      ws.message({
+        type: "session.list.ok",
+        requestId: latest().requestId,
+        sessions: [row("unbound", null)],
+        nextCursor: null,
+      });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.controller.navigationSessions.map((item) => item.sessionId)).toEqual(
+      ["unbound"],
+    );
+  } finally {
+    await hook.unmount();
+  }
+});
+
+test("all-project catalog retention is retired when the paired identity changes or is revoked", async () => {
+  setupBrowser();
+  const hook = await renderHook(() => useRemoteApp({ sessionCatalog: "all" }));
+  const ws = FakeWebSocket.instances[0]!;
+  const latest = () =>
+    ws.sent
+      .map((line) => JSON.parse(line))
+      .filter((event) => event.type === "session.list" && event.requestId)
+      .at(-1)!;
+  try {
+    await act(async () => {
+      ws.open();
+      ws.message({ type: "auth.ok", device: { id: "device-1", name: "First" } });
+      await flushMicrotasks();
+      hook.result.current.refreshSessions();
+      await flushMicrotasks();
+    });
+    const oldRequest = latest();
+    await act(async () => {
+      ws.message({
+        type: "session.list.ok",
+        requestId: oldRequest.requestId,
+        sessions: [{ id: "old", cwd: "/old", title: "old", updatedAt: 1 }],
+        nextCursor: "more-old",
+      });
+      await flushMicrotasks();
+      ws.message({ type: "auth.ok", device: { id: "device-2", name: "Second" } });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.sessions).toEqual([]);
+    expect(hook.result.current.sessionsHasMore).toBe(false);
+    await act(async () => {
+      hook.result.current.refreshSessions();
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      ws.message({
+        type: "session.list.ok",
+        requestId: oldRequest.requestId,
+        sessions: [{ id: "late-old", cwd: "/old", title: "old", updatedAt: 1 }],
+        nextCursor: "more-old",
+      });
+      ws.message({
+        type: "session.list.ok",
+        requestId: latest().requestId,
+        sessions: [{ id: "new", cwd: "/new", title: "new", updatedAt: 2 }],
+        nextCursor: "more-new",
+      });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.sessions.map((item) => item.id)).toEqual(["new"]);
+    await act(async () => {
+      ws.message({ type: "auth.failed", message: "revoked" });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.status).toBe("unpaired");
+    expect(hook.result.current.sessions).toEqual([]);
+    expect(hook.result.current.sessionsHasMore).toBe(false);
+  } finally {
+    await hook.unmount();
+  }
+});
+
 describe("useRemoteApp session switching recovery", () => {
   async function connected(journal = false) {
     setupBrowser();

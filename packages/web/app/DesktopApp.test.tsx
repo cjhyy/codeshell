@@ -90,6 +90,48 @@ afterEach(() => {
 });
 
 describe("Desktop workbench controller", () => {
+  test("an explicitly unbound session never inherits the previous project's execution context", async () => {
+    const created: unknown[] = [];
+    const sent: string[] = [];
+    let app = remoteApp({
+      activeCwd: null,
+      activeProjectCwd: "/previous",
+      activeProjectId: "previous",
+      activeSessionId: "unbound",
+      sessions: [
+        { id: "unbound", cwd: null, title: "Unbound", updatedAt: 1 },
+        { id: "project", cwd: "/previous", title: "Project", updatedAt: 2 },
+      ] as RemoteApp["sessions"],
+      newSession: (target) => created.push(target),
+      sendChat: async ({ text }) => {
+        sent.push(text);
+        return true;
+      },
+    });
+    const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+    try {
+      expect(hook.result.current.workspaceCwd).toBeNull();
+      expect(hook.result.current.workspaceName).toBe("无项目");
+      expect(getApiWorkspace()).toBeUndefined();
+      expect(hook.result.current.sessions.map((item) => item.sessionId)).toEqual(["unbound"]);
+      const directory = hook.result.current.navigationSessions;
+      expect(directory).toHaveLength(2);
+      app = { ...app, chat: { ...app.chat, seq: app.chat.seq + 1 } };
+      await hook.rerender();
+      expect(hook.result.current.navigationSessions).toBe(directory);
+      await act(async () => hook.result.current.setDraft("Unbound task"));
+      await act(async () => {
+        expect(hook.result.current.send()).toBe(true);
+        await flushMicrotasks();
+      });
+      expect(sent).toEqual(["Unbound task"]);
+      await act(async () => hook.result.current.newSession());
+      expect(created).toEqual([{ projectId: null }]);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
   test("explicit Panel selection waits for history and preserves each conversation's draft", async () => {
     const selections: string[] = [];
     let app = remoteApp({

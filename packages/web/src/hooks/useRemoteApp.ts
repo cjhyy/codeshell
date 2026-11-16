@@ -363,6 +363,9 @@ export interface RemoteAppOptions {
   /** Browser host features may observe notifications without opening a second
    * transport or changing the session/room reducer's ownership. */
   onNotification?: (method: string, params: Record<string, unknown>) => void;
+  /** Keep navigation across projects independent of the selected conversation.
+   * Omitted for legacy clients whose session catalog follows the selected project. */
+  sessionCatalog?: "all";
 }
 
 export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
@@ -378,6 +381,13 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   const sessionListRequestRef = useRef<{ requestId: string; append: boolean } | undefined>(
     undefined,
   );
+  const sessionCatalogIdentityRef = useRef<string | undefined>(undefined);
+  const clearSessionCatalog = useCallback(() => {
+    setSessions([]);
+    setSessionsHasMore(false);
+    sessionListCursorRef.current = null;
+    sessionListRequestRef.current = undefined;
+  }, []);
   const [runtimeModels, setRuntimeModels] = useState<MobileRuntimeModel[]>([]);
   const [nativeModelSelection, setNativeModelSelection] = useState(false);
   const nativeModelSelectionRef = useRef(false);
@@ -747,8 +757,9 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   const requestSessionList = useCallback(
     (append = false, cwds?: string[]) => {
       if (append && (!sessionListCursorRef.current || sessionListRequestRef.current)) return;
-      if (cwds !== undefined) {
-        const next = cwds.length ? [...new Set(cwds)].sort() : undefined;
+      const scope = optionsRef.current.sessionCatalog === "all" ? [] : cwds;
+      if (scope !== undefined) {
+        const next = scope.length ? [...new Set(scope)].sort() : undefined;
         if (JSON.stringify(next) !== JSON.stringify(sessionListScopeRef.current)) setSessions([]);
         sessionListScopeRef.current = next;
       }
@@ -1159,6 +1170,11 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       }
       if (goalControls.handle(event)) return;
       if (event.type === "auth.ok") {
+        if (optionsRef.current.sessionCatalog === "all") {
+          const identity = event.device?.id;
+          if (sessionCatalogIdentityRef.current !== identity) clearSessionCatalog();
+          sessionCatalogIdentityRef.current = identity;
+        }
         unsentCreatedSessionRef.current = null;
         nativeModelSelectionRef.current = event.capabilities?.nativeModelSelection === 1;
         setNativeModelSelection(nativeModelSelectionRef.current);
@@ -1387,6 +1403,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           sessionListRequestRef.current = undefined;
           sessionListCursorRef.current = event.nextCursor ?? null;
           setSessionsHasMore(Boolean(event.nextCursor));
+          const refreshedIds = new Set(event.sessions.map((session) => session.id));
           setSessions((previous) =>
             pending?.append
               ? [
@@ -1394,7 +1411,15 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
                     [...previous, ...event.sessions].map((session) => [session.id, session]),
                   ).values(),
                 ]
-              : event.sessions,
+              : optionsRef.current.sessionCatalog === "all" && event.nextCursor
+                ? [
+                    ...event.sessions,
+                    // A refreshed first page cannot prove that older loaded
+                    // rows disappeared: new activity may have moved them into
+                    // later pages. Keep them until a complete catalog arrives.
+                    ...previous.filter((session) => !refreshedIds.has(session.id)),
+                  ]
+                : event.sessions,
           );
           // A page/project is only part of the catalog, so its missing ids do
           // not prove that another conversation or its unread marker was deleted.
@@ -2084,6 +2109,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       appendSessionEvents,
       clearApproval,
       clearSessionUnread,
+      clearSessionCatalog,
       rememberRoomMessages,
       requestRoomCatchup,
       requestSessionList,
@@ -2271,6 +2297,16 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   });
   sendRef.current = socket.send;
   connectionGenerationRef.current = socket.connectionGeneration;
+
+  useEffect(() => {
+    if (
+      optionsRef.current.sessionCatalog === "all" &&
+      (socket.status === "unpaired" || socket.accessRequired)
+    ) {
+      sessionCatalogIdentityRef.current = undefined;
+      clearSessionCatalog();
+    }
+  }, [socket.status, socket.accessRequired, clearSessionCatalog]);
 
   const retryEmptySessionReplacement = useCallback(() => {
     const source = replacementSourceRef.current;
@@ -2720,7 +2756,12 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       }
       setActiveSessionId(id);
       clearSessionUnread(id);
-      setActiveSessionCwd(sessionCwdById.get(id) ?? null);
+      const cwd = sessionCwdById.get(id);
+      setActiveSessionCwd(cwd);
+      if (cwd === null) {
+        setActiveProjectCwd(null);
+        setActiveProjectId(null);
+      }
       boundSessionRef.current = id;
       const cursor = sessionCursor(id);
       epochHistorySessionRef.current =
@@ -2769,6 +2810,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       // Selecting an older row in the current project must retain loaded pages
       // and their provider metadata instead of immediately resetting to page 1.
       if (
+        optionsRef.current.sessionCatalog !== "all" &&
         JSON.stringify([...new Set(roots)].sort()) !== JSON.stringify(sessionListScopeRef.current)
       )
         requestSessionList(false, roots);
