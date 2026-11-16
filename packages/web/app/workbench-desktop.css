@@ -165,8 +165,23 @@
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
-.desktop-room-label {
-  min-width: 0;
+.desktop-cli-session-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.desktop-cli-session-actions .library-button {
+  min-height: 44px;
+}
+.desktop-cli-session-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-variant-numeric: tabular-nums;
+}
+.desktop-model-note {
+  flex-basis: 100%;
+  color: var(--muted);
+  font-size: 11px;
   overflow-wrap: anywhere;
 }
 .desktop-mode-options,
@@ -255,6 +270,7 @@
 }
 
 .desktop-model-picker .model-choice-trigger {
+  min-height: 44px;
   max-width: 240px;
 }
 @media (max-width: 760px) {
@@ -326,8 +342,7 @@
   .with-composer-controls .attach-button {
     grid-row: 2;
   }
-  /* Only a CLI room (no runtime picker) shows this text button. Give it the free
-     middle cells after attach and camera instead of a 44px cell it would overflow. */
+  /* Keep the generic fallback usable for other composer integrations. */
   .with-composer-controls .model-settings-button {
     grid-row: 2;
     grid-column: 3 / 5;
@@ -348,20 +363,15 @@
   .with-composer-controls .composer-run-status:empty {
     display: none;
   }
-  .with-composer-controls:has(.desktop-room-label) .composer-controls,
   .with-composer-controls:has(.desktop-model-picker .library-button) .desktop-model-picker {
     grid-row: auto;
     grid-column: 1 / -1;
-  }
-  .with-composer-controls .desktop-room-label {
-    flex: 1;
   }
   .composer-controls .library-button {
     min-height: 44px;
   }
   /* A routine "applies next send" note would wrap inside a 2-column cell; it
-     stays available to assistive tech. A note explaining why a CLI room cannot
-     switch stays visible (room controls already span the full row). */
+     stays available to assistive tech. Blocking explanations stay visible. */
   .composer-controls .desktop-permission-hint:not([data-blocking]) {
     position: absolute;
     width: 1px;

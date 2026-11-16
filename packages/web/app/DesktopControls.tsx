@@ -7,6 +7,8 @@ import type {
 import type { RemoteApp, PendingApproval } from "../src/hooks/useRemoteApp.js";
 import type { WorkbenchNavigation } from "./workbench-types.js";
 import { autoResolveText, useNow } from "./deadline.js";
+import { relativeTime } from "../src/lib/format.js";
+import { cliSessionControlBlock } from "./cliSessionControls.js";
 
 const permissionModes: Array<{
   value: MobileRemotePermissionMode;
@@ -26,59 +28,38 @@ const permissionModes: Array<{
   {
     value: "bypassPermissions",
     label: "跳过确认",
-    description:
-      "自动批准所有工具操作。不在 Host 可信目录时需在 Host 审批卡中再次批准；Codex 会同时关闭沙箱。",
+    description: "自动批准工具操作；Codex 会同时关闭沙箱。电脑可能要求再次批准。",
   },
 ];
 
 const permissionLabel = (mode: MobileRemotePermissionMode): string =>
   permissionModes.find((entry) => entry.value === mode)?.label ?? mode;
 
-/** What restarting a CLI room under `mode` means, in words a phone user sees. */
+/** Explain the user-visible effect before elevated permission is requested. */
 export function cliModeSwitchNotice(
   kind: "claude-code" | "codex",
   mode: MobileRemotePermissionMode,
 ): string {
-  const applies =
-    kind === "codex"
-      ? "Codex 每条消息启动一个新进程，切换后从下一条消息开始生效"
-      : "会重启 Claude Code 进程，重启后生效";
-  const base = `CLI 的权限模式在进程启动时确定。切换为「${permissionLabel(mode)}」${applies}；有任务运行、排队或审批待处理时 Host 会拒绝切换。`;
+  const base = `切换为「${permissionLabel(mode)}」，从下一条消息开始生效。`;
   if (mode !== "bypassPermissions") return base;
   return kind === "codex"
-    ? `${base}\nCodex 全放行会关闭沙箱，命令和文件写入不再经过确认。不在 Host 可信目录时还需在 Host 审批卡中批准。`
-    : `${base}\nClaude Code 全放行会跳过所有工具确认。不在 Host 可信目录时还需在 Host 审批卡中批准。`;
+    ? `${base}\nCodex 会关闭沙箱，命令执行和文件修改不再逐次确认。电脑可能要求再次批准。`
+    : `${base}\nClaude Code 会跳过工具操作确认。电脑可能要求再次批准。`;
 }
 
 export function DesktopChatControls({ app }: { app: RemoteApp }) {
-  // A CLI room runs in the mode its process was started with. Show that mode
-  // (or none while its metadata loads), never the native session's mode.
   const inRoom = Boolean(app.activeRoomId || app.activeRoom);
   const room = app.activeRoom;
-  const pending = app.ccModeRequest?.switching ? app.ccModeRequest : undefined;
-  // Pending Host turns were submitted under the current mode; the Host refuses
-  // a switch until they ran or were removed.
-  const queuedTurns = inRoom ? (app.turnQueue?.entries.length ?? 0) : 0;
-  const roomSwitchable =
-    !!room &&
-    !!app.setCcRoomPermissionMode &&
-    !room.observing &&
-    !pending &&
-    queuedTurns === 0 &&
-    app.status === "online";
+  const blocked = inRoom ? cliSessionControlBlock(app) : undefined;
+  const roomSwitchable = !!room && !!app.setCcRoomPermissionMode && !blocked;
   const activeSession = app.sessions.find((session) => session.id === app.activeSessionId);
   const externalRuntime =
     activeSession?.provider === "codex" || activeSession?.provider === "claude-code";
+  const nativeBlocked =
+    !!app.outputHistoryFailed || (externalRuntime && app.chat.run === "running");
   const hint = inRoom
-    ? pending
-      ? `正在切换为「${permissionLabel(pending.mode)}」，等待 Host 确认…`
-      : room?.observing
-        ? "只读查看中，接管后才能切换权限模式。"
-        : queuedTurns
-          ? `有 ${queuedTurns} 条排队消息按当前模式提交，执行完或取消后才能切换权限模式。`
-          : room?.kind === "codex"
-            ? "切换后从下一条消息启动的 Codex 进程开始生效。"
-            : "切换会重启 CLI 进程，重启后生效。"
+    ? blocked ||
+      (!app.setCcRoomPermissionMode ? "更新电脑端后可调整权限。" : "切换后从下一条消息开始生效。")
     : externalRuntime
       ? "下次发送生效；运行中变更需先停止。"
       : "下次发送生效。";
@@ -88,17 +69,22 @@ export function DesktopChatControls({ app }: { app: RemoteApp }) {
         <span className="desktop-permission-label">权限模式</span>
         <select
           aria-label="权限模式"
+          title={hint}
           value={inRoom ? (room?.permissionMode ?? "") : app.permissionMode}
-          disabled={inRoom ? !roomSwitchable : app.outputHistoryFailed}
+          disabled={inRoom ? !roomSwitchable : nativeBlocked}
           onChange={(event) => {
             const mode = event.target.value as MobileRemotePermissionMode;
             if (inRoom) {
               if (!room || !roomSwitchable || mode === room.permissionMode) return;
-              if (!window.confirm(cliModeSwitchNotice(room.kind, mode))) return;
+              if (
+                mode === "bypassPermissions" &&
+                !window.confirm(cliModeSwitchNotice(room.kind, mode))
+              )
+                return;
               app.setCcRoomPermissionMode?.(mode);
               return;
             }
-            if (app.outputHistoryFailed) return;
+            if (nativeBlocked) return;
             if (
               mode === "bypassPermissions" &&
               app.permissionMode !== mode &&
@@ -119,18 +105,22 @@ export function DesktopChatControls({ app }: { app: RemoteApp }) {
       <span
         className="desktop-permission-hint"
         role="note"
-        data-blocking={inRoom && room && !roomSwitchable ? "" : undefined}
+        aria-live="polite"
+        data-blocking={inRoom && !roomSwitchable ? "" : undefined}
       >
         {hint}
       </span>
-      {app.activeRoom ? (
-        <>
-          <span className="desktop-room-label">{app.activeRoom.name}</span>
-          <button className="library-button" onClick={app.leaveRoom}>
-            离开 CLI 会话
-          </button>
-        </>
-      ) : null}
+    </div>
+  );
+}
+
+export function DesktopCliSessionActions({ app }: { app: RemoteApp }) {
+  if (!app.activeRoomId && !app.activeRoom) return null;
+  return (
+    <div className="desktop-cli-session-actions">
+      <button className="library-button" onClick={app.leaveRoom}>
+        离开 CLI 会话
+      </button>
     </div>
   );
 }
@@ -263,8 +253,15 @@ export function DesktopSidebar({
         ) : (
           app.ccSessions.map((session) => (
             <button
-              className="session"
+              className={`session${app.activeRoom?.sessionId === session.sessionId && app.activeRoom.kind === app.ccCliKind ? " active" : ""}`}
               key={session.sessionId}
+              aria-current={
+                app.activeRoom?.sessionId === session.sessionId &&
+                app.activeRoom.kind === app.ccCliKind
+                  ? "page"
+                  : undefined
+              }
+              title={session.firstMessage || session.sessionId}
               onClick={(event) =>
                 setPicking({
                   id: session.sessionId,
@@ -275,7 +272,14 @@ export function DesktopSidebar({
               }
             >
               <span className="session-title">{session.firstMessage || session.sessionId}</span>
-              <span className="session-meta">{session.messageCount} 条消息</span>
+              <span className="session-meta desktop-cli-session-meta">
+                {session.messageCount !== undefined ? (
+                  <span>{session.messageCount} 条消息</span>
+                ) : null}
+                {Number.isFinite(session.lastModified) ? (
+                  <span>{relativeTime(session.lastModified)}</span>
+                ) : null}
+              </span>
             </button>
           ))
         )}

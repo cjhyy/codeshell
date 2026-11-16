@@ -18,7 +18,12 @@ import { connectionModelLabel, readConfiguration, type HubConfiguration } from "
 import { SessionDrafts } from "./drafts.js";
 import { sessionTitle } from "./chat.js";
 import { Workbench } from "./Workbench.js";
-import { DesktopApproval, DesktopChatControls, DesktopSidebar } from "./DesktopControls.js";
+import {
+  DesktopApproval,
+  DesktopChatControls,
+  DesktopCliSessionActions,
+  DesktopSidebar,
+} from "./DesktopControls.js";
 import {
   DesktopModelPicker,
   desktopRuntimeModel,
@@ -26,6 +31,7 @@ import {
   nativeConnectionId,
   nativeModelChoices,
 } from "./DesktopModelPicker.js";
+import { DesktopCliModelPicker } from "./DesktopCliModelPicker.js";
 import type { WorkbenchController } from "./workbench-types.js";
 import { DesktopAccessChallenge } from "./DesktopAccessChallenge.js";
 import { DesktopPairingNotice } from "./DesktopPairingNotice.js";
@@ -1070,6 +1076,7 @@ export function useDesktopController(
     composerControls: <DesktopChatControls app={actions} />,
     chatControls: (
       <>
+        <DesktopCliSessionActions app={actions} />
         {app.activeSessionId && uncertainIntents.current.has(activeId) && app.reloadHistory ? (
           <button
             className="library-button"
@@ -1104,57 +1111,60 @@ export function useDesktopController(
         ) : null}
       </>
     ),
-    modelSelector: app.activeRoomId ? undefined : (
-      <DesktopModelPicker
-        key={`${workspaceKey}:${activeId}`}
-        models={app.runtimeModels ?? []}
-        nativeChoices={nativeChoices}
-        currentNativeLabel={
-          activeModelMetadata.current?.sessionId === activeId
-            ? activeModelMetadata.current.nativeLabel
-            : undefined
-        }
-        value={selectedModel}
-        defaultLabel={(() => {
-          const connection = configuration?.connections.find(
-            (item) => item.id === configuration.defaults.text,
-          );
-          return (connection && connectionModelLabel(configuration, connection)) || "默认模型";
-        })()}
-        defaultDisabled={!app.nativeModelSelection && persistedModel === CURRENT_NATIVE_MODEL}
-        loading={app.runtimeModelsLoading}
-        error={app.runtimeModelsError}
-        disabled={
-          app.status !== "online" ||
-          app.outputHistoryFailed ||
-          running ||
-          // Queued turns carry the model chosen when they were queued.
-          queuedTurns > 0 ||
-          sendingId !== null ||
-          app.loading.sessionHistory ||
-          emptyReplacement?.status === "pending" ||
-          uncertainIntents.current.has(activeId)
-        }
-        onRefresh={app.refreshRuntimeModels}
-        onChange={chooseRuntimeModel}
-        onRetryCreation={
-          emptyReplacement?.status === "failed"
-            ? () => {
-                const current = appRef.current;
-                if (
-                  current.activeSessionId === emptyReplacement.fromSessionId &&
-                  current.emptySessionReplacement?.fromSessionId ===
-                    emptyReplacement.fromSessionId &&
-                  current.emptySessionReplacement.status === "failed"
-                )
-                  current.retryEmptySessionReplacement?.();
-              }
-            : creationNeedsRetry
-              ? () => chooseRuntimeModel(selectedModel, true)
+    modelSelector:
+      app.activeRoomId || app.activeRoom ? (
+        <DesktopCliModelPicker app={actions} />
+      ) : (
+        <DesktopModelPicker
+          key={`${workspaceKey}:${activeId}`}
+          models={app.runtimeModels ?? []}
+          nativeChoices={nativeChoices}
+          currentNativeLabel={
+            activeModelMetadata.current?.sessionId === activeId
+              ? activeModelMetadata.current.nativeLabel
               : undefined
-        }
-      />
-    ),
+          }
+          value={selectedModel}
+          defaultLabel={(() => {
+            const connection = configuration?.connections.find(
+              (item) => item.id === configuration.defaults.text,
+            );
+            return (connection && connectionModelLabel(configuration, connection)) || "默认模型";
+          })()}
+          defaultDisabled={!app.nativeModelSelection && persistedModel === CURRENT_NATIVE_MODEL}
+          loading={app.runtimeModelsLoading}
+          error={app.runtimeModelsError}
+          disabled={
+            app.status !== "online" ||
+            app.outputHistoryFailed ||
+            running ||
+            // Queued turns carry the model chosen when they were queued.
+            queuedTurns > 0 ||
+            sendingId !== null ||
+            app.loading.sessionHistory ||
+            emptyReplacement?.status === "pending" ||
+            uncertainIntents.current.has(activeId)
+          }
+          onRefresh={app.refreshRuntimeModels}
+          onChange={chooseRuntimeModel}
+          onRetryCreation={
+            emptyReplacement?.status === "failed"
+              ? () => {
+                  const current = appRef.current;
+                  if (
+                    current.activeSessionId === emptyReplacement.fromSessionId &&
+                    current.emptySessionReplacement?.fromSessionId ===
+                      emptyReplacement.fromSessionId &&
+                    current.emptySessionReplacement.status === "failed"
+                  )
+                    current.retryEmptySessionReplacement?.();
+                }
+              : creationNeedsRetry
+                ? () => chooseRuntimeModel(selectedModel, true)
+                : undefined
+          }
+        />
+      ),
     goalActions:
       app.activeSessionId && !app.outputHistoryFailed ? (
         <>

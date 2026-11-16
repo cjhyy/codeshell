@@ -1334,6 +1334,13 @@ test("CLI room mode switch restarts through the Host and explains when it applie
       await flushMicrotasks();
     });
     expect(requested).toEqual(["bypassPermissions"]);
+    // Routine permission changes apply directly; only elevated access confirms.
+    await act(async () => {
+      reactProps(select).onChange({ target: { value: "acceptEdits" } });
+      await flushMicrotasks();
+    });
+    expect(requested).toEqual(["bypassPermissions", "acceptEdits"]);
+    expect(confirms).toHaveLength(1);
     // Codex bypass is described as turning the sandbox off, before anything is sent.
     expect(confirms[0]).toContain("关闭沙箱");
     expect(confirms[0]).toContain("从下一条消息开始生效");
@@ -1356,7 +1363,7 @@ test("CLI room mode switch restarts through the Host and explains when it applie
     const pending = elementsByTag(host, "SELECT")[0]!;
     expect(reactProps(pending).disabled).toBe(true);
     expect(reactProps(pending).value).toBe("default");
-    expect(textOf(host)).toContain("等待 Host 确认");
+    expect(textOf(host)).toContain("等待电脑确认");
   } finally {
     await act(async () => root.unmount());
     window.confirm = originalConfirm;
