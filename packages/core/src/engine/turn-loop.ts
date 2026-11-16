@@ -128,6 +128,12 @@ export interface TurnLoopConfig {
   /** First message this run added to the history; see engine/stable-prefix.ts. */
   runStartMessage?: Message;
   /**
+   * The run started on a cold prompt cache with a notes context: switch to an
+   * unused continuation note before the first request once the context holds
+   * at least this many tokens (RunBehaviorProfile.notesRolloverWhenColdTokens).
+   */
+  coldNotesRolloverTokens?: number;
+  /**
    * Called before every model request, after context management. The engine
    * appends the run's context-ledger snapshot here when a rewrite dropped it
    * from `messages` (it is ordinary history otherwise; nothing is appended).
@@ -744,6 +750,7 @@ export class TurnLoop {
   }
 
   private noteReminderIssued = false;
+  private coldRolloverChecked = false;
   private readonly retainedHookMessages = new Map<string, Message>();
   private readonly pendingContextReminders = new Map<string, Message>();
 
@@ -798,6 +805,22 @@ export class TurnLoop {
   private async manageContextMessages(messages: Message[]): Promise<Message[]> {
     messages = this.applyNotesRollover(messages);
     const notes = this.deps.contextNotes;
+    const coldThreshold = this.config.coldNotesRolloverTokens;
+    if (notes && coldThreshold !== undefined && !this.coldRolloverChecked) {
+      // Only before the first request of a cold run: later steps are warm.
+      this.coldRolloverChecked = true;
+      if (
+        this.deps.contextManager.checkLimits(this.stripVolatileContextMessages(messages)).tokens >=
+        coldThreshold
+      ) {
+        try {
+          notes.requestRollover();
+          messages = this.applyNotesRollover(messages);
+        } catch {
+          // No unused note: keep the full context.
+        }
+      }
+    }
     if (notes) {
       const stable = this.stripVolatileContextMessages(messages);
       const limits = this.deps.contextManager.checkLimits(stable);

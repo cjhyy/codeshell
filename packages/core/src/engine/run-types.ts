@@ -26,6 +26,13 @@ export interface RunBehaviorProfile {
   id: string;
   /** Default context policy; explicit Engine/settings choices take precedence. */
   contextStrategy?: "summary" | "notes";
+  /**
+   * Notes strategy only. When a run starts after the prompt cache expired and
+   * an unused continuation note exists, switch to it before the first request
+   * if the context holds at least this many tokens: a cold request pays for
+   * the whole context anyway, so switching first pays only for the note.
+   */
+  notesRolloverWhenColdTokens?: number;
   /** Appended to the system prompt after config.appendSystemPrompt. */
   systemPromptAppend?: string;
   /** Hard tool allowlist for the run (model visibility + execution gate). */
