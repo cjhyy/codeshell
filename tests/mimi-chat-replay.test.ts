@@ -125,9 +125,12 @@ function deferred() {
   return { promise, resolve };
 }
 
+/** DelegateWork is static; its Workspace ids come from the runtime context. */
 function workspace(request: CreateMessageOptions): string {
-  const schema = request.tools!.find((tool) => tool.name === "DelegateWork")!.inputSchema;
-  return (schema.properties.workspace_id.enum as string[]).find((id) => id !== "no-workspace")!;
+  const world = JSON.parse(petWorld(request).slice("<pet-world>".length)) as {
+    workspaces?: Array<{ id: string }>;
+  };
+  return world.workspaces!.map((entry) => entry.id).find((id) => id !== "no-workspace")!;
 }
 
 function expectRefusedReceiptTools(request: CreateMessageOptions, ids: string[]): void {
@@ -514,7 +517,8 @@ describe("Mimi historical chat replay through the real manager stack", () => {
         expectWorldFact(request, "fixture launch rejected");
         expect(request.tools).toEqual(h.script.requests[0].tools);
         const forbidden = response("DelegateWork", {
-          workspace_id: workspace(request),
+          // A receipt world lists no Workspaces; reuse the launched one.
+          workspace_id: workspace(h.script.requests[0]),
           objective: "Receipt turns must not start more work.",
         });
         deniedIds = forbidden.toolCalls.map((call) => call.id);
@@ -597,7 +601,8 @@ describe("Mimi historical chat replay through the real manager stack", () => {
             expectWorldFact(request, "fixture launch rejected");
             expect(request.tools).toEqual(h.script.requests[0].tools);
             const forbidden = response("DelegateWork", {
-              workspace_id: workspace(request),
+              // A receipt world lists no Workspaces; reuse the launched one.
+              workspace_id: workspace(h.script.requests[0]),
               objective: "Receipt turns must not start more work.",
             });
             forbidden.toolCalls.push(
