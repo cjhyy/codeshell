@@ -9,7 +9,16 @@ export function DesktopCliModelPicker({ app, busy = false }: { app: RemoteApp; b
   const blocked = busy ? "正在发送消息，完成后可调整。" : cliSessionControlBlock(app);
   const models = (app.runtimeModels ?? []).filter((model) => model.kind === room?.kind);
   const value = room?.modelKey ?? "";
-  const choices: ModelChoice[] = [{ value: "", label: "CLI 默认模型" }];
+  const choices: ModelChoice[] = [
+    {
+      value: "",
+      label: !room
+        ? "正在读取模型…"
+        : !supported && room.modelKey === undefined
+          ? "CLI 当前模型"
+          : "CLI 默认模型",
+    },
+  ];
   if (value && !models.some((model) => model.key === value))
     choices.push({ value, label: `${value} · 当前模型`, disabled: true });
   choices.push(...models.map((model) => ({ value: model.key, label: model.label })));

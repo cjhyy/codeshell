@@ -2417,6 +2417,7 @@ test("CLI composer blocks both settings during pending work and uses confirmed v
     <DesktopCliModelPicker app={{ ...app, activeRoom: undefined }} />,
   );
   expect(metadata).not.toContain("模型设置");
+  expect(metadata).toContain("正在读取模型");
 });
 
 test("CLI sidebar distinguishes unknown counts and marks the active CLI thread", () => {
