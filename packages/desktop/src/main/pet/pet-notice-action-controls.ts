@@ -18,7 +18,11 @@ import {
 } from "./pet-notice-reply-interpreter.js";
 import { describeLocalTime } from "./pet-notice-defer.js";
 import { hostTimezoneOffsetMin } from "./pet-notice-policy.js";
-import { createReplyModels, type ExternalReplyModel } from "./pet-notice-reply-models.js";
+import {
+  createReplyModels,
+  type ExternalReplyModel,
+  type ReplyModelOptions,
+} from "./pet-notice-reply-models.js";
 import type { NoticeActionRecord } from "./pet-notice-types.js";
 
 type WorkerRequest = (
@@ -221,6 +225,7 @@ export function createOwnerReplyHandling(
     models?: ReplyModel[];
     /** External selection is interpreted by a separate restricted Host runtime. */
     externalReplyModel?: ExternalReplyModel;
+    accounting?: ReplyModelOptions["accounting"];
     now?: () => number;
     onError: (error: unknown) => void;
   },
@@ -246,7 +251,11 @@ export function createOwnerReplyHandling(
   return {
     interpret: (message, items, { bound }) => {
       const models =
-        deps.models ?? createReplyModels(deps.cwd, { external: deps.externalReplyModel });
+        deps.models ??
+        createReplyModels(deps.cwd, {
+          external: deps.externalReplyModel,
+          ...(deps.accounting ? { accounting: deps.accounting } : {}),
+        });
       return interpretReply({
         message,
         items,
