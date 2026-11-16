@@ -43,7 +43,14 @@ import {
   type PromptCacheRequestContext,
   type PromptCacheStrategy,
 } from "../prompt-cache.js";
-import { stabilizeExplicitCacheContent, usesExplicitCacheMarkers } from "./openai-cache-content.js";
+import {
+  isPlainStringRoute,
+  rejectsArrayContent,
+  rememberPlainStringRoute,
+  stabilizeExplicitCacheContent,
+  usesExplicitCacheMarkers,
+  withPlainStringContent,
+} from "./openai-cache-content.js";
 import { STREAM_WATCHDOG_CONFIG, StreamIdleTimeoutError } from "../stream-watchdog.js";
 import { joinToolResultText } from "../../utils/tool-schema-discovery.js";
 
@@ -334,6 +341,18 @@ export class OpenAIClient extends LLMClientBase {
   /** Compatibility fallbacks for OpenAI-compatible gateways that lag the API. */
   private _disableExplicitPromptCache = false;
   private _disablePromptCacheKey = false;
+  /**
+   * The endpoint rejected text-part array content: plain strings, no markers.
+   * Remembered per route for the process (openai-cache-content.ts).
+   */
+  private get _plainStringContent(): boolean {
+    return isPlainStringRoute(this.contentRouteKey());
+  }
+
+  private contentRouteKey(): string {
+    const { providerKind, baseUrl } = this.config;
+    return JSON.stringify([this.provider, providerKind ?? "", this.model, baseUrl ?? ""]);
+  }
 
   constructor(
     config: LLMConfig,
@@ -395,9 +414,9 @@ export class OpenAIClient extends LLMClientBase {
       request,
       explicitDisabled: this._disableExplicitPromptCache,
     });
-    return this._disablePromptCacheKey && policy.cacheKey
-      ? { ...policy, cacheKey: undefined }
-      : policy;
+    const keyed =
+      this._disablePromptCacheKey && policy.cacheKey ? { ...policy, cacheKey: undefined } : policy;
+    return this._plainStringContent ? withPlainStringContent(keyed) : keyed;
   }
 
   /**
@@ -431,6 +450,7 @@ export class OpenAIClient extends LLMClientBase {
       dropReasoningEffort: this._dropReasoningEffort,
       disableExplicitPromptCache: this._disableExplicitPromptCache,
       disablePromptCacheKey: this._disablePromptCacheKey,
+      plainStringContent: this._plainStringContent,
     };
   }
 
@@ -1451,6 +1471,26 @@ export class OpenAIClient extends LLMClientBase {
             model: this.model,
           });
         }
+      }
+
+      // A gateway that accepts only string content rejects the text-part
+      // arrays marker routes send (openai-cache-content.ts). Send plain
+      // strings without markers from then on; the effective strategy reports
+      // the change, so the turn loop stops relying on breakpoints.
+      if (
+        !selfCorrected &&
+        !this._plainStringContent &&
+        usesExplicitCacheMarkers(this.promptCachePolicy().strategy) &&
+        rejectsArrayContent(err.status, msg)
+      ) {
+        rememberPlainStringRoute(this.contentRouteKey());
+        selfCorrected = true;
+        logger.warn("llm.prompt_cache_array_content_unsupported", {
+          cat: "llm",
+          provider: this.provider,
+          providerKind: this.config.providerKind,
+          model: this.model,
+        });
       }
 
       // o-series / gpt-5+ reject `max_tokens` and demand

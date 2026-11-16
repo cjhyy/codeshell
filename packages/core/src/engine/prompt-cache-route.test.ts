@@ -31,6 +31,20 @@ describe("PromptCacheRouteMemory", () => {
     );
   });
 
+  test("an Anthropic route that lost array content plans without breakpoints", () => {
+    const routes = new PromptCacheRouteMemory();
+    const anthropic = {
+      provider: "openai",
+      providerKind: "openrouter",
+      model: "anthropic/claude-sonnet-4.5",
+      baseUrl: "https://openrouter.ai/api/v1",
+    };
+    expect(routes.usesExplicitBreakpoints(anthropic)).toBe(true);
+    expect(routes.observe(anthropic, "provider-managed")).toBe(true);
+    expect(routes.usesExplicitBreakpoints(anthropic)).toBe(false);
+    expect(routes.policy(anthropic).strategy).toBe("provider-managed");
+  });
+
   test("other routes and implicit-only routes are unaffected", () => {
     const routes = new PromptCacheRouteMemory();
     routes.observe(HYBRID, "openai-implicit");

@@ -18,7 +18,10 @@ import {
   type PromptCachePolicy,
   type PromptCacheStrategy,
 } from "../llm/prompt-cache.js";
-import { usesExplicitCacheMarkers } from "../llm/providers/openai-cache-content.js";
+import {
+  usesExplicitCacheMarkers,
+  withPlainStringContent,
+} from "../llm/providers/openai-cache-content.js";
 import type { LLMConfig } from "../types.js";
 
 type RouteConfig = Pick<
@@ -34,10 +37,10 @@ export class PromptCacheRouteMemory {
   private readonly explicitRejected = new Set<string>();
 
   policy(llm: RouteConfig): PromptCachePolicy {
-    return resolvePromptCachePolicy({
-      ...llm,
-      ...(this.explicitRejected.has(routeKey(llm)) ? { explicitDisabled: true } : {}),
-    });
+    if (!this.explicitRejected.has(routeKey(llm))) return resolvePromptCachePolicy(llm);
+    // A route that keeps markers even with explicit cache fields disabled
+    // (Anthropic) lost them because its endpoint rejected array content.
+    return withPlainStringContent(resolvePromptCachePolicy({ ...llm, explicitDisabled: true }));
   }
 
   ttlMs(llm: RouteConfig): number {
