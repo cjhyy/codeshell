@@ -535,9 +535,7 @@ export function Sidebar({
       </div>
 
       <div className="shrink-0 border-t border-border/70 bg-card/40 px-2 py-2">
-        {onOpenExecutionDevices && (
-          <AccountDeviceEntry onOpen={onOpenExecutionDevices} onSignIn={onOpenAccountSettings} />
-        )}
+        {onOpenExecutionDevices && <AccountDeviceEntry onOpen={onOpenExecutionDevices} />}
         <div className="flex items-center gap-1.5">
           <div className="min-w-0 flex-1">
             <AccountSidebarEntry

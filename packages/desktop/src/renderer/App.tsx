@@ -2926,6 +2926,12 @@ function App() {
         <AccountDeviceWorkspace
           open={executionDevicesOpen}
           onClose={() => setExecutionDevicesOpen(false)}
+          onOpenLocal={async () => {
+            if (activeProjectId !== null && (!projectRuntime.ready || cloudSelected))
+              await projectRuntime.select(null);
+            setViewMode("chat");
+            setExecutionDevicesOpen(false);
+          }}
         />
       )}
       <PetPeekHost
