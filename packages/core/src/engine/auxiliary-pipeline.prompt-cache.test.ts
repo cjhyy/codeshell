@@ -186,6 +186,7 @@ describe("memory pipeline prompt cache", () => {
     expect(decision.promptCache).toEqual({
       scopeId: auxPromptCacheScope(sessionId, "memory-write-decision"),
       stablePrefixMessageCount: decision.messages.length - 1,
+      auxiliary: true,
     });
     expect(decision.messages.length).toBeGreaterThan(2);
     const stable = text(decision).slice(0, -1).join("");

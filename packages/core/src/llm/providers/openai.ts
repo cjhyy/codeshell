@@ -247,6 +247,12 @@ const MISSING_TOOL_RESULT_WIRE_TEXT =
 // Clients are recreated between Engine runs. Keep only bounded, expiring
 // boundary hashes across those recreations; never retain conversation text.
 const sharedPromptCacheHistory = new PromptCacheHistory();
+/**
+ * Auxiliary calls (PromptCacheRequestContext.auxiliary) keep their own bounded
+ * history: each session adds several auxiliary scopes, which would otherwise
+ * push main conversations out of the shared one.
+ */
+const sharedAuxPromptCacheHistory = new PromptCacheHistory();
 
 /** Resolve the same actual message used by the wire marker and history hash. */
 function promptCacheBoundaryIndex(
@@ -325,6 +331,7 @@ function normalizeOpenAIToolMessagePairs(
 export class OpenAIClient extends LLMClientBase {
   private _client: OpenAI | null = null;
   private readonly promptCacheHistory: PromptCacheHistory;
+  private readonly auxPromptCacheHistory: PromptCacheHistory;
   private readonly dangerouslyAllowBrowser: boolean;
   // Sticky override: once the endpoint tells us `max_tokens` is rejected for
   // this model, switch to `max_completion_tokens` for the lifetime of the
@@ -360,10 +367,13 @@ export class OpenAIClient extends LLMClientBase {
     runtimeOptions: {
       dangerouslyAllowBrowser?: boolean;
       promptCacheHistory?: PromptCacheHistory;
+      auxPromptCacheHistory?: PromptCacheHistory;
     } = {},
   ) {
     super(config, defaults);
     this.promptCacheHistory = runtimeOptions.promptCacheHistory ?? sharedPromptCacheHistory;
+    this.auxPromptCacheHistory =
+      runtimeOptions.auxPromptCacheHistory ?? sharedAuxPromptCacheHistory;
     this.dangerouslyAllowBrowser = runtimeOptions.dangerouslyAllowBrowser === true;
   }
 
@@ -488,6 +498,9 @@ export class OpenAIClient extends LLMClientBase {
           : undefined;
         const stableBoundaryIndex = promptCacheBoundaryIndex(messages, stablePrefixEndIndex);
         let cachePlan: PromptCacheHistoryPlan | undefined;
+        const cacheHistory = options.promptCache?.auxiliary
+          ? this.auxPromptCacheHistory
+          : this.promptCacheHistory;
         if (cachePolicy.strategy === "openai-hybrid" && options.promptCache?.scopeId) {
           let latestEligibleIndex = -1;
           for (let index = messages.length - 1; index >= 0; index--) {
@@ -511,7 +524,7 @@ export class OpenAIClient extends LLMClientBase {
             reasoning,
             false,
           );
-          cachePlan = this.promptCacheHistory.prepare({
+          cachePlan = cacheHistory.prepare({
             scopeKey: createPromptCacheKey(
               options.promptCache.scopeId,
               JSON.stringify(this.getPromptCacheScopeIdentity()),
@@ -546,7 +559,7 @@ export class OpenAIClient extends LLMClientBase {
               ? await this.streamMessage(streamOptions, messages, tools, reasoning, requestSignal)
               : await this.nonStreamMessage(options, messages, tools, reasoning, requestSignal);
           if (cachePlan && !requestSignal?.aborted && (response.usage?.promptTokens ?? 0) > 0) {
-            this.promptCacheHistory.commit(cachePlan);
+            cacheHistory.commit(cachePlan);
           }
           recordModelTraceAttemptResult(response);
           span.end({

@@ -33,6 +33,12 @@ export interface PromptCacheRequestContext {
    * append-only in-run tail.
    */
   stablePrefixMessageCount?: number;
+  /**
+   * An auxiliary call (memory extraction, session summary — see
+   * engine/aux-prompt-cache.ts). Its boundary history is kept apart from the
+   * main conversations', so neither can evict the other's.
+   */
+  auxiliary?: true;
 }
 
 export interface PromptCachePolicy {

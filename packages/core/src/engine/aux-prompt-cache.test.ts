@@ -15,7 +15,7 @@ function turns(count: number) {
 }
 
 /** An OpenRouter GPT route (openai-hybrid) that records request bodies. */
-function capturingClient() {
+function capturingClient(histories: { main?: PromptCacheHistory; aux?: PromptCacheHistory } = {}) {
   const bodies: any[] = [];
   const client = new OpenAIClient(
     {
@@ -26,7 +26,10 @@ function capturingClient() {
       baseUrl: "https://openrouter.ai/api/v1",
     },
     { retryMaxAttempts: 1 },
-    { promptCacheHistory: new PromptCacheHistory() },
+    {
+      promptCacheHistory: histories.main ?? new PromptCacheHistory(),
+      auxPromptCacheHistory: histories.aux ?? new PromptCacheHistory(),
+    },
   );
   (client as any)._client = {
     chat: {
@@ -70,7 +73,10 @@ describe("auxiliary prompt cache request", () => {
 
   test("a client that places no markers, or a plan with nothing stable, keeps one message", () => {
     const plan = { purpose: "p", stable: ["a", "b"], volatile: "v" };
-    const scoped = { messages: whole, promptCache: { scopeId: auxPromptCacheScope("s-1", "p") } };
+    const scoped = {
+      messages: whole,
+      promptCache: { scopeId: auxPromptCacheScope("s-1", "p"), auxiliary: true },
+    };
     for (const client of [
       {},
       { getPromptCacheConfigIdentity: () => ({ cacheStrategy: "provider-managed" }) },
@@ -92,7 +98,11 @@ describe("auxiliary prompt cache request", () => {
       auxCachedRequest({ client: marking, sessionId: "s-1", prompt: "whole prompt", plan }),
     ).toEqual({
       messages: ["a", "b", "v"].map((content) => ({ role: "user", content })),
-      promptCache: { scopeId: auxPromptCacheScope("s-1", "p"), stablePrefixMessageCount: 2 },
+      promptCache: {
+        scopeId: auxPromptCacheScope("s-1", "p"),
+        stablePrefixMessageCount: 2,
+        auxiliary: true,
+      },
     });
   });
 
@@ -172,4 +182,38 @@ describe("auxiliary prompt cache request", () => {
       expect(reusable / total).toBeGreaterThan(0.6);
     },
   );
+
+  test("auxiliary boundaries are kept apart from the main conversations'", async () => {
+    // One scope each: if both shared a history, the main call would evict the
+    // auxiliary save point.
+    const { client, bodies } = capturingClient({
+      main: new PromptCacheHistory(1),
+      aux: new PromptCacheHistory(1),
+    });
+    const aux = async (count: number) => {
+      const segments = buildSessionMemoryPromptSegments(turns(count));
+      await client.createMessage({
+        systemPrompt: "summariser",
+        ...auxCachedRequest({
+          client,
+          sessionId: "s-1",
+          prompt: joinMemoryPrompt(segments),
+          plan: { purpose: "session-summary", ...segments },
+        }),
+        tools: [],
+      });
+      return segments;
+    };
+    const first = await aux(14);
+    for (const sessionId of ["s-1", "s-2"]) {
+      await client.createMessage({
+        systemPrompt: "main",
+        messages: [{ role: "user", content: `main conversation of ${sessionId}` }],
+        promptCache: { scopeId: sessionId, stablePrefixMessageCount: 1 },
+        tools: [],
+      });
+    }
+    await aux(18);
+    expect(breakpoints(bodies.at(-1))).toContain(first.stable.length);
+  });
 });

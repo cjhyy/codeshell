@@ -61,10 +61,10 @@ export function auxCachedRequest(input: {
   const scopeId = auxPromptCacheScope(input.sessionId, plan.purpose);
   const stable = plan.stable.filter((text) => text.length > 0);
   if (stable.length === 0 || plan.volatile.length === 0 || !placesCacheMarkers(input.client)) {
-    return { messages: whole, promptCache: { scopeId } };
+    return { messages: whole, promptCache: { scopeId, auxiliary: true } };
   }
   return {
     messages: [...stable, plan.volatile].map((content) => ({ role: "user", content })),
-    promptCache: { scopeId, stablePrefixMessageCount: stable.length },
+    promptCache: { scopeId, stablePrefixMessageCount: stable.length, auxiliary: true },
   };
 }
