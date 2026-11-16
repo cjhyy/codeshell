@@ -694,7 +694,8 @@ describe("useRemoteApp session switching recovery", () => {
       writable: true,
     });
     let retired = 0,
-      uncertain = 0;
+      uncertain = 0,
+      rejected = 0;
     try {
       await act(async () => {
         hook.result.current.selectSession("native");
@@ -709,6 +710,9 @@ describe("useRemoteApp session switching recovery", () => {
           },
           onUncertain: () => {
             uncertain++;
+          },
+          onRejected: () => {
+            rejected++;
           },
         });
         await flushMicrotasks();
@@ -726,6 +730,7 @@ describe("useRemoteApp session switching recovery", () => {
       expect(await pending).toBe(false);
       expect(retired).toBe(1);
       expect(uncertain).toBe(0);
+      expect(rejected).toBe(0);
       await act(async () => {
         ws.message({
           type: "chat.accepted",
@@ -4607,6 +4612,9 @@ for (const outcome of ["uncertain", "legacy-timeout", "rejected"] as const) {
       });
       await act(async () => {
         hook.result.current.setDraft("perform operation once");
+        hook.result.current.addFiles([
+          new File(["owned image"], "task.png", { type: "image/png" }),
+        ] as unknown as FileList);
       });
       await act(async () => {
         expect(hook.result.current.send()).toBe(true);
@@ -4625,9 +4633,14 @@ for (const outcome of ["uncertain", "legacy-timeout", "rejected"] as const) {
         await flushMicrotasks();
       });
       expect(hook.result.current.draft).toBe("perform operation once");
+      expect(hook.result.current.files.map((file) => file.name)).toEqual(["task.png"]);
       expect(hook.result.current.error).toContain(
         outcome === "rejected" ? "消息未送达" : "无法确认消息是否已送达",
       );
+      if (outcome === "rejected") {
+        expect(hook.result.current.error).toContain("invalid input");
+        expect(hook.result.current.error).not.toContain("图片发送失败");
+      } else expect(hook.result.current.error).not.toContain("消息未送达");
       if (outcome === "uncertain") {
         // Failure before the retry frame is sent must not forget the original
         // uncertainty and manufacture a new ID for the next attempt.
@@ -4637,6 +4650,9 @@ for (const outcome of ["uncertain", "legacy-timeout", "rejected"] as const) {
           await flushMicrotasks();
         });
         expect(hook.result.current.draft).toBe("perform operation once");
+        expect(hook.result.current.files.map((file) => file.name)).toEqual(["task.png"]);
+        expect(hook.result.current.error).toContain("无法确认消息是否已送达");
+        expect(hook.result.current.error).not.toContain("发送前与电脑的连接已改变");
         ws.readyState = FakeWebSocket.OPEN;
       }
       await act(async () => {
@@ -4649,6 +4665,7 @@ for (const outcome of ["uncertain", "legacy-timeout", "rejected"] as const) {
       expect(sends).toHaveLength(2);
       expect(sends[1].text).toBe(sends[0].text);
       expect(sends[1].sessionId).toBe(sends[0].sessionId);
+      expect(sends[1].attachments).toEqual(sends[0].attachments);
       if (outcome === "rejected")
         expect(sends[1].clientMessageId).not.toBe(sends[0].clientMessageId);
       else expect(sends[1].clientMessageId).toBe(sends[0].clientMessageId);
@@ -4662,7 +4679,69 @@ for (const outcome of ["uncertain", "legacy-timeout", "rejected"] as const) {
         await flushMicrotasks();
       });
       expect(hook.result.current.draft).toBe("");
+      expect(hook.result.current.files).toHaveLength(0);
       expect(hook.result.current.chat.items.filter((item) => item.kind === "user")).toHaveLength(1);
+    } finally {
+      await hook.unmount();
+      restoreFetch();
+    }
+  });
+}
+
+for (const failure of ["connection", "upload"] as const) {
+  test(`Desktop displays a ${failure} failure before sending and retains the draft`, async () => {
+    setupBrowser();
+    const restoreFetch = defineTestProperty(window, "fetch", {
+      value: async () => new Response(null, { status: 413 }),
+      writable: true,
+    });
+    const hook = await renderHook(() => useDesktopController(useRemoteApp(), undefined, () => {}));
+    const ws = FakeWebSocket.instances[0]!;
+    try {
+      await act(async () => {
+        ws.open();
+        ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        hook.result.current.setDraft("keep this task");
+        hook.result.current.addFiles([
+          new File([new Uint8Array(failure === "upload" ? 256 * 1024 + 1 : 1)], "kept.png", {
+            type: "image/png",
+          }),
+        ] as unknown as FileList);
+      });
+      // The connection can stop accepting frames before React sees it offline.
+      if (failure === "connection") ws.readyState = FakeWebSocket.CLOSED;
+      await act(async () => {
+        expect(hook.result.current.send()).toBe(true);
+        await flushMicrotasks();
+      });
+      if (failure === "upload") {
+        const begin = ws.sent
+          .map((line) => JSON.parse(line))
+          .find((event) => event.type === "attachment.upload.begin");
+        await act(async () => {
+          ws.message({
+            type: "attachment.upload.ready",
+            clientId: begin.clientId,
+            uploadId: "rejected-upload",
+            putUrl: "/api/mobile/uploads/rejected-upload",
+            expiresAt: Date.now() + 10_000,
+          });
+          await flushMicrotasks();
+        });
+      }
+      expect(hook.result.current.error).toContain(
+        failure === "connection" ? "发送前与电脑的连接已改变" : "Image upload failed (413)",
+      );
+      expect(hook.result.current.error).toContain("消息未送达，内容和附件已保留");
+      expect(hook.result.current.uncertain).toBe(false);
+      expect(hook.result.current.draft).toBe("keep this task");
+      expect(hook.result.current.files.map((file) => file.name)).toEqual(["kept.png"]);
+      expect(
+        ws.sent.map((line) => JSON.parse(line)).some((event) => event.type === "chat.send"),
+      ).toBe(false);
     } finally {
       await hook.unmount();
       restoreFetch();

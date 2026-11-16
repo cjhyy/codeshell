@@ -206,6 +206,9 @@ export interface RemoteApp {
      *  arrived (lost connection or timeout): the host may have run it. */
     onUncertain?: (clientMessageId: string) => void;
     onRetired?: () => void;
+    /** This attempt was not sent or was explicitly rejected by the host.
+     *  Does not settle the delivery of an earlier uncertain attempt. */
+    onRejected?: (reason: string) => void;
   }) => Promise<boolean>;
   stopRun: () => void;
   selectSession: (id: string) => void;
@@ -2530,15 +2533,21 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       clientMessageId?: string;
       onUncertain?: (clientMessageId: string) => void;
       onRetired?: () => void;
+      onRejected?: (reason: string) => void;
     }): Promise<boolean> => {
+      const reject = (reason: string): false => {
+        setNotice(reason);
+        input.onRejected?.(reason);
+        return false;
+      };
       const permissionMode = input.permissionMode ?? permissionModeRef.current;
       const text = input.text.trim();
-      if (!text && input.attachments.length === 0) return false;
-      if (socket.status !== "online") return false;
+      if (!text && input.attachments.length === 0) return reject("请输入消息或添加附件后再发送。");
+      if (socket.status !== "online") return reject("与电脑的连接尚未就绪，请连接后再发送。");
       const refusePendingRoomSwitch = (roomId: string | undefined): boolean => {
         const pending = pendingCcOpenRef.current;
         if (!roomId || !pending?.switching || pending.roomId !== roomId) return false;
-        setNotice("请等待此会话的模型或权限设置确认后再发送。草稿已保留。");
+        reject("请等待此会话的模型或权限设置确认后再发送。");
         return true;
       };
       if (refusePendingRoomSwitch(activeRoomIdRef.current)) return false;
@@ -2546,7 +2555,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         input.nativeConnectionId &&
         (!nativeModelSelectionRef.current || activeRoomIdRef.current || input.modelKey)
       ) {
-        setNotice("当前连接不支持这项原生模型选择。草稿已保留，请重新连接桌面端后再试。");
+        reject("当前连接不支持这项原生模型选择，请重新连接桌面端后再试。");
         if (input.clientMessageId) input.onUncertain?.(input.clientMessageId);
         return false;
       }
@@ -2555,7 +2564,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         (emptySessionReplacementRef.current &&
           emptySessionReplacementRef.current.status !== "complete")
       )
-        return false;
+        return reject("新对话尚未准备完成，请等待创建完成后再发送。");
       unsentCreatedSessionRef.current = null;
       replacementSourceRef.current = null;
       const connectionGeneration = socket.connectionGeneration;
@@ -2566,7 +2575,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         (input.clientMessageId
           ? uncertainMessageSessionsRef.current.get(input.clientMessageId)
           : undefined) ?? boundSessionRef.current;
-      if (!roomId && sessionId && recoveryFencesRef.current.has(sessionId)) return false;
+      if (!roomId && sessionId && recoveryFencesRef.current.has(sessionId))
+        return reject("会话记录尚未恢复完成，请先恢复记录再发送。");
       const clientMessageId =
         input.clientMessageId ??
         globalThis.crypto?.randomUUID?.() ??
@@ -2609,8 +2619,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       }
       let attachments: Awaited<ReturnType<typeof prepareMobileAttachments>>;
       if (roomId && roomsRef.current.find((room) => room.id === roomId)?.observing) {
-        setNotice(t("mobile.notice.ccRoomObserving"));
-        return false;
+        return reject(t("mobile.notice.ccRoomObserving"));
       }
       const upload = new AbortController();
       uploadAbortsRef.current.add(upload);
@@ -2633,12 +2642,11 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           setNotice(t("mobile.historyRecovery.noReplay"));
           return false;
         }
-        setNotice(
+        return reject(
           t("mobile.notice.attachmentSendFailed", {
             error: error instanceof Error ? error.message : String(error),
           }),
         );
-        return false;
       } finally {
         uploadAbortsRef.current.delete(upload);
         if (roomId) {
@@ -2652,11 +2660,10 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         input.onRetired?.();
         return false;
       }
-      if (
-        conversationRevision !== conversationRevisionRef.current ||
-        (!roomId && sessionId && recoveryFencesRef.current.has(sessionId))
-      )
-        return false;
+      if (conversationRevision !== conversationRevisionRef.current)
+        return reject("发送前所选会话已改变，请核对当前会话后再发送。");
+      if (!roomId && sessionId && recoveryFencesRef.current.has(sessionId))
+        return reject("会话记录尚未恢复完成，请先恢复记录再发送。");
       const summaries = attachments.map(({ name, mime, size }) => ({ name, mime, size }));
       preparedMessagesRef.current.set(clientMessageId, {
         signature,
@@ -2711,7 +2718,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         if (!prepared) preparedMessagesRef.current.delete(clientMessageId);
         settleMessageAck(clientMessageId, new Error("Remote connection changed before send"));
         await acknowledged.catch(() => undefined);
-        return false;
+        return reject("发送前与电脑的连接已改变，请重新连接后再发送。");
       }
       let admission: "queued" | undefined;
       try {
@@ -2723,14 +2730,10 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         const uncertain = !retired && !(error instanceof MessageRejectedError);
         if (!uncertain) preparedMessagesRef.current.delete(clientMessageId);
         if (uncertain) input.onUncertain?.(clientMessageId);
+        if (!retired && !uncertain)
+          return reject(error instanceof Error ? error.message : String(error));
         setNotice(
-          retired
-            ? t("mobile.historyRecovery.noReplay")
-            : uncertain
-              ? t("mobile.composer.sendUncertain")
-              : t("mobile.notice.attachmentSendFailed", {
-                  error: error instanceof Error ? error.message : String(error),
-                }),
+          retired ? t("mobile.historyRecovery.noReplay") : t("mobile.composer.sendUncertain"),
         );
         return false;
       }

@@ -570,6 +570,59 @@ describe("Desktop workbench controller", () => {
     }
   });
 
+  for (const laterTyping of [false, true])
+    test(`send failure keeps its own reason and files (later typing: ${laterTyping})`, async () => {
+      ensureMiniDom();
+      const previous = Object.getOwnPropertyDescriptor(window, "matchMedia");
+      Object.defineProperty(window, "matchMedia", {
+        configurable: true,
+        value: () => ({ matches: false }),
+      });
+      browserRestores.push(() =>
+        previous
+          ? Object.defineProperty(window, "matchMedia", previous)
+          : Reflect.deleteProperty(window, "matchMedia"),
+      );
+      const response = deferred<boolean>();
+      let reject: ((reason: string) => void) | undefined;
+      const app = remoteApp({
+        notice: "unrelated previous notice",
+        sendChat: (input) => {
+          reject = input.onRejected;
+          return response.promise;
+        },
+      });
+      const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+      try {
+        await act(async () => {
+          hook.result.current.setDraft("original task");
+          hook.result.current.addFiles([
+            new File(["image"], "task.png", { type: "image/png" }),
+          ] as unknown as FileList);
+        });
+        await act(async () => {
+          expect(hook.result.current.send()).toBe(true);
+        });
+        await act(async () => {
+          if (laterTyping) hook.result.current.setDraft("later typing");
+          reject?.("Selected runtime is unavailable");
+          response.resolve(false);
+          await flushMicrotasks();
+        });
+        expect(hook.result.current.draft).toContain("original task");
+        if (laterTyping) expect(hook.result.current.draft).toContain("later typing");
+        expect(hook.result.current.files.map((file) => file.name)).toEqual(["task.png"]);
+        expect(hook.result.current.error).toContain("Selected runtime is unavailable");
+        expect(hook.result.current.error).toContain("消息未送达");
+        expect(hook.result.current.error).not.toContain("unrelated previous notice");
+        expect(hook.result.current.uncertain).toBe(false);
+        const markup = renderToStaticMarkup(<Workbench controller={hook.result.current} />);
+        expect(markup).toContain("Selected runtime is unavailable");
+      } finally {
+        await hook.unmount();
+      }
+    });
+
   test("offline session and CLI navigation preserve the workspace and draft", async () => {
     const calls: string[] = [];
     const app = remoteApp({
@@ -732,6 +785,7 @@ describe("Desktop workbench controller", () => {
         attachments: [],
         onUncertain: expect.any(Function),
         onRetired: expect.any(Function),
+        onRejected: expect.any(Function),
       },
     ]);
     expect(hook.result.current.activeId).toBe("mobile-real-1");

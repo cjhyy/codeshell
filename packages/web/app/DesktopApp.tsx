@@ -796,6 +796,7 @@ export function useDesktopController(
     // prove that the original uncertain submission was never admitted.
     let uncertainId: string | undefined = retryId;
     let retired = false;
+    let rejectionReason: string | undefined;
     void app
       .sendChat({
         text: submitted.draft.text,
@@ -808,6 +809,9 @@ export function useDesktopController(
         onRetired: () => {
           retired = true;
           uncertainId = undefined;
+        },
+        onRejected: (reason) => {
+          rejectionReason = reason;
         },
       })
       .then((accepted) => {
@@ -832,9 +836,16 @@ export function useDesktopController(
                 ? "恢复已取消旧发送等待。内容和附件已保留为草稿，请核对记录后手动处理。"
                 : uncertainId
                   ? "无法确认消息是否已送达。内容已放回输入框；直接重试不会重复执行同一条消息。"
-                  : restored === "merged"
-                    ? "消息未送达。原内容和附件已放回输入框，之后输入的内容也已保留。"
-                    : "消息未送达，内容和附件已保留。请检查连接后重试。",
+                  : [
+                      rejectionReason,
+                      restored === "merged"
+                        ? "消息未送达。原内容和附件已放回输入框，之后输入的内容也已保留。"
+                        : rejectionReason
+                          ? "消息未送达，内容和附件已保留。"
+                          : "消息未送达，内容和附件已保留。请检查连接后重试。",
+                    ]
+                      .filter(Boolean)
+                      .join(" "),
             );
           }
         } else {
