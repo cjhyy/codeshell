@@ -398,7 +398,7 @@ try {
     await page.goto(origin);
     await page.locator(".messages").waitFor();
     await open();
-    await page.getByRole("button", { name: "选择新会话目录", exact: true }).click();
+    await page.getByRole("button", { name: "在项目中新建", exact: true }).click();
     await page.locator(".desktop-cli-sessions summary").click();
     await page.locator(".sidebar-close").focus();
     const count = await page

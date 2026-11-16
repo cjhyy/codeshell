@@ -154,35 +154,19 @@ export function DesktopSidebar({
   const cwd = cliCwd === undefined ? (app.activeProjectCwd ?? app.activeCwd ?? null) : cliCwd;
   return (
     <div className="desktop-sidebar-controls">
-      <label className="desktop-project-picker">
-        项目
-        <select
-          aria-label="选择项目"
-          value={app.activeProjectId ?? app.activeProjectCwd ?? ""}
-          onChange={(event) => {
-            const selected = event.target.value;
-            const project = app.projects.find((item) => (item.id ?? item.path) === selected);
-            if (selected)
-              navigation.guard(() => app.selectProject(selected), project?.path ?? selected);
-          }}
-        >
-          <option value="" disabled>
-            选择项目
-          </option>
-          {app.projects.map((project) => (
-            <option key={project.id ?? project.path} value={project.id ?? project.path}>
-              {project.name}
-            </option>
-          ))}
-        </select>
-      </label>
       <div className="desktop-sidebar-actions">
+        <button
+          className="library-button"
+          onClick={() => navigation.conversation(() => app.newSession({ projectId: null }), null)}
+        >
+          无项目对话
+        </button>
         <button
           className="library-button"
           onClick={() => setCreateOpen((value) => !value)}
           aria-expanded={createOpen}
         >
-          选择新会话目录
+          在项目中新建
         </button>
         <button
           className="library-button"
@@ -191,30 +175,9 @@ export function DesktopSidebar({
         >
           刷新
         </button>
-        {app.sessionsHasMore ? (
-          <button
-            className="library-button"
-            disabled={app.loading.sessions}
-            onClick={() => app.loadMoreSessions?.()}
-          >
-            {app.loading.sessions ? "正在加载…" : "加载更多会话"}
-          </button>
-        ) : null}
       </div>
       {createOpen ? (
         <div className="desktop-root-picker">
-          <button
-            className="session"
-            onClick={() =>
-              navigation.conversation(() => {
-                app.newSession({ projectId: null });
-                setCreateOpen(false);
-              }, null)
-            }
-          >
-            <span className="session-title">无项目对话</span>
-            <span className="session-meta">不绑定代码仓库</span>
-          </button>
           {!app.projects.length && app.activeCwd ? (
             <button
               className="session"

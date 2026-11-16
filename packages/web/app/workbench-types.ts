@@ -34,6 +34,12 @@ export interface WorkbenchController {
   panelSessionId: string | undefined;
   chat: ChatState;
   sessions: SessionSummary[];
+  /** Authorized navigation catalog; independent of the execution workspace.
+   * `sessions` remains scoped for Panel association and management actions. */
+  navigationSessions?: SessionSummary[];
+  navigationSessionsLoading?: boolean;
+  navigationSessionsHasMore?: boolean;
+  loadMoreNavigationSessions?: () => void;
   workspaceCwd: string | null;
   workspaceName: string;
   workspaceKey: string;

@@ -7,6 +7,84 @@
   padding: 8px 12px 12px;
   border-bottom: 1px solid var(--border);
 }
+.project-session-navigation {
+  min-width: 0;
+  padding-bottom: 16px;
+}
+.project-session-group {
+  min-width: 0;
+  margin: 4px 8px 12px;
+}
+.project-session-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--text);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.project-session-heading:hover {
+  background: var(--hover);
+}
+.project-session-heading > svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.project-session-heading > span:first-of-type {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+}
+.project-session-count,
+.project-session-chevron {
+  color: var(--muted);
+  font-size: 11px;
+}
+.sessions.project-session-rows {
+  padding: 0 0 0 24px;
+}
+.project-session-rows .session {
+  min-height: 40px;
+}
+.project-session-more {
+  min-height: 36px;
+  margin-left: 34px;
+  max-width: calc(100% - 42px);
+  padding: 6px 4px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  text-align: left;
+  font-size: 12px;
+  cursor: pointer;
+}
+.project-session-more:hover {
+  color: var(--text);
+}
+.project-session-heading:focus-visible,
+.project-session-more:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.project-session-empty {
+  padding: 0 22px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
 .desktop-project-picker,
 .desktop-approval-scope label,
 .desktop-chat-controls label {
