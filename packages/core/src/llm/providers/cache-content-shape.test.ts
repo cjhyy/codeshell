@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { OpenAIClient } from "./openai.js";
-import { anthropicMessages } from "./anthropic-discovery-wire.js";
+import { anthropicMessages, sendsTextAsBlocks } from "./anthropic-discovery-wire.js";
 import { stabilizeExplicitCacheContent, usesExplicitCacheMarkers } from "./openai-cache-content.js";
 import { PromptCacheHistory, resolvePromptCachePolicy } from "../prompt-cache.js";
 import type { PromptCachePolicy, PromptCacheStrategy } from "../prompt-cache.js";
@@ -61,6 +61,11 @@ const history: Message[] = [
   { role: "user", content: [{ type: "text", text: "context update" }] },
 ];
 
+/** `history` with the finished reply replayed from disk: one text block instead of a string. */
+const replayedHistory: Message[] = history.map((message, index) =>
+  index === 3 ? { role: "assistant", content: [{ type: "text", text: "first answer" }] } : message,
+);
+
 function openAIClient(settings: { model: string; providerKind: string; baseUrl: string }) {
   const bodies: any[] = [];
   const client = new OpenAIClient(
@@ -81,10 +86,13 @@ function openAIClient(settings: { model: string; providerKind: string; baseUrl: 
       },
     },
   };
-  const send = async (stablePrefixMessageCount: number | undefined): Promise<any[]> => {
+  const send = async (
+    stablePrefixMessageCount: number | undefined,
+    messages: Message[] = history,
+  ): Promise<any[]> => {
     await client.createMessage({
       systemPrompt: "SYSTEM",
-      messages: history,
+      messages,
       tools: [],
       stream: false,
       ...(stablePrefixMessageCount === undefined
@@ -279,5 +287,50 @@ describe("Anthropic wire content under explicit cache markers", () => {
     const wire = anthropicMessages(history, undefined, managed);
     expect(wire[0]!.content).toBe("first task");
     expect(wire[3]!.content).toBe("first answer");
+  });
+});
+
+/**
+ * The prompt-prefix guard treats a reply's string and its replayed one-block
+ * form as the same request only where sendsLoneTextBlockAsString says so;
+ * these check that claim against the bytes each route actually sends.
+ */
+describe("a reply's string and its replayed text block on the wire", () => {
+  const managedOpenAI = {
+    strategy: "provider-managed" as PromptCacheStrategy,
+    make: () =>
+      openAIClient({
+        model: "fixture-model",
+        providerKind: "openai-compatible",
+        baseUrl: "https://fixture.invalid/v1",
+      }),
+  };
+  for (const { strategy, make } of [...routes, managedOpenAI]) {
+    it(`${strategy}: OpenAI-compatible routes send both alike`, async () => {
+      const { client, send } = make();
+      expect(client.sendsLoneTextBlockAsString()).toBe(true);
+      expect(await send(5, replayedHistory)).toEqual(await send(5, history));
+    });
+  }
+
+  it("native Anthropic sends both alike only when it sends text as blocks", () => {
+    const explicit = resolvePromptCachePolicy({
+      provider: "anthropic",
+      model: "claude-sonnet-4-5",
+    });
+    expect(sendsTextAsBlocks(explicit)).toBe(true);
+    expect(anthropicMessages(replayedHistory, { stablePrefixMessageCount: 5 }, explicit)).toEqual(
+      anthropicMessages(history, { stablePrefixMessageCount: 5 }, explicit),
+    );
+    const managed: PromptCachePolicy = {
+      strategy: "provider-managed",
+      toolDiscovery: "call-tool",
+      layoutVersion: "append-only-v1",
+      breakpoints: [],
+    };
+    expect(sendsTextAsBlocks(managed)).toBe(false);
+    expect(anthropicMessages(replayedHistory, undefined, managed)).not.toEqual(
+      anthropicMessages(history, undefined, managed),
+    );
   });
 });

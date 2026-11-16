@@ -650,7 +650,7 @@ export class TurnLoop {
     forced: boolean;
   }): Message[] {
     if (result.replacedCount > 0) {
-      if (result.forced) notePromptPrefixRewrite("image_batch");
+      if (result.forced) notePromptPrefixRewrite("image_batch", this.deps.sessionId);
       this.currentTurnLog.info("context.image_payload_downgrade", {
         cat: "context",
         images: result.replacedCount,
@@ -667,7 +667,8 @@ export class TurnLoop {
       this.volatileAtTail() &&
       moveVolatileContextToTail(messages, this.volatileContextMessages)
     ) {
-      for (const message of this.volatileContextMessages) notePromptMessageLeft(message);
+      for (const message of this.volatileContextMessages)
+        notePromptMessageLeft(message, this.deps.sessionId);
     }
   }
 
@@ -870,7 +871,11 @@ export class TurnLoop {
     messages: Message[],
     assistantMessageId: string = randomUUID(),
   ): ModelCallRecordingOptions {
-    notePromptRequest(this.deps.sessionId, messages);
+    notePromptRequest(
+      this.deps.sessionId,
+      messages,
+      () => this.deps.model.sendsLoneTextBlockAsString?.() ?? false,
+    );
     return {
       requestBoundary: { step: this.turnCount, assistantMessageId },
       ...(this.sensitiveToolResultRedactions.size > 0
@@ -1317,7 +1322,7 @@ export class TurnLoop {
               const previousMessageCount = messages.length;
               messages = dropOldestRounds(messages, retry);
               if (messages.length < previousMessageCount) {
-                notePromptPrefixRewrite("context_limit_recovery");
+                notePromptPrefixRewrite("context_limit_recovery", this.deps.sessionId);
                 this.deps.runToolSurface?.rebase();
                 await this.refreshModelToolPrefix();
                 // The dropped rounds may have held the run's context.
@@ -1483,7 +1488,8 @@ export class TurnLoop {
             if (budgetTermination) break;
             tlog.info("turn.max_tokens_continuation", { cat: "turn", retry: retry + 1 });
             // Each continuation re-sends the reply so far, longer than last time.
-            if (sentContinuation) notePromptPrefixRewrite("max_tokens_continuation");
+            if (sentContinuation)
+              notePromptPrefixRewrite("max_tokens_continuation", this.deps.sessionId);
             sentContinuation = true;
             const contMessages = [
               ...messages,
@@ -1547,7 +1553,8 @@ export class TurnLoop {
           }
           response = { ...response, text: combinedText };
           // History keeps the whole reply, not the last continuation request's tail.
-          if (sentContinuation) notePromptPrefixRewrite("max_tokens_continuation");
+          if (sentContinuation)
+            notePromptPrefixRewrite("max_tokens_continuation", this.deps.sessionId);
           if (continuedResponse && response.usage?.promptTokens !== undefined) {
             this.emitCtxFromUsage(response.usage, messages);
           }

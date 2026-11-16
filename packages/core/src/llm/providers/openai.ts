@@ -400,6 +400,15 @@ export class OpenAIClient extends LLMClientBase {
       : policy;
   }
 
+  /**
+   * Always: an assistant's text blocks are joined into one string `content`
+   * below, and on marker routes every string is then lifted to the same
+   * text-part array (openai-cache-content.ts).
+   */
+  override sendsLoneTextBlockAsString(): boolean {
+    return true;
+  }
+
   /** Sticky per client: explicit → implicit once the endpoint rejected explicit fields. */
   override getEffectivePromptCacheStrategy(): PromptCacheStrategy {
     return this.promptCachePolicy().strategy;

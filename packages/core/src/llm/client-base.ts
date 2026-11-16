@@ -164,6 +164,16 @@ export abstract class LLMClientBase {
   }
 
   /**
+   * True when an assistant message whose content is one text block reaches
+   * the wire as exactly the same bytes as that text sent as a string. Asked
+   * only by the test-only prompt-prefix guard (testing/prompt-prefix-guard.ts):
+   * a live reply is a string, the same reply replayed from disk is a block.
+   */
+  sendsLoneTextBlockAsString(): boolean {
+    return false;
+  }
+
+  /**
    * Cache-relevant request identity only. Credentials, retry/timeout policy,
    * arbitrary catalog payloads, and endpoint text are deliberately excluded.
    */

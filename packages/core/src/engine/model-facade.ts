@@ -64,6 +64,11 @@ export class ModelFacade {
     ).getEffectivePromptCacheStrategy?.();
   }
 
+  /** See LLMClientBase.sendsLoneTextBlockAsString. */
+  sendsLoneTextBlockAsString(): boolean {
+    return this.client.sendsLoneTextBlockAsString?.() ?? false;
+  }
+
   getPromptPrefixFingerprint(
     systemPrompt: string,
     tools: readonly ToolDefinition[],

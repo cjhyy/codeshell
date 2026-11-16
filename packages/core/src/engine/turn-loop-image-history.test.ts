@@ -92,7 +92,7 @@ function makeDeps(
     const batch = options?.externalRewrite?.(m);
     if (!batch || batch.messages === m) return m;
     batch.commit();
-    notePromptPrefixRewrite("rewrite_batch"); // as the real ContextManager does
+    notePromptPrefixRewrite("rewrite_batch", "test"); // as the real ContextManager does
     return batch.messages;
   };
   const contextManager = (realContextManager ?? {

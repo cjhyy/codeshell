@@ -105,8 +105,10 @@ export function createRunContextLedger(args: {
    * afresh. A chain without a recorded scope is never revoked.
    */
   scope?: string;
+  /** The session, which a revocation's prefix change belongs to (prompt-prefix-events.ts). */
+  sessionId?: string;
 }): RunContextLedger {
-  const { transcript, sections, scope } = args;
+  const { transcript, sections, scope, sessionId } = args;
   // Only this run appends ledger events while it is active.
   let chain: LedgerChain | undefined;
   let loaded = false;
@@ -122,7 +124,7 @@ export function createRunContextLedger(args: {
         for (let index = messages.length - 1; index >= 0; index -= 1) {
           if (contextMessageMark(messages[index]!)?.kind === "ledger") messages.splice(index, 1);
         }
-        notePromptPrefixRewrite("workspace_root_changed");
+        notePromptPrefixRewrite("workspace_root_changed", sessionId);
         chain = undefined;
       }
       const present = new Set<string>();

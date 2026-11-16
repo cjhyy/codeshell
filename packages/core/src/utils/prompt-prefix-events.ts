@@ -34,15 +34,24 @@ export type PromptPrefixRewrite =
   | "max_tokens_continuation";
 
 export interface PromptPrefixObserver {
-  rewrite(kind: PromptPrefixRewrite): void;
+  /**
+   * A rewrite changed the prefix of session `scope`; `undefined` when the
+   * reporter cannot name the session, which excuses every session.
+   */
+  rewrite(kind: PromptPrefixRewrite, scope: string | undefined): void;
   /**
    * One message left its place in history: a run's non-durable runtime
    * context moved to the request tail or was removed after the run. Every
-   * other message must still extend the previous request.
+   * other message must still extend the previous request. `scope` as for
+   * {@link rewrite}.
    */
-  messageLeft(message: Message): void;
-  /** `scope` is the session; `messages` are exactly what the request carries. */
-  request(scope: string, messages: readonly Message[]): void;
+  messageLeft(message: Message, scope: string | undefined): void;
+  /**
+   * `scope` is the session; `messages` are exactly what the request carries.
+   * `loneTextBlockIsString`: the route sends an assistant message whose
+   * content is one text block as the same bytes as that text as a string.
+   */
+  request(scope: string, messages: readonly Message[], loneTextBlockIsString: boolean): void;
   /**
    * The user-context head (instructions) a run of `scope` starts with. A
    * head that differs from the scope's previous one rebuilds the prefix.
@@ -53,16 +62,25 @@ export interface PromptPrefixObserver {
 const OBSERVER = Symbol.for("codeshell.promptPrefixObserver");
 type Holder = { [OBSERVER]?: PromptPrefixObserver };
 
-export function notePromptPrefixRewrite(kind: PromptPrefixRewrite): void {
-  (globalThis as Holder)[OBSERVER]?.rewrite(kind);
+export function notePromptPrefixRewrite(
+  kind: PromptPrefixRewrite,
+  scope: string | undefined,
+): void {
+  (globalThis as Holder)[OBSERVER]?.rewrite(kind, scope);
 }
 
-export function notePromptMessageLeft(message: Message): void {
-  (globalThis as Holder)[OBSERVER]?.messageLeft(message);
+export function notePromptMessageLeft(message: Message, scope?: string): void {
+  (globalThis as Holder)[OBSERVER]?.messageLeft(message, scope);
 }
 
-export function notePromptRequest(scope: string, messages: readonly Message[]): void {
-  (globalThis as Holder)[OBSERVER]?.request(scope, messages);
+/** `loneTextBlockIsString` is asked only while a guard is installed. */
+export function notePromptRequest(
+  scope: string,
+  messages: readonly Message[],
+  loneTextBlockIsString: () => boolean = () => false,
+): void {
+  const observer = (globalThis as Holder)[OBSERVER];
+  if (observer) observer.request(scope, messages, loneTextBlockIsString());
 }
 
 /**

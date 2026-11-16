@@ -1448,7 +1448,7 @@ export class Engine {
       })
     )
       return;
-    notePromptPrefixRewrite("clear_context");
+    notePromptPrefixRewrite("clear_context", session.state.sessionId);
     this.rebaseSessionToolCache(session);
     this.compactedMessagesBySession.delete(session.state.sessionId);
     if (this.lastSessionId === session.state.sessionId) this.lastMessages = [];
@@ -1831,7 +1831,7 @@ export class Engine {
     // the anchor is dead; too late and the first new-topic prompt still sees
     // the entire old topic. Fail open to full history if summarization fails.
     if (options?.archiveBeforeCurrentTurn && options.clientMessageId) {
-      notePromptPrefixRewrite("archive");
+      notePromptPrefixRewrite("archive", session.state.sessionId);
       try {
         const anchors = {
           toClientMessageId: options.clientMessageId,
@@ -2357,6 +2357,7 @@ export class Engine {
     // update instead of rewriting what was sent.
     const runContextLedger = createRunContextLedger({
       transcript: session.transcript,
+      sessionId: session.state.sessionId,
       scope: promptComposer.contextScope(),
       sections: [
         ...contextSections,
@@ -2416,11 +2417,9 @@ export class Engine {
 
     // Wire up LLM summarization for context compaction
     // Uses a lightweight call without tools
-    if (session.transcript.isPersistent()) {
+    contextManager.setPromptCacheSessionKey(session.state.sessionId);
+    if (session.transcript.isPersistent())
       contextManager.setTranscriptPath(session.transcript.getFilePath());
-    } else {
-      contextManager.setPromptCacheSessionKey(session.state.sessionId);
-    }
     // Re-derive frozen persistence decisions from the messages we just
     // loaded. Skipped on cold start (messages == [userContextMsg] only).
     // Critical for resume — otherwise a result that was persisted last
@@ -4343,11 +4342,9 @@ export class Engine {
           Object.entries(this.resolveContextRatios()).filter(([, v]) => v !== undefined),
         ),
       });
-      if (session.transcript.isPersistent()) {
+      contextManager.setPromptCacheSessionKey(effectiveSessionId);
+      if (session.transcript.isPersistent())
         contextManager.setTranscriptPath(session.transcript.getFilePath());
-      } else {
-        contextManager.setPromptCacheSessionKey(effectiveSessionId);
-      }
       contextManager.initReplacementStateFromMessages(sourceMessages);
       this.lastContextManager = contextManager;
     }
@@ -4409,7 +4406,7 @@ export class Engine {
   ): Promise<{ before: number; after: number }> {
     const effectiveSessionId = sessionId || this.lastSessionId;
     if (!effectiveSessionId) return { before: 0, after: 0 };
-    notePromptPrefixRewrite("archive");
+    notePromptPrefixRewrite("archive", effectiveSessionId);
 
     const session = this.sessionManager.resume(effectiveSessionId);
     const { sourceMessages, window } = resolveArchiveWindow(
@@ -4456,7 +4453,7 @@ export class Engine {
   ): Promise<boolean> {
     const session = this.sessionManager.resume(sessionId);
     if (!appendSessionArchiveMarker(sessionId, session, marker)) return false;
-    notePromptPrefixRewrite("archive");
+    notePromptPrefixRewrite("archive", sessionId);
     this.rebaseSessionToolCache(session);
     // The in-memory cache (if any) predates the marker; drop it so the next
     // run rebuilds from the trimmed transcript replay.

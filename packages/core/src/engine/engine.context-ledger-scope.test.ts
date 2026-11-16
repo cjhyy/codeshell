@@ -24,6 +24,12 @@ const requestsByModel = new Map<string, Message[][]>();
 class FakeClient extends LLMClientBase {
   protected initClient(): void {}
 
+  // Stands in for an OpenAI-compatible route, which sends a reply's string
+  // and its replayed text block as the same bytes (openai.ts).
+  override sendsLoneTextBlockAsString(): boolean {
+    return true;
+  }
+
   async createMessage(options: CreateMessageOptions): Promise<LLMResponse> {
     const response: LLMResponse = {
       text: "done",

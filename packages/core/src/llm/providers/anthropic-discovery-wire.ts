@@ -118,8 +118,7 @@ export function anthropicMessages(
     Math.min(messages.length, promptCache?.stablePrefixMessageCount ?? messages.length),
   );
   let stablePrefixEndMessage: Anthropic.MessageParam | undefined;
-  const textAsBlocks =
-    policy.toolDiscovery === "tool-reference" || policy.strategy === "anthropic-explicit";
+  const textAsBlocks = sendsTextAsBlocks(policy);
   for (const [sourceIndex, message] of messages.entries()) {
     if (sourceIndex === stablePrefixMessageCount)
       stablePrefixEndMessage = result[result.length - 1];
@@ -159,6 +158,15 @@ export function anthropicMessages(
   ]))
     markBreakpoint(result[index]);
   return result;
+}
+
+/**
+ * Whether string content is sent as a one-text-block array, so that a string
+ * and a single text block reach the wire as the same bytes. Otherwise a
+ * string is sent as a string.
+ */
+export function sendsTextAsBlocks(policy: PromptCachePolicy): boolean {
+  return policy.toolDiscovery === "tool-reference" || policy.strategy === "anthropic-explicit";
 }
 
 function markBreakpoint(message: Anthropic.MessageParam | undefined): void {

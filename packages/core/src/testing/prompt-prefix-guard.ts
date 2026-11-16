@@ -40,17 +40,25 @@ function canonical(value: unknown): string {
 }
 
 /**
- * A finished text reply is a string in the live history and a text block on
- * replay; providers serialize both the same.
+ * The message as the route puts it on the wire, as far as the guard can
+ * tell. A finished reply is a string in the live history and one text block
+ * when replayed from disk; the two are the same request only on a route that
+ * sends both as the same bytes (LLMClientBase.sendsLoneTextBlockAsString).
+ * Anywhere else the difference is a real prefix change.
  */
-function wireForm(message: Message): unknown {
+function wireForm(message: Message, loneTextBlockIsString: boolean): unknown {
+  const block = Array.isArray(message.content) ? message.content[0] : undefined;
   if (
+    loneTextBlockIsString &&
     message.role === "assistant" &&
-    Array.isArray(message.content) &&
-    message.content.length > 0 &&
-    message.content.every((block) => block.type === "text")
+    message.content.length === 1 &&
+    block?.type === "text" &&
+    // A plain non-empty text block only: an empty one or one carrying more
+    // (reasoning) is sent differently from a string.
+    !!block.text &&
+    Object.keys(block).every((key) => key === "type" || key === "text")
   ) {
-    return { role: "assistant", content: message.content.map((block) => block.text).join("\n") };
+    return { ...message, content: block.text };
   }
   return message;
 }
@@ -58,20 +66,28 @@ function wireForm(message: Message): unknown {
 export class PromptPrefixGuard implements PromptPrefixObserver {
   readonly violations: PromptPrefixViolation[] = [];
   readonly rewrites: PromptPrefixRewrite[] = [];
-  private epoch = 0;
-  private readonly last = new Map<string, { messages: string[]; epoch: number }>();
+  /** Rewrites that named no session; each excuses every session. */
+  private sharedEpoch = 0;
+  /** Rewrites per session: each excuses only that session's next request. */
+  private readonly scopeEpochs = new Map<string, number>();
+  private readonly last = new Map<string, { messages: string[]; epoch: string }>();
   /** Digest of each scope's latest user-context head. */
   private readonly heads = new Map<string, string>();
 
-  rewrite(kind: PromptPrefixRewrite): void {
-    this.epoch += 1;
+  rewrite(kind: PromptPrefixRewrite, scope: string | undefined): void {
+    if (scope === undefined) this.sharedEpoch += 1;
+    else this.scopeEpochs.set(scope, (this.scopeEpochs.get(scope) ?? 0) + 1);
     this.rewrites.push(kind);
+  }
+
+  private epoch(scope: string): string {
+    return `${this.sharedEpoch}:${this.scopeEpochs.get(scope) ?? 0}`;
   }
 
   userContextHead(scope: string, head: string): void {
     const digest = createHash("sha256").update(head).digest("hex");
     const previous = this.heads.get(scope);
-    if (previous !== undefined && previous !== digest) this.rewrite("user_context_head");
+    if (previous !== undefined && previous !== digest) this.rewrite("user_context_head", scope);
     this.heads.delete(scope);
     this.heads.set(scope, digest);
     if (this.heads.size > MAX_REMEMBERED_HEADS) {
@@ -79,18 +95,24 @@ export class PromptPrefixGuard implements PromptPrefixObserver {
     }
   }
 
-  messageLeft(message: Message): void {
-    const left = canonical(wireForm(message));
-    for (const previous of this.last.values()) {
+  messageLeft(message: Message, scope: string | undefined): void {
+    // Runtime context is user-authored text, never an assistant reply.
+    const left = canonical(wireForm(message, false));
+    const affected =
+      scope === undefined ? [...this.last.values()] : [this.last.get(scope)].filter(Boolean);
+    for (const previous of affected as Array<{ messages: string[] }>) {
       const index = previous.messages.lastIndexOf(left);
       if (index !== -1) previous.messages.splice(index, 1);
     }
   }
 
-  request(scope: string, messages: readonly Message[]): void {
-    const serialized = messages.map((message) => canonical(wireForm(message)));
+  request(scope: string, messages: readonly Message[], loneTextBlockIsString = false): void {
+    const serialized = messages.map((message) =>
+      canonical(wireForm(message, loneTextBlockIsString)),
+    );
     const previous = this.last.get(scope);
-    if (previous && previous.epoch === this.epoch) {
+    const epoch = this.epoch(scope);
+    if (previous && previous.epoch === epoch) {
       const index = previous.messages.findIndex((message, i) => serialized[i] !== message);
       if (index !== -1) {
         this.violations.push({
@@ -101,7 +123,7 @@ export class PromptPrefixGuard implements PromptPrefixObserver {
         });
       }
     }
-    this.last.set(scope, { messages: serialized, epoch: this.epoch });
+    this.last.set(scope, { messages: serialized, epoch });
   }
 
   /** Forget a scope's previous request, e.g. after an intentional fresh start. */

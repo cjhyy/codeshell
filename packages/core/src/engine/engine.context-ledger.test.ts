@@ -33,6 +33,12 @@ const scenarios = new Map<string, Scenario>();
 class FakeLedgerClient extends LLMClientBase {
   protected initClient(): void {}
 
+  // Stands in for an OpenAI-compatible route, which sends a reply's string
+  // and its replayed text block as the same bytes (openai.ts).
+  override sendsLoneTextBlockAsString(): boolean {
+    return true;
+  }
+
   async createMessage(options: CreateMessageOptions): Promise<LLMResponse> {
     const scenario = scenarios.get(this.model);
     if (!scenario) throw new Error(`missing fake scenario: ${this.model}`);

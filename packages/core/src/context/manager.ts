@@ -178,6 +178,8 @@ export class ContextManager {
   private transcriptPath: string | undefined;
   /** Cache-warmth key for a session without a transcript path (see rewrite-gate.ts). */
   private sessionWarmthKey: string | undefined;
+  /** Session whose prefix this manager's rewrites change (prompt-prefix-events.ts). */
+  private promptPrefixScope: string | undefined;
   /** Notified whenever any compaction tier fires, including microcompact. */
   private onCompact: OnCompactFn | undefined;
   /**
@@ -206,7 +208,7 @@ export class ContextManager {
   /** Every compaction that rewrote history is a registered prefix change (prompt-prefix-events.ts). */
   private reportCompact(info: Parameters<OnCompactFn>[0]): void {
     if (info.strategy !== "micro" && info.historyChanged !== false) {
-      notePromptPrefixRewrite("compaction");
+      notePromptPrefixRewrite("compaction", this.promptPrefixScope);
     }
     this.onCompact?.(info);
   }
@@ -431,13 +433,15 @@ export class ContextManager {
   }
 
   /**
-   * Warmth key for a session that has no persistent transcript. Without it
-   * such a session would look cold at every run start (a new ContextManager
-   * is created per run) and rewrite its history every time. A transcript
-   * path, when set, takes precedence.
+   * The session this manager serves. It keys cache warmth for a session that
+   * has no persistent transcript — without it such a session would look cold
+   * at every run start (a new ContextManager is created per run) and rewrite
+   * its history every time; a transcript path, when set, takes precedence.
+   * It also scopes the prefix rewrites this manager reports.
    */
   setPromptCacheSessionKey(sessionId: string): void {
     this.sessionWarmthKey = `session:${sessionId}`;
+    this.promptPrefixScope = sessionId;
     this.publishLocalWarmth();
   }
 
@@ -554,7 +558,7 @@ export class ContextManager {
     }
 
     if (externalChanged) external.commit();
-    notePromptPrefixRewrite("rewrite_batch");
+    notePromptPrefixRewrite("rewrite_batch", this.promptPrefixScope);
     logger.info("context.rewrite_batch_applied", {
       reason,
       savedTokens,

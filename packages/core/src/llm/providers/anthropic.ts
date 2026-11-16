@@ -23,7 +23,12 @@ import {
   nativeToolDiscoveryEnabled,
   supportsNativeToolDiscoveryModel,
 } from "../native-tool-discovery.js";
-import { anthropicMessages, anthropicSystem, anthropicTools } from "./anthropic-discovery-wire.js";
+import {
+  anthropicMessages,
+  anthropicSystem,
+  anthropicTools,
+  sendsTextAsBlocks,
+} from "./anthropic-discovery-wire.js";
 import {
   resolvePromptCachePolicy,
   type PromptCachePolicy,
@@ -131,6 +136,10 @@ export class AnthropicClient extends LLMClientBase {
       promptCaching: this.capability.promptCaching,
       request,
     });
+  }
+
+  override sendsLoneTextBlockAsString(): boolean {
+    return sendsTextAsBlocks(this.promptCachePolicy());
   }
 
   override getPromptCacheConfigIdentity(): Readonly<Record<string, unknown>> {

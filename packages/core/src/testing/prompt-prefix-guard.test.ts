@@ -48,7 +48,7 @@ describe("PromptPrefixGuard", () => {
   test("a registered rewrite excuses the next request only", () => {
     const guard = withGuard(() => {
       notePromptRequest("a", [user("1"), user("2")]);
-      notePromptPrefixRewrite("compaction");
+      notePromptPrefixRewrite("compaction", "a");
       notePromptRequest("a", [user("summary"), user("3")]);
       notePromptRequest("a", [user("other"), user("3")]);
     });
@@ -56,19 +56,69 @@ describe("PromptPrefixGuard", () => {
     expect(guard.violations).toHaveLength(1);
   });
 
-  test("key order and the text-block form of a reply are not changes", () => {
+  test("a session's rewrite excuses only that session", () => {
     const guard = withGuard(() => {
-      notePromptRequest("a", [
-        { role: "user", content: [{ type: "text", text: "x" }] },
-        { role: "assistant", content: "reply" },
-      ]);
+      notePromptRequest("a", [user("a1")]);
+      notePromptRequest("b", [user("b1")]);
+      notePromptPrefixRewrite("compaction", "a");
+      notePromptRequest("a", [user("a summary")]);
+      notePromptRequest("b", [user("b changed")]);
+    });
+    expect(guard.violations.map((v) => v.scope)).toEqual(["b"]);
+  });
+
+  test("a rewrite that names no session excuses every session", () => {
+    const guard = withGuard(() => {
+      notePromptRequest("a", [user("a1")]);
+      notePromptRequest("b", [user("b1")]);
+      notePromptPrefixRewrite("compaction", undefined);
+      notePromptRequest("a", [user("a changed")]);
+      notePromptRequest("b", [user("b changed")]);
+    });
+    expect(guard.violations).toEqual([]);
+  });
+
+  test("key order is not a change", () => {
+    const guard = withGuard(() => {
+      notePromptRequest("a", [{ role: "user", content: [{ type: "text", text: "x" }] }]);
       notePromptRequest("a", [
         { content: [{ text: "x", type: "text" }], role: "user" } as Message,
-        { role: "assistant", content: [{ type: "text", text: "reply" }] },
         user("next"),
       ]);
     });
     expect(guard.violations).toEqual([]);
+  });
+
+  test("a reply's text-block form equals its string only on a route that sends both alike", () => {
+    const live: Message[] = [user("q"), { role: "assistant", content: "reply" }];
+    const replayed: Message[] = [
+      user("q"),
+      { role: "assistant", content: [{ type: "text", text: "reply" }] },
+      user("next"),
+    ];
+    const alike = withGuard(() => {
+      notePromptRequest("a", live, () => true);
+      notePromptRequest("a", replayed, () => true);
+    });
+    expect(alike.violations).toEqual([]);
+    const different = withGuard(() => {
+      notePromptRequest("a", live);
+      notePromptRequest("a", replayed);
+    });
+    expect(different.violations.map((v) => v.index)).toEqual([1]);
+    // A block carrying more than its text is never a plain string.
+    const reasoning = withGuard(() => {
+      notePromptRequest("a", live, () => true);
+      notePromptRequest(
+        "a",
+        [
+          user("q"),
+          { role: "assistant", content: [{ type: "text", text: "reply", reasoningContent: "r" }] },
+        ],
+        () => true,
+      );
+    });
+    expect(reasoning.violations).toHaveLength(1);
   });
 
   test("reports are no-ops without an installed guard", () => {
@@ -76,7 +126,7 @@ describe("PromptPrefixGuard", () => {
     let built = false;
     expect(() => {
       notePromptRequest("a", [user("1")]);
-      notePromptPrefixRewrite("archive");
+      notePromptPrefixRewrite("archive", "a");
       notePromptUserContextHead("a", () => {
         built = true;
         return "instructions";
@@ -115,7 +165,7 @@ describe("PromptPrefixGuard volatile messages", () => {
     const volatile = user("runtime status");
     const guard = withGuard(() => {
       notePromptRequest("a", [user("1"), volatile]);
-      notePromptMessageLeft(volatile);
+      notePromptMessageLeft(volatile, "a");
       notePromptRequest("a", [user("1"), user("2"), volatile]);
       notePromptMessageLeft(volatile);
       notePromptRequest("a", [user("changed"), user("2")]);
