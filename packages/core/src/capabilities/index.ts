@@ -23,6 +23,15 @@ export interface CapabilityDynamicContext {
   cwd: string;
   workspace: import("../workspace/workspace-context.js").WorkspaceContext;
   preset: AgentPreset;
+  /** The Session this context is built for; absent for legacy callers. */
+  session?: {
+    id: string;
+    kind?: string;
+    profileId?: string;
+    isSubAgent: boolean;
+  };
+  /** This run's behavior-profile parameters. In-process providers only. */
+  runParams?: Readonly<Record<string, unknown>>;
 }
 
 /**

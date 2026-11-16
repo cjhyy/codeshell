@@ -138,7 +138,7 @@ import {
 import { computeEffectiveDisabledLists } from "../capability-control/disabled-lists.js";
 import { registerFileHistoryHook } from "./file-history-hook.js";
 import type { ToolContext } from "../tool-system/context.js";
-import { resolveToolNamesForPreset, type AgentPreset } from "../preset/index.js";
+import { type AgentPreset } from "../preset/index.js";
 import { type CapabilityDynamicContextProvider } from "../capabilities/index.js";
 import { compileComposition } from "../composition/compiler.js";
 import { LifetimeScope, type Dispose } from "../composition/lifetime.js";
@@ -147,12 +147,17 @@ import { ConfigError } from "../exceptions.js";
 import {
   compositionPromptSections,
   compositionToolCatalog,
-  presetInjectedTools,
   registerAlwaysTools,
   resolveCompositionInstructionBoundary,
   resolvePresetFromComposition,
 } from "../composition/resolve-preset.js";
 import type { ResolvedComposition } from "../composition/types.js";
+import {
+  buildPresetToolRegistry,
+  presetToolNames,
+  withInjectedTools,
+  type PresetToolRegistryInput,
+} from "./engine-tool-registry.js";
 import { ModelPool, type ModelEntry } from "../llm/model-pool.js";
 import { AgentDefinitionRegistry } from "../agent/agent-definition-registry.js";
 import { defaultCacheDir } from "../llm/model-cache.js";
@@ -343,17 +348,24 @@ export function applyBuiltinOverrideVisibility<T extends { name: string }>(
  *   nested-agent tools forced into `disabled` (no grandchildren).
  */
 export class Engine {
-  // Resolved per-session preset. Set in the ctor; re-resolved by
-  // refreshRuntimeConfig on a preset hot-reload so the next-turn PromptComposer
-  // picks up the new preset's system prompt / behavior (#2). NOT readonly for
-  // that reason. NOTE: the toolRegistry's builtin tool SET is still ctor-frozen
-  // and is NOT rebuilt on reload — a preset change that alters the builtin tool
-  // set only takes effect on session restart (logged in refreshRuntimeConfig).
+  // Resolved per-session preset (injected catalog tools merged). Set in the
+  // ctor; re-resolved by refreshRuntimeConfig on a preset hot-reload, which
+  // also rebuilds this Engine's tool registry when the tool set changes.
   private preset: AgentPreset;
   /** Capability-free seed owned by the runtime/host; never mutated by an Engine. */
   private runtimeToolRegistry: ToolRegistry;
-  /** Engine-local view containing only this Engine's capability modules. */
-  private toolRegistry: ToolRegistry;
+  /** This Engine's own tools, resolved from its own preset. */
+  private toolRegistry!: ToolRegistry;
+  private disposeAlwaysTools?: Dispose;
+  /** Host tools from registerCustomTool, re-registered when the registry is rebuilt. */
+  private readonly customTools = new Map<
+    string,
+    { definition: import("../types.js").RegisteredTool; executor: BuiltinToolFn }
+  >();
+  /** A preset reload changed the tool set during a run; rebuild when it ends. */
+  private toolRegistryRebuildPending = false;
+  /** The running Session's identity for hook payloads; absent between runs. */
+  private hookRunIdentity?: { sessionId: string; sessionKind?: string; profileId?: string };
   /** Compiled module contributions — the single composition fact source. */
   private readonly composition: ResolvedComposition;
   private readonly toolCatalog: readonly BuiltinTool[];
@@ -697,25 +709,10 @@ export class Engine {
       this.capabilityDynamicContextProviders = this.composition.engine.dynamicContextProviders.map(
         (c) => c.value,
       );
-      this.preset = resolvePresetFromComposition(this.composition, config.preset);
-      // Catalog tools owned by modules that contribute no presets join the
-      // active preset regardless of its name: presets snapshot their tool lists
-      // from catalogs known at module authoring time, which can never include
-      // such packages. Visibility stays gated by exposure.availability.
-      const injectedTools = presetInjectedTools(this.composition);
-      if (injectedTools.length > 0) {
-        this.preset = {
-          ...this.preset,
-          builtinTools: [
-            ...this.preset.builtinTools,
-            ...injectedTools.map((tool) => tool.definition.name),
-          ],
-          defaultPermissionRules: [
-            ...this.preset.defaultPermissionRules,
-            ...injectedTools.flatMap((tool) => [...(tool.exposure.defaultPermissionRules ?? [])]),
-          ],
-        };
-      }
+      this.preset = withInjectedTools(
+        this.composition,
+        resolvePresetFromComposition(this.composition, config.preset),
+      );
       this.permissionController = new PermissionController({
         config: () => this.config,
         updateConfig: (next) => {
@@ -724,54 +721,30 @@ export class Engine {
         presetRules: () => [...this.preset.defaultPermissionRules],
         runInProgress: () => this.runInProgress,
       });
-      // Fold the project's capabilityOverrides.builtin overlay over the global
-      // enabled/disabled builtin lists so a project can force-enable a
-      // globally-disabled builtin tool or force-disable a globally-enabled one
-      // (tri-state). Mirrors readDisabledLists for skills/plugins/agents; no cwd
-      // / no overlay → the config lists pass through unchanged (zero regression).
-      //
-      // #7: this builds the ctor-FROZEN builtin tool SET in the registry — a
-      // mid-session project override can't rebuild it. To make a builtin `off`
-      // toggle apply mid-session, run()'s per-turn tool-list assembly re-reads
-      // readBuiltinOverride(cwd) and HIDES `off` builtins from the turn's tool
-      // list (see the allToolDefs filter). `on` here can force-enable a
-      // globally-disabled builtin INTO the frozen set at construction; the
-      // per-turn path can only hide, not add, so a freshly-`on`'d builtin not in
-      // the set needs a session restart to appear.
-      const builtinLists = effectiveBuiltinLists(
-        config.enabledBuiltinTools ?? [],
-        config.disabledBuiltinTools ?? [],
-        this.readBuiltinOverride(config.cwd),
-      );
+      // Fold the project's capabilityOverrides.builtin overlay (read for this
+      // Engine's own cwd) over the global enabled/disabled builtin lists. A
+      // mid-session `off` is also hidden per turn (readBuiltinOverride in run);
+      // `on` can only add a builtin when the registry is built or rebuilt.
+      // A host-shared runtime registry supplies pooled MCP tools, which are
+      // synced into this Engine's registry every run; tool membership always
+      // comes from this Engine's own preset, never from the seed's.
       this.runtimeToolRegistry =
-        config.runtime?.toolRegistry ??
-        new ToolRegistry({
-          builtinTools: resolveToolNamesForPreset({
-            preset: this.preset,
-            host: config.builtinToolHost,
-            enabledBuiltinTools: [
-              ...builtinLists.enabledBuiltinTools,
-              // Injected catalog tools are preset-agnostic (see preset merge
-              // above); their availability guards gate actual visibility.
-              ...injectedTools.map((tool) => tool.definition.name),
-            ],
-            disabledBuiltinTools: builtinLists.disabledBuiltinTools,
-            adjusters: this.composition.engine.toolSelectionAdjusters.map((a) => a.value),
-          }),
-          toolCatalog: this.toolCatalog,
-        });
-      this.toolRegistry = this.runtimeToolRegistry.fork();
-      // Composition owns executable metadata even when the host supplies a
-      // registry. Attach it to this Engine's fork, never the shared seed.
-      for (const tool of this.toolCatalog) {
-        this.toolRegistry.setExposure(tool.definition.name, tool.exposure);
-      }
-      this.lifetime.own(() => this.toolRegistry.clear());
-      this.lifetime.own(registerAlwaysTools(this.composition, this.toolRegistry));
-      for (const contribution of this.composition.engine.tools) {
-        this.toolRegistry.setModuleOwner(contribution.tool.definition.name, contribution.moduleId);
-      }
+        config.runtime?.toolRegistry ?? buildPresetToolRegistry(this.presetToolInput());
+      this.installToolRegistry(
+        config.runtime
+          ? buildPresetToolRegistry(this.presetToolInput())
+          : this.runtimeToolRegistry.fork(),
+      );
+      this.lifetime.own(() => {
+        this.disposeAlwaysTools?.();
+        this.toolRegistry.clear();
+      });
       this.hooks = new HookRegistry();
+      this.hooks.setIdentity(() => ({
+        preset: this.preset.name,
+        isSubAgent: this.config.isSubAgent === true,
+        ...this.hookRunIdentity,
+      }));
       this.lifetime.own(() => this.hooks.clear());
       this.settingsHookScope = this.lifetime.child("engine", "settings-hooks");
       this.pluginHookScope = this.lifetime.child("engine", "plugin-hooks");
@@ -1061,7 +1034,47 @@ export class Engine {
     definition: import("../types.js").RegisteredTool,
     executor: BuiltinToolFn,
   ): void {
+    this.customTools.set(definition.name, { definition, executor });
     this.toolRegistry.registerTool(definition, executor);
+  }
+
+  private presetToolInput(): PresetToolRegistryInput {
+    const lists = effectiveBuiltinLists(
+      this.config.enabledBuiltinTools ?? [],
+      this.config.disabledBuiltinTools ?? [],
+      this.readBuiltinOverride(this.config.cwd),
+    );
+    return {
+      composition: this.composition,
+      preset: this.preset,
+      toolCatalog: this.toolCatalog,
+      host: this.config.builtinToolHost,
+      enabledBuiltinTools: lists.enabledBuiltinTools,
+      disabledBuiltinTools: lists.disabledBuiltinTools,
+    };
+  }
+
+  /** Composition owns executable metadata; attach it to this Engine's registry. */
+  private installToolRegistry(registry: ToolRegistry): void {
+    this.toolRegistry = registry;
+    for (const tool of this.toolCatalog) registry.setExposure(tool.definition.name, tool.exposure);
+    this.disposeAlwaysTools = registerAlwaysTools(this.composition, registry);
+    for (const contribution of this.composition.engine.tools) {
+      registry.setModuleOwner(contribution.tool.definition.name, contribution.moduleId);
+    }
+    for (const { definition, executor } of this.customTools.values()) {
+      registry.registerTool(definition, executor);
+    }
+  }
+
+  /** Replace this Engine's tools after a preset change; pooled MCP tools re-sync next run. */
+  private rebuildToolRegistry(): void {
+    this.toolRegistryRebuildPending = false;
+    const previous = this.toolRegistry;
+    const disposeAlways = this.disposeAlwaysTools;
+    this.installToolRegistry(buildPresetToolRegistry(this.presetToolInput()));
+    disposeAlways?.();
+    previous.clear();
   }
 
   /** Dispatch a host-installed capability query without teaching core its name. */
@@ -1423,7 +1436,17 @@ export class Engine {
               this.boundModelKey = previousModel.key;
             }
             this.runInProgress = false;
+            if (this.toolRegistryRebuildPending) {
+              try {
+                this.rebuildToolRegistry();
+              } catch (error) {
+                logger.warn("engine.tool_registry.rebuild_failed", {
+                  error: error instanceof Error ? error.message : String(error),
+                });
+              }
+            }
             this.runningSession = undefined;
+            this.hookRunIdentity = undefined;
             this.failClaimedRun = undefined;
             this.runAbort = undefined;
             settle();
@@ -1707,6 +1730,11 @@ export class Engine {
     } = openedResult.opened;
     const session = openedResult.opened.session;
     this.runIds.set(session.state, runId);
+    this.hookRunIdentity = {
+      sessionId: session.state.sessionId,
+      ...(sessionKind ? { sessionKind } : {}),
+      ...(profile?.id ? { profileId: profile.id } : {}),
+    };
     this.runningSession = {
       sessionId: session.state.sessionId,
       runId,
@@ -3234,6 +3262,13 @@ export class Engine {
         // with dangling section names (for example terminal-coding → coding).
         capabilityPromptSections: this.capabilityPromptSections,
         dynamicContextProviders: this.capabilityDynamicContextProviders,
+        providerSession: {
+          id: session.state.sessionId,
+          ...(session.state.kind ? { kind: session.state.kind } : {}),
+          ...(profile?.id ? { profileId: profile.id } : {}),
+          isSubAgent: this.config.isSubAgent === true,
+        },
+        providerRunParams: profileParams,
         getSettingsManager: () => this.getSettingsManager(),
         toolCatalog: this.toolCatalog,
       });
@@ -4085,35 +4120,17 @@ export class Engine {
     // (rebuilt per turn from this.preset) reflects the new preset's system
     // prompt / behavior. Only when the preset actually changed.
     if (patch.preset !== undefined && patch.preset !== prevPresetName) {
-      const nextPreset = resolvePresetFromComposition(this.composition, this.config.preset);
-      // The builtin tool SET is ctor-frozen and may be shared via runtime — we
-      // do NOT rebuild it here. If the new preset implies a different builtin
-      // tool set, that part of the change only lands on session restart.
-      const adjusters = this.composition.engine.toolSelectionAdjusters.map((a) => a.value);
-      const prevTools = resolveToolNamesForPreset({
-        preset: resolvePresetFromComposition(this.composition, prevPresetName),
-        host: this.config.builtinToolHost,
-        adjusters,
-      })
-        .slice()
-        .sort()
-        .join(",");
-      const nextTools = resolveToolNamesForPreset({
-        preset: nextPreset,
-        host: this.config.builtinToolHost,
-        adjusters,
-      })
-        .slice()
-        .sort()
-        .join(",");
-      if (prevTools !== nextTools) {
-        logger.warn("engine.preset_reload.tool_set_change_needs_restart", {
-          from: prevPresetName,
-          to: nextPreset.name,
-          note: "preset system prompt hot-reloaded; builtin tool-set change takes effect on session restart",
-        });
+      const previousTools = presetToolNames(this.presetToolInput()).sort().join(",");
+      // Injected catalog tools and their permission rules stay merged.
+      this.preset = withInjectedTools(
+        this.composition,
+        resolvePresetFromComposition(this.composition, this.config.preset),
+      );
+      if (presetToolNames(this.presetToolInput()).sort().join(",") !== previousTools) {
+        // A running turn keeps its tools; the next run starts with the new set.
+        if (this.runInProgress) this.toolRegistryRebuildPending = true;
+        else this.rebuildToolRegistry();
       }
-      this.preset = nextPreset;
     }
     this.reloadHooks();
     // MCP ownership and tool authority are Run-scoped. Keep this Run's frozen

@@ -5,6 +5,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Engine } from "./engine.js";
+import { initialToolsFixtureModule } from "./initial-tools-preset.fixture.js";
 import { EngineRuntime } from "./runtime.js";
 import { ModelPool } from "../llm/model-pool.js";
 import { SettingsManager } from "../settings/manager.js";
@@ -438,6 +439,8 @@ describe("shared current model configuration", () => {
       cwd,
       sessionStorageDir: join(cwd, "sessions"),
       enabledBuiltinTools: [],
+      // Each Session's tools come from its own preset; load the host tool eagerly.
+      modules: [initialToolsFixtureModule(["InspectCurrentModel"])],
       headless: true,
       permissionMode: "bypassPermissions",
       clientDefaults: {

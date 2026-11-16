@@ -266,4 +266,37 @@ describe("Engine task routing consumer", () => {
     await f.run("Find files and read data sources.");
     expect(names(f.requests[0]!)).toEqual(["Read", "Write", "Sleep"]);
   }, 15_000);
+  test("tool hooks carry the running Session's identity", async () => {
+    let step = 0;
+    const seen: Record<string, unknown>[] = [];
+    const f = fixture(() =>
+      ++step === 1 ? [{ id: "probe", toolName: "IdentityProbe", args: {} }] : [],
+    );
+    f.engine.registerCustomTool(
+      {
+        name: "IdentityProbe",
+        description: "Identity probe",
+        inputSchema: { type: "object", properties: {} },
+        source: "builtin",
+        permissionDefault: "allow",
+      },
+      async () => "ok",
+    );
+    f.engine.getHookRegistry().clear();
+    f.engine.getHookRegistry().register("pre_tool_use", async ({ data }) => {
+      seen.push(data);
+      return {};
+    });
+    const result = await f.run("probe", { toolAllowlist: ["IdentityProbe"] });
+    expect(result.reason).toBe("completed");
+    expect(seen[0]).toMatchObject({
+      toolName: "IdentityProbe",
+      sessionId: "routing-session",
+      preset: "general",
+      sessionKind: "work",
+      profileId: "routing-fixture",
+      // The routing fixture Engine is configured as a sub-agent.
+      isSubAgent: true,
+    });
+  }, 15_000);
 });

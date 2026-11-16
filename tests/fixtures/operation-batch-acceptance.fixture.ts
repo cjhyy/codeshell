@@ -724,6 +724,8 @@ test("private response namespace and Run token are rejected on renderer and remo
 
 const { Engine } = await import("../../packages/core/src/engine/engine.js");
 const { EngineRuntime } = await import("../../packages/core/src/engine/runtime.js");
+const { initialToolsFixtureModule } =
+  await import("../../packages/core/src/engine/initial-tools-preset.fixture.js");
 const { ModelPool } = await import("../../packages/core/src/llm/model-pool.js");
 const { SettingsManager } = await import("../../packages/core/src/settings/manager.js");
 const { MCPManager } = await import("../../packages/core/src/tool-system/mcp-manager.js");
@@ -809,6 +811,8 @@ async function engineFixture(
     isSubAgent: true,
     permissionMode: mode as any,
     enabledBuiltinTools: ["LinkAction"],
+    // Tools come from the Session's own preset; keep LinkAction eagerly loaded.
+    modules: [initialToolsFixtureModule(["LinkAction"])],
     maxTurns: 5,
     askUser: async () => (failure === "native" && asks++ === 0 ? "取消" : "允许执行"),
     ...(failure === "hook"

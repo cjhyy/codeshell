@@ -41,6 +41,16 @@ describe("resolveSessionAgentConfig", () => {
     const out = resolveSessionAgentConfig({ permissionMode: "default" } as any, settings);
     expect(out.preset).toBe("general");
   });
+
+  it("passes the global builtin enable/disable lists to every Session", () => {
+    const settings = {
+      ...baseSettings,
+      agent: { ...baseSettings.agent, enabledBuiltinTools: ["A"], disabledBuiltinTools: ["B"] },
+    } as unknown as ValidatedSettings;
+    const out = resolveSessionAgentConfig({ preset: "harness-min" } as any, settings);
+    expect(out.enabledBuiltinTools).toEqual(["A"]);
+    expect(out.disabledBuiltinTools).toEqual(["B"]);
+  });
 });
 
 describe("resolveSessionCwd", () => {
