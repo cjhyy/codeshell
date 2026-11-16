@@ -98,6 +98,8 @@ export interface WorkbenchController {
   goalActions?: React.ReactNode;
   loading?: boolean;
   loadingLabel?: string;
+  /** Temporarily prevent submission while retaining an editable draft. */
+  sendBlockedReason?: string;
   readOnly?: boolean;
   readOnlyNote?: string;
   attachmentAccept?: string;

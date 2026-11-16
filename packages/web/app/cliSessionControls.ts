@@ -14,7 +14,8 @@ export function cliSessionControlBlock(app: RemoteApp): string | undefined {
   if (app.loading.roomHistory) return "正在读取会话记录…";
   if (app.approvals.some((approval) => approval.roomId === room.id && !approval.asynchronous))
     return "先处理待确认的操作，再调整模型或权限。";
-  if (app.chat.run === "running") return "任务完成或停止后可调整模型和权限。";
+  if (app.chat.run === "running" || app.chat.run === "waiting")
+    return "任务完成或停止后可调整模型和权限。";
   const queued = app.turnQueue?.entries.length ?? 0;
   if (queued) return `有 ${queued} 条排队消息，执行完或取消后可调整。`;
   return undefined;

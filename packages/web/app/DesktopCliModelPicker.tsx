@@ -3,10 +3,10 @@ import type { RemoteApp } from "../src/hooks/useRemoteApp.js";
 import { ModelChoicePicker, type ModelChoice } from "./ModelChoicePicker.js";
 import { cliSessionControlBlock } from "./cliSessionControls.js";
 
-export function DesktopCliModelPicker({ app }: { app: RemoteApp }) {
+export function DesktopCliModelPicker({ app, busy = false }: { app: RemoteApp; busy?: boolean }) {
   const room = app.activeRoom;
   const supported = app.ccRoomModelSelection && !!app.setCcRoomModel;
-  const blocked = cliSessionControlBlock(app);
+  const blocked = busy ? "正在发送消息，完成后可调整。" : cliSessionControlBlock(app);
   const models = (app.runtimeModels ?? []).filter((model) => model.kind === room?.kind);
   const value = room?.modelKey ?? "";
   const choices: ModelChoice[] = [{ value: "", label: "CLI 默认模型" }];

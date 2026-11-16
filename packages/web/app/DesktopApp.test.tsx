@@ -11,6 +11,8 @@ import { Workbench } from "./Workbench.js";
 import { DesktopApproval, DesktopChatControls, DesktopSidebar } from "./DesktopControls.js";
 import { OutputHistoryRecovery } from "../src/components/OutputHistoryRecovery.js";
 import { DesktopModelPicker, CURRENT_NATIVE_MODEL } from "./DesktopModelPicker.js";
+import { DesktopCliModelPicker } from "./DesktopCliModelPicker.js";
+import { cliSessionControlBlock } from "./cliSessionControls.js";
 import { HubPanels } from "./HubPanels.js";
 import { PanelHost } from "./PanelHost.js";
 
@@ -2351,3 +2353,145 @@ test.each([false, true])(
     expect(markup).toContain("超时后需要重新发起");
   },
 );
+
+test("CLI composer blocks both settings during pending work and uses confirmed values", () => {
+  const room = {
+    id: "cli-room",
+    name: "Long CLI title",
+    cwd: "/repo",
+    kind: "codex" as const,
+    permissionMode: "default" as const,
+    modelKey: "codex/current",
+    createdAt: 1,
+    lastActiveAt: 1,
+    open: true,
+    observing: false,
+    sessionId: "thread",
+  };
+  const app = remoteApp({
+    activeRoomId: room.id,
+    activeRoom: room,
+    ccRoomModelSelection: true,
+    setCcRoomPermissionMode: noop,
+    setCcRoomModel: noop,
+  });
+  expect(cliSessionControlBlock(app)).toBeUndefined();
+  const cases: Partial<RemoteApp>[] = [
+    { status: "offline" },
+    { activeRoom: undefined },
+    { activeRoom: { ...room, observing: true } },
+    { chat: { ...app.chat, run: "running" } },
+    { loading: { ...app.loading, roomHistory: true } },
+    { ccModeRequest: { switching: true, mode: "default", modelKey: "codex/next" } },
+    {
+      approvals: [
+        {
+          roomId: room.id,
+          requestId: "approval",
+          toolName: "Read",
+          summary: "test",
+          description: "",
+          risk: "low",
+        },
+      ],
+    },
+  ];
+  for (const patch of cases) {
+    const current = { ...app, ...patch };
+    expect(cliSessionControlBlock(current)).toBeTruthy();
+    const permissions = renderToStaticMarkup(<DesktopChatControls app={current} />);
+    expect(permissions).toMatch(/<select[^>]*disabled=""/);
+    const model = renderToStaticMarkup(<DesktopCliModelPicker app={current} />);
+    expect(model).toMatch(/<button[^>]*disabled=""/);
+    if (current.activeRoom) expect(model).toContain('value="codex/current"');
+  }
+  const oldHost = renderToStaticMarkup(
+    <DesktopCliModelPicker app={{ ...app, ccRoomModelSelection: false }} />,
+  );
+  expect(oldHost).toContain("更新电脑端后");
+  expect(oldHost).toMatch(/<button[^>]*disabled=""/);
+  const metadata = renderToStaticMarkup(
+    <DesktopCliModelPicker app={{ ...app, activeRoom: undefined }} />,
+  );
+  expect(metadata).not.toContain("模型设置");
+});
+
+test("CLI sidebar distinguishes unknown counts and marks the active CLI thread", () => {
+  const app = remoteApp({
+    activeProjectCwd: "/repo",
+    ccCliKind: "codex",
+    ccProbe: { available: true },
+    activeRoomId: "room",
+    activeRoom: {
+      id: "room",
+      name: "Known",
+      cwd: "/repo",
+      kind: "codex",
+      permissionMode: "default",
+      createdAt: 1,
+      lastActiveAt: 1,
+      open: true,
+      observing: false,
+      sessionId: "known",
+    },
+    ccSessions: [
+      { sessionId: "known", cwd: "/repo", firstMessage: "Known", lastModified: 1, messageCount: 6 },
+      { sessionId: "unknown", cwd: "/repo", firstMessage: "Unknown", lastModified: 1 },
+    ],
+  });
+  const markup = renderToStaticMarkup(
+    <DesktopSidebar app={app} navigation={{ guard: noop, conversation: noop }} />,
+  );
+  expect(markup).toContain('aria-current="page"');
+  expect(markup).toContain('class="session active"');
+  expect(markup).toContain("6 条消息");
+  expect(markup).not.toContain("0 条消息");
+  expect(markup).not.toContain("undefined");
+});
+
+test("CLI settings handoff keeps editable drafts and the sidebar while blocking submission", async () => {
+  const sent: unknown[] = [];
+  const room = {
+    id: "r",
+    name: "CLI",
+    cwd: "/repo",
+    kind: "codex" as const,
+    permissionMode: "default" as const,
+    createdAt: 1,
+    lastActiveAt: 1,
+    open: true,
+    observing: false,
+    sessionId: "t",
+  };
+  let app = remoteApp({
+    activeRoomId: room.id,
+    activeRoom: room,
+    activeCwd: "/repo",
+    activeProjectCwd: "/repo",
+    ccModeRequest: { switching: true, mode: "default", modelKey: "codex/next" },
+    sendChat: async (input) => {
+      sent.push(input);
+      return true;
+    },
+  });
+  const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+  try {
+    await act(async () => {
+      hook.result.current.setDraft("keep this draft");
+    });
+    expect(hook.result.current.sendBlockedReason).toContain("正在应用 CLI 设置");
+    expect(hook.result.current.loading).toBe(false);
+    expect(hook.result.current.readOnly).toBeFalsy();
+    await act(async () => {
+      expect(hook.result.current.send()).toBe(false);
+    });
+    expect(sent).toHaveLength(0);
+    expect(hook.result.current.draft).toBe("keep this draft");
+    app = { ...app, ccModeRequest: undefined };
+    await hook.rerender();
+    expect(hook.result.current.sendBlockedReason).toBeUndefined();
+    expect(hook.result.current.draft).toBe("keep this draft");
+  } finally {
+    await hook.unmount();
+  }
+});

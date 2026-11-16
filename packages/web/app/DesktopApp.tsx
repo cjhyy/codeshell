@@ -705,15 +705,17 @@ export function useDesktopController(
     app.approvals.some((approval) => !approval.asynchronous);
   // Only a Host FIFO may accept a turn while this conversation is busy; it runs
   // after the current turn (and its approvals) through the same submit path.
+  const cliSettingsPending = Boolean(app.activeRoomId && app.ccModeRequest?.switching);
   const queueTarget = app.activeRoomId ?? app.activeSessionId;
   const canQueue =
     Boolean(app.turnQueueSupported && queueTarget) &&
     !app.activeRoom?.observing &&
     !app.outputHistoryFailed &&
+    !cliSettingsPending &&
     !emptyReplacement;
   const queuedTurns = app.turnQueue?.entries.length ?? 0;
   const send = (options?: { modelTraceSource?: string }): boolean => {
-    if (app.outputHistoryFailed || emptyReplacement) return false;
+    if (app.outputHistoryFailed || emptyReplacement || cliSettingsPending) return false;
     if (
       sendingRef.current ||
       app.status !== "online" ||
@@ -1073,7 +1075,12 @@ export function useDesktopController(
         navigation={navigation}
       />
     ),
-    composerControls: <DesktopChatControls app={actions} />,
+    composerControls: (
+      <DesktopChatControls
+        app={actions}
+        busy={sendingId !== null || uncertainIntents.current.has(activeId)}
+      />
+    ),
     chatControls: (
       <>
         <DesktopCliSessionActions app={actions} />
@@ -1113,7 +1120,10 @@ export function useDesktopController(
     ),
     modelSelector:
       app.activeRoomId || app.activeRoom ? (
-        <DesktopCliModelPicker app={actions} />
+        <DesktopCliModelPicker
+          app={actions}
+          busy={sendingId !== null || uncertainIntents.current.has(activeId)}
+        />
       ) : (
         <DesktopModelPicker
           key={`${workspaceKey}:${activeId}`}
@@ -1188,6 +1198,7 @@ export function useDesktopController(
           </button>
         </>
       ) : undefined,
+    sendBlockedReason: cliSettingsPending ? "正在应用 CLI 设置，输入内容会保留。" : undefined,
     loading:
       app.loading.sessionHistory ||
       app.loading.roomHistory ||

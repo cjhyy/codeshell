@@ -46,6 +46,7 @@ export function submitWorkbenchPanelPrompt(
     throw new Error("当前工作区或对话已经变化，请先打开面板关联的对话，再返回面板发送。");
   if (controller.connection !== "open" || controller.loading)
     throw new Error("工作台尚未连接，请连接后重新发送面板任务。");
+  if (controller.sendBlockedReason) throw new Error(controller.sendBlockedReason);
   if (controller.readOnly) throw new Error("当前对话为只读，无法发送面板任务。");
   if (
     controller.running ||
@@ -574,6 +575,7 @@ export function Workbench({
     controller.loading ||
     uploading ||
     controller.uncertain ||
+    !!controller.sendBlockedReason ||
     controller.readOnly;
   const draftEmpty = !draft.trim() && !files.length;
   const sendDisabled = sendBlocked || draftEmpty;
@@ -1449,25 +1451,26 @@ export function Workbench({
                     blockingApprovals.length ? "waiting" : running ? "running" : undefined
                   }
                 >
-                  {controller.uncertain
-                    ? "正在核对消息…"
-                    : uploading
-                      ? controller.host === "desktop"
-                        ? "正在发送…"
-                        : "正在上传附件…"
-                      : blockingApprovals.length
-                        ? queuedCount
-                          ? `等待你的确认 · ${queuedCount} 条待执行`
-                          : "等待你的确认"
-                        : running
+                  {controller.sendBlockedReason ||
+                    (controller.uncertain
+                      ? "正在核对消息…"
+                      : uploading
+                        ? controller.host === "desktop"
+                          ? "正在发送…"
+                          : "正在上传附件…"
+                        : blockingApprovals.length
                           ? queuedCount
-                            ? `正在处理… · ${queuedCount} 条待执行`
-                            : queueing
-                              ? "正在处理… · 可继续发送，将排队执行"
-                              : "正在处理…"
-                          : approvals.length
-                            ? "有可稍后回答的问题"
-                            : ""}
+                            ? `等待你的确认 · ${queuedCount} 条待执行`
+                            : "等待你的确认"
+                          : running
+                            ? queuedCount
+                              ? `正在处理… · ${queuedCount} 条待执行`
+                              : queueing
+                                ? "正在处理… · 可继续发送，将排队执行"
+                                : "正在处理…"
+                            : approvals.length
+                              ? "有可稍后回答的问题"
+                              : "")}
                 </span>
                 <span className="composer-submit-group">
                   {queueing ? (

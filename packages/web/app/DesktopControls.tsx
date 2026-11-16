@@ -47,10 +47,14 @@ export function cliModeSwitchNotice(
     : `${base}\nClaude Code 会跳过工具操作确认。电脑可能要求再次批准。`;
 }
 
-export function DesktopChatControls({ app }: { app: RemoteApp }) {
+export function DesktopChatControls({ app, busy = false }: { app: RemoteApp; busy?: boolean }) {
   const inRoom = Boolean(app.activeRoomId || app.activeRoom);
   const room = app.activeRoom;
-  const blocked = inRoom ? cliSessionControlBlock(app) : undefined;
+  const blocked = inRoom
+    ? busy
+      ? "正在发送消息，完成后可调整。"
+      : cliSessionControlBlock(app)
+    : undefined;
   const roomSwitchable = !!room && !!app.setCcRoomPermissionMode && !blocked;
   const activeSession = app.sessions.find((session) => session.id === app.activeSessionId);
   const externalRuntime =
