@@ -7,7 +7,11 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const repo = fileURLToPath(new URL("../../..", import.meta.url));
+const sourceIndex = process.argv.indexOf("--source-repo");
+const repo =
+  sourceIndex < 0
+    ? fileURLToPath(new URL("../../..", import.meta.url))
+    : path.resolve(process.argv[sourceIndex + 1]);
 const require = createRequire(path.join(repo, "packages/desktop/package.json"));
 const { build } = require("esbuild");
 const { chromium } = require("playwright");
