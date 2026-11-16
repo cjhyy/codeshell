@@ -13,6 +13,11 @@
 import { writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  type OpenRouterModel,
+  type RawOpenRouterPricing,
+  openRouterPriceFields,
+} from "../packages/core/src/data/openrouter-models.js";
 
 const ENDPOINT = "https://openrouter.ai/api/v1/models";
 
@@ -55,32 +60,17 @@ interface RawModel {
   created?: number;
   context_length?: number;
   top_provider?: { context_length?: number; max_completion_tokens?: number };
-  pricing?: { prompt?: string; completion?: string };
+  pricing?: RawOpenRouterPricing;
   architecture?: { input_modalities?: string[]; output_modalities?: string[] };
 }
 
-interface SlimModel {
-  id: string;
-  name: string;
-  created: number;
-  contextLength: number;
-  maxOutputTokens: number;
-  inputPricePerMillion: number;
-  outputPricePerMillion: number;
-  modalities: string[];
-}
+type SlimModel = OpenRouterModel;
 
 interface Snapshot {
   fetchedAt: string;
   source: string;
   count: number;
   models: SlimModel[];
-}
-
-function priceToPerMillion(raw: string | undefined): number {
-  if (!raw) return 0;
-  const n = Number(raw);
-  return Number.isFinite(n) ? n * 1_000_000 : 0;
 }
 
 function slim(m: RawModel): SlimModel {
@@ -92,8 +82,7 @@ function slim(m: RawModel): SlimModel {
     created: m.created ?? 0,
     contextLength: ctx,
     maxOutputTokens: maxOut,
-    inputPricePerMillion: priceToPerMillion(m.pricing?.prompt),
-    outputPricePerMillion: priceToPerMillion(m.pricing?.completion),
+    ...openRouterPriceFields(m.pricing),
     modalities: m.architecture?.input_modalities ?? [],
   };
 }

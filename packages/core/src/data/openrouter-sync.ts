@@ -9,6 +9,8 @@
 
 import {
   type OpenRouterModel,
+  type RawOpenRouterPricing,
+  openRouterPriceFields,
   setOpenRouterSnapshot,
   getOpenRouterSnapshot,
 } from "./openrouter-models.js";
@@ -21,14 +23,8 @@ interface RawModel {
   created?: number;
   context_length?: number;
   top_provider?: { context_length?: number; max_completion_tokens?: number };
-  pricing?: { prompt?: string; completion?: string };
+  pricing?: RawOpenRouterPricing;
   architecture?: { input_modalities?: string[] };
-}
-
-function priceToPerMillion(raw: string | undefined): number {
-  if (!raw) return 0;
-  const n = Number(raw);
-  return Number.isFinite(n) ? n * 1_000_000 : 0;
 }
 
 function slim(m: RawModel): OpenRouterModel {
@@ -38,8 +34,7 @@ function slim(m: RawModel): OpenRouterModel {
     created: m.created ?? 0,
     contextLength: m.top_provider?.context_length ?? m.context_length ?? 0,
     maxOutputTokens: m.top_provider?.max_completion_tokens ?? 0,
-    inputPricePerMillion: priceToPerMillion(m.pricing?.prompt),
-    outputPricePerMillion: priceToPerMillion(m.pricing?.completion),
+    ...openRouterPriceFields(m.pricing),
     modalities: m.architecture?.input_modalities ?? [],
   };
 }
