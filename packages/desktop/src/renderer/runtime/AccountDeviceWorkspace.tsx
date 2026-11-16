@@ -18,7 +18,7 @@ export function AccountDeviceWorkspace({
 }: {
   open: boolean;
   onClose(): void;
-  onOpenLocal(): void | Promise<void>;
+  onOpenLocal(isCurrent: () => boolean): void | Promise<void>;
 }) {
   const directory = useAccountFeature("devices.directory");
   const [account, setAccount] = useState<CloudAccountStatus>({ state: "signed-out" });
@@ -155,7 +155,7 @@ export function AccountDeviceWorkspace({
     setActionError("");
     setOpened("");
     try {
-      if (!device) await onOpenLocal();
+      if (!device) await onOpenLocal(() => revision.current === epoch);
       else {
         const origin = accountPublicOrigin(account.origin);
         if (!origin?.startsWith("https://") || !UUID.test(device.hostId))

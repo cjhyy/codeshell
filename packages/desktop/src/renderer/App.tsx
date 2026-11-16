@@ -2926,9 +2926,10 @@ function App() {
         <AccountDeviceWorkspace
           open={executionDevicesOpen}
           onClose={() => setExecutionDevicesOpen(false)}
-          onOpenLocal={async () => {
+          onOpenLocal={async (isCurrent) => {
             if (activeProjectId !== null && (!projectRuntime.ready || cloudSelected))
               await projectRuntime.select(null);
+            if (!isCurrent()) return;
             setViewMode("chat");
             setExecutionDevicesOpen(false);
           }}
