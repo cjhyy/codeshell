@@ -34,6 +34,17 @@ interface RegisteredHook {
 
 export class HookRegistry {
   private hooks = new Map<HookEventName, RegisteredHook[]>();
+  private identity?: () => Readonly<Record<string, unknown>> | undefined;
+
+  /**
+   * Who is emitting: merged into every event's data so handlers can tell
+   * Sessions, presets and behavior profiles apart. Fields the emitter passes
+   * explicitly win. Never put per-run payloads here: shell hooks receive the
+   * whole data object on stdin.
+   */
+  setIdentity(provider: () => Readonly<Record<string, unknown>> | undefined): void {
+    this.identity = provider;
+  }
 
   register(eventName: HookEventName, handler: HookHandler, priority = 0, name?: string): Dispose {
     if (!this.hooks.has(eventName)) {
@@ -86,7 +97,7 @@ export class HookRegistry {
     const handlers = this.hooks.get(eventName);
     if (!handlers?.length) return {};
 
-    const ctx: HookContext = { eventName, data: { ...data } };
+    const ctx: HookContext = { eventName, data: { ...this.identity?.(), ...data } };
     const aggregated: HookResult = {};
 
     for (const { handler } of handlers) {

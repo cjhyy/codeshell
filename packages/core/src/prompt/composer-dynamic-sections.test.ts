@@ -196,6 +196,27 @@ describe("PromptComposer.buildDynamicContextSections", () => {
     expect(await ids()).toEqual(first);
   });
 
+  test("providers receive the Session identity and this run's parameters", async () => {
+    const seen: unknown[] = [];
+    await new PromptComposer({
+      ...options(),
+      providerSession: { id: "s-1", kind: "pet", profileId: "pet", isSubAgent: false },
+      providerRunParams: { workspaces: [] },
+      dynamicContextProviders: [
+        (context) => {
+          seen.push({ session: context.session, runParams: context.runParams });
+          return undefined;
+        },
+      ],
+    }).buildDynamicContextSections();
+    expect(seen).toEqual([
+      {
+        session: { id: "s-1", kind: "pet", profileId: "pet", isSubAgent: false },
+        runParams: { workspaces: [] },
+      },
+    ]);
+  });
+
   test("a provider's own section follows the shared capability text, compared on its terms", async () => {
     const sections = await new PromptComposer({
       ...options(),

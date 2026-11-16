@@ -73,6 +73,8 @@ export interface RunPromptComposerConfigInput {
   goalToolState: ComposerOptions["goalToolState"];
   capabilityPromptSections: ComposerOptions["capabilityPromptSections"];
   dynamicContextProviders: ComposerOptions["dynamicContextProviders"];
+  providerSession?: ComposerOptions["providerSession"];
+  providerRunParams?: ComposerOptions["providerRunParams"];
   getSettingsManager: () => SettingsManager;
   toolCatalog: ComposerOptions["toolCatalog"];
   toolDiscovery?: ComposerOptions["toolDiscovery"];
@@ -108,6 +110,8 @@ export function buildPromptComposerConfig(args: RunPromptComposerConfigInput): C
     goalToolState,
     capabilityPromptSections,
     dynamicContextProviders,
+    providerSession,
+    providerRunParams,
     getSettingsManager,
     toolCatalog,
     toolDiscovery,
@@ -150,6 +154,8 @@ export function buildPromptComposerConfig(args: RunPromptComposerConfigInput): C
     goalToolState,
     capabilityPromptSections,
     dynamicContextProviders,
+    ...(providerSession ? { providerSession } : {}),
+    ...(providerRunParams ? { providerRunParams } : {}),
     sourcesContextProvider: () =>
       buildSourcesContextSummary({
         cwd,
