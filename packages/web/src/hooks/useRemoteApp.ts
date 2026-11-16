@@ -1,4 +1,9 @@
 import { useRemoteGoalControls } from "./useRemoteGoalControls.js";
+import {
+  prepareCcRoomSettingChange,
+  type CcRoomOpenRequest,
+  type CcRoomSettingSelection,
+} from "./ccRoomSettingsRequests.js";
 import { localDeadline } from "../remote-deadline.js";
 import { RoomHistoryAccumulator } from "../lib/roomHistory.js";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
@@ -124,6 +129,8 @@ export interface PendingApproval {
 export interface RemoteApp {
   status: ConnStatus;
   accessRequired?: boolean;
+  accountAccessRequired?: boolean;
+  accountEntryUrl?: string;
   deviceName: string;
   chat: ChatState;
   sessions: MobileSessionMeta[];
@@ -239,7 +246,10 @@ export interface RemoteApp {
   /** Restart the viewed CLI room under another mode (Host may require approval). */
   setCcRoomPermissionMode?: (mode: PermissionMode) => void;
   /** This tab's in-flight CLI open / mode switch, until the Host answers. */
-  ccModeRequest?: { mode: PermissionMode; switching: boolean };
+  ccModeRequest?: { mode: PermissionMode; switching: boolean; modelKey?: string | null };
+  ccRoomModelSelection?: boolean;
+  /** Changes only this room model, preserving the Host's current permission mode. */
+  setCcRoomModel?: (modelKey: string | null) => void;
   respondCcApproval: (roomId: string, requestId: string, decision: CcApprovalDecision) => void;
   /** The Host owns a pending-turn FIFO (turnQueue capability). */
   turnQueueSupported?: boolean;
@@ -361,6 +371,9 @@ export interface RemoteAppOptions {
   /** Browser host features may observe notifications without opening a second
    * transport or changing the session/room reducer's ownership. */
   onNotification?: (method: string, params: Record<string, unknown>) => void;
+  /** Keep navigation across projects independent of the selected conversation.
+   * Omitted for legacy clients whose session catalog follows the selected project. */
+  sessionCatalog?: "all";
 }
 
 export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
@@ -376,9 +389,18 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   const sessionListRequestRef = useRef<{ requestId: string; append: boolean } | undefined>(
     undefined,
   );
+  const sessionCatalogIdentityRef = useRef<string | undefined>(undefined);
+  const clearSessionCatalog = useCallback(() => {
+    setSessions([]);
+    setSessionsHasMore(false);
+    sessionListCursorRef.current = null;
+    sessionListRequestRef.current = undefined;
+  }, []);
   const [runtimeModels, setRuntimeModels] = useState<MobileRuntimeModel[]>([]);
   const [nativeModelSelection, setNativeModelSelection] = useState(false);
   const nativeModelSelectionRef = useRef(false);
+  const [ccRoomModelSelection, setCcRoomModelSelection] = useState(false);
+  const ccRoomModelSelectionRef = useRef(false);
   const [turnQueueSupported, setTurnQueueSupported] = useState(false);
   const turnQueueSupportedRef = useRef(false);
   const [turnQueues, setTurnQueues] = useState<TurnQueueStates>({});
@@ -500,10 +522,20 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       {
         signature: string;
         sessionId?: string;
+        roomId?: string;
         sources: MobileComposerAttachment[];
         attachments: Awaited<ReturnType<typeof prepareMobileAttachments>>;
       }
     >(),
+  );
+  // A room's send owns its settings while attachments are preparing, and
+  // preparedMessages keeps the fence until admission is confirmed or refused.
+  const preparingRoomInputsRef = useRef(new Map<string, number>());
+  const hasPendingRoomInput = useCallback(
+    (roomId: string) =>
+      preparingRoomInputsRef.current.has(roomId) ||
+      [...preparedMessagesRef.current.values()].some((message) => message.roomId === roomId),
+    [],
   );
   const pendingCreateRef = useRef<{
     clientRequestId: string;
@@ -711,17 +743,9 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
    * so a late reply to a superseded request can neither navigate nor overwrite
    * newer state. The conversation revision lets a reply that arrives after the
    * user navigated elsewhere be discarded instead of navigating back. */
-  const pendingCcOpenRef = useRef<{
-    requestId: string;
-    sessionId: string;
-    cwd: string;
-    mode: PermissionMode;
-    revision: number;
-    /** True for a mode switch of the room this tab is already viewing. */
-    switching: boolean;
-  } | null>(null);
+  const pendingCcOpenRef = useRef<CcRoomOpenRequest | null>(null);
   const [ccModeRequest, setCcModeRequest] = useState<
-    { mode: PermissionMode; switching: boolean } | undefined
+    { mode: PermissionMode; switching: boolean; modelKey?: string | null } | undefined
   >(undefined);
   const ccBacklogLoadedRef = useRef(false);
   /** Which CLI the currently-open cc session belongs to — selects the on-disk
@@ -745,8 +769,9 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   const requestSessionList = useCallback(
     (append = false, cwds?: string[]) => {
       if (append && (!sessionListCursorRef.current || sessionListRequestRef.current)) return;
-      if (cwds !== undefined) {
-        const next = cwds.length ? [...new Set(cwds)].sort() : undefined;
+      const scope = optionsRef.current.sessionCatalog === "all" ? [] : cwds;
+      if (scope !== undefined) {
+        const next = scope.length ? [...new Set(scope)].sort() : undefined;
         if (JSON.stringify(next) !== JSON.stringify(sessionListScopeRef.current)) setSessions([]);
         sessionListScopeRef.current = next;
       }
@@ -1157,9 +1182,16 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       }
       if (goalControls.handle(event)) return;
       if (event.type === "auth.ok") {
+        if (optionsRef.current.sessionCatalog === "all") {
+          const identity = event.device?.id;
+          if (sessionCatalogIdentityRef.current !== identity) clearSessionCatalog();
+          sessionCatalogIdentityRef.current = identity;
+        }
         unsentCreatedSessionRef.current = null;
         nativeModelSelectionRef.current = event.capabilities?.nativeModelSelection === 1;
         setNativeModelSelection(nativeModelSelectionRef.current);
+        ccRoomModelSelectionRef.current = event.capabilities?.ccRoomModelSelection === 1;
+        setCcRoomModelSelection(ccRoomModelSelectionRef.current);
         turnQueueSupportedRef.current = event.capabilities?.turnQueue === 1;
         setTurnQueueSupported(turnQueueSupportedRef.current);
       }
@@ -1385,6 +1417,9 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           sessionListRequestRef.current = undefined;
           sessionListCursorRef.current = event.nextCursor ?? null;
           setSessionsHasMore(Boolean(event.nextCursor));
+          const refreshedIds = new Set(event.sessions.map((session) => session.id));
+          const retainLoadedSessions =
+            optionsRef.current.sessionCatalog === "all" && Boolean(event.nextCursor);
           setSessions((previous) =>
             pending?.append
               ? [
@@ -1392,7 +1427,15 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
                     [...previous, ...event.sessions].map((session) => [session.id, session]),
                   ).values(),
                 ]
-              : event.sessions,
+              : retainLoadedSessions
+                ? [
+                    ...event.sessions,
+                    // A refreshed first page cannot prove that older loaded
+                    // rows disappeared: new activity may have moved them into
+                    // later pages. Keep them until a complete catalog arrives.
+                    ...previous.filter((session) => !refreshedIds.has(session.id)),
+                  ]
+                : event.sessions,
           );
           // A page/project is only part of the catalog, so its missing ids do
           // not prove that another conversation or its unread marker was deleted.
@@ -1429,7 +1472,9 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
             }
             const active = event.sessions.find((s) => s.id === event.activeSessionId);
             if (active) setActiveSessionCwd(active.cwd || null);
-            else if (!pending?.append && !sessionListScopeRef.current)
+            // A retained older row keeps its confirmed root (including null).
+            // Its absence from a refreshed first page cannot retire that target.
+            else if (!pending?.append && !sessionListScopeRef.current && !retainLoadedSessions)
               setActiveSessionCwd(undefined);
           }
           break;
@@ -1898,12 +1943,19 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
             !!request &&
             (event.requestId !== undefined
               ? event.requestId === request.requestId
-              : event.sessionId === request.sessionId);
+              : request.modelKey === undefined && event.sessionId === request.sessionId) &&
+            event.sessionId === request.sessionId &&
+            (!request.roomId || event.roomId === request.roomId);
           if (!request || !matches) break;
           pendingCcOpenRef.current = null;
           setCcModeRequest(undefined);
           // Only this browser's latest open request may change navigation.
           if (request.revision !== conversationRevisionRef.current) break;
+          if (request.modelKey !== undefined && event.modelKey === undefined) {
+            setNotice("此电脑未确认 CLI 模型设置，请更新桌面端后重试。");
+            sendRef.current?.({ type: "room.list" });
+            break;
+          }
           if (event.status === "missing") {
             setNotice(t("mobile.notice.ccRoomOpenFailed"));
             break;
@@ -1919,6 +1971,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
                       open: event.status === "running",
                       observing: event.status === "observing",
                       ...(event.permissionMode ? { permissionMode: event.permissionMode } : {}),
+                      ...(event.modelKey !== undefined ? { modelKey: event.modelKey } : {}),
                     }
                   : room,
               ),
@@ -1948,6 +2001,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
                     open: event.status === "running",
                     observing: event.status === "observing",
                     ...(event.permissionMode ? { permissionMode: event.permissionMode } : {}),
+                    ...(event.modelKey !== undefined ? { modelKey: event.modelKey } : {}),
                   }
                 : room,
             ),
@@ -2082,6 +2136,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       appendSessionEvents,
       clearApproval,
       clearSessionUnread,
+      clearSessionCatalog,
       rememberRoomMessages,
       requestRoomCatchup,
       requestSessionList,
@@ -2269,6 +2324,16 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   });
   sendRef.current = socket.send;
   connectionGenerationRef.current = socket.connectionGeneration;
+
+  useEffect(() => {
+    if (
+      optionsRef.current.sessionCatalog === "all" &&
+      (socket.status === "unpaired" || socket.accessRequired)
+    ) {
+      sessionCatalogIdentityRef.current = undefined;
+      clearSessionCatalog();
+    }
+  }, [socket.status, socket.accessRequired, clearSessionCatalog]);
 
   const retryEmptySessionReplacement = useCallback(() => {
     const source = replacementSourceRef.current;
@@ -2470,6 +2535,13 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       const text = input.text.trim();
       if (!text && input.attachments.length === 0) return false;
       if (socket.status !== "online") return false;
+      const refusePendingRoomSwitch = (roomId: string | undefined): boolean => {
+        const pending = pendingCcOpenRef.current;
+        if (!roomId || !pending?.switching || pending.roomId !== roomId) return false;
+        setNotice("请等待此会话的模型或权限设置确认后再发送。草稿已保留。");
+        return true;
+      };
+      if (refusePendingRoomSwitch(activeRoomIdRef.current)) return false;
       if (
         input.nativeConnectionId &&
         (!nativeModelSelectionRef.current || activeRoomIdRef.current || input.modelKey)
@@ -2542,6 +2614,11 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       }
       const upload = new AbortController();
       uploadAbortsRef.current.add(upload);
+      if (roomId)
+        preparingRoomInputsRef.current.set(
+          roomId,
+          (preparingRoomInputsRef.current.get(roomId) ?? 0) + 1,
+        );
       try {
         attachments =
           prepared?.attachments ??
@@ -2564,7 +2641,13 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         return false;
       } finally {
         uploadAbortsRef.current.delete(upload);
+        if (roomId) {
+          const remaining = (preparingRoomInputsRef.current.get(roomId) ?? 1) - 1;
+          if (remaining > 0) preparingRoomInputsRef.current.set(roomId, remaining);
+          else preparingRoomInputsRef.current.delete(roomId);
+        }
       }
+      if (refusePendingRoomSwitch(roomId)) return false;
       if (outputWriteGeneration !== outputWriteGenerationRef.current) {
         input.onRetired?.();
         return false;
@@ -2578,6 +2661,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       preparedMessagesRef.current.set(clientMessageId, {
         signature,
         sessionId,
+        roomId,
         sources: input.attachments.map((source) => ({ ...source })),
         attachments,
       });
@@ -2718,7 +2802,12 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       }
       setActiveSessionId(id);
       clearSessionUnread(id);
-      setActiveSessionCwd(sessionCwdById.get(id) ?? null);
+      const cwd = sessionCwdById.get(id);
+      setActiveSessionCwd(cwd);
+      if (cwd === null) {
+        setActiveProjectCwd(null);
+        setActiveProjectId(null);
+      }
       boundSessionRef.current = id;
       const cursor = sessionCursor(id);
       epochHistorySessionRef.current =
@@ -2767,6 +2856,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       // Selecting an older row in the current project must retain loaded pages
       // and their provider metadata instead of immediately resetting to page 1.
       if (
+        optionsRef.current.sessionCatalog !== "all" &&
         JSON.stringify([...new Set(roots)].sort()) !== JSON.stringify(sessionListScopeRef.current)
       )
         requestSessionList(false, roots);
@@ -2824,48 +2914,50 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     [socket, setLoadingKey, setNotice],
   );
 
-  /**
-   * Restart the CLI room this tab is viewing under another permission mode.
-   * Reuses ccRoom.openSession; the Host refuses while the room is busy and
-   * asks for a one-time approval before bypassPermissions. The dropdown keeps
-   * showing the running mode until the Host confirms the new one.
-   */
-  const setCcRoomPermissionMode = useCallback(
-    (mode: PermissionMode) => {
+  const changeCcRoomSetting = useCallback(
+    (selection: CcRoomSettingSelection) => {
       const roomId = activeRoomIdRef.current;
-      const sessionId = ccHistorySessionRef.current;
-      const cwd = ccHistoryCwdRef.current;
-      if (!roomId || !sessionId || !cwd) return;
-      if (!socketOnlineRef.current) {
-        setNotice(t("mobile.connection.offlineTitle"));
+      const prepared = prepareCcRoomSettingChange(selection, {
+        roomId,
+        room: roomsRef.current.find((room) => room.id === roomId),
+        sessionId: ccHistorySessionRef.current,
+        cwd: ccHistoryCwdRef.current,
+        kind: ccHistoryKindRef.current,
+        revision: conversationRevisionRef.current,
+        online: socketOnlineRef.current,
+        modelSelection: ccRoomModelSelectionRef.current,
+        inputPending: !!roomId && hasPendingRoomInput(roomId),
+        changePending: pendingCcOpenRef.current !== null,
+        hasQueuedTurns: !!turnQueuesRef.current[`room:${roomId}`]?.entries.length,
+        models: runtimeModels,
+      });
+      if (!prepared.request) {
+        if (prepared.notice) setNotice(prepared.notice);
         return;
       }
-      const requestId = `cc-mode-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-      pendingCcOpenRef.current = {
-        requestId,
-        sessionId,
-        cwd,
-        mode,
-        revision: conversationRevisionRef.current,
+      const { request, event } = prepared;
+      pendingCcOpenRef.current = request;
+      setCcModeRequest({
+        mode: request.mode,
         switching: true,
-      };
-      setCcModeRequest({ mode, switching: true });
-      const sent = socket.send({
-        type: "ccRoom.openSession",
-        sessionId,
-        cwd,
-        mode,
-        kind: ccHistoryKindRef.current,
-        requestId,
+        ...(request.modelKey !== undefined ? { modelKey: request.modelKey } : {}),
       });
-      if (!sent && pendingCcOpenRef.current?.requestId === requestId) {
-        // Never reached the Host: nothing changed and nothing is pending.
+      if (!socket.send(event) && pendingCcOpenRef.current?.requestId === request.requestId) {
+        // No Host admission: keep the actual settings, conversation and draft.
         pendingCcOpenRef.current = null;
         setCcModeRequest(undefined);
         setNotice(t("mobile.connection.offlineTitle"));
       }
     },
-    [socket, setNotice],
+    [socket, setNotice, runtimeModels, hasPendingRoomInput],
+  );
+  const setCcRoomPermissionMode = useCallback(
+    (mode: PermissionMode) => changeCcRoomSetting({ mode }),
+    [changeCcRoomSetting],
+  );
+  const setCcRoomModel = useCallback(
+    (modelKey: string | null) => changeCcRoomSetting({ modelKey }),
+    [changeCcRoomSetting],
   );
 
   const respondCcApproval = useCallback(
@@ -3253,6 +3345,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     emptySessionReplacement,
     retryEmptySessionReplacement,
     accessRequired: socket.accessRequired,
+    accountAccessRequired: socket.accountAccessRequired,
+    accountEntryUrl: socket.accountEntryUrl,
     deviceName: socket.deviceName,
     chat,
     sessions,
@@ -3323,6 +3417,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     setCcCliKind,
     openCcSession,
     setCcRoomPermissionMode,
+    setCcRoomModel,
+    ccRoomModelSelection,
     ccModeRequest,
     respondCcApproval,
   };

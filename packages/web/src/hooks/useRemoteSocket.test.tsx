@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { act } from "react";
 import { ensureMiniDom, flushMicrotasks, renderHook } from "../test-utils/renderHook";
 import { useRemoteSocket, type ResyncReason } from "./useRemoteSocket";
+import { remoteDeviceCredential } from "../lib/accountRelaySession.js";
 
 class MemoryStorage {
   private readonly values = new Map<string, string>();
@@ -81,6 +82,10 @@ function setupBrowser(): void {
   storage.setItem("cs.deviceName", "Phone");
 
   const restores = [
+    defineTestProperty(globalThis, "fetch", {
+      value: async () => Response.json({ active: false }),
+      writable: true,
+    }),
     defineTestProperty(globalThis, "localStorage", { value: storage, writable: true }),
     defineTestProperty(globalThis, "WebSocket", { value: FakeWebSocket, writable: true }),
     defineTestProperty(window, "location", {
@@ -103,6 +108,68 @@ afterEach(() => {
 });
 
 describe("useRemoteSocket resync", () => {
+  test("an account browser uses an in-memory grant without replacing its legacy pairing", async () => {
+    setupBrowser();
+    window.location.origin = "https://computer.fixture.test";
+    const calls: string[] = [];
+    const credential = { deviceId: "account-browser", secretHash: "a".repeat(43) };
+    globalThis.fetch = (async (url: string) => {
+      calls.push(url);
+      return Response.json({
+        active: true,
+        ...credential,
+        expiresAt: Date.now() + 60_000,
+        accountEntryUrl: "https://account.test/app",
+      });
+    }) as typeof fetch;
+    window.location.search = "?pairing=old-token";
+    const hook = await renderHook(() => useRemoteSocket({}));
+    const ws = FakeWebSocket.instances[0]!;
+    await act(async () => {
+      ws.open();
+      await flushMicrotasks();
+    });
+    expect(ws.sent.map((line) => JSON.parse(line))).toEqual([
+      { type: "auth.device", ...credential },
+    ]);
+    expect(remoteDeviceCredential()).toEqual(credential);
+    expect(localStorage.getItem("cs.deviceId")).toBe("device-1");
+    expect(localStorage.getItem("cs.deviceSecret")).toBe("secret-1");
+    await act(async () => {
+      ws.message({ type: "auth.ok", device: { id: credential.deviceId, name: "Account" } });
+      ws.onclose?.({ code: 4407 });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.accountAccessRequired).toBe(true);
+    expect(hook.result.current.accountEntryUrl).toBe("https://account.test/app");
+    await act(async () => {
+      hook.result.current.logout();
+      await flushMicrotasks();
+    });
+    expect(calls).toEqual(["/api/v1/relay/session", "/api/v1/relay/session/logout"]);
+    expect(localStorage.getItem("cs.deviceId")).toBe("device-1");
+    await hook.unmount();
+  });
+
+  test.each([200, 401])(
+    "a missing or expired account cookie requests Passkey again without durable-pairing fallback (%s)",
+    async (status) => {
+      setupBrowser();
+      window.location.origin = "https://computer.fixture.test";
+      globalThis.fetch = (async () =>
+        Response.json(
+          { active: false, accountRelay: true, accountEntryUrl: "https://account.test/app" },
+          { status },
+        )) as typeof fetch;
+      const hook = await renderHook(() => useRemoteSocket({}));
+      expect(FakeWebSocket.instances).toHaveLength(0);
+      expect(hook.result.current.accessRequired).toBe(true);
+      expect(hook.result.current.accountAccessRequired).toBe(true);
+      expect(localStorage.getItem("cs.deviceId")).toBe("device-1");
+      await hook.unmount();
+    },
+  );
+
   test("a paired browser authenticates without consuming a bookmarked pairing link", async () => {
     setupBrowser();
     window.location.search = "?pairing=expired-test-token&view=panels";

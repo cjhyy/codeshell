@@ -1,11 +1,10 @@
-import { closeSync, openSync, readdirSync, readSync, statSync, type Dirent } from "node:fs";
+import { closeSync, openSync, readSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { isAbsolute, join, resolve } from "node:path";
-import { encodeCwd } from "@cjhyy/code-shell-capability-coding/orchestration";
+import { encodeCwd, findCodexRolloutFile } from "@cjhyy/code-shell-capability-coding/orchestration";
 import type { LinkedSessionTarget, RoomKind } from "@cjhyy/code-shell-server/mobile-remote";
 
 const MAX_CLAUDE_IDENTITY_BYTES = 256 * 1024;
-const MAX_CODEX_META_BYTES = 64 * 1024;
 const SAFE_EXTERNAL_SESSION_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,255}$/u;
 
 export interface LinkedSessionResolverOptions {
@@ -98,51 +97,11 @@ function resolveCodexIdentity(
   requestedCwd: string,
   codexHome: string,
 ): SessionIdentity | null {
-  const sessionsRoot = join(codexHome, "sessions");
-  for (const file of rolloutFiles(sessionsRoot)) {
-    const firstLine = readFirstLine(file, MAX_CODEX_META_BYTES);
-    if (firstLine === null) continue;
-    let record: unknown;
-    try {
-      record = JSON.parse(firstLine);
-    } catch {
-      continue;
-    }
-    const meta = record as { type?: unknown; payload?: { id?: unknown; cwd?: unknown } };
-    if (
-      meta.type !== "session_meta" ||
-      typeof meta.payload?.id !== "string" ||
-      typeof meta.payload.cwd !== "string" ||
-      meta.payload.id !== externalSessionId ||
-      !isAbsolute(meta.payload.cwd) ||
-      resolve(meta.payload.cwd) !== requestedCwd
-    ) {
-      continue;
-    }
-    return { externalSessionId: meta.payload.id, cwd: meta.payload.cwd };
-  }
-  return null;
-}
-
-function* rolloutFiles(root: string): Generator<string> {
-  let entries: Dirent[];
-  try {
-    entries = readdirSync(root, { withFileTypes: true });
-  } catch {
-    return;
-  }
-  for (const entry of entries) {
-    const file = join(root, entry.name);
-    if (entry.isDirectory()) {
-      yield* rolloutFiles(file);
-    } else if (
-      entry.isFile() &&
-      entry.name.startsWith("rollout-") &&
-      entry.name.endsWith(".jsonl")
-    ) {
-      yield file;
-    }
-  }
+  // The shared finder checks authoritative metadata after narrowing modern
+  // UUID-named rollouts; opening one task must not read every session's prefix.
+  return findCodexRolloutFile(codexHome, requestedCwd, externalSessionId)
+    ? { externalSessionId, cwd: requestedCwd }
+    : null;
 }
 
 function isRegularFile(file: string): boolean {
@@ -169,15 +128,6 @@ function readBoundedPrefix(file: string, maximum: number): string | null {
   } finally {
     closeSync(fd);
   }
-}
-
-function readFirstLine(file: string, maximum: number): string | null {
-  const prefix = readBoundedPrefix(file, maximum);
-  if (prefix === null) return null;
-  const newline = prefix.indexOf("\n");
-  // A full buffer without a line boundary is not a bounded metadata record.
-  if (newline < 0 && Buffer.byteLength(prefix, "utf-8") >= maximum) return null;
-  return (newline < 0 ? prefix : prefix.slice(0, newline)).trim();
 }
 
 function firstRecordWithCwd(

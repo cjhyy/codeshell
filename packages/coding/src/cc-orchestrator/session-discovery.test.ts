@@ -1,8 +1,17 @@
 import { describe, it, expect } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync, utimesSync, rmSync, unlinkSync } from "node:fs";
+import {
+  appendFileSync,
+  mkdtempSync,
+  mkdirSync,
+  writeFileSync,
+  utimesSync,
+  rmSync,
+  unlinkSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
+import { readRecentHistory } from "./session-history.js";
 import {
   encodeCwd,
   discoverSessions,
@@ -138,6 +147,48 @@ describe("discoverSessions", () => {
         .map((s) => s.sessionId)
         .sort(),
     ).toEqual(["session-b", "session-legacy"]);
+  });
+
+  it("counts visible Claude history instead of injected user and tool-result records", () => {
+    const home = mkdtempSync(join(tmpdir(), "claude-counts-"));
+    const cwd = "/tmp/counts";
+    writeClaudeSession(home, cwd, "counts", [
+      { type: "mode", cwd },
+      { type: "user", message: { content: "<local-command-caveat>injected instructions" } },
+      { type: "user", message: { content: "<command-name>/help</command-name>" } },
+      { type: "user", message: { content: "Inspect the project" } },
+      {
+        type: "assistant",
+        message: {
+          content: [{ type: "tool_use", id: "call-1", name: "Bash", input: { command: "pwd" } }],
+        },
+      },
+      {
+        type: "user",
+        message: { content: [{ type: "tool_result", tool_use_id: "call-1", content: cwd }] },
+      },
+      { type: "assistant", message: { content: [{ type: "text", text: "The project is ready" }] } },
+      { type: "assistant", message: { content: [{ type: "thinking", thinking: "hidden" }] } },
+      { type: "result", subtype: "success" },
+    ]);
+
+    const session = discoverSessions(cwd, home)[0];
+    expect(session.firstMessage).toBe("Inspect the project");
+    // One user bubble, one visible assistant tool card, one assistant reply.
+    expect(session.messageCount).toBe(3);
+    expect(readRecentHistory(cwd, "counts", 100, home).totalCount).toBe(3);
+  });
+
+  it("does not publish a partial count while a Claude record is still being written", () => {
+    const home = mkdtempSync(join(tmpdir(), "claude-counts-"));
+    const cwd = "/tmp/counts";
+    const file = writeClaudeSession(home, cwd, "partial", [
+      { type: "user", cwd, message: { content: "Keep the title" } },
+    ]);
+    appendFileSync(file, '{"type":"assistant","message":');
+    const session = discoverSessions(cwd, home)[0];
+    expect(session.firstMessage).toBe("Keep the title");
+    expect(session.messageCount).toBeUndefined();
   });
 
   it("returns [] when the project dir is absent", () => {

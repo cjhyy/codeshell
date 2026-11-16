@@ -12,7 +12,11 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const web = fileURLToPath(new URL("..", import.meta.url));
+const sourceIndex = process.argv.indexOf("--source-repo");
+const web =
+  sourceIndex < 0
+    ? fileURLToPath(new URL("..", import.meta.url))
+    : path.resolve(process.argv[sourceIndex + 1], "packages/web");
 const require = createRequire(path.join(web, "../desktop/package.json"));
 const { build } = require("esbuild");
 const { chromium } = require("playwright");
@@ -398,7 +402,7 @@ try {
     await page.goto(origin);
     await page.locator(".messages").waitFor();
     await open();
-    await page.getByRole("button", { name: "选择新会话目录", exact: true }).click();
+    await page.getByRole("button", { name: "在项目中新建", exact: true }).click();
     await page.locator(".desktop-cli-sessions summary").click();
     await page.locator(".sidebar-close").focus();
     const count = await page

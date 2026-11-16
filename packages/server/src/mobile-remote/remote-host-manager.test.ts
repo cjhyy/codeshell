@@ -1130,7 +1130,14 @@ describe("RemoteHostManager", () => {
 
 test("output journal is explicitly negotiated on first pairing and subsequent auth only by enabled hosts", async () => {
   dir = mkdtempSync(join(tmpdir(), "mobile-recovery-capability-"));
-  for (const [enabled, basePages, densePages, historyView, nativeModelSelection] of [
+  for (const [
+    enabled,
+    basePages,
+    densePages,
+    historyView,
+    nativeModelSelection,
+    ccRoomModelSelection,
+  ] of [
     [false, false],
     [false, true],
     [true, false],
@@ -1143,6 +1150,7 @@ test("output journal is explicitly negotiated on first pairing and subsequent au
     [true, true, true, true, true],
     [false, false, false, false, true],
     [false, true, true, true, true],
+    [false, false, false, false, false, true],
   ]) {
     const devices = new TrustedDeviceStore(
       join(
@@ -1157,6 +1165,7 @@ test("output journal is explicitly negotiated on first pairing and subsequent au
       outputJournalPageFrames: densePages ? 2048 : undefined,
       historyView,
       nativeModelSelection,
+      ccRoomModelSelection,
       onClientEvent() {},
     } as any);
     await host.start({ host: "127.0.0.1", port: 0 });
@@ -1178,10 +1187,11 @@ test("output journal is explicitly negotiated on first pairing and subsequent au
       expect(authenticated?.type).toBe("auth.ok");
       if (authenticated?.type !== "auth.ok") throw new Error("auth failed");
       expect(paired.capabilities).toEqual(
-        enabled || nativeModelSelection
+        enabled || nativeModelSelection || ccRoomModelSelection
           ? {
               ...(enabled ? { outputJournal: 1 } : {}),
               ...(nativeModelSelection ? { nativeModelSelection: 1 } : {}),
+              ...(ccRoomModelSelection ? { ccRoomModelSelection: 1 } : {}),
               ...(enabled && basePages ? { legacyBasePages: 1 } : {}),
               ...(enabled && densePages ? { outputJournalPageFrames: 2048 } : {}),
               ...(enabled && historyView ? { historyView: 1 } : {}),

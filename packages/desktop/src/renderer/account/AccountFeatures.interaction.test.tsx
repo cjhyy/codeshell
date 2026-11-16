@@ -30,6 +30,7 @@ for (const scenario of [
   "remote-cleanup-hidden",
   "remote-cleanup-pending",
   "credential-cleanup",
+  "remote-access",
 ])
   test(`account feature lifecycle: ${scenario}`, () => {
     const result = Bun.spawnSync({
@@ -37,6 +38,30 @@ for (const scenario of [
         process.execPath,
         fileURLToPath(new URL("./AccountFeatures.interaction.fixture.tsx", import.meta.url)),
         scenario,
+      ],
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    expect({ code: result.exitCode, error: result.stderr.toString() }).toEqual({
+      code: 0,
+      error: "",
+    });
+  });
+
+for (const reason of [
+  "device_not_registered",
+  "relay_disconnected",
+  "service_unreachable",
+  "storage_error",
+])
+  test(`account device recovery stays reachable when ${reason}`, () => {
+    const result = Bun.spawnSync({
+      cmd: [
+        process.execPath,
+        fileURLToPath(new URL("./AccountFeatures.interaction.fixture.tsx", import.meta.url)),
+        "devices",
+        "pending",
+        reason,
       ],
       stdout: "pipe",
       stderr: "pipe",

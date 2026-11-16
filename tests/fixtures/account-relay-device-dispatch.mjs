@@ -5,7 +5,6 @@ import http from "node:http";
 import https from "node:https";
 import net from "node:net";
 import { syncBuiltinESMExports } from "node:module";
-import { once } from "node:events";
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
 import { createCipheriv, createDecipheriv, randomBytes, randomUUID } from "node:crypto";
@@ -61,12 +60,16 @@ const { memoryHttp } = await import(pathToFileURL(join(services, "tests/helpers/
 const { createAccountApplication } = await import(
   pathToFileURL(join(services, "apps/account-server/http.mjs"))
 );
+const { createPasskeyAuthenticator } = await import(
+  pathToFileURL(join(services, "tests/helpers/passkey-authenticator.mjs"))
+);
 const {
   CloudAccountManager,
   CloudAccountStore,
   MobileRemoteController,
   DeviceRelayStore,
   AccountDeviceService,
+  createAccountRemoteAuthorizer,
   AccessPasscode,
   RemoteHostManager,
   TrustedDeviceStore,
@@ -155,12 +158,14 @@ async function request(url, init = {}) {
         response.on("end", () => {
           if (response.statusCode >= 400)
             console.error("Fixture HTTP rejection", target.pathname, response.statusCode);
+          const responseHeaders = new Headers();
+          for (const [key, value] of Object.entries(response.headers))
+            for (const entry of Array.isArray(value) ? value : value === undefined ? [] : [value])
+              responseHeaders.append(key, entry);
           resolve(
             new Response(Buffer.concat(chunks), {
               status: response.statusCode,
-              headers: Object.entries(response.headers).flatMap(([key, value]) =>
-                value === undefined ? [] : [[key, Array.isArray(value) ? value.join(", ") : value]],
-              ),
+              headers: responseHeaders,
             }),
           );
         });
@@ -193,6 +198,168 @@ async function accountRequest(input) {
     throw Object.assign(new Error("Fixture account HTTP rejected"), { status: response.status });
   if (value.publicOrigin) allowedOrigins.add(value.publicOrigin);
   return value;
+}
+const browserSessions = new Map();
+let verifiedRemoteRequests = 0;
+async function browserRequest(session, path, body, expected = 200) {
+  const response = await request(new URL(`/api/v1/account/web${path}`, directoryOrigin), {
+    method: body === undefined ? "GET" : "POST",
+    redirect: "error",
+    headers: {
+      "Content-Type": "application/json",
+      Cookie: session.cookie,
+      "X-CodeShell-CSRF": session.csrfToken,
+    },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  });
+  const value = await response.json();
+  assert.equal(response.status, expected, `${path}: unexpected HTTP status`);
+  return value;
+}
+async function browserProof(session, purpose, target) {
+  const ceremony = await browserRequest(session, "/passkeys/authentication/options", {
+    purpose,
+    target,
+  });
+  return browserRequest(session, "/passkeys/authentication/verify", {
+    ceremonyId: ceremony.ceremonyId,
+    response: session.authenticator.authenticate(ceremony.optionsJSON),
+  });
+}
+async function registerBrowserPasskey(username, password) {
+  const grant = await accountRequest({
+    origin: directoryOrigin,
+    path: "/api/v1/account/login",
+    body: { username, password },
+  });
+  const response = await request(`${directoryOrigin}/api/v1/account/web/session`, {
+    method: "POST",
+    redirect: "error",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${grant.accessToken}` },
+    body: JSON.stringify({ refreshToken: grant.refreshToken }),
+  });
+  assert.equal(response.status, 200);
+  const session = {
+    ...(await response.json()),
+    cookie: response.headers
+      .getSetCookie()
+      .map((value) => value.split(";", 1)[0])
+      .join("; "),
+    authenticator: createPasskeyAuthenticator({ origin: directoryOrigin }),
+  };
+  assert.equal(session.authenticated, true);
+  await browserRequest(session, "/passkeys/registration/options", { name: "Cookie alone" }, 401);
+  const bootstrap = await browserRequest(session, "/passkeys/bootstrap/password", {
+    currentPassword: password,
+  });
+  const ceremony = await browserRequest(session, "/passkeys/registration/options", {
+    name: "Isolated fixture authenticator",
+    bootstrapProof: bootstrap.bootstrapProof,
+  });
+  const registered = await browserRequest(session, "/passkeys/registration/verify", {
+    ceremonyId: ceremony.ceremonyId,
+    response: session.authenticator.register(ceremony.optionsJSON),
+  });
+  assert.equal(registered.verified, true);
+  browserSessions.set(session.account.id, session);
+  return session;
+}
+async function verifyBrowserRelay(session, computer) {
+  const hostId = computer.controller.relayStatus().hostId;
+  const proof = await browserProof(session, "remote-access", hostId);
+  const input = { client: "browser", stepUpToken: proof.stepUpToken };
+  const access = await browserRequest(session, `/remote-hosts/${hostId}/client-access`, input, 201);
+  await browserRequest(session, `/remote-hosts/${hostId}/client-access`, input, 401);
+  const claimUrl = new URL(access.claimUrl);
+  assert.equal(claimUrl.origin, access.publicOrigin);
+  assert.equal(claimUrl.pathname, "/__relay/claim");
+  assert.match(claimUrl.hash, /^#[A-Za-z0-9_-]{43}$/);
+  const deviceRequest = (path, cookie = "", body) =>
+    request(new URL(path, access.publicOrigin), {
+      method: body === undefined ? "GET" : "POST",
+      redirect: "error",
+      headers: { "Content-Type": "application/json", Cookie: cookie },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+  const claimInput = { ticket: claimUrl.hash.slice(1), delivery: "cookie" };
+  const claim = await deviceRequest("/__relay/claim", "", claimInput);
+  assert.equal(claim.status, 200);
+  const claimed = await claim.json();
+  assert.equal(claimed.next, "/mobile");
+  assert.equal(claimed.relayAccessToken, undefined);
+  const relayCookieHeader = claim.headers.getSetCookie()[0];
+  assert.match(relayCookieHeader, /^__Host-cs-relay=/);
+  assert.match(relayCookieHeader, /Secure; HttpOnly; SameSite=Lax/);
+  assert.doesNotMatch(relayCookieHeader, /Domain=/i);
+  const relayCookie = relayCookieHeader.split(";", 1)[0];
+  assert.equal((await deviceRequest("/__relay/claim", "", claimInput)).status, 401);
+  assert.equal(
+    (await (await deviceRequest("/api/v1/relay/session", relayCookie)).json()).active,
+    false,
+    "A relay cookie alone is not a Host session",
+  );
+  assert.equal((await deviceRequest("/api/v1/relay/projects", relayCookie)).status, 401);
+  const exchange = await deviceRequest("/api/v1/relay/session", relayCookie, {
+    handoff: claimed.handoff,
+  });
+  assert.equal(exchange.status, 200);
+  const hostCookieHeader = exchange.headers.getSetCookie()[0];
+  assert.match(hostCookieHeader, /^__Host-cs_host_access=/);
+  assert.match(hostCookieHeader, /HttpOnly; Secure; SameSite=Strict/);
+  assert.doesNotMatch(hostCookieHeader, /Domain=/i);
+  const maxAge = Number(/Max-Age=(\d+)/.exec(hostCookieHeader)?.[1]);
+  assert.ok(maxAge > 0 && maxAge <= 600, "Host authorization is bounded to ten minutes");
+  const cookie = `${relayCookie}; ${hostCookieHeader.split(";", 1)[0]}`;
+  assert.equal(
+    (await deviceRequest("/api/v1/relay/session", cookie, { handoff: claimed.handoff })).status,
+    401,
+    "A redeemed handoff cannot create another Host session",
+  );
+  const restored = await (await deviceRequest("/api/v1/relay/session", cookie)).json();
+  assert.equal(restored.active, true);
+  assert.equal(restored.hostId, hostId);
+  assert.equal(restored.hostAccessToken, undefined);
+  const projects = await (await deviceRequest("/api/v1/relay/projects", cookie)).json();
+  assert.deepEqual(projects.projects, [
+    {
+      id: computer.projectId,
+      name: computer.label + " actual project",
+      path: computer.projectPath,
+    },
+  ]);
+  const ws = socket(access.publicOrigin.replace("https:", "wss:") + "/ws", { Cookie: cookie });
+  const events = [];
+  ws.on("message", (bytes) => events.push(JSON.parse(String(bytes))));
+  try {
+    await waitFor(() => ws.readyState === WebSocket.OPEN, "browser relay WebSocket");
+    ws.send(
+      JSON.stringify({
+        type: "auth.device",
+        deviceId: restored.deviceId,
+        secretHash: restored.secretHash,
+      }),
+    );
+    await waitFor(
+      () => events.some((event) => event.type === "auth.ok"),
+      "browser Host authentication",
+    );
+    ws.send(
+      JSON.stringify({
+        type: "session.create",
+        projectId: computer.projectId,
+        clientRequestId: randomUUID(),
+      }),
+    );
+    await waitFor(
+      () => events.some((event) => event.type === "chat.accepted"),
+      "browser actual project session",
+    );
+    assert.equal((await deviceRequest("/api/v1/relay/session/logout", cookie, {})).status, 200);
+    await waitFor(() => ws.readyState === WebSocket.CLOSED, "Host logout closes browser stream");
+    assert.equal((await deviceRequest("/api/v1/relay/session", cookie)).status, 401);
+  } finally {
+    ws.terminate();
+  }
 }
 function socket(url, headers) {
   const target = new URL(url);
@@ -472,6 +639,27 @@ function computer(label) {
     credential: (identity, signal) =>
       value.account.getCredential(identity.origin, identity.accountId, signal),
     sourceProof: (identity, signal) => value.controller.accountRelaySource(identity, signal),
+    authorizeTarget: createAccountRemoteAuthorizer({
+      request: accountRequest,
+      openExternal: async (url) => {
+        const target = new URL(url);
+        assert.equal(target.origin, directoryOrigin);
+        assert.equal(target.pathname, "/remote-access");
+        const requestId = target.searchParams.get("request");
+        const session = browserSessions.get(value.account.status().account.id);
+        assert.ok(session, "Only the actual source account can confirm its remote request");
+        const detail = await browserRequest(session, `/remote-access/request?request=${requestId}`);
+        assert.ok(detail.target.hostId);
+        await browserRequest(session, "/remote-access/approve", { request: requestId }, 401);
+        const proof = await browserProof(session, "desktop-remote-access", requestId);
+        const result = await browserRequest(session, "/remote-access/approve", {
+          request: requestId,
+          stepUpToken: proof.stepUpToken,
+        });
+        assert.equal(result.approved, true);
+        verifiedRemoteRequests++;
+      },
+    }),
     relayOrigin: async (identity) =>
       (await value.account.capabilities(identity.origin)).relay.directoryOrigin,
     fetch: request,
@@ -491,32 +679,77 @@ try {
   await a.account.signIn("register", { origin: directoryOrigin, username: "alice", password });
   await b.account.signIn("login", { origin: directoryOrigin, username: "alice", password });
   await c.account.signIn("register", { origin: directoryOrigin, username: "bob", password });
-  for (const item of computers)
+  const browser = await registerBrowserPasskey("alice", password);
+  for (const item of computers) {
     assert.equal(
       item.controller.relayStatus().state,
-      "ready",
+      "stopped",
       JSON.stringify({
         label: item.label,
         status: item.controller.relayStatus(),
         paths: requests.map((item) => item.path),
       }),
     );
+    assert.equal(item.controller.relayStatus().registered, true);
+    assert.equal(item.controller.relayStatus().remoteAccessEnabled, false);
+    assert.ok(!item.host.status(), "Account sign-in must not start a remote Host");
+  }
+  assert.equal(connectorSockets.size, 0, "Account sign-in must not open relay sockets");
   const aId = a.controller.relayStatus().hostId,
     bId = b.controller.relayStatus().hostId,
     cId = c.controller.relayStatus().hostId;
   const aliceHosts = await b.client.list();
   assert.deepEqual(new Set(aliceHosts.map((host) => host.hostId)), new Set([aId, bId]));
-  assert.ok(aliceHosts.every((host) => host.online));
+  assert.ok(
+    aliceHosts.every((host) => !host.online),
+    "Signed-in computers are visible with remote control off",
+  );
   assert.deepEqual(
     (await c.client.list()).map((host) => host.hostId),
     [cId],
   );
+  await assert.rejects(b.client.connect(7, { hostId: aId, projectId: a.projectId }), /离线/);
+  await a.controller.start({ mode: "relay" });
+  await c.controller.start({ mode: "relay" });
+  assert.equal(a.controller.relayStatus().remoteAccessEnabled, true);
+  assert.equal(a.controller.relayStatus().state, "ready");
+  assert.equal(b.controller.relayStatus().remoteAccessEnabled, false);
+  assert.equal(b.controller.relayStatus().state, "stopped");
+  assert.equal((await b.client.list()).find((host) => host.hostId === aId).online, true);
+  await browserRequest(browser, `/remote-hosts/${aId}/client-access`, { client: "browser" }, 401);
+  await verifyBrowserRelay(browser, a);
+  const nativeToken = await b.account.getCredential(directoryOrigin, b.account.status().account.id);
+  const sourceProof = await b.controller.accountRelaySource(
+    { origin: directoryOrigin, accountId: b.account.status().account.id },
+    new AbortController().signal,
+  );
+  await assert.rejects(
+    accountRequest({
+      origin: directoryOrigin,
+      path: `/api/v1/remote-hosts/${aId}/handoffs`,
+      token: nativeToken,
+      body: { environmentId: a.controller.relayStatus().environmentId, ...sourceProof },
+    }),
+    { status: 401 },
+    "A stolen native bearer and enrolled source cannot bypass Passkey verification",
+  );
   await assert.rejects(c.client.connect(8, { hostId: aId, projectId: a.projectId }), /账号授权/);
+  // Source device authority is independent of allowing inbound remote control.
   const projects = await b.client.projects(7, { hostId: aId });
+  assert.equal(verifiedRemoteRequests, 1);
   assert.deepEqual(projects, [
     { id: a.projectId, name: "computer-a actual project", path: a.projectPath },
   ]);
   const one = await b.client.connect(7, { hostId: aId, projectId: a.projectId });
+  assert.equal(
+    verifiedRemoteRequests,
+    1,
+    "Project selection and its connection share one verified grant",
+  );
+  const fresh = await b.client.connect(7, { hostId: aId, projectId: a.projectId });
+  assert.equal(verifiedRemoteRequests, 2, "A consumed prepared grant requires fresh verification");
+  assert.notEqual(fresh.sessionId, one.sessionId);
+  b.client.close(7, { connectionId: fresh.id });
   b.client.send(7, { connectionId: one.id, text: "approval" });
   await waitFor(
     () =>
@@ -537,6 +770,12 @@ try {
   );
   b.client.send(7, { connectionId: one.id, text: "long" });
   await waitFor(() => JSON.stringify(b.events).includes("computer-a:long"), "first target running");
+  assert.equal(
+    b.controller.relayStatus().state,
+    "stopped",
+    "Viewing another computer must not enable this source computer",
+  );
+  await b.controller.start({ mode: "relay" });
   const two = await b.client.connect(7, { hostId: bId, projectId: b.projectId });
   b.client.send(7, { connectionId: two.id, text: "quick" });
   await waitFor(
@@ -569,11 +808,17 @@ try {
   const saved = a.accountStore.load();
   a.accountStore.save({ ...saved, accessTokenExpiresAt: Date.now() - 1 });
   const epoch = a.relayStore.load().credentialEpoch;
-  await a.controller.stop();
+  await a.controller.dispose();
   a.make();
   await a.account.resume();
   assert.equal(a.controller.relayStatus().hostId, aId);
   assert.equal(a.relayStore.load().credentialEpoch, epoch);
+  assert.equal(
+    a.controller.relayStatus().remoteAccessEnabled,
+    true,
+    "Restart preserves an explicit remote-control opt-in",
+  );
+  assert.equal(a.controller.relayStatus().state, "ready");
   assert.equal(requests.filter((request) => request.path.endsWith("/ensure")).length, before);
   assert.ok(requests.some((request) => request.path === "/api/v1/account/refresh"));
   await waitFor(
@@ -616,12 +861,38 @@ try {
   assert.equal(b.controller.relayStatus().state, "ready");
   await assert.rejects(b.client.connect(7, { hostId: aId, projectId: a.projectId }), /授权/);
   await b.controller.stop();
+  assert.equal(b.controller.relayStatus().remoteAccessEnabled, false);
+  assert.equal(
+    b.controller.relayStatus().registered,
+    true,
+    "Turning remote control off preserves account visibility",
+  );
   assert.equal((await b.client.list()).find((host) => host.hostId === bId).online, false);
   await assert.rejects(b.client.connect(7, { hostId: bId, projectId: b.projectId }), /离线/);
+  await b.account.resume();
+  assert.equal(
+    b.controller.relayStatus().state,
+    "stopped",
+    "Session resume cannot override the off switch",
+  );
+  assert.equal((await a.client.list()).find((host) => host.hostId === bId).online, false);
   await b.account.logout();
   await assert.rejects(b.client.list(), /登录/);
+  assert.equal(b.controller.relayStatus().registered, false);
+  assert.ok(
+    !(await a.client.list()).some((host) => host.hostId === bId),
+    "Signing out removes this computer from the account directory",
+  );
   assert.equal(c.controller.relayStatus().state, "ready");
   assert.equal((await c.client.list())[0].hostId, cId);
+  await b.account.signIn("login", { origin: directoryOrigin, username: "alice", password });
+  assert.equal(b.controller.relayStatus().hostId, bId);
+  assert.equal(b.controller.relayStatus().remoteAccessEnabled, false);
+  assert.equal(b.controller.relayStatus().state, "stopped");
+  assert.ok(
+    (await a.client.list()).some((host) => host.hostId === bId),
+    "Signing in again restores the same computer without a separate enrollment action",
+  );
   const publicState = JSON.stringify({
     list: aliceHosts,
     projects,
@@ -645,12 +916,25 @@ try {
     JSON.stringify({
       ok: true,
       transport: "native HTTP/ws parsers over isolated memory bytes; no TCP/TLS claim",
-      automaticLoginOnline: 3,
+      automaticLoginRegistered: 3,
+      verifiedRemoteRequests,
+      remoteControlDefaultOff: 3,
       accounts: 2,
       projects: "actual per-Host fixture directories",
       controlledStdio: ["output", "approval", "cancel"],
       verified: [
         "same-account discovery",
+        "real WebAuthn ES256 registration and user-verified assertions",
+        "cookie alone cannot bootstrap a Passkey or authorize browser/native control",
+        "native PKCE browser confirmation binds source and target",
+        "one verification for project selection and its connection",
+        "prepared native grant consumed once; second connection needs fresh verification",
+        "browser UV proof, claim ticket and Host handoff are single use",
+        "browser claim creates bounded Host-only cookie and actual project WebSocket",
+        "Host logout invalidates browser credential and closes its stream",
+        "login visible without opening remote access",
+        "remote-control off source can view and dispatch to another computer",
+        "explicit on/off and persisted restart preference",
         "foreign-account denied",
         "selected Host/project/session ownership",
         "old-target Stop after switch",
@@ -658,6 +942,7 @@ try {
         "target and source revocation disconnect",
         "offline dispatch denied",
         "logout isolation",
+        "logout removes computer and relogin restores it with remote control off",
         "main-only credentials",
       ],
     }),

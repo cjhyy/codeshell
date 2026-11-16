@@ -1863,6 +1863,11 @@ export class PetDispatchService {
                 },
               }
             : {}),
+          // DelegateWork and SendMessage take their ids only from these lists,
+          // so they go before anything stringifyBoundedPetWorld may trim.
+          workspaces: petWorkspaces,
+          reusableSessions: petReusableSessions,
+          outboundTargets: listedOutboundTargets.slice(0, 32),
           ...(recentInputAttachments.length
             ? {
                 inputAttachments: recentInputAttachments.map(({ id, path, absPath, mime }) => ({
@@ -1886,12 +1891,9 @@ export class PetDispatchService {
           ...(longTaskContext ? { longTasks: longTaskContext } : {}),
           ...(taskInbox ? { taskInbox } : {}),
           followUps: petFollowUps,
-          outboundTargets: listedOutboundTargets.slice(0, 32),
           sessions: projectionWorld.sessions,
           pending: projectionWorld.pending,
           ...(carryoverBrief ? { carryoverBrief } : {}),
-          workspaces: petWorkspaces,
-          reusableSessions: petReusableSessions,
           ...remainingWorldExtras,
         };
         const runtimeContext = stringifyBoundedPetWorld(world);

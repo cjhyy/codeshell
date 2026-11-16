@@ -67,8 +67,15 @@ test("local relay readiness binds both origin and account and leaves setup actio
     expect(local?.["relay.phone"]?.ready).toBe(false);
   }
   const connecting = accountLocalConditions(account, { ...relay, state: "connecting" });
-  expect(connecting?.["devices.dispatch"]).toEqual({ ready: false, reason: "relay_connecting" });
+  expect(connecting?.["devices.dispatch"]?.ready).toBe(true);
   expect(connecting?.["relay.phone"]?.ready).toBe(true);
+  expect(
+    accountLocalConditions(account, {
+      ...relay,
+      state: "stopped",
+      remoteAccessEnabled: false,
+    })?.["devices.dispatch"]?.ready,
+  ).toBe(true);
 });
 test("feature IPC restricts snapshots, refresh and push to live main windows", async () => {
   const handlers = new Map<string, (...args: any[]) => any>();

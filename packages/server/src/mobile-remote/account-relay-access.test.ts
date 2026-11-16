@@ -3,7 +3,11 @@ import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import type { IncomingMessage } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { AccountRelayAccessGate, type AccountRelayBinding } from "./account-relay-access.js";
+import {
+  ACCOUNT_RELAY_COOKIE,
+  AccountRelayAccessGate,
+  type AccountRelayBinding,
+} from "./account-relay-access.js";
 import { TrustedDeviceStore } from "./trusted-device-store.js";
 
 const roots: string[] = [];
@@ -24,6 +28,9 @@ function fixture(redeem?: (handoff: string) => Promise<AccountRelayBinding>) {
       redeem ??
       (async () => ({
         authorizationId: "auth-a",
+        authorizationKind: "passkey-remote",
+        sourceKind: "device",
+        sourceHostId: "source-host",
         accountId: "account-a",
         rootSessionId: "root-a",
         hostId: "host-a",
@@ -67,6 +74,9 @@ test.each(["hostId", "environmentId", "accountId"])(
   async (field) => {
     const f = fixture(async () => ({
       authorizationId: "auth-a",
+      authorizationKind: "passkey-remote",
+      sourceKind: "device",
+      sourceHostId: "source-host",
       accountId: "account-a",
       rootSessionId: "root-a",
       hostId: "host-a",
@@ -93,6 +103,9 @@ test("concurrent replay and a redemption resolving after stop cannot create auth
   f.gate.clear();
   resolve({
     authorizationId: "auth-a",
+    authorizationKind: "passkey-remote",
+    sourceKind: "device",
+    sourceHostId: "source-host",
     accountId: "account-a",
     rootSessionId: "root-a",
     hostId: "host-a",
@@ -105,6 +118,10 @@ test("concurrent replay and a redemption resolving after stop cannot create auth
 });
 
 test.each([
+  { authorizationKind: undefined },
+  { authorizationKind: "account-cookie" },
+  { sourceKind: "unknown" },
+  { sourceHostId: "" },
   { authorizationId: 123 },
   { rootSessionId: "" },
   { leaseId: "bad\0lease" },
@@ -116,6 +133,9 @@ test.each([
     async () =>
       ({
         authorizationId: "auth-a",
+        authorizationKind: "passkey-remote",
+        sourceKind: "device",
+        sourceHostId: "source-host",
         accountId: "account-a",
         rootSessionId: "root-a",
         hostId: "host-a",
@@ -133,6 +153,9 @@ test.each([
 test("expiry synchronously fences access and removes the ephemeral paired identity", async () => {
   const f = fixture(async () => ({
     authorizationId: "auth-a",
+    authorizationKind: "passkey-remote",
+    sourceKind: "device",
+    sourceHostId: "source-host",
     accountId: "account-a",
     rootSessionId: "root-a",
     hostId: "host-a",
@@ -173,6 +196,9 @@ test("retired redemption cannot release the new provider's pending replay guard"
   const f = fixture(() => new Promise((done) => completions.push(done)));
   const binding = (): AccountRelayBinding => ({
     authorizationId: "auth-a",
+    authorizationKind: "passkey-remote",
+    sourceKind: "device",
+    sourceHostId: "source-host",
     accountId: "account-a",
     rootSessionId: "root-a",
     hostId: "host-a",
@@ -190,4 +216,34 @@ test("retired redemption cannot release the new provider's pending replay guard"
   completions[1]!(binding());
   await current;
   f.gate.clear();
+});
+
+test("browser cookie restores only its ephemeral device and rejects ambiguous credentials", async () => {
+  const f = fixture();
+  try {
+    const grant = await f.gate.exchange("browser-handoff");
+    const cookie = `${ACCOUNT_RELAY_COOKIE}=${grant.hostAccessToken}`;
+    const request = (value: string, header?: string) =>
+      ({
+        headers: { cookie: value, ...(header ? { "x-codeshell-host-access": header } : {}) },
+      }) as IncomingMessage;
+    const browser = request(cookie);
+    expect(f.gate.browserCredential(browser)).toMatchObject({
+      deviceId: grant.deviceId,
+      secretHash: grant.secretHash,
+      expiresAt: grant.expiresAt,
+    });
+    expect(f.gate.capture(request(`${cookie}; ${cookie}`))).toBeUndefined();
+    expect(f.gate.capture(request(cookie, "x".repeat(43)))).toBeUndefined();
+    expect(f.gate.browserCredential(f.request(grant.hostAccessToken))).toBeUndefined();
+    const captured = f.gate.capture(browser)!;
+    f.gate.revokeRequest(browser);
+    expect(captured.isAuthorized()).toBe(false);
+    expect(f.gate.browserCredential(browser)).toBeUndefined();
+    expect(f.devices.authenticate(grant.deviceId, grant.secretHash)).toBeUndefined();
+    expect(f.revoked).toEqual([grant.deviceId]);
+    expect(existsSync(f.path)).toBe(false);
+  } finally {
+    f.gate.clear();
+  }
 });

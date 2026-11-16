@@ -88,6 +88,16 @@ function readBoundedUtf8File(path: string, maxBytes: number): string {
 /** Room metadata names are capped at this many UTF-16 units by parseRoomMeta. */
 const MAX_ROOM_NAME_LENGTH = 512;
 
+function validRoomModelKey(value: unknown, kind: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.length <= 512 &&
+    value.startsWith(`${kind}/`) &&
+    value.length > String(kind).length + 1 &&
+    !/[\r\n\0]/.test(value)
+  );
+}
+
 /**
  * Default room name: the cwd's last path segment. Windows drive and UNC paths
  * also split on backslashes. Bounded to the metadata name limit, without
@@ -134,6 +144,7 @@ function parseRoomMeta(value: unknown, expectedId?: string): RoomMeta | undefine
       (typeof raw.claudeSessionId !== "string" ||
         raw.claudeSessionId.length > 4_096 ||
         raw.claudeSessionId.includes("\0"))) ||
+    (raw.modelKey !== undefined && !validRoomModelKey(raw.modelKey, raw.kind)) ||
     (raw.linkedSessionMode !== undefined && raw.linkedSessionMode !== "observe-only")
   ) {
     return undefined;
@@ -144,6 +155,7 @@ function parseRoomMeta(value: unknown, expectedId?: string): RoomMeta | undefine
     cwd: raw.cwd,
     kind: raw.kind,
     permissionMode: raw.permissionMode,
+    ...(typeof raw.modelKey === "string" ? { modelKey: raw.modelKey } : {}),
     createdAt: raw.createdAt,
     lastActiveAt: raw.lastActiveAt,
     ...(typeof raw.claudeSessionId === "string" ? { claudeSessionId: raw.claudeSessionId } : {}),
@@ -304,6 +316,8 @@ export interface RoomMeta {
   cwd: string;
   kind: RoomKind;
   permissionMode: RoomPermissionMode;
+  /** Host-validated runtime catalog key; absence keeps the CLI default. */
+  modelKey?: string;
   createdAt: number;
   lastActiveAt: number;
   /** Session/thread id to resume: claude's session_id OR codex's thread_id.
@@ -322,12 +336,12 @@ export type RoomBusyReason = "switching" | "retiring" | "turn" | "approval" | "q
 
 const ROOM_BUSY_MESSAGES: Record<RoomBusyReason, string> = {
   queued:
-    "该 CLI 会话有排队、失败或无法确认的消息，它们按当前权限模式提交；请先在队列中处理后再切换权限模式。",
-  switching: "该 CLI 会话正在切换权限模式，请稍后重试。",
+    "该 CLI 会话有排队、失败或无法确认的消息，它们按当前权限模式提交；请先在队列中处理后再切换模型或权限模式。",
+  switching: "该 CLI 会话正在切换模型或权限模式，请稍后重试。",
   retiring:
     "该 CLI 会话的旧进程仍未确认退出；为避免两个进程同时写入同一会话，暂不启动新进程，请稍后重试。",
-  turn: "该 CLI 会话仍有任务在运行或排队，请先停止或等待完成后再切换权限模式。",
-  approval: "该 CLI 会话有待处理的审批或提问，请先处理后再切换权限模式。",
+  turn: "该 CLI 会话仍有任务在运行或排队，请先停止或等待完成后再切换模型或权限模式。",
+  approval: "该 CLI 会话有待处理的审批或提问，请先处理后再切换模型或权限模式。",
 };
 
 export class RoomBusyError extends Error {
@@ -378,6 +392,7 @@ export interface RoomSessionOpenPlan {
   /** Live process mode, else persisted mode; undefined for a new room. */
   fromMode?: RoomPermissionMode;
   toMode: RoomPermissionMode;
+  toModelKey?: string;
   /** False when metadata and any live process already run in toMode. */
   change: boolean;
   /** True when a process is live now (an unchanged open will reuse it). */
@@ -390,6 +405,7 @@ export interface RoomSessionOpenResult {
   roomId: string;
   status: RoomOpenStatus;
   mode: RoomPermissionMode;
+  modelKey?: string;
   changed: boolean;
 }
 
@@ -776,6 +792,7 @@ export class RoomManager {
     kind?: RoomKind;
     permissionMode?: RoomPermissionMode;
     claudeSessionId?: string;
+    modelKey?: string;
     linkedSessionMode?: "observe-only";
   }): RoomMeta {
     return this.createRoomWithId(this.mintRoomId(), input);
@@ -806,6 +823,8 @@ export class RoomManager {
         (typeof input.claudeSessionId !== "string" ||
           input.claudeSessionId.length > 4_096 ||
           input.claudeSessionId.includes("\0"))) ||
+      (input.modelKey !== undefined &&
+        !validRoomModelKey(input.modelKey, input.kind ?? "claude-code")) ||
       (input.linkedSessionMode !== undefined && input.linkedSessionMode !== "observe-only")
     ) {
       throw new Error("invalid room metadata");
@@ -820,6 +839,7 @@ export class RoomManager {
       createdAt: this.now(),
       lastActiveAt: this.now(),
       claudeSessionId: input.claudeSessionId,
+      modelKey: input.modelKey,
       linkedSessionMode: input.linkedSessionMode,
     };
     mkdirSync(this.roomDir(id), { recursive: true, mode: 0o700 });
@@ -1180,16 +1200,30 @@ export class RoomManager {
    * an occupied external session, or a busy room whose mode would change.
    */
   planSessionOpen(input: {
+    roomId?: string;
+    modelKey?: string | null;
     sessionId: string;
     cwd: string;
     kind: RoomKind;
     mode: RoomPermissionMode;
   }): RoomSessionOpenPlan {
-    const { sessionId, kind, mode } = input;
+    const { sessionId, kind } = input;
+    let mode = input.mode;
+    if (
+      input.modelKey !== undefined &&
+      input.modelKey !== null &&
+      !validRoomModelKey(input.modelKey, kind)
+    )
+      throw new Error("invalid CLI model key");
     if (typeof sessionId !== "string" || !sessionId) throw new Error("CLI session id is required");
     this.opts.assertExternalSessionAvailable?.(sessionId, kind);
     const cwd = canonicalDirectory(input.cwd);
     const existing = this.findSessionRoom(sessionId, kind);
+    if (
+      (input.roomId && existing?.id !== input.roomId) ||
+      (input.modelKey !== undefined && !input.roomId)
+    )
+      throw new RoomStateChangedError("CLI 会话与目标房间不匹配，模型未更改。");
     if (!existing) {
       return {
         roomId: this.mintRoomId(),
@@ -1209,9 +1243,18 @@ export class RoomManager {
       throw new Error("该 CLI 会话已绑定到另一个目录，不能在当前目录打开。");
     const liveMode = this.liveMode(existing.id);
     const observing = existing.linkedSessionMode === "observe-only";
+    // A model-only request must never apply an old client's permission snapshot.
+    if (input.modelKey !== undefined) {
+      if (observing) throw new Error("此 CLI 会话仅供查看，无法切换模型。");
+      mode = liveMode ?? existing.permissionMode;
+    }
+    const toModelKey =
+      input.modelKey === undefined ? existing.modelKey : (input.modelKey ?? undefined);
     const change =
       !observing &&
-      (existing.permissionMode !== mode || (liveMode !== undefined && liveMode !== mode));
+      (existing.permissionMode !== mode ||
+        (liveMode !== undefined && liveMode !== mode) ||
+        existing.modelKey !== toModelKey);
     if (this.transitions.has(existing.id)) throw new RoomBusyError("switching");
     // Refused before any Host approval is asked for. settleSessionRoom()
     // re-probes the retired process, so a later attempt succeeds once it exits.
@@ -1228,6 +1271,7 @@ export class RoomManager {
       kind,
       fromMode: liveMode ?? existing.permissionMode,
       toMode: mode,
+      toModelKey,
       change,
       live: liveMode !== undefined,
       observing,
@@ -1257,12 +1301,19 @@ export class RoomManager {
         cwd: plan.cwd,
         kind: plan.kind,
         permissionMode: plan.toMode,
+        modelKey: plan.toModelKey,
         claudeSessionId: plan.sessionId,
       });
       this.bumpRevision(plan.roomId);
       try {
         const status = await this.startAgent(plan.roomId);
-        return { roomId: plan.roomId, status, mode: plan.toMode, changed: true };
+        return {
+          roomId: plan.roomId,
+          status,
+          mode: plan.toMode,
+          modelKey: plan.toModelKey,
+          changed: true,
+        };
       } catch (error) {
         // The room now exists but nothing runs in it; every view must see that.
         this.notifyRoomState(plan.roomId);
@@ -1292,6 +1343,7 @@ export class RoomManager {
         roomId: plan.roomId,
         status: "observing",
         mode: meta.permissionMode,
+        modelKey: meta.modelKey,
         changed: false,
       };
     }
@@ -1300,15 +1352,28 @@ export class RoomManager {
       authorize();
       // Reuses a live process untouched; starts a dormant one in its own mode.
       const status = await this.startAgent(plan.roomId);
-      return { roomId: plan.roomId, status, mode: meta.permissionMode, changed: false };
+      return {
+        roomId: plan.roomId,
+        status,
+        mode: meta.permissionMode,
+        modelKey: meta.modelKey,
+        changed: false,
+      };
     }
     const status = await this.transitionRoom(plan.roomId, {
       toMode: plan.toMode,
       expectedMode: meta.permissionMode,
+      patch: { modelKey: plan.toModelKey },
       authorize,
       ...(options.revalidate ? { revalidate: options.revalidate } : {}),
     });
-    return { roomId: plan.roomId, status, mode: plan.toMode, changed: true };
+    return {
+      roomId: plan.roomId,
+      status,
+      mode: plan.toMode,
+      modelKey: plan.toModelKey,
+      changed: true,
+    };
   }
 
   /**
@@ -1422,7 +1487,7 @@ export class RoomManager {
       authorize: () => void;
       /** Async Host re-checks after the old process exited (token held). */
       revalidate?: () => Promise<void>;
-      patch?: Partial<Pick<RoomMeta, "cwd" | "linkedSessionMode">>;
+      patch?: Partial<Pick<RoomMeta, "cwd" | "linkedSessionMode" | "modelKey">>;
     },
   ): Promise<RoomOpenStatus> {
     const busy = this.roomBusyReason(id);
@@ -1487,6 +1552,7 @@ export class RoomManager {
               ...current,
               cwd: snapshot.cwd,
               permissionMode: snapshot.permissionMode,
+              modelKey: snapshot.modelKey,
               linkedSessionMode: snapshot.linkedSessionMode,
             });
         } catch {

@@ -12,12 +12,10 @@ import {
 } from "node:fs";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { homedir } from "node:os";
+import { encodeCwd } from "./claude-session-paths.js";
+import { parseRecentHistory } from "./session-history.js";
 
-/** Encode a cwd to claude's project dir name: every non-[A-Za-z0-9] char → '-'.
- *  Mirrors `~/.claude/projects/<encoded>` (verified against real layout). */
-export function encodeCwd(cwd: string): string {
-  return cwd.replace(/[^A-Za-z0-9]/g, "-");
-}
+export { encodeCwd } from "./claude-session-paths.js";
 
 /** Session discovered from an external coding CLI. */
 export interface DiscoveredSession {
@@ -29,7 +27,8 @@ export interface DiscoveredSession {
   cwd: string;
   firstMessage: string;
   lastModified: number;
-  messageCount: number;
+  /** Omitted when bounded discovery cannot establish the full message count. */
+  messageCount?: number;
 }
 
 /** A session discovered globally from an external CLI's own storage, with the
@@ -205,19 +204,6 @@ function isCollidingClaudeCwd(recordedCwd: string | undefined, cwd: string): boo
   return recorded !== expected && encodeCwd(recorded) === encodeCwd(expected);
 }
 
-function countUserMessages(lines: string[]): number {
-  let n = 0;
-  for (const line of lines) {
-    if (!line.trim()) continue;
-    try {
-      if (JSON.parse(line).type === "user") n++;
-    } catch {
-      /* skip */
-    }
-  }
-  return n;
-}
-
 /** Cheap (sessionId, mtime) pairs for every session file — stat only, no read. */
 function listSessionStats(dir: string): { sessionId: string; file: string; mtimeMs: number }[] {
   const stats: { sessionId: string; file: string; mtimeMs: number }[] = [];
@@ -276,24 +262,25 @@ export function discoverSessions(
   const out: DiscoveredSession[] = [];
   for (const s of windowed) {
     if (out.length >= limit) break;
-    let lines: string[];
+    let raw: string;
     try {
       const fd = openRegularSessionFile(s.file);
       try {
-        lines = readFileSync(fd, "utf-8").split("\n");
+        raw = readFileSync(fd, "utf-8");
       } finally {
         closeSync(fd);
       }
     } catch {
       continue;
     }
+    const lines = raw.split("\n");
     if (isCollidingClaudeCwd(firstRecordedCwd(lines), cwd)) continue;
     out.push({
       sessionId: s.sessionId,
       cwd,
       firstMessage: firstUserMessage(lines),
       lastModified: s.mtimeMs,
-      messageCount: countUserMessages(lines),
+      messageCount: completeSnapshotMessageCount(raw),
     });
   }
   return out;
@@ -323,6 +310,18 @@ function readBoundedPrefix(file: string, maxBytes: number): string {
   } finally {
     closeSync(fd);
   }
+}
+
+function completeSnapshotMessageCount(raw: string) {
+  const lastLine = raw.slice(raw.lastIndexOf("\n") + 1).trim();
+  if (lastLine) {
+    try {
+      JSON.parse(lastLine);
+    } catch {
+      return undefined;
+    }
+  }
+  return parseRecentHistory(raw, 1).totalCount;
 }
 
 /**

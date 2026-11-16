@@ -4,6 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import type { UsageSummary } from "@cjhyy/code-shell-core";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
 import { UsagePage } from "./UsagePage";
+import { bucketStartOf } from "./usageTimeline";
 
 const summary: UsageSummary = {
   version: 1,
@@ -419,4 +420,54 @@ test("a removed and rediscovered ID never adopts the old card's pending response
   });
   expect(textOf(card(codex.id))).toContain("已使用 60%");
   expect(textOf(card(codex.id))).not.toContain("已使用 25%");
+});
+
+test("recorded usage asks for time buckets and charts the cache hit rate before the model table", async () => {
+  const queries: Array<Record<string, unknown>> = [];
+  const totals = { ...summary, requests: 4, promptTokens: 20_000, cacheReadTokens: 15_000 };
+  const { version: _v, scope: _s, byModel: _m, bySession: _b, byPurpose: _p, ...row } = totals;
+  await mount({
+    getUsageSummary: async (query: Record<string, unknown>) => {
+      queries.push(query);
+      return {
+        ...totals,
+        byTime: [
+          {
+            ...row,
+            provider: "anthropic",
+            model: "chart-model",
+            purpose: "main",
+            bucketStart: bucketStartOf(
+              query.until as number,
+              query.bucketMs as number,
+              query.bucketOffsetMs as number,
+            ),
+          },
+        ],
+      };
+    },
+    quota: { listProviders: async () => [], query: async () => ({}) },
+  });
+  expect(queries[0]).toMatchObject({ bucketMs: 86_400_000 });
+  expect(Number.isSafeInteger(queries[0]!.bucketOffsetMs)).toBe(true);
+  const text = textOf(container);
+  expect(text.indexOf("缓存命中率走势")).toBeGreaterThan(text.indexOf("本机已记录用量"));
+  expect(text.indexOf("缓存命中率走势")).toBeLessThan(text.indexOf("按模型查看"));
+  expect(
+    nodes(container).filter((node) => props(node)["data-series-toggle"] !== undefined),
+  ).toHaveLength(1);
+  const select = nodes(container).find((node) => node.tagName === "SELECT")!;
+  expect(Array.from(select.children).map((option) => props(option).value)).toEqual([
+    "24h",
+    "7d",
+    "30d",
+    "all",
+  ]);
+  expect(props(select).value).toBe("30d");
+  await act(async () => {
+    props(select).onChange({ target: { value: "24h" } });
+    await flushMicrotasks();
+  });
+  expect(queries[1]).toMatchObject({ bucketMs: 3_600_000 });
+  expect(queries[1]!.since).toBe((queries[1]!.until as number) - 86_400_000);
 });

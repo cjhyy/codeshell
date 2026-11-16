@@ -1,6 +1,7 @@
 import React from "react";
 import { Gauge, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { UsageCacheChart } from "./UsageCacheChart";
 import { UsageProviders } from "./UsageProviders";
 import { useT } from "../i18n/I18nProvider";
 import {
@@ -95,6 +96,7 @@ export function UsagePage() {
                 onChange={(event) => setRange(event.target.value as UsageRange)}
                 className="h-8 rounded-lg border border-border bg-background px-2 text-xs"
               >
+                <option value="24h">{t("usagePage.day")}</option>
                 <option value="7d">{t("usagePage.week")}</option>
                 <option value="30d">{t("usagePage.month")}</option>
                 <option value="all">{t("usagePage.all")}</option>
@@ -159,6 +161,7 @@ export function UsagePage() {
                   {t("usagePage.notSent", { count: format(totals.notSentRequests) })}
                 </p>
               )}
+              <UsageCacheChart timeline={overview.timeline} />
               <h3 className="mb-3 mt-6 text-sm font-medium">{t("usagePage.models")}</h3>
               <div className="overflow-x-auto rounded-xl border border-border">
                 <table className="w-full text-left text-xs">

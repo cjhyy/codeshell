@@ -13,6 +13,11 @@ import {
 import { readSettings } from "../settings-service.js";
 import { requireRendererProjectPath } from "../renderer-project-path.js";
 import { desktopRoomModeHostBoundary } from "./room-mode-host-boundary.js";
+import { registerRoomSettingsIpc } from "./room-settings-ipc.js";
+import {
+  parseExternalRuntimeModelKey,
+  type ExternalRuntimeModelEntry,
+} from "../../shared/external-runtime-models.js";
 
 type PermissionMode = "default" | "acceptEdits" | "bypassPermissions";
 type Decision = { approved: boolean; reason?: string };
@@ -26,9 +31,21 @@ type Decision = { approved: boolean; reason?: string };
 export function createDesktopRoomModeAuthority(deps: {
   roomManager: RoomManager;
   approvalBridge: Pick<ApprovalBridge, "request" | "respond">;
+  externalRuntimeModels?: () => Promise<ExternalRuntimeModelEntry[]>;
 }): RoomModeAuthority {
   return new RoomModeAuthority({
     roomManager: deps.roomManager,
+    validateModel: async (key, kind) => {
+      const parsed = parseExternalRuntimeModelKey(key);
+      if (
+        !parsed?.model ||
+        parsed.kind !== kind ||
+        !((await deps.externalRuntimeModels?.()) ?? []).some(
+          (entry) => entry.key === key && entry.kind === kind,
+        )
+      )
+        throw new Error("该模型不在此电脑当前 CLI 的可用模型中，请刷新模型列表后重试。");
+    },
     // Project roots, their subdirectories and registered linked worktrees
     // (realpath-checked), plus the CLI's own on-disk session identity.
     ...desktopRoomModeHostBoundary(),
@@ -80,7 +97,10 @@ async function confirmOnDesktop(
  */
 export function registerRoomModeIpc(deps: {
   ipcMain: Pick<IpcMain, "handle">;
-  roomManager: Pick<RoomManager, "createRoom">;
+  roomManager: Pick<
+    RoomManager,
+    "createRoom" | "getRoom" | "roomBusyReason" | "effectiveMode" | "isExecutionBusy"
+  >;
   roomModes: RoomModeAuthority;
   roomToPublic: (room: RoomMeta) => RoomPublic;
   broadcastRoomState: (roomId: string) => void;
@@ -114,38 +134,5 @@ export function registerRoomModeIpc(deps: {
       return deps.roomToPublic(room);
     },
   );
-  ipcMain.handle(
-    "ccRoom:openSession",
-    async (
-      e,
-      claudeSessionId: string,
-      cwd: string,
-      mode: PermissionMode,
-      kind?: "claude-code" | "codex",
-    ) => {
-      if (typeof claudeSessionId !== "string" || !claudeSessionId)
-        throw new Error("CLI session id is required");
-      if (mode !== "default" && mode !== "acceptEdits" && mode !== "bypassPermissions")
-        throw new Error("invalid permission mode");
-      if (kind !== undefined && kind !== "claude-code" && kind !== "codex")
-        throw new Error("invalid CLI kind");
-      const sender = e.sender;
-      const result = await roomModes.openSession({
-        sessionId: claudeSessionId,
-        cwd,
-        kind: kind ?? "claude-code",
-        mode,
-        requester: {
-          key: `desktop:${sender.id}`,
-          channel: "desktop",
-          ownerWebContentsId: sender.id,
-          assertCurrent: () => {
-            if (sender.isDestroyed()) throw new Error("requester window closed");
-          },
-        },
-      });
-      if (result.changed) deps.broadcastRoomState(result.roomId);
-      return { roomId: result.roomId, status: result.status, permissionMode: result.mode };
-    },
-  );
+  registerRoomSettingsIpc(deps);
 }

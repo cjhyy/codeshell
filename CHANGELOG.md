@@ -8,6 +8,47 @@ breaking.
 
 ## [Unreleased]
 
+## [0.11.0-rc.2] - 2026-11-13
+
+Release candidate for the desktop, website and account computer flow. Public
+remote access requires the matching Services deployment, device DNS and TLS.
+
+### Added
+
+- Default desktop account service at `https://codeshell.site`, with browser sign-in,
+  registration and explicit confirmation of the computer being signed in.
+- Public website separated from the signed-in account workbench, with account
+  onboarding and protection for unsaved workspace drafts when leaving an account.
+- After explicit desktop sign-in confirmation, enter a shared remote workbench
+  that offers Cloud or an online computer on the current account. Computer access
+  uses a Passkey confirmation on the controlling phone or computer; the target
+  computer does not need someone to approve the connection.
+- Automatically associate this computer after desktop sign-in and restore the
+  association when the app reopens. Remote control has a separate explicit switch
+  and is off by default. Signing out removes the computer from the account list.
+- Account security settings for Passkeys, with fingerprint, Face ID or device PIN
+  verification. First enrollment verifies the existing account password or linked
+  GitHub identity; adding credentials or login methods requires an existing Passkey.
+
+### Security
+
+- Require an operation-specific Passkey proof for browser and desktop remote
+  connections and browser approval of desktop sign-in. A website cookie or native
+  account token alone cannot create a new remote authorization.
+- Remote grants last at most ten minutes and are bound to the account session,
+  selected computer and its current connection. Expiry requires another Passkey
+  confirmation. Browser Host credentials stay in a short-lived HttpOnly cookie
+  and memory instead of creating a permanent browser pairing.
+- LAN, tunnel and standalone pairing keep their existing passcode behavior.
+
+### Fixed
+
+- Replace the manual computer registration step with automatic account sync and
+  a clear **My computers** entry. A computer can connect to another computer
+  without enabling incoming remote control on itself.
+- Keep recovery and connection attempts scoped to the current account; late
+  responses after sign-out cannot restore its computer list or open a computer.
+
 ## [0.11.0-rc.1] - 2026-11-12
 
 Release candidate. Mimi's notice system phase 2 and the settings rework have not

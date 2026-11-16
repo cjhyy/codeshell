@@ -180,7 +180,13 @@ export class RunToolSurface {
     for (const definition of definitions) byName.set(definition.name, cloneDefinition(definition));
     this.catalogByName = byName;
     this.catalog = Object.freeze([...byName.values()]);
-    if (this.initialized) return;
+    if (this.initialized) {
+      if (this.admitWithoutDiscovery()) {
+        this.invalidateSnapshots();
+        this.onSelectionChanged?.(this.getSelection());
+      }
+      return;
+    }
     this.initialized = true;
     this.behaviorToolNames ??= Object.freeze([...byName.keys()]);
     if (!this.hasPersistedSelection) {
@@ -217,9 +223,36 @@ export class RunToolSurface {
         }
       }
     }
+    this.admitWithoutDiscovery();
     if (!this.hasPersistedDeferredSnapshot) this.rebuildDeferredSnapshot();
     this.invalidateSnapshots();
     this.onSelectionChanged?.(this.getSelection());
+  }
+
+  /**
+   * A catalog without ToolSearch has no way to load a tool that is missing from
+   * the frozen prefix, so every currently eligible tool joins it. Names are
+   * never removed: the prefix grows only when a tool is eligible for the first
+   * time and converges to the union of what the session's runs have offered.
+   * A tool that is in the prefix but not eligible this run stays visible and is
+   * refused at call time. A cycle that froze ToolSearch keeps discovery
+   * semantics even while ToolSearch is temporarily ineligible.
+   */
+  private admitWithoutDiscovery(): boolean {
+    if (this.catalogByName.has("ToolSearch") || this.topNames.has("ToolSearch")) return false;
+    let admitted = false;
+    for (const [name, definition] of this.catalogByName) {
+      if (name === "CallTool" || this.frozenByName.has(name) || this.discoveredNames.has(name))
+        continue;
+      if (this.canExposeDefinition(definition)) {
+        this.topNames.add(name);
+        this.frozenByName.set(name, definition);
+      } else {
+        this.discoveredNames.add(name);
+      }
+      admitted = true;
+    }
+    return admitted;
   }
 
   getCatalog(): readonly ToolDefinition[] {
@@ -268,6 +301,7 @@ export class RunToolSurface {
         this.discoveredNames.add(name);
       }
     }
+    this.admitWithoutDiscovery();
     this.rebuildDeferredSnapshot();
     this.behaviorToolNames = Object.freeze([...this.catalogByName.keys()]);
     this.lastRequestAt = undefined;

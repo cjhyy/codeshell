@@ -293,6 +293,7 @@ page.on("dialog", async (dialog) => {
 });
 const picker = page.getByRole("combobox", { name: "切换面板项目", exact: true });
 const conversation = page.getByRole("combobox", { name: "关联对话", exact: true });
+const catalog = page.getByRole("region", { name: "项目会话", exact: true });
 const frame = page.frameLocator("iframe.panel-host-frame");
 const currentInstance = async () =>
   new URL(await page.locator("iframe.panel-host-frame").getAttribute("src"), origin).pathname.split(
@@ -464,11 +465,23 @@ try {
   assert.equal(await conversation.isVisible(), false);
   assert.equal(await page.locator("iframe.panel-host-frame").isVisible(), false);
   dialogDecisions.push(false);
-  const selectionsBeforeHiddenSwitch = await page.evaluate(() => window.selected.length);
+  const selectionsBeforeHiddenSwitch = await page.evaluate(() => ({
+    projects: window.selected.length,
+    sessions: window.sessionSelections.length,
+    created: window.created.length,
+  }));
   await page.getByRole("button", { name: "展开侧栏", exact: true }).tap();
-  await page.getByRole("combobox", { name: "选择项目", exact: true }).selectOption("project-b");
-  assert.equal(await page.evaluate(() => window.selected.length), selectionsBeforeHiddenSwitch);
+  await catalog.getByRole("button", { name: /B conversation must stay in B/ }).tap();
+  assert.deepEqual(
+    await page.evaluate(() => ({
+      projects: window.selected.length,
+      sessions: window.sessionSelections.length,
+      created: window.created.length,
+    })),
+    selectionsBeforeHiddenSwitch,
+  );
   assert.equal(await page.evaluate(() => window.currentScope().workspace), "/owned/A");
+  assert.equal(await page.evaluate(() => window.currentScope().activeId), "session-a");
   assert.equal(instances.get(original).closed, false);
   assert.match(dialogs.at(-1), /未保存/);
   await page
@@ -492,10 +505,7 @@ try {
     "a hidden guest approval leaves chat visible and offers return to the same guest for trusted cancellation",
   );
   await page.getByRole("button", { name: "展开侧栏", exact: true }).tap();
-  await page
-    .locator(".sessions")
-    .getByRole("button", { name: /A second conversation/ })
-    .tap();
+  await catalog.getByRole("button", { name: /A second conversation/ }).tap();
   await page.waitForFunction(() => window.currentScope().panelSessionId === "session-a-other");
   await sidebarAction("面板");
   await page.locator("iframe.panel-host-frame").waitFor({ state: "visible" });
@@ -656,19 +666,24 @@ try {
   assert.equal(await picker.isDisabled(), true);
   assert.equal(await conversation.isDisabled(), true);
   await page.evaluate(() => window.setConnection("online"));
+  const creationsBeforeSidebarSwitch = await page.evaluate(() => window.created.length);
   await page.getByRole("button", { name: "展开侧栏", exact: true }).tap();
-  assert.equal(
-    await page.getByRole("combobox", { name: "选择项目", exact: true }).inputValue(),
-    "project-a",
-  );
-  await page.getByRole("combobox", { name: "选择项目", exact: true }).selectOption("project-b");
-  await page
-    .getByRole("dialog", { name: "工作台导航" })
-    .getByRole("button", { name: "收起侧栏", exact: true })
-    .tap();
+  await catalog.getByRole("button", { name: /A original conversation/ }).waitFor();
+  await catalog.getByRole("button", { name: /B conversation must stay in B/ }).tap();
+  await page.locator(".chat:not([hidden])").waitFor();
+  await page.waitForFunction(() => window.currentScope().activeId === "session-b-existing");
+  assert.equal(await page.evaluate(() => window.currentScope().workspace), "/owned/B");
+  assert.equal(await page.evaluate(() => window.currentScope().selected), "project-b");
+  assert.equal(await page.evaluate(() => window.created.length), creationsBeforeSidebarSwitch);
+  assert.deepEqual(await page.evaluate(() => window.sessionSelections), ["session-b-existing"]);
+  assert.equal(instances.get(inherited).closed, true);
+  await sidebarAction("面板");
   await list("B");
+  const sidebarSelected = await open("B");
+  assert.equal(instances.get(sidebarSelected).sessionId, "session-b-existing");
+  assert.equal(await conversation.inputValue(), "session-b-existing");
   reports.push(
-    "44px native selector and long bilingual names retain Back/status at 320/390/landscape in both themes; original sidebar remains usable",
+    "44px Panel selectors and long bilingual names retain Back/status at 320/390/landscape in both themes; the sidebar opens an existing cross-project conversation without creating one and Panel entry inherits that conversation",
   );
   assert.deepEqual(await page.evaluate(() => window.sent), []);
   assert.deepEqual(await page.evaluate(() => window.stopped), []);

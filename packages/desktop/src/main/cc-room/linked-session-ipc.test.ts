@@ -10,8 +10,103 @@ import {
   registerRoomHistoryIpc,
   takeOverLinkedSessionFromIpc,
 } from "./linked-session-ipc.js";
+import { registerRoomSettingsIpc } from "./room-settings-ipc.js";
 
 const historyRoots: string[] = [];
+
+test("native room settings preserve exact identity, validate input, and return Host-applied settings", async () => {
+  const handlers = new Map<string, (...args: any[]) => any>();
+  const calls: any[] = [];
+  const broadcasts: string[] = [];
+  const meta = {
+    id: "room_native",
+    cwd: "/private/tmp/project",
+    kind: "codex",
+    permissionMode: "default",
+    claudeSessionId: "thread-native",
+    modelKey: "codex/old",
+  };
+  let busy: string | undefined = "queued";
+  registerRoomSettingsIpc({
+    ipcMain: {
+      handle: (name, handler) => {
+        handlers.set(name, handler);
+      },
+    },
+    roomManager: {
+      getRoom: (id) => (id === meta.id ? (meta as any) : undefined),
+      roomBusyReason: () => busy as any,
+      effectiveMode: () => "acceptEdits",
+      isExecutionBusy: () => true,
+    },
+    roomModes: {
+      openSession: async (input) => {
+        calls.push(input);
+        return {
+          roomId: meta.id,
+          status: "running",
+          mode: "acceptEdits",
+          modelKey: input.modelKey ?? undefined,
+          changed: true,
+          requestedMode: input.mode,
+          approved: false,
+        };
+      },
+    },
+    broadcastRoomState: (id) => broadcasts.push(id),
+  });
+  const state = handlers.get("ccRoom:settingsState")!({}, meta.id);
+  expect(state).toEqual({
+    roomId: meta.id,
+    sessionId: "thread-native",
+    cwd: meta.cwd,
+    kind: "codex",
+    permissionMode: "acceptEdits",
+    modelKey: "codex/old",
+    observing: false,
+    busyReason: "queued",
+  });
+  busy = undefined;
+  expect(handlers.get("ccRoom:settingsState")!({}, meta.id).busyReason).toBe("retiring");
+  const invoke = (settings: unknown) =>
+    handlers.get("ccRoom:openSession")!(
+      { sender: { id: 7, isDestroyed: () => false } },
+      "thread-native",
+      "/tmp/project",
+      "default",
+      "codex",
+      settings,
+    );
+  for (const invalid of [
+    null,
+    [],
+    {},
+    { roomId: "" },
+    { roomId: meta.id, modelKey: 3 },
+    { roomId: meta.id, modelKey: "native/model" },
+    { roomId: meta.id, modelKey: "codex/bad\nmodel" },
+  ])
+    await expect(invoke(invalid)).rejects.toThrow("invalid CLI settings request");
+  expect(calls).toHaveLength(0);
+  expect(await invoke({ roomId: meta.id, modelKey: "codex/new" })).toEqual({
+    roomId: meta.id,
+    cwd: meta.cwd,
+    status: "running",
+    permissionMode: "acceptEdits",
+    modelKey: "codex/new",
+  });
+  expect(calls[0]).toMatchObject({
+    sessionId: "thread-native",
+    cwd: "/tmp/project",
+    kind: "codex",
+    roomId: meta.id,
+    mode: "default",
+    modelKey: "codex/new",
+    requester: { key: "desktop:7" },
+  });
+  expect((await invoke({ roomId: meta.id, modelKey: null })).modelKey).toBeNull();
+  expect(broadcasts).toEqual([meta.id, meta.id]);
+});
 afterEach(() => {
   for (const root of historyRoots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
