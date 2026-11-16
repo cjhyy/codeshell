@@ -262,7 +262,7 @@ describe("reviewed external Mimi manager catalog", () => {
   test("recurring follow-ups require the current turn's explicit Host action grant", async () => {
     const { host, reported } = createHost();
     try {
-      expect(host.listTools().some((tool) => tool.name === "ManageFollowUp")).toBe(false);
+      // Listed on every turn; the missing grant refuses the call.
       const result = await host.execute({
         id: "ungranted-recurrence",
         name: "ManageFollowUp",
@@ -396,10 +396,8 @@ describe("reviewed external Mimi manager catalog", () => {
     for (const name of ["DelegateWork", "GatewayReply", "SendMessage"]) {
       const tool = PET_MANAGER_TOOL_CATALOG.find((entry) => entry.definition.name === name)!;
       expect(typeof tool.exposure.availability).toBe("function");
-      // Only GatewayReply still rewrites (channel limits); the other two are static.
-      expect(typeof tool.exposure.rewriteDefinition).toBe(
-        name === "GatewayReply" ? "function" : "undefined",
-      );
+      // Static definitions: route limits and ids live in the runtime context.
+      expect(tool.exposure.rewriteDefinition).toBeUndefined();
       expect(tool.exposure.defaultPermissionRules).toContainEqual({
         tool: name,
         decision: "allow",
@@ -407,9 +405,13 @@ describe("reviewed external Mimi manager catalog", () => {
     }
     const reply = PET_MANAGER_TOOL_CATALOG.find((tool) => tool.definition.name === "GatewayReply")!;
     expect(reply.exposure.availability!(visibility)).toBe(true);
+    // Visible on every Mimi turn, never outside the pet profile.
     expect(reply.exposure.availability!({ behaviorProfile: "pet" } as ToolVisibilityContext)).toBe(
-      false,
+      true,
     );
+    expect(
+      reply.exposure.availability!({ behaviorProfile: "general" } as ToolVisibilityContext),
+    ).toBe(false);
     expect(PET_MANAGER_TOOL_CATALOG.every((tool) => tool.exposure.availability)).toBe(true);
     // The original executor still fails closed even without a visibility wrapper.
     const missing = {} as ToolContext;

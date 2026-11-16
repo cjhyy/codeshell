@@ -372,7 +372,8 @@ describe("Mimi mocked multi-turn chat replay", () => {
     expect(replay.replay.rounds).toHaveLength(4);
     expect(replay.replay.rounds[0]!.tools?.map((tool) => tool.name)).toContain("CurrentTime");
     expect(replay.replay.rounds[0]!.tools?.map((tool) => tool.name)).toContain("SendMessage");
-    expect(replay.replay.rounds[0]!.tools?.map((tool) => tool.name)).not.toContain("GatewayReply");
+    // Every Mimi turn carries the same tools; a desktop turn refuses GatewayReply at call time.
+    expect(replay.replay.rounds[0]!.tools?.map((tool) => tool.name)).toContain("GatewayReply");
     const time = toolResultJson(replay.replay.rounds[1]!, "CurrentTime");
     expect(time.epochMs).toBeGreaterThanOrEqual(before);
     expect(time.epochMs).toBeLessThanOrEqual(Date.now());

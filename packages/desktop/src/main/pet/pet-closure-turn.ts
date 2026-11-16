@@ -175,6 +175,7 @@ export async function runLongTaskClosureTurn(
                 tool: "GatewayReply",
                 destination: "current originating IM conversation",
                 allowedRoots: replyAttachmentRoots,
+                ...gatewayReplyCapability,
               },
             },
           }

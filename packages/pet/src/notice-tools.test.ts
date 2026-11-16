@@ -78,14 +78,15 @@ describe("Mimi notice tools: registration and visibility", () => {
     expect(PET_SYSTEM_PROMPT).toContain("recentProactive");
   });
 
-  test("are visible only to the pet profile with the host's notice action kinds", () => {
+  test("are visible on every Mimi turn and never outside the pet profile", () => {
     expect(noticeToolsAvailability(visibility(["noticeTriggerMutation"]))).toBe(true);
-    expect(noticeToolsAvailability(visibility([]))).toBe(false);
+    // This turn's grant is checked when the tool is called, not by hiding it.
+    expect(noticeToolsAvailability(visibility([]))).toBe(true);
     expect(noticeToolsAvailability(visibility(["noticeTriggerMutation"], "general"))).toBe(false);
     expect(notificationSettingsAvailability(visibility(["notificationSettingsMutation"]))).toBe(
       true,
     );
-    expect(notificationSettingsAvailability(visibility(["noticeTriggerMutation"]))).toBe(false);
+    expect(notificationSettingsAvailability(visibility(["noticeTriggerMutation"]))).toBe(true);
     const meta = PET_BEHAVIOR_PROFILE.buildVisibilityMeta!({
       workspaces: [],
       reusableSessions: [],

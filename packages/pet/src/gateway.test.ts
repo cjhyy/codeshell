@@ -159,13 +159,17 @@ describe("Gateway discovery tool", () => {
     ).toBeUndefined();
   });
 
-  test("is visible only when a validated catalog reaches profile metadata", () => {
+  test("is visible on every Mimi turn; a turn without a catalog refuses the call", () => {
     expect(
       gatewayAvailability({
+        behaviorProfile: "pet",
         profileMeta: { petGateway: parsePetGatewayCatalog(catalogInput) },
       } as never),
     ).toBe(true);
-    expect(gatewayAvailability({ profileMeta: {} } as never)).toBe(false);
+    expect(gatewayAvailability({ behaviorProfile: "pet", profileMeta: {} } as never)).toBe(true);
+    expect(gatewayAvailability({ behaviorProfile: "general", profileMeta: {} } as never)).toBe(
+      false,
+    );
   });
 });
 

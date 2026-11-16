@@ -1857,6 +1857,7 @@ export class PetDispatchService {
                           tool: "GatewayReply",
                           destination: "current IM conversation",
                           allowedRoots: replyAttachmentRoots,
+                          ...gatewayReplyCapability,
                         },
                       }
                     : {}),
