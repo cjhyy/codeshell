@@ -463,7 +463,10 @@ describe("architecture growth budgets", () => {
       // +2 main-frame-only usage provider operations: local metadata discovery
       // and an explicit query of a registered provider. The existing quota:get
       // moves into the same guarded registrar and is still counted.
-    ).toBeLessThanOrEqual(474);
+      // +1 read-only ccRoom:settingsState returns this room's actual model/mode
+      // and busy reason, so native controls can disable changes before submission.
+      // Mutations still use the existing ccRoom:openSession authority/handoff.
+    ).toBeLessThanOrEqual(475);
     expect(matches("packages/desktop/src/main/quota-ipc.ts", /handle\("quota:/g)).toBe(3);
     expect(matches("packages/desktop/src/main/account-device-ipc.ts", /^ {4}[a-z]+: \(/gm)).toBe(8);
     expect(
@@ -502,7 +505,8 @@ describe("architecture growth budgets", () => {
       // Browser sign-in and fixed account-management navigation add two typed
       // adapters within the existing ceiling; neither exposes credentials.
       // +2 typed provider discovery/query invokes; credentials remain in Main.
-    ).toBeLessThanOrEqual(483);
+      // +1 typed ccRoom:settingsState adapter for the reviewed read-only route.
+    ).toBeLessThanOrEqual(484);
     expect(matches("packages/desktop/src/preload/quota-api.ts", /ipc\.invoke\(/g)).toBe(3);
     expect(
       matches("packages/desktop/src/preload/account-device-api.ts", /\binvoke(?:Raw)?\("/g),
