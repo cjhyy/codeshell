@@ -84,7 +84,10 @@ test("Mimi status, pending query and manager prompt share the task-center view",
   });
   const request = calls.find((call) => typeof call.petRuntimeContext === "string")!;
   expect(request).toBeDefined();
-  const world = JSON.parse(request.petRuntimeContext as string);
+  // Task inbox and long tasks are durable lists: they travel in ledgerContext.
+  const world = JSON.parse(
+    (request.profileParams as Record<string, unknown>).ledgerContext as string,
+  );
   expect(world.taskInbox).toEqual(view);
   expect(world.longTasks.active[0].taskId).toBe("ledger-fallback");
 });
@@ -102,7 +105,8 @@ test("projection failure falls back to the existing ledger without blocking Mimi
     clientMessageId: "task-inbox-fallback",
   });
   const request = calls.find((call) => typeof call.petRuntimeContext === "string")!;
-  expect(JSON.parse(request.petRuntimeContext as string).longTasks.active[0].taskId).toBe(
-    "ledger-fallback",
+  const lists = JSON.parse(
+    (request.profileParams as Record<string, unknown>).ledgerContext as string,
   );
+  expect(lists.longTasks.active[0].taskId).toBe("ledger-fallback");
 });

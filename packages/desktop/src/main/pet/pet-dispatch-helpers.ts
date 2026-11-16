@@ -2,6 +2,8 @@ import { createHash } from "node:crypto";
 import {
   isPetHostActionRequest,
   isPetWorkExecutionBackend,
+  MAX_MIMI_LEDGER_CONTEXT_LENGTH,
+  MIMI_LEDGER_LISTS,
   type PetContextOriginRef,
   type PetGroundedTaskRef,
   type PetGatewayReplyCapability,
@@ -48,13 +50,16 @@ const OMIT_JSON_VALUE = Symbol("omit-json-value");
  * prefix (the memory store is newest-first), while oversized strings/objects
  * are recursively shortened instead of rejecting the whole manager turn.
  */
-export function stringifyBoundedPetWorld(world: Readonly<Record<string, unknown>>): string {
+export function stringifyBoundedPetWorld(
+  world: Readonly<Record<string, unknown>>,
+  maximum = MAX_PET_RUNTIME_CONTEXT_LENGTH,
+): string {
   // Fast path: JSON.stringify already omits undefined-valued keys, so an
   // in-budget world serializes to exactly what the per-key trimming below
   // would produce — without the O(keys) full-size checks.
   try {
     const serialized = serializePetWorldJson(world);
-    if (serialized !== undefined && serialized.length <= MAX_PET_RUNTIME_CONTEXT_LENGTH) {
+    if (serialized !== undefined && serialized.length <= maximum) {
       return serialized;
     }
   } catch {
@@ -64,7 +69,7 @@ export function stringifyBoundedPetWorld(world: Readonly<Record<string, unknown>
   for (const [key, value] of Object.entries(world)) {
     if (value === undefined) continue;
     const fitted = fitJsonValue(value, (candidate) =>
-      jsonFits({ ...bounded, [key]: candidate }, MAX_PET_RUNTIME_CONTEXT_LENGTH),
+      jsonFits({ ...bounded, [key]: candidate }, maximum),
     );
     if (fitted !== OMIT_JSON_VALUE) bounded[key] = fitted;
   }
@@ -270,4 +275,55 @@ export interface PetManagerTurnHost {
     gatewayReplyCapability?: PetGatewayReplyCapability,
     replayIdentity?: { petSessionId: string; clientMessageId?: string },
   ): Promise<PetHostActionExecution[]>;
+}
+
+/**
+ * Split Mimi's world into the per-turn runtime context and the durable lists
+ * the context ledger carries (see pet world-ledger). Each part is bounded.
+ */
+export function splitPetWorld(world: Readonly<Record<string, unknown>>): {
+  runtimeContext: string;
+  ledgerContext: string;
+} {
+  const lists = new Set<string>(MIMI_LEDGER_LISTS);
+  const perTurn: Record<string, unknown> = {};
+  const durable: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(world)) {
+    if (value === undefined) continue;
+    (lists.has(key) ? durable : perTurn)[key] = value;
+  }
+  return {
+    runtimeContext: stringifyBoundedPetWorld(perTurn),
+    ledgerContext: stringifyBoundedPetWorld(durable, MAX_MIMI_LEDGER_CONTEXT_LENGTH),
+  };
+}
+
+/** Internal turns carry the last lists, so the ledger never reads them as removed. */
+export function withPetLedgerContext(
+  params: Record<string, unknown>,
+  last: string | undefined,
+): Record<string, unknown> {
+  const profileParams = params.profileParams as Record<string, unknown> | undefined;
+  if (params.behaviorMode !== "pet" || !last || !profileParams) return params;
+  if (typeof profileParams.ledgerContext === "string") return params;
+  return { ...params, profileParams: { ...profileParams, ledgerContext: last } };
+}
+
+/** An external runtime has no ledger: it reads one world with the lists merged back. */
+export function withMergedPetWorld(params: Record<string, unknown>): Record<string, unknown> {
+  const profileParams = params.profileParams as Record<string, unknown> | undefined;
+  if (typeof profileParams?.ledgerContext !== "string") return params;
+  const { ledgerContext, ...rest } = profileParams;
+  let world: Record<string, unknown>;
+  let lists: Record<string, unknown>;
+  try {
+    world = JSON.parse(String(rest.runtimeContext ?? "{}")) as Record<string, unknown>;
+    lists = JSON.parse(ledgerContext) as Record<string, unknown>;
+  } catch {
+    return { ...params, profileParams: rest };
+  }
+  return {
+    ...params,
+    profileParams: { ...rest, runtimeContext: stringifyBoundedPetWorld({ ...world, ...lists }) },
+  };
 }

@@ -50,7 +50,7 @@
     "status": "exposed",
     "requires": "mimi-host",
     "reason": "Records one delegation through the Host-owned per-turn Pet profile services. Workspace ids and reusable Session evidence are validated against that turn's bounded options; reporting a request does not launch work or grant a general execution tool.",
-    "contractFingerprint": "3e02257b30bc1c528da13150db629131c5987153f6f62d58b121ca966b6ca1d1"
+    "contractFingerprint": "332004d222a3d177d5c6ed518dca5d98789da06a5a676b568018f971bd69ea17"
   },
   {
     "tool": "DriveAgent",
@@ -273,7 +273,7 @@
     "status": "exposed",
     "requires": "mimi-host",
     "reason": "Records an outbound message through the Host-owned per-turn Pet profile services. Exact target ids, text and attachment limits come from that turn's authorized targets; the Host validates and delivers after the turn, and acceptance is not delivery.",
-    "contractFingerprint": "447c89d6f9fc14af4b563dec4cee82310b672340459c65b60e73e9d7ba07ae56"
+    "contractFingerprint": "53340e8c176156d1cf57d20154ccf543bd356f79e9d05ba807e6f3f4f8cea1ff"
   },
   {
     "tool": "Sessions",
