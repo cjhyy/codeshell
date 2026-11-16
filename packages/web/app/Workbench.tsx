@@ -26,6 +26,8 @@ import { ToolActivity } from "./ToolActivity.js";
 import { ExpandedHistoryText } from "./ExpandedHistoryText.js";
 import { TurnQueueList } from "./TurnQueueList.js";
 import { WebsiteSetupSteps } from "./WebsiteSetupSteps.js";
+import { ProjectSessionNavigation } from "./ProjectSessionNavigation.js";
+import type { SessionSummary } from "./protocol.js";
 import "./app.css";
 import "./workbench-desktop.css";
 
@@ -44,6 +46,7 @@ export function submitWorkbenchPanelPrompt(
     throw new Error("当前工作区或对话已经变化，请先打开面板关联的对话，再返回面板发送。");
   if (controller.connection !== "open" || controller.loading)
     throw new Error("工作台尚未连接，请连接后重新发送面板任务。");
+  if (controller.sendBlockedReason) throw new Error(controller.sendBlockedReason);
   if (controller.readOnly) throw new Error("当前对话为只读，无法发送面板任务。");
   if (
     controller.running ||
@@ -113,6 +116,7 @@ export function Workbench({
     refreshConfiguration,
     session,
   } = controller;
+  const navigationSessions = controller.navigationSessions ?? sessions;
   const hub = controller.workspaceApi;
   const currentController = React.useRef(controller);
   currentController.current = controller;
@@ -442,9 +446,37 @@ export function Workbench({
       };
     openConversation(
       () => void controller.selectSession(id),
-      cwd !== undefined ? cwd : sessions.find((item) => item.sessionId === id)?.cwd,
+      cwd !== undefined ? cwd : navigationSessions.find((item) => item.sessionId === id)?.cwd,
     );
   };
+  const renderNavigationSession = (item: SessionSummary) => (
+    <li key={item.sessionId}>
+      <button
+        className={item.sessionId === activeId && view === "chat" ? "session active" : "session"}
+        onClick={() => void openSession(item.sessionId)}
+        aria-current={item.sessionId === activeId && view === "chat" ? "page" : undefined}
+      >
+        <span className="session-title">
+          {item.sessionId === activeId
+            ? item.customTitle || chat.title || item.title || sessionTitle(chat, item.sessionId)
+            : item.title || item.preview?.trim() || item.sessionId.slice(0, 8)}
+        </span>
+        <span className="session-meta">
+          {controller.unreadSessionIds?.has(item.sessionId) && item.sessionId !== activeId ? (
+            <span className="session-unread" aria-label="有新消息">
+              ●{" "}
+            </span>
+          ) : null}
+          {approvalCount(item.sessionId)
+            ? `${approvalCount(item.sessionId)} 项待审批`
+            : item.running
+              ? "进行中"
+              : sessionStatusLabel(item.status)}
+          {controller.showTurnCounts !== false ? <span> · {item.turnCount} 轮</span> : null}
+        </span>
+      </button>
+    </li>
+  );
   const startNewSession = () => openConversation(controller.newSession);
   const confirmPanelReplacement = () =>
     !openedPanelRef.current ||
@@ -543,6 +575,7 @@ export function Workbench({
     controller.loading ||
     uploading ||
     controller.uncertain ||
+    !!controller.sendBlockedReason ||
     controller.readOnly;
   const draftEmpty = !draft.trim() && !files.length;
   const sendDisabled = sendBlocked || draftEmpty;
@@ -757,66 +790,53 @@ export function Workbench({
             conversation: openConversation,
             leaveWorkspace,
           })}
-          <div className="rail-section-label history-label">
-            <span>最近对话</span>
-            <span>{sessions.length}</span>
-          </div>
-          <ul className="sessions" aria-label="最近对话">
-            {localDrafts.map(({ sessionId, draft: pendingDraft, cwd }) => (
-              <li key={`draft-${sessionId}`}>
-                <button
-                  className={
-                    sessionId === activeId && view === "chat" ? "session active" : "session"
-                  }
-                  onClick={() => void openSession(sessionId, undefined, cwd)}
-                >
-                  <span className="session-title">
-                    {pendingDraft.text.trim() || `附件：${pendingDraft.files[0]?.name ?? "新对话"}`}
-                  </span>
-                  <span className="session-meta">草稿</span>
-                </button>
-              </li>
-            ))}
-            {sessions.map((item) => (
-              <li key={item.sessionId}>
-                <button
-                  className={
-                    item.sessionId === activeId && view === "chat" ? "session active" : "session"
-                  }
-                  onClick={() => void openSession(item.sessionId)}
-                  aria-current={item.sessionId === activeId && view === "chat" ? "page" : undefined}
-                >
-                  <span className="session-title">
-                    {item.sessionId === activeId
-                      ? item.customTitle ||
-                        chat.title ||
-                        item.title ||
-                        sessionTitle(chat, item.sessionId)
-                      : item.title || item.preview?.trim() || item.sessionId.slice(0, 8)}
-                  </span>
-                  <span className="session-meta">
-                    {controller.unreadSessionIds?.has(item.sessionId) &&
-                    item.sessionId !== activeId ? (
-                      <span className="session-unread" aria-label="有新消息">
-                        ●{" "}
+          {controller.navigationSessions === undefined || localDrafts.length > 0 ? (
+            <>
+              <div className="rail-section-label history-label">
+                <span>{controller.navigationSessions === undefined ? "最近对话" : "草稿"}</span>
+                <span>
+                  {controller.navigationSessions === undefined
+                    ? sessions.length
+                    : localDrafts.length}
+                </span>
+              </div>
+              <ul className="sessions" aria-label="最近对话">
+                {localDrafts.map(({ sessionId, draft: pendingDraft, cwd }) => (
+                  <li key={`draft-${sessionId}`}>
+                    <button
+                      className={
+                        sessionId === activeId && view === "chat" ? "session active" : "session"
+                      }
+                      onClick={() => void openSession(sessionId, undefined, cwd)}
+                    >
+                      <span className="session-title">
+                        {pendingDraft.text.trim() ||
+                          `附件：${pendingDraft.files[0]?.name ?? "新对话"}`}
                       </span>
-                    ) : null}
-                    {approvalCount(item.sessionId)
-                      ? `${approvalCount(item.sessionId)} 项待审批`
-                      : item.running
-                        ? "进行中"
-                        : sessionStatusLabel(item.status)}
-                    {controller.showTurnCounts !== false ? (
-                      <span> · {item.turnCount} 轮</span>
-                    ) : null}
-                  </span>
-                </button>
-              </li>
-            ))}
-            {sessions.length === 0 && localDrafts.length === 0 ? (
-              <li className="empty">开始对话后，记录会保存在这里。</li>
-            ) : null}
-          </ul>
+                      <span className="session-meta">草稿</span>
+                    </button>
+                  </li>
+                ))}
+                {controller.navigationSessions === undefined
+                  ? sessions.map(renderNavigationSession)
+                  : null}
+                {sessions.length === 0 && localDrafts.length === 0 ? (
+                  <li className="empty">开始对话后，记录会保存在这里。</li>
+                ) : null}
+              </ul>
+            </>
+          ) : null}
+          {controller.navigationSessions !== undefined ? (
+            <ProjectSessionNavigation
+              sessions={navigationSessions}
+              projects={controller.projects ?? []}
+              activeId={activeId}
+              loading={controller.navigationSessionsLoading}
+              hasMore={controller.navigationSessionsHasMore}
+              loadMore={controller.loadMoreNavigationSessions}
+              renderSession={renderNavigationSession}
+            />
+          ) : null}
         </div>
         <div className="rail-footer">
           <div className="host-label">
@@ -1431,25 +1451,26 @@ export function Workbench({
                     blockingApprovals.length ? "waiting" : running ? "running" : undefined
                   }
                 >
-                  {controller.uncertain
-                    ? "正在核对消息…"
-                    : uploading
-                      ? controller.host === "desktop"
-                        ? "正在发送…"
-                        : "正在上传附件…"
-                      : blockingApprovals.length
-                        ? queuedCount
-                          ? `等待你的确认 · ${queuedCount} 条待执行`
-                          : "等待你的确认"
-                        : running
+                  {controller.sendBlockedReason ||
+                    (controller.uncertain
+                      ? "正在核对消息…"
+                      : uploading
+                        ? controller.host === "desktop"
+                          ? "正在发送…"
+                          : "正在上传附件…"
+                        : blockingApprovals.length
                           ? queuedCount
-                            ? `正在处理… · ${queuedCount} 条待执行`
-                            : queueing
-                              ? "正在处理… · 可继续发送，将排队执行"
-                              : "正在处理…"
-                          : approvals.length
-                            ? "有可稍后回答的问题"
-                            : ""}
+                            ? `等待你的确认 · ${queuedCount} 条待执行`
+                            : "等待你的确认"
+                          : running
+                            ? queuedCount
+                              ? `正在处理… · ${queuedCount} 条待执行`
+                              : queueing
+                                ? "正在处理… · 可继续发送，将排队执行"
+                                : "正在处理…"
+                            : approvals.length
+                              ? "有可稍后回答的问题"
+                              : "")}
                 </span>
                 <span className="composer-submit-group">
                   {queueing ? (

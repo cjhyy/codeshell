@@ -105,6 +105,332 @@ afterEach(() => {
   visibilityState = "visible";
 });
 
+test("all-project navigation keeps loaded pages while another project's history loads", async () => {
+  setupBrowser();
+  const hook = await renderHook(() => {
+    const app = useRemoteApp({ sessionCatalog: "all" });
+    return { app, controller: useDesktopController(app, undefined, () => {}) };
+  });
+  const ws = FakeWebSocket.instances[0]!;
+  const requests = () =>
+    ws.sent.map((line) => JSON.parse(line)).filter((event) => event.type === "session.list");
+  const latest = () => requests().at(-1)!;
+  const row = (id: string, cwd: string | null) => ({ id, cwd, title: id, updatedAt: 1 });
+  try {
+    await act(async () => {
+      ws.open();
+      ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+      ws.message({
+        type: "room.projects.ok",
+        projects: [
+          { id: "a", path: "/a", name: "A" },
+          { id: "b", path: "/b", name: "B" },
+        ],
+      });
+      await flushMicrotasks();
+    });
+    expect(latest().cwds).toBeUndefined();
+    await act(async () => {
+      ws.message({
+        type: "session.list.ok",
+        requestId: latest().requestId,
+        sessions: [row("a1", "/a"), row("unbound", null)],
+        nextCursor: "page-2",
+      });
+      await flushMicrotasks();
+    });
+    const firstPageRequests = requests().length;
+    expect(firstPageRequests).toBe(1);
+    await act(async () => {
+      hook.result.current.app.loadMoreSessions!();
+      await flushMicrotasks();
+    });
+    expect(latest().cursor).toBe("page-2");
+    await act(async () => {
+      ws.message({
+        type: "session.list.ok",
+        requestId: latest().requestId,
+        sessions: [row("b1", "/b")],
+        nextCursor: "page-3",
+      });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      hook.result.current.controller.selectSession("b1");
+      await flushMicrotasks();
+    });
+    expect(requests()).toHaveLength(firstPageRequests + 1);
+    expect(hook.result.current.app.loading.sessionHistory).toBe(true);
+    expect(hook.result.current.controller.navigationSessionsLoading).toBe(false);
+    expect(hook.result.current.controller.navigationSessions.map((item) => item.sessionId)).toEqual(
+      ["a1", "unbound", "b1"],
+    );
+    expect(hook.result.current.controller.sessions.map((item) => item.sessionId)).toEqual(["b1"]);
+    expect(getApiWorkspace()).toBe("/b");
+    await act(async () => {
+      hook.result.current.controller.selectSession("unbound");
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.controller.workspaceCwd).toBeNull();
+    expect(hook.result.current.app.activeProjectCwd).toBeNull();
+    expect(hook.result.current.app.activeProjectId).toBeNull();
+    expect(getApiWorkspace()).toBeUndefined();
+    expect(hook.result.current.controller.sessions.map((item) => item.sessionId)).toEqual([
+      "unbound",
+    ]);
+    await expect(hook.result.current.controller.selectPanelSession!("b1")).rejects.toThrow(
+      "此对话不在当前项目中",
+    );
+    expect(hook.result.current.controller.navigationSessions).toHaveLength(3);
+    await act(async () => {
+      // Visibility/focus refresh must keep the already loaded second page.
+      window.dispatchEvent(new Event("focus"));
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.controller.navigationSessionsLoading).toBe(true);
+    expect(hook.result.current.controller.navigationSessions).toHaveLength(3);
+    expect(latest().cursor).toBeUndefined();
+    expect(latest().cwds).toBeUndefined();
+    await act(async () => {
+      ws.message({
+        type: "session.list.ok",
+        requestId: latest().requestId,
+        sessions: [{ ...row("a1", "/a"), title: "Updated A" }],
+        nextCursor: "refreshed-page-2",
+      });
+      ws.message({ type: "session.history.ok", sessionId: "b1", events: [] });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.app.loading.sessionHistory).toBe(true);
+    expect(hook.result.current.controller.navigationSessionsLoading).toBe(false);
+    expect(hook.result.current.controller.navigationSessions.map((item) => item.sessionId)).toEqual(
+      ["a1", "unbound", "b1"],
+    );
+    expect(hook.result.current.controller.navigationSessions[0]?.title).toBe("Updated A");
+    await act(async () => {
+      hook.result.current.app.refreshSessions(["/b"]);
+      await flushMicrotasks();
+    });
+    expect(latest().cwds).toBeUndefined();
+    await act(async () => {
+      // A complete catalog can authoritatively remove an archived/deleted row.
+      ws.message({
+        type: "session.list.ok",
+        requestId: latest().requestId,
+        sessions: [row("unbound", null)],
+        nextCursor: null,
+      });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.controller.navigationSessions.map((item) => item.sessionId)).toEqual(
+      ["unbound"],
+    );
+  } finally {
+    await hook.unmount();
+  }
+});
+
+for (const { label, cwd } of [
+  { label: "a secondary project root", cwd: "/secondary" },
+  { label: "an explicit no-project target", cwd: null },
+]) {
+  test(`all-project refresh preserves ${label} for an older selected conversation`, async () => {
+    setupBrowser();
+    const restoreFetch = defineTestProperty(window, "fetch", {
+      value: async () => {
+        throw new Error("catalog refresh send tests make no HTTP requests");
+      },
+      writable: true,
+    });
+    const hook = await renderHook(() => {
+      const app = useRemoteApp({ sessionCatalog: "all" });
+      return { app, controller: useDesktopController(app, undefined, () => {}) };
+    });
+    const ws = FakeWebSocket.instances[0]!;
+    const latest = (type: string) =>
+      ws.sent
+        .map((line) => JSON.parse(line))
+        .filter((event) => event.type === type)
+        .at(-1)!;
+    const recent = { id: "recent", cwd: "/primary", title: "Recent", updatedAt: 2 };
+    const selected = { id: "older", cwd, title: "Older", updatedAt: 1 };
+    try {
+      await act(async () => {
+        ws.open();
+        ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+        ws.message({
+          type: "room.projects.ok",
+          projects: [
+            {
+              id: "project",
+              name: "Project",
+              path: "/primary",
+              roots: [{ path: "/primary" }, { path: "/secondary" }],
+            },
+          ],
+        });
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        ws.message({
+          type: "session.list.ok",
+          requestId: latest("session.list").requestId,
+          sessions: [recent],
+          nextCursor: "page-2",
+        });
+        await flushMicrotasks();
+        hook.result.current.app.loadMoreSessions!();
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        ws.message({
+          type: "session.list.ok",
+          requestId: latest("session.list").requestId,
+          sessions: [selected],
+          nextCursor: null,
+        });
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        hook.result.current.controller.selectSession(selected.id);
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        ws.message({ type: "session.history.ok", sessionId: selected.id, events: [] });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.app.activeCwd).toBe(cwd);
+      expect(hook.result.current.app.activeProjectCwd).toBe(cwd === null ? null : "/primary");
+      await act(async () => {
+        window.dispatchEvent(new Event("focus"));
+        await flushMicrotasks();
+      });
+      expect(latest("session.list").cursor).toBeUndefined();
+      expect(latest("session.list").cwds).toBeUndefined();
+      await act(async () => {
+        // The Host names the selected conversation even when it is not on this page.
+        ws.message({
+          type: "session.list.ok",
+          requestId: latest("session.list").requestId,
+          sessions: [recent],
+          activeSessionId: selected.id,
+          nextCursor: "refreshed-page-2",
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.app.activeCwd).toBe(cwd);
+      expect(hook.result.current.controller.workspaceCwd).toBe(cwd);
+      expect(getApiWorkspace()).toBe(cwd ?? undefined);
+      expect(
+        hook.result.current.controller.navigationSessions.map((item) => item.sessionId),
+      ).toEqual([recent.id, selected.id]);
+      await act(async () => {
+        hook.result.current.controller.setDraft("Continue the older conversation");
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        expect(hook.result.current.controller.send()).toBe(true);
+        await flushMicrotasks();
+      });
+      const sent = latest("chat.send");
+      expect(sent.sessionId).toBe(selected.id);
+      await act(async () => {
+        ws.message({
+          type: "chat.accepted",
+          sessionId: selected.id,
+          clientMessageId: sent.clientMessageId,
+          cwd,
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.controller.error).toBe("");
+      await act(async () => {
+        hook.result.current.app.refreshSessions();
+        await flushMicrotasks();
+        // A complete catalog still retires metadata for a missing conversation.
+        ws.message({
+          type: "session.list.ok",
+          requestId: latest("session.list").requestId,
+          sessions: [recent],
+          activeSessionId: selected.id,
+          nextCursor: null,
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.app.activeCwd).toBeUndefined();
+      expect(
+        hook.result.current.controller.navigationSessions.map((item) => item.sessionId),
+      ).toEqual([recent.id]);
+    } finally {
+      await hook.unmount();
+      restoreFetch();
+    }
+  });
+}
+
+test("all-project catalog retention is retired when the paired identity changes or is revoked", async () => {
+  setupBrowser();
+  const hook = await renderHook(() => useRemoteApp({ sessionCatalog: "all" }));
+  const ws = FakeWebSocket.instances[0]!;
+  const latest = () =>
+    ws.sent
+      .map((line) => JSON.parse(line))
+      .filter((event) => event.type === "session.list" && event.requestId)
+      .at(-1)!;
+  try {
+    await act(async () => {
+      ws.open();
+      ws.message({ type: "auth.ok", device: { id: "device-1", name: "First" } });
+      await flushMicrotasks();
+      hook.result.current.refreshSessions();
+      await flushMicrotasks();
+    });
+    const oldRequest = latest();
+    await act(async () => {
+      ws.message({
+        type: "session.list.ok",
+        requestId: oldRequest.requestId,
+        sessions: [{ id: "old", cwd: "/old", title: "old", updatedAt: 1 }],
+        nextCursor: "more-old",
+      });
+      await flushMicrotasks();
+      ws.message({ type: "auth.ok", device: { id: "device-2", name: "Second" } });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.sessions).toEqual([]);
+    expect(hook.result.current.sessionsHasMore).toBe(false);
+    await act(async () => {
+      hook.result.current.refreshSessions();
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      ws.message({
+        type: "session.list.ok",
+        requestId: oldRequest.requestId,
+        sessions: [{ id: "late-old", cwd: "/old", title: "old", updatedAt: 1 }],
+        nextCursor: "more-old",
+      });
+      ws.message({
+        type: "session.list.ok",
+        requestId: latest().requestId,
+        sessions: [{ id: "new", cwd: "/new", title: "new", updatedAt: 2 }],
+        nextCursor: "more-new",
+      });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.sessions.map((item) => item.id)).toEqual(["new"]);
+    await act(async () => {
+      ws.message({ type: "auth.failed", message: "revoked" });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.status).toBe("unpaired");
+    expect(hook.result.current.sessions).toEqual([]);
+    expect(hook.result.current.sessionsHasMore).toBe(false);
+  } finally {
+    await hook.unmount();
+  }
+});
+
 describe("useRemoteApp session switching recovery", () => {
   async function connected(journal = false) {
     setupBrowser();
@@ -5250,13 +5576,17 @@ describe("useRemoteApp CLI room controls", () => {
     observing: false,
   };
 
-  async function openRoom() {
+  async function openRoom(modelSelection = false) {
     setupBrowser();
     const hook = await renderHook(() => useRemoteApp());
     const ws = FakeWebSocket.instances[0]!;
     await act(async () => {
       ws.open();
-      ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+      ws.message({
+        type: "auth.ok",
+        device: { id: "device-1", name: "Phone" },
+        capabilities: modelSelection ? { ccRoomModelSelection: 1 } : {},
+      });
       ws.message({ type: "room.projects.ok", projects: [{ path: "/repo", name: "repo" }] });
       await flushMicrotasks();
     });
@@ -5282,6 +5612,281 @@ describe("useRemoteApp CLI room controls", () => {
       });
     return { hook, ws, sent, approval };
   }
+
+  test("CLI model switching preserves transcript and accepts only the exact Host selection acknowledgement", async () => {
+    const { hook, ws, sent } = await openRoom(true);
+    try {
+      await act(async () => {
+        ws.message({
+          type: "runtime.models.ok",
+          models: [
+            {
+              key: "claude-code/fixture",
+              label: "Fixture",
+              kind: "claude-code",
+              provider: "claude-code",
+              maxContextTokens: 100,
+            },
+            {
+              key: "codex/fixture",
+              label: "Other CLI",
+              kind: "codex",
+              provider: "codex",
+              maxContextTokens: 100,
+            },
+          ],
+        });
+        ws.message({
+          type: "ccRoom.transcriptSubscribed",
+          roomId: room.id,
+          sessionId: "thread-cli",
+          active: true,
+          messages: [{ role: "user", text: "kept transcript" }],
+          hasMore: false,
+          totalCount: 1,
+          roomCursor: 1,
+        });
+        await flushMicrotasks();
+      });
+      const transcript = hook.result.current.chat;
+      const opens = () => sent().filter((event) => event.type === "ccRoom.openSession");
+      const before = opens().length;
+      await act(async () => {
+        hook.result.current.setCcRoomModel!("codex/fixture");
+        await flushMicrotasks();
+      });
+      expect(opens()).toHaveLength(before);
+      await act(async () => {
+        hook.result.current.setCcRoomModel!("claude-code/fixture");
+        await flushMicrotasks();
+      });
+      const request = opens().at(-1)!;
+      expect(request).toMatchObject({
+        roomId: room.id,
+        sessionId: "thread-cli",
+        cwd: "/repo",
+        kind: "claude-code",
+        modelKey: "claude-code/fixture",
+      });
+      expect(hook.result.current.activeRoom?.modelKey).toBeUndefined();
+      expect(hook.result.current.ccModeRequest?.modelKey).toBe("claude-code/fixture");
+      const applied = {
+        type: "ccRoom.opened",
+        roomId: room.id,
+        sessionId: "thread-cli",
+        status: "running",
+        permissionMode: "acceptEdits",
+        modelKey: "claude-code/fixture",
+        requestId: request.requestId,
+      };
+      await act(async () => {
+        ws.message({ ...applied, roomId: "other-room" });
+        ws.message({ ...applied, sessionId: "other-session" });
+        ws.message({ ...applied, requestId: "stale" });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.activeRoom?.modelKey).toBeUndefined();
+      expect(hook.result.current.ccModeRequest?.modelKey).toBe("claude-code/fixture");
+      await act(async () => {
+        ws.message(applied);
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.activeRoom?.modelKey).toBe("claude-code/fixture");
+      expect(hook.result.current.activeRoom?.permissionMode).toBe("acceptEdits");
+      expect(hook.result.current.chat).toBe(transcript);
+      expect(hook.result.current.ccModeRequest).toBeUndefined();
+      await act(async () => {
+        hook.result.current.setCcRoomModel!(null);
+        await flushMicrotasks();
+      });
+      const reset = opens().at(-1)!;
+      expect(reset.modelKey).toBeNull();
+      await act(async () => {
+        ws.message({ ...applied, requestId: reset.requestId, modelKey: null });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.activeRoom?.modelKey).toBeNull();
+      expect(hook.result.current.chat).toBe(transcript);
+      expect(sent().filter((event) => event.type === "ccRoom.subscribeTranscript")).toHaveLength(1);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  for (const setting of ["model", "permission"] as const)
+    test(`CLI ${setting} confirmation blocks sending and queue admission without consuming the draft`, async () => {
+      const { hook, ws, sent } = await openRoom(true);
+      const file = new File([new Uint8Array(256 * 1024 + 1)], "held.png", { type: "image/png" });
+      const draft = { text: "keep this draft", attachments: [{ clientId: "held-image", file }] };
+      try {
+        await act(async () => {
+          ws.message({
+            type: "auth.ok",
+            device: { id: "device-1", name: "Phone" },
+            capabilities: { ccRoomModelSelection: 1, turnQueue: 1 },
+          });
+          ws.message({
+            type: "runtime.models.ok",
+            models: [
+              {
+                key: "claude-code/fixture",
+                label: "Fixture",
+                kind: "claude-code",
+                provider: "claude-code",
+                maxContextTokens: 100,
+              },
+            ],
+          });
+          await flushMicrotasks();
+        });
+        await act(async () => {
+          if (setting === "model") hook.result.current.setCcRoomModel!("claude-code/fixture");
+          else hook.result.current.setCcRoomPermissionMode!("default");
+          await flushMicrotasks();
+        });
+        expect(hook.result.current.ccModeRequest?.switching).toBe(true);
+        const before = sent().length;
+        await act(async () => {
+          expect(await hook.result.current.sendChat(draft)).toBe(false);
+          await flushMicrotasks();
+        });
+        expect(sent()).toHaveLength(before);
+        expect(hook.result.current.notice).toContain("设置确认");
+        expect(draft.text).toBe("keep this draft");
+        expect(draft.attachments[0]!.file).toBe(file);
+        expect(hook.result.current.ccModeRequest?.switching).toBe(true);
+      } finally {
+        await hook.unmount();
+      }
+    });
+
+  test("CLI attachment preparation, admission wait and uncertain delivery fence local model and permission changes", async () => {
+    const { hook, ws, sent } = await openRoom(true);
+    const puts: string[] = [];
+    const restoreFetch = defineTestProperty(window, "fetch", {
+      value: async (url: string) => {
+        puts.push(url);
+        return new Response(null, { status: 201 });
+      },
+      writable: true,
+    });
+    const draft = {
+      text: "send with current settings",
+      attachments: [
+        {
+          clientId: "room-image",
+          file: new File([new Uint8Array(256 * 1024 + 1)], "large.png", { type: "image/png" }),
+        },
+      ],
+    };
+    let delivery!: Promise<boolean>;
+    try {
+      await act(async () => {
+        ws.message({
+          type: "runtime.models.ok",
+          models: [
+            {
+              key: "claude-code/fixture",
+              label: "Fixture",
+              kind: "claude-code",
+              provider: "claude-code",
+              maxContextTokens: 100,
+            },
+          ],
+        });
+        await flushMicrotasks();
+        delivery = hook.result.current.sendChat(draft);
+        await flushMicrotasks();
+      });
+      const requests = () => sent().filter((event) => event.type === "ccRoom.openSession").length;
+      const before = requests();
+      const trySwitch = async () =>
+        act(async () => {
+          hook.result.current.setCcRoomModel!("claude-code/fixture");
+          hook.result.current.setCcRoomPermissionMode!("default");
+          await flushMicrotasks();
+          expect(requests()).toBe(before);
+          expect(hook.result.current.ccModeRequest).toBeUndefined();
+        });
+      await trySwitch();
+      expect(sent().filter((event) => event.type === "room.send")).toHaveLength(0);
+      await act(async () => {
+        ws.message({
+          type: "attachment.upload.ready",
+          clientId: "room-image",
+          uploadId: "room-upload",
+          putUrl: "/api/mobile/uploads/room-fixture",
+          expiresAt: Date.now() + 10000,
+        });
+        await flushMicrotasks();
+      });
+      expect(puts).toEqual(["/api/mobile/uploads/room-fixture"]);
+      const message = sent().findLast((event) => event.type === "room.send")!;
+      expect(message.text).toBe(draft.text);
+      await trySwitch();
+      await act(async () => {
+        ws.message({
+          type: "room.error",
+          roomId: room.id,
+          clientMessageId: message.clientMessageId,
+          uncertain: true,
+          message: "fixture uncertain",
+        });
+        expect(await delivery).toBe(false);
+      });
+      await trySwitch();
+      await act(async () => {
+        delivery = hook.result.current.sendChat({
+          ...draft,
+          clientMessageId: message.clientMessageId,
+        });
+        await flushMicrotasks();
+        ws.message({
+          type: "room.accepted",
+          roomId: room.id,
+          clientMessageId: message.clientMessageId,
+        });
+        expect(await delivery).toBe(true);
+        hook.result.current.setCcRoomModel!("claude-code/fixture");
+        await flushMicrotasks();
+      });
+      expect(requests()).toBe(before + 1);
+      expect(sent().filter((event) => event.type === "attachment.upload.begin")).toHaveLength(1);
+    } finally {
+      await hook.unmount();
+      restoreFetch();
+    }
+  });
+
+  test("CLI model switching refuses legacy Hosts and an observing room", async () => {
+    const { hook, ws, sent } = await openRoom();
+    try {
+      const count = () => sent().filter((event) => event.type === "ccRoom.openSession").length;
+      const before = count();
+      await act(async () => {
+        hook.result.current.setCcRoomModel!("claude-code/fixture");
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.ccRoomModelSelection).toBe(false);
+      expect(count()).toBe(before);
+      expect(hook.result.current.notice).toContain("更新桌面端");
+      await act(async () => {
+        ws.message({
+          type: "auth.ok",
+          device: { id: "device-1", name: "Phone" },
+          capabilities: { ccRoomModelSelection: 1 },
+        });
+        ws.message({ type: "room.list.ok", rooms: [{ ...room, observing: true }] });
+        await flushMicrotasks();
+        hook.result.current.setCcRoomModel!("claude-code/fixture");
+        await flushMicrotasks();
+      });
+      expect(count()).toBe(before);
+      expect(hook.result.current.ccModeRequest).toBeUndefined();
+    } finally {
+      await hook.unmount();
+    }
+  });
 
   test("CLI history loads the full catalog and ignores a delayed default-window response", async () => {
     const { hook, ws, sent } = await openRoom();

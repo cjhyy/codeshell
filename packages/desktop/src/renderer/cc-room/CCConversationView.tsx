@@ -21,6 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SimpleSelect } from "@/components/ui/simple-select";
 import { Markdown } from "@/Markdown";
 import { useT } from "../i18n/I18nProvider";
 import { useToast } from "../ui/ToastProvider";
@@ -42,6 +43,8 @@ import {
 import { CcAskUserQuestions, type CcAskUserQuestion } from "./CcAskUserQuestions";
 import { useStickToBottom } from "../chat/stickToBottom";
 import { TranscriptScrollContext, useAnchoredLayoutChange } from "../chat/TranscriptScrollContext";
+import { useCcRoomSettings } from "./useCcRoomSettings";
+import type { MobilePermissionMode } from "../../shared/mobile-remote";
 
 /**
  * CCConversationView — one resident Claude Code (external CLI) conversation.
@@ -108,6 +111,7 @@ export function CCConversationView({
   cwd,
   sessionId,
   mode,
+  modelKey,
   cliKind = "claude-code",
   cliLabel = "Claude Code",
   active = true,
@@ -117,11 +121,17 @@ export function CCConversationView({
   observeHint,
   onTakeOver,
   onBack,
+  onSettingsApplied,
 }: {
   roomId: string;
   cwd: string | null;
   sessionId: string;
   mode: string;
+  modelKey?: string | null;
+  onSettingsApplied?: (settings: {
+    permissionMode: MobilePermissionMode;
+    modelKey: string | null;
+  }) => void;
   /** Which external CLI drives this room. Selects the on-disk history reader:
    *  codex sessions live in a different store/format than claude (see
    *  readCodexRecentHistory) — reading a codex thread via the claude reader
@@ -159,10 +169,39 @@ export function CCConversationView({
   const sendRequestRef = useRef<object | null>(null);
   const draftRevisionRef = useRef(0);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(true);
   const [historyRevision, setHistoryRevision] = useState(0);
   const approvalRequestsRef = useRef(new Map<string, object>());
   const [resolvingApprovals, setResolvingApprovals] = useState(new Set<string>());
   const [selectedAgent, setSelectedAgent] = useState<SubagentItem | null>(null);
+  const settings = useCcRoomSettings({
+    roomId,
+    sessionId,
+    cwd,
+    kind: cliKind,
+    mode,
+    modelKey,
+    active,
+    observing,
+    isSending: () => sendRequestRef.current !== null,
+    onApplied: onSettingsApplied,
+    localBlock: historyError
+      ? "恢复会话记录后可调整。"
+      : historyLoading
+        ? "正在读取会话记录…"
+        : sending
+          ? "正在发送消息，完成后可调整。"
+          : pending.length || resolvingApprovals.size
+            ? "先处理待确认的操作，再调整设置。"
+            : chat.run === "running" || chat.run === "waiting"
+              ? "任务完成或停止后可调整模型和权限。"
+              : undefined,
+  });
+  const permissionOptions = [
+    { value: "default", label: cliKind === "codex" ? "只读" : "逐次确认" },
+    { value: "acceptEdits", label: cliKind === "codex" ? "工作区读写" : "允许编辑" },
+    { value: "bypassPermissions", label: cliKind === "codex" ? "完全访问" : "跳过确认" },
+  ];
   useEffect(() => {
     setSelectedAgent(null);
     setInput("");
@@ -203,6 +242,7 @@ export function CCConversationView({
   useEffect(() => {
     if (!active) return;
     setHistoryError(null);
+    setHistoryLoading(true);
     let cancelled = false;
     let ready = false;
     let booted = false;
@@ -352,17 +392,22 @@ export function CCConversationView({
         if (!ready) void recover();
       }
     };
-    void boot().catch((error) => {
-      if (cancelled || blocked) return;
-      blocked = true;
-      setHistoryError(
-        feedbackRef.current.t("panels.room.historyFailed", {
-          error: error instanceof Error ? error.message : String(error),
-        }),
-      );
-      // Preserve the failed boundary. A partial transcript or tail window must
-      // not replace the missing range and make the conversation look current.
-    });
+    void boot()
+      .then(() => {
+        if (!cancelled) setHistoryLoading(false);
+      })
+      .catch((error) => {
+        if (cancelled || blocked) return;
+        setHistoryLoading(false);
+        blocked = true;
+        setHistoryError(
+          feedbackRef.current.t("panels.room.historyFailed", {
+            error: error instanceof Error ? error.message : String(error),
+          }),
+        );
+        // Preserve the failed boundary. A partial transcript or tail window must
+        // not replace the missing range and make the conversation look current.
+      });
     return () => {
       cancelled = true;
       if (recoveryTimer) clearTimeout(recoveryTimer);
@@ -381,7 +426,15 @@ export function CCConversationView({
       localFilePaths,
       t("panels.room.localFilePaths"),
     );
-    if (!text || observing || sendRequestRef.current) return;
+    if (
+      !text ||
+      observing ||
+      historyError ||
+      historyLoading ||
+      settings.isChanging() ||
+      sendRequestRef.current
+    )
+      return;
     const request = {};
     const draftRevision = draftRevisionRef.current;
     sendRequestRef.current = request;
@@ -417,7 +470,17 @@ export function CCConversationView({
         setSending(false);
       }
     }
-  }, [input, localFilePaths, observing, roomId, t, toast]);
+  }, [
+    input,
+    localFilePaths,
+    observing,
+    historyError,
+    historyLoading,
+    settings.isChanging,
+    roomId,
+    t,
+    toast,
+  ]);
 
   const dragHasFiles = (dataTransfer: DataTransfer | null): boolean => {
     if (!dataTransfer || observing) return false;
@@ -569,7 +632,9 @@ export function CCConversationView({
             <code className="text-xs text-muted-foreground">
               {(sessionId || roomId).slice(0, 8)}
             </code>{" "}
-            · {mode}
+            ·{" "}
+            {permissionOptions.find((option) => option.value === settings.mode)?.label ??
+              settings.mode}
           </div>
           <Button variant="ghost" size="sm" onClick={onBack}>
             返回
@@ -632,6 +697,74 @@ export function CCConversationView({
       </ConversationHistory>
 
       <div className="flex flex-col gap-2 border-t border-border p-2">
+        <div className="relative flex flex-wrap items-center gap-2" data-cc-room-settings>
+          <SimpleSelect
+            ariaLabel="CLI 模型"
+            name="cc-room-model"
+            size="sm"
+            value={settings.modelKey ?? ""}
+            disabled={!!settings.blocked}
+            triggerProps={{ "data-cc-room-model": true, title: settings.blocked }}
+            className="max-w-72"
+            options={[
+              { value: "", label: "CLI 默认模型" },
+              ...(settings.modelKey &&
+              !settings.models.some((entry) => entry.key === settings.modelKey)
+                ? [
+                    {
+                      value: settings.modelKey,
+                      label: `${settings.modelKey} · 当前模型`,
+                      disabled: true,
+                    },
+                  ]
+                : []),
+              ...settings.models.map((entry) => ({ value: entry.key, label: entry.label })),
+            ]}
+            onChange={(next) => void settings.change({ modelKey: next || null })}
+          />
+          <SimpleSelect
+            ariaLabel="权限模式"
+            name="cc-room-permission"
+            size="sm"
+            className="w-32"
+            value={settings.mode}
+            disabled={!!settings.blocked}
+            triggerProps={{ "data-cc-room-permission": true, title: settings.blocked }}
+            options={permissionOptions}
+            onChange={(next) => {
+              if (settings.blocked || next === settings.mode) return;
+              if (
+                next === "bypassPermissions" &&
+                !window.confirm(
+                  cliKind === "codex"
+                    ? "Codex 会关闭沙箱，命令执行和文件修改不再逐次确认。电脑可能要求再次批准。是否继续？"
+                    : "Claude Code 会跳过工具操作确认。电脑可能要求再次批准。是否继续？",
+                )
+              )
+                return;
+              void settings.change({ mode: next as MobilePermissionMode });
+            }}
+          />
+          {!observing && !settings.models.length && !settings.modelsLoading && (
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={!!settings.blocked}
+              onClick={settings.refreshModels}
+            >
+              重新检测模型
+            </Button>
+          )}
+          <span className="text-xs text-muted-foreground" role="status">
+            {settings.blocked ??
+              (settings.modelsLoading ? "正在读取可用模型…" : "切换后从下一条消息开始生效。")}
+          </span>
+          {settings.error && settings.error !== settings.blocked && (
+            <span role="alert" className="text-xs text-destructive">
+              {settings.error}
+            </span>
+          )}
+        </div>
         {localFilePaths.length > 0 && (
           <div className="flex flex-wrap gap-1.5" data-cc-room-path-attachments="true">
             {localFilePaths.map((path) => (
@@ -685,7 +818,15 @@ export function CCConversationView({
           />
           <Button
             size="sm"
-            disabled={observing || sending || (!input.trim() && localFilePaths.length === 0)}
+            data-cc-room-send
+            disabled={
+              observing ||
+              sending ||
+              settings.switching ||
+              historyLoading ||
+              !!historyError ||
+              (!input.trim() && localFilePaths.length === 0)
+            }
             onClick={() => void send()}
           >
             发送

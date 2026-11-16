@@ -11,6 +11,7 @@ import type {
 } from "./session-discovery.js";
 import { externalSessionCwdEnabled, selectRecentStats } from "./session-discovery.js";
 import { codexUserText } from "./codex-user-text.js";
+import { parseCodexRecentHistory } from "./codex-session-history.js";
 
 export interface CodexSessionList {
   sessions: DiscoveredSession[];
@@ -19,7 +20,7 @@ export interface CodexSessionList {
 
 /** Interactive room lists must not run the synchronous rollout walk on the
  * host event loop. Read identities once for both the list and its total, then
- * read titles only for the selected, deduplicated threads. */
+ * read bounded title/count snapshots only for the selected, deduplicated threads. */
 export async function listCodexSessionsForCwds(
   cwds: readonly string[],
   codexHome = join(homedir(), ".codex"),
@@ -49,18 +50,17 @@ export async function listCodexSessionsForCwds(
   }
   const selected = selectRecentStats([...byThread.values()], opts);
   const sessions = await mapConcurrent(selected, async (session): Promise<DiscoveredSession> => {
-    let firstMessage = "";
+    let details: SessionDetails = { firstMessage: "" };
     try {
-      firstMessage = firstUserMessageFromPrefix(await readPrefixAsync(session.file, 1 << 20));
+      details = sessionDetailsFromPrefix(await readPrefixAsync(session.file, 1 << 20));
     } catch {
       // Retain the session identity if its title cannot be read.
     }
     return {
       sessionId: session.sessionId,
       cwd: session.cwd,
-      firstMessage,
+      ...details,
       lastModified: session.mtimeMs,
-      messageCount: 0,
     };
   });
   return { sessions, total: byThread.size };
@@ -104,12 +104,31 @@ async function mapConcurrent<T, R>(
   return results;
 }
 
-async function readPrefixAsync(file: string, maxBytes: number): Promise<string> {
+interface SessionPrefix {
+  text: string;
+  complete: boolean;
+}
+
+interface SessionDetails {
+  firstMessage: string;
+  messageCount?: number;
+}
+
+async function readPrefixAsync(file: string, maxBytes: number): Promise<SessionPrefix> {
   const handle = await open(file, "r");
   try {
-    const buffer = Buffer.alloc(maxBytes);
-    const { bytesRead } = await handle.read(buffer, 0, maxBytes, 0);
-    return buffer.toString("utf-8", 0, bytesRead);
+    // One lookahead byte distinguishes an exact-size snapshot from a prefix.
+    const buffer = Buffer.alloc(maxBytes + 1);
+    let total = 0;
+    while (total < buffer.length) {
+      const { bytesRead } = await handle.read(buffer, total, buffer.length - total, total);
+      if (bytesRead === 0) break;
+      total += bytesRead;
+    }
+    return {
+      text: buffer.toString("utf-8", 0, Math.min(total, maxBytes)),
+      complete: total <= maxBytes,
+    };
   } finally {
     await handle.close();
   }
@@ -202,9 +221,8 @@ export function discoverCodexSessionsForCwds(
     out.push({
       sessionId: meta.id,
       cwd: meta.cwd,
-      firstMessage: readFirstUserMessage(s.file),
+      ...readSessionDetails(s.file),
       lastModified: s.mtimeMs,
-      messageCount: 0, // not tracked for codex (would need a full scan); UI shows time + title.
     });
   }
   return out;
@@ -363,20 +381,56 @@ function parseSessionMeta(line: string): { id?: string; cwd?: string } | undefin
  * Reads a bounded prefix of the file rather than the whole thing.
  */
 function readFirstUserMessage(file: string, maxBytes = 1 << 20): string {
-  let chunk: string;
   try {
-    const fd = openSync(file, "r");
-    try {
-      const buf = Buffer.alloc(maxBytes);
-      const n = readSync(fd, buf, 0, maxBytes, 0);
-      chunk = buf.toString("utf-8", 0, n);
-    } finally {
-      closeSync(fd);
-    }
+    return firstUserMessageFromPrefix(readPrefix(file, maxBytes).text);
   } catch {
     return "";
   }
-  return firstUserMessageFromPrefix(chunk);
+}
+
+function readPrefix(file: string, maxBytes: number): SessionPrefix {
+  const fd = openSync(file, "r");
+  try {
+    const buffer = Buffer.alloc(maxBytes + 1);
+    let total = 0;
+    while (total < buffer.length) {
+      const n = readSync(fd, buffer, total, buffer.length - total, total);
+      if (n === 0) break;
+      total += n;
+    }
+    return {
+      text: buffer.toString("utf-8", 0, Math.min(total, maxBytes)),
+      complete: total <= maxBytes,
+    };
+  } finally {
+    closeSync(fd);
+  }
+}
+
+function readSessionDetails(file: string): SessionDetails {
+  try {
+    return sessionDetailsFromPrefix(readPrefix(file, 1 << 20));
+  } catch {
+    return { firstMessage: "" };
+  }
+}
+
+function sessionDetailsFromPrefix(prefix: SessionPrefix): SessionDetails {
+  const details: SessionDetails = { firstMessage: firstUserMessageFromPrefix(prefix.text) };
+  if (!prefix.complete) return details;
+  const lastLine = prefix.text.slice(prefix.text.lastIndexOf("\n") + 1).trim();
+  if (lastLine) {
+    try {
+      JSON.parse(lastLine);
+    } catch {
+      // A writer may still be appending a record even when this read reached EOF.
+      return details;
+    }
+  }
+  // Reuse the rendered history contract: event_msg mirrors, injected context
+  // and tool outputs do not inflate the count. Never scan past the title budget.
+  details.messageCount = parseCodexRecentHistory(prefix.text, 1).totalCount;
+  return details;
 }
 
 function firstUserMessageFromPrefix(chunk: string): string {

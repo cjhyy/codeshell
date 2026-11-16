@@ -1,15 +1,26 @@
 import type { UsageQuery, UsageSummary } from "@cjhyy/code-shell-core";
+import {
+  finishTimeline,
+  localOffsetAt,
+  mergeTimeRows,
+  planBuckets,
+  rangeWindowMs,
+  type UsageTimeline,
+  type UsageTimeRow,
+} from "./usageTimeline";
 
 type UsageIdentity = Pick<UsageSummary["byModel"][number], "provider" | "model" | "providerKind">;
 type UsageTotals = Pick<UsageSummary, (typeof fields)[number]>;
 
-export type UsageRange = "7d" | "30d" | "all";
+export type UsageRange = "24h" | "7d" | "30d" | "all";
 export interface UsageOverview {
   totals: UsageTotals;
   models: Array<UsageTotals & UsageIdentity>;
   partial: boolean;
   scannedReceipts: number;
   capturedAt: number;
+  /** Per-bucket rows behind the cache hit-rate chart. */
+  timeline: UsageTimeline;
 }
 
 const fields = [
@@ -39,7 +50,12 @@ export async function readUsageOverview(
   range: UsageRange,
   cancelled: () => boolean,
   capturedAt = Date.now(),
+  offsetAt = localOffsetAt,
 ): Promise<UsageOverview | undefined> {
+  const windowMs = rangeWindowMs(range);
+  const since = windowMs === undefined ? undefined : Math.max(0, capturedAt - windowMs);
+  const { bucketMs, queryBucketMs, offsetMs } = planBuckets(range, since, capturedAt, offsetAt);
+  const timeRows = new Map<string, UsageTimeRow>();
   const totals = emptyTotals();
   const models = new Map<string, UsageTotals & UsageIdentity>();
   const seen = new Set<string>();
@@ -53,16 +69,17 @@ export async function readUsageOverview(
     const summary = await read({
       scope: "store",
       until: capturedAt,
-      ...(range === "all"
-        ? {}
-        : { since: Math.max(0, capturedAt - (range === "7d" ? 7 : 30) * 86_400_000) }),
+      ...(since === undefined ? {} : { since }),
       limit: 10_000,
+      bucketMs: queryBucketMs,
+      bucketOffsetMs: offsetMs,
       ...(cursor ? { cursor } : {}),
     });
     if (cancelled()) return undefined;
     addTotals(totals, summary);
     scannedReceipts += summary.scannedReceipts;
     partial ||= summary.persistenceErrors > 0 || summary.invalidReceipts > 0;
+    mergeTimeRows(timeRows, summary.byTime ?? []);
     for (const model of summary.byModel) {
       const key = JSON.stringify([model.provider, model.model, model.providerKind]);
       let aggregate = models.get(key);
@@ -94,6 +111,14 @@ export async function readUsageOverview(
     partial: partial || !complete,
     scannedReceipts,
     capturedAt,
+    timeline: finishTimeline(timeRows, {
+      range,
+      bucketMs,
+      offsetMs,
+      offsetAt,
+      since,
+      until: capturedAt,
+    }),
   };
 }
 

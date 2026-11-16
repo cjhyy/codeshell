@@ -226,6 +226,7 @@ jobs:
               --path-ignore-patterns '**/renderer/credentials/CredentialsPage.test.tsx'
               --path-ignore-patterns '**/src/main/pet/pet-widget-menu.test.ts'
               --path-ignore-patterns '**/src/shared/mimi-companion.test.ts'
+              --path-ignore-patterns '**/renderer/activity/**'
           # rest is split in two only for wall time (470s as one shard). Together the two
           # path lists are the previous single list. The module losses seen when it was split
           # were not size: two suites bundled with an in-process Bun.build, which shares the
@@ -255,7 +256,7 @@ jobs:
             # The panels-only process later hit another native lifecycle failure at
             # 34 files. Bound every Panel group below; lint:test-shards checks exact
             # coverage and budgets while lifecycle diagnostics remain enabled.
-            ignore: "--path-ignore-patterns '**/server/src/panels/**' --path-ignore-patterns '**/server/src/account/**' --path-ignore-patterns '**/web/src/account/**' --path-ignore-patterns '**/web/app/WebsiteEntry.test.tsx' --path-ignore-patterns '**/web/app/admin-data.test.ts'"
+            ignore: "--path-ignore-patterns '**/server/src/panels/**' --path-ignore-patterns '**/server/src/account/**' --path-ignore-patterns '**/web/src/account/**' --path-ignore-patterns '**/web/app/WebsiteEntry.test.tsx' --path-ignore-patterns '**/web/app/website-devices.test.ts' --path-ignore-patterns '**/web/app/passkey-browser.test.ts' --path-ignore-patterns '**/web/app/admin-data.test.ts'"
           # Browser fixtures, not a Bun shard. The overlay and Web suites took 28 of the
           # desktop shard's 44 minutes (2026-10-22) and share nothing with its Bun tests,
           # so they run beside it instead of after it.
@@ -325,6 +326,9 @@ jobs:
           # Keep new presence suites in their own bounded process; the general Desktop shard is full.
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/pet/mimi-presence-controller.test.ts packages/desktop/src/main/pet/mimi-presence-state.test.ts packages/desktop/src/main/pet/mimi-presence-ipc.test.ts packages/desktop/src/main/pet/pet-widget-surface.test.ts packages/desktop/src/renderer/app/useMimiPresence.test.tsx
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/pet/createPetTargetNavigator.test.ts
+          # Activity pages (usage history, cache chart, model traces) run as one bounded process;
+          # the general Desktop shard is at its budget.
+          node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/activity
           # Host turn-queue and CLI room-mode lifecycle suites (real RoomManager with mock
           # CLIs) run as one bounded process; the general Desktop shard is at its budget.
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/mobile-remote/turn-queue-host.test.ts packages/desktop/src/main/cc-room/room-mode-authority.test.ts packages/desktop/src/main/cc-room/room-mode-host-boundary.test.ts
@@ -354,7 +358,7 @@ jobs:
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/cloud-management.test.ts
       - name: test account policy and native credential lifecycles
         if: matrix.shard == 'rest-server'
-        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/server/src/account packages/web/src/account packages/web/app/WebsiteEntry.test.tsx packages/web/app/admin-data.test.ts
+        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/server/src/account packages/web/src/account packages/web/app/WebsiteEntry.test.tsx packages/web/app/website-devices.test.ts packages/web/app/passkey-browser.test.ts packages/web/app/admin-data.test.ts
       - name: test Desktop script suites with their own runners
         if: matrix.shard == 'desktop'
         run: |
@@ -370,11 +374,14 @@ jobs:
         run: |
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-account-features-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-desktop-login-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-passkeys-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-website-destinations-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-website-onboarding-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-admin-console-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-file-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-latest-messages.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-sidebar-navigation.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-remote-session-navigation-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-workbench-back-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-workbench-back-browser.mjs --development
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-project-workbench-back-browser.mjs
@@ -391,6 +398,7 @@ jobs:
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-mobile-workbench-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-mobile-workbench-browser.mjs --development
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-remote-queue-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-cli-session-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-history-details-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-compact-tool-progress-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-compact-tool-progress-browser.mjs --development

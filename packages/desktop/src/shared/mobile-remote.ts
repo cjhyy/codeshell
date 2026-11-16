@@ -34,8 +34,29 @@ export interface MobilePermissionModeSnapshotEntry {
 /** ccRoom:openSession result: the mode Main actually started the CLI with. */
 export interface CcRoomOpenResult {
   roomId: string;
+  /** Canonical directory proven by Main's room authority. */
+  cwd?: string;
   status: "running" | "missing" | "observing";
   permissionMode?: MobilePermissionMode;
+  /** Actual Host-applied override; null restores the CLI's own default. */
+  modelKey?: string | null;
+}
+
+export interface CcRoomSettingsRequest {
+  roomId: string;
+  /** Omit to preserve the model when changing permissions. */
+  modelKey?: string | null;
+}
+
+export interface CcRoomSettingsState {
+  roomId: string;
+  sessionId: string;
+  cwd: string;
+  kind: "claude-code" | "codex";
+  permissionMode: MobilePermissionMode;
+  modelKey: string | null;
+  observing: boolean;
+  busyReason?: "switching" | "retiring" | "turn" | "approval" | "queued";
 }
 
 export interface MobileRemoteApi {

@@ -459,6 +459,14 @@ describe("AgentServer query wire contracts before registry extraction", () => {
       ),
     ).toEqual(queryResult("usage", { scope: "session", requests: 3 }));
     expect(calls).toEqual([bounds]);
+    await queryWire(
+      { type: "usage", ...bounds, bucketMs: 3_600_000, bucketOffsetMs: 28_800_000 },
+      {
+        sessionExistsOnDisk: () => true,
+        getUsageSummary: (options: unknown) => calls.push(options),
+      },
+    );
+    expect(calls[1]).toEqual({ ...bounds, bucketMs: 3_600_000, bucketOffsetMs: 28_800_000 });
     expect(
       await queryWire(
         { type: "usage", sessionId: "missing" },

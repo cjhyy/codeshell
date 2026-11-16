@@ -3,6 +3,20 @@ import type { ConnectionOptions } from "node:tls";
 import { isRelayOrigin } from "../remote-relay/protocol.js";
 
 function accountErrorMessage(status: number, path?: string, code?: unknown): string {
+  if (path?.startsWith("/api/v1/account/remote-access/")) {
+    if (code === "passkey_required") return "请在账号网页设置 Passkey，然后重新连接电脑。";
+    if (code === "remote_access_denied") return "已取消远程访问验证；没有连接或发送任务。";
+    if (
+      [
+        "remote_access_expired",
+        "invalid_remote_access_receipt",
+        "remote_authorization_required",
+      ].includes(String(code))
+    )
+      return "远程访问验证已失效，请重新连接并使用 Passkey 确认。";
+    if (status === 404 || status === 503)
+      return "账号服务尚未启用 Passkey 远程验证，请更新服务后重试。";
+  }
   if (status === 403 && code === "feature_not_entitled")
     return "此账号功能当前不可用，请刷新功能状态。";
   if (path === "/api/v1/account/profile") {

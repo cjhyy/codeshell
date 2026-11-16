@@ -7,11 +7,7 @@ import { AccountSessionProvider, useAccountSession } from "./AccountSessionProvi
 import { AccountSettings } from "./AccountSettings.js";
 import { AdminConsole } from "./AdminConsole.js";
 import { WebsiteLogin, WebsiteRegistration } from "./WebsiteLogin.js";
-import {
-  AccountFeatureEntry,
-  accountFeatureMessage,
-  useAccountFeature,
-} from "./useAccountFeature.js";
+import { accountFeatureMessage, useAccountFeature } from "./useAccountFeature.js";
 import {
   detectWebsiteCloud,
   logoutWebsiteCloudSession,
@@ -26,6 +22,7 @@ import {
   safeWebsiteReturn,
   websiteAuthUrl,
   websiteRouteUrl,
+  websiteCloudSelected,
   type WebsiteRoute,
 } from "./website-routes.js";
 import type { CloudManagementSession } from "./auth.js";
@@ -33,7 +30,9 @@ import "./website.css";
 import { withAccountCookieLock } from "./account-cookie-lock.js";
 import { parseAccountSession } from "./account-api.js";
 import { DesktopLoginPage, desktopLoginRequest } from "./DesktopLogin.js";
+import { DesktopRemoteAccessPage, desktopRemoteAccessRequest } from "./DesktopRemoteAccess.js";
 import { WebsiteHome } from "./WebsiteHome.js";
+import { WebsiteDestinations } from "./WebsiteDestinations.js";
 import { validProjectId } from "./api-context.js";
 import type { WorkbenchNavigation } from "./workbench-types.js";
 
@@ -89,6 +88,7 @@ export function WebsiteEntry({ setupToken }: { setupToken: string }) {
   const url = new URL(window.location.href);
   const registration = isRegistrationRoute(url);
   const desktopLogin = url.pathname === "/desktop-login" || url.pathname === "/desktop-login/";
+  const desktopRemote = url.pathname === "/remote-access" || url.pathname === "/remote-access/";
   const publicWebsite = isPublicWebsiteOrigin(url) && !setupToken;
   const publicHome = publicWebsite && url.pathname === "/";
   const publicAuth =
@@ -98,7 +98,15 @@ export function WebsiteEntry({ setupToken }: { setupToken: string }) {
   const [error, setError] = React.useState("");
   const [retry, setRetry] = React.useState(0);
   React.useEffect(() => {
-    if (registration || desktopLogin || publicHome || publicAuth || publicAccountPage) return;
+    if (
+      registration ||
+      desktopLogin ||
+      desktopRemote ||
+      publicHome ||
+      publicAuth ||
+      publicAccountPage
+    )
+      return;
     const controller = new AbortController();
     setError("");
     void detectWebsiteCloud(globalThis.fetch, controller.signal)
@@ -110,7 +118,7 @@ export function WebsiteEntry({ setupToken }: { setupToken: string }) {
           setError(cause instanceof Error ? cause.message : "无法连接工作台，请重试。");
       });
     return () => controller.abort();
-  }, [retry, registration, desktopLogin, publicHome, publicAuth, publicAccountPage]);
+  }, [retry, registration, desktopLogin, desktopRemote, publicHome, publicAuth, publicAccountPage]);
   if (publicHome) {
     // Older desktop/project links explicitly selected a project at /. Keep
     // those selections usable without turning an ordinary homepage visit into login.
@@ -128,6 +136,12 @@ export function WebsiteEntry({ setupToken }: { setupToken: string }) {
     return (
       <AccountSessionProvider>
         <DesktopLoginPage request={desktopLoginRequest(url)} />
+      </AccountSessionProvider>
+    );
+  if (desktopRemote)
+    return (
+      <AccountSessionProvider>
+        <DesktopRemoteAccessPage request={desktopRemoteAccessRequest(url)} />
       </AccountSessionProvider>
     );
   if (registration)
@@ -173,10 +187,12 @@ export function WebsiteEntry({ setupToken }: { setupToken: string }) {
 function WebsiteAccountMenu({
   go,
   logout,
+  chooseDestination,
   goHome = () => window.location.assign("/"),
 }: {
   go: (route: WebsiteRoute) => void;
   logout: () => void;
+  chooseDestination: () => void;
   goHome?: () => void;
 }) {
   const account = useAccountSession();
@@ -189,9 +205,7 @@ function WebsiteAccountMenu({
       <div className="website-account-popover">
         <strong>{user?.displayName}</strong>
         <small>@{user?.username}</small>
-        <AccountFeatureEntry id="relay.phone" onClick={() => window.location.assign("/devices")}>
-          我的电脑
-        </AccountFeatureEntry>
+        <button onClick={chooseDestination}>切换云端或电脑</button>
         <button
           onClick={(event) => {
             event.currentTarget.closest("details")?.removeAttribute("open");
@@ -234,23 +248,34 @@ function WebsiteRuntimeAccountMenu({
   register,
   go,
   logout,
+  chooseDestination,
 }: {
   navigation: WorkbenchNavigation;
   register: (guard: WorkbenchNavigation["leaveWorkspace"] | null) => void;
   go: (route: WebsiteRoute) => void;
   logout: () => void;
+  chooseDestination: () => void;
 }) {
   React.useLayoutEffect(() => {
     register(navigation.leaveWorkspace);
     return () => register(null);
   }, [navigation.leaveWorkspace, register]);
-  return <WebsiteAccountMenu go={go} logout={() => navigation.leaveWorkspace(logout)} />;
+  return (
+    <WebsiteAccountMenu
+      go={go}
+      logout={() => navigation.leaveWorkspace(logout)}
+      chooseDestination={() => navigation.leaveWorkspace(chooseDestination)}
+    />
+  );
 }
 
 function WebsiteShell({ capability }: { capability?: WebsiteCloudCapability }) {
   const account = useAccountSession();
   const cloudFeature = useAccountFeature("cloud.projects");
   const [route, setRoute] = React.useState(() => parseWebsiteRoute(new URL(window.location.href)));
+  const [cloudSelected, setCloudSelected] = React.useState(() =>
+    websiteCloudSelected(new URL(window.location.href)),
+  );
   const [cloudGrant, setCloudGrant] = React.useState<{
     session: CloudManagementSession;
     identity: string;
@@ -280,23 +305,38 @@ function WebsiteShell({ capability }: { capability?: WebsiteCloudCapability }) {
   // Once mounted, route-only navigation must not cancel an in-flight renewal:
   // cancellation after its cookie write would revoke the still-active workspace.
   const cloudAdmissionNeeded =
-    route.kind === "workbench" ||
-    !!(
-      cloudSession &&
-      cloudFeature.state === "ready" &&
-      cloudSession.audience === target?.cloudOrigin &&
-      cloudSession.accountOrigin === target?.accountOrigin &&
-      cloudSession.installationId === target?.installationId
-    );
+    cloudSelected &&
+    (route.kind === "workbench" ||
+      !!(
+        cloudSession &&
+        cloudFeature.state === "ready" &&
+        cloudSession.audience === target?.cloudOrigin &&
+        cloudSession.accountOrigin === target?.accountOrigin &&
+        cloudSession.installationId === target?.installationId
+      ));
   const go = (next: WebsiteRoute) => {
     window.history.pushState(null, "", websiteRouteUrl(next, new URL(window.location.href)));
     setRoute(next);
     account.clearError();
     if (account.oauthPending) account.cancelGithub();
   };
+  const selectDestination = (cloud: boolean) => {
+    const current = new URL(window.location.href);
+    const next = new URL(websiteRouteUrl({ kind: "workbench" }, current), current);
+    next.searchParams.set("target", cloud ? "cloud" : "choose");
+    window.history.pushState(null, "", next.pathname + next.search);
+    setCloudSelected(cloud);
+    setRoute({ kind: "workbench" });
+    account.clearError();
+  };
   React.useEffect(() => {
     const pop = () => {
-      setRoute(parseWebsiteRoute(new URL(window.location.href)));
+      const url = new URL(window.location.href);
+      const next = parseWebsiteRoute(url);
+      setRoute(next);
+      // Account/admin routes keep the selected workspace and its renewal alive.
+      // Only returning to a workbench URL changes the execution destination.
+      if (next.kind === "workbench") setCloudSelected(websiteCloudSelected(url));
       if (account.oauthPending) account.cancelGithub();
     };
     window.addEventListener("popstate", pop);
@@ -310,6 +350,7 @@ function WebsiteShell({ capability }: { capability?: WebsiteCloudCapability }) {
     // background requests cannot expire and unmount its drafts or leave guard.
     const previous = cloudGrantRef.current;
     const retainedGrant =
+      cloudSelected &&
       previous?.identity === identity &&
       cloudFeature.state === "ready" &&
       previous.session.audience === target?.cloudOrigin &&
@@ -321,7 +362,7 @@ function WebsiteShell({ capability }: { capability?: WebsiteCloudCapability }) {
     if (!cloudAdmissionNeeded) return () => controller.abort();
     setCloudError("");
     setConnecting(false);
-    if (!identity || !accountId) return () => controller.abort();
+    if (!identity || !accountId || !cloudSelected) return () => controller.abort();
     if (cloudFeature.state !== "ready") return () => controller.abort();
     if (!target) {
       setCloudError("当前账号尚未分配云端环境。你仍可管理账号设置。");
@@ -426,6 +467,7 @@ function WebsiteShell({ capability }: { capability?: WebsiteCloudCapability }) {
     account.request,
     cloudFeature.state,
     cloudFeature.params?.cloudOrigin,
+    cloudSelected,
     attempt,
   ]);
 
@@ -454,18 +496,31 @@ function WebsiteShell({ capability }: { capability?: WebsiteCloudCapability }) {
     ) : (
       <WebsiteLogin />
     );
-  const menu = <WebsiteAccountMenu go={go} logout={() => leaveWorkspace(logout)} />;
+  const menu = (
+    <WebsiteAccountMenu
+      go={go}
+      logout={() => leaveWorkspace(logout)}
+      chooseDestination={() => leaveWorkspace(() => selectDestination(false))}
+    />
+  );
   const settings = route.kind !== "workbench";
   const administrator = account.session.account?.role === "admin";
   return (
     <EnvironmentApiContext.Provider value="/api/v1/cloud-browser/environment">
-      {cloudSession && cloudFeature.state === "ready" ? (
+      {!settings && !cloudSelected ? (
+        <WebsiteDestinations
+          key={identity}
+          accountControl={menu}
+          onCloud={() => selectDestination(true)}
+        />
+      ) : cloudSession && cloudFeature.state === "ready" ? (
         <div hidden={settings} className="website-workbench-root">
           <ProjectsGate
             key={identity}
             allowLegacy={false}
             autoEnterSingle
             startCreatedProject
+            onSkipSetup={() => selectDestination(false)}
             canRequest={() => account.workspaceActive(identity!)}
             onAuthLost={() => {
               setCloudGrant(null);
@@ -494,6 +549,7 @@ function WebsiteShell({ capability }: { capability?: WebsiteCloudCapability }) {
                     register={registerLeaveGuard}
                     go={go}
                     logout={logout}
+                    chooseDestination={() => selectDestination(false)}
                   />
                 )}
               />
@@ -535,12 +591,9 @@ function WebsiteShell({ capability }: { capability?: WebsiteCloudCapability }) {
                 重试连接账号服务
               </button>
             ) : null}
-            <AccountFeatureEntry
-              id="relay.phone"
-              onClick={() => window.location.assign("/devices")}
-            >
-              我的电脑
-            </AccountFeatureEntry>
+            <button className="website-button" onClick={() => selectDestination(false)}>
+              选择云端或其他电脑
+            </button>
             <button className="ghost" onClick={() => go({ kind: "account", section: "profile" })}>
               账号设置
             </button>

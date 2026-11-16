@@ -114,9 +114,11 @@ export function CcSessionList({
                     {s.firstMessage || s.sessionId}
                   </span>
                   <div className="flex w-full min-w-0 items-center gap-2 text-[11px] text-muted-foreground">
-                    <span className="min-w-0 flex-1 truncate">
-                      {t("mobile.cc.messageCount", { count: s.messageCount })}
-                    </span>
+                    {s.messageCount !== undefined && (
+                      <span className="min-w-0 flex-1 truncate">
+                        {t("mobile.cc.messageCount", { count: s.messageCount })}
+                      </span>
+                    )}
                     <span className="ml-auto shrink-0">
                       {relativeTime(s.lastModified, Date.now(), lang)}
                     </span>

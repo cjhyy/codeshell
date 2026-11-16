@@ -984,6 +984,7 @@ const mobileUploads = new MobileUploadService({
 });
 const mobileRemote = new RemoteHostManager({
   nativeModelSelection: true,
+  ccRoomModelSelection: true,
   outputJournal: true,
   legacyBasePages: true,
   outputJournalPageFrames: 2048,
@@ -1227,6 +1228,7 @@ const roomManager = new RoomManager({
           command: "codex",
           cwd: room.cwd,
           permissionMode: room.permissionMode,
+          model: parseExternalRuntimeModelKey(room.modelKey)?.model,
           resumeThreadId: room.claudeSessionId,
           onEvent,
           // Persist codex's thread id so the next turn / app restart resumes it.
@@ -1236,6 +1238,7 @@ const roomManager = new RoomManager({
           command: "claude",
           cwd: room.cwd,
           permissionMode: room.permissionMode,
+          model: parseExternalRuntimeModelKey(room.modelKey)?.model,
           resumeSessionId: room.claudeSessionId,
           appendSystemPrompt: CC_COST_GUARD_PROMPT,
           onEvent,
@@ -1270,7 +1273,11 @@ const transcriptSubscriptions = createRoomTranscriptSubscriptions({
   broadcast: (event) => mobileRemote.broadcast(event),
   windows: () => BrowserWindow.getAllWindows(),
 });
-const roomModes = createDesktopRoomModeAuthority({ roomManager, approvalBridge });
+const roomModes = createDesktopRoomModeAuthority({
+  roomManager,
+  approvalBridge,
+  externalRuntimeModels: () => externalRuntimeModelService.list(),
+});
 
 // Routes authenticated mobile events into the same run/permission path the
 // renderer uses (chat/approvals/sessions/rooms/cc-rooms). Extracted glue —

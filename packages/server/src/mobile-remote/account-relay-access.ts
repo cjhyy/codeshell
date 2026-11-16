@@ -2,7 +2,32 @@ import { createHash, randomBytes } from "node:crypto";
 import type { IncomingMessage } from "node:http";
 import type { TrustedDeviceStore } from "./trusted-device-store.js";
 
+export const ACCOUNT_RELAY_COOKIE = "__Host-cs_host_access";
+
+export function hasAccountRelayCookie(request: IncomingMessage): boolean {
+  return (request.headers.cookie ?? "")
+    .split(";")
+    .some((part) => part.trim().startsWith(`${ACCOUNT_RELAY_COOKIE}=`));
+}
+
+function requestToken(request: IncomingMessage): string | undefined {
+  const cookies = (request.headers.cookie ?? "")
+    .split(";")
+    .map((part) => part.trim())
+    .filter((part) => part.startsWith(`${ACCOUNT_RELAY_COOKIE}=`));
+  const cookie =
+    cookies.length === 1 ? cookies[0]!.slice(ACCOUNT_RELAY_COOKIE.length + 1) : undefined;
+  const header = request.headers["x-codeshell-host-access"];
+  if (cookies.length > 1 || (header !== undefined && cookie !== undefined && header !== cookie))
+    return;
+  const token = header ?? cookie;
+  return typeof token === "string" && /^[A-Za-z0-9_-]{43}$/.test(token) ? token : undefined;
+}
+
 export interface AccountRelayBinding {
+  authorizationKind: "passkey-remote";
+  sourceKind: "browser" | "device";
+  sourceHostId?: string;
   authorizationId: string;
   accountId: string;
   rootSessionId: string;
@@ -23,6 +48,7 @@ export interface AccountRelayAccessProvider {
   hostId: string;
   environmentId: string;
   accountId?: string;
+  accountOrigin?: string;
   redeem: (handoff: string) => Promise<AccountRelayBinding>;
   listProjects: () => Promise<AccountRelayProject[]>;
 }
@@ -30,6 +56,7 @@ export interface AccountRelayAccessProvider {
 interface AccountAccess {
   provider: AccountRelayAccessProvider;
   deviceId: string;
+  secretHash: string;
   expiresAt: number;
   timer: ReturnType<typeof setTimeout>;
 }
@@ -59,6 +86,17 @@ export class AccountRelayAccessGate {
 
   get available(): boolean {
     return !!this.provider;
+  }
+
+  get accountEntryUrl(): string | undefined {
+    try {
+      const origin = this.provider?.accountOrigin;
+      if (origin && new URL(origin).origin === origin && origin.startsWith("https://"))
+        return `${origin}/app`;
+    } catch {
+      /* An invalid provider address must never become browser navigation. */
+    }
+    return;
   }
 
   clear(): void {
@@ -109,6 +147,13 @@ export class AccountRelayAccessGate {
         this.generation !== generation ||
         !binding ||
         typeof binding !== "object" ||
+        binding.authorizationKind !== "passkey-remote" ||
+        !["browser", "device"].includes(binding.sourceKind) ||
+        (binding.sourceKind === "device" &&
+          (typeof binding.sourceHostId !== "string" ||
+            !binding.sourceHostId ||
+            binding.sourceHostId.length > 512 ||
+            binding.sourceHostId.includes("\0"))) ||
         ![
           binding.authorizationId,
           binding.accountId,
@@ -144,6 +189,7 @@ export class AccountRelayAccessGate {
       this.grants.set(hostAccessToken, {
         provider,
         deviceId: device.id,
+        secretHash,
         expiresAt: binding.expiresAt,
         timer,
       });
@@ -162,8 +208,8 @@ export class AccountRelayAccessGate {
   }
 
   capture(request: IncomingMessage): CapturedAccountRelayAccess | undefined {
-    const token = request.headers["x-codeshell-host-access"];
-    if (typeof token !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(token)) return;
+    const token = requestToken(request);
+    if (!token) return;
     const grant = this.grants.get(token);
     if (!grant) return;
     const isAuthorized = () =>
@@ -176,6 +222,28 @@ export class AccountRelayAccessGate {
       return;
     }
     return { deviceId: grant.deviceId, isAuthorized };
+  }
+
+  /** A browser restores only this short-lived identity, never a durable pairing. */
+  browserCredential(request: IncomingMessage) {
+    if (!hasAccountRelayCookie(request)) return;
+    const access = this.capture(request);
+    const token = requestToken(request);
+    const grant = token && this.grants.get(token);
+    if (!access || !grant || !access.isAuthorized()) return;
+    return {
+      deviceId: grant.deviceId,
+      secretHash: grant.secretHash,
+      expiresAt: grant.expiresAt,
+      hostId: grant.provider.hostId,
+      environmentId: grant.provider.environmentId,
+      accountEntryUrl: this.accountEntryUrl,
+    };
+  }
+
+  revokeRequest(request: IncomingMessage): void {
+    const token = requestToken(request);
+    if (token && this.capture(request)) this.retire(token);
   }
 
   async projects(access: CapturedAccountRelayAccess) {

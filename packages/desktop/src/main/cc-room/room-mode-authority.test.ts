@@ -36,6 +36,7 @@ function fixture(
     trusted?: unknown[];
     decide?: (approval: RoomModeApproval, signal: AbortSignal) => Promise<Decision>;
     approvalTimeoutMs?: number;
+    validateModel?: (key: string, kind: string) => Promise<void>;
   } = {},
 ) {
   const root = mkdtempSync(join(tmpdir(), "room-mode-authority-"));
@@ -98,6 +99,7 @@ function fixture(
   });
   const authority: RoomModeAuthority = new RoomModeAuthority({
     roomManager: manager,
+    validateModel: options.validateModel,
     requireProjectPath: async (cwd) => {
       await pathGate?.();
       if (!projectAuthorized) throw new Error("project path is not registered with CodeShell");
@@ -537,4 +539,44 @@ describe("RoomModeAuthority", () => {
       cwd: f.project,
     });
   });
+});
+
+test("model changes validate the Host catalog and re-check authorization after the old process exits", async () => {
+  const f = fixture({
+    validateModel: async (key, kind) => {
+      if (kind !== "codex" || key !== "codex/fixture-model") throw new Error("model not available");
+    },
+  });
+  const room = await f.open("acceptEdits", "codex");
+  const input = {
+    roomId: room.roomId,
+    sessionId: "thread-1",
+    cwd: f.project,
+    kind: "codex" as const,
+    mode: "bypassPermissions" as const,
+    modelKey: "codex/fixture-model",
+    requester: f.requester(),
+  };
+  await expect(f.authority.openSession({ ...input, modelKey: "codex/unknown" })).rejects.toThrow(
+    "model not available",
+  );
+  await expect(
+    f.authority.openSession({ ...input, modelKey: "claude-code/sonnet" }),
+  ).rejects.toThrow("model not available");
+  expect(f.starts).toHaveLength(1);
+  const changed = await f.authority.openSession(input);
+  expect(changed).toMatchObject({
+    mode: "acceptEdits",
+    modelKey: "codex/fixture-model",
+    changed: true,
+  });
+  expect(f.approvals).toHaveLength(0);
+  f.holdExit();
+  const pending = f.authority.openSession({ ...input, modelKey: null });
+  await until(f.exitWaiting);
+  f.setOnline(false);
+  f.releaseExit(true);
+  await expect(pending).rejects.toThrow("连接已断开");
+  expect(f.manager.getRoom(room.roomId)?.modelKey).toBe("codex/fixture-model");
+  expect(f.starts).toHaveLength(2);
 });

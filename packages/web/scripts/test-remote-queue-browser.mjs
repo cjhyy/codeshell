@@ -17,7 +17,11 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const repo = fileURLToPath(new URL("../../..", import.meta.url));
+const sourceIndex = process.argv.indexOf("--source-repo");
+const repo =
+  sourceIndex < 0
+    ? fileURLToPath(new URL("../../..", import.meta.url))
+    : path.resolve(process.argv[sourceIndex + 1]);
 const require = createRequire(path.join(repo, "packages/desktop/package.json"));
 const { build } = require("esbuild");
 const { chromium } = require("playwright");
@@ -31,7 +35,7 @@ await mkdir(output, { recursive: true });
 
 const source = `
 import React from 'react';import{createRoot}from'react-dom/client';
-import{Workbench}from'./Workbench';import{DesktopChatControls}from'./DesktopControls';import{DesktopModelPicker}from'./DesktopModelPicker';
+import{Workbench}from'./Workbench';import{DesktopChatControls,DesktopCliSessionActions}from'./DesktopControls';import{DesktopModelPicker}from'./DesktopModelPicker';import{DesktopCliModelPicker}from'./DesktopCliModelPicker';
 const noop=()=>{};window.actions=[];
 const code='const value = '+JSON.stringify('x'.repeat(220))+';\\nconsole.log(value.length);';
 const long='这是一段较长的说明文字，用来检查手机上消息的阅读宽度、行高与换行是否舒适。'.repeat(3);
@@ -54,10 +58,11 @@ function Fixture(){
  const paused=state.scene==='paused'?'stopped':state.scene==='failed-running'?'failed':undefined;
  const queueEntries=state.scene==='empty'||state.scene==='idle'?[]:entries(paused);
  const queueState={target:state.room?{kind:'room',roomId:'room-1'}:{kind:'session',sessionId:'s-1'},epoch:'e',revision:1,...(paused?{paused}:{}),entries:queueEntries};
- const app={status:'online',sessions:[],activeSessionId:'s-1',turnQueueSupported:true,turnQueue:queueState,setCcRoomPermissionMode:noop,permissionMode:'default',setPermissionMode:noop,activeRoomId:state.room?'room-1':undefined,activeRoom:state.room?{id:'room-1',name:'Claude Code · repo',cwd:'/repo',kind:'claude-code',permissionMode:'default',open:true,observing:false}:undefined,leaveRoom:noop,outputHistoryFailed:false};
+ const app={status:'online',sessions:[],activeSessionId:'s-1',chat:{run:running?'running':'idle'},approvals:[],loading:{roomHistory:false,sessionHistory:false,rooms:false},ccRoomModelSelection:true,setCcRoomModel:noop,runtimeModels:[{key:'claude-code/owned',kind:'claude-code',provider:'claude-code',label:'Owned Claude model'}],turnQueueSupported:true,turnQueue:queueState,setCcRoomPermissionMode:noop,permissionMode:'default',setPermissionMode:noop,activeRoomId:state.room?'room-1':undefined,activeRoom:state.room?{id:'room-1',name:'Claude Code · repo',cwd:'/repo',kind:'claude-code',permissionMode:'default',open:true,observing:false}:undefined,leaveRoom:noop,outputHistoryFailed:false};
  const controller={panelSessionId:undefined,host:'desktop',workspaceApi:true,connection:'open',activeId:'s-1',chat:{items:state.scene==='empty'?[]:items,run:running?'running':'idle'},sessions:[],workspaceCwd:'/repo',workspaceName:'repo',workspaceKey:'repo',title:'移动端布局检查',configuration:null,configurationVersion:0,sessionsVersion:0,draft:state.draft,files:[],uploading:false,uploadBusy:false,hasUnsent:false,uncertain:false,running,localDrafts:[],approvals:[],approvalCount:()=>0,approvalContent:null,error:state.scene==='failed-running'?'队首消息未执行：请选择有效的外部运行时模型。':'',clearError:noop,setDraft:draft=>setState(current=>({...current,draft})),removeFile:noop,selectSession:noop,newSession:noop,send:()=>{window.actions.push(['send',state.draft]);setState(current=>({...current,draft:''}));return true},stop:()=>window.actions.push(['stop']),addFiles:noop,cameraAttachments:true,refreshSessions:noop,refreshConfiguration:noop,onAuthLost:noop,
   composerControls:<DesktopChatControls app={app}/>,
-  modelSelector:state.room?undefined:<DesktopModelPicker models={[]} nativeChoices={[]} value='' defaultLabel='默认模型' disabled={running||queueEntries.length>0} onRefresh={noop} onChange={noop}/>,
+  chatControls:state.room?<DesktopCliSessionActions app={app}/>:undefined,
+  modelSelector:state.room?<DesktopCliModelPicker app={app}/>:<DesktopModelPicker models={[]} nativeChoices={[]} value='' defaultLabel='默认模型' disabled={running||queueEntries.length>0} onRefresh={noop} onChange={noop}/>,
   statusBadges:state.room?[{label:'Claude Code CLI',tone:'accent'}]:undefined,
   turnQueue:{canQueue:true,state:queueState,online:true,currentPermissionMode:'default',cancel:id=>window.actions.push(['cancel',id]),retry:id=>window.actions.push(['retry',id]),resume:()=>window.actions.push(['resume']),clear:()=>window.actions.push(['clear'])}};
  return <Workbench controller={controller}/>;

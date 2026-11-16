@@ -241,7 +241,7 @@ test("anonymous administrator visits preserve the safe login destination", async
 });
 
 test("a mounted workspace continues renewing while admin and account pages retain its draft", async () => {
-  const view = await mount("https://codeshell.site/app", "cloud", {
+  const view = await mount("https://codeshell.site/app?target=cloud", "cloud", {
     role: "admin",
     cloudSessionMs: 31000,
   });
@@ -283,7 +283,7 @@ test("a mounted workspace continues renewing while admin and account pages retai
 });
 
 test("navigation during a delayed Cloud renewal does not revoke the mounted workspace", async () => {
-  const view = await mount("https://codeshell.site/app", "cloud", {
+  const view = await mount("https://codeshell.site/app?target=cloud", "cloud", {
     role: "admin",
     cloudSessionMs: 31000,
   });
@@ -331,4 +331,34 @@ test("navigation during a delayed Cloud renewal does not revoke the mounted work
   } finally {
     release();
   }
+});
+
+test("choosing another destination retires the Cloud workspace before account navigation", async () => {
+  const view = await mount("https://codeshell.site/app?target=cloud", "cloud", {
+    role: "admin",
+    cloudSessionMs: 31000,
+  });
+  const projectInput = () =>
+    all(view.container).find(
+      (node) => node.tagName === "INPUT" && props(node)?.placeholder === "例如：我的第一个工作区",
+    );
+  expect(projectInput()).toBeDefined();
+  const admissionCount = view.calls.filter(
+    (path) => path === "/api/v1/cloud-browser/session",
+  ).length;
+  for (const pathname of ["/app?target=choose", "/admin"]) {
+    await act(async () => {
+      window.location.href = `https://codeshell.site${pathname}`;
+      window.dispatchEvent({ type: "popstate" } as Event);
+      await flushMicrotasks();
+    });
+    expect(projectInput()).toBeUndefined();
+  }
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 1100));
+    await flushMicrotasks();
+  });
+  expect(view.calls.filter((path) => path === "/api/v1/cloud-browser/session").length).toBe(
+    admissionCount,
+  );
 });

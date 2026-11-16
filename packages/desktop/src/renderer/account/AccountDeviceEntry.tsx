@@ -16,6 +16,7 @@ export function AccountDeviceEntry({
       feature={feature}
       label={t("accountFeatures.devices")}
       onSignIn={onSignIn}
+      onPending={onOpen}
       className="mb-1 h-auto w-full flex-wrap justify-start"
     >
       <Button variant="ghost" className="mb-1 w-full justify-start" onClick={onOpen}>
