@@ -127,6 +127,7 @@ function CliRoomBrowser({
     roomId: string;
     sessionId: string;
     mode: string;
+    modelKey?: string | null;
     cwd: string;
     cliKind: CliKind;
     status: "observing" | "running";
@@ -153,8 +154,9 @@ function CliRoomBrowser({
     () =>
       window.codeshell.ccRoom.onRoomState?.((room) =>
         setConv((current) =>
-          current?.roomId === room.id && current.mode !== room.permissionMode
-            ? { ...current, mode: room.permissionMode }
+          current?.roomId === room.id &&
+          (current.mode !== room.permissionMode || current.modelKey !== room.modelKey)
+            ? { ...current, mode: room.permissionMode, modelKey: room.modelKey }
             : current,
         ),
       ),
@@ -296,7 +298,13 @@ function CliRoomBrowser({
       openingRequestRef.current = request;
       setOpening(true);
       try {
-        const { roomId, status, permissionMode } = await window.codeshell.ccRoom.openSession(
+        const {
+          roomId,
+          status,
+          permissionMode,
+          modelKey,
+          cwd: canonicalCwd,
+        } = await window.codeshell.ccRoom.openSession(
           picking.sessionId,
           picking.cwd,
           mode,
@@ -309,7 +317,8 @@ function CliRoomBrowser({
           sessionId: picking.sessionId,
           // The mode Main actually started the CLI with, not just the request.
           mode: permissionMode ?? mode,
-          cwd: picking.cwd,
+          modelKey,
+          cwd: canonicalCwd ?? picking.cwd,
           cliKind,
           status: status === "observing" ? "observing" : "running",
         });
@@ -423,6 +432,14 @@ function CliRoomBrowser({
         cwd={conv.cwd}
         sessionId={conv.sessionId}
         mode={conv.mode}
+        modelKey={conv.modelKey}
+        onSettingsApplied={(settings) =>
+          setConv((current) =>
+            current?.roomId === conv.roomId
+              ? { ...current, mode: settings.permissionMode, modelKey: settings.modelKey }
+              : current,
+          )
+        }
         cliKind={conv.cliKind}
         cliLabel={CLI_LABEL[conv.cliKind]}
         active={active}

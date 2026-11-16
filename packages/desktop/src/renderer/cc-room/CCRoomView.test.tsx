@@ -93,7 +93,12 @@ describe("CCRoomView DriveAgent deep links", () => {
           listCodexSessions: async () => ({ sessions: [], total: 0 }),
           openSession: async (sessionId: string, cwd: string, mode: string, kind: string) => {
             opened.push([sessionId, cwd, mode, kind]);
-            return { roomId: "room_delegated", status: "observing" };
+            return {
+              roomId: "room_delegated",
+              status: "observing",
+              cwd: "/canonical/delegated",
+              modelKey: "claude-code/sonnet",
+            };
           },
         },
       },
@@ -130,7 +135,8 @@ describe("CCRoomView DriveAgent deep links", () => {
       ["delegated-session", "/repo/.worktrees/delegated", "default", "claude-code"],
     ]);
     expect(conversationProps).toMatchObject({
-      cwd: "/repo/.worktrees/delegated",
+      cwd: "/canonical/delegated",
+      modelKey: "claude-code/sonnet",
       observing: true,
     });
   });

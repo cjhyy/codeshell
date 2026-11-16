@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
+import { ensureMiniDom, flushMicrotasks, renderHook } from "../test-utils/renderHook";
+import { useCcRoomSettings } from "./useCcRoomSettings";
+import type { CcRoomSettingsState } from "../../shared/mobile-remote";
 
 // `bun test` shares one module registry across files, and CCRoomView's suite
 // stubs "./CCConversationView". Re-register the real module through a distinct
@@ -11,6 +13,219 @@ mock.module("./CCConversationView", () => realConversationView);
 const { CCConversationView } = realConversationView;
 
 let root: Root | null = null;
+
+describe("native CLI settings authority", () => {
+  function deferred<T>() {
+    let resolve!: (value: T) => void;
+    let reject!: (cause: unknown) => void;
+    const promise = new Promise<T>((yes, no) => {
+      resolve = yes;
+      reject = no;
+    });
+    return { promise, resolve, reject };
+  }
+  async function setup() {
+    ensureMiniDom();
+    let state: CcRoomSettingsState = {
+      roomId: "room-a",
+      sessionId: "thread-a",
+      cwd: "/repo",
+      kind: "codex",
+      permissionMode: "default",
+      modelKey: null,
+      observing: false,
+    };
+    let input: Parameters<typeof useCcRoomSettings>[0] = {
+      roomId: state.roomId,
+      sessionId: state.sessionId,
+      cwd: state.cwd,
+      kind: "codex",
+      mode: "default",
+      active: true,
+      observing: false,
+      isSending: () => false,
+    };
+    const requests: unknown[][] = [];
+    let response = deferred<any>();
+    let read = async () => state;
+    let catalogCalls = 0;
+    Object.assign(window, {
+      codeshell: {
+        ccRoom: {
+          settingsState: () => read(),
+          onRoomState: () => () => {},
+          openSession: (...args: unknown[]) => {
+            requests.push(args);
+            return response.promise;
+          },
+        },
+        externalRuntime: {
+          models: async () => {
+            catalogCalls++;
+            return [
+              { key: "codex/one", kind: "codex", label: "One" },
+              { key: "claude-code/sonnet", kind: "claude-code", label: "Sonnet" },
+            ];
+          },
+        },
+      },
+    });
+    const hook = await renderHook(() => useCcRoomSettings(input));
+    return {
+      hook,
+      requests,
+      get response() {
+        return response;
+      },
+      resetResponse() {
+        response = deferred<any>();
+      },
+      setRead(value: typeof read) {
+        read = value;
+      },
+      setState(value: Partial<CcRoomSettingsState>) {
+        state = { ...state, ...value };
+      },
+      async setInput(value: Partial<typeof input>) {
+        input = { ...input, ...value };
+        await hook.rerender();
+      },
+      get catalogCalls() {
+        return catalogCalls;
+      },
+    };
+  }
+  test("keeps confirmed values until the receipt and rejects stale reads, wrong kinds and duplicate changes", async () => {
+    const f = await setup();
+    try {
+      expect(f.hook.result.current.models.map((entry) => entry.key)).toEqual(["codex/one"]);
+      await act(async () => {
+        await f.hook.result.current.change({ modelKey: "claude-code/sonnet" });
+      });
+      expect(f.requests).toHaveLength(0);
+      const old = deferred<CcRoomSettingsState>();
+      f.setRead(() => old.promise);
+      let reading!: Promise<void>;
+      let changing!: Promise<void>;
+      await act(async () => {
+        reading = f.hook.result.current.refresh();
+        changing = f.hook.result.current.change({ modelKey: "codex/one" });
+        expect(f.hook.result.current.isChanging()).toBe(true);
+        void f.hook.result.current.change({ mode: "acceptEdits" });
+      });
+      expect(f.requests).toEqual([
+        ["thread-a", "/repo", "default", "codex", { roomId: "room-a", modelKey: "codex/one" }],
+      ]);
+      expect(f.hook.result.current.modelKey).toBeNull();
+      await act(async () => {
+        f.response.resolve({
+          roomId: "room-a",
+          status: "running",
+          permissionMode: "acceptEdits",
+          modelKey: "codex/one",
+        });
+        await changing;
+        old.resolve({
+          roomId: "room-a",
+          sessionId: "thread-a",
+          cwd: "/repo",
+          kind: "codex",
+          permissionMode: "default",
+          modelKey: null,
+          observing: false,
+        });
+        await reading;
+      });
+      expect(f.hook.result.current.mode).toBe("acceptEdits");
+      expect(f.hook.result.current.modelKey).toBe("codex/one");
+      f.resetResponse();
+      await act(async () => {
+        changing = f.hook.result.current.change({ modelKey: null });
+      });
+      await act(async () => {
+        f.response.resolve({
+          roomId: "room-a",
+          status: "running",
+          permissionMode: "acceptEdits",
+          modelKey: null,
+        });
+        await changing;
+      });
+      expect(f.hook.result.current.modelKey).toBeNull();
+    } finally {
+      await f.hook.unmount();
+    }
+  });
+  test("blocks queued, approval, retiring, observing and same-tick sends without launching changes", async () => {
+    const f = await setup();
+    try {
+      for (const busyReason of ["queued", "approval", "retiring", "turn"] as const) {
+        f.setState({ busyReason });
+        await act(async () => {
+          await f.hook.result.current.refresh();
+        });
+        await act(async () => {
+          await f.hook.result.current.change({ modelKey: "codex/one" });
+        });
+      }
+      f.setState({ busyReason: undefined });
+      await act(async () => {
+        await f.hook.result.current.refresh();
+      });
+      await f.setInput({ isSending: () => true });
+      await act(async () => {
+        await f.hook.result.current.change({ modelKey: "codex/one" });
+      });
+      await f.setInput({ isSending: () => false, observing: true });
+      const probes = f.catalogCalls;
+      await act(async () => {
+        await f.hook.result.current.change({ modelKey: "codex/one" });
+      });
+      expect(f.catalogCalls).toBe(probes);
+      expect(f.requests).toHaveLength(0);
+    } finally {
+      await f.hook.unmount();
+    }
+  });
+  test("keeps a denied change error across refresh and ignores a reply after navigating away", async () => {
+    const f = await setup();
+    try {
+      let changing!: Promise<void>;
+      await act(async () => {
+        changing = f.hook.result.current.change({ modelKey: "codex/one" });
+      });
+      await act(async () => {
+        f.response.reject(new Error("Host denied"));
+        await changing;
+      });
+      await act(async () => {
+        await f.hook.result.current.refresh();
+      });
+      expect(f.hook.result.current.error).toBe("Host denied");
+      expect(f.hook.result.current.modelKey).toBeNull();
+      f.resetResponse();
+      await act(async () => {
+        changing = f.hook.result.current.change({ modelKey: "codex/one" });
+      });
+      f.setState({ roomId: "room-b", sessionId: "thread-b" });
+      await f.setInput({ roomId: "room-b", sessionId: "thread-b" });
+      await act(async () => {
+        f.response.resolve({
+          roomId: "room-a",
+          status: "running",
+          permissionMode: "bypassPermissions",
+          modelKey: "codex/one",
+        });
+        await changing;
+      });
+      expect(f.hook.result.current.modelKey).toBeNull();
+      expect(f.hook.result.current.mode).toBe("default");
+      expect(f.hook.result.current.switching).toBe(false);
+    } finally {
+      await f.hook.unmount();
+    }
+  });
+});
 
 function reactPropsOf(node: unknown): Record<string, any> {
   const key = Object.keys(node as object).find((candidate) =>
