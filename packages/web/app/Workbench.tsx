@@ -1037,8 +1037,9 @@ export function Workbench({
           </div>
         ) : null}
         {connection !== "open" ? (
-          <div className="banner">
-            连接{connection === "connecting" ? "中…" : "已断开，重连中…"}
+          <div className="banner" role="status">
+            {controller.connectionMessage ||
+              `连接${connection === "connecting" ? "中…" : "已断开，重连中…"}`}
           </div>
         ) : null}
         {view !== "chat" && approvals.length > 0 ? (

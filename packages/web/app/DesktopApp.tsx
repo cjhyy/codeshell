@@ -114,7 +114,11 @@ export function DesktopApp() {
           ) : (
             <>
               <h1>{authError ? "桌面连接需要重试" : "正在连接桌面…"}</h1>
-              <p>{authError || "正在恢复已配对设备与桌面工作区的连接。"}</p>
+              <p>
+                {authError ||
+                  controller.connectionMessage ||
+                  "正在恢复已配对设备与桌面工作区的连接。"}
+              </p>
             </>
           )}
           {authError ? (
@@ -173,6 +177,29 @@ export function useDesktopController(
   navigationSessionsHasMore: boolean;
   loadMoreNavigationSessions?: () => void;
 } {
+  const online = app.status === "online";
+  const connectionPending = !online && !app.accessRequired && app.status !== "unpaired";
+  const connectedBefore = React.useRef(online);
+  const [connectionSlow, setConnectionSlow] = React.useState(false);
+  React.useEffect(() => {
+    if (!connectionPending) {
+      if (online) connectedBefore.current = true;
+      setConnectionSlow(false);
+      return;
+    }
+    // One deadline covers the whole interruption. Retry transitions between
+    // offline, connecting and authenticating must not extend it indefinitely.
+    const timer = setTimeout(() => setConnectionSlow(true), connectedBefore.current ? 2500 : 8000);
+    return () => clearTimeout(timer);
+  }, [online, connectionPending]);
+  const connectionMessage =
+    !connectionPending
+      ? undefined
+      : connectionSlow
+        ? "暂时无法连接电脑，仍在自动重试。请检查电脑和网络。"
+        : connectedBefore.current
+          ? "正在恢复与电脑的连接…"
+          : "正在连接电脑…";
   const [workspaceOverride, setWorkspaceOverride] = React.useState<string | null | undefined>(
     () => {
       // Restore the management workspace captured before leaving for Link. The Host
@@ -1006,6 +1033,7 @@ export function useDesktopController(
         : app.status === "offline" || app.status === "unpaired"
           ? "closed"
           : "connecting",
+    connectionMessage,
     session,
     activeId,
     panelSessionId:

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -78,6 +78,44 @@ function deferred<T>() {
   });
   return { promise, resolve };
 }
+function connectionClock() {
+  let now = 0;
+  const originalSet = globalThis.setTimeout;
+  const originalClear = globalThis.clearTimeout;
+  const timers = new Map<ReturnType<typeof setTimeout>, { at: number; run: () => void }>();
+  const setting = spyOn(globalThis, "setTimeout").mockImplementation(((
+    callback,
+    delay,
+    ...args
+  ) => {
+    if (typeof callback !== "function" || (delay !== 2500 && delay !== 8000))
+      return originalSet(callback, delay, ...args);
+    const handle = originalSet(() => {}, 60_000);
+    timers.set(handle, { at: now + delay, run: () => callback(...args) });
+    return handle;
+  }) as typeof setTimeout);
+  const clearing = spyOn(globalThis, "clearTimeout").mockImplementation((handle) => {
+    timers.delete(handle as ReturnType<typeof setTimeout>);
+    originalClear(handle);
+  });
+  return {
+    timers,
+    advance(ms: number) {
+      now += ms;
+      for (const [handle, timer] of [...timers]) {
+        if (timer.at > now) continue;
+        timers.delete(handle);
+        originalClear(handle);
+        timer.run();
+      }
+    },
+    restore() {
+      for (const handle of timers.keys()) originalClear(handle);
+      setting.mockRestore();
+      clearing.mockRestore();
+    },
+  };
+}
 function configuration(path: string) {
   return {
     workspace: { path, settingsScope: "local", skillDirectories: [] },
@@ -97,6 +135,118 @@ afterEach(() => {
 });
 
 describe("Desktop workbench controller", () => {
+  for (const connectedBefore of [false, true])
+    test(`connection grace covers consecutive retries and keeps the conversation (connected before: ${connectedBefore})`, async () => {
+      const clock = connectionClock();
+      let sends = 0;
+      let app = remoteApp({
+        status: connectedBefore ? "online" : "connecting",
+        activeSessionId: "original-session",
+        chat: {
+          ...initialChatState(),
+          items: [{ kind: "user", id: "original-message", text: "Previous conversation" }],
+        },
+        sessions: [{ id: "original-session", title: "Original chat", updatedAt: 1, cwd: null }],
+        sendChat: async () => {
+          sends++;
+          return true;
+        },
+      });
+      const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+      try {
+        await act(async () => {
+          hook.result.current.setDraft("unsent task");
+          hook.result.current.addFiles([
+            new File(["owned image"], "kept.png", { type: "image/png" }),
+          ] as unknown as FileList);
+        });
+        if (connectedBefore) {
+          app = { ...app, status: "offline" };
+          await hook.rerender();
+        }
+        expect(hook.result.current.connection).toBe(connectedBefore ? "closed" : "connecting");
+        expect(hook.result.current.connectionMessage).toBe(
+          connectedBefore ? "正在恢复与电脑的连接…" : "正在连接电脑…",
+        );
+        await act(async () => clock.advance((connectedBefore ? 2500 : 8000) - 1000));
+        app = { ...app, status: "authenticating" };
+        await hook.rerender();
+        await act(async () => clock.advance(999));
+        expect(hook.result.current.connectionMessage).not.toContain("暂时无法");
+        app = { ...app, status: "offline" };
+        await hook.rerender();
+        await act(async () => clock.advance(1));
+        expect(hook.result.current.connectionMessage).toContain("暂时无法连接电脑");
+        app = { ...app, status: "connecting" };
+        await hook.rerender();
+        expect(hook.result.current.connectionMessage).toContain("暂时无法连接电脑");
+        expect(hook.result.current.send()).toBe(false);
+        expect(hook.result.current.activeId).toBe("original-session");
+        expect(hook.result.current.chat).toBe(app.chat);
+        expect(hook.result.current.navigationSessions.map((item) => item.sessionId)).toEqual([
+          "original-session",
+        ]);
+        expect(hook.result.current.draft).toBe("unsent task");
+        expect(hook.result.current.files.map((file) => file.name)).toEqual(["kept.png"]);
+        expect(sends).toBe(0);
+        app = { ...app, status: "online" };
+        await hook.rerender();
+        expect(hook.result.current.connection).toBe("open");
+        expect(hook.result.current.connectionMessage).toBeUndefined();
+        expect(clock.timers.size).toBe(0);
+        app = { ...app, status: "offline" };
+        await hook.rerender();
+        expect(hook.result.current.connectionMessage).toBe("正在恢复与电脑的连接…");
+        await act(async () => clock.advance(2499));
+        expect(hook.result.current.connectionMessage).not.toContain("暂时无法");
+        await act(async () => clock.advance(1));
+        expect(hook.result.current.connectionMessage).toContain("暂时无法连接电脑");
+        app = { ...app, status: "online" };
+        await hook.rerender();
+        app = { ...app, status: "offline" };
+        await hook.rerender();
+        expect(clock.timers.size).toBe(1);
+      } finally {
+        await hook.unmount();
+        const remaining = clock.timers.size;
+        clock.restore();
+        expect(remaining).toBe(0);
+      }
+    });
+
+  for (const authorization of ["expired", "unpaired"] as const)
+    test(`connection grace never replaces an immediate ${authorization} authorization state`, async () => {
+      const clock = connectionClock();
+      let app = remoteApp();
+      const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+      try {
+        app = { ...app, status: "offline" };
+        await hook.rerender();
+        expect(hook.result.current.connectionMessage).toBe("正在恢复与电脑的连接…");
+        app = {
+          ...app,
+          status: authorization === "unpaired" ? "unpaired" : "offline",
+          accessRequired: authorization === "expired",
+        };
+        await hook.rerender();
+        expect(hook.result.current.connectionMessage).toBeUndefined();
+        expect(hook.result.current.connection).toBe("closed");
+        expect(hook.result.current.send()).toBe(false);
+        expect(clock.timers.size).toBe(0);
+        await act(async () => clock.advance(10_000));
+        app = { ...app, status: "connecting", accessRequired: false };
+        await hook.rerender();
+        expect(hook.result.current.connectionMessage).toBe("正在恢复与电脑的连接…");
+        await act(async () => clock.advance(2499));
+        expect(hook.result.current.connectionMessage).not.toContain("暂时无法");
+        await act(async () => clock.advance(1));
+        expect(hook.result.current.connectionMessage).toContain("暂时无法连接电脑");
+      } finally {
+        await hook.unmount();
+        clock.restore();
+      }
+    });
+
   test("an explicitly unbound session never inherits the previous project's execution context", async () => {
     const created: unknown[] = [];
     const sent: string[] = [];
@@ -1196,6 +1346,17 @@ describe("Desktop workbench controller", () => {
     const desktop = renderToStaticMarkup(
       <Workbench controller={{ ...hook.result.current, session, workspaceApi: true }} />,
     );
+    const recovering = renderToStaticMarkup(
+      <Workbench
+        controller={{
+          ...hook.result.current,
+          connection: "closed",
+          connectionMessage: "正在恢复与电脑的连接…",
+        }}
+      />,
+    );
+    expect(recovering).toContain("正在恢复与电脑的连接…");
+    expect(recovering).not.toContain("连接已断开，重连中…");
     const hub = renderToStaticMarkup(
       <Workbench
         controller={{

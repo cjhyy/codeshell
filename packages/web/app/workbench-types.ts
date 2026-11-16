@@ -28,6 +28,8 @@ export interface WorkbenchController {
   host: "hub" | "desktop" | "legacy";
   workspaceApi: boolean;
   connection: ConnectionState;
+  /** Presentation only; connection remains the authority for enabling actions. */
+  connectionMessage?: string;
   session?: AuthSession;
   activeId: string;
   /** Canonical protocol session, never a draft or CLI-room display bucket. */
