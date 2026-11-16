@@ -48,7 +48,8 @@ export interface CcDiscoveredSession {
   cwd?: string;
   firstMessage: string;
   lastModified: number;
-  messageCount: number;
+  /** Omitted when bounded discovery cannot establish the full message count. */
+  messageCount?: number;
 }
 
 /** Mirror of core HistoryMessage. */

@@ -43,7 +43,7 @@ interface DiscoveredSession {
   cwd?: string;
   firstMessage: string;
   lastModified: number;
-  messageCount: number;
+  messageCount?: number;
 }
 
 interface Availability {
@@ -558,8 +558,7 @@ function CliRoomBrowser({
               <div className="min-w-0">
                 <div className="truncate font-medium">{s.firstMessage || "(无消息)"}</div>
                 <div className="text-xs text-muted-foreground">
-                  {/* messageCount isn't tracked for codex (would need a full scan) → omit it there. */}
-                  {s.messageCount > 0 && <span>{s.messageCount} 条消息 · </span>}
+                  {s.messageCount !== undefined && <span>{s.messageCount} 条消息 · </span>}
                   {new Date(s.lastModified).toLocaleString()}
                 </div>
                 {s.cwd && s.cwd !== cwd && (

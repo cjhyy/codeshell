@@ -1,8 +1,16 @@
 import { describe, it, expect } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync, utimesSync, symlinkSync } from "node:fs";
+import {
+  appendFileSync,
+  mkdtempSync,
+  mkdirSync,
+  writeFileSync,
+  utimesSync,
+  symlinkSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { discoverCodexSessions, listCodexSessionsForCwds } from "./codex-session-discovery.js";
+import { readCodexRecentHistory } from "./codex-session-history.js";
 
 /** Build one codex rollout JSONL file under <home>/sessions/YYYY/MM/DD/. */
 function writeRollout(
@@ -48,6 +56,7 @@ describe("discoverCodexSessions", () => {
     expect(got).toHaveLength(1);
     expect(got[0].sessionId).toBe(id);
     expect(got[0].firstMessage).toBe("看看样式 还有没有遗漏的地方");
+    expect(got[0].messageCount).toBe(2);
   });
 
   it("uses the real input part as the title instead of injected host context", () => {
@@ -158,6 +167,101 @@ describe("discoverCodexSessions", () => {
     expect(got).toHaveLength(1);
     expect(got[0].sessionId).toBe("id-only");
     expect(got[0].firstMessage).toBe("");
+  });
+});
+
+describe("Codex discovery message counts", () => {
+  async function counts(home: string, cwd: string) {
+    return [
+      discoverCodexSessions(cwd, home)[0]?.messageCount,
+      (await listCodexSessionsForCwds([cwd], home)).sessions[0]?.messageCount,
+    ];
+  }
+
+  it("matches visible history without counting mirrored events or hidden records", async () => {
+    const home = mkdtempSync(join(tmpdir(), "codex-counts-"));
+    const cwd = "/tmp/counts";
+    writeRollout(home, "2026/06/24", "rollout-counts.jsonl", [
+      metaLine("counts", cwd, "2026-06-24T03:31:03.000Z"),
+      userItem("# AGENTS.md instructions for /tmp/counts\nInjected instructions"),
+      userItem("<environment_context>injected cwd</environment_context>"),
+      {
+        type: "response_item",
+        payload: { type: "message", role: "developer", content: "hidden instructions" },
+      },
+      userItem("Inspect the project"),
+      { type: "event_msg", payload: { type: "user_message", message: "Inspect the project" } },
+      {
+        type: "response_item",
+        payload: { type: "function_call", name: "exec_command", arguments: '{"cmd":"pwd"}' },
+      },
+      {
+        type: "response_item",
+        payload: { type: "function_call_output", output: "/tmp/counts" },
+      },
+      assistantItem("The project is ready"),
+      { type: "event_msg", payload: { type: "agent_message", message: "The project is ready" } },
+      { type: "event_msg", payload: { type: "task_complete" } },
+    ]);
+
+    // One user bubble, one visible assistant tool card, one assistant reply.
+    expect(await counts(home, cwd)).toEqual([3, 3]);
+    expect(readCodexRecentHistory(cwd, "counts", 100, home).totalCount).toBe(3);
+  });
+
+  it("distinguishes a genuinely empty history from an unknown count", async () => {
+    const home = mkdtempSync(join(tmpdir(), "codex-counts-"));
+    const cwd = "/tmp/counts";
+    writeRollout(home, "2026/06/24", "rollout-empty.jsonl", [
+      metaLine("empty", cwd, "2026-06-24T03:31:03.000Z"),
+      userItem("<recommended_plugins>injected plugins</recommended_plugins>"),
+    ]);
+    expect(await counts(home, cwd)).toEqual([0, 0]);
+  });
+
+  it("keeps the title but omits counts beyond the bounded discovery snapshot", async () => {
+    const home = mkdtempSync(join(tmpdir(), "codex-counts-"));
+    const cwd = "/tmp/counts";
+    writeRollout(home, "2026/06/24", "rollout-large.jsonl", [
+      metaLine("large", cwd, "2026-06-24T03:31:03.000Z"),
+      userItem("Keep this title"),
+      {
+        type: "response_item",
+        payload: { type: "function_call_output", output: "x".repeat(1 << 20) },
+      },
+      assistantItem("This message is outside the prefix"),
+    ]);
+    expect(await counts(home, cwd)).toEqual([undefined, undefined]);
+    expect(discoverCodexSessions(cwd, home)[0]?.firstMessage).toBe("Keep this title");
+    expect((await listCodexSessionsForCwds([cwd], home)).sessions[0]?.firstMessage).toBe(
+      "Keep this title",
+    );
+  });
+
+  it("does not mistake an exact-size complete snapshot for a truncated prefix", async () => {
+    const home = mkdtempSync(join(tmpdir(), "codex-counts-"));
+    const cwd = "/tmp/counts";
+    const dir = join(home, "sessions", "2026/06/24");
+    mkdirSync(dir, { recursive: true });
+    const raw = [metaLine("exact", cwd, "2026-06-24T03:31:03.000Z"), userItem("Hello")]
+      .map((line) => JSON.stringify(line))
+      .join("\n");
+    writeFileSync(
+      join(dir, "rollout-exact.jsonl"),
+      raw + "\n".repeat((1 << 20) - Buffer.byteLength(raw)),
+    );
+    expect(await counts(home, cwd)).toEqual([1, 1]);
+  });
+
+  it("leaves the count unknown while the writer is appending a partial record", async () => {
+    const home = mkdtempSync(join(tmpdir(), "codex-counts-"));
+    const cwd = "/tmp/counts";
+    writeRollout(home, "2026/06/24", "rollout-partial.jsonl", [
+      metaLine("partial", cwd, "2026-06-24T03:31:03.000Z"),
+      userItem("Hello"),
+    ]);
+    appendFileSync(join(home, "sessions", "2026/06/24", "rollout-partial.jsonl"), '{"type":');
+    expect(await counts(home, cwd)).toEqual([undefined, undefined]);
   });
 });
 
