@@ -166,6 +166,10 @@ export const PET_BEHAVIOR_PROFILE: RunBehaviorProfile = {
   systemPromptAppend: PET_SYSTEM_PROMPT,
   allowedToolNames: PET_ALLOWED_TOOL_NAMES,
   contextStrategy: "notes",
+  // About a third of Mimi's turns start after the cache expired. A cold request
+  // pays full price for the whole context, so switch to the saved note first
+  // once the context is larger than a typical turn (median ~45K tokens).
+  notesRolloverWhenColdTokens: 48_000,
   forcePermissionMode: "default",
   // Manager turns only clarify, inspect bounded status, and dispatch. Leave
   // sustained execution to Work Sessions and bound malformed-tool loops.
