@@ -191,9 +191,10 @@ export class ContextManager {
   private toolResultsDir: string | undefined;
   /** Last successful model request seen by this instance (see rewrite-gate.ts). */
   private localLastRequestAt: number | undefined;
-  /** Earliest index a deferred rewrite batch would touch in the last managed array. */
-  private pendingRewriteBoundary: number | undefined;
-  /** The message at that index: an identity that survives re-indexing by the caller. */
+  /**
+   * Earliest message a deferred rewrite batch would touch in the last managed
+   * array, by identity: it survives re-indexing by the caller.
+   */
   private pendingRewriteBoundaryMessage: Message | undefined;
 
   constructor(config?: Partial<ContextManagerConfig>) {
@@ -401,8 +402,7 @@ export class ContextManager {
 
       this.consecutiveSummaryFailures = 0;
       this.lastSummary = summary;
-      this.pendingRewriteBoundary = undefined; // indices no longer match
-      this.pendingRewriteBoundaryMessage = undefined;
+      this.pendingRewriteBoundaryMessage = undefined; // history was replaced
       logger.info(logEvent, {
         before,
         after,
@@ -470,19 +470,11 @@ export class ContextManager {
   }
 
   /**
-   * Index, in the array returned by the last manage()/manageAsync() call, of
-   * the earliest message a deferred rewrite batch would change. `undefined`
-   * when nothing is pending.
-   */
-  getPendingRewriteBoundary(): number | undefined {
-    return this.pendingRewriteBoundary;
-  }
-
-  /**
-   * The same boundary as a message reference. Callers that hold a differently
-   * shaped list (e.g. with volatile context messages put back) must locate the
-   * boundary by this object, not by the index; a reference that is no longer
-   * in their list means the boundary is unknown.
+   * The earliest message a deferred rewrite batch would change, in the array
+   * the last manage()/manageAsync() call returned; `undefined` when nothing
+   * is pending. Callers that hold a differently shaped list (e.g. with
+   * volatile context messages put back) locate the boundary by this object;
+   * a reference that is no longer in their list means it is unknown.
    */
   getPendingRewriteBoundaryMessage(): Message | undefined {
     return this.pendingRewriteBoundaryMessage;
@@ -523,7 +515,6 @@ export class ContextManager {
       keepRecentN: this.config.microcompactKeepRecent ?? defaultKeepRecent(this.config.maxTokens),
       estimate: (messages) => this.estimateTokensHybrid(messages),
     });
-    this.pendingRewriteBoundary = undefined;
     this.pendingRewriteBoundaryMessage = undefined;
     const kept = { messages: input, tokens: baseTokens, microNoOp: plan.microNoOp };
     if (!plan.changed && !externalChanged) return { ...kept, microShrunk: false };
@@ -550,7 +541,6 @@ export class ContextManager {
       forced: externalChanged && external.forced,
     });
     if (!reason) {
-      this.pendingRewriteBoundary = firstChangedIndex;
       this.pendingRewriteBoundaryMessage =
         firstChangedIndex === undefined ? undefined : input[firstChangedIndex];
       logger.debug("context.rewrite_deferred", { pendingSavedTokens: savedTokens });

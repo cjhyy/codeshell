@@ -4,9 +4,16 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PromptComposer, type ComposerOptions } from "./composer.js";
 import { invalidateSkillCache, scanSkills } from "../skills/index.js";
-import { buildSkillListing } from "../tool-system/builtin/skill-prompt.js";
+import { buildSkillListingParts } from "../tool-system/builtin/skill-prompt.js";
 import { MemoryManager } from "../session/memory.js";
 import { joinContextListParts, planLedgerEmission } from "../context/context-ledger.js";
+import { dynamicContextSnapshot } from "../testing/dynamic-context-snapshot.js";
+
+/** The listing text the skills section carries (production: buildSkillListingParts). */
+function listingText(...args: Parameters<typeof buildSkillListingParts>): string {
+  const parts = buildSkillListingParts(...args);
+  return parts === null ? "" : joinContextListParts(parts);
+}
 
 describe("PromptComposer.buildDynamicContextSections", () => {
   let cwd: string;
@@ -72,7 +79,9 @@ describe("PromptComposer.buildDynamicContextSections", () => {
       "goal-tool",
     ]);
 
+    // The public PromptComposer method is the same snapshot the ledger sends first.
     const message = await composer.buildDynamicContextMessage();
+    expect(message).toEqual(await dynamicContextSnapshot(composer));
     expect(message).toEqual({
       role: "user",
       content: `<system-reminder>\n${sections
@@ -85,7 +94,7 @@ describe("PromptComposer.buildDynamicContextSections", () => {
     // Each section is exactly what the string renderers produce.
     const byKey = new Map(sections.map((section) => [section.key, section.text]));
     expect(byKey.get("skills")).toBe(
-      buildSkillListing(scanSkills(cwd, {}), { declaredSkills: ["missing-skill"] }),
+      listingText(scanSkills(cwd, {}), { declaredSkills: ["missing-skill"] }),
     );
     expect(byKey.get("memory")).toBe(MemoryManager.buildInjectionIndex({ projectDir: cwd }));
     expect(byKey.get("skill-gap")).toContain("missing-skill");
@@ -234,7 +243,7 @@ describe("PromptComposer.buildDynamicContextSections", () => {
     try {
       const composer = new PromptComposer({ cwd: empty, model: "test-model" });
       expect(await composer.buildDynamicContextSections()).toEqual([]);
-      expect(await composer.buildDynamicContextMessage()).toBeNull();
+      expect(await dynamicContextSnapshot(composer)).toBeNull();
     } finally {
       rmSync(empty, { recursive: true, force: true });
     }

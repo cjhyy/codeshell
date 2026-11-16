@@ -1,6 +1,13 @@
 import { describe, it, expect } from "bun:test";
-import { buildSkillListing } from "../packages/core/src/tool-system/builtin/skill-prompt.js";
+import { buildSkillListingParts } from "../packages/core/src/tool-system/builtin/skill-prompt.js";
 import type { SkillDefinition } from "../packages/core/src/skills/scanner.js";
+import { joinContextListParts } from "../packages/core/src/context/context-ledger.js";
+
+/** The listing text the skills section carries (production: buildSkillListingParts). */
+function listingText(...args: Parameters<typeof buildSkillListingParts>): string {
+  const parts = buildSkillListingParts(...args);
+  return parts === null ? "" : joinContextListParts(parts);
+}
 
 function skill(over: Partial<SkillDefinition> = {}): SkillDefinition {
   return {
@@ -13,13 +20,13 @@ function skill(over: Partial<SkillDefinition> = {}): SkillDefinition {
   };
 }
 
-describe("buildSkillListing", () => {
+describe("skill listing text", () => {
   it("returns empty string for empty input", () => {
-    expect(buildSkillListing([])).toBe("");
+    expect(listingText([])).toBe("");
   });
 
   it("renders skills as `- name: description` lines under a header", () => {
-    const out = buildSkillListing([
+    const out = listingText([
       skill({ name: "pdf", description: "handle PDFs" }),
       skill({ name: "deploy", description: "deploy stuff" }),
     ]);
@@ -29,12 +36,12 @@ describe("buildSkillListing", () => {
   });
 
   it("renders skill with no description as `- name:`", () => {
-    const out = buildSkillListing([skill({ name: "bare", description: "" })]);
+    const out = listingText([skill({ name: "bare", description: "" })]);
     expect(out).toContain("- bare:");
   });
 
   it("groups skills by namespace, user/project first then plugins A-Z", () => {
-    const out = buildSkillListing([
+    const out = listingText([
       skill({ name: "superpowers:debugging", source: "plugin" }),
       skill({ name: "local-tool", source: "user" }),
       skill({ name: "document-skills:pdf", source: "plugin" }),

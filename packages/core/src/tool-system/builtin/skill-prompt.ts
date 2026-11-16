@@ -155,15 +155,6 @@ export function buildSkillListingParts(
   return estimateStringTokens(joinContextListParts(result)) <= budget ? result : null;
 }
 
-/** Budget includes headings and discovery guidance. Bodies remain on demand. */
-export function buildSkillListing(
-  skills: readonly SkillDefinition[],
-  options: SkillListingOptions = {},
-): string {
-  const parts = buildSkillListingParts(skills, options);
-  return parts === null ? "" : joinContextListParts(parts);
-}
-
 /** Read-only metadata discovery with the same scanner visibility as invocation. */
 export function searchSkillMetadata(
   skills: readonly SkillDefinition[],

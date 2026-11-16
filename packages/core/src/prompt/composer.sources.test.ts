@@ -3,6 +3,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PromptComposer } from "./composer.js";
+import { dynamicContextSnapshot } from "../testing/dynamic-context-snapshot.js";
 
 const cwd = mkdtempSync(join(tmpdir(), "cs-composer-src-"));
 
@@ -15,7 +16,7 @@ describe("composer sources context", () => {
       sourcesContextProvider: async () => summary,
     });
 
-    expect((await composer.buildDynamicContextMessage())?.content).toContain(summary);
+    expect((await dynamicContextSnapshot(composer))?.content).toContain(summary);
     expect(await composer.buildSystemPrompt([])).not.toContain(summary);
   });
 
@@ -29,10 +30,10 @@ describe("composer sources context", () => {
       },
     });
 
-    expect((await empty.buildDynamicContextMessage())?.content ?? "").not.toContain(
+    expect((await dynamicContextSnapshot(empty))?.content ?? "").not.toContain(
       "Bound data sources",
     );
-    expect((await failing.buildDynamicContextMessage())?.content ?? "").not.toContain(
+    expect((await dynamicContextSnapshot(failing))?.content ?? "").not.toContain(
       "Bound data sources",
     );
   });

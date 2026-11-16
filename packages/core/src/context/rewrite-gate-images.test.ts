@@ -6,6 +6,12 @@ import { IMAGE_HISTORY_WINDOW, ImageHistoryWindow } from "./image-history-window
 import type { ManageOptions } from "./manager.js";
 import type { Message } from "../types.js";
 
+/** Position of the pending rewrite boundary (a message reference) in `sent`. */
+function pendingBoundary(cm: ContextManager, sent: readonly Message[]): number | undefined {
+  const message = cm.getPendingRewriteBoundaryMessage();
+  return message === undefined ? undefined : sent.indexOf(message);
+}
+
 const MINUTE = 60_000;
 
 function imageMessage(data: string): Message {
@@ -88,7 +94,7 @@ for (const [name, run] of runners) {
       expect(out).toEqual(messages);
       expect(out[1]).toBe(message);
       expect(collectBase64Images(out)).toHaveLength(1);
-      expect(cm.getPendingRewriteBoundary()).toBe(1);
+      expect(pendingBoundary(cm, out)).toBe(1);
       expect(cm.getPendingRewriteBoundaryMessage()).toBe(message);
     });
 
@@ -136,7 +142,7 @@ for (const [name, run] of runners) {
       expect(collectBase64Images(out)).toHaveLength(0);
       expect(JSON.stringify(out[1])).toContain("pixels omitted");
       expect(JSON.stringify(out[3])).toContain("collapsed");
-      expect(cm.getPendingRewriteBoundary()).toBeUndefined();
+      expect(cm.getPendingRewriteBoundaryMessage()).toBeUndefined();
       // Committed: the image stays replaced even where its bytes reappear.
       expect(collectBase64Images(window.prepare(messages).messages)).toHaveLength(0);
     });
@@ -159,7 +165,7 @@ for (const [name, run] of runners) {
       const out = await run(cm, sent, { externalRewrite: (m) => window.planBatch(m) });
 
       expect(collectBase64Images(out)).toHaveLength(IMAGE_HISTORY_WINDOW.maxImages);
-      expect(cm.getPendingRewriteBoundary()).toBeUndefined();
+      expect(cm.getPendingRewriteBoundaryMessage()).toBeUndefined();
     });
   });
 }
