@@ -4,8 +4,8 @@
  * Providers cache request prefixes: rewriting ANY earlier message re-bills
  * everything after the nearest surviving save point. dedupeFileReads,
  * maskOldObservations and microcompact all rewrite old tool_results, so
- * running them before every model step turned a ~1k-token saving into a
- * ~310k-token cache miss. This module evaluates the three passes
+ * running them before every model step turned a saving of one small
+ * snapshot into a cache miss of the whole context. This module evaluates the three passes
  * speculatively and says when applying them — all together — is free
  * (cache already cold) or worth the miss.
  *

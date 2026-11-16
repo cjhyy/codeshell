@@ -3,9 +3,8 @@
 验证 `../prompt-cache-cross-run-context-ledger-20261112.md` 里的设计假设。全部请求经 OpenRouter，内容是合成文本。
 
 - 脚本：`context_ledger_probe.py`
-- 原始结果：`results-20261112.txt`、`results-followup-20261112.txt`
+- 结果：`results-20261112.txt`、`results-followup-20261112.txt`（只保留比例）
 - 线路：`openai/gpt-6.1-sol`（承载方 OpenAI）、`anthropic/claude-sonnet-5`（承载方 Claude Platform on AWS）
-- 用量：144 次请求，prompt 合计约 1.6M token，其中约 0.8M 未命中缓存
 
 ## 1. 测试方案
 
@@ -36,7 +35,7 @@
 - Claude 线路：内容块上的 `cache_control`，位置为系统、稳定边界、最后一条消息。
 - "仅隐式"对照组：不带任何断点和 `prompt_cache_options`，只在 GPT 线路跑。
 
-消息段：系统段约 3.6k token（GPT 口径），动态块、每份工具结果、每份快照各约 1.6k。
+消息段：系统段最长；动态块、每份工具结果、每份快照大小相近，各不到系统段的一半。
 
 ## 2. 结果
 
@@ -93,7 +92,7 @@ GPT 线路不受影响。
 
 ## 4. 局限
 
-- 每个变体每条线路 2 遍；上下文只有 1–1.6 万 token，没有测 30 万 token 量级。
+- 每个变体每条线路 2 遍；上下文较短，没有测很长的上下文。
 - 间隔固定 8 秒，没有测缓存有效期边界。
 - 只测了两条线路，都经 OpenRouter；直连没测。
 - 工具表只有两个简单工具，没有覆盖工具表冻结的部分（见 `../prompt-cache-probes-20261111/`）。
