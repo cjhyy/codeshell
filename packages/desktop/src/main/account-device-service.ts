@@ -13,6 +13,16 @@ export interface AccountDeviceIdentity {
   origin: string;
   accountId: string;
 }
+interface AccountDirectoryContext {
+  identity: AccountDeviceIdentity;
+  directory: string;
+  token: string;
+  signal: AbortSignal;
+  assert(): void;
+}
+interface AccountExecutionContext extends AccountDirectoryContext {
+  sourceProof: { sourceHostId: string; sourceDeviceCredential: string };
+}
 interface DeviceRecord extends AccountExecutionDevice {
   publicOrigin: string;
 }
@@ -36,7 +46,7 @@ export interface AccountDeviceDependencies {
     signal: AbortSignal,
   ): Promise<{ sourceHostId: string; sourceDeviceCredential: string }>;
   /** Must return the validated same-origin Account relay capability. */
-  relayOrigin(identity: AccountDeviceIdentity): Promise<string>;
+  relayOrigin(identity: AccountDeviceIdentity, scope: "directory" | "dispatch"): Promise<string>;
   fetch?: typeof fetch;
   socket?: (url: string, headers: Record<string, string>) => Socket;
 }
@@ -75,15 +85,9 @@ export class AccountDeviceService {
   setEventSink(sink: (owner: number, event: AccountDeviceEvent) => void): void {
     this.sink = sink;
   }
-  private async operation<T>(
-    run: (ctx: {
-      identity: AccountDeviceIdentity;
-      directory: string;
-      token: string;
-      sourceProof: { sourceHostId: string; sourceDeviceCredential: string };
-      signal: AbortSignal;
-      assert(): void;
-    }) => Promise<T>,
+  private async accountOperation<T>(
+    scope: "directory" | "dispatch",
+    run: (ctx: AccountDirectoryContext) => Promise<T>,
     owner?: number,
   ): Promise<T> {
     const identity = this.deps.identity();
@@ -100,27 +104,38 @@ export class AccountDeviceService {
         throw new Error("账号授权已结束。");
     };
     try {
-      const directory = origin(await this.deps.relayOrigin(identity));
+      const directory = origin(await this.deps.relayOrigin(identity, scope));
       if (directory !== origin(identity.origin))
         throw new Error("账号中继能力必须与账号服务同源。");
       assert();
       const token = await this.deps.credential(identity, controller.signal);
       assert();
-      const sourceProof = await this.deps.sourceProof(identity, controller.signal);
-      assert();
-      if (!boundedId(sourceProof.sourceHostId) || !boundedId(sourceProof.sourceDeviceCredential))
-        throw new Error("本机设备授权已失效。");
       return await run({
         identity,
         directory,
         token,
-        sourceProof,
         signal: controller.signal,
         assert,
       });
     } finally {
       this.operations.delete(controller);
     }
+  }
+  private operation<T>(
+    run: (ctx: AccountExecutionContext) => Promise<T>,
+    owner?: number,
+  ): Promise<T> {
+    return this.accountOperation(
+      "dispatch",
+      async (ctx) => {
+        const sourceProof = await this.deps.sourceProof(ctx.identity, ctx.signal);
+        ctx.assert();
+        if (!boundedId(sourceProof.sourceHostId) || !boundedId(sourceProof.sourceDeviceCredential))
+          throw new Error("本机设备授权已失效。");
+        return run({ ...ctx, sourceProof });
+      },
+      owner,
+    );
   }
   private async json(
     url: string,
@@ -201,21 +216,16 @@ export class AccountDeviceService {
     });
   }
   async list(): Promise<AccountExecutionDevice[]> {
-    return this.operation(async (ctx) => {
+    // Browsing the account's computers does not enroll or authorize this
+    // computer as an execution source. Those proofs remain dispatch-only.
+    return this.accountOperation("directory", async (ctx) => {
       const devices = await this.directoryHosts(ctx);
       ctx.assert();
       return devices.map(({ publicOrigin: _private, ...device }) => device);
     });
   }
   private async target(
-    ctx: {
-      identity: AccountDeviceIdentity;
-      directory: string;
-      token: string;
-      sourceProof: { sourceHostId: string; sourceDeviceCredential: string };
-      signal: AbortSignal;
-      assert(): void;
-    },
+    ctx: AccountExecutionContext,
     hostId: string,
     owner: number,
     consume = false,

@@ -140,9 +140,11 @@ export function createDesktopRemoteServices(options: {
     credential: (identity, signal) =>
       cloudAccountManager.getCredential(identity.origin, identity.accountId, signal),
     sourceProof: (identity, signal) => mobileRemoteController.accountRelaySource(identity, signal),
-    relayOrigin: async (identity) => {
+    relayOrigin: async (identity, scope) => {
       await accountFeatures.refresh();
-      accountFeatures.requireReady("devices.dispatch");
+      accountFeatures.requireReady(
+        scope === "directory" ? "devices.directory" : "devices.dispatch",
+      );
       const capabilities = await cloudAccountManager.capabilities(identity.origin);
       if (!capabilities.relay?.enabled || capabilities.relay.directoryOrigin !== identity.origin)
         throw new Error("当前账号服务不支持设备协作，请升级服务。");
