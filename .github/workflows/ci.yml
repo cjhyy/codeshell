@@ -503,6 +503,7 @@ jobs:
           packages/core/src/engine/injected-context-cache.test.ts
           packages/core/src/engine/model-facade-cache-lifecycle.test.ts
           packages/core/src/engine/prompt-cache-diagnostics.test.ts
+          packages/core/src/engine/prompt-cache-diagnostics.key.test.ts
           packages/core/src/engine/prompt-cache-route.test.ts
           packages/core/src/engine/prompt-prefix-heads.test.ts
           packages/core/src/engine/rollover-context.test.ts
