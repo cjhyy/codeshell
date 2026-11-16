@@ -364,6 +364,8 @@ export class Engine {
   >();
   /** A preset reload changed the tool set during a run; rebuild when it ends. */
   private toolRegistryRebuildPending = false;
+  /** The running Session's identity for hook payloads; absent between runs. */
+  private hookRunIdentity?: { sessionId: string; sessionKind?: string; profileId?: string };
   /** Compiled module contributions — the single composition fact source. */
   private readonly composition: ResolvedComposition;
   private readonly toolCatalog: readonly BuiltinTool[];
@@ -738,6 +740,11 @@ export class Engine {
         this.toolRegistry.clear();
       });
       this.hooks = new HookRegistry();
+      this.hooks.setIdentity(() => ({
+        preset: this.preset.name,
+        isSubAgent: this.config.isSubAgent === true,
+        ...this.hookRunIdentity,
+      }));
       this.lifetime.own(() => this.hooks.clear());
       this.settingsHookScope = this.lifetime.child("engine", "settings-hooks");
       this.pluginHookScope = this.lifetime.child("engine", "plugin-hooks");
@@ -1439,6 +1446,7 @@ export class Engine {
               }
             }
             this.runningSession = undefined;
+            this.hookRunIdentity = undefined;
             this.failClaimedRun = undefined;
             this.runAbort = undefined;
             settle();
@@ -1722,6 +1730,11 @@ export class Engine {
     } = openedResult.opened;
     const session = openedResult.opened.session;
     this.runIds.set(session.state, runId);
+    this.hookRunIdentity = {
+      sessionId: session.state.sessionId,
+      ...(sessionKind ? { sessionKind } : {}),
+      ...(profile?.id ? { profileId: profile.id } : {}),
+    };
     this.runningSession = {
       sessionId: session.state.sessionId,
       runId,
@@ -3249,6 +3262,13 @@ export class Engine {
         // with dangling section names (for example terminal-coding → coding).
         capabilityPromptSections: this.capabilityPromptSections,
         dynamicContextProviders: this.capabilityDynamicContextProviders,
+        providerSession: {
+          id: session.state.sessionId,
+          ...(session.state.kind ? { kind: session.state.kind } : {}),
+          ...(profile?.id ? { profileId: profile.id } : {}),
+          isSubAgent: this.config.isSubAgent === true,
+        },
+        providerRunParams: profileParams,
         getSettingsManager: () => this.getSettingsManager(),
         toolCatalog: this.toolCatalog,
       });

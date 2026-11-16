@@ -39,6 +39,9 @@ export interface ComposerOptions {
   instructionOptions?: ScanOptions;
   /** Resolved preset — used to load section-based prompt. */
   preset?: AgentPreset;
+  /** Session identity and run parameters handed to capability context providers. */
+  providerSession?: import("../capabilities/index.js").CapabilityDynamicContext["session"];
+  providerRunParams?: Readonly<Record<string, unknown>>;
   customSystemPrompt?: string;
   appendSystemPrompt?: string;
   /** Prompt text and tool metadata supplied by this Engine's capability modules. */
@@ -227,6 +230,10 @@ export class PromptComposer {
             cwd: this.options.cwd,
             workspace: this.options.workspace,
             preset,
+            ...(this.options.providerSession ? { session: this.options.providerSession } : {}),
+            ...(this.options.providerRunParams
+              ? { runParams: this.options.providerRunParams }
+              : {}),
           });
         } catch {
           // A capability's optional context must not make a turn fail.
