@@ -1,4 +1,9 @@
 import { useRemoteGoalControls } from "./useRemoteGoalControls.js";
+import {
+  prepareCcRoomSettingChange,
+  type CcRoomOpenRequest,
+  type CcRoomSettingSelection,
+} from "./ccRoomSettingsRequests.js";
 import { localDeadline } from "../remote-deadline.js";
 import { RoomHistoryAccumulator } from "../lib/roomHistory.js";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
@@ -738,17 +743,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
    * so a late reply to a superseded request can neither navigate nor overwrite
    * newer state. The conversation revision lets a reply that arrives after the
    * user navigated elsewhere be discarded instead of navigating back. */
-  const pendingCcOpenRef = useRef<{
-    requestId: string;
-    roomId?: string;
-    modelKey?: string | null;
-    sessionId: string;
-    cwd: string;
-    mode: PermissionMode;
-    revision: number;
-    /** True for a mode switch of the room this tab is already viewing. */
-    switching: boolean;
-  } | null>(null);
+  const pendingCcOpenRef = useRef<CcRoomOpenRequest | null>(null);
   const [ccModeRequest, setCcModeRequest] = useState<
     { mode: PermissionMode; switching: boolean; modelKey?: string | null } | undefined
   >(undefined);
@@ -2919,123 +2914,50 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     [socket, setLoadingKey, setNotice],
   );
 
-  /**
-   * Restart the CLI room this tab is viewing under another permission mode.
-   * Reuses ccRoom.openSession; the Host refuses while the room is busy and
-   * asks for a one-time approval before bypassPermissions. The dropdown keeps
-   * showing the running mode until the Host confirms the new one.
-   */
-  const setCcRoomPermissionMode = useCallback(
-    (mode: PermissionMode) => {
+  const changeCcRoomSetting = useCallback(
+    (selection: CcRoomSettingSelection) => {
       const roomId = activeRoomIdRef.current;
-      const sessionId = ccHistorySessionRef.current;
-      const cwd = ccHistoryCwdRef.current;
-      if (!roomId || !sessionId || !cwd) return;
-      if (hasPendingRoomInput(roomId)) {
-        setNotice("此会话的消息正在发送或等待确认，请确认发送结果后再切换模型或权限。草稿已保留。");
-        return;
-      }
-      if (!socketOnlineRef.current) {
-        setNotice(t("mobile.connection.offlineTitle"));
-        return;
-      }
-      const requestId = `cc-mode-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-      pendingCcOpenRef.current = {
-        requestId,
+      const prepared = prepareCcRoomSettingChange(selection, {
         roomId,
-        sessionId,
-        cwd,
-        mode,
-        revision: conversationRevisionRef.current,
-        switching: true,
-      };
-      setCcModeRequest({ mode, switching: true });
-      const sent = socket.send({
-        type: "ccRoom.openSession",
-        roomId,
-        sessionId,
-        cwd,
-        mode,
+        room: roomsRef.current.find((room) => room.id === roomId),
+        sessionId: ccHistorySessionRef.current,
+        cwd: ccHistoryCwdRef.current,
         kind: ccHistoryKindRef.current,
-        requestId,
-      });
-      if (!sent && pendingCcOpenRef.current?.requestId === requestId) {
-        // Never reached the Host: nothing changed and nothing is pending.
-        pendingCcOpenRef.current = null;
-        setCcModeRequest(undefined);
-        setNotice(t("mobile.connection.offlineTitle"));
-      }
-    },
-    [socket, setNotice, hasPendingRoomInput],
-  );
-
-  const setCcRoomModel = useCallback(
-    (modelKey: string | null) => {
-      const roomId = activeRoomIdRef.current;
-      const room = roomsRef.current.find((candidate) => candidate.id === roomId);
-      const sessionId = ccHistorySessionRef.current;
-      const cwd = ccHistoryCwdRef.current;
-      if (!room || !sessionId || !cwd) return;
-      if (hasPendingRoomInput(room.id)) {
-        setNotice("此会话的消息正在发送或等待确认，请确认发送结果后再切换模型或权限。草稿已保留。");
-        return;
-      }
-      if (!socketOnlineRef.current) {
-        setNotice(t("mobile.connection.offlineTitle"));
-        return;
-      }
-      if (!ccRoomModelSelectionRef.current) {
-        setNotice("此电脑尚不支持切换 CLI 模型，请更新桌面端。");
-        return;
-      }
-      if (room.observing) {
-        setNotice(t("mobile.notice.ccRoomObserving"));
-        return;
-      }
-      if (pendingCcOpenRef.current || turnQueuesRef.current[`room:${roomId}`]?.entries.length) {
-        setNotice("请先等待设置完成或处理此会话的排队消息，再切换模型。");
-        return;
-      }
-      if (
-        modelKey !== null &&
-        !runtimeModels.some((model) => model.key === modelKey && model.kind === room.kind)
-      ) {
-        setNotice("该模型不在此 CLI 的可用列表中，请刷新模型列表。");
-        return;
-      }
-      if ((room.modelKey ?? null) === modelKey) return;
-      const mode = room.permissionMode;
-      const requestId = `cc-model-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-      pendingCcOpenRef.current = {
-        requestId,
-        roomId,
-        sessionId,
-        cwd,
-        mode,
-        modelKey,
         revision: conversationRevisionRef.current,
+        online: socketOnlineRef.current,
+        modelSelection: ccRoomModelSelectionRef.current,
+        inputPending: !!roomId && hasPendingRoomInput(roomId),
+        changePending: pendingCcOpenRef.current !== null,
+        hasQueuedTurns: !!turnQueuesRef.current[`room:${roomId}`]?.entries.length,
+        models: runtimeModels,
+      });
+      if (!prepared.request) {
+        if (prepared.notice) setNotice(prepared.notice);
+        return;
+      }
+      const { request, event } = prepared;
+      pendingCcOpenRef.current = request;
+      setCcModeRequest({
+        mode: request.mode,
         switching: true,
-      };
-      setCcModeRequest({ mode, switching: true, modelKey });
-      if (
-        !socket.send({
-          type: "ccRoom.openSession",
-          roomId,
-          sessionId,
-          cwd,
-          mode,
-          modelKey,
-          kind: room.kind,
-          requestId,
-        }) &&
-        pendingCcOpenRef.current?.requestId === requestId
-      ) {
+        ...(request.modelKey !== undefined ? { modelKey: request.modelKey } : {}),
+      });
+      if (!socket.send(event) && pendingCcOpenRef.current?.requestId === request.requestId) {
+        // No Host admission: keep the actual settings, conversation and draft.
         pendingCcOpenRef.current = null;
         setCcModeRequest(undefined);
         setNotice(t("mobile.connection.offlineTitle"));
       }
     },
     [socket, setNotice, runtimeModels, hasPendingRoomInput],
+  );
+  const setCcRoomPermissionMode = useCallback(
+    (mode: PermissionMode) => changeCcRoomSetting({ mode }),
+    [changeCcRoomSetting],
+  );
+  const setCcRoomModel = useCallback(
+    (modelKey: string | null) => changeCcRoomSetting({ modelKey }),
+    [changeCcRoomSetting],
   );
 
   const respondCcApproval = useCallback(
