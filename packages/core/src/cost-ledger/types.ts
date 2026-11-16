@@ -42,7 +42,8 @@ export interface UsageReceipt extends UsageIdentity {
     output: number;
     cacheRead: number;
     cacheWrite: number;
-    cachePricesEstimated: true;
+    /** False only when both cache prices are published for this route. */
+    cachePricesEstimated: boolean;
   } | null;
 }
 

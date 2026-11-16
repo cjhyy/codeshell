@@ -5,7 +5,6 @@ import { followUpsTool, manageFollowUpTool, type PetFollowUpItem } from "./follo
 import { manageSessionsTool } from "./session-control.js";
 import {
   type PetOutboundTargetOption,
-  rewriteSendMessageDef,
   sendMessageAvailability,
   sendMessageTool,
   sendMessageToolDef,
@@ -100,29 +99,15 @@ describe("Mimi atomic manager tools", () => {
     ).toContain("requires");
   });
 
-  test("labels a destination whose proactive context is unproven", () => {
-    const base: PetOutboundTargetOption = {
-      id: "owner-abc",
-      channel: "wechat",
-      label: "微信",
-      maxTextLength: 100,
-      attachments: [],
-      maxAttachments: 0,
-      maxAttachmentBytes: 0,
-    };
-    const describeTargets = (targets: PetOutboundTargetOption[]) =>
-      rewriteSendMessageDef(sendMessageToolDef, {
-        behaviorProfile: "pet",
-        profileMeta: { petHostActionKinds: ["outboundMessage"], petOutboundTargets: targets },
-      } as unknown as ToolVisibilityContext).description;
-    expect(describeTargets([{ ...base, proactiveReady: "unknown" }])).toContain(
-      "may not deliver until the owner messages first",
-    );
-    expect(describeTargets([base])).not.toContain("readiness=unknown");
-    // Acceptance is still never delivery, for either readiness.
-    expect(describeTargets([{ ...base, proactiveReady: "unknown" }])).toContain(
-      "never proof of delivery",
-    );
+  test("points to the runtime context for destinations instead of listing them", () => {
+    // Destinations, their limits and readiness are outboundTargets entries in
+    // the trusted runtime context; the frozen tool table stays static.
+    expect(sendMessageToolDef.description).toContain("outboundTargets");
+    expect(sendMessageToolDef.description).toContain("may wait until the owner messages first");
+    expect(sendMessageToolDef.description).toContain("never proof of delivery");
+    expect(
+      (sendMessageToolDef.inputSchema.properties?.target_id as { enum?: string[] }).enum,
+    ).toBeUndefined();
   });
 
   test("exposes proactive messaging only for exact host-authorized targets", async () => {
@@ -147,18 +132,9 @@ describe("Mimi atomic manager tools", () => {
     } as unknown as ToolVisibilityContext;
 
     expect(sendMessageAvailability(visibility)).toBe(true);
-    const rewritten = rewriteSendMessageDef(sendMessageToolDef, visibility);
-    expect(
-      (
-        rewritten.inputSchema.properties?.target_id as {
-          enum?: string[];
-        }
-      ).enum,
-    ).toEqual(["owner-abc"]);
-    expect(rewritten.inputSchema.properties).toHaveProperty("attachment_paths");
-    expect(await sendMessageTool({ target_id: "owner-unknown", text: "完成了" }, ctx)).toContain(
-      "unknown target_id",
-    );
+    const unknown = await sendMessageTool({ target_id: "owner-unknown", text: "完成了" }, ctx);
+    expect(unknown).toContain("unknown target_id");
+    expect(unknown).toContain('"owner-abc"');
     expect(await sendMessageTool({ target_id: " owner-abc", text: "完成了" }, ctx)).toContain(
       "exact authorized",
     );
@@ -188,7 +164,7 @@ describe("Mimi atomic manager tools", () => {
     ]);
   });
 
-  test("hides and rejects attachments for text-only proactive targets", async () => {
+  test("rejects attachments for text-only proactive targets", async () => {
     const targets: PetOutboundTargetOption[] = [
       {
         id: "owner-text",
@@ -201,17 +177,7 @@ describe("Mimi atomic manager tools", () => {
       },
     ];
     const { ctx, recorded } = managerContext({ targets });
-    const visibility = {
-      behaviorProfile: "pet",
-      profileMeta: {
-        petHostActionKinds: ["outboundMessage"],
-        petOutboundTargets: targets,
-      },
-    } as unknown as ToolVisibilityContext;
 
-    expect(
-      rewriteSendMessageDef(sendMessageToolDef, visibility).inputSchema.properties,
-    ).not.toHaveProperty("attachment_paths");
     expect(
       await sendMessageTool(
         { target_id: "owner-text", text: "完成了", attachment_paths: ["/work/result.png"] },

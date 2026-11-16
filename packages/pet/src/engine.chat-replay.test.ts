@@ -338,12 +338,11 @@ describe("Mimi mocked multi-turn chat replay", () => {
       if (round === 2 || round === 3) {
         const time = toolResultJson(options, "CurrentTime");
         outboundText = `现在是 ${time.local}（${time.timeZone}，UTC${time.utcOffset}）。`;
-        const properties = options.tools?.find((tool) => tool.name === "SendMessage")?.inputSchema
-          .properties as Record<string, { enum: string[] }>;
+        // SendMessage is static; the authorized id comes from outboundTargets.
         return call(
           "SendMessage",
           {
-            target_id: round === 2 ? "wechat" : properties.target_id!.enum[0],
+            target_id: round === 2 ? "wechat" : "owner-wechat-7ac291",
             text: outboundText,
           },
           round === 2 ? "raw-channel-rejected" : "authorized-target",

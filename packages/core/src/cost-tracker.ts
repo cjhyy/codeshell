@@ -3,7 +3,11 @@
  */
 
 import { NOOP_COLORIZER, type Colorizer } from "./colorizer.js";
-import { findOpenRouterModel } from "./data/openrouter-models.js";
+import {
+  findOpenRouterModel,
+  openRouterRequestPrice,
+  type OpenRouterModel,
+} from "./data/openrouter-models.js";
 import type { UsageLedger } from "./cost-ledger/store.js";
 import { formatUsageCost } from "./cost-ledger/summary.js";
 import { currentUsageOwner } from "./cost-ledger/context.js";
@@ -12,25 +16,16 @@ import { MODEL_PRICING, DEFAULT_PRICING, type ModelPricing } from "./data/model-
 // Pricing per 1M tokens (USD). The MODEL_PRICING table + DEFAULT_PRICING now
 // live in data/model-metadata.json (loaded by data/model-metadata.ts) so a
 // price change is a data edit, not a code change. cacheRead/cacheWrite are
-// derived there: read = 10% of input, write = 125% of input.
+// derived there: read = 10% of input, write = 125% of input. OpenRouter
+// snapshot entries carry published cache prices and size tiers instead.
 
-/** Build a ModelPricing from an OpenRouter snapshot entry. */
-function openRouterPricing(hit: { inputPricePerMillion: number; outputPricePerMillion: number }): {
-  pricing: ModelPricing;
-  known: boolean;
-} {
-  const input = hit.inputPricePerMillion;
-  const output = hit.outputPricePerMillion;
-  return {
-    pricing: {
-      input,
-      output,
-      // Snapshot doesn't carry cache pricing; use the same heuristic as pricing() helper
-      cacheRead: input * 0.1,
-      cacheWrite: input * 1.25,
-    },
-    known: true,
-  };
+/** Prices for one request from an OpenRouter snapshot entry. */
+function openRouterPricing(
+  hit: OpenRouterModel,
+  promptTokens: number,
+): { pricing: ModelPricing; known: boolean } {
+  const { input, output, cacheRead, cacheWrite } = openRouterRequestPrice(hit, promptTokens);
+  return { pricing: { input, output, cacheRead, cacheWrite }, known: true };
 }
 
 /**
@@ -44,12 +39,12 @@ function openRouterPricing(hit: { inputPricePerMillion: number; outputPricePerMi
  * Returns { pricing, source } so callers can flag unknown-model warnings
  * accurately (the snapshot path counts as known even if MODEL_PRICING misses).
  */
-function lookupPricing(model: string): { pricing: ModelPricing; known: boolean } {
+function lookupPricing(model: string, promptTokens = 0): { pricing: ModelPricing; known: boolean } {
   // Try OpenRouter snapshot lookup for models with vendor/ prefix
   if (model.includes("/")) {
     const hit = findOpenRouterModel(model);
     if (hit && (hit.inputPricePerMillion > 0 || hit.outputPricePerMillion > 0)) {
-      return openRouterPricing(hit);
+      return openRouterPricing(hit, promptTokens);
     }
   }
   // Also try OpenRouter for short names (e.g. "deepseek-v4-flash" → "deepseek/deepseek-v4-flash")
@@ -59,7 +54,7 @@ function lookupPricing(model: string): { pricing: ModelPricing; known: boolean }
     findOpenRouterModel(`openai/${model}`) ??
     findOpenRouterModel(`anthropic/${model}`);
   if (orHit && (orHit.inputPricePerMillion > 0 || orHit.outputPricePerMillion > 0)) {
-    return openRouterPricing(orHit);
+    return openRouterPricing(orHit, promptTokens);
   }
   const canonical = getCanonicalName(model);
   const hit = MODEL_PRICING[canonical] ?? MODEL_PRICING[model];
@@ -83,7 +78,7 @@ export interface UsageRecord {
 
 /** Estimated cost of one record, priced by its original identifier when kept. */
 function recordCost(r: UsageRecord): number {
-  const { pricing: p } = lookupPricing(r.pricingModel ?? r.model);
+  const { pricing: p } = lookupPricing(r.pricingModel ?? r.model, r.promptTokens);
   // promptTokens includes cache tokens — subtract them to avoid double billing
   const uncachedInput = Math.max(0, r.promptTokens - r.cacheReadTokens - r.cacheWriteTokens);
   return (
@@ -182,7 +177,7 @@ export class CostTracker {
     cacheReadTokens = 0,
     cacheWriteTokens = 0,
   ): number {
-    const { pricing: p } = lookupPricing(model);
+    const { pricing: p } = lookupPricing(model, promptTokens);
     const uncachedInput = Math.max(0, promptTokens - cacheReadTokens - cacheWriteTokens);
     return (
       (uncachedInput / 1_000_000) * p.input +
