@@ -1,6 +1,10 @@
 import { join } from "node:path";
 import type { PetLongTask } from "@cjhyy/code-shell-pet";
-import { createReplyModels, type ExternalReplyModel } from "./pet-notice-reply-models.js";
+import {
+  createReplyModels,
+  type ExternalReplyModel,
+  type ReplyModelOptions,
+} from "./pet-notice-reply-models.js";
 import type { PetNoticeWiring } from "./pet-notice-wiring-types.js";
 import { createPetProactive, type PetProactive } from "./pet-proactive.js";
 import { PetProactiveStateStore } from "./pet-proactive-state.js";
@@ -28,6 +32,7 @@ export function wirePetProactive(input: {
   /** Settings cwd for the models. */
   cwd: string;
   externalReplyModel?: ExternalReplyModel;
+  accounting?: ReplyModelOptions["accounting"];
   tasks(): readonly PetLongTask[];
   projection(): Pick<DesktopPetProjectionSnapshot, "sessions" | "pending">;
   log(event: string, data: Record<string, unknown>): void;
@@ -48,6 +53,7 @@ export function wirePetProactive(input: {
       createReplyModels(input.cwd, {
         maxTokens: BRIEF_MAX_TOKENS,
         external: input.externalReplyModel,
+        ...(input.accounting ? { accounting: input.accounting } : {}),
       }),
     log: input.log,
   });

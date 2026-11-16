@@ -1,5 +1,5 @@
 import { MODEL_PRICING } from "../data/model-metadata.js";
-import { findOpenRouterModel } from "../data/openrouter-models.js";
+import { findOpenRouterModel, openRouterRequestPrice } from "../data/openrouter-models.js";
 import type { TokenUsage } from "../types.js";
 import type { UsageIdentity, UsageReceipt } from "./types.js";
 
@@ -15,11 +15,7 @@ export function estimateReceipt(
     if (hit && hit.inputPricePerMillion >= 0 && hit.outputPricePerMillion >= 0) {
       pricing = {
         source: "openrouter-snapshot",
-        input: hit.inputPricePerMillion,
-        output: hit.outputPricePerMillion,
-        cacheRead: hit.inputPricePerMillion * 0.1,
-        cacheWrite: hit.inputPricePerMillion * 1.25,
-        cachePricesEstimated: true,
+        ...openRouterRequestPrice(hit, usage.promptTokens),
       };
     }
   } else if (

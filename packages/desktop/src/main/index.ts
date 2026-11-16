@@ -2179,6 +2179,11 @@ async function createWindow(): Promise<BrowserWindow> {
       ...createOwnerReplyHandling({
         router: notices.router,
         cwd: resolveNoRepoCwd(),
+        accounting: {
+          sessionsRootDir: sessionsRoot(),
+          sessionId: () => mimiSessionId,
+          purpose: "pet_notice_reply",
+        },
         externalReplyModel: createPetExternalReplyModel({
           service: () => externalRuntime.service,
           cwd: resolveNoRepoCwd(),
@@ -2266,6 +2271,11 @@ async function createWindow(): Promise<BrowserWindow> {
       notices,
       userDataDir: app.getPath("userData"),
       cwd: resolveNoRepoCwd(),
+      accounting: {
+        sessionsRootDir: petSessionsRootDir,
+        sessionId: () => mimiSessionId,
+        purpose: "pet_brief",
+      },
       externalReplyModel: createPetExternalReplyModel({
         service: () => externalRuntime.service,
         cwd: resolveNoRepoCwd(),

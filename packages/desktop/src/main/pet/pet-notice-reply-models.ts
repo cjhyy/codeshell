@@ -9,6 +9,7 @@ import { petChatModelKeyFromSettings } from "../../shared/pet-settings.js";
 import { sessionModelKeyFromSettings } from "../../shared/session-model-default.js";
 import { parseExternalRuntimeModelKey } from "../../shared/external-runtime-models.js";
 import type { ReplyModel } from "./pet-notice-reply-interpreter.js";
+import { withDesktopSessionModelTrace } from "../auxiliary-model-tracing.js";
 
 type ReplyRequest = Parameters<ReplyModel>[0];
 type Settings = ReturnType<SettingsManager["get"]>;
@@ -18,6 +19,12 @@ export type ExternalReplyModel = (modelKey: string, request: ReplyRequest) => Pr
 
 export interface ReplyModelOptions {
   maxTokens?: number;
+  /** Trace native calls and charge them to Mimi's Session when it is known. */
+  accounting?: {
+    sessionsRootDir: string;
+    sessionId: () => string | undefined;
+    purpose: string;
+  };
   external?: ExternalReplyModel;
   readSettings?: () => Settings;
   callNative?: (
@@ -83,7 +90,17 @@ export function createReplyModels(cwd: string, options: ReplyModelOptions = {}):
       const earlier = deduplicate ? resolveLLMConfigForTag(settings, "text", aux) : null;
       if (earlier && JSON.stringify(earlier) === JSON.stringify(resolved))
         throw new Error("same model as the auxiliary one");
-      return callNative(resolved, request, { maxTokens: options.maxTokens ?? 1_000 });
+      const run = () => callNative(resolved, request, { maxTokens: options.maxTokens ?? 1_000 });
+      const accounting = options.accounting;
+      const sessionId = accounting?.sessionId();
+      return accounting && sessionId
+        ? withDesktopSessionModelTrace(
+            accounting.sessionsRootDir,
+            sessionId,
+            accounting.purpose,
+            run,
+          )
+        : run();
     };
   return [call(aux), call(main, true)];
 }

@@ -21,7 +21,6 @@ import {
   delegateWorkAvailability,
   delegateWorkTool,
   delegateWorkToolDef,
-  rewriteDelegateWorkDef,
 } from "./delegate-work.js";
 import {
   mobileRemoteAvailability,
@@ -51,7 +50,6 @@ import {
   manageFollowUpToolDef,
 } from "./follow-ups.js";
 import {
-  rewriteSendMessageDef,
   sendMessageAvailability,
   sendMessageTool,
   sendMessageToolDef,
@@ -369,13 +367,13 @@ function buildPetParts(): PetParts {
         },
         execute: delegateWorkTool,
         exposure: {
-          // Byte-identical to the former builtin registration: HARNESS_TAGS
-          // preset tags + explicit allow rule + pet-profile availability and
-          // the per-turn workspace-enum rewrite.
+          // HARNESS_TAGS preset tags + explicit allow rule + pet-profile
+          // availability. The definition is static: Workspaces and reusable
+          // Sessions live in the trusted runtime context, so a frozen tool
+          // table never carries a stale list.
           presetTags: ["harness-min", "general"],
           defaultPermissionRules: [{ tool: delegateWorkToolDef.name, decision: "allow" }],
           availability: delegateWorkAvailability,
-          rewriteDefinition: rewriteDelegateWorkDef,
         },
       },
       {
@@ -574,7 +572,6 @@ function buildPetParts(): PetParts {
           presetTags: ["harness-min", "general"],
           defaultPermissionRules: [{ tool: sendMessageToolDef.name, decision: "allow" }],
           availability: sendMessageAvailability,
-          rewriteDefinition: rewriteSendMessageDef,
         },
       },
       // Mimi's own notice tools (design §4.7). Reads ask the host synchronously;
