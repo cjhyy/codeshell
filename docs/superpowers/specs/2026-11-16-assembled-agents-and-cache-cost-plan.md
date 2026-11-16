@@ -149,14 +149,10 @@
 
 启动回执回合（`toolAllowlist: []`）紧跟在主回合之后运行，周期是热的，不会改动已有快照；只有恰好在那一刻变冷才会冻结出一张空表，概率很低。
 
-修法只作用于目录里没有 `ToolSearch` 的工具面，第 3 步完成后删除：
+已实现为 PR #371。修法只作用于本周期没有 `ToolSearch` 的工具面，第 1 步的渐进式追加（1.7）落地后删除：
 
-1. **`RunToolSurface`**：
-   - 每个冷边界（首次选定、周期过期后的重定基、`rebase()`、没有目录时的 `rebaseToolSelection`），顶部名单 = 已有名单 ∪ 当前有资格的工具，只增不减；
-   - 周期中途才有资格的工具不改工具表（渐进式追加）：宿主把它的完整定义作为一条消息追加到末尾，模型用 `CallTool` 或直接用工具名调用。这条通路 `ToolSearch` 的发现已经在用，这里只是改由宿主发起。到下一个冷边界再并入顶部，缓存不断；
-   - `lastRequestAt` 照常保存。
-   - 要改的测试：`run-tool-surface.test.ts:119-132`、`:489-502` 的断言与新规则相反，限定到有 `ToolSearch` 的情况。
-2. **pet**：`DelegateWork` 和 `SendMessage` 的定义改成静态的，不带枚举和清单。清单已经在 `<pet-world>` 的 `workspaces`、`reusableSessions`、`outboundTargets` 里，描述指向它们，参数继续由宿主在调用时校验。`GatewayReply` 的改写里有渠道的长度上限、附件种类与上限、按钮模式（`pet/host-actions.ts:341-375`），世界状态里没有这些，留到第 3 步。要改的是五个测试文件里对枚举的断言：`pet/delegate-work.test.ts`、`pet/atomic-manager-tools.test.ts`、`pet/external-manager-catalog.test.ts`、`pet/engine.chat-replay.test.ts`、`tests/mimi-chat-replay.test.ts`。
+1. **`RunToolSurface`**：本周期既没有冻结 `ToolSearch`、当前目录里也没有它时，每个有资格的工具都并入冻结工具表，名单只增不减。工具第一次有资格时工具表变一次，之后对所有回合都保持不变；在表里但这一轮没资格的工具，调用时被拒（"看得见、调不动"）。`lastRequestAt` 照常保存。没有在热修复里做渐进式追加，是因为它需要宿主写入、能持久的消息，main 上要等 #363 的提醒通路。
+2. **pet**：`DelegateWork` 和 `SendMessage` 的定义改成静态的，不带枚举和清单；id 只来自世界状态的 `workspaces`、`reusableSessions`、`outboundTargets`，这三项挪到世界状态前部，超长裁剪时最后才被裁；未知 id 的报错列出可选的 id。外部运行时的已审核指纹随之更新这两条。`GatewayReply` 的改写里有渠道的长度上限、附件种类与上限、按钮模式，世界状态里没有这些，留到第 3 步。
 
 ### 0.4 合入 #363
 
