@@ -12,6 +12,7 @@
 ```bash
 python3 cache_baseline.py                      # 默认 ~/.code-shell，模型 openai/gpt-6.1-sol
 python3 cache_baseline.py --model <模型> --model <模型>
+python3 cache_baseline.py --snapshot <价格快照.json>
 ```
 
 说明：
@@ -20,7 +21,7 @@ python3 cache_baseline.py --model <模型> --model <模型>
 - 脚本只输出汇总数字，不读也不打印提示词、会话标题或文件路径。
 - 测试夹具会往同一份日志里写，脚本只保留真实会话的 id 形状。
 - 调用追踪默认只保留 7 天，引擎日志保留更久，所以各表的时间范围不同。
-- 价格取追踪记录里的价格快照，不计缓存写入溢价。快照里的缓存读取价是按"输入 × 0.1"估的。
+- 价格取仓库里的 OpenRouter 价格快照（`packages/core/src/data/openrouter-models.json`，需要带缓存读写价和分档，见 #372），每个请求按自己的档位计价；`--snapshot` 可以指定别的快照。
 - 不同缓存策略的时期不能合在一起看：策略随应用版本变了，合并后的占比两边都不代表。
 - 头部指纹是每个进程一把随机密钥算出来的，跨进程重启不可比；指纹不包含首条用户上下文（指令文件和日期）。
 - 归因方法写在脚本开头的注释里。它是启发式的，用来排优先级，不是节省承诺。

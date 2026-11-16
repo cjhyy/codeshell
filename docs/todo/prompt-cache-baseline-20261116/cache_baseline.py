@@ -13,9 +13,13 @@ Usage
   python3 cache_baseline.py [--home ~/.code-shell] [--model openai/gpt-6.1-sol ...]
 
 Method
+  Prices come from the OpenRouter snapshot in the repository
+  (packages/core/src/data/openrouter-models.json): input, output, cache read,
+  cache write and the size tiers that reprice a whole request once its prompt
+  reaches a threshold. Every request is priced at its own tier.
+
   Table 1 (cost by purpose) sums the trace records, which carry the call's
-  purpose (main, aux_summary, subagent, ...) and the pricing snapshot. The
-  cached-input price in that snapshot is an estimate (input x 0.1).
+  purpose (main, aux_summary, subagent, ...) and its cache reads and writes.
 
   Table 2 (loss attribution) walks consecutive main-loop requests of one
   session in the engine log, separately for each cache strategy, because the
@@ -23,7 +27,10 @@ Method
   0.10.0, openai-hybrid from 0.10.0). In an append-only world the whole
   previous prompt is a prefix of the next one, so
       loss = max(0, min(prev.prompt, cur.prompt) - cur.cacheRead)
-  and each loss above max(2000, 5%) goes into the first bucket that applies:
+  and each loss above max(2000, 5%) goes into the first bucket that applies.
+  Its price is the lost tokens times the difference between what the request
+  paid for its non-cached input (uncached and cache-write tokens) and the
+  cache-read price of its tier:
       first request     no earlier request of the same strategy in the session
       cold              the gap exceeds the strategy's retention
                         (5 minutes implicit, 30 minutes hybrid)
@@ -63,6 +70,53 @@ KINDS = [
     ("subagent", re.compile(r"^[A-Za-z0-9_-]{8}$")),
 ]
 RETENTION = {"openai-hybrid": 1800, "openai-implicit": 300}
+SNAPSHOT = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "packages", "core", "src", "data", "openrouter-models.json"
+)
+PRICES: dict[str, dict] = {}
+
+
+def load_prices(path: str, models: set[str]) -> None:
+    with open(path) as handle:
+        snapshot = json.load(handle)
+    for entry in snapshot.get("models", []):
+        if entry.get("id") not in models:
+            continue
+        if entry.get("cacheReadPricePerMillion") is None or entry.get("cacheWritePricePerMillion") is None:
+            raise SystemExit(f"{path}: {entry['id']} has no published cache prices; refresh the snapshot")
+        PRICES[entry["id"]] = entry
+    missing = models - set(PRICES)
+    if missing:
+        raise SystemExit(f"{path}: no prices for {', '.join(sorted(missing))}")
+
+
+def tier(model: str, prompt: int) -> tuple[float, float, float, float]:
+    """(input, output, cache read, cache write) per 1M tokens for one request."""
+    entry = PRICES[model]
+    chosen = entry
+    for candidate in entry.get("priceTiers") or []:
+        if prompt >= candidate["minPromptTokens"]:
+            chosen = candidate
+    return (
+        chosen["inputPricePerMillion"],
+        chosen["outputPricePerMillion"],
+        chosen["cacheReadPricePerMillion"],
+        chosen["cacheWritePricePerMillion"],
+    )
+
+
+def request_usd(model: str, prompt: int, read: int, write: int, out: int) -> float:
+    p_in, p_out, p_read, p_write = tier(model, prompt)
+    uncached = max(0, prompt - read - write)
+    return (uncached * p_in + read * p_read + write * p_write + out * p_out) / 1e6
+
+
+def loss_usd(model: str, prompt: int, read: int, write: int, lost: int) -> float:
+    """What the lost tokens cost above the cache-read price of the request's tier."""
+    p_in, _, p_read, p_write = tier(model, prompt)
+    uncached = max(0, prompt - read - write)
+    paid = (uncached * p_in + write * p_write) / (uncached + write) if uncached + write else p_in
+    return lost * max(0.0, paid - p_read) / 1e6
 CAUSES = [
     "mid-run",
     "run start",
@@ -130,6 +184,8 @@ def load_requests(home: str, models: set[str]) -> tuple[list[dict], collections.
                             "strategy": end.get("cacheStrategy") or "unknown",
                             "prompt": usage.get("promptTokens") or 0,
                             "read": usage.get("cacheReadTokens") or 0,
+                            "write": usage.get("cacheCreationTokens") or 0,
+                            "model": end.get("model"),
                             "tools": prefix.get("toolsHash"),
                             "system": prefix.get("systemHash"),
                             "config": (prefix.get("configHash"), prefix.get("cacheScopeHash")),
@@ -169,6 +225,7 @@ def attribution(requests: list[dict]) -> None:
 
     totals: dict[tuple, collections.Counter] = collections.defaultdict(collections.Counter)
     loss: dict[tuple, collections.Counter] = collections.defaultdict(collections.Counter)
+    loss_cost: dict[tuple, collections.Counter] = collections.defaultdict(collections.Counter)
     events: dict[tuple, collections.Counter] = collections.defaultdict(collections.Counter)
     span: dict[str, list[float]] = {}
     sessions: dict[tuple, set] = collections.defaultdict(set)
@@ -189,6 +246,8 @@ def attribution(requests: list[dict]) -> None:
             bounds[0], bounds[1] = min(bounds[0], row["t"]), max(bounds[1], row["t"])
             cause, lost, expected = classify(prev, row)
             loss[key][cause] += lost
+            loss_cost[key][cause] += loss_usd(row["model"], row["prompt"], row["read"], row["write"], lost)
+            total["usd"] += request_usd(row["model"], row["prompt"], row["read"], row["write"], 0)
             events[key][cause] += 1
             if prev is not None and prev["strategy"] == row["strategy"]:
                 total["new_tail"] += max(0, row["prompt"] - prev["prompt"])
@@ -213,12 +272,13 @@ def attribution(requests: list[dict]) -> None:
             f"{sum(totals[key]['requests'] for key in keys)} requests, "
             f"{len(set().union(*(sessions[key] for key in keys)))} sessions, "
             f"input {prompt / 1e6:.2f}M, hit {100 * read / prompt:.1f}%, "
+            f"input cost {sum(totals[key]['usd'] for key in keys):.2f} USD, "
             f"new tail {sum(totals[key]['new_tail'] for key in keys) / 1e6:.2f}M, "
             f"requests without fingerprint {sum(totals[key]['no_fingerprint'] for key in keys)}"
         )
         kinds = sorted({key[1] for key in keys}, key=lambda name: -totals[(strategy, name)]["prompt"])
         header = "".join(f"{name + ' M':>12s}" for name in kinds)
-        print(f"{'cause':22s} {'events':>7s} {'lost M':>8s} {'% loss':>7s} {'% input':>8s}{header}")
+        print(f"{'cause':22s} {'events':>7s} {'lost M':>8s} {'% loss':>7s} {'% input':>8s} {'USD':>8s}{header}")
         whole = sum(tokens for key in keys for cause, tokens in loss[key].items() if cause != "ok") or 1
         for cause in CAUSES:
             tokens = sum(loss[key][cause] for key in keys)
@@ -226,11 +286,13 @@ def attribution(requests: list[dict]) -> None:
             if not count:
                 continue
             per_kind = "".join(f"{loss[(strategy, name)][cause] / 1e6:12.2f}" for name in kinds)
+            usd = sum(loss_cost[key][cause] for key in keys)
             print(
                 f"{cause:22s} {count:7d} {tokens / 1e6:8.2f} {100 * tokens / whole:6.1f}% "
-                f"{100 * tokens / prompt:7.1f}%{per_kind}"
+                f"{100 * tokens / prompt:7.1f}% {usd:8.2f}{per_kind}"
             )
-        print(f"{'total':22s} {'':7s} {whole / 1e6:8.2f} {'':7s} {100 * whole / prompt:7.1f}%")
+        whole_usd = sum(cost for key in keys for cause, cost in loss_cost[key].items() if cause != "ok")
+        print(f"{'total':22s} {'':7s} {whole / 1e6:8.2f} {'':7s} {100 * whole / prompt:7.1f}% {whole_usd:8.2f}")
 
     print("\nTable 3. Reuse of the previous request (retention window, head unchanged)")
     print(f"{'strategy':18s} {'run starts':>10s} {'expected M':>10s} {'reuse %':>8s} {'inside-run reuse %':>19s}")
@@ -245,7 +307,7 @@ def attribution(requests: list[dict]) -> None:
 
 def cost_by_purpose(home: str, models: set[str]) -> None:
     rows: dict[tuple, collections.Counter] = collections.defaultdict(collections.Counter)
-    first, last, price, app_estimate = 1e18, 0.0, None, 0.0
+    first, last, app_estimate = 1e18, 0.0, 0.0
     sizes: list[int] = []
     for path in glob.glob(os.path.join(home, "sessions", ".model-traces", "records", "*.json")):
         try:
@@ -262,29 +324,46 @@ def cost_by_purpose(home: str, models: set[str]) -> None:
         row["calls"] += 1
         row["prompt"] += usage.get("promptTokens") or 0
         row["read"] += usage.get("cacheReadTokens") or 0
+        row["write"] += usage.get("cacheCreationTokens") or 0
         row["out"] += usage.get("completionTokens") or 0
+        row["usd_micro"] += round(1e6 * request_usd(
+            record["model"],
+            usage.get("promptTokens") or 0,
+            usage.get("cacheReadTokens") or 0,
+            usage.get("cacheCreationTokens") or 0,
+            usage.get("completionTokens") or 0,
+        ))
+        row["floor_micro"] += round(1e6 * request_usd(
+            record["model"],
+            usage.get("promptTokens") or 0,
+            usage.get("promptTokens") or 0,
+            0,
+            usage.get("completionTokens") or 0,
+        ))
         app_estimate += record.get("estimatedCostUsd") or 0
         if purpose == "main":
             sizes.append(usage.get("promptTokens") or 0)
         started = record.get("startedAt") or 0
         first, last = min(first, started), max(last, started)
-        price = price or record.get("pricing")
     if not rows:
         print("\nTable 1. No trace records for the selected models.")
         return
-    price = price or {}
-    p_in, p_read, p_out = price.get("input") or 0, price.get("cacheRead") or 0, price.get("output") or 0
-
     def usd(row: collections.Counter) -> float:
-        return ((row["prompt"] - row["read"]) * p_in + row["read"] * p_read + row["out"] * p_out) / 1e6
+        return row["usd_micro"] / 1e6
 
     print(f"\nTable 1. Cost by purpose (trace records, {day(first / 1000)} -> {day(last / 1000)})")
-    print(
-        f"prices per 1M tokens: input {p_in}, cached input {p_read} "
-        f"({'estimated' if price.get('cachePricesEstimated') else 'listed'}), output {p_out}; "
-        "no cache-write premium"
-    )
-    print(f"{'kind':10s} {'purpose':18s} {'calls':>6s} {'input M':>9s} {'hit %':>6s} {'uncached M':>10s} {'USD':>8s}")
+    for model, entry in sorted(PRICES.items()):
+        tiers = "; ".join(
+            f"from {t['minPromptTokens']} tokens {t['inputPricePerMillion']}/{t['cacheReadPricePerMillion']}/"
+            f"{t['cacheWritePricePerMillion']}/{t['outputPricePerMillion']}"
+            for t in entry.get("priceTiers") or []
+        )
+        print(
+            f"{model} per 1M tokens, input/cache read/cache write/output: "
+            f"{entry['inputPricePerMillion']}/{entry['cacheReadPricePerMillion']}/"
+            f"{entry['cacheWritePricePerMillion']}/{entry['outputPricePerMillion']}" + (f"; {tiers}" if tiers else "")
+        )
+    print(f"{'kind':10s} {'purpose':18s} {'calls':>6s} {'input M':>9s} {'hit %':>6s} {'write M':>8s} {'uncached M':>10s} {'USD':>8s}")
     total: collections.Counter = collections.Counter()
     total_usd = 0.0
     for key, row in sorted(rows.items(), key=lambda item: -usd(item[1])):
@@ -295,15 +374,16 @@ def cost_by_purpose(home: str, models: set[str]) -> None:
         total.update(row)
         print(
             f"{key[0]:10s} {key[1][:18]:18s} {row['calls']:6d} {row['prompt'] / 1e6:9.2f} "
-            f"{100 * row['read'] / row['prompt']:6.1f} {(row['prompt'] - row['read']) / 1e6:10.2f} {cost:8.2f}"
+            f"{100 * row['read'] / row['prompt']:6.1f} {row['write'] / 1e6:8.2f} "
+            f"{(row['prompt'] - row['read'] - row['write']) / 1e6:10.2f} {cost:8.2f}"
         )
     print(
         f"{'total':10s} {'':18s} {total['calls']:6d} {total['prompt'] / 1e6:9.2f} "
-        f"{100 * total['read'] / total['prompt']:6.1f} {(total['prompt'] - total['read']) / 1e6:10.2f} {total_usd:8.2f}"
+        f"{100 * total['read'] / total['prompt']:6.1f} {total['write'] / 1e6:8.2f} "
+        f"{(total['prompt'] - total['read'] - total['write']) / 1e6:10.2f} {total_usd:8.2f}"
     )
-    floor = (total["prompt"] * p_read + total["out"] * p_out) / 1e6
-    print(f"floor if every input token were a cache read: {floor:.2f} USD")
-    print(f"the application's own estimate for the same calls (with a 1.25x write premium): {app_estimate:.2f} USD")
+    print(f"floor if every input token were a cache read: {total['floor_micro'] / 1e6:.2f} USD")
+    print(f"the application's own estimate recorded with the calls: {app_estimate:.2f} USD")
     if sizes:
         sizes.sort()
         big = sum(size for size in sizes if size > 150_000)
@@ -362,8 +442,10 @@ def main() -> None:
     parser.add_argument("--home", default=os.path.expanduser("~/.code-shell"))
     parser.add_argument("--model", action="append", default=None)
     parser.add_argument("--mimi-days", type=int, default=32, help="window for Table 4")
+    parser.add_argument("--snapshot", default=SNAPSHOT, help="OpenRouter price snapshot")
     args = parser.parse_args()
     models = set(args.model or ["openai/gpt-6.1-sol"])
+    load_prices(args.snapshot, models)
     cost_by_purpose(args.home, models)
     requests, skipped = load_requests(args.home, models)
     attribution([request for request in requests if request["kind"] != "subagent"])
