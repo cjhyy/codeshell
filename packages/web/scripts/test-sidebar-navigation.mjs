@@ -454,8 +454,8 @@ try {
     await inspectTrace();
     reports.push({ host: "desktop", size, keyboardStops: count });
   }
-  // The real workbench's existing dirty-navigation guard remains in charge of
-  // both account directory navigation and previously saved connections.
+  // One click opens the account directory through the real workbench's existing
+  // dirty-navigation guard. Previously saved addresses remain untouched.
   const savedAddress = origin + "/mobile";
   await page.evaluate((address) => {
     window.localStorage.setItem(
@@ -485,31 +485,27 @@ try {
     await page.goto(origin);
     await page.locator(".messages").waitFor();
     await open();
-    await page.locator(".environment-trigger").click();
-    const menu = page.getByRole("dialog", { name: "电脑与云端", exact: true });
-    const choose = menu.getByRole("button", { name: "选择电脑或云端", exact: true });
-    await choose.waitFor();
-    assert.match(await menu.textContent(), cloud ? /当前在云端/ : /当前正在使用这台电脑/);
-    assert.equal(await menu.locator("form, input, details").count(), 0);
-    assert.doesNotMatch(await menu.textContent(), /高级|手动添加|选择项目|当前地址|https?:\/\//);
-    await menu.getByText("原来的电脑", { exact: true }).waitFor();
-    const bounds = await menu.boundingBox();
-    assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= (cloud ? 1280 : 390));
-    await page.screenshot({
-      path: path.join(output, `computer-cloud-menu-${cloud ? "cloud" : "computer"}.png`),
-    });
+    const trigger = page.locator(".environment-trigger");
+    await trigger.filter({ hasText: environmentReply.name }).waitFor();
     const originalUrl = page.url();
-    await choose.click();
+    await trigger.click();
     const guard = page.getByRole("dialog", { name: "还有未保存的修改", exact: true });
     await guard.waitFor();
+    assert.equal(await page.getByRole("dialog", { name: "电脑与云端", exact: true }).count(), 0);
     assert.equal(page.url(), originalUrl);
+    await page.screenshot({
+      path: path.join(output, `computer-cloud-direct-${cloud ? "cloud" : "computer"}.png`),
+    });
     await guard.getByRole("button", { name: "留在此页", exact: true }).click();
     assert.equal(await page.locator(".composer textarea").inputValue(), model.draft);
-    await page.locator(".environment-trigger").click();
-    await choose.click();
+    await trigger.click();
     await guard.getByRole("button", { name: "放弃修改并离开", exact: true }).click();
     await page.waitForURL(origin + "/app?target=choose");
-    reports.push({ menu: cloud ? "cloud" : "computer", draftGuard: true, accountDirectory: true });
+    reports.push({
+      switcher: cloud ? "cloud" : "computer",
+      directNavigation: true,
+      draftGuard: true,
+    });
   }
   environmentReply = {
     version: 1,
@@ -532,10 +528,9 @@ try {
     0,
   );
   environmentReply = { ...environmentReply, accountComputers: origin + "/" };
-  await reconnect.getByRole("button", { name: "重新读取", exact: true }).click();
-  await reconnect.getByRole("button", { name: "选择电脑或云端", exact: true }).waitFor();
-  await reconnect.getByRole("button", { name: "打开", exact: true }).click();
-  await page.waitForURL(savedAddress);
+  assert.equal(await reconnect.getByRole("list", { name: "已保存的连接", exact: true }).count(), 0);
+  await reconnect.getByRole("button", { name: "重试连接", exact: true }).click();
+  await page.waitForURL(origin + "/app?target=choose");
   assert.equal(
     JSON.parse(
       await page.evaluate(() => window.localStorage.getItem("codeshell.environments.v1")),
@@ -544,7 +539,7 @@ try {
   );
   await page.evaluate(() => window.localStorage.removeItem("codeshell.environments.v1"));
   environmentReply = undefined;
-  reports.push({ menu: "unavailable", retry: true, savedConnectionPreserved: true });
+  reports.push({ switcher: "unavailable", retryOpensDirectory: true, savedRecordPreserved: true });
   model = { ...model, host: "hub", sessions, connection: "open" };
   await page.goto(`${origin}/?view=activity`);
   await inspectTrace();
