@@ -1,5 +1,9 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
-import { readOutputJournal, readOutputJournalLegacyBase } from "@cjhyy/code-shell-core/internal";
+import {
+  readOutputJournal,
+  readOutputJournalLegacyBase,
+  withoutContextEvents,
+} from "@cjhyy/code-shell-core/internal";
 import { BusyHistoryView, MobileHistoryViewStore } from "./history-view-store.js";
 import { UnsupportedHistoryView } from "./history-view-projection.js";
 import type { MobileOutputSnapshot, MobileServerEvent } from "@cjhyy/code-shell-core";
@@ -160,7 +164,7 @@ export class MobileOutputRecovery {
   }
 
   private projectLegacyBase(events: Parameters<typeof transcriptToStreamEvents>[0]) {
-    const projected = transcriptToStreamEvents(events);
+    const projected = transcriptToStreamEvents(withoutContextEvents(events));
     return {
       events: projected,
       sizes: projected.map((event) => Buffer.byteLength(JSON.stringify(event))),
@@ -478,7 +482,9 @@ export class MobileOutputRecovery {
         : base
           ? {
               throughEventId: page.legacyBaseThroughEventId!,
-              events: base.complete ? transcriptToStreamEvents(base.events) : [],
+              events: base.complete
+                ? transcriptToStreamEvents(withoutContextEvents(base.events))
+                : [],
             }
           : undefined;
       let legacyBaseComplete = standalone ? false : base?.complete;

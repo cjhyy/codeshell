@@ -12,6 +12,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SessionManager } from "../session/session-manager.js";
 import * as outputJournal from "../session/output-journal.js";
+import {
+  CONTEXT_CANARY,
+  PUBLIC_PROMPT,
+  PUBLIC_ANSWER,
+  contextPrivacySession,
+} from "../../../../tests/helpers/context-privacy.js";
 import { defaultCacheDir, writeCache } from "../llm/model-cache.js";
 
 function fakeEngine(slice: EngineConfigSlice): Engine {
@@ -347,6 +353,35 @@ describe("AgentServer query wire contracts before registry extraction", () => {
       expect(
         await queryWire({ type: "session_detail", sessionId: "missing" }, engine),
       ).toMatchObject({ error: { code: ErrorCodes.SessionNotFound } });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("session list and detail leave engine context on the local disk", async () => {
+    const root = mkdtempSync(join(tmpdir(), "query-context-privacy-"));
+    try {
+      const { manager } = contextPrivacySession(root, root, "private-context");
+      const engine = { getSessionManager: () => manager };
+
+      const wire = JSON.stringify([
+        await queryWire({ type: "sessions" }, engine),
+        await queryWire({ type: "session_detail", sessionId: "private-context" }, engine),
+      ]);
+      for (const local of [
+        CONTEXT_CANARY,
+        "promptSubmitHookMessages",
+        "context_checkpoint",
+        "prompt_rewrite",
+      ]) {
+        expect(wire).not.toContain(local);
+      }
+      expect(wire).toContain(PUBLIC_PROMPT);
+      expect(wire).toContain(PUBLIC_ANSWER);
+      // Still on disk, where resume needs it.
+      const local = manager.resume("private-context");
+      expect(local.state.promptSubmitHookMessages).toEqual([CONTEXT_CANARY]);
+      expect(JSON.stringify(local.transcript.toMessages())).toContain(`${CONTEXT_CANARY}:rewrite`);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

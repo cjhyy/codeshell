@@ -7,6 +7,7 @@ import {
   type QueryParams,
 } from "../types.js";
 import { readOutputJournal } from "../../session/output-journal.js";
+import { withoutContextEvents, withoutLocalContextState } from "../../session/context-messages.js";
 import { toCompactStreamStrategy } from "../server-output.js";
 import { Methods } from "../types.js";
 import type { StreamEvent } from "../../types.js";
@@ -52,7 +53,8 @@ export async function querySessions(
   } else if (engine) {
     const sessions = engine
       .getSessionManager()
-      .list(undefined, { excludeKinds: context.hiddenSessionKinds });
+      .list(undefined, { excludeKinds: context.hiddenSessionKinds })
+      .map(withoutLocalContextState);
     context.send(createResponse(req.id, { type: "sessions", data: sessions }));
   } else {
     context.send(createResponse(req.id, { type: "sessions", data: [] }));
@@ -76,9 +78,11 @@ export async function querySessionDetail(
     if (!detailEngine) return;
     try {
       const bundle = detailEngine.getSessionManager().resume(params.sessionId);
+      // A protocol client (TUI resume and export, a TCP client) gets the
+      // conversation; engine context stays in the local session files.
       const data = {
-        state: bundle.state,
-        transcript: bundle.transcript.getEvents(),
+        state: withoutLocalContextState(bundle.state),
+        transcript: withoutContextEvents(bundle.transcript.getEvents()),
       };
       context.send(createResponse(req.id, { type: "session_detail", data }));
     } catch (err) {

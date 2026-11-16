@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { buildExtractionPrompt } from "./extract-memories.js";
 import { buildSessionMemoryPrompt } from "./session-memory.js";
-import { formatMemoryTranscript } from "./memory-transcript.js";
+import { layoutMemoryTranscript } from "./memory-transcript.js";
 
 describe("bounded memory transcript", () => {
   test("keeps a small conversation verbatim and in order", () => {
     expect(
-      formatMemoryTranscript(
+      transcriptText(
         [
           { role: "user", content: "original request" },
           { role: "assistant", content: "completed result" },
@@ -14,7 +14,7 @@ describe("bounded memory transcript", () => {
         2000,
       ),
     ).toBe("[user]: original request\n\n[assistant]: completed result");
-    expect(formatMemoryTranscript([], 2000)).toBe("");
+    expect(transcriptText([], 2000)).toBe("");
   });
 
   test.each([2000, 3000])(
@@ -29,7 +29,7 @@ describe("bounded memory transcript", () => {
         { role: "user", content: "LATEST_CORRECTION: do not publish" },
         { role: "assistant", content: "LATEST_OUTCOME: merged locally, not published" },
       ];
-      const text = formatMemoryTranscript(messages, maxMessageChars);
+      const text = transcriptText(messages, maxMessageChars);
 
       expect(text.length).toBeLessThanOrEqual(30_000);
       expect(text).toStartWith("[user]: INITIAL_INTENT");
@@ -44,7 +44,7 @@ describe("bounded memory transcript", () => {
   test.each([2000, 3000])(
     "keeps the tail of an oversized final message (%i per message)",
     (maxMessageChars) => {
-      const text = formatMemoryTranscript(
+      const text = transcriptText(
         [{ role: "assistant", content: `START ${"x".repeat(40_000)} FINAL_DECISION` }],
         maxMessageChars,
       );
@@ -69,3 +69,8 @@ describe("bounded memory transcript", () => {
     expect(buildExtractionPrompt(updated, [])).toContain("[user]: LATEST_CORRECTION");
   });
 });
+
+function transcriptText(...args: Parameters<typeof layoutMemoryTranscript>): string {
+  const { sealed, open } = layoutMemoryTranscript(...args);
+  return sealed.join("") + open;
+}

@@ -2,6 +2,7 @@ import { constants, promises as fs } from "node:fs";
 import { basename, join } from "node:path";
 import { homedir } from "node:os";
 import { sessionsRoot } from "@cjhyy/code-shell-core";
+import { isContextEvent } from "@cjhyy/code-shell-core/internal";
 import {
   buildEvidenceBundle,
   type EvidenceBundle,
@@ -250,6 +251,8 @@ export async function previewOptimizationLabEvidence(
           (event) =>
             event.type === "message" &&
             event.data?.role === "user" &&
+            // Engine context (ledger, hook reminders) is not interleaved input.
+            !isContextEvent(event) &&
             event.data?.clientMessageId !== messageId,
         );
         if (interleaved)
@@ -257,6 +260,7 @@ export async function previewOptimizationLabEvidence(
             "Interleaved submissions lack exact tool/run bindings; their content and ambiguous tool events were omitted.",
           );
         for (const event of selected) {
+          if (isContextEvent(event)) continue;
           const data = object(event.data) ? event.data : {};
           if (data.contentRecorded === false)
             source.missingEvidence.push(

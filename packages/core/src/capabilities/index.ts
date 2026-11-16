@@ -25,9 +25,30 @@ export interface CapabilityDynamicContext {
   preset: AgentPreset;
 }
 
+/**
+ * Capability context that is its own section of the context ledger rather
+ * than part of the shared capability text.
+ */
+export interface CapabilityDynamicContextSection {
+  /** Lower-case letters, digits and dashes; the ledger key is `capability-<key>`. */
+  key: string;
+  text: string;
+  /**
+   * "snapshot-only": a point-in-time snapshot (a git status, say). It is shown
+   * when the context is sent whole and never updated afterwards, so its text
+   * must say that it is a snapshot that will not update. Without it the
+   * section is resent whole whenever its text changes.
+   */
+  compare?: "snapshot-only";
+}
+
 export type CapabilityDynamicContextProvider = (
   context: CapabilityDynamicContext,
-) => string | undefined | Promise<string | undefined>;
+) =>
+  | string
+  | CapabilityDynamicContextSection
+  | undefined
+  | Promise<string | CapabilityDynamicContextSection | undefined>;
 
 export type CapabilityInstructionBoundaryFinder = (cwd: string) => string | null;
 

@@ -1,5 +1,9 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
-import { readOutputJournal, readOutputJournalLegacyBase } from "@cjhyy/code-shell-core/internal";
+import {
+  readOutputJournal,
+  readOutputJournalLegacyBase,
+  withoutContextEvents,
+} from "@cjhyy/code-shell-core/internal";
 import type {
   MobileHistoryView,
   MobileHistoryDetailResult,
@@ -266,7 +270,7 @@ export class MobileHistoryViewStore {
     let chat = initialChatState();
     if (base) {
       if (!base.complete || !base.identity) throw new Error("History cutover incomplete");
-      const events = transcriptToStreamEvents(base.events);
+      const events = transcriptToStreamEvents(withoutContextEvents(base.events));
       if (
         events[0]?.type !== "session_started" ||
         events.slice(1).some((event) => event.type === "session_started")

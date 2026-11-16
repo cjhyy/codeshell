@@ -9,15 +9,22 @@
 import type { ToolDefinition, Message } from "../types.js";
 import { SectionCache, type PromptSection } from "./section-cache.js";
 import { scanInstructions, combineInstructions, type ScanOptions } from "./instruction-scanner.js";
+import { dateChangeNotice, resolveSessionDates, type SessionDates } from "./session-date.js";
 import { MemoryManager } from "../session/memory.js";
 import { scanSkills } from "../skills/index.js";
 import {
-  buildSkillListing,
+  buildSkillListingParts,
   type SkillListingOptions,
 } from "../tool-system/builtin/skill-prompt.js";
+import {
+  contextListSection,
+  type ContextListParts,
+  type ContextSection,
+} from "../context/context-ledger.js";
 import { resolveAgentPreset, buildPresetSystemPrompt, type AgentPreset } from "../preset/index.js";
 import type { BuiltinTool } from "../tool-system/builtin/index.js";
 import type { CapabilityDynamicContextProvider } from "../capabilities/index.js";
+import { capabilityContextSections } from "./capability-context.js";
 import {
   legacySingleRootWorkspace,
   validateWorkspaceContext,
@@ -112,9 +119,17 @@ export interface ComposerOptions {
    * When true (set from the active behavior profile, e.g. the Pet manager),
    * the injected memory index keeps only memories relevant to this cwd —
    * global-layer project/dream records tied to other projects are dropped.
-   * See MemoryManager.buildInjectionIndex(currentProjectOnly).
+   * See MemoryManager.buildInjectionIndexParts(currentProjectOnly).
    */
   memoryCurrentProjectOnly?: boolean;
+  /**
+   * When the session started (epoch ms, SessionState.startedAt). The head
+   * context message states this date for the session's whole life, so its
+   * bytes — and every cached prefix behind it — survive midnight.
+   */
+  sessionStartedAt?: number;
+  /** Clock for the date; injectable for tests. */
+  now?: () => Date;
   /** Isolated runs can omit repository/user instruction discovery entirely. */
   disableInstructions?: boolean;
   /** Isolated runs can omit persistent-memory context entirely. */
@@ -170,15 +185,14 @@ export class PromptComposer {
     // constantly (extraction, recall usage++/lastUsed, approve/demote), and this
     // message sits in the cacheable system prefix — so every memory change
     // invalidated the whole prefix and re-billed it. Memory now rides
-    // buildDynamicContextMessage (tail, past the cache breakpoint), same as the
+    // buildDynamicContextSections (tail, past the cache breakpoint), same as the
     // skills listing and other volatile capability context which have the identical problem.
     if (!instructions) return null;
 
-    // Local date, not UTC — toISOString() is UTC and would show the wrong
-    // "today" for users whose timezone has crossed midnight (review-2026-05-30).
-    const now = new Date();
-    const ymd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-    const currentDate = `Today's date is ${ymd}.`;
+    // The session's start date (local, not UTC), so this message — the head
+    // of every cached prefix — does not change at midnight. A later "today"
+    // is announced through the context ledger: see buildDateChangeNotice.
+    const currentDate = `Today's date is ${this.sessionDates().headDate}.`;
 
     let content = `<system-reminder>\n${currentDate}\n\n`;
     content += `${instructions}\n`;
@@ -187,9 +201,24 @@ export class PromptComposer {
     return { role: "user", content };
   }
 
-  /** Build volatile context contributed by installed capability modules. */
-  async buildSystemContext(): Promise<string> {
-    if (this.options.disableCapabilityContext === true) return "";
+  private sessionDates(): SessionDates {
+    return resolveSessionDates(this.options.sessionStartedAt, this.options.now?.() ?? new Date());
+  }
+
+  /**
+   * Text for the context ledger's "date" section: empty unless today's local
+   * date differs from the one frozen in the head message (and there is a head
+   * message stating one).
+   */
+  buildDateChangeNotice(): string {
+    if (this.options.disableInstructions === true || !this.getInstructions()) return "";
+    const { changedTo } = this.sessionDates();
+    return changedTo === undefined ? "" : dateChangeNotice(changedTo);
+  }
+
+  /** Volatile context contributed by installed capability modules, as ledger sections. */
+  private async buildCapabilitySections(): Promise<ContextSection[]> {
+    if (this.options.disableCapabilityContext === true) return [];
     const preset = this.options.preset ?? resolveAgentPreset();
     const parts = await Promise.all(
       (this.options.dynamicContextProviders ?? []).map(async (provider) => {
@@ -205,20 +234,9 @@ export class PromptComposer {
         }
       }),
     );
-    return parts.filter((part): part is string => Boolean(part)).join("\n\n");
+    return capabilityContextSections(parts);
   }
 
-  /**
-   * Per-turn dynamic context, delivered as a trailing <system-reminder> user
-   * message rather than baked into the system prefix.
-   *
-   * Holds things that change *within* a session — the skills listing plus
-   * capability-owned volatile context. Keeping them out of the
-   * system prompt means installing a skill or editing a file no longer
-   * invalidates the cached system prefix. Placed at the END of the messages
-   * array (after the user task) so it sits past the conversation's cache
-   * breakpoint — a change here never re-bills the history prefix.
-   */
   /**
    * Declared-but-absent skills, stated plainly. Rides the dynamic context (not
    * the cached system prefix) because it depends on what is installed right now.
@@ -238,13 +256,37 @@ export class PromptComposer {
     ].join("\n");
   }
 
-  async buildDynamicContextMessage(): Promise<Message | null> {
+  /**
+   * The workspace the dynamic context is scoped to: skills and memory are read
+   * from the working directory, sources from the project. Context told under a
+   * different scope must not stay visible (engine/run-context-ledger.ts).
+   */
+  contextScope(): string {
+    return JSON.stringify([this.options.cwd, this.options.workspace.projectId]);
+  }
+
+  /**
+   * Dynamic context, delivered as <system-reminder> user messages rather than
+   * baked into the system prefix.
+   *
+   * Holds things that change *within* a session — the skills listing, memory
+   * and capability-owned context. Keeping them out of the system prompt means
+   * installing a skill or editing a file no longer invalidates the cached
+   * system prefix. The engine sends the sections through the context ledger
+   * (engine/run-context-ledger.ts): a snapshot once, then only what changed,
+   * always appended so earlier history is never rewritten.
+   *
+   * The dynamic context as ordered sections (empty ones omitted, except a
+   * skills section whose listing did not fit). The context ledger renders a
+   * snapshot or resends only what changed since the model was last told.
+   */
+  async buildDynamicContextSections(): Promise<ContextSection[]> {
     const skills = scanSkills(this.options.cwd, {
       disabledSkills: this.options.disabledSkills,
       disabledPlugins: this.options.disabledPlugins,
       skillAllowlist: this.options.skillAllowlist,
     });
-    const skillsListing = buildSkillListing(skills, {
+    const skillsListing = buildSkillListingParts(skills, {
       ...this.options.skillListing,
       preferredSkills: this.options.skillAllowlist,
       declaredSkills: this.options.profileDeclaredSkills,
@@ -252,8 +294,8 @@ export class PromptComposer {
     const declaredSkillGap = this.buildDeclaredSkillGap(skills);
     // Capability and sources context are independent I/O — resolve them
     // concurrently instead of serially.
-    const [capabilityContext, sourcesContext] = await Promise.all([
-      this.buildSystemContext(),
+    const [capabilitySections, sourcesContext] = await Promise.all([
+      this.buildCapabilitySections(),
       (async () => {
         if (this.options.disableSourcesContext === true) return "";
         try {
@@ -267,23 +309,40 @@ export class PromptComposer {
     // Memory rides here (tail, past the cache breakpoint) — not the system
     // prefix — so a memory change (extraction / recall usage++ / approve) never
     // re-bills the cached prefix. See buildUserContextMessage for the rationale.
-    const memoryContext = this.getMemoryContext();
-    const goalToolContext = this.buildGoalToolContext();
+    const memoryIndex = this.getMemoryIndex();
 
-    const parts = [
-      skillsListing,
-      declaredSkillGap,
-      capabilityContext,
-      memoryContext,
-      sourcesContext,
-      goalToolContext,
-    ].filter(Boolean);
-    if (parts.length === 0) return null;
-
-    return {
-      role: "user",
-      content: `<system-reminder>\n${parts.join("\n\n")}\n</system-reminder>`,
-    };
+    const sections: ContextSection[] = [
+      // The listing is ranked and budgeted per run; only installs and removals
+      // are context changes worth telling the model about.
+      ...(skillsListing
+        ? [
+            {
+              ...contextListSection("skills", skillsListing),
+              compare: "ids" as const,
+              knownIds: skills.map((skill) => skill.name),
+            },
+          ]
+        : skills.length > 0
+          ? [
+              // No listing fits the budget this run, but the skills exist:
+              // the section stays (empty) so it is not announced as removed.
+              {
+                key: "skills",
+                text: "",
+                compare: "ids" as const,
+                knownIds: skills.map((skill) => skill.name),
+              },
+            ]
+          : []),
+      { key: "skill-gap", text: declaredSkillGap },
+      ...capabilitySections,
+      ...(memoryIndex ? [contextListSection("memory", memoryIndex)] : []),
+      { key: "sources", text: sourcesContext },
+      { key: "goal-tool", text: this.buildGoalToolContext() },
+    ];
+    return sections.filter(
+      (section) => Boolean(section.text) || (section.knownIds?.length ?? 0) > 0,
+    );
   }
 
   private buildGoalToolContext(): string {
@@ -395,9 +454,9 @@ export class PromptComposer {
     // Skills listing is intentionally NOT a system section: it changes when a
     // skill is installed/disabled, which would invalidate the whole cached
     // system prefix on every change. It rides in the per-turn dynamic-context
-    // message instead (buildDynamicContextMessage). Same reasoning keeps the
-    // capability-owned volatile context out of the system prefix — see buildSystemContext's
-    // callers.
+    // message instead (buildDynamicContextSections). Same reasoning keeps the
+    // capability-owned volatile context out of the system prefix — see
+    // buildCapabilitySections.
 
     // Append system prompt
     if (this.options.appendSystemPrompt) {
@@ -433,21 +492,21 @@ export class PromptComposer {
     return this.cachedInstructions;
   }
 
-  private getMemoryContext(): string {
-    if (this.options.disableMemoryContext === true) return "";
+  private getMemoryIndex(): ContextListParts | null {
+    if (this.options.disableMemoryContext === true) return null;
     try {
       // Three-layer injection (用户拍板): a compact index merging GLOBAL +
       // DIGITAL-HUMAN + PROJECT memories. Global memories are surfaced every
       // session; the portable middle layer is present only when the active
       // workspace profile opts in.
-      return MemoryManager.buildInjectionIndex({
+      return MemoryManager.buildInjectionIndexParts({
         projectDir: this.options.cwd,
         profileDir: this.options.profileMemoryDir,
         maxAgeDays: this.options.memoriesMaxAgeDays,
         currentProjectOnly: this.options.memoryCurrentProjectOnly,
       });
     } catch {
-      return "";
+      return null;
     }
   }
 }

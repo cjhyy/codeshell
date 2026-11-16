@@ -329,8 +329,8 @@ process.once("exit", () => appendFileSync(${JSON.stringify(join(isolated.home, "
           disableCapabilityContext: true,
           disableSourcesContext: true,
         });
-        const message = await composer.buildDynamicContextMessage();
-        const text = typeof message?.content === "string" ? message.content : "";
+        const sections = await composer.buildDynamicContextSections();
+        const text = sections.map((section) => section.text).join("\n");
         if (
           text.includes(`PORTABLE_${scope}_SUMMARY`) !== profile.portableMemory ||
           /PROJECT_ONLY_|user-source|dream-source/.test(text)

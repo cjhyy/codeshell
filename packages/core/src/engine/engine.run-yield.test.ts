@@ -298,7 +298,10 @@ describe("Engine tool run yield gating", () => {
         });
         expect(replayed).toEqual(result);
         expect(
-          receipt.getEvents("message").filter((event) => event.data.role === "user"),
+          receipt
+            .getEvents("message")
+            // The replayed submit adds no second input; engine context is not input.
+            .filter((event) => event.data.role === "user" && event.data.injected !== true),
         ).toHaveLength(1);
       } finally {
         rmSync(dir, { recursive: true, force: true });

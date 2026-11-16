@@ -1,3 +1,4 @@
+import { assistantHistoryContent } from "./assistant-history-content.js";
 import {
   resolveModelToolCalls,
   orderModelToolResults,
@@ -38,19 +39,37 @@ import { HookRegistry } from "../hooks/registry.js";
 import type { HookEventName, HookResult } from "../hooks/events.js";
 import type { GoalJudgeRuntimeContext } from "../hooks/goal-stop-hook.js";
 import { buildGoalJudgeRuntimeContext } from "./goal-judge-context.js";
-import type { PromptCacheDiagnosticSample } from "./prompt-cache-diagnostics.js";
+import {
+  hashPromptMessages,
+  type PromptCacheDiagnosticSample,
+  type PromptMessageDigest,
+} from "./prompt-cache-diagnostics.js";
 import { wrapHookMessages } from "../hooks/inject.js";
 import { Transcript } from "../session/transcript.js";
 import { ContextLimitError } from "../exceptions.js";
 import { logger } from "../logging/logger.js";
 import { checkTokenBudget, createBudgetTracker } from "./token-budget.js";
 import { StreamingToolQueue } from "./streaming-tool-queue.js";
+import { resolveStablePrefixMessageCount } from "./stable-prefix.js";
 import { estimateTokens } from "../context/compaction.js";
 import { ImageHistoryWindow } from "../context/image-history-window.js";
 import { isTruncatedStop } from "../llm/stop-reason.js";
 import { isAbortError } from "../llm/client-base.js";
 import { crossedReactiveThreshold } from "./reactive-threshold.js";
 import { COMPLETE_GOAL_TOOL_NAME } from "../tool-system/builtin/complete-goal.js";
+import { goalJudgeConversation, type HookReminderEventData } from "../session/context-messages.js";
+import { moveVolatileContextToTail } from "./volatile-context-tail.js";
+import {
+  notePromptMessageLeft,
+  notePromptPrefixRewrite,
+  notePromptRequest,
+} from "../utils/prompt-prefix-events.js";
+import { usesExplicitCacheMarkers } from "../llm/providers/openai-cache-content.js";
+import { persistContextReminder } from "./context-reminders.js";
+import {
+  persistRemindersBeforeCheckpoint,
+  withoutCheckpointDuplicates,
+} from "./rollover-context.js";
 import { CANCEL_GOAL_TOOL_NAME } from "../tool-system/builtin/cancel-goal.js";
 import {
   redactSensitiveToolResultsInMessages,
@@ -95,9 +114,25 @@ export interface TurnLoopConfig {
   freshImageMessages?: Iterable<Message>;
   /**
    * Per-run injected context that must be visible to the model but must not be
-   * summarized into durable history. Engine uses this for dynamicContext.
+   * summarized into durable history. Engine uses this for a profile's
+   * non-durable runtime context; all other run context is ordinary history.
    */
   volatileContextMessages?: Iterable<Message>;
+  /** Keep the volatile messages at the tail of every request (engine/volatile-context-tail.ts). */
+  volatileContextAtTail?: boolean;
+  /**
+   * The model client stopped sending explicit cache breakpoints mid-run
+   * (engine/prompt-cache-route.ts). Tail placement has already stopped.
+   */
+  onPromptCacheFallback?: () => void;
+  /** First message this run added to the history; see engine/stable-prefix.ts. */
+  runStartMessage?: Message;
+  /**
+   * Called before every model request, after context management. The engine
+   * appends the run's context-ledger snapshot here when a rewrite dropped it
+   * from `messages` (it is ordinary history otherwise; nothing is appended).
+   */
+  syncRunContext?: (messages: Message[]) => void;
   /** Current instructions and lifecycle hooks, reattached after a notes transition. */
   retainedContextMessages?: Iterable<Message>;
   /**
@@ -274,6 +309,8 @@ export class TurnLoop {
   }
   /** Tool IDs already emitted as tool_use_start during streaming (to avoid duplicates). */
   private streamedToolIds = new Set<string>();
+  /** Hash chain of the latest primary/continuation request, taken at dispatch. */
+  private lastRequestMessageChain?: PromptMessageDigest[];
   /**
    * Turn-scoped child logger set at the top of each loop iteration. Class
    * methods invoked inside the iteration (callModelWithFallback,
@@ -603,16 +640,51 @@ export class TurnLoop {
     return this.turnBoundaryMs;
   }
 
+  /** Applies only replacements that cannot wait for the rewrite gate (image-history-window.ts). */
   private prepareMessagesForModel(messages: Message[]): Message[] {
-    const result = this.imageHistory.prepare(messages);
+    return this.logImageDowngrade(this.imageHistory.prepare(messages));
+  }
+
+  private logImageDowngrade(result: {
+    messages: Message[];
+    replacedCount: number;
+    forced: boolean;
+  }): Message[] {
     if (result.replacedCount > 0) {
+      if (result.forced) notePromptPrefixRewrite(this.deps.sessionId, "image_batch");
       this.currentTurnLog.info("context.image_payload_downgrade", {
         cat: "context",
         images: result.replacedCount,
+        forced: result.forced,
         pendingFresh: this.imageHistory.hasFreshImages,
       });
     }
     return result.messages;
+  }
+
+  /** Called on the message list of every model request, just before it is sent. */
+  private placeVolatileContext(messages: Message[]): void {
+    if (
+      this.volatileAtTail() &&
+      moveVolatileContextToTail(messages, this.volatileContextMessages)
+    ) {
+      for (const message of this.volatileContextMessages)
+        notePromptMessageLeft(this.deps.sessionId, message);
+    }
+  }
+
+  /**
+   * Tail placement only while the client still sends explicit breakpoints.
+   * After a fallback the end of the previous request is the only save point,
+   * so the volatile message stays where it is from then on.
+   */
+  private volatileAtTail(): boolean {
+    if (!this.config.volatileContextAtTail) return false;
+    const strategy = this.deps.model.getEffectivePromptCacheStrategy?.();
+    if (strategy === undefined || usesExplicitCacheMarkers(strategy)) return true;
+    this.config = { ...this.config, volatileContextAtTail: false };
+    this.config.onPromptCacheFallback?.();
+    return false;
   }
 
   private stripVolatileContextMessages(messages: Message[]): Message[] {
@@ -675,8 +747,14 @@ export class TurnLoop {
   private readonly retainedHookMessages = new Map<string, Message>();
   private readonly pendingContextReminders = new Map<string, Message>();
 
-  private appendContextReminder(messages: Message[], message: Message, retainForRun = false): void {
+  private appendContextReminder(
+    messages: Message[],
+    message: Message,
+    retainForRun = false,
+    reminder?: HookReminderEventData,
+  ): void {
     messages.push(message);
+    persistContextReminder(this.deps.transcript, message, reminder);
     if (!this.deps.contextNotes) return;
     const target = retainForRun ? this.retainedHookMessages : this.pendingContextReminders;
     target.set(JSON.stringify(message), message);
@@ -706,9 +784,11 @@ export class TurnLoop {
         ...this.pendingContextReminders.values(),
       ].map((message) => [JSON.stringify(message), message]),
     );
-    const retained = [...retainedByContent.values()];
-    const checkpoint = notes.applyRollover(stable, retained);
+    const candidates = [...retainedByContent.values()];
+    const checkpoint = notes.applyRollover(stable, candidates);
     if (!checkpoint) return messages;
+    const retained = withoutCheckpointDuplicates(candidates, checkpoint);
+    persistRemindersBeforeCheckpoint(this.deps.transcript, retained);
     const managed = [...retained, ...checkpoint];
     this.deps.contextManager.recordNotesCompaction(stable, managed);
     this.noteReminderIssued = false;
@@ -744,34 +824,38 @@ export class TurnLoop {
           surface && !surface.isCallable("SaveContextNote")
             ? ' First load SaveContextNote with ToolSearch query "select:SaveContextNote".'
             : "";
-        messages = [
-          ...messages,
-          {
-            role: "user",
-            content: `<system-reminder>Context budget is running low.${loadNoteTool} Use SaveContextNote to preserve the current goal, latest corrections, decisions, verified work, pending questions and next steps. Then call NewContext in a separate tool batch and continue the same task. Original history remains available through SearchHistory.</system-reminder>`,
-          },
-        ];
+        const budgetReminder: Message = {
+          role: "user",
+          content: `<system-reminder>Context budget is running low.${loadNoteTool} Use SaveContextNote to preserve the current goal, latest corrections, decisions, verified work, pending questions and next steps. Then call NewContext in a separate tool batch and continue the same task. Original history remains available through SearchHistory.</system-reminder>`,
+        };
+        persistContextReminder(this.deps.transcript, budgetReminder);
+        messages = [...messages, budgetReminder];
         this.noteReminderIssued = true;
       }
     }
     const stable = this.stripVolatileContextMessages(messages);
     const managed = await this.deps.contextManager.manageAsync(stable, this.config.signal, {
       preferNotes: notes !== undefined,
+      externalRewrite: this.planImageBatch,
     });
     return this.restoreVolatileAfterContextManagement(messages, stable, managed);
   }
 
   private manageContextMessagesSync(messages: Message[]): Message[] {
+    const options = { externalRewrite: this.planImageBatch };
     if (this.volatileContextMessages.size === 0) {
-      return this.deps.contextManager.manage(messages);
+      return this.deps.contextManager.manage(messages, options);
     }
     const stable = this.stripVolatileContextMessages(messages);
-    const managed = this.deps.contextManager.manage(stable);
+    const managed = this.deps.contextManager.manage(stable, options);
     return this.restoreVolatileAfterContextManagement(messages, stable, managed);
   }
 
+  /** Image placeholders join the context manager's batched rewrites (rewrite-gate.ts). */
+  private readonly planImageBatch = (messages: Message[]) => this.imageHistory.planBatch(messages);
+
   private markPendingImagesConsumed(messages: Message[]): Message[] {
-    return this.imageHistory.consume(messages);
+    return this.logImageDowngrade(this.imageHistory.consume(messages));
   }
 
   private redactConsumedSensitiveToolResults(messages: Message[]): Message[] {
@@ -788,16 +872,20 @@ export class TurnLoop {
     messages: Message[],
     assistantMessageId: string = randomUUID(),
   ): ModelCallRecordingOptions {
-    const volatileIndex = messages.findIndex((message) =>
-      this.volatileContextMessages.has(message),
-    );
+    notePromptRequest(this.deps.sessionId, messages);
     return {
       requestBoundary: { step: this.turnCount, assistantMessageId },
       ...(this.sensitiveToolResultRedactions.size > 0
         ? { sensitiveToolResultRedactions: new Map(this.sensitiveToolResultRedactions) }
         : {}),
       promptCache: {
-        stablePrefixMessageCount: volatileIndex >= 0 ? volatileIndex : messages.length,
+        stablePrefixMessageCount: resolveStablePrefixMessageCount({
+          messages,
+          isVolatile: (message) => this.volatileContextMessages.has(message),
+          volatileAtTail: this.volatileAtTail(),
+          pendingRewriteMessage: this.deps.contextManager.getPendingRewriteBoundaryMessage?.(),
+          runStartMessage: this.config.runStartMessage,
+        }),
       },
     };
   }
@@ -855,6 +943,13 @@ export class TurnLoop {
     });
   }
 
+  /** Hash what is about to be sent: later in-place edits must not alter it. */
+  private noteRequestDispatched(messages: readonly Message[]): void {
+    this.lastRequestMessageChain = this.deps.recordCacheReadDiagnostics
+      ? hashPromptMessages(messages)
+      : undefined;
+  }
+
   private recordResponseUsage(
     usage: NonNullable<LLMResponse["usage"]>,
     requestKind: PromptCacheDiagnosticSample["requestKind"] = "primary",
@@ -871,6 +966,7 @@ export class TurnLoop {
           this.deps.systemPrompt,
           this.currentTools,
         ),
+        ...(this.lastRequestMessageChain ? { messages: this.lastRequestMessageChain } : {}),
       });
     }
   }
@@ -1138,6 +1234,8 @@ export class TurnLoop {
             return { text: finalText, reason: "completed", messages };
           }
         }
+        // A rewrite above may have dropped the run's context; resend it now.
+        this.config.syncRunContext?.(messages);
         // No pre-llm ctx emit here: the messages-only estimate would be ~16k
         // smaller than the real prompt (system + tools not included), making
         // the bar visibly drop on every submit. Post-llm/post-tool-result
@@ -1221,8 +1319,11 @@ export class TurnLoop {
               const previousMessageCount = messages.length;
               messages = dropOldestRounds(messages, retry);
               if (messages.length < previousMessageCount) {
+                notePromptPrefixRewrite(this.deps.sessionId, "context_limit_recovery");
                 this.deps.runToolSurface?.rebase();
                 await this.refreshModelToolPrefix();
+                // The dropped rounds may have held the run's context.
+                this.config.syncRunContext?.(messages);
               }
               try {
                 recovered = await this.callModelWithFallback(messages, assistantMessageId);
@@ -1297,6 +1398,8 @@ export class TurnLoop {
           );
           if (anchor) this.deps.recordContextUsageAnchor?.(anchor);
         }
+        // The provider now caches this prefix: rewriting history is no longer free.
+        this.deps.contextManager.noteModelRequestCompleted?.();
 
         this.pendingContextReminders.clear();
         messages = this.markPendingImagesConsumed(messages);
@@ -1327,7 +1430,7 @@ export class TurnLoop {
             toolCount: response.toolCalls.length,
           });
           if (response.text) {
-            messages.push({ role: "assistant", content: response.text });
+            messages.push({ role: "assistant", content: assistantHistoryContent(response, []) });
           }
           // Anthropic streams tool_use_start as soon as the content block
           // opens. If max_tokens cuts the JSON arguments off, we deliberately
@@ -1370,6 +1473,7 @@ export class TurnLoop {
         ) {
           let combinedText = response.text;
           let continuedResponse = false;
+          let sentContinuation = false;
           for (let retry = 0; retry < 3; retry++) {
             // Don't fire another continuation call if the user cancelled — without
             // this an abort during a truncated response could still issue up to 3
@@ -1380,6 +1484,10 @@ export class TurnLoop {
               : undefined;
             if (budgetTermination) break;
             tlog.info("turn.max_tokens_continuation", { cat: "turn", retry: retry + 1 });
+            // Each continuation re-sends the reply so far, longer than last time.
+            if (sentContinuation)
+              notePromptPrefixRewrite(this.deps.sessionId, "max_tokens_continuation");
+            sentContinuation = true;
             const contMessages = [
               ...messages,
               { role: "assistant" as const, content: combinedText },
@@ -1390,7 +1498,9 @@ export class TurnLoop {
               },
             ];
             try {
+              this.placeVolatileContext(contMessages);
               const preparedContinuationMessages = this.prepareMessagesForModel(contMessages);
+              this.noteRequestDispatched(preparedContinuationMessages);
               const contResponse = await this.deps.model.call(
                 this.deps.systemPrompt,
                 preparedContinuationMessages,
@@ -1439,6 +1549,9 @@ export class TurnLoop {
             }
           }
           response = { ...response, text: combinedText };
+          // History keeps the whole reply, not the last continuation request's tail.
+          if (sentContinuation)
+            notePromptPrefixRewrite(this.deps.sessionId, "max_tokens_continuation");
           if (continuedResponse && response.usage?.promptTokens !== undefined) {
             this.emitCtxFromUsage(response.usage, messages);
           }
@@ -1500,7 +1613,10 @@ export class TurnLoop {
             turnNumber: this.turnCount,
             hasToolUse: false,
           });
-          messages.push({ role: "assistant", content: finalText });
+          messages.push({
+            role: "assistant",
+            content: assistantHistoryContent(response, [], finalText),
+          });
           this.finalizeModelTurn();
           if (await this.consumeQueuedSteer(messages, "finalize_backfill")) {
             continue;
@@ -1545,7 +1661,11 @@ export class TurnLoop {
           // maxStopBlocks (consecutive) and the outer maxTurns ceiling.
           const maxStopBlocks = this.config.maxStopBlocks ?? GOAL_DEFAULT_MAX_STOP_BLOCKS;
           if (this.goalTracker) {
-            const judgeMessages = this.stripVolatileContextMessages(messages);
+            // The judge reads the conversation and its own earlier verdicts,
+            // not the engine's context framing.
+            const judgeMessages = goalJudgeConversation(
+              this.stripVolatileContextMessages(messages),
+            );
             this.deps.publishGoalJudgeContext?.(
               buildGoalJudgeRuntimeContext(judgeMessages, {
                 sensitiveToolResultRedactions: this.sensitiveToolResultRedactions,
@@ -1640,16 +1760,21 @@ export class TurnLoop {
             this.maybeAnnounceApproachingLimit();
             const injection = wrapHookMessages(stopHook.messages);
             if (injection) {
-              this.appendContextReminder(messages, injection, true);
+              this.appendContextReminder(messages, injection, true, { goalStopBlock: true });
             } else {
               // No guidance from the handler — inject a generic nudge so the
               // model knows it must keep going rather than re-emitting the
               // same final answer.
-              this.appendContextReminder(messages, {
-                role: "user",
-                content:
-                  "<system-reminder>The goal is not yet complete. Continue working toward it.</system-reminder>",
-              });
+              this.appendContextReminder(
+                messages,
+                {
+                  role: "user",
+                  content:
+                    "<system-reminder>The goal is not yet complete. Continue working toward it.</system-reminder>",
+                },
+                false,
+                { goalStopBlock: true },
+              );
             }
             tlog.info("turn.stop_blocked", {
               cat: "turn",
@@ -1773,18 +1898,9 @@ export class TurnLoop {
         const droppedToolCalls = response.toolCalls.slice(this.config.maxToolCallsPerTurn);
 
         // Add assistant message with tool_use blocks to messages
-        const assistantBlocks: ContentBlock[] = [];
-        if (response.text) {
-          assistantBlocks.push({ type: "text", text: response.text });
-        }
+        const assistantContent = assistantHistoryContent(response, wireCalls);
         for (const wireCall of wireCalls) {
           const tc = toolCalls.find((call) => call.id === wireCall.id) ?? wireCall;
-          assistantBlocks.push({
-            type: "tool_use",
-            id: tc.id,
-            name: wireCall.toolName,
-            input: wireCall.args,
-          });
           // Only emit tool_use_start if not already emitted during streaming
           if (!this.streamedToolIds.has(tc.id)) {
             const { wireToolName: _wireToolName, ...visibleCall } = tc;
@@ -1793,7 +1909,7 @@ export class TurnLoop {
           // Record in transcript
           this.deps.transcript.appendToolUse(tc.toolName, tc.id, tc.args, tc.wireToolName);
         }
-        messages.push({ role: "assistant", content: assistantBlocks });
+        messages.push({ role: "assistant", content: assistantContent });
 
         // Execute tools — enqueue concurrency-safe tools for early start,
         // drain remaining (unsafe) tools sequentially.
@@ -2062,7 +2178,10 @@ export class TurnLoop {
             messageId: assistantMessageId,
             message: { role: "assistant", content: finalText },
           });
-          messages.push({ role: "assistant", content: finalText });
+          messages.push({
+            role: "assistant",
+            content: assistantHistoryContent(response, [], finalText),
+          });
           this.finalizeModelTurn();
           if (await this.consumeQueuedSteer(messages, "finalize_backfill")) {
             continue;
@@ -2183,6 +2302,7 @@ export class TurnLoop {
     } else {
       messages = this.manageContextMessagesSync(messages);
     }
+    this.config.syncRunContext?.(messages);
     if (this.goalControlStopRequested) {
       messages = this.redactConsumedSensitiveToolResults(messages);
       return { text: finalText, reason: "completed", messages };
@@ -2194,11 +2314,13 @@ export class TurnLoop {
     });
     this.emitCtxFromMessages(messages);
 
+    let summaryContent: Message["content"] | undefined;
     try {
       if (this.goalControlStopRequested) {
         messages = this.redactConsumedSensitiveToolResults(messages);
         return { text: finalText, reason: "completed", messages };
       }
+      this.placeVolatileContext(messages);
       const summaryMessages = this.prepareMessagesForModel(messages);
       const summaryResponse = await this.deps.model.call(
         this.deps.systemPrompt,
@@ -2226,6 +2348,7 @@ export class TurnLoop {
       messages = this.markPendingImagesConsumed(messages);
       if (summaryResponse.text) {
         finalText = summaryResponse.text;
+        summaryContent = assistantHistoryContent(summaryResponse, [], finalText);
       }
     } catch (err) {
       if (isAbortError(err) || this.config.signal?.aborted) {
@@ -2246,7 +2369,7 @@ export class TurnLoop {
         type: "assistant_message",
         message: { role: "assistant", content: finalText },
       });
-      messages.push({ role: "assistant", content: finalText });
+      messages.push({ role: "assistant", content: summaryContent ?? finalText });
     }
     messages = this.redactConsumedSensitiveToolResults(messages);
     return {
@@ -2301,6 +2424,8 @@ export class TurnLoop {
   }
 
   private async callModelWithFallback(messages: Message[], assistantMessageId: string) {
+    this.placeVolatileContext(messages);
+    this.noteRequestDispatched(messages);
     const revokePartialStream = () => {
       this.config.onStream?.({ type: "tombstone", messageId: assistantMessageId });
       // Streamed tool placeholders have not executed or entered the durable

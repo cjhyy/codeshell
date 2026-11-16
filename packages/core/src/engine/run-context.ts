@@ -1,12 +1,10 @@
 /**
- * Run context — ContextManager creation/seeding and the per-run message-list
- * assembly (user context, lifecycle reminders, volatile dynamic context, and
- * the runtime context, placed per the profile's runtimeContextPlacement: a
- * "system" tail on the system prompt, or "dynamic" volatile context in the
- * message list).
+ * Run context — ContextManager creation/seeding and the runtime context,
+ * placed per the profile's runtimeContextPlacement: a "system" tail on the
+ * system prompt, or a "dynamic" volatile context message in the message
+ * list. The per-run message-list assembly lives in run-context-ledger.ts.
  */
 import { ContextManager } from "../context/manager.js";
-import { wrapHookMessages } from "../hooks/inject.js";
 import type {
   ContextUsageAnchor,
   Message,
@@ -34,9 +32,12 @@ export function createRunContextManager(args: {
   llmModel: string;
   messages: Message[];
   needsCtxSeed: boolean;
+  /** Cache retention of the run's provider route (llm/prompt-cache.ts). */
+  promptCacheTtlMs: number;
 }): { contextManager: ContextManager; ctxSeed: RunContextSeed } {
   const contextManager = new ContextManager({
     maxTokens: args.maxTokens,
+    promptCacheTtlMs: args.promptCacheTtlMs,
     // Drop undefined fields so they don't clobber ContextManager defaults
     // (spread of `{x: undefined}` would override the default with undefined).
     ...Object.fromEntries(Object.entries(args.ratios).filter(([, v]) => v !== undefined)),
@@ -119,36 +120,4 @@ export function composeRunSystemPrompt(args: {
   }
   const block = runtimeContextBlock(args.profile, args.profileParams);
   return block ? `${args.baseSystemPrompt}\n\n${block}` : args.baseSystemPrompt;
-}
-
-/** engine.ts L1778-1803:userContext unshift + lifecycle reminder splice + volatile push。
- *  就地 mutate messages(与原逻辑一致)。 */
-export function assembleRunMessages(args: {
-  messages: Message[];
-  userContextMsg: Message | null;
-  hookMessages: string[]; // [...(sessionStartHook.messages ?? []), ...(promptSubmitHook.messages ?? [])]
-  dynamicContextMsg: Message | null;
-}): void {
-  // Prepend userContext (CLAUDE.md) as first message (sync, fast)
-  if (args.userContextMsg) {
-    args.messages.unshift(args.userContextMsg);
-  }
-
-  // Inject hook-supplied reminders just before the most recent user task.
-  // Combined into one <system-reminder> block so a noisy handler chain
-  // doesn't turn into 3+ separate user turns in the API request.
-  const lifecycleReminder = wrapHookMessages(args.hookMessages);
-  if (lifecycleReminder) {
-    // messages[length - 1] is the user task we just pushed above. Insert
-    // the reminder immediately before it so the model reads: CLAUDE.md →
-    // reminder → user request.
-    args.messages.splice(args.messages.length - 1, 0, lifecycleReminder);
-  }
-
-  // Volatile context (skills + git status) goes at the very END — after the
-  // user task — so it sits past the conversation's cache breakpoint. A change
-  // here (new skill, edited file) never invalidates the cached history prefix.
-  if (args.dynamicContextMsg) {
-    args.messages.push(args.dynamicContextMsg);
-  }
 }

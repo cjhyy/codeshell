@@ -2,13 +2,14 @@
  * Model call facade — wraps LLM client with transcript integration.
  */
 
+import { assistantHistoryContent } from "./assistant-history-content.js";
 import type { LLMClientBase } from "../llm/client-base.js";
 import { randomUUID } from "node:crypto";
 import {
   withModelRequestBoundary,
   type ModelRequestBinding,
 } from "../model-request-boundary/context.js";
-import type { PromptCacheRequestContext } from "../llm/prompt-cache.js";
+import type { PromptCacheRequestContext, PromptCacheStrategy } from "../llm/prompt-cache.js";
 import type { Message, ToolDefinition, LLMResponse, StreamCallback } from "../types.js";
 import { Transcript } from "../session/transcript.js";
 import { logger, getCurrentSid } from "../logging/logger.js";
@@ -56,6 +57,13 @@ export class ModelFacade {
     /** Successful primary calls only; timestamp is captured before the request starts. */
     private readonly onPrimaryResponse?: (startedAt: number) => void,
   ) {}
+
+  /** See LLMClientBase.getEffectivePromptCacheStrategy; `undefined`: as configured. */
+  getEffectivePromptCacheStrategy(): PromptCacheStrategy | undefined {
+    return (
+      this.client as { getEffectivePromptCacheStrategy?: () => PromptCacheStrategy | undefined }
+    ).getEffectivePromptCacheStrategy?.();
+  }
 
   getPromptPrefixFingerprint(
     systemPrompt: string,
@@ -276,35 +284,7 @@ export class ModelFacade {
 
   private recordResponse(response: LLMResponse): void {
     if (response.text || response.toolCalls.length > 0 || response.reasoningContent) {
-      const contentBlocks: import("../types.js").ContentBlock[] = [];
-
-      // DeepSeek V4 thinking mode emits reasoning_content alongside the
-      // reply; we echo it back on the next turn so the model can resume
-      // its chain of thought. Persist as a dedicated block so transcript
-      // -> message round-tripping preserves it without mixing into
-      // displayable text. Goes first so it sits adjacent to the
-      // assistant turn it belongs to even after compaction.
-      if (response.reasoningContent) {
-        contentBlocks.push({
-          type: "reasoning",
-          reasoningContent: response.reasoningContent,
-        });
-      }
-
-      if (response.text) {
-        contentBlocks.push({ type: "text", text: response.text });
-      }
-
-      for (const tc of response.toolCalls) {
-        contentBlocks.push({
-          type: "tool_use",
-          id: tc.id,
-          name: tc.toolName,
-          input: tc.args,
-        });
-      }
-
-      this.transcript.appendMessage("assistant", contentBlocks);
+      this.transcript.appendMessage("assistant", assistantHistoryContent(response));
     }
   }
 

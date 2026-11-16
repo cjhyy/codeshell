@@ -606,7 +606,7 @@ describe("toolSearchTool — deferred run selection", () => {
     expect(query.length).toBeLessThanOrEqual(2048);
     const result = await toolSearchTool({ query }, context);
     expect(result.length).toBeLessThanOrEqual(8192);
-    expect(result).toContain("MCP connection status for this run:");
+    expect(result).toContain("MCP connection status:");
     expect(result).toContain("Initialization timed out.");
     for (const name of missing) {
       expect(result).toContain(`Tool "${name}" is not available in the current Session context.`);
@@ -645,7 +645,7 @@ describe("toolSearchTool — deferred run selection", () => {
     ]);
     const result = await toolSearchTool({ query: "mcp catalog", max_results: 20 }, context);
     expect(result.length).toBeLessThanOrEqual(8192);
-    expect(result).toContain("MCP connection status for this run:");
+    expect(result).toContain("MCP connection status:");
     expect(result).toContain("Some matching tools were omitted");
     expect(result).not.toContain("schema_only_marker");
   });

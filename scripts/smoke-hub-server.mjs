@@ -441,6 +441,7 @@ try {
   console.log("PASS: real Core worker, local model SSE, streamed reply and persisted transcript");
 
   assert.ok(JSON.stringify(modelRequests.at(-1).messages).includes("HUB_SKILL_DISCOVERY_MARKER"));
+  const beforeSkillDisable = modelRequests.at(-1).messages;
   const configure = async (section, body) => {
     const response = await fetch(`${server.url}/api/v1/configuration/${section}`, {
       method: "PUT",
@@ -470,7 +471,35 @@ try {
     task: "SMOKE_SETTINGS: reply briefly.",
   });
   assert.equal(modelRequests.at(-1).model, "gpt-4o");
-  assert.ok(!JSON.stringify(modelRequests.at(-1).messages).includes("HUB_SKILL_DISCOVERY_MARKER"));
+  const afterSkillDisable = modelRequests.at(-1).messages;
+  // This scenario also switches models, which changes the system identity.
+  assert.equal(beforeSkillDisable[0].role, "system");
+  assert.equal(afterSkillDisable[0].role, "system");
+  assert.deepEqual(
+    afterSkillDisable.slice(1, beforeSkillDisable.length),
+    beforeSkillDisable.slice(1),
+    "Disabling a skill must preserve already-sent conversation and context",
+  );
+  const addedContext = afterSkillDisable.slice(beforeSkillDisable.length);
+  const addedText = addedContext
+    .filter((message) => message.role === "user")
+    .map((message) =>
+      typeof message.content === "string"
+        ? message.content
+        : message.content
+            .filter((part) => part.type === "text")
+            .map((part) => part.text)
+            .join("\n"),
+    )
+    .join("\n");
+  assert.ok(!addedText.includes("HUB_SKILL_DISCOVERY_MARKER"));
+  assert.ok(
+    addedText.includes('<context-section-removed key="skills" />') ||
+      addedText.includes(
+        '<context-update section="skills">\nRemoved: "deployment-smoke"\n</context-update>',
+      ),
+    "The same session must receive an explicit skill withdrawal in its appended context",
+  );
   console.log(
     "PASS: Web settings change the real worker model and Skill prompt in the same existing session without restarting",
   );
@@ -493,6 +522,10 @@ try {
     decision: { approved: true },
   });
   assert.equal((await approvedRun).reason, "completed");
+  assert.ok(
+    !JSON.stringify(modelRequests.at(-1).messages).includes("HUB_SKILL_DISCOVERY_MARKER"),
+    "A new session must not receive the disabled skill in its initial context",
+  );
   assert.equal(readFileSync(proofFile, "utf8"), "approved by Hub\n");
   assert.equal(rpc.text(approvalSession), approvalReply);
   console.log(

@@ -29,7 +29,7 @@ const roots: string[] = [];
 afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
-function fixture(toolResult = "synthetic result", missingResult = false) {
+function fixture(toolResult = "synthetic result", missingResult = false, contextEvents = false) {
   const root = mkdtempSync(join(tmpdir(), "output-history-"));
   roots.push(root);
   const id = "historical-session",
@@ -39,6 +39,15 @@ function fixture(toolResult = "synthetic result", missingResult = false) {
   const user = bundle.transcript.appendMessage("user", "synthetic question", {
     clientMessageId: "input",
   });
+  if (contextEvents) {
+    // Engine context: persisted for the model, never emitted as output.
+    bundle.transcript.appendMessage("user", "<system-reminder>\nhook\n</system-reminder>", {
+      hookReminder: { beforeEventId: user.id, sessionStart: ["hook"] },
+    });
+    bundle.transcript.appendMessage("user", "<system-reminder>\ncontext\n</system-reminder>", {
+      contextLedger: { kind: "snapshot", state: '{"version":1,"sections":{}}' },
+    });
+  }
   manager.startSessionRun(bundle.state, user.id);
   const writer = new SessionOutputJournal(root, id, user.id, base);
   const emit = (event: StreamEvent) => writer.append(event);
@@ -79,6 +88,15 @@ function ready(service: OutputHistoryRecovery, f: ReturnType<typeof fixture>) {
   if (result.status !== "ready") throw new Error(result.reason);
   return result;
 }
+
+test("engine context messages in the transcript do not count as user input", () => {
+  const plainFixture = fixture();
+  const plain = ready(new OutputHistoryRecovery(() => plainFixture.root), plainFixture);
+  const f = fixture("synthetic result", false, true);
+  const plan = ready(new OutputHistoryRecovery(() => f.root), f);
+  expect(plan.comparison).toEqual({ turns: 1, userInputs: 1, toolCalls: 1, toolResults: 1 });
+  expect(plan.comparison).toEqual(plain.comparison);
+});
 
 test("explicit new epoch preserves original conversation/context/evidence and rejects old cursors", () => {
   const f = fixture();

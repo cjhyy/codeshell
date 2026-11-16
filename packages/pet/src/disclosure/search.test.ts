@@ -9,6 +9,7 @@ interface MessageEvent {
   role: string;
   content: unknown;
   turnNumber?: number;
+  extra?: Record<string, unknown>;
 }
 
 function writeSession(
@@ -26,7 +27,7 @@ function writeSession(
       type: "message",
       timestamp: 1000 + index,
       turnNumber: message.turnNumber ?? 0,
-      data: { role: message.role, content: message.content },
+      data: { role: message.role, content: message.content, ...message.extra },
     }),
   );
   writeFileSync(join(dir, "transcript.jsonl"), lines.join("\n") + "\n", "utf-8");
@@ -50,6 +51,28 @@ describe("searchSessionTranscripts", () => {
     expect(result.matches.length).toBe(1);
     expect(result.matches[0]?.sessionId).toBe("session-a");
     expect(result.matches[0]?.snippets.length).toBe(2);
+  });
+
+  test("does not match the engine's own context messages", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pet-disclosure-search-context-"));
+    writeSession(root, "session-a", { kind: "work", cwd: "/a", title: "Session A" }, [
+      { role: "user", content: "an ordinary question" },
+      {
+        role: "user",
+        content: "<system-reminder>memory index mentions quokka</system-reminder>",
+        extra: { injected: true, contextLedger: { kind: "snapshot", state: "{}" } },
+      },
+      {
+        role: "user",
+        content: "<system-reminder>hook says quokka</system-reminder>",
+        extra: { injected: true, hookReminder: { sessionStart: ["hook says quokka"] } },
+      },
+    ]);
+
+    const result = await searchSessionTranscripts(root, "quokka", {});
+
+    expect(result.scannedSessions).toBe(1);
+    expect(result.matches).toEqual([]);
   });
 
   test("excludes pet/subagent sessions and respects maxSessions", async () => {
