@@ -242,7 +242,7 @@ async function current(page) {
 }
 async function noHorizontalOverflow(page) {
   const metrics = await page.evaluate(() => ({
-    width: innerWidth,
+    width: window.innerWidth,
     scroll: document.documentElement.scrollWidth,
   }));
   assert.ok(metrics.scroll <= metrics.width + 1, JSON.stringify(metrics));
