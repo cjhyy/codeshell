@@ -11,7 +11,7 @@ import type { ToolRegistry } from "../tool-system/registry.js";
 import type { Transcript } from "../session/transcript.js";
 import type { TokenUsage } from "../types.js";
 import { AuxiliaryPipeline, type EngineLlmClient } from "./auxiliary-pipeline.js";
-import { auxPromptCacheScope } from "./aux-prompt-cache.js";
+import { auxPromptCacheScope } from "../llm/aux-prompt-cache.js";
 import { SESSION_TRANSCRIPT_SYSTEM_PROMPT } from "../services/session-transcript-prompt.js";
 
 let root: string;
