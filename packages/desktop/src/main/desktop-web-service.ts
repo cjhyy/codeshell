@@ -78,6 +78,10 @@ export function createDesktopWebService(options: {
   };
   const authorized = async (request: IncomingMessage) =>
     (await contexts.get(request)?.isAuthorized()) ?? false;
+  const panelAuthorized = async (request: IncomingMessage) => {
+    const context = contexts.get(request);
+    return (await (context?.isCapabilityAuthorized ?? context?.isAuthorized)?.()) ?? false;
+  };
   const api = createDesktopWebApi({
     devices: options.devices,
     dataDir: join(codeShellHome(), "desktop"),
@@ -152,8 +156,8 @@ export function createDesktopWebService(options: {
                   }),
               },
               ownerId: async (req) =>
-                (await authorized(req)) ? contexts.get(req)?.sessionId : undefined,
-              isAuthorized: authorized,
+                (await panelAuthorized(req)) ? contexts.get(req)?.sessionId : undefined,
+              isAuthorized: panelAuthorized,
               withMutation: (write) => withMutation(cwd, write),
               onChanged: async (id, kind) => {
                 await Promise.all(

@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { ensureMiniDom, flushMicrotasks } from "../src/test-utils/renderHook.js";
 import { AccountSessionProvider, useAccountSession } from "./AccountSessionProvider.js";
 import { AccountSettings } from "./AccountSettings.js";
+import { AdminConsole } from "./AdminConsole.js";
 import { WebsiteLogin } from "./WebsiteLogin.js";
 import type { WebsiteRoute } from "./website-routes.js";
 import { AccountFeaturesContext } from "./useAccountFeature.js";
@@ -73,6 +74,8 @@ async function fixture({
     ["location", new URL("https://cloud.fixture.invalid/")],
     ["confirm", () => true],
     ["open", () => popup],
+    ["focus", () => {}],
+    ["isSecureContext", true],
   ] as const) {
     const previous = Object.getOwnPropertyDescriptor(window, name);
     Object.defineProperty(window, name, { configurable: true, value });
@@ -82,10 +85,31 @@ async function fixture({
     });
   }
   const priorNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+  const priorCredential = Object.getOwnPropertyDescriptor(globalThis, "PublicKeyCredential");
+  Object.defineProperty(globalThis, "PublicKeyCredential", {
+    configurable: true,
+    value: function PublicKeyCredential() {},
+  });
+  cleanups.push(() => {
+    if (priorCredential) Object.defineProperty(globalThis, "PublicKeyCredential", priorCredential);
+    else delete (globalThis as any).PublicKeyCredential;
+  });
   let queue = Promise.resolve();
   Object.defineProperty(globalThis, "navigator", {
     configurable: true,
     value: {
+      credentials: {
+        async get() {
+          const bytes = new Uint8Array([1, 2, 3]).buffer;
+          return {
+            id: "AQID",
+            rawId: bytes,
+            type: "public-key",
+            response: { authenticatorData: bytes, clientDataJSON: bytes, signature: bytes },
+            getClientExtensionResults: () => ({}),
+          };
+        },
+      },
       locks: {
         request(_name: string, _options: unknown, operation: () => Promise<unknown>) {
           const current = queue.then(operation);
@@ -102,7 +126,7 @@ async function fixture({
     if (priorNavigator) Object.defineProperty(globalThis, "navigator", priorNavigator);
     else delete (globalThis as any).navigator;
   });
-  const popup = { location: { href: "" }, opener: undefined, close() {} };
+  const popup = { location: { href: "" }, opener: undefined, close() {}, blur() {} };
   let authenticated = signedIn;
   let currentSessionId = sessionId;
   let profile = { id: accountId, username: "fixture-user", displayName: "原昵称", role };
@@ -180,6 +204,24 @@ async function fixture({
         refreshTokenExpiresAt: Date.now() + 86400000,
       });
     if (path === "/api/v1/account/web/overview") return Response.json(overview());
+    if (path === "/api/v1/account/web/passkeys")
+      return Response.json({
+        passkeys: [],
+        bootstrap: { password: hasPassword, github: !hasPassword },
+      });
+    if (path === "/api/v1/account/web/passkeys/authentication/options") {
+      expect(call.body).toEqual({ purpose: "github-link", target: accountId });
+      return Response.json({
+        ceremonyId: "K".repeat(43),
+        optionsJSON: {
+          rpId: "cloud.fixture.invalid",
+          challenge: "Q".repeat(43),
+          userVerification: "required",
+        },
+      });
+    }
+    if (path === "/api/v1/account/web/passkeys/authentication/verify")
+      return Response.json({ stepUpToken: "S".repeat(43), expiresAt: Date.now() + 60000 });
     if (path === "/api/v1/account/web/profile") {
       if (init?.method === "PATCH") profile = { ...profile, ...call.body };
       const { id, username, displayName } = profile;
@@ -207,10 +249,18 @@ async function fixture({
       ? { kind: "admin", section: "users" }
       : { kind: "account", section: section as any };
     return context.session?.authenticated ? (
-      <AccountSettings
-        key={`${context.session.account!.id}:${context.session.session!.id}`}
-        route={route}
-      />
+      route.kind === "admin" ? (
+        <AdminConsole
+          key={`${context.session.account!.id}:${context.session.session!.id}`}
+          section={route.section}
+          go={() => {}}
+        />
+      ) : (
+        <AccountSettings
+          key={`${context.session.account!.id}:${context.session.session!.id}`}
+          route={route}
+        />
+      )
     ) : renderLogin ? (
       <WebsiteLogin registration={registration} />
     ) : (
@@ -434,14 +484,15 @@ test("logout clears the private settings before the server responds and ignores 
 test("cancelled GitHub association cannot publish a late failure over a fresh settings status", async () => {
   const view = await fixture({ section: "connections" });
   const late = deferred<Response>();
-  view.overrides.set("POST /api/v1/account/web/github/start", (call) =>
-    Response.json({
+  view.overrides.set("POST /api/v1/account/web/github/start", (call) => {
+    expect(call.body.stepUpToken).toBe("S".repeat(43));
+    return Response.json({
       authorizationUrl: `https://github.com/login/oauth/authorize?scope=read%3Auser&code_challenge_method=S256&code_challenge=${call.body.codeChallenge}`,
       receipt: "R".repeat(43),
       expiresAt: Date.now() + 60000,
       pollIntervalMs: 1000,
-    }),
-  );
+    });
+  });
   view.overrides.set("POST /api/v1/account/web/github/poll", () => late.promise);
   let flow!: Promise<void>;
   await action(() => {

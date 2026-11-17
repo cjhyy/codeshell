@@ -1,7 +1,55 @@
 import { createHmac, randomBytes } from "node:crypto";
-import type { TokenUsage, ToolDefinition } from "../types.js";
+import { linkSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import type { Message, TokenUsage, ToolDefinition } from "../types.js";
+import { codeShellHome } from "../utils/paths.js";
 
-const PROCESS_DIAGNOSTIC_KEY = randomBytes(32);
+const DIAGNOSTIC_KEY_BYTES = 32;
+
+/**
+ * One local key per installation, so the same prefix keeps the same
+ * fingerprint across process restarts and logs from different runs can be
+ * compared. The key never leaves the machine; fingerprints stay HMACs so a log
+ * reveals no prompt text. Falls back to a process-local key when the home
+ * directory is unavailable.
+ */
+function loadDiagnosticKey(): Uint8Array {
+  try {
+    const home = codeShellHome();
+    const path = join(home, "prompt-cache-diagnostics.key");
+    try {
+      const existing = readFileSync(path);
+      if (existing.length === DIAGNOSTIC_KEY_BYTES) return existing;
+    } catch {
+      // Created below.
+    }
+    mkdirSync(home, { recursive: true });
+    // Write a complete file beside it, then link: concurrent processes either
+    // win the link or read the winner's complete key.
+    const temporary = `${path}.${process.pid}.${randomBytes(4).toString("hex")}`;
+    writeFileSync(temporary, randomBytes(DIAGNOSTIC_KEY_BYTES), { mode: 0o600 });
+    try {
+      linkSync(temporary, path);
+    } catch {
+      // Another process created it first.
+    } finally {
+      rmSync(temporary, { force: true });
+    }
+    const key = readFileSync(path);
+    if (key.length === DIAGNOSTIC_KEY_BYTES) return key;
+  } catch {
+    // Fall through to a process-local key.
+  }
+  return randomBytes(DIAGNOSTIC_KEY_BYTES);
+}
+
+let diagnosticKey: Uint8Array | undefined;
+/** Sentinel default: resolved to the installation key on first use. */
+const PROCESS_DIAGNOSTIC_KEY = new Uint8Array(0);
+
+function defaultKey(key: Uint8Array): Uint8Array {
+  return key === PROCESS_DIAGNOSTIC_KEY ? (diagnosticKey ??= loadDiagnosticKey()) : key;
+}
 const DEFAULT_MAX_SESSIONS = 256;
 const DROP_MIN_PREVIOUS_TOKENS = 100;
 const DROP_MAX_CURRENT_TOKENS = 64;
@@ -49,16 +97,40 @@ export interface PromptPrefixFingerprint {
   configHash: string;
 }
 
+/** One request message, reduced to what attribution needs. Never the text. */
+export interface PromptMessageDigest {
+  hash: string;
+  role: Message["role"];
+  /** A `tool` message, or one carrying a `tool_result` block. */
+  hasToolResult: boolean;
+}
+
+export type PromptMessageChange = "append_only" | "rewritten" | "removed" | "inserted" | "diverged";
+
+export interface PromptMessageChainDiff {
+  messageChange: PromptMessageChange;
+  /** Absent when the previous list is a prefix of the current one. */
+  firstChangedMessageIndex?: number;
+  previousMessageCount: number;
+  currentMessageCount: number;
+  /** The message at the changed index: the current one, else the previous one. */
+  changedMessageRole?: Message["role"];
+  changedMessageHasToolResult?: boolean;
+}
+
 export interface PromptCacheDiagnosticSample {
   usage: TokenUsage;
   fingerprint: PromptPrefixFingerprint;
   requestKind: "primary" | "continuation";
+  /** Hash chain of the messages sent in this request, in request order. */
+  messages?: readonly PromptMessageDigest[];
 }
 
 export interface PromptCacheDiagnosticState {
   cacheReadTokens: number;
   fingerprint: PromptPrefixFingerprint;
   sampledAtMs: number;
+  messages?: readonly PromptMessageDigest[];
 }
 
 export type PromptPrefixPart = "system" | "tools" | "config";
@@ -70,7 +142,10 @@ export interface PromptCacheDropAttribution {
     | "tools_changed"
     | "config_changed"
     | "multiple_prefixes_changed"
+    | "message_prefix_changed"
     | "no_tracked_prefix_change";
+  /** Present when both compared samples carried a message chain. */
+  messages?: PromptMessageChainDiff;
 }
 
 const SENSITIVE_IDENTITY_KEYS = new Set([
@@ -117,7 +192,8 @@ function stableSerialize(value: unknown): string {
   return JSON.stringify(canonicalize(value));
 }
 
-function hmac(value: unknown, key: Uint8Array = PROCESS_DIAGNOSTIC_KEY): string {
+function hmac(value: unknown, keyArg: Uint8Array = PROCESS_DIAGNOSTIC_KEY): string {
+  const key = defaultKey(keyArg);
   return createHmac("sha256", key).update(stableSerialize(value)).digest("hex").slice(0, 16);
 }
 
@@ -149,6 +225,121 @@ export function createPromptPrefixFingerprint(
     toolsHash: hashToolDefinitions(tools, key),
     configHash: hmac(["config-v1", configIdentity], key),
   };
+}
+
+/**
+ * Key-order-independent JSON of one message. Unlike `canonicalize`, nothing is
+ * dropped: a tool argument named `token` is part of the cached bytes.
+ */
+function stableMessageJson(message: Message): string {
+  return JSON.stringify(message, (_key, value: unknown) => {
+    if (value === null || typeof value !== "object" || Array.isArray(value)) return value;
+    const source = value as Record<string, unknown>;
+    const sorted: Record<string, unknown> = {};
+    for (const key of Object.keys(source).sort()) sorted[key] = source[key];
+    return sorted;
+  });
+}
+
+function messageHasToolResult(message: Message): boolean {
+  if (message.role === "tool") return true;
+  return (
+    Array.isArray(message.content) && message.content.some((block) => block.type === "tool_result")
+  );
+}
+
+/**
+ * Hash every message of one request. One pass over the message bytes, no
+ * memoization: an old message rewritten in place (same object, new content) is
+ * exactly what this exists to catch, so identity is not trusted.
+ */
+export function hashPromptMessages(
+  messages: readonly Message[],
+  keyArg: Uint8Array = PROCESS_DIAGNOSTIC_KEY,
+): PromptMessageDigest[] {
+  const key = defaultKey(keyArg);
+  return messages.map((message) => ({
+    hash: createHmac("sha256", key)
+      .update("message-v1\n")
+      .update(stableMessageJson(message))
+      .digest("hex")
+      .slice(0, 16),
+    role: message.role,
+    hasToolResult: messageHasToolResult(message),
+  }));
+}
+
+/** True when `left[leftStart..]` is a prefix of `right[rightStart..]`. */
+function tailIsPrefix(
+  left: readonly PromptMessageDigest[],
+  leftStart: number,
+  right: readonly PromptMessageDigest[],
+  rightStart: number,
+): boolean {
+  const length = left.length - leftStart;
+  if (length > right.length - rightStart) return false;
+  for (let offset = 0; offset < length; offset++) {
+    if (left[leftStart + offset]!.hash !== right[rightStart + offset]!.hash) return false;
+  }
+  return true;
+}
+
+/**
+ * Compare two request message chains. A later tail may always have grown, so
+ * "lines up" means the previous remainder is a prefix of the current one.
+ * Only single-message shifts are named; anything larger (compaction, several
+ * removals) is `diverged`. Hashes carry no identity, so among equal adjacent
+ * messages the reported index is the first position where the lists differ.
+ */
+export function diffPromptMessageChain(
+  previous: readonly PromptMessageDigest[],
+  current: readonly PromptMessageDigest[],
+): PromptMessageChainDiff {
+  const counts = { previousMessageCount: previous.length, currentMessageCount: current.length };
+  const shared = Math.min(previous.length, current.length);
+  let index = 0;
+  while (index < shared && previous[index]!.hash === current[index]!.hash) index++;
+  if (index === previous.length) return { messageChange: "append_only", ...counts };
+
+  let messageChange: PromptMessageChange;
+  if (index === current.length) {
+    // The current list is a strict prefix of the previous one: tail dropped.
+    messageChange = "removed";
+  } else if (previous.length === index + 1) {
+    // The previous list's last message: no later message can show a removal.
+    // It either moved down by one (something was inserted before it) or its
+    // slot now holds something else.
+    messageChange = tailIsPrefix(previous, index, current, index + 1) ? "inserted" : "rewritten";
+  } else if (tailIsPrefix(previous, index + 1, current, index + 1)) {
+    messageChange = "rewritten";
+  } else if (tailIsPrefix(previous, index + 1, current, index)) {
+    messageChange = "removed";
+  } else if (tailIsPrefix(previous, index, current, index + 1)) {
+    messageChange = "inserted";
+  } else {
+    messageChange = "diverged";
+  }
+  const changed = current[index] ?? previous[index]!;
+  return {
+    messageChange,
+    firstChangedMessageIndex: index,
+    ...counts,
+    changedMessageRole: changed.role,
+    changedMessageHasToolResult: changed.hasToolResult,
+  };
+}
+
+/**
+ * A change can only explain a cache-read drop when previously cached content
+ * followed it. When the first difference is the previous request's LAST
+ * message (a one-step run's trailing volatile context, say), everything before
+ * it was still reusable, so the drop has another cause (TTL, eviction).
+ */
+export function messageChangeInvalidatesCachedPrefix(diff: PromptMessageChainDiff): boolean {
+  return (
+    diff.firstChangedMessageIndex !== undefined &&
+    diff.firstChangedMessageIndex < diff.previousMessageCount - 1
+  );
 }
 
 export function diffPromptPrefix(
@@ -217,6 +408,7 @@ export class PromptCacheDiagnosticRecorder {
       cacheReadTokens,
       fingerprint: sample.fingerprint,
       sampledAtMs,
+      ...(sample.messages ? { messages: sample.messages } : {}),
     };
     this.states.delete(sessionId);
     this.states.set(sessionId, current);
@@ -243,13 +435,17 @@ export class PromptCacheDiagnosticRecorder {
     if (!nearColdDrop && !partialDrop) {
       return { kind: "updated" };
     }
-    return {
-      kind: "drop",
-      previous,
-      current,
-      dropRatio,
-      attribution: diffPromptPrefix(previous.fingerprint, current.fingerprint),
-    };
+    const attribution = diffPromptPrefix(previous.fingerprint, current.fingerprint);
+    if (previous.messages && current.messages) {
+      attribution.messages = diffPromptMessageChain(previous.messages, current.messages);
+      if (
+        attribution.cause === "no_tracked_prefix_change" &&
+        messageChangeInvalidatesCachedPrefix(attribution.messages)
+      ) {
+        attribution.cause = "message_prefix_changed";
+      }
+    }
+    return { kind: "drop", previous, current, dropRatio, attribution };
   }
 }
 
@@ -263,7 +459,26 @@ export function promptCacheDropHint(attribution: PromptCacheDropAttribution): st
       return "Request config changed; inspect reasoning shape, token fields, and provider cache strategy.";
     case "multiple_prefixes_changed":
       return `Multiple tracked prefixes changed: ${attribution.changedPrefixes.join(", ")}.`;
+    case "message_prefix_changed": {
+      const diff = attribution.messages;
+      const subject = diff?.changedMessageHasToolResult
+        ? `${diff.changedMessageRole} tool-result message`
+        : `${diff?.changedMessageRole ?? "unknown"} message`;
+      return `Message list changed before the cached tail: ${diff?.messageChange ?? "diverged"} at index ${diff?.firstChangedMessageIndex ?? "unknown"} (${subject}; ${diff?.previousMessageCount ?? "?"} -> ${diff?.currentMessageCount ?? "?"} messages). Everything from that index on was re-billed; inspect compaction/archival, tool-result clearing or redaction, and volatile context placement.`;
+    }
     case "no_tracked_prefix_change":
       return "No tracked prefix changed; inspect provider TTL/eviction, history compaction, userContext/date/instructions, or server cache policy.";
   }
+}
+
+/** Attribution fields of the `engine.cache_read_drop` log event. */
+export function promptCacheDropLogFields(
+  attribution: PromptCacheDropAttribution,
+): Record<string, unknown> & { hint: string } {
+  return {
+    cause: attribution.cause,
+    changedPrefixes: attribution.changedPrefixes,
+    ...attribution.messages,
+    hint: promptCacheDropHint(attribution),
+  };
 }

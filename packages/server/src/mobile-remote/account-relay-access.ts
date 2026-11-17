@@ -2,7 +2,34 @@ import { createHash, randomBytes } from "node:crypto";
 import type { IncomingMessage } from "node:http";
 import type { TrustedDeviceStore } from "./trusted-device-store.js";
 
+export const ACCOUNT_RELAY_COOKIE = "__Host-cs_host_access";
+const MAX_LOCAL_GRANT_MS = 10 * 60_000;
+const DIRECTORY_CLOCK_SKEW_MS = 30_000;
+
+export function hasAccountRelayCookie(request: IncomingMessage): boolean {
+  return (request.headers.cookie ?? "")
+    .split(";")
+    .some((part) => part.trim().startsWith(`${ACCOUNT_RELAY_COOKIE}=`));
+}
+
+function requestToken(request: IncomingMessage): string | undefined {
+  const cookies = (request.headers.cookie ?? "")
+    .split(";")
+    .map((part) => part.trim())
+    .filter((part) => part.startsWith(`${ACCOUNT_RELAY_COOKIE}=`));
+  const cookie =
+    cookies.length === 1 ? cookies[0]!.slice(ACCOUNT_RELAY_COOKIE.length + 1) : undefined;
+  const header = request.headers["x-codeshell-host-access"];
+  if (cookies.length > 1 || (header !== undefined && cookie !== undefined && header !== cookie))
+    return;
+  const token = header ?? cookie;
+  return typeof token === "string" && /^[A-Za-z0-9_-]{43}$/.test(token) ? token : undefined;
+}
+
 export interface AccountRelayBinding {
+  authorizationKind: "passkey-remote";
+  sourceKind: "browser" | "device";
+  sourceHostId?: string;
   authorizationId: string;
   accountId: string;
   rootSessionId: string;
@@ -23,13 +50,22 @@ export interface AccountRelayAccessProvider {
   hostId: string;
   environmentId: string;
   accountId?: string;
+  accountOrigin?: string;
   redeem: (handoff: string) => Promise<AccountRelayBinding>;
   listProjects: () => Promise<AccountRelayProject[]>;
 }
 
-interface AccountAccess {
+interface AccountPrincipal {
   provider: AccountRelayAccessProvider;
+  key: string;
   deviceId: string;
+  secretHash: string;
+  expiresAt: number;
+  tokens: Set<string>;
+}
+
+interface AccountAccess {
+  principal: AccountPrincipal;
   expiresAt: number;
   timer: ReturnType<typeof setTimeout>;
 }
@@ -37,12 +73,15 @@ interface AccountAccess {
 export interface CapturedAccountRelayAccess {
   deviceId: string;
   isAuthorized: () => boolean;
+  /** Existing owner-scoped capabilities follow fresh grants for the same UV authority. */
+  isCapabilityAuthorized: () => boolean;
 }
 
 /** Independent entrance gate; an account credential is never a Host credential. */
 export class AccountRelayAccessGate {
   private provider?: AccountRelayAccessProvider;
   private readonly grants = new Map<string, AccountAccess>();
+  private readonly principals = new Map<string, AccountPrincipal>();
   private readonly consumed = new Map<string, number>();
   private readonly pending = new Set<string>();
   private generation = 0;
@@ -61,18 +100,29 @@ export class AccountRelayAccessGate {
     return !!this.provider;
   }
 
+  get accountEntryUrl(): string | undefined {
+    try {
+      const origin = this.provider?.accountOrigin;
+      if (origin && new URL(origin).origin === origin && origin.startsWith("https://"))
+        return `${origin}/app`;
+    } catch {
+      /* An invalid provider address must never become browser navigation. */
+    }
+    return;
+  }
+
   clear(): void {
     this.generation++;
-    for (const token of this.grants.keys()) this.retire(token);
+    for (const principal of this.principals.values()) this.retirePrincipal(principal);
     this.consumed.clear();
     this.pending.clear();
   }
 
   revokeDevice(deviceId: string): boolean {
     let revoked = false;
-    for (const [token, grant] of this.grants)
-      if (grant.deviceId === deviceId) {
-        this.retire(token);
+    for (const principal of this.principals.values())
+      if (principal.deviceId === deviceId) {
+        this.retirePrincipal(principal);
         revoked = true;
       }
     return revoked;
@@ -83,8 +133,35 @@ export class AccountRelayAccessGate {
     if (!grant) return;
     this.grants.delete(token);
     clearTimeout(grant.timer);
-    this.devices.removeEphemeralDevice(grant.deviceId);
-    this.onRevoke(grant.deviceId);
+    grant.principal.tokens.delete(token);
+    if (
+      ![...grant.principal.tokens].some(
+        (key) => (this.grants.get(key)?.expiresAt ?? 0) > Date.now(),
+      )
+    )
+      this.retirePrincipal(grant.principal);
+  }
+
+  private retirePrincipal(principal: AccountPrincipal): void {
+    if (this.principals.get(principal.key) !== principal) return;
+    this.principals.delete(principal.key);
+    for (const token of principal.tokens) {
+      const grant = this.grants.get(token);
+      if (grant) clearTimeout(grant.timer);
+      this.grants.delete(token);
+    }
+    principal.tokens.clear();
+    this.devices.removeEphemeralDevice(principal.deviceId);
+    this.onRevoke(principal.deviceId);
+  }
+
+  private principalCurrent(principal: AccountPrincipal): boolean {
+    return (
+      this.provider === principal.provider &&
+      this.principals.get(principal.key) === principal &&
+      principal.expiresAt > Date.now() &&
+      this.devices.isEphemeralDevice(principal.deviceId)
+    );
   }
 
   async exchange(handoff: string) {
@@ -109,6 +186,13 @@ export class AccountRelayAccessGate {
         this.generation !== generation ||
         !binding ||
         typeof binding !== "object" ||
+        binding.authorizationKind !== "passkey-remote" ||
+        !["browser", "device"].includes(binding.sourceKind) ||
+        (binding.sourceKind === "device" &&
+          (typeof binding.sourceHostId !== "string" ||
+            !binding.sourceHostId ||
+            binding.sourceHostId.length > 512 ||
+            binding.sourceHostId.includes("\0"))) ||
         ![
           binding.authorizationId,
           binding.accountId,
@@ -128,30 +212,68 @@ export class AccountRelayAccessGate {
         (provider.accountId !== undefined && binding.accountId !== provider.accountId) ||
         !Number.isSafeInteger(binding.expiresAt) ||
         binding.expiresAt <= now ||
-        binding.expiresAt > now + 10 * 60_000
+        binding.expiresAt > now + MAX_LOCAL_GRANT_MS + DIRECTORY_CLOCK_SKEW_MS
       )
         throw new Error("Account relay handoff target is invalid");
+      // A slightly ahead directory clock must not reject a fresh handoff, but
+      // local authority still lasts at most ten minutes from this redemption.
+      const expiresAt = Math.min(binding.expiresAt, now + MAX_LOCAL_GRANT_MS);
+      // Keep the replay fence through the original directory expiry, including
+      // the small interval after the capped local grant has expired.
       this.consumed.set(digest, binding.expiresAt);
+      // A fresh directory redemption may continue one logical UV authority.
+      // Lease IDs intentionally rotate; all other authority identity fields must match.
+      const key = JSON.stringify([
+        binding.authorizationId,
+        binding.accountId,
+        binding.rootSessionId,
+        binding.hostId,
+        binding.environmentId,
+        binding.sourceKind,
+        binding.sourceHostId ?? null,
+      ]);
+      let principal = this.principals.get(key);
+      if (
+        principal &&
+        (!this.principalCurrent(principal) ||
+          !this.devices.renewEphemeralDevice(principal.deviceId, principal.secretHash, expiresAt))
+      ) {
+        this.retirePrincipal(principal);
+        principal = undefined;
+      }
+      if (!principal) {
+        const secretHash = randomBytes(32).toString("base64url");
+        const device = this.devices.addEphemeralDevice({
+          name: "Account device session",
+          secretHash,
+          expiresAt,
+        });
+        principal = {
+          provider,
+          key,
+          deviceId: device.id,
+          secretHash,
+          expiresAt,
+          tokens: new Set(),
+        };
+        this.principals.set(key, principal);
+      } else {
+        principal.expiresAt = Math.max(principal.expiresAt, expiresAt);
+      }
       const hostAccessToken = randomBytes(32).toString("base64url");
-      const secretHash = randomBytes(32).toString("base64url");
-      const device = this.devices.addEphemeralDevice({
-        name: "Account device session",
-        secretHash,
-        expiresAt: binding.expiresAt,
-      });
-      const timer = setTimeout(() => this.retire(hostAccessToken), binding.expiresAt - now);
+      const timer = setTimeout(() => this.retire(hostAccessToken), expiresAt - now);
       timer.unref();
+      principal.tokens.add(hostAccessToken);
       this.grants.set(hostAccessToken, {
-        provider,
-        deviceId: device.id,
-        expiresAt: binding.expiresAt,
+        principal,
+        expiresAt,
         timer,
       });
       return {
         hostAccessToken,
-        deviceId: device.id,
-        secretHash,
-        expiresAt: binding.expiresAt,
+        deviceId: principal.deviceId,
+        secretHash: principal.secretHash,
+        expiresAt,
         hostId: binding.hostId,
         environmentId: binding.environmentId,
       };
@@ -162,20 +284,46 @@ export class AccountRelayAccessGate {
   }
 
   capture(request: IncomingMessage): CapturedAccountRelayAccess | undefined {
-    const token = request.headers["x-codeshell-host-access"];
-    if (typeof token !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(token)) return;
+    const token = requestToken(request);
+    if (!token) return;
     const grant = this.grants.get(token);
     if (!grant) return;
     const isAuthorized = () =>
-      this.provider === grant.provider &&
+      this.principalCurrent(grant.principal) &&
       this.grants.get(token) === grant &&
-      this.devices.isEphemeralDevice(grant.deviceId) &&
       grant.expiresAt > Date.now();
     if (!isAuthorized()) {
-      this.retire(token);
+      if (!this.principalCurrent(grant.principal)) this.retirePrincipal(grant.principal);
+      else this.retire(token);
       return;
     }
-    return { deviceId: grant.deviceId, isAuthorized };
+    return {
+      deviceId: grant.principal.deviceId,
+      isAuthorized,
+      isCapabilityAuthorized: () => this.principalCurrent(grant.principal),
+    };
+  }
+
+  /** A browser restores only this short-lived identity, never a durable pairing. */
+  browserCredential(request: IncomingMessage) {
+    if (!hasAccountRelayCookie(request)) return;
+    const access = this.capture(request);
+    const token = requestToken(request);
+    const grant = token && this.grants.get(token);
+    if (!access || !grant || !access.isAuthorized()) return;
+    return {
+      deviceId: grant.principal.deviceId,
+      secretHash: grant.principal.secretHash,
+      expiresAt: grant.expiresAt,
+      hostId: grant.principal.provider.hostId,
+      environmentId: grant.principal.provider.environmentId,
+      accountEntryUrl: this.accountEntryUrl,
+    };
+  }
+
+  revokeRequest(request: IncomingMessage): void {
+    const token = requestToken(request);
+    if (token && this.capture(request)) this.retirePrincipal(this.grants.get(token)!.principal);
   }
 
   async projects(access: CapturedAccountRelayAccess) {

@@ -23,7 +23,9 @@ import {
 import { join } from "node:path";
 import { userHome } from "../utils/paths.js";
 import { sortSessionMemoriesByRecency } from "./session-memory-sort.js";
-import { formatMemoryTranscript } from "./memory-transcript.js";
+import { joinMemoryPrompt, type MemoryPromptSegments } from "./memory-prompt-segments.js";
+import type { MemoryTranscriptMessage } from "./memory-transcript.js";
+import { sessionTranscriptPromptSegments } from "./session-transcript-prompt.js";
 
 export interface SessionMemoryEntry {
   sessionId: string;
@@ -201,19 +203,12 @@ export function searchSessionMemories(query: string, baseDir?: string): SessionM
   );
 }
 
-/**
- * Build a prompt for extracting session memory from a conversation.
- */
-export function buildSessionMemoryPrompt(
-  messages: Array<{ role: string; content: string }>,
-): string {
-  const text = formatMemoryTranscript(messages, 2000);
+const SESSION_MEMORY_TASK = `## Task: session summary
+Act as a session summariser. Output only valid JSON.
 
-  return `Extract a concise session memory from this conversation:
+Extract a concise session memory from the conversation above.`;
 
-${text}
-
-Respond with ONLY a single JSON object — no markdown code fence, no text before
+const SESSION_MEMORY_RESPONSE_FORMAT = `Respond with ONLY a single JSON object — no markdown code fence, no text before
 or after. Keep every value on one line (escape any newline as \\n) and escape
 any double quote inside a string as \\". Shape:
 {
@@ -224,4 +219,24 @@ any double quote inside a string as \\". Shape:
 Keep the response concise: summary at most 500 characters, at most 8 keyTopics
 of 40 characters each, and at most 8 decisions of 80 characters each. Preserve
 the latest corrections and final outcomes; omitted material is unavailable.`;
+
+/**
+ * The session-memory prompt in cache order: the conversation prefix shared
+ * with memory extraction (session-transcript-prompt.ts), then the task and
+ * the response format.
+ */
+export function buildSessionMemoryPromptSegments(
+  messages: readonly MemoryTranscriptMessage[],
+): MemoryPromptSegments {
+  return sessionTranscriptPromptSegments(
+    messages,
+    `${SESSION_MEMORY_TASK}\n\n${SESSION_MEMORY_RESPONSE_FORMAT}`,
+  );
+}
+
+/**
+ * Build a prompt for extracting session memory from a conversation.
+ */
+export function buildSessionMemoryPrompt(messages: readonly MemoryTranscriptMessage[]): string {
+  return joinMemoryPrompt(buildSessionMemoryPromptSegments(messages));
 }

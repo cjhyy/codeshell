@@ -50,7 +50,7 @@
     "status": "exposed",
     "requires": "mimi-host",
     "reason": "Records one delegation through the Host-owned per-turn Pet profile services. Workspace ids and reusable Session evidence are validated against that turn's bounded options; reporting a request does not launch work or grant a general execution tool.",
-    "contractFingerprint": "71f1a8ad602096640b57b240911c841ed3bef590444ca38d17ff3e7ed0e5b806"
+    "contractFingerprint": "332004d222a3d177d5c6ed518dca5d98789da06a5a676b568018f971bd69ea17"
   },
   {
     "tool": "DriveAgent",
@@ -109,7 +109,7 @@
     "status": "exposed",
     "requires": "mimi-host",
     "reason": "Records the current conversation's reply through the Host-owned per-turn Pet profile services. The capability bounds text and attachments, and the Host validates and delivers the final draft after the turn; acceptance is not delivery.",
-    "contractFingerprint": "dd922ad6ab85e2003f1571fdf9eb61a6a2bf9e971d6ca930e802d4bab4893c43"
+    "contractFingerprint": "b5581f74d9e1cfc1c540b70b8eb19138f8e8eb33fd33d43364a89459e437867e"
   },
   {
     "tool": "Glob",
@@ -273,7 +273,7 @@
     "status": "exposed",
     "requires": "mimi-host",
     "reason": "Records an outbound message through the Host-owned per-turn Pet profile services. Exact target ids, text and attachment limits come from that turn's authorized targets; the Host validates and delivers after the turn, and acceptance is not delivery.",
-    "contractFingerprint": "99741aca639fe61ef33955fa4d3674f925a31b16279eec98d10acd52f0c86bdc"
+    "contractFingerprint": "53340e8c176156d1cf57d20154ccf543bd356f79e9d05ba807e6f3f4f8cea1ff"
   },
   {
     "tool": "Sessions",

@@ -1,5 +1,6 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import type { ContentBlock, Message, ToolDefinition } from "../../types.js";
+import { wireToolInputSchema } from "../tool-wire-schema.js";
 import {
   matchesToolDiscoverySchema,
   NATIVE_TOOL_DISCOVERY_USAGE,
@@ -38,7 +39,7 @@ export function anthropicTools(
   const converted: NativeTool[] = tools.map((tool) => ({
     name: tool.name,
     description: tool.description,
-    input_schema: tool.inputSchema as Anthropic.Tool.InputSchema,
+    input_schema: wireToolInputSchema(tool.inputSchema) as Anthropic.Tool.InputSchema,
     ...(policy.toolDiscovery === "tool-reference" && tool.deferLoading
       ? { defer_loading: true as const }
       : {}),
@@ -118,16 +119,27 @@ export function anthropicMessages(
     Math.min(messages.length, promptCache?.stablePrefixMessageCount ?? messages.length),
   );
   let stablePrefixEndMessage: Anthropic.MessageParam | undefined;
+  // The rolling breakpoint ends before volatile tail context (resent every step).
+  const rollingSourceEnd =
+    messages.length -
+    Math.max(0, Math.min(messages.length, promptCache?.volatileTailMessageCount ?? 0));
+  let rollingEndMessage: Anthropic.MessageParam | undefined;
+  const textAsBlocks =
+    policy.toolDiscovery === "tool-reference" || policy.strategy === "anthropic-explicit";
   for (const [sourceIndex, message] of messages.entries()) {
     if (sourceIndex === stablePrefixMessageCount)
       stablePrefixEndMessage = result[result.length - 1];
+    if (sourceIndex === rollingSourceEnd) rollingEndMessage = result[result.length - 1];
     if (message.role === "system") continue;
     const role = message.role === "tool" ? "user" : message.role;
     if (typeof message.content === "string") {
       result.push({
         role,
+        // A marked message must be a block array, so an unmarked one is too:
+        // its bytes may not change when a breakpoint moves onto or off it.
+        // An empty text block is invalid; an empty string is never marked.
         content:
-          policy.toolDiscovery === "tool-reference"
+          textAsBlocks && message.content.length > 0
             ? [{ type: "text", text: message.content }]
             : message.content,
       });
@@ -145,12 +157,14 @@ export function anthropicMessages(
     if (blocks.length) result.push({ role, content: blocks });
   }
   stablePrefixEndMessage ??= result[result.length - 1];
+  rollingEndMessage ??= result[result.length - 1];
   const stablePrefixEndIndex = stablePrefixEndMessage
     ? result.indexOf(stablePrefixEndMessage)
     : undefined;
+  const rollingEndIndex = rollingEndMessage ? result.indexOf(rollingEndMessage) : undefined;
   for (const index of uniquePromptCacheBreakpointIndexes([
     policy.breakpoints.includes("stable-history") ? stablePrefixEndIndex : undefined,
-    policy.breakpoints.includes("rolling-history") ? result.length - 1 : undefined,
+    policy.breakpoints.includes("rolling-history") ? rollingEndIndex : undefined,
   ]))
     markBreakpoint(result[index]);
   return result;

@@ -51,7 +51,10 @@ import {
   readPetHostActionRequests,
   readPetWorkDelegations,
   reusableSessionId,
+  splitPetWorld,
   stringifyBoundedPetWorld,
+  withMergedPetWorld,
+  withPetLedgerContext,
   workspaceIdForPath,
   type PetManagerTurnHost,
   type PetWorldContextInput,
@@ -698,6 +701,8 @@ export class PetDispatchService {
     }
   }
   private readonly recentWorkContext;
+  /** Mimi's last durable lists; internal turns resend them to the ledger unchanged. */
+  private lastLedgerContext?: string;
   private activeChatTurn?: PetActiveChatTurn;
   private chatAdmissionTail: Promise<void> = Promise.resolve();
   private readonly chatInputs = new Map<
@@ -1095,7 +1100,10 @@ export class PetDispatchService {
         : suppliedModel === null
           ? undefined
           : await this.options.managerModel?.();
-    const routedParams = { ...runParams, ...(model ? { model } : {}) };
+    const routedParams = withPetLedgerContext(
+      { ...runParams, ...(model ? { model } : {}) },
+      this.lastLedgerContext,
+    );
     if (parseExternalRuntimeModelKey(model)) {
       if (!this.options.externalRuntime) {
         return {
@@ -1104,7 +1112,7 @@ export class PetDispatchService {
         };
       }
       try {
-        return await this.options.externalRuntime.run(routedParams);
+        return await this.options.externalRuntime.run(withMergedPetWorld(routedParams));
       } catch (error) {
         return {
           ok: false as const,
@@ -1857,12 +1865,17 @@ export class PetDispatchService {
                           tool: "GatewayReply",
                           destination: "current IM conversation",
                           allowedRoots: replyAttachmentRoots,
+                          ...gatewayReplyCapability,
                         },
                       }
                     : {}),
                 },
               }
             : {}),
+          // Durable lists: splitPetWorld sends them through the context ledger.
+          workspaces: petWorkspaces,
+          reusableSessions: petReusableSessions,
+          outboundTargets: listedOutboundTargets.slice(0, 32),
           ...(recentInputAttachments.length
             ? {
                 inputAttachments: recentInputAttachments.map(({ id, path, absPath, mime }) => ({
@@ -1886,15 +1899,13 @@ export class PetDispatchService {
           ...(longTaskContext ? { longTasks: longTaskContext } : {}),
           ...(taskInbox ? { taskInbox } : {}),
           followUps: petFollowUps,
-          outboundTargets: listedOutboundTargets.slice(0, 32),
           sessions: projectionWorld.sessions,
           pending: projectionWorld.pending,
           ...(carryoverBrief ? { carryoverBrief } : {}),
-          workspaces: petWorkspaces,
-          reusableSessions: petReusableSessions,
           ...remainingWorldExtras,
         };
-        const runtimeContext = stringifyBoundedPetWorld(world);
+        const { runtimeContext, ledgerContext } = splitPetWorld(world);
+        this.lastLedgerContext = ledgerContext;
         timer.done();
         const activeChat = this.activeChatTurn;
         command.pendingNotices?.started();
@@ -1910,6 +1921,7 @@ export class PetDispatchService {
           petWorkspaces,
           profileParams: {
             runtimeContext,
+            ledgerContext,
             workspaces: petWorkspaces,
             reusableSessions: petReusableSessions,
             ...(hostActionKinds.length > 0 ? { hostActions: hostActionKinds } : {}),
@@ -1926,6 +1938,7 @@ export class PetDispatchService {
           cwd: this.options.hostCwd,
           behaviorMode: "pet",
           kind: "pet",
+          preset: "mimi",
           permissionMode: "default",
           clientMessageId: command.clientMessageId,
           ...(segmentTurn?.closedSegment && command.clientMessageId
@@ -2221,6 +2234,7 @@ export class PetDispatchService {
                 cwd: this.options.hostCwd,
                 behaviorMode: "pet",
                 kind: "pet",
+                preset: "mimi",
                 permissionMode: "default",
                 disableGoal: true,
                 toolAllowlist: [],

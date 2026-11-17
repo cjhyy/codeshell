@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -11,8 +11,12 @@ import {
   type StreamEvent,
 } from "@cjhyy/code-shell-core/extension";
 import { createPetModule } from "./capability.js";
+// Rule 5 of the prompt-cache design: unregistered prefix changes fail (shared via globalThis).
+import { installPromptPrefixGuard } from "../../core/dist/testing/prompt-prefix-guard.js";
 import { sessionSelectorId } from "./disclosure/selector.js";
 import { PET_BEHAVIOR_PROFILE } from "./profile.js";
+
+installPromptPrefixGuard({ beforeEach, afterEach });
 
 /**
  * Script the LLM only; real Engine history, disclosure tools, profile services,
@@ -92,6 +96,7 @@ function createReplay(script: Script) {
     llm: { provider, model, apiKey: "test" } as never,
     cwd,
     modules: [createPetModule()],
+    preset: "mimi",
     sessionStorageDir: sessionsRootDir,
     settingsScope: "isolated",
     headless: true,
@@ -334,12 +339,11 @@ describe("Mimi mocked multi-turn chat replay", () => {
       if (round === 2 || round === 3) {
         const time = toolResultJson(options, "CurrentTime");
         outboundText = `现在是 ${time.local}（${time.timeZone}，UTC${time.utcOffset}）。`;
-        const properties = options.tools?.find((tool) => tool.name === "SendMessage")?.inputSchema
-          .properties as Record<string, { enum: string[] }>;
+        // SendMessage is static; the authorized id comes from outboundTargets.
         return call(
           "SendMessage",
           {
-            target_id: round === 2 ? "wechat" : properties.target_id!.enum[0],
+            target_id: round === 2 ? "wechat" : "owner-wechat-7ac291",
             text: outboundText,
           },
           round === 2 ? "raw-channel-rejected" : "authorized-target",
@@ -368,7 +372,8 @@ describe("Mimi mocked multi-turn chat replay", () => {
     expect(replay.replay.rounds).toHaveLength(4);
     expect(replay.replay.rounds[0]!.tools?.map((tool) => tool.name)).toContain("CurrentTime");
     expect(replay.replay.rounds[0]!.tools?.map((tool) => tool.name)).toContain("SendMessage");
-    expect(replay.replay.rounds[0]!.tools?.map((tool) => tool.name)).not.toContain("GatewayReply");
+    // Every Mimi turn carries the same tools; a desktop turn refuses GatewayReply at call time.
+    expect(replay.replay.rounds[0]!.tools?.map((tool) => tool.name)).toContain("GatewayReply");
     const time = toolResultJson(replay.replay.rounds[1]!, "CurrentTime");
     expect(time.epochMs).toBeGreaterThanOrEqual(before);
     expect(time.epochMs).toBeLessThanOrEqual(Date.now());

@@ -39,6 +39,7 @@ import { logger } from "../logging/logger.js";
 import { canExposeNativeToolDefinition } from "../llm/native-tool-discovery.js";
 import { resolvePromptCachePolicy } from "../llm/prompt-cache.js";
 import { callToolDef } from "../tool-system/builtin/call-tool.js";
+import { formatPreloadedToolSchemas } from "../tool-system/builtin/tool-search.js";
 import {
   rebaseToolSelection,
   selectionForToolCacheCycle,
@@ -61,6 +62,27 @@ export function snapshotRunMcpServers(
   );
 }
 
+/**
+ * Load the routed tools missing from the frozen head, on a Session's first run
+ * only: their schemas ride the context ledger after the head (a snapshot-only
+ * section) and they become callable exactly like a ToolSearch selection. At
+ * the next cold boundary they join the head like any other discovery.
+ */
+export function preloadRoutedTools(
+  surface: RunToolSurface,
+  routedNames: readonly string[],
+): string {
+  const head = new Set(surface.snapshot().map((tool) => tool.name));
+  const extras = routedNames.filter(
+    (name) => name !== "CallTool" && !head.has(name) && surface.isEligible(name),
+  );
+  if (extras.length === 0) return "";
+  const { output, loaded } = formatPreloadedToolSchemas(surface.getCatalog(), extras);
+  if (loaded.length === 0) return "";
+  surface.select(loaded);
+  return `Tools loaded for this task in addition to the tools field:\n\n${output}`;
+}
+
 /** Keep current eligibility separate from schemas frozen for the cache cycle. */
 export function initializeRunToolSurface(
   toolCtx: ToolContext,
@@ -72,6 +94,8 @@ export function initializeRunToolSurface(
     injected?: boolean;
     selection?: unknown;
     onSelectionChanged?: (selection: SessionToolSelection) => void;
+    /** Context text carrying the routed tools' schemas; empty when none were loaded. */
+    onPreloadedTools?: (contextText: string) => void;
   },
 ): ToolDefinition[] {
   const toolDiscovery = toolCtx.llmConfig
@@ -146,8 +170,16 @@ export function initializeRunToolSurface(
       eligibleCount: catalog.length,
     });
   }
+  // The frozen head is the preset's fixed set, never the routed one: two new
+  // Sessions of one preset then send identical tools and system prompts, so a
+  // later Session reads the head an earlier one cached. Routed extras are
+  // loaded after the head instead (preloadRoutedTools).
   const surface = new RunToolSurface(
-    catalog.some((tool) => tool.name === "ToolSearch") ? routed.initialToolNames : undefined,
+    catalog.some((tool) => tool.name === "ToolSearch")
+      ? routed.reason === "matched"
+        ? initialToolNames
+        : routed.initialToolNames
+      : undefined,
     {
       selection:
         selection && (routing?.selection as { version?: unknown })?.version === 1
@@ -164,6 +196,8 @@ export function initializeRunToolSurface(
   );
   toolCtx.runToolSurface = surface;
   surface.updateCatalog(catalog);
+  if (routed.reason === "matched")
+    routing?.onPreloadedTools?.(preloadRoutedTools(surface, routed.initialToolNames ?? []));
   persistSelection?.(surface.getSelection());
   toolCtx.refreshRunToolEligibility = () => surface.updateCatalog(assembleModelCatalog());
   let previousNames: string[] | undefined;

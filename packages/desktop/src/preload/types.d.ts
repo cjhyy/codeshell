@@ -2537,6 +2537,7 @@ export interface RoomPublic {
   cwd: string;
   kind: "claude-code" | "codex";
   permissionMode: "default" | "acceptEdits" | "bypassPermissions";
+  modelKey?: string | null;
   createdAt: number;
   lastActiveAt: number;
   open: boolean;

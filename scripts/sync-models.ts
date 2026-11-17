@@ -13,6 +13,11 @@
 import { writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  type OpenRouterModel,
+  type RawOpenRouterPricing,
+  openRouterPriceFields,
+} from "../packages/core/src/data/openrouter-models.js";
 
 const ENDPOINT = "https://openrouter.ai/api/v1/models";
 
@@ -37,6 +42,28 @@ export const CURATED_MODEL_IDS = [
   "cohere/command-a-plus",
   "stepfun/step-5-preview",
   "liquid/lfm-2.5-24b-a2b",
+  // Previous generations and fixed versions still common in saved connections.
+  // Appended so the picker's first picks per vendor keep the newest models.
+  "anthropic/claude-opus-5",
+  "anthropic/claude-sonnet-5",
+  "~anthropic/claude-opus-latest",
+  "~anthropic/claude-sonnet-latest",
+  "openai/gpt-6.1-terra",
+  "openai/gpt-6-astra",
+  "openai/gpt-6-astra-pro",
+  "openai/gpt-6-sol",
+  "openai/gpt-5.6-sol",
+  "openai/gpt-5.6-terra",
+  "openai/gpt-5.6-luna",
+  "google/gemini-3.1-pro-preview",
+  "deepseek/deepseek-v4-pro",
+  "deepseek/deepseek-v4-flash",
+  "moonshotai/kimi-k2.7-code",
+  "z-ai/glm-5.3",
+  "z-ai/glm-5.2",
+  "x-ai/grok-4.6",
+  "qwen/qwen3.8-max-0902",
+  "minimax/minimax-m3",
 ] as const;
 
 const OUT_PATH = join(
@@ -55,32 +82,17 @@ interface RawModel {
   created?: number;
   context_length?: number;
   top_provider?: { context_length?: number; max_completion_tokens?: number };
-  pricing?: { prompt?: string; completion?: string };
+  pricing?: RawOpenRouterPricing;
   architecture?: { input_modalities?: string[]; output_modalities?: string[] };
 }
 
-interface SlimModel {
-  id: string;
-  name: string;
-  created: number;
-  contextLength: number;
-  maxOutputTokens: number;
-  inputPricePerMillion: number;
-  outputPricePerMillion: number;
-  modalities: string[];
-}
+type SlimModel = OpenRouterModel;
 
 interface Snapshot {
   fetchedAt: string;
   source: string;
   count: number;
   models: SlimModel[];
-}
-
-function priceToPerMillion(raw: string | undefined): number {
-  if (!raw) return 0;
-  const n = Number(raw);
-  return Number.isFinite(n) ? n * 1_000_000 : 0;
 }
 
 function slim(m: RawModel): SlimModel {
@@ -92,8 +104,7 @@ function slim(m: RawModel): SlimModel {
     created: m.created ?? 0,
     contextLength: ctx,
     maxOutputTokens: maxOut,
-    inputPricePerMillion: priceToPerMillion(m.pricing?.prompt),
-    outputPricePerMillion: priceToPerMillion(m.pricing?.completion),
+    ...openRouterPriceFields(m.pricing),
     modalities: m.architecture?.input_modalities ?? [],
   };
 }

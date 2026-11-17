@@ -16,6 +16,12 @@ import { SessionOutputJournal, SessionOutputCoverageStore } from "@cjhyy/code-sh
 import { initialChatState, reduceStream, transcriptToStreamEvents } from "@cjhyy/code-shell-web";
 import { SessionSnapshotStore } from "../SessionSnapshotStore.js";
 import { MobileOutputRecovery } from "./output-recovery.js";
+import {
+  CONTEXT_CANARY,
+  PUBLIC_PROMPT,
+  PUBLIC_ANSWER,
+  contextPrivacySession,
+} from "../../../../../tests/helpers/context-privacy.js";
 import { projectHistoryView, UnsupportedHistoryView } from "./history-view-projection.js";
 
 const cleanups: (() => void)[] = [];
@@ -24,12 +30,19 @@ afterEach(() => {
 });
 function fixture(
   events: StreamEvent[],
-  options: { noBase?: boolean; producer?: boolean; legacyText?: string } = {},
+  options: {
+    noBase?: boolean;
+    producer?: boolean;
+    legacyText?: string;
+    privateContext?: boolean;
+  } = {},
 ) {
   const root = mkdtempSync(join(tmpdir(), "mobile-history-view-"));
   cleanups.push(() => rmSync(root, { recursive: true, force: true }));
   const manager = new SessionManager(root);
-  const session = manager.create(root, "fixture", "fixture", "history");
+  const session = options.privateContext
+    ? contextPrivacySession(root, root, "history").bundle
+    : manager.create(root, "fixture", "fixture", "history");
   if (options.legacyText) {
     for (let offset = 0; offset < options.legacyText.length; offset += 500_000)
       session.transcript.append("message", {
@@ -871,4 +884,15 @@ test("frozen suffix continuation allows its real per-page snapshot to advance be
     page: { status: "ok", complete: true, through },
     snapshot: { outputCursor: later },
   });
+});
+
+test("mobile history views exclude local checkpoint and hook context", async () => {
+  const f = fixture(simple(), { privateContext: true });
+  await f.select();
+  const view = ok(await f.view());
+  const wire = JSON.stringify(view);
+  expect(wire).not.toContain(CONTEXT_CANARY);
+  expect(wire).toContain(PUBLIC_PROMPT);
+  expect(wire).toContain(PUBLIC_ANSWER);
+  expect(JSON.stringify(f.session.transcript.toMessages())).toContain(`${CONTEXT_CANARY}:rewrite`);
 });

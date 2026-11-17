@@ -4,7 +4,11 @@ import {
   readSessionFileSync,
   sessionListStorage,
 } from "@cjhyy/code-shell-host/session-files";
-import { listSessionEntries } from "@cjhyy/code-shell-core/internal";
+import {
+  listSessionEntries,
+  withoutContextEvents,
+  withoutLocalContextState,
+} from "@cjhyy/code-shell-core/internal";
 import { join, resolve } from "node:path";
 import { SessionManager, type SessionState } from "@cjhyy/code-shell-core";
 import { replayTranscript, transcriptUserDisplay } from "@cjhyy/code-shell-web/transcript-replay";
@@ -246,7 +250,8 @@ export function createHubSessions(options: {
           throw new SessionRequestError(429, "正在导出的对话过多，请稍后重试。");
         activeExports++;
         exporting = true;
-        const transcript = readHubTranscript(sessionRootDir, sessionId);
+        // An export carries the conversation; engine context stays on disk.
+        const transcript = withoutContextEvents(readHubTranscript(sessionRootDir, sessionId));
         const format = url.searchParams.get("format") ?? "markdown";
         if (format !== "json" && format !== "markdown")
           throw new SessionRequestError(400, "不支持这个导出格式。");
@@ -256,7 +261,11 @@ export function createHubSessions(options: {
           "CodeShell 对话";
         const body =
           format === "json"
-            ? JSON.stringify({ version: 1, title, state, transcript }, null, 2) + "\n"
+            ? JSON.stringify(
+                { version: 1, title, state: withoutLocalContextState(state), transcript },
+                null,
+                2,
+              ) + "\n"
             : transcriptMarkdown(title, transcript);
         if (Buffer.byteLength(body) > MAX_EXPORT_BYTES)
           throw new SessionRequestError(413, "导出内容过大。");
@@ -357,7 +366,7 @@ export function hubSessionPreview(value: unknown): string | undefined {
 
 export function transcriptMarkdown(title: string, transcript: readonly unknown[]): string {
   const sections = [`# ${title.replace(/[\r\n]/g, " ")}`];
-  for (const item of replayTranscript(transcript).items) {
+  for (const item of replayTranscript(withoutContextEvents(transcript)).items) {
     if (item.kind === "user") {
       sections.push(`## 用户\n\n${item.text}`);
       if (item.attachments?.length)

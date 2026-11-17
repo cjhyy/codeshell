@@ -1751,7 +1751,9 @@ contextBridge.exposeInMainWorld("codeshell", {
       cwd: string,
       mode: string,
       kind?: "claude-code" | "codex",
-    ) => ipcRenderer.invoke("ccRoom:openSession", claudeSessionId, cwd, mode, kind),
+      settings?: Parameters<CodeshellApi["ccRoom"]["openSession"]>[4],
+    ) => ipcRenderer.invoke("ccRoom:openSession", claudeSessionId, cwd, mode, kind, settings),
+    settingsState: (roomId: string) => ipcRenderer.invoke("ccRoom:settingsState", roomId),
     openLinkedSession: (
       externalSessionId: string,
       cwd: string,

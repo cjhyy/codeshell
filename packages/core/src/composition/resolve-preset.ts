@@ -28,17 +28,39 @@ export function compositionToolCatalog(composition: ResolvedComposition): Builti
 }
 
 /**
- * Preset-tags tools force-joined to the ACTIVE preset regardless of its name.
- * Rule: tools owned by modules that contribute no presets (pet-style catalog
- * tools) — presets snapshot their tool lists from catalogs known at module
- * authoring time, which can never include such packages. Modules that DO
- * contribute presets (core, coding) reference their tools via preset tags
- * already. Visibility stays gated by each tool's exposure.availability.
+ * Preset-tags tools that join a preset beyond its own list:
+ * - tools a module adds through a preset extension whose target matches;
+ * - by default, every tool of a module that contributes neither presets nor
+ *   extensions — presets snapshot their lists from catalogs known at module
+ *   authoring time, which can never include such packages.
+ * Visibility stays gated by each tool's exposure.availability.
  */
-export function presetInjectedTools(composition: ResolvedComposition): BuiltinTool[] {
+export function presetInjectedTools(
+  composition: ResolvedComposition,
+  presetName?: string,
+): BuiltinTool[] {
   const presetOwners = new Set(composition.engine.presets.map((p) => p.moduleId));
+  const extensions = composition.engine.presetExtensions ?? [];
+  const extensionOwners = new Set(extensions.map((e) => e.moduleId));
+  const extended = new Set(
+    presetName === undefined
+      ? []
+      : extensions.flatMap(({ value }) =>
+          (
+            "presets" in value.target
+              ? value.target.presets.includes(presetName)
+              : !value.target.allExcept.includes(presetName)
+          )
+            ? value.tools
+            : [],
+        ),
+  );
   return composition.engine.tools.flatMap((t) =>
-    t.kind === "preset-tags" && !presetOwners.has(t.moduleId) ? [t.tool] : [],
+    t.kind === "preset-tags" &&
+    (extended.has(t.tool.definition.name) ||
+      (!presetOwners.has(t.moduleId) && !extensionOwners.has(t.moduleId)))
+      ? [t.tool]
+      : [],
   );
 }
 

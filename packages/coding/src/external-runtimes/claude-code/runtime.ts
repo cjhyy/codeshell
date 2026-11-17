@@ -30,7 +30,8 @@ import {
   type ClaudePermissionPromptDecider,
 } from "./permissions.js";
 import type { McpBridgeHandle } from "../shared/mcp-bridge.js";
-import { textWithAttachmentReferences, type ExternalRuntimeTurnInput } from "../turn-input.js";
+import type { ExternalRuntimeTurnInput } from "../turn-input.js";
+import { buildClaudeUserMessage } from "./user-message.js";
 
 export interface ClaudeRuntimeOptions {
   cwd: string;
@@ -120,6 +121,8 @@ export class ClaudeCodeRuntime {
   readonly kind = "claude-code" as const;
   private readonly log: (event: string, data: Record<string, unknown>) => void;
   private active?: ActiveTurn;
+  /** Set while send() reads attachments, before `active` exists. */
+  private preparing = false;
   private claudeSessionId?: string;
   private reportedModel?: string;
   private closed = false;
@@ -165,13 +168,40 @@ export class ClaudeCodeRuntime {
    * The prompt goes on **stdin**, not argv: `--mcp-config` is variadic, so a
    * positional prompt after it is swallowed as another config value (measured),
    * and a prompt on the command line would also be visible in `ps`.
+   *
+   * Every turn — text-only included — is ONE `--input-format stream-json` user
+   * line, so image attachments ride as native content blocks. stdin is then
+   * closed: `-p` runs that message to its result (tool calls included) and exits.
    */
   async send(
     input: ExternalRuntimeTurnInput,
     onEvent?: (event: StreamEvent) => void,
   ): Promise<ClaudeTurnHandle> {
     if (this.closed) throw new Error("ClaudeCodeRuntime is closed");
-    if (this.active) throw new Error("a turn is already running");
+    if (this.active || this.preparing) throw new Error("a turn is already running");
+    this.preparing = true;
+    let message: Awaited<ReturnType<typeof buildClaudeUserMessage>>;
+    try {
+      const replayContext =
+        this.firstTurn && !this.options.resumeRuntimeSessionId
+          ? this.options.initialContext
+          : undefined;
+      message = await buildClaudeUserMessage(input, (text) =>
+        replayContext
+          ? `${replayContext}\n\n<current_user_request>\n${text}\n</current_user_request>`
+          : text,
+      );
+    } finally {
+      this.preparing = false;
+    }
+    if (this.closed) throw new Error("ClaudeCodeRuntime is closed");
+    if (message.inlineImages > 0 || message.imageFallbacks.length > 0) {
+      // Counts and reasons only: never image data or paths.
+      this.log("claude.image_attachments", {
+        inline: message.inlineImages,
+        fallbacks: message.imageFallbacks.map((fallback) => fallback.reason),
+      });
+    }
     let terminalSeen = false;
     const turnNumber = ++this.turnCount;
     const translator = new ClaudeEventTranslator({
@@ -198,6 +228,8 @@ export class ClaudeCodeRuntime {
 
     const args = [
       "-p",
+      "--input-format",
+      "stream-json",
       "--output-format",
       "stream-json",
       "--include-partial-messages",
@@ -256,10 +288,6 @@ export class ClaudeCodeRuntime {
       if (trimmed) this.log("claude.stderr", { bytes: trimmed.length });
     });
 
-    let text = textWithAttachmentReferences(input);
-    if (this.firstTurn && !this.options.resumeRuntimeSessionId && this.options.initialContext) {
-      text = `${this.options.initialContext}\n\n<current_user_request>\n${text}\n</current_user_request>`;
-    }
     this.firstTurn = false;
     let resolveSettled!: () => void;
     const settled = new Promise<void>((resolve) => (resolveSettled = resolve));
@@ -307,7 +335,7 @@ export class ClaudeCodeRuntime {
       // ignores SIGTERM before releasing the turn to a retry.
       active.stopping ??= this.terminate(active);
     });
-    child.stdin.end(text);
+    child.stdin.end(message.line);
 
     return { done: settled };
   }

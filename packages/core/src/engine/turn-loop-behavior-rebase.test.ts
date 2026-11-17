@@ -116,7 +116,9 @@ describe("TurnLoop refreshes frozen behavior at cold boundaries", () => {
           appendToolUse() {},
           appendToolResult() {},
           appendTurnBoundary() {},
-          appendMessage() {},
+          appendMessage() {
+            return { id: crypto.randomUUID() };
+          },
         } as unknown as TurnLoopDeps["transcript"],
         systemPrompt: initialPrompt,
         tools: getTools(),

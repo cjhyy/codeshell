@@ -93,7 +93,12 @@ describe("CCRoomView DriveAgent deep links", () => {
           listCodexSessions: async () => ({ sessions: [], total: 0 }),
           openSession: async (sessionId: string, cwd: string, mode: string, kind: string) => {
             opened.push([sessionId, cwd, mode, kind]);
-            return { roomId: "room_delegated", status: "observing" };
+            return {
+              roomId: "room_delegated",
+              status: "observing",
+              cwd: "/canonical/delegated",
+              modelKey: "claude-code/sonnet",
+            };
           },
         },
       },
@@ -118,7 +123,7 @@ describe("CCRoomView DriveAgent deep links", () => {
     });
 
     const defaultButton = findElements(document.body, "BUTTON").find(
-      (node) => childText(reactPropsOf(node).children) === "default",
+      (node) => childText(reactPropsOf(node).children) === "逐次确认",
     );
     expect(defaultButton).toBeDefined();
     await act(async () => {
@@ -130,7 +135,8 @@ describe("CCRoomView DriveAgent deep links", () => {
       ["delegated-session", "/repo/.worktrees/delegated", "default", "claude-code"],
     ]);
     expect(conversationProps).toMatchObject({
-      cwd: "/repo/.worktrees/delegated",
+      cwd: "/canonical/delegated",
+      modelKey: "claude-code/sonnet",
       observing: true,
     });
   });
@@ -633,20 +639,20 @@ describe("CCRoomView session list recovery", () => {
     });
     const container = await mount();
     await click(button(container, "新开 session"));
-    const open = button(container, "default");
+    const open = button(container, "逐次确认");
     await act(async () => {
       reactPropsOf(open).onClick();
       reactPropsOf(open).onClick();
       await flushMicrotasks();
     });
     expect(calls).toBe(1);
-    expect(reactPropsOf(button(container, "default")).disabled).toBe(true);
+    expect(reactPropsOf(button(container, "逐次确认")).disabled).toBe(true);
     await act(async () => {
       rejectOpen(new Error("unable to start CLI"));
       await flushMicrotasks();
     });
-    expect(reactPropsOf(button(container, "default")).disabled).toBe(false);
-    await click(button(container, "default"));
+    expect(reactPropsOf(button(container, "逐次确认")).disabled).toBe(false);
+    await click(button(container, "逐次确认"));
     expect(calls).toBe(2);
     expect(conversationProps).toMatchObject({ roomId: "room-retry" });
   });
@@ -661,14 +667,14 @@ describe("CCRoomView session list recovery", () => {
     });
     const container = await mount();
     await click(button(container, "新开 session"));
-    await click(button(container, "default"));
+    await click(button(container, "逐次确认"));
     await render("/next");
     await act(async () => {
       resolveOpen({ roomId: "stale-room", status: "running" });
       await flushMicrotasks();
     });
     expect(conversationProps).toBeNull();
-    expect(button(container, "default")).toBeUndefined();
+    expect(button(container, "逐次确认")).toBeUndefined();
   });
 
   test("a CLI that exits during startup remains retryable instead of opening a running conversation", async () => {
@@ -681,10 +687,10 @@ describe("CCRoomView session list recovery", () => {
     });
     const container = await mount();
     await click(button(container, "新开 session"));
-    await click(button(container, "default"));
+    await click(button(container, "逐次确认"));
     expect(conversationProps).toBeNull();
-    expect(reactPropsOf(button(container, "default")).disabled).toBe(false);
-    await click(button(container, "default"));
+    expect(reactPropsOf(button(container, "逐次确认")).disabled).toBe(false);
+    await click(button(container, "逐次确认"));
     expect(conversationProps).toMatchObject({ roomId: "startup-room", observing: false });
   });
 });

@@ -1,3 +1,4 @@
+import { joinContextListParts } from "../context/context-ledger.js";
 // OM5: project memory roots must not be shared by distinct project paths.
 //
 // The old root was projects/<key>/memory with key = path with every separator
@@ -95,7 +96,7 @@ describe("project memory root key", () => {
 
     const coldB = new MemoryManager({ baseDir, projectDir: projectB });
     expect(coldB.loadAll().map((entry) => entry.id)).toEqual(["project-b-note"]);
-    const indexB = MemoryManager.buildInjectionIndex({ baseDir, projectDir: projectB });
+    const indexB = injectionText({ baseDir, projectDir: projectB });
     expect(indexB).toContain("Project B uses schema v2");
     expect(indexB).not.toContain("Project A uses schema v1");
     // Nothing is written under the lossy legacy key any more.
@@ -132,9 +133,7 @@ describe("legacy project memory migration", () => {
     const a = new MemoryManager({ baseDir, projectDir: projectA });
     expect(a.getMemoryDir()).not.toContain(legacy);
     expect(a.loadAll().map((entry) => entry.id)).toEqual(["legacy-note"]);
-    expect(MemoryManager.buildInjectionIndex({ baseDir, projectDir: projectA })).toContain(
-      "Legacy fact for A",
-    );
+    expect(injectionText({ baseDir, projectDir: projectA })).toContain("Legacy fact for A");
     // Dream scope shares the migrated root.
     expect(new MemoryManager({ baseDir, projectDir: projectA, scope: "dream" }).loadAll()).toEqual(
       [],
@@ -166,7 +165,7 @@ describe("legacy project memory migration", () => {
 
     const b = new MemoryManager({ baseDir, projectDir: projectB });
     expect(b.loadAll()).toEqual([]);
-    expect(MemoryManager.buildInjectionIndex({ baseDir, projectDir: projectB })).not.toContain(
+    expect(injectionText({ baseDir, projectDir: projectB })).not.toContain(
       "Fact of unknown ownership",
     );
     const a = new MemoryManager({ baseDir, projectDir: projectA });
@@ -255,3 +254,10 @@ describe("legacy project memory migration", () => {
     expect(readdirSync(dirname(rootA)).filter((name) => name.startsWith("."))).toEqual([]);
   }, 60_000);
 });
+
+function injectionText(
+  options: Parameters<typeof MemoryManager.buildInjectionIndexParts>[0],
+): string {
+  const parts = MemoryManager.buildInjectionIndexParts(options);
+  return parts ? joinContextListParts(parts) : "";
+}

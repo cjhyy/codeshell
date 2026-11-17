@@ -13,6 +13,7 @@ import type {
   TunnelManager,
 } from "@cjhyy/code-shell-server/mobile-remote";
 import { AccountDeviceService } from "./account-device-service.js";
+import { createAccountRemoteAuthorizer } from "./account-device-passkey.js";
 import { registerAccountDeviceIpc } from "./account-device-ipc.js";
 import { CloudAccountManager } from "./cloud-account-manager.js";
 import { CloudAccountStore } from "./cloud-account-store.js";
@@ -24,6 +25,7 @@ import { registerCloudWorkbenchIpc } from "./cloud-workbench-ipc.js";
 import type { PrepareAccountGitHubLink } from "./account-github-link.js";
 import { CloudManagementManager, type ManagedCloudWindows } from "./cloud-management-manager.js";
 import { createLinkAccountAccess } from "./link-account-access.js";
+import { bindDesktopAccountLifecycle } from "./desktop-account-lifecycle.js";
 
 /** Compose optional cloud identity and its remote-access lifecycle without starting either. */
 export function createDesktopRemoteServices(options: {
@@ -128,6 +130,7 @@ export function createDesktopRemoteServices(options: {
   });
   if (options.app) bindAccountFeatureLifecycle(options.app, accountFeatures, options.windows);
   const accountDeviceService = new AccountDeviceService({
+    authorizeTarget: createAccountRemoteAuthorizer({ openExternal: options.openExternal }),
     identity: () => {
       const status = cloudAccountManager.status();
       return status.state === "signed-in" && status.origin && status.account
@@ -137,9 +140,11 @@ export function createDesktopRemoteServices(options: {
     credential: (identity, signal) =>
       cloudAccountManager.getCredential(identity.origin, identity.accountId, signal),
     sourceProof: (identity, signal) => mobileRemoteController.accountRelaySource(identity, signal),
-    relayOrigin: async (identity) => {
+    relayOrigin: async (identity, scope) => {
       await accountFeatures.refresh();
-      accountFeatures.requireReady("devices.dispatch");
+      accountFeatures.requireReady(
+        scope === "directory" ? "devices.directory" : "devices.dispatch",
+      );
       const capabilities = await cloudAccountManager.capabilities(identity.origin);
       if (!capabilities.relay?.enabled || capabilities.relay.directoryOrigin !== identity.origin)
         throw new Error("当前账号服务不支持设备协作，请升级服务。");
@@ -181,6 +186,13 @@ export function createDesktopRemoteServices(options: {
     controller: mobileRemoteController,
     isMainWindow,
   });
+  if (options.app)
+    bindDesktopAccountLifecycle(
+      options.app,
+      cloudAccountManager,
+      mobileRemoteController,
+      options.windows,
+    );
   return {
     captureLinkAccount: createLinkAccountAccess(cloudAccountManager, () =>
       accountFeatures.requireReady("links.remote"),

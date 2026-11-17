@@ -28,7 +28,7 @@ test("worker preserves Claude history titles/counts while the host remains respo
       sessionId: "session",
       cwd,
       firstMessage: "Fixture request",
-      messageCount: 2,
+      messageCount: 4002,
     });
     expect(ticks).toBeGreaterThan(0);
     expect(

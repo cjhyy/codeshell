@@ -2,9 +2,59 @@ import { describe, expect, it } from "bun:test";
 import {
   createPromptCacheKey,
   PromptCacheHistory,
+  promptCacheHeadId,
+  promptCacheTtlMs,
   resolvePromptCachePolicy,
   uniquePromptCacheBreakpointIndexes,
 } from "./prompt-cache.js";
+
+describe("prompt cache TTL", () => {
+  const MINUTE = 60_000;
+
+  it("is 30 minutes where the policy requests a 30m TTL", () => {
+    const hybrid = resolvePromptCachePolicy({
+      provider: "openai",
+      providerKind: "openai",
+      model: "gpt-5.6-sol",
+    });
+    expect(hybrid.strategy).toBe("openai-hybrid");
+    expect(hybrid.promptCacheOptions?.ttl).toBe("30m");
+    expect(promptCacheTtlMs(hybrid)).toBe(30 * MINUTE);
+    expect(promptCacheTtlMs({ strategy: "openai-explicit" })).toBe(30 * MINUTE);
+  });
+
+  it("is the provider default of 5 minutes for Anthropic breakpoints", () => {
+    const anthropic = resolvePromptCachePolicy({
+      provider: "openai",
+      providerKind: "openrouter",
+      model: "anthropic/claude-sonnet-4.5",
+    });
+    expect(anthropic.strategy).toBe("anthropic-explicit");
+    expect(promptCacheTtlMs(anthropic)).toBe(5 * MINUTE);
+  });
+
+  it("is 5 minutes for every route without an explicit TTL", () => {
+    const implicit = resolvePromptCachePolicy({
+      provider: "openai",
+      providerKind: "openai",
+      model: "gpt-5.5",
+    });
+    expect(implicit.strategy).toBe("openai-implicit");
+    expect(promptCacheTtlMs(implicit)).toBe(5 * MINUTE);
+    // A hybrid route that fell back after the endpoint rejected explicit fields.
+    expect(
+      promptCacheTtlMs(
+        resolvePromptCachePolicy({
+          provider: "openai",
+          providerKind: "openai",
+          model: "gpt-5.6-sol",
+          explicitDisabled: true,
+        }),
+      ),
+    ).toBe(5 * MINUTE);
+    expect(promptCacheTtlMs({ strategy: "provider-managed" })).toBe(5 * MINUTE);
+  });
+});
 
 describe("prompt cache policy", () => {
   it("combines implicit tails with explicit boundaries on GPT-5.6 routes", () => {
@@ -166,6 +216,28 @@ describe("prompt cache policy", () => {
     const fallback = resolvePromptCachePolicy({ ...base, explicitDisabled: true });
     expect(fallback.strategy).toBe("openai-implicit");
     expect(fallback.cacheKey).toBe(explicit.cacheKey);
+  });
+
+  it("shares the affinity key between Sessions with the same head", () => {
+    const head = promptCacheHeadId("system", [{ name: "Read" }]);
+    const key = (scopeId: string, headId?: string) =>
+      resolvePromptCachePolicy({
+        provider: "openai",
+        providerKind: "openrouter",
+        model: "openai/gpt-5.6-sol",
+        request: { scopeId, ...(headId ? { headId } : {}) },
+      }).cacheKey;
+    expect(key("session-a", head)).toBe(key("session-b", head));
+    expect(key("session-a", head)).toMatch(/^cs:[a-f0-9]{48}$/);
+    expect(key("session-a", promptCacheHeadId("system", [{ name: "Grep" }]))).not.toBe(
+      key("session-a", head),
+    );
+    expect(key("session-a", promptCacheHeadId("other system", [{ name: "Read" }]))).not.toBe(
+      key("session-a", head),
+    );
+    // Without a head the key still follows the Session.
+    expect(key("session-a")).not.toBe(key("session-b"));
+    expect(head).not.toContain("system");
   });
 
   it("produces opaque bounded keys and ordered unique breakpoint indexes", () => {

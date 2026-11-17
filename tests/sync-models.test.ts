@@ -21,7 +21,9 @@ describe("OpenRouter curated model sync", () => {
   it("contains the current GPT-6.1 Sol models without batch or free variants", () => {
     expect(CURATED_MODEL_IDS).toContain("openai/gpt-6.1-sol");
     expect(CURATED_MODEL_IDS).toContain("openai/gpt-6.1-sol-pro");
-    expect(CURATED_MODEL_IDS).toHaveLength(20);
+    expect(CURATED_MODEL_IDS).toHaveLength(40);
+    expect(new Set(CURATED_MODEL_IDS).size).toBe(CURATED_MODEL_IDS.length);
+    expect(CURATED_MODEL_IDS).toContain("anthropic/claude-sonnet-5");
     expect(CURATED_MODEL_IDS.some((id) => id.endsWith(":batch") || id.endsWith(":free"))).toBe(
       false,
     );

@@ -4,15 +4,17 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createDesktopRemoteServices } from "./desktop-remote-services.js";
 
-test("remote composition registers owner-scoped IPC without starting cloud or local transports", async () => {
+test("remote composition scopes IPC and reads the computer directory without local enrollment", async () => {
   const root = mkdtempSync(join(tmpdir(), "desktop-remote-composition-"));
   const handlers = new Map<string, (...args: any[]) => any>();
   let starts = 0;
   let owned = true;
   const sender = { mainFrame: {}, isDestroyed: () => false, send: () => {} };
   const window = { webContents: sender, isDestroyed: () => false };
+  const previousFetch = globalThis.fetch;
+  let services: ReturnType<typeof createDesktopRemoteServices> | undefined;
   try {
-    createDesktopRemoteServices({
+    services = createDesktopRemoteServices({
       ipcMain: { handle: (name, handler) => void handlers.set(name, handler) },
       userDataDir: root,
       environmentDir: root,
@@ -80,7 +82,61 @@ test("remote composition registers owner-scoped IPC without starting cloud or lo
     for (const [, handler] of deviceRoutes)
       expect(await handler(event, {})).toMatchObject({ ok: false });
     expect(starts).toBe(0);
+
+    // Real feature resolution: directory is ready for an account whose local
+    // computer has no enrollment, while native dispatch remains pending.
+    const origin = "https://account.fixture.invalid";
+    const account = { id: "fixture-account", username: "fixture" };
+    const features = {
+      "devices.directory": { version: 1, enabled: true },
+      "devices.dispatch": { version: 1, enabled: true },
+    };
+    services.cloudAccountManager.status = () => ({ state: "signed-in", origin, account });
+    services.cloudAccountManager.capabilities = async () => ({
+      features,
+      registrationAllowed: false,
+      githubEnabled: false,
+      relay: {
+        enabled: true,
+        directoryOrigin: origin,
+        protocolVersion: 1,
+        accountHandoffVersion: 1,
+      },
+    });
+    services.cloudAccountManager.overview = async () => ({ account, features });
+    services.cloudAccountManager.getCredential = async () => "directory-fixture-token";
+    let directoryReads = 0;
+    let sourceProofReads = 0;
+    services.mobileRemoteController.accountRelaySource = async () => {
+      sourceProofReads++;
+      throw new Error("fixture has no enrolled local computer");
+    };
+    globalThis.fetch = (async (url: string, init: RequestInit) => {
+      expect(url).toBe(`${origin}/api/v1/remote-hosts`);
+      expect(init.method).toBe("GET");
+      expect(init.redirect).toBe("error");
+      expect(init.credentials).toBe("omit");
+      expect(init.headers).toMatchObject({ Authorization: "Bearer directory-fixture-token" });
+      directoryReads++;
+      return Response.json({ hosts: [] });
+    }) as typeof fetch;
+    expect(await services.accountDeviceService.list()).toEqual([]);
+    const snapshot = services.accountFeatures.snapshot();
+    expect(snapshot["devices.directory"].state).toBe("ready");
+    expect(snapshot["devices.dispatch"]).toMatchObject({
+      state: "pending",
+      reason: "device_not_registered",
+    });
+    await expect(services.accountDeviceService.projects(1, { hostId: "host" })).rejects.toThrow(
+      "尚未准备好",
+    );
+    expect(directoryReads).toBe(1);
+    expect(sourceProofReads).toBe(0);
+    expect(starts).toBe(0);
   } finally {
+    globalThis.fetch = previousFetch;
+    services?.accountDeviceService.retireIdentity();
+    services?.accountFeatures.dispose();
     rmSync(root, { recursive: true, force: true });
   }
 });

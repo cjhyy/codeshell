@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
+import { ensureMiniDom, flushMicrotasks, renderHook } from "../test-utils/renderHook";
+import { useCcRoomSettings } from "./useCcRoomSettings";
+import type { CcRoomSettingsState } from "../../shared/mobile-remote";
 
 // `bun test` shares one module registry across files, and CCRoomView's suite
 // stubs "./CCConversationView". Re-register the real module through a distinct
@@ -11,6 +13,219 @@ mock.module("./CCConversationView", () => realConversationView);
 const { CCConversationView } = realConversationView;
 
 let root: Root | null = null;
+
+describe("native CLI settings authority", () => {
+  function deferred<T>() {
+    let resolve!: (value: T) => void;
+    let reject!: (cause: unknown) => void;
+    const promise = new Promise<T>((yes, no) => {
+      resolve = yes;
+      reject = no;
+    });
+    return { promise, resolve, reject };
+  }
+  async function setup() {
+    ensureMiniDom();
+    let state: CcRoomSettingsState = {
+      roomId: "room-a",
+      sessionId: "thread-a",
+      cwd: "/repo",
+      kind: "codex",
+      permissionMode: "default",
+      modelKey: null,
+      observing: false,
+    };
+    let input: Parameters<typeof useCcRoomSettings>[0] = {
+      roomId: state.roomId,
+      sessionId: state.sessionId,
+      cwd: state.cwd,
+      kind: "codex",
+      mode: "default",
+      active: true,
+      observing: false,
+      isSending: () => false,
+    };
+    const requests: unknown[][] = [];
+    let response = deferred<any>();
+    let read = async () => state;
+    let catalogCalls = 0;
+    Object.assign(window, {
+      codeshell: {
+        ccRoom: {
+          settingsState: () => read(),
+          onRoomState: () => () => {},
+          openSession: (...args: unknown[]) => {
+            requests.push(args);
+            return response.promise;
+          },
+        },
+        externalRuntime: {
+          models: async () => {
+            catalogCalls++;
+            return [
+              { key: "codex/one", kind: "codex", label: "One" },
+              { key: "claude-code/sonnet", kind: "claude-code", label: "Sonnet" },
+            ];
+          },
+        },
+      },
+    });
+    const hook = await renderHook(() => useCcRoomSettings(input));
+    return {
+      hook,
+      requests,
+      get response() {
+        return response;
+      },
+      resetResponse() {
+        response = deferred<any>();
+      },
+      setRead(value: typeof read) {
+        read = value;
+      },
+      setState(value: Partial<CcRoomSettingsState>) {
+        state = { ...state, ...value };
+      },
+      async setInput(value: Partial<typeof input>) {
+        input = { ...input, ...value };
+        await hook.rerender();
+      },
+      get catalogCalls() {
+        return catalogCalls;
+      },
+    };
+  }
+  test("keeps confirmed values until the receipt and rejects stale reads, wrong kinds and duplicate changes", async () => {
+    const f = await setup();
+    try {
+      expect(f.hook.result.current.models.map((entry) => entry.key)).toEqual(["codex/one"]);
+      await act(async () => {
+        await f.hook.result.current.change({ modelKey: "claude-code/sonnet" });
+      });
+      expect(f.requests).toHaveLength(0);
+      const old = deferred<CcRoomSettingsState>();
+      f.setRead(() => old.promise);
+      let reading!: Promise<void>;
+      let changing!: Promise<void>;
+      await act(async () => {
+        reading = f.hook.result.current.refresh();
+        changing = f.hook.result.current.change({ modelKey: "codex/one" });
+        expect(f.hook.result.current.isChanging()).toBe(true);
+        void f.hook.result.current.change({ mode: "acceptEdits" });
+      });
+      expect(f.requests).toEqual([
+        ["thread-a", "/repo", "default", "codex", { roomId: "room-a", modelKey: "codex/one" }],
+      ]);
+      expect(f.hook.result.current.modelKey).toBeNull();
+      await act(async () => {
+        f.response.resolve({
+          roomId: "room-a",
+          status: "running",
+          permissionMode: "acceptEdits",
+          modelKey: "codex/one",
+        });
+        await changing;
+        old.resolve({
+          roomId: "room-a",
+          sessionId: "thread-a",
+          cwd: "/repo",
+          kind: "codex",
+          permissionMode: "default",
+          modelKey: null,
+          observing: false,
+        });
+        await reading;
+      });
+      expect(f.hook.result.current.mode).toBe("acceptEdits");
+      expect(f.hook.result.current.modelKey).toBe("codex/one");
+      f.resetResponse();
+      await act(async () => {
+        changing = f.hook.result.current.change({ modelKey: null });
+      });
+      await act(async () => {
+        f.response.resolve({
+          roomId: "room-a",
+          status: "running",
+          permissionMode: "acceptEdits",
+          modelKey: null,
+        });
+        await changing;
+      });
+      expect(f.hook.result.current.modelKey).toBeNull();
+    } finally {
+      await f.hook.unmount();
+    }
+  });
+  test("blocks queued, approval, retiring, observing and same-tick sends without launching changes", async () => {
+    const f = await setup();
+    try {
+      for (const busyReason of ["queued", "approval", "retiring", "turn"] as const) {
+        f.setState({ busyReason });
+        await act(async () => {
+          await f.hook.result.current.refresh();
+        });
+        await act(async () => {
+          await f.hook.result.current.change({ modelKey: "codex/one" });
+        });
+      }
+      f.setState({ busyReason: undefined });
+      await act(async () => {
+        await f.hook.result.current.refresh();
+      });
+      await f.setInput({ isSending: () => true });
+      await act(async () => {
+        await f.hook.result.current.change({ modelKey: "codex/one" });
+      });
+      await f.setInput({ isSending: () => false, observing: true });
+      const probes = f.catalogCalls;
+      await act(async () => {
+        await f.hook.result.current.change({ modelKey: "codex/one" });
+      });
+      expect(f.catalogCalls).toBe(probes);
+      expect(f.requests).toHaveLength(0);
+    } finally {
+      await f.hook.unmount();
+    }
+  });
+  test("keeps a denied change error across refresh and ignores a reply after navigating away", async () => {
+    const f = await setup();
+    try {
+      let changing!: Promise<void>;
+      await act(async () => {
+        changing = f.hook.result.current.change({ modelKey: "codex/one" });
+      });
+      await act(async () => {
+        f.response.reject(new Error("Host denied"));
+        await changing;
+      });
+      await act(async () => {
+        await f.hook.result.current.refresh();
+      });
+      expect(f.hook.result.current.error).toBe("Host denied");
+      expect(f.hook.result.current.modelKey).toBeNull();
+      f.resetResponse();
+      await act(async () => {
+        changing = f.hook.result.current.change({ modelKey: "codex/one" });
+      });
+      f.setState({ roomId: "room-b", sessionId: "thread-b" });
+      await f.setInput({ roomId: "room-b", sessionId: "thread-b" });
+      await act(async () => {
+        f.response.resolve({
+          roomId: "room-a",
+          status: "running",
+          permissionMode: "bypassPermissions",
+          modelKey: "codex/one",
+        });
+        await changing;
+      });
+      expect(f.hook.result.current.modelKey).toBeNull();
+      expect(f.hook.result.current.mode).toBe("default");
+      expect(f.hook.result.current.switching).toBe(false);
+    } finally {
+      await f.hook.unmount();
+    }
+  });
+});
 
 function reactPropsOf(node: unknown): Record<string, any> {
   const key = Object.keys(node as object).find((candidate) =>
@@ -37,6 +252,159 @@ afterEach(async () => {
     });
   }
   root = null;
+});
+
+describe("CCConversationView latest progress", () => {
+  async function renderProgress() {
+    ensureMiniDom();
+    let receive: (event: { roomId: string; msg: unknown }) => void = () => undefined;
+    let resolveSnapshot!: (snapshot: unknown) => void;
+    let cursor = 20;
+    const snapshot = new Promise((resolve) => {
+      resolveSnapshot = resolve;
+    });
+    const subscriptions: unknown[][] = [];
+    const off = () => undefined;
+    Object.assign(window, {
+      codeshell: {
+        ccRoom: {
+          onApprovalRequest: () => off,
+          onApprovalResolved: () => off,
+          onRoomMessage: (listener: typeof receive) => {
+            receive = listener;
+            return off;
+          },
+          subscribeTranscript: async (...args: unknown[]) => {
+            subscriptions.push(args);
+            if (subscriptions.length === 1) return snapshot;
+            return {
+              active: true,
+              messages: [{ role: "assistant", text: "Latest after reopening" }],
+              roomCursor: cursor,
+            };
+          },
+          unsubscribeTranscript: async () => undefined,
+          roomHistoryPage: async (_roomId: string, request: { sinceSeq?: number }) => ({
+            snapshotId: "snapshot",
+            throughSeq: request.sinceSeq ?? 0,
+            messages: [],
+            complete: true,
+          }),
+        },
+      },
+    });
+    const container = document.createElement("div");
+    root = createRoot(container);
+    const render = async (latestRequest = 1, active = true) => {
+      await act(async () => {
+        root!.render(
+          <CCConversationView
+            roomId="progress-room"
+            sessionId="progress-session"
+            cwd="/repo"
+            mode="default"
+            cliKind="codex"
+            observing
+            latestRequest={latestRequest}
+            active={active}
+            onBack={() => undefined}
+          />,
+        );
+        await flushMicrotasks();
+      });
+    };
+    await render();
+    const scroller = findElementByProp(container, "data-cc-room-history") as HTMLElement;
+    let height = 300;
+    let top = 0;
+    // MiniDOM has no layout engine; model real scrollTop clamping while the
+    // component's actual effects and wheel listeners control its position.
+    Object.defineProperties(scroller, {
+      scrollHeight: { configurable: true, get: () => height },
+      clientHeight: { configurable: true, value: 300 },
+      scrollTop: {
+        configurable: true,
+        get: () => top,
+        set: (value: number) => {
+          top = Math.max(0, Math.min(value, height - 300));
+        },
+      },
+    });
+    const completeSnapshot = async () => {
+      await act(async () => {
+        height = 1800;
+        resolveSnapshot({
+          active: true,
+          messages: [
+            { role: "user", text: "Earlier question" },
+            { role: "assistant", text: "Latest progress" },
+          ],
+          roomCursor: cursor,
+        });
+        await flushMicrotasks();
+      });
+    };
+    const append = async () => {
+      await act(async () => {
+        height += 250;
+        receive({
+          roomId: "progress-room",
+          msg: { seq: ++cursor, from: "agent", type: "text", text: `Progress ${cursor}` },
+        });
+        await flushMicrotasks();
+      });
+    };
+    const scrollEarlier = async () => {
+      await act(async () => {
+        scroller.dispatchEvent(Object.assign(new Event("wheel"), { deltaY: -120 }));
+        scroller.scrollTop = 150;
+        await flushMicrotasks();
+      });
+    };
+    return { container, scroller, subscriptions, render, completeSnapshot, append, scrollEarlier };
+  }
+
+  test("opens an asynchronous recent snapshot at the end and follows only while reading latest", async () => {
+    const view = await renderProgress();
+    expect(view.subscriptions).toEqual([
+      ["progress-room", "/repo", "progress-session", "codex", 50],
+    ]);
+    await view.completeSnapshot();
+    expect(renderedText(view.container)).toContain("Latest progress");
+    expect(view.scroller.scrollTop).toBe(1500);
+    await view.append();
+    expect(view.scroller.scrollTop).toBe(1750);
+    await view.scrollEarlier();
+    await view.append();
+    expect(view.scroller.scrollTop).toBe(150);
+    const jump = findElementByProp(view.container, "aria-label");
+    expect(reactPropsOf(jump)["aria-label"]).toBe("回到底部");
+    await act(async () => {
+      reactPropsOf(jump).onClick();
+      await flushMicrotasks();
+    });
+    expect(view.scroller.scrollTop).toBe(2000);
+    await view.append();
+    expect(view.scroller.scrollTop).toBe(2250);
+    expect(view.subscriptions).toHaveLength(1);
+  });
+
+  test("a repeated progress click jumps without reloading and reopening follows the latest", async () => {
+    const view = await renderProgress();
+    await view.completeSnapshot();
+    await view.scrollEarlier();
+    await view.append();
+    expect(view.scroller.scrollTop).toBe(150);
+    await view.render(2);
+    expect(view.scroller.scrollTop).toBe(1750);
+    expect(view.subscriptions).toHaveLength(1);
+    await view.scrollEarlier();
+    await view.render(2, false);
+    await view.render(2, true);
+    expect(view.scroller.scrollTop).toBe(1750);
+    expect(view.subscriptions).toHaveLength(2);
+    expect(renderedText(view.container)).toContain("Latest after reopening");
+  });
 });
 
 describe("CCConversationView transcript ownership", () => {

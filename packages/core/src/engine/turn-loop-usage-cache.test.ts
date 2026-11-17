@@ -1,8 +1,12 @@
-import { describe, it, expect } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { TurnLoop, type TurnLoopDeps, type TurnLoopConfig } from "./turn-loop.js";
 import type { LLMResponse, Message, StreamEvent, TokenUsage, ToolCall } from "../types.js";
 import { estimateTokens } from "../context/compaction.js";
 import { ContextManager } from "../context/manager.js";
+import { hashPromptMessages } from "./prompt-cache-diagnostics.js";
+import { installPromptPrefixGuard } from "../testing/prompt-prefix-guard.js";
+
+installPromptPrefixGuard({ beforeEach, afterEach });
 
 /**
  * Prompt-cache visibility in the UI: the usage_update event that feeds the
@@ -75,7 +79,9 @@ function makeDeps(
     appendToolUse() {},
     appendToolResult() {},
     appendTurnBoundary() {},
-    appendMessage() {},
+    appendMessage() {
+      return { id: crypto.randomUUID() };
+    },
   } as unknown as TurnLoopDeps["transcript"];
 
   const toolExecutor = {
@@ -227,6 +233,112 @@ describe("TurnLoop usage_update carries cache tokens", () => {
     expect(calls[1]!.options.promptCache.stablePrefixMessageCount).toBe(1);
   });
 
+  it("asks the engine to sync the run context before each model request", async () => {
+    const userMessage: Message = { role: "user", content: "task" };
+    const contextMessage: Message = { role: "user", content: "<context>snapshot</context>" };
+    const responses: LLMResponse[] = [
+      {
+        text: "part one",
+        toolCalls: [],
+        stopReason: "max_tokens",
+        usage: { promptTokens: 100, completionTokens: 10, totalTokens: 110 },
+      },
+      {
+        text: "part two",
+        toolCalls: [],
+        stopReason: "stop",
+        usage: { promptTokens: 120, completionTokens: 10, totalTokens: 130 },
+      },
+    ];
+    const { deps } = makeDeps(responses);
+    const calls: Array<{ messages: Message[]; options: any }> = [];
+    let responseIndex = 0;
+    const call = async (
+      _system: string,
+      messages: Message[],
+      _tools: unknown,
+      _onStream: unknown,
+      _signal: unknown,
+      options: any,
+    ): Promise<LLMResponse> => {
+      calls.push({ messages: [...messages], options });
+      return responses[responseIndex++]!;
+    };
+    (deps.model as any).call = call;
+    (deps.model as any).callWithoutStreaming = call;
+    let syncCalls = 0;
+
+    await new TurnLoop(deps, {
+      maxTurns: 5,
+      maxToolCallsPerTurn: 10,
+      // The engine appends context that history lacks; here, on the first ask.
+      syncRunContext: (messages) => {
+        syncCalls += 1;
+        if (!messages.includes(contextMessage)) messages.push(contextMessage);
+      },
+    }).run([userMessage]);
+
+    expect(calls).toHaveLength(2);
+    expect(syncCalls).toBe(1);
+    expect(calls[0]!.messages).toEqual([userMessage, contextMessage]);
+    // It is ordinary history afterwards: in place, and not a volatile boundary.
+    expect(calls[1]!.messages[1]).toBe(contextMessage);
+    expect(calls[0]!.options.promptCache.stablePrefixMessageCount).toBe(2);
+    expect(calls[1]!.options.promptCache.stablePrefixMessageCount).toBe(calls[1]!.messages.length);
+  });
+
+  it("puts the stable prefix at the run start, or before a pending rewrite", async () => {
+    const head: Message = { role: "user", content: "instructions" };
+    const oldTask: Message = { role: "user", content: "earlier task" };
+    const oldAnswer: Message = { role: "assistant", content: "earlier answer" };
+    const task: Message = { role: "user", content: "task" };
+    const volatileMessage: Message = { role: "user", content: "runtime status" };
+    const responses: LLMResponse[] = [
+      {
+        text: "part one",
+        toolCalls: [],
+        stopReason: "max_tokens",
+        usage: { promptTokens: 100, completionTokens: 10, totalTokens: 110 },
+      },
+      {
+        text: "done",
+        toolCalls: [],
+        stopReason: "stop",
+        usage: { promptTokens: 120, completionTokens: 10, totalTokens: 130 },
+      },
+    ];
+    const { deps } = makeDeps(responses);
+    const counts: number[] = [];
+    let responseIndex = 0;
+    const call = async (
+      _system: string,
+      _messages: Message[],
+      _tools: unknown,
+      _onStream: unknown,
+      _signal: unknown,
+      options: any,
+    ): Promise<LLMResponse> => {
+      counts.push(options.promptCache.stablePrefixMessageCount);
+      return responses[responseIndex++]!;
+    };
+    (deps.model as any).call = call;
+    (deps.model as any).callWithoutStreaming = call;
+    // The manager only ever sees the list without the volatile message; it
+    // reports the boundary by reference. Pending from the second request on.
+    (deps.contextManager as any).getPendingRewriteBoundaryMessage = () =>
+      counts.length > 0 ? oldAnswer : undefined;
+
+    await new TurnLoop(deps, {
+      maxTurns: 5,
+      maxToolCallsPerTurn: 10,
+      volatileContextMessages: [volatileMessage],
+      runStartMessage: task,
+    }).run([head, oldTask, oldAnswer, task, volatileMessage]);
+
+    // Run start (index of `task`), then just before the pending rewrite.
+    expect(counts).toEqual([3, 2]);
+  });
+
   it("forwards a primary diagnostic sample with the effective prefix fingerprint", async () => {
     const { deps } = makeDeps([respWithCache()]);
     const samples: any[] = [];
@@ -248,6 +360,38 @@ describe("TurnLoop usage_update carries cache tokens", () => {
         configHash: "config",
       },
     });
+    // The chain covers the messages sent in that request: hashes only.
+    // (this fixture's request is the user message plus one context message).
+    const digest = { hash: expect.stringMatching(/^[0-9a-f]{16}$/), hasToolResult: false };
+    expect(samples[0].messages).toEqual([
+      { ...digest, role: "user" },
+      { ...digest, role: "user" },
+    ]);
+    expect(JSON.stringify(samples[0].messages)).not.toContain("hi");
+  });
+
+  it("hashes the request messages at dispatch, not when usage is recorded", async () => {
+    const { deps } = makeDeps([respWithCache()]);
+    const samples: any[] = [];
+    deps.recordCacheReadDiagnostics = (sample) => samples.push(sample);
+    const realCall = deps.model.call.bind(deps.model);
+    let sentChain: unknown;
+    (deps.model as any).call = async (sys: string, messages: Message[], ...rest: unknown[]) => {
+      sentChain = hashPromptMessages(messages);
+      // Rewrite a sent message in place while the request is in flight.
+      messages[0]!.content = "rewritten after dispatch";
+      return (realCall as any)(sys, messages, ...rest);
+    };
+
+    await new TurnLoop(deps, { maxTurns: 2, maxToolCallsPerTurn: 10 }).run([
+      { role: "user", content: "hi" },
+    ]);
+
+    expect(samples).toHaveLength(1);
+    expect(samples[0].messages).toEqual(sentChain);
+    expect(samples[0].messages[0].hash).toBe(
+      hashPromptMessages([{ role: "user", content: "hi" }])[0]!.hash,
+    );
   });
 
   it("does not let the no-tools max-turn summary replace the primary cache baseline", async () => {

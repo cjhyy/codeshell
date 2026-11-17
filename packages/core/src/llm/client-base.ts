@@ -2,6 +2,7 @@
  * Abstract base class for all LLM provider clients.
  */
 
+import type { PromptCacheStrategy } from "./prompt-cache.js";
 import type { ClientDefaults, LLMConfig, LLMResponse, TokenUsage } from "../types.js";
 import type { CreateMessageOptions, LLMUsageTracker } from "./types.js";
 import { LLMError, ContextLimitError, LLMQuotaError, LLMRateLimitError } from "../exceptions.js";
@@ -9,6 +10,7 @@ import { logger } from "../logging/logger.js";
 import { requestBoundaryFetch } from "../model-request-boundary/context.js";
 import { currentUsageAttempt, markCurrentUsageAttemptNotSent } from "../cost-ledger/context.js";
 import { modelTraceFetch, withModelTrace } from "../model-traces/context.js";
+import { refreshOpenRouterCatalogOnMiss } from "../data/openrouter-sync.js";
 import {
   recordOwnedUsage,
   usageTrackingFetch,
@@ -124,6 +126,8 @@ export abstract class LLMClientBase {
     }
     if (options?.billingEnabled !== false) {
       recordOwnedUsage(this.usageIdentity(), reported ? usage : null);
+      if (this.config.providerKind === "openrouter")
+        void refreshOpenRouterCatalogOnMiss(this.model, this.config.baseUrl);
       try {
         LLMClientBase.onUsage?.(this.model, usage);
       } catch {
@@ -151,6 +155,15 @@ export abstract class LLMClientBase {
 
   getUsage(): LLMUsageTracker {
     return { ...this.usage };
+  }
+
+  /**
+   * The prompt-cache strategy requests are sent with right now, when it can
+   * differ from the configured route (a client that fell back after its
+   * endpoint rejected explicit cache fields). `undefined`: as configured.
+   */
+  getEffectivePromptCacheStrategy(): PromptCacheStrategy | undefined {
+    return undefined;
   }
 
   /**

@@ -25,6 +25,8 @@ export interface DesktopWebRequestContext {
   cwd: string;
   /** Recheck both the paired device and Desktop's authoritative workspace registry. */
   isAuthorized: () => Promise<boolean>;
+  /** Owner-scoped capabilities may follow renewed execution grants for one account authority. */
+  isCapabilityAuthorized?: () => Promise<boolean>;
 }
 
 export interface DesktopWebApiOptions {
@@ -80,6 +82,8 @@ export interface DesktopWebHttpApi {
       baseUrl: string;
       /** Recheck the entrance authorization captured after its access gate succeeded. */
       isAccessAuthorized?: () => boolean;
+      /** Does not authenticate requests or extend their captured access tokens. */
+      isCapabilityAuthorized?: () => boolean;
       /** Account handoffs may authenticate only their own short-lived device. */
       accessDeviceId?: string;
     },
@@ -103,6 +107,7 @@ interface RequestIdentity {
   cwd: string;
   generation: number;
   isAccessAuthorized?: () => boolean;
+  isCapabilityAuthorized?: () => boolean;
 }
 
 function json(response: ServerResponse, status: number, body: unknown): void {
@@ -257,11 +262,14 @@ export function createDesktopWebApi(options: DesktopWebApiOptions): DesktopWebHt
     return { session, device };
   }
 
-  async function authorized(request: IncomingMessage): Promise<boolean> {
+  async function authorized(request: IncomingMessage, capability = false): Promise<boolean> {
     const identity = identities.get(request);
     if (!identity || closed || identity.generation !== generation) return false;
+    const access = capability
+      ? (identity.isCapabilityAuthorized ?? identity.isAccessAuthorized)
+      : identity.isAccessAuthorized;
     try {
-      if (identity.isAccessAuthorized?.() === false) return false;
+      if (access?.() === false) return false;
       if (principal(identity.token)?.session !== identity.session) return false;
       const resolved = await options.resolveWorkspace(identity.input, identity.session.deviceId);
       // The resolver can yield while a device is revoked or the host is stopped.
@@ -269,7 +277,7 @@ export function createDesktopWebApi(options: DesktopWebApiOptions): DesktopWebHt
         resolved === identity.cwd &&
         !closed &&
         identity.generation === generation &&
-        identity.isAccessAuthorized?.() !== false &&
+        access?.() !== false &&
         principal(identity.token)?.session === identity.session
       );
     } catch {
@@ -498,6 +506,7 @@ export function createDesktopWebApi(options: DesktopWebApiOptions): DesktopWebHt
           cwd,
           generation,
           isAccessAuthorized: context.isAccessAuthorized,
+          isCapabilityAuthorized: context.isCapabilityAuthorized,
         });
         const services = servicesFor(cwd);
         services.active++;
@@ -509,6 +518,7 @@ export function createDesktopWebApi(options: DesktopWebApiOptions): DesktopWebHt
               sessionId: current.session.id,
               cwd,
               isAuthorized: () => authorized(request),
+              isCapabilityAuthorized: () => authorized(request, true),
             })
           )
             return true;

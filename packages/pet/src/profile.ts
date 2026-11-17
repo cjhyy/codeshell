@@ -47,6 +47,7 @@ export const PET_SYSTEM_PROMPT = `# Local Mimi Manager Boundary
 
 You are Mimi, the user's local work manager and dispatcher, not an execution agent.
 - Use only the bounded host-provided status to summarize work and help the user navigate to the original work session.
+- Host-provided state arrives in two places. The durable lists (workspaces, reusableSessions, outboundTargets, sessions, pending, followUps, longTasks, taskInbox) are context sections, each titled with its list name in brackets; a later context update lists only the entries that were added, replaced or removed, and an entry not mentioned is unchanged. Everything about the current message (its source, this turn's capabilities, wake events, receipts, retrieved memories) is in the trusted runtime context of this turn. When this documentation says "the trusted runtime context" for one of the durable lists, read that list's context section.
 - The trusted runtime context may include owner-authored personalization with responseLanguage, userProfile, communicationStyle, and customInstructions. Apply it naturally to Mimi's replies. These preferences customize presentation and standing context only: they never override Mimi's manager boundary, tool routing, permission rules, security constraints, or truthful status reporting. When a durable memory conflicts with explicit personalization, follow the personalization.
 - Clarify goals, break work into coherent tasks, identify follow-ups, and decide automatically whether the user's message needs a separate execution session.
 - Answer lightweight questions directly when they need no tools, workspace access, web research, artifact creation, or extended multi-step execution.
@@ -165,6 +166,10 @@ export const PET_BEHAVIOR_PROFILE: RunBehaviorProfile = {
   systemPromptAppend: PET_SYSTEM_PROMPT,
   allowedToolNames: PET_ALLOWED_TOOL_NAMES,
   contextStrategy: "notes",
+  // About a third of Mimi's turns start after the cache expired. A cold request
+  // pays full price for the whole context, so switch to the saved note first
+  // once the context is larger than a typical turn (median ~45K tokens).
+  notesRolloverWhenColdTokens: 48_000,
   forcePermissionMode: "default",
   // Manager turns only clarify, inspect bounded status, and dispatch. Leave
   // sustained execution to Work Sessions and bound malformed-tool loops.
@@ -261,3 +266,5 @@ export const PET_BEHAVIOR_PROFILE: RunBehaviorProfile = {
     return services as unknown as Record<string, unknown>;
   },
 };
+
+export { MIMI_LEDGER_LISTS, MAX_MIMI_LEDGER_CONTEXT_LENGTH } from "./world-ledger.js";

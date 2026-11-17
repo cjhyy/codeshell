@@ -281,6 +281,158 @@ describe("buildStreamItems", () => {
     expect(items.some((it) => it.kind === "assistant" && it.text === "报告正文。")).toBe(true);
   });
 
+  test("a successful trailing goal completion keeps the final report outside the process card", () => {
+    const read = tool("Read", 10, 20);
+    const report = assistant("## 完成报告\n原来的完整输出应保持可见。");
+    const completion = tool("complete_goal", 21, 30);
+    const items = buildStreamItems([user(), read, report, completion]);
+
+    expect(items.map((item) => item.kind)).toEqual(["user", "turn_process_group", "assistant"]);
+    expect(items.at(-1)).toBe(report);
+    expect(processGroups(items)[0]?.items).toEqual([read]);
+    expect(processGroups(items)[0]?.toolCount).toBe(1);
+    expect(JSON.stringify(items)).not.toContain(completion.toolName);
+  });
+
+  test("a report followed only by goal completion needs no process card", () => {
+    const request = user();
+    const report = assistant("全部完成，以下是交付结果。");
+    const items = buildStreamItems([request, report, tool("complete_goal")]);
+
+    expect(items).toEqual([request, report]);
+    expect(processGroups(items)).toHaveLength(0);
+  });
+
+  test("completion metadata after the last goal tool does not hide the report", () => {
+    const request = user();
+    const report = assistant("完整最终报告。");
+    const completion = tool("complete_goal", 21, 30);
+    const trailing: Message[] = [
+      thinking("收尾状态已记录。"),
+      assistant(" \n "),
+      { kind: "task_list", id: freshId("tasks"), tasks: [] },
+      { kind: "goal_progress", id: freshId("goal"), status: "met", round: 3 },
+      {
+        kind: "turn_usage",
+        id: freshId("usage"),
+        promptTokens: 100,
+        cacheReadTokens: 50,
+        cacheCreationTokens: 0,
+      },
+      { kind: "system", id: freshId("system"), text: "" },
+    ];
+
+    expect(buildStreamItems([request, report, completion, ...trailing])).toEqual([
+      request,
+      report,
+      ...trailing,
+    ]);
+  });
+
+  test("a later user turn does not make the previous completion or folded report reappear", () => {
+    const firstRequest = user("完成目标");
+    const report = assistant("已交付的完整报告。");
+    const completion = tool("complete_goal", 21, 30);
+    const met: Message = {
+      kind: "goal_progress",
+      id: freshId("goal"),
+      status: "met",
+      round: 1,
+    };
+    const firstTurn = [firstRequest, report, completion, met];
+    const nextRequest = user("再看一个问题");
+    const nextAnswer = assistant("后续问题的回答。");
+    const items = buildStreamItems([...firstTurn, nextRequest, tool("Read", 40, 50), nextAnswer]);
+
+    expect(items.slice(0, 3)).toEqual(buildStreamItems(firstTurn));
+    expect(items.slice(0, 3)).toEqual([firstRequest, report, met]);
+    expect(processGroups(items)).toHaveLength(1);
+    expect(items.at(-1)).toBe(nextAnswer);
+    expect(JSON.stringify(items)).not.toContain(completion.toolName);
+  });
+
+  for (const status of ["queued", "running", "failed", "denied", "cancelled"] as const) {
+    test(`keeps a trailing ${status} goal completion visible`, () => {
+      const completion: ToolMessage = { ...tool("complete_goal"), status };
+      const items = buildStreamItems([user(), assistant("完成前的输出。"), completion]);
+
+      expect(processGroups(items)).toHaveLength(1);
+      expect(processGroups(items)[0]?.items).toContain(completion);
+      expect(processGroups(items)[0]?.toolCount).toBe(1);
+    });
+  }
+
+  test("keeps an external goal rejection even when its JSON result has succeeded tool status", () => {
+    for (const rejection of [
+      { ok: false, message: "Goal changed or could not be saved; no completion recorded." },
+      { ok: false, error: "The operation still has unverified writes." },
+    ]) {
+      const completion = { ...tool("complete_goal"), result: JSON.stringify(rejection) };
+      const items = buildStreamItems([user(), assistant("待确认的完成报告。"), completion]);
+
+      expect(processGroups(items)[0]?.items).toContain(completion);
+    }
+  });
+
+  test("hides a successful external goal completion JSON result", () => {
+    const request = user();
+    const report = assistant("已交付的完整报告。");
+    const completion = { ...tool("complete_goal"), result: JSON.stringify({ ok: true }) };
+
+    expect(buildStreamItems([request, report, completion])).toEqual([request, report]);
+  });
+
+  for (const following of ["assistant", "tool"] as const) {
+    test(`keeps goal completion when a later ${following} continues the turn`, () => {
+      const completion = tool("complete_goal", 10, 20);
+      const continuation =
+        following === "assistant" ? assistant("还有后续说明。") : tool("Read", 30, 40);
+      const items = buildStreamItems([user(), assistant("先前的报告。"), completion, continuation]);
+
+      expect(JSON.stringify(items)).toContain(completion.toolName);
+      expect(processGroups(items)[0]?.toolCount).toBe(following === "tool" ? 2 : 1);
+      if (following === "assistant") expect(items.at(-1)).toBe(continuation);
+    });
+  }
+
+  test("diagnostics and goal continuation after completion remain visible", () => {
+    const following: Message[] = [
+      { kind: "system", id: freshId("system"), text: "目标完成状态未能保存。" },
+      turnEnd("error"),
+      { kind: "goal_progress", id: freshId("goal"), status: "not_met", round: 2 },
+      {
+        kind: "goal_progress",
+        id: freshId("goal"),
+        status: "met",
+        round: 2,
+        waiting: { sinceMs: 100, tasks: [] },
+      },
+      injectedUser("<system-reminder>目标仍未完成，请继续。</system-reminder>"),
+    ];
+    for (const diagnostic of following) {
+      const completion = tool("complete_goal", 10, 20);
+      const items = buildStreamItems([user(), assistant("报告。"), completion, diagnostic]);
+
+      expect(JSON.stringify(items)).toContain(completion.toolName);
+      expect(processGroups(items)[0]?.toolCount).toBe(1);
+    }
+  });
+
+  test("hiding terminal goal completion preserves the source transcript", () => {
+    const completion = tool("complete_goal");
+    const messages: Message[] = [user(), assistant("最终输出。"), completion];
+    const before = JSON.stringify(messages);
+    for (const message of messages) Object.freeze(message);
+    Object.freeze(messages);
+
+    const items = buildStreamItems(messages);
+
+    expect(items.some((item) => item.kind === "assistant")).toBe(true);
+    expect(JSON.stringify(items)).not.toContain(completion.toolName);
+    expect(JSON.stringify(messages)).toBe(before);
+    expect(messages.at(-1)).toBe(completion);
+  });
+
   test("inside the outer card, adjacent tools fold into a tool_group but assistant text splits them", () => {
     const messages: Message[] = [
       user(),

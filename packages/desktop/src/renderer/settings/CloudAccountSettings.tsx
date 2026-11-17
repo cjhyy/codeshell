@@ -5,6 +5,7 @@ import { useT } from "../i18n/I18nProvider";
 import { useToast } from "../ui/ToastProvider";
 import { CloudAccountLinks } from "./CloudAccountLinks";
 import { CloudAccountProfile } from "./CloudAccountProfile";
+import { AccountRemoteAccessSettings } from "./AccountRemoteAccessSettings";
 import {
   DEFAULT_CLOUD_ACCOUNT_ORIGIN,
   type CloudAccountCapabilities,
@@ -324,6 +325,13 @@ export function CloudAccountSettings({
               {t("settingsX.cloudAccount.logout")}
             </Button>
           </div>
+          {status.state === "signed-in" && status.origin && (
+            <AccountRemoteAccessSettings
+              key={`remote:${authorityGeneration}`}
+              identity={{ origin: status.origin, accountId: status.account.id }}
+              pending={pending}
+            />
+          )}
           {status.state === "signed-in" && status.origin && (
             <details className="rounded-lg border border-border p-4">
               <summary className="cursor-pointer font-medium">

@@ -32,6 +32,7 @@ function harness(
     volatile?: Message[];
     signal?: AbortSignal;
     surface?: RunToolSurface;
+    coldNotesRolloverTokens?: number;
   },
 ) {
   const notes = new SessionContextNotes(transcript);
@@ -49,6 +50,7 @@ function harness(
       retainedContextMessages: extras?.retained,
       volatileContextMessages: extras?.volatile,
       signal: extras?.signal,
+      coldNotesRolloverTokens: extras?.coldNotesRolloverTokens,
     },
   );
   return {
@@ -63,23 +65,37 @@ function harness(
 }
 
 describe("TurnLoop notes context policy", () => {
-  test.each(["missing", "revoked"])(
-    "does not recommend discovery when ToolSearch is %s and the note tool is unloaded",
-    async (discovery) => {
-      const transcript = history();
-      const original = transcript.toMessages();
-      const surface = new RunToolSurface(["ToolSearch"]);
-      surface.updateCatalog(discovery === "missing" ? [] : [toolSearchToolDef]);
-      surface.updateCatalog([saveContextNoteToolDef]);
-      const { loop } = harness(
-        transcript,
-        new ContextManager({ maxTokens: estimateTokens(original) / 0.77 }),
-        { surface },
-      );
-      const managed = await loop.manageContextMessages(original);
-      expect(JSON.stringify(managed)).not.toContain("Context budget is running low");
-    },
-  );
+  test("does not recommend discovery when ToolSearch is revoked and the note tool is unloaded", async () => {
+    const transcript = history();
+    const original = transcript.toMessages();
+    const surface = new RunToolSurface(["ToolSearch"]);
+    surface.updateCatalog([toolSearchToolDef]);
+    surface.updateCatalog([saveContextNoteToolDef]);
+    const { loop } = harness(
+      transcript,
+      new ContextManager({ maxTokens: estimateTokens(original) / 0.77 }),
+      { surface },
+    );
+    const managed = await loop.manageContextMessages(original);
+    expect(JSON.stringify(managed)).not.toContain("Context budget is running low");
+  });
+
+  test("without ToolSearch, a note tool that becomes eligible is loaded and recommended directly", async () => {
+    const transcript = history();
+    const original = transcript.toMessages();
+    const surface = new RunToolSurface(["ToolSearch"]);
+    surface.updateCatalog([]);
+    surface.updateCatalog([saveContextNoteToolDef]);
+    const { loop } = harness(
+      transcript,
+      new ContextManager({ maxTokens: estimateTokens(original) / 0.77 }),
+      { surface },
+    );
+    const managed = JSON.stringify(await loop.manageContextMessages(original));
+    expect(surface.snapshot().map((tool) => tool.name)).toContain("SaveContextNote");
+    expect(managed).toContain("Context budget is running low");
+    expect(managed).not.toContain("ToolSearch");
+  });
 
   test.each([false, true])(
     "warns for eligible deferred note tools (discovered=%s) and loads the schema when needed",
@@ -133,6 +149,38 @@ describe("TurnLoop notes context policy", () => {
     const current = [retained, ...transcript.toMessages()];
     expect(loop.applyNotesRollover(current)).toBe(current);
     expect(transcript.getEvents("context_checkpoint")).toHaveLength(0);
+  });
+
+  test("a cold run switches to an unused note before its first request once the context is large", async () => {
+    const transcript = history();
+    const manager = new ContextManager({ maxTokens: 1_000_000 });
+    const { notes, loop } = harness(transcript, manager, { coldNotesRolloverTokens: 1 });
+    notes.markModelBoundary();
+    notes.save("Release draft is in progress; await the user before publishing.");
+    const managed = await loop.manageContextMessages(transcript.toMessages());
+    expect(JSON.stringify(managed)).toContain("Release draft is in progress");
+    expect(JSON.stringify(managed)).not.toContain("old 0:");
+    expect(transcript.getEvents("context_checkpoint")).toHaveLength(1);
+    // Only the first request of the run is cold.
+    await loop.manageContextMessages(managed);
+    expect(transcript.getEvents("context_checkpoint")).toHaveLength(1);
+  });
+
+  test("a cold run without an unused note, or below the threshold, keeps its context", async () => {
+    for (const [saveNote, threshold] of [
+      [false, 1],
+      [true, 10_000_000],
+    ] as const) {
+      const transcript = history();
+      const manager = new ContextManager({ maxTokens: 1_000_000 });
+      const { notes, loop } = harness(transcript, manager, { coldNotesRolloverTokens: threshold });
+      notes.markModelBoundary();
+      if (saveNote) notes.save("A note that must not be used yet.");
+      const original = transcript.toMessages();
+      const managed = await loop.manageContextMessages(original);
+      expect(JSON.stringify(managed)).toContain("old 0:");
+      expect(transcript.getEvents("context_checkpoint")).toHaveLength(0);
+    }
   });
 
   test("preserves newly injected hooks and unread loop reminders across rollover", async () => {

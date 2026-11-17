@@ -132,6 +132,58 @@ function isHiddenTool(m: Message): boolean {
   return shouldHideBrowserRuntimeTool(m);
 }
 
+function isSuccessfulGoalCompletion(message: ToolMessage): boolean {
+  if (
+    message.toolName.toLowerCase() !== "complete_goal" ||
+    message.status !== "succeeded" ||
+    message.error
+  ) {
+    return false;
+  }
+  // External runtimes can return a rejected completion as a successful tool
+  // transport with { ok: false }. That diagnostic must remain inspectable.
+  try {
+    const result = JSON.parse(message.result ?? "null") as { ok?: boolean } | null;
+    return result?.ok !== false;
+  } catch {
+    // The native tool returns a plain-text acknowledgement.
+    return true;
+  }
+}
+
+/**
+ * A successful terminal complete_goal only records completion. Hide it before
+ * folding so "final report → complete_goal" leaves the report outside the
+ * process card. Keep the original messages for transcript/context consumers,
+ * and keep unsuccessful calls or calls followed by more work visible.
+ */
+function filterStreamMessages(messages: Message[]): Message[] {
+  const visible: Message[] = [];
+  let atTurnTail = true;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const message = messages[i]!;
+    if (isHiddenTool(message)) continue;
+    if (atTurnTail && message.kind === "tool" && isSuccessfulGoalCompletion(message)) {
+      continue;
+    }
+
+    if (message.kind === "user" && !message.injected && !isSystemReminderText(message.text)) {
+      atTurnTail = true;
+    } else if (
+      message.kind !== "thinking" &&
+      message.kind !== "task_list" &&
+      message.kind !== "turn_usage" &&
+      message.kind !== "files_changed" &&
+      !(message.kind === "goal_progress" && message.status === "met" && !message.waiting) &&
+      !((message.kind === "assistant" || message.kind === "system") && !message.text.trim())
+    ) {
+      atTurnTail = false;
+    }
+    visible.push(message);
+  }
+  return visible.reverse();
+}
+
 const BROWSER_RUNTIME_TOOL_NAMES = new Set(["browser_observe", "browser_act", "browser_navigate"]);
 
 /**
@@ -207,8 +259,8 @@ function isTransparent(m: Message): m is ThinkingMessage {
 
 /**
  * Build the display list:
- *   0. Drop task-tracker tool calls — those drive the pinned task
- *      panel, not the chat stream.
+ *   0. Drop hidden task/runtime tools and successful terminal goal completion
+ *      calls before they can anchor a process card around the final answer.
  *   1. Run level-1 folding: collapse adjacent tool messages into
  *      ToolGroup (regardless of toolName), absorbing transparent
  *      thinking items that land between two tools.
@@ -220,7 +272,7 @@ export function buildStreamItems(
   messages: Message[],
   opts: { liveTurnActive?: boolean } = {},
 ): StreamItem[] {
-  const filtered = messages.filter((m) => !isHiddenTool(m));
+  const filtered = filterStreamMessages(messages);
   const level1 = foldAdjacentTools(filtered);
   return foldTurnProcess(level1, opts.liveTurnActive ?? false);
 }

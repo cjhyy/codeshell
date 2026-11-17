@@ -113,7 +113,11 @@ describe("PetDispatchService", () => {
       },
       worker: {
         requestWorker: async (_method, params) => {
-          managerWorld = JSON.parse(String(params.petRuntimeContext));
+          // Durable lists travel in profileParams.ledgerContext, the rest per turn.
+          managerWorld = {
+            ...JSON.parse(String(params.petRuntimeContext)),
+            ...JSON.parse(String((params.profileParams as Record<string, unknown>).ledgerContext)),
+          };
           return { ok: true, result: { text: "shared tasks" } };
         },
       },
@@ -358,8 +362,9 @@ describe("PetDispatchService", () => {
     expect(String(request?.params.task)).toContain("What is running?");
     expect(String(request?.params.task)).not.toContain("<pet-world>");
     expect(String(request?.params.task)).not.toContain("requestId");
-    expect(String(request?.params.petRuntimeContext)).toContain('"runState":"running"');
-    expect(String(request?.params.petRuntimeContext)).toContain('"taskId":"pet-task-one"');
+    const ledger = String((request?.params.profileParams as Record<string, unknown>).ledgerContext);
+    expect(ledger).toContain('"runState":"running"');
+    expect(ledger).toContain('"taskId":"pet-task-one"');
     expect(String(request?.params.petRuntimeContext)).toContain(
       '"currentMessageSource":{"kind":"im-gateway","channel":"telegram"}',
     );
@@ -917,9 +922,18 @@ describe("PetDispatchService", () => {
     expect(String(request?.params.petRuntimeContext)).toContain(
       '"currentMessageSource":{"kind":"im-gateway","channel":"wechat"}',
     );
-    expect(String(request?.params.petRuntimeContext)).toContain(
-      '"currentMessageCapabilities":{"gatewayReply":{"tool":"GatewayReply","destination":"current originating IM conversation","allowedRoots":["/safe/pet","/Users/admin/Downloads"]}}',
-    );
+    // The route's limits ride with the capability, since GatewayReply's definition is static.
+    expect(
+      JSON.parse(String(request?.params.petRuntimeContext)).currentMessageCapabilities,
+    ).toMatchObject({
+      gatewayReply: {
+        tool: "GatewayReply",
+        destination: "current originating IM conversation",
+        allowedRoots: ["/safe/pet", "/Users/admin/Downloads"],
+        maxTextLength: expect.any(Number),
+        attachments: expect.any(Array),
+      },
+    });
     expect((request?.params.profileParams as Record<string, unknown>).gateway).toBeUndefined();
     expect(String(request?.params.task)).toContain("MUST call GatewayReply exactly once");
     expect(String(request?.params.task)).toContain(
@@ -2167,7 +2181,10 @@ describe("PetDispatchService", () => {
       worker: {
         requestWorker: async (_method, params) => {
           task = String(params.task);
-          runtimeContext = String(params.petRuntimeContext);
+          // Both parts of the world: per turn and the durable lists.
+          runtimeContext = `${String(params.petRuntimeContext)}\n${String(
+            (params.profileParams as Record<string, unknown> | undefined)?.ledgerContext ?? "",
+          )}`;
           return { ok: true, result: { text: "safe" } };
         },
       },
@@ -2193,7 +2210,10 @@ describe("PetDispatchService", () => {
       },
       worker: {
         requestWorker: async (_method, params) => {
-          runtimeContext = String(params.petRuntimeContext);
+          // Both parts of the world: per turn and the durable lists.
+          runtimeContext = `${String(params.petRuntimeContext)}\n${String(
+            (params.profileParams as Record<string, unknown> | undefined)?.ledgerContext ?? "",
+          )}`;
           return { ok: true, result: { text: "hi" } };
         },
       },
@@ -2272,6 +2292,7 @@ describe("PetDispatchService", () => {
       worker: {
         requestWorker: async (_method, params) => {
           task = String(params.task);
+          // Personalization is per turn: the per-turn world alone.
           runtimeContext = String(params.petRuntimeContext);
           return { ok: true, result: { text: "hi" } };
         },
@@ -2731,6 +2752,8 @@ describe("PetDispatchService", () => {
           tool: "GatewayReply",
           destination: "current IM conversation",
           allowedRoots: ["/safe/pet", "/Users/admin/Downloads"],
+          // The route's limits ride with the capability; GatewayReply is static.
+          ...(profiles[index + 1]?.gatewayReply as Record<string, unknown>),
         },
       });
       expect(profiles[index + 1]?.gatewayReply).toEqual({
@@ -2757,7 +2780,7 @@ describe("PetDispatchService", () => {
     }
     const whatsappContext =
       contexts[channelEntries.findIndex(([channel]) => channel === "whatsapp") + 1];
-    expect(whatsappContext?.currentMessageCapabilities).toEqual({
+    expect(whatsappContext?.currentMessageCapabilities).toMatchObject({
       gateway: {
         tool: "Gateway",
         discovery: ["search", "describe"],
@@ -2770,7 +2793,7 @@ describe("PetDispatchService", () => {
     });
     const telegramContext =
       contexts[channelEntries.findIndex(([channel]) => channel === "telegram") + 1];
-    expect(telegramContext?.currentMessageCapabilities).toEqual({
+    expect(telegramContext?.currentMessageCapabilities).toMatchObject({
       gateway: {
         tool: "Gateway",
         discovery: ["search", "describe"],

@@ -1,4 +1,4 @@
-import type { UsageReceipt, UsageSummary, UsageTotals } from "./types.js";
+import type { UsageReceipt, UsageSummary, UsageTimeBucket, UsageTotals } from "./types.js";
 
 function totals(): UsageTotals {
   return {
@@ -32,7 +32,11 @@ function add(target: UsageTotals, receipt: UsageReceipt): void {
 
 export function summarizeReceipts(
   receipts: readonly UsageReceipt[],
-  metadata: Omit<UsageSummary, keyof UsageTotals | "byModel" | "bySession" | "byPurpose">,
+  metadata: Omit<
+    UsageSummary,
+    keyof UsageTotals | "byModel" | "bySession" | "byPurpose" | "byTime"
+  >,
+  bucket?: { sizeMs: number; offsetMs: number },
 ): UsageSummary {
   const result: UsageSummary = {
     ...totals(),
@@ -44,6 +48,7 @@ export function summarizeReceipts(
   const models = new Map<string, UsageSummary["byModel"][number]>();
   const sessions = new Map<string, UsageSummary["bySession"][number]>();
   const purposes = new Map<string, UsageSummary["byPurpose"][number]>();
+  const times = new Map<string, UsageTimeBucket>();
   for (const receipt of receipts) {
     add(result, receipt);
     const key = JSON.stringify([receipt.provider, receipt.providerKind, receipt.model]);
@@ -63,7 +68,27 @@ export function summarizeReceipts(
     models.set(key, model);
     sessions.set(receipt.accountingSessionId, session);
     purposes.set(receipt.purpose, purpose);
+    if (bucket) {
+      const bucketStart =
+        Math.floor((receipt.startedAt + bucket.offsetMs) / bucket.sizeMs) * bucket.sizeMs -
+        bucket.offsetMs;
+      const timeKey = JSON.stringify([bucketStart, key, receipt.purpose]);
+      let time = times.get(timeKey);
+      if (!time) {
+        time = {
+          ...totals(),
+          provider: receipt.provider,
+          providerKind: receipt.providerKind,
+          model: receipt.model,
+          purpose: receipt.purpose,
+          bucketStart,
+        };
+        times.set(timeKey, time);
+      }
+      add(time, receipt);
+    }
   }
+  if (bucket) result.byTime = [...times.values()];
   result.byModel = [...models.values()];
   result.bySession = [...sessions.values()];
   result.byPurpose = [...purposes.values()];

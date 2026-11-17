@@ -28,6 +28,16 @@ Object.assign(window, {
 });
 mock.module("../ui/ToastProvider", () => ({ useToast: () => () => {} }));
 mock.module("../ui/ConfirmDialog", () => ({ useConfirm: () => async () => true }));
+mock.module("@/components/ui/switch", () => ({
+  Switch: ({ checked, onCheckedChange, ...props }: any) => (
+    <button
+      {...props}
+      role="switch"
+      aria-checked={checked}
+      onClick={() => onCheckedChange(!checked)}
+    />
+  ),
+}));
 const qrValues: string[] = [];
 mock.module("qrcode", () => ({
   default: {
@@ -48,12 +58,16 @@ mock.module("@/components/ui/dialog", () => ({
 }));
 const { I18nProvider } = await import("../i18n/I18nProvider");
 const { AccountDeviceEntry } = await import("./AccountDeviceEntry");
+const { AccountFeatureEntry } = await import("./AccountFeatureEntry");
+const { useAccountFeature } = await import("./useAccountFeature");
 const { DeviceRelaySettings } = await import("../settings/DeviceRelaySettings");
+const { AccountRemoteAccessSettings } = await import("../settings/AccountRemoteAccessSettings");
 const { NewProjectDialog } = await import("../projects/NewProjectDialog");
 const { CloudProjectManager } = await import("../projects/CloudProjectManager");
 const { RemoteProviderSection } = await import("../credentials/RemoteLinkSection");
 const { UnavailableLinkCleanup } = await import("../credentials/UnavailableLinkCleanup");
-const [scenario, requestedState = "ready"] = process.argv.slice(2);
+const [scenario, requestedState = "ready", pendingReason = "relay_connecting"] =
+  process.argv.slice(2);
 const state = scenario.startsWith("remote-cleanup")
   ? scenario.endsWith("pending")
     ? "pending"
@@ -63,7 +77,7 @@ const snapshot = featureSnapshot(state as AccountFeatureView["state"], {
   cloudOrigin: "https://cloud.example",
 });
 for (const view of Object.values(snapshot))
-  if (view.state === "pending") view.reason = "relay_connecting";
+  if (view.state === "pending") view.reason = pendingReason as AccountFeatureView["reason"];
 // Directory preparation remains independently available while phone business access is pending.
 snapshot["devices.directory"] = { id: "devices.directory", state: "ready" };
 let resolve!: (snapshot: AccountFeatureSnapshot) => void;
@@ -77,13 +91,22 @@ let unsubscribed = 0,
   opened = 0,
   signIns = 0,
   closed = 0,
-  refreshed = 0,
+  _refreshed = 0,
   enrolled = 0,
   resumed = 0,
   revoked = 0;
 const cloudActions: string[] = [];
 const cloudOrigins: string[] = [];
 const retryOrder: string[] = [];
+const remoteCalls: string[] = [];
+let remoteListener: ((next: any) => void) | undefined;
+let remoteStatus = {
+  state: "stopped",
+  registered: true,
+  accountId: "account",
+  relayOrigin: "https://account.example",
+  remoteAccessEnabled: false,
+};
 let cloudResolve!: (result: unknown) => void;
 const cloudLate = new Promise((resolve) => {
   cloudResolve = resolve;
@@ -94,7 +117,7 @@ const api = {
   snapshot: () =>
     scenario.startsWith("late-") || scenario === "unmount" ? late : Promise.resolve(snapshot),
   refresh: async () => {
-    refreshed++;
+    _refreshed++;
     retryOrder.push("features");
     return snapshot;
   },
@@ -123,7 +146,28 @@ window.codeshell = {
     onStatus: () => () => {},
   },
   mobileRemote: {
+    start: async () => {
+      remoteCalls.push("start");
+      remoteStatus = { ...remoteStatus, state: "ready", remoteAccessEnabled: true };
+      remoteListener?.(remoteStatus);
+    },
+    stop: async () => {
+      remoteCalls.push("stop");
+      remoteStatus = { ...remoteStatus, state: "stopped", remoteAccessEnabled: false };
+      remoteListener?.(remoteStatus);
+    },
     relay: {
+      ...(scenario === "remote-access"
+        ? {
+            status: async () => remoteStatus,
+            onStatus: (listener: (next: any) => void) => {
+              remoteListener = listener;
+              return () => {
+                remoteListener = undefined;
+              };
+            },
+          }
+        : {}),
       enroll: async () => {
         enrolled++;
       },
@@ -177,11 +221,25 @@ const update = async (run: () => unknown) => {
     await flushMicrotasks();
   });
 };
+function FeatureLifecycleProbe() {
+  const feature = useAccountFeature("devices.dispatch");
+  return (
+    <AccountFeatureEntry feature={feature} label="测试账号功能" onSignIn={() => signIns++}>
+      <button type="button">测试账号功能</button>
+    </AccountFeatureEntry>
+  );
+}
 const render = async () =>
   update(() =>
     root.render(
       <I18nProvider>
-        {scenario.startsWith("phone") ? (
+        {scenario.startsWith("late-") || scenario === "unmount" ? (
+          <FeatureLifecycleProbe />
+        ) : scenario === "remote-access" ? (
+          <AccountRemoteAccessSettings
+            identity={{ origin: "https://account.example", accountId: "account" }}
+          />
+        ) : scenario.startsWith("phone") ? (
           <DeviceRelaySettings
             status={{
               state: "ready",
@@ -192,7 +250,7 @@ const render = async () =>
             }}
             busy={false}
             refresh={async () => {
-              refreshed++;
+              _refreshed++;
               retryOrder.push("relay-refresh");
             }}
           />
@@ -257,20 +315,33 @@ const render = async () =>
             onChanged={() => {}}
           />
         ) : (
-          <AccountDeviceEntry onOpen={() => opened++} onSignIn={() => signIns++} />
+          <AccountDeviceEntry onOpen={() => opened++} />
         )}
       </I18nProvider>,
     ),
   );
 try {
   await render();
-  if (scenario.startsWith("late-")) {
-    assert.equal(button("执行电脑 / 设备"), undefined);
+  if (scenario === "remote-access") {
+    const control = () => button("允许远程访问这台电脑");
+    assert.equal(props(control())["aria-checked"], false);
+    assert.equal(props(control()).disabled, false);
+    assert.deepEqual(remoteCalls, []);
+    assert.equal(button("重试连接"), undefined);
+    await update(() => props(control()).onClick());
+    assert.equal(props(control())["aria-checked"], true);
+    await update(() => props(control()).onClick());
+    assert.equal(props(control())["aria-checked"], false);
+    assert.deepEqual(remoteCalls, ["start", "stop"]);
+    assert.equal(enrolled, 0);
+    assert.equal(resumed, 0);
+  } else if (scenario.startsWith("late-")) {
+    assert.equal(button("测试账号功能"), undefined);
     await update(() => subscribed!(featureSnapshot("sign-in")));
     if (scenario === "late-failure") await update(() => reject(new Error("old response")));
     else await update(() => resolve(featureSnapshot("hidden")));
-    assert.ok(button("执行电脑 / 设备"));
-    await update(() => props(button("执行电脑 / 设备")).onClick());
+    assert.ok(button("测试账号功能"));
+    await update(() => props(button("测试账号功能")).onClick());
     assert.equal(signIns, 1);
   } else if (scenario === "unmount") {
     await update(() => root.unmount());
@@ -341,16 +412,24 @@ try {
   } else {
     const label =
       scenario === "devices"
-        ? "执行电脑 / 设备"
+        ? "我的电脑"
         : scenario === "cloud"
           ? "云端"
           : scenario === "remote"
             ? "远程连接"
             : "手机访问入口";
     const gated = nodes(container).find((n) => props(n)["data-account-feature"]);
-    if (state === "hidden") {
+    if (scenario === "devices") {
+      assert.ok(button(label), "Computer selection remains available without account features");
+      assert.notEqual(props(button(label)).disabled, true);
+      assert.equal(gated, undefined, "Only remote computer access is account-gated");
+      await update(() => props(button(label)).onClick());
+      assert.equal(opened, 1);
+      assert.equal(signIns, 0);
+      assert.equal(resumed, 0);
+      assert.equal(enrolled, 0);
+    } else if (state === "hidden") {
       assert.equal(gated, undefined);
-      if (scenario === "devices") assert.equal(button(label), undefined);
       if (scenario === "cloud") assert.equal(button(label), undefined);
       if (scenario === "remote")
         assert.equal(
@@ -368,25 +447,16 @@ try {
       assert.equal(signIns, 1);
     } else if (state === "pending") {
       assert.equal(props(gated).disabled, true);
-      assert.ok(text(gated).includes("中继连接中"));
+      if (pendingReason === "relay_connecting") assert.ok(text(gated).includes("正在连接"));
       if (scenario === "phone") {
-        assert.equal(props(button("重试")).disabled, false);
-        const nameInput = nodes(container).find(
-          (node) => node.tagName === "INPUT" && props(node).maxLength === 100,
-        );
-        await update(() => props(nameInput).onChange({ target: { value: "Laptop" } }));
-        assert.equal(props(button("通过当前账号登记电脑")).disabled, false);
-        await update(() => props(button("通过当前账号登记电脑")).onClick());
-        assert.equal(enrolled, 1);
+        assert.equal(button("通过当前账号登记电脑"), undefined);
+        assert.equal(props(button("重试连接")).disabled, false);
+        assert.equal(enrolled, 0, "Account binding is automatic, not a form submission");
         retryOrder.length = 0;
-        await update(() => props(button("重试")).onClick());
+        await update(() => props(button("重试连接")).onClick());
         assert.equal(resumed, 1);
-        assert.deepEqual(retryOrder, ["resume", "relay-refresh", "features"]);
-        assert.ok(refreshed >= 2);
+        assert.deepEqual(retryOrder, ["resume"]);
       }
-    } else if (scenario === "devices") {
-      await update(() => props(button(label)).onClick());
-      assert.equal(opened, 1);
     } else if (scenario === "remote")
       assert.ok(nodes(container).some((n) => props(n)["data-link-runtime"] === "server"));
     else if (scenario === "phone") {

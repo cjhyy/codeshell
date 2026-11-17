@@ -12,6 +12,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SessionManager } from "../session/session-manager.js";
 import * as outputJournal from "../session/output-journal.js";
+import {
+  CONTEXT_CANARY,
+  PUBLIC_PROMPT,
+  PUBLIC_ANSWER,
+  contextPrivacySession,
+} from "../../../../tests/helpers/context-privacy.js";
 import { defaultCacheDir, writeCache } from "../llm/model-cache.js";
 
 function fakeEngine(slice: EngineConfigSlice): Engine {
@@ -352,6 +358,35 @@ describe("AgentServer query wire contracts before registry extraction", () => {
     }
   });
 
+  test("session list and detail leave engine context on the local disk", async () => {
+    const root = mkdtempSync(join(tmpdir(), "query-context-privacy-"));
+    try {
+      const { manager } = contextPrivacySession(root, root, "private-context");
+      const engine = { getSessionManager: () => manager };
+
+      const wire = JSON.stringify([
+        await queryWire({ type: "sessions" }, engine),
+        await queryWire({ type: "session_detail", sessionId: "private-context" }, engine),
+      ]);
+      for (const local of [
+        CONTEXT_CANARY,
+        "promptSubmitHookMessages",
+        "context_checkpoint",
+        "prompt_rewrite",
+      ]) {
+        expect(wire).not.toContain(local);
+      }
+      expect(wire).toContain(PUBLIC_PROMPT);
+      expect(wire).toContain(PUBLIC_ANSWER);
+      // Still on disk, where resume needs it.
+      const local = manager.resume("private-context");
+      expect(local.state.promptSubmitHookMessages).toEqual([CONTEXT_CANARY]);
+      expect(JSON.stringify(local.transcript.toMessages())).toContain(`${CONTEXT_CANARY}:rewrite`);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test.each(["session_detail", "output_journal"])("%s requires sessionId", async (type) => {
     expect(await queryWire({ type })).toEqual(
       queryError(ErrorCodes.InvalidParams, `sessionId required for ${type}`),
@@ -424,6 +459,14 @@ describe("AgentServer query wire contracts before registry extraction", () => {
       ),
     ).toEqual(queryResult("usage", { scope: "session", requests: 3 }));
     expect(calls).toEqual([bounds]);
+    await queryWire(
+      { type: "usage", ...bounds, bucketMs: 3_600_000, bucketOffsetMs: 28_800_000 },
+      {
+        sessionExistsOnDisk: () => true,
+        getUsageSummary: (options: unknown) => calls.push(options),
+      },
+    );
+    expect(calls[1]).toEqual({ ...bounds, bucketMs: 3_600_000, bucketOffsetMs: 28_800_000 });
     expect(
       await queryWire(
         { type: "usage", sessionId: "missing" },

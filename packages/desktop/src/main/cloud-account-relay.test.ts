@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
-import { randomBytes, randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { MobileRemoteController } from "./mobile-remote-controller.js";
@@ -9,8 +9,96 @@ import type { RelayRegistration } from "./device-relay-store.js";
 import { EventEmitter } from "node:events";
 import { AccountDeviceService, type AccountDeviceIdentity } from "./account-device-service.js";
 import type { AccountDeviceEvent } from "../shared/account-device.js";
+import { createAccountRemoteAuthorizer } from "./account-device-passkey.js";
 
 const token = () => randomBytes(32).toString("base64url");
+
+function passkeyBrokerFixture(
+  options: { wrongUrl?: boolean; wrongTarget?: boolean; cancelOnOpen?: boolean } = {},
+) {
+  const controller = new AbortController();
+  const requests: Array<{ path: string; body?: any; token?: string }> = [];
+  const opened: string[] = [];
+  let now = 1000;
+  const input = {
+    origin: "https://account.fixture.invalid",
+    token: "native-private-root",
+    hostId: "target",
+    environmentId: "target-env",
+    sourceHostId: "source",
+    sourceDeviceCredential: "private-source-proof",
+    signal: controller.signal,
+  };
+  const authorize = createAccountRemoteAuthorizer({
+    now: () => now,
+    sleep: async (ms) => {
+      now += ms;
+    },
+    openExternal: async (url) => {
+      opened.push(url);
+      if (options.cancelOnOpen) controller.abort();
+    },
+    request: async (request) => {
+      requests.push(request);
+      expect(request.origin).toBe(input.origin);
+      expect(request.token).toBe(input.token);
+      if (request.path.endsWith("/start"))
+        return {
+          receipt: "r".repeat(43),
+          authorizationUrl: `${options.wrongUrl ? "https://untrusted.fixture.invalid" : input.origin}/remote-access?request=${"p".repeat(43)}`,
+          expiresAt: now + 60_000,
+          pollIntervalMs: 1000,
+        };
+      if (request.path.endsWith("/cancel")) return { ok: true };
+      if (requests.filter((item) => item.path.endsWith("/poll")).length === 1)
+        return { status: "pending" };
+      return {
+        authorization: "a".repeat(43),
+        hostId: options.wrongTarget ? "foreign" : input.hostId,
+        environmentId: input.environmentId,
+        sourceHostId: input.sourceHostId,
+        expiresAt: now + 60_000,
+      };
+    },
+  });
+  return { authorize, input, requests, opened };
+}
+
+test("native Passkey authorization keeps PKCE/private receipts in main and verifies the selected source and target", async () => {
+  const f = passkeyBrokerFixture();
+  expect(await f.authorize(f.input)).toBe("a".repeat(43));
+  expect(f.opened).toEqual([`${f.input.origin}/remote-access?request=${"p".repeat(43)}`]);
+  const start = f.requests[0]!.body;
+  const poll = f.requests.find((item) => item.path.endsWith("/poll"))!.body;
+  expect(createHash("sha256").update(poll.codeVerifier).digest("base64url")).toBe(
+    start.codeChallenge,
+  );
+  expect(start).toMatchObject({
+    hostId: "target",
+    environmentId: "target-env",
+    sourceHostId: "source",
+    sourceDeviceCredential: "private-source-proof",
+  });
+  for (const privateValue of [
+    f.input.token,
+    f.input.sourceDeviceCredential,
+    poll.receipt,
+    poll.codeVerifier,
+  ])
+    expect(f.opened.join("")).not.toContain(privateValue);
+});
+
+test.each([{ wrongUrl: true }, { wrongTarget: true }, { cancelOnOpen: true }])(
+  "native Passkey authorization cancels rejected or abandoned private receipts: %j",
+  async (options) => {
+    const f = passkeyBrokerFixture(options);
+    await expect(f.authorize(f.input)).rejects.toThrow();
+    expect(f.requests.at(-1)!.path).toBe("/api/v1/account/remote-access/cancel");
+    if (options.wrongUrl) expect(f.opened).toHaveLength(0);
+    if (options.cancelOnOpen)
+      expect(f.requests.some((item) => item.path.endsWith("/poll"))).toBe(false);
+  },
+);
 
 for (const unreadable of [false, true]) {
   test(
@@ -318,7 +406,7 @@ test("stopping during a committed device refresh preserves its rotated credentia
   }
 });
 
-test("Desktop login recovers a first network failure, enrolls once and reconnects the stable device without a passcode or extra buttons", async () => {
+test("Desktop login binds automatically after network recovery but requires separate permission to accept remote access", async () => {
   const root = mkdtempSync(join(tmpdir(), "account-relay-auto-"));
   const identity = { origin: "https://account.example", accountId: randomUUID() };
   let saved: RelayRegistration | undefined;
@@ -401,6 +489,7 @@ test("Desktop login recovers a first network failure, enrolls once and reconnect
         credentialExpiresAt: Date.now() + 600_000,
         credentialEpoch: 1,
         protocolVersion: 1,
+        remoteAccessEnabled: true, // An enrollment response cannot grant local consent.
       };
     },
     connectorFactory: (options) =>
@@ -420,7 +509,7 @@ test("Desktop login recovers a first network failure, enrolls once and reconnect
     expect(controller.relayStatus().state).toBe("unregistered");
     await expect(controller.activateAccountRelay(identity, () => true)).rejects.toThrow();
     const deadline = Date.now() + 2_000;
-    while (controller.relayStatus().state !== "ready") {
+    while (!controller.relayStatus().registered) {
       if (Date.now() > deadline) throw new Error("Automatic first-login recovery did not occur");
       await new Promise((resolve) => setTimeout(resolve, 5));
     }
@@ -428,10 +517,22 @@ test("Desktop login recovers a first network failure, enrolls once and reconnect
       controller.activateAccountRelay(identity, () => true),
       controller.activateAccountRelay(identity, () => true),
     ]);
-    expect(controller.relayStatus().state).toBe("ready");
+    expect(controller.relayStatus()).toMatchObject({
+      state: "stopped",
+      remoteAccessEnabled: false,
+    });
     expect(enrollments).toBe(1);
-    expect(starts).toBe(1);
+    expect(starts).toBe(0);
+    expect(configured).toBeUndefined();
     const binding = [saved!.hostId, saved!.environmentId, saved!.credentialEpoch];
+    expect(
+      await controller.accountRelaySource(identity, new AbortController().signal),
+    ).toMatchObject({
+      sourceHostId: saved!.hostId,
+    });
+    await controller.start({ mode: "relay" });
+    expect(controller.relayStatus()).toMatchObject({ state: "ready", remoteAccessEnabled: true });
+    expect(starts).toBe(1);
     expect(configured.hostId).toBe(saved!.hostId);
     expect(await configured.listProjects()).toEqual([
       { id: "actual-project", name: "My project", path: "/target/project" },
@@ -439,6 +540,12 @@ test("Desktop login recovers a first network failure, enrolls once and reconnect
     await controller.stop();
     await controller.activateAccountRelay(identity, () => true);
     expect(enrollments).toBe(1);
+    expect(starts).toBe(1);
+    expect(controller.relayStatus()).toMatchObject({
+      state: "stopped",
+      remoteAccessEnabled: false,
+    });
+    await controller.start({ mode: "relay" });
     expect(starts).toBe(2);
     expect([saved!.hostId, saved!.environmentId, saved!.credentialEpoch]).toEqual(binding);
     const publicState = JSON.stringify(controller.relayStatus());
@@ -451,6 +558,61 @@ test("Desktop login recovers a first network failure, enrolls once and reconnect
   } finally {
     await controller.dispose();
     rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("turning remote access off still stops and retires stale saved permission if secure storage fails", async () => {
+  let saved: RelayRegistration | undefined = {
+    relayOrigin: "https://account.example",
+    publicOrigin: "https://device.example",
+    hostId: randomUUID(),
+    environmentId: randomUUID(),
+    accountId: randomUUID(),
+    name: "Computer",
+    protocolVersion: 1,
+    credentialEpoch: 1,
+    credential: token(),
+    refreshToken: token(),
+    credentialExpiresAt: Date.now() + 600_000,
+    remoteAccessEnabled: true,
+  };
+  let active = true;
+  const retired: string[] = [];
+  const controller = new MobileRemoteController({
+    host: {
+      status: () => (active ? { mode: "relay" } : undefined),
+      stop: async () => {
+        active = false;
+      },
+      onlineDeviceIds: () => [],
+    } as any,
+    tunnel: { stop: async () => {}, isRunning: () => false, isConnected: () => false } as any,
+    binary: {} as any,
+    passcode: {} as any,
+    store: {
+      load: () => saved,
+      save: () => {
+        throw new Error("keychain locked");
+      },
+      forget: () => {
+        saved = undefined;
+      },
+    } as any,
+    accountRequest: async (request) => {
+      retired.push(request.path);
+      return {};
+    },
+    environmentDir: "/unused",
+    changed: () => {},
+  });
+  try {
+    await expect(controller.stop()).rejects.toThrow("keychain locked");
+    expect(active).toBe(false);
+    expect(saved).toBeUndefined();
+    expect(controller.relayStatus()).toMatchObject({ state: "storage-error", registered: false });
+    expect(retired).toEqual(["/api/v1/account/logout"]);
+  } finally {
+    await controller.dispose();
   }
 });
 
@@ -629,7 +791,7 @@ class FixtureSocket extends EventEmitter {
     }
   }
 }
-function fixture(options: { grantTtlMs?: number } = {}) {
+function fixture(options: { grantTtlMs?: number; sourceProofUnavailable?: boolean } = {}) {
   let identity: AccountDeviceIdentity | undefined = {
     origin: "https://account.fixture.invalid",
     accountId: "account-a",
@@ -650,15 +812,25 @@ function fixture(options: { grantTtlMs?: number } = {}) {
   let foreignEnvironment = false;
   let grantTtlMs = options.grantTtlMs ?? 60_000;
   let selectionReply = true;
+  let authorizations = 0;
+  let sourceProofReads = 0;
+  const capabilityScopes: string[] = [];
   const service = new AccountDeviceService({
+    authorizeTarget: async () => {
+      authorizations++;
+      return "passkey-once";
+    },
     identity: () => identity,
     credential: async () => "account-bearer-do-not-forward",
-    sourceProof: async () => ({
-      sourceHostId: "source-host",
-      sourceDeviceCredential: "source-device-secret",
-    }),
-    relayOrigin: async (account) =>
-      foreignCapability ? "https://untrusted.fixture.invalid" : account.origin,
+    sourceProof: async () => {
+      sourceProofReads++;
+      if (options.sourceProofUnavailable) throw new Error("本机设备授权不可用。");
+      return { sourceHostId: "source-host", sourceDeviceCredential: "source-device-secret" };
+    },
+    relayOrigin: async (account, scope) => {
+      capabilityScopes.push(scope);
+      return foreignCapability ? "https://untrusted.fixture.invalid" : account.origin;
+    },
     fetch: (async (url: string, init: RequestInit) => {
       const parsed = new URL(url);
       const headers = init.headers as Record<string, string>;
@@ -677,6 +849,7 @@ function fixture(options: { grantTtlMs?: number } = {}) {
             environmentId: host.environmentId,
             sourceHostId: "source-host",
             sourceDeviceCredential: "source-device-secret",
+            authorization: "passkey-once",
           });
           return Response.json({
             ...host,
@@ -730,6 +903,9 @@ function fixture(options: { grantTtlMs?: number } = {}) {
   });
   service.setEventSink((owner, event) => events.push({ owner, event }));
   return {
+    authorizations: () => authorizations,
+    sourceProofReads: () => sourceProofReads,
+    capabilityScopes,
     service,
     devices,
     sockets,
@@ -756,6 +932,117 @@ function fixture(options: { grantTtlMs?: number } = {}) {
     },
   };
 }
+
+test("computer directory needs only account authorization while execution retains local device proof", async () => {
+  const f = fixture({ sourceProofUnavailable: true });
+  try {
+    const devices = await f.service.list();
+    expect(devices).toHaveLength(2);
+    expect(devices.every((device) => !("publicOrigin" in device))).toBe(true);
+    expect(f.sourceProofReads()).toBe(0);
+    expect(f.capabilityScopes).toEqual(["directory"]);
+    expect(f.requests.map((request) => request.url)).toEqual([
+      "https://account.fixture.invalid/api/v1/remote-hosts",
+    ]);
+    expect(f.authorizations()).toBe(0);
+    await expect(f.service.projects(1, { hostId: "a" })).rejects.toThrow("本机设备授权");
+    await expect(
+      f.service.connect(1, { hostId: "a", projectId: "shared-project-id" }),
+    ).rejects.toThrow("本机设备授权");
+    expect(f.capabilityScopes).toEqual(["directory", "dispatch", "dispatch"]);
+    expect(f.sourceProofReads()).toBe(2);
+    expect(f.requests).toHaveLength(1);
+    expect(f.sockets).toHaveLength(0);
+    expect(f.authorizations()).toBe(0);
+    f.foreignCapability();
+    await expect(f.service.list()).rejects.toThrow("同源");
+    expect(f.sourceProofReads()).toBe(2);
+    expect(f.requests).toHaveLength(1);
+    f.signOut();
+    await expect(f.service.list()).rejects.toThrow("登录");
+  } finally {
+    f.service.retireIdentity();
+  }
+});
+
+test.each(["capability", "credential", "directory"])(
+  "computer directory drops a retired account during %s without reading local credentials",
+  async (stage) => {
+    for (const change of ["switch", "logout"] as const) {
+      let identity: AccountDeviceIdentity | undefined = {
+        origin: "https://account.fixture.invalid",
+        accountId: "first-account",
+      };
+      let finish!: () => void;
+      let started!: () => void;
+      const pendingGate = new Promise<void>((resolve) => {
+        finish = resolve;
+      });
+      const startedGate = new Promise<void>((resolve) => {
+        started = resolve;
+      });
+      const pause = async (at: string) => {
+        if (at !== stage) return;
+        started();
+        await pendingGate;
+      };
+      const calls: string[] = [];
+      let signal: AbortSignal | undefined;
+      const service = new AccountDeviceService({
+        identity: () => identity,
+        relayOrigin: async (captured, scope) => {
+          expect(scope).toBe("directory");
+          calls.push("capability");
+          await pause("capability");
+          return captured.origin;
+        },
+        credential: async (_captured, operationSignal) => {
+          calls.push("credential");
+          signal = operationSignal;
+          await pause("credential");
+          return "account-only-fixture";
+        },
+        sourceProof: async () => {
+          throw new Error("directory must not load device credentials");
+        },
+        authorizeTarget: async () => {
+          throw new Error("directory must not authorize execution");
+        },
+        fetch: (async (url: string, init: RequestInit) => {
+          expect(url).toBe("https://account.fixture.invalid/api/v1/remote-hosts");
+          expect(init.method).toBe("GET");
+          expect(init.credentials).toBe("omit");
+          expect(init.redirect).toBe("error");
+          calls.push("directory");
+          await pause("directory");
+          return Response.json({ hosts: [] });
+        }) as typeof fetch,
+      });
+      try {
+        const pending = service.list();
+        await startedGate;
+        if (change === "logout") {
+          identity = undefined;
+          service.retireIdentity();
+          if (signal) expect(signal.aborted).toBe(true);
+        } else {
+          identity = { ...identity!, accountId: "second-account" };
+        }
+        finish();
+        await expect(pending).rejects.toThrow("授权已结束");
+        expect(calls).toEqual(
+          ["capability", "credential", "directory"].slice(
+            0,
+            ["capability", "credential", "directory"].indexOf(stage) + 1,
+          ),
+        );
+      } finally {
+        finish();
+        service.retireIdentity();
+      }
+    }
+  },
+);
 
 test("account devices bind tasks, output, approvals and Stop to the original Host/project/session", async () => {
   const f = fixture();
@@ -1027,6 +1314,25 @@ test("submission errors without sessionId are correlated; unknown admission and 
   }
 });
 
+test("project discovery shares only its next connection's Passkey grant and owner teardown clears it", async () => {
+  const f = fixture();
+  try {
+    await f.service.projects(1, { hostId: "a" });
+    expect(f.authorizations()).toBe(1);
+    await f.service.connect(1, { hostId: "a", projectId: "shared-project-id" });
+    expect(f.authorizations()).toBe(1);
+    await f.service.connect(1, { hostId: "a", projectId: "shared-project-id" });
+    expect(f.authorizations()).toBe(2);
+    await f.service.projects(2, { hostId: "a" });
+    expect(f.authorizations()).toBe(3);
+    f.service.releaseOwner(2);
+    await f.service.connect(2, { hostId: "a", projectId: "shared-project-id" });
+    expect(f.authorizations()).toBe(4);
+  } finally {
+    f.service.retireIdentity();
+  }
+});
+
 test("owner teardown aborts an in-flight handoff and cannot leave an orphan execution socket", async () => {
   let release!: () => void;
   const gate = new Promise<void>((resolve) => {
@@ -1037,6 +1343,7 @@ test("owner teardown aborts an in-flight handoff and cannot leave an orphan exec
     started = resolve;
   });
   const service = new AccountDeviceService({
+    authorizeTarget: async () => "passkey-once",
     identity: () => ({ origin: "https://account.fixture.invalid", accountId: "a" }),
     relayOrigin: async (identity) => identity.origin,
     sourceProof: async () => ({ sourceHostId: "source", sourceDeviceCredential: "source-secret" }),

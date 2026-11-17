@@ -2,6 +2,11 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { act } from "react";
 import { ensureMiniDom, flushMicrotasks, renderHook } from "../test-utils/renderHook";
 import { useRemoteSocket, type ResyncReason } from "./useRemoteSocket";
+import {
+  AccountRelaySessionExpired,
+  loadAccountRelayCredential,
+  remoteDeviceCredential,
+} from "../lib/accountRelaySession.js";
 
 class MemoryStorage {
   private readonly values = new Map<string, string>();
@@ -81,6 +86,10 @@ function setupBrowser(): void {
   storage.setItem("cs.deviceName", "Phone");
 
   const restores = [
+    defineTestProperty(globalThis, "fetch", {
+      value: async () => Response.json({ active: false }),
+      writable: true,
+    }),
     defineTestProperty(globalThis, "localStorage", { value: storage, writable: true }),
     defineTestProperty(globalThis, "WebSocket", { value: FakeWebSocket, writable: true }),
     defineTestProperty(window, "location", {
@@ -103,6 +112,193 @@ afterEach(() => {
 });
 
 describe("useRemoteSocket resync", () => {
+  test.each([60_000, 600_400, 630_000])(
+    "account bootstrap tolerates bounded clock skew at %d ms while preserving its local lifetime cap",
+    async (remaining) => {
+      setupBrowser();
+      const now = 1_800_000_000_000;
+      const restoreNow = defineTestProperty(Date, "now", { value: () => now });
+      globalThis.fetch = (async (url: string) => {
+        expect(url).toBe("/api/v1/relay/session");
+        return Response.json({
+          active: true,
+          deviceId: "account-browser",
+          secretHash: "a".repeat(43),
+          expiresAt: now + remaining,
+        });
+      }) as typeof fetch;
+      try {
+        const credential = await loadAccountRelayCredential(new AbortController().signal);
+        expect(credential?.expiresAt).toBe(now + Math.min(remaining, 600_000));
+        expect(localStorage.getItem("cs.deviceId")).toBe("device-1");
+      } finally {
+        restoreNow();
+      }
+    },
+  );
+
+  test.each([-1, 630_001])(
+    "account bootstrap rejects expired or out-of-range grants at %d ms",
+    async (remaining) => {
+      setupBrowser();
+      const now = 1_800_000_000_000;
+      const restoreNow = defineTestProperty(Date, "now", { value: () => now });
+      globalThis.fetch = (async () =>
+        Response.json({
+          active: true,
+          deviceId: "account-browser",
+          secretHash: "a".repeat(43),
+          expiresAt: now + remaining,
+        })) as typeof fetch;
+      try {
+        await expect(
+          loadAccountRelayCredential(new AbortController().signal),
+        ).rejects.toBeInstanceOf(AccountRelaySessionExpired);
+      } finally {
+        restoreNow();
+      }
+    },
+  );
+
+  test("an account browser uses an in-memory grant without replacing its legacy pairing", async () => {
+    setupBrowser();
+    window.location.origin = "https://computer.fixture.test";
+    const calls: string[] = [];
+    const credential = { deviceId: "account-browser", secretHash: "a".repeat(43) };
+    globalThis.fetch = (async (url: string) => {
+      calls.push(url);
+      return Response.json({
+        active: true,
+        ...credential,
+        expiresAt: Date.now() + 60_000,
+        accountEntryUrl: "https://account.test/app",
+      });
+    }) as typeof fetch;
+    window.location.search = "?pairing=old-token";
+    const hook = await renderHook(() => useRemoteSocket({}));
+    const ws = FakeWebSocket.instances[0]!;
+    await act(async () => {
+      ws.open();
+      await flushMicrotasks();
+    });
+    expect(ws.sent.map((line) => JSON.parse(line))).toEqual([
+      { type: "auth.device", ...credential },
+    ]);
+    expect(remoteDeviceCredential()).toEqual(credential);
+    expect(localStorage.getItem("cs.deviceId")).toBe("device-1");
+    expect(localStorage.getItem("cs.deviceSecret")).toBe("secret-1");
+    await act(async () => {
+      ws.message({ type: "auth.ok", device: { id: credential.deviceId, name: "Account" } });
+      ws.onclose?.({ code: 4407 });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.accountAccessRequired).toBe(true);
+    expect(hook.result.current.accountEntryUrl).toBe("https://account.test/app");
+    await act(async () => {
+      hook.result.current.logout();
+      await flushMicrotasks();
+    });
+    expect(calls).toEqual(["/api/v1/relay/session", "/api/v1/relay/session/logout"]);
+    expect(localStorage.getItem("cs.deviceId")).toBe("device-1");
+    await hook.unmount();
+  });
+
+  test.each([200, 401])(
+    "a missing or expired account cookie requests Passkey again without durable-pairing fallback (%s)",
+    async (status) => {
+      setupBrowser();
+      window.location.origin = "https://computer.fixture.test";
+      globalThis.fetch = (async () =>
+        Response.json(
+          { active: false, accountRelay: true, accountEntryUrl: "https://account.test/app" },
+          { status },
+        )) as typeof fetch;
+      const hook = await renderHook(() => useRemoteSocket({}));
+      expect(FakeWebSocket.instances).toHaveLength(0);
+      expect(hook.result.current.accessRequired).toBe(true);
+      expect(hook.result.current.accountAccessRequired).toBe(true);
+      expect(localStorage.getItem("cs.deviceId")).toBe("device-1");
+      await hook.unmount();
+    },
+  );
+
+  test("an expired outer relay grant requires account authorization before constructing a socket", async () => {
+    setupBrowser();
+    window.location.origin = "https://computer.fixture.test";
+    window.location.search = "?pairing=old-token";
+    const calls: string[] = [];
+    globalThis.fetch = (async (url: string) => {
+      expect(url).toBe("/api/v1/relay/session");
+      calls.push(url);
+      return Response.json({ error: "invalid_relay_authorization" }, { status: 401 });
+    }) as typeof fetch;
+    const hook = await renderHook(() => useRemoteSocket({}));
+    try {
+      expect(hook.result.current.status).toBe("offline");
+      expect(hook.result.current.accessRequired).toBe(true);
+      expect(hook.result.current.accountAccessRequired).toBe(true);
+      // A cold page has no validated account destination; its existing navigation
+      // fallback must ask the gateway, rather than inventing a URL from this error.
+      expect(hook.result.current.accountEntryUrl).toBeUndefined();
+      expect(FakeWebSocket.instances).toHaveLength(0);
+      expect(hook.result.current.send({ type: "chat.send", text: "keep this draft" })).toBe(false);
+      expect(
+        hook.result.current.send({
+          type: "approval.respond",
+          approvalId: "pending",
+          decision: "approve",
+        }),
+      ).toBe(false);
+      await act(async () => {
+        for (const name of ["online", "focus", "pageshow"]) window.dispatchEvent(new Event(name));
+        document.dispatchEvent(new Event("visibilitychange"));
+        await flushMicrotasks();
+      });
+      expect(calls).toEqual(["/api/v1/relay/session"]);
+      expect(FakeWebSocket.instances).toHaveLength(0);
+      expect(localStorage.getItem("cs.deviceId")).toBe("device-1");
+      expect(localStorage.getItem("cs.deviceSecret")).toBe("secret-1");
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  test.each([
+    { name: "older Host without a bootstrap endpoint", status: 404, error: undefined },
+    { name: "unrelated unauthorized response", status: 401, error: "passcode_required" },
+    {
+      name: "matching error with a different status",
+      status: 403,
+      error: "invalid_relay_authorization",
+    },
+    { name: "matching error without rejection", status: 200, error: "invalid_relay_authorization" },
+  ])("$name retains the existing legacy bootstrap behavior", async ({ status, error }) => {
+    setupBrowser();
+    window.location.origin = "https://computer.fixture.test";
+    globalThis.fetch = (async (url: string) => {
+      expect(url).toBe("/api/v1/relay/session");
+      return error === undefined
+        ? new Response("not found", { status, headers: { "content-type": "text/plain" } })
+        : Response.json({ error }, { status });
+    }) as typeof fetch;
+    const hook = await renderHook(() => useRemoteSocket({}));
+    try {
+      expect(hook.result.current.accessRequired).toBe(false);
+      expect(hook.result.current.accountAccessRequired).toBe(false);
+      expect(FakeWebSocket.instances).toHaveLength(1);
+      const ws = FakeWebSocket.instances[0]!;
+      await act(async () => {
+        ws.open();
+        await flushMicrotasks();
+      });
+      expect(ws.sent.map((line) => JSON.parse(line))).toEqual([
+        { type: "auth.device", deviceId: "device-1", secretHash: "secret-1" },
+      ]);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
   test("a paired browser authenticates without consuming a bookmarked pairing link", async () => {
     setupBrowser();
     window.location.search = "?pairing=expired-test-token&view=panels";

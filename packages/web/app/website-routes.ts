@@ -25,12 +25,33 @@ export function isPublicWebsiteOrigin(url: URL): boolean {
   return ["https://codeshell.site", "https://www.codeshell.site"].includes(url.origin);
 }
 
+/** A public target hint never grants access; the signed-in directory must contain it.
+ * null preserves an invalid hint as an error instead of falling back to another computer. */
+export function websiteComputerTarget(url: URL): string | null | undefined {
+  const values = url.searchParams.getAll("computer");
+  if (!values.length) return undefined;
+  return values.length === 1 && /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(values[0])
+    ? values[0]
+    : null;
+}
+
+export function websiteCloudSelected(url: URL): boolean {
+  if (websiteComputerTarget(url) !== undefined) return false;
+  if (url.searchParams.get("target") === "choose") return false;
+  if (url.searchParams.get("target") === "cloud" || validProjectId(url.searchParams.get("project")))
+    return true;
+  // Preserve existing private Host/root entry. Public /app starts with a choice.
+  return !isPublicWebsiteOrigin(url) && !["/app", "/app/"].includes(url.pathname);
+}
+
 /** Registration accepts no callback, redirect, token or mode from the URL. */
 export function isRegistrationRoute(url: URL): boolean {
   return url.pathname === "/register" || url.pathname === "/register/";
 }
 
 export function parseWebsiteRoute(url: URL): WebsiteRoute {
+  if (url.pathname === "/admin" || url.pathname === "/admin/")
+    return { kind: "admin", section: "summary" };
   if (url.pathname === "/api/v1/account/manage" || url.pathname === "/settings/account")
     return { kind: "account", section: "profile" };
   const account = /^\/settings\/account\/([^/]+)\/?$/.exec(url.pathname);
@@ -42,18 +63,26 @@ export function parseWebsiteRoute(url: URL): WebsiteRoute {
   return { kind: "workbench" };
 }
 
-/** Only public project/session selections survive a settings round trip. */
+/** Only public computer/project/session selections survive a settings round trip. */
 export function websiteRouteUrl(route: WebsiteRoute, current: URL): string {
   const query = new URLSearchParams();
+  const computer = websiteComputerTarget(current);
+  const target = current.searchParams.get("target");
+  if (target === "cloud" || target === "choose") query.set("target", target);
+  if (computer !== undefined) {
+    query.set("target", "choose");
+    // Keep invalid selections visibly invalid, without copying untrusted input.
+    query.set("computer", computer ?? "");
+  }
   const project = current.searchParams.get("project");
   const session = current.searchParams.get("session");
-  if (validProjectId(project)) {
+  if (computer === undefined && validProjectId(project)) {
     query.set("project", project);
     if (session && /^[A-Za-z0-9_-]{1,128}$/.test(session)) query.set("session", session);
   }
   const workbench = parseWorkbenchLocation(current);
-  if (workbench.view !== "chat") query.set("view", workbench.view);
-  if (workbench.view === "settings" && workbench.section !== "overview")
+  if (computer === undefined && workbench.view !== "chat") query.set("view", workbench.view);
+  if (computer === undefined && workbench.view === "settings" && workbench.section !== "overview")
     query.set("section", workbench.section);
   const path =
     route.kind === "workbench"

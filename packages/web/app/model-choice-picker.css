@@ -5,7 +5,7 @@
   gap: 8px;
   min-width: 0;
   max-width: 100%;
-  min-height: 40px;
+  min-height: 44px;
   padding: 9px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -31,6 +31,18 @@
 }
 .model-choice-trigger.model-button > svg {
   transform: none;
+}
+.model-choice-trigger.model-button {
+  max-width: 100%;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+}
+.model-choice-trigger:not(:disabled):hover {
+  background: var(--panel);
 }
 .model-choice-trigger:disabled {
   opacity: 0.55;
@@ -67,6 +79,20 @@
 }
 .model-choice-dialog::backdrop {
   background: #0006;
+}
+.model-choice-dialog.model-choice-compact {
+  inset: var(--picker-viewport-top) 0 auto;
+  width: min(420px, calc(100vw - 24px));
+  height: auto;
+  margin-top: max(12px, calc((var(--picker-viewport-height) - 400px) / 2));
+}
+.model-choice-compact .model-choice-list {
+  flex: 0 1 auto;
+}
+.model-choice-compact .model-choice-list button > span:first-child {
+  display: block;
+  overflow: visible;
+  -webkit-line-clamp: unset;
 }
 .model-choice-head {
   display: flex;
@@ -165,6 +191,7 @@
   color: var(--muted);
   font-size: 12px;
   font-weight: normal;
+  margin-top: 3px;
 }
 .model-choice-empty,
 .model-choice-status {

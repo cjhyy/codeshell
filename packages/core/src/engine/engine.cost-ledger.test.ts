@@ -116,7 +116,8 @@ function runtime(root: string) {
 test("real Engine child execution rolls up leaf costs once and keeps Session/Runtime views distinct", async () => {
   const root = directory();
   const rt = runtime(root);
-  const parent = engine(root, rt);
+  // Each Session's tools come from its own preset; load the host tool eagerly.
+  const parent = engine(root, rt, ["CostChild"]);
   parent.registerCustomTool(
     {
       name: "CostChild",

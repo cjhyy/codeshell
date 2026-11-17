@@ -23,11 +23,54 @@ export interface CapabilityDynamicContext {
   cwd: string;
   workspace: import("../workspace/workspace-context.js").WorkspaceContext;
   preset: AgentPreset;
+  /** The Session this context is built for; absent for legacy callers. */
+  session?: {
+    id: string;
+    kind?: string;
+    profileId?: string;
+    isSubAgent: boolean;
+  };
+  /** This run's behavior-profile parameters. In-process providers only. */
+  runParams?: Readonly<Record<string, unknown>>;
+}
+
+/**
+ * Capability context that is its own section of the context ledger rather
+ * than part of the shared capability text.
+ */
+export interface CapabilityDynamicContextSection {
+  /** Lower-case letters, digits and dashes; the ledger key is `capability-<key>`. */
+  key: string;
+  /** Whole-text sections only; a list section's text is built from its parts. */
+  text?: string;
+  /**
+   * A list section: one entry per item, so an update sends only the entries
+   * that were added, replaced or removed. `header` and `footer` frame them.
+   */
+  items?: readonly { id: string; text: string; label?: string }[];
+  header?: string;
+  footer?: string;
+  /**
+   * "snapshot-only": a point-in-time snapshot (a git status, say). It is shown
+   * when the context is sent whole and never updated afterwards, so its text
+   * must say that it is a snapshot that will not update.
+   * "ids" (list sections): a ranked or windowed view. Compared by entry id
+   * only, so an entry's row is never resent while it stays; `knownIds` lists
+   * every entry that still exists, shown or not.
+   * Without either, a changed section is updated: entries for a list, the
+   * whole text otherwise.
+   */
+  compare?: "snapshot-only" | "ids";
+  knownIds?: readonly string[];
 }
 
 export type CapabilityDynamicContextProvider = (
   context: CapabilityDynamicContext,
-) => string | undefined | Promise<string | undefined>;
+) =>
+  | string
+  | CapabilityDynamicContextSection
+  | undefined
+  | Promise<string | CapabilityDynamicContextSection | undefined>;
 
 export type CapabilityInstructionBoundaryFinder = (cwd: string) => string | null;
 

@@ -1076,6 +1076,16 @@
   --cs-status-warn: 38 92% 38%;
   --cs-status-err: 0 72% 50%;
   --cs-status-idle: 240 4% 46%;
+
+  /* Chart series identity, assigned in this fixed order and never cycled.
+     Separate from the status colors; each mode's steps are checked against
+     its card surface for colour-vision separation and contrast. */
+  --cs-viz-1: #2a78d6;
+  --cs-viz-2: #eb6834;
+  --cs-viz-3: #1baf7a;
+  --cs-viz-4: #eda100;
+  --cs-viz-5: #e87ba4;
+  --cs-viz-6: #008300;
 }
 
 .dark {
@@ -1105,6 +1115,13 @@
   --cs-status-warn: 42 92% 62%;
   --cs-status-err: 0 84% 65%;
   --cs-status-idle: 240 5% 65%;
+
+  --cs-viz-1: #3987e5;
+  --cs-viz-2: #d95926;
+  --cs-viz-3: #199e70;
+  --cs-viz-4: #c98500;
+  --cs-viz-5: #d55181;
+  --cs-viz-6: #008300;
 }
 
 /*

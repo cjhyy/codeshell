@@ -587,13 +587,15 @@ describe("Host turn queue in the remote composer", () => {
         );
         await flushMicrotasks();
       });
-      const select = elementsByTag(host, "SELECT")[0]!;
-      expect(reactProps(select).disabled).toBe(true);
-      expect(textOf(host)).toContain("1 条排队消息按当前模式提交");
-      await act(async () => {
-        reactProps(select).onChange({ target: { value: "bypassPermissions" } });
-        await flushMicrotasks();
-      });
+      const picker = elementsByTag(host, "BUTTON").find(
+        (button) => reactProps(button)["aria-label"] === "权限模式",
+      );
+      expect(picker).toBeDefined();
+      expect(reactProps(picker).disabled).toBe(true);
+      expect(reactProps(picker).value).toBe("default");
+      expect(reactProps(picker)["aria-expanded"]).toBe(false);
+      expect(elementsByTag(host, "DIALOG")).toHaveLength(0);
+      expect(textOf(host)).toContain("1 条排队消息，执行完或取消后可调整");
       expect(requested).toEqual([]);
     } finally {
       await act(async () => root.unmount());

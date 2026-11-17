@@ -27,6 +27,8 @@ export interface RelayRegistration {
   accountId?: string;
   refreshToken?: string;
   credentialExpiresAt?: number;
+  /** Local account preference; absent on older registrations means remote access is off. */
+  remoteAccessEnabled?: boolean;
 }
 export interface RelaySecretCipher {
   available(): boolean;
@@ -48,6 +50,7 @@ export function validRegistration(value: unknown): value is RelayRegistration {
     typeof data.name === "string" &&
     data.name.length > 0 &&
     data.name.length <= 100 &&
+    (data.remoteAccessEnabled === undefined || typeof data.remoteAccessEnabled === "boolean") &&
     (data.accountId === undefined
       ? data.refreshToken === undefined && data.credentialExpiresAt === undefined
       : isRelayHostId(data.accountId) &&
@@ -65,7 +68,7 @@ export class DeviceRelayStore {
   ) {}
   private assertAvailable() {
     if (!this.cipher.available())
-      throw new Error("系统安全存储不可用，请解锁或配置系统密钥环后重新登记。");
+      throw new Error("系统安全存储不可用，请解锁或配置系统密钥环后重试连接。");
   }
   private temporary(bytes: Buffer): string {
     mkdirSync(dirname(this.path), { recursive: true, mode: 0o700 });

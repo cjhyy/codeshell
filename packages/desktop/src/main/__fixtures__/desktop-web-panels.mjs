@@ -7,6 +7,11 @@ import { join, resolve } from "node:path";
 
 const root = realpathSync(process.argv[2]);
 const tunnel = process.argv[3] === "tunnel";
+const relay = process.argv[3] === "relay";
+const publicAccess = tunnel || relay;
+const originalDateNow = Date.now;
+let relayClockOffset = 0;
+if (relay) Date.now = () => originalDateNow() + relayClockOffset;
 process.env.HOME = join(root, "home");
 process.env.CODE_SHELL_HOME = join(root, "code-shell-home");
 const desktopMain = resolve(import.meta.dir, "..");
@@ -54,8 +59,9 @@ writeFileSync(
 );
 writeFileSync(
   join(source, "app/index.html"),
-  '<!doctype html><html><body><script type="module" src="./main.js"></script></body></html>',
+  '<!doctype html><html><head><link rel="stylesheet" href="./style.css"></head><body><script type="module" src="./main.js"></script></body></html>',
 );
+writeFileSync(join(source, "app/style.css"), "body { color: rgb(12, 34, 56); }");
 writeFileSync(join(source, "app/main.js"), 'document.body.dataset.fixture = "desktop-panel";');
 mock.module("electron", () => ({
   app: {
@@ -81,6 +87,7 @@ const server = createServer((request, response) => {
 });
 await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
 const baseUrl = `http://127.0.0.1:${server.address().port}`;
+const publicOrigin = relay ? "https://panel-host.example.test" : baseUrl;
 const { installLocalNetworkGuard } = await import(
   join(repository, "scripts/runtime-cost-smoke-isolation.mjs")
 );
@@ -157,10 +164,11 @@ for (const [cwd, marker] of [
     DEFAULT_PANEL_APP_STORAGE_QUOTA_BYTES,
   );
 const devices = new TrustedDeviceStore(join(root, "devices.json"));
-const device = devices.addDevice({
+let device = devices.addDevice({
   name: "Fixture browser",
   secretHash: "synthetic-paired-secret",
 });
+let deviceSecret = "synthetic-paired-secret";
 let mutations = 0;
 let notifications = 0;
 let busy = false;
@@ -197,43 +205,83 @@ const api = createDesktopWebService({
 });
 let remoteHost;
 let accessCookie;
+let initialRelayExpiry;
 let passcode;
-if (tunnel) {
+if (publicAccess) {
   const { RemoteHostManager } = await import(
     join(repository, "packages/server/src/mobile-remote/remote-host-manager.ts")
   );
   const { AccessPasscode } = await import(
     join(repository, "packages/server/src/mobile-remote/access-passcode.ts")
   );
-  // Reserve the exact origin before Core imports so the network guard stays
-  // installed; then replace the fixture listener with the real tunnel host.
   await new Promise((resolve) => server.close(resolve));
-  passcode = new AccessPasscode({ filePath: join(root, "access.json") });
-  passcode.set("fixture-access-passcode");
   remoteHost = new RemoteHostManager({ devices, webApi: api, onClientEvent: () => {} });
+  if (relay) {
+    remoteHost.setAccountRelayAccess({
+      hostId: "fixture-host",
+      environmentId: "fixture-environment",
+      accountId: "fixture-account",
+      accountOrigin: "https://account.example.test",
+      redeem: async () => ({
+        authorizationKind: "passkey-remote",
+        sourceKind: "browser",
+        authorizationId: "fixture-authorization",
+        accountId: "fixture-account",
+        rootSessionId: "fixture-root",
+        hostId: "fixture-host",
+        environmentId: "fixture-environment",
+        leaseId: "fixture-lease",
+        expiresAt: Date.now() + 90000,
+      }),
+      listProjects: async () => [],
+    });
+  } else {
+    passcode = new AccessPasscode({ filePath: join(root, "access.json") });
+    passcode.set("fixture-access-passcode");
+  }
   const started = await remoteHost.start({
-    mode: "tunnel",
+    mode: relay ? "relay" : "tunnel",
     host: "localhost",
     port: Number(new URL(baseUrl).port),
-    passcode,
+    ...(passcode ? { passcode } : {}),
   });
   assert.equal(started.url, baseUrl);
-  const access = await fetch(`${baseUrl}/health`, {
-    headers: { "X-Access-Passcode": "fixture-access-passcode" },
-  });
-  assert.equal(access.status, 200);
-  accessCookie = access.headers.get("set-cookie").split(";", 1)[0];
-  assert.match(access.headers.get("set-cookie"), /SameSite=Lax/);
+  if (relay) {
+    remoteHost.setPublicBaseUrl(publicOrigin);
+    const claim = await fetch(baseUrl + "/api/v1/relay/session", {
+      method: "POST",
+      headers: {
+        Host: new URL(publicOrigin).host,
+        Origin: publicOrigin,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ handoff: "h".repeat(43) }),
+    });
+    assert.equal(claim.status, 200);
+    const grant = await claim.json();
+    initialRelayExpiry = grant.expiresAt;
+    device = { id: grant.deviceId };
+    deviceSecret = grant.secretHash;
+    accessCookie = claim.headers.get("set-cookie").split(";", 1)[0];
+  } else {
+    const access = await fetch(`${baseUrl}/health`, {
+      headers: { "X-Access-Passcode": "fixture-access-passcode" },
+    });
+    assert.equal(access.status, 200);
+    accessCookie = access.headers.get("set-cookie").split(";", 1)[0];
+    assert.match(access.headers.get("set-cookie"), /SameSite=Lax/);
+  }
 }
 let cookie;
 async function request(
   path,
-  { cwd = first, method = "GET", body, authenticated = true, origin = baseUrl } = {},
+  { cwd = first, method = "GET", body, authenticated = true, origin = publicOrigin } = {},
 ) {
   return fetch(baseUrl + path, {
     method,
     headers: {
       Origin: origin,
+      ...(relay ? { Host: new URL(publicOrigin).host } : {}),
       ...((authenticated && cookie) || (accessCookie && origin !== "null")
         ? {
             Cookie: [authenticated && cookie, origin !== "null" && accessCookie]
@@ -247,11 +295,12 @@ async function request(
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
 }
-async function login() {
+async function login({ withExistingCookie = false } = {}) {
+  // A browser re-exchange carries its existing session cookie automatically.
   const response = await request("/api/v1/desktop/session", {
     method: "POST",
-    body: { deviceId: device.id, secretHash: "synthetic-paired-secret" },
-    authenticated: false,
+    body: { deviceId: device.id, secretHash: deviceSecret },
+    authenticated: withExistingCookie,
   });
   assert.equal(response.status, 200);
   cookie = response.headers.get("set-cookie").split(";", 1)[0];
@@ -287,7 +336,39 @@ try {
   assert.equal((await request("/api/v1/panels", { cwd: forged })).status, 403);
   const grantA = await prepare(first);
   const grantB = await prepare(second);
-  if (tunnel) {
+  if (relay) {
+    const previousCookie = accessCookie;
+    relayClockOffset += 30000;
+    const renewed = await request("/api/v1/relay/session", {
+      method: "POST",
+      body: { handoff: "r".repeat(43) },
+    });
+    assert.equal(renewed.status, 200);
+    const next = await renewed.json();
+    assert.equal(next.deviceId, device.id, "renewal must retain the existing Panel owner");
+    assert.equal(next.secretHash, deviceSecret);
+    accessCookie = renewed.headers.get("set-cookie").split(";", 1)[0];
+    const previousDesktopCookie = cookie;
+    await login({ withExistingCookie: true });
+    assert.equal(cookie, previousDesktopCookie, "renewal must not replace the owner session");
+    relayClockOffset = initialRelayExpiry - originalDateNow() + 1;
+    const expired = await fetch(baseUrl + "/api/v1/panels", {
+      headers: {
+        Host: new URL(publicOrigin).host,
+        Origin: publicOrigin,
+        Cookie: `${previousDesktopCookie}; ${previousCookie}`,
+      },
+    });
+    assert.equal(expired.status, 401, "ordinary requests retain the old token expiry");
+    for (const path of [grantA.src, new URL("./main.js", baseUrl + grantA.src).pathname])
+      assert.equal(
+        (await request(path, { authenticated: false, origin: "null" })).status,
+        200,
+        "an existing Panel capability follows the same freshly redeemed owner",
+      );
+    assert.equal(await call(first, grantA, "storage.get", { key: "marker" }), "desktop-first");
+  }
+  if (publicAccess) {
     for (const [path, method] of [
       ["/health", "GET"],
       ["/api/v1/panels", "GET"],
@@ -297,7 +378,7 @@ try {
       [grantA.src, "OPTIONS"],
     ]) {
       const denied = await fetch(baseUrl + path, { method, headers: { Origin: "null" } });
-      assert.equal(denied.status, 401, `${method} ${path} must retain the passcode gate`);
+      assert.equal(denied.status, 401, `${method} ${path} must retain the public access gate`);
     }
     const upgradeStatus = await new Promise((resolve, reject) => {
       const req = http.request(`${baseUrl}/ws`, {
@@ -408,6 +489,18 @@ try {
       origin: "null",
     });
     assert.equal(script.status, 200);
+    assert.equal(script.headers.get("access-control-allow-origin"), "*");
+    assert.equal(script.headers.get("access-control-allow-credentials"), null);
+    assert.equal(script.headers.get("cross-origin-resource-policy"), "cross-origin");
+    const css = await request(grant.src.replace(/index\.html$/, "style.css"), {
+      cwd: undefined,
+      authenticated: false,
+      origin: "null",
+    });
+    assert.equal(css.status, 200);
+    assert.equal(css.headers.get("access-control-allow-origin"), "*");
+    assert.match(css.headers.get("content-type"), /text\/css/);
+    assert.match(await css.text(), /rgb\(12, 34, 56\)/);
     assert.match(await script.text(), /desktop-panel/);
     const head = await request(grant.src.replace(/index\.html$/, "main.js"), {
       method: "HEAD",
@@ -416,6 +509,7 @@ try {
       origin: "null",
     });
     assert.equal(head.status, 200);
+    assert.equal(head.headers.get("access-control-allow-origin"), "*");
     assert.equal(await head.text(), "");
     // The ordinary route retains preflight support once the entrance gate has
     // passed. OPTIONS is deliberately not part of the cookie-free exception.
@@ -430,7 +524,7 @@ try {
         origin: "null",
       })
     ).status,
-    tunnel ? 401 : 404,
+    publicAccess ? 401 : 404,
   );
   const before = await list(first);
   busy = true;
@@ -456,7 +550,7 @@ try {
   );
   assert.equal(
     (await request(grantA.src, { authenticated: false, origin: "null" })).status,
-    tunnel ? 401 : 404,
+    publicAccess ? 401 : 404,
   );
   assert.equal((await request(grantB.src, { authenticated: false, origin: "null" })).status, 200);
   assert.equal((await list(second)).bound, true);
@@ -472,7 +566,7 @@ try {
   assert.equal((await request("/api/v1/auth/logout", { method: "POST", body: {} })).status, 200);
   assert.equal(
     (await request(next.src, { authenticated: false, origin: "null" })).status,
-    tunnel ? 401 : 404,
+    publicAccess ? 401 : 404,
   );
   assert.equal((await request("/api/v1/panels", { cwd: second })).status, 401);
   assert.equal(scheduler.list().length, 1, "logout revokes control, not accepted recurring jobs");
@@ -539,7 +633,7 @@ try {
   assert.equal(scheduler.list().length, 1, "closing Web must not own the Desktop scheduler");
   assert.equal(
     (await request(closing.src, { authenticated: false, origin: "null" })).status,
-    tunnel ? 401 : 404,
+    publicAccess ? 401 : 404,
   );
   api.start();
   await login();
@@ -551,7 +645,7 @@ try {
   api.revokeDevice(device.id);
   assert.equal(
     (await request(revoked.src, { authenticated: false, origin: "null" })).status,
-    tunnel ? 401 : 404,
+    publicAccess ? 401 : 404,
   );
   assert.equal((await request("/api/v1/panels", { cwd: second })).status, 401);
   assert.ok(mutations >= 1);
@@ -575,6 +669,7 @@ try {
       sessionIndependentProjectScope: true,
       forgedProjectScopeRejected: true,
       secondaryRootProjectScope: true,
+      ...(relay ? { accountRelayOpaqueAssets: true, ordinaryRoutesGated: true } : {}),
       ...(tunnel
         ? {
             tunnelOpaqueAssets: true,

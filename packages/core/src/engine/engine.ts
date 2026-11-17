@@ -24,6 +24,10 @@ import { assertDurableRequestOwner } from "../model-request-boundary/session-own
 import type { ModelRequestSigner, ModelRequestSubject } from "../model-request-boundary/types.js";
 import { createLLMClient } from "../llm/client-factory.js";
 import { resolvePromptCachePolicy } from "../llm/prompt-cache.js";
+import { PromptCacheRouteMemory } from "./prompt-cache-route.js";
+import { replayEventIdOf } from "./rollover-context.js";
+import { notePromptPrefixRewrite } from "../utils/prompt-prefix-events.js";
+import { PromptPrefixHeads } from "./prompt-prefix-heads.js";
 import { createRunBatchAuthority } from "../operations/run-batch-authority.js";
 import { createSessionOperationController } from "../operations/controller.js";
 import { CapabilityResolver } from "../operations/resolver.js";
@@ -134,7 +138,7 @@ import {
 import { computeEffectiveDisabledLists } from "../capability-control/disabled-lists.js";
 import { registerFileHistoryHook } from "./file-history-hook.js";
 import type { ToolContext } from "../tool-system/context.js";
-import { resolveToolNamesForPreset, type AgentPreset } from "../preset/index.js";
+import { type AgentPreset } from "../preset/index.js";
 import { type CapabilityDynamicContextProvider } from "../capabilities/index.js";
 import { compileComposition } from "../composition/compiler.js";
 import { LifetimeScope, type Dispose } from "../composition/lifetime.js";
@@ -143,12 +147,17 @@ import { ConfigError } from "../exceptions.js";
 import {
   compositionPromptSections,
   compositionToolCatalog,
-  presetInjectedTools,
   registerAlwaysTools,
   resolveCompositionInstructionBoundary,
   resolvePresetFromComposition,
 } from "../composition/resolve-preset.js";
 import type { ResolvedComposition } from "../composition/types.js";
+import {
+  buildPresetToolRegistry,
+  presetToolNames,
+  withInjectedTools,
+  type PresetToolRegistryInput,
+} from "./engine-tool-registry.js";
 import { ModelPool, type ModelEntry } from "../llm/model-pool.js";
 import { AgentDefinitionRegistry } from "../agent/agent-definition-registry.js";
 import { defaultCacheDir } from "../llm/model-cache.js";
@@ -156,7 +165,7 @@ import { detectProviderFromApiKey, buildModelPool } from "../onboarding.js";
 import { detectPastedNoise } from "../utils/task-sanitizer.js";
 import {
   PromptCacheDiagnosticRecorder,
-  promptCacheDropHint,
+  promptCacheDropLogFields,
   type PromptCacheDiagnosticSample,
 } from "./prompt-cache-diagnostics.js";
 import { EngineRuntime } from "./runtime.js";
@@ -186,8 +195,17 @@ import {
   createRunContextManager,
   composeRunSystemPrompt,
   runtimeContextDynamicText,
-  assembleRunMessages,
 } from "./run-context.js";
+import {
+  NO_HOOK_MESSAGES,
+  assembleRunMessages,
+  cleanedHookMessages,
+  createRunContextLedger,
+  engineContextSections,
+  runtimeContextMessage,
+  type RunContextLedger,
+  type RunHookMessages,
+} from "./run-context-ledger.js";
 import {
   resolveRunGoal,
   armRunGoalHook,
@@ -330,17 +348,24 @@ export function applyBuiltinOverrideVisibility<T extends { name: string }>(
  *   nested-agent tools forced into `disabled` (no grandchildren).
  */
 export class Engine {
-  // Resolved per-session preset. Set in the ctor; re-resolved by
-  // refreshRuntimeConfig on a preset hot-reload so the next-turn PromptComposer
-  // picks up the new preset's system prompt / behavior (#2). NOT readonly for
-  // that reason. NOTE: the toolRegistry's builtin tool SET is still ctor-frozen
-  // and is NOT rebuilt on reload — a preset change that alters the builtin tool
-  // set only takes effect on session restart (logged in refreshRuntimeConfig).
+  // Resolved per-session preset (injected catalog tools merged). Set in the
+  // ctor; re-resolved by refreshRuntimeConfig on a preset hot-reload, which
+  // also rebuilds this Engine's tool registry when the tool set changes.
   private preset: AgentPreset;
   /** Capability-free seed owned by the runtime/host; never mutated by an Engine. */
   private runtimeToolRegistry: ToolRegistry;
-  /** Engine-local view containing only this Engine's capability modules. */
-  private toolRegistry: ToolRegistry;
+  /** This Engine's own tools, resolved from its own preset. */
+  private toolRegistry!: ToolRegistry;
+  private disposeAlwaysTools?: Dispose;
+  /** Host tools from registerCustomTool, re-registered when the registry is rebuilt. */
+  private readonly customTools = new Map<
+    string,
+    { definition: import("../types.js").RegisteredTool; executor: BuiltinToolFn }
+  >();
+  /** A preset reload changed the tool set during a run; rebuild when it ends. */
+  private toolRegistryRebuildPending = false;
+  /** The running Session's identity for hook payloads; absent between runs. */
+  private hookRunIdentity?: { sessionId: string; sessionKind?: string; profileId?: string };
   /** Compiled module contributions — the single composition fact source. */
   private readonly composition: ResolvedComposition;
   private readonly toolCatalog: readonly BuiltinTool[];
@@ -420,6 +445,10 @@ export class Engine {
    * LLM response arrives.
    */
   private ctxOverheadBySid = new Map<string, number>();
+  /** Bounded instruction hashes, retained only for an installed prefix guard. */
+  private readonly userContextHeads = new PromptPrefixHeads();
+  /** Routes whose endpoint rejected explicit cache fields in this process. */
+  private readonly promptCacheRoutes = new PromptCacheRouteMemory();
   private promptCacheDiagnostics = new PromptCacheDiagnosticRecorder({ maxSessions: 256 });
   /**
    * Step-gap steering queue (per sessionId, in-memory). Host pushes user
@@ -680,25 +709,10 @@ export class Engine {
       this.capabilityDynamicContextProviders = this.composition.engine.dynamicContextProviders.map(
         (c) => c.value,
       );
-      this.preset = resolvePresetFromComposition(this.composition, config.preset);
-      // Catalog tools owned by modules that contribute no presets join the
-      // active preset regardless of its name: presets snapshot their tool lists
-      // from catalogs known at module authoring time, which can never include
-      // such packages. Visibility stays gated by exposure.availability.
-      const injectedTools = presetInjectedTools(this.composition);
-      if (injectedTools.length > 0) {
-        this.preset = {
-          ...this.preset,
-          builtinTools: [
-            ...this.preset.builtinTools,
-            ...injectedTools.map((tool) => tool.definition.name),
-          ],
-          defaultPermissionRules: [
-            ...this.preset.defaultPermissionRules,
-            ...injectedTools.flatMap((tool) => [...(tool.exposure.defaultPermissionRules ?? [])]),
-          ],
-        };
-      }
+      this.preset = withInjectedTools(
+        this.composition,
+        resolvePresetFromComposition(this.composition, config.preset),
+      );
       this.permissionController = new PermissionController({
         config: () => this.config,
         updateConfig: (next) => {
@@ -707,54 +721,30 @@ export class Engine {
         presetRules: () => [...this.preset.defaultPermissionRules],
         runInProgress: () => this.runInProgress,
       });
-      // Fold the project's capabilityOverrides.builtin overlay over the global
-      // enabled/disabled builtin lists so a project can force-enable a
-      // globally-disabled builtin tool or force-disable a globally-enabled one
-      // (tri-state). Mirrors readDisabledLists for skills/plugins/agents; no cwd
-      // / no overlay → the config lists pass through unchanged (zero regression).
-      //
-      // #7: this builds the ctor-FROZEN builtin tool SET in the registry — a
-      // mid-session project override can't rebuild it. To make a builtin `off`
-      // toggle apply mid-session, run()'s per-turn tool-list assembly re-reads
-      // readBuiltinOverride(cwd) and HIDES `off` builtins from the turn's tool
-      // list (see the allToolDefs filter). `on` here can force-enable a
-      // globally-disabled builtin INTO the frozen set at construction; the
-      // per-turn path can only hide, not add, so a freshly-`on`'d builtin not in
-      // the set needs a session restart to appear.
-      const builtinLists = effectiveBuiltinLists(
-        config.enabledBuiltinTools ?? [],
-        config.disabledBuiltinTools ?? [],
-        this.readBuiltinOverride(config.cwd),
-      );
+      // Fold the project's capabilityOverrides.builtin overlay (read for this
+      // Engine's own cwd) over the global enabled/disabled builtin lists. A
+      // mid-session `off` is also hidden per turn (readBuiltinOverride in run);
+      // `on` can only add a builtin when the registry is built or rebuilt.
+      // A host-shared runtime registry supplies pooled MCP tools, which are
+      // synced into this Engine's registry every run; tool membership always
+      // comes from this Engine's own preset, never from the seed's.
       this.runtimeToolRegistry =
-        config.runtime?.toolRegistry ??
-        new ToolRegistry({
-          builtinTools: resolveToolNamesForPreset({
-            preset: this.preset,
-            host: config.builtinToolHost,
-            enabledBuiltinTools: [
-              ...builtinLists.enabledBuiltinTools,
-              // Injected catalog tools are preset-agnostic (see preset merge
-              // above); their availability guards gate actual visibility.
-              ...injectedTools.map((tool) => tool.definition.name),
-            ],
-            disabledBuiltinTools: builtinLists.disabledBuiltinTools,
-            adjusters: this.composition.engine.toolSelectionAdjusters.map((a) => a.value),
-          }),
-          toolCatalog: this.toolCatalog,
-        });
-      this.toolRegistry = this.runtimeToolRegistry.fork();
-      // Composition owns executable metadata even when the host supplies a
-      // registry. Attach it to this Engine's fork, never the shared seed.
-      for (const tool of this.toolCatalog) {
-        this.toolRegistry.setExposure(tool.definition.name, tool.exposure);
-      }
-      this.lifetime.own(() => this.toolRegistry.clear());
-      this.lifetime.own(registerAlwaysTools(this.composition, this.toolRegistry));
-      for (const contribution of this.composition.engine.tools) {
-        this.toolRegistry.setModuleOwner(contribution.tool.definition.name, contribution.moduleId);
-      }
+        config.runtime?.toolRegistry ?? buildPresetToolRegistry(this.presetToolInput());
+      this.installToolRegistry(
+        config.runtime
+          ? buildPresetToolRegistry(this.presetToolInput())
+          : this.runtimeToolRegistry.fork(),
+      );
+      this.lifetime.own(() => {
+        this.disposeAlwaysTools?.();
+        this.toolRegistry.clear();
+      });
       this.hooks = new HookRegistry();
+      this.hooks.setIdentity(() => ({
+        preset: this.preset.name,
+        isSubAgent: this.config.isSubAgent === true,
+        ...this.hookRunIdentity,
+      }));
       this.lifetime.own(() => this.hooks.clear());
       this.settingsHookScope = this.lifetime.child("engine", "settings-hooks");
       this.pluginHookScope = this.lifetime.child("engine", "plugin-hooks");
@@ -1044,7 +1034,47 @@ export class Engine {
     definition: import("../types.js").RegisteredTool,
     executor: BuiltinToolFn,
   ): void {
+    this.customTools.set(definition.name, { definition, executor });
     this.toolRegistry.registerTool(definition, executor);
+  }
+
+  private presetToolInput(): PresetToolRegistryInput {
+    const lists = effectiveBuiltinLists(
+      this.config.enabledBuiltinTools ?? [],
+      this.config.disabledBuiltinTools ?? [],
+      this.readBuiltinOverride(this.config.cwd),
+    );
+    return {
+      composition: this.composition,
+      preset: this.preset,
+      toolCatalog: this.toolCatalog,
+      host: this.config.builtinToolHost,
+      enabledBuiltinTools: lists.enabledBuiltinTools,
+      disabledBuiltinTools: lists.disabledBuiltinTools,
+    };
+  }
+
+  /** Composition owns executable metadata; attach it to this Engine's registry. */
+  private installToolRegistry(registry: ToolRegistry): void {
+    this.toolRegistry = registry;
+    for (const tool of this.toolCatalog) registry.setExposure(tool.definition.name, tool.exposure);
+    this.disposeAlwaysTools = registerAlwaysTools(this.composition, registry);
+    for (const contribution of this.composition.engine.tools) {
+      registry.setModuleOwner(contribution.tool.definition.name, contribution.moduleId);
+    }
+    for (const { definition, executor } of this.customTools.values()) {
+      registry.registerTool(definition, executor);
+    }
+  }
+
+  /** Replace this Engine's tools after a preset change; pooled MCP tools re-sync next run. */
+  private rebuildToolRegistry(): void {
+    this.toolRegistryRebuildPending = false;
+    const previous = this.toolRegistry;
+    const disposeAlways = this.disposeAlwaysTools;
+    this.installToolRegistry(buildPresetToolRegistry(this.presetToolInput()));
+    disposeAlways?.();
+    previous.clear();
   }
 
   /** Dispatch a host-installed capability query without teaching core its name. */
@@ -1406,7 +1436,17 @@ export class Engine {
               this.boundModelKey = previousModel.key;
             }
             this.runInProgress = false;
+            if (this.toolRegistryRebuildPending) {
+              try {
+                this.rebuildToolRegistry();
+              } catch (error) {
+                logger.warn("engine.tool_registry.rebuild_failed", {
+                  error: error instanceof Error ? error.message : String(error),
+                });
+              }
+            }
             this.runningSession = undefined;
+            this.hookRunIdentity = undefined;
             this.failClaimedRun = undefined;
             this.runAbort = undefined;
             settle();
@@ -1431,6 +1471,7 @@ export class Engine {
       })
     )
       return;
+    notePromptPrefixRewrite(session.state.sessionId, "clear_context");
     this.rebaseSessionToolCache(session);
     this.compactedMessagesBySession.delete(session.state.sessionId);
     if (this.lastSessionId === session.state.sessionId) this.lastMessages = [];
@@ -1689,6 +1730,11 @@ export class Engine {
     } = openedResult.opened;
     const session = openedResult.opened.session;
     this.runIds.set(session.state, runId);
+    this.hookRunIdentity = {
+      sessionId: session.state.sessionId,
+      ...(sessionKind ? { sessionKind } : {}),
+      ...(profile?.id ? { profileId: profile.id } : {}),
+    };
     this.runningSession = {
       sessionId: session.state.sessionId,
       runId,
@@ -1813,6 +1859,7 @@ export class Engine {
     // the anchor is dead; too late and the first new-topic prompt still sees
     // the entire old topic. Fail open to full history if summarization fails.
     if (options?.archiveBeforeCurrentTurn && options.clientMessageId) {
+      notePromptPrefixRewrite(session.state.sessionId, "archive");
       try {
         const anchors = {
           toClientMessageId: options.clientMessageId,
@@ -1886,9 +1933,10 @@ export class Engine {
       withUsageOwner(billingOwner, () =>
         runWithSid(session.state.sessionId, async () => {
           const hookMessages = profile?.disableHooks
-            ? []
+            ? NO_HOOK_MESSAGES
             : await this.runSessionStartHooks({
                 session,
+                userMessageEventId: runId,
                 task,
                 cwd,
                 runPermissionMode,
@@ -1914,33 +1962,38 @@ export class Engine {
               },
             });
 
-          const { promptComposer, toolDefs, mcpFailureSummary } = await this.wireRunTooling({
-            taskText,
-            options,
-            session,
-            cwd,
-            workspaceContext,
-            toolCtx,
-            profile,
-            profileParams,
-            runWorkspaceProfile,
-            profileMemoryDir,
-            sessionProfileOverrides,
-            runPlanMode,
-          });
+          const { promptComposer, toolDefs, mcpFailureSummary, routedTools } =
+            await this.wireRunTooling({
+              taskText,
+              options,
+              session,
+              cwd,
+              workspaceContext,
+              toolCtx,
+              profile,
+              profileParams,
+              runWorkspaceProfile,
+              profileMemoryDir,
+              sessionProfileOverrides,
+              runPlanMode,
+            });
 
           const {
             llmClient,
             fullSystemPrompt,
             rebuildSystemPrompt,
-            dynamicContextMsg,
+            runContextLedger,
+            volatileContextMsg,
             userContextMsg,
             retainedContextMessages,
+            runStartMessage,
           } = await this.assembleRunPrompts({
             session,
+            runId,
             messages,
             hookMessages,
             mcpFailureSummary,
+            routedTools,
             promptComposer,
             toolDefs,
             llmClientPromise,
@@ -1982,6 +2035,7 @@ export class Engine {
             task,
             cwd,
             options,
+            profileColdNotesRolloverTokens: profile?.notesRolloverWhenColdTokens,
             profileMaxTurns:
               typeof profile?.maxTurns === "number" &&
               Number.isSafeInteger(profile.maxTurns) &&
@@ -1999,8 +2053,10 @@ export class Engine {
             claimClientMessageId,
             releaseClientMessageId,
             freshImageMessage,
-            dynamicContextMsg,
+            runContextLedger,
+            volatileContextMsg,
             retainedContextMessages,
+            runStartMessage,
           });
           if (this.runningSession?.runId === runId) {
             this.runningSession.ownUsage = () =>
@@ -2048,7 +2104,7 @@ export class Engine {
             getRunUsage,
             usageBaseline,
             userContextMsg,
-            dynamicContextMsg,
+            dynamicContextMsg: volatileContextMsg,
             options,
             cwd,
             llmClient,
@@ -2276,16 +2332,18 @@ export class Engine {
 
   /**
    * Await the parallel prompt/context assembly (LLM client handshake, system
-   * prompt, dynamic + user context messages), splice the hook-injected and
-   * context messages into `messages`, publish this run's last-session snapshot,
+   * prompt, context sections + user context message), splice the hook reminder
+   * and context-ledger messages into `messages`, publish this run's last-session snapshot,
    * and prime the {@link ContextManager}'s transcript path + replacement state.
    * Extracted verbatim from the {@link runExclusive} skeleton.
    */
   private async assembleRunPrompts(args: {
     session: SessionBundle;
+    runId: string;
     messages: Message[];
-    hookMessages: string[];
+    hookMessages: RunHookMessages;
     mcpFailureSummary: string;
+    routedTools: string;
     promptComposer: PromptComposer;
     toolDefs: import("../types.js").ToolDefinition[];
     llmClientPromise: ReturnType<typeof createLLMClient>;
@@ -2298,9 +2356,12 @@ export class Engine {
     llmClient: Awaited<ReturnType<typeof createLLMClient>>;
     fullSystemPrompt: string;
     rebuildSystemPrompt: (tools: import("../types.js").ToolDefinition[]) => Promise<string>;
-    dynamicContextMsg: Message | null;
+    runContextLedger: RunContextLedger;
+    /** The profile's non-durable runtime context: never persisted, removed after the run. */
+    volatileContextMsg: Message | null;
     userContextMsg: Message | null;
     retainedContextMessages: Message[];
+    runStartMessage: Message | undefined;
   }> {
     const {
       session,
@@ -2315,35 +2376,35 @@ export class Engine {
       profileParams,
     } = args;
 
-    const [llmClient, baseSystemPrompt, baseDynamicContextMsg] = await Promise.all([
+    const [llmClient, baseSystemPrompt, contextSections] = await Promise.all([
       llmClientPromise,
-      // System prompt is now the STABLE prefix only — skills + git status moved
-      // out to a trailing per-turn message so they no longer bust the cache.
+      // System prompt is the STABLE prefix only — skills, memory and capability
+      // context ride the context ledger so they never bust the cached prefix.
       promptComposer.buildSystemPrompt(toolDefs),
-      promptComposer.buildDynamicContextMessage(),
+      promptComposer.buildDynamicContextSections(),
     ]);
-    // Capability health is current-run context. Keep it out of durable history
-    // and summaries so a recovered service is not described as offline later.
-    // Runtime context with "dynamic" placement rides here too.
-    const runtimeDynamicText = runtimeContextDynamicText(profile, profileParams);
-    const extraDynamicBlocks = [
-      ...(runtimeDynamicText ? [runtimeDynamicText] : []),
-      ...(mcpFailureSummary ? [`<system-reminder>${mcpFailureSummary}</system-reminder>`] : []),
-    ];
-    const dynamicContextMsg: Message | null =
-      extraDynamicBlocks.length > 0
-        ? {
-            role: "user",
-            content: [
-              ...(baseDynamicContextMsg
-                ? typeof baseDynamicContextMsg.content === "string"
-                  ? [{ type: "text" as const, text: baseDynamicContextMsg.content }]
-                  : baseDynamicContextMsg.content
-                : []),
-              ...extraDynamicBlocks.map((text) => ({ type: "text" as const, text })),
-            ],
-          }
-        : baseDynamicContextMsg;
+    // Context is append-only history: this run adds what changed since the
+    // model was last told, and nothing when nothing did (run-context-ledger.ts).
+    // Capability health is a section like the rest; a recovery is told as an
+    // update instead of rewriting what was sent.
+    const runContextLedger = createRunContextLedger({
+      transcript: session.transcript,
+      scope: promptComposer.contextScope(),
+      sessionId: session.state.sessionId,
+      sections: [
+        ...contextSections,
+        ...engineContextSections({
+          mcpFailureSummary,
+          routedTools: args.routedTools,
+          dateChange: promptComposer.buildDateChangeNotice(),
+        }),
+      ],
+    });
+    // Runtime context with "dynamic" placement is non-durable by contract, so
+    // it alone stays a volatile per-run message (kept out of the transcript).
+    const volatileContextMsg = runtimeContextMessage(
+      runtimeContextDynamicText(profile, profileParams),
+    );
     this.loadedInstructionSnapshots = structuredClone([...args.instructionSnapshots]);
     const frozenInstructions = args.instructionSnapshots
       .map(
@@ -2369,16 +2430,19 @@ export class Engine {
         await promptComposer.buildSystemPrompt(tools, args.getBehaviorToolNames()),
       );
     const userContextMsg = promptComposer.buildUserContextMessage();
-    const priorMessages = new Set(messages);
-    assembleRunMessages({
+    // Changed instructions rebuild the head: the whole history after it misses.
+    this.userContextHeads.note(session.state.sessionId, userContextMsg);
+    const { retained: retainedContextMessages, runStartMessage } = assembleRunMessages({
       messages,
+      transcript: session.transcript,
+      userMessageEventId: args.runId,
       userContextMsg,
-      hookMessages,
-      dynamicContextMsg,
+      hooks: hookMessages,
+      previousPromptSubmit: session.state.promptSubmitHookMessages,
+      ledger: runContextLedger,
+      volatileContextMsg,
     });
-    const retainedContextMessages = messages.filter(
-      (message) => !priorMessages.has(message) && message !== dynamicContextMsg,
-    );
+    this.recordPromptSubmitHook(session, hookMessages);
     this.lastSessionId = session.state.sessionId;
     this.lastMessages = messages;
 
@@ -2387,6 +2451,7 @@ export class Engine {
     if (session.transcript.isPersistent()) {
       contextManager.setTranscriptPath(session.transcript.getFilePath());
     }
+    contextManager.setPromptCacheSessionKey(session.state.sessionId);
     // Re-derive frozen persistence decisions from the messages we just
     // loaded. Skipped on cold start (messages == [userContextMsg] only).
     // Critical for resume — otherwise a result that was persisted last
@@ -2400,10 +2465,25 @@ export class Engine {
       llmClient,
       fullSystemPrompt,
       rebuildSystemPrompt,
-      dynamicContextMsg,
+      runContextLedger,
+      volatileContextMsg,
       userContextMsg,
       retainedContextMessages,
+      runStartMessage,
     };
+  }
+
+  /** Remember what the prompt hook said for this prompt (run-context-ledger.ts). */
+  private recordPromptSubmitHook(session: SessionBundle, hooks: RunHookMessages): void {
+    const said = cleanedHookMessages(hooks.promptSubmit);
+    const before = session.state.promptSubmitHookMessages;
+    // Never recorded and nothing said: nothing to remember yet.
+    if (before === undefined ? said.length === 0 : JSON.stringify(before) === JSON.stringify(said))
+      return;
+    session.state.promptSubmitHookMessages = said;
+    session.state.stateRevision = this.sessionManager.updateSessionState(session.state.sessionId, {
+      promptSubmitHookMessages: said,
+    });
   }
 
   /**
@@ -2449,6 +2529,7 @@ export class Engine {
       llmModel: this.config.llm.model,
       messages,
       needsCtxSeed: !this.ctxSeedSent.has(sid),
+      promptCacheTtlMs: this.promptCacheRoutes.ttlMs(this.config.llm),
     });
     this.lastContextManager = contextManager;
     if (!this.ctxSeedSent.has(sid)) this.ctxSeedSent.add(sid);
@@ -2663,6 +2744,7 @@ export class Engine {
     cwd: string;
     options: EngineRunOptions | undefined;
     profileMaxTurns: number | undefined;
+    profileColdNotesRolloverTokens?: number;
     toolCtx: ToolContext;
     toolExecutor: import("../tool-system/executor.js").ToolExecutor;
     contextManager: ContextManager;
@@ -2678,8 +2760,10 @@ export class Engine {
     ) => boolean;
     releaseClientMessageId: (clientMessageId: string) => void;
     freshImageMessage: Message | undefined;
-    dynamicContextMsg: Message | null;
+    runContextLedger: RunContextLedger;
+    volatileContextMsg: Message | null;
     retainedContextMessages: Message[];
+    runStartMessage: Message | undefined;
   }): Promise<{
     turnLoop: TurnLoop;
     applyGoalTermination: ReturnType<typeof createGoalTerminationApplier>;
@@ -2697,6 +2781,7 @@ export class Engine {
       cwd,
       options,
       profileMaxTurns,
+      profileColdNotesRolloverTokens,
       toolCtx,
       toolExecutor,
       contextManager,
@@ -2708,8 +2793,10 @@ export class Engine {
       claimClientMessageId,
       releaseClientMessageId,
       freshImageMessage,
-      dynamicContextMsg,
+      runContextLedger,
+      volatileContextMsg,
       retainedContextMessages,
+      runStartMessage,
     } = args;
 
     // eslint-disable-next-line prefer-const
@@ -2881,6 +2968,7 @@ export class Engine {
       sid,
       options,
       profileMaxTurns,
+      profileColdNotesRolloverTokens,
       cwd,
       claimClientMessageId,
       releaseClientMessageId,
@@ -2889,8 +2977,10 @@ export class Engine {
       goalHookHandler,
       normalizedGoal,
       freshImageMessage,
-      dynamicContextMsg,
+      runContextLedger,
+      volatileContextMsg,
       retainedContextMessages,
+      runStartMessage,
       usageBaseline,
       getRunUsage,
       recordCumulativeUsage,
@@ -2948,11 +3038,12 @@ export class Engine {
    * Record the session start and fire the once-per-run `on_session_start` and
    * per-turn `user_prompt_submit` / `agent_direction_submit` hooks, applying any
    * `updatedPrompt` rewrite in place on `messages`. Extracted verbatim from the
-   * {@link runExclusive} skeleton; returns the combined hook-injected messages
+   * {@link runExclusive} skeleton; returns the hook-injected messages, by hook,
    * for {@link assembleRunMessages}.
    */
   private async runSessionStartHooks(args: {
     session: SessionBundle;
+    userMessageEventId: string;
     task: string;
     cwd: string;
     runPermissionMode: NonNullable<EngineConfig["permissionMode"]>;
@@ -2960,7 +3051,7 @@ export class Engine {
     options: EngineRunOptions | undefined;
     taskText: string;
     messages: Message[];
-  }): Promise<string[]> {
+  }): Promise<RunHookMessages> {
     const { session, task, cwd, runPermissionMode, resumedFromDisk, options, taskText, messages } =
       args;
 
@@ -3032,10 +3123,18 @@ export class Engine {
           updatedChars: promptSubmitHook.updatedPrompt.length,
         });
         messages[lastIdx] = { role: "user", content: promptSubmitHook.updatedPrompt };
+        // Replay after a restart must send what the model saw here.
+        session.transcript.appendPromptRewrite({
+          messageEventId: replayEventIdOf(session.transcript, args.userMessageEventId),
+          content: promptSubmitHook.updatedPrompt,
+        });
       }
     }
 
-    return [...(sessionStartHook.messages ?? []), ...(promptSubmitHook.messages ?? [])];
+    return {
+      sessionStart: sessionStartHook.messages ?? [],
+      promptSubmit: promptSubmitHook.messages ?? [],
+    };
   }
 
   /**
@@ -3062,6 +3161,7 @@ export class Engine {
     promptComposer: PromptComposer;
     toolDefs: import("../types.js").ToolDefinition[];
     mcpFailureSummary: string;
+    routedTools: string;
   }> {
     const {
       taskText,
@@ -3130,6 +3230,7 @@ export class Engine {
         // Read from the Session's own persisted state, so every turn — not just
         // the first — carries the standing brief.
         sessionBrief: session.state.sessionBrief,
+        sessionStartedAt: session.state.startedAt,
         profileMemoryDir,
         instructionCompatFileNames: compatFileNamesFrom(this.config.instructions),
         instructionBoundaryFinder: (scanCwd) =>
@@ -3170,6 +3271,13 @@ export class Engine {
         // with dangling section names (for example terminal-coding → coding).
         capabilityPromptSections: this.capabilityPromptSections,
         dynamicContextProviders: this.capabilityDynamicContextProviders,
+        providerSession: {
+          id: session.state.sessionId,
+          ...(session.state.kind ? { kind: session.state.kind } : {}),
+          ...(profile?.id ? { profileId: profile.id } : {}),
+          isSubAgent: this.config.isSubAgent === true,
+        },
+        providerRunParams: profileParams,
         getSettingsManager: () => this.getSettingsManager(),
         toolCatalog: this.toolCatalog,
       });
@@ -3217,6 +3325,7 @@ export class Engine {
     // cwd. Recomputed every message, so configuring a key takes effect on the
     // NEXT message without a restart. Tools with no guard entry are always kept.
     let ownedToolSelection: SessionState["toolSelection"];
+    let routedTools = "";
     const toolDefs = initializeRunToolSurface(
       toolCtx,
       options?.toolAllowlist !== undefined || profile?.allowedToolNames
@@ -3248,6 +3357,7 @@ export class Engine {
         onSelectionChanged: (selection) => {
           session.state.toolSelection = ownedToolSelection = selection;
         },
+        onPreloadedTools: (text) => (routedTools = text),
       },
     );
     const surface = toolCtx.runToolSurface!;
@@ -3277,6 +3387,7 @@ export class Engine {
       promptComposer: new PromptComposer(createPromptComposerConfig(surface.behaviorSnapshot())),
       toolDefs,
       mcpFailureSummary: formatMcpConnectionFailures(mcpFailures),
+      routedTools,
     };
   }
 
@@ -3299,6 +3410,7 @@ export class Engine {
     sid: string;
     options: EngineRunOptions | undefined;
     profileMaxTurns: number | undefined;
+    profileColdNotesRolloverTokens?: number;
     cwd: string;
     claimClientMessageId: (
       bundle: SessionBundle,
@@ -3311,8 +3423,10 @@ export class Engine {
     goalHookHandler: import("./run-goal.js").GoalStopHookHandler | null;
     normalizedGoal: GoalConfig | undefined;
     freshImageMessage: Message | undefined;
-    dynamicContextMsg: Message | null;
+    runContextLedger: RunContextLedger;
+    volatileContextMsg: Message | null;
     retainedContextMessages: Message[];
+    runStartMessage: Message | undefined;
     usageBaseline: TokenUsage;
     getRunUsage: () => ReturnType<import("./model-facade.js").ModelFacade["getUsage"]>;
     recordCumulativeUsage: (usage: TokenUsage) => CumulativeUsageCounters;
@@ -3329,6 +3443,7 @@ export class Engine {
       sid,
       options,
       profileMaxTurns,
+      profileColdNotesRolloverTokens,
       cwd,
       claimClientMessageId,
       releaseClientMessageId,
@@ -3337,8 +3452,10 @@ export class Engine {
       goalHookHandler,
       normalizedGoal,
       freshImageMessage,
-      dynamicContextMsg,
+      runContextLedger,
+      volatileContextMsg,
       retainedContextMessages,
+      runStartMessage,
       usageBaseline,
       getRunUsage,
       recordCumulativeUsage,
@@ -3512,8 +3629,26 @@ export class Engine {
         onStream: options?.onStream,
         signal: options?.signal,
         freshImageMessages: freshImageMessage ? [freshImageMessage] : undefined,
-        volatileContextMessages: dynamicContextMsg ? [dynamicContextMsg] : undefined,
+        volatileContextMessages: volatileContextMsg ? [volatileContextMsg] : undefined,
+        volatileContextAtTail: this.promptCacheRoutes.usesExplicitBreakpoints(this.config.llm),
+        onPromptCacheFallback: () => {
+          if (
+            this.promptCacheRoutes.observe(
+              this.config.llm,
+              modelFacade.getEffectivePromptCacheStrategy(),
+            )
+          ) {
+            contextManager.setPromptCacheTtlMs(this.promptCacheRoutes.ttlMs(this.config.llm));
+          }
+        },
+        syncRunContext: (runMessages) => void runContextLedger.sync(runMessages),
         retainedContextMessages,
+        runStartMessage,
+        // A rebased tool-cache cycle has no last request: this run starts cold.
+        ...(profileColdNotesRolloverTokens !== undefined &&
+        toolCtx.runToolSurface?.getSelection().lastRequestAt === undefined
+          ? { coldNotesRolloverTokens: profileColdNotesRolloverTokens }
+          : {}),
         // Goal mode: the active goal is surfaced to the on_stop handler via
         // ctx.data.goal; the GoalStopHook (registered above) judges it.
         goal: normalizedGoal,
@@ -4004,35 +4139,17 @@ export class Engine {
     // (rebuilt per turn from this.preset) reflects the new preset's system
     // prompt / behavior. Only when the preset actually changed.
     if (patch.preset !== undefined && patch.preset !== prevPresetName) {
-      const nextPreset = resolvePresetFromComposition(this.composition, this.config.preset);
-      // The builtin tool SET is ctor-frozen and may be shared via runtime — we
-      // do NOT rebuild it here. If the new preset implies a different builtin
-      // tool set, that part of the change only lands on session restart.
-      const adjusters = this.composition.engine.toolSelectionAdjusters.map((a) => a.value);
-      const prevTools = resolveToolNamesForPreset({
-        preset: resolvePresetFromComposition(this.composition, prevPresetName),
-        host: this.config.builtinToolHost,
-        adjusters,
-      })
-        .slice()
-        .sort()
-        .join(",");
-      const nextTools = resolveToolNamesForPreset({
-        preset: nextPreset,
-        host: this.config.builtinToolHost,
-        adjusters,
-      })
-        .slice()
-        .sort()
-        .join(",");
-      if (prevTools !== nextTools) {
-        logger.warn("engine.preset_reload.tool_set_change_needs_restart", {
-          from: prevPresetName,
-          to: nextPreset.name,
-          note: "preset system prompt hot-reloaded; builtin tool-set change takes effect on session restart",
-        });
+      const previousTools = presetToolNames(this.presetToolInput()).sort().join(",");
+      // Injected catalog tools and their permission rules stay merged.
+      this.preset = withInjectedTools(
+        this.composition,
+        resolvePresetFromComposition(this.composition, this.config.preset),
+      );
+      if (presetToolNames(this.presetToolInput()).sort().join(",") !== previousTools) {
+        // A running turn keeps its tools; the next run starts with the new set.
+        if (this.runInProgress) this.toolRegistryRebuildPending = true;
+        else this.rebuildToolRegistry();
       }
-      this.preset = nextPreset;
     }
     this.reloadHooks();
     // MCP ownership and tool authority are Run-scoped. Keep this Run's frozen
@@ -4255,12 +4372,15 @@ export class Engine {
     if (!contextManager || this.lastSessionId !== effectiveSessionId) {
       contextManager = new ContextManager({
         maxTokens: this.resolveMaxContextTokens(),
+        promptCacheTtlMs: this.promptCacheRoutes.ttlMs(this.config.llm),
         ...Object.fromEntries(
           Object.entries(this.resolveContextRatios()).filter(([, v]) => v !== undefined),
         ),
       });
       if (session.transcript.isPersistent()) {
         contextManager.setTranscriptPath(session.transcript.getFilePath());
+      } else {
+        contextManager.setPromptCacheSessionKey(effectiveSessionId);
       }
       contextManager.initReplacementStateFromMessages(sourceMessages);
       this.lastContextManager = contextManager;
@@ -4323,6 +4443,7 @@ export class Engine {
   ): Promise<{ before: number; after: number }> {
     const effectiveSessionId = sessionId || this.lastSessionId;
     if (!effectiveSessionId) return { before: 0, after: 0 };
+    notePromptPrefixRewrite(effectiveSessionId, "archive");
 
     const session = this.sessionManager.resume(effectiveSessionId);
     const { sourceMessages, window } = resolveArchiveWindow(
@@ -4369,6 +4490,7 @@ export class Engine {
   ): Promise<boolean> {
     const session = this.sessionManager.resume(sessionId);
     if (!appendSessionArchiveMarker(sessionId, session, marker)) return false;
+    notePromptPrefixRewrite(sessionId, "archive");
     this.rebaseSessionToolCache(session);
     // The in-memory cache (if any) predates the marker; drop it so the next
     // run rebuilds from the trimmed transcript replay.
@@ -4399,11 +4521,9 @@ export class Engine {
       previousCacheReadTokens: result.previous.cacheReadTokens,
       currentCacheReadTokens: result.current.cacheReadTokens,
       dropRatio: result.dropRatio,
-      cause: result.attribution.cause,
-      changedPrefixes: result.attribution.changedPrefixes,
       previousPrefix: result.previous.fingerprint,
       currentPrefix: result.current.fingerprint,
-      hint: promptCacheDropHint(result.attribution),
+      ...promptCacheDropLogFields(result.attribution),
     });
   }
 

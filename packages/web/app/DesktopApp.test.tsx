@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -8,11 +8,19 @@ import type { RemoteApp } from "../src/hooks/useRemoteApp.js";
 import { useDesktopController } from "./DesktopApp.js";
 import { getApiWorkspace } from "./api-context.js";
 import { Workbench } from "./Workbench.js";
-import { DesktopApproval, DesktopChatControls, DesktopSidebar } from "./DesktopControls.js";
+import {
+  DesktopApproval,
+  DesktopChatControls,
+  DesktopSidebar,
+  cliModeSwitchNotice,
+} from "./DesktopControls.js";
 import { OutputHistoryRecovery } from "../src/components/OutputHistoryRecovery.js";
 import { DesktopModelPicker, CURRENT_NATIVE_MODEL } from "./DesktopModelPicker.js";
+import { DesktopCliModelPicker } from "./DesktopCliModelPicker.js";
+import { cliSessionControlBlock } from "./cliSessionControls.js";
 import { HubPanels } from "./HubPanels.js";
 import { PanelHost } from "./PanelHost.js";
+import { SessionLoadingState } from "./SessionLoadingState.js";
 
 const noop = () => {};
 const session = { id: "paired-session", username: "synthetic", deviceName: "Fixture" };
@@ -71,6 +79,44 @@ function deferred<T>() {
   });
   return { promise, resolve };
 }
+function connectionClock() {
+  let now = 0;
+  const originalSet = globalThis.setTimeout;
+  const originalClear = globalThis.clearTimeout;
+  const timers = new Map<ReturnType<typeof setTimeout>, { at: number; run: () => void }>();
+  const setting = spyOn(globalThis, "setTimeout").mockImplementation(((
+    callback,
+    delay,
+    ...args
+  ) => {
+    if (typeof callback !== "function" || (delay !== 2500 && delay !== 8000))
+      return originalSet(callback, delay, ...args);
+    const handle = originalSet(() => {}, 60_000);
+    timers.set(handle, { at: now + delay, run: () => callback(...args) });
+    return handle;
+  }) as typeof setTimeout);
+  const clearing = spyOn(globalThis, "clearTimeout").mockImplementation((handle) => {
+    timers.delete(handle as ReturnType<typeof setTimeout>);
+    originalClear(handle);
+  });
+  return {
+    timers,
+    advance(ms: number) {
+      now += ms;
+      for (const [handle, timer] of [...timers]) {
+        if (timer.at > now) continue;
+        timers.delete(handle);
+        originalClear(handle);
+        timer.run();
+      }
+    },
+    restore() {
+      for (const handle of timers.keys()) originalClear(handle);
+      setting.mockRestore();
+      clearing.mockRestore();
+    },
+  };
+}
 function configuration(path: string) {
   return {
     workspace: { path, settingsScope: "local", skillDirectories: [] },
@@ -90,6 +136,160 @@ afterEach(() => {
 });
 
 describe("Desktop workbench controller", () => {
+  for (const connectedBefore of [false, true])
+    test(`connection grace covers consecutive retries and keeps the conversation (connected before: ${connectedBefore})`, async () => {
+      const clock = connectionClock();
+      let sends = 0;
+      let app = remoteApp({
+        status: connectedBefore ? "online" : "connecting",
+        activeSessionId: "original-session",
+        chat: {
+          ...initialChatState(),
+          items: [{ kind: "user", id: "original-message", text: "Previous conversation" }],
+        },
+        sessions: [{ id: "original-session", title: "Original chat", updatedAt: 1, cwd: null }],
+        sendChat: async () => {
+          sends++;
+          return true;
+        },
+      });
+      const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+      try {
+        await act(async () => {
+          hook.result.current.setDraft("unsent task");
+          hook.result.current.addFiles([
+            new File(["owned image"], "kept.png", { type: "image/png" }),
+          ] as unknown as FileList);
+        });
+        if (connectedBefore) {
+          app = { ...app, status: "offline" };
+          await hook.rerender();
+        }
+        expect(hook.result.current.connection).toBe(connectedBefore ? "closed" : "connecting");
+        expect(hook.result.current.connectionMessage).toBe(
+          connectedBefore ? "正在恢复与电脑的连接…" : "正在连接电脑…",
+        );
+        await act(async () => clock.advance((connectedBefore ? 2500 : 8000) - 1000));
+        app = { ...app, status: "authenticating" };
+        await hook.rerender();
+        await act(async () => clock.advance(999));
+        expect(hook.result.current.connectionMessage).not.toContain("暂时无法");
+        app = { ...app, status: "offline" };
+        await hook.rerender();
+        await act(async () => clock.advance(1));
+        expect(hook.result.current.connectionMessage).toContain("暂时无法连接电脑");
+        app = { ...app, status: "connecting" };
+        await hook.rerender();
+        expect(hook.result.current.connectionMessage).toContain("暂时无法连接电脑");
+        expect(hook.result.current.send()).toBe(false);
+        expect(hook.result.current.activeId).toBe("original-session");
+        expect(hook.result.current.chat).toBe(app.chat);
+        expect(hook.result.current.navigationSessions.map((item) => item.sessionId)).toEqual([
+          "original-session",
+        ]);
+        expect(hook.result.current.draft).toBe("unsent task");
+        expect(hook.result.current.files.map((file) => file.name)).toEqual(["kept.png"]);
+        expect(sends).toBe(0);
+        app = { ...app, status: "online" };
+        await hook.rerender();
+        expect(hook.result.current.connection).toBe("open");
+        expect(hook.result.current.connectionMessage).toBeUndefined();
+        expect(clock.timers.size).toBe(0);
+        app = { ...app, status: "offline" };
+        await hook.rerender();
+        expect(hook.result.current.connectionMessage).toBe("正在恢复与电脑的连接…");
+        await act(async () => clock.advance(2499));
+        expect(hook.result.current.connectionMessage).not.toContain("暂时无法");
+        await act(async () => clock.advance(1));
+        expect(hook.result.current.connectionMessage).toContain("暂时无法连接电脑");
+        app = { ...app, status: "online" };
+        await hook.rerender();
+        app = { ...app, status: "offline" };
+        await hook.rerender();
+        expect(clock.timers.size).toBe(1);
+      } finally {
+        await hook.unmount();
+        const remaining = clock.timers.size;
+        clock.restore();
+        expect(remaining).toBe(0);
+      }
+    });
+
+  for (const authorization of ["expired", "unpaired"] as const)
+    test(`connection grace never replaces an immediate ${authorization} authorization state`, async () => {
+      const clock = connectionClock();
+      let app = remoteApp();
+      const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+      try {
+        app = { ...app, status: "offline" };
+        await hook.rerender();
+        expect(hook.result.current.connectionMessage).toBe("正在恢复与电脑的连接…");
+        app = {
+          ...app,
+          status: authorization === "unpaired" ? "unpaired" : "offline",
+          accessRequired: authorization === "expired",
+        };
+        await hook.rerender();
+        expect(hook.result.current.connectionMessage).toBeUndefined();
+        expect(hook.result.current.connection).toBe("closed");
+        expect(hook.result.current.send()).toBe(false);
+        expect(clock.timers.size).toBe(0);
+        await act(async () => clock.advance(10_000));
+        app = { ...app, status: "connecting", accessRequired: false };
+        await hook.rerender();
+        expect(hook.result.current.connectionMessage).toBe("正在恢复与电脑的连接…");
+        await act(async () => clock.advance(2499));
+        expect(hook.result.current.connectionMessage).not.toContain("暂时无法");
+        await act(async () => clock.advance(1));
+        expect(hook.result.current.connectionMessage).toContain("暂时无法连接电脑");
+      } finally {
+        await hook.unmount();
+        clock.restore();
+      }
+    });
+
+  test("an explicitly unbound session never inherits the previous project's execution context", async () => {
+    const created: unknown[] = [];
+    const sent: string[] = [];
+    let app = remoteApp({
+      activeCwd: null,
+      activeProjectCwd: "/previous",
+      activeProjectId: "previous",
+      activeSessionId: "unbound",
+      sessions: [
+        { id: "unbound", cwd: null, title: "Unbound", updatedAt: 1 },
+        { id: "project", cwd: "/previous", title: "Project", updatedAt: 2 },
+      ] as RemoteApp["sessions"],
+      newSession: (target) => created.push(target),
+      sendChat: async ({ text }) => {
+        sent.push(text);
+        return true;
+      },
+    });
+    const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+    try {
+      expect(hook.result.current.workspaceCwd).toBeNull();
+      expect(hook.result.current.workspaceName).toBe("无项目");
+      expect(getApiWorkspace()).toBeUndefined();
+      expect(hook.result.current.sessions.map((item) => item.sessionId)).toEqual(["unbound"]);
+      const directory = hook.result.current.navigationSessions;
+      expect(directory).toHaveLength(2);
+      app = { ...app, chat: { ...app.chat, seq: app.chat.seq + 1 } };
+      await hook.rerender();
+      expect(hook.result.current.navigationSessions).toBe(directory);
+      await act(async () => hook.result.current.setDraft("Unbound task"));
+      await act(async () => {
+        expect(hook.result.current.send()).toBe(true);
+        await flushMicrotasks();
+      });
+      expect(sent).toEqual(["Unbound task"]);
+      await act(async () => hook.result.current.newSession());
+      expect(created).toEqual([{ projectId: null }]);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
   test("explicit Panel selection waits for history and preserves each conversation's draft", async () => {
     const selections: string[] = [];
     let app = remoteApp({
@@ -521,6 +721,59 @@ describe("Desktop workbench controller", () => {
     }
   });
 
+  for (const laterTyping of [false, true])
+    test(`send failure keeps its own reason and files (later typing: ${laterTyping})`, async () => {
+      ensureMiniDom();
+      const previous = Object.getOwnPropertyDescriptor(window, "matchMedia");
+      Object.defineProperty(window, "matchMedia", {
+        configurable: true,
+        value: () => ({ matches: false }),
+      });
+      browserRestores.push(() =>
+        previous
+          ? Object.defineProperty(window, "matchMedia", previous)
+          : Reflect.deleteProperty(window, "matchMedia"),
+      );
+      const response = deferred<boolean>();
+      let reject: ((reason: string) => void) | undefined;
+      const app = remoteApp({
+        notice: "unrelated previous notice",
+        sendChat: (input) => {
+          reject = input.onRejected;
+          return response.promise;
+        },
+      });
+      const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+      try {
+        await act(async () => {
+          hook.result.current.setDraft("original task");
+          hook.result.current.addFiles([
+            new File(["image"], "task.png", { type: "image/png" }),
+          ] as unknown as FileList);
+        });
+        await act(async () => {
+          expect(hook.result.current.send()).toBe(true);
+        });
+        await act(async () => {
+          if (laterTyping) hook.result.current.setDraft("later typing");
+          reject?.("Selected runtime is unavailable");
+          response.resolve(false);
+          await flushMicrotasks();
+        });
+        expect(hook.result.current.draft).toContain("original task");
+        if (laterTyping) expect(hook.result.current.draft).toContain("later typing");
+        expect(hook.result.current.files.map((file) => file.name)).toEqual(["task.png"]);
+        expect(hook.result.current.error).toContain("Selected runtime is unavailable");
+        expect(hook.result.current.error).toContain("消息未送达");
+        expect(hook.result.current.error).not.toContain("unrelated previous notice");
+        expect(hook.result.current.uncertain).toBe(false);
+        const markup = renderToStaticMarkup(<Workbench controller={hook.result.current} />);
+        expect(markup).toContain("Selected runtime is unavailable");
+      } finally {
+        await hook.unmount();
+      }
+    });
+
   test("offline session and CLI navigation preserve the workspace and draft", async () => {
     const calls: string[] = [];
     const app = remoteApp({
@@ -683,6 +936,7 @@ describe("Desktop workbench controller", () => {
         attachments: [],
         onUncertain: expect.any(Function),
         onRetired: expect.any(Function),
+        onRejected: expect.any(Function),
       },
     ]);
     expect(hook.result.current.activeId).toBe("mobile-real-1");
@@ -1093,6 +1347,17 @@ describe("Desktop workbench controller", () => {
     const desktop = renderToStaticMarkup(
       <Workbench controller={{ ...hook.result.current, session, workspaceApi: true }} />,
     );
+    const recovering = renderToStaticMarkup(
+      <Workbench
+        controller={{
+          ...hook.result.current,
+          connection: "closed",
+          connectionMessage: "正在恢复与电脑的连接…",
+        }}
+      />,
+    );
+    expect(recovering).toContain("正在恢复与电脑的连接…");
+    expect(recovering).not.toContain("连接已断开，重连中…");
     const hub = renderToStaticMarkup(
       <Workbench
         controller={{
@@ -1114,7 +1379,9 @@ describe("Desktop workbench controller", () => {
       expect(html).not.toContain("<span>Link</span>");
       expect(html).toContain('aria-label="任务内容"');
     }
-    expect(desktop).toContain('aria-label="选择项目"');
+    expect(desktop).toContain('aria-label="项目会话"');
+    expect(desktop).toContain("无项目对话");
+    expect(desktop).not.toContain('aria-label="选择项目"');
     expect(desktop).toContain('aria-label="拍照"');
     expect(
       desktop.slice(desktop.indexOf('<footer class="composer'), desktop.indexOf("</footer>")),
@@ -1245,8 +1512,7 @@ function textOf(node: any): string {
   return node.childNodes?.length ? node.childNodes.map(textOf).join("") : (node.textContent ?? "");
 }
 
-test("CLI room mode switch restarts through the Host and explains when it applies", async () => {
-  ensureMiniDom();
+test("CLI room permission picker explains the next turn and retains the Host-confirmed mode", () => {
   const room = {
     id: "room-1",
     name: "CLI",
@@ -1259,65 +1525,31 @@ test("CLI room mode switch restarts through the Host and explains when it applie
     observing: false,
     sessionId: "thread-1",
   };
-  const requested: string[] = [];
-  const confirms: string[] = [];
-  const originalConfirm = window.confirm;
-  window.confirm = (message?: string) => {
-    confirms.push(String(message));
-    return true;
-  };
-  const host = document.createElement("div");
-  const root = createRoot(host);
-  try {
-    await act(async () => {
-      root.render(
-        <DesktopChatControls
-          app={remoteApp({
-            activeRoomId: room.id,
-            activeRoom: room,
-            setCcRoomPermissionMode: (mode) => requested.push(mode),
-          })}
-        />,
-      );
-      await flushMicrotasks();
-    });
-    const select = elementsByTag(host, "SELECT")[0]!;
-    expect(reactProps(select).disabled).toBe(false);
-    // Codex has no resident process: the new mode applies to the next turn's process.
-    expect(textOf(host)).toContain("下一条消息");
-    await act(async () => {
-      reactProps(select).onChange({ target: { value: "bypassPermissions" } });
-      await flushMicrotasks();
-    });
-    expect(requested).toEqual(["bypassPermissions"]);
-    // Codex bypass is described as turning the sandbox off, before anything is sent.
-    expect(confirms[0]).toContain("关闭沙箱");
-    expect(confirms[0]).toContain("从下一条消息开始生效");
-
-    // While the Host is deciding, the room keeps its running mode and cannot
-    // start a second switch.
-    await act(async () => {
-      root.render(
-        <DesktopChatControls
-          app={remoteApp({
-            activeRoomId: room.id,
-            activeRoom: room,
-            setCcRoomPermissionMode: (mode) => requested.push(mode),
-            ccModeRequest: { mode: "bypassPermissions", switching: true },
-          })}
-        />,
-      );
-      await flushMicrotasks();
-    });
-    const pending = elementsByTag(host, "SELECT")[0]!;
-    expect(reactProps(pending).disabled).toBe(true);
-    expect(reactProps(pending).value).toBe("default");
-    expect(textOf(host)).toContain("等待 Host 确认");
-  } finally {
-    await act(async () => root.unmount());
-    window.confirm = originalConfirm;
-  }
-
+  const markup = (patch: Partial<RemoteApp> = {}) =>
+    renderToStaticMarkup(
+      <DesktopChatControls
+        app={remoteApp({
+          activeRoomId: room.id,
+          activeRoom: room,
+          setCcRoomPermissionMode: noop,
+          ...patch,
+        })}
+      />,
+    );
+  const idle = markup();
+  expect(idle).toContain('aria-haspopup="dialog"');
+  expect(idle).toContain('value="default"');
+  expect(idle).toContain("只读");
+  expect(idle).toContain("下一条消息");
+  expect(idle).not.toContain("<select");
+  expect(idle).not.toContain('disabled=""');
+  const pending = markup({ ccModeRequest: { mode: "bypassPermissions", switching: true } });
+  expect(pending).toMatch(/<button[^>]*disabled=""/);
+  expect(pending).toContain('value="default"');
+  expect(pending).toContain("等待电脑确认");
+  expect(cliModeSwitchNotice("codex", "bypassPermissions")).toContain("关闭沙箱");
+  expect(cliModeSwitchNotice("codex", "bypassPermissions")).toContain("从下一条消息开始生效");
+  expect(cliModeSwitchNotice("claude-code", "bypassPermissions")).toContain("跳过工具操作确认");
   const native = renderToStaticMarkup(
     <DesktopChatControls
       app={remoteApp({
@@ -1353,16 +1585,19 @@ test("CLI room chat controls show the room's actual mode and cannot change it na
   const markup = (patch: Partial<RemoteApp>) =>
     renderToStaticMarkup(<DesktopChatControls app={remoteApp(patch)} />);
   const inRoom = markup({ activeRoomId: room.id, activeRoom: room, permissionMode: "default" });
-  expect(inRoom).toMatch(/<select[^>]*disabled=""/);
-  expect(inRoom).toContain('<option value="bypassPermissions" selected="">');
-  expect(inRoom).not.toContain('<option value="default" selected="">');
+  expect(inRoom).toMatch(/<button[^>]*disabled=""/);
+  expect(inRoom).toContain('value="bypassPermissions"');
+  expect(inRoom).toContain("跳过确认");
+  expect(inRoom).not.toContain('value="default"');
   // Metadata not loaded yet: show no mode rather than the stricter native one.
   const pending = markup({ activeRoomId: room.id, permissionMode: "default" });
-  expect(pending).toMatch(/<select[^>]*disabled=""/);
-  expect(pending).not.toContain('<option value="default" selected="">');
+  expect(pending).toMatch(/<button[^>]*disabled=""/);
+  expect(pending).not.toContain('value="default"');
+  expect(pending).toContain("读取中…");
   const native = markup({ permissionMode: "acceptEdits" });
-  expect(native).not.toMatch(/<select[^>]*disabled=""/);
-  expect(native).toContain('<option value="acceptEdits" selected="">');
+  expect(native).not.toMatch(/<button[^>]*disabled=""/);
+  expect(native).toContain('value="acceptEdits"');
+  expect(native).toContain("允许编辑");
 });
 
 test("a multi-question CLI clarification answers every question in one response", async () => {
@@ -2065,9 +2300,10 @@ test("an immediately failed creation restores the visible draft and chosen model
   }
 });
 
-test("history banner exposes verified progress without declaring completion or dropping drafts", async () => {
+test("history loading exposes verified progress without declaring completion or dropping drafts", async () => {
   let app = remoteApp({
     activeSessionId: "native",
+    sessions: [{ id: "native", title: "Saved conversation", updatedAt: 1, cwd: null }],
     loading: {
       sessions: false,
       sessionHistory: true,
@@ -2083,12 +2319,15 @@ test("history banner exposes verified progress without declaring completion or d
     await act(async () => hook.result.current.setDraft("manual draft"));
     expect(hook.result.current.loading).toBe(true);
     expect(hook.result.current.loadingLabel).toContain("50%");
+    expect(hook.result.current.loadingProgress).toBe(50);
+    expect(hook.result.current.title).toBe("Saved conversation");
     app = {
       ...app,
       sessionHistoryProgress: { phase: "journal", pages: 3, receivedBytes: 100, totalBytes: 100 },
     };
     await hook.rerender();
     expect(hook.result.current.loadingLabel).toContain("99%");
+    expect(hook.result.current.loadingProgress).toBe(99);
     expect(hook.result.current.loading).toBe(true);
     expect(hook.result.current.draft).toBe("manual draft");
     app = {
@@ -2099,10 +2338,29 @@ test("history banner exposes verified progress without declaring completion or d
     await hook.rerender();
     expect(hook.result.current.loading).toBe(false);
     expect(hook.result.current.loadingLabel).toBeUndefined();
+    expect(hook.result.current.loadingProgress).toBeUndefined();
     expect(hook.result.current.draft).toBe("manual draft");
   } finally {
     await hook.unmount();
   }
+});
+
+test("history loading distinguishes retained content, unknown progress and blocked creation", () => {
+  const loading = renderToStaticMarkup(<SessionLoadingState progress={100} />);
+  expect(loading).toContain('role="status"');
+  expect(loading).toContain('aria-valuenow="99"');
+  expect(loading).toContain('class="session-loading-skeleton" aria-hidden="true"');
+  const retained = renderToStaticMarkup(<SessionLoadingState retained progress={Number.NaN} />);
+  expect(retained).toContain("session-loading-retained");
+  expect(retained).not.toContain("session-loading-skeleton");
+  expect(retained).not.toContain('role="progressbar"');
+  const failed = renderToStaticMarkup(
+    <SessionLoadingState failed label="建立会话失败，请重试。" progress={25} />,
+  );
+  expect(failed).toContain('role="alert"');
+  expect(failed).toContain("建立会话失败，请重试。");
+  expect(failed).not.toContain("session-loading-skeleton");
+  expect(failed).not.toContain('role="progressbar"');
 });
 
 test("empty-session replacement retains editable input through failure and retries without sending", async () => {
@@ -2143,6 +2401,8 @@ test("empty-session replacement retains editable input through failure and retri
     await hook.rerender();
     expect(hook.result.current.loading).toBe(true);
     expect(hook.result.current.loadingLabel).toContain("重试建立会话");
+    expect(hook.result.current.loadingFailed).toBe(true);
+    expect(hook.result.current.loadingProgress).toBeUndefined();
     expect(hook.result.current.send()).toBe(false);
     expect(modelPicker(hook.result.current).disabled).toBe(false);
     await act(async () => modelPicker(hook.result.current).onRetryCreation!());
@@ -2300,3 +2560,146 @@ test.each([false, true])(
     expect(markup).toContain("超时后需要重新发起");
   },
 );
+
+test("CLI composer blocks both settings during pending work and uses confirmed values", () => {
+  const room = {
+    id: "cli-room",
+    name: "Long CLI title",
+    cwd: "/repo",
+    kind: "codex" as const,
+    permissionMode: "default" as const,
+    modelKey: "codex/current",
+    createdAt: 1,
+    lastActiveAt: 1,
+    open: true,
+    observing: false,
+    sessionId: "thread",
+  };
+  const app = remoteApp({
+    activeRoomId: room.id,
+    activeRoom: room,
+    ccRoomModelSelection: true,
+    setCcRoomPermissionMode: noop,
+    setCcRoomModel: noop,
+  });
+  expect(cliSessionControlBlock(app)).toBeUndefined();
+  const cases: Partial<RemoteApp>[] = [
+    { status: "offline" },
+    { activeRoom: undefined },
+    { activeRoom: { ...room, observing: true } },
+    { chat: { ...app.chat, run: "running" } },
+    { loading: { ...app.loading, roomHistory: true } },
+    { ccModeRequest: { switching: true, mode: "default", modelKey: "codex/next" } },
+    {
+      approvals: [
+        {
+          roomId: room.id,
+          requestId: "approval",
+          toolName: "Read",
+          summary: "test",
+          description: "",
+          risk: "low",
+        },
+      ],
+    },
+  ];
+  for (const patch of cases) {
+    const current = { ...app, ...patch };
+    expect(cliSessionControlBlock(current)).toBeTruthy();
+    const permissions = renderToStaticMarkup(<DesktopChatControls app={current} />);
+    expect(permissions).toMatch(/<button[^>]*disabled=""/);
+    const model = renderToStaticMarkup(<DesktopCliModelPicker app={current} />);
+    expect(model).toMatch(/<button[^>]*disabled=""/);
+    if (current.activeRoom) expect(model).toContain('value="codex/current"');
+  }
+  const oldHost = renderToStaticMarkup(
+    <DesktopCliModelPicker app={{ ...app, ccRoomModelSelection: false }} />,
+  );
+  expect(oldHost).toContain("更新电脑端后");
+  expect(oldHost).toMatch(/<button[^>]*disabled=""/);
+  const metadata = renderToStaticMarkup(
+    <DesktopCliModelPicker app={{ ...app, activeRoom: undefined }} />,
+  );
+  expect(metadata).not.toContain("模型设置");
+  expect(metadata).toContain("正在读取模型");
+});
+
+test("CLI sidebar distinguishes unknown counts and marks the active CLI thread", () => {
+  const app = remoteApp({
+    activeProjectCwd: "/repo",
+    ccCliKind: "codex",
+    ccProbe: { available: true },
+    activeRoomId: "room",
+    activeRoom: {
+      id: "room",
+      name: "Known",
+      cwd: "/repo",
+      kind: "codex",
+      permissionMode: "default",
+      createdAt: 1,
+      lastActiveAt: 1,
+      open: true,
+      observing: false,
+      sessionId: "known",
+    },
+    ccSessions: [
+      { sessionId: "known", cwd: "/repo", firstMessage: "Known", lastModified: 1, messageCount: 6 },
+      { sessionId: "unknown", cwd: "/repo", firstMessage: "Unknown", lastModified: 1 },
+    ],
+  });
+  const markup = renderToStaticMarkup(
+    <DesktopSidebar app={app} navigation={{ guard: noop, conversation: noop }} />,
+  );
+  expect(markup).toContain('aria-current="page"');
+  expect(markup).toContain('class="session active"');
+  expect(markup).toContain("6 条消息");
+  expect(markup).not.toContain("0 条消息");
+  expect(markup).not.toContain("undefined");
+});
+
+test("CLI settings handoff keeps editable drafts and the sidebar while blocking submission", async () => {
+  const sent: unknown[] = [];
+  const room = {
+    id: "r",
+    name: "CLI",
+    cwd: "/repo",
+    kind: "codex" as const,
+    permissionMode: "default" as const,
+    createdAt: 1,
+    lastActiveAt: 1,
+    open: true,
+    observing: false,
+    sessionId: "t",
+  };
+  let app = remoteApp({
+    activeRoomId: room.id,
+    activeRoom: room,
+    activeCwd: "/repo",
+    activeProjectCwd: "/repo",
+    ccModeRequest: { switching: true, mode: "default", modelKey: "codex/next" },
+    sendChat: async (input) => {
+      sent.push(input);
+      return true;
+    },
+  });
+  const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+  try {
+    await act(async () => {
+      hook.result.current.setDraft("keep this draft");
+    });
+    expect(hook.result.current.sendBlockedReason).toContain("正在应用 CLI 设置");
+    expect(hook.result.current.loading).toBe(false);
+    expect(hook.result.current.readOnly).toBeFalsy();
+    await act(async () => {
+      expect(hook.result.current.send()).toBe(false);
+    });
+    expect(sent).toHaveLength(0);
+    expect(hook.result.current.draft).toBe("keep this draft");
+    app = { ...app, ccModeRequest: undefined };
+    await hook.rerender();
+    expect(hook.result.current.sendBlockedReason).toBeUndefined();
+    expect(hook.result.current.draft).toBe("keep this draft");
+  } finally {
+    await hook.unmount();
+  }
+});

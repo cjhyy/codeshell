@@ -175,9 +175,8 @@ describe("reviewed external Mimi manager catalog", () => {
       const visible = host.listTools();
       expect(visible.map((tool) => tool.name)).toContain("GatewayReply");
       const delegation = visible.find((tool) => tool.name === "DelegateWork")!;
-      expect(delegation.inputSchema.properties?.workspace_id).toMatchObject({
-        enum: ["workspace-owned"],
-      });
+      // Static definition: Workspace ids travel in the runtime context.
+      expect(delegation.inputSchema.properties?.workspace_id).not.toHaveProperty("enum");
       for (const name of ["Bash", "Read", "DriveAgent", "NotifyMe", "ReportToMimi"]) {
         expect(visible.some((tool) => tool.name === name)).toBe(false);
         expect((await host.execute({ id: `general-${name}`, name, input: {} })).isError).toBe(true);
@@ -263,7 +262,7 @@ describe("reviewed external Mimi manager catalog", () => {
   test("recurring follow-ups require the current turn's explicit Host action grant", async () => {
     const { host, reported } = createHost();
     try {
-      expect(host.listTools().some((tool) => tool.name === "ManageFollowUp")).toBe(false);
+      // Listed on every turn; the missing grant refuses the call.
       const result = await host.execute({
         id: "ungranted-recurrence",
         name: "ManageFollowUp",
@@ -397,7 +396,8 @@ describe("reviewed external Mimi manager catalog", () => {
     for (const name of ["DelegateWork", "GatewayReply", "SendMessage"]) {
       const tool = PET_MANAGER_TOOL_CATALOG.find((entry) => entry.definition.name === name)!;
       expect(typeof tool.exposure.availability).toBe("function");
-      expect(typeof tool.exposure.rewriteDefinition).toBe("function");
+      // Static definitions: route limits and ids live in the runtime context.
+      expect(tool.exposure.rewriteDefinition).toBeUndefined();
       expect(tool.exposure.defaultPermissionRules).toContainEqual({
         tool: name,
         decision: "allow",
@@ -405,9 +405,13 @@ describe("reviewed external Mimi manager catalog", () => {
     }
     const reply = PET_MANAGER_TOOL_CATALOG.find((tool) => tool.definition.name === "GatewayReply")!;
     expect(reply.exposure.availability!(visibility)).toBe(true);
+    // Visible on every Mimi turn, never outside the pet profile.
     expect(reply.exposure.availability!({ behaviorProfile: "pet" } as ToolVisibilityContext)).toBe(
-      false,
+      true,
     );
+    expect(
+      reply.exposure.availability!({ behaviorProfile: "general" } as ToolVisibilityContext),
+    ).toBe(false);
     expect(PET_MANAGER_TOOL_CATALOG.every((tool) => tool.exposure.availability)).toBe(true);
     // The original executor still fails closed even without a visibility wrapper.
     const missing = {} as ToolContext;

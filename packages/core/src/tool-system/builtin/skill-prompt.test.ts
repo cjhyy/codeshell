@@ -1,8 +1,9 @@
+import { joinContextListParts } from "../../context/context-ledger.js";
 import { describe, expect, test } from "bun:test";
 import { estimateStringTokens } from "../../context/token-counter.js";
 import type { SkillDefinition } from "../../skills/scanner.js";
 import {
-  buildSkillListing,
+  buildSkillListingParts,
   rankSkillsForDiscovery,
   searchSkillMetadata,
   skillListingBudget,
@@ -29,7 +30,7 @@ describe("bounded skill discovery", () => {
     );
     for (const context of [0, 2_000, 12_800, 64_000, 128_000, 1_000_000]) {
       const options = { maxContextTokens: context, task: "处理文档" };
-      const listing = buildSkillListing(skills, options);
+      const listing = listingText(skills, options);
       expect(estimateStringTokens(listing)).toBeLessThanOrEqual(skillListingBudget(options));
       expect(listing).not.toContain("PRIVATE_BODY");
       expect(listing).not.toContain("/private/");
@@ -59,7 +60,7 @@ describe("bounded skill discovery", () => {
       "query",
       "default",
     ]);
-    const listing = buildSkillListing(
+    const listing = listingText(
       [...skills, ...Array.from({ length: 40 }, (_, i) => skill(`other:skill-${i}`))],
       { maxTokens: 85, preferredSkills: ["explicit"] },
     );
@@ -71,7 +72,7 @@ describe("bounded skill discovery", () => {
     const skills = Array.from({ length: 20 }, (_, i) =>
       skill(`plug:s${i}`, `Very long description ${"x".repeat(4_000)}`),
     );
-    const listing = buildSkillListing(skills, { maxTokens: 200 });
+    const listing = listingText(skills, { maxTokens: 200 });
     for (const s of skills) expect(listing).toContain(`- ${s.name}`);
     expect(listing).not.toContain("20 more skills omitted");
     expect(estimateStringTokens(listing)).toBeLessThanOrEqual(200);
@@ -84,10 +85,10 @@ describe("bounded skill discovery", () => {
       skill("local", "project", "project"),
     ];
     const original = [...skills];
-    expect(buildSkillListing(skills)).toBe(buildSkillListing([...skills].reverse()));
+    expect(listingText(skills)).toBe(listingText([...skills].reverse()));
     expect(skills).toEqual(original);
-    expect(buildSkillListing([], { maxTokens: 100 })).toBe("");
-    expect(buildSkillListing(skills, { maxTokens: 1 })).toBe("");
+    expect(listingText([], { maxTokens: 100 })).toBe("");
+    expect(listingText(skills, { maxTokens: 1 })).toBe("");
     expect(skillListingBudget({ maxContextTokens: 1_000_000 })).toBe(2_048);
     expect(skillListingBudget({ maxContextTokens: 2_000, maxTokens: 2_048 })).toBe(20);
     expect(skillListingBudget({ maxContextTokens: 64_000, maxTokens: 100 })).toBe(100);
@@ -134,3 +135,8 @@ describe("bounded skill discovery", () => {
     expect(JSON.parse(searchSkillMetadata(skills, "nonexistent")).results).toEqual([]);
   });
 });
+
+function listingText(...args: Parameters<typeof buildSkillListingParts>): string {
+  const parts = buildSkillListingParts(...args);
+  return parts ? joinContextListParts(parts) : "";
+}

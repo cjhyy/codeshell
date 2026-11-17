@@ -25,6 +25,17 @@ export function toCompositionSnapshot(
       moduleId: p.moduleId,
       isDefault: p.key === composition.engine.defaultPreset,
     })),
+    ...(composition.engine.presetExtensions?.length
+      ? {
+          presetExtensions: composition.engine.presetExtensions.map((e) => ({
+            moduleId: e.moduleId,
+            ...("presets" in e.value.target
+              ? { presets: [...e.value.target.presets] }
+              : { allExcept: [...e.value.target.allExcept] }),
+            tools: [...e.value.tools],
+          })),
+        }
+      : {}),
     promptSections: composition.engine.promptSections.map((s) => ({
       name: s.key,
       moduleId: s.moduleId,

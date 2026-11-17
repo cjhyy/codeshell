@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import WebSocket from "ws";
+import type { AccountRemoteAuthorization } from "./account-device-passkey.js";
 import type { MobileImageAttachment } from "@cjhyy/code-shell-core";
 import type {
   AccountDeviceConnection,
@@ -11,6 +12,16 @@ import type {
 export interface AccountDeviceIdentity {
   origin: string;
   accountId: string;
+}
+interface AccountDirectoryContext {
+  identity: AccountDeviceIdentity;
+  directory: string;
+  token: string;
+  signal: AbortSignal;
+  assert(): void;
+}
+interface AccountExecutionContext extends AccountDirectoryContext {
+  sourceProof: { sourceHostId: string; sourceDeviceCredential: string };
 }
 interface DeviceRecord extends AccountExecutionDevice {
   publicOrigin: string;
@@ -27,6 +38,7 @@ interface Connection extends AccountDeviceConnection {
   expiresAt: number;
 }
 export interface AccountDeviceDependencies {
+  authorizeTarget(input: AccountRemoteAuthorization): Promise<string>;
   identity(): AccountDeviceIdentity | undefined;
   credential(identity: AccountDeviceIdentity, signal: AbortSignal): Promise<string>;
   sourceProof(
@@ -34,7 +46,7 @@ export interface AccountDeviceDependencies {
     signal: AbortSignal,
   ): Promise<{ sourceHostId: string; sourceDeviceCredential: string }>;
   /** Must return the validated same-origin Account relay capability. */
-  relayOrigin(identity: AccountDeviceIdentity): Promise<string>;
+  relayOrigin(identity: AccountDeviceIdentity, scope: "directory" | "dispatch"): Promise<string>;
   fetch?: typeof fetch;
   socket?: (url: string, headers: Record<string, string>) => Socket;
 }
@@ -56,20 +68,26 @@ export class AccountDeviceService {
   private operations = new Map<AbortController, number | undefined>();
   private connections = new Map<string, Connection>();
   private resumes = new Map<string, Promise<AccountDeviceConnection>>();
+  private prepared = new Map<
+    string,
+    {
+      owner: number;
+      sourceHostId: string;
+      identity: AccountDeviceIdentity;
+      target: DeviceRecord;
+      grant: { hostAccessToken: string; deviceId: string; secretHash: string; expiresAt: number };
+      headers: Record<string, string>;
+      projects: AccountDeviceProject[];
+    }
+  >();
   private sink: (owner: number, event: AccountDeviceEvent) => void = () => {};
   constructor(private readonly deps: AccountDeviceDependencies) {}
   setEventSink(sink: (owner: number, event: AccountDeviceEvent) => void): void {
     this.sink = sink;
   }
-  private async operation<T>(
-    run: (ctx: {
-      identity: AccountDeviceIdentity;
-      directory: string;
-      token: string;
-      sourceProof: { sourceHostId: string; sourceDeviceCredential: string };
-      signal: AbortSignal;
-      assert(): void;
-    }) => Promise<T>,
+  private async accountOperation<T>(
+    scope: "directory" | "dispatch",
+    run: (ctx: AccountDirectoryContext) => Promise<T>,
     owner?: number,
   ): Promise<T> {
     const identity = this.deps.identity();
@@ -86,27 +104,38 @@ export class AccountDeviceService {
         throw new Error("账号授权已结束。");
     };
     try {
-      const directory = origin(await this.deps.relayOrigin(identity));
+      const directory = origin(await this.deps.relayOrigin(identity, scope));
       if (directory !== origin(identity.origin))
         throw new Error("账号中继能力必须与账号服务同源。");
       assert();
       const token = await this.deps.credential(identity, controller.signal);
       assert();
-      const sourceProof = await this.deps.sourceProof(identity, controller.signal);
-      assert();
-      if (!boundedId(sourceProof.sourceHostId) || !boundedId(sourceProof.sourceDeviceCredential))
-        throw new Error("本机设备授权已失效。");
       return await run({
         identity,
         directory,
         token,
-        sourceProof,
         signal: controller.signal,
         assert,
       });
     } finally {
       this.operations.delete(controller);
     }
+  }
+  private operation<T>(
+    run: (ctx: AccountExecutionContext) => Promise<T>,
+    owner?: number,
+  ): Promise<T> {
+    return this.accountOperation(
+      "dispatch",
+      async (ctx) => {
+        const sourceProof = await this.deps.sourceProof(ctx.identity, ctx.signal);
+        ctx.assert();
+        if (!boundedId(sourceProof.sourceHostId) || !boundedId(sourceProof.sourceDeviceCredential))
+          throw new Error("本机设备授权已失效。");
+        return run({ ...ctx, sourceProof });
+      },
+      owner,
+    );
   }
   private async json(
     url: string,
@@ -187,32 +216,55 @@ export class AccountDeviceService {
     });
   }
   async list(): Promise<AccountExecutionDevice[]> {
-    return this.operation(async (ctx) => {
+    // Browsing the account's computers does not enroll or authorize this
+    // computer as an execution source. Those proofs remain dispatch-only.
+    return this.accountOperation("directory", async (ctx) => {
       const devices = await this.directoryHosts(ctx);
       ctx.assert();
       return devices.map(({ publicOrigin: _private, ...device }) => device);
     });
   }
   private async target(
-    ctx: {
-      directory: string;
-      token: string;
-      sourceProof: { sourceHostId: string; sourceDeviceCredential: string };
-      signal: AbortSignal;
-      assert(): void;
-    },
+    ctx: AccountExecutionContext,
     hostId: string,
+    owner: number,
+    consume = false,
   ) {
     if (!boundedId(hostId)) throw new Error("请选择执行电脑。");
     const target = (await this.directoryHosts(ctx)).find((item) => item.hostId === hostId);
     ctx.assert();
     if (!target || target.revoked) throw new Error("这台电脑未获该账号授权。");
     if (!target.online) throw new Error("电脑当前离线，无法派发任务。");
+    const key = JSON.stringify([owner, hostId]);
+    for (const [cachedKey, cached] of this.prepared)
+      if (cached.grant.expiresAt <= Date.now()) this.prepared.delete(cachedKey);
+    const prepared = this.prepared.get(key);
+    this.prepared.delete(key);
+    if (
+      prepared &&
+      same(prepared.identity, ctx.identity) &&
+      prepared.sourceHostId === ctx.sourceProof.sourceHostId &&
+      prepared.target.environmentId === target.environmentId &&
+      prepared.target.publicOrigin === target.publicOrigin &&
+      prepared.grant.expiresAt > Date.now()
+    ) {
+      if (!consume) this.prepared.set(key, prepared);
+      return prepared;
+    }
+    const authorization = await this.deps.authorizeTarget({
+      origin: ctx.directory,
+      token: ctx.token,
+      hostId,
+      environmentId: target.environmentId,
+      ...ctx.sourceProof,
+      signal: ctx.signal,
+    });
+    ctx.assert();
     const handoff = await this.json(
       `${ctx.directory}/api/v1/remote-hosts/${encodeURIComponent(hostId)}/handoffs`,
       ctx.signal,
       { Authorization: `Bearer ${ctx.token}` },
-      { environmentId: target.environmentId, ...ctx.sourceProof },
+      { environmentId: target.environmentId, ...ctx.sourceProof, authorization },
     );
     ctx.assert();
     if (
@@ -263,10 +315,26 @@ export class AccountDeviceService {
         throw new Error("电脑项目目录无效。");
       return { id: project.id, name: project.name, path: project.path };
     });
-    return { target, grant, headers, projects };
+    const value = {
+      owner,
+      sourceHostId: ctx.sourceProof.sourceHostId,
+      identity: ctx.identity,
+      target,
+      grant,
+      headers,
+      projects,
+    };
+    if (!consume) {
+      while (this.prepared.size >= 128) this.prepared.delete(this.prepared.keys().next().value!);
+      this.prepared.set(key, value);
+    }
+    return value;
   }
   async projects(owner: number, input: { hostId: string }): Promise<AccountDeviceProject[]> {
-    return this.operation(async (ctx) => (await this.target(ctx, input?.hostId)).projects, owner);
+    return this.operation(
+      async (ctx) => (await this.target(ctx, input?.hostId, owner)).projects,
+      owner,
+    );
   }
   connect(
     owner: number,
@@ -307,7 +375,12 @@ export class AccountDeviceService {
         if (previous && this.connections.get(previous.id) !== previous)
           throw new Error("原电脑会话恢复已取消。");
       };
-      const { target, grant, headers, projects } = await this.target(ctx, input?.hostId);
+      const { target, grant, headers, projects } = await this.target(
+        ctx,
+        input?.hostId,
+        owner,
+        true,
+      );
       assertCurrent();
       if (previous && target.environmentId !== previous.environmentId)
         throw new Error("电脑环境已更换，不能恢复原会话。");
@@ -672,6 +745,8 @@ export class AccountDeviceService {
     this.emit(connection, "disconnected");
   }
   releaseOwner(owner: number): void {
+    for (const [key, prepared] of this.prepared)
+      if (prepared.owner === owner) this.prepared.delete(key);
     for (const [operation, operationOwner] of this.operations)
       if (operationOwner === owner) operation.abort();
     for (const connection of [...this.connections.values()])
@@ -680,6 +755,7 @@ export class AccountDeviceService {
   /** Identity retirement never sends Stop to local/LAN sessions or rewrites running task ownership. */
   retireIdentity(): void {
     this.epoch++;
+    this.prepared.clear();
     for (const operation of this.operations.keys()) operation.abort();
     for (const connection of [...this.connections.values()])
       this.close(connection.owner, { connectionId: connection.id });

@@ -840,14 +840,16 @@ export function useHubController({
     null;
   const workspaceName = workspaceCwd?.split(/[\\/]/).filter(Boolean).pop() ?? "服务端工作区";
   const empty = chat.items.length === 0 && approvals.length === 0;
+  const loading = loadingSession === activeId;
   const activeSession = sessions.find((item) => item.sessionId === activeId);
-  const title = empty
-    ? "新对话"
-    : activeSession?.customTitle ||
-      chat.title ||
-      activeSession?.title ||
-      activeSession?.preview?.trim() ||
-      sessionTitle(chat, activeId ?? "新对话");
+  const title =
+    empty && !loading
+      ? "新对话"
+      : activeSession?.customTitle ||
+        chat.title ||
+        activeSession?.title ||
+        activeSession?.preview?.trim() ||
+        sessionTitle(chat, loading ? "正在加载会话…" : (activeId ?? "新对话"));
   return {
     host: hub ? "hub" : "legacy",
     workspaceApi: hub,
@@ -860,7 +862,7 @@ export function useHubController({
       confirmedSessionIds.has(activeId) || sessions.some((item) => item.sessionId === activeId)
         ? activeId
         : undefined,
-    loading: loadingSession === activeId,
+    loading,
     chat,
     sessions,
     workspaceCwd,

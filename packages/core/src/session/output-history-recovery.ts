@@ -21,6 +21,7 @@ import {
 } from "./output-journal-head.js";
 import { compareOutputHistory } from "./output-history-comparison.js";
 import { compareNativeOutputHistory } from "./output-history-native-comparison.js";
+import { isContextMessageEvent } from "./context-messages.js";
 import {
   outputHistoryEventGroups,
   checkpointOutputHistoryRecords,
@@ -236,7 +237,11 @@ export class OutputHistoryRecovery {
         position.sequence === raw.length &&
         position.hash === raw.at(-1)?.hash,
     );
-    const native = jsonLines(transcript.data) as TranscriptEvent[];
+    // Engine context messages have no output-history counterpart (no stream
+    // event is emitted for them), so they are not part of the comparison.
+    const native = (jsonLines(transcript.data) as TranscriptEvent[]).filter(
+      (event) => !isContextMessageEvent(event),
+    );
     const groups = outputHistoryEventGroups(raw);
     const events = groups.map((group) => group.event);
     const originalEventsHash = sha(JSON.stringify(events));

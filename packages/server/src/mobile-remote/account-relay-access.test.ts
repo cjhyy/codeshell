@@ -1,13 +1,32 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, expect, spyOn, test } from "bun:test";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import type { IncomingMessage } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { AccountRelayAccessGate, type AccountRelayBinding } from "./account-relay-access.js";
+import {
+  ACCOUNT_RELAY_COOKIE,
+  AccountRelayAccessGate,
+  type AccountRelayBinding,
+} from "./account-relay-access.js";
 import { TrustedDeviceStore } from "./trusted-device-store.js";
 
 const roots: string[] = [];
 afterEach(() => roots.splice(0).forEach((root) => rmSync(root, { recursive: true, force: true })));
+
+function directoryBinding(expiresAt: number): AccountRelayBinding {
+  return {
+    authorizationId: "auth-a",
+    authorizationKind: "passkey-remote",
+    sourceKind: "device",
+    sourceHostId: "source-host",
+    accountId: "account-a",
+    rootSessionId: "root-a",
+    hostId: "host-a",
+    environmentId: "env-a",
+    leaseId: "lease-a",
+    expiresAt,
+  };
+}
 
 function fixture(redeem?: (handoff: string) => Promise<AccountRelayBinding>) {
   const root = mkdtempSync(join(tmpdir(), "account-relay-gate-"));
@@ -24,6 +43,9 @@ function fixture(redeem?: (handoff: string) => Promise<AccountRelayBinding>) {
       redeem ??
       (async () => ({
         authorizationId: "auth-a",
+        authorizationKind: "passkey-remote",
+        sourceKind: "device",
+        sourceHostId: "source-host",
         accountId: "account-a",
         rootSessionId: "root-a",
         hostId: "host-a",
@@ -62,11 +84,159 @@ test("account handoff is single use and creates only an in-memory target-bound d
   }
 });
 
+test.each([400, 30_000])(
+  "a directory clock %sms ahead cannot extend local authority or release the replay fence",
+  async (skewMs) => {
+    let now = Date.now();
+    const localExpiry = now + 10 * 60_000;
+    const clock = spyOn(Date, "now").mockImplementation(() => now);
+    const f = fixture(async () => directoryBinding(localExpiry + skewMs));
+    try {
+      const grant = await f.gate.exchange("clock-skew-handoff");
+      expect(grant.expiresAt).toBe(localExpiry);
+      const request = {
+        headers: { cookie: `${ACCOUNT_RELAY_COOKIE}=${grant.hostAccessToken}` },
+      } as IncomingMessage;
+      const access = f.gate.capture(request)!;
+      expect(f.gate.browserCredential(request)?.expiresAt).toBe(localExpiry);
+      now = localExpiry - 1;
+      expect(access.isAuthorized()).toBe(true);
+      expect(f.devices.authenticate(grant.deviceId, grant.secretHash)?.id).toBe(grant.deviceId);
+      now = localExpiry;
+      expect(access.isAuthorized()).toBe(false);
+      expect(f.gate.browserCredential(request)).toBeUndefined();
+      expect(f.devices.authenticate(grant.deviceId, grant.secretHash)).toBeUndefined();
+      await expect(f.gate.exchange("clock-skew-handoff")).rejects.toThrow(/unavailable/);
+    } finally {
+      f.gate.clear();
+      clock.mockRestore();
+    }
+  },
+);
+
+test.each([-1, 0, 10 * 60_000 + 30_001, 60_000.5])(
+  "expired, excessive, or non-integral directory lifetime %sms fails closed",
+  async (remainingMs) => {
+    const now = Date.now();
+    const clock = spyOn(Date, "now").mockReturnValue(now);
+    const f = fixture(async () => directoryBinding(now + remainingMs));
+    try {
+      await expect(f.gate.exchange("invalid-expiry-handoff")).rejects.toThrow(/target/);
+      expect(f.devices.listDevices()).toEqual([]);
+      expect(existsSync(f.path)).toBe(false);
+    } finally {
+      f.gate.clear();
+      clock.mockRestore();
+    }
+  },
+);
+
+test("shorter directory authorization keeps its exact remaining expiry", async () => {
+  const expiresAt = Date.now() + 60_000;
+  const f = fixture(async () => directoryBinding(expiresAt));
+  try {
+    const grant = await f.gate.exchange("shorter-expiry-handoff");
+    expect(grant.expiresAt).toBe(expiresAt);
+    expect(f.devices.authenticate(grant.deviceId, grant.secretHash)?.id).toBe(grant.deviceId);
+  } finally {
+    f.gate.clear();
+  }
+});
+
+test("fresh execution grants retain one owner while old HTTP and socket tokens still expire", async () => {
+  let now = Date.now();
+  const clock = spyOn(Date, "now").mockImplementation(() => now);
+  let leaseId = "lease-a";
+  const f = fixture(async () => ({ ...directoryBinding(now + 60_000), leaseId }));
+  try {
+    const first = await f.gate.exchange("first-execution");
+    const original = f.gate.capture(f.request(first.hostAccessToken))!;
+    now += 30_000;
+    leaseId = "lease-b";
+    const next = await f.gate.exchange("renewed-execution");
+    expect(next.deviceId).toBe(first.deviceId);
+    expect(next.secretHash).toBe(first.secretHash);
+    expect(next.hostAccessToken).not.toBe(first.hostAccessToken);
+    now = first.expiresAt;
+    expect(original.isAuthorized()).toBe(false);
+    expect(original.isCapabilityAuthorized()).toBe(true);
+    expect(f.gate.capture(f.request(first.hostAccessToken))).toBeUndefined();
+    expect(f.gate.capture(f.request(next.hostAccessToken))?.isAuthorized()).toBe(true);
+    expect(f.devices.authenticate(first.deviceId, first.secretHash)?.id).toBe(first.deviceId);
+    expect(f.revoked).toEqual([]);
+    expect(existsSync(f.path)).toBe(false);
+    now = next.expiresAt;
+    expect(original.isCapabilityAuthorized()).toBe(false);
+    expect(f.gate.capture(f.request(next.hostAccessToken))).toBeUndefined();
+    expect(f.revoked).toEqual([first.deviceId]);
+  } finally {
+    f.gate.clear();
+    clock.mockRestore();
+  }
+});
+
+test.each(["authorizationId", "rootSessionId", "sourceHostId", "sourceKind"])(
+  "a changed %s cannot inherit an existing capability owner",
+  async (field) => {
+    let binding = directoryBinding(Date.now() + 60_000);
+    const f = fixture(async () => binding);
+    try {
+      const first = await f.gate.exchange("original-owner");
+      binding = { ...binding, [field]: field === "sourceKind" ? "browser" : "different-authority" };
+      const next = await f.gate.exchange("different-owner");
+      expect(next.deviceId).not.toBe(first.deviceId);
+      expect(next.secretHash).not.toBe(first.secretHash);
+    } finally {
+      f.gate.clear();
+    }
+  },
+);
+
+test("logout revokes every execution token and captured capability of the same owner", async () => {
+  const f = fixture();
+  try {
+    const first = await f.gate.exchange("first-owner-token");
+    const captured = f.gate.capture(f.request(first.hostAccessToken))!;
+    const next = await f.gate.exchange("next-owner-token");
+    f.gate.revokeRequest(f.request(next.hostAccessToken));
+    expect(captured.isAuthorized()).toBe(false);
+    expect(captured.isCapabilityAuthorized()).toBe(false);
+    expect(f.gate.capture(f.request(first.hostAccessToken))).toBeUndefined();
+    expect(f.gate.capture(f.request(next.hostAccessToken))).toBeUndefined();
+    expect(f.devices.authenticate(first.deviceId, first.secretHash)).toBeUndefined();
+    expect(f.revoked).toEqual([first.deviceId]);
+  } finally {
+    f.gate.clear();
+  }
+});
+
+test("expired or removed owner identities cannot be resurrected by a new handoff", async () => {
+  let now = Date.now();
+  const clock = spyOn(Date, "now").mockImplementation(() => now);
+  const f = fixture(async () => directoryBinding(now + 60_000));
+  try {
+    const first = await f.gate.exchange("expired-owner");
+    now = first.expiresAt;
+    const next = await f.gate.exchange("new-owner-after-expiry");
+    expect(next.deviceId).not.toBe(first.deviceId);
+    f.devices.remove(next.deviceId);
+    const third = await f.gate.exchange("new-owner-after-removal");
+    expect(third.deviceId).not.toBe(next.deviceId);
+    expect(f.revoked).toEqual([first.deviceId, next.deviceId]);
+  } finally {
+    f.gate.clear();
+    clock.mockRestore();
+  }
+});
+
 test.each(["hostId", "environmentId", "accountId"])(
   "account handoff rejects a mismatched %s",
   async (field) => {
     const f = fixture(async () => ({
       authorizationId: "auth-a",
+      authorizationKind: "passkey-remote",
+      sourceKind: "device",
+      sourceHostId: "source-host",
       accountId: "account-a",
       rootSessionId: "root-a",
       hostId: "host-a",
@@ -93,6 +263,9 @@ test("concurrent replay and a redemption resolving after stop cannot create auth
   f.gate.clear();
   resolve({
     authorizationId: "auth-a",
+    authorizationKind: "passkey-remote",
+    sourceKind: "device",
+    sourceHostId: "source-host",
     accountId: "account-a",
     rootSessionId: "root-a",
     hostId: "host-a",
@@ -105,6 +278,10 @@ test("concurrent replay and a redemption resolving after stop cannot create auth
 });
 
 test.each([
+  { authorizationKind: undefined },
+  { authorizationKind: "account-cookie" },
+  { sourceKind: "unknown" },
+  { sourceHostId: "" },
   { authorizationId: 123 },
   { rootSessionId: "" },
   { leaseId: "bad\0lease" },
@@ -116,6 +293,9 @@ test.each([
     async () =>
       ({
         authorizationId: "auth-a",
+        authorizationKind: "passkey-remote",
+        sourceKind: "device",
+        sourceHostId: "source-host",
         accountId: "account-a",
         rootSessionId: "root-a",
         hostId: "host-a",
@@ -133,6 +313,9 @@ test.each([
 test("expiry synchronously fences access and removes the ephemeral paired identity", async () => {
   const f = fixture(async () => ({
     authorizationId: "auth-a",
+    authorizationKind: "passkey-remote",
+    sourceKind: "device",
+    sourceHostId: "source-host",
     accountId: "account-a",
     rootSessionId: "root-a",
     hostId: "host-a",
@@ -173,6 +356,9 @@ test("retired redemption cannot release the new provider's pending replay guard"
   const f = fixture(() => new Promise((done) => completions.push(done)));
   const binding = (): AccountRelayBinding => ({
     authorizationId: "auth-a",
+    authorizationKind: "passkey-remote",
+    sourceKind: "device",
+    sourceHostId: "source-host",
     accountId: "account-a",
     rootSessionId: "root-a",
     hostId: "host-a",
@@ -190,4 +376,34 @@ test("retired redemption cannot release the new provider's pending replay guard"
   completions[1]!(binding());
   await current;
   f.gate.clear();
+});
+
+test("browser cookie restores only its ephemeral device and rejects ambiguous credentials", async () => {
+  const f = fixture();
+  try {
+    const grant = await f.gate.exchange("browser-handoff");
+    const cookie = `${ACCOUNT_RELAY_COOKIE}=${grant.hostAccessToken}`;
+    const request = (value: string, header?: string) =>
+      ({
+        headers: { cookie: value, ...(header ? { "x-codeshell-host-access": header } : {}) },
+      }) as IncomingMessage;
+    const browser = request(cookie);
+    expect(f.gate.browserCredential(browser)).toMatchObject({
+      deviceId: grant.deviceId,
+      secretHash: grant.secretHash,
+      expiresAt: grant.expiresAt,
+    });
+    expect(f.gate.capture(request(`${cookie}; ${cookie}`))).toBeUndefined();
+    expect(f.gate.capture(request(cookie, "x".repeat(43)))).toBeUndefined();
+    expect(f.gate.browserCredential(f.request(grant.hostAccessToken))).toBeUndefined();
+    const captured = f.gate.capture(browser)!;
+    f.gate.revokeRequest(browser);
+    expect(captured.isAuthorized()).toBe(false);
+    expect(f.gate.browserCredential(browser)).toBeUndefined();
+    expect(f.devices.authenticate(grant.deviceId, grant.secretHash)).toBeUndefined();
+    expect(f.revoked).toEqual([grant.deviceId]);
+    expect(existsSync(f.path)).toBe(false);
+  } finally {
+    f.gate.clear();
+  }
 });

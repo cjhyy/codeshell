@@ -10,6 +10,7 @@
  */
 
 import { join, basename } from "node:path";
+import { isContextEvent } from "@cjhyy/code-shell-core/internal";
 
 const INLINE_RESULT_LIMIT = 2_000;
 const INLINE_ARG_LIMIT = 800;
@@ -60,6 +61,8 @@ export function renderSessionMarkdown(
   for (const evRaw of events) {
     const ev = evRaw as { type?: string; data?: { role?: string; content?: unknown } };
     if (ev.type !== "message") continue;
+    // Engine context (ledger, hook reminders) is not a conversation turn.
+    if (isContextEvent(ev)) continue;
     turnNumber += 1;
     const role = ev.data?.role ?? "unknown";
     const content = ev.data?.content;

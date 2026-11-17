@@ -2,6 +2,7 @@ import type { TranscriptSubscriptionManager } from "./cc-room/transcript-subscri
 import type { RoomModeAuthority } from "./cc-room/room-mode-authority.js";
 import { MAX_EXTERNAL_RUNTIME_TEXT_CHARS } from "./external-runtime-ipc.js";
 import { BrowserWindow, ipcMain } from "electron";
+import { listBackgroundWorkForUI } from "@cjhyy/code-shell-core/internal";
 import {
   DEFAULT_DISCOVER_LIMIT,
   DEFAULT_DISCOVER_SINCE_MS,
@@ -92,6 +93,7 @@ export function registerRoomsIpc(deps: RoomsIpcDeps) {
     windows: mainWindows,
     roomManager,
     listBackgroundWork: createTaskInboxBackgroundHost({ worker: () => deps.bridge() }).list,
+    readLocalBackgroundWork: () => listBackgroundWorkForUI("task-inbox", { scope: "all" }),
     requirePath: requireRendererLinkedSessionPath,
     subscriptions: transcriptSubscriptions,
     roomMatchesTranscript: (...args) => mobileOrchestrator.roomMatchesTranscript(...args),

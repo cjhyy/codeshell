@@ -1,7 +1,7 @@
 {
-  "fetchedAt": "2026-10-15T06:35:47.055Z",
+  "fetchedAt": "2026-11-17T06:16:12.063Z",
   "source": "https://openrouter.ai/api/v1/models",
-  "count": 20,
+  "count": 40,
   "models": [
     {
       "id": "openai/gpt-6.1-sol-pro",
@@ -11,11 +11,18 @@
       "maxOutputTokens": 128000,
       "inputPricePerMillion": 2,
       "outputPricePerMillion": 10,
-      "modalities": [
-        "file",
-        "image",
-        "text"
-      ]
+      "cacheReadPricePerMillion": 0.1,
+      "cacheWritePricePerMillion": 2.5,
+      "priceTiers": [
+        {
+          "minPromptTokens": 272000,
+          "inputPricePerMillion": 4,
+          "outputPricePerMillion": 15,
+          "cacheReadPricePerMillion": 0.2,
+          "cacheWritePricePerMillion": 5
+        }
+      ],
+      "modalities": ["file", "image", "text"]
     },
     {
       "id": "openai/gpt-6.1-sol",
@@ -25,11 +32,18 @@
       "maxOutputTokens": 128000,
       "inputPricePerMillion": 2,
       "outputPricePerMillion": 10,
-      "modalities": [
-        "file",
-        "image",
-        "text"
-      ]
+      "cacheReadPricePerMillion": 0.1,
+      "cacheWritePricePerMillion": 2.5,
+      "priceTiers": [
+        {
+          "minPromptTokens": 272000,
+          "inputPricePerMillion": 4,
+          "outputPricePerMillion": 15,
+          "cacheReadPricePerMillion": 0.2,
+          "cacheWritePricePerMillion": 5
+        }
+      ],
+      "modalities": ["file", "image", "text"]
     },
     {
       "id": "anthropic/claude-opus-5.5",
@@ -39,11 +53,9 @@
       "maxOutputTokens": 128000,
       "inputPricePerMillion": 4,
       "outputPricePerMillion": 20,
-      "modalities": [
-        "text",
-        "image",
-        "file"
-      ]
+      "cacheReadPricePerMillion": 0.2,
+      "cacheWritePricePerMillion": 5,
+      "modalities": ["text", "image", "file"]
     },
     {
       "id": "anthropic/claude-sonnet-5.5",
@@ -53,11 +65,9 @@
       "maxOutputTokens": 128000,
       "inputPricePerMillion": 2,
       "outputPricePerMillion": 10,
-      "modalities": [
-        "text",
-        "image",
-        "file"
-      ]
+      "cacheReadPricePerMillion": 0.1,
+      "cacheWritePricePerMillion": 2.5,
+      "modalities": ["text", "image", "file"]
     },
     {
       "id": "anthropic/claude-haiku-5.5",
@@ -65,29 +75,32 @@
       "created": 1791397883,
       "contextLength": 1000000,
       "maxOutputTokens": 128000,
-      "inputPricePerMillion": 0.09999999999999999,
+      "inputPricePerMillion": 0.1,
       "outputPricePerMillion": 0.5,
-      "modalities": [
-        "text",
-        "image",
-        "file"
-      ]
+      "cacheReadPricePerMillion": 0.01,
+      "cacheWritePricePerMillion": 0.125,
+      "priceTiers": [
+        {
+          "minPromptTokens": 100000,
+          "inputPricePerMillion": 0.5,
+          "outputPricePerMillion": 2.5,
+          "cacheReadPricePerMillion": 0.05,
+          "cacheWritePricePerMillion": 0.625
+        }
+      ],
+      "modalities": ["text", "image", "file"]
     },
     {
       "id": "google/gemini-4-argon",
       "name": "Google: Gemini 4 Argon",
       "created": 1791907477,
       "contextLength": 1048576,
-      "maxOutputTokens": 65536,
+      "maxOutputTokens": 943718,
       "inputPricePerMillion": 2,
       "outputPricePerMillion": 10,
-      "modalities": [
-        "audio",
-        "file",
-        "image",
-        "text",
-        "video"
-      ]
+      "cacheReadPricePerMillion": 0.1,
+      "cacheWritePricePerMillion": 0.1875,
+      "modalities": ["audio", "file", "image", "text", "video"]
     },
     {
       "id": "google/gemini-3.8-flash",
@@ -95,15 +108,11 @@
       "created": 1788362056,
       "contextLength": 1048576,
       "maxOutputTokens": 65536,
-      "inputPricePerMillion": 0.75,
-      "outputPricePerMillion": 3.75,
-      "modalities": [
-        "text",
-        "image",
-        "video",
-        "file",
-        "audio"
-      ]
+      "inputPricePerMillion": 0.825,
+      "outputPricePerMillion": 4.125,
+      "cacheReadPricePerMillion": 0.0825,
+      "cacheWritePricePerMillion": 0.0416666666667,
+      "modalities": ["text", "image", "video", "file", "audio"]
     },
     {
       "id": "~deepseek/deepseek-pro-latest",
@@ -111,11 +120,10 @@
       "created": 1789399174,
       "contextLength": 1048576,
       "maxOutputTokens": 393216,
-      "inputPricePerMillion": 0.22499999999999998,
+      "inputPricePerMillion": 0.0999,
       "outputPricePerMillion": 8,
-      "modalities": [
-        "text"
-      ]
+      "cacheReadPricePerMillion": 0.0999,
+      "modalities": ["text"]
     },
     {
       "id": "~deepseek/deepseek-flash-latest",
@@ -123,12 +131,10 @@
       "created": 1789399150,
       "contextLength": 1048576,
       "maxOutputTokens": 943718,
-      "inputPricePerMillion": 0.013680000000000001,
-      "outputPricePerMillion": 0.891,
-      "modalities": [
-        "text",
-        "image"
-      ]
+      "inputPricePerMillion": 0.036,
+      "outputPricePerMillion": 0.5,
+      "cacheReadPricePerMillion": 0.01,
+      "modalities": ["text", "image"]
     },
     {
       "id": "qwen/qwen3.8-max-prime",
@@ -138,11 +144,8 @@
       "maxOutputTokens": 131072,
       "inputPricePerMillion": 4,
       "outputPricePerMillion": 12,
-      "modalities": [
-        "text",
-        "image",
-        "video"
-      ]
+      "cacheReadPricePerMillion": 0.5,
+      "modalities": ["text", "image", "video"]
     },
     {
       "id": "qwen/qwen3.8-omni-flash",
@@ -152,12 +155,8 @@
       "maxOutputTokens": 131072,
       "inputPricePerMillion": 0.15,
       "outputPricePerMillion": 0.47,
-      "modalities": [
-        "text",
-        "image",
-        "audio",
-        "video"
-      ]
+      "cacheReadPricePerMillion": 0.016,
+      "modalities": ["text", "image", "audio", "video"]
     },
     {
       "id": "z-ai/glm-5.3-prime",
@@ -165,25 +164,21 @@
       "created": 1790199651,
       "contextLength": 1000000,
       "maxOutputTokens": 131072,
-      "inputPricePerMillion": 2.8,
-      "outputPricePerMillion": 8.8,
-      "modalities": [
-        "text"
-      ]
+      "inputPricePerMillion": 1.68,
+      "outputPricePerMillion": 5.28,
+      "cacheReadPricePerMillion": 0.336,
+      "modalities": ["text"]
     },
     {
       "id": "z-ai/glm-5.3-flash",
       "name": "Z.ai: GLM 5.3 Flash",
       "created": 1787752741,
       "contextLength": 1048576,
-      "maxOutputTokens": 943718,
-      "inputPricePerMillion": 0.036,
-      "outputPricePerMillion": 0.8999999999999999,
-      "modalities": [
-        "text",
-        "image",
-        "video"
-      ]
+      "maxOutputTokens": 131072,
+      "inputPricePerMillion": 0.0399,
+      "outputPricePerMillion": 0.0784,
+      "cacheReadPricePerMillion": 0.03,
+      "modalities": ["text", "image", "video"]
     },
     {
       "id": "moonshotai/kimi-k3",
@@ -191,13 +186,10 @@
       "created": 1784215858,
       "contextLength": 1048576,
       "maxOutputTokens": 943718,
-      "inputPricePerMillion": 0.44999999999999996,
-      "outputPricePerMillion": 15,
-      "modalities": [
-        "text",
-        "image",
-        "video"
-      ]
+      "inputPricePerMillion": 0.192,
+      "outputPricePerMillion": 16,
+      "cacheReadPricePerMillion": 0.182,
+      "modalities": ["text", "image", "video"]
     },
     {
       "id": "x-ai/grok-4.7",
@@ -207,11 +199,16 @@
       "maxOutputTokens": 450000,
       "inputPricePerMillion": 2,
       "outputPricePerMillion": 6,
-      "modalities": [
-        "text",
-        "image",
-        "file"
-      ]
+      "cacheReadPricePerMillion": 0.5,
+      "priceTiers": [
+        {
+          "minPromptTokens": 200000,
+          "inputPricePerMillion": 4,
+          "outputPricePerMillion": 12,
+          "cacheReadPricePerMillion": 1
+        }
+      ],
+      "modalities": ["text", "image", "file"]
     },
     {
       "id": "mistralai/mistral-large-4-0",
@@ -219,12 +216,10 @@
       "created": 1791294122,
       "contextLength": 1048576,
       "maxOutputTokens": 262144,
-      "inputPricePerMillion": 0.6799999999999999,
-      "outputPricePerMillion": 2.09,
-      "modalities": [
-        "text",
-        "image"
-      ]
+      "inputPricePerMillion": 0.7,
+      "outputPricePerMillion": 2.1,
+      "cacheReadPricePerMillion": 0.07,
+      "modalities": ["text", "image"]
     },
     {
       "id": "meta/muse-wonder",
@@ -234,13 +229,8 @@
       "maxOutputTokens": 943718,
       "inputPricePerMillion": 4,
       "outputPricePerMillion": 20,
-      "modalities": [
-        "text",
-        "image",
-        "video",
-        "file",
-        "audio"
-      ]
+      "cacheReadPricePerMillion": 0.2,
+      "modalities": ["text", "image", "video", "file", "audio"]
     },
     {
       "id": "cohere/command-a-plus",
@@ -250,10 +240,8 @@
       "maxOutputTokens": 64000,
       "inputPricePerMillion": 0.3,
       "outputPricePerMillion": 1.5,
-      "modalities": [
-        "text",
-        "image"
-      ]
+      "cacheReadPricePerMillion": 0.15,
+      "modalities": ["text", "image"]
     },
     {
       "id": "stepfun/step-5-preview",
@@ -263,11 +251,8 @@
       "maxOutputTokens": 64000,
       "inputPricePerMillion": 1,
       "outputPricePerMillion": 2.7,
-      "modalities": [
-        "text",
-        "image",
-        "video"
-      ]
+      "cacheReadPricePerMillion": 0.1,
+      "modalities": ["text", "image", "video"]
     },
     {
       "id": "liquid/lfm-2.5-24b-a2b",
@@ -275,11 +260,321 @@
       "created": 1791912025,
       "contextLength": 128000,
       "maxOutputTokens": 8192,
-      "inputPricePerMillion": 0.049999999999999996,
+      "inputPricePerMillion": 0.05,
       "outputPricePerMillion": 0.7,
-      "modalities": [
-        "text"
-      ]
+      "cacheReadPricePerMillion": 0.025,
+      "modalities": ["text"]
+    },
+    {
+      "id": "anthropic/claude-opus-5",
+      "name": "Anthropic: Claude Opus 5",
+      "created": 1784912544,
+      "contextLength": 1000000,
+      "maxOutputTokens": 128000,
+      "inputPricePerMillion": 5,
+      "outputPricePerMillion": 25,
+      "cacheReadPricePerMillion": 0.5,
+      "cacheWritePricePerMillion": 6.25,
+      "modalities": ["text", "image", "file"]
+    },
+    {
+      "id": "anthropic/claude-sonnet-5",
+      "name": "Anthropic: Claude Sonnet 5",
+      "created": 1782843083,
+      "contextLength": 1000000,
+      "maxOutputTokens": 128000,
+      "inputPricePerMillion": 2,
+      "outputPricePerMillion": 10,
+      "cacheReadPricePerMillion": 0.2,
+      "cacheWritePricePerMillion": 2.5,
+      "modalities": ["text", "image", "file"]
+    },
+    {
+      "id": "~anthropic/claude-opus-latest",
+      "name": "Anthropic: Claude Opus Latest",
+      "created": 1776795361,
+      "contextLength": 1000000,
+      "maxOutputTokens": 128000,
+      "inputPricePerMillion": 4,
+      "outputPricePerMillion": 20,
+      "cacheReadPricePerMillion": 0.2,
+      "cacheWritePricePerMillion": 5,
+      "modalities": ["text", "image", "file"]
+    },
+    {
+      "id": "~anthropic/claude-sonnet-latest",
+      "name": "Anthropic: Claude Sonnet Latest",
+      "created": 1777318368,
+      "contextLength": 1000000,
+      "maxOutputTokens": 128000,
+      "inputPricePerMillion": 2,
+      "outputPricePerMillion": 10,
+      "cacheReadPricePerMillion": 0.1,
+      "cacheWritePricePerMillion": 2.5,
+      "modalities": ["text", "image", "file"]
+    },
+    {
+      "id": "openai/gpt-6.1-terra",
+      "name": "OpenAI: GPT-6.1 Terra",
+      "created": 1793038409,
+      "contextLength": 1050000,
+      "maxOutputTokens": 128000,
+      "inputPricePerMillion": 1,
+      "outputPricePerMillion": 5,
+      "cacheReadPricePerMillion": 0.05,
+      "cacheWritePricePerMillion": 1.25,
+      "priceTiers": [
+        {
+          "minPromptTokens": 272000,
+          "inputPricePerMillion": 2,
+          "outputPricePerMillion": 7.5,
+          "cacheReadPricePerMillion": 0.1,
+          "cacheWritePricePerMillion": 2.5
+        }
+      ],
+      "modalities": ["file", "image", "text"]
+    },
+    {
+      "id": "openai/gpt-6-astra",
+      "name": "OpenAI: GPT-6 Astra",
+      "created": 1788552838,
+      "contextLength": 1050000,
+      "maxOutputTokens": 128000,
+      "inputPricePerMillion": 10,
+      "outputPricePerMillion": 50,
+      "cacheReadPricePerMillion": 1,
+      "cacheWritePricePerMillion": 12.5,
+      "priceTiers": [
+        {
+          "minPromptTokens": 272000,
+          "inputPricePerMillion": 20,
+          "outputPricePerMillion": 75,
+          "cacheReadPricePerMillion": 2,
+          "cacheWritePricePerMillion": 25
+        }
+      ],
+      "modalities": ["file", "image", "text"]
+    },
+    {
+      "id": "openai/gpt-6-astra-pro",
+      "name": "OpenAI: GPT-6 Astra Pro",
+      "created": 1788552835,
+      "contextLength": 1050000,
+      "maxOutputTokens": 128000,
+      "inputPricePerMillion": 10,
+      "outputPricePerMillion": 50,
+      "cacheReadPricePerMillion": 1,
+      "cacheWritePricePerMillion": 12.5,
+      "priceTiers": [
+        {
+          "minPromptTokens": 272000,
+          "inputPricePerMillion": 20,
+          "outputPricePerMillion": 75,
+          "cacheReadPricePerMillion": 2,
+          "cacheWritePricePerMillion": 25
+        }
+      ],
+      "modalities": ["file", "image", "text"]
+    },
+    {
+      "id": "openai/gpt-6-sol",
+      "name": "OpenAI: GPT-6 Sol",
+      "created": 1790100775,
+      "contextLength": 1050000,
+      "maxOutputTokens": 128000,
+      "inputPricePerMillion": 2,
+      "outputPricePerMillion": 10,
+      "cacheReadPricePerMillion": 0.2,
+      "cacheWritePricePerMillion": 2.5,
+      "priceTiers": [
+        {
+          "minPromptTokens": 272000,
+          "inputPricePerMillion": 4,
+          "outputPricePerMillion": 15,
+          "cacheReadPricePerMillion": 0.4,
+          "cacheWritePricePerMillion": 5
+        }
+      ],
+      "modalities": ["file", "image", "text"]
+    },
+    {
+      "id": "openai/gpt-5.6-sol",
+      "name": "OpenAI: GPT-5.6 Sol",
+      "created": 1783590850,
+      "contextLength": 1050000,
+      "maxOutputTokens": 128000,
+      "inputPricePerMillion": 4,
+      "outputPricePerMillion": 20,
+      "cacheReadPricePerMillion": 0.4,
+      "cacheWritePricePerMillion": 5,
+      "priceTiers": [
+        {
+          "minPromptTokens": 272000,
+          "inputPricePerMillion": 8,
+          "outputPricePerMillion": 30,
+          "cacheReadPricePerMillion": 0.8,
+          "cacheWritePricePerMillion": 10
+        }
+      ],
+      "modalities": ["file", "image", "text"]
+    },
+    {
+      "id": "openai/gpt-5.6-terra",
+      "name": "OpenAI: GPT-5.6 Terra",
+      "created": 1783590857,
+      "contextLength": 1050000,
+      "maxOutputTokens": 128000,
+      "inputPricePerMillion": 2,
+      "outputPricePerMillion": 12,
+      "cacheReadPricePerMillion": 0.2,
+      "cacheWritePricePerMillion": 2.5,
+      "priceTiers": [
+        {
+          "minPromptTokens": 272000,
+          "inputPricePerMillion": 4,
+          "outputPricePerMillion": 18,
+          "cacheReadPricePerMillion": 0.4,
+          "cacheWritePricePerMillion": 5
+        }
+      ],
+      "modalities": ["file", "image", "text"]
+    },
+    {
+      "id": "openai/gpt-5.6-luna",
+      "name": "OpenAI: GPT-5.6 Luna",
+      "created": 1783590864,
+      "contextLength": 1050000,
+      "maxOutputTokens": 128000,
+      "inputPricePerMillion": 0.2,
+      "outputPricePerMillion": 1.2,
+      "cacheReadPricePerMillion": 0.02,
+      "cacheWritePricePerMillion": 0.25,
+      "priceTiers": [
+        {
+          "minPromptTokens": 272000,
+          "inputPricePerMillion": 0.4,
+          "outputPricePerMillion": 1.8,
+          "cacheReadPricePerMillion": 0.04,
+          "cacheWritePricePerMillion": 0.5
+        }
+      ],
+      "modalities": ["file", "image", "text"]
+    },
+    {
+      "id": "google/gemini-3.1-pro-preview",
+      "name": "Google: Gemini 3.1 Pro Preview",
+      "created": 1771509627,
+      "contextLength": 1048576,
+      "maxOutputTokens": 65536,
+      "inputPricePerMillion": 2,
+      "outputPricePerMillion": 12,
+      "cacheReadPricePerMillion": 0.2,
+      "cacheWritePricePerMillion": 0.375,
+      "priceTiers": [
+        {
+          "minPromptTokens": 200000,
+          "inputPricePerMillion": 4,
+          "outputPricePerMillion": 18,
+          "cacheReadPricePerMillion": 0.4
+        }
+      ],
+      "modalities": ["audio", "file", "image", "text", "video"]
+    },
+    {
+      "id": "deepseek/deepseek-v4-pro",
+      "name": "DeepSeek: DeepSeek V4 Pro 0423",
+      "created": 1777000679,
+      "contextLength": 1048576,
+      "maxOutputTokens": 393216,
+      "inputPricePerMillion": 0.9,
+      "outputPricePerMillion": 1.5,
+      "cacheReadPricePerMillion": 0.25,
+      "modalities": ["text"]
+    },
+    {
+      "id": "deepseek/deepseek-v4-flash",
+      "name": "DeepSeek: DeepSeek V4 Flash 0423",
+      "created": 1777000666,
+      "contextLength": 1048576,
+      "maxOutputTokens": 393216,
+      "inputPricePerMillion": 0.09,
+      "outputPricePerMillion": 0.18,
+      "cacheReadPricePerMillion": 0.018,
+      "modalities": ["text"]
+    },
+    {
+      "id": "moonshotai/kimi-k2.7-code",
+      "name": "MoonshotAI: Kimi K2.7 Code",
+      "created": 1781266361,
+      "contextLength": 262144,
+      "maxOutputTokens": 235929,
+      "inputPricePerMillion": 0.6,
+      "outputPricePerMillion": 3.5,
+      "cacheReadPricePerMillion": 0.16,
+      "modalities": ["text", "image"]
+    },
+    {
+      "id": "z-ai/glm-5.3",
+      "name": "Z.ai: GLM 5.3",
+      "created": 1787086655,
+      "contextLength": 1048576,
+      "maxOutputTokens": 943718,
+      "inputPricePerMillion": 0.0699,
+      "outputPricePerMillion": 1.4,
+      "cacheReadPricePerMillion": 0.0689,
+      "modalities": ["text"]
+    },
+    {
+      "id": "z-ai/glm-5.2",
+      "name": "Z.ai: GLM 5.2",
+      "created": 1781631930,
+      "contextLength": 1048576,
+      "maxOutputTokens": 943718,
+      "inputPricePerMillion": 0.007,
+      "outputPricePerMillion": 6.8,
+      "cacheReadPricePerMillion": 0.006,
+      "modalities": ["text"]
+    },
+    {
+      "id": "x-ai/grok-4.6",
+      "name": "SpaceXAI: Grok 4.6",
+      "created": 1786548957,
+      "contextLength": 500000,
+      "maxOutputTokens": 450000,
+      "inputPricePerMillion": 2,
+      "outputPricePerMillion": 6,
+      "cacheReadPricePerMillion": 0.5,
+      "priceTiers": [
+        {
+          "minPromptTokens": 200000,
+          "inputPricePerMillion": 4,
+          "outputPricePerMillion": 12,
+          "cacheReadPricePerMillion": 1
+        }
+      ],
+      "modalities": ["text", "image", "file"]
+    },
+    {
+      "id": "qwen/qwen3.8-max-0902",
+      "name": "Qwen: Qwen3.8 Max (0902)",
+      "created": 1788469704,
+      "contextLength": 1000000,
+      "maxOutputTokens": 131072,
+      "inputPricePerMillion": 2,
+      "outputPricePerMillion": 6,
+      "cacheReadPricePerMillion": 0.25,
+      "modalities": ["text", "image", "video"]
+    },
+    {
+      "id": "minimax/minimax-m3",
+      "name": "MiniMax: MiniMax M3",
+      "created": 1780245374,
+      "contextLength": 524288,
+      "maxOutputTokens": 512000,
+      "inputPricePerMillion": 0.3,
+      "outputPricePerMillion": 1.2,
+      "cacheReadPricePerMillion": 0.06,
+      "modalities": ["text", "image", "video"]
     }
   ]
 }

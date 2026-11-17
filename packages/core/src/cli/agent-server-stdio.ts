@@ -68,6 +68,8 @@ import type { AgentModule } from "../composition/types.js";
 import { resolveSessionAgentConfig, resolveSessionCwd } from "./stdio-session-config.js";
 import { hasWorkspaceHostBridge } from "./stdio-host-config.js";
 import { configureModelTracing } from "../model-traces/index.js";
+import { registerOpenRouterCatalogCache } from "../data/openrouter-sync.js";
+import { codeShellHome } from "../utils/paths.js";
 
 /**
  * Load AgentModules from CODE_SHELL_CAPABILITY_MODULES: comma-separated
@@ -385,6 +387,10 @@ cronScheduler.setExecutionEnabled(false);
 cronScheduler.loadJobs();
 
 // ─── Step 5: AgentServer over stdio ──────────────────────────────
+
+// Pricing and limits for OpenRouter models beyond the bundled snapshot: reads
+// the disk cache now; the network refresh waits for a real OpenRouter request.
+registerOpenRouterCatalogCache(join(codeShellHome(), "cache", "openrouter-models.json"));
 
 const stdioTransport = new StdioTransport(process.stdin, process.stdout);
 if (operationBatchEnabled) {

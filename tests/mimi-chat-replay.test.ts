@@ -125,9 +125,34 @@ function deferred() {
   return { promise, resolve };
 }
 
+/** Rows Mimi has been told for one durable list, from its context-ledger blocks in order. */
+function ledgerRows(request: CreateMessageOptions, key: string): Array<Record<string, unknown>> {
+  const rows: Array<Record<string, unknown>> = [];
+  const block = new RegExp(
+    `<context-(section|update) key="capability-${key}"[^>]*>([\\s\\S]*?)</context-\\1>`,
+    "g",
+  );
+  for (const message of request.messages) {
+    for (const match of messageText(message).matchAll(block)) {
+      for (const line of match[2]!.split("\n")) {
+        const start = line.indexOf("{");
+        if (start < 0) continue;
+        try {
+          rows.push(JSON.parse(line.slice(start)) as Record<string, unknown>);
+        } catch {
+          // Not a row: a heading or a Removed line.
+        }
+      }
+    }
+  }
+  return rows;
+}
+
+/** DelegateWork is static; its Workspace ids come from the context ledger. */
 function workspace(request: CreateMessageOptions): string {
-  const schema = request.tools!.find((tool) => tool.name === "DelegateWork")!.inputSchema;
-  return (schema.properties.workspace_id.enum as string[]).find((id) => id !== "no-workspace")!;
+  return ledgerRows(request, "mimi-workspaces")
+    .map((entry) => String(entry.id))
+    .find((id) => id !== "no-workspace")!;
 }
 
 function expectRefusedReceiptTools(request: CreateMessageOptions, ids: string[]): void {
@@ -514,7 +539,8 @@ describe("Mimi historical chat replay through the real manager stack", () => {
         expectWorldFact(request, "fixture launch rejected");
         expect(request.tools).toEqual(h.script.requests[0].tools);
         const forbidden = response("DelegateWork", {
-          workspace_id: workspace(request),
+          // A receipt world lists no Workspaces; reuse the launched one.
+          workspace_id: workspace(h.script.requests[0]),
           objective: "Receipt turns must not start more work.",
         });
         deniedIds = forbidden.toolCalls.map((call) => call.id);
@@ -597,7 +623,8 @@ describe("Mimi historical chat replay through the real manager stack", () => {
             expectWorldFact(request, "fixture launch rejected");
             expect(request.tools).toEqual(h.script.requests[0].tools);
             const forbidden = response("DelegateWork", {
-              workspace_id: workspace(request),
+              // A receipt world lists no Workspaces; reuse the launched one.
+              workspace_id: workspace(h.script.requests[0]),
               objective: "Receipt turns must not start more work.",
             });
             forbidden.toolCalls.push(
@@ -690,7 +717,19 @@ describe("Mimi historical chat replay through the real manager stack", () => {
     await h.say("你好", "duplicate");
     expect(h.script.requests).toHaveLength(1);
     expect(h.replyActions).toBe(1);
-    expect(h.transcript().split('"role":"user"')).toHaveLength(2);
+    // One user input; context-ledger events (Mimi's durable lists) are not user messages.
+    const userMessages = h
+      .transcript()
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => JSON.parse(line) as { type?: string; data?: Record<string, unknown> })
+      .filter(
+        (event) =>
+          event.type === "message" &&
+          event.data?.role === "user" &&
+          event.data.contextLedger === undefined,
+      );
+    expect(userMessages).toHaveLength(1);
   });
 
   test("a same-conversation correction steers and replaces an unsent draft", async () => {

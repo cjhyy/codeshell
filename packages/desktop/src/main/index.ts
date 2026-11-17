@@ -69,6 +69,7 @@ import {
   installReviewedLocalTheme,
   listInstalledThemes,
   uninstallTheme,
+  registerOpenRouterCatalogCache,
   type ThemePreview,
 } from "@cjhyy/code-shell-core";
 import {
@@ -984,6 +985,7 @@ const mobileUploads = new MobileUploadService({
 });
 const mobileRemote = new RemoteHostManager({
   nativeModelSelection: true,
+  ccRoomModelSelection: true,
   outputJournal: true,
   legacyBasePages: true,
   outputJournalPageFrames: 2048,
@@ -1227,6 +1229,7 @@ const roomManager = new RoomManager({
           command: "codex",
           cwd: room.cwd,
           permissionMode: room.permissionMode,
+          model: parseExternalRuntimeModelKey(room.modelKey)?.model,
           resumeThreadId: room.claudeSessionId,
           onEvent,
           // Persist codex's thread id so the next turn / app restart resumes it.
@@ -1236,6 +1239,7 @@ const roomManager = new RoomManager({
           command: "claude",
           cwd: room.cwd,
           permissionMode: room.permissionMode,
+          model: parseExternalRuntimeModelKey(room.modelKey)?.model,
           resumeSessionId: room.claudeSessionId,
           appendSystemPrompt: CC_COST_GUARD_PROMPT,
           onEvent,
@@ -1270,7 +1274,11 @@ const transcriptSubscriptions = createRoomTranscriptSubscriptions({
   broadcast: (event) => mobileRemote.broadcast(event),
   windows: () => BrowserWindow.getAllWindows(),
 });
-const roomModes = createDesktopRoomModeAuthority({ roomManager, approvalBridge });
+const roomModes = createDesktopRoomModeAuthority({
+  roomManager,
+  approvalBridge,
+  externalRuntimeModels: () => externalRuntimeModelService.list(),
+});
 
 // Routes authenticated mobile events into the same run/permission path the
 // renderer uses (chat/approvals/sessions/rooms/cc-rooms). Extracted glue —
@@ -2172,6 +2180,11 @@ async function createWindow(): Promise<BrowserWindow> {
       ...createOwnerReplyHandling({
         router: notices.router,
         cwd: resolveNoRepoCwd(),
+        accounting: {
+          sessionsRootDir: sessionsRoot(),
+          sessionId: () => mimiSessionId,
+          purpose: "pet_notice_reply",
+        },
         externalReplyModel: createPetExternalReplyModel({
           service: () => externalRuntime.service,
           cwd: resolveNoRepoCwd(),
@@ -2259,6 +2272,11 @@ async function createWindow(): Promise<BrowserWindow> {
       notices,
       userDataDir: app.getPath("userData"),
       cwd: resolveNoRepoCwd(),
+      accounting: {
+        sessionsRootDir: petSessionsRootDir,
+        sessionId: () => mimiSessionId,
+        purpose: "pet_brief",
+      },
       externalReplyModel: createPetExternalReplyModel({
         service: () => externalRuntime.service,
         cwd: resolveNoRepoCwd(),
@@ -3553,6 +3571,8 @@ app.whenReady().then(async () => {
   );
   await projectStore.warm();
   writeSettingsSchemaAtStartup();
+  // Pricing for Mimi's main-process model calls beyond the bundled snapshot.
+  registerOpenRouterCatalogCache(join(codeShellHome(), "cache", "openrouter-models.json"));
   void cleanupKnownAttachments();
   // The main window and the pet popout both render on the default session, so
   // one handler there serves cstheme:// assets to every window.

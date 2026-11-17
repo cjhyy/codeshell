@@ -90,6 +90,22 @@ describe("discoverCodexModels", () => {
     expect(server.closed()).toBe(true);
   });
 
+  test("reports image support from inputModalities only when the CLI provides it", async () => {
+    const server = respondWith({
+      data: [
+        { model: "vision", displayName: "Vision", inputModalities: ["text", "image"] },
+        { model: "text", displayName: "Text", inputModalities: ["text"] },
+        { model: "legacy", displayName: "Legacy" },
+      ],
+      nextCursor: null,
+    });
+    expect(await discoverCodexModels(server.options)).toEqual([
+      { model: "vision", displayName: "Vision", isDefault: false, supportsImages: true },
+      { model: "text", displayName: "Text", isDefault: false, supportsImages: false },
+      { model: "legacy", displayName: "Legacy", isDefault: false },
+    ]);
+  });
+
   test("preserves the requested cwd and environment while adding loopback proxy bypass", async () => {
     const server = respondWith({ data: [], nextCursor: null });
     await discoverCodexModels({
