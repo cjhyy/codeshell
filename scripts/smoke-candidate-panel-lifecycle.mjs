@@ -201,14 +201,25 @@ export async function verifyCandidatePanelLifecycle({
     let step = "controlled-update";
     try {
       const updated = await run(containerA, controlledUpdate, containerCore, original, marker);
-      const oldGrant = grants.get(`${projectA}:${original.id}`);
-      step = "catalog-pin";
-      assert.equal((await panel(projectA, original.id)).packageDigest, original.packageDigest);
-      step = "retained-page";
+      let oldGrant = grants.get(`${projectA}:${original.id}`);
+      step = "catalog-follow";
+      assert.equal((await panel(projectA, original.id)).packageDigest, updated.packageDigest);
+      step = "catalog-stale-grant";
       assert.ok(
-        !(await page(projectA, oldGrant)).includes(marker),
-        "Catalog update must not replace the project's selected package",
+        [404, 410].includes(
+          (await request(`/p/${projectA}` + oldGrant.src, { anonymous: true, origin: "null" }))
+            .status,
+        ),
       );
+      step = "catalog-page";
+      const followed = await prepare(projectA, original.id);
+      assert.ok((await page(projectA, followed)).includes(marker));
+      step = "catalog-storage";
+      if (original.permissions.includes("storage"))
+        assert.deepEqual(
+          await panelHarness(projectA, followed).call("storage.getSnapshot", { key }),
+          snapshots.get(`${projectA}:${original.id}`),
+        );
       step = "history";
       const current = await panel(projectA, original.id);
       const history = await json(root(projectA) + `/${original.id}/versions`, {
@@ -217,6 +228,20 @@ export async function verifyCandidatePanelLifecycle({
       });
       assert.ok(history.versions.some((item) => item.packageDigest === original.packageDigest));
       assert.ok(history.versions.some((item) => item.packageDigest === updated.packageDigest));
+      // A catalog update supersedes older pins. A later reviewed rollback pins
+      // only this project, and gives the selection round-trip a distinct target.
+      step = "rollback-before-selection";
+      await select(projectA, original.id, original.packageDigest);
+      step = "rollback-stale-grant";
+      assert.ok(
+        [404, 410].includes(
+          (await request(`/p/${projectA}` + followed.src, { anonymous: true, origin: "null" }))
+            .status,
+        ),
+      );
+      step = "retained-page";
+      oldGrant = await prepare(projectA, original.id);
+      assert.ok(!(await page(projectA, oldGrant)).includes(marker));
       step = "select-updated";
       await select(projectA, original.id, updated.packageDigest);
       step = "stale-grant";
@@ -257,7 +282,7 @@ export async function verifyCandidatePanelLifecycle({
     }
   }
   console.log(
-    "PASS: all six real packages reject stale reviewed updates, retain the pinned bytes across catalog changes, and restore through actual cloud UI review, cancel and confirmation without losing project storage",
+    "PASS: all six real packages reject stale reviewed updates, follow their runtime catalog updates with old grants revoked, and restore retained bytes through actual cloud UI review, cancel and confirmation without losing project storage or changing the other runtime",
   );
   // Remove the source directories before restarting: only installed/retained bytes
   // in the project's persistent home may provide the next runtime.
