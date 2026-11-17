@@ -1,10 +1,11 @@
 /**
  * The single stdin line a `claude -p --input-format stream-json` turn reads.
  *
- * Image attachments travel as native `image` content blocks, so the model sees
- * them without spending a Read tool call. Everything else — files, directories,
- * and images the API cannot take — stays a path reference in the text, exactly
- * as `textWithAttachmentReferences` renders it.
+ * Image attachments the API can take also travel as native `image` content
+ * blocks, so the model sees them without spending a Read tool call. Every
+ * attachment — inlined images included — keeps its path reference in the text,
+ * exactly as `textWithAttachmentReferences` renders it, so the model still knows
+ * where the file lives if it needs to edit or copy it.
  */
 import { open, stat } from "node:fs/promises";
 import {
@@ -33,7 +34,7 @@ export interface ClaudeUserMessage {
   line: string;
   /** Image attachments delivered inline. */
   inlineImages: number;
-  /** Image attachments that fell back to a path reference, with the reason. */
+  /** Image attachments sent as a path reference only, with the reason. */
   imageFallbacks: Array<{ reason: ImageFallbackReason }>;
 }
 
@@ -110,22 +111,14 @@ export async function buildClaudeUserMessage(
   wrapText: (text: string) => string = (text) => text,
 ): Promise<ClaudeUserMessage> {
   const images: ClaudeUserContentBlock[] = [];
-  const referenced: ExternalRuntimeAttachment[] = [];
   const imageFallbacks: ClaudeUserMessage["imageFallbacks"] = [];
   for (const attachment of input.attachments ?? []) {
-    if (!attachment.path.trim() || !isImageAttachment(attachment)) {
-      referenced.push(attachment);
-      continue;
-    }
+    if (!attachment.path.trim() || !isImageAttachment(attachment)) continue;
     const block = await readInlineImage(attachment.path);
-    if ("fallback" in block) {
-      imageFallbacks.push({ reason: block.fallback });
-      referenced.push(attachment);
-    } else {
-      images.push(block);
-    }
+    if ("fallback" in block) imageFallbacks.push({ reason: block.fallback });
+    else images.push(block);
   }
-  const text = wrapText(textWithAttachmentReferences({ ...input, attachments: referenced }));
+  const text = wrapText(textWithAttachmentReferences(input));
   // Images before text: Anthropic's guidance for best results with vision.
   const content: ClaudeUserContentBlock[] = [...images, { type: "text", text }];
   const line = JSON.stringify({ type: "user", message: { role: "user", content } }) + "\n";

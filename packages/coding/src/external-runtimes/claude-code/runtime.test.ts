@@ -312,7 +312,7 @@ describe("ClaudeCodeRuntime user message (stream-json input)", () => {
     ]);
   });
 
-  test("an image attachment becomes a native base64 image block, not a path reference", async () => {
+  test("an image attachment becomes a native base64 image block and keeps its path reference", async () => {
     const dir = attachmentDir();
     // Named .jpg on purpose: the media type comes from the bytes.
     const image = join(dir, "shot.jpg");
@@ -326,7 +326,17 @@ describe("ClaudeCodeRuntime user message (stream-json input)", () => {
         type: "image",
         source: { type: "base64", media_type: "image/png", data: PNG_BYTES.toString("base64") },
       },
-      { type: "text", text: "what is this?" },
+      {
+        type: "text",
+        text: [
+          "what is this?",
+          "",
+          "<codeshell_attachments>",
+          "The user explicitly attached these local paths. Inspect them when relevant:",
+          `- image: ${image}`,
+          "</codeshell_attachments>",
+        ].join("\n"),
+      },
     ]);
   });
 
@@ -337,7 +347,7 @@ describe("ClaudeCodeRuntime user message (stream-json input)", () => {
     const { message } = await recordedTurn({
       text: "compare",
       attachments: [
-        { path: image, mime: "image/png" },
+        { path: image, kind: "image", mime: "image/png" },
         { path: "/repo/notes.md", kind: "file" },
         { path: "/repo/src", kind: "directory" },
       ],
@@ -350,12 +360,12 @@ describe("ClaudeCodeRuntime user message (stream-json input)", () => {
         "",
         "<codeshell_attachments>",
         "The user explicitly attached these local paths. Inspect them when relevant:",
+        `- image: ${image}`,
         "- file: /repo/notes.md",
         "- directory: /repo/src",
         "</codeshell_attachments>",
       ].join("\n"),
     );
-    expect(content[1]!.text).not.toContain(image);
   });
 
   test("oversized, unsupported or missing images fall back to path references", async () => {
