@@ -8,7 +8,7 @@
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { userHome } from "./utils/paths.js";
-import { getOpenRouterModels } from "./data/openrouter-models.js";
+import { findOpenRouterModel, getOpenRouterModels } from "./data/openrouter-models.js";
 import {
   KNOWN_MAX_OUTPUT,
   KNOWN_CONTEXT_WINDOWS,
@@ -226,7 +226,7 @@ export function hasApiKey(): boolean {
 export function resolveMaxOutput(model: string): number | undefined {
   if (KNOWN_MAX_OUTPUT[model]) return KNOWN_MAX_OUTPUT[model];
   if (model.includes("/")) {
-    const hit = getOpenRouterModels().find((m) => m.id === model);
+    const hit = findOpenRouterModel(model);
     if (hit && hit.maxOutputTokens > 0) return hit.maxOutputTokens;
   }
   return undefined;
@@ -241,7 +241,7 @@ export function resolveMaxOutput(model: string): number | undefined {
 export function resolveContextWindow(model: string): number | undefined {
   if (KNOWN_CONTEXT_WINDOWS[model]) return KNOWN_CONTEXT_WINDOWS[model];
   if (model.includes("/")) {
-    const hit = getOpenRouterModels().find((m) => m.id === model);
+    const hit = findOpenRouterModel(model);
     if (hit && hit.contextLength > 0) return hit.contextLength;
   }
   return undefined;
@@ -290,6 +290,7 @@ export function buildModelPool(
   key: string;
   label: string;
   provider: string;
+  providerKind?: string;
   model: string;
   baseUrl: string;
   apiKey: string;
@@ -305,6 +306,7 @@ export function buildModelPool(
       key,
       label: modelDisplayName(m),
       provider: provider.provider,
+      ...(provider.kind ? { providerKind: provider.kind } : {}),
       model: m,
       baseUrl: provider.baseUrl,
       apiKey,
