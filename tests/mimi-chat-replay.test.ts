@@ -166,7 +166,11 @@ function expectRefusedReceiptTools(request: CreateMessageOptions, ids: string[])
   expect(results).toHaveLength(ids.length);
   for (const result of results) {
     expect(result.is_error).toBe(true);
-    expect(String(result.content)).toMatch(/not available|not allowed|not found|denied/i);
+    // The tools stay callable; the receipt turn's data refuses them: it lists
+    // no Workspace and allows no host action.
+    expect(String(result.content)).toMatch(
+      /unknown workspace_id .*none available this turn|available only in a Mimi turn originating from Chat Gateway/,
+    );
   }
 }
 
@@ -579,6 +583,7 @@ describe("Mimi historical chat replay through the real manager stack", () => {
       (request) => {
         expectWorldFact(request, "fixture launch rejected");
         expect(request.tools).toEqual(h.script.requests[0].tools);
+        expect(request.systemPrompt).toBe(h.script.requests[0].systemPrompt);
         const forbidden = response("DelegateWork", {
           // A receipt world lists no Workspaces; reuse the launched one.
           workspace_id: workspace(h.script.requests[0]),
@@ -663,6 +668,8 @@ describe("Mimi historical chat replay through the real manager stack", () => {
           (request) => {
             expectWorldFact(request, "fixture launch rejected");
             expect(request.tools).toEqual(h.script.requests[0].tools);
+            expect(request.systemPrompt).toBe(h.script.requests[0].systemPrompt);
+            expect(request.systemPrompt).toBe(h.script.requests[0].systemPrompt);
             const forbidden = response("DelegateWork", {
               // A receipt world lists no Workspaces; reuse the launched one.
               workspace_id: workspace(h.script.requests[0]),
