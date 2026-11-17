@@ -1,0 +1,124 @@
+.chat-loading-empty .messages {
+  display: flex;
+}
+.chat-loading-empty .transcript {
+  justify-content: center;
+}
+.session-loading {
+  width: 100%;
+  padding: 24px 0;
+  color: var(--muted);
+}
+.session-loading-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.session-loading-status strong {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+}
+.session-loading-status p {
+  margin: 2px 0 0;
+}
+.session-loading-indicator {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  box-sizing: border-box;
+  border: 2px solid var(--border);
+  border-top-color: var(--muted);
+  border-radius: 50%;
+  animation: session-loading-spin 1s linear infinite;
+}
+.session-loading-progress {
+  height: 3px;
+  max-width: 240px;
+  margin: 16px auto 0;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--subtle);
+}
+.session-loading-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--muted);
+}
+.session-loading-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  max-width: 520px;
+  margin: 32px auto 0;
+  animation: session-loading-pulse 1.8s ease-in-out infinite;
+}
+.session-loading-skeleton > div {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.session-loading-skeleton span {
+  display: block;
+  height: 10px;
+  border-radius: 5px;
+  background: var(--subtle);
+}
+.session-loading-question {
+  width: 58%;
+  align-self: flex-end;
+  padding: 16px;
+  border: 1px solid var(--subtle);
+  border-radius: 16px;
+}
+.session-loading-question span:last-child {
+  width: 65%;
+}
+.session-loading-answer {
+  width: 88%;
+}
+.session-loading-answer span:last-child {
+  width: 54%;
+}
+.session-loading-retained {
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.session-loading-retained .session-loading-status {
+  justify-content: flex-start;
+}
+.session-loading-retained .session-loading-progress {
+  max-width: none;
+  margin-top: 8px;
+}
+.session-loading-failed .session-loading-indicator {
+  display: grid;
+  place-items: center;
+  border-color: var(--warning);
+  color: var(--warning);
+  font-size: 12px;
+  font-weight: 600;
+  animation: none;
+}
+@keyframes session-loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes session-loading-pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .session-loading-indicator,
+  .session-loading-skeleton {
+    animation: none;
+  }
+}

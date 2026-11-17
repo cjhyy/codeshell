@@ -100,6 +100,10 @@ export interface WorkbenchController {
   goalActions?: React.ReactNode;
   loading?: boolean;
   loadingLabel?: string;
+  /** Verified history transfer percentage; completion still belongs to the Host. */
+  loadingProgress?: number;
+  /** A blocked creation keeps the send gate closed, but must not animate forever. */
+  loadingFailed?: boolean;
   /** Temporarily prevent submission while retaining an editable draft. */
   sendBlockedReason?: string;
   readOnly?: boolean;

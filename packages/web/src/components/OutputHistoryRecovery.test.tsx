@@ -37,6 +37,139 @@ function props(overrides: Partial<OutputHistoryRecoveryProps> = {}): OutputHisto
   };
 }
 describe("explicit output history recovery review", () => {
+  test("not-needed history offers one normal reload without accepting a gap or clearing the fence", async () => {
+    const loaded = deferred<void>();
+    let reloads = 0;
+    let applies = 0;
+    let completes = 0;
+    let current = props({
+      plan: async () => ({ status: "blocked", sessionId: "session-1", reason: "not_needed" }),
+      reload: () => {
+        reloads++;
+        return loaded.promise;
+      },
+      apply: async () => {
+        applies++;
+        return { status: "applied", sessionId: "session-1", historicalGap: true };
+      },
+      onApplied: () => completes++,
+    });
+    const hook = await renderHook(() => useOutputHistoryRecovery(current));
+    try {
+      await act(async () => {
+        await hook.result.current.check();
+        await hook.result.current.confirm();
+      });
+      expect(reloads).toBe(0);
+      await act(async () => {
+        void hook.result.current.reload();
+        void hook.result.current.reload();
+      });
+      expect(reloads).toBe(1);
+      expect(hook.result.current.review.status).toBe("reloading");
+      await act(async () => loaded.resolve());
+      expect(hook.result.current.review).toEqual({ status: "blocked", reason: "not_needed" });
+      expect(current.failed).toBe(true);
+      for (const patch of [{ disabled: true }, { disabled: false, reloading: true }]) {
+        current = { ...current, ...patch };
+        await hook.rerender();
+        await act(async () => {
+          await hook.result.current.reload();
+          await hook.result.current.check();
+          await hook.result.current.confirm();
+        });
+        expect(reloads).toBe(1);
+      }
+      expect(applies).toBe(0);
+      expect(completes).toBe(0);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  test("navigation fences old reload handlers and late completion", async () => {
+    const loaded = deferred<void>();
+    let reloads = 0;
+    let current = props({
+      plan: async () => ({ status: "blocked", sessionId: "session-1", reason: "not_needed" }),
+      reload: () => {
+        reloads++;
+        return loaded.promise;
+      },
+    });
+    const hook = await renderHook(() => useOutputHistoryRecovery(current));
+    try {
+      await act(async () => {
+        await hook.result.current.check();
+      });
+      const previousReload = hook.result.current.reload;
+      await act(async () => {
+        void previousReload();
+      });
+      current = { ...current, sessionId: "session-2", identity: "workspace:connection:session-2" };
+      await hook.rerender();
+      await act(async () => {
+        void previousReload();
+        await hook.result.current.reload();
+        loaded.resolve();
+      });
+      expect(reloads).toBe(1);
+      expect(hook.result.current.review.status).toBe("idle");
+      await hook.unmount();
+      await previousReload();
+      expect(reloads).toBe(1);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  test("a failed or timed-out reload remains retryable without another recovery review", async () => {
+    const loaded = deferred<void>();
+    let reloads = 0;
+    const hook = await renderHook(() =>
+      useOutputHistoryRecovery(
+        props({
+          timeoutMs: 5,
+          plan: async () => ({ status: "blocked", sessionId: "session-1", reason: "not_needed" }),
+          reload: async () => {
+            if (++reloads === 1) return loaded.promise;
+            throw new Error("owned read failure");
+          },
+        }),
+      ),
+    );
+    try {
+      await act(async () => {
+        await hook.result.current.check();
+      });
+      await act(async () => {
+        await hook.result.current.reload();
+      });
+      expect(hook.result.current.review).toEqual({
+        status: "blocked",
+        reason: "not_needed",
+        reloadFailed: true,
+      });
+      await act(async () => loaded.resolve());
+      expect(hook.result.current.review).toEqual({
+        status: "blocked",
+        reason: "not_needed",
+        reloadFailed: true,
+      });
+      await act(async () => {
+        await hook.result.current.reload();
+      });
+      expect(reloads).toBe(2);
+      expect(hook.result.current.review).toEqual({
+        status: "blocked",
+        reason: "not_needed",
+        reloadFailed: true,
+      });
+    } finally {
+      await hook.unmount();
+    }
+  });
+
   test("only explicit confirmation applies the displayed plan once", async () => {
     const applied = deferred<OutputHistoryRecoveryResult>();
     const calls: unknown[] = [];

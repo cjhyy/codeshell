@@ -2446,8 +2446,29 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
 
   // ── actions ────────────────────────────────────────────────────────────
   const getSessionOutputRecoveryPlan = useCallback(
-    (sessionId: string) => historyRecovery.plan(sessionId),
-    [historyRecovery],
+    async (sessionId: string) => {
+      const revision = conversationRevisionRef.current;
+      const generation = connectionGenerationRef.current;
+      const plan = await historyRecovery.plan(sessionId);
+      if (
+        plan.status === "blocked" &&
+        plan.reason === "not_needed" &&
+        plan.sessionId === sessionId &&
+        socketOnlineRef.current &&
+        !activeRoomIdRef.current &&
+        boundSessionRef.current === sessionId &&
+        conversationRevisionRef.current === revision &&
+        connectionGenerationRef.current === generation &&
+        recoveryFencesRef.current.has(sessionId)
+      ) {
+        // A transient browser read failure need not imply damaged Host history.
+        // Retry one normal read after the Host says repair is unnecessary. Only
+        // outputClient.commit's fresh journal/snapshot proof may unlock writes.
+        reloadHistory();
+      }
+      return plan;
+    },
+    [historyRecovery, reloadHistory],
   );
   const applySessionOutputRecovery = useCallback(
     async (

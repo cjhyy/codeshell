@@ -4,8 +4,8 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-for (const tunnel of [false, true])
-  test(`Desktop Web panels use paired authority and Electron's existing storage (${tunnel ? "tunnel passcode" : "direct"})`, () => {
+for (const mode of ["direct", "tunnel", "relay"])
+  test(`Desktop Web panels use paired authority and Electron's existing storage (${mode})`, () => {
     const root = mkdtempSync(join(tmpdir(), "desktop-web-panels-"));
     try {
       const repository = resolve(import.meta.dir, "../../../..");
@@ -29,12 +29,7 @@ for (const tunnel of [false, true])
       // in a child process so Electron mocks cannot contaminate other suites.
       const child = spawnSync(
         process.execPath,
-        [
-          ...sourceArgs,
-          join(import.meta.dir, "__fixtures__/desktop-web-panels.mjs"),
-          root,
-          ...(tunnel ? ["tunnel"] : []),
-        ],
+        [...sourceArgs, join(import.meta.dir, "__fixtures__/desktop-web-panels.mjs"), root, mode],
         { encoding: "utf8", timeout: 20_000, maxBuffer: 1024 * 1024 },
       );
       if (child.error || child.status !== 0)
@@ -59,13 +54,14 @@ for (const tunnel of [false, true])
         sessionIndependentProjectScope: true,
         forgedProjectScopeRejected: true,
         secondaryRootProjectScope: true,
-        ...(tunnel
+        ...(mode === "tunnel"
           ? {
               tunnelOpaqueAssets: true,
               ordinaryRoutesGated: true,
               passcodeRotationRevokesAssets: true,
             }
           : {}),
+        ...(mode === "relay" ? { accountRelayOpaqueAssets: true, ordinaryRoutesGated: true } : {}),
       });
     } finally {
       rmSync(root, { recursive: true, force: true });

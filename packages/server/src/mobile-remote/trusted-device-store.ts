@@ -74,6 +74,24 @@ export class TrustedDeviceStore {
     for (const [id, grant] of this.ephemeral) if (grant.expiresAt <= now) this.ephemeral.delete(id);
   }
 
+  /** A newly redeemed entrance grant may renew only its existing live identity. */
+  renewEphemeralDevice(id: string, secretHash: string, expiresAt: number): boolean {
+    this.pruneEphemeral();
+    const grant = this.ephemeral.get(id);
+    const now = Date.now();
+    if (
+      !grant ||
+      !isBoundedOpaqueString(secretHash, MAX_DEVICE_SECRET_LENGTH) ||
+      !secretHashEquals(grant.device.secretHash, secretHash) ||
+      !isTimestamp(expiresAt) ||
+      expiresAt <= now ||
+      expiresAt > now + 10 * 60_000
+    )
+      return false;
+    grant.expiresAt = Math.max(grant.expiresAt, expiresAt);
+    return true;
+  }
+
   /** Account identities require their matching entrance grant on every transport. */
   isEphemeralDevice(id: string): boolean {
     this.pruneEphemeral();

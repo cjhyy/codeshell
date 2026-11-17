@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { closeSync, mkdtempSync, openSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -88,11 +88,37 @@ export function assertCoverage(totals: CoverageSummary): string {
   return message;
 }
 
+/** Keep Bun's coverage finalization independent of a busy CI output pipe. */
+export function runCoverageProcess(
+  directory: string,
+  args: string[],
+  cwd: string,
+  timeout?: number,
+) {
+  const stdout = openSync(join(directory, "stdout.log"), "wx", 0o600);
+  let stderr: number | undefined;
+  try {
+    stderr = openSync(join(directory, "stderr.log"), "wx", 0o600);
+    return spawnSync(process.execPath, args, {
+      cwd,
+      env: createBunTestEnvironment(process.env, directory),
+      stdio: ["inherit", stdout, stderr],
+      timeout,
+    });
+  } finally {
+    closeSync(stdout);
+    if (stderr !== undefined) closeSync(stderr);
+  }
+}
+
 function main(): number {
   const directory = mkdtempSync(join(tmpdir(), "codeshell-builtin-coverage-"));
   try {
-    const result = spawnSync(
-      process.execPath,
+    // Bun 1.3.11's text reporter can return before committing LCOV when a
+    // console write fails. Ordinary files keep that write out of the CI pipe;
+    // replay the diagnostics only after the child has finalized its reports.
+    const result = runCoverageProcess(
+      directory,
       [
         "test",
         "--timeout",
@@ -117,12 +143,10 @@ function main(): number {
         "--reporter=junit",
         `--reporter-outfile=${join(directory, "junit.xml")}`,
       ],
-      {
-        cwd: fileURLToPath(new URL("..", import.meta.url)),
-        env: createBunTestEnvironment(process.env, directory),
-        stdio: "inherit",
-      },
+      fileURLToPath(new URL("..", import.meta.url)),
     );
+    process.stdout.write(readFileSync(join(directory, "stdout.log")));
+    process.stderr.write(readFileSync(join(directory, "stderr.log")));
     if (result.error) throw result.error;
     if (result.status !== 0) return result.status ?? 1;
     assertBunTestCompletion(join(directory, "junit.xml"));

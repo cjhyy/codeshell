@@ -143,6 +143,92 @@ test("shorter directory authorization keeps its exact remaining expiry", async (
   }
 });
 
+test("fresh execution grants retain one owner while old HTTP and socket tokens still expire", async () => {
+  let now = Date.now();
+  const clock = spyOn(Date, "now").mockImplementation(() => now);
+  let leaseId = "lease-a";
+  const f = fixture(async () => ({ ...directoryBinding(now + 60_000), leaseId }));
+  try {
+    const first = await f.gate.exchange("first-execution");
+    const original = f.gate.capture(f.request(first.hostAccessToken))!;
+    now += 30_000;
+    leaseId = "lease-b";
+    const next = await f.gate.exchange("renewed-execution");
+    expect(next.deviceId).toBe(first.deviceId);
+    expect(next.secretHash).toBe(first.secretHash);
+    expect(next.hostAccessToken).not.toBe(first.hostAccessToken);
+    now = first.expiresAt;
+    expect(original.isAuthorized()).toBe(false);
+    expect(original.isCapabilityAuthorized()).toBe(true);
+    expect(f.gate.capture(f.request(first.hostAccessToken))).toBeUndefined();
+    expect(f.gate.capture(f.request(next.hostAccessToken))?.isAuthorized()).toBe(true);
+    expect(f.devices.authenticate(first.deviceId, first.secretHash)?.id).toBe(first.deviceId);
+    expect(f.revoked).toEqual([]);
+    expect(existsSync(f.path)).toBe(false);
+    now = next.expiresAt;
+    expect(original.isCapabilityAuthorized()).toBe(false);
+    expect(f.gate.capture(f.request(next.hostAccessToken))).toBeUndefined();
+    expect(f.revoked).toEqual([first.deviceId]);
+  } finally {
+    f.gate.clear();
+    clock.mockRestore();
+  }
+});
+
+test.each(["authorizationId", "rootSessionId", "sourceHostId", "sourceKind"])(
+  "a changed %s cannot inherit an existing capability owner",
+  async (field) => {
+    let binding = directoryBinding(Date.now() + 60_000);
+    const f = fixture(async () => binding);
+    try {
+      const first = await f.gate.exchange("original-owner");
+      binding = { ...binding, [field]: field === "sourceKind" ? "browser" : "different-authority" };
+      const next = await f.gate.exchange("different-owner");
+      expect(next.deviceId).not.toBe(first.deviceId);
+      expect(next.secretHash).not.toBe(first.secretHash);
+    } finally {
+      f.gate.clear();
+    }
+  },
+);
+
+test("logout revokes every execution token and captured capability of the same owner", async () => {
+  const f = fixture();
+  try {
+    const first = await f.gate.exchange("first-owner-token");
+    const captured = f.gate.capture(f.request(first.hostAccessToken))!;
+    const next = await f.gate.exchange("next-owner-token");
+    f.gate.revokeRequest(f.request(next.hostAccessToken));
+    expect(captured.isAuthorized()).toBe(false);
+    expect(captured.isCapabilityAuthorized()).toBe(false);
+    expect(f.gate.capture(f.request(first.hostAccessToken))).toBeUndefined();
+    expect(f.gate.capture(f.request(next.hostAccessToken))).toBeUndefined();
+    expect(f.devices.authenticate(first.deviceId, first.secretHash)).toBeUndefined();
+    expect(f.revoked).toEqual([first.deviceId]);
+  } finally {
+    f.gate.clear();
+  }
+});
+
+test("expired or removed owner identities cannot be resurrected by a new handoff", async () => {
+  let now = Date.now();
+  const clock = spyOn(Date, "now").mockImplementation(() => now);
+  const f = fixture(async () => directoryBinding(now + 60_000));
+  try {
+    const first = await f.gate.exchange("expired-owner");
+    now = first.expiresAt;
+    const next = await f.gate.exchange("new-owner-after-expiry");
+    expect(next.deviceId).not.toBe(first.deviceId);
+    f.devices.remove(next.deviceId);
+    const third = await f.gate.exchange("new-owner-after-removal");
+    expect(third.deviceId).not.toBe(next.deviceId);
+    expect(f.revoked).toEqual([first.deviceId, next.deviceId]);
+  } finally {
+    f.gate.clear();
+    clock.mockRestore();
+  }
+});
+
 test.each(["hostId", "environmentId", "accountId"])(
   "account handoff rejects a mismatched %s",
   async (field) => {

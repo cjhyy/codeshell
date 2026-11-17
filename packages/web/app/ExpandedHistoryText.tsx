@@ -16,11 +16,11 @@ export function ExpandedHistoryText({
   scope: string;
   load?: HistoryDetailLoader;
   reload?: () => void;
-  children: (text: string) => React.ReactNode;
+  children: (text: string, complete: boolean) => React.ReactNode;
 }) {
   const [open, setOpen] = React.useState(false);
-  if (!reference) return <>{children(text)}</>;
-  const preview = children(text);
+  if (!reference) return <>{children(text, true)}</>;
+  const preview = children(text, false);
   return (
     <>
       {!open && preview}
@@ -37,7 +37,7 @@ export function ExpandedHistoryText({
             reload={reload}
             preview={preview}
           >
-            {(detail) => children(detail?.text ?? text)}
+            {(detail) => children(detail?.text ?? text, typeof detail?.text === "string")}
           </HistoryDetailBody>
         )}
       </details>

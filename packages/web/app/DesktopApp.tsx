@@ -969,7 +969,12 @@ export function useDesktopController(
   const title =
     app.activeRoom?.name ||
     // A session whose history failed to load is not new, even with no items shown.
-    (!app.chat.items.length && !app.outputHistoryFailed ? "新对话" : "") ||
+    (!app.chat.items.length &&
+    !app.outputHistoryFailed &&
+    !app.loading.sessionHistory &&
+    !app.loading.roomHistory
+      ? "新对话"
+      : "") ||
     app.chat.title ||
     app.sessions.find((item) => item.id === app.activeSessionId)?.title ||
     sessionTitle(app.chat, activeId);
@@ -1147,6 +1152,8 @@ export function useDesktopController(
             disabled={app.status !== "online" || app.loading.sessionHistory || sendingId !== null}
             plan={app.getSessionOutputRecoveryPlan}
             apply={app.applySessionOutputRecovery}
+            reload={app.reloadHistory}
+            reloading={app.loading.sessionHistory}
             onApplied={() => {
               // The content stays in the draft, but its old delivery identity is retired.
               uncertainIntents.current.delete(activeId);
@@ -1249,6 +1256,17 @@ export function useDesktopController(
     loadEarlierHistory: app.loadEarlierHistory,
     loadHistoryDetail: app.loadHistoryDetail,
     reloadHistory: app.reloadHistory,
+    loadingFailed: emptyReplacement?.status === "failed",
+    loadingProgress:
+      !emptyReplacement && app.sessionHistoryProgress?.totalBytes
+        ? Math.min(
+            99,
+            Math.floor(
+              (app.sessionHistoryProgress.receivedBytes / app.sessionHistoryProgress.totalBytes) *
+                100,
+            ),
+          )
+        : undefined,
     loadingLabel: emptyReplacement
       ? emptyReplacement.status === "failed"
         ? "新会话未建立。输入内容和附件已保留，请重试建立会话。"

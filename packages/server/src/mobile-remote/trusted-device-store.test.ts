@@ -11,7 +11,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { TrustedDeviceStore } from "./trusted-device-store.js";
 
 const TRUSTED_DEVICE_MODULE = join(import.meta.dir, "trusted-device-store.ts");
@@ -24,6 +24,39 @@ afterEach(() => {
 });
 
 describe("TrustedDeviceStore", () => {
+  test("renewing a live account identity needs its secret and keeps the short expiry bound", () => {
+    let now = Date.now();
+    const clock = spyOn(Date, "now").mockImplementation(() => now);
+    dir = mkdtempSync(join(tmpdir(), "mobile-renew-account-device-"));
+    const file = join(dir, "devices.json");
+    const store = new TrustedDeviceStore(file);
+    try {
+      const first = store.addEphemeralDevice({
+        name: "Account device",
+        secretHash: "owned-short-lived-secret",
+        expiresAt: now + 60_000,
+      });
+      now += 30_000;
+      expect(store.renewEphemeralDevice(first.id, "wrong", now + 60_000)).toBe(false);
+      expect(store.renewEphemeralDevice(first.id, "owned-short-lived-secret", now + 600_001)).toBe(
+        false,
+      );
+      expect(store.renewEphemeralDevice(first.id, "owned-short-lived-secret", now + 60_000)).toBe(
+        true,
+      );
+      now += 30_000;
+      expect(store.authenticate(first.id, "owned-short-lived-secret")?.id).toBe(first.id);
+      now += 30_000;
+      expect(store.renewEphemeralDevice(first.id, "owned-short-lived-secret", now + 60_000)).toBe(
+        false,
+      );
+      expect(store.authenticate(first.id, "owned-short-lived-secret")).toBeUndefined();
+      expect(existsSync(file)).toBe(false);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
   test("account identities never enter the pairing file or become permanent credentials", () => {
     dir = mkdtempSync(join(tmpdir(), "mobile-account-devices-"));
     const file = join(dir, "devices.json");

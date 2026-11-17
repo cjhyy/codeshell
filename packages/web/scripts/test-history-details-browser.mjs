@@ -15,14 +15,14 @@ const output = await mkdtemp(path.join(tmpdir(), "codeshell-history-details-"));
 const source = `import React from 'react';import{createRoot}from'react-dom/client';import{Workbench}from'./Workbench';import{initialChatState,reduceStream}from'../src/lib/streamReducer';
 const noop=()=>{};window.sends=0;window.earlierCalls=0;window.reloads=0;
 function orderedHistory(){let state=initialChatState();for(const event of [{type:'user_message',text:'Ordered request'},{type:'stream_request_start',turnNumber:1,messageId:'owned-request'},{type:'text_delta',text:'Before first tool.'},{type:'tool_use_start',toolCall:{id:'first-tool',toolName:'Bash',args:{}}},{type:'tool_result',result:{id:'first-tool',result:'one'}},{type:'text_delta',text:'Between tools.'},{type:'tool_use_start',toolCall:{id:'second-tool',toolName:'LinkAction',args:{}}},{type:'tool_result',result:{id:'second-tool',result:'two'}},{type:'text_delta',text:'Final first paragraph.\\n'},{type:'text_delta',text:'\\nFinal second paragraph.'},{type:'turn_complete',reason:'completed'}])state=reduceStream(state,event);return state.items;}
-function Fixture(){const[scope,setScope]=React.useState('first');const[live,setLive]=React.useState(0);window.appendLive=()=>setLive(n=>n+1);const[older,setOlder]=React.useState(false),[earlierError,setEarlierError]=React.useState('');const[ordered,setOrdered]=React.useState(false);window.replayOrdered=()=>setOrdered(true);window.switchScope=()=>setScope('second');
+function Fixture(){const[scope,setScope]=React.useState('first');const[live,setLive]=React.useState(0);window.appendLive=()=>setLive(n=>n+1);const[older,setOlder]=React.useState(false),[earlierError,setEarlierError]=React.useState('');const[ordered,setOrdered]=React.useState(false),[processLive,setProcessLive]=React.useState(false);window.replayOrdered=()=>setOrdered(true);window.beginLiveProcess=()=>{setOrdered(true);setProcessLive(true)};window.completeLiveProcess=()=>setProcessLive(false);window.switchScope=()=>setScope('second');
 const originalItems=[...(older?[{kind:'user',id:'earlier',text:'Earlier record '+'owned '.repeat(800)}]:[]),{kind:'user',id:'user',text:'Original task',attachments:[{name:'owned.txt',size:4}]},
 ...Array.from({length:4},(_,i)=>({kind:'tool',id:'tool-'+i,name:'Read '+i,done:true,summary:'Owned step '+i,activityGroupKey:scope+'/run/turn/main',detailRef:scope+'/tool-'+i})),
 {kind:'tool',id:'error',name:'Failed step',done:true,error:true,summary:'Visible failure',detailRef:scope+'/error'},
 {kind:'tool',id:'running',name:'Running step',done:false,args:{query:'still active'}},
 {kind:'assistant',id:'answer',text:'Original complete answer.',reasoning:'',reasoningDetailRef:scope+'/reasoning',done:true},{kind:'assistant',id:'long',text:'Large text preview',textDetailRef:scope+'/text',reasoning:'',done:true},...Array.from({length:live},(_,i)=>({kind:'assistant',id:'live-'+i,text:'Fresh output '+i,done:true}))];
-const items=ordered?orderedHistory():originalItems;
-const controller={panelSessionId:undefined,host:'desktop',workspaceApi:false,connection:'open',activeId:scope,chat:{items,run:'running'},sessions:[],workspaceCwd:'/owned',workspaceName:'Owned workspace',workspaceKey:'owned',title:'Owned history',configuration:null,configurationVersion:0,sessionsVersion:0,draft:'Preserved draft',files:[],uploading:false,uploadBusy:false,hasUnsent:false,uncertain:false,running:true,localDrafts:[],approvals:[{id:'approval'}],approvalCount:()=>1,approvalContent:<div role='status'>Approval remains visible</div>,error:'',clearError:noop,setDraft:noop,removeFile:noop,selectSession:noop,newSession:noop,send:()=>{window.sends++;return false},stop:noop,addFiles:noop,refreshSessions:noop,refreshConfiguration:noop,onAuthLost:noop,
+const orderedItems=React.useMemo(orderedHistory,[]);const lastTool=orderedItems.findLastIndex(item=>item.kind==='tool');const liveItems=orderedItems.slice(0,lastTool+1).map((item,index)=>index===lastTool?{...item,done:false}:item);const items=ordered?(processLive?liveItems:orderedItems):originalItems;
+const controller={panelSessionId:undefined,host:'desktop',workspaceApi:false,connection:'open',activeId:scope,chat:{items,run:processLive?'running':'idle'},sessions:[],workspaceCwd:'/owned',workspaceName:'Owned workspace',workspaceKey:'owned',title:'Owned history',configuration:null,configurationVersion:0,sessionsVersion:0,draft:'Preserved draft',files:[],uploading:false,uploadBusy:false,hasUnsent:false,uncertain:false,running:processLive,localDrafts:[],approvals:[{id:'approval'}],approvalCount:()=>1,approvalContent:<div role='status'>Approval remains visible</div>,error:'',clearError:noop,setDraft:noop,removeFile:noop,selectSession:noop,newSession:noop,send:()=>{window.sends++;return false},stop:noop,addFiles:noop,refreshSessions:noop,refreshConfiguration:noop,onAuthLost:noop,
 historyHasEarlier:!older,historyEarlierError:earlierError,loadEarlierHistory:async()=>{window.earlierCalls++;if(window.earlierCalls===1){setEarlierError('Owned earlier retry');throw new Error('Owned earlier retry');}setOlder(true);setEarlierError('');},reloadHistory:()=>window.reloads++,loadHistoryDetail:async ref=>{const response=await fetch('/detail?ref='+encodeURIComponent(ref));if(!response.ok)throw new Error('Owned detail temporarily unavailable');return response.json();}};
 return <Workbench controller={controller}/>};createRoot(document.getElementById('root')).render(<React.StrictMode><Fixture/></React.StrictMode>);`;
 const bundle = await build({
@@ -102,13 +102,15 @@ try {
     await page.addScriptTag({
       content: bundle.outputFiles.find((file) => file.path.endsWith(".js")).text,
     });
-    const group = page.locator(".message-tool-group");
+    const group = page.locator(".message-process").first();
     await group.waitFor();
     assert.equal(
-      await group.locator(":scope > summary").textContent(),
-      "✓已完成 4 项操作Read 0 · Read 1 · Read 2",
+      await group
+        .getByRole("button", { name: "处理完成，展开全部过程" })
+        .getAttribute("aria-expanded"),
+      "false",
     );
-    assert.equal(await page.locator(".message-tool-card").count(), 3);
+    assert.equal(await page.locator(".message-tool-card").count(), 2);
     assert.deepEqual(reads, []);
     for (const text of [
       "Original task",
@@ -188,7 +190,7 @@ try {
       return node.scrollHeight - node.clientHeight - node.scrollTop <= 2;
     });
 
-    await group.locator(":scope > summary").tap();
+    await group.locator(".message-process-heading").tap();
     await group.locator(".message-tool-card").first().waitFor();
     assert.equal(await group.locator(".message-tool-card").count(), 4);
     assert.deepEqual(reads, [], "expanding the activity list fetches no bodies");
@@ -218,14 +220,19 @@ try {
     assert.ok(held, "owned delayed detail request was received");
     await page.evaluate(() => window.switchScope());
     await page.waitForFunction(
-      () => !document.querySelector(".message-tool-group")?.hasAttribute("open"),
+      () =>
+        document.querySelector(".message-process-heading")?.getAttribute("aria-expanded") ===
+        "false",
     );
     await held.fulfill({
       contentType: "application/json",
       body: JSON.stringify({ result: "LATE_OLD_SESSION_RESULT" }),
     });
     assert.equal(await page.getByText("LATE_OLD_SESSION_RESULT", { exact: true }).count(), 0);
-    assert.equal(await group.getAttribute("open"), null);
+    assert.equal(
+      await group.locator(".message-process-heading").getAttribute("aria-expanded"),
+      "false",
+    );
     assert.equal(await page.locator(".message-tool-section").count(), 0);
     const reasoning = page.locator(".message-reasoning");
     await reasoning.locator("summary").tap();
@@ -239,18 +246,11 @@ try {
       await page.getByRole("button", { name: "复制已显示内容", exact: true }).count(),
       1,
     );
-    assert.equal(
-      await page
-        .getByText("Original complete answer.", { exact: true })
-        .locator("..")
-        .getByRole("button", { name: "复制回复", exact: true })
-        .count(),
-      1,
-    );
+    assert.equal(await page.getByRole("button", { name: "复制回复", exact: true }).count(), 0);
     await fullText.locator("summary").tap();
     await fullText.getByText("FULL_TEXT_second/text", { exact: true }).waitFor();
     assert.equal(await page.getByText("Large text preview", { exact: true }).count(), 0);
-    assert.equal(await fullText.getByRole("button", { name: "复制回复", exact: true }).count(), 1);
+    assert.equal(await page.getByRole("button", { name: "复制回复", exact: true }).count(), 1);
     await fullText.locator("summary").tap();
     await fullText
       .getByText("FULL_TEXT_second/text", { exact: true })
@@ -283,19 +283,40 @@ try {
           paragraphs[1].getBoundingClientRect().top - paragraphs[0].getBoundingClientRect().bottom,
       };
     });
-    assert.deepEqual(ordered.kinds, [
-      "user",
-      "assistant",
-      "tool",
-      "assistant",
-      "tool",
-      "assistant",
-    ]);
+    assert.deepEqual(ordered.kinds, ["user", "tool", "assistant"]);
     assert.deepEqual(ordered.paragraphs, ["Final first paragraph.", "Final second paragraph."]);
     assert.ok(ordered.gap >= 9, "existing paragraph margins remain visible");
     assert.equal(reads.length, priorReads);
     assert.equal(await page.evaluate(() => window.sends), 0);
     await page.screenshot({ path: path.join(output, `${theme}-ordered-paragraphs.png`) });
+    assert.equal(await page.getByText("Before first tool.", { exact: true }).count(), 0);
+    assert.equal(await page.getByRole("button", { name: "复制回复", exact: true }).count(), 1);
+    await page.evaluate(() => window.beginLiveProcess());
+    const process = page.locator(".message-process");
+    const processHeading = process.locator(".message-process-heading");
+    await page.getByRole("button", { name: "正在处理，展开全部过程" }).waitFor();
+    assert.equal(await processHeading.getAttribute("aria-expanded"), "false");
+    assert.equal(await process.locator(".message-tool-card").count(), 1);
+    assert.equal(
+      await process.locator(".message-tool-card").getByText("LinkAction", { exact: true }).count(),
+      1,
+    );
+    await page.evaluate(() => window.completeLiveProcess());
+    await page.getByRole("button", { name: "处理完成，展开全部过程" }).waitFor();
+    assert.equal(await processHeading.getAttribute("aria-expanded"), "false");
+    assert.equal(await process.getByText("Before first tool.", { exact: true }).count(), 0);
+    await page.evaluate(() => window.beginLiveProcess());
+    await processHeading.tap();
+    await process.getByText("Before first tool.", { exact: true }).waitFor();
+    await page.evaluate(() => window.completeLiveProcess());
+    await page.getByRole("button", { name: "处理完成，收起全部过程" }).waitFor();
+    await page.getByText("Final second paragraph.", { exact: true }).waitFor();
+    assert.equal(await processHeading.getAttribute("aria-expanded"), "true");
+    assert.equal(await process.getByText("Between tools.", { exact: true }).count(), 1);
+    assert.equal(await process.getByRole("button", { name: "复制回复", exact: true }).count(), 0);
+    assert.equal(await page.getByRole("button", { name: "复制回复", exact: true }).count(), 1);
+    assert.deepEqual(errors, []);
+    await page.screenshot({ path: path.join(output, `${theme}-expanded-process.png`) });
     reports.push({
       theme,
       reads,

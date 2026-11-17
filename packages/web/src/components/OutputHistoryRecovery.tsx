@@ -21,6 +21,9 @@ export interface OutputHistoryRecoveryProps {
   ): Promise<OutputHistoryRecoveryResult>;
   beforeApply?(): void;
   onApplied(): void;
+  /** Read and verify normal history; never accepts a historical gap. */
+  reload?(): void | Promise<void>;
+  reloading?: boolean;
   t?: (key: WebTranslationKey, params?: Record<string, string | number>) => string;
   timeoutMs?: number;
   /** A host stylesheet owns the card and its buttons; the inline fallback is dropped. */
@@ -34,19 +37,23 @@ export interface OutputHistoryRecoveryProps {
 export const OutputHistoryRecoveryExit = createContext<(() => void) | undefined>(undefined);
 
 type Review =
-  | { status: "idle" | "checking" | "applying" | "applied" }
+  | { status: "idle" | "checking" | "applying" | "applied" | "reloading" }
   | {
       status: "ready";
       identity: string;
       plan: Extract<OutputHistoryRecoveryPlan, { status: "ready" }>;
     }
-  | { status: "blocked"; reason: OutputHistoryRecoveryReason };
+  | { status: "blocked"; reason: OutputHistoryRecoveryReason; reloadFailed?: boolean };
 
 /** A review is local to one selection; late replies can never approve a different Session. */
 export function useOutputHistoryRecovery(props: OutputHistoryRecoveryProps) {
   const [review, setReview] = useState<Review>({ status: "idle" });
+  const reloadIdentity = useRef<string | undefined>(undefined);
+  const latestProps = useRef(props);
+  latestProps.current = props;
   const lifetime = useRef({ identity: props.identity, serial: 0, live: true, working: false });
   if (lifetime.current.identity !== props.identity) {
+    reloadIdentity.current = undefined;
     lifetime.current.identity = props.identity;
     lifetime.current.serial++;
     lifetime.current.working = false;
@@ -59,7 +66,11 @@ export function useOutputHistoryRecovery(props: OutputHistoryRecoveryProps) {
       lifetime.current.serial++;
     };
   }, [props.identity]);
-  const run = async <T,>(work: () => Promise<T>, complete: (result: T) => void) => {
+  const run = async <T,>(
+    work: () => Promise<T>,
+    complete: (result: T) => void,
+    failed = () => setReview({ status: "blocked", reason: "unavailable" }),
+  ) => {
     if (lifetime.current.working) return;
     lifetime.current.working = true;
     const serial = ++lifetime.current.serial;
@@ -81,21 +92,25 @@ export function useOutputHistoryRecovery(props: OutputHistoryRecoveryProps) {
       ]);
       if (current()) complete(result);
     } catch {
-      if (current()) setReview({ status: "blocked", reason: "unavailable" });
+      if (current()) failed();
     } finally {
       if (timer) clearTimeout(timer);
       if (current()) lifetime.current.working = false;
     }
   };
   const check = () => {
-    if (props.disabled || lifetime.current.working) return;
+    if (props.disabled || props.reloading || lifetime.current.working) return;
+    reloadIdentity.current = undefined;
     setReview({ status: "checking" });
     return run(
       () => props.plan(props.sessionId),
       (plan) => {
         if (plan.sessionId !== props.sessionId)
           return setReview({ status: "blocked", reason: "stale" });
-        if (plan.status === "blocked") return setReview(plan);
+        if (plan.status === "blocked") {
+          if (plan.reason === "not_needed") reloadIdentity.current = props.identity;
+          return setReview(plan);
+        }
         if (
           !plan.planId ||
           ![
@@ -113,6 +128,7 @@ export function useOutputHistoryRecovery(props: OutputHistoryRecoveryProps) {
   const confirm = () => {
     if (
       props.disabled ||
+      props.reloading ||
       lifetime.current.working ||
       review.status !== "ready" ||
       review.identity !== props.identity ||
@@ -129,28 +145,57 @@ export function useOutputHistoryRecovery(props: OutputHistoryRecoveryProps) {
       (result) => {
         if (result.sessionId !== props.sessionId)
           return setReview({ status: "blocked", reason: "stale" });
-        if (result.status !== "applied")
+        if (result.status !== "applied") {
+          if (result.reason === "not_needed") reloadIdentity.current = props.identity;
           return setReview({ status: "blocked", reason: result.reason });
+        }
         setReview({ status: "applied" });
         props.onApplied();
       },
     );
   };
   const cancel = () => {
+    reloadIdentity.current = undefined;
     lifetime.current.serial++;
     lifetime.current.working = false;
     setReview({ status: "idle" });
   };
-  return { review, check, confirm, cancel };
+  const reload = () => {
+    const current = latestProps.current;
+    if (
+      !current.reload ||
+      !current.failed ||
+      current.disabled ||
+      current.reloading ||
+      current.sessionId !== props.sessionId ||
+      !lifetime.current.live ||
+      lifetime.current.working ||
+      lifetime.current.identity !== props.identity ||
+      reloadIdentity.current !== props.identity ||
+      review.status !== "blocked" ||
+      review.reason !== "not_needed"
+    )
+      return;
+    setReview({ status: "reloading" });
+    return run(
+      async () => current.reload!(),
+      // Only the host's fresh history commit can clear failed/read-only state.
+      () => setReview({ status: "blocked", reason: "not_needed" }),
+      () => setReview({ status: "blocked", reason: "not_needed", reloadFailed: true }),
+    );
+  };
+  return { review, check, confirm, cancel, reload };
 }
 
 export function OutputHistoryRecovery(props: OutputHistoryRecoveryProps) {
-  const { review, check, confirm, cancel } = useOutputHistoryRecovery(props);
+  const { review, check, confirm, cancel, reload } = useOutputHistoryRecovery(props);
   const startNew = useContext(OutputHistoryRecoveryExit);
   const t = props.t ?? translate;
   if (!props.failed && !props.historicalGap && review.status !== "applied") return null;
   const prefix = "mobile.historyRecovery.";
   const pending = review.status === "checking" || review.status === "applying";
+  const reloading = props.reloading || review.status === "reloading";
+  const needsReload = props.failed && review.status === "blocked" && review.reason === "not_needed";
   const gap = props.historicalGap || review.status === "applied";
   return (
     <section
@@ -169,9 +214,51 @@ export function OutputHistoryRecovery(props: OutputHistoryRecoveryProps) {
             }
       }
     >
-      <strong>{t(gap ? `${prefix}gapTitle` : `${prefix}title`)}</strong>
-      <p>{t(gap ? `${prefix}gapNotice` : `${prefix}failed`)}</p>
-      {review.status === "ready" ? (
+      <strong>
+        {t(
+          reloading
+            ? `${prefix}reloading`
+            : needsReload
+              ? `${prefix}reloadTitle`
+              : gap
+                ? `${prefix}gapTitle`
+                : `${prefix}title`,
+        )}
+      </strong>
+      <p>
+        {t(
+          reloading
+            ? `${prefix}reloadPending`
+            : needsReload
+              ? review.reloadFailed
+                ? `${prefix}reloadFailed`
+                : `${prefix}reloadDescription`
+              : gap
+                ? `${prefix}gapNotice`
+                : `${prefix}failed`,
+        )}
+      </p>
+      {reloading || needsReload ? (
+        <>
+          {props.reload && (
+            <button
+              type="button"
+              disabled={props.disabled || reloading}
+              onClick={() => void reload()}
+            >
+              {t(`${prefix}reload`)}
+            </button>
+          )}
+          {startNew && (
+            <>
+              {" "}
+              <button type="button" disabled={pending} onClick={startNew}>
+                {t(`${prefix}startNew`)}
+              </button>
+            </>
+          )}
+        </>
+      ) : review.status === "ready" ? (
         <>
           <p>{t(`${prefix}verified`, { ...review.plan.comparison })}</p>
           <p>{t(`${prefix}gapNotice`)}</p>

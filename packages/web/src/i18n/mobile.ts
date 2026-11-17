@@ -11,6 +11,13 @@ export const mobile = {
         failed: "记录尚未完整载入。已有内容已保留，恢复核对通过前不会继续任务。",
         check: "核对恢复方案",
         checking: "正在核对记录…",
+        reloadTitle: "需要重新载入会话记录",
+        reloadDescription:
+          "此会话不需要执行这项修复。请重新载入并核对记录，完成后可继续使用。草稿会保留。",
+        reload: "重新载入会话记录",
+        reloading: "正在重新载入会话记录…",
+        reloadPending: "正在读取并核对记录，已有内容和草稿会保留。也可以先切换到其他对话。",
+        reloadFailed: "重新载入未完成。请检查连接后重试，已有内容和草稿仍会保留。",
         startNew: "新建对话继续",
         applying: "正在保留原始记录并恢复…",
         verified:
@@ -216,6 +223,15 @@ export const mobile = {
           "History has not fully loaded. Existing records are retained; work will stay paused until recovery is verified.",
         check: "Review recovery",
         checking: "Checking records…",
+        reloadTitle: "Reload this conversation's history",
+        reloadDescription:
+          "This recovery operation is not needed. Reload and verify the history before continuing. Your draft will be kept.",
+        reload: "Reload conversation history",
+        reloading: "Reloading conversation history…",
+        reloadPending:
+          "Reading and verifying history. Existing content and drafts are kept; you can switch to another conversation.",
+        reloadFailed:
+          "History could not finish reloading. Check the connection and retry. Existing content and drafts are kept.",
         startNew: "Continue in a new conversation",
         applying: "Preserving original records and recovering…",
         verified:
