@@ -20,6 +20,7 @@ import { DesktopCliModelPicker } from "./DesktopCliModelPicker.js";
 import { cliSessionControlBlock } from "./cliSessionControls.js";
 import { HubPanels } from "./HubPanels.js";
 import { PanelHost } from "./PanelHost.js";
+import { SessionLoadingState } from "./SessionLoadingState.js";
 
 const noop = () => {};
 const session = { id: "paired-session", username: "synthetic", deviceName: "Fixture" };
@@ -2299,9 +2300,10 @@ test("an immediately failed creation restores the visible draft and chosen model
   }
 });
 
-test("history banner exposes verified progress without declaring completion or dropping drafts", async () => {
+test("history loading exposes verified progress without declaring completion or dropping drafts", async () => {
   let app = remoteApp({
     activeSessionId: "native",
+    sessions: [{ id: "native", title: "Saved conversation", updatedAt: 1, cwd: null }],
     loading: {
       sessions: false,
       sessionHistory: true,
@@ -2317,12 +2319,15 @@ test("history banner exposes verified progress without declaring completion or d
     await act(async () => hook.result.current.setDraft("manual draft"));
     expect(hook.result.current.loading).toBe(true);
     expect(hook.result.current.loadingLabel).toContain("50%");
+    expect(hook.result.current.loadingProgress).toBe(50);
+    expect(hook.result.current.title).toBe("Saved conversation");
     app = {
       ...app,
       sessionHistoryProgress: { phase: "journal", pages: 3, receivedBytes: 100, totalBytes: 100 },
     };
     await hook.rerender();
     expect(hook.result.current.loadingLabel).toContain("99%");
+    expect(hook.result.current.loadingProgress).toBe(99);
     expect(hook.result.current.loading).toBe(true);
     expect(hook.result.current.draft).toBe("manual draft");
     app = {
@@ -2333,10 +2338,29 @@ test("history banner exposes verified progress without declaring completion or d
     await hook.rerender();
     expect(hook.result.current.loading).toBe(false);
     expect(hook.result.current.loadingLabel).toBeUndefined();
+    expect(hook.result.current.loadingProgress).toBeUndefined();
     expect(hook.result.current.draft).toBe("manual draft");
   } finally {
     await hook.unmount();
   }
+});
+
+test("history loading distinguishes retained content, unknown progress and blocked creation", () => {
+  const loading = renderToStaticMarkup(<SessionLoadingState progress={100} />);
+  expect(loading).toContain('role="status"');
+  expect(loading).toContain('aria-valuenow="99"');
+  expect(loading).toContain('class="session-loading-skeleton" aria-hidden="true"');
+  const retained = renderToStaticMarkup(<SessionLoadingState retained progress={Number.NaN} />);
+  expect(retained).toContain("session-loading-retained");
+  expect(retained).not.toContain("session-loading-skeleton");
+  expect(retained).not.toContain('role="progressbar"');
+  const failed = renderToStaticMarkup(
+    <SessionLoadingState failed label="建立会话失败，请重试。" progress={25} />,
+  );
+  expect(failed).toContain('role="alert"');
+  expect(failed).toContain("建立会话失败，请重试。");
+  expect(failed).not.toContain("session-loading-skeleton");
+  expect(failed).not.toContain('role="progressbar"');
 });
 
 test("empty-session replacement retains editable input through failure and retries without sending", async () => {
@@ -2377,6 +2401,8 @@ test("empty-session replacement retains editable input through failure and retri
     await hook.rerender();
     expect(hook.result.current.loading).toBe(true);
     expect(hook.result.current.loadingLabel).toContain("重试建立会话");
+    expect(hook.result.current.loadingFailed).toBe(true);
+    expect(hook.result.current.loadingProgress).toBeUndefined();
     expect(hook.result.current.send()).toBe(false);
     expect(modelPicker(hook.result.current).disabled).toBe(false);
     await act(async () => modelPicker(hook.result.current).onRetryCreation!());

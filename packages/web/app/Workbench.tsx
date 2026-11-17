@@ -27,6 +27,7 @@ import { ExpandedHistoryText } from "./ExpandedHistoryText.js";
 import { TurnQueueList } from "./TurnQueueList.js";
 import { WebsiteSetupSteps } from "./WebsiteSetupSteps.js";
 import { ProjectSessionNavigation } from "./ProjectSessionNavigation.js";
+import { SessionLoadingState } from "./SessionLoadingState.js";
 import type { SessionSummary } from "./protocol.js";
 import "./app.css";
 import "./workbench-desktop.css";
@@ -585,6 +586,7 @@ export function Workbench({
     (a) => a.sessionId && a.sessionId !== activeId,
   );
   const empty = chat.items.length === 0 && approvals.length === 0;
+  const showWelcome = empty && !controller.loading && !controller.readOnly;
   const defaultConnection = configuration?.connections.find(
     (item) => item.id === configuration.defaults.text,
   );
@@ -1051,7 +1053,7 @@ export function Workbench({
           </div>
         ) : null}
         <section
-          className={`chat${empty ? " chat-empty" : ""}`}
+          className={`chat${showWelcome ? " chat-empty" : ""}${empty && controller.loading ? " chat-loading-empty" : ""}`}
           hidden={view !== "chat"}
           aria-label="对话"
         >
@@ -1084,9 +1086,12 @@ export function Workbench({
                   {controller.chatControls}
                 </OutputHistoryRecoveryExit.Provider>
                 {controller.loading ? (
-                  <div className="banner" role="status">
-                    {controller.loadingLabel ?? "正在恢复会话记录…"}
-                  </div>
+                  <SessionLoadingState
+                    label={controller.loadingLabel}
+                    progress={controller.loadingProgress}
+                    retained={!empty}
+                    failed={controller.loadingFailed}
+                  />
                 ) : null}
                 {chat.goal ? (
                   <div className="banner goal">
@@ -1242,7 +1247,7 @@ export function Workbench({
 
                 {/* A read-only conversation (recovery pending, observed CLI room) is not
                     a blank slate, so it gets no "start something" welcome. */}
-                {empty && !controller.readOnly ? (
+                {showWelcome ? (
                   needsWebsiteModel ? (
                     <div className="empty-chat website-model-setup">
                       <WebsiteSetupSteps current={3} />

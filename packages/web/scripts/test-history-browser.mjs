@@ -32,9 +32,9 @@ const sessions = () =>
     running: false,
     preview: "Owned preview " + i,
   }));
-const source = `import React from 'react';import{createRoot}from'react-dom/client';import{Workbench}from'./Workbench';
+const source = `import React from 'react';import{createRoot}from'react-dom/client';import{Workbench}from'./Workbench';import{OutputHistoryRecovery}from'../src/components/OutputHistoryRecovery';
 const root=createRoot(document.getElementById('root')),noop=()=>{};window.selectionCalls=[];window.authLost=0;window.changeCalls=0;window.newCalls=0;window.unmountFixture=()=>root.render(null);
-function Fixture(){const[workspace,setWorkspace]=React.useState('owned-history'),[version,setVersion]=React.useState(0);window.changeWorkspace=()=>setWorkspace('other-owned-history');window.bumpSessions=()=>setVersion(n=>n+1);const[activeId,setActive]=React.useState('owned-session-0'),[loading,setLoading]=React.useState(false),[items,setItems]=React.useState([{kind:'assistant',id:'owned-message',text:'Owned old transcript',done:true}]);const controller={panelSessionId:undefined,host:'desktop',workspaceApi:true,connection:'open',activeId,loading,chat:{items,run:'idle'},sessions:window.fixtureSessions,workspaceCwd:'/owned-history',workspaceName:'Owned workspace',workspaceKey:workspace,title:'Owned conversation',configuration:null,configurationVersion:0,sessionsVersion:version,draft:'',files:[],uploading:false,uploadBusy:false,hasUnsent:false,uncertain:false,running:false,localDrafts:[],approvals:[],approvalCount:()=>0,approvalContent:null,error:'',clearError:noop,setDraft:noop,removeFile:noop,selectSession:(id)=>{window.selectionCalls.push(id);window.acceptSelection=()=>setActive(id);if(!window.holdSelection)setActive(id);setLoading(true);setItems([]);return new Promise(resolve=>window.finishSelection=()=>{setItems([{kind:'assistant',id:'new-owned-output',text:'Owned restored transcript for '+id,done:true}]);setLoading(false);resolve()})},newSession:()=>{window.newCalls++;setActive('owned-new-session');setItems([])},send:()=>false,stop:noop,addFiles:noop,refreshSessions:()=>{window.changeCalls++;if(!window.hubRefreshOnly)setVersion(n=>n+1)},refreshConfiguration:noop,onAuthLost:()=>window.authLost++};return <Workbench controller={controller}/>};root.render(<React.StrictMode><Fixture/></React.StrictMode>);`;
+function Fixture(){const[workspace,setWorkspace]=React.useState('owned-history'),[version,setVersion]=React.useState(0);window.changeWorkspace=()=>setWorkspace('other-owned-history');window.bumpSessions=()=>setVersion(n=>n+1);const[activeId,setActive]=React.useState('owned-session-0'),[loading,setLoading]=React.useState(false),[failed,setFailed]=React.useState(false),[progress,setProgress]=React.useState(undefined),[draft,setDraft]=React.useState(''),[items,setItems]=React.useState([{kind:'assistant',id:'owned-message',text:'Owned old transcript',done:true}]);window.recoverFixture=()=>setLoading(true);window.progressFixture=setProgress;window.draftFixture=setDraft;window.failFixture=()=>{setLoading(false);setFailed(true)};const controller={panelSessionId:undefined,host:'desktop',workspaceApi:true,connection:'open',activeId,loading,loadingProgress:progress,loadingLabel:progress===undefined?undefined:'正在恢复会话记录… '+progress+'%',readOnly:failed,chatControls:<OutputHistoryRecovery className='output-history-recovery' sessionId={activeId} identity={workspace+activeId} failed={failed} plan={async()=>{window.recoveryChecks=(window.recoveryChecks||0)+1;return{status:'blocked',sessionId:activeId,reason:'unavailable'}}} apply={async()=>{throw new Error('no recovery acceptance in fixture')}} onApplied={noop}/>,chat:{items,run:'idle'},sessions:window.fixtureSessions,workspaceCwd:'/owned-history',workspaceName:'Owned workspace',workspaceKey:workspace,title:'Owned conversation',configuration:null,configurationVersion:0,sessionsVersion:version,draft,files:[],uploading:false,uploadBusy:false,hasUnsent:false,uncertain:false,running:false,localDrafts:[],approvals:[],approvalCount:()=>0,approvalContent:null,error:'',clearError:noop,setDraft,removeFile:noop,selectSession:(id)=>{window.selectionCalls.push(id);setFailed(false);setProgress(undefined);window.acceptSelection=()=>setActive(id);if(!window.holdSelection)setActive(id);setLoading(true);setItems([]);return new Promise(resolve=>window.finishSelection=()=>{setItems([{kind:'assistant',id:'new-owned-output',text:'Owned restored transcript for '+id,done:true}]);setLoading(false);resolve()})},newSession:()=>{window.newCalls++;setActive('owned-new-session');setLoading(false);setFailed(false);setItems([])},send:()=>false,stop:noop,addFiles:noop,refreshSessions:()=>{window.changeCalls++;if(!window.hubRefreshOnly)setVersion(n=>n+1)},refreshConfiguration:noop,onAuthLost:()=>window.authLost++};return <Workbench controller={controller}/>};root.render(<React.StrictMode><Fixture/></React.StrictMode>);`;
 const bundle = await build({
   stdin: { contents: source, resolveDir: path.join(repo, "packages/web/app"), loader: "tsx" },
   bundle: true,
@@ -425,6 +425,84 @@ async function readLong(page, locator) {
   await visible(locator, true);
 }
 try {
+  for (const [width, height, theme] of [
+    [1280, 720, "light"],
+    [390, 844, "dark"],
+  ]) {
+    const { page } = await mount(width, height, { theme });
+    const catalog = await page.locator('.sessions[aria-label="最近对话"]').textContent();
+    await row(page).getByRole("button", { name: "Owned session 11", exact: true }).click();
+    const loading = page.locator(".session-loading");
+    await loading.waitFor();
+    assert.equal(await page.locator(".session-loading-skeleton").count(), 1);
+    assert.equal(await page.locator(".empty-chat").count(), 0);
+    assert.equal(await page.getByText("Owned old transcript", { exact: true }).count(), 0);
+    assert.equal(await page.locator('.sessions[aria-label="最近对话"]').textContent(), catalog);
+    assert.equal(await page.getByRole("button", { name: "发送", exact: true }).isDisabled(), true);
+    await page.evaluate(() => window.draftFixture("Draft kept while loading"));
+    await page.evaluate(() => window.progressFixture(50));
+    const progress = page.getByRole("progressbar", { name: "会话记录恢复进度" });
+    assert.equal(await progress.getAttribute("aria-valuenow"), "50");
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    assert.equal(
+      await page
+        .locator(".session-loading-indicator")
+        .evaluate((n) => getComputedStyle(n).animationName),
+      "none",
+    );
+    assert.equal(
+      await page
+        .locator(".session-loading-skeleton")
+        .evaluate((n) => getComputedStyle(n).animationName),
+      "none",
+    );
+    assert.equal(await loading.evaluate((n) => n.scrollWidth <= n.clientWidth + 1), true);
+    await page.screenshot({ path: path.join(output, `session-loading-${theme}-${width}.png`) });
+    const composerBefore = await page.locator(".composer").boundingBox();
+    await page.evaluate(() => window.finishSelection());
+    await page
+      .getByText("Owned restored transcript for owned-session-11", { exact: true })
+      .waitFor();
+    assert.equal(await loading.count(), 0);
+    const composerAfter = await page.locator(".composer").boundingBox();
+    assert.ok(
+      Math.abs(composerBefore.y - composerAfter.y) <= 1,
+      "history does not move the composer",
+    );
+    assert.equal(
+      await page.getByRole("textbox", { name: "任务内容" }).inputValue(),
+      "Draft kept while loading",
+    );
+    await page.evaluate(() => window.recoverFixture());
+    await page.locator(".session-loading-retained").waitFor();
+    assert.equal(await page.locator(".session-loading-skeleton").count(), 0);
+    assert.equal(
+      await page
+        .getByText("Owned restored transcript for owned-session-11", { exact: true })
+        .count(),
+      1,
+    );
+    assert.equal(await page.locator('.sessions[aria-label="最近对话"]').textContent(), catalog);
+    await page.evaluate(() => window.failFixture());
+    await page.locator(".output-history-recovery").waitFor();
+    assert.equal(await loading.count(), 0);
+    assert.equal(await page.locator(".empty-chat").count(), 0);
+    assert.equal(
+      await page.getByRole("textbox", { name: "任务内容" }).inputValue(),
+      "Draft kept while loading",
+    );
+    assert.equal(await page.getByRole("button", { name: "发送", exact: true }).isDisabled(), true);
+    await page.locator(".output-history-recovery button").first().click();
+    await page.waitForFunction(() => window.recoveryChecks === 1);
+    await page.locator(".output-history-recovery [role=alert]").waitFor();
+    assert.equal(
+      await page
+        .getByText("Owned restored transcript for owned-session-11", { exact: true })
+        .count(),
+      1,
+    );
+    reports.push({ label: "session-loading-retains-navigation-draft-recovery", width, theme });
+  }
   for (const [kind, wide] of [
     ...["archive-error", "rename-error", "input", "save", "more"].map((kind) => [kind, false]),
     ...["archive-error", "input"].map((kind) => [kind, true]),
