@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import {
   createPromptCacheKey,
   PromptCacheHistory,
+  promptCacheHeadId,
   promptCacheTtlMs,
   resolvePromptCachePolicy,
   uniquePromptCacheBreakpointIndexes,
@@ -215,6 +216,28 @@ describe("prompt cache policy", () => {
     const fallback = resolvePromptCachePolicy({ ...base, explicitDisabled: true });
     expect(fallback.strategy).toBe("openai-implicit");
     expect(fallback.cacheKey).toBe(explicit.cacheKey);
+  });
+
+  it("shares the affinity key between Sessions with the same head", () => {
+    const head = promptCacheHeadId("system", [{ name: "Read" }]);
+    const key = (scopeId: string, headId?: string) =>
+      resolvePromptCachePolicy({
+        provider: "openai",
+        providerKind: "openrouter",
+        model: "openai/gpt-5.6-sol",
+        request: { scopeId, ...(headId ? { headId } : {}) },
+      }).cacheKey;
+    expect(key("session-a", head)).toBe(key("session-b", head));
+    expect(key("session-a", head)).toMatch(/^cs:[a-f0-9]{48}$/);
+    expect(key("session-a", promptCacheHeadId("system", [{ name: "Grep" }]))).not.toBe(
+      key("session-a", head),
+    );
+    expect(key("session-a", promptCacheHeadId("other system", [{ name: "Read" }]))).not.toBe(
+      key("session-a", head),
+    );
+    // Without a head the key still follows the Session.
+    expect(key("session-a")).not.toBe(key("session-b"));
+    expect(head).not.toContain("system");
   });
 
   it("produces opaque bounded keys and ordered unique breakpoint indexes", () => {

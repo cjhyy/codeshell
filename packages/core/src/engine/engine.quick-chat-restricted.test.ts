@@ -145,19 +145,19 @@ describe("Engine quick-chat prompt guidance", () => {
     expect(restricted?.toolNames).not.toContain("Agent");
   });
 
-  it("discovers Bash without changing the prefix or bypassing the sub-agent restriction", async () => {
+  it("discovers a deferred tool without changing the prefix or bypassing the sub-agent restriction", async () => {
     const cwd = mkdtempSync(join(tmpdir(), "quick-chat-elevated-"));
     tempDirs.push(cwd);
     const model = `${provider}-${Date.now()}-${Math.random()}`;
     const calls: CapturedCall[] = [];
     callsByModel.set(model, calls);
     scriptedToolCallsByModel.set(model, [
-      [{ id: "load-bash", toolName: "ToolSearch", args: { query: "select:Bash" } }],
+      [{ id: "load-shells", toolName: "ToolSearch", args: { query: "select:ListShells" } }],
       [
         {
-          id: "run-bash",
+          id: "run-shells",
           toolName: "CallTool",
-          args: { name: "Bash", args: { command: "printf discovery-bash-ok" } },
+          args: { name: "ListShells", args: {} },
         },
         {
           id: "blocked-agent",
@@ -187,16 +187,19 @@ describe("Engine quick-chat prompt guidance", () => {
     expect(calls).toHaveLength(3);
     const [initial, elevated, completed] = calls;
     expect(initial?.systemPrompt).toContain("# Side Conversation Boundary");
-    expect(initial?.toolNames).toEqual(expect.arrayContaining(["Write", "Edit", "ToolSearch"]));
-    expect(initial?.toolNames).not.toContain("Bash");
+    expect(initial?.toolNames).toEqual(
+      expect.arrayContaining(["Write", "Edit", "Bash", "ToolSearch"]),
+    );
+    // The head is the preset's fixed set: task text no longer reshapes it.
+    expect(initial?.toolNames).not.toContain("ListShells");
     expect(initial?.toolNames).not.toContain("Agent");
     expect(elevated?.systemPrompt).toContain("# Side Conversation Boundary");
     expect(elevated?.toolNames).toEqual(initial?.toolNames);
     expect(elevated?.systemPrompt).toBe(initial?.systemPrompt);
-    expect(elevated?.messageText).toContain("schemaRef: select:Bash");
+    expect(elevated?.messageText).toContain("schemaRef: select:ListShells");
     expect(elevated?.messageText).toContain("inputSchema");
     expect(completed?.toolNames).toEqual(initial?.toolNames);
-    expect(completed?.messageText).toContain("discovery-bash-ok");
+    expect(completed?.messageText).toContain("No background shells for this session.");
     expect(completed?.messageText).toContain(
       "Tool Agent is not available in the current session context",
     );

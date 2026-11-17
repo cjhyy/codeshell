@@ -147,6 +147,26 @@ export async function toolSearchTool(
 
 const CALL_TOOL_USAGE =
   "Use CallTool to call these tools: name is the exact tool name and args must match inputSchema.";
+
+/**
+ * Schemas the host loads for the model, rendered as a `select:` result over
+ * the CallTool adapter. Only tools whose schema fit the budget are `loaded`;
+ * callers must make exactly those callable.
+ */
+export function formatPreloadedToolSchemas(
+  definitions: readonly ToolDefinition[],
+  names: readonly string[],
+): { output: string; loaded: string[] } {
+  const { output, loaded } = formatSelectedDefinitions(
+    definitions,
+    [...new Set(names)],
+    MAX_SELECT_OUTPUT_LENGTH,
+    true,
+    CALL_TOOL_USAGE,
+    () => MAX_SINGLE_SELECT_OUTPUT_LENGTH,
+  );
+  return { output, loaded };
+}
 const DIRECT_TOOL_USAGE = "Call each tool by its exact name with arguments matching inputSchema.";
 
 function formatSelectedDefinitions(

@@ -283,13 +283,14 @@ try {
     assert.equal(readFileSync(target, "utf8"), "after\n");
     return [];
   });
-  // Loaded tools persist within a Session, so routing for a new task needs its own Session.
+  // Routing loads its extra schemas after the head; it never reshapes the head.
+  assert.match(JSON.stringify(codeBodies[0].messages), /### LSP/);
+  // A new Session with another task sends the same head, so it can read the
+  // cache an earlier Session of this preset wrote.
   const codeFileBodies = await code.run(
     "read file",
     (body) => {
       bounded(body);
-      assert.ok(!names(body).includes("ApplyPatch"));
-      assert.ok(!catalogNames(body).has("ApplyPatch"));
       assert.ok(
         code.engine.getToolRegistry().hasTool("ApplyPatch"),
         "coding capability stays discoverable",
@@ -298,7 +299,8 @@ try {
     },
     { sessionId: "s-coding-read" },
   );
-  assert.notDeepEqual(names(codeBodies[0]), names(codeFileBodies[0]));
+  assert.deepEqual(names(codeBodies[0]), names(codeFileBodies[0]));
+  assert.equal(codeBodies[0].messages[0].content, codeFileBodies[0].messages[0].content);
   assert.deepEqual(catalogNames(codeBodies[0]), new Set(names(codeBodies[0])));
   assert.deepEqual(catalogNames(codeFileBodies[0]), new Set(names(codeFileBodies[0])));
   assert.ok(code.engine.getToolRegistry().hasTool("DriveAgent"));
@@ -369,7 +371,9 @@ try {
         !names(body).includes("RoutingAction"),
         "selection does not leak into another Session",
       );
-      assert.ok(names(body).includes("ReadSource"), JSON.stringify({ initialTools: names(body) }));
+      // Routed schemas load after the shared head instead of joining it.
+      assert.deepEqual(names(body), names(progressive[0]));
+      assert.match(JSON.stringify(body.messages), /### ReadSource/);
       return [];
     },
     { sessionId: "s-deferred-other" },

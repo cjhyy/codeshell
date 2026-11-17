@@ -9,7 +9,11 @@ import {
   withModelRequestBoundary,
   type ModelRequestBinding,
 } from "../model-request-boundary/context.js";
-import type { PromptCacheRequestContext, PromptCacheStrategy } from "../llm/prompt-cache.js";
+import {
+  promptCacheHeadId,
+  type PromptCacheRequestContext,
+  type PromptCacheStrategy,
+} from "../llm/prompt-cache.js";
 import type { Message, ToolDefinition, LLMResponse, StreamCallback } from "../types.js";
 import { Transcript } from "../session/transcript.js";
 import { logger, getCurrentSid } from "../logging/logger.js";
@@ -28,8 +32,8 @@ import {
 export interface ModelCallRecordingOptions {
   requestBoundary?: { step: number; assistantMessageId: string };
   sensitiveToolResultRedactions?: ReadonlyMap<string, string>;
-  /** Cache boundary metadata; scopeId is filled from the active session. */
-  promptCache?: Omit<PromptCacheRequestContext, "scopeId">;
+  /** Cache boundary metadata; scopeId and headId are filled in by the facade. */
+  promptCache?: Omit<PromptCacheRequestContext, "scopeId" | "headId">;
 }
 
 function nextReqId(): string {
@@ -57,6 +61,17 @@ export class ModelFacade {
     /** Successful primary calls only; timestamp is captured before the request starts. */
     private readonly onPrimaryResponse?: (startedAt: number) => void,
   ) {}
+
+  private lastHead?: { systemPrompt: string; tools: readonly ToolDefinition[]; id: string };
+
+  /** The head is frozen for a cache cycle: hash it once per (prompt, tool snapshot). */
+  private headId(systemPrompt: string, tools: readonly ToolDefinition[]): string {
+    const last = this.lastHead;
+    if (last?.systemPrompt === systemPrompt && last.tools === tools) return last.id;
+    const id = promptCacheHeadId(systemPrompt, tools);
+    this.lastHead = { systemPrompt, tools, id };
+    return id;
+  }
 
   /** See LLMClientBase.getEffectivePromptCacheStrategy; `undefined`: as configured. */
   getEffectivePromptCacheStrategy(): PromptCacheStrategy | undefined {
@@ -155,7 +170,11 @@ export class ModelFacade {
               }
             },
             signal: requestSignal,
-            promptCache: { scopeId: sid, ...recordingOptions?.promptCache },
+            promptCache: {
+              scopeId: sid,
+              headId: this.headId(systemPrompt, tools),
+              ...recordingOptions?.promptCache,
+            },
           }),
       );
     } catch (err) {
@@ -238,7 +257,11 @@ export class ModelFacade {
             tools,
             stream: false,
             signal: requestSignal,
-            promptCache: { scopeId: sid, ...recordingOptions?.promptCache },
+            promptCache: {
+              scopeId: sid,
+              headId: this.headId(systemPrompt, tools),
+              ...recordingOptions?.promptCache,
+            },
           }),
       );
     } catch (err) {
