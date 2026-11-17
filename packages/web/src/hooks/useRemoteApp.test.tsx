@@ -551,6 +551,166 @@ describe("useRemoteApp session switching recovery", () => {
     }
   });
 
+  for (const complete of [true, false]) {
+    test(`unneeded repair retries one ordinary read and ${complete ? "unlocks only after fresh proof" : "keeps failed reads fenced"}`, async () => {
+      const { hook, ws, sent } = await connected(true);
+      const unavailable = (read: Record<string, unknown>) => ({
+        ...read,
+        page: { version: 1, status: "unavailable", frames: [], complete: false },
+        snapshot: { epoch: "old", nextSeq: 1, unpaired: true },
+      });
+      try {
+        await act(async () => {
+          hook.result.current.selectSession("native");
+          const selected = sent().findLast((event) => event.type === "session.select");
+          ws.message({
+            type: "session.recovery.ready",
+            sessionId: "native",
+            recoveryId: selected.recoveryId,
+            ok: true,
+          });
+          await flushMicrotasks();
+          ws.message(
+            unavailable(sent().findLast((event) => event.type === "session.outputJournal")),
+          );
+          await flushMicrotasks();
+        });
+        expect(hook.result.current.outputHistoryFailed).toBe(true);
+        const selections = sent().filter((event) => event.type === "session.select").length;
+        await act(async () => {
+          const checking = hook.result.current.getSessionOutputRecoveryPlan!("native");
+          const request = sent().findLast((event) => event.type === "session.outputRecovery.plan");
+          ws.message({
+            ...request,
+            result: { status: "blocked", sessionId: "native", reason: "not_needed" },
+          });
+          await checking;
+          await flushMicrotasks();
+        });
+        expect(sent().filter((event) => event.type === "session.select")).toHaveLength(
+          selections + 1,
+        );
+        expect(hook.result.current.outputHistoryFailed).toBe(true);
+        expect(hook.result.current.loading.sessionHistory).toBe(true);
+        expect(
+          await hook.result.current.sendChat({ text: "retained draft", attachments: [] }),
+        ).toBe(false);
+        await act(async () => {
+          const selected = sent().findLast((event) => event.type === "session.select");
+          ws.message({
+            type: "session.recovery.ready",
+            sessionId: "native",
+            recoveryId: selected.recoveryId,
+            ok: true,
+          });
+          await flushMicrotasks();
+          const read = sent().findLast((event) => event.type === "session.outputJournal");
+          if (!complete) {
+            ws.message(unavailable(read));
+          } else {
+            const cursor = (sequence: number) =>
+              Buffer.from(
+                JSON.stringify({
+                  identity: "a".repeat(64),
+                  hash: "b".repeat(64),
+                  sequence,
+                  offset: sequence * 100,
+                }),
+              ).toString("base64url");
+            ws.message({
+              ...read,
+              page: {
+                version: 1,
+                status: "ok",
+                from: cursor(0),
+                through: cursor(1),
+                next: cursor(1),
+                coverageStart: cursor(0),
+                legacyBaseThroughEventId: "base",
+                frames: [
+                  {
+                    cursor: cursor(1),
+                    sequence: 1,
+                    event: { type: "text_delta", text: "reloaded saved answer" },
+                  },
+                ],
+                complete: true,
+              },
+              legacyBaseComplete: true,
+              legacyBase: {
+                throughEventId: "base",
+                events: [{ type: "session_started", sessionId: "native" }],
+              },
+              snapshot: { epoch: "fresh", nextSeq: 2, unpaired: false, outputCursor: cursor(1) },
+            });
+          }
+          await flushMicrotasks();
+        });
+        expect(hook.result.current.outputHistoryFailed).toBe(!complete);
+        expect(hook.result.current.loading.sessionHistory).toBe(false);
+        expect(sent().filter((event) => event.type === "session.select")).toHaveLength(
+          selections + 1,
+        );
+        expect(
+          sent().some((event) =>
+            ["session.outputRecovery.apply", "chat.send", "approval.respond"].includes(event.type),
+          ),
+        ).toBe(false);
+      } finally {
+        await hook.unmount();
+      }
+    });
+  }
+
+  test("a not-needed plan cannot reload a selection changed before its promise resumes", async () => {
+    const { hook, ws, sent } = await connected(true);
+    try {
+      await act(async () => {
+        hook.result.current.selectSession("native");
+        const selected = sent().findLast((event) => event.type === "session.select");
+        ws.message({
+          type: "session.recovery.ready",
+          sessionId: "native",
+          recoveryId: selected.recoveryId,
+          ok: true,
+        });
+        await flushMicrotasks();
+        const read = sent().findLast((event) => event.type === "session.outputJournal");
+        ws.message({
+          ...read,
+          page: { version: 1, status: "unavailable", frames: [], complete: false },
+          snapshot: { epoch: "old", nextSeq: 1, unpaired: true },
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.outputHistoryFailed).toBe(true);
+      const before = sent().filter(
+        (event) => event.type === "session.select" && event.sessionId === "native",
+      ).length;
+      await act(async () => {
+        const checking = hook.result.current.getSessionOutputRecoveryPlan!("native");
+        const request = sent().findLast((event) => event.type === "session.outputRecovery.plan");
+        ws.message({
+          ...request,
+          result: { status: "blocked", sessionId: "native", reason: "not_needed" },
+        });
+        hook.result.current.selectSession("other");
+        await checking;
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.activeSessionId).toBe("other");
+      expect(
+        sent().filter((event) => event.type === "session.select" && event.sessionId === "native"),
+      ).toHaveLength(before);
+      expect(
+        sent().filter((event) => event.type === "session.select" && event.sessionId === "other"),
+      ).toHaveLength(1);
+      expect(sent().some((event) => event.type === "session.outputRecovery.apply")).toBe(false);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
   test("explicit repair keeps old writes fenced until a fresh complete journal joins", async () => {
     const { hook, ws, sent } = await connected(true);
     try {
