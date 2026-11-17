@@ -14,14 +14,16 @@ import type { ManagedPanel } from "../src/panels.js";
 import { OutputHistoryRecoveryExit } from "../src/components/OutputHistoryRecovery.js";
 import { connectionModelLabel } from "./configuration.js";
 import { MessageContent, subagentStatusLabel } from "./MessageContent.js";
+import { AnswerContent } from "./AnswerContent.js";
+import { ProcessActivity } from "./ProcessActivity.js";
+import { projectProcessActivity } from "./processActivityProjection.js";
 import { sessionTitle } from "./chat.js";
 import type { WorkbenchController, WorkbenchNavigation } from "./workbench-types.js";
 import { useWorkbenchNavigation } from "./useWorkbenchNavigation.js";
 import { getApiProject } from "./api-context.js";
 import { useLatestMessages } from "./useLatestMessages.js";
 import { useTranscriptWindow } from "./useTranscriptWindow.js";
-import { groupToolActivity } from "./toolActivityGroups.js";
-import { foldToolDisplayRecords, isInvisibleAssistant } from "./toolDisplayRecords.js";
+import { isInvisibleAssistant } from "./toolDisplayRecords.js";
 import { ToolActivity } from "./ToolActivity.js";
 import { ExpandedHistoryText } from "./ExpandedHistoryText.js";
 import { TurnQueueList } from "./TurnQueueList.js";
@@ -1128,7 +1130,10 @@ export function Workbench({
                     )}
                   </div>
                 ) : null}
-                {foldToolDisplayRecords(groupToolActivity(transcript.items)).map((item) => {
+                {projectProcessActivity(transcript.items, {
+                  running,
+                  partial: transcript.hidden > 0 || !!controller.historyHasEarlier,
+                }).map((item) => {
                   switch (item.kind) {
                     case "user":
                       return (
@@ -1160,6 +1165,38 @@ export function Workbench({
                           )}
                         </div>
                       );
+                    case "answer":
+                      return (
+                        <div
+                          key={`${controller.workspaceKey}:${activeId}:${item.id}`}
+                          className="msg assistant"
+                        >
+                          <AnswerContent
+                            items={item.items}
+                            partial={item.partial}
+                            pending={item.pending}
+                            detailScope={`${controller.workspaceKey}:${activeId}`}
+                            loadHistoryDetail={controller.loadHistoryDetail}
+                            reloadHistory={controller.reloadHistory}
+                            onOpenFile={hub ? openMessageFile : undefined}
+                          />
+                        </div>
+                      );
+                    case "process":
+                      return (
+                        <div
+                          key={`${controller.workspaceKey}:${activeId}:${item.id}`}
+                          className="msg tool"
+                        >
+                          <ProcessActivity
+                            group={item}
+                            detailScope={`${controller.workspaceKey}:${activeId}`}
+                            loadHistoryDetail={controller.loadHistoryDetail}
+                            reloadHistory={controller.reloadHistory}
+                            onOpenFile={hub ? openMessageFile : undefined}
+                          />
+                        </div>
+                      );
                     case "assistant":
                       if (isInvisibleAssistant(item)) return null;
                       return (
@@ -1174,29 +1211,8 @@ export function Workbench({
                             loadHistoryDetail={controller.loadHistoryDetail}
                             reloadHistory={controller.reloadHistory}
                             streaming={!item.done}
+                            showCopy={false}
                             onOpenFile={hub ? openMessageFile : undefined}
-                          />
-                        </div>
-                      );
-                    case "tool_records":
-                    case "tool_group":
-                      return (
-                        <div
-                          key={JSON.stringify([
-                            controller.workspaceKey,
-                            activeId,
-                            "tool",
-                            item.items[0].agentId ?? null,
-                            item.items[0].id,
-                          ])}
-                          className="msg tool"
-                        >
-                          <ToolActivity
-                            items={item.items}
-                            presentation={item.kind === "tool_records" ? "records" : "verified"}
-                            detailScope={`${controller.workspaceKey}:${activeId}`}
-                            loadHistoryDetail={controller.loadHistoryDetail}
-                            reloadHistory={controller.reloadHistory}
                           />
                         </div>
                       );
