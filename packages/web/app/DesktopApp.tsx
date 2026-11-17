@@ -1152,6 +1152,8 @@ export function useDesktopController(
             disabled={app.status !== "online" || app.loading.sessionHistory || sendingId !== null}
             plan={app.getSessionOutputRecoveryPlan}
             apply={app.applySessionOutputRecovery}
+            reload={app.reloadHistory}
+            reloading={app.loading.sessionHistory}
             onApplied={() => {
               // The content stays in the draft, but its old delivery identity is retired.
               uncertainIntents.current.delete(activeId);
