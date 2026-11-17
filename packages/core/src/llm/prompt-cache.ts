@@ -22,8 +22,16 @@ export type PromptCacheStrategy =
 export type PromptCacheBreakpoint = "system" | "tools" | "stable-history" | "rolling-history";
 
 export interface PromptCacheRequestContext {
-  /** Stable run/session namespace used for provider cache affinity. */
+  /** Stable run/session namespace for this Session's cache bookkeeping. */
   scopeId?: string;
+  /**
+   * Identity of the request head (system prompt and tool table), from
+   * promptCacheHeadId. When present it, not scopeId, selects the provider
+   * cache key: Sessions with the same head share a key, so a new Session can
+   * read the head an earlier one cached. Within a Session the head only
+   * changes where its cached prefix is lost anyway.
+   */
+  headId?: string;
   /** Auxiliary traffic has its own bounded history, independent of main sessions. */
   scopeKind?: "auxiliary";
   /**
@@ -91,15 +99,27 @@ export function createPromptCacheKey(scopeId: string, namespace: string): string
   return `cs:${digest}`;
 }
 
+/** Opaque digest of a request head; see PromptCacheRequestContext.headId. */
+export function promptCacheHeadId(systemPrompt: string, tools: readonly unknown[]): string {
+  return createHash("sha256")
+    .update("codeshell-prompt-head-v1\0")
+    .update(systemPrompt)
+    .update("\0")
+    .update(JSON.stringify(tools))
+    .digest("hex");
+}
+
 /** Resolve one cache policy from the actual provider route and model family. */
 export function resolvePromptCachePolicy(input: ResolvePromptCachePolicyInput): PromptCachePolicy {
   const kind = (input.providerKind ?? input.provider).toLowerCase();
   const model = normalizedModel(input.model);
   const capability = capabilitiesForConfig(input).promptCaching;
   const toolDiscovery = nativeToolDiscoveryEnabled(input) ? "tool-reference" : "call-tool";
-  const key = input.request?.scopeId
-    ? createPromptCacheKey(input.request.scopeId, `${kind}:${model}`)
+  // Affinity follows the head when known (cross-Session reuse); otherwise the Session.
+  const affinity = input.request?.scopeId
+    ? (input.request.headId ?? input.request.scopeId)
     : undefined;
+  const key = affinity ? createPromptCacheKey(affinity, `${kind}:${model}`) : undefined;
 
   if (capability === "anthropic-explicit" && input.explicitDisabled !== true) {
     return {

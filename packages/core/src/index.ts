@@ -801,7 +801,12 @@ export {
 
 // ─── Data ────────────────────────────────────────────────────────
 
-export { syncOpenRouterCatalog, getOpenRouterSnapshot } from "./data/openrouter-sync.js";
+export {
+  syncOpenRouterCatalog,
+  syncOpenRouterCatalogCached,
+  registerOpenRouterCatalogCache,
+  getOpenRouterSnapshot,
+} from "./data/openrouter-sync.js";
 
 // ─── External agent config (Mobile Web Remote Rooms) ─────────────
 // Resolves the externalAgents settings block (notably claudeCode.trustedWorkspaces),

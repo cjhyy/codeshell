@@ -1,10 +1,7 @@
 import { describe, it, expect } from "bun:test";
-import {
-  deriveModelPoolKey,
-  buildModelPool,
-  modelDisplayName,
-  PROVIDERS,
-} from "./onboarding.js";
+import { capabilitiesForConfig } from "./llm/capabilities/index.js";
+import { ModelPool } from "./llm/model-pool.js";
+import { deriveModelPoolKey, buildModelPool, modelDisplayName, PROVIDERS } from "./onboarding.js";
 
 /**
  * deriveModelPoolKey is the fix for the old modelKey() silent-shadowing bug:
@@ -44,6 +41,33 @@ describe("deriveModelPoolKey — collision-free pool keys", () => {
 });
 
 describe("buildModelPool", () => {
+  it("carries the upstream provider kind so zero-config routes keep prompt caching", () => {
+    // `provider` is only the wire protocol ("openai" for OpenRouter). Without the
+    // kind, `anthropic/…` resolved as an unknown OpenAI model: no cache_control.
+    const openrouter = PROVIDERS.find((p) => p.id === "openrouter")!;
+    const entry = {
+      ...buildModelPool(openrouter, "sk-or-test")[0]!,
+      model: "anthropic/claude-sonnet-5",
+    };
+    expect(entry.providerKind).toBe("openrouter");
+    const pool = new ModelPool([entry], entry.key);
+    expect(capabilitiesForConfig(pool.toLLMConfig(pool.switch(entry.key))).promptCaching).toBe(
+      "anthropic-explicit",
+    );
+  });
+
+  it("maps every catalog provider to its kind, leaving custom endpoints unknown", () => {
+    const kinds = Object.fromEntries(PROVIDERS.map((p) => [p.id, p.kind]));
+    expect(kinds).toMatchObject({
+      openrouter: "openrouter",
+      anthropic: "anthropic",
+      gemini: "google",
+    });
+    expect(kinds.custom).toBeUndefined();
+    const custom = PROVIDERS.find((p) => p.id === "custom")!;
+    expect(buildModelPool({ ...custom, models: ["m"] }, "k")[0]).not.toHaveProperty("providerKind");
+  });
+
   it("produces one distinct key per model with metadata wired in", () => {
     const anthropic = PROVIDERS.find((p) => p.id === "anthropic")!;
     const pool = buildModelPool(anthropic, "sk-ant-test");

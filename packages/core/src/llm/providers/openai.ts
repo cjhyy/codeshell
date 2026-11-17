@@ -55,6 +55,7 @@ import {
 } from "./openai-cache-history.js";
 import { STREAM_WATCHDOG_CONFIG, StreamIdleTimeoutError } from "../stream-watchdog.js";
 import { joinToolResultText } from "../../utils/tool-schema-discovery.js";
+import { wireToolInputSchema } from "../tool-wire-schema.js";
 
 /**
  * Extract prompt-cache counts from an OpenAI-compatible usage object.
@@ -1373,7 +1374,7 @@ export class OpenAIClient extends LLMClientBase {
       function: {
         name: t.name,
         description: t.description,
-        parameters: t.inputSchema,
+        parameters: wireToolInputSchema(t.inputSchema),
       },
       // OpenRouter reads this on the tool entry, not inside `function`.
       ...(markTools && index === tools.length - 1

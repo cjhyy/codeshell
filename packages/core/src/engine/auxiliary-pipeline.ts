@@ -202,6 +202,12 @@ export class AuxiliaryPipeline {
         return {
           role: message.role,
           content: typeof safe === "string" ? safe : JSON.stringify(safe),
+          // A turn ends on an assistant message without tool calls; the memory
+          // prompts seal a cache piece there (memory-transcript.ts).
+          endsTurn:
+            message.role === "assistant" &&
+            (typeof message.content === "string" ||
+              !message.content.some((block) => block.type === "tool_use")),
         };
       });
       const memories = this.readMemoriesConfig();

@@ -70,12 +70,14 @@ export class ExternalRuntimeModelService {
         });
         entry.entries = [...models]
           .sort((a, b) => Number(b.isDefault) - Number(a.isDefault))
-          .map(({ model, displayName }) => ({
+          .map(({ model, displayName, supportsImages }) => ({
             key: externalRuntimeModelKey("codex", model),
             label: `Codex · ${displayName}`,
             provider: "codex",
             kind: "codex",
             maxContextTokens: EXTERNAL_RUNTIME_FALLBACK_CONTEXT_TOKENS,
+            // Older CLIs omit inputModalities; every Codex model accepts images.
+            supportsVision: supportsImages ?? true,
           }));
       } catch (error) {
         // Keep the last successful response, or the bundled fallback on first

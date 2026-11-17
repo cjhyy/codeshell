@@ -220,18 +220,15 @@ test("API memory calls send core's segmented, cacheable request in an external s
   await memory.idle("memory-session");
   expect(errors).toEqual([]);
   const scopes = received.map((request) => request.promptCache?.scopeId);
-  expect(scopes).toContain(
-    `memory-session:aux:${EXTERNAL_MEMORY_CACHE_PURPOSE_PREFIX}memory-extraction`,
-  );
-  expect(scopes).toContain(
-    `memory-session:aux:${EXTERNAL_MEMORY_CACHE_PURPOSE_PREFIX}session-summary`,
-  );
+  // Extraction and summary share one transcript-first prefix and so one scope.
+  expect(scopes).toEqual([
+    `memory-session:aux:${EXTERNAL_MEMORY_CACHE_PURPOSE_PREFIX}session-transcript`,
+    `memory-session:aux:${EXTERNAL_MEMORY_CACHE_PURPOSE_PREFIX}session-transcript`,
+  ]);
   // Never the main conversation's scope, nor core's own memory scopes.
   expect(scopes).not.toContain("memory-session");
-  expect(scopes).not.toContain("memory-session:aux:memory-extraction");
-  const extraction = received.find((request) =>
-    request.promptCache?.scopeId.endsWith("memory-extraction"),
-  )!;
+  expect(scopes).not.toContain("memory-session:aux:session-transcript");
+  const extraction = received[0]!;
   expect(extraction.messages.length).toBeGreaterThan(1);
   expect(extraction.messages.every((message) => message.role === "user")).toBe(true);
   expect(extraction.promptCache!.stablePrefixMessageCount).toBe(extraction.messages.length - 1);
@@ -265,7 +262,7 @@ test("without explicit cache markers the API call keeps one complete user messag
   expect(received).toHaveLength(1);
   expect(received[0]!.messages).toHaveLength(1);
   expect(received[0]!.promptCache?.scopeId).toBe(
-    `memory-session:aux:${EXTERNAL_MEMORY_CACHE_PURPOSE_PREFIX}session-summary`,
+    `memory-session:aux:${EXTERNAL_MEMORY_CACHE_PURPOSE_PREFIX}session-transcript`,
   );
 });
 

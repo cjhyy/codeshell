@@ -105,6 +105,11 @@ describe("external runtime model keys", () => {
     expect(entries.every((entry) => entry.maxContextTokens === 1_000_000)).toBe(true);
   });
 
+  test("both runtimes accept image attachments", () => {
+    const entries = externalRuntimeModelEntries(["codex", "claude-code"]);
+    expect(entries.every((entry) => entry.supportsVision === true)).toBe(true);
+  });
+
   test("offers GPT-6 Astra first and keeps the GPT-5.6 choices", () => {
     expect(EXTERNAL_RUNTIME_MODELS.codex.map(({ model }) => model)).toEqual([
       "gpt-6-astra",

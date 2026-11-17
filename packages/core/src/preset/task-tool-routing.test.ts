@@ -250,34 +250,54 @@ describe("Preset task schema routing", () => {
   test("initializes once while refresh retains selection and recomputes only eligibility", () => {
     const ctx = {} as ToolContext;
     let available = [...managed];
+    let preloaded = "";
     const definitions = () =>
       available.map((name): ToolDefinition => ({ name, description: name, inputSchema: {} }));
     const catalog = initializeRunToolSurface(ctx, initial, definitions, {
       taskText: "alpha",
       policy: policy(),
+      onPreloadedTools: (text) => (preloaded = text),
     });
-    expect(catalog.map((definition) => definition.name)).toEqual([
-      ...route("alpha").initialToolNames!,
-      "CallTool",
-    ]);
+    // The head is the preset's fixed set whatever the task text, so new
+    // Sessions share it; the routed tools are loaded after it instead.
+    expect(catalog.map((definition) => definition.name)).toEqual([...initial, "CallTool"]);
+    expect(preloaded).toContain("### Tool12");
+    expect(preloaded).toContain("### Tool13");
+    expect(ctx.runToolSurface!.isCallable("Tool12")).toBe(true);
+    expect(ctx.runToolSurface!.getSelection().discovered).toEqual(["Tool12", "Tool13"]);
     expect(ctx.runToolSurface!.getCatalog().map((definition) => definition.name)).toEqual([
       ...managed,
       "CallTool",
     ]);
     expect(definitions().map((definition) => definition.name)).toEqual(managed);
     const first = ctx.refreshRunTools!();
-    expect(first.map((definition) => definition.name)).toContain("Tool12");
+    expect(first.map((definition) => definition.name)).toContain("Tool5");
+    expect(first.map((definition) => definition.name)).not.toContain("Tool12");
     expect(first.map((definition) => definition.name)).not.toContain("Tool14");
     ctx.runToolSurface!.select(["Tool14"]);
-    available = managed.filter((name) => name !== "Tool12");
+    available = managed.filter((name) => name !== "Tool5");
     const second = ctx.refreshRunTools!();
     expect(JSON.stringify(second)).toBe(JSON.stringify(first));
     expect(second.map((definition) => definition.name)).not.toContain("Tool14");
-    expect(second.map((definition) => definition.name)).toContain("Tool12");
+    expect(second.map((definition) => definition.name)).toContain("Tool5");
     expect(ctx.runToolSurface!.isCallable("Tool14")).toBe(true);
-    expect(ctx.runToolSurface!.isCallable("Tool12")).toBe(false);
+    expect(ctx.runToolSurface!.isCallable("Tool5")).toBe(false);
     available = [...managed];
     expect(ctx.refreshRunTools!()).toEqual(first);
-    expect(ctx.runToolSurface!.isCallable("Tool12")).toBe(true);
+    expect(ctx.runToolSurface!.isCallable("Tool5")).toBe(true);
+  });
+
+  test("an unmatched task loads nothing after the head", () => {
+    const ctx = {} as ToolContext;
+    let preloaded: string | undefined;
+    const definitions = () =>
+      managed.map((name): ToolDefinition => ({ name, description: name, inputSchema: {} }));
+    initializeRunToolSurface(ctx, initial, definitions, {
+      taskText: "unrelated",
+      policy: policy(),
+      onPreloadedTools: (text) => (preloaded = text),
+    });
+    expect(preloaded).toBeUndefined();
+    expect(ctx.runToolSurface!.getSelection().discovered).toEqual([]);
   });
 });

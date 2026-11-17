@@ -5,6 +5,8 @@ export interface CodexDiscoveredModel {
   model: string;
   displayName: string;
   isDefault: boolean;
+  /** From `inputModalities`; undefined when the CLI does not report modalities. */
+  supportsImages?: boolean;
 }
 
 const DEFAULT_TIMEOUT_MS = 8_000;
@@ -71,7 +73,8 @@ export async function discoverCodexModels(
           !nonemptyString(entry.model) ||
           !nonemptyString(entry.displayName) ||
           (entry.isDefault !== undefined && typeof entry.isDefault !== "boolean") ||
-          (entry.hidden !== undefined && typeof entry.hidden !== "boolean")
+          (entry.hidden !== undefined && typeof entry.hidden !== "boolean") ||
+          (entry.inputModalities !== undefined && !Array.isArray(entry.inputModalities))
         ) {
           throw new Error("Invalid Codex model/list entry");
         }
@@ -80,6 +83,9 @@ export async function discoverCodexModels(
           model: entry.model,
           displayName: entry.displayName,
           isDefault: entry.isDefault === true,
+          ...(Array.isArray(entry.inputModalities)
+            ? { supportsImages: entry.inputModalities.includes("image") }
+            : {}),
         });
       }
 

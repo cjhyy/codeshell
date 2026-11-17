@@ -66,6 +66,53 @@ describe("MessageStream — asynchronous question answers", () => {
   }
 });
 
+describe("MessageStream — goal completion output", () => {
+  test("keeps the final report visible when complete_goal closes the turn", () => {
+    const messages: Message[] = [
+      { kind: "user", id: "goal-user", text: "Review the project" },
+      {
+        kind: "tool",
+        id: "review-tool",
+        toolName: "Read",
+        args: "{}",
+        status: "succeeded",
+        startedAt: 10,
+        endedAt: 20,
+      },
+      {
+        kind: "assistant",
+        id: "final-report",
+        text: "Review finished. **Six issues reproduced.**",
+        done: true,
+      },
+      {
+        kind: "tool",
+        id: "complete-goal",
+        toolName: "complete_goal",
+        args: "{}",
+        result: "目标已完成 (goal complete).",
+        status: "succeeded",
+        startedAt: 30,
+        endedAt: 40,
+      },
+      { kind: "goal_progress", id: "goal-met", status: "met", round: 4 },
+      {
+        kind: "turn_usage",
+        id: "usage",
+        promptTokens: 100,
+        cacheReadTokens: 0,
+        cacheCreationTokens: 0,
+      },
+    ];
+
+    const html = renderToStaticMarkup(<MessageStream messages={messages} />);
+    expect(html).toContain("Review finished.");
+    expect(html).toContain("<strong>Six issues reproduced.</strong>");
+    expect(html).not.toContain("complete_goal");
+    expect(html).toContain('aria-expanded="false"');
+  });
+});
+
 describe("MessageStream — empty streaming assistant guard", () => {
   test("hides assistant with empty text while streaming", () => {
     const messages: Message[] = [

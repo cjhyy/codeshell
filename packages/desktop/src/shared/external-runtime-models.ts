@@ -129,6 +129,11 @@ export interface ExternalRuntimeModelEntry {
   provider: string;
   kind: ExternalRuntimeModelKind;
   maxContextTokens: number;
+  /**
+   * Both runtimes accept image attachments (Codex as `localImage`, Claude Code
+   * as image content blocks). The composer blocks images unless this is true.
+   */
+  supportsVision: boolean;
 }
 
 /**
@@ -153,6 +158,7 @@ export function externalRuntimeModelEntries(
         provider: EXTERNAL_RUNTIME_PROVIDERS[kind],
         kind,
         maxContextTokens: maxContextTokens ?? EXTERNAL_RUNTIME_FALLBACK_CONTEXT_TOKENS,
+        supportsVision: true,
       });
     }
   }
