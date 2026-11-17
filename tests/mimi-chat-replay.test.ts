@@ -176,10 +176,12 @@ function createHarness(
     failSendOnce?: boolean;
     failReply?: boolean;
     beforeLaunch?: (dispatcher: PetDispatchService) => Promise<void>;
+    /** An earlier harness's state directory: a host restart over the same Session. */
+    dir?: string;
   } = {},
 ) {
-  const dir = mkdtempSync(join(tmpdir(), "mimi-chat-replay-"));
-  cleanups.push(() => rmSync(dir, { recursive: true, force: true }));
+  const dir = options.dir ?? mkdtempSync(join(tmpdir(), "mimi-chat-replay-"));
+  if (!options.dir) cleanups.push(() => rmSync(dir, { recursive: true, force: true }));
   const model = crypto.randomUUID();
   const script: Script = { steps: [], requests: [], summaries: 0 };
   scripts.set(model, script);
@@ -188,6 +190,7 @@ function createHarness(
   // Engine helper has no active input identity for scoped steer/cancel.
   const manager = new ChatSessionManager({
     runtime: {} as never,
+    sessionStorageDir: join(dir, "sessions"),
     engineFactory: (slice) => {
       const engine = new Engine({
         ...slice,
@@ -205,11 +208,15 @@ function createHarness(
   const [serverTransport, clientTransport] = createInProcessTransport();
   const server = new AgentServer({ chatManager: manager, transport: serverTransport });
   const client = new AgentClient({ transport: clientTransport });
-  cleanups.push(async () => {
+  let closed = false;
+  const shutdown = async () => {
+    if (closed) return;
+    closed = true;
     server.close();
     client.close();
     await manager.closeAll();
-  });
+  };
+  cleanups.push(shutdown);
   const events: StreamEvent[] = [];
   let outbound: ((line: string, entry: { sessionId: string; event: unknown }) => void) | undefined;
   client.onStreamEvent((event) => {
@@ -345,6 +352,8 @@ function createHarness(
     }),
   );
   return {
+    dir,
+    shutdown,
     script,
     sent,
     launches,
@@ -511,6 +520,38 @@ describe("Mimi historical chat replay through the real manager stack", () => {
       ),
     ).toHaveLength(1);
     expect(h.transcript()).toContain("第二条用户输入");
+  });
+
+  test("after a host restart a closure turn keeps the lists Mimi was told", async () => {
+    const before = createHarness();
+    before.script.steps.push(() => response("GatewayReply", { text: "Mimi 已准备好。" }));
+    await before.say("开始验证", "before-restart");
+    const lists = '<context-section key="capability-mimi-workspaces">';
+    const context = (request: CreateMessageOptions) => request.messages.map(messageText).join("\n");
+    expect(context(before.script.requests[0]!)).toContain(lists);
+    await before.shutdown();
+
+    // A new host process has no lists in memory until its first chat turn.
+    const after = createHarness({ dir: before.dir });
+    after.script.steps.push(
+      (request) => {
+        expectWorldFact(request, "fixture work process failed");
+        expect(context(request)).not.toContain('<context-section-removed key="capability-mimi-');
+        expect(context(request)).toContain(lists);
+        return response(undefined, {}, "工作失败，保留失败原因。");
+      },
+      (request) => {
+        // The first chat turn after the restart is diffed against the lists
+        // told before it, not sent whole as if they had been withdrawn.
+        expect(context(request).split(lists)).toHaveLength(2);
+        return response("GatewayReply", { text: "重启后继续。" });
+      },
+    );
+    const report = await after.dispatcher.reportLongTaskClosure(closedWorkFixture());
+    expect(report.text).toContain("工作失败");
+    await after.say("继续", "after-restart");
+    expect(after.script.requests).toHaveLength(2);
+    expect(after.transcript()).not.toContain("context-section-removed key");
   });
 
   test("a real delegation failure can synchronously close work and compose its receipt", async () => {
