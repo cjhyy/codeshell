@@ -384,7 +384,11 @@ send({ type: "assistant", message: { model: "actual-claude-model", content: [] }
     }
     expect(first!.stdin).toContain("earlier transcript");
     expect(second!.argv).toContain("--resume");
-    expect(second!.stdin).toBe("second");
+    // One stream-json user line; only the first turn replays initialContext.
+    expect(JSON.parse(second!.stdin)).toEqual({
+      type: "user",
+      message: { role: "user", content: [{ type: "text", text: "second" }] },
+    });
     // Must precede the variadic --mcp-config/--allowed-tools, which would
     // otherwise swallow it as another value.
     const flagIndex = first!.argv.indexOf("--append-system-prompt-file");

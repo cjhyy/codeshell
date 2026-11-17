@@ -14,6 +14,7 @@
  */
 
 import { createRequire } from "node:module";
+import type { ProviderKindName } from "../llm/provider-kinds.js";
 
 const requireJson = createRequire(import.meta.url);
 
@@ -39,6 +40,13 @@ export interface ProviderDef {
   id: string;
   name: string;
   envKey: string;
+  /**
+   * Upstream provider identity (`ProviderKindName`). `provider` only names the
+   * wire protocol, so without this an OpenRouter key's `anthropic/…` models
+   * resolve as unknown OpenAI models and lose prompt caching and pricing.
+   * Absent for endpoints whose upstream is unknown (custom).
+   */
+  kind?: ProviderKindName;
   provider: string;
   baseUrl: string;
   keyUrl: string;

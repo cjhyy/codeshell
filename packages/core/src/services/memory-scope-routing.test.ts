@@ -36,8 +36,8 @@ describe("MemoryOrchestrator scope routing (global vs project dream store)", () 
       const orchestrator = new MemoryOrchestrator({
         projectDir,
         // recallTtlDays omitted → no sweep interferes
-        callLLM: async (sysPrompt) => {
-          if (sysPrompt.includes("session summariser")) return "[]";
+        callLLM: async (_system, prompt) => {
+          if (prompt.includes("session summariser")) return "[]";
           return JSON.stringify([
             {
               type: "feedback",

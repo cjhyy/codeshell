@@ -69,6 +69,7 @@ import {
   installReviewedLocalTheme,
   listInstalledThemes,
   uninstallTheme,
+  registerOpenRouterCatalogCache,
   type ThemePreview,
 } from "@cjhyy/code-shell-core";
 import {
@@ -3570,6 +3571,8 @@ app.whenReady().then(async () => {
   );
   await projectStore.warm();
   writeSettingsSchemaAtStartup();
+  // Pricing for Mimi's main-process model calls beyond the bundled snapshot.
+  registerOpenRouterCatalogCache(join(codeShellHome(), "cache", "openrouter-models.json"));
   void cleanupKnownAttachments();
   // The main window and the pet popout both render on the default session, so
   // one handler there serves cstheme:// assets to every window.

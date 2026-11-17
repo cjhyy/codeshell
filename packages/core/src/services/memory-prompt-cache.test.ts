@@ -146,14 +146,15 @@ describe.each([
 });
 
 describe("memory extraction prompt order", () => {
-  test("fixed instructions, then conversation, then existing memories, then the task", () => {
+  test("conversation, then the instructions, then existing memories, then the format", () => {
     const prompt = buildExtractionPrompt(turns(8, 300), [memory("alpha")]);
     const order = [
-      "## Instructions",
-      "AT MOST 1",
       "## Conversation",
       "TURN_0 ",
       "TURN_7 ",
+      "## Task: memory extraction",
+      "## Instructions",
+      "AT MOST 1",
       "## Existing Memories",
       "alpha description",
       "Respond with a JSON array",
@@ -164,10 +165,54 @@ describe("memory extraction prompt order", () => {
     expect(prompt).not.toContain("list above");
   });
 
-  test("the instruction message is identical for every session and memory store", () => {
+  test("the head message is identical for every session and memory store", () => {
     const one = buildExtractionPromptSegments(turns(8, 300), [memory("alpha")]);
     const other = buildExtractionPromptSegments(turns(30, 1200, 100), []);
     expect(other.stable[0]).toBe(one.stable[0]!);
     expect(other.volatile).toContain("(none)");
+  });
+});
+
+describe("memory extraction and session summary share one prefix", () => {
+  test("every stable message is byte-identical; only the final task differs", () => {
+    for (const transcript of [turns(14, 900), turns(9, 2500), turns(40, 2900)]) {
+      const extraction = buildExtractionPromptSegments(transcript, [memory("alpha")]);
+      const summary = buildSessionMemoryPromptSegments(transcript);
+      expect(summary.stable).toEqual(extraction.stable);
+      expect(extraction.volatile).not.toBe(summary.volatile);
+      const taskAt = extraction.volatile.indexOf("\n\n## Task: ");
+      expect(summary.volatile.indexOf("\n\n## Task: ")).toBe(taskAt);
+      // The unsealed transcript end, if any, is identical as well.
+      expect(summary.volatile.slice(0, taskAt)).toBe(extraction.volatile.slice(0, taskAt));
+      expect(extraction.stable.join("")).not.toContain("## Task");
+    }
+  });
+});
+
+describe("turn-end sealing", () => {
+  const ended = (messages: Turn[]) =>
+    messages.map((message) => ({ ...message, endsTurn: message.role === "assistant" }));
+
+  test("a transcript that ends a turn leaves nothing unsealed", () => {
+    const layout = layoutMemoryTranscript(ended(turns(6, 200)), 3000);
+    expect(layout.open).toBe("");
+    // Small turns still seal at each turn end, not only every 2,000 characters.
+    expect(layout.sealed).toHaveLength(3);
+  });
+
+  test("the next run keeps the previous run's whole transcript as sealed pieces", () => {
+    const first = ended(turns(10, 700));
+    const before = layoutMemoryTranscript(first, 3000);
+    const after = layoutMemoryTranscript([...first, ...ended(turns(4, 700, 10))], 3000);
+    expect(before.open).toBe("");
+    expect(after.sealed.slice(0, before.sealed.length)).toEqual(before.sealed);
+  });
+
+  test("a transcript that stops after a tool call keeps the size rule for its end", () => {
+    const messages = [...ended(turns(9, 700)), { role: "assistant", content: "TOOL_CALL" }];
+    const layout = layoutMemoryTranscript(messages, 3000);
+    expect(layout.open).toContain("TOOL_CALL");
+    const next = layoutMemoryTranscript([...messages, ...ended(turns(3, 700, 10))], 3000);
+    expect(next.sealed.slice(0, layout.sealed.length)).toEqual(layout.sealed);
   });
 });

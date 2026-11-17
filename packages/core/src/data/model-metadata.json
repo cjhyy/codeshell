@@ -118,6 +118,7 @@
   "providers": [
     {
       "id": "openrouter",
+      "kind": "openrouter",
       "name": "OpenRouter (推荐 — 支持所有模型)",
       "envKey": "OPENROUTER_API_KEY",
       "provider": "openai",
@@ -143,6 +144,7 @@
     },
     {
       "id": "anthropic",
+      "kind": "anthropic",
       "name": "Anthropic (直连 Claude API)",
       "envKey": "ANTHROPIC_API_KEY",
       "provider": "anthropic",
@@ -153,6 +155,7 @@
     },
     {
       "id": "openai",
+      "kind": "openai",
       "name": "OpenAI",
       "envKey": "OPENAI_API_KEY",
       "provider": "openai",
@@ -163,6 +166,7 @@
     },
     {
       "id": "deepseek",
+      "kind": "deepseek",
       "name": "DeepSeek (官方直连)",
       "envKey": "DEEPSEEK_API_KEY",
       "provider": "openai",
@@ -173,6 +177,7 @@
     },
     {
       "id": "zai",
+      "kind": "zai",
       "name": "Z.AI (GLM 官方)",
       "envKey": "ZAI_API_KEY",
       "provider": "openai",
@@ -183,6 +188,7 @@
     },
     {
       "id": "gemini",
+      "kind": "google",
       "name": "Google Gemini (官方直连)",
       "envKey": "GEMINI_API_KEY",
       "provider": "openai",
@@ -193,6 +199,7 @@
     },
     {
       "id": "ollama",
+      "kind": "ollama",
       "name": "Ollama (本地，无需 Key)",
       "envKey": "",
       "provider": "openai",

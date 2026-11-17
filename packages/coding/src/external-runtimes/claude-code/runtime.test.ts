@@ -241,3 +241,161 @@ setInterval(() => {}, 1_000);
     expect(events.at(-1)).toEqual({ type: "turn_complete", reason: "completed" });
   });
 });
+
+// Records argv and the whole stdin, then finishes the turn once stdin ends.
+const RECORDS_INPUT = `
+let input = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => (input += chunk));
+process.stdin.on("end", () => {
+  writeFileSync(MARKER, JSON.stringify({ args: process.argv.slice(2), input }));
+  process.stdout.write(JSON.stringify({ type: "result", subtype: "success", is_error: false }) + "\\n");
+});
+`;
+
+const PNG_BYTES = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
+  "base64",
+);
+
+describe("ClaudeCodeRuntime user message (stream-json input)", () => {
+  async function recordedTurn(
+    input: Parameters<ClaudeCodeRuntime["send"]>[0],
+    extra: Partial<ClaudeRuntimeOptions> = {},
+  ): Promise<{ args: string[]; message: any; lines: string[] }> {
+    const fake = fakeClaude(RECORDS_INPUT);
+    const claude = runtime(fake.command, extra);
+    await (
+      await claude.send(input)
+    ).done;
+    const recorded = JSON.parse(readFileSync(fake.marker, "utf8")) as {
+      args: string[];
+      input: string;
+    };
+    expect(recorded.input.endsWith("\n")).toBe(true);
+    const lines = recorded.input.split("\n").filter(Boolean);
+    return { args: recorded.args, message: JSON.parse(lines[0]!), lines };
+  }
+
+  function attachmentDir(): string {
+    const dir = mkdtempSync(join(tmpdir(), "codeshell-claude-attachments-"));
+    dirs.push(dir);
+    return dir;
+  }
+
+  test("a text-only turn is one stream-json user line with a single text block", async () => {
+    const { args, message, lines } = await recordedTurn({ text: "hello there" });
+    expect(args.slice(0, 5)).toEqual([
+      "-p",
+      "--input-format",
+      "stream-json",
+      "--output-format",
+      "stream-json",
+    ]);
+    expect(lines).toHaveLength(1);
+    expect(message).toEqual({
+      type: "user",
+      message: { role: "user", content: [{ type: "text", text: "hello there" }] },
+    });
+  });
+
+  test("first-turn context replay wraps the prompt text", async () => {
+    const { message } = await recordedTurn(
+      { text: "now" },
+      { initialContext: "earlier transcript" },
+    );
+    expect(message.message.content).toEqual([
+      {
+        type: "text",
+        text: "earlier transcript\n\n<current_user_request>\nnow\n</current_user_request>",
+      },
+    ]);
+  });
+
+  test("an image attachment becomes a native base64 image block and keeps its path reference", async () => {
+    const dir = attachmentDir();
+    // Named .jpg on purpose: the media type comes from the bytes.
+    const image = join(dir, "shot.jpg");
+    writeFileSync(image, PNG_BYTES);
+    const { message } = await recordedTurn({
+      text: "what is this?",
+      attachments: [{ path: image, kind: "image", mime: "image/jpeg" }],
+    });
+    expect(message.message.content).toEqual([
+      {
+        type: "image",
+        source: { type: "base64", media_type: "image/png", data: PNG_BYTES.toString("base64") },
+      },
+      {
+        type: "text",
+        text: [
+          "what is this?",
+          "",
+          "<codeshell_attachments>",
+          "The user explicitly attached these local paths. Inspect them when relevant:",
+          `- image: ${image}`,
+          "</codeshell_attachments>",
+        ].join("\n"),
+      },
+    ]);
+  });
+
+  test("non-image attachments stay path references next to inline images", async () => {
+    const dir = attachmentDir();
+    const image = join(dir, "a.png");
+    writeFileSync(image, PNG_BYTES);
+    const { message } = await recordedTurn({
+      text: "compare",
+      attachments: [
+        { path: image, kind: "image", mime: "image/png" },
+        { path: "/repo/notes.md", kind: "file" },
+        { path: "/repo/src", kind: "directory" },
+      ],
+    });
+    const content = message.message.content as Array<{ type: string; text?: string }>;
+    expect(content.map((block) => block.type)).toEqual(["image", "text"]);
+    expect(content[1]!.text).toBe(
+      [
+        "compare",
+        "",
+        "<codeshell_attachments>",
+        "The user explicitly attached these local paths. Inspect them when relevant:",
+        `- image: ${image}`,
+        "- file: /repo/notes.md",
+        "- directory: /repo/src",
+        "</codeshell_attachments>",
+      ].join("\n"),
+    );
+  });
+
+  test("oversized, unsupported or missing images fall back to path references", async () => {
+    const dir = attachmentDir();
+    const huge = join(dir, "huge.png");
+    // PNG signature, but past the per-image limit.
+    writeFileSync(huge, Buffer.concat([PNG_BYTES, Buffer.alloc(4 * 1024 * 1024)]));
+    const svg = join(dir, "logo.svg");
+    writeFileSync(svg, "<svg xmlns='http://www.w3.org/2000/svg'/>");
+    const missing = join(dir, "gone.png");
+    const logs: Array<{ event: string; data: Record<string, unknown> }> = [];
+    const { message } = await recordedTurn(
+      {
+        text: "look",
+        attachments: [
+          { path: huge, kind: "image" },
+          { path: svg, mime: "image/svg+xml" },
+          { path: missing, kind: "image" },
+        ],
+      },
+      { log: (event, data) => logs.push({ event, data }) },
+    );
+    const content = message.message.content as Array<{ type: string; text?: string }>;
+    expect(content.map((block) => block.type)).toEqual(["text"]);
+    expect(content[0]!.text).toContain(`- image: ${huge}`);
+    expect(content[0]!.text).toContain(`- file: ${svg}`);
+    expect(content[0]!.text).toContain(`- image: ${missing}`);
+    expect(logs.find((entry) => entry.event === "claude.image_attachments")?.data).toEqual({
+      inline: 0,
+      fallbacks: ["too_large", "unsupported_type", "unreadable"],
+    });
+  });
+});

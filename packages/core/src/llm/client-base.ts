@@ -10,6 +10,7 @@ import { logger } from "../logging/logger.js";
 import { requestBoundaryFetch } from "../model-request-boundary/context.js";
 import { currentUsageAttempt, markCurrentUsageAttemptNotSent } from "../cost-ledger/context.js";
 import { modelTraceFetch, withModelTrace } from "../model-traces/context.js";
+import { refreshOpenRouterCatalogOnMiss } from "../data/openrouter-sync.js";
 import {
   recordOwnedUsage,
   usageTrackingFetch,
@@ -125,6 +126,8 @@ export abstract class LLMClientBase {
     }
     if (options?.billingEnabled !== false) {
       recordOwnedUsage(this.usageIdentity(), reported ? usage : null);
+      if (this.config.providerKind === "openrouter")
+        void refreshOpenRouterCatalogOnMiss(this.model, this.config.baseUrl);
       try {
         LLMClientBase.onUsage?.(this.model, usage);
       } catch {
