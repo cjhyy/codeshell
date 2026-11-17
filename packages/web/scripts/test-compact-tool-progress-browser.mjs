@@ -96,14 +96,20 @@ try {
         content: bundle.outputFiles.find((f) => f.path.endsWith(".js")).text,
       });
       await page.getByText("Owned eight-command audit", { exact: true }).waitFor();
+      const processes = page.locator(".message-process");
+      const settled = processes.first();
+      const live = processes.nth(1);
+      const heading = (group) => group.locator(":scope > .message-process-heading");
       for (const width of [390, 320]) {
         await page.setViewportSize({ width, height: 844 });
         const metrics = await page.evaluate(() => {
           const rows = [...document.querySelectorAll(".transcript > .msg.tool")];
           const rects = rows.map((row) => {
             const r = row.getBoundingClientRect();
-            const summary = row.querySelector(".message-tool-card > summary"),
-              s = summary.getBoundingClientRect();
+            const target = row.querySelector(
+                ":scope > .message-process > .message-process-heading, .message-tool-card > summary",
+              ),
+              s = target.getBoundingClientRect();
             return {
               height: r.height,
               top: r.top,
@@ -126,29 +132,31 @@ try {
         await page.screenshot({ path: path.join(output, `${theme}-${width}-collapsed.png`) });
         assert.equal(
           metrics.cards,
-          4,
-          "six successful CLI records fold, with failed/last-success/running independent",
+          3,
+          "six successful records fold into one settled process; the failure and live process stay separate",
         );
         assert.ok(metrics.totalHeight <= 210, "collapsed tool region stays compact");
         assert.ok(metrics.scrollWidth <= width);
-        for (const rect of metrics.rects) assert.ok(rect.touchHeight >= 44 && rect.height <= 48);
+        for (const rect of metrics.rects) assert.ok(rect.touchHeight >= 44);
         for (let i = 1; i < metrics.rects.length; i++)
-          assert.ok(metrics.rects[i].top - metrics.rects[i - 1].bottom <= 6.1);
+          assert.ok(metrics.rects[i].top - metrics.rects[i - 1].bottom <= 12.1);
       }
       assert.deepEqual(reads, []);
+      assert.equal(await settled.getAttribute("data-state"), "settled");
+      assert.equal(await heading(settled).getAttribute("aria-expanded"), "false");
+      assert.equal(await settled.locator(".message-tool-card").count(), 0);
       assert.equal(await page.getByText("失败", { exact: true }).count(), 1);
       assert.equal(await page.getByText("执行中", { exact: true }).count(), 1);
       assert.equal(
         await page.getByText("Pending approval stays visible", { exact: true }).count(),
         1,
       );
-      const group = page.locator(".message-tool-records").first();
-      await group.locator(":scope > summary").tap();
-      await group.locator(".message-tool-card").first().waitFor();
-      assert.equal(await group.locator(".message-tool-card").count(), 6);
-      assert.deepEqual(reads, [], "opening the list never fetches its detail bodies");
+      await heading(settled).tap();
+      await settled.locator(".message-tool-card").first().waitFor();
+      assert.equal(await settled.locator(".message-tool-card").count(), 6);
+      assert.deepEqual(reads, [], "opening the process never fetches its detail bodies");
       assert.deepEqual(
-        await group.locator(".message-tool-card .message-tool-summary").allTextContents(),
+        await settled.locator(".message-tool-card .message-tool-summary").allTextContents(),
         [
           "Owned command tool-0",
           "Owned command tool-1",
@@ -158,9 +166,9 @@ try {
           "Owned command tool-5",
         ],
       );
-      for (const summary of await group.locator(".message-tool-card > summary").all())
+      for (const summary of await settled.locator(".message-tool-card > summary").all())
         assert.ok((await summary.boundingBox()).height >= 44);
-      const first = group.locator(".message-tool-card").nth(0);
+      const first = settled.locator(".message-tool-card").nth(0);
       await first.locator("summary").tap();
       await first.getByText("RESULT_first/tool-0", { exact: true }).waitFor();
       assert.deepEqual(reads, ["first/tool-0"]);
@@ -168,7 +176,8 @@ try {
         window.originalTool = node;
       });
       await page.evaluate(() => window.appendCompleted());
-      await group.getByText("工具记录 · 7 项已完成", { exact: true }).waitFor();
+      await heading(settled).getByText("· 7 项操作", { exact: true }).waitFor();
+      assert.equal(await heading(settled).getAttribute("aria-expanded"), "true");
       assert.equal(await first.evaluate((node) => node === window.originalTool), true);
       assert.notEqual(await first.getAttribute("open"), null);
       assert.equal(await first.getByText("RESULT_first/tool-0", { exact: true }).count(), 1);
@@ -179,8 +188,9 @@ try {
       );
       await first.locator("summary").tap();
       await first.getByText("RESULT_first/tool-0", { exact: true }).waitFor({ state: "detached" });
-      const single = page
-        .locator(".message-tool-single .message-tool-card")
+      await heading(live).tap();
+      const single = live
+        .locator(".message-tool-card")
         .filter({ has: page.getByText("Owned command tool-7", { exact: true }) });
       await single.locator("summary").tap();
       await single.getByText("RESULT_first/tool-7", { exact: true }).waitFor();
@@ -188,19 +198,18 @@ try {
         window.originalSingle = node;
       });
       await page.evaluate(() => window.finishActive());
-      const promoted = page.locator(".message-tool-records").nth(1);
-      await promoted.getByText("工具记录 · 2 项已完成", { exact: true }).waitFor();
-      assert.notEqual(await promoted.getAttribute("open"), null);
-      const promotedTool = promoted.locator(".message-tool-card").first();
-      assert.equal(await promotedTool.evaluate((node) => node === window.originalSingle), true);
-      assert.notEqual(await promotedTool.getAttribute("open"), null);
-      assert.equal(await promotedTool.getByText("RESULT_first/tool-7", { exact: true }).count(), 1);
+      await live.getByText("Owned command active", { exact: true }).waitFor();
+      assert.equal(await page.getByText("执行中", { exact: true }).count(), 0);
+      assert.equal(await heading(live).getAttribute("aria-expanded"), "true");
+      assert.equal(await single.evaluate((node) => node === window.originalSingle), true);
+      assert.notEqual(await single.getAttribute("open"), null);
+      assert.equal(await single.getByText("RESULT_first/tool-7", { exact: true }).count(), 1);
       assert.deepEqual(
         reads,
         ["first/tool-0", "first/tool-7"],
-        "single-to-group preserves the mounted detail without refetching",
+        "finishing the live process preserves the mounted detail without refetching",
       );
-      const pending = group.locator(".message-tool-card").nth(1);
+      const pending = settled.locator(".message-tool-card").nth(1);
       const requested = page.waitForRequest(
         (r) => new URL(r.url()).searchParams.get("ref") === "first/tool-1",
       );
@@ -210,7 +219,9 @@ try {
       assert.ok(held);
       await page.evaluate(() => window.switchScope());
       await page.waitForFunction(
-        () => !document.querySelector(".message-tool-records")?.hasAttribute("open"),
+        () =>
+          document.querySelector(".message-process-heading")?.getAttribute("aria-expanded") ===
+          "false",
       );
       await held.fulfill({
         contentType: "application/json",
