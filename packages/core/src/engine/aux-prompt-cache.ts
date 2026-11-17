@@ -10,7 +10,11 @@ import { usesExplicitCacheMarkers } from "../llm/providers/openai-cache-content.
 import type { Message } from "../types.js";
 
 export interface AuxPromptCachePlan {
-  /** Distinguishes prompts that share no prefix, e.g. "memory-extraction". */
+  /**
+   * Cache scope name within the session. Calls that share a prefix must use
+   * the same purpose (e.g. "session-transcript" for memory extraction and the
+   * session summary); prompts that share no prefix use different ones.
+   */
   purpose: string;
   /** Messages the next call repeats byte for byte, in order. */
   stable: readonly string[];

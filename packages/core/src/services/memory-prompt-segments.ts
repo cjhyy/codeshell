@@ -16,7 +16,12 @@ export interface MemoryPromptSegments {
   volatile: string;
 }
 
-export type MemoryPromptPurpose = "memory-extraction" | "session-summary" | "memory-write-decision";
+/**
+ * Cache purposes. Memory extraction and the session summary share one
+ * (`session-transcript`): both send the same transcript-first prefix, so they
+ * must share a cache scope (and therefore an OpenAI `prompt_cache_key`) too.
+ */
+export type MemoryPromptPurpose = "session-transcript" | "memory-write-decision";
 
 /** Handed to `callLLM` next to the single-string prompt, which stays complete. */
 export interface MemoryPromptCachePlan extends MemoryPromptSegments {
@@ -31,14 +36,18 @@ const SEALED_PIECE_CHARS = 2_000;
  * Cut a growing list of text items into pieces at positions that survive
  * appends: the pieces of a longer list start with the pieces of a shorter
  * one. Each item must carry its own separator, so a sealed piece never
- * depends on what follows it.
+ * depends on what follows it. `sealAfter` may close a piece early after an
+ * item; it must depend only on that item, never on what follows it.
  */
-export function sealMemoryPromptPieces(items: readonly string[]): MemoryTranscriptLayout {
+export function sealMemoryPromptPieces(
+  items: readonly string[],
+  sealAfter?: (index: number) => boolean,
+): MemoryTranscriptLayout {
   const sealed: string[] = [];
   let open = "";
-  for (const item of items) {
+  for (const [index, item] of items.entries()) {
     open += item;
-    if (open.length >= SEALED_PIECE_CHARS) {
+    if (open.length >= SEALED_PIECE_CHARS || (open.length > 0 && sealAfter?.(index) === true)) {
       sealed.push(open);
       open = "";
     }

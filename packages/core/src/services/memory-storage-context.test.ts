@@ -297,8 +297,8 @@ test("default routing retains env memories/cadence and HOME session summaries", 
   isolated(async ({ ambient, projectDir, home }) => {
     await new MemoryOrchestrator({
       projectDir,
-      callLLM: async (system) =>
-        system.includes("summariser")
+      callLLM: async (_system, prompt) =>
+        prompt.includes("summariser")
           ? JSON.stringify({ summary: "default summary", keyTopics: [], decisions: [] })
           : JSON.stringify([candidate]),
     }).run(

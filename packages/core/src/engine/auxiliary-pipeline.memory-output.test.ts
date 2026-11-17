@@ -41,6 +41,12 @@ const priorSummary = {
 };
 const usage: TokenUsage = { promptTokens: 20, completionTokens: 10, totalTokens: 30 };
 
+/** The task is in the user messages; both calls share one system prompt. */
+const promptText = (options: CreateMessageOptions) =>
+  options.messages
+    .map((message) => (typeof message.content === "string" ? message.content : ""))
+    .join("");
+
 function setup(autoExtract: boolean, respond: (options: CreateMessageOptions) => LLMResponse) {
   const calls: CreateMessageOptions[] = [];
   const billed: TokenUsage[] = [];
@@ -110,7 +116,7 @@ describe("memory model output budgets", () => {
     });
     const before = manager.loadAll();
     const fixture = setup(true, (options) => ({
-      text: options.systemPrompt.includes("memory extraction assistant")
+      text: promptText(options).includes("memory extraction assistant")
         ? JSON.stringify([
             {
               type: "project",
@@ -136,7 +142,7 @@ describe("memory model output budgets", () => {
 
   test("uses bounded memory budgets and persists complete output", async () => {
     const fixture = setup(true, (options) => ({
-      text: options.systemPrompt.includes("memory extraction assistant")
+      text: promptText(options).includes("memory extraction assistant")
         ? "[]"
         : JSON.stringify({
             summary: "current outcome",
