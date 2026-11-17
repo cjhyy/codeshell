@@ -196,7 +196,8 @@ describe("MemoryOrchestrator session-summary JSON robustness", () => {
           // the fixture along with the extraction scopes.
           const orchestrator = new MemoryOrchestrator({
             memoryManager: new MemoryManager({ baseDir: base }),
-            callLLM: async (sysPrompt) => (sysPrompt.includes("session summariser") ? reply : "[]"),
+            callLLM: async (_system, prompt) =>
+              prompt.includes("session summariser") ? reply : "[]",
           });
           await orchestrator.run(
             [
@@ -224,12 +225,12 @@ describe("MemoryOrchestrator autoExtract gate (settings.memories.autoExtract)", 
     try {
       await withCodeShellHome(async (base) => {
         const mm = new MemoryManager({ baseDir: base });
-        const systemPrompts: string[] = [];
+        const prompts: string[] = [];
         const orchestrator = new MemoryOrchestrator({
           memoryManager: mm,
           autoExtract: false,
-          callLLM: async (sysPrompt) => {
-            systemPrompts.push(sysPrompt);
+          callLLM: async (_system, prompt) => {
+            prompts.push(prompt);
             return "[]";
           },
         });
@@ -237,7 +238,7 @@ describe("MemoryOrchestrator autoExtract gate (settings.memories.autoExtract)", 
         expect(result.extracted).toBe(0);
         expect(mm.loadScope("user")).toHaveLength(0);
         expect(mm.loadScope("dream")).toHaveLength(0);
-        expect(systemPrompts.some((p) => p.includes("memory extraction assistant"))).toBe(false);
+        expect(prompts.some((p) => p.includes("memory extraction assistant"))).toBe(false);
         const skipped = info.mock.calls.find((c) => c[0] === "memory.extraction_skipped");
         expect(skipped).toBeDefined();
       });

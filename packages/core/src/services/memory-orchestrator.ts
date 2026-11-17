@@ -28,6 +28,11 @@ import {
 } from "./extract-memories.js";
 import { saveSessionMemory, buildSessionMemoryPromptSegments } from "./session-memory.js";
 import { joinMemoryPrompt, type MemoryPromptCachePlan } from "./memory-prompt-segments.js";
+import type { MemoryTranscriptMessage } from "./memory-transcript.js";
+import {
+  SESSION_TRANSCRIPT_SYSTEM_PROMPT,
+  sessionTranscriptCachePlan,
+} from "./session-transcript-prompt.js";
 import {
   buildWriteDecisionPromptSegments,
   memoriesWithBodyExcerpt,
@@ -201,7 +206,7 @@ export class MemoryOrchestrator {
    *  4. Conditionally trigger auto-dream consolidation
    */
   async run(
-    transcript: Array<{ role: string; content: string }>,
+    transcript: MemoryTranscriptMessage[],
     sessionId: string,
   ): Promise<MemoryOrchestratorResult> {
     this.assertCurrent();
@@ -226,10 +231,13 @@ export class MemoryOrchestrator {
         const extractionPrompt = buildExtractionPromptSegments(transcript, existing);
         const promptMs = Date.now() - t;
         t = Date.now();
+        // Same system prompt, transcript prefix and cache scope as the session
+        // summary below, which then reads this call's cached prefix. Keep the
+        // two calls sequential (and maxTokens equal) so that read can happen.
         const response = await this.callLLM(
-          "You are a memory extraction assistant. Extract only durable, reusable information worth carrying into future sessions.",
+          SESSION_TRANSCRIPT_SYSTEM_PROMPT,
           joinMemoryPrompt(extractionPrompt),
-          { maxTokens: 3072, cache: { purpose: "memory-extraction", ...extractionPrompt } },
+          { maxTokens: 3072, cache: sessionTranscriptCachePlan(extractionPrompt) },
         );
         const llmMs = Date.now() - t;
         t = Date.now();
@@ -401,9 +409,9 @@ export class MemoryOrchestrator {
       if (messageCount >= 3) {
         const smPrompt = buildSessionMemoryPromptSegments(transcript);
         const smResponse = await this.callLLM(
-          "You are a session summariser. Output only valid JSON.",
+          SESSION_TRANSCRIPT_SYSTEM_PROMPT,
           joinMemoryPrompt(smPrompt),
-          { maxTokens: 3072, cache: { purpose: "session-summary", ...smPrompt } },
+          { maxTokens: 3072, cache: sessionTranscriptCachePlan(smPrompt) },
         );
         // LLM 摘要常带 markdown 围栏 / 围栏外解释文字 / 末尾逗号 → 裸 JSON.parse 易碎。
         // 复用 utils/json 的 extractJSON(剥围栏 + 花括号配平,识别字符串/转义)拿到候选,

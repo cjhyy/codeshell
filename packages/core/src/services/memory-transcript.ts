@@ -49,9 +49,22 @@ function windowStart(parts: readonly string[]): number {
   return start;
 }
 
+/** One conversation message as the memory prompts render it. */
+export interface MemoryTranscriptMessage {
+  role: string;
+  content: string;
+  /**
+   * An assistant message that ends a turn (no tool call). A run normally ends
+   * on one, so a piece is sealed after it: the next run's prompt then still
+   * has a message boundary where this run's transcript ended, and its cache
+   * save point stays reusable. Without it only the size rule seals pieces.
+   */
+  endsTurn?: boolean;
+}
+
 /** Keep the original intent and recent outcomes inside the memory prompt budget. */
 export function layoutMemoryTranscript(
-  messages: Array<{ role: string; content: string }>,
+  messages: readonly MemoryTranscriptMessage[],
   maxMessageChars: number,
 ): MemoryTranscriptLayout {
   const parts = messages.map(({ role, content }) => {
@@ -63,10 +76,14 @@ export function layoutMemoryTranscript(
     return `[${role}]: ${content}`;
   });
   const start = windowStart(parts);
-  const items = start > 1 ? [parts[0]!, CONVERSATION_OMISSION, ...parts.slice(start)] : parts;
+  // Indexes into `messages`; -1 stands for the omission marker.
+  const all = parts.map((_, index) => index);
+  const kept = start > 1 ? [0, -1, ...all.slice(start)] : all;
+  const items = kept.map((index) => (index < 0 ? CONVERSATION_OMISSION : parts[index]!));
 
   // The separator leads, so a sealed piece never depends on what follows it.
   return sealMemoryPromptPieces(
     items.map((item, index) => (index === 0 ? item : `${SEPARATOR}${item}`)),
+    (index) => messages[kept[index]!]?.endsTurn === true,
   );
 }

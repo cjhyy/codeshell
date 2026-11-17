@@ -175,7 +175,7 @@ describe("MemoryOrchestrator write-decision cache plan", () => {
         memoryManager: new MemoryManager(storage),
         callLLM: async (system, prompt, options) => {
           if (!system.includes("write decision"))
-            return system.includes("summariser")
+            return prompt.includes("summariser")
               ? "{}"
               : JSON.stringify([candidate("fresh one"), candidate("fresh two")]);
           plans.push({ prompt, cache: options?.cache });

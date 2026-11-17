@@ -21,7 +21,10 @@ class QuickChatEphemeralMemoryClient extends LLMClientBase {
 
   async createMessage(options: CreateMessageOptions): Promise<LLMResponse> {
     let text = "done";
-    if (options.systemPrompt.includes("memory extraction assistant")) {
+    const prompt = options.messages
+      .map((message) => (typeof message.content === "string" ? message.content : ""))
+      .join("");
+    if (prompt.includes("memory extraction assistant")) {
       memoryPromptsByModel.get(this.model)?.push("extraction");
       text = JSON.stringify([
         {
@@ -32,7 +35,7 @@ class QuickChatEphemeralMemoryClient extends LLMClientBase {
           content: "must not survive the ephemeral session",
         },
       ]);
-    } else if (options.systemPrompt.includes("session summariser")) {
+    } else if (prompt.includes("session summariser")) {
       memoryPromptsByModel.get(this.model)?.push("session-summary");
       text = JSON.stringify({
         summary: "private quick-chat summary",
