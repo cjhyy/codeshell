@@ -112,3 +112,36 @@ describe("OpenAI-compatible auxiliary cache history", () => {
     expect(JSON.stringify(bodies[1]).split('"cache_control"').length - 1).toBe(4);
   });
 });
+
+describe("OpenAI hybrid boundaries with volatile tail context", () => {
+  it("remembers the boundary before the volatile tail so the next step reads it", async () => {
+    const { client, bodies } = fixture("openai/gpt-5.6-sol", {
+      promptCacheHistory: new PromptCacheHistory(),
+      auxPromptCacheHistory: new PromptCacheHistory(),
+    });
+    const messages: CreateMessageOptions["messages"] = [
+      { role: "user", content: "settled" },
+      { role: "user", content: "step one" },
+      { role: "user", content: "volatile A" },
+    ];
+    const promptCache = { scopeId: "hybrid-volatile", stablePrefixMessageCount: 1 };
+    await client.createMessage({
+      systemPrompt: "system",
+      messages,
+      promptCache: { ...promptCache, volatileTailMessageCount: 1 },
+    });
+    // Next step: the volatile context moves behind the new tail and changes.
+    await client.createMessage({
+      systemPrompt: "system",
+      messages: [
+        ...messages.slice(0, 2),
+        { role: "assistant", content: "answer" },
+        { role: "user", content: "step two" },
+        { role: "user", content: "volatile B" },
+      ],
+      promptCache: { ...promptCache, volatileTailMessageCount: 1 },
+    });
+    // System, stable end and the previous step's pre-volatile boundary.
+    expect(markedIndexes(bodies[1])).toEqual([0, 1, 2]);
+  });
+});

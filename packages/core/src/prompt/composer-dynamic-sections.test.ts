@@ -295,6 +295,21 @@ describe("PromptComposer.buildDynamicContextSections", () => {
     expect(byKey.get("capability-notes")).toEqual({ key: "capability-notes", text: "own notes" });
   });
 
+  test("a provider may say its own section is unchanged this run", async () => {
+    const sections = await new PromptComposer({
+      ...options(),
+      dynamicContextProviders: [
+        () => ({ key: "lists", unchanged: true }),
+        // Unkeyed or repeated, it names nothing to keep.
+        () => ({ key: 'bad" key', unchanged: true }),
+        () => ({ key: "lists", text: "repeated lists" }),
+      ],
+    }).buildDynamicContextSections();
+    const own = sections.filter((section) => section.key.startsWith("capability-"));
+    expect(own).toEqual([{ key: "capability-lists", text: "", unchanged: true }]);
+    expect(sections.find((section) => section.key === "capability")!.text).toBe("repeated lists");
+  });
+
   test("empty sections are omitted and an empty context is null", async () => {
     const empty = mkdtempSync(join(tmpdir(), "cs-sections-empty-"));
     process.env.HOME = empty;

@@ -12,7 +12,7 @@ import { sanitizeContent } from "../logging/sanitize-messages.js";
 import { MemoryOrchestrator } from "../services/memory-orchestrator.js";
 import { runDreamConsolidation } from "../services/dream-consolidation.js";
 import { resolveAuxKey } from "./aux-key.js";
-import { auxCachedRequest } from "./aux-prompt-cache.js";
+import { auxCachedRequest } from "../llm/aux-prompt-cache.js";
 import type { CumulativeUsageCounters } from "../session/usage.js";
 import { contextMessageMark } from "../session/context-messages.js";
 import type { EngineConfig } from "./types.js";
