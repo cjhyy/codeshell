@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SimpleSelect } from "@/components/ui/simple-select";
 import { useT } from "../../i18n";
@@ -19,6 +19,9 @@ const defaultApi: DelegatedPermissionApi = {
   readUserSettings: () => window.codeshell.getSettings("user"),
   writeUserSettings: (patch) => writeSettings("user", patch),
 };
+
+/** Lets a host page (or a browser fixture) supply the settings API without prop drilling. */
+export const DelegatedPermissionApiContext = createContext<DelegatedPermissionApi>(defaultApi);
 
 function errorText(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause);
@@ -72,7 +75,8 @@ const LABEL_KEYS = {
 /** 派发工作的权限: which permission mode Mimi's delegated Work Sessions run with. */
 export function DelegatedPermissionCard({ api }: { api?: DelegatedPermissionApi }) {
   const { t } = useT();
-  const { mode, saveError, select } = useDelegatedPermissionSetting(api);
+  const contextApi = useContext(DelegatedPermissionApiContext);
+  const { mode, saveError, select } = useDelegatedPermissionSetting(api ?? contextApi);
   return (
     <Card data-pet-setting="delegated-permission" className="rounded-2xl">
       <CardHeader className="space-y-1.5">

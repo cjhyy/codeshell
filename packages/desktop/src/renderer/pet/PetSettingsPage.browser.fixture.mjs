@@ -20,6 +20,7 @@ const source = `
 import React from 'react';
 import {createRoot} from 'react-dom/client';
 import {PetSettingsPage} from './pet/PetSettingsPage';
+import {DelegatedPermissionApiContext} from './pet/settings/DelegatedPermissionCard';
 import {I18nProvider} from './i18n/I18nProvider';
 import {saveUILanguage} from './uiLanguage';
 import {ToastProvider} from './ui/ToastProvider';
@@ -66,6 +67,8 @@ window.codeshell={
   },
   openInEditor:async()=>undefined,openPath:async()=>undefined,openExternal:async()=>undefined,
 };
+// The delegated-permission card has its own settings API so the personalization read/write queue above stays exact.
+const delegatedPermissionApi={readUserSettings:async()=>({pet:{delegatedPermissionMode:'inherit'}}),writeUserSettings:async()=>undefined};
 const root=createRoot(document.getElementById('root'));
 function Fixture(){
   const [open,setOpen]=React.useState(true);
@@ -82,7 +85,7 @@ function Fixture(){
 }
 window.renderFixture=({lang,mode})=>{
   saveUILanguage(lang);applyTheme(mode);
-  root.render(<React.StrictMode><I18nProvider><ToastProvider><Fixture/></ToastProvider></I18nProvider></React.StrictMode>);
+  root.render(<React.StrictMode><I18nProvider><ToastProvider><DelegatedPermissionApiContext.Provider value={delegatedPermissionApi}><Fixture/></DelegatedPermissionApiContext.Provider></ToastProvider></I18nProvider></React.StrictMode>);
 };
 `;
 const bundle = await build({
