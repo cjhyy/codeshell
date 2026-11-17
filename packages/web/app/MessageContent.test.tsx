@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MessageContent, ToolMessage, safeMessageLink, messageFilePath } from "./MessageContent.js";
+import { AnswerContent } from "./AnswerContent.js";
+import type { ChatItem } from "../src/lib/streamReducer.js";
 
 function render(text: string, streaming = false) {
   return renderToStaticMarkup(<MessageContent text={text} streaming={streaming} />);
@@ -134,4 +136,61 @@ test("local Markdown images open the authenticated workspace preview only on use
   expect(html).toContain("查看图片");
   expect(html).not.toContain("<img");
   expect(html).not.toContain("<link");
+});
+
+describe("final answer actions", () => {
+  const answer = (id: string, text: string): Extract<ChatItem, { kind: "assistant" }> => ({
+    kind: "assistant",
+    id,
+    text,
+    reasoning: "",
+    done: true,
+  });
+  test("several answer fragments share one action and keep code-block copying", () => {
+    const html = renderToStaticMarkup(
+      <AnswerContent
+        items={[
+          answer("a", "First paragraph."),
+          answer("b", "Second paragraph.\n\n```ts\nconst value = 1;\n```"),
+        ]}
+      />,
+    );
+    expect((html.match(/aria-label="复制回复"/g) ?? []).length).toBe(1);
+    expect((html.match(/aria-label="复制代码"/g) ?? []).length).toBe(1);
+    expect(html).toContain("First paragraph.");
+    expect(html).toContain("Second paragraph.");
+  });
+  test("process narration has no reply action while its code remains copyable", () => {
+    const html = renderToStaticMarkup(
+      <MessageContent text={"Checking.\n\n```sh\npwd\n```"} showCopy={false} />,
+    );
+    expect(html).not.toContain('aria-label="复制回复"');
+    expect(html).toContain('aria-label="复制代码"');
+  });
+  test("pending and streaming answers do not present a completed-reply action", () => {
+    for (const props of [
+      { items: [answer("a", "Settled fragment")], pending: true },
+      { items: [answer("a", "Settled fragment"), { ...answer("b", "Streaming"), done: false }] },
+    ]) {
+      const html = renderToStaticMarkup(<AnswerContent {...props} />);
+      expect(html).not.toContain('aria-label="复制回复"');
+    }
+  });
+  test("history previews and missing earlier fragments explicitly copy only displayed content", () => {
+    for (const props of [
+      { items: [{ ...answer("a", "Preview"), textDetailRef: "detail-a" }] },
+      { items: [answer("b", "Visible suffix")], partial: true },
+    ]) {
+      const html = renderToStaticMarkup(<AnswerContent {...props} />);
+      expect((html.match(/aria-label="复制已显示内容"/g) ?? []).length).toBe(1);
+      expect(html).not.toContain('aria-label="复制回复"');
+    }
+  });
+  test("reasoning-only or empty answers do not create empty copy actions", () => {
+    const html = renderToStaticMarkup(
+      <AnswerContent items={[{ ...answer("a", ""), reasoning: "Private reasoning" }]} />,
+    );
+    expect(html).not.toContain('aria-label="复制回复"');
+    expect(html).not.toContain("Private reasoning");
+  });
 });
