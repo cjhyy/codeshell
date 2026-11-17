@@ -381,6 +381,7 @@ jobs:
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-admin-console-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-file-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-latest-messages.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-answer-copy-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-sidebar-navigation.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-remote-session-navigation-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-workbench-back-browser.mjs
