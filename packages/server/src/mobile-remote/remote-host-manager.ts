@@ -460,11 +460,15 @@ export class RemoteHostManager extends EventEmitter {
       };
       const webApi = this.opts.webApi;
       if (
-        gate?.isSet() &&
+        publicAccess &&
         ["GET", "HEAD"].includes(req.method ?? "") &&
         pathname.startsWith("/api/v1/panel-assets/") &&
         webApi?.handleCapabilityAsset
       ) {
+        // Account relay has no fixed passcode. Its opaque-origin Panel iframe
+        // also cannot send account cookies; the existing asset capability must
+        // be checked before either public entrance gate, with the original
+        // account/paired owner and project binding still revalidated per read.
         void webApi.handleCapabilityAsset(req, res).then(
           (handled) => {
             if (!handled && !res.writableEnded) serve();
