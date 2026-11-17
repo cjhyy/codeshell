@@ -1,13 +1,13 @@
 import { expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { assertBunTestCompletion } from "../scripts/bun-test-completion.mjs";
 import {
-  assertBunTestCompletion,
-  createBunTestEnvironment,
-} from "../scripts/bun-test-completion.mjs";
-import { assertCoverage, summarizeCoverage } from "../scripts/check-builtin-coverage.js";
+  assertCoverage,
+  runCoverageProcess,
+  summarizeCoverage,
+} from "../scripts/check-builtin-coverage.js";
 
 function record(
   file: string,
@@ -54,6 +54,35 @@ test("coverage fails closed for absent, truncated, invalid or impossible LCOV co
     expect(() => summarizeCoverage(report)).toThrow();
 });
 
+test("coverage child receives ordinary output files and preserves large diagnostics and failure", () => {
+  const directory = mkdtempSync(join(tmpdir(), "builtin-coverage-output-"));
+  try {
+    const result = runCoverageProcess(
+      directory,
+      [
+        "-e",
+        'import { fstatSync, writeSync } from "node:fs";' +
+          "if (!fstatSync(1).isFile() || !fstatSync(2).isFile()) process.exit(9);" +
+          'writeSync(1, "stdout:" + "o".repeat(256 * 1024));' +
+          'writeSync(2, "stderr:" + "e".repeat(256 * 1024));' +
+          "process.exitCode = 7;",
+      ],
+      directory,
+      15_000,
+    );
+    expect(result.error).toBeUndefined();
+    expect(result.status).toBe(7);
+    expect(readFileSync(join(directory, "stdout.log"), "utf8")).toBe(
+      "stdout:" + "o".repeat(256 * 1024),
+    );
+    expect(readFileSync(join(directory, "stderr.log"), "utf8")).toBe(
+      "stderr:" + "e".repeat(256 * 1024),
+    );
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("source coverage excludes generated package copies while retaining every loaded source", () => {
   const directory = mkdtempSync(join(tmpdir(), "builtin-coverage-population-"));
   try {
@@ -94,27 +123,24 @@ test("source coverage excludes generated package copies while retaining every lo
     );
     const coverage = join(directory, "coverage");
     const report = join(directory, "junit.xml");
-    const result = spawnSync(
-      process.execPath,
+    const result = runCoverageProcess(
+      directory,
       [
         "test",
         "--config=./bunfig.toml",
         "--coverage",
+        "--coverage-reporter=text",
         "--coverage-reporter=lcov",
         `--coverage-dir=${coverage}`,
         "--reporter=junit",
         `--reporter-outfile=${report}`,
         "./population.test.ts",
       ],
-      {
-        cwd: directory,
-        env: createBunTestEnvironment(process.env, join(directory, "isolation")),
-        encoding: "utf8",
-        timeout: 15_000,
-      },
+      directory,
+      15_000,
     );
     expect(result.error).toBeUndefined();
-    expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
+    expect(result.status, readFileSync(join(directory, "stderr.log"), "utf8")).toBe(0);
     assertBunTestCompletion(report);
     const lcov = readFileSync(join(coverage, "lcov.info"), "utf8");
     const measured = [...lcov.matchAll(/^SF:(.+)$/gm)].map((match) =>
