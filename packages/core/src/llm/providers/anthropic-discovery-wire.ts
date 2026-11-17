@@ -1,5 +1,6 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import type { ContentBlock, Message, ToolDefinition } from "../../types.js";
+import { wireToolInputSchema } from "../tool-wire-schema.js";
 import {
   matchesToolDiscoverySchema,
   NATIVE_TOOL_DISCOVERY_USAGE,
@@ -38,7 +39,7 @@ export function anthropicTools(
   const converted: NativeTool[] = tools.map((tool) => ({
     name: tool.name,
     description: tool.description,
-    input_schema: tool.inputSchema as Anthropic.Tool.InputSchema,
+    input_schema: wireToolInputSchema(tool.inputSchema) as Anthropic.Tool.InputSchema,
     ...(policy.toolDiscovery === "tool-reference" && tool.deferLoading
       ? { defer_loading: true as const }
       : {}),
