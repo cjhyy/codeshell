@@ -112,14 +112,25 @@
   font-size: 12px;
 }
 .message-copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 28px;
   color: var(--muted);
   background: transparent;
   border: 0;
-  border-radius: 5px;
-  padding: 3px 6px;
-  font-size: 10px;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  line-height: 20px;
   cursor: pointer;
   white-space: nowrap;
+}
+.message-copy svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
 }
 .message-copy:hover {
   background: var(--hover);
@@ -127,10 +138,32 @@
 }
 .message-actions {
   display: flex;
-  margin-top: 8px;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  margin-top: 4px;
+  opacity: 1;
+  transition: opacity 150ms ease;
 }
-.message-actions .message-copy {
-  padding-left: 0;
+@media (hover: hover) and (pointer: fine) {
+  .msg.assistant .message-actions {
+    opacity: 0;
+  }
+  .msg.assistant:hover .message-actions,
+  .msg.assistant:focus-within .message-actions {
+    opacity: 1;
+  }
+}
+@media (pointer: coarse) {
+  .message-actions .message-copy {
+    min-height: 44px;
+    padding-inline: 10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .message-actions {
+    transition: none;
+  }
 }
 .message-reasoning {
   color: var(--muted);
