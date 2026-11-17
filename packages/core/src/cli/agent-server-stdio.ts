@@ -68,6 +68,8 @@ import type { AgentModule } from "../composition/types.js";
 import { resolveSessionAgentConfig, resolveSessionCwd } from "./stdio-session-config.js";
 import { hasWorkspaceHostBridge } from "./stdio-host-config.js";
 import { configureModelTracing } from "../model-traces/index.js";
+import { syncOpenRouterCatalogCached } from "../data/openrouter-sync.js";
+import { codeShellHome } from "../utils/paths.js";
 
 /**
  * Load AgentModules from CODE_SHELL_CAPABILITY_MODULES: comma-separated
@@ -385,6 +387,12 @@ cronScheduler.setExecutionEnabled(false);
 cronScheduler.loadJobs();
 
 // ─── Step 5: AgentServer over stdio ──────────────────────────────
+
+// Pricing and context windows for every OpenRouter model, not only the
+// curated bundled snapshot. Disk-cached for a day; failures keep the bundle.
+void syncOpenRouterCatalogCached({
+  cacheFile: join(codeShellHome(), "cache", "openrouter-models.json"),
+}).catch(() => undefined);
 
 const stdioTransport = new StdioTransport(process.stdin, process.stdout);
 if (operationBatchEnabled) {
