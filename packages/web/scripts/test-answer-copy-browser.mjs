@@ -1,5 +1,5 @@
 /** Owned synthetic answers only; clipboard writes are captured in memory. */
-/* global window, document, navigator */
+/* global window, document */
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { mkdtemp, writeFile } from "node:fs/promises";
