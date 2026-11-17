@@ -9,7 +9,11 @@ import {
   setOpenRouterLookupSupplement,
   type OpenRouterModel,
 } from "./openrouter-models.js";
-import { syncOpenRouterCatalogCached } from "./openrouter-sync.js";
+import {
+  refreshOpenRouterCatalogOnMiss,
+  registerOpenRouterCatalogCache,
+  syncOpenRouterCatalogCached,
+} from "./openrouter-sync.js";
 
 const LIVE_ONLY = "example/live-only-model";
 const model = (id: string): OpenRouterModel => ({
@@ -103,6 +107,45 @@ describe("syncOpenRouterCatalogCached", () => {
     });
     expect(result).toMatchObject({ ok: false, source: "network" });
     expect(findOpenRouterModel(LIVE_ONLY)).toBeUndefined();
+  });
+
+  it("hosts read the disk cache at startup without any network", () => {
+    writeFileSync(join(dir, "c.json"), JSON.stringify(snapshot("2026-11-10T00:00:00Z")));
+    registerOpenRouterCatalogCache(join(dir, "c.json"));
+    expect(findOpenRouterModel(LIVE_ONLY)).toBeDefined();
+  });
+
+  it("refreshes once after a real OpenRouter request misses, never for other endpoints", async () => {
+    registerOpenRouterCatalogCache(cacheFile);
+    let fetches = 0;
+    const fetchCatalog = async () => {
+      fetches += 1;
+      return snapshot("2026-11-17T11:00:00Z");
+    };
+    // Fake or local endpoints (E2E fixtures, proxies) never trigger traffic.
+    expect(
+      refreshOpenRouterCatalogOnMiss(LIVE_ONLY, "http://127.0.0.1:9/api/v1", fetchCatalog),
+    ).toBeUndefined();
+    // Known models need no refresh.
+    expect(
+      refreshOpenRouterCatalogOnMiss(
+        "openai/gpt-6.1-sol",
+        "https://openrouter.ai/api/v1",
+        fetchCatalog,
+      ),
+    ).toBeUndefined();
+    const refresh = refreshOpenRouterCatalogOnMiss(
+      LIVE_ONLY,
+      "https://openrouter.ai/api/v1",
+      fetchCatalog,
+    );
+    expect(await refresh).toMatchObject({ ok: true, source: "network" });
+    expect(findOpenRouterModel(LIVE_ONLY)).toBeDefined();
+    setOpenRouterLookupSupplement([]);
+    expect(
+      refreshOpenRouterCatalogOnMiss(LIVE_ONLY, "https://openrouter.ai/api/v1", fetchCatalog),
+    ).toBeUndefined();
+    expect(fetches).toBe(1);
   });
 
   it("never touches the network under the test runner without an injected fetcher", async () => {

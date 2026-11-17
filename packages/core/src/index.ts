@@ -804,6 +804,7 @@ export {
 export {
   syncOpenRouterCatalog,
   syncOpenRouterCatalogCached,
+  registerOpenRouterCatalogCache,
   getOpenRouterSnapshot,
 } from "./data/openrouter-sync.js";
 

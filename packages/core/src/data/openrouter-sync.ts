@@ -15,6 +15,7 @@ import {
   type RawOpenRouterPricing,
   coerceSnapshot,
   openRouterPriceFields,
+  findOpenRouterModel,
   setOpenRouterLookupSupplement,
   setOpenRouterSnapshot,
   getOpenRouterSnapshot,
@@ -153,6 +154,49 @@ export async function syncOpenRouterCatalogCached(
     }
     return { ok: false, count: 0, source: "network", error };
   }
+}
+
+let hostCacheFile: string | undefined;
+let missRefreshStarted = false;
+
+/**
+ * Long-running hosts register their catalog cache at startup. This only reads
+ * the disk cache (no network): an unauthenticated or offline app must not
+ * reach out on its own. The network refresh happens in
+ * `refreshOpenRouterCatalogOnMiss`, after a real request to OpenRouter.
+ */
+export function registerOpenRouterCatalogCache(cacheFile: string): void {
+  hostCacheFile = cacheFile;
+  missRefreshStarted = false;
+  const cached = readCachedCatalog(cacheFile);
+  if (cached) setOpenRouterLookupSupplement(cached.models);
+}
+
+/**
+ * Called after a completed request: when it went to openrouter.ai for a model
+ * neither the bundled snapshot nor the cache knows, fetch the public catalog
+ * once per process so later requests are priced. Hosts that never registered a
+ * cache (CLI, SDK, tests) and non-OpenRouter endpoints never fetch.
+ */
+export function refreshOpenRouterCatalogOnMiss(
+  model: string,
+  baseUrl: string | undefined,
+  fetchCatalog?: CachedSyncOptions["fetchCatalog"],
+): Promise<CachedSyncResult> | undefined {
+  if (!hostCacheFile || missRefreshStarted || findOpenRouterModel(model)) return undefined;
+  try {
+    if (new URL(baseUrl ?? "").hostname !== "openrouter.ai") return undefined;
+  } catch {
+    return undefined;
+  }
+  missRefreshStarted = true;
+  const refresh = syncOpenRouterCatalogCached({
+    cacheFile: hostCacheFile,
+    maxAgeMs: 0,
+    ...(fetchCatalog ? { fetchCatalog } : {}),
+  });
+  refresh.catch(() => undefined);
+  return refresh;
 }
 
 export { getOpenRouterSnapshot };
