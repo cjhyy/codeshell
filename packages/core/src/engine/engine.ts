@@ -1962,20 +1962,21 @@ export class Engine {
               },
             });
 
-          const { promptComposer, toolDefs, mcpFailureSummary } = await this.wireRunTooling({
-            taskText,
-            options,
-            session,
-            cwd,
-            workspaceContext,
-            toolCtx,
-            profile,
-            profileParams,
-            runWorkspaceProfile,
-            profileMemoryDir,
-            sessionProfileOverrides,
-            runPlanMode,
-          });
+          const { promptComposer, toolDefs, mcpFailureSummary, routedTools } =
+            await this.wireRunTooling({
+              taskText,
+              options,
+              session,
+              cwd,
+              workspaceContext,
+              toolCtx,
+              profile,
+              profileParams,
+              runWorkspaceProfile,
+              profileMemoryDir,
+              sessionProfileOverrides,
+              runPlanMode,
+            });
 
           const {
             llmClient,
@@ -1992,6 +1993,7 @@ export class Engine {
             messages,
             hookMessages,
             mcpFailureSummary,
+            routedTools,
             promptComposer,
             toolDefs,
             llmClientPromise,
@@ -2341,6 +2343,7 @@ export class Engine {
     messages: Message[];
     hookMessages: RunHookMessages;
     mcpFailureSummary: string;
+    routedTools: string;
     promptComposer: PromptComposer;
     toolDefs: import("../types.js").ToolDefinition[];
     llmClientPromise: ReturnType<typeof createLLMClient>;
@@ -2392,6 +2395,7 @@ export class Engine {
         ...contextSections,
         ...engineContextSections({
           mcpFailureSummary,
+          routedTools: args.routedTools,
           dateChange: promptComposer.buildDateChangeNotice(),
         }),
       ],
@@ -3157,6 +3161,7 @@ export class Engine {
     promptComposer: PromptComposer;
     toolDefs: import("../types.js").ToolDefinition[];
     mcpFailureSummary: string;
+    routedTools: string;
   }> {
     const {
       taskText,
@@ -3320,6 +3325,7 @@ export class Engine {
     // cwd. Recomputed every message, so configuring a key takes effect on the
     // NEXT message without a restart. Tools with no guard entry are always kept.
     let ownedToolSelection: SessionState["toolSelection"];
+    let routedTools = "";
     const toolDefs = initializeRunToolSurface(
       toolCtx,
       options?.toolAllowlist !== undefined || profile?.allowedToolNames
@@ -3351,6 +3357,7 @@ export class Engine {
         onSelectionChanged: (selection) => {
           session.state.toolSelection = ownedToolSelection = selection;
         },
+        onPreloadedTools: (text) => (routedTools = text),
       },
     );
     const surface = toolCtx.runToolSurface!;
@@ -3380,6 +3387,7 @@ export class Engine {
       promptComposer: new PromptComposer(createPromptComposerConfig(surface.behaviorSnapshot())),
       toolDefs,
       mcpFailureSummary: formatMcpConnectionFailures(mcpFailures),
+      routedTools,
     };
   }
 

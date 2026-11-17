@@ -40,12 +40,18 @@ import { notePromptPrefixRewrite } from "../utils/prompt-prefix-events.js";
  */
 export function engineContextSections(args: {
   mcpFailureSummary: string;
+  /** Routed tool schemas loaded on a Session's first run (run-tooling.ts). */
+  routedTools?: string;
   dateChange?: string;
 }): ContextSection[] {
-  return [
+  const sections: ContextSection[] = [
     { key: "mcp-failures", text: args.mcpFailureSummary },
+    // Shown once: later runs neither resend nor retract it; the tools stay
+    // callable as discoveries and join the head at the next cold boundary.
+    { key: "task-tools", text: args.routedTools ?? "", compare: "snapshot-only" },
     { key: "date", text: args.dateChange ?? "" },
-  ].filter((section) => Boolean(section.text));
+  ];
+  return sections.filter((section) => Boolean(section.text));
 }
 
 /**
