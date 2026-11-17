@@ -60,3 +60,44 @@ describe("Transcript.loadTailForAppend", () => {
     }
   });
 });
+
+describe("display-only messages", () => {
+  test("persist for readers but never enter a model projection", () => {
+    const dir = mkdtempSync(join(tmpdir(), "transcript-display-only-"));
+    try {
+      const file = join(dir, "transcript.jsonl");
+      const live = new Transcript(file);
+      live.appendMessage("user", "hi", { clientMessageId: "u1" });
+      live.appendMessage("assistant", [
+        { type: "tool_use", id: "call-1", name: "Reply", input: { text: "hello" } },
+      ]);
+      live.appendToolUse("Reply", "call-1", { text: "hello" });
+      // Another process records what it displayed, before the tool result lands.
+      const host = Transcript.loadTailForAppend(file);
+      host.appendMessage("assistant", "hello", { clientMessageId: "receipt-1", displayOnly: true });
+      live.appendToolResult("call-1", "Reply", "accepted");
+      const liveMessages = JSON.stringify(live.toMessages());
+
+      const reloaded = Transcript.loadFromFile(file);
+      expect(reloaded.hasClientMessageId("receipt-1")).toBe(true);
+      expect(
+        reloaded.getEvents("message").find((e) => e.data.clientMessageId === "receipt-1")?.data
+          .displayOnly,
+      ).toBe(true);
+      expect(JSON.stringify(reloaded.toMessages())).toBe(liveMessages);
+      expect(reloaded.toMessagesWithIndex().liveIndexByClientMessageId.has("receipt-1")).toBe(
+        false,
+      );
+      const events = reloaded.getEvents();
+      expect(JSON.stringify(Transcript.eventsToMessages(events))).not.toContain("receipt");
+      const range = Transcript.selectContextRange(events, {
+        fromEventId: events[0]!.id,
+        toEventId: events.at(-1)!.id,
+      });
+      expect(range.events.some((e) => e.data.displayOnly === true)).toBe(false);
+      expect(range.messages).toHaveLength(3);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
