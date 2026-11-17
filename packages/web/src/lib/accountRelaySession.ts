@@ -1,15 +1,12 @@
 import { deviceStore } from "./storage.js";
 import { generateSecret } from "./deviceCredential.js";
 
-const MAX_ACCOUNT_RELAY_AGE_MS = 10 * 60_000;
-const ACCOUNT_RELAY_CLOCK_SKEW_MS = 30_000;
+import {
+  accountRelayBootstrap,
+  type AccountRelayBootstrapCredential,
+} from "./accountRelayBootstrap.js";
 
-export interface AccountRelayCredential {
-  deviceId: string;
-  secretHash: string;
-  expiresAt: number;
-  accountEntryUrl?: string;
-}
+export type AccountRelayCredential = AccountRelayBootstrapCredential;
 
 // Account Host grants are never written over a browser's durable legacy pairing.
 let account: AccountRelayCredential | undefined;
@@ -36,71 +33,39 @@ export function remoteDeviceCredential(): { deviceId: string; secretHash: string
 
 export async function loadAccountRelayCredential(
   signal: AbortSignal,
+  options: { renew?: boolean; expectedAccount?: boolean } = {},
 ): Promise<AccountRelayCredential | undefined> {
-  const response = await fetch("/api/v1/relay/session", {
-    credentials: "same-origin",
-    cache: "no-store",
-    redirect: "error",
-    signal: AbortSignal.any([signal, AbortSignal.timeout(15_000)]),
-  });
-  // Older Hosts and LAN/tunnel mode have no account bootstrap endpoint.
-  if (!response.headers.get("content-type")?.includes("application/json")) return;
-  const value = await response.json();
-  let accountEntryUrl: string | undefined;
-  try {
-    const url = new URL(value?.accountEntryUrl);
-    if (
-      url.protocol === "https:" &&
-      !url.username &&
-      !url.password &&
-      url.pathname === "/app" &&
-      !url.search &&
-      !url.hash
-    )
-      accountEntryUrl = url.href;
-  } catch {
-    /* Missing or malformed navigation is not followed. */
-  }
-  // The public gateway rejects an expired outer grant before the request can
-  // reach the Host's accountRelay envelope. It is an account handoff, never a
-  // signal to try this origin's legacy pairing or retry WebSocket admission.
-  if (
-    (response.status === 401 && value?.error === "invalid_relay_authorization") ||
-    (value?.accountRelay === true && value.active !== true)
-  )
+  const result = await accountRelayBootstrap(signal, options.renew, options.expectedAccount);
+  if (result.kind === "ready") return result.credential;
+  if (result.kind === "legacy") return;
+  if (result.kind === "expired")
     throw new AccountRelaySessionExpired(
       "账号远程授权已结束，请返回电脑列表并用 Passkey 重新连接。",
-      accountEntryUrl,
+      result.accountEntryUrl,
     );
-  if (!response.ok || value?.active !== true) return;
-  const now = Date.now();
-  if (
-    typeof value.deviceId !== "string" ||
-    !value.deviceId ||
-    value.deviceId.length > 512 ||
-    typeof value.secretHash !== "string" ||
-    !/^[A-Za-z0-9_-]{43}$/.test(value.secretHash) ||
-    !Number.isSafeInteger(value.expiresAt) ||
-    value.expiresAt <= now ||
-    value.expiresAt > now + MAX_ACCOUNT_RELAY_AGE_MS + ACCOUNT_RELAY_CLOCK_SKEW_MS
-  )
-    throw new AccountRelaySessionExpired("账号远程授权无效，请重新连接。");
-  return {
-    deviceId: value.deviceId,
-    secretHash: value.secretHash,
-    // A small clock difference must not reject a fresh Host grant. The browser
-    // still treats it as valid for at most ten minutes on its own clock; Host
-    // and gateway expiry remain authoritative for every connection.
-    expiresAt: Math.min(value.expiresAt, now + MAX_ACCOUNT_RELAY_AGE_MS),
-    accountEntryUrl,
-  };
+  throw new Error("电脑暂时无法连接，正在恢复连接。");
 }
 
 export async function endAccountRelaySession(): Promise<void> {
   account = undefined;
-  await fetch("/api/v1/relay/session/logout", {
+  try {
+    await fetch("/api/v1/relay/session/logout", {
+      method: "POST",
+      credentials: "same-origin",
+      cache: "no-store",
+      redirect: "error",
+      signal: AbortSignal.timeout(5000),
+    });
+  } catch {
+    // The computer may be offline. Its outer session must still be ended.
+  }
+  const response = await fetch("/__relay/logout", {
     method: "POST",
     credentials: "same-origin",
+    cache: "no-store",
     redirect: "error",
+    signal: AbortSignal.timeout(15_000),
   });
+  if (!response.ok || (await response.json()).ok !== true)
+    throw new Error("当前连接已停止，但未能确认服务器退出，请重试退出。");
 }

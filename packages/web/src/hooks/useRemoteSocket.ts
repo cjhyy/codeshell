@@ -31,6 +31,7 @@ export interface RemoteSocket {
   accessRequired?: boolean;
   accountAccessRequired?: boolean;
   accountEntryUrl?: string;
+  logoutError?: string;
   deviceName: string;
   /** Monotonic id of the currently authenticated socket. */
   connectionGeneration: number;
@@ -57,6 +58,9 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
   const [accessRequired, setAccessRequired] = useState(false);
   const [accountAccessRequired, setAccountAccessRequired] = useState(false);
   const [accountEntryUrl, setAccountEntryUrl] = useState<string>();
+  const [logoutError, setLogoutError] = useState<string>();
+  const accountLogoutPending = useRef(false);
+  const logoutGeneration = useRef(0);
   const [deviceName, setDeviceName] = useState<string>("");
   const [connectionGeneration, setConnectionGeneration] = useState(0);
   const wsRef = useRef<WebSocket | null>(null);
@@ -89,8 +93,20 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
   }, []);
 
   const logout = useCallback(() => {
-    if (hasAccountRelayCredential()) void endAccountRelaySession().catch(() => {});
-    else deviceStore.clearId();
+    setLogoutError(undefined);
+    const generation = ++logoutGeneration.current;
+    if (hasAccountRelayCredential() || accountLogoutPending.current) {
+      accountLogoutPending.current = true;
+      void endAccountRelaySession().then(
+        () => {
+          if (logoutGeneration.current === generation) accountLogoutPending.current = false;
+        },
+        () => {
+          if (logoutGeneration.current === generation)
+            setLogoutError("当前连接已停止，但未能确认服务器退出，请重试退出。");
+        },
+      );
+    } else deviceStore.clearId();
     closedByUs.current = true;
     stopSocket.current?.();
     // Drop the pairing token from the URL and reload into the unpaired state.
@@ -105,6 +121,9 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
     let health: ConnectionLiveness | undefined;
     let bootstrap: AbortController | undefined;
     let accountSession = false;
+    let accountExpiresAt = 0;
+    let accountRenewalRequired = false;
+    let refreshTimer: ReturnType<typeof setTimeout> | undefined;
 
     /** Schedule a reconnect with jittered exponential backoff. Cancels any
      *  pending timer so a manual/event-driven reconnect can pre-empt it. */
@@ -140,35 +159,46 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
     /** Force an immediate reconnect (network back / tab visible again). */
     const reconnectNow = (): void => {
       if (closedByUs.current) return;
+      if (accountSession && accountExpiresAt <= Date.now() + 30_000) accountRenewalRequired = true;
       const ws = wsRef.current;
-      if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+      if (
+        !accountRenewalRequired &&
+        ws &&
+        (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)
+      ) {
         health?.resume();
         return;
       }
       if (retryTimer) clearTimeout(retryTimer);
       retryRef.current = 0;
-      if (ws) retire(ws, false);
+      if (ws && ws.readyState !== WebSocket.OPEN) retire(ws, false);
       connect();
     };
 
     const connect = async (): Promise<void> => {
-      if (closedByUs.current) return;
+      if (closedByUs.current || bootstrap) return;
+      if (retryTimer) clearTimeout(retryTimer);
       retryTimer = undefined;
-      bootstrap?.abort();
       const attempt = new AbortController();
       bootstrap = attempt;
       try {
         const credential = window.location.origin.startsWith("https://")
-          ? await loadAccountRelayCredential(attempt.signal)
+          ? await loadAccountRelayCredential(attempt.signal, {
+              renew: accountRenewalRequired,
+              expectedAccount: accountSession,
+            })
           : undefined;
         if (attempt.signal.aborted || closedByUs.current || bootstrap !== attempt) return;
         setAccountRelayCredential(credential);
         accountSession = !!credential;
+        accountExpiresAt = credential?.expiresAt ?? 0;
+        accountRenewalRequired = false;
         if (credential) setAccountEntryUrl(credential.accountEntryUrl);
       } catch (error) {
         if (!attempt.signal.aborted && !closedByUs.current && bootstrap === attempt) {
           if (error instanceof AccountRelaySessionExpired) {
             closedByUs.current = true;
+            statusRef.current = "offline";
             setStatus("offline");
             setAccessRequired(true);
             setAccountAccessRequired(true);
@@ -176,10 +206,18 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
             // already validated on this account connection instead of guessing
             // an origin or losing the control-side verification handoff.
             if (error.accountEntryUrl) setAccountEntryUrl(error.accountEntryUrl);
+            stopSocket.current?.();
           } else scheduleReconnect();
         }
         return;
+      } finally {
+        if (bootstrap === attempt) bootstrap = undefined;
+        if (attempt.signal.aborted && !closedByUs.current && !connectionPageHidden())
+          scheduleReconnect();
       }
+      // A proactive renewal keeps the old socket usable until its replacement
+      // credential is ready. Reconnection then uses the existing read-only resync.
+      if (wsRef.current) retire(wsRef.current, false);
       const wsUrl = window.location.origin.replace(/^http/, "ws") + "/ws";
       const ws = new WebSocket(wsUrl);
       let pairingFallback: { token: string; name: string; secretHash: string } | undefined;
@@ -280,11 +318,27 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
           setStatus("online");
           connectionGenerationRef.current += 1;
           setConnectionGeneration(connectionGenerationRef.current);
+          if (refreshTimer) clearTimeout(refreshTimer);
+          if (accountSession) {
+            refreshTimer = setTimeout(
+              () => {
+                if (closedByUs.current || connectionPageHidden()) return;
+                accountRenewalRequired = true;
+                connect();
+              },
+              Math.max(1000, accountExpiresAt - Date.now() - 30_000),
+            );
+          }
           handlersRef.current.onServerEvent?.(msg as MobileServerEvent);
           handlersRef.current.onResyncNeeded?.("online");
           return;
         }
         if (obj.type === "auth.failed" || obj.type === "pair.failed") {
+          if (accountSession) {
+            accountRenewalRequired = true;
+            retire(ws);
+            return;
+          }
           if (obj.type === "auth.failed" && pairingFallback) {
             // A fresh QR can intentionally replace credentials revoked on the
             // desktop. Use that grant once; a failed grant still stops below.
@@ -315,7 +369,11 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
 
       ws.onclose = (event) => {
         if (wsRef.current !== ws) return;
-        if (event?.code === 4407) {
+        if (accountSession && [4401, 4403, 4407].includes(event?.code ?? 0)) {
+          // A short Host grant expiring is not a revoked account authorization.
+          // Only the cookie-only resume endpoint can make that distinction.
+          accountRenewalRequired = true;
+        } else if (event?.code === 4407) {
           closedByUs.current = true;
           statusRef.current = "offline";
           setStatus("offline");
@@ -342,7 +400,13 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
     const resyncOrReconnect = (reason: ResyncReason): void => {
       if (closedByUs.current || connectionPageHidden()) return;
       const ws = wsRef.current;
-      if (ws && ws.readyState === WebSocket.OPEN && statusRef.current === "online") {
+      if (
+        !accountRenewalRequired &&
+        (!accountSession || accountExpiresAt > Date.now() + 30_000) &&
+        ws &&
+        ws.readyState === WebSocket.OPEN &&
+        statusRef.current === "online"
+      ) {
         health?.resume();
         handlersRef.current.onResyncNeeded?.(reason);
         return;
@@ -354,6 +418,7 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
       if (document.visibilityState === "visible") resyncOrReconnect("visible");
       else {
         health?.pause();
+        bootstrap?.abort();
         if (retryTimer) clearTimeout(retryTimer);
       }
     };
@@ -369,6 +434,7 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
       closedByUs.current = true;
       bootstrap?.abort();
       if (retryTimer) clearTimeout(retryTimer);
+      if (refreshTimer) clearTimeout(refreshTimer);
       health?.stop();
       health = undefined;
       window.removeEventListener("online", onOnline);
@@ -381,6 +447,7 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
     stopSocket.current = stop;
     return () => {
       stop();
+      logoutGeneration.current += 1;
       setAccountRelayCredential(undefined);
       if (stopSocket.current === stop) stopSocket.current = undefined;
     };
@@ -391,6 +458,7 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
     accessRequired,
     accountAccessRequired,
     accountEntryUrl,
+    logoutError,
     deviceName,
     connectionGeneration,
     send,
