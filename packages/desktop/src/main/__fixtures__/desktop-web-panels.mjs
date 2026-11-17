@@ -9,6 +9,9 @@ const root = realpathSync(process.argv[2]);
 const tunnel = process.argv[3] === "tunnel";
 const relay = process.argv[3] === "relay";
 const publicAccess = tunnel || relay;
+const originalDateNow = Date.now;
+let relayClockOffset = 0;
+if (relay) Date.now = () => originalDateNow() + relayClockOffset;
 process.env.HOME = join(root, "home");
 process.env.CODE_SHELL_HOME = join(root, "code-shell-home");
 const desktopMain = resolve(import.meta.dir, "..");
@@ -202,6 +205,7 @@ const api = createDesktopWebService({
 });
 let remoteHost;
 let accessCookie;
+let initialRelayExpiry;
 let passcode;
 if (publicAccess) {
   const { RemoteHostManager } = await import(
@@ -227,7 +231,7 @@ if (publicAccess) {
         hostId: "fixture-host",
         environmentId: "fixture-environment",
         leaseId: "fixture-lease",
-        expiresAt: Date.now() + 600000,
+        expiresAt: Date.now() + 90000,
       }),
       listProjects: async () => [],
     });
@@ -255,6 +259,7 @@ if (publicAccess) {
     });
     assert.equal(claim.status, 200);
     const grant = await claim.json();
+    initialRelayExpiry = grant.expiresAt;
     device = { id: grant.deviceId };
     deviceSecret = grant.secretHash;
     accessCookie = claim.headers.get("set-cookie").split(";", 1)[0];
@@ -290,11 +295,12 @@ async function request(
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
 }
-async function login() {
+async function login({ withExistingCookie = false } = {}) {
+  // A browser re-exchange carries its existing session cookie automatically.
   const response = await request("/api/v1/desktop/session", {
     method: "POST",
     body: { deviceId: device.id, secretHash: deviceSecret },
-    authenticated: false,
+    authenticated: withExistingCookie,
   });
   assert.equal(response.status, 200);
   cookie = response.headers.get("set-cookie").split(";", 1)[0];
@@ -330,6 +336,38 @@ try {
   assert.equal((await request("/api/v1/panels", { cwd: forged })).status, 403);
   const grantA = await prepare(first);
   const grantB = await prepare(second);
+  if (relay) {
+    const previousCookie = accessCookie;
+    relayClockOffset += 30000;
+    const renewed = await request("/api/v1/relay/session", {
+      method: "POST",
+      body: { handoff: "r".repeat(43) },
+    });
+    assert.equal(renewed.status, 200);
+    const next = await renewed.json();
+    assert.equal(next.deviceId, device.id, "renewal must retain the existing Panel owner");
+    assert.equal(next.secretHash, deviceSecret);
+    accessCookie = renewed.headers.get("set-cookie").split(";", 1)[0];
+    const previousDesktopCookie = cookie;
+    await login({ withExistingCookie: true });
+    assert.equal(cookie, previousDesktopCookie, "renewal must not replace the owner session");
+    relayClockOffset = initialRelayExpiry - originalDateNow() + 1;
+    const expired = await fetch(baseUrl + "/api/v1/panels", {
+      headers: {
+        Host: new URL(publicOrigin).host,
+        Origin: publicOrigin,
+        Cookie: `${previousDesktopCookie}; ${previousCookie}`,
+      },
+    });
+    assert.equal(expired.status, 401, "ordinary requests retain the old token expiry");
+    for (const path of [grantA.src, new URL("./main.js", baseUrl + grantA.src).pathname])
+      assert.equal(
+        (await request(path, { authenticated: false, origin: "null" })).status,
+        200,
+        "an existing Panel capability follows the same freshly redeemed owner",
+      );
+    assert.equal(await call(first, grantA, "storage.get", { key: "marker" }), "desktop-first");
+  }
   if (publicAccess) {
     for (const [path, method] of [
       ["/health", "GET"],

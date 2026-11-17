@@ -412,7 +412,12 @@ export class RemoteHostManager extends EventEmitter {
             .handle(req, res, {
               baseUrl,
               isAccessAuthorized: account?.isAuthorized ?? gate?.captureValidity(),
-              ...(account ? { accessDeviceId: account.deviceId } : {}),
+              ...(account
+                ? {
+                    accessDeviceId: account.deviceId,
+                    isCapabilityAuthorized: account.isCapabilityAuthorized,
+                  }
+                : {}),
             })
             .then((handled) => {
               if (!handled && !res.writableEnded) {
