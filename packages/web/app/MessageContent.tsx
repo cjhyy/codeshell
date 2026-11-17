@@ -88,7 +88,25 @@ export function MessageCopyButton({ text, label = "复制" }: { text: string; la
   };
   return (
     <button className="message-copy" onClick={() => void copy()} aria-label={label} title={label}>
-      {status === "copied" ? "已复制" : status === "error" ? "复制失败" : label}
+      <svg
+        width="13"
+        height="13"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        aria-hidden="true"
+      >
+        {status === "copied" ? (
+          <path d="m5 12 4 4L19 6" />
+        ) : (
+          <>
+            <rect x="8" y="8" width="12" height="12" rx="2" />
+            <path d="M16 8V4H4v12h4" />
+          </>
+        )}
+      </svg>
+      <span>{status === "copied" ? "已复制" : status === "error" ? "复制失败" : label}</span>
     </button>
   );
 }
@@ -186,6 +204,28 @@ function markdownComponents(onOpenFile?: (path: string) => void): Components {
   };
 }
 
+export interface VisibleReplyText {
+  text: string;
+  complete: boolean;
+}
+
+/** Report only the body actually mounted by the history disclosure, never fetch for copying. */
+function VisibleReplyBody({
+  text,
+  complete,
+  onChange,
+  children,
+}: VisibleReplyText & {
+  onChange?: (body?: VisibleReplyText) => void;
+  children: React.ReactNode;
+}) {
+  React.useLayoutEffect(() => {
+    onChange?.({ text, complete });
+    return () => onChange?.();
+  }, [text, complete, onChange]);
+  return <>{children}</>;
+}
+
 /** Match Desktop's fast streaming path; parse Markdown only for settled text. */
 export const MessageContent = React.memo(function MessageContent({
   text,
@@ -197,6 +237,9 @@ export const MessageContent = React.memo(function MessageContent({
   loadHistoryDetail,
   reloadHistory,
   detailScope = "",
+  showCopy = true,
+  onVisibleTextChange,
+  onReasoningOpen,
 }: {
   text: string;
   reasoning?: string;
@@ -207,6 +250,10 @@ export const MessageContent = React.memo(function MessageContent({
   loadHistoryDetail?: HistoryDetailLoader;
   reloadHistory?: () => void;
   detailScope?: string;
+  /** Process narration and grouped answer fragments share a single outer action. */
+  showCopy?: boolean;
+  onVisibleTextChange?: (body?: VisibleReplyText) => void;
+  onReasoningOpen?: () => void;
 }) {
   const components = React.useMemo(() => markdownComponents(onOpenFile), [onOpenFile]);
   const [reasoningOpen, setReasoningOpen] = React.useState(false);
@@ -215,7 +262,10 @@ export const MessageContent = React.memo(function MessageContent({
       {reasoning || reasoningDetailRef ? (
         <details
           className="message-reasoning"
-          onToggle={(event) => setReasoningOpen(event.currentTarget.open)}
+          onToggle={(event) => {
+            setReasoningOpen(event.currentTarget.open);
+            if (event.currentTarget.open) onReasoningOpen?.();
+          }}
         >
           <summary>{streaming && !text ? "思考中…" : "思考过程"}</summary>
           {reasoningOpen && (
@@ -241,8 +291,8 @@ export const MessageContent = React.memo(function MessageContent({
         load={loadHistoryDetail}
         reload={reloadHistory}
       >
-        {(body) => (
-          <>
+        {(body, complete) => (
+          <VisibleReplyBody text={body} complete={complete} onChange={onVisibleTextChange}>
             {streaming ? (
               <div className="message-streaming">
                 {body || (!reasoning ? "正在思考…" : "")}
@@ -262,15 +312,12 @@ export const MessageContent = React.memo(function MessageContent({
                 {body}
               </ReactMarkdown>
             ) : null}
-            {!streaming && body ? (
+            {showCopy && !streaming && body ? (
               <div className="message-actions">
-                <MessageCopyButton
-                  text={body}
-                  label={textDetailRef && body === text ? "复制已显示内容" : "复制回复"}
-                />
+                <MessageCopyButton text={body} label={complete ? "复制回复" : "复制已显示内容"} />
               </div>
             ) : null}
-          </>
+          </VisibleReplyBody>
         )}
       </ExpandedHistoryText>
     </div>
