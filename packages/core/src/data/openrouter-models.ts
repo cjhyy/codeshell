@@ -199,8 +199,20 @@ export function getOpenRouterModels(): OpenRouterModel[] {
   return loadSnapshot().models;
 }
 
+let lookupSupplement: ReadonlyMap<string, OpenRouterModel> = new Map();
+
+/**
+ * Full live catalog consulted only by id lookups (pricing, limits) for models
+ * the curated snapshot lacks. Unlike `setOpenRouterSnapshot` it never changes
+ * picker lists or the zero-config default, so a background refresh cannot
+ * reorder what a user sees mid-session.
+ */
+export function setOpenRouterLookupSupplement(models: readonly OpenRouterModel[]): void {
+  lookupSupplement = new Map(models.map((model) => [model.id, model]));
+}
+
 export function findOpenRouterModel(id: string): OpenRouterModel | undefined {
-  return loadSnapshot().models.find((m) => m.id === id);
+  return loadSnapshot().models.find((m) => m.id === id) ?? lookupSupplement.get(id);
 }
 
 /** Models filtered by vendor prefix, e.g. "anthropic", "openai", "deepseek". */

@@ -24,7 +24,12 @@ describe("external runtime model discovery cache", () => {
       discoverCodex: async (options) => {
         command = options?.command;
         return [
-          { model: "small-model", displayName: "Small Model", isDefault: false },
+          {
+            model: "small-model",
+            displayName: "Small Model",
+            isDefault: false,
+            supportsImages: false,
+          },
           futureModel,
         ];
       },
@@ -36,7 +41,10 @@ describe("external runtime model discovery cache", () => {
       label: "Codex · Future Model",
       kind: "codex",
       provider: "codex",
+      // Older CLIs omit inputModalities: Codex models accept images by default.
+      supportsVision: true,
     });
+    expect(entries.find((entry) => entry.key === "codex/small-model")?.supportsVision).toBe(false);
     expect(entries.filter((entry) => entry.kind === "codex").map((entry) => entry.key)).toEqual([
       "codex/future-model",
       "codex/small-model",
