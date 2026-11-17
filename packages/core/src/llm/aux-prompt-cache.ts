@@ -1,12 +1,12 @@
 /**
  * Prompt-cache wiring for auxiliary model calls (memory extraction, session
- * summary). These calls repeat most of their prompt on the next run of the
+ * summary, goal judge). These calls repeat most of their prompt on the next run of the
  * same session, but a provider only resumes from a save point at the end of a
  * message, so the repeated part is sent as its own messages with the stable
  * boundary after the last of them. See docs/todo/prompt-cache-optimization.md §五.
  */
-import type { PromptCacheRequestContext, PromptCacheStrategy } from "../llm/prompt-cache.js";
-import { usesExplicitCacheMarkers } from "../llm/providers/openai-cache-content.js";
+import type { PromptCacheRequestContext, PromptCacheStrategy } from "./prompt-cache.js";
+import { usesExplicitCacheMarkers } from "./providers/openai-cache-content.js";
 import type { Message } from "../types.js";
 
 export interface AuxPromptCachePlan {
