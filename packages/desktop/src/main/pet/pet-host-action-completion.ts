@@ -99,10 +99,16 @@ export class PetHostActionReceiptService implements PetHostActionReceiptRecorder
     try {
       const sessionDir = join(this.options.sessionsRootDir, input.petSessionId);
       await mkdir(sessionDir, { recursive: true, mode: 0o700 });
+      // Both records are display-only: the worker's live Engine never sent them
+      // to the model, so a reload must not replay them into model history
+      // (that would fork the prompt prefix and its cache after every restart).
+      // The worker appends to the same file; whole-line O_APPEND writes keep
+      // the two processes from overwriting each other, and nothing rewrites it.
       const transcript = Transcript.loadTailForAppend(join(sessionDir, "transcript.jsonl"));
       if (input.userMessage?.trim() && !transcript.hasClientMessageId(input.clientMessageId)) {
         transcript.appendMessage("user", input.userMessage.trim(), {
           clientMessageId: input.clientMessageId,
+          displayOnly: true,
         });
       }
       const assistantClientMessageId =
@@ -124,6 +130,7 @@ export class PetHostActionReceiptService implements PetHostActionReceiptRecorder
       if (!transcript.hasClientMessageId(assistantClientMessageId)) {
         transcript.appendMessage("assistant", message, {
           clientMessageId: assistantClientMessageId,
+          displayOnly: true,
         });
       }
     } catch (error) {

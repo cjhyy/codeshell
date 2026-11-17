@@ -27,6 +27,7 @@ import { syncDirectoryAncestors } from "../model-request-boundary/durability.js"
 import {
   contextMessageMark,
   isContextMessageEvent,
+  isDisplayOnlyMessageEvent,
   markReplayedContextMessage,
   readHookReminderData,
   revokedLedgerEvents,
@@ -567,6 +568,8 @@ export class Transcript {
       contextLedger?: ContextLedgerEventData;
       /** Lifecycle hook reminder (see context-messages.ts). Always injected. */
       hookReminder?: HookReminderEventData;
+      /** Host record the live model never saw; replay keeps it out of context. */
+      displayOnly?: boolean;
     },
   ): TranscriptEvent {
     if (opts?.clientMessageId) {
@@ -593,6 +596,7 @@ export class Transcript {
       ...(opts?.correlationIds ? { correlationIds: opts.correlationIds } : {}),
       ...(opts?.contextLedger ? { contextLedger: opts.contextLedger } : {}),
       ...(opts?.hookReminder ? { hookReminder: opts.hookReminder } : {}),
+      ...(opts?.displayOnly ? { displayOnly: true } : {}),
     });
   }
 
@@ -759,7 +763,7 @@ export class Transcript {
     messages: Message[];
     liveIndexByClientMessageId: Map<string, number>;
   } {
-    const events = this.contextReplayEvents();
+    const events = this.contextReplayEvents().filter((e) => !isDisplayOnlyMessageEvent(e));
     const messages: Message[] = [];
     const liveIndexByClientMessageId = new Map<string, number>();
     const selectedToolResults = preferredToolResults(events);
@@ -1148,6 +1152,7 @@ export class Transcript {
     for (const event of events) {
       switch (event.type) {
         case "message": {
+          if (isDisplayOnlyMessageEvent(event)) break;
           const role = event.data.role as string;
           messages.push({ role, content: modelContentOf(event, rewrites) });
           break;
@@ -1241,7 +1246,10 @@ export class Transcript {
     }
     // A hand-picked range carries the conversation, not the engine's context.
     const selected = frozen.filter(
-      (event) => CONTEXT_EVENT_TYPES.has(event.type) && !isContextMessageEvent(event),
+      (event) =>
+        CONTEXT_EVENT_TYPES.has(event.type) &&
+        !isContextMessageEvent(event) &&
+        !isDisplayOnlyMessageEvent(event),
     );
     validateSelectedToolPairs(selected);
     return {
