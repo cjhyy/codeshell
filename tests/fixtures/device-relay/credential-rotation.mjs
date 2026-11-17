@@ -142,6 +142,34 @@ export async function credentialRotationAcceptance(api, tls, root, network) {
     } finally {
       await legacy.close();
     }
+    let rejectedTls = false;
+    const untrusted = api.createDeviceRelayConnector({
+      relayOrigin: origin,
+      hostId,
+      publicOrigin,
+      localHost: target,
+      getCredential: async () => activeToken,
+      onState: (state) => {
+        if (state === "disconnected") {
+          rejectedTls = true;
+          void untrusted.close();
+        }
+      },
+    });
+    try {
+      untrusted.start();
+      await until(() => rejectedTls);
+      await untrusted.close();
+      assert.equal(controls.length, 4, "untrusted TLS never receives the account continuity proof");
+    } finally {
+      await untrusted.close();
+    }
+    lifetime.abort();
+    assert.throws(
+      () => connector.start(),
+      /abort/i,
+      "stopped Host cannot establish new continuity",
+    );
   } finally {
     await connector.close();
     lifetime.abort();

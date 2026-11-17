@@ -577,17 +577,25 @@ test("Desktop login binds automatically after network recovery but requires sepa
       expect(configured).toBe(provider);
       expect(capabilityRequests).toBe(capabilityCount);
     }
+    // A stale connector reference alone cannot preserve a stopped Host's
+    // authority. Real Host shutdown revokes its target before this recovery.
+    active = undefined;
+    await controller.activateAccountRelay(identity, () => true);
+    expect(starts).toBe(2);
+    expect(connectorStarts).toBe(2);
+    expect(connectorCloses).toBeGreaterThan(0);
+    expect(configured).not.toBe(provider);
     await controller.stop();
     await controller.activateAccountRelay(identity, () => true);
     expect(enrollments).toBe(1);
-    expect(starts).toBe(1);
+    expect(starts).toBe(2);
     expect(controller.relayStatus()).toMatchObject({
       state: "stopped",
       remoteAccessEnabled: false,
     });
     await controller.start({ mode: "relay" });
-    expect(starts).toBe(2);
-    expect(connectorStarts).toBe(2);
+    expect(starts).toBe(3);
+    expect(connectorStarts).toBe(3);
     expect(connectorCloses).toBeGreaterThan(0);
     expect(configured).not.toBe(provider);
     expect([saved!.hostId, saved!.environmentId, saved!.credentialEpoch]).toEqual(binding);
