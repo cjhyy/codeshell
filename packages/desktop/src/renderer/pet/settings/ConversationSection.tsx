@@ -10,6 +10,7 @@ import { useT } from "../../i18n";
 import { writeSettings } from "../../settingsBus";
 import { useTargetedDebouncedSave } from "../../settings/useTargetedDebouncedSave";
 import { useToast } from "../../ui/ToastProvider";
+import { DelegatedPermissionCard } from "./DelegatedPermissionCard";
 import {
   petPersonalizationFromSettings,
   petPersonalizationSettingsPatch,
@@ -223,7 +224,7 @@ export interface ConversationSectionProps {
   onResetModel: () => void;
 }
 
-/** 对话: Mimi's manager-chat model and its personalization, edited in place. */
+/** 对话: Mimi's manager-chat model, delegated-work permissions and personalization. */
 export function ConversationSection({
   activeModelKey,
   modelOptions,
@@ -266,6 +267,7 @@ export function ConversationSection({
           )}
         </CardContent>
       </Card>
+      <DelegatedPermissionCard />
       <PetPersonalizationForm />
     </>
   );

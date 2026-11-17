@@ -202,6 +202,7 @@ import {
   petMemoryAutoExtractFromSettings,
   petMemoryAutoExtractSettingsPatch,
   petPersonalizationFromSettings,
+  resolvePetDelegatedPermissionMode,
 } from "../shared/pet-settings.js";
 import {
   sessionModelKeyFromSettings,
@@ -1853,6 +1854,19 @@ async function createWindow(): Promise<BrowserWindow> {
           return sessionModelKeyFromSettings(new SettingsManager(cwd, "full").get());
         },
         run: imExternalSubmissions.run,
+      },
+      // Read per launch: a settings change applies to the next delegation. Like
+      // the composer, a trusted project's default mode overrides the user's; an
+      // unreadable settings file falls back to asking.
+      permissionMode: async ({ cwd }) => {
+        try {
+          const user = await readSettings("user");
+          const trusted = getTrustCachedSync(cwd) === "trusted";
+          const project = trusted ? await readSettings("project", cwd) : null;
+          return resolvePetDelegatedPermissionMode({ user, project });
+        } catch {
+          return "default";
+        }
       },
       resolveSessionCwd: async (sessionId) => {
         const entry = await getSessionCwdIndex().refresh(sessionId);

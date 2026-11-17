@@ -26,6 +26,13 @@ export const pet = {
           "单独选择会覆盖新会话默认模型；未单独指定时，Mimi 和微信沿用新会话默认模型。长程工作 Session 继续使用自己的默认模型。",
         useAppDefault: "跟随应用默认",
         followingAppDefault: "当前跟随应用默认模型",
+        delegatedPermissionTitle: "派发工作的权限",
+        delegatedPermissionDescription:
+          "Mimi 派出的工作会话用哪种权限运行。从微信等渠道派出的工作没人在电脑前审批，“每次询问”会让它停下来等你。下一次派发时生效。",
+        delegatedPermissionInherit: "跟随我的默认权限模式",
+        delegatedPermissionAuto: "自动（低风险操作自动放行，其余直接失败）",
+        delegatedPermissionAsk: "每次询问",
+        delegatedPermissionSaveFailed: "权限设置保存失败：{error}",
         widgetTitle: "显示 Mimi",
         widgetDescription:
           "桌面上只显示一个 Mimi。停靠模式是角落里的小狗头，带工作动态和未读提醒；移动模式是会走到电脑操作目标旁边的角色。两种模式不会同时出现。",
@@ -556,6 +563,13 @@ export const pet = {
           "An explicit choice overrides the new-chat default. Otherwise Mimi and WeChat follow the new-chat default. Long-running work Sessions keep their own default model.",
         useAppDefault: "Use app default",
         followingAppDefault: "Currently following the app default model",
+        delegatedPermissionTitle: "Permissions for delegated work",
+        delegatedPermissionDescription:
+          'The permission mode for work Sessions Mimi starts. Work started from WeChat or other channels has no one at the computer to approve, so "Ask every time" makes it wait for you. Applies to the next delegation.',
+        delegatedPermissionInherit: "Follow my default permission mode",
+        delegatedPermissionAuto: "Auto (low-risk actions run, everything else fails)",
+        delegatedPermissionAsk: "Ask every time",
+        delegatedPermissionSaveFailed: "Couldn't save the permission setting: {error}",
         widgetTitle: "Show Mimi",
         widgetDescription:
           "Only one Mimi appears on the desktop. Docked mode is the small corner pet with work activity and unread alerts; moving mode is the character that walks to computer-use targets. The two never appear together.",

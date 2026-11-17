@@ -147,6 +147,14 @@ export const SettingsSchema = z
          */
         memoryAutoExtract: z.boolean().default(true),
         /**
+         * Permission mode for Work Sessions Mimi delegates. "inherit" (the
+         * default when absent) follows the owner's default Session mode, with
+         * plan downgraded to default; "auto" uses the engine's auto mode
+         * (low-risk calls run, the rest fail without asking); "ask" always uses
+         * the default mode. An unknown value falls back to inherit.
+         */
+        delegatedPermissionMode: z.enum(["inherit", "auto", "ask"]).optional().catch(undefined),
+        /**
          * Mimi-only presentation and standing preferences. These are injected
          * only into Pet manager turns; ordinary work Sessions continue to use
          * the separate agent.* personalization fields above.
