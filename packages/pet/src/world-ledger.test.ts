@@ -42,11 +42,22 @@ describe("Mimi world ledger providers", () => {
     expect(byKey["mimi-follow-ups"]).toMatchObject({ items: [], footer: "(none)" });
   });
 
-  test("a list the host did not send produces no section; other Sessions get nothing", async () => {
+  test("a list missing from the sent lists produces no section; other Sessions get nothing", async () => {
     expect((await run(JSON.stringify({ workspaces: [] }))).filter(Boolean)).toHaveLength(1);
-    expect((await run("not json")).filter(Boolean)).toHaveLength(0);
     const work = { id: "s-1", kind: "work", profileId: "general", isSubAgent: false };
     expect((await run(JSON.stringify({ workspaces: [] }), work)).filter(Boolean)).toHaveLength(0);
     expect(MIMI_LEDGER_LISTS).toContain("reusableSessions");
+  });
+
+  test("a Mimi turn without usable lists keeps every list as last told", async () => {
+    const unchanged = MIMI_LEDGER_LISTS.map(() => ({
+      key: expect.stringMatching(/^mimi-[a-z-]+$/),
+      unchanged: true,
+    }));
+    expect(await run(undefined)).toEqual(unchanged);
+    expect(await run("not json")).toEqual(unchanged);
+    expect((await run(undefined))[1]).toEqual({ key: "mimi-reusable-sessions", unchanged: true });
+    const work = { id: "s-1", kind: "work", profileId: "general", isSubAgent: false };
+    expect((await run(undefined, work)).filter(Boolean)).toHaveLength(0);
   });
 });

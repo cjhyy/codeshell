@@ -18,6 +18,8 @@ export function prepareOpenAICacheHistory(input: {
   scopeIdentity: Readonly<Record<string, unknown>>;
   messages: readonly OpenAI.ChatCompletionMessageParam[];
   stableBoundaryIndex: number | undefined;
+  /** Last wire message before volatile tail context; defaults to the last message. */
+  rollingBoundaryIndex?: number;
   requestIdentity: () => unknown;
 }) {
   const { history, policy, request, messages } = input;
@@ -28,8 +30,11 @@ export function prepareOpenAICacheHistory(input: {
   ) {
     return undefined;
   }
+  // Volatile tail context changes every step, so a boundary that includes it
+  // could never be read back; the latest boundary ends before it.
   let latestBoundaryIndex = -1;
-  for (let index = messages.length - 1; index >= 0; index--) {
+  const searchFrom = Math.min(messages.length - 1, input.rollingBoundaryIndex ?? Infinity);
+  for (let index = searchFrom; index >= 0; index--) {
     const message = messages[index]!;
     if (
       (message.role === "user" || message.role === "tool") &&

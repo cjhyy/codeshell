@@ -348,7 +348,8 @@ export class PromptComposer {
       { key: "goal-tool", text: this.buildGoalToolContext() },
     ];
     return sections.filter(
-      (section) => Boolean(section.text) || (section.knownIds?.length ?? 0) > 0,
+      (section) =>
+        Boolean(section.text) || (section.knownIds?.length ?? 0) > 0 || section.unchanged === true,
     );
   }
 

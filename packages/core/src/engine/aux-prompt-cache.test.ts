@@ -9,7 +9,7 @@ import {
   SESSION_TRANSCRIPT_SYSTEM_PROMPT,
   sessionTranscriptCachePlan,
 } from "../services/session-transcript-prompt.js";
-import { auxCachedRequest, auxPromptCacheScope } from "./aux-prompt-cache.js";
+import { auxCachedRequest, auxPromptCacheScope } from "../llm/aux-prompt-cache.js";
 
 function turns(count: number) {
   return Array.from({ length: count }, (_, index) => ({

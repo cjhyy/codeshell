@@ -89,6 +89,15 @@ export interface ContextSection {
    * Defaults to the ids of the listable items.
    */
   knownIds?: readonly string[];
+  /**
+   * The owner did not provide this section this run, which is not the same as
+   * the section being gone (a host that sends some context only on some
+   * turns). Such a section has no text: the model keeps what it was last told,
+   * so an update neither changes nor withdraws it. A snapshot cannot repeat
+   * text it was not given, so it leaves the section out; the next run that
+   * provides it sends it whole.
+   */
+  unchanged?: true;
 }
 
 /** The header/items/footer triple a list renderer returns. */
@@ -416,7 +425,8 @@ export function planLedgerEmission(
     return text === null ? { kind: "none", state } : { kind: "snapshot", text, state };
   }
 
-  const state = withSnapshotOnlyAsTold(ledgerStateForSections(current), previous);
+  const unchanged = new Set(sections.filter((s) => s.unchanged === true).map((s) => s.key));
+  const state = withToldStateKept(ledgerStateForSections(current), previous, unchanged);
   const blocks: string[] = [];
   for (const section of current) {
     if (section.compare === "snapshot-only") continue;
@@ -439,14 +449,19 @@ export function planLedgerEmission(
 }
 
 /**
- * Snapshot-only sections stay as the latest snapshot showed them: the model
- * was told nothing since, whatever the current text is.
+ * Snapshot-only sections stay as the latest snapshot showed them, and a
+ * section not provided this run stays as last told: the model was told
+ * nothing since, whatever the current text is.
  */
-function withSnapshotOnlyAsTold(state: LedgerState, previous: LedgerState): LedgerState {
+function withToldStateKept(
+  state: LedgerState,
+  previous: LedgerState,
+  unchanged: ReadonlySet<string>,
+): LedgerState {
   const kept = Object.entries(state.sections).filter(([, section]) => !section.snapshotOnly);
   const keys = new Set(kept.map(([key]) => key));
   const told = Object.entries(previous.sections).filter(
-    ([key, section]) => section.snapshotOnly === true && !keys.has(key),
+    ([key, section]) => !keys.has(key) && (section.snapshotOnly === true || unchanged.has(key)),
   );
   return { ...state, sections: Object.fromEntries([...kept, ...told]) };
 }

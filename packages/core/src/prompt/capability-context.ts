@@ -73,6 +73,14 @@ export function capabilityContextSections(
       shared.push(output);
       continue;
     }
+    if (output.unchanged === true) {
+      const key = ownSectionKey(output);
+      // Without its own key it names nothing to keep.
+      if (key === undefined || keys.has(key)) continue;
+      keys.add(key);
+      own.push({ key, text: "", unchanged: true });
+      continue;
+    }
     const list = listSection(output);
     const text = list ? list.text : output.text;
     if (typeof text !== "string" || (!text && !list)) continue;

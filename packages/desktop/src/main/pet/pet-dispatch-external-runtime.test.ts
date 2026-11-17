@@ -554,7 +554,10 @@ describe("Mimi external manager execution", () => {
     });
     expect(calls).toHaveLength(2);
     expect(calls.every((params) => params.model === "claude-code/sonnet")).toBe(true);
-    expect(calls[1]).toMatchObject({ injected: true, toolAllowlist: [], skillAllowlist: [] });
+    expect(calls[1]).toMatchObject({ injected: true, skillAllowlist: [] });
+    // The receipt keeps the manager's tool table; it only allows no host action.
+    expect(calls[1]).not.toHaveProperty("toolAllowlist");
+    expect(calls[1]).toMatchObject({ profileParams: { hostActions: [], workspaces: [] } });
     expect(nativeCalls).toEqual([]);
   });
 

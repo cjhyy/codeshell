@@ -8,6 +8,8 @@ import {
   type PetHostActionCompletedEvent,
 } from "./pet-host-action-completion.js";
 import { replacementReceiptDisplayMetadata } from "../../shared/pet-host-action-receipt.js";
+import { Transcript } from "@cjhyy/code-shell-core";
+import { transcriptToFoldItems } from "../transcript-reader.js";
 
 const roots: string[] = [];
 
@@ -308,5 +310,36 @@ describe("Pet host-action completion", () => {
       message: "微信平台已接受发送请求。",
       replaceAssistant: true,
     });
+  });
+
+  test("records display-only rows that the UI shows and model replay skips", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pet-display-only-"));
+    roots.push(root);
+    const service = new PetHostActionReceiptService({
+      sessionsRootDir: root,
+      qrDir: join(root, "qr"),
+    });
+    await service.record({
+      petSessionId: "pet-one",
+      clientMessageId: "desktop:clear",
+      executions: [],
+      baseMessage: "上下文已清空",
+      replaceAssistant: true,
+      userMessage: "/clear",
+    });
+    const file = join(root, "pet-one", "transcript.jsonl");
+    const rows = readFileSync(file, "utf8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    expect(rows.map((row) => [row.data.role, row.data.displayOnly])).toEqual([
+      ["user", true],
+      ["assistant", true],
+    ]);
+    // The worker's live Engine never saw either row: a reload must not either.
+    expect(Transcript.loadFromFile(file).toMessages()).toEqual([]);
+    const folded = JSON.stringify(transcriptToFoldItems(readFileSync(file, "utf8")));
+    expect(folded).toContain("/clear");
+    expect(folded).toContain("上下文已清空");
   });
 });

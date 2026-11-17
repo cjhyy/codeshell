@@ -61,7 +61,7 @@ export {
   MemoryOrchestrator,
   type MemoryOrchestratorOptions,
 } from "./services/memory-orchestrator.js";
-export { auxCachedRequest } from "./engine/aux-prompt-cache.js";
+export { auxCachedRequest } from "./llm/aux-prompt-cache.js";
 // Engine context stays on local disk; remote clients and exports leave it out.
 export {
   isContextEvent,
