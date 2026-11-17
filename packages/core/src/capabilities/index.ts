@@ -62,6 +62,14 @@ export interface CapabilityDynamicContextSection {
    */
   compare?: "snapshot-only" | "ids";
   knownIds?: readonly string[];
+  /**
+   * The provider has nothing to say about this section this run, which is
+   * not the same as the section being gone: the model keeps what it was last
+   * told (no update, no removal). Returning undefined instead withdraws an
+   * earlier section. A context sent whole (after compaction) leaves an
+   * unchanged section out until the provider sends it again.
+   */
+  unchanged?: true;
 }
 
 export type CapabilityDynamicContextProvider = (

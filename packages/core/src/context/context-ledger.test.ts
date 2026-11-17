@@ -472,6 +472,53 @@ describe("an id-compared section whose listing does not fit", () => {
   });
 });
 
+describe("a section its owner did not provide this run", () => {
+  const notProvided = (key: string): ContextSection => ({ key, text: "", unchanged: true });
+
+  test("is neither updated nor withdrawn, and keeps its told state", () => {
+    const state = ledgerStateForSections(base());
+    const emission = planLedgerEmission(
+      [notProvided("skills"), notProvided("memory"), goal],
+      state,
+    );
+    expect(emission).toEqual({ kind: "none", state });
+    // A real removal next to it is still told; the unchanged one is not.
+    const text = update([notProvided("memory")], state);
+    expect(text).toContain('<context-section-removed key="skills" />');
+    expect(text).toContain('<context-section-removed key="goal-tool" />');
+    expect(text).not.toContain('key="memory"');
+  });
+
+  test("a later change is diffed against what was last told", () => {
+    const told = planLedgerEmission(
+      [skills(["s1", "s2", "s3"]), notProvided("memory"), goal],
+      ledgerStateForSections(base()),
+    ).state;
+    const added = memoryLine("f", "brand new");
+    const text = update([skills(["s1", "s2", "s3"]), memory([...five, added]), goal], told);
+    expect(text).toContain(`<context-update section="memory">\nAdded:\n${added.text}`);
+    expect(text).not.toContain("<context-section-removed key=");
+  });
+
+  test("is left out of a snapshot and sent whole once provided", () => {
+    const first = planLedgerEmission([notProvided("memory"), goal], undefined);
+    expect(first.kind === "snapshot" && first.text).toBe(
+      `<system-reminder>\n${tagged(goal)}\n</system-reminder>`,
+    );
+    expect(first.state).toEqual(ledgerStateForSections([goal]));
+    expect(planLedgerEmission([notProvided("memory"), goal], first.state).kind).toBe("none");
+    expect(update([memory(five), goal], first.state)).toContain(tagged(memory(five)));
+  });
+
+  test("a provided section with the same key wins", () => {
+    const state = ledgerStateForSections(base());
+    const changed: ContextSection = { key: "goal-tool", text: "Goal state: active." };
+    expect(update([...base().slice(0, 2), changed, notProvided("goal-tool")], state)).toContain(
+      tagged(changed),
+    );
+  });
+});
+
 describe("parseLedgerState", () => {
   test("round-trips a state from JSON text or a parsed value", () => {
     const state = ledgerStateForSections(base());
