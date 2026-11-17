@@ -223,6 +223,69 @@ describe("OpenAIClient OpenRouter+Anthropic prompt-cache breakpoints", () => {
     expect(lastBlock.cache_control).toEqual({ type: "ephemeral" });
   });
 
+  describe("volatile tail context", () => {
+    const tools = [{ name: "Read", description: "read", inputSchema: { type: "object" } }];
+    const conversation: Message[] = [
+      { role: "user", content: "durable history" },
+      { role: "assistant", content: "in-run answer" },
+      { role: "user", content: "in-run task" },
+      { role: "user", content: "# Trusted Runtime Context (non-durable)\nnow: 12:00" },
+    ];
+    const marked = (body: any): number[] =>
+      body.messages.flatMap((message: any, index: number) =>
+        Array.isArray(message.content) && message.content.some((part: any) => part.cache_control)
+          ? [index]
+          : [],
+      );
+
+    it("puts the rolling marker on the last message before the volatile tail", async () => {
+      const { client, lastBody } = capturingClient({
+        providerKind: "openrouter",
+        model: "anthropic/claude-sonnet-5",
+      });
+      await client.createMessage({
+        ...opts(conversation, tools),
+        promptCache: { scopeId: "s", stablePrefixMessageCount: 1, volatileTailMessageCount: 1 },
+      });
+      const body = lastBody();
+      // System, stable end (durable history) and rolling end (in-run task).
+      expect(marked(body)).toEqual([0, 1, 3]);
+      // Resent every step and never read back: a marker would only pay a write,
+      // and its bytes stay the same text-part array as when it was marked.
+      expect(body.messages[4].content).toEqual([
+        { type: "text", text: "# Trusted Runtime Context (non-durable)\nnow: 12:00" },
+      ]);
+      // Anthropic allows four markers: system + tools + two history markers.
+      expect(JSON.stringify(body).match(/"cache_control"/g)).toHaveLength(4);
+    });
+
+    it("uses one history marker when the stable end is also the rolling end", async () => {
+      const { client, lastBody } = capturingClient({
+        providerKind: "openrouter",
+        model: "anthropic/claude-sonnet-5",
+      });
+      await client.createMessage({
+        ...opts(conversation, tools),
+        promptCache: { scopeId: "s", stablePrefixMessageCount: 3, volatileTailMessageCount: 1 },
+      });
+      const body = lastBody();
+      expect(marked(body)).toEqual([0, 3]);
+      expect(JSON.stringify(body).match(/"cache_control"/g)).toHaveLength(3);
+    });
+
+    it("keeps the last message as the rolling end without a volatile tail", async () => {
+      const { client, lastBody } = capturingClient({
+        providerKind: "openrouter",
+        model: "anthropic/claude-sonnet-5",
+      });
+      await client.createMessage({
+        ...opts(conversation, tools),
+        promptCache: { scopeId: "s", stablePrefixMessageCount: 1 },
+      });
+      expect(marked(lastBody())).toEqual([0, 1, 4]);
+    });
+  });
+
   it("does NOT add breakpoints for a non-Anthropic OpenRouter model", async () => {
     const { client, lastBody } = capturingClient({
       providerKind: "openrouter",
