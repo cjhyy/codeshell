@@ -235,6 +235,18 @@ export class MobileRemoteController {
     const activationGeneration = this.generation;
     let retryNetworkFailure = false;
     this.load();
+    // Focus/account refresh may run while the connector is retrying. Its Host
+    // and short-lived viewer grants remain valid; replacing them here would
+    // turn a transient transport failure into a new authorization requirement.
+    if (
+      this.registration?.relayOrigin === identity.origin &&
+      this.registration.accountId === identity.accountId &&
+      this.registration.remoteAccessEnabled === true &&
+      this.connector &&
+      this.deps.host.status()?.mode === "relay" &&
+      ["ready", "connecting", "disconnected"].includes(this.state)
+    )
+      return;
     this.availabilityMessage = undefined;
     try {
       retryNetworkFailure = true;

@@ -11,6 +11,8 @@ export const RELAY_PING_INTERVAL_MS = 20_000;
 export const RELAY_PONG_TIMEOUT_MS = 60_000;
 /** Control-upgrade header listing optional features; older directories ignore it. */
 export const RELAY_FEATURES_HEADER = "X-CodeShell-Relay-Features";
+/** Memory-only proof that an account connector survived an ordinary reconnect. */
+export const RELAY_CONTINUITY_HEADER = "X-CodeShell-Relay-Continuity";
 /** The directory may ask this computer for a one-time phone pairing token. */
 export const RELAY_FEATURE_PAIRING = "pairing";
 
