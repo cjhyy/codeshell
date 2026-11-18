@@ -54,6 +54,7 @@ describe("Server package public entry contracts", () => {
   test("keeps outbound transport and enrollment identity in the focused remote-relay capability", () => {
     expect(Object.keys(remoteRelayApi).sort()).toEqual([
       "RELAY_CONNECT_PATH",
+      "RELAY_CONTINUITY_HEADER",
       "RELAY_CONTROL_MAX_BYTES",
       "RELAY_DATA_CHUNK_BYTES",
       "RELAY_DATA_MAX_BYTES",
