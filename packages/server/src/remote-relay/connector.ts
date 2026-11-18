@@ -1,4 +1,5 @@
 import type { ConnectionOptions } from "node:tls";
+import { randomBytes } from "node:crypto";
 import { WebSocket } from "ws";
 import { openRelayStream, type RelayLocalStream } from "./local-stream.js";
 import {
@@ -7,6 +8,7 @@ import {
   isRelayToken,
   parseRelayControlMessage,
   RELAY_CONNECT_PATH,
+  RELAY_CONTINUITY_HEADER,
   RELAY_CONTROL_MAX_BYTES,
   RELAY_FEATURE_PAIRING,
   RELAY_FEATURES_HEADER,
@@ -76,6 +78,10 @@ export function createDeviceRelayConnector(
       setPublicBaseUrl: options.localHost.setPublicBaseUrl.bind(options.localHost),
     },
   };
+  // Only the main-owned account credential path opts into resumable authority.
+  // Keep this proof across control retries/credential rotation, never persist or
+  // send it on data streams. Explicit close retires it, unlike a socket retry.
+  let continuity: string | undefined;
   let generation = 0;
   let running = false;
   let closing: Promise<void> | undefined;
@@ -148,6 +154,7 @@ export function createDeviceRelayConnector(
     const ws = new WebSocket(url, {
       headers: {
         Authorization: `Bearer ${credential}`,
+        ...(continuity ? { [RELAY_CONTINUITY_HEADER]: continuity } : {}),
         ...(config.issuePairing ? { [RELAY_FEATURES_HEADER]: RELAY_FEATURE_PAIRING } : {}),
       },
       ca: config.ca,
@@ -278,6 +285,7 @@ export function createDeviceRelayConnector(
       config.localHost.signal.throwIfAborted();
       if (running) return;
       if (closing) throw new Error("Device relay connector is closing");
+      continuity = config.getCredential ? randomBytes(32).toString("base64url") : undefined;
       config.localHost.signal.addEventListener("abort", revoke, { once: true });
       running = true;
       failures = 0;
@@ -287,6 +295,7 @@ export function createDeviceRelayConnector(
     close() {
       if (closing) return closing;
       running = false;
+      continuity = undefined;
       config.localHost.signal.removeEventListener("abort", revoke);
       generation++;
       credentialAttempt?.abort();

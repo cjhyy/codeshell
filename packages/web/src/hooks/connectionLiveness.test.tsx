@@ -384,7 +384,7 @@ test.each(["gateway", "Host"])(
     let calls = 0;
     property(globalThis, "fetch", {
       value: async (url: string) => {
-        expect(url).toBe("/api/v1/relay/session");
+        expect(["/api/v1/relay/session", "/__relay/session/resume"]).toContain(url);
         calls++;
         return calls === 1
           ? Response.json({
@@ -395,7 +395,7 @@ test.each(["gateway", "Host"])(
               accountEntryUrl: "https://account.fixture.test/app",
             })
           : Response.json(
-              source === "gateway"
+              source === "gateway" || url === "/__relay/session/resume"
                 ? { error: "invalid_relay_authorization" }
                 : { active: false, accountRelay: true },
               { status: 401 },
@@ -425,7 +425,7 @@ test.each(["gateway", "Host"])(
       clock.advance(800);
       await flushMicrotasks();
     });
-    expect(calls).toBe(2);
+    expect(calls).toBe(3);
     expect(hook.result.current.accessRequired).toBe(true);
     expect(hook.result.current.accountAccessRequired).toBe(true);
     expect(hook.result.current.accountEntryUrl).toBe("https://account.fixture.test/app");
@@ -436,7 +436,7 @@ test.each(["gateway", "Host"])(
       clock.advance(100_000);
       await flushMicrotasks();
     });
-    expect(calls).toBe(2);
+    expect(calls).toBe(3);
     expect(Socket.instances).toHaveLength(1);
     expect(socket.sent.filter((event) => event.type === "chat.send")).toEqual([
       { type: "chat.send", text: "one original request" },

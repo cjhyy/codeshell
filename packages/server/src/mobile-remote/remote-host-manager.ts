@@ -115,6 +115,11 @@ export interface RemoteHostManagerOptions {
   uploads?: Pick<MobileUploadService, "acceptPut" | "cancelActiveTransfers" | "revokeDevice">;
   /** Optional shared Web HTTP facade. Pairing, uploads, and /mobile retain their routes. */
   webApi?: DesktopWebHttpApi;
+  /**
+   * Composed by the app (Web owns the browser bootstrap): a self-recovering page
+   * for an ended account relay grant. Without it the static revalidation page is used.
+   */
+  accountRelayRecoveryPage?: (accountEntryUrl: string) => { policy: string; html: string };
 }
 
 export class RemoteHostManager extends EventEmitter {
@@ -227,19 +232,19 @@ export class RemoteHostManager extends EventEmitter {
         (character) =>
           ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]!,
       );
+    const recovery = this.opts.accountRelayRecoveryPage?.(entry) ?? {
+      policy:
+        "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+      html: `<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>远程连接授权已结束 · CodeShell</title><style>body{font:16px/1.6 system-ui,sans-serif;max-width:32rem;margin:15vh auto;padding:24px}h1{font-size:24px}a{display:inline-block;padding:10px 16px;border-radius:8px;background:#2563eb;color:white;text-decoration:none}</style><main><h1>远程连接授权已结束</h1><p>返回电脑列表，用 Passkey 确认后重新连接这台电脑。</p><a href="${escape(entry)}" rel="noreferrer">返回电脑列表</a></main></html>`,
+    };
     response.writeHead(401, {
       "content-type": "text/html; charset=utf-8",
       "cache-control": "no-store",
       "x-content-type-options": "nosniff",
       "referrer-policy": "no-referrer",
-      "content-security-policy":
-        "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+      "content-security-policy": recovery.policy,
     });
-    response.end(
-      request.method === "HEAD"
-        ? undefined
-        : `<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>远程连接授权已结束 · CodeShell</title><style>body{font:16px/1.6 system-ui,sans-serif;max-width:32rem;margin:15vh auto;padding:24px}h1{font-size:24px}a{display:inline-block;padding:10px 16px;border-radius:8px;background:#2563eb;color:white;text-decoration:none}</style><main><h1>远程连接授权已结束</h1><p>返回电脑列表，用 Passkey 确认后重新连接这台电脑。</p><a href="${escape(entry)}" rel="noreferrer">返回电脑列表</a></main></html>`,
-    );
+    response.end(request.method === "HEAD" ? undefined : recovery.html);
     return true;
   }
 

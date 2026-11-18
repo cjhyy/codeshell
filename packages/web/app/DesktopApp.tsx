@@ -109,6 +109,14 @@ export function DesktopApp() {
       <main className="desktop-connection">
         <div className="desktop-connection-card">
           <EnvironmentMenu discover={false} />
+          {app.logoutError ? (
+            <div role="alert">
+              <p>{app.logoutError}</p>
+              <button className="library-button" onClick={app.logout}>
+                重试退出
+              </button>
+            </div>
+          ) : null}
           {unpaired ? (
             <DesktopPairingNotice />
           ) : (
@@ -192,14 +200,13 @@ export function useDesktopController(
     const timer = setTimeout(() => setConnectionSlow(true), connectedBefore.current ? 2500 : 8000);
     return () => clearTimeout(timer);
   }, [online, connectionPending]);
-  const connectionMessage =
-    !connectionPending
-      ? undefined
-      : connectionSlow
-        ? "暂时无法连接电脑，仍在自动重试。请检查电脑和网络。"
-        : connectedBefore.current
-          ? "正在恢复与电脑的连接…"
-          : "正在连接电脑…";
+  const connectionMessage = !connectionPending
+    ? undefined
+    : connectionSlow
+      ? "暂时无法连接电脑，仍在自动重试。请检查电脑和网络。"
+      : connectedBefore.current
+        ? "正在恢复与电脑的连接…"
+        : "正在连接电脑…";
   const [workspaceOverride, setWorkspaceOverride] = React.useState<string | null | undefined>(
     () => {
       // Restore the management workspace captured before leaving for Link. The Host
