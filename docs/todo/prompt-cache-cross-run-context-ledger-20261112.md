@@ -91,7 +91,7 @@ OpenAI-compatible 显式线路把非空文本统一提升为 text-part 数组，
 
 ### 3.7 辅助调用布局
 
-`engine/aux-prompt-cache.ts` 为同一会话的 memory-extraction、session-summary、memory-write-decision 使用不同 scope，并标记 `scopeKind: auxiliary`。OpenAI-compatible 主会话与辅助调用各有独立的有界 `PromptCacheHistory`，辅助流量不会驱逐主会话存档点。
+`llm/aux-prompt-cache.ts` 为同一会话的 memory-extraction、session-summary、memory-write-decision 使用不同 scope，并标记 `scopeKind: auxiliary`。OpenAI-compatible 主会话与辅助调用各有独立的有界 `PromptCacheHistory`，辅助流量不会驱逐主会话存档点。
 
 记忆提取和摘要把固定说明放在最前；对话按追加不变的位置封成约 2000 字符以上的消息段，未封口的最新对话、变化中的列表和任务要求放尾部。显式线路发送这些独立消息并标记稳定边界；非显式线路保留完整单条用户消息，仍使用独立 affinity scope。
 

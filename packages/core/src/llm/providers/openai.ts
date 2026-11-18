@@ -457,7 +457,7 @@ export class OpenAIClient extends LLMClientBase {
         // Per-call reasoning wins; otherwise fall back to provider default
         // (settings.providers[].reasoning, threaded through LLMConfig).
         const reasoning = options.reasoning ?? this.config.reasoning;
-        const { messages, stablePrefixEndIndex } = this.buildMessages(
+        const { messages, stablePrefixEndIndex, rollingEndIndex } = this.buildMessages(
           options.systemPrompt,
           options.messages,
           reasoning,
@@ -482,6 +482,7 @@ export class OpenAIClient extends LLMClientBase {
           scopeIdentity: this.getPromptCacheScopeIdentity(),
           messages,
           stableBoundaryIndex,
+          rollingBoundaryIndex: rollingEndIndex,
           requestIdentity: () => {
             // Hash effective request settings and tools; transport streaming
             // does not change the prefix represented by these messages.
@@ -500,6 +501,7 @@ export class OpenAIClient extends LLMClientBase {
             messages,
             cachePolicy,
             stableBoundaryIndex,
+            rollingEndIndex,
             cachePlan?.readBoundaryIndex,
             cachePolicy.strategy === "anthropic-explicit" && tools?.length ? 3 : 4,
           );
@@ -1074,6 +1076,7 @@ export class OpenAIClient extends LLMClientBase {
   ): {
     messages: OpenAI.ChatCompletionMessageParam[];
     stablePrefixEndIndex?: number;
+    rollingEndIndex: number;
   } {
     const result: OpenAI.ChatCompletionMessageParam[] = [{ role: "system", content: systemPrompt }];
 
@@ -1089,6 +1092,14 @@ export class OpenAIClient extends LLMClientBase {
     );
     let stablePrefixEndMessage: OpenAI.ChatCompletionMessageParam | undefined =
       stablePrefixMessageCount === 0 ? result[0] : undefined;
+    // Volatile context moved to the tail is resent every step and never read
+    // back, so the rolling boundary ends on the message before it.
+    const volatileTailMessageCount = Math.max(
+      0,
+      Math.min(messages.length, promptCache?.volatileTailMessageCount ?? 0),
+    );
+    const rollingSourceEnd = messages.length - volatileTailMessageCount;
+    let rollingEndMessage: OpenAI.ChatCompletionMessageParam | undefined;
 
     // Reasoning-content echo-back contract — driven by capability:
     //   "when-tools"  : backfill an empty placeholder if the prior assistant
@@ -1112,6 +1123,9 @@ export class OpenAIClient extends LLMClientBase {
     for (let sourceIndex = 0; sourceIndex < messages.length; sourceIndex++) {
       if (sourceIndex === stablePrefixMessageCount) {
         stablePrefixEndMessage = result[result.length - 1];
+      }
+      if (volatileTailMessageCount > 0 && sourceIndex === rollingSourceEnd) {
+        rollingEndMessage = result[result.length - 1];
       }
       const msg = messages[sourceIndex]!;
       if (msg.role === "system") continue;
@@ -1295,15 +1309,16 @@ export class OpenAIClient extends LLMClientBase {
 
     stablePrefixEndMessage ??= result[result.length - 1];
     const normalized = normalizeOpenAIToolMessagePairs(result);
-    const stablePrefixEndIndex = stablePrefixEndMessage
-      ? normalized.indexOf(stablePrefixEndMessage)
-      : undefined;
+    const indexOf = (message: OpenAI.ChatCompletionMessageParam | undefined) => {
+      const index = message ? normalized.indexOf(message) : -1;
+      return index >= 0 ? index : undefined;
+    };
     return {
       messages: normalized,
-      stablePrefixEndIndex:
-        stablePrefixEndIndex !== undefined && stablePrefixEndIndex >= 0
-          ? stablePrefixEndIndex
-          : undefined,
+      stablePrefixEndIndex: indexOf(stablePrefixEndMessage),
+      // Without a volatile tail the rolling boundary is the last wire message.
+      rollingEndIndex:
+        volatileTailMessageCount > 0 ? (indexOf(rollingEndMessage) ?? 0) : normalized.length - 1,
     };
   }
 
@@ -1315,6 +1330,7 @@ export class OpenAIClient extends LLMClientBase {
     messages: OpenAI.ChatCompletionMessageParam[],
     policy: PromptCachePolicy,
     stablePrefixEndIndex: number | undefined,
+    rollingEndIndex: number,
     previousBoundaryIndex?: number,
     messageBreakpointLimit = 4,
   ): void {
@@ -1353,8 +1369,9 @@ export class OpenAIClient extends LLMClientBase {
       // for the implicit tail. The longest matching prior stable/rolling boundary
       // permits reuse even when a run's dynamic snapshot has been removed.
       previousBoundaryIndex,
+      // The rolling marker stops before volatile tail context (resent, never read).
       policy.strategy !== "openai-hybrid" && policy.breakpoints.includes("rolling-history")
-        ? messages.length - 1
+        ? rollingEndIndex
         : undefined,
     ]);
     // Auxiliary Anthropic calls need the prior stable save point as well as

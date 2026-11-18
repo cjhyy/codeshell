@@ -2237,7 +2237,6 @@ export class PetDispatchService {
                 preset: "mimi",
                 permissionMode: "default",
                 disableGoal: true,
-                toolAllowlist: [],
                 skillAllowlist: [],
                 petRuntimeContext: receiptRuntimeContext,
                 petWorkspaces: [],

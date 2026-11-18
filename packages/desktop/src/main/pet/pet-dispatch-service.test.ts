@@ -1965,11 +1965,15 @@ describe("PetDispatchService", () => {
       model: "mimi-model",
       injected: true,
       disableGoal: true,
-      toolAllowlist: [],
       skillAllowlist: [],
       clientMessageId: expect.stringMatching(/^pet-launch-receipt-[a-f0-9]{64}$/),
       profileParams: { workspaces: [], reusableSessions: [], hostActions: [], outboundTargets: [] },
     });
+    // Same tool table and system prompt as the chat turn: the receipt narrows
+    // what the host will act on (no host action, no Workspace), not the tools.
+    for (const key of ["toolAllowlist", "preset", "behaviorMode", "kind", "model", "cwd"]) {
+      expect(workerParams[1]![key]).toEqual(workerParams[0]![key]);
+    }
     expect(validatePetRunParams(workerParams[1]!)).toBeNull();
     const receiptWorld = JSON.parse(String(workerParams[1]!.petRuntimeContext));
     expect(receiptWorld).toMatchObject({

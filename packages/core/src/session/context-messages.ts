@@ -191,6 +191,16 @@ export function isContextMessageEvent(event: TranscriptEvent): boolean {
   return event.type === "message" && isContextEvent(event);
 }
 
+/**
+ * True for a message event a host persisted for the conversation record only
+ * (UI replay, history readers): the live Engine never sent it to the model, so
+ * no model-facing projection may replay it either. Otherwise a reload would
+ * render a different history than the one the live engine has been sending.
+ */
+export function isDisplayOnlyMessageEvent(event: TranscriptEvent): boolean {
+  return event.type === "message" && event.data?.displayOnly === true;
+}
+
 /** Mark `message` as the replay of `event` when the event is a context message. */
 export function markReplayedContextMessage(message: Message, event: TranscriptEvent): void {
   if (readContextLedgerData(event)) {

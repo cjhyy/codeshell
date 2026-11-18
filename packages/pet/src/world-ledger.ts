@@ -76,8 +76,12 @@ function entryId(entry: unknown, row: string): string {
   return `row:${row}`;
 }
 
+function sectionKey(list: MimiLedgerList): string {
+  return `mimi-${list.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`;
+}
+
 function sectionFor(list: MimiLedgerList, value: unknown): CapabilityDynamicContextSection {
-  const key = `mimi-${list.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`;
+  const key = sectionKey(list);
   const title = `${TITLES[list]} [${list}]`;
   if (!Array.isArray(value)) {
     return { key, text: `${title}:\n${JSON.stringify(value).replace(/</g, "\\u003c")}` };
@@ -104,12 +108,18 @@ function isMimiTurn(context: CapabilityDynamicContext): boolean {
   return context.session?.profileId === "pet" && context.session.isSubAgent !== true;
 }
 
-/** One provider per list, so each list is its own ledger section. */
+/**
+ * One provider per list, so each list is its own ledger section. A turn
+ * without the lists (an internal turn before any chat turn since the host
+ * started) leaves every list as Mimi was last told; a list missing from lists
+ * the host did send is gone.
+ */
 export function mimiWorldLedgerProviders(): CapabilityDynamicContextProvider[] {
   return MIMI_LEDGER_LISTS.map((list) => (context: CapabilityDynamicContext) => {
     if (!isMimiTurn(context)) return undefined;
     const world = parseLedgerContext(context.runParams?.ledgerContext);
-    if (!world || !Object.prototype.hasOwnProperty.call(world, list)) return undefined;
+    if (!world) return { key: sectionKey(list), unchanged: true };
+    if (!Object.prototype.hasOwnProperty.call(world, list)) return undefined;
     return sectionFor(list, world[list]);
   });
 }
