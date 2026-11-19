@@ -606,7 +606,10 @@ describe("CodexEventTranslator", () => {
       },
     });
     expect(events).toHaveLength(1);
-    expect(events[0]).toMatchObject({ type: "tool_use_start" });
+    expect(events[0]).toMatchObject({
+      type: "tool_use_start",
+      toolCall: { toolName: "mcp__figma__get_file" },
+    });
   });
 
   test("an unknown notification method is ignored rather than throwing", () => {

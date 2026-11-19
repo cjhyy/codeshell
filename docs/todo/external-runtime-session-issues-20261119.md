@@ -35,7 +35,8 @@ Codex 会话同样验证过（同一个验收脚本）。替身 `codex` 走 app-
 - ✅ 会话归属：代理固定到这个 Codex 会话自己的 id（与同项目的 Claude Code 会话不同）。
 - ✅ 停止、打断并发送：`turn/interrupt` 到达后该会话的输入被拒 `session-cancelled`，下一轮恢复正常。
 - ✅ 计划模式、设置关闭：`-c` 里只有 `codeshell_tools`。
-- 顺带看到（未改）：Codex 的过程行显示的是 item 类型「mcpToolCall codeshell_computer」，不是工具名；离开 Mimi 页面后前台输入还会被 `chat-open` 挡约 10 秒（`CHAT_RELEASE_MS`，按设计）。
+- Codex 的过程行原先显示 item 类型「mcpToolCall」，已改为显示工具名（`mcp__<server>__<tool>`）。
+- 顺带看到（按设计，未改）：离开 Mimi 页面后前台输入还会被 `chat-open` 挡约 10 秒（`CHAT_RELEASE_MS`，按设计）。
 
 仍需有人在机器前验证（替身替不了的部分）：
 
