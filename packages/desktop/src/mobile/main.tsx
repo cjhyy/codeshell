@@ -5,6 +5,10 @@ import { DesktopApp } from "../../../web/app/DesktopApp.js";
 
 import { LinkCallbackPage } from "../../../web/app/LinkCallback.js";
 import { readBrowserLinkCallback } from "../../../web/app/remote-link-authorization.js";
+import { initThemePreference } from "../../../web/app/theme.js";
+
+// The Web workbench appearance toggle (system / light / dark) applies here too.
+initThemePreference();
 
 const callback = readBrowserLinkCallback();
 const element = document.getElementById("app");

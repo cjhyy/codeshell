@@ -16,8 +16,27 @@
   --success: hsl(145 63% 32%);
   --shadow: 0 8px 28px hsl(240 10% 3.9% / 3.5%), 0 1px 3px hsl(240 10% 3.9% / 4%);
 }
+/* Manual appearance (theme.ts): data-theme="dark" forces the dark palette and
+   data-theme="light" opts out of the system preference; no attribute = system. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: hsl(240 9% 5.5%);
+  --surface: hsl(240 7% 8.5%);
+  --panel: hsl(240 4% 11%);
+  --text: hsl(0 0% 98%);
+  --muted: hsl(240 5% 67%);
+  --accent: hsl(22 70% 55%);
+  --accent-text: hsl(22 30% 8%);
+  --border: hsl(240 4% 19%);
+  --hover: hsl(240 4% 17%);
+  --subtle: hsl(240 4% 19% / 65%);
+  --danger: hsl(0 84% 65%);
+  --warning: hsl(42 92% 62%);
+  --success: hsl(142 64% 48%);
+  --shadow: 0 8px 28px #0002, 0 1px 3px #0003;
+}
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     color-scheme: dark;
     --bg: hsl(240 9% 5.5%);
     --surface: hsl(240 7% 8.5%);
@@ -73,6 +92,13 @@ textarea:focus-visible,
 a:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
+}
+/* Fields get a tight ring like Desktop inputs; a 3px gap around a bordered
+   field reads as a second, detached box. */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline-offset: 1px;
 }
 button svg {
   flex-shrink: 0;
@@ -297,6 +323,9 @@ button.workspace-button:hover {
   color: var(--muted);
   font-size: 10px;
   padding: 2px 10px 8px;
+}
+.host-label .host-theme-toggle {
+  margin-left: auto;
 }
 .dot {
   display: inline-block;
@@ -678,6 +707,16 @@ button.workspace-button:hover {
 .transcript > * {
   min-width: 0;
 }
+/* Pending approval cards, observed by the composer jump bar. */
+.approval-anchor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--transcript-gap);
+  min-width: 0;
+}
+.approval-anchor:empty {
+  display: none;
+}
 .chat-empty .messages {
   display: flex;
   padding-top: 32px;
@@ -809,6 +848,11 @@ button.workspace-button:hover {
   transition:
     border-color 150ms ease,
     box-shadow 150ms ease;
+}
+.composer.composer-dragging {
+  border-color: var(--accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--accent) 5%, var(--surface));
 }
 .composer:has(textarea:focus) {
   border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
@@ -1291,6 +1335,12 @@ button.ghost:hover:not(:disabled) {
 }
 
 @media (max-width: 760px) {
+  /* iOS Safari zooms the page when a focused field is under 16px. */
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: max(16px, 1em);
+  }
   .rail {
     position: fixed;
     inset: 0 auto 0 0;

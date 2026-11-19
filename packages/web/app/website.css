@@ -149,10 +149,28 @@
 .website-button:hover {
   background: var(--hover);
 }
+/* Desktop primary actions use the warm accent (--cs-primary), as the sign-in
+   button already does; near-black primaries read as a different product. */
 .website-button.primary {
-  color: var(--surface);
-  background: var(--text);
-  border-color: var(--text);
+  color: var(--accent-text);
+  background: var(--accent);
+  border-color: var(--accent);
+  font-weight: 550;
+}
+.website-button.primary:hover {
+  background: color-mix(in srgb, var(--accent) 88%, var(--text));
+}
+/* Inline text links (e.g. 管理 Passkey) otherwise fall back to browser blue. */
+:is(.website-login, .website-destinations, .website-settings-shell)
+  a:not([class], .website-brand a) {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  text-underline-offset: 3px;
+}
+:is(.website-login, .website-destinations, .website-settings-shell)
+  a:not([class], .website-brand a):hover {
+  text-decoration-color: currentColor;
 }
 .website-wide {
   width: 100%;
@@ -247,6 +265,33 @@
   margin-top: 5px;
   border-radius: 0;
   color: var(--danger);
+}
+.website-account-theme {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 8px 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.website-account-popover .theme-toggle button {
+  padding: 0;
+  margin: 0;
+  border-top: 0;
+  border-radius: 6px;
+  text-align: center;
+  color: var(--muted);
+}
+.website-account-popover .theme-toggle button[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--text);
+}
+.website-brand > .website-home-link + .theme-toggle {
+  margin-left: 14px;
+}
+.website-brand > .website-header-theme {
+  margin-left: auto;
 }
 .rail-footer > .website-account-menu {
   margin-top: 12px;

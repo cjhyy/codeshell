@@ -44,6 +44,7 @@ function remoteApp(patch: Partial<RemoteApp> = {}): RemoteApp {
       ccSessions: false,
     },
     logout: noop,
+    reconnectNow: noop,
     sendChat: async () => true,
     stopRun: noop,
     selectSession: noop,
@@ -136,6 +137,30 @@ afterEach(() => {
 });
 
 describe("Desktop workbench controller", () => {
+  test("offers 立即重连 only while the relay socket is offline", async () => {
+    let reconnects = 0;
+    let app = remoteApp({ status: "online", reconnectNow: () => reconnects++ });
+    const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+    try {
+      expect(hook.result.current.retryConnection).toBeUndefined();
+      app = { ...app, status: "offline" };
+      await hook.rerender();
+      expect(hook.result.current.connection).toBe("closed");
+      hook.result.current.retryConnection?.();
+      expect(reconnects).toBe(1);
+      for (const status of ["connecting", "unpaired"] as const) {
+        app = { ...app, status };
+        await hook.rerender();
+        expect(hook.result.current.retryConnection).toBeUndefined();
+      }
+      app = { ...app, status: "offline", accessRequired: true };
+      await hook.rerender();
+      expect(hook.result.current.retryConnection).toBeUndefined();
+    } finally {
+      await hook.unmount();
+    }
+  });
+
   for (const connectedBefore of [false, true])
     test(`connection grace covers consecutive retries and keeps the conversation (connected before: ${connectedBefore})`, async () => {
       const clock = connectionClock();

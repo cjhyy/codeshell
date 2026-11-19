@@ -30,7 +30,16 @@ import { TurnQueueList } from "./TurnQueueList.js";
 import { WebsiteSetupSteps } from "./WebsiteSetupSteps.js";
 import { ProjectSessionNavigation } from "./ProjectSessionNavigation.js";
 import { SessionLoadingState } from "./SessionLoadingState.js";
+import { ConnectionBanner, submitsOnEnter, useComposerFileTransfer } from "./composer-input.js";
 import type { SessionSummary } from "./protocol.js";
+import { sessionStatusLabel, WorkbenchIcon } from "./workbench-icons.js";
+import { ThemeToggle } from "./ThemeToggle.js";
+import { ApprovalJumpBar, useApprovalOffscreen } from "./ApprovalJumpBar.js";
+import {
+  SessionPinButton,
+  SessionSidebarHeader,
+  useSessionSidebar,
+} from "./SessionSidebarTools.js";
 import "./app.css";
 import "./workbench-desktop.css";
 
@@ -120,7 +129,12 @@ export function Workbench({
     session,
   } = controller;
   const navigationSessions = controller.navigationSessions ?? sessions;
+  const sessionSidebar = useSessionSidebar(controller.workspaceKey, sessions, navigationSessions);
   const hub = controller.workspaceApi;
+  const fileTransfer = useComposerFileTransfer(
+    hub && !controller.uploadBusy && connection === "open" && !controller.readOnly,
+    controller.addFiles,
+  );
   const currentController = React.useRef(controller);
   currentController.current = controller;
   const hostLabel = controller.host === "desktop" ? "桌面" : "服务端";
@@ -132,6 +146,7 @@ export function Workbench({
     workspace: string;
   } | null>(null);
   const fileInput = React.useRef<HTMLInputElement>(null);
+  const approvalAnchor = React.useRef<HTMLDivElement>(null);
   const cameraInput = React.useRef<HTMLInputElement>(null);
   const devicesOpener = React.useRef<HTMLButtonElement>(null);
   const [logoutOpen, setLogoutOpen] = React.useState(false);
@@ -478,6 +493,10 @@ export function Workbench({
           {controller.showTurnCounts !== false ? <span> · {item.turnCount} 轮</span> : null}
         </span>
       </button>
+      <SessionPinButton
+        pinned={sessionSidebar.isPinned(item.sessionId)}
+        onToggle={() => sessionSidebar.toggle(item.sessionId)}
+      />
     </li>
   );
   const startNewSession = () => openConversation(controller.newSession);
@@ -588,6 +607,11 @@ export function Workbench({
     (a) => a.sessionId && a.sessionId !== activeId,
   );
   const empty = chat.items.length === 0 && approvals.length === 0;
+  const approvalsOffscreen = useApprovalOffscreen(
+    latest.listRef,
+    approvalAnchor,
+    view === "chat" && approvals.length > 0,
+  );
   const showWelcome = empty && !controller.loading && !controller.readOnly;
   const defaultConnection = configuration?.connections.find(
     (item) => item.id === configuration.defaults.text,
@@ -794,13 +818,19 @@ export function Workbench({
             conversation: openConversation,
             leaveWorkspace,
           })}
+          <SessionSidebarHeader
+            sidebar={sessionSidebar}
+            total={navigationSessions.length}
+            grouped={controller.navigationSessions !== undefined}
+            renderSession={renderNavigationSession}
+          />
           {controller.navigationSessions === undefined || localDrafts.length > 0 ? (
             <>
               <div className="rail-section-label history-label">
                 <span>{controller.navigationSessions === undefined ? "最近对话" : "草稿"}</span>
                 <span>
                   {controller.navigationSessions === undefined
-                    ? sessions.length
+                    ? sessionSidebar.sessions.length
                     : localDrafts.length}
                 </span>
               </div>
@@ -822,7 +852,7 @@ export function Workbench({
                   </li>
                 ))}
                 {controller.navigationSessions === undefined
-                  ? sessions.map(renderNavigationSession)
+                  ? sessionSidebar.sessions.map(renderNavigationSession)
                   : null}
                 {sessions.length === 0 && localDrafts.length === 0 ? (
                   <li className="empty">开始对话后，记录会保存在这里。</li>
@@ -832,7 +862,8 @@ export function Workbench({
           ) : null}
           {controller.navigationSessions !== undefined ? (
             <ProjectSessionNavigation
-              sessions={navigationSessions}
+              sessions={sessionSidebar.navigationSessions}
+              filtered={!!sessionSidebar.query || sessionSidebar.pinned.length > 0}
               projects={controller.projects ?? []}
               activeId={activeId}
               loading={controller.navigationSessionsLoading}
@@ -849,6 +880,7 @@ export function Workbench({
               {hostLabel}
               {connectionLabel}
             </span>
+            <ThemeToggle className="host-theme-toggle" />
           </div>
           {renderAccountControl ? (
             renderAccountControl({
@@ -1040,12 +1072,7 @@ export function Workbench({
             ))}
           </div>
         ) : null}
-        {connection !== "open" ? (
-          <div className="banner" role="status">
-            {controller.connectionMessage ||
-              `连接${connection === "connecting" ? "中…" : "已断开，重连中…"}`}
-          </div>
-        ) : null}
+        <ConnectionBanner controller={controller} />
         {view !== "chat" && approvals.length > 0 ? (
           <div className="banner">
             {blockingApprovals.length ? "当前对话需要你的确认。" : "当前对话有可稍后回答的问题。"}
@@ -1259,7 +1286,9 @@ export function Workbench({
                       return null;
                   }
                 })}
-                {controller.approvalContent}
+                <div ref={approvalAnchor} className="approval-anchor">
+                  {controller.approvalContent}
+                </div>
 
                 {/* A read-only conversation (recovery pending, observed CLI room) is not
                     a blank slate, so it gets no "start something" welcome. */}
@@ -1339,8 +1368,21 @@ export function Workbench({
           </div>
           {controller.readOnlyNote ? <div className="banner">{controller.readOnlyNote}</div> : null}
           <div className="composer-wrap">
+            {approvalsOffscreen ? (
+              <ApprovalJumpBar
+                count={approvals.length}
+                blocking={blockingApprovals.length}
+                target={approvalAnchor}
+              />
+            ) : null}
             {controller.turnQueue ? <TurnQueueList queue={controller.turnQueue} /> : null}
-            <footer className="composer">
+            <footer
+              className={`composer${fileTransfer.dragging ? " composer-dragging" : ""}`}
+              onDragEnter={fileTransfer.onDragEnter}
+              onDragOver={fileTransfer.onDragOver}
+              onDragLeave={fileTransfer.onDragLeave}
+              onDrop={fileTransfer.onDrop}
+            >
               {files.length || (uploading && controller.host === "hub") ? (
                 <div className="attachments" aria-live="polite">
                   {files.map((file) => (
@@ -1375,13 +1417,9 @@ export function Workbench({
                 onChange={(event) => {
                   controller.setDraft(event.target.value);
                 }}
+                onPaste={fileTransfer.onPaste}
                 onKeyDown={(event) => {
-                  if (
-                    !window.matchMedia("(max-width: 760px)").matches &&
-                    event.key === "Enter" &&
-                    !event.shiftKey &&
-                    !event.nativeEvent.isComposing
-                  ) {
+                  if (submitsOnEnter(event, window.matchMedia("(max-width: 760px)").matches)) {
                     event.preventDefault();
                     send();
                   }
@@ -1868,125 +1906,5 @@ function NavigationPrompt({
         </button>
       </div>
     </dialog>
-  );
-}
-
-function sessionStatusLabel(status: string): string {
-  switch (status) {
-    case "running":
-      return "进行中";
-    case "waiting":
-    case "waiting_approval":
-      return "等待确认";
-    case "completed":
-      return "已完成";
-    case "cancelled":
-    case "canceled":
-      return "已停止";
-    case "failed":
-    case "error":
-      return "发生错误";
-    case "idle":
-      return "可继续";
-    default:
-      return "对话";
-  }
-}
-
-type WorkbenchIconName =
-  | "camera"
-  | "panels"
-  | "links"
-  | "brand"
-  | "sidebar"
-  | "plus"
-  | "chat"
-  | "history"
-  | "skills"
-  | "settings"
-  | "folder"
-  | "chevron"
-  | "attachment"
-  | "send"
-  | "queue"
-  | "stop";
-
-function WorkbenchIcon({ name }: { name: WorkbenchIconName }) {
-  const paths: Record<WorkbenchIconName, React.ReactNode> = {
-    panels: (
-      <>
-        <rect x="3" y="3" width="18" height="18" rx="2" />
-        <path d="M15 3v18M15 10h6" />
-      </>
-    ),
-    camera: (
-      <>
-        <path d="M3 7h4l2-3h6l2 3h4v13H3Z" />
-        <circle cx="12" cy="13" r="4" />
-      </>
-    ),
-    links: (
-      <>
-        <path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-2 2" />
-        <path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l2-2" />
-      </>
-    ),
-    brand: (
-      <>
-        <path d="m5 7 5 5-5 5M13 17h6" />
-      </>
-    ),
-    sidebar: (
-      <>
-        <rect x="3" y="4" width="18" height="16" rx="2" />
-        <path d="M9 4v16" />
-      </>
-    ),
-    plus: <path d="M12 5v14M5 12h14" />,
-    chat: (
-      <path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z" />
-    ),
-    history: (
-      <>
-        <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
-        <path d="M3 3v5h5M12 7v5l3 2" />
-      </>
-    ),
-    skills: (
-      <>
-        <path d="m12 3 2.7 5.5L21 9.4l-4.5 4.4 1.1 6.2L12 17.1 6.4 20l1.1-6.2L3 9.4l6.3-.9L12 3Z" />
-      </>
-    ),
-    settings: (
-      <>
-        <path d="m9 3-.7 3-2.6 1-2.6 2 1.4 3-1.4 3 2.6 2 2.6 1 .7 3h6l.7-3 2.6-1 2.6-2-1.4-3 1.4-3-2.6-2-2.6-1L15 3H9Z" />
-        <circle cx="12" cy="12" r="3" />
-      </>
-    ),
-    folder: (
-      <path d="M3 7V5a1 1 0 0 1 1-1h5l2 3h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7Z" />
-    ),
-    chevron: <path d="m9 5 7 7-7 7" />,
-    attachment: (
-      <path d="m21 11-8 8a6 6 0 0 1-8.5-8.5l9-9A4 4 0 0 1 19 7l-9 9a2 2 0 0 1-2.8-2.8l8-8" />
-    ),
-    send: <path d="M12 19V5m-6 6 6-6 6 6" />,
-    queue: <path d="M4 6h12M4 11h12M4 16h7M17 14v6M14 17h6" />,
-    stop: <rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none" />,
-  };
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      {paths[name]}
-    </svg>
   );
 }

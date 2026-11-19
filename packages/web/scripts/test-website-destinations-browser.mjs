@@ -257,6 +257,22 @@ try {
       !calls.some((call) => call.path === "/api/v1/account/web/cloud-tickets"),
       "Landing must not silently select Cloud",
     );
+    // Inline links use the accent like Desktop, not the browser default blue.
+    assert.equal(
+      await page.evaluate(() => {
+        const probe = globalThis.document.createElement("span");
+        probe.style.color = "var(--accent)";
+        globalThis.document.body.append(probe);
+        const accent = globalThis.getComputedStyle(probe).color;
+        probe.remove();
+        const link = [...globalThis.document.querySelectorAll(".website-hint a")].find(
+          (node) => node.textContent === "管理 Passkey",
+        );
+        return globalThis.getComputedStyle(link).color === accent;
+      }),
+      true,
+      "the 管理 Passkey link must use the accent colour",
+    );
     await shot(page, `destinations-${width}`);
     await page.getByRole("button", { name: "进入云端" }).click();
     await page.getByRole("heading", { name: "按需使用云端" }).waitFor();

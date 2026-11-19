@@ -29,7 +29,8 @@ export const SHARD_BUDGETS: Record<string, number> = {
   "tests (core-rest)": 470,
   "tests (core-engine)": 300,
   "tests (rest)": 400,
-  "tests (rest-server)": 240,
+  // 2026-11-19: +4 for the web composer-input and tool file block suites.
+  "tests (rest-server)": 244,
   // 2026-10-29: replace the 34-file Panel process with 4–8-file partitions.
   "tests: test Hub Panel packages": 8,
   "tests: test Hub Panel runtime and scopes": 8,

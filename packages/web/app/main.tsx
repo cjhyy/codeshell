@@ -5,7 +5,11 @@ import { createRoot } from "react-dom/client";
 import { WebsiteEntry } from "./WebsiteShell.js";
 import { takeSetupToken } from "./auth.js";
 import { registerServiceWorker } from "./register-service-worker.js";
+import { initThemePreference } from "./theme.js";
 import "./app.css";
+
+// Apply the stored light/dark choice before the first render to avoid a flash.
+initThemePreference();
 
 const linkCallback = readBrowserLinkCallback();
 const setupToken = takeSetupToken(window.location, window.history);

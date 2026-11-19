@@ -412,6 +412,8 @@ jobs:
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-links-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-sidebar-focus-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-devices-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-composer-parity-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-workbench-polish-browser.mjs
       - name: test Hub Panel packages
         if: matrix.shard == 'rest-server'
         run: >-
