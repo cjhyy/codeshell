@@ -2,7 +2,7 @@ import { describe, it, expect, mock } from "bun:test";
 import type { spawn } from "node:child_process";
 import { EventEmitter } from "node:events";
 import { PassThrough } from "node:stream";
-import { createProbeRunner, probeCli } from "./cc-capability.js";
+import { createProbeRunner, pathWithCommonBins, probeCli } from "./cc-capability.js";
 
 function fakeProcess() {
   const child = Object.assign(new EventEmitter(), {
@@ -120,5 +120,27 @@ describe("CLI version runner", () => {
     expect(spawnProcess).toHaveBeenCalledTimes(2);
     child.emit("close", 0);
     expect(await third).toEqual({ ok: true, stdout: "" });
+  });
+});
+
+describe("pathWithCommonBins", () => {
+  it("prepends the common CLI directories and keeps the caller PATH after them", () => {
+    expect(pathWithCommonBins({ PATH: "/custom/bin:/usr/bin" })).toBe(
+      "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/custom/bin",
+    );
+  });
+
+  it("puts an explicitly pinned CLI directory ahead of every other install", () => {
+    expect(
+      pathWithCommonBins({ PATH: "/usr/bin", CODE_SHELL_EXTERNAL_CLI_DIR: "/pinned/bin" }).split(
+        ":",
+      )[0],
+    ).toBe("/pinned/bin");
+    // Only an absolute directory can take precedence over the installed CLIs.
+    expect(
+      pathWithCommonBins({ PATH: "/usr/bin", CODE_SHELL_EXTERNAL_CLI_DIR: "relative" }).split(
+        ":",
+      )[0],
+    ).toBe("/opt/homebrew/bin");
   });
 });
