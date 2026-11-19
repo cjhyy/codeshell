@@ -5,6 +5,7 @@ import type { ChatItem } from "../src/lib/streamReducer.js";
 import type { HistoryDetailLoader } from "./workbench-types.js";
 import { HistoryDetailBody } from "./HistoryDetailBody.js";
 import { ExpandedHistoryText } from "./ExpandedHistoryText.js";
+import { toolFileBlocks } from "./toolFileBlocks.js";
 import "./message-content.css";
 
 /** Markdown is untrusted display content. Network images are deliberately
@@ -378,14 +379,26 @@ export const ToolMessage = React.memo(function ToolMessage({
           {(detail) => {
             const args = item.detailRef ? detail?.args : item.args;
             const result = item.detailRef ? detail?.result : item.result;
+            const { blocks, rest } = toolFileBlocks(item.name, args);
             return (
               <>
-                {args && Object.keys(args).length ? (
+                {Object.keys(rest).length ? (
                   <div className="message-tool-section">
                     <strong>参数</strong>
-                    <pre tabIndex={0}>{JSON.stringify(args, null, 2)}</pre>
+                    <pre tabIndex={0}>{JSON.stringify(rest, null, 2)}</pre>
                   </div>
                 ) : null}
+                {blocks.map((block, index) => (
+                  <div className="message-tool-section" key={`${block.label}:${index}`}>
+                    <strong>{block.label}</strong>
+                    <pre
+                      tabIndex={0}
+                      className={block.tone ? `message-tool-${block.tone}` : undefined}
+                    >
+                      {block.text}
+                    </pre>
+                  </div>
+                ))}
                 <div className="message-tool-section">
                   <div className="message-tool-result-heading">
                     <strong>结果</strong>

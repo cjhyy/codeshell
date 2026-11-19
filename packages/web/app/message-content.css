@@ -391,6 +391,14 @@ button.message-image-reference:hover {
     Menlo,
     monospace;
 }
+.message-tool-section pre.message-tool-removed {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 8%, var(--panel));
+}
+.message-tool-section pre.message-tool-added {
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 8%, var(--panel));
+}
 .message-tool-result-heading {
   display: flex;
   align-items: center;
