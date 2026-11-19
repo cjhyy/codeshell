@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { browserPartitionForBucket } from "../shared/browser-profile.js";
 import type { PreparedAgentRunMetadata } from "./agent-run-metadata.js";
-import { resolveAgentRunBrowserRegistration } from "./agent-run-browser-registration.js";
+import {
+  defaultSessionBrowserBucket,
+  resolveAgentRunBrowserRegistration,
+} from "./agent-run-browser-registration.js";
 
 function preparedRun(overrides: Partial<PreparedAgentRunMetadata> = {}): PreparedAgentRunMetadata {
   return {
@@ -43,7 +46,6 @@ describe("resolveAgentRunBrowserRegistration", () => {
       resolveAgentRunBrowserRegistration(preparedRun(), {
         existingBucket: "host-owned-workspace",
         existingPartition: "persist:browser:u:chosen-account",
-        externalRuntime: true,
       }),
     ).toEqual({
       sessionId: "session-1",
@@ -65,22 +67,9 @@ describe("resolveAgentRunBrowserRegistration", () => {
   test("a Quick Chat without a registration never acquires a persistent project profile", () => {
     const registration = resolveAgentRunBrowserRegistration(
       preparedRun({ sessionId: "qchat-new" }),
-      { externalRuntime: true },
     );
     expect(registration?.bucket).toBe("__quick_chat__::qchat-new");
     expect(registration?.partition.startsWith("persist:")).toBe(false);
-  });
-
-  test("a cold external-runtime continuation restores its isolated profile", () => {
-    const registration = resolveAgentRunBrowserRegistration(preparedRun(), {
-      externalRuntime: true,
-    });
-    expect(registration).toEqual({
-      sessionId: "session-1",
-      bucket: "external-runtime:session-1",
-      partition: browserPartitionForBucket("external-runtime:session-1"),
-    });
-    expect(registration?.partition).not.toBe(browserPartitionForBucket("project-1::session-1"));
   });
 
   test("explicit caller routing takes precedence over restored identities", () => {
@@ -90,7 +79,6 @@ describe("resolveAgentRunBrowserRegistration", () => {
         {
           existingBucket: "old::session-1",
           existingPartition: "old-partition",
-          externalRuntime: true,
         },
       ),
     ).toEqual({
@@ -120,9 +108,33 @@ describe("resolveAgentRunBrowserRegistration", () => {
       expect(
         resolveAgentRunBrowserRegistration(prepared, {
           existingBucket: "existing-workspace",
-          externalRuntime: true,
         }),
       ).toBeUndefined();
     }
+  });
+});
+
+describe("defaultSessionBrowserBucket", () => {
+  test("matches the renderer bucket of the same project Session", () => {
+    expect(defaultSessionBrowserBucket("s-one", "project-1")).toBe("project-1::s-one");
+    expect(defaultSessionBrowserBucket("s-one")).toBe("__no_repo__::s-one");
+    expect(defaultSessionBrowserBucket("s-one", "")).toBe("__no_repo__::s-one");
+    expect(defaultSessionBrowserBucket("s-one", 7)).toBe("__no_repo__::s-one");
+  });
+
+  test("Sessions of one project share a cookie jar but not a workspace", () => {
+    const one = defaultSessionBrowserBucket("s-one", "project-1");
+    const two = defaultSessionBrowserBucket("s-two", "project-1");
+    expect(one).not.toBe(two);
+    expect(browserPartitionForBucket(one)).toBe(browserPartitionForBucket(two));
+    expect(browserPartitionForBucket(one)).not.toBe(
+      browserPartitionForBucket(defaultSessionBrowserBucket("s-one", "project-2")),
+    );
+  });
+
+  test("a Quick Chat never derives a persistent profile", () => {
+    const bucket = defaultSessionBrowserBucket("qchat-1", "project-1");
+    expect(bucket).toBe("__quick_chat__::qchat-1");
+    expect(browserPartitionForBucket(bucket).startsWith("persist:")).toBe(false);
   });
 });

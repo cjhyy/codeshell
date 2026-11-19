@@ -100,7 +100,7 @@ function briefRefs(facts: Record<string, unknown>) {
  */
 function noticeText(record: NoticeRecord): string {
   const { facts } = unpackFacts(record.facts);
-  if (record.prompt || record.kind === "session.blocked")
+  if (record.prompt || record.kind === "session.blocked" || record.kind === "session.paused")
     return cut(composeNoticeBody(record.kind, facts));
   let body = record.body;
   if (body !== undefined && record.actions) {

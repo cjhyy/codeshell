@@ -5,6 +5,10 @@ export interface BackgroundNotificationPayload {
   workKind: string;
   status: "completed" | "failed" | "cancelled";
   name?: unknown;
+  /** Names an external-agent task that carries no `name`. */
+  description?: unknown;
+  /** Operations refused by permissions; a "completed" run was then degraded. */
+  permissionDenials?: unknown;
   command?: unknown;
   error?: unknown;
   exitCode?: unknown;
@@ -131,10 +135,21 @@ export function backgroundNotificationContent(payload: BackgroundNotificationPay
   const label = WORK_LABELS.get(payload.workKind) ?? "后台任务";
   const command = typeof payload.command === "string" ? payload.command : undefined;
   const name = typeof payload.name === "string" ? safeText(payload.name, 64) : undefined;
+  // Only an external-agent task: its description is the task label. A shell's
+  // is its raw command line and a sub-agent's is written for the model.
+  const description =
+    payload.workKind === "cc" && typeof payload.description === "string"
+      ? safeText(payload.description, 64)
+      : undefined;
   const identity =
     (payload.workKind === "shell" && command ? commandIdentity(command) : undefined) ||
     name ||
+    description ||
     `${label} ${safeText(payload.workId, 40)}`;
+  const denied =
+    Number.isSafeInteger(payload.permissionDenials) && (payload.permissionDenials as number) > 0
+      ? (payload.permissionDenials as number)
+      : 0;
   const signal =
     typeof payload.signal === "string" && /^SIG[A-Z0-9]{1,29}$/u.test(payload.signal)
       ? payload.signal
@@ -142,7 +157,9 @@ export function backgroundNotificationContent(payload: BackgroundNotificationPay
   const terminated = payload.status === "failed" && !!signal;
   const status =
     payload.status === "completed"
-      ? "完成"
+      ? denied
+        ? "未全部完成"
+        : "完成"
       : payload.status === "cancelled"
         ? "已取消"
         : terminated
@@ -152,6 +169,7 @@ export function backgroundNotificationContent(payload: BackgroundNotificationPay
   if (payload.status === "failed") {
     if (signal) details.push(`收到 ${signal} 信号，进程已终止`);
     else if (Number.isSafeInteger(payload.exitCode)) details.push(`退出码 ${payload.exitCode}`);
+    if (denied) details.push(`被权限拦住，${denied} 个操作被拒`);
     if (
       typeof payload.error === "string" &&
       // This legacy shell error repeats the cause and an agent-only tool call.
@@ -166,6 +184,8 @@ export function backgroundNotificationContent(payload: BackgroundNotificationPay
       if (error) details.push(error);
     }
     if (!details.length) details.push("执行失败，点击查看详情");
+  } else if (payload.status === "completed" && denied) {
+    details.push(`有 ${denied} 个操作被权限拒绝，点击查看`);
   } else {
     details.push(payload.status === "completed" ? "点击查看结果" : "任务已取消");
   }

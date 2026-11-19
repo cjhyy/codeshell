@@ -17,6 +17,7 @@ import { useT } from "../i18n/I18nProvider";
 import type { ActiveGoal } from "../types";
 import { goalElapsedMs } from "../goalClock";
 import { GoalReplyCard } from "./GoalReplyCard";
+import type { GoalReplyChoices } from "./GoalReplyChoices";
 import type { MarkdownRootStatus } from "../Markdown";
 
 /** `12h 57m 34s` / `3m 05s` / `45s` — accumulated goal time. */
@@ -40,8 +41,13 @@ interface Props {
   onPausedChange?: (paused: boolean) => void;
   onUpdate?: (objective: string) => void;
   onDelete?: () => void;
+  /** Send a one-click answer (an option chip); typed answers use the main composer. */
   onReply?: (answer: string) => void | Promise<void>;
   replyDisabled?: boolean;
+  /** An answer typed in the main composer failed to send. */
+  replyFailed?: boolean;
+  /** Another question is shown first; this one waits its turn instead of stacking. */
+  replyQueued?: boolean;
   sessionId?: string | null;
   cwd?: string | null;
   rootId?: string | null;
@@ -64,6 +70,8 @@ export function GoalBar({
   onDelete,
   onReply,
   replyDisabled = false,
+  replyFailed = false,
+  replyQueued = false,
   sessionId,
   cwd,
   rootId,
@@ -81,22 +89,26 @@ export function GoalBar({
     goal.objective,
     goal.round,
     goal.waitingForUser,
+    goal.waitingDetail,
   ]);
-  // Keep an answer through the optimistic waiting -> running -> failed launch
-  // transition, even while the reply card itself is temporarily unmounted.
-  const [replyDraft, setReplyDraft] = React.useState({ key: "", text: "", failed: false });
+  // Keep a failed one-click answer visible through the optimistic
+  // waiting -> running -> failed launch transition, for this question only.
+  const [failedReplyKey, setFailedReplyKey] = React.useState("");
+  // Picks survive the card unmounting while its answer is being sent.
+  const [replyChoices, setReplyChoices] = React.useState<{
+    key: string;
+    choices: GoalReplyChoices;
+  }>({ key: "", choices: {} });
   const reply = onReply
     ? async (answer: string): Promise<void> => {
-        setReplyDraft({ key: replyKey, text: answer, failed: false });
+        setFailedReplyKey("");
         try {
           await onReply(answer);
-          setReplyDraft((previous) =>
-            previous.key === replyKey ? { key: "", text: "", failed: false } : previous,
+          setReplyChoices((previous) =>
+            previous.key === replyKey ? { key: "", choices: {} } : previous,
           );
         } catch (error) {
-          setReplyDraft((previous) =>
-            previous.key === replyKey ? { ...previous, failed: true } : previous,
-          );
+          setFailedReplyKey(replyKey);
           throw error;
         }
       }
@@ -135,8 +147,27 @@ export function GoalBar({
       : elapsed && t("chat.goal.barElapsed", { elapsed });
   // Paused wins: a paused Goal does not continue even after the user replies.
   const waiting = !goal.paused && !!goal.waitingForUser;
+  // A limit that ran out pauses the Goal until the next message; a pause the
+  // user asked for stays, and a turn running beside it is not the Goal's.
+  const limitPaused =
+    goal.paused && goal.pauseReason !== undefined && goal.pauseReason !== "user_stop";
+  // Stopped for lack of progress is not the same state as a spent budget.
+  const blocked = goal.paused && goal.pauseReason === "no_progress";
+  const pausedHint = blocked
+    ? t("chat.goal.barBlockedHint")
+    : limitPaused
+      ? t("chat.goal.barLimitPausedHint")
+      : busy
+        ? t("chat.goal.barPausedBusyHint")
+        : t("chat.goal.barPausedHint");
   const label = goal.paused
-    ? t("chat.goal.barPaused")
+    ? blocked
+      ? t("chat.goal.barBlocked")
+      : limitPaused
+        ? t("chat.goal.barLimitPaused")
+        : busy
+          ? t("chat.goal.barPausedBusy")
+          : t("chat.goal.barPaused")
     : waiting
       ? t("chat.goal.barWaiting")
       : t("chat.goal.barActive");
@@ -162,6 +193,7 @@ export function GoalBar({
             : "border-border bg-background/80",
       )}
       data-goal-state={goal.paused ? "paused" : waiting ? "waiting" : busy ? "running" : "active"}
+      data-goal-pause={goal.paused ? (goal.pauseReason ?? "user") : undefined}
     >
       <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 py-1">
         {goal.paused ? (
@@ -190,7 +222,7 @@ export function GoalBar({
           )}
           title={
             goal.paused
-              ? t("chat.goal.barPausedHint")
+              ? pausedHint
               : waiting
                 ? `${t("chat.goal.barWaitingHint")} ${goal.waitingForUser}`
                 : undefined
@@ -325,19 +357,29 @@ export function GoalBar({
               </div>
             </div>
           )}
-          {goal.paused && (
-            <p className="mt-1.5 text-xs text-status-warn">{t("chat.goal.barPausedHint")}</p>
-          )}
+          {goal.paused && <p className="mt-1.5 text-xs text-status-warn">{pausedHint}</p>}
         </div>
       )}
-      {waiting && (
+      {waiting && replyQueued && (
+        <p
+          className="border-t border-primary/20 py-1.5 text-xs text-muted-foreground"
+          data-goal-reply-queued
+        >
+          {t("chat.goal.replyQueued")}
+        </p>
+      )}
+      {waiting && !replyQueued && (
         <GoalReplyCard
           key={replyKey}
           question={goal.waitingForUser!}
+          detail={goal.waitingDetail}
+          choices={replyChoices.key === replyKey ? replyChoices.choices : undefined}
+          onChoicesChange={(choices) => {
+            setReplyChoices({ key: replyKey, choices });
+            setFailedReplyKey("");
+          }}
           onReply={reply}
-          draft={replyDraft.key === replyKey ? replyDraft.text : ""}
-          failed={replyDraft.key === replyKey && replyDraft.failed}
-          onDraftChange={(text) => setReplyDraft({ key: replyKey, text, failed: false })}
+          failed={replyFailed || failedReplyKey === replyKey}
           disabled={pending || busy || replyDisabled}
           sessionId={sessionId}
           cwd={cwd}

@@ -625,12 +625,48 @@ describe("transcriptToFoldItems", () => {
         },
         progress: { rounds: 7, activeMs: 9_000, atMs: 500 },
         waitingForUser: "要发布吗？",
+        waitingForUserDetail: { level: "consent", options: ["是", 3], default: 1 },
       }),
       line("goal_progress", {
         status: "not_met",
         round: 8,
         waiting: { sinceMs: "soon" },
         progress: { rounds: 8, activeMs: -1, atMs: 1 },
+      }),
+      line("goal_progress", {
+        status: "not_met",
+        round: 9,
+        waitingForUser: "连不上生产服务器。",
+        waitingForUserDetail: {
+          level: "preference",
+          questions: [
+            {
+              id: "deploy",
+              header: "部署方式",
+              question: "怎么部署？",
+              options: [{ label: "执行机", description: "我写清单" }, { label: "不部署" }, 7],
+              default: "不部署",
+            },
+          ],
+        },
+        // The field an unmerged draft used is not a second source of choices.
+        waitingQuestions: [{ id: "x", question: "?", options: [{ label: "a" }, { label: "b" }] }],
+      }),
+      line("goal_progress", {
+        status: "not_met",
+        round: 10,
+        waitingForUser: "发哪个？",
+        waitingForUserDetail: {
+          level: "preference",
+          questions: [
+            {
+              id: "release",
+              question: "发哪个？",
+              options: [{ label: "rc", description: "先验证" }, { label: "正式版" }],
+              default: "正式版",
+            },
+          ],
+        },
       }),
     ].join("\n");
     const items = transcriptToFoldItems(jsonl);
@@ -641,6 +677,7 @@ describe("transcriptToFoldItems", () => {
         status: "not_met",
         round: 7,
         waitingForUser: "要发布吗？",
+        waitingForUserDetail: { level: "consent" },
         waiting: {
           kind: "background_work",
           sinceMs: 500,
@@ -654,6 +691,34 @@ describe("transcriptToFoldItems", () => {
       kind: "stream",
       event: { type: "goal_progress", status: "not_met", round: 8 },
       timestamp: 1,
+    });
+    // One malformed option drops the choices, never the question itself.
+    expect(items[2]).toEqual({
+      kind: "stream",
+      event: {
+        type: "goal_progress",
+        status: "not_met",
+        round: 9,
+        waitingForUser: "连不上生产服务器。",
+        waitingForUserDetail: { level: "preference" },
+      },
+      timestamp: 1,
+    });
+    expect(items[3]).toMatchObject({
+      event: {
+        waitingForUser: "发哪个？",
+        waitingForUserDetail: {
+          level: "preference",
+          questions: [
+            {
+              id: "release",
+              question: "发哪个？",
+              options: [{ label: "rc", description: "先验证" }, { label: "正式版" }],
+              default: "正式版",
+            },
+          ],
+        },
+      },
     });
   });
 

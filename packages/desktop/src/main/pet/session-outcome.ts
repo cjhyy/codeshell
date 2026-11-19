@@ -36,8 +36,52 @@
 
 import { isAbsolute } from "node:path";
 import type { ChangedFiles } from "./pet-notice-action-codes.js";
+import {
+  goalQuestionContext,
+  goalQuestionFullText,
+  goalQuestionRecommended,
+  replayedGoalQuestionDetail,
+} from "../../shared/goal-questions.js";
 
 export type SessionBlockReason = "user" | "limit" | "goal_exhausted";
+
+/** Which limit paused a Goal, from `goal_progress.pauseReason` (never from its text). */
+export type SessionPauseLimit = "time_budget" | "token_budget" | "turn_limit" | "no_progress";
+const PAUSE_LIMITS: readonly string[] = [
+  "time_budget",
+  "token_budget",
+  "turn_limit",
+  "no_progress",
+];
+
+/** One answer the asker offered for its question. */
+export interface SessionQuestionOption {
+  label: string;
+  recommended?: boolean;
+}
+
+/**
+ * A `wait_for_user` question as a notice states it. One question keeps its
+ * options as one-tap answers, recommended one marked; several questions are
+ * spelled out in the text, because a single tap cannot answer them all.
+ */
+function noticeQuestion(
+  text: string,
+  detail: unknown,
+): { question: string; options?: SessionQuestionOption[] } {
+  const questions = replayedGoalQuestionDetail(text, detail)?.questions;
+  if (!questions) return { question: text };
+  if (questions.length > 1) return { question: goalQuestionFullText(text, questions) };
+  const only = questions[0]!;
+  const context = goalQuestionContext(text, questions);
+  const recommended = goalQuestionRecommended(only);
+  return {
+    question: context ? `${context} ${only.question}` : only.question,
+    options: only.options.map(({ label }) =>
+      label === recommended ? { label, recommended: true } : { label },
+    ),
+  };
+}
 
 interface SessionOutcomeBase {
   sessionId: string;
@@ -99,6 +143,10 @@ export type SessionOutcome = SessionOutcomeBase &
         kind: "blocked";
         reason: SessionBlockReason;
         question?: string;
+        /** The answers offered with `question`. */
+        options?: SessionQuestionOption[];
+        /** `limit`: which limit ran out, when the Goal said so. */
+        limit?: SessionPauseLimit;
         /** What is still missing (the Goal judge's gaps), or the run's last text. */
         summary?: string;
         goalId?: string;
@@ -166,6 +214,8 @@ interface TurnState {
    * read as done.
    */
   blocked?: Exclude<SessionBlockReason, "limit">;
+  /** The limit that paused the Goal this turn. */
+  limit?: SessionPauseLimit;
   /** The Goal was met or cleared this turn. */
   goal?: { state: "met" | "cleared"; goalId?: string };
   /** The latest assistant text of this turn (a reply when the run closes without one). */
@@ -464,8 +514,16 @@ export class SessionOutcomeDeriver {
       return [{ ...base, kind: "done", scope: "goal", ...(goalId ? { goalId } : {}), ...changed }];
     }
     // Core carries the question itself in `waitingForUser`; accept a bare flag too.
-    const question = boundedText(event.waitingForUser, MAX_FACT_LENGTH);
-    const waiting = question !== undefined || event.waitingForUser === true;
+    const asked = boundedText(event.waitingForUser, MAX_FACT_LENGTH);
+    const waiting = asked !== undefined || event.waitingForUser === true;
+    if (PAUSE_LIMITS.includes(event.pauseReason as string))
+      state.limit = event.pauseReason as SessionPauseLimit;
+    // Structure is matched against the untruncated text; the fact is bounded after.
+    const stated = asked
+      ? noticeQuestion((event.waitingForUser as string).trim(), event.waitingForUserDetail)
+      : undefined;
+    const question = stated && boundedText(stated.question, MAX_FACT_LENGTH);
+    const options = stated?.options;
     const exhausted = event.status === "exhausted";
     if (!waiting && !exhausted) return [];
     const reason = exhausted ? "goal_exhausted" : "user";
@@ -478,6 +536,7 @@ export class SessionOutcomeDeriver {
         kind: "blocked",
         reason,
         ...(question ? { question } : {}),
+        ...(options ? { options } : {}),
         ...(gaps ? { summary: gaps } : {}),
         ...(goalId ? { goalId } : {}),
         ...(typeof event.revision === "number" ? { revision: event.revision } : {}),
@@ -514,7 +573,14 @@ export class SessionOutcomeDeriver {
     const restated = state.blocked !== undefined ? { repeat: true as const } : {};
     const completionKind = event.completionKind;
     if (completionKind === "limit_stop" || reported?.blockedOn === "limit")
-      return { ...base, ...restated, kind: "blocked", reason: "limit", ...withSummary };
+      return {
+        ...base,
+        ...restated,
+        kind: "blocked",
+        reason: "limit",
+        ...(state.limit ? { limit: state.limit } : {}),
+        ...withSummary,
+      };
     if (completionKind === "goal_control_stop") {
       // Follows goal_progress(met) (complete_goal) or goal_cleared (cancel_goal,
       // or the owner clearing / pausing the Goal while it ran).

@@ -57,7 +57,7 @@
     "kind": "self-contained",
     "status": "exposed",
     "reason": "Delegates one bounded task to an installed Codex/Claude CLI. External sessions may detach it only when the Desktop host promises to drain the completion queue and inject a continuation into the same Session; other hosts fail closed and require foreground execution. The child CLI does not inherit this host bridge, which bounds nesting at one level; the outer call still requires the normal DriveAgent approval.",
-    "contractFingerprint": "5ed54ff909e67425e8dbe10d2bcc40fa118dc88c78b9972f24c31f62ce39d74d"
+    "contractFingerprint": "abc482e71d849c52f5b7ca11b1758b9d09b31361de8140fc07b1128155c7a6b9"
   },
   {
     "tool": "DriveAgentJobs",
@@ -386,11 +386,19 @@
     "contractFingerprint": "dd2cd109e740ff4fdf15066a64c95cbf62b6f591578a6d49c5d006afda0a864e"
   },
   {
+    "tool": "wait_for_background",
+    "kind": "self-contained",
+    "status": "exposed",
+    "requires": "goal-controller",
+    "reason": "Host-owned persisted Goal controller with goalId/revision checks. Available only with Host tools in execution mode; native Engine acknowledgement handlers remain excluded.",
+    "contractFingerprint": "c187cc857012bfe64186d044841e00830da7156001e539b177da4a0a4954c793"
+  },
+  {
     "tool": "wait_for_user",
     "kind": "self-contained",
     "status": "exposed",
     "requires": "goal-controller",
     "reason": "Host-owned persisted Goal controller with goalId/revision checks. Available only with Host tools in execution mode; native Engine acknowledgement handlers remain excluded.",
-    "contractFingerprint": "35758caec40133b4c27bd57cbd3548c5b2a5a0676b39e92d523d7fc423407204"
+    "contractFingerprint": "9252ef4e787a9a908f2a2725f38dc9aee1482c6393dfb40908b6b4acc6b8277a"
   }
 ]

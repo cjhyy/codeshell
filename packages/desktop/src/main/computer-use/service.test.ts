@@ -9,9 +9,11 @@ import {
   observeComputerUseRunControl,
   observeComputerUseRunEvent,
   resetCuaComputerUse,
+  setComputerUseControl,
   type CuaComputerUseInputs,
 } from "./service.js";
 import { InputGate } from "./input-gate.js";
+import { notifyRunStopRequested } from "../run-stop-signals.js";
 import { ComputerActivityBus } from "./computer-activity-bus.js";
 
 const APP_PATH = "/test/packages/desktop";
@@ -299,6 +301,23 @@ describe("Computer Use execution gate wiring", () => {
     observeComputerUseRunEvent("s2", { type: "session_started", agentId: "child" }, control);
     expect(control.gate.snapshot().cancelledSessions).toEqual(["s2"]);
     observeComputerUseRunEvent("s2", { type: "session_started" }, control);
+    expect(control.gate.snapshot().cancelledSessions).toEqual([]);
+  });
+
+  test("a Stop with no worker frame (external runtime) cancels the Session at the gate", () => {
+    const control = { gate: new InputGate(), bus: new ComputerActivityBus() };
+    setComputerUseControl(control);
+    try {
+      notifyRunStopRequested("external-1");
+      expect(control.gate.snapshot().cancelledSessions).toEqual(["external-1"]);
+      // Its next run announces itself on the external event stream.
+      observeComputerUseRunEvent("external-1", { type: "session_started" });
+      expect(control.gate.snapshot().cancelledSessions).toEqual([]);
+    } finally {
+      setComputerUseControl(undefined);
+    }
+    // Without the execution gate there is nothing to cancel, and nothing throws.
+    notifyRunStopRequested("external-1");
     expect(control.gate.snapshot().cancelledSessions).toEqual([]);
   });
 

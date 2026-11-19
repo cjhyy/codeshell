@@ -1264,6 +1264,8 @@ export interface PetLongTaskContext {
     sessionId: string;
     workspace?: string;
     attempt: number;
+    /** When the request was made; orders requests to the same Session. */
+    createdAt?: number;
     updatedAt: number;
     summary?: string;
     waitingFor?: string;
@@ -1275,6 +1277,7 @@ export interface PetLongTaskContext {
     status: "completed" | "failed" | "cancelled";
     sessionId: string;
     workspace?: string;
+    createdAt?: number;
     updatedAt: number;
     summary?: string;
     artifacts?: PetLongTaskArtifact[];
@@ -1295,6 +1298,7 @@ export function buildPetLongTaskContext(tasks: readonly PetLongTask[]): PetLongT
       sessionId: task.sessionId,
       ...(task.workspacePath ? { workspace: task.workspacePath.slice(0, 500) } : {}),
       attempt: task.attempt,
+      createdAt: task.createdAt,
       updatedAt: task.updatedAt,
       ...(task.summary ? { summary: task.summary.slice(0, 1_000) } : {}),
       ...(task.waitingFor ? { waitingFor: task.waitingFor.slice(0, 500) } : {}),
@@ -1311,6 +1315,7 @@ export function buildPetLongTaskContext(tasks: readonly PetLongTask[]): PetLongT
       status: task.status,
       sessionId: task.sessionId,
       ...(task.workspacePath ? { workspace: task.workspacePath.slice(0, 500) } : {}),
+      createdAt: task.createdAt,
       updatedAt: task.updatedAt,
       ...(task.summary ? { summary: task.summary.slice(0, 800) } : {}),
       ...(task.artifacts.some((artifact) => artifact.kind === "file")

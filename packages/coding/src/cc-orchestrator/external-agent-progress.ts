@@ -1,6 +1,7 @@
 import type { BackgroundJobProgress } from "@cjhyy/code-shell-core/extension";
+import { parseClaudePermissionDenials } from "./agent-adapter.js";
 
-type Activity = Pick<BackgroundJobProgress, "phase" | "summary">;
+type Activity = Pick<BackgroundJobProgress, "phase" | "summary" | "permissionDenials">;
 const MAX_SUMMARY_CHARS = 240;
 const MAX_RECENT_EVENTS = 8;
 
@@ -73,11 +74,20 @@ function claudeActivity(data: any): Activity | undefined {
           : "Tool finished",
       };
   }
-  if (data.type === "result")
+  if (data.type === "result") {
+    // The CLI's own terminal count is authoritative: it also covers refusals
+    // that never reached a permission prompt (deny rules, a non-asking mode).
+    const denied = parseClaudePermissionDenials(data.permission_denials).length;
     return {
       phase: "responding",
-      summary: data.is_error ? "Run reported an error" : "Response complete",
+      summary: data.is_error
+        ? "Run reported an error"
+        : denied > 0
+          ? `Response complete · ${denied} operation(s) denied by permissions`
+          : "Response complete",
+      ...(denied > 0 ? { permissionDenials: denied } : {}),
     };
+  }
   return undefined;
 }
 

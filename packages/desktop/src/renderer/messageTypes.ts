@@ -12,6 +12,7 @@ import type {
 } from "@cjhyy/code-shell-core";
 import type { TaskInfo } from "@cjhyy/code-shell-core/internal";
 import type { PetChatAttachment } from "../shared/pet-chat-attachments";
+import type { GoalQuestionDetail, GoalUserQuestion } from "../shared/goal-questions";
 
 export type ToolStatus = "queued" | "running" | "succeeded" | "failed" | "denied" | "cancelled";
 
@@ -202,7 +203,13 @@ export interface GoalProgressMessage {
   waiting?: { sinceMs: number; tasks?: Array<{ kind: string; label: string }> };
   /** When the wait ended (the next run started or the goal moved on). */
   waitEndedAtMs?: number;
+  /** The goal stopped to ask the user this question (shown above the composer). */
+  waitingForUser?: string;
+  /** The user replied or the goal moved on: the record collapses to one short line. */
+  questionClosed?: boolean;
 }
+
+export type { GoalQuestionDetail, GoalUserQuestion };
 
 /** Renderer projection of the session's persisted Goal state. */
 export interface ActiveGoal {
@@ -212,10 +219,17 @@ export interface ActiveGoal {
   revision?: number;
   round: number;
   paused: boolean;
+  /**
+   * Why it is paused, when the pause said so. A limit that ran out is resumed
+   * by the next message; `user_stop` (and an unmarked pause) only by Resume.
+   */
+  pauseReason?: "time_budget" | "token_budget" | "turn_limit" | "no_progress" | "user_stop";
   /** When the objective was set (epoch ms); not elapsed working time. */
   setAtMs?: number;
   /** The Goal stopped to wait for the user's answer to this question. */
   waitingForUser?: string;
+  /** Structure of that question, when the asker supplied it. */
+  waitingDetail?: GoalQuestionDetail;
   /**
    * Goal-level active time (running + background waits), settled up to
    * `clockSinceMs` when that is set, else final. Absent before any marker

@@ -8,6 +8,86 @@ breaking.
 
 ## [Unreleased]
 
+## [0.11.0-rc.4] - 2026-11-19
+
+Release candidate focused on Codex and Claude Code sessions run from the desktop
+(external runtimes), plus the web workbench, website and admin console polish.
+The external-runtime changes are covered by automated tests but have not been
+accepted on a real device yet. Account relay session resume needs the matching
+Services deployment (live on codeshell.site).
+
+### Added
+
+- Computer use for Codex and Claude Code sessions: when computer use is enabled,
+  these sessions get the same gated driver native sessions use, with an approval
+  for each action unless the session has full access. Plan mode, read-only and
+  Mimi-hosted sessions do not get it.
+- Background workers started with DriveAgent take a short `title`, shown in
+  notifications, the Goal bar and the task view. The task view shows when a
+  worker is waiting for approval or had operations denied.
+- `wait_for_background` for Goals: a Goal only parks on background work when the
+  agent says nothing else is left to do; otherwise it keeps working.
+- Web workbench: search conversations in the sidebar and pin conversations
+  (per browser and workspace).
+- Web workbench: a bar above the composer when an approval or question card is
+  scrolled out of view, jumping back to it.
+- "立即重连" for both direct Server and account relay connections when offline.
+- Follow system / light / dark theme switch in the workbench, website account
+  menu and sign-in page.
+- Paste or drag files into the web composer to attach them.
+
+### Changed
+
+- When a Codex or Claude Code Goal stops to ask you something, the question is
+  shown once in a banner above the composer, as short questions with option cards
+  (recommended first) instead of one long paragraph. Pick the options, or type any
+  other answer in the composer; several questions are sent as one reply. A step
+  that needs your consent offers explicit agree / disagree. Long background text
+  starts collapsed.
+- Goals ask less: reversible engineering decisions are made without asking,
+  preferences with a sensible default are stated and acted on, and only
+  irreversible, outward-facing, production, credential or spending steps require
+  explicit consent. At most one question per turn.
+- Codex and Claude Code Goals no longer pause after 30 minutes or a fixed number
+  of turns. A Goal stops on its own only when it makes no progress three turns in
+  a row, or when a budget you set runs out, and says which.
+- A Goal paused by a limit resumes when you (or Mimi on your behalf) send the
+  next message. A Goal you paused yourself stays paused.
+- Codex and Claude Code sessions share the project's browser sign-ins, and can
+  ask for a tab you have open in the browser panel. Driving a panel tab still
+  needs your grant. Sites signed in from earlier sessions of this kind need one
+  more sign-in.
+- `browser_navigate` waits for the page to load (up to 10 seconds) and reports
+  whether it finished; a blank screenshot comes with a hint to wait.
+- DriveAgent workers inherit the calling session's permission mode. Outside full
+  access, a Claude worker's permission requests are routed to the session's
+  approval prompt. A session that is not in full access no longer gets a
+  full-access worker by default.
+- Mimi notices: a Goal paused by a limit sends a "paused" notice with the reason;
+  "needs your decision" is sent only with an actual question and its options.
+- Web composer and question card follow desktop keys: Enter sends or answers,
+  Shift+Enter adds a line, and confirming an input method candidate (including
+  Safari) never sends.
+- Edit/Write tool cards on the web show removed/added/content blocks instead of
+  raw JSON.
+- Website and admin console use the desktop accent colour for primary actions;
+  the admin account list becomes cards on phones and the audit log names the
+  signed-in administrator.
+
+### Fixed
+
+- Claude Code sessions: a message sent after a pause, restart or resume could run
+  with none of its output shown, or appear to do nothing. A turn now ends when
+  the process ends, not at its first result.
+- Pausing or resuming a Goal no longer replaces the running session, and requests
+  queued behind a replacement are carried over instead of failing.
+- A DriveAgent worker whose operations were denied is no longer reported as
+  completed; it stops early after repeated denials and the result says how many
+  operations were denied.
+- Mimi's failure receipt for a delegated request says which request it is about.
+- iOS safe-area padding now applies (viewport-fit=cover) and focusing inputs on
+  phones no longer zooms the page.
+
 ## [0.11.0-rc.3] - 2026-11-19
 
 Release candidate for the desktop, website and account computer flow, plus the

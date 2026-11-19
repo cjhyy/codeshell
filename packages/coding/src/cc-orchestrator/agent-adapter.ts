@@ -14,12 +14,39 @@ export interface BuildArgsOpts {
    * permissionMode:"default". */
   additionalReadDirs?: string[];
   codexImageInputSupported?: boolean;
+  /**
+   * Claude Code only: route native permission asks to a host-owned MCP prompt
+   * tool. Without it `claude -p` refuses every ask on the spot, because there is
+   * no terminal to answer it. The config is a 0600 file so the bridge token
+   * stays out of argv.
+   */
+  permissionPrompt?: { mcpConfigPath: string; toolName: string };
+}
+
+/** One operation the external CLI refused for lack of permission. */
+export interface PermissionDenial {
+  toolName: string;
 }
 
 export interface ParsedResult {
   sessionId: string;
   finalText: string;
   isError: boolean;
+  /**
+   * Operations refused during the run, as reported by the CLI itself in its
+   * terminal `result` record. Absent when the CLI has no such report (Codex
+   * enforces a sandbox instead of per-tool permissions).
+   */
+  permissionDenials?: PermissionDenial[];
+}
+
+/** `permission_denials` of a Claude Code `result` record; tolerant of shape drift. */
+export function parseClaudePermissionDenials(value: unknown): PermissionDenial[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((entry) => {
+    const name = entry && typeof entry === "object" ? (entry as any).tool_name : undefined;
+    return { toolName: typeof name === "string" && name.trim() ? name.trim() : "unknown" };
+  });
 }
 
 export interface AgentAdapter {
@@ -74,12 +101,20 @@ export const claudeAdapter: AgentAdapter = {
     // allowed): ask CC to check in before expensive multi-agent work.
     args.push("--append-system-prompt", CC_COST_GUARD_PROMPT);
     args.push("--permission-mode", opts.permissionMode);
+    if (opts.permissionPrompt) {
+      // Deliberately NOT --strict-mcp-config: a delegated worker keeps the MCP
+      // servers the user configured for Claude Code, as it always has.
+      args.push("--permission-prompt-tool", opts.permissionPrompt.toolName);
+      // --mcp-config is variadic; keep it last so it cannot swallow an option value.
+      args.push("--mcp-config", opts.permissionPrompt.mcpConfigPath);
+    }
     return args;
   },
   parseResult(lines) {
     let sessionId = "";
     let finalText = "";
     let isError = false;
+    let permissionDenials: PermissionDenial[] | undefined;
     for (const line of lines) {
       const t = line.trim();
       if (!t) continue;
@@ -94,9 +129,10 @@ export const claudeAdapter: AgentAdapter = {
         if (typeof d.session_id === "string") sessionId = d.session_id;
         if (typeof d.result === "string") finalText = d.result;
         isError = Boolean(d.is_error);
+        permissionDenials = parseClaudePermissionDenials(d.permission_denials);
       }
     }
-    return { sessionId, finalText, isError };
+    return { sessionId, finalText, isError, ...(permissionDenials ? { permissionDenials } : {}) };
   },
 };
 

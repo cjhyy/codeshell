@@ -16,7 +16,7 @@ export interface NoticeDraftOption {
 }
 
 export interface NoticeDraft {
-  kind: "session.done" | "session.failed" | "session.blocked";
+  kind: "session.done" | "session.failed" | "session.blocked" | "session.paused";
   priority: "P0" | "P1";
   dedupeKey: string;
   sessionId: string;
@@ -33,6 +33,8 @@ export interface NoticeDraft {
     error?: string;
     question?: string;
     options?: NoticeDraftOption[];
+    /** `session.paused`: what stopped the Session (see `PAUSE_CAUSES` in pet-notice-compose). */
+    pause?: string;
   };
   /** What a reply code needs about the outcome (pet-notice-action-codes.ts); never shown. */
   context?: {
@@ -352,7 +354,16 @@ export class PetSessionRuleWatcher {
   }
 
   private async emitBlocked(outcome: Extract<SessionOutcome, { kind: "blocked" }>): Promise<void> {
-    const { sessionId, question, summary } = outcome;
+    const { sessionId, question, summary, options } = outcome;
+    // "Needs your decision" only with the question that is actually open. A
+    // limit that ran out is a pause: it says what happened and how to go on.
+    const asks = outcome.reason === "user" && question !== undefined;
+    const pause =
+      outcome.reason === "limit"
+        ? (outcome.limit ?? "limit")
+        : outcome.reason === "goal_exhausted"
+          ? "goal_exhausted"
+          : "awaiting_reply";
     // Blocked leaves the rules armed, and is the rules' to report even while a
     // long task owns the run (no `runKey`: the closure only reports done / failed).
     // The active task, like a decision prompt's: an IM-started task's pause goes
@@ -363,10 +374,13 @@ export class PetSessionRuleWatcher {
       "blocked",
       { at: outcome.at, ...(task ? { task } : {}) },
       {
-        kind: "session.blocked",
-        priority: "P0",
+        kind: asks ? "session.blocked" : "session.paused",
+        priority: asks ? "P0" : "P1",
         dedupeKey: `${sessionId}:goal-pause:${outcome.goalId ?? "-"}:${outcome.revision ?? "-"}:${outcome.runKey}`,
-        facts: { ...(question ? { question } : {}), ...(summary ? { summary } : {}) },
+        facts: {
+          ...(asks ? { question, ...(options ? { options } : {}) } : { pause }),
+          ...(summary ? { summary } : {}),
+        },
         context: {
           reason: outcome.reason,
           ...(outcome.goalId ? { goalId: outcome.goalId } : {}),

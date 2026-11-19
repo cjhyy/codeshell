@@ -25,6 +25,7 @@ export const PET_NOTICE_KINDS = [
   "session.done",
   "session.failed",
   "session.blocked",
+  "session.paused",
   "session.report",
   "followup.due",
   "digest",

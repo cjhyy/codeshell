@@ -71,12 +71,16 @@ import {
   type ExternalGoalUpdate,
 } from "./external-runtime-goals.js";
 import {
+  externalRuntimeConfigurationKey,
+  externalRuntimeRoutingKey,
+} from "./external-runtime-configuration-key.js";
+import {
   ExternalRuntimeOperationRun,
   ExternalAccountingOwnershipError,
   EXTERNAL_UNVERIFIED_WRITE_NOTICE,
 } from "./external-runtime-operations.js";
 import { createExternalRuntimeSourceContext } from "./external-runtime-source-context.js";
-import { EXTERNAL_GOAL_TOOL_CATALOG } from "./external-runtime-goal-tools.js";
+import { EXTERNAL_GOAL_TOOL_CATALOG, runExternalGoalTool } from "./external-runtime-goal-tools.js";
 import {
   externalMimiToolInstructions,
   type ExternalRuntimeMimiHost,
@@ -92,6 +96,8 @@ import type { ExternalRuntimeMemory } from "./external-runtime-memory.js";
 import { assertOutputHistoryWriteAvailable } from "./session-output-history-lease.js";
 import { ExternalRuntimeDeltaBuffer } from "./external-runtime-delta-buffer.js";
 import { notifyRunStopRequested } from "./run-stop-signals.js";
+import { externalComputerUse } from "./external-runtime-computer-use.js";
+import { EXTERNAL_MEDIA_INSTRUCTIONS } from "./external-runtime-instructions.js";
 import { ExternalRuntimeWorkspaceGate } from "./external-runtime-workspace-gate.js";
 import {
   announcesUserMessage,
@@ -318,6 +324,8 @@ export class ExternalRuntimeService {
         faulted: boolean;
         goalRunActive: boolean;
         interruptGeneration: number;
+        /** Generation whose queued turns move to the runtime that replaced this one. */
+        carryOver?: number;
       };
       goalToolsAvailable: boolean;
     }
@@ -627,28 +635,10 @@ export class ExternalRuntimeService {
     }
   }
 
-  private routingKey(request: ExternalRuntimeStartRequest): string {
-    return JSON.stringify({
-      kind: request.kind,
-      cwd: request.cwd,
-      mainRoot: request.mainRoot ?? request.cwd,
-      model: request.model ?? null,
-      modelKey: request.modelKey ?? null,
-      permissionMode: request.permissionMode ?? "default",
-      planMode: request.planMode === true,
-      hasGoal: request.hasGoal === true,
-      hostToolsEnabled: this.areHostToolsEnabled(),
-      ownerWebContentsId: request.ownerWindow?.webContents.id ?? null,
-    });
-  }
-
-  private configurationKey(request: ExternalRuntimeStartRequest): string {
-    return JSON.stringify({
-      routingKey: this.routingKey(request),
-      developerInstructions: request.developerInstructions ?? null,
-      toolProfile: request.toolProfile?.id ?? null,
-    });
-  }
+  private readonly routingKey = (request: ExternalRuntimeStartRequest) =>
+    externalRuntimeRoutingKey(request, this.areHostToolsEnabled());
+  private readonly configurationKey = (request: ExternalRuntimeStartRequest) =>
+    externalRuntimeConfigurationKey(request, this.areHostToolsEnabled());
 
   private captureAuthority(
     request: Pick<ExternalRuntimeStartRequest, "cwd" | "mainRoot" | "permissionMode" | "planMode">,
@@ -978,6 +968,8 @@ export class ExternalRuntimeService {
       authority.projectTrusted && current?.authority.key === authority.key;
 
     // Close the old runtime first to prevent interleaved turns on the same business session.
+    const replaced = preserveBackgroundWork ? this.sessions.get(request.sessionId) : undefined;
+    if (replaced) replaced.lifecycle.carryOver = replaced.lifecycle.interruptGeneration;
     await this.stopExclusive(request.sessionId, preserveBackgroundWork);
     assertStartAuthority?.();
     if (!this.authorityStillCurrent(request.cwd, authority)) {
@@ -1012,6 +1004,7 @@ export class ExternalRuntimeService {
               this.deps.requestApproval!(request.sessionId, approvalRequest),
           }
         : undefined;
+    const cua = externalComputerUse(request, this.deps.featureFlags(), !!toolApprovalBackend);
     const persisted = readExternalRuntimeBinding(request.sessionId);
     const resumeRuntimeSessionId =
       persisted?.kind === request.kind &&
@@ -1052,10 +1045,10 @@ export class ExternalRuntimeService {
         `${runtimeLabel} worker rather than asking CodeShell's native Agent to redo the work. ` +
         `From a ${runtimeLabel} runtime, use cli="${sameCli}" by default and choose ` +
         `${otherRuntime} only ` +
-        "when the user explicitly asks for it. For delegated tasks that require " +
-        'edits, pass permissionMode="acceptEdits" when the current CodeShell ' +
-        "permission allows edits; never request bypassPermissions unless the user " +
-        "explicitly granted that level. " +
+        "when the user explicitly asks for it. Give every DriveAgent call a short title, " +
+        "and omit permissionMode so the worker inherits this session's permission level " +
+        "(its approval requests then appear here); never request bypassPermissions unless " +
+        "the user explicitly granted that level. " +
         "Give that worker a self-contained prompt because it does not inherit this " +
         "runtime's conversation or host bridge. Default to one worker and use more " +
         "only for truly independent workstreams. Do not use the " +
@@ -1074,18 +1067,13 @@ export class ExternalRuntimeService {
         "a similar agent from a shell, because CodeShell cannot track, stop, notify on or " +
         "account for such a process. Use background=true for anything that may take more " +
         "than a few minutes; a foreground tool call is cut off by this runtime's tool timeout.",
-      "CodeShell Desktop can play local audio and video inline in chat. " +
-        "Save media artifacts inside this session's workspace and include a Markdown " +
-        "embed such as ![Audio description](/absolute/path/audio.mp3) or " +
-        "![Video description](/absolute/path/video.mp4); ordinary Markdown file links " +
-        "also show a player. Use angle brackets around paths containing spaces. " +
-        "Link only files that exist. Playback requires a browser-supported codec; " +
-        "remote media links open normally and are not inline players.",
+      EXTERNAL_MEDIA_INSTRUCTIONS,
       this.areHostToolsEnabled() &&
         "Use LinkAction discovery for connected services and ListSources/ReadSource for " +
           "workspace data. These CodeShell host tools use normal authorization and approval; " +
           "do not claim a service is unsupported because this runtime has no native connector.",
       externalMimiToolInstructions(mimiTools),
+      cua?.instructions,
       externalRuntimeProfileInstructions(profile),
       request.developerInstructions,
       request.toolProfile?.instructions,
@@ -1129,16 +1117,8 @@ export class ExternalRuntimeService {
           if (name === "complete_goal" && operations.current?.hasUnverifiedWrites())
             return JSON.stringify({ ok: false, error: EXTERNAL_UNVERIFIED_WRITE_NOTICE });
           const operation = () =>
-            JSON.stringify(
-              name === "get_goal"
-                ? this.goals.get(request.sessionId)
-                : name === "wait_for_user"
-                  ? this.goals.waitForUser(request.sessionId, args)
-                  : this.goals.settle(
-                      request.sessionId,
-                      name === "complete_goal" ? "completed" : "cancelled",
-                      args,
-                    ),
+            runExternalGoalTool(this.goals, request.sessionId, name, args, () =>
+              this.awaitsBackground(request.sessionId),
             );
           return context?.streamCallback
             ? this.withGoalOutput(
@@ -1221,7 +1201,7 @@ export class ExternalRuntimeService {
           this.withGoalOutput(
             request.sessionId,
             (event) => this.emitSafely(request.sessionId, recorder.recordControlOutput(event)),
-            () => this.goals.pause(run, "达到本轮 token 预算"),
+            () => this.goals.pause(run, "token_budget"),
           );
           void this.interruptGoalTurn(request.sessionId, run).catch((error) => {
             lifecycle.faulted = true;
@@ -1344,6 +1324,7 @@ export class ExternalRuntimeService {
         ...(request.toolProfile?.readOnly ? { disableNativeTools: true } : {}),
         approvalPolicy,
         ...(request.kind === "claude-code" ? { claudePermissionMode } : {}),
+        ...(cua ? { hostMcpServers: cua.servers } : {}),
         ...(toolApprovalBackend
           ? {
               approvalBackend: {
@@ -1632,6 +1613,11 @@ export class ExternalRuntimeService {
     const runTurnExclusive = async (): Promise<ExternalRuntimeTurnOutcome> => {
       assertOutputHistoryWriteAvailable(sessionId);
       if (this.sessions.get(sessionId) !== entry) {
+        // Replaced in place under the same authority: an accepted turn is not dropped.
+        await this.lifecycleTails.get(sessionId);
+        const moved = !initialBackground && entry.lifecycle.carryOver === acceptedGeneration;
+        if (moved && this.sessions.has(sessionId))
+          return this.submit(sessionId, resolveInput, callerWebContentsId, expectedGoal, hooks);
         throw new Error(
           `external runtime session was replaced before its queued turn: ${sessionId}`,
         );
@@ -1688,14 +1674,15 @@ export class ExternalRuntimeService {
       }
       // Application conflicts are rejected before mutating any run buffers or Goal.
       entry.recorder.assertNewSubmission(turnInput);
-      // Only a message the user sent answers a wait_for_user question; resume
-      // and background continuations are injected and leave it open.
+      // Only a message somebody sent answers a wait_for_user question or resumes
+      // a limit-paused Goal; injected continuations leave both as they are.
       if (!turnInput.injected) this.goals.userReplied(sessionId);
+      const resumes = !turnInput.injected && entry.goalToolsAvailable;
       const initialGoalEvents: StreamEvent[] = [];
       const goalRun = this.withGoalOutput(
         sessionId,
         (event) => initialGoalEvents.push(event),
-        () => this.goals.start(sessionId, turnInput.goal, turnInput.disableGoal),
+        () => this.goals.start(sessionId, turnInput.goal, turnInput.disableGoal, resumes),
       );
       let logicalRunId: string | undefined;
       const publishGoalOutput = (event: StreamEvent) => {
@@ -1721,7 +1708,7 @@ export class ExternalRuntimeService {
             if (!this.goals.isCurrent(goalRun)) return;
             if (this.goals.remainingTime(goalRun) > 0) return armDeadline();
             this.withGoalOutput(sessionId, publishGoalOutput, () =>
-              this.goals.pause(goalRun, "达到本轮时间预算"),
+              this.goals.pause(goalRun, "time_budget"),
             );
             void this.interruptGoalTurn(sessionId, goalRun).catch((error) => {
               entry.lifecycle.faulted = true;
@@ -1880,6 +1867,7 @@ export class ExternalRuntimeService {
                   return;
                 background?.observe(event);
                 trace?.observe(event);
+                if (goalRun) this.goals.observeTurnEvent(goalRun, event);
                 entry.forwardEvent(event);
               };
               if (runId) {
@@ -1947,7 +1935,9 @@ export class ExternalRuntimeService {
               });
             }
             finalOutcome = entry.recorder.finishIfMissing();
-            const waitingForBackgroundWork = this.awaitsBackground(sessionId);
+            // Running work parks the Goal only when the model asked (or idled).
+            const waitingForBackgroundWork =
+              this.goals.backgroundTurnEnd(goalRun, this.awaitsBackground(sessionId)) === "park";
             if (
               !goalRun ||
               finalOutcome.reason !== "completed" ||
@@ -1985,7 +1975,10 @@ export class ExternalRuntimeService {
             }
             providerRound++;
             nextInput = {
-              text: `继续处理尚未完成的目标。\n\n${this.goals.instruction(goalRun)}`,
+              text: this.goals.continuation(
+                goalRun,
+                this.deps.backgroundWork?.listRunning?.(sessionId),
+              ),
               displayText: "继续处理尚未完成的目标。",
               injected: true,
             };
@@ -2127,7 +2120,13 @@ export class ExternalRuntimeService {
   /** Let queued user input in after the current provider turn; see `yieldAfterTurn`. */
   yieldGoal(sessionId: string, callerWebContentsId?: number): boolean {
     this.assertOwner(sessionId, callerWebContentsId);
+    void this.releaseIdle(sessionId, true).catch(() => false);
     return this.goals.yieldAfterTurn(sessionId);
+  }
+
+  /** End a provider that finished its reply and only lingers; see `releaseIdle` on the session. */
+  async releaseIdle(sessionId: string, sticky = false): Promise<boolean> {
+    return (await this.sessions.get(sessionId)?.session.releaseIdle?.(sticky)) ?? false;
   }
 
   /**
@@ -2170,7 +2169,7 @@ export class ExternalRuntimeService {
         this.backgroundWakePaused.add(sessionId);
       }
       if (run && this.goals.isCurrent(run)) {
-        this.goals.pause(run, "用户已停止本轮执行", true);
+        this.goals.pause(run, "user_stop", true);
       } else {
         // A background wait has released its live run. Stop must still pause
         // the persisted Goal, or the next completion would silently wake it.

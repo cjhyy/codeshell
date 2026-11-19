@@ -743,6 +743,7 @@ export class ToolExecutor {
     const toolStartedAt = Date.now();
     trace?.onEffectiveInput(call.args);
     let result: ToolResult;
+    const delegatedSessionId = this.toolCtx?.sessionId;
     try {
       result = await this.registry.executeTool(call.toolName, call.args, {
         signal: this.signal,
@@ -754,6 +755,20 @@ export class ToolExecutor {
                 if (this.toolCtx?.allowedToolNames && !this.toolCtx.allowedToolNames.has(name))
                   return "deny";
                 return this.permission.classify(name, args);
+              },
+              requestDelegatedToolApproval: async (request) => {
+                // The classifier is reconfigured in place when the Session's
+                // mode or backend changes, so a background worker that asks
+                // later is answered by the Session's CURRENT policy.
+                const decision = await this.permission.handleAskResult(
+                  request.toolName,
+                  request.args,
+                  request.reason,
+                  delegatedSessionId ? { sessionId: delegatedSessionId } : undefined,
+                );
+                return decision.approved
+                  ? { approved: true }
+                  : { approved: false, ...(decision.reason ? { reason: decision.reason } : {}) };
               },
               executeBoundTool: async (nestedCall, options) => {
                 // A distinct wrapper preserves the per-call cancellation signal

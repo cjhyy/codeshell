@@ -43,3 +43,31 @@ export function pageWaitCondition(
 export function browserWaitTimeout(timeoutMs?: number): number {
   return Number.isFinite(timeoutMs) && timeoutMs! > 0 ? Math.min(timeoutMs!, 60_000) : 30_000;
 }
+
+/** How long navigate waits for the window `load` event before reporting "loading". */
+export const NAVIGATION_LOAD_TIMEOUT_MS = 10_000;
+
+/**
+ * Serialized into the main document: the window `load` event has fired. Unlike
+ * network idleness this is reached by pages that keep polling, so it is a
+ * usable completion signal for consoles and other long-lived apps.
+ */
+export function pageLoadComplete(): boolean {
+  return document.readyState === "complete";
+}
+
+/**
+ * Serialized into the main document: nothing a person could see is there yet —
+ * no rendered text and no sized image, canvas, video, SVG or embedded frame.
+ */
+export function pageLooksBlank(): boolean {
+  const body = document.body;
+  if (!body) return true;
+  if ((body.innerText ?? "").trim()) return false;
+  return !Array.from(body.querySelectorAll("img,canvas,video,svg,iframe,embed,object")).some(
+    (element) => {
+      const rect = element.getBoundingClientRect();
+      return rect.width > 1 && rect.height > 1;
+    },
+  );
+}

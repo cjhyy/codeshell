@@ -1,7 +1,6 @@
 import { app, BrowserWindow, ipcMain } from "electron";
 import { join } from "node:path";
 import { AgentBridge } from "./agent-bridge.js";
-import { externalRuntimeBrowserBucket } from "./external-runtime-browser-bucket.js";
 import { requireRendererProjectPath } from "./renderer-project-path.js";
 import { migrateCredentialStore } from "./credential-migration.js";
 import { RendererBrowserSessionAccess } from "./renderer-browser-session-access.js";
@@ -118,11 +117,6 @@ export function registerBrowserSessionIpc(deps: BrowserSessionIpcDeps) {
         );
         if (!existingBucket) throw new Error("browser Session has no Main-owned bucket");
         if (existingBucket !== bucket) {
-          // External runtimes intentionally own an isolated browser partition.
-          // A late renderer effect must never rebind it to the visible session
-          // bucket; ignore that stale registration instead of emitting a noisy
-          // error after the external runtime has already started successfully.
-          if (existingBucket === externalRuntimeBrowserBucket(sessionId)) return;
           throw new Error(
             `renderer attempted to rebind session ${sessionId} from ${existingBucket} to ${bucket}`,
           );

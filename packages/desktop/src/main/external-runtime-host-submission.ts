@@ -44,7 +44,9 @@ export function createExternalRuntimeHostSubmission(deps: {
       // Admission must be durable before the Gateway acknowledges it. Until a
       // cross-process external queue is available, refuse a busy bound session
       // explicitly rather than acknowledge a memory-only queued provider call.
-      if (service.isSessionRunning(sessionId))
+      // A provider that already replied and only lingers for its own background
+      // shell is not a running turn: end it so this message is not parked behind it.
+      if (service.isSessionRunning(sessionId) && !(await service.releaseIdle(sessionId)))
         throw new Error("当前外部会话仍在运行，请等待本轮结束后重试；未切换到 API 模型。");
       const workspace = await resolveStartWorkspace(sessionId, requestedCwd);
       const ownerWindow = deps.ownerWindow(sessionId);

@@ -1048,17 +1048,29 @@ export function ChatView({
   // an agent turn, so we block composer edits/actions until it settles.
   const controlsDisabled = composerDisabled || busy || compacting || expandingPluginCommand;
   const inputDisabled = composerDisabled || compacting || expandingPluginCommand;
+  // The goal's open question is answered here, in the one composer. A blocking
+  // ask_user card goes first; the goal question then waits its turn.
+  const goalQuestionOpen =
+    variant === "main" &&
+    !!activeGoal?.waitingForUser &&
+    !activeGoal.paused &&
+    !messages.some((m) => m.kind === "ask_user" && m.answer === undefined && !m.asynchronous);
+  const [failedGoalReply, setFailedGoalReply] = useState<string | null>(null);
+  const latestDraft = useRef(draft);
+  latestDraft.current = draft;
   const placeholder = expandingPluginCommand
     ? t("chat.composer.placeholderExpandingCommand")
     : compacting
       ? t("chat.composer.placeholderCompacting")
       : busy
         ? t("chat.composer.placeholderBusy")
-        : t(
-            variant === "quickChat"
-              ? "panels.quickChat.placeholder"
-              : "chat.composer.placeholderIdle",
-          );
+        : goalQuestionOpen
+          ? t("chat.goal.replyPlaceholder")
+          : t(
+              variant === "quickChat"
+                ? "panels.quickChat.placeholder"
+                : "chat.composer.placeholderIdle",
+            );
 
   const closeMention = (): void => {
     setMention(null);
@@ -1324,13 +1336,27 @@ export function ChatView({
         attachments: runAttachments,
         displayText: displayPayload,
       });
-    else
-      onSend(withAnchors, {
+    else {
+      // A message typed while the goal waits on its question is the answer:
+      // it continues that goal instead of starting a new one.
+      const question = goalQuestionOpen && !loopInvocation ? activeGoal?.waitingForUser : undefined;
+      const sent = onSend(withAnchors, {
         ...routeOpts,
         attachments: runAttachments,
         displayText: displayPayload,
         suppressGoal: loopInvocation !== null,
+        ...(question ? { continueGoal: true } : {}),
       });
+      if (question) {
+        setFailedGoalReply(null);
+        void Promise.resolve(sent).catch(() => {
+          // Not sent: the question is still open, so give the answer back.
+          setFailedGoalReply(question);
+          // (Unless the user has already typed something else meanwhile.)
+          if (!latestDraft.current || latestDraft.current === draft) setDraft(draft);
+        });
+      }
+    }
     // Snap the stream to the bottom + re-arm follow regardless of scroll pos.
     setSendEpoch((n) => n + 1);
     // Reusing the main composer must not make ephemeral side prompts durable.
@@ -2217,21 +2243,22 @@ export function ChatView({
               cwd={conversationRoot}
               rootId={conversationRootId}
               rootStatus={conversationRootStatus}
-              replyDisabled={controlsDisabled || !!openAsk}
-              onReply={
-                openAsk
-                  ? undefined
-                  : (answer) => {
-                      if (controlsDisabled || goalPending || !activeGoal.waitingForUser) return;
-                      const sent = onSend(answer, {
-                        ...(sendBucket ? { bucket: sendBucket } : {}),
-                        ...rememberLinkSubmission(answer, sendBucket),
-                        continueGoal: true,
-                      });
-                      setSendEpoch((epoch) => epoch + 1);
-                      return sent;
-                    }
+              replyDisabled={controlsDisabled}
+              replyQueued={!!openAsk}
+              replyFailed={
+                failedGoalReply !== null && failedGoalReply === activeGoal.waitingForUser
               }
+              onReply={(answer) => {
+                if (controlsDisabled || goalPending || !activeGoal.waitingForUser) return;
+                setFailedGoalReply(null);
+                const sent = onSend(answer, {
+                  ...(sendBucket ? { bucket: sendBucket } : {}),
+                  ...rememberLinkSubmission(answer, sendBucket),
+                  continueGoal: true,
+                });
+                setSendEpoch((epoch) => epoch + 1);
+                return sent;
+              }}
             />
           )}
           {/*

@@ -291,7 +291,14 @@ export function DriveAgentTaskView({
   const progress = job?.progress;
   const finalText = driveAgentTaskIsTerminal(job?.status) ? job?.finalText : undefined;
   const clock = job?.finishedAt ?? now;
-  const quiet = running && now - (progress?.lastActivityAt ?? job?.startedAt ?? now) >= 60_000;
+  const denied = progress?.permissionDenials ?? 0;
+  const blocked = progress?.blocked === "permission";
+  const awaitingApproval = running ? progress?.awaitingApprovalSince : undefined;
+  // Waiting on the user is an explanation, not silence.
+  const quiet =
+    running &&
+    !awaitingApproval &&
+    now - (progress?.lastActivityAt ?? job?.startedAt ?? now) >= 60_000;
 
   return (
     <section aria-label={t("panels.shells.taskProgress")} className="flex h-full min-h-0 flex-col">
@@ -361,6 +368,28 @@ export function DriveAgentTaskView({
         {/* Once the transcript is shown below, the raw CLI summary only repeats it. */}
         {!linked && progress?.summary && (
           <p className="break-words text-muted-foreground">{progress.summary}</p>
+        )}
+        {awaitingApproval && (
+          <p data-drive-agent-permission="awaiting" className="text-status-warn">
+            {t("panels.shells.taskAwaitingApproval", {
+              duration: taskDuration(now - awaitingApproval),
+            })}
+          </p>
+        )}
+        {(blocked || denied > 0) && (
+          <p
+            data-drive-agent-permission={blocked ? "blocked" : "denied"}
+            className={blocked ? "text-status-err" : "text-status-warn"}
+          >
+            {t(
+              blocked
+                ? "panels.shells.taskPermissionBlocked"
+                : running
+                  ? "panels.shells.taskPermissionDenied"
+                  : "panels.shells.taskPermissionDeniedDone",
+              { count: denied },
+            )}
+          </p>
         )}
         {quiet && <p className="text-status-warn">{t("panels.shells.taskQuiet")}</p>}
         {readFailed && (

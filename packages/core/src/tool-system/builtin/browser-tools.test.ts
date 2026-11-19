@@ -680,7 +680,61 @@ describe("browser_navigate", () => {
   test("navigates / requires url", async () => {
     const ctx = ctxWith({ navigate: async () => ({ ok: true }) });
     expect(await browserNavigateTool({}, ctx)).toContain("url is required");
-    expect(await browserNavigateTool({ url: "https://x.com" }, ctx)).toContain("Navigated to");
+    expect(await browserNavigateTool({ url: "https://x.com" }, ctx)).toBe(
+      "Navigated to https://x.com",
+    );
+  });
+
+  test("reports the load state the driver observed", async () => {
+    const loaded = await browserNavigateTool(
+      { url: "https://x.com" },
+      ctxWith({ navigate: async () => ({ ok: true, loadState: "complete" }) }),
+    );
+    expect(loaded).toContain("page loaded");
+    expect(loaded).not.toContain("still loading");
+
+    const loading = await browserNavigateTool(
+      { url: "https://x.com" },
+      ctxWith({ navigate: async () => ({ ok: true, loadState: "loading" }) }),
+    );
+    expect(loading).toContain("still loading");
+    expect(loading).toContain("browser_act(wait)");
+    expect(loading).not.toContain("page loaded");
+  });
+
+  test("a failed navigation is never reported as loaded", async () => {
+    const out = await browserNavigateTool(
+      { url: "https://x.com" },
+      ctxWith({ navigate: async () => ({ ok: false, detail: "net::ERR_FAILED" }) }),
+    );
+    expect(out).toBe("Error: net::ERR_FAILED");
+  });
+});
+
+describe("browser_observe vision — blank frame", () => {
+  const image = { ok: true, base64: "AAAA", mediaType: "image/jpeg" };
+
+  test("a blank viewport screenshot carries a wait hint, and still returns the image", async () => {
+    const out = await browserObserveTool(
+      { mode: "vision" },
+      ctxVision({ screenshot: async () => ({ ...image, blank: true }) }),
+    );
+    expect(typeof out).toBe("object");
+    const { result, contentBlocks } = out as { result: string; contentBlocks: unknown[] };
+    expect(contentBlocks).toHaveLength(1);
+    expect(result).toContain("[screenshot loaded]");
+    expect(result).toContain("may not have rendered yet");
+    expect(result).toContain("browser_act(wait)");
+  });
+
+  test("a rendered or unclassified screenshot has no hint", async () => {
+    for (const blank of [false, undefined]) {
+      const out = await browserObserveTool(
+        { mode: "vision" },
+        ctxVision({ screenshot: async () => ({ ...image, blank }) }),
+      );
+      expect((out as { result: string }).result).toBe("[screenshot loaded]");
+    }
   });
 });
 

@@ -261,3 +261,47 @@ test("ownership comes from this process's live jobs without reading a worker", (
   backgroundJobRegistry.finish("live-owner");
   expect(findActiveBackgroundJobForExternalSession("claude", "claude-live")).toBeUndefined();
 });
+
+test("permission state is validated, retained after the job ends and survives history", () => {
+  backgroundJobRegistry.start("progress-denied", "progress-history-test", "task", {
+    persist: true,
+    kind: "drive-agent",
+  });
+  const time = Date.now();
+  backgroundJobRegistry.updateProgress("progress-denied", {
+    lastActivityAt: time,
+    eventCount: 1,
+    permissionDenials: 2,
+    awaitingApprovalSince: time - 5,
+    blocked: "permission",
+  });
+  expect(backgroundJobRegistry.get("progress-denied")!.progress).toMatchObject({
+    permissionDenials: 2,
+    awaitingApprovalSince: time - 5,
+    blocked: "permission",
+  });
+  backgroundJobRegistry.updateProgress("progress-denied", {
+    lastActivityAt: time,
+    eventCount: 2,
+    permissionDenials: -1,
+    blocked: "other" as never,
+  });
+  const cleared = backgroundJobRegistry.get("progress-denied")!.progress!;
+  expect(cleared.permissionDenials).toBeUndefined();
+  expect(cleared.blocked).toBeUndefined();
+  backgroundJobRegistry.updateProgress("progress-denied", {
+    lastActivityAt: time,
+    eventCount: 3,
+    permissionDenials: 4,
+  });
+  backgroundJobRegistry.finish("progress-denied");
+  const listed = listBackgroundWorkForUI("progress-history-test").find(
+    (entry) => entry.kind === "job" && entry.jobId === "progress-denied",
+  );
+  expect(listed?.kind === "job" && listed.progress?.permissionDenials).toBe(4);
+  expect(
+    backgroundJobHistory
+      .list("progress-history-test")
+      .find((job) => job.jobId === "progress-denied")?.progress?.permissionDenials,
+  ).toBe(4);
+});

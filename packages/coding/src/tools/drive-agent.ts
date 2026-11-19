@@ -32,6 +32,13 @@ import {
   type WorktreeSession,
 } from "../git/worktree.js";
 import { codingToolService } from "../capability-runtime.js";
+import {
+  drivePermissionLaunchNote,
+  prepareDriveRunPermissions,
+  resolveDrivePermissionMode,
+  startDrivePermissionPrompt,
+  type DriveRunPermissions,
+} from "./drive-agent-permissions.js";
 
 export type DriveCli = "claude" | "codex";
 export type DriveIsolation = "current" | "worktree" | "none";
@@ -61,6 +68,15 @@ export const driveAgentToolDef: ToolDefinition = {
     "If the external agent is explicitly expected to write a workspace other than its launch cwd, " +
     "set effectiveWorkspaceCwd so cross-session conflict checks use that declared workspace; omit " +
     "it when the run writes in cwd. " +
+    "Always pass `title`: a short human-readable name for the task. It is what the user sees in " +
+    "the task list, the approval prompt, the waiting indicator and the completion notification. " +
+    "PERMISSIONS: without `permissionMode` the worker inherits this session's mode. Only " +
+    "'bypassPermissions' runs everything unattended. In 'default' and 'acceptEdits' a Claude Code " +
+    "worker must get approval for Bash — so git, tests, installs and formatters do NOT run on " +
+    "their own; each request goes to this session's approval prompt, and is denied outright when " +
+    "the session has no approval path. A worker that keeps being denied is stopped early and " +
+    "reported as blocked, and a run that was denied anything is reported as 'completed with N " +
+    "denied operations', never as plainly completed. " +
     "For read-only diagnosis that needs logs or transcripts outside cwd, explicitly pass their " +
     "directories in additionalReadDirs together with permissionMode:'default'. " +
     "For a quick task where you want the answer inline, pass background:false. " +
@@ -83,6 +99,11 @@ export const driveAgentToolDef: ToolDefinition = {
   inputSchema: {
     type: "object",
     properties: {
+      title: {
+        type: "string",
+        description:
+          "Required in practice: a short human-readable task name (a few words, e.g. 'Fix flaky login test'). Shown to the user in the task list, approval prompts, the waiting indicator and the completion notification. When omitted, the first 40 characters of the prompt are used.",
+      },
       prompt: {
         type: "string",
         description:
@@ -149,7 +170,7 @@ export const driveAgentToolDef: ToolDefinition = {
         type: "string",
         enum: ["default", "acceptEdits", "bypassPermissions"],
         description:
-          "Permission/sandbox level. Defaults to 'bypassPermissions' (full auto — needed so the agent's tools run unattended; there is no interactive approval loop here). For codex: default→read-only sandbox, acceptEdits→workspace-write, bypassPermissions→no sandbox. Pass 'default'/'acceptEdits' to gate.",
+          "Permission level. Omit to inherit this session's mode (full access → 'bypassPermissions', accept-edits → 'acceptEdits', anything else → 'default'). Claude Code: 'default' asks before edits, Bash and web access; 'acceptEdits' lets edits through but still asks before Bash (git, tests, installs) and web access; 'bypassPermissions' asks nothing. Asks go to this session's approval prompt and are denied when it has none. Codex: default → read-only sandbox, acceptEdits → workspace-write sandbox, bypassPermissions → no sandbox; Codex never asks.",
       },
       background: {
         type: "boolean",
@@ -172,6 +193,7 @@ type Runner = (opts: {
   signal?: AbortSignal;
   imagePaths?: string[];
   additionalReadDirs?: string[];
+  permissionPrompt?: DriveRunPermissions["permissionPrompt"];
   onSessionId?: (sessionId: string) => void;
   onProgress?: (progress: BackgroundJobProgress) => void;
   onProcess?: (pid: number) => void;
@@ -212,6 +234,8 @@ export interface DriveAgentToolOptions {
   /** Test seam for external transcript attribution. */
   readChangedFiles?: typeof readExternalChangedFiles;
   probeChangedFiles?: typeof probeExternalChangedFiles;
+  /** Test seam for the worker's permission-prompt bridge. */
+  startPermissionPrompt?: typeof startDrivePermissionPrompt;
 }
 
 function isExternalRuntimeContext(ctx?: ToolContext): boolean {
@@ -233,6 +257,7 @@ const defaultRunner: Runner = (opts) => {
       permissionMode: opts.permissionMode ?? "default",
       imagePaths: opts.imagePaths,
       additionalReadDirs: opts.additionalReadDirs,
+      ...(opts.permissionPrompt ? { permissionPrompt: opts.permissionPrompt } : {}),
       onSessionId: opts.onSessionId,
       onProgress: opts.onProgress,
       onProcess: opts.onProcess,
@@ -772,7 +797,10 @@ function attachDriveCompletion(params: {
   probeChangedFiles: typeof probeExternalChangedFiles;
   recordExternalFileChanges?: ToolContext["recordExternalFileChanges"];
   originClientMessageId?: string;
+  title?: string;
+  permissions: DriveRunPermissions;
 }): Promise<void> {
+  const { title, permissions } = params;
   const {
     jobId,
     sessionId,
@@ -819,7 +847,14 @@ function attachDriveCompletion(params: {
       }
       const cancelling = settledStatus === "cancelling";
       const lifecycle = safeFinalizeDriveWorktree(worktree);
-      const finalText = appendLifecycleNote(r.finalText, lifecycle);
+      // A worker that was refused operations did not finish its task, and one
+      // that was stopped for it failed. Say so ahead of its own final text.
+      const denied = permissions.outcome(r);
+      const failed = r.isError || !!denied.blocked;
+      const finalText = appendLifecycleNote(
+        [denied.note, r.finalText].filter(Boolean).join("\n\n"),
+        lifecycle,
+      );
       if (lifecycle) {
         backgroundJobRegistry.recordWorktreeLifecycle(jobId, lifecycle.action);
       }
@@ -837,7 +872,7 @@ function attachDriveCompletion(params: {
           description: label,
           cli,
           cwd,
-          status: cancelling ? "cancelled" : r.isError ? "failed" : "completed",
+          status: cancelling ? "cancelled" : failed ? "failed" : "completed",
           changedFiles,
           ...(provenance ? { provenance } : {}),
           ...(originClientMessageId ? { originClientMessageId } : {}),
@@ -866,47 +901,40 @@ function attachDriveCompletion(params: {
       // (not just "a job finished"). Mirrors the video/sub-agent completion
       // path — enqueue lands in the same notificationQueue the wakeup drains.
       notificationQueue.enqueue(
-        r.isError
-          ? {
-              agentId: jobId,
-              description: label,
-              status: "failed",
-              workKind: "cc",
-              error: finalText || "(no output)",
-              ccSessionId: r.sessionId || undefined,
-              ...(changedFiles.length
-                ? {
-                    changedFiles,
-                    cwd,
-                    ...(provenance ? { changedFilesProvenance: provenance } : {}),
-                  }
-                : {}),
-              ...(originClientMessageId ? { originClientMessageId } : {}),
-              enqueuedAt: Date.now(),
-            }
-          : {
-              agentId: jobId,
-              description: label,
-              status: "completed",
-              workKind: "cc",
-              finalText,
-              ccSessionId: r.sessionId || undefined,
-              ...(changedFiles.length
-                ? {
-                    changedFiles,
-                    cwd,
-                    ...(provenance ? { changedFilesProvenance: provenance } : {}),
-                  }
-                : {}),
-              ...(originClientMessageId ? { originClientMessageId } : {}),
-              enqueuedAt: Date.now(),
-            },
+        {
+          agentId: jobId,
+          ...(title ? { name: title } : {}),
+          description: label,
+          status: failed ? "failed" : "completed",
+          workKind: "cc",
+          ...(failed ? { error: finalText || "(no output)" } : { finalText }),
+          ccSessionId: r.sessionId || undefined,
+          ...(changedFiles.length
+            ? {
+                changedFiles,
+                cwd,
+                ...(provenance ? { changedFilesProvenance: provenance } : {}),
+              }
+            : {}),
+          ...(originClientMessageId ? { originClientMessageId } : {}),
+          ...(denied.denials ? { permissionDenials: denied.denials } : {}),
+          enqueuedAt: Date.now(),
+        },
         sessionId,
       );
       // Retain the job in the panel with its result + the external CLI
       // session id + changed files.
+      const progress = backgroundJobRegistry.get(jobId)?.progress;
+      if (progress && (denied.denials || denied.blocked)) {
+        // Retained with the job, so the task view still shows it after the end.
+        backgroundJobRegistry.updateProgress(jobId, {
+          ...progress,
+          permissionDenials: Math.max(denied.denials, progress.permissionDenials ?? 0),
+          ...(denied.blocked ? { blocked: "permission" as const } : {}),
+        });
+      }
       backgroundJobRegistry.finish(jobId, {
-        status: r.isError ? "failed" : "completed",
+        status: failed ? "failed" : "completed",
         finalText: finalText || undefined,
         ccSessionId: r.sessionId || undefined,
         ...(changedFiles.length ? { changedFiles } : {}),
@@ -919,17 +947,23 @@ function attachDriveCompletion(params: {
         return;
       }
       const lifecycle = safeFinalizeDriveWorktree(worktree);
-      const msg = appendLifecycleNote((err as Error)?.message ?? String(err), lifecycle);
+      const denied = permissions.outcome();
+      const msg = appendLifecycleNote(
+        denied.note ?? (err as Error)?.message ?? String(err),
+        lifecycle,
+      );
       if (lifecycle) {
         backgroundJobRegistry.recordWorktreeLifecycle(jobId, lifecycle.action);
       }
       notificationQueue.enqueue(
         {
           agentId: jobId,
+          ...(title ? { name: title } : {}),
           description: label,
           status: "failed",
           workKind: "cc",
           error: msg,
+          ...(denied.denials ? { permissionDenials: denied.denials } : {}),
           enqueuedAt: Date.now(),
         },
         sessionId,
@@ -969,6 +1003,8 @@ function trackBackgroundRun(params: {
   probeChangedFiles: typeof probeExternalChangedFiles;
   recordExternalFileChanges?: ToolContext["recordExternalFileChanges"];
   originClientMessageId?: string;
+  title?: string;
+  permissions: DriveRunPermissions;
 }): { jobId: string } | { error: string } {
   const { sessionId } = params;
   if (!isValidSessionId(sessionId)) {
@@ -1032,12 +1068,21 @@ function trackBackgroundRun(params: {
       jobId,
       params.initialProgress ?? initialAgentProgress(params.cli),
     );
+    const { permissions } = params;
+    const publish = (progress: BackgroundJobProgress) =>
+      backgroundJobRegistry.updateProgress(jobId, permissions.progress(progress));
+    // A permission ask or refusal is observed activity even while the CLI
+    // prints nothing, which is exactly when a blocked worker looks merely quiet.
+    permissions.setListener(() => {
+      const last = backgroundJobRegistry.get(jobId)?.progress;
+      if (last) publish({ ...last, lastActivityAt: Date.now(), eventCount: last.eventCount + 1 });
+    });
     run = params.start({
       onSessionId: (externalSessionId) => {
         if (!isValidSessionId(externalSessionId)) return;
         backgroundJobRegistry.recordArtifacts(jobId, { ccSessionId: externalSessionId });
       },
-      onProgress: (progress) => backgroundJobRegistry.updateProgress(jobId, progress),
+      onProgress: publish,
       onProcess: (pid) => backgroundJobRegistry.recordArtifacts(jobId, { processId: pid }),
     });
   } catch (error) {
@@ -1102,16 +1147,17 @@ export function makeDriveAgentTool(
     const resumeSessionId =
       typeof args.resumeSessionId === "string" ? args.resumeSessionId : undefined;
     const model = typeof args.model === "string" && args.model.trim() ? args.model : undefined;
-    const permissionMode: PermMode =
-      args.permissionMode === "default" ||
-      args.permissionMode === "acceptEdits" ||
-      args.permissionMode === "bypassPermissions"
-        ? args.permissionMode
-        : isExternalRuntimeContext(ctx)
-          ? "default"
-          : "bypassPermissions";
-    const isWritableRun = permissionMode !== "default";
     const externalRuntime = isExternalRuntimeContext(ctx);
+    // No explicit mode → the launching Session's own. A worker is neither wider
+    // than its parent by default nor silently narrower; see drive-agent-permissions.
+    const { mode: permissionMode, source: permissionSource } = resolveDrivePermissionMode({
+      requested: args.permissionMode,
+      // An external-runtime host expresses the user's full access as path
+      // authority, because its tool host refuses the bypass mode itself.
+      parentMode: ctx?.pathAccess === "full" ? "bypassPermissions" : ctx?.permissionMode,
+      externalRuntime,
+    });
+    const isWritableRun = permissionMode !== "default";
     const background = args.background !== false;
     // A detached external-runtime job is safe only when its host explicitly
     // promises to drain notificationQueue and inject the result into a later
@@ -1253,13 +1299,6 @@ export function makeDriveAgentTool(
       ? managedWorktree.session.worktreePath
       : (declaredEffectiveWorkspaceCwd ?? cwd);
     const effectiveWorkspaceRoot = await resolveDriveWorkspaceRoot(effectiveWorkspaceCwd);
-    // Default to bypassPermissions: this tool is a fire-one-turn delegation to
-    // an external CLI with nobody watching for approvals, and there is no
-    // interactive approval loop here — so under "default" a tool that needs
-    // approval (WebSearch/WebFetch/Write) silently can't run (the
-    // "DriveClaudeCode 没有联网能力" report). A caller that wants gating passes
-    // an explicit mode, which is honored. (For codex, the mode maps to a sandbox
-    // tier inside codexAdapter.)
     const attachmentSourceCwd = managedWorktree?.session.originalCwd ?? cwd;
     const resolvedAttachmentPaths = resolveAttachmentPaths(
       args.attachmentPaths,
@@ -1288,8 +1327,31 @@ export function makeDriveAgentTool(
       cli === "codex"
         ? attachmentPaths.filter((path) => DRIVE_IMAGE_EXTS.has(extname(path).toLowerCase()))
         : [];
-    const label = `DriveAgent(${cli}): ${prompt.slice(0, 40)}`;
+    // The model-given title names the task everywhere a person looks; without
+    // one the historical prompt-prefix label is kept.
+    const title =
+      typeof args.title === "string" && args.title.trim()
+        ? summarizePrompt(args.title, 80)
+        : undefined;
+    const label = title ?? `DriveAgent(${cli}): ${prompt.slice(0, 40)}`;
     const promptSummary = summarizePrompt(prompt);
+    let stopRun = (): void => {};
+    const permissions = await prepareDriveRunPermissions({
+      cli,
+      mode: permissionMode,
+      title: title ?? summarizePrompt(prompt, 40),
+      ...(ctx?.requestDelegatedToolApproval
+        ? { requestApproval: ctx.requestDelegatedToolApproval }
+        : {}),
+      stop: () => stopRun(),
+      ...(options.startPermissionPrompt ? { startPrompt: options.startPermissionPrompt } : {}),
+    });
+    const permissionNote = drivePermissionLaunchNote({
+      cli,
+      mode: permissionMode,
+      source: permissionSource,
+      routed: permissions.routed,
+    });
     const runOptsBase = {
       cli,
       prompt: promptWithAttachments,
@@ -1299,6 +1361,14 @@ export function makeDriveAgentTool(
       permissionMode,
       imagePaths,
       additionalReadDirs,
+      ...(permissions.permissionPrompt ? { permissionPrompt: permissions.permissionPrompt } : {}),
+    };
+    // The prompt bridge lives exactly as long as the external process.
+    const launch = (opts: Parameters<Runner>[0]): Promise<AgentRunResult> => {
+      const started = startRun(runner, opts);
+      const close = () => void permissions.close();
+      started.then(close, close);
+      return started;
     };
     const foregroundHandoffMs = externalRuntime
       ? Number.POSITIVE_INFINITY
@@ -1310,9 +1380,12 @@ export function makeDriveAgentTool(
       // with the result. Refuse up front instead of launching disappearing work.
       const sessionId = ctx!.sessionId!;
       const abortController = makeAbortController(callerSignal, false);
+      stopRun = () => abortController.abort();
       const tracked = trackBackgroundRun({
         sessionId,
         label,
+        title,
+        permissions,
         cli,
         cwd,
         effectiveWorkspaceCwd,
@@ -1321,12 +1394,7 @@ export function makeDriveAgentTool(
         isolation,
         worktree: managedWorktree,
         promptSummary,
-        start: (sinks) =>
-          startRun(runner, {
-            ...runOptsBase,
-            signal: abortController.signal,
-            ...sinks,
-          }),
+        start: (sinks) => launch({ ...runOptsBase, signal: abortController.signal, ...sinks }),
         abort: () => abortController.abort(),
         sessionStore,
         writable: isWritableRun,
@@ -1336,6 +1404,7 @@ export function makeDriveAgentTool(
         originClientMessageId: ctx?.originClientMessageId,
       });
       if ("error" in tracked) {
+        void permissions.close();
         const lifecycle = safeFinalizeDriveWorktree(managedWorktree);
         return appendLifecycleNote(tracked.error, lifecycle);
       }
@@ -1343,9 +1412,10 @@ export function makeDriveAgentTool(
       return [
         resumeNote,
         `已在后台启动 ${cliName}（jobId ${tracked.jobId}）。完成后会通知你结果，无需轮询。`,
+        permissionNote,
         ...(externalRuntime
           ? [
-              "除非用户明确要求并行工作，否则不要在本地重复执行已委派的任务；请结束当前回复，等待完成通知触发续接。",
+              "不要在本地重复执行已委派的任务。还有不依赖它的其他工作就继续做；没有的话再结束当前回复，等待完成通知触发续接。",
             ]
           : []),
         worktreeStartNote(managedWorktree),
@@ -1362,17 +1432,19 @@ export function makeDriveAgentTool(
       writable: isWritableRun,
     });
     if ("error" in lease) {
+      void permissions.close();
       const lifecycle = safeFinalizeDriveWorktree(managedWorktree);
       return appendLifecycleNote(lease.error, lifecycle);
     }
     const foregroundAbort = makeAbortController(callerSignal, true);
+    stopRun = () => foregroundAbort.abort();
     let liveExternalSessionId: string | undefined;
     let backgroundSessionIdSink: ((sessionId: string) => void) | undefined;
     let liveProgress: BackgroundJobProgress | undefined;
     let backgroundProgressSink: ((progress: BackgroundJobProgress) => void) | undefined;
     let liveProcessId: number | undefined;
     let backgroundProcessSink: ((pid: number) => void) | undefined;
-    const run = startRun(runner, {
+    const run = launch({
       ...runOptsBase,
       signal: foregroundAbort.signal,
       onSessionId: (sessionId) => {
@@ -1395,7 +1467,8 @@ export function makeDriveAgentTool(
       const lifecycle = safeFinalizeDriveWorktree(managedWorktree);
       lease.release();
       return appendLifecycleNote(
-        `${cliName} 运行出错：${error instanceof Error ? error.message : String(error)}`,
+        permissions.outcome().note ??
+          `${cliName} 运行出错：${error instanceof Error ? error.message : String(error)}`,
         lifecycle,
       );
     }
@@ -1420,6 +1493,8 @@ export function makeDriveAgentTool(
       const tracked = trackBackgroundRun({
         sessionId: ctx?.sessionId,
         label,
+        title,
+        permissions,
         cli,
         cwd,
         effectiveWorkspaceCwd,
@@ -1462,6 +1537,7 @@ export function makeDriveAgentTool(
       return [
         resumeNote,
         `${cliName} foreground run exceeded ${foregroundHandoffMs}ms; moved it to background (jobId ${tracked.jobId}). Completion will notify this session, so do not poll.`,
+        permissionNote,
         worktreeStartNote(managedWorktree),
       ]
         .filter(Boolean)
@@ -1494,11 +1570,13 @@ export function makeDriveAgentTool(
             description: label,
             cli,
             cwd,
-            status: foregroundAbort.signal.aborted
-              ? "cancelled"
-              : r.isError
-                ? "failed"
-                : "completed",
+            status: permissions.outcome(r).blocked
+              ? "failed"
+              : foregroundAbort.signal.aborted
+                ? "cancelled"
+                : r.isError
+                  ? "failed"
+                  : "completed",
             changedFiles,
             ...(provenance ? { provenance } : {}),
             ...(ctx?.originClientMessageId
@@ -1518,9 +1596,17 @@ export function makeDriveAgentTool(
         lifecycle,
       });
       const prefix = resumeNote ? `${resumeNote}\n` : "";
-      const finalText = appendLifecycleNote(r.finalText, lifecycle);
+      const denied = permissions.outcome(r);
+      const finalText = appendLifecycleNote(
+        [denied.note, r.finalText].filter(Boolean).join("\n\n"),
+        lifecycle,
+      );
+      if (denied.blocked)
+        return `${prefix}${cliName} 被权限拦住，已提前停止（session ${r.sessionId}）：\n${finalText}`;
       if (r.isError)
         return `${prefix}${cliName} 运行出错（session ${r.sessionId}）：\n${finalText}`;
+      if (denied.denials)
+        return `${prefix}${cliName} 完成，但有 ${denied.denials} 个操作被拒（session ${r.sessionId}）：\n${finalText}`;
       return `${prefix}${cliName} 完成（session ${r.sessionId}）：\n${finalText}`;
     } finally {
       lease.release();
@@ -1665,6 +1751,11 @@ function inspectDriveAgentJob(jobId: string | undefined): string {
     );
     if (job.progress.phase) lines.push(`phase: ${job.progress.phase}`);
     if (job.progress.summary) lines.push(`activity: ${job.progress.summary}`);
+    const { permissionDenials, awaitingApprovalSince, blocked } = job.progress;
+    if (permissionDenials) lines.push(`permissionDenials: ${permissionDenials}`);
+    if (blocked) lines.push(`blocked: ${blocked} (stopped early)`);
+    if (awaitingApprovalSince && job.status === "running")
+      lines.push(`awaitingApprovalSince: ${new Date(awaitingApprovalSince).toISOString()}`);
     if (job.progress.recentEvents?.length)
       lines.push(
         "recentActivity:",

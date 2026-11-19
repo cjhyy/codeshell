@@ -24,6 +24,8 @@ export async function connectGrantedTab(
     const driver = new PuppeteerBrowserDriver(pages[0], {
       documentNamespace: namespace,
       actionTimeoutMs: 10_000,
+      // Desktop gives each extension request 15s; leave room for the navigation itself.
+      navigationLoadTimeoutMs: 5_000,
       isActive,
       identity: {
         profileId: `chrome-tab:${tabId}`,

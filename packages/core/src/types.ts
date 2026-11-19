@@ -884,6 +884,29 @@ type StreamEventPayload =
       /** The Goal stopped to wait for the user's answer to this question (wait_for_user). */
       waitingForUser?: string;
       /**
+       * Structure of that question: whether it needs the user's explicit
+       * consent, and for a choice 1-3 short questions with mutually exclusive
+       * options (recommended first; `default` names another one the agent
+       * would take). `waitingForUser` stays the plain-text form, so clients
+       * that ignore this field still show the question.
+       */
+      waitingForUserDetail?: {
+        level: "preference" | "consent";
+        questions?: Array<{
+          id: string;
+          header?: string;
+          question: string;
+          options: Array<{ label: string; description?: string }>;
+          default?: string;
+        }>;
+      };
+      /**
+       * The Goal paused with this marker, and why: one of its limits ran out,
+       * or the user stopped it. `gaps` restates it for people; code that
+       * branches on the cause (notices, clients) reads this field.
+       */
+      pauseReason?: "time_budget" | "token_budget" | "turn_limit" | "no_progress" | "user_stop";
+      /**
        * The Goal parked on finite background work instead of being judged
        * unmet: the run ends and the work's completion wakes it. `tasks` are
        * display-only, already-sanitized labels (untrusted text).
@@ -1080,6 +1103,8 @@ type StreamEventPayload =
       cwd?: string;
       /** Client id of the real user turn that launched this background work. */
       originClientMessageId?: string;
+      /** Operations refused by permissions; "completed" then means degraded. */
+      permissionDenials?: number;
       /** When the bg agent finished (Date.now() value). */
       enqueuedAt: number;
     };

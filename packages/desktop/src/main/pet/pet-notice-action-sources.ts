@@ -57,7 +57,8 @@ export function createNoticeActionSources(deps: NoticeActionSourcesDeps): Notice
     forDraft(draft) {
       const { sessionId, context } = draft;
       switch (draft.kind) {
-        case "session.blocked": {
+        case "session.blocked":
+        case "session.paused": {
           const reason = context?.reason ?? "user";
           const task = deps.activeTask(sessionId);
           return {

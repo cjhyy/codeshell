@@ -397,6 +397,38 @@ describe("transcriptsReducer pending steer bubbles", () => {
     });
   });
 
+  it("a limit pause keeps its reason until the Goal is resumed, and is then not paused", () => {
+    const stream = (map: TranscriptsMap, event: unknown) =>
+      transcriptsReducer(map, { type: "stream", bucket: "b", event: event as StreamEvent });
+    const goal = { goalId: "goal-a", objective: "做完" };
+    let map = stream({}, { type: "goal_set", ...goal, revision: 1, replaced: false });
+    // The external runtime's limit pause: the control event, then its marker.
+    map = stream(map, { type: "goal_updated", ...goal, revision: 2, paused: true });
+    map = stream(map, {
+      type: "goal_progress",
+      goalId: "goal-a",
+      revision: 2,
+      status: "not_met",
+      round: 3,
+      gaps: "达到本轮时间预算；目标已暂停，可继续。",
+      pauseReason: "time_budget",
+    });
+    expect(map.b.activeGoal).toMatchObject({ paused: true, pauseReason: "time_budget" });
+    // The next message resumes it: no client may keep showing it as paused.
+    map = stream(map, { type: "goal_updated", ...goal, revision: 3, paused: false });
+    expect(map.b.activeGoal).toMatchObject({ paused: false, revision: 3 });
+    expect(map.b.activeGoal?.pauseReason).toBeUndefined();
+    map = stream(map, {
+      type: "goal_progress",
+      goalId: "goal-a",
+      revision: 3,
+      status: "not_met",
+      round: 4,
+    });
+    expect(map.b.activeGoal).toMatchObject({ paused: false, round: 4 });
+    expect(map.b.activeGoal?.pauseReason).toBeUndefined();
+  });
+
   it("authoritatively rolls back a failed optimistic goal update without overriding a newer one", () => {
     const optimistic = {
       ...INITIAL_STATE,

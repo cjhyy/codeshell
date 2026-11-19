@@ -70,9 +70,24 @@ let providerSend:
   | undefined;
 let providerInterrupt: (() => Promise<void>) | undefined;
 const providerInputs: Array<{ text: string; injected?: boolean }> = [];
+/** `releaseIdle(sticky)` calls the fake provider received. */
+const idleReleases: boolean[] = [];
 const streamEvents: StreamEvent[] = [];
 let previousHome: string | undefined;
 let testHome: string;
+
+/** The model declares it has nothing left to do until background work finishes. */
+async function parkOnBackground(
+  svc: { getGoal(sessionId: string): { goalId?: string; revision?: number } },
+  args: StartArgs,
+): Promise<void> {
+  const goal = svc.getGoal(request.sessionId);
+  const result = await (args.registry as ToolRegistry).executeTool("wait_for_background", {
+    goalId: goal.goalId,
+    revision: goal.revision,
+  });
+  expect(JSON.parse(result.result!)).toMatchObject({ ok: true });
+}
 
 /** A session stub that records what it was asked to do. */
 function fakeSession(args: StartArgs) {
@@ -106,6 +121,10 @@ function fakeSession(args: StartArgs) {
     },
     interrupt: async () => {
       await providerInterrupt?.();
+    },
+    releaseIdle: async (sticky?: boolean) => {
+      idleReleases.push(sticky === true);
+      return false;
     },
     close: async () => {
       closed.push(String(args.businessSessionId));
@@ -313,6 +332,7 @@ beforeEach(() => {
   providerSend = undefined;
   providerInterrupt = undefined;
   providerInputs.length = 0;
+  idleReleases.length = 0;
   streamEvents.length = 0;
   trust = "trusted";
 });
@@ -2389,7 +2409,7 @@ describe("ExternalRuntimeService", () => {
       await svc.start(request);
       const manager = new SessionManager();
       providerSend = async (args, input) => {
-        if (providerInputs.length === 1) return;
+        if (providerInputs.length === 1) return parkOnBackground(svc, args);
         expect(input.text).toContain(`后台任务结果：${status}`);
         expect(manager.readSessionState(request.sessionId)?.goalLifecycle?.phase).toBe("active");
         const goal = svc.getGoal(request.sessionId);
@@ -2470,6 +2490,7 @@ describe("ExternalRuntimeService", () => {
       },
     });
     await svc.start(request);
+    providerSend = (args) => parkOnBackground(svc, args);
     try {
       await svc.send(request.sessionId, { text: "执行", goal: "等待方案" });
       expect(providerInputs).toHaveLength(1);
@@ -2655,11 +2676,91 @@ describe("ExternalRuntimeService", () => {
       },
     });
     await svc.start(request);
+    providerSend = (args) => parkOnBackground(svc, args);
     try {
       await svc.send(request.sessionId, { text: "执行", goal: "等待方案" });
       expect(providerInputs).toHaveLength(1);
       await svc.interrupt(request.sessionId, 77, undefined, { keepGoal: true });
       expect(svc.getGoal(request.sessionId)).toMatchObject({ goal: "等待方案", paused: false });
+    } finally {
+      await svc.stopAll();
+    }
+  });
+
+  test("running background work does not park a Goal that still has foreground work", async () => {
+    let running = true;
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: {
+        subscribe: () => () => {},
+        claimResults: () => undefined,
+        hasPending: () => false,
+        hasRunning: () => running,
+        listRunning: () => [{ kind: "job", label: "迁移脚本评审" }],
+        dropSession: () => {},
+      },
+    });
+    await svc.start(request);
+    providerSend = async (args) => {
+      const emit = (args.hooks as { onEvent: (event: StreamEvent) => void }).onEvent;
+      // Round 2 keeps working beside the job; rounds 1 and 3 just reply.
+      if (providerInputs.length === 2)
+        emit({
+          type: "tool_use_start",
+          toolCall: { id: "call-1", toolName: "Bash", arguments: { command: "bun test" } },
+        } as StreamEvent);
+      emit({ type: "text_delta", text: `第 ${providerInputs.length} 轮` });
+    };
+    try {
+      const outcome = await svc.send(request.sessionId, { text: "执行", goal: "边等边做" });
+      // Told once, worked, told again, then idle: the host parks on its behalf.
+      expect(providerInputs).toHaveLength(3);
+      expect(providerInputs[0]!.text).not.toContain("<background_work>");
+      for (const input of providerInputs.slice(1)) {
+        expect(input.text).toContain("<background_work>");
+        expect(input.text).toContain("迁移脚本评审");
+        expect(input.text).toContain("wait_for_background");
+        expect(input.text).toContain("do not poll");
+      }
+      expect(outcome).toMatchObject({ reason: "completed", completionKind: "background_wait" });
+      expect(new SessionManager().readSessionState(request.sessionId)?.goalLifecycle).toMatchObject(
+        { phase: "waiting" },
+      );
+      running = false;
+    } finally {
+      await svc.stopAll();
+    }
+  });
+
+  test("wait_for_background is refused when nothing is running and the Goal keeps going", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: {
+        subscribe: () => () => {},
+        claimResults: () => undefined,
+        hasPending: () => false,
+        hasRunning: () => false,
+        dropSession: () => {},
+      },
+    });
+    await svc.start(request);
+    const replies: unknown[] = [];
+    providerSend = async (args) => {
+      const goal = svc.getGoal(request.sessionId);
+      const registry = args.registry as ToolRegistry;
+      if (providerInputs.length === 1) {
+        const refused = await registry.executeTool("wait_for_background", {
+          goalId: goal.goalId,
+          revision: goal.revision,
+        });
+        replies.push(JSON.parse(refused.result!));
+        return;
+      }
+      await registry.executeTool("complete_goal", { goalId: goal.goalId, revision: goal.revision });
+    };
+    try {
+      await svc.send(request.sessionId, { text: "执行", goal: "没有后台任务" });
+      expect(replies).toMatchObject([{ ok: false }]);
+      expect(providerInputs).toHaveLength(2);
+      expect(providerInputs[1]!.text).not.toContain("<background_work>");
     } finally {
       await svc.stopAll();
     }
@@ -2676,6 +2777,7 @@ describe("ExternalRuntimeService", () => {
       },
     });
     await svc.start(request);
+    providerSend = (args) => parkOnBackground(svc, args);
     const persist = spyOn(SessionManager.prototype, "markGoalWaiting").mockReturnValue(false);
     try {
       const outcome = await svc.send(request.sessionId, { text: "执行", goal: "等待方案" });
@@ -2913,7 +3015,12 @@ describe("ExternalRuntimeService", () => {
     expect(registry.getToolDefinitions().map((tool) => tool.name)).toContain("DriveAgent");
     expect(registry.getToolDefinitions().map((tool) => tool.name)).toContain("DriveAgentJobs");
     expect(starts[0]!.developerInstructions).toContain('DriveAgent with cli="codex"');
-    expect(starts[0]!.developerInstructions).toContain('permissionMode="acceptEdits"');
+    // A worker inherits this session's level; telling the model to pick
+    // acceptEdits is what left its Bash calls denied in non-interactive runs.
+    expect(starts[0]!.developerInstructions).toContain(
+      "omit permissionMode so the worker inherits",
+    );
+    expect(starts[0]!.developerInstructions).not.toContain('permissionMode="acceptEdits"');
     expect(starts[0]!.developerInstructions).toContain("never launch codex exec");
   });
 
@@ -2929,6 +3036,73 @@ describe("ExternalRuntimeService", () => {
     expect(text).not.toContain("in-app-browser plugin");
     expect(text).toContain("never launch codex exec");
     expect(text.endsWith("renderer ctx")).toBe(true);
+  });
+
+  test("Computer Use reaches an ordinary session only, pinned to it and with guidance", async () => {
+    const { initCuaComputerUse, resetCuaComputerUse } = await import("./computer-use/service.js");
+    const { CuaDriverHost } = await import("./computer-use/cua-driver-host.js");
+    const flags = {
+      external_agent_runtime: true,
+      external_host_tools: true,
+      computer_use_cua: true,
+    };
+    const approve = async () => ({ approved: true });
+    const hostServers = (index: number) =>
+      (starts[index] as { hostMcpServers?: Array<{ name: string; env: Record<string, string> }> })
+        .hostMcpServers;
+    // No Host driver registered: nothing is declared, nothing is promised.
+    await service(flags, approve).start(request);
+    expect(hostServers(0)).toBeUndefined();
+    expect(starts[0]!.developerInstructions).not.toContain("mcp__codeshell_computer__");
+
+    const decision = initCuaComputerUse({
+      flags,
+      platform: "darwin",
+      isPackaged: false,
+      appPath: "/test/packages/desktop",
+      isExecutable: () => true,
+      mcpProxy: {
+        command: "/app/electron",
+        entryPath: "/app/out/cua-activity-proxy.cjs",
+        socketPath: "/tmp/cs-act/activity.sock",
+        token: "ACTIVITY-SECRET",
+      },
+      requireProxy: true,
+      createHost: (options) => {
+        const real = new CuaDriverHost({ ...options, socketPath: "/tmp/cs-cua/driver.sock" });
+        return Object.assign(Object.create(real), {
+          status: () => ({ ...real.status(), state: "running" }),
+          stop: async () => {},
+        });
+      },
+    });
+    expect(decision.enabled).toBe(true);
+    try {
+      const svc = service(flags, approve);
+      await svc.start({ ...request, sessionId: "s-cua-claude", kind: "claude-code" });
+      const servers = hostServers(1);
+      expect(servers?.map((server) => server.name)).toEqual(["codeshell_computer"]);
+      expect(servers![0]!.env.CODE_SHELL_CUA_SESSION_ID).toBe("s-cua-claude");
+      const text = starts[1]!.developerInstructions as string;
+      expect(text).toContain("mcp__codeshell_computer__*");
+      expect(text).toContain("built-in browser");
+
+      // Restricted sessions keep the bridge as their only channel.
+      await svc.start({ ...request, sessionId: "s-cua-plan", planMode: true });
+      await svc.start({ ...request, sessionId: "s-cua-dontask", permissionMode: "dontAsk" });
+      await service({ ...flags, computer_use_cua: false }, approve).start({
+        ...request,
+        sessionId: "s-cua-setting-off",
+      });
+      // Without an approval path there is nobody to ask.
+      await service(flags).start({ ...request, sessionId: "s-cua-no-prompt" });
+      for (const index of [2, 3, 4, 5]) {
+        expect(hostServers(index)).toBeUndefined();
+        expect(starts[index]!.developerInstructions).not.toContain("mcp__codeshell_computer__");
+      }
+    } finally {
+      await resetCuaComputerUse();
+    }
   });
 
   test("dontAsk disables approval prompts but preserves user questions", async () => {
@@ -4124,10 +4298,17 @@ describe("ExternalRuntimeService", () => {
       backgroundWork: background.delivery,
     });
     await svc.start(request);
-    await svc.send(request.sessionId, {
-      text: "run one bounded turn",
-      goal: { objective: "paused goal", maxTurns: 1 },
-    });
+    // Paused by the user: a limit pause would be resumed by the message below.
+    providerSend = async () => {
+      const live = svc.getGoal(request.sessionId);
+      await svc.updateGoal(request.sessionId, {
+        paused: true,
+        expectedGoalId: live.goalId!,
+        expectedRevision: live.revision!,
+      });
+    };
+    await svc.send(request.sessionId, { text: "run one turn", goal: "paused goal" });
+    providerSend = undefined;
     const goal = svc.getGoal(request.sessionId);
     expect(goal.paused).toBe(true);
     await svc.start(request);
@@ -4855,3 +5036,132 @@ test.each(["codex", "claude-code"] as const)(
     }
   },
 );
+
+describe("a paused Goal, a working session, and replaced runtimes", () => {
+  const flags = { external_agent_runtime: true, external_host_tools: true };
+
+  test("a message sent after a limit pause resumes the Goal and is its input", async () => {
+    const svc = service(flags);
+    await svc.start(request);
+    await svc.send(request.sessionId, { text: "开始", goal: { objective: "做完", maxTurns: 1 } });
+    expect(svc.getGoal(request.sessionId)).toMatchObject({ paused: true, revision: 2 });
+    expect(streamEvents.findLast((event) => event.type === "goal_progress")).toMatchObject({
+      pauseReason: "turn_limit",
+    });
+    const paused = streamEvents.length;
+    let duringRun: unknown;
+    providerSend = async () => {
+      duringRun = svc.getGoal(request.sessionId);
+    };
+    const outcome = await svc.send(request.sessionId, {
+      text: "继续更新 server 和网页端",
+      clientMessageId: "typed-after-pause",
+    });
+    expect(outcome.ok).toBe(true);
+    // While the session works toward the Goal, the Goal is not paused.
+    expect(duringRun).toMatchObject({ goal: "做完", paused: false, revision: 3 });
+    expect(providerInputs[1]!.text).toContain("继续更新 server 和网页端");
+    expect(providerInputs[1]!.text).toContain("<codeshell_goal>");
+    const after = streamEvents.slice(paused);
+    const resumed = after.findIndex((event) => event.type === "goal_updated");
+    expect(after[resumed]).toMatchObject({ paused: false, revision: 3 });
+    // Every client hears the resume before the run's own output.
+    expect(resumed).toBeLessThan(after.findIndex((event) => event.type === "turn_complete"));
+    expect(starts).toHaveLength(1);
+    await svc.stop(request.sessionId);
+  });
+
+  test("a Stop pause is not resumed by the next message, which runs as an ordinary turn", async () => {
+    const svc = service(flags);
+    await svc.start(request);
+    providerSend = async () => {
+      await svc.interrupt(request.sessionId, 77);
+    };
+    await svc.send(request.sessionId, { text: "开始", goal: "用户会停下它" }, 77);
+    expect(svc.getGoal(request.sessionId)).toMatchObject({ paused: true });
+    providerSend = undefined;
+    await svc.send(request.sessionId, { text: "顺便问一句" }, 77);
+    expect(providerInputs.at(-1)!.text).toBe("顺便问一句");
+    expect(svc.getGoal(request.sessionId)).toMatchObject({ paused: true });
+    await svc.stop(request.sessionId);
+  });
+
+  test("a changed Goal launch hint does not replace a live runtime", async () => {
+    const svc = service(flags);
+    const live = await svc.ensure({ ...request, hasGoal: true });
+    expect(await svc.ensure({ ...request, hasGoal: false })).toBe(live);
+    expect(starts).toHaveLength(1);
+    expect(closed).toEqual([]);
+    await svc.stopAll();
+  });
+
+  test("a turn queued behind a replaced runtime runs on its replacement", async () => {
+    const svc = service(flags);
+    await svc.start(request);
+    let release!: () => void;
+    let entered!: () => void;
+    const running = new Promise<void>((resolve) => (entered = resolve));
+    providerSend = async () => {
+      entered();
+      await new Promise<void>((resolve) => (release = resolve));
+    };
+    const first = svc.send(request.sessionId, { text: "正在跑的一轮" }, 77);
+    await running;
+    providerSend = undefined;
+    const queued = svc.send(
+      request.sessionId,
+      {
+        text: "排队中的委托",
+        displayText: "排队中的委托",
+        clientMessageId: "pet-delegation:queued",
+      },
+      77,
+    );
+    const replacement = svc.start({ ...request, developerInstructions: "new instructions" });
+    release();
+    await replacement;
+    expect((await first).reason).toBe("aborted_streaming");
+    expect(await queued).toMatchObject({ ok: true, reason: "completed" });
+    expect(starts).toHaveLength(2);
+    expect(providerInputs.map((input) => input.text)).toEqual(["正在跑的一轮", "排队中的委托"]);
+    expect(
+      streamEvents.some(
+        (event) =>
+          event.type === "session_user_message" &&
+          event.clientMessageId === "pet-delegation:queued",
+      ),
+    ).toBe(true);
+    await svc.stopAll();
+  });
+
+  test("a turn queued behind a stopped runtime still fails, naming the stop", async () => {
+    const svc = service(flags);
+    await svc.start(request);
+    let release!: () => void;
+    let entered!: () => void;
+    const running = new Promise<void>((resolve) => (entered = resolve));
+    providerSend = async () => {
+      entered();
+      await new Promise<void>((resolve) => (release = resolve));
+    };
+    const first = svc.send(request.sessionId, { text: "正在跑的一轮" }, 77);
+    await running;
+    const queued = svc.send(request.sessionId, { text: "排队中的一轮" }, 77);
+    const stopping = svc.stop(request.sessionId, 77);
+    release();
+    await stopping;
+    await first;
+    await expect(queued).rejects.toThrow(/replaced before its queued turn/);
+    expect(providerInputs).toHaveLength(1);
+  });
+
+  test("queued input asks the provider to release an idle process", async () => {
+    const svc = service(flags);
+    await svc.start(request);
+    expect(svc.yieldGoal(request.sessionId, 77)).toBe(false);
+    expect(idleReleases).toEqual([true]);
+    expect(await svc.releaseIdle(request.sessionId)).toBe(false);
+    expect(idleReleases).toEqual([true, false]);
+    await svc.stopAll();
+  });
+});

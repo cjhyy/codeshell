@@ -195,7 +195,22 @@ try {
     assert.equal(await group.locator(".message-tool-card").count(), 4);
     assert.deepEqual(reads, [], "expanding the activity list fetches no bodies");
     const tool = (index) => group.locator(".message-tool-card").nth(index);
-    await tool(0).locator("summary").tap();
+    // The list is still shifting right after it expands (the view follows new
+    // output), and on slow runners a coordinate tap landed on another card.
+    // Wait for the card to stop moving, then toggle it through the element.
+    await page.waitForFunction(
+      (node) => {
+        const top = node.getBoundingClientRect().top;
+        const settled = node.dataset.settledTop === String(top);
+        node.dataset.settledTop = String(top);
+        return settled;
+      },
+      await tool(0).elementHandle(),
+      { polling: 150 },
+    );
+    await tool(0)
+      .locator("summary")
+      .evaluate((node) => node.click());
     await tool(0).getByText("RESULT_first/tool-0", { exact: false }).waitFor();
     assert.deepEqual(reads, ["first/tool-0"]);
     assert.equal(await tool(0).getByRole("button", { name: "复制结果" }).count(), 1);

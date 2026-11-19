@@ -261,3 +261,56 @@ describe("codexAdapter.parseResult", () => {
     expect(r.finalText).toContain("boom");
   });
 });
+
+describe("claudeAdapter permission routing and denial report", () => {
+  it("adds the prompt tool and its MCP config, keeping the variadic --mcp-config last", () => {
+    const args = claudeAdapter.buildArgs({
+      prompt: "p",
+      permissionMode: "acceptEdits",
+      cwd: "/w",
+      permissionPrompt: { mcpConfigPath: "/tmp/c.json", toolName: "mcp__s__Prompt" },
+    });
+    expect(args.slice(-4)).toEqual([
+      "--permission-prompt-tool",
+      "mcp__s__Prompt",
+      "--mcp-config",
+      "/tmp/c.json",
+    ]);
+    expect(args).not.toContain("--strict-mcp-config");
+    expect(
+      claudeAdapter.buildArgs({ prompt: "p", permissionMode: "default", cwd: "/w" }),
+    ).not.toContain("--permission-prompt-tool");
+  });
+
+  it("reads permission_denials from the result record", () => {
+    const parsed = claudeAdapter.parseResult([
+      JSON.stringify({
+        type: "result",
+        session_id: "s",
+        result: "done",
+        is_error: false,
+        permission_denials: [
+          { tool_name: "Bash", tool_use_id: "a", tool_input: { command: "git status" } },
+          { tool_name: "WebFetch" },
+          { unexpected: true },
+        ],
+      }),
+    ]);
+    expect(parsed.permissionDenials).toEqual([
+      { toolName: "Bash" },
+      { toolName: "WebFetch" },
+      { toolName: "unknown" },
+    ]);
+  });
+
+  it("reports an empty list for a clean result and nothing without a result record", () => {
+    expect(
+      claudeAdapter.parseResult([JSON.stringify({ type: "result", session_id: "s", result: "ok" })])
+        .permissionDenials,
+    ).toEqual([]);
+    expect(
+      claudeAdapter.parseResult([JSON.stringify({ type: "system", session_id: "s" })])
+        .permissionDenials,
+    ).toBeUndefined();
+  });
+});

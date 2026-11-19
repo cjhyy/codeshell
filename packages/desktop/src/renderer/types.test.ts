@@ -2126,6 +2126,64 @@ describe("goal waiting for the user", () => {
     expect(moving.activeGoal?.waitingForUser).toBeUndefined();
   });
 
+  test("a structured question reaches the Goal, and the stream keeps one record per question", () => {
+    const detail = {
+      level: "preference",
+      questions: [
+        {
+          id: "release",
+          header: "发版",
+          question: "发哪个？",
+          options: [{ label: "rc", description: "先验证" }, { label: "正式版" }],
+          default: "正式版",
+        },
+      ],
+    };
+    const question = (round: number, text: string) =>
+      ev("goal_progress", {
+        goalId: "g",
+        revision: 1,
+        status: "not_met",
+        round,
+        gaps: "等待你的回复",
+        waitingForUser: text,
+        waitingForUserDetail: detail,
+      } as never);
+    const records = (state: typeof INITIAL_STATE) =>
+      state.messages.filter((m) => m.kind === "goal_progress" && m.waitingForUser !== undefined);
+    const asked = dispatch(INITIAL_STATE, [
+      ev("goal_set", { goalId: "g", revision: 1, objective: "发布", replaced: false } as never),
+      question(1, "发 rc 还是正式版？"),
+    ]);
+    expect(asked.activeGoal?.waitingDetail).toEqual(detail);
+    expect(asked.activeGoal).not.toHaveProperty("waitingQuestions");
+    expect(records(asked)).toMatchObject([{ waitingForUser: "发 rc 还是正式版？" }]);
+    expect(records(asked)[0]).not.toHaveProperty("questionClosed");
+
+    // Asked again while still open (a resumed run): still one record, still open.
+    const reasked = dispatch(asked, [question(2, "发 rc 还是正式版？")]);
+    expect(records(reasked)).toHaveLength(1);
+    expect(records(reasked)[0]).toMatchObject({ round: 2 });
+    expect(reasked.activeGoal?.waitingDetail).toEqual(detail);
+
+    // The reply closes the record and clears the banner state.
+    const replied = dispatch(reasked, [ev("session_user_message", { text: "rc" })]);
+    expect(replied.activeGoal?.waitingForUser).toBeUndefined();
+    expect(replied.activeGoal?.waitingDetail).toBeUndefined();
+    expect(records(replied)).toMatchObject([{ questionClosed: true }]);
+
+    // Later progress also closes it, and a different question gets its own record.
+    const moved = dispatch(asked, [
+      ev("goal_progress", { goalId: "g", revision: 1, status: "not_met", round: 2 } as never),
+      question(3, "要发公告吗？"),
+    ]);
+    expect(moved.activeGoal?.waitingForUser).toBe("要发公告吗？");
+    expect(records(moved)).toMatchObject([
+      { waitingForUser: "发 rc 还是正式版？", questionClosed: true },
+      { waitingForUser: "要发公告吗？" },
+    ]);
+  });
+
   test("the user's reply clears the wait even before any new progress", () => {
     const waiting = dispatch(INITIAL_STATE, [
       ev("goal_set", { goalId: "g", revision: 1, objective: "优化设计", replaced: false } as never),

@@ -1,5 +1,5 @@
 import { describe, expect, test, beforeEach } from "bun:test";
-import { notificationQueue, buildNotificationMessage, buildNotificationSummary, type NotificationItem } from "../packages/core/src/tool-system/builtin/agent-notifications.js";
+import { notificationQueue, buildNotificationMessage, buildNotificationSummary, notificationItemToStreamEvent, type NotificationItem } from "../packages/core/src/tool-system/builtin/agent-notifications.js";
 
 const fixture = (overrides: Partial<NotificationItem> = {}): NotificationItem => ({
   agentId: "abc12345",
@@ -300,5 +300,34 @@ describe("buildNotificationSummary", () => {
     ]);
     expect(s).toContain("did stuff");
     expect(s).not.toMatch(/^\s*·\s/m); // no leading orphan separator
+  });
+});
+
+describe("permission denials on a result", () => {
+  test("a completed run with denied operations is not presented as plainly completed", () => {
+    const envelope = notificationQueue.enqueue(
+      fixture({ workKind: "cc", name: "Fix login test", permissionDenials: 3 }),
+      SID,
+    )!;
+    expect(envelope.payload.permissionDenials).toBe(3);
+    const message = buildNotificationMessage([envelope]);
+    expect(message).toContain('status="completed-with-denied-operations" permissionDenials="3"');
+    expect(buildNotificationSummary([envelope])).toContain(
+      "⚠  ·  3 operation(s) denied by permissions",
+    );
+    expect(notificationItemToStreamEvent(envelope)).toMatchObject({
+      status: "completed",
+      name: "Fix login test",
+      permissionDenials: 3,
+    });
+  });
+
+  test("a clean result is unchanged and a title equal to the description is not repeated", () => {
+    const item = fixture({ name: "Same", description: "Same" });
+    expect(buildNotificationMessage([item])).toContain('status="completed">');
+    expect(buildNotificationSummary([item])).toBe(
+      "📨 background agents completed\n  └─ Same  ·  ✓",
+    );
+    expect(notificationItemToStreamEvent(item).permissionDenials).toBeUndefined();
   });
 });

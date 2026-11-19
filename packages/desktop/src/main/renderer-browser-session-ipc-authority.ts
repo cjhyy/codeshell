@@ -1,6 +1,4 @@
 import type { IpcMainEvent, IpcMainInvokeEvent } from "electron";
-import { externalRuntimeBrowserBucket } from "./external-runtime-browser-bucket.js";
-import { readExternalRuntimeBinding } from "./external-runtime-state.js";
 import { mobileSessionCommandAuthority } from "./mobile-remote/output-recovery-authority.js";
 import { getProjectStore } from "./project-store.js";
 import { SessionCatalogStore } from "./session-catalog-store.js";
@@ -25,11 +23,6 @@ export async function resolvePersistedBrowserSession(sessionId: string, requeste
     authority.projectId ?? store.resolveExactRootSync(authority.mainRoot)?.project.id;
   if (!projectId && !store.isNoRepoCwd(authority.mainRoot))
     throw new Error("Session project is not mounted");
-  if (readExternalRuntimeBinding(sessionId))
-    return {
-      bucket: externalRuntimeBrowserBucket(sessionId),
-      assertCurrent: authority.assertCurrent,
-    };
   const catalog = new SessionCatalogStore();
   const binding = resolvePersistedBrowserBucket({
     sessionId,
