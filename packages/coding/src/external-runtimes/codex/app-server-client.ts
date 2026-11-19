@@ -337,6 +337,11 @@ export class CodexAppServerClient {
     }
   }
 
+  /** OS pid of the app-server process, once spawned. */
+  get processId(): number | undefined {
+    return this.child?.pid;
+  }
+
   /** Why the transport closed, once it has. */
   get closedReason(): string | undefined {
     return this.closeReason;

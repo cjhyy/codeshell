@@ -37,8 +37,12 @@ export interface CodexRuntimeOptions {
   cwd: string;
   /** CodeShell business session id — the authorization subject, never the thread id. */
   businessSessionId: string;
-  /** Loopback MCP bridge the model reaches CodeShell tools through. */
-  bridge: McpBridgeHandle;
+  /**
+   * Loopback MCP bridge the model reaches CodeShell tools through. Absent for a
+   * thread that gets no CodeShell tools (a delegated one-turn worker): nothing
+   * is advertised, and no MCP elicitation is accepted as CodeShell's own.
+   */
+  bridge?: McpBridgeHandle;
   /**
    * MCP server name CodeShell's tools are advertised under. Used to decide which
    * approval elicitations are ours to accept — a name mismatch means the request
@@ -113,6 +117,21 @@ export interface CodexRuntimeHooks {
     toolName?: string;
     message?: string;
   }) => Promise<boolean> | boolean;
+  /**
+   * Called for a tool-call approval elicitation from an MCP server that is
+   * neither the bridge nor a declared Host server (one the user configured for
+   * Codex itself). Defaults to decline.
+   */
+  onForeignMcpApproval?: (request: {
+    serverName: string;
+    toolName?: string;
+    message?: string;
+  }) => Promise<boolean> | boolean;
+  /**
+   * Every app-server notification as received, before translation. Observation
+   * only: for a host that needs item boundaries `StreamEvent` does not carry.
+   */
+  onNotification?: (method: string, params: unknown) => void;
   /** Answer Codex's request_user_input tool through the owning CodeShell UI. */
   onUserInput?: (request: { method: string; params: unknown }) => Promise<unknown> | unknown;
 }
@@ -257,13 +276,15 @@ export class CodexRuntime {
       // 127.0.0.1 through it and every tool call dies as UnexpectedContentType.
       env: buildRuntimeSpawnEnv({
         base: options.client?.env,
-        bridgeToken: { name: options.bridge.tokenEnvVar, value: options.bridge.token },
+        ...(options.bridge
+          ? { bridgeToken: { name: options.bridge.tokenEnvVar, value: options.bridge.token } }
+          : {}),
         secrets: hostMcpSecretEnv(this.hostMcpServers),
       }),
       // Point the thread at the bridge. The token travels by env var, not argv.
       args: [
         ...(options.client?.args ?? ["app-server"]),
-        ...codexBridgeConfigArgs(options.bridge, options.bridgeServerName),
+        ...(options.bridge ? codexBridgeConfigArgs(options.bridge, options.bridgeServerName) : []),
         ...codexHostMcpServerArgs(this.hostMcpServers),
       ],
       log: this.log,
@@ -274,6 +295,11 @@ export class CodexRuntime {
    *  authorization subject (§8.1). */
   get runtimeSessionId(): string | undefined {
     return this.threadId;
+  }
+
+  /** OS pid of the app-server process, once spawned. */
+  get processId(): number | undefined {
+    return this.client.processId;
   }
 
   /** CLI-reported model, falling back to the requested model until reported. */
@@ -632,6 +658,13 @@ export class CodexRuntime {
 
   private onNotification(method: string, params: unknown): void {
     this.trackFileChanges(method, params);
+    try {
+      this.hooks.onNotification?.(method, params);
+    } catch (error) {
+      this.log("runtime.notification_hook_failed", {
+        error: error instanceof Error ? error.name : "unknown",
+      });
+    }
     const events = this.translator?.translate({ method, params }) ?? [];
     for (const event of events) {
       // A fresh turn announced while ours has no id yet IS ours: the translator
@@ -766,15 +799,13 @@ export class CodexRuntime {
       typeof meta.codex_approval_kind === "string" ? meta.codex_approval_kind : undefined;
     const server = typeof record.serverName === "string" ? record.serverName : undefined;
     const expected = this.options.bridgeServerName ?? "codeshell_tools";
-    let ours = kind === "mcp_tool_call" && server === expected;
-    if (
-      kind === "mcp_tool_call" &&
-      server !== undefined &&
-      this.hostMcpServers.some((declared) => declared.name === server)
-    ) {
+    let ours = Boolean(this.options.bridge) && kind === "mcp_tool_call" && server === expected;
+    if (kind === "mcp_tool_call" && server !== undefined && !ours) {
+      const declared = this.hostMcpServers.some((host) => host.name === server);
+      const ask = declared ? this.hooks.onHostMcpApproval : this.hooks.onForeignMcpApproval;
       try {
         ours =
-          (await this.hooks.onHostMcpApproval?.({
+          (await ask?.({
             serverName: server,
             ...(typeof meta.tool_name === "string" ? { toolName: meta.tool_name } : {}),
             ...(typeof record.message === "string" ? { message: record.message } : {}),

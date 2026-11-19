@@ -151,9 +151,72 @@ describe("prepareDriveRunPermissions", () => {
     throw new Error("no bridge in this test");
   };
 
-  it("does not gate Codex or a full-access worker", async () => {
+  it("gates a Codex worker through its own approval channel, with the same thresholds", async () => {
+    const asked: Array<{ toolName: string; reason: string }> = [];
+    let stops = 0;
+    const permissions = await prepareDriveRunPermissions({
+      cli: "codex",
+      mode: "default",
+      title: "Run the tests",
+      requestApproval: async (request) => {
+        asked.push({ toolName: request.toolName, reason: request.reason });
+        return { approved: false };
+      },
+      stop: () => {
+        stops += 1;
+      },
+      startPrompt: async () => {
+        throw new Error("Codex needs no MCP prompt bridge");
+      },
+    });
+    expect(permissions.permissionPrompt).toBeUndefined();
+    expect(permissions.routed).toBe(true);
+    const decide = permissions.codexApproval!;
+    expect((await decide({ toolName: "shell", input: { command: "bun test" } })).approved).toBe(
+      false,
+    );
+    expect(asked).toEqual([
+      {
+        toolName: "Codex shell",
+        reason: "Requested by background task «Run the tests» (DriveAgent worker).",
+      },
+    ]);
+    expect(permissions.progress({ lastActivityAt: 1, eventCount: 1 })).toMatchObject({
+      permissionDenials: 1,
+    });
+    await decide({ toolName: "apply_patch", input: {} });
+    expect(stops).toBe(0);
+    await decide({ toolName: "shell", input: {} });
+    expect(stops).toBe(1);
+    expect(permissions.progress({ lastActivityAt: 1, eventCount: 1 })).toMatchObject({
+      permissionDenials: 3,
+      blocked: "permission",
+    });
+    const outcome = permissions.outcome({ sessionId: "thread-1" });
+    expect(outcome.denials).toBe(3);
+    expect(outcome.note).toContain("[permissions] Stopped early: 3 consecutive operations");
+    expect(outcome.note).toContain("shell ×2, apply_patch ×1");
+  });
+
+  it("denies and counts a Codex worker's asks when the session has no approval path", async () => {
+    const permissions = await prepareDriveRunPermissions({
+      cli: "codex",
+      mode: "acceptEdits",
+      title: "t",
+      stop: () => {},
+    });
+    expect(permissions.routed).toBe(false);
+    expect((await permissions.codexApproval!({ toolName: "shell", input: {} })).approved).toBe(
+      false,
+    );
+    expect(permissions.outcome().note).toContain(
+      'Completed with 1 denied operation(s) (shell ×1) under permissionMode "acceptEdits"',
+    );
+  });
+
+  it("does not gate a full-access worker", async () => {
     for (const input of [
-      { cli: "codex" as const, mode: "default" as const },
+      { cli: "codex" as const, mode: "bypassPermissions" as const },
       { cli: "claude" as const, mode: "bypassPermissions" as const },
     ]) {
       const permissions = await prepareDriveRunPermissions({
@@ -165,6 +228,7 @@ describe("prepareDriveRunPermissions", () => {
         },
       });
       expect(permissions.permissionPrompt).toBeUndefined();
+      expect(permissions.codexApproval).toBeUndefined();
       expect(permissions.outcome({ permissionDenials: [] })).toEqual({ denials: 0 });
     }
   });
@@ -310,14 +374,30 @@ describe("launch note and denial text", () => {
         routed: true,
       }),
     ).toContain("sent to this session's approval prompt");
+    const codexUnrouted = drivePermissionLaunchNote({
+      cli: "codex",
+      mode: "default",
+      source: "inherited",
+      routed: false,
+    });
+    expect(codexUnrouted).toContain("read-only sandbox");
+    expect(codexUnrouted).toContain("every such operation is DENIED");
+    const codexRouted = drivePermissionLaunchNote({
+      cli: "codex",
+      mode: "acceptEdits",
+      source: "inherited",
+      routed: true,
+    });
+    expect(codexRouted).toContain("workspace-write sandbox");
+    expect(codexRouted).toContain("sent to this session's approval prompt");
     expect(
       drivePermissionLaunchNote({
         cli: "codex",
-        mode: "default",
+        mode: "bypassPermissions",
         source: "inherited",
         routed: false,
       }),
-    ).toContain("READ-ONLY sandbox");
+    ).toContain("runs every tool unattended");
   });
 });
 
