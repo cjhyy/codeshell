@@ -22,6 +22,10 @@
  * What Codex refuses on its own, without asking, is counted apart from what the
  * gate denied (`sandboxBlocked`). Only a refusal the protocol states is
  * counted; see `codexUnaskedRefusal` for what that leaves out.
+ *
+ * What it leaves out is reported as two separate facts and no conclusion: how
+ * many commands ended failed (`failedCommands`), and whether Codex said the
+ * sandbox has no network access (`sandboxNetworkDisabled`).
  */
 import type { BackgroundJobProgress } from "@cjhyy/code-shell-core/extension";
 import { codexAdapter, type PermissionMode } from "../cc-orchestrator/agent-adapter.js";
@@ -34,6 +38,7 @@ import {
 } from "../cc-orchestrator/external-agent-driver.js";
 import {
   advanceAgentProgressWith,
+  codexCommandFailed,
   initialAgentProgress,
   recordSandboxBlocked,
 } from "../cc-orchestrator/external-agent-progress.js";
@@ -95,6 +100,28 @@ export function codexWorkerSandbox(mode: CodexWorkerRunOpts["permissionMode"]): 
  * Which failures count as the sandbox's is Codex's own judgement. One it does
  * not make: a network call stopped by the sandbox (`curl` → exit 6, "could not
  * resolve host") is an ordinary `failed` item under either policy.
+ *
+ * No setting of 0.162.0 turns that into an ask or a stated refusal. Measured
+ * the same way with `curl https://example.com` in `workspace-write`:
+ *
+ *   - `[features] network_proxy` alone, or the built-in `:workspace` permission
+ *     profile (thread/start `permissions`): no change, `status: "failed"`,
+ *     `exitCode: 6`.
+ *   - a profile with `[permissions.<name>.network] enabled = true` plus
+ *     `network_proxy` routes the command through Codex's managed proxy, which
+ *     refuses the host (`curl` → "CONNECT tunnel failed, response 403"). The
+ *     item is still `status: "failed"`, now with `exitCode: -1`; the reason
+ *     exists only as a sentence in `aggregatedOutput`. No approval request is
+ *     sent and `networkApprovalContext` never appears, under this policy or
+ *     `on-request`. Such a profile is also only usable from process-level
+ *     config: defined through thread/start `config`, every turn ended
+ *     "failed to load workspace requirements" before the model ran.
+ *   - `untrusted` asks about the command up front, as it does for any command
+ *     it does not know, with nothing about the network in the request.
+ *
+ * So the worker does not try to detect it. It counts commands that ended
+ * failed and reports whether the thread's sandbox has network access (the
+ * `sandbox.networkAccess` of the thread/start answer); see `drive-agent-permissions.ts`.
  */
 export const CODEX_WORKER_APPROVAL_POLICY = {
   granular: {
@@ -149,8 +176,11 @@ export function codexExecRecord(method: string, params: unknown): Record<string,
       ...(typeof item.server === "string" ? { server: item.server } : {}),
       ...(typeof item.tool === "string" ? { tool: item.tool } : {}),
       ...(Array.isArray(item.changes) ? { changes: item.changes.flatMap(changedPaths) } : {}),
-      // How a patch ended decides whether its files count as changed.
-      ...(type === "file_change" && method === "item/completed" && typeof item.status === "string"
+      // How a patch ended decides whether its files count as changed, and
+      // how a command ended whether it counts as failed.
+      ...((type === "file_change" || type === "command_execution") &&
+      method === "item/completed" &&
+      typeof item.status === "string"
         ? { status: item.status }
         : {}),
     },
@@ -249,6 +279,7 @@ export async function runCodexWorkerOnce(
   /** Items put to the gate; a refusal of one of these is the gate's to count. */
   const asked = new Set<string>();
   let sandboxBlocked = 0;
+  let failedCommands = 0;
   const ask: CodexWorkerApproval = async (request) => {
     try {
       return await opts.approve(request, ended.signal);
@@ -277,6 +308,7 @@ export async function runCodexWorkerOnce(
           progress = recordSandboxBlocked(progress, sandboxBlocked);
         }
         const record = codexExecRecord(method, params);
+        if (codexCommandFailed(record)) failedCommands += 1;
         // A failed turn is recorded from `onEvent`, which also covers a dead transport.
         if (record) observe(record);
         else if (method === "turn/completed" && !failed) observe({ type: "turn.completed" });
@@ -331,6 +363,7 @@ export async function runCodexWorkerOnce(
   publishProgress();
 
   let sessionId = opts.resumeSessionId ?? "";
+  let sandboxNetworkDisabled = false;
   const turn = async (): Promise<void> => {
     const starting = runtime.start();
     const pid = runtime.processId;
@@ -349,6 +382,9 @@ export async function runCodexWorkerOnce(
       );
     }
     sessionId = threadId;
+    // Codex's own statement of the sandbox it applied, not the mode asked for:
+    // user configuration can give `workspace-write` network access.
+    sandboxNetworkDisabled = objectOf(runtime.threadSandbox)?.networkAccess === false;
     observe({ type: "thread.started", thread_id: threadId });
     safely(() => opts.onSessionId?.(threadId));
     const handle = await runtime.send({
@@ -396,6 +432,8 @@ export async function runCodexWorkerOnce(
     ...parsed,
     sessionId: parsed.sessionId || sessionId,
     ...(sandboxBlocked ? { sandboxBlocked } : {}),
+    ...(failedCommands ? { failedCommands } : {}),
+    ...(sandboxNetworkDisabled ? { sandboxNetworkDisabled } : {}),
   };
   finishTrace(result);
   return result;

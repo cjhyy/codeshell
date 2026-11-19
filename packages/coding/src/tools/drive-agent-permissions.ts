@@ -319,6 +319,8 @@ export interface DriveRunPermissionOutcome {
    * denied them. Not part of `denials`. Absent when there were none.
    */
   sandboxBlocked?: number;
+  /** Commands that ended failed, for whatever reason. Absent when there were none. */
+  failedCommands?: number;
   /** Set when the worker was stopped for being unable to proceed. */
   blocked?: string;
   /** Model-facing statement to put ahead of the worker's own final text. */
@@ -342,6 +344,8 @@ export interface DriveRunPermissions {
   outcome(result?: {
     permissionDenials?: readonly PermissionDenial[];
     sandboxBlocked?: number;
+    failedCommands?: number;
+    sandboxNetworkDisabled?: boolean;
     sessionId?: string;
     isError?: boolean;
     /** Changed files attributed to the run, once that has been worked out. */
@@ -387,6 +391,22 @@ export async function prepareDriveRunPermissions(options: {
     }
   }
   const outcome: DriveRunPermissions["outcome"] = (result) => {
+    const refusals = refusalOutcome(result);
+    // Codex gives a failed command no cause, and a network call the sandbox cut
+    // off is one such failure (`CODEX_WORKER_APPROVAL_POLICY`). So two facts
+    // are stated side by side and the reader draws the conclusion: nothing
+    // here says the sandbox caused a failure, and the outcome is unchanged.
+    const failedCommands = result?.failedCommands ?? 0;
+    if (!failedCommands) return refusals;
+    const offline = result?.sandboxNetworkDisabled
+      ? `${failedCommands} command(s) failed; this sandbox has no network access.`
+      : "";
+    const note = refusals.note
+      ? [refusals.note, offline].filter(Boolean).join(" ")
+      : offline && `[sandbox] ${offline}`;
+    return { ...refusals, failedCommands, ...(note ? { note } : {}) };
+  };
+  const refusalOutcome: DriveRunPermissions["outcome"] = (result) => {
     const reported = result?.permissionDenials ?? [];
     const counted = gate?.denials() ?? [];
     const denials = reported.length >= counted.length ? reported : counted;

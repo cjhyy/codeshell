@@ -246,6 +246,52 @@ describe("prepareDriveRunPermissions", () => {
     expect(permissions.outcome({}).sandboxBlocked).toBeUndefined();
   });
 
+  it("states failed commands next to a sandbox without network access, and nothing more", async () => {
+    const permissions = await prepareDriveRunPermissions({
+      cli: "codex",
+      mode: "acceptEdits",
+      title: "t",
+      stop: () => {},
+    });
+    const clause = "2 command(s) failed; this sandbox has no network access.";
+    const offline = permissions.outcome({ failedCommands: 2, sandboxNetworkDisabled: true });
+    // Two facts, no cause, and not a refusal: the run is not called blocked.
+    expect(offline).toEqual({ denials: 0, failedCommands: 2, note: `[sandbox] ${clause}` });
+    // Joined to the note of a run that left nothing behind.
+    expect(
+      permissions.outcome({
+        failedCommands: 2,
+        sandboxNetworkDisabled: true,
+        attributedChanges: 0,
+      }).note,
+    ).toBe(
+      "[sandbox] Ran in a workspace-write sandbox; no approval was requested and no file " +
+        `change was recorded. ${clause}`,
+    );
+    // Without the network fact (full access, or a sandbox with network) the
+    // count is reported and no sentence is made of it.
+    expect(permissions.outcome({ failedCommands: 2 })).toEqual({ denials: 0, failedCommands: 2 });
+    expect(permissions.outcome({ sandboxNetworkDisabled: true })).toEqual({ denials: 0 });
+    expect(
+      permissions.outcome({ failedCommands: 0, sandboxNetworkDisabled: true }).note,
+    ).toBeUndefined();
+
+    // The refusal counters are untouched by it.
+    await permissions.codexApproval!({ toolName: "shell", input: {} });
+    const both = permissions.outcome({
+      failedCommands: 1,
+      sandboxNetworkDisabled: true,
+      sandboxBlocked: 1,
+    });
+    expect(both).toMatchObject({ denials: 1, sandboxBlocked: 1, failedCommands: 1 });
+    expect(both.blocked).toBeUndefined();
+    expect(both.note).toStartWith("[permissions] Completed with 1 denied operation(s) (shell ×1)");
+    expect(both.note).toEndWith(" 1 command(s) failed; this sandbox has no network access.");
+    expect(
+      permissions.progress({ lastActivityAt: 1, eventCount: 1, failedCommands: 3 }),
+    ).toMatchObject({ permissionDenials: 1, failedCommands: 3 });
+  });
+
   it("names the sandbox of a Codex run that neither asked nor changed anything", async () => {
     const worker = (cli: "codex" | "claude", mode: "default" | "acceptEdits") =>
       prepareDriveRunPermissions({

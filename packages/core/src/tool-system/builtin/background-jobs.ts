@@ -50,6 +50,10 @@ export interface BackgroundJobProgress {
    *  approval request, so no one was asked. Counted apart from
    *  `permissionDenials`; a non-zero count also means "did not fully complete". */
   sandboxBlocked?: number;
+  /** Commands the external agent ran that ended failed (failed status or a
+   *  non-zero exit code). A plain count: a command fails for many reasons, so
+   *  it says nothing about a refusal and nothing about the job's own result. */
+  failedCommands?: number;
   /** Host receive time since which the job has waited on a user approval. */
   awaitingApprovalSince?: number;
   /** Set when the host stopped the job because it could not make progress. */
