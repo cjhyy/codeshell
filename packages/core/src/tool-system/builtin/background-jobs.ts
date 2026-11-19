@@ -24,7 +24,7 @@
 import { normalizeCwdPath } from "../../utils/cwd-normalize.js";
 import { execFileSync } from "node:child_process";
 import { resolveGit } from "../../utils/exec.js";
-import { backgroundJobHistory } from "./background-job-history.js";
+import { backgroundJobHistory, permissionProgressFields } from "./background-job-history.js";
 
 function isValidSessionId(sid: unknown): sid is string {
   return typeof sid === "string" && sid.length > 0;
@@ -43,6 +43,13 @@ export interface BackgroundJobProgress {
   phase?: "starting" | "thinking" | "tool" | "responding";
   summary?: string;
   recentEvents?: Array<{ at: number; summary: string }>;
+  /** Operations the external agent was refused by its permission mode or by the
+   *  user. A job that ends with a non-zero count did not fully complete. */
+  permissionDenials?: number;
+  /** Host receive time since which the job has waited on a user approval. */
+  awaitingApprovalSince?: number;
+  /** Set when the host stopped the job because it could not make progress. */
+  blocked?: "permission";
 }
 
 /** Generous per-session cap on retained terminal jobs — a leak backstop, not a
@@ -316,6 +323,7 @@ class BackgroundJobRegistry {
               .map((event) => ({ at: event.at, summary: clean(event.summary) })),
           }
         : {}),
+      ...permissionProgressFields(progress),
     };
     if (Date.now() - (this.lastPersistedAt.get(jobId) ?? 0) >= 2_000) this.persist(jobId);
   }

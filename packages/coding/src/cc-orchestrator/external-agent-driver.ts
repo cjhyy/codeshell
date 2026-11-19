@@ -1,6 +1,11 @@
 import { execFile, spawn } from "node:child_process";
 import { createInterface } from "node:readline";
-import type { AgentAdapter, BuildArgsOpts, PermissionMode } from "./agent-adapter.js";
+import type {
+  AgentAdapter,
+  BuildArgsOpts,
+  PermissionDenial,
+  PermissionMode,
+} from "./agent-adapter.js";
 import { pathWithCommonBins } from "./cc-capability.js";
 import {
   killProcessGroup,
@@ -13,6 +18,8 @@ export interface AgentRunResult {
   sessionId: string;
   finalText: string;
   isError: boolean;
+  /** Operations the CLI reported as refused; see ParsedResult. */
+  permissionDenials?: PermissionDenial[];
   exitCode: number | null;
   /** Complete CLI records; transient Claude token deltas are observed only. */
   lines: string[];
@@ -291,6 +298,7 @@ export function runAgentOnce(
         imagePaths: opts.imagePaths,
         additionalReadDirs: opts.additionalReadDirs,
         codexImageInputSupported,
+        ...(opts.permissionPrompt ? { permissionPrompt: opts.permissionPrompt } : {}),
       });
       throwIfAborted(signal);
       // claude takes the prompt in argv (`-p <prompt>`) and wants stdin closed

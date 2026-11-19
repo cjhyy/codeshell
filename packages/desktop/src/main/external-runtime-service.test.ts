@@ -2913,7 +2913,12 @@ describe("ExternalRuntimeService", () => {
     expect(registry.getToolDefinitions().map((tool) => tool.name)).toContain("DriveAgent");
     expect(registry.getToolDefinitions().map((tool) => tool.name)).toContain("DriveAgentJobs");
     expect(starts[0]!.developerInstructions).toContain('DriveAgent with cli="codex"');
-    expect(starts[0]!.developerInstructions).toContain('permissionMode="acceptEdits"');
+    // A worker inherits this session's level; telling the model to pick
+    // acceptEdits is what left its Bash calls denied in non-interactive runs.
+    expect(starts[0]!.developerInstructions).toContain(
+      "omit permissionMode so the worker inherits",
+    );
+    expect(starts[0]!.developerInstructions).not.toContain('permissionMode="acceptEdits"');
     expect(starts[0]!.developerInstructions).toContain("never launch codex exec");
   });
 

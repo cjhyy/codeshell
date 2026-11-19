@@ -83,6 +83,9 @@ export interface ResultPayload {
   changedFilesProvenance?: ExternalChangedFilesProvenance;
   cwd?: string;
   originClientMessageId?: string;
+  /** Operations refused by permissions during the run. With status
+   *  "completed" this means "completed with N denied operations". */
+  permissionDenials?: number;
   finishedAt: number;
 }
 
@@ -259,6 +262,7 @@ export type NotificationItem = {
   changedFilesProvenance?: ExternalChangedFilesProvenance;
   cwd?: string;
   originClientMessageId?: string;
+  permissionDenials?: number;
   enqueuedAt: number;
 };
 
@@ -330,6 +334,12 @@ function isResultPayload(value: unknown): value is ResultPayload {
   if (
     value.exitCode !== undefined &&
     (!Number.isSafeInteger(value.exitCode) || (value.exitCode as number) < 0)
+  ) {
+    return false;
+  }
+  if (
+    value.permissionDenials !== undefined &&
+    (!Number.isSafeInteger(value.permissionDenials) || (value.permissionDenials as number) < 0)
   ) {
     return false;
   }
@@ -425,6 +435,7 @@ function legacyItemToDraft(item: NotificationItem, sessionId: string): ResultEnv
       ...(item.originClientMessageId !== undefined
         ? { originClientMessageId: item.originClientMessageId }
         : {}),
+      ...(item.permissionDenials ? { permissionDenials: item.permissionDenials } : {}),
       finishedAt: item.enqueuedAt,
     },
   };
@@ -1070,6 +1081,7 @@ function resultEnvelopeToItem(envelope: ResultEnvelope): NotificationItem {
     ...(payload.originClientMessageId !== undefined
       ? { originClientMessageId: payload.originClientMessageId }
       : {}),
+    ...(payload.permissionDenials ? { permissionDenials: payload.permissionDenials } : {}),
     enqueuedAt: payload.finishedAt,
   };
 }
@@ -1103,6 +1115,7 @@ export function notificationItemToStreamEvent(
   if (item.originClientMessageId !== undefined) {
     event.originClientMessageId = item.originClientMessageId;
   }
+  if (item.permissionDenials) event.permissionDenials = item.permissionDenials;
   return event;
 }
 
@@ -1143,7 +1156,16 @@ export function buildNotificationMessage(
     .map((item) => {
       const nameAttr = item.name ? ` name="${escapeXmlAttr(item.name)}"` : "";
       const ccAttr = item.ccSessionId ? ` ccSessionId="${escapeXmlAttr(item.ccSessionId)}"` : "";
-      const opening = `  <agent id="${escapeXmlAttr(item.agentId)}"${nameAttr} status="${item.status}"${ccAttr}>`;
+      // A run that was refused operations did not do everything it was asked to;
+      // say so on the element the model reads first, not only in the result text.
+      const deniedAttr = item.permissionDenials
+        ? ` permissionDenials="${item.permissionDenials}"`
+        : "";
+      const statusText =
+        item.status === "completed" && item.permissionDenials
+          ? "completed-with-denied-operations"
+          : item.status;
+      const opening = `  <agent id="${escapeXmlAttr(item.agentId)}"${nameAttr} status="${statusText}"${deniedAttr}${ccAttr}>`;
       const description = `    <description>${escapeXmlText(item.description)}</description>`;
       const body =
         item.status === "completed"
@@ -1170,14 +1192,22 @@ export function buildNotificationSummary(
   const header = "📨 background agents completed";
   const rows = items.map((item) => {
     const badge =
-      item.status === "completed" ? "✓" : item.status === "cancelled" ? "cancelled" : "✗";
-    const namePart = item.name ? `${item.name}  ·  ` : "";
+      item.status === "completed"
+        ? item.permissionDenials
+          ? "⚠"
+          : "✓"
+        : item.status === "cancelled"
+          ? "cancelled"
+          : "✗";
+    const namePart = item.name && item.name !== item.description ? `${item.name}  ·  ` : "";
     const statusPart =
       item.status === "failed"
         ? `  ·  failed: ${item.error ?? "unknown"}`
         : item.status === "cancelled"
           ? "  ·  cancelled"
-          : "";
+          : item.permissionDenials
+            ? `  ·  ${item.permissionDenials} operation(s) denied by permissions`
+            : "";
     return `  └─ ${namePart}${item.description}  ·  ${badge}${statusPart}`;
   });
   return [header, ...rows].join("\n");

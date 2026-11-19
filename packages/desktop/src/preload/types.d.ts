@@ -345,6 +345,12 @@ export interface BackgroundJobProgress {
   phase?: "starting" | "thinking" | "tool" | "responding";
   summary?: string;
   recentEvents?: Array<{ at: number; summary: string }>;
+  /** Operations refused by the worker's permission mode or by the user. */
+  permissionDenials?: number;
+  /** Since when the worker has waited on an approval in its parent session. */
+  awaitingApprovalSince?: number;
+  /** The host stopped the worker because it could not proceed. */
+  blocked?: "permission";
 }
 
 type BackgroundWorkWithSource<T> = T & { sourceSession: BackgroundWorkSourceSession };

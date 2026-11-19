@@ -161,6 +161,53 @@ describe("desktop notification routes", () => {
     expect(calls.every((call) => call.body === "整理学习笔记 · 点击查看结果")).toBe(true);
   });
 
+  it("names an untitled external task by its description instead of its job id", async () => {
+    const { sink, calls } = fixture();
+    notifyResult(sink, {
+      workKind: "cc",
+      workId: "cc-1a2b3c",
+      description: "DriveAgent(claude): fix the flaky login test token=private-value",
+      status: "completed",
+    });
+    notifyResult(sink, {
+      workKind: "cc",
+      name: "修登录测试",
+      description: "ignored when a title exists",
+      status: "completed",
+    });
+    await Promise.resolve();
+    expect(calls.map((call) => call.body)).toEqual([
+      "DriveAgent(claude): fix the flaky login test token=[REDACTED] · 点击查看结果",
+      "修登录测试 · 点击查看结果",
+    ]);
+  });
+
+  it("does not announce a run with denied operations as completed", async () => {
+    const { sink, calls } = fixture();
+    notifyResult(sink, {
+      workKind: "cc",
+      name: "修登录测试",
+      status: "completed",
+      permissionDenials: 3,
+    });
+    notifyResult(sink, {
+      workKind: "cc",
+      name: "提交修复",
+      status: "failed",
+      permissionDenials: 3,
+      error: "[permissions] Stopped early: 3 consecutive operations were denied (Bash ×3)",
+    });
+    await Promise.resolve();
+    expect(calls[0]).toMatchObject({
+      title: "外部代理任务未全部完成",
+      body: "修登录测试 · 有 3 个操作被权限拒绝，点击查看",
+    });
+    expect(calls[1]!.title).toBe("外部代理任务失败");
+    expect(calls[1]!.body).toStartWith(
+      "提交修复 · 被权限拦住，3 个操作被拒 · [permissions] Stopped early",
+    );
+  });
+
   it("keeps shell identities useful without exposing command arguments", async () => {
     const { sink, calls } = fixture();
     for (const command of [
