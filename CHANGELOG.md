@@ -8,6 +8,14 @@ breaking.
 
 ## [Unreleased]
 
+## [0.11.0-rc.6] - 2026-11-20
+
+Second follow-up for Codex and Claude Code sessions run from the desktop. The
+session browser, Goal question banner, Goal state across a restart, DriveAgent
+task view and partition cleanup were accepted in the real desktop app, in an
+isolated instance with scripted stand-in CLIs. Computer use and real provider
+runs inside the app have still not been accepted on a real device.
+
 ### Changed
 
 - A command that the sandbox of a DriveAgent Codex worker stops is no longer
@@ -26,7 +34,14 @@ breaking.
   Codex patches, network access and permission requests are approved one at a
   time.
 
+- A Goal question that is still open, and a Goal that stopped on its own, now
+  survive an app restart: the reply banner is restored and a Mimi notice that
+  was not delivered before the restart is raised once.
+
 ### Fixed
+
+- After you declined a browser panel access request, a Codex or Claude Code
+  session could never ask again; your next message now allows one new request.
 
 - "Allow for this session" is honored in Codex and Claude Code sessions. For a
   CodeShell tool (`browser_act`, DriveAgent worker requests, …) and for Claude
