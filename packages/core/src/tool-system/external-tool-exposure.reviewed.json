@@ -57,7 +57,7 @@
     "kind": "self-contained",
     "status": "exposed",
     "reason": "Delegates one bounded task to an installed Codex/Claude CLI. External sessions may detach it only when the Desktop host promises to drain the completion queue and inject a continuation into the same Session; other hosts fail closed and require foreground execution. The child CLI does not inherit this host bridge, which bounds nesting at one level; the outer call still requires the normal DriveAgent approval.",
-    "contractFingerprint": "5ed54ff909e67425e8dbe10d2bcc40fa118dc88c78b9972f24c31f62ce39d74d"
+    "contractFingerprint": "abc482e71d849c52f5b7ca11b1758b9d09b31361de8140fc07b1128155c7a6b9"
   },
   {
     "tool": "DriveAgentJobs",
