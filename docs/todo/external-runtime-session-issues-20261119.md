@@ -192,3 +192,4 @@
 - 每次 run 都记录两条 `session_started`（同一 runId），疑似重复发射。
 - `state.json` 的 `turnCount` 比实际 run 数少一（唤醒轮未计入？）。
 - ToolSearch `select:` 在转录里结果为空字符串，确认是否只是记录问题。
+- 网页端：有新输出跟随滚动时展开过程列表，列表还在移动，手指点下去可能落在别的工具卡片上（CI 上 `test-history-details-browser.mjs` 因此偶发失败，测试已改为等卡片静止后再点）。真实用户是否会遇到未验证。
