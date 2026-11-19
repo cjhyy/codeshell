@@ -31,6 +31,7 @@ import {
   screen,
   nativeTheme,
   powerMonitor,
+  webContents,
 } from "electron";
 import { mainWindowTitleBarOptions, registerWindowTitleBarIpc } from "./window-titlebar.js";
 import {
@@ -229,6 +230,7 @@ import { McpOAuthService, type McpOAuthLoginInput } from "./mcp-oauth-service.js
 import { LinkDeviceOAuthBroker } from "./link-device-oauth.js";
 import { type ManagedCliInstallResult } from "./link-cli-installer.js";
 import { migrateCredentialStore, migrateKnownCredentialStores } from "./credential-migration.js";
+import { removeOrphanedExternalRuntimePartitions } from "./orphaned-browser-partitions.js";
 import { inspectReadableReplyAttachment } from "./image-read-service.js";
 import { MediaPreviewService } from "./media-preview-service.js";
 import { browserPartitionForBucket } from "./renderer-browser-session-ipc-authority.js";
@@ -3724,6 +3726,21 @@ app.whenReady().then(async () => {
     .then((cwds) => migrateKnownCredentialStores(cwds))
     .then((result) => dlog("credentials", "migration.done", { ...result }))
     .catch((err) => dlog("credentials", "migration.failed", { error: String(err) }));
+
+  // External-runtime sessions browse in the project bucket now; their old
+  // per-session partitions are never opened again. Before any window exists.
+  const partitionsDir = join(app.getPath("userData"), "Partitions");
+  void removeOrphanedExternalRuntimePartitions({
+    partitionsDir,
+    inUse: (directory) =>
+      webContents
+        .getAllWebContents()
+        .some((contents) => !contents.isDestroyed() && contents.session.storagePath === directory),
+  }).then((result) => {
+    // Counts only: a directory name carries a session id.
+    if (result.removed + result.inUse + result.failed > 0)
+      dlog("browser", "orphaned-partitions.cleanup", { ...result });
+  });
 
   if (process.platform === "darwin" && app.dock) {
     try {
