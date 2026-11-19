@@ -67,6 +67,8 @@ describe("createDrivePermissionGate", () => {
         toolName: "Claude Code Bash",
         args: { command: "git status" },
         reason: "Requested by background task «Fix login test» (DriveAgent worker).",
+        // Aborted when the ask stops being awaited, so its prompt is withdrawn.
+        signal: expect.any(AbortSignal),
       },
     ]);
     expect(gate.snapshot()).toEqual({});
@@ -519,5 +521,121 @@ describe("a cancelled ask", () => {
       reason: "The permission request was cancelled.",
     });
     expect(gate.snapshot()).toEqual({});
+  });
+});
+
+describe("an approval prompt never outlives its worker", () => {
+  /** A host that keeps each prompt up until it is answered or withdrawn. */
+  function host() {
+    const prompts: Array<{ toolName: string; signal: AbortSignal; withdrawn: boolean }> = [];
+    const requestApproval = (request: { toolName: string; signal?: AbortSignal }) =>
+      new Promise<{ approved: boolean; reason?: string }>((resolve) => {
+        const prompt = { toolName: request.toolName, signal: request.signal!, withdrawn: false };
+        prompts.push(prompt);
+        request.signal!.addEventListener("abort", () => {
+          prompt.withdrawn = true;
+          resolve({ approved: false, reason: "withdrawn" });
+        });
+      });
+    return { prompts, requestApproval };
+  }
+
+  it("a worker that is cancelled while it waits withdraws its prompt", async () => {
+    const { prompts, requestApproval } = host();
+    const gate = createDrivePermissionGate({
+      title: "t",
+      mode: "default",
+      requestApproval,
+      onBlocked: () => {
+        throw new Error("must not block");
+      },
+    });
+    const worker = new AbortController();
+    const pending = gate.decide(bash, worker.signal);
+    expect(prompts.map((prompt) => prompt.withdrawn)).toEqual([false]);
+    worker.abort();
+    expect(await pending).toEqual({
+      approved: false,
+      reason: "The permission request was cancelled.",
+    });
+    expect(prompts[0]!.withdrawn).toBe(true);
+    expect(gate.denials()).toEqual([]);
+  });
+
+  it("an ask that times out withdraws its prompt as it stops the worker", async () => {
+    const { prompts, requestApproval } = host();
+    const blocked: string[] = [];
+    const gate = createDrivePermissionGate({
+      title: "t",
+      mode: "default",
+      requestApproval,
+      onBlocked: (reason) => blocked.push(reason),
+      approvalWaitLimitMs: 5,
+    });
+    expect(await gate.decide(bash)).toEqual({
+      approved: false,
+      reason: "The approval request was not answered in time.",
+    });
+    expect(blocked).toHaveLength(1);
+    expect(prompts[0]!.withdrawn).toBe(true);
+  });
+
+  it("stopping the worker for repeated denials withdraws its other open prompts, uncounted", async () => {
+    const prompts: Array<{ toolName: string; withdrawn: boolean }> = [];
+    const gate = createDrivePermissionGate({
+      title: "t",
+      mode: "default",
+      maxConsecutiveDenials: 1,
+      requestApproval: (request) =>
+        new Promise((resolve) => {
+          const prompt = { toolName: request.toolName, withdrawn: false };
+          prompts.push(prompt);
+          // The edit is denied by the user at once; the shell ask stays open.
+          if (request.toolName === "Claude Code Edit") resolve({ approved: false });
+          request.signal!.addEventListener("abort", () => {
+            prompt.withdrawn = true;
+            resolve({ approved: false, reason: "withdrawn" });
+          });
+        }),
+      onBlocked: () => {},
+    });
+    const open = gate.decide(bash);
+    expect(await gate.decide({ toolName: "Edit", input: {} })).toMatchObject({ approved: false });
+    expect(gate.blockedReason()).toBeDefined();
+    expect(await open).toEqual({
+      approved: false,
+      reason: "The permission request was cancelled.",
+    });
+    expect(prompts.find((prompt) => prompt.toolName === "Claude Code Bash")!.withdrawn).toBe(true);
+    // Only the user's own refusal is a denial.
+    expect(gate.denials()).toEqual([{ toolName: "Edit" }]);
+  });
+
+  it("closing a run withdraws whatever it still has on screen", async () => {
+    const { prompts, requestApproval } = host();
+    let decide!: Parameters<
+      NonNullable<Parameters<typeof prepareDriveRunPermissions>[0]["startPrompt"]>
+    >[0]["decide"];
+    const permissions = await prepareDriveRunPermissions({
+      cli: "claude",
+      mode: "default",
+      title: "t",
+      requestApproval,
+      stop: () => {},
+      startPrompt: async (gate) => {
+        decide = gate.decide;
+        return {
+          permissionPrompt: { mcpConfigPath: "/dev/null", toolName: "prompt" },
+          close: async () => {},
+        };
+      },
+    });
+    const pending = decide(bash);
+    expect(prompts[0]!.withdrawn).toBe(false);
+    // The process ended (finished, was cancelled, or timed out) with the ask open.
+    await permissions.close();
+    expect(prompts[0]!.withdrawn).toBe(true);
+    expect(await pending).toMatchObject({ approved: false });
+    expect(permissions.outcome().denials).toBe(0);
   });
 });
