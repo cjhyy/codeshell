@@ -21,6 +21,11 @@ import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { McpBridgeHandle } from "../shared/mcp-bridge.js";
+import {
+  claudeHostMcpServerEntries,
+  validateExternalHostMcpServers,
+  type ExternalHostMcpServer,
+} from "../shared/host-mcp-servers.js";
 
 /** Logical MCP server name; also the `mcp__<server>__<tool>` prefix. */
 export const CLAUDE_MCP_SERVER_NAME = "codeshell_tools";
@@ -31,6 +36,8 @@ const MCP_TOOL_NAME = /^mcp__[a-z0-9_]+__[A-Za-z0-9_]+$/;
 export interface ClaudeMcpConfigOptions {
   bridge: McpBridgeHandle;
   serverName?: string;
+  /** Host-owned stdio servers declared beside the bridge (`host-mcp-servers.ts`). */
+  hostMcpServers?: readonly ExternalHostMcpServer[];
 }
 
 /**
@@ -47,8 +54,10 @@ export interface ClaudeMcpConfigOptions {
  */
 export function buildClaudeMcpConfig(options: ClaudeMcpConfigOptions): string {
   const serverName = options.serverName ?? CLAUDE_MCP_SERVER_NAME;
+  const hostServers = validateExternalHostMcpServers(options.hostMcpServers, serverName);
   return JSON.stringify({
     mcpServers: {
+      ...claudeHostMcpServerEntries(hostServers),
       [serverName]: {
         type: "http",
         url: options.bridge.url,
@@ -158,11 +167,17 @@ export function claudeAllowedToolNames(
  * CLI args wiring a `claude -p` invocation to the bridge.
  *
  * Uses a 0600 file for the config (token out of `argv`) and passes
- * `--strict-mcp-config` so the bridge is the session's ONLY tool channel.
- * Without that flag Claude Code also loads every MCP server from the user's
- * `~/.claude.json` and project config — servers the user approved for their own
- * interactive use, not for an agent CodeShell spawns on their behalf, and which
- * sit entirely outside CodeShell's exposure policy and `ToolExecutor`.
+ * `--strict-mcp-config` so the session's ONLY MCP servers are the ones the Host
+ * declares: the bridge, plus any `hostMcpServers` (Desktop's gated Computer Use
+ * proxy). Without that flag Claude Code also loads every MCP server from the
+ * user's `~/.claude.json` and project config — servers the user approved for
+ * their own interactive use, not for an agent CodeShell spawns on their behalf,
+ * and which sit entirely outside CodeShell's exposure policy and `ToolExecutor`.
+ *
+ * `--allowed-tools` names bridge tools ONLY. A Host MCP server's tools bypass
+ * `ToolExecutor`, so pre-approving them here would be a grant with no approval
+ * at all; left out, Claude asks through `--permission-prompt-tool` (the Host's
+ * approval UI) and, with no prompt tool, denies them.
  *
  * The caller owns `cleanup()`; run it when the session ends.
  */
@@ -170,9 +185,14 @@ export function claudeBridgeArgs(options: {
   bridge: McpBridgeHandle;
   exposedToolNames: Iterable<string>;
   serverName?: string;
+  hostMcpServers?: readonly ExternalHostMcpServer[];
 }): { args: string[]; cleanup(): void } {
   const serverName = options.serverName ?? CLAUDE_MCP_SERVER_NAME;
-  const config = writeClaudeMcpConfigFile({ bridge: options.bridge, serverName });
+  const config = writeClaudeMcpConfigFile({
+    bridge: options.bridge,
+    serverName,
+    ...(options.hostMcpServers ? { hostMcpServers: options.hostMcpServers } : {}),
+  });
   return {
     args: [
       "--mcp-config",

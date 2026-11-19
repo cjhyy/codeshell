@@ -29,6 +29,7 @@ export type {
   ToolHostRef,
 } from "./shared/session-context-store.js";
 export { buildRuntimeSpawnEnv } from "./shared/spawn-env.js";
+export type { ExternalHostMcpServer } from "./shared/host-mcp-servers.js";
 export type { RuntimeSpawnEnvOptions } from "./shared/spawn-env.js";
 export { textWithAttachmentReferences } from "./turn-input.js";
 export type { ExternalRuntimeAttachment, ExternalRuntimeTurnInput } from "./turn-input.js";

@@ -740,6 +740,154 @@ setOnLine((m) => {
       expect(await collect(runtime)).toMatchObject({ action: "accept" });
     });
 
+    describe("a declared Host MCP server (not routed through ToolExecutor)", () => {
+      const computer = {
+        name: "codeshell_computer",
+        command: "/app/electron",
+        args: ["/app/proxy.cjs"],
+        env: { CODE_SHELL_CUA_SESSION_ID: "sess-elicit" },
+        secretEnv: { CODE_SHELL_CUA_ACTIVITY_TOKEN: "ACTIVITY-SECRET" },
+      };
+      const ask = {
+        serverName: "codeshell_computer",
+        message: "Run click?",
+        mode: "form",
+        _meta: { codex_approval_kind: "mcp_tool_call", tool_name: "click" },
+      };
+      function probe(
+        hooks: CodexRuntimeHooks,
+        extra: Partial<CodexRuntimeOptions> = { hostMcpServers: [computer] },
+        initialize = "{}",
+      ) {
+        const file = fakeServerScript(`
+          let answer = null;
+          setOnLine((m) => {
+            if (m.method === "initialize") return send({ id: m.id, result: ${initialize} });
+            if (m.method === "config/read")
+              return send({ id: m.id, result: { config: { mcp_servers: { codeshell_tools: {} } } } });
+            if (m.method === "thread/start") {
+              send({ id: m.id, result: { thread: { id: "t" } } });
+              send({ id: 700, method: "mcpServer/elicitation/request", params: ${JSON.stringify(ask)} });
+              return;
+            }
+            if (m.method === "collect")
+              return send({ id: m.id, result: { answer, argv: process.argv.slice(2), token: process.env.CODE_SHELL_CUA_ACTIVITY_TOKEN ?? null } });
+            if (m.result && m.result.action) answer = m.result;
+          });
+        `);
+        const runtime = new CodexRuntime(
+          {
+            cwd: process.cwd(),
+            businessSessionId: "sess-elicit",
+            bridge,
+            client: { command: process.execPath, args: [file] },
+            ...extra,
+          },
+          hooks,
+        );
+        runtimes.push(runtime);
+        return runtime;
+      }
+      async function collectAll(runtime: CodexRuntime) {
+        await runtime.start();
+        await Bun.sleep(250);
+        return (await (
+          runtime as unknown as { client: { request(m: string): Promise<unknown> } }
+        ).client.request("collect")) as {
+          answer: { action?: string; _meta?: unknown } | null;
+          argv: string[];
+          token: string | null;
+        };
+      }
+
+      test("is declared to Codex, with its secret in the environment and not in argv", async () => {
+        const seen = await collectAll(probe({}));
+        expect(seen.argv).toContain('mcp_servers.codeshell_computer.command="/app/electron"');
+        expect(seen.argv).toContain(
+          'mcp_servers.codeshell_computer.env_vars=["CODE_SHELL_CUA_ACTIVITY_TOKEN"]',
+        );
+        expect(seen.argv.join(" ")).not.toContain("ACTIVITY-SECRET");
+        expect(seen.token).toBe("ACTIVITY-SECRET");
+      });
+
+      test("its approval is declined when the host supplies no decision", async () => {
+        expect((await collectAll(probe({}))).answer).toMatchObject({ action: "decline" });
+      });
+
+      test("its approval is put to the host, with the server and tool named", async () => {
+        const asked: unknown[] = [];
+        const seen = await collectAll(
+          probe({
+            onHostMcpApproval: (request) => {
+              asked.push(request);
+              return true;
+            },
+          }),
+        );
+        expect(asked).toEqual([
+          { serverName: "codeshell_computer", toolName: "click", message: "Run click?" },
+        ]);
+        expect(seen.answer).toMatchObject({ action: "accept" });
+        // One call, one approval: nothing is remembered for the session.
+        expect(seen.answer?._meta ?? null).toBeNull();
+      });
+
+      test("a host denial or a failing host both decline", async () => {
+        expect((await collectAll(probe({ onHostMcpApproval: () => false }))).answer).toMatchObject({
+          action: "decline",
+        });
+        expect(
+          (
+            await collectAll(
+              probe({
+                onHostMcpApproval: () => {
+                  throw new Error("approval UI unavailable");
+                },
+              }),
+            )
+          ).answer,
+        ).toMatchObject({ action: "decline" });
+      });
+
+      test("an undeclared server is never put to the host", async () => {
+        let asked = false;
+        const seen = await collectAll(
+          probe(
+            {
+              onHostMcpApproval: () => {
+                asked = true;
+                return true;
+              },
+            },
+            {},
+          ),
+        );
+        expect(asked).toBe(false);
+        expect(seen.answer).toMatchObject({ action: "decline" });
+        expect(seen.argv.join(" ")).not.toContain("codeshell_computer");
+      });
+
+      test("manager mode (native tools disabled) drops the server entirely", async () => {
+        let asked = false;
+        const seen = await collectAll(
+          probe(
+            {
+              onHostMcpApproval: () => {
+                asked = true;
+                return true;
+              },
+            },
+            { hostMcpServers: [computer], disableNativeTools: true },
+            '{ userAgent: "codeshell/0.162.0 (test)" }',
+          ),
+        );
+        expect(seen.argv.join(" ")).not.toContain("codeshell_computer");
+        expect(seen.token).toBeNull();
+        expect(asked).toBe(false);
+        expect(seen.answer).toMatchObject({ action: "decline" });
+      });
+    });
+
     test("declines an elicitation from a THIRD-PARTY server", async () => {
       // Not ours to consent to. A blanket accept here would hand the runtime a
       // yes for any server it can name.

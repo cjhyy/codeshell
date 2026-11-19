@@ -66,11 +66,13 @@ function fakeClaudeCli(body = ""): { command: string; capture: string } {
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 const argv = process.argv.slice(2);
 const send = (value) => process.stdout.write(JSON.stringify(value) + "\\n");
+const mcpFlag = argv.indexOf("--mcp-config");
+const mcpConfig = mcpFlag >= 0 ? JSON.parse(readFileSync(argv[mcpFlag + 1], "utf8")) : undefined;
 const flag = argv.indexOf("--append-system-prompt-file");
 const promptFile = flag >= 0 ? argv[flag + 1] : undefined;
 const systemPrompt = promptFile && existsSync(promptFile) ? readFileSync(promptFile, "utf8") : undefined;
 const stdin = readFileSync(0, "utf8");
-appendFileSync(${JSON.stringify(capture)}, JSON.stringify({ argv, promptFile, systemPrompt, stdin }) + "\\n");
+appendFileSync(${JSON.stringify(capture)}, JSON.stringify({ argv, promptFile, systemPrompt, stdin, mcpConfig }) + "\\n");
 send({ type: "system", subtype: "init", session_id: "claude-fake-session" });
 ${body}
 send({ type: "result", subtype: "success", is_error: false });
@@ -85,6 +87,7 @@ interface ClaudeCapture {
   promptFile?: string;
   systemPrompt?: string;
   stdin: string;
+  mcpConfig?: { mcpServers: Record<string, unknown> };
 }
 
 function readCaptures(capture: string): ClaudeCapture[] {
@@ -114,6 +117,119 @@ function registry(): ToolRegistry {
 }
 
 describe("startExternalRuntimeSession", () => {
+  describe("Host MCP servers (Computer Use) beside the bridge", () => {
+    const computer = {
+      name: "codeshell_computer",
+      command: "/app/electron",
+      args: ["/app/proxy.cjs"],
+      env: { CODE_SHELL_CUA_SESSION_ID: "sess-factory" },
+      secretEnv: { CODE_SHELL_CUA_ACTIVITY_TOKEN: "ACTIVITY-SECRET" },
+    };
+    async function claudeServers(extra: Record<string, unknown>): Promise<string[]> {
+      const fake = fakeClaudeCli();
+      const session = await startExternalRuntimeSession({
+        ...BASE,
+        kind: "claude-code",
+        registry: registry(),
+        claudeCommand: fake.command,
+        hostMcpServers: [computer],
+        ...extra,
+      });
+      sessions.push(session);
+      await (
+        await session.send({ text: "hello" })
+      ).done;
+      const [turn] = readCaptures(fake.capture);
+      const allowed = turn!.argv[turn!.argv.indexOf("--allowed-tools") + 1] ?? "";
+      expect(allowed).not.toContain("codeshell_computer");
+      return Object.keys(turn!.mcpConfig!.mcpServers).sort();
+    }
+
+    test("an ordinary Claude session gets the server, unapproved", async () => {
+      expect(await claudeServers({})).toEqual(["codeshell_computer", "codeshell_tools"]);
+    });
+
+    test("plan mode keeps the bridge as the only channel", async () => {
+      expect(await claudeServers({ planMode: true })).toEqual(["codeshell_tools"]);
+    });
+
+    test("a native-tools-disabled (manager / read-only) session does too", async () => {
+      expect(await claudeServers({ disableNativeTools: true })).toEqual(["codeshell_tools"]);
+    });
+
+    /** A fake Codex that asks to approve a computer tool, then reports its argv and the answer. */
+    function codexAsking(): string[] {
+      return fakeCodex(`
+  if (m.method === "turn/start") {
+    send({ id: m.id, result: { turn: { id: "turn-1" } } });
+    send({ id: 700, method: "mcpServer/elicitation/request", params: { serverName: "codeshell_computer", message: "Run click?", _meta: { codex_approval_kind: "mcp_tool_call", tool_name: "click" } } });
+  }
+  if (m.id === 700 && m.result) {
+    send({ method: "item/agentMessage/delta", params: { threadId: "t-fake", turnId: "turn-1", itemId: "i1", delta: JSON.stringify({ answer: m.result.action, declared: process.argv.join(" ").includes("mcp_servers.codeshell_computer.command") }) } });
+    send({ method: "turn/completed", params: { threadId: "t-fake", turn: { id: "turn-1", status: "completed" } } });
+  }`);
+    }
+    async function codexOutcome(extra: Record<string, unknown>) {
+      const session = await startExternalRuntimeSession({
+        ...BASE,
+        kind: "codex",
+        registry: registry(),
+        codexClient: { command: process.execPath, args: codexAsking() },
+        hostMcpServers: [computer],
+        ...extra,
+      });
+      sessions.push(session);
+      let text = "";
+      await (
+        await session.send({ text: "report" }, (event) => {
+          if (event.type === "text_delta") text += event.text;
+        })
+      ).done;
+      return JSON.parse(text) as { answer?: string; declared: boolean };
+    }
+
+    test("Codex: each call is put to the approval backend as a high-risk request", async () => {
+      const requests: Array<{ toolName: string; riskLevel: string; sessionId?: string }> = [];
+      const outcome = await codexOutcome({
+        approvalBackend: {
+          requestApproval: async (request: {
+            toolName: string;
+            riskLevel: string;
+            sessionId?: string;
+          }) => {
+            requests.push(request);
+            return { approved: true };
+          },
+        },
+      });
+      expect(outcome).toEqual({ answer: "accept", declared: true });
+      expect(requests).toHaveLength(1);
+      expect(requests[0]).toMatchObject({
+        toolName: "mcp__codeshell_computer__click",
+        riskLevel: "high",
+        sessionId: "sess-factory",
+      });
+    });
+
+    test("Codex: a denial, or no approval backend at all, declines", async () => {
+      expect(
+        await codexOutcome({
+          approvalBackend: { requestApproval: async () => ({ approved: false }) },
+        }),
+      ).toEqual({ answer: "decline", declared: true });
+      expect(await codexOutcome({})).toEqual({ answer: "decline", declared: true });
+    });
+
+    test("Codex: plan mode does not declare the server and declines its approvals", async () => {
+      expect(
+        await codexOutcome({
+          planMode: true,
+          approvalBackend: { requestApproval: async () => ({ approved: true }) },
+        }),
+      ).toEqual({ answer: "decline", declared: false });
+    });
+  });
+
   test("forwards manager native-tool isolation through the Codex composition", async () => {
     const dir = mkdtempSync(join(tmpdir(), "codeshell-factory-manager-"));
     dirs.push(dir);

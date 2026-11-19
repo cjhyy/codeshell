@@ -63,13 +63,78 @@ describe("claude-code MCP config", () => {
     expect(() => statSync(file.path)).toThrow();
   });
 
-  test("passes --strict-mcp-config so the bridge is the only tool channel", () => {
+  test("passes --strict-mcp-config so only Host-declared servers are tool channels", () => {
     // Without it, Claude Code ALSO loads every MCP server from the user's
     // ~/.claude.json and project config — approved for their own interactive use,
     // not for an agent CodeShell spawns, and outside CodeShell's ToolExecutor.
+    //
+    // Invariant (changed deliberately when Computer Use was opened to external
+    // sessions): the bridge is the only channel UNLESS the Host declares another
+    // server of its own. By default the config holds the bridge and nothing else.
     const built = claudeBridgeArgs({ bridge, exposedToolNames: ["Panel"] });
     cleanups.push(built.cleanup);
     expect(built.args).toContain("--strict-mcp-config");
+    const path = built.args[built.args.indexOf("--mcp-config") + 1]!;
+    const config = JSON.parse(readFileSync(path, "utf8")) as { mcpServers: object };
+    expect(Object.keys(config.mcpServers)).toEqual([CLAUDE_MCP_SERVER_NAME]);
+  });
+
+  describe("a Host MCP server beside the bridge", () => {
+    const computer = {
+      name: "codeshell_computer",
+      command: "/app/electron",
+      args: ["/app/proxy.cjs", "--driver", "/app/cua-driver", "--socket", "/tmp/d.sock"],
+      env: { CODE_SHELL_CUA_SESSION_ID: "s-1" },
+      secretEnv: { CODE_SHELL_CUA_ACTIVITY_TOKEN: "ACTIVITY-SECRET" },
+    };
+
+    test("is declared as a stdio server in the same private config file", () => {
+      const built = claudeBridgeArgs({
+        bridge,
+        exposedToolNames: ["Panel"],
+        hostMcpServers: [computer],
+      });
+      cleanups.push(built.cleanup);
+      const path = built.args[built.args.indexOf("--mcp-config") + 1]!;
+      expect(statSync(path).mode & 0o777).toBe(0o600);
+      const config = JSON.parse(readFileSync(path, "utf8")) as {
+        mcpServers: Record<string, Record<string, unknown>>;
+      };
+      expect(Object.keys(config.mcpServers).sort()).toEqual([
+        "codeshell_computer",
+        CLAUDE_MCP_SERVER_NAME,
+      ]);
+      expect(config.mcpServers.codeshell_computer).toEqual({
+        type: "stdio",
+        command: "/app/electron",
+        args: computer.args,
+        env: { CODE_SHELL_CUA_SESSION_ID: "s-1", CODE_SHELL_CUA_ACTIVITY_TOKEN: "ACTIVITY-SECRET" },
+      });
+      // The secret is in the 0600 file, never in argv.
+      expect(built.args.join(" ")).not.toContain("ACTIVITY-SECRET");
+      expect(built.args).toContain("--strict-mcp-config");
+    });
+
+    test("its tools are NOT pre-approved: --allowed-tools stays bridge-only", () => {
+      // `--allowed-tools` is a grant. These tools bypass ToolExecutor, so a grant
+      // here would mean no approval anywhere; unlisted, Claude asks through the
+      // permission-prompt tool (the Host's approval UI) or denies.
+      const built = claudeBridgeArgs({
+        bridge,
+        exposedToolNames: ["Panel", "Read"],
+        hostMcpServers: [computer],
+      });
+      cleanups.push(built.cleanup);
+      const allowed = built.args[built.args.indexOf("--allowed-tools") + 1]!.split(",");
+      expect(allowed).toEqual(["mcp__codeshell_tools__Panel", "mcp__codeshell_tools__Read"]);
+    });
+
+    test("a name that cannot form mcp__<server>__<tool> or shadows the bridge is refused", () => {
+      for (const name of ["host:cua-driver", CLAUDE_MCP_SERVER_NAME])
+        expect(() =>
+          buildClaudeMcpConfig({ bridge, hostMcpServers: [{ ...computer, name }] }),
+        ).toThrow(/Host MCP server/);
+    });
   });
 
   test("namespaces allowed tool names the way Claude Code does", () => {
