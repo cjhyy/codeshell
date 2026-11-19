@@ -76,7 +76,7 @@ import {
   EXTERNAL_UNVERIFIED_WRITE_NOTICE,
 } from "./external-runtime-operations.js";
 import { createExternalRuntimeSourceContext } from "./external-runtime-source-context.js";
-import { EXTERNAL_GOAL_TOOL_CATALOG } from "./external-runtime-goal-tools.js";
+import { EXTERNAL_GOAL_TOOL_CATALOG, runExternalGoalTool } from "./external-runtime-goal-tools.js";
 import {
   externalMimiToolInstructions,
   type ExternalRuntimeMimiHost,
@@ -1129,16 +1129,8 @@ export class ExternalRuntimeService {
           if (name === "complete_goal" && operations.current?.hasUnverifiedWrites())
             return JSON.stringify({ ok: false, error: EXTERNAL_UNVERIFIED_WRITE_NOTICE });
           const operation = () =>
-            JSON.stringify(
-              name === "get_goal"
-                ? this.goals.get(request.sessionId)
-                : name === "wait_for_user"
-                  ? this.goals.waitForUser(request.sessionId, args)
-                  : this.goals.settle(
-                      request.sessionId,
-                      name === "complete_goal" ? "completed" : "cancelled",
-                      args,
-                    ),
+            runExternalGoalTool(this.goals, request.sessionId, name, args, () =>
+              this.awaitsBackground(request.sessionId),
             );
           return context?.streamCallback
             ? this.withGoalOutput(
@@ -1880,6 +1872,7 @@ export class ExternalRuntimeService {
                   return;
                 background?.observe(event);
                 trace?.observe(event);
+                if (goalRun) this.goals.observeTurnEvent(goalRun, event);
                 entry.forwardEvent(event);
               };
               if (runId) {
@@ -1947,7 +1940,9 @@ export class ExternalRuntimeService {
               });
             }
             finalOutcome = entry.recorder.finishIfMissing();
-            const waitingForBackgroundWork = this.awaitsBackground(sessionId);
+            // Running work parks the Goal only when the model asked (or idled).
+            const waitingForBackgroundWork =
+              this.goals.backgroundTurnEnd(goalRun, this.awaitsBackground(sessionId)) === "park";
             if (
               !goalRun ||
               finalOutcome.reason !== "completed" ||
@@ -1985,7 +1980,10 @@ export class ExternalRuntimeService {
             }
             providerRound++;
             nextInput = {
-              text: `继续处理尚未完成的目标。\n\n${this.goals.instruction(goalRun)}`,
+              text: this.goals.continuation(
+                goalRun,
+                this.deps.backgroundWork?.listRunning?.(sessionId),
+              ),
               displayText: "继续处理尚未完成的目标。",
               injected: true,
             };

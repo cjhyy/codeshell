@@ -625,6 +625,7 @@ describe("transcriptToFoldItems", () => {
         },
         progress: { rounds: 7, activeMs: 9_000, atMs: 500 },
         waitingForUser: "要发布吗？",
+        waitingForUserDetail: { level: "consent", options: ["是", 3], default: 1 },
       }),
       line("goal_progress", {
         status: "not_met",
@@ -641,6 +642,7 @@ describe("transcriptToFoldItems", () => {
         status: "not_met",
         round: 7,
         waitingForUser: "要发布吗？",
+        waitingForUserDetail: { level: "consent", options: ["是"] },
         waiting: {
           kind: "background_work",
           sinceMs: 500,
