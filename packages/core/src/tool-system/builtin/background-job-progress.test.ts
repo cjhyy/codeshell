@@ -272,11 +272,13 @@ test("permission state is validated, retained after the job ends and survives hi
     lastActivityAt: time,
     eventCount: 1,
     permissionDenials: 2,
+    sandboxBlocked: 3,
     awaitingApprovalSince: time - 5,
     blocked: "permission",
   });
   expect(backgroundJobRegistry.get("progress-denied")!.progress).toMatchObject({
     permissionDenials: 2,
+    sandboxBlocked: 3,
     awaitingApprovalSince: time - 5,
     blocked: "permission",
   });
@@ -284,15 +286,18 @@ test("permission state is validated, retained after the job ends and survives hi
     lastActivityAt: time,
     eventCount: 2,
     permissionDenials: -1,
+    sandboxBlocked: 1.5,
     blocked: "other" as never,
   });
   const cleared = backgroundJobRegistry.get("progress-denied")!.progress!;
   expect(cleared.permissionDenials).toBeUndefined();
+  expect(cleared.sandboxBlocked).toBeUndefined();
   expect(cleared.blocked).toBeUndefined();
   backgroundJobRegistry.updateProgress("progress-denied", {
     lastActivityAt: time,
     eventCount: 3,
     permissionDenials: 4,
+    sandboxBlocked: 1,
   });
   backgroundJobRegistry.finish("progress-denied");
   const listed = listBackgroundWorkForUI("progress-history-test").find(
@@ -302,6 +307,6 @@ test("permission state is validated, retained after the job ends and survives hi
   expect(
     backgroundJobHistory
       .list("progress-history-test")
-      .find((job) => job.jobId === "progress-denied")?.progress?.permissionDenials,
-  ).toBe(4);
+      .find((job) => job.jobId === "progress-denied")?.progress,
+  ).toMatchObject({ permissionDenials: 4, sandboxBlocked: 1 });
 });

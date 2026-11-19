@@ -117,6 +117,8 @@ interface Pending {
  */
 const APPROVAL_TIMEOUT_MS = 10 * 60_000;
 
+const WITHDRAWN_REASON = "the request was withdrawn before the prompt was answered";
+
 export class ExternalRuntimeApprovals {
   private readonly pending = new Map<string, Pending>();
   private readonly observers = new Set<(event: ExternalApprovalEvent) => void>();
@@ -148,7 +150,14 @@ export class ExternalRuntimeApprovals {
    * cannot be shown must never be treated as consent — that inverts the whole
    * point of asking.
    */
-  request(sessionId: string, request: ExternalApprovalRequest): Promise<ExternalApprovalDecision> {
+  request(
+    sessionId: string,
+    request: ExternalApprovalRequest,
+    /** `signal`: abort withdraws the prompt (its asker, a delegated worker, ended). */
+    options?: { signal?: AbortSignal },
+  ): Promise<ExternalApprovalDecision> {
+    const signal = options?.signal;
+    if (signal?.aborted) return Promise.resolve({ approved: false, reason: WITHDRAWN_REASON });
     const target = this.resolveTarget(sessionId);
     if (!target) {
       dlog("external-runtime", "approval.no_window", { sessionId, tool: request.toolName });
@@ -212,6 +221,16 @@ export class ExternalRuntimeApprovals {
         requestId,
         tool: request.toolName,
       });
+      // Retires the card on the desktop and, through the observers, on every
+      // paired client. A no-op once the prompt has settled another way.
+      signal?.addEventListener(
+        "abort",
+        () => {
+          if (this.finish(requestId, { approved: false, reason: WITHDRAWN_REASON }, "cancelled"))
+            dlog("external-runtime", "approval.withdrawn", { sessionId, requestId });
+        },
+        { once: true },
+      );
     });
   }
 

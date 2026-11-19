@@ -80,6 +80,55 @@ describe("extractChangedFilesFromCodexLines", () => {
     );
   });
 
+  // Codex 0.162.0 runs its tools from a script, so the tool call names no file.
+  describe("a rollout whose patch ran from a script", () => {
+    const scriptCall = JSON.stringify({
+      type: "response_item",
+      payload: {
+        type: "custom_tool_call",
+        name: "exec",
+        input:
+          'text(await tools.apply_patch("*** Begin Patch\\n*** Add File: note.txt\\n+hi\\n*** End Patch"));',
+      },
+    });
+    const fileChange = (status: string, changes: Record<string, unknown>) =>
+      JSON.stringify({
+        type: "event_msg",
+        payload: {
+          type: "item_completed",
+          item: { type: "FileChange", id: "exec-1", changes, status, stdout: "", stderr: "" },
+        },
+      });
+
+    test("reads the files from Codex's own record of the applied patch", () => {
+      const lines = [
+        scriptCall,
+        fileChange("completed", {
+          "/repo/note.txt": { type: "add", content: "hi\n" },
+          "/repo/old.ts": { type: "update", unified_diff: "", move_path: "/repo/new.ts" },
+        }),
+        JSON.stringify({
+          type: "event_msg",
+          payload: { type: "item_completed", item: { type: "AgentMessage", id: "m" } },
+        }),
+      ].join("\n");
+      expect(extractChangedFilesFromCodexLines(lines)).toEqual([
+        "/repo/note.txt",
+        "/repo/old.ts",
+        "/repo/new.ts",
+      ]);
+    });
+
+    test("a refused or failed patch changed nothing", () => {
+      const lines = [
+        scriptCall,
+        fileChange("declined", { "/repo/refused.txt": { type: "add", content: "" } }),
+        fileChange("failed", { "/repo/failed.txt": { type: "add", content: "" } }),
+      ].join("\n");
+      expect(extractChangedFilesFromCodexLines(lines)).toEqual([]);
+    });
+  });
+
   test("attributes an apply_patch rename to both source and destination", () => {
     const patch =
       "*** Begin Patch\n*** Update File: src/old.ts\n*** Move to: src/new.ts\n@@\n-old\n+new\n*** End Patch";

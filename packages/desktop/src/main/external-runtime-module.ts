@@ -69,7 +69,8 @@ export function createExternalRuntimeModule(
       service = new ExternalRuntimeService({
         ...deps.service,
         memory: new ExternalRuntimeMemory(),
-        requestApproval: (sessionId, request) => runtimeApprovals.request(sessionId, request),
+        requestApproval: (sessionId, request, approvalOptions) =>
+          runtimeApprovals.request(sessionId, request, approvalOptions),
         cancelApprovals: (sessionId) => runtimeApprovals.cancelSession(sessionId),
       });
     },

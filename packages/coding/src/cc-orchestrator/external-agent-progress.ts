@@ -149,6 +149,28 @@ export function initialAgentProgress(cli: string, now = Date.now()): BackgroundJ
   };
 }
 
+/**
+ * Record that the CLI's own sandbox or policy refused operations without an
+ * approval request. `count` is the run's total so far. It is kept apart from
+ * `permissionDenials`: nobody was asked, so nobody denied anything.
+ */
+export function recordSandboxBlocked(
+  previous: BackgroundJobProgress,
+  count: number,
+  now = Date.now(),
+): BackgroundJobProgress {
+  const summary = `${count} operation(s) blocked by the sandbox`;
+  return {
+    ...previous,
+    sandboxBlocked: count,
+    summary,
+    lastActivityAt: now,
+    recentEvents: [...(previous.recentEvents ?? []), { at: now, summary }].slice(
+      -MAX_RECENT_EVENTS,
+    ),
+  };
+}
+
 /** A real output event refreshes activity even when its schema is unknown.
  * Timestamps are host receive times, not untrusted CLI-provided timestamps. */
 export function advanceAgentProgress(

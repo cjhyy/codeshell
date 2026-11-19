@@ -366,6 +366,11 @@ export interface ToolContext {
     args: Record<string, unknown>;
     /** Shown to the user: who is asking, on behalf of which task. */
     reason: string;
+    /**
+     * Abort when the worker no longer awaits the answer (it ended, was stopped
+     * or timed out): the prompt is withdrawn from every client.
+     */
+    signal?: AbortSignal;
   }): Promise<{ approved: boolean; reason?: string }>;
   /** Executor-owned services for this bound invocation only; not inherited by nested calls. */
   boundToolServices?: ReadonlyMap<symbol, unknown>;

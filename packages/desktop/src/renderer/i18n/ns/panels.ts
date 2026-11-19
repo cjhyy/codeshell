@@ -103,6 +103,9 @@ export const panels = {
         taskPermissionBlocked: "被权限拦住，已提前停止（{count} 个操作被拒）",
         taskPermissionDenied: "已有 {count} 个操作被权限拒绝",
         taskPermissionDeniedDone: "已结束，但有 {count} 个操作被权限拒绝，任务可能没有做完",
+        taskSandboxBlocked: "已有 {count} 个操作被沙箱拦住（未请求审批）",
+        taskSandboxBlockedDone:
+          "已结束，但有 {count} 个操作被沙箱拦住（未请求审批），任务可能没有做完",
         taskAwaitingApproval: "正在等待你在原会话里审批（已等 {duration}）",
         taskAllSessions: "全部 {cli} 会话",
         taskResult: "任务结果",
@@ -528,6 +531,10 @@ export const panels = {
         taskPermissionDenied: "{count} operation(s) denied by permissions so far",
         taskPermissionDeniedDone:
           "Finished, but {count} operation(s) were denied by permissions; the task may be incomplete",
+        taskSandboxBlocked:
+          "{count} operation(s) blocked by the sandbox so far (no approval was requested)",
+        taskSandboxBlockedDone:
+          "Finished, but {count} operation(s) were blocked by the sandbox (no approval was requested); the task may be incomplete",
         taskAwaitingApproval: "Waiting for your approval in the parent session ({duration})",
         taskAllSessions: "All {cli} sessions",
         taskResult: "Task result",

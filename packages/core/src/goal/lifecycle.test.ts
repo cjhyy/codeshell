@@ -58,6 +58,40 @@ describe("GoalLifecycleV1", () => {
     });
   });
 
+  test("a paused record keeps why it paused, beside the phase and never in config", () => {
+    const paused = createGoalLifecycle(
+      { objective: "ship", goalId: "goal-a", paused: true, pauseReason: "no_progress" },
+      "paused",
+      100,
+    );
+    expect(paused).toMatchObject({ phase: "paused", pauseReason: "no_progress" });
+    expect(paused.config).not.toHaveProperty("pauseReason");
+    expect(decodeGoalLifecycle(JSON.parse(JSON.stringify(paused)))).toEqual(paused);
+    expect(goalConfigFromLifecycle(paused)).toMatchObject({
+      paused: true,
+      pauseReason: "no_progress",
+    });
+    // A record from before the reason existed loads as a plain pause.
+    const { pauseReason: _reason, ...legacy } = paused as typeof paused & { pauseReason?: string };
+    expect(decodeGoalLifecycle(legacy)).toEqual(legacy as typeof paused);
+    expect(goalConfigFromLifecycle(decodeGoalLifecycle(legacy)!)).not.toHaveProperty("pauseReason");
+    // An unknown reason drops the reason, never the goal.
+    expect(decodeGoalLifecycle({ ...legacy, pauseReason: "from_the_future" })).toEqual(
+      legacy as typeof paused,
+    );
+    // The reason belongs to a pause only.
+    const active = createGoalLifecycle(
+      { objective: "ship", goalId: "goal-a", pauseReason: "no_progress" },
+      "active",
+      100,
+    );
+    expect(active).not.toHaveProperty("pauseReason");
+    expect(decodeGoalLifecycle({ ...active, pauseReason: "no_progress" })).toEqual(active);
+    expect(
+      decodeGoalLifecycle({ ...paused, config: { ...paused.config, pauseReason: "user" } }),
+    ).toBeUndefined();
+  });
+
   test("active waits, waiting arms with the same id, and terminal never arms", () => {
     const active = createGoalLifecycle({ objective: "ship", goalId: "goal-a" }, "active", 100);
     const waiting = waitGoalLifecycle(active, 200)!;

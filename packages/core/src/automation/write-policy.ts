@@ -22,14 +22,7 @@ import type { SandboxMode } from "../tool-system/sandbox/index.js";
 
 export type CronPermissionLevel = "read-only" | "workspace-write" | "full";
 
-const READ_ONLY_TOOLS = new Set([
-  "Read",
-  "Glob",
-  "Grep",
-  "WebSearch",
-  "WebFetch",
-  "ToolSearch",
-]);
+const READ_ONLY_TOOLS = new Set(["Read", "Glob", "Grep", "WebSearch", "WebFetch", "ToolSearch"]);
 
 const WRITE_TOOLS = new Set(["Write", "Edit", "ApplyPatch", "NotebookEdit", "MultiEdit"]);
 
@@ -48,9 +41,9 @@ const ALWAYS_APPROVED_TOOLS = new Set(["UpdateAutomationMemory"]);
  */
 function withAlwaysApproved(backend: ApprovalBackend): ApprovalBackend {
   return {
-    async requestApproval(req: ApprovalRequest): Promise<ApprovalResult> {
+    async requestApproval(req, options): Promise<ApprovalResult> {
       if (ALWAYS_APPROVED_TOOLS.has(req.toolName)) return { approved: true };
-      return backend.requestApproval(req);
+      return backend.requestApproval(req, options);
     },
   };
 }
@@ -72,7 +65,10 @@ class TierApprovalBackend implements ApprovalBackend {
         return { approved: false, reason: "automation read-only: writes/shell denied" };
       case "workspace-write":
         if (WRITE_TOOLS.has(tool)) return { approved: true };
-        return { approved: false, reason: "automation workspace-write: shell denied (use 'full' for git/PR)" };
+        return {
+          approved: false,
+          reason: "automation workspace-write: shell denied (use 'full' for git/PR)",
+        };
       case "full":
         return { approved: true };
     }

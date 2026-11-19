@@ -151,6 +151,21 @@ export function closeGoalQuestions(messages: Message[], reasked?: string): Messa
 }
 
 /**
+ * Adopt why a paused goal is paused from agent/goalGet. The reason arrives live
+ * on the `goal_progress` marker that follows a pause, which a reloaded app no
+ * longer has; the persisted one restores it. `user` is the plain pause the UI
+ * shows without a reason.
+ */
+export function adoptPersistedGoalPause(
+  goal: ActiveGoal | null,
+  pauseReason: ActiveGoal["pauseReason"] | "user" | undefined,
+): ActiveGoal | null {
+  if (!goal || !goal.paused || pauseReason === undefined) return goal;
+  const { pauseReason: _previous, ...rest } = goal;
+  return pauseReason === "user" ? rest : { ...rest, pauseReason };
+}
+
+/**
  * Adopt the persisted goal snapshot from agent/goalGet on hydration. It is
  * authoritative unless a run is in flight (the replayed clock then already
  * includes time the host settles only at run end). Fills goals whose history

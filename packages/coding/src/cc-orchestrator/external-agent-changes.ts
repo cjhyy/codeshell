@@ -77,10 +77,20 @@ export function readClaudeChangedFiles(
 }
 
 /**
- * Parse codex rollout JSONL text → changed file paths. Codex tool calls are
- * `{type:"response_item", payload:{type:"function_call", name, arguments}}` or
- * `{...custom_tool_call, input}`. apply_patch carries the patch text; write/edit
- * carry a file path in arguments. Exported for unit testing.
+ * Parse codex rollout JSONL text → changed file paths. Two record shapes carry
+ * them:
+ *
+ * - `{type:"event_msg", payload:{type:"item_completed", item:{type:"FileChange",
+ *   status, changes:{<path>: …}}}}` — Codex's own record of a patch and how it
+ *   ended. This is the only one a current Codex writes a usable path into: it
+ *   runs tools from a script (`custom_tool_call` named `exec` whose input is
+ *   JavaScript calling `tools.apply_patch(…)`), so no tool call is named
+ *   `apply_patch` any more.
+ * - `{type:"response_item", payload:{type:"function_call", name, arguments}}` or
+ *   `{...custom_tool_call, input}` of an older Codex, where apply_patch carries
+ *   the patch text and write/edit carry a file path in arguments.
+ *
+ * Exported for unit testing.
  */
 export function extractChangedFilesFromCodexLines(text: string): string[] {
   const seen = new Set<string>();
@@ -90,6 +100,10 @@ export function extractChangedFilesFromCodexLines(text: string): string[] {
     try {
       d = JSON.parse(line);
     } catch {
+      continue;
+    }
+    if (d?.type === "event_msg" && d.payload?.type === "item_completed") {
+      for (const f of filesFromCodexFileChange(d.payload.item)) seen.add(f);
       continue;
     }
     if (d?.type !== "response_item" || !d.payload) continue;
@@ -102,6 +116,22 @@ export function extractChangedFilesFromCodexLines(text: string): string[] {
     for (const f of filesFromCodexArgs(name, rawArgs)) seen.add(f);
   }
   return [...seen];
+}
+
+/** Paths of a rollout `FileChange` item that was applied; a refused or failed patch has none. */
+function filesFromCodexFileChange(item: unknown): string[] {
+  if (!item || typeof item !== "object") return [];
+  const { type, status, changes } = item as Record<string, unknown>;
+  if (type !== "FileChange" || status !== "completed") return [];
+  if (!changes || typeof changes !== "object" || Array.isArray(changes)) return [];
+  const out: string[] = [];
+  for (const [path, change] of Object.entries(changes)) {
+    if (path) out.push(path);
+    // A rename leaves the old path gone and the new one written.
+    const moved = (change as { move_path?: unknown } | null)?.move_path;
+    if (typeof moved === "string" && moved) out.push(moved);
+  }
+  return out;
 }
 
 /** Pull file paths out of a codex tool's arguments string. */

@@ -344,6 +344,20 @@ describe("DriveAgentTaskView", () => {
     await changed();
     expect(text(container)).toContain("已结束，但有 2 个操作被权限拒绝，任务可能没有做完");
     expect(text(container)).not.toContain("正在等待你在原会话里审批");
+    expect(text(container)).not.toContain("沙箱");
+
+    // Blocked by the worker's sandbox with nobody asked: its own line.
+    current = job({
+      status: "completed",
+      finishedAt: time,
+      finalText: "done",
+      progress: { lastActivityAt: time, eventCount: 9, sandboxBlocked: 2 },
+    });
+    await changed();
+    expect(text(container)).toContain(
+      "已结束，但有 2 个操作被沙箱拦住（未请求审批），任务可能没有做完",
+    );
+    expect(text(container)).not.toContain("被权限拒绝");
 
     current = job({
       status: "failed",

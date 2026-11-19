@@ -67,6 +67,8 @@ describe("createDrivePermissionGate", () => {
         toolName: "Claude Code Bash",
         args: { command: "git status" },
         reason: "Requested by background task «Fix login test» (DriveAgent worker).",
+        // Aborted when the ask stops being awaited, so its prompt is withdrawn.
+        signal: expect.any(AbortSignal),
       },
     ]);
     expect(gate.snapshot()).toEqual({});
@@ -151,9 +153,102 @@ describe("prepareDriveRunPermissions", () => {
     throw new Error("no bridge in this test");
   };
 
-  it("does not gate Codex or a full-access worker", async () => {
+  it("gates a Codex worker through its own approval channel, with the same thresholds", async () => {
+    const asked: Array<{ toolName: string; reason: string }> = [];
+    let stops = 0;
+    const permissions = await prepareDriveRunPermissions({
+      cli: "codex",
+      mode: "default",
+      title: "Run the tests",
+      requestApproval: async (request) => {
+        asked.push({ toolName: request.toolName, reason: request.reason });
+        return { approved: false };
+      },
+      stop: () => {
+        stops += 1;
+      },
+      startPrompt: async () => {
+        throw new Error("Codex needs no MCP prompt bridge");
+      },
+    });
+    expect(permissions.permissionPrompt).toBeUndefined();
+    expect(permissions.routed).toBe(true);
+    const decide = permissions.codexApproval!;
+    expect((await decide({ toolName: "shell", input: { command: "bun test" } })).approved).toBe(
+      false,
+    );
+    expect(asked).toEqual([
+      {
+        toolName: "Codex shell",
+        reason: "Requested by background task «Run the tests» (DriveAgent worker).",
+      },
+    ]);
+    expect(permissions.progress({ lastActivityAt: 1, eventCount: 1 })).toMatchObject({
+      permissionDenials: 1,
+    });
+    await decide({ toolName: "apply_patch", input: {} });
+    expect(stops).toBe(0);
+    await decide({ toolName: "shell", input: {} });
+    expect(stops).toBe(1);
+    expect(permissions.progress({ lastActivityAt: 1, eventCount: 1 })).toMatchObject({
+      permissionDenials: 3,
+      blocked: "permission",
+    });
+    const outcome = permissions.outcome({ sessionId: "thread-1" });
+    expect(outcome.denials).toBe(3);
+    expect(outcome.note).toContain("[permissions] Stopped early: 3 consecutive operations");
+    expect(outcome.note).toContain("shell ×2, apply_patch ×1");
+  });
+
+  it("denies and counts a Codex worker's asks when the session has no approval path", async () => {
+    const permissions = await prepareDriveRunPermissions({
+      cli: "codex",
+      mode: "acceptEdits",
+      title: "t",
+      stop: () => {},
+    });
+    expect(permissions.routed).toBe(false);
+    expect((await permissions.codexApproval!({ toolName: "shell", input: {} })).approved).toBe(
+      false,
+    );
+    expect(permissions.outcome().note).toContain(
+      'Completed with 1 denied operation(s) (shell ×1) under permissionMode "acceptEdits"',
+    );
+  });
+
+  it("reports what the sandbox blocked unasked apart from what was denied", async () => {
+    const permissions = await prepareDriveRunPermissions({
+      cli: "codex",
+      mode: "default",
+      title: "t",
+      stop: () => {},
+    });
+    const sandboxOnly = permissions.outcome({ sessionId: "thread-1", sandboxBlocked: 2 });
+    expect(sandboxOnly).toMatchObject({ denials: 0, sandboxBlocked: 2 });
+    expect(sandboxOnly.blocked).toBeUndefined();
+    expect(sandboxOnly.note).toStartWith(
+      "[permissions] Completed with 2 operation(s) blocked by the sandbox (the worker did not " +
+        'ask for approval, so nobody was prompted) under permissionMode "default".',
+    );
+    expect(sandboxOnly.note).not.toContain("denied operation");
+    expect(sandboxOnly.note).toContain("NOT complete");
+
+    await permissions.codexApproval!({ toolName: "shell", input: {} });
+    const both = permissions.outcome({ sandboxBlocked: 1 });
+    expect(both).toMatchObject({ denials: 1, sandboxBlocked: 1 });
+    expect(both.note).toContain(
+      "Completed with 1 denied operation(s) (shell ×1) and 1 operation(s) blocked by the sandbox",
+    );
+    // The worker's own count passes through the progress merge untouched.
+    expect(
+      permissions.progress({ lastActivityAt: 1, eventCount: 1, sandboxBlocked: 1 }),
+    ).toMatchObject({ permissionDenials: 1, sandboxBlocked: 1 });
+    expect(permissions.outcome({}).sandboxBlocked).toBeUndefined();
+  });
+
+  it("does not gate a full-access worker", async () => {
     for (const input of [
-      { cli: "codex" as const, mode: "default" as const },
+      { cli: "codex" as const, mode: "bypassPermissions" as const },
       { cli: "claude" as const, mode: "bypassPermissions" as const },
     ]) {
       const permissions = await prepareDriveRunPermissions({
@@ -165,6 +260,7 @@ describe("prepareDriveRunPermissions", () => {
         },
       });
       expect(permissions.permissionPrompt).toBeUndefined();
+      expect(permissions.codexApproval).toBeUndefined();
       expect(permissions.outcome({ permissionDenials: [] })).toEqual({ denials: 0 });
     }
   });
@@ -310,14 +406,30 @@ describe("launch note and denial text", () => {
         routed: true,
       }),
     ).toContain("sent to this session's approval prompt");
+    const codexUnrouted = drivePermissionLaunchNote({
+      cli: "codex",
+      mode: "default",
+      source: "inherited",
+      routed: false,
+    });
+    expect(codexUnrouted).toContain("read-only sandbox");
+    expect(codexUnrouted).toContain("every such operation is DENIED");
+    const codexRouted = drivePermissionLaunchNote({
+      cli: "codex",
+      mode: "acceptEdits",
+      source: "inherited",
+      routed: true,
+    });
+    expect(codexRouted).toContain("workspace-write sandbox");
+    expect(codexRouted).toContain("sent to this session's approval prompt");
     expect(
       drivePermissionLaunchNote({
         cli: "codex",
-        mode: "default",
+        mode: "bypassPermissions",
         source: "inherited",
         routed: false,
       }),
-    ).toContain("READ-ONLY sandbox");
+    ).toContain("runs every tool unattended");
   });
 });
 
@@ -443,6 +555,44 @@ describe("DriveAgent permission wiring", () => {
     });
   });
 
+  it("reports what a Codex worker's sandbox blocked, and the files it says it changed", async () => {
+    await withTool("S-PERM-SANDBOX", async (dir) => {
+      const tool = makeDriveAgentTool(
+        async () => ({
+          sessionId: "thread-9",
+          finalText: "Wrote the note; could not push.",
+          isError: false,
+          // Reported by the worker itself; its transcript names no file.
+          changedFiles: [join(dir, "note.txt"), "note.txt"],
+          sandboxBlocked: 1,
+          exitCode: 0,
+          lines: [],
+        }),
+        undefined,
+        { sessionStore, readChangedFiles: () => [] },
+      );
+      const ctx = { cwd: dir, sessionId: "S-PERM-SANDBOX", permissionMode: "acceptEdits" } as any;
+      await tool({ prompt: "write a note and push", cwd: dir, cli: "codex" }, ctx);
+      await settle();
+      const [result] = notificationQueue.drainAll("S-PERM-SANDBOX") as any[];
+      expect(result.payload).toMatchObject({
+        status: "completed",
+        sandboxBlocked: 1,
+        changedFiles: ["note.txt"],
+      });
+      expect(result.payload.permissionDenials).toBeUndefined();
+      expect(result.payload.finalText).toStartWith(
+        "[permissions] Completed with 1 operation(s) blocked by the sandbox",
+      );
+      const job = backgroundJobRegistry.listForSession("S-PERM-SANDBOX")[0]!;
+      expect(job).toMatchObject({ status: "completed", changedFiles: ["note.txt"] });
+      expect(job.progress?.sandboxBlocked).toBe(1);
+
+      const inline = await tool({ prompt: "push", cwd: dir, cli: "codex", background: false }, ctx);
+      expect(inline).toContain("完成，但有 1 个操作被沙箱拦住（未请求审批）（session thread-9）");
+    });
+  });
+
   it("stops a worker that can only be denied and wakes the parent with a failure", async () => {
     await withTool("S-PERM-BLOCKED", async (dir) => {
       let aborted = false;
@@ -519,5 +669,121 @@ describe("a cancelled ask", () => {
       reason: "The permission request was cancelled.",
     });
     expect(gate.snapshot()).toEqual({});
+  });
+});
+
+describe("an approval prompt never outlives its worker", () => {
+  /** A host that keeps each prompt up until it is answered or withdrawn. */
+  function host() {
+    const prompts: Array<{ toolName: string; signal: AbortSignal; withdrawn: boolean }> = [];
+    const requestApproval = (request: { toolName: string; signal?: AbortSignal }) =>
+      new Promise<{ approved: boolean; reason?: string }>((resolve) => {
+        const prompt = { toolName: request.toolName, signal: request.signal!, withdrawn: false };
+        prompts.push(prompt);
+        request.signal!.addEventListener("abort", () => {
+          prompt.withdrawn = true;
+          resolve({ approved: false, reason: "withdrawn" });
+        });
+      });
+    return { prompts, requestApproval };
+  }
+
+  it("a worker that is cancelled while it waits withdraws its prompt", async () => {
+    const { prompts, requestApproval } = host();
+    const gate = createDrivePermissionGate({
+      title: "t",
+      mode: "default",
+      requestApproval,
+      onBlocked: () => {
+        throw new Error("must not block");
+      },
+    });
+    const worker = new AbortController();
+    const pending = gate.decide(bash, worker.signal);
+    expect(prompts.map((prompt) => prompt.withdrawn)).toEqual([false]);
+    worker.abort();
+    expect(await pending).toEqual({
+      approved: false,
+      reason: "The permission request was cancelled.",
+    });
+    expect(prompts[0]!.withdrawn).toBe(true);
+    expect(gate.denials()).toEqual([]);
+  });
+
+  it("an ask that times out withdraws its prompt as it stops the worker", async () => {
+    const { prompts, requestApproval } = host();
+    const blocked: string[] = [];
+    const gate = createDrivePermissionGate({
+      title: "t",
+      mode: "default",
+      requestApproval,
+      onBlocked: (reason) => blocked.push(reason),
+      approvalWaitLimitMs: 5,
+    });
+    expect(await gate.decide(bash)).toEqual({
+      approved: false,
+      reason: "The approval request was not answered in time.",
+    });
+    expect(blocked).toHaveLength(1);
+    expect(prompts[0]!.withdrawn).toBe(true);
+  });
+
+  it("stopping the worker for repeated denials withdraws its other open prompts, uncounted", async () => {
+    const prompts: Array<{ toolName: string; withdrawn: boolean }> = [];
+    const gate = createDrivePermissionGate({
+      title: "t",
+      mode: "default",
+      maxConsecutiveDenials: 1,
+      requestApproval: (request) =>
+        new Promise((resolve) => {
+          const prompt = { toolName: request.toolName, withdrawn: false };
+          prompts.push(prompt);
+          // The edit is denied by the user at once; the shell ask stays open.
+          if (request.toolName === "Claude Code Edit") resolve({ approved: false });
+          request.signal!.addEventListener("abort", () => {
+            prompt.withdrawn = true;
+            resolve({ approved: false, reason: "withdrawn" });
+          });
+        }),
+      onBlocked: () => {},
+    });
+    const open = gate.decide(bash);
+    expect(await gate.decide({ toolName: "Edit", input: {} })).toMatchObject({ approved: false });
+    expect(gate.blockedReason()).toBeDefined();
+    expect(await open).toEqual({
+      approved: false,
+      reason: "The permission request was cancelled.",
+    });
+    expect(prompts.find((prompt) => prompt.toolName === "Claude Code Bash")!.withdrawn).toBe(true);
+    // Only the user's own refusal is a denial.
+    expect(gate.denials()).toEqual([{ toolName: "Edit" }]);
+  });
+
+  it("closing a run withdraws whatever it still has on screen", async () => {
+    const { prompts, requestApproval } = host();
+    let decide!: Parameters<
+      NonNullable<Parameters<typeof prepareDriveRunPermissions>[0]["startPrompt"]>
+    >[0]["decide"];
+    const permissions = await prepareDriveRunPermissions({
+      cli: "claude",
+      mode: "default",
+      title: "t",
+      requestApproval,
+      stop: () => {},
+      startPrompt: async (gate) => {
+        decide = gate.decide;
+        return {
+          permissionPrompt: { mcpConfigPath: "/dev/null", toolName: "prompt" },
+          close: async () => {},
+        };
+      },
+    });
+    const pending = decide(bash);
+    expect(prompts[0]!.withdrawn).toBe(false);
+    // The process ended (finished, was cancelled, or timed out) with the ask open.
+    await permissions.close();
+    expect(prompts[0]!.withdrawn).toBe(true);
+    expect(await pending).toMatchObject({ approved: false });
+    expect(permissions.outcome().denials).toBe(0);
   });
 });

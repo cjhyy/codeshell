@@ -85,6 +85,8 @@ export function goalGetPayload(
     ...(goal?.revision ? { revision: goal.revision } : {}),
     ...(goal?.setAtMs ? { setAtMs: goal.setAtMs } : {}),
     paused: goal?.paused === true,
+    // Why it is paused, when the pause recorded it (absent for older pauses).
+    ...(goal?.paused === true && goal.pauseReason ? { pauseReason: goal.pauseReason } : {}),
     ...(sameGoal
       ? {
           progress: {

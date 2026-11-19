@@ -831,6 +831,71 @@ describe("a paused external Goal and the next message", () => {
     expect(restarted.start(sessionId, undefined, false, true)?.goal.goalId).toBe(run.goal.goalId);
   });
 
+  test("the pause reason is persisted, so a restart needs no run outcome to tell the pauses apart", () => {
+    // Stopped for lack of progress: blocked, and resumed by the next message.
+    const run = goals.start(sessionId, { objective: "没有进展", maxStopBlocks: 1 })!;
+    goals.afterTurn(run, 10, "同样的回复");
+    goals.afterTurn(run, 10, "同样的回复");
+    goals.end(run);
+    expect(manager.readSessionState(sessionId)?.goalLifecycle).toMatchObject({
+      phase: "paused",
+      pauseReason: "no_progress",
+    });
+    // No `lastCompletionKind` was recorded: only the lifecycle says why.
+    const restarted = new ExternalRuntimeGoals(() => {});
+    expect(restarted.get(sessionId)).toMatchObject({ paused: true, pauseReason: "no_progress" });
+    expect(restarted.start(sessionId)).toBeUndefined();
+    const resumed = restarted.start(sessionId, undefined, false, true)!;
+    expect(resumed.goal.goalId).toBe(run.goal.goalId);
+    expect(restarted.get(sessionId)).not.toHaveProperty("pauseReason");
+    restarted.end(resumed);
+
+    // The user's own pause survives a restart as theirs, even beside a stale
+    // `limit_stop` run outcome.
+    restarted.update(sessionId, {
+      paused: true,
+      expectedGoalId: resumed.goal.goalId!,
+      expectedRevision: resumed.goal.revision!,
+    });
+    closeRunOnLimit();
+    expect(manager.readSessionState(sessionId)?.goalLifecycle).toMatchObject({
+      phase: "paused",
+      pauseReason: "user",
+    });
+    const again = new ExternalRuntimeGoals(() => {});
+    expect(again.start(sessionId, undefined, false, true)).toBeUndefined();
+    expect(again.get(sessionId)).toMatchObject({ paused: true, pauseReason: "user" });
+  });
+
+  test("editing a limit-paused Goal keeps why it paused", () => {
+    const run = goals.start(sessionId, { objective: "改目标", maxTurns: 1 })!;
+    goals.afterTurn(run, 10, "第一轮");
+    goals.end(run);
+    goals.update(sessionId, {
+      objective: "改过的目标",
+      expectedGoalId: run.goal.goalId!,
+      expectedRevision: 2,
+    });
+    expect(manager.readSessionState(sessionId)?.goalLifecycle).toMatchObject({
+      phase: "paused",
+      revision: 3,
+      pauseReason: "turn_limit",
+    });
+  });
+
+  test("a paused record from before the reason was persisted behaves as it did", () => {
+    const run = goals.start(sessionId, "旧记录")!;
+    goals.end(run);
+    // What an older build wrote: paused, no reason.
+    manager.updateActiveGoal(sessionId, { paused: true });
+    expect(manager.readSessionState(sessionId)?.goalLifecycle).not.toHaveProperty("pauseReason");
+    const restarted = new ExternalRuntimeGoals(() => {});
+    expect(restarted.get(sessionId)).not.toHaveProperty("pauseReason");
+    expect(restarted.start(sessionId, undefined, false, true)).toBeUndefined();
+    closeRunOnLimit();
+    expect(restarted.start(sessionId, undefined, false, true)?.goal.goalId).toBe(run.goal.goalId);
+  });
+
   test("a pause the user asked for is not resumed by a message", () => {
     const run = goals.start(sessionId, "用户暂停")!;
     goals.pause(run, "user_stop", true);

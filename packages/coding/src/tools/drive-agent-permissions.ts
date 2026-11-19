@@ -1,5 +1,5 @@
 /**
- * Permissions of a DriveAgent worker (a one-turn `claude -p` / `codex exec`).
+ * Permissions of a DriveAgent worker (a one-turn `claude -p` / Codex thread).
  *
  * Three things live here so `drive-agent.ts` only wires them:
  *
@@ -16,8 +16,12 @@
  *     not complete; a run that could only be refused is stopped early so its
  *     parent hears about it in minutes rather than after it idles to the end.
  *
- * Codex has no per-tool asks: its mode is a spawn-time sandbox, so none of the
- * routing applies to it. Only the default-mode rule and the launch note do.
+ * A Codex worker goes through the same gate by a different door. Outside full
+ * access it runs as an app-server thread (`drive-agent-codex-worker.ts`) in a
+ * sandbox with the `on-request` approval policy, and each approval request the
+ * app-server sends is answered here. Codex asks only for what its sandbox does
+ * not already allow, so in `acceptEdits` workspace edits and sandboxed commands
+ * run without an ask.
  */
 import type { BackgroundJobProgress, ToolContext } from "@cjhyy/code-shell-core/extension";
 import type { PermissionDenial, PermissionMode } from "../cc-orchestrator/agent-adapter.js";
@@ -92,6 +96,11 @@ export interface DrivePermissionGate {
   >;
   /** Called on every state change; at most one listener. */
   setListener(listener: (() => void) | undefined): void;
+  /**
+   * The worker ended: withdraw every ask still waiting for an answer, so its
+   * approval prompt leaves the user's screen instead of outliving the worker.
+   */
+  withdrawPending(): void;
 }
 
 /**
@@ -106,6 +115,8 @@ export function createDrivePermissionGate(options: {
   title: string;
   mode: PermissionMode;
   requestApproval?: DriveApprovalRequester;
+  /** Whose native tool is asking, as the approval card names it. */
+  agent?: "Claude Code" | "Codex";
   onBlocked: (reason: string) => void;
   maxConsecutiveDenials?: number;
   approvalWaitLimitMs?: number;
@@ -115,7 +126,10 @@ export function createDrivePermissionGate(options: {
   const waitLimit = options.approvalWaitLimitMs ?? DRIVE_APPROVAL_WAIT_LIMIT_MS;
   const now = options.now ?? Date.now;
   const denied: PermissionDenial[] = [];
-  const waiting = new Set<{ since: number }>();
+  const waiting = new Set<{ since: number; withdrawal: AbortController }>();
+  const withdrawPending = (): void => {
+    for (const ask of waiting) ask.withdrawal.abort();
+  };
   let consecutive = 0;
   let blocked: string | undefined;
   let listener: (() => void) | undefined;
@@ -129,6 +143,8 @@ export function createDrivePermissionGate(options: {
   const block = (reason: string): void => {
     if (blocked) return;
     blocked = reason;
+    // The worker is being stopped: no other ask of its is awaited any more.
+    withdrawPending();
     changed();
     try {
       options.onBlocked(reason);
@@ -155,6 +171,7 @@ export function createDrivePermissionGate(options: {
     setListener: (next) => {
       listener = next;
     },
+    withdrawPending,
     snapshot: () => ({
       ...(denied.length ? { permissionDenials: denied.length } : {}),
       ...(waiting.size
@@ -174,7 +191,10 @@ export function createDrivePermissionGate(options: {
             "background task has no approval path. Do not retry; report what could not be done.",
         );
       }
-      const ask = { since: now() };
+      // Aborted whenever this ask stops being awaited without an answer: the
+      // host then retires the prompt on every client.
+      const withdrawal = new AbortController();
+      const ask = { since: now(), withdrawal };
       waiting.add(ask);
       changed();
       let timer: ReturnType<typeof setTimeout> | undefined;
@@ -185,9 +205,10 @@ export function createDrivePermissionGate(options: {
           options.requestApproval({
             // Same distinct name the main Claude Code runtime uses, so the card
             // is not mistaken for (or remembered as) CodeShell's own tool.
-            toolName: `Claude Code ${toolName}`,
+            toolName: `${options.agent ?? "Claude Code"} ${toolName}`,
             args: request.input,
             reason: `Requested by background task «${options.title}» (DriveAgent worker).`,
+            signal: withdrawal.signal,
           }),
           new Promise<"timeout">((resolve) => {
             timer = setTimeout(() => resolve("timeout"), waitLimit);
@@ -196,8 +217,11 @@ export function createDrivePermissionGate(options: {
           // The worker went away (cancelled or stopped): nobody awaits the answer.
           new Promise<"cancelled">((resolve) => {
             onAbort = () => resolve("cancelled");
-            if (signal?.aborted) onAbort();
-            else signal?.addEventListener("abort", onAbort, { once: true });
+            if (signal?.aborted || withdrawal.signal.aborted) onAbort();
+            else {
+              signal?.addEventListener("abort", onAbort, { once: true });
+              withdrawal.signal.addEventListener("abort", onAbort, { once: true });
+            }
           }),
         ]);
       } catch {
@@ -207,7 +231,11 @@ export function createDrivePermissionGate(options: {
         if (onAbort) signal?.removeEventListener("abort", onAbort);
         waiting.delete(ask);
       }
-      if (outcome === "cancelled" || signal?.aborted) {
+      const withdrawn = withdrawal.signal.aborted;
+      // Timed out or cancelled with the prompt still up: take it down. After an
+      // answer the prompt is already gone and this changes nothing.
+      withdrawal.abort();
+      if (outcome === "cancelled" || signal?.aborted || withdrawn) {
         // Not a refusal of the operation, so it is not counted as one.
         changed();
         return { approved: false, reason: "The permission request was cancelled." };
@@ -280,6 +308,11 @@ export async function startDrivePermissionPrompt(
 export interface DriveRunPermissionOutcome {
   /** Refused operations: the CLI's own report, or the gate's count if larger. */
   denials: number;
+  /**
+   * Operations the worker's own sandbox refused without asking, so no one
+   * denied them. Not part of `denials`. Absent when there were none.
+   */
+  sandboxBlocked?: number;
   /** Set when the worker was stopped for being unable to proceed. */
   blocked?: string;
   /** Model-facing statement to put ahead of the worker's own final text. */
@@ -290,6 +323,11 @@ export interface DriveRunPermissions {
   mode: PermissionMode;
   /** Present when asks are answered by the host instead of refused by the CLI. */
   permissionPrompt?: DrivePermissionPrompt["permissionPrompt"];
+  /**
+   * Codex outside full access: answers the app-server's approval requests. Its
+   * presence is what makes the worker run as an app-server thread.
+   */
+  codexApproval?: DrivePermissionGate["decide"];
   /** Whether an ask can reach a user or policy of the launching Session. */
   routed: boolean;
   setListener(listener: (() => void) | undefined): void;
@@ -297,6 +335,7 @@ export interface DriveRunPermissions {
   progress<T extends BackgroundJobProgress>(progress: T): T;
   outcome(result?: {
     permissionDenials?: readonly PermissionDenial[];
+    sandboxBlocked?: number;
     sessionId?: string;
   }): DriveRunPermissionOutcome;
   close(): Promise<void>;
@@ -319,17 +358,19 @@ export async function prepareDriveRunPermissions(options: {
   startPrompt?: typeof startDrivePermissionPrompt;
 }): Promise<DriveRunPermissions> {
   const { mode } = options;
-  const gated = options.cli === "claude" && mode !== "bypassPermissions";
-  const gate = gated
-    ? createDrivePermissionGate({
-        title: options.title,
-        mode,
-        ...(options.requestApproval ? { requestApproval: options.requestApproval } : {}),
-        onBlocked: () => options.stop(),
-      })
-    : undefined;
+  const codex = options.cli === "codex";
+  const gate =
+    mode !== "bypassPermissions"
+      ? createDrivePermissionGate({
+          title: options.title,
+          mode,
+          ...(codex ? { agent: "Codex" as const } : {}),
+          ...(options.requestApproval ? { requestApproval: options.requestApproval } : {}),
+          onBlocked: () => options.stop(),
+        })
+      : undefined;
   let prompt: DrivePermissionPrompt | undefined;
-  if (gate) {
+  if (gate && !codex) {
     try {
       prompt = await (options.startPrompt ?? startDrivePermissionPrompt)(gate);
     } catch {
@@ -341,7 +382,8 @@ export async function prepareDriveRunPermissions(options: {
     const counted = gate?.denials() ?? [];
     const denials = reported.length >= counted.length ? reported : counted;
     const blocked = gate?.blockedReason();
-    if (!denials.length && !blocked) return { denials: 0 };
+    const sandboxBlocked = result?.sandboxBlocked ?? 0;
+    if (!denials.length && !blocked && !sandboxBlocked) return { denials: 0 };
     const resume = result?.sessionId
       ? ` Its session ${result.sessionId} is kept and can be resumed with a mode that permits them.`
       : "";
@@ -350,19 +392,32 @@ export async function prepareDriveRunPermissions(options: {
       "as git, tests, installs or formatters). Check what is missing, then finish it yourself " +
       `or re-run with a suitable permissionMode.${resume}`;
     const tools = denials.length ? ` (${describeDenials(denials)})` : "";
+    // Two different things happened and the caller's remedy differs: a denial
+    // was a person's (or this session's) answer, a sandbox block was never asked.
+    const sandboxed = sandboxBlocked
+      ? `${sandboxBlocked} operation(s) blocked by the sandbox (the worker did not ask for ` +
+        "approval, so nobody was prompted)"
+      : "";
+    const refused = [
+      denials.length ? `${denials.length} denied operation(s)${tools}` : "",
+      sandboxed,
+    ]
+      .filter(Boolean)
+      .join(" and ");
     return {
       denials: denials.length,
+      ...(sandboxBlocked ? { sandboxBlocked } : {}),
       ...(blocked ? { blocked } : {}),
       note: blocked
-        ? `[permissions] Stopped early: ${blocked}. ${remedy}`
-        : `[permissions] Completed with ${denials.length} denied operation(s)${tools} under ` +
-          `permissionMode "${mode}". ${remedy}`,
+        ? `[permissions] Stopped early: ${blocked}.${sandboxed ? ` Also ${sandboxed}.` : ""} ${remedy}`
+        : `[permissions] Completed with ${refused} under permissionMode "${mode}". ${remedy}`,
     };
   };
   return {
     mode,
     ...(prompt ? { permissionPrompt: prompt.permissionPrompt } : {}),
-    routed: Boolean(prompt && options.requestApproval),
+    ...(gate && codex ? { codexApproval: gate.decide } : {}),
+    routed: Boolean((prompt || (gate && codex)) && options.requestApproval),
     setListener: (listener) => gate?.setListener(listener),
     progress: (progress) => {
       const own = gate?.snapshot() ?? {};
@@ -372,6 +427,8 @@ export async function prepareDriveRunPermissions(options: {
     outcome,
     close: async () => {
       gate?.setListener(undefined);
+      // However the run ended, a prompt it left behind must not outlive it.
+      gate?.withdrawPending();
       await prompt?.close();
     },
   };
@@ -397,15 +454,14 @@ export function drivePermissionLaunchNote(input: {
         : "default without a session";
   const head = `Permission mode: ${mode} (${origin}).`;
   if (mode === "bypassPermissions") return `${head} The worker runs every tool unattended.`;
-  if (cli === "codex") {
-    return mode === "acceptEdits"
-      ? `${head} Codex runs in a workspace-write sandbox: it can edit and run commands inside the workspace, without network access.`
-      : `${head} Codex runs in a READ-ONLY sandbox: it cannot edit files or run commands that write. Pass permissionMode:"acceptEdits" for workspace writes.`;
-  }
   const scope =
-    mode === "acceptEdits"
-      ? "File edits run unattended; Bash (git, tests, installs), web access and other tools need approval."
-      : "Reads run unattended; file edits, Bash (git, tests, installs), web access and other tools need approval.";
+    cli === "codex"
+      ? mode === "acceptEdits"
+        ? "Codex runs in a workspace-write sandbox without network: edits and commands confined to its cwd run unattended; network access, writes outside it and commands that must leave the sandbox need approval."
+        : "Codex runs in a read-only sandbox: reads run unattended; file edits and commands that write or use the network need approval."
+      : mode === "acceptEdits"
+        ? "File edits run unattended; Bash (git, tests, installs), web access and other tools need approval."
+        : "Reads run unattended; file edits, Bash (git, tests, installs), web access and other tools need approval.";
   return input.routed
     ? `${head} ${scope} Those requests are sent to this session's approval prompt, labelled with the task title. The worker is stopped early if ${DRIVE_MAX_CONSECUTIVE_DENIALS} in a row are denied or one waits ${Math.round(DRIVE_APPROVAL_WAIT_LIMIT_MS / 60_000)} min unanswered.`
     : `${head} ${scope} NO approval path is available here, so every such operation is DENIED; the worker is stopped after ${DRIVE_MAX_CONSECUTIVE_DENIALS} consecutive denials. Pass permissionMode:"bypassPermissions" only if the user granted that level.`;

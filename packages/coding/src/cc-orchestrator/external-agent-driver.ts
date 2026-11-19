@@ -20,6 +20,13 @@ export interface AgentRunResult {
   isError: boolean;
   /** Operations the CLI reported as refused; see ParsedResult. */
   permissionDenials?: PermissionDenial[];
+  /** Files the CLI reported as changed in its own output; see ParsedResult. */
+  changedFiles?: string[];
+  /**
+   * Operations the CLI's sandbox or policy refused without an approval request.
+   * Only a transport that reports this in structured form sets it.
+   */
+  sandboxBlocked?: number;
   exitCode: number | null;
   /** Complete CLI records; transient Claude token deltas are observed only. */
   lines: string[];
@@ -116,7 +123,7 @@ function signalPids(pids: Set<number>, killSignal: NodeJS.Signals): void {
   }
 }
 
-async function terminateAttachedProcessTree(child: {
+export async function terminateAttachedProcessTree(child: {
   pid?: number;
   kill: (signal?: NodeJS.Signals) => boolean;
 }): Promise<void> {
@@ -243,6 +250,61 @@ export function detectCodexImageInput(
   return probe;
 }
 
+/**
+ * Record one delegated run in the model trace: the submitted prompt now, and
+ * through the returned function its visible final result. Idempotent.
+ */
+export function traceExternalAgentRun(input: {
+  kind: string;
+  model?: string;
+  prompt: string;
+  parameters: Record<string, unknown>;
+  signal?: AbortSignal;
+}): (result?: AgentRunResult, error?: unknown) => void {
+  const common = {
+    provider: input.kind,
+    model: input.model ?? "CLI default",
+    source: `drive-agent-${input.kind}-cli`,
+    purpose: "external_delegation",
+    startedAt: Date.now(),
+  };
+  const initialTrace = recordExternalModelCall({
+    ...common,
+    status: "running",
+    input: {
+      messages: [{ role: "user", content: input.prompt }],
+      parameters: {
+        ...input.parameters,
+        limitation:
+          "CLI entry input and visible final result only; private model requests, retries, and provider usage are opaque.",
+      },
+    },
+  });
+  let finished = false;
+  return (result, error) => {
+    if (!initialTrace || finished) return;
+    finished = true;
+    const status = input.signal?.aborted
+      ? "cancelled"
+      : error || result?.isError || result?.exitCode !== 0
+        ? "failed"
+        : "completed";
+    const captured = initialTrace.inputState !== "not-recorded";
+    recordExternalModelCall({
+      ...common,
+      id: initialTrace.id,
+      status,
+      endedAt: Date.now(),
+      output: captured && result ? { text: result.finalText, stopReason: status } : undefined,
+      error: error
+        ? captured
+          ? String(error instanceof Error ? error.message : error)
+          : "External CLI request failed"
+        : undefined,
+    });
+  };
+}
+
 /** Spawn ONE headless agent run, collect stream-json to exit, return result.
  *  No time concept — a single turn. Honors AbortSignal (kills the child). */
 export function runAgentOnce(
@@ -322,53 +384,20 @@ export function runAgentOnce(
           // Process observation is best-effort metadata, like onSessionId.
         }
       }
-      const common = {
-        provider: adapter.kind,
-        model: opts.model ?? "CLI default",
-        source: `drive-agent-${adapter.kind}-cli`,
-        purpose: "external_delegation",
-        startedAt: Date.now(),
-      };
-      const initialTrace = recordExternalModelCall({
-        ...common,
-        status: "running",
-        input: {
-          messages: [{ role: "user", content: opts.prompt }],
-          parameters: {
-            cliArguments: args,
-            promptViaStdin: viaStdin,
-            launchCwd: opts.cwd,
-            resumeExternalSessionId: opts.resumeSessionId,
-            imagePaths: opts.imagePaths,
-            additionalReadDirs: opts.additionalReadDirs,
-            limitation:
-              "CLI entry input and visible final result only; private model requests, retries, and provider usage are opaque.",
-          },
+      finishTrace = traceExternalAgentRun({
+        kind: adapter.kind,
+        model: opts.model,
+        prompt: opts.prompt,
+        signal,
+        parameters: {
+          cliArguments: args,
+          promptViaStdin: viaStdin,
+          launchCwd: opts.cwd,
+          resumeExternalSessionId: opts.resumeSessionId,
+          imagePaths: opts.imagePaths,
+          additionalReadDirs: opts.additionalReadDirs,
         },
       });
-      let traceFinished = false;
-      finishTrace = (result, error) => {
-        if (!initialTrace || traceFinished) return;
-        traceFinished = true;
-        const status = signal?.aborted
-          ? "cancelled"
-          : error || result?.isError || result?.exitCode !== 0
-            ? "failed"
-            : "completed";
-        const captured = initialTrace.inputState !== "not-recorded";
-        recordExternalModelCall({
-          ...common,
-          id: initialTrace.id,
-          status,
-          endedAt: Date.now(),
-          output: captured && result ? { text: result.finalText, stopReason: status } : undefined,
-          error: error
-            ? captured
-              ? String(error instanceof Error ? error.message : error)
-              : "External CLI request failed"
-            : undefined,
-        });
-      };
       let reportedSessionId = "";
       const reportSessionId = (candidate: unknown): void => {
         if (reportedSessionId || typeof candidate !== "string" || !candidate.trim()) return;

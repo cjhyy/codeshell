@@ -8,6 +8,45 @@ breaking.
 
 ## [Unreleased]
 
+## [0.11.0-rc.5] - 2026-11-20
+
+Follow-up to rc.4 for Codex and Claude Code sessions run from the desktop. The
+Claude Code turn handling, computer-use wiring and DriveAgent approval routing
+were checked against the real `claude` and `codex` CLIs; the desktop app itself
+has still not been accepted on a real device.
+
+### Changed
+
+- A Codex worker started with DriveAgent outside full access can now ask: it
+  runs in a read-only (`default`) or workspace-write (`acceptEdits`) sandbox
+  and sends each approval request to the calling session's approval prompt,
+  labelled with the task title. Denials are counted and reported the same way
+  as for a Claude Code worker, including the early stop.
+- Why a Goal stopped (no progress, a budget you set, or your own pause) is kept
+  across app restarts, so the Goal bar and the resume-on-next-message rule stay
+  correct after reopening the app.
+- Computer-use approvals in Codex and Claude Code sessions say what is about to
+  be done instead of naming a generic native tool.
+- Interrupting a run to send a new message also cancels a computer-use action
+  that is in flight; the Goal and queued messages are kept.
+- Browser storage left behind by the per-session isolation that Codex and Claude
+  Code sessions used before rc.4 is removed at startup.
+
+### Fixed
+
+- Token usage for a Claude Code turn that produced more than one result was
+  under-counted; each result's usage is now added.
+- Codex approval cards for computer use showed a placeholder tool name and no
+  arguments; they now show the tool being called and its arguments.
+- An approval card for a DriveAgent worker that was cancelled, timed out or
+  stopped early is withdrawn on every client instead of staying until answered.
+- Files changed by a Codex worker were not listed for Codex 0.162, which runs
+  its patch tool from a script; changed files are now read from Codex's own
+  file-change records. Files written by shell commands are still not listed.
+- A Codex worker whose patch or command was declined by its sandbox without an
+  approval request reports it as blocked instead of plain completed. A command
+  the sandbox stops silently still cannot be detected with Codex 0.162.
+
 ## [0.11.0-rc.4] - 2026-11-19
 
 Release candidate focused on Codex and Claude Code sessions run from the desktop

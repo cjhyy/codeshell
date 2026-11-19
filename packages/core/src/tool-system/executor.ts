@@ -764,7 +764,10 @@ export class ToolExecutor {
                   request.toolName,
                   request.args,
                   request.reason,
-                  delegatedSessionId ? { sessionId: delegatedSessionId } : undefined,
+                  {
+                    ...(delegatedSessionId ? { sessionId: delegatedSessionId } : {}),
+                    ...(request.signal ? { signal: request.signal } : {}),
+                  },
                 );
                 return decision.approved
                   ? { approved: true }

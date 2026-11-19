@@ -20,7 +20,7 @@ import {
 } from "./cua-driver-host.js";
 import type { ComputerActivityBus } from "./computer-activity-bus.js";
 import type { InputGate } from "./input-gate.js";
-import { onRunStopRequested } from "../run-stop-signals.js";
+import { onRunInterrupted } from "../run-stop-signals.js";
 
 let host: CuaDriverHost | undefined;
 
@@ -105,8 +105,10 @@ let control: { gate: InputGate; bus: ComputerActivityBus } | undefined;
 // A Stop from any source (window, phone, task inbox, external runtime) refuses
 // that Session's further input. Native runs also arrive as `agent/cancel`
 // below; an external runtime's Stop has no worker frame and is heard only here.
+// An interrupt-and-send cuts the run short the same way: the interrupted run
+// must not keep driving the computer while the user's next message starts.
 // The Session's next run clears it (`session_started`).
-onRunStopRequested((sessionId) => control?.gate.cancelSession(sessionId));
+onRunInterrupted((sessionId) => control?.gate.cancelSession(sessionId));
 
 /** Registered by Desktop setup; undefined when the execution gate is absent. */
 export function setComputerUseControl(

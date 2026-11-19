@@ -21,6 +21,10 @@ import { useT, type TFunction } from "../i18n/I18nProvider";
 import { translate } from "../i18n/translate";
 import { loadUILanguage } from "../uiLanguage";
 import { approvalKey } from "./approvalRecords";
+import {
+  COMPUTER_USE_RUNTIME_LABEL,
+  readComputerUseApprovalPresentation,
+} from "../../shared/computer-use-approval";
 
 const DENY_PRESETS = [
   "looks unsafe",
@@ -86,6 +90,8 @@ function ApprovalCardBody({ envelope, onDecide, allowScopes = true }: Props) {
     (request.riskLevel as "low" | "medium" | "high" | undefined) ??
     riskFor(request.toolName, argsJson);
   const summary = summarizeRequest(request, t);
+  // A computer-use call of Claude Code / Codex says what it is about to control.
+  const computerUse = computerUseWording(request, t);
 
   // Path-scoped options for file tools (Write/Edit) — pulls file_path so the
   // menu can offer "this file / this dir / all paths".
@@ -140,12 +146,12 @@ function ApprovalCardBody({ envelope, onDecide, allowScopes = true }: Props) {
     <div className="min-w-0 rounded-lg border bg-card p-3 text-card-foreground shadow-sm">
       <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2 gap-y-1">
         <span className="min-w-0 font-mono text-sm font-semibold [overflow-wrap:anywhere]">
-          {request.toolName}
+          {computerUse?.title ?? request.toolName}
         </span>
         <RiskPill level={risk} />
-        {request.description && (
+        {(computerUse?.description ?? request.description) && (
           <span className="col-span-2 min-w-0 text-xs text-muted-foreground [overflow-wrap:anywhere]">
-            {request.description}
+            {computerUse?.description ?? request.description}
           </span>
         )}
       </div>
@@ -263,6 +269,43 @@ function ApprovalCardBody({ envelope, onDecide, allowScopes = true }: Props) {
       )}
     </div>
   );
+}
+
+/**
+ * Title and description of a computer-use approval, worded from the structured
+ * presentation Main attaches (`request.computerUse`). Undefined for every
+ * other request, which keeps its own `toolName` / `description`.
+ */
+export function computerUseWording(
+  req: ApprovalRequestEnvelope["request"],
+  t: TFunction,
+): { title: string; description: string } | undefined {
+  const presentation = readComputerUseApprovalPresentation(
+    (req as { computerUse?: unknown }).computerUse,
+  );
+  if (!presentation) return undefined;
+  const actionKey = `auto.approvalCard.computerUse.action.${presentation.action}`;
+  // The action comes from the request, so its key is not statically known.
+  const known = t(actionKey as Parameters<TFunction>[0]);
+  // An action without a translation keeps the driver's own name.
+  const action = known === actionKey ? presentation.action : known;
+  const target = presentation.app
+    ? t("auto.approvalCard.computerUse.targetApp", { app: presentation.app })
+    : presentation.pid === undefined
+      ? undefined
+      : presentation.windowId === undefined
+        ? t("auto.approvalCard.computerUse.targetProcess", { pid: presentation.pid })
+        : t("auto.approvalCard.computerUse.targetWindow", {
+            pid: presentation.pid,
+            window: presentation.windowId,
+          });
+  const runtime = COMPUTER_USE_RUNTIME_LABEL[presentation.runtime];
+  return {
+    title: t("auto.approvalCard.computerUse.title", { action }),
+    description: target
+      ? t("auto.approvalCard.computerUse.descriptionOn", { runtime, action, target })
+      : t("auto.approvalCard.computerUse.description", { runtime, action }),
+  };
 }
 
 function summarizeRequest(req: ApprovalRequestEnvelope["request"], t: TFunction): string {

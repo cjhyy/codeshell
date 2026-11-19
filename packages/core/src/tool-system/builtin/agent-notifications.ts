@@ -86,6 +86,9 @@ export interface ResultPayload {
   /** Operations refused by permissions during the run. With status
    *  "completed" this means "completed with N denied operations". */
   permissionDenials?: number;
+  /** Operations the worker's own sandbox refused without asking anyone.
+   *  Counted apart from `permissionDenials`, with the same effect on status. */
+  sandboxBlocked?: number;
   finishedAt: number;
 }
 
@@ -263,6 +266,7 @@ export type NotificationItem = {
   cwd?: string;
   originClientMessageId?: string;
   permissionDenials?: number;
+  sandboxBlocked?: number;
   enqueuedAt: number;
 };
 
@@ -337,11 +341,10 @@ function isResultPayload(value: unknown): value is ResultPayload {
   ) {
     return false;
   }
-  if (
-    value.permissionDenials !== undefined &&
-    (!Number.isSafeInteger(value.permissionDenials) || (value.permissionDenials as number) < 0)
-  ) {
-    return false;
+  for (const count of [value.permissionDenials, value.sandboxBlocked]) {
+    if (count !== undefined && (!Number.isSafeInteger(count) || (count as number) < 0)) {
+      return false;
+    }
   }
   return (
     value.changedFiles === undefined ||
@@ -436,6 +439,7 @@ function legacyItemToDraft(item: NotificationItem, sessionId: string): ResultEnv
         ? { originClientMessageId: item.originClientMessageId }
         : {}),
       ...(item.permissionDenials ? { permissionDenials: item.permissionDenials } : {}),
+      ...(item.sandboxBlocked ? { sandboxBlocked: item.sandboxBlocked } : {}),
       finishedAt: item.enqueuedAt,
     },
   };
@@ -1082,6 +1086,7 @@ function resultEnvelopeToItem(envelope: ResultEnvelope): NotificationItem {
       ? { originClientMessageId: payload.originClientMessageId }
       : {}),
     ...(payload.permissionDenials ? { permissionDenials: payload.permissionDenials } : {}),
+    ...(payload.sandboxBlocked ? { sandboxBlocked: payload.sandboxBlocked } : {}),
     enqueuedAt: payload.finishedAt,
   };
 }
@@ -1116,6 +1121,7 @@ export function notificationItemToStreamEvent(
     event.originClientMessageId = item.originClientMessageId;
   }
   if (item.permissionDenials) event.permissionDenials = item.permissionDenials;
+  if (item.sandboxBlocked) event.sandboxBlocked = item.sandboxBlocked;
   return event;
 }
 
@@ -1161,11 +1167,14 @@ export function buildNotificationMessage(
       const deniedAttr = item.permissionDenials
         ? ` permissionDenials="${item.permissionDenials}"`
         : "";
+      // Refused by the worker's own sandbox with no approval request: nobody
+      // denied these, so they are named apart from `permissionDenials`.
+      const sandboxAttr = item.sandboxBlocked ? ` sandboxBlocked="${item.sandboxBlocked}"` : "";
       const statusText =
-        item.status === "completed" && item.permissionDenials
+        item.status === "completed" && (item.permissionDenials || item.sandboxBlocked)
           ? "completed-with-denied-operations"
           : item.status;
-      const opening = `  <agent id="${escapeXmlAttr(item.agentId)}"${nameAttr} status="${statusText}"${deniedAttr}${ccAttr}>`;
+      const opening = `  <agent id="${escapeXmlAttr(item.agentId)}"${nameAttr} status="${statusText}"${deniedAttr}${sandboxAttr}${ccAttr}>`;
       const description = `    <description>${escapeXmlText(item.description)}</description>`;
       const body =
         item.status === "completed"
@@ -1193,7 +1202,7 @@ export function buildNotificationSummary(
   const rows = items.map((item) => {
     const badge =
       item.status === "completed"
-        ? item.permissionDenials
+        ? item.permissionDenials || item.sandboxBlocked
           ? "⚠"
           : "✓"
         : item.status === "cancelled"
@@ -1205,9 +1214,14 @@ export function buildNotificationSummary(
         ? `  ·  failed: ${item.error ?? "unknown"}`
         : item.status === "cancelled"
           ? "  ·  cancelled"
-          : item.permissionDenials
-            ? `  ·  ${item.permissionDenials} operation(s) denied by permissions`
-            : "";
+          : [
+              item.permissionDenials
+                ? `  ·  ${item.permissionDenials} operation(s) denied by permissions`
+                : "",
+              item.sandboxBlocked
+                ? `  ·  ${item.sandboxBlocked} operation(s) blocked by the sandbox`
+                : "",
+            ].join("");
     return `  └─ ${namePart}${item.description}  ·  ${badge}${statusPart}`;
   });
   return [header, ...rows].join("\n");

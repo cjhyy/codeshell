@@ -13,7 +13,11 @@ import {
   type CuaComputerUseInputs,
 } from "./service.js";
 import { InputGate } from "./input-gate.js";
-import { notifyRunStopRequested } from "../run-stop-signals.js";
+import {
+  notifyRunInterrupted,
+  notifyRunStopRequested,
+  onRunStopRequested,
+} from "../run-stop-signals.js";
 import { ComputerActivityBus } from "./computer-activity-bus.js";
 
 const APP_PATH = "/test/packages/desktop";
@@ -319,6 +323,26 @@ describe("Computer Use execution gate wiring", () => {
     // Without the execution gate there is nothing to cancel, and nothing throws.
     notifyRunStopRequested("external-1");
     expect(control.gate.snapshot().cancelledSessions).toEqual([]);
+  });
+
+  test("an interrupt-and-send cancels the Session at the gate without being a Stop", () => {
+    const control = { gate: new InputGate(), bus: new ComputerActivityBus() };
+    const stopped: string[] = [];
+    const unsubscribe = onRunStopRequested((sessionId) => stopped.push(sessionId));
+    setComputerUseControl(control);
+    try {
+      notifyRunInterrupted("external-2");
+      // The interrupted run gets no further input...
+      expect(control.gate.snapshot().cancelledSessions).toEqual(["external-2"]);
+      // ...but follow-up turns and the Goal are not paused: no Stop was signalled.
+      expect(stopped).toEqual([]);
+      // The message that follows starts the next run, which clears the cancel.
+      observeComputerUseRunEvent("external-2", { type: "session_started" });
+      expect(control.gate.snapshot().cancelledSessions).toEqual([]);
+    } finally {
+      unsubscribe();
+      setComputerUseControl(undefined);
+    }
   });
 
   test("top-level terminal events become run outcomes; child agent events do not", () => {

@@ -262,6 +262,37 @@ describe("codexAdapter.parseResult", () => {
   });
 });
 
+describe("codexAdapter.parseResult changed files", () => {
+  const change = (status: string, ...paths: string[]) =>
+    JSON.stringify({
+      type: "item.completed",
+      item: { type: "file_change", status, changes: paths.map((path) => ({ path, kind: "add" })) },
+    });
+
+  it("lists the files of every patch that was applied, once each", () => {
+    const r = codexAdapter.parseResult([
+      JSON.stringify({ type: "thread.started", thread_id: "t" }),
+      // Announced, not yet applied.
+      JSON.stringify({
+        type: "item.started",
+        item: { type: "file_change", status: "in_progress", changes: [{ path: "/r/early.ts" }] },
+      }),
+      change("completed", "/r/a.ts", "/r/b.ts"),
+      change("completed", "/r/a.ts"),
+      change("failed", "/r/failed.ts"),
+      change("declined", "/r/refused.ts"),
+    ]);
+    expect(r.changedFiles).toEqual(["/r/a.ts", "/r/b.ts"]);
+  });
+
+  it("reports nothing when no patch was applied", () => {
+    const r = codexAdapter.parseResult([
+      JSON.stringify({ type: "thread.started", thread_id: "t" }),
+    ]);
+    expect("changedFiles" in r).toBe(false);
+  });
+});
+
 describe("claudeAdapter permission routing and denial report", () => {
   it("adds the prompt tool and its MCP config, keeping the variadic --mcp-config last", () => {
     const args = claudeAdapter.buildArgs({

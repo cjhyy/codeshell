@@ -208,6 +208,26 @@ describe("desktop notification routes", () => {
     );
   });
 
+  it("tells operations the sandbox blocked apart from ones that were denied", async () => {
+    const { sink, calls } = fixture();
+    notifyResult(sink, { workKind: "cc", name: "写说明", status: "completed", sandboxBlocked: 2 });
+    notifyResult(sink, {
+      workKind: "cc",
+      name: "写说明并提交",
+      status: "completed",
+      permissionDenials: 1,
+      sandboxBlocked: 2,
+    });
+    await Promise.resolve();
+    expect(calls[0]).toMatchObject({
+      title: "外部代理任务未全部完成",
+      body: "写说明 · 有 2 个操作被沙箱拦住，点击查看",
+    });
+    expect(calls[1]!.body).toBe(
+      "写说明并提交 · 有 1 个操作被权限拒绝、2 个操作被沙箱拦住，点击查看",
+    );
+  });
+
   it("keeps shell identities useful without exposing command arguments", async () => {
     const { sink, calls } = fixture();
     for (const command of [

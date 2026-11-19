@@ -17,8 +17,33 @@ import { logger as rootPermLogger } from "../logging/logger.js";
 import { READ_ONLY_TOOLS } from "./plan-mode-allowlist.js";
 import { isPlainCdSegment, matchBenignRedirect } from "./bash-read-redirects.js";
 
+/**
+ * Per-request controls that are not part of the request shown to the user.
+ * A backend that prompts honors them; one that decides by policy may ignore them.
+ */
+export interface ApprovalRequestOptions {
+  /**
+   * Aborting withdraws the request: whoever asked no longer awaits the answer.
+   * A prompt already shown is retired on every client and the request resolves
+   * as not approved with failure `cancelled`; one still queued is never shown.
+   */
+  signal?: AbortSignal;
+}
+
+/** The result of a request its asker withdrew. */
+export function withdrawnApproval(): ApprovalResult {
+  return {
+    approved: false,
+    failure: "cancelled",
+    reason: "The request was withdrawn before it was answered",
+  };
+}
+
 export interface ApprovalBackend {
-  requestApproval(request: ApprovalRequest): Promise<ApprovalResult>;
+  requestApproval(
+    request: ApprovalRequest,
+    options?: ApprovalRequestOptions,
+  ): Promise<ApprovalResult>;
 }
 
 /**
@@ -45,7 +70,11 @@ export interface ApprovalRouteTarget {
 }
 
 export interface ApprovalConnectionHandler {
-  requestApproval(request: ApprovalRequest, target: ApprovalRouteTarget): Promise<ApprovalResult>;
+  requestApproval(
+    request: ApprovalRequest,
+    target: ApprovalRouteTarget,
+    options?: ApprovalRequestOptions,
+  ): Promise<ApprovalResult>;
   ownershipLost?(targets: ApprovalRouteTarget[], reason: string): void;
 }
 
@@ -91,7 +120,10 @@ export class ApprovalRouter {
     return { ok: true, target };
   }
 
-  resolve(request: ApprovalRequest): Promise<ApprovalResult> | null {
+  resolve(
+    request: ApprovalRequest,
+    options?: ApprovalRequestOptions,
+  ): Promise<ApprovalResult> | null {
     if (!request.sessionId) return null;
     let target = this.owners.get(request.sessionId);
     if (!target && this.fallbackConnections.size === 1) {
@@ -107,7 +139,7 @@ export class ApprovalRouter {
       this.owners.delete(request.sessionId);
       return null;
     }
-    return handler.requestApproval(request, target);
+    return handler.requestApproval(request, target, options);
   }
 
   matches(target: ApprovalRouteTarget): boolean {
@@ -177,7 +209,10 @@ export class HeadlessApprovalBackend implements ApprovalBackend {
 export class AutoApprovalBackend implements ApprovalBackend {
   constructor(private readonly delegate?: ApprovalBackend) {}
 
-  async requestApproval(req: ApprovalRequest): Promise<ApprovalResult> {
+  async requestApproval(
+    req: ApprovalRequest,
+    options?: ApprovalRequestOptions,
+  ): Promise<ApprovalResult> {
     // Fast-path: auto-approve low-risk operations
     if (req.riskLevel === "low") {
       return { approved: true };
@@ -189,7 +224,7 @@ export class AutoApprovalBackend implements ApprovalBackend {
     // dangerous; honor that first.
     if (req.riskLevel === "high") {
       if (this.delegate) {
-        return this.delegate.requestApproval(req);
+        return this.delegate.requestApproval(req, options);
       }
       return {
         approved: false,
@@ -209,7 +244,7 @@ export class AutoApprovalBackend implements ApprovalBackend {
     // would silently run unvetted commands like `kill`, `npm publish`, or
     // unknown binaries.
     if (this.delegate) {
-      return this.delegate.requestApproval(req);
+      return this.delegate.requestApproval(req, options);
     }
     return {
       approved: false,
@@ -296,7 +331,9 @@ export class InteractiveApprovalBackend implements ApprovalBackend {
   // never blocks an unrelated `git status`.
   private sessionStateById = new Map<string, InteractiveApprovalSessionState>();
   private closedSessionIds = new Set<string>();
-  private promptFn: ((request: ApprovalRequest) => Promise<ApprovalResult>) | null = null;
+  private promptFn:
+    | ((request: ApprovalRequest, options?: ApprovalRequestOptions) => Promise<ApprovalResult>)
+    | null = null;
   private legacyPromptTurn: Promise<void> = Promise.resolve();
   private legacyContext: InteractiveApprovalContextState = {
     cwd: null,
@@ -313,7 +350,9 @@ export class InteractiveApprovalBackend implements ApprovalBackend {
     this.requestGuard = guard;
   }
 
-  setPromptFn(fn: (request: ApprovalRequest) => Promise<ApprovalResult>): void {
+  setPromptFn(
+    fn: (request: ApprovalRequest, options?: ApprovalRequestOptions) => Promise<ApprovalResult>,
+  ): void {
     this.promptFn = fn;
   }
 
@@ -415,7 +454,10 @@ export class InteractiveApprovalBackend implements ApprovalBackend {
     );
   }
 
-  async requestApproval(req: ApprovalRequest): Promise<ApprovalResult> {
+  async requestApproval(
+    req: ApprovalRequest,
+    options?: ApprovalRequestOptions,
+  ): Promise<ApprovalResult> {
     const unavailable = this.requestGuard?.(req);
     if (unavailable) return unavailable;
     const state = this.getSessionState(req.sessionId, true);
@@ -451,7 +493,9 @@ export class InteractiveApprovalBackend implements ApprovalBackend {
       const activeState = this.isActiveSessionState(req.sessionId, state) ? state : null;
       const nowCached = activeState ? this.checkSessionRules(req, activeState) : null;
       if (nowCached) return nowCached;
-      return await this.promptAndRecord(req, activeState);
+      // Withdrawn while it waited behind another prompt: never shown.
+      if (options?.signal?.aborted) return withdrawnApproval();
+      return await this.promptAndRecord(req, activeState, options);
     } finally {
       release();
     }
@@ -476,16 +520,17 @@ export class InteractiveApprovalBackend implements ApprovalBackend {
   private async promptAndRecord(
     req: ApprovalRequest,
     state: InteractiveApprovalSessionState | null,
+    options?: ApprovalRequestOptions,
   ): Promise<ApprovalResult> {
     const hasOwner = !!req.sessionId && this.approvalRouter.current(req.sessionId) !== null;
-    const routed = hasOwner ? this.approvalRouter.resolve(req) : null;
+    const routed = hasOwner ? this.approvalRouter.resolve(req, options) : null;
     let result: ApprovalResult;
     if (routed) {
       result = await routed;
     } else if (this.promptFn) {
-      result = await this.promptFn(req);
+      result = await this.promptFn(req, options);
     } else if (req.sessionId && this.approvalRouter.hasConnections()) {
-      const fallback = this.approvalRouter.resolve(req);
+      const fallback = this.approvalRouter.resolve(req, options);
       result = fallback
         ? await fallback
         : {
@@ -1912,7 +1957,7 @@ export class PermissionClassifier {
     toolName: string,
     args: Record<string, unknown>,
     reason?: string,
-    opts?: { sessionId?: string },
+    opts?: { sessionId?: string; signal?: AbortSignal },
   ): Promise<ApprovalResult> {
     if (this.defaultMode === "dontAsk") {
       this.log.info("permission.auto_deny", {
@@ -1945,6 +1990,9 @@ export class PermissionClassifier {
       return { approved: false, failure: "policy_denied", reason: "repeated user denials" };
     }
 
+    // Withdrawn before it was asked: nothing to show, and not a user denial.
+    if (opts?.signal?.aborted) return withdrawnApproval();
+
     const riskLevel = this.assessRisk(toolName, args);
     const span = this.log.span("permission.ask", {
       cat: "permission",
@@ -1965,13 +2013,16 @@ export class PermissionClassifier {
     try {
       const baseDescription = this.describeToolCall(toolName, args);
       const description = reason ? `${baseDescription}\n\nReason:\n${reason}` : baseDescription;
-      result = await this.approvalBackend.requestApproval({
-        ...(opts?.sessionId ? { sessionId: opts.sessionId } : {}),
-        toolName,
-        args,
-        description,
-        riskLevel,
-      });
+      result = await this.approvalBackend.requestApproval(
+        {
+          ...(opts?.sessionId ? { sessionId: opts.sessionId } : {}),
+          toolName,
+          args,
+          description,
+          riskLevel,
+        },
+        opts?.signal ? { signal: opts.signal } : undefined,
+      );
     } catch (err) {
       span.fail(err, { tool: toolName });
       this.emitApprovalEvent({
