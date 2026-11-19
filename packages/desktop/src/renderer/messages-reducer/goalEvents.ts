@@ -102,6 +102,8 @@ export function applyGoalProgress(
               ...state.activeGoal,
               round: event.round,
               revision: event.revision ?? state.activeGoal.revision,
+              // The marker that follows a pause says why; any other marker clears it.
+              pauseReason: state.activeGoal.paused ? event.pauseReason : undefined,
               // Any later progress means the Goal is moving again.
               waitingForUser: event.waitingForUser,
               waitingDetail: event.waitingForUser ? event.waitingForUserDetail : undefined,

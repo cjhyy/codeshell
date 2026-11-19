@@ -140,13 +140,15 @@ test("a message queued behind a running external Goal asks it to yield once", as
   expect(yields).toEqual(["A"]);
 });
 
-test("a paused Goal or plain turn is not asked to yield", async () => {
+// Main decides what the request means: a live Goal ends its run after the
+// turn, and any provider that only lingers after its reply lets the message in.
+test("a queued message asks a busy external turn to yield, with or without a live Goal", async () => {
   const paused = await mountBusyExternal({ ...runningGoal, paused: true }, true);
-  expect(paused.yields).toEqual([]);
+  expect(paused.yields).toEqual(["A"]);
   await cleanup?.();
   cleanup = undefined;
   const plain = await mountBusyExternal(null, true);
-  expect(plain.yields).toEqual([]);
+  expect(plain.yields).toEqual(["A"]);
 });
 
 test("interrupt-and-send keeps the Goal while Stop does not", async () => {

@@ -71,6 +71,10 @@ import {
   type ExternalGoalUpdate,
 } from "./external-runtime-goals.js";
 import {
+  externalRuntimeConfigurationKey,
+  externalRuntimeRoutingKey,
+} from "./external-runtime-configuration-key.js";
+import {
   ExternalRuntimeOperationRun,
   ExternalAccountingOwnershipError,
   EXTERNAL_UNVERIFIED_WRITE_NOTICE,
@@ -320,6 +324,8 @@ export class ExternalRuntimeService {
         faulted: boolean;
         goalRunActive: boolean;
         interruptGeneration: number;
+        /** Generation whose queued turns move to the runtime that replaced this one. */
+        carryOver?: number;
       };
       goalToolsAvailable: boolean;
     }
@@ -629,28 +635,10 @@ export class ExternalRuntimeService {
     }
   }
 
-  private routingKey(request: ExternalRuntimeStartRequest): string {
-    return JSON.stringify({
-      kind: request.kind,
-      cwd: request.cwd,
-      mainRoot: request.mainRoot ?? request.cwd,
-      model: request.model ?? null,
-      modelKey: request.modelKey ?? null,
-      permissionMode: request.permissionMode ?? "default",
-      planMode: request.planMode === true,
-      hasGoal: request.hasGoal === true,
-      hostToolsEnabled: this.areHostToolsEnabled(),
-      ownerWebContentsId: request.ownerWindow?.webContents.id ?? null,
-    });
-  }
-
-  private configurationKey(request: ExternalRuntimeStartRequest): string {
-    return JSON.stringify({
-      routingKey: this.routingKey(request),
-      developerInstructions: request.developerInstructions ?? null,
-      toolProfile: request.toolProfile?.id ?? null,
-    });
-  }
+  private readonly routingKey = (request: ExternalRuntimeStartRequest) =>
+    externalRuntimeRoutingKey(request, this.areHostToolsEnabled());
+  private readonly configurationKey = (request: ExternalRuntimeStartRequest) =>
+    externalRuntimeConfigurationKey(request, this.areHostToolsEnabled());
 
   private captureAuthority(
     request: Pick<ExternalRuntimeStartRequest, "cwd" | "mainRoot" | "permissionMode" | "planMode">,
@@ -980,6 +968,8 @@ export class ExternalRuntimeService {
       authority.projectTrusted && current?.authority.key === authority.key;
 
     // Close the old runtime first to prevent interleaved turns on the same business session.
+    const replaced = preserveBackgroundWork ? this.sessions.get(request.sessionId) : undefined;
+    if (replaced) replaced.lifecycle.carryOver = replaced.lifecycle.interruptGeneration;
     await this.stopExclusive(request.sessionId, preserveBackgroundWork);
     assertStartAuthority?.();
     if (!this.authorityStillCurrent(request.cwd, authority)) {
@@ -1211,7 +1201,7 @@ export class ExternalRuntimeService {
           this.withGoalOutput(
             request.sessionId,
             (event) => this.emitSafely(request.sessionId, recorder.recordControlOutput(event)),
-            () => this.goals.pause(run, "达到本轮 token 预算"),
+            () => this.goals.pause(run, "token_budget"),
           );
           void this.interruptGoalTurn(request.sessionId, run).catch((error) => {
             lifecycle.faulted = true;
@@ -1623,6 +1613,11 @@ export class ExternalRuntimeService {
     const runTurnExclusive = async (): Promise<ExternalRuntimeTurnOutcome> => {
       assertOutputHistoryWriteAvailable(sessionId);
       if (this.sessions.get(sessionId) !== entry) {
+        // Replaced in place under the same authority: an accepted turn is not dropped.
+        await this.lifecycleTails.get(sessionId);
+        const moved = !initialBackground && entry.lifecycle.carryOver === acceptedGeneration;
+        if (moved && this.sessions.has(sessionId))
+          return this.submit(sessionId, resolveInput, callerWebContentsId, expectedGoal, hooks);
         throw new Error(
           `external runtime session was replaced before its queued turn: ${sessionId}`,
         );
@@ -1679,14 +1674,15 @@ export class ExternalRuntimeService {
       }
       // Application conflicts are rejected before mutating any run buffers or Goal.
       entry.recorder.assertNewSubmission(turnInput);
-      // Only a message the user sent answers a wait_for_user question; resume
-      // and background continuations are injected and leave it open.
+      // Only a message somebody sent answers a wait_for_user question or resumes
+      // a limit-paused Goal; injected continuations leave both as they are.
       if (!turnInput.injected) this.goals.userReplied(sessionId);
+      const resumes = !turnInput.injected && entry.goalToolsAvailable;
       const initialGoalEvents: StreamEvent[] = [];
       const goalRun = this.withGoalOutput(
         sessionId,
         (event) => initialGoalEvents.push(event),
-        () => this.goals.start(sessionId, turnInput.goal, turnInput.disableGoal),
+        () => this.goals.start(sessionId, turnInput.goal, turnInput.disableGoal, resumes),
       );
       let logicalRunId: string | undefined;
       const publishGoalOutput = (event: StreamEvent) => {
@@ -1712,7 +1708,7 @@ export class ExternalRuntimeService {
             if (!this.goals.isCurrent(goalRun)) return;
             if (this.goals.remainingTime(goalRun) > 0) return armDeadline();
             this.withGoalOutput(sessionId, publishGoalOutput, () =>
-              this.goals.pause(goalRun, "达到本轮时间预算"),
+              this.goals.pause(goalRun, "time_budget"),
             );
             void this.interruptGoalTurn(sessionId, goalRun).catch((error) => {
               entry.lifecycle.faulted = true;
@@ -2124,7 +2120,13 @@ export class ExternalRuntimeService {
   /** Let queued user input in after the current provider turn; see `yieldAfterTurn`. */
   yieldGoal(sessionId: string, callerWebContentsId?: number): boolean {
     this.assertOwner(sessionId, callerWebContentsId);
+    void this.releaseIdle(sessionId, true).catch(() => false);
     return this.goals.yieldAfterTurn(sessionId);
+  }
+
+  /** End a provider that finished its reply and only lingers; see `releaseIdle` on the session. */
+  async releaseIdle(sessionId: string, sticky = false): Promise<boolean> {
+    return (await this.sessions.get(sessionId)?.session.releaseIdle?.(sticky)) ?? false;
   }
 
   /**
@@ -2167,7 +2169,7 @@ export class ExternalRuntimeService {
         this.backgroundWakePaused.add(sessionId);
       }
       if (run && this.goals.isCurrent(run)) {
-        this.goals.pause(run, "用户已停止本轮执行", true);
+        this.goals.pause(run, "user_stop", true);
       } else {
         // A background wait has released its live run. Stop must still pause
         // the persisted Goal, or the next completion would silently wake it.

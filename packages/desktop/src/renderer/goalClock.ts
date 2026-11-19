@@ -92,6 +92,10 @@ export function carryGoalClock(
           waitingDetail: next.waitingForUser ? next.waitingDetail : previous.waitingDetail,
         }
       : {}),
+    // A metadata refresh of the same paused revision keeps why it paused.
+    ...(previous.pauseReason && next.paused && previous.revision === next.revision
+      ? { pauseReason: next.pauseReason ?? previous.pauseReason }
+      : {}),
     ...(previous.activeMs !== undefined && next.activeMs === undefined
       ? {
           activeMs: previous.activeMs,

@@ -55,6 +55,34 @@ describe("GoalBar", () => {
     expect(html).toContain("lucide-play");
   });
 
+  test("a limit pause says so and that a message resumes it", () => {
+    const html = renderToStaticMarkup(
+      <GoalBar
+        goal={{ ...goal, paused: true, pauseReason: "time_budget" }}
+        busy={false}
+        now={at(1_000_000)}
+        onPausedChange={() => {}}
+      />,
+    );
+    expect(html).toContain('data-goal-state="paused"');
+    expect(html).toContain("目标已暂停（本轮额度用完）");
+    expect(html).toContain("发一条消息或点击恢复");
+  });
+
+  test("a turn running beside a Goal the user paused is not shown as the Goal's", () => {
+    const html = renderToStaticMarkup(
+      <GoalBar
+        goal={{ ...goal, paused: true, pauseReason: "user_stop" }}
+        busy
+        now={at(1_000_000)}
+        onPausedChange={() => {}}
+      />,
+    );
+    expect(html).toContain('data-goal-state="paused"');
+    expect(html).toContain("已暂停的目标 · 当前这轮不属于它");
+    expect(html).not.toContain("本轮额度用完");
+  });
+
   test("controls are disabled while a Goal control is in flight", () => {
     const html = renderToStaticMarkup(
       <GoalBar

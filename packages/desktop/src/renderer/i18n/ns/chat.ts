@@ -223,6 +223,12 @@ export const chat = {
         replyQueued: "目标还有一个问题在排队，先回答上面的问题。",
         replyFailed: "回复未发送，请重试。",
         barPausedHint: "目标已暂停，不会自动继续。点击恢复后接着推进。",
+        barPausedBusy: "已暂停的目标 · 当前这轮不属于它",
+        barPausedBusyHint:
+          "目标仍是暂停的：正在跑的这一轮只处理你刚发的消息，不推进目标。点击恢复才会接着推进。",
+        barLimitPaused: "目标已暂停（本轮额度用完）",
+        barLimitPausedHint:
+          "这一轮的时间或次数额度用完了，现在没有在运行。发一条消息或点击恢复，就开始新的一轮。",
         barElapsed: "目标已设置 {elapsed}",
         barActiveTime: "第 {round} 轮 · {elapsed}",
         barActiveTimeHint:
@@ -572,6 +578,12 @@ export const chat = {
         replyFailed: "Your reply was not sent. Please try again.",
         barPausedHint:
           "This goal is paused and will not continue on its own. Resume it to keep going.",
+        barPausedBusy: "Paused goal · this turn is not part of it",
+        barPausedBusyHint:
+          "The goal is still paused: the running turn only handles the message you sent. Resume the goal to keep it going.",
+        barLimitPaused: "Goal paused (this round's limit ran out)",
+        barLimitPausedHint:
+          "This round ran out of time or turns and nothing is running. Send a message or resume to start a new round.",
         barElapsed: "Goal set {elapsed} ago",
         barActiveTime: "Turn {round} · {elapsed}",
         barActiveTimeHint:

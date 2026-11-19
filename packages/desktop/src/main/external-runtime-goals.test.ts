@@ -681,3 +681,107 @@ describe("external Goal questions", () => {
     expect(text).toContain("inferred from documentation and unverified");
   });
 });
+
+describe("a paused external Goal and the next message", () => {
+  /** What the recorder persists when a run ends on a limit. */
+  const closeRunOnLimit = () =>
+    manager.updateSessionState(sessionId, { lastCompletionKind: "limit_stop" });
+
+  test("a limit pause says which limit, as a structured reason", () => {
+    const run = goals.start(sessionId, { objective: "跑满预算", maxTurns: 1 })!;
+    expect(goals.afterTurn(run, 10, "第一轮")).toBe(false);
+    expect(events.at(-1)).toMatchObject({ type: "goal_progress", pauseReason: "turn_limit" });
+    expect(run.limited).toBe(true);
+    goals.end(run);
+
+    const timed = new ExternalRuntimeGoals(
+      (_sessionId, event) => events.push(event),
+      () => now,
+    );
+    goals.update(sessionId, {
+      paused: false,
+      expectedGoalId: run.goal.goalId!,
+      expectedRevision: 2,
+    });
+    const second = timed.start(sessionId)!;
+    timed.pause(second, "time_budget");
+    expect(events.at(-1)).toMatchObject({
+      type: "goal_progress",
+      pauseReason: "time_budget",
+      gaps: "达到本轮时间预算；目标已暂停，可继续。",
+    });
+  });
+
+  test("a message into a limit-paused Goal resumes it with a fresh run", () => {
+    const run = goals.start(sessionId, { objective: "继续优化", maxTurns: 1 })!;
+    expect(goals.afterTurn(run, 10, "第一轮")).toBe(false);
+    goals.end(run);
+    closeRunOnLimit();
+    expect(goals.get(sessionId)).toMatchObject({ paused: true, revision: 2 });
+    events.length = 0;
+
+    // An automatic continuation never resumes a pause.
+    expect(goals.start(sessionId)).toBeUndefined();
+    expect(events).toEqual([]);
+
+    const resumed = goals.start(sessionId, undefined, false, true)!;
+    expect(resumed.goal).toMatchObject({ goalId: run.goal.goalId, revision: 3 });
+    expect(resumed.turns).toBe(0);
+    expect(resumed.maxTurns).toBe(1);
+    expect(manager.readSessionState(sessionId)?.goalLifecycle).toMatchObject({
+      phase: "active",
+      revision: 3,
+    });
+    expect(events).toEqual([
+      expect.objectContaining({
+        type: "goal_updated",
+        goalId: run.goal.goalId,
+        revision: 3,
+        paused: false,
+      }),
+    ]);
+  });
+
+  test("a restarted app still resumes a limit pause from the persisted run outcome", () => {
+    const run = goals.start(sessionId, { objective: "重启后继续", maxTurns: 1 })!;
+    goals.afterTurn(run, 10, "第一轮");
+    goals.end(run);
+    closeRunOnLimit();
+    const restarted = new ExternalRuntimeGoals(() => {});
+    expect(restarted.start(sessionId, undefined, false, true)?.goal.goalId).toBe(run.goal.goalId);
+  });
+
+  test("a pause the user asked for is not resumed by a message", () => {
+    const run = goals.start(sessionId, "用户暂停")!;
+    goals.pause(run, "user_stop", true);
+    expect(events.at(-1)).toMatchObject({ type: "goal_progress", pauseReason: "user_stop" });
+    goals.end(run);
+    expect(goals.start(sessionId, undefined, false, true)).toBeUndefined();
+    expect(goals.get(sessionId)).toMatchObject({ paused: true });
+
+    // Paused by the user after a limit pause was resumed: still the user's pause.
+    const other = "external-goal-user-pause";
+    manager.create("/tmp/project", "codex/test", "codex", other, null, "desktop");
+    const limited = goals.start(other, { objective: "先限额后手动", maxTurns: 1 })!;
+    goals.afterTurn(limited, 10, "第一轮");
+    goals.end(limited);
+    manager.updateSessionState(other, { lastCompletionKind: "limit_stop" });
+    const again = goals.start(other, undefined, false, true)!;
+    goals.end(again);
+    goals.update(other, {
+      paused: true,
+      expectedGoalId: again.goal.goalId!,
+      expectedRevision: again.goal.revision!,
+    });
+    expect(goals.start(other, undefined, false, true)).toBeUndefined();
+  });
+
+  test("a turn that opts out of the Goal leaves a limit pause in place", () => {
+    const run = goals.start(sessionId, { objective: "不被打断", maxTurns: 1 })!;
+    goals.afterTurn(run, 10, "第一轮");
+    goals.end(run);
+    closeRunOnLimit();
+    expect(goals.start(sessionId, undefined, true, true)).toBeUndefined();
+    expect(goals.get(sessionId)).toMatchObject({ paused: true });
+  });
+});

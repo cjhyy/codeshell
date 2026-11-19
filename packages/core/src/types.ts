@@ -894,6 +894,12 @@ type StreamEventPayload =
         default?: string;
       };
       /**
+       * The Goal paused with this marker, and why: one of its limits ran out,
+       * or the user stopped it. `gaps` restates it for people; code that
+       * branches on the cause (notices, clients) reads this field.
+       */
+      pauseReason?: "time_budget" | "token_budget" | "turn_limit" | "no_progress" | "user_stop";
+      /**
        * The Goal parked on finite background work instead of being judged
        * unmet: the run ends and the work's completion wakes it. `tasks` are
        * display-only, already-sanitized labels (untrusted text).

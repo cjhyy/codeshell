@@ -42,6 +42,8 @@ afterEach(async () => {
 function harness(
   options: {
     busy?: boolean;
+    /** The busy provider has replied and only lingers for its own background shell. */
+    idle?: boolean;
     ensureFailure?: Error;
     duringEnsure?: () => void;
     hasOwner?: boolean;
@@ -65,6 +67,7 @@ function harness(
   let ownerClosed = false;
   let ownerLookups = 0;
   let busy = options.busy === true;
+  let releases = 0;
   let runtimeExists = false;
   let workspaceRevoked = false;
   const owner = {
@@ -74,6 +77,10 @@ function harness(
   const fake = {
     get: () => (runtimeExists ? {} : undefined),
     isSessionRunning: () => busy,
+    releaseIdle: async () => {
+      releases++;
+      return options.idle === true;
+    },
     ensureContinuation: async (request: ExternalRuntimeStartRequest) => {
       starts.push(request);
       options.duringEnsure?.();
@@ -145,6 +152,7 @@ function harness(
     clearService: () => (currentService = null),
     revokeWorkspace: () => (workspaceRevoked = true),
     ownerLookups: () => ownerLookups,
+    releases: () => releases,
   };
 }
 
@@ -502,6 +510,21 @@ describe("Main-originated external runtime submissions", () => {
     expect(f.sends).toEqual([]);
     expect(f.ownerLookups()).toBe(0);
     expect(f.workspaceRequests).toEqual([]);
+    expect(f.releases()).toBe(1);
+  });
+
+  test("a Session whose provider only lingers after its reply is released and takes the message", async () => {
+    const f = harness({ busy: true, idle: true });
+    f.sessions.create("/persisted/project", "claude-code/opus", "claude-code", "bound-idle");
+    const result = f.submit.runBound({
+      sessionId: "bound-idle",
+      text: "继续",
+      clientMessageId: "pet-delegation:idle",
+    });
+    await f.accept();
+    expect(await result).toEqual({ started: true });
+    expect(f.releases()).toBe(1);
+    expect(f.sends).toHaveLength(1);
   });
 
   test.each(["codex/", "claude-code/", "openrouter/gpt-6.1-sol", ""])(

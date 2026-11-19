@@ -137,8 +137,21 @@ export function GoalBar({
       : elapsed && t("chat.goal.barElapsed", { elapsed });
   // Paused wins: a paused Goal does not continue even after the user replies.
   const waiting = !goal.paused && !!goal.waitingForUser;
+  // A limit that ran out pauses the Goal until the next message; a pause the
+  // user asked for stays, and a turn running beside it is not the Goal's.
+  const limitPaused =
+    goal.paused && goal.pauseReason !== undefined && goal.pauseReason !== "user_stop";
+  const pausedHint = limitPaused
+    ? t("chat.goal.barLimitPausedHint")
+    : busy
+      ? t("chat.goal.barPausedBusyHint")
+      : t("chat.goal.barPausedHint");
   const label = goal.paused
-    ? t("chat.goal.barPaused")
+    ? limitPaused
+      ? t("chat.goal.barLimitPaused")
+      : busy
+        ? t("chat.goal.barPausedBusy")
+        : t("chat.goal.barPaused")
     : waiting
       ? t("chat.goal.barWaiting")
       : t("chat.goal.barActive");
@@ -192,7 +205,7 @@ export function GoalBar({
           )}
           title={
             goal.paused
-              ? t("chat.goal.barPausedHint")
+              ? pausedHint
               : waiting
                 ? `${t("chat.goal.barWaitingHint")} ${goal.waitingForUser}`
                 : undefined
@@ -327,9 +340,7 @@ export function GoalBar({
               </div>
             </div>
           )}
-          {goal.paused && (
-            <p className="mt-1.5 text-xs text-status-warn">{t("chat.goal.barPausedHint")}</p>
-          )}
+          {goal.paused && <p className="mt-1.5 text-xs text-status-warn">{pausedHint}</p>}
         </div>
       )}
       {waiting && replyQueued && (

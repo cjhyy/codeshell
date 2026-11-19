@@ -92,6 +92,21 @@ export function parseExternalGoalQuestion(
   };
 }
 
+/** Why a Goal paused; clients and notices read this, never the `gaps` text. */
+export type ExternalGoalPauseReason = Extract<
+  StreamEvent,
+  { type: "goal_progress" }
+>["pauseReason"] &
+  string;
+
+const PAUSE_TEXT: Record<ExternalGoalPauseReason, string> = {
+  token_budget: "达到本轮 token 预算",
+  time_budget: "达到本轮时间预算",
+  turn_limit: "达到本轮自动继续次数上限",
+  no_progress: "连续多轮没有新的进展",
+  user_stop: "用户已停止本轮执行",
+};
+
 export interface ExternalGoalUpdate {
   objective?: string;
   paused?: boolean;
@@ -183,6 +198,8 @@ export class ExternalRuntimeGoals {
   private readonly pendingQuestions = new Map<string, ExternalGoalQuestion>();
   /** Questions the user already replied to or passed over; never asked again. */
   private readonly closedQuestions = new Map<string, string[]>();
+  /** Goal versions a budget or limit paused (not the user), per Session. */
+  private readonly limitPauses = new Map<string, string>();
 
   constructor(
     private readonly emit: (sessionId: string, event: StreamEvent) => void,
@@ -202,9 +219,41 @@ export class ExternalRuntimeGoals {
     return this.runs.get(sessionId);
   }
 
-  start(sessionId: string, explicit?: string | GoalConfig, disabled = false) {
+  /**
+   * A pause the user did not ask for: a budget or limit ran out. Known from
+   * this process, or after a restart from the run that ended on `limit_stop`.
+   */
+  private isLimitPause(sessionId: string, goal: GoalConfig): boolean {
+    const known = this.limitPauses.get(sessionId);
+    if (known !== undefined) return known === `${goal.goalId}:${goal.revision}`;
+    return this.manager.readSessionState(sessionId)?.lastCompletionKind === "limit_stop";
+  }
+
+  /**
+   * `userMessage`: this run carries a message somebody sent (typed, or passed
+   * on by Mimi), not an automatic continuation. Such a message resumes a Goal
+   * that a limit paused, with fresh limits, through the same revisioned
+   * control as an explicit Resume. A pause the user asked for stays paused,
+   * and the message then runs as an ordinary turn (as in the native engine).
+   */
+  start(sessionId: string, explicit?: string | GoalConfig, disabled = false, userMessage = false) {
     if (disabled) return undefined;
-    const stored = this.read(sessionId);
+    let stored = this.read(sessionId);
+    if (
+      userMessage &&
+      explicit === undefined &&
+      stored?.paused &&
+      this.isLimitPause(sessionId, stored) &&
+      this.update(sessionId, {
+        paused: false,
+        expectedGoalId: stored.goalId!,
+        expectedRevision: stored.revision!,
+      }).updated
+    ) {
+      // The limit pause is over; a later pause of this Goal is judged afresh.
+      this.manager.updateSessionState(sessionId, { lastCompletionKind: undefined });
+      stored = this.read(sessionId);
+    }
     let goal = stored;
     if (explicit !== undefined) {
       goal = goalInput(explicit);
@@ -512,6 +561,8 @@ export class ExternalRuntimeGoals {
     }
     const updated = this.manager.updateActiveGoal(sessionId, patch);
     if (!updated) return { ...this.get(sessionId), updated: false };
+    // Any control is a new revision; `pause` re-marks a limit pause after it.
+    this.limitPauses.set(sessionId, "");
     this.stop(sessionId);
     this.emitUpdated(sessionId, updated.goal);
     return { ...this.get(sessionId), updated: true };
@@ -532,6 +583,7 @@ export class ExternalRuntimeGoals {
     });
     if (cleared) {
       this.stop(sessionId);
+      this.limitPauses.delete(sessionId);
       this.forgetQuestions(sessionId);
       this.emit(sessionId, {
         type: "goal_cleared",
@@ -613,15 +665,15 @@ export class ExternalRuntimeGoals {
     run.stopBlocks = run.lastOutput === output ? run.stopBlocks + 1 : 0;
     run.lastOutput = output;
     if (!this.isCurrent(run) || run.yieldRequested || run.awaitingUser) return false;
-    const limit =
+    const limit: ExternalGoalPauseReason | undefined =
       run.tokenBudget !== undefined && run.tokensUsed >= run.tokenBudget
-        ? "达到本轮 token 预算"
+        ? "token_budget"
         : this.remainingTime(run) === 0
-          ? "达到本轮时间预算"
+          ? "time_budget"
           : run.turns >= run.maxTurns
-            ? "达到本轮自动继续次数上限"
+            ? "turn_limit"
             : run.stopBlocks >= run.maxStopBlocks
-              ? "连续多轮没有新的进展"
+              ? "no_progress"
               : undefined;
     if (limit) {
       this.pause(run, limit);
@@ -646,7 +698,7 @@ export class ExternalRuntimeGoals {
    * (Mimi notices read it as blocked on a limit); a pause the user asked for
    * (`byUser`, a Stop) does not.
    */
-  pause(run: ExternalGoalRun, reason: string, byUser = false): void {
+  pause(run: ExternalGoalRun, reason: ExternalGoalPauseReason, byUser = false): void {
     if (!this.isCurrent(run)) return;
     const result = this.update(run.sessionId, {
       paused: true,
@@ -654,14 +706,18 @@ export class ExternalRuntimeGoals {
       expectedRevision: run.goal.revision!,
     });
     if (result.updated) {
-      if (!byUser) run.limited = true;
+      if (!byUser) {
+        run.limited = true;
+        this.limitPauses.set(run.sessionId, `${result.goalId}:${result.revision}`);
+      }
       this.emit(run.sessionId, {
         type: "goal_progress",
         goalId: result.goalId,
         revision: result.revision,
         status: "not_met",
         ...this.progress(run, run.turns),
-        gaps: `${reason}；目标已暂停，可继续。`,
+        gaps: `${PAUSE_TEXT[reason]}；目标已暂停，可继续。`,
+        pauseReason: reason,
       });
     }
   }

@@ -70,6 +70,8 @@ let providerSend:
   | undefined;
 let providerInterrupt: (() => Promise<void>) | undefined;
 const providerInputs: Array<{ text: string; injected?: boolean }> = [];
+/** `releaseIdle(sticky)` calls the fake provider received. */
+const idleReleases: boolean[] = [];
 const streamEvents: StreamEvent[] = [];
 let previousHome: string | undefined;
 let testHome: string;
@@ -119,6 +121,10 @@ function fakeSession(args: StartArgs) {
     },
     interrupt: async () => {
       await providerInterrupt?.();
+    },
+    releaseIdle: async (sticky?: boolean) => {
+      idleReleases.push(sticky === true);
+      return false;
     },
     close: async () => {
       closed.push(String(args.businessSessionId));
@@ -326,6 +332,7 @@ beforeEach(() => {
   providerSend = undefined;
   providerInterrupt = undefined;
   providerInputs.length = 0;
+  idleReleases.length = 0;
   streamEvents.length = 0;
   trust = "trusted";
 });
@@ -4291,10 +4298,17 @@ describe("ExternalRuntimeService", () => {
       backgroundWork: background.delivery,
     });
     await svc.start(request);
-    await svc.send(request.sessionId, {
-      text: "run one bounded turn",
-      goal: { objective: "paused goal", maxTurns: 1 },
-    });
+    // Paused by the user: a limit pause would be resumed by the message below.
+    providerSend = async () => {
+      const live = svc.getGoal(request.sessionId);
+      await svc.updateGoal(request.sessionId, {
+        paused: true,
+        expectedGoalId: live.goalId!,
+        expectedRevision: live.revision!,
+      });
+    };
+    await svc.send(request.sessionId, { text: "run one turn", goal: "paused goal" });
+    providerSend = undefined;
     const goal = svc.getGoal(request.sessionId);
     expect(goal.paused).toBe(true);
     await svc.start(request);
@@ -5022,3 +5036,132 @@ test.each(["codex", "claude-code"] as const)(
     }
   },
 );
+
+describe("a paused Goal, a working session, and replaced runtimes", () => {
+  const flags = { external_agent_runtime: true, external_host_tools: true };
+
+  test("a message sent after a limit pause resumes the Goal and is its input", async () => {
+    const svc = service(flags);
+    await svc.start(request);
+    await svc.send(request.sessionId, { text: "开始", goal: { objective: "做完", maxTurns: 1 } });
+    expect(svc.getGoal(request.sessionId)).toMatchObject({ paused: true, revision: 2 });
+    expect(streamEvents.findLast((event) => event.type === "goal_progress")).toMatchObject({
+      pauseReason: "turn_limit",
+    });
+    const paused = streamEvents.length;
+    let duringRun: unknown;
+    providerSend = async () => {
+      duringRun = svc.getGoal(request.sessionId);
+    };
+    const outcome = await svc.send(request.sessionId, {
+      text: "继续更新 server 和网页端",
+      clientMessageId: "typed-after-pause",
+    });
+    expect(outcome.ok).toBe(true);
+    // While the session works toward the Goal, the Goal is not paused.
+    expect(duringRun).toMatchObject({ goal: "做完", paused: false, revision: 3 });
+    expect(providerInputs[1]!.text).toContain("继续更新 server 和网页端");
+    expect(providerInputs[1]!.text).toContain("<codeshell_goal>");
+    const after = streamEvents.slice(paused);
+    const resumed = after.findIndex((event) => event.type === "goal_updated");
+    expect(after[resumed]).toMatchObject({ paused: false, revision: 3 });
+    // Every client hears the resume before the run's own output.
+    expect(resumed).toBeLessThan(after.findIndex((event) => event.type === "turn_complete"));
+    expect(starts).toHaveLength(1);
+    await svc.stop(request.sessionId);
+  });
+
+  test("a Stop pause is not resumed by the next message, which runs as an ordinary turn", async () => {
+    const svc = service(flags);
+    await svc.start(request);
+    providerSend = async () => {
+      await svc.interrupt(request.sessionId, 77);
+    };
+    await svc.send(request.sessionId, { text: "开始", goal: "用户会停下它" }, 77);
+    expect(svc.getGoal(request.sessionId)).toMatchObject({ paused: true });
+    providerSend = undefined;
+    await svc.send(request.sessionId, { text: "顺便问一句" }, 77);
+    expect(providerInputs.at(-1)!.text).toBe("顺便问一句");
+    expect(svc.getGoal(request.sessionId)).toMatchObject({ paused: true });
+    await svc.stop(request.sessionId);
+  });
+
+  test("a changed Goal launch hint does not replace a live runtime", async () => {
+    const svc = service(flags);
+    const live = await svc.ensure({ ...request, hasGoal: true });
+    expect(await svc.ensure({ ...request, hasGoal: false })).toBe(live);
+    expect(starts).toHaveLength(1);
+    expect(closed).toEqual([]);
+    await svc.stopAll();
+  });
+
+  test("a turn queued behind a replaced runtime runs on its replacement", async () => {
+    const svc = service(flags);
+    await svc.start(request);
+    let release!: () => void;
+    let entered!: () => void;
+    const running = new Promise<void>((resolve) => (entered = resolve));
+    providerSend = async () => {
+      entered();
+      await new Promise<void>((resolve) => (release = resolve));
+    };
+    const first = svc.send(request.sessionId, { text: "正在跑的一轮" }, 77);
+    await running;
+    providerSend = undefined;
+    const queued = svc.send(
+      request.sessionId,
+      {
+        text: "排队中的委托",
+        displayText: "排队中的委托",
+        clientMessageId: "pet-delegation:queued",
+      },
+      77,
+    );
+    const replacement = svc.start({ ...request, developerInstructions: "new instructions" });
+    release();
+    await replacement;
+    expect((await first).reason).toBe("aborted_streaming");
+    expect(await queued).toMatchObject({ ok: true, reason: "completed" });
+    expect(starts).toHaveLength(2);
+    expect(providerInputs.map((input) => input.text)).toEqual(["正在跑的一轮", "排队中的委托"]);
+    expect(
+      streamEvents.some(
+        (event) =>
+          event.type === "session_user_message" &&
+          event.clientMessageId === "pet-delegation:queued",
+      ),
+    ).toBe(true);
+    await svc.stopAll();
+  });
+
+  test("a turn queued behind a stopped runtime still fails, naming the stop", async () => {
+    const svc = service(flags);
+    await svc.start(request);
+    let release!: () => void;
+    let entered!: () => void;
+    const running = new Promise<void>((resolve) => (entered = resolve));
+    providerSend = async () => {
+      entered();
+      await new Promise<void>((resolve) => (release = resolve));
+    };
+    const first = svc.send(request.sessionId, { text: "正在跑的一轮" }, 77);
+    await running;
+    const queued = svc.send(request.sessionId, { text: "排队中的一轮" }, 77);
+    const stopping = svc.stop(request.sessionId, 77);
+    release();
+    await stopping;
+    await first;
+    await expect(queued).rejects.toThrow(/replaced before its queued turn/);
+    expect(providerInputs).toHaveLength(1);
+  });
+
+  test("queued input asks the provider to release an idle process", async () => {
+    const svc = service(flags);
+    await svc.start(request);
+    expect(svc.yieldGoal(request.sessionId, 77)).toBe(false);
+    expect(idleReleases).toEqual([true]);
+    expect(await svc.releaseIdle(request.sessionId)).toBe(false);
+    expect(idleReleases).toEqual([true, false]);
+    await svc.stopAll();
+  });
+});
