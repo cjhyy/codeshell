@@ -258,6 +258,49 @@ try {
   );
   console.log("acceptance: panel access denied then granted; granted tab is drivable");
 
+  // --- "Allow for this session" on a Host tool is remembered for the session.
+  let approveOnce = win.getByRole("button", { name: /^(仅本次批准|Approve once)$/ });
+  const forSession = win.getByRole("button", {
+    name: /^(本会话一直允许|Always allow this session)$/,
+  });
+  const listTabs = { name: "browser_act", arguments: { action: "list_tabs" } };
+  let turns = (await cli.invocations()).length;
+  await cli.script([
+    { tools: [listTabs, listTabs], text: "fixture: allowed for the session" },
+    { tools: [listTabs], text: "fixture: still allowed" },
+  ]);
+  await send("list the tabs twice");
+  await forSession.first().waitFor({ timeout: 20_000 });
+  assert(
+    (await win.getByRole("button", { name: /^(选择批准范围|Select approval scope)$/ }).count()) ===
+      0,
+    "An external session offers an approval scope it cannot honor",
+  );
+  await screenshot("04b-allow-for-session-offered.png");
+  await forSession.first().click();
+  // The second call of the same tool in this turn, and the next turn's, never ask.
+  const sameTurn = await waitForTurns(turns + 1, {
+    approve: false,
+    until: () => approveOnce.first().isVisible(),
+  });
+  assert(
+    sameTurn?.tools.length === 2 && sameTurn.tools.every((tool) => !/Error: /.test(tool.body)),
+    "The same tool asked again after it was allowed for the session",
+  );
+  await send("list them once more");
+  const nextTurn = await waitForTurns(turns + 2, {
+    approve: false,
+    until: () => approveOnce.first().isVisible(),
+  });
+  assert(
+    nextTurn?.tools.length === 1 && !/Error: /.test(nextTurn.tools[0].body),
+    "A later turn asked again for the tool allowed for the session",
+  );
+  await win.getByText("fixture: still allowed").first().waitFor({ timeout: 15_000 });
+  // Another tool still asks: the DriveAgent launch below waits for its own card.
+  console.log("acceptance: allow-for-session kept for the same tool across turns");
+  turns = (await cli.invocations()).length;
+
   // --- Goal questions: one banner above the composer, answered three ways.
   const ask = (args, text) => ({
     tools: [{ name: "wait_for_user", goal: true, arguments: args }],
@@ -283,7 +326,7 @@ try {
     ask({ level: "consent", question: "Publish the page to production now?" }, ""),
   ]);
   await send("Polish the acceptance page until it is ready to publish");
-  await waitForTurns(4);
+  await waitForTurns(turns + 1);
   await banner.waitFor({ timeout: 20_000 });
   assert((await banner.count()) === 1, "More than one Goal question banner is shown");
   assert(
@@ -295,12 +338,12 @@ try {
   assert((await bar().getAttribute("data-goal-state")) === "waiting", "The Goal is not waiting");
   await screenshot("05-goal-question-banner.png");
   await banner.getByRole("radio", { name: /Roomy/ }).click();
-  const picked = await waitForTurns(5);
+  const picked = await waitForTurns(turns + 2);
   assert(picked.prompt.includes("Roomy"), "Clicking an option did not answer the question");
 
   await banner.getByRole("radio", { name: /Dark/ }).waitFor({ timeout: 20_000 });
   await send("Use the dark theme, typed in the composer");
-  const typed = await waitForTurns(6);
+  const typed = await waitForTurns(turns + 3);
   assert(typed.prompt.includes("typed in the composer"), "A typed message did not answer");
 
   await win.locator('[data-goal-reply-level="consent"]').waitFor({ timeout: 20_000 });
@@ -314,7 +357,7 @@ try {
 
   // --- Goal state: three turns without progress stop it, with the reason shown.
   await banner.getByRole("button", { name: /^(同意|Agree)$/ }).click();
-  const agreed = await waitForTurns(7);
+  const agreed = await waitForTurns(turns + 4);
   assert(/同意|Agree/.test(agreed.prompt), "The consent answer did not reach the runtime");
   const blocked = () => win.locator('[data-goal-state="paused"][data-goal-pause="no_progress"]');
   await blocked().waitFor({ timeout: 60_000 });
@@ -345,7 +388,7 @@ try {
   await screenshot("08-goal-stopped-after-restart.png");
 
   // A message resumes a Goal that a limit stopped; the bar shows it running.
-  let turns = (await cli.invocations()).length;
+  turns = (await cli.invocations()).length;
   await selectModel();
   await cli.script([
     {
@@ -403,7 +446,8 @@ try {
   await win.getByRole("button", { name: /完全访问权限|Full access/ }).click();
   await win.getByRole("option", { name: /默认权限|Default/ }).click();
   await send("Hand the commit to a Codex worker");
-  const approveOnce = win.getByRole("button", { name: /^(仅本次批准|Approve once)$/ });
+  // The window was replaced by the restart above.
+  approveOnce = win.getByRole("button", { name: /^(仅本次批准|Approve once)$/ });
   await approveOnce.first().click();
   const launched = await waitForTurns(turns + 1, { approve: false });
   assert(!/"isError":true/.test(launched.tools[0].body), "DriveAgent did not launch the worker");
@@ -444,6 +488,20 @@ try {
   assert(
     !worker.includes("approval=accept") && (await approveOnce.count()) === 0,
     `A cancelled worker left its approval behind (${worker.join(", ")})`,
+  );
+  // The worker's inline row in the parent session follows it to the end state.
+  const row = win.locator("[data-drive-agent-progress]");
+  await row
+    .first()
+    .waitFor({ timeout: 10_000 })
+    .catch(() => undefined);
+  const rowDeadline = Date.now() + 10_000;
+  const rowStatus = () => row.first().getAttribute("data-drive-agent-progress");
+  while ((await rowStatus()) !== "cancelled" && Date.now() < rowDeadline)
+    await new Promise((done) => setTimeout(done, 200));
+  assert(
+    (await rowStatus()) === "cancelled" && /已取消|Cancelled/i.test(await row.first().innerText()),
+    `The parent session's worker row still reads ${await row.first().innerText()}`,
   );
   await screenshot("12-worker-cancelled-approval-gone.png");
   console.log(

@@ -21,6 +21,23 @@ breaking.
   files written by shell commands as changed, for Claude Code and Codex, by
   comparing the git work tree before and after the run. Ignored files are left
   out and at most 100 files are listed.
+- Approval cards in a Codex or Claude Code session offer only the scopes that
+  session honors: "this project" is no longer shown, and computer-use calls,
+  Codex patches, network access and permission requests are approved one at a
+  time.
+
+### Fixed
+
+- "Allow for this session" is honored in Codex and Claude Code sessions. For a
+  CodeShell tool (`browser_act`, DriveAgent worker requests, …) and for Claude
+  Code's own tools the grant is remembered with the same rule as a native
+  session (a shell command by its head command, other tools by name) until the
+  session's runtime ends; a Codex command is accepted for Codex's own session.
+  The choice used to be answered once and asked again on the next call.
+- The inline row of a background DriveAgent worker in the parent session
+  follows the worker to its end state as soon as it is stopped or ends, instead
+  of reading "running" until the next poll, and says when the worker was
+  blocked by permissions or finished with refused operations.
 
 ## [0.11.0-rc.5] - 2026-11-20
 
