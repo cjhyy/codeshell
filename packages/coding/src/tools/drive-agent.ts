@@ -1415,7 +1415,7 @@ export function makeDriveAgentTool(
         permissionNote,
         ...(externalRuntime
           ? [
-              "除非用户明确要求并行工作，否则不要在本地重复执行已委派的任务；请结束当前回复，等待完成通知触发续接。",
+              "不要在本地重复执行已委派的任务。还有不依赖它的其他工作就继续做；没有的话再结束当前回复，等待完成通知触发续接。",
             ]
           : []),
         worktreeStartNote(managedWorktree),
