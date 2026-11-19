@@ -4515,7 +4515,8 @@ describe("ExternalRuntimeService", () => {
       { external_agent_runtime: true, external_host_tools: true },
       async (_sessionId, approvalRequest) => {
         seen.push(approvalRequest);
-        return { approved: true };
+        // The user picks "allow for this session" on every card.
+        return { approved: true, always: true, scope: "session" as const };
       },
     );
     await svc.start(request);
@@ -4525,6 +4526,10 @@ describe("ExternalRuntimeService", () => {
         params: unknown;
         fileChanges?: Array<{ path: string; kind: string }>;
       }): Promise<string>;
+      onClaudePermissionPrompt(prompt: {
+        toolName: string;
+        input: Record<string, unknown>;
+      }): Promise<{ approved: boolean; forSession?: boolean }>;
     };
     const params = { threadId: "t", turnId: "u", itemId: "fc1", startedAtMs: 1 };
     await expect(
@@ -4541,8 +4546,31 @@ describe("ExternalRuntimeService", () => {
         params,
         description: "Codex 想修改文件",
         args: { files: ["update /repo/a.ts"] },
+        // A patch is approved one at a time: the card offers no session scope,
+        // and a session answer is still only this patch.
+        onceOnly: true,
       },
     ]);
+    // A plain command is the one thing Codex remembers for its own session.
+    await expect(
+      hooks.onNativeApproval({
+        method: "item/commandExecution/requestApproval",
+        params: { ...params, command: "npm test" },
+      }),
+    ).resolves.toBe("acceptForSession");
+    expect(seen[1]).not.toHaveProperty("onceOnly");
+    // Claude Code's own tool: the grant is handed to the session's memory;
+    // a computer-use call never is.
+    expect(await hooks.onClaudePermissionPrompt({ toolName: "Bash", input: {} })).toEqual({
+      approved: true,
+      forSession: true,
+    });
+    expect(
+      await hooks.onClaudePermissionPrompt({
+        toolName: "mcp__codeshell_computer__click",
+        input: {},
+      }),
+    ).toEqual({ approved: true, forSession: false });
     await svc.stopAll();
   });
 

@@ -16,7 +16,12 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { approveOptionsFor, type ApproveChoice, type ApprovePathScope } from "./approvalDecision";
+import {
+  approveOptionsFor,
+  offeredApproveOptions,
+  type ApproveChoice,
+  type ApprovePathScope,
+} from "./approvalDecision";
 import { useT, type TFunction } from "../i18n/I18nProvider";
 import { translate } from "../i18n/translate";
 import { loadUILanguage } from "../uiLanguage";
@@ -99,14 +104,16 @@ function ApprovalCardBody({ envelope, onDecide, allowScopes = true }: Props) {
     typeof (request.args as Record<string, unknown>)?.file_path === "string"
       ? ((request.args as Record<string, unknown>).file_path as string)
       : undefined;
-  const options = approveOptionsFor(request.toolName, filePath);
+  const options = offeredApproveOptions(
+    approveOptionsFor(request.toolName, filePath),
+    envelope,
+    allowScopes,
+  );
   // Promote the first "session" grant to its own visible button (the common
   // "stop asking me this session" case); everything else (项目, path-scoped
   // file/dir grants) folds into the 更多范围 ▾ menu. "once" is its own button.
-  const sessionOption = allowScopes ? options.find((o) => o.scope === "session") : undefined;
-  const moreOptions = allowScopes
-    ? options.filter((o) => o.scope !== "once" && o !== sessionOption)
-    : [];
+  const sessionOption = options.find((o) => o.scope === "session");
+  const moreOptions = options.filter((o) => o.scope !== "once" && o !== sessionOption);
 
   const submit = async (
     kind: "approve" | "deny",
