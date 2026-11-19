@@ -487,6 +487,7 @@ import { registerWorkspaceFilesIpc } from "./workspace-files-ipc.js";
 import { registerMemoryIpc } from "./memory-ipc.js";
 import { registerAutomationIpc } from "./automation-ipc.js";
 import { registerTrustNotificationIpc } from "./trust-notification-ipc.js";
+import { accountRelayRecoveryPage } from "@cjhyy/code-shell-web/account-relay-bootstrap";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const appRendererNavigation = new AppRendererNavigation(
@@ -985,6 +986,7 @@ const mobileUploads = new MobileUploadService({
   rootDir: resolve(app.getPath("userData"), "mobile-remote", "uploads"),
 });
 const mobileRemote = new RemoteHostManager({
+  accountRelayRecoveryPage,
   nativeModelSelection: true,
   ccRoomModelSelection: true,
   outputJournal: true,

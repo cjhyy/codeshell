@@ -414,6 +414,9 @@ test("Desktop login binds automatically after network recovery but requires sepa
   let enrollments = 0;
   let starts = 0;
   let configured: any;
+  let connectorOptions: any;
+  let connectorStarts = 0;
+  let connectorCloses = 0;
   let capabilityRequests = 0;
   const account: any = {
     status: () => ({
@@ -477,6 +480,18 @@ test("Desktop login binds automatically after network recovery but requires sepa
     account,
     accountRequest: async (input) => {
       expect(input.origin).toBe(identity.origin);
+      if (input.path === "/api/v1/account/refresh")
+        return {
+          kind: "device",
+          hostId: saved!.hostId,
+          audience: identity.origin,
+          account: { id: identity.accountId, username: "alice" },
+          sessionId: randomUUID(),
+          accessToken: token(),
+          refreshToken: token(),
+          accessTokenExpiresAt: Date.now() + 600_000,
+          refreshTokenExpiresAt: Date.now() + 86400_000,
+        };
       expect(input.path).toBe("/api/v1/remote-hosts/ensure");
       enrollments++;
       return {
@@ -492,14 +507,18 @@ test("Desktop login binds automatically after network recovery but requires sepa
         remoteAccessEnabled: true, // An enrollment response cannot grant local consent.
       };
     },
-    connectorFactory: (options) =>
-      ({
+    connectorFactory: (options) => {
+      connectorOptions = options;
+      return {
         start: () => {
+          connectorStarts++;
           options.onState?.("ready");
         },
-        close: async () => {},
-        state: () => "ready",
-      }) as any,
+        close: async () => {
+          connectorCloses++;
+        },
+      };
+    },
     listProjects: async () => [
       { id: "actual-project", name: "My project", path: "/target/project" },
     ],
@@ -537,16 +556,48 @@ test("Desktop login binds automatically after network recovery but requires sepa
     expect(await configured.listProjects()).toEqual([
       { id: "actual-project", name: "My project", path: "/target/project" },
     ]);
+    const provider = configured;
+    const capabilityCount = capabilityRequests;
+    const oldCredential = saved!.credential;
+    saved!.credentialExpiresAt = Date.now();
+    expect(await connectorOptions.getCredential(new AbortController().signal)).not.toBe(
+      oldCredential,
+    );
+    for (const state of ["disconnected", "connecting", "ready"] as const) {
+      connectorOptions.onState(state);
+      // Account resume is invoked by window focus and the 30s lifecycle retry.
+      await Promise.all([
+        controller.activateAccountRelay(identity, () => true),
+        controller.activateAccountRelay(identity, () => true),
+      ]);
+      expect(controller.relayStatus().state).toBe(state);
+      expect(starts).toBe(1);
+      expect(connectorStarts).toBe(1);
+      expect(connectorCloses).toBe(0);
+      expect(configured).toBe(provider);
+      expect(capabilityRequests).toBe(capabilityCount);
+    }
+    // A stale connector reference alone cannot preserve a stopped Host's
+    // authority. Real Host shutdown revokes its target before this recovery.
+    active = undefined;
+    await controller.activateAccountRelay(identity, () => true);
+    expect(starts).toBe(2);
+    expect(connectorStarts).toBe(2);
+    expect(connectorCloses).toBeGreaterThan(0);
+    expect(configured).not.toBe(provider);
     await controller.stop();
     await controller.activateAccountRelay(identity, () => true);
     expect(enrollments).toBe(1);
-    expect(starts).toBe(1);
+    expect(starts).toBe(2);
     expect(controller.relayStatus()).toMatchObject({
       state: "stopped",
       remoteAccessEnabled: false,
     });
     await controller.start({ mode: "relay" });
-    expect(starts).toBe(2);
+    expect(starts).toBe(3);
+    expect(connectorStarts).toBe(3);
+    expect(connectorCloses).toBeGreaterThan(0);
+    expect(configured).not.toBe(provider);
     expect([saved!.hostId, saved!.environmentId, saved!.credentialEpoch]).toEqual(binding);
     const publicState = JSON.stringify(controller.relayStatus());
     expect(publicState).not.toContain(saved!.credential);

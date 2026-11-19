@@ -131,6 +131,7 @@ export interface RemoteApp {
   accessRequired?: boolean;
   accountAccessRequired?: boolean;
   accountEntryUrl?: string;
+  logoutError?: string;
   deviceName: string;
   chat: ChatState;
   sessions: MobileSessionMeta[];
@@ -3371,6 +3372,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     accessRequired: socket.accessRequired,
     accountAccessRequired: socket.accountAccessRequired,
     accountEntryUrl: socket.accountEntryUrl,
+    logoutError: socket.logoutError,
     deviceName: socket.deviceName,
     chat,
     sessions,

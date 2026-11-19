@@ -19,6 +19,10 @@
       "types": "./dist/account/profile.d.ts",
       "import": "./dist/account/profile.js"
     },
+    "./account-relay-bootstrap": {
+      "types": "./dist/lib/accountRelayBootstrap.d.ts",
+      "import": "./dist/lib/accountRelayBootstrap.js"
+    },
     "./transcript-replay": {
       "types": "./dist/lib/transcriptReplay.d.ts",
       "import": "./dist/lib/transcriptReplay.js"

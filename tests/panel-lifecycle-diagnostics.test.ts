@@ -14,6 +14,74 @@ const id = "design-studio";
 const secret = "private-password-cookie-grant-url-body-argv-never-print";
 const digest = (value) => createHash("sha256").update(value).digest("hex");
 
+test("catalog-follow, rollback and recovery failures retain their fixed diagnostic step", () => {
+  for (const step of [
+    "catalog-follow",
+    "catalog-stale-grant",
+    "catalog-page",
+    "catalog-storage",
+    "rollback-before-selection",
+    "rollback-stale-grant",
+    "design-open-panel",
+    "design-ready",
+    "design-export",
+    "design-import-review",
+    "design-open-copy",
+    "design-save",
+    "design-import-conflict",
+    "design-import-copy",
+    "video-open-panel",
+    "video-ready",
+    "video-page-errors",
+    "video-edit",
+    "video-upgrade-backup",
+    "video-restore",
+    "video-restore-edit",
+    "video-status-probe",
+    "video-recording",
+    "video-record-mode",
+    "video-record-capture",
+    "video-record-review",
+    "video-record-backup",
+    "video-record-upload",
+    "video-record-resource",
+    "video-record-reopen",
+    "video-record-attach",
+    "video-record-deduplicate",
+    "video-record-playback",
+    "video-media",
+    "video-final-document",
+    "video-restart-document",
+    "video-restart-tasks",
+    "video-restart-resources",
+    "video-restart-playback",
+    "video-restart-backup",
+  ]) {
+    const original = new Error(secret);
+    const failure = panelLifecycleFailure(original, id, step);
+    const summary = summarizeFailure(failure);
+    expect(failure.cause).toBe(original);
+    expect(summary.sha256).toBe(digest(secret));
+    expect(summary.panelLifecycle).toEqual({
+      source: "candidate-panel-lifecycle",
+      panelId: id,
+      step,
+    });
+    expect(JSON.stringify(summary)).not.toContain(secret);
+  }
+});
+
+test("recording guard failures expose a fixed category, step and fingerprint only", () => {
+  const message = `Docker candidate native argv refused ${secret}`;
+  const summary = summarizeFailure(
+    panelLifecycleFailure(new Error(message), "video-studio", "video-record-attach"),
+  );
+  expect(summary.categories).toEqual(["native-argv-refusal"]);
+  expect(summary.panelLifecycle.step).toBe("video-record-attach");
+  expect(summary.sha256).toBe(digest(message));
+  expect(JSON.stringify(summary)).not.toContain(secret);
+});
+
 test("nested Panel steps retain the original cause and fingerprint without its private text", () => {
   const original = new Error(secret);
   const ui = panelVersionUiFailure(original, id, "review-second");
