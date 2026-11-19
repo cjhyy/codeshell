@@ -158,6 +158,53 @@ export interface GoalProgress {
  */
 export type GoalWaitKind = "background" | "user";
 
+/**
+ * The question a `user` wait is parked on, as the host that parked it asked
+ * it. Display data kept for a restart (the reply banner, the owner's notice);
+ * core stores it and never reads it. `detail` is the question's structure
+ * (`goal_progress.waitingForUserDetail`), validated by whoever reads it back.
+ */
+export interface GoalWaitQuestion {
+  text: string;
+  detail?: Record<string, unknown>;
+}
+
+/** What a writer may record with a `user` wait; each key is optional. */
+export interface GoalWaitDetail {
+  /** The run that asked. */
+  runId?: string;
+  question?: GoalWaitQuestion;
+}
+
+const MAX_GOAL_RUN_ID_CHARS = 256;
+const MAX_GOAL_QUESTION_CHARS = 64 * 1024;
+
+function decodeGoalRunId(value: unknown): string | undefined {
+  return typeof value === "string" && value.length > 0 && value.length <= MAX_GOAL_RUN_ID_CHARS
+    ? value
+    : undefined;
+}
+
+function decodeGoalWaitQuestion(value: unknown): GoalWaitQuestion | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const { text, detail } = value as Record<string, unknown>;
+  if (typeof text !== "string" || !text.trim() || text.length > MAX_GOAL_QUESTION_CHARS)
+    return undefined;
+  return {
+    text,
+    ...(detail && typeof detail === "object" && !Array.isArray(detail)
+      ? { detail: detail as Record<string, unknown> }
+      : {}),
+  };
+}
+
+/** `runId` / `question` of a wait, dropped to what is well-formed (never rejects the goal). */
+function decodeGoalWaitDetail(value: { runId?: unknown; question?: unknown }): GoalWaitDetail {
+  const runId = decodeGoalRunId(value.runId);
+  const question = decodeGoalWaitQuestion(value.question);
+  return { ...(runId ? { runId } : {}), ...(question ? { question } : {}) };
+}
+
 interface GoalLifecycleBaseV1 {
   version: 1;
   goalId: string;
@@ -176,12 +223,20 @@ export type GoalLifecycleV1 =
        * pauses whose writer gave no reason; older decoders ignore it.
        */
       pauseReason?: GoalPauseReason;
+      /**
+       * The run the pause ended, when its writer named one. Optional like
+       * `pauseReason`; an edit of the paused goal drops it.
+       */
+      runId?: string;
     })
   | (GoalLifecycleBaseV1 & {
       phase: "waiting";
       waitingSinceMs: number;
       waitingFor: "finite_background_work";
       waitKind?: GoalWaitKind;
+      /** `user` waits only, when the writer recorded them (see `GoalWaitDetail`). */
+      runId?: string;
+      question?: GoalWaitQuestion;
     })
   | (GoalLifecycleBaseV1 & {
       phase: "terminal";
@@ -349,8 +404,15 @@ export function decodeGoalLifecycle(value: unknown): GoalLifecycleV1 | undefined
   if (phase === "active" || phase === "paused") {
     if (hasWaitingFields || hasTerminalField) return undefined;
     // Lenient like progress: an unknown reason drops the reason, never the goal.
-    if (phase === "paused" && isGoalPauseReason(candidate.pauseReason))
-      return { ...base, phase, pauseReason: candidate.pauseReason };
+    if (phase === "paused") {
+      const runId = decodeGoalRunId(candidate.runId);
+      return {
+        ...base,
+        phase,
+        ...(isGoalPauseReason(candidate.pauseReason) ? { pauseReason: candidate.pauseReason } : {}),
+        ...(runId ? { runId } : {}),
+      };
+    }
     return { ...base, phase };
   }
   if (phase === "waiting") {
@@ -373,6 +435,8 @@ export function decodeGoalLifecycle(value: unknown): GoalLifecycleV1 | undefined
       waitingFor: "finite_background_work",
       waitingSinceMs: candidate.waitingSinceMs,
       ...(waitKind ? { waitKind } : {}),
+      // Lenient like progress: a malformed question drops the question, never the goal.
+      ...(waitKind === "user" ? decodeGoalWaitDetail(candidate) : {}),
     };
   }
   if (phase === "terminal") {
@@ -410,6 +474,7 @@ export function waitGoalLifecycle(
   lifecycle: GoalLifecycleV1,
   nowMs = Date.now(),
   waitKind: GoalWaitKind = "background",
+  detail?: GoalWaitDetail,
 ): GoalLifecycleV1 | undefined {
   if (lifecycle.phase !== "active") return undefined;
   return {
@@ -419,7 +484,30 @@ export function waitGoalLifecycle(
     waitingSinceMs: nowMs,
     waitingFor: "finite_background_work",
     waitKind,
+    ...(waitKind === "user" && detail ? decodeGoalWaitDetail(detail) : {}),
   };
+}
+
+/**
+ * Replace what an open `user` wait records (its asking run and question)
+ * without restarting the wait; an empty `detail` clears both.
+ */
+export function withGoalWaitDetail(
+  lifecycle: GoalLifecycleV1,
+  detail: GoalWaitDetail,
+): GoalLifecycleV1 {
+  if (lifecycle.phase !== "waiting" || lifecycle.waitKind !== "user") return lifecycle;
+  const { runId: _runId, question: _question, ...rest } = lifecycle;
+  return { ...rest, ...decodeGoalWaitDetail(detail) };
+}
+
+/** Name the run a pause ended on its paused record; other phases are returned as they are. */
+export function withGoalPauseRun(
+  lifecycle: GoalLifecycleV1,
+  runId: string | undefined,
+): GoalLifecycleV1 {
+  const decoded = decodeGoalRunId(runId);
+  return lifecycle.phase === "paused" && decoded ? { ...lifecycle, runId: decoded } : lifecycle;
 }
 
 export function armGoalLifecycle(
@@ -433,6 +521,8 @@ export function armGoalLifecycle(
     waitingSinceMs: _waitingSinceMs,
     waitingFor: _waitingFor,
     waitKind: _waitKind,
+    runId: _runId,
+    question: _question,
     progress: _progress,
     ...base
   } = lifecycle;
