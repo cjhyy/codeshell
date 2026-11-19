@@ -136,6 +136,9 @@ function main(): number {
         // and its concurrent/restart states in the same coverage harness.
         "packages/core/src/links/verified-write.test.ts",
         "packages/core/src/operations",
+        // Bash permission classification loads the read-redirect classifier;
+        // measure it with its own approval-level tests.
+        "packages/core/src/tool-system/permission-bash-redirects.test.ts",
         "--coverage",
         "--coverage-reporter=text",
         "--coverage-reporter=lcov",
