@@ -8,6 +8,17 @@ breaking.
 
 ## [Unreleased]
 
+### Changed
+
+- A DriveAgent Codex worker counts the commands that ended failed, and the
+  task view shows the count. When Codex reports that the worker's sandbox has
+  no network access and at least one command failed, the result says so in one
+  sentence ("N command(s) failed; this sandbox has no network access."). It
+  states the two facts only: Codex gives a failed command no cause, so the
+  result does not say the sandbox caused the failure and the run still counts
+  as completed. Checked against `codex-cli 0.162.0`, where no sandbox or
+  network setting turns a cut-off network call into an approval request.
+
 ## [0.11.0-rc.6] - 2026-11-20
 
 Second follow-up for Codex and Claude Code sessions run from the desktop. The
