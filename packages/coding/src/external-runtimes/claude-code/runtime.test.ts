@@ -399,3 +399,162 @@ describe("ClaudeCodeRuntime user message (stream-json input)", () => {
     });
   });
 });
+
+// `claude -p --resume` first runs a queued task-notification (a background
+// shell that died with the previous process) to its own `result`, and only
+// then the message from stdin. It also stays alive after a `result` while a
+// background shell is still running.
+describe("ClaudeCodeRuntime: a result is terminal only when the process ends", () => {
+  const SEND = `const send = (value) => process.stdout.write(JSON.stringify(value) + "\\n");
+const delta = (text) => send({ type: "stream_event", event: { type: "content_block_delta", delta: { type: "text_delta", text } } });
+`;
+
+  test("the reply to the submitted message survives an earlier result for a queued notification", async () => {
+    const fake = fakeClaude(`${SEND}
+send({ type: "system", subtype: "init", session_id: "resumed" });
+send({ type: "result", subtype: "success", is_error: false, usage: { input_tokens: 0, output_tokens: 0 } });
+send({ type: "stream_event", event: { type: "message_start", message: {} } });
+delta("real answer");
+send({ type: "result", subtype: "success", is_error: false, usage: { input_tokens: 7, output_tokens: 3 } });
+`);
+    const events: StreamEvent[] = [];
+    const turn = await runtime(fake.command).send({ text: "do the thing" }, (event) =>
+      events.push(event),
+    );
+    await turn.done;
+    const types = events.map((event) => event.type);
+    expect(types.filter((type) => type === "turn_complete")).toHaveLength(1);
+    expect(types.at(-1)).toBe("turn_complete");
+    expect(events).toContainEqual({ type: "text_delta", text: "real answer" });
+    // Only the last result's usage is reported: the empty first one is not a turn.
+    const usage = events.filter((event) => event.type === "usage_update");
+    expect(usage).toHaveLength(1);
+    expect(usage[0]).toMatchObject({ singleTurnPromptTokens: 7, completionTokens: 3 });
+  });
+
+  test("the turn stays open while the process lingers after a result, and later output is delivered", async () => {
+    const fake = fakeClaude(`${SEND}
+import { existsSync } from "node:fs";
+send({ type: "system", subtype: "init", session_id: "lingering" });
+delta("first");
+send({ type: "result", subtype: "success", is_error: false });
+const timer = setInterval(() => {
+  if (!existsSync(MARKER)) return;
+  clearInterval(timer);
+  send({ type: "stream_event", event: { type: "message_start", message: {} } });
+  delta("after background work");
+  send({ type: "result", subtype: "success", is_error: false });
+}, 10);
+`);
+    const events: StreamEvent[] = [];
+    const turn = await runtime(fake.command).send({ text: "start" }, (event) => events.push(event));
+    await waitForPid(fake.pidFile);
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(events.some((event) => event.type === "turn_complete")).toBe(false);
+    writeFileSync(fake.marker, "background finished");
+    await turn.done;
+    expect(events).toContainEqual({ type: "text_delta", text: "after background work" });
+    expect(events.filter((event) => event.type === "turn_complete")).toEqual([
+      { type: "turn_complete", reason: "completed" },
+    ]);
+  });
+
+  test("releaseIdle ends a process that only lingers after its result, as a completed turn", async () => {
+    const fake = fakeClaude(`${SEND}
+send({ type: "system", subtype: "init", session_id: "idle" });
+delta("reply");
+send({ type: "result", subtype: "success", is_error: false });
+setInterval(() => {}, 1_000);
+`);
+    const events: StreamEvent[] = [];
+    const claude = runtime(fake.command, { idleGraceMs: 30 });
+    const turn = await claude.send({ text: "start" }, (event) => events.push(event));
+    const pid = await waitForPid(fake.pidFile);
+    const deadline = Date.now() + 5_000;
+    while (!(await claude.releaseIdle())) {
+      if (Date.now() > deadline) throw new Error("never became idle");
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    await turn.done;
+    expect(alive(pid)).toBe(false);
+    expect(events.at(-1)).toEqual({ type: "turn_complete", reason: "completed" });
+  });
+
+  test("releaseIdle leaves a working turn alone; a sticky request ends it once it goes idle", async () => {
+    const fake = fakeClaude(`${SEND}
+import { existsSync } from "node:fs";
+send({ type: "system", subtype: "init", session_id: "busy" });
+const timer = setInterval(() => {
+  if (!existsSync(MARKER)) return;
+  clearInterval(timer);
+  delta("done working");
+  send({ type: "result", subtype: "success", is_error: false });
+}, 10);
+setInterval(() => {}, 1_000);
+`);
+    const events: StreamEvent[] = [];
+    const claude = runtime(fake.command, { idleGraceMs: 30 });
+    const turn = await claude.send({ text: "start" }, (event) => events.push(event));
+    const pid = await waitForPid(fake.pidFile);
+    expect(await claude.releaseIdle()).toBe(false);
+    expect(alive(pid)).toBe(true);
+    expect(await claude.releaseIdle(true)).toBe(false);
+    writeFileSync(fake.marker, "finish");
+    await turn.done;
+    expect(events).toContainEqual({ type: "text_delta", text: "done working" });
+    expect(events.at(-1)).toEqual({ type: "turn_complete", reason: "completed" });
+    expect(alive(pid)).toBe(false);
+  });
+
+  test("a result with no work before it never makes the process idle: the submitted message is still queued", async () => {
+    // The resumed CLI answers a queued notification first, without a model
+    // call, and only then starts on the message. A queued follow-up must not
+    // end the process in between.
+    const fake = fakeClaude(`${SEND}
+send({ type: "system", subtype: "init", session_id: "stale-first" });
+send({ type: "result", subtype: "success", is_error: false, usage: { input_tokens: 0, output_tokens: 0 } });
+setTimeout(() => {
+  send({ type: "stream_event", event: { type: "message_start", message: {} } });
+  delta("the real reply");
+  send({ type: "result", subtype: "success", is_error: false });
+}, 250);
+setInterval(() => {}, 1_000);
+`);
+    const events: StreamEvent[] = [];
+    const claude = runtime(fake.command, { idleGraceMs: 30 });
+    const turn = await claude.send({ text: "the submitted message" }, (event) =>
+      events.push(event),
+    );
+    const pid = await waitForPid(fake.pidFile);
+    expect(await claude.releaseIdle(true)).toBe(false);
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    // Well past the grace period after the first result, and still running.
+    expect(alive(pid)).toBe(true);
+    expect(await claude.releaseIdle()).toBe(false);
+    await turn.done;
+    expect(events).toContainEqual({ type: "text_delta", text: "the real reply" });
+    expect(events.filter((event) => event.type === "turn_complete")).toHaveLength(1);
+    expect(alive(pid)).toBe(false);
+  });
+
+  test("silence after a result is not idleness until the grace period has passed", async () => {
+    const fake = fakeClaude(`${SEND}
+send({ type: "system", subtype: "init", session_id: "grace" });
+delta("first reply");
+send({ type: "result", subtype: "success", is_error: false });
+setTimeout(() => {
+  send({ type: "stream_event", event: { type: "message_start", message: {} } });
+  delta("second reply");
+  send({ type: "result", subtype: "success", is_error: false });
+  process.exit(0);
+}, 200);
+`);
+    const events: StreamEvent[] = [];
+    const claude = runtime(fake.command, { idleGraceMs: 5_000 });
+    const turn = await claude.send({ text: "start" }, (event) => events.push(event));
+    await waitForPid(fake.pidFile);
+    expect(await claude.releaseIdle(true)).toBe(false);
+    await turn.done;
+    expect(events).toContainEqual({ type: "text_delta", text: "second reply" });
+  });
+});
