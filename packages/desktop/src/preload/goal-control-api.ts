@@ -75,6 +75,14 @@ export interface GoalControlApi {
     goal: string | null;
     goalId?: string;
     paused?: boolean;
+    /** Why it is paused, as persisted; `user` is the user's own pause. Absent for older pauses. */
+    pauseReason?:
+      | "time_budget"
+      | "token_budget"
+      | "turn_limit"
+      | "no_progress"
+      | "user_stop"
+      | "user";
     revision?: number;
     /** When the objective was set (epoch ms). */
     setAtMs?: number;
