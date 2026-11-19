@@ -195,7 +195,16 @@ try {
     assert.equal(await group.locator(".message-tool-card").count(), 4);
     assert.deepEqual(reads, [], "expanding the activity list fetches no bodies");
     const tool = (index) => group.locator(".message-tool-card").nth(index);
-    await tool(0).locator("summary").tap();
+    // The first tap follows the activity list expanding; on slow runners it
+    // can land while the list is still settling and leave the card closed.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (await tool(0).evaluate((node) => node.open)) break;
+      await tool(0).locator("summary").tap();
+      await tool(0)
+        .locator("xpath=self::details[@open]")
+        .waitFor({ timeout: 1500 })
+        .catch(() => {});
+    }
     await tool(0).getByText("RESULT_first/tool-0", { exact: false }).waitFor();
     assert.deepEqual(reads, ["first/tool-0"]);
     assert.equal(await tool(0).getByRole("button", { name: "复制结果" }).count(), 1);
