@@ -165,6 +165,11 @@ function browserFailure(
   }
 }
 
+const BLANK_SCREENSHOT_HINT =
+  "\nThe screenshot is blank or nearly blank: the page may not have rendered yet. Use " +
+  "browser_act(wait), with a selector or text you expect, then observe again before " +
+  "concluding the page is empty or giving up.";
+
 /** A single read-only fallback, never a replay of the preceding interaction. */
 async function observationFailure(
   result: { code?: BrowserResultCode; detail?: string },
@@ -309,7 +314,10 @@ export async function browserObserveTool(
       const d = await b.screenshot(ref);
       const block = toImageBlock(d);
       if (!block) return `Error: ${d.detail ?? "screenshot failed"}`;
-      return { contentBlocks: [block], result: `[screenshot loaded${ref ? ` of ${ref}` : ""}]` };
+      return {
+        contentBlocks: [block],
+        result: `[screenshot loaded${ref ? ` of ${ref}` : ""}]${d.blank ? BLANK_SCREENSHOT_HINT : ""}`,
+      };
     }
     default:
       return `Error: unknown observe mode "${mode}" (use snapshot | read | extract | image | vision)`;
@@ -567,7 +575,8 @@ export const browserNavigateToolDef: ToolDefinition = {
     "Starts in the background; browser_act(request_takeover) reveals this same tab when the user " +
     "wants to see it or needs to sign in. After the user finishes, call " +
     "browser_act(resume_control), then browser_observe to inspect the page. " +
-    "Wait for a specific target only if it is still loading.",
+    "Waits a bounded time for the page to load and reports whether it finished; when it is " +
+    "still loading, wait for a specific target before reading it.",
   inputSchema: {
     type: "object",
     properties: { url: { type: "string", description: "Absolute URL to open" } },
@@ -584,7 +593,19 @@ export async function browserNavigateTool(
   const url = args.url as string;
   if (!url) return "Error: url is required";
   const r = await b.navigate(url);
-  return r.ok ? `Navigated to ${url}` : `Error: ${r.detail ?? "navigation failed"}`;
+  if (!r.ok) return `Error: ${r.detail ?? "navigation failed"}`;
+  switch (r.loadState) {
+    case "complete":
+      return `Navigated to ${url} — page loaded. Content rendered by scripts may still be arriving.`;
+    case "loading":
+      return (
+        `Navigated to ${url} — the page is still loading; the bounded load wait ran out. ` +
+        "Use browser_act(wait), with a selector or text you expect, before reading the page; " +
+        "a blank observation now does not mean the page is empty."
+      );
+    default:
+      return `Navigated to ${url}`;
+  }
 }
 
 /** True when the session has a browser bridge wired (used to gate visibility). */
