@@ -39,6 +39,38 @@ import type { ChangedFiles } from "./pet-notice-action-codes.js";
 
 export type SessionBlockReason = "user" | "limit" | "goal_exhausted";
 
+/** Which limit paused a Goal, from `goal_progress.pauseReason` (never from its text). */
+export type SessionPauseLimit = "time_budget" | "token_budget" | "turn_limit" | "no_progress";
+const PAUSE_LIMITS: readonly string[] = [
+  "time_budget",
+  "token_budget",
+  "turn_limit",
+  "no_progress",
+];
+
+/** One answer the asker offered for its question. */
+export interface SessionQuestionOption {
+  label: string;
+  recommended?: boolean;
+}
+
+const MAX_QUESTION_OPTIONS = 6;
+const MAX_OPTION_LENGTH = 80;
+
+/** Options of a `wait_for_user` question; its stated default is the recommended one. */
+function questionOptions(detail: unknown): SessionQuestionOption[] | undefined {
+  if (!detail || typeof detail !== "object") return undefined;
+  const { options, default: fallback } = detail as { options?: unknown; default?: unknown };
+  if (!Array.isArray(options)) return undefined;
+  const labels = options
+    .map((option) => boundedText(option, MAX_OPTION_LENGTH))
+    .filter((label): label is string => label !== undefined)
+    .slice(0, MAX_QUESTION_OPTIONS);
+  return labels.length > 0
+    ? labels.map((label) => (label === fallback ? { label, recommended: true } : { label }))
+    : undefined;
+}
+
 interface SessionOutcomeBase {
   sessionId: string;
   /** The core run id. Absent when core gave none for this run. */
@@ -99,6 +131,10 @@ export type SessionOutcome = SessionOutcomeBase &
         kind: "blocked";
         reason: SessionBlockReason;
         question?: string;
+        /** The answers offered with `question`. */
+        options?: SessionQuestionOption[];
+        /** `limit`: which limit ran out, when the Goal said so. */
+        limit?: SessionPauseLimit;
         /** What is still missing (the Goal judge's gaps), or the run's last text. */
         summary?: string;
         goalId?: string;
@@ -166,6 +202,8 @@ interface TurnState {
    * read as done.
    */
   blocked?: Exclude<SessionBlockReason, "limit">;
+  /** The limit that paused the Goal this turn. */
+  limit?: SessionPauseLimit;
   /** The Goal was met or cleared this turn. */
   goal?: { state: "met" | "cleared"; goalId?: string };
   /** The latest assistant text of this turn (a reply when the run closes without one). */
@@ -466,6 +504,9 @@ export class SessionOutcomeDeriver {
     // Core carries the question itself in `waitingForUser`; accept a bare flag too.
     const question = boundedText(event.waitingForUser, MAX_FACT_LENGTH);
     const waiting = question !== undefined || event.waitingForUser === true;
+    if (PAUSE_LIMITS.includes(event.pauseReason as string))
+      state.limit = event.pauseReason as SessionPauseLimit;
+    const options = question ? questionOptions(event.waitingForUserDetail) : undefined;
     const exhausted = event.status === "exhausted";
     if (!waiting && !exhausted) return [];
     const reason = exhausted ? "goal_exhausted" : "user";
@@ -478,6 +519,7 @@ export class SessionOutcomeDeriver {
         kind: "blocked",
         reason,
         ...(question ? { question } : {}),
+        ...(options ? { options } : {}),
         ...(gaps ? { summary: gaps } : {}),
         ...(goalId ? { goalId } : {}),
         ...(typeof event.revision === "number" ? { revision: event.revision } : {}),
@@ -514,7 +556,14 @@ export class SessionOutcomeDeriver {
     const restated = state.blocked !== undefined ? { repeat: true as const } : {};
     const completionKind = event.completionKind;
     if (completionKind === "limit_stop" || reported?.blockedOn === "limit")
-      return { ...base, ...restated, kind: "blocked", reason: "limit", ...withSummary };
+      return {
+        ...base,
+        ...restated,
+        kind: "blocked",
+        reason: "limit",
+        ...(state.limit ? { limit: state.limit } : {}),
+        ...withSummary,
+      };
     if (completionKind === "goal_control_stop") {
       // Follows goal_progress(met) (complete_goal) or goal_cleared (cancel_goal,
       // or the owner clearing / pausing the Goal while it ran).

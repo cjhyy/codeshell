@@ -106,6 +106,11 @@ export class ClaudeEventTranslator {
     this.lastRequestUsage = undefined;
   }
 
+  /** Activity followed a `result` in the same process; the next one is terminal. */
+  reopenTurn(): void {
+    this.terminal = false;
+  }
+
   /** Claude session id, learned from the `system/init` line. */
   runtimeSessionId?: string;
 

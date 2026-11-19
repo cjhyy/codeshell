@@ -299,6 +299,7 @@ export function buildWrappedOnStream(args: {
         ...(event.gaps ? { gaps: event.gaps } : {}),
         ...(event.waitingForUser ? { waitingForUser: event.waitingForUser } : {}),
         ...(event.waitingForUserDetail ? { waitingForUserDetail: event.waitingForUserDetail } : {}),
+        ...(event.pauseReason ? { pauseReason: event.pauseReason } : {}),
         ...(event.waiting ? { waiting: event.waiting } : {}),
         ...(event.progress ? { progress: event.progress } : {}),
       });

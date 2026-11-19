@@ -152,6 +152,7 @@ export interface NoticeSubmission {
     | "session.done"
     | "session.failed"
     | "session.blocked"
+    | "session.paused"
     | "session.report"
     | "followup.due"
     | "digest"
@@ -538,7 +539,7 @@ export function staleReason(
   if (sessionId && requestId && pending && !pending(sessionId, requestId)) return "resolved";
   const goalCancelled = probes.isGoalRuleCancelled;
   if (
-    record.kind === "session.blocked" &&
+    (record.kind === "session.blocked" || record.kind === "session.paused") &&
     requestId === undefined &&
     goalCancelled &&
     record.ruleIds.some((id) => goalCancelled(id))

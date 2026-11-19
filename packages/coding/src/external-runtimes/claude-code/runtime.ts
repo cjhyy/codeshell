@@ -72,9 +72,21 @@ export interface ClaudeRuntimeOptions {
    * Defaults to {@link DEFAULT_INTERRUPT_GRACE_MS}.
    */
   interruptGraceMs?: number;
+  /**
+   * How long a process must stay silent after a `result` before it counts as
+   * only lingering. Defaults to {@link DEFAULT_IDLE_GRACE_MS}.
+   */
+  idleGraceMs?: number;
   log?: (event: string, data: Record<string, unknown>) => void;
 }
 
+/**
+ * Silence after a `result` before the process counts as only lingering. The
+ * CLI may still have the submitted message queued behind a `result` it emitted
+ * for something else, and starts on it without a line on stdout until the
+ * model's stream opens; ending the process in that gap would drop the message.
+ */
+export const DEFAULT_IDLE_GRACE_MS = 10_000;
 /** SIGTERM grace before escalating to SIGKILL. */
 export const DEFAULT_INTERRUPT_GRACE_MS = 3_000;
 /**
@@ -94,6 +106,26 @@ interface ActiveTurn {
   interrupted: boolean;
   failure?: Error;
   stopping?: Promise<void>;
+  /**
+   * Terminal events of the latest `result`, published when the process ends.
+   * A `result` does not end the process: the CLI first answers a queued
+   * task-notification with a `result` of its own before it reads the submitted
+   * message, and it stays alive after a `result` while a background shell
+   * runs, working again when that shell completes. Publishing the first
+   * `result` as the end of the turn dropped everything that followed.
+   */
+  held?: StreamEvent[];
+  /** When `held` arrived. */
+  heldAt?: number;
+  /**
+   * The model or a tool produced output in this process. A `result` with none
+   * before it answers a queued notification, never the submitted message, so
+   * the process is not lingering yet.
+   */
+  worked?: boolean;
+  /** End the process as soon as it only lingers after a `result`. */
+  releaseWhenIdle?: boolean;
+  idleTimer?: ReturnType<typeof setTimeout>;
 }
 
 function settlesWithin(promise: Promise<void>, ms: number): Promise<boolean> {
@@ -166,7 +198,8 @@ export class ClaudeCodeRuntime {
 
   /**
    * Run one turn. Resolves when the process exits, which is also when the turn is
-   * terminal — `claude -p` is one process per turn.
+   * terminal — `claude -p` is one process per turn, and may emit more than one
+   * `result` before it exits (see `ActiveTurn.held`).
    *
    * The prompt goes on **stdin**, not argv: `--mcp-config` is variadic, so a
    * positional prompt after it is swallowed as another config value (measured),
@@ -276,14 +309,28 @@ export class ClaudeCodeRuntime {
 
     child.stdout.setEncoding("utf8");
     const lines = createInterface({ input: child.stdout, crlfDelay: Infinity });
+    const publish = (event: StreamEvent): void => {
+      if (event.type === "turn_complete") terminalSeen = true;
+      this.emit(event.type === "stream_request_start" ? { ...event, turnNumber } : event, onEvent);
+    };
     lines.on("line", (line) => {
-      this.onLine(line, translator, (event) => {
-        if (event.type === "turn_complete") terminalSeen = true;
-        this.emit(
-          event.type === "stream_request_start" ? { ...event, turnNumber } : event,
-          onEvent,
-        );
-      });
+      const { type, events } = this.onLine(line, translator);
+      if (events.some((event) => event.type === "turn_complete")) {
+        active.held = events;
+        active.heldAt = Date.now();
+        if (active.releaseWhenIdle) this.releaseOnceIdle(active);
+        return;
+      }
+      const activity = type === "stream_event" || type === "assistant" || type === "user";
+      if (activity) active.worked = true;
+      // Model or tool activity after a `result`: that result was not the end.
+      if (active.held && activity) {
+        active.held = undefined;
+        clearTimeout(active.idleTimer);
+        translator.reopenTurn();
+        this.log("claude.result_superseded", {});
+      }
+      for (const event of events) publish(event);
     });
 
     child.stderr.setEncoding("utf8");
@@ -308,6 +355,9 @@ export class ClaudeCodeRuntime {
         // system-prompt file.
         cleanupTurnFiles();
         if (this.active === active) this.active = undefined;
+        clearTimeout(active.idleTimer);
+        for (const event of active.held ?? []) publish(event);
+        active.held = undefined;
         if (!terminalSeen) {
           if (active.interrupted) {
             // A stop the user asked for is not a model failure. Same terminal
@@ -347,16 +397,15 @@ export class ClaudeCodeRuntime {
   private onLine(
     line: string,
     translator: ClaudeEventTranslator,
-    emit: (event: StreamEvent) => void,
-  ): void {
-    if (!line.trim()) return;
+  ): { type?: unknown; events: StreamEvent[] } {
+    if (!line.trim()) return { events: [] };
     let parsed: unknown;
     try {
       parsed = JSON.parse(line);
     } catch {
       // The CLI may print non-JSON diagnostics; one bad line is not fatal.
       this.log("claude.unparsable_line", { bytes: line.length });
-      return;
+      return { events: [] };
     }
     // Capture identity before publishing terminal output so post-turn work sees
     // the model this process actually used, including aliases resolved by Claude.
@@ -378,7 +427,7 @@ export class ClaudeCodeRuntime {
         }
       }
     }
-    for (const event of translator.translate(parsed)) emit(event);
+    const events = translator.translate(parsed);
     if (!this.claudeSessionId && translator.runtimeSessionId) {
       this.claudeSessionId = translator.runtimeSessionId;
       this.log("claude.session_started", {
@@ -386,6 +435,49 @@ export class ClaudeCodeRuntime {
         runtimeSessionIdPrefix: this.claudeSessionId.slice(0, 8),
       });
     }
+    return { type: (parsed as { type?: unknown } | null)?.type, events };
+  }
+
+  /** Milliseconds until `active` counts as only lingering; undefined while it works. */
+  private idleIn(active: ActiveTurn): number | undefined {
+    if (!active.held || !active.worked) return undefined;
+    const grace = this.options.idleGraceMs ?? DEFAULT_IDLE_GRACE_MS;
+    return Math.max(0, (active.heldAt ?? 0) + grace - Date.now());
+  }
+
+  private releaseOnceIdle(active: ActiveTurn): void {
+    clearTimeout(active.idleTimer);
+    const wait = this.idleIn(active);
+    if (wait === undefined) return;
+    active.idleTimer = setTimeout(() => {
+      // Still the same silent result: nothing arrived since it was held.
+      if (this.active === active && this.idleIn(active) === 0)
+        active.stopping ??= this.terminate(active);
+    }, wait);
+    active.idleTimer.unref?.();
+  }
+
+  /**
+   * End a process that has delivered its `result` and only lingers for a
+   * background shell, so the next submission does not wait behind it. The turn
+   * settles as the completed turn it was. A working turn is left alone; with
+   * `sticky` it is ended as soon as it reaches that idle state. Background
+   * shells of the process end with it, and the CLI reports them as stopped on
+   * the next resume.
+   */
+  async releaseIdle(sticky = false): Promise<boolean> {
+    const active = this.active;
+    if (!active) return false;
+    if (this.idleIn(active) !== 0) {
+      if (sticky) {
+        active.releaseWhenIdle = true;
+        this.releaseOnceIdle(active);
+      }
+      return false;
+    }
+    active.stopping ??= this.terminate(active);
+    await active.stopping;
+    return true;
   }
 
   private emit(event: StreamEvent, onEvent?: (event: StreamEvent) => void): void {

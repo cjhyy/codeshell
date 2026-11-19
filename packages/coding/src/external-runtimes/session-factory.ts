@@ -167,6 +167,12 @@ export interface ExternalRuntimeSession {
     accepted?: true;
   }>;
   interrupt(): Promise<void>;
+  /**
+   * End a provider process that finished its reply and only lingers for its own
+   * background shell (Claude Code). True when one was ended. `sticky` ends the
+   * running turn's process as soon as it reaches that state.
+   */
+  releaseIdle?(sticky?: boolean): Promise<boolean>;
   /** Reverses the assembly order; safe to call more than once. */
   close(): Promise<void>;
 }
@@ -396,6 +402,9 @@ export async function startExternalRuntimeSession(
       }
     },
     interrupt: () => activeRuntime.interrupt(),
+    ...("releaseIdle" in activeRuntime
+      ? { releaseIdle: (sticky?: boolean) => activeRuntime.releaseIdle(sticky) }
+      : {}),
     close,
   };
 }

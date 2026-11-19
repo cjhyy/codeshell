@@ -414,7 +414,9 @@ describe("outcomes of external runs", () => {
     await svc.send(CODEX, { text: "做完整个迁移", goal: { objective: "迁移", maxTurns: 1 } });
     expectLimitBlocked(outcomes);
     await settle(() => current!.submitted.length > 0);
-    expect(current.submitted).toMatchObject([{ kind: "session.blocked", sessionId: CODEX }]);
+    expect(current.submitted).toMatchObject([
+      { kind: "session.paused", sessionId: CODEX, facts: { pause: "turn_limit" } },
+    ]);
   });
 
   test("a Goal out of time is blocked on the limit, not aborted by its interrupt", async () => {

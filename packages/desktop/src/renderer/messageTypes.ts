@@ -223,6 +223,11 @@ export interface ActiveGoal {
   revision?: number;
   round: number;
   paused: boolean;
+  /**
+   * Why it is paused, when the pause said so. A limit that ran out is resumed
+   * by the next message; `user_stop` (and an unmarked pause) only by Resume.
+   */
+  pauseReason?: "time_budget" | "token_budget" | "turn_limit" | "no_progress" | "user_stop";
   /** When the objective was set (epoch ms); not elapsed working time. */
   setAtMs?: number;
   /** The Goal stopped to wait for the user's answer to this question. */

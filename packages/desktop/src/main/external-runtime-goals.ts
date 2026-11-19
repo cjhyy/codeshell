@@ -2,10 +2,15 @@ import { randomUUID } from "node:crypto";
 import { SessionManager, type GoalConfig, type StreamEvent } from "@cjhyy/code-shell-core";
 import { goalGetPayload } from "@cjhyy/code-shell-core/internal";
 
-// These count provider turns, each of which already contains its own tool loop.
-export const EXTERNAL_GOAL_DEFAULT_TURNS = 12;
+/**
+ * Consecutive provider turns without progress (the same reply again, or a turn
+ * that ran no tool) before the host stops driving the Goal. This is the only
+ * limit a Goal has by default: there is no timer and no cap on turns, so a
+ * Goal that keeps making progress, or waits on work that takes hours, is not
+ * paused for it. A time, token or turn budget applies only when the Goal's
+ * own configuration sets one.
+ */
 export const EXTERNAL_GOAL_DEFAULT_STOP_BLOCKS = 3;
-export const EXTERNAL_GOAL_DEFAULT_TIME_MS = 30 * 60_000;
 export const EXTERNAL_GOAL_TOOLS = [
   "get_goal",
   "complete_goal",
@@ -92,6 +97,21 @@ export function parseExternalGoalQuestion(
   };
 }
 
+/** Why a Goal paused; clients and notices read this, never the `gaps` text. */
+export type ExternalGoalPauseReason = Extract<
+  StreamEvent,
+  { type: "goal_progress" }
+>["pauseReason"] &
+  string;
+
+const PAUSE_TEXT: Record<ExternalGoalPauseReason, string> = {
+  token_budget: "达到本轮 token 预算",
+  time_budget: "达到本轮时间预算",
+  turn_limit: "达到本轮自动继续次数上限",
+  no_progress: "连续多轮没有新的进展",
+  user_stop: "用户已停止本轮执行",
+};
+
 export interface ExternalGoalUpdate {
   objective?: string;
   paused?: boolean;
@@ -112,11 +132,15 @@ export interface ExternalGoalRun {
   startedAtMs: number;
   turns: number;
   tokensUsed: number;
-  maxTurns: number;
+  /** Provider turns this run may take; absent unless the Goal set a cap. */
+  maxTurns?: number;
   maxStopBlocks: number;
   tokenBudget?: number;
-  timeBudgetMs: number;
+  /** Wall-clock budget of this run; absent unless the Goal set one. */
+  timeBudgetMs?: number;
   stopBlocks: number;
+  /** The provider turn that just ended ran no work tool. */
+  lastTurnIdle?: boolean;
   lastOutput?: string;
   stopped: boolean;
   /** End after the current provider turn without pausing (the user has input queued). */
@@ -183,6 +207,8 @@ export class ExternalRuntimeGoals {
   private readonly pendingQuestions = new Map<string, ExternalGoalQuestion>();
   /** Questions the user already replied to or passed over; never asked again. */
   private readonly closedQuestions = new Map<string, string[]>();
+  /** Goal versions a budget or limit paused (not the user), per Session. */
+  private readonly limitPauses = new Map<string, string>();
 
   constructor(
     private readonly emit: (sessionId: string, event: StreamEvent) => void,
@@ -202,9 +228,41 @@ export class ExternalRuntimeGoals {
     return this.runs.get(sessionId);
   }
 
-  start(sessionId: string, explicit?: string | GoalConfig, disabled = false) {
+  /**
+   * A pause the user did not ask for: a budget or limit ran out. Known from
+   * this process, or after a restart from the run that ended on `limit_stop`.
+   */
+  private isLimitPause(sessionId: string, goal: GoalConfig): boolean {
+    const known = this.limitPauses.get(sessionId);
+    if (known !== undefined) return known === `${goal.goalId}:${goal.revision}`;
+    return this.manager.readSessionState(sessionId)?.lastCompletionKind === "limit_stop";
+  }
+
+  /**
+   * `userMessage`: this run carries a message somebody sent (typed, or passed
+   * on by Mimi), not an automatic continuation. Such a message resumes a Goal
+   * that a limit paused, with fresh limits, through the same revisioned
+   * control as an explicit Resume. A pause the user asked for stays paused,
+   * and the message then runs as an ordinary turn (as in the native engine).
+   */
+  start(sessionId: string, explicit?: string | GoalConfig, disabled = false, userMessage = false) {
     if (disabled) return undefined;
-    const stored = this.read(sessionId);
+    let stored = this.read(sessionId);
+    if (
+      userMessage &&
+      explicit === undefined &&
+      stored?.paused &&
+      this.isLimitPause(sessionId, stored) &&
+      this.update(sessionId, {
+        paused: false,
+        expectedGoalId: stored.goalId!,
+        expectedRevision: stored.revision!,
+      }).updated
+    ) {
+      // The limit pause is over; a later pause of this Goal is judged afresh.
+      this.manager.updateSessionState(sessionId, { lastCompletionKind: undefined });
+      stored = this.read(sessionId);
+    }
     let goal = stored;
     if (explicit !== undefined) {
       goal = goalInput(explicit);
@@ -250,10 +308,10 @@ export class ExternalRuntimeGoals {
       startedAtMs: this.now(),
       turns: 0,
       tokensUsed: 0,
-      maxTurns: goal.maxTurns ?? EXTERNAL_GOAL_DEFAULT_TURNS,
+      ...(goal.maxTurns !== undefined ? { maxTurns: goal.maxTurns } : {}),
       maxStopBlocks: goal.maxStopBlocks ?? EXTERNAL_GOAL_DEFAULT_STOP_BLOCKS,
       tokenBudget: goal.tokenBudget,
-      timeBudgetMs: goal.timeBudgetMs ?? EXTERNAL_GOAL_DEFAULT_TIME_MS,
+      ...(goal.timeBudgetMs !== undefined ? { timeBudgetMs: goal.timeBudgetMs } : {}),
       stopBlocks: 0,
       turnToolCalls: 0,
       stopped: false,
@@ -420,6 +478,7 @@ export class ExternalRuntimeGoals {
     const idleAfterReminder = run.backgroundReminded === true && run.turnToolCalls === 0;
     run.awaitingBackground = false;
     run.backgroundReminded = false;
+    run.lastTurnIdle = run.turnToolCalls === 0;
     run.turnToolCalls = 0;
     if (!running) return "none";
     if (requested || idleAfterReminder) return "park";
@@ -510,8 +569,22 @@ export class ExternalRuntimeGoals {
     if (patch.objective === undefined && patch.paused === undefined) {
       throw new Error("A goal update is required");
     }
+    // Resume of a Goal whose run is already going: a second click (or a
+    // toggle the user repeats because nothing seemed to happen) must not
+    // abort that run and start another under a new revision.
+    const live = this.runs.get(sessionId);
+    if (
+      patch.paused === false &&
+      patch.objective === undefined &&
+      live &&
+      this.isCurrent(live) &&
+      live.goal.goalId === patch.expectedGoalId
+    )
+      return { ...this.get(sessionId), updated: false };
     const updated = this.manager.updateActiveGoal(sessionId, patch);
     if (!updated) return { ...this.get(sessionId), updated: false };
+    // Any control is a new revision; `pause` re-marks a limit pause after it.
+    this.limitPauses.set(sessionId, "");
     this.stop(sessionId);
     this.emitUpdated(sessionId, updated.goal);
     return { ...this.get(sessionId), updated: true };
@@ -532,6 +605,7 @@ export class ExternalRuntimeGoals {
     });
     if (cleared) {
       this.stop(sessionId);
+      this.limitPauses.delete(sessionId);
       this.forgetQuestions(sessionId);
       this.emit(sessionId, {
         type: "goal_cleared",
@@ -555,24 +629,28 @@ export class ExternalRuntimeGoals {
     const run = this.runs.get(sessionId);
     if (!run || !this.isCurrent(run)) throw new Error("No active external goal run to extend");
     const add = (current: number, delta = 0) => Math.min(Number.MAX_SAFE_INTEGER, current + delta);
-    run.maxTurns = add(run.maxTurns, extension.addTurns);
+    // A limit the Goal never had stays absent: there is nothing to extend.
+    if (run.maxTurns !== undefined) run.maxTurns = add(run.maxTurns, extension.addTurns);
     run.maxStopBlocks = add(run.maxStopBlocks, extension.addStopBlocks);
     if (extension.addTokenBudget) {
       run.tokenBudget = add(run.tokenBudget ?? run.tokensUsed, extension.addTokenBudget);
     }
-    run.timeBudgetMs = add(run.timeBudgetMs, extension.addTimeBudgetMs);
+    if (run.timeBudgetMs !== undefined)
+      run.timeBudgetMs = add(run.timeBudgetMs, extension.addTimeBudgetMs);
     return {
       ok: true as const,
       limits: {
-        maxTurns: run.maxTurns,
+        ...(run.maxTurns !== undefined ? { maxTurns: run.maxTurns } : {}),
         maxStopBlocks: run.maxStopBlocks,
         ...(run.tokenBudget !== undefined ? { tokenBudget: run.tokenBudget } : {}),
-        timeBudgetMs: run.timeBudgetMs,
+        ...(run.timeBudgetMs !== undefined ? { timeBudgetMs: run.timeBudgetMs } : {}),
       },
     };
   }
 
+  /** Time left of the Goal's own budget; infinite when it set none. */
   remainingTime(run: ExternalGoalRun): number {
+    if (run.timeBudgetMs === undefined) return Number.POSITIVE_INFINITY;
     return Math.max(0, run.timeBudgetMs - (this.now() - run.startedAtMs));
   }
 
@@ -610,25 +688,29 @@ export class ExternalRuntimeGoals {
   ): boolean {
     run.turns++;
     if (Number.isFinite(tokens) && tokens > 0) run.tokensUsed += tokens;
-    run.stopBlocks = run.lastOutput === output ? run.stopBlocks + 1 : 0;
+    // No progress: the same reply again, or a turn that ran no tool. A turn
+    // that parks on background work is a wait, not a turn without progress.
+    const idle = run.lastTurnIdle === true && !waitingForBackgroundWork;
+    run.lastTurnIdle = undefined;
+    run.stopBlocks = run.lastOutput === output || idle ? run.stopBlocks + 1 : 0;
     run.lastOutput = output;
     if (!this.isCurrent(run) || run.yieldRequested || run.awaitingUser) return false;
-    const limit =
+    const limit: ExternalGoalPauseReason | undefined =
       run.tokenBudget !== undefined && run.tokensUsed >= run.tokenBudget
-        ? "达到本轮 token 预算"
+        ? "token_budget"
         : this.remainingTime(run) === 0
-          ? "达到本轮时间预算"
-          : run.turns >= run.maxTurns
-            ? "达到本轮自动继续次数上限"
+          ? "time_budget"
+          : run.maxTurns !== undefined && run.turns >= run.maxTurns
+            ? "turn_limit"
             : run.stopBlocks >= run.maxStopBlocks
-              ? "连续多轮没有新的进展"
+              ? "no_progress"
               : undefined;
     if (limit) {
       this.pause(run, limit);
       return false;
     }
     if (waitingForBackgroundWork) return true;
-    const remaining = run.maxTurns - run.turns;
+    const remaining = run.maxTurns !== undefined ? run.maxTurns - run.turns : Infinity;
     this.emit(run.sessionId, {
       type: "goal_progress",
       goalId: run.goal.goalId,
@@ -646,7 +728,7 @@ export class ExternalRuntimeGoals {
    * (Mimi notices read it as blocked on a limit); a pause the user asked for
    * (`byUser`, a Stop) does not.
    */
-  pause(run: ExternalGoalRun, reason: string, byUser = false): void {
+  pause(run: ExternalGoalRun, reason: ExternalGoalPauseReason, byUser = false): void {
     if (!this.isCurrent(run)) return;
     const result = this.update(run.sessionId, {
       paused: true,
@@ -654,14 +736,18 @@ export class ExternalRuntimeGoals {
       expectedRevision: run.goal.revision!,
     });
     if (result.updated) {
-      if (!byUser) run.limited = true;
+      if (!byUser) {
+        run.limited = true;
+        this.limitPauses.set(run.sessionId, `${result.goalId}:${result.revision}`);
+      }
       this.emit(run.sessionId, {
         type: "goal_progress",
         goalId: result.goalId,
         revision: result.revision,
         status: "not_met",
         ...this.progress(run, run.turns),
-        gaps: `${reason}；目标已暂停，可继续。`,
+        gaps: `${PAUSE_TEXT[reason]}；目标已暂停，可继续。`,
+        pauseReason: reason,
       });
     }
   }
@@ -712,6 +798,16 @@ export class ExternalRuntimeGoals {
     return { ok: true, status };
   }
 
+  /** The budgets this Goal's configuration set, for the instruction; empty when it set none. */
+  private budgetNote(run: ExternalGoalRun): string {
+    const budgets = [
+      ...(run.maxTurns !== undefined ? [`${run.maxTurns} provider turns`] : []),
+      ...(run.timeBudgetMs !== undefined ? [`${run.timeBudgetMs} ms`] : []),
+      ...(run.tokenBudget !== undefined ? [`${run.tokenBudget} tokens`] : []),
+    ];
+    return budgets.length > 0 ? ` (this run: ${budgets.join(", ")})` : "";
+  }
+
   instruction(run: ExternalGoalRun): string {
     return [
       "<codeshell_goal>",
@@ -721,7 +817,7 @@ export class ExternalRuntimeGoals {
       "Only when the objective is fully achieved, call mcp__codeshell_tools__complete_goal with this goalId and revision and a completion summary.",
       "Only if the user explicitly cancels it, call mcp__codeshell_tools__cancel_goal with this goalId, revision, confirm=true and the user's reason.",
       "Use mcp__codeshell_tools__get_goal to check the current identity. Do not call the runtime's separate create_goal/update_goal tools for this CodeShell goal.",
-      `This run allows ${run.maxTurns} provider turns and ${run.timeBudgetMs} ms${run.tokenBudget ? `, with ${run.tokenBudget} tokens` : ""}. If it pauses, do not claim completion.`,
+      `CodeShell does not stop this goal on a timer or after a number of turns. It stops driving it only when the user pauses it, when ${run.maxStopBlocks} turns in a row make no progress (the same reply again, or a turn that runs no tool), or when a budget the user set for it runs out${this.budgetNote(run)}. If it stops, do not claim completion.`,
       "CodeShell sends automatic continuation messages (such as 继续处理尚未完成的目标 or 继续执行已保存的目标) to keep this goal moving. Such a message is not a reply from the user: it never answers a question you asked and never grants an approval you requested.",
       'Decisions come in three levels. L0, a reversible engineering or quality decision (how to split a change, which step first, naming): decide it yourself and do not ask. L1, a preference with a sensible default (for example which kind of release was meant): state the default you are taking, proceed with it, and list it in your final summary so the user can change it. L2, anything irreversible or outward-facing: writes to production or live systems, publishing or sending to other people, deleting data that cannot be restored, creating or installing credentials or keys, granting new permissions, spending money. For L2 you must ask with level "consent" and act only after the user explicitly agrees; a reply that is ambiguous, off-topic or merely asks you to look into it is not consent, so do the other safe work and leave that step undone.',
       'To ask, call mcp__codeshell_tools__wait_for_user with this goalId and revision, one short question, level ("preference" or "consent"), and when they help short options and the default you would take. CodeShell shows the question to the user and the goal stops until they reply: do not repeat the question in your reply text, and end your turn after the call. Only one wait_for_user call is accepted per turn, so put every open decision into that one question.',

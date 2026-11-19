@@ -275,7 +275,7 @@ export function actionHints(
     case "goal":
       return "直接回我要对它说的话就行；也可以让它停下，或交给 Mimi。";
     case "limit":
-      return "要继续、停下，还是交给 Mimi？直接回我就行。";
+      return "回我“继续”就接着做；也可以让它停下，或交给 Mimi。";
     case "failure":
       return actions.retry
         ? "要重试，还是交给 Mimi？直接回我就行。"

@@ -7,6 +7,8 @@ import type {
   PetReusableSessionOption,
   PetWorkspaceOption,
 } from "@cjhyy/code-shell-pet";
+import type { PetLongTaskContext } from "@cjhyy/code-shell-pet";
+import { closureRequestIdentity } from "./pet-closure-receipt.js";
 import { petContextOriginForSource } from "./pet-context-links.js";
 import {
   contextAssociationFor,
@@ -140,6 +142,11 @@ export async function runLongTaskClosureTurn(
         reference: artifact.reference.slice(0, 2_048),
       })),
       completedAt: task.completedAt ?? task.updatedAt,
+      // Which request this is among those made to the Session, and whether it ran.
+      ...closureRequestIdentity(
+        task,
+        host.options.longTasks?.context() as PetLongTaskContext | undefined,
+      ),
     };
     const personalization = await host.currentPersonalization();
     const contextInput = await host.prepareWorldContextInput(
@@ -195,6 +202,7 @@ export async function runLongTaskClosureTurn(
         task:
           "<system-reminder>A trusted delegated Work Session has reached a terminal state. " +
           "Decide the next manager action using completionReceipt and continuationPolicy from the trusted runtime context. " +
+          "completionReceipt is about exactly one request: its taskId, objective and createdAt. Its request.latestForSession, request.openForSession and request.newerForSession say whether any other request to that Session exists; when they list none, the request you made last to that Session IS this one, so never report it as an older or separate request, and never say another request is still pending. started=false means it ended before anything was executed. " +
           "If the user's overall intent is done, a user decision is needed, the task was cancelled, or autonomous continuation is unavailable, do not delegate; send one concise result update or question. " +
           "If exactly one necessary, concrete execution follow-up for the SAME original objective can safely proceed without user input, call DelegateWork once using continuationPolicy.session and its workspace, then briefly state that continuation is requested. Never replace the original Session or expand the objective. " +
           "Preserve uncertainty in the executor's report; do not claim independent verification or infer causes without evidence. " +

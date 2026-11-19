@@ -996,10 +996,11 @@ export function useRunController({
       // yield at the next round boundary instead of waiting out the whole run.
       const queuedModelKey = modelOverrides[activeBucket] ?? defaultActiveModelKey;
       if (parseExternalRuntimeModelKey(queuedModelKey)) {
-        const goal = state.activeGoal;
         const engineSessionId = resolveEngineSessionIdForBucket(activeBucket);
         const fresh = queued.filter((item) => !goalYieldIdsRef.current.has(item.id));
-        if (goal && !goal.paused && engineSessionId && fresh.length > 0) {
+        // Not only for a live Goal: a provider that replied and merely lingers
+        // for its own background shell is asked to let the queued message in.
+        if (engineSessionId && fresh.length > 0) {
           fresh.forEach((item) => goalYieldIdsRef.current.add(item.id));
           void window.codeshell.externalRuntime?.yieldGoal?.(engineSessionId).catch((err) => {
             window.codeshell.log("goal.yield_failed", {

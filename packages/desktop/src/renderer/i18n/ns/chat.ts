@@ -223,6 +223,15 @@ export const chat = {
         replyQueued: "目标还有一个问题在排队，先回答上面的问题。",
         replyFailed: "回复未发送，请重试。",
         barPausedHint: "目标已暂停，不会自动继续。点击恢复后接着推进。",
+        barPausedBusy: "已暂停的目标 · 当前这轮不属于它",
+        barPausedBusyHint:
+          "目标仍是暂停的：正在跑的这一轮只处理你刚发的消息，不推进目标。点击恢复才会接着推进。",
+        barLimitPaused: "目标已停下（设定的预算用完）",
+        barLimitPausedHint:
+          "这个目标设定的预算用完了，现在没有在运行。发一条消息或点击恢复，就开始新的一轮。",
+        barBlocked: "目标卡住了（连续几轮没有进展）",
+        barBlockedHint:
+          "连续几轮没有新的进展，已停止自动继续，现在没有在运行。发一条消息告诉它怎么往下做，或点击恢复再试。",
         barElapsed: "目标已设置 {elapsed}",
         barActiveTime: "第 {round} 轮 · {elapsed}",
         barActiveTimeHint:
@@ -572,6 +581,15 @@ export const chat = {
         replyFailed: "Your reply was not sent. Please try again.",
         barPausedHint:
           "This goal is paused and will not continue on its own. Resume it to keep going.",
+        barPausedBusy: "Paused goal · this turn is not part of it",
+        barPausedBusyHint:
+          "The goal is still paused: the running turn only handles the message you sent. Resume the goal to keep it going.",
+        barLimitPaused: "Goal stopped (its budget ran out)",
+        barLimitPausedHint:
+          "The budget set for this goal ran out and nothing is running. Send a message or resume to start a new round.",
+        barBlocked: "Goal blocked (no progress for several turns)",
+        barBlockedHint:
+          "Several turns in a row made no progress, so it stopped continuing on its own. Send a message to steer it, or resume to try again.",
         barElapsed: "Goal set {elapsed} ago",
         barActiveTime: "Turn {round} · {elapsed}",
         barActiveTimeHint:
