@@ -26,7 +26,10 @@ import {
 } from "./external-runtime-tool-profile.js";
 import { join } from "node:path";
 import { startExternalRuntimeSession } from "@cjhyy/code-shell-capability-coding/external-runtimes";
-import { codexNativeApprovalPresentation } from "./external-runtime-codex-approvals.js";
+import {
+  answerCodexUserInput,
+  codexNativeApprovalPresentation,
+} from "./external-runtime-codex-approvals.js";
 import type {
   ExternalRuntimeTurnInput,
   ExternalRuntimeKind,
@@ -95,8 +98,12 @@ import { startExternalRuntimeTrace } from "./external-runtime-tracing.js";
 import type { ExternalRuntimeMemory } from "./external-runtime-memory.js";
 import { assertOutputHistoryWriteAvailable } from "./session-output-history-lease.js";
 import { ExternalRuntimeDeltaBuffer } from "./external-runtime-delta-buffer.js";
-import { notifyRunStopRequested } from "./run-stop-signals.js";
-import { externalComputerUse } from "./external-runtime-computer-use.js";
+import { notifyRunInterrupted, notifyRunStopRequested } from "./run-stop-signals.js";
+import {
+  claudeNativeApprovalRequest,
+  externalComputerUse,
+  presentCodexHostMcpApproval,
+} from "./external-runtime-computer-use.js";
 import { EXTERNAL_MEDIA_INSTRUCTIONS } from "./external-runtime-instructions.js";
 import { ExternalRuntimeWorkspaceGate } from "./external-runtime-workspace-gate.js";
 import {
@@ -233,6 +240,8 @@ export interface ExternalRuntimeServiceDeps {
   requestApproval?: (
     sessionId: string,
     request: { toolName: string; [key: string]: unknown },
+    /** `signal`: abort withdraws the prompt from every client. */
+    options?: { signal?: AbortSignal },
   ) => Promise<{ approved: boolean; reason?: string; answer?: string }>;
   /** Drop any prompt still on screen for a session that is going away. */
   cancelApprovals?: (sessionId: string) => void;
@@ -996,12 +1005,15 @@ export class ExternalRuntimeService {
       });
     const { fullAccess, hostPermissionMode, sandbox, approvalPolicy, claudePermissionMode } =
       externalRuntimePermissionPolicy(request);
+    type ToolApproval = NonNullable<ExternalRuntimeServiceDeps["requestApproval"]>;
     const toolApprovalBackend = fullAccess
       ? { requestApproval: async () => ({ approved: true }) }
       : request.permissionMode !== "dontAsk" && this.deps.requestApproval
         ? {
-            requestApproval: (approvalRequest: { toolName: string; [key: string]: unknown }) =>
-              this.deps.requestApproval!(request.sessionId, approvalRequest),
+            requestApproval: (
+              approval: Parameters<ToolApproval>[1],
+              withdraw?: Parameters<ToolApproval>[2],
+            ) => this.deps.requestApproval!(request.sessionId, approval, withdraw),
           }
         : undefined;
     const cua = externalComputerUse(request, this.deps.featureFlags(), !!toolApprovalBackend);
@@ -1328,12 +1340,13 @@ export class ExternalRuntimeService {
         ...(toolApprovalBackend
           ? {
               approvalBackend: {
-                requestApproval: async (approvalRequest) => {
+                requestApproval: async (approvalRequest, withdraw) => {
                   if (!lifecycle.active || !this.authorityStillCurrent(request.cwd, authority))
                     return { approved: false, reason: "External runtime authority was revoked" };
-                  const decision = await toolApprovalBackend.requestApproval({
-                    ...approvalRequest,
-                  });
+                  const decision = await toolApprovalBackend.requestApproval(
+                    presentCodexHostMcpApproval({ ...approvalRequest }),
+                    withdraw,
+                  );
                   return lifecycle.active && this.authorityStillCurrent(request.cwd, authority)
                     ? decision
                     : { approved: false, reason: "External runtime authority was revoked" };
@@ -1411,15 +1424,8 @@ export class ExternalRuntimeService {
                   };
                   if (!lifecycle.active || !this.authorityStillCurrent(request.cwd, authority))
                     return revoked;
-                  // A distinct name, so the card is not mistaken for (or remembered
-                  // as) CodeShell's own governed tool of the same name.
                   const decision: { approved: boolean; reason?: string } =
-                    await toolApprovalBackend.requestApproval({
-                      toolName: `Claude Code ${prompt.toolName}`,
-                      args: prompt.input,
-                      description: `Claude Code wants to use its native ${prompt.toolName} tool.`,
-                      riskLevel: "high",
-                    });
+                    await toolApprovalBackend.requestApproval(claudeNativeApprovalRequest(prompt));
                   if (!lifecycle.active || !this.authorityStillCurrent(request.cwd, authority))
                     return revoked;
                   return decision.approved
@@ -1430,54 +1436,16 @@ export class ExternalRuntimeService {
             : {}),
           ...(this.deps.requestApproval
             ? {
-                onUserInput: async (inputRequest) => {
-                  if (!lifecycle.active || !this.authorityStillCurrent(request.cwd, authority))
-                    return { answers: {} };
-                  const params =
-                    inputRequest.params && typeof inputRequest.params === "object"
-                      ? (inputRequest.params as Record<string, unknown>)
-                      : {};
-                  const questions = Array.isArray(params.questions) ? params.questions : [];
-                  const answers: Record<string, { answers: string[] }> = {};
-                  for (const value of questions) {
-                    if (!lifecycle.active || !this.authorityStillCurrent(request.cwd, authority))
-                      return { answers: {} };
-                    if (!value || typeof value !== "object") continue;
-                    const question = value as Record<string, unknown>;
-                    const id = typeof question.id === "string" ? question.id : "";
-                    const text = typeof question.question === "string" ? question.question : "";
-                    if (!id || !text) continue;
-                    const options = Array.isArray(question.options)
-                      ? question.options.flatMap((option) => {
-                          if (!option || typeof option !== "object") return [];
-                          const item = option as Record<string, unknown>;
-                          return typeof item.label === "string"
-                            ? [
-                                {
-                                  label: item.label,
-                                  description:
-                                    typeof item.description === "string" ? item.description : "",
-                                },
-                              ]
-                            : [];
-                        })
-                      : undefined;
-                    const decision = await this.deps.requestApproval!(
-                      request.sessionId,
-                      askUserApprovalRequest(text, {
-                        ...(typeof question.header === "string" ? { header: question.header } : {}),
-                        ...(options && options.length > 0 ? { options } : {}),
-                      }),
-                    );
-                    if (
-                      lifecycle.active &&
-                      this.authorityStillCurrent(request.cwd, authority) &&
-                      decision.answer
-                    )
-                      answers[id] = { answers: [decision.answer] };
-                  }
-                  return { answers };
-                },
+                onUserInput: (inputRequest) =>
+                  answerCodexUserInput(
+                    inputRequest.params,
+                    (text, options) =>
+                      this.deps.requestApproval!(
+                        request.sessionId,
+                        askUserApprovalRequest(text, options),
+                      ),
+                    () => lifecycle.active && this.authorityStillCurrent(request.cwd, authority),
+                  ),
               }
             : {}),
         },
@@ -2150,8 +2118,9 @@ export class ExternalRuntimeService {
     )
       throw new Error("External run changed before cancellation");
     // A plain Stop pauses Host-held follow-ups before the provider is interrupted;
-    // interrupt-and-send is the user's own next turn, not a stop.
-    if (!options.keepGoal) notifyRunStopRequested(sessionId);
+    // interrupt-and-send is the user's own next turn, not a stop, but the run it
+    // cuts short must still stop driving the computer.
+    (options.keepGoal ? notifyRunInterrupted : notifyRunStopRequested)(sessionId);
     this.deps.memory?.cancel(sessionId);
     if (entry) {
       try {

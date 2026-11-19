@@ -27,6 +27,7 @@ import {
   type StreamEvent,
   type ToolRegistry,
 } from "@cjhyy/code-shell-core";
+import { onRunInterrupted, onRunStopRequested } from "./run-stop-signals.js";
 import {
   backgroundJobRegistry,
   activateWorkspaceProfile,
@@ -1852,7 +1853,17 @@ describe("ExternalRuntimeService", () => {
     };
     const running = svc.send(request.sessionId, { text: "执行", goal: "持续推进的目标" });
     await entered;
+    const interrupted: string[] = [];
+    const stopped: string[] = [];
+    const unsubscribe = [
+      onRunInterrupted((sessionId) => interrupted.push(sessionId)),
+      onRunStopRequested((sessionId) => stopped.push(sessionId)),
+    ];
     await svc.interrupt(request.sessionId, 77, undefined, { keepGoal: true });
+    unsubscribe.forEach((off) => off());
+    // The interrupted run must stop driving the computer; it is still not a Stop.
+    expect(interrupted).toEqual([request.sessionId]);
+    expect(stopped).toEqual([]);
     await running;
     expect(svc.getGoal(request.sessionId)).toMatchObject({
       goal: "持续推进的目标",
@@ -3890,6 +3901,16 @@ describe("ExternalRuntimeService", () => {
     });
     expect(sent[1]!.text).toContain("<system-reminder>");
     expect(sent[1]!.text).toContain("review complete");
+    // The wake is a run of its own and its turn is counted like any other.
+    for (let index = 0; index < 50; index += 1) {
+      if (new SessionManager().readSessionState("sess-1")?.status === "completed") break;
+      await new Promise<void>((resolve) => setTimeout(resolve, 2));
+    }
+    expect(new SessionManager().readSessionState("sess-1")).toMatchObject({
+      status: "completed",
+      turnSeq: 2,
+      turnCount: 2,
+    });
 
     await svc.stopAll();
     expect(dropped).toContain("sess-1");
