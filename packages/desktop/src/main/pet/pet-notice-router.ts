@@ -78,6 +78,14 @@ export const OWNER_OUTBOX_TTL_MS = 30 * 60_000;
 export const ROUTE_OUTBOX_TTL_MS = 24 * 60 * 60_000;
 
 /** A result opens the P1 merge window for its Session; progress reports and follow-ups do not. */
+/** A Goal pause or open Goal question (a blocked notice without a decision request). */
+function isGoalPauseNotice(record: NoticeRecord): boolean {
+  return (
+    (record.kind === "session.blocked" || record.kind === "session.paused") &&
+    record.requestId === undefined
+  );
+}
+
 function opensMergeWindow(notice: NoticeSubmission): boolean {
   return (
     notice.priority === "P1" && notice.kind !== "session.report" && !isOwnerTimedKind(notice.kind)
@@ -721,17 +729,29 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
   }
 
   /**
-   * The Session's Goal was cleared: its goal pauses (blocked notices without
-   * a decision request) that still wait for a channel or the digest are moot.
+   * The Session's Goal was cleared (or, read back after a restart, is no
+   * longer stopped): its goal pauses (blocked notices without a decision
+   * request) that still wait for a channel or the digest are moot.
    */
   async revokeSessionBlocked(sessionId: string, reason = "goal-cleared"): Promise<void> {
     await this.revokeWaiting(
-      (record) =>
-        record.sessionId === sessionId &&
-        (record.kind === "session.blocked" || record.kind === "session.paused") &&
-        record.requestId === undefined,
+      (record) => record.sessionId === sessionId && isGoalPauseNotice(record),
       reason,
     );
+  }
+
+  /** Sessions with a goal-pause notice that still waits for a channel, the digest or the outbox. */
+  goalPauseSessions(): string[] {
+    const ledger = this.options.ledger;
+    if (!ledger) return [];
+    const waiting = [...ledger.queued(), ...ledger.held(), ...ledger.enqueued()];
+    return [
+      ...new Set(
+        waiting.flatMap((record) =>
+          isGoalPauseNotice(record) && record.sessionId ? [record.sessionId] : [],
+        ),
+      ),
+    ];
   }
 
   /** Revoke queued / held notices that match, except those being sent right now. */

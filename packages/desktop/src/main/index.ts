@@ -158,6 +158,7 @@ import { getSessionCwdIndex } from "./session-cwd-index.js";
 import { wirePetNotices, type PetNoticeWiring } from "./pet/pet-notice-wiring.js";
 import { withExternalDecisions } from "./pet/pet-notice-external-decisions.js";
 import { createExternalSessionCatalog } from "./pet/pet-notice-external-sessions.js";
+import { externalGoalNoticeSource } from "./pet/pet-notice-goal-reconcile.js";
 import { createPetNoticeControls, type PetNoticeControls } from "./pet/pet-notice-ipc.js";
 import { wireMimiNoticeTools } from "./pet/pet-mimi-notice-tools.js";
 import { PetWorkInboxStore } from "./pet/pet-work-inbox-store.js";
@@ -1798,6 +1799,7 @@ async function createWindow(): Promise<BrowserWindow> {
           if (!externalRuntime.service) throw new Error("external runtime service is unavailable");
           return externalRuntime.service;
         },
+        onGoalRead: (sessionId) => void petNotices?.reconcileGoalNotices(sessionId),
       }),
     );
 
@@ -1998,6 +2000,11 @@ async function createWindow(): Promise<BrowserWindow> {
       focusEvents: app,
       hasLiveWorker: () => bridge?.hasLiveWorker() ?? false,
       externalSessions,
+      externalGoals: externalGoalNoticeSource({
+        sessionsRootDir: sessionsRoot(),
+        readState: (id) => externalGoalSessions.readSessionState(id),
+        isRunning: (id) => externalRuntime.service?.isSessionRunning(id) === true,
+      }),
       externalApprovals: {
         approvals: () => externalRuntime.approvals,
         subscribe: (listener) => externalRuntime.subscribeApprovals(listener),
