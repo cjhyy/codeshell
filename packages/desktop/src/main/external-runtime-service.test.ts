@@ -74,6 +74,19 @@ const streamEvents: StreamEvent[] = [];
 let previousHome: string | undefined;
 let testHome: string;
 
+/** The model declares it has nothing left to do until background work finishes. */
+async function parkOnBackground(
+  svc: { getGoal(sessionId: string): { goalId?: string; revision?: number } },
+  args: StartArgs,
+): Promise<void> {
+  const goal = svc.getGoal(request.sessionId);
+  const result = await (args.registry as ToolRegistry).executeTool("wait_for_background", {
+    goalId: goal.goalId,
+    revision: goal.revision,
+  });
+  expect(JSON.parse(result.result!)).toMatchObject({ ok: true });
+}
+
 /** A session stub that records what it was asked to do. */
 function fakeSession(args: StartArgs) {
   return {
@@ -2389,7 +2402,7 @@ describe("ExternalRuntimeService", () => {
       await svc.start(request);
       const manager = new SessionManager();
       providerSend = async (args, input) => {
-        if (providerInputs.length === 1) return;
+        if (providerInputs.length === 1) return parkOnBackground(svc, args);
         expect(input.text).toContain(`后台任务结果：${status}`);
         expect(manager.readSessionState(request.sessionId)?.goalLifecycle?.phase).toBe("active");
         const goal = svc.getGoal(request.sessionId);
@@ -2470,6 +2483,7 @@ describe("ExternalRuntimeService", () => {
       },
     });
     await svc.start(request);
+    providerSend = (args) => parkOnBackground(svc, args);
     try {
       await svc.send(request.sessionId, { text: "执行", goal: "等待方案" });
       expect(providerInputs).toHaveLength(1);
@@ -2655,11 +2669,91 @@ describe("ExternalRuntimeService", () => {
       },
     });
     await svc.start(request);
+    providerSend = (args) => parkOnBackground(svc, args);
     try {
       await svc.send(request.sessionId, { text: "执行", goal: "等待方案" });
       expect(providerInputs).toHaveLength(1);
       await svc.interrupt(request.sessionId, 77, undefined, { keepGoal: true });
       expect(svc.getGoal(request.sessionId)).toMatchObject({ goal: "等待方案", paused: false });
+    } finally {
+      await svc.stopAll();
+    }
+  });
+
+  test("running background work does not park a Goal that still has foreground work", async () => {
+    let running = true;
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: {
+        subscribe: () => () => {},
+        claimResults: () => undefined,
+        hasPending: () => false,
+        hasRunning: () => running,
+        listRunning: () => [{ kind: "job", label: "迁移脚本评审" }],
+        dropSession: () => {},
+      },
+    });
+    await svc.start(request);
+    providerSend = async (args) => {
+      const emit = (args.hooks as { onEvent: (event: StreamEvent) => void }).onEvent;
+      // Round 2 keeps working beside the job; rounds 1 and 3 just reply.
+      if (providerInputs.length === 2)
+        emit({
+          type: "tool_use_start",
+          toolCall: { id: "call-1", toolName: "Bash", arguments: { command: "bun test" } },
+        } as StreamEvent);
+      emit({ type: "text_delta", text: `第 ${providerInputs.length} 轮` });
+    };
+    try {
+      const outcome = await svc.send(request.sessionId, { text: "执行", goal: "边等边做" });
+      // Told once, worked, told again, then idle: the host parks on its behalf.
+      expect(providerInputs).toHaveLength(3);
+      expect(providerInputs[0]!.text).not.toContain("<background_work>");
+      for (const input of providerInputs.slice(1)) {
+        expect(input.text).toContain("<background_work>");
+        expect(input.text).toContain("迁移脚本评审");
+        expect(input.text).toContain("wait_for_background");
+        expect(input.text).toContain("do not poll");
+      }
+      expect(outcome).toMatchObject({ reason: "completed", completionKind: "background_wait" });
+      expect(new SessionManager().readSessionState(request.sessionId)?.goalLifecycle).toMatchObject(
+        { phase: "waiting" },
+      );
+      running = false;
+    } finally {
+      await svc.stopAll();
+    }
+  });
+
+  test("wait_for_background is refused when nothing is running and the Goal keeps going", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: {
+        subscribe: () => () => {},
+        claimResults: () => undefined,
+        hasPending: () => false,
+        hasRunning: () => false,
+        dropSession: () => {},
+      },
+    });
+    await svc.start(request);
+    const replies: unknown[] = [];
+    providerSend = async (args) => {
+      const goal = svc.getGoal(request.sessionId);
+      const registry = args.registry as ToolRegistry;
+      if (providerInputs.length === 1) {
+        const refused = await registry.executeTool("wait_for_background", {
+          goalId: goal.goalId,
+          revision: goal.revision,
+        });
+        replies.push(JSON.parse(refused.result!));
+        return;
+      }
+      await registry.executeTool("complete_goal", { goalId: goal.goalId, revision: goal.revision });
+    };
+    try {
+      await svc.send(request.sessionId, { text: "执行", goal: "没有后台任务" });
+      expect(replies).toMatchObject([{ ok: false }]);
+      expect(providerInputs).toHaveLength(2);
+      expect(providerInputs[1]!.text).not.toContain("<background_work>");
     } finally {
       await svc.stopAll();
     }
@@ -2676,6 +2770,7 @@ describe("ExternalRuntimeService", () => {
       },
     });
     await svc.start(request);
+    providerSend = (args) => parkOnBackground(svc, args);
     const persist = spyOn(SessionManager.prototype, "markGoalWaiting").mockReturnValue(false);
     try {
       const outcome = await svc.send(request.sessionId, { text: "执行", goal: "等待方案" });

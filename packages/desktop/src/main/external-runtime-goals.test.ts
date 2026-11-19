@@ -472,3 +472,212 @@ describe("external Goal lifecycle", () => {
     }
   });
 });
+
+describe("external Goal waiting on background work", () => {
+  const identity = (run: { goal: { goalId?: string; revision?: number } }) => ({
+    goalId: run.goal.goalId,
+    revision: run.goal.revision,
+  });
+  const tool = (toolName: string, agentId?: string): StreamEvent =>
+    ({
+      type: "tool_use_start",
+      toolCall: { id: toolName, toolName, arguments: {} },
+      ...(agentId ? { agentId } : {}),
+    }) as StreamEvent;
+
+  test("running work parks the Goal only when the model calls wait_for_background", () => {
+    const run = goals.start(sessionId, "边等边做")!;
+    expect(goals.backgroundTurnEnd(run, false)).toBe("none");
+    expect(goals.backgroundTurnEnd(run, true)).toBe("remind");
+    expect(goals.waitForBackground(sessionId, identity(run), true)).toMatchObject({ ok: true });
+    expect(goals.backgroundTurnEnd(run, true)).toBe("park");
+    // The request covers one turn only.
+    expect(goals.backgroundTurnEnd(run, true)).toBe("remind");
+    expect(goals.backgroundTurnEnd(undefined, true)).toBe("none");
+  });
+
+  test("an idle turn after the reminder is parked by the host; a working turn is not", () => {
+    const run = goals.start(sessionId, "边等边做")!;
+    expect(goals.backgroundTurnEnd(run, true)).toBe("remind");
+    goals.observeTurnEvent(run, tool("Bash"));
+    expect(goals.backgroundTurnEnd(run, true)).toBe("remind");
+    // Goal controls and a sub-agent's calls are not this turn's own work.
+    goals.observeTurnEvent(run, tool("mcp__codeshell_tools__get_goal"));
+    goals.observeTurnEvent(run, tool("Read", "child-1"));
+    expect(goals.backgroundTurnEnd(run, true)).toBe("park");
+    // Work that finished meanwhile needs no park.
+    expect(goals.backgroundTurnEnd(run, true)).toBe("remind");
+    expect(goals.backgroundTurnEnd(run, false)).toBe("none");
+  });
+
+  test("wait_for_background refuses a stale identity or a wait with nothing running", () => {
+    const run = goals.start(sessionId, "边等边做")!;
+    expect(
+      goals.waitForBackground(sessionId, { goalId: "other", revision: 1 }, true),
+    ).toMatchObject({ ok: false });
+    expect(goals.waitForBackground(sessionId, identity(run), false)).toMatchObject({ ok: false });
+    expect(goals.backgroundTurnEnd(run, true)).toBe("remind");
+  });
+
+  test("the continuation names running work only after a reminder decision", () => {
+    const run = goals.start(sessionId, "边等边做")!;
+    const tasks = [{ kind: "job", label: "迁移脚本评审" }];
+    expect(goals.continuation(run, tasks)).not.toContain("<background_work>");
+    goals.backgroundTurnEnd(run, true);
+    const text = goals.continuation(run, tasks);
+    expect(text).toContain("继续处理尚未完成的目标。");
+    expect(text).toContain('Background work is still running: "迁移脚本评审"');
+    expect(text).toContain("do not poll");
+    expect(text).toContain("mcp__codeshell_tools__wait_for_background");
+    expect(text).toContain("<codeshell_goal>");
+    expect(goals.continuation(run)).toContain("Background work is still running.");
+  });
+
+  test("a repeated identical reply still pauses the Goal (stop-block cap)", () => {
+    const run = goals.start(sessionId, { objective: "空转", maxStopBlocks: 2 })!;
+    expect(goals.afterTurn(run, 1, "还在等")).toBe(true);
+    expect(goals.afterTurn(run, 1, "还在等")).toBe(true);
+    expect(goals.afterTurn(run, 1, "还在等")).toBe(false);
+    expect(goals.get(sessionId).paused).toBe(true);
+  });
+});
+
+describe("external Goal questions", () => {
+  const ask = (run: { goal: { goalId?: string; revision?: number } }, extra: object) =>
+    goals.waitForUser(sessionId, {
+      goalId: run.goal.goalId,
+      revision: run.goal.revision,
+      ...extra,
+    });
+
+  test("a structured question carries options, default and level without repeating the text", () => {
+    const run = goals.start(sessionId, "发布")!;
+    expect(
+      ask(run, {
+        question: "发 rc 还是正式版？",
+        options: [" rc ", "正式版", "rc"],
+        default: "rc",
+        level: "preference",
+      }),
+    ).toMatchObject({ ok: true });
+    const event = events.at(-1) as Extract<StreamEvent, { type: "goal_progress" }>;
+    expect(event).toMatchObject({
+      waitingForUser: "发 rc 还是正式版？",
+      waitingForUserDetail: { level: "preference", options: ["rc", "正式版"], default: "rc" },
+      gaps: "等待你的回复",
+    });
+    expect(event.gaps).not.toContain("发 rc");
+  });
+
+  test("a bare question stays valid and defaults to a preference", () => {
+    const run = goals.start(sessionId, "发布")!;
+    expect(ask(run, { question: "继续吗？" })).toMatchObject({ ok: true });
+    expect(events.at(-1)).toMatchObject({
+      waitingForUser: "继续吗？",
+      waitingForUserDetail: { level: "preference" },
+    });
+  });
+
+  test("a consent question is yes/no: options and default are dropped", () => {
+    const run = goals.start(sessionId, "部署")!;
+    expect(
+      ask(run, {
+        question: "要把新密钥写入生产服务器吗？",
+        level: "consent",
+        options: ["写入", "不写"],
+        default: "写入",
+      }),
+    ).toMatchObject({ ok: true });
+    const detail = (events.at(-1) as Extract<StreamEvent, { type: "goal_progress" }>)
+      .waitingForUserDetail;
+    expect(detail).toEqual({ level: "consent" });
+  });
+
+  test("malformed questions are refused with a reason and publish nothing", () => {
+    const run = goals.start(sessionId, "发布")!;
+    const before = events.length;
+    for (const bad of [
+      { question: "长".repeat(601) },
+      { question: "继续吗？", level: "urgent" },
+      { question: "继续吗？", options: "是" },
+      { question: "继续吗？", options: ["1", "2", "3", "4", "5", "6", "7"] },
+      { question: "继续吗？", options: ["x".repeat(81)] },
+      { question: "继续吗？", default: 3 },
+    ]) {
+      const result = ask(run, bad);
+      expect(result.ok).toBe(false);
+      expect(result.message.length).toBeGreaterThan(10);
+    }
+    expect(events).toHaveLength(before);
+    expect(goals.pendingQuestion(sessionId)).toBeUndefined();
+    expect(goals.afterTurn(run, 1, "继续")).toBe(true);
+  });
+
+  test("only one question is accepted per turn", () => {
+    const run = goals.start(sessionId, "发布")!;
+    expect(ask(run, { question: "第一个问题？" })).toMatchObject({ ok: true });
+    const before = events.length;
+    const second = ask(run, { question: "第二个问题？" });
+    expect(second.ok).toBe(false);
+    expect(second.message).toContain("only one");
+    expect(events).toHaveLength(before);
+    expect(goals.pendingQuestion(sessionId)).toBe("第一个问题？");
+  });
+
+  test("a question the user already saw is not asked again", () => {
+    const first = goals.start(sessionId, "发布")!;
+    expect(ask(first, { question: "发 rc 还是正式版？" })).toMatchObject({ ok: true });
+    goals.afterTurn(first, 1, "已提问");
+    goals.end(first);
+    // Any real user message closes it, whether it answered or moved on.
+    goals.userReplied(sessionId);
+    const next = goals.start(sessionId)!;
+    const before = events.length;
+    const repeat = ask(next, { question: "  发 RC  还是正式版？ " });
+    expect(repeat.ok).toBe(false);
+    expect(repeat.message).toContain("Do not ask it again");
+    expect(events).toHaveLength(before);
+    expect(goals.afterTurn(next, 1, "继续")).toBe(true);
+    expect(ask(next, { question: "另一个新问题？" })).toMatchObject({ ok: true });
+  });
+
+  test("an unanswered question is kept; a different one does not replace it", () => {
+    const first = goals.start(sessionId, "发布")!;
+    expect(ask(first, { question: "发 rc 还是正式版？", options: ["rc", "正式版"] })).toMatchObject(
+      {
+        ok: true,
+      },
+    );
+    goals.afterTurn(first, 1, "已提问");
+    goals.end(first);
+    // A resume (not a user message) starts another run with the question open.
+    const resumed = goals.start(sessionId)!;
+    const other = ask(resumed, { question: "要不要顺便发公告？" });
+    expect(other.ok).toBe(false);
+    expect(other.message).toContain("发 rc 还是正式版？");
+    expect(goals.pendingQuestion(sessionId)).toBe("发 rc 还是正式版？");
+    expect(events.at(-1)).toMatchObject({
+      waitingForUser: "发 rc 还是正式版？",
+      waitingForUserDetail: { options: ["rc", "正式版"] },
+    });
+    // The Goal keeps waiting on the original instead of continuing by itself.
+    expect(goals.afterTurn(resumed, 1, "仍在等")).toBe(false);
+    expect(goals.get(sessionId).paused).toBe(false);
+  });
+
+  test("the prompt grades decisions and never asks for the question twice", () => {
+    const run = goals.start(sessionId, "发布")!;
+    const text = goals.instruction(run);
+    expect(text).not.toContain("ask it in your reply");
+    expect(text).toContain("do not repeat the question in your reply text");
+    expect(text).toContain("Only one wait_for_user call is accepted per turn");
+    expect(text).toContain("L0, a reversible engineering or quality decision");
+    expect(text).toContain("state the default you are taking, proceed with it");
+    expect(text).toContain('you must ask with level "consent"');
+    expect(text).toContain("is not consent");
+    // The old blanket rule stopped every outward action, including L1 ones.
+    expect(text).not.toContain("publishing or other outward actions), do not take that step");
+    expect(text).toContain("mcp__codeshell_tools__wait_for_background");
+    expect(text).toContain("inferred from documentation and unverified");
+  });
+});

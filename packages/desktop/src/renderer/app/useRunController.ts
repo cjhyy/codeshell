@@ -431,7 +431,11 @@ export function useRunController({
         type: "goal_reconcile",
         bucket,
         expected: { goalId: goal.goalId, revision: goal.revision },
-        goal: { ...goal, waitingForUser: goalBeforeSend.waitingForUser },
+        goal: {
+          ...goal,
+          waitingForUser: goalBeforeSend.waitingForUser,
+          waitingDetail: goalBeforeSend.waitingDetail,
+        },
       });
       return true;
     };

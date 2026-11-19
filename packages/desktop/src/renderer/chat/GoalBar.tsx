@@ -40,8 +40,13 @@ interface Props {
   onPausedChange?: (paused: boolean) => void;
   onUpdate?: (objective: string) => void;
   onDelete?: () => void;
+  /** Send a one-click answer (an option chip); typed answers use the main composer. */
   onReply?: (answer: string) => void | Promise<void>;
   replyDisabled?: boolean;
+  /** An answer typed in the main composer failed to send. */
+  replyFailed?: boolean;
+  /** Another question is shown first; this one waits its turn instead of stacking. */
+  replyQueued?: boolean;
   sessionId?: string | null;
   cwd?: string | null;
   rootId?: string | null;
@@ -64,6 +69,8 @@ export function GoalBar({
   onDelete,
   onReply,
   replyDisabled = false,
+  replyFailed = false,
+  replyQueued = false,
   sessionId,
   cwd,
   rootId,
@@ -82,21 +89,16 @@ export function GoalBar({
     goal.round,
     goal.waitingForUser,
   ]);
-  // Keep an answer through the optimistic waiting -> running -> failed launch
-  // transition, even while the reply card itself is temporarily unmounted.
-  const [replyDraft, setReplyDraft] = React.useState({ key: "", text: "", failed: false });
+  // Keep a failed one-click answer visible through the optimistic
+  // waiting -> running -> failed launch transition, for this question only.
+  const [failedReplyKey, setFailedReplyKey] = React.useState("");
   const reply = onReply
     ? async (answer: string): Promise<void> => {
-        setReplyDraft({ key: replyKey, text: answer, failed: false });
+        setFailedReplyKey("");
         try {
           await onReply(answer);
-          setReplyDraft((previous) =>
-            previous.key === replyKey ? { key: "", text: "", failed: false } : previous,
-          );
         } catch (error) {
-          setReplyDraft((previous) =>
-            previous.key === replyKey ? { ...previous, failed: true } : previous,
-          );
+          setFailedReplyKey(replyKey);
           throw error;
         }
       }
@@ -330,14 +332,21 @@ export function GoalBar({
           )}
         </div>
       )}
-      {waiting && (
+      {waiting && replyQueued && (
+        <p
+          className="border-t border-primary/20 py-1.5 text-xs text-muted-foreground"
+          data-goal-reply-queued
+        >
+          {t("chat.goal.replyQueued")}
+        </p>
+      )}
+      {waiting && !replyQueued && (
         <GoalReplyCard
           key={replyKey}
           question={goal.waitingForUser!}
+          detail={goal.waitingDetail}
           onReply={reply}
-          draft={replyDraft.key === replyKey ? replyDraft.text : ""}
-          failed={replyDraft.key === replyKey && replyDraft.failed}
-          onDraftChange={(text) => setReplyDraft({ key: replyKey, text, failed: false })}
+          failed={replyFailed || failedReplyKey === replyKey}
           disabled={pending || busy || replyDisabled}
           sessionId={sessionId}
           cwd={cwd}

@@ -56,6 +56,28 @@ describe("GoalProgressView", () => {
     expect(open).toContain("2 个后台任务");
   });
 
+  test("a question keeps one short record: no text while open, one line once closed", () => {
+    const question = "发 rc 还是正式版？" + "详细背景。".repeat(40);
+    const open = renderToStaticMarkup(
+      <GoalProgressView
+        message={{ ...base, gaps: `等待你的回复：${question}`, waitingForUser: question }}
+      />,
+    );
+    expect(open).toContain('data-goal-question="open"');
+    expect(open).toContain("等待你的回复 · 第 14 轮");
+    // The question is on screen once, above the composer; not again here.
+    expect(open).not.toContain("发 rc");
+    expect(open).not.toContain("目标未达成");
+
+    const closed = renderToStaticMarkup(
+      <GoalProgressView message={{ ...base, waitingForUser: question, questionClosed: true }} />,
+    );
+    expect(closed).toContain('data-goal-question="closed"');
+    expect(closed).toContain("已提问 · 第 14 轮");
+    expect(closed).toContain("truncate");
+    expect(closed).toContain(`title="${question}"`);
+  });
+
   test("an unmet verdict keeps its goal-level round", () => {
     const html = renderToStaticMarkup(<GoalProgressView message={{ ...base, gaps: "还差验收" }} />);
     expect(html).toContain("目标未达成 · 第 14 轮");

@@ -884,6 +884,16 @@ type StreamEventPayload =
       /** The Goal stopped to wait for the user's answer to this question (wait_for_user). */
       waitingForUser?: string;
       /**
+       * Structure of that question, when the asker supplied it: short option
+       * labels, the default the agent proceeds with, and whether it needs the
+       * user's explicit consent. Clients that ignore it still show the text.
+       */
+      waitingForUserDetail?: {
+        level: "preference" | "consent";
+        options?: string[];
+        default?: string;
+      };
+      /**
        * The Goal parked on finite background work instead of being judged
        * unmet: the run ends and the work's completion wakes it. `tasks` are
        * display-only, already-sanitized labels (untrusted text).

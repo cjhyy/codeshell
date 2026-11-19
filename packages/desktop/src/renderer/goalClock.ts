@@ -87,7 +87,10 @@ export function carryGoalClock(
     // goal/get does not include the outstanding question. A metadata refresh
     // must not answer it; a real user message or later progress does that.
     ...(previous.objective === next.objective && previous.waitingForUser
-      ? { waitingForUser: next.waitingForUser ?? previous.waitingForUser }
+      ? {
+          waitingForUser: next.waitingForUser ?? previous.waitingForUser,
+          waitingDetail: next.waitingForUser ? next.waitingDetail : previous.waitingDetail,
+        }
       : {}),
     ...(previous.activeMs !== undefined && next.activeMs === undefined
       ? {
@@ -117,6 +120,29 @@ export function closeOpenGoalWaits(messages: Message[], nowMs: number): Message[
       waitEndedAtMs: Math.max(message.waiting.sinceMs, nowMs),
     } satisfies GoalProgressMessage;
   });
+  return changed ? next : messages;
+}
+
+/**
+ * Close every goal-question record: the user replied or the goal moved on.
+ * A record of `reasked` is dropped instead, so one question keeps one record.
+ */
+export function closeGoalQuestions(messages: Message[], reasked?: string): Message[] {
+  let changed = false;
+  const next: Message[] = [];
+  for (const message of messages) {
+    if (
+      message.kind !== "goal_progress" ||
+      message.waitingForUser === undefined ||
+      message.questionClosed
+    ) {
+      next.push(message);
+      continue;
+    }
+    changed = true;
+    if (message.waitingForUser === reasked) continue;
+    next.push({ ...message, questionClosed: true } satisfies GoalProgressMessage);
+  }
   return changed ? next : messages;
 }
 
