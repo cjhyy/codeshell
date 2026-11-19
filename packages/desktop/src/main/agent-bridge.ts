@@ -161,11 +161,12 @@ import {
   type AgentRunMetadataDeps,
   type HostReservation,
 } from "./agent-run-metadata.js";
-import { resolveAgentRunBrowserRegistration } from "./agent-run-browser-registration.js";
+import {
+  defaultSessionBrowserBucket,
+  resolveAgentRunBrowserRegistration,
+} from "./agent-run-browser-registration.js";
 import { getProjectStore } from "./project-store.js";
 import { getSessionCwdIndex } from "./session-cwd-index.js";
-import { externalRuntimeBrowserBucket } from "./external-runtime-browser-bucket.js";
-import { readExternalRuntimeBinding } from "./external-runtime-state.js";
 import type { ExternalGoalRpcHandler } from "./external-runtime-goal-rpc.js";
 import { getTrustCachedSync } from "./trust-store.js";
 import { isOptimizationLabQuery, unwrapOptimizationLabReply } from "../shared/optimization-lab.js";
@@ -700,15 +701,10 @@ export class AgentBridge implements PetStateBridge {
       try {
         // Host-driven resumes have no renderer to supply a browser bucket.
         // Resolve only after run metadata has established Session authority,
-        // retaining any existing browser identity or external-runtime isolation.
-        const existingBucket = bucketForSession(prepared.sessionId);
+        // retaining any existing browser identity.
         const registration = resolveAgentRunBrowserRegistration(prepared, {
-          existingBucket,
+          existingBucket: bucketForSession(prepared.sessionId),
           existingPartition: partitionForSession(prepared.sessionId),
-          externalRuntime:
-            !prepared.bucket &&
-            !existingBucket &&
-            readExternalRuntimeBinding(prepared.sessionId) !== undefined,
         });
         if (registration) {
           registerSessionBucket(
@@ -2324,10 +2320,10 @@ export class AgentBridge implements PetStateBridge {
    * the register/release halves across call sites and the bucket leaks for the
    * lifetime of the process.
    *
-   * The bucket is per-session (`external-runtime:<id>`) rather than the
-   * renderer's active bucket: sharing one would put the runtime's browser
-   * automation in the same partition — same cookies, same logged-in state — as
-   * whatever tab the user happens to be looking at.
+   * The bucket is the one a native Session of the same project uses, so the
+   * runtime shares the project's logins and can ask for the user's BrowserPanel
+   * tab. Its automation still starts in its own task window; a panel tab is
+   * driven only after the user grants it.
    */
   registerExternalSession(sessionId: string, cwd: string, webContentsId?: number): void {
     this.reserveHostSession(sessionId, cwd);
@@ -2350,7 +2346,15 @@ export class AgentBridge implements PetStateBridge {
       }
     }
     try {
-      registerSessionBucket(sessionId, externalRuntimeBrowserBucket(sessionId));
+      // A renderer that opened this conversation first has already bound it.
+      if (!bucketForSession(sessionId)) {
+        // The recorder persisted the Main-resolved project before this call.
+        const project = this.sessionsForFallback().readSessionProjectBinding(sessionId);
+        registerSessionBucket(
+          sessionId,
+          defaultSessionBrowserBucket(sessionId, project?.projectId),
+        );
+      }
     } catch (err) {
       dlog("bridge", "external.register_session_bucket_failed", { error: String(err) });
     }
@@ -2393,7 +2397,7 @@ export class AgentBridge implements PetStateBridge {
     ): Promise<AgentPanelHostResult> =>
       this.requestPanelHost({
         sessionId,
-        bucket: bucketForSession(sessionId) ?? externalRuntimeBrowserBucket(sessionId),
+        bucket: bucketForSession(sessionId) ?? defaultSessionBrowserBucket(sessionId),
         action,
         ...extra,
       });

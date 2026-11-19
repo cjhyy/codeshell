@@ -1,7 +1,6 @@
 import { browserPartitionForBucket } from "../shared/browser-profile.js";
 import { QUICK_CHAT_BUCKET_PREFIX } from "../shared/browser-partition.js";
 import type { PreparedAgentRunMetadata } from "./agent-run-metadata.js";
-import { externalRuntimeBrowserBucket } from "./external-runtime-browser-bucket.js";
 
 export interface AgentRunBrowserRegistration {
   sessionId: string;
@@ -12,7 +11,22 @@ export interface AgentRunBrowserRegistration {
 export interface AgentRunBrowserRegistrationContext {
   existingBucket?: string | null;
   existingPartition?: string | null;
-  externalRuntime?: boolean;
+}
+
+/**
+ * The bucket Main derives for a Session when no renderer supplied one. It is
+ * byte-identical to the renderer's `bucketKey(projectId, sessionId)`, so the
+ * Session's BrowserPanel tabs and its automation meet in one workspace, and
+ * its partition is the project profile every Session of that project shares.
+ *
+ * Sessions driven by an external Agent Runtime use this too. Keeping
+ * automation off the tab a user is looking at is the job of tab control (a
+ * task-owned window by default, a BrowserPanel tab only after an explicit
+ * grant), not of a separate cookie jar.
+ */
+export function defaultSessionBrowserBucket(sessionId: string, projectId?: unknown): string {
+  if (sessionId.startsWith("qchat-")) return `${QUICK_CHAT_BUCKET_PREFIX}${sessionId}`;
+  return `${typeof projectId === "string" && projectId ? projectId : "__no_repo__"}::${sessionId}`;
 }
 
 /**
@@ -47,14 +61,7 @@ export function resolveAgentRunBrowserRegistration(
     };
   }
 
-  // External runtimes use their own cookie jar even when the Session belongs
-  // to a project. A cold continuation must restore that isolation.
   const params = prepared.parsed.params as Record<string, unknown> | undefined;
-  const projectId = params?.projectId;
-  const bucket = sessionId.startsWith("qchat-")
-    ? `${QUICK_CHAT_BUCKET_PREFIX}${sessionId}`
-    : context.externalRuntime
-      ? externalRuntimeBrowserBucket(sessionId)
-      : `${typeof projectId === "string" && projectId ? projectId : "__no_repo__"}::${sessionId}`;
+  const bucket = defaultSessionBrowserBucket(sessionId, params?.projectId);
   return { sessionId, bucket, partition: browserPartitionForBucket(bucket) };
 }
