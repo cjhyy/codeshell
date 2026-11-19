@@ -854,6 +854,7 @@ export function useHubController({
     host: hub ? "hub" : "legacy",
     workspaceApi: hub,
     connection,
+    retryConnection: () => clientRef.current?.retryNow(),
     session,
     activeId,
     // A paged catalog can omit older sessions. Successful history recovery or

@@ -269,6 +269,14 @@ export class ProtocolClient {
     return this.generation;
   }
 
+  /** User-initiated retry while the socket is down: skip the remaining backoff. */
+  retryNow(): void {
+    if (this.closedByUser || this.ws) return;
+    clearTimeout(this.reconnectTimer);
+    this.reconnectDelay = RECONNECT_BASE_MS;
+    this.openSocket();
+  }
+
   /** Compatibility fallback for a Host explicitly missing read-only snapshots. */
   reconnect(): void {
     if (!this.closedByUser && this.ws) this.retire(this.ws);

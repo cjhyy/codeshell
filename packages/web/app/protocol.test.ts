@@ -95,6 +95,23 @@ describe("Hub browser protocol", () => {
     expect(FakeSocket.sockets).toHaveLength(1);
   });
 
+  test("retryNow skips the backoff wait only while the socket is down", () => {
+    client.retryNow();
+    expect(FakeSocket.sockets).toHaveLength(1);
+    socket.close();
+    expect(FakeSocket.sockets).toHaveLength(1);
+    client.retryNow();
+    expect(FakeSocket.sockets).toHaveLength(2);
+    client.retryNow();
+    expect(FakeSocket.sockets).toHaveLength(2);
+  });
+
+  test("retryNow does not resurrect a client closed by the page", () => {
+    client.close();
+    client.retryNow();
+    expect(FakeSocket.sockets).toHaveLength(1);
+  });
+
   test("revoked sessions emit auth loss and stop automatic reconnect", async () => {
     let lost = 0;
     client.onAuthLost(() => lost++);

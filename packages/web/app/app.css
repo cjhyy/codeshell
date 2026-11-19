@@ -810,6 +810,11 @@ button.workspace-button:hover {
     border-color 150ms ease,
     box-shadow 150ms ease;
 }
+.composer.composer-dragging {
+  border-color: var(--accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--accent) 5%, var(--surface));
+}
 .composer:has(textarea:focus) {
   border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
   box-shadow:
@@ -1291,6 +1296,12 @@ button.ghost:hover:not(:disabled) {
 }
 
 @media (max-width: 760px) {
+  /* iOS Safari zooms the page when a focused field is under 16px. */
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: max(16px, 1em);
+  }
   .rail {
     position: fixed;
     inset: 0 auto 0 0;

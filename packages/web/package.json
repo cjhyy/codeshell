@@ -46,6 +46,7 @@
     "test:remote-queue-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-remote-queue-browser.mjs",
     "test:cli-session-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-cli-session-browser.mjs",
     "test:chat-operations-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-chat-operations-browser.mjs",
+    "test:composer-parity-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-composer-parity-browser.mjs",
     "test:service-worker-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-service-worker-browser.mjs",
     "build": "bun run clean && tsc -p tsconfig.json && vite build",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.app.json --noEmit",

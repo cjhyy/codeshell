@@ -30,6 +30,8 @@ export interface WorkbenchController {
   connection: ConnectionState;
   /** Presentation only; connection remains the authority for enabling actions. */
   connectionMessage?: string;
+  /** Skip the backoff wait after a drop; offered only while the link is closed. */
+  retryConnection?: () => void;
   session?: AuthSession;
   activeId: string;
   /** Canonical protocol session, never a draft or CLI-room display bucket. */

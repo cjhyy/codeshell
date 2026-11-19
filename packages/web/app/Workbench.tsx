@@ -30,6 +30,7 @@ import { TurnQueueList } from "./TurnQueueList.js";
 import { WebsiteSetupSteps } from "./WebsiteSetupSteps.js";
 import { ProjectSessionNavigation } from "./ProjectSessionNavigation.js";
 import { SessionLoadingState } from "./SessionLoadingState.js";
+import { ConnectionBanner, submitsOnEnter, useComposerFileTransfer } from "./composer-input.js";
 import type { SessionSummary } from "./protocol.js";
 import "./app.css";
 import "./workbench-desktop.css";
@@ -121,6 +122,10 @@ export function Workbench({
   } = controller;
   const navigationSessions = controller.navigationSessions ?? sessions;
   const hub = controller.workspaceApi;
+  const fileTransfer = useComposerFileTransfer(
+    hub && !controller.uploadBusy && connection === "open" && !controller.readOnly,
+    controller.addFiles,
+  );
   const currentController = React.useRef(controller);
   currentController.current = controller;
   const hostLabel = controller.host === "desktop" ? "桌面" : "服务端";
@@ -1040,12 +1045,7 @@ export function Workbench({
             ))}
           </div>
         ) : null}
-        {connection !== "open" ? (
-          <div className="banner" role="status">
-            {controller.connectionMessage ||
-              `连接${connection === "connecting" ? "中…" : "已断开，重连中…"}`}
-          </div>
-        ) : null}
+        <ConnectionBanner controller={controller} />
         {view !== "chat" && approvals.length > 0 ? (
           <div className="banner">
             {blockingApprovals.length ? "当前对话需要你的确认。" : "当前对话有可稍后回答的问题。"}
@@ -1340,7 +1340,13 @@ export function Workbench({
           {controller.readOnlyNote ? <div className="banner">{controller.readOnlyNote}</div> : null}
           <div className="composer-wrap">
             {controller.turnQueue ? <TurnQueueList queue={controller.turnQueue} /> : null}
-            <footer className="composer">
+            <footer
+              className={`composer${fileTransfer.dragging ? " composer-dragging" : ""}`}
+              onDragEnter={fileTransfer.onDragEnter}
+              onDragOver={fileTransfer.onDragOver}
+              onDragLeave={fileTransfer.onDragLeave}
+              onDrop={fileTransfer.onDrop}
+            >
               {files.length || (uploading && controller.host === "hub") ? (
                 <div className="attachments" aria-live="polite">
                   {files.map((file) => (
@@ -1375,13 +1381,9 @@ export function Workbench({
                 onChange={(event) => {
                   controller.setDraft(event.target.value);
                 }}
+                onPaste={fileTransfer.onPaste}
                 onKeyDown={(event) => {
-                  if (
-                    !window.matchMedia("(max-width: 760px)").matches &&
-                    event.key === "Enter" &&
-                    !event.shiftKey &&
-                    !event.nativeEvent.isComposing
-                  ) {
+                  if (submitsOnEnter(event, window.matchMedia("(max-width: 760px)").matches)) {
                     event.preventDefault();
                     send();
                   }

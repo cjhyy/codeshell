@@ -3,6 +3,7 @@ import type { ApprovalRequestPayload } from "./protocol.js";
 import { summarizeApproval } from "../src/lib/riskClassify.js";
 import { recommendedAskAnswer, recommendedAskLabels } from "../src/lib/messageMappers.js";
 import { autoResolveText, formatRemaining, useNow } from "./deadline.js";
+import { submitsOnEnter } from "./composer-input.js";
 
 export function HubApprovalCard({
   payload,
@@ -171,6 +172,13 @@ export function HubApprovalCard({
               onChange={(e) => {
                 keepWaiting();
                 setAnswer(e.target.value);
+              }}
+              onKeyDown={(e) => {
+                // Same as Desktop: Enter answers, Shift+Enter or an IME confirm doesn't.
+                const narrow = window.matchMedia?.("(max-width: 760px)").matches ?? false;
+                if (!submitsOnEnter(e, narrow)) return;
+                e.preventDefault();
+                if (!locked && submittedAnswer) onDecide(payload, true, submittedAnswer);
               }}
             />
           ) : null}
