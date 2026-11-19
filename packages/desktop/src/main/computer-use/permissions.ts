@@ -57,8 +57,8 @@ export function resolveComputerUsePermissionsHelper(options: {
   readonly isPackaged: boolean;
   readonly resourcesPath: string;
   readonly appPath: string;
-}): string {
-  return computerUseBundlePaths(options)!.helperPath;
+}): string | undefined {
+  return computerUseBundlePaths(options)?.helperPath;
 }
 
 function runHelper(
