@@ -11,6 +11,7 @@ import {
   type ToolDefinition,
 } from "@cjhyy/code-shell-core/extension";
 import { runAgentOnce, type AgentRunResult } from "../cc-orchestrator/external-agent-driver.js";
+import { runCodexWorkerOnce } from "./drive-agent-codex-worker.js";
 import { initialAgentProgress } from "../cc-orchestrator/external-agent-progress.js";
 import { claudeAdapter, codexAdapter } from "../cc-orchestrator/agent-adapter.js";
 import { readExternalChangedFiles } from "../cc-orchestrator/external-agent-changes.js";
@@ -73,7 +74,8 @@ export const driveAgentToolDef: ToolDefinition = {
     "PERMISSIONS: without `permissionMode` the worker inherits this session's mode. Only " +
     "'bypassPermissions' runs everything unattended. In 'default' and 'acceptEdits' a Claude Code " +
     "worker must get approval for Bash — so git, tests, installs and formatters do NOT run on " +
-    "their own; each request goes to this session's approval prompt, and is denied outright when " +
+    "their own — and a Codex worker for whatever its sandbox does not allow; each request goes to " +
+    "this session's approval prompt, and is denied outright when " +
     "the session has no approval path. A worker that keeps being denied is stopped early and " +
     "reported as blocked, and a run that was denied anything is reported as 'completed with N " +
     "denied operations', never as plainly completed. " +
@@ -170,7 +172,7 @@ export const driveAgentToolDef: ToolDefinition = {
         type: "string",
         enum: ["default", "acceptEdits", "bypassPermissions"],
         description:
-          "Permission level. Omit to inherit this session's mode (full access → 'bypassPermissions', accept-edits → 'acceptEdits', anything else → 'default'). Claude Code: 'default' asks before edits, Bash and web access; 'acceptEdits' lets edits through but still asks before Bash (git, tests, installs) and web access; 'bypassPermissions' asks nothing. Asks go to this session's approval prompt and are denied when it has none. Codex: default → read-only sandbox, acceptEdits → workspace-write sandbox, bypassPermissions → no sandbox; Codex never asks.",
+          "Permission level. Omit to inherit this session's mode (full access → 'bypassPermissions', accept-edits → 'acceptEdits', anything else → 'default'). Claude Code: 'default' asks before edits, Bash and web access; 'acceptEdits' lets edits through but still asks before Bash (git, tests, installs) and web access; 'bypassPermissions' asks nothing. Codex: 'default' → read-only sandbox, asks before edits and before commands that write or use the network; 'acceptEdits' → workspace-write sandbox limited to cwd without network, asks only for what that sandbox blocks (network, writes outside cwd); 'bypassPermissions' → no sandbox, asks nothing. Asks go to this session's approval prompt and are denied when it has none.",
       },
       background: {
         type: "boolean",
@@ -194,6 +196,7 @@ type Runner = (opts: {
   imagePaths?: string[];
   additionalReadDirs?: string[];
   permissionPrompt?: DriveRunPermissions["permissionPrompt"];
+  codexApproval?: DriveRunPermissions["codexApproval"];
   onSessionId?: (sessionId: string) => void;
   onProgress?: (progress: BackgroundJobProgress) => void;
   onProcess?: (pid: number) => void;
@@ -246,6 +249,12 @@ function isExternalRuntimeContext(ctx?: ToolContext): boolean {
 
 const defaultRunner: Runner = (opts) => {
   const { adapter, command } = CLI_ADAPTERS[opts.cli];
+  const mode = opts.permissionMode ?? "default";
+  // Outside full access a Codex worker needs a channel to ask on; `codex exec` has none.
+  if (opts.cli === "codex" && opts.codexApproval && mode !== "bypassPermissions") {
+    const { codexApproval: approve, signal, cli: _cli, ...rest } = opts;
+    return runCodexWorkerOnce({ ...rest, permissionMode: mode, approve }, signal);
+  }
   return runAgentOnce(
     adapter,
     {
@@ -1362,6 +1371,7 @@ export function makeDriveAgentTool(
       imagePaths,
       additionalReadDirs,
       ...(permissions.permissionPrompt ? { permissionPrompt: permissions.permissionPrompt } : {}),
+      ...(permissions.codexApproval ? { codexApproval: permissions.codexApproval } : {}),
     };
     // The prompt bridge lives exactly as long as the external process.
     const launch = (opts: Parameters<Runner>[0]): Promise<AgentRunResult> => {

@@ -144,8 +144,9 @@ export const claudeAdapter: AgentAdapter = {
  *      default        → --sandbox read-only      (codex can read, not write)
  *      acceptEdits    → --sandbox workspace-write (codex can write the workspace)
  *      bypassPermissions → --dangerously-bypass-approvals-and-sandbox (full auto)
- *    (Matches the only model codex supports — same choice the `wand` tool makes;
- *    codex has no `--permission-prompt-tool stdio` equivalent.)
+ *    (`codex exec` has no approval channel. DriveAgent therefore uses this
+ *    adapter only for full access, and for parsing; a worker that may have to
+ *    ask runs as an app-server thread, see `tools/drive-agent-codex-worker.ts`.)
  *  - JSONL event shape differs: session id is `thread.started`.thread_id, the
  *    final answer is the last `item.completed` of item.type "agent_message", and
  *    failure is `turn.failed` / `error` events (no `is_error` flag).

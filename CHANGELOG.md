@@ -8,6 +8,14 @@ breaking.
 
 ## [Unreleased]
 
+### Changed
+
+- A Codex worker started with DriveAgent outside full access can now ask: it
+  runs in a read-only (`default`) or workspace-write (`acceptEdits`) sandbox
+  and sends each approval request to the calling session's approval prompt,
+  labelled with the task title. Denials are counted and reported the same way
+  as for a Claude Code worker, including the early stop.
+
 ## [0.11.0-rc.4] - 2026-11-19
 
 Release candidate focused on Codex and Claude Code sessions run from the desktop

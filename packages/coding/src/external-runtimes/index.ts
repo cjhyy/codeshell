@@ -39,6 +39,7 @@ export type { AppServerClientOptions } from "./codex/app-server-client.js";
 export { discoverCodexModels } from "./codex/model-discovery.js";
 export type { CodexDiscoveredModel } from "./codex/model-discovery.js";
 export { CodexRuntime } from "./codex/runtime.js";
+export { codexNativeApprovalPresentation } from "./codex/approval-presentation.js";
 export type {
   CodexRuntimeOptions,
   CodexFileChangeSummary,
