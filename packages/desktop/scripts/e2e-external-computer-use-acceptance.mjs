@@ -36,6 +36,7 @@ const isolated = await makeIsolatedElectronHome("codeshell-computer-use-acceptan
 const screenshotDir = process.env.CODESHELL_ACCEPTANCE_SCREENSHOT_DIR;
 const projectPath = join(isolated.home, "acceptance-project");
 const modelKey = "claude-code/sonnet";
+const codexModelKey = "codex/gpt-5.6-sol";
 const SERVER = "codeshell_computer";
 let app, win, cli, standIn;
 
@@ -114,17 +115,17 @@ async function registerProject() {
   );
 }
 
-async function selectModel() {
+async function selectModel(wanted = modelKey) {
   const pill = win.locator("button[data-active-model]");
   await pill.waitFor({ state: "visible", timeout: 20_000 });
-  if ((await pill.getAttribute("data-active-model")) === modelKey) return;
+  if ((await pill.getAttribute("data-active-model")) === wanted) return;
   await pill.click();
-  await win.locator(`[data-model-key="${modelKey}"]`).click();
+  await win.locator(`[data-model-key="${wanted}"]`).click();
   await win.waitForFunction(
     (key) =>
       document.querySelector("button[data-active-model]")?.getAttribute("data-active-model") ===
       key,
-    modelKey,
+    wanted,
   );
 }
 
@@ -390,6 +391,161 @@ try {
   await win.getByRole("button", { name: /计划模式|Plan/ }).click();
   await win.getByRole("option", { name: /默认权限|Default/ }).click();
 
+  // === The same, for a Codex session (app-server protocol, MCP approval elicitation).
+  const codexTurns = async () =>
+    (await cli.codexEvents()).filter((entry) => entry.event === "scripted-turn");
+  const codexSpawn = async () =>
+    (await cli.codexEvents()).filter((entry) => entry.event === "spawn").at(-1);
+  const codexTurn = async (count, { noCard = false } = {}) => {
+    const deadline = Date.now() + 40_000;
+    while ((await codexTurns()).length < count) {
+      assert(Date.now() < deadline, `Timed out waiting for scripted Codex turn ${count}`);
+      if (noCard)
+        assert(
+          !(await approveOnce().first().isVisible()),
+          "An approval card was shown unexpectedly",
+        );
+      await pause(100);
+    }
+    return (await codexTurns())[count - 1];
+  };
+  await win
+    .locator("aside")
+    .getByRole("button", { name: /acceptance-project.*(新对话|new)/i })
+    .click();
+  await selectModel(codexModelKey);
+  const codexCard = win.getByText(/Codex (想操控你的电脑|wants to control your computer)/);
+  await cli.scriptCodex([{ computer: [{ name: "list_apps" }], text: "codex fixture: denied" }]);
+  reachedDriver = (await driverNames()).length;
+  await send("codex, which apps are open?");
+  await codexCard.waitFor({ timeout: 30_000 });
+  await screenshot("08-codex-default-mode-approval-card.png");
+  // The elicitation names no tool; the card still says which one.
+  assert(
+    (await win.getByText("Computer use: list_apps").count()) > 0 &&
+      (await win
+        .getByRole("button", { name: /^(本会话一直允许|Always allow this session)$/ })
+        .count()) === 0,
+    "The Codex computer-use card does not name the tool, or offers a standing approval",
+  );
+  await win
+    .getByRole("button", { name: /^(拒绝|Deny)$/ })
+    .first()
+    .click();
+  const codexDenied = await codexTurn(1);
+  const declared = await codexSpawn();
+  assert(
+    declared.servers.includes(SERVER) &&
+      declared.secretNames.length > 0 &&
+      declared.secretsInEnv &&
+      !declared.secretsInArgv,
+    `Codex was not given the server with its token out of argv: ${JSON.stringify(declared)}`,
+  );
+  const codexSessionId = declared.computerSession;
+  assert(
+    /^s-[a-z0-9-]+$/.test(codexSessionId ?? "") &&
+      codexSessionId !== sessionId &&
+      (await win.evaluate(
+        (id) => JSON.stringify(Object.entries(window.localStorage)).includes(id),
+        codexSessionId,
+      )),
+    `The Codex proxy is not pinned to its own session: ${codexSessionId}`,
+  );
+  assert(
+    codexDenied.approvalPolicy === "on-request" &&
+      codexDenied.computer[0].asked &&
+      codexDenied.computer[0].answer === "decline" &&
+      !codexDenied.computerTools.includes("page") &&
+      (await driverNames()).length === reachedDriver,
+    `A denied Codex call was not declined, or reached the driver: ${JSON.stringify(codexDenied.computer)}`,
+  );
+  console.log(`acceptance: Codex offered the gated server, pinned to ${codexSessionId}; deny held`);
+
+  await cli.scriptCodex([{ computer: [{ name: "list_apps" }], text: "codex fixture: approved" }]);
+  await send("try again, I will approve");
+  await codexCard.waitFor({ timeout: 20_000 });
+  await approveOnce().first().click();
+  const codexApproved = await codexTurn(2);
+  assert(
+    codexApproved.computer[0].answer === "accept" &&
+      (await driverNames()).slice(reachedDriver).join(",") === "list_apps",
+    "An approved Codex call did not reach the driver exactly once",
+  );
+  await win.getByText("codex fixture: approved").first().waitFor({ timeout: 15_000 });
+
+  await win.getByRole("button", { name: /默认权限|Default/ }).click();
+  await win.getByRole("option", { name: /完全访问权限|Full access/ }).click();
+  await setUserIdleSeconds(0);
+  await cli.scriptCodex([
+    { computer: [{ name: "list_apps" }, background, foreground], text: "codex fixture: active" },
+  ]);
+  await send("click it for me");
+  const codexActive = await codexTurn(3, { noCard: true });
+  assert(
+    codexActive.approvalPolicy === "never" &&
+      codexActive.computer.map((call) => refusal(call) ?? "ran").join(",") ===
+        "ran,ran,user-active",
+    `Codex full access: ${codexActive.approvalPolicy}, ${codexActive.computer.map((call) => refusal(call) ?? "ran")}`,
+  );
+  await setUserIdleSeconds(9999);
+  await win.getByText("codex fixture: active").first().waitFor({ timeout: 15_000 });
+  await screenshot("09-codex-full-access-no-card.png");
+  console.log("acceptance: Codex full access asked nothing; the input gate still refused");
+
+  calls = (await cli.computerCalls()).length;
+  await cli.scriptCodex([held]);
+  await send("keep clicking until I stop you");
+  await waitFor(async () => (await cli.computerCalls()).length > calls, "the held Codex call");
+  await win.getByRole("button", { name: /^(停止|Stop)$/ }).click();
+  const codexStopped = await afterSignal(calls);
+  assert(
+    codexStopped.map((call) => refusal(call) ?? "ran").join(",") === "ran,session-cancelled,ran",
+    `After Stop the gate decided ${codexStopped.map((call) => refusal(call) ?? "ran")} for Codex`,
+  );
+  await codexTurn(4);
+  await cli.scriptCodex([{ computer: [background], text: "codex fixture: next run" }]);
+  await send("carry on");
+  assert(
+    refusal((await codexTurn(5, { noCard: true })).computer[0]) === undefined,
+    "A Stop outlived the Codex run it stopped",
+  );
+  await win.getByText("codex fixture: next run").first().waitFor({ timeout: 15_000 });
+
+  calls = (await cli.computerCalls()).length;
+  await cli.scriptCodex([held, { computer: [background], text: "codex fixture: redirected" }]);
+  await send("keep clicking again");
+  await waitFor(async () => (await cli.computerCalls()).length > calls, "the held Codex call");
+  await win.locator("textarea:visible").last().fill("stop that, do this instead");
+  await win.getByRole("button", { name: /^(引导|Guide)$/ }).click();
+  const codexInterrupted = await afterSignal(calls);
+  const codexRedirected = await codexTurn(7, { noCard: true });
+  assert(
+    codexInterrupted.map((call) => refusal(call) ?? "ran").join(",") ===
+      "ran,session-cancelled,ran" &&
+      codexRedirected.prompt.includes("do this instead") &&
+      refusal(codexRedirected.computer[0]) === undefined,
+    `Codex interrupt-and-send: ${codexInterrupted.map((call) => refusal(call) ?? "ran")}`,
+  );
+  await win.getByText("codex fixture: redirected").first().waitFor({ timeout: 15_000 });
+  await screenshot("10-codex-stop-and-interrupt.png");
+  console.log("acceptance: Codex Stop and interrupt-and-send cancelled; next runs could act");
+
+  await win.getByRole("button", { name: /完全访问权限|Full access/ }).click();
+  await win.getByRole("option", { name: /计划模式|Plan/ }).click();
+  await cli.scriptCodex([{ computer: [{ name: "list_apps" }], text: "codex fixture: planning" }]);
+  await send("plan the next step");
+  const codexPlanning = await codexTurn(8, { noCard: true });
+  assert(
+    codexPlanning.sandbox === "read-only" &&
+      !(await codexSpawn()).servers.includes(SERVER) &&
+      (await codexSpawn()).servers.includes("codeshell_tools"),
+    `Codex plan mode declared ${(await codexSpawn()).servers} (${codexPlanning.sandbox})`,
+  );
+  await win.getByText("codex fixture: planning").first().waitFor({ timeout: 15_000 });
+  await win.getByRole("button", { name: /计划模式|Plan/ }).click();
+  await win.getByRole("option", { name: /默认权限|Default/ }).click();
+  console.log("acceptance: Codex plan mode declared no computer-use server");
+
   // --- A Mimi-hosted external session keeps the reviewed bridge as its only channel.
   await win.locator("aside").getByRole("button", { name: /Mimi/ }).first().click();
   await win.getByRole("button", { name: /选择模型|Select model/ }).click();
@@ -414,6 +570,17 @@ try {
   await settings(false);
   errors.push(...(await launch()));
   await dismissTrust();
+  await win.locator("aside").getByText("codex, which apps are open?").first().click();
+  await selectModel(codexModelKey);
+  await cli.scriptCodex([{ computer: [{ name: "list_apps" }], text: "codex fixture: off" }]);
+  await send("which apps are open now?");
+  const codexOff = await codexTurn(9, { noCard: true });
+  assert(
+    codexOff.approvalPolicy === "on-request" &&
+      (await codexSpawn()).servers.join(",") === "codeshell_tools",
+    `With the setting off Codex was given ${(await codexSpawn()).servers}`,
+  );
+  await win.getByText("codex fixture: off").first().waitFor({ timeout: 15_000 });
   await win.locator("aside").getByText("which apps are open?").first().click();
   await selectModel();
   await cli.script([{ computer: [{ name: "list_apps" }], text: "fixture: setting off" }]);

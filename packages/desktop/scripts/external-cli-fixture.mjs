@@ -154,8 +154,16 @@ process.stdin.on("end", async () => {
 // host to approve one command and stays open until that is answered or the
 // worker is stopped. Everything else fails fast, so PATH lookups and model
 // discovery never reach an installed Codex.
-const codexSource = ({ logFile }) => `#!${process.execPath}
-import { appendFileSync } from "node:fs";
+//
+// With a step queued (\`scriptCodex\`) the turn is a scripted session turn
+// instead. Its \`computer\` calls go to the \`codeshell_computer\` server declared
+// by the \`-c mcp_servers.*\` overrides, the way codex 0.162 runs an MCP tool: an
+// \`mcpToolCall\` item, then (unless the approval policy is \`never\`) an approval
+// elicitation that names the server and carries \`tool_params\` but no tool name.
+// \`afterSignal\` calls are made when \`turn/interrupt\` arrives.
+const codexSource = ({ logFile, queueFile, computerLogFile }) => `#!${process.execPath}
+import { spawn } from "node:child_process";
+import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
 import { createInterface } from "node:readline";
 const args = process.argv.slice(2);
 if (args.includes("--version")) {
@@ -167,6 +175,124 @@ const send = (value) => process.stdout.write(JSON.stringify(value) + "\\n");
 const log = (record) => appendFileSync(${JSON.stringify(logFile)}, JSON.stringify({ pid: process.pid, ...record }) + "\\n");
 const threadId = "acceptance-worker-thread";
 const turn = { id: "acceptance-worker-turn" };
+
+// The \`-c key=value\` overrides: TOML strings, arrays and inline tables of strings.
+const overrides = {};
+args.forEach((arg, index) => {
+  if (args[index - 1] === "-c") overrides[arg.slice(0, arg.indexOf("="))] = arg.slice(arg.indexOf("=") + 1);
+});
+const SERVER = "codeshell_computer";
+const key = (name) => overrides["mcp_servers." + SERVER + "." + name];
+const secretNames = JSON.parse(key("env_vars") ?? "[]");
+const computer = key("command") && {
+  command: JSON.parse(key("command")),
+  args: JSON.parse(key("args") ?? "[]"),
+  env: Object.fromEntries([
+    ...[...(key("env") ?? "").matchAll(/([A-Z_][A-Z0-9_]*)=("(?:[^"\\\\]|\\\\.)*")/g)].map((entry) => [entry[1], JSON.parse(entry[2])]),
+    ...secretNames.filter((name) => process.env[name] !== undefined).map((name) => [name, process.env[name]]),
+  ]),
+};
+log({
+  event: "spawn",
+  servers: [...new Set(Object.keys(overrides).filter((name) => name.startsWith("mcp_servers.")).map((name) => name.split(".")[1]))],
+  computerSession: computer ? (computer.env.CODE_SHELL_CUA_SESSION_ID ?? null) : null,
+  secretNames,
+  secretsInEnv: secretNames.every((name) => !!process.env[name]),
+  secretsInArgv: secretNames.some((name) => process.env[name] && args.some((arg) => arg.includes(process.env[name]))),
+});
+
+const answers = new Map();
+let requests = 1000;
+const ask = (method, params) =>
+  new Promise((resolve) => {
+    const id = ++requests;
+    answers.set(id, resolve);
+    send({ id, method, params });
+  });
+let computerServer;
+const connectComputer = async () => {
+  const child = spawn(computer.command, computer.args, {
+    env: { ...process.env, ...computer.env },
+    stdio: ["pipe", "pipe", "ignore"],
+  });
+  process.on("exit", () => child.kill());
+  const pending = new Map();
+  let nextId = 0;
+  createInterface({ input: child.stdout }).on("line", (line) => {
+    try {
+      const message = JSON.parse(line);
+      pending.get(message.id)?.(message);
+      pending.delete(message.id);
+    } catch {}
+  });
+  const request = (method, params) =>
+    new Promise((resolve) => {
+      const id = ++nextId;
+      pending.set(id, resolve);
+      child.stdin.write(JSON.stringify({ jsonrpc: "2.0", id, method, params }) + "\\n");
+    });
+  await request("initialize", { protocolVersion: "2025-03-26", capabilities: {}, clientInfo: { name: "acceptance-fixture", version: "0" } });
+  child.stdin.write(JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }) + "\\n");
+  return { request };
+};
+let thread = {};
+let turns = 0;
+let items = 0;
+let interruptActive;
+const scriptedTurn = async (step, message) => {
+  const scripted = { id: "acceptance-turn-" + ++turns };
+  const record = { event: "scripted-turn", prompt: JSON.stringify(message.params?.input ?? "").slice(0, 400), ...thread, computer: [] };
+  let interrupted = false;
+  const interrupt = new Promise((resolve) => {
+    interruptActive = () => {
+      interrupted = true;
+      resolve();
+    };
+  });
+  send({ id: message.id, result: { turn: scripted } });
+  send({ method: "turn/started", params: { threadId, turn: scripted } });
+  const run = async (call, phase) => {
+    const input = call.arguments ?? {};
+    const item = { type: "mcpToolCall", id: "acceptance-call-" + ++items, server: SERVER, tool: call.name, arguments: input, status: "inProgress" };
+    send({ method: "item/started", params: { threadId, turnId: scripted.id, item } });
+    const entry = { pid: process.pid, runtime: "codex", phase, name: call.name, asked: false, allowed: thread.approvalPolicy === "never", result: null };
+    if (!entry.allowed) {
+      entry.asked = true;
+      const answer = await ask("mcpServer/elicitation/request", {
+        threadId,
+        turnId: scripted.id,
+        serverName: SERVER,
+        mode: "form",
+        message: "Allow the " + SERVER + " MCP server to run this tool?",
+        requestedSchema: { type: "object", properties: {} },
+        _meta: { codex_approval_kind: "mcp_tool_call", tool_params: input },
+      });
+      entry.answer = answer.result?.action ?? null;
+      entry.allowed = entry.answer === "accept";
+    }
+    if (entry.allowed) entry.result = (await computerServer.request("tools/call", { name: call.name, arguments: input })).result ?? null;
+    send({ method: "item/completed", params: { threadId, turnId: scripted.id, item: { ...item, status: entry.allowed ? "completed" : "failed" } } });
+    appendFileSync(${JSON.stringify(computerLogFile)}, JSON.stringify(entry) + "\\n");
+    record.computer.push(entry);
+  };
+  if (step.computer && computer) {
+    computerServer ??= await connectComputer();
+    record.computerTools = (await computerServer.request("tools/list", {})).result.tools.map((tool) => tool.name);
+    for (const call of step.computer) {
+      if (call.delayMs) await new Promise((done) => setTimeout(done, call.delayMs));
+      await run(call, "turn");
+    }
+    if (step.holdMs) await Promise.race([interrupt, new Promise((done) => setTimeout(done, step.holdMs))]);
+    if (interrupted) for (const call of step.afterSignal ?? []) await run(call, "after-signal");
+  }
+  interruptActive = undefined;
+  if (!interrupted)
+    send({ method: "item/agentMessage/delta", params: { threadId, turnId: scripted.id, itemId: "acceptance-message-" + turns, delta: step.text ?? "fixture reply" } });
+  record.interrupted = interrupted;
+  log(record);
+  send({ method: "turn/completed", params: { threadId, turn: { ...scripted, status: interrupted ? "interrupted" : "completed", error: null } } });
+};
+
 createInterface({ input: process.stdin }).on("line", (line) => {
   let message;
   try {
@@ -174,9 +300,29 @@ createInterface({ input: process.stdin }).on("line", (line) => {
   } catch {
     return;
   }
+  if (message.id !== undefined && !message.method && answers.has(message.id)) {
+    answers.get(message.id)(message);
+    return answers.delete(message.id);
+  }
   if (message.method === "initialize") return send({ id: message.id, result: { userAgent: "fixture/0.162.0" } });
-  if (message.method === "thread/start") return send({ id: message.id, result: { thread: { id: threadId } } });
+  if (message.method === "thread/start" || message.method === "thread/resume") {
+    thread = { approvalPolicy: message.params?.approvalPolicy ?? null, sandbox: message.params?.sandbox ?? null };
+    return send({ id: message.id, result: { thread: { id: threadId } } });
+  }
+  if (message.method === "turn/interrupt" && interruptActive) {
+    send({ id: message.id, result: {} });
+    return interruptActive();
+  }
   if (message.method === "turn/start") {
+    let queue = [];
+    try {
+      queue = JSON.parse(readFileSync(${JSON.stringify(queueFile)}, "utf8"));
+    } catch {}
+    const step = queue.shift();
+    if (step) {
+      writeFileSync(${JSON.stringify(queueFile)}, JSON.stringify(queue));
+      return void scriptedTurn(step, message);
+    }
     log({ event: "turn", cwd: process.cwd() });
     send({ id: message.id, result: { turn } });
     send({ method: "turn/started", params: { threadId, turn } });
@@ -202,6 +348,8 @@ process.on("SIGTERM", () => {
   log({ event: "terminated" });
   process.exit(0);
 });
+// The computer-use child must not keep an abandoned app-server alive.
+process.stdin.on("end", () => process.exit(0));
 `;
 
 /** Install both stand-ins in `directory`; put it first on the app's PATH. */
@@ -221,9 +369,11 @@ export async function installExternalCliFixture(directory) {
   await writeFile(logFile, "");
   await writeFile(codexLogFile, "");
   await writeFile(computerLogFile, "");
+  const codexQueueFile = join(directory, "codex-queue.json");
+  await writeFile(codexQueueFile, "[]");
   for (const [name, source] of [
     ["claude", claudeSource({ queueFile, logFile, computerLogFile })],
-    ["codex", codexSource({ logFile: codexLogFile })],
+    ["codex", codexSource({ logFile: codexLogFile, queueFile: codexQueueFile, computerLogFile })],
   ]) {
     await writeFile(join(bin, name), source);
     await chmod(join(bin, name), 0o755);
@@ -235,7 +385,9 @@ export async function installExternalCliFixture(directory) {
     invocations: () => lines(logFile),
     /** Each computer-use call the stand-in made, written as it finished. */
     computerCalls: () => lines(computerLogFile),
-    /** What the Codex worker stand-in saw: turn, approval answer, interrupt, terminated. */
+    /** Queue scripted Codex session turns; without one a turn is the worker's. */
+    scriptCodex: (steps) => writeFile(codexQueueFile, JSON.stringify(steps)),
+    /** What the Codex stand-in saw: spawn, turn, approval answer, interrupt, terminated. */
     codexEvents: () => lines(codexLogFile),
   };
 }
