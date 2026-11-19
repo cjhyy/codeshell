@@ -70,6 +70,8 @@ describe("PetSettingsPage", () => {
     expect(html).toContain('data-pet-setting="model"');
     expect(html).toContain('data-active-model="deepseek-v4-pro"');
     expect(html).toContain("长程工作 Session 继续使用自己的默认模型");
+    expect(html).toContain('data-pet-setting="delegated-permission"');
+    expect(html).toContain("派发工作的权限");
     expect(html).toContain('data-pet-setting="personalization"');
     expect(html).toContain("不会改变普通 Work Session");
     for (const id of [

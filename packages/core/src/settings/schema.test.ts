@@ -255,6 +255,22 @@ describe("pet settings (Mimi global-view external-session visibility)", () => {
     ).toBe(true);
   });
 
+  it("keeps the delegated Work Session permission mode and drops unknown values", () => {
+    for (const mode of ["inherit", "auto", "ask"]) {
+      expect(
+        SettingsSchema.parse({ pet: { delegatedPermissionMode: mode } }).pet
+          ?.delegatedPermissionMode,
+      ).toBe(mode);
+    }
+    // Absent (= inherit) stays absent; a bad value never rejects the file.
+    expect(SettingsSchema.parse({}).pet?.delegatedPermissionMode).toBeUndefined();
+    const parsed = SettingsSchema.parse({
+      pet: { delegatedPermissionMode: "bypass", memoryAutoExtract: false },
+    });
+    expect(parsed.pet?.delegatedPermissionMode).toBeUndefined();
+    expect(parsed.pet?.memoryAutoExtract).toBe(false);
+  });
+
   it("accepts bounded Mimi-only personalization independently of agent settings", () => {
     const parsed = SettingsSchema.parse({
       pet: {

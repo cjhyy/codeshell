@@ -15,6 +15,7 @@ import { SettingsManager } from "../settings/manager.js";
 import { randomUUID } from "node:crypto";
 import { logger as rootPermLogger } from "../logging/logger.js";
 import { READ_ONLY_TOOLS } from "./plan-mode-allowlist.js";
+import { isPlainCdSegment, matchBenignRedirect } from "./bash-read-redirects.js";
 
 export interface ApprovalBackend {
   requestApproval(request: ApprovalRequest): Promise<ApprovalResult>;
@@ -703,7 +704,12 @@ export function ruleMatches(
     // flow, not a statement boundary) — so `git log | sh` is one non-dangerous
     // segment. A head grant must not cover a pipe either: reject any segment
     // carrying an (unquoted-enough) pipe so pipe-to-shell can't ride the grant.
-    if (scan.dangerous || scan.segments.length > 1 || scan.segments.some((s) => s.includes("|"))) {
+    if (
+      scan.dangerous ||
+      scan.segments.length > 1 ||
+      scan.redirected.some(Boolean) ||
+      scan.segments.some((s) => s.includes("|"))
+    ) {
       return false;
     }
   }
@@ -1397,7 +1403,9 @@ const SAFE_WRITE_PATTERNS = [
 //   - command substitution (` ` ` or `$(` ) outside single quotes, redirection
 //     (`>` `>>` `<` `<<`), process substitution (`<(` `>(`), and
 //     pipe-to-shell (`| sh`, `| bash`, ...) flag the command as
-//     dangerous.
+//     dangerous. The exception is the allowlisted read-only redirections
+//     in bash-read-redirects.ts (`< file`, `2>/dev/null`, `2>&1`, ...),
+//     which are stripped and recorded per segment instead.
 //   - single quotes make command-substitution syntax literal; double quotes
 //     do not. Other quoted and backslash-escaped metacharacters are ignored —
 //     `echo "a; b"` is a single segment.
@@ -1410,6 +1418,8 @@ const PIPE_SHELL_COMMAND_RE =
 
 interface ScanResult {
   segments: string[];
+  /** Parallel to `segments`: the segment had a benign redirection stripped out. */
+  redirected: boolean[];
   dangerous: boolean;
 }
 
@@ -1462,8 +1472,10 @@ function normalizeShellLineContinuations(input: string): string {
 function scanShellCommand(input: string): ScanResult {
   const normalizedInput = normalizeShellLineContinuations(input);
   const segments: string[] = [];
+  const redirected: boolean[] = [];
   let buf = "";
   let dangerous = false;
+  let segmentRedirected = false;
   let i = 0;
   // Track top-level quote state. We do NOT recurse into nested
   // command substitutions for classification — the presence of `$(`
@@ -1472,8 +1484,22 @@ function scanShellCommand(input: string): ScanResult {
 
   const flush = () => {
     const s = buf.trim();
-    if (s.length > 0) segments.push(s);
+    if (s.length > 0) {
+      segments.push(s);
+      redirected.push(segmentRedirected);
+    }
     buf = "";
+    segmentRedirected = false;
+  };
+  // Strip an allowlisted read-only redirection (see bash-read-redirects.ts);
+  // the caller then requires the remaining segment to be safe-read.
+  const consumeBenignRedirect = (): boolean => {
+    const redirect = matchBenignRedirect(normalizedInput, i, buf);
+    if (!redirect) return false;
+    buf = `${buf.slice(0, buf.length - redirect.fdPrefixLength)} `;
+    segmentRedirected = true;
+    i = redirect.end;
+    return true;
   };
 
   while (i < normalizedInput.length) {
@@ -1510,6 +1536,7 @@ function scanShellCommand(input: string): ScanResult {
       }
       // Redirection
       if (ch === ">" || ch === "<") {
+        if (consumeBenignRedirect()) continue;
         dangerous = true;
         buf += ch;
         i++;
@@ -1524,6 +1551,14 @@ function scanShellCommand(input: string): ScanResult {
       if ((ch === "&" && next === "&") || (ch === "|" && next === "|")) {
         flush();
         i += 2;
+        continue;
+      }
+      // `&>` redirects both streams; only a /dev/null discard is benign.
+      if (ch === "&" && next === ">") {
+        if (consumeBenignRedirect()) continue;
+        dangerous = true;
+        buf += ch;
+        i++;
         continue;
       }
       // Background `&` is treated like `;`
@@ -1575,7 +1610,7 @@ function scanShellCommand(input: string): ScanResult {
   // swallowed). Treat malformed shell syntax as dangerous rather than risk
   // misclassifying it as safe.
   if (quote !== null) dangerous = true;
-  return { segments, dangerous };
+  return { segments, redirected, dangerous };
 }
 
 /** Split only on real shell pipes, preserving pipes inside quotes or escapes. */
@@ -1632,7 +1667,9 @@ function classifySegment(segment: string): BashSafetyLevel {
     return parts.every(partIsSafeRead) ? "safe-read" : "unsafe";
   }
 
-  if (matchesSafeReadPattern(segment)) return "safe-read";
+  // A segment may be an argument-less read (`ls`, `cat < file` once the
+  // redirection is stripped); test it with a trailing space like pipe parts.
+  if (matchesSafeReadPattern(segment, true)) return "safe-read";
   if (SAFE_WRITE_PATTERNS.some((p) => p.test(segment))) return "safe-write";
   return "unsafe";
 }
@@ -1661,11 +1698,28 @@ export function classifyBashCommand(command: string): BashSafetyLevel {
   if (scan.segments.length === 0) return "unsafe";
 
   // Every top-level segment must independently classify. The whole
-  // command's safety is the minimum across segments.
+  // command's safety is the minimum across segments. A segment that had a
+  // benign redirection stripped only keeps that allowance when it is safe-read.
+  const levels = scan.segments.map((seg, index): BashSafetyLevel | "cd" => {
+    if (isPlainCdSegment(seg)) return "cd";
+    const level = classifySegment(seg);
+    return scan.redirected[index] && level !== "safe-read" ? "dangerous" : level;
+  });
   let overall: BashSafetyLevel = "safe-read";
-  for (const seg of scan.segments) {
-    overall = minSafety(overall, classifySegment(seg));
-    if (overall === "dangerous") return "dangerous";
+  for (const level of levels) {
+    if (level === "dangerous") return "dangerous";
+    if (level !== "cd") overall = minSafety(overall, level);
+  }
+  // `cd <plain dir>` is read-only only as a prefix of an all-read command.
+  // Git after cd is excluded: another repository's config can run programs
+  // (fsmonitor, textconv, pager), which is why `git -C dir` is gated too.
+  if (levels.includes("cd")) {
+    const reads = scan.segments.filter((_, index) => levels[index] !== "cd");
+    const prefixOnly = levels[levels.length - 1] !== "cd" && overall === "safe-read";
+    const touchesGit = reads.some((seg) =>
+      splitUnquotedPipes(seg).some((part) => /^git(?:\s|$)/.test(part)),
+    );
+    if (!prefixOnly || touchesGit) overall = minSafety(overall, "unsafe");
   }
   return overall;
 }

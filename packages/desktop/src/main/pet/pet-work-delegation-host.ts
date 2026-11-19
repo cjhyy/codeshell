@@ -9,6 +9,7 @@ import {
   isExternalRuntimeModelKey,
   normalizeExternalRuntimeModelKey,
 } from "../../shared/external-runtime-models.js";
+import type { PetDelegatedEnginePermissionMode } from "../../shared/pet-settings.js";
 import { isSessionModelKey } from "../../shared/session-model-default.js";
 import { preparePetDelegationAttachments } from "./pet-delegation-attachments.js";
 import { delegatedRunText } from "./pet-delegation-brief.js";
@@ -62,6 +63,11 @@ export class PetWorkDelegationHost {
       noWorkspaceCwd: string;
       /** Persisted effective workspace of an existing Session, supplied by the Host. */
       resolveSessionCwd?: (sessionId: string) => Promise<string | undefined>;
+      /**
+       * Permission mode from the owner's `pet.delegatedPermissionMode` setting,
+       * read per launch so a change applies to the next delegation. Absent: ask.
+       */
+      permissionMode?: (input: { cwd: string }) => Promise<PetDelegatedEnginePermissionMode>;
       /** Display name of an IM channel id for the delegation brief (微信, 飞书, …). */
       channelLabel?: (channel: string) => string | undefined;
       /** Host model routing preserves reused Sessions and resolves defaults only for new ones. */
@@ -140,6 +146,8 @@ export class PetWorkDelegationHost {
         throw new Error("The delegated Work Session model is invalid");
       }
       const model = selectedModel ? normalizeExternalRuntimeModelKey(selectedModel) : null;
+      const external = isExternalRuntimeModelKey(model);
+      const configuredMode = (await this.options.permissionMode?.({ cwd })) ?? "default";
       const params: Record<string, unknown> = {
         task: prepared.task,
         sessionId,
@@ -148,10 +156,11 @@ export class PetWorkDelegationHost {
         ...(model ? { model } : {}),
         ...(runText.displayText ? { displayText: runText.displayText } : {}),
         ...(prepared.attachments.length > 0 ? { attachments: prepared.attachments } : {}),
-        // Delegation does not grant Mimi authority to bypass the user's normal
-        // permission and sensitive-path boundaries. A run that needs approval
-        // remains visible as waiting instead of silently receiving full access.
-        permissionMode: "default",
+        // Delegation never grants Mimi more than the owner configured: the
+        // setting inherits their own default mode, or picks auto/ask. External
+        // runtimes have no auto mode; their nearest is dontAsk (never prompt,
+        // anything needing approval fails), which keeps "fail, don't wait".
+        permissionMode: external && configuredMode === "auto" ? "dontAsk" : configuredMode,
         // Goal is opt-in. Ordinary Work Sessions can still use tools, span many
         // model/tool steps, and resume from async notifications; forcing every
         // loosely-worded delegation into persistent Goal mode caused ambiguous
@@ -164,7 +173,7 @@ export class PetWorkDelegationHost {
         ...(delegation.targetSessionId ? { requireExisting: true } : {}),
       };
       let acceptance: { ok: boolean; message?: string };
-      if (isExternalRuntimeModelKey(model)) {
+      if (external) {
         const submit = this.options.external?.run;
         if (!submit) {
           throw new Error("The selected external runtime is unavailable for delegated work");

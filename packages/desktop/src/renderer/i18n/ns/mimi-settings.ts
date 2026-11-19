@@ -17,7 +17,7 @@ export const mimiSettings = {
         },
         conversation: {
           title: "对话",
-          description: "Mimi 管理对话用的模型，以及它怎么称呼你、怎么说话。",
+          description: "Mimi 管理对话用的模型、派出工作的权限，以及它怎么称呼你、怎么说话。",
         },
         notifications: {
           title: "通知与主动",
@@ -199,7 +199,7 @@ export const mimiSettings = {
         conversation: {
           title: "Conversation",
           description:
-            "The model for Mimi's manager chat, and how Mimi addresses and talks to you.",
+            "The model for Mimi's manager chat, permissions for delegated work, and how Mimi addresses and talks to you.",
         },
         notifications: {
           title: "Notifications & proactivity",
