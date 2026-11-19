@@ -322,6 +322,29 @@ describe("permission denials on a result", () => {
     });
   });
 
+  test("operations the sandbox blocked unasked are counted apart from denials", () => {
+    const envelope = notificationQueue.enqueue(
+      fixture({ workKind: "cc", name: "Fix login test", sandboxBlocked: 2 }),
+      SID,
+    )!;
+    expect(envelope.payload.sandboxBlocked).toBe(2);
+    expect(envelope.payload.permissionDenials).toBeUndefined();
+    expect(buildNotificationMessage([envelope])).toContain(
+      'status="completed-with-denied-operations" sandboxBlocked="2"',
+    );
+    expect(buildNotificationSummary([envelope])).toContain(
+      "⚠  ·  2 operation(s) blocked by the sandbox",
+    );
+    expect(notificationItemToStreamEvent(envelope)).toMatchObject({
+      status: "completed",
+      sandboxBlocked: 2,
+    });
+    const both = fixture({ workKind: "cc", permissionDenials: 1, sandboxBlocked: 2 });
+    expect(buildNotificationSummary([both])).toContain(
+      "1 operation(s) denied by permissions  ·  2 operation(s) blocked by the sandbox",
+    );
+  });
+
   test("a clean result is unchanged and a title equal to the description is not repeated", () => {
     const item = fixture({ name: "Same", description: "Same" });
     expect(buildNotificationMessage([item])).toContain('status="completed">');

@@ -46,6 +46,10 @@ export interface BackgroundJobProgress {
   /** Operations the external agent was refused by its permission mode or by the
    *  user. A job that ends with a non-zero count did not fully complete. */
   permissionDenials?: number;
+  /** Operations the external agent's own sandbox or policy refused without an
+   *  approval request, so no one was asked. Counted apart from
+   *  `permissionDenials`; a non-zero count also means "did not fully complete". */
+  sandboxBlocked?: number;
   /** Host receive time since which the job has waited on a user approval. */
   awaitingApprovalSince?: number;
   /** Set when the host stopped the job because it could not make progress. */

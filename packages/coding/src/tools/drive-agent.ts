@@ -12,6 +12,7 @@ import {
 } from "@cjhyy/code-shell-core/extension";
 import { runAgentOnce, type AgentRunResult } from "../cc-orchestrator/external-agent-driver.js";
 import { runCodexWorkerOnce } from "./drive-agent-codex-worker.js";
+import { driveChangedFiles } from "./drive-agent-changed-files.js";
 import { initialAgentProgress } from "../cc-orchestrator/external-agent-progress.js";
 import { claudeAdapter, codexAdapter } from "../cc-orchestrator/agent-adapter.js";
 import { readExternalChangedFiles } from "../cc-orchestrator/external-agent-changes.js";
@@ -491,26 +492,6 @@ function changedFilesSummary(job: BackgroundJobEntry): string {
   return `${files.slice(0, 4).join(",")} (+${files.length - 4} more)`;
 }
 
-/**
- * Canonicalize external transcript paths against the DriveAgent cwd. Claude
- * normally records absolute paths while Codex apply_patch normally records
- * relative paths; returning a cwd-relative display path for in-workspace files
- * gives the renderer one stable identity and removes duplicate transcript hits.
- */
-function normalizeChangedFiles(cwd: string, files: readonly string[]): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const file of files) {
-    if (typeof file !== "string" || !file.trim()) continue;
-    const absolute = resolve(cwd, file.trim());
-    if (seen.has(absolute)) continue;
-    seen.add(absolute);
-    const rel = relative(cwd, absolute);
-    out.push(rel && rel !== ".." && !rel.startsWith(`..${sep}`) ? rel : absolute);
-  }
-  return out;
-}
-
 function jobDurationSeconds(job: BackgroundJobEntry): string {
   const end = job.finishedAt ?? Date.now();
   return `${Math.max(0, (end - job.startedAt) / 1000).toFixed(1)}s`;
@@ -837,8 +818,7 @@ function attachDriveCompletion(params: {
       // notification event was emitted first and carried no files; changedFiles
       // only reached the background-work registry/panel, so the chat turn card
       // could never count DriveAgent edits.
-      const rawChangedFiles = r.sessionId ? readChangedFiles(cli, cwd, r.sessionId) : [];
-      const changedFiles = normalizeChangedFiles(cwd, rawChangedFiles);
+      const { rawSize, files: changedFiles } = driveChangedFiles(cli, cwd, r, readChangedFiles);
       let provenance: Awaited<ReturnType<typeof probeExternalChangedFiles>> | undefined;
       if (changedFiles.length) {
         try {
@@ -895,7 +875,7 @@ function attachDriveCompletion(params: {
         cli,
         cwd,
         originClientMessageId,
-        rawSize: rawChangedFiles.length,
+        rawSize,
         size: changedFiles.length,
         files: changedFiles,
       });
@@ -927,6 +907,7 @@ function attachDriveCompletion(params: {
             : {}),
           ...(originClientMessageId ? { originClientMessageId } : {}),
           ...(denied.denials ? { permissionDenials: denied.denials } : {}),
+          ...(denied.sandboxBlocked ? { sandboxBlocked: denied.sandboxBlocked } : {}),
           enqueuedAt: Date.now(),
         },
         sessionId,
@@ -934,11 +915,12 @@ function attachDriveCompletion(params: {
       // Retain the job in the panel with its result + the external CLI
       // session id + changed files.
       const progress = backgroundJobRegistry.get(jobId)?.progress;
-      if (progress && (denied.denials || denied.blocked)) {
+      if (progress && (denied.denials || denied.blocked || denied.sandboxBlocked)) {
         // Retained with the job, so the task view still shows it after the end.
         backgroundJobRegistry.updateProgress(jobId, {
           ...progress,
           permissionDenials: Math.max(denied.denials, progress.permissionDenials ?? 0),
+          ...(denied.sandboxBlocked ? { sandboxBlocked: denied.sandboxBlocked } : {}),
           ...(denied.blocked ? { blocked: "permission" as const } : {}),
         });
       }
@@ -1558,11 +1540,11 @@ export function makeDriveAgentTool(
       // Capture while the isolated checkout still exists, just as background
       // completion does. The lease stays held until capture and cleanup finish.
       try {
-        const changedFiles = normalizeChangedFiles(
+        const { files: changedFiles } = driveChangedFiles(
+          cli,
           cwd,
-          r.sessionId
-            ? (options.readChangedFiles ?? readExternalChangedFiles)(cli, cwd, r.sessionId)
-            : [],
+          r,
+          options.readChangedFiles ?? readExternalChangedFiles,
         );
         if (changedFiles.length) {
           let provenance: Awaited<ReturnType<typeof probeExternalChangedFiles>> | undefined;
@@ -1615,8 +1597,12 @@ export function makeDriveAgentTool(
         return `${prefix}${cliName} 被权限拦住，已提前停止（session ${r.sessionId}）：\n${finalText}`;
       if (r.isError)
         return `${prefix}${cliName} 运行出错（session ${r.sessionId}）：\n${finalText}`;
-      if (denied.denials)
-        return `${prefix}${cliName} 完成，但有 ${denied.denials} 个操作被拒（session ${r.sessionId}）：\n${finalText}`;
+      const refused = [
+        denied.denials ? `${denied.denials} 个操作被拒` : "",
+        denied.sandboxBlocked ? `${denied.sandboxBlocked} 个操作被沙箱拦住（未请求审批）` : "",
+      ].filter(Boolean);
+      if (refused.length)
+        return `${prefix}${cliName} 完成，但有 ${refused.join("、")}（session ${r.sessionId}）：\n${finalText}`;
       return `${prefix}${cliName} 完成（session ${r.sessionId}）：\n${finalText}`;
     } finally {
       lease.release();

@@ -20,6 +20,13 @@ export interface AgentRunResult {
   isError: boolean;
   /** Operations the CLI reported as refused; see ParsedResult. */
   permissionDenials?: PermissionDenial[];
+  /** Files the CLI reported as changed in its own output; see ParsedResult. */
+  changedFiles?: string[];
+  /**
+   * Operations the CLI's sandbox or policy refused without an approval request.
+   * Only a transport that reports this in structured form sets it.
+   */
+  sandboxBlocked?: number;
   exitCode: number | null;
   /** Complete CLI records; transient Claude token deltas are observed only. */
   lines: string[];

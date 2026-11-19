@@ -49,13 +49,20 @@ function pidAlive(pid: unknown): boolean {
 /** Validated copy of the permission fields; shared with persisted history. */
 export function permissionProgressFields(
   progress: Partial<BackgroundJobProgress> | undefined,
-): Pick<BackgroundJobProgress, "permissionDenials" | "awaitingApprovalSince" | "blocked"> {
+): Pick<
+  BackgroundJobProgress,
+  "permissionDenials" | "sandboxBlocked" | "awaitingApprovalSince" | "blocked"
+> {
   if (!progress) return {};
   const denials = progress.permissionDenials;
+  const sandboxed = progress.sandboxBlocked;
   const since = progress.awaitingApprovalSince;
   return {
     ...(Number.isSafeInteger(denials) && (denials as number) > 0
       ? { permissionDenials: denials }
+      : {}),
+    ...(Number.isSafeInteger(sandboxed) && (sandboxed as number) > 0
+      ? { sandboxBlocked: sandboxed }
       : {}),
     ...(Number.isFinite(since) && (since as number) > 0 ? { awaitingApprovalSince: since } : {}),
     ...(progress.blocked === "permission" ? { blocked: "permission" as const } : {}),

@@ -308,6 +308,11 @@ export async function startDrivePermissionPrompt(
 export interface DriveRunPermissionOutcome {
   /** Refused operations: the CLI's own report, or the gate's count if larger. */
   denials: number;
+  /**
+   * Operations the worker's own sandbox refused without asking, so no one
+   * denied them. Not part of `denials`. Absent when there were none.
+   */
+  sandboxBlocked?: number;
   /** Set when the worker was stopped for being unable to proceed. */
   blocked?: string;
   /** Model-facing statement to put ahead of the worker's own final text. */
@@ -330,6 +335,7 @@ export interface DriveRunPermissions {
   progress<T extends BackgroundJobProgress>(progress: T): T;
   outcome(result?: {
     permissionDenials?: readonly PermissionDenial[];
+    sandboxBlocked?: number;
     sessionId?: string;
   }): DriveRunPermissionOutcome;
   close(): Promise<void>;
@@ -376,7 +382,8 @@ export async function prepareDriveRunPermissions(options: {
     const counted = gate?.denials() ?? [];
     const denials = reported.length >= counted.length ? reported : counted;
     const blocked = gate?.blockedReason();
-    if (!denials.length && !blocked) return { denials: 0 };
+    const sandboxBlocked = result?.sandboxBlocked ?? 0;
+    if (!denials.length && !blocked && !sandboxBlocked) return { denials: 0 };
     const resume = result?.sessionId
       ? ` Its session ${result.sessionId} is kept and can be resumed with a mode that permits them.`
       : "";
@@ -385,13 +392,25 @@ export async function prepareDriveRunPermissions(options: {
       "as git, tests, installs or formatters). Check what is missing, then finish it yourself " +
       `or re-run with a suitable permissionMode.${resume}`;
     const tools = denials.length ? ` (${describeDenials(denials)})` : "";
+    // Two different things happened and the caller's remedy differs: a denial
+    // was a person's (or this session's) answer, a sandbox block was never asked.
+    const sandboxed = sandboxBlocked
+      ? `${sandboxBlocked} operation(s) blocked by the sandbox (the worker did not ask for ` +
+        "approval, so nobody was prompted)"
+      : "";
+    const refused = [
+      denials.length ? `${denials.length} denied operation(s)${tools}` : "",
+      sandboxed,
+    ]
+      .filter(Boolean)
+      .join(" and ");
     return {
       denials: denials.length,
+      ...(sandboxBlocked ? { sandboxBlocked } : {}),
       ...(blocked ? { blocked } : {}),
       note: blocked
-        ? `[permissions] Stopped early: ${blocked}. ${remedy}`
-        : `[permissions] Completed with ${denials.length} denied operation(s)${tools} under ` +
-          `permissionMode "${mode}". ${remedy}`,
+        ? `[permissions] Stopped early: ${blocked}.${sandboxed ? ` Also ${sandboxed}.` : ""} ${remedy}`
+        : `[permissions] Completed with ${refused} under permissionMode "${mode}". ${remedy}`,
     };
   };
   return {

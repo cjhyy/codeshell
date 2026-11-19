@@ -9,6 +9,8 @@ export interface BackgroundJobProgress {
   recentEvents?: Array<{ at: number; summary: string }>;
   /** Operations refused by the worker's permission mode or by the user. */
   permissionDenials?: number;
+  /** Operations the worker's own sandbox refused without asking anyone. */
+  sandboxBlocked?: number;
   /** Since when the worker has waited on an approval in its parent session. */
   awaitingApprovalSince?: number;
   /** The host stopped the worker because it could not proceed. */

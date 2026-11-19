@@ -9,6 +9,8 @@ export interface BackgroundNotificationPayload {
   description?: unknown;
   /** Operations refused by permissions; a "completed" run was then degraded. */
   permissionDenials?: unknown;
+  /** Operations the worker's sandbox refused unasked; equally a degraded run. */
+  sandboxBlocked?: unknown;
   command?: unknown;
   error?: unknown;
   exitCode?: unknown;
@@ -146,10 +148,10 @@ export function backgroundNotificationContent(payload: BackgroundNotificationPay
     name ||
     description ||
     `${label} ${safeText(payload.workId, 40)}`;
-  const denied =
-    Number.isSafeInteger(payload.permissionDenials) && (payload.permissionDenials as number) > 0
-      ? (payload.permissionDenials as number)
-      : 0;
+  const count = (value: unknown): number =>
+    Number.isSafeInteger(value) && (value as number) > 0 ? (value as number) : 0;
+  const denied = count(payload.permissionDenials);
+  const sandboxBlocked = count(payload.sandboxBlocked);
   const signal =
     typeof payload.signal === "string" && /^SIG[A-Z0-9]{1,29}$/u.test(payload.signal)
       ? payload.signal
@@ -157,7 +159,7 @@ export function backgroundNotificationContent(payload: BackgroundNotificationPay
   const terminated = payload.status === "failed" && !!signal;
   const status =
     payload.status === "completed"
-      ? denied
+      ? denied || sandboxBlocked
         ? "未全部完成"
         : "完成"
       : payload.status === "cancelled"
@@ -170,6 +172,7 @@ export function backgroundNotificationContent(payload: BackgroundNotificationPay
     if (signal) details.push(`收到 ${signal} 信号，进程已终止`);
     else if (Number.isSafeInteger(payload.exitCode)) details.push(`退出码 ${payload.exitCode}`);
     if (denied) details.push(`被权限拦住，${denied} 个操作被拒`);
+    if (sandboxBlocked) details.push(`${sandboxBlocked} 个操作被沙箱拦住`);
     if (
       typeof payload.error === "string" &&
       // This legacy shell error repeats the cause and an agent-only tool call.
@@ -184,8 +187,13 @@ export function backgroundNotificationContent(payload: BackgroundNotificationPay
       if (error) details.push(error);
     }
     if (!details.length) details.push("执行失败，点击查看详情");
-  } else if (payload.status === "completed" && denied) {
-    details.push(`有 ${denied} 个操作被权限拒绝，点击查看`);
+  } else if (payload.status === "completed" && (denied || sandboxBlocked)) {
+    // Told apart: one was somebody's answer, the other was never asked.
+    const refused = [
+      denied ? `${denied} 个操作被权限拒绝` : "",
+      sandboxBlocked ? `${sandboxBlocked} 个操作被沙箱拦住` : "",
+    ].filter(Boolean);
+    details.push(`有 ${refused.join("、")}，点击查看`);
   } else {
     details.push(payload.status === "completed" ? "点击查看结果" : "任务已取消");
   }

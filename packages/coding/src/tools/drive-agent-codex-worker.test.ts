@@ -210,6 +210,81 @@ describe("runCodexWorkerOnce", () => {
     expect(asks.map((ask) => ask.toolName)).toEqual(["mcp__codeshell_tools__Bash"]);
   });
 
+  test("reports the files of the patches Codex applied, not of one it was refused", async () => {
+    const { result, progress } = run(
+      `const patch = (id, status, changes) =>
+        note("item/completed", { item: { type: "fileChange", id, status, changes } });
+      onTurn = async () => {
+        await ask(910, "item/fileChange/requestApproval", { itemId: "p1", reason: null, grantRoot: null });
+        patch("p1", "completed", [
+          { path: "/repo/note.txt", kind: { type: "add" }, diff: "hi" },
+          { path: "/repo/old.ts", kind: { type: "update", move_path: "/repo/new.ts" }, diff: "" },
+        ]);
+        await ask(911, "item/fileChange/requestApproval", { itemId: "p2", reason: null, grantRoot: null });
+        patch("p2", "declined", [{ path: "/repo/refused.txt", kind: { type: "add" }, diff: "" }]);
+        patch("p3", "failed", [{ path: "/repo/failed.txt", kind: { type: "add" }, diff: "" }]);
+        say("done");
+        finish();
+      };`,
+    );
+    const r = await result;
+    expect(r.changedFiles).toEqual(["/repo/note.txt", "/repo/old.ts", "/repo/new.ts"]);
+    expect(r.sandboxBlocked).toBeUndefined();
+    expect(progress.at(-1)?.sandboxBlocked).toBeUndefined();
+  });
+
+  describe("operations Codex refuses without asking", () => {
+    test("a command or patch declined with no approval request is counted as sandbox-blocked", async () => {
+      const { result, asks, progress } = run(`onTurn = () => {
+        note("item/completed", { item: { type: "commandExecution", id: "c1", command: "rm -rf /",
+          status: "declined", exitCode: null } });
+        note("item/completed", { item: { type: "fileChange", id: "p1", status: "declined",
+          changes: [{ path: "/etc/hosts", kind: { type: "update", move_path: null }, diff: "" }] } });
+        say("could not");
+        finish();
+      };`);
+      const r = await result;
+      expect(asks).toEqual([]);
+      expect(r).toMatchObject({ isError: false, finalText: "could not", sandboxBlocked: 2 });
+      expect(r.changedFiles).toBeUndefined();
+      expect(progress.at(-1)?.sandboxBlocked).toBe(2);
+      const summaries = progress.flatMap((p) => (p.recentEvents ?? []).map((e) => e.summary));
+      expect(summaries).toContain("1 operation(s) blocked by the sandbox");
+      expect(summaries).toContain("2 operation(s) blocked by the sandbox");
+    });
+
+    test("a refusal the gate answered is the gate's denial, not a sandbox block", async () => {
+      const { result, asks } = run(
+        `onTurn = async () => {
+        await ask(920, "item/commandExecution/requestApproval", { itemId: "c1", command: "git push" });
+        note("item/completed", { item: { type: "commandExecution", id: "c1", command: "git push",
+          status: "declined", exitCode: null } });
+        finish();
+      };`,
+        { approve: async (request) => (asks.push(request), { approved: false }) },
+      );
+      expect((await result).sandboxBlocked).toBeUndefined();
+      expect(asks).toHaveLength(1);
+    });
+
+    // As codex-cli 0.162.0 reports it: an exit code and no cause.
+    test("a command that merely failed is not counted", async () => {
+      const { result } = run(`onTurn = () => {
+        note("item/completed", { item: { type: "commandExecution", id: "c1", command: "sh -c 'exit 3'",
+          status: "failed", exitCode: 3, aggregatedOutput: null } });
+        finish();
+      };`);
+      expect((await result).sandboxBlocked).toBeUndefined();
+    });
+
+    test("a turn that ends with Codex's sandbox error code is counted", async () => {
+      const { result } = run(
+        `onTurn = () => finish("failed", { message: "sandbox denied", codexErrorInfo: "sandboxError" });`,
+      );
+      expect(await result).toMatchObject({ isError: true, sandboxBlocked: 1 });
+    });
+  });
+
   test("reports a failed turn as an error with Codex's own message", async () => {
     const { result } = run(
       `onTurn = () => { say("partial"); finish("failed", { message: "model unavailable" }); };`,

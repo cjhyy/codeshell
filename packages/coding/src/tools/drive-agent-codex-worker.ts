@@ -15,6 +15,10 @@
  * Session's gate (`drive-agent-permissions.ts`). The run is reported in the
  * shape of a `codex exec --json` run so the rest of DriveAgent needs no second
  * result or progress model.
+ *
+ * What Codex refuses on its own, without asking, is counted apart from what the
+ * gate denied (`sandboxBlocked`). Only a refusal the protocol states is
+ * counted; see `codexUnaskedRefusal` for what that leaves out.
  */
 import type { BackgroundJobProgress } from "@cjhyy/code-shell-core/extension";
 import { codexAdapter, type PermissionMode } from "../cc-orchestrator/agent-adapter.js";
@@ -28,6 +32,7 @@ import {
 import {
   advanceAgentProgressWith,
   initialAgentProgress,
+  recordSandboxBlocked,
 } from "../cc-orchestrator/external-agent-progress.js";
 import type { AppServerClientOptions } from "../external-runtimes/codex/app-server-client.js";
 import { codexNativeApprovalPresentation } from "../external-runtimes/codex/approval-presentation.js";
@@ -100,11 +105,54 @@ export function codexExecRecord(method: string, params: unknown): Record<string,
       ...(Number.isInteger(item.exitCode) ? { exit_code: item.exitCode } : {}),
       ...(typeof item.server === "string" ? { server: item.server } : {}),
       ...(typeof item.tool === "string" ? { tool: item.tool } : {}),
-      ...(Array.isArray(item.changes)
-        ? { changes: item.changes.map((change) => ({ path: objectOf(change)?.path })) }
+      ...(Array.isArray(item.changes) ? { changes: item.changes.flatMap(changedPaths) } : {}),
+      // How a patch ended decides whether its files count as changed.
+      ...(type === "file_change" && method === "item/completed" && typeof item.status === "string"
+        ? { status: item.status }
         : {}),
     },
   };
+}
+
+/** The path of one `FileUpdateChange`, and where it went if the change moved it. */
+function changedPaths(change: unknown): Array<{ path: unknown }> {
+  const moved = objectOf(objectOf(change)?.kind)?.move_path;
+  return [
+    { path: objectOf(change)?.path },
+    ...(typeof moved === "string" && moved ? [{ path: moved }] : []),
+  ];
+}
+
+/**
+ * Whether this notification states that Codex refused an operation by itself,
+ * with no approval request to answer (`asked` holds the item ids that were put
+ * to the gate, whose refusals the gate already counts):
+ *
+ *   - a command or patch item that ends `declined` without having been asked
+ *     about (Codex's own policy or reviewer turned it down);
+ *   - a turn that ends with the `sandboxError` error code.
+ *
+ * NOT covered, because codex-cli 0.162.0 reports nothing structured for it: a
+ * command that runs inside the sandbox and is stopped by it (a write under
+ * `read-only`, say). Codex sends no item at all for such a command, and an
+ * ordinary failing command is a `failed` item with an exit code and no cause.
+ * The only trace is the command's own output text, which is not parsed.
+ */
+export function codexUnaskedRefusal(
+  method: string,
+  params: unknown,
+  asked: ReadonlySet<string>,
+): boolean {
+  if (method === "turn/completed") {
+    return objectOf(objectOf(objectOf(params)?.turn)?.error)?.codexErrorInfo === "sandboxError";
+  }
+  if (method !== "item/completed") return false;
+  const item = objectOf(objectOf(params)?.item);
+  return (
+    (item?.type === "commandExecution" || item?.type === "fileChange") &&
+    item.status === "declined" &&
+    !(typeof item.id === "string" && asked.has(item.id))
+  );
 }
 
 /** Run ONE turn of a Codex app-server thread to its end. Honors AbortSignal. */
@@ -154,6 +202,9 @@ export async function runCodexWorkerOnce(
   // Aborted when the run ends for any reason, so no ask outlives its worker.
   const ended = new AbortController();
   let failed = false;
+  /** Items put to the gate; a refusal of one of these is the gate's to count. */
+  const asked = new Set<string>();
+  let sandboxBlocked = 0;
   const ask: CodexWorkerApproval = async (request) => {
     try {
       return await opts.approve(request, ended.signal);
@@ -177,6 +228,10 @@ export async function runCodexWorkerOnce(
     },
     {
       onNotification: (method, params) => {
+        if (codexUnaskedRefusal(method, params, asked)) {
+          sandboxBlocked += 1;
+          progress = recordSandboxBlocked(progress, sandboxBlocked);
+        }
         const record = codexExecRecord(method, params);
         // A failed turn is recorded from `onEvent`, which also covers a dead transport.
         if (record) observe(record);
@@ -193,6 +248,8 @@ export async function runCodexWorkerOnce(
         }
       },
       onNativeApproval: async (request) => {
+        const itemId = objectOf(request.params)?.itemId;
+        if (typeof itemId === "string") asked.add(itemId);
         const { args } = codexNativeApprovalPresentation(
           request.method,
           request.params,
@@ -288,7 +345,11 @@ export async function runCodexWorkerOnce(
     throw error;
   }
   const parsed = runWithLines(codexAdapter, lines, signal?.aborted ? null : failed ? 1 : 0);
-  const result = { ...parsed, sessionId: parsed.sessionId || sessionId };
+  const result = {
+    ...parsed,
+    sessionId: parsed.sessionId || sessionId,
+    ...(sandboxBlocked ? { sandboxBlocked } : {}),
+  };
   finishTrace(result);
   return result;
 }

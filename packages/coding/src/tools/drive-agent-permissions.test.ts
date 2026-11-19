@@ -216,6 +216,36 @@ describe("prepareDriveRunPermissions", () => {
     );
   });
 
+  it("reports what the sandbox blocked unasked apart from what was denied", async () => {
+    const permissions = await prepareDriveRunPermissions({
+      cli: "codex",
+      mode: "default",
+      title: "t",
+      stop: () => {},
+    });
+    const sandboxOnly = permissions.outcome({ sessionId: "thread-1", sandboxBlocked: 2 });
+    expect(sandboxOnly).toMatchObject({ denials: 0, sandboxBlocked: 2 });
+    expect(sandboxOnly.blocked).toBeUndefined();
+    expect(sandboxOnly.note).toStartWith(
+      "[permissions] Completed with 2 operation(s) blocked by the sandbox (the worker did not " +
+        'ask for approval, so nobody was prompted) under permissionMode "default".',
+    );
+    expect(sandboxOnly.note).not.toContain("denied operation");
+    expect(sandboxOnly.note).toContain("NOT complete");
+
+    await permissions.codexApproval!({ toolName: "shell", input: {} });
+    const both = permissions.outcome({ sandboxBlocked: 1 });
+    expect(both).toMatchObject({ denials: 1, sandboxBlocked: 1 });
+    expect(both.note).toContain(
+      "Completed with 1 denied operation(s) (shell ×1) and 1 operation(s) blocked by the sandbox",
+    );
+    // The worker's own count passes through the progress merge untouched.
+    expect(
+      permissions.progress({ lastActivityAt: 1, eventCount: 1, sandboxBlocked: 1 }),
+    ).toMatchObject({ permissionDenials: 1, sandboxBlocked: 1 });
+    expect(permissions.outcome({}).sandboxBlocked).toBeUndefined();
+  });
+
   it("does not gate a full-access worker", async () => {
     for (const input of [
       { cli: "codex" as const, mode: "bypassPermissions" as const },
@@ -522,6 +552,44 @@ describe("DriveAgent permission wiring", () => {
 
       const inline = await tool({ prompt: "run tests", cwd: dir, background: false }, ctx);
       expect(inline).toContain("完成，但有 2 个操作被拒（session ext-3）");
+    });
+  });
+
+  it("reports what a Codex worker's sandbox blocked, and the files it says it changed", async () => {
+    await withTool("S-PERM-SANDBOX", async (dir) => {
+      const tool = makeDriveAgentTool(
+        async () => ({
+          sessionId: "thread-9",
+          finalText: "Wrote the note; could not push.",
+          isError: false,
+          // Reported by the worker itself; its transcript names no file.
+          changedFiles: [join(dir, "note.txt"), "note.txt"],
+          sandboxBlocked: 1,
+          exitCode: 0,
+          lines: [],
+        }),
+        undefined,
+        { sessionStore, readChangedFiles: () => [] },
+      );
+      const ctx = { cwd: dir, sessionId: "S-PERM-SANDBOX", permissionMode: "acceptEdits" } as any;
+      await tool({ prompt: "write a note and push", cwd: dir, cli: "codex" }, ctx);
+      await settle();
+      const [result] = notificationQueue.drainAll("S-PERM-SANDBOX") as any[];
+      expect(result.payload).toMatchObject({
+        status: "completed",
+        sandboxBlocked: 1,
+        changedFiles: ["note.txt"],
+      });
+      expect(result.payload.permissionDenials).toBeUndefined();
+      expect(result.payload.finalText).toStartWith(
+        "[permissions] Completed with 1 operation(s) blocked by the sandbox",
+      );
+      const job = backgroundJobRegistry.listForSession("S-PERM-SANDBOX")[0]!;
+      expect(job).toMatchObject({ status: "completed", changedFiles: ["note.txt"] });
+      expect(job.progress?.sandboxBlocked).toBe(1);
+
+      const inline = await tool({ prompt: "push", cwd: dir, cli: "codex", background: false }, ctx);
+      expect(inline).toContain("完成，但有 1 个操作被沙箱拦住（未请求审批）（session thread-9）");
     });
   });
 

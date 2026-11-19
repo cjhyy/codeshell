@@ -38,6 +38,12 @@ export interface ParsedResult {
    * enforces a sandbox instead of per-tool permissions).
    */
   permissionDenials?: PermissionDenial[];
+  /**
+   * Files the CLI itself reported as changed, from its structured output (a
+   * Codex `file_change` item that completed). Absent when the output carries no
+   * such report; the CLI's transcript is then the only source.
+   */
+  changedFiles?: string[];
 }
 
 /** `permission_denials` of a Claude Code `result` record; tolerant of shape drift. */
@@ -179,6 +185,7 @@ export const codexAdapter: AgentAdapter = {
     let finalText = "";
     let isError = false;
     const errorBits: string[] = [];
+    const changedFiles = new Set<string>();
     for (const line of lines) {
       const t = line.trim();
       if (!t) continue;
@@ -189,7 +196,14 @@ export const codexAdapter: AgentAdapter = {
         continue;
       }
       if (d.type === "thread.started" && typeof d.thread_id === "string") sessionId = d.thread_id;
-      else if (
+      else if (d.type === "item.completed" && d.item?.type === "file_change") {
+        // A patch that failed or was refused changed nothing.
+        if (d.item.status === "completed" && Array.isArray(d.item.changes)) {
+          for (const change of d.item.changes) {
+            if (typeof change?.path === "string" && change.path) changedFiles.add(change.path);
+          }
+        }
+      } else if (
         d.type === "item.completed" &&
         d.item?.type === "agent_message" &&
         typeof d.item.text === "string"
@@ -208,6 +222,11 @@ export const codexAdapter: AgentAdapter = {
     // On failure, surface the error text as finalText (so the caller/notification
     // shows *why*), preferring it over any partial agent_message.
     if (isError && errorBits.length) finalText = errorBits.join("\n");
-    return { sessionId, finalText, isError };
+    return {
+      sessionId,
+      finalText,
+      isError,
+      ...(changedFiles.size ? { changedFiles: [...changedFiles] } : {}),
+    };
   },
 };

@@ -1105,6 +1105,8 @@ type StreamEventPayload =
       originClientMessageId?: string;
       /** Operations refused by permissions; "completed" then means degraded. */
       permissionDenials?: number;
+      /** Operations the worker's sandbox refused without asking; also degraded. */
+      sandboxBlocked?: number;
       /** When the bg agent finished (Date.now() value). */
       enqueuedAt: number;
     };
