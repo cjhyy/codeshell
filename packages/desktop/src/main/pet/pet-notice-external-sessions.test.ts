@@ -1,4 +1,15 @@
 import { describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import type { GoalAttentionState } from "../external-runtime-goal-attention.js";
+import {
+  createGoalNoticeReconciler,
+  GOAL_NOTICE_MAX_AGE_MS,
+  persistedBlockedOutcome,
+  recentSessionIds,
+} from "./pet-notice-goal-reconcile.js";
+import { goalPauseDedupeKey } from "./pet-session-rule-watcher.js";
 import {
   createExternalSessionCatalog,
   type ExternalRuntimeNoticeProbe,
@@ -138,6 +149,172 @@ describe("external Session catalog", () => {
     for (const runtime of ["absent", "throws"] as const) {
       const { catalog: known } = catalog({ s: probe(2) }, { s: codexState }, runtime);
       expect(known.get("s")).toMatchObject({ busy: false });
+    }
+  });
+});
+
+describe("persisted Goal notices", () => {
+  const NOW = 1_800_000_000_000;
+  const base = { version: 1 as const, goalId: "g-1", revision: 3, config: { objective: "迁移" } };
+  const limited = (updatedAtMs = NOW - 60_000): GoalAttentionState => ({
+    runId: "run-latest",
+    goalLifecycle: {
+      ...base,
+      phase: "paused",
+      pauseReason: "no_progress",
+      runId: "run-paused",
+      updatedAtMs,
+    },
+  });
+  const asking = (question?: { text: string; detail?: Record<string, unknown> }) =>
+    ({
+      runId: "run-ask",
+      goalLifecycle: {
+        ...base,
+        phase: "waiting",
+        waitKind: "user",
+        waitingFor: "finite_background_work",
+        waitingSinceMs: NOW - 60_000,
+        updatedAtMs: NOW - 60_000,
+        ...(question ? { question } : {}),
+      },
+    }) satisfies GoalAttentionState;
+  const active: GoalAttentionState = {
+    runId: "run-latest",
+    goalLifecycle: { ...base, phase: "active", updatedAtMs: NOW },
+  };
+
+  function reconciler(
+    states: Record<string, GoalAttentionState | undefined>,
+    options: {
+      running?: string[];
+      waiting?: string[];
+      reported?: string[];
+      native?: string[];
+    } = {},
+  ) {
+    const reported: string[] = [];
+    const withdrawn: string[] = [];
+    const reconcile = createGoalNoticeReconciler({
+      source: {
+        recentSessions: async () => Object.keys(states),
+        readState: (id) => states[id],
+        isRunning: (id) => options.running?.includes(id) === true,
+      },
+      isExternalSession: (id) => !options.native?.includes(id),
+      isReported: (outcome) => options.reported?.includes(goalPauseDedupeKey(outcome)) === true,
+      report: async (outcome) => void reported.push(goalPauseDedupeKey(outcome)),
+      waitingSessions: () => options.waiting ?? [],
+      withdraw: async (id) => void withdrawn.push(id),
+      now: () => NOW,
+      log: () => undefined,
+    });
+    return { reconcile, reported, withdrawn };
+  }
+
+  test("a limit pause and an open question are stated as their live outcomes were", () => {
+    const pause = persistedBlockedOutcome("s", {
+      kind: "limit",
+      limit: "no_progress",
+      goalId: "g-1",
+      revision: 3,
+      runId: "run-paused",
+      atMs: NOW,
+    })!;
+    expect(pause).toMatchObject({
+      kind: "blocked",
+      reason: "limit",
+      limit: "no_progress",
+      runKey: "run-paused",
+      at: NOW,
+      final: true,
+    });
+    // As the live closing outcome: its key names the run, not the Goal version.
+    expect(goalPauseDedupeKey(pause)).toBe("s:goal-pause:-:-:run-paused");
+
+    const question = {
+      text: "迁移前要先定两件事。",
+      level: "preference" as const,
+      questions: [
+        {
+          id: "db",
+          question: "用哪个数据库？",
+          options: [{ label: "Postgres" }, { label: "SQLite" }],
+        },
+        { id: "when", question: "何时切换？", options: [{ label: "今晚" }, { label: "周末" }] },
+      ],
+    };
+    const asked = persistedBlockedOutcome("s", {
+      kind: "question",
+      question,
+      goalId: "g-1",
+      revision: 3,
+      runId: "run-ask",
+      atMs: NOW,
+    })!;
+    expect(asked).toMatchObject({ kind: "blocked", reason: "user", goalId: "g-1", revision: 3 });
+    // Several questions cannot be answered by one tap: they are spelled out instead.
+    expect(asked.question).toContain("何时切换？");
+    expect(asked).not.toHaveProperty("options");
+    expect(goalPauseDedupeKey(asked)).toBe("s:goal-pause:g-1:3:run-ask");
+  });
+
+  test("each stopped Goal is reported once; known, running, foreign and stale ones are left alone", async () => {
+    const states = {
+      paused: limited(),
+      asking: asking({ text: "用哪个数据库？", detail: { level: "preference" } }),
+      known: limited(),
+      running: limited(),
+      native: limited(),
+      old: limited(NOW - GOAL_NOTICE_MAX_AGE_MS - 1),
+      unasked: asking(),
+      unreadable: undefined,
+    };
+    const { reconcile, reported, withdrawn } = reconciler(states, {
+      running: ["running"],
+      native: ["native"],
+      reported: ["known:goal-pause:-:-:run-paused"],
+      // Still stopped: a waiting notice about each of these stays.
+      waiting: ["paused", "unasked", "unreadable", "running", "native"],
+    });
+    await reconcile.all();
+    expect(reported).toEqual([
+      "paused:goal-pause:-:-:run-paused",
+      "asking:goal-pause:g-1:3:run-ask",
+    ]);
+    expect(withdrawn).toEqual([]);
+  });
+
+  test("a Goal that moved on has its waiting notice withdrawn, and only then", async () => {
+    const { reconcile, reported, withdrawn } = reconciler(
+      { resumed: active, quiet: active, cleared: { runId: "run-latest" } },
+      { waiting: ["resumed", "cleared", "gone"] },
+    );
+    // `gone` is not among the recent Sessions: a waiting notice alone brings it in.
+    await reconcile.all();
+    await reconcile.session("quiet");
+    expect(reported).toEqual([]);
+    expect(withdrawn).toEqual(["resumed", "cleared"]);
+  });
+
+  test("recent Sessions are found by their state file's time", async () => {
+    const root = mkdtempSync(join(tmpdir(), "goal-notice-sessions-"));
+    try {
+      const write = (name: string, ageMs: number) => {
+        mkdirSync(join(root, name));
+        writeFileSync(join(root, name, "state.json"), "{}");
+        const at = new Date(Date.now() - ageMs);
+        utimesSync(join(root, name, "state.json"), at, at);
+      };
+      write("fresh", 1_000);
+      write("stale", 10 * 24 * 60 * 60_000);
+      mkdirSync(join(root, "no-state"));
+      mkdirSync(join(root, ".pending-x"));
+      writeFileSync(join(root, "a-file"), "");
+      expect(await recentSessionIds(root, Date.now() - 60_000)).toEqual(["fresh"]);
+      expect(await recentSessionIds(join(root, "missing"), 0)).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
     }
   });
 });

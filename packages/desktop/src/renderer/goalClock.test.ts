@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { adoptPersistedGoalPause, adoptPersistedGoalProgress, goalElapsedMs } from "./goalClock";
+import {
+  adoptPersistedGoalPause,
+  adoptPersistedGoalProgress,
+  adoptPersistedGoalQuestion,
+  goalElapsedMs,
+} from "./goalClock";
 import type { ActiveGoal } from "./types";
 
 const goal: ActiveGoal = { objective: "g", goalId: "g1", revision: 1, round: 0, paused: false };
@@ -69,5 +74,36 @@ describe("adoptPersistedGoalPause", () => {
     const active: ActiveGoal = { ...paused, paused: false };
     expect(adoptPersistedGoalPause(active, "no_progress")).toBe(active);
     expect(adoptPersistedGoalPause(null, "no_progress")).toBeNull();
+  });
+});
+
+describe("adoptPersistedGoalQuestion", () => {
+  const goal: ActiveGoal = { objective: "ship", round: 2, paused: false };
+  const detail = {
+    level: "preference" as const,
+    questions: [
+      { id: "db", question: "用哪个数据库？", options: [{ label: "A" }, { label: "B" }] },
+    ],
+  };
+
+  test("a reloaded goal whose history lost the question shows the persisted one", () => {
+    expect(adoptPersistedGoalQuestion(goal, "用哪个数据库？", detail)).toEqual({
+      ...goal,
+      waitingForUser: "用哪个数据库？",
+      waitingDetail: detail,
+    });
+    // A waiting goal's clock stays stopped once its progress is adopted.
+    const waiting = adoptPersistedGoalQuestion(goal, "用哪个数据库？", undefined);
+    expect(
+      adoptPersistedGoalProgress(waiting, { rounds: 2, activeMs: 5_000, runningSinceMs: 1 })
+        ?.clockSinceMs,
+    ).toBeUndefined();
+  });
+
+  test("the replayed question is kept, and a host that reports none changes nothing", () => {
+    const replayed: ActiveGoal = { ...goal, waitingForUser: "重放出来的问题" };
+    expect(adoptPersistedGoalQuestion(replayed, "另一个问题", detail)).toBe(replayed);
+    expect(adoptPersistedGoalQuestion(goal, undefined, undefined)).toBe(goal);
+    expect(adoptPersistedGoalQuestion(null, "用哪个数据库？", detail)).toBeNull();
   });
 });

@@ -6,6 +6,7 @@ import { createNoticeActionSources } from "./pet-notice-action-sources.js";
 import { createNoticeAttention, SessionViewTracker } from "./pet-notice-attention.js";
 import { createDecisionHooks } from "./pet-notice-decision-hooks.js";
 import { createExternalDecisions } from "./pet-notice-external-decisions.js";
+import { createGoalNoticeReconciler } from "./pet-notice-goal-reconcile.js";
 import { createNoticeRuleAction, predictedIm } from "./pet-notice-host-action.js";
 import { PetNoticeLedger } from "./pet-notice-ledger.js";
 import { PetNoticeMediaStore } from "./pet-notice-media.js";
@@ -26,7 +27,11 @@ import type { PetNoticeWiring, PetNoticeWiringDeps } from "./pet-notice-wiring-t
 import { createPresenceDetector } from "./pet-presence.js";
 import { PetReceiptStore } from "./pet-receipt-store.js";
 import { PetRuleStore } from "./pet-rule-store.js";
-import { PetSessionRuleWatcher, type NoticeDraft } from "./pet-session-rule-watcher.js";
+import {
+  goalPauseDedupeKey,
+  PetSessionRuleWatcher,
+  type NoticeDraft,
+} from "./pet-session-rule-watcher.js";
 import { topLevelEvent } from "./session-outcome.js";
 
 // The public surface index.ts, pet IPC and the tests import from here.
@@ -273,6 +278,39 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     .then(() => router.recover())
     .catch((error) => log("pet.notice.recover_failed", { error: errorText(error) }));
 
+  // What a restart lost: Goal pauses and questions persisted with no notice.
+  const goalNotices = deps.externalGoals
+    ? createGoalNoticeReconciler({
+        source: deps.externalGoals,
+        isExternalSession: (sessionId) =>
+          isExternal(sessionId) && view.isEligibleSession(sessionId),
+        isReported: (outcome) => ledger.seenDedupeKeys().has(goalPauseDedupeKey(outcome)),
+        report: (outcome) => watcher.reportBlocked(outcome),
+        waitingSessions: () => router.goalPauseSessions(),
+        withdraw: (sessionId) => router.revokeSessionBlocked(sessionId, "goal-moved-on"),
+        now,
+        log,
+      })
+    : undefined;
+  /** The pass over every Session that is under way; a second request joins it. */
+  let goalSweep: Promise<void> | undefined;
+  const reconcileGoalNotices = (sessionId?: string): Promise<void> => {
+    if (sessionId === undefined && goalSweep) return goalSweep;
+    const pass = ready
+      .then(() =>
+        disposed || !goalNotices
+          ? undefined
+          : sessionId === undefined
+            ? goalNotices.all()
+            : goalNotices.session(sessionId),
+      )
+      .catch((error) => log("pet.notice.goal_reconcile_failed", { error: errorText(error) }));
+    if (sessionId !== undefined) return pass;
+    goalSweep = pass.finally(() => (goalSweep = undefined));
+    return goalSweep;
+  };
+  void reconcileGoalNotices();
+
   const replay = createNoticeReplay({
     router,
     ready,
@@ -354,6 +392,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     externalRuntimeEnded(sessionId) {
       void ready.then(() => (disposed ? undefined : watcher.flush(sessionId)));
     },
+    reconcileGoalNotices,
     submitNotice,
     notifySessionReport: createSessionReportNotices({
       deliveries,

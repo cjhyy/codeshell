@@ -60,8 +60,8 @@ export interface CodexRuntimeOptions {
   developerInstructions?: string;
   /** Codex sandbox mode. Kebab-case per protocol (`workspace-write`, …). */
   sandbox?: string;
-  /** Codex approval policy. Also kebab-case. */
-  approvalPolicy?: string;
+  /** Codex approval policy: a kebab-case name, or the protocol's `{ granular: … }` object. */
+  approvalPolicy?: string | { readonly granular: Readonly<Record<string, boolean>> };
   /** Host-only manager mode: expose the reviewed bridge without native execution tools. */
   disableNativeTools?: boolean;
   client?: AppServerClientOptions;

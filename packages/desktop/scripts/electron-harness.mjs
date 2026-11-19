@@ -326,6 +326,70 @@ async function sourceWindowsLaunchDetails() {
   };
 }
 
+/** Opt-in for local acceptance: keep Chromium's mock keychain, never the OS one. */
+export const ACCEPTANCE_MOCK_KEYCHAIN_ENV = "CODESHELL_E2E_MOCK_KEYCHAIN";
+export const ACCEPTANCE_APP_NAME = "code-shell-acceptance";
+
+export function acceptanceMockKeychainRequested(env = {}, base = process.env) {
+  return base[ACCEPTANCE_MOCK_KEYCHAIN_ENV] === "1" || env[ACCEPTANCE_MOCK_KEYCHAIN_ENV] === "1";
+}
+
+function realKeyringBootstrapSource(home) {
+  return `const { app } = require("electron");
+const { appendFileSync } = require("node:fs");
+if (process.platform === "linux" && app.commandLine.hasSwitch("no-sandbox"))
+  throw new Error("Owned Electron acceptance refused no-sandbox");
+// Electron 33 fixes the macOS Keychain service/account from the app name
+// after the awaited application entry loads. Pin the production name in this
+// synchronous preload, before that native phase or any safeStorage call.
+app.setName("code-shell");
+app.commandLine.removeSwitch("password-store");
+app.commandLine.removeSwitch("use-mock-keychain");
+if (process.platform === "linux")
+  app.commandLine.appendSwitch("password-store", "gnome-libsecret");
+appendFileSync(${JSON.stringify(join(home, "real-keyring-bootstrap.jsonl"))}, JSON.stringify({
+  pid: process.pid,
+  ppid: process.ppid,
+  appName: app.getName(),
+  mockKeychain: app.commandLine.hasSwitch("use-mock-keychain"),
+  passwordStore: app.commandLine.getSwitchValue("password-store"),
+  noSandboxSwitch: app.commandLine.hasSwitch("no-sandbox"),
+  electron: process.versions.electron,
+}) + "\\n", { mode: 0o600 });
+`;
+}
+
+/**
+ * Keeps Playwright's mock keychain and refuses to continue without it, so an
+ * acceptance run next to an installed CodeShell cannot reach that install's
+ * Keychain item. Main pins the production app name on load; holding a distinct
+ * one keeps the menu-bar and Dock identity apart. Exits instead of throwing: an
+ * uncaught Main error would open a native error dialog.
+ */
+export function mockKeychainBootstrapSource(home) {
+  return `const { app } = require("electron");
+const { appendFileSync } = require("node:fs");
+const refuse = (reason) => {
+  process.stderr.write("Mock-keychain acceptance refused launch: " + reason + "\\n");
+  process.exit(78);
+};
+if (process.platform === "linux" && app.commandLine.hasSwitch("no-sandbox")) refuse("no-sandbox");
+if (process.platform === "darwin" && !app.commandLine.hasSwitch("use-mock-keychain"))
+  refuse("Chromium's mock keychain switch is missing");
+app.setName(${JSON.stringify(ACCEPTANCE_APP_NAME)});
+app.setName = () => {};
+appendFileSync(${JSON.stringify(join(home, "real-keyring-bootstrap.jsonl"))}, JSON.stringify({
+  pid: process.pid,
+  ppid: process.ppid,
+  appName: app.getName(),
+  mockKeychain: app.commandLine.hasSwitch("use-mock-keychain"),
+  passwordStore: app.commandLine.getSwitchValue("password-store"),
+  noSandboxSwitch: app.commandLine.hasSwitch("no-sandbox"),
+  electron: process.versions.electron,
+}) + "\\n", { mode: 0o600 });
+`;
+}
+
 export async function launchCodeShellElectron(
   {
     appDir,
@@ -369,53 +433,38 @@ export async function launchCodeShellElectron(
     DISABLE_AUTOUPDATER: "1",
     ...env,
   };
-  // Metadata checks happen before even loading Playwright. A missing default
-  // must fail here instead of entering macOS's create/reset-Keychain dialog.
-  diagnostics?.phase("harness-preflight");
-  preflight({
-    home,
-    environment: {
-      ...environment,
-      // Confined fixtures deliberately scrub this parent-only metadata path
-      // from the Electron environment. Keep it available to verify their
-      // already-bound acceptance HOME without exposing it to the child.
-      CODESHELL_MACOS_DEFAULT_KEYCHAIN_REFERENCE:
-        environment.CODESHELL_MACOS_DEFAULT_KEYCHAIN_REFERENCE ??
-        process.env.CODESHELL_MACOS_DEFAULT_KEYCHAIN_REFERENCE,
-    },
-  });
-  // Playwright's Electron loader appends password-store=basic and
-  // use-mock-keychain. Undo those test defaults after its loader, before
-  // Electron initializes OS cryptography; a command-line argument alone loses
-  // to that loader. Every caller already owns a temporary home.
+  // Local acceptance runs opt in to Playwright's mock keychain and a distinct
+  // app name. Suites re-exec themselves under scrubbed environments, so the
+  // harness process's own environment decides; the default stays real storage.
+  const mockKeychain = acceptanceMockKeychainRequested(env);
   const keyringBootstrap = join(home, "real-keyring.cjs");
-  diagnostics?.phase("harness-bootstrap");
-  await writeFile(
-    keyringBootstrap,
-    `const { app } = require("electron");
-const { appendFileSync } = require("node:fs");
-if (process.platform === "linux" && app.commandLine.hasSwitch("no-sandbox"))
-  throw new Error("Owned Electron acceptance refused no-sandbox");
-// Electron 33 fixes the macOS Keychain service/account from the app name
-// after the awaited application entry loads. Pin the production name in this
-// synchronous preload, before that native phase or any safeStorage call.
-app.setName("code-shell");
-app.commandLine.removeSwitch("password-store");
-app.commandLine.removeSwitch("use-mock-keychain");
-if (process.platform === "linux")
-  app.commandLine.appendSwitch("password-store", "gnome-libsecret");
-appendFileSync(${JSON.stringify(join(home, "real-keyring-bootstrap.jsonl"))}, JSON.stringify({
-  pid: process.pid,
-  ppid: process.ppid,
-  appName: app.getName(),
-  mockKeychain: app.commandLine.hasSwitch("use-mock-keychain"),
-  passwordStore: app.commandLine.getSwitchValue("password-store"),
-  noSandboxSwitch: app.commandLine.hasSwitch("no-sandbox"),
-  electron: process.versions.electron,
-}) + "\\n", { mode: 0o600 });
-`,
-    { mode: 0o600 },
-  );
+  if (mockKeychain) {
+    // No preflight: this HOME is never bound to the account's Keychain.
+    diagnostics?.phase("harness-bootstrap");
+    await writeFile(keyringBootstrap, mockKeychainBootstrapSource(home), { mode: 0o600 });
+  } else {
+    // Metadata checks happen before even loading Playwright. A missing default
+    // must fail here instead of entering macOS's create/reset-Keychain dialog.
+    diagnostics?.phase("harness-preflight");
+    preflight({
+      home,
+      environment: {
+        ...environment,
+        // Confined fixtures deliberately scrub this parent-only metadata path
+        // from the Electron environment. Keep it available to verify their
+        // already-bound acceptance HOME without exposing it to the child.
+        CODESHELL_MACOS_DEFAULT_KEYCHAIN_REFERENCE:
+          environment.CODESHELL_MACOS_DEFAULT_KEYCHAIN_REFERENCE ??
+          process.env.CODESHELL_MACOS_DEFAULT_KEYCHAIN_REFERENCE,
+      },
+    });
+    // Playwright's Electron loader appends password-store=basic and
+    // use-mock-keychain. Undo those test defaults after its loader, before
+    // Electron initializes OS cryptography; a command-line argument alone loses
+    // to that loader. Every caller already owns a temporary home.
+    diagnostics?.phase("harness-bootstrap");
+    await writeFile(keyringBootstrap, realKeyringBootstrapSource(home), { mode: 0o600 });
+  }
   const options = {
     timeout,
     // Playwright otherwise prepends --no-sandbox on Linux. The CI owns and

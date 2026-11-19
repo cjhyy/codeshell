@@ -76,9 +76,21 @@ export function beginBrowserRunForStartedRun(
   if (message.method !== "agent/run") return false;
   const sessionId = (message.params as { sessionId?: unknown } | undefined)?.sessionId;
   if (typeof sessionId !== "string" || !sessionId) return false;
+  beginBrowserRunForSession(sessionId, runtime, panelAccess);
+  return true;
+}
+
+/**
+ * The same reset for a session whose turns never travel as `agent/run`: an
+ * external runtime's user message is its new request.
+ */
+export function beginBrowserRunForSession(
+  sessionId: string,
+  runtime: Pick<BrowserRuntimeLike, "beginRun"> = browserRuntime,
+  panelAccess: Pick<PanelAccessRequests, "beginRun"> = panelAccessRequests,
+): void {
   runtime.beginRun?.(interactiveBrowserRuntimeOwner(sessionId));
   panelAccess.beginRun(sessionId);
-  return true;
 }
 
 /**

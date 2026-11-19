@@ -4,6 +4,7 @@ import {
   CLAUDE_PERMISSION_PROMPT_TOOL,
   claudeModeUsesPermissionPrompt,
   claudePermissionModeFor,
+  rememberClaudePermissionGrants,
   withClaudePermissionPrompt,
   type ClaudePermissionPromptRequest,
 } from "./permissions.js";
@@ -122,6 +123,49 @@ describe("withClaudePermissionPrompt (E08)", () => {
     expect((await ask(host, { tool_name: "Bash" })).behavior).toBe("deny");
     expect((await ask(host, null)).behavior).toBe("deny");
     expect(asked).toBe(0);
+  });
+
+  test("a native tool allowed for the session is not asked about again, as natively", async () => {
+    const asked: string[] = [];
+    const answers = [
+      { approved: true, forSession: true }, // Bash `git status`
+      { approved: true }, // Bash `rm`, once
+      { approved: true }, // Bash `rm` again
+      { approved: true, forSession: true }, // Write
+      { approved: false, forSession: true } as never, // Edit: a refusal is never remembered
+      { approved: true },
+    ];
+    const grants = rememberClaudePermissionGrants(
+      async (request) => {
+        asked.push(`${request.toolName}:${String(request.input.command ?? request.toolUseId)}`);
+        return answers.shift() ?? { approved: false };
+      },
+      { sessionId: "sess-claude", cwd: process.cwd() },
+    );
+    const decide = (toolName: string, input: Record<string, unknown> = {}) =>
+      grants.decide({ toolName, input, toolUseId: "tu" });
+
+    expect(await decide("Bash", { command: "git status" })).toEqual({ approved: true });
+    expect(await decide("Bash", { command: "git log -1" })).toEqual({ approved: true });
+    // Another command, and a chained tail behind the granted head, still ask.
+    await decide("Bash", { command: "rm -rf build" });
+    await decide("Bash", { command: "git status && rm -rf build" });
+    await decide("Write", { file_path: "/tmp/a" });
+    await decide("Write", { file_path: "/tmp/b" });
+    expect((await decide("Edit")).approved).toBe(false);
+    expect((await decide("Edit")).approved).toBe(true);
+    expect(asked).toEqual([
+      "Bash:git status",
+      "Bash:rm -rf build",
+      "Bash:git status && rm -rf build",
+      "Write:tu",
+      "Edit:tu",
+      "Edit:tu",
+    ]);
+
+    grants.clear();
+    expect((await decide("Write", { file_path: "/tmp/c" })).approved).toBe(false);
+    expect(asked).toHaveLength(6);
   });
 
   test("an aborted request is denied even if the user later approves", async () => {

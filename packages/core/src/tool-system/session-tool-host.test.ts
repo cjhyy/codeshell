@@ -22,7 +22,9 @@ import { PermissionClassifier } from "./permission.js";
 import { HookRegistry } from "../hooks/registry.js";
 import type { BuiltinTool } from "./builtin/index.js";
 import type { ToolContext } from "./context.js";
-import type { StreamEvent } from "../types.js";
+import type { PermissionRule, StreamEvent } from "../types.js";
+import { rememberSessionApprovals } from "./session-approval-memory.js";
+import type { ApprovalRequest, ApprovalResult } from "./permission.js";
 
 /** Two trivial tools: one read-only, one that "writes". */
 function catalog(record: string[]): BuiltinTool[] {
@@ -721,4 +723,206 @@ test("each asynchronous tool keeps the output sink captured before its first awa
     result: { id: "new" },
   });
   await host.dispose();
+});
+
+/**
+ * "Allow for this session" on a Host tool of an external-runtime session.
+ *
+ * A Native Engine remembers that choice in `InteractiveApprovalBackend`. The
+ * host used to hand the classifier the caller's raw backend, so the choice was
+ * answered and then forgotten: the next call of the same tool asked again.
+ * These pin that an external session honors it with the native semantics and
+ * never more widely than the user picked.
+ */
+describe("SessionToolHost session-scoped approvals", () => {
+  function writeTool(name: string, record: string[]): BuiltinTool {
+    return {
+      definition: {
+        name,
+        description: `${name} pretends to change something.`,
+        inputSchema: { type: "object", properties: { target: { type: "string" } } },
+        source: "builtin",
+        permissionDefault: "ask",
+        isReadOnly: false,
+        isConcurrencySafe: false,
+      },
+      execute: async (args: Record<string, unknown>) => {
+        record.push(`${name}:${String(args.target ?? args.command ?? "")}`);
+        return "done";
+      },
+      exposure: { presetTags: ["general"] },
+    } as unknown as BuiltinTool;
+  }
+
+  const TOOLS = ["ActA", "ActB", "Bash", "Read"];
+
+  function makeHost(
+    opts: {
+      sessionId?: string;
+      answers?: ApprovalResult[];
+      rules?: PermissionRule[];
+      planMode?: boolean;
+      record?: string[];
+      asked?: ApprovalRequest[];
+    } = {},
+  ) {
+    const record = opts.record ?? [];
+    const asked = opts.asked ?? [];
+    const answers = [...(opts.answers ?? [])];
+    const registry = new ToolRegistry({
+      toolCatalog: TOOLS.map((name) => writeTool(name, record)),
+    });
+    const host = createSessionToolHost({
+      businessSessionId: opts.sessionId ?? "sess-approvals",
+      cwd: process.cwd(),
+      registry,
+      permissionMode: opts.planMode ? "plan" : "default",
+      presetRules: opts.rules ?? TOOLS.map((tool) => ({ tool, decision: "ask" as const })),
+      projectTrusted: false,
+      settingsScope: "isolated",
+      planMode: opts.planMode ?? false,
+      exposure: { mode: "allowlist", toolNames: new Set(TOOLS) },
+      visibility: { cwd: process.cwd(), hasGoal: false, host: "desktop", isSubAgent: false },
+      hooks: new HookRegistry(),
+      approvalBackend: {
+        requestApproval: async (request) => {
+          asked.push(request);
+          return answers.shift() ?? { approved: true };
+        },
+      },
+    });
+    let n = 0;
+    const call = (name: string, input: Record<string, unknown> = {}) =>
+      host.execute({ id: `call-${++n}`, name, input });
+    return { host, record, asked, call };
+  }
+
+  const ONCE: ApprovalResult = { approved: true };
+  const FOR_SESSION: ApprovalResult = { approved: true, always: true, scope: "session" };
+
+  test("allow once asks again for the same tool", async () => {
+    const { asked, call, record } = makeHost({ answers: [ONCE, ONCE] });
+    expect((await call("ActA", { target: "1" })).isError).toBeFalsy();
+    expect((await call("ActA", { target: "2" })).isError).toBeFalsy();
+    expect(asked.map((request) => request.toolName)).toEqual(["ActA", "ActA"]);
+    expect(record).toEqual(["ActA:1", "ActA:2"]);
+  });
+
+  test("allow for this session stops asking for that tool, and only that tool", async () => {
+    const { asked, call, record } = makeHost({ answers: [FOR_SESSION, ONCE] });
+    await call("ActA", { target: "1" });
+    await call("ActA", { target: "2" });
+    await call("ActA", { target: "3" });
+    expect(asked.map((request) => request.toolName)).toEqual(["ActA"]);
+    await call("ActB", { target: "4" });
+    expect(asked.map((request) => request.toolName)).toEqual(["ActA", "ActB"]);
+    expect(record).toEqual(["ActA:1", "ActA:2", "ActA:3", "ActB:4"]);
+  });
+
+  test("a session grant for a shell command covers its head command only, as natively", async () => {
+    const { asked, call } = makeHost({ answers: [FOR_SESSION, ONCE, ONCE] });
+    await call("Bash", { command: "git status" });
+    await call("Bash", { command: "git log" });
+    expect(asked).toHaveLength(1);
+    await call("Bash", { command: "rm -rf build" });
+    expect(asked).toHaveLength(2);
+    // A chained tail cannot ride the grant for its head.
+    await call("Bash", { command: "git status && rm -rf build" });
+    expect(asked).toHaveLength(3);
+  });
+
+  test("a denied tool is not unlocked, and a deny rule is never asked about", async () => {
+    const denied = makeHost({ answers: [{ approved: false }, FOR_SESSION] });
+    expect((await denied.call("ActA")).isError).toBe(true);
+    expect(denied.record).toEqual([]);
+    // The denial was a one-off answer: the next call asks again.
+    await denied.call("ActA");
+    expect(denied.asked).toHaveLength(2);
+
+    const ruled = makeHost({
+      answers: [FOR_SESSION],
+      rules: [
+        { tool: "ActA", decision: "ask" },
+        { tool: "ActB", decision: "deny" },
+      ],
+    });
+    await ruled.call("ActA");
+    expect((await ruled.call("ActB")).isError).toBe(true);
+    expect(ruled.asked.map((request) => request.toolName)).toEqual(["ActA"]);
+    expect(ruled.record).toEqual(["ActA:"]);
+  });
+
+  test("a new session, and a session reopened after it ended, start clean", async () => {
+    const asked: ApprovalRequest[] = [];
+    const first = makeHost({ sessionId: "sess-one", answers: [FOR_SESSION], asked });
+    await first.call("ActA");
+    await first.call("ActA");
+    expect(asked).toHaveLength(1);
+
+    const other = makeHost({ sessionId: "sess-two", answers: [ONCE], asked });
+    await other.call("ActA");
+    expect(asked).toHaveLength(2);
+
+    await first.host.dispose();
+    const reopened = makeHost({ sessionId: "sess-one", answers: [ONCE], asked });
+    await reopened.call("ActA");
+    expect(asked).toHaveLength(3);
+  });
+
+  test("plan mode is not opened by a grant, and never reaches the backend", async () => {
+    const { asked, call, record } = makeHost({ planMode: true, answers: [FOR_SESSION] });
+    expect((await call("ActA")).isError).toBe(true);
+    expect((await call("ActA")).isError).toBe(true);
+    expect(asked).toEqual([]);
+    expect(record).toEqual([]);
+  });
+
+  test("a project-wide choice is remembered for the session and writes no settings", async () => {
+    const { mkdtempSync, existsSync, rmSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    const cwd = mkdtempSync(join(tmpdir(), "session-approvals-"));
+    try {
+      const asked: ApprovalRequest[] = [];
+      const memory = rememberSessionApprovals(
+        {
+          requestApproval: async (request) => {
+            asked.push(request);
+            return { approved: true, always: true, scope: "project" };
+          },
+        },
+        { sessionId: "sess-project", cwd },
+      );
+      const request = {
+        sessionId: "ignored",
+        toolName: "ActA",
+        args: {},
+        riskLevel: "high" as const,
+      };
+      expect((await memory.backend.requestApproval(request)).scope).toBe("session");
+      expect((await memory.backend.requestApproval(request)).approved).toBe(true);
+      expect(asked).toHaveLength(1);
+      // The grant is bucketed under the session it was created for.
+      expect(asked[0]!.sessionId).toBe("sess-project");
+      expect(existsSync(join(cwd, ".code-shell"))).toBe(false);
+
+      memory.clear();
+      expect((await memory.backend.requestApproval(request)).approved).toBe(false);
+      expect(asked).toHaveLength(1);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  test("a withdrawn or failed prompt records nothing", async () => {
+    const { asked, call } = makeHost({
+      answers: [
+        { approved: false, failure: "cancelled", always: true, scope: "session" } as never,
+        ONCE,
+      ],
+    });
+    expect((await call("ActA")).isError).toBe(true);
+    expect((await call("ActA")).isError).toBeFalsy();
+    expect(asked).toHaveLength(2);
+  });
 });

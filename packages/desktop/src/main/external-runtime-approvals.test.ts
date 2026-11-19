@@ -168,7 +168,17 @@ describe("ExternalRuntimeApprovals", () => {
         pathScope: "dir",
         ignored: "value",
       }),
-    ).toEqual({ approved: true, reason: "ok", scope: "session", pathScope: "dir" });
+    ).toEqual({ approved: true, reason: "ok", always: true, scope: "session", pathScope: "dir" });
+    // "Remember" is derived here, as the preload derives it for a native
+    // session: never taken from the payload, never set on a refusal or on once.
+    expect(parseExternalApprovalDecision({ approved: true, scope: "once", always: true })).toEqual({
+      approved: true,
+      scope: "once",
+    });
+    expect(parseExternalApprovalDecision({ approved: false, scope: "session" })).toEqual({
+      approved: false,
+      scope: "session",
+    });
     expect(
       parseExternalApprovalDecision({
         approved: true,

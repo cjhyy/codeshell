@@ -1,6 +1,6 @@
 {
   "name": "@cjhyy/code-shell-desktop",
-  "version": "0.11.0-rc.5",
+  "version": "0.11.0-rc.6",
   "private": true,
   "license": "MIT",
   "description": "Electron desktop client for CodeShell — the full desktop agent app.",
@@ -30,6 +30,7 @@
     "test:e2e:startup-operations": "node ../../scripts/run-isolated-node-smoke.mjs scripts/e2e-startup-operation-cycles.mjs",
     "test:e2e:task-inbox-sources": "node scripts/e2e-task-inbox-sources.mjs",
     "test:e2e:link": "node scripts/e2e-link.mjs",
+    "test:e2e:external-session-acceptance": "node scripts/e2e-external-session-acceptance.mjs",
     "test:e2e:credential-operations": "node ../../scripts/run-isolated-node-smoke.mjs scripts/e2e-credential-operations.mjs",
     "test:e2e:mcp-operations": "node ../../scripts/run-isolated-node-smoke.mjs scripts/e2e-mcp-operations.mjs",
     "test:e2e:digital-humans": "node scripts/e2e-digital-humans.mjs",

@@ -181,7 +181,14 @@ function computerUseApprovalRequest(
 ): NativeApprovalRequest | undefined {
   const computerUse = computerUseApprovalPresentation(runtime, toolName, args);
   if (!computerUse) return undefined;
-  return { ...computerUseApprovalText(computerUse), args, riskLevel: "high", computerUse };
+  return {
+    ...computerUseApprovalText(computerUse),
+    args,
+    riskLevel: "high",
+    // These calls bypass ToolExecutor and are approved one at a time.
+    onceOnly: true,
+    computerUse,
+  };
 }
 
 /** The card for one Claude Code permission prompt (its own tools and Host MCP tools). */

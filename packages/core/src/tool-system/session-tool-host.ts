@@ -22,6 +22,10 @@ import type { ToolContext } from "./context.js";
 import { ToolExecutor } from "./executor.js";
 import { ToolRegistry } from "./registry.js";
 import { PermissionClassifier, type ApprovalBackend } from "./permission.js";
+import { rememberSessionApprovals } from "./session-approval-memory.js";
+
+/** The memory this host keeps, for a runtime adapter's own native-tool prompts. */
+export { rememberSessionApprovals };
 import { HookRegistry } from "../hooks/registry.js";
 import { registerConfiguredHooks } from "../hooks/register-configured-hooks.js";
 import { SettingsManager } from "../settings/manager.js";
@@ -293,6 +297,17 @@ export function createSessionToolHost(options: CreateSessionToolHostOptions): Se
   const { registry, exposure } = options;
   const ownsHooks = options.hooks === undefined;
   const hooks = options.hooks ?? configuredHooks(options);
+  // "Allow for this session" is remembered the way a Native Engine remembers
+  // it. Handing the classifier the raw backend answered the prompt and forgot
+  // the scope, so the same tool asked again on its next call. The memory is
+  // consulted only where the classifier would otherwise ask: deny rules, plan
+  // mode and the exposure policy are decided before it and are unaffected.
+  const approvals = options.approvalBackend
+    ? rememberSessionApprovals(options.approvalBackend, {
+        sessionId: options.businessSessionId,
+        cwd: options.cwd,
+      })
+    : undefined;
   // Composed HERE, by the same function the Native Engine uses, so the two paths
   // cannot drift. In particular this is what pulls in the user's own
   // `settings.permissions.rules` — a deny the user wrote must bind an external
@@ -306,7 +321,7 @@ export function createSessionToolHost(options: CreateSessionToolHostOptions): Se
       ...(options.settingsScope ? { settingsScope: options.settingsScope } : {}),
     }),
     options.permissionMode,
-    options.approvalBackend,
+    approvals?.backend,
   );
 
   // Every in-flight call is chained to this, so dispose() can actually stop work
@@ -595,6 +610,7 @@ export function createSessionToolHost(options: CreateSessionToolHostOptions): Se
       // the session is gone.
       disposed = true;
       lifetime.abort();
+      approvals?.clear();
       if (ownsHooks) hooks.clear();
     },
   };

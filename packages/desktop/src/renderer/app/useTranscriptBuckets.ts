@@ -19,7 +19,11 @@ import {
 import { subscribeSessionPersistenceFlush } from "../sessionPersistence";
 import type { TranscriptsAction, TranscriptsMap } from "../transcriptsReducer";
 import { applyStreamEvent, INITIAL_STATE, type Message, type MessagesReducerState } from "../types";
-import { adoptPersistedGoalPause, adoptPersistedGoalProgress } from "../goalClock";
+import {
+  adoptPersistedGoalPause,
+  adoptPersistedGoalProgress,
+  adoptPersistedGoalQuestion,
+} from "../goalClock";
 import {
   hasTranscriptRecovery,
   hasBufferedTranscriptRecovery,
@@ -647,8 +651,18 @@ export function useTranscriptBuckets({
         const goalLookupEpoch = state.snapshotEpoch ?? null;
         let goalLookupSucceeded = false;
         try {
-          const { ok, goal, goalId, paused, pauseReason, revision, setAtMs, progress } =
-            await window.codeshell.goalGet(engineId);
+          const {
+            ok,
+            goal,
+            goalId,
+            paused,
+            pauseReason,
+            revision,
+            setAtMs,
+            progress,
+            waitingForUser,
+            waitingForUserDetail,
+          } = await window.codeshell.goalGet(engineId);
           goalLookupSucceeded = ok !== false;
           if (ok !== false && goal) {
             const persistedGoalId = goalId ?? state.activeGoal?.goalId;
@@ -670,7 +684,15 @@ export function useTranscriptBuckets({
             state = {
               ...state,
               activeGoal: adoptPersistedGoalPause(
-                adoptPersistedGoalProgress(state.activeGoal, progress),
+                adoptPersistedGoalProgress(
+                  // The open question first: a waiting goal's clock does not run.
+                  adoptPersistedGoalQuestion(
+                    state.activeGoal,
+                    waitingForUser,
+                    waitingForUserDetail,
+                  ),
+                  progress,
+                ),
                 pauseReason,
               ),
             };

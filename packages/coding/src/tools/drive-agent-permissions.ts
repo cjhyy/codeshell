@@ -18,10 +18,10 @@
  *
  * A Codex worker goes through the same gate by a different door. Outside full
  * access it runs as an app-server thread (`drive-agent-codex-worker.ts`) in a
- * sandbox with the `on-request` approval policy, and each approval request the
- * app-server sends is answered here. Codex asks only for what its sandbox does
- * not already allow, so in `acceptEdits` workspace edits and sandboxed commands
- * run without an ask.
+ * sandbox, and each approval request the app-server sends is answered here.
+ * Codex asks only for what its sandbox does not already allow (before leaving
+ * it, or after it stopped a command), so in `acceptEdits` workspace edits and
+ * sandboxed commands run without an ask.
  */
 import type { BackgroundJobProgress, ToolContext } from "@cjhyy/code-shell-core/extension";
 import type { PermissionDenial, PermissionMode } from "../cc-orchestrator/agent-adapter.js";
@@ -36,6 +36,7 @@ import {
   type BridgeToolHost,
 } from "../external-runtimes/shared/mcp-bridge.js";
 import { SessionContextStore } from "../external-runtimes/shared/session-context-store.js";
+import { codexWorkerSandbox } from "./drive-agent-codex-worker.js";
 
 /** Consecutive refused asks after which a worker is stopped and its parent woken. */
 export const DRIVE_MAX_CONSECUTIVE_DENIALS = 3;
@@ -87,6 +88,8 @@ export interface DrivePermissionGate {
   ): Promise<{ approved: boolean; reason?: string }>;
   /** Refusals this gate issued, oldest first. */
   denials(): readonly PermissionDenial[];
+  /** How many asks reached this gate, whatever the answer. */
+  asked(): number;
   /** Why the worker was stopped, once it has been. */
   blockedReason(): string | undefined;
   /** Permission fields for the job's progress record. */
@@ -131,6 +134,7 @@ export function createDrivePermissionGate(options: {
     for (const ask of waiting) ask.withdrawal.abort();
   };
   let consecutive = 0;
+  let asks = 0;
   let blocked: string | undefined;
   let listener: (() => void) | undefined;
   const changed = (): void => {
@@ -167,6 +171,7 @@ export function createDrivePermissionGate(options: {
 
   return {
     denials: () => denied,
+    asked: () => asks,
     blockedReason: () => blocked,
     setListener: (next) => {
       listener = next;
@@ -181,6 +186,7 @@ export function createDrivePermissionGate(options: {
     }),
     async decide(request, signal) {
       const { toolName } = request;
+      asks += 1;
       if (blocked) {
         return refuse(toolName, "This background task was stopped because it was blocked.");
       }
@@ -337,6 +343,9 @@ export interface DriveRunPermissions {
     permissionDenials?: readonly PermissionDenial[];
     sandboxBlocked?: number;
     sessionId?: string;
+    isError?: boolean;
+    /** Changed files attributed to the run, once that has been worked out. */
+    attributedChanges?: number;
   }): DriveRunPermissionOutcome;
   close(): Promise<void>;
 }
@@ -383,7 +392,27 @@ export async function prepareDriveRunPermissions(options: {
     const denials = reported.length >= counted.length ? reported : counted;
     const blocked = gate?.blockedReason();
     const sandboxBlocked = result?.sandboxBlocked ?? 0;
-    if (!denials.length && !blocked && !sandboxBlocked) return { denials: 0 };
+    if (!denials.length && !blocked && !sandboxBlocked) {
+      // Nothing was refused, yet a sandboxed Codex run that asked for nothing
+      // and left no file behind may have been unable to do its work: what the
+      // sandbox stops is not always reported (`CODEX_WORKER_APPROVAL_POLICY`).
+      // Not called blocked, since nothing says it was; the reader is told
+      // where the run happened and can judge an empty result by it.
+      const quiet =
+        codex &&
+        mode !== "bypassPermissions" &&
+        !result?.isError &&
+        result?.attributedChanges === 0 &&
+        !gate?.asked();
+      return quiet
+        ? {
+            denials: 0,
+            note:
+              `[sandbox] Ran in a ${codexWorkerSandbox(mode)} sandbox; no approval was ` +
+              "requested and no file change was recorded.",
+          }
+        : { denials: 0 };
+    }
     const resume = result?.sessionId
       ? ` Its session ${result.sessionId} is kept and can be resumed with a mode that permits them.`
       : "";

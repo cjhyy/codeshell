@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { decisionFromChoice, approveOptionsFor } from "./approvalDecision";
+import { decisionFromChoice, approveOptionsFor, offeredApproveOptions } from "./approvalDecision";
 
 describe("decisionFromChoice", () => {
   test("once is the legacy payload — no always, no scope", () => {
@@ -71,5 +71,40 @@ describe("approveOptionsFor", () => {
 
   test("Edit is path-scoped like Write", () => {
     expect(approveOptionsFor("Edit", "/a/b.ts")).toHaveLength(7);
+  });
+});
+
+describe("offeredApproveOptions", () => {
+  const all = approveOptionsFor("browser_act", undefined);
+  const envelope = (source: "external-runtime" | undefined, extra: Record<string, unknown> = {}) =>
+    ({ ...(source ? { source } : {}), request: { toolName: "browser_act", ...extra } }) as const;
+
+  test("a native session keeps every scope", () => {
+    expect(offeredApproveOptions(all, envelope(undefined), true)).toEqual(all);
+  });
+
+  test("an external session offers what it honors: once and this session", () => {
+    expect(
+      offeredApproveOptions(all, envelope("external-runtime"), true).map((o) => o.scope),
+    ).toEqual(["once", "session"]);
+    const write = approveOptionsFor("Write", "/repo/src/foo.ts");
+    expect(
+      offeredApproveOptions(write, envelope("external-runtime"), true).map(
+        (o) => `${o.scope}:${o.pathScope ?? ""}`,
+      ),
+    ).toEqual(["once:", "session:file", "session:dir", "session:tool"]);
+  });
+
+  test("a request Main marks once-only, and a remote transport, offer only once", () => {
+    expect(
+      offeredApproveOptions(all, envelope("external-runtime", { onceOnly: true }), true).map(
+        (o) => o.scope,
+      ),
+    ).toEqual(["once"]);
+    // The mark is Main's; a native request cannot be narrowed by tool arguments.
+    expect(offeredApproveOptions(all, envelope(undefined, { onceOnly: true }), true)).toEqual(all);
+    expect(offeredApproveOptions(all, envelope(undefined), false).map((o) => o.scope)).toEqual([
+      "once",
+    ]);
   });
 });

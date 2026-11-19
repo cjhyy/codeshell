@@ -27,6 +27,7 @@ import {
   type ExternalRuntimeServiceDeps,
 } from "../external-runtime-service.js";
 import { createExternalSessionCatalog } from "./pet-notice-external-sessions.js";
+import { externalGoalNoticeSource } from "./pet-notice-goal-reconcile.js";
 import { PetLongTaskCoordinator } from "./pet-long-task-coordinator.js";
 import { PetLongTaskStore } from "./pet-long-task-store.js";
 import type { DesktopPetProjectionSnapshot } from "./pet-state-aggregator.js";
@@ -105,7 +106,13 @@ beforeEach(async () => {
   onInterrupt = undefined;
   interrupted = false;
   backgroundRunning = false;
-  svc = new ExternalRuntimeService({
+  svc = newService();
+  await svc.start({ kind: "codex", sessionId: CODEX, cwd });
+});
+
+/** The service as Main builds it; a relaunch builds another over the same Session store. */
+function newService(): ExternalRuntimeService {
+  return new ExternalRuntimeService({
     featureFlags: () => ({ external_agent_runtime: true, external_host_tools: true }),
     registerSession: () => {},
     releaseSession: () => {},
@@ -133,8 +140,7 @@ beforeEach(async () => {
       report: (event) => reports.push(event),
     }),
   });
-  await svc.start({ kind: "codex", sessionId: CODEX, cwd });
-});
+}
 
 afterEach(async () => {
   await cleanupNoticeEnv(current);
@@ -147,12 +153,21 @@ afterEach(async () => {
 });
 
 /** The real notice wiring, knowing the Codex Session through the real catalog. */
-function noticeHarness(): Harness {
+function noticeHarness(readsPersistedGoals = false): Harness {
   const target = harness({
     externalSessions: createExternalSessionCatalog({
       runtime: () => svc,
       readState: (id) => new SessionManager().readSessionState(id),
     }),
+    ...(readsPersistedGoals
+      ? {
+          externalGoals: externalGoalNoticeSource({
+            sessionsRootDir: sessionsRoot(),
+            readState: (id) => new SessionManager().readSessionState(id),
+            isRunning: (id) => svc.isSessionRunning(id),
+          }),
+        }
+      : {}),
   });
   sink = (sessionId, event) => target.observeSessionEvent(sessionId, event);
   return target;
@@ -517,6 +532,222 @@ describe("outcomes of external runs", () => {
     await svc.send(CODEX, { text: "修登录" });
     await settle(() => current!.submitted.length > 0);
     expect(current.submitted).toMatchObject([{ kind: "session.done", sessionId: CODEX }]);
+  });
+});
+
+describe("Goal notices a restart lost", () => {
+  const work: ProviderTurn = async (_args, emit) => {
+    for (const event of [...tool("commandExecution", `call-${Math.random()}`), reply("还差一点")])
+      emit(event);
+  };
+  const ask: ProviderTurn = async (args, emit) => {
+    for (const event of tool("commandExecution")) emit(event);
+    await (args.registry as ToolRegistry).executeTool("wait_for_user", {
+      ...goalIdentity(),
+      level: "preference",
+      question: "迁移前要先定数据库。",
+      questions: [
+        {
+          id: "db",
+          question: "用哪个数据库？",
+          options: [{ label: "Postgres" }, { label: "SQLite" }],
+        },
+      ],
+    });
+  };
+  const QUESTION = {
+    question: "迁移前要先定数据库。 用哪个数据库？",
+    options: [{ label: "Postgres", recommended: true }, { label: "SQLite" }],
+  };
+  const blockedRule = (extra: Record<string, unknown> = {}) =>
+    current!.handler(
+      CODEX,
+      upsertArgs({ sessionId: CODEX, scope: "goal", events: ["blocked"], ...extra }),
+    );
+  /** The pause or question happens while nothing listens: the app quits before any notice. */
+  const unheard = () => (sink = () => undefined);
+  const goalNotices = () =>
+    current!.wiring.ledger.newest((record) => record.sessionId === CODEX, 10);
+
+  /**
+   * Quit and start again: a new service (no runtime started) and a new notice
+   * wiring over the same Session store, rules and ledger. The wiring reads the
+   * persisted Goals on its own once its stores are loaded.
+   */
+  async function relaunch(): Promise<Harness> {
+    await settle();
+    await current!.wiring.flush();
+    current!.wiring.dispose();
+    await svc.stopAll();
+    svc = newService();
+    current = noticeHarness(true);
+    // Joins the pass the wiring started for itself.
+    await current.wiring.reconcileGoalNotices();
+    await settle();
+    return current;
+  }
+
+  test("a limit pause nobody was told about is reported once, however often the app restarts", async () => {
+    current = noticeHarness();
+    await blockedRule();
+    env.clock = NOW + 1_000;
+    unheard();
+    providerTurn = work;
+    await svc.send(CODEX, { text: "做完整个迁移", goal: { objective: "迁移", maxTurns: 1 } });
+    expect(svc.getGoal(CODEX)).toMatchObject({ paused: true, pauseReason: "turn_limit" });
+    expect(goalNotices()).toEqual([]);
+
+    await relaunch();
+    expect(current.ownerSends).toHaveLength(1);
+    expect(goalNotices()).toMatchObject([
+      { kind: "session.paused", priority: "P1", delivery: { status: "accepted" } },
+    ]);
+    expect(current.submitted).toMatchObject([
+      { kind: "session.paused", sessionId: CODEX, facts: { pause: "turn_limit" } },
+    ]);
+
+    // Again, and when the Session is opened: the ledger knows the pause.
+    await relaunch();
+    await current.wiring.reconcileGoalNotices(CODEX);
+    await settle();
+    expect(current.submitted).toEqual([]);
+    expect(current.ownerSends).toEqual([]);
+    expect(current.desktop).toEqual([]);
+    expect(goalNotices()).toHaveLength(1);
+  });
+
+  test("a pause the owner already heard about is not sent again", async () => {
+    current = noticeHarness();
+    await blockedRule();
+    env.clock = NOW + 1_000;
+    providerTurn = work;
+    await svc.send(CODEX, { text: "做完整个迁移", goal: { objective: "迁移", maxTurns: 1 } });
+    await settle(() => current!.ownerSends.length > 0);
+    const [live] = current.submitted;
+    expect(live).toMatchObject({ kind: "session.paused" });
+    expect(current.ownerSends).toHaveLength(1);
+
+    await relaunch();
+    // The persisted pause has the live notice's own key: the ledger knows it.
+    expect(current.submitted).toEqual([]);
+    expect(current.ownerSends).toEqual([]);
+    expect(goalNotices()).toMatchObject([{ dedupeKey: live!.dedupeKey }]);
+  });
+
+  test("an open question is asked again after a restart, with its options, and the banner has it", async () => {
+    current = noticeHarness();
+    await blockedRule();
+    env.clock = NOW + 1_000;
+    unheard();
+    providerTurn = ask;
+    await svc.send(CODEX, { text: "做迁移", goal: { objective: "迁移" } });
+    const frames = readOutputJournal(sessionsRoot(), CODEX).frames.map((frame) => frame.event);
+
+    await relaunch();
+    expect(current.submitted).toMatchObject([
+      { kind: "session.blocked", priority: "P0", sessionId: CODEX, facts: QUESTION },
+    ]);
+    expect(current.ownerSends).toHaveLength(1);
+    // The reply banner: the host still has the question (it was only in memory before) ...
+    const banner = {
+      waitingForUser: "迁移前要先定数据库。",
+      waitingForUserDetail: {
+        level: "preference",
+        questions: [{ id: "db", question: "用哪个数据库？" }],
+      },
+    };
+    expect(svc.getGoal(CODEX)).toMatchObject(banner);
+    // ... and a reloaded window folds the same question out of the replayed journal.
+    const replayed = frames.reduce(
+      (state, event) => applyStreamEvent(state, event, () => 1),
+      INITIAL_STATE,
+    );
+    expect(replayed.activeGoal).toMatchObject({
+      paused: false,
+      waitingForUser: banner.waitingForUser,
+      waitingDetail: banner.waitingForUserDetail,
+    });
+
+    await relaunch();
+    expect(current.ownerSends).toEqual([]);
+    expect(goalNotices()).toHaveLength(1);
+
+    // The owner's next message answers it for good: the persisted copy goes too.
+    await svc.start({ kind: "codex", sessionId: CODEX, cwd });
+    expect(svc.getGoal(CODEX)).toMatchObject(banner);
+    providerTurn = undefined;
+    await svc.send(CODEX, { text: "Postgres" });
+    expect(svc.getGoal(CODEX)).not.toHaveProperty("waitingForUser");
+    expect(new SessionManager().readSessionState(CODEX)?.goalLifecycle).not.toHaveProperty(
+      "question",
+    );
+  });
+
+  test("a question the owner was asked while the app ran is not asked again", async () => {
+    current = noticeHarness();
+    await blockedRule();
+    env.clock = NOW + 1_000;
+    providerTurn = ask;
+    await svc.send(CODEX, { text: "做迁移", goal: { objective: "迁移" } });
+    await settle(() => current!.ownerSends.length > 0);
+    const [live] = current.submitted;
+    expect(live).toMatchObject({ kind: "session.blocked", facts: QUESTION });
+
+    await relaunch();
+    expect(current.submitted).toEqual([]);
+    expect(current.ownerSends).toEqual([]);
+    expect(goalNotices()).toMatchObject([{ dedupeKey: live!.dedupeKey }]);
+  });
+
+  test("a pause the owner asked for raises nothing", async () => {
+    current = noticeHarness();
+    await blockedRule();
+    env.clock = NOW + 1_000;
+    unheard();
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    providerTurn = async () => held;
+    const running = svc.send(CODEX, { text: "做迁移", goal: { objective: "迁移" } });
+    await settle(() => svc.isRunActive(CODEX));
+    await svc.interrupt(CODEX);
+    release();
+    await running;
+    expect(svc.getGoal(CODEX)).toMatchObject({ paused: true, pauseReason: "user_stop" });
+
+    await relaunch();
+    expect(current.submitted).toEqual([]);
+    expect(goalNotices()).toEqual([]);
+  });
+
+  test("a Goal that moved on raises nothing, and its waiting notice is withdrawn", async () => {
+    current = noticeHarness();
+    // A named, unavailable WeChat queues the pause: it waits for the channel.
+    current.channels[0] = { ...current.channels[0]!, ready: "unavailable" };
+    await blockedRule({ channel: "wechat" });
+    env.clock = NOW + 1_000;
+    providerTurn = work;
+    await svc.send(CODEX, { text: "做完整个迁移", goal: { objective: "迁移", maxTurns: 1 } });
+    await settle(() => current!.wiring.ledger.queued().length === 1);
+    // The owner's next message resumes the Goal and it completes; nothing hears of it.
+    unheard();
+    providerTurn = async (args, emit) => {
+      for (const event of tool("commandExecution", "call-finish")) emit(event);
+      await (args.registry as ToolRegistry).executeTool("complete_goal", {
+        ...goalIdentity(),
+        summary: "迁移完成",
+      });
+    };
+    await svc.send(CODEX, { text: "继续" });
+    expect(svc.getGoal(CODEX)).toMatchObject({ goal: null });
+    expect(current.wiring.ledger.queued()).toHaveLength(1);
+
+    await relaunch();
+    expect(current.submitted).toEqual([]);
+    expect(current.wiring.ledger.queued()).toEqual([]);
+    expect(goalNotices()).toMatchObject([
+      { delivery: { status: "revoked", error: "goal-moved-on" } },
+    ]);
+    expect(current.ownerSends).toEqual([]);
   });
 });
 

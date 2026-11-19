@@ -16,6 +16,9 @@ import { join } from "node:path";
 import { test } from "node:test";
 import vm from "node:vm";
 import {
+  ACCEPTANCE_APP_NAME,
+  ACCEPTANCE_MOCK_KEYCHAIN_ENV,
+  acceptanceMockKeychainRequested,
   assertOfflinePluginBootstrapHeld,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
@@ -440,4 +443,68 @@ test("temporary Electron homes are canonical and cleanup stays scoped to that fi
     await isolated.cleanup();
   }
   equal(existsSync(isolated.home), false);
+});
+
+test("opt-in mock-keychain acceptance skips the Keychain preflight and keeps a distinct identity", async (t) => {
+  const input = fixture(t);
+  equal(acceptanceMockKeychainRequested({}, {}), false);
+  equal(acceptanceMockKeychainRequested({}, { [ACCEPTANCE_MOCK_KEYCHAIN_ENV]: "1" }), true);
+  equal(acceptanceMockKeychainRequested({ [ACCEPTANCE_MOCK_KEYCHAIN_ENV]: "true" }, {}), false);
+  await launchCodeShellElectron(
+    { ...input, env: { [ACCEPTANCE_MOCK_KEYCHAIN_ENV]: "1" } },
+    {
+      platform: "linux",
+      preflight: () => {
+        throw new Error("mock-keychain acceptance must not bind the account Keychain");
+      },
+      watch: () => {},
+      launch: async () => ({ process: () => ({}) }),
+    },
+  );
+  equal(existsSync(join(input.home, "electron-keychain-reference.json")), false);
+  const script = new vm.Script(readFileSync(join(input.home, "real-keyring.cjs"), "utf8"));
+  for (const mocked of [true, false]) {
+    const names = [],
+      removed = [],
+      records = [],
+      exits = [];
+    const app = {
+      setName: (name) => names.push(name),
+      getName: () => names.at(-1),
+      commandLine: {
+        hasSwitch: (name) => name === "use-mock-keychain" && mocked,
+        removeSwitch: (name) => removed.push(name),
+        getSwitchValue: () => "basic",
+      },
+    };
+    const run = () =>
+      script.runInNewContext({
+        process: {
+          platform: "darwin",
+          pid: 101,
+          ppid: 100,
+          versions: { electron: "fixture" },
+          stderr: { write: () => {} },
+          exit: (code) => {
+            exits.push(code);
+            throw new Error("exited");
+          },
+        },
+        require: (name) =>
+          name === "node:fs"
+            ? { appendFileSync: (_path, text) => records.push(JSON.parse(text)) }
+            : { app },
+      });
+    if (!mocked) {
+      await rejects(async () => run(), /exited/);
+      deepStrictEqual([exits, names, records], [[78], [], []]);
+      continue;
+    }
+    run();
+    // Main's own production-name pin must no longer take effect.
+    app.setName("code-shell");
+    deepStrictEqual(names, [ACCEPTANCE_APP_NAME]);
+    deepStrictEqual(removed, []);
+    deepStrictEqual([records[0].appName, records[0].mockKeychain], [ACCEPTANCE_APP_NAME, true]);
+  }
 });

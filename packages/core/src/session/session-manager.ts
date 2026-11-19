@@ -49,9 +49,12 @@ import {
   terminateGoalLifecycle,
   goalProgressSnapshot,
   waitGoalLifecycle,
+  withGoalPauseRun,
+  withGoalWaitDetail,
   type GoalConfig,
   type GoalPauseReason,
   type GoalProgressSnapshot,
+  type GoalWaitDetail,
   type GoalWaitKind,
   type PersistedGoalTerminationReason,
 } from "../goal/lifecycle.js";
@@ -1084,6 +1087,8 @@ export class SessionManager {
       paused?: boolean;
       /** Recorded with `paused: true`; a resume drops it, an edit keeps it. */
       pauseReason?: GoalPauseReason;
+      /** The run a `paused: true` ended, when the writer knows it; recorded beside the reason. */
+      pauseRunId?: string;
       expectedGoalId?: string;
       expectedRevision?: number;
     },
@@ -1133,9 +1138,12 @@ export class SessionManager {
       }
       // Same identity: edits and pause/resume keep the goal's accumulated
       // progress (an open background wait is settled up to now).
-      state.goalLifecycle = carryGoalProgress(
-        createGoalLifecycle(goal, goal.paused === true ? "paused" : "active"),
-        lifecycle,
+      state.goalLifecycle = withGoalPauseRun(
+        carryGoalProgress(
+          createGoalLifecycle(goal, goal.paused === true ? "paused" : "active"),
+          lifecycle,
+        ),
+        patch.paused === true ? patch.pauseRunId : undefined,
       );
       hydrateGoalLifecycle(state);
 
@@ -1529,11 +1537,17 @@ export class SessionManager {
     return false;
   }
 
-  /** Persist active → waiting only for the expected concrete Goal version. */
+  /**
+   * Persist active → waiting only for the expected concrete Goal version.
+   * `detail` (a `user` wait's asking run and question) is recorded as given:
+   * on a wait that is already open it replaces what was recorded, and an
+   * empty one clears it. Without `detail` an open wait is left as it is.
+   */
   markGoalWaiting(
     state: SessionState,
     goal: GoalConfig,
     waitKind: GoalWaitKind = "background",
+    detail?: GoalWaitDetail,
   ): boolean {
     const expectedGoalId = goal.goalId ?? deriveLegacyGoalId(state.sessionId, goal);
     const expectedRevision = Math.max(1, Math.floor(goal.revision ?? 1));
@@ -1545,7 +1559,8 @@ export class SessionManager {
         rebaseLiveState(state, latest);
         return false;
       }
-      if (lifecycle.phase === "waiting" && lifecycle.waitKind === waitKind) {
+      const sameWait = lifecycle.phase === "waiting" && lifecycle.waitKind === waitKind;
+      if (sameWait && (!detail || waitKind !== "user")) {
         rebaseLiveState(state, latest);
         return true;
       }
@@ -1553,7 +1568,11 @@ export class SessionManager {
       // (an open background wait is settled first).
       const nowMs = Date.now();
       const active = lifecycle.phase === "waiting" ? armGoalLifecycle(lifecycle, nowMs) : lifecycle;
-      const waiting = active ? waitGoalLifecycle(active, nowMs, waitKind) : undefined;
+      const waiting = sameWait
+        ? withGoalWaitDetail(lifecycle, detail!)
+        : active
+          ? waitGoalLifecycle(active, nowMs, waitKind, detail)
+          : undefined;
       if (!waiting) return false;
       latest.goalLifecycle = waiting;
       hydrateGoalLifecycle(latest);

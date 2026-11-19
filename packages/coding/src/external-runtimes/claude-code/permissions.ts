@@ -18,7 +18,7 @@
  * `{ behavior: "allow", updatedInput }` or `{ behavior: "deny", message }`
  * (shape read from the CLI's own result schema; not run against a real account).
  */
-import type { PermissionMode } from "@cjhyy/code-shell-core/extension";
+import { rememberSessionApprovals, type PermissionMode } from "@cjhyy/code-shell-core/extension";
 import type { BridgeToolHost } from "../shared/mcp-bridge.js";
 
 /** Values passed to `claude --permission-mode`. */
@@ -77,7 +77,58 @@ export interface ClaudePermissionPromptRequest {
 export type ClaudePermissionPromptDecider = (
   request: ClaudePermissionPromptRequest,
   signal?: AbortSignal,
-) => Promise<{ approved: boolean; reason?: string }>;
+) => Promise<{
+  approved: boolean;
+  reason?: string;
+  /** The user allowed this tool for the rest of the session. Ignored on a refusal. */
+  forSession?: boolean;
+}>;
+
+/**
+ * Honor "allow for this session" on Claude's native tools.
+ *
+ * The CLI asks once per call and keeps no memory of the host's answer, so the
+ * grant is remembered here with the rule CodeShell's own tools get: Bash is
+ * narrowed to its head command and never covers a chained command, other tools
+ * are remembered by name. The store is this session's alone; Host Tools keep
+ * theirs in `SessionToolHost`, so a grant for Claude's `Bash` is not one for
+ * CodeShell's.
+ */
+export function rememberClaudePermissionGrants(
+  decide: ClaudePermissionPromptDecider,
+  options: { sessionId: string; cwd: string },
+): { decide: ClaudePermissionPromptDecider; clear(): void } {
+  const prompts = new WeakMap<object, ClaudePermissionPromptRequest>();
+  const memory = rememberSessionApprovals(
+    {
+      requestApproval: async (request, promptOptions) => {
+        const decision = await decide(
+          prompts.get(request.args) ?? { toolName: request.toolName, input: request.args },
+          promptOptions?.signal,
+        );
+        if (!decision.approved)
+          return { approved: false, ...(decision.reason ? { reason: decision.reason } : {}) };
+        return decision.forSession
+          ? { approved: true, always: true, scope: "session" }
+          : { approved: true };
+      },
+    },
+    options,
+  );
+  return {
+    decide: async (request, signal) => {
+      prompts.set(request.input, request);
+      const result = await memory.backend.requestApproval(
+        { toolName: request.toolName, args: request.input, description: "", riskLevel: "high" },
+        signal ? { signal } : undefined,
+      );
+      return result.approved
+        ? { approved: true }
+        : { approved: false, ...(result.reason ? { reason: result.reason } : {}) };
+    },
+    clear: () => memory.clear(),
+  };
+}
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
   return value && typeof value === "object" && !Array.isArray(value)

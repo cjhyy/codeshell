@@ -10,6 +10,7 @@ import type {
   PetExternalDecisions,
 } from "./pet-notice-external-decisions.js";
 import type { ExternalNoticeSessionCatalog } from "./pet-notice-external-sessions.js";
+import type { ExternalGoalNoticeSource } from "./pet-notice-goal-reconcile.js";
 import type { PetIpcAttention } from "./pet-ipc.js";
 import type {
   PetDecisionNoticeHooks,
@@ -66,6 +67,13 @@ export interface PetNoticeWiringDeps {
   externalSessions?: ExternalNoticeSessionCatalog;
   /** Desktop external runtimes' approval prompts and questions (`ExternalRuntimeApprovals`). */
   externalApprovals?: ExternalDecisionSource;
+  /**
+   * Persisted Goal state of desktop external-runtime Sessions. With it, a
+   * Goal pause or open question whose live notice a restart lost is reported
+   * once the stores are loaded, and again whenever `reconcileGoalNotices`
+   * names its Session (pet-notice-goal-reconcile.ts).
+   */
+  externalGoals?: ExternalGoalNoticeSource;
   /**
    * IM conversations that receive a Session's turn replies; resolved lazily
    * (built after this wiring). A done / failed notice for a conversation the
@@ -124,6 +132,15 @@ export interface PetNoticeWiring {
    * close, so the reports parked on it go out now (worker loss, for one Session).
    */
   externalRuntimeEnded(sessionId: string): void;
+  /**
+   * Read a desktop external-runtime Session's persisted Goal again (the
+   * Session was opened), or every recent one without an id: a pause or open
+   * question nobody was told about is reported, a notice about a Goal that
+   * moved on is withdrawn. Idempotent; resolves when the reports are handed
+   * over. The wiring runs the pass over every Session itself once its stores
+   * are loaded; asking for it while it runs joins that pass.
+   */
+  reconcileGoalNotices(sessionId?: string): Promise<void>;
   /**
    * Route one notice (a follow-up coming due): resolves with the router's
    * decision, rejects when it could not be routed. Shutdown waits for it.
