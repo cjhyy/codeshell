@@ -11,6 +11,8 @@ export interface BackgroundJobProgress {
   permissionDenials?: number;
   /** Operations the worker's own sandbox refused without asking anyone. */
   sandboxBlocked?: number;
+  /** Commands the worker ran that ended failed, for whatever reason. */
+  failedCommands?: number;
   /** Since when the worker has waited on an approval in its parent session. */
   awaitingApprovalSince?: number;
   /** The host stopped the worker because it could not proceed. */

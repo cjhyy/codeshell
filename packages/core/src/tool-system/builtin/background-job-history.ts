@@ -46,16 +46,18 @@ function pidAlive(pid: unknown): boolean {
   }
 }
 
-/** Validated copy of the permission fields; shared with persisted history. */
+/** Validated copy of the run's counters and permission state; shared with
+ *  persisted history. */
 export function permissionProgressFields(
   progress: Partial<BackgroundJobProgress> | undefined,
 ): Pick<
   BackgroundJobProgress,
-  "permissionDenials" | "sandboxBlocked" | "awaitingApprovalSince" | "blocked"
+  "permissionDenials" | "sandboxBlocked" | "failedCommands" | "awaitingApprovalSince" | "blocked"
 > {
   if (!progress) return {};
   const denials = progress.permissionDenials;
   const sandboxed = progress.sandboxBlocked;
+  const failed = progress.failedCommands;
   const since = progress.awaitingApprovalSince;
   return {
     ...(Number.isSafeInteger(denials) && (denials as number) > 0
@@ -64,6 +66,7 @@ export function permissionProgressFields(
     ...(Number.isSafeInteger(sandboxed) && (sandboxed as number) > 0
       ? { sandboxBlocked: sandboxed }
       : {}),
+    ...(Number.isSafeInteger(failed) && (failed as number) > 0 ? { failedCommands: failed } : {}),
     ...(Number.isFinite(since) && (since as number) > 0 ? { awaitingApprovalSince: since } : {}),
     ...(progress.blocked === "permission" ? { blocked: "permission" as const } : {}),
   };

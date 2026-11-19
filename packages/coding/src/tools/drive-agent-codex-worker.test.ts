@@ -29,6 +29,12 @@ const say = (text) => note("item/completed", { item: { type: "agentMessage", id:
 const finish = (status = "completed", error = null) =>
   send({ method: "turn/completed", params: { threadId, turn: { id: "turn-1", status, error } } });
 let threadParams, turnParams;
+// What 0.162 answers thread/start and thread/resume with, next to the thread.
+let networkAccess = false;
+const sandboxOf = (mode) =>
+  mode === "workspace-write"
+    ? { type: "workspaceWrite", writableRoots: [], networkAccess, excludeTmpdirEnvVar: false, excludeSlashTmp: false }
+    : { type: "readOnly", networkAccess };
 const answers = new Map();
 let onTurn = () => finish();
 createInterface({ input: process.stdin }).on("line", (l) => {
@@ -38,11 +44,11 @@ createInterface({ input: process.stdin }).on("line", (l) => {
     if (m.params.threadId === "gone") return send({ id: m.id, error: { code: -32600, message: "no rollout" } });
     threadParams = m.params;
     threadId = m.params.threadId;
-    return send({ id: m.id, result: { thread: { id: threadId } } });
+    return send({ id: m.id, result: { thread: { id: threadId }, sandbox: sandboxOf(m.params.sandbox) } });
   }
   if (m.method === "thread/start") {
     threadParams = m.params;
-    return send({ id: m.id, result: { thread: { id: threadId } } });
+    return send({ id: m.id, result: { thread: { id: threadId }, sandbox: sandboxOf(m.params.sandbox) } });
   }
   if (m.method === "turn/start") {
     turnParams = m.params;
@@ -299,6 +305,66 @@ describe("runCodexWorkerOnce", () => {
     expect(r.changedFiles).toEqual(["/repo/note.txt", "/repo/old.ts", "/repo/new.ts"]);
     expect(r.sandboxBlocked).toBeUndefined();
     expect(progress.at(-1)?.sandboxBlocked).toBeUndefined();
+  });
+
+  describe("commands that failed", () => {
+    // The failed items are shaped like a network call cut by the sandbox as
+    // codex-cli 0.162.0 reports it: an ordinary failure with no cause field.
+    const commands = `const command = (id, extra) =>
+        note("item/completed", { item: { type: "commandExecution", id, pluginId: null,
+          scriptPath: null, command: "/bin/zsh -lc 'curl -sS -m 8 -o /dev/null https://example.com'",
+          cwd: "/repo", processId: "81695", source: "unifiedExecStartup",
+          commandActions: [], durationMs: 0, ...extra } });
+      const failures = () => {
+        command("c1", { status: "failed", exitCode: 6,
+          aggregatedOutput: "curl: (6) Could not resolve host: example.com" });
+        command("c2", { status: "completed", exitCode: 0, aggregatedOutput: "ok" });
+        command("c3", { status: "failed", exitCode: -1, aggregatedOutput: "" });
+        command("c4", { status: "declined", exitCode: null, aggregatedOutput: null });
+      };`;
+
+    test("are counted, next to the fact that the sandbox has no network access", async () => {
+      const { result, asks, progress } = run(
+        `${commands}
+        onTurn = () => { failures(); say("could not reach it"); finish(); };`,
+        { permissionMode: "acceptEdits" },
+      );
+      const r = await result;
+      expect(asks).toEqual([]);
+      // Still an ordinary completed run: nothing says why the commands failed.
+      expect(r).toMatchObject({
+        isError: false,
+        finalText: "could not reach it",
+        failedCommands: 2,
+        sandboxNetworkDisabled: true,
+      });
+      // The declined command is the sandbox counter's, and only that.
+      expect(r.sandboxBlocked).toBe(1);
+      expect(progress.at(-1)).toMatchObject({ failedCommands: 2, sandboxBlocked: 1 });
+      expect(progress.at(-1)?.permissionDenials).toBeUndefined();
+    });
+
+    test("a sandbox Codex reports as having network access is not called offline", async () => {
+      const { result } = run(
+        `${commands}
+        networkAccess = true;
+        onTurn = () => { failures(); finish(); };`,
+      );
+      const r = await result;
+      expect(r.failedCommands).toBe(2);
+      expect(r.sandboxNetworkDisabled).toBeUndefined();
+    });
+
+    test("a run whose commands all succeeded reports no count", async () => {
+      const { result, progress } = run(
+        `${commands}
+        onTurn = () => { command("c1", { status: "completed", exitCode: 0 }); say("ok"); finish(); };`,
+      );
+      const r = await result;
+      expect(r.failedCommands).toBeUndefined();
+      expect(r.sandboxNetworkDisabled).toBe(true);
+      expect(progress.at(-1)?.failedCommands).toBeUndefined();
+    });
   });
 
   describe("operations Codex refuses without asking", () => {
