@@ -3,7 +3,11 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { BackgroundJobProgress } from "@cjhyy/code-shell-core/extension";
-import { codexWorkerSandbox, runCodexWorkerOnce } from "./drive-agent-codex-worker.js";
+import {
+  CODEX_WORKER_APPROVAL_POLICY,
+  codexWorkerSandbox,
+  runCodexWorkerOnce,
+} from "./drive-agent-codex-worker.js";
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -95,6 +99,20 @@ function run(
   return { result, asks, progress, sessionIds, pids };
 }
 
+describe("CODEX_WORKER_APPROVAL_POLICY", () => {
+  test("keeps every approval flow open, sandbox failures included", () => {
+    expect(CODEX_WORKER_APPROVAL_POLICY).toEqual({
+      granular: {
+        sandbox_approval: true,
+        rules: true,
+        skill_approval: true,
+        request_permissions: true,
+        mcp_elicitations: true,
+      },
+    });
+  });
+});
+
 describe("codexWorkerSandbox", () => {
   test("default asks before writes; acceptEdits confines writes to the workspace", () => {
     expect(codexWorkerSandbox("default")).toBe("read-only");
@@ -103,7 +121,7 @@ describe("codexWorkerSandbox", () => {
 });
 
 describe("runCodexWorkerOnce", () => {
-  test("opens a sandboxed on-request thread and returns the last agent message", async () => {
+  test("opens a sandboxed thread that asks on a sandbox failure and returns the last agent message", async () => {
     const { result, sessionIds, pids, progress } = run(
       `onTurn = () => {
         note("item/started", { item: { type: "commandExecution", id: "c1", command: "ls" } });
@@ -120,7 +138,7 @@ describe("runCodexWorkerOnce", () => {
     expect(seen.threadParams).toMatchObject({
       cwd: process.cwd(),
       sandbox: "workspace-write",
-      approvalPolicy: "on-request",
+      approvalPolicy: CODEX_WORKER_APPROVAL_POLICY,
       model: "some-model",
     });
     expect(seen.input[0]).toMatchObject({ type: "text" });
@@ -151,6 +169,56 @@ describe("runCodexWorkerOnce", () => {
     ]);
     const declined = run(body, { approve: async () => ({ approved: false }) });
     expect(JSON.parse((await declined.result).finalText)).toEqual({ decision: "decline" });
+  });
+
+  // Captured from codex-cli 0.162.0 in a `workspace-write` sandbox: asking for
+  // network is an ordinary command approval. There is no `networkApprovalContext`
+  // (that belongs to Codex's managed network proxy, off by default); the first,
+  // sandboxed attempt is a plain failed item of its own.
+  test("a network request arrives as a command approval for a second item", async () => {
+    const curl = `/bin/zsh -lc "curl -sS -o /dev/null -w '%{http_code}' https://example.com"`;
+    const body = `const command = ${JSON.stringify(curl)};
+      const item = (id, extra) => ({ type: "commandExecution", id, pluginId: null, scriptPath: null,
+        command, cwd: "/repo", processId: null, source: "agent", status: "inProgress",
+        commandActions: [{ type: "unknown", command: "curl" }],
+        aggregatedOutput: null, exitCode: null, durationMs: null, ...extra });
+      onTurn = async () => {
+        note("item/completed", { item: item("exec-f0d5cb13", { processId: "36371",
+          source: "unifiedExecStartup", status: "failed", exitCode: 6,
+          aggregatedOutput: "curl: (6) Could not resolve host: example.com\\n000" }) });
+        note("item/started", { item: item("exec-84bd1ce0") });
+        const answer = await ask(0, "item/commandExecution/requestApproval", {
+          kind: "command", itemId: "exec-84bd1ce0", environmentId: "local",
+          reason: "May I allow network access to run the requested curl command?",
+          command, cwd: "/repo", commandActions: [{ type: "unknown", command: "curl" }],
+          availableDecisions: ["accept", "cancel"] });
+        note("item/completed", { item: answer.decision === "accept"
+          ? item("exec-84bd1ce0", { processId: "50644", source: "unifiedExecStartup",
+              status: "completed", exitCode: 0, aggregatedOutput: "200", durationMs: 326 })
+          : item("exec-84bd1ce0", { status: "declined" }) });
+        say(answer.decision);
+        finish();
+      };`;
+    const accepted = run(body, { permissionMode: "acceptEdits" });
+    expect(await accepted.result).toMatchObject({ isError: false, finalText: "accept" });
+    expect(accepted.asks).toEqual([
+      {
+        toolName: "shell",
+        input: {
+          command: curl,
+          cwd: "/repo",
+          reason: "May I allow network access to run the requested curl command?",
+        },
+      },
+    ]);
+    const declined = run(body, {
+      permissionMode: "acceptEdits",
+      approve: async () => ({ approved: false }),
+    });
+    const refused = await declined.result;
+    expect(refused).toMatchObject({ isError: false, finalText: "decline" });
+    // The sandboxed attempt merely failed and the second was the gate's to refuse.
+    expect(refused.sandboxBlocked).toBeUndefined();
   });
 
   test("names the files of a patch under approval", async () => {
@@ -267,6 +335,56 @@ describe("runCodexWorkerOnce", () => {
       expect(asks).toHaveLength(1);
     });
 
+    // Captured from codex-cli 0.162.0 (`touch blocked.txt`, read-only sandbox,
+    // the worker's approval policy): the command ran in the sandbox, was
+    // stopped by it, and Codex asks to run it again outside.
+    test("a command the sandbox stopped is put to the gate, so it is never silent", async () => {
+      const body = `const item = (status, extra) => ({ type: "commandExecution",
+        id: "exec-8ed1fa07", pluginId: null, scriptPath: null,
+        command: "/bin/zsh -lc 'touch blocked.txt'", cwd: "/repo", processId: null, source: "agent",
+        status, commandActions: [{ type: "unknown", command: "touch blocked.txt" }],
+        aggregatedOutput: null, exitCode: null, durationMs: null, ...extra });
+      onTurn = async () => {
+        note("item/started", { item: item("inProgress") });
+        const answer = await ask(0, "item/commandExecution/requestApproval", {
+          kind: "command", itemId: "exec-8ed1fa07", environmentId: "local",
+          reason: "command failed; retry without sandbox?",
+          command: "/bin/zsh -lc 'touch blocked.txt'", cwd: "/repo",
+          commandActions: [{ type: "unknown", command: "touch blocked.txt" }],
+          proposedExecpolicyAmendment: ["touch", "blocked.txt"],
+          availableDecisions: ["accept", { acceptWithExecpolicyAmendment: {
+            execpolicy_amendment: ["touch", "blocked.txt"] } }, "cancel"] });
+        send({ method: "serverRequest/resolved", params: { threadId, requestId: 0 } });
+        note("item/completed", { item: answer.decision === "accept"
+          ? item("completed", { processId: "13038", source: "unifiedExecStartup", exitCode: 0, durationMs: 0 })
+          : item("declined") });
+        say(answer.decision);
+        finish();
+      };`;
+      const declined = run(body, { approve: async () => ({ approved: false }) });
+      const refused = await declined.result;
+      expect(refused).toMatchObject({ isError: false, finalText: "decline" });
+      // The gate answered it, so it is the gate's denial and not a silent block.
+      expect(refused.sandboxBlocked).toBeUndefined();
+      const refusedEvents = declined.progress.flatMap((p) =>
+        (p.recentEvents ?? []).map((e) => e.summary),
+      );
+      expect(refusedEvents.filter((summary) => summary.startsWith("Command finished"))).toEqual([]);
+
+      const accepted = run(body);
+      expect((await accepted.result).finalText).toBe("accept");
+      expect(accepted.asks).toEqual([
+        {
+          toolName: "shell",
+          input: {
+            command: "/bin/zsh -lc 'touch blocked.txt'",
+            cwd: "/repo",
+            reason: "command failed; retry without sandbox?",
+          },
+        },
+      ]);
+    });
+
     // As codex-cli 0.162.0 reports it: an exit code and no cause.
     test("a command that merely failed is not counted", async () => {
       const { result } = run(`onTurn = () => {
@@ -306,7 +424,7 @@ describe("runCodexWorkerOnce", () => {
     expect(JSON.parse(r.finalText)).toMatchObject({
       threadId: "thread-old",
       sandbox: "read-only",
-      approvalPolicy: "on-request",
+      approvalPolicy: CODEX_WORKER_APPROVAL_POLICY,
     });
     const gone = await run("", { resumeSessionId: "gone" }).result;
     expect(gone).toMatchObject({ sessionId: "gone", isError: true, exitCode: 1 });
