@@ -8,6 +8,20 @@ breaking.
 
 ## [Unreleased]
 
+### Changed
+
+- A command that the sandbox of a DriveAgent Codex worker stops is no longer
+  silent: Codex now asks to run it outside the sandbox, so it reaches the
+  calling session's approval prompt and a refusal is counted. Checked against
+  `codex-cli 0.162.0`. A network call cut off by the sandbox is still reported
+  only as a failed command unless the worker asks for network access.
+- A Codex worker that finishes in a sandbox without asking for anything and
+  without a recorded file change says which sandbox it ran in.
+- A DriveAgent run in its own worktree (`isolation: "worktree"`) also counts
+  files written by shell commands as changed, for Claude Code and Codex, by
+  comparing the git work tree before and after the run. Ignored files are left
+  out and at most 100 files are listed.
+
 ## [0.11.0-rc.5] - 2026-11-20
 
 Follow-up to rc.4 for Codex and Claude Code sessions run from the desktop. The

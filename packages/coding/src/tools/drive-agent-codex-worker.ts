@@ -7,8 +7,11 @@
  * not in full access runs as a one-turn app-server thread instead, through the
  * same `CodexRuntime` the main Codex runtime uses:
  *
- *   default      → `read-only` sandbox, `on-request` approvals
- *   acceptEdits  → `workspace-write` sandbox rooted at the worker's cwd, `on-request`
+ *   default      → `read-only` sandbox
+ *   acceptEdits  → `workspace-write` sandbox rooted at the worker's cwd
+ *
+ * both with `CODEX_WORKER_APPROVAL_POLICY`, under which Codex asks before it
+ * leaves the sandbox and also when the sandbox stopped a command.
  *
  * Every approval request Codex sends (command, patch, extra permissions, a
  * user-configured MCP tool) is put to `approve`, which is the launching
@@ -62,6 +65,46 @@ export interface CodexWorkerRunOpts {
 export function codexWorkerSandbox(mode: CodexWorkerRunOpts["permissionMode"]): string {
   return mode === "acceptEdits" ? "workspace-write" : "read-only";
 }
+
+/**
+ * The approval policy of a worker thread: every approval flow open.
+ *
+ * Not `on-request`, although both ask for the same things up front. Measured
+ * against codex-cli 0.162.0 with `touch blocked.txt` in a `read-only` sandbox,
+ * every app-server message and the rollout captured:
+ *
+ *   - `on-request`: the command runs in the sandbox and fails there. NO item is
+ *     sent for it (no `item/started`, no `item/completed`, no approval request,
+ *     no error; the turn ends `completed`). The rollout holds only the tool
+ *     script (`custom_tool_call` named `exec`) and its text output
+ *     (`custom_tool_call_output`: the command's stderr and `exit_code: 1`).
+ *     Nothing structured says a sandbox was involved.
+ *   - this policy (`granular` with `sandbox_approval`): the same command is
+ *     announced (`item/started`, `status: "inProgress"`), and after the sandbox
+ *     stops it Codex sends `item/commandExecution/requestApproval` for that item
+ *     to run it again outside the sandbox. Accepted, the item completes with
+ *     `exitCode: 0`; declined, it ends `status: "declined"`.
+ *
+ * So the sandbox's refusal becomes an ask at the gate instead of silence. The
+ * policy does not make ordinary work ask: reads, and commands that fail for
+ * their own reasons (`grep` without a match, a missing file), run and end as
+ * plain `completed` / `failed` items. `untrusted` was measured too and asks
+ * before any command it does not know to be read-only, which is too much for
+ * `acceptEdits`. 0.162 has no `on-failure`.
+ *
+ * Which failures count as the sandbox's is Codex's own judgement. One it does
+ * not make: a network call stopped by the sandbox (`curl` → exit 6, "could not
+ * resolve host") is an ordinary `failed` item under either policy.
+ */
+export const CODEX_WORKER_APPROVAL_POLICY = {
+  granular: {
+    sandbox_approval: true,
+    rules: true,
+    skill_approval: true,
+    request_permissions: true,
+    mcp_elicitations: true,
+  },
+} as const;
 
 /** Names as `codex exec --json` spells them, which the progress model reads. */
 const EXEC_ITEM_TYPES: Record<string, string> = {
@@ -132,11 +175,12 @@ function changedPaths(change: unknown): Array<{ path: unknown }> {
  *     about (Codex's own policy or reviewer turned it down);
  *   - a turn that ends with the `sandboxError` error code.
  *
- * NOT covered, because codex-cli 0.162.0 reports nothing structured for it: a
- * command that runs inside the sandbox and is stopped by it (a write under
- * `read-only`, say). Codex sends no item at all for such a command, and an
- * ordinary failing command is a `failed` item with an exit code and no cause.
- * The only trace is the command's own output text, which is not parsed.
+ * A command that ran inside the sandbox and was stopped by it is not counted
+ * here because it is no longer unasked: under `CODEX_WORKER_APPROVAL_POLICY`
+ * Codex puts it to the gate. What stays uncounted is what codex-cli 0.162.0
+ * does not classify itself, such as a network call the sandbox cut off: a
+ * `failed` item with an exit code and no cause. Its only trace is the
+ * command's own output text, which is not parsed.
  */
 export function codexUnaskedRefusal(
   method: string,
@@ -217,7 +261,7 @@ export async function runCodexWorkerOnce(
       cwd: opts.cwd,
       businessSessionId: "drive-agent-codex-worker",
       sandbox,
-      approvalPolicy: "on-request",
+      approvalPolicy: CODEX_WORKER_APPROVAL_POLICY,
       ...(opts.model ? { model: opts.model } : {}),
       ...(opts.resumeSessionId ? { resumeRuntimeSessionId: opts.resumeSessionId } : {}),
       client: {
@@ -277,7 +321,7 @@ export async function runCodexWorkerOnce(
     parameters: {
       transport: "app-server",
       sandbox,
-      approvalPolicy: "on-request",
+      approvalPolicy: "granular",
       launchCwd: opts.cwd,
       resumeExternalSessionId: opts.resumeSessionId,
       imagePaths: opts.imagePaths,
@@ -296,6 +340,9 @@ export async function runCodexWorkerOnce(
     if (opts.resumeSessionId && threadId !== opts.resumeSessionId) {
       // The runtime falls back to a new thread; a worker asked to continue a
       // session must not quietly do the task without that session's context.
+      // Which transport began the session does not matter: with codex-cli
+      // 0.162.0 a `codex exec` session resumes here with its context and under
+      // this run's sandbox, and a session begun here resumes with `codex exec`.
       throw new Error(
         `Codex session ${opts.resumeSessionId} could not be resumed (it may belong to another ` +
           "Codex home or have been removed). Omit resumeSessionId to start a new session.",
