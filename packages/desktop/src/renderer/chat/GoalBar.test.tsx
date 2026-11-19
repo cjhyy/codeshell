@@ -65,8 +65,23 @@ describe("GoalBar", () => {
       />,
     );
     expect(html).toContain('data-goal-state="paused"');
-    expect(html).toContain("目标已暂停（本轮额度用完）");
+    expect(html).toContain("目标已停下（设定的预算用完）");
     expect(html).toContain("发一条消息或点击恢复");
+    expect(html).toContain('data-goal-pause="time_budget"');
+  });
+
+  test("a Goal stopped for lack of progress is shown as blocked, not as the user's pause", () => {
+    const html = renderToStaticMarkup(
+      <GoalBar
+        goal={{ ...goal, paused: true, pauseReason: "no_progress" }}
+        busy={false}
+        now={at(1_000_000)}
+        onPausedChange={() => {}}
+      />,
+    );
+    expect(html).toContain('data-goal-pause="no_progress"');
+    expect(html).toContain("目标卡住了（连续几轮没有进展）");
+    expect(html).not.toContain("已暂停的目标");
   });
 
   test("a turn running beside a Goal the user paused is not shown as the Goal's", () => {
@@ -80,7 +95,7 @@ describe("GoalBar", () => {
     );
     expect(html).toContain('data-goal-state="paused"');
     expect(html).toContain("已暂停的目标 · 当前这轮不属于它");
-    expect(html).not.toContain("本轮额度用完");
+    expect(html).not.toContain("预算用完");
   });
 
   test("controls are disabled while a Goal control is in flight", () => {

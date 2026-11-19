@@ -87,9 +87,9 @@ function blockedBody(facts: NoticeFacts): string {
 
 /** What stopped a paused Session, in the owner's words. Keys come from structured events. */
 const PAUSE_CAUSES: Readonly<Record<string, string>> = {
-  time_budget: "本轮时间预算用完了",
-  token_budget: "本轮 token 预算用完了",
-  turn_limit: "本轮自动继续次数用完了",
+  time_budget: "设定的时间预算用完了",
+  token_budget: "设定的 token 预算用完了",
+  turn_limit: "设定的轮数上限用完了",
   no_progress: "连续几轮没有新进展",
   limit: "本轮额度用完了",
   goal_exhausted: "Goal 的额度用完了",

@@ -141,17 +141,23 @@ export function GoalBar({
   // user asked for stays, and a turn running beside it is not the Goal's.
   const limitPaused =
     goal.paused && goal.pauseReason !== undefined && goal.pauseReason !== "user_stop";
-  const pausedHint = limitPaused
-    ? t("chat.goal.barLimitPausedHint")
-    : busy
-      ? t("chat.goal.barPausedBusyHint")
-      : t("chat.goal.barPausedHint");
-  const label = goal.paused
-    ? limitPaused
-      ? t("chat.goal.barLimitPaused")
+  // Stopped for lack of progress is not the same state as a spent budget.
+  const blocked = goal.paused && goal.pauseReason === "no_progress";
+  const pausedHint = blocked
+    ? t("chat.goal.barBlockedHint")
+    : limitPaused
+      ? t("chat.goal.barLimitPausedHint")
       : busy
-        ? t("chat.goal.barPausedBusy")
-        : t("chat.goal.barPaused")
+        ? t("chat.goal.barPausedBusyHint")
+        : t("chat.goal.barPausedHint");
+  const label = goal.paused
+    ? blocked
+      ? t("chat.goal.barBlocked")
+      : limitPaused
+        ? t("chat.goal.barLimitPaused")
+        : busy
+          ? t("chat.goal.barPausedBusy")
+          : t("chat.goal.barPaused")
     : waiting
       ? t("chat.goal.barWaiting")
       : t("chat.goal.barActive");
@@ -177,6 +183,7 @@ export function GoalBar({
             : "border-border bg-background/80",
       )}
       data-goal-state={goal.paused ? "paused" : waiting ? "waiting" : busy ? "running" : "active"}
+      data-goal-pause={goal.paused ? (goal.pauseReason ?? "user") : undefined}
     >
       <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 py-1">
         {goal.paused ? (

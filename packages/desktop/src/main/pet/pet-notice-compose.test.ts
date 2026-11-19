@@ -28,10 +28,10 @@ describe("composeNoticeBody", () => {
 
   test("a pause says what stopped and that nothing runs; it asks nothing", () => {
     expect(composeNoticeBody("session.paused", { title: "发版", pause: "time_budget" })).toBe(
-      "「发版」已暂停：本轮时间预算用完了，现在没有在运行。",
+      "「发版」已暂停：设定的时间预算用完了，现在没有在运行。",
     );
-    expect(composeNoticeBody("session.paused", { title: "发版", pause: "turn_limit" })).toBe(
-      "「发版」已暂停：本轮自动继续次数用完了，现在没有在运行。",
+    expect(composeNoticeBody("session.paused", { title: "发版", pause: "no_progress" })).toBe(
+      "「发版」已暂停：连续几轮没有新进展，现在没有在运行。",
     );
     // An unknown cause is still a pause, never a decision.
     const unknown = composeNoticeBody("session.paused", { title: "发版", pause: "new_kind" });

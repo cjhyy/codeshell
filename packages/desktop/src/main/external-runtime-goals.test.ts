@@ -785,3 +785,97 @@ describe("a paused external Goal and the next message", () => {
     expect(goals.get(sessionId)).toMatchObject({ paused: true });
   });
 });
+
+describe("what stops an external Goal by itself", () => {
+  /** One provider turn: `tools` work tool calls, then the host's turn-end bookkeeping. */
+  const turn = (run: NonNullable<ReturnType<typeof goals.start>>, output: string, tools = 1) => {
+    for (let call = 0; call < tools; call++)
+      goals.observeTurnEvent(run, {
+        type: "tool_use_start",
+        toolCall: { id: `t${call}`, toolName: "Bash", args: {} },
+      });
+    goals.backgroundTurnEnd(run, false);
+    return goals.afterTurn(run, 10, output);
+  };
+
+  test("no timer and no turn count pauses a Goal that keeps making progress", () => {
+    const run = goals.start(sessionId, "等 CI 然后发版")!;
+    expect(run.timeBudgetMs).toBeUndefined();
+    expect(run.maxTurns).toBeUndefined();
+    for (let round = 1; round <= 40; round++) {
+      now += 10 * 60_000;
+      expect(turn(run, `第 ${round} 轮的进展`)).toBe(true);
+    }
+    expect(goals.get(sessionId)).toMatchObject({ paused: false });
+    expect(goals.remainingTime(run)).toBe(Number.POSITIVE_INFINITY);
+    expect(events.some((event) => event.type === "goal_updated")).toBe(false);
+    // Without a cap there is no "approaching the limit" to announce.
+    expect(
+      events.some((event) => event.type === "goal_progress" && event.status !== "not_met"),
+    ).toBe(false);
+  });
+
+  test("several turns in a row without any work stop it as no progress", () => {
+    const run = goals.start(sessionId, "不要空转")!;
+    expect(turn(run, "我再想想", 0)).toBe(true);
+    expect(turn(run, "还在想", 0)).toBe(true);
+    // A turn that did work resets the count.
+    expect(turn(run, "跑了一次测试", 1)).toBe(true);
+    expect(turn(run, "等一下", 0)).toBe(true);
+    expect(turn(run, "再等一下", 0)).toBe(true);
+    expect(turn(run, "还是等", 0)).toBe(false);
+    expect(goals.get(sessionId)).toMatchObject({ paused: true });
+    expect(events.at(-1)).toMatchObject({ type: "goal_progress", pauseReason: "no_progress" });
+  });
+
+  test("a turn that parks on background work is a wait, not a turn without progress", () => {
+    const run = goals.start(sessionId, "等后台")!;
+    for (let round = 0; round < 5; round++) {
+      goals.backgroundTurnEnd(run, true);
+      expect(goals.afterTurn(run, 10, `等待中 ${round}`, true)).toBe(true);
+    }
+    expect(goals.get(sessionId)).toMatchObject({ paused: false });
+  });
+
+  test("a budget the user set still stops it, named as that budget", () => {
+    const timed = goals.start(sessionId, { objective: "限时", timeBudgetMs: 1_000 })!;
+    now += 1_000;
+    expect(turn(timed, "做了一些")).toBe(false);
+    expect(events.at(-1)).toMatchObject({ type: "goal_progress", pauseReason: "time_budget" });
+    goals.end(timed);
+
+    const other = "external-goal-token-budget";
+    manager.create("/tmp/project", "codex/test", "codex", other, null, "desktop");
+    const metered = goals.start(other, { objective: "限额", tokenBudget: 15, maxTurns: 9 })!;
+    expect(turn(metered, "第一轮")).toBe(true);
+    expect(turn(metered, "第二轮")).toBe(false);
+    expect(events.at(-1)).toMatchObject({ type: "goal_progress", pauseReason: "token_budget" });
+  });
+
+  test("the prompt no longer promises a time or turn allowance that does not exist", () => {
+    const open = goals.instruction(goals.start(sessionId, "无预算")!);
+    expect(open).not.toContain(" ms");
+    expect(open).not.toContain("provider turns");
+    expect(open).toContain("does not stop this goal on a timer");
+    const other = "external-goal-explicit-budget";
+    manager.create("/tmp/project", "codex/test", "codex", other, null, "desktop");
+    const budgeted = goals.instruction(
+      goals.start(other, { objective: "有预算", timeBudgetMs: 60_000, tokenBudget: 500 })!,
+    );
+    expect(budgeted).toContain("60000 ms");
+    expect(budgeted).toContain("500 tokens");
+  });
+
+  test("resuming a Goal whose run is already going changes nothing", () => {
+    const run = goals.start(sessionId, "别重复恢复")!;
+    events.length = 0;
+    const result = goals.update(sessionId, {
+      paused: false,
+      expectedGoalId: run.goal.goalId!,
+      expectedRevision: run.goal.revision!,
+    });
+    expect(result).toMatchObject({ updated: false, paused: false, revision: 1 });
+    expect(events).toEqual([]);
+    expect(goals.isCurrent(run)).toBe(true);
+  });
+});
