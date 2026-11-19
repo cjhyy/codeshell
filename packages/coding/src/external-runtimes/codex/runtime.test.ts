@@ -748,11 +748,33 @@ setOnLine((m) => {
         env: { CODE_SHELL_CUA_SESSION_ID: "sess-elicit" },
         secretEnv: { CODE_SHELL_CUA_ACTIVITY_TOKEN: "ACTIVITY-SECRET" },
       };
+      // Shape measured with codex 0.162.0: `_meta` names no tool. The tool is
+      // the in-flight `mcpToolCall` item; its arguments are `tool_params`.
       const ask = {
+        threadId: "t",
+        turnId: "u",
         serverName: "codeshell_computer",
-        message: "Run click?",
+        message: 'Allow the codeshell_computer MCP server to run tool "click"?',
         mode: "form",
-        _meta: { codex_approval_kind: "mcp_tool_call", tool_name: "click" },
+        _meta: {
+          codex_approval_kind: "mcp_tool_call",
+          persist: ["session", "always"],
+          tool_description: "Click.",
+          tool_params: { x: 1, y: 2 },
+          tool_params_display: [],
+        },
+        requestedSchema: { type: "object", properties: {} },
+      };
+      const started = {
+        threadId: "t",
+        turnId: "u",
+        item: {
+          type: "mcpToolCall",
+          id: "call-1",
+          server: "codeshell_computer",
+          tool: "click",
+          arguments: { x: 1, y: 2 },
+        },
       };
       function probe(
         hooks: CodexRuntimeHooks,
@@ -767,6 +789,7 @@ setOnLine((m) => {
               return send({ id: m.id, result: { config: { mcp_servers: { codeshell_tools: {} } } } });
             if (m.method === "thread/start") {
               send({ id: m.id, result: { thread: { id: "t" } } });
+              send({ method: "item/started", params: ${JSON.stringify(started)} });
               send({ id: 700, method: "mcpServer/elicitation/request", params: ${JSON.stringify(ask)} });
               return;
             }
@@ -825,7 +848,12 @@ setOnLine((m) => {
           }),
         );
         expect(asked).toEqual([
-          { serverName: "codeshell_computer", toolName: "click", message: "Run click?" },
+          {
+            serverName: "codeshell_computer",
+            toolName: "click",
+            args: { x: 1, y: 2 },
+            message: 'Allow the codeshell_computer MCP server to run tool "click"?',
+          },
         ]);
         expect(seen.answer).toMatchObject({ action: "accept" });
         // One call, one approval: nothing is remembered for the session.

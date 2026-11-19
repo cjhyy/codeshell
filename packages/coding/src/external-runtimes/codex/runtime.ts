@@ -111,6 +111,8 @@ export interface CodexRuntimeHooks {
   onHostMcpApproval?: (request: {
     serverName: string;
     toolName?: string;
+    /** The call's arguments, as Codex reports them for the prompt. */
+    args?: Record<string, unknown>;
     message?: string;
   }) => Promise<boolean> | boolean;
   /** Answer Codex's request_user_input tool through the owning CodeShell UI. */
@@ -237,6 +239,12 @@ export class CodexRuntime {
   private activeTurn?: ActiveTurn;
   /** Files of each `fileChange` item still in flight, by item id (for its approval prompt). */
   private readonly fileChanges = new Map<string, TrackedFileChanges>();
+  /**
+   * `mcpToolCall` items still in flight, by item id. An approval elicitation
+   * names the server but not the tool (measured, codex 0.162.0), so the tool
+   * is read from the call it belongs to.
+   */
+  private readonly mcpToolCalls = new Map<string, { server: string; tool: string }>();
 
   constructor(
     private readonly options: CodexRuntimeOptions,
@@ -632,6 +640,7 @@ export class CodexRuntime {
 
   private onNotification(method: string, params: unknown): void {
     this.trackFileChanges(method, params);
+    this.trackMcpToolCalls(method, params);
     const events = this.translator?.translate({ method, params }) ?? [];
     for (const event of events) {
       // A fresh turn announced while ours has no id yet IS ours: the translator
@@ -650,6 +659,33 @@ export class CodexRuntime {
         turn?.resolve();
       }
     }
+  }
+
+  /** Remember an MCP tool call from `item/started` until `item/completed`. */
+  private trackMcpToolCalls(method: string, params: unknown): void {
+    if (method !== "item/started" && method !== "item/completed") return;
+    const item = objectOf(objectOf(params)?.item);
+    if (item?.type !== "mcpToolCall" || typeof item.id !== "string") return;
+    this.mcpToolCalls.delete(item.id);
+    if (method === "item/completed") return;
+    if (typeof item.server !== "string" || typeof item.tool !== "string") return;
+    this.mcpToolCalls.set(item.id, { server: item.server, tool: item.tool });
+    for (const oldest of this.mcpToolCalls.keys()) {
+      if (this.mcpToolCalls.size <= MAX_TRACKED_FILE_CHANGES) break;
+      this.mcpToolCalls.delete(oldest);
+    }
+  }
+
+  /** The tool an approval for `server` is about: named by Codex, else the one call in flight. */
+  private approvalToolName(meta: Record<string, unknown>, server: string): string | undefined {
+    if (typeof meta.tool_name === "string") return meta.tool_name;
+    const tools = new Set(
+      [...this.mcpToolCalls.values()]
+        .filter((call) => call.server === server)
+        .map((call) => call.tool),
+    );
+    // Several different tools in flight: naming one would be a guess.
+    return tools.size === 1 ? [...tools][0] : undefined;
   }
 
   /** Remember a patch's files from `item/started` / `patchUpdated` until `item/completed`. */
@@ -772,11 +808,14 @@ export class CodexRuntime {
       server !== undefined &&
       this.hostMcpServers.some((declared) => declared.name === server)
     ) {
+      const toolName = this.approvalToolName(meta, server);
+      const args = objectOf(meta.tool_params);
       try {
         ours =
           (await this.hooks.onHostMcpApproval?.({
             serverName: server,
-            ...(typeof meta.tool_name === "string" ? { toolName: meta.tool_name } : {}),
+            ...(toolName ? { toolName } : {}),
+            ...(args ? { args } : {}),
             ...(typeof record.message === "string" ? { message: record.message } : {}),
           })) === true;
       } catch {
