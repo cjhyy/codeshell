@@ -27,6 +27,16 @@ export interface AgentRunResult {
    * Only a transport that reports this in structured form sets it.
    */
   sandboxBlocked?: number;
+  /**
+   * Commands the worker ran that ended failed (`codexCommandFailed`). A count
+   * with no cause attached; set only by a transport that sees every command.
+   */
+  failedCommands?: number;
+  /**
+   * Set when the CLI itself reported that the sandbox this run happened in has
+   * no network access. A fact about the sandbox, not about any command.
+   */
+  sandboxNetworkDisabled?: boolean;
   exitCode: number | null;
   /** Complete CLI records; transient Claude token deltas are observed only. */
   lines: string[];

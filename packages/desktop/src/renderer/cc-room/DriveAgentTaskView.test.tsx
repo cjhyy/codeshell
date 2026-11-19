@@ -359,6 +359,20 @@ describe("DriveAgentTaskView", () => {
     );
     expect(text(container)).not.toContain("被权限拒绝");
 
+    // Commands that failed are a plain count: not a refusal, and no verdict
+    // on the task.
+    current = job({
+      status: "completed",
+      finishedAt: time,
+      finalText: "done",
+      progress: { lastActivityAt: time, eventCount: 9, failedCommands: 3 },
+    });
+    await changed();
+    expect(text(container)).toContain("3 条命令执行失败");
+    expect(text(container)).not.toContain("沙箱");
+    expect(text(container)).not.toContain("被权限拒绝");
+    expect(text(container)).not.toContain("任务可能没有做完");
+
     current = job({
       status: "failed",
       finishedAt: time,

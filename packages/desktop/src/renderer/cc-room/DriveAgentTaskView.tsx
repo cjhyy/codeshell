@@ -297,6 +297,7 @@ export function DriveAgentTaskView({
   const clock = job?.finishedAt ?? now;
   const denied = progress?.permissionDenials ?? 0;
   const sandboxBlocked = progress?.sandboxBlocked ?? 0;
+  const failedCommands = progress?.failedCommands ?? 0;
   const blocked = progress?.blocked === "permission";
   const awaitingApproval = running ? progress?.awaitingApprovalSince : undefined;
   // Waiting on the user is an explanation, not silence.
@@ -404,6 +405,11 @@ export function DriveAgentTaskView({
                 count: sandboxBlocked,
               },
             )}
+          </p>
+        )}
+        {failedCommands > 0 && (
+          <p data-drive-agent-failed-commands className="text-muted-foreground">
+            {t("panels.shells.taskFailedCommands", { count: failedCommands })}
           </p>
         )}
         {quiet && <p className="text-status-warn">{t("panels.shells.taskQuiet")}</p>}

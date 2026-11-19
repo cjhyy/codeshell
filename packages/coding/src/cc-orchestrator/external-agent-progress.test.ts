@@ -92,6 +92,43 @@ describe("external agent activity", () => {
     expect(JSON.stringify(progress)).not.toContain("secret");
   });
 
+  it("counts Codex commands that ended failed, from their status or exit code only", () => {
+    const completed = (item: Record<string, unknown>) =>
+      JSON.stringify({ type: "item.completed", item: { type: "command_execution", ...item } });
+    let progress = initialAgentProgress("codex", 100);
+    const lines = [
+      completed({ exit_code: 0, status: "completed" }),
+      completed({ exit_code: 6, status: "failed", aggregated_output: "private output" }),
+      completed({ status: "failed" }),
+      completed({ exit_code: 1 }),
+      // Not run at all, or not finished: neither failed.
+      completed({ exit_code: null, status: "declined" }),
+      JSON.stringify({ type: "item.started", item: { type: "command_execution", exit_code: 1 } }),
+      JSON.stringify({ type: "item.completed", item: { type: "file_change", status: "failed" } }),
+    ];
+    for (const [index, line] of lines.entries()) {
+      if (index === 1) expect(progress.failedCommands).toBeUndefined();
+      progress = advanceAgentProgress(progress, "codex", line, 200 + index);
+    }
+    expect(progress.failedCommands).toBe(3);
+    expect(progress.permissionDenials).toBeUndefined();
+    expect(progress.sandboxBlocked).toBeUndefined();
+    expect(JSON.stringify(progress)).not.toContain("private output");
+
+    // Claude Code's tool_result is_error also marks a refused tool and names
+    // no tool, so it is not counted as a failed command.
+    const claude = advanceAgentProgress(
+      initialAgentProgress("claude", 100),
+      "claude",
+      JSON.stringify({
+        type: "user",
+        message: { content: [{ type: "tool_result", tool_use_id: "t1", is_error: true }] },
+      }),
+      200,
+    );
+    expect(claude.failedCommands).toBeUndefined();
+  });
+
   it("tracks Codex JSONL commands, files and public tool names without raw arguments", () => {
     let progress = initialAgentProgress("codex", 100);
     const events = [

@@ -8,6 +8,28 @@ breaking.
 
 ## [Unreleased]
 
+## [0.11.0-rc.7] - 2026-11-20
+
+Small follow-up to rc.6. Computer use for Codex and Claude Code sessions was
+accepted in the real desktop app with a stand-in driver (offer, approval card,
+deny, session pinning, input gate, stop and interrupt, and the cases where it
+is not offered); the actual on-screen action still needs a person at the
+machine. Unanswered browser panel requests, Codex session-scoped approval and
+a real Claude Code run inside the app were also checked, with no defects.
+
+### Changed
+
+- A DriveAgent Codex worker counts the commands that ended failed, and the
+  task view shows the count. When Codex reports that the worker's sandbox has
+  no network access and at least one command failed, the result says so in one
+  sentence ("N command(s) failed; this sandbox has no network access."). It
+  states the two facts only: Codex gives a failed command no cause, so the
+  result does not say the sandbox caused the failure and the run still counts
+  as completed. Checked against `codex-cli 0.162.0`, where no sandbox or
+  network setting turns a cut-off network call into an approval request.
+- A Codex tool row for an MCP call shows the tool that was called
+  (`mcp__<server>__<tool>`) instead of the item type.
+
 ## [0.11.0-rc.6] - 2026-11-20
 
 Second follow-up for Codex and Claude Code sessions run from the desktop. The

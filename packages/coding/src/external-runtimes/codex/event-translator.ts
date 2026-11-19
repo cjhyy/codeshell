@@ -96,6 +96,18 @@ function toolArgsOf(item: Record<string, unknown>): Record<string, unknown> {
   return args;
 }
 
+/**
+ * The name a tool card shows. An MCP call is named like every other MCP tool
+ * (`mcp__<server>__<tool>`) instead of by its item type, which says nothing
+ * about what was called.
+ */
+function toolNameOf(item: Record<string, unknown>, type: string): string {
+  if (type !== "mcpToolCall") return type;
+  const server = str(item.server);
+  const tool = str(item.tool);
+  return server && tool ? `mcp__${server}__${tool}` : type;
+}
+
 function toolErrorOf(item: Record<string, unknown>, type: string): string | undefined {
   const detail = str(asRecord(item.error)?.message) ?? str(item.error);
   if (detail) return detail;
@@ -395,7 +407,7 @@ export class CodexEventTranslator {
     if (this.isCodeshellHostTool(item)) return [];
     const args = toolArgsOf(item);
     this.openedToolArgs.set(id, JSON.stringify(args));
-    return [{ type: "tool_use_start", toolCall: { id, toolName: type, args } }];
+    return [{ type: "tool_use_start", toolCall: { id, toolName: toolNameOf(item, type), args } }];
   }
 
   private onItemCompleted(params: Record<string, unknown>): StreamEvent[] {
@@ -433,7 +445,7 @@ export class CodexEventTranslator {
       type: "tool_result",
       result: {
         id,
-        toolName: type,
+        toolName: toolNameOf(item, type),
         ...(output !== undefined ? { result: output } : {}),
         ...(errorMessage ? { error: errorMessage, isError: true } : {}),
       },

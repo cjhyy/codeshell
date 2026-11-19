@@ -139,6 +139,25 @@ function codexActivity(data: any): Activity | undefined {
   return undefined;
 }
 
+/**
+ * Whether this `codex exec --json` record (the shape both Codex transports are
+ * reported in) is a command that ended failed: a `failed` status or a non-zero
+ * exit code. A command Codex declined never ran and is not one.
+ *
+ * Nothing but those two fields is read. Codex gives a failed command no cause,
+ * so this is a count of failures and never a statement of why: a network call
+ * cut off by the sandbox and a `grep` without a match look the same here.
+ *
+ * Claude Code has no equal signal. Its `tool_result.is_error` names no tool and
+ * is also set for a tool that was refused, so it is not counted.
+ */
+export function codexCommandFailed(data: unknown): boolean {
+  const record = data as { type?: unknown; item?: Record<string, unknown> } | null;
+  const item = record?.type === "item.completed" ? record.item : undefined;
+  if (item?.type !== "command_execution" || item.status === "declined") return false;
+  return item.status === "failed" || (Number.isInteger(item.exit_code) && item.exit_code !== 0);
+}
+
 export function initialAgentProgress(cli: string, now = Date.now()): BackgroundJobProgress {
   return {
     lastActivityAt: now,
@@ -209,6 +228,9 @@ export function advanceAgentProgressWith(
   return {
     ...previous,
     ...activity,
+    ...(cli === "codex" && codexCommandFailed(data)
+      ? { failedCommands: (previous.failedCommands ?? 0) + 1 }
+      : {}),
     lastActivityAt: now,
     eventCount: previous.eventCount + 1,
     recentEvents: recentEvents.slice(-MAX_RECENT_EVENTS),

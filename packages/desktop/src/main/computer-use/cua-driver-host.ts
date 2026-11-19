@@ -17,7 +17,7 @@ import {
 } from "node:fs";
 import { createConnection } from "node:net";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, isAbsolute, join } from "node:path";
 
 export const CUA_HOST_MCP_SERVER_NAME = "host:cua-driver";
 
@@ -130,20 +130,37 @@ function isExecutable(path: string): boolean {
 export const COMPUTER_USE_APP_NAME = "CodeShell Computer Use.app";
 export const COMPUTER_USE_BUNDLE_ID = "com.cjhyy.codeshell.computer-use";
 
+/**
+ * Acceptance seam, unset by default: an UNPACKAGED build takes its helper
+ * bundle from this absolute path instead of `out/native`, so an Electron
+ * acceptance run can exercise the proxy, gate and app wiring against a
+ * stand-in that never touches the desktop or asks macOS for a permission.
+ * A packaged app ignores it. When set, the real helper is never a fallback.
+ */
+export const COMPUTER_USE_BUNDLE_OVERRIDE_ENV = "CODESHELL_E2E_COMPUTER_USE_BUNDLE";
+
 export interface ComputerUseBundleOptions {
   readonly isPackaged: boolean;
   readonly resourcesPath?: string;
   readonly appPath?: string;
   readonly isExecutable?: (path: string) => boolean;
+  /** Read for {@link COMPUTER_USE_BUNDLE_OVERRIDE_ENV}; defaults to the process's. */
+  readonly env?: NodeJS.ProcessEnv;
 }
 
 /** Resolve only this installation's helper; never fall back to a global driver. */
 export function computerUseBundlePaths(
   options: ComputerUseBundleOptions,
 ): { helperPath: string; driverPath: string } | undefined {
-  const bundle = options.isPackaged
-    ? options.resourcesPath && join(options.resourcesPath, "..", "Library", COMPUTER_USE_APP_NAME)
-    : options.appPath && join(options.appPath, "out", "native", COMPUTER_USE_APP_NAME);
+  const standIn = options.isPackaged
+    ? undefined
+    : (options.env ?? process.env)[COMPUTER_USE_BUNDLE_OVERRIDE_ENV];
+  if (standIn && !isAbsolute(standIn)) return undefined;
+  const bundle =
+    standIn ||
+    (options.isPackaged
+      ? options.resourcesPath && join(options.resourcesPath, "..", "Library", COMPUTER_USE_APP_NAME)
+      : options.appPath && join(options.appPath, "out", "native", COMPUTER_USE_APP_NAME));
   if (!bundle) return undefined;
   return {
     helperPath: join(bundle, "Contents", "MacOS", "codeshell-computer-use"),

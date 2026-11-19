@@ -252,6 +252,7 @@ export class CodexRuntime {
   private translator?: CodexEventTranslator;
   private threadId?: string;
   private reportedModel?: string;
+  private reportedSandbox?: unknown;
   private started = false;
   private resumed = false;
   private firstTurn = true;
@@ -316,6 +317,11 @@ export class CodexRuntime {
     return this.reportedModel ?? this.options.model;
   }
 
+  /** The `sandbox` policy Codex answered thread/start or thread/resume with. */
+  get threadSandbox(): unknown {
+    return this.reportedSandbox;
+  }
+
   /**
    * Spawn the app-server, handshake, and open a thread.
    *
@@ -344,7 +350,7 @@ export class CodexRuntime {
       ? await this.nativeToolsDisabledConfig(initialized)
       : undefined;
 
-    let thread: { thread?: { id?: string }; model?: unknown } | undefined;
+    let thread: { thread?: { id?: string }; model?: unknown; sandbox?: unknown } | undefined;
     if (this.options.resumeRuntimeSessionId) {
       try {
         thread = (await this.client.request(
@@ -390,6 +396,7 @@ export class CodexRuntime {
       throw new Error(`${this.resumed ? "thread/resume" : "thread/start"} returned no thread id`);
     }
     this.threadId = threadId;
+    this.reportedSandbox = thread?.sandbox;
     const reportedModel = thread?.model;
     if (typeof reportedModel === "string" && reportedModel.trim()) {
       this.reportedModel = reportedModel.trim();
