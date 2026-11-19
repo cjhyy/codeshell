@@ -45,10 +45,12 @@ import {
   deriveLegacyGoalId,
   goalConfigFromLifecycle,
   isGoalLifecycleCurrent,
+  isGoalPauseReason,
   terminateGoalLifecycle,
   goalProgressSnapshot,
   waitGoalLifecycle,
   type GoalConfig,
+  type GoalPauseReason,
   type GoalProgressSnapshot,
   type GoalWaitKind,
   type PersistedGoalTerminationReason,
@@ -1080,6 +1082,8 @@ export class SessionManager {
     patch: {
       objective?: string;
       paused?: boolean;
+      /** Recorded with `paused: true`; a resume drops it, an edit keeps it. */
+      pauseReason?: GoalPauseReason;
       expectedGoalId?: string;
       expectedRevision?: number;
     },
@@ -1119,8 +1123,14 @@ export class SessionManager {
         revision: currentRevision + 1,
         ...(objectiveChanged ? { setAtMs: Date.now() } : {}),
       };
-      if (patch.paused === true) goal.paused = true;
-      else if (patch.paused === false) delete goal.paused;
+      if (patch.paused === true) {
+        goal.paused = true;
+        if (isGoalPauseReason(patch.pauseReason)) goal.pauseReason = patch.pauseReason;
+        else delete goal.pauseReason;
+      } else if (patch.paused === false) {
+        delete goal.paused;
+        delete goal.pauseReason;
+      }
       // Same identity: edits and pause/resume keep the goal's accumulated
       // progress (an open background wait is settled up to now).
       state.goalLifecycle = carryGoalProgress(

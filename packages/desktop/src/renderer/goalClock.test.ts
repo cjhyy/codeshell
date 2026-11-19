@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { adoptPersistedGoalProgress, goalElapsedMs } from "./goalClock";
+import { adoptPersistedGoalPause, adoptPersistedGoalProgress, goalElapsedMs } from "./goalClock";
 import type { ActiveGoal } from "./types";
 
 const goal: ActiveGoal = { objective: "g", goalId: "g1", revision: 1, round: 0, paused: false };
@@ -43,5 +43,31 @@ describe("adoptPersistedGoalProgress", () => {
       activeMs: 70_000,
     });
     expect(adoptPersistedGoalProgress(null, { rounds: 1, activeMs: 1 })).toBeNull();
+  });
+});
+
+describe("adoptPersistedGoalPause", () => {
+  const paused: ActiveGoal = { objective: "ship", round: 1, paused: true };
+
+  test("a reloaded paused goal shows why it paused", () => {
+    expect(adoptPersistedGoalPause(paused, "no_progress")).toMatchObject({
+      paused: true,
+      pauseReason: "no_progress",
+    });
+    expect(adoptPersistedGoalPause(paused, "time_budget")?.pauseReason).toBe("time_budget");
+  });
+
+  test("the user's own pause is the plain pause, and replaces a stale reason", () => {
+    expect(
+      adoptPersistedGoalPause({ ...paused, pauseReason: "turn_limit" }, "user"),
+    ).not.toHaveProperty("pauseReason");
+  });
+
+  test("an older host that reports no reason, or a goal that is not paused, changes nothing", () => {
+    const marked: ActiveGoal = { ...paused, pauseReason: "turn_limit" };
+    expect(adoptPersistedGoalPause(marked, undefined)).toBe(marked);
+    const active: ActiveGoal = { ...paused, paused: false };
+    expect(adoptPersistedGoalPause(active, "no_progress")).toBe(active);
+    expect(adoptPersistedGoalPause(null, "no_progress")).toBeNull();
   });
 });

@@ -96,6 +96,11 @@ export interface DrivePermissionGate {
   >;
   /** Called on every state change; at most one listener. */
   setListener(listener: (() => void) | undefined): void;
+  /**
+   * The worker ended: withdraw every ask still waiting for an answer, so its
+   * approval prompt leaves the user's screen instead of outliving the worker.
+   */
+  withdrawPending(): void;
 }
 
 /**
@@ -121,7 +126,10 @@ export function createDrivePermissionGate(options: {
   const waitLimit = options.approvalWaitLimitMs ?? DRIVE_APPROVAL_WAIT_LIMIT_MS;
   const now = options.now ?? Date.now;
   const denied: PermissionDenial[] = [];
-  const waiting = new Set<{ since: number }>();
+  const waiting = new Set<{ since: number; withdrawal: AbortController }>();
+  const withdrawPending = (): void => {
+    for (const ask of waiting) ask.withdrawal.abort();
+  };
   let consecutive = 0;
   let blocked: string | undefined;
   let listener: (() => void) | undefined;
@@ -135,6 +143,8 @@ export function createDrivePermissionGate(options: {
   const block = (reason: string): void => {
     if (blocked) return;
     blocked = reason;
+    // The worker is being stopped: no other ask of its is awaited any more.
+    withdrawPending();
     changed();
     try {
       options.onBlocked(reason);
@@ -161,6 +171,7 @@ export function createDrivePermissionGate(options: {
     setListener: (next) => {
       listener = next;
     },
+    withdrawPending,
     snapshot: () => ({
       ...(denied.length ? { permissionDenials: denied.length } : {}),
       ...(waiting.size
@@ -180,7 +191,10 @@ export function createDrivePermissionGate(options: {
             "background task has no approval path. Do not retry; report what could not be done.",
         );
       }
-      const ask = { since: now() };
+      // Aborted whenever this ask stops being awaited without an answer: the
+      // host then retires the prompt on every client.
+      const withdrawal = new AbortController();
+      const ask = { since: now(), withdrawal };
       waiting.add(ask);
       changed();
       let timer: ReturnType<typeof setTimeout> | undefined;
@@ -194,6 +208,7 @@ export function createDrivePermissionGate(options: {
             toolName: `${options.agent ?? "Claude Code"} ${toolName}`,
             args: request.input,
             reason: `Requested by background task «${options.title}» (DriveAgent worker).`,
+            signal: withdrawal.signal,
           }),
           new Promise<"timeout">((resolve) => {
             timer = setTimeout(() => resolve("timeout"), waitLimit);
@@ -202,8 +217,11 @@ export function createDrivePermissionGate(options: {
           // The worker went away (cancelled or stopped): nobody awaits the answer.
           new Promise<"cancelled">((resolve) => {
             onAbort = () => resolve("cancelled");
-            if (signal?.aborted) onAbort();
-            else signal?.addEventListener("abort", onAbort, { once: true });
+            if (signal?.aborted || withdrawal.signal.aborted) onAbort();
+            else {
+              signal?.addEventListener("abort", onAbort, { once: true });
+              withdrawal.signal.addEventListener("abort", onAbort, { once: true });
+            }
           }),
         ]);
       } catch {
@@ -213,7 +231,11 @@ export function createDrivePermissionGate(options: {
         if (onAbort) signal?.removeEventListener("abort", onAbort);
         waiting.delete(ask);
       }
-      if (outcome === "cancelled" || signal?.aborted) {
+      const withdrawn = withdrawal.signal.aborted;
+      // Timed out or cancelled with the prompt still up: take it down. After an
+      // answer the prompt is already gone and this changes nothing.
+      withdrawal.abort();
+      if (outcome === "cancelled" || signal?.aborted || withdrawn) {
         // Not a refusal of the operation, so it is not counted as one.
         changed();
         return { approved: false, reason: "The permission request was cancelled." };
@@ -386,6 +408,8 @@ export async function prepareDriveRunPermissions(options: {
     outcome,
     close: async () => {
       gate?.setListener(undefined);
+      // However the run ended, a prompt it left behind must not outlive it.
+      gate?.withdrawPending();
       await prompt?.close();
     },
   };

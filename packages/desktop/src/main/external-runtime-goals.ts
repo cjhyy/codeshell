@@ -33,6 +33,9 @@ export function isExternalGoalToolName(toolName: string): boolean {
 
 const sameQuestion = (text: string) => text.replace(/\s+/gu, " ").trim().toLowerCase();
 
+/** Why a paused Goal is paused, as its lifecycle record persists it. */
+type PersistedPauseReason = NonNullable<GoalConfig["pauseReason"]>;
+
 /** Why a Goal paused; clients and notices read this, never the `gaps` text. */
 export type ExternalGoalPauseReason = Extract<
   StreamEvent,
@@ -143,8 +146,6 @@ export class ExternalRuntimeGoals {
   private readonly pendingQuestions = new Map<string, GoalQuestion>();
   /** Questions the user already replied to or passed over; never asked again. */
   private readonly closedQuestions = new Map<string, string[]>();
-  /** Goal versions a budget or limit paused (not the user), per Session. */
-  private readonly limitPauses = new Map<string, string>();
 
   constructor(
     private readonly emit: (sessionId: string, event: StreamEvent) => void,
@@ -165,12 +166,14 @@ export class ExternalRuntimeGoals {
   }
 
   /**
-   * A pause the user did not ask for: a budget or limit ran out. Known from
-   * this process, or after a restart from the run that ended on `limit_stop`.
+   * A pause the user did not ask for: a budget or limit ran out, or the Goal
+   * made no progress. The paused record says why, so this holds across a
+   * restart. Only a record written before the reason was persisted falls back
+   * to the run that ended on `limit_stop`.
    */
   private isLimitPause(sessionId: string, goal: GoalConfig): boolean {
-    const known = this.limitPauses.get(sessionId);
-    if (known !== undefined) return known === `${goal.goalId}:${goal.revision}`;
+    if (goal.pauseReason !== undefined)
+      return goal.pauseReason !== "user" && goal.pauseReason !== "user_stop";
     return this.manager.readSessionState(sessionId)?.lastCompletionKind === "limit_stop";
   }
 
@@ -499,7 +502,11 @@ export class ExternalRuntimeGoals {
     }
   }
 
-  update(sessionId: string, patch: ExternalGoalUpdate) {
+  /**
+   * `pauseReason` is recorded with a pause and is the host's to state: a
+   * control from a client is the user's own pause.
+   */
+  update(sessionId: string, patch: ExternalGoalUpdate, pauseReason: PersistedPauseReason = "user") {
     if (!patch.expectedGoalId || !positiveInteger(patch.expectedRevision)) {
       throw new Error("Goal controls require the current goalId and revision");
     }
@@ -522,10 +529,11 @@ export class ExternalRuntimeGoals {
       live.goal.goalId === patch.expectedGoalId
     )
       return { ...this.get(sessionId), updated: false };
-    const updated = this.manager.updateActiveGoal(sessionId, patch);
+    const updated = this.manager.updateActiveGoal(sessionId, {
+      ...patch,
+      ...(patch.paused === true ? { pauseReason } : {}),
+    });
     if (!updated) return { ...this.get(sessionId), updated: false };
-    // Any control is a new revision; `pause` re-marks a limit pause after it.
-    this.limitPauses.set(sessionId, "");
     this.stop(sessionId);
     this.emitUpdated(sessionId, updated.goal);
     return { ...this.get(sessionId), updated: true };
@@ -546,7 +554,6 @@ export class ExternalRuntimeGoals {
     });
     if (cleared) {
       this.stop(sessionId);
-      this.limitPauses.delete(sessionId);
       this.forgetQuestions(sessionId);
       this.emit(sessionId, {
         type: "goal_cleared",
@@ -671,16 +678,17 @@ export class ExternalRuntimeGoals {
    */
   pause(run: ExternalGoalRun, reason: ExternalGoalPauseReason, byUser = false): void {
     if (!this.isCurrent(run)) return;
-    const result = this.update(run.sessionId, {
-      paused: true,
-      expectedGoalId: run.goal.goalId!,
-      expectedRevision: run.goal.revision!,
-    });
+    const result = this.update(
+      run.sessionId,
+      {
+        paused: true,
+        expectedGoalId: run.goal.goalId!,
+        expectedRevision: run.goal.revision!,
+      },
+      reason,
+    );
     if (result.updated) {
-      if (!byUser) {
-        run.limited = true;
-        this.limitPauses.set(run.sessionId, `${result.goalId}:${result.revision}`);
-      }
+      if (!byUser) run.limited = true;
       this.emit(run.sessionId, {
         type: "goal_progress",
         goalId: result.goalId,

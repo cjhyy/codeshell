@@ -73,11 +73,13 @@ import { resolveSessionMessageWorkspace } from "./session-message-workspace.js";
 import { validateWorkspaceContext, workspacePrimaryRoot } from "../workspace/workspace-context.js";
 import { canonicalKey } from "../workspace/canonical-key.js";
 import {
+  type ApprovalRequestOptions,
   type ApprovalRouteTarget,
   type ApprovalRouter,
   getApprovalRouter,
   getInteractiveApprovalBackend,
   InteractiveApprovalBackend,
+  withdrawnApproval,
 } from "../tool-system/permission.js";
 import {
   agentNotificationBus,
@@ -700,7 +702,8 @@ export class AgentServer {
     this.approvalConnectionUnregister = this.approvalRouter.addConnection(
       this.connectionId,
       {
-        requestApproval: (request, target) => this.requestApprovalFromClient(request, target),
+        requestApproval: (request, target, options) =>
+          this.requestApprovalFromClient(request, target, undefined, options),
         ownershipLost: (targets, reason) => this.failClosedApprovalTargets(targets, reason),
       },
       { claimUnownedSessions: !this.strictApprovalRouting },
@@ -955,7 +958,7 @@ export class AgentServer {
           };
         return undefined;
       });
-      backend.setPromptFn((request) => {
+      backend.setPromptFn((request, options) => {
         const failure = scope.failure();
         if (failure) return Promise.resolve({ approved: false, ...failure });
         if (request.sessionId !== input.sessionId) {
@@ -965,7 +968,7 @@ export class AgentServer {
             reason: "child approval identity mismatch",
           });
         }
-        return this.requestApprovalFromClient(request, route, scope);
+        return this.requestApprovalFromClient(request, route, scope, options);
       });
       const dispose = () => {
         if (closed) return;
@@ -3234,10 +3237,14 @@ export class AgentServer {
     request: ApprovalRequest,
     route?: ApprovalRouteTarget,
     scope?: ChildHostScope,
+    options?: ApprovalRequestOptions,
   ): Promise<ApprovalResult> {
     const failure = scope?.failure();
     if (failure) return Promise.resolve({ approved: false, ...failure });
-    return new Promise((resolve) => {
+    const signal = options?.signal;
+    if (signal?.aborted) return Promise.resolve(withdrawnApproval());
+    let withdraw: (() => void) | undefined;
+    const asked = new Promise<ApprovalResult>((resolve) => {
       const requestId = nanoid(12);
       const effectiveRoute = route ?? {
         connectionId: this.connectionId,
@@ -3325,6 +3332,28 @@ export class AgentServer {
         expiresAt,
         request,
       });
+
+      // The asker went away (a delegated worker ended): retire this one card on
+      // every client. Unlike a timeout, clients cannot infer it from a deadline.
+      withdraw = () => {
+        const decision = withdrawnApproval();
+        if (session) {
+          // The entry's resolver also tells the client the card is resolved.
+          this.retireSessionApproval(session, requestId, "cancelled")?.resolve(decision);
+          return;
+        }
+        // The legacy resolver clears its own timer/target and notifies the client.
+        const legacyResolve = this.pendingApprovals.get(requestId);
+        if (!legacyResolve) return;
+        this.pendingApprovals.delete(requestId);
+        scope?.pending.delete(requestId);
+        legacyResolve(decision);
+      };
+      signal?.addEventListener("abort", withdraw, { once: true });
+    });
+    if (!signal) return asked;
+    return asked.finally(() => {
+      if (withdraw) signal.removeEventListener("abort", withdraw);
     });
   }
 

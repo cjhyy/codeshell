@@ -172,6 +172,7 @@ export function buildNoChildFallbackReply(
         ...(goal?.revision ? { revision: goal.revision } : {}),
         ...(goal?.setAtMs ? { setAtMs: goal.setAtMs } : {}),
         paused: goal?.paused === true,
+        ...(goal?.paused === true && goal.pauseReason ? { pauseReason: goal.pauseReason } : {}),
         ...(goal && progress && progress.goalId === goal.goalId
           ? {
               progress: {

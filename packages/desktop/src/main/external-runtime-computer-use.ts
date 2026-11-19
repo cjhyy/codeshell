@@ -28,13 +28,19 @@ import type { ExternalHostMcpServer } from "@cjhyy/code-shell-capability-coding/
 import type { CuaDriverHost } from "./computer-use/cua-driver-host.js";
 import { PINNED_SESSION_ENV, pinnedSessionId } from "./computer-use/input-gate-policy.js";
 import { getCuaDriverHost } from "./computer-use/service.js";
+import {
+  EXTERNAL_COMPUTER_USE_SERVER_NAME,
+  computerUseApprovalPresentation,
+  computerUseApprovalText,
+  type ComputerUseApprovalRuntime,
+} from "../shared/computer-use-approval.js";
 
 /**
  * MCP server name external CLIs see. `host:cua-driver` cannot be used: both
  * CLIs name tools `mcp__<server>__<tool>`, and Claude Code accepts only
  * `[a-z0-9_]` in the server part.
  */
-export const EXTERNAL_COMPUTER_USE_SERVER_NAME = "codeshell_computer";
+export { EXTERNAL_COMPUTER_USE_SERVER_NAME };
 
 const ACTIVITY_SOCKET_ENV = "CODE_SHELL_CUA_ACTIVITY_SOCKET";
 const ACTIVITY_TOKEN_ENV = "CODE_SHELL_CUA_ACTIVITY_TOKEN";
@@ -156,3 +162,57 @@ export const EXTERNAL_COMPUTER_USE_INSTRUCTIONS =
   "tool descriptions carry CodeShell's input policy: follow both. If a call returns " +
   "computer_input_refused, follow its guidance and do not retry the same action; when " +
   "the user stopped computer control, stop and report what is left.";
+
+/** An approval request as the card, the phone and Mimi's IM prompt read it. */
+interface NativeApprovalRequest {
+  toolName: string;
+  [key: string]: unknown;
+}
+
+/**
+ * A computer-use call as its approval card presents it: what is about to be
+ * controlled, not "a native tool". Undefined when `toolName` is not one of the
+ * `codeshell_computer` tools.
+ */
+function computerUseApprovalRequest(
+  runtime: ComputerUseApprovalRuntime,
+  toolName: string,
+  args: Record<string, unknown>,
+): NativeApprovalRequest | undefined {
+  const computerUse = computerUseApprovalPresentation(runtime, toolName, args);
+  if (!computerUse) return undefined;
+  return { ...computerUseApprovalText(computerUse), args, riskLevel: "high", computerUse };
+}
+
+/** The card for one Claude Code permission prompt (its own tools and Host MCP tools). */
+export function claudeNativeApprovalRequest(prompt: {
+  toolName: string;
+  input: Record<string, unknown>;
+}): NativeApprovalRequest {
+  return (
+    computerUseApprovalRequest("claude-code", prompt.toolName, prompt.input) ?? {
+      // A distinct name, so the card is not mistaken for (or remembered as)
+      // CodeShell's own governed tool of the same name.
+      toolName: `Claude Code ${prompt.toolName}`,
+      args: prompt.input,
+      description: `Claude Code wants to use its native ${prompt.toolName} tool.`,
+      riskLevel: "high",
+    }
+  );
+}
+
+/**
+ * Codex asks about a Host MCP tool through the session's approval backend,
+ * naming only `mcp__<server>__<tool>`. Re-present a computer-use call; every
+ * other request passes through unchanged.
+ */
+export function presentCodexHostMcpApproval<T extends NativeApprovalRequest>(
+  request: T,
+): T | (T & NativeApprovalRequest) {
+  const args =
+    request.args && typeof request.args === "object" && !Array.isArray(request.args)
+      ? (request.args as Record<string, unknown>)
+      : {};
+  const computerUse = computerUseApprovalRequest("codex", request.toolName, args);
+  return computerUse ? { ...request, ...computerUse } : request;
+}

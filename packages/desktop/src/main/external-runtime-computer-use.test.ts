@@ -18,6 +18,8 @@ import { CuaDriverHost } from "./computer-use/cua-driver-host.js";
 import {
   EXTERNAL_COMPUTER_USE_INSTRUCTIONS,
   EXTERNAL_COMPUTER_USE_SERVER_NAME,
+  claudeNativeApprovalRequest,
+  presentCodexHostMcpApproval,
   externalComputerUse,
   externalComputerUseFor,
   type ExternalComputerUseInputs,
@@ -167,5 +169,76 @@ describe("Computer Use for external runtime sessions", () => {
       "set_value",
     ])
       expect(text).toContain(phrase);
+  });
+});
+
+describe("the approval card of a computer-use call", () => {
+  test("Claude Code: names the action and its target, not a native tool", () => {
+    const input = { pid: 412, window_id: 7, element_index: 3 };
+    const request = claudeNativeApprovalRequest({
+      toolName: `mcp__${EXTERNAL_COMPUTER_USE_SERVER_NAME}__click`,
+      input,
+    });
+    expect(request).toEqual({
+      toolName: "Computer use: click",
+      description: "Claude Code 想操控电脑：click（pid 412, window 7）",
+      args: input,
+      riskLevel: "high",
+      computerUse: { runtime: "claude-code", action: "click", pid: 412, windowId: 7 },
+    });
+    expect(JSON.stringify(request)).not.toContain("native");
+    // The window may also be given as `target`; an app name outranks a pid.
+    expect(
+      claudeNativeApprovalRequest({
+        toolName: `mcp__${EXTERNAL_COMPUTER_USE_SERVER_NAME}__type_text`,
+        input: { target: { pid: 9, window_id: 2 }, text: "hello" },
+      }).computerUse,
+    ).toEqual({ runtime: "claude-code", action: "type_text", pid: 9, windowId: 2 });
+    expect(
+      claudeNativeApprovalRequest({
+        toolName: `mcp__${EXTERNAL_COMPUTER_USE_SERVER_NAME}__launch_app`,
+        input: { bundle_id: "com.apple.Notes" },
+      }),
+    ).toMatchObject({
+      description: "Claude Code 想操控电脑：launch_app（com.apple.Notes）",
+      computerUse: { action: "launch_app", app: "com.apple.Notes" },
+    });
+  });
+
+  test("Claude Code's own tools and other MCP servers keep the native-tool card", () => {
+    for (const toolName of ["Bash", "mcp__other__click", "mcp__codeshell_computer_evil__click"]) {
+      const request = claudeNativeApprovalRequest({ toolName, input: { command: "ls" } });
+      expect(request).toEqual({
+        toolName: `Claude Code ${toolName}`,
+        args: { command: "ls" },
+        description: `Claude Code wants to use its native ${toolName} tool.`,
+        riskLevel: "high",
+      });
+    }
+  });
+
+  test("Codex: its bare MCP tool ask is re-presented; everything else passes through", () => {
+    const asked = {
+      sessionId: "s-1",
+      toolName: `mcp__${EXTERNAL_COMPUTER_USE_SERVER_NAME}__press_key`,
+      args: {},
+      description: "Allow the codeshell_computer MCP server to run tool press_key?",
+      riskLevel: "high" as const,
+    };
+    expect(presentCodexHostMcpApproval(asked)).toEqual({
+      sessionId: "s-1",
+      toolName: "Computer use: press_key",
+      description: "Codex 想操控电脑：press_key",
+      args: {},
+      riskLevel: "high",
+      computerUse: { runtime: "codex", action: "press_key" },
+    });
+    const governed = {
+      toolName: "Bash",
+      args: { command: "ls" },
+      description: "Run",
+      riskLevel: "low",
+    };
+    expect(presentCodexHostMcpApproval(governed)).toBe(governed);
   });
 });

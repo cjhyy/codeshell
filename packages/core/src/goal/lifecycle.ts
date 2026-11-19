@@ -26,6 +26,11 @@ export interface GoalConfig {
    * this back to false without creating a new goal identity.
    */
   paused?: boolean;
+  /**
+   * Why a paused goal is paused, when the writer said so. Lifecycle state like
+   * `paused`: persisted beside the phase, never inside the lifecycle config.
+   */
+  pauseReason?: GoalPauseReason;
   /** Hard cap on total tokens (prompt+completion) for the whole goal run. */
   tokenBudget?: number;
   /** Hard cap on wall-clock duration of the whole goal run, in ms. */
@@ -61,6 +66,33 @@ export interface GoalConfig {
   setAtMs?: number;
 }
 
+/**
+ * Why a goal is paused. A budget or limit that ran out (`time_budget`,
+ * `token_budget`, `turn_limit`) and a stop for lack of progress
+ * (`no_progress`) are pauses the user did not ask for; `user_stop` (the user
+ * stopped the run) and `user` (the user paused the goal) are theirs.
+ */
+export type GoalPauseReason =
+  | "time_budget"
+  | "token_budget"
+  | "turn_limit"
+  | "no_progress"
+  | "user_stop"
+  | "user";
+
+const GOAL_PAUSE_REASONS: readonly string[] = [
+  "time_budget",
+  "token_budget",
+  "turn_limit",
+  "no_progress",
+  "user_stop",
+  "user",
+];
+
+export function isGoalPauseReason(value: unknown): value is GoalPauseReason {
+  return typeof value === "string" && GOAL_PAUSE_REASONS.includes(value);
+}
+
 /** A follow-up may inherit this live Goal version, but cannot re-arm or replace it. */
 export interface GoalContinuation {
   goalId: string;
@@ -93,7 +125,10 @@ export function assertGoalContinuation(
 }
 
 /** Persisted V1 lifecycle. Identity/control fields live outside config exactly once. */
-export type GoalLifecycleConfig = Omit<GoalConfig, "goalId" | "revision" | "paused">;
+export type GoalLifecycleConfig = Omit<
+  GoalConfig,
+  "goalId" | "revision" | "paused" | "pauseReason"
+>;
 
 export type GoalLifecycleTerminalReason =
   | "completed"
@@ -134,7 +169,14 @@ interface GoalLifecycleBaseV1 {
 
 export type GoalLifecycleV1 =
   | (GoalLifecycleBaseV1 & { phase: "active" })
-  | (GoalLifecycleBaseV1 & { phase: "paused" })
+  | (GoalLifecycleBaseV1 & {
+      phase: "paused";
+      /**
+       * Optional key, absent in records written before it existed and in
+       * pauses whose writer gave no reason; older decoders ignore it.
+       */
+      pauseReason?: GoalPauseReason;
+    })
   | (GoalLifecycleBaseV1 & {
       phase: "waiting";
       waitingSinceMs: number;
@@ -183,7 +225,13 @@ export function extendGoalLimit(current: number, addition: unknown): number {
 }
 
 function goalLifecycleConfig(goal: GoalConfig): GoalLifecycleConfig {
-  const { goalId: _goalId, revision: _revision, paused: _paused, ...config } = goal;
+  const {
+    goalId: _goalId,
+    revision: _revision,
+    paused: _paused,
+    pauseReason: _pauseReason,
+    ...config
+  } = goal;
   return config;
 }
 
@@ -202,6 +250,8 @@ export function createGoalLifecycle(
     config: goalLifecycleConfig(goal),
     updatedAtMs: nowMs,
   };
+  if (phase === "paused" && isGoalPauseReason(goal.pauseReason))
+    return { ...base, phase, pauseReason: goal.pauseReason };
   return { ...base, phase };
 }
 
@@ -212,6 +262,9 @@ export function goalConfigFromLifecycle(lifecycle: GoalLifecycleV1): GoalConfig 
     goalId: lifecycle.goalId,
     revision: lifecycle.revision,
     ...(lifecycle.phase === "paused" ? { paused: true } : {}),
+    ...(lifecycle.phase === "paused" && lifecycle.pauseReason
+      ? { pauseReason: lifecycle.pauseReason }
+      : {}),
   };
 }
 
@@ -254,7 +307,7 @@ export function decodeGoalLifecycle(value: unknown): GoalLifecycleV1 | undefined
   // Identity and mutable lifecycle state have one canonical owner. Reject
   // persisted payloads that duplicate them inside config instead of silently
   // accepting two potentially conflicting truths.
-  for (const lifecycleKey of ["goalId", "revision", "paused"]) {
+  for (const lifecycleKey of ["goalId", "revision", "paused", "pauseReason"]) {
     if (Object.prototype.hasOwnProperty.call(config, lifecycleKey)) return undefined;
   }
   if (typeof config.objective !== "string" || config.objective.trim().length === 0)
@@ -295,6 +348,9 @@ export function decodeGoalLifecycle(value: unknown): GoalLifecycleV1 | undefined
   const hasTerminalField = Object.prototype.hasOwnProperty.call(candidate, "terminal");
   if (phase === "active" || phase === "paused") {
     if (hasWaitingFields || hasTerminalField) return undefined;
+    // Lenient like progress: an unknown reason drops the reason, never the goal.
+    if (phase === "paused" && isGoalPauseReason(candidate.pauseReason))
+      return { ...base, phase, pauseReason: candidate.pauseReason };
     return { ...base, phase };
   }
   if (phase === "waiting") {

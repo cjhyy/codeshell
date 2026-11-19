@@ -1,5 +1,16 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { EventEmitter } from "node:events";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { WebContents } from "electron";
 import { defaultSessionBrowserBucket } from "./agent-run-browser-registration.js";
 import {
@@ -13,6 +24,10 @@ import {
 } from "./browser-driver/active-guest.js";
 import { BuiltInBrowserHandoffGrants } from "./browser-runtime/built-in-handoff.js";
 import { PanelAccessRequests } from "./browser-runtime/panel-access-request.js";
+import {
+  isOrphanedExternalRuntimePartitionDir,
+  removeOrphanedExternalRuntimePartitions,
+} from "./orphaned-browser-partitions.js";
 
 function panelGuest(id: number, url: string): WebContents {
   const guest = new EventEmitter() as EventEmitter & Record<string, unknown>;
@@ -114,5 +129,85 @@ describe("browser access of an external-runtime Session", () => {
         "does not belong to this task",
       );
     }
+  });
+});
+
+describe("the partitions external-runtime sessions used to own", () => {
+  const orphan = (sessionId: string) => `browser%3Ap%3Aexternal-runtime%3A${sessionId}`;
+
+  test("only the exact retired name matches, by its decoded form", () => {
+    expect(isOrphanedExternalRuntimePartitionDir(orphan("s-1f0c"))).toBe(true);
+    for (const name of [
+      // The project and named profiles that are in use today.
+      "browser%3Ap%3Aproject-a",
+      "browser%3Au%3Awork",
+      "browser",
+      // Near misses: another namespace, no session id, a longer path, raw colons.
+      "browser%3Au%3Aexternal-runtime%3As-1",
+      "browser%3Ap%3Aexternal-runtime%3A",
+      "browser%3Ap%3Aexternal-runtime",
+      "browser%3Ap%3Aexternal-runtime%3As-1%2F..",
+      "browser%3Ap%3Aexternal-runtime%3As-1%3Aextra",
+      "x-browser%3Ap%3Aexternal-runtime%3As-1",
+      "browser:p:external-runtime:s-1",
+      "browser%3ap%3aexternal-runtime%3as-1",
+      "browser%3Ap%3Aexternal-runtime%3As-1%",
+    ]) {
+      expect(isOrphanedExternalRuntimePartitionDir(name)).toBe(false);
+    }
+  });
+
+  test("removes the retired directories and nothing else; links are not followed", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-partitions-"));
+    try {
+      const partitions = join(root, "Partitions");
+      const outside = join(root, "outside");
+      mkdirSync(join(outside, "keep"), { recursive: true });
+      writeFileSync(join(outside, "keep", "Cookies"), "user data");
+      for (const name of [
+        orphan("s-old"),
+        orphan("s-live"),
+        "browser%3Ap%3Aproject-a",
+        "browser",
+      ]) {
+        mkdirSync(join(partitions, name, "Network"), { recursive: true });
+        writeFileSync(join(partitions, name, "Network", "Cookies"), "jar");
+      }
+      // A link inside a removed directory, a link named like one, and a file named like one.
+      symlinkSync(outside, join(partitions, orphan("s-old"), "link-out"));
+      symlinkSync(outside, join(partitions, orphan("s-link")));
+      writeFileSync(join(partitions, orphan("s-file")), "not a directory");
+
+      const result = await removeOrphanedExternalRuntimePartitions({
+        partitionsDir: partitions,
+        inUse: (directory) => directory === join(partitions, orphan("s-live")),
+      });
+
+      expect(result).toEqual({ removed: 1, inUse: 1, failed: 0 });
+      expect(readdirSync(partitions).sort()).toEqual(
+        [
+          "browser",
+          "browser%3Ap%3Aproject-a",
+          orphan("s-file"),
+          orphan("s-link"),
+          orphan("s-live"),
+        ].sort(),
+      );
+      expect(existsSync(join(partitions, "browser%3Ap%3Aproject-a", "Network", "Cookies"))).toBe(
+        true,
+      );
+      expect(existsSync(join(outside, "keep", "Cookies"))).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("a missing Partitions directory is not an error", async () => {
+    expect(
+      await removeOrphanedExternalRuntimePartitions({
+        partitionsDir: join(tmpdir(), "codeshell-no-such-partitions-dir"),
+        inUse: () => false,
+      }),
+    ).toEqual({ removed: 0, inUse: 0, failed: 0 });
   });
 });

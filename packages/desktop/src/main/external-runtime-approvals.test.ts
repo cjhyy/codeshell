@@ -486,4 +486,55 @@ describe("ExternalRuntimeApprovals", () => {
     });
     expect(approvals.expire(requestId)).toBe(false);
   });
+
+  test("a withdrawn prompt is retired on the desktop and for every observer, and a late answer is ignored", async () => {
+    const owner = fakeWindow(1);
+    const events: ExternalApprovalEvent[] = [];
+    const approvals = new ExternalRuntimeApprovals({
+      windows: () => [owner.window] as never,
+      ownerWebContentsId: () => 1,
+      onPendingChange: (event) => events.push(event),
+    });
+    const worker = new AbortController();
+    const delegated = approvals.request("sess", request, { signal: worker.signal });
+    const other = approvals.request("sess", { toolName: "Write" });
+    const delegatedId = (owner.sent[0]!.payload as { requestId: string }).requestId;
+    const otherId = (owner.sent[1]!.payload as { requestId: string }).requestId;
+
+    // The worker that asked ended: only its card goes away.
+    worker.abort();
+    expect(await delegated).toMatchObject({ approved: false });
+    expect(approvals.pendingForSession("sess", 1).map((entry) => entry.requestId)).toEqual([
+      otherId,
+    ]);
+    expect(owner.sent.at(-1)).toEqual({
+      channel: "externalRuntime:approvalResolved",
+      payload: { sessionId: "sess", requestId: delegatedId, approved: false },
+    });
+    expect(events.at(-1)).toMatchObject({
+      type: "resolved",
+      requestId: delegatedId,
+      cause: "cancelled",
+      approved: false,
+    });
+    expect(approvals.settle(delegatedId, { approved: true }, 1)).toBe(false);
+
+    // Answering the other one first leaves nothing for a later abort to do.
+    const answered = new AbortController();
+    const third = approvals.request("sess", request, { signal: answered.signal });
+    const thirdId = (owner.sent.at(-1)!.payload as { requestId: string }).requestId;
+    expect(approvals.settle(thirdId, { approved: true }, 1)).toBe(true);
+    expect(await third).toMatchObject({ approved: true });
+    const sentBefore = owner.sent.length;
+    answered.abort();
+    expect(owner.sent).toHaveLength(sentBefore);
+
+    // Withdrawn before it was asked: no card at all.
+    expect(await approvals.request("sess", request, { signal: worker.signal })).toMatchObject({
+      approved: false,
+    });
+    expect(owner.sent).toHaveLength(sentBefore);
+    expect(approvals.settle(otherId, { approved: false }, 1)).toBe(true);
+    await other;
+  });
 });
