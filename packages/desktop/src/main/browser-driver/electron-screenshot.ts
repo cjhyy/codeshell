@@ -39,8 +39,42 @@ export async function captureElectronPage(
             quality: "best",
           })
         : image;
-    return { ok: true, mediaType: "image/jpeg", base64: output.toJPEG(80).toString("base64") };
+    const base64 = output.toJPEG(80).toString("base64");
+    if (rect) return { ok: true, mediaType: "image/jpeg", base64 };
+    // Only a whole-viewport frame says anything about the page having rendered,
+    // and classifying it must never cost the caller its screenshot.
+    let blank: boolean | undefined;
+    try {
+      blank = isFlatBitmap(output.toBitmap());
+    } catch {
+      blank = undefined;
+    }
+    return { ok: true, mediaType: "image/jpeg", base64, blank };
   } catch (error) {
     return { ok: false, detail: error instanceof Error ? error.message : String(error) };
   }
+}
+
+/**
+ * True when a 4-bytes-per-pixel bitmap is (almost) one flat color: an unpainted
+ * or still-empty page. A sparse grid is enough, and a little tolerance keeps a
+ * spinner or a hairline border from hiding an otherwise empty frame.
+ */
+export function isFlatBitmap(bitmap: Uint8Array): boolean {
+  const pixels = Math.floor(bitmap.length / 4);
+  if (pixels === 0) return false;
+  const stride = Math.max(1, Math.floor(pixels / 20_000));
+  let sampled = 0;
+  let differing = 0;
+  for (let pixel = 0; pixel < pixels; pixel += stride) {
+    const at = pixel * 4;
+    sampled += 1;
+    if (
+      Math.abs(bitmap[at] - bitmap[0]) > 8 ||
+      Math.abs(bitmap[at + 1] - bitmap[1]) > 8 ||
+      Math.abs(bitmap[at + 2] - bitmap[2]) > 8
+    )
+      differing += 1;
+  }
+  return differing / sampled < 0.005;
 }

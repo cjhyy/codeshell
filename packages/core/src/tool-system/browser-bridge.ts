@@ -111,6 +111,11 @@ export interface BrowserResult {
   /** Present for scroll-like actions so callers can prove forward progress. */
   scroll?: BrowserScrollState;
   contentChanged?: boolean;
+  /**
+   * Set by navigate: whether the window `load` event fired within the driver's
+   * bounded wait. Absent when the backend cannot tell.
+   */
+  loadState?: "complete" | "loading";
 }
 
 export interface BrowserReadOptions {
@@ -209,6 +214,8 @@ export interface BrowserImageData {
   /** ref the image came from (so the tool can label which image is which). */
   ref?: string;
   detail?: string;
+  /** Viewport screenshot only: the frame is blank or nearly so. */
+  blank?: boolean;
 }
 
 /** Bounded developer observations; deliberately not an arbitrary script/CDP port. */

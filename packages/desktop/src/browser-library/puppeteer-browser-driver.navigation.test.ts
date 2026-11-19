@@ -2,6 +2,80 @@ import { describe, expect, test } from "bun:test";
 import { EventEmitter } from "node:events";
 import type { Page } from "puppeteer-core/lib/esm/puppeteer/puppeteer-core-browser.js";
 import { PuppeteerBrowserDriver } from "./puppeteer-browser-driver.js";
+import { pageLooksBlank } from "./wait-condition.js";
+
+describe("Puppeteer navigation load state", () => {
+  function fixture(load: () => Promise<unknown>, blank?: () => Promise<boolean>) {
+    const events = new EventEmitter();
+    let url = "about:blank";
+    const waits: Array<{ timeout?: number }> = [];
+    const page = Object.assign(events, {
+      isClosed: () => false,
+      url: () => url,
+      goto: async (destination: string) => {
+        url = destination;
+        events.emit("framenavigated");
+      },
+      waitForFunction: async (_fn: unknown, options: { timeout?: number }) => {
+        waits.push(options);
+        await load();
+        return { dispose: async () => undefined };
+      },
+      evaluate: async (fn: unknown) =>
+        fn === pageLooksBlank
+          ? (blank ?? (async () => false))()
+          : { width: 800, height: 600, x: 0, y: 0, dpr: 1 },
+      screenshot: async () => "AAAA",
+    });
+    return { driver: new PuppeteerBrowserDriver(page as unknown as Page), waits };
+  }
+
+  test("reports a completed load after a bounded wait", async () => {
+    const { driver, waits } = fixture(async () => undefined);
+    try {
+      const result = await driver.navigate("https://example.test/app");
+      expect(result).toMatchObject({ ok: true, documentChanged: true, loadState: "complete" });
+      expect(waits).toHaveLength(1);
+      expect(waits[0]?.timeout).toBe(10_000);
+    } finally {
+      driver.dispose();
+    }
+  });
+
+  test("a page whose load event never arrives is navigated but still loading", async () => {
+    const { driver } = fixture(async () => {
+      throw Object.assign(new Error("Waiting failed: 10000ms exceeded"), { name: "TimeoutError" });
+    });
+    try {
+      const result = await driver.navigate("https://example.test/app");
+      expect(result).toMatchObject({ ok: true, documentChanged: true, loadState: "loading" });
+    } finally {
+      driver.dispose();
+    }
+  });
+
+  test("a viewport screenshot of an unrendered page is marked blank", async () => {
+    for (const [answer, expected] of [
+      [async () => true, true],
+      [async () => false, false],
+      [
+        async () => {
+          throw new Error("Execution context was destroyed");
+        },
+        undefined,
+      ],
+    ] as const) {
+      const { driver } = fixture(async () => undefined, answer);
+      try {
+        const image = await driver.screenshot();
+        expect(image.ok).toBe(true);
+        expect(image.blank).toBe(expected as boolean | undefined);
+      } finally {
+        driver.dispose();
+      }
+    }
+  });
+});
 
 describe("Puppeteer navigation errors", () => {
   function fixture(error: Error, changesDocument = true) {

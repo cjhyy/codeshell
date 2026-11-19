@@ -35,7 +35,13 @@ import type {
 import { collectPageNodes, readFrameText } from "./dom-observation.js";
 import { observeScrollProgress } from "./scroll-observation.js";
 import { createPuppeteerInspector } from "./browser-inspector.js";
-import { browserWaitTimeout, pageWaitCondition } from "./wait-condition.js";
+import {
+  NAVIGATION_LOAD_TIMEOUT_MS,
+  browserWaitTimeout,
+  pageLoadComplete,
+  pageLooksBlank,
+  pageWaitCondition,
+} from "./wait-condition.js";
 
 /** Command+key editing shortcuts macOS would route through its Edit menu. */
 const MAC_EDIT_COMMANDS: Record<string, string> = {
@@ -56,6 +62,8 @@ export interface PuppeteerBrowserDriverOptions {
   captureScreenshot?: (request: PuppeteerScreenshotRequest) => Promise<BrowserImageData>;
   documentNamespace?: string;
   actionTimeoutMs?: number;
+  /** Navigate's wait for the window `load` event; lower it under a short transport timeout. */
+  navigationLoadTimeoutMs?: number;
   identity?: BrowserIdentity;
   requestHumanTakeover?: () => Promise<BrowserResult>;
   isActive?: () => boolean;
@@ -324,7 +332,10 @@ export class PuppeteerBrowserDriver implements BrowserBridge {
         scope.check();
         await this.page.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 });
         this.checkActive();
-        return this.success(before);
+        const loadState = await this.awaitLoad();
+        this.checkActive();
+        scope.check();
+        return { ...this.success(before), loadState };
       } catch (error) {
         // Navigation is expected to replace the document. Preserve a failed
         // load's actual cause instead of treating that replacement as the error.
@@ -618,7 +629,10 @@ export class PuppeteerBrowserDriver implements BrowserBridge {
           "screenshot",
         );
         this.checkDocument(documentId);
-        return { ...image, ref };
+        // A native capturer classifies its own pixels and must keep working
+        // when page evaluation has stalled, so the DOM check is not for it.
+        if (ref || !image.ok || this.options.captureScreenshot) return { ...image, ref };
+        return { ...image, ref, blank: await this.looksBlank() };
       } catch (error) {
         return { ok: false, ref, detail: message(error) };
       }
@@ -1121,6 +1135,42 @@ export class PuppeteerBrowserDriver implements BrowserBridge {
       detail: message(error),
     };
   }
+  /** Bounded wait for the window `load` event; anything else is "not confirmed". */
+  private async awaitLoad(): Promise<"complete" | "loading"> {
+    const timeout = this.options.navigationLoadTimeoutMs ?? NAVIGATION_LOAD_TIMEOUT_MS;
+    const controller = new AbortController();
+    const cancel = () => controller.abort();
+    this.abort.signal.addEventListener("abort", cancel, { once: true });
+    try {
+      const loaded = await observeWithin(
+        this.page.waitForFunction(pageLoadComplete, {
+          polling: 100,
+          timeout,
+          signal: controller.signal,
+        }),
+        timeout,
+        "page load",
+        (handle) => void handle.dispose().catch(() => undefined),
+      );
+      void loaded.dispose().catch(() => undefined);
+      return "complete";
+    } catch {
+      return "loading";
+    } finally {
+      controller.abort();
+      this.abort.signal.removeEventListener("abort", cancel);
+    }
+  }
+
+  /** Best-effort DOM check for library captures, whose pixels are not inspected. */
+  private async looksBlank(): Promise<boolean | undefined> {
+    try {
+      return await observeWithin(this.page.evaluate(pageLooksBlank), 1_000, "render check");
+    } catch {
+      return undefined;
+    }
+  }
+
   private success(before: string): BrowserResult {
     const documentId = this.documentId();
     return {

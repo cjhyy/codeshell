@@ -26,7 +26,13 @@ import {
 import type { BrowserContext, ElementHandle, Page } from "playwright-core";
 import { collectPageNodes, readFrameText } from "../../browser-library/dom-observation.js";
 import { observeScrollProgress } from "../../browser-library/scroll-observation.js";
-import { browserWaitTimeout, pageWaitCondition } from "../../browser-library/wait-condition.js";
+import {
+  NAVIGATION_LOAD_TIMEOUT_MS,
+  browserWaitTimeout,
+  pageLoadComplete,
+  pageLooksBlank,
+  pageWaitCondition,
+} from "../../browser-library/wait-condition.js";
 import {
   createPlaywrightInspector,
   type BrowserInspector,
@@ -174,12 +180,26 @@ export class PlaywrightBrowserDriver implements BrowserBridge {
         timeout: DEFAULT_NAVIGATION_TIMEOUT_MS,
       });
       this.clearRefs();
+      // Bounded wait for the window `load` event; anything else is "not confirmed".
+      const loadState = await page
+        .waitForFunction(pageLoadComplete, undefined, {
+          polling: 100,
+          timeout: NAVIGATION_LOAD_TIMEOUT_MS,
+        })
+        .then(
+          (handle) => {
+            void handle.dispose().catch(() => undefined);
+            return "complete" as const;
+          },
+          () => "loading" as const,
+        );
       const documentId = this.documentId(this.page());
       return {
         ok: true,
         code: documentId === before ? "OK" : "NAVIGATION",
         documentId,
         documentChanged: documentId !== before,
+        loadState,
       };
     } catch (error) {
       return playwrightFailure(error);
@@ -517,6 +537,14 @@ export class PlaywrightBrowserDriver implements BrowserBridge {
         ok: true,
         base64: bytes.toString("base64"),
         mediaType: ref ? "image/png" : "image/jpeg",
+        // Best-effort DOM check; a failed probe leaves the frame unclassified.
+        ...(ref
+          ? {}
+          : {
+              blank: await this.page()
+                .evaluate(pageLooksBlank)
+                .catch(() => undefined),
+            }),
       };
     } catch (error) {
       return { ok: false, detail: errMsg(error) };

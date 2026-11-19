@@ -27,6 +27,8 @@ export interface CdpImageData {
   /** True when a ref/node no longer resolves (DOM changed → re-observe). */
   staleRef?: boolean;
   detail?: string;
+  /** Set by a capturer that inspected the pixels: the frame is one flat color. */
+  blank?: boolean;
 }
 
 export function normalizePageText(raw: string): string {
