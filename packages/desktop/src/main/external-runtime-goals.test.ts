@@ -471,6 +471,53 @@ describe("external Goal lifecycle", () => {
       terminal.mockRestore();
     }
   });
+
+  test("wait_for_user carries structured choices and repeats them to the model", () => {
+    const run = goals.start(sessionId, "发版并部署")!;
+    const questions = [
+      {
+        id: "deploy",
+        header: "部署方式",
+        question: "服务端怎么部署？",
+        options: [{ label: "执行机", description: "我写清单" }, { label: "这次不部署" }],
+        default: "这次不部署",
+      },
+    ];
+    expect(
+      goals.waitForUser(sessionId, {
+        goalId: run.goal.goalId,
+        revision: run.goal.revision,
+        questions,
+      }),
+    ).toMatchObject({ ok: true });
+    expect(events.at(-1)).toMatchObject({
+      type: "goal_progress",
+      gaps: "等待你的回复",
+      waitingForUser: "部署方式: 服务端怎么部署？ [执行机 / 这次不部署]",
+      waitingForUserDetail: { level: "preference", questions },
+    });
+    expect(events.at(-1)).not.toHaveProperty("waitingQuestions");
+    // The reminder spells the choices out once, without doubling the question.
+    expect(goals.instruction(run)).toContain(
+      "your question: 部署方式: 服务端怎么部署？ [执行机 / 这次不部署] It is still",
+    );
+    expect(goals.instruction(run)).toContain("Never write a multiple-choice question as text");
+  });
+
+  test("invalid structured choices are refused before anything is shown", () => {
+    const run = goals.start(sessionId, "发版并部署")!;
+    const before = events.length;
+    expect(
+      goals.waitForUser(sessionId, {
+        goalId: run.goal.goalId,
+        revision: run.goal.revision,
+        question: "需要你决定",
+        questions: [{ question: "选？", options: [{ label: "A" }] }],
+      }),
+    ).toMatchObject({ ok: false, message: expect.stringContaining("2 to 4") });
+    expect(events).toHaveLength(before);
+    expect(goals.pendingQuestion(sessionId)).toBeUndefined();
+  });
 });
 
 describe("external Goal waiting on background work", () => {
@@ -550,20 +597,30 @@ describe("external Goal questions", () => {
       ...extra,
     });
 
-  test("a structured question carries options, default and level without repeating the text", () => {
+  test("flat options are shorthand for one structured question, without repeating the text", () => {
     const run = goals.start(sessionId, "发布")!;
     expect(
       ask(run, {
         question: "发 rc 还是正式版？",
-        options: [" rc ", "正式版", "rc"],
-        default: "rc",
+        options: [" rc ", "正式版"],
+        default: "正式版",
         level: "preference",
       }),
     ).toMatchObject({ ok: true });
     const event = events.at(-1) as Extract<StreamEvent, { type: "goal_progress" }>;
     expect(event).toMatchObject({
       waitingForUser: "发 rc 还是正式版？",
-      waitingForUserDetail: { level: "preference", options: ["rc", "正式版"], default: "rc" },
+      waitingForUserDetail: {
+        level: "preference",
+        questions: [
+          {
+            id: "q1",
+            question: "发 rc 还是正式版？",
+            options: [{ label: "rc" }, { label: "正式版" }],
+            default: "正式版",
+          },
+        ],
+      },
       gaps: "等待你的回复",
     });
     expect(event.gaps).not.toContain("发 rc");
@@ -578,8 +635,18 @@ describe("external Goal questions", () => {
     });
   });
 
-  test("a consent question is yes/no: options and default are dropped", () => {
+  test("a consent question is one yes/no question: options and default are dropped", () => {
     const run = goals.start(sessionId, "部署")!;
+    const yesNo = { options: [{ label: "是" }, { label: "否" }] };
+    expect(
+      ask(run, {
+        level: "consent",
+        questions: [
+          { id: "a", question: "写入密钥吗？", ...yesNo },
+          { id: "b", question: "顺便发布吗？", ...yesNo },
+        ],
+      }),
+    ).toMatchObject({ ok: false, message: expect.stringContaining("single question") });
     expect(
       ask(run, {
         question: "要把新密钥写入生产服务器吗？",
@@ -600,9 +667,18 @@ describe("external Goal questions", () => {
       { question: "长".repeat(601) },
       { question: "继续吗？", level: "urgent" },
       { question: "继续吗？", options: "是" },
-      { question: "继续吗？", options: ["1", "2", "3", "4", "5", "6", "7"] },
-      { question: "继续吗？", options: ["x".repeat(81)] },
-      { question: "继续吗？", default: 3 },
+      { question: "继续吗？", options: ["1", "2", "3", "4", "5"] },
+      { question: "继续吗？", options: ["只有一个"] },
+      { question: "继续吗？", options: ["是", "x".repeat(81)] },
+      { question: "继续吗？", options: ["是", "是"] },
+      { question: "继续吗？", options: ["是", "否"], default: "都行" },
+      { question: "继续吗？", default: "是" },
+      { options: ["是", "否"] },
+      {
+        question: "继续吗？",
+        options: ["是", "否"],
+        questions: [{ id: "a", question: "继续吗？", options: [{ label: "是" }, { label: "否" }] }],
+      },
     ]) {
       const result = ask(run, bad);
       expect(result.ok).toBe(false);
@@ -658,7 +734,11 @@ describe("external Goal questions", () => {
     expect(goals.pendingQuestion(sessionId)).toBe("发 rc 还是正式版？");
     expect(events.at(-1)).toMatchObject({
       waitingForUser: "发 rc 还是正式版？",
-      waitingForUserDetail: { options: ["rc", "正式版"] },
+      waitingForUserDetail: {
+        questions: [
+          { question: "发 rc 还是正式版？", options: [{ label: "rc" }, { label: "正式版" }] },
+        ],
+      },
     });
     // The Goal keeps waiting on the original instead of continuing by itself.
     expect(goals.afterTurn(resumed, 1, "仍在等")).toBe(false);

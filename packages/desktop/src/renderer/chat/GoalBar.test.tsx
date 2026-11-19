@@ -2,7 +2,9 @@ import { describe, expect, test } from "bun:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { formatGoalElapsed, GoalBar } from "./GoalBar";
-import type { ActiveGoal } from "../types";
+import { goalChoicesAnswer, goalChoicesComplete } from "./GoalReplyChoices";
+import type { ActiveGoal, GoalUserQuestion } from "../types";
+import { goalQuestionsText } from "../../shared/goal-questions";
 
 const goal: ActiveGoal = {
   objective: "帮我看看设计工作台怎么优化能够对标 figma",
@@ -178,13 +180,23 @@ describe("GoalBar", () => {
     expect(html).toContain("在下方输入框回答");
   });
 
-  test("a preference question offers its options as chips and marks the default", () => {
+  test("a preference question offers its options and marks the stated default as recommended", () => {
     const html = renderToStaticMarkup(
       <GoalBar
         goal={{
           ...goal,
           waitingForUser: "发 rc 还是正式版？",
-          waitingDetail: { level: "preference", options: ["rc", "正式版"], default: "rc" },
+          waitingDetail: {
+            level: "preference",
+            questions: [
+              {
+                id: "q1",
+                question: "发 rc 还是正式版？",
+                options: [{ label: "rc" }, { label: "正式版" }],
+                default: "正式版",
+              },
+            ],
+          },
         }}
         busy={false}
         now={at(0)}
@@ -195,25 +207,13 @@ describe("GoalBar", () => {
     expect(html.match(/data-goal-reply-choice=/g)).toHaveLength(2);
     expect(html.match(/data-goal-reply-choice="default"/g)).toHaveLength(1);
     expect(html).toContain("正式版");
-    expect(html).toContain("· 默认");
+    expect(html).toMatch(/data-goal-reply-choice="default"[^>]*>.*?正式版.*?>推荐</);
+    // The lone question is the banner's text, shown once.
+    const banner = html.slice(html.indexOf("data-goal-reply="));
+    expect(banner.match(/发 rc 还是正式版？/g)).toHaveLength(2); // text + radiogroup label
+    expect(html).not.toContain("<legend");
+    expect(html).not.toContain("data-goal-reply-submit");
     expect(html).not.toContain("<textarea");
-  });
-
-  test("a free-text default becomes one more chip", () => {
-    const html = renderToStaticMarkup(
-      <GoalBar
-        goal={{
-          ...goal,
-          waitingForUser: "分支叫什么？",
-          waitingDetail: { level: "preference", default: "fix/login" },
-        }}
-        busy={false}
-        now={at(0)}
-        onReply={() => {}}
-      />,
-    );
-    expect(html.match(/data-goal-reply-choice="default"/g)).toHaveLength(1);
-    expect(html).toContain("fix/login");
   });
 
   test("a consent question renders explicit 同意 / 不同意 instead of model options", () => {
@@ -222,7 +222,12 @@ describe("GoalBar", () => {
         goal={{
           ...goal,
           waitingForUser: "要把新密钥写入生产服务器吗？",
-          waitingDetail: { level: "consent", options: ["随便"], default: "随便" },
+          waitingDetail: {
+            level: "consent",
+            questions: [
+              { id: "q1", question: "选？", options: [{ label: "随便" }, { label: "都行" }] },
+            ],
+          },
         }}
         busy={false}
         now={at(0)}
@@ -243,7 +248,16 @@ describe("GoalBar", () => {
         goal={{
           ...goal,
           waitingForUser: "发 rc 还是正式版？",
-          waitingDetail: { level: "preference", options: ["rc", "正式版"] },
+          waitingDetail: {
+            level: "preference",
+            questions: [
+              {
+                id: "q1",
+                question: "发 rc 还是正式版？",
+                options: [{ label: "rc" }, { label: "正式版" }],
+              },
+            ],
+          },
         }}
         busy={false}
         now={at(0)}
@@ -263,7 +277,16 @@ describe("GoalBar", () => {
         goal={{
           ...goal,
           waitingForUser: "发 rc 还是正式版？",
-          waitingDetail: { level: "preference", options: ["rc"] },
+          waitingDetail: {
+            level: "preference",
+            questions: [
+              {
+                id: "q1",
+                question: "发 rc 还是正式版？",
+                options: [{ label: "rc" }, { label: "正式版" }],
+              },
+            ],
+          },
         }}
         busy
         now={at(0)}
@@ -274,5 +297,86 @@ describe("GoalBar", () => {
     expect(html).toContain('role="alert"');
     expect(html).toContain("回复未发送，请重试。");
     expect(html).toMatch(/disabled=""[^>]*data-goal-reply-choice/);
+  });
+
+  const deploy = {
+    id: "deploy",
+    header: "部署方式",
+    question: "服务端怎么部署？",
+    options: [
+      { label: "你在执行机上部署", description: "我写部署计划和验收清单" },
+      { label: "给我服务器访问方式" },
+    ],
+  };
+  const release: GoalUserQuestion = {
+    id: "release",
+    header: "发版",
+    question: "发哪个版本？",
+    options: [{ label: "rc.3" }, { label: "合并后发 0.11.0" }],
+    default: "合并后发 0.11.0",
+  };
+
+  test("structured choices render as option cards in the banner; long context starts collapsed", () => {
+    const context =
+      "生产服务器部署我这台机器连不上：SSH 都被拒，也没有 tccli，Link 里也没有腾讯云连接。上次是在执行机上部署的，所以这次需要你决定部署方式，以及发版指的是哪一个版本。v0.11.0-rc.3 的发布流水线已经在跑，网页优化 PR 合并后也可以再发正式版。";
+    const html = renderToStaticMarkup(
+      <GoalBar
+        goal={{
+          ...goal,
+          waitingForUser: context,
+          waitingDetail: { level: "preference", questions: [deploy, release] },
+        }}
+        busy={false}
+        now={at(0)}
+        onReply={() => {}}
+      />,
+    );
+    // One banner, no input of its own: free-form answers use the main composer.
+    expect(html.match(/data-goal-reply=/g)).toHaveLength(1);
+    expect(html).not.toContain("<textarea");
+    expect(html).not.toContain("<input");
+    expect(html.match(/role="radiogroup"/g)).toHaveLength(2);
+    expect(html).toContain("部署方式");
+    expect(html).toContain("我写部署计划和验收清单");
+    // Recommended: the first option, or the stated default.
+    expect(html.match(/>推荐</g)).toHaveLength(2);
+    expect(html).toMatch(/data-goal-reply-choice="default"[^>]*>.*?你在执行机上部署/);
+    expect(html).toMatch(/data-goal-reply-choice="option"[^>]*>.*?rc\.3/);
+    expect(html).toContain("line-clamp-2");
+    expect(html).toContain("展开说明");
+    // Several questions are sent together, and only once each has a pick.
+    expect(html).toMatch(
+      /<button[^>]*disabled=""[^>]*data-goal-reply-submit|data-goal-reply-submit[^>]*disabled=""/,
+    );
+  });
+
+  test("a lone question with a header keeps its header and is not repeated as context", () => {
+    const html = renderToStaticMarkup(
+      <GoalBar
+        goal={{
+          ...goal,
+          waitingForUser: goalQuestionsText([deploy]),
+          waitingDetail: { level: "preference", questions: [deploy] },
+        }}
+        busy={false}
+        now={at(0)}
+        onReply={() => {}}
+      />,
+    );
+    expect(html).toContain("<legend");
+    expect(html.slice(html.indexOf("data-goal-reply="))).not.toContain(goalQuestionsText([deploy]));
+    expect(html).not.toContain("data-goal-reply-submit");
+  });
+
+  test("the combined answer lists one line per question under its header", () => {
+    expect(goalChoicesComplete([deploy, release], { deploy: "给我服务器访问方式" })).toBe(false);
+    const choices = { deploy: "你在执行机上部署", release: "rc.3" };
+    expect(goalChoicesComplete([deploy, release], choices)).toBe(true);
+    expect(goalChoicesAnswer([deploy, release], choices)).toBe(
+      "部署方式：你在执行机上部署\n发版：rc.3",
+    );
+    expect(goalChoicesAnswer([deploy], choices)).toBe("部署方式：你在执行机上部署");
+    // A lone question without a header is answered with the bare label.
+    expect(goalChoicesAnswer([{ ...release, header: undefined }], choices)).toBe("rc.3");
   });
 });

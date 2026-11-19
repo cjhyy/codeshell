@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { SessionManager, type GoalConfig, type StreamEvent } from "@cjhyy/code-shell-core";
 import { goalGetPayload } from "@cjhyy/code-shell-core/internal";
+import {
+  goalQuestionFullText,
+  normalizeGoalQuestion,
+  type GoalQuestion,
+} from "../shared/goal-questions.js";
 
 /**
  * Consecutive provider turns without progress (the same reply again, or a turn
@@ -18,22 +23,7 @@ export const EXTERNAL_GOAL_TOOLS = [
   "wait_for_user",
   "wait_for_background",
 ] as const;
-/** A question is one or two sentences; background belongs in the reply text. */
-export const EXTERNAL_GOAL_MAX_QUESTION_CHARS = 600;
-export const EXTERNAL_GOAL_MAX_OPTIONS = 6;
-export const EXTERNAL_GOAL_MAX_OPTION_CHARS = 80;
 const MAX_CLOSED_QUESTIONS = 8;
-
-/** L1 "preference": has a sensible default. L2 "consent": needs explicit agreement. */
-export type ExternalGoalQuestionLevel = "preference" | "consent";
-
-/** A wait_for_user question as the host shows it (never repeated in reply text). */
-export interface ExternalGoalQuestion {
-  text: string;
-  level: ExternalGoalQuestionLevel;
-  options?: string[];
-  default?: string;
-}
 
 /** Whether a provider-reported tool name is one of the Goal controller tools. */
 export function isExternalGoalToolName(toolName: string): boolean {
@@ -42,60 +32,6 @@ export function isExternalGoalToolName(toolName: string): boolean {
 }
 
 const sameQuestion = (text: string) => text.replace(/\s+/gu, " ").trim().toLowerCase();
-
-/** Validate wait_for_user arguments; a bare `question` stays valid. */
-export function parseExternalGoalQuestion(
-  args: Record<string, unknown>,
-): { question: ExternalGoalQuestion } | { error: string } {
-  const text = typeof args.question === "string" ? args.question.trim() : "";
-  if (!text) return { error: "wait_for_user needs the question you are asking the user." };
-  if (text.length > EXTERNAL_GOAL_MAX_QUESTION_CHARS) {
-    return {
-      error: `The question must be at most ${EXTERNAL_GOAL_MAX_QUESTION_CHARS} characters: ask one short question and put background in your reply.`,
-    };
-  }
-  if (args.level !== undefined && args.level !== "preference" && args.level !== "consent") {
-    return { error: 'level must be "preference" or "consent".' };
-  }
-  const level: ExternalGoalQuestionLevel = args.level === "consent" ? "consent" : "preference";
-  let options: string[] | undefined;
-  if (args.options !== undefined) {
-    if (
-      !Array.isArray(args.options) ||
-      args.options.length > EXTERNAL_GOAL_MAX_OPTIONS ||
-      args.options.some(
-        (option) =>
-          typeof option !== "string" ||
-          !option.trim() ||
-          option.trim().length > EXTERNAL_GOAL_MAX_OPTION_CHARS,
-      )
-    ) {
-      return {
-        error: `options must be at most ${EXTERNAL_GOAL_MAX_OPTIONS} short labels (${EXTERNAL_GOAL_MAX_OPTION_CHARS} characters each).`,
-      };
-    }
-    options = [...new Set((args.options as string[]).map((option) => option.trim()))];
-  }
-  if (
-    args.default !== undefined &&
-    (typeof args.default !== "string" ||
-      !args.default.trim() ||
-      args.default.trim().length > EXTERNAL_GOAL_MAX_QUESTION_CHARS)
-  ) {
-    return { error: "default must be one of the options or a short text." };
-  }
-  const fallback = typeof args.default === "string" ? args.default.trim() : undefined;
-  return {
-    question: {
-      text,
-      level,
-      // A consent question is answered 同意 / 不同意; the host supplies those.
-      ...(options?.length && level !== "consent" ? { options } : {}),
-      // Consent never has a default: silence or an ambiguous reply is not agreement.
-      ...(fallback && level !== "consent" ? { default: fallback } : {}),
-    },
-  };
-}
 
 /** Why a Goal paused; clients and notices read this, never the `gaps` text. */
 export type ExternalGoalPauseReason = Extract<
@@ -204,7 +140,7 @@ export class ExternalRuntimeGoals {
   private readonly manager = new SessionManager();
   private readonly runs = new Map<string, ExternalGoalRun>();
   /** Questions the model is waiting on, per Session, until the user replies. */
-  private readonly pendingQuestions = new Map<string, ExternalGoalQuestion>();
+  private readonly pendingQuestions = new Map<string, GoalQuestion>();
   /** Questions the user already replied to or passed over; never asked again. */
   private readonly closedQuestions = new Map<string, string[]>();
   /** Goal versions a budget or limit paused (not the user), per Session. */
@@ -378,7 +314,7 @@ export class ExternalRuntimeGoals {
           "You already asked the user a question in this turn; only one is allowed. End your turn now and wait for the reply.",
       };
     }
-    const parsed = parseExternalGoalQuestion(args);
+    const parsed = normalizeGoalQuestion(args);
     if ("error" in parsed) return { ok: false, message: parsed.error };
     const pending = this.pendingQuestions.get(sessionId);
     if (this.closedQuestions.get(sessionId)?.includes(sameQuestion(parsed.question.text))) {
@@ -412,14 +348,13 @@ export class ExternalRuntimeGoals {
       waitingForUser: question.text,
       waitingForUserDetail: {
         level: question.level,
-        ...(question.options ? { options: question.options } : {}),
-        ...(question.default ? { default: question.default } : {}),
+        ...(question.questions ? { questions: question.questions } : {}),
       },
     });
     if (replaced) {
       return {
         ok: false,
-        message: `Your earlier question is still waiting for the user's reply, so the new one was not shown: ${pending.text} The goal keeps waiting on it. End your turn now.`,
+        message: `Your earlier question is still waiting for the user's reply, so the new one was not shown: ${goalQuestionFullText(pending.text, pending.questions)} The goal keeps waiting on it. End your turn now.`,
       };
     }
     return {
@@ -517,6 +452,12 @@ export class ExternalRuntimeGoals {
 
   pendingQuestion(sessionId: string): string | undefined {
     return this.pendingQuestions.get(sessionId)?.text;
+  }
+
+  /** The open question with its choices spelled out, as the model is reminded of it. */
+  private pendingQuestionForModel(sessionId: string): string {
+    const pending = this.pendingQuestions.get(sessionId)!;
+    return goalQuestionFullText(pending.text, pending.questions);
   }
 
   /** Automatic work must respect a user wait after the in-memory question is gone. */
@@ -820,14 +761,14 @@ export class ExternalRuntimeGoals {
       `CodeShell does not stop this goal on a timer or after a number of turns. It stops driving it only when the user pauses it, when ${run.maxStopBlocks} turns in a row make no progress (the same reply again, or a turn that runs no tool), or when a budget the user set for it runs out${this.budgetNote(run)}. If it stops, do not claim completion.`,
       "CodeShell sends automatic continuation messages (such as 继续处理尚未完成的目标 or 继续执行已保存的目标) to keep this goal moving. Such a message is not a reply from the user: it never answers a question you asked and never grants an approval you requested.",
       'Decisions come in three levels. L0, a reversible engineering or quality decision (how to split a change, which step first, naming): decide it yourself and do not ask. L1, a preference with a sensible default (for example which kind of release was meant): state the default you are taking, proceed with it, and list it in your final summary so the user can change it. L2, anything irreversible or outward-facing: writes to production or live systems, publishing or sending to other people, deleting data that cannot be restored, creating or installing credentials or keys, granting new permissions, spending money. For L2 you must ask with level "consent" and act only after the user explicitly agrees; a reply that is ambiguous, off-topic or merely asks you to look into it is not consent, so do the other safe work and leave that step undone.',
-      'To ask, call mcp__codeshell_tools__wait_for_user with this goalId and revision, one short question, level ("preference" or "consent"), and when they help short options and the default you would take. CodeShell shows the question to the user and the goal stops until they reply: do not repeat the question in your reply text, and end your turn after the call. Only one wait_for_user call is accepted per turn, so put every open decision into that one question.',
+      'To ask, call mcp__codeshell_tools__wait_for_user with this goalId and revision and a level ("preference" or "consent"). When the answer is a choice between known options, pass them as `questions` (1-3 short questions, each with 2-4 options, the recommended one first; add `default` only when you would take another one); the user picks them in a banner. Never write a multiple-choice question as text. Keep `question` to one or two sentences (it is optional when `questions` is given) and put longer background in your reply. A consent call is a single yes/no question. CodeShell shows the question to the user and the goal stops until they reply: do not repeat the question in your reply text, and end your turn after the call. Only one wait_for_user call is accepted per turn, so put every open decision into that one call.',
       "Ask sparingly. Never ask again a question the user has already answered, skipped or left unanswered: act on their answer, or keep the default you stated and mention it in your summary.",
       "When background work you started is still running, CodeShell tells you when it completes; do not poll or sleep. Keep doing work that does not depend on it. Only when nothing is left to do until it finishes, call mcp__codeshell_tools__wait_for_background with this goalId and revision and end your turn; the goal then parks and resumes on completion.",
       "Never present the current state of a live, remote or production system (what is deployed, what a server or database contains, what is published) as fact unless you checked it in this session. Otherwise label the claim explicitly as inferred from documentation and unverified, and verify before planning irreversible steps on it.",
       "When the objective is a matter of judgment (looks good enough, no obvious differences, acceptable quality), the user's verdict decides it. If the user says the current result is acceptable or good enough (for example 可以接受, 还好, 行, 就这样), take that as acceptance of the result as a whole, not only of the part you showed, unless they explicitly limit it. Then finish wrap-up work such as committing and recording known limitations, and call mcp__codeshell_tools__complete_goal; do not ask the user to accept the remaining items one by one.",
       ...(this.pendingQuestions.has(run.sessionId)
         ? [
-            `The user has not yet answered your question: ${this.pendingQuestions.get(run.sessionId)!.text} It is still shown to them. Do not proceed with anything that depends on that answer; if nothing else is left to do, call wait_for_user with the same question to keep waiting.`,
+            `The user has not yet answered your question: ${this.pendingQuestionForModel(run.sessionId)} It is still shown to them. Do not proceed with anything that depends on that answer; if nothing else is left to do, call wait_for_user with the same question to keep waiting.`,
           ]
         : []),
       "</codeshell_goal>",

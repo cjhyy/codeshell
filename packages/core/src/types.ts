@@ -884,14 +884,21 @@ type StreamEventPayload =
       /** The Goal stopped to wait for the user's answer to this question (wait_for_user). */
       waitingForUser?: string;
       /**
-       * Structure of that question, when the asker supplied it: short option
-       * labels, the default the agent proceeds with, and whether it needs the
-       * user's explicit consent. Clients that ignore it still show the text.
+       * Structure of that question: whether it needs the user's explicit
+       * consent, and for a choice 1-3 short questions with mutually exclusive
+       * options (recommended first; `default` names another one the agent
+       * would take). `waitingForUser` stays the plain-text form, so clients
+       * that ignore this field still show the question.
        */
       waitingForUserDetail?: {
         level: "preference" | "consent";
-        options?: string[];
-        default?: string;
+        questions?: Array<{
+          id: string;
+          header?: string;
+          question: string;
+          options: Array<{ label: string; description?: string }>;
+          default?: string;
+        }>;
       };
       /**
        * The Goal paused with this marker, and why: one of its limits ran out,

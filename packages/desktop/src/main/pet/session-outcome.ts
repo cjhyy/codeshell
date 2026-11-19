@@ -36,6 +36,12 @@
 
 import { isAbsolute } from "node:path";
 import type { ChangedFiles } from "./pet-notice-action-codes.js";
+import {
+  goalQuestionContext,
+  goalQuestionFullText,
+  goalQuestionRecommended,
+  replayedGoalQuestionDetail,
+} from "../../shared/goal-questions.js";
 
 export type SessionBlockReason = "user" | "limit" | "goal_exhausted";
 
@@ -54,21 +60,27 @@ export interface SessionQuestionOption {
   recommended?: boolean;
 }
 
-const MAX_QUESTION_OPTIONS = 6;
-const MAX_OPTION_LENGTH = 80;
-
-/** Options of a `wait_for_user` question; its stated default is the recommended one. */
-function questionOptions(detail: unknown): SessionQuestionOption[] | undefined {
-  if (!detail || typeof detail !== "object") return undefined;
-  const { options, default: fallback } = detail as { options?: unknown; default?: unknown };
-  if (!Array.isArray(options)) return undefined;
-  const labels = options
-    .map((option) => boundedText(option, MAX_OPTION_LENGTH))
-    .filter((label): label is string => label !== undefined)
-    .slice(0, MAX_QUESTION_OPTIONS);
-  return labels.length > 0
-    ? labels.map((label) => (label === fallback ? { label, recommended: true } : { label }))
-    : undefined;
+/**
+ * A `wait_for_user` question as a notice states it. One question keeps its
+ * options as one-tap answers, recommended one marked; several questions are
+ * spelled out in the text, because a single tap cannot answer them all.
+ */
+function noticeQuestion(
+  text: string,
+  detail: unknown,
+): { question: string; options?: SessionQuestionOption[] } {
+  const questions = replayedGoalQuestionDetail(text, detail)?.questions;
+  if (!questions) return { question: text };
+  if (questions.length > 1) return { question: goalQuestionFullText(text, questions) };
+  const only = questions[0]!;
+  const context = goalQuestionContext(text, questions);
+  const recommended = goalQuestionRecommended(only);
+  return {
+    question: context ? `${context} ${only.question}` : only.question,
+    options: only.options.map(({ label }) =>
+      label === recommended ? { label, recommended: true } : { label },
+    ),
+  };
 }
 
 interface SessionOutcomeBase {
@@ -502,11 +514,16 @@ export class SessionOutcomeDeriver {
       return [{ ...base, kind: "done", scope: "goal", ...(goalId ? { goalId } : {}), ...changed }];
     }
     // Core carries the question itself in `waitingForUser`; accept a bare flag too.
-    const question = boundedText(event.waitingForUser, MAX_FACT_LENGTH);
-    const waiting = question !== undefined || event.waitingForUser === true;
+    const asked = boundedText(event.waitingForUser, MAX_FACT_LENGTH);
+    const waiting = asked !== undefined || event.waitingForUser === true;
     if (PAUSE_LIMITS.includes(event.pauseReason as string))
       state.limit = event.pauseReason as SessionPauseLimit;
-    const options = question ? questionOptions(event.waitingForUserDetail) : undefined;
+    // Structure is matched against the untruncated text; the fact is bounded after.
+    const stated = asked
+      ? noticeQuestion((event.waitingForUser as string).trim(), event.waitingForUserDetail)
+      : undefined;
+    const question = stated && boundedText(stated.question, MAX_FACT_LENGTH);
+    const options = stated?.options;
     const exhausted = event.status === "exhausted";
     if (!waiting && !exhausted) return [];
     const reason = exhausted ? "goal_exhausted" : "user";

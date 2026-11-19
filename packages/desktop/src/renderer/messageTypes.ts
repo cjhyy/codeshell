@@ -12,6 +12,7 @@ import type {
 } from "@cjhyy/code-shell-core";
 import type { TaskInfo } from "@cjhyy/code-shell-core/internal";
 import type { PetChatAttachment } from "../shared/pet-chat-attachments";
+import type { GoalQuestionDetail, GoalUserQuestion } from "../shared/goal-questions";
 
 export type ToolStatus = "queued" | "running" | "succeeded" | "failed" | "denied" | "cancelled";
 
@@ -208,12 +209,7 @@ export interface GoalProgressMessage {
   questionClosed?: boolean;
 }
 
-/** How a goal question is answered: option chips, a default, or explicit consent. */
-export interface GoalQuestionDetail {
-  level: "preference" | "consent";
-  options?: string[];
-  default?: string;
-}
+export type { GoalQuestionDetail, GoalUserQuestion };
 
 /** Renderer projection of the session's persisted Goal state. */
 export interface ActiveGoal {

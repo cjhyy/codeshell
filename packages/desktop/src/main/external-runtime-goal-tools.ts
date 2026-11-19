@@ -1,12 +1,7 @@
 import type { RegisteredTool } from "@cjhyy/code-shell-core";
 import type { BuiltinToolExposure } from "@cjhyy/code-shell-core/extension";
-import {
-  EXTERNAL_GOAL_MAX_OPTION_CHARS,
-  EXTERNAL_GOAL_MAX_OPTIONS,
-  EXTERNAL_GOAL_MAX_QUESTION_CHARS,
-  EXTERNAL_GOAL_TOOLS,
-  type ExternalRuntimeGoals,
-} from "./external-runtime-goals.js";
+import { EXTERNAL_GOAL_TOOLS, type ExternalRuntimeGoals } from "./external-runtime-goals.js";
+import { GOAL_WAIT_FOR_USER_PROPERTIES } from "../shared/goal-questions.js";
 
 type GoalToolName = (typeof EXTERNAL_GOAL_TOOLS)[number];
 
@@ -38,33 +33,11 @@ const CONTRACTS: Record<
   },
   wait_for_user: {
     description:
-      "Stop the CodeShell goal until the user replies, when you need their decision, consent or missing information. CodeShell shows the question to the user: do not repeat it in your reply text. At most one call per turn; never re-ask a question that is still unanswered or that the user already passed over.",
-    properties: {
-      ...IDENTITY,
-      question: {
-        type: "string",
-        maxLength: EXTERNAL_GOAL_MAX_QUESTION_CHARS,
-        description: "One short question. Background and detail belong in your reply text.",
-      },
-      options: {
-        type: "array",
-        maxItems: EXTERNAL_GOAL_MAX_OPTIONS,
-        items: { type: "string", maxLength: EXTERNAL_GOAL_MAX_OPTION_CHARS },
-        description: "Optional short answer labels the user can pick with one click.",
-      },
-      default: {
-        type: "string",
-        description:
-          "Optional: the option (or short text) you would take if the user has no preference.",
-      },
-      level: {
-        type: "string",
-        enum: ["preference", "consent"],
-        description:
-          '"preference": a choice with a sensible default. "consent": an irreversible, outward-facing, production, credential or spending action that needs the user\'s explicit agreement; it is shown as agree / disagree, and options and default are ignored.',
-      },
-    },
-    required: ["goalId", "revision", "question"],
+      "Stop the CodeShell goal until the user replies, when you need their decision, consent or missing information. " +
+      "For a choice between known options, pass `questions` so the user picks from a banner; never write a multiple-choice question as text. " +
+      "CodeShell shows the question to the user: do not repeat it in your reply text. At most one call per turn; never re-ask a question that is still unanswered or that the user already passed over.",
+    properties: { ...IDENTITY, ...GOAL_WAIT_FOR_USER_PROPERTIES },
+    required: ["goalId", "revision"],
   },
   wait_for_background: {
     description:

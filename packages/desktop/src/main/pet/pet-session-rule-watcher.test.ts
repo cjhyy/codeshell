@@ -444,8 +444,14 @@ describe("blocked", () => {
         waitingForUser: "发正式版还是预发布？",
         waitingForUserDetail: {
           level: "preference",
-          options: ["正式版", "预发布"],
-          default: "预发布",
+          questions: [
+            {
+              id: "release",
+              question: "发正式版还是预发布？",
+              options: [{ label: "正式版", description: "直接对外" }, { label: "预发布" }],
+              default: "预发布",
+            },
+          ],
         },
       }),
     ]);
@@ -460,6 +466,43 @@ describe("blocked", () => {
       },
     ]);
     expect(drafts[0]!.facts).not.toHaveProperty("pause");
+  });
+
+  test("structured questions reach the notice: context joins one question, several are spelled out", async () => {
+    rules.rules.push(sessionRule("rule-a", { scope: "goal" }));
+    const deploy = {
+      id: "deploy",
+      header: "部署方式",
+      question: "服务端怎么部署？",
+      options: [{ label: "执行机" }, { label: "这次不部署" }],
+    };
+    const release = {
+      id: "release",
+      header: "发版",
+      question: "发哪个版本？",
+      options: [{ label: "rc" }, { label: "正式版" }],
+    };
+    const ask = (round: number, questions: object[]) =>
+      goal("not_met", {
+        round,
+        waitingForUser: "连不上生产服务器。",
+        waitingForUserDetail: { level: "preference", questions },
+      });
+    const one = watcher();
+    await feed(one, [started(), ask(1, [deploy])]);
+    expect(drafts.at(-1)!.facts).toMatchObject({
+      question: "连不上生产服务器。 服务端怎么部署？",
+      // Without a stated default the first option is the recommended one.
+      options: [{ label: "执行机", recommended: true }, { label: "这次不部署" }],
+    });
+    drafts.length = 0;
+    const several = watcher();
+    await feed(several, [started(), ask(1, [deploy, release])]);
+    expect(drafts.at(-1)!.facts.question).toBe(
+      "连不上生产服务器。 部署方式: 服务端怎么部署？ [执行机 / 这次不部署]; 发版: 发哪个版本？ [rc / 正式版]",
+    );
+    // One tap cannot answer two questions, so no one-tap options are offered.
+    expect(drafts.at(-1)!.facts).not.toHaveProperty("options");
   });
 
   test("goal waiting for the user emits blocked with the question and revision key", async () => {

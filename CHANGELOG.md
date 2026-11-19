@@ -8,6 +8,15 @@ breaking.
 
 ## [Unreleased]
 
+### Changed
+
+- When a Codex or Claude Code Goal stops to ask you something, the question is
+  shown once in a banner above the composer, as short questions with option cards
+  (recommended first) instead of one long paragraph. Pick the options, or type any
+  other answer in the composer; several questions are sent as one reply. A step
+  that needs your consent offers explicit agree / disagree. Long background text
+  starts collapsed.
+
 ## [0.11.0-rc.3] - 2026-11-19
 
 Release candidate for the desktop, website and account computer flow, plus the

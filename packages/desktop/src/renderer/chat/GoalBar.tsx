@@ -17,6 +17,7 @@ import { useT } from "../i18n/I18nProvider";
 import type { ActiveGoal } from "../types";
 import { goalElapsedMs } from "../goalClock";
 import { GoalReplyCard } from "./GoalReplyCard";
+import type { GoalReplyChoices } from "./GoalReplyChoices";
 import type { MarkdownRootStatus } from "../Markdown";
 
 /** `12h 57m 34s` / `3m 05s` / `45s` — accumulated goal time. */
@@ -88,15 +89,24 @@ export function GoalBar({
     goal.objective,
     goal.round,
     goal.waitingForUser,
+    goal.waitingDetail,
   ]);
   // Keep a failed one-click answer visible through the optimistic
   // waiting -> running -> failed launch transition, for this question only.
   const [failedReplyKey, setFailedReplyKey] = React.useState("");
+  // Picks survive the card unmounting while its answer is being sent.
+  const [replyChoices, setReplyChoices] = React.useState<{
+    key: string;
+    choices: GoalReplyChoices;
+  }>({ key: "", choices: {} });
   const reply = onReply
     ? async (answer: string): Promise<void> => {
         setFailedReplyKey("");
         try {
           await onReply(answer);
+          setReplyChoices((previous) =>
+            previous.key === replyKey ? { key: "", choices: {} } : previous,
+          );
         } catch (error) {
           setFailedReplyKey(replyKey);
           throw error;
@@ -363,6 +373,11 @@ export function GoalBar({
           key={replyKey}
           question={goal.waitingForUser!}
           detail={goal.waitingDetail}
+          choices={replyChoices.key === replyKey ? replyChoices.choices : undefined}
+          onChoicesChange={(choices) => {
+            setReplyChoices({ key: replyKey, choices });
+            setFailedReplyKey("");
+          }}
           onReply={reply}
           failed={replyFailed || failedReplyKey === replyKey}
           disabled={pending || busy || replyDisabled}

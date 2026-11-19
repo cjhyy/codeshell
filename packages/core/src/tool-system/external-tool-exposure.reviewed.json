@@ -399,6 +399,6 @@
     "status": "exposed",
     "requires": "goal-controller",
     "reason": "Host-owned persisted Goal controller with goalId/revision checks. Available only with Host tools in execution mode; native Engine acknowledgement handlers remain excluded.",
-    "contractFingerprint": "eeccb2ed6388ea16f9f8f3e93ee8715b23a4e2cb9aa4bf54da94695322192baf"
+    "contractFingerprint": "9252ef4e787a9a908f2a2725f38dc9aee1482c6393dfb40908b6b4acc6b8277a"
   }
 ]

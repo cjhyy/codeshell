@@ -25,11 +25,20 @@ window.codeshell={sttAvailable:async()=>({available:false}),listPluginCommands:a
 window.addEventListener('codeshell:open-file',event=>window.calls.push(['file',event.detail]));
 const question='请按 100% 显示查看当前原尺寸对照：[查看对照图](/fixture/compare.png)。这处效果在实际编辑时是否仍明显不一致？请回复“这处可接受”，或指出具体异常位置。';
 const initialGoal={objective:'优化设计工作台，一直优化到没有太多样式差异',goalId:'goal-one',revision:2,round:3,paused:false,setAtMs:Date.now()-251174000,activeMs:65000,waitingForUser:question};
+const background='生产服务器从这台机器连不上：SSH 被拒，也没有云厂商的命令行工具。上次是在执行机上部署的，所以这次需要你决定部署方式，以及发版指的是哪一个版本。预发布流水线已经在跑，网页优化合并后也可以再发正式版。两件事互不依赖，可以分别决定；没有选的那一项我会保持现状，不做任何对外操作。';
+const deploy={id:'deploy',header:'部署方式',question:'服务端怎么部署？',options:[{label:'你在执行机上部署',description:'我写部署计划和验收清单'},{label:'这次先不部署'}]};
+const release={id:'release',header:'发版',question:'发哪个版本？',options:[{label:'预发布'},{label:'合并后发正式版',description:'等网页优化合并'}],default:'合并后发正式版'};
+const details={
+ none:()=>({}),
+ options:text=>({waitingDetail:{level:'preference',questions:[{id:'q1',question:text,options:[{label:'这处可接受',description:'按当前效果收尾'},{label:'继续优化'}]}]}}),
+ several:()=>({waitingForUser:background,waitingDetail:{level:'preference',questions:[deploy,release]}}),
+ consent:()=>({waitingDetail:{level:'consent'}}),
+};
 const history=[{kind:'user',id:'human',text:'优化设计工作台'},{kind:'assistant',id:'assistant',text:'已完成当前对照，请确认这处效果。',done:true}];
 function Fixture({width=760,height=800,legacy=false,longQuestion=false,sendFailure='none',detail='none'}){
  const [session,setSession]=React.useState('session-a');
  const [draft,setDraft]=React.useState('');
- const [goal,setGoal]=React.useState(()=>({...initialGoal,...(legacy?{activeMs:undefined}:{}),...(longQuestion?{waitingForUser:question+' 很长的问题内容。'.repeat(100)}:{}),...(detail==='options'?{waitingDetail:{level:'preference',options:['这处可接受','继续优化'],default:'这处可接受'}}:detail==='consent'?{waitingDetail:{level:'consent'}}:{})}));
+ const [goal,setGoal]=React.useState(()=>({...initialGoal,...(legacy?{activeMs:undefined}:{}),...(longQuestion?{waitingForUser:question+' 很长的问题内容。'.repeat(100)}:{}),...details[detail](longQuestion?question+' 很长的问题内容。'.repeat(100):question)}));
  const [busy,setBusy]=React.useState(false);const [openAsk,setOpenAsk]=React.useState(false);
  const [failure,setFailure]=React.useState(sendFailure);const pendingFailure=React.useRef(null);
  const send=(text,opts)=>{window.calls.push(['send',text,opts]);if(failure==='reject')return Promise.reject(new Error('Fixture send rejected'));setBusy(true);setGoal(previous=>({...previous,waitingForUser:undefined,clockSinceMs:Date.now()}));if(failure==='optimistic')return new Promise((_,reject)=>{pendingFailure.current=()=>{setBusy(false);setGoal(goal);reject(new Error('Fixture launch rejected'))}});};
@@ -83,6 +92,8 @@ const question = (page) => page.locator("[data-goal-reply]");
 // The goal question has no input of its own: the one composer answers it.
 const composer = (page) => page.locator("textarea");
 const choice = (page, name) => question(page).getByRole("button", { name, exact: true });
+const cards = (page) => question(page).locator("[data-goal-reply-choice]");
+const card = (page, label) => question(page).getByRole("radio", { name: label });
 const sends = (page) =>
   page.evaluate(() =>
     window.calls
@@ -193,11 +204,19 @@ try {
     },
   );
   await check(
-    "option chips answer with one click, mark the default and cannot double send",
+    "option cards answer one question with one click, mark the recommended one and cannot double send",
     async () => {
       const page = await mount({ detail: "options" });
-      assert.equal(await question(page).getByRole("button").count(), 2);
+      assert.equal(await cards(page).count(), 2);
       assert.equal(await question(page).locator('[data-goal-reply-choice="default"]').count(), 1);
+      // The first option is the recommended one; its description is on the card.
+      assert.match(
+        await cards(page).first().innerText(),
+        /这处可接受[\s\S]*推荐[\s\S]*按当前效果收尾/,
+      );
+      // Still one input on screen, and one question means no separate send button.
+      assert.equal(await page.locator("textarea, input[type=text]").count(), 1);
+      assert.equal(await question(page).locator("[data-goal-reply-submit]").count(), 0);
       await screenshot(page, "waiting-options-light");
       await question(page)
         .locator('[data-goal-reply-choice="option"]')
@@ -208,6 +227,53 @@ try {
       await page.locator('[data-goal-state="running"]').waitFor();
       assert.deepEqual(await sends(page), [["继续优化", "session-a", true]]);
       await page.close();
+    },
+  );
+  await check(
+    "several questions sit in one banner and are sent as one combined answer",
+    async () => {
+      const page = await mount({ detail: "several" });
+      assert.equal(await question(page).count(), 1);
+      assert.equal(await question(page).locator("[data-goal-reply-question]").count(), 2);
+      assert.equal(await cards(page).count(), 4);
+      assert.equal(await question(page).locator('[data-goal-reply-choice="default"]').count(), 2);
+      // The banner adds no input: free-form answers still use the one composer.
+      assert.equal(await page.locator("textarea, input[type=text]").count(), 1);
+      assert.equal(await question(page).locator("textarea, input").count(), 0);
+      // Long background starts collapsed and can be opened.
+      const more = question(page).getByRole("button", { name: "展开说明", exact: true });
+      assert.equal(await more.getAttribute("aria-expanded"), "false");
+      await more.click();
+      await question(page).getByRole("button", { name: "收起", exact: true }).waitFor();
+      const submit = question(page).locator("[data-goal-reply-submit]");
+      assert(await submit.isDisabled());
+      await card(page, "这次先不部署").click();
+      await frames(page);
+      assert.equal(await card(page, "这次先不部署").getAttribute("aria-checked"), "true");
+      // One pick does not send: every question needs one.
+      assert.deepEqual(await sends(page), []);
+      assert(await submit.isDisabled());
+      await card(page, "预发布").click();
+      await card(page, "你在执行机上部署").click();
+      await frames(page);
+      assert.equal(await card(page, "这次先不部署").getAttribute("aria-checked"), "false");
+      await screenshot(page, "waiting-several-light");
+      await submit.evaluate((element) => {
+        element.click();
+        element.click();
+      });
+      await page.locator('[data-goal-state="running"]').waitFor();
+      assert.deepEqual(await sends(page), [
+        ["部署方式：你在执行机上部署\n发版：预发布", "session-a", true],
+      ]);
+      await page.close();
+      // The main composer answers several questions too, without any pick.
+      const typed = await mount({ detail: "several" });
+      await composer(typed).fill("都先别动，等我看完");
+      await composer(typed).press("Enter");
+      await typed.locator('[data-goal-state="running"]').waitFor();
+      assert.deepEqual(await sends(typed), [["都先别动，等我看完", "session-a", true]]);
+      await typed.close();
     },
   );
   await check("a consent question offers explicit agree / disagree in both languages", async () => {
@@ -307,19 +373,18 @@ try {
       },
     );
   }
-  for (const mode of ["light", "dark"]) {
-    await check(mode + " narrow layout keeps the question and chips within the pane", async () => {
-      const page = await mount({
-        width: 360,
-        height: 800,
-        mode,
-        longQuestion: true,
-        detail: "options",
-      });
+  for (const [mode, detail] of [
+    ["light", "options"],
+    ["dark", "options"],
+    ["dark", "several"],
+  ]) {
+    const name = mode + " narrow layout keeps the " + detail + " banner within the pane";
+    await check(name, async () => {
+      const page = await mount({ width: 360, height: 800, mode, longQuestion: true, detail });
       for (const locator of [
         page.locator("[data-goal-state]"),
         question(page),
-        ...(await question(page).getByRole("button").all()),
+        ...(await cards(page).all()),
         composer(page),
       ]) {
         const bounds = await locator.boundingBox();
@@ -332,7 +397,7 @@ try {
       const overflows = await page
         .locator("[data-goal-state]")
         .evaluate((element) => ({ client: element.clientWidth, scroll: element.scrollWidth }));
-      await screenshot(page, "waiting-narrow-" + mode);
+      await screenshot(page, "waiting-narrow-" + detail + "-" + mode);
       if (overflows.scroll > overflows.client + 1) {
         const geometry = await page.locator("[data-goal-state]").evaluate((element) => {
           const bounds = element.getBoundingClientRect();
@@ -346,7 +411,7 @@ try {
             }));
         });
         await writeFile(
-          path.join(output, "overflow-" + mode + ".json"),
+          path.join(output, "overflow-" + detail + "-" + mode + ".json"),
           JSON.stringify({ overflows, geometry }, null, 2),
         );
       }

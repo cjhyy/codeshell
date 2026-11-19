@@ -19,6 +19,7 @@ import {
   markPetHostActionReplacementDisplay,
   replacementReceiptDisplayMetadata,
 } from "../shared/pet-host-action-receipt.js";
+import { replayedGoalQuestionDetail, type GoalQuestionDetail } from "../shared/goal-questions.js";
 
 interface TranscriptEvent {
   id: string;
@@ -133,24 +134,11 @@ function goalProgressReplayFields(d: Record<string, unknown>): {
     tasks?: Array<{ kind: string; label: string }>;
   };
   progress?: { rounds: number; activeMs: number; atMs: number };
-  waitingForUserDetail?: {
-    level: "preference" | "consent";
-    options?: string[];
-    default?: string;
-  };
+  waitingForUserDetail?: GoalQuestionDetail;
 } {
   const out: ReturnType<typeof goalProgressReplayFields> = {};
-  const detail = d.waitingForUserDetail as Record<string, unknown> | undefined;
-  if (detail && typeof detail === "object") {
-    const options = Array.isArray(detail.options)
-      ? detail.options.filter((option): option is string => typeof option === "string")
-      : [];
-    out.waitingForUserDetail = {
-      level: detail.level === "consent" ? "consent" : "preference",
-      ...(options.length > 0 ? { options } : {}),
-      ...(typeof detail.default === "string" ? { default: detail.default } : {}),
-    };
-  }
+  const detail = replayedGoalQuestionDetail(d.waitingForUser, d.waitingForUserDetail);
+  if (detail) out.waitingForUserDetail = detail;
   const waiting = d.waiting as Record<string, unknown> | undefined;
   if (waiting && typeof waiting === "object" && finiteNonNegative(waiting.sinceMs)) {
     const tasks = Array.isArray(waiting.tasks)
