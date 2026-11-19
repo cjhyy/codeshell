@@ -352,6 +352,21 @@ export interface ToolContext {
       privateServices?: ReadonlyMap<symbol, unknown>;
     },
   ): Promise<ToolResult>;
+  /**
+   * Ask the owning Session's approval path about an operation a delegated
+   * external worker wants to perform with its OWN tool (not a CodeShell tool).
+   * Honors the Session's permission mode exactly as a CodeShell tool ask would:
+   * full access approves, a non-prompting mode denies, anything else reaches the
+   * Session's approval UI. May be called after the launching tool call returned,
+   * for as long as the Session lives. Undefined → no approval path; callers must
+   * fail closed and report the denial.
+   */
+  requestDelegatedToolApproval?(request: {
+    toolName: string;
+    args: Record<string, unknown>;
+    /** Shown to the user: who is asking, on behalf of which task. */
+    reason: string;
+  }): Promise<{ approved: boolean; reason?: string }>;
   /** Executor-owned services for this bound invocation only; not inherited by nested calls. */
   boundToolServices?: ReadonlyMap<symbol, unknown>;
   /** Explicit root for project/global memory; portable profile storage stays separate. */

@@ -1080,6 +1080,8 @@ type StreamEventPayload =
       cwd?: string;
       /** Client id of the real user turn that launched this background work. */
       originClientMessageId?: string;
+      /** Operations refused by permissions; "completed" then means degraded. */
+      permissionDenials?: number;
       /** When the bg agent finished (Date.now() value). */
       enqueuedAt: number;
     };

@@ -10,7 +10,11 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { codeShellHome } from "../../utils/paths.js";
-import type { BackgroundJobEntry, ExternalCliKind } from "./background-jobs.js";
+import type {
+  BackgroundJobEntry,
+  BackgroundJobProgress,
+  ExternalCliKind,
+} from "./background-jobs.js";
 
 const MAX_SNAPSHOTS = 500;
 const MAX_SNAPSHOT_BYTES = 128 * 1024;
@@ -40,6 +44,22 @@ function pidAlive(pid: unknown): boolean {
   } catch (error) {
     return (error as NodeJS.ErrnoException).code === "EPERM";
   }
+}
+
+/** Validated copy of the permission fields; shared with persisted history. */
+export function permissionProgressFields(
+  progress: Partial<BackgroundJobProgress> | undefined,
+): Pick<BackgroundJobProgress, "permissionDenials" | "awaitingApprovalSince" | "blocked"> {
+  if (!progress) return {};
+  const denials = progress.permissionDenials;
+  const since = progress.awaitingApprovalSince;
+  return {
+    ...(Number.isSafeInteger(denials) && (denials as number) > 0
+      ? { permissionDenials: denials }
+      : {}),
+    ...(Number.isFinite(since) && (since as number) > 0 ? { awaitingApprovalSince: since } : {}),
+    ...(progress.blocked === "permission" ? { blocked: "permission" as const } : {}),
+  };
 }
 
 function normalizeSnapshot(item: Snapshot): Snapshot {
@@ -105,6 +125,7 @@ function normalizeSnapshot(item: Snapshot): Snapshot {
         .filter((event) => event && Number.isFinite(event.at) && typeof event.summary === "string")
         .slice(-8)
         .map((event) => ({ at: event.at, summary: event.summary.slice(0, 240) }));
+    Object.assign(clean.progress, permissionProgressFields(progress));
   }
   return clean;
 }
