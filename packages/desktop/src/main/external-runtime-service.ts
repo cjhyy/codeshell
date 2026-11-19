@@ -1052,10 +1052,10 @@ export class ExternalRuntimeService {
         `${runtimeLabel} worker rather than asking CodeShell's native Agent to redo the work. ` +
         `From a ${runtimeLabel} runtime, use cli="${sameCli}" by default and choose ` +
         `${otherRuntime} only ` +
-        "when the user explicitly asks for it. For delegated tasks that require " +
-        'edits, pass permissionMode="acceptEdits" when the current CodeShell ' +
-        "permission allows edits; never request bypassPermissions unless the user " +
-        "explicitly granted that level. " +
+        "when the user explicitly asks for it. Give every DriveAgent call a short title, " +
+        "and omit permissionMode so the worker inherits this session's permission level " +
+        "(its approval requests then appear here); never request bypassPermissions unless " +
+        "the user explicitly granted that level. " +
         "Give that worker a self-contained prompt because it does not inherit this " +
         "runtime's conversation or host bridge. Default to one worker and use more " +
         "only for truly independent workstreams. Do not use the " +

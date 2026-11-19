@@ -318,6 +318,48 @@ describe("DriveAgentTaskView", () => {
     expect(text(container)).toContain("Build failed in packages/desktop");
   });
 
+  test("shows a worker waiting for approval, denied operations, and a permission block", async () => {
+    const time = Date.now();
+    current = job({
+      progress: {
+        lastActivityAt: time - 120_000,
+        eventCount: 3,
+        phase: "tool",
+        awaitingApprovalSince: time - 120_000,
+        permissionDenials: 1,
+      },
+    });
+    await render();
+    expect(text(container)).toContain("正在等待你在原会话里审批");
+    expect(text(container)).toContain("已有 1 个操作被权限拒绝");
+    // Waiting on the user explains the silence; do not also call it quiet.
+    expect(text(container)).not.toContain("暂未收到新输出");
+
+    current = job({
+      status: "completed",
+      finishedAt: time,
+      finalText: "done",
+      progress: { lastActivityAt: time, eventCount: 9, permissionDenials: 2 },
+    });
+    await changed();
+    expect(text(container)).toContain("已结束，但有 2 个操作被权限拒绝，任务可能没有做完");
+    expect(text(container)).not.toContain("正在等待你在原会话里审批");
+
+    current = job({
+      status: "failed",
+      finishedAt: time,
+      finalText: "[permissions] Stopped early",
+      progress: {
+        lastActivityAt: time,
+        eventCount: 9,
+        permissionDenials: 3,
+        blocked: "permission",
+      },
+    });
+    await changed();
+    expect(text(container)).toContain("被权限拦住，已提前停止（3 个操作被拒）");
+  });
+
   test("rejects another owner's matching job and reports unknown instead of running", async () => {
     current = job({
       sourceSession: { sessionId: "other", shortId: "other", current: false },
