@@ -2,17 +2,25 @@
  * Which files a DriveAgent worker changed, for the "changed files" attribution
  * of its run.
  *
- * Two sources, merged:
+ * Three sources, merged:
  *
  *   - what the CLI reported in its own structured output (`changedFiles` on the
  *     run result — a Codex `file_change` item that completed, on either
  *     transport). Nothing has to be located or flushed for this one.
  *   - the CLI's transcript on disk (`readExternalChangedFiles`), which is the
  *     only source for Claude Code and a second one for Codex.
+ *   - the git work tree against a baseline taken before the run
+ *     (`drive-agent-git-changes.ts`), which also sees what shell commands
+ *     wrote. Only for a run that had its directory to itself.
  */
 import { realpathSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { readExternalChangedFiles } from "../cc-orchestrator/external-agent-changes.js";
+import {
+  DRIVE_GIT_CHANGED_FILES_CAP,
+  driveGitChangedFiles,
+  type DriveGitBaseline,
+} from "./drive-agent-git-changes.js";
 
 function inside(root: string, absolute: string): string | undefined {
   const rel = relative(root, absolute);
@@ -57,16 +65,33 @@ export function normalizeChangedFiles(cwd: string, files: readonly string[]): st
   return out;
 }
 
-/** The run's changed files, and how many raw reports they were reduced from. */
+/**
+ * The run's changed files, and how many raw reports they were reduced from.
+ * `gitBaseline` is the work tree before the run, given only when the worker had
+ * the directory to itself; `note` says so when git saw more files than are listed.
+ */
 export function driveChangedFiles(
   cli: string,
   cwd: string,
   result: { sessionId: string; changedFiles?: readonly string[] },
   read: typeof readExternalChangedFiles,
-): { rawSize: number; files: string[] } {
+  gitBaseline?: DriveGitBaseline,
+): { rawSize: number; files: string[]; note?: string } {
+  const git = driveGitChangedFiles(gitBaseline);
   const raw = [
     ...(result.changedFiles ?? []),
     ...(result.sessionId ? read(cli, cwd, result.sessionId) : []),
+    ...(git?.files ?? []),
   ];
-  return { rawSize: raw.length, files: normalizeChangedFiles(cwd, raw) };
+  return {
+    rawSize: raw.length,
+    files: normalizeChangedFiles(cwd, raw),
+    ...(git && git.total > git.files.length
+      ? {
+          note:
+            `[changed files] ${git.total} files changed in the work tree; only the first ` +
+            `${DRIVE_GIT_CHANGED_FILES_CAP} are listed.`,
+        }
+      : {}),
+  };
 }

@@ -246,6 +246,44 @@ describe("prepareDriveRunPermissions", () => {
     expect(permissions.outcome({}).sandboxBlocked).toBeUndefined();
   });
 
+  it("names the sandbox of a Codex run that neither asked nor changed anything", async () => {
+    const worker = (cli: "codex" | "claude", mode: "default" | "acceptEdits") =>
+      prepareDriveRunPermissions({
+        cli,
+        mode,
+        title: "t",
+        requestApproval: async () => ({ approved: true }),
+        stop: () => {},
+        startPrompt: async () => ({
+          permissionPrompt: { mcpConfigPath: "/x", toolName: "t" },
+          close: async () => {},
+        }),
+      });
+    const readOnly = await worker("codex", "default");
+    // Not a refusal: nothing was counted, the run is simply put in context.
+    expect(readOnly.outcome({ attributedChanges: 0 })).toEqual({
+      denials: 0,
+      note:
+        "[sandbox] Ran in a read-only sandbox; no approval was requested and no file change " +
+        "was recorded.",
+    });
+    expect((await worker("codex", "acceptEdits")).outcome({ attributedChanges: 0 }).note).toContain(
+      "Ran in a workspace-write sandbox;",
+    );
+    // Nothing to explain when the run changed files, failed, or was not measured.
+    expect(readOnly.outcome({ attributedChanges: 2 })).toEqual({ denials: 0 });
+    expect(readOnly.outcome({ attributedChanges: 0, isError: true })).toEqual({ denials: 0 });
+    expect(readOnly.outcome({})).toEqual({ denials: 0 });
+    expect(readOnly.outcome()).toEqual({ denials: 0 });
+    // An approved ask means the worker did get out of its sandbox.
+    await readOnly.codexApproval!({ toolName: "shell", input: {} });
+    expect(readOnly.outcome({ attributedChanges: 0 })).toEqual({ denials: 0 });
+    // Claude Code has no sandbox to name.
+    expect((await worker("claude", "default")).outcome({ attributedChanges: 0 })).toEqual({
+      denials: 0,
+    });
+  });
+
   it("does not gate a full-access worker", async () => {
     for (const input of [
       { cli: "codex" as const, mode: "bypassPermissions" as const },

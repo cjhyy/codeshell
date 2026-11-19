@@ -13,6 +13,7 @@ import {
 import { runAgentOnce, type AgentRunResult } from "../cc-orchestrator/external-agent-driver.js";
 import { runCodexWorkerOnce } from "./drive-agent-codex-worker.js";
 import { driveChangedFiles } from "./drive-agent-changed-files.js";
+import { snapshotDriveGitState, type DriveGitBaseline } from "./drive-agent-git-changes.js";
 import { initialAgentProgress } from "../cc-orchestrator/external-agent-progress.js";
 import { claudeAdapter, codexAdapter } from "../cc-orchestrator/agent-adapter.js";
 import { readExternalChangedFiles } from "../cc-orchestrator/external-agent-changes.js";
@@ -209,6 +210,8 @@ type SessionStore = {
 
 interface ManagedDriveWorktree {
   session: WorktreeSession;
+  /** The work tree before the run; this run owns the directory, so the difference is its own. */
+  gitBaseline?: DriveGitBaseline;
   cleanup: DriveWorktreeCleanup;
   branchPrefix?: string;
 }
@@ -818,7 +821,11 @@ function attachDriveCompletion(params: {
       // notification event was emitted first and carried no files; changedFiles
       // only reached the background-work registry/panel, so the chat turn card
       // could never count DriveAgent edits.
-      const { rawSize, files: changedFiles } = driveChangedFiles(cli, cwd, r, readChangedFiles);
+      const {
+        rawSize,
+        files: changedFiles,
+        note: changedNote,
+      } = driveChangedFiles(cli, cwd, r, readChangedFiles, worktree?.gitBaseline);
       let provenance: Awaited<ReturnType<typeof probeExternalChangedFiles>> | undefined;
       if (changedFiles.length) {
         try {
@@ -838,10 +845,10 @@ function attachDriveCompletion(params: {
       const lifecycle = safeFinalizeDriveWorktree(worktree);
       // A worker that was refused operations did not finish its task, and one
       // that was stopped for it failed. Say so ahead of its own final text.
-      const denied = permissions.outcome(r);
+      const denied = permissions.outcome({ ...r, attributedChanges: changedFiles.length });
       const failed = r.isError || !!denied.blocked;
       const finalText = appendLifecycleNote(
-        [denied.note, r.finalText].filter(Boolean).join("\n\n"),
+        [denied.note, changedNote, r.finalText].filter(Boolean).join("\n\n"),
         lifecycle,
       );
       if (lifecycle) {
@@ -1337,6 +1344,7 @@ export function makeDriveAgentTool(
       stop: () => stopRun(),
       ...(options.startPermissionPrompt ? { startPrompt: options.startPermissionPrompt } : {}),
     });
+    if (managedWorktree) managedWorktree.gitBaseline = snapshotDriveGitState(cwd);
     const permissionNote = drivePermissionLaunchNote({
       cli,
       mode: permissionMode,
@@ -1539,13 +1547,16 @@ export function makeDriveAgentTool(
       const r = result.kind === "completed" ? result.result : await run;
       // Capture while the isolated checkout still exists, just as background
       // completion does. The lease stays held until capture and cleanup finish.
+      let attributed: { files: string[]; note?: string } | undefined;
       try {
-        const { files: changedFiles } = driveChangedFiles(
+        attributed = driveChangedFiles(
           cli,
           cwd,
           r,
           options.readChangedFiles ?? readExternalChangedFiles,
+          managedWorktree?.gitBaseline,
         );
+        const changedFiles = attributed.files;
         if (changedFiles.length) {
           let provenance: Awaited<ReturnType<typeof probeExternalChangedFiles>> | undefined;
           try {
@@ -1588,9 +1599,9 @@ export function makeDriveAgentTool(
         lifecycle,
       });
       const prefix = resumeNote ? `${resumeNote}\n` : "";
-      const denied = permissions.outcome(r);
+      const denied = permissions.outcome({ ...r, attributedChanges: attributed?.files.length });
       const finalText = appendLifecycleNote(
-        [denied.note, r.finalText].filter(Boolean).join("\n\n"),
+        [denied.note, attributed?.note, r.finalText].filter(Boolean).join("\n\n"),
         lifecycle,
       );
       if (denied.blocked)
