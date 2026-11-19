@@ -162,7 +162,8 @@ describe("startExternalRuntimeSession", () => {
       return fakeCodex(`
   if (m.method === "turn/start") {
     send({ id: m.id, result: { turn: { id: "turn-1" } } });
-    send({ id: 700, method: "mcpServer/elicitation/request", params: { serverName: "codeshell_computer", message: "Run click?", _meta: { codex_approval_kind: "mcp_tool_call", tool_name: "click" } } });
+    send({ method: "item/started", params: { threadId: "t-fake", turnId: "turn-1", item: { type: "mcpToolCall", id: "call-1", server: "codeshell_computer", tool: "click", arguments: { x: 1 } } } });
+    send({ id: 700, method: "mcpServer/elicitation/request", params: { serverName: "codeshell_computer", message: "Run click?", _meta: { codex_approval_kind: "mcp_tool_call", tool_params: { x: 1 } } } });
   }
   if (m.id === 700 && m.result) {
     send({ method: "item/agentMessage/delta", params: { threadId: "t-fake", turnId: "turn-1", itemId: "i1", delta: JSON.stringify({ answer: m.result.action, declared: process.argv.join(" ").includes("mcp_servers.codeshell_computer.command") }) } });
@@ -189,13 +190,19 @@ describe("startExternalRuntimeSession", () => {
     }
 
     test("Codex: each call is put to the approval backend as a high-risk request", async () => {
-      const requests: Array<{ toolName: string; riskLevel: string; sessionId?: string }> = [];
+      const requests: Array<{
+        toolName: string;
+        riskLevel: string;
+        sessionId?: string;
+        args?: unknown;
+      }> = [];
       const outcome = await codexOutcome({
         approvalBackend: {
           requestApproval: async (request: {
             toolName: string;
             riskLevel: string;
             sessionId?: string;
+            args?: unknown;
           }) => {
             requests.push(request);
             return { approved: true };
@@ -206,6 +213,7 @@ describe("startExternalRuntimeSession", () => {
       expect(requests).toHaveLength(1);
       expect(requests[0]).toMatchObject({
         toolName: "mcp__codeshell_computer__click",
+        args: { x: 1 },
         riskLevel: "high",
         sessionId: "sess-factory",
       });

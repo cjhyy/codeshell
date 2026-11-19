@@ -68,6 +68,26 @@ function normaliseUsage(usage: Record<string, unknown> | undefined): NormalisedU
   };
 }
 
+interface ResultUsage extends NormalisedUsage {
+  completionTokens?: number;
+}
+
+/** Sum two results' usage; a counter absent from both stays absent. */
+function addResultUsage(a?: ResultUsage, b?: ResultUsage): ResultUsage | undefined {
+  if (!a || !b) return a ?? b;
+  const sum = (x?: number, y?: number): number | undefined =>
+    x === undefined && y === undefined ? undefined : (x ?? 0) + (y ?? 0);
+  const cacheReadTokens = sum(a.cacheReadTokens, b.cacheReadTokens);
+  const cacheCreationTokens = sum(a.cacheCreationTokens, b.cacheCreationTokens);
+  const completionTokens = sum(a.completionTokens, b.completionTokens);
+  return {
+    promptTokens: a.promptTokens + b.promptTokens,
+    ...(cacheReadTokens !== undefined ? { cacheReadTokens } : {}),
+    ...(cacheCreationTokens !== undefined ? { cacheCreationTokens } : {}),
+    ...(completionTokens !== undefined ? { completionTokens } : {}),
+  };
+}
+
 /**
  * Map Claude's terminal reason onto CodeShell's.
  *
@@ -88,12 +108,20 @@ export class ClaudeEventTranslator {
   /** Accumulates `input_json_delta` per tool block so args land as one object. */
   private readonly toolInput = new Map<string, { name: string; json: string }>();
   /**
-   * Prompt usage of the latest top-level model request in this turn. The
-   * terminal `result.usage` sums every request of the process, which is right
-   * for accounting but overstates the context N-fold (each request re-reads the
-   * cache), so the context anchor comes from here.
+   * Prompt usage of the latest top-level model request in this turn. A
+   * `result.usage` sums every request since the previous `result`, which is
+   * right for accounting but overstates the context N-fold (each request
+   * re-reads the cache), so the context anchor comes from here.
    */
   private lastRequestUsage?: NormalisedUsage;
+  /** Usage of the latest `result`, until the turn ends or is reopened. */
+  private resultUsage?: ResultUsage;
+  /**
+   * Usage of earlier results of this turn's process. `result.usage` is not
+   * cumulative across the results of one process (measured, claude 2.1.328),
+   * so a superseded result's share would otherwise go unaccounted.
+   */
+  private supersededUsage?: ResultUsage;
 
   constructor(private readonly options: ClaudeEventTranslatorOptions) {
     this.codeshellServer = options.codeshellServerName ?? "codeshell_tools";
@@ -104,11 +132,15 @@ export class ClaudeEventTranslator {
     this.terminal = false;
     this.toolInput.clear();
     this.lastRequestUsage = undefined;
+    this.resultUsage = undefined;
+    this.supersededUsage = undefined;
   }
 
   /** Activity followed a `result` in the same process; the next one is terminal. */
   reopenTurn(): void {
     this.terminal = false;
+    this.supersededUsage = addResultUsage(this.supersededUsage, this.resultUsage);
+    this.resultUsage = undefined;
   }
 
   /** Claude session id, learned from the `system/init` line. */
@@ -279,14 +311,16 @@ export class ClaudeEventTranslator {
     this.terminal = true;
     const events: StreamEvent[] = [];
     const usage = asRecord(message.usage);
-    const total = normaliseUsage(usage);
-    if (total) {
+    const own = normaliseUsage(usage);
+    if (own) {
+      this.resultUsage = { ...own, completionTokens: count(usage?.output_tokens) };
+      const total = addResultUsage(this.supersededUsage, this.resultUsage)!;
       // `promptTokens`/`cache*` describe the latest request (the context, as in
       // the native stream); `singleTurn*` carry this submission's aggregate, which
       // is what accounting adds up. Without a per-request reading the aggregate is
       // the best available context estimate.
-      const latest = this.lastRequestUsage ?? total;
-      const completionTokens = count(usage?.output_tokens);
+      const latest = this.lastRequestUsage ?? own;
+      const completionTokens = total.completionTokens;
       events.push({
         type: "usage_update",
         promptTokens: latest.promptTokens,

@@ -314,6 +314,67 @@ describe("ClaudeEventTranslator", () => {
     expect(next).toMatchObject({ promptTokens: 65, singleTurnPromptTokens: 65 });
   });
 
+  test("a superseded result's usage is added to the turn's aggregate", () => {
+    // Measured with claude 2.1.328: each `result.usage` covers only the requests
+    // since the previous `result` of the process, not the process so far. A
+    // process that works again after a `result` (a background shell finished)
+    // therefore reports its main work in the FIRST result.
+    const t = translator();
+    t.translate({
+      ...result("success"),
+      usage: {
+        input_tokens: 4,
+        output_tokens: 221,
+        cache_read_input_tokens: 47089,
+        cache_creation_input_tokens: 22836,
+      },
+    });
+    t.reopenTurn();
+    t.translate({
+      type: "stream_event",
+      parent_tool_use_id: null,
+      event: {
+        type: "message_start",
+        message: {
+          usage: {
+            input_tokens: 2,
+            cache_read_input_tokens: 35171,
+            cache_creation_input_tokens: 2876,
+          },
+        },
+      },
+    });
+    const [usage] = t.translate({
+      ...result("success"),
+      usage: {
+        input_tokens: 2,
+        output_tokens: 100,
+        cache_read_input_tokens: 35171,
+        cache_creation_input_tokens: 2876,
+      },
+    });
+    expect(usage).toMatchObject({
+      type: "usage_update",
+      // Context: the last request alone.
+      promptTokens: 38049,
+      cacheReadTokens: 35171,
+      cacheCreationTokens: 2876,
+      // Accounting: both results.
+      singleTurnPromptTokens: 69929 + 38049,
+      singleTurnCacheReadTokens: 47089 + 35171,
+      singleTurnCacheCreationTokens: 22836 + 2876,
+      completionTokens: 321,
+    });
+
+    // Turn-scoped: nothing carries into the next submission.
+    t.beginTurn();
+    const [next] = t.translate({
+      ...result("success"),
+      usage: { input_tokens: 5, output_tokens: 1 },
+    });
+    expect(next).toMatchObject({ singleTurnPromptTokens: 5, completionTokens: 1 });
+  });
+
   test("thinking deltas become the native thinking stream event", () => {
     // E15: dropping these made Claude's thinking disappear from the UI.
     const t = translator();

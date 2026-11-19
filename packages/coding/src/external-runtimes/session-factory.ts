@@ -319,7 +319,7 @@ export async function startExternalRuntimeSession(
                     await approvalBackend.requestApproval({
                       sessionId: options.businessSessionId,
                       toolName: `mcp__${request.serverName}__${request.toolName ?? "tool"}`,
-                      args: {},
+                      args: request.args ?? {},
                       description:
                         request.message ??
                         `Codex wants to use ${request.toolName ?? "a tool"} on ${request.serverName}.`,
