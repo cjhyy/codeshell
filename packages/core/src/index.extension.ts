@@ -69,7 +69,10 @@ export type {
 // deliberately NOT exported here, because exporting them would hand the caller a
 // supported way to bypass SessionToolHost — and with it every authorization check
 // the design routes through ToolExecutor.
-export { createSessionToolHost } from "./tool-system/session-tool-host.js";
+export {
+  createSessionToolHost,
+  rememberSessionApprovals,
+} from "./tool-system/session-tool-host.js";
 export type {
   CreateSessionToolHostOptions,
   ExternalSessionPermissionMode,

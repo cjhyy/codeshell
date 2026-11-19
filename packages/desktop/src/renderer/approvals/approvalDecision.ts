@@ -46,6 +46,27 @@ export function decisionFromChoice(
   return base;
 }
 
+/**
+ * The options a card actually shows.
+ *
+ * An external-runtime session (Codex / Claude Code) remembers a grant for the
+ * session only, never in project settings, so "project" is not offered there.
+ * Main marks a request `onceOnly` when even a session grant cannot be honored
+ * (computer use, which is approved call by call). A remote transport
+ * (`allowScopes` false) answers this one request only.
+ */
+export function offeredApproveOptions(
+  options: ApproveOption[],
+  envelope: { source?: string; request: object },
+  allowScopes: boolean,
+): ApproveOption[] {
+  if (!allowScopes) return options.filter((o) => o.scope === "once");
+  if (envelope.source !== "external-runtime") return options;
+  if ((envelope.request as { onceOnly?: unknown }).onceOnly === true)
+    return options.filter((o) => o.scope === "once");
+  return options.filter((o) => o.scope !== "project");
+}
+
 /** One row in the approve menu. */
 export interface ApproveOption {
   scope: ApproveChoice;
@@ -95,8 +116,16 @@ export function approveOptionsFor(toolName: string, filePath?: string): ApproveO
     ["project", "auto.approveOption.projectWord"],
   ] as const) {
     const word = translate(lang, wordKey);
-    rows.push({ scope, pathScope: "file", label: translate(lang, "auto.approveOption.writeFile", { word, base }) });
-    rows.push({ scope, pathScope: "dir", label: translate(lang, "auto.approveOption.writeDir", { word, dir }) });
+    rows.push({
+      scope,
+      pathScope: "file",
+      label: translate(lang, "auto.approveOption.writeFile", { word, base }),
+    });
+    rows.push({
+      scope,
+      pathScope: "dir",
+      label: translate(lang, "auto.approveOption.writeDir", { word, dir }),
+    });
     rows.push({
       scope,
       pathScope: "tool",

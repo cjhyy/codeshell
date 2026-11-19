@@ -184,6 +184,8 @@ describe("the approval card of a computer-use call", () => {
       description: "Claude Code 想操控电脑：click（pid 412, window 7）",
       args: input,
       riskLevel: "high",
+      // Computer use is approved call by call: the card offers no wider scope.
+      onceOnly: true,
       computerUse: { runtime: "claude-code", action: "click", pid: 412, windowId: 7 },
     });
     expect(JSON.stringify(request)).not.toContain("native");
@@ -231,6 +233,7 @@ describe("the approval card of a computer-use call", () => {
       description: "Codex 想操控电脑：press_key",
       args: {},
       riskLevel: "high",
+      onceOnly: true,
       computerUse: { runtime: "codex", action: "press_key" },
     });
     const governed = {

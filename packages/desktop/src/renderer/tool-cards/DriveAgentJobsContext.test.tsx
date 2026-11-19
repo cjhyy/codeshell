@@ -5,6 +5,7 @@ import type { BackgroundWorkInfo } from "../../preload/types";
 import type { Message, ToolMessage } from "../types";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
 import {
+  BACKGROUND_WORK_CHANGED_EVENT,
   DriveAgentJobsLoader,
   useDriveAgentJobs,
   type DriveAgentJob,
@@ -287,6 +288,67 @@ describe("DriveAgentJobsLoader request lifecycle", () => {
     });
     expect(calls).toBe(2);
     expect(observedJobs[0]?.jobId).toBe("cc-job");
+  });
+
+  test("a worker that ends is reflected at once, not at the next poll", async () => {
+    let status: DriveAgentJob["status"] = "running";
+    let inboxListener: (() => void) | undefined;
+    let unsubscribed = 0;
+    Object.assign(window, {
+      // The poll never fires here: only the change signals can refresh.
+      setInterval: () => 91,
+      clearInterval: () => undefined,
+      codeshell: {
+        listBackgroundWork: async () => ({ items: [job("ending", status)] }),
+        taskInbox: {
+          onChanged: (listener: () => void) => {
+            inboxListener = listener;
+            return () => void unsubscribed++;
+          },
+        },
+      },
+    });
+    await render("ending");
+    expect(observedJobs[0]?.status).toBe("running");
+
+    // Stopped from the task view (or any other surface of this window).
+    status = "cancelled";
+    await act(async () => {
+      window.dispatchEvent(new Event(BACKGROUND_WORK_CHANGED_EVENT));
+      await flushMicrotasks();
+    });
+    expect(observedJobs[0]?.status).toBe("cancelled");
+
+    // Ended on its own: Main's task projection announces it.
+    for (const next of ["running", "completed", "running", "failed"] as const) {
+      status = next;
+      await act(async () => {
+        inboxListener?.();
+        await flushMicrotasks();
+      });
+      expect(observedJobs[0]?.status).toBe(next);
+    }
+    await act(async () => {
+      root?.unmount();
+      await flushMicrotasks();
+    });
+    root = null;
+    expect(unsubscribed).toBe(1);
+  });
+
+  test("a replayed transcript shows the state the worker ended in", async () => {
+    for (const status of ["completed", "failed", "cancelled"] as const) {
+      Object.assign(window, {
+        codeshell: { listBackgroundWork: async () => ({ items: [job("replayed", status)] }) },
+      });
+      await render("replayed");
+      expect(observedJobs[0]?.status).toBe(status);
+      await act(async () => {
+        root?.unmount();
+        await flushMicrotasks();
+      });
+      root = null;
+    }
   });
 
   test("keeps polling a task while cancellation is pending", async () => {

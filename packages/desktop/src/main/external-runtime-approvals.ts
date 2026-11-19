@@ -30,6 +30,8 @@ export interface ExternalApprovalDecision {
   approved: boolean;
   reason?: string;
   answer?: string;
+  /** Remember the approval for `scope`; set only by {@link parseExternalApprovalDecision}. */
+  always?: boolean;
   scope?: "once" | "session" | "project";
   pathScope?: "file" | "dir" | "tool";
 }
@@ -83,10 +85,16 @@ function boundedResponseText(value: unknown): value is string {
 export function parseExternalApprovalDecision(
   payload: Record<string, unknown> | null | undefined,
 ): ExternalApprovalDecision {
+  const approved = payload?.approved === true;
   return {
-    approved: payload?.approved === true,
+    approved,
     ...(boundedResponseText(payload?.reason) ? { reason: payload.reason } : {}),
     ...(boundedResponseText(payload?.answer) ? { answer: payload.answer } : {}),
+    // The native transport's preload turns a session/project choice into
+    // `always`; without it the scope is answered and never remembered.
+    ...(approved && (payload?.scope === "session" || payload?.scope === "project")
+      ? { always: true }
+      : {}),
     ...(payload?.scope === "once" || payload?.scope === "session" || payload?.scope === "project"
       ? { scope: payload.scope }
       : {}),

@@ -42,6 +42,7 @@ import {
   CLAUDE_PERMISSION_PROMPT_TOOL,
   claudeModeUsesPermissionPrompt,
   claudePermissionModeFor,
+  rememberClaudePermissionGrants,
   withClaudePermissionPrompt,
   type ClaudePermissionMode,
 } from "./claude-code/permissions.js";
@@ -209,6 +210,7 @@ export async function startExternalRuntimeSession(
 
   let host: SessionToolHost | undefined;
   let runtime: CodexRuntime | ClaudeCodeRuntime | undefined;
+  let claudeGrants: ReturnType<typeof rememberClaudePermissionGrants> | undefined;
   let closed = false;
   let turnSink: ((event: StreamEvent) => void) | undefined;
 
@@ -220,6 +222,7 @@ export async function startExternalRuntimeSession(
     store.unregister(pinnedThreadId);
     await runtime?.close();
     await host?.dispose();
+    claudeGrants?.clear();
     await bridge.close();
   };
 
@@ -266,7 +269,14 @@ export async function startExternalRuntimeSession(
         permissionMode: options.permissionMode,
         planMode: options.planMode,
       });
-    const onClaudePermissionPrompt = options.hooks?.onClaudePermissionPrompt;
+    // "Allow for this session" on a native Claude tool lives as long as this
+    // runtime session, like the Host Tool grants the host itself remembers.
+    if (options.hooks?.onClaudePermissionPrompt)
+      claudeGrants = rememberClaudePermissionGrants(options.hooks.onClaudePermissionPrompt, {
+        sessionId: options.businessSessionId,
+        cwd: options.cwd,
+      });
+    const onClaudePermissionPrompt = claudeGrants?.decide;
     const claudePromptTool =
       options.kind === "claude-code" &&
       onClaudePermissionPrompt &&

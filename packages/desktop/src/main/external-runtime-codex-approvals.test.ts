@@ -4,7 +4,11 @@
  * PermissionsRequestApprovalParams.
  */
 import { describe, expect, test } from "bun:test";
-import { codexNativeApprovalPresentation } from "./external-runtime-codex-approvals.js";
+import {
+  codexNativeApprovalAnswer,
+  codexNativeApprovalPresentation,
+  codexNativeSessionGrantable,
+} from "./external-runtime-codex-approvals.js";
 
 const routing = { threadId: "t", turnId: "u", itemId: "i", startedAtMs: 1 };
 
@@ -109,6 +113,27 @@ describe("codexNativeApprovalPresentation", () => {
       description: "Codex 想获得额外权限（仅本轮）",
       args: { network: { enabled: true }, cwd: "/repo", reason: "needs network" },
     });
+  });
+
+  test("only a plain command can be accepted for the session; Codex remembers it itself", () => {
+    const command = "item/commandExecution/requestApproval";
+    expect(codexNativeSessionGrantable(command, { ...routing, command: "npm test" })).toBe(true);
+    expect(codexNativeSessionGrantable(command, { ...routing, kind: "writeStdin" })).toBe(false);
+    expect(
+      codexNativeSessionGrantable(command, {
+        ...routing,
+        networkApprovalContext: { host: "example.com", protocol: "https" },
+      }),
+    ).toBe(false);
+    expect(codexNativeSessionGrantable("item/fileChange/requestApproval", routing)).toBe(false);
+    expect(codexNativeSessionGrantable("item/permissions/requestApproval", routing)).toBe(false);
+
+    const forSession = { approved: true, always: true, scope: "session" as const };
+    expect(codexNativeApprovalAnswer(true, forSession)).toBe("acceptForSession");
+    expect(codexNativeApprovalAnswer(true, { approved: true })).toBe("accept");
+    // A scope the card should not have offered is answered for this call only.
+    expect(codexNativeApprovalAnswer(false, forSession)).toBe("accept");
+    expect(codexNativeApprovalAnswer(true, { approved: false, always: true })).toBe("decline");
   });
 
   test("an unknown approval shows its params without routing ids", () => {

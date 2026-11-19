@@ -28,7 +28,9 @@ import { join } from "node:path";
 import { startExternalRuntimeSession } from "@cjhyy/code-shell-capability-coding/external-runtimes";
 import {
   answerCodexUserInput,
+  codexNativeApprovalAnswer,
   codexNativeApprovalPresentation,
+  codexNativeSessionGrantable,
 } from "./external-runtime-codex-approvals.js";
 import type {
   ExternalRuntimeTurnInput,
@@ -242,7 +244,14 @@ export interface ExternalRuntimeServiceDeps {
     request: { toolName: string; [key: string]: unknown },
     /** `signal`: abort withdraws the prompt from every client. */
     options?: { signal?: AbortSignal },
-  ) => Promise<{ approved: boolean; reason?: string; answer?: string }>;
+  ) => Promise<{
+    approved: boolean;
+    reason?: string;
+    answer?: string;
+    /** "Allow for this session": honored per request kind, never assumed. */
+    always?: boolean;
+    scope?: "once" | "session" | "project";
+  }>;
   /** A message somebody sent was accepted: per-request host state starts over. */
   userTurnStarted?: (sessionId: string) => void;
   /** Drop any prompt still on screen for a session that is going away. */
@@ -1401,10 +1410,15 @@ export class ExternalRuntimeService {
                     !this.authorityStillCurrent(request.cwd, authority)
                   )
                     return "decline";
+                  const grantable = codexNativeSessionGrantable(
+                    nativeRequest.method,
+                    nativeRequest.params,
+                  );
                   const decision = await toolApprovalBackend.requestApproval({
                     toolName: "Codex native tool",
                     method: nativeRequest.method,
                     params: nativeRequest.params,
+                    ...(grantable ? {} : { onceOnly: true }),
                     // The card and Mimi's IM prompt read description/args, not params.
                     ...codexNativeApprovalPresentation(
                       nativeRequest.method,
@@ -1413,10 +1427,8 @@ export class ExternalRuntimeService {
                       nativeRequest.fileChangeCount,
                     ),
                   });
-                  return lifecycle.active &&
-                    this.authorityStillCurrent(request.cwd, authority) &&
-                    decision.approved
-                    ? "accept"
+                  return lifecycle.active && this.authorityStillCurrent(request.cwd, authority)
+                    ? codexNativeApprovalAnswer(grantable, decision)
                     : "decline";
                 },
                 onClaudePermissionPrompt: async (prompt) => {
@@ -1426,12 +1438,13 @@ export class ExternalRuntimeService {
                   };
                   if (!lifecycle.active || !this.authorityStillCurrent(request.cwd, authority))
                     return revoked;
-                  const decision: { approved: boolean; reason?: string } =
-                    await toolApprovalBackend.requestApproval(claudeNativeApprovalRequest(prompt));
+                  const card = claudeNativeApprovalRequest(prompt);
+                  const decision: Awaited<ReturnType<ToolApproval>> =
+                    await toolApprovalBackend.requestApproval(card);
                   if (!lifecycle.active || !this.authorityStillCurrent(request.cwd, authority))
                     return revoked;
                   return decision.approved
-                    ? { approved: true }
+                    ? { approved: true, forSession: !card.onceOnly && decision.always === true }
                     : { approved: false, ...(decision.reason ? { reason: decision.reason } : {}) };
                 },
               }
