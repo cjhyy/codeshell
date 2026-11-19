@@ -30,6 +30,8 @@ import {
   isWithheldTool,
   parseInputGateState,
   parseSessionLineage,
+  PINNED_SESSION_ENV,
+  pinnedSessionId,
   REFUSAL_POLICY_NOTE,
   refusalResponse,
   SESSION_META_KEY,
@@ -354,6 +356,22 @@ export function toolCall(message: unknown): ToolCall | undefined {
   return { id, name: params.name, args: record(params.arguments) ?? {}, sessionIds, stripped };
 }
 
+/**
+ * Native workers attach the calling Session lineage to each request. An external
+ * CLI does not, so its proxy is spawned for exactly one Session and stamps that
+ * identity itself, replacing anything the caller sent: the Session's Stop and
+ * its activity then apply to it exactly as they do to a native Session.
+ */
+export function pinSessionLineage(message: unknown, sessionId: string | undefined): unknown {
+  const request = record(message);
+  const params = record(request?.params);
+  if (!sessionId || !request || request.method !== "tools/call" || !params) return message;
+  return {
+    ...request,
+    params: { ...params, _meta: { ...record(params._meta), [SESSION_META_KEY]: [sessionId] } },
+  };
+}
+
 /** Drop withheld tools and append the CodeShell input strategy to the
  * model-facing tool descriptions. */
 export function annotateToolList(message: unknown): JsonRecord | undefined {
@@ -386,6 +404,7 @@ function line(value: unknown): Buffer {
 
 export async function runCuaActivityProxy(args = process.argv.slice(2)): Promise<number> {
   const { driver, socket } = parseCuaActivityProxyArgs(args);
+  const pinnedSession = pinnedSessionId(process.env[PINNED_SESSION_ENV]);
   const tracker = new CuaActivityTracker(randomUUID());
   const channel = new CuaActivityChannel(
     process.env.CODE_SHELL_CUA_ACTIVITY_SOCKET,
@@ -396,6 +415,7 @@ export async function runCuaActivityProxy(args = process.argv.slice(2)): Promise
   delete childEnv.CODE_SHELL_CUA_ACTIVITY_SOCKET;
   delete childEnv.CODE_SHELL_CUA_ACTIVITY_TOKEN;
   delete childEnv.CODE_SHELL_CUA_APP_PROFILES;
+  delete childEnv[PINNED_SESSION_ENV];
   const profiles = loadAppProfiles(process.env.CODE_SHELL_CUA_APP_PROFILES, (file, reason) =>
     process.stderr.write(`CUA app profile ${file} skipped: ${reason}\n`),
   );
@@ -480,7 +500,7 @@ export async function runCuaActivityProxy(args = process.argv.slice(2)): Promise
         if (endsLine) discarding = false;
         continue;
       }
-      const message = parsed(part.bytes);
+      const message = pinSessionLineage(parsed(part.bytes), pinnedSession);
       const call = toolCall(message);
       let bytes = part.bytes;
       if (call) {

@@ -10,9 +10,10 @@ import {
   CuaActivityChannel,
   cuaWireParts,
   parseCuaActivityProxyArgs,
+  pinSessionLineage,
   toolCall,
 } from "./cua-activity-proxy.js";
-import type { InputGateState } from "./input-gate-policy.js";
+import { pinnedSessionId, type InputGateState } from "./input-gate-policy.js";
 
 const OPEN: InputGateState = { version: 1, userActive: false, cancelledSessions: [] };
 
@@ -432,6 +433,78 @@ describe("CUA activity proxy", () => {
     const forwarded = echoed(responses[1]);
     expect(forwarded.params._meta).toEqual({ progressToken: 7 });
     expect(server.events.find((event) => event.phase === "start")?.sessionId).toBe("other");
+  }, 10_000);
+
+  test("a pinned proxy (external runtime) attributes every call to its one Session", async () => {
+    // An external CLI sends no lineage. Its proxy process is spawned for one
+    // Session, so Stop and activity apply to it as they do to a native Session.
+    const pin = { CODE_SHELL_CUA_SESSION_ID: "ext-1" };
+    const stopped = await activityServer(true, { ...OPEN, cancelledSessions: ["ext-1"] });
+    const refused = await runProxy(
+      stopped,
+      [call(1, "click"), call(2, "list_apps")],
+      ECHO_DRIVER,
+      pin,
+    );
+    expect(refused[0].result.structuredContent.reason).toBe("session-cancelled");
+    expect(echoed(refused[1]).params.name).toBe("list_apps");
+
+    // A lineage the caller made up cannot move the call to another Session.
+    const spoofed = await runProxy(
+      stopped,
+      [call(3, "click", {}, { "codeshell/sessionIds": ["someone-else"] })],
+      ECHO_DRIVER,
+      pin,
+    );
+    expect(spoofed[0].result.structuredContent.reason).toBe("session-cancelled");
+
+    const open = await activityServer(true, OPEN);
+    const allowed = await runProxy(
+      open,
+      [call(4, "click", { pid: 1 }, { progressToken: 7 })],
+      `#!/usr/bin/env node\nconst readline=require('node:readline');\nif(process.env.CODE_SHELL_CUA_SESSION_ID)process.exit(9);\nreadline.createInterface({input:process.stdin}).on('line',line=>{const r=JSON.parse(line);if(r.id===undefined)return;process.stdout.write(JSON.stringify({jsonrpc:'2.0',id:r.id,result:{content:[{type:'text',text:JSON.stringify({request:r})}]}})+'\\n')});\n`,
+      pin,
+    );
+    // The pin is this proxy's own: neither the key nor the env reaches the driver.
+    expect(echoed(allowed[0]).params._meta).toEqual({ progressToken: 7 });
+    expect(open.events.find((event) => event.phase === "start")?.sessionId).toBe("ext-1");
+  }, 15_000);
+
+  test("pinning rewrites only tool calls, and a malformed pin refuses to start", async () => {
+    const list = { jsonrpc: "2.0", id: 1, method: "tools/list" };
+    expect(pinSessionLineage(list, "ext-1")).toBe(list);
+    const request = call(2, "click");
+    expect(pinSessionLineage(request, undefined)).toBe(request);
+    expect(toolCall(pinSessionLineage(request, "ext-1"))?.sessionIds).toEqual(["ext-1"]);
+    expect(pinnedSessionId(undefined)).toBeUndefined();
+    expect(pinnedSessionId("")).toBeUndefined();
+    expect(pinnedSessionId("s-1.a:b_c")).toBe("s-1.a:b_c");
+    expect(() => pinnedSessionId("bad id\n")).toThrow();
+
+    const server = await activityServer();
+    const driver = join(server.folder, "never-started");
+    writeFileSync(driver, ECHO_DRIVER);
+    chmodSync(driver, 0o755);
+    const child = spawn(
+      process.execPath,
+      [join(import.meta.dir, "cua-activity-proxy.ts"), "--driver", driver, "--socket", "/x.sock"],
+      {
+        env: {
+          ...process.env,
+          CODE_SHELL_CUA_ACTIVITY_SOCKET: server.path,
+          CODE_SHELL_CUA_ACTIVITY_TOKEN: "test-token",
+          CODE_SHELL_CUA_SESSION_ID: "not a session id",
+        },
+        stdio: ["pipe", "pipe", "pipe"],
+      },
+    );
+    cleanups.push(() => child.kill());
+    const outputs: Buffer[] = [];
+    child.stdout.on("data", (chunk) => outputs.push(chunk));
+    const exited = new Promise((resolve) => child.once("close", resolve));
+    child.stdin.end(`${JSON.stringify(call(1, "click"))}\n`);
+    expect(await exited).toBe(1);
+    expect(Buffer.concat(outputs).toString()).toBe("");
   }, 10_000);
 
   test("without a reachable host, input fails closed and reads still work", async () => {

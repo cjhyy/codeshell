@@ -2931,6 +2931,73 @@ describe("ExternalRuntimeService", () => {
     expect(text.endsWith("renderer ctx")).toBe(true);
   });
 
+  test("Computer Use reaches an ordinary session only, pinned to it and with guidance", async () => {
+    const { initCuaComputerUse, resetCuaComputerUse } = await import("./computer-use/service.js");
+    const { CuaDriverHost } = await import("./computer-use/cua-driver-host.js");
+    const flags = {
+      external_agent_runtime: true,
+      external_host_tools: true,
+      computer_use_cua: true,
+    };
+    const approve = async () => ({ approved: true });
+    const hostServers = (index: number) =>
+      (starts[index] as { hostMcpServers?: Array<{ name: string; env: Record<string, string> }> })
+        .hostMcpServers;
+    // No Host driver registered: nothing is declared, nothing is promised.
+    await service(flags, approve).start(request);
+    expect(hostServers(0)).toBeUndefined();
+    expect(starts[0]!.developerInstructions).not.toContain("mcp__codeshell_computer__");
+
+    const decision = initCuaComputerUse({
+      flags,
+      platform: "darwin",
+      isPackaged: false,
+      appPath: "/test/packages/desktop",
+      isExecutable: () => true,
+      mcpProxy: {
+        command: "/app/electron",
+        entryPath: "/app/out/cua-activity-proxy.cjs",
+        socketPath: "/tmp/cs-act/activity.sock",
+        token: "ACTIVITY-SECRET",
+      },
+      requireProxy: true,
+      createHost: (options) => {
+        const real = new CuaDriverHost({ ...options, socketPath: "/tmp/cs-cua/driver.sock" });
+        return Object.assign(Object.create(real), {
+          status: () => ({ ...real.status(), state: "running" }),
+          stop: async () => {},
+        });
+      },
+    });
+    expect(decision.enabled).toBe(true);
+    try {
+      const svc = service(flags, approve);
+      await svc.start({ ...request, sessionId: "s-cua-claude", kind: "claude-code" });
+      const servers = hostServers(1);
+      expect(servers?.map((server) => server.name)).toEqual(["codeshell_computer"]);
+      expect(servers![0]!.env.CODE_SHELL_CUA_SESSION_ID).toBe("s-cua-claude");
+      const text = starts[1]!.developerInstructions as string;
+      expect(text).toContain("mcp__codeshell_computer__*");
+      expect(text).toContain("built-in browser");
+
+      // Restricted sessions keep the bridge as their only channel.
+      await svc.start({ ...request, sessionId: "s-cua-plan", planMode: true });
+      await svc.start({ ...request, sessionId: "s-cua-dontask", permissionMode: "dontAsk" });
+      await service({ ...flags, computer_use_cua: false }, approve).start({
+        ...request,
+        sessionId: "s-cua-setting-off",
+      });
+      // Without an approval path there is nobody to ask.
+      await service(flags).start({ ...request, sessionId: "s-cua-no-prompt" });
+      for (const index of [2, 3, 4, 5]) {
+        expect(hostServers(index)).toBeUndefined();
+        expect(starts[index]!.developerInstructions).not.toContain("mcp__codeshell_computer__");
+      }
+    } finally {
+      await resetCuaComputerUse();
+    }
+  });
+
   test("dontAsk disables approval prompts but preserves user questions", async () => {
     const svc = service({ external_agent_runtime: true, external_host_tools: true }, async () => ({
       approved: true,

@@ -92,6 +92,8 @@ import type { ExternalRuntimeMemory } from "./external-runtime-memory.js";
 import { assertOutputHistoryWriteAvailable } from "./session-output-history-lease.js";
 import { ExternalRuntimeDeltaBuffer } from "./external-runtime-delta-buffer.js";
 import { notifyRunStopRequested } from "./run-stop-signals.js";
+import { externalComputerUse } from "./external-runtime-computer-use.js";
+import { EXTERNAL_MEDIA_INSTRUCTIONS } from "./external-runtime-instructions.js";
 import { ExternalRuntimeWorkspaceGate } from "./external-runtime-workspace-gate.js";
 import {
   announcesUserMessage,
@@ -1012,6 +1014,7 @@ export class ExternalRuntimeService {
               this.deps.requestApproval!(request.sessionId, approvalRequest),
           }
         : undefined;
+    const cua = externalComputerUse(request, this.deps.featureFlags(), !!toolApprovalBackend);
     const persisted = readExternalRuntimeBinding(request.sessionId);
     const resumeRuntimeSessionId =
       persisted?.kind === request.kind &&
@@ -1074,18 +1077,13 @@ export class ExternalRuntimeService {
         "a similar agent from a shell, because CodeShell cannot track, stop, notify on or " +
         "account for such a process. Use background=true for anything that may take more " +
         "than a few minutes; a foreground tool call is cut off by this runtime's tool timeout.",
-      "CodeShell Desktop can play local audio and video inline in chat. " +
-        "Save media artifacts inside this session's workspace and include a Markdown " +
-        "embed such as ![Audio description](/absolute/path/audio.mp3) or " +
-        "![Video description](/absolute/path/video.mp4); ordinary Markdown file links " +
-        "also show a player. Use angle brackets around paths containing spaces. " +
-        "Link only files that exist. Playback requires a browser-supported codec; " +
-        "remote media links open normally and are not inline players.",
+      EXTERNAL_MEDIA_INSTRUCTIONS,
       this.areHostToolsEnabled() &&
         "Use LinkAction discovery for connected services and ListSources/ReadSource for " +
           "workspace data. These CodeShell host tools use normal authorization and approval; " +
           "do not claim a service is unsupported because this runtime has no native connector.",
       externalMimiToolInstructions(mimiTools),
+      cua?.instructions,
       externalRuntimeProfileInstructions(profile),
       request.developerInstructions,
       request.toolProfile?.instructions,
@@ -1344,6 +1342,7 @@ export class ExternalRuntimeService {
         ...(request.toolProfile?.readOnly ? { disableNativeTools: true } : {}),
         approvalPolicy,
         ...(request.kind === "claude-code" ? { claudePermissionMode } : {}),
+        ...(cua ? { hostMcpServers: cua.servers } : {}),
         ...(toolApprovalBackend
           ? {
               approvalBackend: {

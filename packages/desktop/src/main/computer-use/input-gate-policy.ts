@@ -138,6 +138,16 @@ export function parseSessionLineage(value: unknown): string[] {
     .filter((id): id is string => typeof id === "string" && SESSION_ID.test(id));
 }
 
+/** Env var pinning every call of one proxy process to one Session (external runtimes). */
+export const PINNED_SESSION_ENV = "CODE_SHELL_CUA_SESSION_ID";
+
+/** A malformed pin must stop the proxy, never degrade to an unattributed one. */
+export function pinnedSessionId(value: string | undefined): string | undefined {
+  if (value === undefined || value === "") return undefined;
+  if (!SESSION_ID.test(value)) throw new Error("Invalid pinned Session id for the CUA proxy");
+  return value;
+}
+
 export function parseInputGateState(value: unknown): InputGateState | undefined {
   const state = object(value);
   if (!state) return;
