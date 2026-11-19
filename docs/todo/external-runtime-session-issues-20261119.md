@@ -63,6 +63,16 @@
 
 **进展（2026-11-20）**：PR #397：worker 默认继承父会话权限；审批请求转到父会话的审批卡；统计 `permission_denials`，有拒绝不再报「完成」；连续 3 次被拒或一次审批 10 分钟无人回答即提前停止；工具说明与代码一致。收尾分支：worker 被取消、提前停止或超时后，它留下的审批卡在所有端撤回，不再出现「点了也没用」的卡片。未真机验证。
 
+**进展（2026-11-20，rc.5 之后的 Codex worker 收尾）**：以下三项都对真实 `codex-cli 0.162.0` 和 `claude` 跑过（临时 git 仓库，直接调 DriveAgent 工具）；桌面 App 里的审批卡仍未真机验证。
+
+- ✅ **被沙箱拦下的命令不再悄悄算「完成」**。抓了整轮 app-server 的全部消息和 rollout 文件：`on-request` 策略下，在只读沙箱里失败的 `touch` 不产生任何 item、审批请求或错误，这一轮以 `completed` 结束；rollout 里只有工具脚本（名为 `exec` 的 `custom_tool_call`）和它的文本输出，没有任何结构化字段说明是沙箱拦的。换成 `granular`（各项全开，含 `sandbox_approval`）后，同一条命令会先发 `item/started`，被沙箱拦下后 Codex 发 `item/commandExecution/requestApproval`，请求在沙箱外重跑。worker 已改用这个策略：拦截变成父会话的一张审批卡，批准则执行，拒绝则计入被拒次数、结果标为未完成。普通读命令和自身失败的命令（`grep` 无匹配、文件不存在）不会多问。`untrusted` 也测了，任何它不认识的命令都先问，太吵，没用；0.162 没有 `on-failure`。
+- ⬜ **仍然测不出的一种**：沙箱断网导致的失败（`curl` 退出码 6）在两种策略下都只是一个普通的 `failed` item，没有原因字段，Codex 自己不判定为沙箱拦截；除非模型主动申请联网，否则不计数。这是 0.162 协议的限制，不靠解析输出文字去猜。
+- ✅ **兜底说明**：Codex worker 在沙箱里跑完、没申请过审批、也没有记录到文件改动时，结果开头加一句「在只读（或 workspace-write）沙箱中运行」，不说它被拦，只交代运行环境。
+- ✅ **shell 命令写的文件也算改动**：worker 独占目录时（`isolation: "worktree"`），运行前后各取一次 git 状态（含未跟踪文件和 HEAD），差异计入改动文件，Claude 和 Codex 都适用；遵守 `.gitignore`；最多列 100 个，超出时在结果里说明总数；与原有来源合并去重；没有 git 或 git 出错时退回原有来源。共享目录不这样做（会把别人写的文件算到这个 worker 头上），行为不变。
+- ✅ **Codex 命令审批**：批准后命令执行（item `completed`、`exitCode: 0`），拒绝后 item 为 `declined`，结果为「完成，但有 1 个操作被拒」。
+- ✅ **Codex 联网审批**：默认沙箱不会发 `networkApprovalContext`（那属于 Codex 的托管网络代理，默认关闭；在线程配置里打开 `features.network_proxy` 也没出现）。申请联网就是一次普通的命令审批：沙箱内第一次尝试是一个失败的 item，随后对第二个 item 发审批请求；批准后返回 200，拒绝后计入被拒。
+- ✅ **跨启动方式续接会话**：app-server 启动的会话可以用 `codex exec resume`（完全访问）续接，反过来也可以，上下文都在；从 `codex exec` 会话续接到 app-server 后，本次的只读沙箱照常生效。不需要拒绝，行为未改。
+
 **现象**：后台 worker 跑了约 12 分钟，git / bun test / node / prettier 全被拒，最后只留下未提交的改动；通知显示"外部代理任务完成"。
 
 **证据**
