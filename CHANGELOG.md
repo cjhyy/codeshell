@@ -8,6 +8,39 @@ breaking.
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-19
+
+First stable 0.11 release. Includes everything in 0.11.0-rc.1 to rc.3 plus the
+web workbench, website and admin console polish below. Account relay session
+resume needs the matching Services deployment (live on codeshell.site).
+
+### Added
+
+- Web workbench: search conversations in the sidebar and pin conversations
+  (per browser and workspace).
+- Web workbench: a bar above the composer when an approval or question card is
+  scrolled out of view, jumping back to it.
+- "立即重连" for both direct Server and account relay connections when offline.
+- Follow system / light / dark theme switch in the workbench, website account
+  menu and sign-in page.
+- Paste or drag files into the web composer to attach them.
+
+### Changed
+
+- Web composer and question card follow desktop keys: Enter sends or answers,
+  Shift+Enter adds a line, and confirming an input method candidate (including
+  Safari) never sends.
+- Edit/Write tool cards on the web show removed/added/content blocks instead of
+  raw JSON.
+- Website and admin console use the desktop accent colour for primary actions;
+  the admin account list becomes cards on phones and the audit log names the
+  signed-in administrator.
+
+### Fixed
+
+- iOS safe-area padding now applies (viewport-fit=cover) and focusing inputs on
+  phones no longer zooms the page.
+
 ## [0.11.0-rc.3] - 2026-11-19
 
 Release candidate for the desktop, website and account computer flow, plus the
