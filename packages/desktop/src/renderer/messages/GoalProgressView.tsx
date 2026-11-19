@@ -1,5 +1,12 @@
 import React, { memo, useEffect, useState } from "react";
-import { CircleDot, CheckCircle2, AlertTriangle, Clock, Hourglass } from "lucide-react";
+import {
+  CircleDot,
+  CheckCircle2,
+  AlertTriangle,
+  Clock,
+  Hourglass,
+  MessageCircleQuestion,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { GoalProgressMessage } from "../types";
 import { useT } from "../i18n/I18nProvider";
@@ -92,6 +99,28 @@ function GoalProgressViewImpl({
             {tasks.length === 1
               ? tasks[0]!.label
               : t("msg.goal.waitingTasks", { count: tasks.length })}
+          </span>
+        )}
+      </div>
+    );
+  }
+
+  // The question itself lives above the composer while it is open; the stream
+  // keeps one short record, and the asked text only once it is closed.
+  if (message.waitingForUser !== undefined) {
+    const closed = message.questionClosed === true;
+    return (
+      <div
+        className="flex items-center gap-1.5 px-4 py-1 text-xs text-muted-foreground"
+        data-goal-question={closed ? "closed" : "open"}
+      >
+        <MessageCircleQuestion size={12} className="shrink-0" />
+        <span className="shrink-0">
+          {t(closed ? "msg.goal.askedUser" : "msg.goal.waitingUser", { count: round })}
+        </span>
+        {closed && (
+          <span className="truncate text-muted-foreground/80" title={message.waitingForUser}>
+            — {message.waitingForUser}
           </span>
         )}
       </div>

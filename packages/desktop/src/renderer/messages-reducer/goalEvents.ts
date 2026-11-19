@@ -8,6 +8,7 @@
 import type { StreamEvent } from "@cjhyy/code-shell-core";
 import {
   carryGoalClock,
+  closeGoalQuestions,
   closeOpenGoalWaits,
   goalClockAfterProgress,
   stopGoalClock,
@@ -64,6 +65,7 @@ export function applyGoalProgress(
     ...(event.waiting
       ? { waiting: { sinceMs: event.waiting.sinceMs, tasks: event.waiting.tasks } }
       : {}),
+    ...(event.waitingForUser ? { waitingForUser: event.waitingForUser } : {}),
   };
   // The "approaching_limit" marker carries the "再续" button. Only prune it
   // when the moment has TRULY passed:
@@ -75,13 +77,18 @@ export function applyGoalProgress(
   const dropApproaching =
     event.status === "met" || event.status === "exhausted" || event.status === "approaching_limit";
   // Any later marker ends an earlier background wait still shown as open.
-  const base = closeOpenGoalWaits(
-    dropApproaching
-      ? state.messages.filter(
-          (m) => !(m.kind === "goal_progress" && m.status === "approaching_limit"),
-        )
-      : state.messages,
-    now() ?? Date.now(),
+  // Any later marker also closes an open question record; the same question
+  // asked again replaces its record instead of stacking a second one.
+  const base = closeGoalQuestions(
+    closeOpenGoalWaits(
+      dropApproaching
+        ? state.messages.filter(
+            (m) => !(m.kind === "goal_progress" && m.status === "approaching_limit"),
+          )
+        : state.messages,
+      now() ?? Date.now(),
+    ),
+    event.waitingForUser,
   );
   // Track the active goal's round; clear it when the goal settles
   // (met = achieved, exhausted = gave up). not_met/approaching_limit keep
@@ -97,6 +104,7 @@ export function applyGoalProgress(
               revision: event.revision ?? state.activeGoal.revision,
               // Any later progress means the Goal is moving again.
               waitingForUser: event.waitingForUser,
+              waitingDetail: event.waitingForUser ? event.waitingForUserDetail : undefined,
             },
             event,
             now() ?? Date.now(),

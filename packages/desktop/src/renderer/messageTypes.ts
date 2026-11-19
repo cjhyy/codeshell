@@ -202,6 +202,17 @@ export interface GoalProgressMessage {
   waiting?: { sinceMs: number; tasks?: Array<{ kind: string; label: string }> };
   /** When the wait ended (the next run started or the goal moved on). */
   waitEndedAtMs?: number;
+  /** The goal stopped to ask the user this question (shown above the composer). */
+  waitingForUser?: string;
+  /** The user replied or the goal moved on: the record collapses to one short line. */
+  questionClosed?: boolean;
+}
+
+/** How a goal question is answered: option chips, a default, or explicit consent. */
+export interface GoalQuestionDetail {
+  level: "preference" | "consent";
+  options?: string[];
+  default?: string;
 }
 
 /** Renderer projection of the session's persisted Goal state. */
@@ -216,6 +227,8 @@ export interface ActiveGoal {
   setAtMs?: number;
   /** The Goal stopped to wait for the user's answer to this question. */
   waitingForUser?: string;
+  /** Structure of that question, when the asker supplied it. */
+  waitingDetail?: GoalQuestionDetail;
   /**
    * Goal-level active time (running + background waits), settled up to
    * `clockSinceMs` when that is set, else final. Absent before any marker

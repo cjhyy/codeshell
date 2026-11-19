@@ -12,6 +12,7 @@ import type {
   TurnEndMessage,
   UserMessage,
 } from "../messageTypes";
+import { closeGoalQuestions } from "../goalClock";
 import {
   freshId,
   sealToolWithoutResult,
@@ -94,7 +95,11 @@ export function appendUserMessage(
     state.activeGoal?.waitingForUser &&
     (!existing || (existing.pending === true && pending === false))
   ) {
-    state = { ...state, activeGoal: { ...state.activeGoal, waitingForUser: undefined } };
+    state = {
+      ...state,
+      messages: closeGoalQuestions(state.messages),
+      activeGoal: { ...state.activeGoal, waitingForUser: undefined, waitingDetail: undefined },
+    };
   }
   if (clientMessageId) {
     let replaced = false;

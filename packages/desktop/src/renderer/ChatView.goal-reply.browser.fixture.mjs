@@ -1,4 +1,4 @@
-/* Real ChatView + Tailwind: goal reply routing, IME, state isolation and layout. */
+/* Real ChatView + Tailwind: the goal question banner, answered through the main composer. */
 /* global window, requestAnimationFrame, KeyboardEvent, CompositionEvent */
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
@@ -26,10 +26,10 @@ window.addEventListener('codeshell:open-file',event=>window.calls.push(['file',e
 const question='请按 100% 显示查看当前原尺寸对照：[查看对照图](/fixture/compare.png)。这处效果在实际编辑时是否仍明显不一致？请回复“这处可接受”，或指出具体异常位置。';
 const initialGoal={objective:'优化设计工作台，一直优化到没有太多样式差异',goalId:'goal-one',revision:2,round:3,paused:false,setAtMs:Date.now()-251174000,activeMs:65000,waitingForUser:question};
 const history=[{kind:'user',id:'human',text:'优化设计工作台'},{kind:'assistant',id:'assistant',text:'已完成当前对照，请确认这处效果。',done:true}];
-function Fixture({width=760,height=800,legacy=false,longQuestion=false,sendFailure='none'}){
+function Fixture({width=760,height=800,legacy=false,longQuestion=false,sendFailure='none',detail='none'}){
  const [session,setSession]=React.useState('session-a');
- const [draft,setDraft]=React.useState('Keep my ordinary composer draft');
- const [goal,setGoal]=React.useState(()=>({...initialGoal,...(legacy?{activeMs:undefined}:{}),...(longQuestion?{waitingForUser:question+' 很长的问题内容。'.repeat(100)}:{})}));
+ const [draft,setDraft]=React.useState('');
+ const [goal,setGoal]=React.useState(()=>({...initialGoal,...(legacy?{activeMs:undefined}:{}),...(longQuestion?{waitingForUser:question+' 很长的问题内容。'.repeat(100)}:{}),...(detail==='options'?{waitingDetail:{level:'preference',options:['这处可接受','继续优化'],default:'这处可接受'}}:detail==='consent'?{waitingDetail:{level:'consent'}}:{})}));
  const [busy,setBusy]=React.useState(false);const [openAsk,setOpenAsk]=React.useState(false);
  const [failure,setFailure]=React.useState(sendFailure);const pendingFailure=React.useRef(null);
  const send=(text,opts)=>{window.calls.push(['send',text,opts]);if(failure==='reject')return Promise.reject(new Error('Fixture send rejected'));setBusy(true);setGoal(previous=>({...previous,waitingForUser:undefined,clockSinceMs:Date.now()}));if(failure==='optimistic')return new Promise((_,reject)=>{pendingFailure.current=()=>{setBusy(false);setGoal(goal);reject(new Error('Fixture launch rejected'))}});};
@@ -79,10 +79,16 @@ const frames = (page) =>
   page.evaluate(
     () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
   );
-const replyInput = (page) =>
-  page.getByRole("textbox", { name: /^(回答目标问题|Answer the goal question)$/ });
-const replyButton = (page) =>
-  page.getByRole("button", { name: /^(回复并继续|Reply and continue)$/ });
+const question = (page) => page.locator("[data-goal-reply]");
+// The goal question has no input of its own: the one composer answers it.
+const composer = (page) => page.locator("textarea");
+const choice = (page, name) => question(page).getByRole("button", { name, exact: true });
+const sends = (page) =>
+  page.evaluate(() =>
+    window.calls
+      .filter((call) => call[0] === "send")
+      .map((call) => [call[1], call[2].bucket, call[2].continueGoal]),
+  );
 const selectedCase = process.argv.find((arg) => arg.startsWith("--case="))?.slice(7);
 const excludedCase = process.argv.find((arg) => arg.startsWith("--skip-case="))?.slice(12);
 async function mount(options = {}) {
@@ -105,7 +111,7 @@ async function mount(options = {}) {
   await page
     .locator('[data-fixture-generation="' + generation + '"]')
     .waitFor({ state: "attached" });
-  await replyInput(page).waitFor();
+  await question(page).waitFor();
   await frames(page);
   return page;
 }
@@ -124,7 +130,7 @@ async function check(name, test) {
 }
 try {
   await check(
-    "waiting is actionable without expansion; clock freezes and local image link opens",
+    "the question is shown once with one input box; clock freezes and local image link opens",
     async () => {
       const page = await mount();
       assert.equal(
@@ -133,7 +139,13 @@ try {
           .getAttribute("aria-expanded"),
         "false",
       );
-      assert.equal(await replyButton(page).isDisabled(), true);
+      // One input on screen, and it says what it is for.
+      assert.equal(await page.locator("textarea, input[type=text]").count(), 1);
+      assert.equal(
+        await composer(page).getAttribute("placeholder"),
+        "在这里回答上面的问题，Enter 发送…",
+      );
+      assert.equal(await question(page).getByRole("button").count(), 0);
       const before = await page.locator("[data-goal-state]").innerText();
       assert.match(before, /1m 05s/);
       await page.waitForTimeout(1150);
@@ -145,16 +157,15 @@ try {
     },
   );
   await check(
-    "IME and plain Enter keep the answer; Ctrl+Enter sends exactly once to the session",
+    "the main composer answers the question: IME Enter is ignored, Enter sends once",
     async () => {
       const page = await mount();
-      await replyInput(page).fill("这处可接受");
-      await replyInput(page).evaluate((element) => {
+      await composer(page).fill("这处可接受");
+      await composer(page).evaluate((element) => {
         element.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
         element.dispatchEvent(
           new KeyboardEvent("keydown", {
             key: "Enter",
-            ctrlKey: true,
             isComposing: true,
             bubbles: true,
             cancelable: true,
@@ -163,59 +174,61 @@ try {
         element.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true }));
       });
       assert.equal(await page.evaluate(() => window.calls.length), 0);
-      await replyInput(page).press("Enter");
-      assert.equal(await page.evaluate(() => window.calls.length), 0);
-      await replyInput(page).press("Control+Enter");
+      await composer(page).press("Enter");
       await page.locator('[data-goal-state="running"]').waitFor();
-      assert.deepEqual(
-        await page.evaluate(() =>
-          window.calls
-            .filter((call) => call[0] === "send")
-            .map((call) => [call[1], call[2].bucket, call[2].continueGoal]),
-        ),
-        [["这处可接受", "session-a", true]],
+      assert.deepEqual(await sends(page), [["这处可接受", "session-a", true]]);
+      assert.equal(await page.evaluate(() => window.fixture.draft()), "");
+      assert.equal(await question(page).count(), 0);
+      // With no question open, the composer is an ordinary composer again.
+      await page.evaluate(() => window.fixture.setBusy(false));
+      await frames(page);
+      assert.notEqual(
+        await composer(page).getAttribute("placeholder"),
+        "在这里回答上面的问题，Enter 发送…",
       );
-      assert.equal(
-        await page.evaluate(() => window.fixture.draft()),
-        "Keep my ordinary composer draft",
-      );
-      assert.equal(await replyInput(page).count(), 0);
+      await composer(page).fill("另一条普通消息");
+      await composer(page).press("Enter");
+      assert.deepEqual((await sends(page))[1], ["另一条普通消息", "session-a", undefined]);
       await page.close();
     },
   );
   await check(
-    "Meta+Enter sends in English and double clicks cannot duplicate a reply",
+    "option chips answer with one click, mark the default and cannot double send",
     async () => {
-      const page = await mount({ lang: "en" });
-      await replyInput(page).fill("Accept this part");
-      await replyInput(page).press("Meta+Enter");
+      const page = await mount({ detail: "options" });
+      assert.equal(await question(page).getByRole("button").count(), 2);
+      assert.equal(await question(page).locator('[data-goal-reply-choice="default"]').count(), 1);
+      await screenshot(page, "waiting-options-light");
+      await question(page)
+        .locator('[data-goal-reply-choice="option"]')
+        .evaluate((element) => {
+          element.click();
+          element.click();
+        });
       await page.locator('[data-goal-state="running"]').waitFor();
-      assert.equal(
-        await page.evaluate(() => window.calls.filter((call) => call[0] === "send").length),
-        1,
-      );
+      assert.deepEqual(await sends(page), [["继续优化", "session-a", true]]);
       await page.close();
-      const duplicate = await mount();
-      await replyInput(duplicate).fill("这处可接受");
-      await replyButton(duplicate).evaluate((element) => {
-        element.click();
-        element.click();
-      });
-      await duplicate.locator('[data-goal-state="running"]').waitFor();
-      assert.equal(
-        await duplicate.evaluate(() => window.calls.filter((call) => call[0] === "send").length),
-        1,
-      );
-      await duplicate.close();
     },
   );
-  await check("answers do not leak across session or question changes", async () => {
+  await check("a consent question offers explicit agree / disagree in both languages", async () => {
+    const page = await mount({ detail: "consent" });
+    assert.equal(await question(page).getAttribute("data-goal-reply-level"), "consent");
+    assert.equal(await question(page).getByRole("button").count(), 2);
+    await screenshot(page, "waiting-consent-light");
+    await choice(page, "不同意").click();
+    await page.locator('[data-goal-state="running"]').waitFor();
+    assert.deepEqual(await sends(page), [["不同意", "session-a", true]]);
+    await page.close();
+    const english = await mount({ detail: "consent", lang: "en" });
+    await choice(english, "Agree").click();
+    await english.locator('[data-goal-state="running"]').waitFor();
+    assert.deepEqual(await sends(english), [["Agree", "session-a", true]]);
+    await english.close();
+  });
+  await check("answers go to the session and question that are on screen", async () => {
     const page = await mount();
-    await replyInput(page).fill("unsent answer in session A");
     await page.evaluate(() => window.fixture.setSession("session-b"));
     await frames(page);
-    assert.equal(await replyInput(page).inputValue(), "");
-    await replyInput(page).fill("answer to previous question");
     await page.evaluate(() =>
       window.fixture.setGoal((previous) => ({
         ...previous,
@@ -223,34 +236,36 @@ try {
       })),
     );
     await frames(page);
-    assert.equal(await replyInput(page).inputValue(), "");
-    await replyInput(page).fill("右侧标题基线");
-    await replyButton(page).click();
+    assert.match(await question(page).innerText(), /第二个问题/);
+    await composer(page).fill("右侧标题基线");
+    await composer(page).press("Enter");
     await page.locator('[data-goal-state="running"]').waitFor();
-    assert.deepEqual(
-      await page.evaluate(() =>
-        window.calls
-          .filter((call) => call[0] === "send")
-          .map((call) => [call[1], call[2].bucket, call[2].continueGoal]),
-      ),
-      [["右侧标题基线", "session-b", true]],
-    );
+    assert.deepEqual(await sends(page), [["右侧标题基线", "session-b", true]]);
     await page.close();
   });
   await check(
-    "blocking AskUser keeps one answer destination and manual pause hides reply action",
+    "a blocking AskUser goes first and the goal question queues; a pause hides it",
     async () => {
-      const page = await mount();
+      const page = await mount({ detail: "options" });
       await page.evaluate(() => window.fixture.setOpenAsk(true));
       await frames(page);
-      assert.equal(await replyInput(page).count(), 0);
+      // One pending item at a time: the goal question waits, it is not a disabled card.
+      assert.equal(await question(page).count(), 0);
+      assert.equal(await page.locator("[data-goal-reply-queued]").count(), 1);
       assert.equal(await page.getByText("真正的 AskUser 问题", { exact: true }).count(), 1);
-      await page.evaluate(() => {
-        window.fixture.setOpenAsk(false);
-        window.fixture.setGoal((previous) => ({ ...previous, paused: true }));
-      });
+      assert.notEqual(
+        await composer(page).getAttribute("placeholder"),
+        "在这里回答上面的问题，Enter 发送…",
+      );
+      await screenshot(page, "queued-behind-ask-light");
+      await page.evaluate(() => window.fixture.setOpenAsk(false));
+      await question(page).waitFor();
+      assert.equal(await page.locator("[data-goal-reply-queued]").count(), 0);
+      await page.evaluate(() =>
+        window.fixture.setGoal((previous) => ({ ...previous, paused: true })),
+      );
       await page.locator('[data-goal-state="paused"]').waitFor();
-      assert.equal(await replyInput(page).count(), 0);
+      assert.equal(await question(page).count(), 0);
       const before = await page.locator("[data-goal-state]").innerText();
       await page.waitForTimeout(1100);
       assert.equal(await page.locator("[data-goal-state]").innerText(), before);
@@ -265,51 +280,47 @@ try {
   });
   for (const sendFailure of ["reject", "optimistic"]) {
     await check(
-      sendFailure + " send failure preserves the answer, reports failure and permits retry",
+      sendFailure + " send failure gives the answer back, reports failure and permits retry",
       async () => {
         const page = await mount({ sendFailure });
-        await replyInput(page).fill("右侧标题基线仍偏下，请继续优化");
-        await replyButton(page).click();
+        await composer(page).fill("右侧标题基线仍偏下，请继续优化");
+        await composer(page).press("Enter");
         if (sendFailure === "optimistic") {
           await page.locator('[data-goal-state="running"]').waitFor();
-          assert.equal(await replyInput(page).count(), 0);
+          assert.equal(await question(page).count(), 0);
           await page.evaluate(() => window.fixture.rejectPending());
         }
         await page.getByRole("alert").filter({ hasText: "回复未发送，请重试。" }).waitFor();
-        assert.equal(await replyInput(page).inputValue(), "右侧标题基线仍偏下，请继续优化");
-        assert.equal(await replyButton(page).isEnabled(), true);
-        assert.equal(
-          await page.evaluate(() => window.fixture.draft()),
-          "Keep my ordinary composer draft",
-        );
+        assert.equal(await composer(page).inputValue(), "右侧标题基线仍偏下，请继续优化");
         assert.equal(await page.locator('[data-goal-state="waiting"]').count(), 1);
         await page.evaluate(() => window.fixture.setFailure("none"));
         await frames(page);
-        await replyButton(page).click();
+        await composer(page).press("Enter");
         await page.locator('[data-goal-state="running"]').waitFor();
-        assert.deepEqual(
-          await page.evaluate(() =>
-            window.calls
-              .filter((call) => call[0] === "send")
-              .map((call) => [call[1], call[2].bucket, call[2].continueGoal]),
-          ),
-          [
-            ["右侧标题基线仍偏下，请继续优化", "session-a", true],
-            ["右侧标题基线仍偏下，请继续优化", "session-a", true],
-          ],
-        );
-        assert.equal(await replyInput(page).count(), 0);
+        assert.deepEqual(await sends(page), [
+          ["右侧标题基线仍偏下，请继续优化", "session-a", true],
+          ["右侧标题基线仍偏下，请继续优化", "session-a", true],
+        ]);
+        assert.equal(await question(page).count(), 0);
+        assert.equal(await page.getByRole("alert").count(), 0);
         await page.close();
       },
     );
   }
   for (const mode of ["light", "dark"]) {
-    await check(mode + " narrow layout keeps answer and action within the pane", async () => {
-      const page = await mount({ width: 360, height: 800, mode, longQuestion: true });
+    await check(mode + " narrow layout keeps the question and chips within the pane", async () => {
+      const page = await mount({
+        width: 360,
+        height: 800,
+        mode,
+        longQuestion: true,
+        detail: "options",
+      });
       for (const locator of [
         page.locator("[data-goal-state]"),
-        replyInput(page),
-        replyButton(page),
+        question(page),
+        ...(await question(page).getByRole("button").all()),
+        composer(page),
       ]) {
         const bounds = await locator.boundingBox();
         assert(
@@ -317,7 +328,7 @@ try {
           "control overflows horizontally",
         );
       }
-      assert(await replyInput(page).isVisible());
+      assert(await composer(page).isVisible());
       const overflows = await page
         .locator("[data-goal-state]")
         .evaluate((element) => ({ client: element.clientWidth, scroll: element.scrollWidth }));
@@ -340,9 +351,8 @@ try {
         );
       }
       assert(overflows.scroll <= overflows.client + 1, "goal contents overflow horizontally");
-      await replyInput(page).fill("右侧标题基线仍偏下");
-      await screenshot(page, "waiting-narrow-" + mode);
-      await replyButton(page).click();
+      await composer(page).fill("右侧标题基线仍偏下");
+      await composer(page).press("Enter");
       await page.locator('[data-goal-state="running"]').waitFor();
       await page.close();
     });
