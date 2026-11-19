@@ -138,6 +138,12 @@ export function DesktopApp() {
                 重新配对
               </button>
             </div>
+          ) : controller.retryConnection ? (
+            <div className="library-actions">
+              <button className="library-button" onClick={controller.retryConnection}>
+                立即重连
+              </button>
+            </div>
           ) : null}
         </div>
       </main>
@@ -1046,6 +1052,8 @@ export function useDesktopController(
           ? "closed"
           : "connecting",
     connectionMessage,
+    // Skip the relay backoff wait; only meaningful while the socket is down.
+    retryConnection: app.status === "offline" && !app.accessRequired ? app.reconnectNow : undefined,
     session,
     activeId,
     panelSessionId:

@@ -191,6 +191,8 @@ export interface RemoteApp {
     acceptance: OutputHistoryRecoveryAcceptance,
   ) => Promise<OutputHistoryRecoveryResult>;
   logout: () => void;
+  /** Reconnect immediately instead of waiting for the next backoff retry. */
+  reconnectNow: () => void;
   // actions
   /** Resolves true once the host accepted the message. */
   sendChat: (input: {
@@ -3420,6 +3422,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     getSessionOutputRecoveryPlan,
     applySessionOutputRecovery,
     logout: socket.logout,
+    reconnectNow: socket.reconnectNow,
     sendChat,
     stopRun,
     selectSession,

@@ -39,6 +39,8 @@ export interface RemoteSocket {
   send: (event: MobileClientEvent, expectedGeneration?: number) => boolean;
   /** Manually drop credentials and return to the pairing screen. */
   logout: () => void;
+  /** Skip the backoff wait and reconnect now (the "立即重连" action). No-op once stopped. */
+  reconnectNow: () => void;
 }
 
 export interface RemoteSocketHandlers {
@@ -68,6 +70,7 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
   const retryRef = useRef(0);
   const closedByUs = useRef(false);
   const stopSocket = useRef<(() => void) | undefined>(undefined);
+  const reconnectRef = useRef<(() => void) | undefined>(undefined);
   const statusRef = useRef<ConnStatus>(status);
   statusRef.current = status;
   // Keep latest handlers without retriggering the connect effect.
@@ -413,6 +416,7 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
       }
       reconnectNow();
     };
+    reconnectRef.current = reconnectNow;
     const onOnline = () => resyncOrReconnect("online");
     const onVisible = () => {
       if (document.visibilityState === "visible") resyncOrReconnect("visible");
@@ -450,8 +454,11 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
       logoutGeneration.current += 1;
       setAccountRelayCredential(undefined);
       if (stopSocket.current === stop) stopSocket.current = undefined;
+      if (reconnectRef.current === reconnectNow) reconnectRef.current = undefined;
     };
   }, []);
+
+  const reconnectNow = useCallback(() => reconnectRef.current?.(), []);
 
   return {
     status,
@@ -463,5 +470,6 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
     connectionGeneration,
     send,
     logout,
+    reconnectNow,
   };
 }

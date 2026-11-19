@@ -302,7 +302,7 @@ try {
       );
       await page.locator(".sidebar-close").focus();
       const labels = [],
-        count = await page.locator('.rail button, .rail [tabindex="0"]').count();
+        count = await page.locator('.rail button, .rail input, .rail [tabindex="0"]').count();
       for (let index = 0; index < count; index++) {
         labels.push((await assertFocus()).label);
         await page.keyboard.press("Tab");
@@ -325,7 +325,7 @@ try {
       await page.screenshot({
         path: path.join(output, `${theme}-${size.width}x${size.height}-sessions.png`),
       });
-      await page.locator(".sessions button").last().click();
+      await page.locator(".sessions button.session").last().click();
       await page.waitForFunction(() =>
         document.querySelector(".topbar-title")?.textContent.includes("session-29"),
       );

@@ -1,4 +1,7 @@
+/* The marketing page is a fixed paper-and-ink design: keep native controls and
+   scrollbars light even when the workbench appearance is set to dark. */
 .public-site {
+  color-scheme: light;
   --site-accent: #ad4d28;
   --site-ink: #242622;
   --site-muted: #6e716a;

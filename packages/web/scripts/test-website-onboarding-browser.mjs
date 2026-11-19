@@ -296,6 +296,18 @@ try {
       .getByRole("link", { name: "登录", exact: true })
       .click();
     await page.getByRole("link", { name: "没有账号？创建账号" }).waitFor();
+    // Sign-in offers the same system / light / dark choice as the workbench.
+    const appearance = page.getByRole("group", { name: "外观", exact: true });
+    assert.equal(
+      await appearance
+        .getByRole("button", { name: "跟随系统", exact: true })
+        .getAttribute("aria-pressed"),
+      "true",
+    );
+    assert.equal(
+      await page.evaluate(() => globalThis.document.documentElement.dataset.theme),
+      undefined,
+    );
     await shot(page, `${prefix}-01-login`);
     await page.getByRole("link", { name: "没有账号？创建账号" }).click();
     await page.getByLabel("昵称", { exact: true }).fill("测试账号");

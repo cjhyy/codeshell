@@ -241,12 +241,46 @@ try {
     const { page, calls, state } = await mount({ width, theme });
     await page.goto(`${origin}/admin`);
     await page.getByText("账号总数", { exact: true }).waitFor();
+    // Primary actions use the Desktop accent, not near-black.
+    assert.equal(
+      await page.evaluate(() => {
+        const probe = globalThis.document.createElement("span");
+        probe.style.background = "var(--accent)";
+        globalThis.document.body.append(probe);
+        const accent = globalThis.getComputedStyle(probe).backgroundColor;
+        probe.remove();
+        const button = globalThis.document.querySelector(".website-button.primary");
+        return globalThis.getComputedStyle(button).backgroundColor === accent;
+      }),
+      true,
+      "primary buttons must use the accent colour",
+    );
     await shot(page, `${width}-${theme}-overview`);
     await page
       .getByRole("navigation", { name: "管理后台", exact: true })
       .getByRole("button", { name: "账号管理", exact: true })
       .click();
     await page.getByRole("row").filter({ hasText: "member-01" }).waitFor();
+    if (width < 760) {
+      // Phones get account cards: status and actions are visible without sideways panning.
+      const first = page.getByRole("row").filter({ hasText: "member-01" });
+      for (const control of [
+        first.getByText("正常", { exact: true }),
+        first.getByRole("button", { name: "停用", exact: true }),
+        first.getByRole("button", { name: "退出会话", exact: true }),
+      ]) {
+        const box = await control.boundingBox();
+        assert.ok(box && box.x >= 0 && box.x + box.width <= width, "card control fits the phone");
+      }
+      assert.equal(
+        await page
+          .getByRole("region", { name: "账号列表" })
+          .evaluate((node) => node.scrollWidth <= node.clientWidth),
+        true,
+        "the account list must not need horizontal scrolling",
+      );
+      assert.equal(await page.getByText("左右滑动表格可查看完整信息与操作。").count(), 0);
+    }
     await shot(page, `${width}-${theme}-accounts`);
     await page.getByRole("button", { name: "下一页", exact: true }).click();
     await page.getByRole("row").filter({ hasText: "member-31" }).waitFor();
@@ -310,6 +344,8 @@ try {
       .click();
     await page.getByText("停用账号", { exact: true }).waitFor();
     await page.getByText("恢复账号", { exact: true }).waitFor();
+    // The signed-in administrator is named instead of shown as a bare ID.
+    assert.ok((await page.getByText("你（@site-admin）", { exact: true }).count()) >= 3);
     await shot(page, `${width}-${theme}-audit`);
     assert.equal(
       calls.some(
@@ -346,6 +382,17 @@ try {
   await recovering.page.getByLabel("打开账号菜单", { exact: true }).click();
   await recovering.page.getByRole("button", { name: "管理后台", exact: true }).click();
   await recovering.page.getByText("账号总数", { exact: true }).waitFor();
+  // Appearance lives in the account menu, as on Desktop; the explicit choice wins over the OS.
+  await recovering.page.getByLabel("打开账号菜单", { exact: true }).click();
+  await recovering.page
+    .getByRole("group", { name: "外观", exact: true })
+    .getByRole("button", { name: "深色", exact: true })
+    .click();
+  assert.equal(
+    await recovering.page.evaluate(() => globalThis.document.documentElement.dataset.theme),
+    "dark",
+  );
+  await shot(recovering.page, "1440-explicit-dark-overview");
 
   const member = await mount({ role: "member" });
   await member.page.goto(`${origin}/admin/users`);
@@ -364,6 +411,7 @@ try {
           "loading and failure recovery, plus account menu entry",
           "audit records, member denial and no cloud runtime requests",
           "desktop light and mobile dark fit the viewport",
+          "accent primary buttons, phone account cards, named audit actor, appearance toggle",
         ],
         screenshots,
         errors,

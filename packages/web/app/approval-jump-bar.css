@@ -1,0 +1,49 @@
+.approval-jump {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 7px 8px 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  font-size: 12px;
+}
+.approval-jump.blocking {
+  border-color: color-mix(in srgb, var(--warning) 45%, var(--border));
+  background: color-mix(in srgb, var(--warning) 7%, var(--surface));
+}
+.approval-jump > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+.approval-jump-dot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.approval-jump.blocking .approval-jump-dot {
+  background: var(--warning);
+}
+.approval-jump button {
+  flex: none;
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+.approval-jump button:hover {
+  background: var(--hover);
+}
+@media (max-width: 760px) {
+  .approval-jump button {
+    min-height: 32px;
+  }
+}

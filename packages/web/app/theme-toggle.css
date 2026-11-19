@@ -1,0 +1,41 @@
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  flex: none;
+}
+.theme-toggle button {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.theme-toggle button:hover {
+  color: var(--text);
+}
+.theme-toggle button[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 2px hsl(240 10% 3.9% / 12%);
+}
+.theme-toggle button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+@media (max-width: 760px) {
+  /* Touch targets: keep the strip compact but at least 32px tall. */
+  .theme-toggle button {
+    width: 34px;
+    height: 30px;
+  }
+}

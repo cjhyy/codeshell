@@ -28,6 +28,7 @@ import {
 } from "./website-routes.js";
 import type { CloudManagementSession } from "./auth.js";
 import "./website.css";
+import { ThemeToggle } from "./ThemeToggle.js";
 import { withAccountCookieLock } from "./account-cookie-lock.js";
 import { parseAccountSession } from "./account-api.js";
 import { DesktopLoginPage, desktopLoginRequest } from "./DesktopLogin.js";
@@ -206,6 +207,10 @@ function WebsiteAccountMenu({
       <div className="website-account-popover">
         <strong>{user?.displayName}</strong>
         <small>@{user?.username}</small>
+        <div className="website-account-theme">
+          <span>外观</span>
+          <ThemeToggle />
+        </div>
         <button onClick={chooseDestination}>切换云端或电脑</button>
         <button
           onClick={(event) => {

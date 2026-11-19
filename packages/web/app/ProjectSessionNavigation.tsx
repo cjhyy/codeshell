@@ -16,6 +16,7 @@ export function ProjectSessionNavigation({
   hasMore,
   loadMore,
   renderSession,
+  filtered,
 }: {
   sessions: SessionSummary[];
   projects: readonly MobileProjectMeta[];
@@ -24,6 +25,8 @@ export function ProjectSessionNavigation({
   hasMore?: boolean;
   loadMore?: () => void;
   renderSession: (session: SessionSummary) => React.ReactNode;
+  /** Rows were narrowed by search or lifted into 置顶, so "no sessions yet" would mislead. */
+  filtered?: boolean;
 }) {
   const [groupLimit, setGroupLimit] = React.useState(GROUP_BATCH);
   const [collapsed, setCollapsed] = React.useState<ReadonlySet<string>>(() => new Set());
@@ -58,7 +61,7 @@ export function ProjectSessionNavigation({
         <span>项目</span>
         <span>{loading ? "正在更新…" : `已加载 ${sessions.length}`}</span>
       </div>
-      {!groups.length ? (
+      {!groups.length && !(filtered && !loading) ? (
         <p className="project-session-empty" role={loading ? "status" : undefined}>
           {loading ? "正在读取会话目录…" : "还没有会话，可以直接开始无项目对话。"}
         </p>
