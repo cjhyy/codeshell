@@ -13,6 +13,13 @@ import type { Message } from "../types";
 
 export type DriveAgentJob = Extract<BackgroundWorkInfo, { kind: "job" }>;
 
+/**
+ * Dispatched on `window` by any surface that changed a background task (the
+ * task view's Stop, "mark as ended"). The inline rows re-read at once instead
+ * of showing the previous state until their next poll.
+ */
+export const BACKGROUND_WORK_CHANGED_EVENT = "codeshell:background-work-changed";
+
 const DriveAgentJobsContext = createContext<readonly DriveAgentJob[]>([]);
 const INITIAL_RETRY_DELAYS_MS = [100, 500, 1_500] as const;
 
@@ -111,7 +118,15 @@ export function DriveAgentJobsLoader({
     if (!jobKey) return;
     const onChanged = (): void => void refresh();
     window.addEventListener("codeshell:files-changed", onChanged);
-    return () => window.removeEventListener("codeshell:files-changed", onChanged);
+    window.addEventListener(BACKGROUND_WORK_CHANGED_EVENT, onChanged);
+    // Main's task projection changes when a task ends by itself; the task view
+    // listens to the same signal, so the two never disagree for long.
+    const off = window.codeshell.taskInbox?.onChanged?.(onChanged);
+    return () => {
+      window.removeEventListener("codeshell:files-changed", onChanged);
+      window.removeEventListener(BACKGROUND_WORK_CHANGED_EVENT, onChanged);
+      off?.();
+    };
   }, [jobKey, refresh]);
 
   const hasRunningJob = jobs.some((job) => job.status === "running" || job.status === "cancelling");

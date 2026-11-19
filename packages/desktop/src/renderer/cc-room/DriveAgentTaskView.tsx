@@ -3,6 +3,7 @@ import type { BackgroundWorkInfo } from "../../preload/types";
 import { Button } from "@/components/ui/button";
 import { useT } from "../i18n/I18nProvider";
 import { CCConversationView } from "./CCConversationView";
+import { BACKGROUND_WORK_CHANGED_EVENT } from "../tool-cards/DriveAgentJobsContext";
 import type { OpenCliSessionRequest } from "./types";
 
 type Job = Extract<BackgroundWorkInfo, { kind: "job" }>;
@@ -29,6 +30,8 @@ export async function stopDriveAgentTask(job: Job): Promise<boolean> {
     job.jobId,
     job.startedAt,
   );
+  // The parent session's inline row for this worker re-reads now, not at its next poll.
+  window.dispatchEvent(new Event(BACKGROUND_WORK_CHANGED_EVENT));
   return result.cancelled;
 }
 
@@ -228,6 +231,7 @@ export function DriveAgentTaskView({
         job.startedAt,
       );
       if (!result.marked) setActionError(t("panels.shells.taskMarkUnavailable"));
+      window.dispatchEvent(new Event(BACKGROUND_WORK_CHANGED_EVENT));
     } catch (error) {
       setActionError(
         t("panels.shells.taskMarkFailed", {

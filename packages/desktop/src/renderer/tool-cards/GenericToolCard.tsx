@@ -35,6 +35,18 @@ export function GenericToolCard({
   const cliLink = driveAgentLinkDetailForToolMessage(message, backgroundJobs);
   const jobId = driveAgentJobIdFromToolMessage(message);
   const job = backgroundJobs.find((candidate) => candidate.jobId === jobId);
+  // Once the worker has ended, say how: a refusal that cut it short matters
+  // more than whatever its last activity happened to be.
+  const jobEnded =
+    job?.status === "completed" || job?.status === "failed" || job?.status === "cancelled";
+  const jobDenials = job?.progress?.permissionDenials ?? 0;
+  const jobNote = !job
+    ? undefined
+    : jobEnded && job.progress?.blocked === "permission"
+      ? t("panels.shells.taskPermissionBlocked", { count: jobDenials })
+      : jobEnded && jobDenials > 0
+        ? t("panels.shells.taskPermissionDeniedDone", { count: jobDenials })
+        : job.progress?.summary;
   // Use parsedArgs (argsLive ?? parsed message.args), NOT raw message.args —
   // message.args is the tool_use_start snapshot ("{}" while streaming); the real
   // args arrive via tool_use_args_delta and live in argsLive. Reading the raw
@@ -105,7 +117,7 @@ export function GenericToolCard({
         details={details}
         preview={
           job && (
-            <div data-drive-agent-progress="" className="flex min-w-0 items-center gap-2">
+            <div data-drive-agent-progress={job.status} className="flex min-w-0 items-center gap-2">
               <StatusDot
                 status={
                   job.status === "running"
@@ -135,11 +147,8 @@ export function GenericToolCard({
                             : "panels.shells.jobUnknown",
                 )}
               </span>
-              <span
-                className="min-w-0 flex-1 truncate text-muted-foreground"
-                title={job.progress?.summary}
-              >
-                {job.progress?.summary}
+              <span className="min-w-0 flex-1 truncate text-muted-foreground" title={jobNote}>
+                {jobNote}
               </span>
               {cliLink && <DriveAgentLinkButton detail={cliLink} />}
             </div>

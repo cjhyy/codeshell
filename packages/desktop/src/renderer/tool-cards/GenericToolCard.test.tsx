@@ -173,4 +173,46 @@ describe("GenericToolCard DriveAgent CLI link", () => {
     expect(html).toContain("Read README.md");
     expect(html).toContain("查看 Codex 进度");
   });
+
+  test("the inline row names every end state of the worker, never a stale 进行中", () => {
+    const row = (overrides: Partial<typeof job>) =>
+      renderToStaticMarkup(
+        <DriveAgentJobsProvider jobs={[{ ...job, ...overrides }]}>
+          <GenericToolCard message={msg({ toolName: "DriveAgent", result: "jobId cc-abc123" })} />
+        </DriveAgentJobsProvider>,
+      );
+    const progress = { lastActivityAt: 1, eventCount: 3 };
+    const cases: Array<[Partial<typeof job>, string, string]> = [
+      [{ status: "completed" }, "completed", "已完成"],
+      // Finished, but some operations were refused along the way.
+      [
+        { status: "completed", progress: { ...progress, permissionDenials: 2 } },
+        "completed",
+        "已完成",
+      ],
+      [{ status: "failed" }, "failed", "失败"],
+      // Stopped early by the host because it could not proceed.
+      [{ status: "failed", progress: { ...progress, blocked: "permission" } }, "failed", "失败"],
+      [{ status: "cancelled" }, "cancelled", "已取消"],
+      [{ status: "cancelling" }, "cancelling", "停止中"],
+    ];
+    for (const [overrides, status, label] of cases) {
+      const html = row(overrides);
+      expect(html).toContain(`data-drive-agent-progress="${status}"`);
+      expect(html).toContain(label);
+      expect(html).not.toContain("进行中");
+    }
+    const blocked = row({ status: "failed", progress: { ...progress, blocked: "permission" } });
+    expect(blocked).toContain("被权限拦住，已提前停止");
+    expect(row({ status: "completed", progress: { ...progress, permissionDenials: 2 } })).toContain(
+      "有 2 个操作被权限拒绝",
+    );
+    // While it runs, the row keeps showing the latest activity instead.
+    const running = row({
+      status: "running",
+      progress: { ...progress, permissionDenials: 2, summary: "Read README.md" },
+    });
+    expect(running).toContain("Read README.md");
+    expect(running).not.toContain("任务可能没有做完");
+  });
 });
