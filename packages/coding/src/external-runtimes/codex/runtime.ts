@@ -20,6 +20,12 @@ import { CodexAppServerClient, type AppServerClientOptions } from "./app-server-
 import { CodexEventTranslator } from "./event-translator.js";
 import { buildRuntimeSpawnEnv } from "../shared/spawn-env.js";
 import { codexBridgeConfigArgs, type McpBridgeHandle } from "../shared/mcp-bridge.js";
+import {
+  codexHostMcpServerArgs,
+  hostMcpSecretEnv,
+  validateExternalHostMcpServers,
+  type ExternalHostMcpServer,
+} from "../shared/host-mcp-servers.js";
 import { textWithAttachmentReferences, type ExternalRuntimeTurnInput } from "../turn-input.js";
 
 /** A thread/start or turn/start that hangs is worse than one that fails. */
@@ -39,6 +45,11 @@ export interface CodexRuntimeOptions {
    * belongs to some other server and must be declined.
    */
   bridgeServerName?: string;
+  /**
+   * Host-owned stdio MCP servers declared beside the bridge. Their approval
+   * elicitations go to `onHostMcpApproval`; ignored with `disableNativeTools`.
+   */
+  hostMcpServers?: readonly ExternalHostMcpServer[];
   model?: string;
   resumeRuntimeSessionId?: string;
   initialContext?: string;
@@ -93,6 +104,15 @@ export interface CodexRuntimeHooks {
     /** How many files the patch touches in all; more than `fileChanges` lists when truncated. */
     fileChangeCount?: number;
   }) => Promise<NativeApprovalDecision> | NativeApprovalDecision;
+  /**
+   * Called for an approval elicitation from one of `hostMcpServers`. These tools
+   * bypass `ToolExecutor`, so nothing else authorizes the call. Defaults to decline.
+   */
+  onHostMcpApproval?: (request: {
+    serverName: string;
+    toolName?: string;
+    message?: string;
+  }) => Promise<boolean> | boolean;
   /** Answer Codex's request_user_input tool through the owning CodeShell UI. */
   onUserInput?: (request: { method: string; params: unknown }) => Promise<unknown> | unknown;
 }
@@ -213,6 +233,7 @@ export class CodexRuntime {
   private started = false;
   private resumed = false;
   private firstTurn = true;
+  private readonly hostMcpServers: readonly ExternalHostMcpServer[];
   private activeTurn?: ActiveTurn;
   /** Files of each `fileChange` item still in flight, by item id (for its approval prompt). */
   private readonly fileChanges = new Map<string, TrackedFileChanges>();
@@ -222,6 +243,13 @@ export class CodexRuntime {
     private readonly hooks: CodexRuntimeHooks = {},
   ) {
     this.log = options.log ?? (() => {});
+    // A manager-mode thread is restricted to the reviewed bridge: no other server.
+    this.hostMcpServers = options.disableNativeTools
+      ? []
+      : validateExternalHostMcpServers(
+          options.hostMcpServers,
+          options.bridgeServerName ?? "codeshell_tools",
+        );
     this.client = new CodexAppServerClient({
       ...options.client,
       cwd: options.cwd,
@@ -230,11 +258,13 @@ export class CodexRuntime {
       env: buildRuntimeSpawnEnv({
         base: options.client?.env,
         bridgeToken: { name: options.bridge.tokenEnvVar, value: options.bridge.token },
+        secrets: hostMcpSecretEnv(this.hostMcpServers),
       }),
       // Point the thread at the bridge. The token travels by env var, not argv.
       args: [
         ...(options.client?.args ?? ["app-server"]),
         ...codexBridgeConfigArgs(options.bridge, options.bridgeServerName),
+        ...codexHostMcpServerArgs(this.hostMcpServers),
       ],
       log: this.log,
     });
@@ -718,11 +748,15 @@ export class CodexRuntime {
    * as well would prompt twice for one operation; declining here would make
    * CodeShell tools permanently unreachable.
    *
+   * A declared Host MCP server (`hostMcpServers`) is the opposite case: its tools
+   * do NOT pass through `ToolExecutor`, so this elicitation is the only approval
+   * the call gets. It is put to `onHostMcpApproval` and declined without one.
+   *
    * Everything else is declined. An elicitation from a THIRD-PARTY MCP server, or
    * one whose kind we do not recognise, is not ours to consent to — and a blanket
    * accept here would hand the runtime a yes for any server it can name.
    */
-  private answerMcpElicitation(params: unknown): unknown {
+  private async answerMcpElicitation(params: unknown): Promise<unknown> {
     const record = params && typeof params === "object" ? (params as Record<string, unknown>) : {};
     const meta =
       record._meta && typeof record._meta === "object"
@@ -732,7 +766,23 @@ export class CodexRuntime {
       typeof meta.codex_approval_kind === "string" ? meta.codex_approval_kind : undefined;
     const server = typeof record.serverName === "string" ? record.serverName : undefined;
     const expected = this.options.bridgeServerName ?? "codeshell_tools";
-    const ours = kind === "mcp_tool_call" && server === expected;
+    let ours = kind === "mcp_tool_call" && server === expected;
+    if (
+      kind === "mcp_tool_call" &&
+      server !== undefined &&
+      this.hostMcpServers.some((declared) => declared.name === server)
+    ) {
+      try {
+        ours =
+          (await this.hooks.onHostMcpApproval?.({
+            serverName: server,
+            ...(typeof meta.tool_name === "string" ? { toolName: meta.tool_name } : {}),
+            ...(typeof record.message === "string" ? { message: record.message } : {}),
+          })) === true;
+      } catch {
+        ours = false;
+      }
+    }
 
     this.log("runtime.mcp_elicitation", {
       kind,

@@ -30,6 +30,7 @@ import {
   type ClaudePermissionPromptDecider,
 } from "./permissions.js";
 import type { McpBridgeHandle } from "../shared/mcp-bridge.js";
+import type { ExternalHostMcpServer } from "../shared/host-mcp-servers.js";
 import type { ExternalRuntimeTurnInput } from "../turn-input.js";
 import { buildClaudeUserMessage } from "./user-message.js";
 
@@ -64,6 +65,8 @@ export interface ClaudeRuntimeOptions {
    */
   permissionPromptTool?: string;
   serverName?: string;
+  /** Host-owned stdio MCP servers declared beside the bridge; never pre-approved. */
+  hostMcpServers?: readonly ExternalHostMcpServer[];
   /**
    * How long `interrupt()`/`close()` wait after SIGTERM before SIGKILL.
    * Defaults to {@link DEFAULT_INTERRUPT_GRACE_MS}.
@@ -214,6 +217,7 @@ export class ClaudeCodeRuntime {
       bridge: this.options.bridge,
       exposedToolNames: this.options.exposedToolNames,
       ...(this.options.serverName ? { serverName: this.options.serverName } : {}),
+      ...(this.options.hostMcpServers ? { hostMcpServers: this.options.hostMcpServers } : {}),
     });
 
     // Per turn: each `claude -p` is a new process, and `--resume` does not carry a

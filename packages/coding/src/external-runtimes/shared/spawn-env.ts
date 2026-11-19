@@ -20,6 +20,8 @@ export interface RuntimeSpawnEnvOptions {
   base?: NodeJS.ProcessEnv;
   /** Bearer token env var name and value for the loopback MCP bridge. */
   bridgeToken?: { name: string; value: string };
+  /** Further secrets a Host MCP server reads by name (never placed in argv). */
+  secrets?: Readonly<Record<string, string>>;
 }
 
 /**
@@ -48,5 +50,6 @@ export function buildRuntimeSpawnEnv(options: RuntimeSpawnEnvOptions = {}): Node
   if (options.bridgeToken) {
     env[options.bridgeToken.name] = options.bridgeToken.value;
   }
+  Object.assign(env, options.secrets);
   return env;
 }

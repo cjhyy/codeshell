@@ -34,6 +34,7 @@ import {
   type McpBridgeHandle,
 } from "./shared/mcp-bridge.js";
 import { SessionContextStore } from "./shared/session-context-store.js";
+import type { ExternalHostMcpServer } from "./shared/host-mcp-servers.js";
 import { CodexRuntime, type CodexRuntimeHooks, type CodexRuntimeOptions } from "./codex/runtime.js";
 import { ClaudeCodeRuntime, type ClaudeRuntimeHooks } from "./claude-code/runtime.js";
 import { CLAUDE_MCP_SERVER_NAME } from "./claude-code/mcp-config.js";
@@ -118,6 +119,14 @@ export interface ExternalRuntimeSessionOptions {
   approvalPolicy?: string;
   /** Restrict the external provider to the Host's reviewed bridge tools. */
   disableNativeTools?: boolean;
+  /**
+   * Host-owned stdio MCP servers offered beside the bridge (Desktop's gated
+   * Computer Use proxy). They bypass `ToolExecutor`: the Host decides whether a
+   * session gets one, the server enforces its own execution policy, and each
+   * call is approved through `approvalBackend` (Codex) or the Claude permission
+   * prompt. Never offered in plan mode or with `disableNativeTools`.
+   */
+  hostMcpServers?: readonly ExternalHostMcpServer[];
   /** Claude Code only: extra CLI args. */
   claudeExtraArgs?: readonly string[];
   /**
@@ -270,6 +279,10 @@ export async function startExternalRuntimeSession(
 
     // 4. Runtime.
     const exposedToolNames = host.listTools().map((definition) => definition.name);
+    // Restricted sessions keep the reviewed bridge as their only tool channel.
+    const hostMcpServers =
+      options.disableNativeTools || options.planMode ? [] : (options.hostMcpServers ?? []);
+    const approvalBackend = options.approvalBackend;
     if (options.kind === "codex") {
       const codex = new CodexRuntime(
         {
@@ -287,10 +300,30 @@ export async function startExternalRuntimeSession(
           ...(options.sandbox ? { sandbox: options.sandbox } : {}),
           ...(options.approvalPolicy ? { approvalPolicy: options.approvalPolicy } : {}),
           ...(options.disableNativeTools ? { disableNativeTools: true } : {}),
+          ...(hostMcpServers.length ? { hostMcpServers } : {}),
           ...(options.codexClient ? { client: options.codexClient } : {}),
           log,
         },
-        options.hooks ?? {},
+        {
+          // No approval backend means no hook: the runtime then declines.
+          ...(approvalBackend
+            ? {
+                onHostMcpApproval: async (request) =>
+                  (
+                    await approvalBackend.requestApproval({
+                      sessionId: options.businessSessionId,
+                      toolName: `mcp__${request.serverName}__${request.toolName ?? "tool"}`,
+                      args: {},
+                      description:
+                        request.message ??
+                        `Codex wants to use ${request.toolName ?? "a tool"} on ${request.serverName}.`,
+                      riskLevel: "high",
+                    })
+                  ).approved === true,
+              }
+            : {}),
+          ...options.hooks,
+        },
       );
       // Own the process before its handshake can fail, so the catch path also
       // closes an app-server that launched but could not initialize a thread.
@@ -313,6 +346,7 @@ export async function startExternalRuntimeSession(
             : {}),
           permissionMode: claudePermissionMode,
           ...(claudePromptTool ? { permissionPromptTool: claudePromptTool } : {}),
+          ...(hostMcpServers.length ? { hostMcpServers } : {}),
           ...(options.disableNativeTools
             ? { extraArgs: [...(options.claudeExtraArgs ?? []), "--tools", ""] }
             : options.claudeExtraArgs
