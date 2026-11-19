@@ -8,10 +8,12 @@ breaking.
 
 ## [Unreleased]
 
-## [0.11.0-rc.2] - 2026-11-13
+## [0.11.0-rc.3] - 2026-11-19
 
-Release candidate for the desktop, website and account computer flow. Public
-remote access requires the matching Services deployment, device DNS and TLS.
+Release candidate for the desktop, website and account computer flow, plus the
+prompt-cache context ledger. Public remote access requires the matching Services
+deployment, device DNS and TLS. 0.11.0-rc.2 was versioned but never tagged; its
+changes ship here.
 
 ### Added
 
@@ -29,6 +31,19 @@ remote access requires the matching Services deployment, device DNS and TLS.
 - Account security settings for Passkeys, with fingerprint, Face ID or device PIN
   verification. First enrollment verifies the existing account password or linked
   GitHub identity; adding credentials or login methods requires an existing Passkey.
+- Keep run context in history as an append-only context ledger, so dynamic
+  context, reminders, skills and memory no longer rewrite the cached prefix
+  between runs. Mimi's lists, notes and tool table go through the same ledger.
+- Usage page charts cache hit rate over time; usage summaries bucket by time and
+  attribute cache-read drops to the message changes that caused them.
+- Remote web workbench: progressive project groups for remote sessions, grouped
+  process narration with collapsible completed activity, and opening an existing
+  chat or workbench directly from the computer chooser.
+- Model and permission controls for Codex and Claude Code sessions in the desktop
+  and web composer, with changes fenced against pending sends.
+- Standalone account administration console on the website.
+- Claude Code image attachments are sent natively; Codex and Claude Code models
+  accept images.
 
 ### Security
 
@@ -48,6 +63,19 @@ remote access requires the matching Services deployment, device DNS and TLS.
   without enabling incoming remote control on itself.
 - Keep recovery and connection attempts scoped to the current account; late
   responses after sign-out cannot restore its computer list or open a computer.
+- Account relay sessions renew without a new Passkey prompt, survive brief
+  reconnects and Host restarts, bound grants across clock differences, and stop
+  reconnect loops once authorization expires.
+- Prompt cache: stable breakpoints stay off volatile tail context, wire content
+  shape no longer depends on cache markers, fingerprints stay comparable across
+  restarts, and retroactive rewrites are batched. Memory extraction, session
+  summaries and the goal judge get their own cacheable prefixes.
+- OpenRouter requests are priced with published cache prices and size tiers for
+  every model, and the catalog is fetched only after a real OpenRouter request.
+- Engine context messages stay out of summarizer input, rollover checkpoints,
+  exports and user-message consumers.
+- Final goal reports stay outside process folds; copying a final answer uses one
+  visible-content action.
 
 ## [0.11.0-rc.1] - 2026-11-12
 
