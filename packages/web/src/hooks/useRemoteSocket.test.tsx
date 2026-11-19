@@ -577,6 +577,43 @@ describe("useRemoteSocket resync", () => {
     await hook.unmount();
   });
 
+  test("reconnectNow skips the backoff wait after a drop and is a no-op while online", async () => {
+    setupBrowser();
+    const hook = await renderHook(() => useRemoteSocket({}));
+    const first = FakeWebSocket.instances[0]!;
+    await act(async () => {
+      first.open();
+      first.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.status).toBe("online");
+    // Online: a manual retry must not tear down a healthy socket.
+    await act(async () => {
+      hook.result.current.reconnectNow();
+      await flushMicrotasks();
+    });
+    expect(FakeWebSocket.instances).toHaveLength(1);
+
+    await act(async () => {
+      first.onerror?.();
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.status).toBe("offline");
+    // The backoff timer has not fired yet; only the manual retry opens a socket.
+    expect(FakeWebSocket.instances).toHaveLength(1);
+    await act(async () => {
+      hook.result.current.reconnectNow();
+      await flushMicrotasks();
+    });
+    expect(FakeWebSocket.instances).toHaveLength(2);
+    expect(hook.result.current.status).toBe("connecting");
+
+    const reconnect = hook.result.current.reconnectNow;
+    await hook.unmount();
+    reconnect();
+    expect(FakeWebSocket.instances).toHaveLength(2);
+  });
+
   test("a fresh pairing link can replace a revoked stored device exactly once", async () => {
     setupBrowser();
     window.location.search = "?pairing=fresh-test-token";

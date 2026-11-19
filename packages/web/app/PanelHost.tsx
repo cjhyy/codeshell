@@ -16,6 +16,7 @@ import {
 import { CopyDownloadLink } from "./CopyDownloadLink.js";
 import { panelVideoCapabilities } from "./panel-video-capture.js";
 import { panelVideoOptions } from "../src/panels.js";
+import { currentResolvedTheme } from "./theme.js";
 import "./panel-host.css";
 
 const ROOT = "/api/v1/panels/runtime";
@@ -938,7 +939,7 @@ export function PanelHost({
         appId: panel.id,
         revision: panel.revision,
         ...(sessionId ? { sessionId } : {}),
-        theme: window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light",
+        theme: currentResolvedTheme(),
         locale: "zh-CN",
       }),
       signal: prepareController.signal,

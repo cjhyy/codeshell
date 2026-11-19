@@ -135,9 +135,6 @@
 .admin-filters button {
   min-height: 38px;
 }
-.admin-scroll-hint {
-  display: none;
-}
 .admin-results {
   display: flex;
   flex-wrap: wrap;
@@ -351,9 +348,88 @@
   }
 }
 @media (max-width: 760px) {
-  .admin-scroll-hint {
+  /* Phones get one card per account instead of a sideways-scrolling table,
+     so status and actions are visible without horizontal panning. */
+  .admin-table-scroll {
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+  .admin-table,
+  .admin-table tbody {
     display: block;
-    margin-top: 20px;
+  }
+  .admin-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .admin-table tr {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px 10px;
+    padding: 16px;
+    margin-bottom: 10px;
+    border: 1px solid var(--subtle);
+    border-radius: 10px;
+    background: var(--surface);
+  }
+  .admin-table tbody tr:hover {
+    background: var(--surface);
+  }
+  .admin-table td {
+    display: grid;
+    align-content: start;
+    justify-items: start;
+    gap: 6px;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+  }
+  .admin-table td[data-label]::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 10px;
+  }
+  .admin-table td:first-child,
+  .admin-table td:last-child {
+    grid-column: 1 / -1;
+  }
+  .admin-table td.admin-date {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+  .admin-account,
+  .admin-row-actions {
+    min-width: 0;
+  }
+  .admin-account strong,
+  .admin-account div > span {
+    max-width: none;
+  }
+  .admin-account-id {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    margin-top: 8px;
+  }
+  .admin-table td:first-child,
+  .admin-table td:last-child {
+    justify-items: stretch;
+  }
+  .admin-table td:last-child {
+    padding-top: 12px;
+    border-top: 1px solid var(--subtle);
+  }
+  .admin-table td:last-child::before {
+    display: none;
+  }
+  .admin-row-actions button {
+    flex: 1;
+    min-height: 36px;
   }
   .website-admin-shell {
     display: block;

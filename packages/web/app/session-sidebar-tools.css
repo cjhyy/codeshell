@@ -1,0 +1,112 @@
+.session-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin: 18px 12px 0;
+}
+.session-search svg {
+  position: absolute;
+  left: 10px;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+.session-search input {
+  width: 100%;
+  min-width: 0;
+  height: 32px;
+  padding: 0 10px 0 30px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+}
+.session-search input::placeholder {
+  color: var(--muted);
+}
+.session-search input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.session-search-empty {
+  margin: 10px 12px 0;
+  padding: 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.pinned-label {
+  margin-top: 18px;
+}
+.sessions.pinned-sessions {
+  padding-bottom: 0;
+}
+.sessions li,
+.project-session-rows li {
+  position: relative;
+}
+.session-pin {
+  position: absolute;
+  top: 7px;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  opacity: 0;
+}
+.session-pin svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+}
+.session-pin[aria-pressed="true"] {
+  color: var(--accent);
+  opacity: 1;
+}
+.session-pin[aria-pressed="true"] svg {
+  fill: currentColor;
+}
+li:hover > .session-pin,
+.session-pin:focus-visible {
+  opacity: 1;
+}
+.session-pin:hover {
+  background: var(--panel);
+  color: var(--text);
+}
+.session-pin:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
+}
+/* Leave room so a long title never runs under the pin control. */
+li:has(> .session-pin) > .session .session-title {
+  padding-right: 22px;
+}
+@media (hover: none) {
+  /* Touch screens cannot hover: keep the control discoverable but quiet. */
+  .session-pin {
+    opacity: 0.55;
+  }
+}
+@media (max-width: 760px) {
+  .session-search input {
+    height: 38px;
+    font-size: 16px;
+  }
+  .session-pin {
+    width: 32px;
+    height: 32px;
+    top: 4px;
+  }
+}

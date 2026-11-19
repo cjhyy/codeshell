@@ -1,6 +1,7 @@
 import React from "react";
 import { useAccountSession } from "./AccountSessionProvider.js";
 import { WebsiteSetupSteps } from "./WebsiteSetupSteps.js";
+import { ThemeToggle } from "./ThemeToggle.js";
 import { isPublicWebsiteOrigin, websiteAuthUrl } from "./website-routes.js";
 
 export function WebsiteLogin({
@@ -90,6 +91,7 @@ export function WebsiteLogin({
             返回官网
           </a>
         ) : null}
+        <ThemeToggle className={officialWebsite ? undefined : "website-header-theme"} />
       </header>
       <div className="website-welcome">
         <section className="website-introduction">

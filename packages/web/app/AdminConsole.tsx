@@ -386,27 +386,27 @@ function Users() {
       {data.loading ? <p role="status">正在读取账号…</p> : null}
       {data.value ? (
         <>
-          <p className="admin-scroll-hint website-hint">左右滑动表格可查看完整信息与操作。</p>
           <div className="admin-results">
             <span>本页 {data.value.users.length} 个账号</span>
             <span>停用账号会同时撤销其登录会话</span>
           </div>
           {data.value.users.length ? (
             <div className="admin-table-scroll" role="region" aria-label="账号列表" tabIndex={0}>
-              <table className="admin-table">
-                <thead>
-                  <tr>
+              {/* Explicit roles: phones restyle rows as cards, which drops implicit table semantics. */}
+              <table className="admin-table" role="table">
+                <thead role="rowgroup">
+                  <tr role="row">
                     {["账号", "角色", "状态", "登录会话", "注册时间", "操作"].map((label) => (
-                      <th key={label} scope="col">
+                      <th key={label} scope="col" role="columnheader">
                         {label}
                       </th>
                     ))}
                   </tr>
                 </thead>
-                <tbody>
+                <tbody role="rowgroup">
                   {data.value.users.map((user) => (
-                    <tr key={user.id}>
-                      <td>
+                    <tr key={user.id} role="row">
+                      <td role="cell">
                         <div className="admin-account">
                           <span className="admin-avatar" aria-hidden="true">
                             {Array.from(user.displayName)[0]}
@@ -421,21 +421,25 @@ function Users() {
                         </div>
                         <code className="admin-account-id">{user.id}</code>
                       </td>
-                      <td>
+                      <td role="cell" data-label="角色">
                         <span className={`admin-badge ${user.role === "admin" ? "is-admin" : ""}`}>
                           {user.role === "admin" ? "管理员" : "成员"}
                         </span>
                       </td>
-                      <td>
+                      <td role="cell" data-label="状态">
                         <span
                           className={`admin-badge ${user.disabled ? "is-disabled" : "is-active"}`}
                         >
                           {user.disabled ? "已停用" : "正常"}
                         </span>
                       </td>
-                      <td>{user.sessionCount}</td>
-                      <td className="admin-date">{date(user.createdAt)}</td>
-                      <td>
+                      <td role="cell" data-label="登录会话">
+                        {user.sessionCount}
+                      </td>
+                      <td role="cell" className="admin-date" data-label="注册时间">
+                        {date(user.createdAt)}
+                      </td>
+                      <td role="cell" data-label="操作">
                         <div className="admin-row-actions">
                           {user.id !== account.session?.account?.id && user.role !== "admin" ? (
                             <button
@@ -486,6 +490,10 @@ function Users() {
 function Audit() {
   const [cursors, setCursors] = React.useState<Array<string | null>>([null]);
   const data = useAdminData(adminListPath("audit", cursors.at(-1)!), parseAdminAudit);
+  const me = useAccountSession().session?.account;
+  // Raw IDs are hard to scan; name the signed-in administrator, keep the ID on hover.
+  const who = (id: string) =>
+    id === me?.id ? <span title={id}>你（@{me.username}）</span> : <code>{id}</code>;
   return (
     <>
       <Heading section="audit">
@@ -523,15 +531,11 @@ function Audit() {
                     <dl>
                       <div>
                         <dt>操作人</dt>
-                        <dd>
-                          <code>{event.actorId}</code>
-                        </dd>
+                        <dd>{who(event.actorId)}</dd>
                       </div>
                       <div>
                         <dt>目标账号</dt>
-                        <dd>
-                          <code>{event.targetId}</code>
-                        </dd>
+                        <dd>{who(event.targetId)}</dd>
                       </div>
                     </dl>
                   </div>
