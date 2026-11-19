@@ -2185,8 +2185,10 @@ describe("ExternalRuntimeService", () => {
 
   test("replacement, rejected input and injected reminders preserve Stop until real input", async () => {
     const background = backgroundDelivery();
+    const userTurns: string[] = [];
     const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
       backgroundWork: background.delivery,
+      userTurnStarted: (sessionId: string) => userTurns.push(sessionId),
     });
     try {
       await svc.start(request);
@@ -2209,7 +2211,11 @@ describe("ExternalRuntimeService", () => {
           },
         }),
       ).rejects.toThrow("Input rejected");
+      // Only a message somebody sent is a new request for per-request host state
+      // (a declined BrowserPanel request, a closed task window).
+      expect(userTurns).toEqual([request.sessionId]);
       await svc.send(request.sessionId, { text: "Unrelated reminder", injected: true }, 77);
+      expect(userTurns).toEqual([request.sessionId]);
       // Repeat the completion signal to exercise the wake gate after both sends.
       background.complete(request.sessionId, "Retained result");
       await settleBackgroundWakeup();

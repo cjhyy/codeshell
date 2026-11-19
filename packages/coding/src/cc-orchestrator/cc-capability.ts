@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { delimiter } from "node:path";
+import { delimiter, isAbsolute } from "node:path";
 
 /** Availability of one external coding CLI. */
 export interface CCAvailability {
@@ -10,9 +10,18 @@ export interface CCAvailability {
 }
 
 /** macOS GUI-launched Electron has a minimal PATH (no Homebrew). Prepend common
- *  CLI dirs so `claude` resolves. Mirrors resident-agent.ts's fix. */
+ *  CLI dirs so `claude` resolves. Mirrors resident-agent.ts's fix.
+ *  `CODE_SHELL_EXTERNAL_CLI_DIR` (absolute) pins one directory ahead of them, so
+ *  an acceptance run with stand-in CLIs never starts an installed one. */
 export function pathWithCommonBins(env: NodeJS.ProcessEnv = process.env): string {
-  const extra = ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin"];
+  const pinned = env.CODE_SHELL_EXTERNAL_CLI_DIR;
+  const extra = [
+    ...(pinned && isAbsolute(pinned) ? [pinned] : []),
+    "/opt/homebrew/bin",
+    "/usr/local/bin",
+    "/usr/bin",
+    "/bin",
+  ];
   const current = (env.PATH ?? "").split(delimiter).filter(Boolean);
   const merged: string[] = [];
   for (const dir of [...extra, ...current]) if (!merged.includes(dir)) merged.push(dir);

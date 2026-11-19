@@ -52,6 +52,7 @@ export {
 export type { BuiltInBrowserHandoffStatus, GrantBuiltInBrowserInput } from "./built-in-handoff.js";
 export { panelAccessRequests, registerPanelAccessResponses } from "./panel-access-request.js";
 export {
+  beginBrowserRunForSession,
   beginBrowserRunForStartedRun,
   cancelBrowserActionsForStoppedRun,
   dispatchInteractiveBrowserRuntimeAction,
