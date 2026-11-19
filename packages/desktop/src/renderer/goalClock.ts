@@ -87,7 +87,10 @@ export function carryGoalClock(
     // goal/get does not include the outstanding question. A metadata refresh
     // must not answer it; a real user message or later progress does that.
     ...(previous.objective === next.objective && previous.waitingForUser
-      ? { waitingForUser: next.waitingForUser ?? previous.waitingForUser }
+      ? {
+          waitingForUser: next.waitingForUser ?? previous.waitingForUser,
+          waitingQuestions: next.waitingForUser ? next.waitingQuestions : previous.waitingQuestions,
+        }
       : {}),
     ...(previous.activeMs !== undefined && next.activeMs === undefined
       ? {

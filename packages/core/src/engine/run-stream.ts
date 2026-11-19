@@ -298,6 +298,7 @@ export function buildWrappedOnStream(args: {
         round: event.round,
         ...(event.gaps ? { gaps: event.gaps } : {}),
         ...(event.waitingForUser ? { waitingForUser: event.waitingForUser } : {}),
+        ...(event.waitingQuestions ? { waitingQuestions: event.waitingQuestions } : {}),
         ...(event.waiting ? { waiting: event.waiting } : {}),
         ...(event.progress ? { progress: event.progress } : {}),
       });

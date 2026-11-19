@@ -884,6 +884,17 @@ type StreamEventPayload =
       /** The Goal stopped to wait for the user's answer to this question (wait_for_user). */
       waitingForUser?: string;
       /**
+       * Structured choices for that wait (wait_for_user `questions`): 1-3 short
+       * questions, each with mutually exclusive options. `waitingForUser` stays
+       * the plain-text form for older readers.
+       */
+      waitingQuestions?: Array<{
+        id: string;
+        header?: string;
+        question: string;
+        options: Array<{ label: string; description?: string }>;
+      }>;
+      /**
        * The Goal parked on finite background work instead of being judged
        * unmet: the run ends and the work's completion wakes it. `tasks` are
        * display-only, already-sanitized labels (untrusted text).

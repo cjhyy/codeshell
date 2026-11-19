@@ -8,6 +8,12 @@ breaking.
 
 ## [Unreleased]
 
+### Changed
+
+- When a Codex or Claude Code Goal stops to ask you something, its card now shows
+  short questions with option buttons (recommended first, plus "Other") instead of
+  one long paragraph and a text box. Long background text starts collapsed.
+
 ## [0.11.0-rc.3] - 2026-11-19
 
 Release candidate for the desktop, website and account computer flow, plus the

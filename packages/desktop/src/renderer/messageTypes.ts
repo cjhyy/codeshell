@@ -8,10 +8,16 @@
 import type {
   ExternalChangedFilesProvenance,
   ExternalChangedFileRef,
+  StreamEvent,
   TurnDiffSnapshot,
 } from "@cjhyy/code-shell-core";
 import type { TaskInfo } from "@cjhyy/code-shell-core/internal";
 import type { PetChatAttachment } from "../shared/pet-chat-attachments";
+
+/** One wait_for_user question with mutually exclusive options. */
+export type GoalUserQuestion = NonNullable<
+  Extract<StreamEvent, { type: "goal_progress" }>["waitingQuestions"]
+>[number];
 
 export type ToolStatus = "queued" | "running" | "succeeded" | "failed" | "denied" | "cancelled";
 
@@ -216,6 +222,8 @@ export interface ActiveGoal {
   setAtMs?: number;
   /** The Goal stopped to wait for the user's answer to this question. */
   waitingForUser?: string;
+  /** Structured choices for that question, rendered as option buttons. */
+  waitingQuestions?: GoalUserQuestion[];
   /**
    * Goal-level active time (running + background waits), settled up to
    * `clockSinceMs` when that is set, else final. Absent before any marker

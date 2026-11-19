@@ -1,6 +1,7 @@
 import type { RegisteredTool } from "@cjhyy/code-shell-core";
 import type { BuiltinToolExposure } from "@cjhyy/code-shell-core/extension";
 import { EXTERNAL_GOAL_TOOLS } from "./external-runtime-goals.js";
+import { GOAL_QUESTIONS_SCHEMA } from "../shared/goal-questions.js";
 
 /** The Host controller's schemas differ from native Engine acknowledgement tools. */
 export const EXTERNAL_GOAL_TOOL_CATALOG: readonly {
@@ -15,7 +16,9 @@ export const EXTERNAL_GOAL_TOOL_CATALOG: readonly {
         : name === "complete_goal"
           ? "Declare the CodeShell goal fully achieved. For a judgment-based objective, the user accepting the current result counts as achieved. Supply its current goalId and revision."
           : name === "wait_for_user"
-            ? "Stop the CodeShell goal until the user replies, when you need their decision, approval or missing information. Ask the same question in your reply."
+            ? "Stop the CodeShell goal until the user replies, when you need their decision, approval or missing information. " +
+              "For a choice between known options, pass `questions` so the user picks from a card; never write a multiple-choice question as text. " +
+              "`question` is one or two sentences of context (optional when `questions` is given); put longer background in your reply."
             : "Cancel a CodeShell goal ONLY when the user explicitly requests cancellation. Include the user's reason.",
     inputSchema: {
       type: "object",
@@ -28,21 +31,13 @@ export const EXTERNAL_GOAL_TOOL_CATALOG: readonly {
               ...(name === "complete_goal"
                 ? { summary: { type: "string" } }
                 : name === "wait_for_user"
-                  ? { question: { type: "string" } }
+                  ? { question: { type: "string" }, questions: GOAL_QUESTIONS_SCHEMA }
                   : { confirm: { type: "boolean" }, reason: { type: "string" } }),
             },
       required:
         name === "get_goal"
           ? []
-          : [
-              "goalId",
-              "revision",
-              ...(name === "cancel_goal"
-                ? ["confirm", "reason"]
-                : name === "wait_for_user"
-                  ? ["question"]
-                  : []),
-            ],
+          : ["goalId", "revision", ...(name === "cancel_goal" ? ["confirm", "reason"] : [])],
     },
     source: "builtin",
     permissionDefault: "allow",

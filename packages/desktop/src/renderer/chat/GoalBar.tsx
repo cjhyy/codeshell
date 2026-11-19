@@ -17,6 +17,7 @@ import { useT } from "../i18n/I18nProvider";
 import type { ActiveGoal } from "../types";
 import { goalElapsedMs } from "../goalClock";
 import { GoalReplyCard } from "./GoalReplyCard";
+import type { GoalReplyChoices } from "./GoalReplyChoices";
 import type { MarkdownRootStatus } from "../Markdown";
 
 /** `12h 57m 34s` / `3m 05s` / `45s` — accumulated goal time. */
@@ -81,10 +82,15 @@ export function GoalBar({
     goal.objective,
     goal.round,
     goal.waitingForUser,
+    goal.waitingQuestions,
   ]);
   // Keep an answer through the optimistic waiting -> running -> failed launch
   // transition, even while the reply card itself is temporarily unmounted.
   const [replyDraft, setReplyDraft] = React.useState({ key: "", text: "", failed: false });
+  const [replyChoices, setReplyChoices] = React.useState<{
+    key: string;
+    choices: GoalReplyChoices;
+  }>({ key: "", choices: {} });
   const reply = onReply
     ? async (answer: string): Promise<void> => {
         setReplyDraft({ key: replyKey, text: answer, failed: false });
@@ -92,6 +98,9 @@ export function GoalBar({
           await onReply(answer);
           setReplyDraft((previous) =>
             previous.key === replyKey ? { key: "", text: "", failed: false } : previous,
+          );
+          setReplyChoices((previous) =>
+            previous.key === replyKey ? { key: "", choices: {} } : previous,
           );
         } catch (error) {
           setReplyDraft((previous) =>
@@ -334,6 +343,14 @@ export function GoalBar({
         <GoalReplyCard
           key={replyKey}
           question={goal.waitingForUser!}
+          questions={goal.waitingQuestions}
+          choices={replyChoices.key === replyKey ? replyChoices.choices : {}}
+          onChoicesChange={(choices) => {
+            setReplyChoices({ key: replyKey, choices });
+            setReplyDraft((previous) =>
+              previous.key === replyKey ? { ...previous, failed: false } : previous,
+            );
+          }}
           onReply={reply}
           draft={replyDraft.key === replyKey ? replyDraft.text : ""}
           failed={replyDraft.key === replyKey && replyDraft.failed}

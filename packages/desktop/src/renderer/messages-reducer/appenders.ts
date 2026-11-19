@@ -94,7 +94,10 @@ export function appendUserMessage(
     state.activeGoal?.waitingForUser &&
     (!existing || (existing.pending === true && pending === false))
   ) {
-    state = { ...state, activeGoal: { ...state.activeGoal, waitingForUser: undefined } };
+    state = {
+      ...state,
+      activeGoal: { ...state.activeGoal, waitingForUser: undefined, waitingQuestions: undefined },
+    };
   }
   if (clientMessageId) {
     let replaced = false;

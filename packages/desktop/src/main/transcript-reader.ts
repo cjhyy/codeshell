@@ -19,6 +19,7 @@ import {
   markPetHostActionReplacementDisplay,
   replacementReceiptDisplayMetadata,
 } from "../shared/pet-host-action-receipt.js";
+import { parseGoalQuestions } from "../shared/goal-questions.js";
 
 interface TranscriptEvent {
   id: string;
@@ -123,6 +124,12 @@ const MAX_SUBAGENT_DETAIL_ITEMS = 100_000;
 
 function finiteNonNegative(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && value >= 0;
+}
+
+/** Structured wait_for_user choices of a persisted goal_progress, dropped when malformed. */
+function replayedGoalQuestions(value: unknown) {
+  const { questions } = parseGoalQuestions(value);
+  return questions ? { waitingQuestions: questions } : {};
 }
 
 /** Goal wait/accounting fields of a persisted goal_progress, dropped when malformed. */
@@ -721,6 +728,9 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
             round: Number.isFinite(Number(d.round)) ? Number(d.round) : 0,
             ...(typeof d.gaps === "string" ? { gaps: d.gaps } : {}),
             ...(typeof d.waitingForUser === "string" ? { waitingForUser: d.waitingForUser } : {}),
+            ...(typeof d.waitingForUser === "string"
+              ? replayedGoalQuestions(d.waitingQuestions)
+              : {}),
             ...goalProgressReplayFields(d),
           },
           timestamp: ts,

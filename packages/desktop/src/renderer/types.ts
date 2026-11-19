@@ -54,6 +54,7 @@ import {
 // scopes each event to its owning user turn before dispatching it.
 export type {
   ActiveGoal,
+  GoalUserQuestion,
   AgentMessage,
   AgentRuntime,
   AskUserMessage,

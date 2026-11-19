@@ -131,4 +131,42 @@ describe("GoalBar", () => {
     expect(html).toContain("1m 05s");
     expect(html).toContain("等待回复期间不计入目标用时");
   });
+
+  test("structured choices replace the text box and long context starts collapsed", () => {
+    const context =
+      "生产服务器部署我这台机器连不上：SSH 都被拒，也没有 tccli，Link 里也没有腾讯云连接。上次是在执行机上部署的，所以这次需要你决定部署方式，以及发版指的是哪一个版本。v0.11.0-rc.3 的发布流水线已经在跑，网页优化 PR 合并后也可以再发正式版。";
+    const html = renderToStaticMarkup(
+      <GoalBar
+        goal={{
+          ...goal,
+          waitingForUser: context,
+          waitingQuestions: [
+            {
+              id: "deploy",
+              header: "部署方式",
+              question: "服务端怎么部署？",
+              options: [
+                { label: "你在执行机上部署（推荐）", description: "我写部署计划和验收清单" },
+                { label: "给我服务器访问方式" },
+              ],
+            },
+          ],
+        }}
+        busy={false}
+        now={at(0)}
+        onReply={() => {}}
+      />,
+    );
+    expect(html).not.toContain('aria-label="回答目标问题"');
+    expect(html).toContain('role="radiogroup"');
+    expect(html).toContain("部署方式");
+    expect(html).toContain("你在执行机上部署");
+    expect(html).not.toContain("你在执行机上部署（推荐）");
+    expect(html).toContain(">推荐<");
+    expect(html).toContain("其他…");
+    expect(html).toContain("line-clamp-2");
+    expect(html).toContain("展开说明");
+    // Nothing chosen yet: the reply cannot be sent.
+    expect(html).toMatch(/<button[^>]*type="submit"[^>]*disabled/);
+  });
 });

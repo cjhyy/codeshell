@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { SessionManager, type GoalConfig, type StreamEvent } from "@cjhyy/code-shell-core";
 import { goalGetPayload } from "@cjhyy/code-shell-core/internal";
+import { goalQuestionsText, parseGoalQuestions } from "../shared/goal-questions.js";
 
 // These count provider turns, each of which already contains its own tool loop.
 export const EXTERNAL_GOAL_DEFAULT_TURNS = 12;
@@ -226,7 +227,12 @@ export class ExternalRuntimeGoals {
         message: "Goal changed or is not running; read get_goal before retrying.",
       };
     }
-    const question = typeof args.question === "string" ? args.question.trim() : "";
+    const parsed = parseGoalQuestions(args.questions);
+    if (parsed.error) return { ok: false, message: `wait_for_user: ${parsed.error}` };
+    const questions = parsed.questions;
+    const question =
+      (typeof args.question === "string" ? args.question.trim() : "") ||
+      (questions ? goalQuestionsText(questions) : "");
     if (!question || question.length > MAX_QUESTION_CHARS) {
       return { ok: false, message: "wait_for_user needs the question you are asking the user." };
     }
@@ -239,7 +245,10 @@ export class ExternalRuntimeGoals {
     }
     run.awaitingUser = true;
     run.clockStoppedAtMs ??= this.now();
-    this.pendingQuestions.set(sessionId, question);
+    this.pendingQuestions.set(
+      sessionId,
+      questions ? `${question} (choices: ${goalQuestionsText(questions)})` : question,
+    );
     this.emit(sessionId, {
       type: "goal_progress",
       goalId: run.goal.goalId,
@@ -248,6 +257,7 @@ export class ExternalRuntimeGoals {
       ...this.progress(run, run.turns + 1),
       gaps: `等待你的回复：${question}`,
       waitingForUser: question,
+      ...(questions ? { waitingQuestions: questions } : {}),
     });
     return {
       ok: true,
@@ -508,7 +518,7 @@ export class ExternalRuntimeGoals {
       "Use mcp__codeshell_tools__get_goal to check the current identity. Do not call the runtime's separate create_goal/update_goal tools for this CodeShell goal.",
       `This run allows ${run.maxTurns} provider turns and ${run.timeBudgetMs} ms${run.tokenBudget ? `, with ${run.tokenBudget} tokens` : ""}. If it pauses, do not claim completion.`,
       "CodeShell sends automatic continuation messages (such as 继续处理尚未完成的目标 or 继续执行已保存的目标) to keep this goal moving. Such a message is not a reply from the user: it never answers a question you asked and never grants an approval you requested. If a step needs the user's decision (new permissions, installs, payments, deletion, publishing or other outward actions), do not take that step on your own; do the other safe work first.",
-      "When you need the user's decision or information to continue, ask it in your reply and call mcp__codeshell_tools__wait_for_user with this goalId, revision and the question. The goal then stops until the user replies instead of continuing automatically.",
+      "When you need the user's decision or information to continue, call mcp__codeshell_tools__wait_for_user with this goalId and revision. The goal then stops until the user replies instead of continuing automatically. When the answer is a choice between known options, pass them as `questions` (1-3 short questions, each with 2-3 options, recommended first); the user picks them in a card. Never write a multiple-choice question as text. Keep `question` to one or two sentences of context; put longer background in your reply.",
       "Ask sparingly. Decide ordinary engineering and quality questions yourself with your best judgment. When you must ask, put every open decision into one question. Never ask again a question the user has already answered, skipped or left unanswered: act on their answer, or keep the default you stated and mention it in your summary.",
       "When the objective is a matter of judgment (looks good enough, no obvious differences, acceptable quality), the user's verdict decides it. If the user says the current result is acceptable or good enough (for example 可以接受, 还好, 行, 就这样), take that as acceptance of the result as a whole, not only of the part you showed, unless they explicitly limit it. Then finish wrap-up work such as committing and recording known limitations, and call mcp__codeshell_tools__complete_goal; do not ask the user to accept the remaining items one by one.",
       ...(this.pendingQuestions.has(run.sessionId)

@@ -471,4 +471,38 @@ describe("external Goal lifecycle", () => {
       terminal.mockRestore();
     }
   });
+
+  test("wait_for_user carries structured choices and repeats them to the model", () => {
+    const run = goals.start(sessionId, "发版并部署")!;
+    const questions = [
+      {
+        id: "deploy",
+        header: "部署方式",
+        question: "服务端怎么部署？",
+        options: [{ label: "执行机（推荐）" }, { label: "这次不部署" }],
+      },
+    ];
+    expect(
+      goals.waitForUser(sessionId, {
+        goalId: run.goal.goalId,
+        revision: run.goal.revision,
+        questions,
+      }),
+    ).toMatchObject({ ok: true });
+    expect(events.at(-1)).toMatchObject({
+      type: "goal_progress",
+      waitingForUser: "部署方式: 服务端怎么部署？ [执行机（推荐） / 这次不部署]",
+      waitingQuestions: questions,
+    });
+    expect(goals.instruction(run)).toContain("这次不部署");
+
+    expect(
+      goals.waitForUser(sessionId, {
+        goalId: run.goal.goalId,
+        revision: run.goal.revision,
+        question: "需要你决定",
+        questions: [{ question: "选？", options: [{ label: "A" }] }],
+      }),
+    ).toMatchObject({ ok: false, message: expect.stringContaining("2 to 4") });
+  });
 });

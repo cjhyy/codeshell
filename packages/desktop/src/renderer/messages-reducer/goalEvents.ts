@@ -97,6 +97,7 @@ export function applyGoalProgress(
               revision: event.revision ?? state.activeGoal.revision,
               // Any later progress means the Goal is moving again.
               waitingForUser: event.waitingForUser,
+              waitingQuestions: event.waitingForUser ? event.waitingQuestions : undefined,
             },
             event,
             now() ?? Date.now(),
