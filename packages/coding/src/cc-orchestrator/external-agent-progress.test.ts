@@ -184,3 +184,29 @@ describe("external agent activity", () => {
     expect(advanceAgentProgress(progress, "codex", " ", 300)).toBe(progress);
   });
 });
+
+describe("external agent permission denials", () => {
+  it("carries the CLI's terminal denial count into progress instead of a clean completion", () => {
+    const start = initialAgentProgress("claude", 1);
+    const denied = advanceAgentProgress(
+      start,
+      "claude",
+      JSON.stringify({
+        type: "result",
+        is_error: false,
+        permission_denials: [{ tool_name: "Bash" }, { tool_name: "Bash" }],
+      }),
+      2,
+    );
+    expect(denied.permissionDenials).toBe(2);
+    expect(denied.summary).toBe("Response complete · 2 operation(s) denied by permissions");
+    const clean = advanceAgentProgress(
+      start,
+      "claude",
+      JSON.stringify({ type: "result", is_error: false, permission_denials: [] }),
+      2,
+    );
+    expect(clean.permissionDenials).toBeUndefined();
+    expect(clean.summary).toBe("Response complete");
+  });
+});
