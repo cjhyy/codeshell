@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SessionManager, type StreamEvent } from "@cjhyy/code-shell-core";
+import { persistedGoalAttention } from "./external-runtime-goal-attention.js";
 import { ExternalRuntimeGoals } from "./external-runtime-goals.js";
 
 let previousHome: string | undefined;
@@ -387,7 +388,12 @@ describe("external Goal lifecycle", () => {
       waitingForUser: "允许三项新权限并安装吗？",
     });
     expect(goals.afterTurn(run, 10, "已提问")).toBe(false);
-    expect(goals.get(sessionId)).toMatchObject({ goal: "安装面板", paused: false });
+    expect(goals.get(sessionId)).toMatchObject({
+      goal: "安装面板",
+      paused: false,
+      waitingForUser: "允许三项新权限并安装吗？",
+      waitingForUserDetail: { level: "preference" },
+    });
     goals.end(run);
     expect(goals.pendingQuestion(sessionId)).toBe("允许三项新权限并安装吗？");
     // A resume or other automatic continuation must still see the open question.
@@ -1022,5 +1028,141 @@ describe("what stops an external Goal by itself", () => {
     expect(result).toMatchObject({ updated: false, paused: false, revision: 1 });
     expect(events).toEqual([]);
     expect(goals.isCurrent(run)).toBe(true);
+  });
+});
+
+describe("what a restart keeps of a stopped external Goal", () => {
+  /** The recorder persists the run's id when a submission begins. */
+  const beginRun = (runId: string) =>
+    manager.startSessionRun(manager.readSessionState(sessionId)!, runId);
+  const lifecycle = () => manager.readSessionState(sessionId)?.goalLifecycle;
+  const attention = () => persistedGoalAttention(manager.readSessionState(sessionId));
+  const choice = {
+    question: "迁移前要先定数据库。",
+    questions: [
+      {
+        id: "db",
+        question: "用哪个数据库？",
+        options: [{ label: "Postgres" }, { label: "SQLite" }],
+      },
+    ],
+  };
+
+  test("the open question is persisted with the run that asked and read back by a new process", () => {
+    const run = goals.start(sessionId, { objective: "迁移" })!;
+    beginRun("run-ask");
+    const asked = { goalId: run.goal.goalId, revision: run.goal.revision, ...choice };
+    expect(goals.waitForUser(sessionId, asked)).toMatchObject({ ok: true });
+    goals.afterTurn(run, 10, "已提问");
+    goals.end(run);
+    expect(lifecycle()).toMatchObject({
+      phase: "waiting",
+      waitKind: "user",
+      runId: "run-ask",
+      question: {
+        text: choice.question,
+        detail: { level: "preference", questions: [{ id: "db", question: "用哪个数据库？" }] },
+      },
+    });
+    expect(attention()).toMatchObject({
+      kind: "question",
+      goalId: run.goal.goalId,
+      revision: run.goal.revision,
+      runId: "run-ask",
+      question: { text: choice.question, level: "preference", questions: [{ id: "db" }] },
+    });
+
+    const restarted = new ExternalRuntimeGoals(() => {});
+    expect(restarted.pendingQuestion(sessionId)).toBe(choice.question);
+    expect(restarted.isWaitingForUser(sessionId)).toBe(true);
+    // The reply banner's data, exactly as the live marker carried it.
+    const marker = events.findLast(
+      (event) => event.type === "goal_progress" && event.waitingForUser !== undefined,
+    ) as Extract<StreamEvent, { type: "goal_progress" }>;
+    expect(restarted.get(sessionId)).toMatchObject({
+      waitingForUser: marker.waitingForUser!,
+      waitingForUserDetail: marker.waitingForUserDetail!,
+    });
+    // An automatic continuation re-arms the Goal; the model is still held to the question.
+    const resumed = restarted.start(sessionId)!;
+    expect(restarted.instruction(resumed)).toContain("用哪个数据库？");
+    // Asked again in a later run: the same question, now named by that run.
+    beginRun("run-again");
+    restarted.waitForUser(sessionId, { ...asked, revision: resumed.goal.revision });
+    expect(lifecycle()).toMatchObject({ runId: "run-again", question: { text: choice.question } });
+    restarted.end(resumed);
+
+    restarted.userReplied(sessionId);
+    expect(restarted.pendingQuestion(sessionId)).toBeUndefined();
+    expect(restarted.get(sessionId)).not.toHaveProperty("waitingForUser");
+    // The wait itself is ended by the run the reply starts; the question is gone at once.
+    expect(lifecycle()).toMatchObject({ phase: "waiting", waitKind: "user" });
+    expect(lifecycle()).not.toHaveProperty("question");
+    expect(attention()).toMatchObject({ kind: "waiting" });
+    expect(new ExternalRuntimeGoals(() => {}).pendingQuestion(sessionId)).toBeUndefined();
+  });
+
+  test("a continuation that is the first thing after a restart still holds the model to the question", () => {
+    const run = goals.start(sessionId, { objective: "迁移" })!;
+    beginRun("run-ask");
+    goals.waitForUser(sessionId, {
+      goalId: run.goal.goalId,
+      revision: run.goal.revision,
+      ...choice,
+    });
+    goals.end(run);
+    const restarted = new ExternalRuntimeGoals(() => {});
+    const woken = restarted.start(sessionId)!;
+    expect(lifecycle()).toMatchObject({ phase: "active" });
+    expect(restarted.instruction(woken)).toContain("用哪个数据库？");
+    expect(restarted.pendingQuestion(sessionId)).toBe(choice.question);
+  });
+
+  test("a limit pause names the run it ended, whatever runs later", () => {
+    const run = goals.start(sessionId, { objective: "迁移", maxTurns: 1 })!;
+    beginRun("run-limit");
+    goals.afterTurn(run, 10, "第一轮");
+    goals.end(run);
+    expect(lifecycle()).toMatchObject({
+      phase: "paused",
+      pauseReason: "turn_limit",
+      runId: "run-limit",
+    });
+    // A later run that leaves the Goal paused (it opted out of it) changes nothing.
+    beginRun("run-later");
+    expect(goals.start(sessionId, undefined, true, true)).toBeUndefined();
+    expect(attention()).toMatchObject({
+      kind: "limit",
+      limit: "turn_limit",
+      runId: "run-limit",
+      goalId: run.goal.goalId,
+    });
+  });
+
+  test("only a limit pause or an open question needs the owner", () => {
+    expect(attention()).toBeUndefined();
+    const run = goals.start(sessionId, { objective: "迁移" })!;
+    beginRun("run-1");
+    expect(attention()).toBeUndefined();
+    // The user's own pause.
+    goals.update(sessionId, {
+      paused: true,
+      expectedGoalId: run.goal.goalId!,
+      expectedRevision: run.goal.revision!,
+    });
+    expect(lifecycle()).toMatchObject({ phase: "paused", pauseReason: "user" });
+    expect(attention()).toBeUndefined();
+    // A paused record from before reasons were persisted: the run outcome says it was a limit.
+    const state = manager.readSessionState(sessionId)!;
+    const { pauseReason: _reason, ...legacy } = state.goalLifecycle as { pauseReason?: string };
+    state.goalLifecycle = legacy as typeof state.goalLifecycle;
+    expect(manager.saveState(state)).toBe(true);
+    expect(attention()).toBeUndefined();
+    manager.updateSessionState(sessionId, { lastCompletionKind: "limit_stop" });
+    expect(attention()).toMatchObject({ kind: "limit", runId: "run-1" });
+    expect(attention()).not.toHaveProperty("limit");
+    // Completed: nothing.
+    goals.delete(sessionId);
+    expect(attention()).toBeUndefined();
   });
 });

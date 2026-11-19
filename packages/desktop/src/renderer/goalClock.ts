@@ -166,6 +166,21 @@ export function adoptPersistedGoalPause(
 }
 
 /**
+ * Adopt the question a goal waits on from agent/goalGet. The replayed marker
+ * that asked normally restores it; a history that no longer holds that marker
+ * (a tail-only replay) leaves the reply banner to this persisted copy. The
+ * host drops its copy when the user replies, so one it still reports is open.
+ */
+export function adoptPersistedGoalQuestion(
+  goal: ActiveGoal | null,
+  waitingForUser: string | undefined,
+  waitingDetail: ActiveGoal["waitingDetail"],
+): ActiveGoal | null {
+  if (!goal || !waitingForUser || goal.waitingForUser) return goal;
+  return { ...goal, waitingForUser, ...(waitingDetail ? { waitingDetail } : {}) };
+}
+
+/**
  * Adopt the persisted goal snapshot from agent/goalGet on hydration. It is
  * authoritative unless a run is in flight (the replayed clock then already
  * includes time the host settles only at run end). Fills goals whose history
