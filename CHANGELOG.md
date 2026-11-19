@@ -44,6 +44,8 @@ changes ship here.
 - Standalone account administration console on the website.
 - Claude Code image attachments are sent natively; Codex and Claude Code models
   accept images.
+- Mimi setting for the permission mode of delegated work sessions: inherit the
+  default mode (default), auto, or ask.
 
 ### Security
 
@@ -76,6 +78,9 @@ changes ship here.
   exports and user-message consumers.
 - Final goal reports stay outside process folds; copying a final answer uses one
   visible-content action.
+- Read-only shell commands with input redirection from a plain path, output
+  discarded to `/dev/null`, stream merges, or a leading `cd <dir>` are classified
+  as read-only instead of asking for approval.
 
 ## [0.11.0-rc.1] - 2026-11-12
 
