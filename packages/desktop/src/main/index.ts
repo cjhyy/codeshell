@@ -242,6 +242,7 @@ import {
   rememberAttachedGuest,
 } from "./browser-driver/active-guest.js";
 import {
+  beginBrowserRunForSession,
   browserRuntime,
   builtInBrowserHandoffGrants,
   chromeExtensionRuntimeService,
@@ -657,6 +658,7 @@ const externalRuntime = createExternalRuntimeModule(() => {
           externalRuntimeWorkspaceForSession(sessionId),
         ),
       backgroundWork: createExternalRuntimeBackgroundWork(),
+      userTurnStarted: (sessionId) => beginBrowserRunForSession(sessionId),
       mimiTools: () => externalRuntimeMimiHost(petNotices, externalBridge),
     },
   };

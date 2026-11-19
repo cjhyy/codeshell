@@ -243,6 +243,8 @@ export interface ExternalRuntimeServiceDeps {
     /** `signal`: abort withdraws the prompt from every client. */
     options?: { signal?: AbortSignal },
   ) => Promise<{ approved: boolean; reason?: string; answer?: string }>;
+  /** A message somebody sent was accepted: per-request host state starts over. */
+  userTurnStarted?: (sessionId: string) => void;
   /** Drop any prompt still on screen for a session that is going away. */
   cancelApprovals?: (sessionId: string) => void;
   /** Mimi's handlers in Main (NotifyMe, ReportToMimi); read at each start, with Host tools on. */
@@ -1644,7 +1646,10 @@ export class ExternalRuntimeService {
       entry.recorder.assertNewSubmission(turnInput);
       // Only a message somebody sent answers a wait_for_user question or resumes
       // a limit-paused Goal; injected continuations leave both as they are.
-      if (!turnInput.injected) this.goals.userReplied(sessionId);
+      if (!turnInput.injected) {
+        this.goals.userReplied(sessionId);
+        this.deps.userTurnStarted?.(sessionId);
+      }
       const resumes = !turnInput.injected && entry.goalToolsAvailable;
       const initialGoalEvents: StreamEvent[] = [];
       const goalRun = this.withGoalOutput(

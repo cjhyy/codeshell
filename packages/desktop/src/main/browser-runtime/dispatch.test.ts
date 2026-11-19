@@ -2,6 +2,7 @@ import { describe, expect, spyOn, test } from "bun:test";
 import type { BrowserBridge } from "@cjhyy/code-shell-core";
 import type { BrowserRuntimeLike } from "./runtime.js";
 import {
+  beginBrowserRunForSession,
   beginBrowserRunForStartedRun,
   cancelBrowserActionsForStoppedRun,
   interactiveBrowserRuntimeOwner,
@@ -387,6 +388,16 @@ test("a new agent/run lets the session's user-closed task window reopen", () => 
   ).toBe(false);
   expect(beginBrowserRunForStartedRun({ method: "agent/run", params: {} }, runtime)).toBe(false);
   expect(begun).toHaveLength(1);
+});
+
+test("an external-runtime user turn resets the same per-request browser state", () => {
+  const begun: string[] = [];
+  const asked: string[] = [];
+  const runtime = { beginRun: (ownerId: string) => begun.push(ownerId) } as never;
+  beginBrowserRunForSession("s1", runtime, { beginRun: (id) => asked.push(id) });
+  expect(begun).toEqual([interactiveBrowserRuntimeOwner("s1")]);
+  // A declined panel request may be asked again on the user's next message.
+  expect(asked).toEqual(["s1"]);
 });
 
 test("a child task cannot ask the user for their BrowserPanel tab", async () => {
