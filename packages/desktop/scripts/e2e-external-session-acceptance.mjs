@@ -1,7 +1,8 @@
 /*
  * Real Electron acceptance for external-runtime (Claude Code) sessions: the
- * project browser partition, panel access prompt, Goal question banner, Goal
- * pause truthfulness across a restart, and orphaned partition cleanup.
+ * project browser partition, panel access prompt (unanswered, denied, granted),
+ * Goal question banner, Goal pause truthfulness across a restart, and orphaned
+ * partition cleanup. The unanswered request waits out its real 60 s timeout.
  *
  * Opt-in (not part of `test:e2e`). Never needs OS key storage, so it always
  * runs in the harness's mock-keychain acceptance mode; `claude` and `codex`
@@ -220,13 +221,61 @@ try {
     { name: "browser_act", arguments: { action: "request_panel_access" } },
     { name: "browser_act", arguments: { action: "list_tabs" } },
   ];
+  // Nobody answers: the request times out by itself (60 s), the bar goes away,
+  // and a second request in the same turn is refused without prompting again.
+  const requestPanel = panelTools[0];
+  await cli.script([
+    {
+      tools: [requestPanel, requestPanel, panelTools[1]],
+      text: "fixture: panel request unanswered",
+    },
+  ]);
+  await send("use the page in my browser panel, I will not answer");
+  // Default permission mode: the tool call itself is approved first.
+  await waitForTurns(2, { until: () => prompt.isVisible() });
+  const promptShownAt = Date.now();
+  await screenshot("03a-panel-access-prompt-unanswered.png");
+  let promptsAfterTimeout = 0;
+  const unanswered = await waitForTurns(2, {
+    timeout: 100_000,
+    until: async () => {
+      // Once the first prompt has expired, any bar is a second prompt.
+      if (Date.now() - promptShownAt > 65_000 && (await prompt.isVisible())) promptsAfterTimeout++;
+      return false;
+    },
+  });
+  const waitedMs = Date.now() - promptShownAt;
+  assert(waitedMs >= 50_000, `An unanswered panel request returned after only ${waitedMs} ms`);
+  assert(
+    /Error: The user did not grant the BrowserPanel tab/.test(unanswered.tools[0].body),
+    `An unanswered panel request returned ${unanswered.tools[0].body.slice(0, 300)}`,
+  );
+  assert(
+    /already declined or did not answer/.test(unanswered.tools[1].body),
+    "A second panel request in the same turn was not refused outright",
+  );
+  assert(
+    !unanswered.tools[2].body.includes(pageUrl),
+    "An unanswered panel tab was still listed as drivable",
+  );
+  assert(
+    promptsAfterTimeout === 0 && !(await prompt.isVisible()),
+    "The panel access bar is still shown after its request timed out",
+  );
+  await win.getByText("fixture: panel request unanswered").first().waitFor({ timeout: 15_000 });
+  await screenshot("03b-panel-access-prompt-expired.png");
+  console.log(
+    `acceptance: unanswered panel request declined itself after ${Math.round(waitedMs / 1000)} s; no second prompt in that turn`,
+  );
+
+  // The next user message may ask once more.
   await cli.script([{ tools: panelTools, text: "fixture: panel request denied" }]);
   await send("please use the page in my browser panel");
   // Default permission mode: the tool call itself is approved first.
-  await waitForTurns(2, { until: () => prompt.isVisible() });
+  await waitForTurns(3, { until: () => prompt.isVisible() });
   await screenshot("03-panel-access-prompt.png");
   await prompt.getByRole("button", { name: /^(拒绝|Deny)$/ }).click();
-  const denied = await waitForTurns(2);
+  const denied = await waitForTurns(3);
   assert(/Error: /.test(denied.tools[0].body), "A denied panel request reported a grant");
   assert(
     !denied.tools[1].body.includes(pageUrl),
@@ -241,9 +290,9 @@ try {
     },
   ]);
   await send("ask again, I will allow it");
-  await waitForTurns(3, { until: () => prompt.isVisible() });
+  await waitForTurns(4, { until: () => prompt.isVisible() });
   await prompt.getByRole("button", { name: /^(允许|Allow)$/ }).click();
-  const granted = await waitForTurns(3);
+  const granted = await waitForTurns(4);
   assert(
     /BrowserPanel tab granted/.test(granted.tools[0].body),
     "The grant did not reach the tool",
