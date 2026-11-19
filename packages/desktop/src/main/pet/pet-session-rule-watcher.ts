@@ -115,6 +115,15 @@ function boundedText(value: unknown, max: number): string | undefined {
   return text ? text.slice(0, max) : undefined;
 }
 
+/**
+ * The ledger key of a Goal pause or open question: one per Goal version and
+ * run. A pause read back from persisted state builds the same key, which is
+ * how it is known to have been reported already.
+ */
+export function goalPauseDedupeKey(outcome: Extract<SessionOutcome, { kind: "blocked" }>): string {
+  return `${outcome.sessionId}:goal-pause:${outcome.goalId ?? "-"}:${outcome.revision ?? "-"}:${outcome.runKey}`;
+}
+
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -190,6 +199,17 @@ export class PetSessionRuleWatcher {
         }),
       ),
     ).then(() => undefined);
+  }
+
+  /**
+   * Report a Goal pause or open question that was read back from the
+   * Session's persisted state (pet-notice-goal-reconcile.ts), exactly as its
+   * live outcome is reported: same rules, same dedupe key, so one the owner
+   * already heard about is dropped by the ledger. It belongs to no turn in
+   * flight, so the open turn's marks and parked reports are left alone.
+   */
+  reportBlocked(outcome: Extract<SessionOutcome, { kind: "blocked" }>): Promise<void> {
+    return this.enqueue(outcome.sessionId, () => this.emitBlocked(outcome));
   }
 
   /** Some report waits for its run to close, or an outcome is still being applied. */
@@ -376,7 +396,7 @@ export class PetSessionRuleWatcher {
       {
         kind: asks ? "session.blocked" : "session.paused",
         priority: asks ? "P0" : "P1",
-        dedupeKey: `${sessionId}:goal-pause:${outcome.goalId ?? "-"}:${outcome.revision ?? "-"}:${outcome.runKey}`,
+        dedupeKey: goalPauseDedupeKey(outcome),
         facts: {
           ...(asks ? { question, ...(options ? { options } : {}) } : { pause }),
           ...(summary ? { summary } : {}),

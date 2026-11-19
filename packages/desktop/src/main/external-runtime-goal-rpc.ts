@@ -76,6 +76,12 @@ export function createExternalGoalRpcHandler(deps: {
   authorize(sessionId: string, callerWebContentsId: number): void | Promise<void>;
   prepareResume(sessionId: string, callerWebContentsId: number): Promise<void>;
   service(): Pick<ExternalRuntimeService, "getGoal" | "updateGoal" | "deleteGoal" | "extendGoal">;
+  /**
+   * A client read the Session's Goal: it opened (or reloaded) the Session.
+   * Main takes the moment to check that a pause or open question of that Goal
+   * reached its owner (Mimi notices).
+   */
+  onGoalRead?(sessionId: string): void;
 }): ExternalGoalRpcHandler {
   return (request, callerWebContentsId) => {
     const params = request.params ?? {};
@@ -101,6 +107,7 @@ export function createExternalGoalRpcHandler(deps: {
         switch (request.method) {
           case "agent/goalGet":
             result = await service.getGoal(sessionId, callerWebContentsId);
+            deps.onGoalRead?.(sessionId);
             break;
           case "agent/goalUpdate": {
             const expected = expectedVersion(params);

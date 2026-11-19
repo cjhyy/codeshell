@@ -2607,8 +2607,9 @@ describe("ExternalRuntimeService", () => {
           phase: "waiting",
           waitKind: "user",
         });
+        // Another process (a restart) reads the wait and its question back from disk.
         const restoredGoals = new ExternalRuntimeGoals(() => {});
-        expect(restoredGoals.pendingQuestion(request.sessionId)).toBeUndefined();
+        expect(restoredGoals.pendingQuestion(request.sessionId)).toBe("允许新增三项权限并安装吗？");
         expect(restoredGoals.isWaitingForUser(request.sessionId)).toBe(true);
         if (restart) {
           await svc.stopAll();
@@ -2633,7 +2634,10 @@ describe("ExternalRuntimeService", () => {
         expect(pending).toBe("后台检查已完成");
 
         providerSend = async (args, input) => {
-          expect(restoredGoals.isWaitingForUser(request.sessionId)).toBe(false);
+          // The reply ended the wait on disk: a process starting now finds none.
+          expect(new ExternalRuntimeGoals(() => {}).isWaitingForUser(request.sessionId)).toBe(
+            false,
+          );
           expect(
             new SessionManager().readSessionState(request.sessionId)?.goalLifecycle?.phase,
           ).toBe("active");

@@ -6,6 +6,7 @@ import {
   normalizeGoalQuestion,
   type GoalQuestion,
 } from "../shared/goal-questions.js";
+import { persistedGoalQuestion } from "./external-runtime-goal-attention.js";
 
 /**
  * Consecutive provider turns without progress (the same reply again, or a turn
@@ -32,6 +33,14 @@ export function isExternalGoalToolName(toolName: string): boolean {
 }
 
 const sameQuestion = (text: string) => text.replace(/\s+/gu, " ").trim().toLowerCase();
+
+/** A question's structure as `goal_progress.waitingForUserDetail` carries it. */
+const questionDetail = (question: GoalQuestion) => ({
+  waitingForUserDetail: {
+    level: question.level,
+    ...(question.questions ? { questions: question.questions } : {}),
+  },
+});
 
 /** Why a paused Goal is paused, as its lifecycle record persists it. */
 type PersistedPauseReason = NonNullable<GoalConfig["pauseReason"]>;
@@ -142,8 +151,14 @@ function goalInput(raw: string | GoalConfig): GoalConfig {
 export class ExternalRuntimeGoals {
   private readonly manager = new SessionManager();
   private readonly runs = new Map<string, ExternalGoalRun>();
-  /** Questions the model is waiting on, per Session, until the user replies. */
+  /**
+   * Questions the model is waiting on, per Session, until the user replies.
+   * The waiting Goal's persisted record carries the same question, so one
+   * asked before a restart is read back from it (`pending`).
+   */
   private readonly pendingQuestions = new Map<string, GoalQuestion>();
+  /** Sessions whose persisted question was already read back into `pendingQuestions`. */
+  private readonly questionsRestored = new Set<string>();
   /** Questions the user already replied to or passed over; never asked again. */
   private readonly closedQuestions = new Map<string, string[]>();
 
@@ -156,9 +171,29 @@ export class ExternalRuntimeGoals {
     return this.manager.readActiveGoal(sessionId);
   }
 
+  /**
+   * The agent/goalGet payload, plus the question the Goal waits on: a client
+   * that reloads shows its reply banner from this when its replayed history
+   * no longer holds the marker that asked.
+   */
   get(sessionId: string) {
     const goal = this.read(sessionId);
-    return goalGetPayload(goal, goal ? this.manager.readGoalProgress(sessionId) : undefined);
+    const question = goal ? this.pending(sessionId) : undefined;
+    return {
+      ...goalGetPayload(goal, goal ? this.manager.readGoalProgress(sessionId) : undefined),
+      ...(question ? { waitingForUser: question.text, ...questionDetail(question) } : {}),
+    };
+  }
+
+  /** The open question of a Session: this process's, else the one its waiting Goal persisted. */
+  private pending(sessionId: string): GoalQuestion | undefined {
+    const known = this.pendingQuestions.get(sessionId);
+    if (known || this.questionsRestored.has(sessionId)) return known;
+    // Read once: from here on this process is the only writer of the question.
+    this.questionsRestored.add(sessionId);
+    const restored = persistedGoalQuestion(this.manager.readSessionState(sessionId));
+    if (restored) this.pendingQuestions.set(sessionId, restored);
+    return restored;
   }
 
   running(sessionId: string): ExternalGoalRun | undefined {
@@ -186,6 +221,8 @@ export class ExternalRuntimeGoals {
    */
   start(sessionId: string, explicit?: string | GoalConfig, disabled = false, userMessage = false) {
     if (disabled) return undefined;
+    // Before the Goal is re-armed: that ends the wait whose record holds the question.
+    this.pending(sessionId);
     let stored = this.read(sessionId);
     if (
       userMessage &&
@@ -319,7 +356,7 @@ export class ExternalRuntimeGoals {
     }
     const parsed = normalizeGoalQuestion(args);
     if ("error" in parsed) return { ok: false, message: parsed.error };
-    const pending = this.pendingQuestions.get(sessionId);
+    const pending = this.pending(sessionId);
     if (this.closedQuestions.get(sessionId)?.includes(sameQuestion(parsed.question.text))) {
       return {
         ok: false,
@@ -331,7 +368,13 @@ export class ExternalRuntimeGoals {
     const question = pending ?? parsed.question;
     const replaced = pending && sameQuestion(pending.text) !== sameQuestion(parsed.question.text);
     const state = this.manager.readSessionState(sessionId);
-    if (!state || !this.manager.markGoalWaiting(state, run.goal, "user")) {
+    // The question and the run that asked are persisted with the wait, so the
+    // reply banner and the owner's notice can be rebuilt after a restart.
+    const asked = {
+      ...(state?.runId ? { runId: state.runId } : {}),
+      question: { text: question.text, detail: questionDetail(question).waitingForUserDetail },
+    };
+    if (!state || !this.manager.markGoalWaiting(state, run.goal, "user", asked)) {
       return {
         ok: false,
         message: "Could not persist the goal's user wait; retry before ending the turn.",
@@ -340,6 +383,7 @@ export class ExternalRuntimeGoals {
     run.awaitingUser = true;
     run.clockStoppedAtMs ??= this.now();
     this.pendingQuestions.set(sessionId, question);
+    this.questionsRestored.add(sessionId);
     this.emit(sessionId, {
       type: "goal_progress",
       goalId: run.goal.goalId,
@@ -349,10 +393,7 @@ export class ExternalRuntimeGoals {
       // The question itself travels in `waitingForUser`; never duplicate it here.
       gaps: "等待你的回复",
       waitingForUser: question.text,
-      waitingForUserDetail: {
-        level: question.level,
-        ...(question.questions ? { questions: question.questions } : {}),
-      },
+      ...questionDetail(question),
     });
     if (replaced) {
       return {
@@ -454,27 +495,33 @@ export class ExternalRuntimeGoals {
   }
 
   pendingQuestion(sessionId: string): string | undefined {
-    return this.pendingQuestions.get(sessionId)?.text;
+    return this.pending(sessionId)?.text;
   }
 
   /** The open question with its choices spelled out, as the model is reminded of it. */
   private pendingQuestionForModel(sessionId: string): string {
-    const pending = this.pendingQuestions.get(sessionId)!;
+    const pending = this.pending(sessionId)!;
     return goalQuestionFullText(pending.text, pending.questions);
   }
 
   /** Automatic work must respect a user wait after the in-memory question is gone. */
   isWaitingForUser(sessionId: string): boolean {
-    if (this.pendingQuestions.has(sessionId)) return true;
+    if (this.pending(sessionId)) return true;
     const lifecycle = this.manager.readSessionState(sessionId)?.goalLifecycle;
     return lifecycle?.phase === "waiting" && lifecycle.waitKind === "user";
   }
 
   /** A real user message (not an automatic continuation) answers the open question. */
   userReplied(sessionId: string): void {
-    const answered = this.pendingQuestions.get(sessionId);
+    const answered = this.pending(sessionId);
     if (!answered) return;
     this.pendingQuestions.delete(sessionId);
+    // The persisted copy goes with it: a wait that outlives this message
+    // (the Goal is not driven by it) must not show the question again later.
+    const state = this.manager.readSessionState(sessionId);
+    const goal = this.read(sessionId);
+    if (state && goal && persistedGoalQuestion(state))
+      this.manager.markGoalWaiting(state, goal, "user", {});
     // Whatever the user wrote, they saw this question: it is not asked twice.
     this.closedQuestions.set(
       sessionId,
@@ -486,6 +533,7 @@ export class ExternalRuntimeGoals {
 
   private forgetQuestions(sessionId: string): void {
     this.pendingQuestions.delete(sessionId);
+    this.questionsRestored.add(sessionId);
     this.closedQuestions.delete(sessionId);
   }
 
@@ -504,9 +552,15 @@ export class ExternalRuntimeGoals {
 
   /**
    * `pauseReason` is recorded with a pause and is the host's to state: a
-   * control from a client is the user's own pause.
+   * control from a client is the user's own pause. `pauseRunId` names the run
+   * a pause ended (a limit pause is always inside one).
    */
-  update(sessionId: string, patch: ExternalGoalUpdate, pauseReason: PersistedPauseReason = "user") {
+  update(
+    sessionId: string,
+    patch: ExternalGoalUpdate,
+    pauseReason: PersistedPauseReason = "user",
+    pauseRunId?: string,
+  ) {
     if (!patch.expectedGoalId || !positiveInteger(patch.expectedRevision)) {
       throw new Error("Goal controls require the current goalId and revision");
     }
@@ -531,7 +585,7 @@ export class ExternalRuntimeGoals {
       return { ...this.get(sessionId), updated: false };
     const updated = this.manager.updateActiveGoal(sessionId, {
       ...patch,
-      ...(patch.paused === true ? { pauseReason } : {}),
+      ...(patch.paused === true ? { pauseReason, ...(pauseRunId ? { pauseRunId } : {}) } : {}),
     });
     if (!updated) return { ...this.get(sessionId), updated: false };
     this.stop(sessionId);
@@ -686,6 +740,9 @@ export class ExternalRuntimeGoals {
         expectedRevision: run.goal.revision!,
       },
       reason,
+      // The run in flight (the recorder persisted its id when it began): the
+      // paused record names it, so the pause's notice is the same after a restart.
+      this.manager.readSessionState(run.sessionId)?.runId,
     );
     if (result.updated) {
       if (!byUser) run.limited = true;
@@ -774,7 +831,7 @@ export class ExternalRuntimeGoals {
       "When background work you started is still running, CodeShell tells you when it completes; do not poll or sleep. Keep doing work that does not depend on it. Only when nothing is left to do until it finishes, call mcp__codeshell_tools__wait_for_background with this goalId and revision and end your turn; the goal then parks and resumes on completion.",
       "Never present the current state of a live, remote or production system (what is deployed, what a server or database contains, what is published) as fact unless you checked it in this session. Otherwise label the claim explicitly as inferred from documentation and unverified, and verify before planning irreversible steps on it.",
       "When the objective is a matter of judgment (looks good enough, no obvious differences, acceptable quality), the user's verdict decides it. If the user says the current result is acceptable or good enough (for example 可以接受, 还好, 行, 就这样), take that as acceptance of the result as a whole, not only of the part you showed, unless they explicitly limit it. Then finish wrap-up work such as committing and recording known limitations, and call mcp__codeshell_tools__complete_goal; do not ask the user to accept the remaining items one by one.",
-      ...(this.pendingQuestions.has(run.sessionId)
+      ...(this.pending(run.sessionId)
         ? [
             `The user has not yet answered your question: ${this.pendingQuestionForModel(run.sessionId)} It is still shown to them. Do not proceed with anything that depends on that answer; if nothing else is left to do, call wait_for_user with the same question to keep waiting.`,
           ]

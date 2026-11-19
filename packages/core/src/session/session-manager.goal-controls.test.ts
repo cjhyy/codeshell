@@ -114,4 +114,52 @@ describe("SessionManager goal controls", () => {
     expect(lifecycle).toMatchObject({ goalId: "goal-1", revision: 8 });
     expect(lifecycle.terminal.reason).toBe("user_cleared");
   });
+
+  test("a pause may name the run it ended; a resume or an edit drops the name", () => {
+    seedGoal("pause-run");
+    const paused = manager.updateActiveGoal("pause-run", {
+      paused: true,
+      pauseReason: "no_progress",
+      pauseRunId: "run-7",
+      expectedGoalId: "goal-1",
+      expectedRevision: 7,
+    })!;
+    expect(manager.readSessionState("pause-run")?.goalLifecycle).toMatchObject({
+      phase: "paused",
+      pauseReason: "no_progress",
+      runId: "run-7",
+    });
+    manager.updateActiveGoal("pause-run", {
+      paused: false,
+      pauseRunId: "ignored",
+      expectedGoalId: "goal-1",
+      expectedRevision: paused.goal.revision!,
+    });
+    expect(manager.readSessionState("pause-run")?.goalLifecycle).not.toHaveProperty("runId");
+  });
+
+  test("a user wait records its question, replaces it on request and keeps it otherwise", () => {
+    seedGoal("wait-question");
+    const state = manager.readSessionState("wait-question")!;
+    const goal = manager.readActiveGoal("wait-question")!;
+    const question = { text: "用哪个数据库？", detail: { level: "preference" } };
+    expect(manager.markGoalWaiting(state, goal, "user", { runId: "run-1", question })).toBe(true);
+    const waiting = manager.readSessionState("wait-question")!.goalLifecycle!;
+    expect(waiting).toMatchObject({ phase: "waiting", waitKind: "user", runId: "run-1", question });
+    // No detail: the open wait is left exactly as it is.
+    expect(manager.markGoalWaiting(state, goal, "user")).toBe(true);
+    expect(manager.readSessionState("wait-question")!.goalLifecycle).toEqual(waiting);
+    // Detail given: recorded as given, without restarting the wait.
+    expect(manager.markGoalWaiting(state, goal, "user", { runId: "run-2", question })).toBe(true);
+    expect(manager.readSessionState("wait-question")!.goalLifecycle).toEqual({
+      ...waiting,
+      runId: "run-2",
+    });
+    expect(manager.markGoalWaiting(state, goal, "user", {})).toBe(true);
+    const cleared = manager.readSessionState("wait-question")!.goalLifecycle;
+    expect(cleared).toMatchObject({ phase: "waiting", waitKind: "user" });
+    expect(cleared).not.toHaveProperty("question");
+    // The goal stays readable and resumable through the compatibility view.
+    expect(manager.readActiveGoal("wait-question")).toMatchObject({ goalId: "goal-1" });
+  });
 });

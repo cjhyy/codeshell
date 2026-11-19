@@ -194,3 +194,44 @@ describe("external Goal send input", () => {
     }
   });
 });
+
+describe("reading an external Goal", () => {
+  test("a client's goalGet tells Main the Session was opened; a refused or internal read does not", async () => {
+    const opened: string[] = [];
+    let permitted = true;
+    const handler = createExternalGoalRpcHandler({
+      isExternalSession: () => true,
+      authorize: () => {
+        if (!permitted) throw new Error("goal belongs to another window");
+      },
+      prepareResume: async () => undefined,
+      service: () => ({
+        getGoal: () => ({
+          ok: true as const,
+          goal: "Finish",
+          goalId: "g",
+          revision: 2,
+          paused: true,
+        }),
+        updateGoal: async () => ({
+          ok: true as const,
+          updated: false,
+          goal: "Finish",
+          paused: true,
+        }),
+        deleteGoal: () => ({ ok: true as const, cleared: false }),
+        extendGoal: () => ({ ok: true as const, limits: { maxStopBlocks: 3 } }),
+      }),
+      onGoalRead: (sessionId) => opened.push(sessionId),
+    });
+    const call = (method: string, params: Record<string, unknown> = {}) =>
+      handler({ id: 1, method, params: { sessionId: "task", ...params } }, 7);
+    await call("agent/goalGet");
+    expect(opened).toEqual(["task"]);
+    // An update reads the Goal to fence a stale client: that is not an open.
+    await call("agent/goalUpdate", { paused: true, expectedGoalId: "g", expectedRevision: 1 });
+    permitted = false;
+    await call("agent/goalGet");
+    expect(opened).toEqual(["task"]);
+  });
+});

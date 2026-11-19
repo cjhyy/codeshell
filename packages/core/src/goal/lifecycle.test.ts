@@ -31,6 +31,8 @@ import {
   isGoalLifecycleArmable,
   terminateGoalLifecycle,
   waitGoalLifecycle,
+  withGoalPauseRun,
+  withGoalWaitDetail,
   type GoalConfig,
 } from "./lifecycle.js";
 
@@ -535,5 +537,64 @@ describe("goal-level progress (rounds + active time)", () => {
       objective: "新目标",
     });
     expect(carryGoalProgress(replacement, waiting, 8_000).progress).toBeUndefined();
+  });
+});
+
+describe("what a stopped goal records for a restart", () => {
+  const started = () => createGoalLifecycle({ objective: "ship", goalId: "goal-a" }, "active", 100);
+  const question = { text: "用哪个数据库？", detail: { level: "consent" } };
+
+  test("a user wait keeps its asking run and question; arming or ending the goal drops them", () => {
+    const waiting = waitGoalLifecycle(started(), 200, "user", { runId: "run-1", question })!;
+    expect(waiting).toMatchObject({ phase: "waiting", waitKind: "user", runId: "run-1", question });
+    expect(decodeGoalLifecycle(JSON.parse(JSON.stringify(waiting)))).toEqual(waiting);
+    const armed = armGoalLifecycle(waiting, 300)!;
+    expect(armed).not.toHaveProperty("question");
+    expect(armed).not.toHaveProperty("runId");
+    const ended = terminateGoalLifecycle(waiting, "completed", 300)!;
+    expect(ended).not.toHaveProperty("question");
+    expect(decodeGoalLifecycle(ended)).toEqual(ended);
+    // Only a user wait carries a question.
+    expect(waitGoalLifecycle(started(), 200, "background", { question })).not.toHaveProperty(
+      "question",
+    );
+  });
+
+  test("the recorded detail can be replaced or cleared without restarting the wait", () => {
+    const waiting = waitGoalLifecycle(started(), 200, "user", { runId: "run-1", question })!;
+    const again = withGoalWaitDetail(waiting, { runId: "run-2", question });
+    expect(again).toMatchObject({ runId: "run-2", waitingSinceMs: 200, question });
+    const cleared = withGoalWaitDetail(again, {});
+    expect(cleared).toMatchObject({ phase: "waiting", waitKind: "user", waitingSinceMs: 200 });
+    expect(cleared).not.toHaveProperty("question");
+    expect(cleared).not.toHaveProperty("runId");
+    expect(withGoalWaitDetail(started(), { question })).toEqual(started());
+  });
+
+  test("a malformed question or run id is dropped, never the goal; older records decode as before", () => {
+    const waiting = waitGoalLifecycle(started(), 200, "user")!;
+    expect(waiting).not.toHaveProperty("question");
+    for (const bad of [{ text: "" }, { text: 7 }, "text", ["x"], { detail: {} }])
+      expect(decodeGoalLifecycle({ ...waiting, question: bad, runId: 9 })).toEqual(waiting);
+    expect(
+      decodeGoalLifecycle({
+        ...waiting,
+        question: { text: "问", detail: ["not", "an", "object"] },
+      }),
+    ).toEqual({ ...waiting, question: { text: "问" } });
+  });
+
+  test("a paused record may name the run the pause ended", () => {
+    const paused = createGoalLifecycle(
+      { objective: "ship", goalId: "goal-a", paused: true, pauseReason: "no_progress" },
+      "paused",
+      100,
+    );
+    const named = withGoalPauseRun(paused, "run-9");
+    expect(named).toMatchObject({ phase: "paused", pauseReason: "no_progress", runId: "run-9" });
+    expect(decodeGoalLifecycle(JSON.parse(JSON.stringify(named)))).toEqual(named);
+    expect(withGoalPauseRun(paused, undefined)).toBe(paused);
+    expect(withGoalPauseRun(started(), "run-9")).not.toHaveProperty("runId");
+    expect(decodeGoalLifecycle({ ...paused, runId: "" })).toEqual(paused);
   });
 });

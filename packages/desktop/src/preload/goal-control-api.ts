@@ -4,6 +4,7 @@
  * worker/main handlers. Extracted from preload/index.ts and types.d.ts so the
  * declaration and implementation of one contract live together.
  */
+import type { GoalQuestionDetail } from "../shared/goal-questions";
 import { rpcResult } from "./rpc-result";
 
 type Rpc = (method: string, params?: Record<string, unknown>) => Promise<unknown>;
@@ -88,6 +89,12 @@ export interface GoalControlApi {
     setAtMs?: number;
     /** Goal-level rounds and goal time; absent from older hosts. */
     progress?: GoalProgressSnapshot;
+    /**
+     * The question the goal waits on, as the host persisted it (desktop
+     * external runtimes; absent when none is open or the host does not say).
+     */
+    waitingForUser?: string;
+    waitingForUserDetail?: GoalQuestionDetail;
   }>;
 }
 
