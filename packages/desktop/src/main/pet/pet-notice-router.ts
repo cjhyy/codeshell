@@ -728,7 +728,7 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     await this.revokeWaiting(
       (record) =>
         record.sessionId === sessionId &&
-        record.kind === "session.blocked" &&
+        (record.kind === "session.blocked" || record.kind === "session.paused") &&
         record.requestId === undefined,
       reason,
     );

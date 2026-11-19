@@ -2101,7 +2101,7 @@ describe("one interpretation for the long task and the notice rules", () => {
     });
     expect(drafts.map((draft) => [draft.kind, draft.dedupeKey])).toEqual([
       [
-        "session.blocked",
+        "session.paused",
         `${launch.sessionId}:goal-pause:goal-1:1:${h.identity(launch.sessionId).runId}`,
       ],
     ]);

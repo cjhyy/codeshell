@@ -397,24 +397,69 @@ describe("goal scope", () => {
 });
 
 describe("blocked", () => {
-  test("limit_stop emits a P0 blocked draft and keeps the rule armed", async () => {
+  test("limit_stop emits a pause, not a decision, and keeps the rule armed", async () => {
     rules.rules.push(sessionRule("rule-a"));
     const w = watcher();
     await feed(w, [started(), tool("Bash"), done({ completionKind: "limit_stop" })]);
     expect(drafts).toEqual([
       {
-        kind: "session.blocked",
-        priority: "P0",
+        kind: "session.paused",
+        priority: "P1",
         dedupeKey: `${SID}:goal-pause:-:-:run-1`,
         sessionId: SID,
         ruleIds: ["rule-a"],
-        facts: { title: "修复登录", summary: "All tests pass now." },
+        facts: { title: "修复登录", pause: "limit", summary: "All tests pass now." },
         // What a reply code needs (继续 / 停止), never shown.
         context: { reason: "limit" },
       },
     ]);
     expect(rules.rules[0]!.state).toBe("active");
     expect(rules.updates).toEqual([]);
+  });
+
+  test("the pause names its limit from the structured reason, not from the gaps text", async () => {
+    rules.rules.push(sessionRule("rule-a"));
+    const w = watcher();
+    await feed(w, [
+      started(),
+      tool("Bash"),
+      // The prose says one thing, the structured field another: the field wins.
+      goal("not_met", {
+        gaps: "达到本轮 token 预算；目标已暂停，可继续。",
+        pauseReason: "time_budget",
+      }),
+      done({ completionKind: "limit_stop" }),
+    ]);
+    expect(drafts.map((draft) => [draft.kind, draft.facts.pause, draft.facts.question])).toEqual([
+      ["session.paused", "time_budget", undefined],
+    ]);
+  });
+
+  test("a question carries its options, with the stated default recommended", async () => {
+    rules.rules.push(sessionRule("rule-a", { scope: "goal" }));
+    const w = watcher();
+    await feed(w, [
+      started(),
+      goal("not_met", {
+        waitingForUser: "发正式版还是预发布？",
+        waitingForUserDetail: {
+          level: "preference",
+          options: ["正式版", "预发布"],
+          default: "预发布",
+        },
+      }),
+    ]);
+    expect(drafts).toMatchObject([
+      {
+        kind: "session.blocked",
+        priority: "P0",
+        facts: {
+          question: "发正式版还是预发布？",
+          options: [{ label: "正式版" }, { label: "预发布", recommended: true }],
+        },
+      },
+    ]);
+    expect(drafts[0]!.facts).not.toHaveProperty("pause");
   });
 
   test("goal waiting for the user emits blocked with the question and revision key", async () => {
@@ -437,25 +482,26 @@ describe("blocked", () => {
     ]);
   });
 
-  test("defensive: a bare waitingForUser flag also counts as blocked", async () => {
+  test("a wait without a question is a pause: no decision is asked without its question", async () => {
     // Core sends the question string; a boolean is accepted in case a producer simplifies it.
     rules.rules.push(sessionRule("rule-a"));
     const w = watcher();
     await feed(w, [goal("not_met", { waitingForUser: true })]);
-    expect(drafts.map((draft) => [draft.kind, draft.facts.question])).toEqual([
-      ["session.blocked", undefined],
+    expect(drafts.map((draft) => [draft.kind, draft.facts.pause])).toEqual([
+      ["session.paused", "awaiting_reply"],
     ]);
   });
 
-  test("goal exhausted emits blocked; plain not_met does not", async () => {
+  test("goal exhausted emits a pause; plain not_met does not", async () => {
     rules.rules.push(sessionRule("rule-a"));
     const w = watcher();
     await feed(w, [goal("not_met", { gaps: "more" }), goal("approaching_limit")]);
     expect(drafts).toEqual([]);
     await feed(w, [goal("exhausted", { gaps: "ran out", runId: "run-7" })]);
     expect(drafts.map((draft) => [draft.kind, draft.dedupeKey])).toEqual([
-      ["session.blocked", `${SID}:goal-pause:-:-:run-7`],
+      ["session.paused", `${SID}:goal-pause:-:-:run-7`],
     ]);
+    expect(drafts[0]!.facts.pause).toBe("goal_exhausted");
   });
 
   test("blocked still emits while a long task owns the session", async () => {
@@ -463,7 +509,7 @@ describe("blocked", () => {
     longTask = true;
     const w = watcher();
     await feed(w, [started(), tool("Bash"), done({ completionKind: "limit_stop" })]);
-    expect(drafts.map((draft) => draft.kind)).toEqual(["session.blocked"]);
+    expect(drafts.map((draft) => draft.kind)).toEqual(["session.paused"]);
   });
 
   test("rules without blocked do not match", async () => {
@@ -925,7 +971,7 @@ describe("core's real flows", () => {
     rules.rules.push(sessionRule("rule-a"));
     const w = watcher();
     await feed(w, [started(), tool("Bash"), goal("exhausted", { gaps: "tests" }), done()]);
-    expect(drafts.map((draft) => draft.kind)).toEqual(["session.blocked"]);
+    expect(drafts.map((draft) => draft.kind)).toEqual(["session.paused"]);
     expect(rules.rules[0]!.state).toBe("active");
   });
 

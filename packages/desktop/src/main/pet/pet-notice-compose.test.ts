@@ -26,6 +26,19 @@ describe("composeNoticeBody", () => {
     expect(composeNoticeBody("session.blocked", facts)).not.toContain("回答");
   });
 
+  test("a pause says what stopped and that nothing runs; it asks nothing", () => {
+    expect(composeNoticeBody("session.paused", { title: "发版", pause: "time_budget" })).toBe(
+      "「发版」已暂停：本轮时间预算用完了，现在没有在运行。",
+    );
+    expect(composeNoticeBody("session.paused", { title: "发版", pause: "turn_limit" })).toBe(
+      "「发版」已暂停：本轮自动继续次数用完了，现在没有在运行。",
+    );
+    // An unknown cause is still a pause, never a decision.
+    const unknown = composeNoticeBody("session.paused", { title: "发版", pause: "new_kind" });
+    expect(unknown).toBe("「发版」已暂停，现在没有在运行。");
+    expect(unknown).not.toContain("需要你决定");
+  });
+
   test("strips control, bidi and zero-width characters", () => {
     expect(composeNoticeBody("session.done", {}, "\u202eabc\u0007\u200b\r\nnext\tline\u2066")).toBe(
       "abc\nnext line",

@@ -7,6 +7,8 @@ export interface NoticeFacts {
   error?: string;
   question?: string;
   options?: NoticeDraftOption[];
+  /** `session.paused`: what stopped the Session, as a key of `PAUSE_CAUSES`. */
+  pause?: string;
   /**
    * Text for an owner target that is not a confirmed private chat: no
    * question, options or code. Without it the notice has nothing private.
@@ -83,6 +85,23 @@ function blockedBody(facts: NoticeFacts): string {
   return lines.join("\n");
 }
 
+/** What stopped a paused Session, in the owner's words. Keys come from structured events. */
+const PAUSE_CAUSES: Readonly<Record<string, string>> = {
+  time_budget: "本轮时间预算用完了",
+  token_budget: "本轮 token 预算用完了",
+  turn_limit: "本轮自动继续次数用完了",
+  no_progress: "连续几轮没有新进展",
+  limit: "本轮额度用完了",
+  goal_exhausted: "Goal 的额度用完了",
+  awaiting_reply: "在等你回复",
+};
+
+/** A pause states what happened and that nothing is running; it asks no question. */
+function pausedBody(facts: NoticeFacts): string {
+  const cause = facts.pause ? PAUSE_CAUSES[facts.pause] : undefined;
+  return `${withDetail(`「${title(facts)}」已暂停`, cause)}，现在没有在运行。`;
+}
+
 function cap(body: string): string {
   return body.length > MAX_NOTICE_BODY ? `${body.slice(0, MAX_NOTICE_BODY - 1)}…` : body;
 }
@@ -91,6 +110,7 @@ const KIND_LABELS: Readonly<Record<string, string>> = {
   "session.done": "做完了",
   "session.failed": "没做完",
   "session.blocked": "等你决定",
+  "session.paused": "已暂停",
   "session.report": "有进展",
   "followup.due": "跟进提醒",
 };
@@ -105,6 +125,8 @@ export function composeNoticeBody(kind: string, facts: NoticeFacts, body?: strin
   switch (kind) {
     case "session.blocked":
       return cap(blockedBody(facts));
+    case "session.paused":
+      return cap(pausedBody(facts));
     case "session.failed":
       return cap(withDetail(`「${title(facts)}」没做完`, line(facts.error, MAX_ERROR)));
     case "session.done":

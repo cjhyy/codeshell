@@ -346,7 +346,7 @@ describe("actions", () => {
     const h = harness();
     h.state.goal = null;
     const code = await h.notify({ family: "limit", reason: "limit" });
-    expect(h.im[0]!.body).toContain("要继续、停下，还是交给 Mimi？直接回我就行。");
+    expect(h.im[0]!.body).toContain("回我“继续”就接着做；也可以让它停下，或交给 Mimi。");
     expect(await h.run(code, "continue")).toBe("已让会话接着做。");
     expect(h.calls.sent).toEqual([
       {

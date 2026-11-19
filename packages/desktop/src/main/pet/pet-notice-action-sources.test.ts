@@ -156,7 +156,9 @@ describe("open items on routed notices", () => {
     await settle(() => current!.ownerSends.length > 0);
     await current.idle();
     const text = current.ownerSends[0]!.text;
-    expect(text).toBe("「修登录」需要你决定\n要继续、停下，还是交给 Mimi？直接回我就行。");
+    expect(text).toBe(
+      "「修登录」已暂停：本轮额度用完了，现在没有在运行。\n回我“继续”就接着做；也可以让它停下，或交给 Mimi。",
+    );
     const [item] = current.wiring.router.openActionItems("wechat");
     expect(item?.actions).toMatchObject({
       family: "limit",
