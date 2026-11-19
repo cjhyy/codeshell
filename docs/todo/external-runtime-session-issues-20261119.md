@@ -11,6 +11,39 @@
 
 **进展（2026-11-20）**：PR #397 按方向 A 实现：外部 CC/Codex 会话多挂一个 `codeshell_computer` MCP 服务（Host 的带闸门代理，按会话固定身份），受限档案、计划模式、`dontAsk`、无审批通路时不提供。收尾分支：审批卡不再写「native … tool」，改为说明要做的操作和目标（中英文）；打断并发送（interrupt-and-send）也会在闸门处取消该会话正在进行的电脑操控，Goal 保留。未真机验证。
 
+**进展（2026-11-20，真实 App 验收，替身驱动）**：在真实 Electron App（隔离的临时 HOME、mock 钥匙串）里把这条链路跑通了，可重跑：`bun run test:e2e:external-computer-use-acceptance`（`packages/desktop`，不在 CI 的 e2e 链里）。
+
+没有启动真实驱动，原因：开发构建的 `CodeShell Computer Use.app` 是 ad-hoc 签名，bundle id 与已安装版本相同，但已安装版本的授权绑定的是「bundle id + 签名证书」，开发构建对不上；内嵌的 `cua-driver` 是第三方二进制，无法从源码确认它在未授权时启动或读状态不会弹系统权限框，而且同一个 bundle id 的第二个实例要经 LaunchServices 启动。排除不了弹框，就不启动。改为在最窄的接缝换替身：未打包构建读环境变量 `CODESHELL_E2E_COMPUTER_USE_BUNDLE`（默认不设；打包后忽略；设了就绝不回退到真实 helper），指向 `scripts/computer-use-stand-in.mjs` 生成的替身 bundle（helper 只监听 socket，driver 只记录调用并返回固定结果）。App 自己的 MCP 代理、输入闸门、审批通路、会话接线全是真的；`claude` 是脚本替身，按真实 CLI 的约定走（有审批工具就先问，完全访问直接调）。
+
+已在真实 App 里验证（Claude Code 会话）：
+
+- ✅ 会话拿到 `codeshell_computer`：CLI 的 MCP 配置里有这个服务；工具列表经过带闸门的代理（`page`、`browser_*` 被扣下，每个工具说明都带输入策略）。
+- ✅ 默认权限：只读调用（`list_apps`）也弹审批卡，文案是「电脑操控 · 查看正在运行的应用 / Claude Code 想操控你的电脑」，高风险，只有「仅本次批准」，没有「本会话一直允许」，不出现「native … tool」。
+- ✅ 拒绝：CLI 收到 `deny`，驱动收到 0 次调用。批准：驱动恰好收到 1 次，会话身份字段留在代理里不外传。
+- ✅ 完全访问：不弹卡。
+- ✅ 会话归属：代理被固定到本窗口这个会话的 id；对这个会话按停止，正是这个代理的调用被拒。
+- ✅ 输入闸门：用户在用键鼠时，前台输入（`delivery_mode:"foreground"`、`launch_app`）被拒 `user-active`，驱动收不到；后台点击和只读照常；用户离开后同一个前台调用放行。
+- ✅ 停止：运行中按停止，该会话下一个输入被拒 `session-cancelled`（只读仍放行）；下一轮恢复正常。
+- ✅ 打断并发送（「引导」）：被打断那一轮的输入同样被拒 `session-cancelled`，随后发出的新消息那一轮可以正常操控。
+- ✅ 不提供的三种情况：计划模式、Mimi 托管的外部会话、设置关闭（helper 根本不启动），CLI 的配置里都只有 `codeshell_tools`。
+
+Codex 会话同样验证过（同一个验收脚本）。替身 `codex` 走 app-server 协议，按 0.162 的形状跑 MCP 工具：先发 `mcpToolCall` item，审批策略不是 `never` 时再发审批征询，征询里只有服务名和 `tool_params`，没有工具名。
+
+- ✅ 声明：App 传给 CLI 的 `-c mcp_servers.codeshell_computer.*` 里有这个服务；活动令牌只按变量名（`env_vars`）传，值在环境里、不在 argv 里。
+- ✅ 默认权限：审批卡写的是真实工具（「Codex 想操控你的电脑：查看正在运行的应用 / Computer use: list_apps」），只有「仅本次批准」。拒绝：CLI 收到 `decline`，驱动 0 次调用。批准：驱动恰好 1 次。
+- ✅ 完全访问（`approvalPolicy: never`）：不弹卡；用户在用键鼠时前台输入照样被拒 `user-active`。
+- ✅ 会话归属：代理固定到这个 Codex 会话自己的 id（与同项目的 Claude Code 会话不同）。
+- ✅ 停止、打断并发送：`turn/interrupt` 到达后该会话的输入被拒 `session-cancelled`，下一轮恢复正常。
+- ✅ 计划模式、设置关闭：`-c` 里只有 `codeshell_tools`。
+- 顺带看到（未改）：Codex 的过程行显示的是 item 类型「mcpToolCall codeshell_computer」，不是工具名；离开 Mimi 页面后前台输入还会被 `chat-open` 挡约 10 秒（`CHAT_RELEASE_MS`，按设计）。
+
+仍需有人在机器前验证（替身替不了的部分）：
+
+- ⬜ 真实驱动下的屏幕动作：光标/舞台出现、点击落在目标上、`set_value` 写进去、截图时角色隐藏。
+- ⬜ 真实 helper 的权限身份：已授权给 `CodeShell Computer Use.app` 时外部会话不再弹系统框；未授权时的提示。
+- ⬜ 真实 `codex` CLI 自己拉起代理、发出征询（替身是按协议写的，不是真实二进制）。
+- ⬜ 全局急停快捷键 ⌘⇧Esc 对外部会话的效果、应用档案备注（需要真实窗口状态）。
+
 **现象**：外部 CC/Codex 会话只能用 `browser_*`，没有任何电脑操控工具；用户在别的地方打开的页面、桌面应用都动不了。
 
 **证据**

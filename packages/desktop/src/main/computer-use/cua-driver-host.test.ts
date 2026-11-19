@@ -668,4 +668,37 @@ describe("resolveComputerUseBundle", () => {
     }
     expect(resolveComputerUseBundle({ isPackaged: false })).toBeUndefined();
   });
+
+  test("an acceptance stand-in replaces the bundle only in an unpackaged build", () => {
+    const env = { CODESHELL_E2E_COMPUTER_USE_BUNDLE: "/tmp/stand-in/Stub.app" };
+    const development = { isPackaged: false, appPath: "/checkout/packages/desktop", env };
+    expect(resolveComputerUseBundle({ ...development, isExecutable: () => true })).toEqual({
+      helperPath: "/tmp/stand-in/Stub.app/Contents/MacOS/codeshell-computer-use",
+      driverPath: "/tmp/stand-in/Stub.app/Contents/Resources/cua-driver",
+    });
+    // A stand-in that cannot run never falls back to the real helper.
+    expect(
+      resolveComputerUseBundle({
+        ...development,
+        isExecutable: (path) => !path.startsWith("/tmp/stand-in/"),
+      }),
+    ).toBeUndefined();
+    expect(
+      resolveComputerUseBundle({
+        ...development,
+        env: { CODESHELL_E2E_COMPUTER_USE_BUNDLE: "relative/Stub.app" },
+        isExecutable: () => true,
+      }),
+    ).toBeUndefined();
+    expect(
+      resolveComputerUseBundle({
+        isPackaged: true,
+        resourcesPath: "/App/Contents/Resources",
+        env,
+        isExecutable: () => true,
+      })?.helperPath,
+    ).toBe(
+      "/App/Contents/Library/CodeShell Computer Use.app/Contents/MacOS/codeshell-computer-use",
+    );
+  });
 });
