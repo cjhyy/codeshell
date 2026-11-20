@@ -61,9 +61,12 @@ import {
 const MAX_LOG = 1024 * 1024;
 const MAX_JOURNAL = 512 * 1024;
 const MAX_EVENTS = 256;
+const SINGLE_INSTALLER_TIMEOUT_MS = 180_000;
 const BUDGETS = Object.freeze({
   build: 600_000,
-  installer: 180_000,
+  installer: SINGLE_INSTALLER_TIMEOUT_MS,
+  // Replacement runs both Setup and the previous uninstaller's app-running checks.
+  replacement: 2 * SINGLE_INSTALLER_TIMEOUT_MS,
   uiController: 300_000,
   readonlyQuery: 30_000,
   closeAfterCustody: 5_000,
@@ -690,7 +693,7 @@ export async function runWindowsNsisAcceptance(args) {
         setup,
         nsisInstallArguments(installation, root),
         environment,
-        BUDGETS.installer,
+        first ? BUDGETS.installer : BUDGETS.replacement,
         label === "replace"
           ? {
               root,
