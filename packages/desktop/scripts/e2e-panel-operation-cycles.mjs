@@ -505,7 +505,18 @@ try {
   await activeGuest().click({
     position: { x: inputRect.x + 10, y: inputRect.y + inputRect.height / 2 },
   });
-  await win.keyboard.type("Keep this browser draft");
+  assert.equal(
+    await guestValue(
+      "document.hasFocus() && document.activeElement === document.getElementById('draft')",
+    ),
+    true,
+    "The native click must focus the input inside the retained guest",
+  );
+  // Playwright's Page keyboard targets the outer renderer. Send native text
+  // events to the focused webview that owns this form, as its user would.
+  await activeGuest().evaluate(async (view, text) => {
+    for (const character of text) await view.sendInputEvent({ type: "char", keyCode: character });
+  }, "Keep this browser draft");
   assert.equal(
     await guestValue("document.getElementById('draft').value"),
     "Keep this browser draft",
