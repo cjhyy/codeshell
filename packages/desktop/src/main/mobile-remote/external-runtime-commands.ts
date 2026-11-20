@@ -356,6 +356,23 @@ export class MobileExternalRuntimeCommands {
         this.revoke(viewer, event.type === "session.create");
       return;
     }
+    const current = this.selections.get(viewer);
+    if (
+      current?.fresh &&
+      current.sessionId === event.sessionId &&
+      current.deviceId === device &&
+      !this.deps.exists(event.sessionId)
+    ) {
+      // Re-selecting this tab's own just-created Session (output recovery, list
+      // click) keeps its creation grant: nothing is persisted to reload yet.
+      try {
+        if (!this.deps.authenticated(viewer, device)) throw new Error("unauthenticated");
+        current.authority?.assertCurrent();
+      } catch {
+        this.revoke(viewer);
+      }
+      return;
+    }
     this.revoke(viewer);
     if (!this.deps.authenticated(viewer, device)) return;
     // Match the bounded recovery subscriptions; no unbounded per-socket state.

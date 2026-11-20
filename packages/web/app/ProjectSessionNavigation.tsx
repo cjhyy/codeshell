@@ -17,6 +17,7 @@ export function ProjectSessionNavigation({
   loadMore,
   renderSession,
   filtered,
+  onNewSession,
 }: {
   sessions: SessionSummary[];
   projects: readonly MobileProjectMeta[];
@@ -27,6 +28,8 @@ export function ProjectSessionNavigation({
   renderSession: (session: SessionSummary) => React.ReactNode;
   /** Rows were narrowed by search or lifted into 置顶, so "no sessions yet" would mislead. */
   filtered?: boolean;
+  /** Start a conversation in a group's project (id or path); null = no project. */
+  onNewSession?: (projectIdOrCwd: string | null, cwd: string | null) => void;
 }) {
   const [groupLimit, setGroupLimit] = React.useState(GROUP_BATCH);
   const [collapsed, setCollapsed] = React.useState<ReadonlySet<string>>(() => new Set());
@@ -75,36 +78,63 @@ export function ProjectSessionNavigation({
         if (active && !rows.includes(active)) rows.push(active);
         return (
           <div className="project-session-group" key={key}>
-            <button
-              type="button"
-              className="project-session-heading"
-              title={group.cwd || "无项目对话"}
-              aria-label={`${closed ? "展开" : "折叠"} ${group.name}`}
-              aria-expanded={!closed}
-              onClick={() =>
-                setCollapsed((previous) => {
-                  const next = new Set(previous);
-                  if (next.has(key)) next.delete(key);
-                  else next.add(key);
-                  return next;
-                })
-              }
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                aria-hidden="true"
+            <div className="project-session-heading-row">
+              <button
+                type="button"
+                className="project-session-heading"
+                title={group.cwd || "无项目对话"}
+                aria-label={`${closed ? "展开" : "折叠"} ${group.name}`}
+                aria-expanded={!closed}
+                onClick={() =>
+                  setCollapsed((previous) => {
+                    const next = new Set(previous);
+                    if (next.has(key)) next.delete(key);
+                    else next.add(key);
+                    return next;
+                  })
+                }
               >
-                <path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" />
-              </svg>
-              <span>{group.name}</span>
-              <span className="project-session-count">{group.items.length}</span>
-              <span className="project-session-chevron" aria-hidden="true">
-                {closed ? "›" : "⌄"}
-              </span>
-            </button>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  aria-hidden="true"
+                >
+                  <path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" />
+                </svg>
+                <span>{group.name}</span>
+                <span className="project-session-count">{group.items.length}</span>
+                <span className="project-session-chevron" aria-hidden="true">
+                  {closed ? "›" : "⌄"}
+                </span>
+              </button>
+              {onNewSession ? (
+                <button
+                  type="button"
+                  className="project-session-new"
+                  aria-label={`在 ${group.name} 中新建对话`}
+                  title={`在 ${group.name} 中新建对话`}
+                  onClick={() =>
+                    onNewSession(
+                      group.cwd ? (group.projectId ?? group.cwd) : null,
+                      group.cwd || null,
+                    )
+                  }
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 20h9" />
+                    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                  </svg>
+                </button>
+              ) : null}
+            </div>
             {!closed ? (
               <>
                 <ul className="sessions project-session-rows" aria-label={`${group.name}的会话`}>

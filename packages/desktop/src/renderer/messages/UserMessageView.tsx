@@ -1,10 +1,11 @@
-import React, { memo } from "react";
+import React, { memo, useEffect, useState } from "react";
 import { extractAnnotations } from "../chat/anchors";
 import { decodeWireForDisplay } from "../chat/attachments";
 import type { LightboxItem } from "../chat/Lightbox";
 import { isSystemReminderText } from "../contextSelection";
 import { useT } from "../i18n/I18nProvider";
 import type { UserMessage } from "../types";
+import type { PetChatAttachment } from "../../shared/pet-chat-attachments";
 import { AnnotationsBlock } from "./AnnotationsBlock";
 import { CollapsibleContent } from "./CollapsibleContent";
 import { SystemReminderTask } from "./SystemReminderTask";
@@ -60,12 +61,12 @@ export const UserMessageView = memo(function UserMessageView({
         {remoteAttachments.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-2" data-remote-message-attachments>
             {remoteAttachments.map((attachment, index) => (
-              <span
+              <AttachmentChip
                 key={index}
-                className="max-w-full break-words rounded-md border px-2 py-1 text-xs"
-              >
-                {attachment.originalName}
-              </span>
+                attachment={attachment}
+                loadImage={localRuntime}
+                onZoom={onZoom}
+              />
             ))}
           </div>
         )}
@@ -109,3 +110,58 @@ export const UserMessageView = memo(function UserMessageView({
     </div>
   );
 });
+
+/** `<cwd>/.code-shell/attachments/<sessionId>/…` — the context Main authorizes reads by. */
+function attachmentReadContext(path: string): { cwd?: string; sessionId?: string } {
+  const match = /^(.*)[\\/]\.code-shell[\\/]attachments[\\/]([^\\/]+)[\\/]/u.exec(path);
+  return match ? { cwd: match[1] || "/", sessionId: match[2] } : {};
+}
+
+function AttachmentChip({
+  attachment,
+  loadImage,
+  onZoom,
+}: {
+  attachment: PetChatAttachment;
+  loadImage: boolean;
+  onZoom: Props["onZoom"];
+}) {
+  const { t } = useT();
+  const [src, setSrc] = useState<string | null>(null);
+  const image = loadImage && attachment.kind === "image" && Boolean(attachment.absPath);
+  useEffect(() => {
+    if (!image) return;
+    let live = true;
+    const context = attachmentReadContext(attachment.absPath);
+    const sessionId = attachment.sessionId || context.sessionId;
+    void window.codeshell
+      ?.readImageDataUrl?.(attachment.absPath, {
+        ...(context.cwd ? { cwd: context.cwd } : {}),
+        ...(sessionId ? { sessionId } : {}),
+      })
+      .then((dataUrl) => {
+        if (live && dataUrl) setSrc(dataUrl);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [image, attachment.absPath, attachment.sessionId]);
+  const name = attachment.originalName || t("chat.composer.imageFallbackName");
+  if (!src)
+    return (
+      <span className="max-w-full break-words rounded-md border px-2 py-1 text-xs">
+        {attachment.originalName}
+      </span>
+    );
+  return (
+    <button
+      type="button"
+      className="max-w-full cursor-zoom-in overflow-hidden rounded-lg outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      aria-label={t("chat.composer.imageClickToZoom", { name })}
+      onClick={() => onZoom([{ src, alt: name, name }], 0)}
+    >
+      <img className="h-20 max-w-full object-cover" src={src} alt={name} title={name} />
+    </button>
+  );
+}

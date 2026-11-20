@@ -393,6 +393,31 @@ test("native first send uses only the Host fresh grant and rejects same-ID repla
   await expect(f.commands.authorizeNative("tab", "phone", "external")).rejects.toThrow();
 });
 
+test("re-selecting the tab's own unpersisted new Session keeps its fresh grant", async () => {
+  const f = harness();
+  f.disappear();
+  const authority = nativeAuthority();
+  f.commands.created("tab", "phone", "external", authority);
+  const select = (viewerId: string) =>
+    f.commands.observe({
+      type: "session.select",
+      sessionId: "external",
+      viewerId,
+      deviceId: "phone",
+    });
+  // Output recovery / a list click re-selects the new chat before its first turn.
+  await select("tab");
+  expect(() => f.commands.captureSelectedAuthority("tab", "phone", "external")).not.toThrow();
+  expect((await f.commands.authorizeNative("tab", "phone", "external")).fresh).toBe(true);
+  // Another tab cannot borrow it by selecting the same unpersisted ID.
+  await select("other-tab");
+  expect(() => f.commands.captureSelectedAuthority("other-tab", "phone", "external")).toThrow();
+  // A revoked project root still retires the grant on re-selection.
+  authority.revoke();
+  await select("tab");
+  expect(() => f.commands.captureSelectedAuthority("tab", "phone", "external")).toThrow();
+});
+
 test("native authority cannot survive a selection change during its asynchronous project lookup", async () => {
   const f = harness();
   f.recreateNative();

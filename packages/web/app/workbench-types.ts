@@ -51,6 +51,8 @@ export interface WorkbenchController {
   projects?: readonly MobileProjectMeta[];
   selectedProjectId?: string;
   selectProject?: (id: string) => void;
+  /** Start a fresh conversation in a project (id or path); null = no project. */
+  newSessionIn?: (projectIdOrCwd: string | null) => void;
   title: string;
   configuration: HubConfiguration | null;
   configurationVersion: number;

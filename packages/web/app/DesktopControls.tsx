@@ -69,7 +69,55 @@ export function cliModeSwitchNotice(
     : `${base}\nClaude Code 会跳过工具操作确认。电脑可能要求再次批准。`;
 }
 
-export function DesktopChatControls({ app, busy = false }: { app: RemoteApp; busy?: boolean }) {
+const NO_PROJECT = "__no_project__";
+
+/** A conversation with no turns yet can still move to another project. */
+function DesktopProjectPicker({ app, projectId }: { app: RemoteApp; projectId: string | null }) {
+  const choices = [
+    { value: NO_PROJECT, label: "无项目", description: "不绑定仓库的对话" },
+    ...app.projects.map((project) => ({
+      value: project.id ?? project.path,
+      label: project.name,
+      description: project.path,
+    })),
+  ];
+  const value =
+    projectId === null
+      ? NO_PROJECT
+      : (app.projects.find((project) => project.id === projectId || project.path === projectId)
+          ?.id ?? projectId);
+  return (
+    <ModelChoicePicker
+      label="项目"
+      className="model-button desktop-new-chat-project"
+      closeLabel="关闭项目选择"
+      placeholder="选择项目"
+      choices={choices}
+      value={value}
+      disabled={app.status !== "online"}
+      onChange={(next) => {
+        if (next === value) return;
+        if (next === NO_PROJECT) {
+          app.newSession({ projectId: null });
+          return;
+        }
+        const project = app.projects.find((item) => (item.id ?? item.path) === next);
+        app.newSession(project?.id ? { projectId: project.id } : (project?.path ?? next));
+      }}
+    />
+  );
+}
+
+export function DesktopChatControls({
+  app,
+  busy = false,
+  projectId,
+}: {
+  app: RemoteApp;
+  busy?: boolean;
+  /** Current workspace project (id or path); null = no project. Enables the picker on a new conversation. */
+  projectId?: string | null;
+}) {
   const hintId = React.useId();
   const inRoom = Boolean(app.activeRoomId || app.activeRoom);
   const room = app.activeRoom;
@@ -90,8 +138,16 @@ export function DesktopChatControls({ app, busy = false }: { app: RemoteApp; bus
     : externalRuntime
       ? "下次发送生效；运行中变更需先停止。"
       : "下次发送生效。";
+  const freshConversation =
+    !inRoom &&
+    projectId !== undefined &&
+    app.chat.items.length === 0 &&
+    !app.loading.sessionHistory &&
+    app.chat.run !== "running" &&
+    !busy;
   return (
     <div className="desktop-chat-controls">
+      {freshConversation ? <DesktopProjectPicker app={app} projectId={projectId} /> : null}
       <ModelChoicePicker
         label="权限模式"
         className="model-button desktop-permission-picker"

@@ -48,7 +48,13 @@ export {
   type ConfiguredTextModelIntent,
 } from "./engine/configured-text-model.js";
 
-export { outputUserMessage } from "./engine/run-output-user-message.js";
+export {
+  outputUserMessage,
+  attachmentReferenceDisplay,
+  formatAttachmentReferences,
+  splitAttachmentReferences,
+  type AttachmentReference,
+} from "./engine/run-output-user-message.js";
 export {
   OutputHistoryRecovery,
   type OutputHistoryRecoveryAuthority,

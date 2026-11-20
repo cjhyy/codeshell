@@ -297,6 +297,8 @@ export type FoldItem =
       sourceEventId?: string;
       /** Image blocks of raw model-facing text (no displayText) whose envelope clients hide. */
       images?: number;
+      /** Paths an external-runtime turn attached, split from its model-facing text. */
+      attachments?: import("../shared/pet-chat-attachments").PetChatAttachment[];
       timestamp?: number;
     }
   // User interrupted this turn (Stop). Rebuilt from the core transcript's

@@ -47,6 +47,50 @@
   font-size: 13px;
   font-weight: 600;
 }
+.project-session-heading-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+.project-session-heading-row > .project-session-heading {
+  flex: 1;
+  min-width: 0;
+}
+.project-session-new {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  opacity: 0;
+}
+.project-session-new > svg {
+  width: 15px;
+  height: 15px;
+}
+.project-session-heading-row:hover .project-session-new,
+.project-session-heading-row:focus-within .project-session-new {
+  opacity: 1;
+}
+.project-session-new:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.project-session-new:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+@media (hover: none) {
+  .project-session-new {
+    opacity: 1;
+  }
+}
 .project-session-count,
 .project-session-chevron {
   color: var(--muted);

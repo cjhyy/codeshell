@@ -53,7 +53,7 @@ export function foldTranscript(
             undefined,
             undefined,
             item.clientMessageId,
-            undefined,
+            item.attachments,
             item.sourceEventId,
           );
     } else if (item.kind === "turn_stopped") {
