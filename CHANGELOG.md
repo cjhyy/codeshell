@@ -8,6 +8,12 @@ breaking.
 
 ## [Unreleased]
 
+### Fixed
+
+- Web: while a panel is opening, its "opening" status no longer pushes the panel
+  down and then lets it jump back when the status clears, so a tap made during
+  that moment lands on the control under the finger.
+
 ## [0.11.0-rc.7] - 2026-11-20
 
 Small follow-up to rc.6. Computer use for Codex and Claude Code sessions was
