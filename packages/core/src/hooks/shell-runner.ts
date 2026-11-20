@@ -43,13 +43,13 @@ export { validateHookResult };
 const DEFAULT_TIMEOUT_MS = 60_000;
 export const MAX_HOOK_STDIN_BYTES = 256 * 1024;
 
-interface HookStdinFailure {
+export interface HookStdinFailure {
   type: "stdin_error";
   code: string;
   message: string;
 }
 
-function stdinFailure(error: unknown): HookStdinFailure {
+export function stdinFailure(error: unknown): HookStdinFailure {
   const err = error as NodeJS.ErrnoException;
   return {
     type: "stdin_error",
@@ -59,10 +59,39 @@ function stdinFailure(error: unknown): HookStdinFailure {
 }
 
 /**
+ * Codes meaning the hook's read end is gone: it closed stdin or already exited.
+ * Hooks may ignore stdin (most CC hooks do), and whether the envelope lands
+ * before such a hook exits is a scheduling race on every runtime, so these are
+ * not hook failures: the exit status and stdout decide the result. Otherwise a
+ * fast `echo reason >&2; exit 2` deny hook could fail open.
+ */
+const HOOK_STDIN_READER_GONE = new Set([
+  "EPIPE",
+  "ECONNRESET",
+  "ERR_STREAM_DESTROYED",
+  "ERR_STREAM_PREMATURE_CLOSE",
+]);
+
+export function isHookStdinReaderGone(failure: HookStdinFailure): boolean {
+  return HOOK_STDIN_READER_GONE.has(failure.code);
+}
+
+function stdinStreamError(code: string, message: string): NodeJS.ErrnoException {
+  const error: NodeJS.ErrnoException = new Error(message);
+  error.code = code;
+  return error;
+}
+
+/**
  * Write one hook envelope without leaving a Writable `error` event unhandled.
- * The listener is installed before write(), remains through end(), and the
- * promise does not resolve until both the write callback and any required
- * drain have completed.
+ *
+ * Runtimes disagree on where a broken pipe surfaces: Node reports it to the
+ * write callback, the end callback and an `error` event; Bun 1.4 reports a
+ * successful write, then fails the end callback and emits `error`. The promise
+ * settles with the first error from any of the three (or a close before end()
+ * completed) and resolves only once the end callback succeeds. The `error`
+ * listener is never removed, so an `error` emitted after settlement is still
+ * handled.
  */
 export function writeHookStdin(
   stdin: Writable | null | undefined,
@@ -76,18 +105,19 @@ export function writeHookStdin(
     let drained = false;
     let ending = false;
 
-    const cleanup = (removeErrorListener = true) => {
-      if (removeErrorListener) stdin.off("error", onError);
-      stdin.off("drain", onDrain);
-    };
-    const finish = (error?: unknown, keepErrorListener = false) => {
+    const finish = (error?: unknown) => {
       if (settled) return;
       settled = true;
-      cleanup(!keepErrorListener);
-      if (error !== undefined) reject(error);
+      stdin.off("drain", onDrain);
+      stdin.off("close", onClose);
+      if (error != null) reject(error);
       else resolve();
     };
     const onError = (error: Error) => finish(error);
+    const onClose = () =>
+      finish(
+        stdinStreamError("ERR_STREAM_PREMATURE_CLOSE", "hook stdin closed before end completed"),
+      );
     const onDrain = () => {
       drained = true;
       maybeEnd();
@@ -96,21 +126,24 @@ export function writeHookStdin(
       if (!writeComplete || !drained || ending || settled) return;
       ending = true;
       try {
-        stdin.end(() => finish());
+        stdin.end((error?: Error | null) => finish(error ?? undefined));
       } catch (error) {
-        finish(error, true);
+        finish(error);
       }
     };
 
     // EventEmitter treats an unhandled stream `error` as fatal. Register the
-    // one-shot handler before the first byte is handed to the child.
-    stdin.once("error", onError);
+    // handler before the first byte is handed to the child, and keep it.
+    stdin.on("error", onError);
+    stdin.once("close", onClose);
+    if (stdin.destroyed) {
+      finish(stdinStreamError("ERR_STREAM_DESTROYED", "hook stdin was already destroyed"));
+      return;
+    }
     try {
       drained = stdin.write(envelope, (error?: Error | null) => {
         if (error) {
-          // Some Writable implementations invoke the callback before emitting
-          // their fatal `error`. Keep the one-shot guard installed for it.
-          finish(error, true);
+          finish(error);
           return;
         }
         writeComplete = true;
@@ -119,7 +152,7 @@ export function writeHookStdin(
       if (!drained) stdin.once("drain", onDrain);
       maybeEnd();
     } catch (error) {
-      finish(error, true);
+      finish(error);
     }
   });
 }
@@ -127,7 +160,7 @@ export function writeHookStdin(
 /** Close stdin for an oversized envelope while still absorbing stream errors. */
 export function closeHookStdin(stdin: Writable | null | undefined): void {
   if (!stdin) return;
-  stdin.once("error", () => {});
+  stdin.on("error", () => {});
   try {
     stdin.end();
   } catch {
@@ -243,10 +276,7 @@ export async function runShellHook(
     child.on("error", (err: Error) => {
       clearTimeout(timer);
       // eslint-disable-next-line no-console
-      console.error(
-        `[hooks] ${config.event} hook failed: ${config.command}`,
-        err.message,
-      );
+      console.error(`[hooks] ${config.event} hook failed: ${config.command}`, err.message);
       settle({});
     });
 
@@ -304,10 +334,7 @@ export async function runShellHook(
       // the chain continues. Per CC: stderr is surfaced to the user but
       // doesn't block execution.
       // eslint-disable-next-line no-console
-      console.error(
-        `[hooks] ${config.event} hook exited with code ${code}:`,
-        stderr.slice(0, 500),
-      );
+      console.error(`[hooks] ${config.event} hook exited with code ${code}:`, stderr.slice(0, 500));
       settle({});
     };
     child.on("close", (code: number | null) => {
@@ -353,9 +380,9 @@ export async function runShellHook(
       return;
     }
 
-    // Let the spawned shell enter user code before writing. Besides avoiding a
-    // needless race, this makes an intentional early stdin close observable as
-    // EPIPE/ECONNRESET while the child is still alive.
+    // Write on the next turn so a spawn error or abort that already settled
+    // skips it. A hook that stops reading (or exits) before the envelope lands
+    // is judged by its exit status; see isHookStdinReaderGone.
     setImmediate(() => {
       void (async () => {
         if (settled) return;
@@ -363,8 +390,12 @@ export async function runShellHook(
           await writeHookStdin(child.stdin, envelope);
           finishStdin();
         } catch (error) {
-          clearTimeout(timer);
           const failure = stdinFailure(error);
+          if (isHookStdinReaderGone(failure)) {
+            finishStdin();
+            return;
+          }
+          clearTimeout(timer);
           // eslint-disable-next-line no-console
           console.error(`[hooks] failed to write stdin for ${config.event}:`, failure.message);
           killChildTree(child, 1000);
@@ -381,10 +412,7 @@ export async function runShellHook(
  * when matcher is set (matcher only makes sense when ctx.data has a
  * toolName field).
  */
-export function shellHookMatches(
-  config: SettingsHookConfig,
-  ctx: HookContext,
-): boolean {
+export function shellHookMatches(config: SettingsHookConfig, ctx: HookContext): boolean {
   if (!config.matcher) return true;
   const toolName = ctx.data.toolName;
   if (typeof toolName !== "string") return false;
@@ -393,9 +421,7 @@ export function shellHookMatches(
   } catch {
     // Bad regex in user config — log once, treat as non-matching.
     // eslint-disable-next-line no-console
-    console.warn(
-      `[hooks] invalid matcher "${config.matcher}" for ${config.event}; skipping`,
-    );
+    console.warn(`[hooks] invalid matcher "${config.matcher}" for ${config.event}; skipping`);
     return false;
   }
 }

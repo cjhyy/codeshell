@@ -435,6 +435,9 @@ export function runAgentOnce(
       signal?.addEventListener("abort", onAbort, { once: true });
       if (signal?.aborted) onAbort();
       if (viaStdin && child.stdin) {
+        // A CLI that exits before reading its prompt breaks the pipe; its exit
+        // status and stderr report that. Never let the stream `error` go uncaught.
+        child.stdin.on("error", () => {});
         child.stdin.end(opts.prompt);
       }
       const lines: string[] = [];
