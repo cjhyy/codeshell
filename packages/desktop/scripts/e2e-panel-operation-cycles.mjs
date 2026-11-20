@@ -14,6 +14,7 @@ import { watchElectronTestProcess } from "./electron-test-watchdog.mjs";
 import { createPanelOperationDiagnostics } from "./panel-operation-diagnostics.mjs";
 import {
   assertSourceElectronTransportSettled,
+  chooseViewOnlyIfPrompted,
   expandSidebar,
   findCodeShellWindow,
   launchCodeShellElectron,
@@ -109,16 +110,6 @@ await new Promise((done) => server.listen(0, "127.0.0.1", done));
 const origin = `http://127.0.0.1:${server.address().port}`;
 const confined = await prepareConfinedElectronFixture({ appDir, isolated, origin });
 
-async function dismissTrust() {
-  const button = win.getByRole("button", { name: /^(仅查看|View only)/ });
-  if (
-    await button.waitFor({ state: "visible", timeout: 2000 }).then(
-      () => true,
-      () => false,
-    )
-  )
-    await button.click();
-}
 async function openPanel(kind) {
   const toggle = win.locator('[data-panel-action="toggle"]');
   if ((await toggle.getAttribute("aria-pressed")) !== "true") await toggle.click();
@@ -247,10 +238,10 @@ try {
     report.errors.push(error.message);
   });
   await win.setViewportSize({ width: 1280, height: 850 });
-  await dismissTrust();
+  await chooseViewOnlyIfPrompted(win, 2_000);
   await win.evaluate((cwd) => window.codeshell.setTrust(cwd, "trusted"), projectPath);
   await win.getByText("operation-project", { exact: true }).first().click();
-  await dismissTrust();
+  await chooseViewOnlyIfPrompted(win, 2_000);
   const project = await win.evaluate(
     async (cwd) =>
       (await window.codeshell.projectRegistry.list()).find((item) =>
@@ -334,10 +325,10 @@ try {
     },
   });
   await win.reload();
-  await dismissTrust();
+  await chooseViewOnlyIfPrompted(win, 2_000);
   await expandSidebar(win);
   await win.getByRole("button", { name: title, exact: true }).click();
-  await dismissTrust();
+  await chooseViewOnlyIfPrompted(win, 2_000);
   report.confinement = await confined.assertWorker(electron, { requireWorker: false });
   // Production history replay and real Main image IPC render this owned PNG.
   // GenerateImage/provider execution and OS-default opening are not invoked.
@@ -440,10 +431,12 @@ try {
   await files.getByText("updated content", { exact: true }).waitFor();
   await rename(join(projectPath, "alpha.txt"), join(projectPath, "alpha-hidden.txt"));
   await files.getByRole("button", { name: "刷新", exact: true }).last().click();
-  await files.getByText(/读取失败|Failed to read/).waitFor();
+  const missingFile = files.locator("[data-file-missing]");
+  await missingFile.getByText(join(projectPath, "alpha.txt"), { exact: true }).waitFor();
   await rename(join(projectPath, "alpha-hidden.txt"), join(projectPath, "alpha.txt"));
   await files.getByRole("button", { name: "刷新", exact: true }).last().click();
   await files.getByText("updated content", { exact: true }).waitFor();
+  await missingFile.waitFor({ state: "detached" });
   recordCase(
     "Files opens real project content, exposes deleted-file failure and refresh recovers it",
   );
