@@ -174,7 +174,7 @@ jobs:
               --path-ignore-patterns '**/src/panel-apps/**' --path-ignore-patterns '**/src/utils/**'
               --path-ignore-patterns '**/src/themes/**' --path-ignore-patterns '**/src/logging/**'
               --path-ignore-patterns '**/src/links/**' --path-ignore-patterns '**/src/sources/**'
-              --path-ignore-patterns '**/src/skills/**'
+              --path-ignore-patterns '**/src/skills/**' --path-ignore-patterns '**/src/settings/recovery.test.ts'
           - shard: desktop
             paths: packages/desktop
             # The issuer proof runs alone above so its receipt precedes the first SDK/Core import.
@@ -552,9 +552,10 @@ jobs:
       - name: test core spawning suites (hooks, runtime, panel-apps, utils, themes, logging)
         if: matrix.shard == 'core-rest'
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/hooks packages/core/src/runtime packages/core/src/panel-apps packages/core/src/utils packages/core/src/themes packages/core/src/logging
-      - name: test core spawning suites (links, sources, skills)
+      # Settings recovery also spawns real Git and competing Bun writers.
+      - name: test core spawning suites (links, sources, skills, settings recovery)
         if: matrix.shard == 'core-rest'
-        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/links packages/core/src/sources packages/core/src/skills
+        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/links packages/core/src/sources packages/core/src/skills packages/core/src/settings/recovery.test.ts
       - name: test core session in its own Bun process
         if: matrix.shard == 'core-rest'
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 --path-ignore-patterns '**/src/session/*.privacy.test.ts' packages/core/src/session
