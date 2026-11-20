@@ -317,7 +317,7 @@ Main（壳）                          Host（utilityProcess）
 
 ### 8.3 自动更新与发布
 
-**0.12 完整支持 macOS 13.5 及以上，更新门槛为 Darwin 22.6.0。** 低于 macOS 13.5 的 0.11 用户留在 0.11，包括 macOS 12 和 13.0–13.4.x。发布说明注明该边界。PDF 解析和 Panel 后台服务使用随包独立提供的 Node 24.22.1，其官方 arm64 和 x64 二进制均以 macOS 13.5 为部署目标。本机 0.11.0-rc.7 随包 Node 的 arm64 可执行文件也标为 `minos 13.5`。[Electron 系统要求](https://www.electronjs.org/docs/latest/breaking-changes#removed-macos-12-support) · [Node 24.22.1 构建目标](https://github.com/nodejs/node/blob/v24.22.1/BUILDING.md#official-binary-platforms-and-toolchains) · [Apple 13.5 源码清单](https://github.com/apple-oss-distributions/distribution-macOS/blob/macos-135/release.json) · [对应 Darwin 版本](https://github.com/apple-oss-distributions/xnu/blob/xnu-8796.141.3/config/MasterVersion)
+**0.12 的安装和更新下限是 macOS 13.5（Darwin 22.6.0），本轮实机验收使用 macOS 15.6.1 arm64。** 低于 macOS 13.5 的 0.11 用户留在 0.11，包括 macOS 12 和 13.0–13.4.x。发布说明注明该边界。PDF 解析和 Panel 后台服务使用随包独立提供的 Node 24.22.1，其官方 arm64 和 x64 二进制均以 macOS 13.5 为部署目标。本机 0.11.0-rc.7 随包 Node 的 arm64 可执行文件也标为 `minos 13.5`。[Electron 系统要求](https://www.electronjs.org/docs/latest/breaking-changes#removed-macos-12-support) · [Node 24.22.1 构建目标](https://github.com/nodejs/node/blob/v24.22.1/BUILDING.md#official-binary-platforms-and-toolchains) · [Apple 13.5 源码清单](https://github.com/apple-oss-distributions/distribution-macOS/blob/macos-135/release.json) · [对应 Darwin 版本](https://github.com/apple-oss-distributions/xnu/blob/xnu-8796.141.3/config/MasterVersion)
 
 **把系统门槛送到旧客户端。** 0.11 的 `electron-updater@6.8.3` 在提示更新前把清单顶层的 `minimumSystemVersion` 与 `os.release()` 比较。缺字段会放行，非法 semver 会告警后放行。builder 25 和本次核对的 26.18.1 都只用 `mac.minimumSystemVersion` 设置 App 的最低版本，须另行生成清单字段。[旧更新器比较逻辑](https://github.com/electron-userland/electron-builder/blob/electron-updater%406.8.3/packages/electron-updater/src/AppUpdater.ts)
 
@@ -327,16 +327,16 @@ Main（壳）                          Host（utilityProcess）
 
 **更新通道。** 先发 `0.12.0-rc.N`，GitHub Release 标记为 prerelease，npm 使用 `next`。默认 GitHub 源下，正式客户端查询 Latest，已装 rc 的客户端选择同名 rc，并先请求该标签的 `rc-mac.yml`，缺失时回退到同标签的 `latest-mac.yml`。沿用当前只上传 `latest*.yml` 的约定。正式版发布时提示 rc 用户如何手动切回正式版，该版本的 GitHub provider 会继续寻找同名 rc。[GitHub 渠道选择源码](https://github.com/electron-userland/electron-builder/blob/electron-updater%406.8.3/packages/electron-updater/src/providers/GitHubProvider.ts)
 
-**更新验收。** 使用已发布的旧客户端和候选签名包，在独立测试账户保存会话、草稿、设置和一条测试凭据。系统版本验证用同一份可达的候选清单。发 rc 前用测试源重放安装，用 GitHub provider 和发布清单样本验证选版。公开 rc 和正式版各自发布后，再核对线上选中的标签和工件。
+**更新验收。** 本轮用已发布的 0.11 客户端、真实 GitHub provider 和同一份可达的候选清单回放系统版本边界。实机只验当前 Mac（macOS 15.6.1，Darwin 24.6.0，arm64）上的签名候选。记录清单响应、所选版本、签名路径以及升级后测试数据能否读回。公开 rc 和正式版发布后再核对线上选版。
 
 | 起点与场景 | 通过条件 |
 | --- | --- |
-| macOS 12 和 macOS 13.4.x 上分别用 0.11 rc 检查同一 0.12 rc | 日志或测试源记录确认成功读取目标版本清单并被 Darwin 下限拦截。UI 不提示安装，未请求 ZIP。最终回退的清单若仍是 404，旧客户端也会显示“没有更新”，该次验收失败。 |
-| macOS 13.5 上的 0.11 rc，安装于 Applications，旧签名允许直升且新包满足其签名要求 | 看到候选，用户确认后下载并替换，重新启动显示目标版本。核对旧会话、草稿、设置、测试凭据可用，再用随包 Node 解析一份 PDF、启动一个测试 Panel 后台服务。L3/L4 实现后另验第 4.4 节的迁移。 |
-| macOS 13.5 上的 0.11 rc，旧签名要求手动安装 | 本机 0.11.0-rc.7 的固定证书签名包含 `certificate leaf` 和 `TeamIdentifier=not set`，旧客户端据此返回 `manual-required`。用同一固定证书的 DMG 覆盖安装，重复数据检查。L1 识别固定证书时核对 App ID 和预期证书指纹，保留系统签名验证及旧 cdhash 的手动路径。再用同证书的 rc.N → rc.N+1 验应用内更新，全程使用正常签名判断。 |
+| 0.11 rc，模拟 Darwin 21.6.0、22.5.0（macOS 12、13.4.x） | 目标清单返回 200 后被系统下限过滤，客户端不提示安装，也不请求 ZIP。另测清单缺失，区别于系统版本拦截。 |
+| 0.11 rc，模拟 Darwin 22.6.0、23.0.0 | 读取同一候选清单并发出更新可用事件，随后按已安装包的签名要求选择应用内更新或手动安装。 |
+| 本机 15.6.1 的 0.11.0-rc.7 → 同证书的 0.12 候选 | 已发布 rc.7 的签名含 `certificate leaf` 和 `TeamIdentifier=not set`，提示用 DMG 手动安装。在隔离目录用候选替换旧包，重启后核对版本、原会话、草稿、设置及测试凭据，实测 PDF 解析和一个测试 Panel 后台服务。后续同证书的 rc.N → rc.N+1 再验应用内更新。 |
 | 公开正式版 → 0.12 rc / 0.12 正式版 | RC 期间仍指向公开正式版。正式切换时，macOS 13.5 及以上看到新正式版，低于 13.5 的客户端读取清单后被拦截。按发版当天实际 Latest 取起点，2026-11-20 核对时为 [0.10.1](https://github.com/cjhyy/codeshell/releases/tag/v0.10.1)。 |
 
-[旧客户端签名判断](../../packages/desktop/src/main/updater-signature.ts) · [下载入口与清单错误处理](../../packages/desktop/src/main/updater.ts)
+[0.11.0-rc.7 签名判断](https://github.com/cjhyy/codeshell/blob/v0.11.0-rc.7/packages/desktop/src/main/updater-signature.ts) · [下载入口与清单错误处理](../../packages/desktop/src/main/updater.ts)
 
 ### 8.4 L1 实施步骤
 
@@ -352,7 +352,7 @@ Main（壳）                          Host（utilityProcess）
    - 扩展 `ci.yml` 的 `electron-e2e`。使用隔离 HOME 和本地 fixture，实际启动 agent worker 并完成一次 RPC，经 Desktop Web 的 Panel 路由唤起 headless worker 并收到响应，通过 CUA MCP stdio 代理完成一次初始化。记录子进程的 Electron/Node 版本并验证限时退出。Web 路由在 Main，worker 和 CUA 代理使用 `ELECTRON_RUN_AS_NODE=1`，原生 CUA 驱动另在第 7 步验收。
 
 6. **三平台打包冒烟。** 对同一 SHA 运行 `release.yml` 的无标签手动构建及现有 `desktop-ui-acceptance.yml` 的原生验收，复用 `test:upload-asar`、`test:mobile-asar`、DMG、NSIS 和 AppImage 安装/启动脚本。Windows 覆盖按用户安装与卸载。Linux 另在 Wayland 会话检查 Mimi 等无边框窗口，记录与 CI 的 X11 结果。[原生验收工作流](../../.github/workflows/desktop-ui-acceptance.yml)
-7. **mac 真机验收。** 使用同一候选提交和签名包。在 macOS 12、13.4.x、13.5 的真机或对应版本虚拟机分别执行 8.3 表中对应行。记录系统与 Darwin 版本、架构、起点版本与签名类型、候选 SHA、实际读取的清单及每项结果。没有相应系统的项目保留待验。
+7. **mac 真机验收。** 在当前 Mac（15.6.1、arm64）运行候选签名包并按 8.3 复核本机升级路径。记录本机系统与 Darwin 版本、架构、起点签名、候选 SHA 和逐项结果。12、13.4.x、13.5 的系统边界用旧客户端自动回放验收。
 
    在支持系统的独立测试账户中，只使用自建窗口、页面和凭据，完成以下操作：
 
@@ -368,7 +368,7 @@ Main（壳）                          Host（utilityProcess）
 
 | 层     | 内容                                                                                                                                                                                          | 出口验收                                                                                                                         |
 | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| **L1** | Electron 45、原生模块、H2–H7/U1 及新旧客户端发布兼容（8.3–8.4） | 首轮 PR CI 验 preload 和运行时入口。候选须通过三平台安装与启动、mac 双架构 PTY、真机功能、macOS 12/13.4.x 的更新拦截及 macOS 13.5 的候选升级（8.3）。公开渠道随发布复核。 |
+| **L1** | Electron 45、原生模块、H2–H7/U1 及新旧客户端发布兼容（8.3–8.4） | 首轮 PR CI 验 preload 和运行时入口。候选须通过三平台安装与启动、mac 双架构 PTY、本机 macOS 15.6.1 的功能与升级验证，以及 0.11 客户端对 Darwin 22.6.0 边界的自动回放（8.3）。公开渠道随发布复核。 |
 | **L2** | Host 进程骨架：启动、监控和重启；端口交接；JSON-RPC 信封（与 Protocol v2 一起定稿）；**端口身份、实时授权和作废规则**（3.2）；反向 RPC 适配器；preload 路由表。先迁一个无权限要求的只读功能域 | 3.2 列出的五项安全验收；Host 崩溃重启；窗口重载；多窗口；主线程阻塞时托管的功能域仍然可用                                        |
 | **L3** | 存储层：驱动按能力加载、退回 JSON；存储线程（含 JSON 加锁写入）；schema 迁移；`sessions` 表；写入挂钩；补建和对账；`listDiskSessions` 改为查表                                                | 4.3 的两项实测；补建正确性（新建、修改、删除、归档、TUI 写入）；库损坏后重建；**并发写锁 + 流式输出 + 列表查询**同时发生时的 p99 |
 | **L4** | 任务中心：`tasks` 和 `task_user_state` 表；增量更新；冷热与终态（5.1）；生命周期和用户意图（5.3）；活动时间（5.4）；隐藏、永久删除、批量清理的界面；镜像；控制命令路由（5.5）                 | `e2e-task-inbox*.mjs`；全量与增量一致性的属性测试；**降级验收**（4.4）；横跨切换的真实任务（5.5）                                |
@@ -419,7 +419,7 @@ Main（壳）                          Host（utilityProcess）
 ## 14. 待决策
 
 1. 是否接受第 12 节的决策变更，以及与平台规划批次的执行顺序。
-2. **已定。** 0.12 整包最低支持 macOS 13.5（Darwin 22.6.0），低于该版本的 0.11 用户留在 0.11。发布规则和验收见 8.3。
+2. **已定。** 0.12 整包最低支持 macOS 13.5（Darwin 22.6.0），低于该版本的 0.11 用户留在 0.11。本轮 macOS 实机验收以当前 15.6.1 arm64 为准，旧系统由自动回放验证更新门槛。见 8.3。
 3. 直接从 main 开 0.12 集成分支，不发 0.11 性能修复（已定）。
 4. 每个会话数据根一个库（建议接受）。
 5. 终态记录保留上限维持 2000 条；`interrupted`、`paused` 不参与裁剪（建议接受）。
