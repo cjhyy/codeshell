@@ -94,7 +94,10 @@ if (production) {
 
 const requireDesktop = createRequire(resolve(source, "../../package.json"));
 const electron = requireDesktop("electron") as string;
-const env = { ...process.env };
+const env: NodeJS.ProcessEnv = {
+  ...process.env,
+  CODESHELL_PROBE_ELECTRON_VERSION: requireDesktop("electron/package.json").version,
+};
 delete env.ELECTRON_RUN_AS_NODE;
 process.exitCode = await run(
   [

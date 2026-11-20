@@ -5,15 +5,7 @@ import { pathToFileURL } from "node:url";
 
 const require = createRequire(import.meta.url);
 const pkg = require("../package.json");
-const builderRequire = createRequire(require.resolve("electron-builder/package.json"));
-const appBuilderRequire = createRequire(builderRequire.resolve("app-builder-lib/package.json"));
-const { sanitizeFileName } = appBuilderRequire("builder-util/out/filename");
-const configuredLinuxName = pkg.build.linux.executableName ?? pkg.build.executableName;
-// LinuxPackager removes the slash from a scoped name, retaining its scope and @.
-const linuxExecutable =
-  configuredLinuxName == null
-    ? sanitizeFileName(pkg.name).toLowerCase()
-    : sanitizeFileName(configuredLinuxName);
+const linuxExecutable = pkg.build.linux.executableName;
 
 /** Select a package format without executing or inspecting its binaries. The
  * platform override supports fixture trees on the current filesystem; native

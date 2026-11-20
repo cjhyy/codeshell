@@ -1,5 +1,5 @@
 // This file is both a local CLI and electron-builder's per-architecture beforeBuild hook.
-/* global require, module, exports, __dirname */
+/* global require, module, exports */
 /* eslint-disable @typescript-eslint/no-require-imports -- Node CLI and CommonJS builder hook. */
 const { execFileSync } = require("node:child_process");
 const { existsSync, readFileSync } = require("node:fs");

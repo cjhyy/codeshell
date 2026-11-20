@@ -171,7 +171,7 @@ async function main() {
   assert.equal(version, "23.7.1");
   assert.equal(
     process.versions.electron,
-    require("electron/package.json").version,
+    process.env.CODESHELL_PROBE_ELECTRON_VERSION,
     "Use the repository's reviewed Electron runtime",
   );
   assert(!app.commandLine.hasSwitch("remote-debugging-port"));

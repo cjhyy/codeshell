@@ -111,6 +111,11 @@
       "!out/managed-runtimes{,/**/*}",
       "build/icon.png",
       "package.json",
+      "node_modules/@cjhyy/code-shell-link/**/*",
+      "node_modules/@cjhyy/code-shell-core/**/*",
+      "node_modules/@cjhyy/code-shell-capability-coding/**/*",
+      "node_modules/@cjhyy/code-shell-pet/**/*",
+      "node_modules/@cjhyy/code-shell-capability-optimization-lab/**/*",
       "node_modules/node-pty/**/*",
       "node_modules/playwright-core/**/*"
     ],
@@ -205,6 +210,7 @@
       "createStartMenuShortcut": true
     },
     "linux": {
+      "executableName": "code-shell",
       "target": [
         "AppImage"
       ],

@@ -325,6 +325,24 @@ jobs:
           esac
           bun run scripts/verify-managed-runtime.ts "$runtime_dir"
 
+      - name: run packaged PTY, Canvas, PDF and mobile ASAR checks
+        working-directory: packages/desktop
+        shell: bash
+        run: |
+          set -euo pipefail
+          check_package() {
+            node scripts/smoke-packaged-native.mjs "$1" "$2"
+            node ../../scripts/run-isolated-node-smoke.mjs scripts/smoke-mobile-asar.mjs --app "$1"
+          }
+          case "${{ matrix.artifact }}" in
+            mac)
+              check_package dist/mac-arm64/code-shell.app arm64
+              check_package dist/mac/code-shell.app x64
+              ;;
+            windows) check_package dist/win-unpacked x64 ;;
+            linux) check_package dist/linux-unpacked x64 ;;
+          esac
+
       - name: verify auto-update metadata
         shell: bash
         run: |
