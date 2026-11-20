@@ -29,6 +29,7 @@ import {
   stopShortcutBinding,
   type ComputerUseControl,
 } from "./computer-use-control.js";
+import { createStopShortcutLock, stopShortcutLockFile } from "./stop-shortcut-lock.js";
 import type { MimiCompanionRect } from "../../shared/mimi-companion.js";
 
 let companion: MimiCompanionHost | undefined;
@@ -114,6 +115,8 @@ export async function initializeDesktopComputerUse(options: {
         },
         env: options.env,
         isPackaged: options.app.isPackaged,
+        // macOS accepts the same accelerator from every process; one instance claims it.
+        lock: (namespace) => createStopShortcutLock({ file: stopShortcutLockFile(namespace) }),
       }),
       notifyStopped: () => {
         if (!Notification.isSupported()) return;

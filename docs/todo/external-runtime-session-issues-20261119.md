@@ -65,9 +65,20 @@ Codex 会话同样验证过（同一个验收脚本）。替身 `codex` 走 app-
 - 修了一个缺陷：注册失败原来只写一行日志，设置页照旧写「随时可按 ⌘⇧Esc 停止」。现在输入状态带 `shortcutUnavailable`，设置页「电脑输入控制」改为提示快捷键不可用、请用停止按钮；下一次连接变化会重试，成功后提示消失。单测加验收覆盖。
 - ⬜ 真实按键没按过（不合成按键）：系统把 ⌘⇧Esc 送到回调这一段靠的是 Electron，本仓库没有证据。
 
+**进展（2026-11-20，真实驱动上的 Codex 会话、`set_value`、两实例 ⌘⇧Esc）**：rc.8 源码构建的隔离 App + 已安装 rc.7 里那份已授权 helper（驱动 0.34.1，designated requirement 不变，被动 `launch status` 报已授权）。`test:e2e:external-computer-use-real-driver` 扩展后整条跑通；仍要同时设两个 opt-in 变量，不在任何测试链里。
+
+- ✅ Codex 会话（替身 `codex` app-server，按 0.162：先 `mcpToolCall` item，再发只有 `tool_params`、没有工具名的审批征询）驱动真实驱动：默认权限下每个调用都弹卡，卡上写的是真实工具（`Computer use: get_window_state` / `click`），仅本次批准 → 对脚本自己起的计算器按「4」（AXPress，后台），读回显示 `12 → 124`。
+- ✅ Codex 拒绝：CLI 收到 `decline`，该调用没有发给驱动（结果为空），随后的读回显示仍是 `124`。
+- ✅ Codex 运行中按停止（完全访问）：停止前按的「6」生效（`1246`），`turn/interrupt` 之后的「7」被拒 `session-cancelled`，读回仍是 `1246`。
+- ✅ `set_value`：脚本自己 `open -g -n` 起的 TextEdit（启动前确认用户没开 TextEdit；参数关掉打开面板和状态恢复），新的「未命名」文档。Codex 会话里审批后对 `AXTextArea` 执行 `set_value`，驱动返回 `route: accessibility`、`delivery.mode: background`、`effect: confirmed`（自带 `value_readback`）；再读无障碍树，文本在、写之前不在。走的是 `set_value` 的后台通道（原生 NSTextView），「网页内只能后台 set_value」那条规则没有涉及（没有 web view）。
+- 关文档：这个驱动给出的窗口标题栏按钮没有标题也没有 subrole，没法确定哪个是「关闭」，所以没按；改为结束脚本自己起的那个 TextEdit pid（不保存），前后比对 TextEdit 的 `Autosave Information` / `Saved Application State` 没有多出任何东西。
+- 顺带：四次运行里有一次，计算器刚起来时第一次读无障碍树没有任何按钮（脚本按约定不点、直接失败收尾），其余三次正常，未复现，原因未查。
+- ✅ 两个 CodeShell 抢 ⌘⇧Esc 现在能区分：注册前先在每用户目录（`$TMPDIR/code-shell-<uid>/`）的认领文件里写「pid + 进程启动时间」，读-判-写在共享的异步 lockfile 锁里做，不阻塞主线程。已有活着的认领者，本实例就不注册，输入状态报 `shortcutUnavailable`，设置页提示用停止按钮；代理全部断开、退出（含进程退出时的同步兜底）时释放；认领者已死、或 pid 被别的进程复用（启动时间对不上）就接管。acceptance 用的 `virtual` 模式用另一份认领文件，跑验收不会让真实实例让出按键。单测（临时目录、两个模拟实例、8 个并发、死掉/复用、释放）；`test:e2e:stop-shortcut-two-instances` 起两个隔离 App 验证：A 持有时 B 报不可用 → A 断开即释放、B 下次连接接管 → SIGKILL 掉持有者后另一个接管遗留认领 → 退出释放。
+- 注意：正在运行的 rc.7 不认这份认领文件，它和新版本同时开时仍是旧行为。
+
 仍需有人在机器前验证：
 
-- ⬜ 真实驱动下的截图（角色隐藏）、`set_value`、前台输入、App 侧的光标/舞台画面。
+- ⬜ 真实驱动下的截图（角色隐藏）及任何截屏、前台输入、像素点击、App 侧的光标/舞台画面（屏幕上真的画出光标）；用真实关闭按钮关文档。
 - ⬜ 未授权机器上的权限提示；真实覆盖安装后授权确实还在。
 - ⬜ 真实 `codex` CLI 自己拉起代理、发出征询（替身是按协议写的，不是真实二进制）。
 - ⬜ 真的按一次 ⌘⇧Esc；应用档案备注（需要真实窗口状态）。

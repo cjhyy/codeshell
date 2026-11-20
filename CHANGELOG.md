@@ -8,6 +8,17 @@ breaking.
 
 ## [Unreleased]
 
+### Fixed
+
+- Computer use: with two CodeShell apps running at once (for example a
+  development build next to the installed one), only one can own the ⌘⇧Esc
+  stop shortcut. macOS lets both register it
+  but delivers the key to only one, so the other used to promise a shortcut
+  that might never reach it. The second one now reports the shortcut as
+  unavailable in Settings → Computer use and points to the Stop button; it
+  takes the shortcut over once the first stops using computer use, quits or
+  crashes. Versions before this one do not take part.
+
 ## [0.11.0-rc.8] - 2026-11-20
 
 Fixes found while root-causing intermittent CI failures, each reproduced on
