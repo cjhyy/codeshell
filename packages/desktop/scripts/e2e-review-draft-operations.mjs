@@ -14,6 +14,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   assertSourceElectronTransportSettled,
   captureRendererErrors,
+  chooseViewOnlyIfPrompted,
   expandSidebar,
   findCodeShellWindow,
   launchCodeShellElectron,
@@ -121,22 +122,12 @@ const git = (cwd, ...args) =>
     { cwd, encoding: "utf8", timeout: 5000 },
   );
 const composer = () => win.locator('textarea[aria-autocomplete="list"]:visible');
-async function dismissTrust() {
-  const view = win.getByRole("button", { name: /^(仅查看|View only)/ });
-  if (
-    await view.waitFor({ state: "visible", timeout: 1500 }).then(
-      () => true,
-      () => false,
-    )
-  )
-    await view.click();
-}
 async function openSession(session) {
   await expandSidebar(win);
   const project = win.getByRole("button", { name: session.name, exact: true }).first();
   if ((await project.getAttribute("aria-expanded")) === "false") await project.click();
   await win.getByRole("button", { name: session.title, exact: true }).click();
-  await dismissTrust();
+  await chooseViewOnlyIfPrompted(win);
   await waitForSessionCatalogSelection(win, session.project.id, session.id);
   await composer().waitFor();
 }
@@ -496,9 +487,9 @@ state.probing=false;
   rendererErrors.push(captureRendererErrors(win));
   await win.setViewportSize({ width: 1440, height: 960 });
   for (const session of sessions) {
-    await dismissTrust();
+    await chooseViewOnlyIfPrompted(win);
     await win.getByRole("button", { name: session.name, exact: true }).first().click();
-    await dismissTrust();
+    await chooseViewOnlyIfPrompted(win);
     session.project = await win.evaluate(
       async (path) =>
         (await window.codeshell.projectRegistry.list()).find((project) =>
@@ -553,7 +544,7 @@ state.probing=false;
     ),
   );
   await win.reload();
-  await dismissTrust();
+  await chooseViewOnlyIfPrompted(win);
   const [a, b] = sessions;
   await openSession(b);
   await composer().fill(prefixB);

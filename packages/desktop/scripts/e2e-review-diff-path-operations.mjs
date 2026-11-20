@@ -12,6 +12,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   assertSourceElectronTransportSettled,
   captureRendererErrors,
+  chooseViewOnlyIfPrompted,
   expandSidebar,
   findCodeShellWindow,
   launchCodeShellElectron,
@@ -102,16 +103,6 @@ const modeContents = "owned mode-only preview\nunchanged bytes\n";
 const binaryFile = "二进制.bin";
 const binaryBefore = Buffer.from([0, 1, 2, 3]);
 const binaryAfter = Buffer.from([0, 1, 2, 4]);
-async function dismissTrust() {
-  const view = win.getByRole("button", { name: /^(仅查看|View only)/ });
-  if (
-    await view.waitFor({ state: "visible", timeout: 1500 }).then(
-      () => true,
-      () => false,
-    )
-  )
-    await view.click();
-}
 async function openPanel(kind) {
   const toggle = win.locator('[data-panel-action="toggle"]');
   if ((await toggle.getAttribute("aria-pressed")) !== "true") await toggle.click();
@@ -296,9 +287,9 @@ ipcMain.on=(channel,listener)=>on(channel,channel!=="agent:msg"?listener:(event,
   win.setDefaultTimeout(10000);
   rendererErrors.push(captureRendererErrors(win));
   await win.setViewportSize({ width: 1440, height: 960 });
-  await dismissTrust();
+  await chooseViewOnlyIfPrompted(win);
   await win.getByText("Owned Review repository", { exact: true }).first().click();
-  await dismissTrust();
+  await chooseViewOnlyIfPrompted(win);
   diagnostics.phase("review-session-seed");
   const project = await win.evaluate(
     async (path) =>
@@ -344,10 +335,10 @@ ipcMain.on=(channel,listener)=>on(channel,channel!=="agent:msg"?listener:(event,
     },
   });
   await win.reload();
-  await dismissTrust();
+  await chooseViewOnlyIfPrompted(win);
   await expandSidebar(win);
   await win.getByRole("button", { name: title, exact: true }).click();
-  await dismissTrust();
+  await chooseViewOnlyIfPrompted(win);
   report.confinement = await fixture.assertWorker(app, { requireWorker: false });
   assert.equal(report.confinement.workerCreated, false);
   diagnostics.phase("review-ui-operations");

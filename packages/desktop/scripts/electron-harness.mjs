@@ -604,6 +604,19 @@ export async function findCodeShellWindow(app, options = {}) {
   throw new Error("CodeShell renderer window was not found");
 }
 
+/** Finish the optional workspace decision before a fixture switches sessions or reloads. */
+export async function chooseViewOnlyIfPrompted(page, timeout = 1500) {
+  const view = page.getByRole("button", { name: /^(仅查看|View only)/ });
+  try {
+    await view.waitFor({ state: "visible", timeout });
+  } catch (error) {
+    if (error.name === "TimeoutError") return;
+    throw error;
+  }
+  if ((await view.getAttribute("aria-busy")) !== "true") await view.click();
+  await view.waitFor({ state: "hidden" });
+}
+
 export function captureRendererErrors(win) {
   const errors = [];
   win.on("pageerror", (error) => {
