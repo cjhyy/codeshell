@@ -622,6 +622,8 @@ export type MobileServerEvent =
       message: string;
       clientMessageId?: string;
       requestId?: string;
+      /** ccRoom.respondApproval failed: the approval request it answered. */
+      approvalRequestId?: string;
       /** The CLI already accepted this input; it must not be retried as rejected. */
       uncertain?: true;
     }
