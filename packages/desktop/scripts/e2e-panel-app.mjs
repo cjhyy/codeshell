@@ -13,6 +13,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PanelRuntimeServices } from "@cjhyy/code-shell-server/panels";
 import {
+  chooseViewOnlyIfPrompted,
   findCodeShellWindow,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
@@ -36,20 +37,6 @@ let win;
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
-}
-
-/**
- * The first launch in an isolated home raises the trust prompt over a modal
- * overlay that swallows every click, so it must be dismissed before any
- * navigation. Same guard the other e2e scripts carry.
- */
-async function dismissTrustDialog(win) {
-  const viewOnly = win.getByRole("button", { name: /仅查看|View only/i });
-  const opened = await viewOnly
-    .waitFor({ state: "visible", timeout: 5_000 })
-    .then(() => true)
-    .catch(() => false);
-  if (opened) await viewOnly.click();
 }
 
 async function installFixture(version, marker, installSnapshot = true) {
@@ -291,9 +278,9 @@ try {
   win = await findCodeShellWindow(app);
   win.on("pageerror", (error) => console.error("renderer pageerror:", error.message));
 
-  await dismissTrustDialog(win);
+  await chooseViewOnlyIfPrompted(win, 5_000);
   await win.getByText("project-e2e", { exact: true }).click();
-  await dismissTrustDialog(win);
+  await chooseViewOnlyIfPrompted(win, 5_000);
   const extensionsEntry = win.getByRole("button", { name: /^(扩展|Extensions)$/ });
   await extensionsEntry.waitFor({ state: "visible" });
   await extensionsEntry.click();

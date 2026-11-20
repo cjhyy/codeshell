@@ -22,6 +22,7 @@ import {
 } from "./composer-operation-diagnostics.mjs";
 import {
   assertSourceElectronTransportSettled,
+  chooseViewOnlyIfPrompted,
   expandSidebar,
   findCodeShellWindow,
   launchCodeShellElectron,
@@ -214,16 +215,6 @@ ${productionImport}
 }
 
 const composer = () => win.locator('textarea[aria-autocomplete="list"]:visible');
-async function dismissTrust() {
-  const view = win.getByRole("button", { name: /^(仅查看|View only)/ });
-  if (
-    await view.waitFor({ timeout: 2_000 }).then(
-      () => true,
-      () => false,
-    )
-  )
-    await view.click();
-}
 async function mainState() {
   return electron.evaluate(() => ({
     calls: globalThis.__composerReference.calls,
@@ -416,10 +407,10 @@ try {
   win.setDefaultTimeout(10_000);
   win.on("pageerror", (error) => report.errors.push(error.message));
   await win.setViewportSize({ width: 1280, height: 850 });
-  await dismissTrust();
+  await chooseViewOnlyIfPrompted(win, 2_000);
   await win.evaluate((cwd) => window.codeshell.setTrust(cwd, "trusted"), projectPath);
   await win.getByText("owned-project", { exact: true }).first().click();
-  await dismissTrust();
+  await chooseViewOnlyIfPrompted(win, 2_000);
   const project = await win.evaluate(
     async (cwd) =>
       (await window.codeshell.projectRegistry.list()).find((item) =>
@@ -462,7 +453,7 @@ try {
   await win.reload();
   await expandSidebar(win);
   await win.getByRole("button", { name: title, exact: true }).click();
-  await dismissTrust();
+  await chooseViewOnlyIfPrompted(win, 2_000);
   diagnostics.phase("composer-worker-guard");
   report.confinement = await confined.assertWorker(electron, { requireWorker: false });
   assert.equal(report.confinement.workerCreated, false);

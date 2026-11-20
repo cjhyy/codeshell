@@ -19,6 +19,7 @@ import { officeZip as createZip } from "../../../tests/fixtures/upload-documents
 import {
   assert,
   captureRendererErrors,
+  chooseViewOnlyIfPrompted,
   expandSidebar,
   findCodeShellWindow,
   launchCodeShellElectron,
@@ -188,17 +189,6 @@ async function screenshot(name) {
   });
   if (screenshotDir) console.log(`Theme visual: ${join(screenshotDir, name)}`);
   return bytes;
-}
-
-async function dismissTrust() {
-  const trust = win.getByRole("button", { name: /仅查看|View only/i });
-  if (
-    await trust.waitFor({ state: "visible", timeout: 2000 }).then(
-      () => true,
-      () => false,
-    )
-  )
-    await trust.click();
 }
 
 async function appearance() {
@@ -512,7 +502,7 @@ try {
   win.setDefaultTimeout(20_000);
   const errors = captureRendererErrors(win);
   await win.setViewportSize({ width: 1440, height: 960 });
-  await dismissTrust();
+  await chooseViewOnlyIfPrompted(win, 2_000);
   await seedSessionCatalog(
     win,
     {
@@ -533,7 +523,7 @@ try {
   );
   await win.reload();
   await win.getByRole("button", { name: sessionTitle, exact: true }).click();
-  await dismissTrust();
+  await chooseViewOnlyIfPrompted(win, 2_000);
   await win.getByRole("heading", { name: "Character Theme Preview" }).waitFor();
   await appearance();
   await chooseMode("light");
