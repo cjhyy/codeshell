@@ -161,10 +161,20 @@ jobs:
             # (CredentialStore concurrent saves, operations controller's competing claims)
             # failed with EBADF epoll_ctl on `process.exited` in four runs on main and PRs,
             # twice in a row on one commit.
+            # Isolating those two only moved it again: on 2026-11-20 main's d40a6de96 failed
+            # the same way in hooks/shell-runner.abort. The defect hits whichever spawning
+            # suite runs late in a large process, so every core dir whose tests spawn child
+            # processes (hooks, runtime, panel-apps, utils, themes, logging, links, sources,
+            # skills) now runs in two small Bun processes below instead of the shared shard.
             ignore: >-
               --path-ignore-patterns **/src/engine/** --path-ignore-patterns **/src/tool-system/**
               --path-ignore-patterns '**/src/plugins/**' --path-ignore-patterns '**/src/session/**'
               --path-ignore-patterns '**/src/credentials/**' --path-ignore-patterns '**/src/operations/**'
+              --path-ignore-patterns '**/src/hooks/**' --path-ignore-patterns '**/src/runtime/**'
+              --path-ignore-patterns '**/src/panel-apps/**' --path-ignore-patterns '**/src/utils/**'
+              --path-ignore-patterns '**/src/themes/**' --path-ignore-patterns '**/src/logging/**'
+              --path-ignore-patterns '**/src/links/**' --path-ignore-patterns '**/src/sources/**'
+              --path-ignore-patterns '**/src/skills/**'
           - shard: desktop
             paths: packages/desktop
             # The issuer proof runs alone above so its receipt precedes the first SDK/Core import.
@@ -539,6 +549,12 @@ jobs:
       - name: test core credentials and operations in their own Bun process
         if: matrix.shard == 'core-rest'
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/credentials packages/core/src/operations
+      - name: test core spawning suites (hooks, runtime, panel-apps, utils, themes, logging)
+        if: matrix.shard == 'core-rest'
+        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/hooks packages/core/src/runtime packages/core/src/panel-apps packages/core/src/utils packages/core/src/themes packages/core/src/logging
+      - name: test core spawning suites (links, sources, skills)
+        if: matrix.shard == 'core-rest'
+        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/links packages/core/src/sources packages/core/src/skills
       - name: test core session in its own Bun process
         if: matrix.shard == 'core-rest'
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 --path-ignore-patterns '**/src/session/*.privacy.test.ts' packages/core/src/session
