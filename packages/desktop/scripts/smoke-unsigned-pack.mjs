@@ -50,6 +50,8 @@ if (phase === "predist") {
   }
   console.log(JSON.stringify({ hostInputs, metadataPath, hostIsBundled: true }));
 } else if (phase === "pack") {
+  const localRequire = createRequire(join(desktopRoot, "package.json"));
+  localRequire("electron");
   const pkg = JSON.parse(readFileSync(join(desktopRoot, "package.json"), "utf8"));
   const config = {
     ...pkg.build,
@@ -65,7 +67,6 @@ if (phase === "predist") {
   };
   const configPath = join(scratch, "unsigned-electron-builder.json");
   writeFileSync(configPath, JSON.stringify(config, null, 2));
-  const localRequire = createRequire(join(desktopRoot, "package.json"));
   const cli = join(localRequire.resolve("electron-builder/package.json"), "..", "cli.js");
   console.log(
     JSON.stringify({ configPath, signing: false, notarization: false, publishing: false }),

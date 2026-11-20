@@ -650,8 +650,16 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.3.11"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24.22.1"
+          package-manager-cache: false
       - name: install
+        env:
+          FORCE_REBUILD_NATIVE: "1"
         run: bun install --frozen-lockfile
+      - name: prepare locked Electron binary
+        run: node packages/desktop/scripts/prepare-electron.mjs
       - name: build runtime and desktop
         run: |
           bun run build

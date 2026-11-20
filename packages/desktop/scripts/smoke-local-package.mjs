@@ -127,7 +127,8 @@ async function main() {
       "Packaging checkout HEAD; caller builds dependencies and Desktop before predist and packaging";
     const pkg = JSON.parse(readFileSync(join(desktopRoot, "package.json"), "utf8"));
     const require = createRequire(join(desktopRoot, "package.json"));
-    // Do not ask electron-builder to download a second Electron or reuse operator caches.
+    // Electron 45 fetches its distro on first require; pass that local copy to builder.
+    require("electron");
     const electronDist = realpathSync(
       join(dirname(require.resolve("electron/package.json")), "dist"),
     );

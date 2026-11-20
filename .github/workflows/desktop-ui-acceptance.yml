@@ -180,7 +180,8 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: "22.16.0"
+          node-version: "24.22.1"
+          package-manager-cache: false
 
       - uses: actions/setup-python@v6
         with:
@@ -232,7 +233,11 @@ jobs:
 
       - name: install locked native dependencies
         timeout-minutes: 15
+        env:
+          FORCE_REBUILD_NATIVE: "1"
         run: bun install --frozen-lockfile
+      - name: prepare locked Electron binary
+        run: node packages/desktop/scripts/prepare-electron.mjs
 
       - name: Windows installer ownership and failure contracts
         if: runner.os == 'Windows'
@@ -829,7 +834,8 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: "22.16.0"
+          node-version: "24.22.1"
+          package-manager-cache: false
 
       - uses: actions/setup-python@v6
         with:
@@ -850,7 +856,11 @@ jobs:
 
       - name: install locked native dependencies
         timeout-minutes: 15
+        env:
+          FORCE_REBUILD_NATIVE: "1"
         run: bun install --frozen-lockfile
+      - name: prepare locked Electron binary
+        run: node packages/desktop/scripts/prepare-electron.mjs
 
       - name: Windows installer ownership and failure contracts
         if: runner.os == 'Windows'
