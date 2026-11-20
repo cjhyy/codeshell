@@ -4,6 +4,7 @@ import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync } from "nod
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import { performance } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
 import { createBunTestEnvironment } from "../../../scripts/bun-test-completion.mjs";
 import runtime from "./managed-node-runtime.cjs";
@@ -59,10 +60,26 @@ try {
 
   const canvas = runProbe("canvas", layout.managedNode, environment);
   assert.equal(canvas.node, manifest.version);
-  const pty = runProbe("pty", layout.executable, { ...environment, ELECTRON_RUN_AS_NODE: "1" });
+  const electronEnv = { ...environment, ELECTRON_RUN_AS_NODE: "1" };
+  let translatedStartupMs;
+  if (process.platform === "darwin" && process.arch === "arm64" && arch === "x64") {
+    // A fresh runner has to translate the signed Intel Electron Framework
+    // before it can enter JS. Budget that first launch apart from the PTY/PDF.
+    console.log("Starting the signed Intel Electron executable under Rosetta");
+    const start = performance.now();
+    const identity = execFileSync(
+      layout.executable,
+      ["-p", "JSON.stringify([process.arch, process.versions.electron])"],
+      { ...options, env: electronEnv, timeout: 240_000 },
+    );
+    assert.deepEqual(JSON.parse(identity), [arch, electronVersion]);
+    translatedStartupMs = Math.round(performance.now() - start);
+    console.log(`First translated Electron launch took ${translatedStartupMs} ms`);
+  }
+  const pty = runProbe("pty", layout.executable, electronEnv);
   assert.equal(pty.electron, electronVersion, "Packaged Electron version differs from the lock");
   assert.equal(pty.pdfNode, manifest.version);
-  const evidence = { ...target, pty, canvas };
+  const evidence = { ...target, pty, canvas, translatedStartupMs };
 
   if (process.platform === "darwin") {
     const minimum = require("../package.json").build.mac.minimumSystemVersion;
