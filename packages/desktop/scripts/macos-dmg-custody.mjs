@@ -13,6 +13,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 
 export function isInside(parent, child) {
   const part = relative(parent, child);
@@ -311,4 +312,18 @@ export function runGuardedHdiutil(file, args) {
   state.commands.push({ kind: command.kind, image: command.image, completed: true });
   saveState(file, state);
   return output;
+}
+
+// Disk Arbitration can briefly return EBUSY even after the app exits. Check
+// the live device and mountpoint again before each ordinary detach attempt.
+export async function detachOwnedDmg(file, device) {
+  const delays = [250, 1_000, 3_000];
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return runGuardedHdiutil(file, ["detach", "-quiet", device]);
+    } catch (error) {
+      if (error.status !== 16 || attempt === delays.length) throw error;
+      await delay(delays[attempt]);
+    }
+  }
 }

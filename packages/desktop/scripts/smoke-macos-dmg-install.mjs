@@ -19,6 +19,7 @@ import {
   assertInstalledUiReceipt,
   assertOwnedReadonlyVolume,
   isInside,
+  detachOwnedDmg,
   readOwnedDmgState,
   recoverDmgAttachments,
   runGuardedHdiutil,
@@ -407,7 +408,7 @@ try {
       recoverDmgAttachments(stateFile);
       const state = readOwnedDmgState(stateFile);
       for (const attachment of state.attachments.filter((entry) => !entry.detached).reverse()) {
-        runGuardedHdiutil(stateFile, ["detach", "-quiet", attachment.devices[0]]);
+        await detachOwnedDmg(stateFile, attachment.devices[0]);
       }
       report.mountCustody = readOwnedDmgState(stateFile);
       assert.deepEqual(recoverDmgAttachments(stateFile), [], "Owned disk image still mounted");
