@@ -8,6 +8,13 @@ breaking.
 
 ## [Unreleased]
 
+### Fixed
+
+- A message sent while a Claude Code turn was still working could stay queued
+  until the turn's background shell finished, however long that took: the
+  request to end the idle turn was sometimes dropped when its timer fired a
+  moment early. The idle check now retries until it ends the turn.
+
 ## [0.11.0-rc.7] - 2026-11-20
 
 Small follow-up to rc.6. Computer use for Codex and Claude Code sessions was
