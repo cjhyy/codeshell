@@ -8,6 +8,13 @@ breaking.
 
 ## [Unreleased]
 
+## [0.11.0-rc.8] - 2026-11-20
+
+Fixes found while root-causing intermittent CI failures, each reproduced on
+demand and shown fixed. Computer use for Claude Code sessions was also accepted
+against the real, already-authorized driver (an approved accessibility press
+landing in a background app and read back; Stop refusing the next press).
+
 ### Fixed
 
 - Web: while a panel is opening, its "opening" status no longer pushes the panel
@@ -21,6 +28,11 @@ breaking.
   until the turn's background shell finished, however long that took: the
   request to end the idle turn was sometimes dropped when its timer fired a
   moment early. The idle check now retries until it ends the turn.
+- Web: a tap in the message list could open a different row when new output
+  or a layout change (such as the approval bar appearing) moved the list while
+  the finger was down, because the view kept following the latest output. A
+  touch press now holds the pressed row in place and the view catches up with
+  the latest output once the tap's click has been delivered.
 
 ## [0.11.0-rc.7] - 2026-11-20
 
