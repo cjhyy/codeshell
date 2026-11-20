@@ -73,6 +73,9 @@
   "workspaces": [
     "packages/*"
   ],
+  "patchedDependencies": {
+    "node-pty@1.1.0": "patches/node-pty@1.1.0.patch"
+  },
   "overrides": {
     "react": "19.2.6",
     "proxy-addr": "2.0.8"

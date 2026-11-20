@@ -108,6 +108,10 @@ if (role === "canvas") {
   assert.equal(role, "pty");
   assert.ok(process.versions.electron);
   const binary = await smokeTerminal();
+  // The Windows ConPTY input socket and output worker belong to each shell.
+  // Open a second terminal while the first worker completes its final drain.
+  const sessions = process.platform === "win32" ? 2 : 1;
+  if (sessions === 2) assert.equal(await smokeTerminal(), binary);
   // Windows PTY uses named pipes. Install the document guard after the shell
   // exits and before importing Core; the production parser guards its own child.
   denyDocumentSmokeNetwork();
@@ -130,6 +134,7 @@ if (role === "canvas") {
   assert.ok(parser.cleanedUp && parser.outcome === "success" && !parser.runtime.electron);
   result = {
     binary,
+    sessions,
     electron: process.versions.electron,
     node: process.versions.node,
     arch: process.arch,
