@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, normalize } from "node:path";
 import { test } from "node:test";
 
 const require = createRequire(import.meta.url);
@@ -93,13 +93,14 @@ test("builder packages the materialized modules and Bun links with external depe
   await tasks.awaitTasks();
 
   const archive = join(resources, "app.asar");
-  for (const path of packed) assert.ok(!asar.statFile(archive, path).unpacked, path);
+  const entry = (path) => asar.statFile(archive, normalize(path));
+  for (const path of packed) assert.ok(!entry(path).unpacked, path);
   for (const path of unpacked) {
-    assert.equal(asar.statFile(archive, path).unpacked, true, path);
+    assert.equal(entry(path).unpacked, true, path);
     assert.equal(
       readFileSync(join(archive + ".unpacked", path), "utf8"),
       path.endsWith("package.json") ? "{}" : path,
     );
   }
-  for (const path of excluded) assert.throws(() => asar.statFile(archive, path), /not found/);
+  for (const path of excluded) assert.throws(() => entry(path), /not found/);
 });
