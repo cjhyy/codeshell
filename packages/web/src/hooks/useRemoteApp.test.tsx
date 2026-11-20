@@ -6866,6 +6866,149 @@ describe("useRemoteApp CLI room controls", () => {
     }
   });
 
+  test("taking over an observed CLI session shows a refusal on its card, then makes the room writable", async () => {
+    const { hook, ws, sent } = await openRoom();
+    try {
+      await act(async () => {
+        ws.message({ type: "room.list.ok", rooms: [{ ...room, open: false, observing: true }] });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.activeRoom?.observing).toBe(true);
+      await act(async () => {
+        hook.result.current.takeOverCcRoom!();
+        await flushMicrotasks();
+      });
+      const first = sent().findLast((event) => event.type === "ccRoom.takeOver");
+      expect(first).toMatchObject({
+        roomId: room.id,
+        sessionId: "thread-cli",
+        cwd: "/repo",
+        kind: "claude-code",
+      });
+      expect(hook.result.current.ccModeRequest).toMatchObject({ takeOver: true });
+      await act(async () => {
+        ws.message({
+          type: "room.error",
+          roomId: room.id,
+          requestId: first.requestId,
+          message: "无法接管：该外部会话正由后台任务使用",
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.ccTakeOverError).toBe("无法接管：该外部会话正由后台任务使用");
+      expect(hook.result.current.notice).toBeUndefined();
+      expect(hook.result.current.ccModeRequest).toBeUndefined();
+      expect(hook.result.current.activeRoom?.observing).toBe(true);
+
+      await act(async () => {
+        hook.result.current.takeOverCcRoom!();
+        await flushMicrotasks();
+      });
+      const second = sent().findLast((event) => event.type === "ccRoom.takeOver");
+      expect(second.requestId).not.toBe(first.requestId);
+      expect(hook.result.current.ccTakeOverError).toBeUndefined();
+      await act(async () => {
+        ws.message({
+          type: "ccRoom.opened",
+          roomId: room.id,
+          sessionId: "thread-cli",
+          status: "running",
+          permissionMode: "default",
+          modelKey: null,
+          changed: true,
+          requestId: second.requestId,
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.activeRoomId).toBe(room.id);
+      expect(hook.result.current.activeRoom).toMatchObject({
+        observing: false,
+        open: true,
+        permissionMode: "default",
+      });
+      expect(hook.result.current.ccModeRequest).toBeUndefined();
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  test("earlier CLI history pages prepend in order, ignore stale replies and stop at the start", async () => {
+    const { hook, ws, sent } = await openRoom();
+    const msg = (n: number) => ({ role: "user" as const, text: `m${n}` });
+    const texts = () =>
+      hook.result.current.chat.items.flatMap((item) =>
+        item.kind === "user" || item.kind === "assistant" ? [item.text] : [],
+      );
+    try {
+      await act(async () => {
+        ws.message({
+          type: "ccRoom.transcriptSubscribed",
+          roomId: room.id,
+          sessionId: "thread-cli",
+          active: true,
+          messages: [msg(8), msg(9)],
+          hasMore: true,
+          totalCount: 10,
+          roomCursor: 0,
+        });
+        await flushMicrotasks();
+        const history = sent().findLast((event) => event.type === "room.history");
+        ws.message({
+          type: "room.history.ok",
+          roomId: room.id,
+          requestId: history.requestId,
+          messages: [],
+          latestSeq: 0,
+          page: { snapshotId: "snapshot", throughSeq: 0, complete: true },
+        });
+        ws.message({
+          type: "room.message",
+          roomId: room.id,
+          msg: { seq: 1, from: "agent", type: "text", text: "live" },
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.historyHasEarlier).toBe(true);
+      let loaded!: Promise<void>;
+      await act(async () => {
+        loaded = hook.result.current.loadEarlierHistory!();
+        await flushMicrotasks();
+      });
+      const request = sent().findLast((event) => event.type === "ccRoom.readHistory");
+      expect(request).toMatchObject({ sessionId: "thread-cli", cwd: "/repo", before: 8, limit: 8 });
+      expect(hook.result.current.historyLoadingEarlier).toBe(true);
+      await act(async () => {
+        // A late reply for another boundary is not this page.
+        ws.message({
+          type: "ccRoom.readHistory.ok",
+          sessionId: "thread-cli",
+          messages: [msg(4)],
+          hasMore: true,
+          totalCount: 10,
+          startIndex: 4,
+          before: 5,
+        });
+        ws.message({
+          type: "ccRoom.readHistory.ok",
+          sessionId: "thread-cli",
+          messages: [0, 1, 2, 3, 4, 5, 6, 7].map(msg),
+          hasMore: false,
+          totalCount: 10,
+          startIndex: 0,
+          before: 8,
+        });
+        await loaded;
+        await flushMicrotasks();
+      });
+      expect(texts()).toEqual(["m0", "m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8", "m9", "live"]);
+      expect(hook.result.current.historyHasEarlier).toBe(false);
+      expect(hook.result.current.historyLoadingEarlier).toBe(false);
+      await expect(hook.result.current.loadEarlierHistory!()).rejects.toThrow();
+    } finally {
+      await hook.unmount();
+    }
+  });
+
   test("a room list that still shows the room running keeps the run", async () => {
     const { hook, ws } = await runningRoom();
     try {

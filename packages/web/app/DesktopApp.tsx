@@ -23,6 +23,7 @@ import {
   DesktopChatControls,
   DesktopCliSessionActions,
   DesktopSidebar,
+  DesktopTakeOver,
   openAttentionRoom,
 } from "./DesktopControls.js";
 import {
@@ -1322,8 +1323,9 @@ export function useDesktopController(
     readOnlyNote: app.outputHistoryFailed
       ? "会话记录尚未完成核对。输入内容已保留为草稿，请先恢复记录。"
       : app.activeRoom?.observing
-        ? "此 CLI 会话正在桌面运行，当前设备以只读方式查看。"
+        ? "正在只读查看外部 CLI 对话；继续前需要明确接管。"
         : undefined,
+    readOnlyAction: app.outputHistoryFailed ? undefined : <DesktopTakeOver app={app} />,
     turnQueue: app.turnQueueSupported
       ? {
           canQueue,

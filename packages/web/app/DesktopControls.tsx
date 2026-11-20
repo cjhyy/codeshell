@@ -196,6 +196,51 @@ export function DesktopChatControls({
   );
 }
 
+/** Remote counterpart of Desktop's "继续对话 / 接管": explain, confirm, then
+ *  ask the Host to take the observed CLI session over. */
+export function DesktopTakeOver({ app }: { app: RemoteApp }) {
+  const [confirming, setConfirming] = React.useState(false);
+  const room = app.activeRoom;
+  if (!room?.observing || !app.takeOverCcRoom) return null;
+  const busy = Boolean(app.ccModeRequest?.takeOver);
+  const offline = app.status !== "online";
+  const cli = room.kind === "codex" ? "Codex" : "Claude Code";
+  return (
+    <div className="desktop-takeover">
+      {confirming ? (
+        <>
+          <p>
+            接管后，电脑会以「逐次确认」权限为这个会话启动自己的 {cli}
+            进程，你就能在这里继续发消息、调整模型和权限。会话若正被后台任务或其他进程使用，电脑会拒绝接管。
+          </p>
+          <button
+            className="send"
+            disabled={busy || offline}
+            onClick={() => {
+              setConfirming(false);
+              app.takeOverCcRoom!();
+            }}
+          >
+            确认接管
+          </button>
+          <button className="library-button" onClick={() => setConfirming(false)}>
+            取消
+          </button>
+        </>
+      ) : (
+        <button
+          className="library-button"
+          disabled={busy || offline}
+          onClick={() => setConfirming(true)}
+        >
+          {busy ? "正在接管…" : "继续对话 / 接管"}
+        </button>
+      )}
+      {app.ccTakeOverError ? <p role="alert">{app.ccTakeOverError}</p> : null}
+    </div>
+  );
+}
+
 export function DesktopCliSessionActions({ app }: { app: RemoteApp }) {
   if (!app.activeRoomId && !app.activeRoom) return null;
   return (

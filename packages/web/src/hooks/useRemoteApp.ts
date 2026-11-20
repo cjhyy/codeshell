@@ -21,7 +21,6 @@ import type {
   OutputHistoryRecoveryPlan,
   OutputHistoryRecoveryResult,
   MobileHistoryDetail,
-  MobileHistoryItem,
   MobileTurnQueueState,
 } from "@cjhyy/code-shell-core";
 import {
@@ -32,12 +31,8 @@ import {
   turnQueueKey,
   type TurnQueueStates,
 } from "./turnQueueState.js";
-import {
-  reduceStream,
-  initialChatState,
-  appendUserMessage,
-  type ChatState,
-} from "../lib/streamReducer.js";
+import { initialChatState, type ChatState } from "../lib/streamReducer.js";
+import { chatReducer } from "./remoteChatReducer.js";
 import { t } from "../i18n/translate.js";
 import { summarizeApproval, type Risk } from "../lib/riskClassify.js";
 import {
@@ -55,6 +50,11 @@ import type { MobileRecoveryProgress } from "../lib/mobileOutputRecovery.js";
 import { MobileHistoryRecoveryRequests } from "./mobileHistoryRecoveryRequests.js";
 import { useRemoteSocket, type ConnStatus } from "./useRemoteSocket.js";
 import { roomsThatStopped, SentRoomApprovals, useRoomAttention } from "./roomAttention.js";
+import {
+  RoomHistoryPager,
+  roomHistoryHasEarlier,
+  type RoomHistoryWindow,
+} from "./roomHistoryPaging.js";
 import type { RoomAttention } from "./roomAttention.js";
 import {
   prepareMobileAttachments,
@@ -258,7 +258,16 @@ export interface RemoteApp {
   /** Restart the viewed CLI room under another mode (Host may require approval). */
   setCcRoomPermissionMode?: (mode: PermissionMode) => void;
   /** This tab's in-flight CLI open / mode switch, until the Host answers. */
-  ccModeRequest?: { mode: PermissionMode; switching: boolean; modelKey?: string | null };
+  ccModeRequest?: {
+    mode: PermissionMode;
+    switching: boolean;
+    modelKey?: string | null;
+    takeOver?: true;
+  };
+  /** Take over the viewed observe-only CLI session (Desktop's 继续对话 / 接管). */
+  takeOverCcRoom?: () => void;
+  /** Why the Host refused this tab's last take-over of the viewed room. */
+  ccTakeOverError?: string;
   ccRoomModelSelection?: boolean;
   /** Changes only this room model, preserving the Host's current permission mode. */
   setCcRoomModel?: (modelKey: string | null) => void;
@@ -304,79 +313,6 @@ function projectContextCwd(
 ): string | null | undefined {
   if (!cwd) return cwd;
   return projectForCwd(cwd, projects)?.path ?? cwd;
-}
-
-type ChatAction =
-  | { kind: "goalProjection"; raw: unknown; expected: { goalId?: string; revision?: number } }
-  | { kind: "raw"; raw: unknown }
-  | {
-      kind: "user";
-      text: string;
-      clientMessageId?: string;
-      attachments?: Array<{ name: string; mime?: string; size: number }>;
-    }
-  | { kind: "hydrate"; chat: ChatState; verifiedInputIds?: string[] }
-  | { kind: "prependHistory"; sessionId: string; items: MobileHistoryItem[] }
-  | { kind: "reset" }
-  | { kind: "stream_epoch_changed" }
-  | { kind: "replay"; events: unknown[] }
-  | { kind: "append"; events: unknown[] };
-
-function chatReducer(state: ChatState, action: ChatAction): ChatState {
-  switch (action.kind) {
-    case "goalProjection":
-      return state.goalId === action.expected.goalId &&
-        state.goalRevision === action.expected.revision
-        ? reduceStream(state, action.raw)
-        : state;
-    case "raw":
-      return reduceStream(state, action.raw);
-    case "user":
-      return appendUserMessage(state, action.text, action.attachments, action.clientMessageId);
-    case "prependHistory": {
-      if (state.sessionId !== action.sessionId) return state;
-      const seen = new Set(state.items.map((item) => item.id));
-      return {
-        ...state,
-        items: [...action.items.filter((item) => !seen.has(item.id)), ...state.items],
-      };
-    }
-    case "hydrate": {
-      const ids = new Set(
-        action.chat.items.flatMap((item) =>
-          item.kind === "user" && item.clientMessageId ? [item.clientMessageId] : [],
-        ),
-      );
-      for (const id of action.verifiedInputIds ?? []) ids.add(id);
-      const pending = state.items.filter(
-        (item) => item.kind === "user" && item.clientMessageId && !ids.has(item.clientMessageId),
-      );
-      return { ...action.chat, items: [...action.chat.items, ...pending] };
-    }
-    case "reset":
-      return initialChatState();
-    case "stream_epoch_changed": {
-      const seq = state.seq + 1;
-      return {
-        ...state,
-        seq,
-        run: "idle",
-        liveByAgent: {},
-        orphanResults: undefined,
-        items: state.items.map((item) =>
-          item.kind === "assistant"
-            ? { ...item, done: true }
-            : item.kind === "tool"
-              ? { ...item, id: `prior-${seq}-${item.id}`, done: true }
-              : item,
-        ),
-      };
-    }
-    case "replay":
-      return action.events.reduce(reduceStream, initialChatState());
-    case "append":
-      return action.events.reduce(reduceStream, state);
-  }
 }
 
 export interface RemoteAppOptions {
@@ -437,6 +373,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   const [approvals, setApprovals] = useState<PendingApproval[]>([]);
   const { attention: roomAttention, observe: observeRoomAttention, viewing } = useRoomAttention();
   const sentCcApprovalsRef = useRef(new SentRoomApprovals<PendingApproval>());
+  const [roomHistory, setRoomHistory] = useState<RoomHistoryWindow>();
+  const [roomPager] = useState(() => new RoomHistoryPager(setRoomHistory));
   const approvalsRef = useRef(approvals);
   approvalsRef.current = approvals;
   const submittingAsyncApprovalsRef = useRef(new Set<string>());
@@ -758,9 +696,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
    * newer state. The conversation revision lets a reply that arrives after the
    * user navigated elsewhere be discarded instead of navigating back. */
   const pendingCcOpenRef = useRef<CcRoomOpenRequest | null>(null);
-  const [ccModeRequest, setCcModeRequest] = useState<
-    { mode: PermissionMode; switching: boolean; modelKey?: string | null } | undefined
-  >(undefined);
+  const [ccModeRequest, setCcModeRequest] = useState<RemoteApp["ccModeRequest"]>(undefined);
+  const [ccTakeOver, setCcTakeOver] = useState<{ roomId?: string; error: string }>();
   const ccBacklogLoadedRef = useRef(false);
   /** Which CLI the currently-open cc session belongs to — selects the on-disk
    *  history reader (claude vs codex rollout) for ccRoom.readHistory. Captured
@@ -1079,6 +1016,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   useEffect(() => () => outputClient.cancel(false), [outputClient]);
 
   const loadEarlierHistory = useCallback(async () => {
+    if (activeRoomIdRef.current)
+      return roomPager.load(activeRoomIdRef.current, (event) => sendRef.current?.(event) ?? false);
     const window = historyWindowRef.current;
     if (!window || window.loading || !window.hasEarlier)
       throw new Error(t("mobile.historyRecovery.detailUnavailable"));
@@ -1106,7 +1045,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         setHistoryWindow(historyWindowRef.current);
       }
     }
-  }, [outputClient]);
+  }, [outputClient, roomPager]);
   const loadHistoryDetail = useCallback(
     async (ref: string) => {
       try {
@@ -1865,7 +1804,9 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
             // denied, timed out, busy room, …). Nothing changed; say why.
             pendingCcOpenRef.current = null;
             setCcModeRequest(undefined);
-            if (failed.revision === conversationRevisionRef.current)
+            // A refused take-over is shown on its own card, not as a notice.
+            if (failed.takeOver) setCcTakeOver({ roomId: failed.roomId, error: event.message });
+            else if (failed.revision === conversationRevisionRef.current)
               setNotice(event.message || t("mobile.notice.ccRoomOpenFailed"));
             break;
           }
@@ -2084,6 +2025,15 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
               break;
             }
             dispatchChat({ kind: "replay", events: ccHistoryToEvents(event.messages) });
+            roomPager.start(
+              {
+                roomId: event.roomId,
+                sessionId: event.sessionId,
+                cwd: ccHistoryCwdRef.current ?? "",
+                kind: ccHistoryKindRef.current,
+              },
+              event,
+            );
             setLoadingKey("roomHistory", false);
             ccBacklogLoadedRef.current = true;
             lastRoomSeqRef.current.set(event.roomId, event.roomCursor);
@@ -2093,6 +2043,12 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           }
           break;
         case "ccRoom.readHistory.ok":
+          if (event.before !== undefined) {
+            roomPager.accept(event, activeRoomIdRef.current, (messages, key) =>
+              dispatchChat({ kind: "prependEvents", key, events: ccHistoryToEvents(messages) }),
+            );
+            break;
+          }
           // Prior on-disk Claude Code transcript for the cc session we just opened.
           // Replay it as the conversation backlog. Guard on the session ref so a
           // late reply for a session we've since left can't clobber the feed.
@@ -2173,6 +2129,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       clearSessionUnread,
       clearSessionCatalog,
       observeRoomAttention,
+      roomPager,
       rememberRoomMessages,
       requestRoomCatchup,
       requestSessionList,
@@ -2994,10 +2951,12 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       }
       const { request, event } = prepared;
       pendingCcOpenRef.current = request;
+      setCcTakeOver(undefined);
       setCcModeRequest({
         mode: request.mode,
         switching: true,
         ...(request.modelKey !== undefined ? { modelKey: request.modelKey } : {}),
+        ...(request.takeOver ? { takeOver: true as const } : {}),
       });
       if (!socket.send(event) && pendingCcOpenRef.current?.requestId === request.requestId) {
         // No Host admission: keep the actual settings, conversation and draft.
@@ -3014,6 +2973,10 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   );
   const setCcRoomModel = useCallback(
     (modelKey: string | null) => changeCcRoomSetting({ modelKey }),
+    [changeCcRoomSetting],
+  );
+  const takeOverCcRoom = useCallback(
+    () => changeCcRoomSetting({ takeOver: true }),
     [changeCcRoomSetting],
   );
 
@@ -3430,14 +3393,20 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     refreshRuntimeModels,
     loading,
     notice,
-    historyHasEarlier:
-      !activeRoomId && historyWindow?.sessionId === activeSessionId && historyWindow?.hasEarlier,
-    historyLoadingEarlier:
-      !activeRoomId && historyWindow?.sessionId === activeSessionId && historyWindow?.loading,
-    historyEarlierError:
-      !activeRoomId && historyWindow?.sessionId === activeSessionId
-        ? historyWindow?.error
-        : undefined,
+    ...(activeRoomId
+      ? {
+          historyHasEarlier: roomHistoryHasEarlier(roomHistory, activeRoomId),
+          historyLoadingEarlier: roomHistory?.roomId === activeRoomId && roomHistory.loading,
+          historyEarlierError: roomHistory?.roomId === activeRoomId ? roomHistory.error : undefined,
+        }
+      : {
+          historyHasEarlier:
+            historyWindow?.sessionId === activeSessionId && historyWindow?.hasEarlier,
+          historyLoadingEarlier:
+            historyWindow?.sessionId === activeSessionId && historyWindow?.loading,
+          historyEarlierError:
+            historyWindow?.sessionId === activeSessionId ? historyWindow?.error : undefined,
+        }),
     loadEarlierHistory,
     loadHistoryDetail,
     reloadHistory,
@@ -3480,6 +3449,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     openCcSession,
     setCcRoomPermissionMode,
     setCcRoomModel,
+    takeOverCcRoom,
+    ccTakeOverError: ccTakeOver?.roomId === activeRoomId ? ccTakeOver?.error : undefined,
     ccRoomModelSelection,
     ccModeRequest,
     respondCcApproval,
