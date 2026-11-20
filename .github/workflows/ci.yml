@@ -666,6 +666,11 @@ jobs:
           sudo chown root:root "$electron_sandbox"
           sudo chmod 4755 "$electron_sandbox"
           test "$(stat -c '%u %a' "$electron_sandbox")" = '0 4755'
+      - name: verify compiled sandbox preload dependencies
+        run: node packages/desktop/scripts/check-sandbox-preloads.mjs
+      - name: exercise worker, Desktop Web Panel task and CUA proxy with Electron Node
+        timeout-minutes: 3
+        run: xvfb-run -a node scripts/run-isolated-node-smoke.mjs packages/desktop/scripts/smoke-electron-runtime.mjs
       - name: real Electron isolated PDF with verified managed Node
         run: |
           bun run --cwd packages/desktop runtime:prepare
