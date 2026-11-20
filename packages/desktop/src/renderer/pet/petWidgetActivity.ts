@@ -9,6 +9,8 @@ export const PET_WIDGET_RECEIPTS_KEY = "codeshell.pet.widget-work-receipts.v1";
 
 export interface PetWidgetReceiptState {
   baselineAt: number;
+  /** Acknowledged activity keys: read completions and dismissed
+   * interrupted/failed long-task revisions (see `dismissible`). */
   seenCompletionKeys: string[];
 }
 
@@ -21,6 +23,11 @@ export interface PetWidgetActivityItem {
   lastActivityAt: number;
   requestId?: string;
   routeGeneration?: number;
+  /** True for an interrupted/failed long-task reminder with no live pending
+   * decision. Its key embeds the task revision, so dismissing hides only this
+   * state; the next task event surfaces a new card. Real approvals/AskUser
+   * prompts are never dismissible here. */
+  dismissible?: boolean;
   /** Raw external projection metadata is retained so the card can distinguish
    * a complete locator from a stale/missing one and fail closed. */
   external?: NonNullable<PetSessionProjection["external"]>;
@@ -77,6 +84,19 @@ export function markPetWidgetCompletionSeen(
 }
 
 /**
+ * Acknowledge one widget card from its close button. Completions become read;
+ * interrupted/failed long-task reminders are dismissed for their current
+ * revision. Live work and real pending decisions are left untouched.
+ */
+export function markPetWidgetActivityDismissed(
+  state: PetWidgetReceiptState,
+  item: PetWidgetActivityItem | undefined,
+): PetWidgetReceiptState {
+  if (!item || (item.kind !== "completed" && !item.dismissible)) return state;
+  return markPetWidgetCompletionSeen(state, item.key);
+}
+
+/**
  * Mark the completed activity currently visible on a desktop surface as seen.
  * Active/waiting work is deliberately ignored because its badge is a live-work
  * count, not an unread receipt.
@@ -128,7 +148,7 @@ export function buildPetWidgetActivity(
   }
   let runningCount = 0;
 
-  const appendLongTask = (task: PetLongTask, session?: PetSessionProjection): void => {
+  const appendLongTask = (task: PetLongTask, session?: PetSessionProjection): boolean => {
     const title =
       session?.title ?? session?.workspaceDisplayName ?? task.objective ?? task.sessionId.slice(-8);
     const detail = task.waitingFor ?? task.lastError ?? task.summary;
@@ -146,21 +166,30 @@ export function buildPetWidgetActivity(
           lastActivityAt: task.updatedAt,
           ...external,
         });
-        return;
+        return true;
       case "waiting":
       case "paused":
       case "interrupted":
-      case "failed":
+      case "failed": {
+        const key = `long-task:${task.id}:${task.revision}`;
+        // A live approval/AskUser for this Session must stay actionable even
+        // when the long-task journal is newer and stands in for it.
+        const dismissible =
+          (task.status === "interrupted" || task.status === "failed") &&
+          !pendingBySession.has(task.sessionId);
+        if (dismissible && seen.has(key)) return false;
         items.push({
-          key: `long-task:${task.id}:${task.revision}`,
+          key,
           agentSessionId: task.sessionId,
           title,
           detail,
           kind: "needs-action",
           lastActivityAt: task.updatedAt,
+          ...(dismissible ? { dismissible: true } : {}),
           ...external,
         });
-        return;
+        return true;
+      }
       case "completed": {
         const completedAt = task.completedAt ?? task.updatedAt;
         const update = [...task.events]
@@ -179,10 +208,10 @@ export function buildPetWidgetActivity(
             ...external,
           });
         }
-        return;
+        return true;
       }
       case "cancelled":
-        return;
+        return true;
     }
   };
 
@@ -259,8 +288,7 @@ export function buildPetWidgetActivity(
   // Keep it visible even when the current projection has no matching row.
   for (const task of latestLongTaskBySession.values()) {
     if (projectedSessionIds.has(task.sessionId)) continue;
-    represented.add(task.sessionId);
-    appendLongTask(task);
+    if (appendLongTask(task)) represented.add(task.sessionId);
   }
 
   for (const pending of snapshot.pending) {

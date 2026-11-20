@@ -64,6 +64,26 @@ describe("PetActivityPreview", () => {
     expect(working).toContain("收起 Session 动态：仍在执行");
   });
 
+  test("labels a dismissible interrupted reminder as closable, not collapsible", () => {
+    const render = (dismissible: boolean) =>
+      renderToStaticMarkup(
+        <PetActivityPreview
+          item={{
+            key: "long-task:task-one:5",
+            agentSessionId: "archived",
+            title: "后台任务",
+            kind: "needs-action",
+            lastActivityAt: 100,
+            ...(dismissible ? { dismissible: true } : { requestId: "approve-1" }),
+          }}
+          onOpen={() => undefined}
+          onDismiss={() => undefined}
+        />,
+      );
+    expect(render(true)).toContain("关闭提醒：后台任务");
+    expect(render(false)).toContain("收起 Session 动态：后台任务");
+  });
+
   test("disables a stale external card that has no complete locator", () => {
     const html = renderToStaticMarkup(
       <PetActivityPreview

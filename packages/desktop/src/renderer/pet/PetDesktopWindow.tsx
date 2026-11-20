@@ -20,6 +20,7 @@ import {
   PET_WIDGET_RECEIPTS_KEY,
   buildPetWidgetActivity,
   initialPetWidgetReceiptState,
+  markPetWidgetActivityDismissed,
   markPetWidgetCompletionSeen,
   parsePetWidgetReceiptState,
   type PetWidgetActivityItem,
@@ -360,29 +361,43 @@ export function PetDesktopWindow({ variant = "docked" }: { variant?: PetDesktopW
     conversationEndRef.current?.scrollIntoView({ block: "end" });
   }, [chatBusy, chatRows.length, chatRows.at(-1)?.text, panel]);
 
-  const markCompletionSeen = React.useCallback((item: PetWidgetActivityItem): void => {
-    if (item.kind !== "completed") return;
-    setWorkReceipts((current) => {
-      if (!current) return current;
-      const next = markPetWidgetCompletionSeen(current, item.key);
-      try {
-        localStorage.setItem(PET_WIDGET_RECEIPTS_KEY, JSON.stringify(next));
-      } catch {
-        // Keep the in-memory receipt even if persistence is unavailable.
-      }
-      return next;
-    });
-  }, []);
+  const updateWorkReceipts = React.useCallback(
+    (update: (current: PetWidgetReceiptState) => PetWidgetReceiptState): void => {
+      setWorkReceipts((current) => {
+        if (!current) return current;
+        const next = update(current);
+        if (next === current) return current;
+        try {
+          localStorage.setItem(PET_WIDGET_RECEIPTS_KEY, JSON.stringify(next));
+        } catch {
+          // Keep the in-memory receipt even if persistence is unavailable.
+        }
+        return next;
+      });
+    },
+    [],
+  );
 
+  const markCompletionSeen = React.useCallback(
+    (item: PetWidgetActivityItem): void => {
+      if (item.kind !== "completed") return;
+      updateWorkReceipts((current) => markPetWidgetCompletionSeen(current, item.key));
+    },
+    [updateWorkReceipts],
+  );
+
+  // Completions are marked read; interrupted/failed long-task reminders with
+  // no live decision are dismissed for their current revision. Live work and
+  // real approvals/AskUser only collapse the panel.
   const dismissActivity = React.useCallback(
     (item: PetWidgetActivityItem): void => {
-      if (item.kind === "completed") {
-        markCompletionSeen(item);
+      if (item.kind !== "completed" && !item.dismissible) {
+        closePanel();
         return;
       }
-      closePanel();
+      updateWorkReceipts((current) => markPetWidgetActivityDismissed(current, item));
     },
-    [closePanel, markCompletionSeen],
+    [closePanel, updateWorkReceipts],
   );
 
   const openSession = (sessionId: string): void => {

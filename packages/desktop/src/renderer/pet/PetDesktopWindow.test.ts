@@ -48,7 +48,8 @@ describe("Pet desktop mini chat", () => {
     expect(source).toContain("markPetWidgetCompletionSeen");
     expect(source).toContain('window.addEventListener("storage", syncReceipts)');
     expect(source).toContain('if (item.kind !== "completed") return');
-    expect(source).toContain('if (item.kind === "completed")');
+    expect(source).toContain('if (item.kind !== "completed" && !item.dismissible)');
+    expect(source).toContain("markPetWidgetActivityDismissed(current, item)");
     expect(source).toContain("closePanel()");
     expect(source).toContain("onDismiss={() => dismissActivity");
     expect(source).toContain("if (activityItem) markCompletionSeen(activityItem)");
