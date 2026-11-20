@@ -7,15 +7,14 @@ export function releaseUrlForVersion(version: string): string {
 }
 
 export function macSignatureNeedsManualInstall(text: string): boolean {
-  // Squirrel validates the replacement against the installed app's designated
-  // requirement. Our local signing certificate has no Apple team identifier.
-  const requirement = text
-    .split("\n")
-    .map((line) => line.trim())
-    .find((line) => line.startsWith("designated => "));
-  const app = 'designated => identifier "com.cjhyy.codeshell"';
-  const certificate = 'certificate leaf = H"30a64d20fc3614e327902f45cf9b725e6e1986dc"';
-  if (requirement === app || requirement === `${app} and ${certificate}`) return false;
+  // Squirrel validates the installed requirement. Our release leaf has no Apple team ID.
+  const releaseLeaf = "30a64d20fc3614e327902f45cf9b725e6e1986dc";
+  const requirement =
+    /^designated => identifier "com\.cjhyy\.codeshell"(?: and certificate leaf = H"([0-9a-fA-F]{40})")?$/;
+  for (const line of text.split("\n")) {
+    const match = requirement.exec(line.trim());
+    if (match && (!match[1] || match[1].toLowerCase() === releaseLeaf)) return false;
+  }
 
   return (
     /^\s*Signature=adhoc\s*$/m.test(text) ||
