@@ -7,7 +7,7 @@ const require = createRequire(import.meta.url);
 const pkg = require("../package.json");
 const builderRequire = createRequire(require.resolve("electron-builder/package.json"));
 const appBuilderRequire = createRequire(builderRequire.resolve("app-builder-lib/package.json"));
-const { sanitizeFileName } = appBuilderRequire("./out/util/filename.js");
+const { sanitizeFileName } = appBuilderRequire("builder-util/out/filename");
 const configuredLinuxName = pkg.build.linux.executableName ?? pkg.build.executableName;
 // LinuxPackager removes the slash from a scoped name, retaining its scope and @.
 const linuxExecutable =

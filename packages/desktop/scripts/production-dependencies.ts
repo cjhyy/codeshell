@@ -321,10 +321,17 @@ export function installProductionClosure(
   try {
     writeFileSync(join(target, "package.json"), closure.manifest);
     writeFileSync(join(target, "bun.lock"), closure.lock);
-    run(process.execPath, ["install", "--production", "--frozen-lockfile", "--linker=hoisted"], {
-      cwd: target,
-      stdio: "inherit",
-    });
+    // Both Mac installers are built on one host. Include the locked Intel and
+    // Apple Silicon optional packages, including the native PDF canvas.
+    const archArgs = process.platform === "darwin" ? ["--cpu=*"] : [];
+    run(
+      process.execPath,
+      ["install", "--production", "--frozen-lockfile", "--linker=hoisted", ...archArgs],
+      {
+        cwd: target,
+        stdio: "inherit",
+      },
+    );
   } finally {
     // Keep runtime exports even on failure, and never ship a minimal-manifest
     // lock next to the restored workspace manifest.

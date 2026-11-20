@@ -13,8 +13,8 @@
   "type": "module",
   "main": "./out/main/index.mjs",
   "scripts": {
-    "postinstall": "bun run rebuild:native",
-    "rebuild:native": "bun run scripts/rebuild-native.ts",
+    "postinstall": "node scripts/rebuild-native.cjs --optional",
+    "rebuild:native": "node scripts/rebuild-native.cjs",
     "dev": "bun run scripts/dev.ts",
     "build": "bun run scripts/build.ts",
     "build:main": "bun run scripts/build-main.ts",
@@ -92,6 +92,7 @@
   "build": {
     "appId": "com.cjhyy.codeshell",
     "productName": "code-shell",
+    "beforeBuild": "scripts/rebuild-native.cjs",
     "afterPack": "scripts/after-pack-adhoc-sign.cjs",
     "afterSign": "scripts/after-sign-managed-node.cjs",
     "detectUpdateChannel": true,

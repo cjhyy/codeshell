@@ -268,7 +268,6 @@ try {
     TMP: paths.temporary,
     TEMP: paths.temporary,
     CSC_IDENTITY_AUTO_DISCOVERY: "false",
-    ELECTRON_SKIP_BINARY_DOWNLOAD: "1",
     ELECTRON_BUILDER_CACHE: join(root, "builder-cache"),
     CODESHELL_NODE_CACHE: join(root, "node-cache"),
     CODESHELL_DMG_GUARD_REFERENCE: stateFile,

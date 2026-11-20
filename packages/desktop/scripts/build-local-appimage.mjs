@@ -178,7 +178,6 @@ async function main() {
     const env = {
       ...createBunTestEnvironment(process.env, privateRoot),
       CSC_IDENTITY_AUTO_DISCOVERY: "false",
-      ELECTRON_SKIP_BINARY_DOWNLOAD: "1",
       ELECTRON_BUILDER_CACHE: join(privateRoot, "electron-builder-cache"),
       CODESHELL_NODE_CACHE: join(privateRoot, "node-cache"),
     };

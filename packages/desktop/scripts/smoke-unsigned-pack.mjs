@@ -17,7 +17,6 @@ const scratch = mkdtempSync(join(tmpdir(), "codeshell-review-pack-"));
 const env = {
   ...createBunTestEnvironment(process.env, scratch),
   CSC_IDENTITY_AUTO_DISCOVERY: "false",
-  ELECTRON_SKIP_BINARY_DOWNLOAD: "1",
   ELECTRON_BUILDER_CACHE: join(scratch, "electron-builder-cache"),
   SWIFT_MODULECACHE_PATH: join(scratch, "swift-module-cache"),
   CLANG_MODULE_CACHE_PATH: join(scratch, "clang-module-cache"),
