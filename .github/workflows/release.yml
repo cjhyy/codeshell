@@ -334,7 +334,7 @@ jobs:
         run: |
           set -euo pipefail
           case "${{ matrix.artifact }}" in
-            mac) test -f packages/desktop/dist/latest-mac.yml ;;
+            mac) node scripts/mac-release-manifest.cjs ;;
             windows) test -f packages/desktop/dist/latest.yml ;;
             linux) test -f packages/desktop/dist/latest-linux.yml ;;
           esac
@@ -389,15 +389,12 @@ jobs:
           case "$TAG" in *-*) PRERELEASE=(--prerelease) ;; esac
 
           cat > /tmp/release-notes.md <<'NOTES'
-          自动打包构建 — 用于在其他电脑(尤其 Windows)安装测试。
+          macOS 版要求 macOS 13.5 或更新版本。使用 macOS 12 或 13.0–13.4 的用户请留在 0.11。
+          0.11 如提示手动更新，请下载对应架构的 DMG 并覆盖 Applications 内的旧版，保留原有数据。
+          后续相同签名的版本可使用应用内更新。0.12 正式发布后，rc 用户可从 GitHub 的 Latest Release 手动安装正式版以切回正式通道。
 
-          **安装包签名说明**:
-          - Windows (.exe / nsis):SmartScreen 会拦,点「更多信息 → 仍要运行」。
-          - macOS 未配置 Developer ID 签名密钥时,产物会使用固定 requirement 的 ad-hoc 签名。
-          - 从旧 cdhash ad-hoc 版本升级到固定 requirement 版本时,需要下载 .dmg 手动覆盖安装一次;之后固定 requirement 版本之间可走应用内更新。
-          - macOS 如已配置 Developer ID + notarization secrets,会使用正式签名/公证,应用内自动更新可直接安装。
-
-          产物按平台分目录上传。node-pty 已按各平台 Electron ABI 重编。
+          Windows 安装包为 NSIS x64。若 SmartScreen 提示，请核对下载来源。
+          Linux 版提供 x64 AppImage。
           NOTES
 
           # Create the release if absent (idempotent across re-runs).
@@ -415,7 +412,7 @@ jobs:
           # not within one command) → 422. So allowlist installer + update files.
           mapfile -t ASSETS < <(find artifacts -type f \( \
             -name '*.exe' -o -name '*.dmg' -o -name '*.zip' -o -name '*.AppImage' \
-            -o -name '*.blockmap' -o -name 'latest*.yml' \) | sort)
+            -o -name '*.blockmap' -o -name 'latest.yml' -o -name 'latest-mac.yml' -o -name 'latest-linux.yml' \) | sort)
           if [ ${#ASSETS[@]} -eq 0 ]; then
             echo "no build artifacts found under artifacts/" >&2
             exit 1

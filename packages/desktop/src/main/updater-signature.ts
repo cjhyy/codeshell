@@ -7,9 +7,15 @@ export function releaseUrlForVersion(version: string): string {
 }
 
 export function macSignatureNeedsManualInstall(text: string): boolean {
-  if (/^\s*designated => identifier "com\.cjhyy\.codeshell"\s*$/m.test(text)) {
-    return false;
-  }
+  // Squirrel validates the replacement against the installed app's designated
+  // requirement. Our local signing certificate has no Apple team identifier.
+  const requirement = text
+    .split("\n")
+    .map((line) => line.trim())
+    .find((line) => line.startsWith("designated => "));
+  const app = 'designated => identifier "com.cjhyy.codeshell"';
+  const certificate = 'certificate leaf = H"30a64d20fc3614e327902f45cf9b725e6e1986dc"';
+  if (requirement === app || requirement === `${app} and ${certificate}`) return false;
 
   return (
     /^\s*Signature=adhoc\s*$/m.test(text) ||

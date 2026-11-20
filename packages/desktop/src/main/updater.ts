@@ -195,7 +195,7 @@ function manualRequiredStatus(version: string, reason: ManualInstallReason): Upd
     message:
       reason === "mac-readonly-volume"
         ? "The app is running from a read-only or translocated location. Move it to Applications, or download and install the release manually."
-        : "This macOS build is ad-hoc signed, so the in-app updater cannot replace the app safely. Download the DMG/zip and install it manually.",
+        : "This app’s signing identity requires a manual update. Download the DMG for your Mac and replace the copy in Applications.",
   };
 }
 

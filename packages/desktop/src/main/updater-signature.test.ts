@@ -13,6 +13,17 @@ describe("updater signature helpers", () => {
     expect(macSignatureNeedsManualInstall(text)).toBe(true);
   });
 
+  test("allows the release certificate requirement without an Apple team identifier", () => {
+    const app = 'identifier "com.cjhyy.codeshell"';
+    const leaf = 'certificate leaf = H"30a64d20fc3614e327902f45cf9b725e6e1986dc"';
+    const inspect = (requirement: string) =>
+      macSignatureNeedsManualInstall(`TeamIdentifier=not set\ndesignated => ${requirement}`);
+    expect(inspect(`${app} and ${leaf}`)).toBe(false);
+    expect(inspect(`${app} and ${leaf.replace("30a6", "c0de")}`)).toBe(true);
+    expect(inspect(`${app.replace("codeshell", "other")} and ${leaf}`)).toBe(true);
+    expect(inspect(`${app} and ${leaf} or true`)).toBe(true);
+  });
+
   test("does not flag Developer ID signatures", () => {
     const text = [
       "Executable=/Applications/code-shell.app/Contents/MacOS/code-shell",
