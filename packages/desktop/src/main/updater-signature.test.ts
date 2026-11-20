@@ -35,6 +35,27 @@ describe("updater signature helpers", () => {
     expect(macSignatureNeedsManualInstall(text)).toBe(false);
   });
 
+  test("does not flag the self-signed certificate requirement used by release builds", () => {
+    const text = [
+      "Executable=/Applications/code-shell.app/Contents/MacOS/code-shell",
+      "Authority=CodeShell Local Signing",
+      "TeamIdentifier=not set",
+      'designated => identifier "com.cjhyy.codeshell" and certificate leaf = H"30a64d20fc3614e327902f45cf9b725e6e1986dc"',
+    ].join("\n");
+
+    expect(macSignatureNeedsManualInstall(text)).toBe(false);
+  });
+
+  test("still flags a certificate requirement for a different bundle identifier", () => {
+    const text = [
+      "Signature=adhoc",
+      "TeamIdentifier=not set",
+      'designated => identifier "com.example.other" and certificate leaf = H"30a64d20fc3614e327902f45cf9b725e6e1986dc"',
+    ].join("\n");
+
+    expect(macSignatureNeedsManualInstall(text)).toBe(true);
+  });
+
   test("builds release URLs from semver or tag versions", () => {
     expect(releaseUrlForVersion("0.6.0-rc.5")).toBe(
       "https://github.com/cjhyy/codeshell/releases/tag/v0.6.0-rc.5",
