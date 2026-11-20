@@ -282,6 +282,34 @@ describe("transcriptToFoldItems", () => {
     expect(withDisplay[0]).not.toHaveProperty("images");
   });
 
+  it("replays an external-runtime turn as its typed text plus attachments", () => {
+    const image = "/repo/.code-shell/attachments/s-1/abc-shot.png";
+    const items = transcriptToFoldItems(
+      line("message", {
+        role: "user",
+        content: [
+          "修复一下",
+          "",
+          "<codeshell_attachments>",
+          "The user explicitly attached these local paths. Inspect them when relevant:",
+          `- image: ${image}`,
+          "</codeshell_attachments>",
+        ].join("\n"),
+        clientMessageId: "c1",
+      }),
+    );
+    expect(items[0]).toMatchObject({
+      kind: "user",
+      text: "修复一下",
+      attachments: [
+        { kind: "image", path: image, absPath: image, sessionId: "", originalName: "abc-shot.png" },
+      ],
+    });
+    const folded = foldTranscript(items);
+    const bubble = folded.messages.find((message) => message.kind === "user");
+    expect(bubble).toMatchObject({ text: "修复一下", attachments: [{ absPath: image }] });
+  });
+
   it("replays a panel displayText instead of its model-facing context envelope", () => {
     const items = transcriptToFoldItems(
       line("message", {

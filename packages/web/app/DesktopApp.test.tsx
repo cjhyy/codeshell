@@ -21,6 +21,8 @@ import { cliSessionControlBlock } from "./cliSessionControls.js";
 import { HubPanels } from "./HubPanels.js";
 import { PanelHost } from "./PanelHost.js";
 import { SessionLoadingState } from "./SessionLoadingState.js";
+import { ProjectSessionNavigation } from "./ProjectSessionNavigation.js";
+import type { SessionSummary } from "./protocol.js";
 
 const noop = () => {};
 const session = { id: "paired-session", username: "synthetic", deviceName: "Fixture" };
@@ -2727,4 +2729,83 @@ test("CLI settings handoff keeps editable drafts and the sidebar while blocking 
   } finally {
     await hook.unmount();
   }
+});
+
+const newChatProjects = [
+  { id: "p-1", name: "codeshell", path: "/repo/codeshell" },
+  { id: "p-2", name: "panels", path: "/repo/panels" },
+];
+
+function newChatApp(patch: Partial<RemoteApp> = {}): RemoteApp {
+  return {
+    status: "online",
+    chat: initialChatState(),
+    sessions: [],
+    projects: newChatProjects,
+    permissionMode: "default",
+    loading: { sessions: false, sessionHistory: false, roomHistory: false, ccSessions: false },
+    ...patch,
+  } as unknown as RemoteApp;
+}
+
+test("a new conversation shows a project picker; one with turns does not", () => {
+  const fresh = renderToStaticMarkup(<DesktopChatControls app={newChatApp()} projectId="p-1" />);
+  expect(fresh).toContain("desktop-new-chat-project");
+  expect(fresh).toContain("codeshell");
+  const started = renderToStaticMarkup(
+    <DesktopChatControls
+      app={newChatApp({
+        chat: {
+          ...initialChatState(),
+          items: [{ id: "m1", kind: "user", text: "hi" }],
+        } as RemoteApp["chat"],
+      })}
+      projectId="p-1"
+    />,
+  );
+  expect(started).not.toContain("desktop-new-chat-project");
+  // Adapters that do not pass the workspace keep the previous controls.
+  expect(renderToStaticMarkup(<DesktopChatControls app={newChatApp()} />)).not.toContain(
+    "desktop-new-chat-project",
+  );
+});
+
+test("each project heading starts a conversation in that project", async () => {
+  ensureMiniDom();
+  const started: Array<[string | null, string | null]> = [];
+  const row = (sessionId: string, cwd: string) =>
+    ({
+      sessionId,
+      cwd,
+      title: sessionId,
+      startedAt: 1,
+      lastActiveAt: 1,
+      status: "completed",
+      turnCount: 1,
+    }) as SessionSummary;
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  await act(async () => {
+    root.render(
+      <ProjectSessionNavigation
+        sessions={[row("a", "/repo/codeshell"), row("b", "")]}
+        projects={newChatProjects}
+        activeId=""
+        renderSession={(session) => <li key={session.sessionId}>{session.sessionId}</li>}
+        onNewSession={(target, cwd) => started.push([target, cwd])}
+      />,
+    );
+  });
+  const buttons = elementsByTag(container, "BUTTON").filter((button) =>
+    String(reactProps(button)["aria-label"] ?? "").includes("中新建对话"),
+  );
+  expect(buttons).toHaveLength(2);
+  await act(async () => {
+    for (const button of buttons) reactProps(button).onClick();
+  });
+  expect(started).toEqual([
+    ["p-1", "/repo/codeshell"],
+    [null, null],
+  ]);
+  await act(async () => root.unmount());
 });

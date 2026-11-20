@@ -1,5 +1,6 @@
 import type { StreamEvent, TranscriptEvent } from "../types.js";
 import { byteLengthFromBase64 } from "../utils/base64.js";
+import { attachmentReferenceDisplay, splitAttachmentReferences } from "./attachment-references.js";
 
 type UserEvent = Extract<StreamEvent, { type: "session_user_message" }>;
 type DisplayContent = NonNullable<UserEvent["transcriptMessage"]>["content"];
@@ -40,6 +41,11 @@ export function outputUserMessage(
           )
         : "";
   const projection = Array.isArray(content) || content.includes("<attached-");
+  // External runtimes persist the path block the CLI reads; show what was typed
+  // and surface the paths as attachments instead.
+  const referenced =
+    hidden || projection ? undefined : splitAttachmentReferences(content as string);
+  const references = referenced?.references.length ? referenced.references : undefined;
   return {
     type: "session_user_message",
     sessionId,
@@ -48,7 +54,9 @@ export function outputUserMessage(
         ? ""
         : typeof message.displayText === "string"
           ? message.displayText
-          : content,
+          : references
+            ? referenced!.text
+            : content,
     ...(typeof message.clientMessageId === "string"
       ? { clientMessageId: message.clientMessageId }
       : {}),
@@ -59,6 +67,7 @@ export function outputUserMessage(
     authority === "policy"
       ? { authority }
       : {}),
+    ...(references ? { attachments: references.map(attachmentReferenceDisplay) } : {}),
     ...(!hidden && projection
       ? {
           transcriptMessage: {

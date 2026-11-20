@@ -1,6 +1,7 @@
 import {
   isContextEvent,
   sanitizeExternalChangedFilesProvenance,
+  splitAttachmentReferences,
 } from "@cjhyy/code-shell-core/internal";
 /**
  * Read a persisted engine transcript (~/.code-shell/sessions/<id>/transcript.jsonl)
@@ -454,10 +455,26 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
           }
           const hasDisplayText = typeof d.displayText === "string" && d.displayText.trim();
           const images = hasDisplayText ? 0 : imageBlockCount(d.content);
+          // External runtimes persist the path block their CLI reads.
+          const referenced = hasDisplayText
+            ? undefined
+            : splitAttachmentReferences(textOf(d.content));
+          const attachments = referenced?.references.map((reference) => ({
+            kind: reference.kind,
+            path: reference.path,
+            absPath: reference.path,
+            sessionId: "",
+            originalName: reference.path.split(/[\\/]/).filter(Boolean).pop() ?? reference.path,
+          }));
           items.push({
             kind: "user",
-            text: hasDisplayText ? (d.displayText as string) : textOf(d.content),
+            text: hasDisplayText
+              ? (d.displayText as string)
+              : referenced
+                ? referenced.text
+                : textOf(d.content),
             ...(images > 0 ? { images } : {}),
+            ...(attachments?.length ? { attachments } : {}),
             ...(d.steerId ? { steerId: String(d.steerId) } : {}),
             ...(typeof d.clientMessageId === "string" && d.clientMessageId
               ? { clientMessageId: d.clientMessageId }
