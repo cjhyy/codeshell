@@ -312,7 +312,18 @@ export function parseMobileClientEvent(value: unknown): MobileClientEvent | unde
         boundedPath(event.cwd) &&
         boundedString(event.sessionId, MAX_ID_LENGTH) &&
         isBoundedHistoryLimit(event.limit) &&
-        optionalMember(event.kind, KINDS);
+        optionalMember(event.kind, KINDS) &&
+        (event.before === undefined ||
+          (Number.isSafeInteger(event.before) && (event.before as number) >= 0));
+      break;
+    case "ccRoom.takeOver":
+      valid =
+        boundedString(event.roomId, MAX_ID_LENGTH) &&
+        boundedString(event.sessionId, MAX_ID_LENGTH) &&
+        boundedPath(event.cwd) &&
+        typeof event.kind === "string" &&
+        KINDS.has(event.kind) &&
+        boundedString(event.requestId, MAX_ID_LENGTH);
       break;
     case "ccRoom.respondApproval":
       valid =

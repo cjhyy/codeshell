@@ -136,6 +136,8 @@ describe("TranscriptSubscriptionManager", () => {
           messages: late.messages,
           totalCount: late.totalCount,
           hasMore: late.hasMore,
+          // The earlier-page cursor matches the full parse's index.
+          startIndex: late.startIndex,
         }).toEqual(parse(raw, 7));
         expect(late.messages.some((message) => message.tools?.length)).toBe(true);
         const fullRing = manager.subscribe({ ...target, subscriberId: "full", limit: 500 });
@@ -148,6 +150,7 @@ describe("TranscriptSubscriptionManager", () => {
           messages: smallest.messages,
           totalCount: smallest.totalCount,
           hasMore: smallest.hasMore,
+          startIndex: smallest.startIndex,
         }).toEqual(parse(raw, 1));
       } finally {
         manager.closeAll();

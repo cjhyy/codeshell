@@ -15,6 +15,7 @@ import {
 } from "@cjhyy/code-shell-server/mobile-remote";
 import type { AuthenticatedMobileClientEvent, OrchestratorCtx } from "./handle-client-event.js";
 import { mobileRoomModeRequesterKey } from "../cc-room/room-mode-authority.js";
+import { takeOverLinkedSessionAtHost } from "../cc-room/linked-session-ipc.js";
 
 /**
  * CC Room (external `claude` CLI sessions) for mobile — mirrors the desktop
@@ -126,6 +127,39 @@ export async function handleCcRoomEvent(
       }
       return;
     }
+    if (event.type === "ccRoom.takeOver") {
+      // Desktop's take-over, through the same Host function and refusals.
+      try {
+        const requirePath = ctx.requireLinkedSessionPath;
+        if (!requirePath) throw new Error("此电脑不支持从远程接管 CLI 会话，请更新桌面端。");
+        const result = await takeOverLinkedSessionAtHost(
+          { roomManager: ctx.roomManager, requirePath, broadcastRoomState: ctx.broadcastRoomState },
+          event.roomId,
+          event.sessionId,
+          event.cwd,
+          event.kind,
+        );
+        reply({
+          type: "ccRoom.opened",
+          roomId: result.roomId,
+          sessionId: event.sessionId,
+          status: result.status,
+          permissionMode: result.mode,
+          modelKey: ctx.roomManager.getRoom(result.roomId)?.modelKey ?? null,
+          changed: true,
+          requestId: event.requestId,
+        });
+        replayPendingApprovals(result.roomId);
+      } catch (error) {
+        reply({
+          type: "room.error",
+          roomId: event.roomId,
+          requestId: event.requestId,
+          message: `无法接管：${error instanceof Error ? error.message : String(error)}`,
+        });
+      }
+      return;
+    }
     if (event.type === "ccRoom.subscribeTranscript") {
       const kind = event.kind ?? "claude-code";
       if (!ctx.roomMatchesTranscript(event.roomId, event.cwd, event.sessionId, kind)) {
@@ -158,14 +192,16 @@ export async function handleCcRoomEvent(
     if (event.type === "ccRoom.readHistory") {
       const h =
         event.kind === "codex"
-          ? readCodexRecentHistory(event.cwd, event.sessionId, event.limit)
-          : readRecentHistory(event.cwd, event.sessionId, event.limit);
+          ? readCodexRecentHistory(event.cwd, event.sessionId, event.limit, undefined, event.before)
+          : readRecentHistory(event.cwd, event.sessionId, event.limit, undefined, event.before);
       reply({
         type: "ccRoom.readHistory.ok",
         sessionId: event.sessionId,
         messages: h.messages,
         hasMore: h.hasMore,
         totalCount: h.totalCount,
+        startIndex: h.startIndex,
+        ...(event.before !== undefined ? { before: event.before } : {}),
       });
       return;
     }

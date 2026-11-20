@@ -5,7 +5,7 @@ import type {
   TaskInboxSourcesDeps,
 } from "../task-inbox/task-inbox-sources.js";
 import { DriveAgentTranscriptAccess } from "./drive-agent-transcript-access.js";
-import { openLinkedSessionFromIpc, takeOverLinkedSessionFromIpc } from "./linked-session-ipc.js";
+import { openLinkedSessionFromIpc, takeOverLinkedSessionAtHost } from "./linked-session-ipc.js";
 import type { TranscriptSubscriptionManager } from "./transcript-subscriptions.js";
 
 interface LinkedSessionObservationDeps {
@@ -21,6 +21,8 @@ interface LinkedSessionObservationDeps {
   >;
   roomMatchesTranscript(roomId: string, cwd: string, sessionId: string, kind: RoomKind): boolean;
   pendingApprovals(roomId: string): unknown;
+  /** Republish a room to phones and windows after a take-over. */
+  broadcastRoomState?(roomId: string): void;
 }
 
 /** Own the read-only room IPC boundary and its window/room observation lifetime. */
@@ -88,13 +90,7 @@ export function registerLinkedSessionObservationIpc(deps: LinkedSessionObservati
   ipcMain.handle(
     "ccRoom:takeOverLinkedSession",
     async (_event, roomId: unknown, externalSessionId: unknown, cwd: unknown, kind: unknown) =>
-      takeOverLinkedSessionFromIpc(
-        roomManager,
-        roomId,
-        externalSessionId,
-        await deps.requirePath(cwd),
-        kind,
-      ),
+      takeOverLinkedSessionAtHost(deps, roomId, externalSessionId, cwd, kind),
   );
   ipcMain.handle(
     "ccRoom:subscribeTranscript",

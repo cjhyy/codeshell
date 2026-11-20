@@ -3,6 +3,24 @@ import { parseMobileClientEvent } from "./mobile-client-event-validator.js";
 import { MAX_MOBILE_ATTACHMENTS, MAX_MOBILE_IMAGE_BYTES } from "./mobile-limits.js";
 
 describe("parseMobileClientEvent", () => {
+  test("CLI take-over and paged history requests are bounded", () => {
+    const takeOver = {
+      type: "ccRoom.takeOver",
+      roomId: "r1",
+      sessionId: "s1",
+      cwd: "/repo",
+      kind: "codex",
+      requestId: "take-1",
+    };
+    expect(parseMobileClientEvent(takeOver)).toEqual(takeOver);
+    for (const change of [{ kind: "other" }, { kind: undefined }, { requestId: "" }, { cwd: "" }])
+      expect(parseMobileClientEvent({ ...takeOver, ...change })).toBeUndefined();
+    const page = { type: "ccRoom.readHistory", cwd: "/repo", sessionId: "s1", limit: 100 };
+    expect(parseMobileClientEvent(page)).toEqual(page);
+    expect(parseMobileClientEvent({ ...page, before: 0 })?.type).toBe("ccRoom.readHistory");
+    for (const before of [-1, 1.5, "8", Infinity])
+      expect(parseMobileClientEvent({ ...page, before })).toBeUndefined();
+  });
   test("approval replies retain the worker route and reject malformed generations", () => {
     const reply = {
       type: "approval.respond",

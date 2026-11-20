@@ -71,10 +71,30 @@ function toolResultText(content: unknown): string {
 /** Parse a bounded/raw Claude Code transcript snapshot. Exported so a live
  * follower can take its initial snapshot and EOF cursor from the same read,
  * eliminating the snapshot→subscribe race. */
+/** Messages [start, end) of the parsed transcript: the newest `limit` before
+ * `before` (an index into the full parse; omitted = the end). Parsed indices are
+ * stable while the transcript only grows, so `startIndex` pages backwards. */
+export function historyWindow(
+  all: HistoryMessage[],
+  limit: number,
+  before?: number,
+): { messages: HistoryMessage[]; hasMore: boolean; totalCount: number; startIndex: number } {
+  const lim = limit > 0 ? limit : 20;
+  const end = before === undefined ? all.length : Math.max(0, Math.min(before, all.length));
+  const start = Math.max(0, end - lim);
+  return {
+    messages: all.slice(start, end),
+    hasMore: start > 0,
+    totalCount: all.length,
+    startIndex: start,
+  };
+}
+
 export function parseRecentHistory(
   raw: string,
   limit: number,
-): { messages: HistoryMessage[]; hasMore: boolean; totalCount: number } {
+  before?: number,
+): ReturnType<typeof historyWindow> {
   const all: HistoryMessage[] = [];
   for (const line of raw.split("\n")) {
     if (!line.trim()) continue;
@@ -97,9 +117,7 @@ export function parseRecentHistory(
       all.push({ role: "assistant", text: t, tools: tools.length ? tools : undefined });
     }
   }
-  const lim = limit > 0 ? limit : 20;
-  const start = Math.max(0, all.length - lim);
-  return { messages: all.slice(start), hasMore: start > 0, totalCount: all.length };
+  return historyWindow(all, limit, before);
 }
 
 /** Parse one newly-appended Claude Code transcript JSONL line into the compact
@@ -172,14 +190,16 @@ export function readRecentHistory(
   sessionId: string,
   limit: number,
   claudeHome = join(homedir(), ".claude"),
-): { messages: HistoryMessage[]; hasMore: boolean; totalCount: number } {
+  before?: number,
+): ReturnType<typeof historyWindow> {
+  const empty = { messages: [], hasMore: false, totalCount: 0, startIndex: 0 };
   const file = join(claudeHome, "projects", encodeCwd(cwd), `${sessionId}.jsonl`);
-  if (!existsSync(file)) return { messages: [], hasMore: false, totalCount: 0 };
+  if (!existsSync(file)) return empty;
   let raw: string;
   try {
     raw = readFileSync(file, "utf-8");
   } catch {
-    return { messages: [], hasMore: false, totalCount: 0 };
+    return empty;
   }
-  return parseRecentHistory(raw, limit);
+  return parseRecentHistory(raw, limit, before);
 }
