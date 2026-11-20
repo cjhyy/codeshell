@@ -564,8 +564,11 @@ try {
   );
   assert.ok(bundle, "Own compiled SettingsPage is required");
   const rendererHTML = await readFile(join(appDir, "out/renderer/index.html"), "utf8");
-  const rendererEntry = rendererHTML.match(/src="\.\/assets\/(index-[A-Za-z0-9_-]+\.js)"/)?.[1];
-  assert.ok(rendererEntry, "Own compiled renderer entry is required");
+  const entryScripts = [
+    ...rendererHTML.matchAll(/<script\b[^>]*\bsrc="\.\/assets\/([\w-]+\.js)"/g),
+  ];
+  assert.equal(entryScripts.length, 1, "Expected a single local renderer entry script");
+  const rendererEntry = entryScripts[0][1];
   receipt.build = {
     sourceHead: children
       .execFileSync("git", ["rev-parse", "HEAD"], { cwd: appDir, encoding: "utf8", timeout: 5_000 })
