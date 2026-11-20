@@ -13,6 +13,10 @@
  * `bypassPermissions` it calls directly, otherwise it denies. `afterSignal`
  * calls are made when the host's SIGTERM arrives (a call already under way
  * when the user presses Stop); `holdMs` keeps the turn open meanwhile.
+ *
+ * A computer call may take its `element_token` from an earlier result of the
+ * same phase (`tokenFrom: { call, role, label }`, matched on the structured
+ * `elements`). Unless exactly one element matches, the call is not made.
  */
 import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -94,9 +98,25 @@ process.stdin.on("end", async () => {
       return { request, close: () => child.stdin.end() };
     };
     const promptTool = option("--permission-prompt-tool");
+    const results = { turn: [], "after-signal": [] };
     const runComputer = async (call, phase) => {
       if (call.delayMs) await new Promise((done) => setTimeout(done, call.delayMs));
       const entry = { pid: process.pid, phase, name: call.name, asked: false, allowed: false, result: null };
+      const done = () => {
+        results[phase].push(entry.result);
+        appendFileSync(${JSON.stringify(computerLogFile)}, JSON.stringify(entry) + "\\n");
+        return entry;
+      };
+      if (call.tokenFrom) {
+        const elements = results[phase][call.tokenFrom.call]?.structuredContent?.elements ?? [];
+        const matches = elements.filter((element) => element.role === call.tokenFrom.role && element.label === call.tokenFrom.label);
+        if (matches.length !== 1) {
+          entry.unresolved = matches.length;
+          return done();
+        }
+        call = { ...call, arguments: { ...call.arguments, element_token: matches[0].element_token } };
+        entry.target = { role: matches[0].role, label: matches[0].label };
+      }
       if (record.permissionMode === "bypassPermissions") entry.allowed = true;
       else if (promptTool) {
         entry.asked = true;
@@ -112,8 +132,7 @@ process.stdin.on("end", async () => {
       }
       if (entry.allowed)
         entry.result = (await computerServer.request("tools/call", { name: call.name, arguments: call.arguments ?? {} })).result ?? null;
-      appendFileSync(${JSON.stringify(computerLogFile)}, JSON.stringify(entry) + "\\n");
-      return entry;
+      return done();
     };
     send({ type: "system", subtype: "init", session_id: "acceptance-fixture-session", model: "fixture" });
     if (step.delayMs) await new Promise((done) => setTimeout(done, step.delayMs));

@@ -32,6 +32,7 @@
     "test:e2e:link": "node scripts/e2e-link.mjs",
     "test:e2e:external-session-acceptance": "node scripts/e2e-external-session-acceptance.mjs",
     "test:e2e:external-computer-use-acceptance": "node scripts/e2e-external-computer-use-acceptance.mjs",
+    "test:e2e:external-computer-use-real-driver": "node scripts/e2e-external-computer-use-real-driver.mjs",
     "test:e2e:credential-operations": "node ../../scripts/run-isolated-node-smoke.mjs scripts/e2e-credential-operations.mjs",
     "test:e2e:mcp-operations": "node ../../scripts/run-isolated-node-smoke.mjs scripts/e2e-mcp-operations.mjs",
     "test:e2e:digital-humans": "node scripts/e2e-digital-humans.mjs",

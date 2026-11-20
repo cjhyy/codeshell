@@ -1,17 +1,18 @@
 /*
  * Real Electron acceptance for Computer Use in external-runtime (Claude Code)
  * sessions: the `codeshell_computer` server a session is offered, the approval
- * card, the input gate, Stop / interrupt-and-send, and the cases that get no
- * computer-use server at all.
+ * card, the input gate, Stop / interrupt-and-send, the ⌘⇧Esc stop shortcut
+ * (its handler, called through a seam: no key is synthesized or taken), and the
+ * cases that get no computer-use server at all.
  *
  * Opt-in (not part of `test:e2e`). The app, its MCP proxy, input gate and
  * approval path are the real ones; the helper bundle behind them is a stand-in
  * (`computer-use-stand-in.mjs`) and `claude` is a scripted stand-in CLI. So no
  * call reaches the desktop and macOS is never asked for a privacy permission.
- * What this cannot show is the on-screen action itself (cursor, a click
- * landing): that needs the real helper and a person at the machine.
+ * What this cannot show is the on-screen action itself (a click landing):
+ * `e2e-external-computer-use-real-driver.mjs` does, behind its own opt-in.
  */
-/* global document, window */
+/* global window */
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,15 +20,14 @@ import {
   ACCEPTANCE_MOCK_KEYCHAIN_ENV,
   assert,
   captureRendererErrors,
-  expandSidebar,
   findCodeShellWindow,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
   seedOfflinePluginBootstrap,
-  waitForAsyncFunction,
 } from "./electron-harness.mjs";
 import { installComputerUseStandIn } from "./computer-use-stand-in.mjs";
 import { installExternalCliFixture } from "./external-cli-fixture.mjs";
+import * as kit from "./external-computer-use-acceptance-kit.mjs";
 
 process.env[ACCEPTANCE_MOCK_KEYCHAIN_ENV] = "1";
 
@@ -46,7 +46,7 @@ async function screenshot(name) {
   await win.screenshot({ path: join(screenshotDir, name), animations: "disabled" });
 }
 
-const pause = (ms) => new Promise((done) => setTimeout(done, ms));
+const { pause, waitFor } = kit;
 
 async function settings(computerUse) {
   await writeFile(
@@ -65,6 +65,8 @@ async function launch() {
       CODE_SHELL_EXTERNAL_CLI_DIR: cli.bin,
       // The only helper this run may start. Unset, the app would use the built one.
       CODESHELL_E2E_COMPUTER_USE_BUNDLE: standIn.bundle,
+      // ⌘⇧Esc is never taken system-wide: an installed CodeShell keeps its own.
+      CODESHELL_E2E_STOP_SHORTCUT: "virtual",
     },
   });
   win = await findCodeShellWindow(app);
@@ -78,86 +80,12 @@ const setUserIdleSeconds = (seconds) =>
     powerMonitor.getSystemIdleTime = () => value;
   }, seconds);
 
-async function dismissTrust() {
-  const trust = win.getByRole("button", { name: /信任并继续|Trust and continue/i });
-  if (
-    await trust
-      .waitFor({ timeout: 5000 })
-      .then(() => true)
-      .catch(() => false)
-  )
-    await trust.click();
-}
-
-async function registerProject() {
-  await app.evaluate(({ dialog }, path) => {
-    const original = dialog.showOpenDialog;
-    dialog.showOpenDialog = async () => {
-      dialog.showOpenDialog = original;
-      return { canceled: false, filePaths: [path] };
-    };
-  }, projectPath);
-  await expandSidebar(win);
-  await win
-    .locator("aside")
-    .getByRole("button", { name: /^(新项目|New project)$/ })
-    .first()
-    .click();
-  const chooser = win.getByRole("dialog", { name: /^(新项目|New project)$/ });
-  await chooser.getByRole("button", { name: /^(此计算机|This computer)$/ }).click();
-  await waitForAsyncFunction(
-    win,
-    async (path) =>
-      (await window.codeshell.projectRegistry.list()).some((entry) =>
-        entry.roots.some((root) => root.path === path),
-      ),
-    projectPath,
-  );
-}
-
-async function selectModel(wanted = modelKey) {
-  const pill = win.locator("button[data-active-model]");
-  await pill.waitFor({ state: "visible", timeout: 20_000 });
-  if ((await pill.getAttribute("data-active-model")) === wanted) return;
-  await pill.click();
-  await win.locator(`[data-model-key="${wanted}"]`).click();
-  await win.waitForFunction(
-    (key) =>
-      document.querySelector("button[data-active-model]")?.getAttribute("data-active-model") ===
-      key,
-    wanted,
-  );
-}
-
-async function send(text) {
-  const composer = win.locator("textarea:visible").last();
-  await composer.fill(text);
-  await composer.press("Enter");
-}
-
-const approveOnce = () => win.getByRole("button", { name: /^(仅本次批准|Approve once)$/ });
-
-/** The scripted CLI's `count`th turn; fails if an approval card shows meanwhile. */
-async function turn(count, { timeout = 40_000, noCard = false } = {}) {
-  const deadline = Date.now() + timeout;
-  while ((await cli.invocations()).length < count) {
-    assert(Date.now() < deadline, `Timed out waiting for scripted turn ${count}`);
-    if (noCard)
-      assert(!(await approveOnce().first().isVisible()), "An approval card was shown unexpectedly");
-    await pause(100);
-  }
-  return (await cli.invocations())[count - 1];
-}
-
-async function waitFor(read, what, timeout = 20_000) {
-  const deadline = Date.now() + timeout;
-  for (;;) {
-    const value = await read();
-    if (value) return value;
-    assert(Date.now() < deadline, `Timed out waiting for ${what}`);
-    await pause(100);
-  }
-}
+const dismissTrust = () => kit.dismissTrust(win);
+const registerProject = () => kit.registerProject(app, win, projectPath);
+const selectModel = (wanted = modelKey) => kit.selectModel(win, wanted);
+const send = (text) => kit.send(win, text);
+const approveOnce = () => kit.approveOnce(win);
+const turn = (count, options) => kit.claudeTurn(win, cli, count, options);
 
 const refusal = (entry) => entry?.result?.structuredContent?.reason;
 const driverNames = async () => (await standIn.driverCalls()).map((call) => call.driver);
@@ -372,12 +300,123 @@ try {
   await screenshot("04-interrupt-and-send.png");
   console.log("acceptance: interrupt-and-send cancelled the old run; the new one could act");
 
+  // --- ⌘⇧Esc. Desktop registers it while a computer-use proxy is connected. The
+  // callback it registered is called through the acceptance seam: no key event
+  // is synthesized and the system-wide key is never taken.
+  const inputStatus = async () =>
+    (await win.evaluate(() => window.codeshell.computerUse.status())).input;
+  const logged = async (msg, source) =>
+    (await kit.computerUseLog(isolated.codeShellHome)).filter(
+      (entry) => entry.msg === msg && (source === undefined || entry.source === source),
+    ).length;
+  const slow = { ...background, delayMs: 4000 };
+  await kit.muteStopNotice(app);
+  await waitFor(
+    async () => !(await kit.stopShortcutRegistered(app)),
+    "the shortcut to be released with the last proxy",
+  );
+  calls = (await cli.computerCalls()).length;
+  reachedDriver = (await driverNames()).length;
+  await cli.script([
+    { computer: [background, slow, { name: "list_apps" }], text: "fixture: after the shortcut" },
+  ]);
+  await send("keep clicking, I will press the shortcut");
+  await waitFor(
+    async () => (await cli.computerCalls()).length > calls,
+    "the first call before the shortcut",
+  );
+  assert(
+    await kit.stopShortcutRegistered(app),
+    "⌘⇧Esc was not registered while a computer-use proxy was connected",
+  );
+  await kit.pressStopShortcut(app);
+  const shortcut = await turn(9, { noCard: true });
+  assert(
+    shortcut.computer.map((call) => refusal(call) ?? "ran").join(",") === "ran,user-stop,ran" &&
+      (await driverNames()).slice(reachedDriver).join(",") === "click,list_apps",
+    `After ⌘⇧Esc the gate decided ${shortcut.computer.map((call) => refusal(call) ?? "ran")}; driver saw ${(await driverNames()).slice(reachedDriver)}`,
+  );
+  // Unlike Stop it does not end the run: the turn finished and replied.
+  await win.getByText("fixture: after the shortcut").first().waitFor({ timeout: 15_000 });
+  assert(
+    !shortcut.signalled &&
+      (await kit.stopNotices(app)) === 1 &&
+      (await logged("computer_input_stopped", "shortcut")) === 1 &&
+      (await inputStatus()).stopped === true,
+    `⌘⇧Esc did not report the stop: ${JSON.stringify(await inputStatus())}`,
+  );
+  await screenshot("11-stop-shortcut.png");
+
+  // The hold covers every later run until the user resumes.
+  await cli.script([{ computer: [background], text: "fixture: still stopped" }]);
+  await send("try once more");
+  assert(
+    refusal((await turn(10, { noCard: true })).computer[0]) === "user-stop",
+    "A ⌘⇧Esc stop did not outlive the run it interrupted",
+  );
+  await win.getByText("fixture: still stopped").first().waitFor({ timeout: 15_000 });
+  await win.evaluate(() => window.codeshell.computerUse.controlInput("resume"));
+  await cli.script([{ computer: [background], text: "fixture: resumed" }]);
+  await send("continue now");
+  assert(
+    refusal((await turn(11, { noCard: true })).computer[0]) === undefined,
+    "Resume did not lift the ⌘⇧Esc stop",
+  );
+  await win.getByText("fixture: resumed").first().waitFor({ timeout: 15_000 });
+  console.log(
+    "acceptance: ⌘⇧Esc held every input (user-stop) without ending the run; resume lifted it",
+  );
+
+  // A refused registration is reported where the input state is shown, and the
+  // on-screen stop still works.
+  await waitFor(
+    async () => !(await kit.stopShortcutRegistered(app)),
+    "the shortcut to be released with the last proxy",
+  );
+  await app.evaluate(() => {
+    process.env.CODESHELL_E2E_STOP_SHORTCUT = "unavailable";
+  });
+  assert((await inputStatus()).shortcutUnavailable === false, "An idle app reported no shortcut");
+  calls = (await cli.computerCalls()).length;
+  await cli.script([{ computer: [background, slow], text: "fixture: no shortcut" }]);
+  await send("keep clicking without the shortcut");
+  await waitFor(
+    async () => (await cli.computerCalls()).length > calls,
+    "the first call without the shortcut",
+  );
+  const missing = await inputStatus();
+  assert(
+    missing.shortcutUnavailable === true &&
+      !missing.stopped &&
+      !(await kit.stopShortcutRegistered(app)),
+    `A refused ⌘⇧Esc registration was not reported: ${JSON.stringify(missing)}`,
+  );
+  await win.evaluate(() => window.codeshell.computerUse.controlInput("stop"));
+  assert(
+    refusal((await turn(12, { noCard: true })).computer[1]) === "user-stop",
+    "The on-screen stop did not hold input while the shortcut was unavailable",
+  );
+  assert(
+    (await logged("computer_input_shortcut_unavailable")) === 1,
+    "A refused ⌘⇧Esc registration was not logged exactly once",
+  );
+  await win.getByText("fixture: no shortcut").first().waitFor({ timeout: 15_000 });
+  await win.evaluate(() => window.codeshell.computerUse.controlInput("resume"));
+  await app.evaluate(() => {
+    process.env.CODESHELL_E2E_STOP_SHORTCUT = "virtual";
+  });
+  await waitFor(
+    async () => (await inputStatus()).shortcutUnavailable === false,
+    "the warning to clear once no proxy is connected",
+  );
+  console.log("acceptance: a refused ⌘⇧Esc registration was logged and reported; Stop still held");
+
   // --- Plan mode: no computer-use server at all.
   await win.getByRole("button", { name: /完全访问权限|Full access/ }).click();
   await win.getByRole("option", { name: /计划模式|Plan/ }).click();
   await cli.script([{ computer: [{ name: "list_apps" }], text: "fixture: planning" }]);
   await send("plan the next step");
-  const planning = await turn(9, { noCard: true });
+  const planning = await turn(13, { noCard: true });
   assert(
     planning.permissionMode === "plan" &&
       !planning.mcpServers.includes(SERVER) &&
@@ -552,7 +591,7 @@ try {
   await win.locator(`[data-model-key="${modelKey}"]`).first().click();
   await cli.script([{ computer: [{ name: "list_apps" }], text: "fixture: Mimi reply" }]);
   await send("what is on my screen?");
-  const mimi = await turn(10, { noCard: true });
+  const mimi = await turn(14, { noCard: true });
   assert(
     mimi.prompt.includes("pet-world") &&
       mimi.mcpServers.join(",") === "codeshell_tools" &&
@@ -585,7 +624,7 @@ try {
   await selectModel();
   await cli.script([{ computer: [{ name: "list_apps" }], text: "fixture: setting off" }]);
   await send("which apps are open now?");
-  const off = await turn(11, { noCard: true });
+  const off = await turn(15, { noCard: true });
   assert(
     off.permissionMode === "default" && off.mcpServers.join(",") === "codeshell_tools",
     `With the setting off the session listed ${off.mcpServers} (${off.permissionMode})`,
