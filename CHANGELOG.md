@@ -17,6 +17,10 @@ breaking.
   computer use is running, Settings → Computer use now says so and points to
   the Stop button instead of still promising the shortcut. Before, the failure
   was only written to the log.
+- A message sent while a Claude Code turn was still working could stay queued
+  until the turn's background shell finished, however long that took: the
+  request to end the idle turn was sometimes dropped when its timer fired a
+  moment early. The idle check now retries until it ends the turn.
 
 ## [0.11.0-rc.7] - 2026-11-20
 

@@ -77,6 +77,8 @@ export interface ClaudeRuntimeOptions {
    * only lingering. Defaults to {@link DEFAULT_IDLE_GRACE_MS}.
    */
   idleGraceMs?: number;
+  /** Clock for the idle grace period. Defaults to `Date.now`; tests inject one. */
+  now?: () => number;
   log?: (event: string, data: Record<string, unknown>) => void;
 }
 
@@ -317,7 +319,7 @@ export class ClaudeCodeRuntime {
       const { type, events } = this.onLine(line, translator);
       if (events.some((event) => event.type === "turn_complete")) {
         active.held = events;
-        active.heldAt = Date.now();
+        active.heldAt = this.now();
         if (active.releaseWhenIdle) this.releaseOnceIdle(active);
         return;
       }
@@ -438,22 +440,37 @@ export class ClaudeCodeRuntime {
     return { type: (parsed as { type?: unknown } | null)?.type, events };
   }
 
+  private now(): number {
+    return (this.options.now ?? Date.now)();
+  }
+
   /** Milliseconds until `active` counts as only lingering; undefined while it works. */
   private idleIn(active: ActiveTurn): number | undefined {
     if (!active.held || !active.worked) return undefined;
     const grace = this.options.idleGraceMs ?? DEFAULT_IDLE_GRACE_MS;
-    return Math.max(0, (active.heldAt ?? 0) + grace - Date.now());
+    return Math.max(0, (active.heldAt ?? 0) + grace - this.now());
   }
 
+  /**
+   * The one place a sticky release is decided: end the process if it is idle
+   * now, otherwise check again when it could be. Called on a held `result`, on
+   * the request itself, and from its own timer — which re-arms rather than
+   * gives up when it fires before the clock says the grace has passed (timers
+   * and the wall clock disagree by a millisecond or more, more on a loaded
+   * machine). Giving up there lost the request: the lingering process was never
+   * ended and the queued message never ran.
+   */
   private releaseOnceIdle(active: ActiveTurn): void {
     clearTimeout(active.idleTimer);
+    active.idleTimer = undefined;
+    if (this.active !== active || active.stopping) return;
     const wait = this.idleIn(active);
     if (wait === undefined) return;
-    active.idleTimer = setTimeout(() => {
-      // Still the same silent result: nothing arrived since it was held.
-      if (this.active === active && this.idleIn(active) === 0)
-        active.stopping ??= this.terminate(active);
-    }, wait);
+    if (wait === 0) {
+      active.stopping = this.terminate(active);
+      return;
+    }
+    active.idleTimer = setTimeout(() => this.releaseOnceIdle(active), wait);
     active.idleTimer.unref?.();
   }
 
