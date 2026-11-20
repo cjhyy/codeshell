@@ -325,9 +325,11 @@ try {
     async () => (await cli.computerCalls()).length > calls,
     "the first call before the shortcut",
   );
-  assert(
-    await kit.stopShortcutRegistered(app),
-    "⌘⇧Esc was not registered while a computer-use proxy was connected",
+  // Registration first claims the per-user owner file, so it settles asynchronously.
+  await waitFor(
+    () => kit.stopShortcutRegistered(app),
+    "⌘⇧Esc to be registered while a computer-use proxy is connected",
+    3_000,
   );
   await kit.pressStopShortcut(app);
   const shortcut = await turn(9, { noCard: true });
@@ -384,7 +386,14 @@ try {
     async () => (await cli.computerCalls()).length > calls,
     "the first call without the shortcut",
   );
-  const missing = await inputStatus();
+  const missing = await waitFor(
+    async () => {
+      const status = await inputStatus();
+      return status.shortcutUnavailable ? status : undefined;
+    },
+    "the refused ⌘⇧Esc registration to be reported",
+    3_000,
+  ).catch(() => inputStatus());
   assert(
     missing.shortcutUnavailable === true &&
       !missing.stopped &&
