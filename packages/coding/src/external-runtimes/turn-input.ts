@@ -1,5 +1,3 @@
-import { formatAttachmentReferences } from "@cjhyy/code-shell-core/internal";
-
 /** Transport-neutral user input for Codex / Claude Code runtimes. */
 export interface ExternalRuntimeAttachment {
   path: string;
@@ -19,11 +17,16 @@ export interface ExternalRuntimeTurnInput {
 }
 
 export function textWithAttachmentReferences(input: ExternalRuntimeTurnInput): string {
-  return formatAttachmentReferences(
+  const references = (input.attachments ?? [])
+    .filter((attachment) => attachment.path.trim())
+    .map((attachment) => `- ${attachment.kind ?? "file"}: ${attachment.path}`);
+  if (references.length === 0) return input.text;
+  return [
     input.text,
-    (input.attachments ?? []).map((attachment) => ({
-      kind: attachment.kind ?? "file",
-      path: attachment.path,
-    })),
-  );
+    "",
+    "<codeshell_attachments>",
+    "The user explicitly attached these local paths. Inspect them when relevant:",
+    ...references,
+    "</codeshell_attachments>",
+  ].join("\n");
 }

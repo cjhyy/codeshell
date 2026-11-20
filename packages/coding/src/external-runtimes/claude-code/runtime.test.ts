@@ -7,6 +7,7 @@ import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { StreamEvent } from "@cjhyy/code-shell-core/extension";
+import { splitAttachmentReferences } from "@cjhyy/code-shell-core/internal";
 import { ClaudeCodeRuntime, type ClaudeRuntimeOptions } from "./runtime.js";
 
 const dirs: string[] = [];
@@ -366,6 +367,15 @@ describe("ClaudeCodeRuntime user message (stream-json input)", () => {
         "</codeshell_attachments>",
       ].join("\n"),
     );
+    // Chat bubbles split this block back out with core's parser; keep the two in step.
+    expect(splitAttachmentReferences(content[1]!.text!)).toEqual({
+      text: "compare",
+      references: [
+        { kind: "image", path: image },
+        { kind: "file", path: "/repo/notes.md" },
+        { kind: "directory", path: "/repo/src" },
+      ],
+    });
   });
 
   test("oversized, unsupported or missing images fall back to path references", async () => {
