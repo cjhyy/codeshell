@@ -1,7 +1,10 @@
 /*
- * Real-driver acceptance for Computer Use in an external-runtime (Claude Code)
- * session: the isolated app drives a REAL "CodeShell Computer Use.app" and its
- * cua-driver against one Calculator instance this script starts and quits.
+ * Real-driver acceptance for Computer Use in external-runtime sessions (a Claude
+ * Code session, then a Codex session): the isolated app drives a REAL
+ * "CodeShell Computer Use.app" and its cua-driver against one Calculator
+ * instance this script starts and quits, and writes with `set_value` into a new
+ * untitled document of a TextEdit instance it starts (skipped when TextEdit is
+ * already running), then discards that document through its own window.
  *
  * THIS ACTS ON THE DESKTOP IT RUNS ON. It is not part of any test chain and
  * refuses to start unless both are set:
@@ -17,18 +20,19 @@
  * - Before anything starts: the bundle's signature is checked, the driver
  *   version must be the pinned one, and the helper's own passive status read
  *   (AXIsProcessTrusted, never the prompting variant) must say "granted".
- * - Only element-addressed accessibility actions are sent, always to the
- *   Calculator pid started here. No pixel click, no typing, no hotkey, no
+ * - Only element-addressed accessibility actions are sent, always to a pid
+ *   started here. No pixel click, no typing, no hotkey, no
  *   foreground delivery, no launch through the driver, and no screenshot
  *   (`include_screenshot:false`: a capture can raise macOS's own periodic
  *   screen-recording confirmation).
- * - A click's target is resolved from the tree read in the same turn and is
- *   sent only when exactly one button has that label.
+ * - A click's or set_value's target is resolved from the tree read in the same
+ *   turn and is sent only when exactly one element matches.
  * - The user-activity clock is the machine's real one; nothing fakes idleness.
  * - The ⌘⇧Esc stop shortcut stays virtual, so an installed CodeShell keeps it.
  */
 import { execFile as execFileCallback } from "node:child_process";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
@@ -76,7 +80,17 @@ const driverPath = join(bundle, "Contents", "Resources", "cua-driver");
 const evidenceDir = process.env.CODESHELL_ACCEPTANCE_SCREENSHOT_DIR;
 const isolated = await makeIsolatedElectronHome("codeshell-computer-use-real-");
 const projectPath = join(isolated.home, "acceptance-project");
-let app, win, cli, targetPid;
+// A new untitled document only: no open panel, and no window restored from or
+// saved into the user's TextEdit state.
+const EDITOR = { name: "TextEdit", path: "/System/Applications/TextEdit.app" };
+const EDITOR_ARGS = [
+  "-NSShowAppCentricOpenPanelInsteadOfUntitledFile",
+  "NO",
+  "-ApplePersistenceIgnoreState",
+  "YES",
+];
+const CODEX_MODEL = "codex/gpt-5.6-sol";
+let app, win, cli, targetPid, editorPid, editorSkipped, editorStateBefore;
 
 const run = async (command, args, options = {}) => {
   const { stdout, stderr } = await execFile(command, args, { encoding: "utf8", ...options });
@@ -124,29 +138,57 @@ async function preflight() {
     (await pids("-x", TARGET.name)).length === 0,
     `${TARGET.name} is already running; this spec only acts on an instance it started`,
   );
+  // TextEdit may hold the user's documents: if it runs, set_value is skipped.
+  if ((await pids("-x", EDITOR.name)).length)
+    editorSkipped = `${EDITOR.name} is already running for the user`;
+  editorStateBefore = await editorState();
   console.log(
     `acceptance: preflight ok — ${version}, ${requirement.split("\n").find((line) => line.includes("designated =>"))}`,
   );
   console.log(`acceptance: helper status (passive) ${JSON.stringify(status)}`);
 }
 
-async function startTarget() {
-  // -g: never brought to the front; -n: an instance of our own.
-  await run("/usr/bin/open", ["-g", "-n", "-a", TARGET.path]);
-  const [pid, ...others] = await waitFor(
-    async () => ((await pids("-x", TARGET.name)).length ? pids("-x", TARGET.name) : undefined),
-    `${TARGET.name} to start`,
-  );
-  assert(others.length === 0, `More than one ${TARGET.name} appeared; not acting on any`);
-  targetPid = pid;
+/** Names in TextEdit's autosave and saved-state folders (read only). */
+async function editorState() {
+  const library = join(homedir(), "Library", "Containers", "com.apple.TextEdit", "Data", "Library");
+  const names = [];
+  for (const folder of ["Autosave Information", "Saved Application State"])
+    names.push(
+      ...(await readdir(join(library, folder)).catch(() => [])).map((n) => `${folder}/${n}`),
+    );
+  return JSON.stringify(names.sort());
 }
 
-async function stopTarget() {
-  if (!targetPid) return;
-  const command = (
-    await run("/bin/ps", ["-p", String(targetPid), "-o", "comm="]).catch(() => "")
-  ).trim();
-  if (command.endsWith(`/${TARGET.name}`)) process.kill(targetPid, "SIGTERM");
+/** Start an instance of our own, in the background (-g: never fronted; -n: new). */
+async function startApp(target, args = []) {
+  await run("/usr/bin/open", [
+    "-g",
+    "-n",
+    "-a",
+    target.path,
+    ...(args.length ? ["--args", ...args] : []),
+  ]);
+  const [pid, ...others] = await waitFor(
+    async () => ((await pids("-x", target.name)).length ? pids("-x", target.name) : undefined),
+    `${target.name} to start`,
+  );
+  assert(others.length === 0, `More than one ${target.name} appeared; not acting on any`);
+  return pid;
+}
+
+async function stopApp(target, pid) {
+  if (!pid) return;
+  const command = (await run("/bin/ps", ["-p", String(pid), "-o", "comm="]).catch(() => "")).trim();
+  if (command.endsWith(`/${target.name}`)) process.kill(pid, "SIGTERM");
+}
+
+async function confirmGone(target, pid) {
+  for (let i = 0; i < 50 && pid && (await pids("-x", target.name)).includes(pid); i++)
+    await pause(100);
+  if (pid && (await pids("-x", target.name)).includes(pid)) {
+    console.error(`${target.name} (pid ${pid}) is still running`);
+    process.exitCode = 1;
+  }
 }
 
 const structured = (entry) => entry?.result?.structuredContent ?? {};
@@ -162,6 +204,135 @@ const display = (entry) =>
       line.slice(line.indexOf('= "') + 3, line.lastIndexOf('"')).replace(/\u200e/g, ""),
     )
     .join(" | ");
+
+async function permissionMode(option) {
+  await win
+    .getByRole("button", { name: /默认权限|完全访问权限|Default|Full access/ })
+    .first()
+    .click();
+  await win.getByRole("option", { name: option }).click();
+}
+
+const codexTurn = async (count) =>
+  waitFor(
+    async () => {
+      const turns = (await cli.codexEvents()).filter((entry) => entry.event === "scripted-turn");
+      return turns.length >= count ? turns[count - 1] : undefined;
+    },
+    `scripted Codex turn ${count}`,
+    40_000,
+  );
+
+/**
+ * Answer one Codex approval card per call, in order. Each card must name its
+ * tool (the elicitation itself carries none); each answer is followed by that
+ * call finishing before the next card is looked at.
+ */
+async function answerCards(tools, answers) {
+  const start = (await cli.computerCalls()).length;
+  for (const [index, tool] of tools.entries()) {
+    const answer = Array.isArray(answers) ? answers[index] : answers;
+    await approveOnce(win).first().waitFor({ timeout: 30_000 });
+    assert(
+      await win.getByText(`Computer use: ${tool}`).last().isVisible(),
+      `The approval card does not name ${tool}`,
+    );
+    const button =
+      answer === "deny"
+        ? win.getByRole("button", { name: /^(拒绝|Deny)$/ }).first()
+        : approveOnce(win).first();
+    await button.click();
+    await waitFor(
+      async () => (await cli.computerCalls()).length > start + index,
+      `the ${tool} call to finish after "${answer}"`,
+      40_000,
+    );
+  }
+}
+
+/**
+ * A new untitled TextEdit document of our own: set its text through the real
+ * driver's `set_value` (approved), read it back from the accessibility tree,
+ * then discard the document by ending that TextEdit pid.
+ */
+async function setValueInOwnEditor() {
+  if ((await pids("-x", EDITOR.name)).length)
+    return console.log(`acceptance: set_value skipped — ${EDITOR.name} started meanwhile`);
+  editorPid = await startApp(EDITOR, EDITOR_ARGS);
+  console.log(`acceptance: started ${EDITOR.name} in the background (pid ${editorPid})`);
+  await permissionMode(/默认权限|Default/);
+  const list = { name: "list_windows", arguments: { pid: editorPid } };
+  await cli.scriptCodex([{ computer: [{ ...list, delayMs: 2000 }], text: "real codex: editor" }]);
+  await send(win, "codex, which windows does the editor have?");
+  await answerCards(["list_windows"], "approve");
+  const listed = await codexTurn(4);
+  const windows = (structured(listed.computer[0]).windows ?? []).filter(
+    (entry) => entry.pid === editorPid,
+  );
+  assert(
+    windows.length === 1,
+    `Expected one untitled ${EDITOR.name} window: ${JSON.stringify(windows).slice(0, 1500)}`,
+  );
+  const editorWindow = windows[0].window_id;
+  console.log(`acceptance: ${EDITOR.name} window ${editorWindow} "${windows[0].title ?? ""}"`);
+
+  const readEditor = {
+    name: "get_window_state",
+    arguments: { pid: editorPid, window_id: editorWindow, include_screenshot: false },
+  };
+  const VALUE = "CodeShell set_value 验收 ✓";
+  const has = (entry) => JSON.stringify(structured(entry)).includes(VALUE);
+  await cli.scriptCodex([
+    {
+      computer: [
+        readEditor,
+        {
+          name: "set_value",
+          arguments: { pid: editorPid, value: VALUE },
+          tokenFrom: { call: 0, role: "AXTextArea" },
+        },
+        readEditor,
+      ],
+      text: "real codex: value set",
+    },
+  ]);
+  await send(win, "codex, write the line into the document");
+  await answerCards(["get_window_state", "set_value", "get_window_state"], "approve");
+  const written = await codexTurn(5);
+  await evidence("real-07-set-value.json", written);
+  const [beforeValue, setValue, afterValue] = written.computer;
+  assert(
+    setValue.unresolved === undefined &&
+      setValue.answer === "accept" &&
+      setValue.result &&
+      !setValue.result.isError &&
+      !has(beforeValue) &&
+      has(afterValue),
+    `set_value did not land: ${JSON.stringify({
+      setValue,
+      text: (structured(beforeValue).elements ?? []).filter((e) => e.role === "AXTextArea"),
+    }).slice(0, 2500)}`,
+  );
+  await win.getByText("real codex: value set").first().waitFor({ timeout: 15_000 });
+  console.log(
+    `acceptance: approved set_value landed and read back: ${JSON.stringify(setValue.result.structuredContent ?? setValue.result.content?.[0]?.text ?? "").slice(0, 300)}`,
+  );
+
+  // This driver exposes the window's title-bar buttons without a title or
+  // subrole, so no element can be told to be "close" for certain. The document
+  // is discarded by ending our own TextEdit pid instead, and TextEdit's
+  // autosave / saved-state folders are checked to have gained nothing.
+  await stopApp(EDITOR, editorPid);
+  await confirmGone(EDITOR, editorPid);
+  const leftovers = await editorState();
+  assert(
+    leftovers === editorStateBefore,
+    `TextEdit kept something of the discarded document: ${editorStateBefore} -> ${leftovers}`,
+  );
+  console.log(
+    `acceptance: our ${EDITOR.name} (pid ${editorPid}) ended; no autosave or saved state left`,
+  );
+}
 
 try {
   await preflight();
@@ -214,7 +385,7 @@ try {
   await registerProject(app, win, projectPath);
   await dismissTrust(win);
   await selectModel(win, "claude-code/sonnet");
-  await startTarget();
+  targetPid = await startApp(TARGET);
   console.log(`acceptance: started ${TARGET.name} in the background (pid ${targetPid})`);
 
   // --- Default permission mode: the first real call asks, and runs once approved.
@@ -272,6 +443,12 @@ try {
       unresolved: click.unresolved,
       result: click.result,
       buttons: buttons(before).map((element) => element.label),
+      read: {
+        ...before.result,
+        structuredContent: undefined,
+        keys: Object.keys(structured(before)),
+        tree: (structured(before).tree_markdown ?? "").slice(0, 600),
+      },
     }).slice(0, 2500)}`,
   );
   assert(
@@ -286,7 +463,7 @@ try {
   );
 
   // --- Stop mid-turn: the next real input is refused, and the display proves it.
-  const calls = (await cli.computerCalls()).length;
+  let calls = (await cli.computerCalls()).length;
   await cli.script([
     { computer: [read, press("2")], holdMs: 30_000, afterSignal: [read, press("3"), read] },
   ]);
@@ -318,13 +495,103 @@ try {
     `acceptance: Stop refused the next press (session-cancelled); display stayed ${display(afterRefused)}`,
   );
 
+  // === A Codex session on the same real driver (app-server protocol: an
+  // `mcpToolCall` item, then an approval elicitation naming no tool).
+  await win
+    .locator("aside")
+    .getByRole("button", { name: /acceptance-project.*(新对话|new)/i })
+    .click();
+  await selectModel(win, CODEX_MODEL);
+  await permissionMode(/默认权限|Default/);
+  const codexCard = win.getByText(/Codex (想操控你的电脑|wants to control your computer)/);
+
+  // Default permission: every call asks, the card names the real tool.
+  await cli.scriptCodex([{ computer: [read, press("4"), read], text: "real codex: pressed 4" }]);
+  await send(win, "codex, press 4");
+  await codexCard.first().waitFor({ timeout: 30_000 });
+  await answerCards(["get_window_state", "click", "get_window_state"], "approve");
+  const codexPressed = await codexTurn(1);
+  await evidence("real-04-codex-press-4.json", codexPressed);
+  const [codexBefore, codexClick, codexAfter] = codexPressed.computer;
+  assert(
+    codexPressed.computerTools.includes("click") &&
+      !codexPressed.computerTools.includes("page") &&
+      codexClick.asked &&
+      codexClick.answer === "accept" &&
+      codexClick.result &&
+      !codexClick.result.isError &&
+      display(codexAfter) === display(codexBefore) + "4",
+    `The approved Codex press did not land: ${display(codexBefore)} -> ${display(codexAfter)}; ${JSON.stringify(codexClick).slice(0, 1500)}`,
+  );
+  await win.getByText("real codex: pressed 4").first().waitFor({ timeout: 15_000 });
+  console.log(
+    `acceptance: Codex card named the tool; approved AX press landed: ${display(codexBefore)} -> ${display(codexAfter)}`,
+  );
+
+  // Deny: the decline reaches Codex and the driver is never called.
+  await cli.scriptCodex([{ computer: [read, press("5"), read], text: "real codex: denied" }]);
+  await send(win, "codex, press 5");
+  await codexCard.first().waitFor({ timeout: 30_000 });
+  await answerCards(
+    ["get_window_state", "click", "get_window_state"],
+    ["approve", "deny", "approve"],
+  );
+  const codexDenied = await codexTurn(2);
+  await evidence("real-05-codex-deny.json", codexDenied);
+  const [deniedBefore, deniedClick, deniedAfter] = codexDenied.computer;
+  assert(
+    deniedClick.asked &&
+      deniedClick.answer === "decline" &&
+      deniedClick.result === null &&
+      display(deniedAfter) === display(deniedBefore) &&
+      display(deniedBefore) === display(codexAfter),
+    `A denied Codex press changed something: ${display(deniedBefore)} -> ${display(deniedAfter)}; ${JSON.stringify(deniedClick).slice(0, 800)}`,
+  );
+  await win.getByText("real codex: denied").first().waitFor({ timeout: 15_000 });
+  console.log(`acceptance: Codex deny declined; the display stayed ${display(deniedAfter)}`);
+
+  // Stop mid-turn (full access, so nothing asks): the next press is refused.
+  await permissionMode(/完全访问权限|Full access/);
+  calls = (await cli.computerCalls()).length;
+  await cli.scriptCodex([
+    { computer: [read, press("6")], holdMs: 30_000, afterSignal: [read, press("7"), read] },
+  ]);
+  await send(win, "codex, press 6 and keep going until I stop you");
+  await waitFor(async () => (await cli.computerCalls()).length >= calls + 2, "Codex's held press");
+  await win.getByRole("button", { name: /^(停止|Stop)$/ }).click();
+  const codexStopped = await waitFor(async () => {
+    const made = (await cli.computerCalls()).slice(calls);
+    return made.filter((call) => call.phase === "after-signal").length === 3 ? made : undefined;
+  }, "the stopped Codex turn's last calls");
+  await evidence("real-06-codex-stop.json", codexStopped);
+  const [, sixth, afterSixth, seventh, afterSeventh] = codexStopped;
+  assert(
+    sixth.result && !sixth.result.isError && display(afterSixth) === display(deniedAfter) + "6",
+    `Codex's press before Stop did not land: ${display(deniedAfter)} -> ${display(afterSixth)}`,
+  );
+  assert(
+    seventh.unresolved === undefined &&
+      refusal(seventh) === "session-cancelled" &&
+      display(afterSeventh) === display(afterSixth),
+    `After Codex Stop: ${refusal(seventh) ?? "ran"}; display ${display(afterSixth)} -> ${display(afterSeventh)}`,
+  );
+  await codexTurn(3);
+  console.log(
+    `acceptance: Codex Stop refused the next press (session-cancelled); display stayed ${display(afterSeventh)}`,
+  );
+
+  // === set_value into a native text view of a TextEdit instance started here.
+  if (editorSkipped) console.log(`acceptance: set_value skipped — ${editorSkipped}`);
+  else await setValueInOwnEditor();
+
   assert(errors.length === 0, `Renderer errors: ${errors.map((e) => e.message).join("; ")}`);
   console.log("CodeShell external computer use real-driver acceptance: passed");
 } catch (error) {
   await evidence("real-failure.png").catch(() => undefined);
   throw error;
 } finally {
-  await stopTarget().catch(() => undefined);
+  await stopApp(TARGET, targetPid).catch(() => undefined);
+  await stopApp(EDITOR, editorPid).catch(() => undefined);
   const appPid = await app?.evaluate(() => process.pid).catch(() => undefined);
   await app?.close().catch(() => undefined);
   if (appPid) {
@@ -336,11 +603,7 @@ try {
       process.exitCode = 1;
     }
   }
-  for (let i = 0; i < 50 && targetPid && (await pids("-x", TARGET.name)).includes(targetPid); i++)
-    await pause(100);
-  if (targetPid && (await pids("-x", TARGET.name)).includes(targetPid)) {
-    console.error(`${TARGET.name} (pid ${targetPid}) is still running`);
-    process.exitCode = 1;
-  }
+  await confirmGone(TARGET, targetPid);
+  await confirmGone(EDITOR, editorPid);
   await isolated.cleanup();
 }
