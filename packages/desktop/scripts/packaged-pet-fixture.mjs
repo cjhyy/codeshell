@@ -8,6 +8,7 @@ import { syncBuiltinESMExports } from "node:module";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { build } from "esbuild";
 import { _electron } from "playwright";
+import { mockKeychainBootstrapSource } from "./electron-harness.mjs";
 import { ensureElectronKeychainContext } from "./electron-keychain-preflight.mjs";
 import { watchElectronTestProcess } from "./electron-test-watchdog.mjs";
 import { createPackagedSignalDiagnostics } from "./packaged-signal-diagnostics.mjs";
@@ -31,11 +32,13 @@ export async function preparePackagedPetFixture({
   origin,
   fixtureRoot,
   keychainReferenceFile,
+  mockKeychain = false,
   requireWorkerEvidence = true,
   appImageRuntime,
   onLaunchError,
   launchDiagnostics = false,
 }) {
+  assert.ok(!mockKeychain || (process.platform === "darwin" && !keychainReferenceFile));
   assert.equal(typeof requireWorkerEvidence, "boolean");
   assert.equal(typeof launchDiagnostics, "boolean");
   if (appImageRuntime) {
@@ -123,6 +126,11 @@ export async function preparePackagedPetFixture({
   });
   // Never inherit APPIMAGE/APPDIR. Only the actual ELF runtime may supply them.
   if (appImageRuntime) Object.assign(environment, appImageRuntime.environment);
+  if (mockKeychain) {
+    const path = join(isolated.home, "packaged-mock-keychain.cjs");
+    await writeFile(path, mockKeychainBootstrapSource(isolated.home), { mode: 0o600 });
+    environment.CODESHELL_OFFICIAL_MOCK_KEYCHAIN = "1";
+  }
   const children = [];
   const processMonitors = [];
   const signalDiagnostics = createPackagedSignalDiagnostics();
@@ -168,13 +176,14 @@ export async function preparePackagedPetFixture({
       };
     },
     async launch() {
-      ensureElectronKeychainContext({
-        home: isolated.home,
-        environment: {
-          ...environment,
-          CODESHELL_MACOS_DEFAULT_KEYCHAIN_REFERENCE: keychainReferenceFile,
-        },
-      });
+      if (!mockKeychain)
+        ensureElectronKeychainContext({
+          home: isolated.home,
+          environment: {
+            ...environment,
+            CODESHELL_MACOS_DEFAULT_KEYCHAIN_REFERENCE: keychainReferenceFile,
+          },
+        });
       // No app directory/script argument: this executable must load its
       // own Resources/app.asar Main/preload/renderer. Its actual worker uses
       // this executable in Node mode; the synthetic plugin uses managed Node.
@@ -184,7 +193,11 @@ export async function preparePackagedPetFixture({
       let preloadFailure;
       let startupRecord;
       let windowsTransport;
-      const launchArgs = ["--inspect-brk=0", `--user-data-dir=${isolated.userDataDir}`];
+      const launchArgs = [
+        ...(mockKeychain ? ["--use-mock-keychain"] : []),
+        "--inspect-brk=0",
+        `--user-data-dir=${isolated.userDataDir}`,
+      ];
       const captureMain = (child) => {
         assert.equal(captured, undefined, "Packaged launcher captured more than once");
         captured = child;
