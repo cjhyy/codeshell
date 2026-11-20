@@ -5,7 +5,7 @@
  * attachment staging and session persistence retain their production handlers.
  * Clipboard writes contain only owned fixture bytes/text; no existing clipboard
  * content is read. No React internals, synthetic DOM events or model are used. */
-/* global document, window */
+/* global Blob, document, window */
 import assert from "node:assert/strict";
 import children, { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";

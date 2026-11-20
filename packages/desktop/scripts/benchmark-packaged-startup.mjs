@@ -1,3 +1,4 @@
+/* global document, location, performance, window */
 // From the repository root, on the same Mac for both packaged versions:
 // node scripts/run-isolated-node-smoke.mjs packages/desktop/scripts/benchmark-packaged-startup.mjs <app> <new-report.json>
 import assert from "node:assert/strict";
@@ -30,6 +31,7 @@ async function measure() {
   let fixture;
   let app;
   let failure;
+  let sample;
   try {
     await mkdir(codeShellHome, { recursive: true, mode: 0o700 });
     await seedOfflinePluginBootstrap(codeShellHome);
@@ -86,24 +88,23 @@ async function measure() {
     };
     if (product) assert.deepEqual(identity, product);
     product = identity;
-    return {
+    sample = {
       processToFirstContentfulPaintMs: Math.round(elapsed),
       navigationToFirstContentfulPaintMs: Math.round(paint.afterNavigationMs),
     };
   } catch (error) {
     failure = error;
-    throw error;
-  } finally {
-    try {
-      if (app) await app.close();
-    } finally {
-      if (!fixture || (await fixture.canCleanup())) await root.cleanup();
-      else
-        throw new Error(`Packaged exit was not confirmed; retained ${root.home}`, {
-          cause: failure,
-        });
-    }
   }
+  try {
+    await app?.close();
+  } catch (error) {
+    failure ??= error;
+  }
+  if (fixture && !(await fixture.canCleanup()))
+    throw new Error(`Packaged exit was not confirmed; retained ${root.home}`, { cause: failure });
+  await root.cleanup();
+  if (failure) throw failure;
+  return sample;
 }
 
 for (let index = 0; index < 5; index++) {

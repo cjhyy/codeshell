@@ -85,6 +85,7 @@ if (role === "Main") {
   const { app, safeStorage } = require("electron");
   if (process.env.CODESHELL_OFFICIAL_MOCK_KEYCHAIN === "1") {
     // The cold-start benchmark and its private profile never bind the operator's Keychain.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- Install before the first app instruction.
     require(join(home, "packaged-mock-keychain.cjs"));
   } else {
     app.setName("code-shell");

@@ -1,3 +1,4 @@
+/* global document, getComputedStyle, window */
 import assert from "node:assert/strict";
 
 // Shared by the full theme smoke and the native Wayland session.
