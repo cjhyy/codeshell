@@ -1073,6 +1073,8 @@ export function useDesktopController(
     projects: app.projects,
     selectedProjectId: selectedProject?.id ?? workspaceCwd ?? undefined,
     selectProject: actions.selectProject,
+    newSessionIn: (id) =>
+      id === null ? actions.newSession({ projectId: null }) : actions.selectProject(id),
     selectPanelSession: (id) => associatePanelSession(id),
     newPanelSession: () => associatePanelSession(),
     workspaceName: workspaceCwd?.split(/[\\/]/).filter(Boolean).pop() || "无项目",
@@ -1137,6 +1139,7 @@ export function useDesktopController(
     composerControls: (
       <DesktopChatControls
         app={actions}
+        projectId={selectedProject?.id ?? workspaceCwd ?? null}
         busy={sendingId !== null || uncertainIntents.current.has(activeId)}
       />
     ),

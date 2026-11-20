@@ -870,6 +870,14 @@ export function Workbench({
               hasMore={controller.navigationSessionsHasMore}
               loadMore={controller.loadMoreNavigationSessions}
               renderSession={renderNavigationSession}
+              onNewSession={
+                controller.newSessionIn
+                  ? (target, cwd) => {
+                      const start = controller.newSessionIn;
+                      if (start) openConversation(() => start(target), cwd);
+                    }
+                  : undefined
+              }
             />
           ) : null}
         </div>
