@@ -1,4 +1,5 @@
 import { afterEach, expect, setSystemTime, spyOn, test } from "bun:test";
+import { readFileSync } from "node:fs";
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
 import type { ManagedPanel } from "../../server/src/panels/types.js";
@@ -498,6 +499,14 @@ test("iframe remains opaque and prepare alone does not mark it loaded", async ()
     "/workspace/测试 %20",
   );
   expect(text(view.tree)).toContain("正在打开面板");
+  // The guest is already tappable here. The status must float out of flow, or
+  // clearing it moves the guest between a finger's touchstart and its click.
+  const loadingRule =
+    /\.panel-host-loading \{([^}]*)\}/.exec(
+      readFileSync(new URL("./panel-host.css", import.meta.url), "utf8"),
+    )?.[1] ?? "";
+  expect(loadingRule).toContain("position: absolute;");
+  expect(loadingRule).toContain("pointer-events: none;");
   await view.message({ type: "codeshell-panel:ready", instanceId });
   expect(text(view.tree)).toContain("正在打开面板");
   await view.ready();
