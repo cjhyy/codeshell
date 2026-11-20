@@ -7,7 +7,14 @@ export function releaseUrlForVersion(version: string): string {
 }
 
 export function macSignatureNeedsManualInstall(text: string): boolean {
-  if (/^\s*designated => identifier "com\.cjhyy\.codeshell"\s*$/m.test(text)) {
+  // Stable designated requirements survive across builds, so Squirrel can
+  // validate the update: the bare identifier form (legacy stabilized ad-hoc)
+  // and the self-signed "CodeShell Local Signing" form, which has no Team ID.
+  if (
+    /^\s*designated => identifier "com\.cjhyy\.codeshell"(?: and certificate leaf = H"[0-9a-f]{40}")?\s*$/im.test(
+      text,
+    )
+  ) {
     return false;
   }
 
