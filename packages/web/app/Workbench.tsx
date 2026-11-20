@@ -1075,7 +1075,7 @@ export function Workbench({
             其他会话有待处理审批。
             {otherApprovals.map((a) => (
               <button className="ghost" key={a.id} onClick={() => void openSession(a.sessionId!)}>
-                打开 {a.sessionId!.slice(0, 8)}
+                打开 {a.label ?? a.sessionId!.slice(0, 8)}
               </button>
             ))}
           </div>

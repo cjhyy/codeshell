@@ -5,6 +5,7 @@ import type {
   ApprovalPathScope,
 } from "@cjhyy/code-shell-core";
 import type { RemoteApp, PendingApproval } from "../src/hooks/useRemoteApp.js";
+import type { RoomAttention } from "../src/hooks/roomAttention.js";
 import type { WorkbenchNavigation } from "./workbench-types.js";
 import { autoResolveText, useNow } from "./deadline.js";
 import { relativeTime } from "../src/lib/format.js";
@@ -206,6 +207,18 @@ export function DesktopCliSessionActions({ app }: { app: RemoteApp }) {
   );
 }
 
+/** Open a CLI room that needs attention, in its own CLI and current mode. */
+export function openAttentionRoom(app: RemoteApp, room: RoomAttention): boolean {
+  if (!room.sessionId) return false;
+  app.setCcCliKind(room.kind);
+  app.openCcSession(room.sessionId, room.cwd, room.permissionMode, room.kind);
+  return true;
+}
+
+function attentionLabel(room: RoomAttention): string {
+  return room.approvalIds.length ? `${room.approvalIds.length} 项待审批` : "有新消息";
+}
+
 export function DesktopSidebar({
   app,
   navigation,
@@ -223,6 +236,9 @@ export function DesktopSidebar({
     returnFocus: HTMLButtonElement;
   } | null>(null);
   const cwd = cliCwd === undefined ? (app.activeProjectCwd ?? app.activeCwd ?? null) : cliCwd;
+  const attention = (app.roomAttention ?? []).filter((room) => room.sessionId);
+  const attentionFor = (sessionId: string) =>
+    attention.find((room) => room.kind === app.ccCliKind && room.sessionId === sessionId);
   return (
     <div className="desktop-sidebar-controls">
       <div className="desktop-sidebar-actions">
@@ -303,7 +319,35 @@ export function DesktopSidebar({
         </div>
       ) : null}
       <details className="desktop-cli-sessions">
-        <summary>CLI 会话</summary>
+        <summary>
+          CLI 会话
+          {attention.length ? (
+            <span className="session-unread" aria-label={`${attention.length} 个 CLI 会话需要处理`}>
+              {" "}
+              ●
+            </span>
+          ) : null}
+        </summary>
+        {attention.length ? (
+          <ul className="desktop-cli-attention" aria-label="需要处理的 CLI 会话">
+            {attention.map((room) => (
+              <li key={room.roomId}>
+                <button
+                  className="session"
+                  title={room.cwd}
+                  onClick={() =>
+                    navigation.conversation(() => void openAttentionRoom(app, room), room.cwd)
+                  }
+                >
+                  <span className="session-title">{room.name}</span>
+                  <span className="session-meta">
+                    {room.kind === "codex" ? "Codex" : "Claude Code"} · {attentionLabel(room)}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
         {cwd ? (
           <p className="desktop-cli-path" title={cwd}>
             发现目录：{cwd}
@@ -354,6 +398,11 @@ export function DesktopSidebar({
             >
               <span className="session-title">{session.firstMessage || session.sessionId}</span>
               <span className="session-meta desktop-cli-session-meta">
+                {attentionFor(session.sessionId) ? (
+                  <span className="session-unread">
+                    ● {attentionLabel(attentionFor(session.sessionId)!)}
+                  </span>
+                ) : null}
                 {session.messageCount !== undefined ? (
                   <span>{session.messageCount} 条消息</span>
                 ) : null}
@@ -483,6 +532,15 @@ function ApprovalDeadline({ expiresAt }: { expiresAt?: number }) {
   ) : null;
 }
 
+/** The Host refused the last response; the request is still waiting for one. */
+function ApprovalError({ approval }: { approval: PendingApproval }) {
+  return approval.error ? (
+    <p className="approval-deadline" role="alert">
+      上次回复没有送达：{approval.error}。请重新选择。
+    </p>
+  ) : null;
+}
+
 /** A CLI AskUserQuestion request with several questions accepts exactly one
  *  response, so every answer is collected before it is sent. */
 function DesktopAskQuestions({ approval, app }: { approval: PendingApproval; app: RemoteApp }) {
@@ -513,6 +571,7 @@ function DesktopAskQuestions({ approval, app }: { approval: PendingApproval; app
         Agent 提问<em> · {approval.risk}</em>
       </div>
       <ApprovalDeadline expiresAt={approval.expiresAt} />
+      <ApprovalError approval={approval} />
       {questions.map((question, index) => (
         <div key={`${index}:${question.question}`} className="approval-question">
           <div className="approval-summary">
@@ -633,6 +692,7 @@ function DesktopApprovalCard({ approval, app }: { approval: PendingApproval; app
       )}
       {approval.description ? <div className="approval-desc">{approval.description}</div> : null}
       <div className="approval-summary">{approval.summary}</div>
+      <ApprovalError approval={approval} />
       {isAsk ? (
         <>
           <div className="desktop-ask-options">

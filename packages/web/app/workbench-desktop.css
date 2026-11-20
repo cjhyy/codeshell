@@ -167,6 +167,11 @@
   font-size: 12px;
   color: var(--muted);
 }
+.desktop-cli-attention {
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
 .desktop-cli-sessions .session,
 .desktop-root-picker .session {
   width: 100%;

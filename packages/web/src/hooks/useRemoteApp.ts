@@ -54,6 +54,8 @@ import { HistoryReadBusyError } from "./mobileHistoryReadQueue.js";
 import type { MobileRecoveryProgress } from "../lib/mobileOutputRecovery.js";
 import { MobileHistoryRecoveryRequests } from "./mobileHistoryRecoveryRequests.js";
 import { useRemoteSocket, type ConnStatus } from "./useRemoteSocket.js";
+import { roomsThatStopped, SentRoomApprovals, useRoomAttention } from "./roomAttention.js";
+import type { RoomAttention } from "./roomAttention.js";
 import {
   prepareMobileAttachments,
   type MobileComposerAttachment,
@@ -99,6 +101,8 @@ export interface PendingApproval {
   /** Set for cc-room (external claude CLI) approvals — routes the response via
    *  respondCcApproval(roomId, …) instead of the session approval path. */
   roomId?: string;
+  /** The Host refused the response sent for this card; it can be answered again. */
+  error?: string;
   toolName: string;
   description: string;
   summary: string;
@@ -158,6 +162,8 @@ export interface RemoteApp {
   /** Set while a CLI room is bound, even before its metadata has loaded. */
   activeRoomId?: string;
   approvals: PendingApproval[];
+  /** CLI rooms not being viewed that have unread output or pending approvals. */
+  roomAttention?: RoomAttention[];
   permissionMode: PermissionMode;
   runtimeModels?: MobileRuntimeModel[];
   nativeModelSelection?: boolean;
@@ -248,7 +254,7 @@ export interface RemoteApp {
   /** Selected CC CLI (Claude Code / Codex). Switching re-probes + re-lists. */
   ccCliKind: CcCliKind;
   setCcCliKind: (kind: CcCliKind) => void;
-  openCcSession: (sessionId: string, cwd: string, mode: PermissionMode) => void;
+  openCcSession: (sessionId: string, cwd: string, mode: PermissionMode, kind?: CcCliKind) => void;
   /** Restart the viewed CLI room under another mode (Host may require approval). */
   setCcRoomPermissionMode?: (mode: PermissionMode) => void;
   /** This tab's in-flight CLI open / mode switch, until the Host answers. */
@@ -429,6 +435,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   const activeRoomIdRef = useRef<string | undefined>(undefined);
   activeRoomIdRef.current = activeRoomId;
   const [approvals, setApprovals] = useState<PendingApproval[]>([]);
+  const { attention: roomAttention, observe: observeRoomAttention, viewing } = useRoomAttention();
+  const sentCcApprovalsRef = useRef(new SentRoomApprovals<PendingApproval>());
   const approvalsRef = useRef(approvals);
   approvalsRef.current = approvals;
   const submittingAsyncApprovalsRef = useRef(new Set<string>());
@@ -1211,6 +1219,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       )
         return;
       if (outputClient.observe(event)) return;
+      observeRoomAttention(event, activeRoomIdRef.current);
       switch (event.type) {
         case "auth.ok":
           socketOnlineRef.current = true;
@@ -1694,6 +1703,12 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           clearApproval(event.approvalId, { ...event, requestId: event.approvalId });
           break;
         case "room.list.ok":
+          // The Host list is authoritative: a viewed room it reports stopped
+          // (closed on Desktop, CLI exited, a missed room.closed) runs no turn.
+          if (
+            roomsThatStopped(roomsRef.current, event.rooms).includes(activeRoomIdRef.current ?? "")
+          )
+            dispatchChat({ kind: "raw", raw: { type: "turn_complete", reason: "aborted_tools" } });
           setRooms(event.rooms);
           setLoadingKey("rooms", false);
           break;
@@ -1831,6 +1846,19 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           }
           break;
         case "room.error": {
+          const card =
+            event.approvalRequestId && sentCcApprovalsRef.current.take(event.approvalRequestId);
+          if (card) {
+            // The CLI still waits for this answer: give the card back with the reason.
+            if (card.roomId === activeRoomIdRef.current && event.roomId === card.roomId)
+              setApprovals((prev) =>
+                prev.some((p) => p.requestId === card.requestId)
+                  ? prev
+                  : [...prev, { ...card, error: event.message }],
+              );
+            else setNotice(event.message || t("mobile.notice.roomError"));
+            break;
+          }
           const failed = pendingCcOpenRef.current;
           if (event.requestId && failed && event.requestId === failed.requestId) {
             // The Host refused this tab's CLI open / mode switch (approval
@@ -2130,6 +2158,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           break;
         }
         case "ccRoom.approvalResolved":
+          sentCcApprovalsRef.current.take(event.requestId);
           clearApproval(event.requestId);
           break;
         default:
@@ -2143,6 +2172,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       clearApproval,
       clearSessionUnread,
       clearSessionCatalog,
+      observeRoomAttention,
       rememberRoomMessages,
       requestRoomCatchup,
       requestSessionList,
@@ -2896,7 +2926,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   );
 
   const openCcSession = useCallback(
-    (sessionId: string, cwd: string, mode: PermissionMode) => {
+    (sessionId: string, cwd: string, mode: PermissionMode, kind = ccCliKindRef.current) => {
       if (!socketOnlineRef.current) {
         setNotice(t("mobile.connection.offlineTitle"));
         return;
@@ -2914,7 +2944,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       roomCatchupRef.current = undefined;
       // Pin the CLI this session belongs to so its on-disk backlog is read with
       // the right reader even if the user switches the pane's CLI afterward.
-      ccHistoryKindRef.current = ccCliKindRef.current;
+      ccHistoryKindRef.current = kind;
       const requestId = `cc-open-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
       pendingCcOpenRef.current = {
         requestId,
@@ -2930,7 +2960,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         sessionId,
         cwd,
         mode,
-        kind: ccCliKindRef.current,
+        kind,
         requestId,
       });
       if (!sent && pendingCcOpenRef.current?.requestId === requestId) {
@@ -2997,6 +3027,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         setNotice(t("mobile.notice.approvalSendFailed"));
         return;
       }
+      sentCcApprovalsRef.current.remember(a);
       approvalsRef.current = approvalsRef.current.filter((p) => p.requestId !== requestId);
       setApprovals((prev) => prev.filter((p) => p.requestId !== requestId));
     },
@@ -3253,6 +3284,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   // snapshot — used for the CC session's title/subtitle and the cc-history cwd.
   // There is no rendered room list; this lookup is internal.
   const activeRoom = useMemo(() => rooms.find((r) => r.id === activeRoomId), [rooms, activeRoomId]);
+  useEffect(() => viewing(activeRoomId), [viewing, activeRoomId]);
   const activeCwd = activeRoom?.cwd || activeSessionCwd;
   const refreshRuntimeModels = useCallback(() => {
     if (socket.status !== "online") return;
@@ -3389,6 +3421,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     activeRoom,
     activeRoomId,
     approvals,
+    roomAttention,
     permissionMode,
     runtimeModels,
     nativeModelSelection,
