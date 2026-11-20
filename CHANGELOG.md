@@ -8,6 +8,13 @@ breaking.
 
 ## [Unreleased]
 
+## [0.11.0-rc.9] - 2026-11-20
+
+Computer use for Codex sessions and `set_value` were accepted against the real,
+already-authorized driver (background accessibility actions in test-launched
+apps, read back; deny and Stop refuse). A web smoke that had never run on CI is
+fixed and now runs there.
+
 ### Fixed
 
 - Computer use: with two CodeShell apps running at once (for example a
