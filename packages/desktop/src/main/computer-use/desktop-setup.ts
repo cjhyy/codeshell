@@ -24,7 +24,11 @@ import {
   type MimiCompanionHost,
   type MimiCompanionPresenceHooks,
 } from "./mimi-companion-host.js";
-import { createComputerUseControl, type ComputerUseControl } from "./computer-use-control.js";
+import {
+  createComputerUseControl,
+  stopShortcutBinding,
+  type ComputerUseControl,
+} from "./computer-use-control.js";
 import type { MimiCompanionRect } from "../../shared/mimi-companion.js";
 
 let companion: MimiCompanionHost | undefined;
@@ -61,7 +65,7 @@ export async function closeComputerUse(): Promise<void> {
 function inputControl(current: ComputerUseControl | undefined) {
   return current
     ? {
-        status: () => current.gate.status(),
+        status: () => current.inputStatus(),
         stop: () => current.stopInput("settings"),
         resume: () => current.resumeInput("settings"),
       }
@@ -103,10 +107,14 @@ export async function initializeDesktopComputerUse(options: {
       executablePath: process.execPath,
       log: options.log,
       idleSeconds: () => powerMonitor.getSystemIdleTime(),
-      shortcut: {
-        register: (accelerator, callback) => globalShortcut.register(accelerator, callback),
-        unregister: (accelerator) => globalShortcut.unregister(accelerator),
-      },
+      shortcut: stopShortcutBinding({
+        native: {
+          register: (accelerator, callback) => globalShortcut.register(accelerator, callback),
+          unregister: (accelerator) => globalShortcut.unregister(accelerator),
+        },
+        env: options.env,
+        isPackaged: options.app.isPackaged,
+      }),
       notifyStopped: () => {
         if (!Notification.isSupported()) return;
         new Notification({

@@ -38,12 +38,39 @@ Codex 会话同样验证过（同一个验收脚本）。替身 `codex` 走 app-
 - Codex 的过程行原先显示 item 类型「mcpToolCall」，已改为显示工具名（`mcp__<server>__<tool>`）。
 - 顺带看到（按设计，未改）：离开 Mimi 页面后前台输入还会被 `chat-open` 挡约 10 秒（`CHAT_RELEASE_MS`，按设计）。
 
-仍需有人在机器前验证（替身替不了的部分）：
+**进展（2026-11-20，真实驱动、权限身份、⌘⇧Esc）**：上一节留下的三项各往前走了一步。
 
-- ⬜ 真实驱动下的屏幕动作：光标/舞台出现、点击落在目标上、`set_value` 写进去、截图时角色隐藏。
-- ⬜ 真实 helper 的权限身份：已授权给 `CodeShell Computer Use.app` 时外部会话不再弹系统框；未授权时的提示。
+真实驱动（Claude Code 会话，rc.7 源码构建的隔离 App + 已安装版本里那份已授权的 helper）。新脚本 `bun run test:e2e:external-computer-use-real-driver`（`packages/desktop`，不在任何测试链里；必须同时设 `CODESHELL_E2E_REAL_COMPUTER_USE=act-on-my-desktop` 和 `CODESHELL_E2E_REAL_COMPUTER_USE_BUNDLE=<已授权的 CodeShell Computer Use.app>`，否则直接退出）。启动任何东西之前先做只读检查：签名不是 ad-hoc、驱动版本等于锁定的 0.34.1、helper 自己的 `launch status`（只调 `AXIsProcessTrusted` / `CGPreflightScreenCaptureAccess`，不会弹框）返回已授权、计算器当前没在运行。能确定不弹框的依据：helper 源码自 10-29 起未改；已安装 helper 的 designated requirement 是「bundle id + 证书」，授权就绑在它上面；驱动在 embedded 模式下的约定是继承宿主授权、不弹框不重启；代理起的 `cua-driver mcp --embedded --socket` 只是转发到 daemon 的 socket。第二个 helper 实例与正在运行的 App 那个互不影响：每次都是新实例（`createsNewApplicationInstance`、不激活、accessory），socket 路径按宿主进程号加随机数。
+
+- ✅ 审批卡 → 仅本次批准 → 真实驱动执行 `list_windows`，返回脚本自己在后台起的计算器窗口。
+- ✅ 完全访问：读无障碍树（`include_screenshot:false`）→ 按元素对「1」按钮做 AXPress（后台、不动真实指针、不抢焦点）→ 再读，显示从上次的算式变成 `1`。驱动返回 `route: accessibility`、`delivery.mode: background`；驱动自己的 agent cursor 有了位置。
+- ✅ 运行中按停止：停止前按的「2」生效（`12`），停止后的「3」被拒 `session-cancelled`，再读显示仍是 `12`。
+- ✅ 用户在用键鼠的状态用的是机器真实的空闲时钟，没有伪造；后台无障碍输入照常放行。
+- ✅ 结束后计算器、helper、驱动都退出，正在运行的 App 自己的 helper/驱动进程没有变化。
+- 没做的：截图（真实截屏可能触发 macOS 自己的定期录屏确认，排除不了就不做，所以「截图时角色隐藏」仍未验）；`launch_app`、`set_value`、前台输入、像素点击（前三项不在「只动自己起的那个实例、不抢焦点」的安全范围内可证明）；App 这一侧的舞台/角色画面（新 HOME 里 Mimi 默认不显示，只看到了驱动的光标状态）；Codex 会话的真实驱动（走的是同一个代理，未单独跑）。
+
+权限身份（不需要启动任何东西）。下载已发布的 `v0.11.0-rc.7` arm64 dmg（sha512 与 `latest-mac.yml` 一致），只读挂载到临时目录，比完卸载并删除：
+
+- ✅ 外层 App、`CodeShell Computer Use.app`、`cua-driver` 三者的 identifier、Authority（`CodeShell Local Signing`）、designated requirement（`identifier "…" and certificate leaf = H"30a64d20…"`）、entitlements 与已安装的 rc.3 逐项相同；只有 cdhash、版本号不同。
+- ✅ 用已安装 helper 的 requirement 去验 rc.7 的 helper：`codesign --verify -R=… ` 通过（外层 App 同样通过）。开发构建的 ad-hoc helper 用同一条 requirement 验不过，这就是上一节不启动它的原因。
+- 结论：macOS 的授权按 designated requirement 认，rc.3 覆盖安装 rc.7 后「辅助功能 / 屏幕录制」授权保留，不会重新弹框。这是由签名推出来的；没有读系统的授权库（需要完全磁盘访问权限），也没有真的覆盖安装。
+- ⬜ 未授权时的提示文案和流程仍未验（要在一台没授权过的机器上做）。
+
+⌘⇧Esc（`computer-use-control.ts`、`desktop-setup.ts`）：
+
+- 注册方式：主进程用 Electron `globalShortcut`，只在至少有一个电脑操控代理连着的时候注册，最后一个断开就注销。回调是 `stopInput("shortcut")`：对**所有**会话拦下一切输入（`user-stop`），不取消运行，直到用户点「继续」；这和停止按钮（只取消那一个会话的本轮，下一轮自动恢复）不是一回事，是有意的。
+- 实测（两个 Electron 进程注册同一个冷门组合键，不按键）：macOS 上第二个进程的 `register` 也返回 `true`，`false` 只出现在同一进程重复注册或系统拒绝时。也就是说**两个 CodeShell 同时开着时，谁收到按键从返回值看不出来**，属已知限制，未修。
+- 所以验收不再碰真实按键：未打包构建读 `CODESHELL_E2E_STOP_SHORTCUT`（打包后忽略）。`virtual` 不向系统注册，把回调挂在 `globalThis.__codeshellE2eStopShortcut`；`unavailable` 让注册失败。替身验收和真实驱动验收都用 `virtual`，不会和已安装的 App 抢这个键。
+- ✅ 真实 App 里（替身驱动，`test:e2e:external-computer-use-acceptance`）：代理连上后才注册、断开后注销；调用回调后本轮下一个输入被拒 `user-stop`、只读放行、运行正常结束；状态里 `stopped`，日志 `computer_input_stopped {source:"shortcut"}`，「已停止」通知触发一次（验收里静音、只计数）；下一轮仍被拒，点继续后恢复。
+- 修了一个缺陷：注册失败原来只写一行日志，设置页照旧写「随时可按 ⌘⇧Esc 停止」。现在输入状态带 `shortcutUnavailable`，设置页「电脑输入控制」改为提示快捷键不可用、请用停止按钮；下一次连接变化会重试，成功后提示消失。单测加验收覆盖。
+- ⬜ 真实按键没按过（不合成按键）：系统把 ⌘⇧Esc 送到回调这一段靠的是 Electron，本仓库没有证据。
+
+仍需有人在机器前验证：
+
+- ⬜ 真实驱动下的截图（角色隐藏）、`set_value`、前台输入、App 侧的光标/舞台画面。
+- ⬜ 未授权机器上的权限提示；真实覆盖安装后授权确实还在。
 - ⬜ 真实 `codex` CLI 自己拉起代理、发出征询（替身是按协议写的，不是真实二进制）。
-- ⬜ 全局急停快捷键 ⌘⇧Esc 对外部会话的效果、应用档案备注（需要真实窗口状态）。
+- ⬜ 真的按一次 ⌘⇧Esc；应用档案备注（需要真实窗口状态）。
 
 **现象**：外部 CC/Codex 会话只能用 `browser_*`，没有任何电脑操控工具；用户在别的地方打开的页面、桌面应用都动不了。
 
@@ -279,4 +306,4 @@ Codex 会话同样验证过（同一个验收脚本）。替身 `codex` 走 app-
 - 每次 run 都记录两条 `session_started`（同一 runId），疑似重复发射。（未处理）
 - `state.json` 的 `turnCount` 比实际 run 数少一（唤醒轮未计入？）。（2026-11-20 核查：未复现。`turnCount` 统计的是写下了结束边界的 provider 轮次，run 数在 `turnSeq`；后台唤醒轮会计入，已加测试固定。只有 run 开始后没有写下结束边界时才会少：输出落盘失败，或进程在 run 中途退出。）
 - ToolSearch `select:` 在转录里结果为空字符串，确认是否只是记录问题。（未处理）
-- 网页端：有新输出跟随滚动时展开过程列表，列表还在移动，手指点下去可能落在别的工具卡片上（CI 上 `test-history-details-browser.mjs` 因此偶发失败，测试已改为等卡片静止后再点）。真实用户是否会遇到未验证。
+- 网页端：有新输出跟随滚动时展开过程列表，列表还在移动，手指点下去可能落在别的工具卡片上（CI 上 `test-history-details-browser.mjs` 因此偶发失败，测试已改为等卡片静止后再点）。真实用户是否会遇到未验证。（2026-11-20 已确认并修复：真实用户会遇到。Chromium 在 touchend 之后才为点击做命中测试，手指按住期间列表若移动，点击就落到别的行。复现了两种来源：按住时有新输出追加（跟随滚动和浏览器自身的滚动锚定都会把尾部钉住，上方内容上移约 27px，展开标题没点中）；以及 CPU 降速 6 倍时，点按前的滚动入视让审批提示条出现，列表变矮触发跟随吸底，卡片在 touchstart 与 click 之间上移 100px，打开了 tool-2。修复：触摸按下期间暂停跟随吸底并把按住的元素钉在原位，点击送达后再补吸底。smoke 恢复为展开后直接单次坐标点按（6 倍降速），并新增"按住标题期间追加输出"检查，修复前必挂。）

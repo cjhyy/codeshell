@@ -190,27 +190,30 @@ try {
       return node.scrollHeight - node.clientHeight - node.scrollTop <= 2;
     });
 
-    await group.locator(".message-process-heading").tap();
+    // A real finger rests on the activity heading for a moment. New output that
+    // arrives during that press must not slide another row under it.
+    const cdp = await context.newCDPSession(page);
+    const heading = await group.locator(".message-process-heading").boundingBox();
+    const finger = [{ x: heading.x + heading.width / 2, y: heading.y + heading.height / 2, id: 1 }];
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: finger });
+    await page.evaluate(() => window.appendLive());
+    await page.getByText("Fresh output 2", { exact: true }).waitFor();
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await group
+      .getByRole("button", { name: "处理完成，收起全部过程" })
+      .waitFor({ timeout: 2000 })
+      .catch(() => assert.fail("output during the press moved another row under the finger"));
     await group.locator(".message-tool-card").first().waitFor();
     assert.equal(await group.locator(".message-tool-card").count(), 4);
     assert.deepEqual(reads, [], "expanding the activity list fetches no bodies");
     const tool = (index) => group.locator(".message-tool-card").nth(index);
-    // The list is still shifting right after it expands (the view follows new
-    // output), and on slow runners a coordinate tap landed on another card.
-    // Wait for the card to stop moving, then toggle it through the element.
-    await page.waitForFunction(
-      (node) => {
-        const top = node.getBoundingClientRect().top;
-        const settled = node.dataset.settledTop === String(top);
-        node.dataset.settledTop = String(top);
-        return settled;
-      },
-      await tool(0).elementHandle(),
-      { polling: 150 },
-    );
-    await tool(0)
-      .locator("summary")
-      .evaluate((node) => node.click());
+    // The view keeps following after the list expands. On a slow device, layout
+    // that settles while the finger is down (here the approval bar reacting to
+    // the tap's scroll-into-view, then a follow snap) used to move the list
+    // between touchstart and click and open a different card.
+    await cdp.send("Emulation.setCPUThrottlingRate", { rate: 6 });
+    await tool(0).locator("summary").tap();
+    await cdp.send("Emulation.setCPUThrottlingRate", { rate: 1 });
     await tool(0).getByText("RESULT_first/tool-0", { exact: false }).waitFor();
     assert.deepEqual(reads, ["first/tool-0"]);
     assert.equal(await tool(0).getByRole("button", { name: "复制结果" }).count(), 1);

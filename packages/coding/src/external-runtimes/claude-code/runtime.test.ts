@@ -537,6 +537,27 @@ setInterval(() => {}, 1_000);
     expect(alive(pid)).toBe(false);
   });
 
+  test("a sticky release survives a timer that fires before the clock says the grace has passed", async () => {
+    // Timers and Date.now() disagree by a millisecond or more (more on a loaded
+    // runner). Model a clock slower than the timers: it advances 1 ms per read.
+    // The release must be checked again, not dropped with the process lingering.
+    const fake = fakeClaude(`${SEND}
+send({ type: "system", subtype: "init", session_id: "early-timer" });
+delta("reply");
+send({ type: "result", subtype: "success", is_error: false });
+setInterval(() => {}, 1_000);
+`);
+    let clock = 0;
+    const events: StreamEvent[] = [];
+    const claude = runtime(fake.command, { idleGraceMs: 10, now: () => clock++ });
+    const turn = await claude.send({ text: "start" }, (event) => events.push(event));
+    const pid = await waitForPid(fake.pidFile);
+    expect(await claude.releaseIdle(true)).toBe(false);
+    await turn.done;
+    expect(alive(pid)).toBe(false);
+    expect(events.at(-1)).toEqual({ type: "turn_complete", reason: "completed" });
+  }, 10_000);
+
   test("silence after a result is not idleness until the grace period has passed", async () => {
     const fake = fakeClaude(`${SEND}
 send({ type: "system", subtype: "init", session_id: "grace" });
