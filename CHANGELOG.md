@@ -8,6 +8,14 @@ breaking.
 
 ## [Unreleased]
 
+### Fixed
+
+- Web: a tap in the message list could open a different row when new output
+  or a layout change (such as the approval bar appearing) moved the list while
+  the finger was down, because the view kept following the latest output. A
+  touch press now holds the pressed row in place and the view catches up with
+  the latest output once the tap's click has been delivered.
+
 ## [0.11.0-rc.7] - 2026-11-20
 
 Small follow-up to rc.6. Computer use for Codex and Claude Code sessions was
