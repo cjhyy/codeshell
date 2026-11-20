@@ -59,7 +59,6 @@ if (phase === "predist") {
     afterSign: null,
     publish: null,
     forceCodeSigning: false,
-    npmRebuild: false,
     nodeGypRebuild: false,
     electronDist: join(desktopRoot, "node_modules/electron/dist"),
     directories: { ...pkg.build.directories, output: "dist/cc-review-unsigned" },

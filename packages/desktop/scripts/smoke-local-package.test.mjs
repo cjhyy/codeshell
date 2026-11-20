@@ -30,6 +30,7 @@ test("local acceptance neutralizes release authority while retaining production 
   for (const key of ["extraResources", "asarUnpack", "files"])
     assert.deepEqual(config[key], original[key]);
   for (const [actual, source] of [
+    [config.beforeBuild, original.beforeBuild],
     [config.afterPack, original.afterPack],
     [config.afterSign, original.afterSign],
     [config.mac.sign, original.mac.sign],
