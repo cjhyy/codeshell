@@ -39,6 +39,13 @@ let current: ComputerUseSettingsStatus = {
   },
 };
 let reads = 0;
+if (scenario === "shortcut-missing")
+  current.input = {
+    stopped: false,
+    foregroundHeld: false,
+    userActive: false,
+    shortcutUnavailable: true,
+  };
 if (scenario === "companion") {
   current.enabled = false;
   current.companion = { enabled: false, size: 200, available: true, appearance: "mimi-sprite" };
@@ -304,6 +311,14 @@ try {
     assert.deepEqual(writes, [], "Companion never enables computer use");
     assert.deepEqual(requests, [], "Companion never requests OS permissions");
     assert.equal(restarts, 0);
+  } else if (scenario === "shortcut-missing") {
+    // A refused ⌘⇧Esc registration replaces the "press it any time" promise.
+    assert.ok(textOf(container).includes("⌘⇧Esc 快捷键注册失败"));
+    assert.ok(!textOf(container).includes("随时可按 ⌘⇧Esc 停止"));
+    current = { ...current, input: { ...current.input!, shortcutUnavailable: false } };
+    await update(() => window.dispatchEvent(new Event("focus")));
+    assert.ok(textOf(container).includes("随时可按 ⌘⇧Esc 停止"));
+    assert.ok(!textOf(container).includes("快捷键注册失败"));
   } else if (scenario === "scope") {
     // General settings must never mount the separate computer-use module.
     mock.module("./PermissionSection", () => ({ PermissionSection: () => null }));

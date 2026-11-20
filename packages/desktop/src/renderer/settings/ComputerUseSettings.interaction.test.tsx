@@ -20,6 +20,7 @@ for (const scenario of [
   "english",
   "scope",
   "companion",
+  "shortcut-missing",
 ]) {
   test(`computer use settings: ${scenario}`, () => {
     const result = Bun.spawnSync({

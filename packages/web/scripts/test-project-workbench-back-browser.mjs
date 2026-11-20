@@ -18,6 +18,11 @@ let releaseConfiguration;
 const configurationGate = new Promise((resolve) => {
   releaseConfiguration = resolve;
 });
+// The guest is tappable before its bridge handshake finishes; hold that window open.
+let releaseReady;
+const readyGate = new Promise((resolve) => {
+  releaseReady = resolve;
+});
 let confirmationTrace;
 let phase = "start";
 const sourceArg = process.argv.indexOf("--source-repo");
@@ -208,6 +213,13 @@ await context.route("**/*", async (route) => {
       limitations: [],
     });
   }
+  if (pathname.startsWith("/api/v1/panel-assets/") && pathname.endsWith("/ready.js")) {
+    await readyGate;
+    return reply(
+      "parent.postMessage({type:'codeshell-panel:ready',instanceId:id},'*');",
+      "text/javascript",
+    );
+  }
   if (pathname.startsWith("/api/v1/panel-assets/")) {
     const id = pathname.split("/")[4];
     return reply(
@@ -216,8 +228,7 @@ await context.route("**/*", async (route) => {
    for(const type of ['touchstart','touchend','click'])document.addEventListener(type,event=>parent.postMessage({type:'codeshell-panel:fixture-input',instanceId:id,input:{type,trusted:event.isTrusted,target:event.target.id}},'*'),true);
    document.querySelector('#preview').onclick=()=>call('resources.open',{assetId:${JSON.stringify(assetId)}});
    document.querySelector('#confirm').onclick=()=>call('external.open',{url:'https://owned-external.invalid/'});
-   parent.postMessage({type:'codeshell-panel:ready',instanceId:id},'*');
-   </script>`,
+   </script><script src="ready.js"></script>`,
       "text/html",
     );
   }
@@ -295,6 +306,18 @@ try {
     await nav("面板");
     phase = "open-B-panel";
     await page.locator(".panels-card").getByRole("button", { name: "打开面板", exact: true }).tap();
+    phase = "opening-status-layout";
+    await page.frameLocator("iframe").locator("#confirm").waitFor();
+    assert.equal(await page.locator(".panel-host-loading").count(), 1);
+    const openingFrame = await page.locator("iframe").boundingBox();
+    releaseReady();
+    await page.locator(".panel-host-loading").waitFor({ state: "detached" });
+    assert.deepEqual(
+      await page.locator("iframe").boundingBox(),
+      openingFrame,
+      "Clearing the opening status must not move a guest that is already tappable",
+    );
+    reports.push("opening status clears without moving the already tappable guest");
     phase = "tap-confirm";
     await page.frameLocator("iframe").locator("#confirm").tap();
     phase = "wait-confirmation";
@@ -488,6 +511,7 @@ try {
   throw error;
 } finally {
   releaseConfiguration();
+  releaseReady();
   await context.close();
   await browser.close();
 }

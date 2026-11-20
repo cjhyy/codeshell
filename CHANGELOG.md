@@ -8,6 +8,50 @@ breaking.
 
 ## [Unreleased]
 
+## [0.11.0-rc.9] - 2026-11-20
+
+Computer use for Codex sessions and `set_value` were accepted against the real,
+already-authorized driver (background accessibility actions in test-launched
+apps, read back; deny and Stop refuse). A web smoke that had never run on CI is
+fixed and now runs there.
+
+### Fixed
+
+- Computer use: with two CodeShell apps running at once (for example a
+  development build next to the installed one), only one can own the ⌘⇧Esc
+  stop shortcut. macOS lets both register it
+  but delivers the key to only one, so the other used to promise a shortcut
+  that might never reach it. The second one now reports the shortcut as
+  unavailable in Settings → Computer use and points to the Stop button; it
+  takes the shortcut over once the first stops using computer use, quits or
+  crashes. Versions before this one do not take part.
+
+## [0.11.0-rc.8] - 2026-11-20
+
+Fixes found while root-causing intermittent CI failures, each reproduced on
+demand and shown fixed. Computer use for Claude Code sessions was also accepted
+against the real, already-authorized driver (an approved accessibility press
+landing in a background app and read back; Stop refusing the next press).
+
+### Fixed
+
+- Web: while a panel is opening, its "opening" status no longer pushes the panel
+  down and then lets it jump back when the status clears, so a tap made during
+  that moment lands on the control under the finger.
+- Computer use: when the ⌘⇧Esc stop shortcut cannot be registered while
+  computer use is running, Settings → Computer use now says so and points to
+  the Stop button instead of still promising the shortcut. Before, the failure
+  was only written to the log.
+- A message sent while a Claude Code turn was still working could stay queued
+  until the turn's background shell finished, however long that took: the
+  request to end the idle turn was sometimes dropped when its timer fired a
+  moment early. The idle check now retries until it ends the turn.
+- Web: a tap in the message list could open a different row when new output
+  or a layout change (such as the approval bar appearing) moved the list while
+  the finger was down, because the view kept following the latest output. A
+  touch press now holds the pressed row in place and the view catches up with
+  the latest output once the tap's click has been delivered.
+
 ## [0.11.0-rc.7] - 2026-11-20
 
 Small follow-up to rc.6. Computer use for Codex and Claude Code sessions was

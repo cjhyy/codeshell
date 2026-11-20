@@ -136,6 +136,8 @@ export const COMPUTER_USE_BUNDLE_ID = "com.cjhyy.codeshell.computer-use";
  * acceptance run can exercise the proxy, gate and app wiring against a
  * stand-in that never touches the desktop or asks macOS for a permission.
  * A packaged app ignores it. When set, the real helper is never a fallback.
+ * The separately opted-in real-driver acceptance points it at an installed,
+ * already-authorised helper instead (`e2e-external-computer-use-real-driver.mjs`).
  */
 export const COMPUTER_USE_BUNDLE_OVERRIDE_ENV = "CODESHELL_E2E_COMPUTER_USE_BUNDLE";
 

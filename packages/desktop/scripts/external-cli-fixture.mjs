@@ -13,14 +13,40 @@
  * `bypassPermissions` it calls directly, otherwise it denies. `afterSignal`
  * calls are made when the host's SIGTERM arrives (a call already under way
  * when the user presses Stop); `holdMs` keeps the turn open meanwhile.
+ *
+ * A computer call may take its `element_token` from an earlier result of the
+ * same phase (`tokenFrom: { call, role, label }`, matched on the structured
+ * `elements`). Unless exactly one element matches, the call is not made.
  */
 import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+
+// Shared by both stand-ins. `tokenFrom.label` may be a list of accepted labels
+// (localized buttons); `subrole` narrows further. Omitted fields match anything.
+const resolveTokenSource = `
+const resolveToken = (call, results) => {
+  const want = call.tokenFrom;
+  const labels = want.label === undefined ? undefined : [].concat(want.label);
+  const elements = results[want.call]?.structuredContent?.elements ?? [];
+  const matches = elements.filter(
+    (element) =>
+      (want.role === undefined || element.role === want.role) &&
+      (want.subrole === undefined || element.subrole === want.subrole) &&
+      (labels === undefined || labels.includes(element.label)),
+  );
+  if (matches.length !== 1) return { unresolved: matches.length };
+  return {
+    call: { ...call, arguments: { ...call.arguments, element_token: matches[0].element_token } },
+    target: { role: matches[0].role, label: matches[0].label },
+  };
+};
+`;
 
 const claudeSource = ({ queueFile, logFile, computerLogFile }) => `#!${process.execPath}
 import { spawn } from "node:child_process";
 import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
 import { createInterface } from "node:readline";
+${resolveTokenSource}
 const args = process.argv.slice(2);
 if (args.includes("--version")) {
   console.log("0.0.0 (Claude Code acceptance fixture)");
@@ -94,9 +120,24 @@ process.stdin.on("end", async () => {
       return { request, close: () => child.stdin.end() };
     };
     const promptTool = option("--permission-prompt-tool");
+    const results = { turn: [], "after-signal": [] };
     const runComputer = async (call, phase) => {
       if (call.delayMs) await new Promise((done) => setTimeout(done, call.delayMs));
       const entry = { pid: process.pid, phase, name: call.name, asked: false, allowed: false, result: null };
+      const done = () => {
+        results[phase].push(entry.result);
+        appendFileSync(${JSON.stringify(computerLogFile)}, JSON.stringify(entry) + "\\n");
+        return entry;
+      };
+      if (call.tokenFrom) {
+        const resolved = resolveToken(call, results[phase]);
+        if (resolved.unresolved !== undefined) {
+          entry.unresolved = resolved.unresolved;
+          return done();
+        }
+        call = resolved.call;
+        entry.target = resolved.target;
+      }
       if (record.permissionMode === "bypassPermissions") entry.allowed = true;
       else if (promptTool) {
         entry.asked = true;
@@ -112,8 +153,7 @@ process.stdin.on("end", async () => {
       }
       if (entry.allowed)
         entry.result = (await computerServer.request("tools/call", { name: call.name, arguments: call.arguments ?? {} })).result ?? null;
-      appendFileSync(${JSON.stringify(computerLogFile)}, JSON.stringify(entry) + "\\n");
-      return entry;
+      return done();
     };
     send({ type: "system", subtype: "init", session_id: "acceptance-fixture-session", model: "fixture" });
     if (step.delayMs) await new Promise((done) => setTimeout(done, step.delayMs));
@@ -165,6 +205,7 @@ const codexSource = ({ logFile, queueFile, computerLogFile }) => `#!${process.ex
 import { spawn } from "node:child_process";
 import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
 import { createInterface } from "node:readline";
+${resolveTokenSource}
 const args = process.argv.slice(2);
 if (args.includes("--version")) {
   console.log("codex-cli 0.0.0 (acceptance fixture)");
@@ -251,11 +292,23 @@ const scriptedTurn = async (step, message) => {
   });
   send({ id: message.id, result: { turn: scripted } });
   send({ method: "turn/started", params: { threadId, turn: scripted } });
+  const results = { turn: [], "after-signal": [] };
   const run = async (call, phase) => {
+    let target;
+    if (call.tokenFrom) {
+      const resolved = resolveToken(call, results[phase]);
+      if (resolved.unresolved !== undefined) {
+        const entry = { pid: process.pid, runtime: "codex", phase, name: call.name, asked: false, allowed: false, result: null, unresolved: resolved.unresolved };
+        results[phase].push(null);
+        appendFileSync(${JSON.stringify(computerLogFile)}, JSON.stringify(entry) + "\\n");
+        return record.computer.push(entry);
+      }
+      ({ call, target } = resolved);
+    }
     const input = call.arguments ?? {};
     const item = { type: "mcpToolCall", id: "acceptance-call-" + ++items, server: SERVER, tool: call.name, arguments: input, status: "inProgress" };
     send({ method: "item/started", params: { threadId, turnId: scripted.id, item } });
-    const entry = { pid: process.pid, runtime: "codex", phase, name: call.name, asked: false, allowed: thread.approvalPolicy === "never", result: null };
+    const entry = { pid: process.pid, runtime: "codex", phase, name: call.name, asked: false, allowed: thread.approvalPolicy === "never", result: null, ...(target ? { target } : {}) };
     if (!entry.allowed) {
       entry.asked = true;
       const answer = await ask("mcpServer/elicitation/request", {
@@ -271,6 +324,7 @@ const scriptedTurn = async (step, message) => {
       entry.allowed = entry.answer === "accept";
     }
     if (entry.allowed) entry.result = (await computerServer.request("tools/call", { name: call.name, arguments: input })).result ?? null;
+    results[phase].push(entry.result);
     send({ method: "item/completed", params: { threadId, turnId: scripted.id, item: { ...item, status: entry.allowed ? "completed" : "failed" } } });
     appendFileSync(${JSON.stringify(computerLogFile)}, JSON.stringify(entry) + "\\n");
     record.computer.push(entry);

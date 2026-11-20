@@ -92,15 +92,20 @@ try {
       Math.abs(after - before) <= 2,
       `older history moved the reading anchor: ${before} -> ${after}`,
     );
+    // The synthetic history ends with an assistant reply. Consecutive assistant
+    // items in one turn share a single final-answer row (processActivityProjection),
+    // so a live reply must start a new turn to add rows: one user + one answer.
     await page.evaluate(() =>
       window.patchFixture({
         items: [
           ...window.fixtureMessages(2000),
+          { kind: "user", id: "live-input", text: "Live input", done: true },
           { kind: "assistant", id: "live", text: "New live output", done: false },
         ],
       }),
     );
-    await page.waitForFunction(() => document.querySelectorAll(".msg").length === 161);
+    await page.waitForFunction(() => document.querySelectorAll(".msg").length === 162);
+    assert.match(await page.locator(".msg").last().textContent(), /^New live output/);
     assert.equal(
       await page.locator(".msg").nth(80).textContent(),
       firstText,
@@ -109,7 +114,7 @@ try {
     const beforeReconnect = await anchor.evaluate((node) => node.getBoundingClientRect().top);
     await page.evaluate(() => window.patchFixture({ connection: "connecting", loading: true }));
     await page.evaluate(() => window.patchFixture({ connection: "open", loading: false }));
-    assert.equal(await page.locator(".msg").count(), 161);
+    assert.equal(await page.locator(".msg").count(), 162);
     assert.ok(
       Math.abs(
         (await anchor.evaluate((node) => node.getBoundingClientRect().top)) - beforeReconnect,
@@ -130,7 +135,7 @@ try {
       JSON.stringify({
         initial,
         expanded: 160,
-        appended: 161,
+        appended: 162,
         anchorDelta: after - before,
         switched: 80,
       }),
