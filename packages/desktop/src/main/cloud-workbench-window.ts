@@ -171,7 +171,7 @@ async function openWorkbench(
     isCloudWorkbenchOrigin(address, contents.getURL());
   const check: PermissionCheck = (contents, permission, requestingOrigin, details) => {
     if (!trustedRequest(contents, details.securityOrigin ?? requestingOrigin)) return false;
-    if (String(permission) === "display-capture") return details.isMainFrame === true;
+    if (permission === "display-capture") return details.isMainFrame === true;
     if (permission === "clipboard-sanitized-write" || permission === "fullscreen") return true;
     return permission === "media"
       ? allowed.has(`media:${details.mediaType}`)
@@ -179,7 +179,7 @@ async function openWorkbench(
   };
   const requestPermission: PermissionRequest = (contents, permission, callback, details) => {
     if (!trustedRequest(contents, details.requestingUrl)) return callback(false);
-    if (String(permission) === "display-capture") return callback(details.isMainFrame === true);
+    if (permission === "display-capture") return callback(details.isMainFrame === true);
     if (permission === "clipboard-sanitized-write" || permission === "fullscreen")
       return callback(true);
     const mediaTypes = "mediaTypes" in details ? (details.mediaTypes ?? []) : [];

@@ -262,10 +262,8 @@ import {
 import { createAutomationResumeTurn } from "./automation-resume-turn.js";
 import { automationLifecycleNotification } from "./automation-notification.js";
 import { DesktopNotifier } from "./desktop-notifier.js";
-import {
-  findNotificationWindow,
-  showNativeDesktopNotification,
-} from "./native-desktop-notification.js";
+import { findNotificationWindow } from "./native-desktop-notification.js";
+import { showSystemNotification } from "./system-notification.js";
 import * as desktopNotifications from "./desktop-notification-routes.js";
 import {
   setAutomationScheduler,
@@ -687,12 +685,7 @@ const panelAppBridge = new PanelAppBridge({
       new SettingsManager(cwd, "full", getTrustCachedSync(cwd) === "trusted").get(),
       getMergedCatalog(),
     ),
-  showNotification: ({ title, body }) => {
-    if (!Notification.isSupported()) return false;
-    // Best-effort, same as the app's own agent notifications.
-    new Notification({ title, body }).show();
-    return true;
-  },
+  showNotification: showSystemNotification,
   cookieCredentials: {
     taskCredentials: async (cwd) => {
       await migrateCredentialStore(cwd);
@@ -1607,7 +1600,7 @@ async function createWindow(): Promise<BrowserWindow> {
   win.webContents.on("preload-error", (_e, preloadPath, err) => {
     dlog("main", "renderer.preload-error", { preloadPath, message: err.message, stack: err.stack });
   });
-  win.webContents.on("console-message", (_e, level, message, line, sourceId) => {
+  win.webContents.on("console-message", ({ level, message, lineNumber: line, sourceId }) => {
     dlog("renderer", "console", { level, message, line, sourceId });
   });
   win.webContents.on("did-finish-load", () => sendWindowFullscreenState(win));
@@ -3069,8 +3062,9 @@ function createPetWidgetBrowserWindow(bounds: {
   win.webContents.on("did-fail-load", (_event, code, desc, validatedUrl) => {
     dlog("main", "pet-widget.did-fail-load", { code, desc, validatedUrl });
   });
-  win.webContents.on("console-message", (_event, level, message, line, sourceId) => {
-    if (level >= 2) dlog("main", "pet-widget.console", { level, message, line, sourceId });
+  win.webContents.on("console-message", ({ level, message, lineNumber: line, sourceId }) => {
+    if (level === "warning" || level === "error")
+      dlog("main", "pet-widget.console", { level, message, line, sourceId });
   });
   return win;
 }
@@ -3231,8 +3225,9 @@ async function createBrowserPopout(parent: BrowserWindow, initialUrl?: string): 
   win.webContents.on("did-fail-load", (_e, code, desc, validatedUrl) => {
     dlog("main", "browser-popout.did-fail-load", { code, desc, validatedUrl });
   });
-  win.webContents.on("console-message", (_e, level, message, line, sourceId) => {
-    if (level >= 2) dlog("main", "browser-popout.console", { level, message, line, sourceId });
+  win.webContents.on("console-message", ({ level, message, lineNumber: line, sourceId }) => {
+    if (level === "warning" || level === "error")
+      dlog("main", "browser-popout.console", { level, message, line, sourceId });
   });
 
   const query: Record<string, string> = { popout: "browser" };
@@ -3589,11 +3584,7 @@ app.whenReady().then(async () => {
     {
       hasFocusedWindow: () => BrowserWindow.getFocusedWindow() !== null,
       isSupported: () => Notification.isSupported(),
-      show: (input) =>
-        showNativeDesktopNotification(input, {
-          create: (options) => new Notification(options),
-          openSession: revealSessionWindow,
-        }),
+      show: (input) => showSystemNotification(input, revealSessionWindow),
     },
   );
   await projectStore.warm();

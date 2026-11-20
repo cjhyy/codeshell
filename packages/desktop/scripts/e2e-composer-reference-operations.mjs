@@ -546,12 +546,13 @@ try {
   await win.getByRole("button", { name: /^(添加本地文件|Add local file)$/ }).click();
   await (await choose).setFiles(explicitPath);
   const png = (await readFile(join(appDir, "build", "icon.png"))).toString("base64");
-  await electron.evaluate(({ clipboard, nativeImage }, base64) => {
+  await electron.evaluate(async ({ clipboard, ClipboardItem, nativeImage }, base64) => {
     const image = nativeImage
       .createFromBuffer(Buffer.from(base64, "base64"))
       .resize({ width: 8, height: 8 });
     if (image.isEmpty()) throw new Error("Owned image fixture is empty");
-    clipboard.writeImage(image);
+    const png = new Blob([image.toPNG()], { type: "image/png" });
+    await clipboard.write([new ClipboardItem({ "image/png": png })]);
   }, png);
   await composer().focus();
   await composer().press(`${modifier}+v`);

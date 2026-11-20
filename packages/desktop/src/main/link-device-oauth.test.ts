@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { LinkDeviceOAuthBroker } from "./link-device-oauth.js";
+import { copyOrShowDeviceCode, LinkDeviceOAuthBroker } from "./link-device-oauth.js";
 
 function jsonResponse(body: Record<string, unknown>, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -9,6 +9,31 @@ function jsonResponse(body: Record<string, unknown>, status = 200): Response {
 }
 
 describe("local Link browser OAuth", () => {
+  test("waits for clipboard delivery and presents the device code if the write fails", async () => {
+    let settle: (ok: boolean) => void;
+    const shown: string[] = [];
+    const code = "ABCD-EFGH";
+    const show = async (value: string) => {
+      shown.push(value);
+    };
+    const pending = copyOrShowDeviceCode(
+      code,
+      (value) => {
+        expect(value).toBe(code);
+        return new Promise<void>((resolve, reject) => {
+          settle = (ok) => (ok ? resolve() : reject(new Error("Clipboard unavailable")));
+        });
+      },
+      show,
+    );
+    expect(shown).toEqual([]);
+    settle!(false);
+    expect(await pending).toBe(false);
+    expect(shown).toEqual([code]);
+    expect(await copyOrShowDeviceCode(code, async () => {}, show)).toBe(true);
+    expect(shown).toEqual([code]);
+  });
+
   test("reports whether the release configured its public provider client id", () => {
     const broker = new LinkDeviceOAuthBroker({ environment: {} });
     expect(broker.status("github")).toEqual({

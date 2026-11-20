@@ -5,7 +5,6 @@ import {
   hostnameOf,
   cookieDomainMatches,
   injectionScript,
-  extractConsoleMessage,
   tokensFor,
   SENTINEL_SAVE,
   SENTINEL_CANCEL,
@@ -219,18 +218,6 @@ describe("hostnameOf / injectionScript", () => {
   });
 });
 
-describe("extractConsoleMessage (Electron signature compat)", () => {
-  test("Electron ≥33: (event, {message})", () => {
-    expect(extractConsoleMessage([{}, { message: SENTINEL_SAVE, versionId: 0 }])).toBe(SENTINEL_SAVE);
-  });
-  test("Electron <33: (event, level, message)", () => {
-    expect(extractConsoleMessage([{}, 0, SENTINEL_SAVE])).toBe(SENTINEL_SAVE);
-  });
-  test("no message → empty string", () => {
-    expect(extractConsoleMessage([{}, 0])).toBe("");
-  });
-});
-
 describe("loginAndCaptureCookies", () => {
   test("invalid url → error, no window opened", async () => {
     let opened = false;
@@ -267,7 +254,7 @@ describe("loginAndCaptureCookies", () => {
     );
     // drive the save sentinel using the Electron ≥33 signature (event, {message})
     await Promise.resolve();
-    fake.wc.emit("console-message", {}, { message: TOK.save, versionId: 0 });
+    fake.wc.emit("console-message", { message: TOK.save });
     const r = await p;
     expect(r.ok).toBe(true);
     if (r.ok) {
@@ -293,7 +280,7 @@ describe("loginAndCaptureCookies", () => {
       { open: async () => fake.handle, nonce: NONCE, destroy: async () => {} },
     );
     await Promise.resolve();
-    fake.wc.emit("console-message", {}, 0, TOK.save);
+    fake.wc.emit("console-message", { message: TOK.save });
     const r = await p;
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.loginCheck.ok).toBe(false);
@@ -307,7 +294,7 @@ describe("loginAndCaptureCookies", () => {
       { open: async () => fake.handle, nonce: NONCE, destroy: async () => { destroyed = true; } },
     );
     await Promise.resolve();
-    fake.wc.emit("console-message", {}, 0, TOK.cancel);
+    fake.wc.emit("console-message", { message: TOK.cancel });
     const r = await p;
     expect(r).toEqual({ ok: false, cancelled: true });
     expect(destroyed).toBe(true);
@@ -334,12 +321,12 @@ describe("loginAndCaptureCookies", () => {
     );
     await Promise.resolve();
     // The page's own JS knows the public prefix but NOT this window's nonce.
-    fake.wc.emit("console-message", {}, { message: SENTINEL_SAVE, versionId: 0 });
-    fake.wc.emit("console-message", {}, { message: SENTINEL_CANCEL, versionId: 0 });
-    fake.wc.emit("console-message", {}, { message: `${SENTINEL_SAVE}:wrong-nonce`, versionId: 0 });
+    fake.wc.emit("console-message", { message: SENTINEL_SAVE });
+    fake.wc.emit("console-message", { message: SENTINEL_CANCEL });
+    fake.wc.emit("console-message", { message: `${SENTINEL_SAVE}:wrong-nonce` });
     // None of those should settle the promise. The genuine token does.
     expect(destroyed).toBe(false);
-    fake.wc.emit("console-message", {}, { message: TOK.save, versionId: 0 });
+    fake.wc.emit("console-message", { message: TOK.save });
     const r = await p;
     expect(r.ok).toBe(true);
   });

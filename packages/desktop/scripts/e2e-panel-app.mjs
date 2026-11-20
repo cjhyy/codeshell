@@ -368,6 +368,30 @@ try {
   assert(sandbox.hasBridge, "scoped preload bridge was not exposed");
   assert(!sandbox.hasProcess && !sandbox.hasRequire, "Node globals escaped into the panel");
   assert(!sandbox.popup, "plugin popup was not denied");
+  if (process.platform === "linux") {
+    // No media.capture grant: the guest must be rejected before source selection.
+    await app.evaluate(({ desktopCapturer }) => {
+      globalThis.panelCapturePickerRequests = 0;
+      desktopCapturer.getSources = async () => {
+        globalThis.panelCapturePickerRequests++;
+        return [];
+      };
+    });
+    const result = await firstView.evaluate((guest) => {
+      guest.focus();
+      return guest.executeJavaScript(
+        `navigator.mediaDevices.getDisplayMedia({video: true})
+          .then(stream => { stream.getTracks().forEach(track => track.stop()); return "captured"; },
+            error => error.name)`,
+        true,
+      );
+    });
+    assert(result === "NotAllowedError", `Unreviewed Panel display capture returned ${result}`);
+    assert(
+      (await app.evaluate(() => globalThis.panelCapturePickerRequests)) === 0,
+      "Unreviewed Panel reached the source picker",
+    );
+  }
 
   const context = await execute(firstView, "window.codeshellPanel.getContext()");
   assert(

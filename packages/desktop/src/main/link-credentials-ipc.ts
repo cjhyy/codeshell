@@ -2,7 +2,7 @@ import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import { registerRemoteLinkIpc } from "./remote-link-ipc.js";
 import type { CaptureLinkAccountAccess } from "./link-account-access.js";
 import { createFigmaMcpLinkAdapter } from "./figma-mcp-link.js";
-import { BrowserWindow, clipboard, ipcMain, shell } from "electron";
+import { BrowserWindow, clipboard, dialog, ipcMain, shell } from "electron";
 import {
   CredentialStore,
   isRemoteLinkCredential,
@@ -18,6 +18,7 @@ import { McpOAuthService, type McpOAuthLoginInput } from "./mcp-oauth-service.js
 import { listDesktopLinkProviders } from "./link-provider-catalog.js";
 import { createDesktopLinkConnections } from "./link-connections.js";
 import {
+  copyOrShowDeviceCode,
   isLocalBrowserLinkProvider,
   LinkDeviceOAuthBroker,
   type LocalBrowserAuthToken,
@@ -191,20 +192,33 @@ export function registerLinkCredentialIpc(deps: LinkCredentialIpcDeps) {
     return linkDeviceOAuthBroker.status(providerId);
   });
 
-  ipcMain.handle("links:startBrowserAuth", async (_e, rawProviderId: unknown) => {
+  ipcMain.handle("links:startBrowserAuth", async (event, rawProviderId: unknown) => {
     const providerId = typeof rawProviderId === "string" ? rawProviderId.trim() : "";
     if (!isLocalBrowserLinkProvider(providerId)) {
       throw new Error("Unsupported browser-login Link provider");
     }
     const prompt = await linkDeviceOAuthBroker.start(providerId);
-    clipboard.writeText(prompt.userCode);
     try {
+      const codeCopied = await copyOrShowDeviceCode(
+        prompt.userCode,
+        (code) => clipboard.writeText(code),
+        async (code) => {
+          const owner = BrowserWindow.fromWebContents(event.sender);
+          if (!owner || owner.isDestroyed()) throw new Error("Authorization window closed");
+          await dialog.showMessageBox(owner, {
+            type: "info",
+            title: "CodeShell",
+            message: "请在授权页面输入此一次性验证码",
+            detail: code,
+          });
+        },
+      );
       await shell.openExternal(prompt.verificationUriComplete ?? prompt.verificationUri);
+      return { ...prompt, codeCopied };
     } catch (error) {
       linkDeviceOAuthBroker.cancel(prompt.attemptId);
-      throw new Error("Could not open the provider authorization page", { cause: error });
+      throw new Error("Could not start provider authorization", { cause: error });
     }
-    return { ...prompt, codeCopied: true };
   });
 
   ipcMain.handle("links:completeBrowserAuth", async (_e, raw: unknown) => {

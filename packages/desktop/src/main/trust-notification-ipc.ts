@@ -1,4 +1,5 @@
-import { app, ipcMain, Notification } from "electron";
+import { app, ipcMain } from "electron";
+import { showSystemNotification } from "./system-notification.js";
 import { ExternalRuntimeService } from "./external-runtime-service.js";
 import { setProjectTrustWithRevocation } from "./project-trust-lifecycle.js";
 import { requireRendererProjectPath } from "./renderer-project-path.js";
@@ -47,8 +48,7 @@ export function registerTrustNotificationIpc(deps: TrustNotificationIpcDeps) {
       ) {
         throw new Error("notify:show requires bounded text");
       }
-      if (!Notification.isSupported()) return;
-      new Notification(opts).show();
+      showSystemNotification(opts);
     },
   );
 

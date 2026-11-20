@@ -450,8 +450,12 @@ async function sampleChatPixel(bytes) {
     ({ nativeImage }, { data, point }) => {
       const image = nativeImage.createFromBuffer(Buffer.from(data, "base64"));
       const bitmap = image.toBitmap();
-      const offset = (point.y * image.getSize().width + point.x) * 4;
-      return [...bitmap.subarray(offset, offset + 4)];
+      const { width, height } = image.getSize();
+      if (point.x < 0 || point.x >= width || point.y < 0 || point.y >= height)
+        throw new Error("Theme sample outside screenshot");
+      const offset = (point.y * width + point.x) * 4;
+      // Electron 43+ returns sRGB BGRA. Compare color channels, excluding opacity.
+      return [...bitmap.subarray(offset, offset + 3)];
     },
     { data: bytes.toString("base64"), point },
   );

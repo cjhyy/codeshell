@@ -1,4 +1,5 @@
-import { globalShortcut, Notification, powerMonitor, type App } from "electron";
+import { globalShortcut, powerMonitor, type App } from "electron";
+import { showSystemNotification } from "../system-notification.js";
 import { join } from "node:path";
 import { SettingsManager } from "@cjhyy/code-shell-core/extension";
 import { readUserFeatureFlags } from "../capability-modules-env.js";
@@ -119,11 +120,10 @@ export async function initializeDesktopComputerUse(options: {
         lock: (namespace) => createStopShortcutLock({ file: stopShortcutLockFile(namespace) }),
       }),
       notifyStopped: () => {
-        if (!Notification.isSupported()) return;
-        new Notification({
+        showSystemNotification({
           title: "已停止电脑操作",
           body: "AI 不会再发送键盘或鼠标输入。在 Mimi 菜单或设置里点“继续”才会恢复。",
-        }).show();
+        });
       },
     }).catch((error) => {
       // Without the gate there is no proxy, and the driver is not offered at all.

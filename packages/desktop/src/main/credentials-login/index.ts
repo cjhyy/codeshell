@@ -138,25 +138,6 @@ export function injectionScript(nonce: string): string {
   })();`;
 }
 
-/**
- * 从 console-message 回调参数里捞出 message 字符串,兼容两种 Electron 签名:
- *  - Electron ≥33: (event, messageDetails:{message,...}) → 取 args[1].message
- *  - Electron <33: (event, level:number, message:string, ...) → 取 args[2]
- * 找不到返回空串。
- */
-export function extractConsoleMessage(args: unknown[]): string {
-  // 新签名:第二个参数是带 .message 的对象
-  const second = args[1];
-  if (second && typeof second === "object" && typeof (second as { message?: unknown }).message === "string") {
-    return (second as { message: string }).message;
-  }
-  // 旧签名:第三个参数是 message 字符串
-  if (typeof args[2] === "string") return args[2];
-  // 兜底:任意位置的字符串
-  const str = args.find((a) => typeof a === "string");
-  return typeof str === "string" ? str : "";
-}
-
 /** 从 URL 取目标主机名(失败返回空)。 */
 export function hostnameOf(url: string): string {
   try {
@@ -254,13 +235,8 @@ export async function loginAndCaptureCookies(
       });
     });
 
-    // console 哨兵:保存 / 取消。
-    // Electron 33 起签名变为 (event, messageDetails:{message,...});旧版是 (event, level, message)。
-    // 两种都兜:从 arguments 里捞出字符串型 message。
-    (handle.webContents as Electron.WebContents).on(
-      "console-message",
-      (...callbackArgs: unknown[]) => {
-      const message = extractConsoleMessage(callbackArgs);
+    // Only the message from this window's console event carries the injected sentinel.
+    handle.webContents.on("console-message", ({ message }) => {
       if (!message) return;
       // 诊断:只记带本窗口 nonce 的哨兵(避免刷屏 + 不记页面伪造的裸前缀);
       // 若哨兵收不到 = 注入或 console 通道被挡。匹配必须带 nonce —— 仅凭公开前缀
