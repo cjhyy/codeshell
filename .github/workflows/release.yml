@@ -325,24 +325,6 @@ jobs:
           esac
           bun run scripts/verify-managed-runtime.ts "$runtime_dir"
 
-      - name: run packaged PTY, Canvas, PDF and mobile ASAR checks
-        working-directory: packages/desktop
-        shell: bash
-        run: |
-          set -euo pipefail
-          check_package() {
-            node scripts/smoke-packaged-native.mjs "$1" "$2"
-            node ../../scripts/run-isolated-node-smoke.mjs scripts/smoke-mobile-asar.mjs --app "$1"
-          }
-          case "${{ matrix.artifact }}" in
-            mac)
-              check_package dist/mac-arm64/code-shell.app arm64
-              check_package dist/mac/code-shell.app x64
-              ;;
-            windows) check_package dist/win-unpacked x64 ;;
-            linux) check_package dist/linux-unpacked x64 ;;
-          esac
-
       - name: verify auto-update metadata
         shell: bash
         run: |
@@ -352,6 +334,41 @@ jobs:
             windows) test -f packages/desktop/dist/latest.yml ;;
             linux) test -f packages/desktop/dist/latest-linux.yml ;;
           esac
+
+      - name: run packaged PTY, Canvas, PDF and mobile ASAR checks
+        id: native_package
+        working-directory: packages/desktop
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${{ matrix.artifact }}" in
+            mac) app=dist/mac-arm64/code-shell.app; arch=arm64 ;;
+            windows) app=dist/win-unpacked; arch=x64 ;;
+            linux) app=dist/linux-unpacked; arch=x64 ;;
+          esac
+          node scripts/smoke-packaged-native.mjs "$app" "$arch"
+          node ../../scripts/run-isolated-node-smoke.mjs scripts/smoke-mobile-asar.mjs --app "$app"
+
+      - name: run Intel macOS package checks
+        id: intel_mac
+        if: matrix.artifact == 'mac'
+        working-directory: packages/desktop
+        run: |
+          node scripts/smoke-packaged-native.mjs dist/mac/code-shell.app x64
+          node ../../scripts/run-isolated-node-smoke.mjs scripts/smoke-mobile-asar.mjs --app dist/mac/code-shell.app
+
+      # Preserve the tested local-Mac candidate on manual diagnostic runs.
+      # Tagged releases still require both architectures and the full artifact set.
+      - name: retain Apple Silicon candidate when Intel checks fail
+        if: failure() && github.event_name == 'workflow_dispatch' && steps.native_package.outcome == 'success' && steps.intel_mac.outcome == 'failure'
+        uses: actions/upload-artifact@v7
+        with:
+          name: codeshell-mac-arm64-diagnostic
+          path: |
+            packages/desktop/dist/*arm64*.dmg
+            packages/desktop/dist/latest-mac.yml
+          if-no-files-found: error
+          retention-days: 7
 
       - name: upload artifacts
         uses: actions/upload-artifact@v7
