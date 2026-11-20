@@ -12,6 +12,7 @@ import { existsSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { WebContents } from "electron";
 import { dlog } from "./desktop-logger.js";
+import { ptyEntryPath } from "./pty-entry.mjs";
 
 const require = createRequire(import.meta.url);
 
@@ -40,7 +41,8 @@ interface NodePty {
 
 let nodePty: NodePty | null = null;
 function loadPty(): NodePty {
-  if (!nodePty) nodePty = require("node-pty") as NodePty;
+  if (!nodePty)
+    nodePty = require(ptyEntryPath(require.resolve("node-pty"), process.resourcesPath)) as NodePty;
   return nodePty;
 }
 

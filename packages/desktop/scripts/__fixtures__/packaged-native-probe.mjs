@@ -6,6 +6,7 @@ import { dirname, join, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { denyDocumentSmokeNetwork } from "../../../../scripts/upload-document-smoke-isolation.mjs";
 import { textPdf } from "../../../../tests/fixtures/upload-documents.mjs";
+import { ptyEntryPath } from "../../src/main/pty-entry.mjs";
 
 const [role, resources, arch, receipt] = process.argv.slice(2);
 assert.ok(
@@ -16,6 +17,13 @@ assert.equal(process.cwd(), process.env.HOME);
 assert.equal(process.arch, arch);
 const archive = join(resources, "app.asar");
 const core = join("node_modules", "@cjhyy", "code-shell-core");
+assert.equal(dirname(receipt), process.env.TMPDIR);
+function phase(name) {
+  writeFileSync(
+    receipt + ".phase",
+    JSON.stringify({ name, active: process.getActiveResourcesInfo() }),
+  );
+}
 
 async function smokeTerminal() {
   // Resolve from the ASAR just like Desktop Main. A working prebuild can mask a
@@ -26,12 +34,15 @@ async function smokeTerminal() {
   const args = windows
     ? ["/d", "/q", "/v:on", "/s", "/c", "set /p token=READY&echo ACK-!token!&exit /b 7"]
     : ["-c", 'printf "READY\\n"; IFS= read -r token; printf "ACK-%s\\n" "$token"; exit 7'];
-  const pty = require("node-pty").spawn(shell, args, {
+  const nodePty = require(ptyEntryPath(require.resolve("node-pty"), resources));
+  phase("spawning shell");
+  const pty = nodePty.spawn(shell, args, {
     cols: 120,
     rows: 24,
     cwd: process.cwd(),
     env: process.env,
   });
+  phase("waiting for shell output");
   const token = randomUUID();
   let output = "";
   let sent = false;
@@ -46,11 +57,13 @@ async function smokeTerminal() {
           return reject(new Error("Packaged PTY output limit exceeded"));
         if (!sent && output.includes("READY")) {
           sent = true;
+          phase("writing challenge to shell");
           pty.write(token + "\r");
         }
       });
       pty.onExit(({ exitCode }) => {
         exited = true;
+        phase("shell exited " + exitCode);
         if (exitCode !== 7 || !output.includes("ACK-" + token)) {
           reject(new Error(`PTY command failed (exit ${exitCode}): ${JSON.stringify(output)}`));
         } else done();
@@ -74,6 +87,7 @@ async function smokeTerminal() {
 }
 
 let result;
+phase("loading " + role);
 if (role === "canvas") {
   assert.equal(process.versions.electron, undefined);
   denyDocumentSmokeNetwork();
@@ -104,6 +118,7 @@ if (role === "canvas") {
   );
   const message = "packaged native PDF";
   let parser;
+  phase("parsing PDF with managed Node");
   const parsed = await parseDocumentIsolated(textPdf(message), "fixture.pdf", {
     timeoutMs: 15_000,
     resolveExecutable: createManagedDocumentParserResolver(join(resources, "runtimes")),
@@ -121,5 +136,5 @@ if (role === "canvas") {
     pdfNode: parser.runtime.node,
   };
 }
-assert.equal(dirname(receipt), process.env.TMPDIR);
 writeFileSync(receipt, JSON.stringify(result), { flag: "wx", mode: 0o600 });
+phase("wrote result, waiting for process exit");

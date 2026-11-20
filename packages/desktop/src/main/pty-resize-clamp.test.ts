@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { ptyEntryPath } from "./pty-entry.mjs";
 import {
   _resetPtyGitBashCache,
   clampPtyDim,
@@ -11,6 +12,17 @@ import {
   resolveShell,
   shellArgs,
 } from "./pty-service.js";
+
+test("Windows ConPTY helpers use the physical package entry only for the packaged app", () => {
+  const resources = "C:\\Program Files\\Code Shell\\resources";
+  const entry = resources + "\\app.asar\\node_modules\\node-pty\\lib\\index.js";
+  const unpacked = entry.replace("app.asar", "app.asar.unpacked");
+  expect(ptyEntryPath(entry, resources, "win32")).toBe(unpacked);
+  expect(ptyEntryPath(unpacked, resources, "win32")).toBe(unpacked);
+  const dev = "D:\\checkout\\node_modules\\node-pty\\lib\\index.js";
+  expect(ptyEntryPath(dev, resources, "win32")).toBe(dev);
+  expect(ptyEntryPath(entry, resources, "darwin")).toBe(entry);
+});
 
 describe("isValidPtySessionId", () => {
   test("accepts the canonical panel, bucket, tab, and window composite id", () => {

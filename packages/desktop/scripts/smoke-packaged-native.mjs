@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -46,7 +46,14 @@ try {
   };
   function runProbe(role, executable, env) {
     const receipt = join(scratch, role + ".json");
-    execFileSync(executable, [probe, role, layout.resources, arch, receipt], { ...options, env });
+    try {
+      execFileSync(executable, [probe, role, layout.resources, arch, receipt], { ...options, env });
+    } catch (cause) {
+      const progress = existsSync(receipt + ".phase")
+        ? readFileSync(receipt + ".phase", "utf8")
+        : "before probe entry";
+      throw new Error(`Packaged ${role} failed at ${progress}`, { cause });
+    }
     return JSON.parse(readFileSync(receipt, "utf8"));
   }
 
