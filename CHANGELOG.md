@@ -8,6 +8,18 @@ breaking.
 
 ## [Unreleased]
 
+Computer use for Claude Code sessions was accepted against the real driver: an
+approved call, an accessibility press landing in a background app and read
+back, and Stop refusing the next press. The ⌘⇧Esc stop shortcut's handler was
+accepted in the real app through a test seam (no key was pressed).
+
+### Fixed
+
+- Computer use: when the ⌘⇧Esc stop shortcut cannot be registered while
+  computer use is running, Settings → Computer use now says so and points to
+  the Stop button instead of still promising the shortcut. Before, the failure
+  was only written to the log.
+
 ## [0.11.0-rc.7] - 2026-11-20
 
 Small follow-up to rc.6. Computer use for Codex and Claude Code sessions was

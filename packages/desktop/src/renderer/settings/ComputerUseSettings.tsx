@@ -237,9 +237,15 @@ export function ComputerUseSettings({
                   ? ` ${t("settingsX.computerUse.inputUserActive")}`
                   : ""}
               </p>
-              <p className="m-0 text-xs text-muted-foreground">
-                {t("settingsX.computerUse.inputShortcut")}
-              </p>
+              {status.input.shortcutUnavailable ? (
+                <p className="m-0 text-xs text-status-warn" role="alert" data-stop-shortcut-missing>
+                  {t("settingsX.computerUse.inputShortcutUnavailable")}
+                </p>
+              ) : (
+                <p className="m-0 text-xs text-muted-foreground">
+                  {t("settingsX.computerUse.inputShortcut")}
+                </p>
+              )}
               {status.active && (
                 <div className="flex flex-wrap items-center gap-2">
                   <Button

@@ -20,6 +20,8 @@ export interface ComputerUseInputStatus {
   foregroundHeld: boolean;
   /** The user is using the keyboard or mouse; foreground input waits. */
   userActive: boolean;
+  /** Computer use is running but the ⌘⇧Esc stop shortcut could not be registered. */
+  shortcutUnavailable?: boolean;
 }
 
 export interface ComputerUseSettingsStatus {
