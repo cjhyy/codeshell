@@ -51,6 +51,8 @@ export const settingsNs = {
         inputStop: "停止电脑操作",
         inputResume: "继续",
         inputShortcut: "随时可按 ⌘⇧Esc 停止。",
+        inputShortcutUnavailable:
+          "⌘⇧Esc 快捷键注册失败（可能被其他应用占用），现在按它不会停止电脑操作。请用上面的“停止电脑操作”按钮。",
         inputForceStop: "强制停止输入驱动",
         inputForceStopHint: "会结束所有任务共用的驱动，需重启 CodeShell 才能再次使用电脑操作。",
       },
@@ -1279,6 +1281,8 @@ export const settingsNs = {
         inputStop: "Stop computer control",
         inputResume: "Resume",
         inputShortcut: "Press ⌘⇧Esc at any time to stop.",
+        inputShortcutUnavailable:
+          "The ⌘⇧Esc shortcut could not be registered (another app may hold it), so pressing it will not stop computer use. Use the Stop button above.",
         inputForceStop: "Force-stop the input driver",
         inputForceStopHint:
           "Ends the driver shared by every task. Restart CodeShell to use computer control again.",

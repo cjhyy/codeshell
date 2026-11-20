@@ -13,6 +13,10 @@ breaking.
 - Web: while a panel is opening, its "opening" status no longer pushes the panel
   down and then lets it jump back when the status clears, so a tap made during
   that moment lands on the control under the finger.
+- Computer use: when the ⌘⇧Esc stop shortcut cannot be registered while
+  computer use is running, Settings → Computer use now says so and points to
+  the Stop button instead of still promising the shortcut. Before, the failure
+  was only written to the log.
 
 ## [0.11.0-rc.7] - 2026-11-20
 

@@ -6,6 +6,45 @@ import { InputGate, UserActivityMonitor } from "./input-gate.js";
 /** Global emergency stop for computer input while a CUA connection is live. */
 export const STOP_INPUT_ACCELERATOR = "CommandOrControl+Shift+Escape";
 
+/**
+ * Acceptance seam, unset by default and ignored by a packaged app: an
+ * UNPACKAGED build keeps the stop shortcut off the real keyboard, so an
+ * acceptance run next to an installed CodeShell never competes for its key.
+ * `virtual` accepts the registration and exposes the callback as
+ * `globalThis[STOP_SHORTCUT_HOOK]`; `unavailable` refuses it. Read at each
+ * registration.
+ */
+export const STOP_SHORTCUT_OVERRIDE_ENV = "CODESHELL_E2E_STOP_SHORTCUT";
+export const STOP_SHORTCUT_HOOK = "__codeshellE2eStopShortcut";
+
+type StopShortcut = NonNullable<ComputerUseControlOptions["shortcut"]>;
+
+export function stopShortcutBinding(options: {
+  native: StopShortcut;
+  env: NodeJS.ProcessEnv;
+  isPackaged: boolean;
+  hooks?: { [STOP_SHORTCUT_HOOK]?: () => void };
+}): StopShortcut {
+  const hooks = options.hooks ?? (globalThis as { [STOP_SHORTCUT_HOOK]?: () => void });
+  const override = () => (options.isPackaged ? undefined : options.env[STOP_SHORTCUT_OVERRIDE_ENV]);
+  let virtual = false;
+  return {
+    register(accelerator, callback) {
+      const mode = override();
+      if (mode === "unavailable") return false;
+      if (mode !== "virtual") return options.native.register(accelerator, callback);
+      hooks[STOP_SHORTCUT_HOOK] = callback;
+      virtual = true;
+      return true;
+    },
+    unregister(accelerator) {
+      if (!virtual) return options.native.unregister(accelerator);
+      delete hooks[STOP_SHORTCUT_HOOK];
+      virtual = false;
+    },
+  };
+}
+
 export interface ComputerUseControlOptions {
   appPath: string;
   /** Bundled app profiles (resources/computer-use/apps), read by every proxy. */
@@ -31,6 +70,9 @@ export async function createComputerUseControl(options: ComputerUseControlOption
     ? new UserActivityMonitor({ gate, idleSeconds: options.idleSeconds })
     : undefined;
   let shortcutActive = false;
+  // A connection is live but the last registration was refused: the user has
+  // no keyboard stop and must be told to use the on-screen one.
+  let shortcutUnavailable = false;
 
   const stopInput = (source: string) => {
     const wasStopped = gate.status().stopped;
@@ -46,12 +88,15 @@ export async function createComputerUseControl(options: ComputerUseControlOption
   const setLive = (live: boolean) => {
     if (live) monitor?.start();
     else monitor?.stop();
+    if (!live) shortcutUnavailable = false;
     if (!options.shortcut || live === shortcutActive) return;
     if (live) {
       shortcutActive = options.shortcut.register(STOP_INPUT_ACCELERATOR, () =>
         stopInput("shortcut"),
       );
-      if (!shortcutActive) options.log("computer_input_shortcut_unavailable");
+      if (!shortcutActive && !shortcutUnavailable)
+        options.log("computer_input_shortcut_unavailable", { accelerator: STOP_INPUT_ACCELERATOR });
+      shortcutUnavailable = !shortcutActive;
     } else {
       options.shortcut.unregister(STOP_INPUT_ACCELERATOR);
       shortcutActive = false;
@@ -72,6 +117,8 @@ export async function createComputerUseControl(options: ComputerUseControlOption
     bus,
     stopInput,
     resumeInput,
+    /** The gate as shown to the user, with whether the keyboard stop is missing. */
+    inputStatus: () => ({ ...gate.status(), shortcutUnavailable }),
     mcpProxy: {
       command: options.executablePath,
       entryPath: join(options.appPath, "out", "main", "cua-activity-proxy.mjs"),
