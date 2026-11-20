@@ -223,6 +223,9 @@
       ],
       "category": "Development",
       "icon": "build/icon.png"
+    },
+    "appImage": {
+      "executableArgs": []
     }
   },
   "//deps": "Runtime dependencies are the unbundled worker/native packages. scripts/build-main.ts keeps electron, playwright-core, @cjhyy/code-shell-core, @cjhyy/code-shell-link, and @cjhyy/code-shell-capability-coding external; the renderer is Vite-bundled. scripts/predist.ts materializes Link, Core, Coding, Pet, and Optimization Lab from DESKTOP_MATERIALIZED_WORKSPACES in scripts/materialized-workspaces.ts, and installs their declared production closures. Link is a Desktop devDependency but is explicitly materialized and is also a Core production dependency, so packaging does not rely on a development workspace symlink. Host, Server, Web, Chat, and browser diagnostics are bundled. Keep runtime dependencies and materialization coverage aligned when adding an external or worker-loaded package; native node-pty and playwright-core also ship as runtime dependencies.",
