@@ -83,10 +83,15 @@ await import(${JSON.stringify(guardUrl)});
   await writeFile(
     mainEntry,
     `import { app } from "electron";
+import https from "node:https";
 import children from "node:child_process";
 import { appendFileSync, existsSync } from "node:fs";
 import { syncBuiltinESMExports } from "node:module";
 await import(${JSON.stringify(preloadUrl)});
+// Account capabilities are read on ready/focus. Serve the fixed anonymous
+// status in memory; every other request still uses this fixture's network guard.
+const { withOwnedAccountDiscovery } = (await import(${JSON.stringify(new URL("./owned-account-discovery.cjs", import.meta.url).href)})).default;
+https.request = withOwnedAccountDiscovery(https.request.bind(https));
 app.setAppPath(${JSON.stringify(appDir)});
 const spawn = children.spawn;
 children.spawn = function (command, args, options) {
