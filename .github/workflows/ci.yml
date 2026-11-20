@@ -688,8 +688,10 @@ jobs:
       - name: Native Account Cloud project chooser with private SecretService
         run: |
           sudo apt-get update
-          sudo apt-get install -y dbus-x11 gnome-keyring libsecret-tools
+          sudo apt-get install -y dbus-x11 gnome-keyring libsecret-tools weston
           xvfb-run -a bun run --cwd packages/desktop test:e2e:cloud-workbench
+      - name: Docked Mimi window on native Wayland
+        run: node scripts/run-isolated-node-smoke.mjs --private-keyring packages/desktop/scripts/e2e-wayland-docked-pet.mjs
       - name: Native built-in theme and surface backgrounds with private SecretService
         run: xvfb-run -a bun run --cwd packages/desktop test:e2e:themes
       # Same commands as packages/desktop test:e2e, each in its own log group: a failing

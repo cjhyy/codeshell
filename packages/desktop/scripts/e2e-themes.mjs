@@ -26,6 +26,7 @@ import {
   navigateSettingsMenu,
   seedSessionCatalog,
 } from "./electron-harness.mjs";
+import { checkDockedPetWindow } from "./docked-pet-window.mjs";
 import { settingsNetworkGuard } from "./settings-network-guard.mjs";
 
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -753,29 +754,7 @@ try {
   await screenshot("theme-narrow-chat.png");
   await win.setViewportSize({ width: 1440, height: 960 });
 
-  await win.evaluate(() => window.codeshell.pet.setWidgetVisible(true));
-  const pet =
-    app.windows().find((page) => new URL(page.url()).searchParams.get("popout") === "pet") ??
-    (await app.waitForEvent("window", {
-      predicate: (page) => new URL(page.url()).searchParams.get("popout") === "pet",
-    }));
-  await pet.waitForFunction(() => document.documentElement.classList.contains("pet-widget-window"));
-  report.pet = await pet.evaluate(() => ({
-    backgrounds: [document.documentElement, document.body, document.getElementById("root")].map(
-      (node) => getComputedStyle(node).backgroundColor,
-    ),
-    wallpaper: getComputedStyle(document.body, "::before").backgroundImage,
-    surfaces: document.querySelectorAll("[data-theme-surface]").length,
-  }));
-  assert(
-    report.pet.backgrounds.every((color) => color === "rgba(0, 0, 0, 0)"),
-    "Pet window keeps transparent roots",
-  );
-  assert(
-    report.pet.wallpaper === "none" && report.pet.surfaces === 0,
-    "Pet window receives no surface wallpaper or frame",
-  );
-  await win.evaluate(() => window.codeshell.pet.setWidgetVisible(false));
+  report.pet = await checkDockedPetWindow(app, win);
 
   await appearance();
   await win.locator('[data-theme-pack="default"] button[aria-pressed]').click();
