@@ -8,6 +8,14 @@ breaking.
 
 ## [Unreleased]
 
+## [0.12.0-rc.1]
+
+Desktop moves to Electron 45.4.1. macOS 13.5 or newer is required for both
+Apple Silicon and Intel. Users on earlier macOS versions stay on the 0.11
+line. On supported Macs, older self-signed builds may request a one-time
+manual installation from the DMG. Install the new app in Applications using
+the same account to retain existing sessions and settings.
+
 ## [0.11.0-rc.9] - 2026-11-20
 
 Computer use for Codex sessions and `set_value` were accepted against the real,
