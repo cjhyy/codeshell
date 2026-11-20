@@ -9,6 +9,7 @@ import {
   buildPetWidgetActivity,
   initialPetWidgetReceiptState,
   markPetWidgetCompletionSeen,
+  markPetWidgetActivityDismissed,
   markPetWidgetCompletionsSeen,
   parsePetWidgetReceiptState,
 } from "./petWidgetActivity";
@@ -266,5 +267,135 @@ describe("Pet widget work activity", () => {
 
     expect(activity).toMatchObject({ runningCount: 0, unreadCompletedCount: 1 });
     expect(activity.items[0]).toMatchObject({ kind: "completed", detail: "调查已完成" });
+  });
+
+  describe("orphaned interrupted/failed long-task reminders", () => {
+    // Real incident shape: the Session was archived (so it is absent from the
+    // projection and the default catalog), while its durable long task was
+    // left `interrupted`. The card cannot navigate anywhere and must still be
+    // dismissible from the widget.
+    const orphanSnapshot = (): PetProjectionSnapshot => snapshot([]);
+    const orphanTasks = (patch: Partial<PetLongTask> = {}) =>
+      longTaskSnapshot([
+        longTask({
+          id: "task-orphan",
+          sessionId: "pet-work-archived",
+          status: "interrupted",
+          revision: 5,
+          updatedAt: 320,
+          summary: "后台任务中断",
+          ...patch,
+        }),
+      ]);
+    const initial = { baselineAt: 200, seenCompletionKeys: [] };
+
+    test("an orphaned interrupted task is counted and offered as dismissible", () => {
+      const activity = buildPetWidgetActivity(orphanSnapshot(), initial, orphanTasks());
+      expect(activity.badgeCount).toBe(1);
+      expect(activity.items[0]).toMatchObject({
+        agentSessionId: "pet-work-archived",
+        kind: "needs-action",
+        dismissible: true,
+      });
+    });
+
+    test("dismissing clears the badge and survives persistence plus repeated snapshots", () => {
+      const activity = buildPetWidgetActivity(orphanSnapshot(), initial, orphanTasks());
+      const dismissed = markPetWidgetActivityDismissed(initial, activity.items[0]);
+      expect(dismissed).not.toBe(initial);
+      const reloaded = parsePetWidgetReceiptState(JSON.stringify(dismissed))!;
+
+      for (const receipts of [dismissed, reloaded]) {
+        const again = buildPetWidgetActivity(orphanSnapshot(), receipts, orphanTasks());
+        expect(again).toMatchObject({ badgeCount: 0, activeCount: 0, items: [] });
+      }
+      // A fresh long-task snapshot revision (journal re-read) with the same task
+      // revision must not resurrect the reminder.
+      const resnapshot = { ...orphanTasks(), revision: 9, observedAt: 900 };
+      expect(buildPetWidgetActivity(orphanSnapshot(), reloaded, resnapshot).badgeCount).toBe(0);
+    });
+
+    test("a new task event re-alerts instead of muting the session forever", () => {
+      const activity = buildPetWidgetActivity(orphanSnapshot(), initial, orphanTasks());
+      const dismissed = markPetWidgetActivityDismissed(initial, activity.items[0]);
+
+      const failedLater = orphanTasks({ status: "failed", revision: 6, updatedAt: 400 });
+      const realerted = buildPetWidgetActivity(orphanSnapshot(), dismissed, failedLater);
+      expect(realerted.badgeCount).toBe(1);
+      expect(realerted.items[0]).toMatchObject({ kind: "needs-action", dismissible: true });
+
+      const otherTask = longTaskSnapshot([
+        ...orphanTasks().tasks,
+        longTask({
+          id: "task-next",
+          sessionId: "pet-work-archived",
+          status: "interrupted",
+          revision: 1,
+          updatedAt: 500,
+        }),
+      ]);
+      expect(buildPetWidgetActivity(orphanSnapshot(), dismissed, otherTask).badgeCount).toBe(1);
+    });
+
+    test("also dismisses a failed task on a projected (navigable) session", () => {
+      const value = snapshot([session("work", { lastActivityAt: 250 })]);
+      const tasks = longTaskSnapshot([longTask({ status: "failed", updatedAt: 300 })]);
+      const activity = buildPetWidgetActivity(value, initial, tasks);
+      expect(activity.items[0]).toMatchObject({ kind: "needs-action", dismissible: true });
+      const dismissed = markPetWidgetActivityDismissed(initial, activity.items[0]);
+      expect(buildPetWidgetActivity(value, dismissed, tasks).badgeCount).toBe(0);
+    });
+
+    test("never treats a real pending approval or AskUser as handled", () => {
+      const value = orphanSnapshot();
+      value.pending.push({
+        agentSessionId: "pet-work-archived",
+        requestId: "approve-1",
+        workerGeneration: 2,
+        kind: "tool_approval",
+        title: "允许运行命令",
+        toolName: "Bash",
+        createdAt: 310,
+        status: "pending",
+      });
+
+      const activity = buildPetWidgetActivity(value, initial, orphanTasks());
+      expect(activity.badgeCount).toBe(1);
+      expect(activity.items[0]?.dismissible).toBeFalsy();
+      expect(markPetWidgetActivityDismissed(initial, activity.items[0])).toBe(initial);
+
+      // Even a stale dismissal recorded before the decision arrived must not
+      // hide the live decision.
+      const stale = buildPetWidgetActivity(orphanSnapshot(), initial, orphanTasks());
+      const dismissed = markPetWidgetActivityDismissed(initial, stale.items[0]);
+      const withPending = buildPetWidgetActivity(value, dismissed, orphanTasks());
+      expect(withPending.badgeCount).toBe(1);
+      expect(withPending.items[0]?.kind).toBe("needs-action");
+
+      const pendingOnly = buildPetWidgetActivity(value, initial, null);
+      expect(pendingOnly.items[0]).toMatchObject({ requestId: "approve-1" });
+      expect(pendingOnly.items[0]?.dismissible).toBeFalsy();
+      expect(markPetWidgetActivityDismissed(initial, pendingOnly.items[0])).toBe(initial);
+    });
+
+    test("keeps live work from a cold worker visible and non-dismissible", () => {
+      for (const status of ["running", "queued", "waiting", "paused"] as const) {
+        const activity = buildPetWidgetActivity(orphanSnapshot(), initial, orphanTasks({ status }));
+        expect(activity.badgeCount).toBe(1);
+        expect(activity.items[0]?.dismissible).toBeFalsy();
+        expect(markPetWidgetActivityDismissed(initial, activity.items[0])).toBe(initial);
+      }
+    });
+
+    test("dismissing a completion still behaves as marking it read", () => {
+      const value = snapshot([
+        session("done", { runState: "terminal", terminal: { status: "completed", at: 300 } }),
+      ]);
+      const activity = buildPetWidgetActivity(value, initial);
+      expect(activity.items[0]).toMatchObject({ kind: "completed" });
+      const read = markPetWidgetActivityDismissed(initial, activity.items[0]);
+      expect(read).toEqual(markPetWidgetCompletionSeen(initial, "completed:done:300"));
+      expect(buildPetWidgetActivity(value, read).badgeCount).toBe(0);
+    });
   });
 });

@@ -81,7 +81,9 @@ export function PetActivityPreview({
             onDismiss();
           }}
           aria-label={`${t(
-            item.kind === "completed" ? "pet.peek.close" : "pet.widget.collapseSessions",
+            item.kind === "completed" || item.dismissible
+              ? "pet.peek.close"
+              : "pet.widget.collapseSessions",
           )}：${item.title}`}
         >
           <X className="h-4 w-4" aria-hidden="true" />
