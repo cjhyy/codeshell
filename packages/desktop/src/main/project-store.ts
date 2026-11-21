@@ -207,8 +207,8 @@ export class ProjectStore {
   }
 
   /** Register a path selected by Main's native picker, including explicit tombstone restoration. */
-  async createFromPath(pickedPath: string): Promise<LocalProject> {
-    const registered = await this.registerFromPath(pickedPath, true);
+  async createFromPath(pickedPath: string, commit?: () => void): Promise<LocalProject> {
+    const registered = await this.registerFromPath(pickedPath, true, commit);
     if (!registered) throw new Error("picker-authorized project registration failed");
     return registered.project;
   }
@@ -216,6 +216,7 @@ export class ProjectStore {
   private async registerFromPath(
     pickedPath: string,
     restoreTombstone: boolean,
+    commit?: () => void,
   ): Promise<{ project: LocalProject; created: boolean } | null> {
     const root = this.resolvePickedRoot(pickedPath);
     let changed = false;
@@ -259,12 +260,16 @@ export class ProjectStore {
       changed = true;
       createdNew = true;
       return newProject;
-    });
+    }, commit);
     if (changed) await this.didChange();
     return project ? { project: cloneProject(project), created: createdNew } : null;
   }
 
-  async addRoot(projectId: string, pickedPath: string): Promise<AddedProjectRoot> {
+  async addRoot(
+    projectId: string,
+    pickedPath: string,
+    commit?: () => void,
+  ): Promise<AddedProjectRoot> {
     const root = this.resolvePickedRoot(pickedPath);
     const picked = resolve(pickedPath);
     const project = this.mutate((registry) => {
@@ -296,7 +301,7 @@ export class ProjectStore {
       });
       touchProject(target, timestamp);
       return target;
-    });
+    }, commit);
     await this.didChange();
     return {
       project: cloneProject(project),
@@ -493,7 +498,7 @@ export class ProjectStore {
     }
   }
 
-  async setPrimary(projectId: string, rootId: string): Promise<LocalProject> {
+  async setPrimary(projectId: string, rootId: string, commit?: () => void): Promise<LocalProject> {
     const project = this.mutate((registry) => {
       const target = requireLiveProject(registry, projectId);
       const primary = target.roots.find((root) => root.id === rootId);
@@ -504,12 +509,12 @@ export class ProjectStore {
         touchProject(target, this.now());
       }
       return target;
-    });
+    }, commit);
     await this.didChange();
     return cloneProject(project);
   }
 
-  async rename(projectId: string, name: string): Promise<LocalProject> {
+  async rename(projectId: string, name: string, commit?: () => void): Promise<LocalProject> {
     const normalized = checkedName(name);
     const project = this.mutate((registry) => {
       const target = requireLiveProject(registry, projectId);
@@ -519,19 +524,19 @@ export class ProjectStore {
         touchProject(target, this.now());
       }
       return target;
-    });
+    }, commit);
     await this.didChange();
     return cloneProject(project);
   }
 
-  async setPinned(projectId: string, pinned: boolean): Promise<LocalProject> {
+  async setPinned(projectId: string, pinned: boolean, commit?: () => void): Promise<LocalProject> {
     if (typeof pinned !== "boolean") throw new Error("invalid pinned state");
     const project = this.mutate((registry) => {
       const target = requireLiveProject(registry, projectId);
       target.pinned = pinned || undefined;
       touchProject(target, this.now());
       return target;
-    });
+    }, commit);
     await this.didChange();
     return cloneProject(project);
   }
@@ -847,7 +852,7 @@ export class ProjectStore {
     return { version: 2, projects };
   }
 
-  private mutate<T>(mutation: (registry: LocalProjectRegistryV2) => T): T {
+  private mutate<T>(mutation: (registry: LocalProjectRegistryV2) => T, commit?: () => void): T {
     this.ensureInitialized();
     const result = mutateJsonFile<LocalProjectRegistryV2, T>(this.file, {
       parse: (raw) => {
@@ -855,7 +860,11 @@ export class ProjectStore {
         return parseRegistryText(raw, this.file);
       },
       serialize: serializeRegistry,
-      mutation: (registry) => ({ value: registry, result: mutation(registry) }),
+      mutation: (registry) => {
+        const result = mutation(registry);
+        commit?.();
+        return { value: registry, result };
+      },
       mode: 0o600,
       maxBytes: MAX_FILE_BYTES,
     });

@@ -1,3 +1,15 @@
+import { registerConfigurationSettingsIpc } from "./configuration-settings-ipc.js";
+import type { SettingsChange } from "../shared/settings-change.js";
+import {
+  observeBackgroundWorkChange,
+  type BackgroundWorkChange,
+} from "@cjhyy/code-shell-core/internal";
+import {
+  setDesktopCredentialFiles,
+  readDesktopCookie,
+  runDesktopCredentialOperation,
+} from "./credential-file-client.js";
+import { taskInboxEnabled } from "./task-inbox/task-host-reads.js";
 import { registerLinkedFileSourceIpc } from "./linked-file-sources-ipc.js";
 import { openLinkedFileSourceOperation } from "./linked-file-sources-host.js";
 import { registerOperationBatchHost } from "./operation-batch-host.js";
@@ -59,7 +71,6 @@ import {
   writeSettingsSchemaFile,
   userHome,
   codeShellHome,
-  CredentialStore,
   summarizeCookieExpiry,
   materializeCookieSecret,
   sweepStaleCredentialCookies,
@@ -127,10 +138,7 @@ import {
 } from "./renderer-project-path.js";
 import { PetStateAggregator } from "./pet/pet-state-aggregator.js";
 import { ExternalSessionAdapter, type ExternalCli } from "./pet/external-session-adapter.js";
-import {
-  ExternalSessionVisibilityController,
-  touchesExternalSessionVisibility,
-} from "./pet/external-session-visibility.js";
+import { ExternalSessionVisibilityController } from "./pet/external-session-visibility.js";
 import { createLatestResultCache } from "./pet/latest-result-cache.js";
 import { createPetSummaryStore } from "./pet/pet-summary-store.js";
 import { createPetSummaryService } from "./pet/pet-summary-service.js";
@@ -257,7 +265,7 @@ import {
   type ChromeNativeRegistrationResult,
 } from "./browser-runtime/index.js";
 import {
-  buildDesktopAutomationRunner,
+  type AutomationSessionMeta,
   makeCronRunnerWithResume,
   resolveDesktopAutomationJobWorkspace,
 } from "./automation-host.js";
@@ -288,11 +296,10 @@ import { cleanupLease, sweepStaleLeases, BROWSER_PARTITION } from "./credentials
 import { cookieCredentialAutoRefresh } from "./cookie-credential-auto-refresh.js";
 import { isBrowserPartition } from "../shared/browser-partition.js";
 import { isProfileBrowserPartition } from "../shared/browser-profile.js";
-import { resolveCookieCredentialForBrowser } from "./credential-action.js";
 import { restoreCookieCredentialToBrowser } from "./cookie-credential-browser.js";
 import { loginAndCaptureCookies } from "./credentials-login/index.js";
 import {
-  archiveDiskSession,
+  archiveDiskSession as writeSessionArchive,
   cleanupAttachments,
   cleanupSessionAttachments,
   cleanupStaleQuickChatSessions,
@@ -333,11 +340,11 @@ import { ApprovalBridge } from "./cc-room/approval-bridge.js";
 import { createRoomTranscriptSubscriptions } from "./cc-room/transcript-subscriptions.js";
 import { QuickChatOwnershipRegistry } from "./quick-chat-ownership.js";
 import { getGitStatus, getGitBranches, revealInFinder, openPath } from "./desktop-services.js";
-import { readSettings, writeSettings, type SettingsScope } from "./settings-service.js";
+import { readSettings } from "./settings-service.js";
 import { registerDesktopOutputHistoryHost } from "./session-output-history-host.js";
 import { registerSessionCatalogIpc } from "./session-catalog-ipc.js";
-import { SessionCatalogStore } from "./session-catalog-store.js";
-import { createTaskInboxSources } from "./task-inbox/task-inbox-sources.js";
+import { hostCatalogClient } from "./desktop-host/catalog-client.js";
+import { backgroundTaskSourceId, createTaskInboxSources } from "./task-inbox/task-inbox-sources.js";
 import { createTaskInboxService } from "./task-inbox/task-inbox-service.js";
 import { createTaskInboxBackgroundHost } from "./task-inbox/task-inbox-background-host.js";
 import * as backgroundWork from "./cc-room/background-work-ipc.js";
@@ -499,7 +506,13 @@ const appRendererNavigation = new AppRendererNavigation(
     pathToFileURL(resolve(__dirname, "..", "renderer", "index.html")).href,
   (url) => shell.openExternal(url),
 );
-const desktopHost = createDesktopHost(join(__dirname, "desktop-host.mjs"), appRendererNavigation);
+const desktopHost = createDesktopHost(
+  join(__dirname, "desktop-host.mjs"),
+  appRendererNavigation,
+  (): void => taskInboxService.hostRestarted(),
+  applyRendererSettingsSideEffects,
+);
+setDesktopCredentialFiles(desktopHost.credentialCommand);
 const { listDiskSessions } = desktopHost;
 const chromeNativeMessagingOrigin = nativeMessagingOriginFromArgv(process.argv);
 if (chromeNativeMessagingOrigin) {
@@ -643,11 +656,10 @@ const externalRuntime = createExternalRuntimeModule(() => {
       // second window showing a different session must not receive its stream.
       emit: (sessionId, event) => {
         externalBridge.ingestOwnedExternalEvent(sessionId, event);
-        taskInboxService?.scheduleRefresh();
       },
       sessionStateChanged: (sessionId, active, ownerId) => {
         sendToOwnerWindow(ownerId, "externalRuntime:sessionState", { sessionId, active });
-        taskInboxService?.scheduleRefresh();
+        markSessionTaskDirty(sessionId);
       },
       // The host seams the exposed tools need. `panels` points at the same
       // requestPanelHost the native protocol line reaches, so owner routing,
@@ -661,7 +673,10 @@ const externalRuntime = createExternalRuntimeModule(() => {
           externalRuntimeWorkspaceForSession(sessionId),
         ),
       backgroundWork: createExternalRuntimeBackgroundWork(),
-      userTurnStarted: (sessionId) => beginBrowserRunForSession(sessionId),
+      userTurnStarted: (sessionId) => {
+        beginBrowserRunForSession(sessionId);
+        userContinuedTask(sessionId);
+      },
       mimiTools: () => externalRuntimeMimiHost(petNotices, externalBridge),
     },
   };
@@ -693,12 +708,13 @@ const panelAppBridge = new PanelAppBridge({
   cookieCredentials: {
     taskCredentials: async (cwd) => {
       await migrateCredentialStore(cwd);
-      return new CredentialStore(cwd).list();
+      return runDesktopCredentialOperation(cwd, ["user", "project"], undefined, (s) => s.list());
     },
     list: async (cwd) => {
       await migrateCredentialStore(cwd);
-      return new CredentialStore(cwd)
-        .list()
+      return (
+        await runDesktopCredentialOperation(cwd, ["user", "project"], undefined, (s) => s.list())
+      )
         .filter((credential) => credential.type === "cookie")
         .map((credential) => {
           let health: "ready" | "corrupted" = "corrupted";
@@ -737,22 +753,23 @@ const panelAppBridge = new PanelAppBridge({
         typeof capture.suggestedLabel === "string" && capture.suggestedLabel.trim()
           ? `${providerLabel} · ${capture.suggestedLabel.trim().slice(0, 80)}`
           : `${providerLabel} 登录`;
-      const store = new CredentialStore(cwd);
-      const previous = new CredentialStore().resolve(credentialId);
       cookieCredentialAutoRefresh.detachForCredential(cwd, credentialId, "user");
-      store.save("user", {
-        id: credentialId,
-        type: "cookie",
-        label: accountLabel,
-        secret: JSON.stringify(capture.jar),
-        meta: {
-          ...(previous?.type === "cookie" ? previous.meta : {}),
-          appUrl: url,
-          platform: providerLabel,
-          domain: capture.domain,
-          scope: "all",
-          switchMode: "merge",
-        },
+      await runDesktopCredentialOperation(cwd, ["user"], "user", (store) => {
+        const previous = store.resolve(credentialId);
+        store.save("user", {
+          id: credentialId,
+          type: "cookie",
+          label: accountLabel,
+          secret: JSON.stringify(capture.jar),
+          meta: {
+            ...(previous?.type === "cookie" ? previous.meta : {}),
+            appUrl: url,
+            platform: providerLabel,
+            domain: capture.domain,
+            scope: "all",
+            switchMode: "merge",
+          },
+        });
       });
       bridge?.pushCredentialSnapshot(cwd);
 
@@ -760,7 +777,7 @@ const panelAppBridge = new PanelAppBridge({
       const partition = browserPartitionForBucket(bucket);
       if (partition) {
         // Resolve the user record just saved, without project shadowing.
-        const resolved = resolveCookieCredentialForBrowser(undefined, credentialId, "full");
+        const resolved = await readDesktopCookie(undefined, credentialId, "full");
         if (!resolved.ok) throw new Error(resolved.error);
         const restored = await restoreCookieCredentialToBrowser({
           targetSession: partition,
@@ -792,7 +809,7 @@ const panelAppBridge = new PanelAppBridge({
       const partition = browserPartitionForBucket(bucket);
       if (!partition) throw new Error("Cookie restore requires an active task browser");
       await migrateCredentialStore(cwd);
-      const resolved = resolveCookieCredentialForBrowser(cwd, credentialId, "full");
+      const resolved = await readDesktopCookie(cwd, credentialId, "full");
       if (!resolved.ok) return { invalid: true };
       const result = await restoreCookieCredentialToBrowser({
         targetSession: partition,
@@ -808,7 +825,12 @@ const panelAppBridge = new PanelAppBridge({
     },
     materialize: async ({ credentialId, cwd }) => {
       await migrateCredentialStore(cwd);
-      const credential = new CredentialStore(cwd).resolve(credentialId);
+      const credential = await runDesktopCredentialOperation(
+        cwd,
+        ["user", "project"],
+        undefined,
+        (s) => s.resolve(credentialId),
+      );
       if (!credential || credential.type !== "cookie") {
         throw new Error(`No saved Cookie login: ${credentialId}`);
       }
@@ -1188,6 +1210,7 @@ tunnelManager.on("status", (status: string, detail?: unknown) => {
 // Push the live online-device set to every renderer whenever a phone connects
 // or disconnects, so the trusted-device list can show per-device online lamps.
 mobileRemote.on("online-change", (ids: string[]) => {
+  bridge?.setMobileOutputOnline(ids.length > 0);
   for (const w of BrowserWindow.getAllWindows()) {
     if (!w.isDestroyed()) w.webContents.send("mobileRemote:onlineChange", ids);
   }
@@ -1690,10 +1713,10 @@ async function createWindow(): Promise<BrowserWindow> {
         hostDirectory: codeShellHome(),
         sessionStorageDir: sessionsRoot(),
         cipher: new SafeStorageCipher(),
-        encryptionAvailable: () =>
-          safeStorage.isEncryptionAvailable() &&
+        encryptionAvailable: async () =>
+          (await safeStorage.isAsyncEncryptionAvailable()) &&
           (process.platform !== "linux" ||
-            safeStorage.getSelectedStorageBackend() !== "basic_text"),
+            !["basic_text", "unknown"].includes(safeStorage.getSelectedStorageBackend())),
         hasActiveEphemeralOwner: (sessionId) => quickChatOwnership.hasActiveOwner(sessionId),
         hasActiveHostTaskOwner: (sessionId) => panelAppBridge.hasActiveAgentTaskOwner(sessionId),
       }),
@@ -1701,12 +1724,25 @@ async function createWindow(): Promise<BrowserWindow> {
       (sessionId, ownerId) => rendererBrowserSessionAccess.sessionOwnerClaimed(sessionId, ownerId),
       desktopHost.setOwner,
       desktopHost.sessionsChanged,
+      userContinuedTask,
+      desktopHost.createWorkerBridge,
     );
     // External Agent Runtimes (Codex / Claude Code). Everything
     // security-relevant is resolved here, in the composition root: this is the
     // only layer that knows the owning window, whether the project is trusted,
     // and which feature flags are on. The layers below deliberately refuse to
     // default any of it.
+    bridge.setMobileOutputOnline(mobileRemote.onlineDeviceIds().length > 0);
+    const markBackgroundChanged = (origin: "main" | "worker", e: BackgroundWorkChange) => {
+      taskInboxService.markDirty(
+        e.kind === "shell" ? "background-shell" : "background-job",
+        backgroundTaskSourceId(origin, e.sessionId, e.startedAt, e.workId),
+      );
+    };
+    bridge.onWorkerBackgroundWorkChanged = (change) => markBackgroundChanged("worker", change);
+    taskInboxDisposers.push(
+      observeBackgroundWorkChange((change) => markBackgroundChanged("main", change)),
+    );
     const externalBridge = bridge;
     taskInboxDisposers.push(
       bridge.subscribeOutbound((_line, entry) => {
@@ -1725,7 +1761,11 @@ async function createWindow(): Promise<BrowserWindow> {
             "background_task_completed",
           ].includes(event.type)
         ) {
-          taskInboxService?.scheduleRefresh();
+          if (entry) markSessionTaskDirty(entry.sessionId);
+          if (event.type.startsWith("background_task_")) {
+            taskInboxService.scheduleRefresh("background-shell");
+            taskInboxService.scheduleRefresh("background-job");
+          }
         }
       }),
     );
@@ -1904,7 +1944,16 @@ async function createWindow(): Promise<BrowserWindow> {
       },
     });
     petStateAggregator = aggregator;
-    taskInboxDisposers.push(aggregator.subscribe(() => taskInboxService?.scheduleRefresh()));
+    taskInboxDisposers.push(
+      aggregator.subscribe((event) => {
+        if (event.kind === "session-upsert") markSessionTaskDirty(event.session.agentSessionId);
+        else if (event.kind === "session-remove") markSessionTaskDirty(event.sessionId);
+        else if (event.kind === "reset") {
+          for (const source of ["session", "subagent", "external-runtime"] as const)
+            taskInboxService.scheduleRefresh(source);
+        }
+      }),
+    );
 
     // Toggle-driven external-CLI session adapters (Codex / Claude). The
     // controller folds each session cwd's capabilityOverrides.pet over the
@@ -1965,7 +2014,9 @@ async function createWindow(): Promise<BrowserWindow> {
       resolve(app.getPath("userData"), "pet", "long-tasks.json"),
     );
     petLongTaskStore = longTaskStore;
-    taskInboxDisposers.push(longTaskStore.subscribe(() => taskInboxService?.scheduleRefresh()));
+    taskInboxDisposers.push(
+      longTaskStore.subscribe(() => taskInboxService.scheduleRefresh("mimi-delegation")),
+    );
     // The one interpreter of Session streams (see createSessionOutcomeTap below);
     // the bound-Session bridge reads its outcomes from `sessionOutcomes`.
     const sessionOutcomeDeriver = new SessionOutcomeDeriver();
@@ -1979,7 +2030,11 @@ async function createWindow(): Promise<BrowserWindow> {
     let mimiSessionId: string | undefined;
     void petMetadata
       .ensure()
-      .then((metadata) => (mimiSessionId = metadata.petSessionId))
+      .then((metadata) => {
+        mimiSessionId = metadata.petSessionId;
+        externalBridge.setMimiSession(mimiSessionId);
+        desktopHost.setStreamView(mimiSessionId, true);
+      })
       .catch(() => undefined);
     const notices = wirePetNotices({
       userDataDir: app.getPath("userData"),
@@ -2023,8 +2078,10 @@ async function createWindow(): Promise<BrowserWindow> {
     petNotices = notices;
     let petNoticeControls: PetNoticeControls | undefined;
     const writePetNotificationSettings = async (notifications: Record<string, unknown>) => {
-      await writeSettings("user", { pet: { notifications } });
-      notices.settingsChanged();
+      await desktopHost.callBusiness("settings/patch", {
+        scope: "user",
+        patch: { pet: { notifications } },
+      });
     };
     // Mimi's Notices / Triggers / ManageTrigger / NotificationSettings (design §4.7).
     const mimiNoticeTools = wireMimiNoticeTools({
@@ -2897,7 +2954,10 @@ async function createWindow(): Promise<BrowserWindow> {
         getAutoExtract: async () =>
           petMemoryAutoExtractFromSettings(await readSettings("user").catch(() => null)),
         setAutoExtract: async (enabled) => {
-          await writeSettings("user", petMemoryAutoExtractSettingsPatch(enabled));
+          await desktopHost.callBusiness("settings/patch", {
+            scope: "user",
+            patch: petMemoryAutoExtractSettingsPatch(enabled),
+          });
           return enabled;
         },
       },
@@ -3054,7 +3114,7 @@ function createPetWidgetBrowserWindow(bounds: {
   // only updates on a fresh transcript hydrate (opening the panel or a restart)
   // — the in-place reply never streams in. attachWindow self-removes on close,
   // so re-creating the widget re-attaches cleanly.
-  bridge?.attachWindow(win);
+  bridge?.attachPetWindow(win);
   if (process.platform === "darwin") {
     void app.dock?.show();
     win.setHiddenInMissionControl(true);
@@ -3793,38 +3853,23 @@ app.whenReady().then(async () => {
   try {
     // Recover Mimi's ledger and initialize dispatch before restored timers can fire.
     await initialWindowReady;
-    // Feed in-main automation Engine events into the bridge's per-session
-    // snapshot + renderer stream, so automation sessions reconnect identically
-    // to interactive chat. `bridge?.` safely no-ops if a job somehow fires
-    // before any window (and thus the bridge) exists.
-    const emitAutomationEvent = (sessionId: string, event: unknown) => {
-      bridge?.ingestExternalEvent(sessionId, event, { browserVisibility: "hidden" });
-      if ((event as { type?: string })?.type === "run_result") {
-        taskInboxAutomationSessions.delete(sessionId);
-        taskInboxService?.scheduleRefresh();
-      }
-    };
-    const announceAutomationSession = (meta: {
-      sessionId: string;
-      cwd: string;
-      title: string;
-      prompt: string;
-      cronJobId: string;
-      clientMessageId?: string;
-    }) => {
+    const announceAutomationSession = (meta: AutomationSessionMeta) => {
       taskInboxAutomationSessions.set(meta.sessionId, meta.cronJobId);
       bridge?.broadcastAutomationSession(meta);
-      taskInboxService?.scheduleRefresh();
+      markSessionTaskDirty(meta.sessionId);
+      taskInboxService.markDirty("automation", meta.cronJobId);
     };
-    // Each fired job runs as a one-shot read-only headless Engine, which
-    // auto-writes a full transcript.jsonl (like interactive chat). The emit
-    // callback streams events to a live snapshot for renderer reconnect; the
-    // announce callback fires once with cwd+title so the renderer can place
-    // the live run in the right project sidebar group immediately.
-    const headlessAutomationRunner = buildDesktopAutomationRunner(
-      emitAutomationEvent,
-      announceAutomationSession,
-    );
+    const onAutomationNotice = (
+      notice: import("../host/composition/automation-run.js").AutomationRunNotice,
+    ) => {
+      if (notice.type === "session") announceAutomationSession(notice.meta);
+      else {
+        taskInboxAutomationSessions.delete(notice.sessionId);
+        markSessionTaskDirty(notice.sessionId);
+      }
+    };
+    desktopHost.automationListeners.add(onAutomationNotice);
+    taskInboxDisposers.push(() => desktopHost.automationListeners.delete(onAutomationNotice));
     // "Continue this conversation" jobs feed their prompt into the live session.
     const injectResumeTurn = createAutomationResumeTurn({
       bridge: () => bridge,
@@ -3832,7 +3877,12 @@ app.whenReady().then(async () => {
         desktopNotifications.notifyMissingAutomationResumeTarget(desktopNotifier, job),
     });
     const automationRunner = makeCronRunnerWithResume(
-      headlessAutomationRunner,
+      (request) =>
+        desktopHost.callBusiness(
+          "automation/run",
+          { job: request.job, searchPath: process.env.PATH ?? "" },
+          request.signal,
+        ),
       injectResumeTurn,
       (job) => resolveDesktopAutomationJobWorkspace(job),
     );
@@ -3865,7 +3915,7 @@ app.whenReady().then(async () => {
             if (jobId === event.job.id) taskInboxAutomationSessions.delete(sessionId);
           }
         }
-        taskInboxService?.scheduleRefresh();
+        taskInboxService.markDirty("automation", event.job.id);
         const notification = automationLifecycleNotification(event);
         if (!notification) return;
         publishGatewayControlEventBestEffort(notification);
@@ -3873,7 +3923,10 @@ app.whenReady().then(async () => {
       },
     });
     // Expose the live scheduler to the automation IPC service (Phase 3 UI).
-    setAutomationScheduler(automationHandle.scheduler);
+    const scheduler = automationHandle.scheduler;
+    setAutomationScheduler(scheduler);
+    scheduler.setDefinitionListener((id) => taskInboxService.markDirty("automation", id));
+    taskInboxDisposers.push(() => scheduler.setDefinitionListener());
     await petRuleScheduler?.start();
     // startAutomation installed the default executor (bindCronToEngine):
     // every cron job runs one headless codeshell turn. Driving Claude Code is
@@ -3888,7 +3941,7 @@ app.whenReady().then(async () => {
   }
 
   taskInboxDisposers.push(
-    agentNotificationBus.subscribe(() => taskInboxService?.scheduleRefresh()),
+    agentNotificationBus.subscribe(() => taskInboxService.scheduleRefresh("legacy-run")),
   );
   taskInboxService?.start();
 
@@ -4062,6 +4115,7 @@ registerProjectPanelIpc({
 // ── Credentials (token/link store + cookie capture) ──────────────────
 // cwd may be "" for no-repo contexts; project scope no-ops without a cwd.
 const { remoteLinkIpc } = registerLinkCredentialIpc({
+  withCaller: desktopHost.withDocumentCaller,
   mainWindows,
   bridge: () => bridge,
   linkDeviceOAuthBroker,
@@ -4353,6 +4407,7 @@ const {
 const knownGitRoots = new Set<string>();
 
 registerProjectAuthorityIpc({
+  host: desktopHost,
   ipcMain,
   getAllWindows: () => BrowserWindow.getAllWindows(),
   showOpenDialog: (options) => dialog.showOpenDialog(options),
@@ -4483,6 +4538,7 @@ ipcMain.handle("browser:popout", async (e, initialUrl?: string) => {
 });
 
 const { externalRuntimeModelService } = registerExternalRuntimeIpc({
+  callBusiness: desktopHost.callBusiness,
   externalRuntimeService: () => externalRuntime.service,
   externalRuntimeApprovals: () => externalRuntime.approvals,
 });
@@ -4494,65 +4550,16 @@ registerWorkspaceFilesIpc({ appRendererNavigation, mainWindows, assertRendererSe
 // path it writes capabilityOverrides to is byte-identical to the worker cwd.
 ipcMain.handle("no-repo:cwd", async () => resolveNoRepoCwd());
 
-ipcMain.handle("settings:get", async (_e, scope: SettingsScope) => {
-  if (scope !== "user") throw new Error("settings:get is user-scoped");
-  return readSettings("user");
-});
-ipcMain.handle("settings:getConfiguration", async (_e, target: RendererConfigurationTarget) =>
-  readSettings("project", await rendererConfigurationCwd(target)),
-);
+registerConfigurationSettingsIpc(ipcMain, desktopHost);
 
-function validateRendererSettingsPatch(patch: Record<string, unknown>): void {
-  if (!patch || typeof patch !== "object" || Array.isArray(patch)) {
-    throw new Error("patch must be object");
-  }
-  if (["panelAppBindings", "panelAppPins", "panelAppOverrides"].some((key) => key in patch)) {
-    throw new Error("Panel project bindings must use the reviewed project binding API");
-  }
-  try {
-    if (Buffer.byteLength(JSON.stringify(patch)) > 2 * 1024 * 1024) {
-      throw new Error("settings patch is too large");
-    }
-  } catch (error) {
-    if (error instanceof Error && error.message === "settings patch is too large") throw error;
-    throw new Error("settings patch must be JSON-serializable", { cause: error });
-  }
+async function applyRendererSettingsSideEffects(change: SettingsChange): Promise<void> {
+  if (change.panelApps) invalidatePanelAppBindingGuard();
+  if (change.git) void applyGitPathFromSettings();
+  if (change.pet) petNotices?.settingsChanged();
+  if (change.externalVisibility) await reconcileExternalAdapters?.();
+  if (change.panelApps) broadcastPanelAppsChanged(mainWindows);
+  if (change.pluginCommands) broadcastPluginCommandsChanged(mainWindows);
 }
-
-async function applyRendererSettingsSideEffects(
-  scope: SettingsScope,
-  patch: Record<string, unknown>,
-): Promise<void> {
-  const touchesPanelApps =
-    "disabledPanelApps" in patch || "panelAppBindings" in patch || "panelAppOverrides" in patch;
-  // Before any await: a failing side effect must not leave the guard on the old binding.
-  if (touchesPanelApps) invalidatePanelAppBindingGuard();
-  if ("git" in patch) void applyGitPathFromSettings();
-  if (scope === "user" && "pet" in patch) petNotices?.settingsChanged();
-  if (touchesExternalSessionVisibility(scope, patch)) await reconcileExternalAdapters?.();
-  if (touchesPanelApps) {
-    broadcastPanelAppsChanged(mainWindows);
-  }
-  if ("disabledPlugins" in patch || "capabilityOverrides" in patch) {
-    broadcastPluginCommandsChanged(mainWindows);
-  }
-}
-
-ipcMain.handle("settings:set", async (_e, scope: SettingsScope, patch: Record<string, unknown>) => {
-  if (scope !== "user") throw new Error("settings:set is user-scoped");
-  validateRendererSettingsPatch(patch);
-  await writeSettings("user", patch);
-  await applyRendererSettingsSideEffects("user", patch);
-});
-ipcMain.handle(
-  "settings:setConfiguration",
-  async (_e, target: RendererConfigurationTarget, patch: Record<string, unknown>) => {
-    validateRendererSettingsPatch(patch);
-    const path = await rendererConfigurationCwd(target);
-    await writeSettings("project", patch, path);
-    await applyRendererSettingsSideEffects("project", patch);
-  },
-);
 
 registerMemoryIpc({ mainWindows });
 const sessionDeletions = new Map<string, Promise<void>>();
@@ -4560,6 +4567,7 @@ function deleteDesktopSession(id: string): Promise<void> {
   const existing = sessionDeletions.get(id);
   if (existing) return existing;
   deletingBrowserSessions.add(id);
+  desktopHost.setStreamView(id, false);
   desktopHost.setDeleting(id, true);
   rendererBrowserSessionAccess.forgetSession(id);
   const pending = Promise.resolve()
@@ -4597,10 +4605,11 @@ async function deleteDesktopSessionResources(id: string): Promise<void> {
   });
   removeExternalRuntimeBinding(id);
   await deleteSession(id);
+  await taskInboxService.sessionIntent({ type: "sessionDeleted", sessionId: id });
   await cleanupKnownAttachments(id);
   // Drop any in-memory snapshot for the deleted session so it can't be
   // replayed into a fresh tab that happens to reuse the id.
-  bridge?.forgetSession(id);
+  await bridge?.forgetSession(id);
   if (ephemeralBrowserPartition?.startsWith("browser:qchat:")) {
     const ephemeralSession = session.fromPartition(ephemeralBrowserPartition);
     await Promise.all([ephemeralSession.clearStorageData(), ephemeralSession.clearCache()]).catch(
@@ -4657,6 +4666,7 @@ ipcMain.handle("quickChat:cleanupSession", async (event, id: unknown, claimId: u
 });
 
 ipcMain.handle("agent:pendingApprovals", (event) => {
+  appRendererNavigation.assertSender(event);
   // Native approval events already reach all main windows. Preserve that queue
   // and its session envelopes, without replaying resolved historical requests.
   pendingMobileApprovals.setWorkerState(
@@ -4664,32 +4674,43 @@ ipcMain.handle("agent:pendingApprovals", (event) => {
     bridge?.hasLiveWorker() ?? false,
   );
   return [
-    ...pendingMobileApprovals.replayAllLines().map((line) => JSON.parse(line).params),
+    ...pendingMobileApprovals
+      .replayAllLines()
+      .map((line) => JSON.parse(line).params)
+      .filter(
+        (envelope) => bridge?.panelOwnerWebContentsId(envelope.sessionId) === event.sender.id,
+      ),
     ...(externalRuntime.approvals?.pendingForWindow(event.sender.id) ?? []),
   ];
 });
-/**
- * Snapshot subscription: a (re)mounted renderer asks main for the events it
- * missed for a session past `sinceSeq`. main holds these (AgentBridge's
- * SessionSnapshotStore) precisely because it does not remount with the
- * renderer. Returns { events: [{seq,event}], nextSeq }.
- */
-ipcMain.handle("agent:subscribe", async (_e, sessionId: string, sinceSeq?: number) => {
+// Compatibility IPC uses the same snapshot grant as the workbench port. The
+// native Pet surface reads only the application-owned Mimi session.
+ipcMain.handle("agent:subscribe", async (event, sessionId: string, sinceSeq?: number) => {
   assertDesktopSessionId(sessionId);
   const cursor =
     typeof sinceSeq === "number" && Number.isSafeInteger(sinceSeq) && sinceSeq >= 0 ? sinceSeq : 0;
-  return (
-    bridge?.getSnapshot(sessionId, cursor) ?? {
-      events: [],
-      nextSeq: 1,
-      topLevelRunning: false,
-    }
-  );
+  appRendererNavigation.assertSender(event);
+  const isPet = () =>
+    petSurfaceWindows().some((w) => !w.isDestroyed() && w.webContents === event.sender);
+  if (!isPet()) return desktopHost.readWorkbenchOutput(event, sessionId, cursor);
+  const frame = event.senderFrame;
+  const assertPet = () => {
+    appRendererNavigation.assertSender(event);
+    if (!isPet() || frame !== event.sender.mainFrame || deletingBrowserSessions.has(sessionId))
+      throw new Error("Pet output authority was revoked");
+  };
+  if (!petDispatchService || sessionId !== (await petDispatchService.getSessionId()))
+    throw new Error("Pet output requires the Mimi session");
+  assertPet();
+  const snapshot = await bridge!.readSnapshot(sessionId, cursor);
+  assertPet();
+  return snapshot;
 });
 let closeActivityHistory: (() => Promise<void>) | undefined;
 registerDesktopOutputHistoryHost({
   ipcMain,
   windows: () => [...mainWindows],
+  archive: archiveDiskSession,
   historyWindows: () => {
     return [...mainWindows, ...petSurfaceWindows()];
   },
@@ -4700,18 +4721,19 @@ registerDesktopOutputHistoryHost({
     closeActivityHistory = cleanup;
   },
 });
-const sessionCatalogStore = new SessionCatalogStore();
+const sessionCatalogStore = hostCatalogClient(
+  desktopHost.callBusiness,
+  desktopHost.catalogListeners,
+);
 const sessionCatalogIpc = registerSessionCatalogIpc(
   ipcMain,
   () => {
     return [...mainWindows, ...petSurfaceWindows()];
   },
   sessionCatalogStore,
+  sessionCatalogStore.transcripts,
+  desktopHost.documentSignal,
 );
-function taskInboxEnabled(): boolean {
-  const settings = new SettingsManager(resolveNoRepoCwd(), "full").getForScope("user");
-  return settings.featureFlags?.taskInboxV1 !== false;
-}
 taskInboxDisposers.push(
   registerOptimizationLabHost({
     windows: () => [...mainWindows],
@@ -4721,8 +4743,37 @@ taskInboxDisposers.push(
     bridge: () => bridge,
   }),
 );
+function markSessionTaskDirty(id: string) {
+  taskInboxService.markDirty("session", id);
+  taskInboxService.markDirty("external-runtime", id);
+  taskInboxService.markDirty("subagent", id);
+}
+function userContinuedTask(id: string) {
+  void taskInboxService
+    .sessionIntent({ type: "userContinued", sessionId: id })
+    .then(() => markSessionTaskDirty(id))
+    .catch((error) => dlog("main", "task-inbox.user-continue", { error: String(error) }));
+}
+async function archiveDiskSession(id: string, archivedAt: number | undefined) {
+  await writeSessionArchive(id, archivedAt);
+  await taskInboxService.sessionIntent({
+    type: archivedAt === undefined ? "sessionUnarchived" : "sessionArchived",
+    sessionId: id,
+  });
+  markSessionTaskDirty(id);
+}
+
 const taskInboxSources = createTaskInboxSources({
   diskSessions: () => listAllDiskSessions({ includeSubagents: true }),
+  diskSession: async (id) =>
+    (
+      await listDiskSessions({
+        limit: 1,
+        sessionId: id,
+        includeArchived: true,
+        includeSubagents: true,
+      })
+    ).sessions[0],
   sessionCatalog: () => sessionCatalogStore.load(),
   sessionProjection: () => petStateAggregator?.getSnapshot(),
   native: {
@@ -4776,33 +4827,41 @@ const taskInboxSources = createTaskInboxSources({
 const taskInboxService = createTaskInboxService({
   filePath: resolve(app.getPath("userData"), "task-inbox", "v1.json"),
   ...taskInboxSources,
+  command: desktopHost.taskCommand,
   enabled: taskInboxEnabled,
   onError: (error) => dlog("main", "task-inbox.projection.failed", { error: String(error) }),
 });
 taskInboxDisposers.push(
-  registerTaskInboxIpc(ipcMain, () => [...mainWindows], taskInboxService, taskInboxEnabled),
-  sessionCatalogStore.onChanged(() => taskInboxService?.scheduleRefresh()),
+  registerTaskInboxIpc(
+    ipcMain,
+    () => [...mainWindows],
+    taskInboxService,
+    taskInboxEnabled,
+    (event) => appRendererNavigation.assertSender(event),
+    desktopHost.withDocumentCaller,
+  ),
+  sessionCatalogStore.onChanged(() => taskInboxService.scheduleRefresh("session")),
 );
 backgroundWork.registerBackgroundWorkIpc(ipcMain, mainWindows, () => bridge);
-const disposeOperationBatchHost = registerOperationBatchHost({
+const operationScope = {
+  host: desktopHost,
   windows: () => [...mainWindows],
   enabled: taskInboxEnabled,
-  bridge: () => bridge ?? undefined,
-  isSessionRunning: (id) =>
+  isSessionRunning: (id: string) =>
     taskInboxAutomationSessions.has(id) ||
     bridge?.isSessionRunning(id) === true ||
     externalRuntime.service?.isSessionRunning(id) === true,
+};
+const disposeOperationBatchHost = registerOperationBatchHost({
+  ...operationScope,
+  bridge: () => bridge ?? undefined,
 });
-const disposeOperationResolutionHost = registerOperationResolutionHost({
-  windows: () => [...mainWindows],
-  enabled: taskInboxEnabled,
-  isSessionRunning: (id) =>
-    taskInboxAutomationSessions.has(id) ||
-    !!bridge?.isSessionRunning(id) ||
-    !!externalRuntime.service?.isSessionRunning(id),
-});
+const disposeOperationResolutionHost = registerOperationResolutionHost(operationScope);
 registerAutomationIpc();
-registerTrustNotificationIpc({ externalRuntimeService: () => externalRuntime.service });
+registerTrustNotificationIpc({
+  host: desktopHost,
+  externalRuntimeService: () => externalRuntime.service,
+});
 registerDesktopShutdown(app, {
   ownsInstance: () => ownsDesktopInstance,
   flushRenderers: () => sessionCatalogIpc.flushRenderers(),

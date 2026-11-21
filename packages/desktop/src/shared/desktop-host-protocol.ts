@@ -25,8 +25,10 @@ export interface DesktopHostIdentity {
 
 export type DesktopHostControl =
   | { type: "shutdown" }
+  | { type: "worker-port"; execPath: string; entryPath: string }
   | { type: "session-index-changed"; ids: string[] }
   | { type: "bind" | "revoke"; identity: DesktopHostIdentity }
+  | { type: "stream-view"; sessionId: string; enabled: boolean }
   | { type: "owner"; sessionId: string; webContentsId: number | null }
   | { type: "deleting"; sessionId: string; deleting: boolean };
 
@@ -83,6 +85,12 @@ export function isDesktopHostIdentity(value: unknown): value is DesktopHostIdent
 
 export function isDesktopHostControl(value: unknown): value is DesktopHostControl {
   if (!record(value)) return false;
+  if (value.type === "worker-port")
+    return (
+      hasOnly(value, ["type", "execPath", "entryPath"]) &&
+      typeof value.execPath === "string" &&
+      typeof value.entryPath === "string"
+    );
   if (value.type === "shutdown") return hasOnly(value, ["type"]);
   if (value.type === "session-index-changed") {
     return (
@@ -96,6 +104,8 @@ export function isDesktopHostControl(value: unknown): value is DesktopHostContro
     return hasOnly(value, ["type", "identity"]) && isDesktopHostIdentity(value.identity);
   }
   if (typeof value.sessionId !== "string" || !value.sessionId) return false;
+  if (value.type === "stream-view")
+    return typeof value.enabled === "boolean" && hasOnly(value, ["type", "sessionId", "enabled"]);
   if (value.type === "owner") {
     return (
       hasOnly(value, ["type", "sessionId", "webContentsId"]) &&

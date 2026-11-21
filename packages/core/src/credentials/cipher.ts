@@ -16,7 +16,17 @@
  *   - `enc:<scheme>:<base64>` — an encrypting cipher; `<scheme>` lets a cipher
  *                               recognize its own ciphertext via canDecrypt().
  */
+/** Host-provided nonblocking OS key operations. Callers await them outside any file lock. */
+export interface AsyncEncryptionCipher {
+  encrypt(plaintext: string): Promise<string>;
+  decrypt(stored: string): Promise<string>;
+  canDecrypt?(stored: string): Promise<boolean>;
+  /** Known target prefix avoids keychain probes for stores that already use this scheme. */
+  readonly storagePrefix?: string;
+}
+
 export interface EncryptionCipher {
+  readonly asynchronous?: AsyncEncryptionCipher;
   /** Encrypt a plaintext secret into its stored (tagged) form. */
   encrypt(plaintext: string): string;
   /** Decrypt a stored value back to plaintext. Must accept this cipher's own

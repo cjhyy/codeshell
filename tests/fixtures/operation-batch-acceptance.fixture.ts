@@ -461,13 +461,15 @@ mock.module("@cjhyy/code-shell-core/internal", () => ({
 }));
 const { PanelHostWindowRoutes } =
   await import("../../packages/desktop/src/main/panel-host-routing.js");
+const { OperationBatches } =
+  await import("../../packages/desktop/src/host/composition/operation-batches.js");
 const { registerOperationBatchIpc } =
   await import("../../packages/desktop/src/main/operation-batch-ipc.js");
 const { prepareAgentRunMetadata } =
   await import("../../packages/desktop/src/main/agent-run-metadata.js");
 function mainFixture() {
   const f = fixture(); // Its independent origin is intentionally not this Native batch origin.
-  const handlers = new Map<string, Function>();
+  const handlers = new Map<string, (event: any, input: unknown) => unknown>();
   let enabled = true,
     trusted = true,
     revision = "r1",
@@ -479,7 +481,7 @@ function mainFixture() {
   const webContents: any = { id: 100, mainFrame: frame };
   const window: any = { webContents, isDestroyed: () => false };
   const event: any = { sender: webContents, senderFrame: frame };
-  let resolver: Function | undefined,
+  let resolver: ((...args: any[]) => Promise<any>) | undefined,
     pendingResolve: (value: unknown) => void = () => {},
     run: Record<string, unknown> | undefined,
     token: string | undefined;
@@ -490,7 +492,7 @@ function mainFixture() {
     sessionPanelOwnerRevision: (sid: string) => panelOwners.revision(sid),
     workerGeneration: () => 7,
     hasLiveWorker: () => true,
-    setOperationBatchResolver: (fn: Function | undefined) => {
+    setOperationBatchResolver: (fn: typeof resolver) => {
       resolver = fn;
     },
     requestOperationBatchRun: (
@@ -504,9 +506,34 @@ function mainFixture() {
       return new Promise((resolve) => (pendingResolve = resolve));
     },
   };
+  const hostBatches = new OperationBatches(f.root, () => revision);
   const dispose = registerOperationBatchIpc({
+    captureClient: () => ({
+      async operationCommand<T>(action, payload) {
+        const file = join(f.root, ".operations", "ledger.json");
+        let wrapped;
+        try {
+          wrapped = JSON.parse(readFileSync(file, "utf8")).key;
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+          wrapped = "plain:" + createHash("sha256").update(randomUUID()).digest("hex");
+        }
+        const proposal = payload.proposal as Record<string, unknown> | undefined;
+        return hostBatches.run(
+          action as any,
+          {
+            ...payload,
+            frame: "fixture-native-frame",
+            permit: new Int32Array(new SharedArrayBuffer(4)),
+            ...(proposal
+              ? { proposal: { ...proposal, key: { wrapped, secret: wrapped.slice(6) } } }
+              : {}),
+          } as any,
+        ) as T;
+      },
+    }),
     ipc: {
-      handle: (name: string, fn: Function) => handlers.set(name, fn),
+      handle: (name: string, fn: (event: any, input: unknown) => unknown) => handlers.set(name, fn),
       removeHandler: (name: string) => {
         handlers.delete(name);
       },

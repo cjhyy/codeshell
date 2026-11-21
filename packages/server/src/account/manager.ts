@@ -21,7 +21,8 @@ import type {
 } from "./types.js";
 import { accountLinksRequest, accountLinkView, accountLinkRevocation } from "./links.js";
 import { accountProfile, accountProfileRequest } from "./profile.js";
-import { CloudAccountStore, validCloudAccountGrant, type SavedCloudAccount } from "./store.js";
+import type { GrantStorage } from "@cjhyy/code-shell-core/internal/storage";
+import { validCloudAccountGrant, type SavedCloudAccount } from "./store.js";
 import {
   CloudAccountHttpError,
   createCloudAccountTransport,
@@ -111,6 +112,8 @@ function wait(ms: number, signal: AbortSignal): Promise<void> {
 /** Optional cloud identity. Construction/status never initiate network activity. */
 export class CloudAccountManager {
   private loaded = false;
+  private loading?: Promise<void>;
+  private grantWrites: Promise<void> = Promise.resolve();
   private disposed = false;
   private readonly statusListeners = new Set<(status: CloudAccountStatus) => void>();
   private saved?: SavedCloudAccount;
@@ -130,7 +133,7 @@ export class CloudAccountManager {
   private expiryTimer?: ReturnType<typeof setTimeout>;
   constructor(
     private readonly deps: {
-      store: Pick<CloudAccountStore, "preflight" | "load" | "save" | "forget">;
+      store: GrantStorage<SavedCloudAccount>;
       request?: CloudAccountTransport;
       openExternal: (url: string) => Promise<void>;
       prepareGitHubLink?: (
@@ -154,15 +157,48 @@ export class CloudAccountManager {
   private now() {
     return this.deps.now?.() ?? Date.now();
   }
-  private load() {
-    if (this.loaded) return;
+  private load(): Promise<void> | undefined {
+    if (this.loaded) return this.loading;
     this.loaded = true;
+    const receive = (saved: SavedCloudAccount | undefined) => {
+      if (this.disposed) return;
+      this.saved = saved;
+      this.state = saved ? "signed-in" : "signed-out";
+    };
     try {
-      this.saved = this.deps.store.load();
-      this.state = this.saved ? "signed-in" : "signed-out";
+      const initial = this.deps.store.load();
+      if (initial instanceof Promise) {
+        this.loading = initial
+          .then(receive, () => {
+            this.state = "storage-error";
+          })
+          .finally(() => {
+            this.loading = undefined;
+            if (!this.disposed) this.publish(this.state);
+          });
+        return this.loading;
+      }
+      receive(initial);
     } catch {
       this.state = "storage-error";
     }
+  }
+
+  /** Merge profile and token changes in persistence order, with authority checked after OS prompts. */
+  private writeGrant(current: () => void, build: () => SavedCloudAccount) {
+    const pending = this.grantWrites.then(async () => {
+      current();
+      const next = build();
+      await this.deps.store.save(next, current);
+      current();
+      this.saved = next;
+      return next;
+    });
+    this.grantWrites = pending.then(
+      () => {},
+      () => {},
+    );
+    return pending;
   }
   status(): CloudAccountStatus {
     this.load();
@@ -190,6 +226,8 @@ export class CloudAccountManager {
     authorized: () => boolean = () => true,
     signal?: AbortSignal,
   ): Promise<CloudAccountOverview> {
+    const loading = this.load();
+    if (loading) await loading;
     const lease = this.captureRootAccount(input.origin, input.accountId, authorized);
     const requestSignal = signal ? AbortSignal.any([lease.signal, signal]) : lease.signal;
     requestSignal.throwIfAborted();
@@ -314,7 +352,8 @@ export class CloudAccountManager {
   }
   /** The application explicitly restores saved authority once its main window is ready. */
   async resume(authorized: () => boolean = () => true): Promise<CloudAccountStatus> {
-    this.load();
+    const loading = this.load();
+    if (loading) await loading;
     const saved = this.saved;
     if (!saved || this.state !== "signed-in" || !authorized()) return this.status();
     await this.getCredential(saved.origin, saved.account.id);
@@ -389,12 +428,15 @@ export class CloudAccountManager {
     const previous = this.saved;
     const next = savedGrant(value, origin);
     try {
-      this.deps.store.save(next);
+      await this.writeGrant(
+        () => this.current(generation, authorized),
+        () => next,
+      );
     } catch (error) {
       void this.revoke(next);
       throw error;
     }
-    this.saved = next;
+    this.current(generation, authorized);
     this.armExpiry();
     this.publish("signed-in");
     if (previous && previous.sessionId !== next.sessionId) await this.revoke(previous);
@@ -439,14 +481,18 @@ export class CloudAccountManager {
   }
   private async prepare(origin: string) {
     requireOrigin(origin);
-    this.load();
-    this.deps.store.preflight();
+    const loading = this.load();
     this.invalidate();
     this.githubConnection = undefined;
     const generation = this.generation;
     const signal = this.operation.signal;
-    this.publish("signing-in");
     try {
+      if (loading) await loading;
+      this.current(generation, () => true);
+      const preflight = this.deps.store.preflight();
+      if (preflight) await preflight;
+      this.current(generation, () => true);
+      this.publish("signing-in");
       await this.retire(this.saved);
       this.current(generation, () => true);
       return { generation, signal };
@@ -589,7 +635,8 @@ export class CloudAccountManager {
     }
   }
   async linkGitHub(authorized: () => boolean = () => true): Promise<CloudAccountStatus> {
-    this.load();
+    const loading = this.load();
+    if (loading) await loading;
     const saved = this.saved;
     if (!saved || this.state !== "signed-in" || !authorized()) throw new Error("请先登录云账号。");
     const token = await this.getCredential(saved.origin, saved.account.id);
@@ -603,7 +650,8 @@ export class CloudAccountManager {
     authorized: () => boolean = () => true,
   ): Promise<CloudAccountLinksResult> {
     const input = accountLinksRequest(raw);
-    this.load();
+    const loading = this.load();
+    if (loading) await loading;
     const saved = this.saved;
     const generation = this.generation;
     const signal = this.operation.signal;
@@ -645,7 +693,8 @@ export class CloudAccountManager {
     authorized: () => boolean = () => true,
   ): Promise<CloudAccountStatus> {
     const input = accountProfileRequest(raw);
-    this.load();
+    const loading = this.load();
+    if (loading) await loading;
     if (this.profileUpdate) throw new Error("账号资料正在保存，请稍后重试。");
     const saved = this.saved;
     const generation = this.generation;
@@ -687,14 +736,13 @@ export class CloudAccountManager {
       });
       current();
       const account = accountProfile(value, input.accountId);
-      const next = { ...this.saved!, account };
       try {
-        this.deps.store.save(next);
+        await this.writeGrant(current, () => ({ ...this.saved!, account }));
       } catch {
         throw new Error("账号资料同步后无法保存到本机，请重试。");
       }
+      current();
       this.profileRevision++;
-      this.saved = next;
       this.publish("signed-in");
       return this.status();
     } finally {
@@ -900,7 +948,8 @@ export class CloudAccountManager {
     this.publish(this.saved ? "signed-in" : "signed-out");
   }
   async logout(): Promise<CloudAccountLogoutResult> {
-    this.load();
+    const loading = this.load();
+    if (loading) await loading;
     const previous = this.saved;
     const inFlightRefresh = this.refreshResponse;
     if (inFlightRefresh) this.revocationResponses.add(inFlightRefresh);
@@ -987,7 +1036,8 @@ export class CloudAccountManager {
   /** Returns credentials only to main callers, for one exact service/account. */
   async getCredential(origin: string, accountId?: string, signal?: AbortSignal): Promise<string> {
     requireOrigin(origin);
-    this.load();
+    const loading = this.load();
+    if (loading) await loading;
     const saved = this.saved;
     if (
       this.state !== "signed-in" ||
@@ -1032,23 +1082,40 @@ export class CloudAccountManager {
           }
           if (grant.account.id !== saved.account.id || grant.sessionId !== saved.sessionId)
             throw new Error("云账号授权发生变化，请重新登录。");
-          const next = savedGrant(grant, origin);
-          // A refresh issued before a profile update may carry its older label.
-          if (profileRevision !== this.profileRevision && this.saved?.sessionId === saved.sessionId)
-            next.account = { ...this.saved.account };
+          const current = () =>
+            this.current(
+              generation,
+              () =>
+                this.saved?.sessionId === saved.sessionId &&
+                this.saved?.account.id === saved.account.id &&
+                !operationSignal.aborted,
+            );
+          let next: SavedCloudAccount;
           try {
-            this.deps.store.save(next);
+            next = await this.writeGrant(current, () => {
+              const rotated = savedGrant(grant, origin);
+              if (
+                profileRevision !== this.profileRevision &&
+                this.saved?.sessionId === saved.sessionId
+              )
+                rotated.account = { ...this.saved.account };
+              return rotated;
+            });
+            current();
           } catch (error) {
+            if (generation !== this.generation) {
+              if (!this.revocationResponses.has(response)) void this.revoke({ ...grant, origin });
+              throw error;
+            }
             this.saved = undefined;
             this.publish("storage-error");
             try {
               await this.retire(saved);
             } finally {
-              void this.revoke(next);
+              void this.revoke({ ...grant, origin });
             }
             throw error;
           }
-          this.saved = next;
           this.armExpiry();
           this.publish("signed-in");
           return next.accessToken;

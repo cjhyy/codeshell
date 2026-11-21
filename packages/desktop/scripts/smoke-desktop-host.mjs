@@ -1,6 +1,6 @@
 /* global window */
 import assert from "node:assert/strict";
-import { mkdir, readdir, writeFile } from "node:fs/promises";
+import { mkdir, readdir, realpath, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { prepareConfinedElectronFixture } from "./confined-electron-fixture.mjs";
@@ -32,6 +32,30 @@ const readCatalog = (page) =>
 
 try {
   await seedOfflinePluginBootstrap(isolated.codeShellHome);
+  const projectRoot = join(isolated.home, "host-smoke-project");
+  await mkdir(projectRoot, { recursive: true });
+  const mount = await realpath(projectRoot);
+  await writeFile(join(mount, "host-file.txt"), "from-workspace");
+  await mkdir(join(isolated.codeShellHome, "desktop"), { recursive: true });
+  await writeFile(
+    join(isolated.codeShellHome, "desktop", "projects.json"),
+    JSON.stringify({
+      version: 2,
+      projects: [
+        {
+          id: "host-smoke-project",
+          name: "Host smoke",
+          primaryRootId: "root",
+          roots: [{ id: "root", name: "root", path: mount, canonicalIdentity: mount, addedAt: 1 }],
+          createdAt: 1,
+          updatedAt: 1,
+          lastOpenedAt: 1,
+          revision: 1,
+        },
+      ],
+    }),
+    { mode: 0o600 },
+  );
   const directory = join(isolated.codeShellHome, "sessions", "index-visible");
   await mkdir(directory, { recursive: true });
   await writeFile(
@@ -43,6 +67,30 @@ try {
       title: "Host indexed row",
       cwd: isolated.home,
     }),
+  );
+  await writeFile(
+    join(isolated.codeShellHome, "settings.json"),
+    JSON.stringify({
+      credentials: [
+        {
+          id: "fixture-key",
+          catalogId: "openai",
+          apiKey: "synthetic",
+          baseUrl: "http://127.0.0.1:9/v1",
+        },
+      ],
+      modelConnections: [
+        {
+          id: "fixture",
+          catalogId: "openai",
+          tag: "text",
+          model: "gpt-4o",
+          credentialId: "fixture-key",
+        },
+      ],
+      defaults: { text: "fixture" },
+    }),
+    { mode: 0o600 },
   );
   const fixture = await prepareConfinedElectronFixture({
     appDir,
@@ -82,6 +130,56 @@ utilityProcess.fork = function (...args) {
   const second = await secondOpened;
   await observeHost(second);
   assert.deepEqual(await readCatalog(second), catalog);
+  await first.evaluate(() =>
+    window.codeshell.updateSettings("user", { hostSmokeReceipt: "committed" }),
+  );
+  assert.equal(
+    await second.evaluate(
+      async () => (await window.codeshell.getSettings("user"))?.hostSmokeReceipt,
+    ),
+    "committed",
+  );
+  await assert.rejects(
+    first.evaluate(() => window.codeshell.updateSettings("user", { panelAppBindings: {} })),
+    /reviewed project binding/,
+  );
+
+  await first.evaluate((root) => window.codeshell.setTrust(root, "trusted"), mount);
+  assert.equal(await second.evaluate((root) => window.codeshell.getTrust(root), mount), "trusted");
+  await first.evaluate((root) => window.codeshell.setTrust(root, "untrusted"), mount);
+  assert.equal(
+    await second.evaluate((root) => window.codeshell.getTrust(root), mount),
+    "untrusted",
+  );
+
+  await second.evaluate(() => {
+    window.hostRegistryRename = new Promise((resolve) => {
+      const off = window.codeshell.projectRegistry.onChanged((projects) => {
+        const project = projects.find(
+          (p) => p.id === "host-smoke-project" && p.name === "Renamed Host project",
+        );
+        if (project) {
+          off();
+          resolve(project.name);
+        }
+      });
+    });
+  });
+  await first.evaluate(() =>
+    window.codeshell.projectRegistry.rename("host-smoke-project", "Renamed Host project"),
+  );
+  assert.equal(await second.evaluate(() => window.hostRegistryRename), "Renamed Host project");
+  await first.evaluate(() =>
+    window.codeshell.projectRegistry.setPinned("host-smoke-project", true),
+  );
+  assert.equal(
+    await second.evaluate(
+      async () =>
+        (await window.codeshell.projectRegistry.list()).find((p) => p.id === "host-smoke-project")
+          ?.pinned,
+    ),
+    true,
+  );
 
   // Arm a renderer timer before blocking Main. Both timestamps come from the
   // renderer so a response delivered by Main after the pause cannot pass.
@@ -94,7 +192,27 @@ utilityProcess.fork = function (...args) {
           const begin = Date.now();
           const ids = (await window.codeshell.links.listLocalProviders()).map(({ id }) => id);
           const page = await window.codeshell.listDiskSessions({limit:1,sessionId:"index-visible"});
-          resolve({ begin, end: Date.now(), ids, sessionIds:page.sessions.map(row=>row.id) });
+          const api = window.codeshell;
+          const business = await Promise.all([
+            api.projectRegistry.list(), api.recents(), api.listSourceCatalog(), api.getModelCatalog(),
+            api.listPluginMcpTrust(), api.getPluginDetail("uninstalled-business-test"), api.getSettings("user"),
+            api.listSkills(null),api.listPlugins(null),api.listMergedMcpServers({},[]),api.getConfigurationSettings({noRepo:true})
+          ]);
+          const [projects, recents, sources, models, trust, plugin, settings, skills, plugins, mcp, projectSettings] = business;
+          const root = projects.find(p => p.id === "host-smoke-project").roots[0];
+          const entries = await api.readProjectDir("host-smoke-project", root.id);
+          const entry = entries.find(row => row.name === "host-file.txt");
+          const [file, hits, exists, git] = await Promise.all([
+            api.readProjectFileContent("host-smoke-project", root.id, entry.path),
+            api.searchProjectFiles("host-smoke-project", "host-file", root.id),
+            api.projectFileExists("host-smoke-project", root.id, entry.path),
+            api.getProjectGitStatus("host-smoke-project"),
+          ]);
+          resolve({ begin, end: Date.now(), ids, sessionIds:page.sessions.map(row=>row.id),
+            workspaceViews:file.text === "from-workspace" && exists && hits.some(row => row.rootId === root.id && row.name === entry.name) && Array.isArray(git.entries),
+            configurationViews: [projects, recents, sources, models, trust, skills, plugins].every(Array.isArray)
+              && mcp !== null && typeof mcp === "object" && (projectSettings === null || typeof projectSettings === "object")
+              && models.length > 0 && plugin === null && (settings === null || typeof settings === "object") });
         } catch (error) { reject(error); }
       }, 250)); void 0`);
     const begin = Date.now();
@@ -104,7 +222,13 @@ utilityProcess.fork = function (...args) {
   });
   await secondHandle.dispose();
   assert.deepEqual(measured.read.ids, catalog);
+  assert.equal(measured.read.workspaceViews, true, "Workspace files and Git answered during the Main pause");
   assert.deepEqual(measured.read.sessionIds, ["index-visible"]);
+  assert.equal(
+    measured.read.configurationViews,
+    true,
+    "Configuration views must resolve on the workbench Host port",
+  );
   // A correct metadata page could also come from JSON fallback. Verify that this
   // Electron utility's actual worker committed the row in its WAL database.
   const storage = join(isolated.codeShellHome, ".codeshell-state");
@@ -131,12 +255,44 @@ utilityProcess.fork = function (...args) {
   await first.reload({ waitUntil: "domcontentloaded" });
   await observeHost(first);
   assert.deepEqual(await readCatalog(first), catalog);
+  // A full local fork exercises actual worker stdio without performing inference.
+  await first.evaluate(() => {
+    window.hostSmokeFork = window.codeshell.forkSession({
+      sourceSessionId: "index-visible",
+      targetSessionId: "host-worker-copy",
+      mode: "full",
+    });
+    void window.hostSmokeFork.catch(() => {});
+  });
+  const receipt = await fixture.assertWorker(application);
+  assert.equal(receipt.spawned.length, 1);
+  assert.equal((await first.evaluate(() => window.hostSmokeFork)).sessionId, "host-worker-copy");
+  assert.deepEqual((await first.evaluate(() => window.codeshell.configure({}))).result, {
+    ok: true,
+  });
   const oldPid = await application.evaluate(() => {
     const child = globalThis.smokeHostChild;
     const pid = child?.pid;
     if (!pid || !child.kill()) throw new Error("Failed to stop the owned Desktop Host");
     return pid;
   });
+  assert.equal(receipt.spawned[0].ppid, oldPid);
+  assert.notEqual(oldPid, receipt.mainPid);
+  const deadline = Date.now() + 15_000;
+  while (Date.now() < deadline) {
+    try {
+      process.kill(receipt.spawned[0].pid, 0);
+    } catch (error) {
+      if (error.code === "ESRCH") break;
+      throw error;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  assert.throws(
+    () => process.kill(receipt.spawned[0].pid, 0),
+    { code: "ESRCH" },
+    "Original stdio worker must exit when its Host disappears",
+  );
   for (const page of [first, second]) {
     await page.waitForFunction(
       () =>

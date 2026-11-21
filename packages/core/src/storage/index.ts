@@ -5,3 +5,17 @@ export {
   type StorageWorkerHandlers,
 } from "./worker.js";
 export type { SqlValue, StorageDatabase, StorageStatement } from "./driver.js";
+export {
+  credentialCommands,
+  credentialFileCommand,
+  type CredentialFileAddress,
+  type CredentialFileCommand,
+  type CredentialFileSnapshot,
+} from "./credential-files.js";
+export {
+  EncryptedGrantStore,
+  AsyncEncryptedGrantStore,
+  type RelaySecretCipher,
+  type AsyncGrantCipher,
+  type GrantStorage,
+} from "./encrypted-grant.js";

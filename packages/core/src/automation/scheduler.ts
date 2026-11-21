@@ -285,6 +285,17 @@ export class CronScheduler {
     { controller: AbortController; done: Promise<void> }
   >();
   private onExecute?: (job: CronJob, signal: AbortSignal) => Promise<void | CronExecutionOutcome>;
+  private definitionListener?: (id: string) => void;
+  setDefinitionListener(listener?: (id: string) => void): void {
+    this.definitionListener = listener;
+  }
+  private definitionChanged(id: string) {
+    try {
+      this.definitionListener?.(id);
+    } catch {
+      /* Projection observers cannot roll back a committed definition. */
+    }
+  }
   private onJobEvent?: (event: CronJobLifecycleEvent) => void;
   /** Optional persistence backend. When set, every create/delete/pause/resume
    *  writes the full job set to disk so jobs survive a restart. */
@@ -628,6 +639,7 @@ export class CronScheduler {
         return { jobs: [...jobs, job], result: job };
       });
       this.reconcileJobs(tx.jobs);
+      this.definitionChanged(tx.result.id);
       return this.jobs.get(tx.result.id) ?? tx.result;
     }
 
@@ -660,6 +672,7 @@ export class CronScheduler {
     this.jobs.set(id, job);
     this.arm(job);
     this.persist();
+    this.definitionChanged(id);
     return job;
   }
 
@@ -676,6 +689,7 @@ export class CronScheduler {
         return { jobs: next, result: next.length !== jobs.length };
       });
       this.reconcileJobs(tx.jobs);
+      if (tx.result) this.definitionChanged(id);
       return tx.result;
     }
 
@@ -683,7 +697,10 @@ export class CronScheduler {
     if (job) assertCurrent?.(job);
     this.clearTimer(id);
     const deleted = this.jobs.delete(id);
-    if (deleted) this.persist();
+    if (deleted) {
+      this.persist();
+      this.definitionChanged(id);
+    }
     return deleted;
   }
 
@@ -708,6 +725,7 @@ export class CronScheduler {
         return { jobs: next, result: changed };
       });
       this.reconcileJobs(tx.jobs);
+      if (tx.result) this.definitionChanged(id);
       return tx.result;
     }
 
@@ -717,6 +735,7 @@ export class CronScheduler {
     job.enabled = false;
     this.clearTimer(id);
     this.persist();
+    this.definitionChanged(id);
     return true;
   }
 
@@ -739,6 +758,7 @@ export class CronScheduler {
         return { jobs: next, result: changed };
       });
       this.reconcileJobs(tx.jobs);
+      if (tx.result) this.definitionChanged(id);
       return tx.result;
     }
 
@@ -748,6 +768,7 @@ export class CronScheduler {
     job.disabledReason = reason;
     this.clearTimer(id);
     this.persist();
+    this.definitionChanged(id);
     return true;
   }
 
@@ -766,6 +787,7 @@ export class CronScheduler {
         return { jobs: next, result: changed };
       });
       this.reconcileJobs(tx.jobs);
+      if (tx.result) this.definitionChanged(id);
       return tx.result;
     }
 
@@ -776,6 +798,7 @@ export class CronScheduler {
     job.disabledReason = undefined;
     this.arm(job);
     this.persist();
+    this.definitionChanged(id);
     return true;
   }
 
@@ -833,6 +856,7 @@ export class CronScheduler {
         return { jobs: next, result: updated };
       });
       this.reconcileJobs(tx.jobs);
+      if (tx.result) this.definitionChanged(id);
       return tx.result ? (this.jobs.get(id) ?? tx.result) : null;
     }
 
@@ -871,6 +895,7 @@ export class CronScheduler {
       this.refreshNextRunForDisplay(job);
     }
     this.persist();
+    this.definitionChanged(id);
     return job;
   }
 

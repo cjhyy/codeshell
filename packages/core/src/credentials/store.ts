@@ -24,6 +24,11 @@ import { summarizeOAuthCredentialSecret } from "./oauth.js";
 import { isBrowserOAuthLinkCredential } from "./oauth.js";
 import { summarizeCookieExpiry, type CookieExpirySummary } from "./cookie-jar.js";
 import { acquireFileLock, writeFileAtomic } from "../utils/file-mutex.js";
+import {
+  runCredentialOperation,
+  type CredentialFileAccess,
+  type DetachedCredentialState,
+} from "./async-store.js";
 import { isDeepStrictEqual } from "node:util";
 import {
   stageRetirement,
@@ -148,6 +153,29 @@ const EMPTY: CredentialStoreFile = { version: 1, credentials: [] };
  */
 export class CredentialStore {
   private readonly cipher: EncryptionCipher;
+  private detached?: DetachedCredentialState;
+
+  /** Host transactions use immutable snapshots. A conflicting write replays
+   * the synchronous callback, which must only read or change this store. */
+  withAsyncCipher<T>(
+    files: CredentialFileAccess,
+    readScopes: readonly CredentialScope[],
+    writeScope: CredentialScope | undefined,
+    work: (store: CredentialStore) => T,
+  ): Promise<T> {
+    return runCredentialOperation(
+      files,
+      this.cipher,
+      this.cwd,
+      readScopes,
+      writeScope,
+      (cipher, state) => {
+        const store = new CredentialStore(this.cwd, cipher, this.userDirOverride);
+        store.detached = state;
+        return work(store);
+      },
+    );
+  }
 
   /**
    * @param cwd     project root for the project-scope store (undefined → user only).
@@ -253,12 +281,32 @@ export class CredentialStore {
    * credential type added by a newer version). They are kept verbatim so a
    * round-trip through an older build preserves rather than deletes them.
    */
+  private decodeFile(raw: Partial<CredentialStoreFile>) {
+    const values = Array.isArray(raw.credentials) ? raw.credentials.slice(0, MAX_CREDENTIALS) : [];
+    const creds: Credential[] = [];
+    const unknown: unknown[] = [];
+    // Decrypt secrets at the disk boundary so all callers see plaintext.
+    for (const value of values) {
+      const c = normalizeCredential(value, false);
+      if (!c) {
+        unknown.push(value);
+        continue;
+      }
+      if (typeof c.secret === "string" && c.secret.length > 0) {
+        c.secret = this.decryptSecret(c.secret);
+      }
+      creds.push(c);
+    }
+    return { file: { version: 1 as const, credentials: creds }, readable: true, unknown };
+  }
+
   private readGuarded(scope: CredentialScope): {
     file: CredentialStoreFile;
     readable: boolean;
     unknown: unknown[];
   } {
     const empty = { ...EMPTY, credentials: [] };
+    if (this.detached) return this.decodeFile(this.detached.files[scope] ?? empty);
     const p = this.pathFor(scope);
     if (!p) return { file: empty, readable: true, unknown: [] };
     let descriptor: number | undefined;
@@ -283,24 +331,7 @@ export class CredentialStore {
         return { file: empty, readable: false, unknown: [] };
       }
       const raw = JSON.parse(readFileSync(descriptor, "utf8")) as Partial<CredentialStoreFile>;
-      const values = Array.isArray(raw.credentials)
-        ? raw.credentials.slice(0, MAX_CREDENTIALS)
-        : [];
-      const creds: Credential[] = [];
-      const unknown: unknown[] = [];
-      // Decrypt secrets at the disk boundary so all callers see plaintext.
-      for (const value of values) {
-        const c = normalizeCredential(value, false);
-        if (!c) {
-          unknown.push(value);
-          continue;
-        }
-        if (typeof c.secret === "string" && c.secret.length > 0) {
-          c.secret = this.decryptSecret(c.secret);
-        }
-        creds.push(c);
-      }
-      return { file: { version: 1, credentials: creds }, readable: true, unknown };
+      return this.decodeFile(raw);
     } catch (error) {
       // A missing file is genuinely empty; anything else (torn JSON, EACCES)
       // is unreadable and must not be committed over.
@@ -337,6 +368,12 @@ export class CredentialStore {
         ...(preserved as Credential[]),
       ],
     };
+    if (this.detached) {
+      if (this.detached.writeScope !== scope)
+        throw new Error("Credential transaction scope mismatch");
+      this.detached.next = onDisk;
+      return;
+    }
     const encoded = JSON.stringify(onDisk, null, 2);
     if (Buffer.byteLength(encoded) > MAX_CREDENTIAL_FILE_BYTES) {
       throw new Error("credential store exceeds the maximum file size");
@@ -362,6 +399,17 @@ export class CredentialStore {
     scope: CredentialScope,
     change: (file: CredentialStoreFile, preserved: unknown[]) => boolean,
   ): void {
+    if (this.detached) {
+      if (this.detached.writeScope !== scope || this.detached.next)
+        throw new Error("A credential transaction can commit one scope mutation");
+      const { file, unknown } = this.readGuarded(scope);
+      if (change(file, unknown)) {
+        if (file.credentials.length + unknown.length > MAX_CREDENTIALS)
+          throw new Error("credential store has reached its maximum entry count");
+        this.write(scope, file, unknown);
+      }
+      return;
+    }
     const p = this.pathFor(scope);
     if (!p) return;
     const parent = dirname(p);

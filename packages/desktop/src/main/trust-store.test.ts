@@ -213,3 +213,23 @@ describe("trust-store", () => {
     expect(JSON.parse(await readFile(outside, "utf8"))).toEqual({ [projectPath]: "trusted" });
   });
 });
+
+test("native trust gates keep a downgrade closed until the serialized worker confirms it", async () => {
+  const { holdProjectTrust } = await import("./trust-store.js");
+  const dir = await mkdtemp(join(tmpdir(), "codeshell-trust-fence-"));
+  try {
+    __setTrustFileForTest(join(dir, "trust.json"));
+    await setTrust(dir, "trusted");
+    const releaseFirst = holdProjectTrust(dir, "untrusted");
+    const releaseSecond = holdProjectTrust(dir, "untrusted");
+    expect(getTrustCachedSync(dir)).toBe("untrusted");
+    expect(await getTrust(dir)).toBe("untrusted");
+    releaseFirst("trusted");
+    expect(getTrustCachedSync(dir)).toBe("untrusted");
+    releaseSecond("unknown");
+    expect(getTrustCachedSync(dir)).toBe("unknown");
+  } finally {
+    __setTrustFileForTest(null);
+    await rm(dir, { recursive: true, force: true });
+  }
+});

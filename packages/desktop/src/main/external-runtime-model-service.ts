@@ -30,13 +30,13 @@ export class ExternalRuntimeModelService {
 
   constructor(private readonly options: ExternalRuntimeModelServiceOptions) {}
 
-  async list(): Promise<ExternalRuntimeModelEntry[]> {
+  async list(searchPath = process.env.PATH): Promise<ExternalRuntimeModelEntry[]> {
     if (!this.options.isEnabled()) {
       this.cache.clear();
       return [];
     }
 
-    const probed = (this.options.probe ?? probeExternalRuntimes)();
+    const probed = (this.options.probe ?? probeExternalRuntimes)(searchPath);
     const available = probed.filter((runtime) => runtime.path !== null);
     const codex = available.find((runtime) => runtime.kind === "codex");
     const otherEntries = externalRuntimeModelEntries(
@@ -44,12 +44,12 @@ export class ExternalRuntimeModelService {
     );
     if (!codex?.path) return otherEntries;
 
-    const codexEntries = await this.codexEntries(codex.path);
+    const codexEntries = await this.codexEntries(codex.path, searchPath);
     // The feature can be disabled while a discovery request is in flight.
     return this.options.isEnabled() ? [...codexEntries, ...otherEntries] : [];
   }
 
-  private codexEntries(command: string): Promise<ExternalRuntimeModelEntry[]> {
+  private codexEntries(command: string, searchPath: string | undefined): Promise<ExternalRuntimeModelEntry[]> {
     const now = this.options.now ?? Date.now;
     let cached = this.cache.get(command);
     if (!cached) {
@@ -64,6 +64,7 @@ export class ExternalRuntimeModelService {
       try {
         const models = await (this.options.discoverCodex ?? discoverCodexModels)({
           command,
+          env: { ...process.env, PATH: searchPath },
           // The catalog is account-wide. Avoid inheriting a project's config
           // just because it happens to be the process's current directory.
           cwd: homedir(),

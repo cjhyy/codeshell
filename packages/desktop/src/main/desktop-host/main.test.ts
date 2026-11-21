@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { EventEmitter } from "node:events";
 import type { MessageChannelMain, UtilityProcess, WebContents, WebFrameMain } from "electron";
 import { DesktopHostIpc, type DesktopHostControl } from "../../shared/desktop-host-protocol.js";
+import { DesktopHostWorkerClient } from "./main-worker.js";
+import type { WorkerCommand, WorkerNotice } from "./worker-wire.js";
 import { DesktopHostSupervisor } from "./main-supervisor.js";
 import { HostWorkbenchPorts } from "./main-workbenches.js";
 
@@ -68,6 +70,45 @@ describe("Desktop Host process", () => {
       { jsonrpc: "2.0", id: 2, error: { code: -32601, message: "Method not found" } },
       { jsonrpc: "2.0", id: 3, error: { code: -32602, message: "Invalid params" } },
     ]);
+  });
+
+  test("cancelling a scheduled run waits for the original Host to finish its Engine cleanup", async () => {
+    const { supervisor, children } = processFixture();
+    const child = children[0]!;
+    child.emit("message", { type: "ready" });
+    const abort = new AbortController();
+    const result = supervisor.callBusiness(
+      "automation/run",
+      {
+        job: {
+          id: "cron",
+          name: "fixture",
+          schedule: "1h",
+          prompt: "fixture",
+          enabled: true,
+          createdAt: 1,
+          runCount: 0,
+        },
+        searchPath: "",
+      },
+      abort.signal,
+    );
+    const request = child.messages.at(-1) as { id: string };
+    let finished = false;
+    const settled = result.catch(() => {
+      finished = true;
+    });
+    abort.abort();
+    await Promise.resolve();
+    expect(child.messages.at(-1)).toEqual({ type: "withdraw-business", id: request.id });
+    expect(finished).toBe(false);
+    child.emit("message", {
+      jsonrpc: "2.0",
+      id: request.id,
+      error: { code: -32603, message: "Cancelled" },
+    });
+    await settled;
+    expect(finished).toBe(true);
   });
 
   test("replays current ownership and deletions before offering ports on every fresh host", () => {
@@ -284,4 +325,108 @@ test("Main keeps the authorized catalog query intact and settles every read on e
     .catch((error: Error) => error);
   child.emit("exit", 1);
   expect(await unfinished).toBeInstanceOf(Error);
+});
+
+class WorkerTestPort extends EventEmitter {
+  commands: WorkerCommand[] = [];
+  start() {}
+  close() {}
+  postMessage(command: WorkerCommand) {
+    this.commands.push(command);
+  }
+  notice(data: WorkerNotice) {
+    this.emit("message", { data, ports: [] });
+  }
+}
+
+test("a native reply and an outstanding call cannot cross a worker or Host replacement", async () => {
+  const client = new DesktopHostWorkerClient({
+    entryPath: "/owned/agent.mjs",
+    buildEnv: () => ({}),
+  });
+  const first = new WorkerTestPort();
+  client.bind(first);
+  client.ensureWorker("/owned");
+  const release = Promise.withResolvers<void>();
+  const staleWrite = Promise.withResolvers<boolean>();
+  client.subscribeLines(() => {
+    void release.promise.then(() => staleWrite.resolve(client.sendLine("late reply")));
+  });
+  first.notice({ type: "line", generation: 1, line: "private prompt" });
+  const call = client.request(
+    "agent/query",
+    {},
+    { id: "one", timeoutMs: 30_000, meta: { origin: "host", producer: "owned test" } },
+  );
+  const second = new WorkerTestPort();
+  client.bind(second);
+  expect(await call).toEqual({ status: "workerExit" });
+  client.ensureWorker("/owned");
+  expect(client.workerGeneration()).toBe(2);
+  release.resolve();
+  expect(await staleWrite.promise).toBe(false);
+  expect(second.commands.map((command) => command.type)).toEqual(["start"]);
+  expect(client.sendLine("current")).toBe(true);
+  expect(second.commands.at(-1)).toEqual({ type: "write", generation: 2, line: "current" });
+});
+
+test("Host worker expiry and replacement suppress writes still waiting for credentials", async () => {
+  const queued: (() => boolean)[] = [];
+  const client = new DesktopHostWorkerClient({
+    entryPath: "/internal/worker",
+    dispatchInput: (_generation, _line, send) => {
+      queued.push(send);
+      return true;
+    },
+  });
+  const port = new WorkerTestPort();
+  client.bind(port);
+  client.ensureWorker("/internal");
+  const req = client.request(
+    "agent/run",
+    {},
+    { id: "fixture", timeoutMs: 10, failFast: true, meta: { origin: "host", producer: "test" } },
+  );
+  expect(await req).toEqual({ status: "timeout" });
+  expect(queued.shift()!()).toBe(false);
+  client.sendLine("prior generation");
+  const next = new WorkerTestPort();
+  client.bind(next);
+  client.ensureWorker("/internal");
+  expect(queued.shift()!()).toBe(false);
+  expect(port.commands.map((c) => c.type)).toEqual(["start"]);
+  expect(next.commands.map((c) => c.type)).toEqual(["start"]);
+});
+
+test("committed settings refresh once even if the original document withdraws", async () => {
+  const { supervisor, children } = processFixture();
+  const child = children[0]!;
+  child.emit("message", { type: "ready" });
+  const flags = {
+    panelApps: false,
+    git: true,
+    pet: false,
+    externalVisibility: false,
+    pluginCommands: false,
+  };
+  const changes = [] as (typeof flags)[];
+  const completion = Promise.withResolvers<void>();
+  supervisor.settingsCommitted = async (change) => {
+    changes.push(change);
+    await completion.promise;
+  };
+  const signal = new AbortController();
+  const request = supervisor.callBusiness(
+    "settings/patch",
+    { scope: "user", patch: { git: {} } },
+    signal.signal,
+  );
+  const sent = child.messages.at(-1) as { id: string };
+  signal.abort();
+  await expect(request).rejects.toThrow("document changed");
+  child.emit("message", { type: "settings-committed", requestId: sent.id, effects: flags });
+  child.emit("message", { jsonrpc: "2.0", id: sent.id, result: null });
+  await Promise.resolve();
+  expect(changes).toEqual([flags]);
+  completion.resolve();
 });

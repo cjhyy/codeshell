@@ -88,6 +88,7 @@ describe("TaskInboxPage", () => {
     request: ReturnType<typeof deferred<TaskInboxListResult>>;
   }>;
   let actions: unknown[];
+  let intents: unknown[];
   let result: TaskInboxActionResult;
   let changed: (version: number) => void;
   let unsubscribed: boolean;
@@ -106,6 +107,7 @@ describe("TaskInboxPage", () => {
     });
     requests = [];
     actions = [];
+    intents = [];
     result = { status: "ok" };
     unsubscribed = false;
     opened = [];
@@ -117,6 +119,10 @@ describe("TaskInboxPage", () => {
             const request = deferred<TaskInboxListResult>();
             requests.push({ query, request });
             return request.promise;
+          },
+          intent: async (input: unknown) => {
+            intents.push(input);
+            return result;
           },
           act: async (input: unknown) => {
             actions.push(input);
@@ -357,7 +363,7 @@ describe("TaskInboxPage", () => {
     expect(textOf(cards()[0])).toContain("需要审批");
     expect(textOf(cards()[3])).toContain("仅查看");
     expect(textOf(cards()[3])).toContain("/work/a");
-    expect(nodes().filter((node) => props(node).role === "combobox")).toHaveLength(3);
+    expect(nodes().filter((node) => props(node).role === "combobox")).toHaveLength(4);
     expect(
       nodes()
         .filter((node) => node.tagName === "LABEL")
@@ -382,7 +388,7 @@ describe("TaskInboxPage", () => {
   test("pagination includes later tasks and changed events refresh once newer than the current snapshot", async () => {
     await render();
     await settle(() => requests[0].request.resolve({ ...snapshot([row("a")]), nextCursor: "p2" }));
-    expect(requests[1].query).toEqual({ limit: 200, cursor: "p2" });
+    expect(requests[1].query).toEqual({ visibility: "visible", limit: 200, cursor: "p2" });
     await settle(() => requests[1].request.resolve(snapshot([row("b")])));
     expect(cards()).toHaveLength(2);
     await settle(() => changed(1));
@@ -408,7 +414,11 @@ describe("TaskInboxPage", () => {
         nextCursor: "snapshot-one:p2",
       }),
     );
-    expect(requests[1].query).toEqual({ limit: 200, cursor: "snapshot-one:p2" });
+    expect(requests[1].query).toEqual({
+      visibility: "visible",
+      limit: 200,
+      cursor: "snapshot-one:p2",
+    });
     await settle(() => {
       changed(7);
       changed(5);
@@ -433,7 +443,7 @@ describe("TaskInboxPage", () => {
     expect(textOf(container)).toContain("任务 second-page");
     expect(textOf(container)).toContain("任务 third-page");
     expect(requests).toHaveLength(4);
-    expect(requests[3].query).toEqual({ limit: 200 });
+    expect(requests[3].query).toEqual({ visibility: "visible", limit: 200 });
     await settle(() => {
       changed(10);
       changed(10);
@@ -508,6 +518,26 @@ describe("TaskInboxPage", () => {
     expect(cards()).toHaveLength(1);
     expect(textOf(container)).not.toContain("initial outage");
   });
+  test("reconnecting to a restored Host accepts lower versions and drops in-flight mirror pages", async () => {
+    let publish: (status: "reconnecting" | "ready") => void = () => {};
+    window.codeshell.onDesktopHostStatus = (listener) => {
+      publish = listener;
+      listener("ready");
+      return () => {};
+    };
+    await render();
+    await settle(() => requests[0].request.resolve(snapshot([row("old")], 90)));
+    await settle(() => publish("reconnecting"));
+    await settle(() => publish("ready"));
+    await settle(() => requests[2].request.resolve(snapshot([row("restored")], 1)));
+    await settle(() => requests[1].request.resolve(snapshot([row("late-mirror")], 91)));
+    expect(textOf(container)).toContain("任务 restored");
+    expect(textOf(container)).not.toContain("late-mirror");
+    await settle(() => changed(2));
+    await settle(() => requests[3].request.resolve(snapshot([row("new-update")], 2)));
+    expect(textOf(container)).toContain("任务 new-update");
+    expect(requests).toHaveLength(4);
+  });
   test("a notification during a failed read is followed once instead of swallowed", async () => {
     await render();
     await settle(() => changed(2));
@@ -557,6 +587,105 @@ describe("TaskInboxPage", () => {
     await click(button("暂停"));
     expect(textOf(container)).toContain("任务状态已变化");
     expect(requests).toHaveLength(3);
+  });
+  test("hidden and visible views reload with their own query across pagination and ignore late replies", async () => {
+    await render();
+    await settle(() => requests[0].request.resolve(snapshot([row("visible")])));
+    const changeView = (view: string) =>
+      settle(() => {
+        const trigger = nodes().find(
+          (node) =>
+            String(props(node).id).endsWith("-visibility") && props(node).role === "combobox",
+        )!;
+        selectProps(trigger).onChange(view);
+      });
+    await click(button("隐藏记录"));
+    expect(intents).toEqual([
+      { type: "hide", taskKey: "background-job:visible", expectedRevision: "r1" },
+    ]);
+    await changeView("hidden");
+    expect(cards()).toHaveLength(0);
+    expect(requests[2].query).toEqual({ visibility: "hidden", limit: 200 });
+    await settle(() => requests[1].request.resolve(snapshot([row("old-visible")], 2)));
+    const hidden = row("hidden", { hidden: true });
+    await settle(() =>
+      requests[2].request.resolve({ ...snapshot([hidden], 2), nextCursor: "h-next" }),
+    );
+    expect(requests[3].query).toEqual({ visibility: "hidden", limit: 200, cursor: "h-next" });
+    await settle(() => requests[3].request.resolve(snapshot([hidden], 2)));
+    expect(cards()).toHaveLength(1);
+    expect(textOf(container)).not.toContain("old-visible");
+    await click(button("取消隐藏"));
+    expect(intents.at(-1)).toEqual({
+      type: "unhide",
+      taskKey: hidden.taskKey,
+      expectedRevision: "r1",
+    });
+    expect(requests[4].query).toEqual({ visibility: "hidden", limit: 200 });
+  });
+  test("only ended or interrupted records offer permanent deletion, guarded by confirmation and source revision", async () => {
+    await render();
+    const statuses = [
+      "queued",
+      "running",
+      "waiting",
+      "paused",
+      "done",
+      "cancelled",
+      "failed",
+      "interrupted",
+    ] as const;
+    await settle(() =>
+      requests[0].request.resolve(snapshot(statuses.map((status) => row(status, { status })))),
+    );
+    const buttons = nodes().filter(
+      (node) =>
+        node.tagName === "BUTTON" &&
+        String(props(node)["aria-label"]).startsWith("永久删除任务记录："),
+    );
+    expect(buttons.map((node) => props(node)["aria-label"]).sort()).toEqual(
+      ["done", "cancelled", "failed", "interrupted"]
+        .map((status) => `永久删除任务记录：任务 ${status}`)
+        .sort(),
+    );
+    const selected = buttons.find((node) =>
+      String(props(node)["aria-label"]).endsWith("interrupted"),
+    )!;
+    await settle(() => {
+      props(selected).onClick();
+      props(selected).onClick();
+    });
+    expect(intents).toEqual([]);
+    expect(textOf(container)).toContain("原会话与执行历史会保留");
+    await click(button("取消"));
+    expect(intents).toEqual([]);
+    await click(selected);
+    result = { status: "stale", message: "changed at source" };
+    await click(button("永久删除"));
+    expect(intents).toEqual([
+      { type: "delete", taskKey: "background-job:interrupted", expectedRevision: "r1" },
+    ]);
+    expect(actions).toEqual([]);
+    expect(textOf(container)).toContain("任务状态已变化");
+    expect(requests).toHaveLength(2);
+    await settle(() =>
+      requests[1].request.resolve(
+        snapshot([row("interrupted", { status: "running", sourceRevision: "r2" })], 2),
+      ),
+    );
+    expect(textOf(cards()[0])).not.toContain("永久删除任务记录");
+  });
+  test("a failed record mutation re-reads the current view and preserves an actionable error", async () => {
+    await render();
+    await settle(() => requests[0].request.resolve(snapshot([row("waiting")])));
+    window.codeshell.taskInbox.intent = async () => {
+      throw new Error("disk unavailable");
+    };
+    await click(button("隐藏记录"));
+    expect(requests[1].query).toEqual({ visibility: "visible", limit: 200 });
+    await settle(() => requests[1].request.resolve(snapshot([row("waiting")], 2)));
+    expect(textOf(container)).toContain("disk unavailable");
+    expect(cards()).toHaveLength(1);
   });
   test("an open action response cannot navigate after leaving the task page", async () => {
     const pendingOpen = deferred<TaskInboxActionResult>();

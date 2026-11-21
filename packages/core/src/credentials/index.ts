@@ -2,6 +2,7 @@ export { CredentialStore } from "./store.js";
 export type { CredentialScope, MaskedCredential } from "./store.js";
 export {
   type EncryptionCipher,
+  type AsyncEncryptionCipher,
   PlaintextCipher,
   setDefaultCredentialCipher,
   getDefaultCredentialCipher,

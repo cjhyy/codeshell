@@ -105,7 +105,7 @@ export class ModelRequestKeyStore implements ModelRequestSigner {
       record = { keyId: owned.keyId, custodyMode: "ephemeral-memory" };
       key = Buffer.from(owned.key);
     } else {
-      ({ record, key } = this.keyFor(ownerDigest));
+      ({ record, key } = await this.keyFor(ownerDigest));
     }
     const signatures: ModelRequestSignatures["digests"] = {};
     try {
@@ -130,7 +130,7 @@ export class ModelRequestKeyStore implements ModelRequestSigner {
     this.ephemeralKeys.clear();
   }
 
-  private keyFor(ownerDigest: string): { record: KeyRecord; key: Buffer } {
+  private async keyFor(ownerDigest: string): Promise<{ record: KeyRecord; key: Buffer }> {
     if (this.options.custodyMode === "ephemeral-memory")
       throw new Error("Ephemeral request signer cannot sign a durable Session");
     mkdirSync(this.options.directory, { recursive: true, mode: 0o700 });
@@ -144,10 +144,9 @@ export class ModelRequestKeyStore implements ModelRequestSigner {
     )
       throw new Error("Request key custody directory is not private");
     const file = join(this.options.directory, `${ownerDigest}.json`);
-    // The critical section has no await; concurrent hosts cannot rotate a Session key.
-    const release = acquireFileLock(file);
-    try {
-      let record: KeyRecord;
+    const options = this.options;
+    const cipher = options.cipher.asynchronous ?? options.cipher;
+    const read = (): KeyRecord | undefined => {
       let raw: string | undefined;
       try {
         const info = lstatSync(file);
@@ -182,56 +181,63 @@ export class ModelRequestKeyStore implements ModelRequestSigner {
         if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
       }
       if (raw !== undefined) {
-        syncDirectoryAncestors(this.options.directory);
-        record = JSON.parse(raw) as KeyRecord;
+        syncDirectoryAncestors(options.directory);
+        const record = JSON.parse(raw) as KeyRecord;
         if (
           !record ||
           record.version !== 1 ||
           record.ownerDigest !== ownerDigest ||
           typeof record.keyId !== "string" ||
           !uuid.test(record.keyId) ||
-          record.custodyMode !== this.options.custodyMode ||
+          record.custodyMode !== options.custodyMode ||
           typeof record.protectedKey !== "string"
         )
           throw new Error("Request key ownership or custody mismatch");
-      } else {
-        const key = randomBytes(32);
-        let protectedKey: string;
-        try {
-          protectedKey = this.options.cipher.encrypt(key.toString("base64"));
-        } finally {
-          key.fill(0);
-        }
-        if (this.options.custodyMode === "host-encrypted" && !protectedKey.startsWith("enc:"))
-          throw new Error("Request key custody requires encryption");
-        if (
-          this.options.custodyMode === "owner-only-plaintext" &&
-          !protectedKey.startsWith("plain:")
-        )
-          throw new Error("Request key custody mode does not match its cipher");
-        record = {
-          version: 1,
-          ownerDigest,
-          keyId: randomUUID(),
-          custodyMode: this.options.custodyMode,
-          protectedKey,
-        };
-        writeFileAtomic(file, canonicalJson(record), 0o600);
-        const committed = openSync(file, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
-        try {
-          fsyncSync(committed);
-        } finally {
-          closeSync(committed);
-        }
-        syncDirectoryAncestors(this.options.directory);
+        return record;
       }
-      if (record.custodyMode === "host-encrypted" && !record.protectedKey.startsWith("enc:"))
-        throw new Error("Request key encryption is unavailable");
-      const secret = this.options.cipher.decrypt(record.protectedKey);
-      if (!/^[A-Za-z0-9+/]{43}=$/.test(secret)) throw new Error("Invalid request key material");
-      return { record, key: Buffer.from(secret, "base64") };
-    } finally {
-      release();
+    };
+    let record = read();
+    if (!record) {
+      const key = randomBytes(32);
+      let protectedKey: string;
+      try {
+        protectedKey = await cipher.encrypt(key.toString("base64"));
+      } finally {
+        key.fill(0);
+      }
+      if (options.custodyMode === "host-encrypted" && !protectedKey.startsWith("enc:"))
+        throw new Error("Request key custody requires encryption");
+      if (options.custodyMode === "owner-only-plaintext" && !protectedKey.startsWith("plain:"))
+        throw new Error("Request key custody mode does not match its cipher");
+      const candidate: KeyRecord = {
+        version: 1,
+        ownerDigest,
+        keyId: randomUUID(),
+        custodyMode: options.custodyMode,
+        protectedKey,
+      };
+      const release = acquireFileLock(file);
+      try {
+        record = read();
+        if (!record) {
+          record = candidate;
+          writeFileAtomic(file, canonicalJson(record), 0o600);
+          const committed = openSync(file, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+          try {
+            fsyncSync(committed);
+          } finally {
+            closeSync(committed);
+          }
+          syncDirectoryAncestors(options.directory);
+        }
+      } finally {
+        release();
+      }
     }
+    if (record.custodyMode === "host-encrypted" && !record.protectedKey.startsWith("enc:"))
+      throw new Error("Request key encryption is unavailable");
+    const secret = await cipher.decrypt(record.protectedKey);
+    if (!/^[A-Za-z0-9+/]{43}=$/.test(secret)) throw new Error("Invalid request key material");
+    return { record, key: Buffer.from(secret, "base64") };
   }
 }

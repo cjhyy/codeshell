@@ -38,6 +38,20 @@ function state(
 ) {
   return JSON.stringify({ messages, snapshotSeq: 4, activeGoal: { goalId: "goal-1" }, ...extra });
 }
+test("withdrawn Host cache edits cannot create or delete cached or legacy content", async () => {
+  const { cache } = fixture();
+  const revoked = new Int32Array(new SharedArrayBuffer(4));
+  Atomics.store(revoked, 0, -1);
+  const input = { ...key, value: state(), legacy: true };
+  await expect(cache.commitWrite(input, revoked)).rejects.toThrow("revoked");
+  expect((await cache.read(key)).value).toBeNull();
+  const grant = new Int32Array(new SharedArrayBuffer(4));
+  await cache.commitWrite(input, grant);
+  expect(Atomics.load(grant, 0)).toBe(1);
+  await expect(cache.commitDelete(key, revoked)).rejects.toThrow("revoked");
+  expect((await cache.read(key)).value).not.toBeNull();
+});
+
 afterEach(async () => {
   await Promise.all(caches.splice(0).map((cache) => cache.close()));
   for (const directory of fixtures.splice(0)) rmSync(directory, { recursive: true, force: true });

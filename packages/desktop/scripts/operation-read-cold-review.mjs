@@ -1,3 +1,4 @@
+import { guardedWorkerTree } from "./guarded-worker-tree.mjs";
 /* Pure Playwright controller. Core is imported only inside guarded production Main. */
 /* global Event, localStorage, window */
 import assert from "node:assert/strict";
@@ -56,15 +57,14 @@ try {
         (row) => row.origin === config.origin && row.homeId === homeId && row.negativeProbes === 8,
       ),
     );
+    const tree = await guardedWorkerTree(home, mainPid, receipts);
     const spawned = (await readFile(join(home, "spawned-workers.jsonl"), "utf8").catch(() => ""))
       .trim()
       .split("\n")
       .filter(Boolean)
       .map(JSON.parse);
-    const workers = spawned.filter((worker) =>
-      receipts.some((row) => row.pid === worker.pid && row.ppid === mainPid),
-    );
-    if (receipts.some((row) => row.pid === mainPid)) {
+    const workers = spawned.filter((worker) => tree.hasWorker(worker));
+    if (workers.length === spawned.length && receipts.some((row) => row.pid === mainPid)) {
       for (const worker of workers)
         await writeFile(join(home, `worker-${worker.pid}.permit`), "verified");
       const keyring = (await readFile(join(home, "real-keyring-bootstrap.jsonl"), "utf8"))
@@ -77,7 +77,7 @@ try {
         mainPid,
         workers,
         keyring,
-        receipts: receipts.filter((row) => row.pid === mainPid || row.ppid === mainPid),
+        receipts: receipts.filter(tree.belongs),
       };
       break;
     }

@@ -138,6 +138,7 @@ export class OperationLedger {
     storageRoot: string,
     private readonly cipher: EncryptionCipher = getDefaultCredentialCipher(),
     private readonly ownerBinding?: { sessionId: string; read(): OperationSessionOwner },
+    private readonly initialProtectedKey?: string,
   ) {
     mkdirSync(resolve(storageRoot), { recursive: true, mode: 0o700 });
     // Path aliases must not create independent idempotency identities for the
@@ -182,7 +183,7 @@ export class OperationLedger {
             assertNoOperationArtifacts(this.directory);
             return {
               schema: 1,
-              key: this.cipher.encrypt(randomBytes(32).toString("hex")),
+              key: this.initialProtectedKey ?? this.cipher.encrypt(randomBytes(32).toString("hex")),
               records: {},
             };
           }

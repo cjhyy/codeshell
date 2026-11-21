@@ -1089,3 +1089,17 @@ function fakeEmptySessionFs(): SessionCwdIndexFs {
     },
   };
 }
+
+test("a revoked registry edit leaves both the durable project and its legacy recents projection intact", async () => {
+  const projects = store();
+  const root = join(fixtureRoot, "mounted");
+  mkdirSync(root);
+  const project = await projects.createFromPath(root);
+  const before = [projectsFile, recentsFile].map((file) => readFileSync(file, "utf8"));
+  await expect(
+    projects.rename(project.id, "Withdrawn", () => {
+      throw new Error("revoked");
+    }),
+  ).rejects.toThrow("revoked");
+  expect([projectsFile, recentsFile].map((file) => readFileSync(file, "utf8"))).toEqual(before);
+});

@@ -15,6 +15,25 @@ const migrations = [
    CREATE INDEX sessions_project_updated ON sessions(project_id, updated_at DESC);
    CREATE INDEX sessions_archived ON sessions(archived_at);
    CREATE INDEX sessions_directory_order ON sessions(dir_mtime DESC, id);`,
+  `CREATE TABLE tasks (
+     task_key TEXT PRIMARY KEY, source TEXT NOT NULL, source_id TEXT NOT NULL, attempt INTEGER,
+     session_id TEXT, project_id TEXT, status TEXT NOT NULL, tier TEXT NOT NULL, activity_at REAL NOT NULL,
+     terminal_at REAL, stale INTEGER NOT NULL, source_revision TEXT NOT NULL, record_json TEXT NOT NULL,
+     projection_only INTEGER NOT NULL
+   );
+   CREATE INDEX tasks_tier ON tasks(tier);
+   CREATE INDEX tasks_status_activity ON tasks(status,activity_at DESC);
+   CREATE INDEX tasks_session ON tasks(session_id);
+   CREATE INDEX tasks_project_activity ON tasks(project_id,activity_at DESC);
+   CREATE INDEX tasks_source ON tasks(source);
+   CREATE TABLE task_user_state (
+     task_key TEXT PRIMARY KEY, session_id TEXT, hidden_at REAL, hidden_reason TEXT, frozen_activity_at REAL,
+     deleted_at REAL, deleted_revision TEXT, deleted_activity_at REAL
+   );
+   CREATE INDEX task_intent_session ON task_user_state(session_id);
+   CREATE TABLE task_session_state (session_id TEXT PRIMARY KEY, state TEXT NOT NULL);
+   CREATE TABLE task_projection_state (id INTEGER PRIMARY KEY CHECK (id=1), version INTEGER NOT NULL,
+     errors_json TEXT NOT NULL, intent_version INTEGER NOT NULL);`,
 ];
 
 export class UnrecognizedStorageSchema extends Error {}

@@ -5,6 +5,8 @@ import type { StorageDatabase, StorageStatement } from "./driver.js";
 
 export interface StorageWorkerContext {
   sessionsRoot: string;
+  /** Structured-cloned startup configuration supplied by the trusted host. */
+  config?: unknown;
   db: StorageDatabase | null;
   /** Only domain handlers choose file paths, validation, and mutation functions. */
   mutateJsonFile: typeof mutateJsonFile;
@@ -12,6 +14,7 @@ export interface StorageWorkerContext {
 
 export interface StorageWorkerHandlers {
   initialize?(ctx: StorageWorkerContext): unknown;
+  close?(ctx: StorageWorkerContext): unknown;
   handle?(ctx: StorageWorkerContext, command: string, payload: unknown): unknown;
 }
 
@@ -20,14 +23,23 @@ export interface StorageWorkerHandlers {
 export async function serveStorageWorker(handlers: StorageWorkerHandlers = {}): Promise<void> {
   const port = parentPort;
   if (!port) throw new Error("Storage worker requires a parent");
-  const { sessionsRoot, token } = workerData as { sessionsRoot: string; token: string };
+  const { sessionsRoot, token, config } = workerData as {
+    sessionsRoot: string;
+    token: string;
+    config?: unknown;
+  };
   let writer: ReturnType<typeof openWriter>;
   try {
     writer = openWriter(sessionsRoot, token);
   } catch {
     /* Sources and locked JSON mutations remain available. */
   }
-  const ctx: StorageWorkerContext = { sessionsRoot, db: writer?.db ?? null, mutateJsonFile };
+  const ctx: StorageWorkerContext = {
+    sessionsRoot,
+    config,
+    db: writer?.db ?? null,
+    mutateJsonFile,
+  };
   const closeWriter = () => {
     const old = writer;
     writer = undefined;
@@ -69,10 +81,18 @@ export async function serveStorageWorker(handlers: StorageWorkerHandlers = {}): 
             value = await handlers.handle(ctx, message.command, message.payload);
             break;
           case "disable":
-            closeWriter();
+            try {
+              await handlers.close?.(ctx);
+            } finally {
+              closeWriter();
+            }
             break;
           case "close":
-            closeWriter();
+            try {
+              await handlers.close?.(ctx);
+            } finally {
+              closeWriter();
+            }
             port.postMessage({ id: message.id, value: true });
             port.close();
             return;

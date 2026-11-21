@@ -12,6 +12,8 @@ import {
 export interface StateStorage {
   readonly mode: "sqlite" | "json";
   read<T = Record<string, SqlValue>>(sql: string, params?: readonly SqlValue[]): T[] | null;
+  /** Multiple SELECTs from the same committed WAL snapshot; no writer lock. */
+  readSnapshot<T>(read: (db: Pick<StorageDatabase, "all">) => T): T | null;
   /** False means the transaction was not acknowledged. JSON remains authoritative. */
   write(statements: readonly StorageStatement[]): Promise<boolean>;
   /** Null before dispatch if no worker is available. A failed in-flight command
@@ -23,6 +25,7 @@ export interface StateStorage {
 const jsonOnly: StateStorage = {
   mode: "json",
   read: () => null,
+  readSnapshot: () => null,
   write: async () => false,
   request: async () => null,
   close: async () => {},
@@ -30,7 +33,7 @@ const jsonOnly: StateStorage = {
 
 export async function openStateStorage(
   sessionsRoot: string,
-  options: { workerUrl?: URL } = {},
+  options: { workerUrl?: URL; workerConfig?: unknown } = {},
 ): Promise<StateStorage> {
   if (!sessionsRoot) throw new Error("Storage requires an explicit sessions root");
   const token = randomUUID();
@@ -38,7 +41,7 @@ export async function openStateStorage(
   let worker: Worker;
   try {
     worker = new Worker(options.workerUrl ?? new URL(defaultEntry, import.meta.url), {
-      workerData: { sessionsRoot: resolve(sessionsRoot), token },
+      workerData: { sessionsRoot: resolve(sessionsRoot), token, config: options.workerConfig },
     });
   } catch {
     return jsonOnly;
@@ -139,6 +142,25 @@ export async function openStateStorage(
         return null;
       }
     },
+    readSnapshot<T>(read: (db: Pick<StorageDatabase, "all">) => T): T | null {
+      if (!reader) return null;
+      try {
+        reader.exec("BEGIN DEFERRED");
+        const result = read(reader);
+        reader.exec("COMMIT");
+        return result;
+      } catch {
+        try {
+          reader.exec("ROLLBACK");
+        } catch {
+          /* BEGIN may itself have failed. */
+        } finally {
+          dropReader();
+          void send({ type: "disable" }).catch(() => {});
+        }
+        return null;
+      }
+    },
     async write(statements) {
       if (closing || !reader) return false;
       return send<boolean>({ type: "write", statements }).catch(() => false);
@@ -150,12 +172,12 @@ export async function openStateStorage(
     close() {
       if (!closing) {
         dropReader();
-        closing = (stopped ? Promise.resolve() : send({ type: "close" }))
-          .catch(() => {})
-          .then(async () => {
+        closing = (stopped ? Promise.resolve() : send<void>({ type: "close" })).finally(
+          async () => {
             await worker.terminate();
             releaseLease(lease);
-          });
+          },
+        );
       }
       return closing;
     },

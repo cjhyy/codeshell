@@ -84,18 +84,24 @@ test.each([false, true])(
       hasLiveExternalProducer: () => false,
     });
     const state = {};
+    const bridge = {
+      getLastRunContext: () => ({}),
+      getSnapshot: (id: string, since?: number) => snapshots.get(id, since),
+    };
     const ctx = {
       externalCommands: commands,
       outputRecovery: recovery,
-      getBridge: () => ({
-        getLastRunContext: () => ({}),
-        getSnapshot: (id: string, since?: number) => snapshots.get(id, since),
-      }),
+      getBridge: () => bridge,
       deviceState: () => state,
       lookupDiskSessionCwd: async (id: string) => manager.readSessionState(id)?.cwd,
       sendMobilePermissionMode() {},
       replayPendingMobileApprovals() {},
-      remote: { sendToViewer: reply, sendToDevice: reply },
+      remote: {
+        sendToViewer: reply,
+        sendToDevice: reply,
+        hasAuthenticatedViewer: (viewer: string, device: string) =>
+          viewer === "tab" && device === "phone",
+      },
     } as unknown as OrchestratorCtx;
     try {
       client.observe({

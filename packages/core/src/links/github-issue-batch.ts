@@ -1,3 +1,4 @@
+import type { EncryptionCipher } from "../credentials/cipher.js";
 import { resolveActiveWorkspaceProfileSelection } from "../profile/resolve.js";
 import { createHash } from "node:crypto";
 import { SettingsManager } from "../settings/manager.js";
@@ -46,15 +47,22 @@ export function createGithubIssueBatch(input: {
   sessionId: string;
   originIntent: string;
   connection: CredentialMetadata;
+  cipher?: EncryptionCipher;
+  initialProtectedKey?: string;
   items: unknown;
   assertCurrent(): void;
 }) {
   const items = normalizeGithubIssueBatch(input.items);
   const connection = structuredClone(input.connection);
-  const ledger = new OperationLedger(input.root, undefined, {
-    sessionId: input.sessionId,
-    read: () => readOperationSessionOwner(input.root, input.sessionId),
-  });
+  const ledger = new OperationLedger(
+    input.root,
+    input.cipher,
+    {
+      sessionId: input.sessionId,
+      read: () => readOperationSessionOwner(input.root, input.sessionId),
+    },
+    input.initialProtectedKey,
+  );
   const plans = items.map((params) =>
     githubOperationPlan(input.sessionId, input.originIntent, connection, "create_issue", params),
   );

@@ -1,3 +1,14 @@
+import type { AutomationRunNotice } from "../../host/composition/automation-run.js";
+import type { LocalProject } from "../../preload/project-authority-types.js";
+import { isSettingsChange, type SettingsChange } from "../../shared/settings-change.js";
+import type { ShellBusinessOperations } from "../../shared/shell-business-contracts.js";
+import type { SessionCatalogSnapshot } from "../../shared/session-catalog.js";
+import {
+  credentialCommands,
+  type CredentialFileCommand,
+} from "@cjhyy/code-shell-core/internal/storage";
+import type { DesktopAgentMethod } from "../../shared/desktop-agent-methods.js";
+import { isPrivateTaskCommand } from "../task-inbox/private-task-command.js";
 import type { MessagePortMain, UtilityProcess } from "electron";
 import type { ListDiskSessionsResult } from "@cjhyy/code-shell-server/storage";
 import type { ListSessionOptions } from "../../shared/disk-session-query.js";
@@ -5,6 +16,7 @@ import {
   isRpcRequest,
   isRpcResponse,
   type DesktopHostControl,
+  type DesktopHostIdentity,
 } from "../../shared/desktop-host-protocol.js";
 import type { HostStatus } from "./main-workbenches.js";
 
@@ -26,17 +38,24 @@ export class DesktopHostSupervisor {
   private disposePromise?: Promise<void>;
   private cancelTimer?: () => void;
   private readonly restartTimes: number[] = [];
+  private readonly readyWaiters = new Set<() => void>();
+  readonly automationListeners = new Set<(notice: AutomationRunNotice) => void>();
+  readonly catalogListeners = new Set<(snapshot: SessionCatalogSnapshot) => void>();
   private readonly owners = new Map<string, number>();
-  private nextListId = 0;
+  private sequence = 0;
+  readonly projectRegistryListeners = new Set<(projects: LocalProject[]) => Promise<void>>();
+  settingsCommitted?: (effects: SettingsChange) => Promise<void>;
   private readonly reads = new Map<
     string,
     {
-      resolve: (page: ListDiskSessionsResult) => void;
+      resolve: (value: unknown) => void;
       reject: (error: Error) => void;
-      timeout: NodeJS.Timeout;
+      timeout?: NodeJS.Timeout;
+      effects?: Promise<void>;
     }
   >();
   private readonly deleting = new Set<string>();
+  private readonly streamViews = new Set<string>();
 
   constructor(
     private readonly fork: () => HostChild,
@@ -77,17 +96,31 @@ export class DesktopHostSupervisor {
         if (!read) return;
         clearTimeout(read.timeout);
         this.reads.delete(message.id);
-        const page = message.result as ListDiskSessionsResult | undefined;
-        if (
-          page &&
-          Array.isArray(page.sessions) &&
-          (page.nextCursor === null || typeof page.nextCursor === "string")
-        )
-          read.resolve(page);
-        else
-          read.reject(
-            new Error(message.error?.message ?? "Desktop Host returned an invalid session page"),
+        if (message.error)
+          read.reject(Object.assign(new Error(message.error.message), message.error));
+        else read.resolve(read.effects ? read.effects.then(() => message.result) : message.result);
+      } else if (
+        message?.type === "settings-committed" &&
+        this.ready &&
+        typeof message.requestId === "string" &&
+        isSettingsChange(message.effects)
+      ) {
+        this.refreshNative(message.requestId, () => this.settingsCommitted?.(message.effects));
+      } else if (
+        message?.type === "project-registry-committed" &&
+        this.ready &&
+        typeof message.requestId === "string" &&
+        Array.isArray(message.projects)
+      ) {
+        this.refreshNative(message.requestId, async () => {
+          await Promise.all(
+            [...this.projectRegistryListeners].map((notify) => notify(message.projects)),
           );
+        });
+      } else if (message?.type === "automation-notice" && this.ready) {
+        for (const listener of this.automationListeners) listener(message.notice);
+      } else if (message?.type === "session-catalog-changed" && this.ready) {
+        for (const listener of this.catalogListeners) listener(message.snapshot);
       } else if (isRpcRequest(message)) {
         const response =
           message.method !== "app/getVersion"
@@ -103,10 +136,14 @@ export class DesktopHostSupervisor {
         for (const [sessionId, webContentsId] of this.owners) {
           if (!this.post({ type: "owner", sessionId, webContentsId })) return;
         }
+        for (const sessionId of this.streamViews)
+          if (!this.post({ type: "stream-view", sessionId, enabled: true })) return;
         for (const sessionId of this.deleting) {
           if (!this.post({ type: "deleting", sessionId, deleting: true })) return;
         }
         this.setStatus("ready");
+        for (const wake of this.readyWaiters) wake();
+        this.readyWaiters.clear();
       }
     });
     this.cancelTimer = this.schedule(() => {
@@ -115,18 +152,122 @@ export class DesktopHostSupervisor {
     }, 15_000);
   }
 
-  listDiskSessions(options: ListSessionOptions): Promise<ListDiskSessionsResult> {
+  workbenchCommand(
+    caller: DesktopHostIdentity,
+    method: DesktopAgentMethod,
+    params: Record<string, unknown>,
+  ) {
+    return this.request(
+      "host/workbenchCommand",
+      { caller, method, params },
+      method === "agent/run" || (method === "agent/forkSession" && params.mode === "summary")
+        ? 0
+        : 30_000,
+    );
+  }
+  readWorkbenchOutput(caller: DesktopHostIdentity, sessionId: string, sinceSeq: number) {
+    return this.request("host/readWorkbenchOutput", { caller, sessionId, sinceSeq });
+  }
+  async listDiskSessions(options: ListSessionOptions): Promise<ListDiskSessionsResult> {
+    const page = (await this.request("host/listDiskSessions", { ...options })) as
+      | ListDiskSessionsResult
+      | undefined;
+    if (
+      page &&
+      Array.isArray(page.sessions) &&
+      (page.nextCursor === null || typeof page.nextCursor === "string")
+    )
+      return page;
+    throw new Error("Desktop Host returned an invalid session page");
+  }
+
+  async taskCommand<T>(
+    command: string,
+    payload?: unknown,
+    caller?: DesktopHostIdentity,
+  ): Promise<T | null> {
+    if (!isPrivateTaskCommand(command)) throw new Error("Unknown task command");
+    return (await this.request(command, { payload, ...(caller && { caller }) })) as T | null;
+  }
+
+  async credentialCommand<T>(
+    command: CredentialFileCommand,
+    payload: unknown,
+    caller?: DesktopHostIdentity,
+  ): Promise<T> {
+    if (!credentialCommands.includes(command)) throw new Error("Unknown credential command");
+    const result = await this.request(command, { payload, ...(caller && { caller }) });
+    if (result === null || result === undefined)
+      throw new Error("Credential storage is unavailable");
+    return result as T;
+  }
+
+  async callBusiness<K extends keyof ShellBusinessOperations>(
+    method: K,
+    input: ShellBusinessOperations[K]["input"],
+    signal?: AbortSignal,
+  ): Promise<ShellBusinessOperations[K]["result"]> {
+    signal?.throwIfAborted();
+    if (this.stopped) throw new Error("Desktop Host is unavailable");
+    if (!this.ready) {
+      if (this.readyWaiters.size >= 512) throw new Error("Desktop Host startup queue is full");
+      const timeout = AbortSignal.timeout(15_000);
+      const pending = signal ? AbortSignal.any([signal, timeout]) : timeout;
+      const gate = Promise.withResolvers<void>();
+      const cancel = () => gate.reject(pending.reason);
+      this.readyWaiters.add(gate.resolve);
+      pending.addEventListener("abort", cancel, { once: true });
+      try {
+        await gate.promise;
+      } finally {
+        this.readyWaiters.delete(gate.resolve);
+        pending.removeEventListener("abort", cancel);
+      }
+    }
+    signal?.throwIfAborted();
+    // A scheduled Engine turn can span many tool calls. Its scheduler owns cancellation.
+    const timeout = method === "automation/run" ? 0 : 15_000;
+    const value = await this.request("host/business", { method, input }, timeout, signal);
+    signal?.throwIfAborted();
+    return value as ShellBusinessOperations[K]["result"];
+  }
+
+  private request(
+    method: string,
+    params: Record<string, unknown>,
+    timeoutMs = 15_000,
+    signal?: AbortSignal,
+  ): Promise<unknown> {
     if (!this.ready || this.stopped)
       return Promise.reject(new Error("Desktop Host is unavailable"));
-    const id = `main:session-list:${++this.nextListId}`;
-    return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        this.reads.delete(id);
-        reject(new Error("Desktop Host session list timed out"));
-      }, 15_000).unref();
+    const id = `main:request:${++this.sequence}`;
+    const withdraw = () => {
+      const pending = this.reads.get(id);
+      if (!pending) return;
+      clearTimeout(pending.timeout);
+      if (method === "host/business") {
+        this.send({ type: "withdraw-business", id });
+        // Deletion waits for the isolated Engine's final state write and browser
+        // teardown, even when the caller cancelled the run. Host exit rejects it.
+        if (params.method === "automation/run") return;
+      }
+      this.reads.delete(id);
+      pending.reject(new Error("Desktop Host request expired or document changed"));
+    };
+    return new Promise<unknown>((resolve, reject) => {
+      const timeout = timeoutMs > 0 ? setTimeout(withdraw, timeoutMs).unref() : undefined;
+      signal?.addEventListener("abort", withdraw, { once: true });
       this.reads.set(id, { resolve, reject, timeout });
-      this.send({ jsonrpc: "2.0", id, method: "host/listDiskSessions", params: options });
-    });
+      this.send({ jsonrpc: "2.0", id, method, params });
+    }).finally(() => signal?.removeEventListener("abort", withdraw));
+  }
+
+  private refreshNative(requestId: string, refresh: () => Promise<void> | void) {
+    const read = this.reads.get(requestId);
+    const job = Promise.resolve().then(refresh);
+    // A document may leave after its write committed. Refresh the native view even then.
+    void job.catch((error) => this.log("native_refresh_failed", { error: String(error) }));
+    if (read) read.effects = job;
   }
 
   private rejectReads(): void {
@@ -142,6 +283,13 @@ export class DesktopHostSupervisor {
     if (webContentsId === null) this.owners.delete(sessionId);
     else this.owners.set(sessionId, webContentsId);
     this.post({ type: "owner", sessionId, webContentsId });
+  }
+
+  setStreamView(sessionId: string, enabled: boolean): void {
+    if (this.streamViews.has(sessionId) === enabled) return;
+    if (enabled) this.streamViews.add(sessionId);
+    else this.streamViews.delete(sessionId);
+    this.post({ type: "stream-view", sessionId, enabled });
   }
 
   setDeleting(sessionId: string, deleting: boolean): void {
@@ -206,6 +354,8 @@ export class DesktopHostSupervisor {
     const canClose = this.ready && this.child && this.send({ type: "shutdown" });
     this.rejectReads();
     this.stopped = true;
+    for (const wake of this.readyWaiters) wake();
+    this.readyWaiters.clear();
     this.ready = false;
     this.clearTimer();
     const child = this.child;

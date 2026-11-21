@@ -49,7 +49,10 @@ export class SessionTranscriptCacheStore {
     await this.pending;
   }
 
-  write(input: SessionTranscriptCacheKey & { value: string; legacy?: boolean }): Promise<void> {
+  write(
+    input: SessionTranscriptCacheKey & { value: string; legacy?: boolean },
+    commit?: () => void,
+  ): Promise<void> {
     let key: string;
     let incoming: CachedState;
     try {
@@ -65,6 +68,7 @@ export class SessionTranscriptCacheStore {
     const legacy = input.legacy === true;
     return this.enqueue(() => {
       this.mutate(key, (current) => {
+        commit?.();
         if (current?.deleted) return undefined;
         if (legacy) {
           // A distinct directory avoids recursively taking the cache's mutex.
@@ -144,7 +148,7 @@ export class SessionTranscriptCacheStore {
     };
   }
 
-  delete(input: SessionTranscriptCacheKey): Promise<void> {
+  delete(input: SessionTranscriptCacheKey, commit?: () => void): Promise<void> {
     let key: string;
     try {
       key = checkedKey(input);
@@ -153,7 +157,10 @@ export class SessionTranscriptCacheStore {
     }
     return this.enqueue(() => {
       // A tombstone fences a slow renderer save or pending legacy migration.
-      this.mutate(key, () => ({ version: 1, state: null, deleted: true }));
+      this.mutate(key, () => {
+        commit?.();
+        return { version: 1, state: null, deleted: true };
+      });
       rmSync(join(this.legacyDirectory, key), { force: true });
     });
   }

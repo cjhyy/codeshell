@@ -136,7 +136,10 @@ export class MobileOutputRecovery {
     private readonly deps: {
       root: () => string;
       authority: (sessionId: string) => Promise<string>;
-      snapshot: (sessionId: string, sinceSeq?: number) => Snapshot | undefined;
+      snapshot: (
+        sessionId: string,
+        sinceSeq?: number,
+      ) => Snapshot | undefined | Promise<Snapshot | undefined>;
       reply: (viewerId: string, event: MobileServerEvent) => void;
       owner?: (sessionId: string) => number | undefined;
       ownerRevision?: (sessionId: string) => number | undefined;
@@ -218,7 +221,7 @@ export class MobileOutputRecovery {
         throw new Error("selected stream unavailable");
       // Fetch only the exact sequence observed at the owned ingress. A native
       // worker entry interleaved in this Session cannot be mirrored twice.
-      const snapshot = this.deps.snapshot(binding.sessionId, header.seq - 1);
+      const snapshot = await this.deps.snapshot(binding.sessionId, header.seq - 1);
       const frame = snapshot?.events.find((candidate) => candidate.seq === header.seq);
       if (
         !snapshot ||
@@ -312,7 +315,7 @@ export class MobileOutputRecovery {
         if (
           journalRequired &&
           liveProducer === false &&
-          isUntouchedLegacySnapshot(this.deps.snapshot(event.sessionId))
+          isUntouchedLegacySnapshot(await this.deps.snapshot(event.sessionId))
         ) {
           try {
             const root = this.deps.root();
@@ -333,6 +336,12 @@ export class MobileOutputRecovery {
             /* Missing or modern history must still prove its journal. */
           }
         }
+        if (
+          this.bindings.get(viewer) !== binding ||
+          (this.deps.authenticated && !this.deps.authenticated(viewer, event.deviceId)) ||
+          this.deps.hasLiveExternalProducer?.(event.sessionId) !== liveProducer
+        )
+          return false;
         this.deps.reply(viewer, {
           type: "session.recovery.ready",
           sessionId: event.sessionId,
@@ -416,7 +425,7 @@ export class MobileOutputRecovery {
       const root = this.deps.root();
       // Capture only this real prefix's snapshot. Future live inputs are joined
       // by the next suffix batch rather than making this bounded batch chase them.
-      const before = event.frozenSnapshot ? this.deps.snapshot(event.sessionId) : undefined;
+      const before = event.frozenSnapshot ? await this.deps.snapshot(event.sessionId) : undefined;
       const captured = before ? outputSnapshot(before) : undefined;
       if (event.frozenSnapshot && (!captured || captured.unpaired))
         throw new Error("snapshot unavailable");
@@ -434,8 +443,8 @@ export class MobileOutputRecovery {
           : undefined;
       if ((await this.deps.authority(event.sessionId)) !== binding!.authority || !valid())
         throw new Error("read grant revoked");
-      const current = this.deps.snapshot(event.sessionId);
-      if (!current) throw new Error("snapshot unavailable");
+      const current = await this.deps.snapshot(event.sessionId);
+      if (!current || !valid()) throw new Error("snapshot unavailable");
       const snapshot = outputSnapshot(current);
       if (captured) {
         if (
@@ -460,13 +469,15 @@ export class MobileOutputRecovery {
           checked.coverageIdentity !== page.coverageIdentity
         )
           throw new Error("frozen journal changed");
-        this.historyViews.confirm({
-          binding: binding!,
-          root,
-          sessionId: event.sessionId,
-          fence: ownerFence(),
-          snapshot: () => snapshot,
-        });
+        this.historyViews.confirm(
+          {
+            binding: binding!,
+            root,
+            sessionId: event.sessionId,
+            fence: ownerFence(),
+          },
+          snapshot,
+        );
         assertOutputCoverage({ ...captured, inputIds: undefined }, checked, () => true);
         if (event.through === undefined && captured.outputCursor !== undefined) {
           const order = compareOutputCursors(captured.outputCursor, page.through!);
@@ -475,7 +486,7 @@ export class MobileOutputRecovery {
       }
       const standalone =
         page.status === "unavailable" && binding!.legacyTranscript
-          ? this.legacyHistory(binding!)
+          ? this.legacyHistory(binding!, current)
           : undefined;
       const legacyBase = standalone
         ? { throughEventId: standalone.throughEventId, events: [] }
@@ -507,7 +518,7 @@ export class MobileOutputRecovery {
     return false;
   }
 
-  private legacyHistory(binding: Binding) {
+  private legacyHistory(binding: Binding, snapshot: Snapshot | undefined) {
     const proof = binding.legacyTranscript;
     if (
       !proof ||
@@ -518,7 +529,7 @@ export class MobileOutputRecovery {
           this.deps.owner?.(binding.sessionId),
           this.deps.ownerRevision?.(binding.sessionId),
         ]) ||
-      !isUntouchedLegacySnapshot(this.deps.snapshot(binding.sessionId))
+      !isUntouchedLegacySnapshot(snapshot)
     )
       throw new Error("Legacy history changed");
     const current = readLegacyExternalHistory(proof.root, binding.sessionId);
@@ -544,8 +555,7 @@ export class MobileOutputRecovery {
         JSON.stringify([
           this.deps.owner?.(event.sessionId),
           this.deps.ownerRevision?.(event.sessionId),
-        ]) &&
-      isUntouchedLegacySnapshot(this.deps.snapshot(event.sessionId));
+        ]);
     if (this.readingViewers.has(viewer) || this.activeReads >= 8) {
       this.deps.reply(viewer, {
         type: "session.recovery.ready",
@@ -564,7 +574,7 @@ export class MobileOutputRecovery {
         !valid()
       )
         throw new Error("Legacy history grant revoked");
-      const current = this.legacyHistory(binding);
+      const current = this.legacyHistory(binding, await this.deps.snapshot(binding.sessionId));
       if (!valid() || Buffer.byteLength(JSON.stringify(current.events)) > MiB - 16 * 1024)
         throw new Error("Legacy history changed");
       this.deps.reply(viewer, {
@@ -635,8 +645,9 @@ export class MobileOutputRecovery {
       fail("busy");
       return false;
     }
-    const snapshot = (): MobileOutputSnapshot => {
-      const value = this.deps.snapshot(event.sessionId);
+    const snapshot = async (): Promise<MobileOutputSnapshot> => {
+      const value = await this.deps.snapshot(event.sessionId);
+      if (!valid()) throw new Error("History grant revoked");
       if (!value) throw new Error("History snapshot unavailable");
       return outputSnapshot(value);
     };
@@ -662,13 +673,17 @@ export class MobileOutputRecovery {
       if (event.type === "session.historyView") {
         const result = await this.historyViews.read(access, event.before);
         await assertCurrent();
-        this.historyViews.confirm(access);
+        const current = await snapshot();
+        if (!valid()) throw new Error("History grant revoked");
+        this.historyViews.confirm(access, current);
         binding!.historyView = { root, ownerFence: access.fence };
         this.deps.reply(viewer, { ...envelope, type: event.type, result });
       } else {
         const result = await this.historyViews.detail(access, event.ref, event.cursor);
         await assertCurrent();
-        this.historyViews.confirm(access);
+        const current = await snapshot();
+        if (!valid()) throw new Error("History grant revoked");
+        this.historyViews.confirm(access, current);
         this.deps.reply(viewer, { ...envelope, type: event.type, result });
       }
     } catch (error) {
@@ -677,7 +692,7 @@ export class MobileOutputRecovery {
       // unpaired snapshot; it must never turn broken coverage into legacy success.
       try {
         await assertCurrent();
-        if (!snapshot().unpaired) {
+        if (!(await snapshot()).unpaired && valid()) {
           if (error instanceof BusyHistoryView) status = "busy";
           if (error instanceof UnsupportedHistoryView) status = "unsupported";
         }
@@ -745,7 +760,9 @@ export class MobileOutputRecovery {
       const cursor = event.cursor ? decodeBaseCursor(event.cursor, binding!) : undefined;
       const throughEventId = cursor?.throughEventId ?? event.throughEventId!;
       const root = this.deps.root();
-      const standalone = binding!.legacyTranscript ? this.legacyHistory(binding!) : undefined;
+      const standalone = binding!.legacyTranscript
+        ? this.legacyHistory(binding!, await this.deps.snapshot(binding!.sessionId))
+        : undefined;
       const journal = standalone
         ? undefined
         : readOutputJournal(root, event.sessionId, { maxFrames: 1 });
@@ -837,7 +854,8 @@ export class MobileOutputRecovery {
         throw new Error("base reply exceeds its bound");
       if ((await this.deps.authority(event.sessionId)) !== binding!.authority || !valid())
         throw new Error("read grant revoked");
-      if (standalone) this.legacyHistory(binding!);
+      if (standalone) this.legacyHistory(binding!, await this.deps.snapshot(binding!.sessionId));
+      if (!valid()) throw new Error("base grant revoked");
       // Never install a cache after an awaited revocation; the final page releases it.
       this.legacyProjection =
         !reply.complete &&

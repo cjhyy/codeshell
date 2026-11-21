@@ -105,6 +105,9 @@ export interface WorkerBridgeCoreOptions {
    * injected or correlated (e.g. agent/run trust metadata + on-demand spawn).
    * Returns the line to write; `method` is only used for log context.
    */
+  /** Desktop can serialize inputs behind an OS credential prompt. A deferred
+   * write remains bound to the exact worker that accepted it. */
+  dispatchInput?: (generation: number, line: string, send: () => boolean) => boolean;
   prepareInbound?: (line: string, meta: WorkerFrameMeta) => { line: string; method?: string };
   /** A worker successfully spawned with piped stdio. */
   onWorkerStarted?: (info: { generation: number; pid?: number }) => void;
@@ -339,16 +342,28 @@ export class WorkerBridgeCore {
     return () => this.lineListeners.delete(listener);
   }
 
+  /** Let the OS pipe apply backpressure while a downstream publisher drains. */
+  pauseOutput(paused: boolean): void {
+    if (paused) this.child?.stdout?.pause();
+    else this.child?.stdout?.resume();
+  }
+
   /**
    * Write one JSON-RPC line to the worker's stdin (newline appended). Returns
    * false when there is no live worker (caller decides drop/fallback). A
    * stream write error propagates to the caller, matching a direct write.
    */
-  sendLine(line: string): boolean {
+  sendLine(line: string, current?: () => boolean): boolean {
     const stdin = this.child?.stdin;
     if (!stdin || stdin.destroyed) return false;
-    stdin.write(line + "\n");
-    return true;
+    const send = () => {
+      if (this.child?.stdin !== stdin || stdin.destroyed || (current && !current())) return false;
+      stdin.write(line + "\n");
+      return true;
+    };
+    return this.opts.dispatchInput
+      ? this.opts.dispatchInput(this.workerGeneration(), line, send)
+      : send();
   }
 
   /**
@@ -410,13 +425,16 @@ export class WorkerBridgeCore {
         this.pendingRequests.delete(id);
         resolve(outcome);
       };
-      const timer = setTimeout(() => settle({ status: "timeout" }), options.timeoutMs);
+      const timer =
+        options.timeoutMs > 0
+          ? setTimeout(() => settle({ status: "timeout" }), options.timeoutMs)
+          : undefined;
       // unref so a long-lived correlation can never be the only thing keeping the
       // process alive. Callers legitimately use very long timeouts (the Panel App
       // fire-and-forget agent/run uses 24h); without this, a pending request of
       // that length blocks a clean exit for a day. Settling still works normally
       // while the process is running — unref only removes the event-loop hold.
-      timer.unref?.();
+      timer?.unref?.();
       this.pendingRequests.set(id, {
         consume: options.consume === true,
         settleOnExit: options.settleOnExit === true,
@@ -462,7 +480,7 @@ export class WorkerBridgeCore {
         // to hang until timeout. Idempotent when prepareInbound already spawned
         // the worker as an agent/run side effect.
         if (options.ensureWorker) this.ensureWorker(options.ensureWorkerCwd);
-        sent = this.sendLine(prepared.line);
+        sent = this.sendLine(prepared.line, () => !settled);
       } catch (e) {
         sendError = e;
       }

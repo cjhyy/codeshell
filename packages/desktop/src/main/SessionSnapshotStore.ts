@@ -173,6 +173,11 @@ export class SessionSnapshotStore {
     return entry;
   }
 
+  /** The in-memory publication boundary; coverage I/O belongs to client recovery reads. */
+  latestOutputCursor(sessionId: string): string | undefined {
+    return this.logs.get(sessionId)?.outputCursor;
+  }
+
   /**
    * Snapshot for a session. With `sinceSeq`, returns only entries with a
    * strictly-greater seq (the increment the client is missing).

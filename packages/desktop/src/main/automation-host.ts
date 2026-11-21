@@ -40,7 +40,7 @@ import { resolveProjectRoot } from "@cjhyy/code-shell-capability-coding/git";
 import { readAutomationMemory, appendAutomationMemory } from "./automationMemory.js";
 import { AUTOMATION_DISABLED_TOOLS } from "./automationToolset.js";
 import { stablePromptHash } from "@cjhyy/code-shell-server/storage";
-import { browserRuntime, type BrowserRuntimeLike } from "./browser-runtime/index.js";
+import type { BrowserRuntimeLike } from "./browser-runtime/configured-runtime.js";
 import { getProjectStore } from "./project-store.js";
 import { getSessionCwdIndex } from "./session-cwd-index.js";
 import { getTrustCachedSync } from "./trust-store.js";
@@ -244,9 +244,10 @@ export interface AutomationSessionMeta {
  * backfill from disk.
  */
 export function buildDesktopAutomationRunner(
-  emit?: (sessionId: string, event: unknown) => void,
-  onSession?: (meta: AutomationSessionMeta) => void,
-  runtime: BrowserRuntimeLike = browserRuntime,
+  emit: (sessionId: string, event: unknown) => void,
+  onSession: (meta: AutomationSessionMeta) => void,
+  runtime: Pick<BrowserRuntimeLike, "acquire">,
+  sessionFinished?: (id: string) => Promise<void>,
 ): CronRunner {
   return async (req): Promise<CronRunResult> => {
     const workspace = resolveDesktopAutomationWorkspace(req.job);
@@ -294,6 +295,7 @@ export function buildDesktopAutomationRunner(
       title: `CodeShell 自动化 · ${req.job.name?.trim() || req.job.id}`,
     });
     let engine: Engine | undefined;
+    let sid: string | undefined;
     try {
       engine = new Engine({
         llm,
@@ -339,39 +341,36 @@ export function buildDesktopAutomationRunner(
       // Key emitted events by the REAL engine sessionId (carried on the first
       // `session_started` event) so renderer routing/reconnect matches interactive
       // chat. Fall back to job.id until that event is seen.
-      let sid: string | undefined;
+
       const output = new SessionOutputPublisher(
         () => engine!.getSessionManager().getStorageDir(),
         "host",
       );
       const publish = (sessionId: string, event: unknown) => {
-        emit?.(sessionId, output.project(sessionId, event));
+        emit(sessionId, output.project(sessionId, event));
       };
-      const onStream =
-        emit || onSession
-          ? (e: unknown) => {
-              const ev = e as { type?: string; sessionId?: string };
-              if (ev.type === "session_started" && typeof ev.sessionId === "string") {
-                const firstBind = sid === undefined;
-                sid = ev.sessionId;
-                // Announce the session ONCE so the renderer can attribute this
-                // live run to the project owning jobCwd and title it nicely.
-                if (firstBind && onSession) {
-                  const name = req.job.name?.trim() || req.job.id;
-                  const date = new Date().toLocaleDateString();
-                  onSession({
-                    sessionId: sid,
-                    cwd: jobCwd,
-                    title: `${name} ${date}`,
-                    prompt: req.job.prompt,
-                    cronJobId: req.job.id,
-                    clientMessageId,
-                  });
-                }
-              }
-              publish(sid ?? req.job.id, e);
-            }
-          : undefined;
+      const onStream = (e: unknown) => {
+        const ev = e as { type?: string; sessionId?: string };
+        if (ev.type === "session_started" && typeof ev.sessionId === "string") {
+          const firstBind = sid === undefined;
+          sid = ev.sessionId;
+          // Announce the session ONCE so the renderer can attribute this
+          // live run to the project owning jobCwd and title it nicely.
+          if (firstBind) {
+            const name = req.job.name?.trim() || req.job.id;
+            const date = new Date().toLocaleDateString();
+            onSession({
+              sessionId: sid,
+              cwd: jobCwd,
+              title: `${name} ${date}`,
+              prompt: req.job.prompt,
+              cronJobId: req.job.id,
+              clientMessageId,
+            });
+          }
+        }
+        publish(sid ?? req.job.id, e);
+      };
       try {
         const result = await engine.run(req.prompt, {
           cwd: jobCwd,
@@ -405,6 +404,7 @@ export function buildDesktopAutomationRunner(
         await engine?.dispose();
       } finally {
         browserLease.release();
+        if (sid) await sessionFinished?.(sid);
       }
     }
   };

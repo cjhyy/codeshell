@@ -20,12 +20,12 @@ test("remote composition scopes IPC and reads the computer directory without loc
       environmentDir: root,
       windows: () => (owned ? [window as any] : []),
       safeStorage: {
-        isEncryptionAvailable: () => false,
+        isAsyncEncryptionAvailable: async () => false,
         getSelectedStorageBackend: () => "basic_text",
-        encryptString: () => {
+        encryptStringAsync: async () => {
           throw new Error("unexpected encryption before sign-in");
         },
-        decryptString: () => {
+        decryptStringAsync: async () => {
           throw new Error("unexpected decryption before sign-in");
         },
       },

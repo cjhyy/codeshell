@@ -16,6 +16,7 @@ export async function preloadPausedPackagedMain(
     terminateChild,
     verifyPausedIdentity,
     launcherOwnsInspector = true,
+    chromiumReady,
   } = {},
 ) {
   let socket;
@@ -181,7 +182,11 @@ export async function preloadPausedPackagedMain(
     clearTimeout(timer);
     if (onData) child.stderr.removeListener("data", onData);
     if (onExit) child.removeListener("exit", onExit);
-    if (
+    // Detaching the bootstrap debugger while Electron 45 initializes V8 can
+    // trap before the first browser endpoint opens. Preserve the first-pause
+    // guard and release this connection once Playwright finishes its handshake.
+    if (resumed && chromiumReady) void chromiumReady.then(() => socket.close());
+    else if (
       resumed ||
       pausedMainGone ||
       (launcherOwnsInspector && (child.exitCode !== null || child.signalCode !== null))

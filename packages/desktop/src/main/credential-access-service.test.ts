@@ -469,3 +469,45 @@ describe("desktop credential access service", () => {
     }
   });
 });
+
+test("credential readiness delivers the snapshot before run and cancel and drops pending input on worker replacement", async () => {
+  const { WorkerCredentialInputs } = await import("./worker-credential-inputs.js");
+  const inputs = new WorkerCredentialInputs();
+  const lines: string[] = [];
+  let release!: () => void;
+  const waiting = new Promise<void>((resolve) => (release = resolve));
+  const build = () => waiting.then(() => ({ revision: 1, entries: [] }));
+  const write = (generation: number, line: string) =>
+    inputs.write(generation, line, () => {
+      lines.push(line);
+      return true;
+    });
+  const snapshot = inputs.snapshot(1, build, () => {
+    write(1, "snapshot");
+  });
+  write(1, "run");
+  write(1, "cancel");
+  expect(lines).toEqual([]);
+  release();
+  await snapshot;
+  await new Promise((resolve) => setImmediate(resolve));
+  expect(lines).toEqual(["snapshot", "run", "cancel"]);
+  let next!: () => void;
+  const stale = inputs.snapshot(
+    1,
+    () =>
+      new Promise((resolve) => {
+        next = () => resolve({ revision: 2, entries: [] });
+      }),
+    () => {
+      write(1, "stale snapshot");
+    },
+  );
+  write(1, "stale run");
+  await Promise.resolve();
+  write(2, "new worker");
+  next();
+  await stale;
+  await new Promise((resolve) => setImmediate(resolve));
+  expect(lines).toEqual(["snapshot", "run", "cancel", "new worker"]);
+});

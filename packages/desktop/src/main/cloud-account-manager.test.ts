@@ -1471,3 +1471,37 @@ test("relay discovery accepts only the signed-in exact origin and supported acco
   }));
   expect((await ctx.manager.capabilities(origin)).relay).toEqual(relay);
 });
+
+test("logout while the asynchronous keyring is protecting a rotated grant retires it before commit", async () => {
+  const saved = grant({ accessTokenExpiresAt: Date.now() - 1 });
+  const rotated = grant({ account: saved.account, sessionId: saved.sessionId });
+  let persisted: SavedCloudAccount | undefined = saved;
+  const entered = deferred<void>(),
+    release = deferred<void>();
+  const manager = new CloudAccountManager({
+    store: {
+      load: async () => persisted,
+      preflight: async () => {},
+      save: async (value, current) => {
+        entered.resolve();
+        await release.promise;
+        current?.();
+        persisted = value;
+      },
+      forget: () => {
+        persisted = undefined;
+      },
+    },
+    request: async (input) => (input.path.endsWith("/refresh") ? rotated : {}),
+    openExternal: async () => {},
+    changed: () => {},
+  });
+  const token = manager.getCredential(origin, saved.account.id);
+  await entered.promise;
+  await manager.logout();
+  release.resolve();
+  await expect(token).rejects.toThrow();
+  expect(persisted).toBeUndefined();
+  expect(manager.status()).toEqual({ state: "signed-out" });
+  manager.dispose();
+});
