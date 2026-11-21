@@ -23,10 +23,21 @@ type Listener = (status: DesktopHostStatus) => void;
 
 const providerMethod = "links/listLocalProviders";
 const replyDeadlineMs = 15_000;
+// Network-backed discoveries have their own protocol or provider deadline.
+const serviceDeadlines: ReadonlySet<keyof DesktopBusinessReads> = new Set([
+  "models/provider",
+  "models/meta",
+  "skills/checkUpdate",
+]);
 
 // Each migrated domain keeps its original IPC handler available for rollback.
 export const desktopHostRoutes: Record<
-  "localLinkProviders" | "diskSessions" | "taskInbox" | "agentStream" | "configuration" | "agentCommands",
+  | "localLinkProviders"
+  | "diskSessions"
+  | "taskInbox"
+  | "agentStream"
+  | "configuration"
+  | "agentCommands",
   "host" | "ipc"
 > = {
   localLinkProviders: "host",
@@ -324,7 +335,12 @@ export class DesktopHostClient {
     fallback: () => Promise<DesktopBusinessReads[K]["result"]>,
   ): Promise<DesktopBusinessReads[K]["result"]> {
     if (this.status === "ready" && this.port && this.methods.has(method))
-      return (await this.request(this.port, method, params)) as DesktopBusinessReads[K]["result"];
+      return (await this.request(
+        this.port,
+        method,
+        params,
+        serviceDeadlines.has(method) ? 0 : this.timeoutMs,
+      )) as DesktopBusinessReads[K]["result"];
     if (this.negotiatedMethods.has(method))
       throw rpcError(DesktopHostErrors.reconnecting, `Desktop Host ${this.status}`);
     return fallback();
@@ -356,8 +372,9 @@ export class DesktopHostClient {
     port: MessagePort,
     method: string,
     params?: Record<string, unknown>,
+    timeoutMs = this.timeoutMs,
   ): Promise<unknown> {
-    const response = await this.exchange(port, method, params, this.timeoutMs);
+    const response = await this.exchange(port, method, params, timeoutMs);
     if (response.error) throw rpcError(response.error.code, response.error.message);
     return response.result;
   }
