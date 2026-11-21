@@ -1,6 +1,7 @@
 import type { ShellBusinessOperations } from "../../shared/shell-business-contracts.js";
 
 export interface BusinessGrant {
+  readonly requestId: string;
   readonly permit: Int32Array;
   assertCurrent(): void;
 }
@@ -34,7 +35,7 @@ export class HostBusinessCalls<T extends Partial<BusinessMethods> = BusinessMeth
         value: unknown,
         grant: BusinessGrant,
       ) => unknown;
-      const value = await run(input, { permit: state.permit, assertCurrent });
+      const value = await run(input, { requestId: id, permit: state.permit, assertCurrent });
       assertCurrent();
       return value;
     } finally {

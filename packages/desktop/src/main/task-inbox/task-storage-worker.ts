@@ -3,6 +3,7 @@ import {
   type ResolveOperation,
   type PreparedOperationKey,
 } from "../../host/composition/operation-storage.js";
+import { writeHostedSettings } from "../hosted-settings-write.js";
 import { SessionCatalogStore } from "../session-catalog-store.js";
 import { claimBusinessCommit } from "../../host/composition/business-calls.js";
 import type { SessionCatalogPatch, SessionIndex } from "../../shared/session-catalog.js";
@@ -26,6 +27,8 @@ let ledger: OperationStorage | undefined;
 await serveSessionIndexWorker({
   ...tasks,
   async handle(ctx, command, payload) {
+    if (command === "settings/patch")
+      return writeHostedSettings(payload as Parameters<typeof writeHostedSettings>[0]);
     if (
       command === "operations/wrappedKey" ||
       command === "operations/review" ||

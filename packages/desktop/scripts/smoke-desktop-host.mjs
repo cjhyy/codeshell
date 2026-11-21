@@ -106,6 +106,19 @@ utilityProcess.fork = function (...args) {
   const second = await secondOpened;
   await observeHost(second);
   assert.deepEqual(await readCatalog(second), catalog);
+  await first.evaluate(() =>
+    window.codeshell.updateSettings("user", { hostSmokeReceipt: "committed" }),
+  );
+  assert.equal(
+    await second.evaluate(
+      async () => (await window.codeshell.getSettings("user"))?.hostSmokeReceipt,
+    ),
+    "committed",
+  );
+  await assert.rejects(
+    first.evaluate(() => window.codeshell.updateSettings("user", { panelAppBindings: {} })),
+    /reviewed project binding/,
+  );
 
   // Arm a renderer timer before blocking Main. Both timestamps come from the
   // renderer so a response delivered by Main after the pause cannot pass.

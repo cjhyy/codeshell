@@ -6,6 +6,7 @@ import { isOperationCommand } from "./private-operations.js";
 import { HostBusinessCalls } from "../../host/composition/business-calls.js";
 import { catalogOperations } from "../../host/composition/session-catalog.js";
 import { businessRead, noBusinessArguments } from "./business-read.js";
+import { settingsOperations } from "../../host/composition/settings.js";
 import { scopedConfigurationReads } from "./scoped-configuration-reads.js";
 import { configurationReads } from "./configuration-reads.js";
 import { isDesktopAgentMethod } from "../../shared/desktop-agent-methods.js";
@@ -105,6 +106,9 @@ const business = new HostBusinessCalls({
       grant,
     );
   },
+  ...settingsOperations(storage, (requestId, effects) =>
+    parent.postMessage({ type: "settings-committed", requestId, effects }),
+  ),
 } satisfies BusinessMethods);
 const index = createSessionIndex(sessionsRoot(), { storage });
 const catalog = new DesktopSessionListVisibility(index);

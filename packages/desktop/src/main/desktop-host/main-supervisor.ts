@@ -1,3 +1,4 @@
+import { isSettingsChange, type SettingsChange } from "../../shared/settings-change.js";
 import type { ShellBusinessOperations } from "../../shared/shell-business-contracts.js";
 import type { SessionCatalogSnapshot } from "../../shared/session-catalog.js";
 import {
@@ -39,12 +40,14 @@ export class DesktopHostSupervisor {
   readonly catalogListeners = new Set<(snapshot: SessionCatalogSnapshot) => void>();
   private readonly owners = new Map<string, number>();
   private sequence = 0;
+  settingsCommitted?: (effects: SettingsChange) => Promise<void>;
   private readonly reads = new Map<
     string,
     {
       resolve: (value: unknown) => void;
       reject: (error: Error) => void;
       timeout?: NodeJS.Timeout;
+      effects?: Promise<void>;
     }
   >();
   private readonly deleting = new Set<string>();
@@ -91,7 +94,18 @@ export class DesktopHostSupervisor {
         this.reads.delete(message.id);
         if (message.error)
           read.reject(Object.assign(new Error(message.error.message), message.error));
-        else read.resolve(message.result);
+        else read.resolve(read.effects ? read.effects.then(() => message.result) : message.result);
+      } else if (
+        message?.type === "settings-committed" &&
+        this.ready &&
+        typeof message.requestId === "string" &&
+        isSettingsChange(message.effects)
+      ) {
+        const read = this.reads.get(message.requestId);
+        const job = Promise.resolve().then(() => this.settingsCommitted?.(message.effects));
+        // A withdrawn caller can no longer wait for a native refresh, but its committed change still takes effect.
+        void job.catch((error) => this.log("settings_refresh_failed", { error: String(error) }));
+        if (read) read.effects = job;
       } else if (message?.type === "session-catalog-changed" && this.ready) {
         for (const listener of this.catalogListeners) listener(message.snapshot);
       } else if (isRpcRequest(message)) {

@@ -18,6 +18,7 @@ import type { WorkerBridgeCoreOptions } from "@cjhyy/code-shell-server/worker";
 import { DesktopHostWorkerClient } from "./main-worker.js";
 import { sessionsRoot, getDefaultCredentialCipher } from "@cjhyy/code-shell-core";
 import { listDiskSessions as listJson } from "@cjhyy/code-shell-server/storage";
+import type { SettingsChange } from "../../shared/settings-change.js";
 import type { ListSessionOptions } from "../../shared/disk-session-query.js";
 import { createSessionIndexChanges } from "./session-index-changes.js";
 import { DesktopHostIpc } from "../../shared/desktop-host-protocol.js";
@@ -31,6 +32,7 @@ export function createDesktopHost(
   entryPath: string,
   navigation: Pick<AppRendererNavigation, "assertSender">,
   hostReady?: () => void,
+  settingsCommitted?: (effects: SettingsChange) => Promise<void>,
 ) {
   let worker: DesktopHostWorkerClient | undefined;
   const supervisor: DesktopHostSupervisor = new DesktopHostSupervisor(
@@ -47,6 +49,7 @@ export function createDesktopHost(
     },
     (message, details) => dlog("main", `desktop_host.${message}`, details),
   );
+  supervisor.settingsCommitted = settingsCommitted;
   const workbenches = new HostWorkbenchPorts(
     (event) => navigation.assertSender(event),
     () => new MessageChannelMain(),
