@@ -87,7 +87,9 @@ beforeEach(() => {
 });
 afterEach(() => {
   setDefaultCredentialAccess(null);
-  process.env.CODE_SHELL_HOME = oldHome;
+  // Assigning undefined stores the string "undefined" (Node, Bun >= 1.4).
+  if (oldHome === undefined) delete process.env.CODE_SHELL_HOME;
+  else process.env.CODE_SHELL_HOME = oldHome;
   process.env.HOME = oldUserHome;
   rmSync(root, { recursive: true, force: true });
 });

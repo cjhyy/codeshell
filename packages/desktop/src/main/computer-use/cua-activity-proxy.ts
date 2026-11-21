@@ -436,6 +436,10 @@ export async function runCuaActivityProxy(args = process.argv.slice(2)): Promise
     stdio: ["pipe", "pipe", "pipe"],
     windowsHide: true,
   });
+  // A driver that exits mid-write breaks the pipe: write() callbacks reject
+  // their caller and `exited` reports the exit. Without a listener the
+  // stream's `error` event would also be thrown as uncaught.
+  child.stdin.on("error", () => {});
   // One ordered presentation lane. Nothing on the input path awaits it.
   let emitting = Promise.resolve();
   const enqueue = (work: () => Promise<unknown> | unknown): void => {

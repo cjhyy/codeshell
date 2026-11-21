@@ -59,7 +59,10 @@ describe("previewLocalPlugin", () => {
 
   afterEach(() => {
     process.env.HOME = previousHome;
-    process.env.TMPDIR = previousTmp;
+    // Assigning undefined stores the string "undefined" (Node, Bun >= 1.4),
+    // which would make every later tmpdir() in this process "undefined".
+    if (previousTmp === undefined) delete process.env.TMPDIR;
+    else process.env.TMPDIR = previousTmp;
     rmSync(home, { recursive: true, force: true });
     rmSync(scratch, { recursive: true, force: true });
   });

@@ -41,7 +41,13 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import type { HookContext, HookResult } from "../hooks/events.js";
 import { MAX_HOOK_OUTPUT_BYTES } from "../hooks/hook-output.js";
-import { closeHookStdin, MAX_HOOK_STDIN_BYTES, writeHookStdin } from "../hooks/shell-runner.js";
+import {
+  closeHookStdin,
+  isHookStdinReaderGone,
+  MAX_HOOK_STDIN_BYTES,
+  stdinFailure,
+  writeHookStdin,
+} from "../hooks/shell-runner.js";
 import { killChildTree } from "../runtime/spawn-common.js";
 import { preparePluginHookInvocation } from "./pluginHookCommand.js";
 
@@ -357,13 +363,13 @@ export async function runPluginCommandHook(
           await writeHookStdin(child.stdin, envelope);
           finishStdin();
         } catch (error) {
+          const failure = stdinFailure(error);
+          if (isHookStdinReaderGone(failure)) {
+            // Plugins usually ignore stdin; the exit status decides.
+            finishStdin();
+            return;
+          }
           clearTimeout(timer);
-          const err = error as NodeJS.ErrnoException;
-          const failure = {
-            type: "stdin_error" as const,
-            code: typeof err?.code === "string" ? err.code : "UNKNOWN",
-            message: err instanceof Error ? err.message : String(error),
-          };
           // eslint-disable-next-line no-console
           console.error(
             `[plugin-hook] ${spec.pluginKey} ${ctx.eventName} stdin error:`,

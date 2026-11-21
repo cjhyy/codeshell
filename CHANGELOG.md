@@ -8,6 +8,19 @@ breaking.
 
 ## [Unreleased]
 
+### Fixed
+
+- Hooks: a shell or plugin hook that never reads its input, or exits before
+  the input arrives, is now judged by its exit code and output. Before, a fast
+  `echo reason >&2; exit 2` hook could randomly lose its block and let the tool
+  run, and a hook that closed its input early could crash the process with an
+  uncaught "broken pipe" error. A Codex drive or computer-use driver that exits
+  while still being sent input no longer crashes its host either.
+
+### Changed
+
+- Build: Bun 1.4.5 (was 1.3.11) for development, CI and the Docker image.
+
 ## [0.11.0-rc.9] - 2026-11-20
 
 Computer use for Codex sessions and `set_value` were accepted against the real,

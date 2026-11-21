@@ -142,10 +142,10 @@ describe("runPluginCommandHook → additionalContext becomes messages", () => {
     expect(out).toEqual({});
   });
 
-  test("early stdin close → structured stdin_error instead of an unhandled EPIPE", async () => {
+  test("early stdin close is judged by exit status instead of an unhandled EPIPE", async () => {
     const out = await runPluginCommandHook(
       {
-        command: "exec 0<&-; sleep 1",
+        command: "exec 0<&-; sleep 0.3; echo blocked >&2; exit 2",
         installPath: process.cwd(),
         pluginKey: "test@local",
         timeoutMs: 2_000,
@@ -155,13 +155,20 @@ describe("runPluginCommandHook → additionalContext becomes messages", () => {
         data: { ...ctx.data, payload: slowPayload() },
       },
     );
+    expect(out).toEqual({ decision: "deny", messages: ["blocked"] });
+  });
 
-    const failure = out.data?.hookFailure as
-      | { type?: string; code?: string; message?: string }
-      | undefined;
-    expect(failure?.type).toBe("stdin_error");
-    expect(failure?.code === "EPIPE" || failure?.code === "ECONNRESET").toBe(true);
-    expect(failure?.message).toBeTruthy();
+  test("a plugin that exits before reading stdin keeps its additionalContext", async () => {
+    const out = await runPluginCommandHook(
+      {
+        command: echoJson('{"additionalContext":"FAST"}'),
+        installPath: process.cwd(),
+        pluginKey: "test@local",
+        timeoutMs: 2_000,
+      },
+      { ...ctx, data: { ...ctx.data, payload: slowPayload() } },
+    );
+    expect(out).toEqual({ messages: ["FAST"] });
   });
 
   test("oversized context closes stdin without writing the envelope", async () => {
