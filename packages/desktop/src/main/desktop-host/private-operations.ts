@@ -4,9 +4,18 @@ import type { OperationProjectScope } from "../operation-authority.js";
 
 export type OperationReviewStore = ReturnType<typeof createLinkOperationReviewStore>;
 export type OperationSnapshot = ReturnType<OperationReviewStore["review"]>;
-export type OperationCommand = "host/operationReview" | "host/operationResolve";
+export const batchCommands = [
+  "host/batchReserve",
+  "host/batchResolve",
+  "host/batchFinish",
+  "host/batchClose",
+] as const;
+export type BatchCommand = (typeof batchCommands)[number];
+export const isBatchCommand = (method: string): method is BatchCommand =>
+  batchCommands.includes(method as BatchCommand);
+export type OperationCommand = "host/operationReview" | "host/operationResolve" | BatchCommand;
 export const isOperationCommand = (method: string): method is OperationCommand =>
-  method === "host/operationReview" || method === "host/operationResolve";
+  method === "host/operationReview" || method === "host/operationResolve" || isBatchCommand(method);
 
 export interface OperationClient {
   operationCommand<T>(method: OperationCommand, payload: Record<string, unknown>): Promise<T>;

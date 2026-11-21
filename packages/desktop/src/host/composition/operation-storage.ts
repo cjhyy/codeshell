@@ -2,7 +2,6 @@ import {
   createLinkOperationReviewStore,
   readProtectedOperationKey,
 } from "@cjhyy/code-shell-core/internal";
-import type { EncryptionCipher } from "@cjhyy/code-shell-core";
 import {
   operationRootIdentity,
   operationRegistryRevision,
@@ -11,22 +10,8 @@ import {
 import type { OperationSnapshot } from "../../main/desktop-host/private-operations.js";
 import { claimBusinessCommit } from "./business-calls.js";
 
-export interface PreparedOperationKey {
-  wrapped: string;
-  secret: string;
-}
-export function preparedOperationCipher(key: PreparedOperationKey | null): EncryptionCipher {
-  return {
-    encrypt() {
-      throw new Error("Operation key was not prepared");
-    },
-    decrypt(wrapped) {
-      if (!key || key.wrapped !== wrapped || !/^[a-f0-9]{64}$/.test(key.secret))
-        throw new Error("Operation key changed");
-      return key.secret;
-    },
-  };
-}
+import { preparedOperationCipher, type PreparedOperationKey } from "./operation-key.js";
+export type { PreparedOperationKey } from "./operation-key.js";
 export interface ResolveOperation {
   owner: OperationSnapshot["owner"];
   sessionId: string;

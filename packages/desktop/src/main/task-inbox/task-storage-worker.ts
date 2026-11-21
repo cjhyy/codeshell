@@ -1,3 +1,5 @@
+import { OperationBatches, type BatchPayload } from "../../host/composition/operation-batches.js";
+import { isBatchCommand } from "../desktop-host/private-operations.js";
 import {
   OperationStorage,
   type ResolveOperation,
@@ -24,11 +26,16 @@ catalog.onChanged((snapshot) => {
 });
 let output: StoredDesktopOutput | undefined;
 let ledger: OperationStorage | undefined;
+let batches: OperationBatches | undefined;
 await serveSessionIndexWorker({
   ...tasks,
   async handle(ctx, command, payload) {
     if (command === "settings/patch")
       return writeHostedSettings(payload as Parameters<typeof writeHostedSettings>[0]);
+    if (isBatchCommand(command)) {
+      batches ??= new OperationBatches(ctx.sessionsRoot);
+      return batches.run(command, payload as BatchPayload);
+    }
     if (
       command === "operations/wrappedKey" ||
       command === "operations/review" ||

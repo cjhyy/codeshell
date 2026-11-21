@@ -54,6 +54,21 @@ export class HostOperationReviews {
     this.previews.get(token)?.guard.release?.();
     this.previews.delete(token);
   }
+  async withPending<T>(
+    guard: ReturnType<CaptureOperation>,
+    grant: BusinessGrant,
+    work: () => Promise<T>,
+  ) {
+    try {
+      guard.assertCurrent();
+      grant.assertCurrent();
+      this.pending.set(grant.permit, guard.assertCurrent);
+      return await work();
+    } finally {
+      this.pending.delete(grant.permit);
+      guard.release?.();
+    }
+  }
   async run(
     method: OperationCommand,
     caller: DesktopHostIdentity,
