@@ -559,10 +559,8 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer,
     desktopHost && desktopHostRoutes.taskInbox === "host"
       ? {
-          list: (query) =>
-            desktopHost.listTasks(query, (input) => ipcRenderer.invoke("taskInbox:list", input)),
-          get: (taskKey) =>
-            desktopHost.getTask(taskKey, (key) => ipcRenderer.invoke("taskInbox:get", key)),
+          list: desktopHost.listTasks.bind(desktopHost),
+          get: desktopHost.getTask.bind(desktopHost),
         }
       : undefined,
   ),

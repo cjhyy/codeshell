@@ -23,7 +23,10 @@ test("task inbox bridge forwards only typed messages and cleans up event subscri
   await api.get("session:one");
   await api.act({ taskKey: "session:one", action: "cancel", expectedRevision: "r1" });
   const intent = { type: "hide" as const, taskKey: "session:one", expectedRevision: "r1" };
-  const routed = createTaskInboxApi(ipc as any, { get: async () => null });
+  const routed = createTaskInboxApi(ipc as any, {
+    get: async () => null,
+    list: (query, fallback) => fallback(query),
+  });
   await routed.get("session:one");
   await routed.list({ visibility: "hidden" });
   await routed.intent(intent);
