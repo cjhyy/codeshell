@@ -198,6 +198,7 @@ export async function preparePackagedPetFixture({
         "--inspect-brk=0",
         `--user-data-dir=${isolated.userDataDir}`,
       ];
+      const chromium = Promise.withResolvers();
       const captureMain = (child) => {
         assert.equal(captured, undefined, "Packaged launcher captured more than once");
         captured = child;
@@ -231,6 +232,7 @@ export async function preparePackagedPetFixture({
             passiveLaunchDiagnostics?.appended(child, stream, chunk);
           });
         preload = preloadPausedPackagedMain(child, bootstrap, {
+          chromiumReady: chromium.promise,
           // Initial ESM Break-on-start precedes the first dependency body.
           // Parsing the graph is expected; ordinary later pauses are denied.
           allowedPause: (url) => url.startsWith(layout.mainURLPrefix),
@@ -315,7 +317,7 @@ export async function preparePackagedPetFixture({
           cwd: isolated.home,
           env: environment,
           timeout: 30_000,
-        });
+        }).finally(chromium.resolve);
         launchPhase = "startup-barrier";
         startupObservation.sdkReturned(startupRecord);
         const startupPause = await preload;
