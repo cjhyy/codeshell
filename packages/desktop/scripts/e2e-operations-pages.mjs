@@ -470,7 +470,13 @@ async function checkTraces() {
     "Clearing trace filters restores search focus",
   );
   await filter.selectOption("failed");
+  // The notes row is present in both the old and the filtered result. Wait
+  // for the store response to remove the other rows before checking the view.
   await page.locator('[data-trace-session="session:ui-history-notes"]').waitFor();
+  await list
+    .locator('[data-trace-session]:not([data-trace-session="session:ui-history-notes"])')
+    .first()
+    .waitFor({ state: "hidden" });
   assert(
     (await list.locator("[data-trace-session]").count()) === 1,
     "Status filtering uses the real trace store",

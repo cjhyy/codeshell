@@ -16,6 +16,7 @@ import type {
 // This port is transferred only between Main and its utility. The renderer
 // never receives its peer or gains access to these launch and response frames.
 export interface HostedDesktopOutput {
+  waitForFirstBinding?(): Promise<void>;
   readSnapshot(sessionId: string, sinceSeq?: number): Promise<Snapshot>;
   mutateOutput(command: OutputMutation): Promise<void>;
   onOutput(listener: (frame: OutputPublication) => void): () => void;

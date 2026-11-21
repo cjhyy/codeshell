@@ -1885,6 +1885,10 @@ export class AgentBridge implements PetStateBridge {
     );
   }
 
+  async waitForWorkerHost(): Promise<void> {
+    await this.core.hostedOutput?.waitForFirstBinding?.();
+  }
+
   /** Main-only authority: generic renderer/mobile/serve frames cannot mint this admission. */
   async requestOptimizationLab(type: string, params: Record<string, unknown>): Promise<unknown> {
     if (!/^optimization_lab_[a-z_]+$/.test(type)) throw new Error("Invalid Optimization Lab query");
