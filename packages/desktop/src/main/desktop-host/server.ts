@@ -27,7 +27,7 @@ interface HostPort {
 
 export interface DesktopHostMethod {
   /** Allows an unowned row only when run verifies current, visible disk history. */
-  readonly historyRead?: boolean;
+  readonly historyRead?: "output" | "operation";
   readonly admission?: boolean;
   /** A session-scoped method derives its scope from its validated arguments. */
   sessionId?(params: RpcRequest["params"]): string | undefined;
@@ -201,7 +201,7 @@ export class DesktopHostServer {
     if (connection.pending.size + connection.compatibilityReads >= 128)
       throw new Error("Too many pending Desktop Host requests");
     const guard = sessionId
-      ? connection.authority.captureHistoryRead(sessionId, handler.admission)
+      ? connection.authority.captureHistoryRead(sessionId, handler.admission ? "admission" : handler.historyRead)
       : connection.authority.capture();
     connection.compatibilityReads++;
     try {
@@ -355,7 +355,7 @@ export class DesktopHostServer {
         throw new InvalidParams();
       guard =
         (handler.historyRead || handler.admission) && sessionId
-          ? authority.captureHistoryRead(sessionId, handler.admission ? "admission" : "output")
+          ? authority.captureHistoryRead(sessionId, handler.admission ? "admission" : handler.historyRead)
           : authority.capture(sessionId);
       pending.set(id, guard);
       const result = await handler.run(guard, params);

@@ -93,8 +93,11 @@ export class HostSessionAuthority {
   }
 
   captureHistoryRead(sessionId: string, webContentsId: number, sharedOutput = true) {
-    if (sharedOutput && this.streamViews.has(sessionId))
-      return { historical: false, assertCurrent: this.captureOutput(sessionId, webContentsId) };
+    if (this.streamViews.has(sessionId)) {
+      if (sharedOutput)
+        return { historical: false, assertCurrent: this.captureOutput(sessionId, webContentsId) };
+      return { historical: false, assertCurrent: this.grant(sessionId, webContentsId) };
+    }
     const current = this.sessions.get(sessionId);
     if (current) return { historical: false, assertCurrent: this.grant(sessionId, webContentsId) };
     let lease = this.historicalReads.get(sessionId);

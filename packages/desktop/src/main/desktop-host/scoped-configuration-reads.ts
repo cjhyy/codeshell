@@ -69,7 +69,7 @@ export function scopedConfigurationReads(list: ListSessions) {
       name,
       {
         ...method,
-        historyRead: true,
+        historyRead: "operation",
         optionalSessionId(params) {
           const t = parse(params).target;
           return t && "sessionId" in t ? t.sessionId : undefined;
