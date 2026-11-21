@@ -174,6 +174,13 @@ export async function handleCcRoomEvent(
       return;
     }
   } catch (err) {
-    reply({ type: "room.error", message: err instanceof Error ? err.message : String(err) });
+    // Carry what identifies the failed operation so the viewer can attach the
+    // failure to its card (e.g. re-enable an approval it already hid).
+    reply({
+      type: "room.error",
+      message: err instanceof Error ? err.message : String(err),
+      ...("roomId" in event && event.roomId ? { roomId: event.roomId } : {}),
+      ...(event.type === "ccRoom.respondApproval" ? { approvalRequestId: event.requestId } : {}),
+    });
   }
 }

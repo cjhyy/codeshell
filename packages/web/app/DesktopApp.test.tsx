@@ -2684,6 +2684,86 @@ test("CLI sidebar distinguishes unknown counts and marks the active CLI thread",
   expect(markup).not.toContain("undefined");
 });
 
+test("CLI rooms needing attention show badges, a jump list and a cross-room approval target", async () => {
+  const opened: unknown[][] = [];
+  const kinds: string[] = [];
+  const waiting = {
+    roomId: "room-wait",
+    kind: "codex" as const,
+    sessionId: "known",
+    cwd: "/repo",
+    name: "Waiting room",
+    permissionMode: "acceptEdits" as const,
+    unread: true,
+    approvalIds: ["a-1", "a-2"],
+  };
+  const app = remoteApp({
+    activeProjectCwd: "/repo",
+    ccCliKind: "codex",
+    ccProbe: { available: true },
+    ccSessions: [
+      { sessionId: "known", cwd: "/repo", firstMessage: "Known", lastModified: 1 },
+      { sessionId: "quiet", cwd: "/repo", firstMessage: "Quiet", lastModified: 1 },
+    ],
+    roomAttention: [
+      waiting,
+      {
+        ...waiting,
+        roomId: "room-unread",
+        sessionId: "other",
+        name: "Unread room",
+        approvalIds: [],
+      },
+    ],
+    setCcCliKind: (kind) => void kinds.push(kind),
+    openCcSession: (...args) => void opened.push(args),
+  });
+  const markup = renderToStaticMarkup(
+    <DesktopSidebar app={app} navigation={{ guard: noop, conversation: noop }} />,
+  );
+  expect(markup).toContain("2 个 CLI 会话需要处理");
+  expect(markup).toContain("Waiting room");
+  expect(markup).toContain("Codex · 2 项待审批");
+  expect(markup).toContain("Unread room");
+  expect(markup).toContain("Codex · 有新消息");
+  // The matching discovered session row carries the same badge.
+  expect(markup.match(/2 项待审批/g)).toHaveLength(2);
+
+  const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+  try {
+    const target = hook.result.current.approvals.find((item) => item.label === "Waiting room");
+    expect(target).toEqual({ id: "a-1", sessionId: "room:room-wait", label: "Waiting room" });
+    await act(async () => {
+      hook.result.current.selectSession(target!.sessionId!);
+    });
+    expect(kinds).toEqual(["codex"]);
+    expect(opened).toEqual([["known", "/repo", "acceptEdits", "codex"]]);
+  } finally {
+    await hook.unmount();
+  }
+});
+
+test("a restored CLI approval card shows why the last response failed", () => {
+  const markup = renderToStaticMarkup(
+    <DesktopApproval
+      approval={{
+        requestId: "a-1",
+        roomId: "room",
+        toolName: "Bash",
+        description: "",
+        summary: "ls",
+        risk: "low",
+        pathScoped: false,
+        error: "bridge unavailable",
+      }}
+      app={remoteApp({ status: "online" })}
+    />,
+  );
+  expect(markup).toContain('role="alert"');
+  expect(markup).toContain("上次回复没有送达：bridge unavailable");
+  expect(markup).toContain("允许");
+});
+
 test("CLI settings handoff keeps editable drafts and the sidebar while blocking submission", async () => {
   const sent: unknown[] = [];
   const room = {

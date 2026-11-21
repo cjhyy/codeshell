@@ -103,7 +103,7 @@ import {
   mimiMovingUnavailableReason,
 } from "./computer-use/desktop-setup.js";
 import { startMobileExternalRuntime } from "./mobile-remote/start-external-runtime.js";
-import { initializeMobileRemoteLifecycle } from "./mobile-remote/lifecycle.js";
+import { initializeMobileRemoteLifecycle, publishRoomEnded } from "./mobile-remote/lifecycle.js";
 import { resolveMobileStaticRoot } from "./mobile-remote/mobile-static-root.js";
 import {
   externalRuntimeToolContextForSession,
@@ -1271,10 +1271,11 @@ const roomManager = new RoomManager({
       })
       .then((decision) => roomManager.respondApproval(roomId, ev.requestId, decision));
   },
-  onRoomEnded: (roomId) => {
-    approvalBridge.cancelRoom(roomId);
-    transcriptSubscriptions.endRoom(roomId);
-  },
+  onRoomEnded: (roomId) =>
+    publishRoomEnded(
+      { approvals: approvalBridge, transcripts: transcriptSubscriptions, remote: mobileRemote },
+      roomId,
+    ),
 });
 const transcriptSubscriptions = createRoomTranscriptSubscriptions({
   roomManager,

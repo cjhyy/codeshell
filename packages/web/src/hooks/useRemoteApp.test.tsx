@@ -6660,6 +6660,225 @@ describe("useRemoteApp CLI room controls", () => {
       await hook.unmount();
     }
   });
+
+  async function runningRoom() {
+    const fixture = await openRoom();
+    const { ws, sent } = fixture;
+    await act(async () => {
+      ws.message({
+        type: "ccRoom.transcriptSubscribed",
+        roomId: room.id,
+        sessionId: "thread-cli",
+        active: true,
+        messages: [],
+        hasMore: false,
+        totalCount: 0,
+        roomCursor: 0,
+      });
+      await flushMicrotasks();
+      const history = sent().findLast((event) => event.type === "room.history");
+      ws.message({
+        type: "room.history.ok",
+        roomId: room.id,
+        requestId: history.requestId,
+        messages: [],
+        latestSeq: 0,
+        page: { snapshotId: "snapshot", throughSeq: 0, complete: true },
+      });
+      ws.message({
+        type: "room.message",
+        roomId: room.id,
+        msg: { seq: 1, from: "agent", type: "tool", tool: "Bash", toolId: "t1", summary: "sleep" },
+      });
+      await flushMicrotasks();
+    });
+    expect(fixture.hook.result.current.chat.run).toBe("running");
+    return fixture;
+  }
+
+  test("a room closed on Desktop (only an authoritative room list arrives) ends the remote run", async () => {
+    const { hook, ws } = await runningRoom();
+    try {
+      // Desktop's close path republishes the room list; no room.closed reaches this phone.
+      await act(async () => {
+        ws.message({ type: "room.list.ok", rooms: [{ ...room, open: false }] });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.chat.run).not.toBe("running");
+      expect(hook.result.current.activeRoom).toMatchObject({ id: room.id, open: false });
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  const other = { ...room, id: "room-other", name: "Other", sessionId: "thread-other" };
+
+  test("approvals of a room not being viewed become a bounded badge until resolved", async () => {
+    const { hook, ws } = await openRoom();
+    const otherApproval = (requestId: string) =>
+      ws.message({
+        type: "ccRoom.approvalRequest",
+        roomId: other.id,
+        req: { requestId, toolName: "Bash", input: { command: "ls" } },
+      });
+    try {
+      await act(async () => {
+        ws.message({ type: "room.list.ok", rooms: [room, other] });
+        otherApproval("o-1");
+        otherApproval("o-1"); // Host replay of the same pending request
+        otherApproval("o-2");
+        await flushMicrotasks();
+      });
+      // Never answerable from the room being viewed.
+      expect(hook.result.current.approvals).toEqual([]);
+      expect(hook.result.current.roomAttention).toEqual([
+        expect.objectContaining({
+          roomId: other.id,
+          sessionId: "thread-other",
+          kind: "claude-code",
+          approvalIds: ["o-1", "o-2"],
+          unread: false,
+        }),
+      ]);
+      await act(async () => {
+        ws.message({
+          type: "ccRoom.approvalResolved",
+          roomId: other.id,
+          requestId: "o-1",
+          decision: { behavior: "deny", message: "x" },
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.roomAttention?.[0]?.approvalIds).toEqual(["o-2"]);
+      await act(async () => {
+        ws.message({ type: "room.closed", roomId: other.id });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.roomAttention).toEqual([]);
+      await act(async () => {
+        for (let index = 0; index < 30; index += 1) otherApproval(`many-${index}`);
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.roomAttention?.[0]?.approvalIds).toHaveLength(20);
+      expect(hook.result.current.roomAttention?.[0]?.approvalIds.at(-1)).toBe("many-29");
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  test("assistant output in another room marks it unread; opening it clears unread and approvals", async () => {
+    const { hook, ws, sent } = await openRoom();
+    try {
+      await act(async () => {
+        ws.message({ type: "room.list.ok", rooms: [room, other] });
+        ws.message({
+          type: "room.message",
+          roomId: other.id,
+          msg: { seq: 1, from: "agent", type: "tool", tool: "Bash", summary: "ls" },
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.roomAttention).toEqual([]);
+      await act(async () => {
+        ws.message({
+          type: "room.message",
+          roomId: other.id,
+          msg: { seq: 2, from: "agent", type: "text", text: "done" },
+        });
+        ws.message({
+          type: "ccRoom.approvalRequest",
+          roomId: other.id,
+          req: { requestId: "o-1", toolName: "Bash", input: {} },
+        });
+        // Output of the viewed room is read already.
+        ws.message({
+          type: "room.message",
+          roomId: room.id,
+          msg: { seq: 1, from: "agent", type: "text", text: "here" },
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.roomAttention).toEqual([
+        expect.objectContaining({ roomId: other.id, unread: true, approvalIds: ["o-1"] }),
+      ]);
+
+      await act(async () => {
+        hook.result.current.openCcSession("thread-other", "/repo", "bypassPermissions", "codex");
+        await flushMicrotasks();
+      });
+      const open = sent().findLast((event) => event.type === "ccRoom.openSession");
+      expect(open).toMatchObject({ sessionId: "thread-other", kind: "codex" });
+      await act(async () => {
+        ws.message({
+          type: "ccRoom.opened",
+          roomId: other.id,
+          sessionId: "thread-other",
+          status: "running",
+          requestId: open.requestId,
+        });
+        await flushMicrotasks();
+        // The Host replays the still-pending request on open: one card, in this room.
+        ws.message({
+          type: "ccRoom.approvalRequest",
+          roomId: other.id,
+          req: { requestId: "o-1", toolName: "Bash", input: {} },
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.activeRoomId).toBe(other.id);
+      expect(hook.result.current.approvals.map((a) => a.requestId)).toEqual(["o-1"]);
+      expect(hook.result.current.roomAttention).toEqual([]);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  test("a failed approval response restores that room's card with the Host's reason", async () => {
+    const { hook, ws, approval } = await openRoom();
+    try {
+      await act(async () => {
+        approval("a-1");
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        hook.result.current.respondCcApproval(room.id, "a-1", {
+          behavior: "allow",
+          updatedInput: {},
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.approvals).toEqual([]);
+      await act(async () => {
+        ws.message({
+          type: "room.error",
+          roomId: room.id,
+          approvalRequestId: "a-1",
+          message: "bridge unavailable",
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.approvals).toEqual([
+        expect.objectContaining({ requestId: "a-1", roomId: room.id, error: "bridge unavailable" }),
+      ]);
+      expect(hook.result.current.notice).toBeUndefined();
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  test("a room list that still shows the room running keeps the run", async () => {
+    const { hook, ws } = await runningRoom();
+    try {
+      await act(async () => {
+        ws.message({ type: "room.list.ok", rooms: [{ ...room, open: true }] });
+        ws.message({ type: "room.list.ok", rooms: [{ ...room }] });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.chat.run).toBe("running");
+    } finally {
+      await hook.unmount();
+    }
+  });
 });
 
 describe("versioned remote Goal controls", () => {

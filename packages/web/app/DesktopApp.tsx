@@ -23,6 +23,7 @@ import {
   DesktopChatControls,
   DesktopCliSessionActions,
   DesktopSidebar,
+  openAttentionRoom,
 } from "./DesktopControls.js";
 import {
   DesktopModelPicker,
@@ -957,6 +958,12 @@ export function useDesktopController(
     [draftRevision],
   );
   const selectSession = (id: string) => {
+    if (id.startsWith("room:")) {
+      // A CLI room's pending approvals are answered inside that room.
+      const room = app.roomAttention?.find((item) => `room:${item.roomId}` === id);
+      if (!room || !openAttentionRoom(app, room)) setError("这个 CLI 会话已不需要处理。");
+      return;
+    }
     if (id.startsWith("desktop-new-")) {
       if (app.status !== "online") {
         setError("连接已断开，重新连接后才能继续这个新任务。");
@@ -1090,11 +1097,19 @@ export function useDesktopController(
     uncertain: uncertainIntents.current.has(activeId),
     running,
     localDrafts,
-    approvals: (app.outputHistoryFailed ? [] : app.approvals).map((approval) => ({
-      id: approval.requestId,
-      sessionId: approval.roomId ? undefined : approval.sessionId,
-      ...(approval.asynchronous ? { asynchronous: true } : {}),
-    })),
+    approvals: [
+      ...(app.outputHistoryFailed ? [] : app.approvals).map((approval) => ({
+        id: approval.requestId,
+        sessionId: approval.roomId ? undefined : approval.sessionId,
+        ...(approval.asynchronous ? { asynchronous: true } : {}),
+      })),
+      // Other CLI rooms waiting on an approval: one jump target per room.
+      ...(app.roomAttention ?? []).flatMap((room) =>
+        room.approvalIds.length && room.sessionId
+          ? [{ id: room.approvalIds[0]!, sessionId: `room:${room.roomId}`, label: room.name }]
+          : [],
+      ),
+    ],
     approvalCount: (id) => app.approvals.filter((approval) => approval.sessionId === id).length,
     approvalContent: (app.outputHistoryFailed ? [] : app.approvals).map((approval) => (
       <DesktopApproval key={approval.requestId} approval={approval} app={app} />
