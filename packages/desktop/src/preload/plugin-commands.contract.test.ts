@@ -16,7 +16,9 @@ const methodChannels = {
 
 describe("preload plugin command contract", () => {
   test("keeps list, expansion, and refresh channels wired across the boundary", () => {
-    const preload = readFileSync(join(import.meta.dir, "index.ts"), "utf8");
+    const preload = ["index.ts", "configuration-reads.ts"]
+      .map((file) => readFileSync(join(import.meta.dir, file), "utf8"))
+      .join("\n");
     const main = readFileSync(join(import.meta.dir, "..", "main", "index.ts"), "utf8");
 
     expect(preload).toContain(`ipcRenderer.invoke("${methodChannels.listPluginCommands}"`);

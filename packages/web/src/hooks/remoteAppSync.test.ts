@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { ctrlSequence, RemoteTerminalChannel } from "./remoteTerminalChannel.js";
 import {
   filterNewRoomMessages,
   clearUnreadSession,
@@ -187,5 +188,39 @@ describe("CLI room attention helpers", () => {
     expect(sent.take("r-0")).toBeUndefined();
     expect(sent.take("r-29")).toEqual({ requestId: "r-29" });
     expect(sent.take("r-29")).toBeUndefined();
+  });
+});
+
+describe("remote terminal channel", () => {
+  test("routes only terminal events and re-attaches on every new socket", () => {
+    const channel = new RemoteTerminalChannel();
+    const seen: string[] = [];
+    let reconnects = 0;
+    channel.subscribe((event) => seen.push(event.type));
+    channel.onReconnect(() => reconnects++);
+    expect(channel.accept({ type: "terminal.data", terminalId: "term:x", data: "a" })).toBe(true);
+    expect(channel.accept({ type: "session.list.ok", sessions: [] } as never)).toBe(false);
+    expect(seen).toEqual(["terminal.data"]);
+
+    const sent: unknown[] = [];
+    const send = (event: unknown) => (sent.push(event), true);
+    expect(channel.send({ type: "terminal.list" })).toBe(false);
+    channel.bind(send, true, 1);
+    channel.bind(send, true, 1);
+    expect(reconnects).toBe(1);
+    expect(channel.send({ type: "terminal.list" })).toBe(true);
+    channel.bind(send, false, 1);
+    expect(channel.online).toBe(false);
+    channel.bind(send, true, 2);
+    expect(reconnects).toBe(2);
+    expect(sent).toEqual([{ type: "terminal.list" }]);
+  });
+
+  test("the phone Ctrl key turns the next letter into a control character", () => {
+    expect(ctrlSequence("c")).toBe("\x03");
+    expect(ctrlSequence("D")).toBe("\x04");
+    expect(ctrlSequence("[")).toBe("\x1b");
+    expect(ctrlSequence("1")).toBe("1");
+    expect(ctrlSequence("ab")).toBe("ab");
   });
 });

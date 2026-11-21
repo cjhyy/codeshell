@@ -1,4 +1,6 @@
+import type { NativeRemoteTerminals } from "../mobile-remote/native-terminals.js";
 import { NativeAutomationClient } from "./main-automation.js";
+import type { PreparedOperationKey } from "../../host/composition/operation-key.js";
 import { randomBytes } from "node:crypto";
 import { documentLifetimes } from "./document-lifetime.js";
 import type { OperationCommand } from "./private-operations.js";
@@ -36,6 +38,7 @@ export function createDesktopHost(
   hostReady?: () => void,
   settingsCommitted?: (effects: SettingsChange) => Promise<void>,
 ) {
+  let terminals: NativeRemoteTerminals | undefined;
   let worker: DesktopHostWorkerClient | undefined;
   const supervisor: DesktopHostSupervisor = new DesktopHostSupervisor(
     () =>
@@ -47,9 +50,11 @@ export function createDesktopHost(
       if (status === "ready") {
         bindWorker();
         bindAutomation();
+        bindTerminals();
       } else {
         worker?.disconnect();
         automation.disconnect();
+        terminals?.disconnect();
       }
       workbenches.setStatus(status);
       if (status === "ready") hostReady?.();
@@ -129,6 +134,12 @@ export function createDesktopHost(
       port2.close();
     }
   }
+  function bindTerminals() {
+    if (!terminals) return;
+    const { port1, port2 } = new MessageChannelMain();
+    if (supervisor.post({type:"remote-terminal-port"}, [port2])) terminals.bind(port1);
+    else { port1.close(); port2.close(); }
+  }
   function bindWorker() {
     if (!worker) return;
     const { port1, port2 } = new MessageChannelMain();
@@ -149,6 +160,7 @@ export function createDesktopHost(
   return {
     callBusiness: supervisor.callBusiness.bind(supervisor),
     documentSignal,
+    setRemoteTerminals(client: NativeRemoteTerminals) { terminals = client; },
     automationListeners: supervisor.automationListeners,
     automation,
     catalogListeners: supervisor.catalogListeners,
@@ -238,6 +250,31 @@ export function createDesktopHost(
       );
     },
     captureOperationClient,
+    async withNativeRead<T>(
+      input: { sessionId: string; token: string; id: string; revision: string },
+      work: (key: PreparedOperationKey, check: () => void) => Promise<T>,
+    ) {
+      const origin = operationCaller.getStore();
+      if (!origin) throw new Error("Operation requires its native workbench document");
+      const lease = supervisor.watchOperationOwner(input.sessionId, origin.caller.webContentsId);
+      const signal = AbortSignal.any([origin.signal, lease.signal]);
+      try {
+        const { wrapped } = (await supervisor.callBusiness(
+          "operations/ledger",
+          { action: "host/operationReadKey", payload: input, caller: origin.caller },
+          signal,
+        )) as { wrapped: string };
+        signal.throwIfAborted();
+        const key = await prepareKey(wrapped, false);
+        signal.throwIfAborted();
+        if (!key) throw new Error("Reviewed operation key unavailable");
+        const value = await work(key, () => signal.throwIfAborted());
+        signal.throwIfAborted();
+        return value;
+      } finally {
+        lease.release();
+      }
+    },
     operationCommand<T>(action: OperationCommand, payload: Record<string, unknown>): Promise<T> {
       return captureOperationClient().operationCommand<T>(action, payload);
     },
@@ -252,13 +289,21 @@ export function createDesktopHost(
       );
     },
     sessionsChanged: (ids: string[]) => changes?.add(ids),
-    trackWorkbench: (contents: WebContents) => workbenches.track(contents),
+    trackWorkbench(contents: WebContents) {
+      if (workbenches.tracks(contents)) return;
+      const id = contents.id;
+      workbenches.track(contents);
+      contents.once("destroyed", () =>
+        supervisor.post({ type: "window-closed", webContentsId: id }),
+      );
+    },
     setStreamView: (sessionId: string, enabled: boolean) =>
       supervisor.setStreamView(sessionId, enabled),
     setOwner: (sessionId: string, owner: number | null) => supervisor.setOwner(sessionId, owner),
     setDeleting: (sessionId: string, deleting: boolean) =>
       supervisor.setDeleting(sessionId, deleting),
     dispose() {
+      terminals?.disconnect();
       changes?.close();
       changes = undefined;
       ipcMain.removeListener(DesktopHostIpc.connect, connect);

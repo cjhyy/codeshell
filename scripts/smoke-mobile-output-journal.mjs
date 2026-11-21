@@ -35,6 +35,9 @@ try {
       "scripts/fixtures/mobile-output-journal.tsx",
       "--target=node",
       "--packages=external",
+      // Bun >= 1.4 applies tsconfig `paths` before --packages=external, which
+      // would inline workspace sources whose deps do not resolve from here.
+      "--external=@cjhyy/*",
       "--outfile",
       fixture,
     ],

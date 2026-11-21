@@ -1,0 +1,60 @@
+.remote-terminal {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  flex: 1;
+  gap: 8px;
+  padding: 12px;
+}
+.remote-terminal-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.remote-terminal-bar select {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+.remote-terminal-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.remote-terminal-screen {
+  flex: 1;
+  min-height: 200px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px;
+  background: #ffffff;
+}
+:root[data-theme="dark"] .remote-terminal-screen {
+  background: #09090b;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .remote-terminal-screen {
+    background: #09090b;
+  }
+}
+.remote-terminal-keys {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.remote-terminal-keys button {
+  flex: 0 0 auto;
+  min-width: 44px;
+  min-height: 36px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.remote-terminal-keys button.active {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+.remote-terminal-keys[hidden] {
+  display: none;
+}

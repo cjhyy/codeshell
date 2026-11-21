@@ -399,3 +399,27 @@ test("old Hosts use existing IPC and a negotiated request honors its own deadlin
     "timed out",
   );
 });
+
+test("provider discovery keeps its own network deadline and remains bound to its port", async () => {
+  const { client } = clientWithStatus(9);
+  const host = await attach(client, {
+    ...capabilities,
+    methods: [...capabilities.methods, "models/provider"],
+  });
+  const fallback = () => {
+    throw new Error("unexpected fallback");
+  };
+  const result = client.readBusiness(
+    "models/provider",
+    { provider: { kind: "openrouter" } },
+    fallback,
+  );
+  const request = await nextRequest(host);
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  host.postMessage({ jsonrpc: "2.0", id: request.id, result: { models: [] } });
+  expect((await result).models).toEqual([]);
+  const pending = client.readBusiness("models/provider", { provider: {} }, fallback);
+  await nextRequest(host);
+  client.disconnect("reconnecting");
+  await expect(pending).rejects.toThrow("-32011");
+});

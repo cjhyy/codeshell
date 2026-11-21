@@ -506,6 +506,10 @@ describe("SessionsView editing and recovery", () => {
     await act(async () => {
       await import("./SessionHistoryDetail");
       await flushMicrotasks();
+      // React.lazy settles its own promise chain after the module does; on a busy
+      // CI runner that can take a few macrotasks. Wait (bounded) for its first read.
+      for (let tick = 0; tick < 50 && reads.length === 0; tick++)
+        await new Promise((resolve) => setTimeout(resolve, 0));
     });
     expect(reads).toEqual([[FIRST.id, 512 * 1024]]);
     expect(opened).toBe(false);

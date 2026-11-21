@@ -1,3 +1,4 @@
+import type { TerminalCommands, TerminalEvents } from "../shared/pty.js";
 import type { DesktopAgentMethod } from "../shared/desktop-agent-methods";
 import {
   DesktopHostErrors,
@@ -23,10 +24,21 @@ type Listener = (status: DesktopHostStatus) => void;
 
 const providerMethod = "links/listLocalProviders";
 const replyDeadlineMs = 15_000;
+// Network-backed discoveries have their own protocol or provider deadline.
+const serviceDeadlines: ReadonlySet<keyof DesktopBusinessReads> = new Set([
+  "models/provider",
+  "models/meta",
+  "skills/checkUpdate",
+]);
 
 // Each migrated domain keeps its original IPC handler available for rollback.
 export const desktopHostRoutes: Record<
-  "localLinkProviders" | "diskSessions" | "taskInbox" | "agentStream" | "configuration" | "agentCommands",
+  | "localLinkProviders"
+  | "diskSessions"
+  | "taskInbox"
+  | "agentStream"
+  | "configuration"
+  | "agentCommands",
   "host" | "ipc"
 > = {
   localLinkProviders: "host",
@@ -72,6 +84,9 @@ export class DesktopHostClient {
   private readonly negotiatedMethods = new Set<string>();
   private approvalRead = 0;
   private approvals?: { epoch: string; stateVersion: number; pending: ApprovalRequestEnvelope[] };
+  private readonly terminalData = new Set<(message: TerminalEvents["pty/data"]) => void>();
+  private readonly terminalViewers = new Set<(message: TerminalEvents["pty/remoteViewers"]) => void>();
+  private readonly terminalExit = new Set<(message: TerminalEvents["pty/exit"]) => void>();
   private readonly streams = new Set<(envelope: StreamEventEnvelope) => void>();
   private status: DesktopHostStatus = "connecting";
   private readonly listeners = new Set<Listener>();
@@ -102,6 +117,41 @@ export class DesktopHostClient {
     this.port = port;
     port.onmessage = ({ data }: MessageEvent<unknown>) => {
       if (this.port !== port) return;
+      if (
+        this.status === "ready" &&
+        this.methods.has("pty/start") &&
+        data &&
+        typeof data === "object" &&
+        "jsonrpc" in data &&
+        data.jsonrpc === "2.0" &&
+        !("id" in data) &&
+        "method" in data &&
+        "params" in data &&
+        data.params &&
+        typeof data.params === "object" &&
+        "sessionId" in data.params &&
+        typeof data.params.sessionId === "string"
+      ) {
+        const p = data.params;
+        if (data.method === "pty/data" && "data" in p && typeof p.data === "string") {
+          for (const cb of this.terminalData)
+            cb({ sessionId: data.params.sessionId, data: p.data, ...("replay" in p && p.replay === true ? {replay: true} : {}) });
+          return;
+        }
+        if (data.method === "pty/remoteViewers" && "count" in p && typeof p.count === "number" && Number.isSafeInteger(p.count) && p.count >= 0) {
+          for (const cb of this.terminalViewers) cb({sessionId: data.params.sessionId, count: p.count});
+          return;
+        }
+        if (data.method === "pty/exit" && "exitCode" in p && typeof p.exitCode === "number") {
+          for (const cb of this.terminalExit)
+            cb({
+              sessionId: data.params.sessionId,
+              exitCode: p.exitCode,
+              ...("signal" in p && typeof p.signal === "number" && { signal: p.signal }),
+            });
+          return;
+        }
+      }
       if (
         this.status === "ready" &&
         this.methods.has("agent/subscribe") &&
@@ -214,6 +264,32 @@ export class DesktopHostClient {
     return this.read("tasks/get", { taskKey }, () => readIpc(taskKey));
   }
 
+  onTerminalData(cb: (p: TerminalEvents["pty/data"]) => void) {
+    this.terminalData.add(cb);
+    return () => {
+      this.terminalData.delete(cb);
+    };
+  }
+  onTerminalViewers(cb: (p: TerminalEvents["pty/remoteViewers"]) => void) {
+    this.terminalViewers.add(cb);
+    return () => { this.terminalViewers.delete(cb); };
+  }
+  onTerminalExit(cb: (p: TerminalEvents["pty/exit"]) => void) {
+    this.terminalExit.add(cb);
+    return () => {
+      this.terminalExit.delete(cb);
+    };
+  }
+  async terminal<K extends keyof TerminalCommands>(
+    method: K,
+    params: TerminalCommands[K]["input"],
+  ): Promise<TerminalCommands[K]["result"]> {
+    if (this.initialPort) await this.initialPort;
+    if (this.status !== "ready" || !this.port || !this.methods.has(method))
+      throw rpcError(DesktopHostErrors.reconnecting, "Terminal Host unavailable");
+    return (await this.request(this.port, method, { ...params })) as TerminalCommands[K]["result"];
+  }
+
   onStreamEvent(listener: (envelope: StreamEventEnvelope) => void): () => void {
     this.streams.add(listener);
     return () => {
@@ -324,7 +400,12 @@ export class DesktopHostClient {
     fallback: () => Promise<DesktopBusinessReads[K]["result"]>,
   ): Promise<DesktopBusinessReads[K]["result"]> {
     if (this.status === "ready" && this.port && this.methods.has(method))
-      return (await this.request(this.port, method, params)) as DesktopBusinessReads[K]["result"];
+      return (await this.request(
+        this.port,
+        method,
+        params,
+        serviceDeadlines.has(method) ? 0 : this.timeoutMs,
+      )) as DesktopBusinessReads[K]["result"];
     if (this.negotiatedMethods.has(method))
       throw rpcError(DesktopHostErrors.reconnecting, `Desktop Host ${this.status}`);
     return fallback();
@@ -356,8 +437,9 @@ export class DesktopHostClient {
     port: MessagePort,
     method: string,
     params?: Record<string, unknown>,
+    timeoutMs = this.timeoutMs,
   ): Promise<unknown> {
-    const response = await this.exchange(port, method, params, this.timeoutMs);
+    const response = await this.exchange(port, method, params, timeoutMs);
     if (response.error) throw rpcError(response.error.code, response.error.message);
     return response.result;
   }

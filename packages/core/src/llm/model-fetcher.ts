@@ -42,6 +42,7 @@ export interface FetchOptions {
   cacheDir: string;
   refresh?: boolean;
   timeoutMs?: number;
+  beforeCacheWrite?: () => void;
 }
 
 export interface FetchResult extends ModelCacheFile {
@@ -85,7 +86,7 @@ export async function fetchModelList(
   }
 
   if (provider.kind === "openrouter") {
-    return loadOpenRouterSnapshot(provider.key, opts.cacheDir);
+    return loadOpenRouterSnapshot(provider.key, opts.cacheDir, opts.beforeCacheWrite);
   }
 
   try {
@@ -120,6 +121,7 @@ export async function fetchModelList(
     const sorted = sortByRecency(filtered);
     const enriched = enrichFromStaticCatalog(provider.kind, sorted);
     const finalModels = enrichFromOpenRouterSnapshot(provider.kind, enriched);
+    opts.beforeCacheWrite?.();
     const file = writeCache(opts.cacheDir, provider.key, finalModels);
     return file;
   } catch (err) {
@@ -290,7 +292,7 @@ function normalize(payload: unknown, protocol: ProviderProtocol): CachedModel[] 
   return _exhaustive;
 }
 
-function loadOpenRouterSnapshot(providerKey: string, cacheDir: string): FetchResult {
+function loadOpenRouterSnapshot(providerKey: string, cacheDir: string, beforeCacheWrite?: () => void): FetchResult {
   if (!existsSync(OPENROUTER_SNAPSHOT)) {
     return errorResult(providerKey, cacheDir, "openrouter snapshot missing");
   }
@@ -303,6 +305,7 @@ function loadOpenRouterSnapshot(providerKey: string, cacheDir: string): FetchRes
       contextLength: m.contextLength ?? 0,
       maxOutputTokens: m.maxOutputTokens ?? 0,
     }));
+    beforeCacheWrite?.();
     return writeCache(cacheDir, providerKey, models);
   } catch (err) {
     return errorResult(providerKey, cacheDir, (err as Error).message);

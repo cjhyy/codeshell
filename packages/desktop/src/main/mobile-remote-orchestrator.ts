@@ -15,6 +15,7 @@ import { readMobileSnapshot } from "./mobile-remote/read-snapshot.js";
 
 import { Methods, sessionsRoot } from "@cjhyy/code-shell-core";
 import { MobilePermissionModes } from "./mobile-remote/permission-modes.js";
+import { isRemoteTerminalEvent, type RemoteTerminals } from "./mobile-remote/remote-terminals.js";
 import { MobileNativeSubmissions } from "./mobile-remote/native-submissions.js";
 import { MobileOutputRecovery } from "./mobile-remote/output-recovery.js";
 import {
@@ -113,6 +114,8 @@ export interface MobileRemoteOrchestratorDeps {
   requireLinkedSessionPath?: (cwd: unknown) => Promise<string>;
   /** Send an IPC payload to every live desktop window. */
   broadcastToWindows: (channel: string, payload: unknown) => void;
+  /** Shared Desktop terminals; absent hosts answer every terminal event as disabled. */
+  terminals?: Pick<RemoteTerminals, "handle" | "releaseViewer">;
 }
 
 export class MobileRemoteOrchestrator {
@@ -278,6 +281,7 @@ export class MobileRemoteOrchestrator {
     // already running legitimately is not touched.
     this.deps.roomModes?.cancelRequester(mobileRoomModeRequesterKey(viewerId));
     this.turnQueue.releaseViewer(viewerId);
+    this.deps.terminals?.releaseViewer(viewerId);
   }
 
   /** Installed once by Main's shared Desktop/mobile history composition. */
@@ -622,6 +626,17 @@ export class MobileRemoteOrchestrator {
    * path the renderer uses, via AgentBridge.injectWorkerMessage.
    */
   async handleMobileClientEvent(event: AuthenticatedMobileClientEvent): Promise<void> {
+    if (isRemoteTerminalEvent(event)) {
+      if (this.deps.terminals) this.deps.terminals.handle(event);
+      else if (event.viewerId && event.type !== "terminal.list") {
+        this.deps.remote.sendToViewer(event.viewerId, {
+          type: "terminal.error",
+          code: "disabled",
+          message: "这台桌面不支持远程终端。",
+        });
+      }
+      return;
+    }
     this.turnQueue.observeViewer(event.viewerId, event.deviceId);
     if (this.turnQueue.control(event) || (await this.turnQueue.submit(event))) return;
     this.turnQueue.before(event);

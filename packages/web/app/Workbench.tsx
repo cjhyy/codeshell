@@ -9,6 +9,7 @@ import { HubSessions, useHistoryActionFocus } from "./HubSessions.js";
 import { HubLinks } from "./HubLinks.js";
 import { HubPanels } from "./HubPanels.js";
 import { PanelHost } from "./PanelHost.js";
+import { RemoteTerminal } from "./RemoteTerminal.js";
 import { PanelSessionBar } from "./PanelSessionBar.js";
 import type { ManagedPanel } from "../src/panels.js";
 import { OutputHistoryRecoveryExit } from "../src/components/OutputHistoryRecovery.js";
@@ -639,13 +640,15 @@ export function Workbench({
             ? "历史对话"
             : view === "links"
               ? "Link"
-              : view === "panels" || view === "panel"
-                ? openedPanel && view === "panel"
-                  ? openedPanel.panel.title["zh-CN"] || openedPanel.panel.title.default
-                  : "面板"
-                : settingsSection === "skills"
-                  ? "Skills"
-                  : "设置";
+              : view === "terminal"
+                ? "终端"
+                : view === "panels" || view === "panel"
+                  ? openedPanel && view === "panel"
+                    ? openedPanel.panel.title["zh-CN"] || openedPanel.panel.title.default
+                    : "面板"
+                  : settingsSection === "skills"
+                    ? "Skills"
+                    : "设置";
   // Execution traces open from the settings overview, so they keep 设置 highlighted.
   const settingsNavActive =
     view === "activity" ||
@@ -743,6 +746,16 @@ export function Workbench({
               <WorkbenchIcon name="chat" />
               <span>对话</span>
             </button>
+            {controller.terminal ? (
+              <button
+                className={`nav-button${view === "terminal" ? " active" : ""}`}
+                onClick={() => requestNavigation(() => (setView("terminal"), closeMobileSidebar()))}
+                aria-current={view === "terminal" ? "page" : undefined}
+              >
+                <WorkbenchIcon name="terminal" />
+                <span>终端</span>
+              </button>
+            ) : null}
             {hub ? (
               <>
                 <button
@@ -1629,6 +1642,14 @@ export function Workbench({
             }
             onBack={navigation.back}
             onAuthLost={onAuthLost}
+          />
+        ) : null}
+        {view === "terminal" && controller.terminal ? (
+          <RemoteTerminal
+            channel={controller.terminal}
+            projectId={
+              controller.projects?.find((item) => item.id === controller.selectedProjectId)?.id
+            }
           />
         ) : null}
         {view === "activity" && hub ? (

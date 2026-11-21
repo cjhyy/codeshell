@@ -15,6 +15,26 @@ export function createConfigurationReads(
     return host ? host.readBusiness(name, params, fallback) : fallback();
   }
   return {
+    resolveModelMeta: (models: unknown, providers: unknown) =>
+      read("models/meta", { models, providers }, () =>
+        ipcRenderer.invoke("models:resolve-meta", models, providers),
+      ),
+    reasoningControl: (kind: string, model: string) =>
+      read("models/reasoning", { kind, model }, () =>
+        ipcRenderer.invoke("models:reasoning-control", kind, model),
+      ),
+    listModels: (provider: unknown, refresh?: boolean) =>
+      read("models/provider", { provider, refresh }, () =>
+        ipcRenderer.invoke("models:list", provider, refresh),
+      ),
+    listPluginHooks: (disabledPlugins?: string[]) =>
+      read("plugins/hooks", { disabledPlugins }, () =>
+        ipcRenderer.invoke("hooks:listPlugin", disabledPlugins),
+      ),
+    checkSkillUpdate: (target: RendererConfigurationTarget | null, filePath: string) =>
+      read("skills/checkUpdate", { target, filePath }, () =>
+        ipcRenderer.invoke("skills:checkUpdate", target, filePath),
+      ),
     listMergedMcpServers: (
       base: Record<string, unknown>,
       disabledPlugins?: string[],

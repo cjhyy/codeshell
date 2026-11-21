@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { readFile, stat, writeFile } from "node:fs/promises";
+import { readFile, rename, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 const args = process.argv.slice(2);
@@ -42,7 +42,9 @@ if (mode === "tree") {
   );
   report.childPid = descendant.pid;
 }
-await writeFile(process.env.CODESHELL_TEST_CLAUDE_REPORT, JSON.stringify(report));
+const reportPath = process.env.CODESHELL_TEST_CLAUDE_REPORT;
+await writeFile(reportPath + ".tmp", JSON.stringify(report));
+await rename(reportPath + ".tmp", reportPath);
 const emit = (item) => process.stdout.write(`${JSON.stringify(item)}\n`);
 const result = {
   type: "result",

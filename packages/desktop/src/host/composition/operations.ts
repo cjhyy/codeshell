@@ -20,6 +20,7 @@ export function nativeOperations(
     return result;
   }
   const reviews = new HostOperationReviews({
+    wrappedKey: async () => (await storage).request<string>("operations/wrappedKey"),
     review: (sessionId, key) => request<OperationSnapshot>("operations/review", { sessionId, key }),
     resolve: (input) => request<boolean>("operations/resolve", input),
   });

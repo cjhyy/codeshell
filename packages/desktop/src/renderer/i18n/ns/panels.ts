@@ -151,6 +151,7 @@ export const panels = {
         processExited: "[进程已退出 (code {code})]",
         startFailed: "[终端启动失败: {detail}]",
         workspaceChanged: "工作区已切换；此终端仍在旧目录。新建终端以使用新工作区。",
+        remoteViewers: "手机/网页正在查看（{count}）",
       },
       room: {
         cliUnavailable: "未检测到对应的 Claude Code / Codex CLI",
@@ -583,6 +584,7 @@ export const panels = {
         startFailed: "[Terminal failed to start: {detail}]",
         workspaceChanged:
           "The workspace changed; this terminal remains in its original directory. Open a new terminal to use the new workspace.",
+        remoteViewers: "Viewed remotely ({count})",
       },
       room: {
         cliUnavailable: "The corresponding Claude Code / Codex CLI is unavailable",

@@ -89,6 +89,7 @@ function fixture(pause?: Promise<void>) {
   const grant = () => ({ permit: new Int32Array(new SharedArrayBuffer(4)), assertCurrent() {} });
   const host = new HostOperationReviews(
     {
+      wrappedKey: async () => local.wrappedKey(),
       review: local.review.bind(local),
       resolve: async (req) => {
         if (pause) await pause;
@@ -116,6 +117,14 @@ function fixture(pause?: Promise<void>) {
       grant(),
     );
   return {
+    readKey: (token: string, id: string, revision: string) =>
+      host.run(
+        "host/operationReadKey",
+        identity,
+        { sessionId, token, id, revision },
+        guard,
+        grant(),
+      ),
     review,
     resolve,
     host,
@@ -131,13 +140,13 @@ function fixture(pause?: Promise<void>) {
 test("a native decision resolves only the reviewed pending ledger receipt and is single use", async () => {
   const f = fixture(),
     review = await f.review();
-  if (typeof review !== "object") throw new Error("missing review");
+  if (typeof review !== "object" || !("snapshot" in review)) throw new Error("missing review");
   expect(JSON.stringify(review)).not.toContain("must not cross the pipe");
   const row = review.snapshot.records[0]!;
   expect(await f.resolve(review.token, row.id, row.revision)).toBe(true);
   await expect(f.resolve(review.token, row.id, row.revision)).rejects.toThrow();
   const next = await f.review();
-  if (typeof next !== "object") throw new Error("missing review");
+  if (typeof next !== "object" || !("snapshot" in next)) throw new Error("missing review");
   expect(next.snapshot.records.some((entry) => entry.id === row.id && entry.canResolve)).toBe(
     false,
   );
@@ -147,7 +156,7 @@ test.each(["owner", "delete", "document", "project"])(
   async (change) => {
     const f = fixture(),
       review = await f.review();
-    if (typeof review !== "object") throw new Error("missing review");
+    if (typeof review !== "object" || !("snapshot" in review)) throw new Error("missing review");
     const row = review.snapshot.records[0]!;
     if (change === "owner") {
       f.sessions.setOwner(f.sessionId, 2);
@@ -167,7 +176,7 @@ test("owner loss while a storage write is queued revokes its mutex-time CAS", as
   const gate = Promise.withResolvers<void>(),
     f = fixture(gate.promise),
     review = await f.review();
-  if (typeof review !== "object") throw new Error("missing review");
+  if (typeof review !== "object" || !("snapshot" in review)) throw new Error("missing review");
   const row = review.snapshot.records[0]!;
   const pending = f.resolve(review.token, row.id, row.revision);
   f.sessions.setOwner(f.sessionId, 2);
@@ -176,6 +185,18 @@ test("owner loss while a storage write is queued revokes its mutex-time CAS", as
   await expect(pending).rejects.toThrow("revoked");
   f.sessions.setOwner(f.sessionId, null);
   const again = await f.review();
-  if (typeof again !== "object") throw new Error("missing review");
+  if (typeof again !== "object" || !("snapshot" in again)) throw new Error("missing review");
   expect(again.snapshot.records[0]?.canResolve).toBe(true);
+});
+
+test("independent recovery releases one canonical wrapped key only for the reviewed receipt", async () => {
+  const f = fixture(),
+    preview = await f.review();
+  if (typeof preview !== "object" || !("snapshot" in preview)) throw new Error("missing preview");
+  const row = preview.snapshot.records[0]!;
+  await expect(f.readKey(preview.token, "different", row.revision)).rejects.toThrow("expired");
+  expect(await f.readKey(preview.token, row.id, row.revision)).toEqual({
+    wrapped: "enc:synthetic:wrapped",
+  });
+  await expect(f.resolve(preview.token, row.id, row.revision)).rejects.toThrow("expired");
 });

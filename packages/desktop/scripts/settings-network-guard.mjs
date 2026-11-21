@@ -16,7 +16,7 @@ for (const name of ["node:http", "node:https"]) {
 const { withOwnedAccountDiscovery } = require(${JSON.stringify(fileURLToPath(new URL("./owned-account-discovery.cjs", import.meta.url)))});
 require("node:https").request = withOwnedAccountDiscovery(deny);
 require("node:module").syncBuiltinESMExports();
-if (process.versions.electron) {
+if (process.type === "browser") {
   const { app, net } = require("electron");
   net.request = deny; net.fetch = deny;
   app.on("web-contents-created", (_event, contents) => contents.session.webRequest.onBeforeRequest({urls:["http://*/*", "https://*/*"]}, (_details, done) => { globalThis.__staticSettingsNetworkAttempts++; done({cancel:true}); }));

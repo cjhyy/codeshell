@@ -1337,8 +1337,6 @@ contextBridge.exposeInMainWorld("codeshell", {
     input: import("../shared/panel-apps").PanelAppUpdateInput,
   ): Promise<import("../shared/panel-apps").PanelAppUpdateResult> =>
     ipcRenderer.invoke("panel-apps:installUpdate", input),
-  checkSkillUpdate: (target: RendererConfigurationTarget | null, filePath: string) =>
-    ipcRenderer.invoke("skills:checkUpdate", target, filePath),
   updateSkill: (target: RendererConfigurationTarget | null, filePath: string) =>
     ipcRenderer.invoke("skills:update", target, filePath),
   installLocalSkill: (
@@ -1369,8 +1367,6 @@ contextBridge.exposeInMainWorld("codeshell", {
   installFromGithub: (input: unknown) => ipcRenderer.invoke("skills:installFromGithub", input),
   probeMcpServers: (cfgs: unknown, force?: boolean, target?: RendererConfigurationTarget | null) =>
     ipcRenderer.invoke("mcp:probe", cfgs, force, target),
-  listPluginHooks: (disabledPlugins?: unknown) =>
-    ipcRenderer.invoke("hooks:listPlugin", disabledPlugins),
   approvePluginHooks: (installKey: string): Promise<PluginHookApprovalResult[]> =>
     ipcRenderer.invoke("hooks:approvePlugin", installKey),
   revokePluginHooks: (installKey: string): Promise<PluginHookApprovalResult[]> =>
@@ -1384,12 +1380,6 @@ contextBridge.exposeInMainWorld("codeshell", {
   probeImage: (input: unknown) => ipcRenderer.invoke("image:probe", input),
   saveCatalogEntry: (entry: unknown) => ipcRenderer.invoke("catalog:save", entry),
   deleteCatalogEntry: (id: string) => ipcRenderer.invoke("catalog:delete", id),
-  resolveModelMeta: (models: unknown, providers: unknown) =>
-    ipcRenderer.invoke("models:resolve-meta", models, providers),
-  reasoningControl: (kind: string, model: string) =>
-    ipcRenderer.invoke("models:reasoning-control", kind, model),
-  listModels: (provider: unknown, refresh?: boolean) =>
-    ipcRenderer.invoke("models:list", provider, refresh),
   setTrust: (path: string, level: "trusted" | "untrusted") =>
     ipcRenderer.invoke("trust:set", path, level),
   notify: (opts: { title: string; body?: string; subtitle?: string }) =>
@@ -1450,25 +1440,33 @@ contextBridge.exposeInMainWorld("codeshell", {
    */
   windowToken: String(process.pid),
   ptyStart: (opts: Parameters<CodeshellApi["ptyStart"]>[0]) =>
-    ipcRenderer.invoke("pty:start", opts) as Promise<PtyStartResult>,
-  ptyWrite: (sessionId: string, data: string) => ipcRenderer.invoke("pty:write", sessionId, data),
+    configurationHost ? configurationHost.terminal("pty/start",opts) : ipcRenderer.invoke("pty:start", opts) as Promise<PtyStartResult>,
+  ptyWrite: (sessionId: string, data: string, reply?: boolean) => configurationHost ? configurationHost.terminal("pty/write",{sessionId,data,reply: reply === true}) : ipcRenderer.invoke("pty:write", sessionId, data, reply === true),
   ptyResize: (sessionId: string, cols: number, rows: number) =>
-    ipcRenderer.invoke("pty:resize", sessionId, cols, rows),
-  ptyKill: (sessionId: string) => ipcRenderer.invoke("pty:kill", sessionId),
-  onPtyData: (cb: (msg: { sessionId: string; data: string }) => void): (() => void) => {
-    const h = (_e: IpcRendererEvent, msg: { sessionId: string; data: string }) => cb(msg);
+    configurationHost ? configurationHost.terminal("pty/resize",{sessionId,cols,rows}) : ipcRenderer.invoke("pty:resize", sessionId, cols, rows),
+  ptyKill: (sessionId: string) => configurationHost ? configurationHost.terminal("pty/kill",{sessionId}) : ipcRenderer.invoke("pty:kill", sessionId),
+  onPtyData: (cb: (msg: { sessionId: string; data: string; replay?: boolean }) => void): (() => void) => {
+    if(configurationHost) return configurationHost.onTerminalData(cb);
+    const h = (_e: IpcRendererEvent, msg: { sessionId: string; data: string; replay?: boolean }) => cb(msg);
     ipcRenderer.on("pty:data", h);
     return () => ipcRenderer.removeListener("pty:data", h);
   },
   onPtyExit: (
     cb: (msg: { sessionId: string; exitCode: number; signal?: number }) => void,
   ): (() => void) => {
+    if(configurationHost) return configurationHost.onTerminalExit(cb);
     const h = (
       _e: IpcRendererEvent,
       msg: { sessionId: string; exitCode: number; signal?: number },
     ) => cb(msg);
     ipcRenderer.on("pty:exit", h);
     return () => ipcRenderer.removeListener("pty:exit", h);
+  },
+  onPtyRemoteViewers: (cb: (msg: { sessionId: string; count: number }) => void): (() => void) => {
+    if (configurationHost) return configurationHost.onTerminalViewers(cb);
+    const h = (_e: IpcRendererEvent, msg: { sessionId: string; count: number }) => cb(msg);
+    ipcRenderer.on("pty:remoteViewers", h);
+    return () => ipcRenderer.removeListener("pty:remoteViewers", h);
   },
 
   // ── Browser popout window ─────────────────────────────────────────────

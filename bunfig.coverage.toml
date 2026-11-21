@@ -10,7 +10,7 @@ coverageSkipTestFiles = true
 # including handwritten source directories named dist.
 coveragePathIgnorePatterns = ["dist/**", "packages/*/dist/**"]
 # Bun enforces coverageThreshold per file, while this gate measures the entire
-# loaded integration surface. check-builtin-coverage.ts enforces the unchanged
-# 45% lines / 38% functions minimums using Bun's mean of module ratios, computed
+# loaded integration surface. check-builtin-coverage.ts enforces the 42% lines /
+# 38% functions minimums using Bun's mean of module ratios, computed
 # from exact LCOV counts rather than rounded console output. Its --config= form
 # ensures Bun loads this file; Bun 1.3.11 ignores the separate --config argument.

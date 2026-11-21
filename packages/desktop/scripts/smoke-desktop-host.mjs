@@ -1,4 +1,5 @@
 /* global window */
+import { verifyPairedHostTerminal } from "./paired-host-terminal.mjs";
 import assert from "node:assert/strict";
 import { mkdir, readFile, readdir, realpath, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -103,6 +104,9 @@ try {
   await writeFile(
     bootstrap,
     `const { utilityProcess } = require("electron");
+// Advertise only loopback to this isolated Desktop's real LAN gateway.
+require("node:os").networkInterfaces = () => ({});
+require("node:module").syncBuiltinESMExports();
 const fork = utilityProcess.fork;
 utilityProcess.fork = function (...args) {
   const child = fork.apply(this, args);
@@ -239,6 +243,36 @@ utilityProcess.fork = function (...args) {
     true,
   );
 
+  const terminalId = "term:host-smoke";
+  const started = await first.evaluate(
+    async ({ cwd, sessionId }) => {
+      window.hostTerminalText = "";
+      window.codeshell.onPtyData((msg) => {
+        if (msg.sessionId === sessionId) window.hostTerminalText += msg.data;
+      });
+      return window.codeshell.ptyStart({ cwd, sessionId });
+    },
+    { cwd: mount, sessionId: terminalId },
+  );
+  assert.equal(started.ok, true, started.detail);
+  const denied = await second.evaluate(
+    ({ cwd, sessionId }) => window.codeshell.ptyStart({ cwd, sessionId }),
+    { cwd: mount, sessionId: terminalId },
+  );
+  assert.equal(
+    denied.ok,
+    false,
+    "A second window cannot attach to the first window's live terminal",
+  );
+  await second.evaluate((id) => window.codeshell.ptyKill(id), terminalId);
+  await first.evaluate(
+    (id) => window.codeshell.ptyWrite(id, "echo HOST_TERMINAL_READY\r"),
+    terminalId,
+  );
+  await first.waitForFunction(() =>
+    window.hostTerminalText.replace(/\r/g, "").includes("\nHOST_TERMINAL_READY\n"),
+  );
+  await verifyPairedHostTerminal(first, terminalId, started.pid);
   // Arm a renderer timer before blocking Main. Both timestamps come from the
   // renderer so a response delivered by Main after the pause cannot pass.
   const secondHandle = await application.browserWindow(second);
@@ -254,9 +288,10 @@ utilityProcess.fork = function (...args) {
           const business = await Promise.all([
             api.projectRegistry.list(), api.recents(), api.listSourceCatalog(), api.getModelCatalog(),
             api.listPluginMcpTrust(), api.getPluginDetail("uninstalled-business-test"), api.getSettings("user"),
-            api.listSkills(null),api.listPlugins(null),api.listMergedMcpServers({},[]),api.getConfigurationSettings({noRepo:true})
+            api.listSkills(null),api.listPlugins(null),api.listMergedMcpServers({},[]),api.getConfigurationSettings({noRepo:true}),
+            api.reasoningControl("openai","gpt-5"),api.listPluginHooks([])
           ]);
-          const [projects, recents, sources, models, trust, plugin, settings, skills, plugins, mcp, projectSettings] = business;
+          const [projects, recents, sources, models, trust, plugin, settings, skills, plugins, mcp, projectSettings, reasoning, hooks] = business;
           const root = projects.find(p => p.id === "host-smoke-project").roots[0];
           const entries = await api.readProjectDir("host-smoke-project", root.id);
           const entry = entries.find(row => row.name === "host-file.txt");
@@ -269,7 +304,7 @@ utilityProcess.fork = function (...args) {
           resolve({ begin, end: Date.now(), ids, sessionIds:page.sessions.map(row=>row.id),
             workspaceViews:file.text === "from-workspace" && exists && hits.some(row => row.rootId === root.id && row.name === entry.name) && Array.isArray(git.entries),
             configurationViews: [projects, recents, sources, models, trust, skills, plugins].every(Array.isArray)
-              && mcp !== null && typeof mcp === "object" && (projectSettings === null || typeof projectSettings === "object")
+              && Array.isArray(hooks) && reasoning !== undefined && mcp !== null && typeof mcp === "object" && (projectSettings === null || typeof projectSettings === "object")
               && models.length > 0 && plugin === null && (settings === null || typeof settings === "object") });
         } catch (error) { reject(error); }
       }, 250)); void 0`);
@@ -280,7 +315,11 @@ utilityProcess.fork = function (...args) {
   });
   await secondHandle.dispose();
   assert.deepEqual(measured.read.ids, catalog);
-  assert.equal(measured.read.workspaceViews, true, "Workspace files and Git answered during the Main pause");
+  assert.equal(
+    measured.read.workspaceViews,
+    true,
+    "Workspace files and Git answered during the Main pause",
+  );
   assert.deepEqual(measured.read.sessionIds, ["index-visible"]);
   assert.equal(
     measured.read.configurationViews,
@@ -313,6 +352,19 @@ utilityProcess.fork = function (...args) {
   await first.reload({ waitUntil: "domcontentloaded" });
   await observeHost(first);
   assert.deepEqual(await readCatalog(first), catalog);
+  const reattached = await first.evaluate(
+    async ({ cwd, sessionId }) => {
+      window.hostTerminalText = "";
+      window.codeshell.onPtyData((msg) => {
+        if (msg.sessionId === sessionId) window.hostTerminalText += msg.data;
+      });
+      return window.codeshell.ptyStart({ cwd, sessionId });
+    },
+    { cwd: mount, sessionId: terminalId },
+  );
+  assert.equal(reattached.pid, started.pid);
+  await first.waitForFunction(() => window.hostTerminalText.includes("HOST_TERMINAL_READY"));
+  await first.evaluate((id) => window.codeshell.ptyKill(id), terminalId);
   // A full local fork exercises actual worker stdio without performing inference.
   await first.evaluate(() => {
     window.hostSmokeFork = window.codeshell.forkSession({
