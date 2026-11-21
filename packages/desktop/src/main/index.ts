@@ -448,6 +448,7 @@ import {
 import type { MimiPresenceSnapshot } from "../shared/mimi-presence.js";
 import { getTrust, getTrustCachedSync, warmTrustCache } from "./trust-store.js";
 import { installAppMenu } from "./menu.js";
+import { disposeWorkbenchTray, installWorkbenchTray } from "./workbench-tray.js";
 import { seedDefaults } from "./seed-defaults.js";
 import { bootstrapCorePlugins } from "./bootstrap-core-plugins.js";
 import { invalidateMcpProbeCache } from "./mcp-probe-service.js";
@@ -3765,6 +3766,7 @@ app.whenReady().then(async () => {
     .catch((error) => dlog("main", "panel.media.recovery.failed", { error: String(error) }));
   // Share the restorer with `activate`: a Dock click queued during a blocked
   // startup would otherwise open a second main window before this one registers.
+  installWorkbenchTray(restoreMainWindow);
   const initialWindowReady = restoreMainWindow();
   initUpdater();
   sweepStaleLeases(); // clear any cookie-lease temp files left by a prior crash
@@ -4800,6 +4802,7 @@ registerDesktopShutdown(app, {
   ownsInstance: () => ownsDesktopInstance,
   flushRenderers: () => sessionCatalogIpc.flushRenderers(),
   disposeOperationResolution: async () => {
+    disposeWorkbenchTray();
     await disposeOperationBatchHost();
     await disposeOperationResolutionHost();
   },

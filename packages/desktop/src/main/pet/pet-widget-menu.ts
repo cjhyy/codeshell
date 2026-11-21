@@ -3,7 +3,9 @@
  * menu's few strings live here, chosen by the app locale.
  */
 
-export type PetWidgetMenuLanguage = "zh" | "en";
+import { nativeMenuLanguage } from "../native-menu-language.js";
+export { nativeMenuLanguage as petWidgetMenuLanguage };
+export type PetWidgetMenuLanguage = ReturnType<typeof nativeMenuLanguage>;
 
 const STRINGS = {
   zh: {
@@ -25,10 +27,6 @@ const STRINGS = {
     close: "Close Mimi",
   },
 } as const;
-
-export function petWidgetMenuLanguage(locale: string): PetWidgetMenuLanguage {
-  return locale.toLowerCase().startsWith("zh") ? "zh" : "en";
-}
 
 /** The subset of Electron's MenuItemConstructorOptions this menu uses. */
 export interface PetWidgetMenuItem {
@@ -57,7 +55,7 @@ export function petWidgetMenuTemplate({
     close(): void;
   };
 }): PetWidgetMenuItem[] {
-  const text = STRINGS[petWidgetMenuLanguage(locale)];
+  const text = STRINGS[nativeMenuLanguage(locale)];
   const template: PetWidgetMenuItem[] = [
     { label: text.open, click: actions.open },
     {

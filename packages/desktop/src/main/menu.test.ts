@@ -39,6 +39,11 @@ if (process.env.CODESHELL_MENU_FIXTURE === "1") {
       },
     },
   }));
+  mock.module("./workbench-tray.js", () => ({
+    installWorkbenchQuitMenu: () => {
+      throw new Error("macOS uses the application menu");
+    },
+  }));
   mock.module("./recents-store.js", () => ({ loadRecents: async () => structuredClone(recents) }));
   const { installAppMenu } = await import("./menu.js");
 

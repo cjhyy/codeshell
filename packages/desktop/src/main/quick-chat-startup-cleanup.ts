@@ -30,6 +30,13 @@ interface FocusableWindow {
   focus(): void;
 }
 
+export function focusWorkbench(window: FocusableWindow): void {
+  if (window.isDestroyed()) return;
+  if (window.isMinimized()) window.restore();
+  window.show();
+  window.focus();
+}
+
 /** Register exactly one first-instance handler that foregrounds its live window. */
 export function registerSecondInstanceFocus(
   register: (handler: () => void) => void,
@@ -42,9 +49,7 @@ export function registerSecondInstanceFocus(
       openMissing?.();
       return;
     }
-    if (window.isMinimized()) window.restore();
-    window.show();
-    window.focus();
+    focusWorkbench(window);
   });
 }
 
