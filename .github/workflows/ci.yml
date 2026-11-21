@@ -251,7 +251,7 @@ jobs:
             # file's electron mock (no `screen`) wins in a shared process, the import
             # fails, and its fake child_process then outlives the file, so every later
             # spawn in the shard hangs to its timeout.
-            ignore: "--path-ignore-patterns tests/mimi-native-trial-cancel.test.ts --path-ignore-patterns 'tests/desktop-host-*.test.ts'"
+            ignore: "--path-ignore-patterns tests/mimi-native-trial-cancel.test.ts --path-ignore-patterns 'tests/desktop-host-*.test.ts' --path-ignore-patterns tests/release-recovery.test.ts --path-ignore-patterns tests/release-push-guard.test.ts"
           - shard: rest-server
             paths: packages/server packages/web packages/tui
             # Hub panels run in bounded Bun processes below. Late in this shard's Bun process
@@ -362,6 +362,9 @@ jobs:
       # shard hit Bun's resolver/pidfd EBADF in a late history-recovery child.
       # Keep account imports and the existing in-process Cloud bundler bounded;
       # the original recovery assertions still run in the broad Desktop shard.
+      - name: test release recovery and protected push workflows
+        if: matrix.shard == 'rest'
+        run: node scripts/run-bun-test-shard.mjs --timeout 30000 tests/release-recovery.test.ts tests/release-push-guard.test.ts
       - name: test Desktop Host transport and authority
         if: matrix.shard == 'desktop'
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/desktop-host packages/desktop/src/main/task-inbox packages/desktop/src/preload/desktop-host-client.test.ts tests/desktop-host-operation-review.test.ts tests/desktop-host-run-ledger.test.ts

@@ -5,6 +5,7 @@ import { getProjectStore } from "../../main/project-store.js";
 /** The paired transport and Desktop workbench share this process's PTY registry. */
 export function bindRemoteTerminals(port: Electron.MessagePortMain) {
   const viewers = new Map<string, { deviceId: string; generation: string }>();
+  let enabled = false;
   let revision = 0;
   let open = true;
   const send = (delivery: TerminalDelivery) => {
@@ -12,9 +13,9 @@ export function bindRemoteTerminals(port: Electron.MessagePortMain) {
   };
   const terminals = new RemoteTerminals({
     policy: {
-      enabled: false,
+      get enabled() { return enabled; },
       set(value) {
-        this.enabled = value;
+        enabled = value;
       },
     },
     projectCwd: (id) => getProjectStore().resolveProjectRootByIdSync(id).cwd,
