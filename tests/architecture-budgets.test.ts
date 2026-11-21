@@ -165,7 +165,7 @@ const CORE_LAYERS: readonly (readonly string[])[] = [
     "goal",
     "workspace",
   ],
-  ["utils", "runtime", "logging", "data", "agent", "remote", "testing", "capabilities"],
+  ["utils", "storage", "runtime", "logging", "data", "agent", "remote", "testing", "capabilities"],
 ];
 
 // Measured on fcd8406d5. These exceptions may only shrink: removing the import
