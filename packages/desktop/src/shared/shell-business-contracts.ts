@@ -1,5 +1,5 @@
 import type { PrivateMemoryReads, MemoryOperations } from "./memory-contracts.js";
-import type { CronJob, CronRunResult } from "@cjhyy/code-shell-core/internal";
+import type { CronCommand } from "../host/automation/commands.js";
 import type {
   ExternalRuntimeModelEntry,
   ExternalRuntimeModelKind,
@@ -17,9 +17,8 @@ type Operation<F extends (...args: any[]) => Promise<unknown>> = {
 
 /** Private calls from authenticated Electron adapters. These methods are never
  * registered on a renderer port or exposed by the window preload. */
-export interface ShellBusinessOperations
-  extends MemoryOperations, PrivateMemoryReads, ProjectRegistryOperations, CatalogEdits {
-  "automation/run": { input: { job: CronJob; searchPath: string }; result: CronRunResult };
+export interface ShellBusinessOperations extends MemoryOperations, PrivateMemoryReads, ProjectRegistryOperations, CatalogEdits {
+  "automation/command": { input: CronCommand; result: unknown };
   "external-runtime/available": {
     input: { searchPath: string };
     result: ExternalRuntimeModelKind[];

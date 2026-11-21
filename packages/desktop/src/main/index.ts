@@ -86,11 +86,7 @@ import {
   type ThemePreview,
 } from "@cjhyy/code-shell-core";
 import {
-  startAutomation,
-  CronStore,
-  defaultCronStorePath,
   agentNotificationBus,
-  type AutomationHandle,
   getMergedCatalog,
   setGitPathOverride,
   isGitAvailable,
@@ -264,32 +260,14 @@ import {
   runChromeNativeMessagingHost,
   type ChromeNativeRegistrationResult,
 } from "./browser-runtime/index.js";
-import {
-  type AutomationSessionMeta,
-  makeCronRunnerWithResume,
-  resolveDesktopAutomationJobWorkspace,
-} from "./automation-host.js";
+import type { AutomationSessionMeta } from "./automation-host.js";
 import { createAutomationResumeTurn } from "./automation-resume-turn.js";
 import { automationLifecycleNotification } from "./automation-notification.js";
 import { DesktopNotifier } from "./desktop-notifier.js";
 import { findNotificationWindow } from "./native-desktop-notification.js";
-import { showSystemNotification } from "./system-notification.js";
+import { registerNotificationFallback, showSystemNotification } from "./system-notification.js";
 import * as desktopNotifications from "./desktop-notification-routes.js";
-import {
-  setAutomationScheduler,
-  listAutomations,
-  getAutomation,
-  createAutomation,
-  updateAutomation,
-  listAutomationsForResumeSession,
-  deleteAutomation,
-  pauseAutomation,
-  resumeAutomation,
-  runAutomationNow,
-  cancelAutomationRun,
-  type CreateAutomationInput,
-} from "./automation-service.js";
-import { desktopAutomationAuthorityDeps } from "./automation-authority.js";
+import type { CreateAutomationInput } from "./automation-service.js";
 import { dlog } from "./desktop-logger.js";
 import { ptyKillAll, ptyReapDestroyed } from "./pty-service.js";
 import { cleanupLease, sweepStaleLeases, BROWSER_PARTITION } from "./credentials-service.js";
@@ -355,7 +333,6 @@ import { assertDesktopSessionId } from "./session-validation.js";
 import { getSessionEvents } from "./rawTranscript.js";
 import { createLinkService } from "@cjhyy/code-shell-server/links";
 import { createDesktopWebService, deploymentRemoteLink } from "./desktop-web-service.js";
-import { createDesktopPanelAutomationHost } from "./panel-automation-host.js";
 import { listSkills, readSkillBody, uninstallSkill } from "./skills-service.js";
 import {
   listPlugins,
@@ -366,7 +343,6 @@ import {
   checkPluginUpdateEntry,
 } from "./plugins-service.js";
 import { invalidatePanelAppBindingGuard, isPanelAppBoundToProject } from "./panel-apps-service.js";
-import { createAutomationFromPluginTemplate } from "./plugin-automation-service.js";
 import { expandPluginCommand, listPluginCommands } from "./plugin-command-service.js";
 import { getPluginMedia } from "./plugin-media-service.js";
 import {
@@ -479,6 +455,8 @@ import { registerAgentsMediaIpc } from "./agents-media-ipc.js";
 import { registerSkillsMcpIpc } from "./skills-mcp-ipc.js";
 import { registerModelCatalogIpc } from "./model-catalog-ipc.js";
 import { registerMobileRemoteIpc } from "./mobile-remote-ipc.js";
+import { NativeRemoteTerminals } from "./mobile-remote/native-terminals.js";
+import { RemoteTerminalPolicy } from "./mobile-remote/remote-terminals.js";
 import { registerRoomsIpc } from "./rooms-ipc.js";
 import { registerDialogPickerIpc } from "./dialog-picker-ipc.js";
 import { registerExternalRuntimeIpc } from "./external-runtime-ipc.js";
@@ -503,7 +481,7 @@ const desktopHost = createDesktopHost(
   applyRendererSettingsSideEffects,
 );
 setDesktopCredentialFiles(desktopHost.credentialCommand);
-const { listDiskSessions } = desktopHost;
+const { listDiskSessions, automation: cron } = desktopHost;
 const chromeNativeMessagingOrigin = nativeMessagingOriginFromArgv(process.argv);
 if (chromeNativeMessagingOrigin) {
   void runChromeNativeMessagingHost(chromeNativeMessagingOrigin)
@@ -525,6 +503,17 @@ registerPanelAppSchemePrivileges();
 app.setName("code-shell");
 if (process.platform === "win32") app.setAppUserModelId("com.cjhyy.codeshell");
 const mainWindows = new Set<BrowserWindow>();
+registerNotificationFallback(
+  ipcMain,
+  (id) =>
+    findNotificationWindow(mainWindows, id ? bridge?.panelOwnerWebContentsId(id) : undefined)
+      ?.webContents.id,
+  (event) => {
+    if (![...mainWindows].some((window) => window.webContents === event.sender))
+      throw Error("Desktop notifications require a workbench");
+    return desktopHost.documentSignal(event);
+  },
+);
 const mediaPreviewService = new MediaPreviewService({
   isOwnerAlive: (ownerId) =>
     [...mainWindows].some(
@@ -838,20 +827,15 @@ const panelAppBridge = new PanelAppBridge({
   },
   automations: {
     uniqueCreation: true,
-    conditional: createDesktopPanelAutomationHost(desktopAutomationAuthorityDeps),
-    list: async (scope) =>
-      listAutomationsForResumeSession(scope.resumeSessionId, desktopAutomationAuthorityDeps()),
-    create: async (input, scope) =>
-      createAutomation(
-        { ...input, resumeSessionId: scope.resumeSessionId },
-        desktopAutomationAuthorityDeps(),
-      ),
-    update: async (id, patch, scope) =>
-      updateAutomation(id, patch, desktopAutomationAuthorityDeps(), scope),
-    pause: async (id) => pauseAutomation(id),
-    resume: async (id) => resumeAutomation(id),
-    delete: async (id) => deleteAutomation(id),
-    runNow: async (id) => runAutomationNow(id),
+    conditional: cron.panel,
+    list: (scope) => cron.call("forSession", scope.resumeSessionId),
+    create: (input, scope) =>
+      cron.call("create", { ...input, resumeSessionId: scope.resumeSessionId }),
+    update: (id, patch, scope) => cron.call("update", { id, patch, scope }),
+    pause: (id) => cron.call("pause", id),
+    resume: (id) => cron.call("resume", id),
+    delete: (id) => cron.call("delete", id),
+    runNow: (id) => cron.call("runNow", id),
   },
   audioTranscription: {
     status: (cwd) => {
@@ -918,7 +902,7 @@ let mcpOAuthService: McpOAuthService | null = null;
 const linkDeviceOAuthBroker = new LinkDeviceOAuthBroker();
 const managedCliInstallJobs = new Map<string, Promise<ManagedCliInstallResult>>();
 let cspInstalled = false;
-let automationHandle: AutomationHandle | null = null;
+
 const quickChatOwnership = new QuickChatOwnershipRegistry();
 const quickChatOwnerCleanupRegistered = new Set<number>();
 
@@ -1011,7 +995,7 @@ const mobileRemote = new RemoteHostManager({
   uploads: mobileUploads,
   webApi: createDesktopWebService({
     devices: mobileDevices,
-    automations: createDesktopPanelAutomationHost(desktopAutomationAuthorityDeps),
+    automations: cron.panel,
     sharedToolJobs: panelAppBridge.sharedToolJobs(),
     resolveProjectScope: resolvePanelProjectScope,
     resolvePanelProjectPath: (cwd) => resolveDesktopPanelProjectPath(getProjectStore(), cwd),
@@ -1309,9 +1293,17 @@ const cloudEnvironment = registerCloudEnvironmentIpc({
   userDataDir: app.getPath("userData"),
   assertLocalProject: (id) => projectStore.requireLive(id),
 });
+const remoteTerminals = new NativeRemoteTerminals({
+  remote: mobileRemote,
+  policy: new RemoteTerminalPolicy(
+    resolve(app.getPath("userData"), "mobile-remote", "terminal.json"),
+  ),
+});
+desktopHost.setRemoteTerminals(remoteTerminals);
 const mobileOrchestrator: MobileRemoteOrchestrator = new MobileRemoteOrchestrator({
   listDiskSessions,
   remote: mobileRemote,
+  terminals: remoteTerminals,
   uploads: mobileUploads,
   pendingApprovals: pendingMobileApprovals,
   roomManager,
@@ -1695,10 +1687,10 @@ async function createWindow(): Promise<BrowserWindow> {
           quickChatOwnership.isClaimActive(sessionId, ownerId, claimId),
       },
       async (input) =>
-        (await createAutomation(
-          input as unknown as CreateAutomationInput,
-          desktopAutomationAuthorityDeps(),
-        )) as unknown as Record<string, unknown>,
+        (await cron.call("create", input as unknown as CreateAutomationInput)) as unknown as Record<
+          string,
+          unknown
+        >,
       createDesktopModelRequestSigner({
         hostDirectory: codeShellHome(),
         sessionStorageDir: sessionsRoot(),
@@ -1716,6 +1708,7 @@ async function createWindow(): Promise<BrowserWindow> {
       desktopHost.sessionsChanged,
       userContinuedTask,
       desktopHost.createWorkerBridge,
+      () => cron.call("reload", undefined),
     );
     // External Agent Runtimes (Codex / Claude Code). Everything
     // security-relevant is resolved here, in the composition root: this is the
@@ -2377,10 +2370,12 @@ async function createWindow(): Promise<BrowserWindow> {
       inbox: petWorkInbox,
       tasks: longTaskStore,
       longTasks: longTaskCoordinator,
-      scheduler: () => {
-        if (!automationHandle) throw new Error("follow-up scheduler is not initialized");
-        return automationHandle.scheduler;
-      },
+      scheduler: () => ({
+        list: () => cron.call("petList", undefined),
+        create: (name, schedule, prompt, options = {}) =>
+          cron.call("petCreate", { name, schedule, prompt, options }),
+        delete: (id) => cron.call("petDelete", id),
+      }),
       submitNotice: notices.submitNotice,
       dispatch: () => petDispatchService,
       onError: (error) => dlog("main", "pet.followUp.wake.failed", { error: String(error) }),
@@ -3837,9 +3832,7 @@ app.whenReady().then(async () => {
     .then(() => seedDefaults())
     .then(() => bootstrapCorePlugins());
 
-  // Automation: load the in-process scheduler (read-only jobs). Persisted
-  // jobs are restored from ~/.code-shell/cron.json. Cron follows the app
-  // lifecycle by design (docs/automation-plan-2026-05-31.md, D2).
+  // Start the Host scheduler after native continuation and Mimi services can receive jobs.
   try {
     // Recover Mimi's ledger and initialize dispatch before restored timers can fire.
     await initialWindowReady;
@@ -3866,37 +3859,25 @@ app.whenReady().then(async () => {
       notifyMissingTarget: (job) =>
         desktopNotifications.notifyMissingAutomationResumeTarget(desktopNotifier, job),
     });
-    const automationRunner = makeCronRunnerWithResume(
-      (request) =>
-        desktopHost.callBusiness(
-          "automation/run",
-          { job: request.job, searchPath: process.env.PATH ?? "" },
-          request.signal,
-        ),
-      injectResumeTurn,
-      (job) => resolveDesktopAutomationJobWorkspace(job),
-    );
-    automationHandle = startAutomation({
-      store: new CronStore(defaultCronStorePath()),
-      runner: async (request) => {
-        if (!isPetRuleScheduleJob(request.job)) return automationRunner(request);
+    await cron.start({
+      dirty: (id) => taskInboxService.markDirty("automation", id),
+      execute: async (job, signal) => {
+        if (job.resumeSessionId && !isPetRuleScheduleJob(job))
+          return injectResumeTurn(job.resumeSessionId, job.prompt, signal, job);
+        if (!isPetRuleScheduleJob(job))
+          throw Error("Native execution requires a Mimi rule or existing session");
         if (!petRuleScheduler)
           return {
             text: "Mimi 跟进服务不可用",
             reason: "unavailable",
             stop: { reason: "Mimi 跟进服务不可用" },
           };
-        await petRuleScheduler.wake(request.job);
+        await petRuleScheduler.wake(job);
         return { text: "Scheduled rule wake handled", reason: "done" };
       },
-      onJobEvent: (event) => {
+      deliver: async (event) => {
         if (isPetRuleScheduleJob(event.job)) {
-          if (event.type === "job_missed")
-            void petRuleScheduler
-              ?.missed(event.job)
-              .catch((error) =>
-                dlog("main", "pet.followUp.missed.failed", { error: String(error) }),
-              );
+          if (event.type === "job_missed") await petRuleScheduler?.missed(event.job);
           if (event.type === "job_error") petRuleScheduler?.repairSoon();
           return;
         }
@@ -3908,19 +3889,11 @@ app.whenReady().then(async () => {
         taskInboxService.markDirty("automation", event.job.id);
         const notification = automationLifecycleNotification(event);
         if (!notification) return;
-        publishGatewayControlEventBestEffort(notification);
+        await publishGatewayControlEvent(notification);
         desktopNotifications.notifyMissedAutomation(desktopNotifier, notification, event);
       },
     });
-    // Expose the live scheduler to the automation IPC service (Phase 3 UI).
-    const scheduler = automationHandle.scheduler;
-    setAutomationScheduler(scheduler);
-    scheduler.setDefinitionListener((id) => taskInboxService.markDirty("automation", id));
-    taskInboxDisposers.push(() => scheduler.setDefinitionListener());
     await petRuleScheduler?.start();
-    // startAutomation installed the default executor (bindCronToEngine):
-    // every cron job runs one headless codeshell turn. Driving Claude Code is
-    // just one such turn calling DriveClaudeCode — no CC-specific scheduling.
 
     agentNotificationBus.subscribe((envelope) =>
       desktopNotifications.notifyBackgroundResult(desktopNotifier, envelope),
@@ -4090,12 +4063,10 @@ ipcMain.handle(
     if (installKey.length > 512 || templateId.length > 512 || expectedRevision.length > 512) {
       throw new Error("plugin automation identifiers are too long");
     }
-    return createAutomationFromPluginTemplate(
-      installKey,
-      templateId,
-      expectedRevision,
-      { cwd },
-      desktopAutomationAuthorityDeps(),
+    return cron.call(
+      "template",
+      { installKey, templateId, expectedRevision, workspace: { cwd } },
+      desktopHost.documentSignal(_e),
     );
   },
 );
@@ -4343,6 +4314,7 @@ const {
   accessPasscode,
   mobileRemoteController,
   mobileOrchestrator,
+  remoteTerminals,
 });
 const knownGitRoots = new Set<string>();
 
@@ -4721,7 +4693,7 @@ const taskInboxSources = createTaskInboxSources({
     isSessionRunning: (id) => taskInboxAutomationSessions.has(id) || !!bridge?.isSessionRunning(id),
     cancel: async (id) => {
       const jobId = taskInboxAutomationSessions.get(id);
-      if (jobId) return cancelAutomationRun(jobId);
+      if (jobId) return cron.call("cancel", jobId);
       if (!bridge?.hasLiveWorker() || !bridge.isSessionRunning(id)) return false;
       const result = await bridge.requestWorker("agent/cancel", { sessionId: id }, 15_000, {
         failFast: true,
@@ -4734,11 +4706,11 @@ const taskInboxSources = createTaskInboxSources({
   },
   runs: { list: listRuns },
   automations: {
-    list: listAutomations,
-    get: getAutomation,
-    pause: pauseAutomation,
-    resume: resumeAutomation,
-    runNow: runAutomationNow,
+    list: () => cron.call("list", undefined),
+    get: (id) => cron.call("get", id),
+    pause: (id) => cron.call("pause", id),
+    resume: (id) => cron.call("resume", id),
+    runNow: (id) => cron.call("runNow", id),
   },
   mimi: {
     snapshot: () => {
@@ -4797,7 +4769,7 @@ const disposeOperationBatchHost = registerOperationBatchHost({
   bridge: () => bridge ?? undefined,
 });
 const disposeOperationResolutionHost = registerOperationResolutionHost(operationScope);
-registerAutomationIpc();
+registerAutomationIpc(cron, desktopHost.documentSignal);
 registerTrustNotificationIpc({
   host: desktopHost,
   externalRuntimeService: () => externalRuntime.service,
@@ -4849,8 +4821,7 @@ registerDesktopShutdown(app, {
     petLongTaskStore = null;
     disposePetIpc?.();
     disposePetIpc = null;
-    automationHandle?.stop();
-    automationHandle = null;
+
     ptyKillAll();
     transcriptSubscriptions?.closeAll();
     roomManager.closeAll();

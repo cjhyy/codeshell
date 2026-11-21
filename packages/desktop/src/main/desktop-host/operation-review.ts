@@ -12,7 +12,7 @@ import {
 } from "../operation-authority.js";
 import type {
   CaptureOperation,
-  OperationCommand,
+  PrivateOperationCommand,
   OperationSnapshot,
 } from "./private-operations.js";
 
@@ -41,6 +41,7 @@ export class HostOperationReviews {
   >();
   constructor(
     private readonly store: {
+      wrappedKey?(): Promise<string | null>;
       review(
         sessionId: string,
         key: PreparedOperationKey | null,
@@ -70,7 +71,7 @@ export class HostOperationReviews {
     }
   }
   async run(
-    method: OperationCommand,
+    method: PrivateOperationCommand,
     caller: DesktopHostIdentity,
     params: Record<string, unknown>,
     capture: CaptureOperation,
@@ -133,6 +134,7 @@ export class HostOperationReviews {
       )
     )
       throw new Error("Operation review expired or changed");
+    this.previews.delete(token);
     const current = () => {
       preview.guard.assertCurrent();
       if (
@@ -145,6 +147,14 @@ export class HostOperationReviews {
     try {
       current();
       this.pending.set(grant.permit, current);
+      if (method === "host/operationReadKey") {
+        if (!this.store.wrappedKey) throw new Error("Operation storage unavailable");
+        const wrapped = await this.store.wrappedKey();
+        current();
+        grant.assertCurrent();
+        if (typeof wrapped !== "string") throw new Error("Reviewed operation key unavailable");
+        return { wrapped };
+      }
       return await this.store.resolve({
         sessionId,
         owner: preview.snapshot.owner,
@@ -157,7 +167,7 @@ export class HostOperationReviews {
       });
     } finally {
       this.pending.delete(grant.permit);
-      this.drop(token);
+      preview.guard.release?.();
     }
   }
 }

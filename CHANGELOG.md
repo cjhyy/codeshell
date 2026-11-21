@@ -17,6 +17,10 @@ manual installation from the DMG. Install the new app in Applications using
 the same account to retain existing sessions and settings. Send or copy any
 unsent text you want to keep before quitting 0.11. Restarting clears its composer.
 
+### Changed
+
+- Build: Bun 1.4.5 (was 1.3.11) for development, CI and the Docker image.
+
 ## [0.11.0-rc.10] - 2026-11-21
 
 ### Fixed

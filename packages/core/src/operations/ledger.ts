@@ -137,8 +137,12 @@ export class OperationLedger {
   constructor(
     storageRoot: string,
     private readonly cipher: EncryptionCipher = getDefaultCredentialCipher(),
-    private readonly ownerBinding?: { sessionId: string; read(): OperationSessionOwner },
+    private readonly ownerBinding?: {
+      sessionId: string;
+      read(): OperationSessionOwner;
+    },
     private readonly initialProtectedKey?: string,
+    private readonly assertTransactionCurrent?: () => void,
   ) {
     mkdirSync(resolve(storageRoot), { recursive: true, mode: 0o700 });
     // Path aliases must not create independent idempotency identities for the
@@ -210,6 +214,7 @@ export class OperationLedger {
           const key = Buffer.from(secret, "hex");
           try {
             const archives = new OperationArchives(this.directory, key, state);
+            this.assertTransactionCurrent?.();
             const result = mutation(state, key, archives);
             if (result.value !== undefined) {
               archives.collect();

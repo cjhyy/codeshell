@@ -40,10 +40,11 @@ import { resolveProjectRoot } from "@cjhyy/code-shell-capability-coding/git";
 import { readAutomationMemory, appendAutomationMemory } from "./automationMemory.js";
 import { AUTOMATION_DISABLED_TOOLS } from "./automationToolset.js";
 import { stablePromptHash } from "@cjhyy/code-shell-server/storage";
+import type { HostRunOperations, OperationCap } from "../host/composition/run-operations.js";
 import type { BrowserRuntimeLike } from "./browser-runtime/configured-runtime.js";
 import { getProjectStore } from "./project-store.js";
 import { getSessionCwdIndex } from "./session-cwd-index.js";
-import { getTrustCachedSync } from "./trust-store.js";
+import { getTrustCachedSync, warmTrustCache } from "./trust-store.js";
 import {
   desktopAutomationAuthorityDeps,
   validateAutomationResumeAuthority,
@@ -122,9 +123,10 @@ export function resolveAutomationWorkspace(
   return null;
 }
 
-function resolveDesktopAutomationWorkspace(
+async function resolveDesktopAutomationWorkspace(
   job: Pick<CronJob, "cwd" | "projectId" | "rootId">,
-): AutomationWorkspaceResolution | null {
+): Promise<AutomationWorkspaceResolution | null> {
+  await warmTrustCache();
   return resolveAutomationWorkspace(job, {
     noRepoCwd: automationNoRepoCwd,
     foldProjectRoot: resolveProjectRoot,
@@ -248,9 +250,10 @@ export function buildDesktopAutomationRunner(
   onSession: (meta: AutomationSessionMeta) => void,
   runtime: Pick<BrowserRuntimeLike, "acquire">,
   sessionFinished?: (id: string) => Promise<void>,
+  operations?: Pick<HostRunOperations, "open">,
 ): CronRunner {
   return async (req): Promise<CronRunResult> => {
-    const workspace = resolveDesktopAutomationWorkspace(req.job);
+    const workspace = await resolveDesktopAutomationWorkspace(req.job);
     if (!workspace) {
       return {
         text: "",
@@ -296,6 +299,8 @@ export function buildDesktopAutomationRunner(
     });
     let engine: Engine | undefined;
     let sid: string | undefined;
+    let runId: string | undefined;
+    let cap: OperationCap | undefined;
     try {
       engine = new Engine({
         llm,
@@ -328,6 +333,13 @@ export function buildDesktopAutomationRunner(
         // depth on top of the approval backend (§5.6 #9).
         sandbox: defaultSandboxConfig(req.sandboxMode),
         browserBridge: browserLease.bridge,
+        ...(operations && {
+          operationLedger: async (request) => {
+            if (!cap || request.sessionId !== sid || request.runId !== runId)
+              throw new Error("Automation operation Run unavailable");
+            return cap.run(request);
+          },
+        }),
       });
 
       // Let the run persist a one-paragraph summary for the NEXT scheduled run.
@@ -350,7 +362,7 @@ export function buildDesktopAutomationRunner(
         emit(sessionId, output.project(sessionId, event));
       };
       const onStream = (e: unknown) => {
-        const ev = e as { type?: string; sessionId?: string };
+        const ev = e as { type?: string; sessionId?: string; runId?: string };
         if (ev.type === "session_started" && typeof ev.sessionId === "string") {
           const firstBind = sid === undefined;
           sid = ev.sessionId;
@@ -367,6 +379,19 @@ export function buildDesktopAutomationRunner(
               cronJobId: req.job.id,
               clientMessageId,
             });
+            if (operations && typeof ev.runId === "string") {
+              const boundId = sid;
+              const boundRun = (runId = ev.runId);
+              try {
+                cap = operations.open(
+                  boundId,
+                  boundRun,
+                  () => sid === boundId && runId === boundRun,
+                );
+              } catch {
+                // A stale scope must fail ledger operations without stopping ordinary text output.
+              }
+            }
           }
         }
         publish(sid ?? req.job.id, e);
@@ -403,6 +428,8 @@ export function buildDesktopAutomationRunner(
       try {
         await engine?.dispose();
       } finally {
+        runId = undefined;
+        cap?.close();
         browserLease.release();
         if (sid) await sessionFinished?.(sid);
       }

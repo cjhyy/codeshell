@@ -478,6 +478,7 @@ export class AgentBridge implements PetStateBridge {
     private readonly onUserRunAccepted?: (id: string) => void,
     createDriver: (options: WorkerBridgeCoreOptions) => DesktopWorkerDriver = (options) =>
       new WorkerBridgeCore(options),
+    private readonly onCronChanged: () => void | Promise<void> = reloadAutomations,
   ) {
     this.panelHostWindowRoutes = new PanelHostWindowRoutes(onSessionPanelOwnerChanged);
     dlog("bridge", "ctor", { agentEntry, execPath: process.execPath });
@@ -1293,7 +1294,9 @@ export class AgentBridge implements PetStateBridge {
     if (parsed === undefined) return false;
     if (parsed.method !== "agent/cronChanged") return false;
     try {
-      reloadAutomations();
+      void Promise.resolve(this.onCronChanged()).catch((err) =>
+        dlog("bridge", "cronChanged.reload_failed", { error: String(err) }),
+      );
     } catch (err) {
       dlog("bridge", "cronChanged.reload_failed", { error: String(err) });
     }
@@ -1880,6 +1883,10 @@ export class AgentBridge implements PetStateBridge {
       marker,
       this.sessionsForFallback().readSessionMainRoot(marker.sessionId),
     );
+  }
+
+  async waitForWorkerHost(): Promise<void> {
+    await this.core.hostedOutput?.waitForFirstBinding?.();
   }
 
   /** Main-only authority: generic renderer/mobile/serve frames cannot mint this admission. */

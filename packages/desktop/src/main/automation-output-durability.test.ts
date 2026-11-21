@@ -44,6 +44,10 @@ test("actual headless automation runner persists cleanup failures with its captu
   for (const replace of [false, true]) {
     const directory = mkdtempSync(join(tmpdir(), "automation-output-lifetime-"));
     const events: Array<{ id: string; event: any }> = [];
+    const operationRuns: string[] = [];
+    let operationInput: NonNullable<ConstructorParameters<typeof Engine>[0]["operationLedger"]>;
+    let runCurrent: (() => boolean) | undefined;
+    let authorityClosed = false;
     let sid: string | undefined,
       released = 0;
     class CleanupFaultEngine extends Engine {
@@ -55,10 +59,21 @@ test("actual headless automation runner persists cleanup failures with its captu
           enabledBuiltinTools: [],
           maxTurns: 1,
         });
+        operationInput = options.operationLedger;
         this.getHookRegistry().clear();
       }
       override async run(task: string, options: any) {
         await super.run(task, { ...options, behaviorMode: "isolatedTask" });
+        const request = {
+          sessionId: sid!,
+          runId: operationRuns[0],
+          method: "sealForFinalization" as const,
+          args: [sid],
+        };
+        await expect(operationInput({ ...request, runId: "another" })).rejects.toThrow(
+          "unavailable",
+        );
+        await expect(operationInput(request)).resolves.toBe(true);
         if (replace) {
           const manager = this.getSessionManager();
           rmSync(join(manager.getStorageDir(), sid!), { recursive: true });
@@ -106,6 +121,20 @@ test("actual headless automation runner persists cleanup failures with its captu
           sid = meta.sessionId;
         },
         runtime,
+        undefined,
+        {
+          open(sessionId: string, runId: string, current: () => boolean) {
+            expect(sessionId).toBe(sid);
+            operationRuns.push(runId);
+            runCurrent = current;
+            return {
+              run: async () => current(),
+              close() {
+                authorityClosed = true;
+              },
+            };
+          },
+        },
       );
       await expect(
         run({
@@ -132,6 +161,17 @@ test("actual headless automation runner persists cleanup failures with its captu
         expect(cleanup[0].event.runId).toBeUndefined();
       }
       expect(released).toBe(1);
+      expect(operationRuns).toHaveLength(1);
+      expect(runCurrent?.()).toBe(false);
+      expect(authorityClosed).toBe(true);
+      await expect(
+        operationInput!({
+          sessionId: sid!,
+          runId: operationRuns[0],
+          method: "sealForFinalization",
+          args: [sid],
+        }),
+      ).rejects.toThrow("unavailable");
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }

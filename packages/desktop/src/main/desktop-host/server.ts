@@ -148,6 +148,36 @@ export class DesktopHostServer {
     }
   }
 
+  captureWorkerOperation(sessionId: string) {
+    const capture = () => {
+      const owner = this.sessions.owner(sessionId);
+      if (owner === null) return this.sessions.captureHistoryRead(sessionId, 0, false);
+      const frame = this.windows.get(owner);
+      if (!frame) throw new HostRevokedError();
+      return frame.authority.captureHistoryRead(sessionId, "operation");
+    };
+    let guard = capture();
+    // New UI sessions announce their id before Main assigns their first window.
+    // Adopt only that first assignment before use. Once used or bound, freeze the grant.
+    let canAssign = guard.historical === true;
+    return {
+      assertCurrent: () => guard.assertCurrent(),
+      observe: () => {
+        if (canAssign && this.sessions.owner(sessionId) !== null) {
+          guard.release?.();
+          canAssign = false;
+          guard = capture();
+        }
+        guard.assertCurrent();
+      },
+      pin: () => {
+        canAssign = false;
+        guard.assertCurrent();
+      },
+      release: () => guard.release?.(),
+    };
+  }
+
   captureOperation(identity: DesktopHostIdentity, sessionId: string) {
     const connection = this.windows.get(identity.webContentsId);
     if (
@@ -201,7 +231,10 @@ export class DesktopHostServer {
     if (connection.pending.size + connection.compatibilityReads >= 128)
       throw new Error("Too many pending Desktop Host requests");
     const guard = sessionId
-      ? connection.authority.captureHistoryRead(sessionId, handler.admission ? "admission" : handler.historyRead)
+      ? connection.authority.captureHistoryRead(
+          sessionId,
+          handler.admission ? "admission" : handler.historyRead,
+        )
       : connection.authority.capture();
     connection.compatibilityReads++;
     try {
@@ -227,6 +260,16 @@ export class DesktopHostServer {
   setDeleting(sessionId: string, deleting: boolean): void {
     this.sessions.setDeleting(sessionId, deleting);
     this.rejectRevoked();
+  }
+
+  notifyWindow(id: number, method: string, params: Record<string, unknown>): void {
+    const connection = this.windows.get(id);
+    if (!connection?.initialized) return;
+    try {
+      connection.port.postMessage({ jsonrpc: "2.0", method, params });
+    } catch {
+      this.detach(connection);
+    }
   }
 
   /** Push to the current session owner only. No session subscription is
@@ -355,7 +398,10 @@ export class DesktopHostServer {
         throw new InvalidParams();
       guard =
         (handler.historyRead || handler.admission) && sessionId
-          ? authority.captureHistoryRead(sessionId, handler.admission ? "admission" : handler.historyRead)
+          ? authority.captureHistoryRead(
+              sessionId,
+              handler.admission ? "admission" : handler.historyRead,
+            )
           : authority.capture(sessionId);
       pending.set(id, guard);
       const result = await handler.run(guard, params);

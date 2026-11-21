@@ -5,6 +5,7 @@ import type { AuthSession, UploadedFile } from "./auth.js";
 import type { HubConfiguration } from "./configuration.js";
 import type { ComposerDraft } from "./drafts.js";
 import type { ConnectionState, SessionSummary } from "./protocol.js";
+import type { RemoteTerminalChannel } from "../src/hooks/remoteTerminalChannel.js";
 
 export interface WorkbenchNavigation {
   /** Supply the destination when an action replaces the current workspace. */
@@ -26,6 +27,8 @@ export type HistoryDetailLoader = (reference: string) => Promise<HistoryDetail>;
  * navigation, focus, message rendering and the composer for every host. */
 export interface WorkbenchController {
   host: "hub" | "desktop" | "legacy";
+  /** Shared Desktop terminals; only a Desktop host offers them. */
+  terminal?: RemoteTerminalChannel;
   workspaceApi: boolean;
   connection: ConnectionState;
   /** Presentation only; connection remains the authority for enabling actions. */

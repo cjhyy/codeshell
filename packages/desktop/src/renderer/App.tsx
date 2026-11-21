@@ -1337,6 +1337,7 @@ function App() {
     },
   });
 
+  useEffect(() => window.codeshell.onNotificationFallback?.(toast), [toast]);
   useNotificationSessionNavigation({
     sessionIndicesRef,
     selectSession: selectVisibleSession,

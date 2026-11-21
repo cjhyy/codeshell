@@ -5,7 +5,11 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assertBunTestCompletion, createBunTestEnvironment } from "./bun-test-completion.mjs";
 
-const MIN_LINES = 0.45;
+// Re-baselined for Bun 1.4 (was 0.45 under Bun 1.3.11 for the same tests).
+// Bun 1.3 counted unexecuted lines inside executed blocks as covered, e.g.
+// client-base.ts recordUsage's requestVisible branch under a requestVisible:
+// false probe; Bun 1.4 reports them as missed, lowering every module ratio.
+const MIN_LINES = 0.42;
 const MIN_FUNCTIONS = 0.38;
 
 export interface CoverageSummary {

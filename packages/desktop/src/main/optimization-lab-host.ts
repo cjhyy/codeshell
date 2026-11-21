@@ -22,6 +22,9 @@ export function registerOptimizationLabHost(deps: {
     enabled: () =>
       new SettingsManager(deps.settingsCwd(), "full").getForScope("user").featureFlags
         ?.optimization_lab === true,
+    waitForWorkerHost: async () => {
+      await deps.bridge()?.waitForWorkerHost();
+    },
     resolveTarget: deps.resolveTarget,
     trusted: async (cwd) => (await deps.trust(cwd)) === "trusted",
     artifactRoot: () => join(codeShellHome(), "optimization-lab"),

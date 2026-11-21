@@ -27,7 +27,7 @@ jobs:
           fetch-depth: 0
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.3.11"
+          bun-version: "1.4.5"
       - name: install
         run: bun install --frozen-lockfile
       - name: immutable Link operation contracts
@@ -58,7 +58,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.3.11"
+          bun-version: "1.4.5"
       - name: install
         run: bun install --frozen-lockfile
       - name: typecheck
@@ -161,27 +161,13 @@ jobs:
             # 2026-11-09 the file order put memory.project-root's 12 concurrent child processes
             # right after the spawn-heavy output-journal and model-traces suites, and
             # `p.exited` failed with EBADF epoll_ctl in most core-rest runs on main and PRs.
-            # The credentials and operations dirs run in their own Bun process below, again
-            # for the same bug: on 2026-11-19/20 the shard's multi-process suites
-            # (CredentialStore concurrent saves, operations controller's competing claims)
-            # failed with EBADF epoll_ctl on `process.exited` in four runs on main and PRs,
-            # twice in a row on one commit.
-            # Isolating those two only moved it again: on 2026-11-20 main's d40a6de96 failed
-            # the same way in hooks/shell-runner.abort. The defect hits whichever spawning
-            # suite runs late in a large process, so every core dir whose tests spawn child
-            # processes (hooks, runtime, panel-apps, utils, themes, logging, links, sources,
-            # skills) now runs in two small Bun processes below instead of the shared shard.
-            # settings joined them on 2026-11-21: recovery.test.ts's `git check-ignore` got a
-            # null stdout from execFileSync (the same spawn defect) in four runs in a row.
+            # On 2026-11-20/21 credentials, operations, settings and every other spawning
+            # core dir were also split out for Bun 1.3.11's extra-pipe double close
+            # (oven-sh/bun#47561, fixed in Bun 1.4.0). They are back in the shared shard
+            # since Bun 1.4.5.
             ignore: >-
               --path-ignore-patterns **/src/engine/** --path-ignore-patterns **/src/tool-system/**
               --path-ignore-patterns '**/src/plugins/**' --path-ignore-patterns '**/src/session/**'
-              --path-ignore-patterns '**/src/credentials/**' --path-ignore-patterns '**/src/operations/**'
-              --path-ignore-patterns '**/src/hooks/**' --path-ignore-patterns '**/src/runtime/**'
-              --path-ignore-patterns '**/src/panel-apps/**' --path-ignore-patterns '**/src/utils/**'
-              --path-ignore-patterns '**/src/themes/**' --path-ignore-patterns '**/src/logging/**'
-              --path-ignore-patterns '**/src/links/**' --path-ignore-patterns '**/src/sources/**'
-              --path-ignore-patterns '**/src/skills/**' --path-ignore-patterns '**/src/settings/**'
           - shard: desktop
             paths: packages/desktop
             # The issuer proof runs alone above so its receipt precedes the first SDK/Core import.
@@ -265,7 +251,7 @@ jobs:
             # file's electron mock (no `screen`) wins in a shared process, the import
             # fails, and its fake child_process then outlives the file, so every later
             # spawn in the shard hangs to its timeout.
-            ignore: "--path-ignore-patterns tests/mimi-native-trial-cancel.test.ts"
+            ignore: "--path-ignore-patterns tests/mimi-native-trial-cancel.test.ts --path-ignore-patterns 'tests/desktop-host-*.test.ts' --path-ignore-patterns tests/release-recovery.test.ts --path-ignore-patterns tests/release-push-guard.test.ts"
           - shard: rest-server
             paths: packages/server packages/web packages/tui
             # Hub panels run in bounded Bun processes below. Late in this shard's Bun process
@@ -291,7 +277,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.3.11"
+          bun-version: "1.4.5"
       # Real background-service fixtures must execute a security-patched Node.
       # Keep the unrelated renderer UI shard on its existing compatibility version.
       - uses: actions/setup-node@v7
@@ -376,9 +362,12 @@ jobs:
       # shard hit Bun's resolver/pidfd EBADF in a late history-recovery child.
       # Keep account imports and the existing in-process Cloud bundler bounded;
       # the original recovery assertions still run in the broad Desktop shard.
+      - name: test release recovery and protected push workflows
+        if: matrix.shard == 'rest'
+        run: node scripts/run-bun-test-shard.mjs --timeout 30000 tests/release-recovery.test.ts tests/release-push-guard.test.ts
       - name: test Desktop Host transport and authority
         if: matrix.shard == 'desktop'
-        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/desktop-host packages/desktop/src/main/task-inbox packages/desktop/src/preload/desktop-host-client.test.ts
+        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/desktop-host packages/desktop/src/main/task-inbox packages/desktop/src/preload/desktop-host-client.test.ts tests/desktop-host-operation-review.test.ts tests/desktop-host-run-ledger.test.ts
       - name: test Desktop native account boundaries
         if: matrix.shard == 'desktop'
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/cloud-account-links.test.ts packages/desktop/src/main/link-account-access.test.ts packages/desktop/src/main/cloud-account-manager.test.ts packages/desktop/src/main/cloud-management-http.test.ts packages/desktop/src/main/cloud-account-http.test.ts packages/desktop/src/main/desktop-remote-services.test.ts packages/desktop/src/main/cloud-account.native.test.ts packages/desktop/src/main/cloud-account-relay.test.ts packages/desktop/src/main/cloud-account-ipc.test.ts packages/desktop/src/main/cloud-account-store.test.ts
@@ -562,18 +551,6 @@ jobs:
       - name: test core plugins in their own Bun process
         if: matrix.shard == 'core-rest'
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/plugins
-      - name: test core credentials and operations in their own Bun process
-        if: matrix.shard == 'core-rest'
-        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/credentials packages/core/src/operations
-      - name: test core spawning suites (hooks, runtime, panel-apps, utils, themes, logging)
-        if: matrix.shard == 'core-rest'
-        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/hooks packages/core/src/runtime packages/core/src/panel-apps packages/core/src/utils packages/core/src/themes packages/core/src/logging
-      - name: test core spawning suites (links, sources, skills)
-        if: matrix.shard == 'core-rest'
-        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/links packages/core/src/sources packages/core/src/skills
-      - name: test core settings suites in their own Bun process
-        if: matrix.shard == 'core-rest'
-        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/settings
       - name: test core session in its own Bun process
         if: matrix.shard == 'core-rest'
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 --path-ignore-patterns '**/src/session/*.privacy.test.ts' packages/core/src/session
@@ -628,7 +605,7 @@ jobs:
           package-manager-cache: false
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.3.11"
+          bun-version: "1.4.5"
       - name: install
         run: bun install --frozen-lockfile
       - name: build real parser package entries
@@ -651,7 +628,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.3.11"
+          bun-version: "1.4.5"
       - name: install
         run: bun install --frozen-lockfile
       - name: build Link and Core source-test boundaries
@@ -668,7 +645,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.3.11"
+          bun-version: "1.4.5"
       - uses: actions/setup-node@v7
         with:
           node-version: "24.22.1"
@@ -701,6 +678,8 @@ jobs:
       - name: desktop Host across windows, Main stalls and utility restart
         timeout-minutes: 3
         run: xvfb-run -a node scripts/run-isolated-node-smoke.mjs packages/desktop/scripts/smoke-desktop-host.mjs
+      - name: encrypted operation ledger through the real stdio worker
+        run: ELECTRON_RUN_AS_NODE=1 packages/desktop/node_modules/electron/dist/electron scripts/run-isolated-node-smoke.mjs packages/desktop/scripts/smoke-run-operation-ledger.mjs
       - name: real Electron isolated PDF with verified managed Node
         run: |
           bun run --cwd packages/desktop runtime:prepare
@@ -796,7 +775,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.3.11"
+          bun-version: "1.4.5"
       - name: install
         run: bun install --frozen-lockfile
       - name: build Link and Core source-test boundaries

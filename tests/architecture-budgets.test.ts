@@ -467,7 +467,10 @@ describe("architecture growth budgets", () => {
       // and busy reason, so native controls can disable changes before submission.
       // Mutations still use the existing ccRoom:openSession authority/handoff.
       // +1 workbench-owned task record intent route checks the source revision before commit.
-    ).toBeLessThanOrEqual(476);
+      // +2 mobileRemote:terminalAccess get/set: the Desktop owner's off-by-default
+      // switch for remote terminals. Terminal I/O itself rides the authenticated
+      // remote socket, not IPC.
+    ).toBeLessThanOrEqual(478);
     expect(matches("packages/desktop/src/main/quota-ipc.ts", /handle\("quota:/g)).toBe(3);
     expect(matches("packages/desktop/src/main/account-device-ipc.ts", /^ {4}[a-z]+: \(/gm)).toBe(8);
     expect(
@@ -508,7 +511,8 @@ describe("architecture growth budgets", () => {
       // +2 typed provider discovery/query invokes; credentials remain in Main.
       // +1 typed ccRoom:settingsState adapter for the reviewed read-only route.
       // +1 typed task record intent. Host reads reuse the original list/get IPC fallbacks.
-    ).toBeLessThanOrEqual(485);
+      // +2 typed mobileRemote terminal-access get/set adapters mirroring Main.
+    ).toBeLessThanOrEqual(487);
     expect(matches("packages/desktop/src/preload/quota-api.ts", /ipc\.invoke\(/g)).toBe(3);
     expect(
       matches("packages/desktop/src/preload/account-device-api.ts", /\binvoke(?:Raw)?\("/g),

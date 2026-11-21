@@ -631,6 +631,22 @@ describe("core public/internal export contract", () => {
     }
   });
 
+  it("limits ledger custody to the dedicated Host operations entry", async () => {
+    const operations = await import("./index.operations.js");
+    const expected = [
+      "GITHUB_OPERATION_CONFLICT_SCOPE",
+      "ScopedRunLedger",
+      "isOperationLedgerRequest",
+      "readProtectedOperationKey",
+    ];
+    expect(Object.keys(operations).sort()).toEqual(expected);
+    const extension = await import("./index.extension.js");
+    const internal = await import("./index.internal.js");
+    for (const name of expected) {
+      for (const entry of [publicApi, extension, internal]) expect(entry).not.toHaveProperty(name);
+    }
+  });
+
   it("declares the internal package subpath and an exact source alias", async () => {
     const packageJson = await Bun.file(new URL("../package.json", import.meta.url)).json();
     const rootTsconfig = await Bun.file(new URL("../../../tsconfig.json", import.meta.url)).json();
@@ -642,6 +658,13 @@ describe("core public/internal export contract", () => {
     expect(rootTsconfig.compilerOptions.paths["@cjhyy/code-shell-core/internal"]).toEqual([
       "packages/core/src/index.internal.ts",
     ]);
+    expect(packageJson.exports["./internal/operations"]).toEqual({
+      types: "./dist/index.operations.d.ts",
+      import: "./dist/index.operations.js",
+    });
+    expect(
+      rootTsconfig.compilerOptions.paths["@cjhyy/code-shell-core/internal/operations"],
+    ).toEqual(["packages/core/src/index.operations.ts"]);
     expect(packageJson.exports["./extension"]).toEqual({
       types: "./dist/index.extension.d.ts",
       import: "./dist/index.extension.js",

@@ -1,6 +1,10 @@
+import { preparedOperationCipher } from "../host/composition/operation-key.js";
 import { app, dialog, ipcMain, type BrowserWindow } from "electron";
 import { operationRegistryRevision } from "./operation-authority.js";
-import { operationReviewClient, type OperationClient } from "./desktop-host/private-operations.js";
+import {
+  operationReviewClient,
+  type NativeReviewClient,
+} from "./desktop-host/private-operations.js";
 import type { IpcMainInvokeEvent } from "electron";
 import { join } from "node:path";
 import { codeShellHome, sessionsRoot } from "@cjhyy/code-shell-core";
@@ -18,7 +22,9 @@ const nativeHookConfiguration = process.env.CODESHELL_OPERATION_HOOK_HOST;
 const nativeHookStateRoot = codeShellHome();
 
 export function registerOperationResolutionHost(deps: {
-  host: OperationClient & { withOperationCaller<T>(event: IpcMainInvokeEvent, work: () => T): T };
+  host: NativeReviewClient & {
+    withOperationCaller<T>(event: IpcMainInvokeEvent, work: () => T): T;
+  };
   windows(): BrowserWindow[];
   enabled(): boolean;
   isSessionRunning(sessionId: string): boolean;
@@ -47,10 +53,14 @@ export function registerOperationResolutionHost(deps: {
     enabled: () => !disposed && deps.enabled(),
     ipc: ipcMain,
     withCaller: deps.host.withOperationCaller,
-    store: {
-      ...operationReviewClient(deps.host),
-      reconcile: createLinkOperationReviewStore(sessionsRoot(), hookHost).reconcile,
-    },
+    store: operationReviewClient(
+      deps.host,
+      (key) =>
+        createLinkOperationReviewStore(sessionsRoot(), {
+          ...hookHost,
+          ledgerCipher: preparedOperationCipher(key),
+        }).reconcile,
+    ),
     resolveTarget: resolveRendererConfigurationTarget,
     trusted: async (cwd) => (await getTrust(cwd)) === "trusted",
     trustedSync: (cwd) => getTrustCachedSync(cwd) === "trusted",

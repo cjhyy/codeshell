@@ -2,6 +2,8 @@ import { prepareAgentRunMetadata } from "../agent-run-metadata.js";
 import { rendererRunFactReader } from "./renderer-run-facts.js";
 import { WorkerCommandError } from "./server.js";
 import type { WorkbenchAdmission, WorkbenchRequest } from "./ingress-wire.js";
+import { WorkerRunOperations } from "./worker-run-operations.js";
+import type { HostRunOperations } from "../../host/composition/run-operations.js";
 import type { HostOutput } from "./host-output.js";
 import type { OutputPublication } from "./stored-output.js";
 import { WorkerBridgeCore } from "@cjhyy/code-shell-server/worker";
@@ -14,6 +16,7 @@ export function bindHostWorker(
   launch: { execPath: string; entryPath: string },
   observers: {
     output?: HostOutput;
+    runOperations?: HostRunOperations;
     observeWorkerLine?(line: ParsedWorkerLine): void;
     workerExited?(generation: number): void;
   } = {},
@@ -36,13 +39,21 @@ export function bindHostWorker(
       void close();
     }
   };
-  const core = new WorkerBridgeCore({
+  const runs =
+    observers.runOperations &&
+    new WorkerRunOperations(observers.runOperations, () => active && core.hasLiveWorker());
+  const core: WorkerBridgeCore = new WorkerBridgeCore({
+    ...(runs && {
+      onOperationDisconnect: () => runs.close(),
+      operationLedger: (req, current) => runs.run(req, current),
+    }),
     ...launch,
     buildEnv: () => env,
     onWorkerStarted: ({ pid }) => post({ type: "started", generation, pid }),
     onSpawnFailed: () => post({ type: "spawn-failed", generation }),
     onSpawnError: (error) => post({ type: "spawn-failed", generation, message: String(error) }),
     onExit: (info) => {
+      runs?.close();
       try {
         observers.workerExited?.(generation);
       } finally {
@@ -63,6 +74,7 @@ export function bindHostWorker(
   };
   core.subscribeLines((line) => {
     const parsed = parseWorkerLine(line);
+    runs?.observe(parsed.message);
     const method = (parsed.message as { method?: string } | null)?.method;
     try {
       observers.observeWorkerLine?.(parsed);
@@ -101,6 +113,7 @@ export function bindHostWorker(
     active = false;
     for (const pending of admissions.values()) pending.fail(new Error("Desktop Host was closed"));
     admissions.clear();
+    runs?.close();
     closing = core.stopAndWait();
     port.close();
     return closing;
@@ -149,7 +162,12 @@ export function bindHostWorker(
       )
         return;
       generation = message.generation;
-      env = { ...message.env, ELECTRON_RUN_AS_NODE: "1", CODESHELL_AGENT_STDIO: "1" };
+      env = {
+        ...message.env,
+        CODE_SHELL_PRIVATE_LEDGER: runs ? "host" : undefined,
+        ELECTRON_RUN_AS_NODE: "1",
+        CODESHELL_AGENT_STDIO: "1",
+      };
       core.ensureWorker(message.cwd);
       return;
     }
@@ -162,8 +180,10 @@ export function bindHostWorker(
         .request(message.method, message.params, { ...message.options, ensureWorker: false })
         .then((outcome) => later({ type: "result", call: message.call, outcome }));
     } else if (message.generation === generation) {
-      if (message.type === "stop") core.kill();
-      else if (message.type === "write" && typeof message.line === "string")
+      if (message.type === "stop") {
+        runs?.close();
+        core.kill();
+      } else if (message.type === "write" && typeof message.line === "string")
         core.sendLine(message.line);
     }
   });

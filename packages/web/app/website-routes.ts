@@ -9,6 +9,7 @@ export type WorkbenchView =
   | "files"
   | "links"
   | "panels"
+  | "terminal"
   | "settings";
 export type WorkspaceSettingsSection = "overview" | "models" | "skills" | "mcp";
 export type WebsiteRoute =
@@ -122,7 +123,9 @@ export function parseWorkbenchLocation(url: URL): {
   const view = url.searchParams.get("view"),
     section = url.searchParams.get("section");
   return {
-    view: ["activity", "history", "files", "links", "panels", "settings"].includes(view ?? "")
+    view: ["activity", "history", "files", "links", "panels", "terminal", "settings"].includes(
+      view ?? "",
+    )
       ? (view as WorkbenchView)
       : "chat",
     section: ["models", "skills", "mcp"].includes(section ?? "")

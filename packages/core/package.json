@@ -18,6 +18,10 @@
       "types": "./dist/index.internal.d.ts",
       "import": "./dist/index.internal.js"
     },
+    "./internal/operations": {
+      "types": "./dist/index.operations.d.ts",
+      "import": "./dist/index.operations.js"
+    },
     "./internal/storage": {
       "types": "./dist/storage/index.d.ts",
       "import": "./dist/storage/index.js"

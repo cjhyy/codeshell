@@ -1,4 +1,5 @@
 import { DeviceRelaySettings } from "./DeviceRelaySettings";
+import { RemoteTerminalAccessSetting } from "./RemoteTerminalAccessSetting";
 import type { DesktopRelayStatus } from "../../shared/device-relay.js";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { readScopedSettings } from "../settingsAuthority";
@@ -1981,6 +1982,7 @@ export function MobileRemoteSection() {
           </pre>
         </div>
       ) : null}
+      <RemoteTerminalAccessSetting />
       <div className="mt-4 space-y-2">
         <div className="flex items-center justify-between">
           <h4 className="text-sm font-medium">{t("settingsX.adv.trustedDevices")}</h4>

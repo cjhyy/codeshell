@@ -1,4 +1,5 @@
 /* global window */
+import { verifyPairedHostTerminal } from "./paired-host-terminal.mjs";
 import assert from "node:assert/strict";
 import { mkdir, readFile, readdir, realpath, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -106,6 +107,9 @@ try {
   await writeFile(
     bootstrap,
     `const { utilityProcess } = require("electron");
+// Advertise only loopback to this isolated Desktop's real LAN gateway.
+require("node:os").networkInterfaces = () => ({});
+require("node:module").syncBuiltinESMExports();
 const fork = utilityProcess.fork;
 utilityProcess.fork = function (...args) {
   const child = fork.apply(this, args);
@@ -249,6 +253,36 @@ utilityProcess.fork = function (...args) {
   assert.ok(dream.ran && dream.summary);
   assert.ok(provider.requests.some(({ body }) =>
     body.tools?.some((tool) => tool.function?.name === "MemorySave")));
+  const terminalId = "term:host-smoke";
+  const started = await first.evaluate(
+    async ({ cwd, sessionId }) => {
+      window.hostTerminalText = "";
+      window.codeshell.onPtyData((msg) => {
+        if (msg.sessionId === sessionId) window.hostTerminalText += msg.data;
+      });
+      return window.codeshell.ptyStart({ cwd, sessionId });
+    },
+    { cwd: mount, sessionId: terminalId },
+  );
+  assert.equal(started.ok, true, started.detail);
+  const denied = await second.evaluate(
+    ({ cwd, sessionId }) => window.codeshell.ptyStart({ cwd, sessionId }),
+    { cwd: mount, sessionId: terminalId },
+  );
+  assert.equal(
+    denied.ok,
+    false,
+    "A second window cannot attach to the first window's live terminal",
+  );
+  await second.evaluate((id) => window.codeshell.ptyKill(id), terminalId);
+  await first.evaluate(
+    (id) => window.codeshell.ptyWrite(id, "echo HOST_TERMINAL_READY\r"),
+    terminalId,
+  );
+  await first.waitForFunction(() =>
+    window.hostTerminalText.replace(/\r/g, "").includes("\nHOST_TERMINAL_READY\n"),
+  );
+  await verifyPairedHostTerminal(first, terminalId, started.pid);
   // Arm a renderer timer before blocking Main. Both timestamps come from the
   // renderer so a response delivered by Main after the pause cannot pass.
   const secondHandle = await application.browserWindow(second);
@@ -298,7 +332,11 @@ utilityProcess.fork = function (...args) {
   assert.equal(measured.read.memoryViews,true,"Memory reads finished while Main was paused");
   assert.equal(await first.evaluate(()=>window.codeshell.deleteMemory("user","user","Host memory smoke")),true);
   assert.equal(await second.evaluate(()=>window.codeshell.readMemory("user","user","Host memory smoke")),null);
-  assert.equal(measured.read.workspaceViews, true, "Workspace files and Git answered during the Main pause");
+  assert.equal(
+    measured.read.workspaceViews,
+    true,
+    "Workspace files and Git answered during the Main pause",
+  );
   assert.deepEqual(measured.read.sessionIds, ["index-visible"]);
   assert.equal(
     measured.read.configurationViews,
@@ -331,6 +369,19 @@ utilityProcess.fork = function (...args) {
   await first.reload({ waitUntil: "domcontentloaded" });
   await observeHost(first);
   assert.deepEqual(await readCatalog(first), catalog);
+  const reattached = await first.evaluate(
+    async ({ cwd, sessionId }) => {
+      window.hostTerminalText = "";
+      window.codeshell.onPtyData((msg) => {
+        if (msg.sessionId === sessionId) window.hostTerminalText += msg.data;
+      });
+      return window.codeshell.ptyStart({ cwd, sessionId });
+    },
+    { cwd: mount, sessionId: terminalId },
+  );
+  assert.equal(reattached.pid, started.pid);
+  await first.waitForFunction(() => window.hostTerminalText.includes("HOST_TERMINAL_READY"));
+  await first.evaluate((id) => window.codeshell.ptyKill(id), terminalId);
   // A full local fork exercises actual worker stdio without performing inference.
   await first.evaluate(() => {
     window.hostSmokeFork = window.codeshell.forkSession({

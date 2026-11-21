@@ -78,19 +78,8 @@ describe("Desktop Host process", () => {
     child.emit("message", { type: "ready" });
     const abort = new AbortController();
     const result = supervisor.callBusiness(
-      "automation/run",
-      {
-        job: {
-          id: "cron",
-          name: "fixture",
-          schedule: "1h",
-          prompt: "fixture",
-          enabled: true,
-          createdAt: 1,
-          runCount: 0,
-        },
-        searchPath: "",
-      },
+      "automation/command",
+      { method: "cancel", input: "cron" },
       abort.signal,
     );
     const request = child.messages.at(-1) as { id: string };
@@ -344,8 +333,10 @@ test("a native reply and an outstanding call cannot cross a worker or Host repla
     entryPath: "/owned/agent.mjs",
     buildEnv: () => ({}),
   });
+  const startup = client.waitForFirstBinding();
   const first = new WorkerTestPort();
   client.bind(first);
+  await startup;
   client.ensureWorker("/owned");
   const release = Promise.withResolvers<void>();
   const staleWrite = Promise.withResolvers<boolean>();
@@ -429,4 +420,57 @@ test("committed settings refresh once even if the original document withdraws", 
   await Promise.resolve();
   expect(changes).toEqual([flags]);
   completion.resolve();
+});
+
+test("private operation key preparation reads the fixed ledger and discards a late reply after Host restart", async () => {
+  const { children, supervisor, advance } = processFixture();
+  const entered = Promise.withResolvers<void>(),
+    unlocked = Promise.withResolvers<void>();
+  const first = children[0]!;
+  const request = {
+    jsonrpc: "2.0",
+    method: "app/operationLedgerKey",
+    id: "host:run-key:1",
+    params: { create: false },
+  };
+  const key = { wrapped: "enc:synthetic:test", secret: "1".repeat(64) };
+  supervisor.prepareRunKey = async (wrapped, create) => {
+    expect(wrapped).toBe(key.wrapped);
+    expect(create).toBe(false);
+    entered.resolve();
+    await unlocked.promise;
+    return key;
+  };
+  first.emit("message", { type: "ready" });
+  first.emit("message", { ...request, params: { create: false, wrapped: "caller-selected" } });
+  expect(first.messages.at(-1)).toMatchObject({ error: { code: -32601 } });
+  first.emit("message", request);
+  const read = first.messages.at(-1) as { method: string; id: string; params: object };
+  expect(read).toMatchObject({ method: "host/readOperationWrappedKey", params: {} });
+  first.emit("message", { jsonrpc: "2.0", id: read.id, result: key.wrapped });
+  await entered.promise;
+  first.emit("exit", 1);
+  advance();
+  children[1]!.emit("message", { type: "ready" });
+  unlocked.resolve();
+  await new Promise((resolve) => setImmediate(resolve));
+  for (const child of children) expect(JSON.stringify(child.messages)).not.toContain(key.secret);
+});
+
+test("native recovery authorization expires on owner or deletion ABA and Host exit", () => {
+  const { supervisor, children } = processFixture();
+  children[0]!.emit("message", { type: "ready" });
+  const pending = supervisor.watchOperationOwner("fixture", 4);
+  supervisor.setOwner("fixture", 4);
+  supervisor.setOwner("fixture", null);
+  expect(pending.signal.aborted).toBe(true);
+  supervisor.setOwner("fixture", 4);
+  expect(() => supervisor.watchOperationOwner("fixture", 5)).toThrow();
+  const next = supervisor.watchOperationOwner("fixture", 4);
+  supervisor.setDeleting("fixture", true);
+  supervisor.setDeleting("fixture", false);
+  expect(next.signal.aborted).toBe(true);
+  const last = supervisor.watchOperationOwner("fixture", 4);
+  children[0]!.emit("exit", 1);
+  expect(last.signal.aborted).toBe(true);
 });

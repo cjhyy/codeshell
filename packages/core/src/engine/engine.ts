@@ -1,3 +1,4 @@
+import { remoteRunLedger } from "../operations/host-transport.js";
 import { rebaseToolSelection, isToolCacheCompaction } from "./tool-cache-cycle.js";
 import { normalizeSessionToolSelection } from "../tool-system/run-tool-surface.js";
 /**
@@ -500,7 +501,7 @@ export class Engine {
   /** Stable through pre-loop awaits, finalization/end hooks, and outer cleanup. */
   private runningSession?: RunningSessionState;
   /** Uses the claimed run's journal wrapper even when initialization fails before the loop. */
-  private failClaimedRun?: (error: unknown) => EngineResult;
+  private failClaimedRun?: (error: unknown) => Promise<EngineResult>;
   /**
    * Same-instance run guard. Engine owns single-valued live controls and one
    * HookRegistry, so a second run must not enter until the first has completed
@@ -1398,7 +1399,7 @@ export class Engine {
       if (running && !running.finalized) {
         if (this.failClaimedRun) {
           try {
-            this.failClaimedRun(error);
+            await this.failClaimedRun(error);
           } catch {
             /* Terminal publication must not replace the original initialization rejection. */
           }
@@ -1749,7 +1750,7 @@ export class Engine {
       options,
       runId,
       sealForFinalization: () =>
-        toolCtx.operations?.controller.ledger.sealForFinalization(session.state.sessionId),
+        toolCtx.operations?.controller.sealForFinalization(session.state.sessionId),
       persistFinalRunState: (state) => this.persistFinalRunState(state),
     });
     this.failClaimedRun = failClaimedRun;
@@ -1779,6 +1780,15 @@ export class Engine {
         this.sessionManager.getStorageDir(),
         session.state.sessionId,
         isEphemeralSessionState(session.state) ? undefined : this.usageLedger,
+        undefined,
+        this.config.operationLedger
+          ? remoteRunLedger(
+              session.state.sessionId,
+              runId,
+              this.config.operationLedger,
+              isEphemeralSessionState(session.state),
+            )
+          : undefined,
       ),
       resolver: new CapabilityResolver(),
       sessionId: session.state.sessionId,
@@ -2114,7 +2124,7 @@ export class Engine {
             profile,
             getProfileReportedResults: () => profileReportedResults,
             hasUnverifiedWrites: () =>
-              toolCtx.operations!.controller.ledger.sealForFinalization(session.state.sessionId),
+              toolCtx.operations!.controller.sealForFinalization(session.state.sessionId),
             hasIncompleteBatch: batchAuthority?.hasIncompleteBatch,
           });
           finalized.runId = runId;
@@ -2151,7 +2161,7 @@ export class Engine {
     accounting: ReturnType<typeof createRunUsageAccounting>;
     profile: RunBehaviorProfile | undefined;
     getProfileReportedResults: () => Record<string, unknown> | undefined;
-    hasUnverifiedWrites: () => boolean;
+    hasUnverifiedWrites: () => boolean | Promise<boolean>;
     hasIncompleteBatch?: () => Promise<boolean>;
   }): Promise<EngineResult> {
     const {
