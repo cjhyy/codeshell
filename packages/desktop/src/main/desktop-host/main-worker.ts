@@ -1,3 +1,4 @@
+import type { IpcMainEvent } from "electron";
 import type { DesktopHostIdentity } from "../../shared/desktop-host-protocol.js";
 import type { WorkbenchIngressAdapter } from "./ingress-wire.js";
 import type { Snapshot } from "../SessionSnapshotStore.js";
@@ -44,7 +45,12 @@ export class DesktopHostWorkerClient implements DesktopWorkerDriver {
   constructor(
     readonly options: WorkerBridgeCoreOptions,
     private readonly assertWorkbench?: (identity: DesktopHostIdentity) => void,
+    private readonly legacy?: (event: IpcMainEvent, line: string) => boolean,
   ) {}
+  legacyWorkbench(event: IpcMainEvent, line: string): boolean {
+    return this.legacy?.(event, line) ?? false;
+  }
+
   bind(port: WorkerPort): void {
     this.disconnect();
     this.port = port;
@@ -126,7 +132,27 @@ export class DesktopHostWorkerClient implements DesktopWorkerDriver {
         })
         .then((admission) => {
           assertCurrent();
-          this.post({ type: "renderer-admitted", call: message.call, admission });
+          const reply = () => {
+            try {
+              assertCurrent();
+              if (admission.type === "dispatch" && this.active?.generation !== admission.generation)
+                throw new Error("Worker generation changed");
+              return this.post({ type: "renderer-admitted", call: message.call, admission });
+            } catch (error) {
+              fail(error);
+              return false;
+            }
+          };
+          if (admission.type === "dispatch" && this.options.dispatchInput) {
+            const line = JSON.stringify({
+              jsonrpc: "2.0",
+              id: admission.id,
+              method: message.request.method,
+              params: message.request.params,
+            });
+            if (!this.options.dispatchInput(admission.generation, line, reply))
+              fail(new Error("Worker input unavailable"));
+          } else reply();
         })
         .catch(fail);
       return;

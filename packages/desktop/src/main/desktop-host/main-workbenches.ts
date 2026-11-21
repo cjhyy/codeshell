@@ -72,6 +72,10 @@ export class HostWorkbenchPorts {
     });
   }
 
+  tracks(contents: WebContents): boolean {
+    return this.windows.has(contents);
+  }
+
   assertIdentity(identity: DesktopHostIdentity): void {
     for (const window of this.windows.values()) {
       if (window.contents.id !== identity.webContentsId || !window.requestedFrame) continue;

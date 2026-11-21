@@ -1,6 +1,8 @@
 import { documentLifetimes } from "./document-lifetime.js";
 import type { OperationCommand } from "./private-operations.js";
 import type { CredentialFileCommand } from "@cjhyy/code-shell-core/internal/storage";
+import { isDesktopAgentMethod } from "../../shared/desktop-agent-methods.js";
+import { isRpcRequest } from "../../shared/desktop-host-protocol.js";
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { DesktopHostIdentity } from "../../shared/desktop-host-protocol.js";
 import { join } from "node:path";
@@ -87,8 +89,49 @@ export function createDesktopHost(
     },
     createWorkerBridge(options: WorkerBridgeCoreOptions) {
       if (worker) throw new Error("Desktop Host already has a worker bridge");
-      worker = new DesktopHostWorkerClient(options, (identity) =>
-        workbenches.assertIdentity(identity),
+      worker = new DesktopHostWorkerClient(
+        options,
+        (identity) => workbenches.assertIdentity(identity),
+        (event, line) => {
+          navigation.assertSender(event);
+          if (!workbenches.tracks(event.sender)) return false;
+          let req: unknown;
+          try {
+            req = JSON.parse(line);
+          } catch {
+            return true;
+          }
+          if (!isRpcRequest(req)) return true;
+          const { id, method, params } = req;
+          const frame = event.senderFrame;
+          const send = (payload: Record<string, unknown>) => {
+            if (
+              frame &&
+              !frame.detached &&
+              !frame.isDestroyed() &&
+              !event.sender.isDestroyed() &&
+              event.sender.mainFrame === frame
+            )
+              frame.send("agent:msg", JSON.stringify({ jsonrpc: "2.0", id, ...payload }));
+          };
+          void Promise.resolve()
+            .then(async () => {
+              if (!isDesktopAgentMethod(method)) throw new Error("Unrecognized workbench command");
+              const caller = workbenches.identity(event);
+              const result = await supervisor.workbenchCommand(caller, method, params ?? {});
+              if (workbenches.identity(event) === caller) send({ result });
+            })
+            .catch((error) =>
+              send({
+                error: {
+                  code: typeof error?.code === "number" ? error.code : -32010,
+                  ...(error?.data === undefined ? {} : { data: error.data }),
+                  message: error instanceof Error ? error.message : "Workbench unavailable",
+                },
+              }),
+            );
+          return true;
+        },
       );
       bindWorker();
       return worker;

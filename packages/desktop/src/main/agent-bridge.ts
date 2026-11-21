@@ -1157,9 +1157,25 @@ export class AgentBridge implements PetStateBridge {
     if (this.ipcListenerAttached) return;
     this.ipcListenerAttached = true;
 
-    ipcMain.on("agent:msg", (event, line: string) =>
-      this.handleRendererCommand(event.sender, line),
-    );
+    ipcMain.on("agent:msg", (event, line: string) => {
+      if (this.core.hostedOutput) {
+        try {
+          if (this.core.hostedOutput.legacyWorkbench(event, line)) return;
+          const pet = [...this.petWindows].find(
+            (w) => !w.isDestroyed() && w.webContents === event.sender,
+          );
+          if (
+            !pet ||
+            !this.mimiSessionId ||
+            JSON.parse(line).params?.sessionId !== this.mimiSessionId
+          )
+            return;
+        } catch {
+          return;
+        }
+      }
+      this.handleRendererCommand(event.sender, line);
+    });
 
     ipcMain.on(
       "desktop:log",

@@ -4,6 +4,7 @@ import {
   credentialCommands,
   type CredentialFileCommand,
 } from "@cjhyy/code-shell-core/internal/storage";
+import type { DesktopAgentMethod } from "../../shared/desktop-agent-methods.js";
 import { isPrivateTaskCommand } from "../task-inbox/private-task-command.js";
 import type { MessagePortMain, UtilityProcess } from "electron";
 import type { ListDiskSessionsResult } from "@cjhyy/code-shell-server/storage";
@@ -43,7 +44,7 @@ export class DesktopHostSupervisor {
     {
       resolve: (value: unknown) => void;
       reject: (error: Error) => void;
-      timeout: NodeJS.Timeout;
+      timeout?: NodeJS.Timeout;
     }
   >();
   private readonly deleting = new Set<string>();
@@ -88,7 +89,8 @@ export class DesktopHostSupervisor {
         if (!read) return;
         clearTimeout(read.timeout);
         this.reads.delete(message.id);
-        if (message.error) read.reject(new Error(message.error.message));
+        if (message.error)
+          read.reject(Object.assign(new Error(message.error.message), message.error));
         else read.resolve(message.result);
       } else if (message?.type === "session-catalog-changed" && this.ready) {
         for (const listener of this.catalogListeners) listener(message.snapshot);
@@ -123,6 +125,19 @@ export class DesktopHostSupervisor {
     }, 15_000);
   }
 
+  workbenchCommand(
+    caller: DesktopHostIdentity,
+    method: DesktopAgentMethod,
+    params: Record<string, unknown>,
+  ) {
+    return this.request(
+      "host/workbenchCommand",
+      { caller, method, params },
+      method === "agent/run" || (method === "agent/forkSession" && params.mode === "summary")
+        ? 0
+        : 30_000,
+    );
+  }
   readWorkbenchOutput(caller: DesktopHostIdentity, sessionId: string, sinceSeq: number) {
     return this.request("host/readWorkbenchOutput", { caller, sessionId, sinceSeq });
   }
@@ -183,14 +198,12 @@ export class DesktopHostSupervisor {
       }
     }
     signal?.throwIfAborted();
-    const value = await this.request("host/business", { method, input }, signal);
+    const value = await this.request("host/business", { method, input }, 15_000, signal);
     signal?.throwIfAborted();
-    return value as ShellBusinessOperations[K]["result"];
-  }
-
-  private request(
+    return value as ShellBusinessOperations[K]["result"  private request(
     method: string,
     params: Record<string, unknown>,
+    timeoutMs = 15_000,
     signal?: AbortSignal,
   ): Promise<unknown> {
     if (!this.ready || this.stopped)
@@ -205,7 +218,7 @@ export class DesktopHostSupervisor {
       pending.reject(new Error("Desktop Host request expired or document changed"));
     };
     return new Promise<unknown>((resolve, reject) => {
-      const timeout = setTimeout(withdraw, 15_000).unref();
+      const timeout = timeoutMs > 0 ? setTimeout(withdraw, timeoutMs).unref() : undefined;
       signal?.addEventListener("abort", withdraw, { once: true });
       this.reads.set(id, { resolve, reject, timeout });
       this.send({ jsonrpc: "2.0", id, method, params });

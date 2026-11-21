@@ -1,4 +1,4 @@
-import { isDesktopAgentMethod, type DesktopAgentMethod } from "../shared/desktop-agent-methods";
+import type { DesktopAgentMethod } from "../shared/desktop-agent-methods";
 import {
   DesktopHostErrors,
   isRpcResponse,

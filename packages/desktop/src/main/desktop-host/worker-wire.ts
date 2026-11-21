@@ -1,3 +1,4 @@
+import type { IpcMainEvent } from "electron";
 import type {
   WorkbenchRequest,
   WorkbenchAdmission,
@@ -20,6 +21,7 @@ export interface HostedDesktopOutput {
   onOutput(listener: (frame: OutputPublication) => void): () => void;
   /** Captured producers cannot publish into another utility after a restart. */
   captureGeneration(): () => boolean;
+  legacyWorkbench(event: IpcMainEvent, line: string): boolean;
   setIngress(adapter: WorkbenchIngressAdapter): void;
   setDeltaInterest(all: boolean, sessions: string[]): void;
 }
