@@ -8,6 +8,8 @@ breaking.
 
 ## [Unreleased]
 
+## [0.11.0-rc.10] - 2026-11-21
+
 ### Fixed
 
 - Hooks: a shell or plugin hook that never reads its input, or exits before
@@ -19,7 +21,8 @@ breaking.
 
 ### Changed
 
-- Build: Bun 1.4.5 (was 1.3.11) for development, CI and the Docker image.
+- CI: every test job stops after 60 minutes, so a hung test process fails
+  within the hour instead of running for up to six hours.
 
 ## [0.11.0-rc.9] - 2026-11-20
 
