@@ -40,6 +40,7 @@ import { useCloudAccountStatus } from "./useCloudAccountStatus";
 import { useAccountFeature } from "../account/useAccountFeature";
 import { AccountFeatureEntry } from "../account/AccountFeatureEntry";
 import { UnavailableLinkCleanup } from "./UnavailableLinkCleanup";
+import { onLocalProviderCatalogRecovery } from "./onLocalProviderCatalogRecovery";
 import { localLinkProvider, localLinkSnapshot } from "./linkLocalPresentation";
 import type { MaskedCredentialView } from "./types";
 import type {
@@ -406,6 +407,14 @@ export function LinkTab({ cwd }: { cwd: string }) {
       }
     }
   }, [cwd]);
+
+  useEffect(
+    () =>
+      onLocalProviderCatalogRecovery(() => {
+        void load().catch(() => undefined);
+      }),
+    [load],
+  );
 
   const refresh = useCallback(
     (forceCatalog = false) => {

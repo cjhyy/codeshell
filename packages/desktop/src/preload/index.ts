@@ -1,3 +1,5 @@
+import { DesktopHostIpc } from "../shared/desktop-host-protocol";
+import { DesktopHostClient, desktopHostRoutes, routeLocalProviders } from "./desktop-host-client";
 import { accountFeaturesApi } from "./account-features-api.js";
 import { createOperationBatchApi } from "./operation-batch-api.js";
 import { cloudAccountApi } from "./cloud-account-api.js";
@@ -65,6 +67,7 @@ import type { PanelAppWindowTarget } from "../shared/panel-apps";
 import type { GoalConfig, MobileServerEvent, RunResult } from "@cjhyy/code-shell-core";
 import type {
   CodeshellApi,
+  DesktopHostStatus,
   RpcResponse,
   ForkSessionResult,
   StreamEventEnvelope,
@@ -514,7 +517,28 @@ ipcRenderer.on("externalRuntime:approvalResolved", (_e, payload: { requestId?: u
   approvalResolvedListeners.forEach((cb) => cb(payload as ApprovalResolvedEnvelope));
 });
 
+const desktopHost =
+  process.isMainFrame &&
+  process.argv.includes("--codeshell-desktop-host") &&
+  Object.values(desktopHostRoutes).includes("host")
+    ? new DesktopHostClient()
+    : undefined;
+
+if (desktopHost) {
+  ipcRenderer.on(DesktopHostIpc.port, (event) => {
+    const port = event.ports[0];
+    if (port) void desktopHost.attach(port);
+  });
+  ipcRenderer.on(DesktopHostIpc.status, (_event, status: unknown) => {
+    if (status === "reconnecting" || status === "unavailable") desktopHost.disconnect(status);
+  });
+  ipcRenderer.send(DesktopHostIpc.connect);
+}
+
 contextBridge.exposeInMainWorld("codeshell", {
+  ...(desktopHost && {
+    onDesktopHostStatus: (cb: (status: DesktopHostStatus) => void) => desktopHost.subscribe(cb),
+  }),
   ...createNotificationNavigationApi(ipcRenderer),
   ...createProfilePluginExportApi(ipcRenderer),
   ...createProfileMemoryPromotionApi(ipcRenderer),
@@ -1468,7 +1492,9 @@ contextBridge.exposeInMainWorld("codeshell", {
       ipcRenderer.invoke("links:remoteRename", cwd, id, label, revision),
     remoteDisconnect: (cwd: string, id: string, revision: string) =>
       ipcRenderer.invoke("links:remoteDisconnect", cwd, id, revision),
-    listLocalProviders: () => ipcRenderer.invoke("links:listLocalProviders"),
+    listLocalProviders: routeLocalProviders(desktopHost, () =>
+      ipcRenderer.invoke("links:listLocalProviders"),
+    ),
     cliStatus: (providerId: string, cwd?: string) =>
       ipcRenderer.invoke("links:cliStatus", providerId, cwd),
     cliInstallStatus: (providerId: string) =>

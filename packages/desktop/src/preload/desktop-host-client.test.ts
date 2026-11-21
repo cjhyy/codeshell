@@ -1,0 +1,137 @@
+import { afterEach, expect, test } from "bun:test";
+import { DesktopHostClient, routeLocalProviders } from "./desktop-host-client";
+import type { DesktopHostStatus } from "./types";
+import { DesktopHostErrors, type RpcRequest } from "../shared/desktop-host-protocol";
+
+const capabilities = {
+  protocolVersion: "2.0",
+  host: { kind: "electron", version: "0.12.0" },
+  methods: ["links/listLocalProviders"],
+};
+
+const cleanups: Array<() => void> = [];
+afterEach(() => {
+  for (const cleanup of cleanups.splice(0)) cleanup();
+});
+
+function clientWithStatus(timeoutMs?: number) {
+  const client = new DesktopHostClient(timeoutMs);
+  const statuses: DesktopHostStatus[] = [];
+  const unsubscribe = client.subscribe((status) => statuses.push(status));
+  cleanups.push(unsubscribe, () => client.disconnect("unavailable"));
+  return { client, statuses };
+}
+
+function nextRequest(port: MessagePort): Promise<RpcRequest> {
+  return new Promise((resolve) => {
+    port.addEventListener("message", ({ data }: MessageEvent<RpcRequest>) => resolve(data), {
+      once: true,
+    });
+    port.start();
+  });
+}
+
+async function attach(client: DesktopHostClient, result: unknown = capabilities) {
+  const { port1, port2 } = new MessageChannel();
+  cleanups.push(() => port2.close());
+  const request = nextRequest(port2);
+  const attached = client.attach(port1);
+  const hello = await request;
+  expect(hello).toEqual({
+    id: expect.any(Number),
+    jsonrpc: "2.0",
+    method: "initialize",
+    params: { protocolVersions: ["2.0"] },
+  });
+  port2.postMessage({ jsonrpc: "2.0", id: hello.id, result });
+  await attached;
+  return port2;
+}
+
+test("the first read waits for initialize and sends only the provider method", async () => {
+  const { client, statuses } = clientWithStatus();
+  const providers = client.listLocalProviders();
+  const host = await attach(client);
+  const request = await nextRequest(host);
+  expect(request).toEqual({
+    jsonrpc: "2.0",
+    id: expect.any(Number),
+    method: "links/listLocalProviders",
+  });
+  host.postMessage({ jsonrpc: "2.0", id: request.id, result: [{ id: "fixture" }] });
+  expect(await providers).toEqual([{ id: "fixture" }]);
+  expect(statuses).toEqual(["connecting", "ready"]);
+});
+
+test("losing a port rejects outstanding calls and does not replay them on the new port", async () => {
+  const { client, statuses } = clientWithStatus();
+  const oldHost = await attach(client);
+  const oldRequest = nextRequest(oldHost);
+  const before = client.listLocalProviders().catch((error: Error) => error);
+  const sent = await oldRequest;
+  client.disconnect("reconnecting");
+  expect(await before).toMatchObject({ code: DesktopHostErrors.reconnecting });
+  await expect(client.listLocalProviders()).rejects.toMatchObject({
+    code: DesktopHostErrors.reconnecting,
+  });
+  oldHost.postMessage({ jsonrpc: "2.0", id: sent.id, result: [{ id: "stale" }] });
+  const newHost = await attach(client);
+  const newRequest = nextRequest(newHost);
+  const after = client.listLocalProviders();
+  const { id } = await newRequest;
+  expect(id).not.toBe(sent.id);
+  newHost.postMessage({ jsonrpc: "2.0", id, result: [{ id: "new" }] });
+  expect(await after).toEqual([{ id: "new" }]);
+  expect(statuses).toEqual(["connecting", "ready", "reconnecting", "ready"]);
+});
+
+test("incompatible capabilities disable the route until a new port initializes", async () => {
+  const { client, statuses } = clientWithStatus();
+  const early = client.listLocalProviders().catch((error: Error) => error);
+  await attach(client, { ...capabilities, methods: [] });
+  expect(await early).toMatchObject({ code: DesktopHostErrors.reconnecting });
+  await expect(client.listLocalProviders()).rejects.toThrow("unavailable");
+  await attach(client);
+  expect(statuses).toEqual(["connecting", "unavailable", "reconnecting", "ready"]);
+});
+
+test("a missing port and an unresponsive host both have deadlines", async () => {
+  const { client, statuses } = clientWithStatus(80);
+  await expect(client.listLocalProviders()).rejects.toThrow("unavailable");
+  await attach(client);
+  await expect(client.listLocalProviders()).rejects.toThrow("timed out");
+  expect(statuses).toEqual(["connecting", "unavailable", "reconnecting", "ready"]);
+});
+
+test("auxiliary windows and a rolled-back domain use the original IPC handler", async () => {
+  const { client } = clientWithStatus();
+  const ipc = async () => [];
+  expect(routeLocalProviders(undefined, ipc)).toBe(ipc);
+  expect(routeLocalProviders(client, ipc, "ipc")).toBe(ipc);
+  client.disconnect("reconnecting");
+  await expect(routeLocalProviders(client, ipc, "host")()).rejects.toThrow("reconnecting");
+});
+
+test("a new binding supersedes in-flight replies from the previous port", async () => {
+  const { client } = clientWithStatus();
+  const oldPort = await attach(client);
+  const first = nextRequest(oldPort);
+  const dropped = client.listLocalProviders().catch((error: Error) => error);
+  await first;
+  const current = await attach(client);
+  expect(await dropped).toMatchObject({ code: DesktopHostErrors.revoked });
+  const firstRequest = nextRequest(current);
+  const a = client.listLocalProviders();
+  const one = await firstRequest;
+  const secondRequest = nextRequest(current);
+  const b = client.listLocalProviders().catch((error: Error) => error);
+  const two = await secondRequest;
+  current.postMessage({
+    jsonrpc: "2.0",
+    id: two.id,
+    error: { code: -32603, message: "Catalog unavailable" },
+  });
+  current.postMessage({ jsonrpc: "2.0", id: one.id, result: [{ id: "current" }] });
+  expect(await b).toMatchObject({ code: -32603 });
+  expect(await a).toEqual([{ id: "current" }]);
+});

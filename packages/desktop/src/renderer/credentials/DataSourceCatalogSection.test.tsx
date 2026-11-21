@@ -3,6 +3,7 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import type { SourceDefinition } from "@cjhyy/code-shell-core";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
+import type { DesktopHostStatus } from "../../preload/types";
 import { DataSourceCatalogSection } from "./DataSourceCatalogSection";
 import { DialogProvider } from "../ui/DialogProvider";
 
@@ -349,6 +350,47 @@ describe("DataSourceCatalogSection", () => {
       "mcp-resource",
     ]);
     expect(textOf(container)).toContain("还没有可用的 Link 连接");
+  });
+
+  test("an open provider selector reloads once when its desktop service recovers", async () => {
+    ensureMiniDom();
+    let status: DesktopHostStatus = "reconnecting";
+    let listener: ((state: DesktopHostStatus) => void) | undefined;
+    let calls = 0;
+    Object.assign(window, {
+      codeshell: {
+        listSourceCatalog: async () => [],
+        credentials: { list: async () => [savedLinkConnection] },
+        links: {
+          listLocalProviders: async () => {
+            calls++;
+            if (status !== "ready") throw new Error("Catalog offline");
+            return [linkProvider];
+          },
+        },
+        onDesktopHostStatus: (callback: (state: DesktopHostStatus) => void) => {
+          listener = callback;
+          callback(status);
+          return () => {
+            listener = undefined;
+          };
+        },
+      },
+    });
+    const container = await renderSection();
+    await openCreate(container);
+    expect(textOf(container)).toContain("Catalog offline");
+    await act(async () => {
+      status = "ready";
+      listener?.(status);
+      listener?.(status);
+      await flushMicrotasks();
+    });
+    expect(calls).toBe(2);
+    expect(textOf(container)).not.toContain("Catalog offline");
+    expect(selectPropsOf(findElements(container, "SELECT")[1]).options).toEqual([
+      { value: "link-alice", label: "Alice GitHub (github)" },
+    ]);
   });
 
   test("shows connection loading and request failure, then reloads connections", async () => {

@@ -10,6 +10,10 @@
  */
 export const core = {
   zh: {
+    desktopHost: {
+      reconnecting: "正在重新连接桌面服务，本地连接目录暂不可用。",
+      unavailable: "桌面服务不可用。请重新启动 CodeShell 以恢复本地连接目录。",
+    },
     accountFeatures: {
       signIn: "登录后可用",
       pending: "准备中",
@@ -229,6 +233,12 @@ export const core = {
     },
   },
   en: {
+    desktopHost: {
+      reconnecting:
+        "Reconnecting to the desktop service. The local provider catalog is temporarily unavailable.",
+      unavailable:
+        "The desktop service is unavailable. Restart CodeShell to restore the local provider catalog.",
+    },
     accountFeatures: {
       signIn: "Sign in to use",
       pending: "Getting ready",

@@ -1,4 +1,6 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import type { DesktopHostStatus } from "../../preload/types";
+import { useT } from "../i18n";
 
 export function AppShell({
   platformClass,
@@ -15,6 +17,9 @@ export function AppShell({
   sidebarIsDialog?: boolean;
   children: ReactNode;
 }) {
+  const { t } = useT();
+  const [hostStatus, setHostStatus] = useState<DesktopHostStatus>("connecting");
+  useEffect(() => window.codeshell?.onDesktopHostStatus?.(setHostStatus), []);
   return (
     <div
       className={`relative flex h-screen flex-col overflow-hidden text-foreground ${platformClass}`.trim()}
@@ -32,6 +37,16 @@ export function AppShell({
       >
         {children}
       </div>
+      {(hostStatus === "reconnecting" || hostStatus === "unavailable") && (
+        <div
+          role="status"
+          className="shrink-0 border-t border-border bg-muted px-4 py-1.5 text-xs text-muted-foreground"
+        >
+          {t(
+            hostStatus === "reconnecting" ? "desktopHost.reconnecting" : "desktopHost.unavailable",
+          )}
+        </div>
+      )}
     </div>
   );
 }

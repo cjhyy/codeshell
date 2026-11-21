@@ -1092,6 +1092,8 @@ export type ImGatewayUiEvent =
       conversation: DingTalkDiscoveredConversation;
     };
 
+export type DesktopHostStatus = "connecting" | "ready" | "reconnecting" | "unavailable";
+
 export interface CodeshellApi
   extends
     GoalControlApi,
@@ -1100,6 +1102,8 @@ export interface CodeshellApi
     ProjectPanelVersionApi,
     ProfilePluginExportApi,
     ProfileMemoryPromotionApi {
+  /** Workbench only. Subscribers receive the current connection state immediately. */
+  onDesktopHostStatus?(listener: (status: DesktopHostStatus) => void): () => void;
   /** Main-owned sidebar catalogue and transcript checkpoints. Optional for older hosts. */
   sessionCatalog?: SessionCatalogApi;
   /** Read-only bounded Pet projection. */
