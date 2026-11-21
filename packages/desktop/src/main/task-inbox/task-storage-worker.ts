@@ -5,6 +5,8 @@ import {
   type ResolveOperation,
   type PreparedOperationKey,
 } from "../../host/composition/operation-storage.js";
+import { getTrust } from "../trust-store.js";
+import { writeHostedProjectTrust } from "../hosted-project-trust.js";
 import { writeHostedSettings } from "../hosted-settings-write.js";
 import { SessionCatalogStore } from "../session-catalog-store.js";
 import { claimBusinessCommit } from "../../host/composition/business-calls.js";
@@ -30,6 +32,9 @@ let batches: OperationBatches | undefined;
 await serveSessionIndexWorker({
   ...tasks,
   async handle(ctx, command, payload) {
+    if (command === "trust/set")
+      return writeHostedProjectTrust(payload as Parameters<typeof writeHostedProjectTrust>[0]);
+    if (command === "trust/readProjection") return getTrust(payload as string);
     if (command === "settings/patch")
       return writeHostedSettings(payload as Parameters<typeof writeHostedSettings>[0]);
     if (isBatchCommand(command)) {

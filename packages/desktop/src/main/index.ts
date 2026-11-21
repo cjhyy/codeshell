@@ -4878,7 +4878,10 @@ const disposeOperationBatchHost = registerOperationBatchHost({
 });
 const disposeOperationResolutionHost = registerOperationResolutionHost(operationScope);
 registerAutomationIpc();
-registerTrustNotificationIpc({ externalRuntimeService: () => externalRuntime.service });
+registerTrustNotificationIpc({
+  host: desktopHost,
+  externalRuntimeService: () => externalRuntime.service,
+});
 registerDesktopShutdown(app, {
   ownsInstance: () => ownsDesktopInstance,
   flushRenderers: () => sessionCatalogIpc.flushRenderers(),

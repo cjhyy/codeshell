@@ -4,9 +4,13 @@ import { ExternalRuntimeService } from "./external-runtime-service.js";
 import { setProjectTrustWithRevocation } from "./project-trust-lifecycle.js";
 import { requireRendererProjectPath } from "./renderer-project-path.js";
 import { loadRecents } from "./recents-store.js";
-import { getTrust, setTrust, summarizeProjectTrustRisks, type TrustLevel } from "./trust-store.js";
+import { updateHostedProjectTrust } from "./hosted-project-trust.js";
+import type { CallShellBusiness } from "../shared/shell-business-contracts.js";
+import type { IpcMainInvokeEvent } from "electron";
+import { getTrust, summarizeProjectTrustRisks, type TrustLevel } from "./trust-store.js";
 
 export interface TrustNotificationIpcDeps {
+  host: { callBusiness: CallShellBusiness; documentSignal(event: IpcMainInvokeEvent): AbortSignal };
   externalRuntimeService: () => ExternalRuntimeService | null;
 }
 
@@ -17,11 +21,13 @@ export function registerTrustNotificationIpc(deps: TrustNotificationIpcDeps) {
     return getTrust(await requireRendererProjectPath(p));
   });
 
-  ipcMain.handle("trust:set", async (_e, p: string, level: TrustLevel) => {
+  ipcMain.handle("trust:set", async (event, p: string, level: TrustLevel) => {
+    const signal = deps.host.documentSignal(event);
     if (typeof p !== "string") throw new Error("trust:set requires path");
     if (level !== "trusted" && level !== "untrusted") throw new Error("invalid level");
     await setProjectTrustWithRevocation(await requireRendererProjectPath(p), level, {
-      setTrust,
+      setTrust: (path, level) =>
+        updateHostedProjectTrust(deps.host.callBusiness, path, level, signal),
       revokeExternalRuntimeTrust: async (cwd) =>
         deps.externalRuntimeService()?.revokeProjectTrust(cwd),
     });
