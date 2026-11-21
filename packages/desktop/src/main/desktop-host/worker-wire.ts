@@ -1,3 +1,8 @@
+import type {
+  WorkbenchRequest,
+  WorkbenchAdmission,
+  WorkbenchIngressAdapter,
+} from "./ingress-wire.js";
 import type { Snapshot } from "../SessionSnapshotStore.js";
 import type { OutputMutation, OutputPublication } from "./stored-output.js";
 import type {
@@ -15,6 +20,7 @@ export interface HostedDesktopOutput {
   onOutput(listener: (frame: OutputPublication) => void): () => void;
   /** Captured producers cannot publish into another utility after a restart. */
   captureGeneration(): () => boolean;
+  setIngress(adapter: WorkbenchIngressAdapter): void;
   setDeltaInterest(all: boolean, sessions: string[]): void;
 }
 export type DesktopWorkerDriver = { readonly hostedOutput?: HostedDesktopOutput } & Pick<
@@ -32,6 +38,7 @@ export type DesktopWorkerDriver = { readonly hostedOutput?: HostedDesktopOutput 
 >;
 
 export type WorkerCommand =
+  | { type: "renderer-admitted"; call: number; admission: WorkbenchAdmission }
   | { type: "delta-interest"; all: boolean; sessions: string[] }
   | { type: "output"; call: number; command: OutputMutation }
   | { type: "snapshot"; call: number; sessionId: string; sinceSeq: number }
@@ -48,6 +55,8 @@ export type WorkerCommand =
   | { type: "stop"; generation: number };
 
 export type WorkerNotice =
+  | { type: "renderer-prepare"; call: number; request: WorkbenchRequest }
+  | { type: "renderer-settled"; line: string }
   | { type: "frames"; frames: OutputPublication[] }
   | { type: "output-result"; call: number; snapshot?: Snapshot; error?: string }
   | { type: "started"; generation: number; pid?: number }

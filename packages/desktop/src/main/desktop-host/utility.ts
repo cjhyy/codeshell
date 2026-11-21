@@ -1,3 +1,6 @@
+import { lstat } from "node:fs/promises";
+import { join } from "node:path";
+import { ingressMethods } from "./ingress-methods.js";
 import { HostApprovalState } from "./approval-state.js";
 import { openStateStorage } from "@cjhyy/code-shell-core/internal/storage";
 import { taskHostReads } from "../task-inbox/task-host-reads.js";
@@ -94,6 +97,27 @@ parent.on("message", ({ data, ports }) => {
       new Map([
         ...desktopHostMethods((options) => catalog.list(options)),
         ...taskHostReads(storage),
+        ...ingressMethods(
+          (req, current) => {
+            if (!worker) throw new Error("Desktop worker is unavailable");
+            return worker.rendererCommand(req, current);
+          },
+          async (id) => {
+            if (
+              (await catalog.list({ sessionId: id, limit: 1 })).sessions.some(
+                (row) => row.id === id,
+              )
+            )
+              return "visible";
+            try {
+              await lstat(join(sessionsRoot(), id));
+              return "hidden";
+            } catch (error) {
+              if ((error as NodeJS.ErrnoException).code === "ENOENT") return "absent";
+              throw error;
+            }
+          },
+        ),
         ["agent/pendingApprovals", approvals.method] as const,
         ...outputMethods(
           (id, since) => output.snapshot(id, since),
