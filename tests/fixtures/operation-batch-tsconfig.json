@@ -2,6 +2,7 @@
   "compilerOptions": {
     "baseUrl": "../..",
     "paths": {
+      "@cjhyy/code-shell-core/internal/operations": ["./packages/core/src/index.operations.ts"],
       "@cjhyy/code-shell-core/internal": ["./packages/core/src/index.internal.ts"],
       "@cjhyy/code-shell-core": ["./packages/core/src/index.ts"],
       "@cjhyy/code-shell-core/extension": ["./packages/core/src/index.extension.ts"],

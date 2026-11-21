@@ -1,7 +1,5 @@
-import {
-  createLinkOperationReviewStore,
-  readProtectedOperationKey,
-} from "@cjhyy/code-shell-core/internal";
+import { createLinkOperationReviewStore } from "@cjhyy/code-shell-core/internal";
+import { readProtectedOperationKey } from "@cjhyy/code-shell-core/internal/operations";
 import {
   operationRootIdentity,
   operationRegistryRevision,
