@@ -1,3 +1,7 @@
+import { HostedCloudProjects } from "../../packages/desktop/src/host/remote/cloud-projects.js";
+import { NativeCloudProjects } from "../../packages/desktop/src/main/desktop-host/cloud-projects-client.js";
+import { createCloudManagementTransport } from "../../packages/desktop/src/main/cloud-management-http.js";
+import { managedCloudPartition } from "@cjhyy/code-shell-server/account";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -20,9 +24,19 @@ if (workerData?.kind === "account-fixture") {
       return request(input);
     },
   );
+  const projectTransport = createCloudManagementTransport(Buffer.from(ca));
+  const projects = new HostedCloudProjects(
+    () => peer,
+    account,
+    (input) => {
+      assert.equal(input.origin, origin);
+      return projectTransport(input);
+    },
+  );
   const peer: PrivateHostPeer = new PrivateHostPeer(
     nodePrivatePort(port),
     (method, raw, signal) => {
+      if (method.startsWith("projects/")) return projects.run(method, raw, signal);
       assert.equal(method, "cloud/account");
       return account.run(raw, signal);
     },
@@ -38,6 +52,7 @@ async function until(predicate: () => boolean) {
 export async function exerciseHostedAccount(options: {
   origin: string;
   ca: Buffer;
+  projectId: string;
   root: string;
   token: () => string;
 }) {
@@ -60,6 +75,8 @@ export async function exerciseHostedAccount(options: {
     },
     decrypt: async (v) => cipher.decrypt(v),
   });
+  const partitions = new Set<string>();
+  let entitled = true;
   const start = () => {
     const { port1, port2 } = new MessageChannel();
     const worker = new Worker(new URL(import.meta.url), {
@@ -85,13 +102,39 @@ export async function exerciseHostedAccount(options: {
         activates++;
       },
     });
+    const projects = new NativeCloudProjects(() => peer, {
+      account,
+      requireFeature() {
+        if (!entitled) throw Error("not subscribed");
+      },
+      onFeatureChange: () => () => {},
+      windows: {
+        open: async ({ grant, projectId, authorized }) => {
+          assert.ok(authorized());
+          assert.equal(projectId, options.projectId);
+          assert.notEqual(grant.token, options.token());
+          partitions.add(managedCloudPartition(grant));
+          return { address: options.origin + "/?project=" + projectId };
+        },
+        close: async (key) => {
+          partitions.delete(key);
+        },
+      },
+    });
     const peer: PrivateHostPeer = new PrivateHostPeer(
       nodePrivatePort(port1),
-      (method, raw, signal) => account.handle(method, raw, signal),
-      () => account.disconnect(),
+      (method, raw, signal) =>
+        method.startsWith("projects/")
+          ? projects.handle(method, raw, signal)
+          : account.handle(method, raw, signal),
+      () => {
+        account.disconnect();
+        void projects.disconnect();
+      },
     );
     return {
       account,
+      projects,
       stop: async () => {
         peer.close();
         await worker.terminate();
@@ -115,13 +158,38 @@ export async function exerciseHostedAccount(options: {
     assert.ok(values.every((v) => v === options.token()));
     assert.ok(!JSON.stringify(active.account.status()).includes(options.token()));
     assert.ok(!readFileSync(file).includes(options.token()));
+    const projectRequest = {
+      action: "open",
+      accountOrigin: login.origin,
+      accountId: id,
+      cloudOrigin: login.origin,
+      projectId: options.projectId,
+    };
+    entitled = false;
+    await assert.rejects(
+      active.projects.manage(projectRequest, () => true),
+      /not subscribed/,
+    );
+    entitled = true;
+    const projectView = await active.projects.manage(projectRequest, () => true);
+    assert.equal(projectView.action, "open");
+    assert.equal(partitions.size, 1);
     await active.stop();
     assert.ok(lease.signal.aborted);
+    assert.equal(partitions.size, 0, "Host crash destroys its Native cloud windows");
     active = start();
     await active.account.connect();
     await until(() => active.account.status().state === "signed-in");
     await active.account.resume();
     assert.equal(activates, 2);
+    await active.projects.manage(projectRequest, () => true);
+    assert.equal(partitions.size, 1);
+    const loggedOut = await active.projects.manage(
+      { accountOrigin: login.origin, accountId: id, cloudOrigin: login.origin, action: "logout" },
+      () => true,
+    );
+    assert.deepEqual(loggedOut, { action: "logout", revoked: true });
+    assert.equal(partitions.size, 0);
     assert.equal(await active.account.getCredential(login.origin, id), options.token());
     await assert.rejects(active.account.getCredential(login.origin, "wrong-account"), /账号/);
     assert.equal((await active.account.logout()).revocation, "confirmed");

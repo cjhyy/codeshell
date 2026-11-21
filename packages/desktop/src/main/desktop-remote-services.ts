@@ -108,11 +108,14 @@ export function createDesktopRemoteServices(options: {
       ...effects,
       store: CloudAccountStore.asynchronous(grantFile, cipher),
     });
-  const cloudManagementManager = new CloudManagementManager({
+  const projectDeps = {
     account: cloudAccountManager,
     windows: options.cloudWindows,
     requireFeature: () => accountFeatures.requireReady("cloud.projects"),
-  });
+    onFeatureChange: (listener: () => void) => accountFeatures.onChanged(listener),
+  };
+  const cloudManagementManager =
+    options.remote?.createProjects(projectDeps) ?? new CloudManagementManager(projectDeps);
   const mobileRemoteController = new MobileRemoteController({
     account: cloudAccountManager,
     connectorFactory: options.remote?.relay.create,
@@ -210,6 +213,7 @@ export function createDesktopRemoteServices(options: {
   registerCloudWorkbenchIpc({
     ipcMain: options.ipcMain,
     manager: cloudManagementManager,
+    documentSignal: options.documentSignal,
     isMainWindow,
     openLegacy: options.openLegacyCloud,
   });

@@ -10,6 +10,17 @@ const token = () => randomBytes(32).toString("base64url");
 const cert = await readFile(join(root, "cert.pem")),
   key = await readFile(join(root, "key.pem"));
 const requests = [];
+const installationId = randomUUID(),
+  projectId = randomUUID();
+let managementTicket, managementToken;
+const project = {
+  id: projectId,
+  name: "fixture",
+  status: "running",
+  generation: 1,
+  createdAt: 1,
+  updatedAt: 1,
+};
 let origin,
   active,
   saved,
@@ -22,7 +33,10 @@ const server = createServer({ cert, key }, async (req, res) => {
   for await (const chunk of req) chunks.push(chunk);
   const body = chunks.length ? JSON.parse(Buffer.concat(chunks).toString()) : undefined;
   requests.push({ url: req.url, token: req.headers.authorization, body });
-  assert.equal(req.headers.origin, origin);
+  assert.equal(
+    req.headers.origin,
+    req.url === "/api/v1/cloud-management/session" ? undefined : origin,
+  );
   if (req.url === "/api/v1/account/leak") {
     redirectTargetRequests++;
     res.end("{}");
@@ -38,6 +52,72 @@ const server = createServer({ cert, key }, async (req, res) => {
     return;
   }
   res.setHeader("Content-Type", "application/json");
+  if (req.url === "/api/v1/cloud-management/capabilities") {
+    assert.equal(req.headers.authorization, undefined);
+    res.end(
+      JSON.stringify({
+        version: 2,
+        mode: "cloud-account",
+        cloudOrigin: origin,
+        accountOrigin: origin,
+        installationId,
+      }),
+    );
+    return;
+  }
+  if (req.url === "/api/v1/account/cloud-management/tickets") {
+    assert.equal(req.headers.authorization, "Bearer " + active.accessToken);
+    assert.deepEqual(body, { cloudOrigin: origin, installationId });
+    managementTicket = token();
+    res.end(
+      JSON.stringify({
+        ticket: managementTicket,
+        cloudOrigin: origin,
+        accountOrigin: origin,
+        installationId,
+        expiresAt: Date.now() + 30_000,
+      }),
+    );
+    return;
+  }
+  if (req.url === "/api/v1/cloud-management/session") {
+    assert.equal(req.headers.authorization, undefined);
+    assert.deepEqual(body, { ticket: managementTicket });
+    managementTicket = undefined;
+    managementToken = token();
+    res.end(
+      JSON.stringify({
+        token: managementToken,
+        session: {
+          id: randomUUID(),
+          kind: "cloud-management",
+          audience: origin,
+          installationId,
+          accountOrigin: origin,
+          accountId: active.account.id,
+          managementEpoch: randomUUID(),
+          expiresAt: Date.now() + 60_000,
+        },
+      }),
+    );
+    return;
+  }
+  if (req.url === "/api/v1/projects" || req.url === "/api/v1/projects/" + projectId + "/open") {
+    assert.equal(req.headers.authorization, "Bearer " + managementToken);
+    res.end(
+      JSON.stringify(
+        req.url.endsWith("/open")
+          ? { project, url: origin + "/?project=" + projectId }
+          : { runtime: "docker", available: true, projects: [project] },
+      ),
+    );
+    return;
+  }
+  if (req.url === "/api/v1/cloud-management/logout") {
+    assert.equal(req.headers.authorization, "Bearer " + managementToken);
+    res.end('{"revoked":true}');
+    return;
+  }
   if (req.url === "/api/v1/account/status") {
     res.end(
       JSON.stringify({
@@ -142,7 +222,13 @@ try {
     "expired logout refreshes before server revocation",
   );
   const { exerciseHostedAccount } = await import(`${root}/cloud-account-hosted.js`);
-  await exerciseHostedAccount({ origin, ca: cert, root, token: () => active.accessToken });
+  await exerciseHostedAccount({
+    origin,
+    ca: cert,
+    root,
+    projectId,
+    token: () => active.accessToken,
+  });
   mode = "redirect";
   await assert.rejects(transport({ origin, path: "/api/v1/account/login", body: {} }));
   assert.equal(redirectTargetRequests, 0);

@@ -88,6 +88,9 @@ export class HostedCloudAccount {
       retireRelay: (identity) => native("retire", identity),
     });
   }
+  captureRootAccount(...args: Parameters<CloudAccountManager["captureRootAccount"]>) {
+    return this.manager.captureRootAccount(...args);
+  }
   run(raw: unknown, signal: AbortSignal) {
     const req = raw as NativeCloudRequest | undefined;
     if (!req || typeof req.flow !== "string" || !/^[a-f0-9-]{36}$/.test(req.flow) || !req.action)
