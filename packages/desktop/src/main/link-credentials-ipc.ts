@@ -77,13 +77,11 @@ export function registerLinkCredentialIpc(deps: LinkCredentialIpcDeps) {
         undefined,
         (store) => {
           const projectIds = new Set(store.list("project").map((credential) => credential.id));
-          return store
-            .listMasked()
-            .map((credential) => ({
-              ...credential,
-              meta: credential.meta ? linkConnectionMetadata(credential.meta) : undefined,
-              storeScope: projectIds.has(credential.id) ? "project" : "user",
-            }));
+          return store.listMasked().map((credential) => ({
+            ...credential,
+            meta: credential.meta ? linkConnectionMetadata(credential.meta) : undefined,
+            storeScope: projectIds.has(credential.id) ? "project" : "user",
+          }));
         },
       );
     }),
@@ -165,8 +163,13 @@ export function registerLinkCredentialIpc(deps: LinkCredentialIpcDeps) {
     )
       throw new Error("请在 Link 页的独立服务连接中管理或断开此连接，以同步撤销远端授权。");
   }
-  function assertGenericCredentialMutation(cwd: string, id: string) {
-    const credential = new CredentialStore(cwd || undefined).resolve(id);
+  async function assertGenericCredentialMutation(cwd: string, id: string) {
+    const credential = await runDesktopCredentialOperation(
+      cwd || undefined,
+      ["user", "project"],
+      undefined,
+      (store) => store.resolve(id),
+    );
     if (credential && isRemoteLinkCredential(credential))
       throw new Error("请在 Link 页的独立服务连接中管理或断开此连接，以同步撤销远端授权。");
   }
@@ -426,24 +429,33 @@ export function registerLinkCredentialIpc(deps: LinkCredentialIpcDeps) {
       },
     ),
   );
-  ipcMain.handle("mcpOAuth:login", (_e, raw: unknown) => {
-    const input = normalizeMcpOAuthLoginInput(raw);
-    if (input.credentialId) assertGenericCredentialMutation("", input.credentialId);
-    return getMcpOAuthService().login(input);
-  });
-  ipcMain.handle("mcpOAuth:refresh", (_e, credentialId: unknown) => {
-    if (typeof credentialId !== "string" || !credentialId) {
-      throw new Error("mcpOAuth:refresh requires credentialId");
-    }
-    assertGenericCredentialMutation("", credentialId);
-    return getMcpOAuthService().refresh(credentialId);
-  });
-  ipcMain.handle("mcpOAuth:logout", (_e, credentialId: unknown) => {
-    if (typeof credentialId !== "string" || !credentialId) {
-      throw new Error("mcpOAuth:logout requires credentialId");
-    }
-    assertGenericCredentialMutation("", credentialId);
-    return getMcpOAuthService().logout(credentialId);
-  });
+  ipcMain.handle(
+    "mcpOAuth:login",
+    guarded(async (_e, raw: unknown) => {
+      const input = normalizeMcpOAuthLoginInput(raw);
+      if (input.credentialId) await assertGenericCredentialMutation("", input.credentialId);
+      return getMcpOAuthService().login(input);
+    }),
+  );
+  ipcMain.handle(
+    "mcpOAuth:refresh",
+    guarded(async (_e, credentialId: unknown) => {
+      if (typeof credentialId !== "string" || !credentialId) {
+        throw new Error("mcpOAuth:refresh requires credentialId");
+      }
+      await assertGenericCredentialMutation("", credentialId);
+      return getMcpOAuthService().refresh(credentialId);
+    }),
+  );
+  ipcMain.handle(
+    "mcpOAuth:logout",
+    guarded(async (_e, credentialId: unknown) => {
+      if (typeof credentialId !== "string" || !credentialId) {
+        throw new Error("mcpOAuth:logout requires credentialId");
+      }
+      await assertGenericCredentialMutation("", credentialId);
+      return getMcpOAuthService().logout(credentialId);
+    }),
+  );
   return { remoteLinkIpc };
 }

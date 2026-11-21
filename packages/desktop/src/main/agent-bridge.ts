@@ -100,7 +100,6 @@ import {
   executeRemoteLinkAction,
   RemoteLinkError,
   executeLocalOAuthLinkAction,
-  CredentialStore,
   type CredentialSnapshot,
   type RemoteLinkActionReply,
   type LocalOAuthLinkActionRequest,
@@ -129,7 +128,7 @@ import {
   type PetProjectionSnapshotResult,
   type PetReportToMimiEvent,
 } from "@cjhyy/code-shell-pet";
-import { resolveCookieCredentialForBrowser } from "./credential-action.js";
+import { readDesktopCookie, runDesktopCredentialOperation } from "./credential-file-client.js";
 import {
   injectCredentialIntoSessionBrowser,
   type CredentialInjectReport,
@@ -1608,10 +1607,16 @@ export class AgentBridge implements PetStateBridge {
           const serverUrl =
             typeof parsed.params?.serverUrl === "string" ? parsed.params.serverUrl : "";
           if (!serverUrl) throw new Error("oauthAccessResolve requires the selected server URL");
-          const assertWorkerOAuthAccess = () => {
+          const assertWorkerOAuthAccess = async () => {
             // This generic IPC returns a bearer to the Worker. Link-owned MCP
             // tokens may only feed the dedicated Host execution route above.
-            const credential = new CredentialStore(undefined).resolve(credentialId, "full");
+            const credential = await runDesktopCredentialOperation(
+              undefined,
+              ["user"],
+              undefined,
+              (store) => store.resolve(credentialId),
+            );
+            assertCurrent();
             if (
               !credential ||
               credential.type !== "oauth" ||
@@ -1620,14 +1625,14 @@ export class AgentBridge implements PetStateBridge {
             )
               throw new Error("OAuth credential is restricted to Host-owned actions");
           };
-          assertWorkerOAuthAccess();
+          await assertWorkerOAuthAccess();
           const result = await this.oauthAccessResolver({
             id: credentialId,
             scope: "full",
             serverUrl,
             forceRefresh: parsed.params?.forceRefresh === true,
           });
-          assertWorkerOAuthAccess();
+          await assertWorkerOAuthAccess();
           reply = {
             jsonrpc: "2.0",
             id,
@@ -1721,6 +1726,7 @@ export class AgentBridge implements PetStateBridge {
   ): boolean {
     const parsed = parseCredentialActionLine(line, parsedLine);
     if (!parsed) return false;
+    const epoch = this.localOAuthLinkEpoch;
     void (async () => {
       let resultJson: string;
       try {
@@ -1730,42 +1736,25 @@ export class AgentBridge implements PetStateBridge {
         if (!parsed.sessionId) {
           throw new Error("credential inject missing sessionId");
         }
-        const bucket = bucketForSession(parsed.sessionId);
-        if (!bucket) {
-          throw new Error(`no browser bucket registered for session ${parsed.sessionId}`);
-        }
-        // Resolve the credential against the ORIGINATING session's cwd (from the
-        // parsed action's sessionId). If this process lost the in-memory map,
-        // recover from persisted state.json; never fall back to lastRunContext,
-        // which may belong to a different project/session.
-        const sessionCwd = this.cwdForSessionOrThrow(parsed.sessionId);
-        const resolved = resolveCookieCredentialForBrowser(
-          sessionCwd,
-          parsed.credentialId,
-          parsed.credentialScope,
-          parsed.expectedApprovalIdentity,
+        resultJson = JSON.stringify(
+          await this.injectCredentialForSession(
+            parsed.sessionId,
+            parsed.credentialId,
+            parsed.credentialScope,
+            parsed.expectedApprovalIdentity,
+            () => {
+              if (this.localOAuthLinkEpoch !== epoch) throw new Error("Cookie target has changed");
+            },
+          ),
         );
-        if (!resolved.ok) {
-          resultJson = JSON.stringify({ ok: false, error: resolved.error });
-        } else {
-          const report = await injectCredentialIntoSessionBrowser({
-            sessionId: parsed.sessionId,
-            bucket,
-            sessionCwd,
-            credentialId: parsed.credentialId,
-            credentialScope: parsed.credentialScope,
-            resolved,
-            reloadBucket: broadcastBrowserReload,
-          });
-          resultJson = JSON.stringify(report);
-        }
       } catch (e) {
         resultJson = JSON.stringify({
           ok: false,
           error: e instanceof Error ? e.message : String(e),
         });
       }
-      this.core.sendLine(buildCredentialActionReply(parsed, resultJson));
+      if (this.localOAuthLinkEpoch === epoch)
+        this.core.sendLine(buildCredentialActionReply(parsed, resultJson));
     })();
     return true;
   }
@@ -2583,17 +2572,24 @@ export class AgentBridge implements PetStateBridge {
     credentialId: string,
     credentialScope: "full" | "project" = "full",
     expectedApprovalIdentity?: string,
+    assertCurrent?: () => void,
   ): Promise<CredentialInjectReport | { ok: false; error: string }> {
     try {
       const bucket = bucketForSession(sessionId);
       if (!bucket) throw new Error(`no browser bucket registered for session ${sessionId}`);
       const sessionCwd = this.cwdForSessionOrThrow(sessionId);
-      const resolved = resolveCookieCredentialForBrowser(
+      const resolved = await readDesktopCookie(
         sessionCwd,
         credentialId,
         credentialScope,
         expectedApprovalIdentity,
       );
+      assertCurrent?.();
+      if (
+        bucketForSession(sessionId) !== bucket ||
+        this.cwdForSessionOrThrow(sessionId) !== sessionCwd
+      )
+        throw new Error("Cookie target has changed");
       if (!resolved.ok) return { ok: false, error: resolved.error };
       return await injectCredentialIntoSessionBrowser({
         sessionId,

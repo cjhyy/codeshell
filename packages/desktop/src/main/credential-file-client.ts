@@ -36,6 +36,33 @@ export function runDesktopCredentialOperation<T>(
   read: readonly CredentialScope[],
   write: CredentialScope | undefined,
   work: (store: CredentialStore) => T,
+  assertCurrent?: () => void,
 ): Promise<T> {
-  return new CredentialStore(cwd).withAsyncCipher(credentialFiles(), read, write, work);
+  const files = credentialFiles();
+  const guarded = assertCurrent
+    ? {
+        ...files,
+        commit: (...args: Parameters<typeof files.commit>) => {
+          assertCurrent();
+          return files.commit(...args);
+        },
+      }
+    : files;
+  return new CredentialStore(cwd).withAsyncCipher(guarded, read, write, work);
+}
+
+/** Worker and panel cookie access share the same CAS-verified credential snapshot. */
+export async function readDesktopCookie(
+  cwd: string | undefined,
+  id: string,
+  scope: "full" | "project",
+  approval?: string,
+) {
+  const { resolveCookieCredentialForBrowser } = await import("./credential-action.js");
+  return runDesktopCredentialOperation(
+    cwd,
+    scope === "project" ? ["project"] : ["user", "project"],
+    undefined,
+    (store) => resolveCookieCredentialForBrowser(cwd, id, scope, approval, store),
+  );
 }

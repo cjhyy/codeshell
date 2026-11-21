@@ -18,22 +18,20 @@ export type ResolvedCookieCredential =
   | { ok: false; error: string };
 
 function storedCookieCredential(
-  sessionCwd: string | undefined,
+  store: CredentialStore,
   credentialId: string,
   credentialScope: DesktopCredentialScope,
 ): { credential: Credential; storeScope: CredentialScope; approvalIdentity: string } | null {
   // Determine ownership from the same record read, not a second list that may
   // observe a later project shadow being created/deleted in another process.
-  const project = new CredentialStore(sessionCwd).resolve(credentialId, "project");
-  const credential =
-    project ??
-    (credentialScope === "full" ? new CredentialStore().resolve(credentialId) : undefined);
-  if (!credential || credential.type !== "cookie") return null;
-  const storeScope = project ? "project" : "user";
+  const found = store
+    .listWithSources(credentialScope)
+    .credentials.find((record) => record.credential.id === credentialId);
+  if (!found || found.credential.type !== "cookie") return null;
   return {
-    credential,
-    storeScope,
-    approvalIdentity: new CredentialStore(sessionCwd).approvalIdentity(storeScope, credential),
+    credential: found.credential,
+    storeScope: found.source,
+    approvalIdentity: store.approvalIdentity(found.source, found.credential),
   };
 }
 
@@ -42,8 +40,9 @@ export function resolveCookieCredentialForBrowser(
   credentialId: string,
   credentialScope: DesktopCredentialScope,
   expectedApprovalIdentity?: string,
+  store = new CredentialStore(sessionCwd),
 ): ResolvedCookieCredential {
-  const stored = storedCookieCredential(sessionCwd, credentialId, credentialScope);
+  const stored = storedCookieCredential(store, credentialId, credentialScope);
   if (!stored) {
     return { ok: false, error: `无 cookie 凭证: "${credentialId}"` };
   }
@@ -115,11 +114,12 @@ export function refreshCookieCredentialFromBrowser(
   storeScope: CredentialScope,
   jar: unknown[],
   expectedSecret: string,
+  store = new CredentialStore(sessionCwd),
 ): RefreshCookieCredentialResult {
   if (!Array.isArray(jar) || jar.length === 0) return "empty";
   const secret = JSON.stringify(jar);
   const outcome: { result: RefreshCookieCredentialResult } = { result: "missing" };
-  new CredentialStore(sessionCwd).updateExisting(storeScope, credentialId, (current) => {
+  store.updateExisting(storeScope, credentialId, (current) => {
     if (current.type !== "cookie") return undefined;
     if (current.meta?.autoRefreshFromBrowser !== true) {
       outcome.result = "disabled";

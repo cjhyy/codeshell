@@ -2,7 +2,11 @@ import {
   observeBackgroundWorkChange,
   type BackgroundWorkChange,
 } from "@cjhyy/code-shell-core/internal";
-import { setDesktopCredentialFiles } from "./credential-file-client.js";
+import {
+  setDesktopCredentialFiles,
+  readDesktopCookie,
+  runDesktopCredentialOperation,
+} from "./credential-file-client.js";
 import { taskInboxEnabled } from "./task-inbox/task-host-reads.js";
 import { registerLinkedFileSourceIpc } from "./linked-file-sources-ipc.js";
 import { openLinkedFileSourceOperation } from "./linked-file-sources-host.js";
@@ -65,7 +69,6 @@ import {
   writeSettingsSchemaFile,
   userHome,
   codeShellHome,
-  CredentialStore,
   summarizeCookieExpiry,
   materializeCookieSecret,
   sweepStaleCredentialCookies,
@@ -294,7 +297,6 @@ import { cleanupLease, sweepStaleLeases, BROWSER_PARTITION } from "./credentials
 import { cookieCredentialAutoRefresh } from "./cookie-credential-auto-refresh.js";
 import { isBrowserPartition } from "../shared/browser-partition.js";
 import { isProfileBrowserPartition } from "../shared/browser-profile.js";
-import { resolveCookieCredentialForBrowser } from "./credential-action.js";
 import { restoreCookieCredentialToBrowser } from "./cookie-credential-browser.js";
 import { loginAndCaptureCookies } from "./credentials-login/index.js";
 import {
@@ -706,12 +708,13 @@ const panelAppBridge = new PanelAppBridge({
   cookieCredentials: {
     taskCredentials: async (cwd) => {
       await migrateCredentialStore(cwd);
-      return new CredentialStore(cwd).list();
+      return runDesktopCredentialOperation(cwd, ["user", "project"], undefined, (s) => s.list());
     },
     list: async (cwd) => {
       await migrateCredentialStore(cwd);
-      return new CredentialStore(cwd)
-        .list()
+      return (
+        await runDesktopCredentialOperation(cwd, ["user", "project"], undefined, (s) => s.list())
+      )
         .filter((credential) => credential.type === "cookie")
         .map((credential) => {
           let health: "ready" | "corrupted" = "corrupted";
@@ -750,22 +753,23 @@ const panelAppBridge = new PanelAppBridge({
         typeof capture.suggestedLabel === "string" && capture.suggestedLabel.trim()
           ? `${providerLabel} · ${capture.suggestedLabel.trim().slice(0, 80)}`
           : `${providerLabel} 登录`;
-      const store = new CredentialStore(cwd);
-      const previous = new CredentialStore().resolve(credentialId);
       cookieCredentialAutoRefresh.detachForCredential(cwd, credentialId, "user");
-      store.save("user", {
-        id: credentialId,
-        type: "cookie",
-        label: accountLabel,
-        secret: JSON.stringify(capture.jar),
-        meta: {
-          ...(previous?.type === "cookie" ? previous.meta : {}),
-          appUrl: url,
-          platform: providerLabel,
-          domain: capture.domain,
-          scope: "all",
-          switchMode: "merge",
-        },
+      await runDesktopCredentialOperation(cwd, ["user"], "user", (store) => {
+        const previous = store.resolve(credentialId);
+        store.save("user", {
+          id: credentialId,
+          type: "cookie",
+          label: accountLabel,
+          secret: JSON.stringify(capture.jar),
+          meta: {
+            ...(previous?.type === "cookie" ? previous.meta : {}),
+            appUrl: url,
+            platform: providerLabel,
+            domain: capture.domain,
+            scope: "all",
+            switchMode: "merge",
+          },
+        });
       });
       bridge?.pushCredentialSnapshot(cwd);
 
@@ -773,7 +777,7 @@ const panelAppBridge = new PanelAppBridge({
       const partition = browserPartitionForBucket(bucket);
       if (partition) {
         // Resolve the user record just saved, without project shadowing.
-        const resolved = resolveCookieCredentialForBrowser(undefined, credentialId, "full");
+        const resolved = await readDesktopCookie(undefined, credentialId, "full");
         if (!resolved.ok) throw new Error(resolved.error);
         const restored = await restoreCookieCredentialToBrowser({
           targetSession: partition,
@@ -805,7 +809,7 @@ const panelAppBridge = new PanelAppBridge({
       const partition = browserPartitionForBucket(bucket);
       if (!partition) throw new Error("Cookie restore requires an active task browser");
       await migrateCredentialStore(cwd);
-      const resolved = resolveCookieCredentialForBrowser(cwd, credentialId, "full");
+      const resolved = await readDesktopCookie(cwd, credentialId, "full");
       if (!resolved.ok) return { invalid: true };
       const result = await restoreCookieCredentialToBrowser({
         targetSession: partition,
@@ -821,7 +825,12 @@ const panelAppBridge = new PanelAppBridge({
     },
     materialize: async ({ credentialId, cwd }) => {
       await migrateCredentialStore(cwd);
-      const credential = new CredentialStore(cwd).resolve(credentialId);
+      const credential = await runDesktopCredentialOperation(
+        cwd,
+        ["user", "project"],
+        undefined,
+        (s) => s.resolve(credentialId),
+      );
       if (!credential || credential.type !== "cookie") {
         throw new Error(`No saved Cookie login: ${credentialId}`);
       }
@@ -1704,10 +1713,10 @@ async function createWindow(): Promise<BrowserWindow> {
         hostDirectory: codeShellHome(),
         sessionStorageDir: sessionsRoot(),
         cipher: new SafeStorageCipher(),
-        encryptionAvailable: () =>
-          safeStorage.isEncryptionAvailable() &&
+        encryptionAvailable: async () =>
+          (await safeStorage.isAsyncEncryptionAvailable()) &&
           (process.platform !== "linux" ||
-            safeStorage.getSelectedStorageBackend() !== "basic_text"),
+            !["basic_text", "unknown"].includes(safeStorage.getSelectedStorageBackend())),
         hasActiveEphemeralOwner: (sessionId) => quickChatOwnership.hasActiveOwner(sessionId),
         hasActiveHostTaskOwner: (sessionId) => panelAppBridge.hasActiveAgentTaskOwner(sessionId),
       }),

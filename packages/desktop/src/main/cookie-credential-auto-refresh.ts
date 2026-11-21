@@ -1,3 +1,4 @@
+import { runDesktopCredentialOperation } from "./credential-file-client.js";
 import type { ElectronCookieLike } from "./credentials-service.js";
 import type { CredentialScope } from "@cjhyy/code-shell-core";
 import {
@@ -104,7 +105,7 @@ export class CookieCredentialAutoRefresh {
   private readonly bindingByCredential = new Map<string, ActiveBinding>();
   private readonly debounceMs: number;
   private readonly shutdownTimeoutMs: number;
-  private readonly persist: typeof refreshCookieCredentialFromBrowser;
+  private readonly persist?: typeof refreshCookieCredentialFromBrowser;
   private readonly onError: (error: unknown) => void;
   private readonly inFlight = new Set<Promise<void>>();
   private shuttingDown = false;
@@ -113,7 +114,7 @@ export class CookieCredentialAutoRefresh {
   constructor(options: CookieCredentialAutoRefreshOptions = {}) {
     this.debounceMs = Math.max(0, options.debounceMs ?? DEFAULT_DEBOUNCE_MS);
     this.shutdownTimeoutMs = Math.max(0, options.shutdownTimeoutMs ?? DEFAULT_SHUTDOWN_TIMEOUT_MS);
-    this.persist = options.persist ?? refreshCookieCredentialFromBrowser;
+    this.persist = options.persist;
     this.onError =
       options.onError ??
       ((error) => dlog("credentials", "cookie_auto_refresh_failed", { error: String(error) }));
@@ -333,13 +334,33 @@ export class CookieCredentialAutoRefresh {
     // credential until all cookies present at binding are present again.
     const capturedKeys = new Set(jar.map(cookieKey));
     if ([...binding.requiredCookieKeys].some((key) => !capturedKeys.has(key))) return;
-    const result = this.persist(
+    const current = () =>
+      this.hasBinding(binding) && binding.enabled && binding.revision === revision;
+    const args = [
       binding.sessionCwd,
       binding.credentialId,
       binding.storeScope,
       jar,
       binding.expectedSecret,
-    );
+    ] as const;
+    const result = this.persist
+      ? this.persist(...args)
+      : await runDesktopCredentialOperation(
+          binding.sessionCwd,
+          [binding.storeScope],
+          binding.storeScope,
+          (store) => {
+            if (!current()) return "disabled" as const;
+            return refreshCookieCredentialFromBrowser(...args, store);
+          },
+          () => {
+            if (!current()) throw new Error("Cookie refresh binding expired");
+          },
+        ).catch((error) => {
+          if (current()) throw error;
+          return "disabled" as const;
+        });
+    if (!current()) return;
     if (result === "updated") binding.expectedSecret = JSON.stringify(jar);
     if (result === "missing" || result === "conflict") this.removeBinding(binding);
   }

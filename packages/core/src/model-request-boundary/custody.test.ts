@@ -127,6 +127,45 @@ test("encrypted Host custody retains no plaintext key and HMAC domains cannot be
   ).toMatchObject({ keyId: signatures.keyId, digests: { messages: signatures.digests.messages } });
 });
 
+test("concurrent asynchronous keychain prompts keep the file lock free and adopt the committed key", async () => {
+  const folder = directory();
+  const base = encryptedCipher();
+  let release!: () => void;
+  const pause = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let candidates = 0;
+  const unlocked = () => expect(existsSync(folder + ".lock")).toBe(false);
+  const cipher: EncryptionCipher = {
+    ...base,
+    asynchronous: {
+      async encrypt(value) {
+        unlocked();
+        candidates++;
+        await pause;
+        unlocked();
+        return base.encrypt(value);
+      },
+      async decrypt(value) {
+        unlocked();
+        return base.decrypt(value);
+      },
+    },
+  };
+  const sign = () =>
+    new ModelRequestKeyStore({ directory: folder, cipher, custodyMode: "host-encrypted" }).sign(
+      input,
+    );
+  const first = sign(),
+    second = sign();
+  expect(candidates).toBe(2);
+  release();
+  const [left, right] = await Promise.all([first, second]);
+  expect(left).toEqual(right);
+  expect(await sign()).toEqual(left);
+  expect(readdirSync(folder)).toHaveLength(1);
+});
+
 test("custody failure and corrupt key never rotate or downgrade into a new apparent Session key", async () => {
   const folder = directory();
   const options = {
