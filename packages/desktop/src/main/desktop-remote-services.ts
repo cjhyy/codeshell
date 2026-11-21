@@ -16,8 +16,12 @@ import { AccountDeviceService } from "./account-device-service.js";
 import { createAccountRemoteAuthorizer } from "./account-device-passkey.js";
 import { registerAccountDeviceIpc } from "./account-device-ipc.js";
 import { CloudAccountManager } from "./cloud-account-manager.js";
+import {
+  AsyncEncryptedGrantStore,
+  type AsyncGrantCipher,
+} from "@cjhyy/code-shell-core/internal/storage";
 import { CloudAccountStore } from "./cloud-account-store.js";
-import { DeviceRelayStore, type RelaySecretCipher } from "./device-relay-store.js";
+import { validRegistration } from "./device-relay-store.js";
 import { MobileRemoteController } from "./mobile-remote-controller.js";
 import { registerCloudAccountIpc } from "./cloud-account-ipc.js";
 import { registerDeviceRelayIpc } from "./device-relay-ipc.js";
@@ -35,7 +39,10 @@ export function createDesktopRemoteServices(options: {
   environmentDir: string;
   safeStorage: Pick<
     SafeStorage,
-    "isEncryptionAvailable" | "getSelectedStorageBackend" | "encryptString" | "decryptString"
+    | "isAsyncEncryptionAvailable"
+    | "getSelectedStorageBackend"
+    | "encryptStringAsync"
+    | "decryptStringAsync"
   >;
   windows: () => Iterable<BrowserWindow>;
   openExternal: (url: string) => Promise<void>;
@@ -48,16 +55,16 @@ export function createDesktopRemoteServices(options: {
   listProjects?: () => Promise<Array<{ id: string; name: string; path: string }>>;
   openLegacyCloud: (address: unknown) => Promise<{ address: string }>;
 }) {
-  const cipher: RelaySecretCipher = {
-    available: () =>
-      options.safeStorage.isEncryptionAvailable() &&
+  const cipher: AsyncGrantCipher = {
+    available: async () =>
+      (await options.safeStorage.isAsyncEncryptionAvailable()) &&
       (process.platform !== "linux" ||
-        options.safeStorage.getSelectedStorageBackend() !== "basic_text"),
-    encrypt: (value) => options.safeStorage.encryptString(value),
-    decrypt: (value) => options.safeStorage.decryptString(value),
+        !["unknown", "basic_text"].includes(options.safeStorage.getSelectedStorageBackend())),
+    encrypt: (value) => options.safeStorage.encryptStringAsync(value),
+    decrypt: async (value) => (await options.safeStorage.decryptStringAsync(value)).result,
   };
   const cloudAccountManager = new CloudAccountManager({
-    store: new CloudAccountStore(
+    store: CloudAccountStore.asynchronous(
       resolve(options.userDataDir, "cloud-account", "session.enc"),
       cipher,
     ),
@@ -103,7 +110,11 @@ export function createDesktopRemoteServices(options: {
     passcode: options.passcode,
     environmentDir: options.environmentDir,
     listProjects: options.listProjects,
-    store: new DeviceRelayStore(resolve(options.userDataDir, "mobile-remote", "relay.enc"), cipher),
+    store: new AsyncEncryptedGrantStore(
+      resolve(options.userDataDir, "mobile-remote", "relay.enc"),
+      cipher,
+      validRegistration,
+    ),
     changed: (status) => {
       accountFeatures.localChanged();
       for (const window of options.windows()) {

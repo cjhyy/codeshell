@@ -12,3 +12,10 @@ export {
   type CredentialFileCommand,
   type CredentialFileSnapshot,
 } from "./credential-files.js";
+export {
+  EncryptedGrantStore,
+  AsyncEncryptedGrantStore,
+  type RelaySecretCipher,
+  type AsyncGrantCipher,
+  type GrantStorage,
+} from "./encrypted-grant.js";
