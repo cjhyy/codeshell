@@ -3897,11 +3897,12 @@ app.whenReady().then(async () => {
       },
     });
     // Expose the live scheduler to the automation IPC service (Phase 3 UI).
-    setAutomationScheduler(automationHandle.scheduler);
-    automationHandle.scheduler.setDefinitionListener((id) =>
+    const scheduler = automationHandle.scheduler;
+    setAutomationScheduler(scheduler);
+    scheduler.setDefinitionListener((id) =>
       taskInboxService.markDirty("automation", id),
     );
-    taskInboxDisposers.push(() => automationHandle.scheduler.setDefinitionListener());
+    taskInboxDisposers.push(() => scheduler.setDefinitionListener());
     await petRuleScheduler?.start();
     // startAutomation installed the default executor (bindCronToEngine):
     // every cron job runs one headless codeshell turn. Driving Claude Code is
