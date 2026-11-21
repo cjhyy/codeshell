@@ -392,7 +392,7 @@ describe("transcript history hydration after a background resume", () => {
       }
     });
 
-  test("existing hydration recovers a long prefix evicted from Main through the v2 journal", async () => {
+  test("existing hydration recovers a long prefix and reconnects through the v2 journal without duplicating output", async () => {
     const root = mkdtempSync(join(tmpdir(), "codeshell-hydrate-journal-"));
     const manager = new SessionManager(root);
     const session = manager.create(root, "fixture", "fixture", "saved");
@@ -410,6 +410,12 @@ describe("transcript history hydration after a background resume", () => {
     const publish = (event: StreamEvent) =>
       snapshots.append("saved", { ...event, outputCursor: writer.append(event) });
     try {
+      let status!: (status: "ready" | "reconnecting") => void;
+      window.codeshell.onDesktopHostStatus = (cb) => {
+        status = cb;
+        cb("ready");
+        return () => {};
+      };
       initial = {};
       readDisk = async () => [];
       const persisted = deferred<{ value: string | null; hasEarlier: boolean }>();
@@ -507,6 +513,21 @@ describe("transcript history hydration after a background resume", () => {
       expect(
         hook.result.current.state.messages.filter((message) => message.kind === "turn_end"),
       ).toEqual([]);
+      await act(async () => {
+        status("reconnecting");
+        for (const text of [" A", " B", " C", " D"]) publish({ type: "text_delta", text });
+        publish({ type: "turn_complete", reason: "completed" });
+        status("ready");
+        await flushMicrotasks();
+      });
+      const replies = hook.result.current.state.messages.filter(
+        (message) => message.id === "durable-reply",
+      );
+      expect(replies).toEqual([
+        expect.objectContaining({ text: parts.join("") + " A B C D", done: true }),
+      ]);
+      expect(hook.result.current.state.outputCursor).toBe(snapshots.get("saved").outputCursor);
+      expect(hook.result.current.state.turnEpoch).toBe(1);
     } finally {
       await hook?.unmount();
       hook = undefined;

@@ -161,6 +161,20 @@ export function useTranscriptBuckets({
     (session) => session.id === activeSessionId,
   )?.engineSessionId;
   const [retryEpoch, setRetryEpoch] = useState(0);
+  useEffect(() => {
+    let previous: string | undefined;
+    return window.codeshell.onDesktopHostStatus?.((status) => {
+      if (status === "ready" && previous && previous !== "ready") {
+        // Old in-flight pages belong to the old Host. The active bucket rejoins
+        // its durable journal now; background buckets rejoin when selected.
+        for (const [bucket, generation] of hydrationGenerationsRef.current)
+          hydrationGenerationsRef.current.set(bucket, generation + 1);
+        hydratedBucketsRef.current.clear();
+        setRetryEpoch((epoch) => epoch + 1);
+      }
+      previous = status;
+    });
+  }, []);
   const freshJournalBucketsRef = useRef(new Set<string>());
   const [outputRecoveries, setOutputRecoveries] = useState<
     Record<string, "held" | "loading" | "joining" | "failed">

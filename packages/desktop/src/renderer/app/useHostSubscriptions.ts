@@ -733,6 +733,8 @@ export function useHostSubscriptions({
     const pendingApprovalDecisions = new Set<string>();
     let restoringApprovals = true;
     const resolvedDuringRestore = new Set<string>();
+    const liveDuringRestore = new Set<string>();
+    let restoreGeneration = 0;
     const externalRequestsDuringRestore = new Set<string>();
     externalApprovalsRef.current.ready = false;
     questionsRef.current.ready = false;
@@ -746,6 +748,7 @@ export function useHostSubscriptions({
         return;
       }
       if (resolvedDuringRestore.has(env.requestId)) return;
+      if (restoringApprovals && !fromSnapshot) liveDuringRestore.add(env.requestId);
       if (env.expiresAt !== undefined) {
         const previous = approvalDeadlines.get(env.requestId);
         if (previous !== undefined) clearTimeout(previous);
@@ -1109,41 +1112,73 @@ export function useHostSubscriptions({
     const offApprovalResolved = window.codeshell.onApprovalResolved(handleApprovalResolved);
     // Subscribe first so a decision made while the read is in flight wins over
     // an older snapshot. Use the same routing and permission path as live events.
-    const pendingApprovals = window.codeshell.getPendingApprovals?.();
-    if (pendingApprovals) {
-      void pendingApprovals
-        .then((pending) => {
-          if (!approvalHandlingActive) return;
-          const external = externalApprovalsRef.current;
-          external.pending = new Set(externalRequestsDuringRestore);
-          const pendingQuestions = new Set(questionsDuringRestore);
-          for (const env of pending) {
-            // A Core worker exit invalidates only its own snapshot entries.
-            if (approvalRestoreActive || env.source === "external-runtime") {
-              handleApproval(env, true);
-              if (
-                env.request.toolName === "__ask_user__" &&
-                !resolvedDuringRestore.has(env.requestId)
-              )
-                pendingQuestions.add(env.requestId);
+    const restoreApprovals = () => {
+      const generation = ++restoreGeneration;
+      resolvedDuringRestore.clear();
+      liveDuringRestore.clear();
+      externalRequestsDuringRestore.clear();
+      questionsDuringRestore.clear();
+      restoringApprovals = true;
+      approvalRestoreActive = true;
+      const pendingApprovals = window.codeshell.getPendingApprovals?.();
+      if (pendingApprovals) {
+        void pendingApprovals
+          .then((pending) => {
+            if (!approvalHandlingActive || restoreGeneration !== generation) return;
+            const external = externalApprovalsRef.current;
+            external.pending = new Set(externalRequestsDuringRestore);
+            const pendingQuestions = new Set(questionsDuringRestore);
+            const authoritative = new Set([
+              ...liveDuringRestore,
+              ...pending.map((env) => env.requestId),
+            ]);
+            for (const id of [...pendingApprovalIdsRef.current]) {
+              if (!authoritative.has(id)) handleApprovalResolved({ requestId: id });
             }
-          }
-          for (const requestId of questionsRef.current.pending.keys()) {
-            if (!pendingQuestions.has(requestId)) {
-              questionsRef.current.pending.delete(requestId);
-              questionsRef.current.projectedInto.delete(requestId);
+            for (const env of pending) {
+              // A Core worker exit invalidates only its own snapshot entries.
+              if (approvalRestoreActive || env.source === "external-runtime") {
+                handleApproval(env, true);
+                if (
+                  env.request.toolName === "__ask_user__" &&
+                  !resolvedDuringRestore.has(env.requestId)
+                )
+                  pendingQuestions.add(env.requestId);
+              }
             }
-          }
-          questionsRef.current.ready = true;
-          external.ready = true;
-          refreshExternalApprovals((version) => version + 1);
-        })
-        .catch((error) => window.codeshell.log("approval.restore_failed", { error: String(error) }))
-        .finally(() => {
+            for (const requestId of questionsRef.current.pending.keys()) {
+              if (!pendingQuestions.has(requestId)) {
+                questionsRef.current.pending.delete(requestId);
+                questionsRef.current.projectedInto.delete(requestId);
+              }
+            }
+            questionsRef.current.ready = true;
+            external.ready = true;
+            refreshExternalApprovals((version) => version + 1);
+          })
+          .catch((error) =>
+            window.codeshell.log("approval.restore_failed", { error: String(error) }),
+          )
+          .finally(() => {
+            if (restoreGeneration !== generation) return;
+            restoringApprovals = false;
+            resolvedDuringRestore.clear();
+          });
+      } else restoringApprovals = false;
+    };
+    restoreApprovals();
+    let previousHostStatus: string | undefined;
+    const offHostReconnect = window.codeshell.onDesktopHostStatus?.((status) => {
+      if (previousHostStatus && status !== previousHostStatus) {
+        if (status === "ready") restoreApprovals();
+        else if (previousHostStatus === "ready") {
+          ++restoreGeneration;
           restoringApprovals = false;
           resolvedDuringRestore.clear();
-        });
-    } else restoringApprovals = false;
+        }
+      }
+      previousHostStatus = status;
+    });
     const offMobileSessionSettings = window.codeshell.onMobileSessionSettings(
       (env: MobileSessionSettingsEnvelope) => {
         if (!env.sessionId) return;
@@ -1291,6 +1326,7 @@ export function useHostSubscriptions({
       offPetDelegationSession();
       offApproval();
       offApprovalResolved();
+      offHostReconnect?.();
       offMobileSessionSettings();
       offStatus();
       offExternalSessionState?.();

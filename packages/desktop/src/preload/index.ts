@@ -524,6 +524,9 @@ const desktopHost =
     ? new DesktopHostClient()
     : undefined;
 
+const agentHost = desktopHostRoutes.agentStream === "host" ? desktopHost : undefined;
+agentHost?.onStreamEvent((env) => streamListeners.forEach((listener) => listener(env)));
+
 if (desktopHost) {
   ipcRenderer.on(DesktopHostIpc.port, (event) => {
     const port = event.ports[0];
@@ -819,7 +822,8 @@ contextBridge.exposeInMainWorld("codeshell", {
     };
   },
   getPendingApprovals: async () => {
-    const pending = await ipcRenderer.invoke("agent:pendingApprovals");
+    const readIpc = () => ipcRenderer.invoke("agent:pendingApprovals");
+    const pending = await (agentHost ? agentHost.pendingApprovals(readIpc) : readIpc());
     for (const env of pending) {
       if (env?.source === "external-runtime" && typeof env.requestId === "string")
         externalApprovalIds.add(env.requestId);
@@ -984,8 +988,10 @@ contextBridge.exposeInMainWorld("codeshell", {
    * Returns events past `sinceSeq` plus the next cursor, so the renderer can
    * replay what it missed and align the snapshot with the live stream.
    */
-  subscribeSession: (sessionId: string, sinceSeq?: number) =>
-    ipcRenderer.invoke("agent:subscribe", sessionId, sinceSeq),
+  subscribeSession: (sessionId: string, sinceSeq?: number) => {
+    const readIpc = () => ipcRenderer.invoke("agent:subscribe", sessionId, sinceSeq);
+    return agentHost ? agentHost.subscribeSession(sessionId, sinceSeq, readIpc) : readIpc();
+  },
   deleteRun: (runId: string) => ipcRenderer.invoke("runs:delete", runId),
   listAutomations: () => ipcRenderer.invoke("automation:list"),
   getAutomation: (id: string) => ipcRenderer.invoke("automation:get", id),

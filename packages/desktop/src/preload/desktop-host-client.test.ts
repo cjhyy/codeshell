@@ -218,3 +218,77 @@ test("task reads negotiate each capability and preserve the Host's authoritative
   expect(await pending).toBeNull();
   expect(fromIpc).toEqual(["list", "get", "get"]);
 });
+
+test("a negotiated stream arrives on the port while its subscription snapshot is outstanding", async () => {
+  const { client } = clientWithStatus();
+  const host = await attach(client, {
+    ...capabilities,
+    methods: [...capabilities.methods, "agent/subscribe"],
+  });
+  const events: unknown[] = [];
+  const off = client.onStreamEvent((env) => events.push(env));
+  const next = nextRequest(host);
+  const read = client.subscribeSession("s", 2, async () => {
+    throw new Error("unexpected IPC");
+  });
+  const req = await next;
+  expect(req).toMatchObject({ method: "agent/subscribe", params: { sessionId: "s", sinceSeq: 2 } });
+  const live = {
+    sessionId: "s",
+    epoch: "stream-1",
+    seq: 3,
+    event: { type: "text_delta", text: "live" },
+  };
+  host.postMessage({ jsonrpc: "2.0", method: "agent/streamEvent", params: live });
+  host.postMessage({
+    jsonrpc: "2.0",
+    id: req.id,
+    result: {
+      epoch: "stream-1",
+      nextSeq: 4,
+      events: [{ seq: 3, event: live.event }],
+      outputCursor: "opaque-journal-cursor",
+    },
+  });
+  expect((await read).outputCursor).toBe("opaque-journal-cursor");
+  expect(events).toEqual([live]);
+  off();
+  const barrier = nextRequest(host);
+  const done = client.subscribeSession("s", 3, async () => {
+    throw new Error("unexpected IPC");
+  });
+  const empty = await barrier;
+  host.postMessage({ jsonrpc: "2.0", method: "agent/streamEvent", params: live });
+  host.postMessage({ jsonrpc: "2.0", id: empty.id, result: { nextSeq: 4, events: [] } });
+  await done;
+  expect(events).toEqual([live]);
+});
+
+test("approval resume uses its own epoch and version and retains only external approvals from Main", async () => {
+  const { client } = clientWithStatus();
+  const host = await attach(client, {
+    ...capabilities,
+    methods: [...capabilities.methods, "agent/pendingApprovals"],
+  });
+  const native = { requestId: "native", sessionId: "s", request: { toolName: "write" } };
+  const external = { ...native, source: "external-runtime" as const, requestId: "external" };
+  const legacy = async () => [external, { ...native, requestId: "stale-main-native" }] as any[];
+  const respond = async (expectedParams: unknown, result: unknown) => {
+    const next = nextRequest(host);
+    const read = client.pendingApprovals(legacy);
+    const req = await next;
+    expect(req).toMatchObject({ method: "agent/pendingApprovals", params: expectedParams });
+    host.postMessage({ jsonrpc: "2.0", id: req.id, result });
+    return read;
+  };
+  expect(await respond({}, { epoch: "worker-1", stateVersion: 9, pending: [native] })).toEqual([
+    native,
+    external,
+  ]);
+  const since = { since: { epoch: "worker-1", stateVersion: 9 } };
+  expect(await respond(since, { epoch: "worker-1", stateVersion: 9 })).toEqual([native, external]);
+  await expect(respond(since, { epoch: "worker-2", stateVersion: 1 })).rejects.toThrow("snapshot");
+  expect(await respond(since, { epoch: "worker-2", stateVersion: 1, pending: [] })).toEqual([
+    external,
+  ]);
+});

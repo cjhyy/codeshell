@@ -1,5 +1,8 @@
 import { DesktopHostErrors, isRpcResponse, type RpcRequest } from "../shared/desktop-host-protocol";
 import type { TaskInboxApi, TaskInboxQuery } from "./task-inbox-api";
+import { normalizeStreamEnvelope } from "../shared/stream-envelope";
+import type { SessionSnapshot, StreamEventEnvelope } from "./session-stream-types";
+import type { ApprovalRequestEnvelope } from "./types";
 import type { DiskSessionListOptions } from "./session-transcript-api";
 import type { CodeshellApi, DesktopHostStatus, LocalLinkProviderView } from "./types";
 
@@ -11,12 +14,13 @@ const replyDeadlineMs = 15_000;
 
 // Each migrated domain keeps its original IPC handler available for rollback.
 export const desktopHostRoutes: Record<
-  "localLinkProviders" | "diskSessions" | "taskInbox",
+  "localLinkProviders" | "diskSessions" | "taskInbox" | "agentStream",
   "host" | "ipc"
 > = {
   localLinkProviders: "host",
   diskSessions: "host",
   taskInbox: "host",
+  agentStream: "host",
 };
 
 type PendingReply = {
@@ -51,6 +55,9 @@ function supportsProviderCatalog(result: unknown): boolean {
 export class DesktopHostClient {
   private port?: MessagePort;
   private readonly methods = new Set<string>();
+  private approvalRead = 0;
+  private approvals?: { epoch: string; stateVersion: number; pending: ApprovalRequestEnvelope[] };
+  private readonly streams = new Set<(envelope: StreamEventEnvelope) => void>();
   private status: DesktopHostStatus = "connecting";
   private readonly listeners = new Set<Listener>();
   private readonly pending = new Map<number, PendingReply>();
@@ -79,7 +86,25 @@ export class DesktopHostClient {
     else if (this.status === "unavailable") this.publish("reconnecting");
     this.port = port;
     port.onmessage = ({ data }: MessageEvent<unknown>) => {
-      if (this.port !== port || !isRpcResponse(data) || typeof data.id !== "number") return;
+      if (this.port !== port) return;
+      if (
+        this.status === "ready" &&
+        this.methods.has("agent/subscribe") &&
+        data &&
+        typeof data === "object" &&
+        "jsonrpc" in data &&
+        data.jsonrpc === "2.0" &&
+        !("id" in data) &&
+        "method" in data &&
+        data.method === "agent/streamEvent" &&
+        "params" in data
+      ) {
+        const envelope = normalizeStreamEnvelope(data.params);
+        if (envelope?.sessionId)
+          for (const listener of this.streams) listener(envelope as StreamEventEnvelope);
+        return;
+      }
+      if (!isRpcResponse(data) || typeof data.id !== "number") return;
       const request = this.pending.get(data.id);
       if (!request) return;
       clearTimeout(request.timeout);
@@ -113,6 +138,7 @@ export class DesktopHostClient {
     const port = this.port;
     this.port = undefined;
     this.methods.clear();
+    if (code === DesktopHostErrors.revoked) this.approvals = undefined;
     if (port) {
       port.onmessage = null;
       port.removeEventListener("close", this.onPortLost);
@@ -171,8 +197,87 @@ export class DesktopHostClient {
     return this.read("tasks/get", { taskKey }, () => readIpc(taskKey));
   }
 
+  onStreamEvent(listener: (envelope: StreamEventEnvelope) => void): () => void {
+    this.streams.add(listener);
+    return () => {
+      this.streams.delete(listener);
+    };
+  }
+
+  subscribeSession(
+    sessionId: string,
+    sinceSeq: number | undefined,
+    readIpc: () => Promise<SessionSnapshot>,
+  ) {
+    return this.read(
+      "agent/subscribe",
+      { sessionId, ...(sinceSeq === undefined ? {} : { sinceSeq }) },
+      readIpc,
+    );
+  }
+
+  async pendingApprovals(
+    readIpc: () => Promise<ApprovalRequestEnvelope[]>,
+  ): Promise<ApprovalRequestEnvelope[]> {
+    const port = this.port;
+    if (this.status !== "ready" || !port || !this.methods.has("agent/pendingApprovals"))
+      return readIpc();
+    const generation = ++this.approvalRead;
+    const previous = this.approvals;
+    const since = previous
+      ? { epoch: previous.epoch, stateVersion: previous.stateVersion }
+      : undefined;
+    // External runtime approvals remain owned by their existing Main controller.
+    const offline = Symbol("offline");
+    const [state, legacy] = await Promise.all([
+      this.read<
+        | { epoch: string; stateVersion: number; pending?: ApprovalRequestEnvelope[] }
+        | typeof offline
+      >("agent/pendingApprovals", since ? { since } : {}, async () => offline),
+      readIpc(),
+    ]);
+    if (state === offline) return legacy;
+    if (port !== this.port)
+      throw rpcError(DesktopHostErrors.revoked, "Desktop Host approval state superseded");
+    if (
+      !state ||
+      typeof state !== "object" ||
+      typeof state.epoch !== "string" ||
+      !state.epoch ||
+      !Number.isSafeInteger(state.stateVersion) ||
+      state.stateVersion < 0
+    )
+      throw new Error("Invalid Desktop Host approval revision");
+    if (state.pending !== undefined && !Array.isArray(state.pending))
+      throw new Error("Invalid Desktop Host approval snapshot");
+    const pending = Array.isArray(state.pending)
+      ? state.pending
+      : previous?.epoch === state.epoch && previous.stateVersion === state.stateVersion
+        ? previous.pending
+        : undefined;
+    if (
+      !pending ||
+      pending.some(
+        (entry) => !entry || entry.source || typeof entry.requestId !== "string" || !entry.request,
+      )
+    )
+      throw new Error("Invalid Desktop Host approval snapshot");
+    const newest = this.approvals;
+    if (
+      this.approvalRead === generation &&
+      (!newest || state.epoch !== newest.epoch || state.stateVersion >= newest.stateVersion)
+    )
+      this.approvals = { epoch: state.epoch, stateVersion: state.stateVersion, pending };
+    return [...pending, ...legacy.filter((entry) => entry.source === "external-runtime")];
+  }
+
   private async read<T>(
-    method: "sessions/listDisk" | "tasks/list" | "tasks/get",
+    method:
+      | "sessions/listDisk"
+      | "tasks/list"
+      | "tasks/get"
+      | "agent/subscribe"
+      | "agent/pendingApprovals",
     params: Record<string, unknown>,
     readIpc: () => Promise<T>,
   ): Promise<T> {
