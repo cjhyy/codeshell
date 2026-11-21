@@ -1436,12 +1436,13 @@ contextBridge.exposeInMainWorld("codeshell", {
    */
   windowToken: String(process.pid),
   ptyStart: (opts: Parameters<CodeshellApi["ptyStart"]>[0]) =>
-    ipcRenderer.invoke("pty:start", opts) as Promise<PtyStartResult>,
-  ptyWrite: (sessionId: string, data: string) => ipcRenderer.invoke("pty:write", sessionId, data),
+    configurationHost ? configurationHost.terminal("pty/start",opts) : ipcRenderer.invoke("pty:start", opts) as Promise<PtyStartResult>,
+  ptyWrite: (sessionId: string, data: string) => configurationHost ? configurationHost.terminal("pty/write",{sessionId,data}) : ipcRenderer.invoke("pty:write", sessionId, data),
   ptyResize: (sessionId: string, cols: number, rows: number) =>
-    ipcRenderer.invoke("pty:resize", sessionId, cols, rows),
-  ptyKill: (sessionId: string) => ipcRenderer.invoke("pty:kill", sessionId),
+    configurationHost ? configurationHost.terminal("pty/resize",{sessionId,cols,rows}) : ipcRenderer.invoke("pty:resize", sessionId, cols, rows),
+  ptyKill: (sessionId: string) => configurationHost ? configurationHost.terminal("pty/kill",{sessionId}) : ipcRenderer.invoke("pty:kill", sessionId),
   onPtyData: (cb: (msg: { sessionId: string; data: string }) => void): (() => void) => {
+    if(configurationHost) return configurationHost.onTerminalData(cb);
     const h = (_e: IpcRendererEvent, msg: { sessionId: string; data: string }) => cb(msg);
     ipcRenderer.on("pty:data", h);
     return () => ipcRenderer.removeListener("pty:data", h);
@@ -1449,6 +1450,7 @@ contextBridge.exposeInMainWorld("codeshell", {
   onPtyExit: (
     cb: (msg: { sessionId: string; exitCode: number; signal?: number }) => void,
   ): (() => void) => {
+    if(configurationHost) return configurationHost.onTerminalExit(cb);
     const h = (
       _e: IpcRendererEvent,
       msg: { sessionId: string; exitCode: number; signal?: number },

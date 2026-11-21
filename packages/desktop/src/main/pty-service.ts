@@ -1,5 +1,5 @@
 // Interactive terminal backend (node-pty). Modeled on Codex's TerminalService:
-// main owns the pty, renderer drives it over IPC. One pty per sessionId.
+// The owning process keeps a terminal per renderer-local session handle.
 //
 // node-pty is a native module; the esbuild `build:main` bundle marks all
 // bare requires external and injects a createRequire banner, so we load it
@@ -10,7 +10,14 @@ import { homedir } from "node:os";
 import { execFileSync } from "node:child_process";
 import { existsSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
-import type { WebContents } from "electron";
+export interface PtyOwner {
+  readonly id: number;
+  isDestroyed(): boolean;
+  send(
+    channel: "pty:data" | "pty:exit",
+    value: { sessionId: string; data?: string; exitCode?: number; signal?: number },
+  ): void;
+}
 import { dlog } from "./desktop-logger.js";
 import { ptyEntryPath } from "./pty-entry.mjs";
 
@@ -163,7 +170,7 @@ function buildEnv(): Record<string, string> {
 
 interface Session {
   pty: IPty;
-  webContents: WebContents;
+  webContents: PtyOwner;
   /** Rolling scrollback so a re-attached/re-mounted xterm can be replayed. */
   buffer: string;
 }
@@ -199,7 +206,7 @@ function appendBuffer(s: Session, data: string): void {
   if (s.buffer.length > MAX_BUFFER) s.buffer = s.buffer.slice(s.buffer.length - MAX_BUFFER);
 }
 
-function webContentsId(wc: WebContents): number | undefined {
+function webContentsId(wc: PtyOwner): number | undefined {
   try {
     return wc.id;
   } catch {
@@ -207,7 +214,7 @@ function webContentsId(wc: WebContents): number | undefined {
   }
 }
 
-function sessionForOwner(wc: WebContents, sessionId: string, action: string): Session | undefined {
+function sessionForOwner(wc: PtyOwner, sessionId: string, action: string): Session | undefined {
   const s = sessions.get(sessionId);
   if (!s) return undefined;
   if (s.webContents !== wc) {
@@ -261,7 +268,7 @@ export function resolvePtyCwd(
  * Start (or reuse) a pty for sessionId, streaming output to `wc` via
  * `pty:data` / `pty:exit`.
  */
-export function ptyStart(wc: WebContents, opts: PtyStartOpts): PtyStartResult {
+export function ptyStart(wc: PtyOwner, opts: PtyStartOpts): PtyStartResult {
   const { sessionId } = opts;
   const existing = sessions.get(sessionId);
   if (existing) {
@@ -285,8 +292,8 @@ export function ptyStart(wc: WebContents, opts: PtyStartOpts): PtyStartResult {
   try {
     pty = loadPty().spawn(shell, args, {
       name: "xterm-256color",
-      cols: opts.cols ?? 80,
-      rows: opts.rows ?? 24,
+      cols: clampPtyDim(opts.cols ?? 80),
+      rows: clampPtyDim(opts.rows ?? 24),
       cwd,
       env: buildEnv(),
     });
@@ -302,12 +309,13 @@ export function ptyStart(wc: WebContents, opts: PtyStartOpts): PtyStartResult {
 
   pty.onData((data) => {
     const s = sessions.get(sessionId);
-    if (!s) return;
+    if (s !== session) return;
     appendBuffer(s, data);
     if (!s.webContents.isDestroyed()) s.webContents.send("pty:data", { sessionId, data });
   });
   pty.onExit(({ exitCode, signal }) => {
-    const target = sessions.get(sessionId)?.webContents;
+    if (sessions.get(sessionId) !== session) return;
+    const target = session.webContents;
     if (target && !target.isDestroyed()) {
       target.send("pty:exit", { sessionId, exitCode, signal });
     }
@@ -317,7 +325,7 @@ export function ptyStart(wc: WebContents, opts: PtyStartOpts): PtyStartResult {
   return { ok: true, pid: pty.pid };
 }
 
-export function ptyWrite(wc: WebContents, sessionId: string, data: string): void {
+export function ptyWrite(wc: PtyOwner, sessionId: string, data: string): void {
   // Renderer-supplied; a non-string reaching the native addon can crash main.
   if (typeof data !== "string") return;
   sessionForOwner(wc, sessionId, "write")?.pty.write(data);
@@ -337,7 +345,7 @@ export function clampPtyDim(n: number): number {
   return Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1;
 }
 
-export function ptyResize(wc: WebContents, sessionId: string, cols: number, rows: number): void {
+export function ptyResize(wc: PtyOwner, sessionId: string, cols: number, rows: number): void {
   const s = sessionForOwner(wc, sessionId, "resize");
   if (!s) return;
   try {
@@ -347,7 +355,7 @@ export function ptyResize(wc: WebContents, sessionId: string, cols: number, rows
   }
 }
 
-export function ptyKill(wc: WebContents, sessionId: string): void {
+export function ptyKill(wc: PtyOwner, sessionId: string): void {
   if (!sessionForOwner(wc, sessionId, "kill")) return;
   killSession(sessionId);
 }

@@ -1,3 +1,4 @@
+import type { TerminalCommands, TerminalEvents } from "../shared/pty.js";
 import type { DesktopAgentMethod } from "../shared/desktop-agent-methods";
 import {
   DesktopHostErrors,
@@ -26,7 +27,12 @@ const replyDeadlineMs = 15_000;
 
 // Each migrated domain keeps its original IPC handler available for rollback.
 export const desktopHostRoutes: Record<
-  "localLinkProviders" | "diskSessions" | "taskInbox" | "agentStream" | "configuration" | "agentCommands",
+  | "localLinkProviders"
+  | "diskSessions"
+  | "taskInbox"
+  | "agentStream"
+  | "configuration"
+  | "agentCommands",
   "host" | "ipc"
 > = {
   localLinkProviders: "host",
@@ -72,6 +78,8 @@ export class DesktopHostClient {
   private readonly negotiatedMethods = new Set<string>();
   private approvalRead = 0;
   private approvals?: { epoch: string; stateVersion: number; pending: ApprovalRequestEnvelope[] };
+  private readonly terminalData = new Set<(message: TerminalEvents["pty/data"]) => void>();
+  private readonly terminalExit = new Set<(message: TerminalEvents["pty/exit"]) => void>();
   private readonly streams = new Set<(envelope: StreamEventEnvelope) => void>();
   private status: DesktopHostStatus = "connecting";
   private readonly listeners = new Set<Listener>();
@@ -102,6 +110,37 @@ export class DesktopHostClient {
     this.port = port;
     port.onmessage = ({ data }: MessageEvent<unknown>) => {
       if (this.port !== port) return;
+      if (
+        this.status === "ready" &&
+        this.methods.has("pty/start") &&
+        data &&
+        typeof data === "object" &&
+        "jsonrpc" in data &&
+        data.jsonrpc === "2.0" &&
+        !("id" in data) &&
+        "method" in data &&
+        "params" in data &&
+        data.params &&
+        typeof data.params === "object" &&
+        "sessionId" in data.params &&
+        typeof data.params.sessionId === "string"
+      ) {
+        const p = data.params;
+        if (data.method === "pty/data" && "data" in p && typeof p.data === "string") {
+          for (const cb of this.terminalData)
+            cb({ sessionId: data.params.sessionId, data: p.data });
+          return;
+        }
+        if (data.method === "pty/exit" && "exitCode" in p && typeof p.exitCode === "number") {
+          for (const cb of this.terminalExit)
+            cb({
+              sessionId: data.params.sessionId,
+              exitCode: p.exitCode,
+              ...("signal" in p && typeof p.signal === "number" && { signal: p.signal }),
+            });
+          return;
+        }
+      }
       if (
         this.status === "ready" &&
         this.methods.has("agent/subscribe") &&
@@ -212,6 +251,28 @@ export class DesktopHostClient {
 
   getTask(taskKey: string, readIpc: TaskInboxApi["get"]) {
     return this.read("tasks/get", { taskKey }, () => readIpc(taskKey));
+  }
+
+  onTerminalData(cb: (p: TerminalEvents["pty/data"]) => void) {
+    this.terminalData.add(cb);
+    return () => {
+      this.terminalData.delete(cb);
+    };
+  }
+  onTerminalExit(cb: (p: TerminalEvents["pty/exit"]) => void) {
+    this.terminalExit.add(cb);
+    return () => {
+      this.terminalExit.delete(cb);
+    };
+  }
+  async terminal<K extends keyof TerminalCommands>(
+    method: K,
+    params: TerminalCommands[K]["input"],
+  ): Promise<TerminalCommands[K]["result"]> {
+    if (this.initialPort) await this.initialPort;
+    if (this.status !== "ready" || !this.port || !this.methods.has(method))
+      throw rpcError(DesktopHostErrors.reconnecting, "Terminal Host unavailable");
+    return (await this.request(this.port, method, { ...params })) as TerminalCommands[K]["result"];
   }
 
   onStreamEvent(listener: (envelope: StreamEventEnvelope) => void): () => void {

@@ -225,7 +225,14 @@ export function createDesktopHost(
       );
     },
     sessionsChanged: (ids: string[]) => changes?.add(ids),
-    trackWorkbench: (contents: WebContents) => workbenches.track(contents),
+    trackWorkbench(contents: WebContents) {
+      if (workbenches.tracks(contents)) return;
+      const id = contents.id;
+      workbenches.track(contents);
+      contents.once("destroyed", () =>
+        supervisor.post({ type: "window-closed", webContentsId: id }),
+      );
+    },
     setStreamView: (sessionId: string, enabled: boolean) =>
       supervisor.setStreamView(sessionId, enabled),
     setOwner: (sessionId: string, owner: number | null) => supervisor.setOwner(sessionId, owner),

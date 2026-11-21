@@ -1,3 +1,4 @@
+import { hostedTerminals } from "../../host/composition/terminals.js";
 import { workspaceReads } from "./workspace-reads.js";
 import { HostAutomationRuns } from "../../host/composition/automation-run.js";
 import { externalRuntimeCatalogOperations } from "../../host/composition/external-runtime-catalog.js";
@@ -97,6 +98,7 @@ const business = new HostBusinessCalls({
 const index = createSessionIndex(sessionsRoot(), { storage });
 const catalog = new DesktopSessionListVisibility(index);
 let server: DesktopHostServer | undefined;
+const terminals = hostedTerminals(() => server!, options => catalog.list(options));
 const approvals = new HostApprovalState((id, owner) => server?.allows(id, owner) ?? false);
 let stopping = false;
 let worker: ReturnType<typeof bindHostWorker> | undefined;
@@ -145,6 +147,7 @@ parent.on("message", ({ data, ports }) => {
 
   if (isDesktopHostControl(data) && data.type === "shutdown") {
     stopping = true;
+    terminals.close();
     business.close();
     void Promise.all([index.close(), worker?.close(), transcripts.close(), automation.close()])
       .then(() => output.drain())
@@ -165,6 +168,7 @@ parent.on("message", ({ data, ports }) => {
       new Map([
         ...desktopHostMethods((options) => catalog.list(options)),
         ...taskHostReads(storage),
+        ...terminals.methods,
         ...configurationReads,
         ...scopedConfigurationReads((options) => catalog.list(options)),
         ...workspaceReads((options) => catalog.list(options)),
@@ -354,6 +358,9 @@ parent.on("message", ({ data, ports }) => {
   }
   if (!isDesktopHostControl(data)) return;
   switch (data.type) {
+    case "window-closed":
+      terminals.closeWindow(data.webContentsId);
+      break;
     case "session-index-changed":
       for (const id of data.ids) void index.changed(id).catch(() => {});
       break;

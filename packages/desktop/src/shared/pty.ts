@@ -7,3 +7,17 @@ export interface PtyStartRequest {
   /** Session whose current workspace (e.g. its managed worktree) authorizes `cwd`. */
   engineSessionId?: string;
 }
+
+export interface TerminalCommands {
+  "pty/start": {
+    input: PtyStartRequest;
+    result: { ok: true; pid: number } | { ok: false; detail: string };
+  };
+  "pty/write": { input: { sessionId: string; data: string }; result: void };
+  "pty/resize": { input: { sessionId: string; cols: number; rows: number }; result: void };
+  "pty/kill": { input: { sessionId: string }; result: void };
+}
+export interface TerminalEvents {
+  "pty/data": { sessionId: string; data: string };
+  "pty/exit": { sessionId: string; exitCode: number; signal?: number };
+}

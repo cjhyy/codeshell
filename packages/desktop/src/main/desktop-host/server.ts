@@ -201,7 +201,10 @@ export class DesktopHostServer {
     if (connection.pending.size + connection.compatibilityReads >= 128)
       throw new Error("Too many pending Desktop Host requests");
     const guard = sessionId
-      ? connection.authority.captureHistoryRead(sessionId, handler.admission ? "admission" : handler.historyRead)
+      ? connection.authority.captureHistoryRead(
+          sessionId,
+          handler.admission ? "admission" : handler.historyRead,
+        )
       : connection.authority.capture();
     connection.compatibilityReads++;
     try {
@@ -227,6 +230,16 @@ export class DesktopHostServer {
   setDeleting(sessionId: string, deleting: boolean): void {
     this.sessions.setDeleting(sessionId, deleting);
     this.rejectRevoked();
+  }
+
+  notifyWindow(id: number, method: string, params: Record<string, unknown>): void {
+    const connection = this.windows.get(id);
+    if (!connection?.initialized) return;
+    try {
+      connection.port.postMessage({ jsonrpc: "2.0", method, params });
+    } catch {
+      this.detach(connection);
+    }
   }
 
   /** Push to the current session owner only. No session subscription is
@@ -355,7 +368,10 @@ export class DesktopHostServer {
         throw new InvalidParams();
       guard =
         (handler.historyRead || handler.admission) && sessionId
-          ? authority.captureHistoryRead(sessionId, handler.admission ? "admission" : handler.historyRead)
+          ? authority.captureHistoryRead(
+              sessionId,
+              handler.admission ? "admission" : handler.historyRead,
+            )
           : authority.capture(sessionId);
       pending.set(id, guard);
       const result = await handler.run(guard, params);
