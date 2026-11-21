@@ -31,6 +31,29 @@ describe("digital-human profile memory", () => {
     rmSync(root, { recursive: true, force: true });
   });
 
+  test("revocation at the write boundary preserves existing profile memory", () => {
+    const input = {
+      level: "profile",
+      scope: "user",
+      profileName: "pm",
+      name: "Stable",
+      description: "approved",
+      type: "reference",
+      content: "original",
+    } as const;
+    saveMemory(input);
+    const deny = () => {
+      throw new Error("revoked");
+    };
+    const current = readMemory("profile", "user", "Stable", undefined, "pm")!;
+    expect(() => saveMemory({ ...input, id: current.id, content: "withheld" }, deny)).toThrow(
+      "revoked",
+    );
+    expect(() => deleteMemory("profile", "user", "Stable", undefined, "pm", deny)).toThrow(
+      "revoked",
+    );
+    expect(readMemory("profile", "user", "Stable", undefined, "pm")?.content).toBe(current.content);
+  });
   test("edits a store isolated under the selected profile", () => {
     saveMemory({
       level: "profile",

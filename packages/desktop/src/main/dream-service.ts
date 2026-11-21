@@ -1,22 +1,3 @@
-/**
- * dream-service — manual "整理 / Dream" trigger for the desktop host.
- *
- * The renderer's memory page exposes a button to run a one-off dream
- * consolidation (dedup / merge / drop-stale across the `dream` memory scope).
- * That work needs an LLM client + the Memory* tools, but the Electron MAIN
- * process never constructs an Engine — only the agent worker subprocess does
- * (see core's cli/agent-server-stdio.ts). Rather than build request/response
- * correlation over the fire-and-forget AgentBridge pipe, we reuse the worker's
- * exact "seed Engine" bootstrap here: construct an Engine purely to populate
- * the model pool + tool registry from settings, then hand its tool registry +
- * a freshly-built LLM client to core's runDreamConsolidation.
- *
- * The seed Engine never runs a turn — it's discarded after we extract the
- * pieces. Dream writes only to the `dream` scope (core enforces this), and the
- * MemoryManager it uses points at the same on-disk memory dir the worker and
- * the renderer's memory:* handlers use, so the data stays consistent.
- */
-
 import {
   Engine,
   SettingsManager,
@@ -49,7 +30,11 @@ export interface DreamResult {
  * on bootstrap failure (e.g. no model/API key configured) so the IPC layer can
  * surface it to the renderer.
  */
-export async function runDream(level: DreamLevel, cwd?: string): Promise<DreamResult> {
+export async function runDream(
+  level: DreamLevel,
+  cwd?: string,
+  signal?: AbortSignal,
+): Promise<DreamResult> {
   return withModelTraceContext(
     {
       storageDir: join(sessionsRoot(), ".model-traces"),
@@ -62,11 +47,15 @@ export async function runDream(level: DreamLevel, cwd?: string): Promise<DreamRe
       parentSessionId: undefined,
       ephemeral: false,
     },
-    () => runDreamPass(level, cwd),
+    () => runDreamPass(level, cwd, signal),
   );
 }
 
-async function runDreamPass(level: DreamLevel, cwd?: string): Promise<DreamResult> {
+async function runDreamPass(
+  level: DreamLevel,
+  cwd?: string,
+  signal?: AbortSignal,
+): Promise<DreamResult> {
   if (level === "project" && !cwd) {
     throw new Error("project dream requires a cwd (open a project first)");
   }
@@ -76,7 +65,7 @@ async function runDreamPass(level: DreamLevel, cwd?: string): Promise<DreamResul
   const seedCwd = cwd ?? process.cwd();
   const projectDir = level === "project" ? cwd : undefined;
 
-  dlog("main", "start", { level, cwd, projectDir });
+  dlog("desktop-host", "start", { level, cwd, projectDir });
 
   // ─── Seed Engine — same bootstrap the agent worker uses ───────────
   // Read settings to derive the seed llm config, exactly like
@@ -85,6 +74,7 @@ async function runDreamPass(level: DreamLevel, cwd?: string): Promise<DreamResul
   // unified catalog (modelConnections[] / defaults.text, overwriting this seed)
   // and builds the tool registry. "full" scope so we read the user's
   // ~/.code-shell config too.
+  signal?.throwIfAborted();
   const settings = new SettingsManager(seedCwd, "full").get();
   const auxId = resolveAuxKey(settings);
   const llmConfig =
@@ -114,15 +104,16 @@ async function runDreamPass(level: DreamLevel, cwd?: string): Promise<DreamResul
     await seedEngine.ready();
     const llmClient = await createLLMClient(resolved.llm, resolved.clientDefaults);
     const result = await runDreamConsolidation({
+      signal,
       llmClient,
       toolRegistry,
       toolContext: seedEngine.buildToolContext(),
       projectDir,
     });
-    dlog("main", "done", { level, ran: result.ran, summaryLen: result.summary.length });
+    dlog("desktop-host", "done", { level, ran: result.ran, summaryLen: result.summary.length });
     return result;
   } catch (err) {
-    dlog("main", "error", { level, error: (err as Error).message });
+    dlog("desktop-host", "error", { level, error: (err as Error).message });
     throw err;
   } finally {
     await seedEngine.dispose();

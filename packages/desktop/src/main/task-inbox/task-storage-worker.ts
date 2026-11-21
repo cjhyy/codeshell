@@ -1,3 +1,4 @@
+import { isMemoryCommand, writeHostedMemory } from "../hosted-memory.js";
 import { attachCronStorage } from "../../host/automation/storage-owner.js";
 import { MessagePort, workerData } from "node:worker_threads";
 import { RunOperationStorage } from "../../host/composition/run-operation-storage.js";
@@ -45,6 +46,8 @@ installDefaultLinkProviders();
 await serveSessionIndexWorker({
   ...tasks,
   async handle(ctx, command, payload) {
+    if (isMemoryCommand(command))
+      return writeHostedMemory(command, payload as Parameters<typeof writeHostedMemory>[1]);
     if (command === "sources/commitPicked")
       return commitPickedSourceUpload(payload as Parameters<typeof commitPickedSourceUpload>[0]);
     if (isCatalogEdit(command))

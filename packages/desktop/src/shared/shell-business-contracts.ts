@@ -1,4 +1,5 @@
 import type { NativeCcRoomReads } from "./cc-room-reads.js";
+import type { PrivateMemoryReads, MemoryOperations } from "./memory-contracts.js";
 import type { CronCommand } from "../host/automation/commands.js";
 import type {
   ExternalRuntimeModelEntry,
@@ -17,7 +18,7 @@ type Operation<F extends (...args: any[]) => Promise<unknown>> = {
 
 /** Private calls from authenticated Electron adapters. These methods are never
  * registered on a renderer port or exposed by the window preload. */
-export interface ShellBusinessOperations extends ProjectRegistryOperations, CatalogEdits, NativeCcRoomReads {
+export interface ShellBusinessOperations extends NativeCcRoomReads, MemoryOperations, PrivateMemoryReads, ProjectRegistryOperations, CatalogEdits {
   "automation/command": { input: CronCommand; result: unknown };
   "external-runtime/available": {
     input: { searchPath: string };

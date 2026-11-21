@@ -1,6 +1,11 @@
+import type {
+  ProfileMemoryPromotionReview,
+  ProfileMemoryPromotionResult,
+  PreviewProfileMemoryPromotionInput,
+  CommitProfileMemoryPromotionInput,
+} from "../shared/profile-memory-promotion.js";
 import type { IpcMain, IpcMainInvokeEvent, WebContents, WebFrameMain } from "electron";
 import {
-  ProfileMemoryPromotionReviews,
   parseMemoryPromotionCommit,
   parseMemoryPromotionPreview,
 } from "./profile-memory-promotion-service.js";
@@ -9,12 +14,36 @@ export function registerProfileMemoryPromotionIpc(
   ipcMain: Pick<IpcMain, "handle">,
   isMainWindow: (sender: WebContents) => boolean,
   requireProjectPath: (cwd: unknown) => Promise<string>,
+  reviews: {
+    documentSignal(event: IpcMainInvokeEvent): AbortSignal;
+    preview(
+      owner: number,
+      value: PreviewProfileMemoryPromotionInput,
+      signal: AbortSignal,
+    ): Promise<ProfileMemoryPromotionReview>;
+    commit(
+      owner: number,
+      value: CommitProfileMemoryPromotionInput,
+      signal: AbortSignal,
+    ): Promise<ProfileMemoryPromotionResult>;
+    clearOwner(owner: number): void;
+  },
 ): void {
-  const reviews = new ProfileMemoryPromotionReviews();
+  let nextOwnerId = 0;
   const observed = new WeakSet<WebContents>();
   type Owner = { id: number; frame: WebFrameMain; processId: number; routingId: number };
   const frames = new WeakMap<WebContents, Owner>();
-  const generations = new Map<number, object>();
+  const generations = new Map<
+    number,
+    { owner: number; controller: AbortController; committing: boolean }
+  >();
+  const clear = (id: number) => {
+    const generation = generations.get(id);
+    if (!generation) return;
+    generation.controller.abort();
+    generations.delete(id);
+    reviews.clearOwner(generation.owner);
+  };
   const owner = (event: IpcMainInvokeEvent): Owner => {
     const frame = event.senderFrame;
     if (
@@ -32,13 +61,12 @@ export function registerProfileMemoryPromotionIpc(
         current.processId !== frame.processId ||
         current.routingId !== frame.routingId)
     ) {
-      reviews.clearOwner(event.sender.id);
-      generations.delete(event.sender.id);
+      clear(current.id);
       current = undefined;
     }
     if (!current) {
       current = {
-        id: event.sender.id,
+        id: ++nextOwnerId,
         frame,
         processId: frame.processId,
         routingId: frame.routingId,
@@ -47,16 +75,15 @@ export function registerProfileMemoryPromotionIpc(
     }
     if (!observed.has(event.sender)) {
       observed.add(event.sender);
-      const id = event.sender.id;
       const invalidate = () => {
-        reviews.clearOwner(id);
-        generations.delete(id);
+        const binding = frames.get(event.sender);
+        if (binding) clear(binding.id);
         frames.delete(event.sender);
       };
       event.sender.once("destroyed", invalidate);
       event.sender.on("render-process-gone", invalidate);
-      event.sender.on("did-start-navigation", (_event, _url, _inPlace, mainFrame) => {
-        if (mainFrame) invalidate();
+      event.sender.on("did-start-navigation", (event) => {
+        if (event.isMainFrame && !event.isSameDocument) invalidate();
       });
     }
     return current;
@@ -67,29 +94,45 @@ export function registerProfileMemoryPromotionIpc(
   ipcMain.handle("memory:previewProfilePromotion", async (event, value: unknown) => {
     const binding = owner(event);
     const id = binding.id;
+    const document = reviews.documentSignal(event);
     const input = parseMemoryPromotionPreview(value);
-    const generation = {};
+    clear(id);
+    const generation = {
+      owner: ++nextOwnerId,
+      controller: new AbortController(),
+      committing: false,
+    };
     generations.set(id, generation);
-    reviews.clearOwner(id);
     const cwd = await requireProjectPath(input.cwd);
     assertOwner(event, binding);
     if (generations.get(id) !== generation) throw new Error("memory review was superseded");
-    return reviews.preview(id, { ...input, cwd });
+    return reviews.preview(
+      generation.owner,
+      { ...input, cwd },
+      AbortSignal.any([document, generation.controller.signal]),
+    );
   });
   ipcMain.handle("memory:commitProfilePromotion", async (event, value: unknown) => {
     const binding = owner(event);
     const id = binding.id;
+    const document = reviews.documentSignal(event);
     const input = parseMemoryPromotionCommit(value);
     const generation = generations.get(id);
+    if (generation?.committing) throw new Error("memory promotion review already in progress");
+    if (generation) generation.committing = true;
     try {
       const cwd = await requireProjectPath(input.cwd);
       assertOwner(event, binding);
-      return reviews.commit(id, { ...input, cwd });
-    } catch (error) {
-      // Revoked project authority also invalidates its pending review.
-      if (frames.get(event.sender) === binding && generations.get(id) === generation)
-        reviews.clearOwner(id);
-      throw error;
+      if (!generation || generation !== generations.get(id))
+        throw new Error("memory promotion review expired");
+      return await reviews.commit(
+        generation.owner,
+        { ...input, cwd },
+        generation.controller.signal,
+      );
+    } finally {
+      // A reviewed token is single use, including failed commits.
+      if (frames.get(event.sender) === binding && generations.get(id) === generation) clear(id);
     }
   });
 }

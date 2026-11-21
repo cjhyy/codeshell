@@ -1,5 +1,7 @@
 import { ccRoomReads } from "../../host/composition/cc-room-reads.js";
 import { ActivityHistoryWorker } from "../activity-history-worker-client.js";
+import { memoryReads } from "./memory-reads.js";
+import { memoryOperations } from "../../host/composition/memory.js";
 import { bindRemoteTerminals } from "../../host/composition/remote-terminals.js";
 import { hostedTerminals } from "../../host/composition/terminals.js";
 import { HostScheduler } from "../../host/automation/host-scheduler.js";
@@ -112,6 +114,7 @@ const business = new HostBusinessCalls({
   "transcripts/delete": (input, grant) => transcripts.commitDelete(input, grant.permit),
   ...operations.methods,
   ...catalogEdits(storage),
+  ...memoryOperations(storage),
   ...projectTrustOperations(storage),
   ...projectRegistryOperations(storage, (requestId, projects) =>
     parent.postMessage({ type: "project-registry-committed", requestId, projects }),
@@ -219,6 +222,7 @@ parent.on("message", ({ data, ports }) => {
         ...terminals.methods,
         ...roomReads.methods,
         ...configurationReads,
+        ...memoryReads,
         ...scopedConfigurationReads((options) => catalog.list(options)),
         ...workspaceReads((options) => catalog.list(options)),
         businessRead("catalog/load", noBusinessArguments, catalogFiles["catalog/load"]),

@@ -142,6 +142,8 @@ export interface SaveMemoryOptions {
 }
 
 export interface MemoryManagerOptions {
+  /** Recheck Host write authority immediately before changing a memory body or moving it to trash. */
+  beforeWrite?: () => void;
   /**
    * Project root path; when set, memories are scoped under
    * project-memory/<slug>-<hash> (see project-memory-root.ts).
@@ -167,6 +169,7 @@ export function resolveMemoryBaseDir(override?: string): string {
 }
 
 export class MemoryManager {
+  private readonly beforeWrite?: () => void;
   private readonly baseDir: string;
   private readonly projectDir?: string;
   /** Root containing both scope subdirs (the "memory" dir per project/global). */
@@ -187,6 +190,7 @@ export class MemoryManager {
     const opts: MemoryManagerOptions =
       typeof options === "string" ? { projectDir: options } : (options ?? {});
 
+    this.beforeWrite = opts.beforeWrite;
     this.baseDir = resolveMemoryBaseDir(opts.baseDir);
     this.projectDir = opts.projectDir;
     this.scope = opts.scope ?? "user";
@@ -299,6 +303,7 @@ export class MemoryManager {
       `---\n\n` +
       `${entry.content}\n`;
 
+    this.beforeWrite?.();
     writeFileAtomic(filePath, content, 0o600);
 
     // Incremental index update. Initialize the cache on first
@@ -523,6 +528,7 @@ export class MemoryManager {
     );
     if (!entry) return false;
 
+    this.beforeWrite?.();
     try {
       const stamp = new Date().toISOString().replace(/[:.]/g, "-");
       const trashDir = join(this.baseDir, "memory-trash", stamp, this.scope);
@@ -629,6 +635,7 @@ export class MemoryManager {
 
     if (entry.originProject) {
       const projectDream = new MemoryManager({
+        beforeWrite: this.beforeWrite,
         baseDir: this.baseDir,
         projectDir: entry.originProject,
         scope: "dream",
@@ -674,14 +681,23 @@ export class MemoryManager {
     if (!entry) return null;
     const targetMgr =
       dest === "global"
-        ? new MemoryManager({ baseDir: this.baseDir, scope: "dream" })
+        ? new MemoryManager({
+            beforeWrite: this.beforeWrite,
+            baseDir: this.baseDir,
+            scope: "dream",
+          })
         : dest === "project" && entry.originProject
           ? new MemoryManager({
+              beforeWrite: this.beforeWrite,
               baseDir: this.baseDir,
               projectDir: entry.originProject,
               scope: "user",
             })
-          : new MemoryManager({ baseDir: this.baseDir, scope: "user" }); // demote fallback
+          : new MemoryManager({
+              beforeWrite: this.beforeWrite,
+              baseDir: this.baseDir,
+              scope: "user",
+            }); // demote fallback
     const destinationOrigin: MemoryOrigin = dest === "global" ? "dream" : (entry.origin ?? "auto");
     const fileName = targetMgr.save(
       {
@@ -718,7 +734,11 @@ export class MemoryManager {
   promoteToGlobal(nameOrFile: string): string | null {
     const entry = this.loadAll().find((e) => e.name === nameOrFile || e.fileName === nameOrFile);
     if (!entry) return null;
-    const globalMgr = new MemoryManager({ baseDir: this.baseDir, scope: "user" });
+    const globalMgr = new MemoryManager({
+      beforeWrite: this.beforeWrite,
+      baseDir: this.baseDir,
+      scope: "user",
+    });
     const fileName = globalMgr.save({
       name: entry.name,
       description: entry.description,

@@ -72,6 +72,28 @@ async function runGuardedDream(
 }
 
 describe("dream consolidation origin guard", () => {
+  it("discards a provider reply that arrives after the caller cancels", async () => {
+    await withCodeShellHome(async (base) => {
+      const controller = new AbortController();
+      const registry = memoryRegistry();
+      await expect(
+        runDreamConsolidation({
+          llmClient: {
+            async createMessage({ signal }: { signal: AbortSignal }) {
+              expect(signal).toBe(controller.signal);
+              controller.abort(new Error("document closed"));
+              return { text: "late", toolCalls: [] };
+            },
+          } as any,
+          toolRegistry: registry,
+          toolContext: toolContext(base, registry),
+          projectDir: base,
+          signal: controller.signal,
+        }),
+      ).rejects.toThrow("document closed");
+    });
+  });
+
   it("does not let dream update or delete origin:manual user memories", async () => {
     const info = spyOn(logger, "info").mockImplementation(() => {});
     const warn = spyOn(logger, "warn").mockImplementation(() => {});

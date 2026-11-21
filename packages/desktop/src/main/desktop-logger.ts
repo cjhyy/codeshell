@@ -68,6 +68,7 @@ function streamFor(filePath: string): WriteStream | null {
 }
 
 export type LogSource =
+  | "desktop-host"
   | "main"
   | "bridge"
   | "renderer"

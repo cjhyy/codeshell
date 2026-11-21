@@ -970,16 +970,11 @@ contextBridge.exposeInMainWorld("codeshell", {
   turnUndoState: (sessionId: string) => ipcRenderer.invoke("files:turnUndoState", sessionId),
   undoTurn: (sessionId: string) => ipcRenderer.invoke("files:undoTurn", sessionId),
   redoTurn: (sessionId: string) => ipcRenderer.invoke("files:redoTurn", sessionId),
-  listMemory: (level: string, scope: string, cwd?: string, profileName?: string) =>
-    ipcRenderer.invoke("memory:list", level, scope, cwd, profileName),
-  readMemory: (level: string, scope: string, name: string, cwd?: string, profileName?: string) =>
-    ipcRenderer.invoke("memory:read", level, scope, name, cwd, profileName),
   saveMemory: (input: Parameters<CodeshellApi["saveMemory"]>[0]) =>
     ipcRenderer.invoke("memory:save", input),
   deleteMemory: (level: string, scope: string, name: string, cwd?: string, profileName?: string) =>
     ipcRenderer.invoke("memory:delete", level, scope, name, cwd, profileName),
   // 审批门 (pending global memories)
-  listPendingMemory: () => ipcRenderer.invoke("memory:pending:list"),
   approvePendingMemory: (name: string) => ipcRenderer.invoke("memory:pending:approve", name),
   demotePendingMemory: (name: string) => ipcRenderer.invoke("memory:pending:demote", name),
   rejectPendingMemory: (name: string) => ipcRenderer.invoke("memory:pending:reject", name),
