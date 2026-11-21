@@ -77,6 +77,17 @@ export function mimiRecordsOperations(
   announce: (domain: MimiRecordDomain) => void,
 ) {
   return {
+    async "mimi/workMemory"(input, grant) {
+      const db = await storage;
+      grant.assertCurrent();
+      // These are lifecycle commands from the authenticated Mimi manager.
+      const row = await db.request<import("../../shared/mimi-work-memory.js").MimiWorkSnapshot>(
+        "mimi/workMemory",
+        input,
+      );
+      if (!row) throw Error("Mimi work memory unavailable");
+      return row;
+    },
     async "mimi/records"(call, grant) {
       const db = await storage;
       grant.assertCurrent();
@@ -88,7 +99,7 @@ export function mimiRecordsOperations(
       if (row.changed) announce(row.changed);
       return row.result;
     },
-  } satisfies Pick<BusinessMethods, "mimi/records">;
+  } satisfies Pick<BusinessMethods, "mimi/records" | "mimi/workMemory">;
 }
 
 export async function readMimiList<K extends "memoryList" | "journalList">(

@@ -1,4 +1,5 @@
 import { isMemoryCommand, writeHostedMemory } from "../hosted-memory.js";
+import { StoredMimiWorkMemory } from "../../host/composition/mimi-work-memory.js";
 import { dirname, join, isAbsolute } from "node:path";
 import { StoredMimiRecords } from "../../host/composition/mimi-records.js";
 import { attachCronStorage } from "../../host/automation/storage-owner.js";
@@ -42,6 +43,7 @@ catalog.onChanged((snapshot) => {
 let output: StoredDesktopOutput | undefined;
 let runLedger: RunOperationStorage | undefined;
 let ledger: OperationStorage | undefined;
+let mimiWork: StoredMimiWorkMemory | undefined;
 let mimi: StoredMimiRecords | undefined;
 let batches: OperationBatches | undefined;
 // Link-backed source definitions are validated against this process-local registry.
@@ -51,11 +53,16 @@ await serveSessionIndexWorker({
   async handle(ctx, command, payload) {
     if (isMemoryCommand(command))
       return writeHostedMemory(command, payload as Parameters<typeof writeHostedMemory>[1]);
-    if (command === "mimi/records") {
+    if (command === "mimi/records" || command === "mimi/workMemory") {
       const directory = workerData?.config?.taskInboxDirectory;
       if (typeof directory !== "string" || !isAbsolute(directory))
         throw Error("Desktop data directory unavailable");
-      mimi ??= new StoredMimiRecords(join(dirname(directory), "pet"));
+      const root = join(dirname(directory), "pet");
+      if (command === "mimi/workMemory") {
+        mimiWork ??= new StoredMimiWorkMemory(root);
+        return mimiWork.run(payload as Parameters<StoredMimiWorkMemory["run"]>[0]);
+      }
+      mimi ??= new StoredMimiRecords(root);
       return mimi.run(payload as Parameters<StoredMimiRecords["run"]>[0]);
     }
     if (command === "sources/commitPicked")

@@ -468,7 +468,11 @@ export function createPetApi(
     ipcRenderer.invoke("pet:notices:update-rule", payload);
   return {
     getSnapshot: () => ipcRenderer.invoke("pet:get-snapshot") as Promise<PetProjectionSnapshot>,
-    getWorkMemory: () => ipcRenderer.invoke("pet:get-work-memory") as Promise<PetWorkMemoryQuery>,
+    getWorkMemory: () => {
+      const fallback = () =>
+        ipcRenderer.invoke("pet:get-work-memory") as Promise<PetWorkMemoryQuery>;
+      return host ? host.readBusiness("mimi/workMemory", {}, fallback) : fallback();
+    },
     openSession: (request) =>
       ipcRenderer.invoke("pet:open-session", request) as Promise<PetOpenSessionResult>,
     dispatch: (command) =>
