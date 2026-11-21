@@ -458,19 +458,25 @@ async function checkDataSourceAdds(app, win) {
     (await networkAttempts()) === attemptsBefore,
     "Linked selection attempted a network request",
   );
+  const savedFiles = [...github, ...figma];
+  async function assertSavedFiles(rows, message) {
+    // Navigation renders before the catalog or project snapshot finishes loading.
+    for (const file of savedFiles) {
+      await rows.getByText(file.label, { exact: true }).waitFor({ timeout: 10_000 });
+    }
+    assert((await rows.count()) === 3, message);
+  }
   await win.getByRole("button", { name: "添加或管理资料集", exact: true }).click();
-  const online = win.locator("[data-connected-materials]");
-  assert(
-    (await online.locator("[data-source-definition]").count()) === 3,
+  await assertSavedFiles(
+    win.locator("[data-connected-materials] [data-source-definition]"),
     "Selected online files are hidden in advanced definitions",
   );
   await screenshot(win, "settings-online-materials.png");
   await win
     .getByRole("button", { name: `返回 ${basename(projectPath)} 数据源`, exact: true })
     .click();
-  await win.getByRole("button", { name: "从 Link 选择文件", exact: true }).waitFor();
-  assert(
-    (await win.locator("[data-source-access]").count()) === 3,
+  await assertSavedFiles(
+    win.locator('[data-data-sources-module="project"] [data-source-access]'),
     "Returning to the project lost its file references",
   );
   // Leave the remainder of this settings smoke in its original global context.
