@@ -55,6 +55,7 @@ function supportsProviderCatalog(result: unknown): boolean {
 export class DesktopHostClient {
   private port?: MessagePort;
   private readonly methods = new Set<string>();
+  private readonly negotiatedAgentReads = new Set<string>();
   private approvalRead = 0;
   private approvals?: { epoch: string; stateVersion: number; pending: ApprovalRequestEnvelope[] };
   private readonly streams = new Set<(envelope: StreamEventEnvelope) => void>();
@@ -123,7 +124,11 @@ export class DesktopHostClient {
         this.disconnect("unavailable");
         return;
       }
-      for (const method of (result as { methods: string[] }).methods) this.methods.add(method);
+      for (const method of (result as { methods: string[] }).methods) {
+        this.methods.add(method);
+        if (method === "agent/subscribe" || method === "agent/pendingApprovals")
+          this.negotiatedAgentReads.add(method);
+      }
       this.publish("ready");
     } catch {
       if (this.port === port) this.disconnect("unavailable");
@@ -204,39 +209,50 @@ export class DesktopHostClient {
     };
   }
 
-  subscribeSession(
+  private async agentPort(
+    method: "agent/subscribe" | "agent/pendingApprovals",
+  ): Promise<MessagePort | undefined> {
+    // Historical v1 Main handlers are a compatibility path for a Host that
+    // never offered this capability. Once negotiated, keep its document grant.
+    if (this.initialPort) await this.initialPort;
+    if (this.status === "ready" && this.methods.has(method) && this.port) return this.port;
+    if (this.negotiatedAgentReads.has(method))
+      throw rpcError(DesktopHostErrors.reconnecting, `Desktop Host ${this.status}`);
+    return undefined;
+  }
+
+  async subscribeSession(
     sessionId: string,
     sinceSeq: number | undefined,
     readIpc: () => Promise<SessionSnapshot>,
   ) {
-    return this.read(
-      "agent/subscribe",
-      { sessionId, ...(sinceSeq === undefined ? {} : { sinceSeq }) },
-      readIpc,
-    );
+    const port = await this.agentPort("agent/subscribe");
+    if (!port) return readIpc();
+    return (await this.request(port, "agent/subscribe", {
+      sessionId,
+      ...(sinceSeq === undefined ? {} : { sinceSeq }),
+    })) as SessionSnapshot;
   }
 
   async pendingApprovals(
     readIpc: () => Promise<ApprovalRequestEnvelope[]>,
   ): Promise<ApprovalRequestEnvelope[]> {
-    const port = this.port;
-    if (this.status !== "ready" || !port || !this.methods.has("agent/pendingApprovals"))
-      return readIpc();
+    const port = await this.agentPort("agent/pendingApprovals");
+    if (!port) return readIpc();
     const generation = ++this.approvalRead;
     const previous = this.approvals;
     const since = previous
       ? { epoch: previous.epoch, stateVersion: previous.stateVersion }
       : undefined;
     // External runtime approvals remain owned by their existing Main controller.
-    const offline = Symbol("offline");
     const [state, legacy] = await Promise.all([
-      this.read<
-        | { epoch: string; stateVersion: number; pending?: ApprovalRequestEnvelope[] }
-        | typeof offline
-      >("agent/pendingApprovals", since ? { since } : {}, async () => offline),
+      this.request(port, "agent/pendingApprovals", since ? { since } : {}) as Promise<{
+        epoch: string;
+        stateVersion: number;
+        pending?: ApprovalRequestEnvelope[];
+      }>,
       readIpc(),
     ]);
-    if (state === offline) return legacy;
     if (port !== this.port)
       throw rpcError(DesktopHostErrors.revoked, "Desktop Host approval state superseded");
     if (
@@ -272,12 +288,7 @@ export class DesktopHostClient {
   }
 
   private async read<T>(
-    method:
-      | "sessions/listDisk"
-      | "tasks/list"
-      | "tasks/get"
-      | "agent/subscribe"
-      | "agent/pendingApprovals",
+    method: "sessions/listDisk" | "tasks/list" | "tasks/get",
     params: Record<string, unknown>,
     readIpc: () => Promise<T>,
   ): Promise<T> {

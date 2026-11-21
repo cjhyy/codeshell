@@ -292,3 +292,36 @@ test("approval resume uses its own epoch and version and retains only external a
     external,
   ]);
 });
+
+test("an established agent grant cannot downgrade to Main when its Host connection is lost", async () => {
+  const { client } = clientWithStatus();
+  const host = await attach(client, {
+    ...capabilities,
+    methods: [...capabilities.methods, "agent/subscribe", "agent/pendingApprovals"],
+  });
+  let reads = 0;
+  const legacy = async () => {
+    reads++;
+    return [];
+  };
+  const next = nextRequest(host);
+  const inflight = client
+    .subscribeSession("s", 0, async () => {
+      reads++;
+      return { events: [], nextSeq: 0 };
+    })
+    .catch((error) => error);
+  await next;
+  client.disconnect("reconnecting");
+  expect(await inflight).toMatchObject({ code: DesktopHostErrors.reconnecting });
+  await expect(client.pendingApprovals(legacy)).rejects.toMatchObject({
+    code: DesktopHostErrors.reconnecting,
+  });
+  await expect(
+    client.subscribeSession("s", 0, async () => {
+      reads++;
+      return { events: [], nextSeq: 0 };
+    }),
+  ).rejects.toMatchObject({ code: DesktopHostErrors.reconnecting });
+  expect(reads).toBe(0);
+});
