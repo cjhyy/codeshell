@@ -1,5 +1,6 @@
 import { catalogEntryOrigins, getMergedCatalog } from "@cjhyy/code-shell-core/internal";
-import { listPluginMcpTrust } from "@cjhyy/code-shell-core";
+import { modelMetadata, modelReasoning, providerModels } from "../model-provider-views.js";
+import { listPluginMcpTrust, listPluginHooks } from "@cjhyy/code-shell-core";
 import { getProjectStore } from "../project-store.js";
 import {
   requireRendererProjectPath,
@@ -71,6 +72,45 @@ export const configurationReads = [
     ({ installKey, includeScreenshots }) => getPluginMedia(installKey, includeScreenshots === true),
   ),
   businessRead("mcp/pluginTrust", noBusinessArguments, () => listPluginMcpTrust()),
+  businessRead(
+    "models/meta",
+    (input) => {
+      const { models, providers } = businessArguments(input, ["models", "providers"]);
+      return { models, providers };
+    },
+    ({ models, providers }) => modelMetadata(models, providers),
+  ),
+  businessRead(
+    "models/reasoning",
+    (input) => {
+      const { kind, model } = businessArguments(input, ["kind", "model"]);
+      if (typeof kind !== "string" || typeof model !== "string") throw new InvalidParams();
+      return { kind, model };
+    },
+    ({ kind, model }) => modelReasoning(kind, model),
+  ),
+  businessRead(
+    "models/provider",
+    (input) => {
+      const { provider, refresh } = businessArguments(input, ["provider", "refresh"]);
+      if (refresh !== undefined && typeof refresh !== "boolean") throw new InvalidParams();
+      return { provider, refresh };
+    },
+    ({ provider, refresh }, context) => providerModels(provider, refresh, context.assertCurrent),
+  ),
+  businessRead(
+    "plugins/hooks",
+    (input) => {
+      const { disabledPlugins } = businessArguments(input, ["disabledPlugins"]);
+      if (
+        disabledPlugins !== undefined &&
+        (!Array.isArray(disabledPlugins) || disabledPlugins.some((x) => typeof x !== "string"))
+      )
+        throw new InvalidParams();
+      return { disabledPlugins: disabledPlugins as string[] | undefined };
+    },
+    ({ disabledPlugins }) => listPluginHooks(disabledPlugins),
+  ),
   businessRead("models/catalog", noBusinessArguments, getMergedCatalog),
   businessRead("models/catalogOrigins", noBusinessArguments, catalogEntryOrigins),
 ];

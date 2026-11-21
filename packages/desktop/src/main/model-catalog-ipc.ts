@@ -1,16 +1,8 @@
 import type { CallShellBusiness } from "../shared/shell-business-contracts.js";
 import type { IpcMainInvokeEvent } from "electron";
 import { ipcMain } from "electron";
-import {
-  defaultCacheDir,
-  fetchModelList,
-  PROVIDER_KINDS,
-  reasoningControlFor,
-  type ProviderKindName,
-  getMergedCatalog,
-  catalogEntryOrigins,
-} from "@cjhyy/code-shell-core/internal";
-import { resolveModelMeta } from "./model-meta-service.js";
+import { getMergedCatalog, catalogEntryOrigins } from "@cjhyy/code-shell-core/internal";
+import { modelMetadata, modelReasoning, providerModels } from "./model-provider-views.js";
 import { invalidateMcpProbeCache } from "./mcp-probe-service.js";
 import { probeSearch, type SearchProbeInput } from "./search-probe-service.js";
 import { probeImage, type ImageProbeInput } from "./image-probe-service.js";
@@ -56,44 +48,13 @@ export function registerModelCatalogIpc(host: {
   );
   ipcMain.handle("catalog:origins", async () => catalogEntryOrigins());
 
-  ipcMain.handle("models:resolve-meta", async (_e, models: unknown, providers: unknown) => {
-    if (!Array.isArray(models) || !Array.isArray(providers)) return [];
-    return resolveModelMeta(models as never, providers as never);
-  });
-
-  ipcMain.handle("models:reasoning-control", async (_e, rawKind: unknown, rawModel: unknown) => {
-    const kind: ProviderKindName =
-      typeof rawKind === "string" && Object.prototype.hasOwnProperty.call(PROVIDER_KINDS, rawKind)
-        ? (rawKind as ProviderKindName)
-        : "custom";
-    const model = typeof rawModel === "string" ? rawModel : "";
-    return reasoningControlFor(kind, model);
-  });
-
-  ipcMain.handle("models:list", async (_e, rawProvider: unknown, refresh?: boolean) => {
-    const provider =
-      rawProvider && typeof rawProvider === "object"
-        ? (rawProvider as Record<string, unknown>)
-        : {};
-    const rawKind = typeof provider.kind === "string" ? provider.kind : "custom";
-    const kind = Object.prototype.hasOwnProperty.call(PROVIDER_KINDS, rawKind)
-      ? (rawKind as ProviderKindName)
-      : "custom";
-    const meta = PROVIDER_KINDS[kind];
-    const rawBaseUrl =
-      typeof provider.baseUrl === "string" && provider.baseUrl.trim()
-        ? provider.baseUrl.trim()
-        : meta.defaultBaseUrl;
-    const baseUrl = kind === "ollama" ? rawBaseUrl.replace(/\/v1\/?$/, "") : rawBaseUrl;
-    return fetchModelList(
-      {
-        key: typeof provider.key === "string" && provider.key ? provider.key : kind,
-        kind,
-        baseUrl,
-        apiKey: typeof provider.apiKey === "string" ? provider.apiKey : undefined,
-        modelsPath: typeof provider.modelsPath === "string" ? provider.modelsPath : undefined,
-      },
-      { cacheDir: defaultCacheDir(), refresh: refresh === true },
-    );
-  });
+  ipcMain.handle("models:resolve-meta", (_event, models: unknown, providers: unknown) =>
+    modelMetadata(models, providers),
+  );
+  ipcMain.handle("models:reasoning-control", (_event, kind: unknown, model: unknown) =>
+    modelReasoning(kind, model),
+  );
+  ipcMain.handle("models:list", (_event, provider: unknown, refresh?: boolean) =>
+    providerModels(provider, refresh),
+  );
 }

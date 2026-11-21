@@ -2,6 +2,7 @@ import type { DesktopBusinessReads } from "../../shared/desktop-business-contrac
 import { isDesktopSessionId, type ListSessions } from "../../shared/disk-session-query.js";
 import type { RendererConfigurationTarget } from "../../shared/renderer-configuration.js";
 import { listMergedMcpServers } from "../mcp-config-view.js";
+import { checkSkillUpdateEntry } from "../skill-update-entry.js";
 import { listCapabilities } from "../capabilities-service.js";
 import { resolveNoRepoCwd } from "../no-repo-cwd.js";
 import { listPluginCommands } from "../plugin-command-service.js";
@@ -57,6 +58,10 @@ export function scopedConfigurationReads(list: ListSessions) {
       read,
     );
   }
+  function listedSkill(input: unknown) {
+    const { target: t, filePath } = businessArguments(input, ["target", "filePath"]);
+    return { target: maybeTarget(t), filePath: textArgument(filePath) };
+  }
   return [
     register(
       "mcp/merged",
@@ -101,14 +106,11 @@ export function scopedConfigurationReads(list: ListSessions) {
           includeDisabled,
         }),
     ),
-    register(
-      "skills/body",
-      (input) => {
-        const { target: t, filePath } = businessArguments(input, ["target", "filePath"]);
-        return { target: maybeTarget(t), filePath: textArgument(filePath) };
-      },
-      async ({ target, filePath }) =>
-        readSkillBody(await requireRendererListedSkillPath(target, filePath)),
+    register("skills/body", listedSkill, async ({ target, filePath }) =>
+      readSkillBody(await requireRendererListedSkillPath(target, filePath)),
+    ),
+    register("skills/checkUpdate", listedSkill, async ({ target, filePath }) =>
+      checkSkillUpdateEntry(await requireRendererListedSkillPath(target, filePath)),
     ),
     register("plugins/list", optional, async ({ target }) =>
       listPlugins(await rendererOptionalConfigurationCwd(target, "")),

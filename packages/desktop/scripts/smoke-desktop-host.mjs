@@ -254,9 +254,10 @@ utilityProcess.fork = function (...args) {
           const business = await Promise.all([
             api.projectRegistry.list(), api.recents(), api.listSourceCatalog(), api.getModelCatalog(),
             api.listPluginMcpTrust(), api.getPluginDetail("uninstalled-business-test"), api.getSettings("user"),
-            api.listSkills(null),api.listPlugins(null),api.listMergedMcpServers({},[]),api.getConfigurationSettings({noRepo:true})
+            api.listSkills(null),api.listPlugins(null),api.listMergedMcpServers({},[]),api.getConfigurationSettings({noRepo:true}),
+            api.reasoningControl("openai","gpt-5"),api.listPluginHooks([])
           ]);
-          const [projects, recents, sources, models, trust, plugin, settings, skills, plugins, mcp, projectSettings] = business;
+          const [projects, recents, sources, models, trust, plugin, settings, skills, plugins, mcp, projectSettings, reasoning, hooks] = business;
           const root = projects.find(p => p.id === "host-smoke-project").roots[0];
           const entries = await api.readProjectDir("host-smoke-project", root.id);
           const entry = entries.find(row => row.name === "host-file.txt");
@@ -269,7 +270,7 @@ utilityProcess.fork = function (...args) {
           resolve({ begin, end: Date.now(), ids, sessionIds:page.sessions.map(row=>row.id),
             workspaceViews:file.text === "from-workspace" && exists && hits.some(row => row.rootId === root.id && row.name === entry.name) && Array.isArray(git.entries),
             configurationViews: [projects, recents, sources, models, trust, skills, plugins].every(Array.isArray)
-              && mcp !== null && typeof mcp === "object" && (projectSettings === null || typeof projectSettings === "object")
+              && Array.isArray(hooks) && reasoning !== undefined && mcp !== null && typeof mcp === "object" && (projectSettings === null || typeof projectSettings === "object")
               && models.length > 0 && plugin === null && (settings === null || typeof settings === "object") });
         } catch (error) { reject(error); }
       }, 250)); void 0`);

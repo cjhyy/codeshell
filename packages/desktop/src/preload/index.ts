@@ -1323,8 +1323,6 @@ contextBridge.exposeInMainWorld("codeshell", {
     input: import("../shared/panel-apps").PanelAppUpdateInput,
   ): Promise<import("../shared/panel-apps").PanelAppUpdateResult> =>
     ipcRenderer.invoke("panel-apps:installUpdate", input),
-  checkSkillUpdate: (target: RendererConfigurationTarget | null, filePath: string) =>
-    ipcRenderer.invoke("skills:checkUpdate", target, filePath),
   updateSkill: (target: RendererConfigurationTarget | null, filePath: string) =>
     ipcRenderer.invoke("skills:update", target, filePath),
   installLocalSkill: (
@@ -1355,8 +1353,6 @@ contextBridge.exposeInMainWorld("codeshell", {
   installFromGithub: (input: unknown) => ipcRenderer.invoke("skills:installFromGithub", input),
   probeMcpServers: (cfgs: unknown, force?: boolean, target?: RendererConfigurationTarget | null) =>
     ipcRenderer.invoke("mcp:probe", cfgs, force, target),
-  listPluginHooks: (disabledPlugins?: unknown) =>
-    ipcRenderer.invoke("hooks:listPlugin", disabledPlugins),
   approvePluginHooks: (installKey: string): Promise<PluginHookApprovalResult[]> =>
     ipcRenderer.invoke("hooks:approvePlugin", installKey),
   revokePluginHooks: (installKey: string): Promise<PluginHookApprovalResult[]> =>
@@ -1370,12 +1366,6 @@ contextBridge.exposeInMainWorld("codeshell", {
   probeImage: (input: unknown) => ipcRenderer.invoke("image:probe", input),
   saveCatalogEntry: (entry: unknown) => ipcRenderer.invoke("catalog:save", entry),
   deleteCatalogEntry: (id: string) => ipcRenderer.invoke("catalog:delete", id),
-  resolveModelMeta: (models: unknown, providers: unknown) =>
-    ipcRenderer.invoke("models:resolve-meta", models, providers),
-  reasoningControl: (kind: string, model: string) =>
-    ipcRenderer.invoke("models:reasoning-control", kind, model),
-  listModels: (provider: unknown, refresh?: boolean) =>
-    ipcRenderer.invoke("models:list", provider, refresh),
   setTrust: (path: string, level: "trusted" | "untrusted") =>
     ipcRenderer.invoke("trust:set", path, level),
   notify: (opts: { title: string; body?: string; subtitle?: string }) =>

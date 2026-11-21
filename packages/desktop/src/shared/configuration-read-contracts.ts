@@ -12,6 +12,12 @@ type Target = { target: RendererConfigurationTarget };
 type OptionalTarget = { target: RendererConfigurationTarget | null };
 
 export interface ConfigurationReadContracts {
+  "models/meta": View<"resolveModelMeta", { models: unknown; providers: unknown }>;
+  "models/reasoning": View<"reasoningControl", { kind: string; model: string }>;
+  "models/provider": View<"listModels", { provider: unknown; refresh?: boolean }>;
+  "plugins/hooks": View<"listPluginHooks", { disabledPlugins?: string[] }>;
+  "skills/checkUpdate": View<"checkSkillUpdate", OptionalTarget & { filePath: string }>;
+
   "mcp/merged": View<
     "listMergedMcpServers",
     OptionalTarget & { base: Record<string, unknown>; disabledPlugins?: string[] }
