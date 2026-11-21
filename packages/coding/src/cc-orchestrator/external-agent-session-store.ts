@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { chmod, mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { codeShellHome, logger, normalizeCwdPath } from "@cjhyy/code-shell-core/extension";
@@ -37,6 +37,9 @@ interface ExternalAgentSessionSnapshot {
   sessions: ExternalAgentSessionBinding[];
 }
 
+// Keep the most recently used local bindings. Eviction never affects the
+// original external session or its transcript.
+const MAX_BINDINGS = 4_096;
 const LOCK_WAIT_MS = 5_000;
 const LOCK_STALE_MS = 30_000;
 const LOCK_POLL_MS = 10;
@@ -48,21 +51,24 @@ export function defaultExternalAgentSessionStorePath(): string {
 export class ExternalAgentSessionStore {
   private readonly pendingBindings = new Map<string, ExternalAgentSessionBinding>();
 
+  private cached?: { fingerprint: string; bindings: Map<string, ExternalAgentSessionBinding> };
+
   constructor(private readonly file = defaultExternalAgentSessionStorePath()) {}
 
   /** Snapshot all known bindings. Returned objects are detached from the
    *  persisted array so read-only consumers (for example room discovery) can
    *  correlate worktree sessions without gaining a mutation path. */
   list(): ExternalAgentSessionBinding[] {
-    const merged = new Map(this.load().map((binding) => [bindingKey(binding), binding]));
+    const merged = new Map(this.load());
     for (const [key, binding] of this.pendingBindings) merged.set(key, binding);
     return [...merged.values()].map((binding) => ({ ...binding }));
   }
 
   get(cli: ExternalAgentCli, sessionId: string): ExternalAgentSessionBinding | undefined {
     if (!sessionId) return undefined;
-    const pending = this.pendingBindings.get(bindingKey({ cli, sessionId }));
-    return pending ?? this.load().find((s) => s.cli === cli && s.sessionId === sessionId);
+    const key = bindingKey({ cli, sessionId });
+    const binding = this.pendingBindings.get(key) ?? this.load().get(key);
+    return binding && { ...binding };
   }
 
   async record(binding: ExternalAgentSessionRecord): Promise<void> {
@@ -84,27 +90,42 @@ export class ExternalAgentSessionStore {
           (s) => !(s.cli === binding.cli && s.sessionId === binding.sessionId),
         );
         sessions.push(next);
-        await this.save(sessions);
+        await this.save(trimBindings(sessions));
+        this.cached = undefined;
       });
     } finally {
       if (this.pendingBindings.get(key) === optimistic) this.pendingBindings.delete(key);
     }
   }
 
-  private load(): ExternalAgentSessionBinding[] {
-    if (!existsSync(this.file)) return [];
+  private load(): Map<string, ExternalAgentSessionBinding> {
     try {
-      const raw = readFileSync(this.file, "utf-8");
-      const parsed = JSON.parse(raw) as Partial<ExternalAgentSessionSnapshot>;
-      if (!parsed || !Array.isArray(parsed.sessions)) return [];
-      return parsed.sessions.filter(isBinding).map(normalizeBinding);
+      // Atomic replacement changes inode even when size and wall time match.
+      const st = statSync(this.file, { bigint: true });
+      const fingerprint = [st.dev, st.ino, st.size, st.mtimeNs, st.ctimeNs].join(":");
+      if (this.cached?.fingerprint === fingerprint) return this.cached.bindings;
+      const raw = JSON.parse(
+        readFileSync(this.file, "utf-8"),
+      ) as Partial<ExternalAgentSessionSnapshot>;
+      if (!raw || !Array.isArray(raw.sessions))
+        throw new Error("Invalid external agent session store");
+      const bindings = new Map(
+        trimBindings(raw.sessions.filter(isBinding).map(normalizeBinding)).map((b) => [
+          bindingKey(b),
+          b,
+        ]),
+      );
+      this.cached = { fingerprint, bindings };
+      return bindings;
     } catch (err) {
-      logger.warn("external_agent_session_store.load_failed", {
-        cat: "cc",
-        file: this.file,
-        error: err instanceof Error ? err.message : String(err),
-      });
-      return [];
+      this.cached = undefined;
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT")
+        logger.warn("external_agent_session_store.load_failed", {
+          cat: "cc",
+          file: this.file,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      return new Map();
     }
   }
 
@@ -176,6 +197,22 @@ export class ExternalAgentSessionStore {
       await rm(lockDir, { recursive: true, force: true });
     }
   }
+}
+
+function trimBindings(bindings: ExternalAgentSessionBinding[]): ExternalAgentSessionBinding[] {
+  if (bindings.length <= MAX_BINDINGS) return bindings;
+  // Preserve insertion order for list consumers after choosing the survivors.
+  const newest = new Set(
+    [...bindings]
+      .sort(
+        (a, b) =>
+          b.lastUsedAt - a.lastUsedAt ||
+          b.createdAt - a.createdAt ||
+          bindingKey(a).localeCompare(bindingKey(b)),
+      )
+      .slice(0, MAX_BINDINGS),
+  );
+  return bindings.filter((binding) => newest.has(binding));
 }
 
 function bindingKey(binding: Pick<ExternalAgentSessionRecord, "cli" | "sessionId">): string {

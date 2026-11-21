@@ -5,6 +5,7 @@ import {
   readFileSync,
   readdirSync,
   realpathSync,
+  renameSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -232,6 +233,39 @@ describe("ExternalAgentSessionStore", () => {
     try {
       const store = new ExternalAgentSessionStore(join(dir, "sessions.json"));
       expect(store.get("claude", "missing")).toBeUndefined();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("bounds legacy and new bindings by last use and reloads another writer's atomic replacement", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "external-agent-bounded-"));
+    try {
+      const file = join(dir, "sessions.json");
+      const legacy = Array.from({ length: 4100 }, (_, i) => ({
+        cli: "codex",
+        sessionId: "s" + i,
+        cwd: dir,
+        updatedAt: i,
+      }));
+      writeFileSync(file, JSON.stringify({ version: 1, sessions: legacy }));
+      const reader = new ExternalAgentSessionStore(file);
+      expect(reader.list()).toHaveLength(4096);
+      expect(reader.get("codex", "s0")).toBeUndefined();
+      const copy = reader.get("codex", "s4099")!;
+      copy.cwd = "/changed-cache";
+      expect(reader.get("codex", "s4099")?.cwd).toBe(realpathSync(dir));
+      const writer = new ExternalAgentSessionStore(file);
+      await writer.record({ cli: "claude", sessionId: "new", cwd: dir });
+      expect(reader.get("claude", "new")).toBeDefined();
+      const persisted = JSON.parse(readFileSync(file, "utf8"));
+      expect(persisted.sessions).toHaveLength(4096);
+      expect(persisted.sessions[0].sessionId).toBe("s5");
+      const replacement = join(dir, "other");
+      writeFileSync(replacement, JSON.stringify({ version: 2, sessions: [legacy[0]] }));
+      renameSync(replacement, file);
+      expect(reader.get("claude", "new")).toBeUndefined();
+      expect(reader.get("codex", "s0")).toBeDefined();
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
