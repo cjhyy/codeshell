@@ -1,13 +1,23 @@
-import { afterEach, describe, expect, test } from "bun:test";
+// Real worker-thread suite for SessionTranscriptCache, moved from
+// src/main/session-transcript-cache.test.ts (assertions unchanged). See
+// main-worker-suite.mjs for why it runs under node --test.
 import { mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { SessionTranscriptCache } from "./session-transcript-cache";
+import { after, afterEach, describe, test } from "node:test";
 import { SessionManager } from "@cjhyy/code-shell-core";
+import { compileMainModules, expect } from "./main-worker-suite.mjs";
 
-const fixtures: string[] = [];
-const caches: SessionTranscriptCache[] = [];
-function makeCache(options: ConstructorParameters<typeof SessionTranscriptCache>[0]) {
+const compiled = await compileMainModules([
+  "session-transcript-cache",
+  "session-transcript-cache-worker",
+]);
+const { SessionTranscriptCache } = compiled.module;
+after(() => compiled.remove());
+
+const fixtures = [];
+const caches = [];
+function makeCache(options) {
   const cache = new SessionTranscriptCache(options);
   caches.push(cache);
   return cache;
@@ -29,16 +39,14 @@ function fixture() {
     }),
   };
 }
-function message(id: string, kind = "assistant", text = id) {
+function message(id, kind = "assistant", text = id) {
   return { id, kind, text };
 }
-function state(
-  messages: Record<string, unknown>[] = [message("a")],
-  extra: Record<string, unknown> = {},
-) {
+function state(messages = [message("a")], extra = {}) {
   return JSON.stringify({ messages, snapshotSeq: 4, activeGoal: { goalId: "goal-1" }, ...extra });
 }
 afterEach(async () => {
+  // close() drains and terminates each real worker so none keeps Node alive.
   await Promise.all(caches.splice(0).map((cache) => cache.close()));
   for (const directory of fixtures.splice(0)) rmSync(directory, { recursive: true, force: true });
 });
@@ -86,7 +94,7 @@ describe("SessionTranscriptCache", () => {
         singleTurnPromptTokens: 1500,
       }),
     });
-    expect(JSON.parse((await cache.read(key)).value!)).toMatchObject({
+    expect(JSON.parse((await cache.read(key)).value)).toMatchObject({
       cacheUsageVersion: 1,
       cumulativePromptTokens: 1000,
       cumulativeCacheReadTokens: 800,
@@ -114,7 +122,7 @@ describe("SessionTranscriptCache", () => {
         singleTurnPromptTokens: 1500,
       }),
     });
-    expect(JSON.parse((await cache.read(key)).value!)).toMatchObject({
+    expect(JSON.parse((await cache.read(key)).value)).toMatchObject({
       cacheUsageVersion: 1,
       cumulativePromptTokens: 1000,
       cumulativeCacheReadTokens: 800,
@@ -134,8 +142,8 @@ describe("SessionTranscriptCache", () => {
     });
     await cache.write({ ...key, value: state([message("old")]), legacy: true });
     const restarted = makeCache({ directory, legacyDirectory });
-    const loaded = JSON.parse((await restarted.read(key)).value!);
-    expect(loaded.messages.map((row: { id: string }) => row.id)).toEqual(["a", "b", "c"]);
+    const loaded = JSON.parse((await restarted.read(key)).value);
+    expect(loaded.messages.map((row) => row.id)).toEqual(["a", "b", "c"]);
     expect(loaded.messages[1].text).toBe("updated");
     expect(readFileSync(backup, "utf8")).toBe(original);
   });
@@ -159,24 +167,22 @@ describe("SessionTranscriptCache", () => {
     });
     const tail = await cache.read({ ...key, maxBytes: 700 });
     expect(tail.hasEarlier).toBe(true);
-    const parsed = JSON.parse(tail.value!);
-    expect(parsed.messages.map((row: { id: string }) => row.id)).toEqual(["worker", "answer"]);
+    const parsed = JSON.parse(tail.value);
+    expect(parsed.messages.map((row) => row.id)).toEqual(["worker", "answer"]);
     expect(parsed.agentMessageIndex).toEqual({ worker: 0 });
     expect(parsed.streamingAssistantId).toBe("answer");
     expect(parsed.streamingThinkingId).toBeNull();
     expect(parsed.activeGoal).toEqual({ goalId: "goal-1" });
     expect(parsed.snapshotSeq).toBe(4);
     const tiny = await cache.read({ ...key, maxBytes: 1 });
-    expect(JSON.parse(tiny.value!).messages.map((row: { id: string }) => row.id)).toEqual([
-      "answer",
-    ]);
+    expect(JSON.parse(tiny.value).messages.map((row) => row.id)).toEqual(["answer"]);
     expect(tiny.hasEarlier).toBe(true);
     const all = await cache.read({ ...key, maxBytes: Number.MAX_SAFE_INTEGER });
     expect(all.hasEarlier).toBe(false);
-    expect(JSON.parse(all.value!).messages).toHaveLength(3);
-    await cache.write({ ...key, value: tail.value! });
+    expect(JSON.parse(all.value).messages).toHaveLength(3);
+    await cache.write({ ...key, value: tail.value });
     expect(
-      JSON.parse((await cache.read({ ...key, maxBytes: Number.MAX_SAFE_INTEGER })).value!).messages,
+      JSON.parse((await cache.read({ ...key, maxBytes: Number.MAX_SAFE_INTEGER })).value).messages,
     ).toHaveLength(3);
   });
 
@@ -193,11 +199,11 @@ describe("SessionTranscriptCache", () => {
     ];
     await cache.flush();
     await Promise.all(pending);
-    expect(JSON.parse((await cache.read(key)).value!).messages).toHaveLength(2);
+    expect(JSON.parse((await cache.read(key)).value).messages).toHaveLength(2);
     expect(
       JSON.parse(
         (await cache.read({ projectKey: "investment", sessionId: "project.codex.session.1" }))
-          .value!,
+          .value,
       ).messages[0].id,
     ).toBe("other");
   });
@@ -215,7 +221,7 @@ describe("SessionTranscriptCache", () => {
     ];
     await cache.write({ ...key, value: state(secondFold) });
     await cache.write({ ...key, value: state(secondFold) });
-    expect(JSON.parse((await cache.read(key)).value!).messages).toEqual(secondFold);
+    expect(JSON.parse((await cache.read(key)).value).messages).toEqual(secondFold);
   });
 
   test("keeps earlier pages across random-id tails and distinct repeated user intents", async () => {
@@ -230,14 +236,14 @@ describe("SessionTranscriptCache", () => {
       ...key,
       value: state([second, message("answer-b", "assistant", "same answer")]),
     });
-    let all = JSON.parse((await cache.read(key)).value!);
+    let all = JSON.parse((await cache.read(key)).value);
     expect(all.messages).toHaveLength(4);
     const reFoldedTail = [
       { ...second, id: "random-new-user" },
       message("random-new-answer", "assistant", "same answer"),
     ];
     await cache.write({ ...key, value: state(reFoldedTail) });
-    all = JSON.parse((await cache.read(key)).value!);
+    all = JSON.parse((await cache.read(key)).value);
     expect(all.messages).toEqual([
       first,
       message("answer-a", "assistant", "same answer"),
@@ -247,7 +253,7 @@ describe("SessionTranscriptCache", () => {
       ...key,
       value: state([message("random-tail", "assistant", "same answer")]),
     });
-    expect(JSON.parse((await cache.read(key)).value!).messages).toHaveLength(4);
+    expect(JSON.parse((await cache.read(key)).value).messages).toHaveLength(4);
   });
 
   test("a delayed second window cannot erase a completed reply or subsequent legacy-only turns", async () => {
@@ -264,7 +270,7 @@ describe("SessionTranscriptCache", () => {
       value: state([firstUser, unfinished], { sessionId: null, snapshotSeq: 0 }),
     });
     const oldSnapshot = (await secondWindow.read({ ...key, maxBytes: Number.MAX_SAFE_INTEGER }))
-      .value!;
+      .value;
     const completed = {
       ...message("answer-1", "assistant", "The fund may fluctuate in the coming week."),
       done: true,
@@ -281,7 +287,7 @@ describe("SessionTranscriptCache", () => {
       }),
     });
     await secondWindow.write({ ...key, value: oldSnapshot });
-    const loaded = JSON.parse((await cache.read(key)).value!);
+    const loaded = JSON.parse((await cache.read(key)).value);
     expect(loaded.messages).toEqual([firstUser, completed, secondUser, continuation]);
     expect(loaded.streamingAssistantId).toBeNull();
   });
@@ -296,17 +302,17 @@ describe("SessionTranscriptCache", () => {
       ...key,
       value: state([message("answer")], { snapshotEpoch: "new", snapshotSeq: 3 }),
     });
-    expect(JSON.parse((await cache.read(key)).value!)).toMatchObject({
+    expect(JSON.parse((await cache.read(key)).value)).toMatchObject({
       snapshotEpoch: "new",
       snapshotSeq: 3,
     });
     await cache.write({ ...key, value: state([], { snapshotEpoch: "new", snapshotSeq: 2 }) });
-    expect(JSON.parse((await cache.read(key)).value!)).toMatchObject({
+    expect(JSON.parse((await cache.read(key)).value)).toMatchObject({
       snapshotEpoch: "new",
       snapshotSeq: 3,
     });
     await cache.write({ ...key, value: state([message("answer")], { snapshotSeq: 1 }) });
-    expect(JSON.parse((await cache.read(key)).value!).snapshotEpoch).toBeUndefined();
+    expect(JSON.parse((await cache.read(key)).value).snapshotEpoch).toBeUndefined();
   });
 
   test("expanding a saved tail prepends older messages before the known suffix", async () => {
@@ -322,7 +328,7 @@ describe("SessionTranscriptCache", () => {
     const answer = message("answer", "assistant", "recent answer");
     await cache.write({ ...key, value: state([question, answer]) });
     await cache.write({ ...key, value: state([older, question, answer]) });
-    expect(JSON.parse((await cache.read(key)).value!).messages).toEqual([older, question, answer]);
+    expect(JSON.parse((await cache.read(key)).value).messages).toEqual([older, question, answer]);
   });
 
   test("a repeated first answer cannot outrank the later stable anchor of an expanded page", async () => {
@@ -332,16 +338,15 @@ describe("SessionTranscriptCache", () => {
     const olderAnswer = message("older-answer", "assistant", "same answer");
     await cache.write({ ...key, value: state([question, answer]) });
     await cache.write({ ...key, value: state([olderAnswer, question, answer]) });
-    expect(JSON.parse((await cache.read(key)).value!).messages).toEqual([
+    expect(JSON.parse((await cache.read(key)).value).messages).toEqual([
       olderAnswer,
       question,
       answer,
     ]);
   });
 
-  test.each(["stable", "refold-with-intent", "legacy-refold"])(
-    "expanding %s history is ordered, idempotent, and retains another window's newer suffix",
-    async (mode) => {
+  for (const mode of ["stable", "refold-with-intent", "legacy-refold"]) {
+    test(`expanding ${mode} history is ordered, idempotent, and retains another window's newer suffix`, async () => {
       const { cache } = fixture();
       const ordered = [
         message("u1", "user", "older question"),
@@ -358,14 +363,12 @@ describe("SessionTranscriptCache", () => {
         .slice(0, 4)
         .map((row) => (mode === "stable" ? row : { ...row, id: `refold-${row.id}` }));
       await cache.write({ ...key, value: state(expanded) });
-      const first = JSON.parse((await cache.read(key)).value!).messages;
-      expect(first.map((row: { text: string }) => row.text)).toEqual(
-        ordered.map((row) => row.text),
-      );
+      const first = JSON.parse((await cache.read(key)).value).messages;
+      expect(first.map((row) => row.text)).toEqual(ordered.map((row) => row.text));
       await cache.write({ ...key, value: state(expanded) });
-      expect(JSON.parse((await cache.read(key)).value!).messages).toEqual(first);
-    },
-  );
+      expect(JSON.parse((await cache.read(key)).value).messages).toEqual(first);
+    });
+  }
 
   test("a refolded unfinished reply keeps its streaming pointer attached to the merged id", async () => {
     const { cache } = fixture();
@@ -387,7 +390,7 @@ describe("SessionTranscriptCache", () => {
         { streamingAssistantId: null },
       ),
     });
-    const saved = JSON.parse((await cache.read(key)).value!);
+    const saved = JSON.parse((await cache.read(key)).value);
     expect(saved.messages[1]).toMatchObject({
       id: "refold-answer",
       text: "Part and live tail",
@@ -420,7 +423,7 @@ describe("SessionTranscriptCache", () => {
         streamingAssistantId: "answer",
       }),
     });
-    const loaded = JSON.parse((await cache.read(key)).value!);
+    const loaded = JSON.parse((await cache.read(key)).value);
     expect(loaded.messages[1]).toMatchObject({ text: "Part one and part two.", done: true });
     expect(loaded.messages).toHaveLength(2);
     expect(loaded.streamingAssistantId).toBeNull();
@@ -439,7 +442,7 @@ describe("SessionTranscriptCache", () => {
         { ...message("fold-answer", "assistant", "Answer"), done: false },
       ]),
     });
-    const loaded = JSON.parse((await cache.read(key)).value!);
+    const loaded = JSON.parse((await cache.read(key)).value);
     expect(loaded.messages).toHaveLength(4);
     expect(loaded.messages[1]).toMatchObject({
       id: "fold-answer",
@@ -473,21 +476,13 @@ describe("SessionTranscriptCache", () => {
         message("a3"),
       ]),
     });
-    const loaded = JSON.parse((await cache.read(key)).value!);
-    expect(loaded.messages.map((row: { id: string }) => row.id)).toEqual([
-      "u1",
-      "tool",
-      "u2",
-      "a2",
-      "u3",
-      "a3",
-    ]);
+    const loaded = JSON.parse((await cache.read(key)).value);
+    expect(loaded.messages.map((row) => row.id)).toEqual(["u1", "tool", "u2", "a2", "u3", "a3"]);
     expect(loaded.messages[1]).toMatchObject({ status: "succeeded", result: "full result" });
   });
 
-  test.each(["live-first", "canonical-first"])(
-    "joins a confirmed steer to its canonical client identity in %s cache saves",
-    async (order) => {
+  for (const order of ["live-first", "canonical-first"]) {
+    test(`joins a confirmed steer to its canonical client identity in ${order} cache saves`, async () => {
       const { cache } = fixture();
       const first = { ...message("first", "user", "create note"), clientMessageId: "first" };
       const live = {
@@ -506,7 +501,7 @@ describe("SessionTranscriptCache", () => {
       const states = order === "live-first" ? [live, canonical] : [canonical, live];
       for (const [index, user] of [...states, ...states].entries()) {
         await cache.write({ ...key, value: state([first, user]) });
-        const users = JSON.parse((await cache.read(key)).value!).messages;
+        const users = JSON.parse((await cache.read(key)).value).messages;
         expect(users).toHaveLength(2);
         if (index === 0) continue;
         expect(users[1]).toMatchObject({
@@ -516,8 +511,8 @@ describe("SessionTranscriptCache", () => {
           attachments: live.attachments,
         });
       }
-    },
-  );
+    });
+  }
 
   test("upgrades an existing dual-alias cache without moving the request after its tool", async () => {
     const { cache } = fixture();
@@ -553,8 +548,8 @@ describe("SessionTranscriptCache", () => {
           streamingAssistantId: "answer",
         }),
       });
-      const saved = JSON.parse((await cache.read(key)).value!);
-      expect(saved.messages.map((row: { kind: string }) => row.kind)).toEqual([
+      const saved = JSON.parse((await cache.read(key)).value);
+      expect(saved.messages.map((row) => row.kind)).toEqual([
         "user",
         "tool",
         "user",
@@ -585,7 +580,7 @@ describe("SessionTranscriptCache", () => {
         { ...second, id: "canonical-b", clientMessageId: "client-b" },
       ]),
     });
-    expect(JSON.parse((await cache.read(key)).value!).messages).toMatchObject([
+    expect(JSON.parse((await cache.read(key)).value).messages).toMatchObject([
       { steerId: "steer-a", clientMessageId: "client-a", text: "continue" },
       { steerId: "steer-b", clientMessageId: "client-b", text: "continue" },
     ]);
@@ -599,14 +594,12 @@ describe("SessionTranscriptCache", () => {
     await cache.write({ ...key, value: state([live, one, two]) });
     for (const rows of [[one, two], [live]]) {
       await cache.write({ ...key, value: state(rows) });
-      expect(JSON.parse((await cache.read(key)).value!).messages).toMatchObject([
+      expect(JSON.parse((await cache.read(key)).value).messages).toMatchObject([
         { id: "live", steerId: "conflict" },
         { id: "canonical-one", steerId: "conflict", clientMessageId: "client-one" },
         { id: "canonical-two", steerId: "conflict", clientMessageId: "client-two" },
       ]);
-      expect(
-        JSON.parse((await cache.read(key)).value!).messages[0].clientMessageId,
-      ).toBeUndefined();
+      expect(JSON.parse((await cache.read(key)).value).messages[0].clientMessageId).toBeUndefined();
     }
   });
 
@@ -631,9 +624,9 @@ describe("SessionTranscriptCache", () => {
     await expect(cache.write({ ...key, value: state([message("failed")]) })).rejects.toThrow();
     rmSync(file, { recursive: true });
     writeFileSync(file, committed);
-    expect(JSON.parse((await cache.read(key)).value!).messages[0].id).toBe("a");
+    expect(JSON.parse((await cache.read(key)).value).messages[0].id).toBe("a");
     await cache.write({ ...key, value: state([message("a", "assistant", "recovered")]) });
-    expect(JSON.parse((await cache.read(key)).value!).messages[0].text).toBe("recovered");
+    expect(JSON.parse((await cache.read(key)).value).messages[0].text).toBe("recovered");
   });
 
   test("validates ids, JSON and message arrays at the main boundary", async () => {
