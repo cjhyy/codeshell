@@ -1,3 +1,7 @@
+import {
+  credentialCommands,
+  type CredentialFileCommand,
+} from "@cjhyy/code-shell-core/internal/storage";
 import { isPrivateTaskCommand } from "../task-inbox/private-task-command.js";
 import type { MessagePortMain, UtilityProcess } from "electron";
 import type { ListDiskSessionsResult } from "@cjhyy/code-shell-server/storage";
@@ -134,6 +138,18 @@ export class DesktopHostSupervisor {
   ): Promise<T | null> {
     if (!isPrivateTaskCommand(command)) throw new Error("Unknown task command");
     return (await this.request(command, { payload, ...(caller && { caller }) })) as T | null;
+  }
+
+  async credentialCommand<T>(
+    command: CredentialFileCommand,
+    payload: unknown,
+    caller?: DesktopHostIdentity,
+  ): Promise<T> {
+    if (!credentialCommands.includes(command)) throw new Error("Unknown credential command");
+    const result = await this.request(command, { payload, ...(caller && { caller }) });
+    if (result === null || result === undefined)
+      throw new Error("Credential storage is unavailable");
+    return result as T;
   }
 
   private request(method: string, params: Record<string, unknown>): Promise<unknown> {

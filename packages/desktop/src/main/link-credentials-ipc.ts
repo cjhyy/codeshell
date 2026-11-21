@@ -1,8 +1,16 @@
+import { runDesktopCredentialOperation } from "./credential-file-client.js";
 import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import { registerRemoteLinkIpc } from "./remote-link-ipc.js";
 import type { CaptureLinkAccountAccess } from "./link-account-access.js";
 import { createFigmaMcpLinkAdapter } from "./figma-mcp-link.js";
-import { BrowserWindow, clipboard, dialog, ipcMain, shell } from "electron";
+import {
+  BrowserWindow,
+  clipboard,
+  dialog,
+  ipcMain,
+  shell,
+  type IpcMainInvokeEvent,
+} from "electron";
 import {
   CredentialStore,
   isRemoteLinkCredential,
@@ -32,6 +40,7 @@ import { migrateCredentialStore } from "./credential-migration.js";
 import { cookieCredentialAutoRefresh } from "./cookie-credential-auto-refresh.js";
 
 export interface LinkCredentialIpcDeps {
+  withCaller<T>(event: IpcMainInvokeEvent, work: () => T): T;
   mainWindows: Set<BrowserWindow>;
   bridge: () => AgentBridge | null;
   linkDeviceOAuthBroker: LinkDeviceOAuthBroker;
@@ -51,22 +60,38 @@ export function registerLinkCredentialIpc(deps: LinkCredentialIpcDeps) {
     normalizeMcpOAuthLoginInput,
     captureLinkAccount,
   } = deps;
-  ipcMain.handle("credentials:list", async (_e, cwd: string) => {
-    const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : "";
-    await migrateCredentialStore(authorizedCwd || undefined);
-    const store = new CredentialStore(authorizedCwd || undefined);
-    const projectIds = new Set(store.list("project").map((credential) => credential.id));
-    return store.listMasked().map((credential) => ({
-      ...credential,
-      meta: credential.meta ? linkConnectionMetadata(credential.meta) : undefined,
-      storeScope: projectIds.has(credential.id) ? "project" : "user",
-    }));
-  });
+  function guarded<A extends unknown[], T>(
+    handler: (event: IpcMainInvokeEvent, ...args: A) => Promise<T>,
+  ) {
+    return (event: IpcMainInvokeEvent, ...args: A) =>
+      deps.withCaller(event, () => handler(event, ...args));
+  }
+  ipcMain.handle(
+    "credentials:list",
+    guarded(async (_e, cwd: string) => {
+      const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : "";
+      await migrateCredentialStore(authorizedCwd || undefined);
+      return runDesktopCredentialOperation(
+        authorizedCwd || undefined,
+        ["user", "project"],
+        undefined,
+        (store) => {
+          const projectIds = new Set(store.list("project").map((credential) => credential.id));
+          return store
+            .listMasked()
+            .map((credential) => ({
+              ...credential,
+              meta: credential.meta ? linkConnectionMetadata(credential.meta) : undefined,
+              storeScope: projectIds.has(credential.id) ? "project" : "user",
+            }));
+        },
+      );
+    }),
+  );
   ipcMain.handle(
     "credentials:save",
-    async (_e, cwd: string, scope: CredentialScope, cred: Credential) => {
+    guarded(async (_e, cwd: string, scope: CredentialScope, cred: Credential) => {
       const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : "";
-      assertGenericCredentialMutation(authorizedCwd, cred.id);
       if (isRemoteLinkCredential(cred)) throw new Error("远程 Link 连接必须通过授权创建。");
       if (cred.meta?.recordSchemaVersion === 2) {
         const {
@@ -77,20 +102,35 @@ export function registerLinkCredentialIpc(deps: LinkCredentialIpcDeps) {
         } = cred.meta;
         cred = { ...cred, meta };
       }
-      new CredentialStore(authorizedCwd || undefined).save(scope, cred);
+      await runDesktopCredentialOperation(
+        authorizedCwd || undefined,
+        ["user", "project"],
+        scope,
+        (store) => {
+          assertGenericCredentialRecord(store, scope, cred.id);
+          store.save(scope, cred);
+        },
+      );
       cookieCredentialAutoRefresh.detachForCredential(authorizedCwd || undefined, cred.id, scope);
       deps.bridge()?.pushCredentialSnapshot(authorizedCwd || undefined);
-    },
+    }),
   );
   ipcMain.handle(
     "credentials:remove",
-    async (_e, cwd: string, scope: CredentialScope, id: string) => {
+    guarded(async (_e, cwd: string, scope: CredentialScope, id: string) => {
       const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : "";
-      assertGenericCredentialMutation(authorizedCwd, id);
-      new CredentialStore(authorizedCwd || undefined).remove(scope, id);
+      await runDesktopCredentialOperation(
+        authorizedCwd || undefined,
+        ["user", "project"],
+        scope,
+        (store) => {
+          assertGenericCredentialRecord(store, scope, id);
+          store.remove(scope, id);
+        },
+      );
       cookieCredentialAutoRefresh.detachForCredential(authorizedCwd || undefined, id, scope);
       deps.bridge()?.pushCredentialSnapshot(authorizedCwd || undefined);
-    },
+    }),
   );
   ipcMain.handle("links:listLocalProviders", () => listDesktopLinkProviders());
 
@@ -113,6 +153,18 @@ export function registerLinkCredentialIpc(deps: LinkCredentialIpcDeps) {
     ],
   });
 
+  function assertGenericCredentialRecord(
+    store: CredentialStore,
+    scope: CredentialScope,
+    id: string,
+  ) {
+    const record = store.listLayerWithStatus(scope).credentials.find((c) => c.id === id);
+    if (
+      (record && isRemoteLinkCredential(record)) ||
+      store.list().some((c) => c.id === id && isRemoteLinkCredential(c))
+    )
+      throw new Error("请在 Link 页的独立服务连接中管理或断开此连接，以同步撤销远端授权。");
+  }
   function assertGenericCredentialMutation(cwd: string, id: string) {
     const credential = new CredentialStore(cwd || undefined).resolve(id);
     if (credential && isRemoteLinkCredential(credential))
@@ -321,49 +373,58 @@ export function registerLinkCredentialIpc(deps: LinkCredentialIpcDeps) {
   // 只改元数据(label/autoUseByAI/meta),保留 secret —— UI 的编辑/AI 开关用,避免清空 jar。
   ipcMain.handle(
     "credentials:patchMeta",
-    async (
-      _e,
-      cwd: string,
-      scope: CredentialScope,
-      id: string,
-      fields: {
-        label?: string;
-        exposeAsEnv?: string;
-        autoUseByAI?: boolean;
-        autoInjectByAI?: boolean;
-        meta?: unknown;
-      },
-    ) => {
-      const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : "";
-      if (typeof id !== "string" || !id || id.length > 512 || id.includes("\0")) {
-        throw new Error("credentials:patchMeta requires id");
-      }
-      if (!fields || typeof fields !== "object" || Array.isArray(fields)) {
-        throw new Error("credentials:patchMeta requires fields");
-      }
-      assertGenericCredentialMutation(authorizedCwd, id);
-      new CredentialStore(authorizedCwd || undefined).patch(scope, id, fields as never);
-      if (
-        fields.meta &&
-        typeof fields.meta === "object" &&
-        "autoRefreshFromBrowser" in fields.meta
-      ) {
-        if (fields.meta.autoRefreshFromBrowser === true) {
-          cookieCredentialAutoRefresh.requestRefreshForCredential(
-            authorizedCwd || undefined,
-            id,
-            scope,
-          );
-        } else {
-          cookieCredentialAutoRefresh.cancelRefreshForCredential(
-            authorizedCwd || undefined,
-            id,
-            scope,
-          );
+    guarded(
+      async (
+        _e,
+        cwd: string,
+        scope: CredentialScope,
+        id: string,
+        fields: {
+          label?: string;
+          exposeAsEnv?: string;
+          autoUseByAI?: boolean;
+          autoInjectByAI?: boolean;
+          meta?: unknown;
+        },
+      ) => {
+        const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : "";
+        if (typeof id !== "string" || !id || id.length > 512 || id.includes("\0")) {
+          throw new Error("credentials:patchMeta requires id");
         }
-      }
-      deps.bridge()?.pushCredentialSnapshot(authorizedCwd || undefined);
-    },
+        if (!fields || typeof fields !== "object" || Array.isArray(fields)) {
+          throw new Error("credentials:patchMeta requires fields");
+        }
+        await runDesktopCredentialOperation(
+          authorizedCwd || undefined,
+          ["user", "project"],
+          scope,
+          (store) => {
+            assertGenericCredentialRecord(store, scope, id);
+            store.patch(scope, id, fields as never);
+          },
+        );
+        if (
+          fields.meta &&
+          typeof fields.meta === "object" &&
+          "autoRefreshFromBrowser" in fields.meta
+        ) {
+          if (fields.meta.autoRefreshFromBrowser === true) {
+            cookieCredentialAutoRefresh.requestRefreshForCredential(
+              authorizedCwd || undefined,
+              id,
+              scope,
+            );
+          } else {
+            cookieCredentialAutoRefresh.cancelRefreshForCredential(
+              authorizedCwd || undefined,
+              id,
+              scope,
+            );
+          }
+        }
+        deps.bridge()?.pushCredentialSnapshot(authorizedCwd || undefined);
+      },
+    ),
   );
   ipcMain.handle("mcpOAuth:login", (_e, raw: unknown) => {
     const input = normalizeMcpOAuthLoginInput(raw);

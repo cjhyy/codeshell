@@ -2,6 +2,7 @@ import {
   observeBackgroundWorkChange,
   type BackgroundWorkChange,
 } from "@cjhyy/code-shell-core/internal";
+import { setDesktopCredentialFiles } from "./credential-file-client.js";
 import { taskInboxEnabled } from "./task-inbox/task-host-reads.js";
 import { registerLinkedFileSourceIpc } from "./linked-file-sources-ipc.js";
 import { openLinkedFileSourceOperation } from "./linked-file-sources-host.js";
@@ -509,6 +510,7 @@ const desktopHost = createDesktopHost(
   appRendererNavigation,
   (): void => taskInboxService.hostRestarted(),
 );
+setDesktopCredentialFiles(desktopHost.credentialCommand);
 const { listDiskSessions } = desktopHost;
 const chromeNativeMessagingOrigin = nativeMessagingOriginFromArgv(process.argv);
 if (chromeNativeMessagingOrigin) {
@@ -4120,6 +4122,7 @@ registerProjectPanelIpc({
 // ── Credentials (token/link store + cookie capture) ──────────────────
 // cwd may be "" for no-repo contexts; project scope no-ops without a cwd.
 const { remoteLinkIpc } = registerLinkCredentialIpc({
+  withCaller: desktopHost.withDocumentCaller,
   mainWindows,
   bridge: () => bridge,
   linkDeviceOAuthBroker,
@@ -4884,7 +4887,7 @@ taskInboxDisposers.push(
     taskInboxService,
     taskInboxEnabled,
     (event) => appRendererNavigation.assertSender(event),
-    desktopHost.withTaskCaller,
+    desktopHost.withDocumentCaller,
   ),
   sessionCatalogStore.onChanged(() => taskInboxService.scheduleRefresh("session")),
 );

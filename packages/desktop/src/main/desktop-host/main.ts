@@ -1,3 +1,4 @@
+import type { CredentialFileCommand } from "@cjhyy/code-shell-core/internal/storage";
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { DesktopHostIdentity } from "../../shared/desktop-host-protocol.js";
 import { join } from "node:path";
@@ -98,8 +99,11 @@ export function createDesktopHost(
       if (workbenches.identity(event) !== caller) throw new Error("Workbench document changed");
       return result;
     },
-    withTaskCaller<T>(event: Pick<IpcMainEvent, "sender" | "senderFrame">, work: () => T): T {
+    withDocumentCaller<T>(event: Pick<IpcMainEvent, "sender" | "senderFrame">, work: () => T): T {
       return intentCaller.run(workbenches.identity(event), work);
+    },
+    credentialCommand<T>(command: CredentialFileCommand, payload: unknown): Promise<T> {
+      return supervisor.credentialCommand(command, payload, intentCaller.getStore());
     },
     taskCommand<T>(command: string, payload?: unknown) {
       return supervisor.taskCommand<T>(

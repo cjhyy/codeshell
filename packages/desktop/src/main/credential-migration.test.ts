@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -157,6 +165,47 @@ describe("credential migration", () => {
     expect(listed.map((cred) => ({ id: cred.id, secret: cred.secret }))).toEqual([
       { id: "a", secret: "secret-a" },
       { id: "b", secret: "secret-b" },
+    ]);
+  });
+
+  test("async key operations run outside the file lock and retry against a concurrent editor", async () => {
+    const root = join(home, ".code-shell"),
+      file = join(root, "credentials.json");
+    mkdirSync(root, { recursive: true });
+    writeFileSync(
+      file,
+      JSON.stringify({
+        version: 1,
+        credentials: [{ id: "a", type: "token", label: "A", secret: "initial" }],
+      }),
+    );
+    const legacy = new FakeSafeCipher();
+    let first = true;
+    setDefaultCredentialCipher(
+      Object.assign(legacy, {
+        asynchronous: {
+          storagePrefix: "enc:safeStorage:",
+          async decrypt(value: string) {
+            expect(existsSync(root + ".lock")).toBe(false);
+            return legacy.decrypt(value);
+          },
+          async encrypt(value: string) {
+            expect(existsSync(root + ".lock")).toBe(false);
+            if (first) {
+              first = false;
+              const other = new CredentialStore(undefined, new PlaintextCipher());
+              other.save("user", { id: "b", type: "token", label: "B", secret: "concurrent" });
+            }
+            return legacy.encrypt(value);
+          },
+        },
+      }),
+    );
+    expect((await migrateCredentialStore()).credentials).toBe(2);
+    const updated = JSON.parse(readFileSync(file, "utf8"));
+    expect(updated.credentials.map((v: { secret: string }) => legacy.decrypt(v.secret))).toEqual([
+      "initial",
+      "concurrent",
     ]);
   });
 

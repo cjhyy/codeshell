@@ -140,7 +140,7 @@ export class DesktopHostServer {
 
   /** Only the private parent pipe can reserve a one-shot write for a bound document.
    * The storage thread acquires it inside the transaction, after lock acquisition. */
-  reserveTaskCommit(identity: DesktopHostIdentity) {
+  reserveDocumentCommit(identity: DesktopHostIdentity) {
     const conn = this.windows.get(identity.webContentsId);
     const bound = conn?.authority.identity;
     if (

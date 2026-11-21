@@ -1,5 +1,6 @@
 import type { DesktopWorkerDriver } from "./desktop-host/worker-wire.js";
 import { isBackgroundWorkChange, type BackgroundWorkChange } from "@cjhyy/code-shell-core/internal";
+import { WorkerCredentialInputs } from "./worker-credential-inputs.js";
 /**
  * AgentBridge — Electron main ↔ agent worker subprocess broker.
  *
@@ -431,6 +432,7 @@ export class AgentBridge implements PetStateBridge {
    */
   private readonly panelHostWindowRoutes: PanelHostWindowRoutes;
   private credentialSnapshotRevision = 0;
+  private credentialInputs?: WorkerCredentialInputs;
   private readonly localOAuthLinkActions = new Map<string | number, AbortController>();
   private localOAuthLinkEpoch = 0;
   private readonly credentialSnapshotCwds = new Set<string>();
@@ -526,6 +528,8 @@ export class AgentBridge implements PetStateBridge {
       }),
       fallbackCwd: resolveNoRepoCwd,
       log: (event, data) => dlog("bridge", event, data),
+      dispatchInput: (generation, line, send) =>
+        (this.credentialInputs ??= new WorkerCredentialInputs()).write(generation, line, send),
       prepareInbound: (line, meta) => this.prepareInboundLine(line, meta),
       onStderr: (text) => {
         dlog("agent", "stderr", { text: previewLine(text, 800) });
@@ -1511,6 +1515,10 @@ export class AgentBridge implements PetStateBridge {
     const id = parsed.id;
     if (id === undefined) return true;
     const workerEpoch = this.localOAuthLinkEpoch;
+    const assertCurrent = () => {
+      if (workerEpoch !== this.localOAuthLinkEpoch)
+        throw new Error("Worker credential request has expired");
+    };
     void (async () => {
       let reply: RemoteLinkActionReply;
       try {
@@ -1536,8 +1544,9 @@ export class AgentBridge implements PetStateBridge {
           reply = {
             jsonrpc: "2.0",
             id,
-            result: resolveCredentialValueForWorker(
+            result: await resolveCredentialValueForWorker(
               normalizeCredentialResolveParams(parsed.params),
+              assertCurrent,
             ),
           };
         } else if (
@@ -1587,8 +1596,9 @@ export class AgentBridge implements PetStateBridge {
           reply = {
             jsonrpc: "2.0",
             id,
-            result: materializeCredentialCookieForWorker(
+            result: await materializeCredentialCookieForWorker(
               normalizeCredentialMaterializeParams(parsed.params),
+              assertCurrent,
             ),
           };
         } else {
@@ -1675,7 +1685,7 @@ export class AgentBridge implements PetStateBridge {
         try {
           const cwd = parsed.params?.cwd;
           if (typeof cwd === "string" && cwd) this.credentialSnapshotCwds.add(cwd);
-          reply.credentialSnapshot = this.buildLatestCredentialSnapshot();
+          reply.credentialSnapshot = await this.buildLatestCredentialSnapshot();
         } catch {
           // Status delivery is best effort. Preserve the action's original
           // result/error even if reading or sending its snapshot fails.
@@ -1692,6 +1702,7 @@ export class AgentBridge implements PetStateBridge {
           }
         }
       }
+      if (workerEpoch !== this.localOAuthLinkEpoch) return;
       this.core.sendLine(JSON.stringify(reply));
     })();
     return true;
@@ -2230,24 +2241,42 @@ export class AgentBridge implements PetStateBridge {
   }
 
   /** Push the current host credential metadata to the live worker. */
-  pushCredentialSnapshot(cwd?: string): void {
-    if (typeof cwd === "string" && cwd) this.credentialSnapshotCwds.add(cwd);
+  async pushCredentialSnapshot(cwd?: string): Promise<void> {
+    if (cwd) this.credentialSnapshotCwds.add(cwd);
     if (!this.core.hasLiveWorker()) return;
-    const snapshot = this.buildLatestCredentialSnapshot();
-    this.core.sendLine(
-      JSON.stringify({
-        jsonrpc: "2.0",
-        method: "desktop/credentialSnapshot",
-        params: snapshot,
-      }),
-    );
+    const epoch = this.localOAuthLinkEpoch;
+    const generation = this.core.workerGeneration?.() ?? epoch;
+    const inputs = (this.credentialInputs ??= new WorkerCredentialInputs());
+    await inputs
+      .snapshot(
+        generation,
+        async () => {
+          try {
+            return await this.buildLatestCredentialSnapshot();
+          } catch {
+            dlog("bridge", "credential_snapshot.unavailable", {});
+            return { revision: this.credentialSnapshotRevision, entries: [] };
+          }
+        },
+        (snapshot) => {
+          if (this.core.hasLiveWorker() && epoch === this.localOAuthLinkEpoch)
+            this.core.sendLine(
+              JSON.stringify({
+                jsonrpc: "2.0",
+                method: "desktop/credentialSnapshot",
+                params: snapshot,
+              }),
+            );
+        },
+      )
+      .catch(() => dlog("bridge", "credential_snapshot.unavailable", {}));
   }
-
-  private buildLatestCredentialSnapshot(): CredentialSnapshot {
+  private async buildLatestCredentialSnapshot(): Promise<CredentialSnapshot> {
     this.credentialSnapshotRevision += 1;
     return buildCredentialSnapshot(
       [...this.credentialSnapshotCwds],
       this.credentialSnapshotRevision,
+      true,
     );
   }
 

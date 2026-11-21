@@ -1,3 +1,4 @@
+import { runDesktopCredentialOperation } from "./credential-file-client.js";
 import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import {
   CredentialStore,
@@ -33,20 +34,54 @@ export interface CredentialMaterializeCookieRequest {
 export function buildCredentialSnapshot(
   cwds: Array<string | undefined>,
   revision: number,
-): CredentialSnapshot {
-  const entries: CredentialSnapshotEntry[] = [];
-  const seen = new Set<string>();
-  for (const cwd of [undefined, ...cwds]) {
-    const key = cwd ?? "";
-    if (seen.has(key)) continue;
-    seen.add(key);
-    entries.push(buildCredentialSnapshotEntry(cwd));
-  }
-  return { revision, entries };
+): CredentialSnapshot;
+export function buildCredentialSnapshot(
+  cwds: Array<string | undefined>,
+  revision: number,
+  hosted: true,
+): Promise<CredentialSnapshot>;
+export function buildCredentialSnapshot(
+  cwds: Array<string | undefined>,
+  revision: number,
+  hosted?: true,
+): CredentialSnapshot | Promise<CredentialSnapshot> {
+  const roots = [...new Set([undefined, ...cwds.map((cwd) => cwd || undefined)])];
+  if (hosted)
+    return Promise.all(
+      roots.map((cwd) =>
+        runDesktopCredentialOperation(cwd, ["user", "project"], undefined, (store) =>
+          buildCredentialSnapshotEntry(cwd, store),
+        ),
+      ),
+    ).then((entries) => ({ revision, entries }));
+  return {
+    revision,
+    entries: roots.map((cwd) => buildCredentialSnapshotEntry(cwd, new CredentialStore(cwd))),
+  };
 }
-
-export function resolveCredentialValueForWorker(req: CredentialResolveRequest): { value: string } {
-  const record = new CredentialStore(req.cwd).resolveForApproval(req.id, req.scope);
+export function resolveCredentialValueForWorker(req: CredentialResolveRequest): { value: string };
+export function resolveCredentialValueForWorker(
+  req: CredentialResolveRequest,
+  assertCurrent: () => void,
+): Promise<{ value: string }>;
+export function resolveCredentialValueForWorker(
+  req: CredentialResolveRequest,
+  assertCurrent?: () => void,
+) {
+  if (assertCurrent)
+    return runDesktopCredentialOperation(
+      req.cwd,
+      req.scope === "project" ? ["project"] : ["user", "project"],
+      undefined,
+      (store) => {
+        assertCurrent();
+        return credentialValue(store, req);
+      },
+    );
+  return credentialValue(new CredentialStore(req.cwd), req);
+}
+function credentialValue(store: CredentialStore, req: CredentialResolveRequest): { value: string } {
+  const record = store.resolveForApproval(req.id, req.scope);
   if (req.expectedApprovalIdentity && record?.approvalIdentity !== req.expectedApprovalIdentity)
     throw new Error("credential changed after approval");
   const cred = record?.credential;
@@ -85,11 +120,35 @@ export function resolveCredentialValueForWorker(req: CredentialResolveRequest): 
   };
 }
 
-export function materializeCredentialCookieForWorker(req: CredentialMaterializeCookieRequest): {
-  cookiesFile: string;
-  count: number;
-} {
-  const record = new CredentialStore(req.cwd).resolveForApproval(req.id, req.scope);
+type Cookiefiles = ReturnType<typeof materializeCookieSecret>;
+export function materializeCredentialCookieForWorker(
+  req: CredentialMaterializeCookieRequest,
+): Cookiefiles;
+export function materializeCredentialCookieForWorker(
+  req: CredentialMaterializeCookieRequest,
+  assertCurrent: () => void,
+): Promise<Cookiefiles>;
+export function materializeCredentialCookieForWorker(
+  req: CredentialMaterializeCookieRequest,
+  assertCurrent?: () => void,
+) {
+  if (assertCurrent)
+    return runDesktopCredentialOperation(
+      req.cwd,
+      req.scope === "project" ? ["project"] : ["user", "project"],
+      undefined,
+      (store) => {
+        assertCurrent();
+        return materializeCookie(store, req);
+      },
+    );
+  return materializeCookie(new CredentialStore(req.cwd), req);
+}
+function materializeCookie(
+  store: CredentialStore,
+  req: CredentialMaterializeCookieRequest,
+): Cookiefiles {
+  const record = store.resolveForApproval(req.id, req.scope);
   if (req.expectedApprovalIdentity && record?.approvalIdentity !== req.expectedApprovalIdentity)
     throw new Error("credential changed after approval");
   const cred = record?.credential;
@@ -99,8 +158,10 @@ export function materializeCredentialCookieForWorker(req: CredentialMaterializeC
   return materializeCookieSecret(cred.id, cred.secret);
 }
 
-function buildCredentialSnapshotEntry(cwd: string | undefined): CredentialSnapshotEntry {
-  const store = new CredentialStore(cwd);
+function buildCredentialSnapshotEntry(
+  cwd: string | undefined,
+  store: CredentialStore,
+): CredentialSnapshotEntry {
   const full = store.listWithSources("full");
   const project = store.listWithSources("project");
   return {

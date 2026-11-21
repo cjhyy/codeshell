@@ -1,5 +1,9 @@
 import { HostApprovalState } from "./approval-state.js";
-import { openStateStorage } from "@cjhyy/code-shell-core/internal/storage";
+import {
+  credentialCommands,
+  type CredentialFileCommand,
+  openStateStorage,
+} from "@cjhyy/code-shell-core/internal/storage";
 import { taskHostReads } from "../task-inbox/task-host-reads.js";
 import { isPrivateTaskCommand } from "../task-inbox/private-task-command.js";
 import { HostOutput } from "./host-output.js";
@@ -105,14 +109,28 @@ parent.on("message", ({ data, ports }) => {
     return;
   }
 
-  if (isRpcRequest(data) && isPrivateTaskCommand(data.method)) {
+  if (
+    isRpcRequest(data) &&
+    (isPrivateTaskCommand(data.method) ||
+      credentialCommands.includes(data.method as CredentialFileCommand))
+  ) {
     const { id, method, params } = data;
     const host = server;
     const invoke = async () => {
       const db = await storage;
+      if (credentialCommands.includes(method as CredentialFileCommand)) {
+        if (!params?.caller) return db.request(method, { payload: params?.payload });
+        if (!isDesktopHostIdentity(params.caller)) throw new Error("Invalid credential caller");
+        const reservation = host.reserveDocumentCommit(params.caller);
+        try {
+          return await db.request(method, { payload: params.payload, permit: reservation.permit });
+        } finally {
+          reservation.release();
+        }
+      }
       if (method !== "tasks/intent" || !params?.caller) return db.request(method, params?.payload);
       if (!isDesktopHostIdentity(params.caller)) throw new Error("Invalid task caller");
-      const reservation = host.reserveTaskCommit(params.caller);
+      const reservation = host.reserveDocumentCommit(params.caller);
       try {
         return await db.request("tasks/commitIntent", {
           intent: params.payload,

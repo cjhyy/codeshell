@@ -261,13 +261,13 @@ test("replacing a document revokes its waiting writes without undoing a committe
   const server = new DesktopHostServer("test", new Map());
   const first = frame(3);
   connect(server, first);
-  const pending = server.reserveTaskCommit(first);
-  const committed = server.reserveTaskCommit(first);
+  const pending = server.reserveDocumentCommit(first);
+  const committed = server.reserveDocumentCommit(first);
   expect(Atomics.compareExchange(committed.permit, 0, 0, 1)).toBe(0);
   connect(server, frame(3, 2));
   expect(Atomics.load(pending.permit, 0)).toBe(-1);
   expect(Atomics.load(committed.permit, 0)).toBe(1);
-  expect(() => server.reserveTaskCommit(first)).toThrow();
+  expect(() => server.reserveDocumentCommit(first)).toThrow();
   pending.release();
   committed.release();
 });
