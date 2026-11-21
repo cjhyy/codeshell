@@ -384,11 +384,21 @@ test("only trusted, live shared views receive root-owned output and they never g
 
 test("a shared output stream does not expose session files or configuration to spectators", async () => {
   let reads = 0;
-  const server = new DesktopHostServer("test", new Map([["files/list", {
-    historyRead: "operation" as const,
-    sessionId: () => sessionId,
-    run() { return ++reads; },
-  }]]));
+  const server = new DesktopHostServer(
+    "test",
+    new Map([
+      [
+        "files/list",
+        {
+          historyRead: "operation" as const,
+          sessionId: () => sessionId,
+          run() {
+            return ++reads;
+          },
+        },
+      ],
+    ]),
+  );
   const owner = connect(server, frame(1));
   const spectator = connect(server, frame(2));
   server.setStreamView(sessionId, true);

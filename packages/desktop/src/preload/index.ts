@@ -895,7 +895,7 @@ contextBridge.exposeInMainWorld("codeshell", {
   pickSkillDir: (): Promise<{ path: string; name: string } | null> =>
     ipcRenderer.invoke("dialog:pickSkillDir"),
   pickGitBinary: (): Promise<string | null> => ipcRenderer.invoke("dialog:pickGitBinary"),
-  ...createProjectAuthorityApi(ipcRenderer, listProjects),
+  ...createProjectAuthorityApi(ipcRenderer, listProjects, configurationHost),
   ...configurationReads,
   setGitPrefs: (prefs: {
     branchPrefix: string;

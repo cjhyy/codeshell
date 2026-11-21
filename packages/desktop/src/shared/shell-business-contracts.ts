@@ -4,6 +4,8 @@ import type {
   ExternalRuntimeModelKind,
 } from "./external-runtime-models.js";
 import type { DesktopHostIdentity } from "./desktop-host-protocol.js";
+import type { CatalogEdits } from "./catalog-edits.js";
+import type { ProjectRegistryOperations } from "./project-registry-operations.js";
 import type { RendererConfigurationTarget } from "./renderer-configuration.js";
 import type { SessionCatalogApi } from "./session-catalog.js";
 
@@ -14,7 +16,7 @@ type Operation<F extends (...args: any[]) => Promise<unknown>> = {
 
 /** Private calls from authenticated Electron adapters. These methods are never
  * registered on a renderer port or exposed by the window preload. */
-export interface ShellBusinessOperations {
+export interface ShellBusinessOperations extends ProjectRegistryOperations, CatalogEdits {
   "automation/command": { input: CronCommand; result: unknown };
   "external-runtime/available": {
     input: { searchPath: string };

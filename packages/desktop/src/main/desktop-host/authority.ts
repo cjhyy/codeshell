@@ -157,11 +157,19 @@ export class HostPortAuthority {
     this.capture().assertCurrent();
     this.sessions.captureOutput(sessionId, this.identity.webContentsId)();
   }
-  captureHistoryRead(sessionId: string, mode: "output"|"admission"|"operation" = "output"): HostRequestContext {
+  captureHistoryRead(
+    sessionId: string,
+    mode: "output" | "admission" | "operation" = "output",
+  ): HostRequestContext {
     const frame = this.capture();
-    const lease = mode === "admission"
-      ? this.sessions.captureAdmission(sessionId, this.identity.webContentsId)
-      : this.sessions.captureHistoryRead(sessionId, this.identity.webContentsId, mode === "output");
+    const lease =
+      mode === "admission"
+        ? this.sessions.captureAdmission(sessionId, this.identity.webContentsId)
+        : this.sessions.captureHistoryRead(
+            sessionId,
+            this.identity.webContentsId,
+            mode === "output",
+          );
     return {
       ...lease,
       identity: frame.identity,

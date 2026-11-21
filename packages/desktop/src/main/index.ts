@@ -377,17 +377,7 @@ import {
   setCapabilityEnabled,
   setCapabilityOverride,
 } from "./capabilities-service.js";
-import {
-  bind as bindSource,
-  catalogDelete as deleteSourceCatalog,
-  catalogList as listSourceCatalog,
-  catalogSave as saveSourceCatalog,
-  deleteUpload,
-  listScopes as listSourceScopes,
-  unbind as unbindSource,
-  uploadFiles,
-  workspaceAccess as workspaceSourceAccess,
-} from "./sources-service.js";
+import { registerSourceCatalogIpc } from "./source-catalog-ipc.js";
 import { createRendererProjectFileSearch } from "./file-search-service.js";
 import { checkSkillUpdateEntry, updateSkillEntry } from "./skill-update-entry.js";
 import { listRuns } from "./runs-service.js";
@@ -3960,57 +3950,7 @@ registerLinkedFileSourceIpc({
       remoteLinkIpc.storedSnapshot,
     ),
 });
-ipcMain.handle("sources:catalogList", async () => listSourceCatalog());
-ipcMain.handle("sources:catalogSave", async (_e, definition: unknown) => {
-  if (typeof definition !== "object" || definition === null || Array.isArray(definition)) {
-    throw new Error("sources:catalogSave requires definition");
-  }
-  saveSourceCatalog(definition as Parameters<typeof saveSourceCatalog>[0]);
-});
-ipcMain.handle("sources:catalogDelete", async (_e, id: string) => {
-  if (typeof id !== "string" || !id) throw new Error("sources:catalogDelete requires id");
-  deleteSourceCatalog(id);
-});
-ipcMain.handle("sources:projectAccess", async (_e, projectId: string) => {
-  const { path } = await requireRendererProjectPrimary(projectId);
-  return workspaceSourceAccess(path);
-});
-ipcMain.handle("sources:bindProject", async (_e, projectId: string, binding: unknown) => {
-  const { path } = await requireRendererProjectPrimary(projectId);
-  if (typeof binding !== "object" || binding === null || Array.isArray(binding)) {
-    throw new Error("sources:bindProject requires binding");
-  }
-  bindSource(path, binding as Parameters<typeof bindSource>[1]);
-});
-ipcMain.handle("sources:unbindProject", async (_e, projectId: string, sourceId: string) => {
-  const { path } = await requireRendererProjectPrimary(projectId);
-  if (typeof sourceId !== "string" || !sourceId) {
-    throw new Error("sources:unbindProject requires sourceId");
-  }
-  unbindSource(path, sourceId);
-});
-ipcMain.handle("sources:listScopes", async (_e, sourceId: string) => {
-  if (typeof sourceId !== "string" || !sourceId) {
-    throw new Error("sources:listScopes requires sourceId");
-  }
-  return listSourceScopes(sourceId);
-});
-ipcMain.handle("sources:pickAndUploadProject", async (_e, projectId: string) => {
-  const { path } = await requireRendererProjectPrimary(projectId);
-  const result = await dialog.showOpenDialog({
-    title: "选择数据源文件",
-    properties: ["openFile", "multiSelections"],
-  });
-  if (result.canceled || result.filePaths.length === 0) return [];
-  return uploadFiles(path, result.filePaths);
-});
-ipcMain.handle("sources:deleteProjectUpload", async (_e, projectId: string, name: string) => {
-  const { path } = await requireRendererProjectPrimary(projectId);
-  if (typeof name !== "string" || !name) {
-    throw new Error("sources:deleteProjectUpload requires name");
-  }
-  deleteUpload(path, name);
-});
+registerSourceCatalogIpc(ipcMain, desktopHost, (options) => dialog.showOpenDialog(options));
 registerProfileSwitchIpc({
   ipcMain,
   resolveTarget: resolveRendererConfigurationTarget,
@@ -4325,7 +4265,7 @@ ipcMain.handle("mcp:revokePlugin", async (_e, installKey: string) => {
   return revokePluginMcp(installKey);
 });
 
-registerModelCatalogIpc();
+registerModelCatalogIpc(desktopHost);
 ipcMain.handle("updater:check", async () => checkForUpdate());
 ipcMain.handle("updater:download", async () => downloadUpdate());
 ipcMain.handle("updater:install", async () => quitAndInstall());
@@ -4357,6 +4297,7 @@ const {
 const knownGitRoots = new Set<string>();
 
 registerProjectAuthorityIpc({
+  host: desktopHost,
   ipcMain,
   getAllWindows: () => BrowserWindow.getAllWindows(),
   showOpenDialog: (options) => dialog.showOpenDialog(options),

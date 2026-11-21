@@ -1,4 +1,5 @@
 import { HostScheduler } from "../../host/automation/host-scheduler.js";
+import { workspaceReads } from "./workspace-reads.js";
 import { HostAutomationRuns } from "../../host/composition/automation-run.js";
 import { externalRuntimeCatalogOperations } from "../../host/composition/external-runtime-catalog.js";
 import { MessageChannel, Worker } from "node:worker_threads";
@@ -6,6 +7,8 @@ import { SessionTranscriptCache } from "../session-transcript-cache.js";
 import type { BusinessMethods } from "../../host/composition/business-calls.js";
 import { nativeOperations } from "../../host/composition/operations.js";
 import { HostBusinessCalls } from "../../host/composition/business-calls.js";
+import { catalogEdits } from "../../host/composition/catalog-edits.js";
+import { projectRegistryOperations } from "../../host/composition/project-registry.js";
 import { projectTrustOperations } from "../../host/composition/project-trust.js";
 import { catalogOperations } from "../../host/composition/session-catalog.js";
 import { businessRead, noBusinessArguments } from "./business-read.js";
@@ -86,7 +89,11 @@ const business = new HostBusinessCalls({
   "transcripts/write": (input, grant) => transcripts.commitWrite(input, grant.permit),
   "transcripts/delete": (input, grant) => transcripts.commitDelete(input, grant.permit),
   ...operations.methods,
+  ...catalogEdits(storage),
   ...projectTrustOperations(storage),
+  ...projectRegistryOperations(storage, (requestId, projects) =>
+    parent.postMessage({ type: "project-registry-committed", requestId, projects }),
+  ),
   ...settingsOperations(storage, (requestId, effects) =>
     parent.postMessage({ type: "settings-committed", requestId, effects }),
   ),
@@ -177,6 +184,7 @@ parent.on("message", ({ data, ports }) => {
         ...taskHostReads(storage),
         ...configurationReads,
         ...scopedConfigurationReads((options) => catalog.list(options)),
+        ...workspaceReads((options) => catalog.list(options)),
         businessRead("catalog/load", noBusinessArguments, catalogFiles["catalog/load"]),
         ...ingressMethods(
           (req, current) => {
