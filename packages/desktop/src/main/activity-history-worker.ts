@@ -35,9 +35,10 @@ port.on("message", ({ id, method, input, permit }: ActivityHistoryWorkerRequest)
           (input as ActivityReads["activity/usage"]["params"]).query,
           options.sessionsDir,
         );
-      else if (method === "externalSessions") value = await externalSessions(input as Parameters<typeof externalSessions>[0]);
-      else if (method === "externalHistory") value = externalHistory(input as Parameters<typeof externalHistory>[0]);
-      else if (method === "list") value = history.list(input);
+      else if (method === "externalSessions")
+        value = await externalSessions(input as Parameters<typeof externalSessions>[0]);
+      else if (method === "externalHistory")
+        value = externalHistory(input as Parameters<typeof externalHistory>[0]);
       else if (method === "activity/runs")
         value = await listRunsForUi(input as ActivityReads["activity/runs"]["params"]);
       else if (method === "activity/run")

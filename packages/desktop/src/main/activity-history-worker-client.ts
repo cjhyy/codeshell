@@ -10,7 +10,13 @@ export interface ActivityHistoryWorkerOptions {
 }
 export interface ActivityHistoryWorkerRequest {
   id: number;
-  method: keyof TraceHistory | "externalSessions" | "externalHistory" | "flush" | keyof ActivityReads | "activity/setTitle";
+  method:
+    | keyof TraceHistory
+    | "externalSessions"
+    | "externalHistory"
+    | "flush"
+    | keyof ActivityReads
+    | "activity/setTitle";
   permit?: Int32Array;
   input?: unknown;
 }
