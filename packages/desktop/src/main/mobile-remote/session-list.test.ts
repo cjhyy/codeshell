@@ -1,3 +1,4 @@
+import { externalSessions } from "../../host/composition/cc-room-history.js";
 import { expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
@@ -33,6 +34,7 @@ test("mobile CLI discovery exposes its total and can load sessions beyond both d
       utimesSync(file, new Date(modified), new Date(modified));
     }
     const ctx = {
+      readCcRoom: (_method: string, input: Parameters<typeof externalSessions>[0]) => externalSessions(input),
       remote: { sendToViewer: (_viewer: string, event: unknown) => replies.push(event) },
     } as unknown as OrchestratorCtx;
     await handleCcRoomEvent(ctx, {

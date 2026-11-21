@@ -1,3 +1,5 @@
+import { ccRoomReads } from "../../host/composition/cc-room-reads.js";
+import { ActivityHistoryWorker } from "../activity-history-worker-client.js";
 import { bindRemoteTerminals } from "../../host/composition/remote-terminals.js";
 import { hostedTerminals } from "../../host/composition/terminals.js";
 import { HostScheduler } from "../../host/automation/host-scheduler.js";
@@ -71,6 +73,8 @@ const transcripts = new SessionTranscriptCache(
       workerData: options,
     }),
 );
+const roomHistory = new ActivityHistoryWorker({sessionsDir:sessionsRoot()}, options => new Worker(new URL("./activity-history-worker.mjs",import.meta.url),{workerData:options}));
+const roomReads = ccRoomReads(roomHistory);
 const runKeys = new RunKeyClient((frame) => parent.postMessage(frame));
 const runOperations = new HostRunOperations(
   storage,
@@ -101,6 +105,7 @@ installDefaultLinkProviders();
 const business = new HostBusinessCalls({
   "automation/command": (cmd, grant) => scheduler.command(cmd, grant.permit),
   ...externalRuntimeCatalogOperations(),
+  ...roomReads.native,
   ...catalogFiles,
   "transcripts/read": (input) => transcripts.read(input),
   "transcripts/write": (input, grant) => transcripts.commitWrite(input, grant.permit),
@@ -191,7 +196,7 @@ parent.on("message", ({ data, ports }) => {
     void scheduler
       .close()
       .then(() =>
-        Promise.all([index.close(), worker?.close(), transcripts.close(), automation.close()]),
+        Promise.all([index.close(), worker?.close(), roomHistory.close(), transcripts.close(), automation.close()]),
       )
       .then(() => output.drain())
       .finally(async () => (await storage).close())
@@ -212,6 +217,7 @@ parent.on("message", ({ data, ports }) => {
         ...desktopHostMethods((options) => catalog.list(options)),
         ...taskHostReads(storage),
         ...terminals.methods,
+        ...roomReads.methods,
         ...configurationReads,
         ...scopedConfigurationReads((options) => catalog.list(options)),
         ...workspaceReads((options) => catalog.list(options)),

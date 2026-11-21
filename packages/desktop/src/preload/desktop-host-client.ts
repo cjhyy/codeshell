@@ -26,6 +26,8 @@ const providerMethod = "links/listLocalProviders";
 const replyDeadlineMs = 15_000;
 // Network-backed discoveries have their own protocol or provider deadline.
 const serviceDeadlines: ReadonlySet<keyof DesktopBusinessReads> = new Set([
+  "ccRoom/sessions",
+  "ccRoom/history",
   "models/provider",
   "models/meta",
   "skills/checkUpdate",

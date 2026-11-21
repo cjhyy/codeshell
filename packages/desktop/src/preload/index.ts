@@ -1,3 +1,4 @@
+import { createCcRoomReads } from "./cc-room-reads.js";
 import { createConfigurationReads } from "./configuration-reads.js";
 import { DesktopHostIpc } from "../shared/desktop-host-protocol";
 import { isDesktopAgentMethod } from "../shared/desktop-agent-methods";
@@ -1771,12 +1772,7 @@ contextBridge.exposeInMainWorld("codeshell", {
 
   // ── CC rooms (external `claude` CLI orchestration) ──
   ccRoom: {
-    probe: (force?: boolean) => ipcRenderer.invoke("ccRoom:probe", force),
-    codexProbe: (force?: boolean) => ipcRenderer.invoke("ccRoom:codexProbe", force),
-    listSessions: (cwd: string, all?: boolean) =>
-      ipcRenderer.invoke("ccRoom:listSessions", cwd, all),
-    listCodexSessions: (cwd: string, all?: boolean) =>
-      ipcRenderer.invoke("ccRoom:listCodexSessions", cwd, all),
+    ...createCcRoomReads(ipcRenderer, configurationHost),
     openSession: (
       claudeSessionId: string,
       cwd: string,
@@ -1805,10 +1801,6 @@ contextBridge.exposeInMainWorld("codeshell", {
       roomId: string,
       request: { sinceSeq?: number; cursor?: string; limit?: number },
     ) => invokeRoomHistory(roomId, request),
-    readHistory: (cwd: string, sessionId: string, limit: number) =>
-      ipcRenderer.invoke("ccRoom:readHistory", cwd, sessionId, limit),
-    readCodexHistory: (cwd: string, threadId: string, limit: number) =>
-      ipcRenderer.invoke("ccRoom:readCodexHistory", cwd, threadId, limit),
     subscribeTranscript: (
       roomId: string,
       cwd: string,

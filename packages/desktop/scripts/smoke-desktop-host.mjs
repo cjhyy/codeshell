@@ -35,7 +35,12 @@ try {
   await seedOfflinePluginBootstrap(isolated.codeShellHome);
   const projectRoot = join(isolated.home, "host-smoke-project");
   await mkdir(projectRoot, { recursive: true });
+  const unregistered = join(isolated.home,"unregistered-project");
+  await mkdir(unregistered);
   const mount = await realpath(projectRoot);
+  const cliProject = join(isolated.home,".claude","projects",mount.replace(/[^A-Za-z0-9]/g,"-"));
+  await mkdir(cliProject,{recursive:true});
+  await writeFile(join(cliProject,"host-cli-fixture.jsonl"),JSON.stringify({type:"user",cwd:mount,sessionId:"host-cli-fixture",message:{role:"user",content:"Host CLI transcript"}})+"\n");
   await writeFile(join(mount, "host-file.txt"), "from-workspace");
   await mkdir(join(isolated.codeShellHome, "desktop"), { recursive: true });
   await writeFile(
@@ -270,13 +275,15 @@ utilityProcess.fork = function (...args) {
     terminalId,
   );
   await first.waitForFunction(() =>
-    window.hostTerminalText.replace(/\r/g, "").includes("\nHOST_TERMINAL_READY\n"),
+    /(?:^|[\r\n])HOST_TERMINAL_READY[\r\n]/.test(window.hostTerminalText),
   );
   await verifyPairedHostTerminal(first, terminalId, started.pid);
+  await assert.rejects(first.evaluate((root) => window.codeshell.ccRoom.readHistory(root,"../other",4),mount),/Invalid CLI history request/);
+  await assert.rejects(first.evaluate((root) => window.codeshell.ccRoom.listSessions(root),unregistered),/authority was revoked/);
   // Arm a renderer timer before blocking Main. Both timestamps come from the
   // renderer so a response delivered by Main after the pause cannot pass.
   const secondHandle = await application.browserWindow(second);
-  const measured = await secondHandle.evaluate(async (nativeWindow) => {
+  const measured = await secondHandle.evaluate(async (nativeWindow, mount) => {
     const contents = nativeWindow.webContents;
     await contents.executeJavaScript(`window.hostSmokeRead = new Promise((resolve, reject) =>
       setTimeout(async () => {
@@ -285,6 +292,8 @@ utilityProcess.fork = function (...args) {
           const ids = (await window.codeshell.links.listLocalProviders()).map(({ id }) => id);
           const page = await window.codeshell.listDiskSessions({limit:1,sessionId:"index-visible"});
           const api = window.codeshell;
+          const [ccList,ccPage] = await Promise.all([api.ccRoom.listSessions(${JSON.stringify(mount)}),api.ccRoom.readHistory(${JSON.stringify(mount)},"host-cli-fixture",5)]);
+          if (!ccList.sessions.some(s=>s.sessionId==="host-cli-fixture") || ccPage.messages[0]?.text !== "Host CLI transcript") throw new Error("Host CLI history disagrees with the fixture on disk");
           const business = await Promise.all([
             api.projectRegistry.list(), api.recents(), api.listSourceCatalog(), api.getModelCatalog(),
             api.listPluginMcpTrust(), api.getPluginDetail("uninstalled-business-test"), api.getSettings("user"),
@@ -312,7 +321,7 @@ utilityProcess.fork = function (...args) {
     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1600);
     const end = Date.now();
     return { begin, end, read: await contents.executeJavaScript("window.hostSmokeRead") };
-  });
+  }, mount);
   await secondHandle.dispose();
   assert.deepEqual(measured.read.ids, catalog);
   assert.equal(

@@ -1301,6 +1301,7 @@ const remoteTerminals = new NativeRemoteTerminals({
 });
 desktopHost.setRemoteTerminals(remoteTerminals);
 const mobileOrchestrator: MobileRemoteOrchestrator = new MobileRemoteOrchestrator({
+  readCcRoom: desktopHost.callBusiness,
   listDiskSessions,
   remote: mobileRemote,
   terminals: remoteTerminals,
@@ -4338,6 +4339,7 @@ registerProjectAuthorityIpc({
 });
 
 registerRoomsIpc({
+  readCcRoom: desktopHost.callBusiness,
   mainWindows,
   bridge: () => bridge,
   approvalBridge,

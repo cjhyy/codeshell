@@ -1,3 +1,4 @@
+import { externalHistory, externalSessions } from "../host/composition/cc-room-history.js";
 import { parentPort, workerData } from "node:worker_threads";
 import { join } from "node:path";
 import { ModelTraceStore } from "@cjhyy/code-shell-core/internal";
@@ -25,6 +26,8 @@ port.on("message", ({ id, method, input }: ActivityHistoryWorkerRequest) => {
           input as Parameters<typeof readUsageHistory>[0],
           options.sessionsDir,
         );
+      else if (method === "externalSessions") value = await externalSessions(input as Parameters<typeof externalSessions>[0]);
+      else if (method === "externalHistory") value = externalHistory(input as Parameters<typeof externalHistory>[0]);
       else if (method === "list") value = history.list(input);
       else if (method === "sessions") value = history.sessions(input);
       else if (method === "get") value = history.get(input);
