@@ -397,3 +397,36 @@ test("Host worker expiry and replacement suppress writes still waiting for crede
   expect(port.commands.map((c) => c.type)).toEqual(["start"]);
   expect(next.commands.map((c) => c.type)).toEqual(["start"]);
 });
+
+test("committed settings refresh once even if the original document withdraws", async () => {
+  const { supervisor, children } = processFixture();
+  const child = children[0]!;
+  child.emit("message", { type: "ready" });
+  const flags = {
+    panelApps: false,
+    git: true,
+    pet: false,
+    externalVisibility: false,
+    pluginCommands: false,
+  };
+  const changes = [] as (typeof flags)[];
+  const completion = Promise.withResolvers<void>();
+  supervisor.settingsCommitted = async (change) => {
+    changes.push(change);
+    await completion.promise;
+  };
+  const signal = new AbortController();
+  const request = supervisor.callBusiness(
+    "settings/patch",
+    { scope: "user", patch: { git: {} } },
+    signal.signal,
+  );
+  const sent = child.messages.at(-1) as { id: string };
+  signal.abort();
+  await expect(request).rejects.toThrow("document changed");
+  child.emit("message", { type: "settings-committed", requestId: sent.id, effects: flags });
+  child.emit("message", { jsonrpc: "2.0", id: sent.id, result: null });
+  await Promise.resolve();
+  expect(changes).toEqual([flags]);
+  completion.resolve();
+});

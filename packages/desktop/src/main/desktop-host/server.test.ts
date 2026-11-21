@@ -382,6 +382,28 @@ test("only trusted, live shared views receive root-owned output and they never g
   expect(b.messages.at(-1)).toHaveProperty("method", "agent/streamEvent");
 });
 
+test("a shared output stream does not expose session files or configuration to spectators", async () => {
+  let reads = 0;
+  const server = new DesktopHostServer("test", new Map([["files/list", {
+    historyRead: "operation" as const,
+    sessionId: () => sessionId,
+    run() { return ++reads; },
+  }]]));
+  const owner = connect(server, frame(1));
+  const spectator = connect(server, frame(2));
+  server.setStreamView(sessionId, true);
+  spectator.request(1, "files/list", { sessionId });
+  await tick();
+  expect(spectator.responses(1)[0]?.error?.code).toBe(revoked);
+  server.setOwner(sessionId, 1);
+  spectator.request(2, "files/list", { sessionId });
+  owner.request(3, "files/list", { sessionId });
+  await tick();
+  expect(spectator.responses(2)[0]?.error?.code).toBe(revoked);
+  expect(owner.responses(3)[0]?.result).toBe(1);
+  expect(reads).toBe(1);
+});
+
 test("disk-history recovery checks visibility after I/O and legacy IPC uses the same frame grant", async () => {
   const snapshot = { epoch: "test", events: [], nextSeq: 1, topLevelRunning: false };
   let visible = true;

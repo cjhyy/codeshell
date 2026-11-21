@@ -1,17 +1,18 @@
 import { dialog, ipcMain, type BrowserWindow } from "electron";
-import { lstatSync } from "node:fs";
-import { join } from "node:path";
-import {
-  codeShellHome,
-  sessionsRoot,
-  getCredentialAccess,
-  credentialAccessScope,
-} from "@cjhyy/code-shell-core";
+import { sessionsRoot } from "@cjhyy/code-shell-core";
+import { operationRegistryRevision } from "./operation-authority.js";
+import { buildCredentialSnapshot } from "./credential-access-service.js";
+import type { OperationClient } from "./desktop-host/private-operations.js";
+import type { IpcMainInvokeEvent } from "electron";
 import { registerOperationBatchIpc } from "./operation-batch-ipc.js";
 import { resolveRendererConfigurationTarget } from "./renderer-configuration-authority.js";
 import { getTrust, getTrustCachedSync } from "./trust-store.js";
 import type { AgentBridge } from "./agent-bridge.js";
 export function registerOperationBatchHost(deps: {
+  host: {
+    captureOperationClient(): OperationClient;
+    withOperationCaller<T>(event: IpcMainInvokeEvent, work: () => T): T;
+  };
   windows(): BrowserWindow[];
   enabled(): boolean;
   isSessionRunning(sessionId: string): boolean;
@@ -24,16 +25,12 @@ export function registerOperationBatchHost(deps: {
     resolveTarget: resolveRendererConfigurationTarget,
     trusted: async (cwd) => (await getTrust(cwd)) === "trusted",
     trustedSync: (cwd) => getTrustCachedSync(cwd) === "trusted",
-    authorityRevision: () =>
-      JSON.stringify(
-        ["projects.json", "trust.json"].map((name) => {
-          const info = lstatSync(join(codeShellHome(), "desktop", name), { bigint: true });
-          if (!info.isFile() || info.isSymbolicLink())
-            throw new Error("Batch project registry unavailable");
-          return [info.dev, info.ino, info.size, info.mtimeNs, info.ctimeNs].map(String);
-        }),
-      ),
-    connections: (cwd) => getCredentialAccess().listMasked(cwd, credentialAccessScope("full")),
+    authorityRevision: operationRegistryRevision,
+    withCaller: deps.host.withOperationCaller,
+    captureClient: deps.host.captureOperationClient,
+    connections: async (cwd) =>
+      (await buildCredentialSnapshot([cwd], 0, true)).entries.find((entry) => entry.cwd === cwd)
+        ?.full ?? [],
     confirm: (window, options) => dialog.showMessageBox(window, options),
   });
 }

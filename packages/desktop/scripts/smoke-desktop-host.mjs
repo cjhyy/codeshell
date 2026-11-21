@@ -1,6 +1,6 @@
 /* global window */
 import assert from "node:assert/strict";
-import { mkdir, readdir, writeFile } from "node:fs/promises";
+import { mkdir, readdir, realpath, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { prepareConfinedElectronFixture } from "./confined-electron-fixture.mjs";
@@ -32,6 +32,29 @@ const readCatalog = (page) =>
 
 try {
   await seedOfflinePluginBootstrap(isolated.codeShellHome);
+  const projectRoot = join(isolated.home, "host-smoke-project");
+  await mkdir(projectRoot, { recursive: true });
+  const mount = await realpath(projectRoot);
+  await mkdir(join(isolated.codeShellHome, "desktop"), { recursive: true });
+  await writeFile(
+    join(isolated.codeShellHome, "desktop", "projects.json"),
+    JSON.stringify({
+      version: 2,
+      projects: [
+        {
+          id: "host-smoke-project",
+          name: "Host smoke",
+          primaryRootId: "root",
+          roots: [{ id: "root", name: "root", path: mount, canonicalIdentity: mount, addedAt: 1 }],
+          createdAt: 1,
+          updatedAt: 1,
+          lastOpenedAt: 1,
+          revision: 1,
+        },
+      ],
+    }),
+    { mode: 0o600 },
+  );
   const directory = join(isolated.codeShellHome, "sessions", "index-visible");
   await mkdir(directory, { recursive: true });
   await writeFile(
@@ -106,6 +129,27 @@ utilityProcess.fork = function (...args) {
   const second = await secondOpened;
   await observeHost(second);
   assert.deepEqual(await readCatalog(second), catalog);
+  await first.evaluate(() =>
+    window.codeshell.updateSettings("user", { hostSmokeReceipt: "committed" }),
+  );
+  assert.equal(
+    await second.evaluate(
+      async () => (await window.codeshell.getSettings("user"))?.hostSmokeReceipt,
+    ),
+    "committed",
+  );
+  await assert.rejects(
+    first.evaluate(() => window.codeshell.updateSettings("user", { panelAppBindings: {} })),
+    /reviewed project binding/,
+  );
+
+  await first.evaluate((root) => window.codeshell.setTrust(root, "trusted"), mount);
+  assert.equal(await second.evaluate((root) => window.codeshell.getTrust(root), mount), "trusted");
+  await first.evaluate((root) => window.codeshell.setTrust(root, "untrusted"), mount);
+  assert.equal(
+    await second.evaluate((root) => window.codeshell.getTrust(root), mount),
+    "untrusted",
+  );
 
   // Arm a renderer timer before blocking Main. Both timestamps come from the
   // renderer so a response delivered by Main after the pause cannot pass.

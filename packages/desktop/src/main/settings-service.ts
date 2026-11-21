@@ -132,6 +132,7 @@ export async function writeSettings(
   scope: SettingsScope,
   patch: Record<string, unknown>,
   projectPath?: string,
+  commit?: () => void,
 ): Promise<void> {
   if (!isPlainRecord(patch)) throw new Error("settings patch must be a plain object");
   assertSafePatch(patch);
@@ -148,6 +149,7 @@ export async function writeSettings(
       // async holder's continuation until it is mistaken for a stale owner.
       const release = acquireFileLock(p);
       try {
+        commit?.();
         const current = readSettingsForMutation(p) ?? {};
         const merged = deepMerge(current, patch);
         normalizeWorktreeBranchPrefixIfPatched(patch, merged);

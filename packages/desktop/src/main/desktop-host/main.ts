@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { documentLifetimes } from "./document-lifetime.js";
 import type { OperationCommand } from "./private-operations.js";
 import type { CredentialFileCommand } from "@cjhyy/code-shell-core/internal/storage";
@@ -18,6 +19,7 @@ import type { WorkerBridgeCoreOptions } from "@cjhyy/code-shell-server/worker";
 import { DesktopHostWorkerClient } from "./main-worker.js";
 import { sessionsRoot, getDefaultCredentialCipher } from "@cjhyy/code-shell-core";
 import { listDiskSessions as listJson } from "@cjhyy/code-shell-server/storage";
+import type { SettingsChange } from "../../shared/settings-change.js";
 import type { ListSessionOptions } from "../../shared/disk-session-query.js";
 import { createSessionIndexChanges } from "./session-index-changes.js";
 import { DesktopHostIpc } from "../../shared/desktop-host-protocol.js";
@@ -31,6 +33,7 @@ export function createDesktopHost(
   entryPath: string,
   navigation: Pick<AppRendererNavigation, "assertSender">,
   hostReady?: () => void,
+  settingsCommitted?: (effects: SettingsChange) => Promise<void>,
 ) {
   let worker: DesktopHostWorkerClient | undefined;
   const supervisor: DesktopHostSupervisor = new DesktopHostSupervisor(
@@ -47,6 +50,7 @@ export function createDesktopHost(
     },
     (message, details) => dlog("main", `desktop_host.${message}`, details),
   );
+  supervisor.settingsCommitted = settingsCommitted;
   const workbenches = new HostWorkbenchPorts(
     (event) => navigation.assertSender(event),
     () => new MessageChannelMain(),
@@ -58,6 +62,47 @@ export function createDesktopHost(
     caller: DesktopHostIdentity;
     signal: AbortSignal;
   }>();
+  function captureOperationClient() {
+    const origin = operationCaller.getStore();
+    if (!origin) throw new Error("Operation requires its native workbench document");
+    return {
+      async operationCommand<T>(
+        action: OperationCommand,
+        payload: Record<string, unknown>,
+      ): Promise<T> {
+        if (
+          action === "host/batchClose" ||
+          action === "host/batchFinish" ||
+          action === "host/batchResolve"
+        )
+          return supervisor.callBusiness(
+            "operations/ledger",
+            { action, payload, caller: origin.caller },
+            action === "host/batchClose" ? undefined : origin.signal,
+          ) as Promise<T>;
+        const { wrapped } = (await supervisor.callBusiness(
+          "operations/ledger",
+          { action: "host/operationKey", payload: {}, caller: origin.caller },
+          origin.signal,
+        )) as { wrapped: string | null };
+        const cipher = getDefaultCredentialCipher().asynchronous;
+        if (!cipher) throw new Error("Operation keyring unavailable");
+        let key = wrapped === null ? null : { wrapped, secret: await cipher.decrypt(wrapped) };
+        if (!key && action === "host/batchReserve") {
+          const secret = randomBytes(32).toString("hex");
+          key = { wrapped: await cipher.encrypt(secret), secret };
+        }
+        if (key && !/^[a-f0-9]{64}$/.test(key.secret))
+          throw new Error("Invalid protected operation key");
+        origin.signal.throwIfAborted();
+        return supervisor.callBusiness(
+          "operations/ledger",
+          { action, payload: { ...payload, key }, caller: origin.caller },
+          origin.signal,
+        ) as Promise<T>;
+      },
+    };
+  }
   function bindWorker() {
     if (!worker) return;
     const { port1, port2 } = new MessageChannelMain();
@@ -164,28 +209,9 @@ export function createDesktopHost(
         work,
       );
     },
-    async operationCommand<T>(
-      action: OperationCommand,
-      payload: Record<string, unknown>,
-    ): Promise<T> {
-      const origin = operationCaller.getStore();
-      if (!origin) throw new Error("Operation requires its native workbench document");
-      const { wrapped } = (await supervisor.callBusiness(
-        "operations/ledger",
-        { action: "host/operationKey", payload: {}, caller: origin.caller },
-        origin.signal,
-      )) as { wrapped: string | null };
-      const cipher = getDefaultCredentialCipher().asynchronous;
-      if (!cipher) throw new Error("Operation keyring unavailable");
-      const key = wrapped === null ? null : { wrapped, secret: await cipher.decrypt(wrapped) };
-      if (key && !/^[a-f0-9]{64}$/.test(key.secret))
-        throw new Error("Invalid protected operation key");
-      origin.signal.throwIfAborted();
-      return supervisor.callBusiness(
-        "operations/ledger",
-        { action, payload: { ...payload, key }, caller: origin.caller },
-        origin.signal,
-      ) as Promise<T>;
+    captureOperationClient,
+    operationCommand<T>(action: OperationCommand, payload: Record<string, unknown>): Promise<T> {
+      return captureOperationClient().operationCommand<T>(action, payload);
     },
     credentialCommand<T>(command: CredentialFileCommand, payload: unknown): Promise<T> {
       return supervisor.credentialCommand(command, payload, intentCaller.getStore());

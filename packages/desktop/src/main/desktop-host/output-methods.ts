@@ -11,7 +11,7 @@ export function outputMethods(
     [
       "agent/subscribe",
       {
-        historyRead: true,
+        historyRead: "output",
         sessionId(params) {
           if (
             !params ||

@@ -4,6 +4,7 @@ import type {
   ExternalRuntimeModelKind,
 } from "./external-runtime-models.js";
 import type { DesktopHostIdentity } from "./desktop-host-protocol.js";
+import type { RendererConfigurationTarget } from "./renderer-configuration.js";
 import type { SessionCatalogApi } from "./session-catalog.js";
 
 type Operation<F extends (...args: any[]) => Promise<unknown>> = {
@@ -27,6 +28,15 @@ export interface ShellBusinessOperations {
     input: { action: string; caller: DesktopHostIdentity; payload: Record<string, unknown> };
     result: unknown;
   };
+  "trust/set": { input: { path: string; level: "trusted" | "untrusted" }; result: void };
+  "trust/readProjection": { input: string; result: "trusted" | "untrusted" | "unknown" };
+  "settings/patch": {
+    input: ({ scope: "user" } | { scope: "project"; target: RendererConfigurationTarget }) & {
+      patch: Record<string, unknown>;
+    };
+    result: void;
+  };
+
   "catalog/load": Operation<SessionCatalogApi["load"]>;
   "catalog/importLegacy": Operation<SessionCatalogApi["importLegacy"]>;
   "catalog/apply": Operation<SessionCatalogApi["apply"]>;

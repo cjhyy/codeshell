@@ -1,3 +1,5 @@
+import { registerConfigurationSettingsIpc } from "./configuration-settings-ipc.js";
+import type { SettingsChange } from "../shared/settings-change.js";
 import {
   observeBackgroundWorkChange,
   type BackgroundWorkChange,
@@ -136,10 +138,7 @@ import {
 } from "./renderer-project-path.js";
 import { PetStateAggregator } from "./pet/pet-state-aggregator.js";
 import { ExternalSessionAdapter, type ExternalCli } from "./pet/external-session-adapter.js";
-import {
-  ExternalSessionVisibilityController,
-  touchesExternalSessionVisibility,
-} from "./pet/external-session-visibility.js";
+import { ExternalSessionVisibilityController } from "./pet/external-session-visibility.js";
 import { createLatestResultCache } from "./pet/latest-result-cache.js";
 import { createPetSummaryStore } from "./pet/pet-summary-store.js";
 import { createPetSummaryService } from "./pet/pet-summary-service.js";
@@ -341,7 +340,7 @@ import { ApprovalBridge } from "./cc-room/approval-bridge.js";
 import { createRoomTranscriptSubscriptions } from "./cc-room/transcript-subscriptions.js";
 import { QuickChatOwnershipRegistry } from "./quick-chat-ownership.js";
 import { getGitStatus, getGitBranches, revealInFinder, openPath } from "./desktop-services.js";
-import { readSettings, writeSettings, type SettingsScope } from "./settings-service.js";
+import { readSettings } from "./settings-service.js";
 import { registerDesktopOutputHistoryHost } from "./session-output-history-host.js";
 import { registerSessionCatalogIpc } from "./session-catalog-ipc.js";
 import { hostCatalogClient } from "./desktop-host/catalog-client.js";
@@ -511,6 +510,7 @@ const desktopHost = createDesktopHost(
   join(__dirname, "desktop-host.mjs"),
   appRendererNavigation,
   (): void => taskInboxService.hostRestarted(),
+  applyRendererSettingsSideEffects,
 );
 setDesktopCredentialFiles(desktopHost.credentialCommand);
 const { listDiskSessions } = desktopHost;
@@ -2078,8 +2078,10 @@ async function createWindow(): Promise<BrowserWindow> {
     petNotices = notices;
     let petNoticeControls: PetNoticeControls | undefined;
     const writePetNotificationSettings = async (notifications: Record<string, unknown>) => {
-      await writeSettings("user", { pet: { notifications } });
-      notices.settingsChanged();
+      await desktopHost.callBusiness("settings/patch", {
+        scope: "user",
+        patch: { pet: { notifications } },
+      });
     };
     // Mimi's Notices / Triggers / ManageTrigger / NotificationSettings (design §4.7).
     const mimiNoticeTools = wireMimiNoticeTools({
@@ -2952,7 +2954,10 @@ async function createWindow(): Promise<BrowserWindow> {
         getAutoExtract: async () =>
           petMemoryAutoExtractFromSettings(await readSettings("user").catch(() => null)),
         setAutoExtract: async (enabled) => {
-          await writeSettings("user", petMemoryAutoExtractSettingsPatch(enabled));
+          await desktopHost.callBusiness("settings/patch", {
+            scope: "user",
+            patch: petMemoryAutoExtractSettingsPatch(enabled),
+          });
           return enabled;
         },
       },
@@ -4544,65 +4549,16 @@ registerWorkspaceFilesIpc({ appRendererNavigation, mainWindows, assertRendererSe
 // path it writes capabilityOverrides to is byte-identical to the worker cwd.
 ipcMain.handle("no-repo:cwd", async () => resolveNoRepoCwd());
 
-ipcMain.handle("settings:get", async (_e, scope: SettingsScope) => {
-  if (scope !== "user") throw new Error("settings:get is user-scoped");
-  return readSettings("user");
-});
-ipcMain.handle("settings:getConfiguration", async (_e, target: RendererConfigurationTarget) =>
-  readSettings("project", await rendererConfigurationCwd(target)),
-);
+registerConfigurationSettingsIpc(ipcMain, desktopHost);
 
-function validateRendererSettingsPatch(patch: Record<string, unknown>): void {
-  if (!patch || typeof patch !== "object" || Array.isArray(patch)) {
-    throw new Error("patch must be object");
-  }
-  if (["panelAppBindings", "panelAppPins", "panelAppOverrides"].some((key) => key in patch)) {
-    throw new Error("Panel project bindings must use the reviewed project binding API");
-  }
-  try {
-    if (Buffer.byteLength(JSON.stringify(patch)) > 2 * 1024 * 1024) {
-      throw new Error("settings patch is too large");
-    }
-  } catch (error) {
-    if (error instanceof Error && error.message === "settings patch is too large") throw error;
-    throw new Error("settings patch must be JSON-serializable", { cause: error });
-  }
+async function applyRendererSettingsSideEffects(change: SettingsChange): Promise<void> {
+  if (change.panelApps) invalidatePanelAppBindingGuard();
+  if (change.git) void applyGitPathFromSettings();
+  if (change.pet) petNotices?.settingsChanged();
+  if (change.externalVisibility) await reconcileExternalAdapters?.();
+  if (change.panelApps) broadcastPanelAppsChanged(mainWindows);
+  if (change.pluginCommands) broadcastPluginCommandsChanged(mainWindows);
 }
-
-async function applyRendererSettingsSideEffects(
-  scope: SettingsScope,
-  patch: Record<string, unknown>,
-): Promise<void> {
-  const touchesPanelApps =
-    "disabledPanelApps" in patch || "panelAppBindings" in patch || "panelAppOverrides" in patch;
-  // Before any await: a failing side effect must not leave the guard on the old binding.
-  if (touchesPanelApps) invalidatePanelAppBindingGuard();
-  if ("git" in patch) void applyGitPathFromSettings();
-  if (scope === "user" && "pet" in patch) petNotices?.settingsChanged();
-  if (touchesExternalSessionVisibility(scope, patch)) await reconcileExternalAdapters?.();
-  if (touchesPanelApps) {
-    broadcastPanelAppsChanged(mainWindows);
-  }
-  if ("disabledPlugins" in patch || "capabilityOverrides" in patch) {
-    broadcastPluginCommandsChanged(mainWindows);
-  }
-}
-
-ipcMain.handle("settings:set", async (_e, scope: SettingsScope, patch: Record<string, unknown>) => {
-  if (scope !== "user") throw new Error("settings:set is user-scoped");
-  validateRendererSettingsPatch(patch);
-  await writeSettings("user", patch);
-  await applyRendererSettingsSideEffects("user", patch);
-});
-ipcMain.handle(
-  "settings:setConfiguration",
-  async (_e, target: RendererConfigurationTarget, patch: Record<string, unknown>) => {
-    validateRendererSettingsPatch(patch);
-    const path = await rendererConfigurationCwd(target);
-    await writeSettings("project", patch, path);
-    await applyRendererSettingsSideEffects("project", patch);
-  },
-);
 
 registerMemoryIpc({ mainWindows });
 const sessionDeletions = new Map<string, Promise<void>>();
@@ -4901,7 +4857,10 @@ const disposeOperationBatchHost = registerOperationBatchHost({
 });
 const disposeOperationResolutionHost = registerOperationResolutionHost(operationScope);
 registerAutomationIpc();
-registerTrustNotificationIpc({ externalRuntimeService: () => externalRuntime.service });
+registerTrustNotificationIpc({
+  host: desktopHost,
+  externalRuntimeService: () => externalRuntime.service,
+});
 registerDesktopShutdown(app, {
   ownsInstance: () => ownsDesktopInstance,
   flushRenderers: () => sessionCatalogIpc.flushRenderers(),
