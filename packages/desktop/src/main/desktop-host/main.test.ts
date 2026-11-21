@@ -78,19 +78,8 @@ describe("Desktop Host process", () => {
     child.emit("message", { type: "ready" });
     const abort = new AbortController();
     const result = supervisor.callBusiness(
-      "automation/run",
-      {
-        job: {
-          id: "cron",
-          name: "fixture",
-          schedule: "1h",
-          prompt: "fixture",
-          enabled: true,
-          createdAt: 1,
-          runCount: 0,
-        },
-        searchPath: "",
-      },
+      "automation/command",
+      { method: "cancel", input: "cron" },
       abort.signal,
     );
     const request = child.messages.at(-1) as { id: string };

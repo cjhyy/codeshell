@@ -1,6 +1,7 @@
+import { HostScheduler } from "../../host/automation/host-scheduler.js";
 import { HostAutomationRuns } from "../../host/composition/automation-run.js";
 import { externalRuntimeCatalogOperations } from "../../host/composition/external-runtime-catalog.js";
-import { Worker } from "node:worker_threads";
+import { MessageChannel, Worker } from "node:worker_threads";
 import { SessionTranscriptCache } from "../session-transcript-cache.js";
 import type { BusinessMethods } from "../../host/composition/business-calls.js";
 import { nativeOperations } from "../../host/composition/operations.js";
@@ -46,8 +47,10 @@ import {
 // proxy on the renderer port, and the hosted catalog never waits on Main.
 const parent = process.parentPort;
 const versionRequestId = "host:app-version";
+const schedulerPorts = new MessageChannel();
 const storage = openStateStorage(sessionsRoot(), {
-  workerConfig: { taskInboxDirectory: process.argv[2] },
+  workerConfig: { taskInboxDirectory: process.argv[2], schedulerPort: schedulerPorts.port2 },
+  workerPorts: [schedulerPorts.port2],
   workerUrl: new URL("./session-index-worker.mjs", import.meta.url),
 });
 const catalogFiles = catalogOperations(storage, (snapshot) =>
@@ -74,8 +77,9 @@ const automation = new HostAutomationRuns({
   },
   drain: () => output.drain(),
 });
+const scheduler = new HostScheduler(schedulerPorts.port1, automation);
 const business = new HostBusinessCalls({
-  "automation/run": ({ job, searchPath }, grant) => automation.run(job, searchPath, grant.signal),
+  "automation/command": (cmd, grant) => scheduler.command(cmd, grant.permit),
   ...externalRuntimeCatalogOperations(),
   ...catalogFiles,
   "transcripts/read": (input) => transcripts.read(input),
@@ -117,6 +121,15 @@ parent.on("message", ({ data, ports }) => {
   }
   if (
     isDesktopHostControl(data) &&
+    data.type === "automation-port" &&
+    server &&
+    ports.length === 1
+  ) {
+    scheduler.bind(ports[0], data.searchPath);
+    return;
+  }
+  if (
+    isDesktopHostControl(data) &&
     data.type === "worker-port" &&
     server &&
     ports.length === 1 &&
@@ -139,7 +152,11 @@ parent.on("message", ({ data, ports }) => {
   if (isDesktopHostControl(data) && data.type === "shutdown") {
     stopping = true;
     business.close();
-    void Promise.all([index.close(), worker?.close(), transcripts.close(), automation.close()])
+    void scheduler
+      .close()
+      .then(() =>
+        Promise.all([index.close(), worker?.close(), transcripts.close(), automation.close()]),
+      )
       .then(() => output.drain())
       .finally(async () => (await storage).close())
       .then(

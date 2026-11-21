@@ -83,12 +83,17 @@ export interface RuleScheduleDue {
   key: string;
 }
 
+export type PetCronAccess = {
+  [K in "list" | "create" | "delete"]: (
+    ...args: Parameters<CronScheduler[K]>
+  ) => ReturnType<CronScheduler[K]> | Promise<ReturnType<CronScheduler[K]>>;
+};
 export interface PetRuleSchedulerDeps {
   rules: Pick<
     PetRuleStore,
     "load" | "list" | "onChange" | "claimOccurrence" | "settleOccurrence" | "recoverClaims"
   >;
-  scheduler(): Pick<CronScheduler, "list" | "create" | "delete">;
+  scheduler(): PetCronAccess;
   /** Carry out one claimed occurrence (`remind` / `run-mimi`). Throwing records `unknown`. */
   fire(rule: ScheduleNoticeRule, due: RuleScheduleDue): Promise<RuleWakeOutcome>;
   /** Electron `powerMonitor`: occurrences slept through are handled on wake / unlock. */
@@ -185,7 +190,7 @@ export class PetRuleScheduler {
   reconcile(): Promise<void> {
     const next = this.reconcileTail
       .catch(() => undefined)
-      .then(() => {
+      .then(async () => {
         if (!this.started) return;
         const scheduler = this.deps.scheduler();
         const now = this.now();
@@ -200,18 +205,18 @@ export class PetRuleScheduler {
           desired.set(ruleScheduleKey(rule.id, rule.version, rule.wake.occurrence), rule);
         }
         const kept = new Set<string>();
-        for (const job of scheduler.list()) {
+        for (const job of await scheduler.list()) {
           if (!job.creationKey?.startsWith(PREFIX)) continue;
           const rule = desired.get(job.creationKey);
           if (rule && !kept.has(job.creationKey) && this.matches(job, rule)) {
             kept.add(job.creationKey);
             continue;
           }
-          scheduler.delete(job.id);
+          await scheduler.delete(job.id);
         }
         for (const [key, rule] of desired) {
           if (kept.has(key)) continue;
-          scheduler.create(scheduleRuleTitle(rule), "once", JOB_PROMPT, {
+          await scheduler.create(scheduleRuleTitle(rule), "once", JOB_PROMPT, {
             once: true,
             ...this.timing(rule),
             creationKey: key,
@@ -324,8 +329,8 @@ export class PetRuleScheduler {
     let file = false;
     try {
       const scheduler = this.deps.scheduler();
-      for (const job of scheduler.list()) {
-        if (isLegacyJob(job) && scheduler.delete(job.id)) jobs += 1;
+      for (const job of await scheduler.list()) {
+        if (isLegacyJob(job) && (await scheduler.delete(job.id))) jobs += 1;
       }
       const path = this.deps.legacyFollowUpsPath;
       if (path) {

@@ -91,11 +91,11 @@ export interface TaskInboxSourcesDeps {
   };
   runs?: { list(): Promise<RunSummary[]> };
   automations?: {
-    list(): AutomationSummary[];
-    get(id: string): AutomationSummary | null;
-    pause(id: string): boolean;
-    resume(id: string): boolean;
-    runNow(id: string): boolean;
+    list(): AutomationSummary[] | Promise<AutomationSummary[]>;
+    get(id: string): AutomationSummary | null | Promise<AutomationSummary | null>;
+    pause(id: string): boolean | Promise<boolean>;
+    resume(id: string): boolean | Promise<boolean>;
+    runNow(id: string): boolean | Promise<boolean>;
   };
   mimi?: {
     snapshot(): PetLongTaskSnapshot;
@@ -527,7 +527,8 @@ export function createTaskInboxSources(deps: TaskInboxSourcesDeps): {
   const readSource = async (source: TaskSource): Promise<TaskInboxRecordV1[]> => {
     if (source === "session" || source === "external-runtime")
       return (await sessions()).filter((record) => record.source === source);
-    if (source === "automation") return deps.automations?.list().map(automationRecord) ?? [];
+    if (source === "automation")
+      return ((await deps.automations?.list()) ?? []).map(automationRecord);
     if (source === "mimi-delegation") return deps.mimi?.snapshot().tasks.map(mimiRecord) ?? [];
     if (source === "subagent") return subagents();
     if (source === "legacy-run")
@@ -555,7 +556,7 @@ export function createTaskInboxSources(deps: TaskInboxSourcesDeps): {
     if (source === "session" || source === "external-runtime")
       return (await sessions(id)).filter((r) => r.source === source);
     if (source === "automation") {
-      const found = deps.automations?.get(id);
+      const found = await deps.automations?.get(id);
       return found ? [automationRecord(found)] : [];
     }
     if (source === "mimi-delegation") {
@@ -600,11 +601,11 @@ export function createTaskInboxSources(deps: TaskInboxSourcesDeps): {
       } else if (record.source === "automation" && deps.automations) {
         ok =
           action === "pause"
-            ? deps.automations.pause(record.sourceId)
+            ? await deps.automations.pause(record.sourceId)
             : action === "resume"
-              ? deps.automations.resume(record.sourceId)
+              ? await deps.automations.resume(record.sourceId)
               : action === "retry"
-                ? deps.automations.runNow(record.sourceId)
+                ? await deps.automations.runNow(record.sourceId)
                 : false;
       } else if (record.source === "mimi-delegation" && deps.mimi) {
         const result = await deps.mimi.control({

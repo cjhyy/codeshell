@@ -43,7 +43,7 @@ import { stablePromptHash } from "@cjhyy/code-shell-server/storage";
 import type { BrowserRuntimeLike } from "./browser-runtime/configured-runtime.js";
 import { getProjectStore } from "./project-store.js";
 import { getSessionCwdIndex } from "./session-cwd-index.js";
-import { getTrustCachedSync } from "./trust-store.js";
+import { getTrustCachedSync, warmTrustCache } from "./trust-store.js";
 import {
   desktopAutomationAuthorityDeps,
   validateAutomationResumeAuthority,
@@ -122,9 +122,10 @@ export function resolveAutomationWorkspace(
   return null;
 }
 
-function resolveDesktopAutomationWorkspace(
+async function resolveDesktopAutomationWorkspace(
   job: Pick<CronJob, "cwd" | "projectId" | "rootId">,
-): AutomationWorkspaceResolution | null {
+): Promise<AutomationWorkspaceResolution | null> {
+  await warmTrustCache();
   return resolveAutomationWorkspace(job, {
     noRepoCwd: automationNoRepoCwd,
     foldProjectRoot: resolveProjectRoot,
@@ -250,7 +251,7 @@ export function buildDesktopAutomationRunner(
   sessionFinished?: (id: string) => Promise<void>,
 ): CronRunner {
   return async (req): Promise<CronRunResult> => {
-    const workspace = resolveDesktopAutomationWorkspace(req.job);
+    const workspace = await resolveDesktopAutomationWorkspace(req.job);
     if (!workspace) {
       return {
         text: "",

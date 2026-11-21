@@ -25,6 +25,7 @@ export interface DesktopHostIdentity {
 
 export type DesktopHostControl =
   | { type: "shutdown" }
+  | { type: "automation-port"; searchPath: string }
   | { type: "worker-port"; execPath: string; entryPath: string }
   | { type: "session-index-changed"; ids: string[] }
   | { type: "bind" | "revoke"; identity: DesktopHostIdentity }
@@ -85,6 +86,8 @@ export function isDesktopHostIdentity(value: unknown): value is DesktopHostIdent
 
 export function isDesktopHostControl(value: unknown): value is DesktopHostControl {
   if (!record(value)) return false;
+  if (value.type === "automation-port")
+    return Object.keys(value).length === 2 && typeof value.searchPath === "string";
   if (value.type === "worker-port")
     return (
       hasOnly(value, ["type", "execPath", "entryPath"]) &&

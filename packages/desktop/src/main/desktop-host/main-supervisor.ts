@@ -217,7 +217,9 @@ export class DesktopHostSupervisor {
     }
     signal?.throwIfAborted();
     // A scheduled Engine turn can span many tool calls. Its scheduler owns cancellation.
-    const timeout = method === "automation/run" ? 0 : 15_000;
+    const waitsForRun =
+      method === "automation/command" && (input as { method?: string }).method === "cancel";
+    const timeout = waitsForRun ? 0 : 15_000;
     const value = await this.request("host/business", { method, input }, timeout, signal);
     signal?.throwIfAborted();
     return value as ShellBusinessOperations[K]["result"];
@@ -240,7 +242,11 @@ export class DesktopHostSupervisor {
         this.send({ type: "withdraw-business", id });
         // Deletion waits for the isolated Engine's final state write and browser
         // teardown, even when the caller cancelled the run. Host exit rejects it.
-        if (params.method === "automation/run") return;
+        if (
+          params.method === "automation/command" &&
+          (params.input as { method?: string })?.method === "cancel"
+        )
+          return;
       }
       this.reads.delete(id);
       pending.reject(new Error("Desktop Host request expired or document changed"));

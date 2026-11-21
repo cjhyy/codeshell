@@ -1,23 +1,15 @@
 import { ipcMain } from "electron";
-import {
-  listAutomations,
-  getAutomation,
-  createAutomation,
-  updateAutomation,
-  deleteAutomation,
-  pauseAutomation,
-  resumeAutomation,
-  runAutomationNow,
-  cancelAutomationRun,
-  type CreateAutomationInput,
-  type UpdateAutomationInput,
-} from "./automation-service.js";
-import { desktopAutomationAuthorityDeps } from "./automation-authority.js";
+import type { CreateAutomationInput, UpdateAutomationInput } from "./automation-service.js";
+import type { NativeAutomationClient } from "./desktop-host/main-automation.js";
+import type { IpcMainInvokeEvent } from "electron";
 import { assertDesktopSessionId } from "./session-validation.js";
 import { deleteRunDir } from "./runs-service.js";
 
 /** Run deletion and automation CRUD/scheduling routes with bounded payload validation. */
-export function registerAutomationIpc() {
+export function registerAutomationIpc(
+  cron: NativeAutomationClient,
+  lifetime: (event: IpcMainInvokeEvent) => AbortSignal,
+) {
   ipcMain.handle("runs:delete", async (_e, runId: string) => {
     if (typeof runId !== "string") throw new Error("runId required");
     await deleteRunDir(runId);
@@ -48,10 +40,10 @@ export function registerAutomationIpc() {
     );
   }
 
-  ipcMain.handle("automation:list", async () => listAutomations());
+  ipcMain.handle("automation:list", async (e) => cron.call("list", undefined, lifetime(e)));
   ipcMain.handle("automation:get", async (_e, id: string) => {
     assertAutomationId(id);
-    return getAutomation(id);
+    return cron.call("get", id, lifetime(_e));
   });
   ipcMain.handle("automation:create", async (_e, input: CreateAutomationInput) => {
     if (
@@ -83,7 +75,7 @@ export function registerAutomationIpc() {
     if (Object.prototype.hasOwnProperty.call(input, "authoritySessionId")) {
       throw new Error("renderer cannot submit automation Session authority");
     }
-    return createAutomation(input, desktopAutomationAuthorityDeps());
+    return cron.call("create", input, lifetime(_e));
   });
   ipcMain.handle("automation:update", async (_e, id: string, patch: UpdateAutomationInput) => {
     assertAutomationId(id);
@@ -109,26 +101,26 @@ export function registerAutomationIpc() {
     ) {
       throw new Error("invalid automation patch");
     }
-    return updateAutomation(id, patch, desktopAutomationAuthorityDeps());
+    return cron.call("update", { id, patch }, lifetime(_e));
   });
   ipcMain.handle("automation:delete", async (_e, id: string) => {
     assertAutomationId(id);
-    return deleteAutomation(id);
+    return cron.call("delete", id, lifetime(_e));
   });
   ipcMain.handle("automation:pause", async (_e, id: string) => {
     assertAutomationId(id);
-    return pauseAutomation(id);
+    return cron.call("pause", id, lifetime(_e));
   });
   ipcMain.handle("automation:resume", async (_e, id: string) => {
     assertAutomationId(id);
-    return resumeAutomation(id);
+    return cron.call("resume", id, lifetime(_e));
   });
   ipcMain.handle("automation:runNow", async (_e, id: string) => {
     assertAutomationId(id);
-    return runAutomationNow(id);
+    return cron.call("runNow", id, lifetime(_e));
   });
   ipcMain.handle("automation:cancelRun", async (_e, id: string) => {
     assertAutomationId(id);
-    return cancelAutomationRun(id);
+    return cron.call("cancel", id, lifetime(_e));
   });
 }

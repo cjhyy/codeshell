@@ -1,3 +1,4 @@
+import { NativeAutomationClient } from "./main-automation.js";
 import { randomBytes } from "node:crypto";
 import { documentLifetimes } from "./document-lifetime.js";
 import type { OperationCommand } from "./private-operations.js";
@@ -43,8 +44,13 @@ export function createDesktopHost(
       }),
     () => app.getVersion(),
     (status) => {
-      if (status === "ready") bindWorker();
-      else worker?.disconnect();
+      if (status === "ready") {
+        bindWorker();
+        bindAutomation();
+      } else {
+        worker?.disconnect();
+        automation.disconnect();
+      }
       workbenches.setStatus(status);
       if (status === "ready") hostReady?.();
     },
@@ -103,6 +109,20 @@ export function createDesktopHost(
       },
     };
   }
+  const automation = new NativeAutomationClient(
+    supervisor.callBusiness.bind(supervisor),
+    bindAutomation,
+  );
+  function bindAutomation() {
+    if (!automation.enabled) return;
+    const { port1, port2 } = new MessageChannelMain();
+    if (supervisor.post({ type: "automation-port", searchPath: process.env.PATH ?? "" }, [port2]))
+      automation.bind(port1);
+    else {
+      port1.close();
+      port2.close();
+    }
+  }
   function bindWorker() {
     if (!worker) return;
     const { port1, port2 } = new MessageChannelMain();
@@ -124,6 +144,7 @@ export function createDesktopHost(
     callBusiness: supervisor.callBusiness.bind(supervisor),
     documentSignal,
     automationListeners: supervisor.automationListeners,
+    automation,
     catalogListeners: supervisor.catalogListeners,
     start() {
       ipcMain.removeListener(DesktopHostIpc.connect, connect);
@@ -234,7 +255,7 @@ export function createDesktopHost(
       changes?.close();
       changes = undefined;
       ipcMain.removeListener(DesktopHostIpc.connect, connect);
-      return supervisor.dispose();
+      return supervisor.dispose().finally(() => automation.close());
     },
   };
 }

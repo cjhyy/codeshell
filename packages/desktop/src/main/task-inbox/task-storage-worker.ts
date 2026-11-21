@@ -1,3 +1,5 @@
+import { attachCronStorage } from "../../host/automation/storage-owner.js";
+import { MessagePort, workerData } from "node:worker_threads";
 import { OperationBatches, type BatchPayload } from "../../host/composition/operation-batches.js";
 import { isBatchCommand } from "../desktop-host/private-operations.js";
 import {
@@ -20,6 +22,8 @@ import {
 import { serveSessionIndexWorker } from "@cjhyy/code-shell-server/storage";
 import { createTaskInboxStorageHandlers } from "./task-projection-storage.js";
 
+const port = workerData?.config?.schedulerPort;
+if (port instanceof MessagePort) attachCronStorage(port);
 const tasks = createTaskInboxStorageHandlers();
 const catalog = new SessionCatalogStore();
 let catalogRevision: number | undefined;
