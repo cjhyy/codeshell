@@ -82,6 +82,7 @@ const runOperations = new HostRunOperations(
 );
 const operations = nativeOperations(storage, () => server);
 const automation = new HostAutomationRuns({
+  operations: runOperations,
   notice: (notice) => parent.postMessage({ type: "automation-notice", notice }),
   share: (id, enabled) => server?.setStreamView(id, enabled),
   publish: (sessionId, event) => {
