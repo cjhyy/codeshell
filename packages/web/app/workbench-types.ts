@@ -113,6 +113,12 @@ export interface WorkbenchController {
   sendBlockedReason?: string;
   readOnly?: boolean;
   readOnlyNote?: string;
+  /** Open one subagent of the current conversation (its parent-feed row). */
+  openSubagent?: (agentId: string) => void;
+  /** Entry to the conversation's subagent list, shown above the transcript. */
+  subagentEntry?: React.ReactNode;
+  /** An open subagent list/detail; replaces the conversation while shown. */
+  subagentView?: React.ReactNode;
   /** An action that ends the read-only state (e.g. taking over a CLI session). */
   readOnlyAction?: React.ReactNode;
   attachmentAccept?: string;

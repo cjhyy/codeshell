@@ -11,10 +11,48 @@
  *   turn_complete | goal_progress | task_update | agent_start | agent_end |
  *   error | session_title …
  *
- * Subagent events carry an optional `agentId`. We tag items with it so a future
- * UI can scope subagent rows (see commit fbe6f68 — task_update must be isolated
- * by agentId so a subagent never clobbers the main list).
+ * Subagent events carry an optional `agentId` and are tagged onto items here.
+ * Views that can open a child's own transcript use reduceScopedStream instead,
+ * which (like Desktop's parent feed) folds a child's prose and tool calls into
+ * its `subagent` row. task_update stays isolated by agentId (fbe6f68) so a
+ * subagent never clobbers the main list.
  */
+
+/** Child stream events that Desktop folds into the agent card. */
+const CHILD_FEED_EVENTS = new Set([
+  "stream_request_start",
+  "text_delta",
+  "thinking_delta",
+  "tool_use_start",
+  "tool_use_args_delta",
+  "tool_result",
+  "tool_summary",
+  "assistant_message",
+  "turn_complete",
+  "error",
+  "session_user_message",
+  "steer_injected",
+]);
+/** Child result text kept on the parent row (the child view has the rest). */
+const CHILD_TEXT_LIMIT = 2_000;
+
+/** Fold one child stream event into its subagent row; unknown children are dropped. */
+function scopeChildEvent(s: ChatState, event: Record<string, unknown>): ChatState {
+  const agentId = event.agentId as string;
+  const index = s.items.findIndex((item) => item.kind === "subagent" && item.agentId === agentId);
+  const row = s.items[index];
+  if (!row || row.kind !== "subagent") return s;
+  let next = row;
+  if (event.type === "tool_use_start") next = { ...row, toolCount: (row.toolCount ?? 0) + 1 };
+  else if (event.type === "text_delta" && typeof event.text === "string")
+    next = { ...row, text: ((row.text ?? "") + event.text).slice(-CHILD_TEXT_LIMIT) };
+  else if (event.type === "error")
+    next = { ...row, error: String(event.error ?? "子代理出错").slice(0, CHILD_TEXT_LIMIT) };
+  if (next === row) return s;
+  const items = s.items.slice();
+  items[index] = next;
+  return { ...s, items };
+}
 
 import type { MobileHistoryAttachment, MobileHistoryItem } from "@cjhyy/code-shell-core";
 import { projectOutputUserEvent } from "./userMessageDisplay.js";
@@ -584,11 +622,17 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
 
     case "agent_end": {
       const agentId = event.agentId as string;
+      const text = typeof event.text === "string" ? event.text.slice(-CHILD_TEXT_LIMIT) : undefined;
       return {
         ...s,
         items: s.items.map((i) =>
           i.kind === "subagent" && i.agentId === agentId
-            ? { ...i, status: event.error ? "error" : "completed" }
+            ? {
+                ...i,
+                status: event.error ? "error" : "completed",
+                ...(text ? { text } : {}),
+                ...(event.error ? { error: String(event.error).slice(0, CHILD_TEXT_LIMIT) } : {}),
+              }
             : i,
         ),
       };
@@ -780,4 +824,22 @@ export function appendUserMessage(
       },
     ],
   };
+}
+
+/**
+ * reduceStream with Desktop's parent-feed scoping: a child's prose and tool
+ * calls fold into its `subagent` row (tool count, result text) instead of
+ * becoming parent items. For views that can open the child's own transcript.
+ */
+export function reduceScopedStream(state: ChatState, raw: unknown): ChatState {
+  const unwrapped = asStreamEvent(raw);
+  const event = unwrapped?.event as Record<string, unknown> | undefined;
+  if (
+    event &&
+    typeof event.agentId === "string" &&
+    event.agentId &&
+    CHILD_FEED_EVENTS.has(event.type as string)
+  )
+    return scopeChildEvent(state, event);
+  return reduceStream(state, raw);
 }

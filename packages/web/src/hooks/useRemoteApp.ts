@@ -56,6 +56,7 @@ import {
   type RoomHistoryWindow,
 } from "./roomHistoryPaging.js";
 import type { RoomAttention } from "./roomAttention.js";
+import { useRemoteSubagents, type RemoteSubagents } from "./useRemoteSubagents.js";
 import {
   prepareMobileAttachments,
   type MobileComposerAttachment,
@@ -164,6 +165,8 @@ export interface RemoteApp {
   approvals: PendingApproval[];
   /** CLI rooms not being viewed that have unread output or pending approvals. */
   roomAttention?: RoomAttention[];
+  /** Read-only subagent list/detail (Desktop's subagent panel data). */
+  subagents?: RemoteSubagents;
   permissionMode: PermissionMode;
   runtimeModels?: MobileRuntimeModel[];
   nativeModelSelection?: boolean;
@@ -375,6 +378,14 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   const sentCcApprovalsRef = useRef(new SentRoomApprovals<PendingApproval>());
   const [roomHistory, setRoomHistory] = useState<RoomHistoryWindow>();
   const [roomPager] = useState(() => new RoomHistoryPager(setRoomHistory));
+  const subagents = useRemoteSubagents(
+    useCallback(
+      (event: import("@cjhyy/code-shell-core").MobileClientEvent) =>
+        sendRef.current?.(event) ?? false,
+      [],
+    ),
+  );
+  const { observe: observeSubagents, close: closeSubagents } = subagents;
   const approvalsRef = useRef(approvals);
   approvalsRef.current = approvals;
   const submittingAsyncApprovalsRef = useRef(new Set<string>());
@@ -1159,6 +1170,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         return;
       if (outputClient.observe(event)) return;
       observeRoomAttention(event, activeRoomIdRef.current);
+      observeSubagents(event);
       switch (event.type) {
         case "auth.ok":
           socketOnlineRef.current = true;
@@ -2129,6 +2141,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       clearSessionUnread,
       clearSessionCatalog,
       observeRoomAttention,
+      observeSubagents,
       roomPager,
       rememberRoomMessages,
       requestRoomCatchup,
@@ -3248,6 +3261,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   // There is no rendered room list; this lookup is internal.
   const activeRoom = useMemo(() => rooms.find((r) => r.id === activeRoomId), [rooms, activeRoomId]);
   useEffect(() => viewing(activeRoomId), [viewing, activeRoomId]);
+  // A subagent view belongs to the conversation it was opened from.
+  useEffect(() => closeSubagents(), [closeSubagents, activeSessionId, activeRoomId]);
   const activeCwd = activeRoom?.cwd || activeSessionCwd;
   const refreshRuntimeModels = useCallback(() => {
     if (socket.status !== "online") return;
@@ -3385,6 +3400,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     activeRoomId,
     approvals,
     roomAttention,
+    subagents,
     permissionMode,
     runtimeModels,
     nativeModelSelection,

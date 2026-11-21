@@ -8,6 +8,7 @@ import type { RemoteApp } from "../src/hooks/useRemoteApp.js";
 import { useDesktopController } from "./DesktopApp.js";
 import { getApiWorkspace } from "./api-context.js";
 import { Workbench } from "./Workbench.js";
+import { SubagentView } from "./SubagentView.js";
 import {
   DesktopApproval,
   DesktopChatControls,
@@ -2810,6 +2811,119 @@ test("an observed CLI session offers take-over with a confirm step and shows the
       />,
     ),
   ).toBe("");
+});
+
+test("a subagent row in the parent feed opens its read-only detail, and back returns", async () => {
+  ensureMiniDom();
+  const previousMatchMedia = Object.getOwnPropertyDescriptor(window, "matchMedia");
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: () => ({ matches: true }), // narrow phone layout
+  });
+  browserRestores.push(() =>
+    previousMatchMedia
+      ? Object.defineProperty(window, "matchMedia", previousMatchMedia)
+      : Reflect.deleteProperty(window, "matchMedia"),
+  );
+  const calls: unknown[][] = [];
+  const subagents = {
+    view: undefined as RemoteApp["subagents"] extends infer T
+      ? T extends { view: infer V }
+        ? V
+        : never
+      : never,
+    open: (...args: unknown[]) => void calls.push(["open", ...args]),
+    select: (id: string) => void calls.push(["select", id]),
+    openRoomAgent: noop,
+    back: () => void calls.push(["back"]),
+    close: noop,
+    refresh: noop,
+    observe: noop,
+  };
+  const chat = {
+    ...initialChatState(),
+    items: [
+      { kind: "assistant" as const, id: "a1", text: "parent text", reasoning: "", done: true },
+      {
+        kind: "subagent" as const,
+        id: "sub-child",
+        agentId: "child",
+        label: "Explorer",
+        status: "running",
+        toolCount: 2,
+      },
+    ],
+  };
+  const parent = remoteApp({ activeSessionId: "parent", chat, subagents });
+  const hook = await renderHook(() => useDesktopController(parent, undefined, noop));
+  try {
+    const markup = renderToStaticMarkup(<Workbench controller={hook.result.current} />);
+    expect(markup).toContain('aria-label="查看子代理 Explorer"');
+    expect(markup).toContain("2 次工具调用");
+    expect(markup).toContain("子代理 · 1");
+    expect(markup).not.toContain('data-subagent-view="detail"');
+    hook.result.current.openSubagent!("child");
+    expect(calls).toEqual([["open", "parent", "child"]]);
+  } finally {
+    await hook.unmount();
+  }
+
+  subagents.view = {
+    kind: "session",
+    trail: [],
+    parentSessionId: "parent",
+    selectedId: "child",
+    catalog: [{ sessionId: "child", title: "Explorer", status: "active" }],
+    listLoading: false,
+    transcriptLoading: false,
+    transcript: {
+      ...initialChatState(),
+      items: [{ kind: "assistant", id: "c1", text: "child prose", reasoning: "", done: true }],
+    },
+  };
+  const detailApp = remoteApp({ activeSessionId: "parent", chat, subagents });
+  const detailHook = await renderHook(() => useDesktopController(detailApp, undefined, noop));
+  try {
+    const markup = renderToStaticMarkup(<Workbench controller={detailHook.result.current} />);
+    expect(markup).toContain('data-subagent-view="detail"');
+    expect(markup).toContain("child prose");
+    expect(markup).toContain("返回列表");
+  } finally {
+    await detailHook.unmount();
+  }
+
+  ensureMiniDom();
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  try {
+    await act(async () => {
+      root.render(<SubagentView app={detailApp} />);
+      await flushMicrotasks();
+    });
+    const back = elementsByTag(container, "BUTTON").find((node) => textOf(node) === "返回列表");
+    await act(async () => {
+      reactProps(back).onClick();
+      await flushMicrotasks();
+    });
+    expect(calls.at(-1)).toEqual(["back"]);
+    // The list groups children like Desktop's subagent panel.
+    subagents.view = { ...subagents.view!, selectedId: undefined } as never;
+    await act(async () => {
+      root.render(<SubagentView app={{ ...detailApp, subagents: { ...subagents } }} />);
+      await flushMicrotasks();
+    });
+    expect(textOf(container)).toContain("运行中 · 1");
+    const child = elementsByTag(container, "BUTTON").find((node) =>
+      textOf(node).includes("Explorer"),
+    );
+    await act(async () => {
+      reactProps(child).onClick();
+      await flushMicrotasks();
+    });
+    expect(calls.at(-1)).toEqual(["select", "child"]);
+  } finally {
+    await act(async () => root.unmount());
+  }
 });
 
 test("a restored CLI approval card shows why the last response failed", () => {
