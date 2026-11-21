@@ -11,11 +11,14 @@ import {
 import { ConfiguredBrowserRuntime } from "../../main/browser-runtime/configured-runtime.js";
 import { DedicatedPlaywrightBackend } from "../../main/browser-runtime/playwright-backend.js";
 
+import type { HostRunOperations } from "./run-operations.js";
+
 export type AutomationRunNotice =
   | { type: "session"; meta: AutomationSessionMeta }
   | { type: "ended"; sessionId: string };
 
 interface AutomationRunServices {
+  operations: Pick<HostRunOperations, "open">;
   notice(message: AutomationRunNotice): void;
   share(sessionId: string, enabled: boolean): void;
   publish(sessionId: string, event: unknown): void;
@@ -51,6 +54,7 @@ export class HostAutomationRuns {
           services.share(id, false);
         }
       },
+      services.operations,
     );
   }
 
