@@ -2867,7 +2867,7 @@ export interface PluginDetail extends PluginSummary {
       permissionLevel: AutomationPermissionLevel;
       workspace: "current" | "none";
     }>;
-    panels: Array<{
+    panels?: Array<{
       id: string;
       title: { default: string; en?: string; "zh-CN"?: string };
       entry: string;

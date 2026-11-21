@@ -14,7 +14,10 @@ import type {
 type ProjectAuthorityIpcRenderer = Pick<IpcRenderer, "invoke" | "on" | "removeListener">;
 
 /** Renderer-safe transport for project registry and Session workspace authority. */
-export function createProjectAuthorityApi(ipcRenderer: ProjectAuthorityIpcRenderer) {
+export function createProjectAuthorityApi(
+  ipcRenderer: ProjectAuthorityIpcRenderer,
+  listProjects = (fallback: () => Promise<LocalProject[]>) => fallback(),
+) {
   return {
     searchProjectFiles: (projectId: string, query: string, rootId?: string) =>
       rootId === undefined
@@ -75,7 +78,7 @@ export function createProjectAuthorityApi(ipcRenderer: ProjectAuthorityIpcRender
       action: "detach" | "discard",
     ) => ipcRenderer.invoke("workspace:cleanup", sessionId, cwd, worktreePath, action),
     projectRegistry: {
-      list: () => ipcRenderer.invoke("projectRegistry:list"),
+      list: () => listProjects(() => ipcRenderer.invoke("projectRegistry:list")),
       sessionMainRoots: (projectId: string) =>
         ipcRenderer.invoke("projectRegistry:sessionMainRoots", projectId),
       createFromPicker: () => ipcRenderer.invoke("projectRegistry:createFromPicker"),

@@ -1,3 +1,4 @@
+import { createConfigurationReads } from "./configuration-reads.js";
 import { DesktopHostIpc } from "../shared/desktop-host-protocol";
 import { DesktopHostClient, desktopHostRoutes, routeLocalProviders } from "./desktop-host-client";
 import { accountFeaturesApi } from "./account-features-api.js";
@@ -57,7 +58,7 @@ import { rpcResult } from "./rpc-result";
 import { createGoalControlApi } from "./goal-control-api";
 import type { AgentPanelHostRequest, AgentPanelHostResponse } from "../shared/agent-panels";
 import type { ExpandedPluginCommand, PluginCommandDescriptor } from "../shared/plugin-commands";
-import type { PluginMediaDto } from "../shared/plugin-media";
+
 import type { MediaPreviewRequest, MediaPreviewResult } from "../shared/media-preview";
 import type { InstalledThemePack, ThemeImportKind, ThemePickPreview } from "../shared/theme-packs";
 import type { WindowTitleBarOverlay } from "../shared/window-titlebar";
@@ -525,6 +526,10 @@ const desktopHost =
     : undefined;
 
 const configurationHost = desktopHostRoutes.configuration === "host" ? desktopHost : undefined;
+const { listProjects, ...configurationReads } = createConfigurationReads(
+  ipcRenderer,
+  configurationHost,
+);
 const agentHost = desktopHostRoutes.agentStream === "host" ? desktopHost : undefined;
 agentHost?.onStreamEvent((env) => streamListeners.forEach((listener) => listener(env)));
 
@@ -876,7 +881,8 @@ contextBridge.exposeInMainWorld("codeshell", {
   pickSkillDir: (): Promise<{ path: string; name: string } | null> =>
     ipcRenderer.invoke("dialog:pickSkillDir"),
   pickGitBinary: (): Promise<string | null> => ipcRenderer.invoke("dialog:pickGitBinary"),
-  ...createProjectAuthorityApi(ipcRenderer),
+  ...createProjectAuthorityApi(ipcRenderer, listProjects),
+  ...configurationReads,
   setGitPrefs: (prefs: {
     branchPrefix: string;
     autoDeleteWorktrees: boolean;
@@ -954,7 +960,6 @@ contextBridge.exposeInMainWorld("codeshell", {
   /** Authoritative no-repo conversation cwd (~/.code-shell/no-repo) from main.
    *  Renderer must use this, never recompute homedir() itself. */
   noRepoCwd: (): Promise<string> => ipcRenderer.invoke("no-repo:cwd"),
-  getSettings: (scope: "user") => ipcRenderer.invoke("settings:get", scope),
   getConfigurationSettings: (target: RendererConfigurationTarget) =>
     ipcRenderer.invoke("settings:getConfiguration", target),
   updateSettings: (scope: "user", patch: Record<string, unknown>) =>
@@ -1032,11 +1037,6 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("session:content-search", query),
   listPlugins: (target: RendererConfigurationTarget | null) =>
     ipcRenderer.invoke("plugins:list", target),
-  getPluginMedia: (
-    installKey: string,
-    includeScreenshots?: boolean,
-  ): Promise<PluginMediaDto | null> =>
-    ipcRenderer.invoke("plugins:media", installKey, includeScreenshots),
   listPluginCommands: (target: RendererConfigurationTarget): Promise<PluginCommandDescriptor[]> =>
     ipcRenderer.invoke("plugin-commands:list", target),
   expandPluginCommand: (
@@ -1080,7 +1080,6 @@ contextBridge.exposeInMainWorld("codeshell", {
   respondAgentPanelRequest: (response: AgentPanelHostResponse) =>
     ipcRenderer.send("panel:agent-response", response),
   /** Full content inventory for one installed plugin (详情页). */
-  getPluginDetail: (installKey: string) => ipcRenderer.invoke("plugins:detail", installKey),
   createAutomationFromPluginTemplate: (
     installKey: string,
     templateId: string,
@@ -1107,7 +1106,6 @@ contextBridge.exposeInMainWorld("codeshell", {
     id: string,
     state: "inherit" | "on" | "off",
   ) => ipcRenderer.invoke("capabilities:setOverride", target, id, state),
-  listSourceCatalog: () => ipcRenderer.invoke("sources:catalogList"),
   linkedFileSources: {
     snapshot: (projectId: string) => ipcRenderer.invoke("sources:linkedFiles:snapshot", projectId),
     add: (
@@ -1132,15 +1130,12 @@ contextBridge.exposeInMainWorld("codeshell", {
   saveSourceCatalog: (definition: import("@cjhyy/code-shell-core").SourceDefinition) =>
     ipcRenderer.invoke("sources:catalogSave", definition),
   deleteSourceCatalog: (id: string) => ipcRenderer.invoke("sources:catalogDelete", id),
-  projectSourceAccess: (projectId: string) =>
-    ipcRenderer.invoke("sources:projectAccess", projectId),
   bindProjectSource: (
     projectId: string,
     binding: import("@cjhyy/code-shell-core").WorkspaceSourceBinding,
   ) => ipcRenderer.invoke("sources:bindProject", projectId, binding),
   unbindProjectSource: (projectId: string, sourceId: string) =>
     ipcRenderer.invoke("sources:unbindProject", projectId, sourceId),
-  listSourceScopes: (sourceId: string) => ipcRenderer.invoke("sources:listScopes", sourceId),
   pickAndUploadProjectSources: (projectId: string) =>
     ipcRenderer.invoke("sources:pickAndUploadProject", projectId),
   deleteProjectUpload: (projectId: string, name: string) =>
@@ -1369,7 +1364,6 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("hooks:approvePlugin", installKey),
   revokePluginHooks: (installKey: string): Promise<PluginHookApprovalResult[]> =>
     ipcRenderer.invoke("hooks:revokePlugin", installKey),
-  listPluginMcpTrust: () => ipcRenderer.invoke("mcp:listPluginTrust"),
   approvePluginMcp: (installKey: string): Promise<PluginMcpApprovalResult[]> =>
     ipcRenderer.invoke("mcp:approvePlugin", installKey),
   revokePluginMcp: (installKey: string): Promise<PluginMcpApprovalResult[]> =>
@@ -1377,37 +1371,16 @@ contextBridge.exposeInMainWorld("codeshell", {
   invalidateMcpProbeCache: (name?: string) => ipcRenderer.invoke("mcp:invalidate", name),
   probeSearch: (input: unknown) => ipcRenderer.invoke("search:probe", input),
   probeImage: (input: unknown) => ipcRenderer.invoke("image:probe", input),
-  getModelCatalog: () => {
-    const ipc = () => ipcRenderer.invoke("catalog:list");
-    return configurationHost ? configurationHost.readBusiness("models/catalog", {}, ipc) : ipc();
-  },
   saveCatalogEntry: (entry: unknown) => ipcRenderer.invoke("catalog:save", entry),
   deleteCatalogEntry: (id: string) => ipcRenderer.invoke("catalog:delete", id),
-  getCatalogOrigins: () => {
-    const ipc = () => ipcRenderer.invoke("catalog:origins");
-    return configurationHost
-      ? configurationHost.readBusiness("models/catalogOrigins", {}, ipc)
-      : ipc();
-  },
   resolveModelMeta: (models: unknown, providers: unknown) =>
     ipcRenderer.invoke("models:resolve-meta", models, providers),
   reasoningControl: (kind: string, model: string) =>
     ipcRenderer.invoke("models:reasoning-control", kind, model),
   listModels: (provider: unknown, refresh?: boolean) =>
     ipcRenderer.invoke("models:list", provider, refresh),
-  getTrust: (path: string) => ipcRenderer.invoke("trust:get", path),
   setTrust: (path: string, level: "trusted" | "untrusted") =>
     ipcRenderer.invoke("trust:set", path, level),
-  getTrustRisks: (
-    path: string,
-  ): Promise<{
-    permissionRules: number;
-    envKeys: string[];
-    hooks: number;
-    mcpServers: string[];
-    setupScripts: boolean;
-  }> => ipcRenderer.invoke("trust:risks", path),
-  recents: () => ipcRenderer.invoke("recents:list"),
   notify: (opts: { title: string; body?: string; subtitle?: string }) =>
     ipcRenderer.invoke("notify:show", opts),
   isWindowFullscreen: () => ipcRenderer.invoke("window:isFullscreen"),

@@ -325,3 +325,24 @@ test("an established agent grant cannot downgrade to Main when its Host connecti
   ).rejects.toMatchObject({ code: DesktopHostErrors.reconnecting });
   expect(reads).toBe(0);
 });
+
+test("configuration reads cannot downgrade after their document port was negotiated", async () => {
+  const { client } = clientWithStatus();
+  const old = async () => [];
+  expect(await client.readBusiness("sources/catalog", {}, old)).toEqual([]);
+  const host = await attach(client, {
+    ...capabilities,
+    methods: [...capabilities.methods, "sources/catalog"],
+  });
+  const response = client.readBusiness("sources/catalog", {}, old);
+  const request = await nextRequest(host);
+  expect(request.method).toBe("sources/catalog");
+  host.postMessage({
+    jsonrpc: "2.0",
+    id: request.id,
+    error: { code: DesktopHostErrors.revoked, message: "document revoked" },
+  });
+  await expect(response).rejects.toThrow("document revoked");
+  client.disconnect("reconnecting");
+  await expect(client.readBusiness("sources/catalog", {}, old)).rejects.toThrow("-32011");
+});

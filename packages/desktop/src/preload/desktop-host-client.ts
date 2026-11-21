@@ -57,7 +57,7 @@ function supportsProviderCatalog(result: unknown): boolean {
 export class DesktopHostClient {
   private port?: MessagePort;
   private readonly methods = new Set<string>();
-  private readonly negotiatedAgentReads = new Set<string>();
+  private readonly negotiatedMethods = new Set<string>();
   private approvalRead = 0;
   private approvals?: { epoch: string; stateVersion: number; pending: ApprovalRequestEnvelope[] };
   private readonly streams = new Set<(envelope: StreamEventEnvelope) => void>();
@@ -128,8 +128,7 @@ export class DesktopHostClient {
       }
       for (const method of (result as { methods: string[] }).methods) {
         this.methods.add(method);
-        if (method === "agent/subscribe" || method === "agent/pendingApprovals")
-          this.negotiatedAgentReads.add(method);
+        this.negotiatedMethods.add(method);
       }
       this.publish("ready");
     } catch {
@@ -218,7 +217,7 @@ export class DesktopHostClient {
     // never offered this capability. Once negotiated, keep its document grant.
     if (this.initialPort) await this.initialPort;
     if (this.status === "ready" && this.methods.has(method) && this.port) return this.port;
-    if (this.negotiatedAgentReads.has(method))
+    if (this.negotiatedMethods.has(method))
       throw rpcError(DesktopHostErrors.reconnecting, `Desktop Host ${this.status}`);
     return undefined;
   }
@@ -289,16 +288,20 @@ export class DesktopHostClient {
     return [...pending, ...legacy.filter((entry) => entry.source === "external-runtime")];
   }
 
-  readBusiness<K extends keyof DesktopBusinessReads>(
+  async readBusiness<K extends keyof DesktopBusinessReads>(
     method: K,
     params: DesktopBusinessReads[K]["params"],
     fallback: () => Promise<DesktopBusinessReads[K]["result"]>,
   ): Promise<DesktopBusinessReads[K]["result"]> {
-    return this.read(method, params, fallback);
+    if (this.status === "ready" && this.port && this.methods.has(method))
+      return (await this.request(this.port, method, params)) as DesktopBusinessReads[K]["result"];
+    if (this.negotiatedMethods.has(method))
+      throw rpcError(DesktopHostErrors.reconnecting, `Desktop Host ${this.status}`);
+    return fallback();
   }
 
   private async read<T>(
-    method: "sessions/listDisk" | "tasks/list" | "tasks/get" | keyof DesktopBusinessReads,
+    method: "sessions/listDisk" | "tasks/list" | "tasks/get",
     params: Record<string, unknown>,
     readIpc: () => Promise<T>,
   ): Promise<T> {

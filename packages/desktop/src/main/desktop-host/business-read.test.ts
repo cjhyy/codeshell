@@ -31,3 +31,25 @@ test("a configuration read supplies its validated parameters and captured caller
   expect(name).toBe("models/catalogOrigins");
   expect(handler.run(ctx, {})).toEqual({});
 });
+
+test("registered configuration reads validate their own scope before resolving resources", async () => {
+  const { configurationReads } = await import("./configuration-reads.js");
+  const methods = new Map(configurationReads);
+  const ctx = {
+    identity: {
+      webContentsId: 12,
+      frameToken: "doc",
+      frameGeneration: 1,
+      windowKind: "workbench" as const,
+    },
+    assertCurrent() {},
+  };
+  for (const [name, params] of [
+    ["projects/list", { includeDeleted: true }],
+    ["settings/user", { scope: "project" }],
+    ["sources/projectAccess", { projectId: "one", cwd: "/tmp" }],
+    ["plugins/media", { installKey: "known", includeScreenshots: "yes" }],
+    ["projects/trust", { path: "" }],
+  ] as const)
+    expect(() => methods.get(name)?.run(ctx, params)).toThrow(InvalidParams);
+});

@@ -118,7 +118,15 @@ utilityProcess.fork = function (...args) {
           const begin = Date.now();
           const ids = (await window.codeshell.links.listLocalProviders()).map(({ id }) => id);
           const page = await window.codeshell.listDiskSessions({limit:1,sessionId:"index-visible"});
-          resolve({ begin, end: Date.now(), ids, sessionIds:page.sessions.map(row=>row.id) });
+          const api = window.codeshell;
+          const business = await Promise.all([
+            api.projectRegistry.list(), api.recents(), api.listSourceCatalog(), api.getModelCatalog(),
+            api.listPluginMcpTrust(), api.getPluginDetail("uninstalled-business-test"), api.getSettings("user")
+          ]);
+          const [projects, recents, sources, models, trust, plugin, settings] = business;
+          resolve({ begin, end: Date.now(), ids, sessionIds:page.sessions.map(row=>row.id),
+            configurationViews: [projects, recents, sources, models, trust].every(Array.isArray)
+              && models.length > 0 && plugin === null && (settings === null || typeof settings === "object") });
         } catch (error) { reject(error); }
       }, 250)); void 0`);
     const begin = Date.now();
@@ -129,6 +137,11 @@ utilityProcess.fork = function (...args) {
   await secondHandle.dispose();
   assert.deepEqual(measured.read.ids, catalog);
   assert.deepEqual(measured.read.sessionIds, ["index-visible"]);
+  assert.equal(
+    measured.read.configurationViews,
+    true,
+    "Configuration views must resolve on the workbench Host port",
+  );
   // A correct metadata page could also come from JSON fallback. Verify that this
   // Electron utility's actual worker committed the row in its WAL database.
   const storage = join(isolated.codeShellHome, ".codeshell-state");

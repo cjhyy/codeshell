@@ -34,3 +34,24 @@ export function noBusinessArguments(params: unknown): Record<string, never> {
     throw new InvalidParams("Unexpected business read arguments");
   return {};
 }
+
+/** Parse only the named fields of a structured-cloneable RPC parameter object. */
+export function businessArguments(
+  input: unknown,
+  allowed: readonly string[],
+): Record<string, unknown> {
+  if (
+    !input ||
+    typeof input !== "object" ||
+    (Object.getPrototypeOf(input) !== Object.prototype && Object.getPrototypeOf(input) !== null) ||
+    !Reflect.ownKeys(input).every((k) => typeof k === "string" && allowed.includes(k))
+  )
+    throw new InvalidParams("Unexpected business read arguments");
+  return input as Record<string, unknown>;
+}
+
+export function textArgument(value: unknown): string {
+  if (typeof value !== "string" || !value || value.includes("\0") || value.length > 32_768)
+    throw new InvalidParams("Expected a bounded nonempty string");
+  return value;
+}
