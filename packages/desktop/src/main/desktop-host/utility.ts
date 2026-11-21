@@ -1,3 +1,4 @@
+import { HostApprovalState } from "./approval-state.js";
 import { openStateStorage } from "@cjhyy/code-shell-core/internal/storage";
 import { taskHostReads } from "../task-inbox/task-host-reads.js";
 import { isPrivateTaskCommand } from "../task-inbox/private-task-command.js";
@@ -24,6 +25,7 @@ const storage = openStateStorage(sessionsRoot(), {
 const index = createSessionIndex(sessionsRoot(), { storage });
 const catalog = new DesktopSessionListVisibility(index);
 let server: DesktopHostServer | undefined;
+const approvals = new HostApprovalState((id, owner) => server?.allows(id, owner) ?? false);
 let stopping = false;
 let worker: ReturnType<typeof bindHostWorker> | undefined;
 
@@ -39,7 +41,10 @@ parent.on("message", ({ data, ports }) => {
     ports.length === 1 &&
     !worker
   ) {
-    worker = bindHostWorker(ports[0], data);
+    worker = bindHostWorker(ports[0], data, {
+      observeWorkerLine: (line) => approvals.observe(line),
+      workerExited: (generation) => approvals.reset(generation),
+    });
     return;
   }
   if (isDesktopHostControl(data) && data.type === "bind" && server && ports.length === 1) {
@@ -51,8 +56,12 @@ parent.on("message", ({ data, ports }) => {
 
   if (isDesktopHostControl(data) && data.type === "shutdown") {
     stopping = true;
-    void Promise.all([index.close(), worker?.close()]).finally(async () => (await storage).close()).then(
-      () => process.exit(0), () => process.exit(1));
+    void Promise.all([index.close(), worker?.close()])
+      .finally(async () => (await storage).close())
+      .then(
+        () => process.exit(0),
+        () => process.exit(1),
+      );
     return;
   }
   if (!server) {
@@ -65,6 +74,7 @@ parent.on("message", ({ data, ports }) => {
       new Map([
         ...desktopHostMethods((options) => catalog.list(options)),
         ...taskHostReads(storage),
+        ["agent/pendingApprovals", approvals.method] as const,
       ]),
     );
     parent.postMessage({ type: "ready" });
@@ -144,6 +154,7 @@ parent.on("message", ({ data, ports }) => {
       server.setOwner(data.sessionId, data.webContentsId);
       break;
     case "deleting":
+      if (data.deleting) approvals.forgetSession(data.sessionId);
       server.setDeleting(data.sessionId, data.deleting);
       catalog.setDeleting(data.sessionId, data.deleting);
       break;

@@ -270,3 +270,61 @@ test("replacing a document revokes its waiting writes without undoing a committe
   pending.release();
   committed.release();
 });
+
+test("approval snapshots are scoped to the document's current sessions and worker generation", async () => {
+  const { HostApprovalState } = await import("./approval-state.js");
+  let now = 1;
+  const state = new HostApprovalState(
+    (id, owner) => server.allows(id, owner),
+    () => now,
+  );
+  const server: DesktopHostServer = new DesktopHostServer(
+    "test",
+    new Map([["agent/pendingApprovals", state.method]]),
+  );
+  const first = connect(server, frame(1)),
+    second = connect(server, frame(2));
+  server.setOwner("mine", 1);
+  server.setOwner("theirs", 2);
+  const observe = (method: string, params: Record<string, unknown>) => {
+    const message = { jsonrpc: "2.0", method, params };
+    state.observe({ message, line: JSON.stringify(message) });
+  };
+  const request = (sessionId: string) =>
+    observe("agent/approvalRequest", {
+      sessionId,
+      requestId: "r",
+      expiresAt: 10,
+      request: { toolName: "Read" },
+    });
+  const read = async (
+    port: TestPort,
+    id: number,
+    since?: { epoch: string; stateVersion: number },
+  ) => {
+    port.request(id, "agent/pendingApprovals", since ? { since } : {});
+    await tick();
+    return port.responses(id)[0]!.result as {
+      epoch: string;
+      stateVersion: number;
+      pending?: { sessionId: string }[];
+    };
+  };
+  request("mine");
+  const initial = await read(first, 1);
+  expect(initial.pending?.map((p) => p.sessionId)).toEqual(["mine"]);
+  const cursor = { epoch: initial.epoch, stateVersion: initial.stateVersion };
+  request("theirs");
+  expect(await read(first, 2, cursor)).toEqual(cursor);
+  expect((await read(second, 3)).pending?.map((p) => p.sessionId)).toEqual(["theirs"]);
+  server.setOwner("mine", 2);
+  expect((await read(first, 4, cursor)).pending).toEqual([]);
+  const both = await read(second, 5);
+  expect(both.pending).toHaveLength(2);
+  observe("agent/approvalResolved", { sessionId: "mine", requestId: "r" });
+  expect((await read(second, 6)).pending).toHaveLength(1);
+  now = 11;
+  expect((await read(second, 7)).pending).toEqual([]);
+  state.reset(2);
+  expect((await read(first, 8, cursor)).epoch).not.toBe(initial.epoch);
+});

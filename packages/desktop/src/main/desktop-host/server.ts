@@ -152,6 +152,9 @@ export class DesktopHostServer {
     return { permit, release: () => conn.commits.delete(permit) };
   }
 
+  allows(sessionId: string, owner: number): boolean {
+    return this.sessions.allows(sessionId, owner);
+  }
   setOwner(sessionId: string, owner: number | null): void {
     this.sessions.setOwner(sessionId, owner);
     this.rejectRevoked();

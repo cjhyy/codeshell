@@ -3900,9 +3900,7 @@ app.whenReady().then(async () => {
     // Expose the live scheduler to the automation IPC service (Phase 3 UI).
     const scheduler = automationHandle.scheduler;
     setAutomationScheduler(scheduler);
-    scheduler.setDefinitionListener((id) =>
-      taskInboxService.markDirty("automation", id),
-    );
+    scheduler.setDefinitionListener((id) => taskInboxService.markDirty("automation", id));
     taskInboxDisposers.push(() => scheduler.setDefinitionListener());
     await petRuleScheduler?.start();
     // startAutomation installed the default executor (bindCronToEngine):
@@ -4688,6 +4686,7 @@ ipcMain.handle("quickChat:cleanupSession", async (event, id: unknown, claimId: u
 });
 
 ipcMain.handle("agent:pendingApprovals", (event) => {
+  appRendererNavigation.assertSender(event);
   // Native approval events already reach all main windows. Preserve that queue
   // and its session envelopes, without replaying resolved historical requests.
   pendingMobileApprovals.setWorkerState(
@@ -4695,7 +4694,12 @@ ipcMain.handle("agent:pendingApprovals", (event) => {
     bridge?.hasLiveWorker() ?? false,
   );
   return [
-    ...pendingMobileApprovals.replayAllLines().map((line) => JSON.parse(line).params),
+    ...pendingMobileApprovals
+      .replayAllLines()
+      .map((line) => JSON.parse(line).params)
+      .filter(
+        (envelope) => bridge?.panelOwnerWebContentsId(envelope.sessionId) === event.sender.id,
+      ),
     ...(externalRuntime.approvals?.pendingForWindow(event.sender.id) ?? []),
   ];
 });

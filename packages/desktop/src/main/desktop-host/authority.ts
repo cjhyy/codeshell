@@ -33,6 +33,11 @@ export class HostSessionAuthority {
     else this.sessions.set(sessionId, { owner, deleting });
   }
 
+  allows(sessionId: string, webContentsId: number): boolean {
+    const entry = this.sessions.get(sessionId);
+    return !!entry && entry.owner === webContentsId && !entry.deleting;
+  }
+
   grant(sessionId: string, webContentsId: number): () => void {
     const observed = this.sessions.get(sessionId);
     if (!observed || observed.owner !== webContentsId || observed.deleting) {
