@@ -143,7 +143,13 @@ export function attachCronStorage(
           {
             ...scope,
             isAuthorized: () => peer.call<boolean>("authorize", grantId),
-            assertAuthorized: check,
+            assertAuthorized: () => {
+              const permit = grants.getStore();
+              if (!permit || Atomics.load(permit, 0) === -1)
+                throw Error("Panel authorization expired");
+              // runNow has no definition commit. The scheduler starts it in the same turn.
+              if (method === "automations.runNow") check();
+            },
           },
           method,
           params,

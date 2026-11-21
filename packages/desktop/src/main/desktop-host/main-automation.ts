@@ -96,12 +96,16 @@ export class NativeAutomationClient {
       });
       try {
         const { appId, cwd, sessionId, revision } = scope;
-        return await this.call("panel", {
-          grantId,
-          scope: { appId, cwd, sessionId, revision },
-          method,
-          params,
-        });
+        return await this.call(
+          "panel",
+          {
+            grantId,
+            scope: { appId, cwd, sessionId, revision },
+            method,
+            params,
+          },
+          scope.signal,
+        );
       } finally {
         this.grants.delete(grantId);
       }

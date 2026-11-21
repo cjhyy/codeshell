@@ -21,6 +21,8 @@ export interface PanelAutomationScope {
   sessionId: string;
   /** Host-selected installed package revision, never a field from Panel call JSON. */
   revision?: string;
+  /** Withdraw in-flight changes when the transport discards this binding. */
+  signal?: AbortSignal;
   /** Optional synchronous transport fence immediately before a Host mutation. */
   assertAuthorized?(): void;
   isAuthorized(): Promise<boolean>;
