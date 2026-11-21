@@ -22,8 +22,23 @@ interface CatalogDirectory {
 export function registerSessionCatalogIpc(
   ipc: Pick<IpcMain, "handle" | "removeHandler">,
   windows: () => BrowserWindow[],
-  catalog: CatalogDirectory | SessionCatalogStore = new SessionCatalogStore(),
-  transcripts = new SessionTranscriptCache(),
+  catalog: CatalogDirectory = new SessionCatalogStore(),
+  transcripts: {
+    read(
+      input: Parameters<SessionTranscriptCache["read"]>[0],
+      signal?: AbortSignal,
+    ): ReturnType<SessionTranscriptCache["read"]>;
+    write(
+      input: Parameters<SessionTranscriptCache["write"]>[0],
+      signal?: AbortSignal,
+    ): Promise<void>;
+    delete(
+      input: Parameters<SessionTranscriptCache["delete"]>[0],
+      signal?: AbortSignal,
+    ): Promise<void>;
+    flush(): Promise<void>;
+    close(): Promise<void>;
+  } = new SessionTranscriptCache(),
   documentSignal?: (e: IpcMainInvokeEvent) => AbortSignal,
 ) {
   const channels: string[] = [];
@@ -49,24 +64,12 @@ export function registerSessionCatalogIpc(
       return action(input, documentSignal?.(event));
     });
   };
-  const directory: CatalogDirectory =
-    catalog instanceof SessionCatalogStore
-      ? {
-          load: () => catalog.load(),
-          apply: (patch) => catalog.apply(patch),
-          importLegacy: (indices) => catalog.importLegacy(indices),
-          onChanged: (listener) => catalog.onChanged(listener),
-          flush: () => catalog.flush(),
-        }
-      : catalog;
-  handle("sessionCatalog:load", (_, signal) => directory.load(signal));
-  handle("sessionCatalog:importLegacy", (indices, signal) =>
-    directory.importLegacy(indices, signal),
-  );
-  handle("sessionCatalog:apply", (patch, signal) => directory.apply(patch, signal));
-  handle("sessionCatalog:writeTranscript", (input) => transcripts.write(input));
-  handle("sessionCatalog:readTranscript", (input) => transcripts.read(input));
-  handle("sessionCatalog:deleteTranscript", (input) => transcripts.delete(input));
+  handle("sessionCatalog:load", (_, signal) => catalog.load(signal));
+  handle("sessionCatalog:importLegacy", (indices, signal) => catalog.importLegacy(indices, signal));
+  handle("sessionCatalog:apply", (patch, signal) => catalog.apply(patch, signal));
+  handle("sessionCatalog:writeTranscript", (input, signal) => transcripts.write(input, signal));
+  handle("sessionCatalog:readTranscript", (input, signal) => transcripts.read(input, signal));
+  handle("sessionCatalog:deleteTranscript", (input, signal) => transcripts.delete(input, signal));
   channels.push("sessionCatalog:flushComplete");
   ipc.handle("sessionCatalog:flushComplete", (event, input) => {
     if (!trustedEvent(event) || typeof input?.requestId !== "string") return;

@@ -1,3 +1,6 @@
+import { Worker } from "node:worker_threads";
+import { SessionTranscriptCache } from "../session-transcript-cache.js";
+import type { BusinessMethods } from "../../host/composition/business-calls.js";
 import { HostBusinessCalls } from "../../host/composition/business-calls.js";
 import { catalogOperations } from "../../host/composition/session-catalog.js";
 import { businessRead, noBusinessArguments } from "./business-read.js";
@@ -35,7 +38,19 @@ const storage = openStateStorage(sessionsRoot(), {
 const catalogFiles = catalogOperations(storage, (snapshot) =>
   parent.postMessage({ type: "session-catalog-changed", snapshot }),
 );
-const business = new HostBusinessCalls({ ...catalogFiles });
+const transcripts = new SessionTranscriptCache(
+  {},
+  (options) =>
+    new Worker(new URL("./session-transcript-cache-worker.mjs", import.meta.url), {
+      workerData: options,
+    }),
+);
+const business = new HostBusinessCalls({
+  ...catalogFiles,
+  "transcripts/read": (input) => transcripts.read(input),
+  "transcripts/write": (input, grant) => transcripts.commitWrite(input, grant.permit),
+  "transcripts/delete": (input, grant) => transcripts.commitDelete(input, grant.permit),
+} satisfies BusinessMethods);
 const index = createSessionIndex(sessionsRoot(), { storage });
 const catalog = new DesktopSessionListVisibility(index);
 let server: DesktopHostServer | undefined;
@@ -88,7 +103,7 @@ parent.on("message", ({ data, ports }) => {
   if (isDesktopHostControl(data) && data.type === "shutdown") {
     stopping = true;
     business.close();
-    void Promise.all([index.close(), worker?.close()])
+    void Promise.all([index.close(), worker?.close(), transcripts.close()])
       .then(() => output.drain())
       .finally(async () => (await storage).close())
       .then(

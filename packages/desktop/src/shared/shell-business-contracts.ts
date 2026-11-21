@@ -8,6 +8,9 @@ type Operation<F extends (...args: any[]) => Promise<unknown>> = {
 /** Private calls from authenticated Electron adapters. These methods are never
  * registered on a renderer port or exposed by the window preload. */
 export interface ShellBusinessOperations {
+  "transcripts/read": Operation<SessionCatalogApi["readTranscript"]>;
+  "transcripts/write": Operation<SessionCatalogApi["writeTranscript"]>;
+  "transcripts/delete": Operation<SessionCatalogApi["deleteTranscript"]>;
   "catalog/load": Operation<SessionCatalogApi["load"]>;
   "catalog/importLegacy": Operation<SessionCatalogApi["importLegacy"]>;
   "catalog/apply": Operation<SessionCatalogApi["apply"]>;

@@ -1,5 +1,6 @@
 import type { CallShellBusiness } from "../../shared/shell-business-contracts.js";
 import type {
+  SessionCatalogApi,
   SessionCatalogSnapshot,
   SessionIndex,
   SessionCatalogPatch,
@@ -16,7 +17,20 @@ export function hostCatalogClient(
     pending.add(job);
     return job.finally(() => pending.delete(job));
   }
+  const flush = async () => {
+    await Promise.all([...pending]);
+  };
   return {
+    transcripts: {
+      read: (input: Parameters<SessionCatalogApi["readTranscript"]>[0], signal?: AbortSignal) =>
+        call("transcripts/read", input, signal),
+      write: (input: Parameters<SessionCatalogApi["writeTranscript"]>[0], signal?: AbortSignal) =>
+        track(call("transcripts/write", input, signal)),
+      delete: (input: Parameters<SessionCatalogApi["deleteTranscript"]>[0], signal?: AbortSignal) =>
+        track(call("transcripts/delete", input, signal)),
+      flush,
+      close: flush,
+    },
     load: (signal?: AbortSignal) => call("catalog/load", undefined, signal),
     importLegacy: (value: Record<string, SessionIndex>, signal?: AbortSignal) =>
       track(call("catalog/importLegacy", value, signal)),
@@ -28,8 +42,6 @@ export function hostCatalogClient(
         listeners.delete(listener);
       };
     },
-    async flush() {
-      await Promise.all([...pending]);
-    },
+    flush,
   };
 }

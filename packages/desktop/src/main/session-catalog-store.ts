@@ -112,7 +112,11 @@ export class SessionCatalogStore {
    * The backup precedes the atomic marker+catalogue commit; a failed commit can
    * be retried, while successful migration permanently ignores stale browsers.
    */
-  importLegacy(
+  importLegacy(indices: Record<string, SessionIndex>): Promise<SessionCatalogSnapshot> {
+    return this.commitLegacy(indices);
+  }
+
+  commitLegacy(
     indices: Record<string, SessionIndex>,
     commit?: () => void,
   ): Promise<SessionCatalogSnapshot> {
@@ -158,7 +162,11 @@ export class SessionCatalogStore {
     );
   }
 
-  apply(patch: SessionCatalogPatch, commit?: () => void): Promise<SessionCatalogSnapshot> {
+  apply(patch: SessionCatalogPatch): Promise<SessionCatalogSnapshot> {
+    return this.commitPatch(patch);
+  }
+
+  commitPatch(patch: SessionCatalogPatch, commit?: () => void): Promise<SessionCatalogSnapshot> {
     // Detach queued input immediately: callers cannot mutate it while waiting
     // for another window's operation to finish.
     let validated: SessionCatalogPatch;

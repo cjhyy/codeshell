@@ -4794,7 +4794,7 @@ const sessionCatalogIpc = registerSessionCatalogIpc(
     return [...mainWindows, ...petSurfaceWindows()];
   },
   sessionCatalogStore,
-  undefined,
+  sessionCatalogStore.transcripts,
   desktopHost.documentSignal,
 );
 taskInboxDisposers.push(

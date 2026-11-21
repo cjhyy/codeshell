@@ -25,11 +25,9 @@ export function createSessionCatalogApi(
   ipc.on("sessionCatalog:flushRequested", (_event: IpcRendererEvent, requestId: string) =>
     flush(requestId),
   );
+  const load = () => ipc.invoke("sessionCatalog:load");
   return {
-    load: () =>
-      host
-        ? host.readBusiness("catalog/load", {}, () => ipc.invoke("sessionCatalog:load"))
-        : ipc.invoke("sessionCatalog:load"),
+    load: () => (host ? host.readBusiness("catalog/load", {}, load) : load()),
     importLegacy: (indices) => ipc.invoke("sessionCatalog:importLegacy", indices),
     apply: (patch) => ipc.invoke("sessionCatalog:apply", patch),
     writeTranscript: (input) => ipc.invoke("sessionCatalog:writeTranscript", input),

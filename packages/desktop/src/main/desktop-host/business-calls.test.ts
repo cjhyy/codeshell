@@ -14,10 +14,10 @@ test("a withdrawn catalog edit cannot create a draft, while an acknowledged edit
     const calls = new HostBusinessCalls({
       "catalog/load": () => store.load(),
       "catalog/importLegacy": (indices, grant) =>
-        store.importLegacy(indices, () => claimBusinessCommit(grant.permit)),
+        store.commitLegacy(indices, () => claimBusinessCommit(grant.permit)),
       "catalog/apply": async (patch, grant) => {
         await wait.promise;
-        return store.apply(patch, () => claimBusinessCommit(grant.permit));
+        return store.commitPatch(patch, () => claimBusinessCommit(grant.permit));
       },
     });
     const patch = {

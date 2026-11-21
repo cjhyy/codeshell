@@ -31,8 +31,8 @@ await serveSessionIndexWorker({
       const before = catalogRevision;
       const snapshot =
         command === "catalog/apply"
-          ? await catalog.apply(input as SessionCatalogPatch, commit)
-          : await catalog.importLegacy(input as Record<string, SessionIndex>, commit);
+          ? await catalog.commitPatch(input as SessionCatalogPatch, commit)
+          : await catalog.commitLegacy(input as Record<string, SessionIndex>, commit);
       return { snapshot, changed: before !== catalogRevision };
     }
     if (command === "output/mutate" || command === "output/snapshot") {

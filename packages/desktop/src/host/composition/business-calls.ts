@@ -15,9 +15,9 @@ export function claimBusinessCommit(permit: Int32Array): void {
   if (Atomics.compareExchange(permit, 0, 0, 1) !== 0) throw new Error("Document write was revoked");
 }
 
-export class HostBusinessCalls {
+export class HostBusinessCalls<T extends Partial<BusinessMethods> = BusinessMethods> {
   private readonly pending = new Map<string, { permit: Int32Array; revoked: boolean }>();
-  constructor(private readonly methods: BusinessMethods) {}
+  constructor(private readonly methods: T) {}
 
   async run(id: string, method: string, input: unknown): Promise<unknown> {
     if (!Object.hasOwn(this.methods, method)) throw new Error("Unknown private business method");
@@ -30,7 +30,7 @@ export class HostBusinessCalls {
     };
     try {
       // Only Main can address this table. Each implementation validates its domain input.
-      const run = this.methods[method as keyof BusinessMethods] as (
+      const run = this.methods[method as keyof T] as (
         value: unknown,
         grant: BusinessGrant,
       ) => unknown;
