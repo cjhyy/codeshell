@@ -3,6 +3,7 @@ import {
   type TaskInboxActionAdapter,
   type TaskExecutorContext,
 } from "./task-inbox-actions.js";
+import type { DiskTaskSession } from "./task-session-observations.js";
 import type { TaskInboxSourceReader } from "./task-inbox-projector.js";
 import { listTaskInboxSnapshot } from "./task-inbox-store.js";
 import { hotTask } from "./task-projection-rows.js";
@@ -98,13 +99,19 @@ export function createHostedTaskInboxService(options: HostedTaskInboxOptions) {
       keys.push(record.taskKey);
     }
     try {
+      let diskSessions: DiskTaskSession[] | undefined;
       const perSource = await Promise.all(
         [...pending].map(async ([source, ids]) => {
           const reader = readers.get(source);
           if (!reader) return [];
           if (!ids || !reader.readOne) {
             try {
-              return [{ source, records: await reader.read(), complete: true }];
+              const [records, observed] = await Promise.all([
+                reader.read(),
+                reader.observeDiskSessions?.(),
+              ]);
+              if (observed) diskSessions = observed;
+              return [{ source, records, complete: true }];
             } catch (error) {
               return [{ source, error: sourceError(error), complete: true }];
             }
@@ -130,6 +137,7 @@ export function createHostedTaskInboxService(options: HostedTaskInboxOptions) {
           return changes;
         }),
       );
+      if (diskSessions) await issue("tasks/observeSessions", { sessions: diskSessions });
       await ingest(perSource.flat());
     } catch (error) {
       // Replay observations on the next connection; control commands are never replayed.
@@ -234,7 +242,19 @@ export function createHostedTaskInboxService(options: HostedTaskInboxOptions) {
         }
       }),
     sessionIntent: (intent: Extract<TaskChangeIntent, { sessionId: string }>) =>
-      queue(() => updateIntent(intent)),
+      queue(async () => {
+        if (closed) return;
+        try {
+          const result = await issue<Change>("tasks/intent", intent);
+          if (enabled()) await publish(result.version);
+          else ready = false;
+        } catch (error) {
+          // The source's archive/delete has already committed. Its durable
+          // state is re-observed on reconnect, independently of this UI.
+          ready = false;
+          options.onError?.(error);
+        }
+      }),
     act: (request: TaskInboxActionRequest, ctx: TaskExecutorContext) =>
       enabled() ? actions.act(request, ctx) : Promise.resolve({ status: "unavailable" as const }),
     start() {

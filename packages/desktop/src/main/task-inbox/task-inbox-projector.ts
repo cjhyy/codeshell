@@ -6,11 +6,13 @@ import {
   type TaskInboxSnapshot,
   type TaskSource,
 } from "./task-inbox-types.js";
+import type { DiskTaskSession } from "./task-session-observations.js";
 import type { TaskInboxStore } from "./task-inbox-store.js";
 
 export interface TaskInboxSourceReader {
   source: TaskSource;
   read(): TaskInboxRecordV1[] | Promise<TaskInboxRecordV1[]>;
+  observeDiskSessions?(): Promise<DiskTaskSession[]>;
   readOne?(sourceId: string): Promise<TaskInboxRecordV1[]>;
 }
 export interface TaskInboxProjectorOptions {

@@ -353,3 +353,67 @@ test("the writer checks a document permit at commit and consumes it once", async
   expect((await snapshot(db)).records).toHaveLength(0);
   await expect(db.request("tasks/commitIntent", payload)).rejects.toThrow("revoked");
 });
+
+test("a complete disk scan reconciles offline archival and verifies directory deletion before removing owned tasks", async () => {
+  const f = await fixture();
+  const s = await f.open();
+  await mkdir(join(f.root, "one"));
+  const observe = (sessions: { id: string; archivedAt?: number }[]) =>
+    s.request("tasks/observeSessions", { sessions });
+  await ingest(s, [task("one"), task("unrelated")]);
+  await observe([{ id: "one", archivedAt: 4 }]);
+  expect((await snapshot(s, "hidden")).records.map((r) => r.sessionId)).toEqual(["one"]);
+  await observe([{ id: "one" }]);
+  expect((await snapshot(s)).records).toHaveLength(2);
+  await intent(s, { type: "hide", taskKey: "session:one", expectedRevision: "1" });
+  await observe([{ id: "one", archivedAt: 8 }]);
+  await observe([{ id: "one" }]);
+  await observe([]);
+  expect((await snapshot(s, "hidden")).records).toHaveLength(1);
+  await s.close();
+  await rm(join(f.root, "one"), { recursive: true });
+  const restarted = await f.open();
+  await restarted.request("tasks/observeSessions", { sessions: [] });
+  await ingest(restarted, [task("one", { updatedAt: 20 })]);
+  expect((await snapshot(restarted, "all")).records.map((r) => r.sessionId)).toEqual(["unrelated"]);
+});
+
+test("completed session lifecycle commands record while the inbox is disabled and do not block source actions on outage", async () => {
+  const f = await fixture(),
+    s = await f.open();
+  const { createHostedTaskInboxService } = await import("./host-task-inbox-service.js");
+  let reads = 0,
+    changes = 0,
+    failures = 0,
+    online = true;
+  const service = createHostedTaskInboxService({
+    command: (c, p) => (online ? s.request(c, p) : Promise.resolve(null)),
+    enabled: () => false,
+    readers: [
+      {
+        source: "session",
+        read: () => {
+          reads++;
+          return [];
+        },
+      },
+    ],
+    adapters: [],
+    onError: () => {
+      failures++;
+    },
+  });
+  service.subscribe(() => {
+    changes++;
+  });
+  try {
+    await ingest(s, [task("one")]);
+    await service.sessionIntent({ type: "sessionArchived", sessionId: "one" });
+    expect((await snapshot(s, "hidden")).records).toHaveLength(1);
+    online = false;
+    await service.sessionIntent({ type: "sessionDeleted", sessionId: "one" });
+    expect({ reads, changes, failures }).toEqual({ reads: 0, changes: 0, failures: 1 });
+  } finally {
+    service.dispose();
+  }
+});

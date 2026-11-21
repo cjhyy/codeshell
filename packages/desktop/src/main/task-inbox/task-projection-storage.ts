@@ -31,8 +31,15 @@ import {
   type TaskRows,
 } from "./task-projection-rows.js";
 
+import {
+  isDiskTaskId,
+  observeDiskTaskSessions,
+  parseDiskTaskSessions,
+} from "./task-session-observations.js";
+
 const MAX_BYTES = 64 * 1024 * 1024;
 interface Mirror extends TaskMirror {
+  observed?: string[];
   fallback?: { rows: TaskRow[]; header: ProjectionHeader };
 }
 const emptyMirror = (): Mirror => ({ schemaVersion: 1, version: 0, intents: [], sessions: [] });
@@ -55,6 +62,8 @@ function parseMirror(raw: string | undefined): Mirror {
     !Array.isArray(m.sessions)
   )
     throw new Error("Invalid task intent mirror");
+  if (m.observed !== undefined && (!Array.isArray(m.observed) || !m.observed.every(isDiskTaskId)))
+    throw new Error("Invalid observed disk sessions");
   for (const i of m.intents) {
     checkedTaskText(i.taskKey, "task key", 1100);
     if (i.sessionId !== undefined) checkedTaskText(i.sessionId, "session", 512);
@@ -292,10 +301,14 @@ export function createTaskInboxStorageHandlers(): StorageWorkerHandlers {
       if (!sql)
         return {
           result: true,
-          value: { ...rows.mirror(h.intentVersion), fallback: { rows: rows.rows(), header: h } },
+          value: {
+            ...rows.mirror(h.intentVersion),
+            observed: m.observed,
+            fallback: { rows: rows.rows(), header: h },
+          },
         };
       return m.fallback || h.intentVersion > m.version
-        ? { result: true, value: rows.mirror(h.intentVersion) }
+        ? { result: true, value: { ...rows.mirror(h.intentVersion), observed: m.observed } }
         : { result: true };
     });
     initialized = true;
@@ -353,7 +366,9 @@ export function createTaskInboxStorageHandlers(): StorageWorkerHandlers {
         return true;
       }
       const db = ctx.db;
-      if (db && command !== "tasks/intent" && command !== "tasks/commitIntent") {
+      const diskSessions =
+        command === "tasks/observeSessions" ? parseDiskTaskSessions(payload) : undefined;
+      if (db && command !== "tasks/intent" && command !== "tasks/commitIntent" && !diskSessions) {
         const rows = new SqlTaskRows(db);
         const result =
           command === "tasks/reconcile"
@@ -364,6 +379,8 @@ export function createTaskInboxStorageHandlers(): StorageWorkerHandlers {
       }
       const reply = withMirror(ctx, (m) => {
         const rows = db ? new SqlTaskRows(db) : fallbackRows(m);
+        let observed = m.observed;
+        let membershipChanged = false;
         const mutate = () => {
           const h = rows.header();
           if (db && m.version > h.intentVersion) {
@@ -381,12 +398,36 @@ export function createTaskInboxStorageHandlers(): StorageWorkerHandlers {
               throw new Error("Task caller was revoked");
             return perform(rows, "tasks/intent", intent);
           }
+          if (diskSessions) {
+            const delta = observeDiskTaskSessions(
+              rows,
+              ctx.sessionsRoot,
+              observed ?? [],
+              diskSessions,
+            );
+            observed = delta.observed;
+            membershipChanged = delta.membershipChanged;
+            const current = rows.header();
+            if (delta.changed)
+              rows.setHeader({
+                ...current,
+                version: current.version + 1,
+                intentVersion: current.intentVersion + 1,
+              });
+            return {
+              value: { version: rows.header().version, changed: delta.changed },
+              changed: delta.changed,
+            };
+          }
           return perform(rows, command, payload);
         };
         const result = db ? db.transaction(mutate) : mutate();
         const h = rows.header();
-        const write = result.changed || Boolean(db && m.version < h.intentVersion);
-        const value: Mirror | undefined = write ? rows.mirror(h.intentVersion) : undefined;
+        const write =
+          result.changed || membershipChanged || Boolean(db && m.version < h.intentVersion);
+        const value: Mirror | undefined = write
+          ? { ...rows.mirror(h.intentVersion), observed }
+          : undefined;
         if (value && !db) value.fallback = { rows: rows.rows(), header: h };
         else if (value && m.fallback) value.fallback = m.fallback;
         return { value, result };

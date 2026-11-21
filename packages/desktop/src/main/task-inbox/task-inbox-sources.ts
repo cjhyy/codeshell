@@ -645,6 +645,15 @@ export function createTaskInboxSources(deps: TaskInboxSourcesDeps): {
     readers: sources.map((source) => ({
       source,
       read: () => readSource(source),
+      ...(source === "session"
+        ? {
+            observeDiskSessions: async () =>
+              (await diskSessions()).map(({ engineSessionId, archivedAt }) => ({
+                id: engineSessionId,
+                archivedAt,
+              })),
+          }
+        : {}),
       readOne: (id) => readOne(source, id),
     })),
     adapters: sources.map((source) => ({ source, reread, act })),
