@@ -2150,6 +2150,7 @@ export class PanelAppBridge {
         cwd,
         sessionId,
         revision: binding.resource.descriptor.revision,
+        signal: binding.bindController?.signal,
         assertAuthorized: () => this.assertSessionBinding(binding),
         isAuthorized: async () => {
           if (
