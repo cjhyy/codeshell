@@ -189,3 +189,73 @@ export class AsyncEncryptedGrantStore<T> implements GrantStorage<T> {
     this.file.forget();
   }
 }
+
+/** OS operations for one fixed grant file. There is no caller-selected ciphertext to open. */
+export interface GrantCustody<T> {
+  readSaved(): Promise<T | undefined>;
+  seal(grant: T): Promise<Uint8Array>;
+  checkKeyring(): Promise<void>;
+}
+
+export function grantCustody<T>(
+  path: string,
+  cipher: AsyncGrantCipher,
+  valid: (raw: unknown) => raw is T,
+): GrantCustody<T> {
+  const file = new GrantFile(path, valid);
+  const store = new AsyncEncryptedGrantStore(path, cipher, valid);
+  return {
+    readSaved: () => store.load(),
+    async seal(grant) {
+      const json = file.encode(grant);
+      if (Buffer.byteLength(json) > limit) throw Error("授权登记文件过大。");
+      requireAvailable(await cipher.available());
+      return cipher.encrypt(json);
+    },
+    async checkKeyring() {
+      requireAvailable(await cipher.available());
+      const probe = randomUUID();
+      if ((await cipher.decrypt(await cipher.encrypt(probe))) !== probe)
+        throw Error("系统安全存储校验失败。");
+    },
+  };
+}
+
+/** File authority stays in the Host. After every OS prompt, recheck the local generation before replacing the file. */
+export function custodiedGrantStore<T>(
+  path: string,
+  custody: GrantCustody<T>,
+  valid: (raw: unknown) => raw is T,
+): GrantStorage<T> {
+  const file = new GrantFile(path, valid);
+  let generation = 0;
+  const current = (observed: number) => {
+    if (observed !== generation) throw Error("授权登记已变更。");
+  };
+  return {
+    async load() {
+      const observed = generation;
+      const value = await custody.readSaved();
+      current(observed);
+      if (value !== undefined && !valid(value)) throw Error("授权登记损坏，请重新登录。");
+      return value;
+    },
+    async save(grant, assertCurrent) {
+      const observed = generation;
+      if (!valid(grant)) throw Error("授权登记无效。");
+      const bytes = await custody.seal(grant);
+      current(observed);
+      assertCurrent?.();
+      file.write(Buffer.from(bytes));
+      generation++;
+    },
+    async preflight() {
+      await custody.checkKeyring();
+      file.write(Buffer.from(randomUUID()), true);
+    },
+    forget() {
+      generation++;
+      file.forget();
+    },
+  };
+}

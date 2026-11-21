@@ -22,6 +22,7 @@ import type {
 import { accountLinksRequest, accountLinkView, accountLinkRevocation } from "./links.js";
 import { accountProfile, accountProfileRequest } from "./profile.js";
 import type { GrantStorage } from "@cjhyy/code-shell-core/internal/storage";
+import { savedGrant } from "./saved-grant.js";
 import { validCloudAccountGrant, type SavedCloudAccount } from "./store.js";
 import {
   CloudAccountHttpError,
@@ -42,27 +43,6 @@ function cancelPrepared(prepared?: PreparedGitHubLink) {
   } catch {
     /* Link cleanup cannot undo an account login. */
   }
-}
-
-function savedGrant(value: SavedCloudAccount, origin: string): SavedCloudAccount {
-  return {
-    origin,
-    accessToken: value.accessToken,
-    refreshToken: value.refreshToken,
-    accessTokenExpiresAt: value.accessTokenExpiresAt,
-    refreshTokenExpiresAt: value.refreshTokenExpiresAt,
-    sessionId: value.sessionId,
-    account: {
-      id: value.account.id,
-      username: value.account.username,
-      ...(value.account.displayName === undefined
-        ? {}
-        : { displayName: value.account.displayName }),
-    },
-    ...(value.kind === undefined ? {} : { kind: value.kind }),
-    ...(value.audience === undefined ? {} : { audience: value.audience }),
-    ...(value.hostId === undefined ? {} : { hostId: value.hostId }),
-  };
 }
 
 function linkContinuation(value: unknown, authorizationUrl: string): string | undefined {
@@ -119,6 +99,7 @@ export class CloudAccountManager {
   private saved?: SavedCloudAccount;
   private state: CloudAccountStatus["state"] = "signed-out";
   private generation = 0;
+  private nativeRevision = 0;
   private operation = new AbortController();
   private refresh?: Promise<string>;
   private refreshResponse?: Promise<unknown>;
@@ -141,6 +122,8 @@ export class CloudAccountManager {
         authorized: () => boolean,
       ) => Promise<PreparedGitHubLink>;
       changed: (status: CloudAccountStatus) => void;
+      /** Retire captured native leases immediately, including before an asynchronous keyring prompt. */
+      authorityChanged?: () => void;
       /** Retire only this account's remote access; never local work or LAN. */
       retireRelay?: (identity: { origin: string; accountId: string }) => Promise<void>;
       /** Explicit desktop login/resume enables account-owned device collaboration. */
@@ -206,6 +189,15 @@ export class CloudAccountManager {
       state: this.state,
       ...(this.saved ? { origin: this.saved.origin, account: { ...this.saved.account } } : {}),
       ...(this.githubConnection ? { githubConnection: { ...this.githubConnection } } : {}),
+    };
+  }
+  /** Private process-to-process projection for native consumers of root account leases. */
+  nativeAuthority() {
+    return {
+      revision: this.nativeRevision,
+      generation: this.generation,
+      expiresAt: this.saved?.refreshTokenExpiresAt ?? 0,
+      status: this.status(),
     };
   }
   onStatus(listener: (status: CloudAccountStatus) => void): () => void {
@@ -363,6 +355,7 @@ export class CloudAccountManager {
     return this.status();
   }
   private publish(state: CloudAccountStatus["state"]) {
+    this.nativeRevision++;
     this.state = state;
     try {
       this.deps.changed(this.status());
@@ -378,6 +371,7 @@ export class CloudAccountManager {
     }
   }
   private invalidate() {
+    this.nativeRevision++;
     this.generation++;
     this.activation = undefined;
     clearTimeout(this.expiryTimer);
@@ -389,6 +383,7 @@ export class CloudAccountManager {
     this.refresh = undefined;
     this.refreshResponse = undefined;
     this.profileUpdate = undefined;
+    this.deps.authorityChanged?.();
   }
   private current(generation: number, authorized: () => boolean) {
     if (
@@ -479,7 +474,7 @@ export class CloudAccountManager {
       return false;
     }
   }
-  private async prepare(origin: string) {
+  private async prepare(origin: string, authorized: () => boolean) {
     requireOrigin(origin);
     const loading = this.load();
     this.invalidate();
@@ -488,13 +483,13 @@ export class CloudAccountManager {
     const signal = this.operation.signal;
     try {
       if (loading) await loading;
-      this.current(generation, () => true);
+      this.current(generation, authorized);
       const preflight = this.deps.store.preflight();
       if (preflight) await preflight;
-      this.current(generation, () => true);
+      this.current(generation, authorized);
       this.publish("signing-in");
       await this.retire(this.saved);
-      this.current(generation, () => true);
+      this.current(generation, authorized);
       return { generation, signal };
     } catch (error) {
       if (generation === this.generation) this.publish(this.saved ? "signed-in" : "signed-out");
@@ -519,7 +514,7 @@ export class CloudAccountManager {
     )
       throw new Error("请填写账号名称和至少 12 位密码。");
     if (!authorized()) throw new Error("云账号操作已取消。");
-    const { generation, signal } = await this.prepare(input.origin);
+    const { generation, signal } = await this.prepare(input.origin, authorized);
     try {
       const grant = await this.request({
         origin: input.origin,
@@ -551,7 +546,7 @@ export class CloudAccountManager {
     )
       throw new Error("网页登录请求无效。");
     if (!authorized()) throw new Error("云账号操作已取消。");
-    const { generation, signal } = await this.prepare(input.origin);
+    const { generation, signal } = await this.prepare(input.origin, authorized);
     const codeVerifier = randomBytes(32).toString("base64url");
     const codeChallenge = createHash("sha256").update(codeVerifier).digest("base64url");
     let receipt: string | undefined;
@@ -768,7 +763,7 @@ export class CloudAccountManager {
     if (link) this.invalidate();
     const { generation, signal } = link
       ? { generation: this.generation, signal: this.operation.signal }
-      : await this.prepare(input.origin);
+      : await this.prepare(input.origin, authorized);
     const codeVerifier = randomBytes(32).toString("base64url");
     const codeChallenge = createHash("sha256").update(codeVerifier).digest("base64url");
     let receipt: string | undefined;

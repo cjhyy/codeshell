@@ -15,6 +15,9 @@ export {
 export {
   EncryptedGrantStore,
   AsyncEncryptedGrantStore,
+  grantCustody,
+  custodiedGrantStore,
+  type GrantCustody,
   type RelaySecretCipher,
   type AsyncGrantCipher,
   type GrantStorage,

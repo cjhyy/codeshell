@@ -66,7 +66,7 @@ export class MobileRemoteController {
       store: GrantStorage<RelayRegistration>;
       environmentDir: string;
       changed: (status: DesktopRelayStatus) => void;
-      account?: CloudAccountManager;
+      account?: Pick<CloudAccountManager, "status" | "capabilities" | "getCredential">;
       accountRequest?: CloudAccountTransport;
       connectorFactory?: typeof createDeviceRelayConnector;
       autoRetryDelayMs?: number;

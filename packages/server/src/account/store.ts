@@ -1,9 +1,13 @@
+import { savedGrant } from "./saved-grant.js";
 import { isRelayHostId, isRelayOrigin, isRelayToken } from "../remote-relay/protocol.js";
 import type { CloudAccountIdentity } from "./types.js";
 import { normalizeCloudDisplayName } from "@cjhyy/code-shell-web/account-profile";
 import {
   EncryptedGrantStore,
   AsyncEncryptedGrantStore,
+  grantCustody,
+  custodiedGrantStore,
+  type GrantCustody,
   type AsyncGrantCipher,
   type RelaySecretCipher,
 } from "@cjhyy/code-shell-core/internal/storage";
@@ -61,6 +65,23 @@ function validSavedCloudAccount(value: unknown): value is SavedCloudAccount {
 
 /** Independent from agent credentials; no plaintext fallback or generic enumeration. */
 export class CloudAccountStore extends EncryptedGrantStore<SavedCloudAccount> {
+  static custody(path: string, cipher: AsyncGrantCipher) {
+    const custody = grantCustody(path, cipher, validSavedCloudAccount);
+    return {
+      checkKeyring: custody.checkKeyring,
+      async readSaved() {
+        const saved = await custody.readSaved();
+        return saved && savedGrant(saved, saved.origin);
+      },
+      seal(value: SavedCloudAccount) {
+        if (!validSavedCloudAccount(value)) throw Error("授权登记无效。");
+        return custody.seal(savedGrant(value, value.origin));
+      },
+    };
+  }
+  static hosted(path: string, custody: GrantCustody<SavedCloudAccount>) {
+    return custodiedGrantStore(path, custody, validSavedCloudAccount);
+  }
   static asynchronous(path: string, cipher: AsyncGrantCipher) {
     return new AsyncEncryptedGrantStore(path, cipher, validSavedCloudAccount);
   }

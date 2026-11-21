@@ -1055,6 +1055,7 @@ let prepareAccountGitHubLink:
 const { mobileRemoteController, cloudManagementManager, captureLinkAccount, accountFeatures } =
   createDesktopRemoteServices({
     remote: desktopHost.remote,
+    documentSignal: desktopHost.documentSignal,
     app,
     ipcMain,
     userDataDir: app.getPath("userData"),

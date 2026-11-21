@@ -1,3 +1,4 @@
+import type { CloudEffects } from "./desktop-host/cloud-effects.js";
 import type { NativeRemoteClient } from "./desktop-host/remote-client.js";
 import {
   AccountFeatureService,
@@ -39,6 +40,7 @@ export function createDesktopRemoteServices(options: {
   userDataDir: string;
   environmentDir: string;
   remote?: NativeRemoteClient;
+  documentSignal?: (event: Electron.IpcMainInvokeEvent) => AbortSignal;
   safeStorage: Pick<
     SafeStorage,
     | "isAsyncEncryptionAvailable"
@@ -65,11 +67,8 @@ export function createDesktopRemoteServices(options: {
     encrypt: (value) => options.safeStorage.encryptStringAsync(value),
     decrypt: async (value) => (await options.safeStorage.decryptStringAsync(value)).result,
   };
-  const cloudAccountManager = new CloudAccountManager({
-    store: CloudAccountStore.asynchronous(
-      resolve(options.userDataDir, "cloud-account", "session.enc"),
-      cipher,
-    ),
+  const grantFile = resolve(options.userDataDir, "cloud-account", "session.enc");
+  const effects: Omit<CloudEffects, "custody"> = {
     openExternal: options.openExternal,
     prepareGitHubLink: options.prepareGitHubLink,
     activateRelay: async (identity, authorized) => {
@@ -98,7 +97,17 @@ export function createDesktopRemoteServices(options: {
       for (const window of options.windows())
         if (!window.isDestroyed()) window.webContents.send("cloudAccount:statusChanged", status);
     },
+  };
+  const hosted = options.remote?.createAccount({
+    ...effects,
+    custody: CloudAccountStore.custody(grantFile, cipher),
   });
+  const cloudAccountManager =
+    hosted ??
+    new CloudAccountManager({
+      ...effects,
+      store: CloudAccountStore.asynchronous(grantFile, cipher),
+    });
   const cloudManagementManager = new CloudManagementManager({
     account: cloudAccountManager,
     windows: options.cloudWindows,
@@ -181,6 +190,11 @@ export function createDesktopRemoteServices(options: {
   registerCloudAccountIpc({
     ipcMain: options.ipcMain,
     manager: cloudAccountManager,
+    ...(hosted &&
+      options.documentSignal && {
+        withDocument: (event, callback) =>
+          hosted.withDocument(options.documentSignal!(event), callback),
+      }),
     openExternal: options.openExternal,
     isMainWindow,
     focusMainWindow: (contents) => {
