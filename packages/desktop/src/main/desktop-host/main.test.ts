@@ -166,6 +166,29 @@ function fakeWindow(id: number, frame: WebFrameMain) {
   return { contents, sender: contents as unknown as WebContents };
 }
 
+test("a workbench opened during cold startup waits for the first Host before receiving a port", () => {
+  const { frame, ports, statuses } = fakeFrame("cold-start");
+  const { sender, contents } = fakeWindow(1, frame);
+  const windows = new HostWorkbenchPorts(
+    () => {},
+    () => ({ port1: { close() {} }, port2: { close() {} } }) as unknown as MessageChannelMain,
+    () => true,
+  );
+  windows.track(sender);
+  contents.emit("did-navigate");
+  windows.connect({ sender, senderFrame: frame });
+  expect(statuses).toEqual([]);
+  expect(ports).toHaveLength(0);
+  windows.setStatus("ready");
+  expect(statuses).toEqual([]);
+  expect(ports).toHaveLength(1);
+
+  windows.setStatus("reconnecting");
+  expect(statuses).toEqual(["reconnecting"]);
+  windows.setStatus("ready");
+  expect(ports).toHaveLength(2);
+});
+
 test("only a connected, current, committed workbench main frame gets a port", () => {
   const first = fakeFrame("one");
   const guest = fakeFrame("guest");

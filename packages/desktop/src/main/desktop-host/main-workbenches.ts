@@ -20,7 +20,7 @@ interface Workbench {
 /** Only createWindow() enrolls a WebContents. Other app windows may share its preload and URL. */
 export class HostWorkbenchPorts {
   private readonly windows = new Map<WebContents, Workbench>();
-  private status: HostStatus | "ready" = "reconnecting";
+  private status: HostStatus | "starting" | "ready" = "starting";
 
   constructor(
     private readonly assertSender: (sender: Sender) => void,
@@ -99,7 +99,15 @@ export class HostWorkbenchPorts {
 
   private offer(window: Workbench): void {
     const frame = window.requestedFrame;
-    if (!window.committed || !frame || !this.isCurrent(window.contents, frame)) return;
+    // A first connection waits for the initial Host. A reconnecting notification
+    // would reject the renderer's startup reads before it receives its first port.
+    if (
+      this.status === "starting" ||
+      !window.committed ||
+      !frame ||
+      !this.isCurrent(window.contents, frame)
+    )
+      return;
     if (this.status !== "ready") {
       try {
         frame.send(DesktopHostIpc.status, this.status);
