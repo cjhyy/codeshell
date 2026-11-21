@@ -208,7 +208,6 @@ jobs:
               --path-ignore-patterns '**/src/main/browser-host/index.test.ts'
               --path-ignore-patterns '**/src/main/computer-use/**'
               --path-ignore-patterns '**/src/main/desktop-host/**'
-              --path-ignore-patterns '**/src/main/workbench-tray.test.ts'
               --path-ignore-patterns '**/src/preload/desktop-host-client.test.ts'
               --path-ignore-patterns '**/renderer/pet/createPetTargetNavigator.test.ts'
               --path-ignore-patterns '**/src/main/pet/mimi-presence*.test.ts'
@@ -371,7 +370,7 @@ jobs:
       # the original recovery assertions still run in the broad Desktop shard.
       - name: test Desktop Host transport and authority
         if: matrix.shard == 'desktop'
-        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/desktop-host packages/desktop/src/preload/desktop-host-client.test.ts packages/desktop/src/main/workbench-tray.test.ts
+        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/desktop-host packages/desktop/src/preload/desktop-host-client.test.ts
       - name: test Desktop native account boundaries
         if: matrix.shard == 'desktop'
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/cloud-account-links.test.ts packages/desktop/src/main/link-account-access.test.ts packages/desktop/src/main/cloud-account-manager.test.ts packages/desktop/src/main/cloud-management-http.test.ts packages/desktop/src/main/cloud-account-http.test.ts packages/desktop/src/main/desktop-remote-services.test.ts packages/desktop/src/main/cloud-account.native.test.ts packages/desktop/src/main/cloud-account-relay.test.ts packages/desktop/src/main/cloud-account-ipc.test.ts packages/desktop/src/main/cloud-account-store.test.ts
