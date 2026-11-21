@@ -44,6 +44,30 @@ try {
       cwd: isolated.home,
     }),
   );
+  await writeFile(
+    join(isolated.codeShellHome, "settings.json"),
+    JSON.stringify({
+      credentials: [
+        {
+          id: "fixture-key",
+          catalogId: "openai",
+          apiKey: "synthetic",
+          baseUrl: "http://127.0.0.1:9/v1",
+        },
+      ],
+      modelConnections: [
+        {
+          id: "fixture",
+          catalogId: "openai",
+          tag: "text",
+          model: "gpt-4o",
+          credentialId: "fixture-key",
+        },
+      ],
+      defaults: { text: "fixture" },
+    }),
+    { mode: 0o600 },
+  );
   const fixture = await prepareConfinedElectronFixture({
     appDir,
     isolated,
@@ -131,12 +155,44 @@ utilityProcess.fork = function (...args) {
   await first.reload({ waitUntil: "domcontentloaded" });
   await observeHost(first);
   assert.deepEqual(await readCatalog(first), catalog);
+  // A full local fork exercises actual worker stdio without performing inference.
+  await first.evaluate(() => {
+    window.hostSmokeFork = window.codeshell.forkSession({
+      sourceSessionId: "index-visible",
+      targetSessionId: "host-worker-copy",
+      mode: "full",
+    });
+    void window.hostSmokeFork.catch(() => {});
+  });
+  const receipt = await fixture.assertWorker(application);
+  assert.equal(receipt.spawned.length, 1);
+  assert.equal((await first.evaluate(() => window.hostSmokeFork)).sessionId, "host-worker-copy");
+  assert.deepEqual((await first.evaluate(() => window.codeshell.configure({}))).result, {
+    ok: true,
+  });
   const oldPid = await application.evaluate(() => {
     const child = globalThis.smokeHostChild;
     const pid = child?.pid;
     if (!pid || !child.kill()) throw new Error("Failed to stop the owned Desktop Host");
     return pid;
   });
+  assert.equal(receipt.spawned[0].ppid, oldPid);
+  assert.notEqual(oldPid, receipt.mainPid);
+  const deadline = Date.now() + 15_000;
+  while (Date.now() < deadline) {
+    try {
+      process.kill(receipt.spawned[0].pid, 0);
+    } catch (error) {
+      if (error.code === "ESRCH") break;
+      throw error;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  assert.throws(
+    () => process.kill(receipt.spawned[0].pid, 0),
+    { code: "ESRCH" },
+    "Original stdio worker must exit when its Host disappears",
+  );
   for (const page of [first, second]) {
     await page.waitForFunction(
       () =>

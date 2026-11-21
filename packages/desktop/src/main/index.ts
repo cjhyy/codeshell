@@ -1709,6 +1709,7 @@ async function createWindow(): Promise<BrowserWindow> {
       desktopHost.setOwner,
       desktopHost.sessionsChanged,
       userContinuedTask,
+      desktopHost.createWorkerBridge,
     );
     // External Agent Runtimes (Codex / Claude Code). Everything
     // security-relevant is resolved here, in the composition root: this is the

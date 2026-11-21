@@ -1,6 +1,7 @@
 import { openStateStorage } from "@cjhyy/code-shell-core/internal/storage";
 import { taskHostReads } from "../task-inbox/task-host-reads.js";
 import { isPrivateTaskCommand } from "../task-inbox/private-task-command.js";
+import { bindHostWorker } from "./host-worker.js";
 import { sessionsRoot } from "@cjhyy/code-shell-core";
 import { createSessionIndex } from "@cjhyy/code-shell-server/storage";
 import {
@@ -24,10 +25,21 @@ const index = createSessionIndex(sessionsRoot(), { storage });
 const catalog = new DesktopSessionListVisibility(index);
 let server: DesktopHostServer | undefined;
 let stopping = false;
+let worker: ReturnType<typeof bindHostWorker> | undefined;
 
 parent.on("message", ({ data, ports }) => {
   if (stopping) {
     for (const port of ports) port.close();
+    return;
+  }
+  if (
+    isDesktopHostControl(data) &&
+    data.type === "worker-port" &&
+    server &&
+    ports.length === 1 &&
+    !worker
+  ) {
+    worker = bindHostWorker(ports[0], data);
     return;
   }
   if (isDesktopHostControl(data) && data.type === "bind" && server && ports.length === 1) {
@@ -39,13 +51,8 @@ parent.on("message", ({ data, ports }) => {
 
   if (isDesktopHostControl(data) && data.type === "shutdown") {
     stopping = true;
-    void index
-      .close()
-      .then(async () => (await storage).close())
-      .then(
-        () => process.exit(0),
-        () => process.exit(1),
-      );
+    void Promise.all([index.close(), worker?.close()]).finally(async () => (await storage).close()).then(
+      () => process.exit(0), () => process.exit(1));
     return;
   }
   if (!server) {

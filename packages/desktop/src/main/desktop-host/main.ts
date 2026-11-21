@@ -9,6 +9,8 @@ import {
   type IpcMainEvent,
   type WebContents,
 } from "electron";
+import type { WorkerBridgeCoreOptions } from "@cjhyy/code-shell-server/worker";
+import { DesktopHostWorkerClient } from "./main-worker.js";
 import { sessionsRoot } from "@cjhyy/code-shell-core";
 import { listDiskSessions as listJson } from "@cjhyy/code-shell-server/storage";
 import type { ListSessionOptions } from "../../shared/disk-session-query.js";
@@ -25,6 +27,7 @@ export function createDesktopHost(
   navigation: Pick<AppRendererNavigation, "assertSender">,
   hostReady?: () => void,
 ) {
+  let worker: DesktopHostWorkerClient | undefined;
   const supervisor: DesktopHostSupervisor = new DesktopHostSupervisor(
     () =>
       utilityProcess.fork(entryPath, [join(app.getPath("userData"), "task-inbox")], {
@@ -32,6 +35,8 @@ export function createDesktopHost(
       }),
     () => app.getVersion(),
     (status) => {
+      if (status === "ready") bindWorker();
+      else worker?.disconnect();
       workbenches.setStatus(status);
       if (status === "ready") hostReady?.();
     },
@@ -43,6 +48,21 @@ export function createDesktopHost(
     (message, ports) => supervisor.post(message, ports),
   );
   const intentCaller = new AsyncLocalStorage<DesktopHostIdentity>();
+  function bindWorker() {
+    if (!worker) return;
+    const { port1, port2 } = new MessageChannelMain();
+    if (
+      supervisor.post(
+        { type: "worker-port", execPath: process.execPath, entryPath: worker.options.entryPath },
+        [port2],
+      )
+    )
+      worker.bind(port1);
+    else {
+      port1.close();
+      port2.close();
+    }
+  }
   let changes: ReturnType<typeof createSessionIndexChanges> | undefined;
   const connect = (event: IpcMainEvent) => workbenches.connect(event);
   return {
@@ -53,6 +73,12 @@ export function createDesktopHost(
         supervisor.post({ type: "session-index-changed", ids });
       });
       supervisor.start();
+    },
+    createWorkerBridge(options: WorkerBridgeCoreOptions) {
+      if (worker) throw new Error("Desktop Host already has a worker bridge");
+      worker = new DesktopHostWorkerClient(options);
+      bindWorker();
+      return worker;
     },
     async listDiskSessions(options: ListSessionOptions) {
       changes?.flush();

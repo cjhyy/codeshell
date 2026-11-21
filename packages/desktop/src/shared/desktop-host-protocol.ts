@@ -25,6 +25,7 @@ export interface DesktopHostIdentity {
 
 export type DesktopHostControl =
   | { type: "shutdown" }
+  | { type: "worker-port"; execPath: string; entryPath: string }
   | { type: "session-index-changed"; ids: string[] }
   | { type: "bind" | "revoke"; identity: DesktopHostIdentity }
   | { type: "owner"; sessionId: string; webContentsId: number | null }
@@ -83,6 +84,12 @@ export function isDesktopHostIdentity(value: unknown): value is DesktopHostIdent
 
 export function isDesktopHostControl(value: unknown): value is DesktopHostControl {
   if (!record(value)) return false;
+  if (value.type === "worker-port")
+    return (
+      hasOnly(value, ["type", "execPath", "entryPath"]) &&
+      typeof value.execPath === "string" &&
+      typeof value.entryPath === "string"
+    );
   if (value.type === "shutdown") return hasOnly(value, ["type"]);
   if (value.type === "session-index-changed") {
     return (

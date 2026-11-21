@@ -1,3 +1,4 @@
+import type { DesktopWorkerDriver } from "./desktop-host/worker-wire.js";
 /**
  * AgentBridge — Electron main ↔ agent worker subprocess broker.
  *
@@ -180,6 +181,7 @@ import {
   previewLine,
   WorkerBridgeCore,
   type WorkerFrameMeta,
+  type WorkerBridgeCoreOptions,
 } from "@cjhyy/code-shell-server/worker";
 import type {
   AgentPanelHostRequest,
@@ -298,7 +300,7 @@ export class AgentBridge implements PetStateBridge {
 
   private readonly webConfiguration = new WebConfigurationGate();
   /** Transport-agnostic worker driver (spawn / framing / correlation). */
-  private readonly core: WorkerBridgeCore;
+  private readonly core: DesktopWorkerDriver;
   private ipcListenerAttached = false;
   /**
    * Lazily-created SessionManager for disk-backed fallbacks when no worker is
@@ -454,10 +456,12 @@ export class AgentBridge implements PetStateBridge {
     onSessionPanelOwnerChanged?: (sessionId: string, webContentsId: number | null) => void,
     private readonly onSessionsChanged?: (ids: string[]) => void,
     private readonly onUserRunAccepted?: (id: string) => void,
+    createDriver: (options: WorkerBridgeCoreOptions) => DesktopWorkerDriver = (options) =>
+      new WorkerBridgeCore(options),
   ) {
     this.panelHostWindowRoutes = new PanelHostWindowRoutes(onSessionPanelOwnerChanged);
     dlog("bridge", "ctor", { agentEntry, execPath: process.execPath });
-    this.core = new WorkerBridgeCore({
+    this.core = createDriver({
       entryPath: agentEntry,
       buildEnv: () => ({
         ...process.env,
@@ -496,7 +500,8 @@ export class AgentBridge implements PetStateBridge {
         process.stderr.write(`[agent] ${text}`);
       },
       onWorkerStarted: () => {
-        this.workerRuns.beginWorker();
+        // Exit closes the old generation. New admissions can already be queued
+        // by the time the utility reports its successful spawn.
         this.petWorkerGeneration.beginWorker();
         this.emitPetProjection({ kind: "lifecycle", state: "active" });
       },
