@@ -22,10 +22,17 @@ test("task inbox bridge forwards only typed messages and cleans up event subscri
   await api.list({ source: "session", limit: 200 });
   await api.get("session:one");
   await api.act({ taskKey: "session:one", action: "cancel", expectedRevision: "r1" });
+  const intent = { type: "hide" as const, taskKey: "session:one", expectedRevision: "r1" };
+  const routed = createTaskInboxApi(ipc as any, { get: async () => null });
+  await routed.get("session:one");
+  await routed.list({ visibility: "hidden" });
+  await routed.intent(intent);
   expect(calls).toEqual([
     ["taskInbox:list", { source: "session", limit: 200 }],
     ["taskInbox:get", "session:one"],
     ["taskInbox:act", { taskKey: "session:one", action: "cancel", expectedRevision: "r1" }],
+    ["taskInbox:list", { visibility: "hidden" }],
+    ["taskInbox:intent", intent],
   ]);
   const versions: number[] = [];
   const off = api.onChanged((version) => versions.push(version));

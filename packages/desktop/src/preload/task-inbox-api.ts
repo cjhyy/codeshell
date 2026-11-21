@@ -5,6 +5,8 @@ import type {
   TaskInboxListResult,
   TaskInboxAction,
   TaskInboxActionResult,
+  TaskInboxIntent,
+  TaskInboxIntentResult,
 } from "../main/task-inbox/task-inbox-types";
 
 export type {
@@ -13,6 +15,9 @@ export type {
   TaskInboxListResult,
   TaskInboxAction,
   TaskInboxActionResult,
+  TaskInboxIntent,
+  TaskInboxIntentResult,
+  TaskInboxVisibility,
   TaskSource,
   TaskStatus,
 } from "../main/task-inbox/task-inbox-types";
@@ -25,15 +30,18 @@ export interface TaskInboxApi {
     action: TaskInboxAction;
     expectedRevision: string;
   }): Promise<TaskInboxActionResult>;
+  intent(input: TaskInboxIntent): Promise<TaskInboxIntentResult>;
   onChanged(listener: (version: number) => void): () => void;
 }
 
 export function createTaskInboxApi(
   ipc: Pick<IpcRenderer, "invoke" | "on" | "removeListener">,
+  reads: Partial<Pick<TaskInboxApi, "list" | "get">> = {},
 ): TaskInboxApi {
   return {
-    list: (query) => ipc.invoke("taskInbox:list", query),
-    get: (taskKey) => ipc.invoke("taskInbox:get", taskKey),
+    list: reads.list ?? ((query) => ipc.invoke("taskInbox:list", query)),
+    get: reads.get ?? ((taskKey) => ipc.invoke("taskInbox:get", taskKey)),
+    intent: (input) => ipc.invoke("taskInbox:intent", input),
     act: (input) => ipc.invoke("taskInbox:act", input),
     onChanged(listener) {
       const handler = (_event: IpcRendererEvent, version: number) => {
