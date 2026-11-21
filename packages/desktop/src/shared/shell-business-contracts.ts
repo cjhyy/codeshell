@@ -1,3 +1,7 @@
+import type {
+  ExternalRuntimeModelEntry,
+  ExternalRuntimeModelKind,
+} from "./external-runtime-models.js";
 import type { DesktopHostIdentity } from "./desktop-host-protocol.js";
 import type { RendererConfigurationTarget } from "./renderer-configuration.js";
 import type { SessionCatalogApi } from "./session-catalog.js";
@@ -10,6 +14,11 @@ type Operation<F extends (...args: any[]) => Promise<unknown>> = {
 /** Private calls from authenticated Electron adapters. These methods are never
  * registered on a renderer port or exposed by the window preload. */
 export interface ShellBusinessOperations {
+  "external-runtime/available": {
+    input: { searchPath: string };
+    result: ExternalRuntimeModelKind[];
+  };
+  "external-runtime/models": { input: { searchPath: string }; result: ExternalRuntimeModelEntry[] };
   "transcripts/read": Operation<SessionCatalogApi["readTranscript"]>;
   "transcripts/write": Operation<SessionCatalogApi["writeTranscript"]>;
   "transcripts/delete": Operation<SessionCatalogApi["deleteTranscript"]>;
