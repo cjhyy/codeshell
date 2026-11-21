@@ -999,14 +999,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("quickChat:isClaimActive", id, claimId),
   cleanupQuickChatSession: (id: string, claimId: string) =>
     ipcRenderer.invoke("quickChat:cleanupSession", id, claimId),
-  listSessionTitles: () => ipcRenderer.invoke("sessions:titles"),
   renameSession: (id: string, title: string) => ipcRenderer.invoke("sessions:rename", id, title),
-  tailLog: (bucket: "ui-ink" | "engine" | "desktop", lines?: number) =>
-    ipcRenderer.invoke("logs:tail", bucket, lines),
-  getUsageSummary: (query?: import("@cjhyy/code-shell-core").UsageQuery) =>
-    ipcRenderer.invoke("usage:summary", query),
-  listRuns: (options?: { includeSessions?: boolean }) => ipcRenderer.invoke("runs:list", options),
-  getRun: (runId: string) => ipcRenderer.invoke("runs:get", runId),
   ...createSessionTranscriptApi(ipcRenderer, desktopHost),
   modelTraces: createModelTraceApi(ipcRenderer),
   browserPanelAccess: createBrowserPanelAccessApi(ipcRenderer),
@@ -1435,21 +1428,34 @@ contextBridge.exposeInMainWorld("codeshell", {
    */
   windowToken: String(process.pid),
   ptyStart: (opts: Parameters<CodeshellApi["ptyStart"]>[0]) =>
-    configurationHost ? configurationHost.terminal("pty/start",opts) : ipcRenderer.invoke("pty:start", opts) as Promise<PtyStartResult>,
-  ptyWrite: (sessionId: string, data: string, reply?: boolean) => configurationHost ? configurationHost.terminal("pty/write",{sessionId,data,reply: reply === true}) : ipcRenderer.invoke("pty:write", sessionId, data, reply === true),
+    configurationHost
+      ? configurationHost.terminal("pty/start", opts)
+      : (ipcRenderer.invoke("pty:start", opts) as Promise<PtyStartResult>),
+  ptyWrite: (sessionId: string, data: string, reply?: boolean) =>
+    configurationHost
+      ? configurationHost.terminal("pty/write", { sessionId, data, reply: reply === true })
+      : ipcRenderer.invoke("pty:write", sessionId, data, reply === true),
   ptyResize: (sessionId: string, cols: number, rows: number) =>
-    configurationHost ? configurationHost.terminal("pty/resize",{sessionId,cols,rows}) : ipcRenderer.invoke("pty:resize", sessionId, cols, rows),
-  ptyKill: (sessionId: string) => configurationHost ? configurationHost.terminal("pty/kill",{sessionId}) : ipcRenderer.invoke("pty:kill", sessionId),
-  onPtyData: (cb: (msg: { sessionId: string; data: string; replay?: boolean }) => void): (() => void) => {
-    if(configurationHost) return configurationHost.onTerminalData(cb);
-    const h = (_e: IpcRendererEvent, msg: { sessionId: string; data: string; replay?: boolean }) => cb(msg);
+    configurationHost
+      ? configurationHost.terminal("pty/resize", { sessionId, cols, rows })
+      : ipcRenderer.invoke("pty:resize", sessionId, cols, rows),
+  ptyKill: (sessionId: string) =>
+    configurationHost
+      ? configurationHost.terminal("pty/kill", { sessionId })
+      : ipcRenderer.invoke("pty:kill", sessionId),
+  onPtyData: (
+    cb: (msg: { sessionId: string; data: string; replay?: boolean }) => void,
+  ): (() => void) => {
+    if (configurationHost) return configurationHost.onTerminalData(cb);
+    const h = (_e: IpcRendererEvent, msg: { sessionId: string; data: string; replay?: boolean }) =>
+      cb(msg);
     ipcRenderer.on("pty:data", h);
     return () => ipcRenderer.removeListener("pty:data", h);
   },
   onPtyExit: (
     cb: (msg: { sessionId: string; exitCode: number; signal?: number }) => void,
   ): (() => void) => {
-    if(configurationHost) return configurationHost.onTerminalExit(cb);
+    if (configurationHost) return configurationHost.onTerminalExit(cb);
     const h = (
       _e: IpcRendererEvent,
       msg: { sessionId: string; exitCode: number; signal?: number },

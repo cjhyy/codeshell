@@ -56,7 +56,7 @@ function fixture() {
       },
     },
     () => [window],
-    createTraceHistoryService({ store, storageDir: store.storageDir }),
+    () => createTraceHistoryService({ store, storageDir: store.storageDir }),
   );
   const api = createModelTraceApi({
     invoke: async (name, input) => handlers.get(name)!(event, input),

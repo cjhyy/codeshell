@@ -1,3 +1,5 @@
+import { hostedActivityHistory } from "../../host/composition/activity-history.js";
+import { ActivityHistoryWorker } from "../activity-history-worker-client.js";
 import { memoryReads } from "./memory-reads.js";
 import { memoryOperations } from "../../host/composition/memory.js";
 import { bindRemoteTerminals } from "../../host/composition/remote-terminals.js";
@@ -100,7 +102,14 @@ const automation = new HostAutomationRuns({
 const scheduler = new HostScheduler(schedulerPorts.port1, automation);
 // Link-backed source definitions are validated against this process-local registry.
 installDefaultLinkProviders();
+const historyWorker = new ActivityHistoryWorker(
+  { sessionsDir: sessionsRoot() },
+  (options) =>
+    new Worker(new URL("./activity-history-worker.mjs", import.meta.url), { workerData: options }),
+);
+const activities = hostedActivityHistory(historyWorker);
 const business = new HostBusinessCalls({
+  ...activities.operations,
   "automation/command": (cmd, grant) => scheduler.command(cmd, grant.permit),
   ...externalRuntimeCatalogOperations(),
   ...catalogFiles,
@@ -121,7 +130,10 @@ const business = new HostBusinessCalls({
 const index = createSessionIndex(sessionsRoot(), { storage });
 const catalog = new DesktopSessionListVisibility(index);
 let server: DesktopHostServer | undefined;
-const terminals = hostedTerminals(() => server!, options => catalog.list(options));
+const terminals = hostedTerminals(
+  () => server!,
+  (options) => catalog.list(options),
+);
 const approvals = new HostApprovalState((id, owner) => server?.allows(id, owner) ?? false);
 let stopping = false;
 let closeRemoteTerminals: (() => void) | undefined;
@@ -148,7 +160,12 @@ parent.on("message", ({ data, ports }) => {
     for (const port of ports) port.close();
     return;
   }
-  if (isDesktopHostControl(data) && data.type === "remote-terminal-port" && server && ports.length === 1) {
+  if (
+    isDesktopHostControl(data) &&
+    data.type === "remote-terminal-port" &&
+    server &&
+    ports.length === 1
+  ) {
     closeRemoteTerminals?.();
     closeRemoteTerminals = bindRemoteTerminals(ports[0]);
     return;
@@ -194,7 +211,13 @@ parent.on("message", ({ data, ports }) => {
     void scheduler
       .close()
       .then(() =>
-        Promise.all([index.close(), worker?.close(), transcripts.close(), automation.close()]),
+        Promise.all([
+          index.close(),
+          worker?.close(),
+          transcripts.close(),
+          automation.close(),
+          historyWorker.close(),
+        ]),
       )
       .then(() => output.drain())
       .finally(async () => (await storage).close())
@@ -217,6 +240,7 @@ parent.on("message", ({ data, ports }) => {
         ...terminals.methods,
         ...configurationReads,
         ...memoryReads,
+        ...activities.reads,
         ...scopedConfigurationReads((options) => catalog.list(options)),
         ...workspaceReads((options) => catalog.list(options)),
         businessRead("catalog/load", noBusinessArguments, catalogFiles["catalog/load"]),

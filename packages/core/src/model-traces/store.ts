@@ -107,7 +107,7 @@ export class ModelTraceStore {
       retentionDays: retentionDays(saved),
     };
   }
-  setConfig(patch: ModelTraceConfigPatch): ModelTraceConfig {
+  setConfig(patch: ModelTraceConfigPatch, beforeCommit?: () => void): ModelTraceConfig {
     if (
       !patch ||
       typeof patch !== "object" ||
@@ -137,6 +137,7 @@ export class ModelTraceStore {
       ...updates,
       policyRevision: changed ? randomUUID() : previous.policyRevision,
     };
+    beforeCommit?.();
     this.writeJson(this.storageDir, "config.json", { ...config, defaultsVersion: 2 });
     this.prune(true);
     return config;
