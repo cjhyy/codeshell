@@ -23,7 +23,7 @@ export type DeviceRelayState = "connecting" | "ready" | "disconnected" | "unauth
 export interface RelayLocalTarget {
   readonly port: number;
   readonly signal: AbortSignal;
-  setPublicBaseUrl(origin: string): void;
+  setPublicBaseUrl(origin: string): void | Promise<void>;
 }
 
 export interface DeviceRelayConnectorOptions {
@@ -43,7 +43,9 @@ export interface DeviceRelayConnectorOptions {
    * Opt-in: lets the directory mint a one-time phone pairing token for its
    * owner. Omitted, the feature is neither advertised nor accepted.
    */
-  issuePairing?: () => { token: string; expiresAt: number };
+  issuePairing?: () =>
+    | { token: string; expiresAt: number }
+    | Promise<{ token: string; expiresAt: number }>;
 }
 export interface DeviceRelayConnector {
   /** Idempotent while running. Callers must await close before restarting. */
@@ -167,6 +169,7 @@ export function createDeviceRelayConnector(
     const current = () =>
       running && generation === attempt && control === ws && !config.localHost.signal.aborted;
     let leaseId: string | undefined;
+    let welcoming = false;
     let lastPong = Date.now();
     const owned = new Map<string, RelayLocalStream>();
     const deadline = setTimeout(() => ws.terminate(), RELAY_SETUP_TIMEOUT_MS);
@@ -207,7 +210,7 @@ export function createDeviceRelayConnector(
     ws.on("pong", () => {
       if (current()) lastPong = Date.now();
     });
-    ws.on("message", (data, binary) => {
+    ws.on("message", async (data, binary) => {
       if (!current()) return ws.terminate();
       let message: ReturnType<typeof parseRelayControlMessage>;
       try {
@@ -219,11 +222,12 @@ export function createDeviceRelayConnector(
         return;
       }
       if (!message) return ws.terminate();
-      if (message.type === "welcome" && !leaseId) {
+      if (message.type === "welcome" && !leaseId && !welcoming) {
         if (message.hostId !== config.hostId || message.publicOrigin !== config.publicOrigin)
           return ws.terminate();
         try {
-          config.localHost.setPublicBaseUrl(message.publicOrigin);
+          welcoming = true;
+          await config.localHost.setPublicBaseUrl(message.publicOrigin);
         } catch {
           ws.terminate();
           return;
@@ -245,7 +249,7 @@ export function createDeviceRelayConnector(
           requestId: message.requestId,
         };
         try {
-          const issued = config.issuePairing();
+          const issued = await config.issuePairing();
           if (
             isRelayToken(issued?.token) &&
             Number.isSafeInteger(issued.expiresAt) &&

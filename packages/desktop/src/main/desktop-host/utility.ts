@@ -2,6 +2,7 @@ import { ccRoomReads } from "../../host/composition/cc-room-reads.js";
 import { ActivityHistoryWorker } from "../activity-history-worker-client.js";
 import { memoryReads } from "./memory-reads.js";
 import { memoryOperations } from "../../host/composition/memory.js";
+import { bindRemoteServices } from "../../host/remote/service.js";
 import { bindRemoteTerminals } from "../../host/composition/remote-terminals.js";
 import { hostedTerminals } from "../../host/composition/terminals.js";
 import { HostScheduler } from "../../host/automation/host-scheduler.js";
@@ -128,6 +129,7 @@ const catalog = new DesktopSessionListVisibility(index);
 let server: DesktopHostServer | undefined;
 const terminals = hostedTerminals(() => server!, options => catalog.list(options));
 const approvals = new HostApprovalState((id, owner) => server?.allows(id, owner) ?? false);
+let remote: ReturnType<typeof bindRemoteServices> | undefined;
 let stopping = false;
 let closeRemoteTerminals: (() => void) | undefined;
 let worker: ReturnType<typeof bindHostWorker> | undefined;
@@ -156,6 +158,16 @@ parent.on("message", ({ data, ports }) => {
   if (isDesktopHostControl(data) && data.type === "remote-terminal-port" && server && ports.length === 1) {
     closeRemoteTerminals?.();
     closeRemoteTerminals = bindRemoteTerminals(ports[0]);
+    return;
+  }
+  if (
+    isDesktopHostControl(data) &&
+    data.type === "remote-services-port" &&
+    server &&
+    ports.length === 1 &&
+    !remote
+  ) {
+    remote = bindRemoteServices(ports[0]);
     return;
   }
   if (
@@ -199,7 +211,14 @@ parent.on("message", ({ data, ports }) => {
     void scheduler
       .close()
       .then(() =>
-        Promise.all([index.close(), worker?.close(), roomHistory.close(), transcripts.close(), automation.close()]),
+        Promise.all([
+          index.close(),
+          roomHistory.close(),
+          worker?.close(),
+          transcripts.close(),
+          automation.close(),
+          remote?.close(),
+        ]),
       )
       .then(() => output.drain())
       .finally(async () => (await storage).close())

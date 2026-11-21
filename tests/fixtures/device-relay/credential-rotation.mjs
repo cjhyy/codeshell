@@ -33,7 +33,9 @@ export async function credentialRotationAcceptance(api, tls, root, network) {
         };
         controls.push(record);
         ws.on("message", (raw) => {
-          if (JSON.parse(raw).type === "ready") record.ready = true;
+          const message = JSON.parse(raw);
+          if (message.type === "ready") record.ready = true;
+          if (message.type === "paired") record.paired = message;
         });
         ws.send(
           JSON.stringify({ type: "welcome", v: 1, hostId, publicOrigin, leaseId: record.leaseId }),
@@ -56,11 +58,13 @@ export async function credentialRotationAcceptance(api, tls, root, network) {
     signal: lifetime.signal,
     setPublicBaseUrl: () => {},
   };
+  const pair = { token: token(), expiresAt: Date.now() + 60_000 };
   const connector = api.createDeviceRelayConnector({
     relayOrigin: origin,
     hostId,
     publicOrigin,
     ca: tls.cert,
+    issuePairing: async () => pair,
     getCredential: async (signal) => {
       signal.throwIfAborted();
       resolutions++;
@@ -73,6 +77,18 @@ export async function credentialRotationAcceptance(api, tls, root, network) {
     connector.start();
     await until(() => controls[0]?.ready);
     assert.match(controls[0].continuity, /^[A-Za-z0-9_-]{43}$/);
+    const requestId = token();
+    controls[0].ws.send(
+      JSON.stringify({ type: "pair", v: 1, leaseId: controls[0].leaseId, requestId }),
+    );
+    await until(() => controls[0].paired);
+    assert.deepEqual(controls[0].paired, {
+      type: "paired",
+      v: 1,
+      leaseId: controls[0].leaseId,
+      requestId,
+      ...pair,
+    });
     const firstToken = activeToken;
     activeToken = token();
     controls[0].ws.send(
@@ -163,6 +179,26 @@ export async function credentialRotationAcceptance(api, tls, root, network) {
       assert.equal(controls.length, 4, "untrusted TLS never receives the account continuity proof");
     } finally {
       await untrusted.close();
+    }
+    let unauthorized = false;
+    const retired = api.createDeviceRelayConnector({
+      relayOrigin: origin,
+      hostId,
+      publicOrigin,
+      localHost: target,
+      getCredential: async () => {
+        throw Object.assign(new Error("revoked"), { status: 403 });
+      },
+      onState: (state) => {
+        if (state === "unauthorized") unauthorized = true;
+      },
+    });
+    try {
+      retired.start();
+      await until(() => unauthorized);
+      assert.equal(controls.length, 4);
+    } finally {
+      await retired.close();
     }
     lifetime.abort();
     assert.throws(

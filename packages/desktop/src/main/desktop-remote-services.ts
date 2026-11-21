@@ -1,3 +1,4 @@
+import type { NativeRemoteClient } from "./desktop-host/remote-client.js";
 import {
   AccountFeatureService,
   accountLocalConditions,
@@ -37,6 +38,7 @@ export function createDesktopRemoteServices(options: {
   ipcMain: Pick<IpcMain, "handle" | "removeHandler">;
   userDataDir: string;
   environmentDir: string;
+  remote?: NativeRemoteClient;
   safeStorage: Pick<
     SafeStorage,
     | "isAsyncEncryptionAvailable"
@@ -104,6 +106,7 @@ export function createDesktopRemoteServices(options: {
   });
   const mobileRemoteController = new MobileRemoteController({
     account: cloudAccountManager,
+    connectorFactory: options.remote?.relay.create,
     host: options.host,
     tunnel: options.tunnel,
     binary: options.binary,
@@ -123,6 +126,10 @@ export function createDesktopRemoteServices(options: {
       }
     },
   });
+  if (options.remote)
+    options.remote.lostRelay = () => {
+      void mobileRemoteController.hostRelayDisconnected().catch(() => {});
+    };
   const accountFeatures = new AccountFeatureService({
     account: cloudAccountManager,
     supported: [

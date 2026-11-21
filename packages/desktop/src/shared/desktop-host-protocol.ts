@@ -24,6 +24,7 @@ export interface DesktopHostIdentity {
 }
 
 export type DesktopHostControl =
+  | { type: "remote-services-port" }
   | { type: "shutdown" }
   | { type: "remote-terminal-port" }
   | { type: "window-closed"; webContentsId: number }
@@ -88,6 +89,7 @@ export function isDesktopHostIdentity(value: unknown): value is DesktopHostIdent
 
 export function isDesktopHostControl(value: unknown): value is DesktopHostControl {
   if (!record(value)) return false;
+  if (value.type === "remote-services-port") return hasOnly(value, ["type"]);
   if (value.type === "automation-port")
     return Object.keys(value).length === 2 && typeof value.searchPath === "string";
   if (value.type === "worker-port")
