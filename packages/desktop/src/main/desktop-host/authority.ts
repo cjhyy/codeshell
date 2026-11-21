@@ -61,8 +61,8 @@ export class HostSessionAuthority {
     };
   }
 
-  captureHistoryRead(sessionId: string, webContentsId: number) {
-    if (this.streamViews.has(sessionId))
+  captureHistoryRead(sessionId: string, webContentsId: number, sharedOutput = true) {
+    if (sharedOutput && this.streamViews.has(sessionId))
       return { historical: false, assertCurrent: this.captureOutput(sessionId, webContentsId) };
     const current = this.sessions.get(sessionId);
     if (current) return { historical: false, assertCurrent: this.grant(sessionId, webContentsId) };
@@ -123,9 +123,13 @@ export class HostPortAuthority {
     this.capture().assertCurrent();
     this.sessions.captureOutput(sessionId, this.identity.webContentsId)();
   }
-  captureHistoryRead(sessionId: string): HostRequestContext {
+  captureHistoryRead(sessionId: string, sharedOutput = true): HostRequestContext {
     const frame = this.capture();
-    const lease = this.sessions.captureHistoryRead(sessionId, this.identity.webContentsId);
+    const lease = this.sessions.captureHistoryRead(
+      sessionId,
+      this.identity.webContentsId,
+      sharedOutput,
+    );
     return {
       ...lease,
       identity: frame.identity,

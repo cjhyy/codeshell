@@ -1,5 +1,7 @@
 import { app, dialog, ipcMain, type BrowserWindow } from "electron";
-import { lstatSync } from "node:fs";
+import { operationRegistryRevision } from "./operation-authority.js";
+import { operationReviewClient, type OperationClient } from "./desktop-host/private-operations.js";
+import type { IpcMainInvokeEvent } from "electron";
 import { join } from "node:path";
 import { codeShellHome, sessionsRoot } from "@cjhyy/code-shell-core";
 import {
@@ -15,19 +17,8 @@ import { getTrust, getTrustCachedSync } from "./trust-store.js";
 const nativeHookConfiguration = process.env.CODESHELL_OPERATION_HOOK_HOST;
 const nativeHookStateRoot = codeShellHome();
 
-/** Pin registry revisions without exposing or copying their contents into activity records. */
-function authorityRevision(): string {
-  return JSON.stringify(
-    ["projects.json", "trust.json"].map((name) => {
-      const info = lstatSync(join(codeShellHome(), "desktop", name), { bigint: true });
-      if (!info.isFile() || info.isSymbolicLink())
-        throw new Error("Operation authority registry unavailable");
-      return [name, info.dev, info.ino, info.size, info.mtimeNs, info.ctimeNs].map(String);
-    }),
-  );
-}
-
 export function registerOperationResolutionHost(deps: {
+  host: OperationClient & { withOperationCaller<T>(event: IpcMainInvokeEvent, work: () => T): T };
   windows(): BrowserWindow[];
   enabled(): boolean;
   isSessionRunning(sessionId: string): boolean;
@@ -55,11 +46,15 @@ export function registerOperationResolutionHost(deps: {
     ...deps,
     enabled: () => !disposed && deps.enabled(),
     ipc: ipcMain,
-    store: createLinkOperationReviewStore(sessionsRoot(), hookHost),
+    withCaller: deps.host.withOperationCaller,
+    store: {
+      ...operationReviewClient(deps.host),
+      reconcile: createLinkOperationReviewStore(sessionsRoot(), hookHost).reconcile,
+    },
     resolveTarget: resolveRendererConfigurationTarget,
     trusted: async (cwd) => (await getTrust(cwd)) === "trusted",
     trustedSync: (cwd) => getTrustCachedSync(cwd) === "trusted",
-    authorityRevision,
+    authorityRevision: operationRegistryRevision,
     confirm: (window, options) => dialog.showMessageBox(window, options),
   });
   return async () => {

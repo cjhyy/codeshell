@@ -1,3 +1,5 @@
+import { operationDirectory, readOperationFile } from "./files.js";
+import { OPERATION_ACTIVE_MAX_BYTES } from "./archive.js";
 import { constants, closeSync, fstatSync, lstatSync, openSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { UsageLedger } from "../cost-ledger/store.js";
@@ -62,4 +64,21 @@ export function readOperationSessionOwner(
     state,
     directory,
   };
+}
+
+/** Keychain preflight reads only a canonical ledger path; a caller must compare the protected field again under lock. */
+export function readProtectedOperationKey(root: string): string | null {
+  const directory = join(root, ".operations");
+  try {
+    operationDirectory(directory);
+    const { key } = JSON.parse(
+      readOperationFile(join(directory, "ledger.json"), OPERATION_ACTIVE_MAX_BYTES),
+    );
+    if (typeof key !== "string" || key.length > 16_384)
+      throw new Error("Invalid protected operation key");
+    return key;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw error;
+  }
 }

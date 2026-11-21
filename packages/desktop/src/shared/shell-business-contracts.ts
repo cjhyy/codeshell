@@ -1,3 +1,4 @@
+import type { DesktopHostIdentity } from "./desktop-host-protocol.js";
 import type { SessionCatalogApi } from "./session-catalog.js";
 
 type Operation<F extends (...args: any[]) => Promise<unknown>> = {
@@ -11,6 +12,10 @@ export interface ShellBusinessOperations {
   "transcripts/read": Operation<SessionCatalogApi["readTranscript"]>;
   "transcripts/write": Operation<SessionCatalogApi["writeTranscript"]>;
   "transcripts/delete": Operation<SessionCatalogApi["deleteTranscript"]>;
+  "operations/ledger": {
+    input: { action: string; caller: DesktopHostIdentity; payload: Record<string, unknown> };
+    result: unknown;
+  };
   "catalog/load": Operation<SessionCatalogApi["load"]>;
   "catalog/importLegacy": Operation<SessionCatalogApi["importLegacy"]>;
   "catalog/apply": Operation<SessionCatalogApi["apply"]>;

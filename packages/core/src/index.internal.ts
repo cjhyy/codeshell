@@ -570,7 +570,10 @@ export {
   normalizeGithubIssueBatch,
   githubIssueBatchPolicy,
 } from "./links/github-issue-batch.js";
-export { readOperationSessionOwner } from "./operations/session-owner.js";
+export {
+  readOperationSessionOwner,
+  readProtectedOperationKey,
+} from "./operations/session-owner.js";
 export { createSessionOperationServices } from "./operations/session-services.js";
 export { allowsLinkAction, linkAuthoritySnapshot } from "./links/authority.js";
 export {

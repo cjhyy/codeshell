@@ -94,6 +94,7 @@ export class DesktopHostServer {
   constructor(
     private readonly version: string,
     private readonly methods: ReadonlyMap<string, DesktopHostMethod>,
+    private readonly changed?: () => void,
   ) {}
 
   bind(identity: DesktopHostIdentity, port: HostPort): void {
@@ -136,6 +137,17 @@ export class DesktopHostServer {
     ) {
       this.detach(connection);
     }
+  }
+
+  captureOperation(identity: DesktopHostIdentity, sessionId: string) {
+    const connection = this.windows.get(identity.webContentsId);
+    if (
+      !connection ||
+      connection.authority.identity.frameToken !== identity.frameToken ||
+      connection.authority.identity.frameGeneration !== identity.frameGeneration
+    )
+      throw new HostRevokedError();
+    return connection.authority.captureHistoryRead(sessionId, false);
   }
 
   /** Only the private parent pipe can reserve a one-shot write for a bound document.
@@ -224,6 +236,7 @@ export class DesktopHostServer {
     if (this.windows.get(id) !== connection) return;
     this.windows.delete(id);
     connection.authority.revoke();
+    this.changed?.();
     for (const permit of connection.commits) Atomics.compareExchange(permit, 0, 0, -1);
     connection.commits.clear();
     try {
@@ -245,6 +258,7 @@ export class DesktopHostServer {
   }
 
   private rejectRevoked(): void {
+    this.changed?.();
     for (const connection of this.windows.values()) {
       for (const [id, guard] of connection.pending) {
         try {

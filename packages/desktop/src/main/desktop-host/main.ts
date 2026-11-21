@@ -1,4 +1,5 @@
 import { documentLifetimes } from "./document-lifetime.js";
+import type { OperationCommand } from "./private-operations.js";
 import type { CredentialFileCommand } from "@cjhyy/code-shell-core/internal/storage";
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { DesktopHostIdentity } from "../../shared/desktop-host-protocol.js";
@@ -13,7 +14,7 @@ import {
 } from "electron";
 import type { WorkerBridgeCoreOptions } from "@cjhyy/code-shell-server/worker";
 import { DesktopHostWorkerClient } from "./main-worker.js";
-import { sessionsRoot } from "@cjhyy/code-shell-core";
+import { sessionsRoot, getDefaultCredentialCipher } from "@cjhyy/code-shell-core";
 import { listDiskSessions as listJson } from "@cjhyy/code-shell-server/storage";
 import type { ListSessionOptions } from "../../shared/disk-session-query.js";
 import { createSessionIndexChanges } from "./session-index-changes.js";
@@ -50,6 +51,11 @@ export function createDesktopHost(
     (message, ports) => supervisor.post(message, ports),
   );
   const intentCaller = new AsyncLocalStorage<DesktopHostIdentity>();
+  const documentSignal = documentLifetimes((event) => navigation.assertSender(event));
+  const operationCaller = new AsyncLocalStorage<{
+    caller: DesktopHostIdentity;
+    signal: AbortSignal;
+  }>();
   function bindWorker() {
     if (!worker) return;
     const { port1, port2 } = new MessageChannelMain();
@@ -69,7 +75,7 @@ export function createDesktopHost(
   const connect = (event: IpcMainEvent) => workbenches.connect(event);
   return {
     callBusiness: supervisor.callBusiness.bind(supervisor),
-    documentSignal: documentLifetimes((event) => navigation.assertSender(event)),
+    documentSignal,
     catalogListeners: supervisor.catalogListeners,
     start() {
       ipcMain.removeListener(DesktopHostIpc.connect, connect);
@@ -105,6 +111,35 @@ export function createDesktopHost(
     },
     withDocumentCaller<T>(event: Pick<IpcMainEvent, "sender" | "senderFrame">, work: () => T): T {
       return intentCaller.run(workbenches.identity(event), work);
+    },
+    withOperationCaller<T>(event: Pick<IpcMainEvent, "sender" | "senderFrame">, work: () => T): T {
+      return operationCaller.run(
+        { caller: workbenches.identity(event), signal: documentSignal(event) },
+        work,
+      );
+    },
+    async operationCommand<T>(
+      action: OperationCommand,
+      payload: Record<string, unknown>,
+    ): Promise<T> {
+      const origin = operationCaller.getStore();
+      if (!origin) throw new Error("Operation requires its native workbench document");
+      const { wrapped } = (await supervisor.callBusiness(
+        "operations/ledger",
+        { action: "host/operationKey", payload: {}, caller: origin.caller },
+        origin.signal,
+      )) as { wrapped: string | null };
+      const cipher = getDefaultCredentialCipher().asynchronous;
+      if (!cipher) throw new Error("Operation keyring unavailable");
+      const key = wrapped === null ? null : { wrapped, secret: await cipher.decrypt(wrapped) };
+      if (key && !/^[a-f0-9]{64}$/.test(key.secret))
+        throw new Error("Invalid protected operation key");
+      origin.signal.throwIfAborted();
+      return supervisor.callBusiness(
+        "operations/ledger",
+        { action, payload: { ...payload, key }, caller: origin.caller },
+        origin.signal,
+      ) as Promise<T>;
     },
     credentialCommand<T>(command: CredentialFileCommand, payload: unknown): Promise<T> {
       return supervisor.credentialCommand(command, payload, intentCaller.getStore());

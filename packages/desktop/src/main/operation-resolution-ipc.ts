@@ -1,7 +1,10 @@
 import type { BrowserWindow, IpcMain, IpcMainInvokeEvent, MessageBoxOptions } from "electron";
 import type { createLinkOperationReviewStore } from "@cjhyy/code-shell-core/internal";
 import { randomUUID } from "node:crypto";
-import { lstatSync } from "node:fs";
+import {
+  operationRootIdentity as rootIdentity,
+  type OperationProjectScope,
+} from "./operation-authority.js";
 import type { ResolvedRendererConfigurationTarget } from "./renderer-configuration-authority.js";
 import type {
   OperationResolutionReview,
@@ -15,8 +18,17 @@ interface Deps {
   ipc: Pick<IpcMain, "handle" | "removeHandler">;
   windows(): BrowserWindow[];
   enabled(): boolean;
-  store: Pick<OperationReviewStore, "review" | "resolve"> &
-    Partial<Pick<OperationReviewStore, "reconcile">>;
+  withCaller?<T>(event: IpcMainInvokeEvent, work: () => T): T;
+  store: {
+    review(
+      sessionId: string,
+      scope: OperationProjectScope,
+    ):
+      | ReturnType<OperationReviewStore["review"]>
+      | Promise<ReturnType<OperationReviewStore["review"]>>;
+    resolve(...args: Parameters<OperationReviewStore["resolve"]>): void | Promise<void>;
+    reconcile?: OperationReviewStore["reconcile"];
+  };
   resolveTarget(input: unknown): Promise<ResolvedRendererConfigurationTarget>;
   trusted(cwd: string): Promise<boolean>;
   trustedSync(cwd: string): boolean;
@@ -39,13 +51,6 @@ function inputRecord(input: unknown, keys: string[]): Record<string, string> {
   if (Object.values(value).some((value) => (value as string).length > 128))
     throw new Error("Invalid operation review");
   return value as Record<string, string>;
-}
-
-function rootIdentity(cwd: string): string {
-  const info = lstatSync(cwd);
-  if (!info.isDirectory() || info.isSymbolicLink())
-    throw new Error("Operation project root is unavailable");
-  return JSON.stringify([cwd, info.dev, info.ino]);
 }
 
 /** Native top-frame authority only; not registered as a worker/model/Web RPC method. */
@@ -83,7 +88,8 @@ export function registerOperationResolutionIpc(deps: Deps): () => void {
         if (owner(event) !== window || event.sender.mainFrame !== frame)
           throw new Error("Operation review originating frame changed");
       };
-      return callback(window, args, check);
+      const run = () => callback(window, args, check);
+      return deps.withCaller ? deps.withCaller(event, run) : run();
     });
   };
   const authority = async (sessionId: string, check: () => void) => {
@@ -108,7 +114,12 @@ export function registerOperationResolutionIpc(deps: Deps): () => void {
       if (args.length !== 1) throw new Error("Invalid operation review");
       const { sessionId } = inputRecord(args[0], ["sessionId"]);
       const context = await authority(sessionId, check);
-      const snapshot = deps.store.review(sessionId);
+      const snapshot = await deps.store.review(sessionId, {
+        cwd: context.target.cwd,
+        root: context.root,
+        authority: context.authority,
+      });
+      check();
       if (snapshot.owner.state.status === "active")
         throw new Error("Stop this Session before reviewing an uncertain write");
       for (const [token, prior] of previews) {
@@ -272,7 +283,7 @@ export function registerOperationResolutionIpc(deps: Deps): () => void {
       )
         throw new Error("Operation Session or project changed; refresh the activity record");
       assertCurrent();
-      deps.store.resolve(
+      await deps.store.resolve(
         prior.sessionId,
         prior.snapshot.owner,
         input.operationId,

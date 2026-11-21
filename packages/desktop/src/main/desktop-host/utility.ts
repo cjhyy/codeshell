@@ -1,6 +1,8 @@
 import { Worker } from "node:worker_threads";
 import { SessionTranscriptCache } from "../session-transcript-cache.js";
 import type { BusinessMethods } from "../../host/composition/business-calls.js";
+import { HostOperationReviews } from "./operation-review.js";
+import { isOperationCommand } from "./private-operations.js";
 import { HostBusinessCalls } from "../../host/composition/business-calls.js";
 import { catalogOperations } from "../../host/composition/session-catalog.js";
 import { businessRead, noBusinessArguments } from "./business-read.js";
@@ -45,11 +47,54 @@ const transcripts = new SessionTranscriptCache(
       workerData: options,
     }),
 );
+const reviews = new HostOperationReviews({
+  async review(sessionId, key) {
+    const snapshot = await (
+      await storage
+    ).request<import("./private-operations.js").OperationSnapshot>("operations/review", {
+      sessionId,
+      key,
+    });
+    if (!snapshot) throw new Error("Operation storage unavailable");
+    return snapshot;
+  },
+  async resolve(input) {
+    const result = await (await storage).request<boolean>("operations/resolve", input);
+    if (result !== true) throw new Error("Operation storage unavailable");
+    return true;
+  },
+});
 const business = new HostBusinessCalls({
   ...catalogFiles,
   "transcripts/read": (input) => transcripts.read(input),
   "transcripts/write": (input, grant) => transcripts.commitWrite(input, grant.permit),
   "transcripts/delete": (input, grant) => transcripts.commitDelete(input, grant.permit),
+  "operations/ledger": async (input, grant) => {
+    if (input?.action === "host/operationKey" && isDesktopHostIdentity(input.caller) && server) {
+      const lease = server.reserveDocumentCommit(input.caller);
+      try {
+        return { wrapped: await (await storage).request<string>("operations/wrappedKey") };
+      } finally {
+        lease.release();
+      }
+    }
+    if (
+      !server ||
+      !isDesktopHostIdentity(input?.caller) ||
+      !isOperationCommand(input.action) ||
+      !input.payload ||
+      typeof input.payload !== "object"
+    )
+      throw new Error("Invalid native operation");
+    const host = server;
+    return reviews.run(
+      input.action,
+      input.caller,
+      input.payload,
+      (caller, id) => host.captureOperation(caller, id),
+      grant,
+    );
+  },
 } satisfies BusinessMethods);
 const index = createSessionIndex(sessionsRoot(), { storage });
 const catalog = new DesktopSessionListVisibility(index);
@@ -130,6 +175,7 @@ parent.on("message", ({ data, ports }) => {
           (options) => catalog.list(options),
         ),
       ]),
+      () => reviews.authorityChanged(),
     );
     parent.postMessage({ type: "ready" });
     return;

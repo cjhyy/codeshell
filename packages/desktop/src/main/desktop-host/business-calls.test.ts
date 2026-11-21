@@ -12,6 +12,9 @@ test("a withdrawn catalog edit cannot create a draft, while an acknowledged edit
     const store = new SessionCatalogStore({ file });
     const wait = Promise.withResolvers<void>();
     const calls = new HostBusinessCalls({
+      "operations/ledger": () => {
+        throw new Error("Unexpected operation");
+      },
       "catalog/load": () => store.load(),
       "catalog/importLegacy": (indices, grant) =>
         store.commitLegacy(indices, () => claimBusinessCommit(grant.permit)),

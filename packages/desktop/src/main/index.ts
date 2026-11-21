@@ -4906,23 +4906,20 @@ taskInboxDisposers.push(
   sessionCatalogStore.onChanged(() => taskInboxService.scheduleRefresh("session")),
 );
 backgroundWork.registerBackgroundWorkIpc(ipcMain, mainWindows, () => bridge);
-const disposeOperationBatchHost = registerOperationBatchHost({
+const operationScope = {
+  host: desktopHost,
   windows: () => [...mainWindows],
   enabled: taskInboxEnabled,
-  bridge: () => bridge ?? undefined,
-  isSessionRunning: (id) =>
+  isSessionRunning: (id: string) =>
     taskInboxAutomationSessions.has(id) ||
     bridge?.isSessionRunning(id) === true ||
     externalRuntime.service?.isSessionRunning(id) === true,
+};
+const disposeOperationBatchHost = registerOperationBatchHost({
+  ...operationScope,
+  bridge: () => bridge ?? undefined,
 });
-const disposeOperationResolutionHost = registerOperationResolutionHost({
-  windows: () => [...mainWindows],
-  enabled: taskInboxEnabled,
-  isSessionRunning: (id) =>
-    taskInboxAutomationSessions.has(id) ||
-    !!bridge?.isSessionRunning(id) ||
-    !!externalRuntime.service?.isSessionRunning(id),
-});
+const disposeOperationResolutionHost = registerOperationResolutionHost(operationScope);
 registerAutomationIpc();
 registerTrustNotificationIpc({ externalRuntimeService: () => externalRuntime.service });
 registerDesktopShutdown(app, {

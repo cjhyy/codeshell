@@ -1,3 +1,8 @@
+import {
+  OperationStorage,
+  type ResolveOperation,
+  type PreparedOperationKey,
+} from "../../host/composition/operation-storage.js";
 import { SessionCatalogStore } from "../session-catalog-store.js";
 import { claimBusinessCommit } from "../../host/composition/business-calls.js";
 import type { SessionCatalogPatch, SessionIndex } from "../../shared/session-catalog.js";
@@ -17,9 +22,21 @@ catalog.onChanged((snapshot) => {
   catalogRevision = snapshot.revision;
 });
 let output: StoredDesktopOutput | undefined;
+let ledger: OperationStorage | undefined;
 await serveSessionIndexWorker({
   ...tasks,
   async handle(ctx, command, payload) {
+    if (
+      command === "operations/wrappedKey" ||
+      command === "operations/review" ||
+      command === "operations/resolve"
+    ) {
+      ledger ??= new OperationStorage(ctx.sessionsRoot);
+      if (command === "operations/wrappedKey") return ledger.wrappedKey();
+      if (command === "operations/resolve") return ledger.resolve(payload as ResolveOperation);
+      const { sessionId, key } = payload as { sessionId: string; key: PreparedOperationKey | null };
+      return ledger.review(sessionId, key);
+    }
     if (
       command === "catalog/load" ||
       command === "catalog/apply" ||
