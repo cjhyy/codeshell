@@ -6,6 +6,7 @@ import {
   type RpcNotification,
   type RpcResponse,
 } from "../../shared/desktop-host-protocol.js";
+import { outputMethods } from "./output-methods.js";
 import { DesktopHostServer, desktopHostMethods, type DesktopHostMethod } from "./server.js";
 
 class TestPort extends EventEmitter {
@@ -358,4 +359,63 @@ test("unowned disk-history reads are withdrawn on ownership changes even after r
   sessions.setDeleting("past", false);
   expect(() => fresh.assertCurrent()).toThrow();
   fresh.release?.();
+});
+
+test("only trusted, live shared views receive root-owned output and they never gain a session mutation grant", async () => {
+  const { server, a, b } = fixture();
+  server.setStreamView(sessionId, true);
+  server.notifySession(sessionId, "agent/streamEvent", { sessionId });
+  expect(a.messages.at(-1)).toHaveProperty("method", "agent/streamEvent");
+  expect(b.messages.at(-1)).toHaveProperty("method", "agent/streamEvent");
+  b.request(73, "session/use", { sessionId });
+  await tick();
+  expect(b.responses(73)[0]?.error?.code).toBe(revoked);
+  server.setDeleting(sessionId, true);
+  const count = a.messages.length;
+  server.notifySession(sessionId, "agent/streamEvent", { sessionId });
+  expect(a.messages.length).toBe(count);
+  server.setStreamView(sessionId, false);
+  server.setDeleting(sessionId, false);
+  server.setOwner(sessionId, 2);
+  server.notifySession(sessionId, "agent/streamEvent", { sessionId });
+  expect(a.messages.length).toBe(count);
+  expect(b.messages.at(-1)).toHaveProperty("method", "agent/streamEvent");
+});
+
+test("disk-history recovery checks visibility after I/O and legacy IPC uses the same frame grant", async () => {
+  const snapshot = { epoch: "test", events: [], nextSeq: 1, topLevelRunning: false };
+  let visible = true;
+  let resolveRead: (() => void) | undefined;
+  let reads = 0;
+  const methods = outputMethods(
+    async () => {
+      reads++;
+      await new Promise<void>((resolve) => {
+        resolveRead = resolve;
+      });
+      return snapshot;
+    },
+    async () => ({ sessions: visible ? [{ id: sessionId, mtime: 1 }] : [], nextCursor: null }),
+  );
+  const server = new DesktopHostServer("test", methods);
+  const a = connect(server, frame(1));
+  const b = connect(server, frame(2));
+  a.request(1, "agent/subscribe", { sessionId });
+  await tick();
+  visible = false;
+  resolveRead!();
+  await tick();
+  expect(a.responses(1)[0]?.error?.code).toBe(revoked);
+  b.request(2, "agent/subscribe", { sessionId });
+  await tick();
+  expect(b.responses(2)[0]?.error?.code).toBe(revoked);
+  expect(reads).toBe(1);
+  server.setOwner(sessionId, 1);
+  const legacy = server.readWorkbenchOutput(frame(1), { sessionId });
+  server.setOwner(sessionId, 2);
+  server.setOwner(sessionId, 1);
+  resolveRead!();
+  await expect(legacy).rejects.toThrow("revoked");
+  await expect(server.readWorkbenchOutput(frame(2), { sessionId })).rejects.toThrow("revoked");
+  await expect(server.readWorkbenchOutput(frame(1, 2), { sessionId })).rejects.toThrow("revoked");
 });

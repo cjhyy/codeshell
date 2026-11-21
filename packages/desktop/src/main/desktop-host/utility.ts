@@ -140,6 +140,26 @@ parent.on("message", ({ data, ports }) => {
     );
     return;
   }
+  if (isRpcRequest(data) && data.method === "host/readWorkbenchOutput") {
+    const { caller, ...params } = data.params ?? {};
+    const job = isDesktopHostIdentity(caller)
+      ? server.readWorkbenchOutput(caller, params)
+      : Promise.reject(new Error("Invalid workbench identity"));
+    void job.then(
+      (result) => {
+        if (!stopping) parent.postMessage({ jsonrpc: "2.0", id: data.id, result });
+      },
+      () => {
+        if (!stopping)
+          parent.postMessage({
+            jsonrpc: "2.0",
+            id: data.id,
+            error: { code: -32003, message: "Output access unavailable" },
+          });
+      },
+    );
+    return;
+  }
   if (isRpcRequest(data) && data.method === "host/listDiskSessions") {
     // This pipe is private to Main. Renderer methods use the public view normalizer.
     const params = data.params;

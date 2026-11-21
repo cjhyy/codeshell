@@ -37,7 +37,13 @@ export function bindHostWorker(
       try {
         observers.workerExited?.(generation);
       } finally {
-        later({ type: "exit", generation, info });
+        const ended = generation;
+        if (observers.output)
+          void observers.output.mutate({ type: "worker-exit" }).then(
+            () => post({ type: "exit", generation: ended, info }),
+            () => {},
+          );
+        else post({ type: "exit", generation: ended, info });
       }
     },
     onStderr: (text) => post({ type: "stderr", generation, text }),
@@ -131,7 +137,7 @@ export function bindHostWorker(
       const observed = frames.filter(({ envelope }) => {
         if (allDeltas || deltaSessions.has(envelope.sessionId)) return true;
         const type = (envelope.event as { type?: string } | null)?.type;
-        return type !== "text_delta" && type !== "thinking_delta" && type !== "tool_use_delta";
+        return type !== "text_delta" && type !== "thinking_delta" && type !== "tool_use_args_delta";
       });
       if (observed.length) post({ type: "frames", frames: observed });
     },

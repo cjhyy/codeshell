@@ -88,6 +88,16 @@ export function createDesktopHost(
         return listJson(options);
       }
     },
+    async readWorkbenchOutput(
+      event: Pick<IpcMainEvent, "sender" | "senderFrame">,
+      sessionId: string,
+      sinceSeq: number,
+    ) {
+      const caller = workbenches.identity(event);
+      const result = await supervisor.readWorkbenchOutput(caller, sessionId, sinceSeq);
+      if (workbenches.identity(event) !== caller) throw new Error("Workbench document changed");
+      return result;
+    },
     withTaskCaller<T>(event: Pick<IpcMainEvent, "sender" | "senderFrame">, work: () => T): T {
       return intentCaller.run(workbenches.identity(event), work);
     },

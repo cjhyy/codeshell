@@ -329,7 +329,7 @@ export class AgentBridge implements PetStateBridge {
   });
   private readonly mainOutput = new MainOutputPublisher({
     root: () => sessionsRoot(),
-    latest: (sessionId) => this.snapshots.get(sessionId).outputCursor,
+    latest: (sessionId) => this.snapshots.latestOutputCursor(sessionId),
     worker: (sessionId, event) => {
       this.handleWorkerLine(
         JSON.stringify({
@@ -338,7 +338,7 @@ export class AgentBridge implements PetStateBridge {
           params: { sessionId, event },
         }),
       );
-      return this.snapshots.get(sessionId).outputCursor === event.outputCursor;
+      return this.snapshots.latestOutputCursor(sessionId) === event.outputCursor;
     },
   });
   /** In-flight runs actually owned by the CURRENT stdio worker. */
@@ -685,20 +685,16 @@ export class AgentBridge implements PetStateBridge {
   }
 
   private submitOutput(command: OutputMutation): void {
-    void this.core
-      .hostedOutput!.mutateOutput(command)
-      .catch((error) =>
-        dlog("bridge", "stream.source_unavailable", {
-          error: String(error),
-          command: command.type,
-        }),
-      );
+    void this.core.hostedOutput!.mutateOutput(command).catch((error) =>
+      dlog("bridge", "stream.source_unavailable", {
+        error: String(error),
+        command: command.type,
+      }),
+    );
   }
 
   private workerOutputExited(ids: string[]): void {
-    if (this.core.hostedOutput) {
-      if (ids.length) this.submitOutput({ type: "worker-exit", ids });
-    } else this.snapshots.onWorkerExit(ids);
+    if (!this.core.hostedOutput) this.snapshots.onWorkerExit(ids);
   }
 
   private observeHostedOutput({ origin, envelope, line }: OutputPublication): void {

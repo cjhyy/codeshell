@@ -38,6 +38,7 @@ interface Connection {
   initialized: boolean;
   commits: Set<Int32Array>;
   pending: Map<RpcRequest["id"], HostRequestContext>;
+  compatibilityReads: number;
 }
 
 export class InvalidParams extends Error {}
@@ -108,6 +109,7 @@ export class DesktopHostServer {
       initialized: false,
       commits: new Set(),
       pending: new Map(),
+      compatibilityReads: 0,
     };
     this.windows.set(identity.webContentsId, connection);
     port.on("close", () => this.detach(connection));
@@ -157,6 +159,36 @@ export class DesktopHostServer {
   allows(sessionId: string, owner: number): boolean {
     return this.sessions.allows(sessionId, owner);
   }
+  async readWorkbenchOutput(
+    identity: DesktopHostIdentity,
+    params: Record<string, unknown>,
+  ): Promise<unknown> {
+    const connection = this.windows.get(identity.webContentsId);
+    const bound = connection?.authority.identity;
+    const handler = this.methods.get("agent/subscribe");
+    if (
+      !connection ||
+      bound?.frameToken !== identity.frameToken ||
+      bound.frameGeneration !== identity.frameGeneration ||
+      !handler
+    )
+      throw new HostRevokedError();
+    const sessionId = handler.sessionId?.(params);
+    if (!sessionId) throw new InvalidParams();
+    if (connection.pending.size + connection.compatibilityReads >= 128)
+      throw new Error("Too many pending Desktop Host requests");
+    const guard = connection.authority.captureHistoryRead(sessionId);
+    connection.compatibilityReads++;
+    try {
+      const result = await handler.run(guard, params);
+      guard.assertCurrent();
+      return result;
+    } finally {
+      guard.release?.();
+      connection.compatibilityReads--;
+    }
+  }
+
   setOwner(sessionId: string, owner: number | null): void {
     this.sessions.setOwner(sessionId, owner);
     this.rejectRevoked();
@@ -281,7 +313,7 @@ export class DesktopHostServer {
       sendError(port, id, -32601, "Method not found");
       return;
     }
-    if (pending.size >= 128) {
+    if (pending.size + connection.compatibilityReads >= 128) {
       sendError(port, id, -32001, "Too many pending Desktop Host requests");
       return;
     }

@@ -3870,6 +3870,15 @@ app.whenReady().then(async () => {
     const headlessAutomationRunner = buildDesktopAutomationRunner(
       emitAutomationEvent,
       announceAutomationSession,
+      undefined,
+      async (id) => {
+        // A snapshot request on the producer port is ordered after its final output.
+        try {
+          await bridge?.readSnapshot(id, Number.MAX_SAFE_INTEGER);
+        } finally {
+          desktopHost.setStreamView(id, false);
+        }
+      },
     );
     // "Continue this conversation" jobs feed their prompt into the live session.
     const injectResumeTurn = createAutomationResumeTurn({
@@ -4725,23 +4734,28 @@ ipcMain.handle("agent:pendingApprovals", (event) => {
     ...(externalRuntime.approvals?.pendingForWindow(event.sender.id) ?? []),
   ];
 });
-/**
- * Snapshot subscription: a (re)mounted renderer asks main for the events it
- * missed for a session past `sinceSeq`. main holds these (AgentBridge's
- * SessionSnapshotStore) precisely because it does not remount with the
- * renderer. Returns { events: [{seq,event}], nextSeq }.
- */
-ipcMain.handle("agent:subscribe", async (_e, sessionId: string, sinceSeq?: number) => {
+// Compatibility IPC uses the same snapshot grant as the workbench port. The
+// native Pet surface reads only the application-owned Mimi session.
+ipcMain.handle("agent:subscribe", async (event, sessionId: string, sinceSeq?: number) => {
   assertDesktopSessionId(sessionId);
   const cursor =
     typeof sinceSeq === "number" && Number.isSafeInteger(sinceSeq) && sinceSeq >= 0 ? sinceSeq : 0;
-  return (
-    bridge?.readSnapshot(sessionId, cursor) ?? {
-      events: [],
-      nextSeq: 1,
-      topLevelRunning: false,
-    }
-  );
+  appRendererNavigation.assertSender(event);
+  const isPet = () =>
+    petSurfaceWindows().some((w) => !w.isDestroyed() && w.webContents === event.sender);
+  if (!isPet()) return desktopHost.readWorkbenchOutput(event, sessionId, cursor);
+  const frame = event.senderFrame;
+  const assertPet = () => {
+    appRendererNavigation.assertSender(event);
+    if (!isPet() || frame !== event.sender.mainFrame || deletingBrowserSessions.has(sessionId))
+      throw new Error("Pet output authority was revoked");
+  };
+  if (!petDispatchService || sessionId !== (await petDispatchService.getSessionId()))
+    throw new Error("Pet output requires the Mimi session");
+  assertPet();
+  const snapshot = await bridge!.readSnapshot(sessionId, cursor);
+  assertPet();
+  return snapshot;
 });
 let closeActivityHistory: (() => Promise<void>) | undefined;
 registerDesktopOutputHistoryHost({

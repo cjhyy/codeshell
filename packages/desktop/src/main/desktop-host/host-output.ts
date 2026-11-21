@@ -76,7 +76,10 @@ export class HostOutput {
   }
   mutate(command: OutputMutation): Promise<void> {
     this.flush();
-    return this.enqueue(() => this.apply(command));
+    return this.enqueue(() => this.apply(command)).catch((error) => {
+      if (command.type === "worker-exit") this.fault(error);
+      throw error;
+    });
   }
   snapshot(sessionId: string, sinceSeq = 0): Promise<Snapshot> {
     this.flush();

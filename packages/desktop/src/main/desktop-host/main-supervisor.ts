@@ -111,6 +111,9 @@ export class DesktopHostSupervisor {
     }, 15_000);
   }
 
+  readWorkbenchOutput(caller: DesktopHostIdentity, sessionId: string, sinceSeq: number) {
+    return this.request("host/readWorkbenchOutput", { caller, sessionId, sinceSeq });
+  }
   async listDiskSessions(options: ListSessionOptions): Promise<ListDiskSessionsResult> {
     const page = (await this.request("host/listDiskSessions", { ...options })) as
       | ListDiskSessionsResult

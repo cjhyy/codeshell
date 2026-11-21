@@ -1,3 +1,4 @@
+import { WorkerRunOwnership } from "../worker-run-ownership.js";
 import { Methods } from "@cjhyy/code-shell-core";
 import {
   needsIndependentOutput,
@@ -18,7 +19,7 @@ import type { LiveStreamEnvelope } from "../parseStreamLine.js";
 type Visibility = "hidden" | "milestones" | "full";
 export type OutputMutation =
   | { type: "worker"; lines: string[] }
-  | { type: "worker-exit"; ids: string[] }
+  | { type: "worker-exit" }
   | {
       type: "publish";
       sessionId: string;
@@ -51,6 +52,7 @@ export interface OutputResult {
  * thread. All producers for the same session share its cursor and snapshot. */
 export class StoredDesktopOutput {
   readonly snapshots: SessionSnapshotStore;
+  private readonly workerRuns = new WorkerRunOwnership();
   private readonly publisher: MainOutputPublisher;
   private readonly owned = new Map<string, MainOutputSource>();
   private readonly captured = new Map<string, { sessionId: string; source: MainOutputSource }>();
@@ -63,7 +65,7 @@ export class StoredDesktopOutput {
     });
     this.publisher = new MainOutputPublisher({
       root: () => root,
-      latest: (id) => this.snapshots.get(id).outputCursor,
+      latest: (id) => this.snapshots.latestOutputCursor(id),
       worker: (sessionId, event) => {
         this.worker(
           JSON.stringify({
@@ -72,13 +74,13 @@ export class StoredDesktopOutput {
             params: { sessionId, event },
           }),
         );
-        return this.snapshots.get(sessionId).outputCursor === event.outputCursor;
+        return this.snapshots.latestOutputCursor(sessionId) === event.outputCursor;
       },
     });
   }
   private worker(line: string) {
     const frame = projectWorkerOutput(parseWorkerLine(line), this.publisher, this.snapshots, {
-      observeLifecycle() {},
+      observeLifecycle: (id, event) => this.workerRuns.observeWorker(id, event),
       report: (name, details) => {
         this.diagnostics.push({ name, details });
       },
@@ -99,6 +101,7 @@ export class StoredDesktopOutput {
     const event = annotateBrowserRuntimeStreamEvent(raw, visibility);
     try {
       const entry = this.snapshots.append(sessionId, event);
+      this.workerRuns.observeExternal(sessionId, event);
       this.frames.push({
         origin,
         envelope: { sessionId, event, seq: entry.seq, epoch: this.snapshots.epoch },
@@ -160,7 +163,7 @@ export class StoredDesktopOutput {
           for (const line of command.lines) this.worker(line);
           break;
         case "worker-exit":
-          this.snapshots.onWorkerExit(command.ids);
+          this.snapshots.onWorkerExit(this.workerRuns.endWorker());
           break;
         case "publish":
           this.publish(command);
@@ -223,7 +226,7 @@ export class StoredDesktopOutput {
         name: "stream.source_unavailable",
         details: { error: String(error) },
       });
-      if (command.type === "capture" || command.type === "captured") throw error;
+      if (command.type !== "publish") throw error;
     }
     const result = { frames: this.frames, diagnostics: this.diagnostics };
     this.frames = [];
