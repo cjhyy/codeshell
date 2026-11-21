@@ -347,6 +347,7 @@ export function createTaskInboxStorageHandlers(): StorageWorkerHandlers {
     },
     handle(ctx, command, payload) {
       if (!initialized || !dir) throw new Error("Desktop task storage is uninitialized");
+      if (command === "tasks/ready") return true;
       if (command === "tasks/flush") {
         flush(ctx);
         return true;
@@ -370,9 +371,13 @@ export function createTaskInboxStorageHandlers(): StorageWorkerHandlers {
             rows.setHeader({ ...h, intentVersion: m.version });
           }
           if (command === "tasks/commitIntent") {
-            const { permit, intent } = checkedTaskObject(payload, new Set(["permit","intent"]));
-            if (!(permit instanceof Int32Array) || !(permit.buffer instanceof SharedArrayBuffer) ||
-                permit.length !== 1 || Atomics.compareExchange(permit, 0, 0, 1) !== 0)
+            const { permit, intent } = checkedTaskObject(payload, new Set(["permit", "intent"]));
+            if (
+              !(permit instanceof Int32Array) ||
+              !(permit.buffer instanceof SharedArrayBuffer) ||
+              permit.length !== 1 ||
+              Atomics.compareExchange(permit, 0, 0, 1) !== 0
+            )
               throw new Error("Task caller was revoked");
             return perform(rows, "tasks/intent", intent);
           }

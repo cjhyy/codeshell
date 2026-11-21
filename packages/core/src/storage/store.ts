@@ -12,6 +12,8 @@ import {
 export interface StateStorage {
   readonly mode: "sqlite" | "json";
   read<T = Record<string, SqlValue>>(sql: string, params?: readonly SqlValue[]): T[] | null;
+  /** Multiple SELECTs from the same committed WAL snapshot; no writer lock. */
+  readSnapshot<T>(read: (db: Pick<StorageDatabase, "all">) => T): T | null;
   /** False means the transaction was not acknowledged. JSON remains authoritative. */
   write(statements: readonly StorageStatement[]): Promise<boolean>;
   /** Null before dispatch if no worker is available. A failed in-flight command
@@ -23,6 +25,7 @@ export interface StateStorage {
 const jsonOnly: StateStorage = {
   mode: "json",
   read: () => null,
+  readSnapshot: () => null,
   write: async () => false,
   request: async () => null,
   close: async () => {},
@@ -136,6 +139,25 @@ export async function openStateStorage(
         // No stale results after a failed query; queued work transitions first.
         dropReader();
         void send({ type: "disable" }).catch(() => {});
+        return null;
+      }
+    },
+    readSnapshot<T>(read: (db: Pick<StorageDatabase, "all">) => T): T | null {
+      if (!reader) return null;
+      try {
+        reader.exec("BEGIN DEFERRED");
+        const result = read(reader);
+        reader.exec("COMMIT");
+        return result;
+      } catch {
+        try {
+          reader.exec("ROLLBACK");
+        } catch {
+          /* BEGIN may itself have failed. */
+        } finally {
+          dropReader();
+          void send({ type: "disable" }).catch(() => {});
+        }
         return null;
       }
     },

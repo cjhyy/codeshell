@@ -5,7 +5,8 @@ import type { ListSessionOptions } from "../../shared/disk-session-query.js";
 import {
   isRpcRequest,
   isRpcResponse,
-  type DesktopHostControl, type DesktopHostIdentity,
+  type DesktopHostControl,
+  type DesktopHostIdentity,
 } from "../../shared/desktop-host-protocol.js";
 import type { HostStatus } from "./main-workbenches.js";
 
@@ -108,15 +109,25 @@ export class DesktopHostSupervisor {
   }
 
   async listDiskSessions(options: ListSessionOptions): Promise<ListDiskSessionsResult> {
-    const page = await this.request("host/listDiskSessions", { ...options }) as ListDiskSessionsResult | undefined;
-    if (page && Array.isArray(page.sessions) && (page.nextCursor === null || typeof page.nextCursor === "string"))
+    const page = (await this.request("host/listDiskSessions", { ...options })) as
+      | ListDiskSessionsResult
+      | undefined;
+    if (
+      page &&
+      Array.isArray(page.sessions) &&
+      (page.nextCursor === null || typeof page.nextCursor === "string")
+    )
       return page;
     throw new Error("Desktop Host returned an invalid session page");
   }
 
-  async taskCommand<T>(command: string, payload?: unknown, caller?: DesktopHostIdentity): Promise<T | null> {
+  async taskCommand<T>(
+    command: string,
+    payload?: unknown,
+    caller?: DesktopHostIdentity,
+  ): Promise<T | null> {
     if (!isPrivateTaskCommand(command)) throw new Error("Unknown task command");
-    return await this.request(command, { payload, ...(caller && {caller}) }) as T | null;
+    return (await this.request(command, { payload, ...(caller && { caller }) })) as T | null;
   }
 
   private request(method: string, params: Record<string, unknown>): Promise<unknown> {

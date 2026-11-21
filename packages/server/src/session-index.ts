@@ -14,11 +14,16 @@ export interface SessionIndex {
   close(): Promise<void>;
 }
 
-export function createSessionIndex(root: string, options: { workerUrl?: URL; storage?: Promise<StateStorage> } = {}): SessionIndex {
+export function createSessionIndex(
+  root: string,
+  options: { workerUrl?: URL; storage?: Promise<StateStorage> } = {},
+): SessionIndex {
   const sessionsRoot = resolve(root);
-  const storage = options.storage ?? openStateStorage(sessionsRoot, {
-    workerUrl: options.workerUrl ?? new URL("./session-index-worker.js", import.meta.url),
-  });
+  const storage =
+    options.storage ??
+    openStateStorage(sessionsRoot, {
+      workerUrl: options.workerUrl ?? new URL("./session-index-worker.js", import.meta.url),
+    });
   let closed = false;
   let usable = true;
   let watcher: FSWatcher | undefined;

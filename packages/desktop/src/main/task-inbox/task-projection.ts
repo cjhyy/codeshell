@@ -108,7 +108,7 @@ export function displayTask(row: TaskRow): TaskInboxRecordV1 {
   };
 }
 export function taskSnapshot(
-  rows: TaskRows,
+  rows: Pick<TaskRows, "header" | "rows">,
   visibility: "visible" | "hidden" | "all" = "visible",
 ): TaskInboxSnapshot {
   const { version, errors } = rows.header();

@@ -500,7 +500,11 @@ const appRendererNavigation = new AppRendererNavigation(
     pathToFileURL(resolve(__dirname, "..", "renderer", "index.html")).href,
   (url) => shell.openExternal(url),
 );
-const desktopHost = createDesktopHost(join(__dirname, "desktop-host.mjs"), appRendererNavigation);
+const desktopHost = createDesktopHost(
+  join(__dirname, "desktop-host.mjs"),
+  appRendererNavigation,
+  (): void => taskInboxService.hostRestarted(),
+);
 const { listDiskSessions } = desktopHost;
 const chromeNativeMessagingOrigin = nativeMessagingOriginFromArgv(process.argv);
 if (chromeNativeMessagingOrigin) {
@@ -1912,13 +1916,16 @@ async function createWindow(): Promise<BrowserWindow> {
       },
     });
     petStateAggregator = aggregator;
-    taskInboxDisposers.push(aggregator.subscribe((event) => {
-      if (event.kind === "session-upsert") markSessionTaskDirty(event.session.agentSessionId);
-      else if (event.kind === "session-remove") markSessionTaskDirty(event.sessionId);
-      else if (event.kind === "reset") {
-        for (const source of ["session","subagent","external-runtime"] as const) taskInboxService.scheduleRefresh(source);
-      }
-    }));
+    taskInboxDisposers.push(
+      aggregator.subscribe((event) => {
+        if (event.kind === "session-upsert") markSessionTaskDirty(event.session.agentSessionId);
+        else if (event.kind === "session-remove") markSessionTaskDirty(event.sessionId);
+        else if (event.kind === "reset") {
+          for (const source of ["session", "subagent", "external-runtime"] as const)
+            taskInboxService.scheduleRefresh(source);
+        }
+      }),
+    );
 
     // Toggle-driven external-CLI session adapters (Codex / Claude). The
     // controller folds each session cwd's capabilityOverrides.pet over the
@@ -1979,7 +1986,9 @@ async function createWindow(): Promise<BrowserWindow> {
       resolve(app.getPath("userData"), "pet", "long-tasks.json"),
     );
     petLongTaskStore = longTaskStore;
-    taskInboxDisposers.push(longTaskStore.subscribe(() => taskInboxService.scheduleRefresh("mimi-delegation")));
+    taskInboxDisposers.push(
+      longTaskStore.subscribe(() => taskInboxService.scheduleRefresh("mimi-delegation")),
+    );
     // The one interpreter of Session streams (see createSessionOutcomeTap below);
     // the bound-Session bridge reads its outcomes from `sessionOutcomes`.
     const sessionOutcomeDeriver = new SessionOutcomeDeriver();
@@ -4612,7 +4621,7 @@ async function deleteDesktopSessionResources(id: string): Promise<void> {
   });
   removeExternalRuntimeBinding(id);
   await deleteSession(id);
-  await taskInboxService.sessionIntent({type:"sessionDeleted",sessionId:id});
+  await taskInboxService.sessionIntent({ type: "sessionDeleted", sessionId: id });
   await cleanupKnownAttachments(id);
   // Drop any in-memory snapshot for the deleted session so it can't be
   // replayed into a fresh tab that happens to reuse the id.
@@ -4740,19 +4749,31 @@ function markSessionTaskDirty(id: string) {
   taskInboxService.markDirty("subagent", id);
 }
 function userContinuedTask(id: string) {
-  void taskInboxService.sessionIntent({ type: "userContinued", sessionId: id })
+  void taskInboxService
+    .sessionIntent({ type: "userContinued", sessionId: id })
     .then(() => markSessionTaskDirty(id))
     .catch((error) => dlog("main", "task-inbox.user-continue", { error: String(error) }));
 }
 async function archiveDiskSession(id: string, archivedAt: number | undefined) {
   await writeSessionArchive(id, archivedAt);
-  await taskInboxService.sessionIntent({ type: archivedAt === undefined ? "sessionUnarchived" : "sessionArchived", sessionId: id });
+  await taskInboxService.sessionIntent({
+    type: archivedAt === undefined ? "sessionUnarchived" : "sessionArchived",
+    sessionId: id,
+  });
   markSessionTaskDirty(id);
 }
 
 const taskInboxSources = createTaskInboxSources({
   diskSessions: () => listAllDiskSessions({ includeSubagents: true }),
-  diskSession: async (id) => (await listDiskSessions({limit:1,sessionId:id,includeArchived:true,includeSubagents:true})).sessions[0],
+  diskSession: async (id) =>
+    (
+      await listDiskSessions({
+        limit: 1,
+        sessionId: id,
+        includeArchived: true,
+        includeSubagents: true,
+      })
+    ).sessions[0],
   sessionCatalog: () => sessionCatalogStore.load(),
   sessionProjection: () => petStateAggregator?.getSnapshot(),
   native: {
@@ -4811,7 +4832,14 @@ const taskInboxService = createTaskInboxService({
   onError: (error) => dlog("main", "task-inbox.projection.failed", { error: String(error) }),
 });
 taskInboxDisposers.push(
-  registerTaskInboxIpc(ipcMain, () => [...mainWindows], taskInboxService, taskInboxEnabled, (event) => appRendererNavigation.assertSender(event), desktopHost.withTaskCaller),
+  registerTaskInboxIpc(
+    ipcMain,
+    () => [...mainWindows],
+    taskInboxService,
+    taskInboxEnabled,
+    (event) => appRendererNavigation.assertSender(event),
+    desktopHost.withTaskCaller,
+  ),
   sessionCatalogStore.onChanged(() => taskInboxService.scheduleRefresh("session")),
 );
 backgroundWork.registerBackgroundWorkIpc(ipcMain, mainWindows, () => bridge);

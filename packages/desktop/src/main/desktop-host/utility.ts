@@ -4,7 +4,8 @@ import { isPrivateTaskCommand } from "../task-inbox/private-task-command.js";
 import { sessionsRoot } from "@cjhyy/code-shell-core";
 import { createSessionIndex } from "@cjhyy/code-shell-server/storage";
 import {
-  isDesktopHostControl, isDesktopHostIdentity,
+  isDesktopHostControl,
+  isDesktopHostIdentity,
   isRpcRequest,
   isRpcResponse,
 } from "../../shared/desktop-host-protocol.js";
@@ -16,10 +17,10 @@ import { DesktopHostServer, desktopHostMethods } from "./server.js";
 const parent = process.parentPort;
 const versionRequestId = "host:app-version";
 const storage = openStateStorage(sessionsRoot(), {
-  workerConfig: {taskInboxDirectory: process.argv[2]},
+  workerConfig: { taskInboxDirectory: process.argv[2] },
   workerUrl: new URL("./session-index-worker.mjs", import.meta.url),
 });
-const index = createSessionIndex(sessionsRoot(), {storage});
+const index = createSessionIndex(sessionsRoot(), { storage });
 const catalog = new DesktopSessionListVisibility(index);
 let server: DesktopHostServer | undefined;
 let stopping = false;
@@ -38,7 +39,13 @@ parent.on("message", ({ data, ports }) => {
 
   if (isDesktopHostControl(data) && data.type === "shutdown") {
     stopping = true;
-    void index.close().then(async () => (await storage).close()).then(() => process.exit(0), () => process.exit(1));
+    void index
+      .close()
+      .then(async () => (await storage).close())
+      .then(
+        () => process.exit(0),
+        () => process.exit(1),
+      );
     return;
   }
   if (!server) {
@@ -48,7 +55,10 @@ parent.on("message", ({ data, ports }) => {
     }
     server = new DesktopHostServer(
       data.result,
-      new Map([...desktopHostMethods((options) => catalog.list(options)), ...taskHostReads(storage)]),
+      new Map([
+        ...desktopHostMethods((options) => catalog.list(options)),
+        ...taskHostReads(storage),
+      ]),
     );
     parent.postMessage({ type: "ready" });
     return;
@@ -63,14 +73,29 @@ parent.on("message", ({ data, ports }) => {
       if (!isDesktopHostIdentity(params.caller)) throw new Error("Invalid task caller");
       const reservation = host.reserveTaskCommit(params.caller);
       try {
-        return await db.request("tasks/commitIntent", { intent: params.payload, permit: reservation.permit });
+        return await db.request("tasks/commitIntent", {
+          intent: params.payload,
+          permit: reservation.permit,
+        });
       } finally {
         reservation.release();
       }
     };
     void invoke().then(
-      (result) => { if (!stopping) parent.postMessage({ jsonrpc: "2.0", id, result }); },
-      (error: unknown) => { if (!stopping) parent.postMessage({ jsonrpc: "2.0", id, error: {code: -32603, message: error instanceof Error ? error.message : "Task operation failed"} }); },
+      (result) => {
+        if (!stopping) parent.postMessage({ jsonrpc: "2.0", id, result });
+      },
+      (error: unknown) => {
+        if (!stopping)
+          parent.postMessage({
+            jsonrpc: "2.0",
+            id,
+            error: {
+              code: -32603,
+              message: error instanceof Error ? error.message : "Task operation failed",
+            },
+          });
+      },
     );
     return;
   }

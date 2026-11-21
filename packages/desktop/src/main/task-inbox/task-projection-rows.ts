@@ -81,8 +81,8 @@ function decode(i: SqlIntent): TaskIntent {
     deletedActivityAt: i.deleted_activity_at ?? undefined,
   };
 }
-export class SqlTaskRows implements TaskRows {
-  constructor(private db: StorageDatabase) {}
+export class SqlTaskReadRows {
+  constructor(private reader: Pick<StorageDatabase, "all">) {}
   rows(scope: RowScope = {}): TaskRow[] {
     const where: string[] = [];
     const params: (string | number)[] = [];
@@ -101,7 +101,7 @@ export class SqlTaskRows implements TaskRows {
     }
     if (scope.hidden !== undefined) where.push(`i.hidden_at IS ${scope.hidden ? "NOT " : ""}NULL`);
     const join = "LEFT JOIN task_user_state i USING(task_key)";
-    return this.db
+    return this.reader
       .all<{
         record_json: string;
         activity_at: number;
@@ -117,6 +117,23 @@ export class SqlTaskRows implements TaskRows {
         projectionOnly: !!r.projection_only,
         frozenActivityAt: r.frozen_activity_at ?? undefined,
       }));
+  }
+  header(): ProjectionHeader {
+    const row = this.reader.all<{ version: number; errors_json: string; intent_version: number }>(
+      "SELECT * FROM task_projection_state WHERE id=1",
+    )[0];
+    return row
+      ? {
+          version: row.version,
+          errors: JSON.parse(row.errors_json),
+          intentVersion: row.intent_version,
+        }
+      : { version: 0, errors: [], intentVersion: 0 };
+  }
+}
+export class SqlTaskRows extends SqlTaskReadRows implements TaskRows {
+  constructor(private db: StorageDatabase) {
+    super(db);
   }
   put({ record: r, activityAt, projectionOnly }: TaskRow) {
     this.db.run(
@@ -186,18 +203,6 @@ export class SqlTaskRows implements TaskRows {
         }>("SELECT * FROM task_session_state ORDER BY session_id")
         .map((r) => [r.session_id, r.state]),
     };
-  }
-  header(): ProjectionHeader {
-    const row = this.db.get<{ version: number; errors_json: string; intent_version: number }>(
-      "SELECT * FROM task_projection_state WHERE id=1",
-    );
-    return row
-      ? {
-          version: row.version,
-          errors: JSON.parse(row.errors_json),
-          intentVersion: row.intent_version,
-        }
-      : { version: 0, errors: [], intentVersion: 0 };
   }
   setHeader(h: ProjectionHeader) {
     this.db.run("INSERT OR REPLACE INTO task_projection_state VALUES(1,?,?,?)", [

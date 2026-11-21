@@ -139,8 +139,14 @@ export class DesktopHostServer {
   reserveTaskCommit(identity: DesktopHostIdentity) {
     const conn = this.windows.get(identity.webContentsId);
     const bound = conn?.authority.identity;
-    if (!conn || !bound || bound.frameToken !== identity.frameToken || bound.frameGeneration !== identity.frameGeneration ||
-        conn.commits.size >= 128) throw new HostRevokedError();
+    if (
+      !conn ||
+      !bound ||
+      bound.frameToken !== identity.frameToken ||
+      bound.frameGeneration !== identity.frameGeneration ||
+      conn.commits.size >= 128
+    )
+      throw new HostRevokedError();
     const permit = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT));
     conn.commits.add(permit);
     return { permit, release: () => conn.commits.delete(permit) };

@@ -1,7 +1,9 @@
 import type { BrowserWindow, IpcMain, IpcMainInvokeEvent } from "electron";
 import { createTaskInboxPages } from "./task-inbox-pages.js";
 import type {
-  TaskInboxIntent, TaskInboxIntentResult, TaskInboxVisibility,
+  TaskInboxIntent,
+  TaskInboxIntentResult,
+  TaskInboxVisibility,
   TaskInboxActionRequest,
   TaskInboxActionResult,
   TaskInboxListQuery,
@@ -27,7 +29,8 @@ export { parseTaskInboxActionRequest as parseTaskInboxAction } from "./task-inbo
 import {
   parseTaskInboxListQuery,
   parseTaskInboxActionRequest,
-  checkedTaskText, parseTaskInboxIntent,
+  checkedTaskText,
+  parseTaskInboxIntent,
 } from "./task-inbox-types.js";
 
 /** Private local data and controls are available only to application top frames. */
@@ -42,8 +45,12 @@ export function registerTaskInboxIpc(
   const channels: string[] = [];
   const pages = createTaskInboxPages((visibility) => service.reconcile(visibility));
   const assertSender = (event: IpcMainInvokeEvent) => {
-    if (!event.senderFrame || !windows().some((window) => !window.isDestroyed() && window.webContents === event.sender) ||
-        event.senderFrame !== event.sender.mainFrame || event.senderFrame.detached) {
+    if (
+      !event.senderFrame ||
+      !windows().some((window) => !window.isDestroyed() && window.webContents === event.sender) ||
+      event.senderFrame !== event.sender.mainFrame ||
+      event.senderFrame.detached
+    ) {
       throw new Error("Task inbox requires an application window");
     }
     validateFrame?.(event);
@@ -64,14 +71,19 @@ export function registerTaskInboxIpc(
     pages.list(event.senderFrame!, parseTaskInboxListQuery(input), () => assertSender(event)),
   );
   handle("taskInbox:intent", (event, input) =>
-    withCaller(event, () => service.applyIntent(parseTaskInboxIntent(input), () => assertSender(event))),
+    withCaller(event, () =>
+      service.applyIntent(parseTaskInboxIntent(input), () => assertSender(event)),
+    ),
   );
   handle("taskInbox:get", (_event, input) => {
     const key = checkedTaskText(input, "key", 1100);
     return service.get(key) ?? null;
   });
   handle("taskInbox:act", (event, input) =>
-    service.act(parseTaskInboxActionRequest(input), { webContentsId: event.sender.id, assertCurrent: () => assertSender(event) }),
+    service.act(parseTaskInboxActionRequest(input), {
+      webContentsId: event.sender.id,
+      assertCurrent: () => assertSender(event),
+    }),
   );
   const unsubscribe = service.subscribe((snapshot) => {
     if (!enabled()) return;

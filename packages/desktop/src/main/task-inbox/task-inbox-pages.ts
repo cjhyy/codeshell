@@ -1,18 +1,30 @@
 import { randomUUID } from "node:crypto";
 import { compareTaskInboxRecords, deduplicateTaskInboxRecords } from "./task-inbox-mappers.js";
-import type { TaskInboxListQuery, TaskInboxListResult, TaskInboxSnapshot, TaskInboxVisibility } from "./task-inbox-types.js";
+import type {
+  TaskInboxListQuery,
+  TaskInboxListResult,
+  TaskInboxSnapshot,
+  TaskInboxVisibility,
+} from "./task-inbox-types.js";
 
 /** Cursor snapshots belong to one committed document. A new port or frame cannot reuse them. */
-export function createTaskInboxPages(read: (visibility: TaskInboxVisibility) => Promise<TaskInboxSnapshot>) {
+export function createTaskInboxPages(
+  read: (visibility: TaskInboxVisibility) => Promise<TaskInboxSnapshot>,
+) {
   const pages = new Map<
     string,
     { owner: object; expires: number; query: string; snapshot: TaskInboxSnapshot; bytes: number }
   >();
   const queryKey = (query: TaskInboxListQuery) =>
-    JSON.stringify([query.source, query.status, query.projectId, query.search, query.visibility ?? "visible"]);
+    JSON.stringify([
+      query.source,
+      query.status,
+      query.projectId,
+      query.search,
+      query.visibility ?? "visible",
+    ]);
   const prune = () => {
-    for (const [id, page] of pages)
-      if (page.expires < Date.now()) pages.delete(id);
+    for (const [id, page] of pages) if (page.expires < Date.now()) pages.delete(id);
     let bytes = [...pages.values()].reduce((total, page) => total + page.bytes, 0);
     while (pages.size > 8 || bytes > 96 * 1024 * 1024) {
       const oldest = pages.keys().next().value!;
@@ -20,7 +32,11 @@ export function createTaskInboxPages(read: (visibility: TaskInboxVisibility) => 
       pages.delete(oldest);
     }
   };
-  async function list(owner: object, query: TaskInboxListQuery, assertCurrent: () => void): Promise<TaskInboxListResult> {
+  async function list(
+    owner: object,
+    query: TaskInboxListQuery,
+    assertCurrent: () => void,
+  ): Promise<TaskInboxListResult> {
     prune();
     let offset = 0;
     let token: string;
@@ -78,5 +94,5 @@ export function createTaskInboxPages(read: (visibility: TaskInboxVisibility) => 
       ...(more ? { nextCursor: `page:${token}:${offset + limit}` } : {}),
     };
   }
-  return {list, clear: () => pages.clear()};
+  return { list, clear: () => pages.clear() };
 }

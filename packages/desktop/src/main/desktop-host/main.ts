@@ -23,11 +23,18 @@ import { HostWorkbenchPorts } from "./main-workbenches.js";
 export function createDesktopHost(
   entryPath: string,
   navigation: Pick<AppRendererNavigation, "assertSender">,
+  hostReady?: () => void,
 ) {
   const supervisor: DesktopHostSupervisor = new DesktopHostSupervisor(
-    () => utilityProcess.fork(entryPath, [join(app.getPath("userData"), "task-inbox")], { serviceName: "CodeShell Desktop Host" }),
+    () =>
+      utilityProcess.fork(entryPath, [join(app.getPath("userData"), "task-inbox")], {
+        serviceName: "CodeShell Desktop Host",
+      }),
     () => app.getVersion(),
-    (status) => workbenches.setStatus(status),
+    (status) => {
+      workbenches.setStatus(status);
+      if (status === "ready") hostReady?.();
+    },
     (message, details) => dlog("main", `desktop_host.${message}`, details),
   );
   const workbenches = new HostWorkbenchPorts(
@@ -59,7 +66,11 @@ export function createDesktopHost(
       return intentCaller.run(workbenches.identity(event), work);
     },
     taskCommand<T>(command: string, payload?: unknown) {
-      return supervisor.taskCommand<T>(command, payload, command === "tasks/intent" ? intentCaller.getStore() : undefined);
+      return supervisor.taskCommand<T>(
+        command,
+        payload,
+        command === "tasks/intent" ? intentCaller.getStore() : undefined,
+      );
     },
     sessionsChanged: (ids: string[]) => changes?.add(ids),
     trackWorkbench: (contents: WebContents) => workbenches.track(contents),

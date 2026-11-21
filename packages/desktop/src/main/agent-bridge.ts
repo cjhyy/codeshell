@@ -689,10 +689,14 @@ export class AgentBridge implements PetStateBridge {
       const requestId = prepared.parsed.id;
       if (requestId !== undefined) {
         this.foregroundRuns.delete(requestId);
-        if (!prepared.parsed.params?.injected && (prepared.meta.origin === "renderer" ||
-            (prepared.meta.origin === "mobile" && prepared.meta.producer === "mobile-chat"))) {
+        if (
+          !prepared.parsed.params?.injected &&
+          (prepared.meta.origin === "renderer" ||
+            (prepared.meta.origin === "mobile" && prepared.meta.producer === "mobile-chat"))
+        ) {
           this.foregroundRuns.set(requestId, prepared.sessionId);
-          if (this.foregroundRuns.size > 4096) this.foregroundRuns.delete(this.foregroundRuns.keys().next().value!);
+          if (this.foregroundRuns.size > 4096)
+            this.foregroundRuns.delete(this.foregroundRuns.keys().next().value!);
         }
       }
       const clientMessageId = prepared.parsed.params?.clientMessageId;
@@ -758,7 +762,11 @@ export class AgentBridge implements PetStateBridge {
     if (message.method === Methods.RunAccepted) {
       const sessionId = message.params?.sessionId;
       const requestId = message.params?.requestId;
-      if (requestId !== undefined && typeof sessionId === "string" && this.foregroundRuns.get(requestId) === sessionId) {
+      if (
+        requestId !== undefined &&
+        typeof sessionId === "string" &&
+        this.foregroundRuns.get(requestId) === sessionId
+      ) {
         this.foregroundRuns.delete(requestId);
         this.onUserRunAccepted?.(sessionId);
       }

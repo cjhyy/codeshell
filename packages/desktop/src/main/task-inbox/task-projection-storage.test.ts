@@ -335,3 +335,21 @@ test("the Main facade reads each dirty source ID once, serves repeat lists from 
     service.dispose();
   }
 });
+
+test("the writer checks a document permit at commit and consumes it once", async () => {
+  const f = await fixture(),
+    db = await f.open();
+  await ingest(db, [task("scoped")]);
+  const permit = new Int32Array(new SharedArrayBuffer(4));
+  const payload = {
+    permit,
+    intent: { type: "hide", taskKey: "session:scoped", expectedRevision: "1" },
+  };
+  Atomics.store(permit, 0, -1);
+  await expect(db.request("tasks/commitIntent", payload)).rejects.toThrow("revoked");
+  expect((await snapshot(db)).records).toHaveLength(1);
+  Atomics.store(permit, 0, 0);
+  await db.request("tasks/commitIntent", payload);
+  expect((await snapshot(db)).records).toHaveLength(0);
+  await expect(db.request("tasks/commitIntent", payload)).rejects.toThrow("revoked");
+});
