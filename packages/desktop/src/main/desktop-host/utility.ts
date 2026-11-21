@@ -1,3 +1,4 @@
+import { bindRemoteServices } from "../../host/remote/service.js";
 import { hostedTerminals } from "../../host/composition/terminals.js";
 import { HostScheduler } from "../../host/automation/host-scheduler.js";
 import { workspaceReads } from "./workspace-reads.js";
@@ -115,6 +116,7 @@ const catalog = new DesktopSessionListVisibility(index);
 let server: DesktopHostServer | undefined;
 const terminals = hostedTerminals(() => server!, options => catalog.list(options));
 const approvals = new HostApprovalState((id, owner) => server?.allows(id, owner) ?? false);
+let remote: ReturnType<typeof bindRemoteServices> | undefined;
 let stopping = false;
 let worker: ReturnType<typeof bindHostWorker> | undefined;
 const output = new HostOutput(
@@ -137,6 +139,16 @@ const output = new HostOutput(
 parent.on("message", ({ data, ports }) => {
   if (stopping) {
     for (const port of ports) port.close();
+    return;
+  }
+  if (
+    isDesktopHostControl(data) &&
+    data.type === "remote-services-port" &&
+    server &&
+    ports.length === 1 &&
+    !remote
+  ) {
+    remote = bindRemoteServices(ports[0]);
     return;
   }
   if (
@@ -179,7 +191,13 @@ parent.on("message", ({ data, ports }) => {
     void scheduler
       .close()
       .then(() =>
-        Promise.all([index.close(), worker?.close(), transcripts.close(), automation.close()]),
+        Promise.all([
+          index.close(),
+          worker?.close(),
+          transcripts.close(),
+          automation.close(),
+          remote?.close(),
+        ]),
       )
       .then(() => output.drain())
       .finally(async () => (await storage).close())

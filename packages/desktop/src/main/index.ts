@@ -1043,6 +1043,7 @@ let prepareAccountGitHubLink:
   | undefined = undefined;
 const { mobileRemoteController, cloudManagementManager, captureLinkAccount, accountFeatures } =
   createDesktopRemoteServices({
+    remote: desktopHost.remote,
     app,
     ipcMain,
     userDataDir: app.getPath("userData"),

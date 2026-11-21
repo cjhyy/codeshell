@@ -164,11 +164,22 @@ export class MobileRemoteController {
     // close() fences before awaiting its owned sockets; Host stop aborts its target too.
     void this.connector?.close().catch(() => {});
   }
+  hostRelayDisconnected(): Promise<void> {
+    if (this.deps.host.status()?.mode !== "relay") return Promise.resolve();
+    this.invalidate();
+    return this.serial(async () => {
+      await this.closeTransport();
+      if (this.registration) this.publish("disconnected");
+    });
+  }
   private async closeTransport() {
     const connector = this.connector;
     this.connector = undefined;
-    await connector?.close();
-    await Promise.all([this.deps.tunnel.stop(), this.deps.host.stop()]);
+    try {
+      await connector?.close();
+    } finally {
+      await Promise.all([this.deps.tunnel.stop(), this.deps.host.stop()]);
+    }
     if (this.registration && this.state !== "storage-error") this.publish("stopped");
   }
   enroll(input: DesktopRelayEnrollment, authorized: () => boolean): Promise<DesktopRelayStatus> {
