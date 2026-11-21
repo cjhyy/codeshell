@@ -21,7 +21,7 @@ import {
   type GitCommit,
   type GitDiffMode,
   type GitStatus,
-} from "./desktop-services.js";
+} from "./git-services.js";
 import { resolveSessionReviewWorkspaceForUi } from "./session-workspace-service.js";
 
 export interface ReviewWorkspace {

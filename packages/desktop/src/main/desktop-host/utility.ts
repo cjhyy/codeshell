@@ -1,3 +1,4 @@
+import { workspaceReads } from "./workspace-reads.js";
 import { HostAutomationRuns } from "../../host/composition/automation-run.js";
 import { externalRuntimeCatalogOperations } from "../../host/composition/external-runtime-catalog.js";
 import { Worker } from "node:worker_threads";
@@ -160,6 +161,7 @@ parent.on("message", ({ data, ports }) => {
         ...taskHostReads(storage),
         ...configurationReads,
         ...scopedConfigurationReads((options) => catalog.list(options)),
+        ...workspaceReads((options) => catalog.list(options)),
         businessRead("catalog/load", noBusinessArguments, catalogFiles["catalog/load"]),
         ...ingressMethods(
           (req, current) => {

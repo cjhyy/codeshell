@@ -13,8 +13,7 @@ import {
 } from "../renderer-configuration-helpers.js";
 import { readSettings } from "../settings-service.js";
 import { listSkills, readSkillBody } from "../skills-service.js";
-import { HostRevokedError } from "./authority.js";
-import { businessArguments, businessRead, textArgument } from "./business-read.js";
+import { businessArguments, scopedBusinessRead, textArgument } from "./business-read.js";
 import { InvalidParams, type DesktopHostMethod } from "./server.js";
 
 function target(value: unknown): RendererConfigurationTarget {
@@ -50,40 +49,39 @@ export function scopedConfigurationReads(list: ListSessions) {
       input: DesktopBusinessReads[K]["params"],
     ) => DesktopBusinessReads[K]["result"] | Promise<DesktopBusinessReads[K]["result"]>,
   ): [K, DesktopHostMethod] {
-    const [, method] = businessRead(name, parse, async (input, ctx) => {
-      const t = input.target;
-      const checkVisibility = async () => {
-        if (ctx.historical && t && "sessionId" in t) {
-          const id = t.sessionId;
-          if (!(await list({ sessionId: id, limit: 1 })).sessions.some((s) => s.id === id))
-            throw new HostRevokedError();
-        }
-        ctx.assertCurrent();
-      };
-      await checkVisibility();
-      const result = await read(input);
-      await checkVisibility();
-      return result;
-    });
-    return [
+    return scopedBusinessRead(
       name,
-      {
-        ...method,
-        historyRead: "operation",
-        optionalSessionId(params) {
-          const t = parse(params).target;
-          return t && "sessionId" in t ? t.sessionId : undefined;
-        },
-      },
-    ];
+      list,
+      parse,
+      ({ target }) => (target && "sessionId" in target ? target.sessionId : undefined),
+      read,
+    );
   }
   return [
-    register("mcp/merged", input=>{
-      const {base, disabledPlugins,target:t}=businessArguments(input,["base","disabledPlugins","target"]);
-      if (!base || typeof base!=="object" || Array.isArray(base) || (disabledPlugins!==undefined &&
-        (!Array.isArray(disabledPlugins) || disabledPlugins.some(x=>typeof x!=="string")))) throw new InvalidParams();
-      return {base:base as Record<string,unknown>,disabledPlugins:disabledPlugins as string[]|undefined,target:maybeTarget(t)};
-    }, ({base,disabledPlugins,target}) => listMergedMcpServers(base,disabledPlugins,target)),
+    register(
+      "mcp/merged",
+      (input) => {
+        const {
+          base,
+          disabledPlugins,
+          target: t,
+        } = businessArguments(input, ["base", "disabledPlugins", "target"]);
+        if (
+          !base ||
+          typeof base !== "object" ||
+          Array.isArray(base) ||
+          (disabledPlugins !== undefined &&
+            (!Array.isArray(disabledPlugins) || disabledPlugins.some((x) => typeof x !== "string")))
+        )
+          throw new InvalidParams();
+        return {
+          base: base as Record<string, unknown>,
+          disabledPlugins: disabledPlugins as string[] | undefined,
+          target: maybeTarget(t),
+        };
+      },
+      ({ base, disabledPlugins, target }) => listMergedMcpServers(base, disabledPlugins, target),
+    ),
     register("settings/project", scoped, async ({ target }) =>
       readSettings("project", await rendererConfigurationCwd(target)),
     ),

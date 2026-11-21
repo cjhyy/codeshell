@@ -35,6 +35,7 @@ try {
   const projectRoot = join(isolated.home, "host-smoke-project");
   await mkdir(projectRoot, { recursive: true });
   const mount = await realpath(projectRoot);
+  await writeFile(join(mount, "host-file.txt"), "from-workspace");
   await mkdir(join(isolated.codeShellHome, "desktop"), { recursive: true });
   await writeFile(
     join(isolated.codeShellHome, "desktop", "projects.json"),
@@ -169,7 +170,17 @@ utilityProcess.fork = function (...args) {
             api.listSkills(null),api.listPlugins(null),api.listMergedMcpServers({},[]),api.getConfigurationSettings({noRepo:true})
           ]);
           const [projects, recents, sources, models, trust, plugin, settings, skills, plugins, mcp, projectSettings] = business;
+          const root = projects.find(p => p.id === "host-smoke-project").roots[0];
+          const entries = await api.readProjectDir("host-smoke-project", root.id);
+          const entry = entries.find(row => row.name === "host-file.txt");
+          const [file, hits, exists, git] = await Promise.all([
+            api.readProjectFileContent("host-smoke-project", root.id, entry.path),
+            api.searchProjectFiles("host-smoke-project", "host-file", root.id),
+            api.projectFileExists("host-smoke-project", root.id, entry.path),
+            api.getProjectGitStatus("host-smoke-project"),
+          ]);
           resolve({ begin, end: Date.now(), ids, sessionIds:page.sessions.map(row=>row.id),
+            workspaceViews:file.text === "from-workspace" && exists && hits.some(row => row.rootId === root.id && row.name === entry.name) && Array.isArray(git.entries),
             configurationViews: [projects, recents, sources, models, trust, skills, plugins].every(Array.isArray)
               && mcp !== null && typeof mcp === "object" && (projectSettings === null || typeof projectSettings === "object")
               && models.length > 0 && plugin === null && (settings === null || typeof settings === "object") });
@@ -182,6 +193,7 @@ utilityProcess.fork = function (...args) {
   });
   await secondHandle.dispose();
   assert.deepEqual(measured.read.ids, catalog);
+  assert.equal(measured.read.workspaceViews, true, "Workspace files and Git answered during the Main pause");
   assert.deepEqual(measured.read.sessionIds, ["index-visible"]);
   assert.equal(
     measured.read.configurationViews,
