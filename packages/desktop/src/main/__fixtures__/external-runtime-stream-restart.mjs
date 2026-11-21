@@ -103,6 +103,7 @@ const owner = {
 // Electron, a worker or a provider process.
 function createBridge() {
   const bridge = Object.create(AgentBridge.prototype);
+  bridge.core = { hostedOutput: undefined };
   bridge.snapshots = new SessionSnapshotStore({
     coverage: new SessionOutputCoverageStore(() => root),
   });

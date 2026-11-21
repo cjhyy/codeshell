@@ -14,6 +14,8 @@ export async function prepareConfinedElectronFixture({
   origin,
   guardModule,
   guardReceiptReady = () => true,
+  receiptDirectory = isolated.home,
+  enableWorkerCrash = false,
 }) {
   isolated.home = await realpath(isolated.home);
   isolated.codeShellHome = join(isolated.home, ".code-shell");
@@ -21,12 +23,12 @@ export async function prepareConfinedElectronFixture({
   const guardUrl =
     guardModule ??
     new URL("../../../scripts/runtime-cost-smoke-isolation.mjs", import.meta.url).href;
-  const receiptFile = join(isolated.home, "network-guard.jsonl");
-  const spawnedWorkerFile = join(isolated.home, "spawned-workers.jsonl");
+  const receiptFile = join(receiptDirectory, "network-guard.jsonl");
+  const spawnedWorkerFile = join(receiptDirectory, "spawned-workers.jsonl");
   const mainEntry = join(isolated.home, "guarded-main.mjs");
   const hostEntry = join(isolated.home, "guarded-host.mjs");
   const workerSpawnGuard = join(isolated.home, "guard-worker-spawn.mjs");
-  const hostedProcesses = join(isolated.home, "spawned-hosts.jsonl");
+  const hostedProcesses = join(receiptDirectory, "spawned-hosts.jsonl");
   const preload = join(isolated.home, "guarded-runtime.mjs");
   const preloadUrl = pathToFileURL(preload).href;
   // Preserve toolchain/locale/display and the actual OS keyring session. All
@@ -100,13 +102,20 @@ children.spawn = function (command, args, options) {
     // bootstrap receipt. Core can load, but no model task reaches the worker.
     child.stdin.cork();
     const timer = setInterval(() => {
-      if (existsSync(${JSON.stringify(join(isolated.home, "worker-"))} + child.pid + ".permit")) {
+      if (existsSync(${JSON.stringify(join(receiptDirectory, "worker-"))} + child.pid + ".permit")) {
         clearInterval(timer);
         child.stdin.uncork();
       }
     }, 10);
     timer.unref();
     child.once("exit", () => clearInterval(timer));
+    if (${JSON.stringify(enableWorkerCrash)}) {
+      const crashFile = ${JSON.stringify(join(receiptDirectory, "worker-"))} + child.pid + ".crash";
+      const crash = setInterval(() => {
+        if (existsSync(crashFile)) { clearInterval(crash); child.kill("SIGKILL"); }
+      }, 25).unref();
+      child.once("exit", () => clearInterval(crash));
+    }
     appendFileSync(${JSON.stringify(spawnedWorkerFile)}, JSON.stringify({ pid: child.pid, ppid: process.pid }) + "\\n", { mode: 0o600 });
   }
   return child;
@@ -181,7 +190,7 @@ await import(${JSON.stringify(pathToFileURL(join(appDir, "out/main/index.mjs")).
           .split("\n")
           .filter(Boolean)
           .map((line) => JSON.parse(line));
-        const tree = await guardedWorkerTree(isolated.home, pid, receipts, guardReceiptReady);
+        const tree = await guardedWorkerTree(receiptDirectory, pid, receipts, guardReceiptReady);
         lastReceipts = receipts;
         lastSpawned = spawned;
         if (receipts.some((receipt) => receipt.origin !== origin || receipt.homeId !== homeId))
@@ -192,7 +201,7 @@ await import(${JSON.stringify(pathToFileURL(join(appDir, "out/main/index.mjs")).
           spawned.every(tree.hasWorker)
         ) {
           for (const worker of spawned)
-            await writeFile(join(isolated.home, `worker-${worker.pid}.permit`), "verified", {
+            await writeFile(join(receiptDirectory, `worker-${worker.pid}.permit`), "verified", {
               mode: 0o600,
             });
           console.log(

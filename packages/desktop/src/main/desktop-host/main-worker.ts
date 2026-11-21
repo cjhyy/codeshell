@@ -25,6 +25,8 @@ interface WorkerInstance {
  * them, even when a permission dialog outlives a worker or Host restart. */
 export class DesktopHostWorkerClient implements DesktopWorkerDriver {
   private port?: WorkerPort;
+  private boundOnce = false;
+  private readonly startupWaiters = new Set<() => void>();
   private generation = 0;
   private active?: WorkerInstance;
   private nextCall = 0;
@@ -51,6 +53,25 @@ export class DesktopHostWorkerClient implements DesktopWorkerDriver {
     return this.legacy?.(event, line) ?? false;
   }
 
+  async waitForFirstBinding(): Promise<void> {
+    if (this.port) return;
+    if (this.boundOnce || this.startupWaiters.size >= 128)
+      throw new Error("Desktop Host is unavailable");
+    const gate = Promise.withResolvers<void>();
+    this.startupWaiters.add(gate.resolve);
+    const timer = setTimeout(
+      () => gate.reject(new Error("Desktop Host startup timed out")),
+      15_000,
+    ).unref();
+    try {
+      await gate.promise;
+    } finally {
+      clearTimeout(timer);
+      this.startupWaiters.delete(gate.resolve);
+    }
+    if (!this.port) throw new Error("Desktop Host is unavailable");
+  }
+
   bind(port: WorkerPort): void {
     this.disconnect();
     this.port = port;
@@ -63,6 +84,8 @@ export class DesktopHostWorkerClient implements DesktopWorkerDriver {
       if (this.port === port) this.disconnect();
     });
     port.start();
+    this.boundOnce = true;
+    for (const ready of this.startupWaiters) ready();
     if (this.deltaInterest.all || this.deltaInterest.sessions.length)
       this.post({ type: "delta-interest", ...this.deltaInterest });
   }

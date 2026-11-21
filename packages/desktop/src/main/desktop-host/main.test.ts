@@ -304,8 +304,10 @@ test("a native reply and an outstanding call cannot cross a worker or Host repla
     entryPath: "/owned/agent.mjs",
     buildEnv: () => ({}),
   });
+  const startup = client.waitForFirstBinding();
   const first = new Port();
   client.bind(first);
+  await startup;
   client.ensureWorker("/owned");
   const release = Promise.withResolvers<void>();
   const staleWrite = Promise.withResolvers<boolean>();
