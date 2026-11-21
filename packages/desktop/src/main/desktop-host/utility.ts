@@ -6,6 +6,7 @@ import { isOperationCommand } from "./private-operations.js";
 import { HostBusinessCalls } from "../../host/composition/business-calls.js";
 import { catalogOperations } from "../../host/composition/session-catalog.js";
 import { businessRead, noBusinessArguments } from "./business-read.js";
+import { scopedConfigurationReads } from "./scoped-configuration-reads.js";
 import { configurationReads } from "./configuration-reads.js";
 import { isDesktopAgentMethod } from "../../shared/desktop-agent-methods.js";
 import { lstat } from "node:fs/promises";
@@ -177,6 +178,7 @@ parent.on("message", ({ data, ports }) => {
         ...desktopHostMethods((options) => catalog.list(options)),
         ...taskHostReads(storage),
         ...configurationReads,
+        ...scopedConfigurationReads((options) => catalog.list(options)),
         businessRead("catalog/load", noBusinessArguments, catalogFiles["catalog/load"]),
         ...ingressMethods(
           (req, current) => {

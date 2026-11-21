@@ -121,11 +121,13 @@ utilityProcess.fork = function (...args) {
           const api = window.codeshell;
           const business = await Promise.all([
             api.projectRegistry.list(), api.recents(), api.listSourceCatalog(), api.getModelCatalog(),
-            api.listPluginMcpTrust(), api.getPluginDetail("uninstalled-business-test"), api.getSettings("user")
+            api.listPluginMcpTrust(), api.getPluginDetail("uninstalled-business-test"), api.getSettings("user"),
+            api.listSkills(null),api.listPlugins(null),api.listMergedMcpServers({},[]),api.getConfigurationSettings({noRepo:true})
           ]);
-          const [projects, recents, sources, models, trust, plugin, settings] = business;
+          const [projects, recents, sources, models, trust, plugin, settings, skills, plugins, mcp, projectSettings] = business;
           resolve({ begin, end: Date.now(), ids, sessionIds:page.sessions.map(row=>row.id),
-            configurationViews: [projects, recents, sources, models, trust].every(Array.isArray)
+            configurationViews: [projects, recents, sources, models, trust, skills, plugins].every(Array.isArray)
+              && mcp !== null && typeof mcp === "object" && (projectSettings === null || typeof projectSettings === "object")
               && models.length > 0 && plugin === null && (settings === null || typeof settings === "object") });
         } catch (error) { reject(error); }
       }, 250)); void 0`);

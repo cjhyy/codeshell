@@ -58,7 +58,7 @@ import { createPreloadRpcIdFactory, takePreloadRpcResponse } from "./rpc-identit
 import { rpcResult } from "./rpc-result";
 import { createGoalControlApi } from "./goal-control-api";
 import type { AgentPanelHostRequest, AgentPanelHostResponse } from "../shared/agent-panels";
-import type { ExpandedPluginCommand, PluginCommandDescriptor } from "../shared/plugin-commands";
+import type { ExpandedPluginCommand } from "../shared/plugin-commands";
 
 import type { MediaPreviewRequest, MediaPreviewResult } from "../shared/media-preview";
 import type { InstalledThemePack, ThemeImportKind, ThemePickPreview } from "../shared/theme-packs";
@@ -974,8 +974,6 @@ contextBridge.exposeInMainWorld("codeshell", {
   /** Authoritative no-repo conversation cwd (~/.code-shell/no-repo) from main.
    *  Renderer must use this, never recompute homedir() itself. */
   noRepoCwd: (): Promise<string> => ipcRenderer.invoke("no-repo:cwd"),
-  getConfigurationSettings: (target: RendererConfigurationTarget) =>
-    ipcRenderer.invoke("settings:getConfiguration", target),
   updateSettings: (scope: "user", patch: Record<string, unknown>) =>
     ipcRenderer.invoke("settings:set", scope, patch),
   updateConfigurationSettings: (
@@ -1045,14 +1043,8 @@ contextBridge.exposeInMainWorld("codeshell", {
   resumeAutomation: (id: string) => ipcRenderer.invoke("automation:resume", id),
   runAutomationNow: (id: string) => ipcRenderer.invoke("automation:runNow", id),
   cancelAutomationRun: (id: string) => ipcRenderer.invoke("automation:cancelRun", id),
-  listSkills: (target: RendererConfigurationTarget | null, opts?: { includeDisabled?: boolean }) =>
-    ipcRenderer.invoke("skills:list", target, opts),
   searchSessionContent: (query: string): Promise<SessionContentSearchResult> =>
     ipcRenderer.invoke("session:content-search", query),
-  listPlugins: (target: RendererConfigurationTarget | null) =>
-    ipcRenderer.invoke("plugins:list", target),
-  listPluginCommands: (target: RendererConfigurationTarget): Promise<PluginCommandDescriptor[]> =>
-    ipcRenderer.invoke("plugin-commands:list", target),
   expandPluginCommand: (
     target: RendererConfigurationTarget,
     name: string,
@@ -1107,8 +1099,6 @@ contextBridge.exposeInMainWorld("codeshell", {
       expectedRevision,
       cwd,
     ),
-  listCapabilities: (target: RendererConfigurationTarget | null) =>
-    ipcRenderer.invoke("capabilities:list", target),
   setCapabilityEnabled: (
     target: RendererConfigurationTarget | null,
     id: string,
@@ -1333,8 +1323,6 @@ contextBridge.exposeInMainWorld("codeshell", {
     input: import("../shared/panel-apps").PanelAppUpdateInput,
   ): Promise<import("../shared/panel-apps").PanelAppUpdateResult> =>
     ipcRenderer.invoke("panel-apps:installUpdate", input),
-  readSkillBody: (target: RendererConfigurationTarget | null, filePath: string) =>
-    ipcRenderer.invoke("skills:read", target, filePath),
   checkSkillUpdate: (target: RendererConfigurationTarget | null, filePath: string) =>
     ipcRenderer.invoke("skills:checkUpdate", target, filePath),
   updateSkill: (target: RendererConfigurationTarget | null, filePath: string) =>
@@ -1367,11 +1355,6 @@ contextBridge.exposeInMainWorld("codeshell", {
   installFromGithub: (input: unknown) => ipcRenderer.invoke("skills:installFromGithub", input),
   probeMcpServers: (cfgs: unknown, force?: boolean, target?: RendererConfigurationTarget | null) =>
     ipcRenderer.invoke("mcp:probe", cfgs, force, target),
-  listMergedMcpServers: (
-    base: unknown,
-    disabledPlugins?: unknown,
-    target?: RendererConfigurationTarget | null,
-  ) => ipcRenderer.invoke("mcp:listMerged", base, disabledPlugins, target),
   listPluginHooks: (disabledPlugins?: unknown) =>
     ipcRenderer.invoke("hooks:listPlugin", disabledPlugins),
   approvePluginHooks: (installKey: string): Promise<PluginHookApprovalResult[]> =>

@@ -31,6 +31,8 @@ export interface DesktopHostMethod {
   readonly admission?: boolean;
   /** A session-scoped method derives its scope from its validated arguments. */
   sessionId?(params: RpcRequest["params"]): string | undefined;
+  /** Configuration views can be user/project-scoped or refer to a session. */
+  optionalSessionId?(params: RpcRequest["params"]): string | undefined;
   run(context: HostRequestContext, params: RpcRequest["params"]): unknown;
 }
 
@@ -344,7 +346,7 @@ export class DesktopHostServer {
     }
     let guard: HostRequestContext | undefined;
     try {
-      const sessionId = handler.sessionId?.(params);
+      const sessionId = handler.sessionId?.(params) ?? handler.optionalSessionId?.(params);
       if (
         handler.sessionId &&
         !(handler.admission && sessionId === undefined) &&

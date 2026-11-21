@@ -2282,7 +2282,14 @@ export interface CodeshellApi
     /** Main resolves this identity before folding project capabilityOverrides. */
     target?: RendererConfigurationTarget | null,
   ): Promise<
-    Record<string, McpServerProbeInput & { source?: "settings" | "plugin"; editable?: boolean }>
+    Record<
+      string,
+      Omit<McpServerProbeInput, "transport"> & {
+        transport?: McpServerProbeInput["transport"] | "inprocess";
+        source?: "settings" | "plugin";
+        editable?: boolean;
+      }
+    >
   >;
   /** Read-only list of plugin-provided hooks (for the settings 钩子 page). */
   listPluginHooks(disabledPlugins?: string[]): Promise<PluginHookEntry[]>;

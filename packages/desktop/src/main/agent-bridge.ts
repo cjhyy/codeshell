@@ -57,10 +57,10 @@ import {
 } from "./main-output-publisher.js";
 import { WorkerRunOwnership } from "./worker-run-ownership.js";
 import { createRequire } from "node:module";
-import { homedir } from "node:os";
+import { resolveNoRepoCwd } from "./no-repo-cwd.js";
+export { resolveNoRepoCwd } from "./no-repo-cwd.js";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { mkdirSync } from "node:fs";
 import { app, BrowserWindow, ipcMain } from "electron";
 import { desktopManagedRuntimeRoot } from "./managed-runtime-service.js";
 import { dlog } from "./desktop-logger.js";
@@ -201,15 +201,6 @@ import {
  * `~/.code-shell/no-repo` is created on demand and kept stable across
  * runs so the worker always lands in a contained directory.
  */
-export function resolveNoRepoCwd(): string {
-  const dir = join(homedir(), ".code-shell", "no-repo");
-  try {
-    mkdirSync(dir, { recursive: true });
-  } catch {
-    /* best-effort */
-  }
-  return dir;
-}
 
 /**
  * Turn a failed panel-host result into a sentence the model can act on.

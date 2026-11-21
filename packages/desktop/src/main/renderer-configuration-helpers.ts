@@ -1,6 +1,6 @@
 /** Renderer configuration-target resolution and listed skill/agent path checks shared by IPC registrars. */
 import { resolve } from "node:path";
-import { resolveNoRepoCwd } from "./agent-bridge.js";
+import { resolveNoRepoCwd } from "./no-repo-cwd.js";
 import { listSkills } from "./skills-service.js";
 import { listAgents } from "./agents-service.js";
 import {
