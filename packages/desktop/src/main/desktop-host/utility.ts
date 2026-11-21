@@ -1,3 +1,4 @@
+import { mimiWorkView, type MimiWorkSnapshot } from "../../shared/mimi-work-memory.js";
 import { bindRemoteTerminals } from "../../host/composition/remote-terminals.js";
 import { hostedTerminals } from "../../host/composition/terminals.js";
 import { mimiRecordsOperations, readMimiList } from "../../host/composition/mimi-records.js";
@@ -223,6 +224,13 @@ parent.on("message", ({ data, ports }) => {
       new Map([
         ...desktopHostMethods((options) => catalog.list(options)),
         ...taskHostReads(storage),
+        businessRead("mimi/workMemory", noBusinessArguments, async () => {
+          const snapshot = await (
+            await storage
+          ).request<MimiWorkSnapshot>("mimi/workMemory", { type: "snapshot" });
+          if (!snapshot) throw Error("Mimi work memory unavailable");
+          return mimiWorkView(snapshot.segments);
+        }),
         businessRead("mimi/memories", noBusinessArguments, () =>
           readMimiList(storage, "memoryList"),
         ),

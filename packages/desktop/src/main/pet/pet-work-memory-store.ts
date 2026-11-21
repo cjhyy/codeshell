@@ -9,6 +9,7 @@ const MAX_SEGMENTS = 50;
 interface PersistedWorkMemory {
   version: 1;
   lastInteractionAt: number;
+  manualClearPending?: boolean;
   /** Legacy single active segment (pre-boundary-history). Still read on load. */
   activeSegment?: PetTopicSegment;
   /** Topic-segment boundary history, oldest → newest (the last is active). */
@@ -56,6 +57,7 @@ export class PetWorkMemoryStore {
   private entriesList: PetWorkMemoryEntry[] = [];
   private segments: PetTopicSegment[] = [];
   private last = 0;
+  private clearPending = false;
   private writeQueue = Promise.resolve();
   private mutationQueue = Promise.resolve();
 
@@ -72,6 +74,7 @@ export class PetWorkMemoryStore {
       if (Array.isArray(parsed.entries)) {
         this.entriesList = parsed.entries.filter(isEntry).slice(-MAX_ENTRIES);
       }
+      this.clearPending = parsed.manualClearPending === true;
       if (typeof parsed.lastInteractionAt === "number") {
         this.last = parsed.lastInteractionAt;
       }
@@ -140,27 +143,37 @@ export class PetWorkMemoryStore {
    * Open a new topic segment, appending it to the boundary history (capped at
    * MAX_SEGMENTS, most recent kept). The newest segment is the active one.
    */
-  async openSegment(segment: PetTopicSegment): Promise<void> {
+  async openSegment(segment: PetTopicSegment, consumeManualClear = false): Promise<void> {
     return this.enqueueMutation(async () => {
       const previous = this.segments;
+      const previousClear = this.clearPending;
+      if (consumeManualClear) this.clearPending = false;
       this.segments = [...this.segments, segment].slice(-MAX_SEGMENTS);
       try {
         await this.enqueuePersist();
       } catch (error) {
         this.segments = previous;
+        this.clearPending = previousClear;
         throw error;
       }
     });
   }
 
-  async setLastInteractionAt(at: number): Promise<void> {
+  manualClearPending(): boolean {
+    return this.clearPending;
+  }
+
+  async setLastInteractionAt(at: number, manualClear = false): Promise<void> {
     return this.enqueueMutation(async () => {
       const previous = this.last;
+      const previousClear = this.clearPending;
+      if (manualClear) this.clearPending = true;
       this.last = at;
       try {
         await this.enqueuePersist();
       } catch (error) {
         this.last = previous;
+        this.clearPending = previousClear;
         throw error;
       }
     });
@@ -180,6 +193,7 @@ export class PetWorkMemoryStore {
     const snapshot: PersistedWorkMemory = {
       version: 1,
       lastInteractionAt: this.last,
+      ...(this.clearPending && { manualClearPending: true }),
       ...(this.segments.length > 0 ? { segments: [...this.segments] } : {}),
       entries: [...this.entriesList],
     };

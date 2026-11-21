@@ -172,8 +172,8 @@ import { createPetFollowUpRules } from "./pet/pet-follow-up-rules.js";
 import { wirePetProactive } from "./pet/pet-proactive-wiring.js";
 import { PetRuleScheduler, isPetRuleScheduleJob } from "./pet/pet-rule-schedule.js";
 import { PetContextLinkStore } from "./pet/pet-context-links.js";
-import { PetWorkMemoryStore } from "./pet/pet-work-memory-store.js";
-import { PetSegmentController, type PetArchiveAnchors } from "./pet/pet-segment-controller.js";
+import { nativeMimiWorkMemory } from "./desktop-host/mimi-work-client.js";
+import type { PetArchiveAnchors } from "./pet/pet-segment-controller.js";
 import { recordPetDelegationClosureBestEffort } from "./pet/pet-delegation-closure.js";
 import { PetReportReceiptStore } from "./pet/pet-report-receipt-store.js";
 import { PetLongTaskStore } from "./pet/pet-long-task-store.js";
@@ -192,7 +192,7 @@ import {
 import { createOwnerReplyHandling, lastUserMessageIn } from "./pet/pet-notice-action-controls.js";
 import { selectSessionsToArchive } from "./pet/pet-auto-archive.js";
 import { resolveLinkedSessionFromDisk } from "./cc-room/linked-session-resolver.js";
-import { DEFAULT_SEGMENT_IDLE_MS, buildMigrationSummary } from "@cjhyy/code-shell-pet";
+import { buildMigrationSummary } from "@cjhyy/code-shell-pet";
 import { searchSessionTranscripts } from "@cjhyy/code-shell-pet/disclosure";
 import { materializeOutgoingAttachments } from "@cjhyy/code-shell-chat";
 import { createReusableSessionResolver } from "./pet/reusable-session-resolver.js";
@@ -1910,9 +1910,7 @@ async function createWindow(): Promise<BrowserWindow> {
       channelLabel: (channel) =>
         imGatewayService.ownerChannels().find((entry) => entry.id === channel)?.label,
     });
-    const petWorkMemory = new PetWorkMemoryStore(
-      resolve(app.getPath("userData"), "pet", "work-memory.json"),
-    );
+    const petWorkMemory = nativeMimiWorkMemory(desktopHost.callBusiness);
     const aggregator = new PetStateAggregator({
       bridge,
       listDiskSessions,
@@ -1990,7 +1988,7 @@ async function createWindow(): Promise<BrowserWindow> {
     // The topic-segment controller is created inside petInitialization once the
     // durable pet session id is known; until then the dispatch service holds a
     // stable wrapper that no-ops (beginTurn → undefined; closure → nothing).
-    let petSegmentController: PetSegmentController | null = null;
+    let petSegmentController: ReturnType<typeof petWorkMemory.controller> | null = null;
     const longTaskStore = new PetLongTaskStore(
       resolve(app.getPath("userData"), "pet", "long-tasks.json"),
     );
@@ -2771,8 +2769,7 @@ async function createWindow(): Promise<BrowserWindow> {
       // turns. The controller serializes beginTurn to prevent a double close,
       // and this set guarantees at-most-once archival per segment regardless.
       const closedSegmentIds = new Set<string>();
-      petSegmentController = new PetSegmentController({
-        store: petWorkMemory,
+      petSegmentController = petWorkMemory.controller({
         petSessionId,
         archiveRange: archivePetRange,
         // The dispatcher calls this after the boundary turn settles, so the
@@ -2784,8 +2781,6 @@ async function createWindow(): Promise<BrowserWindow> {
             .close(closed)
             .catch((error) => dlog("main", "pet.closure.failed", { error: String(error) }));
         },
-        now: Date.now,
-        idleMs: DEFAULT_SEGMENT_IDLE_MS,
       });
       // Startup compensation: a segment whose closure was interrupted by app exit
       // still has no journal entry. Recover those (journal + memory only; the

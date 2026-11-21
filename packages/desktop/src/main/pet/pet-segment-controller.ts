@@ -15,8 +15,9 @@ export interface PetWorkMemoryStoreLike {
   segmentBoundaries(): { boundaryBeforeMessageId: string; brief?: string }[];
   lastInteractionAt(): number;
   append(entry: PetWorkMemoryEntry): Promise<void>;
-  openSegment(segment: PetTopicSegment): Promise<void>;
-  setLastInteractionAt(at: number): Promise<void>;
+  openSegment(segment: PetTopicSegment, consumeManualClear?: boolean): Promise<void>;
+  manualClearPending?(): boolean;
+  setLastInteractionAt(at: number, manualClear?: boolean): Promise<void>;
 }
 
 export interface PetSegmentControllerOptions {
@@ -194,7 +195,7 @@ export class PetSegmentController {
             startedAt: now,
           });
         }
-        await this.options.store.setLastInteractionAt(now);
+        await this.options.store.setLastInteractionAt(now, true);
         this.manualClearPending = true;
       });
     this.beginTurnQueue = run.catch(() => undefined);
@@ -204,7 +205,7 @@ export class PetSegmentController {
   private async runBeginTurn(clientMessageId?: string): Promise<PetSegmentTurnStart | undefined> {
     const now = this.options.now();
     const lastInteractionAt = this.options.store.lastInteractionAt();
-    const manualClear = this.manualClearPending;
+    const manualClear = this.options.store.manualClearPending?.() ?? this.manualClearPending;
     // The very first interaction has no preceding segment to close, so it only
     // establishes the interaction baseline — never a visible boundary. Without
     // this guard `shouldStartNewSegment(0, now, idleMs)` is always true and the
@@ -259,12 +260,15 @@ export class PetSegmentController {
       : undefined;
     const brief = manualClear ? "" : this.buildBrief();
     const briefText = brief.length > 0 ? brief : undefined;
-    await this.options.store.openSegment({
-      id: `seg-${randomUUID()}`,
-      startedAt: now,
-      ...(clientMessageId ? { boundaryBeforeMessageId: clientMessageId } : {}),
-      ...(briefText ? { brief: briefText } : {}),
-    });
+    await this.options.store.openSegment(
+      {
+        id: `seg-${randomUUID()}`,
+        startedAt: now,
+        ...(clientMessageId ? { boundaryBeforeMessageId: clientMessageId } : {}),
+        ...(briefText ? { brief: briefText } : {}),
+      },
+      manualClear,
+    );
     await this.options.store.setLastInteractionAt(now);
     if (manualClear) this.manualClearPending = false;
     if (rollover) this.rolloverBoundaryPending = false;

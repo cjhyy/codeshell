@@ -178,13 +178,15 @@ try {
       reading = true;
       const start = Date.now();
       try {
-        const [rows, journal] = await Promise.all([
+        const [rows, journal, work] = await Promise.all([
           window.codeshell.pet.listMemories(),
           window.codeshell.pet.listJournal(),
+          window.codeshell.pet.getWorkMemory(),
         ]);
         if (
           rows.some((row) => row.id === id && row.text === "Updated synthetic preference") &&
-          Array.isArray(journal)
+          Array.isArray(journal) &&
+          Array.isArray(work.segments)
         )
           window.__mimiRecordReads.push({ start, end: Date.now() });
       } finally {
