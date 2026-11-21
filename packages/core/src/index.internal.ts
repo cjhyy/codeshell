@@ -240,6 +240,9 @@ export {
 } from "./session/background-continuation.js";
 export { backgroundJobRegistry } from "./tool-system/builtin/background-jobs.js";
 export {
+  observeBackgroundWorkChange,
+  isBackgroundWorkChange,
+  type BackgroundWorkChange,
   cancelBackgroundWorkForUI,
   dropBackgroundJobHistoryForSession,
   findActiveBackgroundJobForExternalSession,
@@ -595,9 +598,3 @@ export {
   sanitizeExternalChangedFilesProvenance,
   sanitizeGitBlobRef,
 } from "./session/external-file-provenance.js";
-
-export {
-  observeBackgroundWorkChange,
-  isBackgroundWorkChange,
-  type BackgroundWorkChange,
-} from "./runtime/background-work-lifecycle.js";
