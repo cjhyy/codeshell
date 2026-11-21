@@ -1,3 +1,4 @@
+import { rendererDiskSessionQuery, type ListSessions } from "../../shared/disk-session-query.js";
 import { CONTRACTS } from "@cjhyy/code-shell-core/contracts";
 import {
   DesktopHostErrors,
@@ -47,6 +48,26 @@ const catalog: DesktopHostMethod = {
   },
 };
 
+export function desktopHostMethods(list: ListSessions): ReadonlyMap<string, DesktopHostMethod> {
+  return new Map<string, DesktopHostMethod>([
+    ["links/listLocalProviders", catalog],
+    [
+      "sessions/listDisk",
+      {
+        run(_context, params) {
+          let options: ReturnType<typeof rendererDiskSessionQuery>;
+          try {
+            options = rendererDiskSessionQuery(params);
+          } catch (error) {
+            throw new InvalidParams(error instanceof Error ? error.message : undefined);
+          }
+          return list(options);
+        },
+      },
+    ],
+  ]);
+}
+
 function record(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -68,9 +89,7 @@ export class DesktopHostServer {
 
   constructor(
     private readonly version: string,
-    private readonly methods: ReadonlyMap<string, DesktopHostMethod> = new Map([
-      ["links/listLocalProviders", catalog],
-    ]),
+    private readonly methods: ReadonlyMap<string, DesktopHostMethod>,
   ) {}
 
   bind(identity: DesktopHostIdentity, port: HostPort): void {
@@ -247,7 +266,8 @@ export class DesktopHostServer {
       if (guard && pending.get(id) !== guard) return;
       if (error instanceof HostRevokedError)
         sendError(port, id, DesktopHostErrors.revoked, error.message);
-      else if (error instanceof InvalidParams) sendError(port, id, -32602, "Invalid params");
+      else if (error instanceof InvalidParams)
+        sendError(port, id, -32602, error.message || "Invalid params");
       else sendError(port, id, -32603, "Desktop Host request failed");
     } finally {
       if (pending.get(id) === guard) pending.delete(id);

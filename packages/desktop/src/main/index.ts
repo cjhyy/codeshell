@@ -296,7 +296,6 @@ import {
   cleanupSessionAttachments,
   cleanupStaleQuickChatSessions,
   deleteSession,
-  listDiskSessions,
   markAttachmentsSent,
   stablePromptHash,
   stageFileBytes,
@@ -500,6 +499,7 @@ const appRendererNavigation = new AppRendererNavigation(
   (url) => shell.openExternal(url),
 );
 const desktopHost = createDesktopHost(join(__dirname, "desktop-host.mjs"), appRendererNavigation);
+const { listDiskSessions } = desktopHost;
 const chromeNativeMessagingOrigin = nativeMessagingOriginFromArgv(process.argv);
 if (chromeNativeMessagingOrigin) {
   void runChromeNativeMessagingHost(chromeNativeMessagingOrigin)
@@ -1295,6 +1295,7 @@ const cloudEnvironment = registerCloudEnvironmentIpc({
   assertLocalProject: (id) => projectStore.requireLive(id),
 });
 const mobileOrchestrator: MobileRemoteOrchestrator = new MobileRemoteOrchestrator({
+  listDiskSessions,
   remote: mobileRemote,
   uploads: mobileUploads,
   pendingApprovals: pendingMobileApprovals,
@@ -1696,6 +1697,7 @@ async function createWindow(): Promise<BrowserWindow> {
       captureLinkAccount,
       (sessionId, ownerId) => rendererBrowserSessionAccess.sessionOwnerClaimed(sessionId, ownerId),
       desktopHost.setOwner,
+      desktopHost.sessionsChanged,
     );
     // External Agent Runtimes (Codex / Claude Code). Everything
     // security-relevant is resolved here, in the composition root: this is the

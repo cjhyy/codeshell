@@ -8,6 +8,7 @@ import {
   type MobileDeviceState,
   type OrchestratorCtx,
 } from "./handle-client-event.js";
+import { listDiskSessions } from "@cjhyy/code-shell-server/storage";
 import { handleCcRoomEvent } from "./handle-cc-room-event.js";
 
 test("mobile CLI discovery exposes its total and can load sessions beyond both default limits", async () => {
@@ -92,7 +93,12 @@ test("mobile session pages retain older project sessions and reply only to the r
     for (let index = 0; index < 105; index++) seed(`other-${index}`, unrelated, 20_000 + index);
     for (let index = 0; index < 101; index++)
       seed(`selected-${index}`, project, 10_000 + index, index % 2 ? "codex" : "claude-code");
+    const indexedQueries: Parameters<typeof listDiskSessions>[0][] = [];
     const ctx = {
+      listDiskSessions: (options: Parameters<typeof listDiskSessions>[0]) => {
+        indexedQueries.push(options);
+        return listDiskSessions(options);
+      },
       remote: {
         sendToViewer: (viewer: string, event: unknown) => replies.push({ viewer, event }),
         sendToDevice: () => {
@@ -135,6 +141,10 @@ test("mobile session pages retain older project sessions and reply only to the r
       `${prefix}selected-0`,
     ]);
     expect(replies[1]!.event.nextCursor).toBeNull();
+    expect(indexedQueries).toEqual([
+      { limit: 100, cwds: [project], cursor: undefined },
+      { limit: 100, cwds: [project], cursor: first.event.nextCursor },
+    ]);
   } finally {
     for (const directory of owned) rmSync(directory, { recursive: true, force: true });
     rmSync(workspace, { recursive: true, force: true });

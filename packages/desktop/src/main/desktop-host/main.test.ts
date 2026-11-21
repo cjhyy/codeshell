@@ -258,3 +258,30 @@ test("only a connected, current, committed workbench main frame gets a port", ()
   expect(second.ports).toHaveLength(3);
   expect(guest.ports).toHaveLength(0);
 });
+
+test("Main keeps the authorized catalog query intact and settles every read on exit", async () => {
+  const { supervisor, children } = processFixture();
+  const child = children[0]!;
+  const query = { limit: 100, cwds: ["/phone/current"], cursor: "25" };
+  await expect(supervisor.listDiskSessions(query)).rejects.toThrow("unavailable");
+  child.emit("message", { type: "ready" });
+  const first = supervisor.listDiskSessions(query);
+  const sent = child.messages.at(-1) as { id: string };
+  expect(sent).toEqual({
+    id: expect.any(String),
+    jsonrpc: "2.0",
+    method: "host/listDiskSessions",
+    params: query,
+  });
+  child.emit("message", {
+    jsonrpc: "2.0",
+    id: sent.id,
+    result: { sessions: [], nextCursor: "26" },
+  });
+  expect(await first).toEqual({ sessions: [], nextCursor: "26" });
+  const unfinished = supervisor
+    .listDiskSessions({ limit: 100, includeSubagents: true })
+    .catch((error: Error) => error);
+  child.emit("exit", 1);
+  expect(await unfinished).toBeInstanceOf(Error);
+});

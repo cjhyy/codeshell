@@ -135,3 +135,45 @@ test("a new binding supersedes in-flight replies from the previous port", async 
   expect(await b).toMatchObject({ code: -32603 });
   expect(await a).toEqual([{ id: "current" }]);
 });
+
+test("disk pages use the private port and read IPC only on unavailable transport", async () => {
+  const { client } = clientWithStatus();
+  const host = await attach(client, {
+    ...capabilities,
+    methods: [...capabilities.methods, "sessions/listDisk"],
+  });
+  const options = { limit: 3, parentSessionId: "parent" };
+  const fallbackCalls: unknown[] = [];
+  const fallback = async (opts: unknown) => {
+    fallbackCalls.push(opts);
+    return { sessions: [], nextCursor: "ipc" };
+  };
+  const sent = nextRequest(host);
+  const read = client.listDiskSessions(options, fallback);
+  const request = await sent;
+  expect(request).toMatchObject({ method: "sessions/listDisk", params: options });
+  host.postMessage({
+    jsonrpc: "2.0",
+    id: request.id,
+    result: { sessions: [], nextCursor: "host" },
+  });
+  expect((await read).nextCursor).toBe("host");
+
+  const pending = nextRequest(host);
+  const revoked = client.listDiskSessions(options, fallback).catch((error: Error) => error);
+  const { id } = await pending;
+  host.postMessage({
+    jsonrpc: "2.0",
+    id,
+    error: { code: DesktopHostErrors.revoked, message: "Revoked" },
+  });
+  expect(await revoked).toMatchObject({ code: DesktopHostErrors.revoked });
+  expect(fallbackCalls).toEqual([]);
+
+  const inflight = nextRequest(host);
+  const fallbackRead = client.listDiskSessions(options, fallback);
+  await inflight;
+  client.disconnect("reconnecting");
+  expect((await fallbackRead).nextCursor).toBe("ipc");
+  expect(fallbackCalls).toEqual([options]);
+});

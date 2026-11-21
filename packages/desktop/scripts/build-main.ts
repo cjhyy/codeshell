@@ -10,6 +10,7 @@ export function desktopMainBuildOptions(root = desktopRoot): BuildOptions {
   return {
     entryPoints: {
       index: resolve(root, "src/main/index.ts"),
+      "session-index-worker": resolve(root, "../server/src/session-index-worker.ts"),
       "desktop-host": resolve(root, "src/main/desktop-host/utility.ts"),
       "link-provider-module": resolve(root, "src/main/link-provider-module.ts"),
       "cua-activity-proxy": resolve(root, "src/main/computer-use/cua-activity-proxy.ts"),

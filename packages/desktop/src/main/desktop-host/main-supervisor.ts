@@ -1,5 +1,11 @@
 import type { MessagePortMain, UtilityProcess } from "electron";
-import { isRpcRequest, type DesktopHostControl } from "../../shared/desktop-host-protocol.js";
+import type { ListDiskSessionsResult } from "@cjhyy/code-shell-server/storage";
+import type { ListSessionOptions } from "../../shared/disk-session-query.js";
+import {
+  isRpcRequest,
+  isRpcResponse,
+  type DesktopHostControl,
+} from "../../shared/desktop-host-protocol.js";
 import type { HostStatus } from "./main-workbenches.js";
 
 type HostChild = Pick<UtilityProcess, "postMessage" | "on" | "once" | "kill">;
@@ -21,6 +27,15 @@ export class DesktopHostSupervisor {
   private cancelTimer?: () => void;
   private readonly restartTimes: number[] = [];
   private readonly owners = new Map<string, number>();
+  private nextListId = 0;
+  private readonly reads = new Map<
+    string,
+    {
+      resolve: (page: ListDiskSessionsResult) => void;
+      reject: (error: Error) => void;
+      timeout: NodeJS.Timeout;
+    }
+  >();
   private readonly deleting = new Set<string>();
 
   constructor(
@@ -48,6 +63,7 @@ export class DesktopHostSupervisor {
       if (child !== this.child) return;
       this.clearTimer();
       this.child = undefined;
+      this.rejectReads();
       this.ready = false;
       if (!this.stopped) {
         this.log("exited", { code });
@@ -56,7 +72,23 @@ export class DesktopHostSupervisor {
     });
     child.on("message", (message) => {
       if (child !== this.child || this.stopped || this.retiring) return;
-      if (isRpcRequest(message)) {
+      if (isRpcResponse(message) && typeof message.id === "string") {
+        const read = this.reads.get(message.id);
+        if (!read) return;
+        clearTimeout(read.timeout);
+        this.reads.delete(message.id);
+        const page = message.result as ListDiskSessionsResult | undefined;
+        if (
+          page &&
+          Array.isArray(page.sessions) &&
+          (page.nextCursor === null || typeof page.nextCursor === "string")
+        )
+          read.resolve(page);
+        else
+          read.reject(
+            new Error(message.error?.message ?? "Desktop Host returned an invalid session page"),
+          );
+      } else if (isRpcRequest(message)) {
         const response =
           message.method !== "app/getVersion"
             ? { error: { code: -32601, message: "Method not found" } }
@@ -81,6 +113,28 @@ export class DesktopHostSupervisor {
       this.log("startup_timeout", {});
       this.retire();
     }, 15_000);
+  }
+
+  listDiskSessions(options: ListSessionOptions): Promise<ListDiskSessionsResult> {
+    if (!this.ready || this.stopped)
+      return Promise.reject(new Error("Desktop Host is unavailable"));
+    const id = `main:session-list:${++this.nextListId}`;
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        this.reads.delete(id);
+        reject(new Error("Desktop Host session list timed out"));
+      }, 15_000).unref();
+      this.reads.set(id, { resolve, reject, timeout });
+      this.send({ jsonrpc: "2.0", id, method: "host/listDiskSessions", params: options });
+    });
+  }
+
+  private rejectReads(): void {
+    for (const read of this.reads.values()) {
+      clearTimeout(read.timeout);
+      read.reject(new Error("Desktop Host is unavailable"));
+    }
+    this.reads.clear();
   }
 
   setOwner(sessionId: string, webContentsId: number | null): void {
@@ -118,6 +172,7 @@ export class DesktopHostSupervisor {
     this.clearTimer();
     this.ready = false;
     this.retiring = true;
+    this.rejectReads();
     this.setStatus("reconnecting");
     const child = this.child;
     if (child && !child.kill()) child.once("spawn", () => child.kill());
@@ -148,18 +203,26 @@ export class DesktopHostSupervisor {
 
   dispose(): Promise<void> {
     if (this.disposePromise) return this.disposePromise;
+    const canClose = this.ready && this.child && this.send({ type: "shutdown" });
+    this.rejectReads();
     this.stopped = true;
     this.ready = false;
     this.clearTimer();
     const child = this.child;
     this.disposePromise = new Promise<void>((resolve, reject) => {
       if (!child) return resolve();
+      const kill = () => {
+        if (!child.kill()) child.once("spawn", () => child.kill());
+      };
+      let cancelGrace: (() => void) | undefined;
       const cancel = this.schedule(() => reject(new Error("Desktop Host did not exit")), 5_000);
       child.once("exit", () => {
+        cancelGrace?.();
         cancel();
         resolve();
       });
-      if (!child.kill()) child.once("spawn", () => child.kill());
+      if (canClose) cancelGrace = this.schedule(kill, 2_000);
+      else kill();
     });
     return this.disposePromise;
   }

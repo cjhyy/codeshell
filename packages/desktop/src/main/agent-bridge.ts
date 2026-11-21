@@ -62,6 +62,7 @@ import {
 } from "./computer-use/service.js";
 import { composeCapabilityModulesEnv, readUserFeatureFlags } from "./capability-modules-env.js";
 import { ChildBrowserWorkerLifetime } from "./browser-runtime/child-browser-lifetime.js";
+import { consumeSessionIndexNotification } from "./desktop-host/session-index-changes.js";
 import { parseWorkerLine, type ParsedWorkerLine } from "./worker-line.js";
 import { WebConfigurationGate } from "./web-configuration-gate.js";
 import { SessionSnapshotStore, type Snapshot, type SnapshotEntry } from "./SessionSnapshotStore.js";
@@ -443,6 +444,7 @@ export class AgentBridge implements PetStateBridge {
       webContentsId: number,
     ) => void,
     onSessionPanelOwnerChanged?: (sessionId: string, webContentsId: number | null) => void,
+    private readonly onSessionsChanged?: (ids: string[]) => void,
   ) {
     this.panelHostWindowRoutes = new PanelHostWindowRoutes(onSessionPanelOwnerChanged);
     dlog("bridge", "ctor", { agentEntry, execPath: process.execPath });
@@ -458,6 +460,7 @@ export class AgentBridge implements PetStateBridge {
         }),
         ELECTRON_RUN_AS_NODE: "1",
         CODESHELL_AGENT_STDIO: "1",
+        CODE_SHELL_NOTIFY_SESSION_INDEX: "1",
         CODE_SHELL_CREDENTIAL_ACCESS: "host",
         CODE_SHELL_MODEL_REQUEST_SIGNING: "host",
         CODE_SHELL_OPERATION_BATCH_ACCESS: "host",
@@ -578,6 +581,7 @@ export class AgentBridge implements PetStateBridge {
    */
   private handleWorkerLine(line: string): void {
     const parsedLine = parseWorkerLine(line);
+    if (consumeSessionIndexNotification(parsedLine.message, this.onSessionsChanged)) return;
     this.webConfiguration.observe(line, parsedLine);
     this.updateTentativeRunLifecycle(line, parsedLine);
     if (this.workerHost.intercept(line, parsedLine)) return;

@@ -76,6 +76,7 @@ export interface MobileDeviceState {
 
 /** Narrow facade over the orchestrator state used by the three domain handlers. */
 export interface OrchestratorCtx {
+  listDiskSessions?: typeof listDiskSessions;
   outputRecovery?: MobileOutputRecovery;
   externalCommands?: MobileExternalRuntimeCommands;
   nativeSubmissions?: MobileNativeSubmissions;
@@ -416,7 +417,7 @@ export async function handleClientEvent(
     runContext.sessionId
   ) {
     const selection = { ...st };
-    implicitSessionId = await listDiskSessions({
+    implicitSessionId = await (ctx.listDiskSessions ?? listDiskSessions)({
       limit: 1,
       sessionId: runContext.sessionId,
     })
@@ -939,7 +940,7 @@ export async function handleClientEvent(
   }
   if (event.type === "session.list") {
     // Filter before paging so busy projects cannot hide another project's history.
-    const { sessions, nextCursor } = await listDiskSessions({
+    const { sessions, nextCursor } = await (ctx.listDiskSessions ?? listDiskSessions)({
       limit: 100,
       cursor: event.cursor,
       cwds: event.cwds,

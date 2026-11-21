@@ -1,3 +1,4 @@
+import { desktopHostRoutes, type DesktopHostClient } from "./desktop-host-client";
 import type { IpcRenderer, IpcRendererEvent } from "electron";
 import type {
   OutputHistoryRecoveryAcceptance,
@@ -25,7 +26,9 @@ export interface DiskSessionListOptions {
 /** Original session history stays behind the same validated Main IPC routes. */
 export function createSessionTranscriptApi(
   ipc: Pick<IpcRenderer, "invoke" | "on" | "removeListener">,
+  host?: DesktopHostClient,
 ) {
+  const readIpc = (opts: DiskSessionListOptions = {}) => ipc.invoke("sessions:listDisk", opts);
   return {
     onSessionOutputHistoryReset(listener: (sessionId: string) => void) {
       const handler = (_event: IpcRendererEvent, payload: { sessionId?: unknown }) => {
@@ -45,8 +48,10 @@ export function createSessionTranscriptApi(
     ) => ipc.invoke("sessions:outputJournal", sessionId, options),
     getSessionTranscriptPage: (sessionId: string, options?: { maxBytes?: number }) =>
       ipc.invoke("sessions:transcriptPage", sessionId, options),
-    listDiskSessions: (opts?: DiskSessionListOptions) =>
-      ipc.invoke("sessions:listDisk", opts ?? {}),
+    listDiskSessions:
+      host && desktopHostRoutes.diskSessions === "host"
+        ? (opts: DiskSessionListOptions = {}) => host.listDiskSessions(opts, readIpc)
+        : readIpc,
     /** Long-disconnect fallback after the live snapshot has evicted older events. */
     getSessionRawEvents: (sessionId: string, sinceId?: string) =>
       ipc.invoke("sessions:rawEvents", sessionId, sinceId),

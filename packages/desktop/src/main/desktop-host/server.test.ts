@@ -6,7 +6,7 @@ import {
   type RpcNotification,
   type RpcResponse,
 } from "../../shared/desktop-host-protocol.js";
-import { DesktopHostServer, type DesktopHostMethod } from "./server.js";
+import { DesktopHostServer, desktopHostMethods, type DesktopHostMethod } from "./server.js";
 
 class TestPort extends EventEmitter {
   messages: Array<RpcResponse | RpcNotification> = [];
@@ -187,7 +187,10 @@ describe("Desktop Host grants", () => {
 
   test("the hosted read returns the existing catalog and rejects unrelated arguments", async () => {
     const { listDesktopLinkProviders } = await import("../link-provider-catalog.js");
-    const server = new DesktopHostServer("0.12-test");
+    const server = new DesktopHostServer(
+      "0.12-test",
+      desktopHostMethods(async () => ({ sessions: [], nextCursor: null })),
+    );
     const port = connect(server, frame(1));
     port.request(1, "links/listLocalProviders", { sessionId });
     const reply = new Promise<void>((resolve) => port.once("result", resolve));
@@ -197,8 +200,41 @@ describe("Desktop Host grants", () => {
     expect(port.responses(2)[0]?.result).toEqual(await listDesktopLinkProviders());
   });
 
+  test("the workbench list uses the same bounded visible rows as the old IPC", async () => {
+    const queries: unknown[] = [];
+    const server = new DesktopHostServer(
+      "test",
+      desktopHostMethods(async (options) => {
+        queries.push(options);
+        return { sessions: [], nextCursor: null };
+      }),
+    );
+    const port = connect(server, frame(1));
+    port.request(1, "sessions/listDisk", {
+      limit: 500,
+      sessionId: "open",
+      cursor: "30",
+      cwds: ["another"],
+      baseDir: "other-root",
+      includeArchived: true,
+      includeSubagents: true,
+    });
+    port.request(2, "sessions/listDisk", { parentSessionId: "." });
+    port.request(3, "host/listDiskSessions", { limit: 200 });
+    await tick();
+    expect(queries).toEqual([
+      { limit: 200, cursor: "30", parentSessionId: undefined, sessionId: "open" },
+    ]);
+    expect(port.responses(1)[0]?.result).toEqual({ sessions: [], nextCursor: null });
+    expect(port.responses(2)[0]?.error?.code).toBe(-32602);
+    expect(port.responses(3)[0]?.error?.code).toBe(-32601);
+  });
+
   test("initialization negotiates the protocol before discovery and rejects unexpected port transfer", () => {
-    const server = new DesktopHostServer("0.12-test");
+    const server = new DesktopHostServer(
+      "0.12-test",
+      desktopHostMethods(async () => ({ sessions: [], nextCursor: null })),
+    );
     const port = new TestPort();
     server.bind(frame(1), port);
     expect(port.started).toBe(true);
@@ -210,7 +246,7 @@ describe("Desktop Host grants", () => {
     expect(port.responses(3)[0]?.result).toMatchObject({
       protocolVersion: "2.0",
       host: { kind: "electron", version: "0.12-test" },
-      methods: ["links/listLocalProviders"],
+      methods: ["links/listLocalProviders", "sessions/listDisk"],
       contracts: expect.any(Object),
     });
     const extraPort = new TestPort();

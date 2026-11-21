@@ -1,5 +1,6 @@
 import { DesktopHostErrors, isRpcResponse, type RpcRequest } from "../shared/desktop-host-protocol";
-import type { DesktopHostStatus, LocalLinkProviderView } from "./types";
+import type { DiskSessionListOptions } from "./session-transcript-api";
+import type { CodeshellApi, DesktopHostStatus, LocalLinkProviderView } from "./types";
 
 type OfflineStatus = Extract<DesktopHostStatus, "reconnecting" | "unavailable">;
 type Listener = (status: DesktopHostStatus) => void;
@@ -8,8 +9,9 @@ const providerMethod = "links/listLocalProviders";
 const replyDeadlineMs = 15_000;
 
 // Each migrated domain keeps its original IPC handler available for rollback.
-export const desktopHostRoutes: Record<"localLinkProviders", "host" | "ipc"> = {
+export const desktopHostRoutes: Record<"localLinkProviders" | "diskSessions", "host" | "ipc"> = {
   localLinkProviders: "host",
+  diskSessions: "host",
 };
 
 type PendingReply = {
@@ -43,6 +45,7 @@ function supportsProviderCatalog(result: unknown): boolean {
 // The instance and its MessagePort live exclusively in the isolated preload world.
 export class DesktopHostClient {
   private port?: MessagePort;
+  private supportsDiskSessions = false;
   private status: DesktopHostStatus = "connecting";
   private readonly listeners = new Set<Listener>();
   private readonly pending = new Map<number, PendingReply>();
@@ -90,6 +93,9 @@ export class DesktopHostClient {
         this.disconnect("unavailable");
         return;
       }
+      this.supportsDiskSessions = (result as { methods: string[] }).methods.includes(
+        "sessions/listDisk",
+      );
       this.publish("ready");
     } catch {
       if (this.port === port) this.disconnect("unavailable");
@@ -103,6 +109,7 @@ export class DesktopHostClient {
   disconnect(status: OfflineStatus, code: number = DesktopHostErrors.reconnecting): void {
     const port = this.port;
     this.port = undefined;
+    this.supportsDiskSessions = false;
     if (port) {
       port.onmessage = null;
       port.removeEventListener("close", this.onPortLost);
@@ -146,6 +153,29 @@ export class DesktopHostClient {
     return (await this.request(port, providerMethod)) as LocalLinkProviderView[];
   }
 
+  async listDiskSessions(
+    options: DiskSessionListOptions,
+    readIpc: CodeshellApi["listDiskSessions"],
+  ) {
+    if (this.status !== "ready" || !this.port || !this.supportsDiskSessions)
+      return readIpc(options);
+    try {
+      return (await this.request(this.port, "sessions/listDisk", { ...options })) as Awaited<
+        ReturnType<typeof readIpc>
+      >;
+    } catch (error) {
+      // This call is read-only; consulting the old IPC view is safe on a transport outage.
+      // A revoked window or invalid request must retain its original outcome.
+      if (
+        error instanceof Error &&
+        "code" in error &&
+        (error.code === DesktopHostErrors.reconnecting || error.code === -32601)
+      )
+        return readIpc(options);
+      throw error;
+    }
+  }
+
   private request(
     port: MessagePort,
     method: string,
@@ -156,7 +186,9 @@ export class DesktopHostClient {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         this.pending.delete(id);
-        reject(new Error(`Desktop Host request timed out: ${method}`));
+        reject(
+          rpcError(DesktopHostErrors.reconnecting, `Desktop Host request timed out: ${method}`),
+        );
       }, this.timeoutMs);
       this.pending.set(id, { resolve, reject, timeout });
       try {

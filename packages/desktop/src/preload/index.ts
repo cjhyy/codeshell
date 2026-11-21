@@ -968,7 +968,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("usage:summary", query),
   listRuns: (options?: { includeSessions?: boolean }) => ipcRenderer.invoke("runs:list", options),
   getRun: (runId: string) => ipcRenderer.invoke("runs:get", runId),
-  ...createSessionTranscriptApi(ipcRenderer),
+  ...createSessionTranscriptApi(ipcRenderer, desktopHost),
   modelTraces: createModelTraceApi(ipcRenderer),
   browserPanelAccess: createBrowserPanelAccessApi(ipcRenderer),
   /**

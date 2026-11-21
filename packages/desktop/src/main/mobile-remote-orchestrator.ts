@@ -93,6 +93,7 @@ export { injectAndAwaitResult } from "./mobile-remote/handle-client-event.js";
 export type { AuthenticatedMobileClientEvent } from "./mobile-remote/handle-client-event.js";
 
 export interface MobileRemoteOrchestratorDeps {
+  listDiskSessions?: OrchestratorCtx["listDiskSessions"];
   remote: RemoteHostManager;
   uploads: MobileUploadService;
   pendingApprovals: PendingMobileApprovals;
@@ -554,6 +555,7 @@ export class MobileRemoteOrchestrator {
 
   private ctx(): OrchestratorCtx {
     return {
+      listDiskSessions: this.deps.listDiskSessions,
       remote: this.deps.remote,
       outputRecovery: this.outputRecovery,
       externalCommands: this.externalCommands,

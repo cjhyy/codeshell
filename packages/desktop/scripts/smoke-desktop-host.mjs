@@ -1,6 +1,6 @@
 /* global window */
 import assert from "node:assert/strict";
-import { writeFile } from "node:fs/promises";
+import { mkdir, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { prepareConfinedElectronFixture } from "./confined-electron-fixture.mjs";
@@ -32,6 +32,18 @@ const readCatalog = (page) =>
 
 try {
   await seedOfflinePluginBootstrap(isolated.codeShellHome);
+  const directory = join(isolated.codeShellHome, "sessions", "index-visible");
+  await mkdir(directory, { recursive: true });
+  await writeFile(
+    join(directory, "state.json"),
+    JSON.stringify({
+      sessionId: "index-visible",
+      origin: "desktop",
+      parentSessionId: null,
+      title: "Host indexed row",
+      cwd: isolated.home,
+    }),
+  );
   const fixture = await prepareConfinedElectronFixture({
     appDir,
     isolated,
@@ -81,7 +93,8 @@ utilityProcess.fork = function (...args) {
         try {
           const begin = Date.now();
           const ids = (await window.codeshell.links.listLocalProviders()).map(({ id }) => id);
-          resolve({ begin, end: Date.now(), ids });
+          const page = await window.codeshell.listDiskSessions({limit:1,sessionId:"index-visible"});
+          resolve({ begin, end: Date.now(), ids, sessionIds:page.sessions.map(row=>row.id) });
         } catch (error) { reject(error); }
       }, 250)); void 0`);
     const begin = Date.now();
@@ -91,6 +104,25 @@ utilityProcess.fork = function (...args) {
   });
   await secondHandle.dispose();
   assert.deepEqual(measured.read.ids, catalog);
+  assert.deepEqual(measured.read.sessionIds, ["index-visible"]);
+  // A correct metadata page could also come from JSON fallback. Verify that this
+  // Electron utility's actual worker committed the row in its WAL database.
+  const storage = join(isolated.codeShellHome, ".codeshell-state");
+  const roots = await readdir(storage);
+  assert.equal(roots.length, 1);
+  const { DatabaseSync } = await import("node:sqlite");
+  const database = new DatabaseSync(join(storage, roots[0], "current", "state.sqlite"), {
+    readOnly: true,
+  });
+  try {
+    assert.equal(database.prepare("PRAGMA journal_mode").get().journal_mode, "wal");
+    assert.equal(
+      database.prepare("SELECT title FROM sessions WHERE id=?").get("index-visible")?.title,
+      "Host indexed row",
+    );
+  } finally {
+    database.close();
+  }
   assert.ok(
     measured.begin <= measured.read.begin && measured.read.end < measured.end,
     `Catalog read must finish during Main stall: ${JSON.stringify(measured)}`,

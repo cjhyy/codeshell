@@ -1,3 +1,4 @@
+import { isDesktopSessionId } from "./disk-session-query.js";
 import type { RpcMessage } from "@cjhyy/code-shell-core";
 
 // The dedicated desktop port uses Core's JSON-RPC envelopes. The parent pipe
@@ -23,6 +24,8 @@ export interface DesktopHostIdentity {
 }
 
 export type DesktopHostControl =
+  | { type: "shutdown" }
+  | { type: "session-index-changed"; ids: string[] }
   | { type: "bind" | "revoke"; identity: DesktopHostIdentity }
   | { type: "owner"; sessionId: string; webContentsId: number | null }
   | { type: "deleting"; sessionId: string; deleting: boolean };
@@ -80,6 +83,15 @@ export function isDesktopHostIdentity(value: unknown): value is DesktopHostIdent
 
 export function isDesktopHostControl(value: unknown): value is DesktopHostControl {
   if (!record(value)) return false;
+  if (value.type === "shutdown") return hasOnly(value, ["type"]);
+  if (value.type === "session-index-changed") {
+    return (
+      hasOnly(value, ["type", "ids"]) &&
+      Array.isArray(value.ids) &&
+      value.ids.length <= 256 &&
+      value.ids.every(isDesktopSessionId)
+    );
+  }
   if (value.type === "bind" || value.type === "revoke") {
     return hasOnly(value, ["type", "identity"]) && isDesktopHostIdentity(value.identity);
   }
