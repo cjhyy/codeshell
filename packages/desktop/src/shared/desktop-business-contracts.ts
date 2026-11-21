@@ -4,6 +4,14 @@ import type { ConfigurationReadContracts } from "./configuration-read-contracts.
 /** The workbench port advertises each supported read separately. Add a fixed
  * business method here and register its parser/implementation in the Host. */
 export interface DesktopBusinessReads extends ConfigurationReadContracts, WorkspaceReadContracts {
+  "mimi/memories": {
+    params: Record<string, never>;
+    result: import("../main/pet/pet-memory-store.js").PetMemoryEntry[];
+  };
+  "mimi/journal": {
+    params: Record<string, never>;
+    result: import("../main/pet/pet-journal-store.js").PetJournalEntry[];
+  };
   "catalog/load": {
     params: Record<string, never>;
     result: import("./session-catalog.js").SessionCatalogSnapshot;

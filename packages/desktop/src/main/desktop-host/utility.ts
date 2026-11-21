@@ -1,5 +1,6 @@
 import { bindRemoteTerminals } from "../../host/composition/remote-terminals.js";
 import { hostedTerminals } from "../../host/composition/terminals.js";
+import { mimiRecordsOperations, readMimiList } from "../../host/composition/mimi-records.js";
 import { HostScheduler } from "../../host/automation/host-scheduler.js";
 import { installDefaultLinkProviders } from "@cjhyy/code-shell-server/links";
 import { workspaceReads } from "./workspace-reads.js";
@@ -99,6 +100,9 @@ const scheduler = new HostScheduler(schedulerPorts.port1, automation);
 // Link-backed source definitions are validated against this process-local registry.
 installDefaultLinkProviders();
 const business = new HostBusinessCalls({
+  ...mimiRecordsOperations(storage, (domain) =>
+    parent.postMessage({ type: "mimi-records-changed", domain }),
+  ),
   "automation/command": (cmd, grant) => scheduler.command(cmd, grant.permit),
   ...externalRuntimeCatalogOperations(),
   ...catalogFiles,
@@ -118,7 +122,10 @@ const business = new HostBusinessCalls({
 const index = createSessionIndex(sessionsRoot(), { storage });
 const catalog = new DesktopSessionListVisibility(index);
 let server: DesktopHostServer | undefined;
-const terminals = hostedTerminals(() => server!, options => catalog.list(options));
+const terminals = hostedTerminals(
+  () => server!,
+  (options) => catalog.list(options),
+);
 const approvals = new HostApprovalState((id, owner) => server?.allows(id, owner) ?? false);
 let stopping = false;
 let closeRemoteTerminals: (() => void) | undefined;
@@ -145,7 +152,12 @@ parent.on("message", ({ data, ports }) => {
     for (const port of ports) port.close();
     return;
   }
-  if (isDesktopHostControl(data) && data.type === "remote-terminal-port" && server && ports.length === 1) {
+  if (
+    isDesktopHostControl(data) &&
+    data.type === "remote-terminal-port" &&
+    server &&
+    ports.length === 1
+  ) {
     closeRemoteTerminals?.();
     closeRemoteTerminals = bindRemoteTerminals(ports[0]);
     return;
@@ -211,6 +223,12 @@ parent.on("message", ({ data, ports }) => {
       new Map([
         ...desktopHostMethods((options) => catalog.list(options)),
         ...taskHostReads(storage),
+        businessRead("mimi/memories", noBusinessArguments, () =>
+          readMimiList(storage, "memoryList"),
+        ),
+        businessRead("mimi/journal", noBusinessArguments, () =>
+          readMimiList(storage, "journalList"),
+        ),
         ...terminals.methods,
         ...configurationReads,
         ...scopedConfigurationReads((options) => catalog.list(options)),

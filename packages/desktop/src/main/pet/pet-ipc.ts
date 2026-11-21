@@ -1,3 +1,4 @@
+import { dlog } from "../desktop-logger.js";
 import type {
   DesktopPetProjectionEvent,
   DesktopPetProjectionSnapshot,
@@ -134,9 +135,9 @@ export interface PetIpcLongTasks {
 /** Session-like ergonomics for Mimi's durable memory: list, add, edit, remove. */
 export interface PetIpcMemories {
   list(): Promise<PetMemoryEntry[]>;
-  remember(text: string): Promise<PetMemoryEntry>;
-  update(id: string, text: string): Promise<PetMemoryEntry>;
-  forget(id: string): Promise<PetMemoryEntry>;
+  remember(text: string, signal?: AbortSignal): Promise<PetMemoryEntry>;
+  update(id: string, text: string, signal?: AbortSignal): Promise<PetMemoryEntry>;
+  forget(id: string, signal?: AbortSignal): Promise<PetMemoryEntry>;
   subscribe(listener: () => void): () => void;
 }
 
@@ -394,6 +395,8 @@ export function registerPetIpc(options: {
   workMemory?: PetIpcWorkMemory;
   longTasks?: PetIpcLongTasks;
   memories?: PetIpcMemories;
+  recordAuthority?: (event: unknown) => AbortSignal;
+  recordWindows?: () => readonly PetIpcWindowLike[];
   latestResult?: PetIpcLatestResult;
   summaries?: PetIpcSummaries;
   journal?: PetIpcJournal;
@@ -583,6 +586,7 @@ export function registerPetIpc(options: {
   if (options.memories) {
     options.ipcMain.handle(PET_MEMORY_LIST_CHANNEL, (_event, ...args) => {
       if (args.length !== 0) throw new Error("Pet memory list does not accept arguments");
+      options.recordAuthority?.(_event);
       return afterReady(options.ready, () => options.memories!.list());
     });
     options.ipcMain.handle(PET_MEMORY_ADD_CHANNEL, (_event, ...args) => {
@@ -590,7 +594,8 @@ export function registerPetIpc(options: {
         throw new Error("invalid Pet memory text");
       }
       const text = args[0];
-      return afterReady(options.ready, () => options.memories!.remember(text));
+      const signal = options.recordAuthority?.(_event);
+      return afterReady(options.ready, () => options.memories!.remember(text, signal));
     });
     options.ipcMain.handle(PET_MEMORY_UPDATE_CHANNEL, (_event, ...args) => {
       const payload = args[0] as { id?: unknown; text?: unknown } | undefined;
@@ -604,14 +609,16 @@ export function registerPetIpc(options: {
         throw new Error("invalid Pet memory update");
       }
       const { id, text } = payload as { id: string; text: string };
-      return afterReady(options.ready, () => options.memories!.update(id, text));
+      const signal = options.recordAuthority?.(_event);
+      return afterReady(options.ready, () => options.memories!.update(id, text, signal));
     });
     options.ipcMain.handle(PET_MEMORY_REMOVE_CHANNEL, (_event, ...args) => {
       if (args.length !== 1 || typeof args[0] !== "string") {
         throw new Error("invalid Pet memory id");
       }
       const id = args[0];
-      return afterReady(options.ready, () => options.memories!.forget(id));
+      const signal = options.recordAuthority?.(_event);
+      return afterReady(options.ready, () => options.memories!.forget(id, signal));
     });
   }
   if (options.latestResult) {
@@ -643,6 +650,7 @@ export function registerPetIpc(options: {
   if (options.journal) {
     options.ipcMain.handle(PET_JOURNAL_LIST_CHANNEL, (_event, ...args) => {
       if (args.length !== 0) throw new Error("pet:journal-get does not accept arguments");
+      options.recordAuthority?.(_event);
       return afterReady(options.ready, () => options.journal!.list());
     });
     options.ipcMain.handle(PET_SEGMENT_TRANSCRIPT_CHANNEL, (_event, ...args) => {
@@ -697,11 +705,13 @@ export function registerPetIpc(options: {
       })
     : undefined;
   const unsubscribeMemories = options.memories?.subscribe(() => {
-    void Promise.resolve(options.memories!.list()).then((entries) => {
-      for (const window of options.windows()) {
-        if (!window.isDestroyed()) window.webContents.send(PET_MEMORY_EVENT_CHANNEL, entries);
-      }
-    });
+    void Promise.resolve(options.memories!.list())
+      .then((entries) => {
+        for (const window of (options.recordWindows ?? options.windows)()) {
+          if (!window.isDestroyed()) window.webContents.send(PET_MEMORY_EVENT_CHANNEL, entries);
+        }
+      })
+      .catch((err) => dlog("main", "pet.memories.refresh.failed", { error: String(err) }));
   });
   const unsubscribeFollowUps = options.summaries?.subscribe?.(() => {
     for (const window of options.windows()) {
@@ -709,11 +719,13 @@ export function registerPetIpc(options: {
     }
   });
   const unsubscribeJournal = options.journal?.subscribe(() => {
-    void Promise.resolve(options.journal!.list()).then((entries) => {
-      for (const window of options.windows()) {
-        if (!window.isDestroyed()) window.webContents.send(PET_JOURNAL_EVENT_CHANNEL, entries);
-      }
-    });
+    void Promise.resolve(options.journal!.list())
+      .then((entries) => {
+        for (const window of (options.recordWindows ?? options.windows)()) {
+          if (!window.isDestroyed()) window.webContents.send(PET_JOURNAL_EVENT_CHANNEL, entries);
+        }
+      })
+      .catch((err) => dlog("main", "pet.journal.refresh.failed", { error: String(err) }));
   });
   const unsubscribe = options.aggregator.subscribe((event) => {
     for (const window of options.windows()) {

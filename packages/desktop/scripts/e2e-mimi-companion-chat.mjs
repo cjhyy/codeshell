@@ -155,6 +155,65 @@ try {
     )
   )
     await trust.click();
+  const added = await main.evaluate(() =>
+    window.codeshell.pet.addMemory("Synthetic Mimi project preference"),
+  );
+  await main.evaluate(
+    (id) => window.codeshell.pet.updateMemory(id, "Updated synthetic preference"),
+    added.id,
+  );
+  const stored = JSON.parse(
+    await readFile(join(isolated.userDataDir, "pet", "memories.json"), "utf8"),
+  );
+  assert(
+    stored.entries.some(
+      (row) => row.id === added.id && row.text === "Updated synthetic preference",
+    ),
+  );
+  await main.evaluate((id) => {
+    window.__mimiRecordReads = [];
+    let reading = false;
+    window.__mimiRecordTimer = setInterval(async () => {
+      if (reading) return;
+      reading = true;
+      const start = Date.now();
+      try {
+        const [rows, journal] = await Promise.all([
+          window.codeshell.pet.listMemories(),
+          window.codeshell.pet.listJournal(),
+        ]);
+        if (
+          rows.some((row) => row.id === id && row.text === "Updated synthetic preference") &&
+          Array.isArray(journal)
+        )
+          window.__mimiRecordReads.push({ start, end: Date.now() });
+      } finally {
+        reading = false;
+      }
+    }, 90);
+  }, added.id);
+  const hold = await app.evaluate(() => {
+    const from = Date.now();
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1800);
+    return { from, to: Date.now() };
+  });
+  const reads = await main.evaluate(() => {
+    clearInterval(window.__mimiRecordTimer);
+    return window.__mimiRecordReads;
+  });
+  assert(
+    reads.some((r) => r.start > hold.from && r.end < hold.to),
+    "Mimi memory and journal must resolve during the Main hold",
+  );
+  await main.evaluate((id) => window.codeshell.pet.removeMemory(id), added.id);
+  assert(
+    !(await main.evaluate(() => window.codeshell.pet.listMemories())).some(
+      (row) => row.id === added.id,
+    ),
+  );
+  console.log(
+    "PASS: Mimi editable memory persists, and workbench memory and journal reads complete during Main stall",
+  );
   receipt.guard = await fixture.assertWorker(app, { requireWorker: false });
   // A worker's stdin remains corked until this fixture verifies its bootstrap.
   // Keep doing that for replacement workers during the optional manual session.

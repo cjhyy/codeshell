@@ -181,8 +181,11 @@ export interface PetSegmentClosureService {
 export function createPetSegmentClosureService(deps: {
   petSessionId: string;
   sessionsRootDir: string;
-  journal: PetJournalStore;
-  memory: PetMemoryStore;
+  journal: Pick<PetJournalStore, "record"> & {
+    load?(): Promise<void>;
+    recordedSegmentIds(): Set<string> | Promise<Set<string>>;
+  };
+  memory: Pick<PetMemoryStore, "remember">;
   /** Whether auto-extraction is enabled; when false, journal + memory are skipped. */
   autoExtractEnabled: () => boolean;
   cwd?: string;
@@ -263,8 +266,8 @@ export function createPetSegmentClosureService(deps: {
       // journal already recorded; the last segment stays open until its own
       // boundary closes it.
       if (segments.length <= 1) return;
-      await deps.journal.load().catch(() => undefined);
-      const recorded = deps.journal.recordedSegmentIds();
+      await deps.journal.load?.().catch(() => undefined);
+      const recorded = await deps.journal.recordedSegmentIds();
       const settled = segments.slice(0, -1);
       for (let index = 0; index < settled.length; index += 1) {
         const segment = settled[index]!;

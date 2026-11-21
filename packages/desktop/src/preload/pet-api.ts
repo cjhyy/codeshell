@@ -1,3 +1,4 @@
+import type { DesktopHostClient } from "./desktop-host-client.js";
 import type {
   PetLongTask,
   PetLongTaskControlAction,
@@ -458,7 +459,10 @@ export interface PetIpcRenderer {
   removeListener(channel: string, listener: (event: unknown, payload: unknown) => void): unknown;
 }
 
-export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
+export function createPetApi(
+  ipcRenderer: PetIpcRenderer,
+  host?: Pick<DesktopHostClient, "readBusiness">,
+): PetApi {
   // One rule-mutation channel carries the every-Session patch and listed-rule actions.
   const updateNoticeRule = (payload: PetNoticeSystemRulePatch | PetNoticeRuleUpdate) =>
     ipcRenderer.invoke("pet:notices:update-rule", payload);
@@ -519,7 +523,10 @@ export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
       ipcRenderer.on("pet:long-tasks-changed", handler);
       return () => ipcRenderer.removeListener("pet:long-tasks-changed", handler);
     },
-    listMemories: () => ipcRenderer.invoke("pet:memories-get") as Promise<PetMemoryEntry[]>,
+    listMemories: () => {
+      const fallback = () => ipcRenderer.invoke("pet:memories-get") as Promise<PetMemoryEntry[]>;
+      return host ? host.readBusiness("mimi/memories", {}, fallback) : fallback();
+    },
     addMemory: (text) => ipcRenderer.invoke("pet:memory-add", text) as Promise<PetMemoryEntry>,
     updateMemory: (id, text) =>
       ipcRenderer.invoke("pet:memory-update", { id, text }) as Promise<PetMemoryEntry>,
@@ -542,7 +549,10 @@ export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
       ipcRenderer.on("pet:follow-ups-changed", handler);
       return () => ipcRenderer.removeListener("pet:follow-ups-changed", handler);
     },
-    listJournal: () => ipcRenderer.invoke("pet:journal-get") as Promise<PetJournalEntry[]>,
+    listJournal: () => {
+      const fallback = () => ipcRenderer.invoke("pet:journal-get") as Promise<PetJournalEntry[]>;
+      return host ? host.readBusiness("mimi/journal", {}, fallback) : fallback();
+    },
     onJournalChanged: (listener) => {
       const handler = (_event: unknown, payload: unknown): void =>
         listener(payload as PetJournalEntry[]);

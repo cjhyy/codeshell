@@ -1,0 +1,65 @@
+import type { CallShellBusiness } from "../../shared/shell-business-contracts.js";
+import type { MimiRecordCall, MimiRecordDomain, MimiRecords } from "../../shared/mimi-records.js";
+import type { PetMemoryStore } from "../pet/pet-memory-store.js";
+import type { PetJournalRecord } from "../pet/pet-journal-store.js";
+import type { PetHostActionContext, PetWorldContextInput } from "../pet/pet-dispatch-service.js";
+import type { MobileRemoteGatewayStatus } from "../im-gateway-control-server.js";
+import { petRemoteMemoryContext } from "../pet/pet-memory-host.js";
+
+export function nativeMimiRecords(
+  business: CallShellBusiness,
+  listeners: Set<(domain: MimiRecordDomain) => void>,
+) {
+  const subscribe = (domain: MimiRecordDomain, callback: () => void) => {
+    const listener = (changed: MimiRecordDomain) => {
+      if (changed === domain) callback();
+    };
+    listeners.add(listener);
+    return () => {
+      listeners.delete(listener);
+    };
+  };
+  const call = <K extends keyof MimiRecords>(
+    action: K,
+    args: Parameters<MimiRecords[K]>,
+    signal?: AbortSignal,
+  ) =>
+    business("mimi/records", { action, args } as MimiRecordCall, signal) as Promise<
+      ReturnType<MimiRecords[K]>
+    >;
+  return {
+    interactive: {
+      list: () => call("memoryList", []),
+      remember: (text: string, signal?: AbortSignal) => call("remember", [text, "user"], signal),
+      update: (id: string, text: string, signal?: AbortSignal) =>
+        call("update", [id, text], signal),
+      forget: (id: string, signal?: AbortSignal) => call("forget", [id], signal),
+      subscribe: (fn: () => void) => subscribe("memories", fn),
+    },
+    memory: {
+      remember: (...args: Parameters<PetMemoryStore["remember"]>) => call("remember", args),
+    },
+    memoryAction: (payload: Record<string, unknown>, ctx?: PetHostActionContext) =>
+      call("memoryAction", [
+        payload,
+        ctx && { originRef: ctx.originRef, groundedTasks: ctx.groundedTasks },
+      ]),
+    worldContext: async (input: PetWorldContextInput, remote: MobileRemoteGatewayStatus) => ({
+      ...(await call("memoryRecall", [
+        {
+          message: input.message,
+          originRef: input.originRef,
+          groundedObjectives: input.groundedTasks.map((t) => t.objective),
+          taskIds: input.groundedTasks.map((t) => t.taskId),
+        },
+      ])),
+      mobileRemote: petRemoteMemoryContext(remote),
+    }),
+    journal: {
+      list: () => call("journalList", []),
+      recordedSegmentIds: async () => new Set(await call("journalIds", [])),
+      record: (input: PetJournalRecord) => call("record", [input]),
+      subscribe: (fn: () => void) => subscribe("journal", fn),
+    },
+  };
+}

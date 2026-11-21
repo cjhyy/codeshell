@@ -161,6 +161,7 @@ export function createDesktopHost(
     callBusiness: supervisor.callBusiness.bind(supervisor),
     documentSignal,
     setRemoteTerminals(client: NativeRemoteTerminals) { terminals = client; },
+    mimiRecordListeners: supervisor.mimiRecordListeners,
     automationListeners: supervisor.automationListeners,
     automation,
     catalogListeners: supervisor.catalogListeners,
