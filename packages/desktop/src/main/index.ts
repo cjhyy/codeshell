@@ -266,7 +266,7 @@ import {
   type ChromeNativeRegistrationResult,
 } from "./browser-runtime/index.js";
 import {
-  buildDesktopAutomationRunner,
+  type AutomationSessionMeta,
   makeCronRunnerWithResume,
   resolveDesktopAutomationJobWorkspace,
 } from "./automation-host.js";
@@ -3848,49 +3848,23 @@ app.whenReady().then(async () => {
   try {
     // Recover Mimi's ledger and initialize dispatch before restored timers can fire.
     await initialWindowReady;
-    // Feed in-main automation Engine events into the bridge's per-session
-    // snapshot + renderer stream, so automation sessions reconnect identically
-    // to interactive chat. `bridge?.` safely no-ops if a job somehow fires
-    // before any window (and thus the bridge) exists.
-    const emitAutomationEvent = (sessionId: string, event: unknown) => {
-      bridge?.ingestExternalEvent(sessionId, event, { browserVisibility: "hidden" });
-      if ((event as { type?: string })?.type === "run_result") {
-        taskInboxAutomationSessions.delete(sessionId);
-        markSessionTaskDirty(sessionId);
-      }
-    };
-    const announceAutomationSession = (meta: {
-      sessionId: string;
-      cwd: string;
-      title: string;
-      prompt: string;
-      cronJobId: string;
-      clientMessageId?: string;
-    }) => {
-      desktopHost.setStreamView(meta.sessionId, true);
+    const announceAutomationSession = (meta: AutomationSessionMeta) => {
       taskInboxAutomationSessions.set(meta.sessionId, meta.cronJobId);
       bridge?.broadcastAutomationSession(meta);
       markSessionTaskDirty(meta.sessionId);
       taskInboxService.markDirty("automation", meta.cronJobId);
     };
-    // Each fired job runs as a one-shot read-only headless Engine, which
-    // auto-writes a full transcript.jsonl (like interactive chat). The emit
-    // callback streams events to a live snapshot for renderer reconnect; the
-    // announce callback fires once with cwd+title so the renderer can place
-    // the live run in the right project sidebar group immediately.
-    const headlessAutomationRunner = buildDesktopAutomationRunner(
-      emitAutomationEvent,
-      announceAutomationSession,
-      undefined,
-      async (id) => {
-        // A snapshot request on the producer port is ordered after its final output.
-        try {
-          await bridge?.readSnapshot(id, Number.MAX_SAFE_INTEGER);
-        } finally {
-          desktopHost.setStreamView(id, false);
-        }
-      },
-    );
+    const onAutomationNotice = (
+      notice: import("../host/composition/automation-run.js").AutomationRunNotice,
+    ) => {
+      if (notice.type === "session") announceAutomationSession(notice.meta);
+      else {
+        taskInboxAutomationSessions.delete(notice.sessionId);
+        markSessionTaskDirty(notice.sessionId);
+      }
+    };
+    desktopHost.automationListeners.add(onAutomationNotice);
+    taskInboxDisposers.push(() => desktopHost.automationListeners.delete(onAutomationNotice));
     // "Continue this conversation" jobs feed their prompt into the live session.
     const injectResumeTurn = createAutomationResumeTurn({
       bridge: () => bridge,
@@ -3898,7 +3872,12 @@ app.whenReady().then(async () => {
         desktopNotifications.notifyMissingAutomationResumeTarget(desktopNotifier, job),
     });
     const automationRunner = makeCronRunnerWithResume(
-      headlessAutomationRunner,
+      (request) =>
+        desktopHost.callBusiness(
+          "automation/run",
+          { job: request.job, searchPath: process.env.PATH ?? "" },
+          request.signal,
+        ),
       injectResumeTurn,
       (job) => resolveDesktopAutomationJobWorkspace(job),
     );

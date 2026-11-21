@@ -78,6 +78,7 @@ export function createDesktopHost(
   return {
     callBusiness: supervisor.callBusiness.bind(supervisor),
     documentSignal,
+    automationListeners: supervisor.automationListeners,
     catalogListeners: supervisor.catalogListeners,
     start() {
       ipcMain.removeListener(DesktopHostIpc.connect, connect);

@@ -72,6 +72,45 @@ describe("Desktop Host process", () => {
     ]);
   });
 
+  test("cancelling a scheduled run waits for the original Host to finish its Engine cleanup", async () => {
+    const { supervisor, children } = processFixture();
+    const child = children[0]!;
+    child.emit("message", { type: "ready" });
+    const abort = new AbortController();
+    const result = supervisor.callBusiness(
+      "automation/run",
+      {
+        job: {
+          id: "cron",
+          name: "fixture",
+          schedule: "1h",
+          prompt: "fixture",
+          enabled: true,
+          createdAt: 1,
+          runCount: 0,
+        },
+        searchPath: "",
+      },
+      abort.signal,
+    );
+    const request = child.messages.at(-1) as { id: string };
+    let finished = false;
+    const settled = result.catch(() => {
+      finished = true;
+    });
+    abort.abort();
+    await Promise.resolve();
+    expect(child.messages.at(-1)).toEqual({ type: "withdraw-business", id: request.id });
+    expect(finished).toBe(false);
+    child.emit("message", {
+      jsonrpc: "2.0",
+      id: request.id,
+      error: { code: -32603, message: "Cancelled" },
+    });
+    await settled;
+    expect(finished).toBe(true);
+  });
+
   test("replays current ownership and deletions before offering ports on every fresh host", () => {
     const { supervisor, children, statuses, advance } = processFixture();
     supervisor.setOwner("a", 4);

@@ -715,6 +715,9 @@ jobs:
       - name: direct worker streaming and approval recovery in a reloaded workbench
         timeout-minutes: 4
         run: xvfb-run -a node scripts/run-isolated-node-smoke.mjs --private-keyring packages/desktop/scripts/e2e-desktop-host-stream.mjs
+      - name: Scheduled Host Engine streams while Main is busy
+        timeout-minutes: 4
+        run: xvfb-run -a node scripts/run-isolated-node-smoke.mjs --private-keyring packages/desktop/scripts/e2e-hosted-automation.mjs
       - name: Docked Mimi window on native Wayland
         run: node scripts/run-isolated-node-smoke.mjs --private-keyring packages/desktop/scripts/e2e-wayland-docked-pet.mjs
       - name: Native built-in theme and surface backgrounds with private SecretService

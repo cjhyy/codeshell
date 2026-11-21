@@ -2,6 +2,7 @@ import type { ShellBusinessOperations } from "../../shared/shell-business-contra
 
 export interface BusinessGrant {
   readonly permit: Int32Array;
+  readonly signal: AbortSignal;
   assertCurrent(): void;
 }
 type Method<K extends keyof ShellBusinessOperations> = (
@@ -16,17 +17,20 @@ export function claimBusinessCommit(permit: Int32Array): void {
 }
 
 export class HostBusinessCalls<T extends Partial<BusinessMethods> = BusinessMethods> {
-  private readonly pending = new Map<string, { permit: Int32Array; revoked: boolean }>();
+  private readonly pending = new Map<string, { permit: Int32Array; controller: AbortController }>();
   constructor(private readonly methods: T) {}
 
   async run(id: string, method: string, input: unknown): Promise<unknown> {
     if (!Object.hasOwn(this.methods, method)) throw new Error("Unknown private business method");
     if (this.pending.has(id) || this.pending.size >= 512)
       throw new Error("Too many pending business calls");
-    const state = { permit: new Int32Array(new SharedArrayBuffer(4)), revoked: false };
+    const state = {
+      permit: new Int32Array(new SharedArrayBuffer(4)),
+      controller: new AbortController(),
+    };
     this.pending.set(id, state);
     const assertCurrent = () => {
-      if (state.revoked) throw new Error("Document no longer owns the operation");
+      if (state.controller.signal.aborted) throw new Error("Document no longer owns the operation");
     };
     try {
       // Only Main can address this table. Each implementation validates its domain input.
@@ -34,7 +38,11 @@ export class HostBusinessCalls<T extends Partial<BusinessMethods> = BusinessMeth
         value: unknown,
         grant: BusinessGrant,
       ) => unknown;
-      const value = await run(input, { permit: state.permit, assertCurrent });
+      const value = await run(input, {
+        permit: state.permit,
+        signal: state.controller.signal,
+        assertCurrent,
+      });
       assertCurrent();
       return value;
     } finally {
@@ -45,8 +53,8 @@ export class HostBusinessCalls<T extends Partial<BusinessMethods> = BusinessMeth
   revoke(id: string) {
     const state = this.pending.get(id);
     if (state) {
-      state.revoked = true;
       Atomics.compareExchange(state.permit, 0, 0, -1);
+      state.controller.abort();
     }
   }
   close() {

@@ -1,3 +1,4 @@
+import type { AutomationRunNotice } from "../../host/composition/automation-run.js";
 import type { ShellBusinessOperations } from "../../shared/shell-business-contracts.js";
 import type { SessionCatalogSnapshot } from "../../shared/session-catalog.js";
 import {
@@ -36,6 +37,7 @@ export class DesktopHostSupervisor {
   private cancelTimer?: () => void;
   private readonly restartTimes: number[] = [];
   private readonly readyWaiters = new Set<() => void>();
+  readonly automationListeners = new Set<(notice: AutomationRunNotice) => void>();
   readonly catalogListeners = new Set<(snapshot: SessionCatalogSnapshot) => void>();
   private readonly owners = new Map<string, number>();
   private sequence = 0;
@@ -92,6 +94,8 @@ export class DesktopHostSupervisor {
         if (message.error)
           read.reject(Object.assign(new Error(message.error.message), message.error));
         else read.resolve(message.result);
+      } else if (message?.type === "automation-notice" && this.ready) {
+        for (const listener of this.automationListeners) listener(message.notice);
       } else if (message?.type === "session-catalog-changed" && this.ready) {
         for (const listener of this.catalogListeners) listener(message.snapshot);
       } else if (isRpcRequest(message)) {
@@ -198,9 +202,14 @@ export class DesktopHostSupervisor {
       }
     }
     signal?.throwIfAborted();
-    const value = await this.request("host/business", { method, input }, 15_000, signal);
+    // A scheduled Engine turn can span many tool calls. Its scheduler owns cancellation.
+    const timeout = method === "automation/run" ? 0 : 15_000;
+    const value = await this.request("host/business", { method, input }, timeout, signal);
     signal?.throwIfAborted();
-    return value as ShellBusinessOperations[K]["result"  private request(
+    return value as ShellBusinessOperations[K]["result"];
+  }
+
+  private request(
     method: string,
     params: Record<string, unknown>,
     timeoutMs = 15_000,
@@ -213,8 +222,13 @@ export class DesktopHostSupervisor {
       const pending = this.reads.get(id);
       if (!pending) return;
       clearTimeout(pending.timeout);
+      if (method === "host/business") {
+        this.send({ type: "withdraw-business", id });
+        // Deletion waits for the isolated Engine's final state write and browser
+        // teardown, even when the caller cancelled the run. Host exit rejects it.
+        if (params.method === "automation/run") return;
+      }
       this.reads.delete(id);
-      if (method === "host/business") this.send({ type: "withdraw-business", id });
       pending.reject(new Error("Desktop Host request expired or document changed"));
     };
     return new Promise<unknown>((resolve, reject) => {

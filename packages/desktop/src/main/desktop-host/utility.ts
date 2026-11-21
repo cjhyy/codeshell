@@ -1,3 +1,4 @@
+import { HostAutomationRuns } from "../../host/composition/automation-run.js";
 import { externalRuntimeCatalogOperations } from "../../host/composition/external-runtime-catalog.js";
 import { Worker } from "node:worker_threads";
 import { SessionTranscriptCache } from "../session-transcript-cache.js";
@@ -75,7 +76,21 @@ const reviews = new HostOperationReviews({
     return true;
   },
 });
+const automation = new HostAutomationRuns({
+  notice: (notice) => parent.postMessage({ type: "automation-notice", notice }),
+  share: (id, enabled) => server?.setStreamView(id, enabled),
+  publish: (sessionId, event) => {
+    void output
+      .mutate({ type: "publish", sessionId, event, visibility: "hidden" })
+      .catch((error) => {
+        console.error("[Desktop Host] Automation output storage unavailable", error);
+        process.exit(1);
+      });
+  },
+  drain: () => output.drain(),
+});
 const business = new HostBusinessCalls({
+  "automation/run": ({ job, searchPath }, grant) => automation.run(job, searchPath, grant.signal),
   ...externalRuntimeCatalogOperations(),
   ...catalogFiles,
   "transcripts/read": (input) => transcripts.read(input),
@@ -160,7 +175,7 @@ parent.on("message", ({ data, ports }) => {
   if (isDesktopHostControl(data) && data.type === "shutdown") {
     stopping = true;
     business.close();
-    void Promise.all([index.close(), worker?.close(), transcripts.close()])
+    void Promise.all([index.close(), worker?.close(), transcripts.close(), automation.close()])
       .then(() => output.drain())
       .finally(async () => (await storage).close())
       .then(
