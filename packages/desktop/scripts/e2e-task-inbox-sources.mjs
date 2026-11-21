@@ -295,6 +295,31 @@ try {
       ? value
       : undefined;
   }, "Durable task sources were not reconciled");
+  // The IPC fallback returns the same records. Complete both reads while Main
+  // is blocked to demonstrate that this workbench is using its negotiated port.
+  const nativeWindow = await app.browserWindow(win);
+  const measured = await nativeWindow.evaluate(async ({ webContents }) => {
+    await webContents.executeJavaScript(`window.__taskHostProbe = new Promise((resolve,reject) =>
+      setTimeout(async () => {
+        try {
+          const begin=Date.now();
+          const {records}=await window.codeshell.taskInbox.list({limit:1});
+          const row=await window.codeshell.taskInbox.get(records[0].taskKey);
+          resolve({begin,end:Date.now(),sameRecord:row?.taskKey===records[0].taskKey});
+        } catch(error) { reject(error); }
+      },250)); void 0`);
+    const begin = Date.now();
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1600);
+    const end = Date.now();
+    return { begin, end, probe: await webContents.executeJavaScript("window.__taskHostProbe") };
+  });
+  await nativeWindow.dispose();
+  assert(
+    measured.probe.sameRecord &&
+      measured.probe.begin >= measured.begin &&
+      measured.probe.end < measured.end,
+    "Both list and get must answer on the Host port while Main is busy",
+  );
   assert.deepEqual(initial.errors, [], "Every authoritative source reconciles successfully");
   assert.equal(
     initial.records.find((record) => record.source === "session" && record.sourceId === ids.done)
