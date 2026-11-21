@@ -79,3 +79,82 @@ describe("CredentialStore atomic compare-and-swap", () => {
     );
   });
 });
+
+test("asynchronous store operations replay a conflicting edit outside locks and preserve opaque entries", async () => {
+  const { credentialFileCommand } = await import("../storage/credential-files.js");
+  const { existsSync, readFileSync, writeFileSync } = await import("node:fs");
+  const dir = mkdtempSync(join(tmpdir(), "credential-detached-"));
+  try {
+    const path = join(dir, "credentials.json");
+    writeFileSync(
+      path,
+      JSON.stringify({ version: 1, credentials: [{ type: "future", token: "untouched" }] }),
+    );
+    const sync = new PlaintextCipher();
+    const cipher = Object.assign(sync, {
+      asynchronous: {
+        async decrypt(stored: string) {
+          expect(existsSync(dir + ".lock")).toBe(false);
+          return sync.decrypt(stored);
+        },
+        async encrypt(plain: string) {
+          expect(existsSync(dir + ".lock")).toBe(false);
+          return sync.encrypt(plain);
+        },
+      },
+    });
+    const store = new CredentialStore(undefined, cipher, dir);
+    let interfere = true,
+      attempts = 0;
+    const files = {
+      read: async (address: import("../storage/credential-files.js").CredentialFileAddress) =>
+        credentialFileCommand(
+          dir,
+          "credentials/read",
+          address,
+        ) as import("../storage/credential-files.js").CredentialFileSnapshot,
+      commit: async (
+        address: import("../storage/credential-files.js").CredentialFileAddress,
+        expectedRevision: string,
+        file: import("./types.js").CredentialStoreFile,
+      ) => {
+        if (interfere) {
+          interfere = false;
+          store.save("user", { ...credential, id: "other" });
+        }
+        return credentialFileCommand(dir, "credentials/commit", {
+          ...address,
+          expectedRevision,
+          file,
+        }) as boolean;
+      },
+    };
+    await store.withAsyncCipher(files, ["user"], "user", (s) => {
+      attempts++;
+      s.save("user", credential);
+    });
+    expect(attempts).toBe(2);
+    expect(
+      store
+        .list()
+        .map((c) => c.id)
+        .sort(),
+    ).toEqual(["fixture", "other"]);
+    expect(JSON.parse(readFileSync(path, "utf8")).credentials).toContainEqual({
+      type: "future",
+      token: "untouched",
+    });
+    const before = await files.read({ scope: "user" });
+    expect(() =>
+      credentialFileCommand(
+        dir,
+        "credentials/commit",
+        { scope: "user", expectedRevision: before.revision, file: { version: 1, credentials: [] } },
+        new Int32Array(new SharedArrayBuffer(4)).fill(2),
+      ),
+    ).toThrow("revoked");
+    expect(store.list()).toHaveLength(2);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
