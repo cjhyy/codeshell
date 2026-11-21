@@ -1,8 +1,10 @@
 import { afterEach, expect, test } from "bun:test";
+import { EventEmitter } from "node:events";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { BrowserWindow, IpcMain, IpcMainInvokeEvent } from "electron";
+import type { BrowserWindow, IpcMain, IpcMainInvokeEvent, IpcRenderer } from "electron";
+import { createSessionCatalogApi } from "../preload/session-catalog-api";
 import { SessionCatalogStore } from "./session-catalog-store";
 import { SessionTranscriptCache } from "./session-transcript-cache";
 import { registerSessionCatalogIpc } from "./session-catalog-ipc";
@@ -23,6 +25,7 @@ async function setup() {
       handlers.set(name, handler),
     removeHandler: (name: string) => handlers.delete(name),
   } as unknown as IpcMain;
+  const renderer = new EventEmitter();
   const mainFrame = {};
   const broadcasts: unknown[] = [];
   const sent: Array<{ channel: string; value: unknown }> = [];
@@ -32,6 +35,7 @@ async function setup() {
     send: (channel: string, value: unknown) => {
       broadcasts.push(value);
       sent.push({ channel, value });
+      renderer.emit(channel, {}, value);
     },
   };
   const window = { isDestroyed: () => false, webContents: sender } as unknown as BrowserWindow;
@@ -40,7 +44,12 @@ async function setup() {
   const transcriptCache = { flush: async () => undefined } as SessionTranscriptCache;
   const registration = registerSessionCatalogIpc(ipc, () => [window], catalog, transcriptCache);
   const event = { sender, senderFrame: mainFrame } as unknown as IpcMainInvokeEvent;
-  return { handlers, event, catalog, broadcasts, sent, registration, directory };
+  const preload = createSessionCatalogApi(
+    Object.assign(renderer, {
+      invoke: async (channel: string, input: unknown) => handlers.get(channel)!(event, input),
+    }) as Pick<IpcRenderer, "on" | "removeListener" | "invoke">,
+  );
+  return { handlers, event, catalog, broadcasts, sent, registration, directory, preload };
 }
 
 test("catalog IPC rejects embedded frames and unregistered windows before reading private data", async () => {
@@ -106,4 +115,41 @@ test("quit skips crashed renderers while still draining Main persistence", async
   (event.sender as unknown as { isCrashed(): boolean }).isCrashed = () => true;
   await registration.flushRenderers();
   expect(sent.some((entry) => entry.channel === "sessionCatalog:flushRequested")).toBe(false);
+});
+
+test("Quit during workbench startup waits for the renderer's actual save", async () => {
+  const { registration, preload } = await setup();
+  const started = Promise.withResolvers<void>();
+  const saved = Promise.withResolvers<void>();
+  let completed = false;
+  const shutdown = registration.flushRenderers().then(() => {
+    completed = true;
+  });
+  preload.onFlushRequested!(() => {
+    started.resolve();
+    return saved.promise;
+  });
+  await started.promise;
+  expect(completed).toBe(false);
+  saved.resolve();
+  await shutdown;
+  expect(completed).toBe(true);
+});
+
+test("a replacement persistence gate must acknowledge the pending quit even if its save fails", async () => {
+  const { registration, preload } = await setup();
+  let staleCalls = 0;
+  const unsubscribe = preload.onFlushRequested!(async () => {
+    staleCalls++;
+  });
+  unsubscribe();
+  const shutdown = registration.flushRenderers().then(
+    () => null,
+    (error: Error) => error,
+  );
+  preload.onFlushRequested!(async () => {
+    throw new Error("Disk full");
+  });
+  expect((await shutdown)?.message).toContain("could not be saved");
+  expect(staleCalls).toBe(0);
 });
