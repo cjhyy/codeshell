@@ -193,9 +193,12 @@ describe("node:http server timeout enforcement", () => {
       const shutdownAt = Date.now();
       server.closeAllConnections();
       server.close();
-      // Resolves without the client writing anything.
-      await closed;
-      expect({ connections, count, closedPromptly: Date.now() - shutdownAt < 500 }).toEqual({
+      // The client is closed without writing anything.
+      const closedAfter = await Promise.race([
+        closed.then(() => Date.now() - shutdownAt),
+        Bun.sleep(1500).then(() => Infinity),
+      ]);
+      expect({ connections, count, closedPromptly: closedAfter < 500 }).toEqual({
         connections: 1,
         count: 1,
         closedPromptly: true,
