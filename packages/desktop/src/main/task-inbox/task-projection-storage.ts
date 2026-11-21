@@ -1,4 +1,6 @@
-import { isAbsolute, join } from "node:path";
+import { createHash } from "node:crypto";
+import { realpathSync } from "node:fs";
+import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import type {
   StorageWorkerContext,
   StorageWorkerHandlers,
@@ -111,6 +113,36 @@ function fallbackRows(m: Mirror): JsonTaskRows {
   return rows;
 }
 
+// The first data root keeps the exact 0.11 mirror path. All other roots
+// sharing an Electron profile have separate mirrors, just like their databases.
+function taskMirrorDirectory(ctx: StorageWorkerContext, base: string): string {
+  function canonical(path: string): string {
+    try {
+      return realpathSync(path);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      return join(canonical(dirname(path)), basename(path));
+    }
+  }
+  const key = createHash("sha256")
+    .update(canonical(resolve(ctx.sessionsRoot)))
+    .digest("hex");
+  const owner = ctx.mutateJsonFile(join(base, "data-root.json"), {
+    mode: 0o600,
+    maxBytes: 256,
+    parse: (raw) => {
+      if (raw === undefined) return undefined;
+      const value = JSON.parse(raw);
+      if (typeof value !== "string" || !/^[a-f0-9]{64}$/.test(value))
+        throw new Error("Invalid task mirror data root");
+      return value;
+    },
+    serialize,
+    mutation: (current) => ({ result: current ?? key, value: current ? undefined : key }),
+  });
+  return owner === key ? base : join(base, "roots", key);
+}
+
 const legacyLimit = 2000;
 export function createTaskInboxStorageHandlers(): StorageWorkerHandlers {
   let dir: string | undefined;
@@ -170,9 +202,11 @@ export function createTaskInboxStorageHandlers(): StorageWorkerHandlers {
         if (current && JSON.parse(current).version > h.version) return {};
         // 0.11 rejects unknown record properties. Keep UI-only visibility
         // in the intent mirror, never in the backward-compatible payload.
-        const records = rows
-          .rows({ orphan: true })
-          .map((row) => ({ ...row.record, updatedAt: row.frozenActivityAt ?? row.activityAt }));
+        const records = rows.rows({ orphan: true }).map((row) => {
+          const record = { ...row.record, updatedAt: row.frozenActivityAt ?? row.activityAt };
+          delete record.hidden;
+          return record;
+        });
         const bytes = serialize({
           schemaVersion: 1,
           version: h.version,
@@ -203,7 +237,7 @@ export function createTaskInboxStorageHandlers(): StorageWorkerHandlers {
     const config = ctx.config as { taskInboxDirectory?: string } | undefined;
     if (!config?.taskInboxDirectory || !isAbsolute(config.taskInboxDirectory))
       throw new Error("Desktop task directory must be configured");
-    dir = config.taskInboxDirectory;
+    dir = taskMirrorDirectory(ctx, config.taskInboxDirectory);
     const legacy = importLegacy(ctx);
     withMirror(ctx, (m) => {
       const sql = ctx.db;
@@ -213,24 +247,42 @@ export function createTaskInboxStorageHandlers(): StorageWorkerHandlers {
         : !m.fallback;
       const ingest = () => {
         const header = rows.header();
-        if (initial && m.fallback) for (const row of m.fallback.rows) rows.put(row);
+        const restoring = Boolean(sql && m.fallback);
+        if (initial || m.version > header.intentVersion) applyMirror(rows, m);
         let imported = false;
+        if (sql && m.fallback) {
+          for (const row of m.fallback.rows) {
+            const existing = rows.rows({ key: row.record.taskKey })[0];
+            if (upsertTask(rows, row.record, row.projectionOnly, Date.now())) {
+              const restored = rows.rows({ key: row.record.taskKey })[0];
+              // A degraded observation may not know the original activity
+              // time for a still-running task in the surviving database.
+              const sameRun =
+                existing &&
+                existing.record.runId === restored.record.runId &&
+                existing.record.status === restored.record.status;
+              rows.put({ ...restored, activityAt: sameRun ? existing.activityAt : row.activityAt });
+              imported = true;
+            }
+          }
+        }
         for (const record of legacy.records) {
           const existing = rows.rows({ key: record.taskKey })[0];
           if ((!existing || existing.projectionOnly) && upsertTask(rows, record, true, Date.now()))
             imported = true;
         }
-        if (initial || m.version > header.intentVersion) applyMirror(rows, m);
         for (const record of legacy.records)
           if (rows.intent(record.taskKey)?.deletedAt !== undefined) rows.remove(record.taskKey);
-        if (initial || imported || m.version > header.intentVersion)
+        if (restoring) rows.prune(legacyLimit);
+        if (initial || imported || restoring || m.version > header.intentVersion)
           rows.setHeader({
             version: Math.max(
               header.version + Number(!initial && imported),
               legacy.version,
               m.fallback?.header.version ?? 0,
             ),
-            errors: initial ? (m.fallback?.header.errors ?? legacy.errors) : header.errors,
+            errors:
+              restoring || initial ? (m.fallback?.header.errors ?? legacy.errors) : header.errors,
             intentVersion: Math.max(m.version, header.intentVersion),
           });
       };
@@ -276,7 +328,10 @@ export function createTaskInboxStorageHandlers(): StorageWorkerHandlers {
           const h = rows.header();
           rows.setHeader({ ...h, version: h.version + 1, intentVersion: h.intentVersion + 1 });
         }
-        return { value: { version: rows.header().version, changed }, changed };
+        return {
+          value: { version: rows.header().version, changed: !!changed, count: Number(changed) },
+          changed: !!changed,
+        };
       }
       default:
         throw new Error("Unknown task storage command");
@@ -328,6 +383,7 @@ export function createTaskInboxStorageHandlers(): StorageWorkerHandlers {
         const write = result.changed || Boolean(db && m.version < h.intentVersion);
         const value: Mirror | undefined = write ? rows.mirror(h.intentVersion) : undefined;
         if (value && !db) value.fallback = { rows: rows.rows(), header: h };
+        else if (value && m.fallback) value.fallback = m.fallback;
         return { value, result };
       });
       if (reply.changed) schedule(ctx);

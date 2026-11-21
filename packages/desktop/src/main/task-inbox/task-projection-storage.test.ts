@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdtemp, mkdir, readFile, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rename, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -41,8 +41,8 @@ async function fixture() {
     import {createTaskInboxStorageHandlers} from ${JSON.stringify(handler)};
     await serveStorageWorker(createTaskInboxStorageHandlers());`,
   );
-  const open = async () => {
-    const s = await openStateStorage(root, {
+  const open = async (sessionsRoot = root) => {
+    const s = await openStateStorage(sessionsRoot, {
       workerUrl: pathToFileURL(entry),
       workerConfig: { taskInboxDirectory: dir },
     });
@@ -158,6 +158,48 @@ test("JSON fallback persists intent atomically and imports the degraded projecti
   ).toBeUndefined();
 });
 
+test("return to a surviving database preserves healthy rows and imports offline changes and tombstones", async () => {
+  const f = await fixture();
+  const old = await f.open();
+  await ingest(old, [task("retained"), task("removed"), task("updated")]);
+  await old.close();
+  await rename(f.root, f.root + ".old");
+  await writeFile(f.root, "fixture blocks SQLite");
+  const degraded = await f.open();
+  expect(degraded.mode).toBe("json");
+  await ingest(degraded, [
+    task("offline"),
+    task("removed"),
+    task("updated", { title: "offline title", updatedAt: 8, sourceRevision: "2" }),
+  ]);
+  await intent(degraded, { type: "delete", taskKey: "session:removed", expectedRevision: "1" });
+  await degraded.close();
+  await rm(f.root);
+  await rename(f.root + ".old", f.root);
+  const restored = await f.open();
+  expect(restored.mode).toBe("sqlite");
+  const records = (await snapshot(restored)).records;
+  expect(records.map((r) => r.title).sort()).toEqual(["offline", "offline title", "retained"]);
+  await restored.close();
+  expect((await snapshot(await f.open())).records).toEqual(records);
+});
+
+test("two data roots sharing one desktop profile keep separate migration, intent and fallback mirrors", async () => {
+  const f = await fixture();
+  await writeFile(
+    join(f.dir, "v1.json"),
+    JSON.stringify({ schemaVersion: 1, version: 2, errors: [], records: [task("original")] }),
+  );
+  const a = await f.open();
+  expect((await snapshot(a)).records.map((r) => r.sessionId)).toEqual(["original"]);
+  await intent(a, { type: "hide", taskKey: "session:original", expectedRevision: "1" });
+  const b = await f.open(join(f.d, "other", "sessions"));
+  expect((await snapshot(b, "all")).records).toEqual([]);
+  await ingest(b, [task("original")]);
+  expect((await snapshot(b)).records.map((r) => r.sessionId)).toEqual(["original"]);
+  expect((await snapshot(a, "hidden")).records.map((r) => r.sessionId)).toEqual(["original"]);
+});
+
 test("full and per-key input converge, timestamp-only streaming does not rewrite, and cold resumable tasks survive the terminal cap", async () => {
   const fullFixture = await fixture(),
     deltaFixture = await fixture();
@@ -190,4 +232,106 @@ test("full and per-key input converge, timestamp-only streaming does not rewrite
   expect(left.filter((r) => r.status === "done").every((r) => r.updatedAt >= 130)).toBe(true);
   expect(left.map((r) => r.status)).toContain("paused");
   expect(left.map((r) => r.status)).toContain("interrupted");
+});
+
+test("the Main facade reads each dirty source ID once, serves repeat lists from cache, and checks a caller again before intent or execution", async () => {
+  const f = await fixture(),
+    s = await f.open();
+  const { createHostedTaskInboxService } = await import("./host-task-inbox-service.js");
+  let record = task("one", { status: "running", capabilities: ["cancel"] });
+  let completeReads = 0,
+    keyReads = 0,
+    controls = 0;
+  let pause: Promise<void> | undefined;
+  let enter: (() => void) | undefined;
+  const service = createHostedTaskInboxService({
+    command: (name, payload) => s.request(name, payload),
+    readers: [
+      {
+        source: "session",
+        read: () => {
+          completeReads++;
+          return [record];
+        },
+        readOne: async (id) => {
+          keyReads++;
+          enter?.();
+          await pause;
+          return id === record.sourceId ? [record] : [];
+        },
+      },
+    ],
+    adapters: [
+      {
+        source: "session",
+        reread: async () => {
+          enter?.();
+          await pause;
+          return record;
+        },
+        act: () => {
+          controls++;
+          return { status: "ok" };
+        },
+      },
+    ],
+  });
+  try {
+    await service.reconcile();
+    await service.reconcile();
+    expect(completeReads).toBe(1);
+    expect(keyReads).toBe(0);
+    record = { ...record, title: "renamed", updatedAt: 20, sourceRevision: "2" };
+    service.markDirty("session", "one");
+    service.markDirty("session", "one");
+    let release!: () => void;
+    pause = new Promise((done) => {
+      release = done;
+    });
+    const arrived = new Promise<void>((done) => {
+      enter = done;
+    });
+    const refresh = service.reconcile();
+    await arrived;
+    let valid = true;
+    const hide = service.applyIntent(
+      { type: "hide", taskKey: record.taskKey, expectedRevision: "2" },
+      () => {
+        if (!valid) throw new Error("Revoked");
+      },
+    );
+    valid = false;
+    release();
+    await refresh;
+    await expect(hide).rejects.toThrow("Revoked");
+    expect(keyReads).toBe(1);
+    expect(completeReads).toBe(1);
+    expect(service.snapshot().records).toMatchObject([{ title: "renamed", updatedAt: 2 }]);
+    await service.reconcile();
+    expect(completeReads).toBe(1);
+
+    valid = true;
+    pause = new Promise((done) => {
+      release = done;
+    });
+    const reread = new Promise<void>((done) => {
+      enter = done;
+    });
+    const act = service.act(
+      { taskKey: record.taskKey, action: "cancel", expectedRevision: "2" },
+      {
+        webContentsId: 5,
+        assertCurrent: () => {
+          if (!valid) throw new Error("Revoked");
+        },
+      },
+    );
+    await reread;
+    valid = false;
+    release();
+    await act;
+    expect(controls).toBe(0);
+  } finally {
+    service.dispose();
+  }
 });

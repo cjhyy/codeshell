@@ -85,6 +85,7 @@ export function checkedBatches(input: unknown): ProjectionBatch[] {
       const record = parseTaskInboxRecord(raw);
       if (record.source !== source) throw new Error("Task source mismatch");
       delete record.stale;
+      delete record.hidden;
       return record;
     });
     return {
@@ -133,6 +134,8 @@ export function upsertTask(
   const policy = session ? rows.policy(session) : undefined;
   if (intent?.deletedAt !== undefined || policy === "deleted") return false;
   const previous = rows.rows({ key })[0];
+  if (previous && previous.record.createdAt < r.createdAt)
+    r = { ...r, createdAt: previous.record.createdAt };
   if (
     previous &&
     previous.projectionOnly === only &&
@@ -188,10 +191,17 @@ export function reconcileTasks(
   const header = rows.header(),
     errors = new Map(header.errors.map((e) => [e.source, e.message]));
   let changed = false;
+  for (const batch of batches) errors.delete(batch.source);
   for (const b of batches) {
     if (b.error !== undefined) {
       errors.set(b.source, b.error);
-      for (const row of rows.rows({ source: b.source })) {
+      const affected =
+        b.complete || b.removedKeys === undefined
+          ? rows.rows({ source: b.source })
+          : b.removedKeys
+              .flatMap((key) => rows.rows({ key }))
+              .filter((row) => row.record.source === b.source);
+      for (const row of affected) {
         if (!row.record.stale) {
           rows.put({ ...row, record: { ...row.record, stale: true } });
           changed = true;
@@ -199,7 +209,6 @@ export function reconcileTasks(
       }
       continue;
     }
-    errors.delete(b.source);
     const present = new Set(b.records?.map((r) => r.taskKey));
     const missing = b.complete
       ? rows.rows({ source: b.source }).filter((r) => !present.has(r.record.taskKey))
@@ -232,16 +241,20 @@ function retire(rows: TaskRows, row: TaskRow, now: number) {
   rows.remove(r.taskKey);
 }
 
-export function changeTaskIntent(rows: TaskRows, i: TaskChangeIntent, now: number): boolean {
+export function changeTaskIntent(
+  rows: TaskRows,
+  i: TaskChangeIntent,
+  now: number,
+): boolean | number {
   if (i.type === "clear") {
-    let changed = false;
+    let changed = 0;
     for (const row of rows.rows()) {
       if (
         isTerminalTaskStatus(row.record.status) &&
         (i.before === undefined || (row.record.terminalAt ?? row.activityAt) < i.before)
       ) {
         retire(rows, row, now);
-        changed = true;
+        changed++;
       }
     }
     return changed;

@@ -11,6 +11,7 @@ import type { TaskInboxStore } from "./task-inbox-store.js";
 export interface TaskInboxSourceReader {
   source: TaskSource;
   read(): TaskInboxRecordV1[] | Promise<TaskInboxRecordV1[]>;
+  readOne?(sourceId: string): Promise<TaskInboxRecordV1[]>;
 }
 export interface TaskInboxProjectorOptions {
   store: TaskInboxStore;
