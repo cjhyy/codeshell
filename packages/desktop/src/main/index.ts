@@ -265,7 +265,7 @@ import { createAutomationResumeTurn } from "./automation-resume-turn.js";
 import { automationLifecycleNotification } from "./automation-notification.js";
 import { DesktopNotifier } from "./desktop-notifier.js";
 import { findNotificationWindow } from "./native-desktop-notification.js";
-import { showSystemNotification } from "./system-notification.js";
+import { registerNotificationFallback, showSystemNotification } from "./system-notification.js";
 import * as desktopNotifications from "./desktop-notification-routes.js";
 import type { CreateAutomationInput } from "./automation-service.js";
 import { dlog } from "./desktop-logger.js";
@@ -503,6 +503,17 @@ registerPanelAppSchemePrivileges();
 app.setName("code-shell");
 if (process.platform === "win32") app.setAppUserModelId("com.cjhyy.codeshell");
 const mainWindows = new Set<BrowserWindow>();
+registerNotificationFallback(
+  ipcMain,
+  (id) =>
+    findNotificationWindow(mainWindows, id ? bridge?.panelOwnerWebContentsId(id) : undefined)
+      ?.webContents.id,
+  (event) => {
+    if (![...mainWindows].some((window) => window.webContents === event.sender))
+      throw Error("Desktop notifications require a workbench");
+    return desktopHost.documentSignal(event);
+  },
+);
 const mediaPreviewService = new MediaPreviewService({
   isOwnerAlive: (ownerId) =>
     [...mainWindows].some(
