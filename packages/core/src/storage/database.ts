@@ -1,5 +1,8 @@
 import { createHash, randomUUID } from "node:crypto";
 import {
+  closeSync,
+  openSync,
+  readSync,
   mkdirSync,
   readdirSync,
   realpathSync,
@@ -21,6 +24,26 @@ function isCorruption(error: unknown): boolean {
     (Number(sql?.errcode) & 255) === 11 ||
     (Number(sql?.errcode) & 255) === 26
   );
+}
+
+/** Detect an obviously damaged header before a writable SQLite open has a
+ * chance to replay a surviving WAL into the evidence being quarantined. */
+function checkHeader(file: string): void {
+  let fd: number;
+  try {
+    fd = openSync(file, "r");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
+    throw error;
+  }
+  try {
+    const header = Buffer.alloc(16);
+    const bytes = readSync(fd, header, 0, header.length, 0);
+    if (bytes && (bytes !== header.length || header.toString("latin1") !== "SQLite format 3\0"))
+      throw new UnrecognizedStorageSchema("Invalid SQLite file header");
+  } finally {
+    closeSync(fd);
+  }
 }
 
 /** Replacing an open WAL database invalidates other processes' file handles.
@@ -69,6 +92,7 @@ export function openWriter(sessionsRoot: string, token: string) {
     mkdirSync(leases, { recursive: true, mode: 0o700 });
     const initialize = (): StorageDatabase => {
       mkdirSync(live, { recursive: true, mode: 0o700 });
+      checkHeader(file);
       const db = open(file);
       try {
         db.exec("PRAGMA busy_timeout = 5000");

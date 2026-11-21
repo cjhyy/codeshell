@@ -12,6 +12,7 @@ interface NativeDatabase {
     all(...params: SqlValue[]): unknown[];
     get(...params: SqlValue[]): unknown;
     run(...params: SqlValue[]): unknown;
+    finalize?(): void;
   };
   close(): void;
 }
@@ -19,14 +20,26 @@ interface NativeDatabase {
 export class StorageDatabase {
   constructor(private readonly native: NativeDatabase) {}
 
+  private statement(
+    sql: string,
+    operation: "all" | "get" | "run",
+    params: readonly SqlValue[],
+  ): unknown {
+    const stmt = this.native.prepare(sql);
+    try {
+      return stmt[operation](...params);
+    } finally {
+      stmt.finalize?.();
+    } // Bun otherwise defers sqlite3_close_v2 and WAL cleanup until GC.
+  }
   all<T = Record<string, SqlValue>>(sql: string, params: readonly SqlValue[] = []): T[] {
-    return this.native.prepare(sql).all(...params) as T[];
+    return this.statement(sql, "all", params) as T[];
   }
   get<T = Record<string, SqlValue>>(sql: string, params: readonly SqlValue[] = []): T | undefined {
-    return (this.native.prepare(sql).get(...params) ?? undefined) as T | undefined;
+    return (this.statement(sql, "get", params) ?? undefined) as T | undefined;
   }
   run(sql: string, params: readonly SqlValue[] = []): void {
-    this.native.prepare(sql).run(...params);
+    this.statement(sql, "run", params);
   }
   exec(sql: string): void {
     this.native.exec(sql);
