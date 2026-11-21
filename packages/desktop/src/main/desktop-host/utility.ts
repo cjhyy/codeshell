@@ -1,6 +1,7 @@
 import { bindRemoteTerminals } from "../../host/composition/remote-terminals.js";
 import { hostedTerminals } from "../../host/composition/terminals.js";
 import { HostScheduler } from "../../host/automation/host-scheduler.js";
+import { installDefaultLinkProviders } from "@cjhyy/code-shell-server/links";
 import { workspaceReads } from "./workspace-reads.js";
 import { HostAutomationRuns } from "../../host/composition/automation-run.js";
 import { externalRuntimeCatalogOperations } from "../../host/composition/external-runtime-catalog.js";
@@ -94,6 +95,8 @@ const automation = new HostAutomationRuns({
   drain: () => output.drain(),
 });
 const scheduler = new HostScheduler(schedulerPorts.port1, automation);
+// Link-backed source definitions are validated against this process-local registry.
+installDefaultLinkProviders();
 const business = new HostBusinessCalls({
   "automation/command": (cmd, grant) => scheduler.command(cmd, grant.permit),
   ...externalRuntimeCatalogOperations(),

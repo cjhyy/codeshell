@@ -1,6 +1,7 @@
 import { attachCronStorage } from "../../host/automation/storage-owner.js";
 import { MessagePort, workerData } from "node:worker_threads";
 import { RunOperationStorage } from "../../host/composition/run-operation-storage.js";
+import { installDefaultLinkProviders } from "@cjhyy/code-shell-server/links";
 import { OperationBatches, type BatchPayload } from "../../host/composition/operation-batches.js";
 import { isBatchCommand } from "../desktop-host/private-operations.js";
 import {
@@ -39,6 +40,8 @@ let output: StoredDesktopOutput | undefined;
 let runLedger: RunOperationStorage | undefined;
 let ledger: OperationStorage | undefined;
 let batches: OperationBatches | undefined;
+// Link-backed source definitions are validated against this process-local registry.
+installDefaultLinkProviders();
 await serveSessionIndexWorker({
   ...tasks,
   async handle(ctx, command, payload) {

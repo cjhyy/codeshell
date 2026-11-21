@@ -15,6 +15,7 @@ import {
   makeIsolatedElectronHome,
   navigateSettingsMenu,
 } from "./electron-harness.mjs";
+import { installWorkbenchReadFixture } from "./workbench-read-fixture.mjs";
 import { settingsNetworkGuard } from "./settings-network-guard.mjs";
 
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -107,14 +108,28 @@ async function installFixture() {
         ipcMain.removeHandler(channel);
         ipcMain.handle(channel, fn);
       };
-      handle("catalog:list", () => {
-        if (fixture.failCatalogRead) throw new Error("Synthetic catalog read failure");
-        return structuredClone(fixture.catalog);
-      });
-      handle("catalog:origins", () => {
-        if (fixture.failCatalogOrigins) throw new Error("Synthetic catalog origins failure");
-        return { [providerId]: "user", [disposableProviderId]: "user" };
-      });
+      const read = (method, channel, args, fn) => {
+        handle(channel, (_event, ...values) => fn(...values));
+        globalThis.__workbenchFixtureReads.set(method, (params) => fn(...args(params)));
+      };
+      read(
+        "models/catalog",
+        "catalog:list",
+        () => [],
+        () => {
+          if (fixture.failCatalogRead) throw new Error("Synthetic catalog read failure");
+          return structuredClone(fixture.catalog);
+        },
+      );
+      read(
+        "models/catalogOrigins",
+        "catalog:origins",
+        () => [],
+        () => {
+          if (fixture.failCatalogOrigins) throw new Error("Synthetic catalog origins failure");
+          return { [providerId]: "user", [disposableProviderId]: "user" };
+        },
+      );
       const catalogWriteOutcome = async () => {
         if (fixture.deferNextCatalogWrite) {
           fixture.deferNextCatalogWrite = false;
@@ -146,13 +161,18 @@ async function installFixture() {
         fixture.catalog = fixture.catalog.filter((entry) => entry.id !== id);
         return { ok: true };
       });
-      handle("settings:get", (_event, scope) => {
-        if (scope === "user" && fixture.failNextSettingsRead) {
-          fixture.failNextSettingsRead = false;
-          throw new Error("Synthetic connection settings read failure");
-        }
-        return scope === "user" ? structuredClone(fixture.settings) : {};
-      });
+      read(
+        "settings/user",
+        "settings:get",
+        ({ scope }) => [scope],
+        (scope) => {
+          if (scope === "user" && fixture.failNextSettingsRead) {
+            fixture.failNextSettingsRead = false;
+            throw new Error("Synthetic connection settings read failure");
+          }
+          return scope === "user" ? structuredClone(fixture.settings) : {};
+        },
+      );
       handle("settings:set", async (_event, scope, patch) => {
         const connectionWrite =
           Array.isArray(patch.modelConnections) &&
@@ -181,14 +201,34 @@ async function installFixture() {
         fixture.settingsCommits++;
         fixture.settings = { ...fixture.settings, ...structuredClone(patch) };
       });
-      handle("settings:getConfiguration", () => ({}));
+      read(
+        "settings/project",
+        "settings:getConfiguration",
+        () => [],
+        () => ({}),
+      );
       handle("settings:setConfiguration", () => {
         throw new Error("Project configuration writes are outside this test");
       });
       handle("credentials:list", () => []);
-      handle("models:list", () => []);
-      handle("models:resolve-meta", () => ({}));
-      handle("models:reasoning-control", () => null);
+      read(
+        "models/provider",
+        "models:list",
+        () => [],
+        () => [],
+      );
+      read(
+        "models/meta",
+        "models:resolve-meta",
+        () => [],
+        () => ({}),
+      );
+      read(
+        "models/reasoning",
+        "models:reasoning-control",
+        () => [],
+        () => null,
+      );
     },
     { providerId, connectionId, secondaryConnectionId, disposableProviderId },
   );
@@ -1036,6 +1076,7 @@ try {
   // Wait for the production main module to finish registering its IPC handlers
   // before replacing them. electron.launch() alone can resolve before startup.
   stage = "fixture installation";
+  await app.evaluate(installWorkbenchReadFixture);
   await installFixture();
   win.on("pageerror", () => rendererErrors.push(true));
   await win.route(/^https?:\/\//, (route) => route.abort());

@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
 import { PanelExecutionGate } from "@cjhyy/code-shell-server/panels";
+import { settingsChange } from "./renderer-settings-edits.js";
 import { panelChangeOperation } from "./panel-update-blockers.js";
 
 // Exercise the composition callbacks without booting Electron or a real worker.
@@ -44,7 +45,6 @@ function fixture(hasBridge = true) {
         : null,
       invalidatePanelAppBindingGuard: () => events.push({ kind: "invalidate" }),
       mainWindows: windows,
-      touchesExternalSessionVisibility: () => false,
     },
   );
   return { events, windows, composition };
@@ -64,9 +64,9 @@ test("Panel changes invalidate authority before refreshing native and paired Web
 
 test("native global disable refreshes paired Web without a project mutation reload", async () => {
   const f = fixture();
-  await f.composition.applyRendererSettingsSideEffects("user", {
-    disabledPanelApps: ["fixture-panel"],
-  });
+  await f.composition.applyRendererSettingsSideEffects(
+    settingsChange("user", { disabledPanelApps: ["fixture-panel"] }),
+  );
   expect(f.events.filter((event) => event.kind === "paired-web")).toEqual([
     { kind: "paired-web", args: [] },
   ]);

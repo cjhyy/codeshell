@@ -69,6 +69,10 @@ if (process.env.CODESHELL_COST_SMOKE_ORIGIN) {
   await probeMacosKeychainGuard(
     process.env.CODESHELL_COST_SMOKE_ORIGIN,
     process.env.CODESHELL_COST_SMOKE_GUARD_LOG,
-    process.argv.some((value) => value.includes("agent-server-stdio")) ? "worker" : "Main",
+    process.type === "utility"
+      ? "desktop-host"
+      : process.argv.some((value) => value.includes("agent-server-stdio"))
+        ? "worker"
+        : "Main",
   );
 }
