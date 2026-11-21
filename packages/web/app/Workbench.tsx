@@ -13,7 +13,8 @@ import { PanelSessionBar } from "./PanelSessionBar.js";
 import type { ManagedPanel } from "../src/panels.js";
 import { OutputHistoryRecoveryExit } from "../src/components/OutputHistoryRecovery.js";
 import { connectionModelLabel } from "./configuration.js";
-import { MessageContent, subagentStatusLabel } from "./MessageContent.js";
+import { MessageContent } from "./MessageContent.js";
+import { SubagentRowButton } from "./SubagentView.js";
 import { AnswerContent } from "./AnswerContent.js";
 import { ProcessActivity } from "./ProcessActivity.js";
 import { projectProcessActivity } from "./processActivityProjection.js";
@@ -1089,9 +1090,10 @@ export function Workbench({
             </button>
           </div>
         ) : null}
+        {view === "chat" ? controller.subagentView : null}
         <section
           className={`chat${showWelcome ? " chat-empty" : ""}${empty && controller.loading ? " chat-loading-empty" : ""}`}
-          hidden={view !== "chat"}
+          hidden={view !== "chat" || !!controller.subagentView}
           aria-label="对话"
         >
           <div className="message-viewport">
@@ -1130,6 +1132,7 @@ export function Workbench({
                     failed={controller.loadingFailed}
                   />
                 ) : null}
+                {controller.subagentEntry}
                 {chat.goal ? (
                   <div className="banner goal">
                     <span>{chat.goal}</span>
@@ -1274,9 +1277,11 @@ export function Workbench({
                       );
                     case "subagent":
                       return (
-                        <div key={item.id} className="msg info">
-                          ↳ {item.label} · {subagentStatusLabel(item.status)}
-                        </div>
+                        <SubagentRowButton
+                          key={item.id}
+                          item={item}
+                          onOpen={controller.openSubagent}
+                        />
                       );
                     case "system":
                       return (

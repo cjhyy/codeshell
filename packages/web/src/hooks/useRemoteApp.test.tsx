@@ -7024,6 +7024,114 @@ describe("useRemoteApp CLI room controls", () => {
   });
 });
 
+describe("remote subagents", () => {
+  async function parentWithChild() {
+    setupBrowser();
+    const hook = await renderHook(() => useRemoteApp());
+    const ws = FakeWebSocket.instances[0]!;
+    const sent = () => ws.sent.map((line) => JSON.parse(line));
+    await act(async () => {
+      ws.open();
+      ws.message({ type: "auth.ok", capabilities: {} });
+      await flushMicrotasks();
+      hook.result.current.selectSession("parent");
+      await flushMicrotasks();
+      ws.message({
+        type: "session.history.ok",
+        sessionId: "parent",
+        events: [
+          { type: "stream_request_start", messageId: "p" },
+          { type: "text_delta", text: "parent text" },
+          { type: "agent_start", agentId: "child", name: "Explorer" },
+          { type: "text_delta", agentId: "child", text: "child prose" },
+          { type: "tool_use_start", agentId: "child", toolCall: { id: "t1", toolName: "Read" } },
+        ],
+      });
+      await flushMicrotasks();
+    });
+    return { hook, ws, sent };
+  }
+
+  test("child output stays out of the parent feed; the row opens a read-only child view and back returns", async () => {
+    const { hook, ws, sent } = await parentWithChild();
+    try {
+      const items = hook.result.current.chat.items;
+      expect(items.filter((item) => item.kind !== "subagent").map((item) => item.kind)).toEqual([
+        "assistant",
+      ]);
+      expect(items.find((item) => item.kind === "subagent")).toMatchObject({
+        agentId: "child",
+        status: "running",
+        toolCount: 1,
+      });
+
+      await act(async () => {
+        hook.result.current.subagents!.open("parent", "child");
+        await flushMicrotasks();
+      });
+      const list = sent().findLast((event) => event.type === "session.subagents");
+      const detail = sent().findLast((event) => event.type === "session.subagentTranscript");
+      expect(list).toMatchObject({ sessionId: "parent" });
+      expect(detail).toMatchObject({ parentSessionId: "parent", sessionId: "child" });
+      await act(async () => {
+        ws.message({
+          type: "session.subagents.ok",
+          requestId: list.requestId,
+          sessionId: "parent",
+          agents: [{ sessionId: "child", title: "Explorer", status: "active" }],
+        });
+        // A stale reply for an older request is ignored.
+        ws.message({
+          type: "session.subagentTranscript.ok",
+          requestId: "old",
+          parentSessionId: "parent",
+          sessionId: "child",
+          events: [{ type: "text_delta", text: "stale" }],
+        });
+        ws.message({
+          type: "session.subagentTranscript.ok",
+          requestId: detail.requestId,
+          parentSessionId: "parent",
+          sessionId: "child",
+          events: [
+            { type: "stream_request_start", messageId: "c" },
+            { type: "text_delta", text: "child prose" },
+            { type: "tool_use_start", toolCall: { id: "t1", toolName: "Read", args: {} } },
+          ],
+        });
+        await flushMicrotasks();
+      });
+      const view = hook.result.current.subagents!.view;
+      expect(view).toMatchObject({
+        kind: "session",
+        parentSessionId: "parent",
+        selectedId: "child",
+      });
+      expect(view?.kind === "session" && view.transcript?.items.map((item) => item.kind)).toEqual([
+        "assistant",
+        "tool",
+      ]);
+
+      await act(async () => {
+        hook.result.current.subagents!.back();
+        await flushMicrotasks();
+      });
+      const listView = hook.result.current.subagents!.view;
+      expect(listView?.kind === "session" && listView.selectedId).toBeUndefined();
+      expect(
+        listView?.kind === "session" && listView.catalog.map((agent) => agent.sessionId),
+      ).toEqual(["child"]);
+      await act(async () => {
+        hook.result.current.subagents!.back();
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.subagents!.view).toBeUndefined();
+    } finally {
+      await hook.unmount();
+    }
+  });
+});
+
 describe("versioned remote Goal controls", () => {
   async function goalFixture(capable = true) {
     setupBrowser();

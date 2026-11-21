@@ -39,7 +39,19 @@ export type MobileHistoryItem =
       detailRef?: string;
       /** Only an explicit same-run/turn/source identity permits display grouping. */ activityGroupKey?: string;
     }
-  | { kind: "subagent"; id: string; agentId: string; label: string; status: string }
+  | {
+      kind: "subagent";
+      id: string;
+      /** The child agent; for native sessions this is the child Session id. */
+      agentId: string;
+      label: string;
+      status: string;
+      /** Child tool calls seen in the parent stream (the child's own feed holds them). */
+      toolCount?: number;
+      /** Child result text (flushed at agent_end), or its error. */
+      text?: string;
+      error?: string;
+    }
   | { kind: "system"; id: string; text: string }
   | { kind: "system_error"; id: string; text: string };
 

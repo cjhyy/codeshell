@@ -2,6 +2,7 @@ import type { MobileHistoryItem } from "@cjhyy/code-shell-core";
 import {
   appendUserMessage,
   initialChatState,
+  reduceScopedStream,
   reduceStream,
   type ChatState,
 } from "../lib/streamReducer.js";
@@ -33,7 +34,8 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
         ? reduceStream(state, action.raw)
         : state;
     case "raw":
-      return reduceStream(state, action.raw);
+      // Child agent output lives in the child view (Desktop's parent feed).
+      return reduceScopedStream(state, action.raw);
     case "user":
       return appendUserMessage(state, action.text, action.attachments, action.clientMessageId);
     case "prependHistory": {
@@ -76,7 +78,7 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
       };
     }
     case "replay":
-      return action.events.reduce(reduceStream, initialChatState());
+      return action.events.reduce(reduceScopedStream, initialChatState());
     case "prependEvents": {
       // Reduced on their own: ids are namespaced so they never collide with
       // (or seal) items of the conversation already displayed.
@@ -90,6 +92,6 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
       };
     }
     case "append":
-      return action.events.reduce(reduceStream, state);
+      return action.events.reduce(reduceScopedStream, state);
   }
 }

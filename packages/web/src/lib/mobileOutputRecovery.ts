@@ -7,7 +7,7 @@ import {
   type OutputJournalRecovery,
 } from "./outputJournalRecovery.js";
 import { assertOutputCoverage } from "./outputCoverage.js";
-import { initialChatState, reduceStream } from "./streamReducer.js";
+import { initialChatState, reduceScopedStream } from "./streamReducer.js";
 
 type Reply = Extract<MobileServerEvent, { type: "session.outputJournal" }>;
 type BaseReply = Extract<MobileServerEvent, { type: "session.legacyBase" }>;
@@ -279,7 +279,7 @@ export async function recoverMobileOutput(args: {
       )
         throw new Error("Recovery base is incomplete or exceeds its bound");
       for (const event of base.events) {
-        chat = reduceStream(chat, event);
+        chat = reduceScopedStream(chat, event);
         if (legacyOnly) legacyEvents.push(event);
       }
       args.progress?.({ phase: "legacy", pages, receivedBytes: bytes });
@@ -299,7 +299,7 @@ export async function recoverMobileOutput(args: {
       wireBytes(reply.legacyBase) > MiB + 4096
     )
       throw new Error("Recovery base is incomplete");
-    for (const event of reply.legacyBase.events) chat = reduceStream(chat, event);
+    for (const event of reply.legacyBase.events) chat = reduceScopedStream(chat, event);
   }
   // A legacy transcript establishes display history, never live completion.
   chat = { ...chat, run: chat.run === "error" ? "error" : "idle", liveByAgent: {} };
@@ -316,7 +316,7 @@ export async function recoverMobileOutput(args: {
       while (true) {
         if (!args.canContinue() || ++pages > 2048) throw new Error("Recovery cancelled or bounded");
         const complete = applyOutputJournalPage(recovery, reply.page, (event) => {
-          chat = reduceStream(chat, event);
+          chat = reduceScopedStream(chat, event);
         });
         if (recovery.incomplete) throw new Error("Recovery is incomplete");
         const progress = outputJournalProgress(recovery);
@@ -433,7 +433,7 @@ export async function recoverMobileOutputSuffix(args: {
         (id && !tool && event.type === "tool_use_args_delta")
       )
         deferredChanged = true;
-      if (!deferredChanged) chat = reduceStream(chat, event);
+      if (!deferredChanged) chat = reduceScopedStream(chat, event);
     });
     if (recovery.incomplete) throw new Error("Suffix is incomplete");
     if (deferredChanged)

@@ -14,7 +14,7 @@ import {
   assertOutputCoverage,
   compareOutputCursors,
   initialChatState,
-  reduceStream,
+  reduceScopedStream,
   transcriptToStreamEvents,
   type OutputJournalRecovery,
 } from "@cjhyy/code-shell-web";
@@ -276,7 +276,7 @@ export class MobileHistoryViewStore {
         events.slice(1).some((event) => event.type === "session_started")
       )
         throw new Error("History cutover invalid");
-      for (const event of events) chat = reduceStream(chat, event);
+      for (const event of events) chat = reduceScopedStream(chat, event);
     }
     chat = { ...chat, run: chat.run === "error" ? "error" : "idle", liveByAgent: {} };
     const recovery: OutputJournalRecovery = { incomplete: false };
@@ -290,7 +290,7 @@ export class MobileHistoryViewStore {
         throw new UnsupportedHistoryView("History exceeds projection source budget");
       const metadata = new Map(page.frames.map((frame) => [frame.cursor, frame]));
       const complete = applyOutputJournalPage(recovery, page, (event) => {
-        chat = reduceStream(chat, event);
+        chat = reduceScopedStream(chat, event);
         const frame = metadata.get(String(event.outputCursor));
         if (!frame || (!frame.runId && !frame.producer)) return;
         const identity = JSON.stringify([

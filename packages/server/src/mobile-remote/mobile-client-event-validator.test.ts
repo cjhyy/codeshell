@@ -3,6 +3,28 @@ import { parseMobileClientEvent } from "./mobile-client-event-validator.js";
 import { MAX_MOBILE_ATTACHMENTS, MAX_MOBILE_IMAGE_BYTES } from "./mobile-limits.js";
 
 describe("parseMobileClientEvent", () => {
+  test("subagent reads carry a request id and bounded Session ids", () => {
+    const list = { type: "session.subagents", requestId: "r1", sessionId: "s1" };
+    expect(parseMobileClientEvent(list)).toEqual(list);
+    expect(parseMobileClientEvent({ ...list, cursor: "c" })?.type).toBe("session.subagents");
+    for (const change of [
+      { requestId: "" },
+      { sessionId: "" },
+      { sessionId: "x".repeat(513) },
+      { cursor: "x".repeat(513) },
+      { cursor: 1 },
+    ])
+      expect(parseMobileClientEvent({ ...list, ...change })).toBeUndefined();
+    const detail = {
+      type: "session.subagentTranscript",
+      requestId: "t1",
+      parentSessionId: "s1",
+      sessionId: "c1",
+    };
+    expect(parseMobileClientEvent(detail)).toEqual(detail);
+    expect(parseMobileClientEvent({ ...detail, parentSessionId: undefined })).toBeUndefined();
+  });
+
   test("CLI take-over and paged history requests are bounded", () => {
     const takeOver = {
       type: "ccRoom.takeOver",

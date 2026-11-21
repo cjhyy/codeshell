@@ -316,6 +316,18 @@ export function parseMobileClientEvent(value: unknown): MobileClientEvent | unde
         (event.before === undefined ||
           (Number.isSafeInteger(event.before) && (event.before as number) >= 0));
       break;
+    case "session.subagents":
+      valid =
+        boundedString(event.requestId, MAX_ID_LENGTH) &&
+        boundedString(event.sessionId, MAX_ID_LENGTH) &&
+        (event.cursor === undefined || boundedString(event.cursor, 512));
+      break;
+    case "session.subagentTranscript":
+      valid =
+        boundedString(event.requestId, MAX_ID_LENGTH) &&
+        boundedString(event.parentSessionId, MAX_ID_LENGTH) &&
+        boundedString(event.sessionId, MAX_ID_LENGTH);
+      break;
     case "ccRoom.takeOver":
       valid =
         boundedString(event.roomId, MAX_ID_LENGTH) &&

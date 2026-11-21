@@ -428,3 +428,88 @@
     flex-basis: 100%;
   }
 }
+
+/* Subagents: parent-feed row, list and read-only child transcript. One
+   column at any width; long titles and previews wrap instead of overflowing. */
+.subagent-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-self: stretch;
+  min-width: 0;
+  max-width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+button.subagent-row {
+  cursor: pointer;
+}
+.subagent-row-meta,
+.subagent-row-preview {
+  color: var(--muted);
+  font-size: 12px;
+}
+.subagent-entry {
+  align-self: flex-start;
+  max-width: 100%;
+}
+.subagent-entry .library-button {
+  display: block;
+  max-width: 100%;
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+.subagent-view {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.subagent-view-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.subagent-view-header strong {
+  flex: 1 1 8rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.subagent-view-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  min-height: 0;
+  padding: 12px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+.subagent-list h3 {
+  margin: 8px 0 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.subagent-list ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.subagent-list .session {
+  width: 100%;
+  margin-top: 4px;
+}

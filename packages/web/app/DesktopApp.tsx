@@ -18,6 +18,7 @@ import { connectionModelLabel, readConfiguration, type HubConfiguration } from "
 import { SessionDrafts } from "./drafts.js";
 import { sessionTitle } from "./chat.js";
 import { Workbench } from "./Workbench.js";
+import { subagentControls } from "./SubagentView.js";
 import {
   DesktopApproval,
   DesktopChatControls,
@@ -1326,6 +1327,7 @@ export function useDesktopController(
         ? "正在只读查看外部 CLI 对话；继续前需要明确接管。"
         : undefined,
     readOnlyAction: app.outputHistoryFailed ? undefined : <DesktopTakeOver app={app} />,
+    ...subagentControls(app),
     turnQueue: app.turnQueueSupported
       ? {
           canQueue,
