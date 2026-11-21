@@ -601,6 +601,7 @@ export class MobileRemoteOrchestrator {
       roomToPublic: (room) => this.roomToPublic(room),
       ...(this.deps.roomModes ? { roomModes: this.deps.roomModes } : {}),
       requireLinkedSessionPath: this.deps.requireLinkedSessionPath,
+      sessionReadAuthority: mobileSessionCommandAuthority,
       broadcastRoomState: (roomId) => this.broadcastRoomState(roomId),
       roomMatchesTranscript: (roomId, cwd, sessionId, kind) =>
         this.roomMatchesTranscript(roomId, cwd, sessionId, kind),

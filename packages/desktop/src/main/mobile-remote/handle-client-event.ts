@@ -23,7 +23,13 @@ import {
 } from "../cc-room/room-mode-authority.js";
 import type { TranscriptSubscriptionManager } from "../cc-room/transcript-subscriptions.js";
 import { getSessionTranscript } from "../transcript-reader.js";
+import { SessionManager } from "@cjhyy/code-shell-core";
 import { handleCcRoomEvent } from "./handle-cc-room-event.js";
+import {
+  handleSubagentCommand,
+  isSubagentEvent,
+  type SubagentCommandDeps,
+} from "./subagent-commands.js";
 import type { MobileExternalRuntimeCommands } from "./external-runtime-commands.js";
 import {
   parseExternalRuntimeModelKey,
@@ -134,6 +140,10 @@ export interface OrchestratorCtx {
   broadcastRoomState?: (roomId: string) => void;
   /** Desktop's linked-session project gate, required for a remote take-over. */
   requireLinkedSessionPath?: (cwd: unknown) => Promise<string>;
+  /** Throws unless a device may read this top-level Session (remote Session authority). */
+  sessionReadAuthority?: (sessionId: string) => Promise<unknown>;
+  /** Subagent reads (tests inject; Desktop uses the disk Session store). */
+  subagents?: SubagentCommandDeps;
   /**
    * Set only for a Host-queued turn: its admission authority and Stop fence.
    * Asserted synchronously immediately before the input is physically handed
@@ -372,6 +382,18 @@ export async function handleClientEvent(
         message: "暂时无法读取桌面的外部运行时模型。请稍后刷新。",
       });
     }
+    return;
+  }
+  // ── Subagents (read-only; independent of the chat worker bridge) ──────
+  if (isSubagentEvent(event)) {
+    const viewerId = event.viewerId;
+    await handleSubagentCommand(ctx.subagents ?? defaultSubagentDeps(ctx), event, (reply) =>
+      viewerId
+        ? ctx.remote.sendToViewer(viewerId, reply)
+        : event.deviceId
+          ? ctx.remote.sendToDevice(event.deviceId, reply)
+          : undefined,
+    );
     return;
   }
   // ── CC Room (external claude CLI sessions) — checked first so "ccRoom.*"
@@ -1169,4 +1191,22 @@ export async function handleClientEvent(
     }
     return;
   }
+}
+
+/** Desktop's own subagent data: the same reads its subagent panel uses. */
+function defaultSubagentDeps(ctx: OrchestratorCtx): SubagentCommandDeps {
+  return {
+    authorizeSession: async (sessionId) => {
+      if (!ctx.sessionReadAuthority) throw new Error("Session authority unavailable");
+      return ctx.sessionReadAuthority(sessionId);
+    },
+    parentOf: (sessionId) => {
+      const state = new SessionManager().readSessionState(sessionId);
+      return state ? state.parentSessionId || undefined : null;
+    },
+    listChildren: (parentSessionId, cursor, limit) =>
+      listDiskSessions({ parentSessionId, cursor, limit }),
+    readTranscript: (sessionId) =>
+      buildSessionHistory(sessionId, getSessionTranscript, transcriptUserDisplay),
+  };
 }

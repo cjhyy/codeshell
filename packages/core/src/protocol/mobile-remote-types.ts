@@ -221,6 +221,16 @@ export type MobileClientEvent =
       cwds?: string[];
     }
   | { type: "session.history"; sessionId: string }
+  // ── Subagents (read-only; Desktop's subagent panel data) ─────────────────
+  /** Direct children of a Session the device may read; one bounded page. */
+  | { type: "session.subagents"; requestId: string; sessionId: string; cursor?: string }
+  /** One child's folded transcript; `parentSessionId` scopes the authority. */
+  | {
+      type: "session.subagentTranscript";
+      requestId: string;
+      parentSessionId: string;
+      sessionId: string;
+    }
   | {
       type: "session.sync";
       sessionId: string;
@@ -566,6 +576,24 @@ export type MobileServerEvent =
     }
   | { type: "session.history.ok"; sessionId: string; events: unknown[] }
   | {
+      type: "session.subagents.ok";
+      requestId: string;
+      sessionId: string;
+      agents: MobileSubagentSummary[];
+      nextCursor?: string;
+      /** Set instead of data when the Host refused or failed the read. */
+      error?: string;
+    }
+  | {
+      type: "session.subagentTranscript.ok";
+      requestId: string;
+      parentSessionId: string;
+      sessionId: string;
+      /** Same envelopes as session.history.ok. */
+      events: unknown[];
+      error?: string;
+    }
+  | {
       type: "session.snapshot";
       sessionId: string;
       entries: Array<{ seq: number; event: unknown }>;
@@ -737,6 +765,15 @@ export type MobileServerEvent =
       requestId: string;
       decision: CcApprovalDecision;
     };
+
+/** A child Session (subagent) as Desktop's subagent list shows it. */
+export interface MobileSubagentSummary {
+  sessionId: string;
+  title: string;
+  /** Durable status; absent when the child never recorded one. */
+  status?: "active" | "paused" | "completed" | "failed" | "cancelled";
+  updatedAt?: number;
+}
 
 export interface RoomPublic {
   id: string;
