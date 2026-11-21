@@ -1,3 +1,4 @@
+import { reportBackgroundWorkChange } from "../../runtime/background-work-lifecycle.js";
 /**
  * Registry of NON-agent background jobs (GenerateVideo poll loops, DriveAgent
  * external CLI runs). Mirrors the role `asyncAgentRegistry` plays for background
@@ -285,6 +286,7 @@ class BackgroundJobRegistry {
     });
     this.persist(jobId);
     this.notify();
+    reportBackgroundWorkChange("job", jobId, this.jobs.get(jobId)!);
   }
 
   /** Mark a job terminal (retained, not deleted). Unknown id is a no-op (no
@@ -304,6 +306,7 @@ class BackgroundJobRegistry {
     this.persist(jobId);
     this.evictTerminalOverCap(entry.sessionId);
     this.notify();
+    reportBackgroundWorkChange("job", jobId, entry);
   }
 
   get(jobId: string): BackgroundJobEntry | undefined {
@@ -370,6 +373,7 @@ class BackgroundJobRegistry {
       entry.finalText = `${entry.finalText ? `${entry.finalText}\n\n` : ""}[worktree lifecycle] ${note}`;
     this.persist(jobId);
     this.notify();
+    reportBackgroundWorkChange("job", jobId, this.jobs.get(jobId)!);
     return true;
   }
 
@@ -384,6 +388,7 @@ class BackgroundJobRegistry {
     entry.status = "cancelling";
     this.persist(jobId);
     this.notify();
+    reportBackgroundWorkChange("job", jobId, entry);
     const abortOutcome = entry.abort ? await waitForAbort(entry.abort) : undefined;
 
     // Session teardown/reset may have removed the entry while termination was
@@ -400,6 +405,7 @@ class BackgroundJobRegistry {
     this.persist(jobId);
     this.evictTerminalOverCap(entry.sessionId);
     this.notify();
+    reportBackgroundWorkChange("job", jobId, entry);
     return true;
   }
 

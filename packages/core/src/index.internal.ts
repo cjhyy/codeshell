@@ -595,3 +595,9 @@ export {
   sanitizeExternalChangedFilesProvenance,
   sanitizeGitBlobRef,
 } from "./session/external-file-provenance.js";
+
+export {
+  observeBackgroundWorkChange,
+  isBackgroundWorkChange,
+  type BackgroundWorkChange,
+} from "./runtime/background-work-lifecycle.js";
