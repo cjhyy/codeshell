@@ -6,8 +6,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SessionManager, UsageLedger } from "@cjhyy/code-shell-core";
 import { ModelTraceStore } from "@cjhyy/code-shell-core/internal";
+import type { Worker } from "node:worker_threads";
 import {
   ActivityHistoryWorker,
+  createActivityHistoryWorker,
   type ActivityHistoryWorkerRequest,
 } from "./activity-history-worker-client.js";
 
@@ -88,10 +90,28 @@ test("a rejected query does not poison later reads and queued requests stay boun
 });
 
 const directories: string[] = [];
-afterEach(() => {
+// Real worker threads are reaped even when a test fails or times out before its
+// own close(); a ref'd worker would otherwise keep the whole Bun process alive.
+const workers: Worker[] = [];
+afterEach(async () => {
+  await Promise.all(workers.splice(0).map((worker) => worker.terminate()));
   for (const directory of directories.splice(0))
     rmSync(directory, { recursive: true, force: true });
 });
+
+/**
+ * The rejection a promise settles with. Bun 1.4.5's `expect(promise).rejects`
+ * never settles when a worker_threads message rejects the promise while it
+ * waits (plain await works), so assert on the awaited error instead.
+ */
+async function rejection(promise: Promise<unknown>): Promise<Error> {
+  const error = await promise.then(
+    () => undefined,
+    (error: unknown) => error,
+  );
+  expect(error).toBeInstanceOf(Error);
+  return error as Error;
+}
 
 test("real history scans leave the caller responsive and retain validation, ownership and policy ordering", async () => {
   const root = mkdtempSync(join(tmpdir(), "codeshell-history-worker-"));
@@ -132,7 +152,13 @@ test("real history scans leave the caller responsive and retain validation, owne
   });
   await traces.flushMaintenance();
   const before = readFileSync(join(root, "owned", "state.json"), "utf8");
-  const history = new ActivityHistoryWorker({ sessionsDir: root });
+  const history = new ActivityHistoryWorker({ sessionsDir: root }, (options) => {
+    const worker = createActivityHistoryWorker(options);
+    workers.push(worker);
+    // Bun 1.3.11's terminate() never settles for a worker that already exited.
+    worker.once("exit", () => workers.splice(workers.indexOf(worker), 1));
+    return worker;
+  });
   try {
     await history.getConfig(); // Start the actual worker before measuring the scan.
     let heartbeats = 0;
@@ -149,11 +175,13 @@ test("real history scans leave the caller responsive and retain validation, owne
     expect((await history.list()).items.map((record) => record.id)).toEqual(["request"]);
     expect((await history.sessions()).items[0]?.sessionId).toBe("owned");
     expect((await history.get("request"))?.record.traceId).toBe("run");
-    await expect(history.list({ storageDir: "/foreign" })).rejects.toThrow(
+    expect((await rejection(history.list({ storageDir: "/foreign" }))).message).toContain(
       "Unknown model trace query field",
     );
-    await expect(history.get("../foreign")).rejects.toThrow("Invalid model trace id");
-    await expect(history.usage({ scope: "session", sessionId: "../owned" })).rejects.toThrow();
+    expect((await rejection(history.get("../foreign"))).message).toContain(
+      "Invalid model trace id",
+    );
+    await rejection(history.usage({ scope: "session", sessionId: "../owned" }));
     const writing = history.setConfig({ captureContent: false, retentionDays: 9 });
     const reading = history.getConfig();
     expect(await writing).toEqual(await reading);
