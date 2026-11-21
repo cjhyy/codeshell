@@ -373,3 +373,9 @@ export async function cancelBackgroundWorkForUI(input: {
     return false;
   return backgroundJobRegistry.cancel(input.workId);
 }
+
+export {
+  observeBackgroundWorkChange,
+  isBackgroundWorkChange,
+  type BackgroundWorkChange,
+} from "../../runtime/background-work-lifecycle.js";

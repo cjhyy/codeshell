@@ -775,15 +775,13 @@ try {
   diagnostics.phase("panel-terminal-interrupt");
   await win.keyboard.type("printf 'PANEL_OPERATION_SLEEP_STARTED\\n'; sleep 60\n");
   await terminal.getByText("PANEL_OPERATION_SLEEP_STARTED", { exact: true }).waitFor();
-  await win.keyboard.press("Control+C");
-  await win.waitForFunction(() => {
-    const rows = document.querySelector(
-      '[data-panel-id="terminal"][data-panel-active="true"] .xterm-rows',
-    );
-    return /[%$#>]\s*$/.test(rows?.textContent ?? "");
-  });
+  // Address the terminal's actual input after switching panels. A prompt may
+  // contain cursor-control sequences and is not a reliable interrupt receipt.
+  await input.press("Control+c");
   await win.keyboard.type("printf 'PANEL_OPERATION_CANCEL_OK\\n'\n");
-  await terminal.getByText("PANEL_OPERATION_CANCEL_OK", { exact: true }).waitFor();
+  // The foreground sleep lasts a minute. The shell can execute this command
+  // within 15 seconds only once Ctrl+C has interrupted it.
+  await terminal.getByText("PANEL_OPERATION_CANCEL_OK", { exact: true }).waitFor({timeout:15_000});
   diagnostics.phase("panel-terminal-exit");
   await win.keyboard.type("exit\n");
   await terminal.getByText(/进程已退出/).waitFor();

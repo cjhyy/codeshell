@@ -1,3 +1,4 @@
+import { observeBackgroundWorkChange } from "../runtime/background-work-lifecycle.js";
 import { createDesktopOperationBatchAuthorityClient } from "../operations/desktop-batch-authority-client.js";
 /**
  * agent-server-stdio — Electron worker entry point.
@@ -395,6 +396,9 @@ registerOpenRouterCatalogCache(join(codeShellHome(), "cache", "openrouter-models
 
 const stdioTransport = new StdioTransport(process.stdin, process.stdout);
 if (process.env.CODE_SHELL_NOTIFY_SESSION_INDEX === "1") {
+  observeBackgroundWorkChange((change) =>
+    stdioTransport.send(createNotification("host/backgroundWorkChanged", { ...change })),
+  );
   observeSessionIndexWrites(notificationSessionsDir, (ids) =>
     stdioTransport.send(createNotification("host/sessionIndexChanged", { ids })),
   );

@@ -1,4 +1,5 @@
 import type { DesktopWorkerDriver } from "./desktop-host/worker-wire.js";
+import { isBackgroundWorkChange, type BackgroundWorkChange } from "@cjhyy/code-shell-core/internal";
 /**
  * AgentBridge — Electron main ↔ agent worker subprocess broker.
  *
@@ -295,6 +296,7 @@ function normalizeCredentialMaterializeParams(params: Record<string, unknown> | 
 export class AgentBridge implements PetStateBridge {
   private externalGoalRpcHandler?: ExternalGoalRpcHandler;
 
+  onWorkerBackgroundWorkChanged?: (change: BackgroundWorkChange) => void;
   setExternalGoalRpcHandler(handler: ExternalGoalRpcHandler): void {
     this.externalGoalRpcHandler = handler;
   }
@@ -626,6 +628,14 @@ export class AgentBridge implements PetStateBridge {
    */
   private handleWorkerLine(line: string): void {
     const parsedLine = parseWorkerLine(line);
+    const message = parsedLine.message as
+      | { method?: unknown; params?: unknown; id?: unknown }
+      | undefined;
+    if (message?.method === "host/backgroundWorkChanged") {
+      if (message.id === undefined && isBackgroundWorkChange(message.params))
+        this.onWorkerBackgroundWorkChanged?.(message.params);
+      return;
+    }
     if (consumeSessionIndexNotification(parsedLine.message, this.onSessionsChanged)) return;
     this.webConfiguration.observe(line, parsedLine);
     this.updateTentativeRunLifecycle(line, parsedLine);

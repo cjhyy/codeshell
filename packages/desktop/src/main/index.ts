@@ -1,3 +1,7 @@
+import {
+  observeBackgroundWorkChange,
+  type BackgroundWorkChange,
+} from "@cjhyy/code-shell-core/internal";
 import { taskInboxEnabled } from "./task-inbox/task-host-reads.js";
 import { registerLinkedFileSourceIpc } from "./linked-file-sources-ipc.js";
 import { openLinkedFileSourceOperation } from "./linked-file-sources-host.js";
@@ -338,7 +342,7 @@ import { readSettings, writeSettings, type SettingsScope } from "./settings-serv
 import { registerDesktopOutputHistoryHost } from "./session-output-history-host.js";
 import { registerSessionCatalogIpc } from "./session-catalog-ipc.js";
 import { SessionCatalogStore } from "./session-catalog-store.js";
-import { createTaskInboxSources } from "./task-inbox/task-inbox-sources.js";
+import { backgroundTaskSourceId, createTaskInboxSources } from "./task-inbox/task-inbox-sources.js";
 import { createTaskInboxService } from "./task-inbox/task-inbox-service.js";
 import { createTaskInboxBackgroundHost } from "./task-inbox/task-inbox-background-host.js";
 import * as backgroundWork from "./cc-room/background-work-ipc.js";
@@ -1718,6 +1722,16 @@ async function createWindow(): Promise<BrowserWindow> {
     // and which feature flags are on. The layers below deliberately refuse to
     // default any of it.
     bridge.setMobileOutputOnline(mobileRemote.onlineDeviceIds().length > 0);
+    const markBackgroundChanged = (origin: "main" | "worker", e: BackgroundWorkChange) => {
+      taskInboxService.markDirty(
+        e.kind === "shell" ? "background-shell" : "background-job",
+        backgroundTaskSourceId(origin, e.sessionId, e.startedAt, e.workId),
+      );
+    };
+    bridge.onWorkerBackgroundWorkChanged = (change) => markBackgroundChanged("worker", change);
+    taskInboxDisposers.push(
+      observeBackgroundWorkChange((change) => markBackgroundChanged("main", change)),
+    );
     const externalBridge = bridge;
     taskInboxDisposers.push(
       bridge.subscribeOutbound((_line, entry) => {

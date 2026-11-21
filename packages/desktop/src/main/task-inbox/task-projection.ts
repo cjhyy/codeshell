@@ -216,7 +216,14 @@ export function reconcileTasks(
           .flatMap((key) => rows.rows({ key }))
           .filter((r) => r.record.source === b.source && !present.has(r.record.taskKey));
     for (const row of missing) if (absent(rows, row, now)) changed = true;
-    for (const r of b.records ?? []) if (upsertTask(rows, r, false, now)) changed = true;
+    for (const record of b.records ?? []) {
+      // Finished entries may exist only in the current process's registry. Mirror
+      // them while that owner can still describe their final outcome.
+      const registryOnly =
+        (record.source === "background-shell" || record.source === "background-job") &&
+        (isTerminalTaskStatus(record.status) || record.status === "interrupted");
+      if (upsertTask(rows, record, registryOnly, now)) changed = true;
+    }
   }
   const nextErrors: TaskInboxSourceError[] = [...errors]
     .map(([source, message]) => ({ source, message }))

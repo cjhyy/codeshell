@@ -121,6 +121,14 @@ const clean = (text: string | undefined, limit = 4096): string | undefined =>
   text?.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, "").slice(0, limit) || undefined;
 const revision = (...parts: unknown[]): string =>
   createHash("sha256").update(JSON.stringify(parts)).digest("hex");
+export const backgroundTaskSourceId = (
+  origin: "main" | "worker" | undefined,
+  sessionId: string,
+  startedAt: number,
+  workId: string,
+  generation?: number | string,
+) => `${workId}:${revision(origin, sessionId, startedAt, generation).slice(0, 24)}`;
+
 function statusOf(value: string | undefined): TaskStatus {
   switch (value) {
     case "queued":
@@ -406,7 +414,13 @@ export function createTaskInboxSources(deps: TaskInboxSourcesDeps): {
     const sourceId =
       entry.kind === "subagent" && entry.childSessionId
         ? entry.childSessionId
-        : `${workId}:${revision(entry.executionOrigin, entry.sourceSession.sessionId, startedAt, entry.kind === "subagent" ? entry.runtimeGeneration : undefined).slice(0, 24)}`;
+        : backgroundTaskSourceId(
+            entry.executionOrigin,
+            entry.sourceSession.sessionId,
+            startedAt,
+            workId,
+            entry.kind === "subagent" ? entry.runtimeGeneration : undefined,
+          );
     const rawStatus = shell ? shell.status : entry.kind !== "shell" ? entry.status : undefined;
     const status =
       shell?.status === "exited" ? (shell.exitCode === 0 ? "done" : "failed") : statusOf(rawStatus);

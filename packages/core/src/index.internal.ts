@@ -240,6 +240,9 @@ export {
 } from "./session/background-continuation.js";
 export { backgroundJobRegistry } from "./tool-system/builtin/background-jobs.js";
 export {
+  observeBackgroundWorkChange,
+  isBackgroundWorkChange,
+  type BackgroundWorkChange,
   cancelBackgroundWorkForUI,
   dropBackgroundJobHistoryForSession,
   findActiveBackgroundJobForExternalSession,

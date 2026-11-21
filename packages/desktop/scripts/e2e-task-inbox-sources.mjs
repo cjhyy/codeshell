@@ -5,7 +5,7 @@
 /* global document, localStorage, window */
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, realpath, stat, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
@@ -191,6 +191,20 @@ async function launch() {
 async function list() {
   return win.evaluate(() => window.codeshell.taskInbox.list({ limit: 200 }));
 }
+async function storedTaskStatus(taskKey) {
+  const storage = join(isolated.codeShellHome, ".codeshell-state");
+  const roots = await readdir(storage);
+  assert.equal(roots.length, 1);
+  const { DatabaseSync } = await import("node:sqlite");
+  const db = new DatabaseSync(join(storage, roots[0], "current", "state.sqlite"), {
+    readOnly: true,
+  });
+  try {
+    return db.prepare("SELECT status FROM tasks WHERE task_key=?").get(taskKey)?.status;
+  } finally {
+    db.close();
+  }
+}
 async function until(read, message, timeout = 20_000) {
   const deadline = Date.now() + timeout;
   while (Date.now() < deadline) {
@@ -295,6 +309,31 @@ try {
       ? value
       : undefined;
   }, "Durable task sources were not reconciled");
+  // The IPC fallback returns the same records. Complete both reads while Main
+  // is blocked to demonstrate that this workbench is using its negotiated port.
+  const nativeWindow = await app.browserWindow(win);
+  const measured = await nativeWindow.evaluate(async ({ webContents }) => {
+    await webContents.executeJavaScript(`window.__taskHostProbe = new Promise((resolve,reject) =>
+      setTimeout(async () => {
+        try {
+          const begin=Date.now();
+          const {records}=await window.codeshell.taskInbox.list({limit:1});
+          const row=await window.codeshell.taskInbox.get(records[0].taskKey);
+          resolve({begin,end:Date.now(),sameRecord:row?.taskKey===records[0].taskKey});
+        } catch(error) { reject(error); }
+      },250)); void 0`);
+    const begin = Date.now();
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1600);
+    const end = Date.now();
+    return { begin, end, probe: await webContents.executeJavaScript("window.__taskHostProbe") };
+  });
+  await nativeWindow.dispose();
+  assert(
+    measured.probe.sameRecord &&
+      measured.probe.begin >= measured.begin &&
+      measured.probe.end < measured.end,
+    "Both list and get must answer on the Host port while Main is busy",
+  );
   assert.deepEqual(initial.errors, [], "Every authoritative source reconciles successfully");
   assert.equal(
     initial.records.find((record) => record.source === "session" && record.sourceId === ids.done)
@@ -421,14 +460,11 @@ try {
   );
 
   const projectionPath = join(isolated.userDataDir, "task-inbox", "v1.json");
-  const stored = JSON.parse(await readFile(projectionPath, "utf8"));
-  assert.equal(stored.schemaVersion, 1);
-  assert.ok(
-    stored.records.some(
-      (record) => record.taskKey === shell.taskKey && record.status === "cancelled",
-    ),
+  assert.equal(
+    await storedTaskStatus(shell.taskKey),
+    "cancelled",
+    "Shell cancellation was committed before exit",
   );
-  if (process.platform !== "win32") assert.equal((await stat(projectionPath)).mode & 0o777, 0o600);
   const screenshotDir = process.env.CODESHELL_TASK_INBOX_SOURCES_SCREENSHOT_DIR;
   if (screenshotDir) {
     await mkdir(screenshotDir, { recursive: true });
@@ -440,6 +476,14 @@ try {
   }
   await app.close();
   app = undefined;
+  const stored = JSON.parse(await readFile(projectionPath, "utf8"));
+  assert.equal(stored.schemaVersion, 1);
+  assert.ok(
+    stored.records.some(
+      (record) => record.taskKey === shell.taskKey && record.status === "cancelled",
+    ),
+  );
+  if (process.platform !== "win32") assert.equal((await stat(projectionPath)).mode & 0o777, 0o600);
   await launch();
   const restored = await list();
   assert.equal(
@@ -479,11 +523,10 @@ try {
       record.sourceId.startsWith(`${abandoned.shellId}:`) &&
       record.status === "running",
   );
-  assert.ok(
-    JSON.parse(await readFile(projectionPath, "utf8")).records.some(
-      (record) => record.taskKey === abandonedRow.taskKey && record.status === "running",
-    ),
-    "Running source state must be durable before the crash",
+  assert.equal(
+    await storedTaskStatus(abandonedRow.taskKey),
+    "running",
+    "The authoritative WAL contains the running source before the crash",
   );
   const ownedElectron = app.process();
   await new Promise((done, reject) => {
