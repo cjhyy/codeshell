@@ -8,6 +8,10 @@ breaking.
 
 ## [Unreleased]
 
+### Changed
+
+- Build: Bun 1.4.5 (was 1.3.11) for development, CI and the Docker image.
+
 ## [0.11.0-rc.10] - 2026-11-21
 
 ### Fixed

@@ -73,7 +73,7 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.3.11"
+          bun-version: "1.4.5"
 
       - name: install and build npm packages from the original tag
         working-directory: release-source
