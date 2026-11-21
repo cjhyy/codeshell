@@ -546,6 +546,15 @@ export class SettingsManager {
    * cache invalidation mirror saveUserSetting.
    */
   saveProjectSetting(key: string, value: unknown, cwd: string): void {
+    this.updateProjectSettings(cwd, (current) => setDottedSetting(current, key, value));
+  }
+
+  /** Merge domain updates from the current project file under its inter-process lock. */
+  updateProjectSettings(
+    cwd: string,
+    mutate: (current: Record<string, unknown>) => void,
+    beforeCommit?: () => void,
+  ): void {
     this.clearHookOrigins();
     this.validateProjectCwd(cwd, "project");
     // Don't resurrect a deleted project root: atomicWriteJson's recursive mkdir
@@ -555,8 +564,9 @@ export class SettingsManager {
     if (!existsSync(cwd)) return;
     const path = this.projectSettingsPath(cwd);
     this.mutateSettingsFile(path, (current) => {
-      setDottedSetting(current, key, value);
+      mutate(current);
       validateSettings(merge({}, current));
+      beforeCommit?.();
     });
     this.invalidate();
   }

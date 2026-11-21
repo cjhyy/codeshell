@@ -1,6 +1,6 @@
 /* global window */
 import assert from "node:assert/strict";
-import { mkdir, readdir, realpath, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, realpath, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { prepareConfinedElectronFixture } from "./confined-electron-fixture.mjs";
@@ -177,6 +177,64 @@ utilityProcess.fork = function (...args) {
       async () =>
         (await window.codeshell.projectRegistry.list()).find((p) => p.id === "host-smoke-project")
           ?.pinned,
+    ),
+    true,
+  );
+
+  const uploaded = join(isolated.home, "native-picked-host-document.txt");
+  await writeFile(uploaded, "Host source upload");
+  await application.evaluate(({ dialog }, file) => {
+    const original = dialog.showOpenDialog.bind(dialog);
+    dialog.showOpenDialog = (...args) => {
+      if (args.at(-1)?.title === "选择数据源文件") {
+        dialog.showOpenDialog = original;
+        return Promise.resolve({ canceled: false, filePaths: [file] });
+      }
+      return original(...args);
+    };
+  }, uploaded);
+  await first.evaluate(async () => {
+    const api = window.codeshell;
+    await api.saveSourceCatalog({ id: "host-source", kind: "mcp-resource", label: "Host source" });
+    await api.bindProjectSource("host-smoke-project", {
+      sourceId: "host-source",
+      scopes: ["resources"],
+      readPolicy: "ask",
+    });
+  });
+  assert.ok(
+    await second.evaluate(async () =>
+      (await window.codeshell.projectSourceAccess("host-smoke-project")).bindings.some(
+        (row) => row.sourceId === "host-source",
+      ),
+    ),
+  );
+  const names = await first.evaluate(() =>
+    window.codeshell.pickAndUploadProjectSources("host-smoke-project"),
+  );
+  assert.deepEqual(names, ["native-picked-host-document.txt"]);
+  assert.equal(
+    await readFile(join(mount, ".code-shell", "uploads", names[0]), "utf8"),
+    "Host source upload",
+  );
+  await second.evaluate(async () => {
+    const api = window.codeshell;
+    await api.deleteProjectUpload("host-smoke-project", "native-picked-host-document.txt");
+    await api.unbindProjectSource("host-smoke-project", "host-source");
+    await api.deleteSourceCatalog("host-source");
+    const [builtIn] = await api.getModelCatalog();
+    const saved = await api.saveCatalogEntry({ ...builtIn, id: "host-smoke-model" });
+    if (!saved.ok) throw new Error(saved.error);
+  });
+  assert.equal(
+    await first.evaluate(
+      async () => (await window.codeshell.getCatalogOrigins())["host-smoke-model"],
+    ),
+    "user",
+  );
+  assert.equal(
+    await first.evaluate(
+      async () => (await window.codeshell.deleteCatalogEntry("host-smoke-model")).removed,
     ),
     true,
   );

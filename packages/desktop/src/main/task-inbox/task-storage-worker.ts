@@ -5,6 +5,8 @@ import {
   type ResolveOperation,
   type PreparedOperationKey,
 } from "../../host/composition/operation-storage.js";
+import { isCatalogEdit } from "../../shared/catalog-edits.js";
+import { writeHostedCatalog, commitPickedSourceUpload } from "../hosted-catalog-edits.js";
 import { writeHostedProjectRegistry } from "../hosted-project-registry.js";
 import { isProjectRegistryCommand } from "../../shared/project-registry-operations.js";
 import { getTrust } from "../trust-store.js";
@@ -34,6 +36,10 @@ let batches: OperationBatches | undefined;
 await serveSessionIndexWorker({
   ...tasks,
   async handle(ctx, command, payload) {
+    if (command === "sources/commitPicked")
+      return commitPickedSourceUpload(payload as Parameters<typeof commitPickedSourceUpload>[0]);
+    if (isCatalogEdit(command))
+      return writeHostedCatalog(command, payload as Parameters<typeof writeHostedCatalog>[1]);
     if (isProjectRegistryCommand(command))
       return writeHostedProjectRegistry(
         command,

@@ -225,8 +225,8 @@ export class DesktopHostSupervisor {
       }
     }
     signal?.throwIfAborted();
-    // A scheduled Engine turn can span many tool calls. Its scheduler owns cancellation.
-    const timeout = method === "automation/run" ? 0 : 15_000;
+    // Scheduled runs and native file copies have caller-owned cancellation.
+    const timeout = method === "automation/run" || method === "sources/uploadPicked" ? 0 : 15_000;
     const value = await this.request("host/business", { method, input }, timeout, signal);
     signal?.throwIfAborted();
     return value as ShellBusinessOperations[K]["result"];

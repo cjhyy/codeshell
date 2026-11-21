@@ -1,3 +1,5 @@
+import type { CallShellBusiness } from "../shared/shell-business-contracts.js";
+import type { IpcMainInvokeEvent } from "electron";
 import { ipcMain } from "electron";
 import {
   defaultCacheDir,
@@ -6,9 +8,6 @@ import {
   reasoningControlFor,
   type ProviderKindName,
   getMergedCatalog,
-  saveCatalogEntry,
-  deleteUserCatalogEntry,
-  userCatalogPath,
   catalogEntryOrigins,
 } from "@cjhyy/code-shell-core/internal";
 import { resolveModelMeta } from "./model-meta-service.js";
@@ -17,7 +16,10 @@ import { probeSearch, type SearchProbeInput } from "./search-probe-service.js";
 import { probeImage, type ImageProbeInput } from "./image-probe-service.js";
 
 /** MCP probe cache, search/image probes, model catalog and provider model-list routes. */
-export function registerModelCatalogIpc() {
+export function registerModelCatalogIpc(host: {
+  callBusiness: CallShellBusiness;
+  documentSignal(event: IpcMainInvokeEvent): AbortSignal;
+}) {
   ipcMain.handle("mcp:invalidate", async (_e, name?: string) => {
     invalidateMcpProbeCache(typeof name === "string" ? name : undefined);
   });
@@ -46,11 +48,11 @@ export function registerModelCatalogIpc() {
 
   ipcMain.handle("catalog:list", async () => getMergedCatalog());
 
-  ipcMain.handle("catalog:save", async (_e, entry: unknown) =>
-    saveCatalogEntry(entry, { path: userCatalogPath(), stamp: String(Date.now()) }),
+  ipcMain.handle("catalog:save", (event, entry: unknown) =>
+    host.callBusiness("models/saveEntry", { entry }, host.documentSignal(event)),
   );
-  ipcMain.handle("catalog:delete", async (_e, id: string) =>
-    deleteUserCatalogEntry(id, { path: userCatalogPath(), stamp: String(Date.now()) }),
+  ipcMain.handle("catalog:delete", (event, id: string) =>
+    host.callBusiness("models/deleteEntry", { id }, host.documentSignal(event)),
   );
   ipcMain.handle("catalog:origins", async () => catalogEntryOrigins());
 

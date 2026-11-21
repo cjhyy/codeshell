@@ -6,6 +6,7 @@ import { SessionTranscriptCache } from "../session-transcript-cache.js";
 import type { BusinessMethods } from "../../host/composition/business-calls.js";
 import { nativeOperations } from "../../host/composition/operations.js";
 import { HostBusinessCalls } from "../../host/composition/business-calls.js";
+import { catalogEdits } from "../../host/composition/catalog-edits.js";
 import { projectRegistryOperations } from "../../host/composition/project-registry.js";
 import { projectTrustOperations } from "../../host/composition/project-trust.js";
 import { catalogOperations } from "../../host/composition/session-catalog.js";
@@ -84,6 +85,7 @@ const business = new HostBusinessCalls({
   "transcripts/write": (input, grant) => transcripts.commitWrite(input, grant.permit),
   "transcripts/delete": (input, grant) => transcripts.commitDelete(input, grant.permit),
   ...operations.methods,
+  ...catalogEdits(storage),
   ...projectTrustOperations(storage),
   ...projectRegistryOperations(storage, (requestId, projects) =>
     parent.postMessage({ type: "project-registry-committed", requestId, projects }),
