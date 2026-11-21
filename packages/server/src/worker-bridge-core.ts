@@ -339,6 +339,12 @@ export class WorkerBridgeCore {
     return () => this.lineListeners.delete(listener);
   }
 
+  /** Let the OS pipe apply backpressure while a downstream publisher drains. */
+  pauseOutput(paused: boolean): void {
+    if (paused) this.child?.stdout?.pause();
+    else this.child?.stdout?.resume();
+  }
+
   /**
    * Write one JSON-RPC line to the worker's stdin (newline appended). Returns
    * false when there is no live worker (caller decides drop/fallback). A

@@ -328,3 +328,34 @@ test("approval snapshots are scoped to the document's current sessions and worke
   state.reset(2);
   expect((await read(first, 8, cursor)).epoch).not.toBe(initial.epoch);
 });
+
+test("unowned disk-history reads are withdrawn on ownership changes even after returning to unowned", async () => {
+  const { HostSessionAuthority, HostPortAuthority } = await import("./authority.js");
+  const sessions = new HostSessionAuthority();
+  const a = new HostPortAuthority(
+    { webContentsId: 1, frameGeneration: 1, frameToken: "one", windowKind: "workbench" },
+    sessions,
+  );
+  const b = new HostPortAuthority(
+    { webContentsId: 2, frameGeneration: 1, frameToken: "two", windowKind: "workbench" },
+    sessions,
+  );
+  const first = a.captureHistoryRead("past");
+  expect(first.historical).toBe(true);
+  sessions.setOwner("past", 2);
+  expect(() => a.captureHistoryRead("past")).toThrow();
+  const owned = b.captureHistoryRead("past");
+  expect(owned.historical).toBe(false);
+  sessions.setOwner("past", null);
+  expect(() => first.assertCurrent()).toThrow();
+  expect(() => owned.assertCurrent()).toThrow();
+  const fresh = a.captureHistoryRead("past");
+  first.release?.();
+  expect(() => fresh.assertCurrent()).not.toThrow();
+  sessions.setDeleting("past", true);
+  expect(() => fresh.assertCurrent()).toThrow();
+  expect(() => b.captureHistoryRead("past")).toThrow();
+  sessions.setDeleting("past", false);
+  expect(() => fresh.assertCurrent()).toThrow();
+  fresh.release?.();
+});

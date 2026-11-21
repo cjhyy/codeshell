@@ -25,6 +25,8 @@ interface HostPort {
 }
 
 export interface DesktopHostMethod {
+  /** Allows an unowned row only when run verifies current, visible disk history. */
+  readonly historyRead?: boolean;
   /** A session-scoped method derives its scope from its validated arguments. */
   sessionId?(params: RpcRequest["params"]): string;
   run(context: HostRequestContext, params: RpcRequest["params"]): unknown;
@@ -38,7 +40,7 @@ interface Connection {
   pending: Map<RpcRequest["id"], HostRequestContext>;
 }
 
-class InvalidParams extends Error {}
+export class InvalidParams extends Error {}
 
 const catalog: DesktopHostMethod = {
   async run(context, params) {
@@ -198,6 +200,7 @@ export class DesktopHostServer {
     } catch {
       // The peer may already have closed this port.
     } finally {
+      for (const guard of connection.pending.values()) guard.release?.();
       connection.pending.clear();
       connection.port.close();
     }
@@ -210,6 +213,7 @@ export class DesktopHostServer {
           guard.assertCurrent();
         } catch {
           connection.pending.delete(id);
+          guard.release?.();
           try {
             sendError(
               connection.port,
@@ -280,7 +284,10 @@ export class DesktopHostServer {
       const sessionId = handler.sessionId?.(params);
       if (handler.sessionId && (typeof sessionId !== "string" || !sessionId))
         throw new InvalidParams();
-      guard = authority.capture(sessionId);
+      guard =
+        handler.historyRead && sessionId
+          ? authority.captureHistoryRead(sessionId)
+          : authority.capture(sessionId);
       pending.set(id, guard);
       const result = await handler.run(guard, params);
       guard.assertCurrent();
@@ -295,6 +302,7 @@ export class DesktopHostServer {
         sendError(port, id, -32602, error.message || "Invalid params");
       else sendError(port, id, -32603, "Desktop Host request failed");
     } finally {
+      guard?.release?.();
       if (pending.get(id) === guard) pending.delete(id);
     }
   }
