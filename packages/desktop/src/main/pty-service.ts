@@ -159,12 +159,32 @@ function buildEnv(): Record<string, string> {
   return env;
 }
 
+/** A remote (phone/browser) tab watching a Desktop terminal. */
+export interface PtyRemoteViewer {
+  /** Stable per remote tab; reattaching with the same key replaces the old entry. */
+  key: string;
+  onData(data: string): void;
+  onExit(exitCode: number, signal?: number): void;
+}
+
 interface Session {
   pty: IPty;
-  webContents: WebContents;
+  /** The Desktop window that opened it; null for a terminal opened remotely. */
+  webContents: WebContents | null;
   /** Rolling scrollback so a re-attached/re-mounted xterm can be replayed. */
   buffer: string;
+  cwd: string;
+  startedAt: number;
+  cols: number;
+  rows: number;
+  /** Last size each client reported; the most recently active client wins. */
+  sizes: Map<string, { cols: number; rows: number }>;
+  /** The client that typed, resized or attached last; only it answers terminal queries. */
+  activeKey: string | undefined;
+  remotes: Map<string, PtyRemoteViewer>;
 }
+
+const OWNER_SIZE_KEY = "\0owner";
 
 const sessions = new Map<string, Session>();
 
@@ -208,10 +228,10 @@ function webContentsId(wc: WebContents): number | undefined {
 function sessionForOwner(wc: WebContents, sessionId: string, action: string): Session | undefined {
   const s = sessions.get(sessionId);
   if (!s) return undefined;
-  if (s.webContents !== wc) {
+  if (!s.webContents || s.webContents !== wc) {
     dlog("main", `pty.${action}.denied`, {
       sessionId,
-      ownerId: webContentsId(s.webContents),
+      ownerId: s.webContents ? webContentsId(s.webContents) : undefined,
       senderId: webContentsId(wc),
     });
     return undefined;
@@ -228,6 +248,31 @@ function killSession(sessionId: string): void {
     /* already gone */
   }
   sessions.delete(sessionId);
+}
+
+function ownerAlive(s: Session): s is Session & { webContents: WebContents } {
+  return s.webContents !== null && !s.webContents.isDestroyed();
+}
+
+/** Tell the owning window how many remote viewers share its terminal. */
+function notifyRemoteViewers(sessionId: string, s: Session): void {
+  if (ownerAlive(s)) {
+    s.webContents.send("pty:remoteViewers", { sessionId, count: s.remotes.size });
+  }
+}
+
+/** One pty has one size: whoever typed or resized last gets theirs applied. */
+function applyClientSize(sessionId: string, s: Session, clientKey: string): void {
+  s.activeKey = clientKey;
+  const size = s.sizes.get(clientKey);
+  if (!size || (size.cols === s.cols && size.rows === s.rows)) return;
+  try {
+    s.pty.resize(size.cols, size.rows);
+    s.cols = size.cols;
+    s.rows = size.rows;
+  } catch (e) {
+    dlog("main", "pty.resize.error", { sessionId, error: String(e) });
+  }
 }
 
 export interface PtyStartOpts {
@@ -269,22 +314,32 @@ export function ptyStart(wc: WebContents, opts: PtyStartOpts): PtyStartResult {
     // Replay scrollback so the freshly-mounted xterm isn't blank while the
     // shell keeps running behind it.
     if (existing.buffer && !wc.isDestroyed()) {
-      wc.send("pty:data", { sessionId, data: existing.buffer });
+      wc.send("pty:data", { sessionId, data: existing.buffer, replay: true });
     }
     return { ok: true, pid: existing.pty.pid };
   }
+  return spawnSession(sessionId, wc, opts);
+}
+
+function spawnSession(
+  sessionId: string,
+  owner: WebContents | null,
+  opts: { cwd?: string; cols?: number; rows?: number },
+): PtyStartResult {
   const shell = resolveShell();
   // Login + interactive so the user gets their normal prompt/aliases.
   const args = shellArgs(shell);
   const cwdResult = resolvePtyCwd(opts.cwd);
   if (!cwdResult.ok) return { ok: false, detail: cwdResult.detail };
   const cwd = cwdResult.cwd;
+  const cols = clampPtyDim(opts.cols ?? 80);
+  const rows = clampPtyDim(opts.rows ?? 24);
   let pty: IPty;
   try {
     pty = loadPty().spawn(shell, args, {
       name: "xterm-256color",
-      cols: opts.cols ?? 80,
-      rows: opts.rows ?? 24,
+      cols,
+      rows,
       cwd,
       env: buildEnv(),
     });
@@ -294,37 +349,65 @@ export function ptyStart(wc: WebContents, opts: PtyStartOpts): PtyStartResult {
       detail: `failed to start pty: ${e instanceof Error ? e.message : String(e)}`,
     };
   }
-  const session: Session = { pty, webContents: wc, buffer: "" };
+  const session: Session = {
+    pty,
+    webContents: owner,
+    buffer: "",
+    cwd,
+    startedAt: Date.now(),
+    cols,
+    rows,
+    sizes: new Map(owner ? [[OWNER_SIZE_KEY, { cols, rows }]] : []),
+    activeKey: owner ? OWNER_SIZE_KEY : undefined,
+    remotes: new Map(),
+  };
   sessions.set(sessionId, session);
-  dlog("main", "pty.start", { sessionId, shell, cwd, pid: pty.pid });
+  dlog("main", "pty.start", { sessionId, shell, cwd, pid: pty.pid, remote: owner === null });
 
   pty.onData((data) => {
     const s = sessions.get(sessionId);
     if (!s) return;
     appendBuffer(s, data);
-    if (!s.webContents.isDestroyed()) s.webContents.send("pty:data", { sessionId, data });
+    if (ownerAlive(s)) s.webContents.send("pty:data", { sessionId, data });
+    for (const viewer of s.remotes.values()) viewer.onData(data);
   });
   pty.onExit(({ exitCode, signal }) => {
-    const target = sessions.get(sessionId)?.webContents;
-    if (target && !target.isDestroyed()) {
-      target.send("pty:exit", { sessionId, exitCode, signal });
+    const s = sessions.get(sessionId);
+    if (s && ownerAlive(s)) {
+      s.webContents.send("pty:exit", { sessionId, exitCode, signal });
     }
+    for (const viewer of s?.remotes.values() ?? []) viewer.onExit(exitCode, signal);
     sessions.delete(sessionId);
     dlog("main", "pty.exit", { sessionId, exitCode, signal });
   });
   return { ok: true, pid: pty.pid };
 }
 
-export function ptyWrite(wc: WebContents, sessionId: string, data: string): void {
+/**
+ * `reply` marks xterm's automatic answers to terminal queries (colors, device
+ * attributes). Every attached viewer produces them, so only the active client's
+ * reach the program; a duplicate answer would otherwise be read as typed input.
+ */
+function writeFrom(sessionId: string, s: Session, key: string, data: string, reply: boolean) {
+  if (reply) {
+    if (s.activeKey === key) s.pty.write(data);
+    return;
+  }
+  applyClientSize(sessionId, s, key);
+  s.pty.write(data);
+}
+
+export function ptyWrite(wc: WebContents, sessionId: string, data: string, reply = false): void {
   // Renderer-supplied; a non-string reaching the native addon can crash main.
   if (typeof data !== "string") return;
-  sessionForOwner(wc, sessionId, "write")?.pty.write(data);
+  const s = sessionForOwner(wc, sessionId, "write");
+  if (s) writeFrom(sessionId, s, OWNER_SIZE_KEY, data, reply === true);
 }
 
 /** Reap any session whose webContents has been destroyed (window closed). */
 export function ptyReapDestroyed(): void {
   for (const [id, s] of [...sessions.entries()]) {
-    if (s.webContents.isDestroyed()) killSession(id);
+    if (s.webContents?.isDestroyed()) killSession(id);
   }
 }
 
@@ -338,11 +421,8 @@ export function clampPtyDim(n: number): number {
 export function ptyResize(wc: WebContents, sessionId: string, cols: number, rows: number): void {
   const s = sessionForOwner(wc, sessionId, "resize");
   if (!s) return;
-  try {
-    s.pty.resize(clampPtyDim(cols), clampPtyDim(rows));
-  } catch (e) {
-    dlog("main", "pty.resize.error", { sessionId, error: String(e) });
-  }
+  s.sizes.set(OWNER_SIZE_KEY, { cols: clampPtyDim(cols), rows: clampPtyDim(rows) });
+  applyClientSize(sessionId, s, OWNER_SIZE_KEY);
 }
 
 export function ptyKill(wc: WebContents, sessionId: string): void {
@@ -353,4 +433,128 @@ export function ptyKill(wc: WebContents, sessionId: string): void {
 /** Kill every pty (called on app quit). */
 export function ptyKillAll(): void {
   for (const id of [...sessions.keys()]) killSession(id);
+}
+
+// ── Remote viewers (phone / browser through the authenticated remote host) ──
+// Authorization (paired device + the Desktop "remote terminal" switch) is the
+// caller's job; these functions only enforce that a viewer is attached before
+// it may type, resize or kill.
+
+export interface PtyInfo {
+  id: string;
+  cwd: string;
+  pid: number;
+  startedAt: number;
+  origin: "desktop" | "remote";
+  cols: number;
+  rows: number;
+}
+
+function info(id: string, s: Session): PtyInfo {
+  return {
+    id,
+    cwd: s.cwd,
+    pid: s.pty.pid,
+    startedAt: s.startedAt,
+    origin: s.webContents ? "desktop" : "remote",
+    cols: s.cols,
+    rows: s.rows,
+  };
+}
+
+/** Running terminals whose window (if any) is still open, oldest first. */
+export function ptyList(): PtyInfo[] {
+  return [...sessions.entries()]
+    .filter(([, s]) => s.webContents === null || !s.webContents.isDestroyed())
+    .map(([id, s]) => info(id, s))
+    .sort((a, b) => a.startedAt - b.startedAt);
+}
+
+/** Start a terminal no Desktop window owns; it lives until killed or the app quits. */
+export function ptyRemoteStart(opts: {
+  sessionId: string;
+  cwd?: string;
+  cols?: number;
+  rows?: number;
+}): PtyStartResult {
+  assertValidPtySessionId(opts.sessionId);
+  if (sessions.has(opts.sessionId)) return { ok: false, detail: "pty session already exists" };
+  return spawnSession(opts.sessionId, null, opts);
+}
+
+/** Attach a remote viewer; returns the scrollback to replay before live output. */
+export function ptyAttachRemote(
+  sessionId: string,
+  viewer: PtyRemoteViewer,
+  size: { cols: number; rows: number },
+): { info: PtyInfo; replay: string } | undefined {
+  const s = sessions.get(sessionId);
+  if (!s || (s.webContents && s.webContents.isDestroyed())) return undefined;
+  s.remotes.set(viewer.key, viewer);
+  s.sizes.set(viewer.key, { cols: clampPtyDim(size.cols), rows: clampPtyDim(size.rows) });
+  applyClientSize(sessionId, s, viewer.key);
+  notifyRemoteViewers(sessionId, s);
+  return { info: info(sessionId, s), replay: s.buffer };
+}
+
+export function ptyDetachRemote(sessionId: string, key: string): void {
+  const s = sessions.get(sessionId);
+  if (!s || !s.remotes.delete(key)) return;
+  s.sizes.delete(key);
+  if (s.activeKey === key) s.activeKey = s.webContents ? OWNER_SIZE_KEY : undefined;
+  notifyRemoteViewers(sessionId, s);
+}
+
+/** Drop every remote viewer matching `keep === false`; used when tabs go away. */
+export function ptyPruneRemoteViewers(keep: (key: string) => boolean): void {
+  for (const [id, s] of sessions) {
+    let changed = false;
+    for (const key of [...s.remotes.keys()]) {
+      if (keep(key)) continue;
+      s.remotes.delete(key);
+      s.sizes.delete(key);
+      if (s.activeKey === key) s.activeKey = s.webContents ? OWNER_SIZE_KEY : undefined;
+      changed = true;
+    }
+    if (changed) notifyRemoteViewers(id, s);
+  }
+}
+
+function attached(sessionId: string, key: string, action: string): Session | undefined {
+  const s = sessions.get(sessionId);
+  if (s?.remotes.has(key)) return s;
+  dlog("main", `pty.remote.${action}.denied`, { sessionId });
+  return undefined;
+}
+
+export function ptyRemoteWrite(sessionId: string, key: string, data: string, reply = false): void {
+  if (typeof data !== "string") return;
+  const s = attached(sessionId, key, "write");
+  if (s) writeFrom(sessionId, s, key, data, reply);
+}
+
+export function ptyRemoteResize(sessionId: string, key: string, cols: number, rows: number): void {
+  const s = attached(sessionId, key, "resize");
+  if (!s) return;
+  s.sizes.set(key, { cols: clampPtyDim(cols), rows: clampPtyDim(rows) });
+  applyClientSize(sessionId, s, key);
+}
+
+export function ptyRemoteKill(sessionId: string, key: string): void {
+  if (attached(sessionId, key, "kill")) killSession(sessionId);
+}
+
+/** Remote access was switched off: detach everyone and end remote-only shells. */
+export function ptyRevokeRemoteAccess(): void {
+  for (const [id, s] of [...sessions.entries()]) {
+    if (s.webContents === null) {
+      killSession(id);
+      continue;
+    }
+    if (s.remotes.size === 0) continue;
+    for (const key of s.remotes.keys()) s.sizes.delete(key);
+    s.remotes.clear();
+    s.activeKey = OWNER_SIZE_KEY;
+    notifyRemoteViewers(id, s);
+  }
 }

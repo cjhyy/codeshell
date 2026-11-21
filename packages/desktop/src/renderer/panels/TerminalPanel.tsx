@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Terminal, type ILink, type ILinkProvider, type IBufferLine } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
@@ -36,6 +36,14 @@ export function TerminalPanel({ cwd, sessionId: baseId, engineSessionId }: Props
   const spawnCwdRef = useRef(cwd);
   const spawnSessionRef = useRef(engineSessionId);
   const spawnCwd = spawnCwdRef.current;
+  const [remoteViewers, setRemoteViewers] = useState(0);
+  useEffect(
+    () =>
+      window.codeshell.onPtyRemoteViewers?.((msg) => {
+        if (msg.sessionId === sessionId) setRemoteViewers(msg.count);
+      }),
+    [sessionId],
+  );
 
   useEffect(() => {
     const host = hostRef.current;
@@ -62,14 +70,26 @@ export function TerminalPanel({ cwd, sessionId: baseId, engineSessionId }: Props
     // to the shell's cwd; URLs open in the OS browser.
     const offLinks = registerTerminalLinks(term, () => spawnCwdRef.current ?? undefined);
 
-    // Renderer → shell.
+    // xterm answers terminal queries (colors, device attributes) through onData
+    // while it parses output. Answers to replayed scrollback are stale and must
+    // not reach the shell; live answers are tagged so that, with a phone also
+    // attached, only the active client's answer is delivered.
+    let parsing = 0;
+    let replaying = 0;
     const offInput = term.onData((data) => {
-      void window.codeshell.ptyWrite(sessionId, data);
+      if (replaying > 0) return;
+      void window.codeshell.ptyWrite(sessionId, data, parsing > 0);
     });
 
     // Shell → renderer (filter to our session — channels are shared).
     const offData = window.codeshell.onPtyData((msg) => {
-      if (msg.sessionId === sessionId) term.write(msg.data);
+      if (msg.sessionId !== sessionId) return;
+      parsing++;
+      if (msg.replay) replaying++;
+      term.write(msg.data, () => {
+        parsing--;
+        if (msg.replay) replaying--;
+      });
     });
     const offExit = window.codeshell.onPtyExit((msg) => {
       if (msg.sessionId === sessionId) {
@@ -141,6 +161,11 @@ export function TerminalPanel({ cwd, sessionId: baseId, engineSessionId }: Props
       <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
         <span className="text-sm font-medium text-foreground">{t("panels.terminal.title")}</span>
         <span className="truncate text-xs text-muted-foreground">{spawnCwd ?? "~"}</span>
+        {remoteViewers > 0 && (
+          <span className="ml-auto shrink-0 rounded bg-status-warn/15 px-1.5 py-0.5 text-xs text-status-warn">
+            {t("panels.terminal.remoteViewers", { count: remoteViewers })}
+          </span>
+        )}
       </div>
       {cwd !== spawnCwd && (
         <div className="shrink-0 border-b border-status-warn/30 bg-status-warn/10 px-3 py-1.5 text-xs text-status-warn">

@@ -1,4 +1,5 @@
 import { useRemoteGoalControls } from "./useRemoteGoalControls.js";
+import { RemoteTerminalChannel } from "./remoteTerminalChannel.js";
 import {
   prepareCcRoomSettingChange,
   type CcRoomOpenRequest,
@@ -275,6 +276,8 @@ export interface RemoteApp {
   /** Changes only this room model, preserving the Host's current permission mode. */
   setCcRoomModel?: (modelKey: string | null) => void;
   respondCcApproval: (roomId: string, requestId: string, decision: CcApprovalDecision) => void;
+  /** Shared Desktop terminals ride this socket outside the chat state. */
+  terminal: RemoteTerminalChannel;
   /** The Host owns a pending-turn FIFO (turnQueue capability). */
   turnQueueSupported?: boolean;
   /** Host-authoritative pending turns of the active session or CLI room. */
@@ -1106,8 +1109,10 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     notice: setNotice,
   });
 
+  const terminal = useMemo(() => new RemoteTerminalChannel(), []);
   const onServerEvent = useCallback(
     (event: MobileServerEvent) => {
+      if (terminal.accept(event)) return;
       const unsent = unsentCreatedSessionRef.current;
       const source = unsent ?? replacementSourceRef.current;
       if (
@@ -2152,6 +2157,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       settleMessageAck,
       setNotice,
       sessionCursor,
+      terminal,
     ],
   );
 
@@ -2330,6 +2336,10 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   });
   sendRef.current = socket.send;
   connectionGenerationRef.current = socket.connectionGeneration;
+  useEffect(
+    () => terminal.bind(socket.send, socket.status === "online", socket.connectionGeneration),
+    [terminal, socket.send, socket.status, socket.connectionGeneration],
+  );
 
   useEffect(() => {
     if (
@@ -3470,5 +3480,6 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     ccRoomModelSelection,
     ccModeRequest,
     respondCcApproval,
+    terminal,
   };
 }

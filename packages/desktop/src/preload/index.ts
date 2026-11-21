@@ -1420,12 +1420,16 @@ contextBridge.exposeInMainWorld("codeshell", {
   windowToken: String(process.pid),
   ptyStart: (opts: Parameters<CodeshellApi["ptyStart"]>[0]) =>
     ipcRenderer.invoke("pty:start", opts) as Promise<PtyStartResult>,
-  ptyWrite: (sessionId: string, data: string) => ipcRenderer.invoke("pty:write", sessionId, data),
+  ptyWrite: (sessionId: string, data: string, reply?: boolean) =>
+    ipcRenderer.invoke("pty:write", sessionId, data, reply === true),
   ptyResize: (sessionId: string, cols: number, rows: number) =>
     ipcRenderer.invoke("pty:resize", sessionId, cols, rows),
   ptyKill: (sessionId: string) => ipcRenderer.invoke("pty:kill", sessionId),
-  onPtyData: (cb: (msg: { sessionId: string; data: string }) => void): (() => void) => {
-    const h = (_e: IpcRendererEvent, msg: { sessionId: string; data: string }) => cb(msg);
+  onPtyData: (
+    cb: (msg: { sessionId: string; data: string; replay?: boolean }) => void,
+  ): (() => void) => {
+    const h = (_e: IpcRendererEvent, msg: { sessionId: string; data: string; replay?: boolean }) =>
+      cb(msg);
     ipcRenderer.on("pty:data", h);
     return () => ipcRenderer.removeListener("pty:data", h);
   },
@@ -1438,6 +1442,11 @@ contextBridge.exposeInMainWorld("codeshell", {
     ) => cb(msg);
     ipcRenderer.on("pty:exit", h);
     return () => ipcRenderer.removeListener("pty:exit", h);
+  },
+  onPtyRemoteViewers: (cb: (msg: { sessionId: string; count: number }) => void): (() => void) => {
+    const h = (_e: IpcRendererEvent, msg: { sessionId: string; count: number }) => cb(msg);
+    ipcRenderer.on("pty:remoteViewers", h);
+    return () => ipcRenderer.removeListener("pty:remoteViewers", h);
   },
 
   // ── Browser popout window ─────────────────────────────────────────────

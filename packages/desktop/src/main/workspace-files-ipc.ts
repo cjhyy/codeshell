@@ -108,12 +108,12 @@ export function registerWorkspaceFilesIpc(deps: WorkspaceFilesIpcDeps) {
     );
     return ptyStart(e.sender, { ...opts, cwd });
   });
-  ipcMain.handle("pty:write", (e, sessionId: string, data: string) => {
+  ipcMain.handle("pty:write", (e, sessionId: string, data: string, reply?: unknown) => {
     assertValidPtySessionId(sessionId);
     if (typeof data !== "string" || data.length > 1024 * 1024) {
       throw new Error("invalid pty input");
     }
-    ptyWrite(e.sender, sessionId, data);
+    ptyWrite(e.sender, sessionId, data, reply === true);
   });
   ipcMain.handle("pty:resize", (e, sessionId: string, cols: number, rows: number) => {
     assertValidPtySessionId(sessionId);

@@ -602,3 +602,42 @@ test("CLI model changes require an exact room and correlation id with a bounded 
   ])
     expect(parseMobileClientEvent({ ...event, ...patch })).toBeUndefined();
 });
+
+describe("terminal events", () => {
+  const id = "term:project-1::s-1:terminal-2@4242";
+
+  test("accept the shared-terminal vocabulary", () => {
+    for (const event of [
+      { type: "terminal.list" },
+      { type: "terminal.open", requestId: "r1", cols: 80, rows: 24 },
+      { type: "terminal.open", requestId: "r1", terminalId: id, cols: 80, rows: 24 },
+      { type: "terminal.open", requestId: "r1", projectId: "p1", cols: 80, rows: 24 },
+      { type: "terminal.input", terminalId: id, data: "claude\r" },
+      { type: "terminal.input", terminalId: id, data: "\x1b[?1;2c", reply: true },
+      { type: "terminal.resize", terminalId: id, cols: 120, rows: 40 },
+      { type: "terminal.detach", terminalId: id },
+      { type: "terminal.kill", terminalId: id },
+    ])
+      expect(parseMobileClientEvent(event)).toEqual(event as never);
+  });
+
+  test("reject ids, sizes and input the pty layer must never see", () => {
+    for (const event of [
+      { type: "terminal.list", extra: true },
+      { type: "terminal.open", requestId: "r1", cols: 0, rows: 24 },
+      { type: "terminal.open", requestId: "r1", cols: 80, rows: 1001 },
+      { type: "terminal.open", requestId: "r1", cols: 80.5, rows: 24 },
+      { type: "terminal.open", requestId: "r1", terminalId: "term:../x", cols: 80, rows: 24 },
+      { type: "terminal.open", cols: 80, rows: 24 },
+      { type: "terminal.input", terminalId: "shell", data: "ls" },
+      { type: "terminal.input", terminalId: "term:a/b", data: "ls" },
+      { type: "terminal.input", terminalId: id, data: "" },
+      { type: "terminal.input", terminalId: id, data: "x".repeat(64 * 1024 + 1) },
+      { type: "terminal.input", terminalId: id, data: 3 },
+      { type: "terminal.input", terminalId: id, data: "x", reply: false },
+      { type: "terminal.resize", terminalId: id, cols: -1, rows: 10 },
+      { type: "terminal.kill" },
+    ])
+      expect(parseMobileClientEvent(event)).toBeUndefined();
+  });
+});
