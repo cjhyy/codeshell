@@ -1,3 +1,4 @@
+import { guardedWorkerTree } from "./guarded-worker-tree.mjs";
 import { createHash } from "node:crypto";
 import { readFile, realpath, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
@@ -180,18 +181,7 @@ await import(${JSON.stringify(pathToFileURL(join(appDir, "out/main/index.mjs")).
           .split("\n")
           .filter(Boolean)
           .map((line) => JSON.parse(line));
-        const hosts = (await readFile(hostedProcesses, "utf8").catch(() => ""))
-          .trim()
-          .split("\n")
-          .filter(Boolean)
-          .map((line) => JSON.parse(line));
-        const knownHost = (hostPid) =>
-          hosts.some(
-            (host) =>
-              host.pid === hostPid &&
-              host.ppid === pid &&
-              receipts.some((r) => r.pid === hostPid && guardReceiptReady(r)),
-          );
+        const tree = await guardedWorkerTree(isolated.home, pid, receipts, guardReceiptReady);
         lastReceipts = receipts;
         lastSpawned = spawned;
         if (receipts.some((receipt) => receipt.origin !== origin || receipt.homeId !== homeId))
@@ -199,15 +189,7 @@ await import(${JSON.stringify(pathToFileURL(join(appDir, "out/main/index.mjs")).
         if (
           receipts.some((receipt) => receipt.pid === pid && guardReceiptReady(receipt)) &&
           (!requireWorker || spawned.length > 0) &&
-          spawned.every((worker) =>
-            receipts.some(
-              (receipt) =>
-                receipt.pid === worker.pid &&
-                receipt.ppid === worker.ppid &&
-                knownHost(worker.ppid) &&
-                guardReceiptReady(receipt),
-            ),
-          )
+          spawned.every(tree.hasWorker)
         ) {
           for (const worker of spawned)
             await writeFile(join(isolated.home, `worker-${worker.pid}.permit`), "verified", {

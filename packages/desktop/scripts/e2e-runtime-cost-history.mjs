@@ -1,3 +1,4 @@
+import { guardedWorkerTree } from "./guarded-worker-tree.mjs";
 /* Compiled Core ledger → production Main IPC/cold restart; per-call trace costs → current UI. No model requests. */
 /* global document, localStorage, window */
 import assert from "node:assert/strict";
@@ -78,6 +79,7 @@ async function verifyActualProcesses() {
   const deadline = Date.now() + 15_000;
   while (Date.now() < deadline) {
     const receipts = await guardReceipts();
+    const tree = await guardedWorkerTree(isolated.home, mainPid, receipts);
     const spawned = (
       await readFile(join(isolated.home, "spawned-workers.jsonl"), "utf8").catch(() => "")
     )
@@ -96,13 +98,7 @@ async function verifyActualProcesses() {
     }
     const main = receipts.find((receipt) => receipt.pid === mainPid);
     const parent = receipts.find((receipt) => receipt.pid === process.pid);
-    if (
-      main &&
-      parent &&
-      spawned.every(({ pid }) =>
-        receipts.some((receipt) => receipt.pid === pid && receipt.ppid === mainPid),
-      )
-    ) {
+    if (main && parent && spawned.every(tree.hasWorker)) {
       assert.equal(main.ppid, process.pid);
       for (const worker of spawned)
         await writeFile(join(isolated.home, `worker-${worker.pid}.permit`), "verified", {
