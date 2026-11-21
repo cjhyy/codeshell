@@ -1,4 +1,5 @@
 import type { EncryptionCipher } from "@cjhyy/code-shell-core";
+export class OperationKeyChanged extends Error {}
 export interface PreparedOperationKey {
   wrapped: string;
   secret: string;
@@ -10,7 +11,7 @@ export function preparedOperationCipher(key: PreparedOperationKey | null): Encry
     },
     decrypt(wrapped) {
       if (!key || key.wrapped !== wrapped || !/^[a-f0-9]{64}$/.test(key.secret))
-        throw new Error("Operation key changed");
+        throw new OperationKeyChanged("Operation key changed");
       return key.secret;
     },
   };

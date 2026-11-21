@@ -1,3 +1,4 @@
+import { bindWorkerOperations, type WorkerOperation } from "./worker-operation-channel.js";
 // packages/server/src/worker-bridge-core.ts
 //
 // WorkerBridgeCore — transport-agnostic driver for a per-user agent worker
@@ -91,6 +92,8 @@ export interface WorkerRequestOptions {
 }
 
 export interface WorkerBridgeCoreOptions {
+  operationLedger?: WorkerOperation;
+  onOperationDisconnect?: () => void;
   /** Absolute path of the worker entry script (agent-server-stdio). */
   entryPath: string;
   /** Runtime binary; defaults to process.execPath. */
@@ -184,7 +187,9 @@ export class WorkerBridgeCore {
       child = spawn(this.opts.execPath ?? process.execPath, [this.opts.entryPath], {
         cwd: workerCwd,
         env: this.opts.buildEnv ? this.opts.buildEnv() : process.env,
-        stdio: ["pipe", "pipe", "pipe"],
+        stdio: this.opts.operationLedger
+          ? ["pipe", "pipe", "pipe", "ipc"]
+          : ["pipe", "pipe", "pipe"],
       });
     } catch (e) {
       // spawn() can throw synchronously (e.g. invalid execPath). Don't let it
@@ -203,6 +208,12 @@ export class WorkerBridgeCore {
       this.opts.onSpawnFailed?.();
       return;
     }
+    if (this.opts.operationLedger)
+      child.once("disconnect", () => {
+        if (this.child === child) this.opts.onOperationDisconnect?.();
+      });
+    if (this.opts.operationLedger)
+      bindWorkerOperations(child, () => this.child === child, this.opts.operationLedger);
     this.generation += 1;
     this.opts.onWorkerStarted?.({ generation: this.generation, pid: child.pid });
     const rl = createInterface({ input: child.stdout });

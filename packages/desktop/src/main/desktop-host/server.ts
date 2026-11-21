@@ -148,6 +148,36 @@ export class DesktopHostServer {
     }
   }
 
+  captureWorkerOperation(sessionId: string) {
+    const capture = () => {
+      const owner = this.sessions.owner(sessionId);
+      if (owner === null) return this.sessions.captureHistoryRead(sessionId, 0, false);
+      const frame = this.windows.get(owner);
+      if (!frame) throw new HostRevokedError();
+      return frame.authority.captureHistoryRead(sessionId, false);
+    };
+    let guard = capture();
+    // New UI sessions announce their id before Main assigns their first window.
+    // Adopt only that first assignment before use. Once used or bound, freeze the grant.
+    let canAssign = guard.historical === true;
+    return {
+      assertCurrent: () => guard.assertCurrent(),
+      observe: () => {
+        if (canAssign && this.sessions.owner(sessionId) !== null) {
+          guard.release?.();
+          canAssign = false;
+          guard = capture();
+        }
+        guard.assertCurrent();
+      },
+      pin: () => {
+        canAssign = false;
+        guard.assertCurrent();
+      },
+      release: () => guard.release?.(),
+    };
+  }
+
   captureOperation(identity: DesktopHostIdentity, sessionId: string) {
     const connection = this.windows.get(identity.webContentsId);
     if (

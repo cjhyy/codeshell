@@ -419,3 +419,38 @@ test("committed settings refresh once even if the original document withdraws", 
   expect(changes).toEqual([flags]);
   completion.resolve();
 });
+
+test("private operation key preparation reads the fixed ledger and discards a late reply after Host restart", async () => {
+  const { children, supervisor, advance } = processFixture();
+  const entered = Promise.withResolvers<void>(),
+    unlocked = Promise.withResolvers<void>();
+  const first = children[0]!;
+  const request = {
+    jsonrpc: "2.0",
+    method: "app/operationLedgerKey",
+    id: "host:run-key:1",
+    params: { create: false },
+  };
+  const key = { wrapped: "enc:synthetic:test", secret: "1".repeat(64) };
+  supervisor.prepareRunKey = async (wrapped, create) => {
+    expect(wrapped).toBe(key.wrapped);
+    expect(create).toBe(false);
+    entered.resolve();
+    await unlocked.promise;
+    return key;
+  };
+  first.emit("message", { type: "ready" });
+  first.emit("message", { ...request, params: { create: false, wrapped: "caller-selected" } });
+  expect(first.messages.at(-1)).toMatchObject({ error: { code: -32601 } });
+  first.emit("message", request);
+  const read = first.messages.at(-1) as { method: string; id: string; params: object };
+  expect(read).toMatchObject({ method: "host/readOperationWrappedKey", params: {} });
+  first.emit("message", { jsonrpc: "2.0", id: read.id, result: key.wrapped });
+  await entered.promise;
+  first.emit("exit", 1);
+  advance();
+  children[1]!.emit("message", { type: "ready" });
+  unlocked.resolve();
+  await new Promise((resolve) => setImmediate(resolve));
+  for (const child of children) expect(JSON.stringify(child.messages)).not.toContain(key.secret);
+});

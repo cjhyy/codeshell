@@ -57,6 +57,20 @@ export function createDesktopHost(
     (message, details) => dlog("main", `desktop_host.${message}`, details),
   );
   supervisor.settingsCommitted = settingsCommitted;
+  async function prepareKey(wrapped: string | null, create: boolean) {
+    if (!create && wrapped === null) return null;
+    const cipher = getDefaultCredentialCipher().asynchronous;
+    if (!cipher) throw new Error("Operation keyring unavailable");
+    let key = wrapped === null ? null : { wrapped, secret: await cipher.decrypt(wrapped) };
+    if (!key && create) {
+      const secret = randomBytes(32).toString("hex");
+      key = { wrapped: await cipher.encrypt(secret), secret };
+    }
+    if (key && !/^[a-f0-9]{64}$/.test(key.secret))
+      throw new Error("Invalid protected operation key");
+    return key;
+  }
+  supervisor.prepareRunKey = prepareKey;
   const workbenches = new HostWorkbenchPorts(
     (event) => navigation.assertSender(event),
     () => new MessageChannelMain(),
@@ -91,15 +105,7 @@ export function createDesktopHost(
           { action: "host/operationKey", payload: {}, caller: origin.caller },
           origin.signal,
         )) as { wrapped: string | null };
-        const cipher = getDefaultCredentialCipher().asynchronous;
-        if (!cipher) throw new Error("Operation keyring unavailable");
-        let key = wrapped === null ? null : { wrapped, secret: await cipher.decrypt(wrapped) };
-        if (!key && action === "host/batchReserve") {
-          const secret = randomBytes(32).toString("hex");
-          key = { wrapped: await cipher.encrypt(secret), secret };
-        }
-        if (key && !/^[a-f0-9]{64}$/.test(key.secret))
-          throw new Error("Invalid protected operation key");
+        const key = await prepareKey(wrapped, action === "host/batchReserve");
         origin.signal.throwIfAborted();
         return supervisor.callBusiness(
           "operations/ledger",

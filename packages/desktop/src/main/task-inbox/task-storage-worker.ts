@@ -1,5 +1,6 @@
 import { attachCronStorage } from "../../host/automation/storage-owner.js";
 import { MessagePort, workerData } from "node:worker_threads";
+import { RunOperationStorage } from "../../host/composition/run-operation-storage.js";
 import { OperationBatches, type BatchPayload } from "../../host/composition/operation-batches.js";
 import { isBatchCommand } from "../desktop-host/private-operations.js";
 import {
@@ -35,6 +36,7 @@ catalog.onChanged((snapshot) => {
   catalogRevision = snapshot.revision;
 });
 let output: StoredDesktopOutput | undefined;
+let runLedger: RunOperationStorage | undefined;
 let ledger: OperationStorage | undefined;
 let batches: OperationBatches | undefined;
 await serveSessionIndexWorker({
@@ -54,6 +56,12 @@ await serveSessionIndexWorker({
     if (command === "trust/readProjection") return getTrust(payload as string);
     if (command === "settings/patch")
       return writeHostedSettings(payload as Parameters<typeof writeHostedSettings>[0]);
+    if (command === "operations/run" || command === "operations/endRun") {
+      runLedger ??= new RunOperationStorage(ctx.sessionsRoot);
+      return command === "operations/endRun"
+        ? runLedger.end((payload as { token: string }).token)
+        : runLedger.run(payload as Parameters<RunOperationStorage["run"]>[0]);
+    }
     if (isBatchCommand(command)) {
       batches ??= new OperationBatches(ctx.sessionsRoot);
       return batches.run(command, payload as BatchPayload);

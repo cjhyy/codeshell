@@ -5,6 +5,8 @@ import { externalRuntimeCatalogOperations } from "../../host/composition/externa
 import { MessageChannel, Worker } from "node:worker_threads";
 import { SessionTranscriptCache } from "../session-transcript-cache.js";
 import type { BusinessMethods } from "../../host/composition/business-calls.js";
+import { RunKeyClient } from "./run-key-client.js";
+import { HostRunOperations } from "../../host/composition/run-operations.js";
 import { nativeOperations } from "../../host/composition/operations.js";
 import { HostBusinessCalls } from "../../host/composition/business-calls.js";
 import { catalogEdits } from "../../host/composition/catalog-edits.js";
@@ -65,6 +67,15 @@ const transcripts = new SessionTranscriptCache(
     new Worker(new URL("./session-transcript-cache-worker.mjs", import.meta.url), {
       workerData: options,
     }),
+);
+const runKeys = new RunKeyClient((frame) => parent.postMessage(frame));
+const runOperations = new HostRunOperations(
+  storage,
+  (create) => runKeys.request(create),
+  (sessionId) => {
+    if (!server) throw new Error("Host unavailable");
+    return server.captureWorkerOperation(sessionId);
+  },
 );
 const operations = nativeOperations(storage, () => server);
 const automation = new HostAutomationRuns({
@@ -143,6 +154,7 @@ parent.on("message", ({ data, ports }) => {
     !worker
   ) {
     worker = bindHostWorker(ports[0], data, {
+      runOperations,
       output,
       observeWorkerLine: (line) => approvals.observe(line),
       workerExited: (generation) => approvals.reset(generation),
@@ -158,6 +170,8 @@ parent.on("message", ({ data, ports }) => {
 
   if (isDesktopHostControl(data) && data.type === "shutdown") {
     stopping = true;
+    runKeys.close();
+    runOperations.close();
     business.close();
     void scheduler
       .close()
@@ -213,12 +227,34 @@ parent.on("message", ({ data, ports }) => {
           (options) => catalog.list(options),
         ),
       ]),
-      operations.authorityChanged,
+      () => {
+        operations.authorityChanged();
+        runOperations.authorityChanged();
+      },
     );
     parent.postMessage({ type: "ready" });
     return;
   }
 
+  if (runKeys.receive(data)) return;
+  if (
+    isRpcRequest(data) &&
+    data.method === "host/readOperationWrappedKey" &&
+    Object.keys(data.params ?? {}).length === 0
+  ) {
+    void storage
+      .then((db) => db.request<string>("operations/wrappedKey"))
+      .then(
+        (result) => parent.postMessage({ jsonrpc: "2.0", id: data.id, result }),
+        () =>
+          parent.postMessage({
+            jsonrpc: "2.0",
+            id: data.id,
+            error: { code: -32603, message: "Operation key unavailable" },
+          }),
+      );
+    return;
+  }
   if (data?.type === "withdraw-business" && typeof data.id === "string") {
     business.revoke(data.id);
     return;
