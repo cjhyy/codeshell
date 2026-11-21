@@ -288,23 +288,24 @@ test("Main keeps the authorized catalog query intact and settles every read on e
   expect(await unfinished).toBeInstanceOf(Error);
 });
 
-test("a native reply and an outstanding call cannot cross a worker or Host replacement", async () => {
-  class Port extends EventEmitter {
-    commands: WorkerCommand[] = [];
-    start() {}
-    close() {}
-    postMessage(command: WorkerCommand) {
-      this.commands.push(command);
-    }
-    notice(data: WorkerNotice) {
-      this.emit("message", { data, ports: [] });
-    }
+class WorkerTestPort extends EventEmitter {
+  commands: WorkerCommand[] = [];
+  start() {}
+  close() {}
+  postMessage(command: WorkerCommand) {
+    this.commands.push(command);
   }
+  notice(data: WorkerNotice) {
+    this.emit("message", { data, ports: [] });
+  }
+}
+
+test("a native reply and an outstanding call cannot cross a worker or Host replacement", async () => {
   const client = new DesktopHostWorkerClient({
     entryPath: "/owned/agent.mjs",
     buildEnv: () => ({}),
   });
-  const first = new Port();
+  const first = new WorkerTestPort();
   client.bind(first);
   client.ensureWorker("/owned");
   const release = Promise.withResolvers<void>();
@@ -318,7 +319,7 @@ test("a native reply and an outstanding call cannot cross a worker or Host repla
     {},
     { id: "one", timeoutMs: 30_000, meta: { origin: "host", producer: "owned test" } },
   );
-  const second = new Port();
+  const second = new WorkerTestPort();
   client.bind(second);
   expect(await call).toEqual({ status: "workerExit" });
   client.ensureWorker("/owned");
@@ -328,4 +329,32 @@ test("a native reply and an outstanding call cannot cross a worker or Host repla
   expect(second.commands.map((command) => command.type)).toEqual(["start"]);
   expect(client.sendLine("current")).toBe(true);
   expect(second.commands.at(-1)).toEqual({ type: "write", generation: 2, line: "current" });
+});
+
+test("Host worker expiry and replacement suppress writes still waiting for credentials", async () => {
+  const queued: (() => boolean)[] = [];
+  const client = new DesktopHostWorkerClient({
+    entryPath: "/internal/worker",
+    dispatchInput: (_generation, _line, send) => {
+      queued.push(send);
+      return true;
+    },
+  });
+  const port = new WorkerTestPort();
+  client.bind(port);
+  client.ensureWorker("/internal");
+  const req = client.request(
+    "agent/run",
+    {},
+    { id: "fixture", timeoutMs: 10, failFast: true, meta: { origin: "host", producer: "test" } },
+  );
+  expect(await req).toEqual({ status: "timeout" });
+  expect(queued.shift()!()).toBe(false);
+  client.sendLine("prior generation");
+  const next = new WorkerTestPort();
+  client.bind(next);
+  client.ensureWorker("/internal");
+  expect(queued.shift()!()).toBe(false);
+  expect(port.commands.map((c) => c.type)).toEqual(["start"]);
+  expect(next.commands.map((c) => c.type)).toEqual(["start"]);
 });

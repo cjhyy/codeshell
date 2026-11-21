@@ -208,8 +208,21 @@ export class DesktopHostWorkerClient implements DesktopWorkerDriver {
       this.lines.delete(listener);
     };
   }
+  private dispatchInput(line: string, send: () => boolean): boolean {
+    const active = this.active,
+      port = this.port;
+    const current = () => port === this.port && active === this.active && send();
+    return this.options.dispatchInput
+      ? this.options.dispatchInput(this.generation, line, current)
+      : current();
+  }
   sendLine(line: string): boolean {
-    return !!this.active && this.post({ type: "write", generation: this.active.generation, line });
+    return (
+      !!this.active &&
+      this.dispatchInput(line, () =>
+        this.post({ type: "write", generation: this.generation, line }),
+      )
+    );
   }
 
   injectWorkerMessage(line: string, meta: WorkerFrameMeta): void {
@@ -239,20 +252,34 @@ export class DesktopHostWorkerClient implements DesktopWorkerDriver {
         return { status: "sendFailed" };
       const call = ++this.nextCall;
       return new Promise((resolve) => {
-        this.calls.set(call, resolve);
-        if (
-          !this.post({
-            type: "request",
-            generation: this.generation,
-            call,
-            method: frame.method,
-            params: frame.params,
-            options,
-          })
-        ) {
+        const timer = setTimeout(() => {
+          if (this.calls.delete(call)) resolve({ status: "timeout" });
+        }, options.timeoutMs);
+        timer.unref?.();
+        const settle = (outcome: WorkerRpcOutcome) => {
+          clearTimeout(timer);
+          resolve(outcome);
+        };
+        this.calls.set(call, settle);
+        const accepted = this.dispatchInput(raw, () => {
+          if (!this.calls.has(call)) return false;
+          clearTimeout(timer);
+          if (
+            this.post({
+              type: "request",
+              generation: this.generation,
+              call,
+              method: frame.method,
+              params: frame.params,
+              options,
+            })
+          )
+            return true;
           this.calls.delete(call);
-          resolve({ status: "sendFailed" });
-        }
+          settle({ status: "sendFailed" });
+          return false;
+        });
+        if (!accepted && this.calls.delete(call)) settle({ status: "sendFailed" });
       });
     } catch (error) {
       const reason = error as { code?: number; message?: string };
