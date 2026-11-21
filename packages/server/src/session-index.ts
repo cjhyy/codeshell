@@ -1,6 +1,6 @@
 import { lstatSync, watch, type FSWatcher } from "node:fs";
 import { resolve } from "node:path";
-import { openStateStorage } from "@cjhyy/code-shell-core/internal/storage";
+import { openStateStorage, type StateStorage } from "@cjhyy/code-shell-core/internal/storage";
 import { assertSessionFileId } from "@cjhyy/code-shell-host/session-files";
 import { listDiskSessions } from "./sessions-service.js";
 import { listIndexedDiskSessions } from "./indexed-disk-sessions.js";
@@ -14,9 +14,9 @@ export interface SessionIndex {
   close(): Promise<void>;
 }
 
-export function createSessionIndex(root: string, options: { workerUrl?: URL } = {}): SessionIndex {
+export function createSessionIndex(root: string, options: { workerUrl?: URL; storage?: Promise<StateStorage> } = {}): SessionIndex {
   const sessionsRoot = resolve(root);
-  const storage = openStateStorage(sessionsRoot, {
+  const storage = options.storage ?? openStateStorage(sessionsRoot, {
     workerUrl: options.workerUrl ?? new URL("./session-index-worker.js", import.meta.url),
   });
   let closed = false;
@@ -128,7 +128,7 @@ export function createSessionIndex(root: string, options: { workerUrl?: URL } = 
       watcher?.close();
       await batch;
       await full;
-      await (await storage).close();
+      if (!options.storage) await (await storage).close();
     },
   };
 }

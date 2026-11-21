@@ -1,3 +1,4 @@
+import { taskInboxEnabled } from "./task-inbox/task-host-reads.js";
 import { registerLinkedFileSourceIpc } from "./linked-file-sources-ipc.js";
 import { openLinkedFileSourceOperation } from "./linked-file-sources-host.js";
 import { registerOperationBatchHost } from "./operation-batch-host.js";
@@ -292,7 +293,7 @@ import { resolveCookieCredentialForBrowser } from "./credential-action.js";
 import { restoreCookieCredentialToBrowser } from "./cookie-credential-browser.js";
 import { loginAndCaptureCookies } from "./credentials-login/index.js";
 import {
-  archiveDiskSession,
+  archiveDiskSession as writeSessionArchive,
   cleanupAttachments,
   cleanupSessionAttachments,
   cleanupStaleQuickChatSessions,
@@ -643,11 +644,10 @@ const externalRuntime = createExternalRuntimeModule(() => {
       // second window showing a different session must not receive its stream.
       emit: (sessionId, event) => {
         externalBridge.ingestOwnedExternalEvent(sessionId, event);
-        taskInboxService?.scheduleRefresh();
       },
       sessionStateChanged: (sessionId, active, ownerId) => {
         sendToOwnerWindow(ownerId, "externalRuntime:sessionState", { sessionId, active });
-        taskInboxService?.scheduleRefresh();
+        markSessionTaskDirty(sessionId);
       },
       // The host seams the exposed tools need. `panels` points at the same
       // requestPanelHost the native protocol line reaches, so owner routing,
@@ -661,7 +661,10 @@ const externalRuntime = createExternalRuntimeModule(() => {
           externalRuntimeWorkspaceForSession(sessionId),
         ),
       backgroundWork: createExternalRuntimeBackgroundWork(),
-      userTurnStarted: (sessionId) => beginBrowserRunForSession(sessionId),
+      userTurnStarted: (sessionId) => {
+        beginBrowserRunForSession(sessionId);
+        userContinuedTask(sessionId);
+      },
       mimiTools: () => externalRuntimeMimiHost(petNotices, externalBridge),
     },
   };
@@ -1701,6 +1704,7 @@ async function createWindow(): Promise<BrowserWindow> {
       (sessionId, ownerId) => rendererBrowserSessionAccess.sessionOwnerClaimed(sessionId, ownerId),
       desktopHost.setOwner,
       desktopHost.sessionsChanged,
+      userContinuedTask,
     );
     // External Agent Runtimes (Codex / Claude Code). Everything
     // security-relevant is resolved here, in the composition root: this is the
@@ -1725,7 +1729,11 @@ async function createWindow(): Promise<BrowserWindow> {
             "background_task_completed",
           ].includes(event.type)
         ) {
-          taskInboxService?.scheduleRefresh();
+          if (entry) markSessionTaskDirty(entry.sessionId);
+          if (event.type.startsWith("background_task_")) {
+            taskInboxService.scheduleRefresh("background-shell");
+            taskInboxService.scheduleRefresh("background-job");
+          }
         }
       }),
     );
@@ -1904,7 +1912,13 @@ async function createWindow(): Promise<BrowserWindow> {
       },
     });
     petStateAggregator = aggregator;
-    taskInboxDisposers.push(aggregator.subscribe(() => taskInboxService?.scheduleRefresh()));
+    taskInboxDisposers.push(aggregator.subscribe((event) => {
+      if (event.kind === "session-upsert") markSessionTaskDirty(event.session.agentSessionId);
+      else if (event.kind === "session-remove") markSessionTaskDirty(event.sessionId);
+      else if (event.kind === "reset") {
+        for (const source of ["session","subagent","external-runtime"] as const) taskInboxService.scheduleRefresh(source);
+      }
+    }));
 
     // Toggle-driven external-CLI session adapters (Codex / Claude). The
     // controller folds each session cwd's capabilityOverrides.pet over the
@@ -1965,7 +1979,7 @@ async function createWindow(): Promise<BrowserWindow> {
       resolve(app.getPath("userData"), "pet", "long-tasks.json"),
     );
     petLongTaskStore = longTaskStore;
-    taskInboxDisposers.push(longTaskStore.subscribe(() => taskInboxService?.scheduleRefresh()));
+    taskInboxDisposers.push(longTaskStore.subscribe(() => taskInboxService.scheduleRefresh("mimi-delegation")));
     // The one interpreter of Session streams (see createSessionOutcomeTap below);
     // the bound-Session bridge reads its outcomes from `sessionOutcomes`.
     const sessionOutcomeDeriver = new SessionOutcomeDeriver();
@@ -3801,7 +3815,7 @@ app.whenReady().then(async () => {
       bridge?.ingestExternalEvent(sessionId, event, { browserVisibility: "hidden" });
       if ((event as { type?: string })?.type === "run_result") {
         taskInboxAutomationSessions.delete(sessionId);
-        taskInboxService?.scheduleRefresh();
+        markSessionTaskDirty(sessionId);
       }
     };
     const announceAutomationSession = (meta: {
@@ -3814,7 +3828,8 @@ app.whenReady().then(async () => {
     }) => {
       taskInboxAutomationSessions.set(meta.sessionId, meta.cronJobId);
       bridge?.broadcastAutomationSession(meta);
-      taskInboxService?.scheduleRefresh();
+      markSessionTaskDirty(meta.sessionId);
+      taskInboxService.markDirty("automation", meta.cronJobId);
     };
     // Each fired job runs as a one-shot read-only headless Engine, which
     // auto-writes a full transcript.jsonl (like interactive chat). The emit
@@ -3865,7 +3880,7 @@ app.whenReady().then(async () => {
             if (jobId === event.job.id) taskInboxAutomationSessions.delete(sessionId);
           }
         }
-        taskInboxService?.scheduleRefresh();
+        taskInboxService.markDirty("automation", event.job.id);
         const notification = automationLifecycleNotification(event);
         if (!notification) return;
         publishGatewayControlEventBestEffort(notification);
@@ -3888,7 +3903,7 @@ app.whenReady().then(async () => {
   }
 
   taskInboxDisposers.push(
-    agentNotificationBus.subscribe(() => taskInboxService?.scheduleRefresh()),
+    agentNotificationBus.subscribe(() => taskInboxService.scheduleRefresh("legacy-run")),
   );
   taskInboxService?.start();
 
@@ -4597,6 +4612,7 @@ async function deleteDesktopSessionResources(id: string): Promise<void> {
   });
   removeExternalRuntimeBinding(id);
   await deleteSession(id);
+  await taskInboxService.sessionIntent({type:"sessionDeleted",sessionId:id});
   await cleanupKnownAttachments(id);
   // Drop any in-memory snapshot for the deleted session so it can't be
   // replayed into a fresh tab that happens to reuse the id.
@@ -4690,6 +4706,7 @@ let closeActivityHistory: (() => Promise<void>) | undefined;
 registerDesktopOutputHistoryHost({
   ipcMain,
   windows: () => [...mainWindows],
+  archive: archiveDiskSession,
   historyWindows: () => {
     return [...mainWindows, ...petSurfaceWindows()];
   },
@@ -4708,10 +4725,6 @@ const sessionCatalogIpc = registerSessionCatalogIpc(
   },
   sessionCatalogStore,
 );
-function taskInboxEnabled(): boolean {
-  const settings = new SettingsManager(resolveNoRepoCwd(), "full").getForScope("user");
-  return settings.featureFlags?.taskInboxV1 !== false;
-}
 taskInboxDisposers.push(
   registerOptimizationLabHost({
     windows: () => [...mainWindows],
@@ -4721,8 +4734,25 @@ taskInboxDisposers.push(
     bridge: () => bridge,
   }),
 );
+function markSessionTaskDirty(id: string) {
+  taskInboxService.markDirty("session", id);
+  taskInboxService.markDirty("external-runtime", id);
+  taskInboxService.markDirty("subagent", id);
+}
+function userContinuedTask(id: string) {
+  void taskInboxService.sessionIntent({ type: "userContinued", sessionId: id })
+    .then(() => markSessionTaskDirty(id))
+    .catch((error) => dlog("main", "task-inbox.user-continue", { error: String(error) }));
+}
+async function archiveDiskSession(id: string, archivedAt: number | undefined) {
+  await writeSessionArchive(id, archivedAt);
+  await taskInboxService.sessionIntent({ type: archivedAt === undefined ? "sessionUnarchived" : "sessionArchived", sessionId: id });
+  markSessionTaskDirty(id);
+}
+
 const taskInboxSources = createTaskInboxSources({
   diskSessions: () => listAllDiskSessions({ includeSubagents: true }),
+  diskSession: async (id) => (await listDiskSessions({limit:1,sessionId:id,includeArchived:true,includeSubagents:true})).sessions[0],
   sessionCatalog: () => sessionCatalogStore.load(),
   sessionProjection: () => petStateAggregator?.getSnapshot(),
   native: {
@@ -4776,12 +4806,13 @@ const taskInboxSources = createTaskInboxSources({
 const taskInboxService = createTaskInboxService({
   filePath: resolve(app.getPath("userData"), "task-inbox", "v1.json"),
   ...taskInboxSources,
+  command: desktopHost.taskCommand,
   enabled: taskInboxEnabled,
   onError: (error) => dlog("main", "task-inbox.projection.failed", { error: String(error) }),
 });
 taskInboxDisposers.push(
-  registerTaskInboxIpc(ipcMain, () => [...mainWindows], taskInboxService, taskInboxEnabled),
-  sessionCatalogStore.onChanged(() => taskInboxService?.scheduleRefresh()),
+  registerTaskInboxIpc(ipcMain, () => [...mainWindows], taskInboxService, taskInboxEnabled, (event) => appRendererNavigation.assertSender(event), desktopHost.withTaskCaller),
+  sessionCatalogStore.onChanged(() => taskInboxService.scheduleRefresh("session")),
 );
 backgroundWork.registerBackgroundWorkIpc(ipcMain, mainWindows, () => bridge);
 const disposeOperationBatchHost = registerOperationBatchHost({

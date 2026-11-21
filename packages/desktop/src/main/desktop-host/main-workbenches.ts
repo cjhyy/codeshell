@@ -72,6 +72,14 @@ export class HostWorkbenchPorts {
     });
   }
 
+  identity(event: Sender): DesktopHostIdentity {
+    const window = this.windows.get(event.sender);
+    if (!window?.committed || !window.bound || !event.senderFrame ||
+        window.requestedFrame !== event.senderFrame || !this.isCurrent(event.sender, event.senderFrame))
+      throw new Error("Task action requires the current workbench document");
+    return window.bound;
+  }
+
   connect(event: Sender): void {
     const window = this.windows.get(event.sender);
     if (!window || !event.senderFrame || !this.isCurrent(event.sender, event.senderFrame)) return;

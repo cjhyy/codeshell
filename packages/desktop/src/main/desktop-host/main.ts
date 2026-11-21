@@ -1,3 +1,6 @@
+import { AsyncLocalStorage } from "node:async_hooks";
+import type { DesktopHostIdentity } from "../../shared/desktop-host-protocol.js";
+import { join } from "node:path";
 import {
   app,
   ipcMain,
@@ -22,7 +25,7 @@ export function createDesktopHost(
   navigation: Pick<AppRendererNavigation, "assertSender">,
 ) {
   const supervisor: DesktopHostSupervisor = new DesktopHostSupervisor(
-    () => utilityProcess.fork(entryPath, [], { serviceName: "CodeShell Desktop Host" }),
+    () => utilityProcess.fork(entryPath, [join(app.getPath("userData"), "task-inbox")], { serviceName: "CodeShell Desktop Host" }),
     () => app.getVersion(),
     (status) => workbenches.setStatus(status),
     (message, details) => dlog("main", `desktop_host.${message}`, details),
@@ -32,6 +35,7 @@ export function createDesktopHost(
     () => new MessageChannelMain(),
     (message, ports) => supervisor.post(message, ports),
   );
+  const intentCaller = new AsyncLocalStorage<DesktopHostIdentity>();
   let changes: ReturnType<typeof createSessionIndexChanges> | undefined;
   const connect = (event: IpcMainEvent) => workbenches.connect(event);
   return {
@@ -50,6 +54,12 @@ export function createDesktopHost(
       } catch {
         return listJson(options);
       }
+    },
+    withTaskCaller<T>(event: Pick<IpcMainEvent, "sender" | "senderFrame">, work: () => T): T {
+      return intentCaller.run(workbenches.identity(event), work);
+    },
+    taskCommand<T>(command: string, payload?: unknown) {
+      return supervisor.taskCommand<T>(command, payload, command === "tasks/intent" ? intentCaller.getStore() : undefined);
     },
     sessionsChanged: (ids: string[]) => changes?.add(ids),
     trackWorkbench: (contents: WebContents) => workbenches.track(contents),

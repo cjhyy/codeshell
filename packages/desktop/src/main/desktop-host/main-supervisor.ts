@@ -1,10 +1,11 @@
+import { isPrivateTaskCommand } from "../task-inbox/private-task-command.js";
 import type { MessagePortMain, UtilityProcess } from "electron";
 import type { ListDiskSessionsResult } from "@cjhyy/code-shell-server/storage";
 import type { ListSessionOptions } from "../../shared/disk-session-query.js";
 import {
   isRpcRequest,
   isRpcResponse,
-  type DesktopHostControl,
+  type DesktopHostControl, type DesktopHostIdentity,
 } from "../../shared/desktop-host-protocol.js";
 import type { HostStatus } from "./main-workbenches.js";
 
@@ -27,11 +28,11 @@ export class DesktopHostSupervisor {
   private cancelTimer?: () => void;
   private readonly restartTimes: number[] = [];
   private readonly owners = new Map<string, number>();
-  private nextListId = 0;
+  private sequence = 0;
   private readonly reads = new Map<
     string,
     {
-      resolve: (page: ListDiskSessionsResult) => void;
+      resolve: (value: unknown) => void;
       reject: (error: Error) => void;
       timeout: NodeJS.Timeout;
     }
@@ -77,17 +78,8 @@ export class DesktopHostSupervisor {
         if (!read) return;
         clearTimeout(read.timeout);
         this.reads.delete(message.id);
-        const page = message.result as ListDiskSessionsResult | undefined;
-        if (
-          page &&
-          Array.isArray(page.sessions) &&
-          (page.nextCursor === null || typeof page.nextCursor === "string")
-        )
-          read.resolve(page);
-        else
-          read.reject(
-            new Error(message.error?.message ?? "Desktop Host returned an invalid session page"),
-          );
+        if (message.error) read.reject(new Error(message.error.message));
+        else read.resolve(message.result);
       } else if (isRpcRequest(message)) {
         const response =
           message.method !== "app/getVersion"
@@ -115,17 +107,29 @@ export class DesktopHostSupervisor {
     }, 15_000);
   }
 
-  listDiskSessions(options: ListSessionOptions): Promise<ListDiskSessionsResult> {
+  async listDiskSessions(options: ListSessionOptions): Promise<ListDiskSessionsResult> {
+    const page = await this.request("host/listDiskSessions", { ...options }) as ListDiskSessionsResult | undefined;
+    if (page && Array.isArray(page.sessions) && (page.nextCursor === null || typeof page.nextCursor === "string"))
+      return page;
+    throw new Error("Desktop Host returned an invalid session page");
+  }
+
+  async taskCommand<T>(command: string, payload?: unknown, caller?: DesktopHostIdentity): Promise<T | null> {
+    if (!isPrivateTaskCommand(command)) throw new Error("Unknown task command");
+    return await this.request(command, { payload, ...(caller && {caller}) }) as T | null;
+  }
+
+  private request(method: string, params: Record<string, unknown>): Promise<unknown> {
     if (!this.ready || this.stopped)
       return Promise.reject(new Error("Desktop Host is unavailable"));
-    const id = `main:session-list:${++this.nextListId}`;
+    const id = `main:request:${++this.sequence}`;
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         this.reads.delete(id);
-        reject(new Error("Desktop Host session list timed out"));
+        reject(new Error("Desktop Host request timed out"));
       }, 15_000).unref();
       this.reads.set(id, { resolve, reject, timeout });
-      this.send({ jsonrpc: "2.0", id, method: "host/listDiskSessions", params: options });
+      this.send({ jsonrpc: "2.0", id, method, params });
     });
   }
 

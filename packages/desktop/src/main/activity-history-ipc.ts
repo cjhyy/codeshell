@@ -16,13 +16,14 @@ import { registerModelTraceIpc } from "./model-trace-ipc.js";
 export function registerActivityHistoryIpc(
   ipcMain: Pick<IpcMain, "handle" | "removeHandler">,
   windows: () => BrowserWindow[],
+  archive = archiveDiskSession,
 ) {
   configureModelTracing({ storageDir: join(sessionsRoot(), ".model-traces"), source: "desktop" });
   const history = new ActivityHistoryWorker({ sessionsDir: sessionsRoot() });
   ipcMain.handle("sessions:setArchived", async (_event, id: string, archived: boolean) => {
     assertDesktopSessionId(id);
     if (typeof archived !== "boolean") throw new Error("archived must be a boolean");
-    await archiveDiskSession(id, archived ? Date.now() : undefined);
+    await archive(id, archived ? Date.now() : undefined);
     await getSessionCwdIndex().refresh(id);
   });
   ipcMain.handle("sessions:list", async () => listSessions());

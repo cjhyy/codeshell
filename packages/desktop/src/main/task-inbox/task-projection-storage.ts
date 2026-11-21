@@ -297,7 +297,7 @@ export function createTaskInboxStorageHandlers(): StorageWorkerHandlers {
         return true;
       }
       const db = ctx.db;
-      if (db && command !== "tasks/intent") {
+      if (db && command !== "tasks/intent" && command !== "tasks/commitIntent") {
         const rows = new SqlTaskRows(db);
         const result =
           command === "tasks/reconcile"
@@ -313,6 +313,13 @@ export function createTaskInboxStorageHandlers(): StorageWorkerHandlers {
           if (db && m.version > h.intentVersion) {
             applyMirror(rows, m);
             rows.setHeader({ ...h, intentVersion: m.version });
+          }
+          if (command === "tasks/commitIntent") {
+            const { permit, intent } = checkedTaskObject(payload, new Set(["permit","intent"]));
+            if (!(permit instanceof Int32Array) || !(permit.buffer instanceof SharedArrayBuffer) ||
+                permit.length !== 1 || Atomics.compareExchange(permit, 0, 0, 1) !== 0)
+              throw new Error("Task caller was revoked");
+            return perform(rows, "tasks/intent", intent);
           }
           return perform(rows, command, payload);
         };

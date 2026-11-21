@@ -376,6 +376,7 @@ export class AgentBridge implements PetStateBridge {
    */
   private readonly sessionMainRootMigrationClaims = new Map<string, string>();
   private readonly hostReservations = new Map<string, HostReservation>();
+  private readonly foregroundRuns = new Map<string | number, string>();
   private readonly tentativeRunsByRequest = new Map<string, string>();
   /**
    * Renderer window that owns each session's host-loopback surface. Panel tools
@@ -445,6 +446,7 @@ export class AgentBridge implements PetStateBridge {
     ) => void,
     onSessionPanelOwnerChanged?: (sessionId: string, webContentsId: number | null) => void,
     private readonly onSessionsChanged?: (ids: string[]) => void,
+    private readonly onUserRunAccepted?: (id: string) => void,
   ) {
     this.panelHostWindowRoutes = new PanelHostWindowRoutes(onSessionPanelOwnerChanged);
     dlog("bridge", "ctor", { agentEntry, execPath: process.execPath });
@@ -684,6 +686,15 @@ export class AgentBridge implements PetStateBridge {
   private handleAgentRunMetadata(prepared: ReturnType<typeof prepareAgentRunMetadata>): string {
     this.core.ensureWorker(prepared.cwd);
     if (prepared.sessionId && this.core.canSend()) {
+      const requestId = prepared.parsed.id;
+      if (requestId !== undefined) {
+        this.foregroundRuns.delete(requestId);
+        if (!prepared.parsed.params?.injected && (prepared.meta.origin === "renderer" ||
+            (prepared.meta.origin === "mobile" && prepared.meta.producer === "mobile-chat"))) {
+          this.foregroundRuns.set(requestId, prepared.sessionId);
+          if (this.foregroundRuns.size > 4096) this.foregroundRuns.delete(this.foregroundRuns.keys().next().value!);
+        }
+      }
       const clientMessageId = prepared.parsed.params?.clientMessageId;
       this.workerRuns.beginRun(
         prepared.sessionId,
@@ -746,6 +757,11 @@ export class AgentBridge implements PetStateBridge {
     if (message === undefined) return;
     if (message.method === Methods.RunAccepted) {
       const sessionId = message.params?.sessionId;
+      const requestId = message.params?.requestId;
+      if (requestId !== undefined && typeof sessionId === "string" && this.foregroundRuns.get(requestId) === sessionId) {
+        this.foregroundRuns.delete(requestId);
+        this.onUserRunAccepted?.(sessionId);
+      }
       if (typeof sessionId === "string") getSessionCwdIndex().extendTentative(sessionId);
       return;
     }
@@ -761,6 +777,7 @@ export class AgentBridge implements PetStateBridge {
       return;
     }
     if (message.id !== undefined && message.method === undefined) {
+      this.foregroundRuns.delete(message.id);
       const sessionId = this.tentativeRunsByRequest.get(String(message.id));
       if (sessionId) {
         getSessionCwdIndex().evictTentative(sessionId);
@@ -774,6 +791,7 @@ export class AgentBridge implements PetStateBridge {
       getSessionCwdIndex().evictTentative(sessionId);
     }
     this.tentativeRunsByRequest.clear();
+    this.foregroundRuns.clear();
   }
 
   private agentRunMetadataDeps(): AgentRunMetadataDeps {

@@ -34,6 +34,7 @@ interface Connection {
   port: HostPort;
   authority: HostPortAuthority;
   initialized: boolean;
+  commits: Set<Int32Array>;
   pending: Map<RpcRequest["id"], HostRequestContext>;
 }
 
@@ -103,6 +104,7 @@ export class DesktopHostServer {
       port,
       authority: new HostPortAuthority(identity, this.sessions),
       initialized: false,
+      commits: new Set(),
       pending: new Map(),
     };
     this.windows.set(identity.webContentsId, connection);
@@ -130,6 +132,18 @@ export class DesktopHostServer {
     ) {
       this.detach(connection);
     }
+  }
+
+  /** Only the private parent pipe can reserve a one-shot write for a bound document.
+   * The storage thread acquires it inside the transaction, after lock acquisition. */
+  reserveTaskCommit(identity: DesktopHostIdentity) {
+    const conn = this.windows.get(identity.webContentsId);
+    const bound = conn?.authority.identity;
+    if (!conn || !bound || bound.frameToken !== identity.frameToken || bound.frameGeneration !== identity.frameGeneration ||
+        conn.commits.size >= 128) throw new HostRevokedError();
+    const permit = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT));
+    conn.commits.add(permit);
+    return { permit, release: () => conn.commits.delete(permit) };
   }
 
   setOwner(sessionId: string, owner: number | null): void {
@@ -161,6 +175,8 @@ export class DesktopHostServer {
     if (this.windows.get(id) !== connection) return;
     this.windows.delete(id);
     connection.authority.revoke();
+    for (const permit of connection.commits) Atomics.compareExchange(permit, 0, 0, -1);
+    connection.commits.clear();
     try {
       for (const id of connection.pending.keys()) {
         sendError(

@@ -1,7 +1,10 @@
+import { openStateStorage } from "@cjhyy/code-shell-core/internal/storage";
+import { taskHostReads } from "../task-inbox/task-host-reads.js";
+import { isPrivateTaskCommand } from "../task-inbox/private-task-command.js";
 import { sessionsRoot } from "@cjhyy/code-shell-core";
 import { createSessionIndex } from "@cjhyy/code-shell-server/storage";
 import {
-  isDesktopHostControl,
+  isDesktopHostControl, isDesktopHostIdentity,
   isRpcRequest,
   isRpcResponse,
 } from "../../shared/desktop-host-protocol.js";
@@ -12,9 +15,11 @@ import { DesktopHostServer, desktopHostMethods } from "./server.js";
 // proxy on the renderer port, and the hosted catalog never waits on Main.
 const parent = process.parentPort;
 const versionRequestId = "host:app-version";
-const index = createSessionIndex(sessionsRoot(), {
+const storage = openStateStorage(sessionsRoot(), {
+  workerConfig: {taskInboxDirectory: process.argv[2]},
   workerUrl: new URL("./session-index-worker.mjs", import.meta.url),
 });
+const index = createSessionIndex(sessionsRoot(), {storage});
 const catalog = new DesktopSessionListVisibility(index);
 let server: DesktopHostServer | undefined;
 let stopping = false;
@@ -33,7 +38,7 @@ parent.on("message", ({ data, ports }) => {
 
   if (isDesktopHostControl(data) && data.type === "shutdown") {
     stopping = true;
-    void index.close().finally(() => process.exit(0));
+    void index.close().then(async () => (await storage).close()).then(() => process.exit(0), () => process.exit(1));
     return;
   }
   if (!server) {
@@ -43,12 +48,32 @@ parent.on("message", ({ data, ports }) => {
     }
     server = new DesktopHostServer(
       data.result,
-      desktopHostMethods((options) => catalog.list(options)),
+      new Map([...desktopHostMethods((options) => catalog.list(options)), ...taskHostReads(storage)]),
     );
     parent.postMessage({ type: "ready" });
     return;
   }
 
+  if (isRpcRequest(data) && isPrivateTaskCommand(data.method)) {
+    const { id, method, params } = data;
+    const host = server;
+    const invoke = async () => {
+      const db = await storage;
+      if (method !== "tasks/intent" || !params?.caller) return db.request(method, params?.payload);
+      if (!isDesktopHostIdentity(params.caller)) throw new Error("Invalid task caller");
+      const reservation = host.reserveTaskCommit(params.caller);
+      try {
+        return await db.request("tasks/commitIntent", { intent: params.payload, permit: reservation.permit });
+      } finally {
+        reservation.release();
+      }
+    };
+    void invoke().then(
+      (result) => { if (!stopping) parent.postMessage({ jsonrpc: "2.0", id, result }); },
+      (error: unknown) => { if (!stopping) parent.postMessage({ jsonrpc: "2.0", id, error: {code: -32603, message: error instanceof Error ? error.message : "Task operation failed"} }); },
+    );
+    return;
+  }
   if (isRpcRequest(data) && data.method === "host/listDiskSessions") {
     // This pipe is private to Main. Renderer methods use the public view normalizer.
     const params = data.params;
