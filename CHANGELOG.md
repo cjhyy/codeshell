@@ -17,6 +17,22 @@ manual installation from the DMG. Install the new app in Applications using
 the same account to retain existing sessions and settings. Send or copy any
 unsent text you want to keep before quitting 0.11. Restarting clears its composer.
 
+## [0.11.0-rc.10] - 2026-11-21
+
+### Fixed
+
+- Hooks: a shell or plugin hook that never reads its input, or exits before
+  the input arrives, is now judged by its exit code and output. Before, a fast
+  `echo reason >&2; exit 2` hook could randomly lose its block and let the tool
+  run, and a hook that closed its input early could crash the process with an
+  uncaught "broken pipe" error. A Codex drive or computer-use driver that exits
+  while still being sent input no longer crashes its host either.
+
+### Changed
+
+- CI: every test job stops after 60 minutes, so a hung test process fails
+  within the hour instead of running for up to six hours.
+
 ## [0.11.0-rc.9] - 2026-11-20
 
 Computer use for Codex sessions and `set_value` were accepted against the real,

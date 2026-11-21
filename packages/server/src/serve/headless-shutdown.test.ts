@@ -220,6 +220,11 @@ test("shutdown immediately retires existing HTTP sockets and stops reporting hea
   const { server, release } = await fixture();
   const connected = await socket(server);
   const disconnected = new Promise<void>((resolve) => connected.once("close", resolve));
+  // A request in progress (headers not finished). On Linux, Bun >= 1.4 does
+  // not accept a connection that has sent no bytes yet (no `connection`
+  // event, and closing the listener leaves the peer half-open until it
+  // writes), so a byte-less socket is never owned by the server there.
+  connected.write("GET /health HTTP/1.1\r\nHost: localhost\r\n");
   const stopping = workerMessage(server, "test/stopping");
   const closed = server.close();
   await stopping;

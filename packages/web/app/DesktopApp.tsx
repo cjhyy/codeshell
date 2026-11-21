@@ -18,11 +18,14 @@ import { connectionModelLabel, readConfiguration, type HubConfiguration } from "
 import { SessionDrafts } from "./drafts.js";
 import { sessionTitle } from "./chat.js";
 import { Workbench } from "./Workbench.js";
+import { subagentControls } from "./SubagentView.js";
 import {
   DesktopApproval,
   DesktopChatControls,
   DesktopCliSessionActions,
   DesktopSidebar,
+  DesktopTakeOver,
+  openAttentionRoom,
 } from "./DesktopControls.js";
 import {
   DesktopModelPicker,
@@ -957,6 +960,12 @@ export function useDesktopController(
     [draftRevision],
   );
   const selectSession = (id: string) => {
+    if (id.startsWith("room:")) {
+      // A CLI room's pending approvals are answered inside that room.
+      const room = app.roomAttention?.find((item) => `room:${item.roomId}` === id);
+      if (!room || !openAttentionRoom(app, room)) setError("这个 CLI 会话已不需要处理。");
+      return;
+    }
     if (id.startsWith("desktop-new-")) {
       if (app.status !== "online") {
         setError("连接已断开，重新连接后才能继续这个新任务。");
@@ -1090,11 +1099,19 @@ export function useDesktopController(
     uncertain: uncertainIntents.current.has(activeId),
     running,
     localDrafts,
-    approvals: (app.outputHistoryFailed ? [] : app.approvals).map((approval) => ({
-      id: approval.requestId,
-      sessionId: approval.roomId ? undefined : approval.sessionId,
-      ...(approval.asynchronous ? { asynchronous: true } : {}),
-    })),
+    approvals: [
+      ...(app.outputHistoryFailed ? [] : app.approvals).map((approval) => ({
+        id: approval.requestId,
+        sessionId: approval.roomId ? undefined : approval.sessionId,
+        ...(approval.asynchronous ? { asynchronous: true } : {}),
+      })),
+      // Other CLI rooms waiting on an approval: one jump target per room.
+      ...(app.roomAttention ?? []).flatMap((room) =>
+        room.approvalIds.length && room.sessionId
+          ? [{ id: room.approvalIds[0]!, sessionId: `room:${room.roomId}`, label: room.name }]
+          : [],
+      ),
+    ],
     approvalCount: (id) => app.approvals.filter((approval) => approval.sessionId === id).length,
     approvalContent: (app.outputHistoryFailed ? [] : app.approvals).map((approval) => (
       <DesktopApproval key={approval.requestId} approval={approval} app={app} />
@@ -1307,8 +1324,10 @@ export function useDesktopController(
     readOnlyNote: app.outputHistoryFailed
       ? "会话记录尚未完成核对。输入内容已保留为草稿，请先恢复记录。"
       : app.activeRoom?.observing
-        ? "此 CLI 会话正在桌面运行，当前设备以只读方式查看。"
+        ? "正在只读查看外部 CLI 对话；继续前需要明确接管。"
         : undefined,
+    readOnlyAction: app.outputHistoryFailed ? undefined : <DesktopTakeOver app={app} />,
+    ...subagentControls(app),
     turnQueue: app.turnQueueSupported
       ? {
           canQueue,

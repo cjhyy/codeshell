@@ -77,8 +77,9 @@ export async function handleRoomEvent(
       return;
     }
     if (event.type === "room.close") {
+      // RoomManager reports the end through onRoomEnded, which broadcasts
+      // room.closed for this and every other close/exit path.
       ctx.roomManager.close(event.roomId);
-      ctx.remote.broadcast({ type: "room.closed", roomId: event.roomId });
       return;
     }
     if (event.type === "room.history" && event.page) {

@@ -221,6 +221,16 @@ export type MobileClientEvent =
       cwds?: string[];
     }
   | { type: "session.history"; sessionId: string }
+  // ── Subagents (read-only; Desktop's subagent panel data) ─────────────────
+  /** Direct children of a Session the device may read; one bounded page. */
+  | { type: "session.subagents"; requestId: string; sessionId: string; cursor?: string }
+  /** One child's folded transcript; `parentSessionId` scopes the authority. */
+  | {
+      type: "session.subagentTranscript";
+      requestId: string;
+      parentSessionId: string;
+      sessionId: string;
+    }
   | {
       type: "session.sync";
       sessionId: string;
@@ -322,6 +332,20 @@ export type MobileClientEvent =
       sessionId: string;
       limit: number;
       kind?: "claude-code" | "codex";
+      /** Page backwards: messages before this index of the parsed transcript
+       * (a previous reply's startIndex). Omitted reads the latest messages. */
+      before?: number;
+    }
+  | {
+      /** Take over an observe-only CLI session (the Desktop "继续对话 / 接管"
+       * action): the Host starts its own process in the default mode. Replied
+       * with ccRoom.opened or room.error, both echoing requestId. */
+      type: "ccRoom.takeOver";
+      roomId: string;
+      sessionId: string;
+      cwd: string;
+      kind: "claude-code" | "codex";
+      requestId: string;
     }
   | {
       type: "ccRoom.respondApproval";
@@ -552,6 +576,24 @@ export type MobileServerEvent =
     }
   | { type: "session.history.ok"; sessionId: string; events: unknown[] }
   | {
+      type: "session.subagents.ok";
+      requestId: string;
+      sessionId: string;
+      agents: MobileSubagentSummary[];
+      nextCursor?: string;
+      /** Set instead of data when the Host refused or failed the read. */
+      error?: string;
+    }
+  | {
+      type: "session.subagentTranscript.ok";
+      requestId: string;
+      parentSessionId: string;
+      sessionId: string;
+      /** Same envelopes as session.history.ok. */
+      events: unknown[];
+      error?: string;
+    }
+  | {
       type: "session.snapshot";
       sessionId: string;
       entries: Array<{ seq: number; event: unknown }>;
@@ -622,6 +664,8 @@ export type MobileServerEvent =
       message: string;
       clientMessageId?: string;
       requestId?: string;
+      /** ccRoom.respondApproval failed: the approval request it answered. */
+      approvalRequestId?: string;
       /** The CLI already accepted this input; it must not be retried as rejected. */
       uncertain?: true;
     }
@@ -700,6 +744,8 @@ export type MobileServerEvent =
       messages: CcHistoryMessage[];
       hasMore: boolean;
       totalCount: number;
+      /** Transcript index of messages[0] (pages back via ccRoom.readHistory.before). */
+      startIndex?: number;
       roomCursor: number;
     }
   | {
@@ -708,6 +754,10 @@ export type MobileServerEvent =
       messages: CcHistoryMessage[];
       hasMore: boolean;
       totalCount: number;
+      /** Index of messages[0] in the parsed transcript; absent on older Hosts. */
+      startIndex?: number;
+      /** Echo of a paged request's `before`. */
+      before?: number;
     }
   | {
       type: "ccRoom.approvalResolved";
@@ -715,6 +765,15 @@ export type MobileServerEvent =
       requestId: string;
       decision: CcApprovalDecision;
     };
+
+/** A child Session (subagent) as Desktop's subagent list shows it. */
+export interface MobileSubagentSummary {
+  sessionId: string;
+  title: string;
+  /** Durable status; absent when the child never recorded one. */
+  status?: "active" | "paused" | "completed" | "failed" | "cancelled";
+  updatedAt?: number;
+}
 
 export interface RoomPublic {
   id: string;

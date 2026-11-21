@@ -1,5 +1,11 @@
 import { test, expect } from "bun:test";
-import { reduceStream, initialChatState, appendUserMessage, type ChatItem } from "./streamReducer";
+import {
+  reduceScopedStream,
+  reduceStream,
+  initialChatState,
+  appendUserMessage,
+  type ChatItem,
+} from "./streamReducer";
 
 /** Wrap an inner StreamEvent into the agent/streamEvent JSON-RPC envelope. */
 function ev(event: Record<string, unknown>, sessionId?: string) {
@@ -630,4 +636,48 @@ test("tombstone drops an unexecuted tool placeholder and permits its replacement
     result: "read complete",
     done: true,
   });
+});
+
+test("scoped parent feed keeps child output in the child row, like Desktop's agent card", () => {
+  const events = [
+    ev({ type: "stream_request_start", messageId: "parent" }),
+    ev({ type: "text_delta", text: "parent text" }),
+    ev({ type: "agent_start", agentId: "child", name: "Explorer" }),
+    ev({ type: "stream_request_start", agentId: "child", messageId: "child" }),
+    ev({ type: "text_delta", agentId: "child", text: "child prose" }),
+    ev({
+      type: "tool_use_start",
+      agentId: "child",
+      toolCall: { id: "t1", toolName: "Read", args: {} },
+    }),
+    ev({ type: "tool_result", agentId: "child", toolUseId: "t1", result: "ok" }),
+    ev({ type: "turn_complete", agentId: "child", reason: "completed" }),
+    ev({ type: "agent_end", agentId: "child", text: "child result" }),
+  ];
+  const scoped = events.reduce(reduceScopedStream, initialChatState());
+  expect(scoped.items.map((item) => item.kind)).toEqual(["assistant", "subagent"]);
+  expect(scoped.items[0]).toMatchObject({ text: "parent text" });
+  expect(scoped.items[1]).toMatchObject({
+    kind: "subagent",
+    agentId: "child",
+    label: "Explorer",
+    status: "completed",
+    toolCount: 1,
+    text: "child result",
+  });
+  // Output of a child the parent never started is not attached anywhere.
+  const stray = reduceScopedStream(scoped, ev({ type: "text_delta", agentId: "x", text: "?" }));
+  expect(stray).toBe(scoped);
+  // Unscoped consumers (Hub, CLI rooms) keep the tagged interleaving.
+  const unscoped = events.reduce(reduceStream, initialChatState());
+  expect(unscoped.items.some((item) => item.kind === "tool" && item.agentId === "child")).toBe(
+    true,
+  );
+  // The child's own transcript (no agentId on its events) shows its items.
+  const child = [
+    ev({ type: "stream_request_start", messageId: "c" }),
+    ev({ type: "text_delta", text: "child prose" }),
+    ev({ type: "tool_use_start", toolCall: { id: "t1", toolName: "Read", args: {} } }),
+  ].reduce(reduceScopedStream, initialChatState());
+  expect(child.items.map((item) => item.kind)).toEqual(["assistant", "tool"]);
 });

@@ -65,7 +65,8 @@ export interface WorkbenchController {
   uncertain: boolean;
   running: boolean;
   localDrafts: Array<{ sessionId: string; draft: ComposerDraft; cwd?: string | null }>;
-  approvals: Array<{ id: string; sessionId?: string; asynchronous?: boolean }>;
+  /** `label` names a conversation whose id is not a native session (a CLI room). */
+  approvals: Array<{ id: string; sessionId?: string; asynchronous?: boolean; label?: string }>;
   approvalCount: (sessionId: string) => number;
   approvalContent: React.ReactNode;
   workerNote?: string | null;
@@ -112,6 +113,14 @@ export interface WorkbenchController {
   sendBlockedReason?: string;
   readOnly?: boolean;
   readOnlyNote?: string;
+  /** Open one subagent of the current conversation (its parent-feed row). */
+  openSubagent?: (agentId: string) => void;
+  /** Entry to the conversation's subagent list, shown above the transcript. */
+  subagentEntry?: React.ReactNode;
+  /** An open subagent list/detail; replaces the conversation while shown. */
+  subagentView?: React.ReactNode;
+  /** An action that ends the read-only state (e.g. taking over a CLI session). */
+  readOnlyAction?: React.ReactNode;
   attachmentAccept?: string;
   cameraAttachments?: boolean;
   unreadSessionIds?: ReadonlySet<string>;

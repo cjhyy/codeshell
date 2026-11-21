@@ -24,6 +24,7 @@ import {
   RoomModeAuthority,
 } from "../../packages/desktop/src/main/cc-room/room-mode-authority.js";
 import { desktopRoomModeHostBoundary } from "../../packages/desktop/src/main/cc-room/room-mode-host-boundary.js";
+import { publishRoomEnded } from "../../packages/desktop/src/main/mobile-remote/lifecycle.js";
 import {
   handleClientEvent,
   type OrchestratorCtx,
@@ -92,10 +93,9 @@ export async function runLegacyLifecycle(root: string) {
         .request(roomId, event.requestId, event)
         .then((decision) => roomManager.respondApproval(roomId, event.requestId, decision));
     },
-    onRoomEnded: (roomId) => {
-      approvalBridge.cancelRoom(roomId);
-      transcripts.endRoom(roomId);
-    },
+    // Main's hook: every close/exit path reaches phones as room.closed.
+    onRoomEnded: (roomId) =>
+      publishRoomEnded({ approvals: approvalBridge, transcripts, remote }, roomId),
   });
   // Main's room permission-mode authority, wired as in Desktop Main except that
   // the fixture workspace is the only registered project and the phone card is

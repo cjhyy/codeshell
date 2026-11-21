@@ -124,6 +124,7 @@ describe("readCodexRecentHistory", () => {
       ],
       hasMore: false,
       totalCount: 2,
+      startIndex: 0,
     });
     expect(items.flatMap((item) => parseCodexTranscriptLine(JSON.stringify(item)))).toEqual([
       { type: "user", text: "查看这段对话" },
@@ -273,6 +274,7 @@ describe("readCodexRecentHistory", () => {
       messages: [],
       hasMore: false,
       totalCount: 0,
+      startIndex: 0,
     });
   });
 });

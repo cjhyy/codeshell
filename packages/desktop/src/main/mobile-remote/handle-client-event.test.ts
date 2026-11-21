@@ -1293,3 +1293,121 @@ test("a refused versioned clear reports a correlated refresh error", async () =>
   ]);
   expect(listener).toBeUndefined();
 });
+
+describe("remote subagent reads", () => {
+  // top → child → grandchild; "other" has no readable top-level Session.
+  const parents: Record<string, string | undefined> = {
+    top: undefined,
+    child: "top",
+    grandchild: "child",
+    orphan: "hidden",
+    hidden: undefined,
+  };
+  function subagentHarness() {
+    const authorized: string[] = [];
+    const listed: Array<[string, string | undefined, number]> = [];
+    const viewer: unknown[] = [];
+    const deps = {
+      authorizeSession: async (sessionId: string) => {
+        authorized.push(sessionId);
+        if (sessionId === "hidden") throw new Error("Session recovery unavailable");
+      },
+      parentOf: (sessionId: string) => (sessionId in parents ? parents[sessionId] : null),
+      listChildren: async (parentSessionId: string, cursor: string | undefined, limit: number) => {
+        listed.push([parentSessionId, cursor, limit]);
+        return {
+          sessions: [
+            ...Array.from({ length: 150 }, (_, n) => ({
+              engineSessionId: `c${n}`,
+              title: `Child ${n}`,
+              parentSessionId,
+              status: n === 0 ? ("active" as const) : ("completed" as const),
+              updatedAt: n,
+            })),
+            { engineSessionId: "stray", title: "Stray", parentSessionId: "elsewhere" },
+          ] as never[],
+          nextCursor: "page-2",
+        };
+      },
+      readTranscript: async (sessionId: string) => [{ type: "text_delta", text: sessionId }],
+    };
+    const ctx = {
+      subagents: deps,
+      remote: {
+        sendToViewer: (_viewerId: string, event: unknown) => viewer.push(event),
+        sendToDevice: () => undefined,
+        broadcast: () => undefined,
+      },
+    } as unknown as OrchestratorCtx;
+    const send = (event: Record<string, unknown>) =>
+      handleClientEvent(ctx, { ...event, deviceId: "phone", viewerId: "tab" } as never);
+    return { authorized, listed, viewer, send };
+  }
+
+  test("lists only direct children of a readable Session, one bounded page", async () => {
+    const h = subagentHarness();
+    await h.send({ type: "session.subagents", requestId: "r1", sessionId: "top" });
+    expect(h.authorized).toEqual(["top"]);
+    expect(h.listed).toEqual([["top", undefined, 100]]);
+    const reply = h.viewer[0] as { agents: Array<{ sessionId: string }>; nextCursor?: string };
+    expect(reply).toMatchObject({
+      type: "session.subagents.ok",
+      requestId: "r1",
+      sessionId: "top",
+    });
+    expect(reply.agents).toHaveLength(100);
+    expect(reply.agents[0]).toEqual({
+      sessionId: "c0",
+      title: "Child 0",
+      status: "active",
+      updatedAt: 0,
+    });
+    expect(reply.agents.some((agent) => agent.sessionId === "stray")).toBe(false);
+    expect(reply.nextCursor).toBe("page-2");
+  });
+
+  test("nested children are authorized through their top-level Session", async () => {
+    const h = subagentHarness();
+    await h.send({
+      type: "session.subagentTranscript",
+      requestId: "t1",
+      parentSessionId: "child",
+      sessionId: "grandchild",
+    });
+    expect(h.authorized).toEqual(["top"]);
+    expect(h.viewer[0]).toEqual({
+      type: "session.subagentTranscript.ok",
+      requestId: "t1",
+      parentSessionId: "child",
+      sessionId: "grandchild",
+      events: [{ type: "text_delta", text: "grandchild" }],
+    });
+  });
+
+  test("refuses children of a Session the device cannot read, and non-children", async () => {
+    const h = subagentHarness();
+    await h.send({ type: "session.subagents", requestId: "r2", sessionId: "orphan" });
+    expect(h.listed).toEqual([]);
+    expect(h.viewer[0]).toMatchObject({ type: "session.subagents.ok", agents: [] });
+    expect(String((h.viewer[0] as { error?: string }).error)).toContain(
+      "Session recovery unavailable",
+    );
+    // A Session that is not this parent's child is never read.
+    await h.send({
+      type: "session.subagentTranscript",
+      requestId: "t2",
+      parentSessionId: "top",
+      sessionId: "grandchild",
+    });
+    expect(h.viewer[1]).toMatchObject({ events: [], requestId: "t2" });
+    expect(String((h.viewer[1] as { error?: string }).error)).toContain("not a subagent");
+    // Unknown Sessions and invalid ids are refused before any read.
+    await h.send({ type: "session.subagents", requestId: "r3", sessionId: "missing" });
+    await h.send({ type: "session.subagents", requestId: "r4", sessionId: "../top" });
+    expect(h.viewer.slice(2).map((reply) => (reply as { error?: string }).error)).toEqual([
+      expect.stringContaining("Session not found"),
+      expect.any(String),
+    ]);
+    expect(h.listed).toEqual([]);
+  });
+});

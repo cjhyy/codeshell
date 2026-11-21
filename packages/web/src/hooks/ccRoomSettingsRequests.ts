@@ -15,13 +15,16 @@ export interface CcRoomOpenRequest {
   mode: PermissionMode;
   revision: number;
   switching: boolean;
+  /** Taking over an observe-only room (Desktop's "继续对话 / 接管"). */
+  takeOver?: true;
 }
 
 export type CcRoomSettingSelection =
-  | { mode: PermissionMode; modelKey?: never }
-  | { modelKey: string | null; mode?: never };
+  | { mode: PermissionMode; modelKey?: never; takeOver?: never }
+  | { modelKey: string | null; mode?: never; takeOver?: never }
+  | { takeOver: true; mode?: never; modelKey?: never };
 
-type OpenEvent = Extract<MobileClientEvent, { type: "ccRoom.openSession" }>;
+type OpenEvent = Extract<MobileClientEvent, { type: "ccRoom.openSession" | "ccRoom.takeOver" }>;
 type Preparation =
   | { request: CcRoomOpenRequest; event: OpenEvent; notice?: never }
   | { request?: never; event?: never; notice?: string };
@@ -56,6 +59,24 @@ export function prepareCcRoomSettingChange(
       notice: "此会话的消息正在发送或等待确认，请确认发送结果后再切换模型或权限。草稿已保留。",
     };
   if (!current.online) return { notice: t("mobile.connection.offlineTitle") };
+  if (selection.takeOver) {
+    // Only an observe-only room can be taken over; the Host decides the rest.
+    if (!room?.observing || room.id !== roomId || current.changePending) return {};
+    const requestId = `cc-takeover-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+    return {
+      request: {
+        requestId,
+        roomId,
+        sessionId,
+        cwd,
+        mode: "default",
+        revision: current.revision,
+        switching: true,
+        takeOver: true,
+      },
+      event: { type: "ccRoom.takeOver", roomId, sessionId, cwd, kind: room.kind, requestId },
+    };
+  }
   if (changingModel) {
     if (!current.modelSelection) return { notice: "此电脑尚不支持切换 CLI 模型，请更新桌面端。" };
     if (room!.observing) return { notice: t("mobile.notice.ccRoomObserving") };

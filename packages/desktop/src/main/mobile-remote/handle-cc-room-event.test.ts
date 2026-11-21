@@ -228,3 +228,215 @@ test("model changes forward the exact room binding and echo the actual Host mode
   });
   expect(f.broadcasts).toEqual(["room-a"]);
 });
+
+test("a failed approval response reports its room and approval so the card can recover", async () => {
+  const f = harness();
+  f.ctx.approvalBridge = {
+    respond: () => {
+      throw new Error("bridge unavailable");
+    },
+    pendingRequests: () => [],
+  };
+  await handleCcRoomEvent(f.ctx, {
+    type: "ccRoom.respondApproval",
+    roomId: "room-a",
+    requestId: "approval-7",
+    decision: { behavior: "deny", message: "no" },
+    deviceId: "device",
+    viewerId: "tab-1",
+  });
+  expect(f.viewers).toEqual([
+    [
+      "tab-1",
+      {
+        type: "room.error",
+        message: "bridge unavailable",
+        roomId: "room-a",
+        approvalRequestId: "approval-7",
+      },
+    ],
+  ]);
+});
+
+test("every way a room's process ends reaches phones as room.closed, not only a phone close", async () => {
+  const { RoomManager } = await import("@cjhyy/code-shell-server/mobile-remote");
+  const { publishRoomEnded } = await import("./lifecycle.js");
+  const { mkdtempSync, rmSync } = await import("node:fs");
+  const { join } = await import("node:path");
+  const { tmpdir } = await import("node:os");
+  const dir = mkdtempSync(join(tmpdir(), "rooms-ended-"));
+  const broadcasts: Array<Record<string, unknown>> = [];
+  const cancelled: string[] = [];
+  const emits: Array<(event: { type: "exit"; code: number }) => void> = [];
+  try {
+    const manager = new RoomManager({
+      rootDir: dir,
+      createAgent: (_room, onEvent) => {
+        let running = false;
+        emits.push((event) => {
+          running = false;
+          onEvent(event);
+        });
+        return {
+          start: () => void (running = true),
+          send: () => true,
+          isRunning: () => running,
+          stop: () => void (running = false),
+        };
+      },
+      onMessage: () => undefined,
+      onRoomEnded: (roomId) =>
+        publishRoomEnded(
+          {
+            approvals: { cancelRoom: (id) => (cancelled.push(id), 0) },
+            transcripts: { endRoom: () => undefined },
+            remote: { broadcast: (event) => void broadcasts.push(event as never) },
+          },
+          roomId,
+        ),
+    });
+    // Closed from a Desktop window (ccRoom:closeSession / rooms:close IPC).
+    const desktopClosed = manager.createRoom({ name: "a", cwd: dir });
+    manager.open(desktopClosed.id);
+    manager.close(desktopClosed.id);
+    // The CLI process exits on its own.
+    const exited = manager.createRoom({ name: "b", cwd: dir });
+    manager.open(exited.id);
+    emits[1]!({ type: "exit", code: 1 });
+    expect(broadcasts).toEqual([
+      { type: "room.closed", roomId: desktopClosed.id },
+      { type: "room.closed", roomId: exited.id },
+    ]);
+    expect(cancelled).toEqual([desktopClosed.id, exited.id]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+async function takeOverHarness(options: {
+  requirePath?: (cwd: unknown) => Promise<string>;
+  owned?: boolean;
+}) {
+  const { RoomManager } = await import("@cjhyy/code-shell-server/mobile-remote");
+  const { mkdtempSync, realpathSync } = await import("node:fs");
+  const { join } = await import("node:path");
+  const { tmpdir } = await import("node:os");
+  const dir = realpathSync(mkdtempSync(join(tmpdir(), "rooms-takeover-")));
+  const cwd = join(dir, "repo");
+  (await import("node:fs")).mkdirSync(cwd);
+  let started = 0;
+  const manager = new RoomManager({
+    rootDir: join(dir, "rooms"),
+    resolveLinkedSession: (target) => target,
+    assertExternalSessionAvailable: () => {
+      if (options.owned) throw new Error("该外部会话正由后台任务使用");
+    },
+    createAgent: () => {
+      let running = false;
+      return {
+        start: () => void ((running = true), started++),
+        send: () => true,
+        isRunning: () => running,
+        stop: () => void (running = false),
+      };
+    },
+    onMessage: () => undefined,
+  });
+  const observed = manager.openLinkedSession("thread-1", cwd, "codex");
+  const f = harness();
+  f.ctx.roomManager = manager;
+  f.ctx.requireLinkedSessionPath = options.requirePath ?? (async (path: unknown) => String(path));
+  const takeOver = () =>
+    handleCcRoomEvent(f.ctx, {
+      type: "ccRoom.takeOver",
+      roomId: observed.roomId,
+      sessionId: "thread-1",
+      cwd,
+      kind: "codex",
+      requestId: "take-1",
+      deviceId: "device",
+      viewerId: "tab-1",
+    });
+  return { f, manager, observed, takeOver, started: () => started };
+}
+
+test("remote take-over uses the Host handoff: default mode, writable, republished", async () => {
+  const { f, manager, observed, takeOver, started } = await takeOverHarness({});
+  expect(observed.status).toBe("observing");
+  await takeOver();
+  expect(f.viewers[0]?.[1]).toMatchObject({
+    type: "ccRoom.opened",
+    roomId: observed.roomId,
+    sessionId: "thread-1",
+    status: "running",
+    permissionMode: "default",
+    requestId: "take-1",
+  });
+  expect(manager.getRoom(observed.roomId)?.linkedSessionMode).toBeUndefined();
+  expect(started()).toBe(1);
+  expect(f.broadcasts).toEqual([observed.roomId]);
+});
+
+test("remote take-over keeps Desktop's project gate and reports the refusal on its request", async () => {
+  const { f, manager, observed, takeOver, started } = await takeOverHarness({
+    requirePath: async (path) => {
+      throw new Error(`project path is not registered with CodeShell: ${String(path)}`);
+    },
+  });
+  await takeOver();
+  expect(f.viewers[0]?.[1]).toMatchObject({
+    type: "room.error",
+    roomId: observed.roomId,
+    requestId: "take-1",
+  });
+  expect(String(f.viewers[0]?.[1].message)).toStartWith("无法接管：project path is not registered");
+  expect(manager.getRoom(observed.roomId)?.linkedSessionMode).toBe("observe-only");
+  expect(started()).toBe(0);
+  expect(f.broadcasts).toEqual([]);
+});
+
+test("remote take-over is refused while another owner (a background task) holds the session", async () => {
+  const { f, manager, observed, takeOver, started } = await takeOverHarness({ owned: true });
+  await takeOver();
+  expect(f.viewers[0]?.[1]).toMatchObject({ type: "room.error", requestId: "take-1" });
+  expect(String(f.viewers[0]?.[1].message)).toContain("后台任务");
+  expect(manager.getRoom(observed.roomId)?.linkedSessionMode).toBe("observe-only");
+  expect(started()).toBe(0);
+});
+
+test("CLI history pages backwards from a previous startIndex", async () => {
+  const { parseRecentHistory } = await import("@cjhyy/code-shell-capability-coding/orchestration");
+  const lines = Array.from({ length: 7 }, (_, n) =>
+    JSON.stringify({ type: "user", message: { content: `m${n}` } }),
+  ).join("\n");
+  expect(parseRecentHistory(lines, 3)).toMatchObject({
+    startIndex: 4,
+    hasMore: true,
+    totalCount: 7,
+  });
+  const page = parseRecentHistory(lines, 3, 4);
+  expect(page.messages.map((m) => m.text)).toEqual(["m1", "m2", "m3"]);
+  expect(page).toMatchObject({ startIndex: 1, hasMore: true });
+  expect(parseRecentHistory(lines, 3, 1)).toMatchObject({
+    startIndex: 0,
+    hasMore: false,
+    messages: [{ text: "m0" }],
+  });
+  // The phone's paged request is echoed so a late reply cannot land elsewhere.
+  const f = harness();
+  await handleCcRoomEvent(f.ctx, {
+    type: "ccRoom.readHistory",
+    cwd: "/repo/no-such-transcript",
+    sessionId: "missing",
+    limit: 3,
+    before: 4,
+    deviceId: "device",
+    viewerId: "tab-1",
+  });
+  expect(f.viewers[0]?.[1]).toMatchObject({
+    type: "ccRoom.readHistory.ok",
+    startIndex: 0,
+    before: 4,
+    hasMore: false,
+  });
+});
