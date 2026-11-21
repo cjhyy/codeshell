@@ -483,6 +483,7 @@ import { registerAgentsMediaIpc } from "./agents-media-ipc.js";
 import { registerSkillsMcpIpc } from "./skills-mcp-ipc.js";
 import { registerModelCatalogIpc } from "./model-catalog-ipc.js";
 import { registerMobileRemoteIpc } from "./mobile-remote-ipc.js";
+import { RemoteTerminalPolicy, RemoteTerminals } from "./mobile-remote/remote-terminals.js";
 import { registerRoomsIpc } from "./rooms-ipc.js";
 import { registerDialogPickerIpc } from "./dialog-picker-ipc.js";
 import { registerExternalRuntimeIpc } from "./external-runtime-ipc.js";
@@ -1300,8 +1301,16 @@ const cloudEnvironment = registerCloudEnvironmentIpc({
   userDataDir: app.getPath("userData"),
   assertLocalProject: (id) => projectStore.requireLive(id),
 });
+const remoteTerminals = new RemoteTerminals({
+  remote: mobileRemote,
+  policy: new RemoteTerminalPolicy(
+    resolve(app.getPath("userData"), "mobile-remote", "terminal.json"),
+  ),
+  projectCwd: (projectId) => projectStore.resolveProjectRootByIdSync(projectId).cwd,
+});
 const mobileOrchestrator: MobileRemoteOrchestrator = new MobileRemoteOrchestrator({
   remote: mobileRemote,
+  terminals: remoteTerminals,
   uploads: mobileUploads,
   pendingApprovals: pendingMobileApprovals,
   roomManager,
@@ -4346,6 +4355,7 @@ const {
   accessPasscode,
   mobileRemoteController,
   mobileOrchestrator,
+  remoteTerminals,
 });
 const knownGitRoots = new Set<string>();
 

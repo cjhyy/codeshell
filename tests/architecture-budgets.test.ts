@@ -466,7 +466,10 @@ describe("architecture growth budgets", () => {
       // +1 read-only ccRoom:settingsState returns this room's actual model/mode
       // and busy reason, so native controls can disable changes before submission.
       // Mutations still use the existing ccRoom:openSession authority/handoff.
-    ).toBeLessThanOrEqual(475);
+      // +2 mobileRemote:terminalAccess get/set: the Desktop owner's off-by-default
+      // switch for remote terminals. Terminal I/O itself rides the authenticated
+      // remote socket, not IPC.
+    ).toBeLessThanOrEqual(477);
     expect(matches("packages/desktop/src/main/quota-ipc.ts", /handle\("quota:/g)).toBe(3);
     expect(matches("packages/desktop/src/main/account-device-ipc.ts", /^ {4}[a-z]+: \(/gm)).toBe(8);
     expect(
@@ -506,7 +509,8 @@ describe("architecture growth budgets", () => {
       // adapters within the existing ceiling; neither exposes credentials.
       // +2 typed provider discovery/query invokes; credentials remain in Main.
       // +1 typed ccRoom:settingsState adapter for the reviewed read-only route.
-    ).toBeLessThanOrEqual(484);
+      // +2 typed mobileRemote terminal-access get/set adapters mirroring Main.
+    ).toBeLessThanOrEqual(486);
     expect(matches("packages/desktop/src/preload/quota-api.ts", /ipc\.invoke\(/g)).toBe(3);
     expect(
       matches("packages/desktop/src/preload/account-device-api.ts", /\binvoke(?:Raw)?\("/g),

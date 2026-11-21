@@ -1308,17 +1308,20 @@ export interface CodeshellApi
   /** Start (or reattach) the pty for sessionId. */
   ptyStart(opts: import("../shared/pty.js").PtyStartRequest): Promise<PtyStartResult>;
   /** Send user keystrokes to the shell. */
-  ptyWrite(sessionId: string, data: string): Promise<void>;
+  ptyWrite(sessionId: string, data: string, reply?: boolean): Promise<void>;
   /** Tell the shell the viewport changed. */
   ptyResize(sessionId: string, cols: number, rows: number): Promise<void>;
   /** Terminate the shell. */
   ptyKill(sessionId: string): Promise<void>;
   /** Subscribe to shell output. Returns an unsubscribe fn. */
-  onPtyData(cb: (msg: { sessionId: string; data: string }) => void): () => void;
+  /** `replay` marks scrollback re-sent on remount; queries in it are stale. */
+  onPtyData(cb: (msg: { sessionId: string; data: string; replay?: boolean }) => void): () => void;
   /** Subscribe to shell exit. Returns an unsubscribe fn. */
   onPtyExit(
     cb: (msg: { sessionId: string; exitCode: number; signal?: number }) => void,
   ): () => void;
+  /** How many remote (phone/browser) viewers share a terminal right now. */
+  onPtyRemoteViewers(cb: (msg: { sessionId: string; count: number }) => void): () => void;
 
   // ── Filesystem — file-browser panel ───────────────────────────────────
   // ── Credentials module ────────────────────────────────────────────────
