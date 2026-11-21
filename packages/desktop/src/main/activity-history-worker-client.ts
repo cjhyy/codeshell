@@ -1,4 +1,5 @@
 import type { CcRoomReads, CliList, CliHistory } from "../shared/cc-room-reads.js";
+import type { ActivityReads } from "../shared/activity-history-contracts.js";
 import { Worker } from "node:worker_threads";
 import type { UsageQuery, UsageSummary } from "@cjhyy/code-shell-core";
 import type { createTraceHistoryService } from "./trace-history-service.js";
@@ -9,7 +10,8 @@ export interface ActivityHistoryWorkerOptions {
 }
 export interface ActivityHistoryWorkerRequest {
   id: number;
-  method: keyof TraceHistory | "usage" | "externalSessions" | "externalHistory" | "flush";
+  method: keyof TraceHistory | "externalSessions" | "externalHistory" | "flush" | keyof ActivityReads | "activity/setTitle";
+  permit?: Int32Array;
   input?: unknown;
 }
 export interface ActivityHistoryWorkerReply {
@@ -57,7 +59,7 @@ export class ActivityHistoryWorker {
     return this.request("externalHistory", input);
   }
   usage(query?: UsageQuery): Promise<UsageSummary> {
-    return this.request("usage", query);
+    return this.view("activity/usage", { query });
   }
   list(query?: unknown): Promise<ReturnType<TraceHistory["list"]>> {
     return this.request("list", query);
@@ -71,10 +73,19 @@ export class ActivityHistoryWorker {
   getConfig(): Promise<ReturnType<TraceHistory["getConfig"]>> {
     return this.request("getConfig");
   }
-  setConfig(patch: unknown): Promise<ReturnType<TraceHistory["setConfig"]>> {
-    return this.request("setConfig", patch);
+  setConfig(patch: unknown, permit?: Int32Array): Promise<ReturnType<TraceHistory["setConfig"]>> {
+    return this.request("setConfig", patch, permit);
   }
 
+  view<K extends keyof ActivityReads>(
+    method: K,
+    input: ActivityReads[K]["params"],
+  ): Promise<ActivityReads[K]["result"]> {
+    return this.request(method, input);
+  }
+  setTitle(input: { id: string; title: string }, permit: Int32Array): Promise<void> {
+    return this.request("activity/setTitle", input, permit);
+  }
   /** Drain accepted requests and retention work before terminating; refuse new intake. */
   close(): Promise<void> {
     if (this.closing) return this.closing;
@@ -89,7 +100,11 @@ export class ActivityHistoryWorker {
     return this.closing;
   }
 
-  private request<T>(method: ActivityHistoryWorkerRequest["method"], input?: unknown): Promise<T> {
+  private request<T>(
+    method: ActivityHistoryWorkerRequest["method"],
+    input?: unknown,
+    permit?: Int32Array,
+  ): Promise<T> {
     if (this.closing) return Promise.reject(new Error("activity history is closed"));
     if (this.failure) return Promise.reject(this.failure);
     // A stalled reader must not retain an unbounded number of renderer requests.
@@ -101,7 +116,12 @@ export class ActivityHistoryWorker {
         const id = ++this.nextId;
         this.pending.set(id, { resolve: (value) => resolve(value as T), reject });
         worker.ref();
-        worker.postMessage({ id, method, input } satisfies ActivityHistoryWorkerRequest);
+        worker.postMessage({
+          id,
+          method,
+          input,
+          ...(permit && { permit }),
+        } satisfies ActivityHistoryWorkerRequest);
       } catch (error) {
         this.fail(error instanceof Error ? error : new Error(String(error)));
         reject(this.failure!);

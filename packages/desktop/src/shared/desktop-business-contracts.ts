@@ -1,3 +1,4 @@
+import type { ActivityReads } from "./activity-history-contracts.js";
 import type { CcRoomReads } from "./cc-room-reads.js";
 import type { MemoryReads } from "./memory-contracts.js";
 import type { WorkspaceReadContracts } from "./workspace-read-contracts.js";
@@ -5,16 +6,12 @@ import type { ConfigurationReadContracts } from "./configuration-read-contracts.
 
 /** The workbench port advertises each supported read separately. Add a fixed
  * business method here and register its parser/implementation in the Host. */
-<<<<<<< HEAD
 export interface DesktopBusinessReads
-  extends CcRoomReads, MemoryReads, ConfigurationReadContracts, WorkspaceReadContracts {
-=======
-export interface DesktopBusinessReads extends ConfigurationReadContracts, WorkspaceReadContracts {
+  extends ActivityReads, CcRoomReads, MemoryReads, ConfigurationReadContracts, WorkspaceReadContracts {
   "mimi/workMemory": {
     params: Record<string, never>;
     result: ReturnType<typeof import("./mimi-work-memory.js").mimiWorkView>;
   };
->>>>>>> bbe6926b4 (Move Mimi work memory and topic segmentation to the storage worker)
   "mimi/memories": {
     params: Record<string, never>;
     result: import("../main/pet/pet-memory-store.js").PetMemoryEntry[];

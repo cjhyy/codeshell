@@ -4598,6 +4598,7 @@ ipcMain.handle("agent:subscribe", async (event, sessionId: string, sinceSeq?: nu
 });
 let closeActivityHistory: (() => Promise<void>) | undefined;
 registerDesktopOutputHistoryHost({
+  activityHost: desktopHost,
   ipcMain,
   windows: () => [...mainWindows],
   archive: archiveDiskSession,

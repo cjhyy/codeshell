@@ -1,4 +1,5 @@
 import { ccRoomReads } from "../../host/composition/cc-room-reads.js";
+import { hostedActivityHistory } from "../../host/composition/activity-history.js";
 import { ActivityHistoryWorker } from "../activity-history-worker-client.js";
 import { memoryReads } from "./memory-reads.js";
 import { memoryOperations } from "../../host/composition/memory.js";
@@ -78,8 +79,6 @@ const transcripts = new SessionTranscriptCache(
       workerData: options,
     }),
 );
-const roomHistory = new ActivityHistoryWorker({sessionsDir:sessionsRoot()}, options => new Worker(new URL("./activity-history-worker.mjs",import.meta.url),{workerData:options}));
-const roomReads = ccRoomReads(roomHistory);
 const runKeys = new RunKeyClient((frame) => parent.postMessage(frame));
 const runOperations = new HostRunOperations(
   storage,
@@ -107,10 +106,18 @@ const automation = new HostAutomationRuns({
 const scheduler = new HostScheduler(schedulerPorts.port1, automation);
 // Link-backed source definitions are validated against this process-local registry.
 installDefaultLinkProviders();
+const historyWorker = new ActivityHistoryWorker(
+  { sessionsDir: sessionsRoot() },
+  (options) =>
+    new Worker(new URL("./activity-history-worker.mjs", import.meta.url), { workerData: options }),
+);
+const activities = hostedActivityHistory(historyWorker);
+const roomReads = ccRoomReads(historyWorker);
 const business = new HostBusinessCalls({
   ...mimiRecordsOperations(storage, (domain) =>
     parent.postMessage({ type: "mimi-records-changed", domain }),
   ),
+  ...activities.operations,
   "automation/command": (cmd, grant) => scheduler.command(cmd, grant.permit),
   ...externalRuntimeCatalogOperations(),
   ...roomReads.native,
@@ -226,7 +233,7 @@ parent.on("message", ({ data, ports }) => {
       .then(() =>
         Promise.all([
           index.close(),
-          roomHistory.close(),
+          historyWorker.close(),
           worker?.close(),
           transcripts.close(),
           automation.close(),
@@ -268,6 +275,7 @@ parent.on("message", ({ data, ports }) => {
         ...roomReads.methods,
         ...configurationReads,
         ...memoryReads,
+        ...activities.reads,
         ...scopedConfigurationReads((options) => catalog.list(options)),
         ...workspaceReads((options) => catalog.list(options)),
         businessRead("catalog/load", noBusinessArguments, catalogFiles["catalog/load"]),

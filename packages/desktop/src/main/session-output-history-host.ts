@@ -97,6 +97,7 @@ export function registerDesktopOutputHistoryHost(deps: {
   windows: () => BrowserWindow[];
   historyWindows: () => BrowserWindow[];
   archive?: Parameters<typeof registerActivityHistoryIpc>[2];
+  activityHost: Parameters<typeof registerActivityHistoryIpc>[3];
   bridge: () => AgentBridge | null;
   external: () => ExternalRuntimeService | null;
   mobile: MobileRecoveryHost;
@@ -116,7 +117,12 @@ export function registerDesktopOutputHistoryHost(deps: {
     },
   });
   deps.mobile.setOutputHistoryRecoveryService(service);
-  const history = registerActivityHistoryIpc(deps.ipcMain, deps.historyWindows, deps.archive);
+  const history = registerActivityHistoryIpc(
+    deps.ipcMain,
+    deps.historyWindows,
+    deps.archive,
+    deps.activityHost,
+  );
   deps.registerCleanup?.(() => history.dispose());
   registerSessionOutputHistoryIpc(deps.ipcMain, deps.windows, service);
   return service;

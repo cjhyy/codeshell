@@ -1,3 +1,4 @@
+import type { UsageQuery } from "@cjhyy/code-shell-core";
 import type { MemorySelection } from "../shared/memory-contracts.js";
 import type { RendererConfigurationTarget } from "../shared/renderer-configuration.js";
 import type { IpcRenderer } from "electron";
@@ -16,6 +17,20 @@ export function createConfigurationReads(
     return host ? host.readBusiness(name, params, fallback) : fallback();
   }
   return {
+    listSessionTitles: () =>
+      read("activity/titles", {}, () => ipcRenderer.invoke("sessions:titles")),
+    tailLog: (bucket: "ui-ink" | "engine" | "desktop", lines?: number) =>
+      read("activity/logTail", { bucket, lines }, () =>
+        ipcRenderer.invoke("logs:tail", bucket, lines),
+      ),
+    getUsageSummary: (query?: UsageQuery) =>
+      read("activity/usage", { query }, () => ipcRenderer.invoke("usage:summary", query)),
+    listRuns: (options?: { includeSessions?: boolean }) =>
+      read("activity/runs", { includeSessions: options?.includeSessions }, () =>
+        ipcRenderer.invoke("runs:list", options),
+      ),
+    getRun: (runId: string) =>
+      read("activity/run", { runId }, () => ipcRenderer.invoke("runs:get", runId)),
     listMemory: (
       level: MemorySelection["level"],
       scope: MemorySelection["scope"],
