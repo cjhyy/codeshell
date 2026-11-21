@@ -30,7 +30,7 @@ const jsonOnly: StateStorage = {
 
 export async function openStateStorage(
   sessionsRoot: string,
-  options: { workerUrl?: URL } = {},
+  options: { workerUrl?: URL; workerConfig?: unknown } = {},
 ): Promise<StateStorage> {
   if (!sessionsRoot) throw new Error("Storage requires an explicit sessions root");
   const token = randomUUID();
@@ -38,7 +38,7 @@ export async function openStateStorage(
   let worker: Worker;
   try {
     worker = new Worker(options.workerUrl ?? new URL(defaultEntry, import.meta.url), {
-      workerData: { sessionsRoot: resolve(sessionsRoot), token },
+      workerData: { sessionsRoot: resolve(sessionsRoot), token, config: options.workerConfig },
     });
   } catch {
     return jsonOnly;
@@ -150,12 +150,12 @@ export async function openStateStorage(
     close() {
       if (!closing) {
         dropReader();
-        closing = (stopped ? Promise.resolve() : send({ type: "close" }))
-          .catch(() => {})
-          .then(async () => {
+        closing = (stopped ? Promise.resolve() : send<void>({ type: "close" })).finally(
+          async () => {
             await worker.terminate();
             releaseLease(lease);
-          });
+          },
+        );
       }
       return closing;
     },

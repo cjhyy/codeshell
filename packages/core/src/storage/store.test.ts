@@ -41,7 +41,7 @@ test("WAL shares committed batches between hosts, isolates sibling roots, and ro
     { id: "committed", state_mtime_ns: "9007199254740993551" },
   ]);
   expect(other.read("SELECT id FROM sessions")).toEqual([]);
-  expect(a.read("SELECT version FROM schema_migrations")).toEqual([{ version: 1 }]);
+  expect(a.read("SELECT version FROM schema_migrations")).toEqual([{ version: 1 }, { version: 2 }]);
   await a.close();
   expect(peer.read("SELECT id FROM sessions")).toEqual([{ id: "committed" }]);
   expect((await readdir(join(dir, ".codeshell-state"))).length).toBe(2);
@@ -70,7 +70,10 @@ test("quarantines corruption and unknown schemas together with their sidecars, w
   db.run("INSERT INTO schema_migrations VALUES (?,?)", [99, 0]);
   db.close();
   const afterUnknown = await open(root);
-  expect(afterUnknown.read("SELECT version FROM schema_migrations")).toEqual([{ version: 1 }]);
+  expect(afterUnknown.read("SELECT version FROM schema_migrations")).toEqual([
+    { version: 1 },
+    { version: 2 },
+  ]);
   expect(await quarantines()).toHaveLength(2);
   expect(await readFile(facts, "utf8")).toBe('{"title":"preserved"}');
 });
@@ -85,6 +88,7 @@ test("an incompatible live peer falls back without renaming another process's op
   expect(await peer.write([{ sql: "DELETE FROM sessions" }])).toBe(false);
   expect(owner.read("SELECT version FROM schema_migrations ORDER BY version")).toEqual([
     { version: 1 },
+    { version: 2 },
     { version: 99 },
   ]);
   await owner.close();
