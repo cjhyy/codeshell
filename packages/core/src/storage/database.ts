@@ -3,6 +3,7 @@ import {
   closeSync,
   openSync,
   readSync,
+  lstatSync,
   mkdirSync,
   readdirSync,
   realpathSync,
@@ -73,25 +74,47 @@ export function releaseLease(file: string | undefined): void {
   }
 }
 
+function privateDirectory(path: string): string {
+  try {
+    mkdirSync(path, { mode: 0o700 });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+  }
+  if (!lstatSync(path).isDirectory()) throw new Error("Storage directory is not ordinary");
+  return path;
+}
+
+function checkDatabaseFiles(file: string): void {
+  for (const suffix of ["", "-wal", "-shm", "-journal"]) {
+    const stat = lstatSync(file + suffix, { throwIfNoEntry: false });
+    if (stat && (!stat.isFile() || stat.nlink !== 1))
+      throw new Error("Unsafe storage database file");
+  }
+}
+
 export function openWriter(sessionsRoot: string, token: string) {
   const open = sqliteDriver();
   if (!open) return undefined;
   mkdirSync(sessionsRoot, { recursive: true, mode: 0o700 });
+  if (!lstatSync(sessionsRoot).isDirectory())
+    throw new Error("Storage root is not an ordinary directory");
   const root = realpathSync(sessionsRoot);
   const key = createHash("sha256").update(basename(root)).digest("hex");
   // Sibling roots can share a parent. Keep auxiliary files outside the roots
   // themselves so old directory scanners see exactly the original candidates.
-  const container = join(dirname(root), ".codeshell-state", key);
-  mkdirSync(container, { recursive: true, mode: 0o700 });
+  const container = privateDirectory(
+    join(privateDirectory(join(dirname(root), ".codeshell-state")), key),
+  );
   const unlock = acquireLockOnPath(container);
   try {
     const live = join(container, "current");
     const leases = join(container, "handles");
     const file = join(live, "state.sqlite");
     const lease = join(leases, `${process.pid}.${token}`);
-    mkdirSync(leases, { recursive: true, mode: 0o700 });
+    privateDirectory(leases);
     const initialize = (): StorageDatabase => {
-      mkdirSync(live, { recursive: true, mode: 0o700 });
+      privateDirectory(live);
+      checkDatabaseFiles(file);
       checkHeader(file);
       const db = open(file);
       try {
