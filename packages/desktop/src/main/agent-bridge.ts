@@ -41,6 +41,7 @@ import {
   linkAccountExecutionOptions,
   type CaptureLinkAccountAccess,
 } from "./link-account-access.js";
+import type { OutputPublication, OutputMutation } from "./desktop-host/stored-output.js";
 import { randomUUID } from "node:crypto";
 import {
   captureIdleOutputPrefix,
@@ -348,6 +349,35 @@ export class AgentBridge implements PetStateBridge {
     report: (event, details) => dlog("bridge", event, details),
   };
   private forwardedStreamEvents = 0;
+  private mobileReceivesDeltas = false;
+  private deltaReaders = new Map<string, number>();
+  private mimiSessionId?: string;
+  private petWindows = new Set<BrowserWindow>();
+
+  private updateDeltaInterest(): void {
+    this.core.hostedOutput?.setDeltaInterest(this.mobileReceivesDeltas, [
+      ...this.deltaReaders.keys(),
+      ...(this.mimiSessionId && this.petWindows.size ? [this.mimiSessionId] : []),
+    ]);
+  }
+  setMobileOutputOnline(online: boolean): void {
+    this.mobileReceivesDeltas = online;
+    this.updateDeltaInterest();
+  }
+  setMimiSession(id: string): void {
+    this.mimiSessionId = id;
+    this.updateDeltaInterest();
+  }
+  attachPetWindow(window: BrowserWindow): void {
+    this.attachWindow(window);
+    this.petWindows.add(window);
+    this.updateDeltaInterest();
+    window.once("closed", () => {
+      this.petWindows.delete(window);
+      this.updateDeltaInterest();
+    });
+  }
+
   /**
    * Out-of-band observers of worker→renderer lines (e.g. the Mobile Web
    * Remote, which streams the same events to a phone). Taps are read-only:
@@ -521,7 +551,7 @@ export class AgentBridge implements PetStateBridge {
         this.failPendingQuickChatForks();
         // Snapshots intentionally survive worker exit — a respawn may resume
         // the same session, and a remounted renderer still needs to replay.
-        this.snapshots.onWorkerExit(sessionIds);
+        this.workerOutputExited(sessionIds);
         this.emitPetProjection({ kind: "lifecycle", state: "disconnected" });
         this.safeSend("agent:lifecycle", { type: "gave_up", sessionIds });
       },
@@ -532,7 +562,7 @@ export class AgentBridge implements PetStateBridge {
         this.childBrowserLifetime.close();
         this.evictPendingTentativeRuns();
         this.failPendingQuickChatForks();
-        this.snapshots.onWorkerExit(sessionIds);
+        this.workerOutputExited(sessionIds);
         if (clean) {
           this.emitPetProjection({ kind: "lifecycle", state: "reclaimed" });
           this.safeSend("agent:lifecycle", { type: "exited", code, sessionIds });
@@ -544,6 +574,7 @@ export class AgentBridge implements PetStateBridge {
       },
     });
     this.core.subscribeLines((line) => this.handleWorkerLine(line));
+    this.core.hostedOutput?.onOutput((frame) => this.observeHostedOutput(frame));
     this.registerWindow(window);
     this.quickChatForkRouter = quickChatForkLifecycle
       ? new QuickChatForkRouter(quickChatForkLifecycle, async (request, result) => {
@@ -641,6 +672,67 @@ export class AgentBridge implements PetStateBridge {
         }
       }
     }
+  }
+
+  private submitOutput(command: OutputMutation): void {
+    void this.core
+      .hostedOutput!.mutateOutput(command)
+      .catch((error) =>
+        dlog("bridge", "stream.source_unavailable", {
+          error: String(error),
+          command: command.type,
+        }),
+      );
+  }
+
+  private workerOutputExited(ids: string[]): void {
+    if (this.core.hostedOutput) {
+      if (ids.length) this.submitOutput({ type: "worker-exit", ids });
+    } else this.snapshots.onWorkerExit(ids);
+  }
+
+  private observeHostedOutput({ origin, envelope, line }: OutputPublication): void {
+    const { sessionId, event, seq, epoch } = envelope;
+    if (sessionId === this.mimiSessionId) {
+      for (const window of this.petWindows) {
+        if (!window.isDestroyed()) window.webContents.send("agent:streamEvent", envelope);
+      }
+    }
+    if (origin === "worker") {
+      if (!line) return;
+      const parsed = parseWorkerLine(line);
+      this.webConfiguration.observe(line, parsed);
+      this.updateTentativeRunLifecycle(line, parsed);
+      this.outputObserver.observeLifecycle(sessionId, event);
+      const entry = seq !== undefined && epoch ? { sessionId, event, seq, epoch } : undefined;
+      for (const tap of this.outboundTaps) {
+        try {
+          tap(line, entry);
+        } catch {
+          /* read-only observer */
+        }
+      }
+      return;
+    }
+    this.workerRuns.observeExternal(sessionId, event);
+    observeComputerUseRunEvent(sessionId, event);
+    if (origin !== "owned" || seq === undefined || !epoch) return;
+    const ownerWebContentsId = this.panelOwnerWebContentsId(sessionId);
+    for (const listener of this.externalSessionTaps) {
+      try {
+        listener.event(sessionId, event);
+      } catch {
+        /* read-only observer */
+      }
+    }
+    if (ownerWebContentsId !== undefined)
+      for (const tap of this.ownedExternalTaps) {
+        try {
+          tap({ sessionId, event, seq, epoch, ownerWebContentsId });
+        } catch {
+          /* read-only observer */
+        }
+      }
   }
 
   /** Lazily build the disk-backed SessionManager used for no-worker fallbacks. */
@@ -2162,8 +2254,16 @@ export class AgentBridge implements PetStateBridge {
     return this.snapshots.get(sessionId, sinceSeq);
   }
 
+  async readSnapshot(sessionId: string, sinceSeq = 0): Promise<Snapshot> {
+    return this.core.hostedOutput
+      ? this.core.hostedOutput.readSnapshot(sessionId, sinceSeq)
+      : this.getSnapshot(sessionId, sinceSeq);
+  }
+
   /** Retire an explicit checkpoint's old proof without resetting transport sequence numbers. */
-  resetOutputHistoryRecovery(sessionId: string): void {
+  resetOutputHistoryRecovery(sessionId: string): void | Promise<void> {
+    if (this.core.hostedOutput)
+      return this.core.hostedOutput.mutateOutput({ type: "reset", sessionId });
     this.snapshots.resetForHistoryCheckpoint(sessionId);
     this.mainOutput.forget(sessionId);
     this.ownedExternalOutputSources.delete(sessionId);
@@ -2171,7 +2271,7 @@ export class AgentBridge implements PetStateBridge {
 
   /** The caller holds the Main ingress fence and has verified all work is idle. */
   async quiesceForOutputRecovery(sessionId: string): Promise<void> {
-    if (this.isSessionRunning(sessionId) || this.snapshots.get(sessionId).topLevelRunning)
+    if ((await this.readSnapshot(sessionId)).topLevelRunning || this.isSessionRunning(sessionId))
       throw new Error("Session still has active work");
     if (!this.core.canSend()) return;
     const outcome = await this.core.request(
@@ -2192,7 +2292,11 @@ export class AgentBridge implements PetStateBridge {
   }
 
   /** Drop a session's snapshot (e.g. when the session is deleted). */
-  forgetSession(sessionId: string): void {
+  forgetSession(sessionId: string): void | Promise<void> {
+    if (this.core.hostedOutput) {
+      this.releaseSessionResources(sessionId);
+      return this.core.hostedOutput.mutateOutput({ type: "forget", sessionId });
+    }
     this.snapshots.forget(sessionId);
     this.mainOutput.forget(sessionId);
     this.ownedExternalOutputSources.delete(sessionId);
@@ -2327,20 +2431,23 @@ export class AgentBridge implements PetStateBridge {
     this.reserveHostSession(sessionId, cwd);
     // A resumed runtime may receive background results before its next turn.
     // Bind existing durable output now, without cutting over a legacy transcript.
-    const history = readOutputJournal(sessionsRoot(), sessionId, { maxFrames: 1 });
-    if (history.status === "ok") {
-      try {
-        const snapshot = this.snapshots.get(sessionId);
-        this.bindOwnedExternalOutputSource(
-          sessionId,
-          // Explicit checkpoints preserve transport sequence numbers while
-          // retiring the entire old snapshot and journal incarnation.
-          snapshot.events.length === 0 && !snapshot.outputCursor && !snapshot.topLevelRunning
-            ? history.through
-            : undefined,
-        );
-      } catch (error) {
-        dlog("bridge", "stream.source_unavailable", { sessionId, error: String(error) });
+    if (this.core.hostedOutput) this.submitOutput({ type: "register-external", sessionId });
+    else {
+      const history = readOutputJournal(sessionsRoot(), sessionId, { maxFrames: 1 });
+      if (history.status === "ok") {
+        try {
+          const snapshot = this.snapshots.get(sessionId);
+          this.bindOwnedExternalOutputSource(
+            sessionId,
+            // Explicit checkpoints preserve transport sequence numbers while
+            // retiring the entire old snapshot and journal incarnation.
+            snapshot.events.length === 0 && !snapshot.outputCursor && !snapshot.topLevelRunning
+              ? history.through
+              : undefined,
+          );
+        } catch (error) {
+          dlog("bridge", "stream.source_unavailable", { sessionId, error: String(error) });
+        }
       }
     }
     try {
@@ -2529,9 +2636,20 @@ export class AgentBridge implements PetStateBridge {
       line: string,
       snapshotEntry?: SnapshotEntry & { sessionId: string; epoch: string },
     ) => void,
+    deltaSession?: string,
   ): () => void {
     this.outboundTaps.add(tap);
-    return () => this.outboundTaps.delete(tap);
+    if (deltaSession) {
+      this.deltaReaders.set(deltaSession, (this.deltaReaders.get(deltaSession) ?? 0) + 1);
+      this.updateDeltaInterest();
+    }
+    return () => {
+      if (!this.outboundTaps.delete(tap) || !deltaSession) return;
+      const remaining = this.deltaReaders.get(deltaSession)! - 1;
+      if (remaining) this.deltaReaders.set(deltaSession, remaining);
+      else this.deltaReaders.delete(deltaSession);
+      this.updateDeltaInterest();
+    };
   }
 
   /**
@@ -2738,6 +2856,16 @@ export class AgentBridge implements PetStateBridge {
     event: unknown,
     options: { browserVisibility?: "hidden" | "milestones" | "full" } = {},
   ): void {
+    if (this.core.hostedOutput) {
+      this.submitOutput({
+        type: "publish",
+        sessionId,
+        event,
+        visibility: options.browserVisibility,
+        workerRunning: this.workerRuns.sessionIds().includes(sessionId),
+      });
+      return;
+    }
     if (needsIndependentOutput(event)) {
       try {
         this.captureExternalOutputSource(sessionId, options).publish(event);
@@ -2761,7 +2889,28 @@ export class AgentBridge implements PetStateBridge {
   captureExternalOutputSource(
     sessionId: string,
     options: { browserVisibility?: "hidden" | "milestones" | "full" } = {},
-  ): MainOutputSource {
+  ): MainOutputSource & { ready?: Promise<void>; close?(): void } {
+    const hosted = this.core.hostedOutput;
+    if (hosted) {
+      const sourceId = randomUUID();
+      const current = hosted.captureGeneration();
+      const ready = hosted.mutateOutput({
+        type: "capture",
+        sessionId,
+        sourceId,
+        visibility: options.browserVisibility,
+        workerRunning: this.workerRuns.sessionIds().includes(sessionId),
+      });
+      return {
+        ready,
+        publish: (event) => {
+          if (current()) this.submitOutput({ type: "captured", sessionId, sourceId, event });
+        },
+        close: () => {
+          if (current()) this.submitOutput({ type: "release-capture", sessionId, sourceId });
+        },
+      };
+    }
     const historicalPrefix = captureIdleOutputPrefix(
       sessionsRoot(),
       sessionId,
@@ -2811,6 +2960,10 @@ export class AgentBridge implements PetStateBridge {
 
   /** External interactive streams retain their exact owning window. */
   ingestOwnedExternalEvent(sessionId: string, event: unknown): void {
+    if (this.core.hostedOutput) {
+      this.submitOutput({ type: "publish", sessionId, event, owned: true });
+      return;
+    }
     try {
       if (needsIndependentOutput(event)) {
         const source = this.ownedExternalOutputSources.get(sessionId);

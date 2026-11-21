@@ -30,6 +30,7 @@ export class DesktopHostWorkerClient implements DesktopWorkerDriver {
     { resolve(value?: Snapshot): void; reject(error: Error): void }
   >();
   private readonly outputListeners = new Set<(frame: OutputPublication) => void>();
+  private deltaInterest: { all: boolean; sessions: string[] } = { all: false, sessions: [] };
   private readonly handling = new AsyncLocalStorage<WorkerInstance>();
   private readonly lines = new Set<(line: string) => void>();
   private readonly calls = new Map<number, (outcome: WorkerRpcOutcome) => void>();
@@ -47,6 +48,8 @@ export class DesktopHostWorkerClient implements DesktopWorkerDriver {
       if (this.port === port) this.disconnect();
     });
     port.start();
+    if (this.deltaInterest.all || this.deltaInterest.sessions.length)
+      this.post({ type: "delta-interest", ...this.deltaInterest });
   }
 
   disconnect(): void {
@@ -131,6 +134,11 @@ export class DesktopHostWorkerClient implements DesktopWorkerDriver {
         });
         break;
     }
+  }
+
+  setDeltaInterest(all: boolean, sessions: string[]): void {
+    this.deltaInterest = { all, sessions };
+    this.post({ type: "delta-interest", all, sessions });
   }
 
   get hostedOutput() {

@@ -16,6 +16,8 @@ export function bindHostWorker(
 ) {
   let active = true;
   let generation = 0;
+  let allDeltas = false;
+  let deltaSessions = new Set<string>();
   let env: NodeJS.ProcessEnv = {};
   const post = (message: WorkerNotice) => {
     if (!active) return;
@@ -70,6 +72,11 @@ export function bindHostWorker(
     for (const foreign of ports) foreign.close();
     if (ports.length || !active || !data || typeof data !== "object") return;
     const message = data as WorkerCommand;
+    if (message.type === "delta-interest") {
+      allDeltas = message.all;
+      deltaSessions = new Set(message.sessions);
+      return;
+    }
     if (message.type === "output" || message.type === "snapshot") {
       const output = observers.output;
       if (!output) {
@@ -120,6 +127,13 @@ export function bindHostWorker(
   return {
     close,
     pauseOutput: (paused: boolean) => core.pauseOutput(paused),
-    publish: (frames: OutputPublication[]) => post({ type: "frames", frames }),
+    publish(frames: OutputPublication[]) {
+      const observed = frames.filter(({ envelope }) => {
+        if (allDeltas || deltaSessions.has(envelope.sessionId)) return true;
+        const type = (envelope.event as { type?: string } | null)?.type;
+        return type !== "text_delta" && type !== "thinking_delta" && type !== "tool_use_delta";
+      });
+      if (observed.length) post({ type: "frames", frames: observed });
+    },
   };
 }

@@ -162,6 +162,11 @@ export class DesktopHostServer {
     this.rejectRevoked();
   }
 
+  setStreamView(sessionId: string, enabled: boolean): void {
+    this.sessions.setStreamView(sessionId, enabled);
+    this.rejectRevoked();
+  }
+
   setDeleting(sessionId: string, deleting: boolean): void {
     this.sessions.setDeleting(sessionId, deleting);
     this.rejectRevoked();
@@ -173,7 +178,8 @@ export class DesktopHostServer {
     for (const connection of this.windows.values()) {
       if (!connection.initialized) continue;
       try {
-        connection.authority.capture(sessionId);
+        if (method === "agent/streamEvent") connection.authority.assertStreamAccess(sessionId);
+        else connection.authority.capture(sessionId);
         connection.port.postMessage({ jsonrpc: "2.0", method, params });
       } catch (error) {
         if (!(error instanceof HostRevokedError)) this.detach(connection);

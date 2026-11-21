@@ -15,6 +15,7 @@ export interface HostedDesktopOutput {
   onOutput(listener: (frame: OutputPublication) => void): () => void;
   /** Captured producers cannot publish into another utility after a restart. */
   captureGeneration(): () => boolean;
+  setDeltaInterest(all: boolean, sessions: string[]): void;
 }
 export type DesktopWorkerDriver = { readonly hostedOutput?: HostedDesktopOutput } & Pick<
   WorkerBridgeCore,
@@ -31,6 +32,7 @@ export type DesktopWorkerDriver = { readonly hostedOutput?: HostedDesktopOutput 
 >;
 
 export type WorkerCommand =
+  | { type: "delta-interest"; all: boolean; sessions: string[] }
   | { type: "output"; call: number; command: OutputMutation }
   | { type: "snapshot"; call: number; sessionId: string; sinceSeq: number }
   | { type: "start"; generation: number; cwd: string; env: NodeJS.ProcessEnv }

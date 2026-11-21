@@ -100,6 +100,8 @@ export function createDesktopHost(
     },
     sessionsChanged: (ids: string[]) => changes?.add(ids),
     trackWorkbench: (contents: WebContents) => workbenches.track(contents),
+    setStreamView: (sessionId: string, enabled: boolean) =>
+      supervisor.setStreamView(sessionId, enabled),
     setOwner: (sessionId: string, owner: number | null) => supervisor.setOwner(sessionId, owner),
     setDeleting: (sessionId: string, deleting: boolean) =>
       supervisor.setDeleting(sessionId, deleting),

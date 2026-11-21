@@ -39,6 +39,7 @@ export class DesktopHostSupervisor {
     }
   >();
   private readonly deleting = new Set<string>();
+  private readonly streamViews = new Set<string>();
 
   constructor(
     private readonly fork: () => HostChild,
@@ -96,6 +97,8 @@ export class DesktopHostSupervisor {
         for (const [sessionId, webContentsId] of this.owners) {
           if (!this.post({ type: "owner", sessionId, webContentsId })) return;
         }
+        for (const sessionId of this.streamViews)
+          if (!this.post({ type: "stream-view", sessionId, enabled: true })) return;
         for (const sessionId of this.deleting) {
           if (!this.post({ type: "deleting", sessionId, deleting: true })) return;
         }
@@ -157,6 +160,13 @@ export class DesktopHostSupervisor {
     if (webContentsId === null) this.owners.delete(sessionId);
     else this.owners.set(sessionId, webContentsId);
     this.post({ type: "owner", sessionId, webContentsId });
+  }
+
+  setStreamView(sessionId: string, enabled: boolean): void {
+    if (this.streamViews.has(sessionId) === enabled) return;
+    if (enabled) this.streamViews.add(sessionId);
+    else this.streamViews.delete(sessionId);
+    this.post({ type: "stream-view", sessionId, enabled });
   }
 
   setDeleting(sessionId: string, deleting: boolean): void {

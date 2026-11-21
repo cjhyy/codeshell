@@ -1195,6 +1195,7 @@ tunnelManager.on("status", (status: string, detail?: unknown) => {
 // Push the live online-device set to every renderer whenever a phone connects
 // or disconnects, so the trusted-device list can show per-device online lamps.
 mobileRemote.on("online-change", (ids: string[]) => {
+  bridge?.setMobileOutputOnline(ids.length > 0);
   for (const w of BrowserWindow.getAllWindows()) {
     if (!w.isDestroyed()) w.webContents.send("mobileRemote:onlineChange", ids);
   }
@@ -1716,6 +1717,7 @@ async function createWindow(): Promise<BrowserWindow> {
     // only layer that knows the owning window, whether the project is trusted,
     // and which feature flags are on. The layers below deliberately refuse to
     // default any of it.
+    bridge.setMobileOutputOnline(mobileRemote.onlineDeviceIds().length > 0);
     const externalBridge = bridge;
     taskInboxDisposers.push(
       bridge.subscribeOutbound((_line, entry) => {
@@ -2003,7 +2005,11 @@ async function createWindow(): Promise<BrowserWindow> {
     let mimiSessionId: string | undefined;
     void petMetadata
       .ensure()
-      .then((metadata) => (mimiSessionId = metadata.petSessionId))
+      .then((metadata) => {
+        mimiSessionId = metadata.petSessionId;
+        externalBridge.setMimiSession(mimiSessionId);
+        desktopHost.setStreamView(mimiSessionId, true);
+      })
       .catch(() => undefined);
     const notices = wirePetNotices({
       userDataDir: app.getPath("userData"),
@@ -3078,7 +3084,7 @@ function createPetWidgetBrowserWindow(bounds: {
   // only updates on a fresh transcript hydrate (opening the panel or a restart)
   // — the in-place reply never streams in. attachWindow self-removes on close,
   // so re-creating the widget re-attaches cleanly.
-  bridge?.attachWindow(win);
+  bridge?.attachPetWindow(win);
   if (process.platform === "darwin") {
     void app.dock?.show();
     win.setHiddenInMissionControl(true);
@@ -3836,6 +3842,7 @@ app.whenReady().then(async () => {
       cronJobId: string;
       clientMessageId?: string;
     }) => {
+      desktopHost.setStreamView(meta.sessionId, true);
       taskInboxAutomationSessions.set(meta.sessionId, meta.cronJobId);
       bridge?.broadcastAutomationSession(meta);
       markSessionTaskDirty(meta.sessionId);
@@ -4588,6 +4595,7 @@ function deleteDesktopSession(id: string): Promise<void> {
   const existing = sessionDeletions.get(id);
   if (existing) return existing;
   deletingBrowserSessions.add(id);
+  desktopHost.setStreamView(id, false);
   desktopHost.setDeleting(id, true);
   rendererBrowserSessionAccess.forgetSession(id);
   const pending = Promise.resolve()
@@ -4629,7 +4637,7 @@ async function deleteDesktopSessionResources(id: string): Promise<void> {
   await cleanupKnownAttachments(id);
   // Drop any in-memory snapshot for the deleted session so it can't be
   // replayed into a fresh tab that happens to reuse the id.
-  bridge?.forgetSession(id);
+  await bridge?.forgetSession(id);
   if (ephemeralBrowserPartition?.startsWith("browser:qchat:")) {
     const ephemeralSession = session.fromPartition(ephemeralBrowserPartition);
     await Promise.all([ephemeralSession.clearStorageData(), ephemeralSession.clearCache()]).catch(
@@ -4714,7 +4722,7 @@ ipcMain.handle("agent:subscribe", async (_e, sessionId: string, sinceSeq?: numbe
   const cursor =
     typeof sinceSeq === "number" && Number.isSafeInteger(sinceSeq) && sinceSeq >= 0 ? sinceSeq : 0;
   return (
-    bridge?.getSnapshot(sessionId, cursor) ?? {
+    bridge?.readSnapshot(sessionId, cursor) ?? {
       events: [],
       nextSeq: 1,
       topLevelRunning: false,

@@ -2662,7 +2662,8 @@ export class PanelAppBridge {
           };
         };
 
-    void dispatch()
+    const submission = output.ready ? output.ready.then(dispatch) : dispatch();
+    void submission
       .then((result) => {
         // Release once the worker has answered. By now either the run finished
         // or it failed; in the success case `context.busy` has long since been
@@ -2684,7 +2685,8 @@ export class PanelAppBridge {
             error instanceof Error ? error.message : String(error)
           }`,
         });
-      });
+      })
+      .finally(() => output.close?.());
 
     return { accepted: true, clientMessageId };
   }

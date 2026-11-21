@@ -15,6 +15,7 @@ interface SessionState {
  * represents a new grant, including a round trip back to the same window. */
 export class HostSessionAuthority {
   private readonly sessions = new Map<string, SessionState>();
+  private readonly streamViews = new Map<string, object>();
   private readonly historicalReads = new Map<string, { readers: number }>();
 
   setOwner(sessionId: string, owner: number | null): void {
@@ -32,6 +33,7 @@ export class HostSessionAuthority {
     if ((previous?.owner ?? null) === owner && (previous?.deleting ?? false) === deleting) return;
     // Invalidate even if the session returns to an unowned state before I/O finishes.
     this.historicalReads.delete(sessionId);
+    if (this.streamViews.has(sessionId)) this.streamViews.set(sessionId, {});
     if (owner === null && !deleting) this.sessions.delete(sessionId);
     else this.sessions.set(sessionId, { owner, deleting });
   }
@@ -41,7 +43,27 @@ export class HostSessionAuthority {
     return !!entry && entry.owner === webContentsId && !entry.deleting;
   }
 
+  setStreamView(sessionId: string, enabled: boolean): void {
+    if (this.streamViews.has(sessionId) === enabled) return;
+    if (enabled) this.streamViews.set(sessionId, {});
+    else this.streamViews.delete(sessionId);
+    this.historicalReads.delete(sessionId);
+  }
+
+  captureOutput(sessionId: string, webContentsId: number): () => void {
+    const view = this.streamViews.get(sessionId);
+    if (!view) return this.grant(sessionId, webContentsId);
+    const state = this.sessions.get(sessionId);
+    if (state?.deleting) throw new HostRevokedError();
+    return () => {
+      if (this.streamViews.get(sessionId) !== view || this.sessions.get(sessionId) !== state)
+        throw new HostRevokedError();
+    };
+  }
+
   captureHistoryRead(sessionId: string, webContentsId: number) {
+    if (this.streamViews.has(sessionId))
+      return { historical: false, assertCurrent: this.captureOutput(sessionId, webContentsId) };
     const current = this.sessions.get(sessionId);
     if (current) return { historical: false, assertCurrent: this.grant(sessionId, webContentsId) };
     let lease = this.historicalReads.get(sessionId);
@@ -97,6 +119,10 @@ export class HostPortAuthority {
     this.current = false;
   }
 
+  assertStreamAccess(sessionId: string): void {
+    this.capture().assertCurrent();
+    this.sessions.captureOutput(sessionId, this.identity.webContentsId)();
+  }
   captureHistoryRead(sessionId: string): HostRequestContext {
     const frame = this.capture();
     const lease = this.sessions.captureHistoryRead(sessionId, this.identity.webContentsId);
