@@ -33,6 +33,7 @@ const FRESH_ENTRY_GRACE_MS = 10 * 60 * 1000;
 const MEMORY_TOOL_NAMES = ["MemoryList", "MemoryRead", "MemorySave", "MemoryDelete"];
 
 export interface DreamConsolidationInput {
+  signal?: AbortSignal;
   /** LLM client for the consolidation calls. */
   llmClient: LLMClientBase;
   /** Tool registry that must contain the four Memory* tools. */
@@ -73,7 +74,7 @@ export interface DreamConsolidationResult {
 export async function runDreamConsolidation(
   input: DreamConsolidationInput,
 ): Promise<DreamConsolidationResult> {
-  const { llmClient, toolRegistry, projectDir, sessionId } = input;
+  const { llmClient, toolRegistry, projectDir, sessionId, signal } = input;
   const baseDir = input.baseDir ?? input.toolContext.memoryBaseDir;
 
   const memoryTools = MEMORY_TOOL_NAMES.map((n) => toolRegistry.getTool(n)).filter(
@@ -108,6 +109,7 @@ export async function runDreamConsolidation(
 
   const toolCtx: ToolContext = {
     ...input.toolContext,
+    signal: signal ?? input.toolContext.signal,
     memoryBaseDir: mm.getStorageContext().baseDir,
     cwd: projectDir ?? process.cwd(),
   };
@@ -116,7 +118,9 @@ export async function runDreamConsolidation(
   let writeBudget = MAX_WRITES;
 
   for (let turn = 0; turn < MAX_TURNS; turn++) {
+    signal?.throwIfAborted();
     const resp = await llmClient.createMessage({
+      signal,
       systemPrompt,
       messages,
       tools: toolDefs,
@@ -125,6 +129,7 @@ export async function runDreamConsolidation(
       requestVisible: false,
       reasoning: { mode: "off" },
     });
+    signal?.throwIfAborted();
     if (resp.usage) input.onUsage?.(resp.usage);
 
     if (resp.toolCalls.length === 0) {
@@ -152,6 +157,7 @@ export async function runDreamConsolidation(
     // Dispatch every tool call requested in this turn.
     const toolResults: ContentBlock[] = [];
     for (const tc of resp.toolCalls) {
+      signal?.throwIfAborted();
       const result = await dispatchDreamTool(tc, toolRegistry, toolCtx, () => {
         if (writeBudget <= 0) return false;
         writeBudget--;
@@ -204,7 +210,10 @@ async function dispatchDreamTool(
     // routing. Normal profile-bound runs may manage it explicitly, but the
     // consolidation loop remains limited to its existing global/project stores.
     const dreamCtx = { ...ctx, profileMemoryDir: undefined, __dreamLoop: true } as ToolContext;
-    const result = await toolRegistry.executeTool(tc.toolName, tc.args, { ctx: dreamCtx });
+    const result = await toolRegistry.executeTool(tc.toolName, tc.args, {
+      ctx: dreamCtx,
+      signal: dreamCtx.signal,
+    });
     if (result.isError) return result.error ?? `Error executing ${tc.toolName}`;
     return result.result ?? "";
   } catch (err) {

@@ -1,3 +1,5 @@
+import { memoryReads } from "./memory-reads.js";
+import { memoryOperations } from "../../host/composition/memory.js";
 import { installDefaultLinkProviders } from "@cjhyy/code-shell-server/links";
 import { workspaceReads } from "./workspace-reads.js";
 import { HostAutomationRuns } from "../../host/composition/automation-run.js";
@@ -89,6 +91,7 @@ const business = new HostBusinessCalls({
   "transcripts/delete": (input, grant) => transcripts.commitDelete(input, grant.permit),
   ...operations.methods,
   ...catalogEdits(storage),
+  ...memoryOperations(storage),
   ...projectTrustOperations(storage),
   ...projectRegistryOperations(storage, (requestId, projects) =>
     parent.postMessage({ type: "project-registry-committed", requestId, projects }),
@@ -169,6 +172,7 @@ parent.on("message", ({ data, ports }) => {
         ...desktopHostMethods((options) => catalog.list(options)),
         ...taskHostReads(storage),
         ...configurationReads,
+        ...memoryReads,
         ...scopedConfigurationReads((options) => catalog.list(options)),
         ...workspaceReads((options) => catalog.list(options)),
         businessRead("catalog/load", noBusinessArguments, catalogFiles["catalog/load"]),

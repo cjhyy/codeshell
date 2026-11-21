@@ -1,3 +1,4 @@
+import type { MemorySelection } from "../shared/memory-contracts.js";
 import type { RendererConfigurationTarget } from "../shared/renderer-configuration.js";
 import type { IpcRenderer } from "electron";
 import type { DesktopBusinessReads } from "../shared/desktop-business-contracts.js";
@@ -15,6 +16,27 @@ export function createConfigurationReads(
     return host ? host.readBusiness(name, params, fallback) : fallback();
   }
   return {
+    listMemory: (
+      level: MemorySelection["level"],
+      scope: MemorySelection["scope"],
+      cwd?: string,
+      profileName?: string,
+    ) =>
+      read("memory/list", { level, scope, cwd, profileName }, () =>
+        ipcRenderer.invoke("memory:list", level, scope, cwd, profileName),
+      ),
+    readMemory: (
+      level: MemorySelection["level"],
+      scope: MemorySelection["scope"],
+      name: string,
+      cwd?: string,
+      profileName?: string,
+    ) =>
+      read("memory/read", { level, scope, name, cwd, profileName }, () =>
+        ipcRenderer.invoke("memory:read", level, scope, name, cwd, profileName),
+      ),
+    listPendingMemory: () =>
+      read("memory/pending", {}, () => ipcRenderer.invoke("memory:pending:list")),
     resolveModelMeta: (models: unknown, providers: unknown) =>
       read("models/meta", { models, providers }, () =>
         ipcRenderer.invoke("models:resolve-meta", models, providers),

@@ -56,16 +56,18 @@ function mmFor(
   scope: MemoryScope,
   location: MemoryLocation = "project",
 ): MemoryManager {
+  const beforeWrite = ctx?.signal ? () => ctx.signal!.throwIfAborted() : undefined;
   if (location === "profile") {
     if (!ctx?.profileMemoryDir) {
       throw new Error(
         'profile memory is unavailable for this run; activate a digital human with portableMemory enabled before using location "profile"',
       );
     }
-    return new MemoryManager({ baseDir: ctx.profileMemoryDir, scope });
+    return new MemoryManager({ baseDir: ctx.profileMemoryDir, scope, beforeWrite });
   }
   // location=global → omit projectDir so the manager points at the global store.
   return new MemoryManager({
+    beforeWrite,
     baseDir: ctx?.memoryBaseDir,
     projectDir: location === "global" ? undefined : ctx?.cwd,
     scope,

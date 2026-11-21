@@ -1,3 +1,4 @@
+import { isMemoryCommand, writeHostedMemory } from "../hosted-memory.js";
 import { installDefaultLinkProviders } from "@cjhyy/code-shell-server/links";
 import { OperationBatches, type BatchPayload } from "../../host/composition/operation-batches.js";
 import { isBatchCommand } from "../desktop-host/private-operations.js";
@@ -39,6 +40,8 @@ installDefaultLinkProviders();
 await serveSessionIndexWorker({
   ...tasks,
   async handle(ctx, command, payload) {
+    if (isMemoryCommand(command))
+      return writeHostedMemory(command, payload as Parameters<typeof writeHostedMemory>[1]);
     if (command === "sources/commitPicked")
       return commitPickedSourceUpload(payload as Parameters<typeof commitPickedSourceUpload>[0]);
     if (isCatalogEdit(command))

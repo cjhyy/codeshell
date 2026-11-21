@@ -4501,7 +4501,7 @@ async function applyRendererSettingsSideEffects(change: SettingsChange): Promise
   if (change.pluginCommands) broadcastPluginCommandsChanged(mainWindows);
 }
 
-registerMemoryIpc({ mainWindows });
+registerMemoryIpc({ mainWindows, host: desktopHost });
 const sessionDeletions = new Map<string, Promise<void>>();
 function deleteDesktopSession(id: string): Promise<void> {
   const existing = sessionDeletions.get(id);

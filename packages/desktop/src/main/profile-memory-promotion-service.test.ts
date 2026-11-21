@@ -372,16 +372,25 @@ function ipcHarness() {
     if (value !== cwd) throw new Error("unauthorized project");
     return cwd;
   };
+  const reviews = new ProfileMemoryPromotionReviews();
   registerProfileMemoryPromotionIpc(
     { handle: (name, fn) => handlers.set(name, fn) } as any,
     (value) => !destroyed && value === (sender as any),
     (value) => resolve(value),
+    {
+      documentSignal: () => new AbortController().signal,
+      preview: async (owner, input, signal) =>
+        reviews.preview(owner, input, () => signal.throwIfAborted()),
+      commit: async (owner, input, signal) =>
+        reviews.commit(owner, input, () => signal.throwIfAborted()),
+      clearOwner: (owner) => reviews.clearOwner(owner),
+    },
   );
   return {
     call: (name: string, value: unknown, e = event) => handlers.get("memory:" + name)!(e, value),
     event,
     navigate: (mainFrame = true) => {
-      sender.emit("did-start-navigation", {}, "file:///fixture.html", false, mainFrame);
+      sender.emit("did-start-navigation", { isMainFrame: mainFrame, isSameDocument: false });
     },
     processGone: () => sender.emit("render-process-gone", {}, { reason: "crashed" }),
     changeFrameIdentity: () => {

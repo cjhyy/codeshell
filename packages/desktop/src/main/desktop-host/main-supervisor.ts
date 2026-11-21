@@ -226,7 +226,10 @@ export class DesktopHostSupervisor {
     }
     signal?.throwIfAborted();
     // Scheduled runs and native file copies have caller-owned cancellation.
-    const timeout = method === "automation/run" || method === "sources/uploadPicked" ? 0 : 15_000;
+    const timeout =
+      method === "automation/run" || method === "memory/dream" || method === "sources/uploadPicked"
+        ? 0
+        : 15_000;
     const value = await this.request("host/business", { method, input }, timeout, signal);
     signal?.throwIfAborted();
     return value as ShellBusinessOperations[K]["result"];
