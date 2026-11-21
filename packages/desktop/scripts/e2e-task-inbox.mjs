@@ -13,6 +13,7 @@ import {
   launchCodeShellElectron,
   makeIsolatedElectronHome,
   navigateSettingsMenu,
+  seedOfflinePluginBootstrap,
 } from "./electron-harness.mjs";
 
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -25,6 +26,7 @@ try {
     join(isolated.codeShellHome, "settings.json"),
     JSON.stringify({ autoUpdates: false }),
   );
+  await seedOfflinePluginBootstrap(isolated.codeShellHome);
   app = await launchCodeShellElectron({
     appDir,
     home: isolated.home,
@@ -41,7 +43,17 @@ try {
       .catch(() => false)
   )
     await trust.click();
-  await app.evaluate(({ ipcMain }) => {
+  // This synthetic fixture exercises the Main read fallback. The real sources
+  // suite covers the negotiated utility process and persistent data.
+  await win.evaluate(() => {
+    window.codeshell.onDesktopHostStatus((status) => {
+      window.__taskFixtureHostStatus = status;
+    });
+  });
+  await win.waitForFunction(() => window.__taskFixtureHostStatus === "ready");
+  await app.evaluate(({ ipcMain, BrowserWindow }) => {
+    for (const win of BrowserWindow.getAllWindows())
+      win.webContents.send("desktop-host:status", "unavailable");
     const now = Date.now();
     const make = (id, status, patch = {}) => ({
       schemaVersion: 1,
@@ -61,6 +73,7 @@ try {
     const fixture = (globalThis.__taskInboxFixture = {
       version: 1,
       actions: [],
+      intents: [],
       listCalls: 0,
       records: [
         make("waiting", "waiting", {
@@ -92,13 +105,36 @@ try {
     replace("taskInbox:list", (_event, query = {}) => {
       fixture.listCalls += 1;
       const offset = Number(query.cursor ?? 0);
-      const records = fixture.records.slice(offset, offset + 200);
+      const matches = fixture.records.filter(
+        (row) =>
+          query.visibility === "all" || Boolean(row.hidden) === (query.visibility === "hidden"),
+      );
+      const records = matches.slice(offset, offset + 200);
       return {
         version: fixture.version,
         records,
         errors: [{ source: "automation", message: "synthetic partial outage" }],
-        ...(offset + 200 < fixture.records.length ? { nextCursor: String(offset + 200) } : {}),
+        ...(offset + 200 < matches.length ? { nextCursor: String(offset + 200) } : {}),
       };
+    });
+    replace("taskInbox:intent", (_event, input) => {
+      fixture.intents.push(input);
+      if (input.type === "clear") {
+        const count = fixture.records.length;
+        fixture.records = fixture.records.filter(
+          (row) =>
+            !["done", "failed", "cancelled"].includes(row.status) ||
+            (input.before !== undefined && row.updatedAt >= input.before),
+        );
+        fixture.version++;
+        return { status: "ok", count: count - fixture.records.length };
+      }
+      const row = fixture.records.find((row) => row.taskKey === input.taskKey);
+      if (!row || input.expectedRevision !== row.sourceRevision) return { status: "stale" };
+      if (input.type === "delete") fixture.records = fixture.records.filter((item) => item !== row);
+      else row.hidden = input.type === "hide";
+      fixture.version++;
+      return { status: "ok" };
     });
     replace("taskInbox:act", (_event, input) => {
       fixture.actions.push(input);
@@ -151,6 +187,7 @@ try {
       };
     });
   });
+  await win.waitForFunction(() => window.__taskFixtureHostStatus === "unavailable");
   await navigateSettingsMenu(win, "后台工作", { activity: true });
   await win.getByRole("heading", { name: "后台工作", level: 1 }).waitFor();
   await win.getByText("2049 项", { exact: true }).waitFor();
@@ -196,6 +233,7 @@ try {
   );
   await win.keyboard.press("Escape");
   await dialog.waitFor({ state: "hidden" });
+  await cancel.and(win.locator(":focus")).waitFor();
   assert(
     await cancel.evaluate((node) => node === document.activeElement),
     "Confirmation cancellation restores keyboard focus",
@@ -262,9 +300,68 @@ try {
       await search.fill("");
     }
   }
+  await win.setViewportSize({ width: 1280, height: 820 });
+  const running = win.locator('article[data-task-key="session:running"]');
+  await running.getByRole("button", { name: /^Hide record/ }).click();
+  await running.waitFor({ state: "hidden" });
+  const visibility = win.getByRole("combobox", { name: "Visibility", exact: true });
+  await visibility.click();
+  await win.getByRole("option", { name: "Hidden", exact: true }).click();
+  await running.getByRole("button", { name: /^Unhide record/ }).click();
+  await running.waitFor({ state: "hidden" });
+  await visibility.click();
+  await win.getByRole("option", { name: "Visible tasks", exact: true }).click();
+  await running.waitFor();
+  assert(
+    (await running.getByRole("button", { name: /permanently delete/i }).count()) === 0,
+    "Running tasks are protected",
+  );
+  const ended = win.locator('article[data-task-key="session:waiting"]');
+  await ended.getByRole("button", { name: /^Permanently delete task record/ }).click();
+  await win
+    .getByRole("dialog")
+    .getByRole("button", { name: "Permanently delete", exact: true })
+    .click();
+  await ended.waitFor({ state: "hidden" });
+
+  const cleanup = win.getByRole("button", { name: "Clear task records", exact: true });
+  await cleanup.click();
+  const form = win.getByRole("dialog", { name: "Clear task records", exact: true });
+  const days = form.getByRole("spinbutton", { name: "Days" });
+  await days.fill("0");
+  assert(
+    await form.getByRole("button", { name: "Review cleanup" }).isDisabled(),
+    "A positive cutoff is required",
+  );
+  await days.fill("7");
+  const earliest = Date.now() - 7 * 86400000;
+  await form.getByRole("button", { name: "Review cleanup" }).click();
+  const confirm = win.getByRole("dialog").filter({ hasText: "7 days" });
+  await confirm.waitFor();
+  await confirm.getByRole("button", { name: "Permanently delete", exact: true }).click();
+  await win.getByText("Task records permanently deleted: 0.", { exact: true }).waitFor();
+  const call = await app.evaluate(() => globalThis.__taskInboxFixture.intents.at(-1));
+  assert(
+    call.type === "clear" && call.before >= earliest && call.before <= Date.now() - 7 * 86400000,
+    "The scoped cutoff reaches Main",
+  );
+  await cleanup.click();
+  await form.getByRole("radio", { name: "All finished records", exact: true }).check();
+  await form.getByRole("button", { name: "Review cleanup" }).click();
+  await win
+    .getByRole("dialog")
+    .getByRole("button", { name: "Permanently delete", exact: true })
+    .click();
+  await win.waitForFunction(() => document.querySelectorAll("article[data-task-key]").length === 1);
+  await running.waitFor();
+  assert(
+    JSON.stringify(await app.evaluate(() => globalThis.__taskInboxFixture.intents.at(-1))) ===
+      JSON.stringify({ type: "clear" }),
+    "All finished records uses an explicit bulk intent",
+  );
   assert(errors.length === 0, `No renderer errors: ${errors.join("; ")}`);
   console.log(
-    "PASS: task inbox 2049-background-record projection, four groups, source/search, stale/partial errors, keyboard confirmation, live refresh and settings activity navigation in Chinese/English at 1280, 820 and 390px",
+    "PASS: task inbox 2049-background-record projection, four groups, source/search, stale/partial errors, keyboard confirmation, hide/unhide, protected rows, bulk cutoff and all-finished cleanup, live refresh and settings activity navigation in Chinese/English at 1280, 820 and 390px",
   );
 } catch (error) {
   if (win)

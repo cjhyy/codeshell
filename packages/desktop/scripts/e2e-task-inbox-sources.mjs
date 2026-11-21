@@ -17,6 +17,7 @@ import {
   launchCodeShellElectron,
   makeIsolatedElectronHome,
   navigateSettingsMenu,
+  seedOfflinePluginBootstrap,
 } from "./electron-harness.mjs";
 
 const appDir = resolve(
@@ -66,6 +67,7 @@ async function json(file, value) {
 }
 async function seedAuthority() {
   await mkdir(project, { recursive: true });
+  await seedOfflinePluginBootstrap(isolated.codeShellHome);
   // Playwright's evaluate VM cannot dynamically import ESM. Load the exact
   // production module through a CJS test loader, without replacing any
   // handler or reader. The normal application entry stays unchanged and
@@ -513,6 +515,49 @@ try {
     "done",
   );
   console.log("PASS: SIGKILL recovery interrupts absent executors and preserves terminal results");
+  await win.setViewportSize({ width: 1440, height: 900 });
+  await openTaskCenter();
+  const child = afterCrash.records.find(
+    (record) => record.source === "subagent" && record.sessionId === ids.child,
+  );
+  assert.ok(child);
+  const childTranscript = join(isolated.codeShellHome, "sessions", ids.child, "transcript.jsonl");
+  const originalTranscript = await readFile(childTranscript, "utf8");
+  const childCard = win.getByRole("article", { name: child.title, exact: true });
+  await childCard.getByRole("button", { name: /^隐藏记录/ }).click();
+  await childCard.waitFor({ state: "hidden" });
+  const visibility = win.getByRole("combobox", { name: "显示范围", exact: true });
+  await visibility.click();
+  await win.getByRole("option", { name: "已隐藏", exact: true }).click();
+  await childCard.getByRole("button", { name: /^取消隐藏/ }).click();
+  await childCard.waitFor({ state: "hidden" });
+  await visibility.click();
+  await win.getByRole("option", { name: "可见任务", exact: true }).click();
+  await childCard.getByRole("button", { name: /^永久删除任务记录/ }).click();
+  await win.getByRole("dialog").getByRole("button", { name: "永久删除", exact: true }).click();
+  await childCard.waitFor({ state: "hidden" });
+  await app.close();
+  app = undefined;
+  await launch();
+  const all = await win.evaluate(() =>
+    window.codeshell.taskInbox.list({ visibility: "all", limit: 200 }),
+  );
+  assert.ok(
+    all.records.some((record) => record.taskKey === shell.taskKey),
+    "Retained projection loaded after restart",
+  );
+  assert.ok(
+    !all.records.some((record) => record.taskKey === child.taskKey),
+    "Deleted task stays absent after restart",
+  );
+  assert.equal(
+    await readFile(childTranscript, "utf8"),
+    originalTranscript,
+    "Deleting a task record preserves the exact original transcript",
+  );
+  console.log(
+    "PASS: task hide/unhide and permanent deletion survive refresh and retain the session transcript",
+  );
   const rendererErrors = rendererErrorLists.flat();
   assert.equal(rendererErrors.length, 0, rendererErrors.map((error) => error.message).join("\n"));
 } catch (error) {

@@ -1,9 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { TaskInboxListResult, TaskInboxRecordV1 } from "../../preload/task-inbox-api";
+import type {
+  TaskInboxListResult,
+  TaskInboxRecordV1,
+  TaskInboxVisibility,
+} from "../../preload/task-inbox-api";
 
 /** Publish complete snapshots; source updates queue behind pagination instead of starving it. */
-export function useTaskInboxSnapshot() {
-  const [snapshot, setSnapshot] = useState<TaskInboxListResult | null>(null);
+export function useTaskInboxSnapshot(visibility: TaskInboxVisibility) {
+  const [loaded, setLoaded] = useState<{
+    visibility: TaskInboxVisibility;
+    page: TaskInboxListResult;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
@@ -44,6 +51,7 @@ export function useTaskInboxSnapshot() {
           let mixed = false;
           do {
             const page = await window.codeshell.taskInbox.list({
+              visibility,
               limit: 200,
               ...(cursor ? { cursor } : {}),
             });
@@ -63,7 +71,10 @@ export function useTaskInboxSnapshot() {
           if (mixed) continue;
           if (first) {
             currentVersion.current = first.version;
-            setSnapshot({ ...first, records: [...records.values()], nextCursor: undefined });
+            setLoaded({
+              visibility,
+              page: { ...first, records: [...records.values()], nextCursor: undefined },
+            });
             published = true;
           }
           return;
@@ -85,7 +96,12 @@ export function useTaskInboxSnapshot() {
     return () => {
       cancelled = true;
     };
-  }, [revision, refresh]);
+  }, [revision, refresh, visibility]);
 
-  return { snapshot, loading, error, refresh };
+  return {
+    snapshot: loaded?.visibility === visibility ? loaded.page : null,
+    loading,
+    error,
+    refresh,
+  };
 }
