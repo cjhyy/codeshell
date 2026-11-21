@@ -38,6 +38,10 @@ export class PanelHostWindowRoutes {
   private readonly revisionBySession = new Map<string, number>();
   private nextRevision = 0;
 
+  constructor(
+    private readonly onOwnerChanged?: (sessionId: string, ownerId: number | null) => void,
+  ) {}
+
   revision(sessionId: string): number {
     return this.revisionBySession.get(sessionId) ?? 0;
   }
@@ -46,11 +50,13 @@ export class PanelHostWindowRoutes {
     if (this.ownerBySession.get(sessionId) === webContentsId) return;
     this.ownerBySession.set(sessionId, webContentsId);
     this.revisionBySession.set(sessionId, ++this.nextRevision);
+    this.onOwnerChanged?.(sessionId, webContentsId);
   }
 
   forgetSession(sessionId: string): void {
-    this.ownerBySession.delete(sessionId);
+    if (!this.ownerBySession.delete(sessionId)) return;
     this.revisionBySession.delete(sessionId);
+    this.onOwnerChanged?.(sessionId, null);
   }
 
   releaseWindow(webContentsId: number): void {
@@ -90,8 +96,7 @@ export class PanelHostWindowRoutes {
     }
     // A renderer can disappear between agent/run and a later Panel tool. Do
     // not retain a dead owner: the caller may use its compatibility fallback.
-    this.ownerBySession.delete(sessionId);
-    this.revisionBySession.delete(sessionId);
+    this.forgetSession(sessionId);
     return { ownerWebContentsId: null, window: null };
   }
 }

@@ -550,7 +550,6 @@ test("native quit wiring uses phase-aware dialogs without restoring disposed ser
   };
   registerDesktopShutdown(app, {
     ownsInstance: () => owned,
-    platform: "linux",
     flushRenderers: async () => {},
     disposeOperationResolution: async () => {},
     cleanup: async () => {
@@ -569,6 +568,8 @@ test("native quit wiring uses phase-aware dialogs without restoring disposed ser
       calls.push("restore");
     },
   });
+  listeners.get("window-all-closed")!();
+  expect(calls).toEqual([]);
   listeners.get("before-quit")!({ preventDefault() {} });
   await settle();
   expect(calls).toEqual(["disposed", "cache-close", "quit"]);

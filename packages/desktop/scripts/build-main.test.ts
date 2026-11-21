@@ -14,6 +14,7 @@ test("the shared main build delivers the worker Link and Cua proxy entries with 
     expect(Object.keys(entries).sort()).toEqual([
       "activity-history-worker",
       "cua-activity-proxy",
+      "desktop-host",
       "index",
       "link-provider-module",
       "session-transcript-cache-worker",
@@ -66,6 +67,9 @@ test("the shared main build delivers the worker Link and Cua proxy entries with 
 
     // The Cua proxy is the MCP stdio server core spawns with ELECTRON_RUN_AS_NODE,
     // so it can import neither Electron nor the workspace packages.
+    const host = [...outputs.keys()].find((path) => path.endsWith("desktop-host.mjs"));
+    expect(host).toBeDefined();
+    expect(externalsOf(host!).has("electron")).toBe(false);
     const proxy = [...outputs.keys()].find((path) => path.endsWith("cua-activity-proxy.mjs"));
     expect(proxy).toBeDefined();
     expect([...externalsOf(proxy!)].filter((specifier) => !isBuiltin(specifier))).toEqual([]);

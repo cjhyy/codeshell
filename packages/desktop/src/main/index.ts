@@ -2,6 +2,7 @@ import { registerLinkedFileSourceIpc } from "./linked-file-sources-ipc.js";
 import { openLinkedFileSourceOperation } from "./linked-file-sources-host.js";
 import { registerOperationBatchHost } from "./operation-batch-host.js";
 import { createDesktopRemoteServices } from "./desktop-remote-services.js";
+import { createDesktopHost } from "./desktop-host/main.js";
 import { createDesktopModuleRegistry, registerDesktopShutdown } from "./desktop-shutdown.js";
 import { createExternalRuntimeModule } from "./external-runtime-module.js";
 import { externalRuntimeMimiHost } from "./external-runtime-mimi-tools.js";
@@ -497,6 +498,7 @@ const appRendererNavigation = new AppRendererNavigation(
     pathToFileURL(resolve(__dirname, "..", "renderer", "index.html")).href,
   (url) => shell.openExternal(url),
 );
+const desktopHost = createDesktopHost(join(__dirname, "desktop-host.mjs"), appRendererNavigation);
 const chromeNativeMessagingOrigin = nativeMessagingOriginFromArgv(process.argv);
 if (chromeNativeMessagingOrigin) {
   void runChromeNativeMessagingHost(chromeNativeMessagingOrigin)
@@ -1466,7 +1468,10 @@ async function createWindow(): Promise<BrowserWindow> {
     autoHideMenuBar: process.platform !== "darwin",
     webPreferences: {
       preload: resolve(__dirname, "..", "preload", "index.cjs"),
-      additionalArguments: process.platform === "win32" ? ["--codeshell-titlebar-overlay"] : [],
+      additionalArguments: [
+        "--codeshell-desktop-host",
+        ...(process.platform === "win32" ? ["--codeshell-titlebar-overlay"] : []),
+      ],
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
@@ -1577,6 +1582,7 @@ async function createWindow(): Promise<BrowserWindow> {
   }
 
   appRendererNavigation.bind(win.webContents);
+  desktopHost.trackWorkbench(win.webContents);
 
   const devUrl = process.env.VITE_DEV_URL;
   const noDevtools = process.env.CODE_SHELL_NO_DEVTOOLS === "1";
@@ -1688,6 +1694,7 @@ async function createWindow(): Promise<BrowserWindow> {
       }),
       captureLinkAccount,
       (sessionId, ownerId) => rendererBrowserSessionAccess.sessionOwnerClaimed(sessionId, ownerId),
+      desktopHost.setOwner,
     );
     // External Agent Runtimes (Codex / Claude Code). Everything
     // security-relevant is resolved here, in the composition root: this is the
@@ -3579,6 +3586,7 @@ function decodeGatewayAttachment(dataBase64: string, expectedSize: number): Buff
 
 app.whenReady().then(async () => {
   if (!ownsDesktopInstance) return;
+  desktopHost.start();
   desktopNotifier = new DesktopNotifier(
     resolve(app.getPath("userData"), "notifications", "delivered.json"),
     {
@@ -4540,17 +4548,25 @@ ipcMain.handle(
 );
 
 registerMemoryIpc({ mainWindows });
-async function deleteDesktopSession(id: string): Promise<void> {
+const sessionDeletions = new Map<string, Promise<void>>();
+function deleteDesktopSession(id: string): Promise<void> {
+  const existing = sessionDeletions.get(id);
+  if (existing) return existing;
   deletingBrowserSessions.add(id);
+  desktopHost.setDeleting(id, true);
   rendererBrowserSessionAccess.forgetSession(id);
-  try {
-    await deleteDesktopSessionResources(id);
-  } finally {
-    // Invalidate any authorization captured before deletion started, including
-    // in-flight durable reads, before allowing this ID to be opened again.
-    rendererBrowserSessionAccess.forgetSession(id);
-    deletingBrowserSessions.delete(id);
-  }
+  const pending = Promise.resolve()
+    .then(() => deleteDesktopSessionResources(id))
+    .finally(() => {
+      // Invalidate any authorization captured before deletion started, including
+      // in-flight durable reads, before allowing this ID to be opened again.
+      rendererBrowserSessionAccess.forgetSession(id);
+      deletingBrowserSessions.delete(id);
+      desktopHost.setDeleting(id, false);
+      sessionDeletions.delete(id);
+    });
+  sessionDeletions.set(id, pending);
+  return pending;
 }
 
 async function deleteDesktopSessionResources(id: string): Promise<void> {
@@ -4795,6 +4811,7 @@ registerDesktopShutdown(app, {
     cloudEnvironment.dispose();
     taskInboxService?.dispose();
     for (const dispose of taskInboxDisposers.splice(0)) dispose();
+    const desktopHostShutdown = desktopHost.dispose();
     const cookieRefreshShutdown = cookieCredentialAutoRefresh.shutdown();
     petRuntimeReady = false;
     browserRuntime.closeAll();
@@ -4839,6 +4856,7 @@ registerDesktopShutdown(app, {
     petWidgetSurface?.dispose();
     mimiBubble?.surface.dispose();
     await Promise.allSettled([
+      desktopHostShutdown,
       closeActivityHistory?.(),
       mimiPresenceShutdown,
       imGatewayService.dispose(),

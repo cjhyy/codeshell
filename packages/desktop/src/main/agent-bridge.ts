@@ -386,7 +386,7 @@ export class AgentBridge implements PetStateBridge {
    * claimSessionPanelOwner for sessions whose turns are driven outside the
    * renderer (main-owned sessions, external Agent Runtimes).
    */
-  private readonly panelHostWindowRoutes = new PanelHostWindowRoutes();
+  private readonly panelHostWindowRoutes: PanelHostWindowRoutes;
   private credentialSnapshotRevision = 0;
   private readonly localOAuthLinkActions = new Map<string | number, AbortController>();
   private localOAuthLinkEpoch = 0;
@@ -442,7 +442,9 @@ export class AgentBridge implements PetStateBridge {
       sessionId: string,
       webContentsId: number,
     ) => void,
+    onSessionPanelOwnerChanged?: (sessionId: string, webContentsId: number | null) => void,
   ) {
+    this.panelHostWindowRoutes = new PanelHostWindowRoutes(onSessionPanelOwnerChanged);
     dlog("bridge", "ctor", { agentEntry, execPath: process.execPath });
     this.core = new WorkerBridgeCore({
       entryPath: agentEntry,
