@@ -87,7 +87,9 @@ export function createDesktopHost(
     },
     createWorkerBridge(options: WorkerBridgeCoreOptions) {
       if (worker) throw new Error("Desktop Host already has a worker bridge");
-      worker = new DesktopHostWorkerClient(options);
+      worker = new DesktopHostWorkerClient(options, (identity) =>
+        workbenches.assertIdentity(identity),
+      );
       bindWorker();
       return worker;
     },

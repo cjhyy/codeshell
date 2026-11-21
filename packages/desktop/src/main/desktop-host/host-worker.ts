@@ -1,3 +1,7 @@
+import { prepareAgentRunMetadata } from "../agent-run-metadata.js";
+import { rendererRunFactReader } from "./renderer-run-facts.js";
+import { WorkerCommandError } from "./server.js";
+import type { WorkbenchAdmission, WorkbenchRequest } from "./ingress-wire.js";
 import type { HostOutput } from "./host-output.js";
 import type { OutputPublication } from "./stored-output.js";
 import { WorkerBridgeCore } from "@cjhyy/code-shell-server/worker";
@@ -16,6 +20,11 @@ export function bindHostWorker(
 ) {
   let active = true;
   let generation = 0;
+  let nextAdmission = 0;
+  const admissions = new Map<
+    number,
+    { finish(value: WorkbenchAdmission): void; fail(error: Error): void }
+  >();
   let allDeltas = false;
   let deltaSessions = new Set<string>();
   let env: NodeJS.ProcessEnv = {};
@@ -67,6 +76,8 @@ export function bindHostWorker(
   function close() {
     if (closing) return closing;
     active = false;
+    for (const pending of admissions.values()) pending.fail(new Error("Desktop Host was closed"));
+    admissions.clear();
     closing = core.stopAndWait();
     port.close();
     return closing;
@@ -78,6 +89,10 @@ export function bindHostWorker(
     for (const foreign of ports) foreign.close();
     if (ports.length || !active || !data || typeof data !== "object") return;
     const message = data as WorkerCommand;
+    if (message.type === "renderer-admitted") {
+      admissions.get(message.call)?.finish(message.admission);
+      return;
+    }
     if (message.type === "delta-interest") {
       allDeltas = message.all;
       deltaSessions = new Set(message.sessions);
@@ -132,6 +147,82 @@ export function bindHostWorker(
   port.start();
   return {
     close,
+    async rendererCommand(request: WorkbenchRequest, current: () => void): Promise<unknown> {
+      current();
+      if (!active || admissions.size >= 128) throw new Error("Agent admission is unavailable");
+      const call = ++nextAdmission;
+      const admission = await new Promise<WorkbenchAdmission>((resolve, reject) => {
+        const timer = setTimeout(() => {
+          admissions.delete(call);
+          reject(new Error("Agent admission timed out"));
+        }, 30_000).unref();
+        admissions.set(call, {
+          finish(value) {
+            clearTimeout(timer);
+            admissions.delete(call);
+            resolve(value);
+          },
+          fail(error) {
+            clearTimeout(timer);
+            admissions.delete(call);
+            reject(error);
+          },
+        });
+        post({ type: "renderer-prepare", call, request });
+      });
+      current();
+      if (admission.type === "reply") {
+        if (admission.error) throw new WorkerCommandError(admission.error);
+        return admission.result ?? null;
+      }
+      const frame = {
+        jsonrpc: "2.0",
+        id: admission.id,
+        method: request.method,
+        params: request.params,
+      };
+      const normalized = prepareAgentRunMetadata(
+        JSON.stringify(frame),
+        { origin: "renderer", producer: "agent:msg" },
+        rendererRunFactReader(admission.facts ?? {}),
+      );
+      current();
+      if (!active || generation !== admission.generation || !core.canSend())
+        throw new Error("Worker generation changed");
+      const outcome = await core.request(request.method, JSON.parse(normalized.outLine).params, {
+        id: admission.id,
+        timeoutMs:
+          request.method === "agent/run" ||
+          (request.method === "agent/forkSession" && request.params.mode === "summary")
+            ? 0
+            : 30_000,
+        failFast: true,
+        settleOnExit: true,
+        consume: true,
+        meta: { origin: "renderer", producer: "agent:msg" },
+      });
+      await observers.output?.drain();
+      const error =
+        outcome.status === "error"
+          ? outcome.error
+          : outcome.status === "result"
+            ? undefined
+            : { code: -32002, message: "Worker request ended: " + outcome.status };
+      const response = {
+        jsonrpc: "2.0",
+        id: admission.id,
+        ...(error ? { error } : { result: outcome.status === "result" ? outcome.result : null }),
+      };
+      post({ type: "renderer-settled", line: JSON.stringify(response) });
+      current();
+      if (error)
+        throw new WorkerCommandError({
+          code: error.code ?? -32603,
+          message: error.message ?? "Worker request failed",
+          ...("data" in error ? { data: error.data } : {}),
+        });
+      return outcome.status === "result" ? (outcome.result ?? null) : null;
+    },
     pauseOutput: (paused: boolean) => core.pauseOutput(paused),
     publish(frames: OutputPublication[]) {
       const observed = frames.filter(({ envelope }) => {

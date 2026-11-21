@@ -1,3 +1,5 @@
+import type { DesktopHostIdentity } from "../../shared/desktop-host-protocol.js";
+import type { WorkbenchIngressAdapter } from "./ingress-wire.js";
 import type { Snapshot } from "../SessionSnapshotStore.js";
 import type { OutputMutation, OutputPublication } from "./stored-output.js";
 import { AsyncLocalStorage } from "node:async_hooks";
@@ -35,7 +37,14 @@ export class DesktopHostWorkerClient implements DesktopWorkerDriver {
   private readonly lines = new Set<(line: string) => void>();
   private readonly calls = new Map<number, (outcome: WorkerRpcOutcome) => void>();
 
-  constructor(readonly options: WorkerBridgeCoreOptions) {}
+  private ingress?: WorkbenchIngressAdapter;
+  setIngress(adapter: WorkbenchIngressAdapter): void {
+    this.ingress = adapter;
+  }
+  constructor(
+    readonly options: WorkerBridgeCoreOptions,
+    private readonly assertWorkbench?: (identity: DesktopHostIdentity) => void,
+  ) {}
   bind(port: WorkerPort): void {
     this.disconnect();
     this.port = port;
@@ -80,6 +89,48 @@ export class DesktopHostWorkerClient implements DesktopWorkerDriver {
   }
 
   private receive(message: WorkerNotice): void {
+    if (message.type === "renderer-settled") {
+      void this.ingress
+        ?.settled(message.line)
+        .catch((error) =>
+          this.options.log?.("renderer.settlement_failed", { error: String(error) }),
+        );
+      return;
+    }
+    if (message.type === "renderer-prepare") {
+      const port = this.port;
+      const assertCurrent = () => {
+        if (!this.assertWorkbench || !port || this.port !== port)
+          throw new Error("Workbench document was revoked");
+        this.assertWorkbench(message.request.identity);
+      };
+      const fail = (error: unknown) => {
+        if (port && port === this.port)
+          this.post({
+            type: "renderer-admitted",
+            call: message.call,
+            admission: {
+              type: "reply",
+              error: {
+                code: -32003,
+                message: error instanceof Error ? error.message : "Request unavailable",
+              },
+            },
+          });
+      };
+      void Promise.resolve()
+        .then(() => {
+          assertCurrent();
+          if (!this.ingress) throw new Error("Agent admission is unavailable");
+          return this.ingress.prepare(message.request, assertCurrent);
+        })
+        .then((admission) => {
+          assertCurrent();
+          this.post({ type: "renderer-admitted", call: message.call, admission });
+        })
+        .catch(fail);
+      return;
+    }
     if (message.type === "frames") {
       for (const frame of message.frames)
         for (const listener of this.outputListeners) {

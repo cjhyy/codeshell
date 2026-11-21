@@ -1,11 +1,22 @@
-import { DesktopHostErrors, isRpcResponse, type RpcRequest } from "../shared/desktop-host-protocol";
+import { isDesktopAgentMethod, type DesktopAgentMethod } from "../shared/desktop-agent-methods";
+import {
+  DesktopHostErrors,
+  isRpcResponse,
+  type RpcRequest,
+  type RpcResponse,
+} from "../shared/desktop-host-protocol";
 import type { DesktopBusinessReads } from "../shared/desktop-business-contracts";
 import type { TaskInboxApi, TaskInboxQuery } from "./task-inbox-api";
 import { normalizeStreamEnvelope } from "../shared/stream-envelope";
 import type { SessionSnapshot, StreamEventEnvelope } from "./session-stream-types";
 import type { ApprovalRequestEnvelope } from "./types";
 import type { DiskSessionListOptions } from "./session-transcript-api";
-import type { CodeshellApi, DesktopHostStatus, LocalLinkProviderView } from "./types";
+import type {
+  CodeshellApi,
+  DesktopHostStatus,
+  LocalLinkProviderView,
+  RpcResponse as AgentResponse,
+} from "./types";
 
 type OfflineStatus = Extract<DesktopHostStatus, "reconnecting" | "unavailable">;
 type Listener = (status: DesktopHostStatus) => void;
@@ -15,7 +26,7 @@ const replyDeadlineMs = 15_000;
 
 // Each migrated domain keeps its original IPC handler available for rollback.
 export const desktopHostRoutes: Record<
-  "localLinkProviders" | "diskSessions" | "taskInbox" | "agentStream" | "configuration",
+  "localLinkProviders" | "diskSessions" | "taskInbox" | "agentStream" | "configuration" | "agentCommands",
   "host" | "ipc"
 > = {
   localLinkProviders: "host",
@@ -23,12 +34,13 @@ export const desktopHostRoutes: Record<
   taskInbox: "host",
   configuration: "host",
   agentStream: "host",
+  agentCommands: "host",
 };
 
 type PendingReply = {
-  resolve: (value: unknown) => void;
+  resolve: (value: RpcResponse) => void;
   reject: (error: Error) => void;
-  timeout: ReturnType<typeof setTimeout>;
+  timeout?: ReturnType<typeof setTimeout>;
 };
 
 function rpcError(code: number, message: string): Error {
@@ -112,8 +124,7 @@ export class DesktopHostClient {
       if (!request) return;
       clearTimeout(request.timeout);
       this.pending.delete(data.id);
-      if (data.error) request.reject(rpcError(data.error.code, data.error.message));
-      else request.resolve(data.result);
+      request.resolve(data);
     };
     port.addEventListener("close", this.onPortLost);
     port.addEventListener("messageerror", this.onPortLost);
@@ -211,7 +222,7 @@ export class DesktopHostClient {
   }
 
   private async agentPort(
-    method: "agent/subscribe" | "agent/pendingApprovals",
+    method: "agent/subscribe" | "agent/pendingApprovals" | DesktopAgentMethod,
   ): Promise<MessagePort | undefined> {
     // Historical v1 Main handlers are a compatibility path for a Host that
     // never offered this capability. Once negotiated, keep its document grant.
@@ -220,6 +231,25 @@ export class DesktopHostClient {
     if (this.negotiatedMethods.has(method))
       throw rpcError(DesktopHostErrors.reconnecting, `Desktop Host ${this.status}`);
     return undefined;
+  }
+
+  async agentCommand(
+    method: DesktopAgentMethod,
+    params: Record<string, unknown> | undefined,
+    timeoutMs: number,
+    responseId: string,
+    sendIpc: () => Promise<AgentResponse>,
+  ): Promise<AgentResponse> {
+    const port = await this.agentPort(method);
+    if (!port) return sendIpc();
+    const response = await this.exchange(port, method, params, timeoutMs);
+    const error = response.error;
+    if (
+      error &&
+      (error.code === DesktopHostErrors.revoked || error.code === DesktopHostErrors.reconnecting)
+    )
+      throw rpcError(error.code, error.message);
+    return { ...response, id: responseId };
   }
 
   async subscribeSession(
@@ -322,20 +352,37 @@ export class DesktopHostClient {
     }
   }
 
-  private request(
+  private async request(
     port: MessagePort,
     method: string,
     params?: Record<string, unknown>,
   ): Promise<unknown> {
+    const response = await this.exchange(port, method, params, this.timeoutMs);
+    if (response.error) throw rpcError(response.error.code, response.error.message);
+    return response.result;
+  }
+
+  private exchange(
+    port: MessagePort,
+    method: string,
+    params: Record<string, unknown> | undefined,
+    timeoutMs: number,
+  ): Promise<RpcResponse> {
     const id = ++this.nextId;
     const request: RpcRequest = { jsonrpc: "2.0", id, method, ...(params && { params }) };
     return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        this.pending.delete(id);
-        reject(
-          rpcError(DesktopHostErrors.reconnecting, `Desktop Host request timed out: ${method}`),
-        );
-      }, this.timeoutMs);
+      const timeout =
+        timeoutMs <= 0
+          ? undefined
+          : setTimeout(() => {
+              this.pending.delete(id);
+              reject(
+                rpcError(
+                  DesktopHostErrors.reconnecting,
+                  `Desktop Host request timed out: ${method}`,
+                ),
+              );
+            }, timeoutMs);
       this.pending.set(id, { resolve, reject, timeout });
       try {
         port.postMessage(request);

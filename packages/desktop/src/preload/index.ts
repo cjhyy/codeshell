@@ -1,5 +1,6 @@
 import { createConfigurationReads } from "./configuration-reads.js";
 import { DesktopHostIpc } from "../shared/desktop-host-protocol";
+import { isDesktopAgentMethod } from "../shared/desktop-agent-methods";
 import { DesktopHostClient, desktopHostRoutes, routeLocalProviders } from "./desktop-host-client";
 import { accountFeaturesApi } from "./account-features-api.js";
 import { createOperationBatchApi } from "./operation-batch-api.js";
@@ -416,6 +417,18 @@ function rpc(
   timeoutMs: number = RPC_TIMEOUT_MS,
 ): Promise<RpcResponse> {
   const id = nextRpcId();
+  const sendIpc = () => rpcIpc(id, method, params, timeoutMs);
+  return agentCommandsHost && isDesktopAgentMethod(method)
+    ? agentCommandsHost.agentCommand(method, params, timeoutMs, id, sendIpc)
+    : sendIpc();
+}
+
+function rpcIpc(
+  id: string,
+  method: string,
+  params: Record<string, unknown> | undefined,
+  timeoutMs: number,
+): Promise<RpcResponse> {
   const line = JSON.stringify({ jsonrpc: "2.0", id, method, params });
   return new Promise<RpcResponse>((resolve, reject) => {
     const timer =
@@ -530,6 +543,7 @@ const { listProjects, ...configurationReads } = createConfigurationReads(
   ipcRenderer,
   configurationHost,
 );
+const agentCommandsHost = desktopHostRoutes.agentCommands === "host" ? desktopHost : undefined;
 const agentHost = desktopHostRoutes.agentStream === "host" ? desktopHost : undefined;
 agentHost?.onStreamEvent((env) => streamListeners.forEach((listener) => listener(env)));
 

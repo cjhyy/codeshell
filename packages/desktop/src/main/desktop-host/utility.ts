@@ -7,6 +7,9 @@ import { HostBusinessCalls } from "../../host/composition/business-calls.js";
 import { catalogOperations } from "../../host/composition/session-catalog.js";
 import { businessRead, noBusinessArguments } from "./business-read.js";
 import { configurationReads } from "./configuration-reads.js";
+import { lstat } from "node:fs/promises";
+import { join } from "node:path";
+import { ingressMethods } from "./ingress-methods.js";
 import { HostApprovalState } from "./approval-state.js";
 import {
   credentialCommands,
@@ -169,6 +172,27 @@ parent.on("message", ({ data, ports }) => {
         ...taskHostReads(storage),
         ...configurationReads,
         businessRead("catalog/load", noBusinessArguments, catalogFiles["catalog/load"]),
+        ...ingressMethods(
+          (req, current) => {
+            if (!worker) throw new Error("Desktop worker is unavailable");
+            return worker.rendererCommand(req, current);
+          },
+          async (id) => {
+            if (
+              (await catalog.list({ sessionId: id, limit: 1 })).sessions.some(
+                (row) => row.id === id,
+              )
+            )
+              return "visible";
+            try {
+              await lstat(join(sessionsRoot(), id));
+              return "hidden";
+            } catch (error) {
+              if ((error as NodeJS.ErrnoException).code === "ENOENT") return "absent";
+              throw error;
+            }
+          },
+        ),
         ["agent/pendingApprovals", approvals.method] as const,
         ...outputMethods(
           (id, since) => output.snapshot(id, since),

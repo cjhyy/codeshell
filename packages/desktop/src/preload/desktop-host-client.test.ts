@@ -346,3 +346,56 @@ test("configuration reads cannot downgrade after their document port was negotia
   client.disconnect("reconnecting");
   await expect(client.readBusiness("sources/catalog", {}, old)).rejects.toThrow("-32011");
 });
+
+test("negotiated commands use named methods and keep caller-local ids and worker error data", async () => {
+  const { client } = clientWithStatus();
+  const host = await attach(client, {
+    ...capabilities,
+    methods: [...capabilities.methods, "agent/cancel"],
+  });
+  const rpc = client.agentCommand("agent/cancel", { sessionId: "s1" }, 60, "caller-id", () => {
+    throw new Error("unexpected fallback");
+  });
+  const request = await nextRequest(host);
+  expect(request).toEqual({
+    jsonrpc: "2.0",
+    id: expect.any(Number),
+    method: "agent/cancel",
+    params: { sessionId: "s1" },
+  });
+  const error = { code: -32001, message: "worker detail", data: { sessionId: "s1" } };
+  host.postMessage({ jsonrpc: "2.0", id: request.id, error });
+  expect(await rpc).toEqual({ jsonrpc: "2.0", id: "caller-id", error });
+});
+
+test("long runs have no clock timeout and reject on disconnect without IPC retry", async () => {
+  const { client } = clientWithStatus(10);
+  const host = await attach(client, {
+    ...capabilities,
+    methods: [...capabilities.methods, "agent/run"],
+  });
+  const ipc = () => {
+    throw new Error("unexpected fallback");
+  };
+  const first = client.agentCommand("agent/run", { task: "a" }, 0, "long", ipc);
+  const request = await nextRequest(host);
+  await new Promise((r) => setTimeout(r, 24));
+  host.postMessage({ jsonrpc: "2.0", id: request.id, result: { ok: true } });
+  expect((await first).result).toEqual({ ok: true });
+  const pending = client.agentCommand("agent/run", { task: "b" }, 0, "next", ipc);
+  await nextRequest(host);
+  client.disconnect("reconnecting");
+  await expect(pending).rejects.toThrow("-32011");
+  await expect(client.agentCommand("agent/run", {}, 0, "again", ipc)).rejects.toThrow("-32011");
+});
+
+test("old Hosts use existing IPC and a negotiated request honors its own deadline", async () => {
+  const { client } = clientWithStatus();
+  const ipc = async () => ({ jsonrpc: "2.0" as const, id: "legacy", result: "old host" });
+  await attach(client);
+  expect((await client.agentCommand("agent/configure", {}, 40, "id", ipc)).result).toBe("old host");
+  await attach(client, { ...capabilities, methods: [...capabilities.methods, "agent/configure"] });
+  await expect(client.agentCommand("agent/configure", {}, 5, "id", ipc)).rejects.toThrow(
+    "timed out",
+  );
+});

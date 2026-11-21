@@ -15,6 +15,10 @@ interface SessionState {
  * represents a new grant, including a round trip back to the same window. */
 export class HostSessionAuthority {
   private readonly sessions = new Map<string, SessionState>();
+  private readonly admissions = new Map<
+    string,
+    Set<{ owner: number; claimed: boolean; current: boolean }>
+  >();
   private readonly streamViews = new Map<string, object>();
   private readonly historicalReads = new Map<string, { readers: number }>();
 
@@ -31,6 +35,11 @@ export class HostSessionAuthority {
   private setState(sessionId: string, owner: number | null, deleting: boolean): void {
     const previous = this.sessions.get(sessionId);
     if ((previous?.owner ?? null) === owner && (previous?.deleting ?? false) === deleting) return;
+    for (const candidate of this.admissions.get(sessionId) ?? []) {
+      if (candidate.current && !candidate.claimed && !deleting && owner === candidate.owner)
+        candidate.claimed = true;
+      else candidate.current = false;
+    }
     // Invalidate even if the session returns to an unowned state before I/O finishes.
     this.historicalReads.delete(sessionId);
     if (this.streamViews.has(sessionId)) this.streamViews.set(sessionId, {});
@@ -45,6 +54,7 @@ export class HostSessionAuthority {
 
   setStreamView(sessionId: string, enabled: boolean): void {
     if (this.streamViews.has(sessionId) === enabled) return;
+    for (const candidate of this.admissions.get(sessionId) ?? []) candidate.current = false;
     if (enabled) this.streamViews.set(sessionId, {});
     else this.streamViews.delete(sessionId);
     this.historicalReads.delete(sessionId);
@@ -58,6 +68,27 @@ export class HostSessionAuthority {
     return () => {
       if (this.streamViews.get(sessionId) !== view || this.sessions.get(sessionId) !== state)
         throw new HostRevokedError();
+    };
+  }
+
+  captureAdmission(sessionId: string, webContentsId: number) {
+    if (this.sessions.has(sessionId))
+      return { historical: false, assertCurrent: this.grant(sessionId, webContentsId) };
+    if (this.streamViews.has(sessionId)) throw new HostRevokedError();
+    const candidate = { owner: webContentsId, claimed: false, current: true };
+    let group = this.admissions.get(sessionId);
+    if (!group) this.admissions.set(sessionId, (group = new Set()));
+    group.add(candidate);
+    return {
+      historical: true,
+      assertCurrent: () => {
+        if (!candidate.current) throw new HostRevokedError();
+      },
+      release: () => {
+        candidate.current = false;
+        group.delete(candidate);
+        if (!group.size) this.admissions.delete(sessionId);
+      },
     };
   }
 
@@ -123,13 +154,11 @@ export class HostPortAuthority {
     this.capture().assertCurrent();
     this.sessions.captureOutput(sessionId, this.identity.webContentsId)();
   }
-  captureHistoryRead(sessionId: string, sharedOutput = true): HostRequestContext {
+  captureHistoryRead(sessionId: string, mode: "output"|"admission"|"operation" = "output"): HostRequestContext {
     const frame = this.capture();
-    const lease = this.sessions.captureHistoryRead(
-      sessionId,
-      this.identity.webContentsId,
-      sharedOutput,
-    );
+    const lease = mode === "admission"
+      ? this.sessions.captureAdmission(sessionId, this.identity.webContentsId)
+      : this.sessions.captureHistoryRead(sessionId, this.identity.webContentsId, mode === "output");
     return {
       ...lease,
       identity: frame.identity,

@@ -1,3 +1,8 @@
+import {
+  handleRendererCommand,
+  type DirectAdmission,
+} from "./desktop-host/main-renderer-ingress.js";
+import type { WorkbenchAdmission, WorkbenchRequest } from "./desktop-host/ingress-wire.js";
 import type { DesktopWorkerDriver } from "./desktop-host/worker-wire.js";
 import { isBackgroundWorkChange, type BackgroundWorkChange } from "@cjhyy/code-shell-core/internal";
 import { WorkerCredentialInputs } from "./worker-credential-inputs.js";
@@ -145,18 +150,9 @@ import {
   partitionForSession,
   registerSessionBucket,
 } from "./browser-driver/active-guest.js";
-import {
-  buildNoChildFallbackReply,
-  compactQuerySessionId,
-  goalResumeSessionId,
-  forkSourceSessionId,
-  quickChatForkRequest,
-  quickChatRunRequest,
-  quickChatRunSessionId,
-} from "./agent-bridge-fallback.js";
+import { buildNoChildFallbackReply, goalResumeSessionId } from "./agent-bridge-fallback.js";
 import { QuickChatForkRouter, type QuickChatForkLifecycle } from "./quick-chat-fork-router.js";
 import {
-  AgentRunMetadataError,
   forgetHostSessionMaps,
   prepareAgentRunMetadata,
   reserveHostSessionMaps,
@@ -580,6 +576,15 @@ export class AgentBridge implements PetStateBridge {
     });
     this.core.subscribeLines((line) => this.handleWorkerLine(line));
     this.core.hostedOutput?.onOutput((frame) => this.observeHostedOutput(frame));
+    this.core.hostedOutput?.setIngress({
+      prepare: (request, current) => this.admitWorkbenchCommand(request, current),
+      settled: async (line) => {
+        const parsed = parseWorkerLine(line);
+        this.webConfiguration.observe(line, parsed);
+        this.updateTentativeRunLifecycle(line, parsed);
+        await this.quickChatForkRouter?.routeWorkerResponse(line, parsed);
+      },
+    });
     this.registerWindow(window);
     this.quickChatForkRouter = quickChatForkLifecycle
       ? new QuickChatForkRouter(quickChatForkLifecycle, async (request, result) => {
@@ -1081,6 +1086,65 @@ export class AgentBridge implements PetStateBridge {
     }
   }
 
+  private admitWorkbenchCommand(
+    request: WorkbenchRequest,
+    assertCurrent: () => void,
+  ): Promise<WorkbenchAdmission> {
+    assertCurrent();
+    const window = [...this.windows].find(
+      (w) => !w.isDestroyed() && w.webContents.id === request.identity.webContentsId,
+    );
+    if (!window) throw new Error("Workbench window was closed");
+    const { method, params } = request;
+    for (const id of [params.sessionId, params.sourceSessionId, params.targetSessionId]) {
+      if (typeof id !== "string") continue;
+      const owner = this.panelOwnerWebContentsId(id);
+      if (owner !== undefined && owner !== window.webContents.id)
+        throw new Error("Session is owned by another window");
+    }
+    const line = JSON.stringify({ jsonrpc: "2.0", id: request.id, method, params });
+    return new Promise((resolve, reject) => {
+      try {
+        this.handleRendererCommand(window.webContents, line, {
+          facts: {},
+          assertCurrent,
+          reply: resolve,
+        });
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  private handleRendererCommand(
+    sender: BrowserWindow["webContents"],
+    line: string,
+    direct?: DirectAdmission,
+  ): void {
+    handleRendererCommand(
+      {
+        agentRunMetadataDeps: () => this.agentRunMetadataDeps(),
+        claimSessionPanelOwner: (id, owner) => this.claimSessionPanelOwner(id, owner),
+        core: this.core,
+        externalGoalRpcHandler: this.externalGoalRpcHandler,
+        handleAgentRunMetadata: (p) => this.handleAgentRunMetadata(p),
+        publishFallbackReply: (l) => this.publishFallbackReply(l),
+        quickChatForkLifecycle: this.quickChatForkLifecycle,
+        quickChatForkRouter: this.quickChatForkRouter,
+        safeSend: (c, p) => this.safeSend(c, p),
+        sessionMainRootMigrationClaims: this.sessionMainRootMigrationClaims,
+        sessionsForFallback: () => this.sessionsForFallback(),
+        tentativeRunsByRequest: this.tentativeRunsByRequest,
+        webConfiguration: this.webConfiguration,
+        windows: this.windows,
+        workerGeneration: () => this.workerGeneration(),
+      },
+      sender,
+      line,
+      direct,
+    );
+  }
+
   private cwdForSessionOrThrow(sessionId: string): string {
     const cwd = resolveCredentialSessionCwd(sessionId, this.sessionCwd, (sid) =>
       this.sessionsForFallback().readSessionMainRoot(sid),
@@ -1093,220 +1157,9 @@ export class AgentBridge implements PetStateBridge {
     if (this.ipcListenerAttached) return;
     this.ipcListenerAttached = true;
 
-    ipcMain.on("agent:msg", (event, line: string) => {
-      // Inspect the message: an agent/run is the only one that can trigger
-      // a fresh spawn. Other messages (agent/approve, agent/cancel) only
-      // make sense if the worker is already alive.
-      let prepared: ReturnType<typeof prepareAgentRunMetadata>;
-      try {
-        prepared = prepareAgentRunMetadata(
-          line,
-          { origin: "renderer", producer: "agent:msg" },
-          this.agentRunMetadataDeps(),
-        );
-      } catch (error) {
-        if (error instanceof AgentRunMetadataError) {
-          let id: unknown;
-          try {
-            id = (JSON.parse(line) as { id?: unknown }).id;
-          } catch {
-            id = undefined;
-          }
-          if (id !== undefined && !event.sender.isDestroyed()) {
-            event.sender.send(
-              "agent:msg",
-              JSON.stringify({
-                jsonrpc: "2.0",
-                id,
-                error: { code: error.code, message: error.message },
-              }),
-            );
-          }
-          return;
-        }
-        throw error;
-      }
-      const parsed = prepared.parsed;
-      if (typeof parsed.params?.sessionId === "string") {
-        try {
-          assertOutputHistoryWriteAvailable(parsed.params.sessionId);
-        } catch {
-          if (parsed.id !== undefined && !event.sender.isDestroyed())
-            event.sender.send(
-              "agent:msg",
-              JSON.stringify({
-                jsonrpc: "2.0",
-                id: parsed.id,
-                error: {
-                  code: ErrorCodes.Overloaded,
-                  message: "Session output recovery is in progress",
-                },
-              }),
-            );
-          return;
-        }
-      }
-      observeRunStopFrame(parsed);
-      cancelBrowserActionsForStoppedRun(parsed);
-      beginBrowserRunForStartedRun(parsed);
-      observeComputerUseRunControl(parsed);
-      if (isOptimizationLabQuery(parsed)) {
-        if (parsed.id !== undefined && !event.sender.isDestroyed()) {
-          event.sender.send(
-            "agent:msg",
-            JSON.stringify({
-              jsonrpc: "2.0",
-              id: parsed.id,
-              error: {
-                code: -32601,
-                message: "Optimization Lab requires the dedicated local application bridge",
-              },
-            }),
-          );
-        }
-        return;
-      }
-      const externalGoalReply = this.externalGoalRpcHandler?.(parsed, event.sender.id);
-      if (externalGoalReply) {
-        void externalGoalReply.then((reply) => {
-          if (parsed.id !== undefined && !event.sender.isDestroyed()) {
-            event.sender.send("agent:msg", JSON.stringify(reply));
-          }
-        });
-        return;
-      }
-      if (
-        parsed.method === "agent/run" &&
-        (this.webConfiguration.runBlocked ||
-          (prepared.sessionId && this.sessionMainRootMigrationClaims.has(prepared.sessionId)))
-      ) {
-        if (parsed.id !== undefined && !event.sender.isDestroyed()) {
-          event.sender.send(
-            "agent:msg",
-            JSON.stringify({
-              jsonrpc: "2.0",
-              id: parsed.id,
-              error: {
-                code: ErrorCodes.Overloaded,
-                message: this.webConfiguration.runBlocked
-                  ? "配置正在更新，请稍后重试。"
-                  : `Session ${prepared.sessionId} root migration is in progress; retry the run`,
-              },
-            }),
-          );
-        }
-        return;
-      }
-      // Line forwarded to the worker. Only rewritten when we inject fields
-      // (agent/run trust) — everything else is passed through verbatim so we
-      // don't re-serialize on the hot path.
-      let outLine = line;
-      const quickChatRunId = quickChatRunSessionId(parsed);
-      if (quickChatRunId) {
-        const request = quickChatRunRequest(parsed, event.sender.id);
-        if (!request || this.quickChatForkLifecycle?.isClaimActive?.(request) !== true) {
-          if (parsed.id !== undefined && !event.sender.isDestroyed()) {
-            event.sender.send(
-              "agent:msg",
-              JSON.stringify({
-                jsonrpc: "2.0",
-                id: parsed.id,
-                error: { code: -32602, message: "quick-chat claim is no longer active" },
-              }),
-            );
-          }
-          return;
-        }
-      }
-      const quickChatFork = quickChatForkRequest(parsed, event.sender.id);
-      let quickChatForkWireId: string | undefined;
-      if (quickChatFork && this.quickChatForkRouter) {
-        const started = this.quickChatForkRouter.start(quickChatFork, event.sender, line);
-        if (!started) return;
-        outLine = started.line;
-        quickChatForkWireId = started.wireId;
-      }
-
-      if (parsed.method === "agent/run") {
-        outLine = this.handleAgentRunMetadata(prepared);
-        const owner = BrowserWindow.fromWebContents(event.sender);
-        if (prepared.sessionId && owner && this.windows.has(owner)) {
-          // The renderer-driven case. Sessions driven from elsewhere (main-owned,
-          // external Agent Runtime) never reach this line and must claim
-          // ownership explicitly — same method, so there is one code path.
-          this.claimSessionPanelOwner(prepared.sessionId, event.sender.id);
-        }
-      } else {
-        const forkSourceId = forkSourceSessionId(parsed);
-        if (forkSourceId) {
-          this.core.ensureWorker(this.sessionsForFallback().readSessionMainRoot(forkSourceId));
-        }
-        const compactSessionId = compactQuerySessionId(parsed);
-        if (compactSessionId) {
-          this.core.ensureWorker(
-            this.sessionsForFallback().readSessionMainRoot(compactSessionId) ?? parsed.params?.cwd,
-          );
-        }
-        const goalResumeId = goalResumeSessionId(parsed);
-        if (goalResumeId) {
-          this.core.ensureWorker(this.sessionsForFallback().readSessionMainRoot(goalResumeId));
-        }
-      }
-
-      if (!this.core.canSend()) {
-        if (parsed.method === "agent/run" && prepared.sessionId) {
-          getSessionCwdIndex().evictTentative(prepared.sessionId);
-          if (prepared.parsed.id !== undefined) {
-            this.tentativeRunsByRequest.delete(String(prepared.parsed.id));
-          }
-        }
-        // No live worker. For approve / cancel this is fine — drop.
-        // For run, ensureWorker above should have created one; if it
-        // didn't, log and drop.
-        // BUT some requests must still get a REPLY, or the renderer's rpc()
-        // hangs its 30s timeout: read-only registry queries (backgroundShells /
-        // backgroundWork — the in-RAM registry is gone with the worker) and
-        // disk-backed goal ops (goalGet / goalClear — a persistent goal lives
-        // in state.json and outlives the worker; without this the "Clear goal"
-        // button did nothing for an aborted goal session).
-        const fallback = buildNoChildFallbackReply(parsed, this.sessionsForFallback());
-        if (fallback !== null) {
-          this.publishFallbackReply(fallback);
-        }
-        dlog("bridge", "renderer→worker.dropped", {
-          reason: this.core.hasChild() ? "stdin destroyed" : "no child",
-          method: parsed.method,
-          answered: fallback !== null,
-        });
-        if (quickChatForkWireId) {
-          void this.quickChatForkRouter
-            ?.fail(quickChatForkWireId)
-            .catch((error) =>
-              dlog("bridge", "quick_chat.fork_settle_failed", { error: String(error) }),
-            );
-        }
-        return;
-      }
-      dlog("bridge", "renderer→worker", { method: parsed.method, raw: previewLine(outLine) });
-      try {
-        if (!this.core.sendLine(outLine) && parsed.id !== undefined) {
-          this.webConfiguration.settleRun(parsed.id);
-        }
-      } catch (error) {
-        if (parsed.id !== undefined) {
-          this.webConfiguration.settleRun(parsed.id);
-          this.safeSend(
-            "agent:msg",
-            JSON.stringify({
-              jsonrpc: "2.0",
-              id: parsed.id,
-              error: { code: -32603, message: "无法向任务进程发送请求，请重试。" },
-            }),
-          );
-        }
-        dlog("bridge", "renderer.write_failed", { error: String(error) });
-      }
-    });
+    ipcMain.on("agent:msg", (event, line: string) =>
+      this.handleRendererCommand(event.sender, line),
+    );
 
     ipcMain.on(
       "desktop:log",

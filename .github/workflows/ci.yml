@@ -701,9 +701,6 @@ jobs:
       - name: desktop Host across windows, Main stalls and utility restart
         timeout-minutes: 3
         run: xvfb-run -a node scripts/run-isolated-node-smoke.mjs packages/desktop/scripts/smoke-desktop-host.mjs
-      - name: direct worker streaming and approval recovery in a reloaded workbench
-        timeout-minutes: 4
-        run: xvfb-run -a node scripts/run-isolated-node-smoke.mjs packages/desktop/scripts/e2e-desktop-host-stream.mjs
       - name: real Electron isolated PDF with verified managed Node
         run: |
           bun run --cwd packages/desktop runtime:prepare
@@ -715,6 +712,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y dbus-x11 gnome-keyring libsecret-tools weston
           xvfb-run -a bun run --cwd packages/desktop test:e2e:cloud-workbench
+      - name: direct worker streaming and approval recovery in a reloaded workbench
+        timeout-minutes: 4
+        run: xvfb-run -a node scripts/run-isolated-node-smoke.mjs --private-keyring packages/desktop/scripts/e2e-desktop-host-stream.mjs
       - name: Docked Mimi window on native Wayland
         run: node scripts/run-isolated-node-smoke.mjs --private-keyring packages/desktop/scripts/e2e-wayland-docked-pet.mjs
       - name: Native built-in theme and surface backgrounds with private SecretService
