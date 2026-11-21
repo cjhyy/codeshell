@@ -271,6 +271,7 @@
     },
   },
   "patchedDependencies": {
+    "app-builder-lib@26.18.1": "patches/app-builder-lib@26.18.1.patch",
     "node-pty@1.1.0": "patches/node-pty@1.1.0.patch",
   },
   "overrides": {
