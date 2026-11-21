@@ -260,9 +260,18 @@ export function createTaskInboxSources(deps: TaskInboxSourcesDeps): {
               id,
               durable?.runId,
               live?.runId,
+              durable?.clientMessageId,
+              live?.clientMessageId,
               status,
-              updatedAt,
               capabilities,
+              // Legacy controllers without execution identity retain the conservative freshness check.
+              capabilities.includes("cancel") &&
+                !durable?.runId &&
+                !live?.runId &&
+                !durable?.clientMessageId &&
+                !live?.clientMessageId
+                ? updatedAt
+                : undefined,
             ),
             ...(durable?.automationId || meta?.row.cronJobId
               ? { automationId: durable?.automationId ?? meta?.row.cronJobId }
