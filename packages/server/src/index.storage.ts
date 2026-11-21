@@ -11,3 +11,5 @@ export * from "./sessions-service.js";
 export * from "./session-titles-store.js";
 export * from "./model-trace-history.js";
 export * from "./panels/storage-store.js";
+export { projectDiskSessionState } from "./disk-session-list.js";
+export { listIndexedDiskSessions } from "./indexed-disk-sessions.js";

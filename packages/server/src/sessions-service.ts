@@ -3,7 +3,7 @@
  * Uses core's canonical session root so CODE_SHELL_HOME matches the worker.
  */
 
-import { SessionManager, sessionsRoot, type TurnCompletionKind } from "@cjhyy/code-shell-core";
+import { SessionManager, sessionsRoot } from "@cjhyy/code-shell-core";
 import {
   scanSessionDirectories,
   readSessionListState,
@@ -12,6 +12,16 @@ import {
 import * as fs from "node:fs/promises";
 import * as fsSync from "node:fs";
 import * as path from "node:path";
+import {
+  checkListIds,
+  collectDiskSessionPage,
+  comparePositions,
+  decodeCursor,
+  isListDirectory,
+  projectDiskSessionState,
+  type DiskSessionListOptions,
+  type ListDiskSessionsResult,
+} from "./disk-session-list.js";
 
 export interface DesktopSessionSummary {
   id: string;
@@ -203,290 +213,50 @@ export async function cleanupStaleQuickChatSessions(
   return [...ids, ...stagingDirs];
 }
 
-export interface DiskSessionMeta {
-  runId?: string;
-  clientMessageId?: string;
-  id: string;
-  engineSessionId: string; // == directory name; reused as the UI session id
-  cwd: string;
-  title: string;
-  model?: string;
-  provider?: string;
-  /** Explicit configured text connection persisted by the Session's last native run. */
-  modelConnectionId?: string;
-  updatedAt: number;
-  /** Durable creation time, when supplied by the engine's state schema. */
-  createdAt?: number;
-  /** Sub-agents require an explicit parent query or the host's includeSubagents scan. */
-  origin: "desktop" | "automation" | "subagent";
-  /** Present for direct-child queries and the host's complete task scan. */
-  parentSessionId?: string;
-  /** Normalized durable status for Pet/display consumers. */
-  status?: "active" | "paused" | "completed" | "failed" | "cancelled";
-  /** Exceptional completed-run boundary; absent means a normal final answer. */
-  completionKind?: TurnCompletionKind;
-  /** Durable archival timestamp; absent = not archived. */
-  archivedAt?: number;
-  /** Workspace profile/digital human bound to this Session. */
-  workspaceProfile?: string;
-}
+export type {
+  DiskSessionMeta,
+  ListDiskSessionsResult,
+  DiskSessionListOptions,
+} from "./disk-session-list.js";
 
-export interface ListDiskSessionsResult {
-  sessions: DiskSessionMeta[];
-  nextCursor: string | null; // opaque stable position in the mtime-sorted catalog; null = no more
-}
-
-interface DiskSessionCursor {
-  mtime: number;
-  id: string;
-}
-
-function compareDiskSessionPosition(a: DiskSessionCursor, b: DiskSessionCursor): number {
-  return b.mtime - a.mtime || a.id.localeCompare(b.id);
-}
-
-function encodeDiskSessionCursor(cursor: DiskSessionCursor): string {
-  return `v1:${cursor.mtime}:${cursor.id}`;
-}
-
-function decodeDiskSessionCursor(value: string | undefined): DiskSessionCursor | number | null {
-  if (!value) return 0;
-  // Keep accepting the old numeric offset during upgrades. New responses use
-  // a stable tuple so deleting an item from an earlier page cannot shift and
-  // skip a later session.
-  if (/^\d+$/.test(value)) return Number(value);
-  const match = /^v1:([^:]+):([A-Za-z0-9._-]+)$/.exec(value);
-  if (!match) return null;
-  const mtime = Number(match[1]);
-  return Number.isFinite(mtime) ? { mtime, id: match[2]! } : null;
-}
-
-/**
- * List sessions from disk, newest first, paginated. The default catalog is
- * top-level only; parentSessionId selects direct children for transcript views.
- * Filter on state.json `parentSessionId`:
- *   - key absent  → legacy → skip (存量 not auto-rebuilt)
- *   - null / ""   → top-level → show only in the default catalog
- *   - non-empty   → sub-agent → show only for the matching parent query
- */
+/** File-backed catalog, also used when the derived index is unavailable. */
 export async function listDiskSessions(
-  opts: {
-    limit: number;
-    cursor?: string;
-    /** Display-only project roots filter, applied before pagination. */
-    cwds?: readonly string[];
-    /** Check one candidate against the same visibility rules without reading unrelated states. */
-    sessionId?: string;
-    includeArchived?: boolean;
-    /** Host read models may include children; ordinary sidebar queries stay top-level. */
-    includeSubagents?: boolean;
-    parentSessionId?: string;
-  },
+  opts: DiskSessionListOptions,
   baseDir: string = sessionsRoot(),
 ): Promise<ListDiskSessionsResult> {
-  if (
-    opts.sessionId !== undefined &&
-    (typeof opts.sessionId !== "string" ||
-      !SAFE_ID.test(opts.sessionId) ||
-      opts.sessionId.length > 128 ||
-      opts.sessionId === "." ||
-      opts.sessionId.includes(".."))
-  ) {
-    throw new Error("invalid session id");
-  }
-  const parentSessionId = opts.parentSessionId;
-  if (
-    parentSessionId !== undefined &&
-    (typeof parentSessionId !== "string" ||
-      !SAFE_ID.test(parentSessionId) ||
-      parentSessionId.length > 128 ||
-      parentSessionId === "." ||
-      parentSessionId.includes(".."))
-  ) {
-    throw new Error("invalid parent session id");
-  }
-  // Preserve the public adapter's explicit relative-root form. Host receives
-  // one absolute root; it never guesses a workspace for the caller.
+  checkListIds(opts);
   baseDir = path.resolve(baseDir);
-  const pathKey = (cwd: string) => {
-    const normalized = path.resolve(cwd);
-    return process.platform === "darwin" || process.platform === "win32"
-      ? normalized.toLocaleLowerCase("en-US")
-      : normalized;
-  };
-  const cwdRoots = opts.cwds?.map(pathKey);
-  const dirs = (await scanSessionDirectories(baseDir)).filter(
-    ({ id }) =>
-      !isInternalEphemeralSessionId(id) && (opts.sessionId === undefined || id === opts.sessionId),
-  );
-  dirs.sort(compareDiskSessionPosition);
-
-  const decodedCursor = decodeDiskSessionCursor(opts.cursor);
-  if (decodedCursor === null) return { sessions: [], nextCursor: null };
+  const dirs = (await scanSessionDirectories(baseDir))
+    .filter(
+      ({ id }) => isListDirectory(id) && (opts.sessionId === undefined || id === opts.sessionId),
+    )
+    .sort(comparePositions);
+  const cursor = decodeCursor(opts.cursor);
+  if (cursor === null) return { sessions: [], nextCursor: null };
   const start =
-    typeof decodedCursor === "number"
-      ? Math.max(0, decodedCursor)
-      : (() => {
-          const index = dirs.findIndex(
-            (entry) => compareDiskSessionPosition(entry, decodedCursor) > 0,
+    typeof cursor === "number"
+      ? cursor
+      : dirs.findIndex((entry) => comparePositions(entry, cursor) > 0);
+  if (start < 0 || start >= dirs.length) return { sessions: [], nextCursor: null };
+  return collectDiskSessionPage(
+    opts,
+    dirs.slice(start),
+    async ({ id, mtime }) => {
+      try {
+        const state = JSON.parse(await readSessionListState(baseDir, id, MAX_HISTORY_STATE_BYTES));
+        return projectDiskSessionState(id, mtime, state);
+      } catch (error) {
+        if (error instanceof SessionFileError && error.code === "too_large") {
+          process.emitWarning(
+            `Session ${id}: state.json exceeds the 2 MiB catalog metadata limit; entry omitted.`,
+            { code: "SESSION_LIST_STATE_TOO_LARGE" },
           );
-          return index < 0 ? dirs.length : index;
-        })();
-  const sessions: DiskSessionMeta[] = [];
-  // Cache cwd existence across the loop — many sessions share one project root,
-  // and we must not re-stat it per session (nor block on a sync existsSync,
-  // which the async-throughout rewrite above was meant to eliminate).
-  const cwdExists = new Map<string, boolean>();
-  const pathExists = async (cwdStr: string): Promise<boolean> => {
-    const cached = cwdExists.get(cwdStr);
-    if (cached !== undefined) return cached;
-    const ok = await fs
-      .access(cwdStr)
-      .then(() => true)
-      .catch(() => false);
-    cwdExists.set(cwdStr, ok);
-    return ok;
-  };
-  let i = start;
-  for (; i < dirs.length && sessions.length < opts.limit; i++) {
-    const { id, mtime } = dirs[i]!;
-    let state: Record<string, unknown>;
-    try {
-      state = JSON.parse(await readSessionListState(baseDir, id, MAX_HISTORY_STATE_BYTES));
-      if (!state || typeof state !== "object" || Array.isArray(state)) continue;
-    } catch (error) {
-      if (error instanceof SessionFileError && error.code === "too_large") {
-        process.emitWarning(
-          `Session ${id}: state.json exceeds the 2 MiB catalog metadata limit; entry omitted.`,
-          { code: "SESSION_LIST_STATE_TOO_LARGE" },
-        );
+        }
+        return null;
       }
-      continue;
-    }
-    if (state.ephemeral === true) continue;
-    if (state.kind === "pet") continue;
-    if (!("parentSessionId" in state)) continue; // legacy → skip
-    if (parentSessionId !== undefined) {
-      if (state.parentSessionId !== parentSessionId) continue;
-    } else if (state.parentSessionId && !opts.includeSubagents) {
-      continue;
-    }
-    // Only desktop + automation belong in the desktop sidebar. Targeted
-    // queries additionally expose subagent origin. tui / missing origins stay
-    // filtered out (tui shares ~/.code-shell; legacy has no origin).
-    const origin = state.origin;
-    if (
-      origin !== "desktop" &&
-      origin !== "automation" &&
-      !((parentSessionId !== undefined || opts.includeSubagents) && origin === "subagent")
-    ) {
-      continue;
-    }
-    // Skip sessions whose project root has been deleted. Listing them led the
-    // renderer's disk-rebuild to call createRepoForCwd → the deleted project
-    // reappeared in the sidebar, and any subsequent write under that cwd
-    // resurrected it on disk as an empty shell. An empty cwd (no-repo session)
-    // is intentionally NOT filtered here — the renderer handles that via
-    // isNoRepoCwd. (deleted-project resurrection)
-    const cwdStr = typeof state.cwd === "string" ? state.cwd : "";
-    if (
-      cwdRoots &&
-      (!cwdStr ||
-        !cwdRoots.some((root) => {
-          const candidate = pathKey(cwdStr);
-          return (
-            candidate === root ||
-            candidate.startsWith(root.endsWith(path.sep) ? root : root + path.sep)
-          );
-        }))
-    )
-      continue;
-    // A child transcript remains useful after its temporary worktree is gone;
-    // targeted reads do not rebuild projects in the sidebar.
-    const childParentId =
-      typeof state.parentSessionId === "string" && state.parentSessionId
-        ? state.parentSessionId
-        : undefined;
-    if (
-      childParentId &&
-      (!SAFE_ID.test(childParentId) ||
-        childParentId.length > 128 ||
-        childParentId.includes("..") ||
-        childParentId === ".")
-    )
-      continue;
-    if (state.parentSessionId && !childParentId) continue;
-    if (
-      parentSessionId === undefined &&
-      !(opts.includeSubagents && childParentId) &&
-      cwdStr &&
-      !(await pathExists(cwdStr))
-    )
-      continue;
-    // Archived sessions are hidden from the default catalog. Filtering happens
-    // before the push (like every other skip above), so the mtime cursor —
-    // derived from the dirs[] position, not from how many rows we kept — keeps
-    // advancing across archived rows: a page may return fewer than `limit`
-    // sessions, but no live session is skipped and the cursor never stalls.
-    const archivedAt = typeof state.archivedAt === "number" ? state.archivedAt : undefined;
-    if (archivedAt !== undefined && !opts.includeArchived) continue;
-    sessions.push({
-      id,
-      ...(typeof state.runId === "string" && state.runId.length > 0 && state.runId.length <= 256
-        ? { runId: state.runId }
-        : {}),
-      ...(typeof state.clientMessageId === "string" &&
-      state.clientMessageId.length > 0 &&
-      state.clientMessageId.length <= 256
-        ? { clientMessageId: state.clientMessageId }
-        : {}),
-      engineSessionId: id,
-      ...(typeof state.model === "string" ? { model: state.model } : {}),
-      ...(typeof state.provider === "string" ? { provider: state.provider } : {}),
-      ...(typeof state.modelConnectionId === "string" &&
-      state.modelConnectionId.length > 0 &&
-      state.modelConnectionId.length <= 256
-        ? { modelConnectionId: state.modelConnectionId }
-        : {}),
-      cwd: typeof state.cwd === "string" ? state.cwd : "",
-      // Prefer the LLM-generated title (now persisted to state); fall back to
-      // the raw first-message summary, then the id. This lets the disk rebuild
-      // surface the real title after a localStorage wipe.
-      title:
-        (typeof state.title === "string" && state.title ? state.title : undefined) ??
-        (typeof state.summary === "string" && state.summary ? state.summary : id),
-      updatedAt: mtime,
-      ...(typeof state.startedAt === "number" &&
-      Number.isFinite(state.startedAt) &&
-      state.startedAt >= 0
-        ? { createdAt: state.startedAt }
-        : {}),
-      origin,
-      ...(childParentId ? { parentSessionId: childParentId } : {}),
-      status:
-        state.status === "active" || state.status === "paused" || state.status === "completed"
-          ? state.status
-          : state.status === "aborted_streaming" || state.status === "aborted_tools"
-            ? "cancelled"
-            : typeof state.status === "string"
-              ? "failed"
-              : undefined,
-      ...(state.status === "completed" &&
-      (state.lastCompletionKind === "background_wait" ||
-        state.lastCompletionKind === "goal_control_stop" ||
-        state.lastCompletionKind === "limit_stop")
-        ? { completionKind: state.lastCompletionKind }
-        : {}),
-      ...(archivedAt !== undefined ? { archivedAt } : {}),
-      ...(typeof state.workspaceProfile === "string" && state.workspaceProfile
-        ? { workspaceProfile: state.workspaceProfile }
-        : {}),
-    });
-  }
-  return {
-    sessions,
-    nextCursor: i < dirs.length && i > 0 ? encodeDiskSessionCursor(dirs[i - 1]!) : null,
-  };
+    },
+    dirs[start - 1],
+  );
 }
 
 /**
