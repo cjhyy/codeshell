@@ -1,6 +1,6 @@
 # 17 · Host 进程与存储层改造（0.12 技术方案）
 
-状态：**提案 v2，待评审**（2026-11-20）。v1 的评审意见已全部采纳，见附录 B。
+状态：**v2，0.12 分层实施中**（2026-11-21）。L2 本轮范围见 3.1–3.3 和第 12 节，待决产品项见第 14 节。
 影响范围：`packages/desktop`（main、preload、renderer 接线）、`packages/host`、`packages/core`（会话索引、存储驱动）、`packages/coding`（外部 agent 会话绑定）、`packages/server`（worker 启动）、打包工具链。
 决策变更：修改第 16 章第 10 节已定的第 2 条决策（「S1、S2 内嵌 HostRuntime」），见第 12 节。
 版本策略：**0.11 线不再做性能改动，直接进入 0.12。** 止血分支 `fix/main-process-scroll-jank` 不单独合入，其中仍然适用的部分（外部绑定读缓存、开关缓存）在 L4/L6 迁入 Host 时复用。
@@ -95,14 +95,14 @@ Main（壳）                          Host（utilityProcess）
 ### 2.2 生命周期
 
 - `app.whenReady()` 后先启动 Host，再创建窗口。
-- **Host 崩溃**：Main 按退避策略重启（60 秒内最多 3 次）。重启期间，渲染进程的请求返回「宿主重连中」，界面显示可恢复状态。worker 随 Host 退出，正在运行的 run 按「执行者消失 → 中断」处理。Host 重启后从磁盘恢复，**输出游标**和**待审批状态**按第 16 章 4.3 的两类续传分别恢复。
-- **关闭所有窗口后 Host 继续运行**，第 16 章 S2-C 随之实现。
+- **Host 崩溃**：Main 按退避策略重启（60 秒内最多 3 次）。重启期间，渲染进程的请求返回「宿主重连中」，界面显示可恢复状态。L2 重新建立端口并握手，worker 和会话服务仍按现有生命周期运行。L5 迁入 worker 后，Host 崩溃时随之退出的 worker 按「执行者消失 → 中断」处理，Host 通过第 16 章 4.3 的两类续传恢复输出游标和待审批状态。
+- L2 在 macOS、Windows、Linux 上关闭最后一个窗口后保留 App 和 Host。打开新窗口时重新绑定端口，显式退出时沿用原有保存和清理流程。S2-C 继续负责连接期间阻止睡眠等在线能力。
 
 ## 3. 通信、身份与撤权
 
 ### 3.1 Renderer ↔ Host
 
-- JSON-RPC 2.0 消息直接用结构化克隆传对象。请求、响应和通知的信封与 Protocol v2（第 16 章第 4 节）共用一份定义，在 L2 一起定稿。
+- JSON-RPC 2.0 消息通过结构化克隆传对象。Desktop 专用端口复用 Core 的请求、响应和通知信封，先协商协议版本，再调用握手清单中的方法。目前唯一业务方法是 `links/listLocalProviders`，读取与既有 Main IPC 共用的本地 Link 提供方目录。
 - **preload 路由表**：`window.codeshell.*` 的接口形状不变，preload 内部维护「功能域 → 通道」表。功能域可以逐个切换，出问题时把那一项改回 `ipcRenderer` 即可回退。
 - 推送：Host 只向**有权接收**的端口推送（见 3.2），不再广播给所有窗口。
 
@@ -113,13 +113,17 @@ Main（壳）                          Host（utilityProcess）
 1. **端口只绑定「窗口 + frame 代次」**：Main 在交接端口时，把 `{webContentsId, frameToken, frameGeneration, windowKind}` 作为不可伪造的元数据交给 Host。**会话归属不进入端口身份**。
 2. **会话归属每次请求实时判断**：Host 维护会话归属表，归属变化由 Main 的 `sessionOwnerClaimed` 事件同步过来。凡是作用于会话的请求，在**生效前**都要调用 `assertCurrent()`；检查和生效之间如果有 `await`，生效前要再查一次。
 3. **作废规则**：
-   - 窗口导航或重载导致 frame 代次变化：Main 通知 Host，旧端口立刻关闭；这个端口上还没完成的请求一律以 `revoked` 结束，**不产生副作用**。
+   - 窗口导航或重载导致 frame 代次变化：Host 收到 Main 的撤权或新代次绑定后关闭旧端口；这个端口上还没完成的请求一律以 `revoked` 结束，**不产生副作用**。
    - 会话转移到另一个窗口：转移前原窗口发起、还在进行中的请求，生效前的检查会失败。
    - 会话进入删除流程：所有针对它的请求都会失败。
 4. **不受信任的内容**（Panel、云端工作台、浏览器 guest）拿不到 Host 端口，继续走 Main 现有的受控通道。
 5. **L2 验收**：伪造身份；窗口重载后旧请求不生效；A→B 转移后 A 的在途请求不生效；A→B→A 后 B 遗留的请求不生效；删除期间的请求被拒绝。
 
+L2 的 `assertCurrent()` 检查 **Host 已收到的** frame、owner 和删除状态。即使会话从 A 转到 B 再转回 A，旧授权也会失效。Main 的控制消息与工作台请求走不同端口，Main 变更与 Host 收到消息之间存在时间差。L2 的 Link 目录只读且无会话权限要求。迁入有副作用的会话方法前，实际执行者必须在**写入、发出命令等提交点**确认授权，使提交和撤权按同一顺序生效。仅凭两条端口的消息到达顺序无法判断哪一项先发生。
+
 ### 3.3 Host → Main：系统能力的反向 RPC
+
+L2 只开放 `app/getVersion`。Host 在启动时读取并缓存版本，之后可直接答复每个新端口的握手。下表是对应服务后续迁移时需要的能力。
 
 | 能力                                    | 用途                             | 约束                                       |
 | --------------------------------------- | -------------------------------- | ------------------------------------------ |
@@ -133,7 +137,7 @@ Main（壳）                          Host（utilityProcess）
 
 ### 3.4 Host ↔ Worker
 
-不变：Host 用 `WorkerBridgeCore` 以 stdio JSON-RPC 启动 worker（`utilityProcess` 的 `execPath` 仍是 Electron 二进制）。渲染进程发给 worker 的消息由 Host 完成预处理（信任、工作目录改写）后再转给 worker。
+L2 沿用原有 worker 启动与服务路由。L5 迁移后，Host 用 `WorkerBridgeCore` 以 stdio JSON-RPC 启动 worker（`utilityProcess` 的 `execPath` 仍是 Electron 二进制）。渲染进程发给 worker 的消息由 Host 完成预处理（信任、工作目录改写）后再转给 worker。
 
 ## 4. 存储层
 
@@ -406,10 +410,9 @@ Main（壳）                          Host（utilityProcess）
 
 ## 12. 与第 16 章的关系
 
-- **决策变更**：第 10 节第 2 条改为「0.12 起 HostRuntime 运行在 Desktop 的 utilityProcess 中」。第 3.3 节的本机守护进程仍然是后续选项。
-- **提前和吸收的条目**：S2-C「关闭窗口后保留 HostRuntime」随 L2 实现；S3-B「迁移其余 HostService」随 L4–L6 完成；S2-A「拆分 Desktop index」随 L6 完成。
-- **Protocol v2**：连接、撤权、重连的约定与 L2 一起定稿；两类续传在 L5 切换流式路径前验收。
-- **协调**：`platform-first-version-plan.md` 里与 L2、L5、L6 重叠的批次（第 8、11 项及后续），需要明确由同一方修改对应文件。开工前更新该计划的顺序。
+- **进程决策。** 第 16 章 §10 第 2 条采用 App 管理的 utilityProcess，按领域迁移。L2 在该进程提供只读 Link 目录，其余服务和 worker 继续走原路径。本机守护进程仍是第 16 章 §3.3 的后续选项。
+- **平台首版第 8、11 项。** L2 负责 Desktop 端口的信封、握手、撤权与重连，以及 `app/getVersion` 反向调用。第 11 项继续负责通用 AgentServer v2 与客户端契约。L5 接入并验收 journal cursor 的输出续传和 stateVersion 的宿主状态续传，之后第 8b 项才能合并旧回放缓存。
+- **S2-C 与其余批次。** L2 负责三个平台关闭最后一个窗口后保留 Host、新窗口重连及显式退出清理。S2-C 继续负责连接时阻止睡眠、在线中继及移动端交付。S3-B 的其余 HostService 随 L4–L6 分域迁移，S2-A 的 Desktop index 拆分由 L6 协调。批次状态见[平台首版实施与验收](../todo/platform-first-version-plan.md)。
 
 ## 13. 不做
 
@@ -420,7 +423,7 @@ Main（壳）                          Host（utilityProcess）
 
 ## 14. 待决策
 
-1. 是否接受第 12 节的决策变更，以及与平台规划批次的执行顺序。
+1. **已定。** Desktop 0.12 采用 App 内管理的 utilityProcess。L2 先接只读 Link 目录，worker 与两类续传排入 L5，平台首版第 8b 项等待续传验收。见第 12 节。
 2. **已定。** 0.12 整包最低支持 macOS 13.5（Darwin 22.6.0），低于该版本的 0.11 用户留在 0.11。本轮 macOS 实机验收以当前 15.6.1 arm64 为准，旧系统由自动回放验证更新门槛。见 8.3。
 3. 直接从 main 开 0.12 集成分支，不发 0.11 性能修复（已定）。
 4. 每个会话数据根一个库（建议接受）。

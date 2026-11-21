@@ -17,13 +17,14 @@
 
 ## S1 当前批：8 的纯服务首版；其余须主控 review 后派发
 
-- [ ] 8. Host 1.2 整体（包含后置输出回放，不能标全部完成）。
+- [ ] 8. Host 1.2 包含共享服务与后置输出回放。第 17 章 L2 只在 Desktop Host 进程接入只读 Link 目录，原 worker、输出服务和回放缓存继续沿用现有实现。第 8b 项排在 L5 两类续传验收之后。
   - [x] 8a. 首批纯服务/ownership：Desktop 与 Hub skills inventory、MCP probe、Session FS 真实共用 Host；MCP SDK 仅由 Core internal 窄连接接口承担。Hub 独有的模型连接测试迁 Host ownership，Desktop metadata 和 Core model-fetcher 保持原语义。首轮已提交并经 CC 审查、宿主补验；同一 CC 第二轮已关闭旧 P1/其余 finding，env 脱敏与 Desktop JSON 日志两个 P2 加宿主暴露的隐私/cipher/Unicode fixture 回归本轮修复，见[复审清单](evidence/host-shared-services-cc-review-20261015.md)；仍待同一 CC 复审、正常宿主/新 head CI，勾选仅表示首版已实现。
   - [x] PR188 三个非阻断 P2 修复与定向回归，CC 已确认 closed，见[修复清单](platform-pr188-followups.md)。
 - [ ] 9. 1.3 凭据与 MCP OAuth 迁 host，由 adapter 注入 cipher；依赖 1.1。serve 同等能力，去掉 local 特例，验证凭据隔离。
 - [ ] 10. 1.4 单 automation 执行器，共享锁/单 owner；依赖 1.1。同机两宿主只触发一次，serve automationCreate 可用。
 - [ ] 11. Protocol v2：Schema 与客户端生成、版本协商、Session/Turn/Item、typed host/*、journal cursor 输出续传及 stateVersion 宿主状态续传、client/* 反向请求、TUI 真切换；保留 v1 兼容并覆盖断连、租约、非法 cursor。
-- [ ] 8b. 后置输出回放去重，依赖第 11 项两类续传完成，把 Desktop snapshot 与 Hub seq/epoch 改为 journal cursor 缓存；验证不漏不重与快照回退。
+  - 第 17 章 L2 先在 Desktop 专用端口复用 Core JSON-RPC 信封，要求 `initialize` 并公布 `links/listLocalProviders`，Host 通过 `app/getVersion` 向 Main 取版本。端口重连后重新握手。通用 AgentServer 的 v2 能力和 TUI 切换仍由第 11 项跟踪。
+- [ ] 8b. 后置输出回放去重。依赖第 11 项的 journal cursor / stateVersion 契约，以及第 17 章 L5 对输出续传和宿主状态续传的接入与验收。之后把 Desktop snapshot 与 Hub seq/epoch 改为 journal cursor 缓存，验证不漏不重与快照回退。
 - [ ] 12. PolicyEngine + ApprovalStore 真接工具、浏览器、process.native。
 - [ ] 13. ExecutionService/report-only 技术验证。当前后端没有完整 dry-run：分别记录静态预检、单次执行观测、unknown，禁止双执行任意命令模拟 report-only。
 - [ ] 14. 兼容矩阵、契约 CI 与发版验收：覆盖客户端/宿主/runtime/扩展版本组合、包边界、Schema 漂移、v1 降级、两类续传及权限契约。
@@ -34,7 +35,7 @@ S1 出口：Desktop/serve 共用会话、凭据、automation；TUI 在 v2 生产
 
 - [ ] S2-A：1.6 拆 Desktop index 为领域注册模块，下调 index 预算至 1500；Desktop renderer 与 Web 真切 v2，手机编排 1.5 依赖两类续传和 client/*，验收旧 UI 行为及重连。
 - [ ] S2-B：ExecutionService enforce，验证工具/浏览器/process.native 权限、取消与沙箱结果，不扩权降级。
-- [ ] S2-C：保持在线与轻量常驻（连接时阻止睡眠、关窗口保留 HostRuntime）、薄云端票据中继/配对设备表/独立推送网关、Capacitor 首版。
+- [ ] S2-C：保持在线与轻量常驻、薄云端票据中继/配对设备表/独立推送网关、Capacitor 首版。第 17 章 L2 负责 macOS、Windows、Linux 关闭最后窗口后保留 App 与 Host、新窗口重新握手、显式退出清理。连接时阻止睡眠以及中继、网关、移动端交付仍由本项实施与验收。
 - [ ] S2-D：手机派任务、审批、断网恢复、电脑 Panel 操作端到端验收；services/panel 跨仓业务与推送证书、签名 App、真机、Linux 目标分别列出代码 fixture 和真实环境验收，未具备真实条件不得标完成。
 
 ## S3 生态与沙箱批次（未实施）
