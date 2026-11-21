@@ -2369,6 +2369,9 @@ export interface CodeshellApi
   onWindowFullscreenChange(cb: (state: { fullscreen: boolean }) => void): Unsubscribe;
   setBadgeCount(count: number): Promise<void>;
   onMenuEvent(cb: (event: string, payload?: unknown) => void): Unsubscribe;
+  onNotificationFallback(
+    cb: (notice: import("../shared/notification-fallback").NotificationFallback) => void,
+  ): Unsubscribe;
   onNotificationOpenSession(cb: (sessionId: string) => void): Unsubscribe;
   newWindow(): Promise<void>;
   /** The running app version (from Electron `app.getVersion()`). */

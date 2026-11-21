@@ -38,6 +38,11 @@ import {
   subscribeExternalRuntimeSessionState,
 } from "./external-runtime-session-state";
 import { createTaskInboxApi } from "./task-inbox-api";
+import {
+  fallbackNotice,
+  fallbackReady,
+  type NotificationFallback,
+} from "../shared/notification-fallback";
 import { createNotificationNavigationApi } from "./notification-navigation-api";
 import { createOperationResolutionApi } from "./operation-resolution-api";
 import { createOptimizationLabApi } from "./optimization-lab-api";
@@ -563,6 +568,15 @@ contextBridge.exposeInMainWorld("codeshell", {
     onDesktopHostStatus: (cb: (status: DesktopHostStatus) => void) => desktopHost.subscribe(cb),
   }),
   ...createNotificationNavigationApi(ipcRenderer),
+  onNotificationFallback: (receive: (notice: NotificationFallback) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, notice: NotificationFallback) =>
+      receive(notice);
+    ipcRenderer.on(fallbackNotice, listener);
+    ipcRenderer.send(fallbackReady);
+    return () => {
+      ipcRenderer.off(fallbackNotice, listener);
+    };
+  },
   ...createProfilePluginExportApi(ipcRenderer),
   ...createProfileMemoryPromotionApi(ipcRenderer),
   /** Main-process platform, exposed explicitly so renderer layout doesn't infer it from UA strings. */

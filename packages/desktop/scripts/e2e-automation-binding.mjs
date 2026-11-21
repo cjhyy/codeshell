@@ -167,7 +167,13 @@ async function checkStartupReminder(reminder) {
     state.projection.sessions.length === 0 && state.longTasks.tasks.length === 0,
     "Reminder waking creates no Work Session or long task",
   );
-  console.log("PASS: cold-start follow-up rule settles once without a Work Session");
+  await win.waitForFunction(({ title, text }) => {
+    const rows = JSON.parse(sessionStorage.getItem("codeshell.notificationHistory.v1") ?? "[]");
+    return rows.filter((row) => row.message === title && row.detail?.includes(text)).length === 1;
+  }, reminder.then);
+  console.log(
+    "PASS: cold-start reminder settles and failed OS delivery appears once in workbench history",
+  );
 }
 
 async function screenshot(name) {
@@ -668,6 +674,11 @@ try {
   await writeFile(
     networkGuard,
     `const deny = () => { throw new Error("Automation binding fixture forbids network"); };
+if (process.type === "browser") {
+  const { Notification } = require("electron");
+  Notification.isSupported = () => true;
+  Notification.prototype.show = function () { this.emit("failed", {}, "Synthetic OS refusal"); };
+}
 globalThis.fetch = async () => deny();
 for (const name of ["node:http", "node:https"]) {
   const transport = require(name);
