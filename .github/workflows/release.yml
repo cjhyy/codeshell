@@ -421,7 +421,8 @@ jobs:
 
           cat > /tmp/release-notes.md <<'NOTES'
           macOS 版要求 macOS 13.5 或更新版本。使用 macOS 12 或 13.0–13.4 的用户请留在 0.11。
-          0.11 如提示手动更新，请下载对应架构的 DMG 并覆盖 Applications 内的旧版，保留原有数据。
+          退出 0.11 前，请先发送或另存输入框里需要保留的文字。重启会清空未发送的文字。
+          如提示手动更新，请下载对应架构的 DMG 并覆盖 Applications 内的旧版。用同一账户启动即可读取已保存的会话和设置。
           后续相同签名的版本可使用应用内更新。0.12 正式发布后，rc 用户可从 GitHub 的 Latest Release 手动安装正式版以切回正式通道。
 
           Windows 安装包为 NSIS x64。若 SmartScreen 提示，请核对下载来源。

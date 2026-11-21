@@ -127,7 +127,7 @@ jobs:
           if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             NOTES=()
             if node -e 'process.exit(require("./scripts/validate-release-recovery.cjs").requiresMacUpdateFloor(process.env.RELEASE_TAG.slice(1)) ? 0 : 1)'; then
-              NOTES=(--notes "macOS 需 13.5 或更高版本。旧系统请留在 0.11。如提示手动更新，请下载对应架构的 DMG 并覆盖 Applications 中的旧版。")
+              NOTES=(--notes "macOS 需 13.5 或更高版本。旧系统请留在 0.11。退出 0.11 前，请先发送或另存输入框里需要保留的文字。如提示手动更新，请下载对应架构的 DMG 并覆盖 Applications 中的旧版。")
             fi
             gh release create "$RELEASE_TAG" --verify-tag --title "$RELEASE_TAG" "${NOTES[@]}" \
               --generate-notes "${PRERELEASE[@]}"
