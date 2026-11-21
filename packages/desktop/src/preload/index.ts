@@ -524,6 +524,7 @@ const desktopHost =
     ? new DesktopHostClient()
     : undefined;
 
+const configurationHost = desktopHostRoutes.configuration === "host" ? desktopHost : undefined;
 const agentHost = desktopHostRoutes.agentStream === "host" ? desktopHost : undefined;
 agentHost?.onStreamEvent((env) => streamListeners.forEach((listener) => listener(env)));
 
@@ -1376,10 +1377,18 @@ contextBridge.exposeInMainWorld("codeshell", {
   invalidateMcpProbeCache: (name?: string) => ipcRenderer.invoke("mcp:invalidate", name),
   probeSearch: (input: unknown) => ipcRenderer.invoke("search:probe", input),
   probeImage: (input: unknown) => ipcRenderer.invoke("image:probe", input),
-  getModelCatalog: () => ipcRenderer.invoke("catalog:list"),
+  getModelCatalog: () => {
+    const ipc = () => ipcRenderer.invoke("catalog:list");
+    return configurationHost ? configurationHost.readBusiness("models/catalog", {}, ipc) : ipc();
+  },
   saveCatalogEntry: (entry: unknown) => ipcRenderer.invoke("catalog:save", entry),
   deleteCatalogEntry: (id: string) => ipcRenderer.invoke("catalog:delete", id),
-  getCatalogOrigins: () => ipcRenderer.invoke("catalog:origins"),
+  getCatalogOrigins: () => {
+    const ipc = () => ipcRenderer.invoke("catalog:origins");
+    return configurationHost
+      ? configurationHost.readBusiness("models/catalogOrigins", {}, ipc)
+      : ipc();
+  },
   resolveModelMeta: (models: unknown, providers: unknown) =>
     ipcRenderer.invoke("models:resolve-meta", models, providers),
   reasoningControl: (kind: string, model: string) =>

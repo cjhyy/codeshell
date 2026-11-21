@@ -1,4 +1,5 @@
 import { DesktopHostErrors, isRpcResponse, type RpcRequest } from "../shared/desktop-host-protocol";
+import type { DesktopBusinessReads } from "../shared/desktop-business-contracts";
 import type { TaskInboxApi, TaskInboxQuery } from "./task-inbox-api";
 import { normalizeStreamEnvelope } from "../shared/stream-envelope";
 import type { SessionSnapshot, StreamEventEnvelope } from "./session-stream-types";
@@ -14,12 +15,13 @@ const replyDeadlineMs = 15_000;
 
 // Each migrated domain keeps its original IPC handler available for rollback.
 export const desktopHostRoutes: Record<
-  "localLinkProviders" | "diskSessions" | "taskInbox" | "agentStream",
+  "localLinkProviders" | "diskSessions" | "taskInbox" | "agentStream" | "configuration",
   "host" | "ipc"
 > = {
   localLinkProviders: "host",
   diskSessions: "host",
   taskInbox: "host",
+  configuration: "host",
   agentStream: "host",
 };
 
@@ -287,8 +289,16 @@ export class DesktopHostClient {
     return [...pending, ...legacy.filter((entry) => entry.source === "external-runtime")];
   }
 
+  readBusiness<K extends keyof DesktopBusinessReads>(
+    method: K,
+    params: DesktopBusinessReads[K]["params"],
+    fallback: () => Promise<DesktopBusinessReads[K]["result"]>,
+  ): Promise<DesktopBusinessReads[K]["result"]> {
+    return this.read(method, params, fallback);
+  }
+
   private async read<T>(
-    method: "sessions/listDisk" | "tasks/list" | "tasks/get",
+    method: "sessions/listDisk" | "tasks/list" | "tasks/get" | keyof DesktopBusinessReads,
     params: Record<string, unknown>,
     readIpc: () => Promise<T>,
   ): Promise<T> {

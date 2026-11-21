@@ -1,3 +1,4 @@
+import { configurationReads } from "./configuration-reads.js";
 import { HostApprovalState } from "./approval-state.js";
 import {
   credentialCommands,
@@ -98,6 +99,7 @@ parent.on("message", ({ data, ports }) => {
       new Map([
         ...desktopHostMethods((options) => catalog.list(options)),
         ...taskHostReads(storage),
+        ...configurationReads,
         ["agent/pendingApprovals", approvals.method] as const,
         ...outputMethods(
           (id, since) => output.snapshot(id, since),
