@@ -85,6 +85,7 @@ export class DesktopHostClient {
   private approvalRead = 0;
   private approvals?: { epoch: string; stateVersion: number; pending: ApprovalRequestEnvelope[] };
   private readonly terminalData = new Set<(message: TerminalEvents["pty/data"]) => void>();
+  private readonly terminalViewers = new Set<(message: TerminalEvents["pty/remoteViewers"]) => void>();
   private readonly terminalExit = new Set<(message: TerminalEvents["pty/exit"]) => void>();
   private readonly streams = new Set<(envelope: StreamEventEnvelope) => void>();
   private status: DesktopHostStatus = "connecting";
@@ -134,7 +135,11 @@ export class DesktopHostClient {
         const p = data.params;
         if (data.method === "pty/data" && "data" in p && typeof p.data === "string") {
           for (const cb of this.terminalData)
-            cb({ sessionId: data.params.sessionId, data: p.data });
+            cb({ sessionId: data.params.sessionId, data: p.data, ...("replay" in p && p.replay === true ? {replay: true} : {}) });
+          return;
+        }
+        if (data.method === "pty/remoteViewers" && "count" in p && typeof p.count === "number" && Number.isSafeInteger(p.count) && p.count >= 0) {
+          for (const cb of this.terminalViewers) cb({sessionId: data.params.sessionId, count: p.count});
           return;
         }
         if (data.method === "pty/exit" && "exitCode" in p && typeof p.exitCode === "number") {
@@ -264,6 +269,10 @@ export class DesktopHostClient {
     return () => {
       this.terminalData.delete(cb);
     };
+  }
+  onTerminalViewers(cb: (p: TerminalEvents["pty/remoteViewers"]) => void) {
+    this.terminalViewers.add(cb);
+    return () => { this.terminalViewers.delete(cb); };
   }
   onTerminalExit(cb: (p: TerminalEvents["pty/exit"]) => void) {
     this.terminalExit.add(cb);

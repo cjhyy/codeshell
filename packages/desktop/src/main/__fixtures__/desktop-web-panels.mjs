@@ -404,7 +404,11 @@ try {
       });
       req.end();
     });
-    assert.ok(upgradeStatus === 401 || upgradeStatus === "closed");
+    // Relay refuses the foreign Origin first and ends the socket with a complete
+    // 403 response (Node and Bun >= 1.4 deliver it; Bun 1.3.11 reset the socket
+    // instead). The tunnel passcode gate may destroy the socket after its 401.
+    if (relay) assert.equal(upgradeStatus, 403);
+    else assert.ok(upgradeStatus === 401 || upgradeStatus === "closed");
   }
   const nativeScope = await resolveProjectScope(first, first);
   assert.deepEqual(grantA.context.projectScope, nativeScope.scope);

@@ -93,8 +93,14 @@ test("shared loopback isolates states and rejects malformed requests without con
     { path: `${path}&error=access_denied`, status: 400 },
     { path: `/link/callback?state=${f.state}`, status: 400 },
     { path: `/link/callback?state=${nonce()}&code=synthetic`, status: 400 },
-    { path: "//attacker.example/link/callback", status: 404 },
-    { path: `${path}&padding=${"x".repeat(16_384)}`, status: 431 },
+    // A protocol-relative target reaches the handler verbatim (Node, Bun >= 1.4;
+    // Bun 1.3.11 collapsed it to "/attacker.example/...") and is refused as invalid.
+    { path: "//attacker.example/link/callback", status: 400 },
+    // The broker's 20 KiB maxHeaderSize admits a 16 KiB target, which the handler
+    // refuses itself; past 20 KiB the HTTP parser answers 431 (Node, Bun >= 1.4;
+    // Bun 1.3.11 ignored maxHeaderSize and answered 431 for both).
+    { path: `${path}&padding=${"x".repeat(16_384)}`, status: 400 },
+    { path: `${path}&padding=${"x".repeat(21_000)}`, status: 431 },
   ]) {
     expect((await f.request(invalid.path, invalid.method, invalid.host)).status).toBe(
       invalid.status,

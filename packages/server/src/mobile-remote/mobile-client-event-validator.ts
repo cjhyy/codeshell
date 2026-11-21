@@ -14,6 +14,8 @@ const MAX_PATH_LENGTH = 32_768;
 const MAX_MESSAGE_LENGTH = 512 * 1024;
 const MAX_HISTORY_LIMIT = 500;
 const MAX_ASK_USER_ANSWERS = 32;
+const MAX_TERMINAL_INPUT_LENGTH = 64 * 1024;
+const MAX_TERMINAL_DIMENSION = 1000;
 
 /** Runtime validation at the WebSocket boundary; TypeScript types do not validate JSON. */
 export function parseMobileClientEvent(value: unknown): MobileClientEvent | undefined {
@@ -343,11 +345,59 @@ export function parseMobileClientEvent(value: unknown): MobileClientEvent | unde
         boundedString(event.requestId, MAX_ID_LENGTH) &&
         isApprovalDecision(event.decision);
       break;
+    case "terminal.list":
+      valid = Object.keys(event).length === 1;
+      break;
+    case "terminal.open":
+      valid =
+        boundedString(event.requestId, MAX_ID_LENGTH) &&
+        optionalTerminalId(event.terminalId) &&
+        optionalBoundedString(event.projectId, MAX_ID_LENGTH) &&
+        isTerminalDimension(event.cols) &&
+        isTerminalDimension(event.rows);
+      break;
+    case "terminal.input":
+      valid =
+        isTerminalId(event.terminalId) &&
+        (event.reply === undefined || event.reply === true) &&
+        typeof event.data === "string" &&
+        event.data.length > 0 &&
+        event.data.length <= MAX_TERMINAL_INPUT_LENGTH;
+      break;
+    case "terminal.resize":
+      valid =
+        isTerminalId(event.terminalId) &&
+        isTerminalDimension(event.cols) &&
+        isTerminalDimension(event.rows);
+      break;
+    case "terminal.detach":
+    case "terminal.kill":
+      valid = isTerminalId(event.terminalId);
+      break;
     default:
       valid = false;
   }
 
   return valid ? (event as MobileClientEvent) : undefined;
+}
+
+/** Same alphabet the Desktop pty layer accepts; anything else never reaches it. */
+function isTerminalId(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.length <= MAX_ID_LENGTH &&
+    value.startsWith("term:") &&
+    !value.includes("..") &&
+    /^[A-Za-z0-9_.:@-]+$/.test(value)
+  );
+}
+
+function optionalTerminalId(value: unknown): boolean {
+  return value === undefined || isTerminalId(value);
+}
+
+function isTerminalDimension(value: unknown): value is number {
+  return isPositiveInteger(value) && value <= MAX_TERMINAL_DIMENSION;
 }
 
 function isRecord(value: unknown): value is JsonRecord {

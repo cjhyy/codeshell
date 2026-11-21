@@ -39,7 +39,15 @@ export function hostedTerminals(host: () => DesktopHostServer, list: ListSession
         id,
         isDestroyed: () => !owners.has(id),
         send(channel, value) {
-          host().notifyWindow(id, channel === "pty:data" ? "pty/data" : "pty/exit", value);
+          host().notifyWindow(
+            id,
+            {
+              "pty:data": "pty/data",
+              "pty:exit": "pty/exit",
+              "pty:remoteViewers": "pty/remoteViewers",
+            }[channel],
+            value,
+          );
         },
       };
       owners.set(id, current);
@@ -97,11 +105,17 @@ export function hostedTerminals(host: () => DesktopHostServer, list: ListSession
       "pty/write",
       {
         run(ctx, params) {
-          const { sessionId, data } = businessArguments(params, ["sessionId", "data"]);
+          const { sessionId, data, reply } = businessArguments(params, [
+            "sessionId",
+            "data",
+            "reply",
+          ]);
+          if (reply !== undefined && typeof reply !== "boolean")
+            throw new InvalidParams("Invalid terminal reply flag");
           assertValidPtySessionId(sessionId);
           if (typeof data !== "string" || data.length > 1024 * 1024)
             throw new InvalidParams("Invalid terminal input");
-          ptyWrite(owner(ctx), sessionId, data);
+          ptyWrite(owner(ctx), sessionId, data, reply === true);
         },
       },
     ],

@@ -34,6 +34,7 @@ export type WorkbenchIconName =
   | "skills"
   | "settings"
   | "folder"
+  | "terminal"
   | "chevron"
   | "attachment"
   | "send"
@@ -42,6 +43,12 @@ export type WorkbenchIconName =
 
 export function WorkbenchIcon({ name }: { name: WorkbenchIconName }) {
   const paths: Record<WorkbenchIconName, React.ReactNode> = {
+    terminal: (
+      <>
+        <rect x="3" y="4" width="18" height="16" rx="2" />
+        <path d="m7 9 3 3-3 3M13 15h4" />
+      </>
+    ),
     panels: (
       <>
         <rect x="3" y="3" width="18" height="18" rx="2" />

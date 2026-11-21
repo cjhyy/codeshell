@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM oven/bun:1.3.11 AS bun
+FROM oven/bun:1.4.5 AS bun
 
 FROM node:22-bookworm-slim AS manifests
 WORKDIR /opt/codeshell

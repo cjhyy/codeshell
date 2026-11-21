@@ -85,6 +85,10 @@ try {
       "scripts/fixtures/mobile-external-output.tsx",
       "--target=node",
       "--packages=external",
+      // Bun >= 1.4 applies tsconfig `paths` before --packages=external (as
+      // esbuild does), which would inline workspace sources whose own deps do
+      // not resolve from this cache directory. Keep workspace packages external.
+      "--external=@cjhyy/*",
       `--outfile=${adapters}`,
     ],
     {

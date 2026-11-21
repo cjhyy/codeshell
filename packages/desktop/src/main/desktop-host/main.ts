@@ -1,3 +1,4 @@
+import type { NativeRemoteTerminals } from "../mobile-remote/native-terminals.js";
 import { NativeAutomationClient } from "./main-automation.js";
 import { randomBytes } from "node:crypto";
 import { documentLifetimes } from "./document-lifetime.js";
@@ -36,6 +37,7 @@ export function createDesktopHost(
   hostReady?: () => void,
   settingsCommitted?: (effects: SettingsChange) => Promise<void>,
 ) {
+  let terminals: NativeRemoteTerminals | undefined;
   let worker: DesktopHostWorkerClient | undefined;
   const supervisor: DesktopHostSupervisor = new DesktopHostSupervisor(
     () =>
@@ -47,9 +49,11 @@ export function createDesktopHost(
       if (status === "ready") {
         bindWorker();
         bindAutomation();
+        bindTerminals();
       } else {
         worker?.disconnect();
         automation.disconnect();
+        terminals?.disconnect();
       }
       workbenches.setStatus(status);
       if (status === "ready") hostReady?.();
@@ -129,6 +133,12 @@ export function createDesktopHost(
       port2.close();
     }
   }
+  function bindTerminals() {
+    if (!terminals) return;
+    const { port1, port2 } = new MessageChannelMain();
+    if (supervisor.post({type:"remote-terminal-port"}, [port2])) terminals.bind(port1);
+    else { port1.close(); port2.close(); }
+  }
   function bindWorker() {
     if (!worker) return;
     const { port1, port2 } = new MessageChannelMain();
@@ -149,6 +159,7 @@ export function createDesktopHost(
   return {
     callBusiness: supervisor.callBusiness.bind(supervisor),
     documentSignal,
+    setRemoteTerminals(client: NativeRemoteTerminals) { terminals = client; },
     automationListeners: supervisor.automationListeners,
     automation,
     catalogListeners: supervisor.catalogListeners,
@@ -266,6 +277,7 @@ export function createDesktopHost(
     setDeleting: (sessionId: string, deleting: boolean) =>
       supervisor.setDeleting(sessionId, deleting),
     dispose() {
+      terminals?.disconnect();
       changes?.close();
       changes = undefined;
       ipcMain.removeListener(DesktopHostIpc.connect, connect);

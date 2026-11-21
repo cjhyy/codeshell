@@ -1217,6 +1217,9 @@ export const settingsNs = {
         pairingQrAlt: "配对二维码",
         orOpenManually: "或手动在手机浏览器打开:",
         trustedDevices: "可信设备",
+        remoteTerminal: "允许远程终端",
+        remoteTerminalDesc:
+          "开启后，已配对的手机和网页可以查看、输入桌面上的终端，也能新开终端。走账号中继时中继服务器能看到终端内容。关闭会立刻断开所有远程终端，并结束从远程新开的终端。",
         changePasscode: "修改访问口令",
         noTrustedDevices: "暂无可信设备。",
         online: "在线",
@@ -2552,6 +2555,9 @@ export const settingsNs = {
         pairingQrAlt: "Pairing QR code",
         orOpenManually: "Or open manually in your phone's browser:",
         trustedDevices: "Trusted devices",
+        remoteTerminal: "Allow remote terminal",
+        remoteTerminalDesc:
+          "Paired phones and browsers can view and type into Desktop terminals, and open new ones. Through the account relay, the relay server can see terminal content. Turning this off disconnects every remote viewer and ends terminals opened remotely.",
         changePasscode: "Change access passcode",
         noTrustedDevices: "No trusted devices yet.",
         online: "Online",

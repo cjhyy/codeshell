@@ -13,11 +13,12 @@ export interface TerminalCommands {
     input: PtyStartRequest;
     result: { ok: true; pid: number } | { ok: false; detail: string };
   };
-  "pty/write": { input: { sessionId: string; data: string }; result: void };
+  "pty/write": { input: { sessionId: string; data: string; reply?: boolean }; result: void };
   "pty/resize": { input: { sessionId: string; cols: number; rows: number }; result: void };
   "pty/kill": { input: { sessionId: string }; result: void };
 }
 export interface TerminalEvents {
-  "pty/data": { sessionId: string; data: string };
+  "pty/data": { sessionId: string; data: string; replay?: boolean };
+  "pty/remoteViewers": { sessionId: string; count: number };
   "pty/exit": { sessionId: string; exitCode: number; signal?: number };
 }

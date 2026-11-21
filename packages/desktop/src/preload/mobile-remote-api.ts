@@ -16,6 +16,9 @@ export const mobileRemoteApi: MobileRemoteApi = {
   renameDevice: (id: string, name: string) =>
     ipcRenderer.invoke("mobileRemote:renameDevice", id, name),
   onlineDevices: () => ipcRenderer.invoke("mobileRemote:onlineDevices"),
+  terminalAccess: () => ipcRenderer.invoke("mobileRemote:terminalAccess"),
+  setTerminalAccess: (enabled: boolean) =>
+    ipcRenderer.invoke("mobileRemote:setTerminalAccess", enabled),
   onOnlineChange: (cb: (ids: string[]) => void): (() => void) => {
     const h = (_e: IpcRendererEvent, ids: string[]) => cb(ids);
     ipcRenderer.on("mobileRemote:onlineChange", h);

@@ -1,15 +1,9 @@
-import { afterEach, expect, test } from "bun:test";
+// The real worker thread's end-to-end suite runs under node --test in
+// packages/desktop/scripts/activity-history-worker.test.mjs.
+import { expect, test } from "bun:test";
 import { EventEmitter } from "node:events";
-import { createHash } from "node:crypto";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { SessionManager, UsageLedger } from "@cjhyy/code-shell-core";
-import { ModelTraceStore } from "@cjhyy/code-shell-core/internal";
-import type { Worker } from "node:worker_threads";
 import {
   ActivityHistoryWorker,
-  createActivityHistoryWorker,
   type ActivityHistoryWorkerRequest,
 } from "./activity-history-worker-client.js";
 
@@ -87,107 +81,4 @@ test("a rejected query does not poison later reads and queued requests stay boun
   for (let index = 1; index < worker.requests.length; index++) worker.reply(index);
   await Promise.all(reads);
   await closing;
-});
-
-const directories: string[] = [];
-// Real worker threads are reaped even when a test fails or times out before its
-// own close(); a ref'd worker would otherwise keep the whole Bun process alive.
-const workers: Worker[] = [];
-afterEach(async () => {
-  await Promise.all(workers.splice(0).map((worker) => worker.terminate()));
-  for (const directory of directories.splice(0))
-    rmSync(directory, { recursive: true, force: true });
-});
-
-/**
- * The rejection a promise settles with. Bun 1.4.5's `expect(promise).rejects`
- * never settles when a worker_threads message rejects the promise while it
- * waits (plain await works), so assert on the awaited error instead.
- */
-async function rejection(promise: Promise<unknown>): Promise<Error> {
-  const error = await promise.then(
-    () => undefined,
-    (error: unknown) => error,
-  );
-  expect(error).toBeInstanceOf(Error);
-  return error as Error;
-}
-
-test("real history scans leave the caller responsive and retain validation, ownership and policy ordering", async () => {
-  const root = mkdtempSync(join(tmpdir(), "codeshell-history-worker-"));
-  directories.push(root);
-  const sessions = new SessionManager(root);
-  sessions.create("/workspace", "gpt-4o", "openai", "owned");
-  const ledger = new UsageLedger({ storageDir: join(root, ".usage-ledger") });
-  const owner = ledger.owner("owned", "run", [], "main", root);
-  const reference = ledger.sessionState("owned", root);
-  sessions.updateSessionState("owned", { costState: reference });
-  const receipt = ledger.begin(owner, { provider: "openai", model: "gpt-4o" });
-  ledger.settle(receipt, { promptTokens: 100, completionTokens: 20, totalTokens: 120 });
-  ledger.finish(receipt, "completed");
-  const namespace = createHash("sha256").update("default").digest("hex");
-  for (let index = 0; index < 1500; index++) {
-    const requestId = createHash("sha256").update(`fixture-${index}`).digest("hex");
-    writeFileSync(
-      join(root, ".usage-ledger", namespace, `${requestId}.json`),
-      JSON.stringify({ ...receipt, requestId }),
-    );
-  }
-  const traces = new ModelTraceStore({ storageDir: join(root, ".model-traces") });
-  traces.write({
-    version: 1,
-    id: "request",
-    traceId: "run",
-    sessionId: "owned",
-    source: "fixture",
-    purpose: "main",
-    provider: "openai",
-    model: "gpt-4o",
-    startedAt: Date.now(),
-    status: "completed",
-    stream: false,
-    inputState: "not-recorded",
-    outputState: "not-recorded",
-    attempts: [],
-  });
-  await traces.flushMaintenance();
-  const before = readFileSync(join(root, "owned", "state.json"), "utf8");
-  const history = new ActivityHistoryWorker({ sessionsDir: root }, (options) => {
-    const worker = createActivityHistoryWorker(options);
-    workers.push(worker);
-    // Bun 1.3.11's terminate() never settles for a worker that already exited.
-    worker.once("exit", () => workers.splice(workers.indexOf(worker), 1));
-    return worker;
-  });
-  try {
-    await history.getConfig(); // Start the actual worker before measuring the scan.
-    let heartbeats = 0;
-    const timer = setInterval(() => heartbeats++, 1);
-    try {
-      const summary = await history.usage({ scope: "session", sessionId: "owned" });
-      expect(summary.requests).toBe(1501);
-      expect(summary.totalTokens).toBe(1501 * 120);
-      expect(summary.partial).toBe(false);
-      expect(heartbeats).toBeGreaterThan(0);
-    } finally {
-      clearInterval(timer);
-    }
-    expect((await history.list()).items.map((record) => record.id)).toEqual(["request"]);
-    expect((await history.sessions()).items[0]?.sessionId).toBe("owned");
-    expect((await history.get("request"))?.record.traceId).toBe("run");
-    expect((await rejection(history.list({ storageDir: "/foreign" }))).message).toContain(
-      "Unknown model trace query field",
-    );
-    expect((await rejection(history.get("../foreign"))).message).toContain(
-      "Invalid model trace id",
-    );
-    await rejection(history.usage({ scope: "session", sessionId: "../owned" }));
-    const writing = history.setConfig({ captureContent: false, retentionDays: 9 });
-    const reading = history.getConfig();
-    expect(await writing).toEqual(await reading);
-    expect(traces.getConfig()).toMatchObject({ captureContent: false, retentionDays: 9 });
-    expect(readFileSync(join(root, "owned", "state.json"), "utf8")).toBe(before);
-  } finally {
-    await history.close();
-  }
 });
