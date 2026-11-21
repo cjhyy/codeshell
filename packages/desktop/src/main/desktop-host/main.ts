@@ -125,6 +125,7 @@ export function createDesktopHost(
     documentSignal,
     automationListeners: supervisor.automationListeners,
     catalogListeners: supervisor.catalogListeners,
+    projectRegistryListeners: supervisor.projectRegistryListeners,
     start() {
       ipcMain.removeListener(DesktopHostIpc.connect, connect);
       ipcMain.on(DesktopHostIpc.connect, connect);

@@ -1,4 +1,5 @@
 import type { AutomationRunNotice } from "../../host/composition/automation-run.js";
+import type { LocalProject } from "../../preload/project-authority-types.js";
 import { isSettingsChange, type SettingsChange } from "../../shared/settings-change.js";
 import type { ShellBusinessOperations } from "../../shared/shell-business-contracts.js";
 import type { SessionCatalogSnapshot } from "../../shared/session-catalog.js";
@@ -42,6 +43,7 @@ export class DesktopHostSupervisor {
   readonly catalogListeners = new Set<(snapshot: SessionCatalogSnapshot) => void>();
   private readonly owners = new Map<string, number>();
   private sequence = 0;
+  readonly projectRegistryListeners = new Set<(projects: LocalProject[]) => Promise<void>>();
   settingsCommitted?: (effects: SettingsChange) => Promise<void>;
   private readonly reads = new Map<
     string,
@@ -103,11 +105,18 @@ export class DesktopHostSupervisor {
         typeof message.requestId === "string" &&
         isSettingsChange(message.effects)
       ) {
-        const read = this.reads.get(message.requestId);
-        const job = Promise.resolve().then(() => this.settingsCommitted?.(message.effects));
-        // A withdrawn caller can no longer wait for a native refresh, but its committed change still takes effect.
-        void job.catch((error) => this.log("settings_refresh_failed", { error: String(error) }));
-        if (read) read.effects = job;
+        this.refreshNative(message.requestId, () => this.settingsCommitted?.(message.effects));
+      } else if (
+        message?.type === "project-registry-committed" &&
+        this.ready &&
+        typeof message.requestId === "string" &&
+        Array.isArray(message.projects)
+      ) {
+        this.refreshNative(message.requestId, async () => {
+          await Promise.all(
+            [...this.projectRegistryListeners].map((notify) => notify(message.projects)),
+          );
+        });
       } else if (message?.type === "automation-notice" && this.ready) {
         for (const listener of this.automationListeners) listener(message.notice);
       } else if (message?.type === "session-catalog-changed" && this.ready) {
@@ -251,6 +260,14 @@ export class DesktopHostSupervisor {
       this.reads.set(id, { resolve, reject, timeout });
       this.send({ jsonrpc: "2.0", id, method, params });
     }).finally(() => signal?.removeEventListener("abort", withdraw));
+  }
+
+  private refreshNative(requestId: string, refresh: () => Promise<void> | void) {
+    const read = this.reads.get(requestId);
+    const job = Promise.resolve().then(refresh);
+    // A document may leave after its write committed. Refresh the native view even then.
+    void job.catch((error) => this.log("native_refresh_failed", { error: String(error) }));
+    if (read) read.effects = job;
   }
 
   private rejectReads(): void {

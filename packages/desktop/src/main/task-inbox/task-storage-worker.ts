@@ -5,6 +5,8 @@ import {
   type ResolveOperation,
   type PreparedOperationKey,
 } from "../../host/composition/operation-storage.js";
+import { writeHostedProjectRegistry } from "../hosted-project-registry.js";
+import { isProjectRegistryCommand } from "../../shared/project-registry-operations.js";
 import { getTrust } from "../trust-store.js";
 import { writeHostedProjectTrust } from "../hosted-project-trust.js";
 import { writeHostedSettings } from "../hosted-settings-write.js";
@@ -32,6 +34,11 @@ let batches: OperationBatches | undefined;
 await serveSessionIndexWorker({
   ...tasks,
   async handle(ctx, command, payload) {
+    if (isProjectRegistryCommand(command))
+      return writeHostedProjectRegistry(
+        command,
+        payload as Parameters<typeof writeHostedProjectRegistry>[1],
+      );
     if (command === "trust/set")
       return writeHostedProjectTrust(payload as Parameters<typeof writeHostedProjectTrust>[0]);
     if (command === "trust/readProjection") return getTrust(payload as string);

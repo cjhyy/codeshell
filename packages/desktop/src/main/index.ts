@@ -4407,6 +4407,7 @@ const {
 const knownGitRoots = new Set<string>();
 
 registerProjectAuthorityIpc({
+  host: desktopHost,
   ipcMain,
   getAllWindows: () => BrowserWindow.getAllWindows(),
   showOpenDialog: (options) => dialog.showOpenDialog(options),

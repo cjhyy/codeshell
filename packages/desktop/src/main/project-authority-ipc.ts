@@ -1,3 +1,11 @@
+import type { IpcMainInvokeEvent } from "electron";
+import type {
+  ProjectRegistryCommand,
+  ProjectRegistryOperations,
+} from "../shared/project-registry-operations.js";
+import type { CallShellBusiness } from "../shared/shell-business-contracts.js";
+import { projectRegistryEdits } from "./hosted-project-registry.js";
+import type { LocalProject } from "./project-store.js";
 import type { AgentBridge } from "./agent-bridge.js";
 import type { ExternalRuntimeService } from "./external-runtime-service.js";
 import { createLegacyProjectMigrationService } from "./legacy-project-migration.js";
@@ -23,6 +31,12 @@ interface ProjectAuthorityWindow {
 }
 
 export interface ProjectAuthorityIpcDependencies {
+  host?: {
+    callBusiness: CallShellBusiness;
+    documentSignal(event: IpcMainInvokeEvent): AbortSignal;
+    projectRegistryListeners: Set<(projects: LocalProject[]) => Promise<void>>;
+  };
+
   ipcMain: Pick<typeof import("electron").ipcMain, "handle">;
   getAllWindows(): ProjectAuthorityWindow[];
   showOpenDialog(options: {
@@ -87,12 +101,27 @@ export function registerProjectAuthorityIpc(deps: ProjectAuthorityIpcDependencie
     pickDirectory: pickProjectDirectory,
   });
 
-  async function broadcastProjectRegistry(): Promise<void> {
-    const projects = await deps.projectStore.list();
+  async function broadcastProjectRegistry(snapshot?: LocalProject[]): Promise<void> {
+    const projects = snapshot ?? (await deps.projectStore.list());
     for (const window of deps.getAllWindows()) {
       if (!window.isDestroyed()) window.webContents.send("projectRegistry:changed", projects);
     }
     await deps.broadcastMobileProjects();
+  }
+
+  deps.host?.projectRegistryListeners.add(broadcastProjectRegistry);
+  const localEdits = projectRegistryEdits(deps.projectStore, deps.getTrust);
+  function edits(event: IpcMainInvokeEvent) {
+    const signal = deps.host?.documentSignal(event);
+    return async <K extends ProjectRegistryCommand>(
+      method: K,
+      input: ProjectRegistryOperations[K]["input"],
+    ): Promise<ProjectRegistryOperations[K]["result"]> => {
+      if (deps.host) return deps.host.callBusiness(method, input, signal);
+      const result = await localEdits[method](input);
+      await broadcastProjectRegistry();
+      return result;
+    };
   }
 
   function broadcastWorkspaceChanged(payload: {
@@ -109,19 +138,17 @@ export function registerProjectAuthorityIpc(deps: ProjectAuthorityIpcDependencie
   deps.ipcMain.handle("projectRegistry:sessionMainRoots", async (_event, projectId: string) =>
     deps.projectStore.sessionMainRoots(projectId),
   );
-  deps.ipcMain.handle("projectRegistry:createFromPicker", async () => {
+  deps.ipcMain.handle("projectRegistry:createFromPicker", async (event) => {
+    const call = edits(event);
     const picked = await pickProjectDirectory();
     if (!picked) return null;
-    const project = await deps.projectStore.createFromPath(picked);
-    await broadcastProjectRegistry();
-    return project;
+    return call("projects/createPicked", { pickedPath: picked });
   });
-  deps.ipcMain.handle("projectRegistry:addRootFromPicker", async (_event, projectId: string) => {
+  deps.ipcMain.handle("projectRegistry:addRootFromPicker", async (event, projectId: string) => {
+    const call = edits(event);
     const picked = await pickProjectDirectory();
     if (!picked) return null;
-    const result = await deps.projectStore.addRoot(projectId, picked);
-    await broadcastProjectRegistry();
-    return result;
+    return call("projects/addPickedRoot", { projectId, pickedPath: picked });
   });
   deps.ipcMain.handle(
     "projectRegistry:removeRoot",
@@ -166,17 +193,8 @@ export function registerProjectAuthorityIpc(deps: ProjectAuthorityIpcDependencie
       return migrated;
     },
   );
-  deps.ipcMain.handle(
-    "projectRegistry:setPrimary",
-    async (_event, projectId: string, rootId: string) => {
-      const root = await requireRendererProjectRoot(projectId, rootId);
-      if ((await deps.getTrust(root.path)) !== "trusted") {
-        throw new Error("project root must be trusted before it can become primary");
-      }
-      const project = await deps.projectStore.setPrimary(projectId, rootId);
-      await broadcastProjectRegistry();
-      return project;
-    },
+  deps.ipcMain.handle("projectRegistry:setPrimary", (event, projectId: string, rootId: string) =>
+    edits(event)("projects/setPrimary", { projectId, rootId }),
   );
   deps.ipcMain.handle(
     "projectRegistry:revealRoot",
@@ -192,18 +210,11 @@ export function registerProjectAuthorityIpc(deps: ProjectAuthorityIpcDependencie
       return deps.openPath(root.path, root.path);
     },
   );
-  deps.ipcMain.handle("projectRegistry:rename", async (_event, projectId: string, name: string) => {
-    const project = await deps.projectStore.rename(projectId, name);
-    await broadcastProjectRegistry();
-    return project;
-  });
-  deps.ipcMain.handle(
-    "projectRegistry:setPinned",
-    async (_event, projectId: string, pinned: boolean) => {
-      const project = await deps.projectStore.setPinned(projectId, pinned);
-      await broadcastProjectRegistry();
-      return project;
-    },
+  deps.ipcMain.handle("projectRegistry:rename", (event, projectId: string, name: string) =>
+    edits(event)("projects/rename", { projectId, name }),
+  );
+  deps.ipcMain.handle("projectRegistry:setPinned", (event, projectId: string, pinned: boolean) =>
+    edits(event)("projects/setPinned", { projectId, pinned }),
   );
   deps.ipcMain.handle("projectRegistry:remove", async (_event, projectId: string) => {
     await deps.projectStore.remove(projectId);

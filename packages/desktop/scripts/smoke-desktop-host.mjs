@@ -152,6 +152,35 @@ utilityProcess.fork = function (...args) {
     "untrusted",
   );
 
+  await second.evaluate(() => {
+    window.hostRegistryRename = new Promise((resolve) => {
+      const off = window.codeshell.projectRegistry.onChanged((projects) => {
+        const project = projects.find(
+          (p) => p.id === "host-smoke-project" && p.name === "Renamed Host project",
+        );
+        if (project) {
+          off();
+          resolve(project.name);
+        }
+      });
+    });
+  });
+  await first.evaluate(() =>
+    window.codeshell.projectRegistry.rename("host-smoke-project", "Renamed Host project"),
+  );
+  assert.equal(await second.evaluate(() => window.hostRegistryRename), "Renamed Host project");
+  await first.evaluate(() =>
+    window.codeshell.projectRegistry.setPinned("host-smoke-project", true),
+  );
+  assert.equal(
+    await second.evaluate(
+      async () =>
+        (await window.codeshell.projectRegistry.list()).find((p) => p.id === "host-smoke-project")
+          ?.pinned,
+    ),
+    true,
+  );
+
   // Arm a renderer timer before blocking Main. Both timestamps come from the
   // renderer so a response delivered by Main after the pause cannot pass.
   const secondHandle = await application.browserWindow(second);
