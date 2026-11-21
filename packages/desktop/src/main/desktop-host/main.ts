@@ -171,6 +171,7 @@ export function createDesktopHost(
     documentSignal,
     remote,
     setRemoteTerminals(client: NativeRemoteTerminals) { terminals = client; },
+    mimiRecordListeners: supervisor.mimiRecordListeners,
     automationListeners: supervisor.automationListeners,
     automation,
     catalogListeners: supervisor.catalogListeners,

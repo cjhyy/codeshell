@@ -6,7 +6,7 @@ import type { PetMemoryStore } from "./pet-memory-store.js";
 export function createPetMemoryHost(store: PetMemoryStore) {
   return async (
     payload: Record<string, unknown>,
-    context?: PetHostActionContext,
+    context?: Pick<PetHostActionContext, "originRef" | "groundedTasks">,
   ): Promise<Record<string, unknown>> => {
     const action = payload.action;
     const text = typeof payload.text === "string" ? payload.text : "";
@@ -53,12 +53,16 @@ export function createPetMemoryWorldContext(
     });
     return {
       ...recalled,
-      mobileRemote: {
-        running: remote.running,
-        tunnelConnected: remote.tunnelConnected,
-        passcodeSet: remote.passcodeSet,
-        ...(remote.url ? { url: remote.url } : {}),
-      },
+      mobileRemote: petRemoteMemoryContext(remote),
     };
+  };
+}
+
+export function petRemoteMemoryContext(remote: MobileRemoteGatewayStatus) {
+  return {
+    running: remote.running,
+    tunnelConnected: remote.tunnelConnected,
+    passcodeSet: remote.passcodeSet,
+    ...(remote.url ? { url: remote.url } : {}),
   };
 }

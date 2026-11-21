@@ -138,7 +138,6 @@ import { ExternalSessionVisibilityController } from "./pet/external-session-visi
 import { createLatestResultCache } from "./pet/latest-result-cache.js";
 import { createPetSummaryStore } from "./pet/pet-summary-store.js";
 import { createPetSummaryService } from "./pet/pet-summary-service.js";
-import { PetJournalStore } from "./pet/pet-journal-store.js";
 import {
   createPetSegmentClosureService,
   type PetSegmentClosureService,
@@ -155,9 +154,8 @@ import {
 import { PetMetadataStore } from "./pet/pet-metadata-store.js";
 import { PetDispatchService, type PetHostActionExecution } from "./pet/pet-dispatch-service.js";
 import { enrichPetChatReplyWithHostActions } from "./pet/host-action-reply.js";
-import { PetMemoryStore } from "./pet/pet-memory-store.js";
+import { nativeMimiRecords } from "./desktop-host/mimi-records-client.js";
 import { petWidgetMenuTemplate } from "./pet/pet-widget-menu.js";
-import { createPetMemoryHost, createPetMemoryWorldContext } from "./pet/pet-memory-host.js";
 import { PetWorkDelegationHost } from "./pet/pet-work-delegation-host.js";
 import { PetChatAttachmentContext } from "./pet/pet-chat-attachment-context.js";
 import { getSessionCwdIndex } from "./session-cwd-index.js";
@@ -2081,12 +2079,7 @@ async function createWindow(): Promise<BrowserWindow> {
       isOwnerConversation: (channel, target) =>
         imGatewayService.isOwnerConversation(channel, target),
     });
-    const petMemoryStoreInstance = new PetMemoryStore(
-      resolve(app.getPath("userData"), "pet", "memories.json"),
-    );
-    void petMemoryStoreInstance
-      .load()
-      .catch((error) => dlog("main", "pet.memory.load.failed", { error: String(error) }));
+    const mimiRecords = nativeMimiRecords(desktopHost.callBusiness, desktopHost.mimiRecordListeners);
     const petWorkInbox = new PetWorkInboxStore(
       resolve(app.getPath("userData"), "pet", "work-inbox.json"),
     );
@@ -2094,12 +2087,6 @@ async function createWindow(): Promise<BrowserWindow> {
     const petHostActionReceipts = new PetHostActionReceiptStore(
       resolve(app.getPath("userData"), "pet", "host-action-receipts.json"),
     );
-    const petJournalStore = new PetJournalStore(
-      resolve(app.getPath("userData"), "pet", "journal.json"),
-    );
-    void petJournalStore
-      .load()
-      .catch((error) => dlog("main", "pet.journal.load.failed", { error: String(error) }));
     // Built inside petInitialization once the durable pet session id is known.
     let petSegmentClosureService: PetSegmentClosureService | null = null;
     const longTaskCoordinator = new PetLongTaskCoordinator({
@@ -2508,7 +2495,7 @@ async function createWindow(): Promise<BrowserWindow> {
           },
           goals: externalGoalSessions,
         }),
-        memory: createPetMemoryHost(petMemoryStoreInstance),
+        memory: mimiRecords.memoryAction,
         followUpMutation: followUpHost,
         sessionBind: async (payload, context) =>
           sessionBridge
@@ -2585,10 +2572,7 @@ async function createWindow(): Promise<BrowserWindow> {
         },
       },
       worldContext: async (input) => ({
-        ...(await createPetMemoryWorldContext(
-          petMemoryStoreInstance,
-          getMobileRemoteGatewayStatus,
-        )(input)),
+        ...(await mimiRecords.worldContext(input, getMobileRemoteGatewayStatus())),
         defaultWorkSessionModel: defaultSessionModelKeyFromSettings(await readSettings("user")),
       }),
       listWorkspaces: () => mobileOrchestrator.projectList(),
@@ -2777,8 +2761,8 @@ async function createWindow(): Promise<BrowserWindow> {
       petSegmentClosureService = createPetSegmentClosureService({
         petSessionId,
         sessionsRootDir: petSessionsRootDir,
-        journal: petJournalStore,
-        memory: petMemoryStoreInstance,
+        journal: mimiRecords.journal,
+        memory: mimiRecords.memory,
         autoExtractEnabled,
         cwd: resolveNoRepoCwd(),
       });
@@ -2842,10 +2826,9 @@ async function createWindow(): Promise<BrowserWindow> {
         // same pattern as the journal.list() IPC handler above) — otherwise a
         // slow-disk cold start could read an empty list and skip migration for
         // this launch entirely.
-        await petJournalStore.load();
         // PetJournalStore.list() is newest-first (sorted by endedAt desc); the
         // migration summary must read oldest→newest, so reverse a copy here.
-        const journalEntries = [...petJournalStore.list()].reverse();
+        const journalEntries = [...(await mimiRecords.journal.list())].reverse();
         if (!activeSegment?.boundaryBeforeMessageId || journalEntries.length === 0) return;
         const summary = buildMigrationSummary(journalEntries);
         if (!summary) return;
@@ -2912,28 +2895,24 @@ async function createWindow(): Promise<BrowserWindow> {
         clearTask: (taskId) => longTaskCoordinator.clearTerminalTask(taskId),
         subscribe: (listener) => longTaskStore.subscribe(listener),
       },
-      memories: {
-        list: async () => {
-          await petMemoryStoreInstance.load();
-          return petMemoryStoreInstance.list();
-        },
-        remember: (text) => petMemoryStoreInstance.remember(text, "user"),
-        update: (id, text) => petMemoryStoreInstance.update(id, text),
-        forget: (id) => petMemoryStoreInstance.forget(id),
-        subscribe: (listener) => petMemoryStoreInstance.subscribe(listener),
-      },
-      latestResult: createLatestResultCache(petSessionsRootDir),
+      memories: mimiRecords.interactive,
+      recordAuthority: (event) => desktopHost.documentSignal(event as Electron.IpcMainInvokeEvent),
+      recordWindows: () => [...mainWindows].filter((win) => {
+        if (win.isDestroyed()) return false;
+        try {
+          appRendererNavigation.assertSender({ sender: win.webContents, senderFrame: win.webContents.mainFrame });
+          return true;
+        } catch {
+          return false;
+        }
+      }),
       summaries: {
         collect: () => petFollowUps.collect(),
         control: (request) => followUpHost({ ...request }),
         subscribe: followUpRuntime.subscribe,
       },
       journal: {
-        list: async () => {
-          await petJournalStore.load();
-          return petJournalStore.list();
-        },
-        subscribe: (listener) => petJournalStore.subscribe(listener),
+        ...mimiRecords.journal,
         readSegmentMessages: async (range) =>
           petSegmentClosureService ? petSegmentClosureService.readSegmentMessages(range) : [],
       },

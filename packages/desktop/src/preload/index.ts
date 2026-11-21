@@ -592,7 +592,7 @@ contextBridge.exposeInMainWorld("codeshell", {
    */
   getPathForFile: (file: File) => webUtils.getPathForFile(file),
   /** Read-only local Pet projection; no transcript, resolver, approval or mutation routes. */
-  pet: createPetApi(ipcRenderer),
+  pet: createPetApi(ipcRenderer, configurationHost),
   taskInbox: createTaskInboxApi(
     ipcRenderer,
     desktopHost && desktopHostRoutes.taskInbox === "host"

@@ -40,6 +40,9 @@ export class DesktopHostSupervisor {
   private cancelTimer?: () => void;
   private readonly restartTimes: number[] = [];
   private readonly readyWaiters = new Set<() => void>();
+  readonly mimiRecordListeners = new Set<
+    (domain: import("../../shared/mimi-records.js").MimiRecordDomain) => void
+  >();
   readonly automationListeners = new Set<(notice: AutomationRunNotice) => void>();
   readonly catalogListeners = new Set<(snapshot: SessionCatalogSnapshot) => void>();
   private readonly owners = new Map<string, number>();
@@ -138,6 +141,12 @@ export class DesktopHostSupervisor {
             [...this.projectRegistryListeners].map((notify) => notify(message.projects)),
           );
         });
+      } else if (
+        message?.type === "mimi-records-changed" &&
+        this.ready &&
+        (message.domain === "memories" || message.domain === "journal")
+      ) {
+        for (const listener of this.mimiRecordListeners) listener(message.domain);
       } else if (message?.type === "automation-notice" && this.ready) {
         for (const listener of this.automationListeners) listener(message.notice);
       } else if (message?.type === "session-catalog-changed" && this.ready) {
@@ -176,6 +185,10 @@ export class DesktopHostSupervisor {
           if (!this.post({ type: "deleting", sessionId, deleting: true })) return;
         }
         this.setStatus("ready");
+        for (const listener of this.mimiRecordListeners) {
+          listener("memories");
+          listener("journal");
+        }
         for (const wake of this.readyWaiters) wake();
         this.readyWaiters.clear();
       }
