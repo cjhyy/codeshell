@@ -62,6 +62,10 @@ window.fixture = {
   },
 };
 const bridge = {
+  onDesktopHostStatus(listener) {
+    listener("ready");
+    return () => {};
+  },
   listSessions: () => {
     window.fixture.calls.push(["listSessions"]);
     if (window.fixture.readMode === "hold") return request("read");
