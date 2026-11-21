@@ -85,6 +85,7 @@ export interface MobileDeviceState {
 
 /** Narrow facade over the orchestrator state used by the three domain handlers. */
 export interface OrchestratorCtx {
+  readCcRoom: import("../../shared/cc-room-reads.js").ReadCcRoom;
   listDiskSessions?: typeof listDiskSessions;
   outputRecovery?: MobileOutputRecovery;
   externalCommands?: MobileExternalRuntimeCommands;

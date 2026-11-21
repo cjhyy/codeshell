@@ -95,6 +95,7 @@ export { injectAndAwaitResult } from "./mobile-remote/handle-client-event.js";
 export type { AuthenticatedMobileClientEvent } from "./mobile-remote/handle-client-event.js";
 
 export interface MobileRemoteOrchestratorDeps {
+  readCcRoom?: OrchestratorCtx["readCcRoom"];
   listDiskSessions?: OrchestratorCtx["listDiskSessions"];
   remote: RemoteHostManager;
   uploads: MobileUploadService;
@@ -610,6 +611,7 @@ export class MobileRemoteOrchestrator {
       broadcastApprovalResolved: (params) => this.broadcastApprovalResolved(params),
       roomToPublic: (room) => this.roomToPublic(room),
       ...(this.deps.roomModes ? { roomModes: this.deps.roomModes } : {}),
+      readCcRoom: this.deps.readCcRoom ?? (() => Promise.reject(new Error("CLI history is unavailable"))),
       requireLinkedSessionPath: this.deps.requireLinkedSessionPath,
       sessionReadAuthority: mobileSessionCommandAuthority,
       broadcastRoomState: (roomId) => this.broadcastRoomState(roomId),

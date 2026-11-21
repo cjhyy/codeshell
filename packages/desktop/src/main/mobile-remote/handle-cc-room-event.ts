@@ -1,15 +1,4 @@
 import {
-  DEFAULT_DISCOVER_LIMIT,
-  DEFAULT_DISCOVER_SINCE_MS,
-  countRelatedSessions,
-  discoverRelatedSessions,
-  listRelatedCodexSessions,
-  probeClaudeCli,
-  probeCodexCli,
-  readCodexRecentHistory,
-  readRecentHistory,
-} from "@cjhyy/code-shell-capability-coding/orchestration";
-import {
   mobileTranscriptSubscriberId,
   type MobileServerEvent,
 } from "@cjhyy/code-shell-server/mobile-remote";
@@ -46,7 +35,7 @@ export async function handleCcRoomEvent(
   try {
     if (event.type === "ccRoom.probe") {
       const kind = event.kind ?? "claude-code";
-      const a = await (kind === "codex" ? probeCodexCli : probeClaudeCli)(Boolean(event.force));
+      const a = await ctx.readCcRoom("ccRoom/probe", { kind, force: event.force });
       reply({
         type: "ccRoom.probe.ok",
         available: a.available,
@@ -59,20 +48,11 @@ export async function handleCcRoomEvent(
     }
     if (event.type === "ccRoom.listSessions") {
       const kind = event.kind ?? "claude-code";
-      // Match Desktop's bounded default and explicit older-history action.
-      const opts = event.all
-        ? {}
-        : { limit: DEFAULT_DISCOVER_LIMIT, sinceMs: DEFAULT_DISCOVER_SINCE_MS };
-      const result =
-        kind === "codex"
-          ? await listRelatedCodexSessions(event.cwd, opts)
-          : (() => {
-              const sessions = discoverRelatedSessions("claude", event.cwd, opts);
-              return {
-                sessions,
-                total: event.all ? sessions.length : countRelatedSessions("claude", event.cwd),
-              };
-            })();
+      const result = await ctx.readCcRoom("ccRoom/sessions", {
+        kind,
+        cwd: event.cwd,
+        all: event.all,
+      });
       reply({
         type: "ccRoom.listSessions.ok",
         cwd: event.cwd,
@@ -190,10 +170,13 @@ export async function handleCcRoomEvent(
       return;
     }
     if (event.type === "ccRoom.readHistory") {
-      const h =
-        event.kind === "codex"
-          ? readCodexRecentHistory(event.cwd, event.sessionId, event.limit, undefined, event.before)
-          : readRecentHistory(event.cwd, event.sessionId, event.limit, undefined, event.before);
+      const h = await ctx.readCcRoom("ccRoom/history", {
+        kind: event.kind ?? "claude-code",
+        cwd: event.cwd,
+        sessionId: event.sessionId,
+        limit: event.limit,
+        before: event.before,
+      });
       reply({
         type: "ccRoom.readHistory.ok",
         sessionId: event.sessionId,

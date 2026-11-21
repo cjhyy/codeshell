@@ -1,4 +1,9 @@
 import { mimiWorkView, type MimiWorkSnapshot } from "../../shared/mimi-work-memory.js";
+import { ccRoomReads } from "../../host/composition/cc-room-reads.js";
+import { ActivityHistoryWorker } from "../activity-history-worker-client.js";
+import { memoryReads } from "./memory-reads.js";
+import { memoryOperations } from "../../host/composition/memory.js";
+import { bindRemoteServices } from "../../host/remote/service.js";
 import { bindRemoteTerminals } from "../../host/composition/remote-terminals.js";
 import { hostedTerminals } from "../../host/composition/terminals.js";
 import { mimiRecordsOperations, readMimiList } from "../../host/composition/mimi-records.js";
@@ -73,6 +78,8 @@ const transcripts = new SessionTranscriptCache(
       workerData: options,
     }),
 );
+const roomHistory = new ActivityHistoryWorker({sessionsDir:sessionsRoot()}, options => new Worker(new URL("./activity-history-worker.mjs",import.meta.url),{workerData:options}));
+const roomReads = ccRoomReads(roomHistory);
 const runKeys = new RunKeyClient((frame) => parent.postMessage(frame));
 const runOperations = new HostRunOperations(
   storage,
@@ -106,12 +113,14 @@ const business = new HostBusinessCalls({
   ),
   "automation/command": (cmd, grant) => scheduler.command(cmd, grant.permit),
   ...externalRuntimeCatalogOperations(),
+  ...roomReads.native,
   ...catalogFiles,
   "transcripts/read": (input) => transcripts.read(input),
   "transcripts/write": (input, grant) => transcripts.commitWrite(input, grant.permit),
   "transcripts/delete": (input, grant) => transcripts.commitDelete(input, grant.permit),
   ...operations.methods,
   ...catalogEdits(storage),
+  ...memoryOperations(storage),
   ...projectTrustOperations(storage),
   ...projectRegistryOperations(storage, (requestId, projects) =>
     parent.postMessage({ type: "project-registry-committed", requestId, projects }),
@@ -128,6 +137,7 @@ const terminals = hostedTerminals(
   (options) => catalog.list(options),
 );
 const approvals = new HostApprovalState((id, owner) => server?.allows(id, owner) ?? false);
+let remote: ReturnType<typeof bindRemoteServices> | undefined;
 let stopping = false;
 let closeRemoteTerminals: (() => void) | undefined;
 let worker: ReturnType<typeof bindHostWorker> | undefined;
@@ -161,6 +171,16 @@ parent.on("message", ({ data, ports }) => {
   ) {
     closeRemoteTerminals?.();
     closeRemoteTerminals = bindRemoteTerminals(ports[0]);
+    return;
+  }
+  if (
+    isDesktopHostControl(data) &&
+    data.type === "remote-services-port" &&
+    server &&
+    ports.length === 1 &&
+    !remote
+  ) {
+    remote = bindRemoteServices(ports[0], join(process.argv[2], "..", "cloud-account", "session.enc"));
     return;
   }
   if (
@@ -204,7 +224,14 @@ parent.on("message", ({ data, ports }) => {
     void scheduler
       .close()
       .then(() =>
-        Promise.all([index.close(), worker?.close(), transcripts.close(), automation.close()]),
+        Promise.all([
+          index.close(),
+          roomHistory.close(),
+          worker?.close(),
+          transcripts.close(),
+          automation.close(),
+          remote?.close(),
+        ]),
       )
       .then(() => output.drain())
       .finally(async () => (await storage).close())
@@ -238,7 +265,9 @@ parent.on("message", ({ data, ports }) => {
           readMimiList(storage, "journalList"),
         ),
         ...terminals.methods,
+        ...roomReads.methods,
         ...configurationReads,
+        ...memoryReads,
         ...scopedConfigurationReads((options) => catalog.list(options)),
         ...workspaceReads((options) => catalog.list(options)),
         businessRead("catalog/load", noBusinessArguments, catalogFiles["catalog/load"]),

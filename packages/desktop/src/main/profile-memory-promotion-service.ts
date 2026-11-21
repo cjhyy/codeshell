@@ -230,7 +230,7 @@ export class ProfileMemoryPromotionReviews {
     for (const [id, record] of this.pending)
       if (record.review.expiresAt <= this.now()) this.pending.delete(id);
   }
-  preview(owner: number, value: unknown): ProfileMemoryPromotionReview {
+  preview(owner: number, value: unknown, beforeWrite?: () => void): ProfileMemoryPromotionReview {
     this.expire();
     this.clearOwner(owner);
     if (this.pending.size >= MAX_REVIEWS) throw new Error("too many pending memory reviews");
@@ -255,6 +255,7 @@ export class ProfileMemoryPromotionReviews {
       },
       draft: input.draft,
     };
+    beforeWrite?.();
     this.pending.set(review.reviewId, {
       owner,
       input,
@@ -264,7 +265,7 @@ export class ProfileMemoryPromotionReviews {
     });
     return structuredClone(review);
   }
-  commit(owner: number, value: unknown): ProfileMemoryPromotionResult {
+  commit(owner: number, value: unknown, beforeWrite?: () => void): ProfileMemoryPromotionResult {
     const input = parseMemoryPromotionCommit(value);
     this.expire();
     const record = this.pending.get(input.reviewId);
@@ -280,15 +281,13 @@ export class ProfileMemoryPromotionReviews {
     if (target.proof !== record.targetProof)
       throw new Error("target Profile changed during review");
     const id = randomUUID();
-    const manager = new MemoryManager({ baseDir: target.dir, scope: "user" });
+    const manager = new MemoryManager({ baseDir: target.dir, scope: "user", beforeWrite });
     // Only the edited draft is copied. Dream/retrieval/promotion lifecycle is
     // intentionally absent; the destination is a new manual user memory.
     const fileName = manager.save(
       { ...record.input.draft, id, origin: "manual" },
       { forceOrigin: "manual" },
     );
-    // This Main operation is synchronous, but it does not add a cross-process
-    // body transaction to MemoryManager's existing atomic-file/index-lock API.
     return { profileName: record.input.profileName, id, fileName };
   }
 }

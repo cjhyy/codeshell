@@ -1,3 +1,4 @@
+import { NativeRemoteClient } from "./remote-client.js";
 import type { NativeRemoteTerminals } from "../mobile-remote/native-terminals.js";
 import { NativeAutomationClient } from "./main-automation.js";
 import type { PreparedOperationKey } from "../../host/composition/operation-key.js";
@@ -38,6 +39,7 @@ export function createDesktopHost(
   hostReady?: () => void,
   settingsCommitted?: (effects: SettingsChange) => Promise<void>,
 ) {
+  const remote = new NativeRemoteClient();
   let terminals: NativeRemoteTerminals | undefined;
   let worker: DesktopHostWorkerClient | undefined;
   const supervisor: DesktopHostSupervisor = new DesktopHostSupervisor(
@@ -50,10 +52,17 @@ export function createDesktopHost(
       if (status === "ready") {
         bindWorker();
         bindAutomation();
+        const { port1, port2 } = new MessageChannelMain();
+        if (supervisor.post({ type: "remote-services-port" }, [port2])) remote.bind(port1);
+        else {
+          port1.close();
+          port2.close();
+        }
         bindTerminals();
       } else {
         worker?.disconnect();
         automation.disconnect();
+        remote.disconnect();
         terminals?.disconnect();
       }
       workbenches.setStatus(status);
@@ -160,6 +169,7 @@ export function createDesktopHost(
   return {
     callBusiness: supervisor.callBusiness.bind(supervisor),
     documentSignal,
+    remote,
     setRemoteTerminals(client: NativeRemoteTerminals) { terminals = client; },
     mimiRecordListeners: supervisor.mimiRecordListeners,
     automationListeners: supervisor.automationListeners,
@@ -308,7 +318,10 @@ export function createDesktopHost(
       changes?.close();
       changes = undefined;
       ipcMain.removeListener(DesktopHostIpc.connect, connect);
-      return supervisor.dispose().finally(() => automation.close());
+      return supervisor.dispose().finally(() => {
+        automation.close();
+        remote.disconnect();
+      });
     },
   };
 }

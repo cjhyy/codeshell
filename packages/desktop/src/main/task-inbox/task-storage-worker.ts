@@ -1,4 +1,5 @@
 import { StoredMimiWorkMemory } from "../../host/composition/mimi-work-memory.js";
+import { isMemoryCommand, writeHostedMemory } from "../hosted-memory.js";
 import { dirname, join, isAbsolute } from "node:path";
 import { StoredMimiRecords } from "../../host/composition/mimi-records.js";
 import { attachCronStorage } from "../../host/automation/storage-owner.js";
@@ -50,6 +51,8 @@ installDefaultLinkProviders();
 await serveSessionIndexWorker({
   ...tasks,
   async handle(ctx, command, payload) {
+    if (isMemoryCommand(command))
+      return writeHostedMemory(command, payload as Parameters<typeof writeHostedMemory>[1]);
     if (command === "mimi/records" || command === "mimi/workMemory") {
       const directory = workerData?.config?.taskInboxDirectory;
       if (typeof directory !== "string" || !isAbsolute(directory))

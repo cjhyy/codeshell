@@ -38,9 +38,38 @@ const server = createServer({ cert, key }, async (req, res) => {
     return;
   }
   res.setHeader("Content-Type", "application/json");
-  if (req.url === "/api/v1/account/login") {
-    assert.equal(body.username, "alice");
-    assert.equal(body.password, "native fixture password");
+  if (req.url === "/api/v1/account/status") {
+    res.end(
+      JSON.stringify({
+        registrationAllowed: false,
+        githubEnabled: false,
+        browserLoginEnabled: true,
+      }),
+    );
+    return;
+  }
+  if (req.url === "/api/v1/account/browser/start") {
+    res.end(
+      JSON.stringify({
+        authorizationUrl: origin + "/desktop-login?request=" + token(),
+        receipt: token(),
+        expiresAt: Date.now() + 60_000,
+      }),
+    );
+    return;
+  }
+  if (req.url === "/api/v1/account/browser/cancel") {
+    res.end("{}");
+    return;
+  }
+  if (req.url === "/api/v1/account/login" || req.url === "/api/v1/account/browser/poll") {
+    if (req.url.endsWith("/login")) {
+      assert.equal(body.username, "alice");
+      assert.equal(body.password, "native fixture password");
+    } else {
+      assert.match(body.receipt, /^[A-Za-z0-9_-]{43}$/);
+      assert.match(body.codeVerifier, /^[A-Za-z0-9_-]{43}$/);
+    }
     active = {
       accessToken: token(),
       refreshToken: token(),
@@ -112,6 +141,8 @@ try {
     2,
     "expired logout refreshes before server revocation",
   );
+  const { exerciseHostedAccount } = await import(`${root}/cloud-account-hosted.js`);
+  await exerciseHostedAccount({ origin, ca: cert, root, token: () => active.accessToken });
   mode = "redirect";
   await assert.rejects(transport({ origin, path: "/api/v1/account/login", body: {} }));
   assert.equal(redirectTargetRequests, 0);

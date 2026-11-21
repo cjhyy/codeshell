@@ -1,3 +1,4 @@
+/* global window */
 import assert from "node:assert/strict";
 import { once } from "node:events";
 import { setTimeout as delay } from "node:timers/promises";
@@ -57,10 +58,10 @@ export async function verifyPairedHostTerminal(page, terminalId, pid) {
     await page.waitForFunction(() => window.hostRemoteViewers.at(-1) === 1);
     send({ type: "terminal.input", terminalId, data: "echo PAIRED_SHELL_ECHO\r" });
     await page.waitForFunction(() =>
-      window.hostTerminalText.replace(/\r/g, "").includes("\nPAIRED_SHELL_ECHO\n"),
+      /(?:^|[\r\n])PAIRED_SHELL_ECHO[\r\n]/.test(window.hostTerminalText),
     );
     let output = "";
-    while (!output.replace(/\r/g, "").includes("\nPAIRED_SHELL_ECHO\n"))
+    while (!/(?:^|[\r\n])PAIRED_SHELL_ECHO[\r\n]/.test(output))
       output += (await receive("terminal.data", (event) => event.terminalId === terminalId)).data;
     await page.evaluate(() => window.codeshell.mobileRemote.setTerminalAccess(false));
     await receive("terminal.list.ok", (event) => !event.enabled);

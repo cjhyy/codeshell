@@ -425,6 +425,7 @@ describe("architecture growth budgets", () => {
           /handle\(\s*"operationResolution:/g,
         "packages/desktop/src/main/operation-batch-ipc.ts": /handle\("operationBatch:/g,
         "packages/desktop/src/main/quota-ipc.ts": /handle\("quota:/g,
+        "packages/desktop/src/main/cloud-account-ipc.ts": /handle\("cloudAccount:/g,
       }),
       // +1 read-only, bounded Session output-journal page route. Its file/owner
       // validation and recovery algorithm stay in Core and the extracted adapters.

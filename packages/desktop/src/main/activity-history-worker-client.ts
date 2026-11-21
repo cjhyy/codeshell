@@ -1,3 +1,4 @@
+import type { CcRoomReads, CliList, CliHistory } from "../shared/cc-room-reads.js";
 import { Worker } from "node:worker_threads";
 import type { UsageQuery, UsageSummary } from "@cjhyy/code-shell-core";
 import type { createTraceHistoryService } from "./trace-history-service.js";
@@ -8,7 +9,7 @@ export interface ActivityHistoryWorkerOptions {
 }
 export interface ActivityHistoryWorkerRequest {
   id: number;
-  method: keyof TraceHistory | "usage" | "flush";
+  method: keyof TraceHistory | "usage" | "externalSessions" | "externalHistory" | "flush";
   input?: unknown;
 }
 export interface ActivityHistoryWorkerReply {
@@ -49,6 +50,12 @@ export class ActivityHistoryWorker {
     ) => HistoryWorker = createActivityHistoryWorker,
   ) {}
 
+  externalSessions(input: CliList): Promise<CcRoomReads["ccRoom/sessions"]["result"]> {
+    return this.request("externalSessions", input);
+  }
+  externalHistory(input: CliHistory): Promise<CcRoomReads["ccRoom/history"]["result"]> {
+    return this.request("externalHistory", input);
+  }
   usage(query?: UsageQuery): Promise<UsageSummary> {
     return this.request("usage", query);
   }

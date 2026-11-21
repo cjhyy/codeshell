@@ -1054,6 +1054,8 @@ let prepareAccountGitHubLink:
   | undefined = undefined;
 const { mobileRemoteController, cloudManagementManager, captureLinkAccount, accountFeatures } =
   createDesktopRemoteServices({
+    remote: desktopHost.remote,
+    documentSignal: desktopHost.documentSignal,
     app,
     ipcMain,
     userDataDir: app.getPath("userData"),
@@ -1299,6 +1301,7 @@ const remoteTerminals = new NativeRemoteTerminals({
 });
 desktopHost.setRemoteTerminals(remoteTerminals);
 const mobileOrchestrator: MobileRemoteOrchestrator = new MobileRemoteOrchestrator({
+  readCcRoom: desktopHost.callBusiness,
   listDiskSessions,
   remote: mobileRemote,
   terminals: remoteTerminals,
@@ -4312,6 +4315,7 @@ registerProjectAuthorityIpc({
 });
 
 registerRoomsIpc({
+  readCcRoom: desktopHost.callBusiness,
   mainWindows,
   bridge: () => bridge,
   approvalBridge,
@@ -4447,7 +4451,7 @@ async function applyRendererSettingsSideEffects(change: SettingsChange): Promise
   if (change.pluginCommands) broadcastPluginCommandsChanged(mainWindows);
 }
 
-registerMemoryIpc({ mainWindows });
+registerMemoryIpc({ mainWindows, host: desktopHost });
 const sessionDeletions = new Map<string, Promise<void>>();
 function deleteDesktopSession(id: string): Promise<void> {
   const existing = sessionDeletions.get(id);

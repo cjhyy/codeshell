@@ -3,21 +3,9 @@ import type { RoomModeAuthority } from "./cc-room/room-mode-authority.js";
 import { MAX_EXTERNAL_RUNTIME_TEXT_CHARS } from "./external-runtime-ipc.js";
 import { BrowserWindow, ipcMain } from "electron";
 import { listBackgroundWorkForUI } from "@cjhyy/code-shell-core/internal";
-import {
-  DEFAULT_DISCOVER_LIMIT,
-  DEFAULT_DISCOVER_SINCE_MS,
-  listRelatedClaudeSessions,
-  listRelatedCodexSessions,
-  probeClaudeCli,
-  probeCodexCli,
-  readCodexRecentHistory,
-  readRecentHistory,
-} from "@cjhyy/code-shell-capability-coding/orchestration";
+import type { ReadCcRoom } from "../shared/cc-room-reads.js";
 import { AgentBridge } from "./agent-bridge.js";
-import {
-  requireRendererLinkedSessionPath,
-  requireRendererProjectPath,
-} from "./renderer-project-path.js";
+import { requireRendererLinkedSessionPath } from "./renderer-project-path.js";
 import { registerRoomHistoryIpc } from "./cc-room/linked-session-ipc.js";
 import { registerLinkedSessionObservationIpc } from "./cc-room/linked-session-observation-ipc.js";
 import { RoomManager } from "@cjhyy/code-shell-server/mobile-remote";
@@ -29,6 +17,7 @@ import { createDefaultUsageProviderService } from "./usage-provider-host.js";
 import { registerQuotaIpc } from "./quota-ipc.js";
 
 export interface RoomsIpcDeps {
+  readCcRoom: ReadCcRoom;
   mainWindows: Set<BrowserWindow>;
   bridge: () => AgentBridge | null;
   approvalBridge: ApprovalBridge;
@@ -73,21 +62,18 @@ export function registerRoomsIpc(deps: RoomsIpcDeps) {
   );
 
   // ── CC rooms (external `claude` CLI orchestration) ──────────────────────────
-  ipcMain.handle("ccRoom:probe", async (_e, force?: boolean) => probeClaudeCli(Boolean(force)));
-  ipcMain.handle("ccRoom:codexProbe", async (_e, force?: boolean) => probeCodexCli(Boolean(force)));
-  // Bounded by default (recent 2 weeks AND ≤20) so a project with lots of history
-  // doesn't deep-read every session file on open. `all:true` returns everything
-  // (the "load more" path). `total` lets the UI show how many are hidden.
-  ipcMain.handle("ccRoom:listSessions", async (_e, cwd: string, all?: boolean) => {
-    cwd = await requireRendererProjectPath(cwd);
-    const opts = all ? {} : { limit: DEFAULT_DISCOVER_LIMIT, sinceMs: DEFAULT_DISCOVER_SINCE_MS };
-    return listRelatedClaudeSessions(cwd, opts, {}, Boolean(all));
-  });
-  ipcMain.handle("ccRoom:listCodexSessions", async (_e, cwd: string, all?: boolean) => {
-    cwd = await requireRendererProjectPath(cwd);
-    const opts = all ? {} : { limit: DEFAULT_DISCOVER_LIMIT, sinceMs: DEFAULT_DISCOVER_SINCE_MS };
-    return listRelatedCodexSessions(cwd, opts);
-  });
+  ipcMain.handle("ccRoom:probe", (_e, force?: boolean) =>
+    deps.readCcRoom("ccRoom/probe", { kind: "claude-code", force }),
+  );
+  ipcMain.handle("ccRoom:codexProbe", (_e, force?: boolean) =>
+    deps.readCcRoom("ccRoom/probe", { kind: "codex", force }),
+  );
+  ipcMain.handle("ccRoom:listSessions", (_e, cwd: string, all?: boolean) =>
+    deps.readCcRoom("ccRoom/sessions", { kind: "claude-code", cwd, all }),
+  );
+  ipcMain.handle("ccRoom:listCodexSessions", (_e, cwd: string, all?: boolean) =>
+    deps.readCcRoom("ccRoom/sessions", { kind: "codex", cwd, all }),
+  );
   registerLinkedSessionObservationIpc({
     ipcMain,
     windows: mainWindows,
@@ -118,23 +104,11 @@ export function registerRoomsIpc(deps: RoomsIpcDeps) {
     ) => approvalBridge.respond(roomId, requestId, decision),
   );
   registerRoomHistoryIpc(ipcMain, roomManager);
-  ipcMain.handle(
-    "ccRoom:readHistory",
-    async (_e, cwd: string, sessionId: string, limit: number) => {
-      cwd = await requireRendererProjectPath(cwd);
-      if (!Number.isSafeInteger(limit) || limit < 1 || limit > 500)
-        throw new Error("invalid limit");
-      return readRecentHistory(cwd, sessionId, limit);
-    },
+  ipcMain.handle("ccRoom:readHistory", (_e, cwd: string, sessionId: string, limit: number) =>
+    deps.readCcRoom("ccRoom/history", { kind: "claude-code", cwd, sessionId, limit }),
   );
-  ipcMain.handle(
-    "ccRoom:readCodexHistory",
-    async (_e, cwd: string, threadId: string, limit: number) => {
-      cwd = await requireRendererProjectPath(cwd);
-      if (!Number.isSafeInteger(limit) || limit < 1 || limit > 500)
-        throw new Error("invalid limit");
-      return readCodexRecentHistory(cwd, threadId, limit);
-    },
+  ipcMain.handle("ccRoom:readCodexHistory", (_e, cwd: string, sessionId: string, limit: number) =>
+    deps.readCcRoom("ccRoom/history", { kind: "codex", cwd, sessionId, limit }),
   );
 
   const quota = createDefaultUsageProviderService();

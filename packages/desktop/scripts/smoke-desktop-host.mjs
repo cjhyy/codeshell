@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { mkdir, readFile, readdir, realpath, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { startMockProviderServer } from "./mock-provider-server.mjs";
 import { prepareConfinedElectronFixture } from "./confined-electron-fixture.mjs";
 import {
   assertOfflinePluginBootstrapHeld,
@@ -16,6 +17,7 @@ import {
 const appDir = fileURLToPath(new URL("../", import.meta.url));
 const isolated = await makeIsolatedElectronHome("codeshell-desktop-host-");
 let application;
+let provider;
 
 async function observeHost(page) {
   await page.waitForFunction(() => typeof window.codeshell?.onDesktopHostStatus === "function");
@@ -32,10 +34,16 @@ const readCatalog = (page) =>
   );
 
 try {
+  provider = await startMockProviderServer();
   await seedOfflinePluginBootstrap(isolated.codeShellHome);
   const projectRoot = join(isolated.home, "host-smoke-project");
   await mkdir(projectRoot, { recursive: true });
+  const unregistered = join(isolated.home,"unregistered-project");
+  await mkdir(unregistered);
   const mount = await realpath(projectRoot);
+  const cliProject = join(isolated.home,".claude","projects",mount.replace(/[^A-Za-z0-9]/g,"-"));
+  await mkdir(cliProject,{recursive:true});
+  await writeFile(join(cliProject,"host-cli-fixture.jsonl"),JSON.stringify({type:"user",cwd:mount,sessionId:"host-cli-fixture",message:{role:"user",content:"Host CLI transcript"}})+"\n");
   await writeFile(join(mount, "host-file.txt"), "from-workspace");
   await mkdir(join(isolated.codeShellHome, "desktop"), { recursive: true });
   await writeFile(
@@ -77,7 +85,7 @@ try {
           id: "fixture-key",
           catalogId: "openai",
           apiKey: "synthetic",
-          baseUrl: "http://127.0.0.1:9/v1",
+          baseUrl: provider.baseUrl,
         },
       ],
       modelConnections: [
@@ -96,7 +104,7 @@ try {
   const fixture = await prepareConfinedElectronFixture({
     appDir,
     isolated,
-    origin: "http://127.0.0.1:9",
+    origin: provider.origin,
   });
   // Keep the exact child handle created by this Main so the failure injection can
   // target only this test's own Host, including if the OS has recycled a PID.
@@ -243,6 +251,13 @@ utilityProcess.fork = function (...args) {
     true,
   );
 
+  await first.evaluate(() => window.codeshell.saveMemory({
+    level:"user",scope:"user",name:"Host memory smoke",type:"reference",description:"fixture",content:"memory on the Host",
+  }));
+  const dream = await first.evaluate(() => window.codeshell.runDream("user"));
+  assert.ok(dream.ran && dream.summary);
+  assert.ok(provider.requests.some(({ body }) =>
+    body.tools?.some((tool) => tool.function?.name === "MemorySave")));
   const terminalId = "term:host-smoke";
   const started = await first.evaluate(
     async ({ cwd, sessionId }) => {
@@ -270,13 +285,15 @@ utilityProcess.fork = function (...args) {
     terminalId,
   );
   await first.waitForFunction(() =>
-    window.hostTerminalText.replace(/\r/g, "").includes("\nHOST_TERMINAL_READY\n"),
+    /(?:^|[\r\n])HOST_TERMINAL_READY[\r\n]/.test(window.hostTerminalText),
   );
   await verifyPairedHostTerminal(first, terminalId, started.pid);
+  await assert.rejects(first.evaluate((root) => window.codeshell.ccRoom.readHistory(root,"../other",4),mount),/Invalid CLI history request/);
+  await assert.rejects(first.evaluate((root) => window.codeshell.ccRoom.listSessions(root),unregistered),/authority was revoked/);
   // Arm a renderer timer before blocking Main. Both timestamps come from the
   // renderer so a response delivered by Main after the pause cannot pass.
   const secondHandle = await application.browserWindow(second);
-  const measured = await secondHandle.evaluate(async (nativeWindow) => {
+  const measured = await secondHandle.evaluate(async (nativeWindow, mount) => {
     const contents = nativeWindow.webContents;
     await contents.executeJavaScript(`window.hostSmokeRead = new Promise((resolve, reject) =>
       setTimeout(async () => {
@@ -285,6 +302,8 @@ utilityProcess.fork = function (...args) {
           const ids = (await window.codeshell.links.listLocalProviders()).map(({ id }) => id);
           const page = await window.codeshell.listDiskSessions({limit:1,sessionId:"index-visible"});
           const api = window.codeshell;
+          const [ccList,ccPage] = await Promise.all([api.ccRoom.listSessions(${JSON.stringify(mount)}),api.ccRoom.readHistory(${JSON.stringify(mount)},"host-cli-fixture",5)]);
+          if (!ccList.sessions.some(s=>s.sessionId==="host-cli-fixture") || ccPage.messages[0]?.text !== "Host CLI transcript") throw new Error("Host CLI history disagrees with the fixture on disk");
           const business = await Promise.all([
             api.projectRegistry.list(), api.recents(), api.listSourceCatalog(), api.getModelCatalog(),
             api.listPluginMcpTrust(), api.getPluginDetail("uninstalled-business-test"), api.getSettings("user"),
@@ -293,6 +312,9 @@ utilityProcess.fork = function (...args) {
           ]);
           const [projects, recents, sources, models, trust, plugin, settings, skills, plugins, mcp, projectSettings, reasoning, hooks] = business;
           const root = projects.find(p => p.id === "host-smoke-project").roots[0];
+          const [memories, memory, pending] = await Promise.all([
+            api.listMemory("user","user"),api.readMemory("user","user","Host memory smoke"),api.listPendingMemory(),
+          ]);
           const entries = await api.readProjectDir("host-smoke-project", root.id);
           const entry = entries.find(row => row.name === "host-file.txt");
           const [file, hits, exists, git] = await Promise.all([
@@ -302,6 +324,7 @@ utilityProcess.fork = function (...args) {
             api.getProjectGitStatus("host-smoke-project"),
           ]);
           resolve({ begin, end: Date.now(), ids, sessionIds:page.sessions.map(row=>row.id),
+            memoryViews: memories.some(row => row.name === "Host memory smoke") && memory?.content.trim() === "memory on the Host" && Array.isArray(pending),
             workspaceViews:file.text === "from-workspace" && exists && hits.some(row => row.rootId === root.id && row.name === entry.name) && Array.isArray(git.entries),
             configurationViews: [projects, recents, sources, models, trust, skills, plugins].every(Array.isArray)
               && Array.isArray(hooks) && reasoning !== undefined && mcp !== null && typeof mcp === "object" && (projectSettings === null || typeof projectSettings === "object")
@@ -312,9 +335,12 @@ utilityProcess.fork = function (...args) {
     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1600);
     const end = Date.now();
     return { begin, end, read: await contents.executeJavaScript("window.hostSmokeRead") };
-  });
+  }, mount);
   await secondHandle.dispose();
   assert.deepEqual(measured.read.ids, catalog);
+  assert.equal(measured.read.memoryViews,true,"Memory reads finished while Main was paused");
+  assert.equal(await first.evaluate(()=>window.codeshell.deleteMemory("user","user","Host memory smoke")),true);
+  assert.equal(await second.evaluate(()=>window.codeshell.readMemory("user","user","Host memory smoke")),null);
   assert.equal(
     measured.read.workspaceViews,
     true,
@@ -438,6 +464,7 @@ utilityProcess.fork = function (...args) {
   try {
     await application?.close();
   } finally {
+    await provider?.close();
     await isolated.cleanup();
   }
 }

@@ -4,7 +4,7 @@ import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-test("native account HTTPS validates TLS, rejects redirects/oversized replies, and uses fresh access for logout", async () => {
+test("native and hosted account HTTPS preserve TLS, credential rotation, restart and document revocation", async () => {
   const root = await mkdtemp(join(tmpdir(), "cloud-account-native-"));
   try {
     execFileSync(
@@ -35,6 +35,7 @@ test("native account HTTPS validates TLS, rejects redirects/oversized replies, a
         "build",
         "packages/desktop/src/main/cloud-account-manager.ts",
         "packages/desktop/src/main/cloud-account-http.ts",
+        "tests/fixtures/cloud-account-hosted.ts",
         "--outdir",
         root,
         "--entry-naming",
@@ -56,7 +57,7 @@ test("native account HTTPS validates TLS, rejects redirects/oversized replies, a
       stdout: "pipe",
       stderr: "pipe",
     });
-    const timer = setTimeout(() => child.kill(), 20_000);
+    const timer = setTimeout(() => child.kill(), 45_000);
     try {
       const [stdout, stderr, exit] = await Promise.all([
         new Response(child.stdout).text(),
@@ -71,4 +72,4 @@ test("native account HTTPS validates TLS, rejects redirects/oversized replies, a
   } finally {
     await rm(root, { recursive: true, force: true });
   }
-}, 25_000);
+}, 50_000);

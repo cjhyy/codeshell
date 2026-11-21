@@ -1,3 +1,4 @@
+import { createCcRoomReads } from "./cc-room-reads.js";
 import { createConfigurationReads } from "./configuration-reads.js";
 import { DesktopHostIpc } from "../shared/desktop-host-protocol";
 import { isDesktopAgentMethod } from "../shared/desktop-agent-methods";
@@ -969,16 +970,11 @@ contextBridge.exposeInMainWorld("codeshell", {
   turnUndoState: (sessionId: string) => ipcRenderer.invoke("files:turnUndoState", sessionId),
   undoTurn: (sessionId: string) => ipcRenderer.invoke("files:undoTurn", sessionId),
   redoTurn: (sessionId: string) => ipcRenderer.invoke("files:redoTurn", sessionId),
-  listMemory: (level: string, scope: string, cwd?: string, profileName?: string) =>
-    ipcRenderer.invoke("memory:list", level, scope, cwd, profileName),
-  readMemory: (level: string, scope: string, name: string, cwd?: string, profileName?: string) =>
-    ipcRenderer.invoke("memory:read", level, scope, name, cwd, profileName),
   saveMemory: (input: Parameters<CodeshellApi["saveMemory"]>[0]) =>
     ipcRenderer.invoke("memory:save", input),
   deleteMemory: (level: string, scope: string, name: string, cwd?: string, profileName?: string) =>
     ipcRenderer.invoke("memory:delete", level, scope, name, cwd, profileName),
   // 审批门 (pending global memories)
-  listPendingMemory: () => ipcRenderer.invoke("memory:pending:list"),
   approvePendingMemory: (name: string) => ipcRenderer.invoke("memory:pending:approve", name),
   demotePendingMemory: (name: string) => ipcRenderer.invoke("memory:pending:demote", name),
   rejectPendingMemory: (name: string) => ipcRenderer.invoke("memory:pending:reject", name),
@@ -1771,12 +1767,7 @@ contextBridge.exposeInMainWorld("codeshell", {
 
   // ── CC rooms (external `claude` CLI orchestration) ──
   ccRoom: {
-    probe: (force?: boolean) => ipcRenderer.invoke("ccRoom:probe", force),
-    codexProbe: (force?: boolean) => ipcRenderer.invoke("ccRoom:codexProbe", force),
-    listSessions: (cwd: string, all?: boolean) =>
-      ipcRenderer.invoke("ccRoom:listSessions", cwd, all),
-    listCodexSessions: (cwd: string, all?: boolean) =>
-      ipcRenderer.invoke("ccRoom:listCodexSessions", cwd, all),
+    ...createCcRoomReads(ipcRenderer, configurationHost),
     openSession: (
       claudeSessionId: string,
       cwd: string,
@@ -1805,10 +1796,6 @@ contextBridge.exposeInMainWorld("codeshell", {
       roomId: string,
       request: { sinceSeq?: number; cursor?: string; limit?: number },
     ) => invokeRoomHistory(roomId, request),
-    readHistory: (cwd: string, sessionId: string, limit: number) =>
-      ipcRenderer.invoke("ccRoom:readHistory", cwd, sessionId, limit),
-    readCodexHistory: (cwd: string, threadId: string, limit: number) =>
-      ipcRenderer.invoke("ccRoom:readCodexHistory", cwd, threadId, limit),
     subscribeTranscript: (
       roomId: string,
       cwd: string,
