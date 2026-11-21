@@ -456,3 +456,21 @@ test("private operation key preparation reads the fixed ledger and discards a la
   await new Promise((resolve) => setImmediate(resolve));
   for (const child of children) expect(JSON.stringify(child.messages)).not.toContain(key.secret);
 });
+
+test("native recovery authorization expires on owner or deletion ABA and Host exit", () => {
+  const { supervisor, children } = processFixture();
+  children[0]!.emit("message", { type: "ready" });
+  const pending = supervisor.watchOperationOwner("fixture", 4);
+  supervisor.setOwner("fixture", 4);
+  supervisor.setOwner("fixture", null);
+  expect(pending.signal.aborted).toBe(true);
+  supervisor.setOwner("fixture", 4);
+  expect(() => supervisor.watchOperationOwner("fixture", 5)).toThrow();
+  const next = supervisor.watchOperationOwner("fixture", 4);
+  supervisor.setDeleting("fixture", true);
+  supervisor.setDeleting("fixture", false);
+  expect(next.signal.aborted).toBe(true);
+  const last = supervisor.watchOperationOwner("fixture", 4);
+  children[0]!.emit("exit", 1);
+  expect(last.signal.aborted).toBe(true);
+});

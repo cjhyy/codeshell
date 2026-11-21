@@ -265,7 +265,7 @@ import { createAutomationResumeTurn } from "./automation-resume-turn.js";
 import { automationLifecycleNotification } from "./automation-notification.js";
 import { DesktopNotifier } from "./desktop-notifier.js";
 import { findNotificationWindow } from "./native-desktop-notification.js";
-import { showSystemNotification } from "./system-notification.js";
+import { registerNotificationFallback, showSystemNotification } from "./system-notification.js";
 import * as desktopNotifications from "./desktop-notification-routes.js";
 import type { CreateAutomationInput } from "./automation-service.js";
 import { dlog } from "./desktop-logger.js";
@@ -455,6 +455,8 @@ import { registerAgentsMediaIpc } from "./agents-media-ipc.js";
 import { registerSkillsMcpIpc } from "./skills-mcp-ipc.js";
 import { registerModelCatalogIpc } from "./model-catalog-ipc.js";
 import { registerMobileRemoteIpc } from "./mobile-remote-ipc.js";
+import { NativeRemoteTerminals } from "./mobile-remote/native-terminals.js";
+import { RemoteTerminalPolicy } from "./mobile-remote/remote-terminals.js";
 import { registerRoomsIpc } from "./rooms-ipc.js";
 import { registerDialogPickerIpc } from "./dialog-picker-ipc.js";
 import { registerExternalRuntimeIpc } from "./external-runtime-ipc.js";
@@ -501,6 +503,17 @@ registerPanelAppSchemePrivileges();
 app.setName("code-shell");
 if (process.platform === "win32") app.setAppUserModelId("com.cjhyy.codeshell");
 const mainWindows = new Set<BrowserWindow>();
+registerNotificationFallback(
+  ipcMain,
+  (id) =>
+    findNotificationWindow(mainWindows, id ? bridge?.panelOwnerWebContentsId(id) : undefined)
+      ?.webContents.id,
+  (event) => {
+    if (![...mainWindows].some((window) => window.webContents === event.sender))
+      throw Error("Desktop notifications require a workbench");
+    return desktopHost.documentSignal(event);
+  },
+);
 const mediaPreviewService = new MediaPreviewService({
   isOwnerAlive: (ownerId) =>
     [...mainWindows].some(
@@ -1281,9 +1294,17 @@ const cloudEnvironment = registerCloudEnvironmentIpc({
   userDataDir: app.getPath("userData"),
   assertLocalProject: (id) => projectStore.requireLive(id),
 });
+const remoteTerminals = new NativeRemoteTerminals({
+  remote: mobileRemote,
+  policy: new RemoteTerminalPolicy(
+    resolve(app.getPath("userData"), "mobile-remote", "terminal.json"),
+  ),
+});
+desktopHost.setRemoteTerminals(remoteTerminals);
 const mobileOrchestrator: MobileRemoteOrchestrator = new MobileRemoteOrchestrator({
   listDiskSessions,
   remote: mobileRemote,
+  terminals: remoteTerminals,
   uploads: mobileUploads,
   pendingApprovals: pendingMobileApprovals,
   roomManager,
@@ -4294,6 +4315,7 @@ const {
   accessPasscode,
   mobileRemoteController,
   mobileOrchestrator,
+  remoteTerminals,
 });
 const knownGitRoots = new Set<string>();
 

@@ -90,6 +90,9 @@ export interface MobileRemoteApi {
   renameDevice(id: string, name: string): Promise<boolean>;
   onlineDevices(): Promise<string[]>;
   onOnlineChange(cb: (ids: string[]) => void): () => void;
+  /** Whether paired phones/browsers may open and type into Desktop terminals. */
+  terminalAccess(): Promise<boolean>;
+  setTerminalAccess(enabled: boolean): Promise<boolean>;
   // ── Public tunnel mode ──
   cloudflaredInstalled(): Promise<boolean>;
   downloadCloudflared(): Promise<boolean>;

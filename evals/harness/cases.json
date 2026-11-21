@@ -1141,7 +1141,7 @@
         "packages/desktop/src/renderer/app/useTranscriptBuckets.test.tsx",
         "packages/desktop/src/renderer/transcriptHydration.prefix.test.ts",
         "packages/desktop/src/renderer/automation/hydrateOrder.steer.test.ts",
-        "packages/desktop/src/main/session-transcript-cache.test.ts",
+        "packages/desktop/scripts/session-transcript-cache.test.mjs",
         "packages/desktop/src/renderer/messages/TurnProcessGroupCard.test.tsx"
       ],
       "provenance": {

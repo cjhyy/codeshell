@@ -353,6 +353,28 @@ export type MobileClientEvent =
       requestId: string;
       decision: CcApprovalDecision;
     }
+  // ── Shared Desktop terminals (off until the Desktop owner allows it) ──
+  | { type: "terminal.list" }
+  | {
+      type: "terminal.open";
+      requestId: string;
+      /** Attach to this running terminal; omit to start a new one. */
+      terminalId?: string;
+      /** New terminals start in this project's primary root (Desktop home when omitted). */
+      projectId?: string;
+      cols: number;
+      rows: number;
+    }
+  | {
+      type: "terminal.input";
+      terminalId: string;
+      data: string;
+      /** xterm's automatic answer to a terminal query, not a keystroke. */
+      reply?: true;
+    }
+  | { type: "terminal.resize"; terminalId: string; cols: number; rows: number }
+  | { type: "terminal.detach"; terminalId: string }
+  | { type: "terminal.kill"; terminalId: string }
   // ── Host-owned pending turn queue (turnQueue capability) ──────────────
   | { type: "queue.sync"; target: MobileTurnQueueTarget }
   | { type: "queue.cancel"; target: MobileTurnQueueTarget; entryId: string }
@@ -764,6 +786,17 @@ export type MobileServerEvent =
       roomId: string;
       requestId: string;
       decision: CcApprovalDecision;
+    }
+  | { type: "terminal.list.ok"; enabled: boolean; terminals: MobileTerminalInfo[] }
+  | { type: "terminal.opened"; requestId: string; terminal: MobileTerminalInfo; replay: string }
+  | { type: "terminal.data"; terminalId: string; data: string }
+  | { type: "terminal.exit"; terminalId: string; exitCode: number; signal?: number }
+  | {
+      type: "terminal.error";
+      requestId?: string;
+      terminalId?: string;
+      code: "disabled" | "not_found" | "failed";
+      message: string;
     };
 
 /** A child Session (subagent) as Desktop's subagent list shows it. */
@@ -773,6 +806,19 @@ export interface MobileSubagentSummary {
   /** Durable status; absent when the child never recorded one. */
   status?: "active" | "paused" | "completed" | "failed" | "cancelled";
   updatedAt?: number;
+}
+
+/** One Desktop terminal as a remote viewer sees it; the same shell, not a copy. */
+export interface MobileTerminalInfo {
+  id: string;
+  title: string;
+  cwd: string;
+  pid: number;
+  startedAt: number;
+  /** Opened from a Desktop window or from a remote viewer. */
+  origin: "desktop" | "remote";
+  cols: number;
+  rows: number;
 }
 
 export interface RoomPublic {

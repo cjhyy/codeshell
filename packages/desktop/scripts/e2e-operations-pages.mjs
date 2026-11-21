@@ -257,31 +257,17 @@ async function seedMetadata() {
       return history.get(id);
     });
 
-    // Intercept only the three synthetic request IDs, forwarding all unrelated
-    // application traffic to its original listeners without changing payloads.
-    const listeners = ipcMain.listeners("agent:msg");
-    ipcMain.removeAllListeners("agent:msg");
-    ipcMain.on("agent:msg", (event, line) => {
-      let message;
-      try {
-        message = JSON.parse(line);
-      } catch {
-        /* handled by the original listener */
-      }
+    // These are synthetic native prompts. Real worker approval delivery and
+    // owner-bound decisions are exercised in e2e-desktop-host-stream.mjs.
+    replace("externalRuntime:approvalDecision", (_event, decision) => {
       if (
-        message?.method === "agent/approve" &&
-        ["ui-approval-allow", "ui-approval-deny", "ui-approval-pending"].includes(
-          message.params?.requestId,
+        !["ui-approval-allow", "ui-approval-deny", "ui-approval-pending"].includes(
+          decision?.requestId,
         )
-      ) {
-        fixture.approvals.push(message.params);
-        event.sender.send(
-          "agent:msg",
-          JSON.stringify({ jsonrpc: "2.0", id: message.id, result: { ok: true } }),
-        );
-        return;
-      }
-      for (const listener of listeners) listener.call(ipcMain, event, line);
+      )
+        throw new Error("Unexpected decision outside the isolated fixture");
+      fixture.approvals.push(decision);
+      return { ok: true };
     });
   });
 }
@@ -536,17 +522,11 @@ async function checkApprovals() {
       ["ui-approval-deny", "synthetic-preview/".repeat(30) + "REQUEST-TAIL"],
       ["ui-approval-pending", "整理发布前的文档检查结果"],
     ]) {
-      main.webContents.send(
-        "agent:msg",
-        JSON.stringify({
-          jsonrpc: "2.0",
-          method: "agent/approvalRequest",
-          params: {
-            requestId,
-            request: { toolName: "Bash", args: { command }, riskLevel: "medium" },
-          },
-        }),
-      );
+      main.webContents.send("externalRuntime:approvalRequest", {
+        sessionId: "ui-history-daily",
+        requestId,
+        request: { toolName: "Bash", args: { command }, riskLevel: "medium" },
+      });
     }
   });
   const pending = win.getByRole("region", { name: /^待批准/ });
@@ -567,13 +547,13 @@ async function checkApprovals() {
   assert(
     decisions.length === 2 &&
       decisions[0].requestId === "ui-approval-allow" &&
-      decisions[0].decision.approved === true &&
+      decisions[0].approved === true &&
       decisions[1].requestId === "ui-approval-deny" &&
-      decisions[1].decision.approved === false,
+      decisions[1].approved === false,
     "Only the intended synthetic decisions reached their intercepted transport",
   );
   assert(
-    !decisions[0].decision.always && !decisions[0].decision.scope,
+    !decisions[0].always && decisions[0].scope === "once",
     "Approve once does not create a session or project grant",
   );
   assert(

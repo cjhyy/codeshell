@@ -1053,6 +1053,7 @@ export function useDesktopController(
   };
   return {
     host: "desktop",
+    terminal: app.terminal,
     workspaceApi: Boolean(session),
     connection:
       app.status === "online"

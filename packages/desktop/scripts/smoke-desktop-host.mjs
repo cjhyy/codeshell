@@ -1,4 +1,5 @@
 /* global window */
+import { verifyPairedHostTerminal } from "./paired-host-terminal.mjs";
 import assert from "node:assert/strict";
 import { mkdir, readFile, readdir, realpath, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -103,6 +104,9 @@ try {
   await writeFile(
     bootstrap,
     `const { utilityProcess } = require("electron");
+// Advertise only loopback to this isolated Desktop's real LAN gateway.
+require("node:os").networkInterfaces = () => ({});
+require("node:module").syncBuiltinESMExports();
 const fork = utilityProcess.fork;
 utilityProcess.fork = function (...args) {
   const child = fork.apply(this, args);
@@ -268,6 +272,7 @@ utilityProcess.fork = function (...args) {
   await first.waitForFunction(() =>
     window.hostTerminalText.replace(/\r/g, "").includes("\nHOST_TERMINAL_READY\n"),
   );
+  await verifyPairedHostTerminal(first, terminalId, started.pid);
   // Arm a renderer timer before blocking Main. Both timestamps come from the
   // renderer so a response delivered by Main after the pause cannot pass.
   const secondHandle = await application.browserWindow(second);

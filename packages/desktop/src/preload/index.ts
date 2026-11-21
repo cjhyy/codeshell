@@ -38,6 +38,11 @@ import {
   subscribeExternalRuntimeSessionState,
 } from "./external-runtime-session-state";
 import { createTaskInboxApi } from "./task-inbox-api";
+import {
+  fallbackNotice,
+  fallbackReady,
+  type NotificationFallback,
+} from "../shared/notification-fallback";
 import { createNotificationNavigationApi } from "./notification-navigation-api";
 import { createOperationResolutionApi } from "./operation-resolution-api";
 import { createOptimizationLabApi } from "./optimization-lab-api";
@@ -563,6 +568,15 @@ contextBridge.exposeInMainWorld("codeshell", {
     onDesktopHostStatus: (cb: (status: DesktopHostStatus) => void) => desktopHost.subscribe(cb),
   }),
   ...createNotificationNavigationApi(ipcRenderer),
+  onNotificationFallback: (receive: (notice: NotificationFallback) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, notice: NotificationFallback) =>
+      receive(notice);
+    ipcRenderer.on(fallbackNotice, listener);
+    ipcRenderer.send(fallbackReady);
+    return () => {
+      ipcRenderer.off(fallbackNotice, listener);
+    };
+  },
   ...createProfilePluginExportApi(ipcRenderer),
   ...createProfileMemoryPromotionApi(ipcRenderer),
   /** Main-process platform, exposed explicitly so renderer layout doesn't infer it from UA strings. */
@@ -1427,13 +1441,13 @@ contextBridge.exposeInMainWorld("codeshell", {
   windowToken: String(process.pid),
   ptyStart: (opts: Parameters<CodeshellApi["ptyStart"]>[0]) =>
     configurationHost ? configurationHost.terminal("pty/start",opts) : ipcRenderer.invoke("pty:start", opts) as Promise<PtyStartResult>,
-  ptyWrite: (sessionId: string, data: string) => configurationHost ? configurationHost.terminal("pty/write",{sessionId,data}) : ipcRenderer.invoke("pty:write", sessionId, data),
+  ptyWrite: (sessionId: string, data: string, reply?: boolean) => configurationHost ? configurationHost.terminal("pty/write",{sessionId,data,reply: reply === true}) : ipcRenderer.invoke("pty:write", sessionId, data, reply === true),
   ptyResize: (sessionId: string, cols: number, rows: number) =>
     configurationHost ? configurationHost.terminal("pty/resize",{sessionId,cols,rows}) : ipcRenderer.invoke("pty:resize", sessionId, cols, rows),
   ptyKill: (sessionId: string) => configurationHost ? configurationHost.terminal("pty/kill",{sessionId}) : ipcRenderer.invoke("pty:kill", sessionId),
-  onPtyData: (cb: (msg: { sessionId: string; data: string }) => void): (() => void) => {
+  onPtyData: (cb: (msg: { sessionId: string; data: string; replay?: boolean }) => void): (() => void) => {
     if(configurationHost) return configurationHost.onTerminalData(cb);
-    const h = (_e: IpcRendererEvent, msg: { sessionId: string; data: string }) => cb(msg);
+    const h = (_e: IpcRendererEvent, msg: { sessionId: string; data: string; replay?: boolean }) => cb(msg);
     ipcRenderer.on("pty:data", h);
     return () => ipcRenderer.removeListener("pty:data", h);
   },
@@ -1447,6 +1461,12 @@ contextBridge.exposeInMainWorld("codeshell", {
     ) => cb(msg);
     ipcRenderer.on("pty:exit", h);
     return () => ipcRenderer.removeListener("pty:exit", h);
+  },
+  onPtyRemoteViewers: (cb: (msg: { sessionId: string; count: number }) => void): (() => void) => {
+    if (configurationHost) return configurationHost.onTerminalViewers(cb);
+    const h = (_e: IpcRendererEvent, msg: { sessionId: string; count: number }) => cb(msg);
+    ipcRenderer.on("pty:remoteViewers", h);
+    return () => ipcRenderer.removeListener("pty:remoteViewers", h);
   },
 
   // ── Browser popout window ─────────────────────────────────────────────

@@ -1,6 +1,8 @@
 import { bindRemoteServices } from "../../host/remote/service.js";
+import { bindRemoteTerminals } from "../../host/composition/remote-terminals.js";
 import { hostedTerminals } from "../../host/composition/terminals.js";
 import { HostScheduler } from "../../host/automation/host-scheduler.js";
+import { installDefaultLinkProviders } from "@cjhyy/code-shell-server/links";
 import { workspaceReads } from "./workspace-reads.js";
 import { HostAutomationRuns } from "../../host/composition/automation-run.js";
 import { externalRuntimeCatalogOperations } from "../../host/composition/external-runtime-catalog.js";
@@ -81,6 +83,7 @@ const runOperations = new HostRunOperations(
 );
 const operations = nativeOperations(storage, () => server);
 const automation = new HostAutomationRuns({
+  operations: runOperations,
   notice: (notice) => parent.postMessage({ type: "automation-notice", notice }),
   share: (id, enabled) => server?.setStreamView(id, enabled),
   publish: (sessionId, event) => {
@@ -94,6 +97,8 @@ const automation = new HostAutomationRuns({
   drain: () => output.drain(),
 });
 const scheduler = new HostScheduler(schedulerPorts.port1, automation);
+// Link-backed source definitions are validated against this process-local registry.
+installDefaultLinkProviders();
 const business = new HostBusinessCalls({
   "automation/command": (cmd, grant) => scheduler.command(cmd, grant.permit),
   ...externalRuntimeCatalogOperations(),
@@ -118,6 +123,7 @@ const terminals = hostedTerminals(() => server!, options => catalog.list(options
 const approvals = new HostApprovalState((id, owner) => server?.allows(id, owner) ?? false);
 let remote: ReturnType<typeof bindRemoteServices> | undefined;
 let stopping = false;
+let closeRemoteTerminals: (() => void) | undefined;
 let worker: ReturnType<typeof bindHostWorker> | undefined;
 const output = new HostOutput(
   storage,
@@ -139,6 +145,11 @@ const output = new HostOutput(
 parent.on("message", ({ data, ports }) => {
   if (stopping) {
     for (const port of ports) port.close();
+    return;
+  }
+  if (isDesktopHostControl(data) && data.type === "remote-terminal-port" && server && ports.length === 1) {
+    closeRemoteTerminals?.();
+    closeRemoteTerminals = bindRemoteTerminals(ports[0]);
     return;
   }
   if (
@@ -184,6 +195,7 @@ parent.on("message", ({ data, ports }) => {
 
   if (isDesktopHostControl(data) && data.type === "shutdown") {
     stopping = true;
+    closeRemoteTerminals?.();
     terminals.close();
     runKeys.close();
     runOperations.close();

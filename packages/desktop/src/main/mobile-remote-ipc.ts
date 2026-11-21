@@ -8,6 +8,7 @@ import {
   TunnelManager,
 } from "@cjhyy/code-shell-server/mobile-remote";
 import { MobileRemoteOrchestrator } from "./mobile-remote-orchestrator.js";
+import type { RemoteTerminals } from "./mobile-remote/remote-terminals.js";
 
 export interface MobileRemoteIpcDeps {
   mobileDevices: TrustedDeviceStore;
@@ -17,6 +18,7 @@ export interface MobileRemoteIpcDeps {
   accessPasscode: AccessPasscode;
   mobileRemoteController: MobileRemoteController;
   mobileOrchestrator: MobileRemoteOrchestrator;
+  remoteTerminals: Pick<RemoteTerminals, "enabled" | "setEnabled">;
 }
 
 /** Mobile Web Remote device, tunnel, passcode and approval-relay routes. */
@@ -29,6 +31,7 @@ export function registerMobileRemoteIpc(deps: MobileRemoteIpcDeps) {
     accessPasscode,
     mobileRemoteController,
     mobileOrchestrator,
+    remoteTerminals,
   } = deps;
   // ── Mobile Web Remote ───────────────────────────────────────────────────────
   const startMobileRemote = (opts?: { mode?: "lan" | "tunnel" | "relay" }) =>
@@ -38,6 +41,12 @@ export function registerMobileRemoteIpc(deps: MobileRemoteIpcDeps) {
   const getMobileRemoteGatewayStatus = () => mobileRemoteController.status();
 
   ipcMain.handle("mobileRemote:listDevices", async () => mobileDevices.listDevices());
+  ipcMain.handle("mobileRemote:terminalAccess", async () => remoteTerminals.enabled);
+  ipcMain.handle("mobileRemote:setTerminalAccess", async (_e, enabled: unknown) => {
+    if (typeof enabled !== "boolean") throw new Error("invalid terminal access value");
+    remoteTerminals.setEnabled(enabled);
+    return remoteTerminals.enabled;
+  });
   ipcMain.handle("mobileRemote:revokeDevice", async (_e, id: string) => {
     mobileDevices.revoke(id);
     mobileRemote.revokeDevice(id);
