@@ -9,6 +9,7 @@
  */
 /* global document, getComputedStyle, window */
 import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
+import { installWorkbenchReadFixture } from "./workbench-read-fixture.mjs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -91,6 +92,7 @@ async function dismissStartupTrustDialog(win) {
 async function seedFixture() {
   await mkdir(isolated.codeShellHome, { recursive: true });
   await mkdir(fixtureProjectPath, { recursive: true });
+  await writeFile(join(fixtureProjectPath, "CODESHELL.md"), "# Fixture instructions\n");
   await writeFile(
     join(isolated.codeShellHome, "settings.json"),
     `${JSON.stringify({ autoUpdates: false }, null, 2)}\n`,
@@ -284,10 +286,9 @@ async function checkProjectConfiguration(projectButton) {
     [fixtureProjectPath, await realpath(fixtureProjectPath)],
   );
   await app.evaluate(({ ipcMain }, fixtureTarget) => {
-    const exists = ipcMain._invokeHandlers.get("fsRoot:exists");
     const editor = ipcMain._invokeHandlers.get("shell:openInEditor");
-    if (!exists || !editor) throw new Error("Project fixture IPC handlers were not ready");
-    const fixture = { ...fixtureTarget, fail: true, reads: [], opens: 0, exists, editor };
+    if (!editor) throw new Error("Project fixture IPC handlers were not ready");
+    const fixture = { ...fixtureTarget, fail: true, reads: [], opens: 0, editor };
     fixture.switchHandlers = [];
     fixture.switchEnabled = false;
     fixture.switchRecords = [];
@@ -356,17 +357,16 @@ async function checkProjectConfiguration(projectButton) {
       });
     }
     globalThis.__projectConfigFixture = fixture;
-    ipcMain.removeHandler("fsRoot:exists");
-    ipcMain.handle("fsRoot:exists", (event, projectId, rootId, path) => {
+    globalThis.__workbenchFixtureReads.set("files/exists", ({ owner, rootId, path }, forward) => {
       if (
-        projectId !== fixture.projectId ||
-        rootId !== fixture.rootId ||
-        !["CODESHELL.md", "CLAUDE.md", "AGENTS.md"].includes(path)
-      )
-        return exists(event, projectId, rootId, path);
-      fixture.reads.push({ projectId, rootId, path });
-      if (fixture.fail) throw new Error("synthetic project instruction read failure");
-      return path === "CODESHELL.md";
+        owner.projectId === fixture.projectId &&
+        rootId === fixture.rootId &&
+        ["CODESHELL.md", "CLAUDE.md", "AGENTS.md"].includes(path)
+      ) {
+        fixture.reads.push({ projectId: owner.projectId, rootId, path });
+        if (fixture.fail) throw new Error("synthetic project instruction read failure");
+      }
+      return forward();
     });
     ipcMain.removeHandler("shell:openInEditor");
     ipcMain.handle("shell:openInEditor", () => {
@@ -575,8 +575,7 @@ async function checkProjectConfiguration(projectButton) {
           ipcMain.handle(channel, original);
         } catch {}
       }
-      ipcMain.removeHandler("fsRoot:exists");
-      ipcMain.handle("fsRoot:exists", fixture.exists);
+      globalThis.__workbenchFixtureReads.delete("files/exists");
       ipcMain.removeHandler("shell:openInEditor");
       ipcMain.handle("shell:openInEditor", fixture.editor);
       delete globalThis.__projectConfigFixture;
@@ -632,6 +631,8 @@ require("node:module").syncBuiltinESMExports();
     env: { NODE_OPTIONS: `--require ${networkGuard}` },
   });
   win = await findCodeShellWindow(app);
+  await app.evaluate(installWorkbenchReadFixture);
+  await win.reload();
   const rendererErrors = captureRendererErrors(win);
   await win.setViewportSize({ width: 1_440, height: 960 });
   await win.locator("#root").waitFor({ state: "visible", timeout: 20_000 });
