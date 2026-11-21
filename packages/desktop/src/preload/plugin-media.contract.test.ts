@@ -8,7 +8,9 @@ const channel = "plugins:media" satisfies string;
 
 describe("preload plugin media contract", () => {
   test("returns DTO media through a dedicated main IPC channel", () => {
-    const preload = readFileSync(join(import.meta.dir, "index.ts"), "utf8");
+    const preload = ["index.ts", "configuration-reads.ts"]
+      .map((file) => readFileSync(join(import.meta.dir, file), "utf8"))
+      .join("\n");
     const main = readFileSync(join(import.meta.dir, "..", "main", "index.ts"), "utf8");
     const method: keyof MediaMethod = "getPluginMedia";
 

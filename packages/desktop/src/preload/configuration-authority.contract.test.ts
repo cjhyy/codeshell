@@ -4,7 +4,9 @@ import { join } from "node:path";
 
 describe("renderer configuration preload contract", () => {
   test("retires cwd configuration signatures in favor of stable identity targets", () => {
-    const preload = readFileSync(join(import.meta.dir, "index.ts"), "utf8");
+    const preload = ["index.ts", "configuration-reads.ts"]
+      .map((file) => readFileSync(join(import.meta.dir, file), "utf8"))
+      .join("\n");
     const types = readFileSync(join(import.meta.dir, "types.d.ts"), "utf8");
     const shared = readFileSync(
       join(import.meta.dir, "..", "shared", "renderer-configuration.ts"),

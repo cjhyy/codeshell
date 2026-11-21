@@ -30,8 +30,10 @@ const methodChannels = {
 
 describe("preload sources contract", () => {
   test("keeps all nine renderer methods wired to project-id main IPC channels", () => {
-    const preload = readFileSync(join(import.meta.dir, "index.ts"), "utf8");
-    const main = readFileSync(join(import.meta.dir, "..", "main", "index.ts"), "utf8");
+    const preload = ["index.ts", "configuration-reads.ts"]
+      .map((file) => readFileSync(join(import.meta.dir, file), "utf8"))
+      .join("\n");
+    const main = readFileSync(join(import.meta.dir, "..", "main", "source-catalog-ipc.ts"), "utf8");
 
     for (const [method, channel] of Object.entries(methodChannels)) {
       expect(preload).toContain(`${method}:`);

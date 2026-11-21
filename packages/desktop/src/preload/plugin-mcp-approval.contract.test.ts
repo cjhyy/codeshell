@@ -17,7 +17,9 @@ describe("plugin MCP approval preload contract", () => {
     ];
     expect(methods).toHaveLength(3);
 
-    const preload = readFileSync(join(import.meta.dir, "index.ts"), "utf-8");
+    const preload = ["index.ts", "configuration-reads.ts"]
+      .map((file) => readFileSync(join(import.meta.dir, file), "utf8"))
+      .join("\n");
     const main = readFileSync(join(import.meta.dir, "..", "main", "index.ts"), "utf-8");
     for (const channel of ["mcp:listPluginTrust", "mcp:approvePlugin", "mcp:revokePlugin"]) {
       expect(preload).toContain(`ipcRenderer.invoke("${channel}"`);
