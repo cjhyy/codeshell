@@ -773,15 +773,22 @@ try {
   recordCase("Terminal executes real PTY input and preserves output across panel switches");
   await input.focus();
   diagnostics.phase("panel-terminal-interrupt");
-  await win.keyboard.type("printf 'PANEL_OPERATION_SLEEP_STARTED\\n'; sleep 60\n");
+  await win.keyboard.type("PS1='PANEL_READY> '; printf 'PANEL_OPERATION_SLEEP_STARTED\\n'; sleep 60\n");
   await terminal.getByText("PANEL_OPERATION_SLEEP_STARTED", { exact: true }).waitFor();
-  // Address the terminal's actual input after switching panels. A prompt may
-  // contain cursor-control sequences and is not a reliable interrupt receipt.
+  // Git Bash on ConPTY can flush typeahead while delivering the interrupt.
+  // Wait for this command’s fresh prompt before typing the follow-up command.
   await input.press("Control+c");
+  await win.waitForFunction(
+    () => [...document.querySelectorAll('[data-panel-id="terminal"] .xterm-rows > div')].some(
+      (row) => row.textContent.replaceAll("\u00a0", " ").trim() === "PANEL_READY>",
+    ),
+    undefined,
+    { timeout: 15_000 },
+  );
   await win.keyboard.type("printf 'PANEL_OPERATION_CANCEL_OK\\n'\n");
   // The foreground sleep lasts a minute. The shell can execute this command
   // within 15 seconds only once Ctrl+C has interrupted it.
-  await terminal.getByText("PANEL_OPERATION_CANCEL_OK", { exact: true }).waitFor({timeout:15_000});
+  await terminal.getByText("PANEL_OPERATION_CANCEL_OK", { exact: true }).waitFor({ timeout: 15_000 });
   diagnostics.phase("panel-terminal-exit");
   await win.keyboard.type("exit\n");
   await terminal.getByText(/进程已退出/).waitFor();
