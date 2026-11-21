@@ -1,3 +1,4 @@
+import { isDesktopAgentMethod } from "../../shared/desktop-agent-methods.js";
 import { lstat } from "node:fs/promises";
 import { join } from "node:path";
 import { ingressMethods } from "./ingress-methods.js";
@@ -17,7 +18,12 @@ import {
   isRpcResponse,
 } from "../../shared/desktop-host-protocol.js";
 import { DesktopSessionListVisibility } from "./session-list-visibility.js";
-import { DesktopHostServer, desktopHostMethods } from "./server.js";
+import {
+  DesktopHostServer,
+  desktopHostMethods,
+  WorkerCommandError,
+  InvalidParams,
+} from "./server.js";
 
 // Obtain the immutable app version once. There is no generic Electron method
 // proxy on the renderer port, and the hosted catalog never waits on Main.
@@ -159,6 +165,37 @@ parent.on("message", ({ data, ports }) => {
               code: -32603,
               message: error instanceof Error ? error.message : "Task operation failed",
             },
+          });
+      },
+    );
+    return;
+  }
+  if (isRpcRequest(data) && data.method === "host/workbenchCommand") {
+    const { caller, method, params } = data.params ?? {};
+    const job =
+      isDesktopHostIdentity(caller) &&
+      isDesktopAgentMethod(method) &&
+      params &&
+      typeof params === "object" &&
+      !Array.isArray(params)
+        ? server.readWorkbenchOutput(caller, params as Record<string, unknown>, method)
+        : Promise.reject(new Error("Invalid workbench command"));
+    void job.then(
+      (result) => {
+        if (!stopping) parent.postMessage({ jsonrpc: "2.0", id: data.id, result });
+      },
+      (error) => {
+        if (!stopping)
+          parent.postMessage({
+            jsonrpc: "2.0",
+            id: data.id,
+            error:
+              error instanceof WorkerCommandError
+                ? error.rpcError
+                : {
+                    code: error instanceof InvalidParams ? -32602 : -32010,
+                    message: error instanceof Error ? error.message : "Command unavailable",
+                  },
           });
       },
     );

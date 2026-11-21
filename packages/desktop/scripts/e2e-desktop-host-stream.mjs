@@ -222,6 +222,14 @@ try {
     "Journal covered the snapshot tail",
   );
   providerPhase = "question";
+  await app.evaluate(({ ipcMain }) => {
+    globalThis.__legacyAgentCommands = [];
+    ipcMain.prependListener("agent:msg", (_event, line) => {
+      const msg = JSON.parse(line);
+      if (msg.params?.sessionId === "host-question-session")
+        globalThis.__legacyAgentCommands.push(msg.method);
+    });
+  });
   await run(questionTurn, questionSession, cwd);
   await fixture.assertWorker(app);
   let initialApproval;
@@ -234,6 +242,36 @@ try {
     return initialApproval;
   }, "The worker did not request its fixture question");
   assert.equal(initialApproval.request.toolName, "__ask_user__");
+  const next = app.waitForEvent("window", { timeout: 15000 });
+  await win.evaluate(() => window.codeshell.newWindow());
+  const other = await next;
+  await other.waitForFunction(() => !!window.codeshell?.onDesktopHostStatus);
+  await other.evaluate(() =>
+    window.codeshell.onDesktopHostStatus((value) => {
+      window.__otherHostStatus = value;
+    }),
+  );
+  await other.waitForFunction(() => window.__otherHostStatus === "ready");
+  const foreign = await other.evaluate(async (id) => {
+    try {
+      const response = await window.codeshell.unsteer(id, "unused");
+      return response?.error?.code;
+    } catch (error) {
+      return String(error);
+    }
+  }, questionSession);
+  assert.match(
+    String(foreign),
+    /-32010|revok/i,
+    "Another workbench cannot change the owner's pending turn",
+  );
+  assert.equal(
+    (await other.evaluate(() => window.codeshell.getPendingApprovals())).some(
+      (x) => x.sessionId === questionSession,
+    ),
+    false,
+  );
+
   await win.reload({ waitUntil: "domcontentloaded" });
   await observe();
   const recovered = await win.evaluate(
@@ -289,6 +327,11 @@ try {
         ({ env }) => env.sessionId === id && env.event.type === "turn_complete",
       ),
     questionSession,
+  );
+  assert.deepEqual(
+    await app.evaluate(() => globalThis.__legacyAgentCommands),
+    [],
+    "Workbench run/approval must not use legacy worker IPC",
   );
   assert(direct, "No text arrived on the workbench port during the Main pause");
   console.log(

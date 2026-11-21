@@ -1,3 +1,4 @@
+import { isDesktopAgentMethod } from "../../shared/desktop-agent-methods.js";
 import { rendererDiskSessionQuery, type ListSessions } from "../../shared/disk-session-query.js";
 import { CONTRACTS } from "@cjhyy/code-shell-core/contracts";
 import {
@@ -168,10 +169,12 @@ export class DesktopHostServer {
   async readWorkbenchOutput(
     identity: DesktopHostIdentity,
     params: Record<string, unknown>,
+    method = "agent/subscribe",
   ): Promise<unknown> {
+    if (method !== "agent/subscribe" && !isDesktopAgentMethod(method)) throw new InvalidParams();
     const connection = this.windows.get(identity.webContentsId);
     const bound = connection?.authority.identity;
-    const handler = this.methods.get("agent/subscribe");
+    const handler = this.methods.get(method);
     if (
       !connection ||
       bound?.frameToken !== identity.frameToken ||
@@ -180,10 +183,12 @@ export class DesktopHostServer {
     )
       throw new HostRevokedError();
     const sessionId = handler.sessionId?.(params);
-    if (!sessionId) throw new InvalidParams();
+    if (!sessionId && !handler.admission) throw new InvalidParams();
     if (connection.pending.size + connection.compatibilityReads >= 128)
       throw new Error("Too many pending Desktop Host requests");
-    const guard = connection.authority.captureHistoryRead(sessionId);
+    const guard = sessionId
+      ? connection.authority.captureHistoryRead(sessionId, handler.admission)
+      : connection.authority.capture();
     connection.compatibilityReads++;
     try {
       const result = await handler.run(guard, params);

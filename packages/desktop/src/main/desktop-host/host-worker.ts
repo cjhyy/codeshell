@@ -63,15 +63,38 @@ export function bindHostWorker(
   };
   core.subscribeLines((line) => {
     const parsed = parseWorkerLine(line);
-    const realStream =
-      (parsed.message as { method?: string } | null)?.method === "agent/streamEvent";
+    const method = (parsed.message as { method?: string } | null)?.method;
     try {
       observers.observeWorkerLine?.(parsed);
     } finally {
-      if (realStream && observers.output) observers.output.push(line);
+      if (method === "agent/streamEvent" && observers.output) observers.output.push(line);
+      else if (typeof method === "string" && method.startsWith("desktop/"))
+        post({ type: "line", generation, line });
       else later({ type: "line", generation, line });
     }
   });
+  function nativeAdmission(request: WorkbenchRequest) {
+    const call = ++nextAdmission;
+    return new Promise<WorkbenchAdmission>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        admissions.delete(call);
+        reject(new Error("Agent admission timed out"));
+      }, 30_000).unref();
+      admissions.set(call, {
+        finish(value) {
+          clearTimeout(timer);
+          admissions.delete(call);
+          resolve(value);
+        },
+        fail(error) {
+          clearTimeout(timer);
+          admissions.delete(call);
+          reject(error);
+        },
+      });
+      post({ type: "renderer-prepare", call, request });
+    });
+  }
   let closing: Promise<void> | undefined;
   function close() {
     if (closing) return closing;
@@ -150,26 +173,22 @@ export function bindHostWorker(
     async rendererCommand(request: WorkbenchRequest, current: () => void): Promise<unknown> {
       current();
       if (!active || admissions.size >= 128) throw new Error("Agent admission is unavailable");
-      const call = ++nextAdmission;
-      const admission = await new Promise<WorkbenchAdmission>((resolve, reject) => {
-        const timer = setTimeout(() => {
-          admissions.delete(call);
-          reject(new Error("Agent admission timed out"));
-        }, 30_000).unref();
-        admissions.set(call, {
-          finish(value) {
-            clearTimeout(timer);
-            admissions.delete(call);
-            resolve(value);
-          },
-          fail(error) {
-            clearTimeout(timer);
-            admissions.delete(call);
-            reject(error);
-          },
-        });
-        post({ type: "renderer-prepare", call, request });
-      });
+      // These controls operate solely on the actual worker. The port grant
+      // already binds their session, including approvals during a busy Main.
+      const local =
+        core.canSend() &&
+        [
+          "agent/approve",
+          "agent/approvalKeepWaiting",
+          "agent/steer",
+          "agent/unsteer",
+          "agent/backgroundShells",
+          "agent/configure",
+          "agent/query",
+        ].includes(request.method);
+      const admission: WorkbenchAdmission = local
+        ? { type: "dispatch", id: request.id, generation }
+        : await nativeAdmission(request);
       current();
       if (admission.type === "reply") {
         if (admission.error) throw new WorkerCommandError(admission.error);
@@ -213,7 +232,7 @@ export function bindHostWorker(
         id: admission.id,
         ...(error ? { error } : { result: outcome.status === "result" ? outcome.result : null }),
       };
-      post({ type: "renderer-settled", line: JSON.stringify(response) });
+      if (!local) post({ type: "renderer-settled", line: JSON.stringify(response) });
       current();
       if (error)
         throw new WorkerCommandError({

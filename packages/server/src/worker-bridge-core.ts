@@ -105,6 +105,9 @@ export interface WorkerBridgeCoreOptions {
    * injected or correlated (e.g. agent/run trust metadata + on-demand spawn).
    * Returns the line to write; `method` is only used for log context.
    */
+  /** Desktop can serialize inputs behind an OS credential prompt. A deferred
+   * write remains bound to the exact worker that accepted it. */
+  dispatchInput?: (generation: number, line: string, send: () => boolean) => boolean;
   prepareInbound?: (line: string, meta: WorkerFrameMeta) => { line: string; method?: string };
   /** A worker successfully spawned with piped stdio. */
   onWorkerStarted?: (info: { generation: number; pid?: number }) => void;
@@ -350,11 +353,17 @@ export class WorkerBridgeCore {
    * false when there is no live worker (caller decides drop/fallback). A
    * stream write error propagates to the caller, matching a direct write.
    */
-  sendLine(line: string): boolean {
+  sendLine(line: string, current?: () => boolean): boolean {
     const stdin = this.child?.stdin;
     if (!stdin || stdin.destroyed) return false;
-    stdin.write(line + "\n");
-    return true;
+    const send = () => {
+      if (this.child?.stdin !== stdin || stdin.destroyed || (current && !current())) return false;
+      stdin.write(line + "\n");
+      return true;
+    };
+    return this.opts.dispatchInput
+      ? this.opts.dispatchInput(this.workerGeneration(), line, send)
+      : send();
   }
 
   /**
@@ -471,7 +480,7 @@ export class WorkerBridgeCore {
         // to hang until timeout. Idempotent when prepareInbound already spawned
         // the worker as an agent/run side effect.
         if (options.ensureWorker) this.ensureWorker(options.ensureWorkerCwd);
-        sent = this.sendLine(prepared.line);
+        sent = this.sendLine(prepared.line, () => !settled);
       } catch (e) {
         sendError = e;
       }
