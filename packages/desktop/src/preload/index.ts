@@ -555,7 +555,17 @@ contextBridge.exposeInMainWorld("codeshell", {
   getPathForFile: (file: File) => webUtils.getPathForFile(file),
   /** Read-only local Pet projection; no transcript, resolver, approval or mutation routes. */
   pet: createPetApi(ipcRenderer),
-  taskInbox: createTaskInboxApi(ipcRenderer),
+  taskInbox: createTaskInboxApi(
+    ipcRenderer,
+    desktopHost && desktopHostRoutes.taskInbox === "host"
+      ? {
+          list: (query) =>
+            desktopHost.listTasks(query, (input) => ipcRenderer.invoke("taskInbox:list", input)),
+          get: (taskKey) =>
+            desktopHost.getTask(taskKey, (key) => ipcRenderer.invoke("taskInbox:get", key)),
+        }
+      : undefined,
+  ),
   operationResolution: createOperationResolutionApi(ipcRenderer),
   operationBatch: createOperationBatchApi(ipcRenderer),
   optimizationLab: createOptimizationLabApi(ipcRenderer),

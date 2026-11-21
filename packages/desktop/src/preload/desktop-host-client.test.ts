@@ -177,3 +177,44 @@ test("disk pages use the private port and read IPC only on unavailable transport
   expect((await fallbackRead).nextCursor).toBe("ipc");
   expect(fallbackCalls).toEqual([options]);
 });
+
+test("task reads negotiate each capability and preserve the Host's authoritative errors", async () => {
+  const { client } = clientWithStatus();
+  const fromIpc: string[] = [];
+  const listIpc = async () => {
+    fromIpc.push("list");
+    return { version: 1, records: [], errors: [] };
+  };
+  const getIpc = async () => {
+    fromIpc.push("get");
+    return null;
+  };
+  await client.listTasks(undefined, listIpc);
+  const host = await attach(client, {
+    ...capabilities,
+    methods: [...capabilities.methods, "tasks/list"],
+  });
+  await client.getTask("session:one", getIpc);
+  for (const code of [DesktopHostErrors.revoked, -32602, -32601]) {
+    const sent = nextRequest(host);
+    const result = client.listTasks({ visibility: "hidden" }, listIpc).catch((error) => error);
+    const request = await sent;
+    expect(request).toMatchObject({ method: "tasks/list", params: { visibility: "hidden" } });
+    host.postMessage({
+      jsonrpc: "2.0",
+      id: request.id,
+      error: { code, message: "Task read rejected" },
+    });
+    expect(await result).toMatchObject({ code });
+  }
+  const upgraded = await attach(client, {
+    ...capabilities,
+    methods: [...capabilities.methods, "tasks/get", "tasks/list"],
+  });
+  const sent = nextRequest(upgraded);
+  const pending = client.getTask("session:one", getIpc);
+  expect(await sent).toMatchObject({ method: "tasks/get", params: { taskKey: "session:one" } });
+  client.disconnect("reconnecting");
+  expect(await pending).toBeNull();
+  expect(fromIpc).toEqual(["list", "get", "get"]);
+});
