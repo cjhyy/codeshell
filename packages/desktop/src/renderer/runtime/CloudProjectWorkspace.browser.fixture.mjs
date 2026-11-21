@@ -30,6 +30,10 @@ const noop = () => {};
 window.unexpected = [];
 window.calls = [];
 const bridge = {
+  onDesktopHostStatus(listener) {
+    listener("ready");
+    return noop;
+  },
   sttAvailable: async () => ({ available: false }),
   listPluginCommands: async () => [],
   onPluginCommandsChanged: () => noop,
