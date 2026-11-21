@@ -12,6 +12,7 @@ import {
   DesktopApproval,
   DesktopChatControls,
   DesktopSidebar,
+  DesktopTakeOver,
   cliModeSwitchNotice,
 } from "./DesktopControls.js";
 import { OutputHistoryRecovery } from "../src/components/OutputHistoryRecovery.js";
@@ -2741,6 +2742,74 @@ test("CLI rooms needing attention show badges, a jump list and a cross-room appr
   } finally {
     await hook.unmount();
   }
+});
+
+test("an observed CLI session offers take-over with a confirm step and shows the Host refusal", async () => {
+  const room = {
+    id: "room-observed",
+    name: "Observed",
+    cwd: "/repo",
+    kind: "codex" as const,
+    permissionMode: "default" as const,
+    createdAt: 1,
+    lastActiveAt: 1,
+    open: false,
+    observing: true,
+    sessionId: "thread",
+  };
+  let takeOvers = 0;
+  const app = remoteApp({
+    status: "online",
+    activeRoomId: room.id,
+    activeRoom: room,
+    takeOverCcRoom: () => void takeOvers++,
+    ccTakeOverError: "无法接管：该外部会话正由后台任务使用",
+  });
+  const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+  try {
+    expect(hook.result.current.readOnly).toBe(true);
+    expect(hook.result.current.readOnlyNote).toContain("继续前需要明确接管");
+    const markup = renderToStaticMarkup(<>{hook.result.current.readOnlyAction}</>);
+    expect(markup).toContain("继续对话 / 接管");
+    expect(markup).toContain('role="alert"');
+    expect(markup).toContain("正由后台任务使用");
+  } finally {
+    await hook.unmount();
+  }
+  // The confirm step explains the handoff before anything is sent.
+  ensureMiniDom();
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  const button = (label: string) =>
+    elementsByTag(container, "BUTTON").find((node) => textOf(node) === label);
+  try {
+    await act(async () => {
+      root.render(<DesktopTakeOver app={app} />);
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      reactProps(button("继续对话 / 接管")).onClick();
+      await flushMicrotasks();
+    });
+    expect(takeOvers).toBe(0);
+    expect(textOf(container)).toContain("逐次确认");
+    expect(textOf(container)).toContain("Codex");
+    await act(async () => {
+      reactProps(button("确认接管")).onClick();
+      await flushMicrotasks();
+    });
+    expect(takeOvers).toBe(1);
+  } finally {
+    await act(async () => root.unmount());
+  }
+  // A writable room has nothing to take over.
+  expect(
+    renderToStaticMarkup(
+      <DesktopTakeOver
+        app={remoteApp({ activeRoom: { ...room, observing: false, open: true } })}
+      />,
+    ),
+  ).toBe("");
 });
 
 test("a restored CLI approval card shows why the last response failed", () => {

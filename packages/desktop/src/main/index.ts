@@ -122,6 +122,7 @@ import {
   requireRendererProjectPath,
   requireRendererProjectPrimary,
   requireRendererProjectRoot,
+  requireRendererLinkedSessionPath,
 } from "./renderer-project-path.js";
 import { PetStateAggregator } from "./pet/pet-state-aggregator.js";
 import { ExternalSessionAdapter, type ExternalCli } from "./pet/external-session-adapter.js";
@@ -1306,6 +1307,7 @@ const mobileOrchestrator: MobileRemoteOrchestrator = new MobileRemoteOrchestrato
   roomManager,
   approvalBridge,
   roomModes,
+  requireLinkedSessionPath: requireRendererLinkedSessionPath,
   transcriptSubscriptions,
   getBridge: () => bridge,
   getExternalRuntimeService: () => externalRuntime.service,

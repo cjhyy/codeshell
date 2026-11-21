@@ -1374,7 +1374,12 @@ export function Workbench({
                 : ""}
             </span>
           </div>
-          {controller.readOnlyNote ? <div className="banner">{controller.readOnlyNote}</div> : null}
+          {controller.readOnlyNote ? (
+            <div className="banner">
+              {controller.readOnlyNote}
+              {controller.readOnlyAction}
+            </div>
+          ) : null}
           <div className="composer-wrap">
             {approvalsOffscreen ? (
               <ApprovalJumpBar

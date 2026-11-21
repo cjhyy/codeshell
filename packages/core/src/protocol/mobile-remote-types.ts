@@ -322,6 +322,20 @@ export type MobileClientEvent =
       sessionId: string;
       limit: number;
       kind?: "claude-code" | "codex";
+      /** Page backwards: messages before this index of the parsed transcript
+       * (a previous reply's startIndex). Omitted reads the latest messages. */
+      before?: number;
+    }
+  | {
+      /** Take over an observe-only CLI session (the Desktop "继续对话 / 接管"
+       * action): the Host starts its own process in the default mode. Replied
+       * with ccRoom.opened or room.error, both echoing requestId. */
+      type: "ccRoom.takeOver";
+      roomId: string;
+      sessionId: string;
+      cwd: string;
+      kind: "claude-code" | "codex";
+      requestId: string;
     }
   | {
       type: "ccRoom.respondApproval";
@@ -702,6 +716,8 @@ export type MobileServerEvent =
       messages: CcHistoryMessage[];
       hasMore: boolean;
       totalCount: number;
+      /** Transcript index of messages[0] (pages back via ccRoom.readHistory.before). */
+      startIndex?: number;
       roomCursor: number;
     }
   | {
@@ -710,6 +726,10 @@ export type MobileServerEvent =
       messages: CcHistoryMessage[];
       hasMore: boolean;
       totalCount: number;
+      /** Index of messages[0] in the parsed transcript; absent on older Hosts. */
+      startIndex?: number;
+      /** Echo of a paged request's `before`. */
+      before?: number;
     }
   | {
       type: "ccRoom.approvalResolved";

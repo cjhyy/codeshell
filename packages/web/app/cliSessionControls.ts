@@ -5,7 +5,7 @@ export function cliSessionControlBlock(app: RemoteApp): string | undefined {
   if (app.status !== "online") return "连接电脑后可调整。";
   const room = app.activeRoom;
   if (!room) return "正在读取会话设置…";
-  if (room.observing) return "此会话在电脑上运行，当前仅可查看。";
+  if (room.observing) return "只读查看中；接管后才能调整模型和权限。";
   if (app.outputHistoryFailed) return "恢复会话记录后可调整。";
   if (app.ccModeRequest?.switching)
     return app.ccModeRequest.modelKey !== undefined

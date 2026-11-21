@@ -113,6 +113,8 @@ export interface WorkbenchController {
   sendBlockedReason?: string;
   readOnly?: boolean;
   readOnlyNote?: string;
+  /** An action that ends the read-only state (e.g. taking over a CLI session). */
+  readOnlyAction?: React.ReactNode;
   attachmentAccept?: string;
   cameraAttachments?: boolean;
   unreadSessionIds?: ReadonlySet<string>;

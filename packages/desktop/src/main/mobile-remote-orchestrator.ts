@@ -107,6 +107,8 @@ export interface MobileRemoteOrchestratorDeps {
   getExternalRuntimeApprovals?: () => ExternalRuntimeApprovals | null;
   /** Host authority for external CLI room permission modes. */
   roomModes?: RoomModeAuthority;
+  /** Desktop's linked-session project gate (shared with ccRoom:takeOverLinkedSession). */
+  requireLinkedSessionPath?: (cwd: unknown) => Promise<string>;
   /** Send an IPC payload to every live desktop window. */
   broadcastToWindows: (channel: string, payload: unknown) => void;
 }
@@ -598,6 +600,7 @@ export class MobileRemoteOrchestrator {
       broadcastApprovalResolved: (params) => this.broadcastApprovalResolved(params),
       roomToPublic: (room) => this.roomToPublic(room),
       ...(this.deps.roomModes ? { roomModes: this.deps.roomModes } : {}),
+      requireLinkedSessionPath: this.deps.requireLinkedSessionPath,
       broadcastRoomState: (roomId) => this.broadcastRoomState(roomId),
       roomMatchesTranscript: (roomId, cwd, sessionId, kind) =>
         this.roomMatchesTranscript(roomId, cwd, sessionId, kind),

@@ -132,6 +132,8 @@ export interface OrchestratorCtx {
   roomModes?: RoomModeAuthority;
   /** Publish a room's authoritative mode/status to every phone and window. */
   broadcastRoomState?: (roomId: string) => void;
+  /** Desktop's linked-session project gate, required for a remote take-over. */
+  requireLinkedSessionPath?: (cwd: unknown) => Promise<string>;
   /**
    * Set only for a Host-queued turn: its admission authority and Stop fence.
    * Asserted synchronously immediately before the input is physically handed
