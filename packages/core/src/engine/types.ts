@@ -54,6 +54,8 @@ export type ChildHostBindingsFactory = (input: {
 export interface EngineConfig {
   llm: LLMConfig;
   /** Native Host reverse-RPC custody; never loaded from Settings or tool arguments. */
+  /** Trusted Host injection. The public Agent protocol never accepts a ledger transport. */
+  operationLedger?: import("../operations/host-transport.js").OperationLedgerTransport;
   operationBatchAuthority?: (
     input: import("../operations/desktop-batch-authority-client.js").DesktopOperationBatchAuthorityInput,
     options: { signal?: AbortSignal },

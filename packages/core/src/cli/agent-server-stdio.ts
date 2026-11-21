@@ -1,3 +1,4 @@
+import { childOperationLedger } from "../operations/child-ledger.js";
 import { observeBackgroundWorkChange } from "../runtime/background-work-lifecycle.js";
 import { createDesktopOperationBatchAuthorityClient } from "../operations/desktop-batch-authority-client.js";
 /**
@@ -106,6 +107,8 @@ async function loadConfiguredAgentModules(): Promise<AgentModule[]> {
 const cwd = process.env.AGENT_CWD ?? process.cwd();
 // Capture the parent Host capabilities and distribution paths before project settings/env load.
 const operationBatchEnabled = process.env.CODE_SHELL_OPERATION_BATCH_ACCESS === "host";
+const operationLedger =
+  process.env.CODE_SHELL_PRIVATE_LEDGER === "host" ? childOperationLedger() : undefined;
 const workspaceBridgeEnabled = hasWorkspaceHostBridge(process.env);
 let operationBatchClient: ReturnType<typeof createDesktopOperationBatchAuthorityClient> | undefined;
 const documentRuntimeRoot = process.env.CODE_SHELL_DOCUMENT_RUNTIME_ROOT;
@@ -316,6 +319,7 @@ const chatManager = new ChatSessionManager({
       origin: "desktop",
       builtinToolHost: "desktop",
       documentParserExecutable,
+      operationLedger,
       ...(operationBatchEnabled
         ? {
             operationBatchAuthority: (input, options) => {

@@ -1,3 +1,4 @@
+import { NativeAutomationClient } from "./main-automation.js";
 import { randomBytes } from "node:crypto";
 import { documentLifetimes } from "./document-lifetime.js";
 import type { OperationCommand } from "./private-operations.js";
@@ -43,14 +44,33 @@ export function createDesktopHost(
       }),
     () => app.getVersion(),
     (status) => {
-      if (status === "ready") bindWorker();
-      else worker?.disconnect();
+      if (status === "ready") {
+        bindWorker();
+        bindAutomation();
+      } else {
+        worker?.disconnect();
+        automation.disconnect();
+      }
       workbenches.setStatus(status);
       if (status === "ready") hostReady?.();
     },
     (message, details) => dlog("main", `desktop_host.${message}`, details),
   );
   supervisor.settingsCommitted = settingsCommitted;
+  async function prepareKey(wrapped: string | null, create: boolean) {
+    if (!create && wrapped === null) return null;
+    const cipher = getDefaultCredentialCipher().asynchronous;
+    if (!cipher) throw new Error("Operation keyring unavailable");
+    let key = wrapped === null ? null : { wrapped, secret: await cipher.decrypt(wrapped) };
+    if (!key && create) {
+      const secret = randomBytes(32).toString("hex");
+      key = { wrapped: await cipher.encrypt(secret), secret };
+    }
+    if (key && !/^[a-f0-9]{64}$/.test(key.secret))
+      throw new Error("Invalid protected operation key");
+    return key;
+  }
+  supervisor.prepareRunKey = prepareKey;
   const workbenches = new HostWorkbenchPorts(
     (event) => navigation.assertSender(event),
     () => new MessageChannelMain(),
@@ -85,15 +105,7 @@ export function createDesktopHost(
           { action: "host/operationKey", payload: {}, caller: origin.caller },
           origin.signal,
         )) as { wrapped: string | null };
-        const cipher = getDefaultCredentialCipher().asynchronous;
-        if (!cipher) throw new Error("Operation keyring unavailable");
-        let key = wrapped === null ? null : { wrapped, secret: await cipher.decrypt(wrapped) };
-        if (!key && action === "host/batchReserve") {
-          const secret = randomBytes(32).toString("hex");
-          key = { wrapped: await cipher.encrypt(secret), secret };
-        }
-        if (key && !/^[a-f0-9]{64}$/.test(key.secret))
-          throw new Error("Invalid protected operation key");
+        const key = await prepareKey(wrapped, action === "host/batchReserve");
         origin.signal.throwIfAborted();
         return supervisor.callBusiness(
           "operations/ledger",
@@ -102,6 +114,20 @@ export function createDesktopHost(
         ) as Promise<T>;
       },
     };
+  }
+  const automation = new NativeAutomationClient(
+    supervisor.callBusiness.bind(supervisor),
+    bindAutomation,
+  );
+  function bindAutomation() {
+    if (!automation.enabled) return;
+    const { port1, port2 } = new MessageChannelMain();
+    if (supervisor.post({ type: "automation-port", searchPath: process.env.PATH ?? "" }, [port2]))
+      automation.bind(port1);
+    else {
+      port1.close();
+      port2.close();
+    }
   }
   function bindWorker() {
     if (!worker) return;
@@ -124,6 +150,7 @@ export function createDesktopHost(
     callBusiness: supervisor.callBusiness.bind(supervisor),
     documentSignal,
     automationListeners: supervisor.automationListeners,
+    automation,
     catalogListeners: supervisor.catalogListeners,
     projectRegistryListeners: supervisor.projectRegistryListeners,
     start() {
@@ -242,7 +269,7 @@ export function createDesktopHost(
       changes?.close();
       changes = undefined;
       ipcMain.removeListener(DesktopHostIpc.connect, connect);
-      return supervisor.dispose();
+      return supervisor.dispose().finally(() => automation.close());
     },
   };
 }

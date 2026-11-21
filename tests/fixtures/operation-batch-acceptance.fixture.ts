@@ -158,7 +158,17 @@ const item = (title: string) => ({
   title,
   body: "Synthetic body",
 });
-function fixture() {
+type FixtureKey = { wrapped: string; secret: string };
+function fixture(key?: FixtureKey) {
+  const cipher = key && {
+    encrypt() {
+      return key.wrapped;
+    },
+    decrypt(value: string) {
+      assert.equal(value, key.wrapped);
+      return key.secret;
+    },
+  };
   const root = mkdtempSync(join(home, "batch-"));
   roots.push(root);
   const sessionId = "fixture-session",
@@ -192,7 +202,7 @@ function fixture() {
     },
   };
   const ledger = () =>
-    new OperationLedger(root, undefined, {
+    new OperationLedger(root, cipher, {
       sessionId,
       read: () => readOperationSessionOwner(root, sessionId),
     });
@@ -200,6 +210,7 @@ function fixture() {
     root,
     sessionId,
     originIntent,
+    cipher,
     connection,
     items: [item("one"), item("two")],
     assertCurrent() {},
@@ -467,8 +478,8 @@ const { registerOperationBatchIpc } =
   await import("../../packages/desktop/src/main/operation-batch-ipc.js");
 const { prepareAgentRunMetadata } =
   await import("../../packages/desktop/src/main/agent-run-metadata.js");
-function mainFixture() {
-  const f = fixture(); // Its independent origin is intentionally not this Native batch origin.
+function mainFixture(key?: FixtureKey) {
+  const f = fixture(key); // Its independent origin is intentionally not this Native batch origin.
   const handlers = new Map<string, (event: any, input: unknown) => unknown>();
   let enabled = true,
     trusted = true,
@@ -526,7 +537,7 @@ function mainFixture() {
             frame: "fixture-native-frame",
             permit: new Int32Array(new SharedArrayBuffer(4)),
             ...(proposal
-              ? { proposal: { ...proposal, key: { wrapped, secret: wrapped.slice(6) } } }
+              ? { proposal: { ...proposal, key: key ?? { wrapped, secret: wrapped.slice(6) } } }
               : {}),
           } as any,
         ) as T;
@@ -800,7 +811,15 @@ async function engineFixture(
   mainCalls = 0;
   plannedItems = count;
   retryFirst = Boolean(failure);
-  const g = mainFixture();
+  const key = {
+    wrapped: "enc:fixture:protected-batch",
+    secret: createHash("sha256").update(randomUUID()).digest("hex"),
+  };
+  const g = mainFixture(key);
+  const { RunOperationStorage } =
+    await import("../../packages/desktop/src/host/composition/run-operation-storage.js");
+  const runLedger = new RunOperationStorage(g.root),
+    ledgerToken = randomUUID();
   mkdirSync(join(g.root, ".code-shell"));
   writeFileSync(
     join(g.root, ".code-shell/settings.json"),
@@ -850,6 +869,13 @@ async function engineFixture(
         }
       : {}),
     approvalBackend: { requestApproval: async () => ({ approved: failure !== "approval" }) },
+    operationLedger: async (request) =>
+      runLedger.run({
+        request,
+        token: ledgerToken,
+        key,
+        permit: new Int32Array(new SharedArrayBuffer(4)),
+      }),
     operationBatchAuthority: async (input) => {
       rpcCalls++;
       return g.resolve(input);
@@ -892,6 +918,7 @@ async function engineFixture(
       posts: calls.filter((c) => c.action === "create_issue").length,
     };
   } finally {
+    runLedger.end(ledgerToken);
     g.finishRun();
     await g.dispose();
     await runtime.close();

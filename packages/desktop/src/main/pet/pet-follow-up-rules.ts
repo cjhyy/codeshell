@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { CronScheduler } from "@cjhyy/code-shell-core/internal";
+import type { PetCronAccess } from "./pet-rule-schedule.js";
 import {
   isPetFollowUpMutationPayload,
   type PetFollowUpMutationPayload,
@@ -223,7 +223,7 @@ export interface PetFollowUpRulesDeps {
   inbox: PetFollowUpInbox;
   tasks: PetLongTaskStore;
   longTasks: Pick<PetLongTaskCoordinator, "control">;
-  scheduler(): CronScheduler;
+  scheduler(): PetCronAccess;
   /** The notice router (`PetNoticeWiring.submitNotice`): every reminder is sent through it. */
   submitNotice(notice: NoticeSubmission): Promise<RouteDecision>;
   dispatch(): Pick<PetDispatchService, "wakeFollowUp"> | null;

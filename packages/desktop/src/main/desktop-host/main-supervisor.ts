@@ -1,6 +1,7 @@
 import type { AutomationRunNotice } from "../../host/composition/automation-run.js";
 import type { LocalProject } from "../../preload/project-authority-types.js";
 import { isSettingsChange, type SettingsChange } from "../../shared/settings-change.js";
+import type { PreparedOperationKey } from "../../host/composition/operation-key.js";
 import type { ShellBusinessOperations } from "../../shared/shell-business-contracts.js";
 import type { SessionCatalogSnapshot } from "../../shared/session-catalog.js";
 import {
@@ -66,6 +67,25 @@ export class DesktopHostSupervisor {
     private readonly now = Date.now,
   ) {}
 
+  prepareRunKey?: (wrapped: string | null, create: boolean) => Promise<PreparedOperationKey | null>;
+  private async runKey(child: HostChild, id: string, create: boolean) {
+    const current = () => child === this.child && this.ready && !this.retiring && !this.stopped;
+    try {
+      const wrapped = await this.request("host/readOperationWrappedKey", {});
+      if (!current() || !this.prepareRunKey || !(wrapped === null || typeof wrapped === "string"))
+        throw new Error("Operation key unavailable");
+      const key = await this.prepareRunKey(wrapped, create);
+      if (current()) this.send({ jsonrpc: "2.0", id, result: key });
+    } catch {
+      if (current())
+        this.send({
+          jsonrpc: "2.0",
+          id,
+          error: { code: -32603, message: "Operation keyring unavailable" },
+        });
+    }
+  }
+
   start(): void {
     if (this.child || this.cancelTimer || this.stopped) return;
     try {
@@ -122,6 +142,19 @@ export class DesktopHostSupervisor {
       } else if (message?.type === "session-catalog-changed" && this.ready) {
         for (const listener of this.catalogListeners) listener(message.snapshot);
       } else if (isRpcRequest(message)) {
+        if (
+          this.ready &&
+          this.prepareRunKey &&
+          message.method === "app/operationLedgerKey" &&
+          typeof message.id === "string" &&
+          message.id.startsWith("host:run-key:") &&
+          typeof message.params?.create === "boolean" &&
+          Object.keys(message.params).length === 1 &&
+          this.reads.size < 512
+        ) {
+          void this.runKey(child, message.id, message.params.create);
+          return;
+        }
         const response =
           message.method !== "app/getVersion"
             ? { error: { code: -32601, message: "Method not found" } }
@@ -225,8 +258,10 @@ export class DesktopHostSupervisor {
       }
     }
     signal?.throwIfAborted();
-    // Scheduled runs and native file copies have caller-owned cancellation.
-    const timeout = method === "automation/run" || method === "sources/uploadPicked" ? 0 : 15_000;
+    // A scheduled Engine turn can span many tool calls. Its scheduler owns cancellation.
+    const waitsForRun =
+      method === "automation/command" && (input as { method?: string }).method === "cancel";
+    const timeout = waitsForRun || method === "sources/uploadPicked" ? 0 : 15_000;
     const value = await this.request("host/business", { method, input }, timeout, signal);
     signal?.throwIfAborted();
     return value as ShellBusinessOperations[K]["result"];
@@ -249,7 +284,11 @@ export class DesktopHostSupervisor {
         this.send({ type: "withdraw-business", id });
         // Deletion waits for the isolated Engine's final state write and browser
         // teardown, even when the caller cancelled the run. Host exit rejects it.
-        if (params.method === "automation/run") return;
+        if (
+          params.method === "automation/command" &&
+          (params.input as { method?: string })?.method === "cancel"
+        )
+          return;
       }
       this.reads.delete(id);
       pending.reject(new Error("Desktop Host request expired or document changed"));

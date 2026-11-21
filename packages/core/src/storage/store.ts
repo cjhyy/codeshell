@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
-import { Worker } from "node:worker_threads";
+import { Worker, type MessagePort } from "node:worker_threads";
 import { releaseLease } from "./database.js";
 import {
   sqliteDriver,
@@ -33,7 +33,7 @@ const jsonOnly: StateStorage = {
 
 export async function openStateStorage(
   sessionsRoot: string,
-  options: { workerUrl?: URL; workerConfig?: unknown } = {},
+  options: { workerUrl?: URL; workerConfig?: unknown; workerPorts?: readonly MessagePort[] } = {},
 ): Promise<StateStorage> {
   if (!sessionsRoot) throw new Error("Storage requires an explicit sessions root");
   const token = randomUUID();
@@ -42,6 +42,7 @@ export async function openStateStorage(
   try {
     worker = new Worker(options.workerUrl ?? new URL(defaultEntry, import.meta.url), {
       workerData: { sessionsRoot: resolve(sessionsRoot), token, config: options.workerConfig },
+      transferList: options.workerPorts && [...options.workerPorts],
     });
   } catch {
     return jsonOnly;

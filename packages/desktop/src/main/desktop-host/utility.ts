@@ -1,10 +1,13 @@
 import { hostedTerminals } from "../../host/composition/terminals.js";
+import { HostScheduler } from "../../host/automation/host-scheduler.js";
 import { workspaceReads } from "./workspace-reads.js";
 import { HostAutomationRuns } from "../../host/composition/automation-run.js";
 import { externalRuntimeCatalogOperations } from "../../host/composition/external-runtime-catalog.js";
-import { Worker } from "node:worker_threads";
+import { MessageChannel, Worker } from "node:worker_threads";
 import { SessionTranscriptCache } from "../session-transcript-cache.js";
 import type { BusinessMethods } from "../../host/composition/business-calls.js";
+import { RunKeyClient } from "./run-key-client.js";
+import { HostRunOperations } from "../../host/composition/run-operations.js";
 import { nativeOperations } from "../../host/composition/operations.js";
 import { HostBusinessCalls } from "../../host/composition/business-calls.js";
 import { catalogEdits } from "../../host/composition/catalog-edits.js";
@@ -50,8 +53,10 @@ import {
 // proxy on the renderer port, and the hosted catalog never waits on Main.
 const parent = process.parentPort;
 const versionRequestId = "host:app-version";
+const schedulerPorts = new MessageChannel();
 const storage = openStateStorage(sessionsRoot(), {
-  workerConfig: { taskInboxDirectory: process.argv[2] },
+  workerConfig: { taskInboxDirectory: process.argv[2], schedulerPort: schedulerPorts.port2 },
+  workerPorts: [schedulerPorts.port2],
   workerUrl: new URL("./session-index-worker.mjs", import.meta.url),
 });
 const catalogFiles = catalogOperations(storage, (snapshot) =>
@@ -63,6 +68,15 @@ const transcripts = new SessionTranscriptCache(
     new Worker(new URL("./session-transcript-cache-worker.mjs", import.meta.url), {
       workerData: options,
     }),
+);
+const runKeys = new RunKeyClient((frame) => parent.postMessage(frame));
+const runOperations = new HostRunOperations(
+  storage,
+  (create) => runKeys.request(create),
+  (sessionId) => {
+    if (!server) throw new Error("Host unavailable");
+    return server.captureWorkerOperation(sessionId);
+  },
 );
 const operations = nativeOperations(storage, () => server);
 const automation = new HostAutomationRuns({
@@ -78,8 +92,9 @@ const automation = new HostAutomationRuns({
   },
   drain: () => output.drain(),
 });
+const scheduler = new HostScheduler(schedulerPorts.port1, automation);
 const business = new HostBusinessCalls({
-  "automation/run": ({ job, searchPath }, grant) => automation.run(job, searchPath, grant.signal),
+  "automation/command": (cmd, grant) => scheduler.command(cmd, grant.permit),
   ...externalRuntimeCatalogOperations(),
   ...catalogFiles,
   "transcripts/read": (input) => transcripts.read(input),
@@ -126,12 +141,22 @@ parent.on("message", ({ data, ports }) => {
   }
   if (
     isDesktopHostControl(data) &&
+    data.type === "automation-port" &&
+    server &&
+    ports.length === 1
+  ) {
+    scheduler.bind(ports[0], data.searchPath);
+    return;
+  }
+  if (
+    isDesktopHostControl(data) &&
     data.type === "worker-port" &&
     server &&
     ports.length === 1 &&
     !worker
   ) {
     worker = bindHostWorker(ports[0], data, {
+      runOperations,
       output,
       observeWorkerLine: (line) => approvals.observe(line),
       workerExited: (generation) => approvals.reset(generation),
@@ -148,8 +173,14 @@ parent.on("message", ({ data, ports }) => {
   if (isDesktopHostControl(data) && data.type === "shutdown") {
     stopping = true;
     terminals.close();
+    runKeys.close();
+    runOperations.close();
     business.close();
-    void Promise.all([index.close(), worker?.close(), transcripts.close(), automation.close()])
+    void scheduler
+      .close()
+      .then(() =>
+        Promise.all([index.close(), worker?.close(), transcripts.close(), automation.close()]),
+      )
       .then(() => output.drain())
       .finally(async () => (await storage).close())
       .then(
@@ -200,12 +231,34 @@ parent.on("message", ({ data, ports }) => {
           (options) => catalog.list(options),
         ),
       ]),
-      operations.authorityChanged,
+      () => {
+        operations.authorityChanged();
+        runOperations.authorityChanged();
+      },
     );
     parent.postMessage({ type: "ready" });
     return;
   }
 
+  if (runKeys.receive(data)) return;
+  if (
+    isRpcRequest(data) &&
+    data.method === "host/readOperationWrappedKey" &&
+    Object.keys(data.params ?? {}).length === 0
+  ) {
+    void storage
+      .then((db) => db.request<string>("operations/wrappedKey"))
+      .then(
+        (result) => parent.postMessage({ jsonrpc: "2.0", id: data.id, result }),
+        () =>
+          parent.postMessage({
+            jsonrpc: "2.0",
+            id: data.id,
+            error: { code: -32603, message: "Operation key unavailable" },
+          }),
+      );
+    return;
+  }
   if (data?.type === "withdraw-business" && typeof data.id === "string") {
     business.revoke(data.id);
     return;

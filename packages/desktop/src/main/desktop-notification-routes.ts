@@ -1,5 +1,6 @@
+import type { CronNotice } from "../host/automation/execution-receipts.js";
 import { createHash } from "node:crypto";
-import type { CronJob, CronJobLifecycleEvent } from "@cjhyy/code-shell-core/internal";
+import type { CronJob } from "@cjhyy/code-shell-core/internal";
 
 import { automationLifecycleNotification } from "./automation-notification.js";
 import { backgroundNotificationContent } from "./background-notification-content.js";
@@ -65,7 +66,7 @@ export function notifyMissingAutomationResumeTarget(
 export function notifyMissedAutomation(
   notifier: DesktopNotificationSink | null,
   notification: GatewayControlEventInput,
-  event: CronJobLifecycleEvent,
+  event: CronNotice,
 ): void {
   if (event.type !== "job_missed" || !notification.deliveryKey) return;
   void deliver(
