@@ -67,7 +67,7 @@ import { parseWorkerLine, type ParsedWorkerLine } from "./worker-line.js";
 import { WebConfigurationGate } from "./web-configuration-gate.js";
 import { SessionSnapshotStore, type Snapshot, type SnapshotEntry } from "./SessionSnapshotStore.js";
 import { assertOutputHistoryWriteAvailable } from "./session-output-history-lease.js";
-import { parseLiveStreamEnvelope, parseSnapshotAppend } from "./parseStreamLine.js";
+import { projectWorkerOutput, type WorkerOutputObserver } from "./desktop-host/worker-output.js";
 import {
   parseBrowserActionLine,
   buildBrowserActionReply,
@@ -90,7 +90,6 @@ import {
   releaseChildBrowserRuntime,
   activateChildBrowserRuntime,
   interactiveBrowserRuntimeOwner,
-  replaceStreamEventInLine,
 } from "./browser-runtime/index.js";
 import { observeRunStopFrame } from "./run-stop-signals.js";
 import {
@@ -339,6 +338,14 @@ export class AgentBridge implements PetStateBridge {
   });
   /** In-flight runs actually owned by the CURRENT stdio worker. */
   private readonly workerRuns = new WorkerRunOwnership();
+  private readonly outputObserver: WorkerOutputObserver = {
+    observeLifecycle: (sessionId, event) => {
+      this.workerRuns.observeWorker(sessionId, event);
+      observeComputerUseRunEvent(sessionId, event);
+    },
+    report: (event, details) => dlog("bridge", event, details),
+  };
+  private forwardedStreamEvents = 0;
   /**
    * Out-of-band observers of worker→renderer lines (e.g. the Mobile Web
    * Remote, which streams the same events to a phone). Taps are read-only:
@@ -599,68 +606,22 @@ export class AgentBridge implements PetStateBridge {
     if (this.routePetReportLine(line, parsedLine)) return;
     const quickChatForkSettlement =
       this.quickChatForkRouter?.routeWorkerResponse(line, parsedLine) ?? null;
-    let summary: Record<string, unknown> = { raw: previewLine(line) };
-    try {
-      const m = parsedLine.message as { method?: string; id?: number };
-      if (m.method) summary = { method: m.method, raw: previewLine(line) };
-      else if (m.id !== undefined) summary = { responseId: m.id, raw: previewLine(line) };
-    } catch {
-      /* keep raw */
-    }
-    // Mirror stream events into the per-session snapshot so a remounted
-    // renderer can replay what it missed. Non-streamEvent lines yield null.
-    const rawAppend = parseSnapshotAppend(line, parsedLine);
-    if (rawAppend) {
-      try {
-        if (!this.mainOutput.observeWorker(rawAppend.sessionId, rawAppend.event)) return;
-      } catch (error) {
-        dlog("bridge", "stream.source_unavailable", {
-          sessionId: rawAppend.sessionId,
-          error: String(error),
-        });
-        if (!(error as { coverageIncomplete?: boolean }).coverageIncomplete) return;
-        rawAppend.event = {
-          ...(rawAppend.event as object),
-          outputCursor: undefined,
-          outputRecovery: "incomplete",
-        };
-      }
-    }
-    const append = rawAppend
-      ? {
-          ...rawAppend,
-          event: annotateBrowserRuntimeStreamEvent(rawAppend.event, "milestones"),
-        }
-      : null;
-    if (append) {
-      this.workerRuns.observeWorker(append.sessionId, append.event);
-      observeComputerUseRunEvent(append.sessionId, append.event);
-    }
-    let snapshotEntry: (SnapshotEntry & { sessionId: string; epoch: string }) | undefined;
-    try {
-      snapshotEntry = append
-        ? {
-            sessionId: append.sessionId,
-            epoch: this.snapshots.epoch,
-            ...this.snapshots.append(append.sessionId, append.event),
-          }
-        : undefined;
-    } catch {
-      dlog("bridge", "stream.coverage_unavailable", { sessionId: append?.sessionId });
-      return;
-    }
-    const liveStreamEnvelope = append
-      ? {
-          sessionId: append.sessionId,
-          event: append.event,
-          ...(snapshotEntry ? { seq: snapshotEntry.seq, epoch: snapshotEntry.epoch } : {}),
-        }
-      : parseLiveStreamEnvelope(line, snapshotEntry, parsedLine);
-    const projectedLine = append ? replaceStreamEventInLine(line, append.event, parsedLine) : line;
-    dlog("bridge", "worker→renderer", summary);
+    const frame = projectWorkerOutput(
+      parsedLine,
+      this.mainOutput,
+      this.snapshots,
+      this.outputObserver,
+    );
+    if (!frame) return;
+    const { liveStreamEnvelope, projectedLine, snapshotEntry } = frame;
     if (liveStreamEnvelope) {
+      // Aggregate high-frequency deltas without copying their text into the debug log.
+      if (++this.forwardedStreamEvents % 256 === 0)
+        dlog("bridge", "stream.forwarded", { count: this.forwardedStreamEvents });
       this.safeSend("agent:streamEvent", liveStreamEnvelope);
     } else if (!quickChatForkSettlement) {
+      const message = parsedLine.message as { method?: string; id?: string | number } | null;
+      dlog("bridge", "worker→renderer", { method: message?.method, responseId: message?.id });
       this.safeSend("agent:msg", line);
     }
     void quickChatForkSettlement?.catch((error) =>
