@@ -154,7 +154,7 @@ export class DesktopHostServer {
       if (owner === null) return this.sessions.captureHistoryRead(sessionId, 0, false);
       const frame = this.windows.get(owner);
       if (!frame) throw new HostRevokedError();
-      return frame.authority.captureHistoryRead(sessionId, false);
+      return frame.authority.captureHistoryRead(sessionId, "operation");
     };
     let guard = capture();
     // New UI sessions announce their id before Main assigns their first window.
