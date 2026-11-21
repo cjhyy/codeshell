@@ -1,3 +1,4 @@
+import { externalRuntimeCatalogOperations } from "../../host/composition/external-runtime-catalog.js";
 import { Worker } from "node:worker_threads";
 import { SessionTranscriptCache } from "../session-transcript-cache.js";
 import type { BusinessMethods } from "../../host/composition/business-calls.js";
@@ -75,6 +76,7 @@ const reviews = new HostOperationReviews({
   },
 });
 const business = new HostBusinessCalls({
+  ...externalRuntimeCatalogOperations(),
   ...catalogFiles,
   "transcripts/read": (input) => transcripts.read(input),
   "transcripts/write": (input, grant) => transcripts.commitWrite(input, grant.permit),

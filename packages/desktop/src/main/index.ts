@@ -4553,6 +4553,7 @@ ipcMain.handle("browser:popout", async (e, initialUrl?: string) => {
 });
 
 const { externalRuntimeModelService } = registerExternalRuntimeIpc({
+  callBusiness: desktopHost.callBusiness,
   externalRuntimeService: () => externalRuntime.service,
   externalRuntimeApprovals: () => externalRuntime.approvals,
 });

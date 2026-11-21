@@ -6,8 +6,7 @@ import {
   ExternalRuntimeApprovals,
   parseExternalApprovalDecision,
 } from "./external-runtime-approvals.js";
-import { availableExternalRuntimes } from "./external-runtime-availability.js";
-import { ExternalRuntimeModelService } from "./external-runtime-model-service.js";
+import type { CallShellBusiness } from "../shared/shell-business-contracts.js";
 import type { ExternalRuntimeAttachment } from "@cjhyy/code-shell-capability-coding/external-runtimes";
 import { parseExternalRuntimeModelKey } from "../shared/external-runtime-models.js";
 import { requireRendererProjectEntryPath } from "./renderer-project-path.js";
@@ -23,21 +22,25 @@ export const MAX_EXTERNAL_RUNTIME_ATTACHMENTS = 32;
 export const MAX_EXTERNAL_RUNTIME_ID_CHARS = 512;
 
 export interface ExternalRuntimeIpcDeps {
+  callBusiness: CallShellBusiness;
   externalRuntimeService: () => ExternalRuntimeService | null;
   externalRuntimeApprovals: () => ExternalRuntimeApprovals | null;
 }
 
 /** External Agent Runtime (Codex / Claude Code) session routes; ownership comes from the sender. */
 export function registerExternalRuntimeIpc(deps: ExternalRuntimeIpcDeps) {
-  /** Which runtimes this machine can run — gates the model picker entries. */
-  ipcMain.handle("externalRuntime:available", () => {
-    if (!deps.externalRuntimeService()?.isEnabled()) return [];
-    return availableExternalRuntimes();
-  });
-
-  const externalRuntimeModelService = new ExternalRuntimeModelService({
-    isEnabled: () => deps.externalRuntimeService()?.isEnabled() ?? false,
-  });
+  // The login shell and managed Node directories can be discovered after the utility
+  // starts. Only this native adapter supplies the search path to the private route.
+  const search = () => ({ searchPath: process.env.PATH ?? "" });
+  const externalRuntimeModelService = {
+    list: () =>
+      deps.externalRuntimeService()
+        ? deps.callBusiness("external-runtime/models", search())
+        : Promise.resolve([]),
+  };
+  ipcMain.handle("externalRuntime:available", () =>
+    deps.externalRuntimeService() ? deps.callBusiness("external-runtime/available", search()) : [],
+  );
   ipcMain.handle("externalRuntime:models", () => externalRuntimeModelService.list());
 
   /**
