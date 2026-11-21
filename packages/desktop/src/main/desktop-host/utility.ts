@@ -1,3 +1,4 @@
+import { installDefaultLinkProviders } from "@cjhyy/code-shell-server/links";
 import { workspaceReads } from "./workspace-reads.js";
 import { HostAutomationRuns } from "../../host/composition/automation-run.js";
 import { externalRuntimeCatalogOperations } from "../../host/composition/external-runtime-catalog.js";
@@ -77,6 +78,8 @@ const automation = new HostAutomationRuns({
   },
   drain: () => output.drain(),
 });
+// Link-backed source definitions are validated against this process-local registry.
+installDefaultLinkProviders();
 const business = new HostBusinessCalls({
   "automation/run": ({ job, searchPath }, grant) => automation.run(job, searchPath, grant.signal),
   ...externalRuntimeCatalogOperations(),

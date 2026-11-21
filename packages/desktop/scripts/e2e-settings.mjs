@@ -406,6 +406,14 @@ async function checkDataSourceAdds(app, win) {
   await linked.waitFor({ state: "hidden", timeout: 10_000 });
   const references = await win.evaluate(async () => {
     const project = (await window.codeshell.projectRegistry.list())[0];
+    // A separate catalog mutation reparses existing rows in the storage worker.
+    // Both GitHub references must survive it before the Host reads them back.
+    await window.codeshell.saveSourceCatalog({
+      id: "unrelated-source",
+      kind: "mcp-resource",
+      label: "Separate catalog entry",
+    });
+    await window.codeshell.deleteSourceCatalog("unrelated-source");
     return {
       catalog: await window.codeshell.listSourceCatalog(),
       access: await window.codeshell.projectSourceAccess(project.id),

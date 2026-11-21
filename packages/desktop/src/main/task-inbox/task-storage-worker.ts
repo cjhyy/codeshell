@@ -1,3 +1,4 @@
+import { installDefaultLinkProviders } from "@cjhyy/code-shell-server/links";
 import { OperationBatches, type BatchPayload } from "../../host/composition/operation-batches.js";
 import { isBatchCommand } from "../desktop-host/private-operations.js";
 import {
@@ -33,6 +34,8 @@ catalog.onChanged((snapshot) => {
 let output: StoredDesktopOutput | undefined;
 let ledger: OperationStorage | undefined;
 let batches: OperationBatches | undefined;
+// Link-backed source definitions are validated against this process-local registry.
+installDefaultLinkProviders();
 await serveSessionIndexWorker({
   ...tasks,
   async handle(ctx, command, payload) {
