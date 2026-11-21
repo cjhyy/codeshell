@@ -98,6 +98,7 @@ export function registerRoomsIpc(deps: RoomsIpcDeps) {
     subscriptions: transcriptSubscriptions,
     roomMatchesTranscript: (...args) => mobileOrchestrator.roomMatchesTranscript(...args),
     pendingApprovals: (roomId) => approvalBridge.pendingRequests(roomId),
+    broadcastRoomState: (roomId) => mobileOrchestrator.broadcastRoomState(roomId),
   });
   ipcMain.handle("ccRoom:send", async (_e, roomId: string, text: string) => {
     if (typeof text !== "string" || text.length > MAX_EXTERNAL_RUNTIME_TEXT_CHARS) {

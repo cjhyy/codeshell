@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { isAbsolute, join, resolve } from "node:path";
 import { homedir } from "node:os";
-import type { HistoryMessage, SessionTailEvent } from "./session-history.js";
+import { historyWindow, type HistoryMessage, type SessionTailEvent } from "./session-history.js";
 import { codexUserText } from "./codex-user-text.js";
 
 /**
@@ -38,8 +38,9 @@ export function readCodexRecentHistory(
   threadId: string,
   limit: number,
   codexHome = join(homedir(), ".codex"),
-): { messages: HistoryMessage[]; hasMore: boolean; totalCount: number } {
-  const empty = { messages: [] as HistoryMessage[], hasMore: false, totalCount: 0 };
+  before?: number,
+): ReturnType<typeof historyWindow> {
+  const empty = { messages: [] as HistoryMessage[], hasMore: false, totalCount: 0, startIndex: 0 };
   const file = findCodexRolloutFile(codexHome, cwd, threadId);
   if (!file) return empty;
   let raw: string;
@@ -49,7 +50,7 @@ export function readCodexRecentHistory(
     return empty;
   }
 
-  return parseCodexRecentHistory(raw, limit);
+  return parseCodexRecentHistory(raw, limit, before);
 }
 
 /** Parse a bounded/raw Codex rollout snapshot. Shared with the desktop tail
@@ -57,7 +58,8 @@ export function readCodexRecentHistory(
 export function parseCodexRecentHistory(
   raw: string,
   limit: number,
-): { messages: HistoryMessage[]; hasMore: boolean; totalCount: number } {
+  before?: number,
+): ReturnType<typeof historyWindow> {
   const all: HistoryMessage[] = [];
   for (const line of raw.split("\n")) {
     if (!line.trim()) continue;
@@ -91,9 +93,7 @@ export function parseCodexRecentHistory(
     }
   }
 
-  const lim = limit > 0 ? limit : 20;
-  const start = Math.max(0, all.length - lim);
-  return { messages: all.slice(start), hasMore: start > 0, totalCount: all.length };
+  return historyWindow(all, limit, before);
 }
 
 /** Parse one newly-appended Codex rollout JSONL line. `response_item` is the

@@ -119,6 +119,9 @@ jobs:
   tests:
     name: tests (${{ matrix.shard }})
     runs-on: ubuntu-latest
+    # A hung test process must fail the shard instead of holding it for GitHub's
+    # 6-hour default. The slowest shard (desktop-ui) takes about 42 minutes.
+    timeout-minutes: 60
     strategy:
       # One shard's failure must not cancel the others: a red CI should show
       # every failing area at once, not just whichever tripped first.
@@ -166,6 +169,8 @@ jobs:
             # suite runs late in a large process, so every core dir whose tests spawn child
             # processes (hooks, runtime, panel-apps, utils, themes, logging, links, sources,
             # skills) now runs in two small Bun processes below instead of the shared shard.
+            # settings joined them on 2026-11-21: recovery.test.ts's `git check-ignore` got a
+            # null stdout from execFileSync (the same spawn defect) in four runs in a row.
             ignore: >-
               --path-ignore-patterns **/src/engine/** --path-ignore-patterns **/src/tool-system/**
               --path-ignore-patterns '**/src/plugins/**' --path-ignore-patterns '**/src/session/**'
@@ -174,7 +179,7 @@ jobs:
               --path-ignore-patterns '**/src/panel-apps/**' --path-ignore-patterns '**/src/utils/**'
               --path-ignore-patterns '**/src/themes/**' --path-ignore-patterns '**/src/logging/**'
               --path-ignore-patterns '**/src/links/**' --path-ignore-patterns '**/src/sources/**'
-              --path-ignore-patterns '**/src/skills/**' --path-ignore-patterns '**/src/settings/recovery.test.ts'
+              --path-ignore-patterns '**/src/skills/**' --path-ignore-patterns '**/src/settings/**'
           - shard: desktop
             paths: packages/desktop
             # The issuer proof runs alone above so its receipt precedes the first SDK/Core import.
@@ -557,10 +562,12 @@ jobs:
       - name: test core spawning suites (hooks, runtime, panel-apps, utils, themes, logging)
         if: matrix.shard == 'core-rest'
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/hooks packages/core/src/runtime packages/core/src/panel-apps packages/core/src/utils packages/core/src/themes packages/core/src/logging
-      # Settings recovery also spawns real Git and competing Bun writers.
-      - name: test core spawning suites (links, sources, skills, settings recovery)
+      - name: test core spawning suites (links, sources, skills)
         if: matrix.shard == 'core-rest'
-        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/links packages/core/src/sources packages/core/src/skills packages/core/src/settings/recovery.test.ts
+        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/links packages/core/src/sources packages/core/src/skills
+      - name: test core settings suites in their own Bun process
+        if: matrix.shard == 'core-rest'
+        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/settings
       - name: test core session in its own Bun process
         if: matrix.shard == 'core-rest'
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 --path-ignore-patterns '**/src/session/*.privacy.test.ts' packages/core/src/session

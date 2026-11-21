@@ -13,6 +13,15 @@ import {
   approvalMatchesRoute,
   selectSessionReplayEntries,
 } from "./remoteAppSync";
+import {
+  MAX_ROOMS_WITH_APPROVALS,
+  SentRoomApprovals,
+  isRoomAssistantOutput,
+  noteRoomApproval,
+  pruneRoomApprovals,
+  roomsThatStopped,
+  type RoomApprovalIndex,
+} from "./roomAttention";
 
 describe("mobile remote app sync helpers", () => {
   test("resolution matches the precise session, connection and request generation", () => {
@@ -127,5 +136,56 @@ describe("mobile remote app sync helpers", () => {
 
     unread = pruneUnreadSessions(unread, ["s1", "s2"]);
     expect([...unread]).toEqual(["s2"]);
+  });
+});
+
+describe("CLI room attention helpers", () => {
+  const room = (id: string, open: boolean) => ({
+    id,
+    name: id,
+    cwd: "/repo",
+    kind: "claude-code" as const,
+    permissionMode: "default" as const,
+    createdAt: 1,
+    lastActiveAt: 1,
+    open,
+    observing: false,
+  });
+
+  test("only a Host transition from running to not running counts as stopped", () => {
+    expect(
+      roomsThatStopped(
+        [room("a", true), room("b", false), room("c", true)],
+        [room("a", false), room("b", false), room("c", true)],
+      ),
+    ).toEqual(["a"]);
+    // A room missing from a later list is unknown, not proven stopped.
+    expect(roomsThatStopped([room("a", true)], [])).toEqual([]);
+  });
+
+  test("approval index is bounded per room and in rooms; closed rooms are pruned", () => {
+    let index: RoomApprovalIndex = new Map();
+    for (let n = 0; n < MAX_ROOMS_WITH_APPROVALS + 5; n += 1)
+      index = noteRoomApproval(index, `room-${n}`, "r");
+    expect(index.size).toBe(MAX_ROOMS_WITH_APPROVALS);
+    expect(index.has("room-0")).toBe(false);
+    expect(noteRoomApproval(index, "room-9", "r")).toBe(index);
+    expect(pruneRoomApprovals(index, [room("room-9", false)]).has("room-9")).toBe(false);
+    expect(pruneRoomApprovals(index, [room("room-9", true)])).toBe(index);
+  });
+
+  test("assistant prose marks a room unread; tools and user lines do not", () => {
+    expect(isRoomAssistantOutput({ from: "agent", type: "text", text: "hi" })).toBe(true);
+    expect(isRoomAssistantOutput({ from: "agent", type: "tool" })).toBe(false);
+    expect(isRoomAssistantOutput({ from: "user", type: "text" })).toBe(false);
+    expect(isRoomAssistantOutput(null)).toBe(false);
+  });
+
+  test("sent approval cards are kept bounded and returned once", () => {
+    const sent = new SentRoomApprovals<{ requestId: string }>();
+    for (let n = 0; n < 30; n += 1) sent.remember({ requestId: `r-${n}` });
+    expect(sent.take("r-0")).toBeUndefined();
+    expect(sent.take("r-29")).toEqual({ requestId: "r-29" });
+    expect(sent.take("r-29")).toBeUndefined();
   });
 });

@@ -18,6 +18,19 @@ export interface ActivityHistoryWorkerReply {
 }
 type HistoryWorker = Pick<Worker, "on" | "postMessage" | "ref" | "unref" | "terminate">;
 
+/** The production worker thread (also used by tests that must reap it on failure). */
+export function createActivityHistoryWorker(options: ActivityHistoryWorkerOptions): Worker {
+  return new Worker(
+    new URL(
+      import.meta.url.endsWith(".ts")
+        ? "./activity-history-worker.ts"
+        : "./activity-history-worker.mjs",
+      import.meta.url,
+    ),
+    { workerData: options },
+  );
+}
+
 /** Disk history scans and capture-policy maintenance never run on Electron Main. */
 export class ActivityHistoryWorker {
   private worker?: HistoryWorker;
@@ -31,18 +44,9 @@ export class ActivityHistoryWorker {
 
   constructor(
     private readonly options: ActivityHistoryWorkerOptions,
-    private readonly createWorker: (options: ActivityHistoryWorkerOptions) => HistoryWorker = (
-      options,
-    ) =>
-      new Worker(
-        new URL(
-          import.meta.url.endsWith(".ts")
-            ? "./activity-history-worker.ts"
-            : "./activity-history-worker.mjs",
-          import.meta.url,
-        ),
-        { workerData: options },
-      ),
+    private readonly createWorker: (
+      options: ActivityHistoryWorkerOptions,
+    ) => HistoryWorker = createActivityHistoryWorker,
   ) {}
 
   usage(query?: UsageQuery): Promise<UsageSummary> {

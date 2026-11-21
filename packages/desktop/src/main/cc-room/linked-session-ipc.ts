@@ -74,6 +74,34 @@ export function takeOverLinkedSessionFromIpc(
   );
 }
 
+/**
+ * The Host take-over action for every caller (a Desktop window or a remote
+ * device): the same registered-project gate, the same RoomManager handoff
+ * (busy/retiring/background-owned refusals, default mode, no inherited
+ * bypass), then every view is told the room is no longer observe-only.
+ */
+export async function takeOverLinkedSessionAtHost(
+  deps: {
+    roomManager: LinkedSessionRoomManager;
+    requirePath(cwd: unknown): Promise<string>;
+    broadcastRoomState?(roomId: string): void;
+  },
+  roomId: unknown,
+  externalSessionId: unknown,
+  cwd: unknown,
+  kind: unknown,
+): ReturnType<RoomManager["takeOverLinkedSession"]> {
+  const result = await takeOverLinkedSessionFromIpc(
+    deps.roomManager,
+    roomId,
+    externalSessionId,
+    await deps.requirePath(cwd),
+    kind,
+  );
+  deps.broadcastRoomState?.(result.roomId);
+  return result;
+}
+
 function parseTarget(
   externalSessionId: unknown,
   cwd: unknown,

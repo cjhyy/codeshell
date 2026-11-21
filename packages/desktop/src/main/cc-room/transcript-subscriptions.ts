@@ -76,6 +76,8 @@ export interface TranscriptSubscriptionSnapshot {
   messages: HistoryMessage[];
   hasMore: boolean;
   totalCount: number;
+  /** Index of messages[0] in the full transcript parse (earlier-page cursor). */
+  startIndex: number;
   /** Room-local boundary; never a native Session or Run cursor. */
   roomCursor: number;
 }
@@ -669,6 +671,7 @@ function recentSnapshot(
     messages,
     totalCount: history.totalCount,
     hasMore: history.totalCount > messages.length,
+    startIndex: history.totalCount - messages.length,
   };
 }
 
