@@ -1,3 +1,4 @@
+import { readMobileSnapshot } from "./read-snapshot.js";
 import {
   buildSessionHistory,
   dispatchMobileChatTurn,
@@ -1034,15 +1035,25 @@ export async function handleClientEvent(
     // External output is sent only through the selected per-socket authority;
     // negotiated peers already receive its head on their bounded journal pages.
     if (ctx.externalCommands?.isExternal(event.sessionId, event.viewerId)) return;
-    let snapshot = bridge.getSnapshot(
+    const selection = st.selectedSessionId;
+    const ownerRevision = bridge.sessionPanelOwnerRevision?.(event.sessionId);
+    const current = () =>
+      ctx.getBridge() === bridge &&
+      st.selectedSessionId === selection &&
+      bridge.sessionPanelOwnerRevision?.(event.sessionId) === ownerRevision &&
+      (!event.viewerId || !deviceId || ctx.remote.hasAuthenticatedViewer(event.viewerId, deviceId));
+    let snapshot = await readMobileSnapshot(
+      bridge,
       event.sessionId,
       typeof event.sinceSeq === "number" ? event.sinceSeq : 0,
     );
     // A cursor from an earlier Main lifetime cannot filter this process's log.
     // Legacy peers omit epochs and retain the original incremental contract.
     if (event.epoch && snapshot.epoch && event.epoch !== snapshot.epoch) {
-      snapshot = bridge.getSnapshot(event.sessionId, 0);
+      if (!current()) return;
+      snapshot = await readMobileSnapshot(bridge, event.sessionId, 0);
     }
+    if (!current()) return;
     reply({
       type: "session.snapshot",
       sessionId: event.sessionId,

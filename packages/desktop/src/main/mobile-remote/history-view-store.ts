@@ -37,7 +37,7 @@ export interface HistoryViewAccess {
   /** Includes the current Main owner revision, even if the numeric owner returns to its old value. */
   fence: string;
   assertCurrent(): Promise<void>;
-  snapshot(): MobileOutputSnapshot;
+  snapshot(): MobileOutputSnapshot | Promise<MobileOutputSnapshot>;
 }
 type HistoryViewSource = Omit<HistoryViewAccess, "assertCurrent">;
 interface View extends ReturnType<typeof projectHistoryView> {
@@ -117,7 +117,7 @@ export class MobileHistoryViewStore {
     this.views.set(access.binding, view);
     this.bytes += view.bytes;
   }
-  private get(access: HistoryViewSource): View {
+  private get(access: Omit<HistoryViewSource, "snapshot">): View {
     const view = this.views.get(access.binding);
     if (
       !view ||
@@ -134,13 +134,20 @@ export class MobileHistoryViewStore {
   private async verify(access: HistoryViewAccess, view: View, cached = true): Promise<void> {
     await access.assertCurrent();
     if (cached && this.views.get(access.binding) !== view) throw new Error("History view retired");
-    this.verifySource(access, view, cached);
+    const snapshot = await access.snapshot();
+    await access.assertCurrent();
+    this.verifySource(access, view, cached, snapshot);
   }
   /** Final synchronous fence after the caller awaits this store, directly before reply. */
-  confirm(access: HistoryViewSource): void {
-    this.verifySource(access, this.get(access), true);
+  confirm(access: Omit<HistoryViewSource, "snapshot">, snapshot: MobileOutputSnapshot): void {
+    this.verifySource(access, this.get(access), true, snapshot);
   }
-  private verifySource(access: HistoryViewSource, view: View, cached: boolean): void {
+  private verifySource(
+    access: Omit<HistoryViewSource, "snapshot">,
+    view: View,
+    cached: boolean,
+    snapshot: MobileOutputSnapshot,
+  ): void {
     // No await after these raw-source checks: reply construction cannot interleave
     // with a writer or a revocation on the Main event loop.
     const page = readOutputJournal(access.root, access.sessionId, {
@@ -162,7 +169,6 @@ export class MobileHistoryViewStore {
       if (!base.complete || JSON.stringify(base.identity) !== view.baseIdentity)
         throw new Error("History cutover changed");
     }
-    const snapshot = access.snapshot();
     if (
       snapshotIdentity(snapshot) !== snapshotIdentity(view.snapshot) ||
       (cached && this.views.get(access.binding) !== view)
@@ -256,9 +262,13 @@ export class MobileHistoryViewStore {
   }
   private async build(access: HistoryViewAccess): Promise<View> {
     await access.assertCurrent();
-    const initial = access.snapshot();
+    const initial = await access.snapshot();
+    await access.assertCurrent();
     snapshotIdentity(initial);
-    let page = readOutputJournal(access.root, access.sessionId, { maxFrames: 2048 });
+    let page = readOutputJournal(access.root, access.sessionId, {
+      maxFrames: 2048,
+      ...(initial.outputCursor && { through: initial.outputCursor }),
+    });
     if (page.status === "unavailable")
       throw new UnsupportedHistoryView("No journal projection available");
     if (page.status !== "ok" || !page.through || !page.coverageStart)
@@ -328,7 +338,8 @@ export class MobileHistoryViewStore {
         maxFrames: 2048,
       });
     }
-    const currentSnapshot = access.snapshot();
+    const currentSnapshot = await access.snapshot();
+    await access.assertCurrent();
     if (snapshotIdentity(currentSnapshot) !== snapshotIdentity(initial))
       throw new Error("History snapshot changed");
     if (initial.outputCursor !== undefined) {

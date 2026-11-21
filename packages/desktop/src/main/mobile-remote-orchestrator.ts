@@ -1,3 +1,4 @@
+import { readMobileSnapshot } from "./mobile-remote/read-snapshot.js";
 /**
  * Mobile-remote orchestration — routes authenticated mobile client events
  * (chat / approvals / sessions / rooms / cc-rooms) into the SAME run and
@@ -171,7 +172,10 @@ export class MobileRemoteOrchestrator {
         !!deps.getExternalRuntimeService?.()?.hasSession(id) ||
         isPersistedExternalRuntime(new SessionManager().readSessionState(id)),
       authority: mobileOutputRecoveryAuthority,
-      snapshot: (id, sinceSeq = 0) => this.deps.getBridge()?.getSnapshot(id, sinceSeq),
+      snapshot: (id, sinceSeq = 0) => {
+        const bridge = this.deps.getBridge();
+        return bridge ? readMobileSnapshot(bridge, id, sinceSeq) : undefined;
+      },
       reply: (viewer, event) => this.deps.remote.sendToViewer(viewer, event),
       owner: (id) => this.deps.getBridge()?.panelOwnerWebContentsId(id),
       ownerRevision: (id) => this.deps.getBridge()?.sessionPanelOwnerRevision(id),
