@@ -1,54 +1,34 @@
-// The real Activity history worker thread runs on Electron/Node, so its
-// end-to-end check runs under node --test. Under `bun test` 1.4.5 its worker
-// replies and the test's own timers intermittently stopped being delivered for
-// about 16 minutes. The client's queueing/ref/shutdown contract stays in
-// src/main/activity-history-worker.test.ts with a fake worker.
+// Real worker-thread suite for the Activity history worker, moved from
+// src/main/activity-history-worker.test.ts (assertions unchanged; the client's
+// queueing/ref/shutdown contract stays there with a fake worker). See
+// main-worker-suite.mjs for why it runs under node --test.
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { after, test } from "node:test";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import { build } from "esbuild";
 import { SessionManager, UsageLedger } from "@cjhyy/code-shell-core";
 import { ModelTraceStore } from "@cjhyy/code-shell-core/internal";
+import { compileMainModules } from "./main-worker-suite.mjs";
 
-const desktop = dirname(dirname(fileURLToPath(import.meta.url)));
 const cleanup = [];
 const workers = [];
 after(async () => {
   // A failed assertion must not leave a worker thread keeping Node alive.
   await Promise.all(workers.splice(0).map((worker) => worker.terminate()));
-  for (const directory of cleanup.splice(0)) rmSync(directory, { recursive: true, force: true });
+  for (const remove of cleanup.splice(0)) remove();
 });
 
-/** Compile the client and worker as the shipped .mjs siblings next to Desktop's packages. */
-async function loadClient() {
-  const cache = join(desktop, "node_modules", ".cache");
-  mkdirSync(cache, { recursive: true });
-  const outdir = mkdtempSync(join(cache, "activity-history-worker-"));
-  cleanup.push(outdir);
-  await build({
-    entryPoints: {
-      "activity-history-worker-client": join(desktop, "src/main/activity-history-worker-client.ts"),
-      "activity-history-worker": join(desktop, "src/main/activity-history-worker.ts"),
-    },
-    outdir,
-    outExtension: { ".js": ".mjs" },
-    bundle: true,
-    format: "esm",
-    platform: "node",
-    packages: "external",
-    logLevel: "silent",
-  });
-  return import(pathToFileURL(join(outdir, "activity-history-worker-client.mjs")).href);
-}
-
 test("real history scans leave the caller responsive and retain validation, ownership and policy ordering", async () => {
-  const { ActivityHistoryWorker, createActivityHistoryWorker } = await loadClient();
+  const compiled = await compileMainModules([
+    "activity-history-worker-client",
+    "activity-history-worker",
+  ]);
+  cleanup.push(compiled.remove);
+  const { ActivityHistoryWorker, createActivityHistoryWorker } = compiled.module;
   const root = mkdtempSync(join(tmpdir(), "codeshell-history-worker-"));
-  cleanup.push(root);
+  cleanup.push(() => rmSync(root, { recursive: true, force: true }));
   const sessions = new SessionManager(root);
   sessions.create("/workspace", "gpt-4o", "openai", "owned");
   const ledger = new UsageLedger({ storageDir: join(root, ".usage-ledger") });
