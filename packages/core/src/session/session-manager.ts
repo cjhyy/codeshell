@@ -1768,6 +1768,10 @@ export class SessionManager {
         state.title = persisted.title;
       }
       preservePersistedRecoveryFields(state, persisted);
+      state.runActivityAt =
+        persisted && (persisted.status !== state.status || persisted.runId !== state.runId)
+          ? Date.now()
+          : (persisted?.runActivityAt ?? state.startedAt);
 
       state.stateRevision = (persistedRevision ?? incomingRevision ?? 0) + 1;
       this.writeStateAtomically(target, stateForPersistence(state));

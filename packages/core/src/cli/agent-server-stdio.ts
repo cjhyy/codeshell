@@ -32,6 +32,7 @@ import { createDesktopOperationBatchAuthorityClient } from "../operations/deskto
  */
 
 import { join } from "node:path";
+import { observeSessionIndexWrites } from "./session-index-notifications.js";
 import { createManagedDocumentParserResolver } from "../sources/documents/runtime.js";
 import { existsSync, readdirSync } from "node:fs";
 import { Engine } from "../engine/engine.js";
@@ -393,6 +394,11 @@ cronScheduler.loadJobs();
 registerOpenRouterCatalogCache(join(codeShellHome(), "cache", "openrouter-models.json"));
 
 const stdioTransport = new StdioTransport(process.stdin, process.stdout);
+if (process.env.CODE_SHELL_NOTIFY_SESSION_INDEX === "1") {
+  observeSessionIndexWrites(notificationSessionsDir, (ids) =>
+    stdioTransport.send(createNotification("host/sessionIndexChanged", { ids })),
+  );
+}
 if (operationBatchEnabled) {
   operationBatchClient = createDesktopOperationBatchAuthorityClient(stdioTransport);
   stdioTransport.send(createNotification("desktop/operationBatch", { phase: "ready", version: 1 }));

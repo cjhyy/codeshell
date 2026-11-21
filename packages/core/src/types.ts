@@ -398,6 +398,8 @@ export interface SessionState {
    * Absent means `status === "completed"` is an ordinary final answer.
    */
   lastCompletionKind?: TurnCompletionKind;
+  /** Time of the most recent run or status transition; metadata edits keep it stable. */
+  runActivityAt?: number;
   /** Current run's durable user-message identity; optional on historical state. */
   runId?: string;
   /** Sticky recovery barrier after an output persistence/budget failure. */
