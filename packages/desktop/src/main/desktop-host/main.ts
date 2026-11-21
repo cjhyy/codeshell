@@ -1,5 +1,6 @@
 import type { NativeRemoteTerminals } from "../mobile-remote/native-terminals.js";
 import { NativeAutomationClient } from "./main-automation.js";
+import type { PreparedOperationKey } from "../../host/composition/operation-key.js";
 import { randomBytes } from "node:crypto";
 import { documentLifetimes } from "./document-lifetime.js";
 import type { OperationCommand } from "./private-operations.js";
@@ -249,6 +250,31 @@ export function createDesktopHost(
       );
     },
     captureOperationClient,
+    async withNativeRead<T>(
+      input: { sessionId: string; token: string; id: string; revision: string },
+      work: (key: PreparedOperationKey, check: () => void) => Promise<T>,
+    ) {
+      const origin = operationCaller.getStore();
+      if (!origin) throw new Error("Operation requires its native workbench document");
+      const lease = supervisor.watchOperationOwner(input.sessionId, origin.caller.webContentsId);
+      const signal = AbortSignal.any([origin.signal, lease.signal]);
+      try {
+        const { wrapped } = (await supervisor.callBusiness(
+          "operations/ledger",
+          { action: "host/operationReadKey", payload: input, caller: origin.caller },
+          signal,
+        )) as { wrapped: string };
+        signal.throwIfAborted();
+        const key = await prepareKey(wrapped, false);
+        signal.throwIfAborted();
+        if (!key) throw new Error("Reviewed operation key unavailable");
+        const value = await work(key, () => signal.throwIfAborted());
+        signal.throwIfAborted();
+        return value;
+      } finally {
+        lease.release();
+      }
+    },
     operationCommand<T>(action: OperationCommand, payload: Record<string, unknown>): Promise<T> {
       return captureOperationClient().operationCommand<T>(action, payload);
     },

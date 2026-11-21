@@ -55,6 +55,7 @@ export class DesktopHostSupervisor {
       effects?: Promise<void>;
     }
   >();
+  private readonly reviewGuards = new Map<AbortController, string>();
   private readonly deleting = new Set<string>();
   private readonly streamViews = new Set<string>();
 
@@ -309,7 +310,30 @@ export class DesktopHostSupervisor {
     if (read) read.effects = job;
   }
 
+  watchOperationOwner(sessionId: string, webContentsId: number) {
+    const owner = this.owners.get(sessionId);
+    if (
+      !this.ready ||
+      this.stopped ||
+      this.deleting.has(sessionId) ||
+      (owner !== undefined && owner !== webContentsId) ||
+      this.reviewGuards.size >= 8
+    )
+      throw new Error("Operation review owner changed");
+    const guard = new AbortController();
+    this.reviewGuards.set(guard, sessionId);
+    return { signal: guard.signal, release: () => this.reviewGuards.delete(guard) };
+  }
+  private invalidateReviews(sessionId?: string) {
+    for (const [guard, id] of this.reviewGuards)
+      if (sessionId === undefined || id === sessionId) {
+        this.reviewGuards.delete(guard);
+        guard.abort();
+      }
+  }
+
   private rejectReads(): void {
+    this.invalidateReviews();
     for (const read of this.reads.values()) {
       clearTimeout(read.timeout);
       read.reject(new Error("Desktop Host is unavailable"));
@@ -319,6 +343,7 @@ export class DesktopHostSupervisor {
 
   setOwner(sessionId: string, webContentsId: number | null): void {
     if ((this.owners.get(sessionId) ?? null) === webContentsId) return;
+    this.invalidateReviews(sessionId);
     if (webContentsId === null) this.owners.delete(sessionId);
     else this.owners.set(sessionId, webContentsId);
     this.post({ type: "owner", sessionId, webContentsId });
@@ -333,6 +358,7 @@ export class DesktopHostSupervisor {
 
   setDeleting(sessionId: string, deleting: boolean): void {
     if (this.deleting.has(sessionId) === deleting) return;
+    this.invalidateReviews(sessionId);
     if (deleting) this.deleting.add(sessionId);
     else this.deleting.delete(sessionId);
     this.post({ type: "deleting", sessionId, deleting });
