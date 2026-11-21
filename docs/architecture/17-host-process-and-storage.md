@@ -145,7 +145,7 @@ L2 沿用原有 worker 启动与服务路由。L5 迁移后，Host 用 `WorkerBr
 
 1. **事实来源不变**：`state.json`、`transcript.jsonl`、输出记录、会话目录 `session-catalog.json` 仍是事实来源。SQLite 存的是**可重建的索引和投影**，外加少量**只存在于 SQLite 的用户意图**（4.5），这部分要能导出镜像。
 2. **运行时状态不落盘**：运行中、等待中只在 Host 内存里，通过推送通知界面。
-3. **一个会话数据根对应一个库**：库放在该数据根旁边，例如 `<sessionsRoot>/../state.sqlite`。默认的 Desktop 和 TUI 共享同一个根，所以共享同一个库；serve 默认使用 `<dataDir>/worker/sessions`，不同身份使用各自的根（`headless-server.ts:146`、`chat-session-manager.ts:201`），这些范围不会混在一个库里。
+3. **一个会话数据根对应一个库**：L3 将库放在会话根的同级目录 `.codeshell-state/<根目录名的 SHA-256>/current/state.sqlite`。同一父目录下的两个会话根各用各的库，旧版本枚举会话目录时也不会看到 SQLite 文件。默认的 Desktop 和 TUI 共享同一个根，所以共享同一个库；serve 默认使用 `<dataDir>/worker/sessions`，不同身份使用各自的根（`headless-server.ts:146`、`chat-session-manager.ts:201`），这些范围不会混在一个库里。
 4. **驱动按能力加载**：`node:sqlite`（Node ≥ 22.13，Electron ≥ 35）或 `bun:sqlite`，上面一层很薄的同步接口。core 仍然声明支持 Node 20.10，加载不到驱动时**退回现有的 JSON 读写和扫描**，功能不缺，只是没有加速。
 5. **写入顺序固定**：先写事实来源（JSON），再写索引。索引写失败不影响事实，由对账修复（4.3）。
 6. **Schema 迁移**：`schema_migrations` 表，迁移脚本只增不改。库损坏或版本不认识时，整库重命名隔离、重新补建。用户意图表先从镜像恢复（4.5）。
@@ -182,6 +182,10 @@ L2 沿用原有 worker 启动与服务路由。L5 迁移后，Host 用 `WorkerBr
   - 目录存在但没有索引行，或者修改时间、大小和索引不一致：重新 upsert。
 - **对账时机**：启动时一次；之后每 60 秒一次（只列目录名，开销很小）；Host 收到会话删除事件时立即对账这一个 ID。
 - **崩溃一致性**：JSON 写完、索引还没写就退出时，下次对账会按修改时间不一致或缺行补上。L3 验收要实际做两件事：**Host 在线时用旧客户端删除会话**；**写完 JSON 立即杀掉进程**。
+
+L3 的目录查询继续使用已有的目录修改时间和 ID 游标，兼容旧的数字偏移。新状态在 run 或状态改变时保存 `runActivityAt`，改标题和归档保留这个时间。历史状态缺少该字段时，索引用已有的会话创建时间。索引只复制列表展示字段和外部运行时种类，原始状态、会话内容与运行时连接句柄继续由原文件保管。
+
+可通过 `node scripts/run-isolated-node-smoke.mjs scripts/smoke-session-index.mjs` 验证重建。夹具让独立进程在写好 JSON 后立即退出，再启动索引；另在 SQLite 写锁被占用期间持续写真实输出记录并读取会话列表，以 p99 小于 10ms 为验收门槛。
 
 ### 4.4 迁移与降级
 
