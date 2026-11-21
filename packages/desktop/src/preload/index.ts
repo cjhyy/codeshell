@@ -550,7 +550,7 @@ contextBridge.exposeInMainWorld("codeshell", {
   platform: process.platform,
   hasWindowTitleBarOverlay:
     process.platform === "win32" && process.argv.includes("--codeshell-titlebar-overlay"),
-  sessionCatalog: createSessionCatalogApi(ipcRenderer),
+  sessionCatalog: createSessionCatalogApi(ipcRenderer, configurationHost),
   /**
    * Resolve a browser File created by an explicit picker/drop to its local
    * absolute path. Electron intentionally removed the old `file.path` field;

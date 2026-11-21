@@ -344,7 +344,7 @@ import { getGitStatus, getGitBranches, revealInFinder, openPath } from "./deskto
 import { readSettings, writeSettings, type SettingsScope } from "./settings-service.js";
 import { registerDesktopOutputHistoryHost } from "./session-output-history-host.js";
 import { registerSessionCatalogIpc } from "./session-catalog-ipc.js";
-import { SessionCatalogStore } from "./session-catalog-store.js";
+import { hostCatalogClient } from "./desktop-host/catalog-client.js";
 import { backgroundTaskSourceId, createTaskInboxSources } from "./task-inbox/task-inbox-sources.js";
 import { createTaskInboxService } from "./task-inbox/task-inbox-service.js";
 import { createTaskInboxBackgroundHost } from "./task-inbox/task-inbox-background-host.js";
@@ -4784,13 +4784,18 @@ registerDesktopOutputHistoryHost({
     closeActivityHistory = cleanup;
   },
 });
-const sessionCatalogStore = new SessionCatalogStore();
+const sessionCatalogStore = hostCatalogClient(
+  desktopHost.callBusiness,
+  desktopHost.catalogListeners,
+);
 const sessionCatalogIpc = registerSessionCatalogIpc(
   ipcMain,
   () => {
     return [...mainWindows, ...petSurfaceWindows()];
   },
   sessionCatalogStore,
+  undefined,
+  desktopHost.documentSignal,
 );
 taskInboxDisposers.push(
   registerOptimizationLabHost({

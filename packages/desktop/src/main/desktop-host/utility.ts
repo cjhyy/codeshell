@@ -1,3 +1,6 @@
+import { HostBusinessCalls } from "../../host/composition/business-calls.js";
+import { catalogOperations } from "../../host/composition/session-catalog.js";
+import { businessRead, noBusinessArguments } from "./business-read.js";
 import { configurationReads } from "./configuration-reads.js";
 import { HostApprovalState } from "./approval-state.js";
 import {
@@ -29,6 +32,10 @@ const storage = openStateStorage(sessionsRoot(), {
   workerConfig: { taskInboxDirectory: process.argv[2] },
   workerUrl: new URL("./session-index-worker.mjs", import.meta.url),
 });
+const catalogFiles = catalogOperations(storage, (snapshot) =>
+  parent.postMessage({ type: "session-catalog-changed", snapshot }),
+);
+const business = new HostBusinessCalls({ ...catalogFiles });
 const index = createSessionIndex(sessionsRoot(), { storage });
 const catalog = new DesktopSessionListVisibility(index);
 let server: DesktopHostServer | undefined;
@@ -80,6 +87,7 @@ parent.on("message", ({ data, ports }) => {
 
   if (isDesktopHostControl(data) && data.type === "shutdown") {
     stopping = true;
+    business.close();
     void Promise.all([index.close(), worker?.close()])
       .then(() => output.drain())
       .finally(async () => (await storage).close())
@@ -100,6 +108,7 @@ parent.on("message", ({ data, ports }) => {
         ...desktopHostMethods((options) => catalog.list(options)),
         ...taskHostReads(storage),
         ...configurationReads,
+        businessRead("catalog/load", noBusinessArguments, catalogFiles["catalog/load"]),
         ["agent/pendingApprovals", approvals.method] as const,
         ...outputMethods(
           (id, since) => output.snapshot(id, since),
@@ -111,6 +120,30 @@ parent.on("message", ({ data, ports }) => {
     return;
   }
 
+  if (data?.type === "withdraw-business" && typeof data.id === "string") {
+    business.revoke(data.id);
+    return;
+  }
+  if (isRpcRequest(data) && data.method === "host/business" && typeof data.id === "string") {
+    const { id, params } = data;
+    void business.run(id, String(params?.method), params?.input).then(
+      (result) => {
+        if (!stopping) parent.postMessage({ jsonrpc: "2.0", id, result });
+      },
+      (error) => {
+        if (!stopping)
+          parent.postMessage({
+            jsonrpc: "2.0",
+            id,
+            error: {
+              code: -32603,
+              message: error instanceof Error ? error.message : "Business operation failed",
+            },
+          });
+      },
+    );
+    return;
+  }
   if (
     isRpcRequest(data) &&
     (isPrivateTaskCommand(data.method) ||

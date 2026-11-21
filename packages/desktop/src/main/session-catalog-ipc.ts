@@ -1,14 +1,30 @@
 import type { BrowserWindow, IpcMain, IpcMainInvokeEvent } from "electron";
 import { randomUUID } from "node:crypto";
+import type {
+  SessionIndex,
+  SessionCatalogSnapshot,
+  SessionCatalogPatch,
+} from "../shared/session-catalog.js";
 import { SessionCatalogStore } from "./session-catalog-store.js";
 import { SessionTranscriptCache } from "./session-transcript-cache.js";
 
+interface CatalogDirectory {
+  load(signal?: AbortSignal): Promise<SessionCatalogSnapshot>;
+  importLegacy(
+    indices: Record<string, SessionIndex>,
+    signal?: AbortSignal,
+  ): Promise<SessionCatalogSnapshot>;
+  apply(patch: SessionCatalogPatch, signal?: AbortSignal): Promise<SessionCatalogSnapshot>;
+  onChanged(listener: (snapshot: SessionCatalogSnapshot) => void): () => void;
+  flush(): Promise<void>;
+}
 /** Only application windows can read or mutate the private session directory. */
 export function registerSessionCatalogIpc(
   ipc: Pick<IpcMain, "handle" | "removeHandler">,
   windows: () => BrowserWindow[],
-  catalog = new SessionCatalogStore(),
+  catalog: CatalogDirectory | SessionCatalogStore = new SessionCatalogStore(),
   transcripts = new SessionTranscriptCache(),
+  documentSignal?: (e: IpcMainInvokeEvent) => AbortSignal,
 ) {
   const channels: string[] = [];
   const pendingFlushes = new Map<
@@ -21,18 +37,33 @@ export function registerSessionCatalogIpc(
   const trustedEvent = (event: IpcMainInvokeEvent) =>
     windows().some((window) => !window.isDestroyed() && window.webContents === event.sender) &&
     event.senderFrame === event.sender.mainFrame;
-  const handle = (channel: string, action: (input: any) => Promise<unknown>) => {
+  const handle = (
+    channel: string,
+    action: (input: any, signal?: AbortSignal) => Promise<unknown>,
+  ) => {
     channels.push(channel);
     ipc.handle(channel, (event: IpcMainInvokeEvent, input: unknown) => {
       if (!trustedEvent(event)) {
         throw new Error("session catalogue requires an application window");
       }
-      return action(input);
+      return action(input, documentSignal?.(event));
     });
   };
-  handle("sessionCatalog:load", () => catalog.load());
-  handle("sessionCatalog:importLegacy", (indices) => catalog.importLegacy(indices));
-  handle("sessionCatalog:apply", (patch) => catalog.apply(patch));
+  const directory: CatalogDirectory =
+    catalog instanceof SessionCatalogStore
+      ? {
+          load: () => catalog.load(),
+          apply: (patch) => catalog.apply(patch),
+          importLegacy: (indices) => catalog.importLegacy(indices),
+          onChanged: (listener) => catalog.onChanged(listener),
+          flush: () => catalog.flush(),
+        }
+      : catalog;
+  handle("sessionCatalog:load", (_, signal) => directory.load(signal));
+  handle("sessionCatalog:importLegacy", (indices, signal) =>
+    directory.importLegacy(indices, signal),
+  );
+  handle("sessionCatalog:apply", (patch, signal) => directory.apply(patch, signal));
   handle("sessionCatalog:writeTranscript", (input) => transcripts.write(input));
   handle("sessionCatalog:readTranscript", (input) => transcripts.read(input));
   handle("sessionCatalog:deleteTranscript", (input) => transcripts.delete(input));

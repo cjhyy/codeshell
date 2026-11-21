@@ -1,9 +1,11 @@
+import type { DesktopHostClient } from "./desktop-host-client.js";
 import type { IpcRenderer, IpcRendererEvent } from "electron";
 import type { SessionCatalogApi, SessionCatalogSnapshot } from "../shared/session-catalog";
 
 /** The renderer keeps a projection; Main acknowledges every durable edit. */
 export function createSessionCatalogApi(
   ipc: Pick<IpcRenderer, "invoke" | "on" | "removeListener">,
+  host?: Pick<DesktopHostClient, "readBusiness">,
 ): SessionCatalogApi {
   const flushListeners = new Set<() => Promise<void>>();
   const waitingForRenderer = new Set<string>();
@@ -24,7 +26,10 @@ export function createSessionCatalogApi(
     flush(requestId),
   );
   return {
-    load: () => ipc.invoke("sessionCatalog:load"),
+    load: () =>
+      host
+        ? host.readBusiness("catalog/load", {}, () => ipc.invoke("sessionCatalog:load"))
+        : ipc.invoke("sessionCatalog:load"),
     importLegacy: (indices) => ipc.invoke("sessionCatalog:importLegacy", indices),
     apply: (patch) => ipc.invoke("sessionCatalog:apply", patch),
     writeTranscript: (input) => ipc.invoke("sessionCatalog:writeTranscript", input),

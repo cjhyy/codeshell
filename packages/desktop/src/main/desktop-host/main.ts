@@ -1,3 +1,4 @@
+import { documentLifetimes } from "./document-lifetime.js";
 import type { CredentialFileCommand } from "@cjhyy/code-shell-core/internal/storage";
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { DesktopHostIdentity } from "../../shared/desktop-host-protocol.js";
@@ -67,6 +68,9 @@ export function createDesktopHost(
   let changes: ReturnType<typeof createSessionIndexChanges> | undefined;
   const connect = (event: IpcMainEvent) => workbenches.connect(event);
   return {
+    callBusiness: supervisor.callBusiness.bind(supervisor),
+    documentSignal: documentLifetimes((event) => navigation.assertSender(event)),
+    catalogListeners: supervisor.catalogListeners,
     start() {
       ipcMain.removeListener(DesktopHostIpc.connect, connect);
       ipcMain.on(DesktopHostIpc.connect, connect);

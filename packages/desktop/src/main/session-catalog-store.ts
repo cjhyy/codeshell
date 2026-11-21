@@ -56,7 +56,7 @@ export interface SessionCatalogStoreOptions {
 }
 
 /**
- * Main owns the directory. Every operation reloads inside the same file mutex
+ * The Desktop Host storage thread owns the directory. Every operation reloads inside the same file mutex
  * used by ProjectStore, so both renderer windows and separate app processes
  * merge against the last committed state. There is no mutable memory snapshot
  * to accidentally publish when an atomic disk write fails.
@@ -112,7 +112,10 @@ export class SessionCatalogStore {
    * The backup precedes the atomic marker+catalogue commit; a failed commit can
    * be retried, while successful migration permanently ignores stale browsers.
    */
-  importLegacy(indices: Record<string, SessionIndex>): Promise<SessionCatalogSnapshot> {
+  importLegacy(
+    indices: Record<string, SessionIndex>,
+    commit?: () => void,
+  ): Promise<SessionCatalogSnapshot> {
     let legacy: Record<string, SessionIndex>;
     try {
       legacy = checkedIndices(indices);
@@ -121,6 +124,7 @@ export class SessionCatalogStore {
     }
     return this.enqueue(() =>
       this.mutate((catalog) => {
+        commit?.();
         if (catalog.legacyMigration) return false;
         for (const [projectKey, index] of Object.entries(legacy)) {
           const existing = catalog.indices[projectKey];
@@ -154,7 +158,7 @@ export class SessionCatalogStore {
     );
   }
 
-  apply(patch: SessionCatalogPatch): Promise<SessionCatalogSnapshot> {
+  apply(patch: SessionCatalogPatch, commit?: () => void): Promise<SessionCatalogSnapshot> {
     // Detach queued input immediately: callers cannot mutate it while waiting
     // for another window's operation to finish.
     let validated: SessionCatalogPatch;
@@ -165,6 +169,7 @@ export class SessionCatalogStore {
     }
     return this.enqueue(() =>
       this.mutate((catalog) => {
+        commit?.();
         const hadProject = Object.hasOwn(catalog.indices, validated.projectKey);
         const index = catalog.indices[validated.projectKey] ?? {
           sessions: [],

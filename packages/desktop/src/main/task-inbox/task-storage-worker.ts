@@ -1,3 +1,6 @@
+import { SessionCatalogStore } from "../session-catalog-store.js";
+import { claimBusinessCommit } from "../../host/composition/business-calls.js";
+import type { SessionCatalogPatch, SessionIndex } from "../../shared/session-catalog.js";
 import { StoredDesktopOutput, type OutputMutation } from "../desktop-host/stored-output.js";
 import {
   credentialCommands,
@@ -8,10 +11,30 @@ import { serveSessionIndexWorker } from "@cjhyy/code-shell-server/storage";
 import { createTaskInboxStorageHandlers } from "./task-projection-storage.js";
 
 const tasks = createTaskInboxStorageHandlers();
+const catalog = new SessionCatalogStore();
+let catalogRevision: number | undefined;
+catalog.onChanged((snapshot) => {
+  catalogRevision = snapshot.revision;
+});
 let output: StoredDesktopOutput | undefined;
 await serveSessionIndexWorker({
   ...tasks,
-  handle(ctx, command, payload) {
+  async handle(ctx, command, payload) {
+    if (
+      command === "catalog/load" ||
+      command === "catalog/apply" ||
+      command === "catalog/importLegacy"
+    ) {
+      const { input, permit } = payload as { input: unknown; permit: Int32Array };
+      const commit = () => claimBusinessCommit(permit);
+      if (command === "catalog/load") return { snapshot: await catalog.load(), changed: false };
+      const before = catalogRevision;
+      const snapshot =
+        command === "catalog/apply"
+          ? await catalog.apply(input as SessionCatalogPatch, commit)
+          : await catalog.importLegacy(input as Record<string, SessionIndex>, commit);
+      return { snapshot, changed: before !== catalogRevision };
+    }
     if (command === "output/mutate" || command === "output/snapshot") {
       output ??= new StoredDesktopOutput(ctx.sessionsRoot);
       if (command === "output/mutate") return output.mutate(payload as OutputMutation);
