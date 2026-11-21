@@ -1,3 +1,4 @@
+import { guardedWorkerTree } from "./guarded-worker-tree.mjs";
 /* Actual compiled Engine → production native Main → existing activity UI → cold Main.
  * Synthetic account/HTTP only. Every Core process is confined before importing Core. */
 /* global Event, localStorage, window */
@@ -271,6 +272,7 @@ async function guardedProcesses() {
       .trim()
       .split("\n")
       .map(JSON.parse);
+    const tree = await guardedWorkerTree(isolated.home, mainPid, receipts);
     const spawned = (
       await readFile(join(isolated.home, "spawned-workers.jsonl"), "utf8").catch(() => "")
     )
@@ -290,9 +292,7 @@ async function guardedProcesses() {
     if (
       receipts.some((row) => row.pid === mainPid) &&
       receipts.some((row) => row.pid === process.pid) &&
-      spawned.every((worker) =>
-        receipts.some((row) => row.pid === worker.pid && row.ppid === mainPid),
-      )
+      spawned.every((worker) => tree.hasWorker(worker))
     ) {
       for (const worker of spawned)
         await writeFile(join(isolated.home, `worker-${worker.pid}.permit`), "verified");

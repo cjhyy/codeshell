@@ -218,3 +218,163 @@ test("task reads negotiate each capability and preserve the Host's authoritative
   expect(await pending).toBeNull();
   expect(fromIpc).toEqual(["list", "get", "get"]);
 });
+
+test("a negotiated stream arrives on the port while its subscription snapshot is outstanding", async () => {
+  const { client } = clientWithStatus();
+  const host = await attach(client, {
+    ...capabilities,
+    methods: [...capabilities.methods, "agent/subscribe"],
+  });
+  const events: unknown[] = [];
+  const off = client.onStreamEvent((env) => events.push(env));
+  const next = nextRequest(host);
+  const read = client.subscribeSession("s", 2, async () => {
+    throw new Error("unexpected IPC");
+  });
+  const req = await next;
+  expect(req).toMatchObject({ method: "agent/subscribe", params: { sessionId: "s", sinceSeq: 2 } });
+  const live = {
+    sessionId: "s",
+    epoch: "stream-1",
+    seq: 3,
+    event: { type: "text_delta", text: "live" },
+  };
+  host.postMessage({ jsonrpc: "2.0", method: "agent/streamEvent", params: live });
+  host.postMessage({
+    jsonrpc: "2.0",
+    id: req.id,
+    result: {
+      epoch: "stream-1",
+      nextSeq: 4,
+      events: [{ seq: 3, event: live.event }],
+      outputCursor: "opaque-journal-cursor",
+    },
+  });
+  expect((await read).outputCursor).toBe("opaque-journal-cursor");
+  expect(events).toEqual([live]);
+  off();
+  const barrier = nextRequest(host);
+  const done = client.subscribeSession("s", 3, async () => {
+    throw new Error("unexpected IPC");
+  });
+  const empty = await barrier;
+  host.postMessage({ jsonrpc: "2.0", method: "agent/streamEvent", params: live });
+  host.postMessage({ jsonrpc: "2.0", id: empty.id, result: { nextSeq: 4, events: [] } });
+  await done;
+  expect(events).toEqual([live]);
+});
+
+test("approval resume uses its own epoch and version and retains only external approvals from Main", async () => {
+  const { client } = clientWithStatus();
+  const host = await attach(client, {
+    ...capabilities,
+    methods: [...capabilities.methods, "agent/pendingApprovals"],
+  });
+  const native = { requestId: "native", sessionId: "s", request: { toolName: "write" } };
+  const external = { ...native, source: "external-runtime" as const, requestId: "external" };
+  const legacy = async () => [external, { ...native, requestId: "stale-main-native" }] as any[];
+  const respond = async (expectedParams: unknown, result: unknown) => {
+    const next = nextRequest(host);
+    const read = client.pendingApprovals(legacy);
+    const req = await next;
+    expect(req).toMatchObject({ method: "agent/pendingApprovals", params: expectedParams });
+    host.postMessage({ jsonrpc: "2.0", id: req.id, result });
+    return read;
+  };
+  expect(await respond({}, { epoch: "worker-1", stateVersion: 9, pending: [native] })).toEqual([
+    native,
+    external,
+  ]);
+  const since = { since: { epoch: "worker-1", stateVersion: 9 } };
+  expect(await respond(since, { epoch: "worker-1", stateVersion: 9 })).toEqual([native, external]);
+  await expect(respond(since, { epoch: "worker-2", stateVersion: 1 })).rejects.toThrow("snapshot");
+  expect(await respond(since, { epoch: "worker-2", stateVersion: 1, pending: [] })).toEqual([
+    external,
+  ]);
+});
+
+test("an established agent grant cannot downgrade to Main when its Host connection is lost", async () => {
+  const { client } = clientWithStatus();
+  const host = await attach(client, {
+    ...capabilities,
+    methods: [...capabilities.methods, "agent/subscribe", "agent/pendingApprovals"],
+  });
+  let reads = 0;
+  const legacy = async () => {
+    reads++;
+    return [];
+  };
+  const next = nextRequest(host);
+  const inflight = client
+    .subscribeSession("s", 0, async () => {
+      reads++;
+      return { events: [], nextSeq: 0 };
+    })
+    .catch((error) => error);
+  await next;
+  client.disconnect("reconnecting");
+  expect(await inflight).toMatchObject({ code: DesktopHostErrors.reconnecting });
+  await expect(client.pendingApprovals(legacy)).rejects.toMatchObject({
+    code: DesktopHostErrors.reconnecting,
+  });
+  await expect(
+    client.subscribeSession("s", 0, async () => {
+      reads++;
+      return { events: [], nextSeq: 0 };
+    }),
+  ).rejects.toMatchObject({ code: DesktopHostErrors.reconnecting });
+  expect(reads).toBe(0);
+});
+
+test("negotiated commands use named methods and keep caller-local ids and worker error data", async () => {
+  const { client } = clientWithStatus();
+  const host = await attach(client, {
+    ...capabilities,
+    methods: [...capabilities.methods, "agent/cancel"],
+  });
+  const rpc = client.agentCommand("agent/cancel", { sessionId: "s1" }, 60, "caller-id", () => {
+    throw new Error("unexpected fallback");
+  });
+  const request = await nextRequest(host);
+  expect(request).toEqual({
+    jsonrpc: "2.0",
+    id: expect.any(Number),
+    method: "agent/cancel",
+    params: { sessionId: "s1" },
+  });
+  const error = { code: -32001, message: "worker detail", data: { sessionId: "s1" } };
+  host.postMessage({ jsonrpc: "2.0", id: request.id, error });
+  expect(await rpc).toEqual({ jsonrpc: "2.0", id: "caller-id", error });
+});
+
+test("long runs have no clock timeout and reject on disconnect without IPC retry", async () => {
+  const { client } = clientWithStatus(10);
+  const host = await attach(client, {
+    ...capabilities,
+    methods: [...capabilities.methods, "agent/run"],
+  });
+  const ipc = () => {
+    throw new Error("unexpected fallback");
+  };
+  const first = client.agentCommand("agent/run", { task: "a" }, 0, "long", ipc);
+  const request = await nextRequest(host);
+  await new Promise((r) => setTimeout(r, 24));
+  host.postMessage({ jsonrpc: "2.0", id: request.id, result: { ok: true } });
+  expect((await first).result).toEqual({ ok: true });
+  const pending = client.agentCommand("agent/run", { task: "b" }, 0, "next", ipc);
+  await nextRequest(host);
+  client.disconnect("reconnecting");
+  await expect(pending).rejects.toThrow("-32011");
+  await expect(client.agentCommand("agent/run", {}, 0, "again", ipc)).rejects.toThrow("-32011");
+});
+
+test("old Hosts use existing IPC and a negotiated request honors its own deadline", async () => {
+  const { client } = clientWithStatus();
+  const ipc = async () => ({ jsonrpc: "2.0" as const, id: "legacy", result: "old host" });
+  await attach(client);
+  expect((await client.agentCommand("agent/configure", {}, 40, "id", ipc)).result).toBe("old host");
+  await attach(client, { ...capabilities, methods: [...capabilities.methods, "agent/configure"] });
+  await expect(client.agentCommand("agent/configure", {}, 5, "id", ipc)).rejects.toThrow(
+    "timed out",
+  );
+});

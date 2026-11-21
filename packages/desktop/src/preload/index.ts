@@ -1,4 +1,5 @@
 import { DesktopHostIpc } from "../shared/desktop-host-protocol";
+import { isDesktopAgentMethod } from "../shared/desktop-agent-methods";
 import { DesktopHostClient, desktopHostRoutes, routeLocalProviders } from "./desktop-host-client";
 import { accountFeaturesApi } from "./account-features-api.js";
 import { createOperationBatchApi } from "./operation-batch-api.js";
@@ -415,6 +416,18 @@ function rpc(
   timeoutMs: number = RPC_TIMEOUT_MS,
 ): Promise<RpcResponse> {
   const id = nextRpcId();
+  const sendIpc = () => rpcIpc(id, method, params, timeoutMs);
+  return agentCommandsHost && isDesktopAgentMethod(method)
+    ? agentCommandsHost.agentCommand(method, params, timeoutMs, id, sendIpc)
+    : sendIpc();
+}
+
+function rpcIpc(
+  id: string,
+  method: string,
+  params: Record<string, unknown> | undefined,
+  timeoutMs: number,
+): Promise<RpcResponse> {
   const line = JSON.stringify({ jsonrpc: "2.0", id, method, params });
   return new Promise<RpcResponse>((resolve, reject) => {
     const timer =
@@ -523,6 +536,10 @@ const desktopHost =
   Object.values(desktopHostRoutes).includes("host")
     ? new DesktopHostClient()
     : undefined;
+
+const agentCommandsHost = desktopHostRoutes.agentCommands === "host" ? desktopHost : undefined;
+const agentHost = desktopHostRoutes.agentStream === "host" ? desktopHost : undefined;
+agentHost?.onStreamEvent((env) => streamListeners.forEach((listener) => listener(env)));
 
 if (desktopHost) {
   ipcRenderer.on(DesktopHostIpc.port, (event) => {
@@ -819,7 +836,8 @@ contextBridge.exposeInMainWorld("codeshell", {
     };
   },
   getPendingApprovals: async () => {
-    const pending = await ipcRenderer.invoke("agent:pendingApprovals");
+    const readIpc = () => ipcRenderer.invoke("agent:pendingApprovals");
+    const pending = await (agentHost ? agentHost.pendingApprovals(readIpc) : readIpc());
     for (const env of pending) {
       if (env?.source === "external-runtime" && typeof env.requestId === "string")
         externalApprovalIds.add(env.requestId);
@@ -984,8 +1002,10 @@ contextBridge.exposeInMainWorld("codeshell", {
    * Returns events past `sinceSeq` plus the next cursor, so the renderer can
    * replay what it missed and align the snapshot with the live stream.
    */
-  subscribeSession: (sessionId: string, sinceSeq?: number) =>
-    ipcRenderer.invoke("agent:subscribe", sessionId, sinceSeq),
+  subscribeSession: (sessionId: string, sinceSeq?: number) => {
+    const readIpc = () => ipcRenderer.invoke("agent:subscribe", sessionId, sinceSeq);
+    return agentHost ? agentHost.subscribeSession(sessionId, sinceSeq, readIpc) : readIpc();
+  },
   deleteRun: (runId: string) => ipcRenderer.invoke("runs:delete", runId),
   listAutomations: () => ipcRenderer.invoke("automation:list"),
   getAutomation: (id: string) => ipcRenderer.invoke("automation:get", id),

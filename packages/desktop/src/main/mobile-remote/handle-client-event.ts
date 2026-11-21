@@ -1,3 +1,4 @@
+import { readMobileSnapshot } from "./read-snapshot.js";
 import {
   buildSessionHistory,
   dispatchMobileChatTurn,
@@ -71,6 +72,8 @@ export interface MobileDeviceState {
   sessionId?: string;
   /** The session this device explicitly selected (overrides everything). */
   selectedSessionId?: string;
+  /** Invalidates outstanding Host reads even if a phone returns to the same Session. */
+  selectionRevision?: number;
   /** The cwd bound to the selected or freshly-created mobile session. */
   selectedCwd?: string | null;
   /** Stable V2 authority for a freshly-created mobile Session. */
@@ -472,6 +475,7 @@ export async function handleClientEvent(
     explicit ?? st.selectedSessionId ?? implicitSessionId ?? ctx.ensureMobileSessionId(st);
   if (event.type === "session.select") {
     await commandSelection;
+    st.selectionRevision = (st.selectionRevision ?? 0) + 1;
     st.selectedSessionId = event.sessionId;
     st.selectedProjectId = undefined;
     st.selectedRootId = undefined;
@@ -503,6 +507,7 @@ export async function handleClientEvent(
         permissionMode: event.permissionMode ?? st.permissionMode ?? "default",
         sessionId,
         selectedSessionId: sessionId,
+        selectionRevision: (st.selectionRevision ?? 0) + 1,
         selectedCwd: selection.cwd,
         selectedProjectId: selection.projectId,
         selectedRootId: selection.rootId,
@@ -1034,15 +1039,27 @@ export async function handleClientEvent(
     // External output is sent only through the selected per-socket authority;
     // negotiated peers already receive its head on their bounded journal pages.
     if (ctx.externalCommands?.isExternal(event.sessionId, event.viewerId)) return;
-    let snapshot = bridge.getSnapshot(
+    const selectionRevision = st.selectionRevision;
+    const ownerRevision = bridge.sessionPanelOwnerRevision?.(event.sessionId);
+    const current = () =>
+      ctx.getBridge() === bridge &&
+      st.selectionRevision === selectionRevision &&
+      (!deviceId || ctx.deviceState(deviceId) === st) &&
+      !ctx.externalCommands?.isExternal(event.sessionId, event.viewerId) &&
+      bridge.sessionPanelOwnerRevision?.(event.sessionId) === ownerRevision &&
+      (!event.viewerId || !deviceId || ctx.remote.hasAuthenticatedViewer(event.viewerId, deviceId));
+    let snapshot = await readMobileSnapshot(
+      bridge,
       event.sessionId,
       typeof event.sinceSeq === "number" ? event.sinceSeq : 0,
     );
     // A cursor from an earlier Main lifetime cannot filter this process's log.
     // Legacy peers omit epochs and retain the original incremental contract.
     if (event.epoch && snapshot.epoch && event.epoch !== snapshot.epoch) {
-      snapshot = bridge.getSnapshot(event.sessionId, 0);
+      if (!current()) return;
+      snapshot = await readMobileSnapshot(bridge, event.sessionId, 0);
     }
+    if (!current()) return;
     reply({
       type: "session.snapshot",
       sessionId: event.sessionId,

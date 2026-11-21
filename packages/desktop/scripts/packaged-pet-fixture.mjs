@@ -1,3 +1,4 @@
+import { guardedWorkerTree } from "./guarded-worker-tree.mjs";
 import assert from "node:assert/strict";
 import childrenModule from "node:child_process";
 import { createHash } from "node:crypto";
@@ -71,6 +72,19 @@ export async function preparePackagedPetFixture({
     target: "node20",
     external: ["electron"],
   });
+  // Inject the fixture only in this temporary profile. The imported Host entry
+  // and the rest of the signed app still come from the installed package.
+  const hostWrapper = join(isolated.home, "packaged-host-wrapper.mjs");
+  await writeFile(
+    hostWrapper,
+    [
+      'import { createRequire } from "node:module";',
+      'import { pathToFileURL } from "node:url";',
+      "createRequire(import.meta.url)(process.env.CODESHELL_OFFICIAL_BOOTSTRAP);",
+      "await import(pathToFileURL(process.env.CODESHELL_OFFICIAL_HOST_ENTRY).href);",
+    ].join("\n"),
+    { mode: 0o600, flag: "wx" },
+  );
   const environment = {};
   for (const key of [
     "PATH",
@@ -122,6 +136,7 @@ export async function preparePackagedPetFixture({
     CODESHELL_OFFICIAL_NODE: managedNode,
     CODESHELL_OFFICIAL_WORKER_EXECUTABLE: executable,
     CODESHELL_OFFICIAL_BOOTSTRAP: bootstrap,
+    CODESHELL_OFFICIAL_HOST_WRAPPER: hostWrapper,
     CODESHELL_OFFICIAL_USER_DATA: isolated.userDataDir,
   });
   // Never inherit APPIMAGE/APPDIR. Only the actual ELF runtime may supply them.
@@ -441,6 +456,12 @@ export async function preparePackagedPetFixture({
           .split("\n")
           .filter(Boolean)
           .map((line) => JSON.parse(line));
+        const tree = await guardedWorkerTree(
+          isolated.home,
+          pid,
+          receipts,
+          (r) => r.negativeProbes === 7,
+        );
         assert.ok(
           receipts.every(
             (receipt) => receipt.origin === origin && receipt.homeId === hash(isolated.home),
@@ -455,10 +476,11 @@ export async function preparePackagedPetFixture({
           spawned.every(
             (worker) =>
               worker.command === executable &&
+              tree.hasWorker(worker) &&
               receipts.some(
                 (receipt) =>
                   receipt.pid === worker.pid &&
-                  receipt.ppid === pid &&
+                  receipt.ppid === worker.ppid &&
                   receipt.role === "worker" &&
                   receipt.electron === app.__packagedIdentity.electron &&
                   receipt.negativeProbes === 7,
@@ -517,6 +539,7 @@ export async function preparePackagedPetFixture({
       )
         return false;
       return canCleanupPackagedProcesses({
+        requireHostEvidence: true,
         home: isolated.home,
         requireWorkerEvidence,
         launchFailed,

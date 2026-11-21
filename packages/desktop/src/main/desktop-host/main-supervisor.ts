@@ -1,3 +1,4 @@
+import type { DesktopAgentMethod } from "../../shared/desktop-agent-methods.js";
 import { isPrivateTaskCommand } from "../task-inbox/private-task-command.js";
 import type { MessagePortMain, UtilityProcess } from "electron";
 import type { ListDiskSessionsResult } from "@cjhyy/code-shell-server/storage";
@@ -35,10 +36,11 @@ export class DesktopHostSupervisor {
     {
       resolve: (value: unknown) => void;
       reject: (error: Error) => void;
-      timeout: NodeJS.Timeout;
+      timeout?: NodeJS.Timeout;
     }
   >();
   private readonly deleting = new Set<string>();
+  private readonly streamViews = new Set<string>();
 
   constructor(
     private readonly fork: () => HostChild,
@@ -79,7 +81,8 @@ export class DesktopHostSupervisor {
         if (!read) return;
         clearTimeout(read.timeout);
         this.reads.delete(message.id);
-        if (message.error) read.reject(new Error(message.error.message));
+        if (message.error)
+          read.reject(Object.assign(new Error(message.error.message), message.error));
         else read.resolve(message.result);
       } else if (isRpcRequest(message)) {
         const response =
@@ -96,6 +99,8 @@ export class DesktopHostSupervisor {
         for (const [sessionId, webContentsId] of this.owners) {
           if (!this.post({ type: "owner", sessionId, webContentsId })) return;
         }
+        for (const sessionId of this.streamViews)
+          if (!this.post({ type: "stream-view", sessionId, enabled: true })) return;
         for (const sessionId of this.deleting) {
           if (!this.post({ type: "deleting", sessionId, deleting: true })) return;
         }
@@ -108,6 +113,22 @@ export class DesktopHostSupervisor {
     }, 15_000);
   }
 
+  workbenchCommand(
+    caller: DesktopHostIdentity,
+    method: DesktopAgentMethod,
+    params: Record<string, unknown>,
+  ) {
+    return this.request(
+      "host/workbenchCommand",
+      { caller, method, params },
+      method === "agent/run" || (method === "agent/forkSession" && params.mode === "summary")
+        ? 0
+        : 30_000,
+    );
+  }
+  readWorkbenchOutput(caller: DesktopHostIdentity, sessionId: string, sinceSeq: number) {
+    return this.request("host/readWorkbenchOutput", { caller, sessionId, sinceSeq });
+  }
   async listDiskSessions(options: ListSessionOptions): Promise<ListDiskSessionsResult> {
     const page = (await this.request("host/listDiskSessions", { ...options })) as
       | ListDiskSessionsResult
@@ -130,15 +151,22 @@ export class DesktopHostSupervisor {
     return (await this.request(command, { payload, ...(caller && { caller }) })) as T | null;
   }
 
-  private request(method: string, params: Record<string, unknown>): Promise<unknown> {
+  private request(
+    method: string,
+    params: Record<string, unknown>,
+    timeoutMs = 15_000,
+  ): Promise<unknown> {
     if (!this.ready || this.stopped)
       return Promise.reject(new Error("Desktop Host is unavailable"));
     const id = `main:request:${++this.sequence}`;
     return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        this.reads.delete(id);
-        reject(new Error("Desktop Host request timed out"));
-      }, 15_000).unref();
+      const timeout =
+        timeoutMs > 0
+          ? setTimeout(() => {
+              this.reads.delete(id);
+              reject(new Error("Desktop Host request timed out"));
+            }, timeoutMs).unref()
+          : undefined;
       this.reads.set(id, { resolve, reject, timeout });
       this.send({ jsonrpc: "2.0", id, method, params });
     });
@@ -157,6 +185,13 @@ export class DesktopHostSupervisor {
     if (webContentsId === null) this.owners.delete(sessionId);
     else this.owners.set(sessionId, webContentsId);
     this.post({ type: "owner", sessionId, webContentsId });
+  }
+
+  setStreamView(sessionId: string, enabled: boolean): void {
+    if (this.streamViews.has(sessionId) === enabled) return;
+    if (enabled) this.streamViews.add(sessionId);
+    else this.streamViews.delete(sessionId);
+    this.post({ type: "stream-view", sessionId, enabled });
   }
 
   setDeleting(sessionId: string, deleting: boolean): void {

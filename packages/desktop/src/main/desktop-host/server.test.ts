@@ -6,6 +6,7 @@ import {
   type RpcNotification,
   type RpcResponse,
 } from "../../shared/desktop-host-protocol.js";
+import { outputMethods } from "./output-methods.js";
 import { DesktopHostServer, desktopHostMethods, type DesktopHostMethod } from "./server.js";
 
 class TestPort extends EventEmitter {
@@ -269,4 +270,152 @@ test("replacing a document revokes its waiting writes without undoing a committe
   expect(() => server.reserveTaskCommit(first)).toThrow();
   pending.release();
   committed.release();
+});
+
+test("approval snapshots are scoped to the document's current sessions and worker generation", async () => {
+  const { HostApprovalState } = await import("./approval-state.js");
+  let now = 1;
+  const state = new HostApprovalState(
+    (id, owner) => server.allows(id, owner),
+    () => now,
+  );
+  const server: DesktopHostServer = new DesktopHostServer(
+    "test",
+    new Map([["agent/pendingApprovals", state.method]]),
+  );
+  const first = connect(server, frame(1)),
+    second = connect(server, frame(2));
+  server.setOwner("mine", 1);
+  server.setOwner("theirs", 2);
+  const observe = (method: string, params: Record<string, unknown>) => {
+    const message = { jsonrpc: "2.0", method, params };
+    state.observe({ message, line: JSON.stringify(message) });
+  };
+  const request = (sessionId: string) =>
+    observe("agent/approvalRequest", {
+      sessionId,
+      requestId: "r",
+      expiresAt: 10,
+      request: { toolName: "Read" },
+    });
+  const read = async (
+    port: TestPort,
+    id: number,
+    since?: { epoch: string; stateVersion: number },
+  ) => {
+    port.request(id, "agent/pendingApprovals", since ? { since } : {});
+    await tick();
+    return port.responses(id)[0]!.result as {
+      epoch: string;
+      stateVersion: number;
+      pending?: { sessionId: string }[];
+    };
+  };
+  request("mine");
+  const initial = await read(first, 1);
+  expect(initial.pending?.map((p) => p.sessionId)).toEqual(["mine"]);
+  const cursor = { epoch: initial.epoch, stateVersion: initial.stateVersion };
+  request("theirs");
+  expect(await read(first, 2, cursor)).toEqual(cursor);
+  expect((await read(second, 3)).pending?.map((p) => p.sessionId)).toEqual(["theirs"]);
+  server.setOwner("mine", 2);
+  expect((await read(first, 4, cursor)).pending).toEqual([]);
+  const both = await read(second, 5);
+  expect(both.pending).toHaveLength(2);
+  observe("agent/approvalResolved", { sessionId: "mine", requestId: "r" });
+  expect((await read(second, 6)).pending).toHaveLength(1);
+  now = 11;
+  expect((await read(second, 7)).pending).toEqual([]);
+  state.reset(2);
+  expect((await read(first, 8, cursor)).epoch).not.toBe(initial.epoch);
+});
+
+test("unowned disk-history reads are withdrawn on ownership changes even after returning to unowned", async () => {
+  const { HostSessionAuthority, HostPortAuthority } = await import("./authority.js");
+  const sessions = new HostSessionAuthority();
+  const a = new HostPortAuthority(
+    { webContentsId: 1, frameGeneration: 1, frameToken: "one", windowKind: "workbench" },
+    sessions,
+  );
+  const b = new HostPortAuthority(
+    { webContentsId: 2, frameGeneration: 1, frameToken: "two", windowKind: "workbench" },
+    sessions,
+  );
+  const first = a.captureHistoryRead("past");
+  expect(first.historical).toBe(true);
+  sessions.setOwner("past", 2);
+  expect(() => a.captureHistoryRead("past")).toThrow();
+  const owned = b.captureHistoryRead("past");
+  expect(owned.historical).toBe(false);
+  sessions.setOwner("past", null);
+  expect(() => first.assertCurrent()).toThrow();
+  expect(() => owned.assertCurrent()).toThrow();
+  const fresh = a.captureHistoryRead("past");
+  first.release?.();
+  expect(() => fresh.assertCurrent()).not.toThrow();
+  sessions.setDeleting("past", true);
+  expect(() => fresh.assertCurrent()).toThrow();
+  expect(() => b.captureHistoryRead("past")).toThrow();
+  sessions.setDeleting("past", false);
+  expect(() => fresh.assertCurrent()).toThrow();
+  fresh.release?.();
+});
+
+test("only trusted, live shared views receive root-owned output and they never gain a session mutation grant", async () => {
+  const { server, a, b } = fixture();
+  server.setStreamView(sessionId, true);
+  server.notifySession(sessionId, "agent/streamEvent", { sessionId });
+  expect(a.messages.at(-1)).toHaveProperty("method", "agent/streamEvent");
+  expect(b.messages.at(-1)).toHaveProperty("method", "agent/streamEvent");
+  b.request(73, "session/use", { sessionId });
+  await tick();
+  expect(b.responses(73)[0]?.error?.code).toBe(revoked);
+  server.setDeleting(sessionId, true);
+  const count = a.messages.length;
+  server.notifySession(sessionId, "agent/streamEvent", { sessionId });
+  expect(a.messages.length).toBe(count);
+  server.setStreamView(sessionId, false);
+  server.setDeleting(sessionId, false);
+  server.setOwner(sessionId, 2);
+  server.notifySession(sessionId, "agent/streamEvent", { sessionId });
+  expect(a.messages.length).toBe(count);
+  expect(b.messages.at(-1)).toHaveProperty("method", "agent/streamEvent");
+});
+
+test("disk-history recovery checks visibility after I/O and legacy IPC uses the same frame grant", async () => {
+  const snapshot = { epoch: "test", events: [], nextSeq: 1, topLevelRunning: false };
+  let visible = true;
+  let resolveRead: (() => void) | undefined;
+  let reads = 0;
+  const methods = outputMethods(
+    async () => {
+      reads++;
+      await new Promise<void>((resolve) => {
+        resolveRead = resolve;
+      });
+      return snapshot;
+    },
+    async () => ({ sessions: visible ? [{ id: sessionId, mtime: 1 }] : [], nextCursor: null }),
+  );
+  const server = new DesktopHostServer("test", methods);
+  const a = connect(server, frame(1));
+  const b = connect(server, frame(2));
+  a.request(1, "agent/subscribe", { sessionId });
+  await tick();
+  visible = false;
+  resolveRead!();
+  await tick();
+  expect(a.responses(1)[0]?.error?.code).toBe(revoked);
+  b.request(2, "agent/subscribe", { sessionId });
+  await tick();
+  expect(b.responses(2)[0]?.error?.code).toBe(revoked);
+  expect(reads).toBe(1);
+  server.setOwner(sessionId, 1);
+  const legacy = server.readWorkbenchOutput(frame(1), { sessionId });
+  server.setOwner(sessionId, 2);
+  server.setOwner(sessionId, 1);
+  resolveRead!();
+  await expect(legacy).rejects.toThrow("revoked");
+  await expect(server.readWorkbenchOutput(frame(2), { sessionId })).rejects.toThrow("revoked");
+  await expect(server.readWorkbenchOutput(frame(1, 2), { sessionId })).rejects.toThrow("revoked");
 });

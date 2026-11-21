@@ -1,3 +1,4 @@
+import { isDesktopAgentMethod } from "../../shared/desktop-agent-methods.js";
 import { rendererDiskSessionQuery, type ListSessions } from "../../shared/disk-session-query.js";
 import { CONTRACTS } from "@cjhyy/code-shell-core/contracts";
 import {
@@ -25,8 +26,11 @@ interface HostPort {
 }
 
 export interface DesktopHostMethod {
+  /** Allows an unowned row only when run verifies current, visible disk history. */
+  readonly historyRead?: boolean;
+  readonly admission?: boolean;
   /** A session-scoped method derives its scope from its validated arguments. */
-  sessionId?(params: RpcRequest["params"]): string;
+  sessionId?(params: RpcRequest["params"]): string | undefined;
   run(context: HostRequestContext, params: RpcRequest["params"]): unknown;
 }
 
@@ -36,9 +40,15 @@ interface Connection {
   initialized: boolean;
   commits: Set<Int32Array>;
   pending: Map<RpcRequest["id"], HostRequestContext>;
+  compatibilityReads: number;
 }
 
-class InvalidParams extends Error {}
+export class InvalidParams extends Error {}
+export class WorkerCommandError extends Error {
+  constructor(readonly rpcError: { code: number; message: string; data?: unknown }) {
+    super(rpcError.message);
+  }
+}
 
 const catalog: DesktopHostMethod = {
   async run(context, params) {
@@ -106,6 +116,7 @@ export class DesktopHostServer {
       initialized: false,
       commits: new Set(),
       pending: new Map(),
+      compatibilityReads: 0,
     };
     this.windows.set(identity.webContentsId, connection);
     port.on("close", () => this.detach(connection));
@@ -152,8 +163,50 @@ export class DesktopHostServer {
     return { permit, release: () => conn.commits.delete(permit) };
   }
 
+  allows(sessionId: string, owner: number): boolean {
+    return this.sessions.allows(sessionId, owner);
+  }
+  async readWorkbenchOutput(
+    identity: DesktopHostIdentity,
+    params: Record<string, unknown>,
+    method = "agent/subscribe",
+  ): Promise<unknown> {
+    if (method !== "agent/subscribe" && !isDesktopAgentMethod(method)) throw new InvalidParams();
+    const connection = this.windows.get(identity.webContentsId);
+    const bound = connection?.authority.identity;
+    const handler = this.methods.get(method);
+    if (
+      !connection ||
+      bound?.frameToken !== identity.frameToken ||
+      bound.frameGeneration !== identity.frameGeneration ||
+      !handler
+    )
+      throw new HostRevokedError();
+    const sessionId = handler.sessionId?.(params);
+    if (!sessionId && !handler.admission) throw new InvalidParams();
+    if (connection.pending.size + connection.compatibilityReads >= 128)
+      throw new Error("Too many pending Desktop Host requests");
+    const guard = sessionId
+      ? connection.authority.captureHistoryRead(sessionId, handler.admission)
+      : connection.authority.capture();
+    connection.compatibilityReads++;
+    try {
+      const result = await handler.run(guard, params);
+      guard.assertCurrent();
+      return result;
+    } finally {
+      guard.release?.();
+      connection.compatibilityReads--;
+    }
+  }
+
   setOwner(sessionId: string, owner: number | null): void {
     this.sessions.setOwner(sessionId, owner);
+    this.rejectRevoked();
+  }
+
+  setStreamView(sessionId: string, enabled: boolean): void {
+    this.sessions.setStreamView(sessionId, enabled);
     this.rejectRevoked();
   }
 
@@ -168,7 +221,8 @@ export class DesktopHostServer {
     for (const connection of this.windows.values()) {
       if (!connection.initialized) continue;
       try {
-        connection.authority.capture(sessionId);
+        if (method === "agent/streamEvent") connection.authority.assertStreamAccess(sessionId);
+        else connection.authority.capture(sessionId);
         connection.port.postMessage({ jsonrpc: "2.0", method, params });
       } catch (error) {
         if (!(error instanceof HostRevokedError)) this.detach(connection);
@@ -195,6 +249,7 @@ export class DesktopHostServer {
     } catch {
       // The peer may already have closed this port.
     } finally {
+      for (const guard of connection.pending.values()) guard.release?.();
       connection.pending.clear();
       connection.port.close();
     }
@@ -207,6 +262,7 @@ export class DesktopHostServer {
           guard.assertCurrent();
         } catch {
           connection.pending.delete(id);
+          guard.release?.();
           try {
             sendError(
               connection.port,
@@ -268,16 +324,23 @@ export class DesktopHostServer {
       sendError(port, id, -32601, "Method not found");
       return;
     }
-    if (pending.size >= 128) {
+    if (pending.size + connection.compatibilityReads >= 128) {
       sendError(port, id, -32001, "Too many pending Desktop Host requests");
       return;
     }
     let guard: HostRequestContext | undefined;
     try {
       const sessionId = handler.sessionId?.(params);
-      if (handler.sessionId && (typeof sessionId !== "string" || !sessionId))
+      if (
+        handler.sessionId &&
+        !(handler.admission && sessionId === undefined) &&
+        (typeof sessionId !== "string" || !sessionId)
+      )
         throw new InvalidParams();
-      guard = authority.capture(sessionId);
+      guard =
+        (handler.historyRead || handler.admission) && sessionId
+          ? authority.captureHistoryRead(sessionId, handler.admission)
+          : authority.capture(sessionId);
       pending.set(id, guard);
       const result = await handler.run(guard, params);
       guard.assertCurrent();
@@ -288,10 +351,13 @@ export class DesktopHostServer {
       if (guard && pending.get(id) !== guard) return;
       if (error instanceof HostRevokedError)
         sendError(port, id, DesktopHostErrors.revoked, error.message);
+      else if (error instanceof WorkerCommandError)
+        port.postMessage({ jsonrpc: "2.0", id, error: error.rpcError });
       else if (error instanceof InvalidParams)
         sendError(port, id, -32602, error.message || "Invalid params");
       else sendError(port, id, -32603, "Desktop Host request failed");
     } finally {
+      guard?.release?.();
       if (pending.get(id) === guard) pending.delete(id);
     }
   }

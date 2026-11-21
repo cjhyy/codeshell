@@ -4,12 +4,11 @@
  */
 /* global document, localStorage, structuredClone, window */
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
 import { createServer } from "node:http";
-import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, realpath, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import { confinedWorkerEnvironment } from "../../../scripts/runtime-cost-smoke-isolation.mjs";
+import { fileURLToPath } from "node:url";
+import { prepareConfinedElectronFixture } from "./confined-electron-fixture.mjs";
 import {
   captureRendererErrors,
   findCodeShellWindow,
@@ -43,9 +42,10 @@ let releaseRequest;
 const gradingFile = join(isolated.home, "grading.json");
 const datasetFile = join(isolated.home, "dataset.json");
 const exportedDataset = join(isolated.home, "dataset-export.json");
-const guardLog = join(isolated.home, "network-guard.jsonl");
-const guardedMain = join(isolated.home, "guarded-main.mjs");
-const guardUrl = new URL("../../../scripts/runtime-cost-smoke-isolation.mjs", import.meta.url).href;
+let fixture;
+let receiptDirectory;
+let verifyCurrentWorker;
+const proofErrors = [];
 
 const dataset = {
   schemaVersion: 1,
@@ -119,26 +119,6 @@ async function json(file, value) {
   await writeFile(file, JSON.stringify(value, null, 2), { mode: 0o600 });
 }
 async function seed() {
-  // Electron GUI startup can discard NODE_OPTIONS. Load the test guard before
-  // the production Main, then use an explicit preload for its owned Node worker.
-  await writeFile(
-    guardedMain,
-    `import { app } from "electron";
-import children from "node:child_process";
-import { syncBuiltinESMExports } from "node:module";
-app.setAppPath(${JSON.stringify(appDir)});
-await import(${JSON.stringify(guardUrl)});
-const spawn = children.spawn;
-children.spawn = function (command, args, options) {
-  if (args?.some((argument) => argument.includes("agent-server-stdio")))
-    args = ["--import", ${JSON.stringify(guardUrl)}, ...args];
-  return spawn.call(this, command, args, options);
-};
-syncBuiltinESMExports();
-await import(${JSON.stringify(pathToFileURL(join(appDir, "out/main/index.mjs")).href)});
-`,
-    { mode: 0o600 },
-  );
   await mkdir(join(project, ".agents", "skills", skillName), { recursive: true });
   await writeFile(join(project, ".agents", "skills", skillName, "SKILL.md"), source);
   const now = Date.now();
@@ -197,24 +177,54 @@ await import(${JSON.stringify(pathToFileURL(join(appDir, "out/main/index.mjs")).
   });
 }
 async function launch() {
+  receiptDirectory = await mkdtemp(join(isolated.home, "worker-run-"));
+  fixture = await prepareConfinedElectronFixture({
+    appDir,
+    isolated,
+    origin: new URL(endpoint).origin,
+    receiptDirectory,
+    enableWorkerCrash: true,
+  });
   app = await launchCodeShellElectron({
     appDir,
     ...isolated,
-    mainEntry: guardedMain,
-    env: {
-      ...confinedWorkerEnvironment(process.env, isolated.home, new URL(endpoint).origin, guardUrl),
-      ...Object.fromEntries(
-        Object.keys(process.env)
-          .filter((key) => /^(https?_proxy|all_proxy|no_proxy)$/i.test(key))
-          .map((key) => [key, ""]),
-      ),
-      CODESHELL_COST_SMOKE_GUARD_LOG: guardLog,
-      // The worker guard inherits the outer test runner's environment; keep
-      // both state aliases bound to this Electron fixture's seeded profile.
-      CODE_SHELL_HOME: isolated.codeShellHome,
-      CODE_SHELL_TEST_HOME: isolated.codeShellHome,
-    },
+    mainEntry: fixture.mainEntry,
+    env: fixture.env,
   });
+  // The page itself performs its first query, and the crash exercise can
+  // restart the worker without calling the test's query helper.
+  const launched = app;
+  const guard = fixture;
+  let verified = "";
+  let pending;
+  const forks = join(receiptDirectory, "spawned-workers.jsonl");
+  const verify = async () => {
+    const current = await readFile(forks, "utf8").catch((error) => {
+      if (error.code === "ENOENT") return "";
+      throw error;
+    });
+    if (!current || current === verified) return;
+    if (!pending)
+      pending = guard
+        .assertWorker(launched)
+        .then(() => {
+          verified = current;
+        })
+        .finally(() => {
+          pending = undefined;
+        });
+    await pending;
+  };
+  const timer = setInterval(() => {
+    void verify().catch((error) => {
+      if (!proofErrors.includes(String(error))) proofErrors.push(String(error));
+    });
+  }, 100).unref();
+  launched.once("close", () => clearInterval(timer));
+  verifyCurrentWorker = async () => {
+    await verify();
+    assert.ok(verified, "The responding worker must have passed the pre-import guard");
+  };
   app.process().stderr.on("data", (value) => mainErrors.push(String(value)));
   win = await findCodeShellWindow(app);
   rendererErrors.push(captureRendererErrors(win));
@@ -256,33 +266,8 @@ async function query(type, params = {}) {
       window.codeshell.optimizationLab.query(type, { target, ...params }),
     { type, params, target },
   );
-  await assertWorkerConfinement();
+  await verifyCurrentWorker();
   return result;
-}
-async function assertWorkerConfinement() {
-  const actual = await app.evaluate(() => ({
-    home: process.env.HOME,
-    workerPid: process
-      ._getActiveHandles()
-      .find((handle) =>
-        handle.spawnargs?.some((argument) => argument.includes("agent-server-stdio")),
-      )?.pid,
-  }));
-  assert.equal(actual.home, isolated.home, "Electron HOME is isolated before Core imports");
-  assert.ok(Number.isInteger(actual.workerPid), "Observe this app's known direct worker");
-  const records = (await readFile(guardLog, "utf8"))
-    .trim()
-    .split("\n")
-    .map((line) => JSON.parse(line));
-  assert.ok(
-    records.some(
-      (record) =>
-        record.pid === actual.workerPid &&
-        record.origin === new URL(endpoint).origin &&
-        record.homeId === createHash("sha256").update(isolated.home).digest("hex"),
-    ),
-    "The actual worker installed exact-origin network confinement before Core",
-  );
 }
 async function until(read, message, timeout = 30000) {
   const deadline = Date.now() + timeout;
@@ -298,20 +283,21 @@ async function openPage() {
   await win.getByTestId("optimization-lab-page").waitFor();
 }
 
+function processExited(pid) {
+  try {
+    process.kill(pid, 0);
+    return false;
+  } catch (error) {
+    if (error.code === "ESRCH") return true;
+    throw error;
+  }
+}
 async function crashOwnedWorker() {
-  // Inspect only this Electron instance's direct ChildProcess handles. This
-  // test harness never guesses a global PID or signals another app's worker.
-  return app.evaluate(() => {
-    const workers = process
-      ._getActiveHandles()
-      .filter((handle) =>
-        handle.spawnargs?.some((argument) => argument.includes("agent-server-stdio")),
-      );
-    if (workers.length !== 1) throw new Error(`Expected one owned worker, found ${workers.length}`);
-    const worker = workers[0];
-    if (!worker.kill("SIGKILL")) throw new Error("Could not crash the owned worker");
-    return worker.pid;
-  });
+  const { spawned } = await fixture.assertWorker(app);
+  const { pid } = spawned.at(-1);
+  // The trusted fixture in the Host signals its actual ChildProcess handle.
+  await writeFile(join(receiptDirectory, `worker-${pid}.crash`), "", { flag: "wx", mode: 0o600 });
+  return pid;
 }
 
 async function crashOwnedElectron() {
@@ -829,15 +815,7 @@ try {
   await until(async () => requests.length === 28, "Worker-crash request did not begin");
   const workerPayload = JSON.stringify(requests.at(-1).body.messages);
   const workerPid = await crashOwnedWorker();
-  await until(
-    async () =>
-      app.evaluate(
-        (_electron, pid) => !process._getActiveHandles().some((handle) => handle.pid === pid),
-        workerPid,
-      ),
-    "Owned crashed worker did not exit",
-    5000,
-  );
+  await until(() => processExited(workerPid), "Owned crashed worker did not exit", 5000);
   blockRequests = false;
   releaseRequest?.();
   releaseRequest = undefined;
@@ -849,26 +827,11 @@ try {
   await win.getByTestId("optimization-lab-start").click();
   await until(async () => requests.length === 31, "Electron-crash request did not begin");
   const appPayload = JSON.stringify(requests.at(-1).body.messages);
-  const orphanPid = await app.evaluate(
-    () =>
-      process
-        ._getActiveHandles()
-        .find((handle) =>
-          handle.spawnargs?.some((argument) => argument.includes("agent-server-stdio")),
-        )?.pid,
-  );
-  assert.ok(Number.isInteger(orphanPid), "Observe only this app's known direct worker");
+  const orphanPid = (await fixture.assertWorker(app)).spawned.at(-1).pid;
+  assert.ok(Number.isInteger(orphanPid), "Observe the worker forked by this app's Host");
   await crashOwnedElectron();
   await until(
-    async () => {
-      try {
-        process.kill(orphanPid, 0);
-        return false;
-      } catch (error) {
-        if (error.code === "ESRCH") return true;
-        throw error;
-      }
-    },
+    () => processExited(orphanPid),
     "The orphaned worker must exit promptly when its controlling stdin closes",
     5000,
   );
@@ -929,6 +892,19 @@ try {
   );
 } catch (error) {
   console.error(`Optimization Lab E2E failed at ${stage}:`, error);
+  if (proofErrors.length) console.error("Worker guard proofs:", proofErrors);
+  if (receiptDirectory)
+    for (const file of ["spawned-hosts.jsonl", "spawned-workers.jsonl", "network-guard.jsonl"]) {
+      const rows = (await readFile(join(receiptDirectory, file), "utf8").catch(() => ""))
+        .trim()
+        .split("\n")
+        .filter(Boolean)
+        .map(JSON.parse);
+      console.error(
+        file,
+        rows.map(({ pid, ppid }) => ({ pid, ppid })),
+      );
+    }
   if (mainErrors.length)
     console.error("Isolated Electron stderr:", mainErrors.join("").slice(-4000));
   if (upstreamErrors.length) console.error("Local fixture upstream failures:", upstreamErrors);

@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { EventEmitter } from "node:events";
 import type { MessageChannelMain, UtilityProcess, WebContents, WebFrameMain } from "electron";
 import { DesktopHostIpc, type DesktopHostControl } from "../../shared/desktop-host-protocol.js";
+import { DesktopHostWorkerClient } from "./main-worker.js";
+import type { WorkerCommand, WorkerNotice } from "./worker-wire.js";
 import { DesktopHostSupervisor } from "./main-supervisor.js";
 import { HostWorkbenchPorts } from "./main-workbenches.js";
 
@@ -284,4 +286,48 @@ test("Main keeps the authorized catalog query intact and settles every read on e
     .catch((error: Error) => error);
   child.emit("exit", 1);
   expect(await unfinished).toBeInstanceOf(Error);
+});
+
+test("a native reply and an outstanding call cannot cross a worker or Host replacement", async () => {
+  class Port extends EventEmitter {
+    commands: WorkerCommand[] = [];
+    start() {}
+    close() {}
+    postMessage(command: WorkerCommand) {
+      this.commands.push(command);
+    }
+    notice(data: WorkerNotice) {
+      this.emit("message", { data, ports: [] });
+    }
+  }
+  const client = new DesktopHostWorkerClient({
+    entryPath: "/owned/agent.mjs",
+    buildEnv: () => ({}),
+  });
+  const startup = client.waitForFirstBinding();
+  const first = new Port();
+  client.bind(first);
+  await startup;
+  client.ensureWorker("/owned");
+  const release = Promise.withResolvers<void>();
+  const staleWrite = Promise.withResolvers<boolean>();
+  client.subscribeLines(() => {
+    void release.promise.then(() => staleWrite.resolve(client.sendLine("late reply")));
+  });
+  first.notice({ type: "line", generation: 1, line: "private prompt" });
+  const call = client.request(
+    "agent/query",
+    {},
+    { id: "one", timeoutMs: 30_000, meta: { origin: "host", producer: "owned test" } },
+  );
+  const second = new Port();
+  client.bind(second);
+  expect(await call).toEqual({ status: "workerExit" });
+  client.ensureWorker("/owned");
+  expect(client.workerGeneration()).toBe(2);
+  release.resolve();
+  expect(await staleWrite.promise).toBe(false);
+  expect(second.commands.map((command) => command.type)).toEqual(["start"]);
+  expect(client.sendLine("current")).toBe(true);
+  expect(second.commands.at(-1)).toEqual({ type: "write", generation: 2, line: "current" });
 });

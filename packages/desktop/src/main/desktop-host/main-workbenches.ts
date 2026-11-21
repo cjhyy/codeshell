@@ -72,6 +72,23 @@ export class HostWorkbenchPorts {
     });
   }
 
+  tracks(contents: WebContents): boolean {
+    return this.windows.has(contents);
+  }
+
+  assertIdentity(identity: DesktopHostIdentity): void {
+    for (const window of this.windows.values()) {
+      if (window.contents.id !== identity.webContentsId || !window.requestedFrame) continue;
+      const live = this.identity({ sender: window.contents, senderFrame: window.requestedFrame });
+      if (
+        live.frameToken === identity.frameToken &&
+        live.frameGeneration === identity.frameGeneration
+      )
+        return;
+    }
+    throw new Error("Workbench document was revoked");
+  }
+
   identity(event: Sender): DesktopHostIdentity {
     const window = this.windows.get(event.sender);
     if (

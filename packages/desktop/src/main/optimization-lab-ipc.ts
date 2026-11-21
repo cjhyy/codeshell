@@ -13,6 +13,7 @@ interface Deps {
   ipc: Pick<IpcMain, "handle" | "removeHandler">;
   windows(): BrowserWindow[];
   enabled(): boolean;
+  waitForWorkerHost?(): Promise<void>;
   resolveTarget(target: unknown): Promise<{ kind: string; cwd: string }>;
   trusted(cwd: string): Promise<boolean>;
   artifactRoot(): string;
@@ -270,6 +271,8 @@ export function registerOptimizationLabIpc(deps: Deps): () => void {
     input: Record<string, unknown>,
     check: () => void,
   ): Promise<Record<string, unknown> & { cwd: string }> => {
+    check();
+    await deps.waitForWorkerHost?.();
     check();
     const target = await deps.resolveTarget(input.target);
     check();

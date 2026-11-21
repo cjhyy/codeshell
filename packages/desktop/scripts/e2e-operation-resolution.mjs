@@ -1,3 +1,4 @@
+import { guardedWorkerTree } from "./guarded-worker-tree.mjs";
 /* Compiled SDK Engine → production Main/native confirmation → existing activity UI.
  * Synthetic Link adapter only; deny-all HTTP is installed in every actual process. */
 /* global document, Event, localStorage, window */
@@ -69,6 +70,7 @@ async function guardProcesses() {
       .trim()
       .split("\n")
       .map(JSON.parse);
+    const tree = await guardedWorkerTree(isolated.home, mainPid, receipts);
     const spawned = (
       await readFile(join(isolated.home, "spawned-workers.jsonl"), "utf8").catch(() => "")
     )
@@ -84,9 +86,7 @@ async function guardProcesses() {
     if (
       receipts.some((row) => row.pid === mainPid) &&
       receipts.some((row) => row.pid === process.pid) &&
-      spawned.every((worker) =>
-        receipts.some((row) => row.pid === worker.pid && row.ppid === mainPid),
-      )
+      spawned.every((worker) => tree.hasWorker(worker))
     ) {
       for (const worker of spawned)
         await writeFile(join(isolated.home, `worker-${worker.pid}.permit`), "verified");

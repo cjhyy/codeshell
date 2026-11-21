@@ -1199,6 +1199,7 @@ tunnelManager.on("status", (status: string, detail?: unknown) => {
 // Push the live online-device set to every renderer whenever a phone connects
 // or disconnects, so the trusted-device list can show per-device online lamps.
 mobileRemote.on("online-change", (ids: string[]) => {
+  bridge?.setMobileOutputOnline(ids.length > 0);
   for (const w of BrowserWindow.getAllWindows()) {
     if (!w.isDestroyed()) w.webContents.send("mobileRemote:onlineChange", ids);
   }
@@ -1713,12 +1714,14 @@ async function createWindow(): Promise<BrowserWindow> {
       desktopHost.setOwner,
       desktopHost.sessionsChanged,
       userContinuedTask,
+      desktopHost.createWorkerBridge,
     );
     // External Agent Runtimes (Codex / Claude Code). Everything
     // security-relevant is resolved here, in the composition root: this is the
     // only layer that knows the owning window, whether the project is trusted,
     // and which feature flags are on. The layers below deliberately refuse to
     // default any of it.
+    bridge.setMobileOutputOnline(mobileRemote.onlineDeviceIds().length > 0);
     const markBackgroundChanged = (origin: "main" | "worker", e: BackgroundWorkChange) => {
       taskInboxService.markDirty(
         e.kind === "shell" ? "background-shell" : "background-job",
@@ -2016,7 +2019,11 @@ async function createWindow(): Promise<BrowserWindow> {
     let mimiSessionId: string | undefined;
     void petMetadata
       .ensure()
-      .then((metadata) => (mimiSessionId = metadata.petSessionId))
+      .then((metadata) => {
+        mimiSessionId = metadata.petSessionId;
+        externalBridge.setMimiSession(mimiSessionId);
+        desktopHost.setStreamView(mimiSessionId, true);
+      })
       .catch(() => undefined);
     const notices = wirePetNotices({
       userDataDir: app.getPath("userData"),
@@ -3091,7 +3098,7 @@ function createPetWidgetBrowserWindow(bounds: {
   // only updates on a fresh transcript hydrate (opening the panel or a restart)
   // — the in-place reply never streams in. attachWindow self-removes on close,
   // so re-creating the widget re-attaches cleanly.
-  bridge?.attachWindow(win);
+  bridge?.attachPetWindow(win);
   if (process.platform === "darwin") {
     void app.dock?.show();
     win.setHiddenInMissionControl(true);
@@ -3849,6 +3856,7 @@ app.whenReady().then(async () => {
       cronJobId: string;
       clientMessageId?: string;
     }) => {
+      desktopHost.setStreamView(meta.sessionId, true);
       taskInboxAutomationSessions.set(meta.sessionId, meta.cronJobId);
       bridge?.broadcastAutomationSession(meta);
       markSessionTaskDirty(meta.sessionId);
@@ -3862,6 +3870,15 @@ app.whenReady().then(async () => {
     const headlessAutomationRunner = buildDesktopAutomationRunner(
       emitAutomationEvent,
       announceAutomationSession,
+      undefined,
+      async (id) => {
+        // A snapshot request on the producer port is ordered after its final output.
+        try {
+          await bridge?.readSnapshot(id, Number.MAX_SAFE_INTEGER);
+        } finally {
+          desktopHost.setStreamView(id, false);
+        }
+      },
     );
     // "Continue this conversation" jobs feed their prompt into the live session.
     const injectResumeTurn = createAutomationResumeTurn({
@@ -4601,6 +4618,7 @@ function deleteDesktopSession(id: string): Promise<void> {
   const existing = sessionDeletions.get(id);
   if (existing) return existing;
   deletingBrowserSessions.add(id);
+  desktopHost.setStreamView(id, false);
   desktopHost.setDeleting(id, true);
   rendererBrowserSessionAccess.forgetSession(id);
   const pending = Promise.resolve()
@@ -4642,7 +4660,7 @@ async function deleteDesktopSessionResources(id: string): Promise<void> {
   await cleanupKnownAttachments(id);
   // Drop any in-memory snapshot for the deleted session so it can't be
   // replayed into a fresh tab that happens to reuse the id.
-  bridge?.forgetSession(id);
+  await bridge?.forgetSession(id);
   if (ephemeralBrowserPartition?.startsWith("browser:qchat:")) {
     const ephemeralSession = session.fromPartition(ephemeralBrowserPartition);
     await Promise.all([ephemeralSession.clearStorageData(), ephemeralSession.clearCache()]).catch(
@@ -4699,6 +4717,7 @@ ipcMain.handle("quickChat:cleanupSession", async (event, id: unknown, claimId: u
 });
 
 ipcMain.handle("agent:pendingApprovals", (event) => {
+  appRendererNavigation.assertSender(event);
   // Native approval events already reach all main windows. Preserve that queue
   // and its session envelopes, without replaying resolved historical requests.
   pendingMobileApprovals.setWorkerState(
@@ -4706,27 +4725,37 @@ ipcMain.handle("agent:pendingApprovals", (event) => {
     bridge?.hasLiveWorker() ?? false,
   );
   return [
-    ...pendingMobileApprovals.replayAllLines().map((line) => JSON.parse(line).params),
+    ...pendingMobileApprovals
+      .replayAllLines()
+      .map((line) => JSON.parse(line).params)
+      .filter(
+        (envelope) => bridge?.panelOwnerWebContentsId(envelope.sessionId) === event.sender.id,
+      ),
     ...(externalRuntime.approvals?.pendingForWindow(event.sender.id) ?? []),
   ];
 });
-/**
- * Snapshot subscription: a (re)mounted renderer asks main for the events it
- * missed for a session past `sinceSeq`. main holds these (AgentBridge's
- * SessionSnapshotStore) precisely because it does not remount with the
- * renderer. Returns { events: [{seq,event}], nextSeq }.
- */
-ipcMain.handle("agent:subscribe", async (_e, sessionId: string, sinceSeq?: number) => {
+// Compatibility IPC uses the same snapshot grant as the workbench port. The
+// native Pet surface reads only the application-owned Mimi session.
+ipcMain.handle("agent:subscribe", async (event, sessionId: string, sinceSeq?: number) => {
   assertDesktopSessionId(sessionId);
   const cursor =
     typeof sinceSeq === "number" && Number.isSafeInteger(sinceSeq) && sinceSeq >= 0 ? sinceSeq : 0;
-  return (
-    bridge?.getSnapshot(sessionId, cursor) ?? {
-      events: [],
-      nextSeq: 1,
-      topLevelRunning: false,
-    }
-  );
+  appRendererNavigation.assertSender(event);
+  const isPet = () =>
+    petSurfaceWindows().some((w) => !w.isDestroyed() && w.webContents === event.sender);
+  if (!isPet()) return desktopHost.readWorkbenchOutput(event, sessionId, cursor);
+  const frame = event.senderFrame;
+  const assertPet = () => {
+    appRendererNavigation.assertSender(event);
+    if (!isPet() || frame !== event.sender.mainFrame || deletingBrowserSessions.has(sessionId))
+      throw new Error("Pet output authority was revoked");
+  };
+  if (!petDispatchService || sessionId !== (await petDispatchService.getSessionId()))
+    throw new Error("Pet output requires the Mimi session");
+  assertPet();
+  const snapshot = await bridge!.readSnapshot(sessionId, cursor);
+  assertPet();
+  return snapshot;
 });
 let closeActivityHistory: (() => Promise<void>) | undefined;
 registerDesktopOutputHistoryHost({

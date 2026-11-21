@@ -1,3 +1,5 @@
+import { isDesktopAgentMethod } from "../../shared/desktop-agent-methods.js";
+import { isRpcRequest } from "../../shared/desktop-host-protocol.js";
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { DesktopHostIdentity } from "../../shared/desktop-host-protocol.js";
 import { join } from "node:path";
@@ -9,6 +11,8 @@ import {
   type IpcMainEvent,
   type WebContents,
 } from "electron";
+import type { WorkerBridgeCoreOptions } from "@cjhyy/code-shell-server/worker";
+import { DesktopHostWorkerClient } from "./main-worker.js";
 import { sessionsRoot } from "@cjhyy/code-shell-core";
 import { listDiskSessions as listJson } from "@cjhyy/code-shell-server/storage";
 import type { ListSessionOptions } from "../../shared/disk-session-query.js";
@@ -25,6 +29,7 @@ export function createDesktopHost(
   navigation: Pick<AppRendererNavigation, "assertSender">,
   hostReady?: () => void,
 ) {
+  let worker: DesktopHostWorkerClient | undefined;
   const supervisor: DesktopHostSupervisor = new DesktopHostSupervisor(
     () =>
       utilityProcess.fork(entryPath, [join(app.getPath("userData"), "task-inbox")], {
@@ -32,6 +37,8 @@ export function createDesktopHost(
       }),
     () => app.getVersion(),
     (status) => {
+      if (status === "ready") bindWorker();
+      else worker?.disconnect();
       workbenches.setStatus(status);
       if (status === "ready") hostReady?.();
     },
@@ -43,6 +50,21 @@ export function createDesktopHost(
     (message, ports) => supervisor.post(message, ports),
   );
   const intentCaller = new AsyncLocalStorage<DesktopHostIdentity>();
+  function bindWorker() {
+    if (!worker) return;
+    const { port1, port2 } = new MessageChannelMain();
+    if (
+      supervisor.post(
+        { type: "worker-port", execPath: process.execPath, entryPath: worker.options.entryPath },
+        [port2],
+      )
+    )
+      worker.bind(port1);
+    else {
+      port1.close();
+      port2.close();
+    }
+  }
   let changes: ReturnType<typeof createSessionIndexChanges> | undefined;
   const connect = (event: IpcMainEvent) => workbenches.connect(event);
   return {
@@ -54,6 +76,55 @@ export function createDesktopHost(
       });
       supervisor.start();
     },
+    createWorkerBridge(options: WorkerBridgeCoreOptions) {
+      if (worker) throw new Error("Desktop Host already has a worker bridge");
+      worker = new DesktopHostWorkerClient(
+        options,
+        (identity) => workbenches.assertIdentity(identity),
+        (event, line) => {
+          navigation.assertSender(event);
+          if (!workbenches.tracks(event.sender)) return false;
+          let req: unknown;
+          try {
+            req = JSON.parse(line);
+          } catch {
+            return true;
+          }
+          if (!isRpcRequest(req)) return true;
+          const { id, method, params } = req;
+          const frame = event.senderFrame;
+          const send = (payload: Record<string, unknown>) => {
+            if (
+              frame &&
+              !frame.detached &&
+              !frame.isDestroyed() &&
+              !event.sender.isDestroyed() &&
+              event.sender.mainFrame === frame
+            )
+              frame.send("agent:msg", JSON.stringify({ jsonrpc: "2.0", id, ...payload }));
+          };
+          void Promise.resolve()
+            .then(async () => {
+              if (!isDesktopAgentMethod(method)) throw new Error("Unrecognized workbench command");
+              const caller = workbenches.identity(event);
+              const result = await supervisor.workbenchCommand(caller, method, params ?? {});
+              if (workbenches.identity(event) === caller) send({ result });
+            })
+            .catch((error) =>
+              send({
+                error: {
+                  code: typeof error?.code === "number" ? error.code : -32010,
+                  ...(error?.data === undefined ? {} : { data: error.data }),
+                  message: error instanceof Error ? error.message : "Workbench unavailable",
+                },
+              }),
+            );
+          return true;
+        },
+      );
+      bindWorker();
+      return worker;
+    },
     async listDiskSessions(options: ListSessionOptions) {
       changes?.flush();
       try {
@@ -61,6 +132,16 @@ export function createDesktopHost(
       } catch {
         return listJson(options);
       }
+    },
+    async readWorkbenchOutput(
+      event: Pick<IpcMainEvent, "sender" | "senderFrame">,
+      sessionId: string,
+      sinceSeq: number,
+    ) {
+      const caller = workbenches.identity(event);
+      const result = await supervisor.readWorkbenchOutput(caller, sessionId, sinceSeq);
+      if (workbenches.identity(event) !== caller) throw new Error("Workbench document changed");
+      return result;
     },
     withTaskCaller<T>(event: Pick<IpcMainEvent, "sender" | "senderFrame">, work: () => T): T {
       return intentCaller.run(workbenches.identity(event), work);
@@ -74,6 +155,8 @@ export function createDesktopHost(
     },
     sessionsChanged: (ids: string[]) => changes?.add(ids),
     trackWorkbench: (contents: WebContents) => workbenches.track(contents),
+    setStreamView: (sessionId: string, enabled: boolean) =>
+      supervisor.setStreamView(sessionId, enabled),
     setOwner: (sessionId: string, owner: number | null) => supervisor.setOwner(sessionId, owner),
     setDeleting: (sessionId: string, deleting: boolean) =>
       supervisor.setDeleting(sessionId, deleting),

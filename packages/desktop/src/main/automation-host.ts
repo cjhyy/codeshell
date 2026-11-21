@@ -247,6 +247,7 @@ export function buildDesktopAutomationRunner(
   emit?: (sessionId: string, event: unknown) => void,
   onSession?: (meta: AutomationSessionMeta) => void,
   runtime: BrowserRuntimeLike = browserRuntime,
+  sessionFinished?: (id: string) => Promise<void>,
 ): CronRunner {
   return async (req): Promise<CronRunResult> => {
     const workspace = resolveDesktopAutomationWorkspace(req.job);
@@ -294,6 +295,7 @@ export function buildDesktopAutomationRunner(
       title: `CodeShell 自动化 · ${req.job.name?.trim() || req.job.id}`,
     });
     let engine: Engine | undefined;
+    let sid: string | undefined;
     try {
       engine = new Engine({
         llm,
@@ -339,7 +341,7 @@ export function buildDesktopAutomationRunner(
       // Key emitted events by the REAL engine sessionId (carried on the first
       // `session_started` event) so renderer routing/reconnect matches interactive
       // chat. Fall back to job.id until that event is seen.
-      let sid: string | undefined;
+
       const output = new SessionOutputPublisher(
         () => engine!.getSessionManager().getStorageDir(),
         "host",
@@ -405,6 +407,7 @@ export function buildDesktopAutomationRunner(
         await engine?.dispose();
       } finally {
         browserLease.release();
+        if (sid) await sessionFinished?.(sid);
       }
     }
   };

@@ -1,3 +1,9 @@
+import {
+  handleRendererCommand,
+  type DirectAdmission,
+} from "./desktop-host/main-renderer-ingress.js";
+import type { WorkbenchAdmission, WorkbenchRequest } from "./desktop-host/ingress-wire.js";
+import type { DesktopWorkerDriver } from "./desktop-host/worker-wire.js";
 import { isBackgroundWorkChange, type BackgroundWorkChange } from "@cjhyy/code-shell-core/internal";
 /**
  * AgentBridge — Electron main ↔ agent worker subprocess broker.
@@ -41,6 +47,7 @@ import {
   linkAccountExecutionOptions,
   type CaptureLinkAccountAccess,
 } from "./link-account-access.js";
+import type { OutputPublication, OutputMutation } from "./desktop-host/stored-output.js";
 import { randomUUID } from "node:crypto";
 import {
   captureIdleOutputPrefix,
@@ -68,7 +75,7 @@ import { parseWorkerLine, type ParsedWorkerLine } from "./worker-line.js";
 import { WebConfigurationGate } from "./web-configuration-gate.js";
 import { SessionSnapshotStore, type Snapshot, type SnapshotEntry } from "./SessionSnapshotStore.js";
 import { assertOutputHistoryWriteAvailable } from "./session-output-history-lease.js";
-import { parseLiveStreamEnvelope, parseSnapshotAppend } from "./parseStreamLine.js";
+import { projectWorkerOutput, type WorkerOutputObserver } from "./desktop-host/worker-output.js";
 import {
   parseBrowserActionLine,
   buildBrowserActionReply,
@@ -91,7 +98,6 @@ import {
   releaseChildBrowserRuntime,
   activateChildBrowserRuntime,
   interactiveBrowserRuntimeOwner,
-  replaceStreamEventInLine,
 } from "./browser-runtime/index.js";
 import { observeRunStopFrame } from "./run-stop-signals.js";
 import {
@@ -144,18 +150,9 @@ import {
   partitionForSession,
   registerSessionBucket,
 } from "./browser-driver/active-guest.js";
-import {
-  buildNoChildFallbackReply,
-  compactQuerySessionId,
-  goalResumeSessionId,
-  forkSourceSessionId,
-  quickChatForkRequest,
-  quickChatRunRequest,
-  quickChatRunSessionId,
-} from "./agent-bridge-fallback.js";
+import { buildNoChildFallbackReply, goalResumeSessionId } from "./agent-bridge-fallback.js";
 import { QuickChatForkRouter, type QuickChatForkLifecycle } from "./quick-chat-fork-router.js";
 import {
-  AgentRunMetadataError,
   forgetHostSessionMaps,
   prepareAgentRunMetadata,
   reserveHostSessionMaps,
@@ -182,6 +179,7 @@ import {
   previewLine,
   WorkerBridgeCore,
   type WorkerFrameMeta,
+  type WorkerBridgeCoreOptions,
 } from "@cjhyy/code-shell-server/worker";
 import type {
   AgentPanelHostRequest,
@@ -301,7 +299,7 @@ export class AgentBridge implements PetStateBridge {
 
   private readonly webConfiguration = new WebConfigurationGate();
   /** Transport-agnostic worker driver (spawn / framing / correlation). */
-  private readonly core: WorkerBridgeCore;
+  private readonly core: DesktopWorkerDriver;
   private ipcListenerAttached = false;
   /**
    * Lazily-created SessionManager for disk-backed fallbacks when no worker is
@@ -327,7 +325,7 @@ export class AgentBridge implements PetStateBridge {
   });
   private readonly mainOutput = new MainOutputPublisher({
     root: () => sessionsRoot(),
-    latest: (sessionId) => this.snapshots.get(sessionId).outputCursor,
+    latest: (sessionId) => this.snapshots.latestOutputCursor(sessionId),
     worker: (sessionId, event) => {
       this.handleWorkerLine(
         JSON.stringify({
@@ -336,11 +334,48 @@ export class AgentBridge implements PetStateBridge {
           params: { sessionId, event },
         }),
       );
-      return this.snapshots.get(sessionId).outputCursor === event.outputCursor;
+      return this.snapshots.latestOutputCursor(sessionId) === event.outputCursor;
     },
   });
   /** In-flight runs actually owned by the CURRENT stdio worker. */
   private readonly workerRuns = new WorkerRunOwnership();
+  private readonly outputObserver: WorkerOutputObserver = {
+    observeLifecycle: (sessionId, event) => {
+      this.workerRuns.observeWorker(sessionId, event);
+      observeComputerUseRunEvent(sessionId, event);
+    },
+    report: (event, details) => dlog("bridge", event, details),
+  };
+  private forwardedStreamEvents = 0;
+  private mobileReceivesDeltas = false;
+  private deltaReaders = new Map<string, number>();
+  private mimiSessionId?: string;
+  private petWindows = new Set<BrowserWindow>();
+
+  private updateDeltaInterest(): void {
+    this.core.hostedOutput?.setDeltaInterest(this.mobileReceivesDeltas, [
+      ...this.deltaReaders.keys(),
+      ...(this.mimiSessionId && this.petWindows.size ? [this.mimiSessionId] : []),
+    ]);
+  }
+  setMobileOutputOnline(online: boolean): void {
+    this.mobileReceivesDeltas = online;
+    this.updateDeltaInterest();
+  }
+  setMimiSession(id: string): void {
+    this.mimiSessionId = id;
+    this.updateDeltaInterest();
+  }
+  attachPetWindow(window: BrowserWindow): void {
+    this.attachWindow(window);
+    this.petWindows.add(window);
+    this.updateDeltaInterest();
+    window.once("closed", () => {
+      this.petWindows.delete(window);
+      this.updateDeltaInterest();
+    });
+  }
+
   /**
    * Out-of-band observers of worker→renderer lines (e.g. the Mobile Web
    * Remote, which streams the same events to a phone). Taps are read-only:
@@ -449,10 +484,12 @@ export class AgentBridge implements PetStateBridge {
     onSessionPanelOwnerChanged?: (sessionId: string, webContentsId: number | null) => void,
     private readonly onSessionsChanged?: (ids: string[]) => void,
     private readonly onUserRunAccepted?: (id: string) => void,
+    createDriver: (options: WorkerBridgeCoreOptions) => DesktopWorkerDriver = (options) =>
+      new WorkerBridgeCore(options),
   ) {
     this.panelHostWindowRoutes = new PanelHostWindowRoutes(onSessionPanelOwnerChanged);
     dlog("bridge", "ctor", { agentEntry, execPath: process.execPath });
-    this.core = new WorkerBridgeCore({
+    this.core = createDriver({
       entryPath: agentEntry,
       buildEnv: () => ({
         ...process.env,
@@ -491,7 +528,8 @@ export class AgentBridge implements PetStateBridge {
         process.stderr.write(`[agent] ${text}`);
       },
       onWorkerStarted: () => {
-        this.workerRuns.beginWorker();
+        // Exit closes the old generation. New admissions can already be queued
+        // by the time the utility reports its successful spawn.
         this.petWorkerGeneration.beginWorker();
         this.emitPetProjection({ kind: "lifecycle", state: "active" });
       },
@@ -511,7 +549,7 @@ export class AgentBridge implements PetStateBridge {
         this.failPendingQuickChatForks();
         // Snapshots intentionally survive worker exit — a respawn may resume
         // the same session, and a remounted renderer still needs to replay.
-        this.snapshots.onWorkerExit(sessionIds);
+        this.workerOutputExited(sessionIds);
         this.emitPetProjection({ kind: "lifecycle", state: "disconnected" });
         this.safeSend("agent:lifecycle", { type: "gave_up", sessionIds });
       },
@@ -522,7 +560,7 @@ export class AgentBridge implements PetStateBridge {
         this.childBrowserLifetime.close();
         this.evictPendingTentativeRuns();
         this.failPendingQuickChatForks();
-        this.snapshots.onWorkerExit(sessionIds);
+        this.workerOutputExited(sessionIds);
         if (clean) {
           this.emitPetProjection({ kind: "lifecycle", state: "reclaimed" });
           this.safeSend("agent:lifecycle", { type: "exited", code, sessionIds });
@@ -534,6 +572,16 @@ export class AgentBridge implements PetStateBridge {
       },
     });
     this.core.subscribeLines((line) => this.handleWorkerLine(line));
+    this.core.hostedOutput?.onOutput((frame) => this.observeHostedOutput(frame));
+    this.core.hostedOutput?.setIngress({
+      prepare: (request, current) => this.admitWorkbenchCommand(request, current),
+      settled: async (line) => {
+        const parsed = parseWorkerLine(line);
+        this.webConfiguration.observe(line, parsed);
+        this.updateTentativeRunLifecycle(line, parsed);
+        await this.quickChatForkRouter?.routeWorkerResponse(line, parsed);
+      },
+    });
     this.registerWindow(window);
     this.quickChatForkRouter = quickChatForkLifecycle
       ? new QuickChatForkRouter(quickChatForkLifecycle, async (request, result) => {
@@ -609,68 +657,22 @@ export class AgentBridge implements PetStateBridge {
     if (this.routePetReportLine(line, parsedLine)) return;
     const quickChatForkSettlement =
       this.quickChatForkRouter?.routeWorkerResponse(line, parsedLine) ?? null;
-    let summary: Record<string, unknown> = { raw: previewLine(line) };
-    try {
-      const m = parsedLine.message as { method?: string; id?: number };
-      if (m.method) summary = { method: m.method, raw: previewLine(line) };
-      else if (m.id !== undefined) summary = { responseId: m.id, raw: previewLine(line) };
-    } catch {
-      /* keep raw */
-    }
-    // Mirror stream events into the per-session snapshot so a remounted
-    // renderer can replay what it missed. Non-streamEvent lines yield null.
-    const rawAppend = parseSnapshotAppend(line, parsedLine);
-    if (rawAppend) {
-      try {
-        if (!this.mainOutput.observeWorker(rawAppend.sessionId, rawAppend.event)) return;
-      } catch (error) {
-        dlog("bridge", "stream.source_unavailable", {
-          sessionId: rawAppend.sessionId,
-          error: String(error),
-        });
-        if (!(error as { coverageIncomplete?: boolean }).coverageIncomplete) return;
-        rawAppend.event = {
-          ...(rawAppend.event as object),
-          outputCursor: undefined,
-          outputRecovery: "incomplete",
-        };
-      }
-    }
-    const append = rawAppend
-      ? {
-          ...rawAppend,
-          event: annotateBrowserRuntimeStreamEvent(rawAppend.event, "milestones"),
-        }
-      : null;
-    if (append) {
-      this.workerRuns.observeWorker(append.sessionId, append.event);
-      observeComputerUseRunEvent(append.sessionId, append.event);
-    }
-    let snapshotEntry: (SnapshotEntry & { sessionId: string; epoch: string }) | undefined;
-    try {
-      snapshotEntry = append
-        ? {
-            sessionId: append.sessionId,
-            epoch: this.snapshots.epoch,
-            ...this.snapshots.append(append.sessionId, append.event),
-          }
-        : undefined;
-    } catch {
-      dlog("bridge", "stream.coverage_unavailable", { sessionId: append?.sessionId });
-      return;
-    }
-    const liveStreamEnvelope = append
-      ? {
-          sessionId: append.sessionId,
-          event: append.event,
-          ...(snapshotEntry ? { seq: snapshotEntry.seq, epoch: snapshotEntry.epoch } : {}),
-        }
-      : parseLiveStreamEnvelope(line, snapshotEntry, parsedLine);
-    const projectedLine = append ? replaceStreamEventInLine(line, append.event, parsedLine) : line;
-    dlog("bridge", "worker→renderer", summary);
+    const frame = projectWorkerOutput(
+      parsedLine,
+      this.mainOutput,
+      this.snapshots,
+      this.outputObserver,
+    );
+    if (!frame) return;
+    const { liveStreamEnvelope, projectedLine, snapshotEntry } = frame;
     if (liveStreamEnvelope) {
+      // Aggregate high-frequency deltas without copying their text into the debug log.
+      if (++this.forwardedStreamEvents % 256 === 0)
+        dlog("bridge", "stream.forwarded", { count: this.forwardedStreamEvents });
       this.safeSend("agent:streamEvent", liveStreamEnvelope);
     } else if (!quickChatForkSettlement) {
+      const message = parsedLine.message as { method?: string; id?: string | number } | null;
+      dlog("bridge", "worker→renderer", { method: message?.method, responseId: message?.id });
       this.safeSend("agent:msg", line);
     }
     void quickChatForkSettlement?.catch((error) =>
@@ -685,6 +687,63 @@ export class AgentBridge implements PetStateBridge {
         }
       }
     }
+  }
+
+  private submitOutput(command: OutputMutation): void {
+    void this.core.hostedOutput!.mutateOutput(command).catch((error) =>
+      dlog("bridge", "stream.source_unavailable", {
+        error: String(error),
+        command: command.type,
+      }),
+    );
+  }
+
+  private workerOutputExited(ids: string[]): void {
+    if (!this.core.hostedOutput) this.snapshots.onWorkerExit(ids);
+  }
+
+  private observeHostedOutput({ origin, envelope, line }: OutputPublication): void {
+    const { sessionId, event, seq, epoch } = envelope;
+    if (sessionId === this.mimiSessionId) {
+      for (const window of this.petWindows) {
+        if (!window.isDestroyed()) window.webContents.send("agent:streamEvent", envelope);
+      }
+    }
+    if (origin === "worker") {
+      if (!line) return;
+      const parsed = parseWorkerLine(line);
+      this.webConfiguration.observe(line, parsed);
+      this.updateTentativeRunLifecycle(line, parsed);
+      this.outputObserver.observeLifecycle(sessionId, event);
+      const entry = seq !== undefined && epoch ? { sessionId, event, seq, epoch } : undefined;
+      for (const tap of this.outboundTaps) {
+        try {
+          tap(line, entry);
+        } catch {
+          /* read-only observer */
+        }
+      }
+      return;
+    }
+    this.workerRuns.observeExternal(sessionId, event);
+    observeComputerUseRunEvent(sessionId, event);
+    if (origin !== "owned" || seq === undefined || !epoch) return;
+    const ownerWebContentsId = this.panelOwnerWebContentsId(sessionId);
+    for (const listener of this.externalSessionTaps) {
+      try {
+        listener.event(sessionId, event);
+      } catch {
+        /* read-only observer */
+      }
+    }
+    if (ownerWebContentsId !== undefined)
+      for (const tap of this.ownedExternalTaps) {
+        try {
+          tap({ sessionId, event, seq, epoch, ownerWebContentsId });
+        } catch {
+          /* read-only observer */
+        }
+      }
   }
 
   /** Lazily build the disk-backed SessionManager used for no-worker fallbacks. */
@@ -1024,6 +1083,65 @@ export class AgentBridge implements PetStateBridge {
     }
   }
 
+  private admitWorkbenchCommand(
+    request: WorkbenchRequest,
+    assertCurrent: () => void,
+  ): Promise<WorkbenchAdmission> {
+    assertCurrent();
+    const window = [...this.windows].find(
+      (w) => !w.isDestroyed() && w.webContents.id === request.identity.webContentsId,
+    );
+    if (!window) throw new Error("Workbench window was closed");
+    const { method, params } = request;
+    for (const id of [params.sessionId, params.sourceSessionId, params.targetSessionId]) {
+      if (typeof id !== "string") continue;
+      const owner = this.panelOwnerWebContentsId(id);
+      if (owner !== undefined && owner !== window.webContents.id)
+        throw new Error("Session is owned by another window");
+    }
+    const line = JSON.stringify({ jsonrpc: "2.0", id: request.id, method, params });
+    return new Promise((resolve, reject) => {
+      try {
+        this.handleRendererCommand(window.webContents, line, {
+          facts: {},
+          assertCurrent,
+          reply: resolve,
+        });
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  private handleRendererCommand(
+    sender: BrowserWindow["webContents"],
+    line: string,
+    direct?: DirectAdmission,
+  ): void {
+    handleRendererCommand(
+      {
+        agentRunMetadataDeps: () => this.agentRunMetadataDeps(),
+        claimSessionPanelOwner: (id, owner) => this.claimSessionPanelOwner(id, owner),
+        core: this.core,
+        externalGoalRpcHandler: this.externalGoalRpcHandler,
+        handleAgentRunMetadata: (p) => this.handleAgentRunMetadata(p),
+        publishFallbackReply: (l) => this.publishFallbackReply(l),
+        quickChatForkLifecycle: this.quickChatForkLifecycle,
+        quickChatForkRouter: this.quickChatForkRouter,
+        safeSend: (c, p) => this.safeSend(c, p),
+        sessionMainRootMigrationClaims: this.sessionMainRootMigrationClaims,
+        sessionsForFallback: () => this.sessionsForFallback(),
+        tentativeRunsByRequest: this.tentativeRunsByRequest,
+        webConfiguration: this.webConfiguration,
+        windows: this.windows,
+        workerGeneration: () => this.workerGeneration(),
+      },
+      sender,
+      line,
+      direct,
+    );
+  }
+
   private cwdForSessionOrThrow(sessionId: string): string {
     const cwd = resolveCredentialSessionCwd(sessionId, this.sessionCwd, (sid) =>
       this.sessionsForFallback().readSessionMainRoot(sid),
@@ -1037,218 +1155,23 @@ export class AgentBridge implements PetStateBridge {
     this.ipcListenerAttached = true;
 
     ipcMain.on("agent:msg", (event, line: string) => {
-      // Inspect the message: an agent/run is the only one that can trigger
-      // a fresh spawn. Other messages (agent/approve, agent/cancel) only
-      // make sense if the worker is already alive.
-      let prepared: ReturnType<typeof prepareAgentRunMetadata>;
-      try {
-        prepared = prepareAgentRunMetadata(
-          line,
-          { origin: "renderer", producer: "agent:msg" },
-          this.agentRunMetadataDeps(),
-        );
-      } catch (error) {
-        if (error instanceof AgentRunMetadataError) {
-          let id: unknown;
-          try {
-            id = (JSON.parse(line) as { id?: unknown }).id;
-          } catch {
-            id = undefined;
-          }
-          if (id !== undefined && !event.sender.isDestroyed()) {
-            event.sender.send(
-              "agent:msg",
-              JSON.stringify({
-                jsonrpc: "2.0",
-                id,
-                error: { code: error.code, message: error.message },
-              }),
-            );
-          }
-          return;
-        }
-        throw error;
-      }
-      const parsed = prepared.parsed;
-      if (typeof parsed.params?.sessionId === "string") {
+      if (this.core.hostedOutput) {
         try {
-          assertOutputHistoryWriteAvailable(parsed.params.sessionId);
+          if (this.core.hostedOutput.legacyWorkbench(event, line)) return;
+          const pet = [...this.petWindows].find(
+            (w) => !w.isDestroyed() && w.webContents === event.sender,
+          );
+          if (
+            !pet ||
+            !this.mimiSessionId ||
+            JSON.parse(line).params?.sessionId !== this.mimiSessionId
+          )
+            return;
         } catch {
-          if (parsed.id !== undefined && !event.sender.isDestroyed())
-            event.sender.send(
-              "agent:msg",
-              JSON.stringify({
-                jsonrpc: "2.0",
-                id: parsed.id,
-                error: {
-                  code: ErrorCodes.Overloaded,
-                  message: "Session output recovery is in progress",
-                },
-              }),
-            );
           return;
         }
       }
-      observeRunStopFrame(parsed);
-      cancelBrowserActionsForStoppedRun(parsed);
-      beginBrowserRunForStartedRun(parsed);
-      observeComputerUseRunControl(parsed);
-      if (isOptimizationLabQuery(parsed)) {
-        if (parsed.id !== undefined && !event.sender.isDestroyed()) {
-          event.sender.send(
-            "agent:msg",
-            JSON.stringify({
-              jsonrpc: "2.0",
-              id: parsed.id,
-              error: {
-                code: -32601,
-                message: "Optimization Lab requires the dedicated local application bridge",
-              },
-            }),
-          );
-        }
-        return;
-      }
-      const externalGoalReply = this.externalGoalRpcHandler?.(parsed, event.sender.id);
-      if (externalGoalReply) {
-        void externalGoalReply.then((reply) => {
-          if (parsed.id !== undefined && !event.sender.isDestroyed()) {
-            event.sender.send("agent:msg", JSON.stringify(reply));
-          }
-        });
-        return;
-      }
-      if (
-        parsed.method === "agent/run" &&
-        (this.webConfiguration.runBlocked ||
-          (prepared.sessionId && this.sessionMainRootMigrationClaims.has(prepared.sessionId)))
-      ) {
-        if (parsed.id !== undefined && !event.sender.isDestroyed()) {
-          event.sender.send(
-            "agent:msg",
-            JSON.stringify({
-              jsonrpc: "2.0",
-              id: parsed.id,
-              error: {
-                code: ErrorCodes.Overloaded,
-                message: this.webConfiguration.runBlocked
-                  ? "配置正在更新，请稍后重试。"
-                  : `Session ${prepared.sessionId} root migration is in progress; retry the run`,
-              },
-            }),
-          );
-        }
-        return;
-      }
-      // Line forwarded to the worker. Only rewritten when we inject fields
-      // (agent/run trust) — everything else is passed through verbatim so we
-      // don't re-serialize on the hot path.
-      let outLine = line;
-      const quickChatRunId = quickChatRunSessionId(parsed);
-      if (quickChatRunId) {
-        const request = quickChatRunRequest(parsed, event.sender.id);
-        if (!request || this.quickChatForkLifecycle?.isClaimActive?.(request) !== true) {
-          if (parsed.id !== undefined && !event.sender.isDestroyed()) {
-            event.sender.send(
-              "agent:msg",
-              JSON.stringify({
-                jsonrpc: "2.0",
-                id: parsed.id,
-                error: { code: -32602, message: "quick-chat claim is no longer active" },
-              }),
-            );
-          }
-          return;
-        }
-      }
-      const quickChatFork = quickChatForkRequest(parsed, event.sender.id);
-      let quickChatForkWireId: string | undefined;
-      if (quickChatFork && this.quickChatForkRouter) {
-        const started = this.quickChatForkRouter.start(quickChatFork, event.sender, line);
-        if (!started) return;
-        outLine = started.line;
-        quickChatForkWireId = started.wireId;
-      }
-
-      if (parsed.method === "agent/run") {
-        outLine = this.handleAgentRunMetadata(prepared);
-        const owner = BrowserWindow.fromWebContents(event.sender);
-        if (prepared.sessionId && owner && this.windows.has(owner)) {
-          // The renderer-driven case. Sessions driven from elsewhere (main-owned,
-          // external Agent Runtime) never reach this line and must claim
-          // ownership explicitly — same method, so there is one code path.
-          this.claimSessionPanelOwner(prepared.sessionId, event.sender.id);
-        }
-      } else {
-        const forkSourceId = forkSourceSessionId(parsed);
-        if (forkSourceId) {
-          this.core.ensureWorker(this.sessionsForFallback().readSessionMainRoot(forkSourceId));
-        }
-        const compactSessionId = compactQuerySessionId(parsed);
-        if (compactSessionId) {
-          this.core.ensureWorker(
-            this.sessionsForFallback().readSessionMainRoot(compactSessionId) ?? parsed.params?.cwd,
-          );
-        }
-        const goalResumeId = goalResumeSessionId(parsed);
-        if (goalResumeId) {
-          this.core.ensureWorker(this.sessionsForFallback().readSessionMainRoot(goalResumeId));
-        }
-      }
-
-      if (!this.core.canSend()) {
-        if (parsed.method === "agent/run" && prepared.sessionId) {
-          getSessionCwdIndex().evictTentative(prepared.sessionId);
-          if (prepared.parsed.id !== undefined) {
-            this.tentativeRunsByRequest.delete(String(prepared.parsed.id));
-          }
-        }
-        // No live worker. For approve / cancel this is fine — drop.
-        // For run, ensureWorker above should have created one; if it
-        // didn't, log and drop.
-        // BUT some requests must still get a REPLY, or the renderer's rpc()
-        // hangs its 30s timeout: read-only registry queries (backgroundShells /
-        // backgroundWork — the in-RAM registry is gone with the worker) and
-        // disk-backed goal ops (goalGet / goalClear — a persistent goal lives
-        // in state.json and outlives the worker; without this the "Clear goal"
-        // button did nothing for an aborted goal session).
-        const fallback = buildNoChildFallbackReply(parsed, this.sessionsForFallback());
-        if (fallback !== null) {
-          this.publishFallbackReply(fallback);
-        }
-        dlog("bridge", "renderer→worker.dropped", {
-          reason: this.core.hasChild() ? "stdin destroyed" : "no child",
-          method: parsed.method,
-          answered: fallback !== null,
-        });
-        if (quickChatForkWireId) {
-          void this.quickChatForkRouter
-            ?.fail(quickChatForkWireId)
-            .catch((error) =>
-              dlog("bridge", "quick_chat.fork_settle_failed", { error: String(error) }),
-            );
-        }
-        return;
-      }
-      dlog("bridge", "renderer→worker", { method: parsed.method, raw: previewLine(outLine) });
-      try {
-        if (!this.core.sendLine(outLine) && parsed.id !== undefined) {
-          this.webConfiguration.settleRun(parsed.id);
-        }
-      } catch (error) {
-        if (parsed.id !== undefined) {
-          this.webConfiguration.settleRun(parsed.id);
-          this.safeSend(
-            "agent:msg",
-            JSON.stringify({
-              jsonrpc: "2.0",
-              id: parsed.id,
-              error: { code: -32603, message: "无法向任务进程发送请求，请重试。" },
-            }),
-          );
-        }
-        dlog("bridge", "renderer.write_failed", { error: String(error) });
-      }
+      this.handleRendererCommand(event.sender, line);
     });
 
     ipcMain.on(
@@ -1968,6 +1891,10 @@ export class AgentBridge implements PetStateBridge {
     );
   }
 
+  async waitForWorkerHost(): Promise<void> {
+    await this.core.hostedOutput?.waitForFirstBinding?.();
+  }
+
   /** Main-only authority: generic renderer/mobile/serve frames cannot mint this admission. */
   async requestOptimizationLab(type: string, params: Record<string, unknown>): Promise<unknown> {
     if (!/^optimization_lab_[a-z_]+$/.test(type)) throw new Error("Invalid Optimization Lab query");
@@ -2206,8 +2133,16 @@ export class AgentBridge implements PetStateBridge {
     return this.snapshots.get(sessionId, sinceSeq);
   }
 
+  async readSnapshot(sessionId: string, sinceSeq = 0): Promise<Snapshot> {
+    return this.core.hostedOutput
+      ? this.core.hostedOutput.readSnapshot(sessionId, sinceSeq)
+      : this.getSnapshot(sessionId, sinceSeq);
+  }
+
   /** Retire an explicit checkpoint's old proof without resetting transport sequence numbers. */
-  resetOutputHistoryRecovery(sessionId: string): void {
+  resetOutputHistoryRecovery(sessionId: string): void | Promise<void> {
+    if (this.core.hostedOutput)
+      return this.core.hostedOutput.mutateOutput({ type: "reset", sessionId });
     this.snapshots.resetForHistoryCheckpoint(sessionId);
     this.mainOutput.forget(sessionId);
     this.ownedExternalOutputSources.delete(sessionId);
@@ -2215,7 +2150,7 @@ export class AgentBridge implements PetStateBridge {
 
   /** The caller holds the Main ingress fence and has verified all work is idle. */
   async quiesceForOutputRecovery(sessionId: string): Promise<void> {
-    if (this.isSessionRunning(sessionId) || this.snapshots.get(sessionId).topLevelRunning)
+    if ((await this.readSnapshot(sessionId)).topLevelRunning || this.isSessionRunning(sessionId))
       throw new Error("Session still has active work");
     if (!this.core.canSend()) return;
     const outcome = await this.core.request(
@@ -2236,7 +2171,11 @@ export class AgentBridge implements PetStateBridge {
   }
 
   /** Drop a session's snapshot (e.g. when the session is deleted). */
-  forgetSession(sessionId: string): void {
+  forgetSession(sessionId: string): void | Promise<void> {
+    if (this.core.hostedOutput) {
+      this.releaseSessionResources(sessionId);
+      return this.core.hostedOutput.mutateOutput({ type: "forget", sessionId });
+    }
     this.snapshots.forget(sessionId);
     this.mainOutput.forget(sessionId);
     this.ownedExternalOutputSources.delete(sessionId);
@@ -2371,20 +2310,23 @@ export class AgentBridge implements PetStateBridge {
     this.reserveHostSession(sessionId, cwd);
     // A resumed runtime may receive background results before its next turn.
     // Bind existing durable output now, without cutting over a legacy transcript.
-    const history = readOutputJournal(sessionsRoot(), sessionId, { maxFrames: 1 });
-    if (history.status === "ok") {
-      try {
-        const snapshot = this.snapshots.get(sessionId);
-        this.bindOwnedExternalOutputSource(
-          sessionId,
-          // Explicit checkpoints preserve transport sequence numbers while
-          // retiring the entire old snapshot and journal incarnation.
-          snapshot.events.length === 0 && !snapshot.outputCursor && !snapshot.topLevelRunning
-            ? history.through
-            : undefined,
-        );
-      } catch (error) {
-        dlog("bridge", "stream.source_unavailable", { sessionId, error: String(error) });
+    if (this.core.hostedOutput) this.submitOutput({ type: "register-external", sessionId });
+    else {
+      const history = readOutputJournal(sessionsRoot(), sessionId, { maxFrames: 1 });
+      if (history.status === "ok") {
+        try {
+          const snapshot = this.snapshots.get(sessionId);
+          this.bindOwnedExternalOutputSource(
+            sessionId,
+            // Explicit checkpoints preserve transport sequence numbers while
+            // retiring the entire old snapshot and journal incarnation.
+            snapshot.events.length === 0 && !snapshot.outputCursor && !snapshot.topLevelRunning
+              ? history.through
+              : undefined,
+          );
+        } catch (error) {
+          dlog("bridge", "stream.source_unavailable", { sessionId, error: String(error) });
+        }
       }
     }
     try {
@@ -2573,9 +2515,20 @@ export class AgentBridge implements PetStateBridge {
       line: string,
       snapshotEntry?: SnapshotEntry & { sessionId: string; epoch: string },
     ) => void,
+    deltaSession?: string,
   ): () => void {
     this.outboundTaps.add(tap);
-    return () => this.outboundTaps.delete(tap);
+    if (deltaSession) {
+      this.deltaReaders.set(deltaSession, (this.deltaReaders.get(deltaSession) ?? 0) + 1);
+      this.updateDeltaInterest();
+    }
+    return () => {
+      if (!this.outboundTaps.delete(tap) || !deltaSession) return;
+      const remaining = this.deltaReaders.get(deltaSession)! - 1;
+      if (remaining) this.deltaReaders.set(deltaSession, remaining);
+      else this.deltaReaders.delete(deltaSession);
+      this.updateDeltaInterest();
+    };
   }
 
   /**
@@ -2782,6 +2735,16 @@ export class AgentBridge implements PetStateBridge {
     event: unknown,
     options: { browserVisibility?: "hidden" | "milestones" | "full" } = {},
   ): void {
+    if (this.core.hostedOutput) {
+      this.submitOutput({
+        type: "publish",
+        sessionId,
+        event,
+        visibility: options.browserVisibility,
+        workerRunning: this.workerRuns.sessionIds().includes(sessionId),
+      });
+      return;
+    }
     if (needsIndependentOutput(event)) {
       try {
         this.captureExternalOutputSource(sessionId, options).publish(event);
@@ -2805,7 +2768,28 @@ export class AgentBridge implements PetStateBridge {
   captureExternalOutputSource(
     sessionId: string,
     options: { browserVisibility?: "hidden" | "milestones" | "full" } = {},
-  ): MainOutputSource {
+  ): MainOutputSource & { ready?: Promise<void>; close?(): void } {
+    const hosted = this.core.hostedOutput;
+    if (hosted) {
+      const sourceId = randomUUID();
+      const current = hosted.captureGeneration();
+      const ready = hosted.mutateOutput({
+        type: "capture",
+        sessionId,
+        sourceId,
+        visibility: options.browserVisibility,
+        workerRunning: this.workerRuns.sessionIds().includes(sessionId),
+      });
+      return {
+        ready,
+        publish: (event) => {
+          if (current()) this.submitOutput({ type: "captured", sessionId, sourceId, event });
+        },
+        close: () => {
+          if (current()) this.submitOutput({ type: "release-capture", sessionId, sourceId });
+        },
+      };
+    }
     const historicalPrefix = captureIdleOutputPrefix(
       sessionsRoot(),
       sessionId,
@@ -2855,6 +2839,10 @@ export class AgentBridge implements PetStateBridge {
 
   /** External interactive streams retain their exact owning window. */
   ingestOwnedExternalEvent(sessionId: string, event: unknown): void {
+    if (this.core.hostedOutput) {
+      this.submitOutput({ type: "publish", sessionId, event, owned: true });
+      return;
+    }
     try {
       if (needsIndependentOutput(event)) {
         const source = this.ownedExternalOutputSources.get(sessionId);

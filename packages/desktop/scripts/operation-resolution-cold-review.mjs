@@ -1,3 +1,4 @@
+import { guardedWorkerTree } from "./guarded-worker-tree.mjs";
 /* Pure Playwright controller: no Core, provider, credentials, or model imports. */
 /* global Event, localStorage, window */
 import assert from "node:assert/strict";
@@ -44,6 +45,7 @@ try {
       .trim()
       .split("\n")
       .map(JSON.parse);
+    const tree = await guardedWorkerTree(home, mainPid, receipts);
     const spawned = (await readFile(join(home, "spawned-workers.jsonl"), "utf8").catch(() => ""))
       .trim()
       .split("\n")
@@ -54,16 +56,14 @@ try {
       assert.equal(row.origin, "http://127.0.0.1:9");
       assert.equal(row.negativeProbes, 7);
     }
-    const workers = spawned.filter((worker) =>
-      receipts.some((row) => row.pid === worker.pid && row.ppid === mainPid),
-    );
-    if (receipts.some((row) => row.pid === mainPid)) {
+    const workers = spawned.filter((worker) => tree.hasWorker(worker));
+    if (workers.length === spawned.length && receipts.some((row) => row.pid === mainPid)) {
       for (const worker of workers)
         await writeFile(join(home, `worker-${worker.pid}.permit`), "verified");
       receipt = {
         mainPid,
         workers,
-        receipts: receipts.filter((row) => row.pid === mainPid || row.ppid === mainPid),
+        receipts: receipts.filter(tree.belongs),
       };
       break;
     }

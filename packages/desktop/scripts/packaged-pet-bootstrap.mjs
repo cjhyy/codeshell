@@ -50,9 +50,11 @@ for (const probe of probes) {
 }
 const role = process.argv.some((argument) => argument.includes("agent-server-stdio"))
   ? "worker"
-  : process.versions.electron
-    ? "Main"
-    : "auxiliary";
+  : process.type === "utility"
+    ? "Host"
+    : process.versions.electron
+      ? "Main"
+      : "auxiliary";
 if (
   role === "worker" &&
   (realpathSync(process.execPath) !== process.env.CODESHELL_OFFICIAL_WORKER_EXECUTABLE ||
@@ -82,7 +84,43 @@ appendFileSync(
 if (role === "Main") {
   // The actual supplied Electron executable loads its own packaged entry.
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- This source is bundled as a synchronous CJS preload, also tested under plain Node.
-  const { app, safeStorage } = require("electron");
+  const { app, safeStorage, utilityProcess } = require("electron");
+  const fork = utilityProcess.fork;
+  let hostSpawnCount = 0;
+  utilityProcess.fork = function (entry, args, options) {
+    if (entry !== join(app.getAppPath(), "out", "main", "desktop-host.mjs"))
+      return fork.call(this, entry, args, options);
+    const host = fork.call(this, process.env.CODESHELL_OFFICIAL_HOST_WRAPPER, args, {
+      ...options,
+      env: {
+        ...process.env,
+        ...options?.env,
+        CODESHELL_OFFICIAL_HOST_ENTRY: entry,
+        CODESHELL_OFFICIAL_MAIN_PID: String(process.pid),
+      },
+    });
+    host.once("spawn", () => {
+      hostSpawnCount++;
+      appendFileSync(
+        join(home, "spawned-hosts.jsonl"),
+        JSON.stringify({ pid: host.pid, ppid: process.pid }) + "\n",
+        { mode: 0o600 },
+      );
+    });
+    return host;
+  };
+  process.once("exit", (code) =>
+    appendFileSync(
+      join(home, "main-exits.jsonl"),
+      JSON.stringify({
+        pid: process.pid,
+        code,
+        hostSpawnCount,
+        workerSpawnCount: 0,
+      }) + "\n",
+      { mode: 0o600 },
+    ),
+  );
   if (process.env.CODESHELL_OFFICIAL_MOCK_KEYCHAIN === "1") {
     // The cold-start benchmark and its private profile never bind the operator's Keychain.
     // eslint-disable-next-line @typescript-eslint/no-require-imports -- Install before the first app instruction.
@@ -120,12 +158,14 @@ if (role === "Main") {
       }
     };
   }
+}
+if (role === "Host") {
   const spawn = children.spawn;
   let workerSpawnCount = 0;
   process.once("exit", (code) => {
     appendFileSync(
-      join(home, "main-exits.jsonl"),
-      JSON.stringify({ pid: process.pid, code, workerSpawnCount }) + "\n",
+      join(home, "host-exits.jsonl"),
+      JSON.stringify({ pid: process.pid, ppid: process.ppid, code, workerSpawnCount }) + "\n",
       { mode: 0o600 },
     );
   });
@@ -133,7 +173,7 @@ if (role === "Main") {
     const worker = args?.some((argument) => argument.includes("agent-server-stdio"));
     if (worker) {
       if (
-        realpathSync(command) !== realpathSync(process.execPath) ||
+        realpathSync(command) !== process.env.CODESHELL_OFFICIAL_WORKER_EXECUTABLE ||
         options?.env?.ELECTRON_RUN_AS_NODE !== "1" ||
         options?.env?.HOME !== home
       )
@@ -173,7 +213,8 @@ if (role === "Main") {
         join(home, "spawned-workers.jsonl"),
         JSON.stringify({
           pid: child.pid,
-          mainPid: process.pid,
+          ppid: process.pid,
+          mainPid: Number(process.env.CODESHELL_OFFICIAL_MAIN_PID),
           command: realpathSync(command),
           args: args.filter((argument) => argument.includes("agent-server-stdio")),
         }) + "\n",
