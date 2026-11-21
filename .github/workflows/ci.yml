@@ -701,6 +701,9 @@ jobs:
       - name: desktop Host across windows, Main stalls and utility restart
         timeout-minutes: 3
         run: xvfb-run -a node scripts/run-isolated-node-smoke.mjs packages/desktop/scripts/smoke-desktop-host.mjs
+      - name: direct worker streaming and approval recovery in a reloaded workbench
+        timeout-minutes: 4
+        run: xvfb-run -a node scripts/run-isolated-node-smoke.mjs packages/desktop/scripts/e2e-desktop-host-stream.mjs
       - name: real Electron isolated PDF with verified managed Node
         run: |
           bun run --cwd packages/desktop runtime:prepare

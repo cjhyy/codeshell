@@ -72,6 +72,8 @@ export interface MobileDeviceState {
   sessionId?: string;
   /** The session this device explicitly selected (overrides everything). */
   selectedSessionId?: string;
+  /** Invalidates outstanding Host reads even if a phone returns to the same Session. */
+  selectionRevision?: number;
   /** The cwd bound to the selected or freshly-created mobile session. */
   selectedCwd?: string | null;
   /** Stable V2 authority for a freshly-created mobile Session. */
@@ -473,6 +475,7 @@ export async function handleClientEvent(
     explicit ?? st.selectedSessionId ?? implicitSessionId ?? ctx.ensureMobileSessionId(st);
   if (event.type === "session.select") {
     await commandSelection;
+    st.selectionRevision = (st.selectionRevision ?? 0) + 1;
     st.selectedSessionId = event.sessionId;
     st.selectedProjectId = undefined;
     st.selectedRootId = undefined;
@@ -504,6 +507,7 @@ export async function handleClientEvent(
         permissionMode: event.permissionMode ?? st.permissionMode ?? "default",
         sessionId,
         selectedSessionId: sessionId,
+        selectionRevision: (st.selectionRevision ?? 0) + 1,
         selectedCwd: selection.cwd,
         selectedProjectId: selection.projectId,
         selectedRootId: selection.rootId,
@@ -1035,11 +1039,13 @@ export async function handleClientEvent(
     // External output is sent only through the selected per-socket authority;
     // negotiated peers already receive its head on their bounded journal pages.
     if (ctx.externalCommands?.isExternal(event.sessionId, event.viewerId)) return;
-    const selection = st.selectedSessionId;
+    const selectionRevision = st.selectionRevision;
     const ownerRevision = bridge.sessionPanelOwnerRevision?.(event.sessionId);
     const current = () =>
       ctx.getBridge() === bridge &&
-      st.selectedSessionId === selection &&
+      st.selectionRevision === selectionRevision &&
+      (!deviceId || ctx.deviceState(deviceId) === st) &&
+      !ctx.externalCommands?.isExternal(event.sessionId, event.viewerId) &&
       bridge.sessionPanelOwnerRevision?.(event.sessionId) === ownerRevision &&
       (!event.viewerId || !deviceId || ctx.remote.hasAuthenticatedViewer(event.viewerId, deviceId));
     let snapshot = await readMobileSnapshot(
