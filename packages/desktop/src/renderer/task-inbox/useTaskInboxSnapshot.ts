@@ -5,6 +5,8 @@ import type {
   TaskInboxVisibility,
 } from "../../preload/task-inbox-api";
 
+import type { DesktopHostStatus } from "../../preload/types";
+
 /** Publish complete snapshots; source updates queue behind pagination instead of starving it. */
 export function useTaskInboxSnapshot(visibility: TaskInboxVisibility) {
   const [loaded, setLoaded] = useState<{
@@ -14,6 +16,7 @@ export function useTaskInboxSnapshot(visibility: TaskInboxVisibility) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
+  const hostGeneration = useRef(0);
   const currentVersion = useRef(-1);
   const notifiedVersion = useRef(-1);
   const inFlight = useRef(true);
@@ -22,18 +25,34 @@ export function useTaskInboxSnapshot(visibility: TaskInboxVisibility) {
     setRevision((value) => value + 1);
   }, []);
 
-  useEffect(
-    () =>
-      window.codeshell.taskInbox.onChanged((version) => {
-        if (version <= Math.max(currentVersion.current, notifiedVersion.current)) return;
-        notifiedVersion.current = version;
-        if (!inFlight.current) refresh();
-      }),
-    [refresh],
-  );
+  useEffect(() => {
+    let previous: DesktopHostStatus | undefined;
+    const offHost = window.codeshell.onDesktopHostStatus?.((status) => {
+      if (previous && status !== previous && (status === "ready" || previous === "ready")) {
+        // A restored database can have a lower revision than the old port or
+        // fallback mirror. Fence its pending pages and establish a fresh baseline.
+        hostGeneration.current++;
+        currentVersion.current = -1;
+        notifiedVersion.current = -1;
+        refresh();
+      }
+      previous = status;
+    });
+    const offChanged = window.codeshell.taskInbox.onChanged((version) => {
+      if (version <= Math.max(currentVersion.current, notifiedVersion.current)) return;
+      notifiedVersion.current = version;
+      if (!inFlight.current) refresh();
+    });
+    return () => {
+      offHost?.();
+      offChanged();
+    };
+  }, [refresh]);
 
   useEffect(() => {
     let cancelled = false;
+    const generation = hostGeneration.current;
+    const isCurrent = () => !cancelled && generation === hostGeneration.current;
     const notifiedAtStart = notifiedVersion.current;
     let published = false;
     inFlight.current = true;
@@ -55,7 +74,7 @@ export function useTaskInboxSnapshot(visibility: TaskInboxVisibility) {
               limit: 200,
               ...(cursor ? { cursor } : {}),
             });
-            if (cancelled) return;
+            if (!isCurrent()) return;
             if (!first) first = page;
             if (page.version !== first.version) {
               mixed = true;
@@ -81,14 +100,17 @@ export function useTaskInboxSnapshot(visibility: TaskInboxVisibility) {
         }
         throw new Error("Task snapshot changed repeatedly. Please refresh to retry.");
       } catch (cause) {
-        if (!cancelled) setError(cause instanceof Error ? cause.message : String(cause));
+        if (isCurrent()) setError(cause instanceof Error ? cause.message : String(cause));
       } finally {
-        if (!cancelled) {
+        if (isCurrent()) {
           inFlight.current = false;
           setLoading(false);
           // A newer notification during a failed read must not be swallowed.
           // Only follow genuinely new notifications to avoid a hot retry loop.
-          if (notifiedVersion.current > (published ? currentVersion.current : notifiedAtStart))
+          if (
+            notifiedVersion.current >
+            Math.max(notifiedAtStart, published ? currentVersion.current : -1)
+          )
             refresh();
         }
       }

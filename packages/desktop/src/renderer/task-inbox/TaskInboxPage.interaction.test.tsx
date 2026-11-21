@@ -518,6 +518,26 @@ describe("TaskInboxPage", () => {
     expect(cards()).toHaveLength(1);
     expect(textOf(container)).not.toContain("initial outage");
   });
+  test("reconnecting to a restored Host accepts lower versions and drops in-flight mirror pages", async () => {
+    let publish: (status: "reconnecting" | "ready") => void = () => {};
+    window.codeshell.onDesktopHostStatus = (listener) => {
+      publish = listener;
+      listener("ready");
+      return () => {};
+    };
+    await render();
+    await settle(() => requests[0].request.resolve(snapshot([row("old")], 90)));
+    await settle(() => publish("reconnecting"));
+    await settle(() => publish("ready"));
+    await settle(() => requests[2].request.resolve(snapshot([row("restored")], 1)));
+    await settle(() => requests[1].request.resolve(snapshot([row("late-mirror")], 91)));
+    expect(textOf(container)).toContain("任务 restored");
+    expect(textOf(container)).not.toContain("late-mirror");
+    await settle(() => changed(2));
+    await settle(() => requests[3].request.resolve(snapshot([row("new-update")], 2)));
+    expect(textOf(container)).toContain("任务 new-update");
+    expect(requests).toHaveLength(4);
+  });
   test("a notification during a failed read is followed once instead of swallowed", async () => {
     await render();
     await settle(() => changed(2));
