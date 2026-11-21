@@ -200,7 +200,10 @@ export class DesktopHostSupervisor {
     signal?.throwIfAborted();
     const value = await this.request("host/business", { method, input }, 15_000, signal);
     signal?.throwIfAborted();
-    return value as ShellBusinessOperations[K]["result"  private request(
+    return value as ShellBusinessOperations[K]["result"];
+  }
+
+  private request(
     method: string,
     params: Record<string, unknown>,
     timeoutMs = 15_000,
