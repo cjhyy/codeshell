@@ -6,6 +6,7 @@
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { isDeepStrictEqual } from "node:util";
 import { build } from "esbuild";
 
 const desktop = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -44,6 +45,10 @@ export async function compileMainModules(names) {
 }
 
 const isRecord = (value) => typeof value === "object" && value !== null;
+const isPlainObject = (value) => {
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
+};
 
 /** Jest/Bun `toEqual`: recursive equality that ignores properties set to undefined. */
 export function equals(actual, expected) {
@@ -57,6 +62,10 @@ export function equals(actual, expected) {
     );
   }
   if (!isRecord(actual) || !isRecord(expected)) return false;
+  // Dates, Maps, Sets, typed arrays, class instances: their state is not in own
+  // enumerable keys, so the key walk below would call any two of them equal.
+  if (!isPlainObject(actual) || !isPlainObject(expected))
+    return isDeepStrictEqual(actual, expected);
   const defined = (value) =>
     Object.keys(value)
       .filter((key) => value[key] !== undefined)
