@@ -169,13 +169,15 @@ describe("node:http server timeout enforcement", () => {
   });
 
   test("a connected client that has sent nothing is seen, counted and closed by closeAllConnections()", async () => {
-    // Node emits 'connection' at TCP accept. A client that connects and stays
-    // silent must be visible to the server so getConnections() counts it and
-    // closeAllConnections() + close() close it right away, instead of the client
-    // only learning about the shutdown when it later writes (ECONNRESET).
+    // Node emits 'connection' at TCP accept. A client that connects and stays silent
+    // must be visible to the server at once, so getConnections() counts it and
+    // closeAllConnections() + close() close it right away. With a kernel-side
+    // deferred accept the server only sees it after the defer window (a second or
+    // more), and a shutdown inside that window leaves the client connected until it
+    // writes and gets ECONNRESET.
     const server = http.createServer((req, res) => res.end("ok"));
-    const { promise: sawConnection, resolve: onConnection } = Promise.withResolvers<void>();
-    server.on("connection", () => onConnection());
+    let connections = 0;
+    server.on("connection", () => connections++);
     const port = await listen(server);
     const socket = net.connect(port, "127.0.0.1");
     socket.on("error", () => {});
@@ -183,15 +185,21 @@ describe("node:http server timeout enforcement", () => {
     socket.on("close", () => onClosed());
     try {
       await once(socket, "connect");
-      await sawConnection;
+      // Well inside a one-second deferred-accept window.
+      await Bun.sleep(200);
       const { promise: counted, resolve: onCount } = Promise.withResolvers<number>();
       server.getConnections((err, count) => onCount(err ? -1 : count));
-      expect(await counted).toBe(1);
+      const count = await counted;
+      const shutdownAt = Date.now();
       server.closeAllConnections();
       server.close();
       // Resolves without the client writing anything.
       await closed;
-      expect(socket.destroyed).toBe(true);
+      expect({ connections, count, closedPromptly: Date.now() - shutdownAt < 500 }).toEqual({
+        connections: 1,
+        count: 1,
+        closedPromptly: true,
+      });
     } finally {
       socket.destroy();
       server.closeAllConnections();
