@@ -10,6 +10,12 @@ import {
   requireRendererListedSkillPath,
 } from "../../main/renderer-configuration-helpers.js";
 import { claimBusinessCommit } from "./business-calls.js";
+import {
+  addProfileRepo,
+  previewProfileRequirements,
+  installProfileRequirements,
+} from "../../main/profiles-service.js";
+import type { ProfilePackageOperations } from "../../shared/profile-library.js";
 import type { SkillOperations } from "../../shared/skill-operations.js";
 
 async function skillDestination(target: RendererConfigurationTarget | null) {
@@ -31,12 +37,22 @@ async function skillDestination(target: RendererConfigurationTarget | null) {
     },
   };
 }
+type ExtensionOperations = SkillOperations & ProfilePackageOperations;
 type Handlers = {
-  [K in keyof SkillOperations]: (
-    input: SkillOperations[K]["input"],
-  ) => Promise<SkillOperations[K]["result"]>;
+  [K in keyof ExtensionOperations]: (
+    input: ExtensionOperations[K]["input"],
+  ) => Promise<ExtensionOperations[K]["result"]>;
 };
 const handlers = {
+  "profiles/addRepo": ({ repo }) =>
+    addProfileRepo(repo, () => claimBusinessCommit(workerData.permit)),
+  async "profiles/previewRequirements"({ target, name }) {
+    return previewProfileRequirements(name, await rendererConfigurationCwd(target));
+  },
+  async "profiles/installRequirements"({ target, name }) {
+    const { cwd, claim } = await skillDestination(target);
+    return installProfileRequirements(name, cwd!, undefined, claim);
+  },
   "skills/inspectGithub": ({ url, existingNames }) => inspectRepo(url, existingNames),
   async "skills/installGithub"({ scope, target, ...review }) {
     const { cwd, claim } = await skillDestination(target);
@@ -56,7 +72,10 @@ const handlers = {
   },
 } satisfies Handlers;
 
-async function run<K extends keyof SkillOperations>(method: K, input: SkillOperations[K]["input"]) {
+async function run<K extends keyof ExtensionOperations>(
+  method: K,
+  input: ExtensionOperations[K]["input"],
+) {
   if (!Object.hasOwn(handlers, method)) throw new Error("Unknown Skill operation");
   const invoke = (handlers as Handlers)[method];
   return invoke(input);

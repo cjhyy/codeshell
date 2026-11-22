@@ -12,14 +12,9 @@ import { WORKSPACE_PROFILE_NAME_RE } from "@cjhyy/code-shell-core";
 import { assertDesktopSessionId } from "./session-validation.js";
 import {
   activateProfile,
-  addProfileRepo,
   deleteProfile,
   deactivateProfile,
-  exportProfileRepo,
   forceDeleteProfile,
-  installProfileRequirements,
-  previewProfileRequirements,
-  removeProfileRepo,
   setSessionWorkspaceProfile,
 } from "./profiles-service.js";
 import { type RendererConfigurationTarget } from "./renderer-configuration-authority.js";
@@ -78,11 +73,11 @@ export function registerProfileCatalogIpc(host: {
   );
   ipcMain.handle("profiles:addRepo", async (_e, repo: string) => {
     if (typeof repo !== "string" || !repo) throw new Error("profiles:addRepo requires repo");
-    return addProfileRepo(repo.trim());
+    return host.callBusiness("profiles/addRepo", { repo: repo.trim() }, host.documentSignal(_e));
   });
   ipcMain.handle("profiles:removeRepo", async (_e, repo: string) => {
     if (typeof repo !== "string" || !repo) throw new Error("profiles:removeRepo requires repo");
-    removeProfileRepo(repo);
+    return host.callBusiness("profiles/removeRepo", { repo }, host.documentSignal(_e));
   });
   ipcMain.handle(
     "profiles:forceDelete",
@@ -110,8 +105,11 @@ export function registerProfileCatalogIpc(host: {
       if (typeof name !== "string" || !name) {
         throw new Error("profiles:previewRequirements requires name");
       }
-      const cwd = await rendererConfigurationCwd(target);
-      return previewProfileRequirements(name, cwd);
+      return host.callBusiness(
+        "profiles/previewRequirements",
+        { name, target },
+        host.documentSignal(_e),
+      );
     },
   );
   ipcMain.handle(
@@ -120,8 +118,11 @@ export function registerProfileCatalogIpc(host: {
       if (typeof name !== "string" || !name) {
         throw new Error("profiles:installRequirements requires name");
       }
-      const cwd = await rendererConfigurationCwd(target);
-      return installProfileRequirements(name, cwd);
+      return host.callBusiness(
+        "profiles/installRequirements",
+        { name, target },
+        host.documentSignal(_e),
+      );
     },
   );
   ipcMain.handle(
@@ -203,6 +204,7 @@ export function registerProfileCatalogIpc(host: {
     return host.callBusiness("profiles/exportDefinition", { name, path: result.filePath }, signal);
   });
   ipcMain.handle("profiles:exportRepo", async (event, names: string[]) => {
+    const signal = host.documentSignal(event);
     if (!Array.isArray(names) || names.length === 0 || names.some((n) => typeof n !== "string")) {
       throw new Error("profiles:exportRepo requires profile names");
     }
@@ -215,7 +217,7 @@ export function registerProfileCatalogIpc(host: {
       ? await dialog.showOpenDialog(win, { ...options, properties: [...options.properties] })
       : await dialog.showOpenDialog({ ...options, properties: [...options.properties] });
     if (picked.canceled || picked.filePaths.length === 0) return { canceled: true };
-    return exportProfileRepo(names, picked.filePaths[0]);
+    return host.callBusiness("profiles/exportRepo", { names, path: picked.filePaths[0]! }, signal);
   });
   ipcMain.handle(
     "profiles:delete",

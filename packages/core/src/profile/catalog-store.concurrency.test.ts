@@ -50,6 +50,19 @@ function markerOf(dir: string): string | null {
 }
 
 describe("digital-human repo crash recovery", () => {
+  test("revoked removal leaves the published repository intact", () => {
+    const repo = "acme/retained";
+    const dir = humanRepoDir(repo);
+    mkdirSync(humanReposRoot(), { recursive: true });
+    writeRepoTree(dir, "published");
+    expect(() =>
+      removeHumanRepo(repo, () => {
+        throw Error("revoked");
+      }),
+    ).toThrow(/revoked/);
+    expect(markerOf(dir)).toBe("published");
+  });
+
   test("restores a tree left behind by a crash between retire and promote", async () => {
     // Simulate the exact interrupted state: `dir` gone, `.retired-*` present.
     const repo = "acme/humans";

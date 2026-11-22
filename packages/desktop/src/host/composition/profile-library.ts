@@ -67,6 +67,8 @@ export function hostedProfileLibrary(
       "profiles/teams": view("profiles/teams"),
       "profiles/list": view("profiles/list"),
       "profiles/previewDeletion": view("profiles/previewDeletion"),
+      "profiles/removeRepo": change("profiles/removeRepo"),
+      "profiles/exportRepo": change("profiles/exportRepo"),
       "profiles/saveTeam": change("profiles/saveTeam"),
       "profiles/deleteTeam": change("profiles/deleteTeam"),
       "profiles/save": change("profiles/save"),

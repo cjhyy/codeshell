@@ -294,6 +294,7 @@ export class DesktopHostSupervisor {
     // GitHub downloads have per-request deadlines and may stage a whole bundle.
     // Local copies can wait for a Skill worker and the cross-process directory lock.
     const longRunning = waitsForRun || method === "im/wechatLogin" || method === "memory/dream" ||
+      method === "profiles/addRepo" || method === "profiles/previewRequirements" || method === "profiles/installRequirements" ||
       method === "sources/uploadPicked" || method === "skills/inspectGithub" ||
       method === "skills/installGithub" || method === "skills/installLocal" ||
       method === "skills/update" || method === "skills/uninstall";

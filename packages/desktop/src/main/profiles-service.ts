@@ -459,12 +459,12 @@ export function installCatalogProfile(name: string, beforeCommit?: () => void): 
 }
 
 /** 添加一个数字人仓库（克隆/更新）。会写磁盘并访问网络。 */
-export async function addProfileRepo(repo: string) {
-  return addHumanRepo(repo);
+export async function addProfileRepo(repo: string, beforeCommit?: () => void) {
+  return addHumanRepo(repo, beforeCommit);
 }
 
-export function removeProfileRepo(repo: string): void {
-  removeHumanRepo(repo);
+export function removeProfileRepo(repo: string, beforeCommit?: () => void): void {
+  removeHumanRepo(repo, beforeCommit);
 }
 
 export function listProfileRepos(): HumanRepoListEntry[] {
@@ -483,6 +483,7 @@ export function listProfileRepos(): HumanRepoListEntry[] {
 export function exportProfileRepo(
   names: string[],
   destDir: string,
+  beforeCommit?: () => void,
 ): { ok: true; written: string[] } {
   if (!Array.isArray(names) || names.length === 0) {
     throw new Error("Digital-human repo export requires at least one profile");
@@ -505,6 +506,7 @@ export function exportProfileRepo(
 
   const written: string[] = [];
   const humansDir = join(destDir, "humans");
+  beforeCommit?.();
   ensureRegularExportDirectory(humansDir);
   for (const profile of profiles) {
     const dir = join(humansDir, profile.name);
@@ -598,6 +600,7 @@ export async function installProfileRequirements(
   name: string,
   cwd: string,
   runner?: SkillInstallRunner,
+  beforeCommit?: () => void,
 ): Promise<{ ok: boolean; errors: string[] }> {
   if (!WORKSPACE_PROFILE_NAME_RE.test(name)) throw new Error("invalid digital-human profile id");
   const profile = readWorkspaceProfile(name);
@@ -614,8 +617,16 @@ export async function installProfileRequirements(
   });
 
   const errors: string[] = [];
+  // The reviewed batch is accepted once, at its first validated installer invocation.
+  let accepted = false;
+  const accept = () => {
+    if (!accepted) {
+      beforeCommit?.();
+      accepted = true;
+    }
+  };
   for (const { requirement } of plan.skillInstalls) {
-    const result = await installSkillRequirement(requirement, cwd, runner);
+    const result = await installSkillRequirement(requirement, cwd, runner, accept);
     if (!result.ok) errors.push(`${requirement.repo}: ${result.error}`);
   }
   // 新文件落地后必须让扫描缓存过期，否则本轮仍看不到刚装的 skill。

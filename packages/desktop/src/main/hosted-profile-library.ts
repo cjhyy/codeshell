@@ -7,6 +7,8 @@ import {
 } from "./digital-human-team-service.js";
 import {
   exportProfileDefinition,
+  exportProfileRepo,
+  removeProfileRepo,
   importReviewedProfileDefinition,
   installCatalogProfile,
   listProfileCatalog,
@@ -52,6 +54,8 @@ type Mutations = {
   ) => ProfileLibraryChanges[K]["result"] | Promise<ProfileLibraryChanges[K]["result"]>;
 };
 const mutations: Mutations = {
+  "profiles/removeRepo": ({ repo }, claim) => removeProfileRepo(repo, claim),
+  "profiles/exportRepo": ({ names, path }, claim) => exportProfileRepo(names, path, claim),
   "profiles/saveTeam": ({ team }, claim) => saveDigitalHumanTeam(team, claim),
   "profiles/deleteTeam": ({ id }, claim) => deleteDigitalHumanTeam(id, claim),
   "profiles/save": async ({ profile, target }, claim) =>

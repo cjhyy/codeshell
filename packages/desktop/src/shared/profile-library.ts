@@ -36,7 +36,23 @@ export const profileLibraryReads = [
 export function isProfileLibraryRead(name: string): name is keyof ProfileLibraryReads {
   return profileLibraryReads.some((key) => key === name);
 }
+export interface ProfilePackageOperations {
+  "profiles/addRepo": { input: { repo: string }; result: Result<"addProfileRepo"> };
+  "profiles/previewRequirements": {
+    input: { name: string; target: RendererConfigurationTarget };
+    result: Result<"previewProfileRequirements">;
+  };
+  "profiles/installRequirements": {
+    input: { name: string; target: RendererConfigurationTarget };
+    result: Result<"installProfileRequirements">;
+  };
+}
 export interface ProfileLibraryChanges {
+  "profiles/removeRepo": { input: { repo: string }; result: void };
+  "profiles/exportRepo": {
+    input: { names: string[]; path: string };
+    result: { ok: true; written: string[] };
+  };
   "profiles/saveTeam": { input: { team: DigitalHumanTeam }; result: DigitalHumanTeam };
   "profiles/deleteTeam": { input: { id: string }; result: void };
   "profiles/save": { input: Target & { profile: WorkspaceProfile }; result: void };
@@ -55,6 +71,8 @@ export interface ProfileLibraryChanges {
   };
 }
 export const profileLibraryChanges = [
+  "profiles/removeRepo",
+  "profiles/exportRepo",
   "profiles/saveTeam",
   "profiles/deleteTeam",
   "profiles/save",
@@ -66,9 +84,10 @@ export const profileLibraryChanges = [
 export function isProfileLibraryChange(name: string): name is keyof ProfileLibraryChanges {
   return profileLibraryChanges.some((key) => key === name);
 }
-export type ProfileLibraryOperations = ProfileLibraryChanges & {
-  [K in keyof ProfileLibraryReads]: {
-    input: ProfileLibraryReads[K]["params"];
-    result: ProfileLibraryReads[K]["result"];
+export type ProfileLibraryOperations = ProfilePackageOperations &
+  ProfileLibraryChanges & {
+    [K in keyof ProfileLibraryReads]: {
+      input: ProfileLibraryReads[K]["params"];
+      result: ProfileLibraryReads[K]["result"];
+    };
   };
-};
