@@ -38,7 +38,7 @@ export interface PetFollowUpMutationResult {
 }
 
 export interface PetFollowUpInbox {
-  getSnapshot(): PetWorkInboxSnapshot;
+  getSnapshot(): PetWorkInboxSnapshot | Promise<PetWorkInboxSnapshot>;
   addIfAbsentDurably(id: string): Promise<{ added: boolean; snapshot: PetWorkInboxSnapshot }>;
 }
 
@@ -148,7 +148,7 @@ export function createPetFollowUpService(deps: {
 
   async function listOpen(options?: { allowGenerate?: boolean }): Promise<PetFollowUpItem[]> {
     const rows = await collect(options);
-    const handled = new Set(deps.inbox.getSnapshot().dismissedIds);
+    const handled = new Set((await deps.inbox.getSnapshot()).dismissedIds);
     return rows
       .filter((row) =>
         row.kind === "registered"
@@ -188,7 +188,7 @@ export function createPetFollowUpService(deps: {
       const row = (await collect()).find((candidate) => candidate.followUpId === followUpId);
       // Re-read after the asynchronous collection so a concurrent UI/Mimi
       // mutation cannot make this request report a second successful handling.
-      const handled = new Set(deps.inbox.getSnapshot().dismissedIds);
+      const handled = new Set((await deps.inbox.getSnapshot()).dismissedIds);
       if (!row || handled.has(stateId)) throw new Error("跟进项不存在或已处理");
       const mutation = await deps.inbox.addIfAbsentDurably(stateId);
       if (!mutation.added) throw new Error("跟进项不存在或已处理");

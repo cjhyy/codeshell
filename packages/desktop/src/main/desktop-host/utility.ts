@@ -287,6 +287,7 @@ parent.on("message", ({ data, ports }) => {
       new Map([
         ...desktopHostMethods((options) => catalog.list(options)),
         ...taskHostReads(storage),
+        businessRead("mimi/workInbox", noBusinessArguments, () => readMimiList(storage,"inboxSnapshot")),
         businessRead("mimi/segmentMessages", parseMimiSegmentRange, (range) =>
           segments["mimi/segmentMessages"](range),
         ),

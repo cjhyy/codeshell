@@ -1,10 +1,15 @@
+import type { PetWorkInboxStore } from "../main/pet/pet-work-inbox-store.js";
 import type { selectPetMemories } from "@cjhyy/code-shell-pet";
 import type { PetMemoryStore, PetMemoryEntry } from "../main/pet/pet-memory-store.js";
 import type { PetJournalEntry, PetJournalRecord } from "../main/pet/pet-journal-store.js";
 import type { PetHostActionContext } from "../main/pet/pet-dispatch-service.js";
 
-export type MimiRecordDomain = "memories" | "journal";
+export type MimiRecordDomain = "memories" | "journal" | "work-inbox";
 export interface MimiRecords {
+  inboxSnapshot(): ReturnType<PetWorkInboxStore["getSnapshot"]>;
+  inboxAdd(ids: readonly string[]): Awaited<ReturnType<PetWorkInboxStore["addDurably"]>>;
+  inboxClear(): Awaited<ReturnType<PetWorkInboxStore["clearDurably"]>>;
+  inboxClaim(id: string): Awaited<ReturnType<PetWorkInboxStore["addIfAbsentDurably"]>>;
   metadata(): import("../main/pet/pet-metadata-store.js").LocalPetMetadata;
   memoryList(): PetMemoryEntry[];
   memoryRecall(

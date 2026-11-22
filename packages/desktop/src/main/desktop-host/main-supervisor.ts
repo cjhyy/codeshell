@@ -151,7 +151,7 @@ export class DesktopHostSupervisor {
       } else if (
         message?.type === "mimi-records-changed" &&
         this.ready &&
-        (message.domain === "memories" || message.domain === "journal")
+        (message.domain === "memories" || message.domain === "journal" || message.domain === "work-inbox")
       ) {
         for (const listener of this.mimiRecordListeners) listener(message.domain);
       } else if (message?.type === "automation-notice" && this.ready) {
@@ -195,6 +195,7 @@ export class DesktopHostSupervisor {
         for (const listener of this.mimiRecordListeners) {
           listener("memories");
           listener("journal");
+          listener("work-inbox");
         }
         for (const wake of this.readyWaiters) wake();
         this.readyWaiters.clear();

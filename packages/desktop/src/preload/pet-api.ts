@@ -501,8 +501,11 @@ export function createPetApi(
       ipcRenderer.invoke("pet:set-active-session", sessionId) as Promise<{ ok: true }>,
     markAttentionReceipt: (keys, state) =>
       ipcRenderer.invoke("pet:attention-receipt", { keys, state }) as Promise<{ ok: true }>,
-    getDismissedWorkItemIds: () =>
-      ipcRenderer.invoke("pet:work-inbox-dismissed-get") as Promise<PetWorkInboxSnapshot>,
+    getDismissedWorkItemIds: () => {
+      const fallback = () =>
+        ipcRenderer.invoke("pet:work-inbox-dismissed-get") as Promise<PetWorkInboxSnapshot>;
+      return host ? host.readBusiness("mimi/workInbox", {}, fallback) : fallback();
+    },
     updateDismissedWorkItemIds: (update) =>
       ipcRenderer.invoke(
         "pet:work-inbox-dismissed-update",

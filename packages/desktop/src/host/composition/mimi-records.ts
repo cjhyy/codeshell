@@ -1,3 +1,4 @@
+import { PetWorkInboxStore } from "../../main/pet/pet-work-inbox-store.js";
 import { nativeExtractionAllowed } from "../../main/pet/pet-native-extraction-policy.js";
 import { PetMetadataStore } from "../../main/pet/pet-metadata-store.js";
 import { AsyncLocalStorage } from "node:async_hooks";
@@ -14,6 +15,8 @@ import { claimBusinessCommit, type BusinessMethods } from "./business-calls.js";
 export class StoredMimiRecords {
   private readonly grants = new AsyncLocalStorage<{ permit: Int32Array; autoSessionId?: string }>();
   private readonly memory: PetMemoryStore;
+  private readonly inbox: PetWorkInboxStore;
+  private inboxLoaded?: Promise<void>;
   private readonly metadata: PetMetadataStore;
   private readonly journal: PetJournalStore;
   constructor(dir: string) {
@@ -25,6 +28,7 @@ export class StoredMimiRecords {
       claimBusinessCommit(grant.permit);
       renameSync(from, to);
     };
+    this.inbox = new PetWorkInboxStore(join(dir, "work-inbox.json"), replaceFile);
     this.metadata = new PetMetadataStore(join(dir, "metadata.json"));
     this.memory = new PetMemoryStore(join(dir, "memories.json"), { replaceFile });
     this.journal = new PetJournalStore(join(dir, "journal.json"), { replaceFile });
@@ -44,6 +48,30 @@ export class StoredMimiRecords {
       let result: unknown;
       let changed: MimiRecordDomain | undefined;
       switch (call.action) {
+        case "inboxSnapshot":
+        case "inboxAdd":
+        case "inboxClear":
+        case "inboxClaim": {
+          await (this.inboxLoaded ??= this.inbox.load());
+          const previous = this.inbox.getSnapshot().revision;
+          switch (call.action) {
+            case "inboxSnapshot":
+              result = this.inbox.getSnapshot();
+              break;
+            case "inboxAdd":
+              result = await this.inbox.addDurably(...call.args);
+              break;
+            case "inboxClear":
+              result = await this.inbox.clearDurably();
+              break;
+            case "inboxClaim":
+              result = await this.inbox.addIfAbsentDurably(...call.args);
+              break;
+          }
+          if (call.action !== "inboxSnapshot" && this.inbox.getSnapshot().revision !== previous)
+            changed = "work-inbox";
+          break;
+        }
         case "metadata":
           result = await this.metadata.ensure();
           break;
@@ -121,7 +149,7 @@ export function mimiRecordsOperations(
   } satisfies Pick<BusinessMethods, "mimi/records" | "mimi/workMemory">;
 }
 
-export async function readMimiList<K extends "memoryList" | "journalList">(
+export async function readMimiList<K extends "memoryList" | "journalList" | "inboxSnapshot">(
   storage: Promise<StateStorage>,
   action: K,
 ) {

@@ -113,9 +113,12 @@ export interface PetIpcAttention {
 }
 
 export interface PetIpcWorkInbox {
-  getSnapshot(): PetWorkInboxSnapshot;
-  add(ids: readonly string[]): PetWorkInboxSnapshot;
-  clear(): PetWorkInboxSnapshot;
+  getSnapshot(): PetWorkInboxSnapshot | Promise<PetWorkInboxSnapshot>;
+  add(
+    ids: readonly string[],
+    signal?: AbortSignal,
+  ): PetWorkInboxSnapshot | Promise<PetWorkInboxSnapshot>;
+  clear(signal?: AbortSignal): PetWorkInboxSnapshot | Promise<PetWorkInboxSnapshot>;
   /** Preferred transactional mutation; legacy hosts may omit it. */
   addDurably?(ids: readonly string[]): Promise<PetWorkInboxSnapshot>;
   /** Preferred transactional reset; legacy hosts may omit it. */
@@ -534,17 +537,18 @@ export function registerPetIpc(options: {
     });
     options.ipcMain.handle(PET_WORK_INBOX_UPDATE_CHANNEL, (_event, ...args) => {
       if (args.length !== 1) throw new Error("invalid work inbox update");
+      const signal = options.recordAuthority?.(_event);
       const update = parseWorkInboxUpdate(args[0]);
       return afterReady(options.ready, async () => {
         let snapshot: PetWorkInboxSnapshot;
         if (update.action === "clear") {
           snapshot = options.workInbox!.clearDurably
             ? await options.workInbox!.clearDurably!()
-            : options.workInbox!.clear();
+            : await options.workInbox!.clear(signal);
         } else {
           snapshot = options.workInbox!.addDurably
             ? await options.workInbox!.addDurably!(update.ids)
-            : options.workInbox!.add(update.ids);
+            : await options.workInbox!.add(update.ids, signal);
         }
         if (
           (update.action === "clear" && !options.workInbox!.clearDurably) ||
@@ -733,7 +737,7 @@ export function registerPetIpc(options: {
     }
   });
   const unsubscribeWorkInbox = options.workInbox?.subscribe?.((snapshot) => {
-    for (const window of options.windows()) {
+    for (const window of (options.recordWindows ?? options.windows)()) {
       if (!window.isDestroyed()) window.webContents.send(PET_WORK_INBOX_EVENT_CHANNEL, snapshot);
     }
   });

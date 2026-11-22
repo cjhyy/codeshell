@@ -42,3 +42,30 @@ test("Mimi records reject withdrawn writes at the file replacement and keep conc
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test("work inbox claims commit once, survive a reopen, and withdraw before replacing the file", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "mimi-inbox-claims-"));
+  try {
+    const owner = new StoredMimiRecords(dir);
+    const permit = () => new Int32Array(new SharedArrayBuffer(4));
+    const claim = { action: "inboxClaim", args: ["completed:fixture"] } as const;
+    const call = (): MimiRecordCall => ({ action: claim.action, args: [claim.args[0]] });
+    const withdrawn = permit();
+    Atomics.store(withdrawn, 0, -1);
+    await expect(owner.run({ call: call(), permit: withdrawn })).rejects.toThrow("revoked");
+    const outcomes = await Promise.all(
+      [1, 2].map(() => owner.run({ call: call(), permit: permit() })),
+    );
+    expect(outcomes.map((a) => (a.result as { added: boolean }).added).sort()).toEqual([
+      false,
+      true,
+    ]);
+    const reopened = new StoredMimiRecords(dir);
+    expect(
+      (await reopened.run({ call: { action: "inboxSnapshot", args: [] }, permit: permit() }))
+        .result,
+    ).toEqual({ revision: 1, dismissedIds: ["completed:fixture"] });
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});

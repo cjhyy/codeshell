@@ -59,7 +59,7 @@ export async function writeOwnerJsonAtomic(
   path: string,
   value: unknown,
   maxBytes: number,
-  options: { compact?: boolean } = {},
+  options: { compact?: boolean; replaceFile?: (from: string, to: string) => Promise<void> } = {},
 ): Promise<void> {
   const serialized = serializeOwnerJson(value, options);
   if (Buffer.byteLength(serialized, "utf8") > maxBytes) throw new Error("state is too large");
@@ -80,7 +80,7 @@ export async function writeOwnerJsonAtomic(
   const temporary = `${path}.${process.pid}.${randomUUID()}.tmp`;
   try {
     await writeFile(temporary, serialized, { encoding: "utf8", mode: 0o600, flag: "wx" });
-    await rename(temporary, path);
+    await (options.replaceFile ?? rename)(temporary, path);
     if (process.platform !== "win32") await chmod(path, 0o600);
   } finally {
     await rm(temporary, { force: true }).catch(() => undefined);

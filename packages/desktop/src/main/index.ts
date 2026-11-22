@@ -155,7 +155,6 @@ import { createExternalSessionCatalog } from "./pet/pet-notice-external-sessions
 import { externalGoalNoticeSource } from "./pet/pet-notice-goal-reconcile.js";
 import { createPetNoticeControls, type PetNoticeControls } from "./pet/pet-notice-ipc.js";
 import { wireMimiNoticeTools } from "./pet/pet-mimi-notice-tools.js";
-import { PetWorkInboxStore } from "./pet/pet-work-inbox-store.js";
 import { PetHostActionReceiptStore } from "./pet/pet-host-action-receipts.js";
 import { archivePetSessionsBySelector } from "./pet/pet-session-archive.js";
 import { createPetFollowUpRules } from "./pet/pet-follow-up-rules.js";
@@ -882,7 +881,7 @@ let petRuleScheduler: PetRuleScheduler | null = null;
 let petRuntimeReady = false;
 let petHostActionReceiptService: PetHostActionReceiptService | null = null;
 let petNotices: PetNoticeWiring | null = null;
-let petWorkInboxStore: PetWorkInboxStore | null = null;
+let petWorkInboxStore: ReturnType<typeof nativeMimiRecords>["workInbox"] | null = null;
 let petLongTaskStore: PetLongTaskStore | null = null;
 let petLongTaskCoordinator: PetLongTaskCoordinator | null = null;
 const taskInboxDisposers: Array<() => void> = [];
@@ -1737,9 +1736,7 @@ async function createWindow(): Promise<BrowserWindow> {
       isOwnerConversation: (channel, target) =>
         imGatewayService.isOwnerConversation(channel, target),
     });
-    const petWorkInbox = new PetWorkInboxStore(
-      resolve(app.getPath("userData"), "pet", "work-inbox.json"),
-    );
+    const petWorkInbox = mimiRecords.workInbox;
     petWorkInboxStore = petWorkInbox;
     const petHostActionReceipts = new PetHostActionReceiptStore(
       resolve(app.getPath("userData"), "pet", "host-action-receipts.json"),

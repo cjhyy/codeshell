@@ -8,6 +8,7 @@ import type { ConfigurationReadContracts } from "./configuration-read-contracts.
  * business method here and register its parser/implementation in the Host. */
 export interface DesktopBusinessReads
   extends ActivityReads, CcRoomReads, MemoryReads, ConfigurationReadContracts, WorkspaceReadContracts {
+  "mimi/workInbox": {params: Record<string, never>;result: ReturnType<import("./mimi-records.js").MimiRecords["inboxSnapshot"]>};
   "mimi/segmentMessages": { params:{start:number;end:number};result: import("../preload/pet-api.js").PetSegmentMessage[] };
   "mimi/workMemory": {
     params: Record<string, never>;

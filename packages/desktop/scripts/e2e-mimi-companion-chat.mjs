@@ -198,6 +198,10 @@ try {
   receipt.checks.push(
     "isolated Codex activity was discovered, tailed through completion, then removed when the user disabled its source",
   );
+  const dismissed = await main.evaluate(() =>
+    window.codeshell.pet.updateDismissedWorkItemIds({ action: "add", ids: ["completed:fixture"] }),
+  );
+  assert.ok(dismissed.dismissedIds.includes("completed:fixture"));
   const added = await main.evaluate(() =>
     window.codeshell.pet.addMemory("Synthetic Mimi project preference"),
   );
@@ -221,16 +225,18 @@ try {
       reading = true;
       const start = Date.now();
       try {
-        const [rows, journal, work, segment] = await Promise.all([
+        const [rows, journal, work, segment, inbox] = await Promise.all([
           window.codeshell.pet.listMemories(),
           window.codeshell.pet.listJournal(),
           window.codeshell.pet.getWorkMemory(),
           window.codeshell.pet.getSegmentMessages({ start: 0, end: 1 }),
+          window.codeshell.pet.getDismissedWorkItemIds(),
         ]);
         if (
           rows.some((row) => row.id === id && row.text === "Updated synthetic preference") &&
           Array.isArray(journal) &&
           Array.isArray(work.segments) &&
+          inbox.dismissedIds.includes("completed:fixture") &&
           Array.isArray(segment)
         )
           window.__mimiRecordReads.push({ start, end: Date.now() });

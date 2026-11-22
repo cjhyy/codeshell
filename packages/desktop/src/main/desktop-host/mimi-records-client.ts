@@ -27,7 +27,40 @@ export function nativeMimiRecords(
     business("mimi/records", { action, args } as MimiRecordCall, signal) as Promise<
       ReturnType<MimiRecords[K]>
     >;
+  let inboxTail: Promise<unknown> = Promise.resolve();
+  const writeInbox = <T>(write: () => Promise<T>) => {
+    const result = inboxTail.catch(() => {}).then(write);
+    inboxTail = result;
+    return result;
+  };
   return {
+    workInbox: {
+      load: () => call("inboxSnapshot", []),
+      getSnapshot: () => call("inboxSnapshot", []),
+      add: (ids: readonly string[], signal?: AbortSignal) =>
+        writeInbox(() => call("inboxAdd", [ids], signal)),
+      clear: (signal?: AbortSignal) => writeInbox(() => call("inboxClear", [], signal)),
+      addIfAbsentDurably: (id: string) => writeInbox(() => call("inboxClaim", [id])),
+      flush: async () => {
+        await inboxTail;
+      },
+      subscribe: (notify: (snapshot: ReturnType<MimiRecords["inboxSnapshot"]>) => void) => {
+        let active = true;
+        let issued = 0;
+        const unsubscribe = subscribe("work-inbox", () => {
+          const stamp = ++issued;
+          void call("inboxSnapshot", [])
+            .then((snapshot) => {
+              if (active && stamp === issued) notify(snapshot);
+            })
+            .catch(() => {});
+        });
+        return () => {
+          active = false;
+          unsubscribe();
+        };
+      },
+    },
     metadata: { ensure: () => call("metadata", []) },
     interactive: {
       list: () => call("memoryList", []),
