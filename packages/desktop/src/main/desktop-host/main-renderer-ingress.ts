@@ -28,7 +28,10 @@ import { observeComputerUseRunControl } from "../computer-use/service.js";
 import { getSessionCwdIndex } from "../session-cwd-index.js";
 import { isOptimizationLabQuery } from "../../shared/optimization-lab.js";
 import { dlog } from "../desktop-logger.js";
-import type { ExternalGoalRpcHandler } from "../external-runtime-goal-rpc.js";
+import {
+  isExternalGoalRequest,
+  type ExternalGoalRpcHandler,
+} from "../external-runtime-goal-rpc.js";
 import type { WebConfigurationGate } from "../web-configuration-gate.js";
 
 export interface DirectAdmission {
@@ -54,7 +57,7 @@ interface RendererCommandDeps {
   workerGeneration(): number;
 }
 
-export function handleRendererCommand(
+export async function handleRendererCommand(
   deps: RendererCommandDeps,
   sender: BrowserWindow["webContents"],
   line: string,
@@ -150,17 +153,28 @@ export function handleRendererCommand(
     }
     return;
   }
-  const externalGoalReply = deps.externalGoalRpcHandler?.(parsed, sender.id);
-  if (externalGoalReply) {
-    void externalGoalReply
-      .then((reply) => {
-        if (parsed.id !== undefined && !sender.isDestroyed())
-          target.send("agent:msg", JSON.stringify(reply));
-      })
-      .catch((error) =>
-        direct?.reply({ type: "reply", error: { code: -32603, message: String(error) } }),
-      );
-    return;
+  if (deps.externalGoalRpcHandler && isExternalGoalRequest(parsed)) {
+    const frame = sender.mainFrame;
+    const sameDocument = () =>
+      !sender.isDestroyed() && !frame.isDestroyed() && sender.mainFrame === frame;
+    const checkDocument = () => {
+      if (!sameDocument()) throw Error("Workbench document changed");
+      direct?.assertCurrent();
+    };
+    try {
+      const reply = await deps.externalGoalRpcHandler(parsed, sender.id, checkDocument);
+      checkDocument();
+      if (reply) {
+        if (parsed.id !== undefined) target.send("agent:msg", JSON.stringify(reply));
+        return;
+      }
+    } catch {
+      const error = { code: -32003, message: "Goal authority changed or storage is unavailable" };
+      if (direct) direct.reply({ type: "reply", error });
+      else if (sameDocument() && parsed.id !== undefined)
+        target.send("agent:msg", JSON.stringify({ jsonrpc: "2.0", id: parsed.id, error }));
+      return;
+    }
   }
   if (
     parsed.method === "agent/run" &&

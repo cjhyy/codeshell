@@ -394,6 +394,7 @@ export function createDesktopHost(
       );
     },
     captureOperationClient,
+    watchGoalOwner: supervisor.watchGoalOwner.bind(supervisor),
     async withNativeRead<T>(
       input: { sessionId: string; token: string; id: string; revision: string },
       work: (key: PreparedOperationKey, check: () => void) => Promise<T>,

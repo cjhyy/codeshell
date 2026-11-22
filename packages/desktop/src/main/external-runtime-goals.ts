@@ -149,7 +149,6 @@ function goalInput(raw: string | GoalConfig): GoalConfig {
 
 /** Canonical persistence and version fences; no provider-specific state files. */
 export class ExternalRuntimeGoals {
-  private readonly manager = new SessionManager();
   private readonly runs = new Map<string, ExternalGoalRun>();
   /**
    * Questions the model is waiting on, per Session, until the user replies.
@@ -165,6 +164,7 @@ export class ExternalRuntimeGoals {
   constructor(
     private readonly emit: (sessionId: string, event: StreamEvent) => void,
     private readonly now: () => number = Date.now,
+    private readonly manager = new SessionManager(),
   ) {}
 
   read(sessionId: string): GoalConfig | undefined {

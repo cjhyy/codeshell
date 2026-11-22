@@ -1,4 +1,5 @@
 import { sessionFileOperations } from "../../host/composition/session-files.js";
+import { goalRecoveryOperations } from "../../host/composition/goal-recovery.js";
 import { hostedMimiRuleScheduler } from "../../host/composition/mimi-rule-scheduler.js";
 import type { MimiRuleReply } from "../../shared/mimi-rules.js";
 import { hostRuntimePath } from "../../host/runtime-path.js";
@@ -310,6 +311,7 @@ const business = new HostBusinessCalls({
   "transcripts/write": (input, grant) => transcripts.commitWrite(input, grant.permit),
   "transcripts/delete": (input, grant) => transcripts.commitDelete(input, grant.permit),
   ...operations.methods,
+  ...goalRecoveryOperations(storage),
   ...catalogEdits(storage),
   ...memoryOperations(storage),
   ...projectTrustOperations(storage),

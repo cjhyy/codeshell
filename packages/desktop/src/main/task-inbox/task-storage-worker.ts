@@ -1,5 +1,7 @@
 import { changeSessionFiles } from "../../host/composition/session-files.js";
 import {StoredMimiNoticeLedger} from "../../host/composition/mimi-notice-ledger.js";
+import { SessionManager } from "@cjhyy/code-shell-core";
+import { readStoredGoal } from "../../host/composition/goal-recovery.js";
 import { StoredMimiRules } from "../../host/composition/mimi-rules.js";
 import { isProjectMigrationCommand } from "../../shared/project-migration.js";
 import { writeHostedProjectMigration } from "../../host/composition/stored-project-migrations.js";
@@ -64,6 +66,8 @@ await serveSessionIndexWorker({
   async handle(ctx, command, payload) {
     if (command === "sessions/archive" || command === "sessions/deleteFiles")
       return changeSessionFiles(ctx.sessionsRoot, command, payload as Parameters<typeof changeSessionFiles>[2]);
+    if (command === "goals/read" || command === "goals/resume" || command === "goals/recent" || command === "goals/attention")
+      return readStoredGoal(command, payload, new SessionManager(ctx.sessionsRoot));
     if (isProfileLibraryChange(command)) return changeProfileLibrary(command,payload as Parameters<typeof changeProfileLibrary>[1]);
     if (isMemoryCommand(command))
       return writeHostedMemory(command, payload as Parameters<typeof writeHostedMemory>[1]);

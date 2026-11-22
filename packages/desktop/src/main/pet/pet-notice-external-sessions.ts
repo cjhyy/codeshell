@@ -105,7 +105,7 @@ export function createExternalSessionCatalog(deps: {
 }
 
 /** Not Mimi's, a sub-agent's, a child, ephemeral or archived (pet `readWorkSessionOnDisk`). */
-function isTopLevelWork(state: PersistedExternalSessionState): boolean {
+export function isTopLevelWork(state: PersistedExternalSessionState): boolean {
   return (
     (state.kind === undefined || state.kind === "work") &&
     state.origin !== "subagent" &&

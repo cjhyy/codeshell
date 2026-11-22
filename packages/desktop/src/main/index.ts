@@ -18,8 +18,6 @@ import { registerOperationBatchHost } from "./operation-batch-host.js";
 import { createMobileGatewayShell } from "./shell/mobile-gateway.js";
 import { createDesktopHost } from "./desktop-host/main.js";
 import { createDesktopModuleRegistry } from "./desktop-shutdown.js";
-import { createExternalRuntimeModule } from "./external-runtime-module.js";
-import { externalRuntimeMimiHost } from "./external-runtime-mimi-tools.js";
 import { registerProjectPanelIpc } from "./project-panel-ipc.js";
 import { registerProfileSwitchIpc, hostedProfileSwitch } from "./profile-switch-ipc.js";
 import { registerSourceCollectionIpc } from "./source-collections-ipc.js";
@@ -70,12 +68,8 @@ import {
   describeTranscribe,
 } from "@cjhyy/code-shell-core/internal";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
-import {
-  externalRuntimeToolContextForSession,
-  externalRuntimeWorkspaceForSession,
-} from "./external-runtime-tool-context.js";
-import { createExternalRuntimeBackgroundWork } from "./external-runtime-background-work.js";
-import { createExternalGoalRpcHandler } from "./external-runtime-goal-rpc.js";
+import { createNativeExternalRuntime } from "./shell/external-runtime.js";
+import { nativeExternalGoals } from "./shell/external-goals.js";
 import { buildExternalRuntimeHandoffFromEvents } from "./external-runtime-handoff.js";
 import { parseExternalRuntimeModelKey } from "../shared/external-runtime-models.js";
 import {
@@ -105,7 +99,7 @@ import { getSessionCwdIndex } from "./session-cwd-index.js";
 import { wirePetNotices, type PetNoticeWiring } from "./pet/pet-notice-wiring.js";
 import { withExternalDecisions } from "./pet/pet-notice-external-decisions.js";
 import { createExternalSessionCatalog } from "./pet/pet-notice-external-sessions.js";
-import { externalGoalNoticeSource } from "./pet/pet-notice-goal-reconcile.js";
+import { hostedExternalGoalNoticeSource } from "./pet/pet-notice-goal-reconcile.js";
 import { createPetNoticeControls, type PetNoticeControls } from "./pet/pet-notice-ipc.js";
 import { wireMimiNoticeTools } from "./pet/pet-mimi-notice-tools.js";
 import { archivePetSessionsBySelector } from "./pet/pet-session-archive.js";
@@ -156,7 +150,6 @@ import {
 import { createPetRuntimeControlWorker } from "./pet/pet-runtime-control-worker.js";
 import { createPetExternalRuntime } from "./pet/pet-external-runtime.js";
 import { createPetExternalReplyModel } from "./pet/pet-external-reply-model.js";
-import { resolveExternalRuntimeStartWorkspace } from "./external-runtime-start-workspace.js";
 import { installedThemeToPack } from "./theme-pack-conversion.js";
 import { themeImportDialogOptions } from "./theme-import-dialog.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
@@ -167,10 +160,8 @@ import { type ManagedCliInstallResult } from "./link-cli-installer.js";
 import { inspectReadableReplyAttachment } from "./image-read-service.js";
 import { NativeMediaProtocol } from "./hosted-media-protocol.js";
 import {
-  beginBrowserRunForSession,
   browserRuntime,
   chromeExtensionRuntimeService,
-  interactiveBrowserBridgeForSession,
 } from "./browser-runtime/index.js";
 import type { AutomationSessionMeta } from "./automation-host.js";
 import { createAutomationResumeTurn } from "./automation-resume-turn.js";
@@ -353,64 +344,17 @@ dlog("main", "boot", { argv: process.argv, execPath: process.execPath, cwd: proc
  */
 let bridge: AgentBridge | null = null;
 let desktopNotifier: DesktopNotifier | null = null;
-const externalRuntime = createExternalRuntimeModule(() => {
-  const externalBridge = bridge!;
-  return {
-    memoryInference: desktopHost.inferExternalMemory,
-    approvals: {
-      windows: () => mainWindows,
-      ownerWebContentsId: (sessionId) => externalBridge.panelOwnerWebContentsId(sessionId),
-      onPendingChange: (event) => mobileOrchestrator.mirrorExternalApproval(event),
-    },
-    service: {
-      providerFactories: desktopHost.externalProviders,
-      featureFlags: () => {
-        const cwd = resolveNoRepoCwd();
-        const settings = new SettingsManager(cwd, "full").getForScope("user") as {
-          featureFlags?: Record<string, boolean>;
-        };
-        return settings.featureFlags ?? {};
-      },
-      registerSession: (sessionId, cwd, webContentsId) =>
-        externalBridge.registerExternalSession(sessionId, cwd, webContentsId),
-      releaseSession: (sessionId) => externalBridge.releaseExternalSession(sessionId),
-      resolveProjectBinding: (cwd) => {
-        const resolved = getProjectStore().resolveExactRootSync(cwd);
-        return resolved
-          ? {
-              projectId: resolved.project.id,
-              mainRootId: resolved.mainRoot.id,
-            }
-          : undefined;
-      },
-      // Route events to the window that owns the session, not every window: a
-      // second window showing a different session must not receive its stream.
-      emit: (sessionId, event) => {
-        externalBridge.ingestOwnedExternalEvent(sessionId, event);
-      },
-      sessionStateChanged: (sessionId, active, ownerId) => {
-        sendToOwnerWindow(ownerId, "externalRuntime:sessionState", { sessionId, active });
-        markSessionTaskDirty(sessionId);
-      },
-      // The host seams the exposed tools need. `panels` points at the same
-      // requestPanelHost the native protocol line reaches, so owner routing,
-      // the timeout and invoke's fail-closed behaviour are shared rather than
-      // reimplemented.
-      toolContextOverrides: (sessionId) =>
-        externalRuntimeToolContextForSession(
-          externalBridge,
-          sessionId,
-          interactiveBrowserBridgeForSession(sessionId),
-          externalRuntimeWorkspaceForSession(sessionId),
-        ),
-      backgroundWork: createExternalRuntimeBackgroundWork(),
-      userTurnStarted: (sessionId) => {
-        beginBrowserRunForSession(sessionId);
-        userContinuedTask(sessionId);
-      },
-      mimiTools: () => externalRuntimeMimiHost(petNotices, externalBridge),
-    },
-  };
+const externalRuntime = createNativeExternalRuntime({
+  host: desktopHost,
+  bridge: () => bridge!,
+  windows: mainWindows,
+  onApproval: (event) => mobileOrchestrator.mirrorExternalApproval(event),
+  changed(sessionId, active, ownerId) {
+    sendToOwnerWindow(ownerId, "externalRuntime:sessionState", { sessionId, active });
+    markSessionTaskDirty(sessionId);
+  },
+  continued: userContinuedTask,
+  notices: () => petNotices,
 });
 const desktopModules = createDesktopModuleRegistry([externalRuntime]);
 const resolvePanelProjectScope = createDesktopPanelProjectScopeResolver({
@@ -689,83 +633,17 @@ async function createWindow(): Promise<BrowserWindow> {
     const externalBridge = bridge;
     desktopModules.start();
 
-    const externalGoalSessions = new SessionManager();
     externalBridge.setExternalGoalRpcHandler(
-      createExternalGoalRpcHandler({
-        isExternalSession: (sessionId) => {
-          if (externalRuntime.service?.get(sessionId)) return true;
-          // The canonical model wins over an old external-runtime sidecar after
-          // a user switches this task back to the native runtime.
-          return isPersistedExternalRuntime(externalGoalSessions.readSessionState(sessionId));
-        },
-        authorize: (sessionId, callerId) => {
-          assertDesktopSessionId(sessionId);
-          const owner = [...mainWindows].find(
-            (window) => !window.isDestroyed() && window.webContents.id === callerId,
-          );
-          if (!owner) throw new Error("goal controls require a live owner window");
-          const existingOwner = externalBridge.panelOwnerWebContentsId(sessionId);
-          if (existingOwner !== undefined && existingOwner !== callerId) {
-            throw new Error("goal belongs to another window");
-          }
-        },
-        prepareResume: async (sessionId, callerId) => {
-          const service = externalRuntime.service;
-          if (!service) throw new Error("external runtime service is unavailable");
-          if (service.canResumeGoal(sessionId, callerId)) return;
-          const state = externalGoalSessions.readSessionState(sessionId);
-          const model = parseExternalRuntimeModelKey(persistedExternalRuntimeModelKey(state));
-          if (!state || !model) throw new Error("external goal task is no longer available");
-          const workspace = await resolveExternalRuntimeStartWorkspace(sessionId, state.cwd, {
-            sessions: externalGoalSessions,
-          });
-          const ownerWindow = [...mainWindows].find(
-            (window) => !window.isDestroyed() && window.webContents.id === callerId,
-          );
-          if (!ownerWindow) throw new Error("goal owner window has closed");
-          const existingOwner = externalBridge.panelOwnerWebContentsId(sessionId);
-          if (existingOwner !== undefined && existingOwner !== callerId) {
-            throw new Error("goal belongs to another window");
-          }
-          const assertStartAuthority = () => {
-            workspace.assertStartAuthority();
-            const current = externalGoalSessions.readSessionState(sessionId);
-            const currentModel = parseExternalRuntimeModelKey(
-              persistedExternalRuntimeModelKey(current),
-            );
-            const owner = externalBridge.panelOwnerWebContentsId(sessionId);
-            if (
-              externalRuntime.service !== service ||
-              ownerWindow.isDestroyed() ||
-              (owner !== undefined && owner !== callerId) ||
-              current?.startedAt !== state.startedAt ||
-              current?.cwd !== state.cwd ||
-              currentModel?.kind !== model.kind ||
-              currentModel?.model !== model.model
-            )
-              throw new Error("external goal authority changed before startup");
-          };
-          await service.ensure({
-            kind: model.kind,
-            sessionId,
-            cwd: workspace.cwd,
-            mainRoot: workspace.mainRoot,
-            assertStartAuthority,
-            modelKey: state.model,
-            ...(model.model ? { model: model.model } : {}),
-            permissionMode: "default",
-            hasGoal: true,
-            initialContext: buildExternalRuntimeHandoffFromEvents(
-              await getSessionEvents(sessionId),
-            ),
-            ownerWindow,
-          });
-        },
-        service: () => {
-          if (!externalRuntime.service) throw new Error("external runtime service is unavailable");
-          return externalRuntime.service;
-        },
-        onGoalRead: (sessionId) => void petNotices?.reconcileGoalNotices(sessionId),
+      nativeExternalGoals({
+        window: (id) => [...mainWindows].find((w) => !w.isDestroyed() && w.webContents.id === id),
+        documentSignal: (w) =>
+          desktopHost.documentSignal({ sender: w.webContents, senderFrame: w.webContents.mainFrame }),
+        ownsMimiDocument: (id, sessionId) => externalBridge.ownsMimiDocument(id, sessionId),
+        watchOwner: desktopHost.watchGoalOwner,
+        call: desktopHost.callBusiness,
+        runtime: () => externalRuntime.service,
+        hasWorker: () => externalBridge.hasLiveWorker(),
+        onGoalRead: (id) => void petNotices?.reconcileGoalNotices(id),
       }),
     );
 
@@ -873,6 +751,7 @@ async function createWindow(): Promise<BrowserWindow> {
     const sessionOutcomeDeriver = new SessionOutcomeDeriver();
     const sessionOutcomes = createSessionOutcomeFanout();
     // Desktop external-runtime Sessions (Codex / Claude Code run here in Main).
+    const externalGoalSessions = new SessionManager();
     const externalSessions = createExternalSessionCatalog({
       runtime: () => externalRuntime.service,
       readState: (id) => externalGoalSessions.readSessionState(id),
@@ -912,9 +791,9 @@ async function createWindow(): Promise<BrowserWindow> {
       focusEvents: app,
       hasLiveWorker: () => bridge?.hasLiveWorker() ?? false,
       externalSessions,
-      externalGoals: externalGoalNoticeSource({
-        sessionsRootDir: sessionsRoot(),
-        readState: (id) => externalGoalSessions.readSessionState(id),
+      externalGoals: hostedExternalGoalNoticeSource({
+        call: desktopHost.callBusiness,
+        isLive: (id) => externalSessions.isLive(id),
         isRunning: (id) => externalRuntime.service?.isSessionRunning(id) === true,
       }),
       externalApprovals: {

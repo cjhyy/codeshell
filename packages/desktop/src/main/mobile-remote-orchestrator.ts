@@ -98,6 +98,7 @@ export type { AuthenticatedMobileClientEvent } from "./mobile-remote/handle-clie
 import { isRoomPhoneEvent } from "./mobile-remote/room-route.js";
 import type { NativeRooms } from "./desktop-host/rooms-client.js";
 export interface MobileRemoteOrchestratorDeps {
+  readColdGoal?: OrchestratorCtx["readColdGoal"];
   hostedRooms?: Pick<NativeRooms, "phone" | "left" | "cancel">;
   readCcRoom?: OrchestratorCtx["readCcRoom"];
   listDiskSessions?: OrchestratorCtx["listDiskSessions"];
@@ -591,6 +592,7 @@ export class MobileRemoteOrchestrator {
   private ctx(): OrchestratorCtx {
     return {
       listDiskSessions: this.deps.listDiskSessions,
+      readColdGoal: this.deps.readColdGoal,
       remote: this.deps.remote,
       outputRecovery: this.outputRecovery,
       externalCommands: this.externalCommands,

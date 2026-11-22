@@ -358,6 +358,13 @@ export class AgentBridge implements PetStateBridge {
     this.mimiSessionId = id;
     this.updateDeltaInterest();
   }
+  ownsMimiDocument(ownerId: number, sessionId: string) {
+    return (
+      this.mimiSessionId === sessionId &&
+      [...this.petWindows].some((w) => !w.isDestroyed() && w.webContents.id === ownerId)
+    );
+  }
+
   attachPetWindow(window: BrowserWindow): void {
     this.attachWindow(window);
     this.petWindows.add(window);
@@ -1103,7 +1110,7 @@ export class AgentBridge implements PetStateBridge {
           facts: {},
           assertCurrent,
           reply: resolve,
-        });
+        }).catch(reject);
       } catch (error) {
         reject(error);
       }
@@ -1114,8 +1121,8 @@ export class AgentBridge implements PetStateBridge {
     sender: BrowserWindow["webContents"],
     line: string,
     direct?: DirectAdmission,
-  ): void {
-    handleRendererCommand(
+  ): Promise<void> {
+    return handleRendererCommand(
       {
         agentRunMetadataDeps: () => this.agentRunMetadataDeps(),
         claimSessionPanelOwner: (id, owner) => this.claimSessionPanelOwner(id, owner),
@@ -1168,7 +1175,9 @@ export class AgentBridge implements PetStateBridge {
           return;
         }
       }
-      this.handleRendererCommand(event.sender, line);
+      void this.handleRendererCommand(event.sender, line).catch((error) =>
+        dlog("bridge", "renderer.command_failed", { error: String(error) }),
+      );
     });
 
     ipcMain.on(

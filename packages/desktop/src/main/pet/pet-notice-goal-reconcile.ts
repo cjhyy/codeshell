@@ -1,3 +1,4 @@
+import type { CallShellBusiness } from "../../shared/shell-business-contracts.js";
 import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import {
@@ -51,13 +52,16 @@ export interface ExternalGoalNoticeSource {
   /** Sessions whose persisted state was written at or after `sinceMs`. */
   recentSessions(sinceMs: number): Promise<readonly string[]>;
   /** The Session store's state (`SessionManager.readSessionState`). */
-  readState(sessionId: string): GoalAttentionState | undefined;
+  readState?(sessionId: string): GoalAttentionState | undefined;
+  /** The worker returns only eligible persisted external work and the attention it needs. */
+  inspect?(sessionId: string): Promise<{ attention?: ExternalGoalAttention } | null>;
   /** A run of the Session is in flight: its own events report what it does. */
   isRunning(sessionId: string): boolean;
 }
 
 export interface GoalNoticeReconcilerDeps {
   source: ExternalGoalNoticeSource;
+  isMimiSession?(sessionId: string): boolean;
   /** A top-level work Session on a desktop external runtime (the notice catalog's `has`). */
   isExternalSession(sessionId: string): boolean;
   /** The ledger already holds this outcome's notice (sent, waiting, dropped or withdrawn). */
@@ -133,11 +137,18 @@ export function persistedBlockedOutcome(
 export function createGoalNoticeReconciler(deps: GoalNoticeReconcilerDeps): GoalNoticeReconciler {
   const check = async (sessionId: string): Promise<void> => {
     try {
-      if (!deps.isExternalSession(sessionId) || deps.source.isRunning(sessionId)) return;
-      const state = deps.source.readState(sessionId);
-      // Unreadable state says nothing, least of all that the Goal moved on.
-      if (!state) return;
-      const attention = persistedGoalAttention(state);
+      if (deps.source.isRunning(sessionId) || deps.isMimiSession?.(sessionId)) return;
+      let attention: ExternalGoalAttention | undefined;
+      if (deps.source.inspect) {
+        const current = await deps.source.inspect(sessionId);
+        if (!current || deps.source.isRunning(sessionId) || deps.isMimiSession?.(sessionId)) return;
+        attention = current.attention;
+      } else {
+        if (!deps.isExternalSession(sessionId)) return;
+        const state = deps.source.readState?.(sessionId);
+        if (!state) return;
+        attention = persistedGoalAttention(state);
+      }
       if (!attention) {
         // Resumed, completed, cleared or paused by the user since: nothing to say any more.
         if ((await deps.waitingSessions()).includes(sessionId)) await deps.withdraw(sessionId);
@@ -163,9 +174,26 @@ export function createGoalNoticeReconciler(deps: GoalNoticeReconcilerDeps): Goal
       } catch (error) {
         deps.log("pet.notice.goal_reconcile_failed", { error: errorText(error) });
       }
-      // One at a time: each read is synchronous, and startup has no hurry.
+      // Yield between Sessions so foreground storage requests can be served during reconciliation.
       for (const sessionId of new Set([...recent, ...(await deps.waitingSessions())]))
         await check(sessionId);
+    },
+  };
+}
+
+export function hostedExternalGoalNoticeSource(input: {
+  call: CallShellBusiness;
+  isLive(sessionId: string): boolean;
+  isRunning(sessionId: string): boolean;
+}): ExternalGoalNoticeSource {
+  return {
+    recentSessions: (sinceMs) => input.call("goals/recent", { sinceMs }),
+    isRunning: input.isRunning,
+    async inspect(sessionId) {
+      const state = await input.call("goals/attention", { sessionId });
+      return state.topLevel && (state.external || input.isLive(sessionId))
+        ? { attention: state.attention }
+        : null;
     },
   };
 }

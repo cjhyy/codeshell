@@ -474,3 +474,21 @@ test("native recovery authorization expires on owner or deletion ABA and Host ex
   children[0]!.emit("exit", 1);
   expect(last.signal.aborted).toBe(true);
 });
+
+test("a cold Goal permits its own initial claim and expires on any ownership or deletion round trip", () => {
+  const { supervisor, children } = processFixture();
+  children[0]!.emit("message", { type: "ready" });
+  const first = supervisor.watchGoalOwner("fixture", 4);
+  supervisor.setOwner("fixture", 4);
+  expect(first.signal.aborted).toBe(false);
+  supervisor.setOwner("fixture", 5);
+  supervisor.setOwner("fixture", 4);
+  expect(first.signal.aborted).toBe(true);
+  const second = supervisor.watchGoalOwner("fixture", 4);
+  supervisor.setDeleting("fixture", true);
+  supervisor.setDeleting("fixture", false);
+  expect(second.signal.aborted).toBe(true);
+  const last = supervisor.watchGoalOwner("fixture", 4);
+  children[0]!.emit("exit", 1);
+  expect(last.signal.aborted).toBe(true);
+});

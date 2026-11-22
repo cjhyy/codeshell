@@ -212,6 +212,7 @@ export function createMobileGatewayShell(options: MobileShellOptions) {
   });
   desktopHost.setRemoteTerminals(remoteTerminals);
   const mobileOrchestrator: MobileRemoteOrchestrator = new MobileRemoteOrchestrator({
+    readColdGoal: (sessionId) => desktopHost.callBusiness("goals/read", {sessionId}),
     readCcRoom: desktopHost.callBusiness,
     roomHistory,
     listDiskSessions: options.listDiskSessions,

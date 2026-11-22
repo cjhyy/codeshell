@@ -1456,3 +1456,57 @@ describe("remote subagent reads", () => {
     expect(h.listed).toEqual([]);
   });
 });
+
+test("a paired cold Goal read rechecks the original viewer before delivering its objective", async () => {
+  const replies: unknown[] = [];
+  const deferred = Promise.withResolvers<void>();
+  const began = Promise.withResolvers<void>();
+  let online = true;
+  const ctx = {
+    getBridge: () => ({ hasLiveWorker: () => false, getLastRunContext: () => ({}) }),
+    deviceState: () => ({ selectedSessionId: "native" }),
+    externalCommands: {
+      observe() {},
+      isExternal: () => false,
+      authorizeNative: async () => ({
+        assertCurrent() {
+          if (!online) throw Error("Viewer left");
+        },
+      }),
+    },
+    async readColdGoal() {
+      began.resolve();
+      await deferred.promise;
+      return {
+        external: false,
+        goal: {
+          goal: "private synthetic objective",
+          goalId: "fixture",
+          revision: 3,
+          paused: false,
+        },
+      };
+    },
+    remote: { sendToDevice: (_id: string, reply: unknown) => replies.push(reply) },
+  } as unknown as OrchestratorCtx;
+  const reading = handleClientEvent(ctx, {
+    type: "goal.get",
+    sessionId: "native",
+    deviceId: "phone",
+    viewerId: "tab",
+    requestId: "read",
+  });
+  await began.promise;
+  online = false;
+  deferred.resolve();
+  await reading;
+  expect(replies).toEqual([
+    {
+      type: "goal.state",
+      sessionId: "native",
+      requestId: "read",
+      ok: false,
+      message: "Viewer left",
+    },
+  ]);
+});

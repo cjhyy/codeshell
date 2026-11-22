@@ -281,6 +281,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
   const goalNotices = deps.externalGoals
     ? createGoalNoticeReconciler({
         source: deps.externalGoals,
+        isMimiSession: deps.isMimiSession,
         isExternalSession: (sessionId) =>
           isExternal(sessionId) && view.isEligibleSession(sessionId),
         isReported: (outcome) => ledger.hasSeen(goalPauseDedupeKey(outcome)),

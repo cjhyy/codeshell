@@ -85,6 +85,11 @@ export interface MobileDeviceState {
 
 /** Narrow facade over the orchestrator state used by the three domain handlers. */
 export interface OrchestratorCtx {
+  readColdGoal?(
+    sessionId: string,
+  ): Promise<
+    import("../../shared/goal-recovery.js").GoalRecoveryOperations["goals/read"]["result"]
+  >;
   readCcRoom: import("../../shared/cc-room-reads.js").ReadCcRoom;
   listDiskSessions?: typeof listDiskSessions;
   outputRecovery?: MobileOutputRecovery;
@@ -1163,10 +1168,19 @@ export async function handleClientEvent(
         ...params
       } = event;
       authority.assertCurrent();
-      const res = await injectAndAwaitResult(bridge, method, params, {
-        origin: "mobile",
-        producer: "mobile-goal-control",
-      });
+      const cold =
+        event.type === "goal.get" && ctx.readColdGoal && !bridge.hasLiveWorker()
+          ? await ctx.readColdGoal(event.sessionId)
+          : undefined;
+      authority.assertCurrent();
+      if (cold?.external) throw Error("External Goal controls require the Desktop owner");
+      const res = cold
+        ? { ok: true as const, result: cold.goal }
+        : await injectAndAwaitResult(bridge, method, params, {
+            origin: "mobile",
+            producer: "mobile-goal-control",
+          });
+      authority.assertCurrent();
       if (!res.ok) throw new Error(res.message);
       const value = res.result as {
         updated?: boolean;

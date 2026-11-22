@@ -69,6 +69,7 @@ export class DesktopHostSupervisor {
     }
   >();
   private readonly fileHistoryGuards = new Map<AbortController, string>();
+  private readonly goalGuards = new Map<AbortController, { id: string; ownerId: number }>();
   private readonly reviewGuards = new Map<AbortController, string>();
   private readonly deleting = new Set<string>();
   private readonly streamViews = new Set<string>();
@@ -427,6 +428,30 @@ export class DesktopHostSupervisor {
     guards.set(guard, sessionId);
     return { signal: guard.signal, release: () => guards.delete(guard) };
   }
+  watchGoalOwner(id: string, ownerId: number) {
+    const owner = this.owners.get(id);
+    if (
+      !this.ready ||
+      this.stopped ||
+      this.deleting.has(id) ||
+      (owner !== undefined && owner !== ownerId) ||
+      this.goalGuards.size >= 128
+    )
+      throw Error("Goal owner unavailable");
+    const guard = new AbortController();
+    this.goalGuards.set(guard, { id, ownerId });
+    return { signal: guard.signal, release: () => this.goalGuards.delete(guard) };
+  }
+
+  private invalidateGoalOwners(id?: string, nextOwner?: number | null) {
+    for (const [guard, lease] of this.goalGuards) {
+      if (id !== undefined && lease.id !== id) continue;
+      // Starting a cold Goal legitimately claims the unowned Session for this caller.
+      if (id !== undefined && !this.owners.has(id) && nextOwner === lease.ownerId) continue;
+      this.goalGuards.delete(guard);
+      guard.abort();
+    }
+  }
   private invalidateReviews(sessionId?: string) {
     for (const guards of [this.reviewGuards, this.fileHistoryGuards]) {
       for (const [guard, id] of guards) {
@@ -438,6 +463,7 @@ export class DesktopHostSupervisor {
   }
 
   private rejectReads(): void {
+    this.invalidateGoalOwners();
     this.invalidateReviews();
     for (const read of this.reads.values()) {
       clearTimeout(read.timeout);
@@ -449,6 +475,7 @@ export class DesktopHostSupervisor {
 
   setOwner(sessionId: string, webContentsId: number | null): void {
     if ((this.owners.get(sessionId) ?? null) === webContentsId) return;
+    this.invalidateGoalOwners(sessionId, webContentsId);
     this.invalidateReviews(sessionId);
     if (webContentsId === null) this.owners.delete(sessionId);
     else this.owners.set(sessionId, webContentsId);
@@ -464,6 +491,7 @@ export class DesktopHostSupervisor {
 
   setDeleting(sessionId: string, deleting: boolean): void {
     if (this.deleting.has(sessionId) === deleting) return;
+    this.invalidateGoalOwners(sessionId);
     this.invalidateReviews(sessionId);
     if (deleting) this.deleting.add(sessionId);
     else this.deleting.delete(sessionId);

@@ -81,6 +81,34 @@ try {
     }),
     { mode: 0o600 },
   );
+  const coldGoals = ["native-goal-recovery", "external-goal-recovery"];
+  const coldStateFiles = coldGoals.map((id) =>
+    join(isolated.codeShellHome, "sessions", id, "state.json"),
+  );
+  for (const [index, id] of coldGoals.entries()) {
+    const dir = join(isolated.codeShellHome, "sessions", id);
+    await mkdir(dir, { recursive: true });
+    await writeFile(
+      join(dir, "state.json"),
+      JSON.stringify({
+        sessionId: id,
+        title: id,
+        origin: "desktop",
+        parentSessionId: null,
+        startedAt: 1,
+        cwd: mount,
+        model: index ? "codex/fixture" : "fixture",
+        provider: index ? "codex" : "openai",
+        project: { projectId: "host-smoke-project", mainRootId: "root" },
+        activeGoal: {
+          goalId: id,
+          objective: "Fixture objective " + index,
+          revision: 3,
+          paused: true,
+        },
+      }),
+    );
+  }
   const directory = join(isolated.codeShellHome, "sessions", "index-visible");
   await mkdir(directory, { recursive: true });
   await writeFile(
@@ -156,7 +184,34 @@ try {
   const bootstrap = join(isolated.home, "observe-host.cjs");
   await writeFile(
     bootstrap,
-    `const { utilityProcess, ipcMain } = require("electron");
+    `const { app, MessageChannelMain, utilityProcess, ipcMain } = require("electron");
+// Keep unrelated workbench hydration out of the Goal RPC's disk-read receipt.
+const goalScope = new (require("node:async_hooks").AsyncLocalStorage)();
+const goalIds = new Set(${JSON.stringify(coldGoals)});
+const fs = require("node:fs");
+const goalFiles = new Set(${JSON.stringify(coldStateFiles)});
+globalThis.goalReceipt = { requests: 0, reads: 0 };
+app.whenReady().then(() => {
+  const channel = new MessageChannelMain();
+  const port = Object.getPrototypeOf(channel.port1);
+  const emit = port.emit;
+  port.emit = function (name, event, ...rest) {
+    const frame = event?.data;
+    if (name === "message" && frame?.type === "renderer-prepare" &&
+        frame.request?.method === "agent/goalGet" && goalIds.has(frame.request?.params?.sessionId)) {
+      globalThis.goalReceipt.requests++;
+      return goalScope.run(true, () => emit.call(this, name, event, ...rest));
+    }
+    return emit.call(this, name, event, ...rest);
+  };
+  channel.port1.close();
+  channel.port2.close();
+});
+const read = fs.readFileSync;
+fs.readFileSync = function (path, ...args) {
+  if (goalScope.getStore() && goalFiles.has(String(path))) globalThis.goalReceipt.reads++;
+  return read.call(this, path, ...args);
+};
 // Exercise the registered compatibility handlers with this fixture's real frames.
 const register = ipcMain.handle;
 const terminals = new Map();
@@ -218,6 +273,19 @@ utilityProcess.fork = function (...args) {
   await assert.rejects(stat(staleDirectory), { code: "ENOENT" });
   await fixture.assertWorker(application, { requireWorker: false });
   await observeHost(first);
+  const goals = await first.evaluate(
+    (ids) => Promise.all(ids.map((id) => window.codeshell.goalGet(id))),
+    coldGoals,
+  );
+  assert.deepEqual(
+    goals.map((row) => [row.goalId, row.revision, row.paused]),
+    coldGoals.map((id) => [id, 3, true]),
+  );
+  assert.deepEqual(
+    await application.evaluate(() => globalThis.goalReceipt),
+    { requests: 2, reads: 0 },
+    "Cold workbench Goal reads and their notice reconciliation run outside Main",
+  );
   const catalog = await readCatalog(first);
   assert.ok(catalog.includes("github"), "Built-in Link provider missing");
   const secondOpened = application.waitForEvent("window", { timeout: 15_000 });

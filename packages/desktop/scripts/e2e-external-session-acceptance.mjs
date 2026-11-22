@@ -11,6 +11,7 @@
  */
 /* global document, window */
 import { createServer } from "node:http";
+import { SessionManager } from "@cjhyy/code-shell-core";
 import { once } from "node:events";
 import { mkdir, readdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
@@ -648,6 +649,53 @@ try {
   await win.evaluate((id) => window.codeshell.externalRuntime.stop(id), sessionId);
   console.log(
     "acceptance: foreground Claude and Codex belonged to Desktop Host; Host retirement released the child and the same session reopened on its successor",
+  );
+  // A paused provider Session on disk has no live task, worker turn or renderer binding.
+  const coldId = "fixture-cold-external-resume";
+  const manager = new SessionManager(join(isolated.codeShellHome, "sessions"));
+  const { state } = manager.create(projectPath, modelKey, "claude-code", coldId);
+  state.origin = "desktop";
+  state.parentSessionId = null;
+  state.activeGoal = {
+    objective: "Restore the saved acceptance fixture",
+    goalId: "cold-goal",
+    revision: 2,
+    paused: true,
+    setAtMs: 1,
+  };
+  assert(manager.saveState(state), "Cold external fixture was saved");
+  await cli.script([ask({ level: "preference", question: "Which fixture should continue?" }, "")]);
+  await waitForAsyncFunction(
+    win,
+    async (id) => {
+      try {
+        return (await window.codeshell.goalGet(id)).goalId === "cold-goal";
+      } catch {
+        return false;
+      }
+    },
+    coldId,
+    { timeout: 15_000 },
+  );
+  const beforeResume = (await cli.invocations()).length;
+  const resumed = await win.evaluate(async (sessionId) => {
+    const old = await window.codeshell.goalGet(sessionId);
+    const stale = await window.codeshell.goalUpdate(sessionId, {
+      paused: false,
+      expectedGoalId: old.goalId,
+      expectedRevision: old.revision + 1,
+    });
+    const current = await window.codeshell.goalUpdate(sessionId, {
+      paused: false,
+      expectedGoalId: old.goalId,
+      expectedRevision: old.revision,
+    });
+    return { stale: stale.updated, current: current.updated };
+  }, coldId);
+  assert(!resumed.stale && resumed.current, "Only the current cold Goal revision resumed");
+  await waitForTurns(beforeResume + 1, { approve: false });
+  console.log(
+    "acceptance: the stored external Goal resumed through its owning window and a fresh provider",
   );
   assert(errors.length === 0, `Renderer errors: ${errors.map((e) => e.message).join("; ")}`);
   console.log("CodeShell external session acceptance: passed");
