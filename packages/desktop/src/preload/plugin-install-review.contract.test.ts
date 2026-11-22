@@ -9,7 +9,7 @@ type ReviewMethods = Pick<CodeshellApi, "previewLocalPlugin" | "installLocalPlug
 describe("preload local plugin review contract", () => {
   test("previews before the reviewed-token install channel", () => {
     const preload = readFileSync(join(import.meta.dir, "index.ts"), "utf-8");
-    const main = readFileSync(join(import.meta.dir, "..", "main", "index.ts"), "utf-8");
+    const main = readFileSync(join(import.meta.dir, "..", "main", "plugin-library-ipc.ts"), "utf-8");
     const methods: Array<keyof ReviewMethods> = ["previewLocalPlugin", "installLocalPlugin"];
 
     for (const method of methods) expect(preload).toContain(`${method}:`);

@@ -9,7 +9,7 @@ type ApprovalMethods = Pick<
 >;
 
 describe("plugin MCP approval preload contract", () => {
-  test("exposes list/approve/revoke through matching IPC channels", () => {
+  test("exposes list/approve/revoke through the Host and native mutation channels", () => {
     const methods: Array<keyof ApprovalMethods> = [
       "listPluginMcpTrust",
       "approvePluginMcp",
@@ -20,8 +20,9 @@ describe("plugin MCP approval preload contract", () => {
     const preload = ["index.ts", "configuration-reads.ts"]
       .map((file) => readFileSync(join(import.meta.dir, file), "utf8"))
       .join("\n");
-    const main = readFileSync(join(import.meta.dir, "..", "main", "index.ts"), "utf-8");
-    for (const channel of ["mcp:listPluginTrust", "mcp:approvePlugin", "mcp:revokePlugin"]) {
+    const main = readFileSync(join(import.meta.dir, "..", "main", "plugin-library-ipc.ts"), "utf-8");
+    expect(preload).toContain('read("mcp/pluginTrust", {})');
+    for (const channel of ["mcp:approvePlugin", "mcp:revokePlugin"]) {
       expect(preload).toContain(`ipcRenderer.invoke("${channel}"`);
       expect(main).toContain(`ipcMain.handle("${channel}"`);
     }

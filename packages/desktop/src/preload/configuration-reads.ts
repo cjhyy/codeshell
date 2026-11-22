@@ -7,7 +7,7 @@ import type { DesktopHostClient } from "./desktop-host-client.js";
 
 export function createConfigurationReads(
   ipcRenderer: Pick<IpcRenderer, "invoke">,
-  host?: DesktopHostClient,
+  host?: Pick<DesktopHostClient, "readBusiness">,
 ) {
   function read<K extends keyof DesktopBusinessReads>(
     name: K,
