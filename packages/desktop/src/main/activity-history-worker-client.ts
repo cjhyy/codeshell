@@ -1,3 +1,4 @@
+import type { ShellBusinessOperations } from "../shared/shell-business-contracts.js";
 import type { CcRoomReads, CliList, CliHistory } from "../shared/cc-room-reads.js";
 import { Worker } from "node:worker_threads";
 import type { UsageQuery, UsageSummary } from "@cjhyy/code-shell-core";
@@ -9,7 +10,13 @@ export interface ActivityHistoryWorkerOptions {
 }
 export interface ActivityHistoryWorkerRequest {
   id: number;
-  method: keyof TraceHistory | "usage" | "externalSessions" | "externalHistory" | "flush";
+  method:
+    | keyof TraceHistory
+    | "usage"
+    | "externalSessions"
+    | "externalHistory"
+    | "mimiExternalActivity"
+    | "flush";
   input?: unknown;
 }
 export interface ActivityHistoryWorkerReply {
@@ -49,6 +56,13 @@ export class ActivityHistoryWorker {
       options: ActivityHistoryWorkerOptions,
     ) => HistoryWorker = createActivityHistoryWorker,
   ) {}
+
+  onExternalActivityChanged?: () => void;
+  mimiExternalActivity(
+    input: ShellBusinessOperations["mimi/externalActivity"]["input"],
+  ): Promise<ShellBusinessOperations["mimi/externalActivity"]["result"]> {
+    return this.request("mimiExternalActivity", input);
+  }
 
   externalSessions(input: CliList): Promise<CcRoomReads["ccRoom/sessions"]["result"]> {
     return this.request("externalSessions", input);
@@ -113,14 +127,22 @@ export class ActivityHistoryWorker {
     if (this.worker) return this.worker;
     const worker = this.createWorker(this.options);
     this.worker = worker;
-    worker.on("message", (reply: ActivityHistoryWorkerReply) => {
-      const request = this.pending.get(reply.id);
-      if (!request) return;
-      this.pending.delete(reply.id);
-      if (reply.error !== undefined) request.reject(new Error(reply.error));
-      else request.resolve(reply.value);
-      if (!this.pending.size) worker.unref();
-    });
+    worker.on(
+      "message",
+      (reply: ActivityHistoryWorkerReply | { type: "mimi-external-changed" }) => {
+        if ("type" in reply) {
+          if (!this.closing && reply.type === "mimi-external-changed")
+            this.onExternalActivityChanged?.();
+          return;
+        }
+        const request = this.pending.get(reply.id);
+        if (!request) return;
+        this.pending.delete(reply.id);
+        if (reply.error !== undefined) request.reject(new Error(reply.error));
+        else request.resolve(reply.value);
+        if (!this.pending.size) worker.unref();
+      },
+    );
     worker.on("error", (error: Error) => this.fail(error));
     worker.on("exit", (code: number) => {
       if (this.worker === worker) this.fail(new Error(`activity history worker exited (${code})`));
@@ -130,7 +152,10 @@ export class ActivityHistoryWorker {
   }
 
   private fail(error: Error): void {
-    this.failure ??= error;
+    if (!this.failure) {
+      this.failure = error;
+      if (!this.closing) this.onExternalActivityChanged?.();
+    }
     for (const request of this.pending.values()) request.reject(this.failure);
     this.pending.clear();
     this.worker?.unref();

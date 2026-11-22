@@ -19,6 +19,10 @@ type Operation<F extends (...args: any[]) => Promise<unknown>> = {
 /** Private calls from authenticated Electron adapters. These methods are never
  * registered on a renderer port or exposed by the window preload. */
 export interface ShellBusinessOperations extends NativeCcRoomReads, MemoryOperations, PrivateMemoryReads, ProjectRegistryOperations, CatalogEdits {
+  "mimi/externalActivity": {
+    input: { projectCwds?: string[] };
+    result: import("../main/pet/pet-state-aggregator.js").DesktopPetSession[];
+  };
   "mimi/workMemory": {
     input: import("./mimi-work-memory.js").MimiWorkCommand;
     result: import("./mimi-work-memory.js").MimiWorkSnapshot;

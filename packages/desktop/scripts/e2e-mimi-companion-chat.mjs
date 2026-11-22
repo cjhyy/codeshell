@@ -6,7 +6,7 @@
  */
 /* global window, document */
 import assert from "node:assert/strict";
-import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+import { access, appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
@@ -18,6 +18,7 @@ import {
   launchCodeShellElectron,
   makeIsolatedElectronHome,
   seedOfflinePluginBootstrap,
+  waitForAsyncFunction,
 } from "./electron-harness.mjs";
 import { watchElectronTestProcess } from "./electron-test-watchdog.mjs";
 import { startMockProviderServer } from "./mock-provider-server.mjs";
@@ -98,7 +99,16 @@ try {
   model = await startMockProviderServer();
   const fixture = await prepareConfinedElectronFixture({ appDir, isolated, origin: model.origin });
   await seedOfflinePluginBootstrap(isolated.codeShellHome);
+  const externalId = "mimi-external-fixture";
+  const rollout = join(isolated.home, ".codex", "sessions", "rollout-mimi-fixture.jsonl");
+  await mkdir(dirname(rollout), { recursive: true });
+  await writeFile(
+    rollout,
+    JSON.stringify({ type: "session_meta", payload: { id: externalId, cwd: isolated.home } }) +
+      "\n",
+  );
   await put(join(isolated.codeShellHome, "settings.json"), {
+    pet: { showExternalCodexSessions: true },
     autoUpdates: false,
     featureFlags: { computer_use_cua: options.has("--cua-driver") },
     credentials: [
@@ -155,6 +165,25 @@ try {
     )
   )
     await trust.click();
+  const readExternal = async ({ id, state }) => {
+    const row = (await window.codeshell.pet.getSnapshot()).sessions.find(
+      (session) => session.agentSessionId === id,
+    );
+    return state === "absent" ? !row : row?.external?.cli === "codex" && row.runState === state;
+  };
+  await waitForAsyncFunction(main, readExternal, { id: externalId, state: "running" });
+  await appendFile(
+    rollout,
+    JSON.stringify({ type: "event_msg", payload: { type: "task_complete" } }) + "\n",
+  );
+  await waitForAsyncFunction(main, readExternal, { id: externalId, state: "idle" });
+  await main.evaluate(() =>
+    window.codeshell.updateSettings("user", { pet: { showExternalCodexSessions: false } }),
+  );
+  await waitForAsyncFunction(main, readExternal, { id: externalId, state: "absent" });
+  receipt.checks.push(
+    "isolated Codex activity was discovered, tailed through completion, then removed when the user disabled its source",
+  );
   const added = await main.evaluate(() =>
     window.codeshell.pet.addMemory("Synthetic Mimi project preference"),
   );

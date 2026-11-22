@@ -81,6 +81,7 @@ const transcripts = new SessionTranscriptCache(
     }),
 );
 const roomHistory = new ActivityHistoryWorker({sessionsDir:sessionsRoot()}, options => new Worker(new URL("./activity-history-worker.mjs",import.meta.url),{workerData:options}));
+roomHistory.onExternalActivityChanged = () => parent.postMessage({ type: "mimi-external-changed" });
 const roomReads = ccRoomReads(roomHistory);
 const runKeys = new RunKeyClient((frame) => parent.postMessage(frame));
 const runOperations = new HostRunOperations(
@@ -110,6 +111,7 @@ const scheduler = new HostScheduler(schedulerPorts.port1, automation);
 // Link-backed source definitions are validated against this process-local registry.
 installDefaultLinkProviders();
 const business = new HostBusinessCalls({
+  "mimi/externalActivity": (input) => roomHistory.mimiExternalActivity(input),
   ...mimiRecordsOperations(storage, (domain) =>
     parent.postMessage({ type: "mimi-records-changed", domain }),
   ),

@@ -1,3 +1,4 @@
+import { createMimiExternalActivity } from "../host/composition/mimi-external-activity.js";
 import { externalHistory, externalSessions } from "../host/composition/cc-room-history.js";
 import { parentPort, workerData } from "node:worker_threads";
 import { join } from "node:path";
@@ -15,6 +16,9 @@ if (!port) throw new Error("activity history requires a worker thread");
 const options = workerData as ActivityHistoryWorkerOptions;
 const store = new ModelTraceStore({ storageDir: join(options.sessionsDir, ".model-traces") });
 const history = createTraceHistoryService({ storageDir: store.storageDir, store });
+const externalActivity = createMimiExternalActivity(() =>
+  port.postMessage({ type: "mimi-external-changed" }),
+);
 let tail = Promise.resolve();
 port.on("message", ({ id, method, input }: ActivityHistoryWorkerRequest) => {
   // FIFO includes configuration writes and the shutdown maintenance barrier.
@@ -26,15 +30,23 @@ port.on("message", ({ id, method, input }: ActivityHistoryWorkerRequest) => {
           input as Parameters<typeof readUsageHistory>[0],
           options.sessionsDir,
         );
-      else if (method === "externalSessions") value = await externalSessions(input as Parameters<typeof externalSessions>[0]);
-      else if (method === "externalHistory") value = externalHistory(input as Parameters<typeof externalHistory>[0]);
+      else if (method === "mimiExternalActivity")
+        value = await externalActivity.snapshot(
+          input as Parameters<typeof externalActivity.snapshot>[0],
+        );
+      else if (method === "externalSessions")
+        value = await externalSessions(input as Parameters<typeof externalSessions>[0]);
+      else if (method === "externalHistory")
+        value = externalHistory(input as Parameters<typeof externalHistory>[0]);
       else if (method === "list") value = history.list(input);
       else if (method === "sessions") value = history.sessions(input);
       else if (method === "get") value = history.get(input);
       else if (method === "getConfig") value = history.getConfig();
       else if (method === "setConfig") value = history.setConfig(input);
-      else if (method === "flush") await store.flushMaintenance();
-      else throw new Error("Unknown activity history operation");
+      else if (method === "flush") {
+        externalActivity.close();
+        await store.flushMaintenance();
+      } else throw new Error("Unknown activity history operation");
       port.postMessage({ id, value } satisfies ActivityHistoryWorkerReply);
     } catch (error) {
       port.postMessage({

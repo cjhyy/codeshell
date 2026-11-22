@@ -93,14 +93,7 @@ import {
   resolveGitPath,
   describeTranscribe,
 } from "@cjhyy/code-shell-core/internal";
-import {
-  CC_COST_GUARD_PROMPT,
-  discoverRecentClaudeSessions,
-  discoverRecentCodexSessions,
-  parseClaudeTranscriptLine,
-  parseCodexTranscriptLine,
-  type ExternalSessionDiscoveryScope,
-} from "@cjhyy/code-shell-capability-coding/orchestration";
+import { CC_COST_GUARD_PROMPT } from "@cjhyy/code-shell-capability-coding/orchestration";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
 import { getCuaDriverHost } from "./computer-use/service.js";
 import {
@@ -133,8 +126,7 @@ import {
   requireRendererLinkedSessionPath,
 } from "./renderer-project-path.js";
 import { PetStateAggregator } from "./pet/pet-state-aggregator.js";
-import { ExternalSessionAdapter, type ExternalCli } from "./pet/external-session-adapter.js";
-import { ExternalSessionVisibilityController } from "./pet/external-session-visibility.js";
+import { nativeMimiExternalActivity } from "./desktop-host/mimi-external-client.js";
 import { createLatestResultCache } from "./pet/latest-result-cache.js";
 import { createPetSummaryStore } from "./pet/pet-summary-store.js";
 import { createPetSummaryService } from "./pet/pet-summary-service.js";
@@ -475,7 +467,12 @@ const appRendererNavigation = new AppRendererNavigation(
 const desktopHost = createDesktopHost(
   join(__dirname, "desktop-host.mjs"),
   appRendererNavigation,
-  (): void => taskInboxService.hostRestarted(),
+  (): void => {
+    taskInboxService.hostRestarted();
+    void petExternalVisibilityController?.restart().catch((error) =>
+      dlog("main", "pet.external.restart.failed", { error: String(error) }),
+    );
+  },
   applyRendererSettingsSideEffects,
 );
 setDesktopCredentialFiles(desktopHost.credentialCommand);
@@ -880,7 +877,7 @@ const imGatewayService = new ImGatewayService({
 });
 registerImGatewayIpc(ipcMain, imGatewayService);
 let petStateAggregator: PetStateAggregator | null = null;
-let petExternalVisibilityController: ExternalSessionVisibilityController | null = null;
+let petExternalVisibilityController: ReturnType<typeof nativeMimiExternalActivity> | null = null;
 let reconcileExternalAdapters: (() => Promise<void>) | null = null;
 let petDispatchService: PetDispatchService | null = null;
 let petRuleScheduler: PetRuleScheduler | null = null;
@@ -1939,54 +1936,12 @@ async function createWindow(): Promise<BrowserWindow> {
       }),
     );
 
-    // Toggle-driven external-CLI session adapters (Codex / Claude). The
-    // controller folds each session cwd's capabilityOverrides.pet over the
-    // user baseline, and keeps a disabled source entirely unconstructed.
-    const externalCliConfig = {
-      codex: {
-        discover: (scope: ExternalSessionDiscoveryScope) =>
-          discoverRecentCodexSessions({ sinceMs: 24 * 60 * 60_000, limit: 50 }, undefined, scope),
-        parseLine: parseCodexTranscriptLine,
-      },
-      claude: {
-        discover: (scope: ExternalSessionDiscoveryScope) =>
-          discoverRecentClaudeSessions({ sinceMs: 24 * 60 * 60_000, limit: 50 }, undefined, scope),
-        parseLine: parseClaudeTranscriptLine,
-      },
-    } satisfies Record<
-      ExternalCli,
-      {
-        discover: (
-          scope: ExternalSessionDiscoveryScope,
-        ) => ReturnType<typeof discoverRecentCodexSessions>;
-        parseLine: (line: string) => ReturnType<typeof parseCodexTranscriptLine>;
-      }
-    >;
-
-    const externalVisibility = new ExternalSessionVisibilityController({
-      readUserSettings: () =>
-        new SettingsManager(resolveNoRepoCwd(), "full").getForScope("user") as Record<
-          string,
-          unknown
-        >,
-      readProjectSettings: (cwd) =>
-        new SettingsManager(cwd, "full").getForScope("project", cwd) as Record<string, unknown>,
-      listProjectCwds: async () =>
-        (await mobileOrchestrator.projectList()).map((project) => project.path),
-      createAdapter: (cli, getDiscoveryScope, includeSession) =>
-        new ExternalSessionAdapter({
-          cli,
-          discover: () => externalCliConfig[cli].discover(getDiscoveryScope()),
-          parseLine: externalCliConfig[cli].parseLine,
-          includeSession,
-          sink: aggregator,
-          onBackgroundError: (operation, error) =>
-            dlog("main", `pet.external.${cli}.${operation}.failed`, { error: String(error) }),
-        }),
-      onSourceDisabled: (cli) => aggregator.removeExternalSessionsByCli(cli),
-      onReconcileError: (cli, error) =>
-        dlog("main", `pet.external.${cli}.reconcile.failed`, { error: String(error) }),
-    });
+    const externalVisibility = nativeMimiExternalActivity(
+      desktopHost.callBusiness,
+      desktopHost.mimiExternalListeners,
+      async () => (await mobileOrchestrator.projectList()).map((project) => project.path),
+      aggregator,
+    );
     petExternalVisibilityController = externalVisibility;
     reconcileExternalAdapters = () => externalVisibility.reconcile();
 

@@ -40,6 +40,7 @@ export class DesktopHostSupervisor {
   private cancelTimer?: () => void;
   private readonly restartTimes: number[] = [];
   private readonly readyWaiters = new Set<() => void>();
+  readonly mimiExternalListeners = new Set<() => void>();
   readonly mimiRecordListeners = new Set<
     (domain: import("../../shared/mimi-records.js").MimiRecordDomain) => void
   >();
@@ -141,6 +142,8 @@ export class DesktopHostSupervisor {
             [...this.projectRegistryListeners].map((notify) => notify(message.projects)),
           );
         });
+      } else if (message?.type === "mimi-external-changed" && this.ready) {
+        for (const listener of this.mimiExternalListeners) listener();
       } else if (
         message?.type === "mimi-records-changed" &&
         this.ready &&
