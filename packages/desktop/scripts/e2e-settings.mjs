@@ -17,6 +17,7 @@ import {
   findCodeShellWindow,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
+  seedViewOnlyWorkbench,
   openSettingsMenu,
 } from "./electron-harness.mjs";
 
@@ -519,6 +520,7 @@ require("node:module").syncBuiltinESMExports();
 `,
     { mode: 0o600 },
   );
+  await seedViewOnlyWorkbench(isolated);
   app = await launchCodeShellElectron({
     appDir,
     home: isolated.home,

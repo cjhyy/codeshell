@@ -13,6 +13,7 @@ import {
   findCodeShellWindow,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
+  seedViewOnlyWorkbench,
   navigateSettingsMenu,
 } from "./electron-harness.mjs";
 import { installWorkbenchReadFixture } from "./workbench-read-fixture.mjs";
@@ -1065,6 +1066,7 @@ try {
   );
   if (screenshotDir) await mkdir(screenshotDir, { recursive: true });
   stage = "Electron launch";
+  await seedViewOnlyWorkbench(isolated);
   app = await launchCodeShellElectron({
     appDir,
     home: isolated.home,
