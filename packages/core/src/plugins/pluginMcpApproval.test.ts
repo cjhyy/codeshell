@@ -41,6 +41,21 @@ describe("plugin MCP approval", () => {
     });
   }
 
+  test("checks the initiating document before persisting either trust transition", () => {
+    writeEntry("demo@local", { mcpDigest: pluginMcpDigest(installPath) });
+    const registry = () => JSON.stringify(readInstalledPlugins());
+    const reject = () => {
+      throw Error("Document revoked");
+    };
+    const before = registry();
+    expect(() => approvePluginMcp("demo@local", reject)).toThrow("Document revoked");
+    expect(registry()).toBe(before);
+    approvePluginMcp("demo@local");
+    const accepted = registry();
+    expect(() => revokePluginMcp("demo@local", reject)).toThrow("Document revoked");
+    expect(registry()).toBe(accepted);
+  });
+
   test("new recorded MCP stays disconnected until explicitly approved", () => {
     const mcpDigest = pluginMcpDigest(installPath);
     writeEntry("demo@local", { mcpDigest });

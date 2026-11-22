@@ -26,7 +26,25 @@ export interface MarketplaceReads {
   "marketplace/load": { params: { name: string }; result: Result<Market["loadMarketplaceForUi"]> };
   "marketplace/jobs": { params: Empty; result: Result<Market["listPluginInstallJobsForUi"]> };
 }
+type Approval<
+  K extends "approvePluginHooks" | "revokePluginHooks" | "approvePluginMcp" | "revokePluginMcp",
+> = {
+  input: { installKey: string };
+  result: Result<(typeof import("@cjhyy/code-shell-core"))[K]>;
+};
 export interface MarketplaceChanges {
+  "plugins/approveHooks": Approval<"approvePluginHooks">;
+  "plugins/revokeHooks": Approval<"revokePluginHooks">;
+  "plugins/approveMcp": Approval<"approvePluginMcp">;
+  "plugins/revokeMcp": Approval<"revokePluginMcp">;
+  "plugins/hooks": {
+    input: { disabledPlugins?: string[] };
+    result: Result<(typeof import("@cjhyy/code-shell-core"))["listPluginHooks"]>;
+  };
+  "mcp/pluginTrust": {
+    input: Empty;
+    result: Result<(typeof import("@cjhyy/code-shell-core"))["listPluginMcpTrust"]>;
+  };
   "marketplace/bootstrap": { input: { resourcesDir: string }; result: void };
   "marketplace/recommended": {
     input: Empty;

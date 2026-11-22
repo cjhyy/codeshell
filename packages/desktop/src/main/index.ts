@@ -61,12 +61,6 @@ import { AppRendererNavigation } from "./app-renderer-navigation.js";
 import { randomUUID } from "node:crypto";
 import { dirname, resolve, isAbsolute, join } from "node:path";
 import {
-  approvePluginHooks,
-  approvePluginMcp,
-  listPluginMcpTrust,
-  listPluginHooks,
-  revokePluginMcp,
-  revokePluginHooks,
   SettingsManager,
   SessionManager,
   writeSettingsSchemaFile,
@@ -2991,36 +2985,36 @@ registerSkillsMcpIpc({ host: desktopHost, getMcpOAuthService });
 // Read-only list of plugin-provided hooks, for the settings 钩子 page to show
 // alongside hand-written hooks (labelled by owner plugin). Mirrors
 // mcp:listMerged's disabledPlugins handling. (#钩子设置页改造)
-ipcMain.handle("hooks:listPlugin", async (_e, rawDisabledPlugins?: unknown) => {
+ipcMain.handle("hooks:listPlugin", async (event, rawDisabledPlugins?: unknown) => {
   const disabledPlugins = Array.isArray(rawDisabledPlugins)
     ? rawDisabledPlugins.filter((x): x is string => typeof x === "string")
     : [];
-  return listPluginHooks(disabledPlugins);
+  return desktopHost.callBusiness("plugins/hooks",{disabledPlugins},desktopHost.documentSignal(event));
 });
-ipcMain.handle("hooks:approvePlugin", async (_e, installKey: string) => {
+ipcMain.handle("hooks:approvePlugin", async (event, installKey: string) => {
   if (typeof installKey !== "string" || !installKey) {
     throw new Error("hooks:approvePlugin requires installKey");
   }
-  return approvePluginHooks(installKey);
+  return desktopHost.callBusiness("plugins/approveHooks", {installKey}, desktopHost.documentSignal(event));
 });
-ipcMain.handle("hooks:revokePlugin", async (_e, installKey: string) => {
+ipcMain.handle("hooks:revokePlugin", async (event, installKey: string) => {
   if (typeof installKey !== "string" || !installKey) {
     throw new Error("hooks:revokePlugin requires installKey");
   }
-  return revokePluginHooks(installKey);
+  return desktopHost.callBusiness("plugins/revokeHooks", {installKey}, desktopHost.documentSignal(event));
 });
-ipcMain.handle("mcp:listPluginTrust", async () => listPluginMcpTrust());
-ipcMain.handle("mcp:approvePlugin", async (_e, installKey: string) => {
+ipcMain.handle("mcp:listPluginTrust", (event) => desktopHost.callBusiness("mcp/pluginTrust",{},desktopHost.documentSignal(event)));
+ipcMain.handle("mcp:approvePlugin", async (event, installKey: string) => {
   if (typeof installKey !== "string" || !installKey) {
     throw new Error("mcp:approvePlugin requires installKey");
   }
-  return approvePluginMcp(installKey);
+  return desktopHost.callBusiness("plugins/approveMcp", {installKey}, desktopHost.documentSignal(event));
 });
-ipcMain.handle("mcp:revokePlugin", async (_e, installKey: string) => {
+ipcMain.handle("mcp:revokePlugin", async (event, installKey: string) => {
   if (typeof installKey !== "string" || !installKey) {
     throw new Error("mcp:revokePlugin requires installKey");
   }
-  return revokePluginMcp(installKey);
+  return desktopHost.callBusiness("plugins/revokeMcp", {installKey}, desktopHost.documentSignal(event));
 });
 
 registerModelCatalogIpc(desktopHost);

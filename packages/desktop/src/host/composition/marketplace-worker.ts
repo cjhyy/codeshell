@@ -1,3 +1,11 @@
+import {
+  approvePluginHooks,
+  revokePluginHooks,
+  approvePluginMcp,
+  revokePluginMcp,
+  listPluginHooks,
+  listPluginMcpTrust,
+} from "@cjhyy/code-shell-core";
 import { seedDefaults } from "../../main/seed-defaults.js";
 import { bootstrapCorePlugins } from "../../main/bootstrap-core-plugins.js";
 import { applyGitPathFromSettings } from "../../main/git-path-settings.js";
@@ -13,6 +21,12 @@ type Handlers = {
   ) => MarketplaceOperations[K]["result"] | Promise<MarketplaceOperations[K]["result"]>;
 };
 const handlers: Handlers = {
+  "plugins/approveHooks": ({ installKey }, claim) => approvePluginHooks(installKey, claim),
+  "plugins/revokeHooks": ({ installKey }, claim) => revokePluginHooks(installKey, claim),
+  "plugins/approveMcp": ({ installKey }, claim) => approvePluginMcp(installKey, claim),
+  "plugins/revokeMcp": ({ installKey }, claim) => revokePluginMcp(installKey, claim),
+  "plugins/hooks": ({ disabledPlugins }) => listPluginHooks(disabledPlugins),
+  "mcp/pluginTrust": () => listPluginMcpTrust(),
   async "marketplace/bootstrap"({ resourcesDir }) {
     await seedDefaults(resourcesDir);
     await bootstrapCorePlugins();
