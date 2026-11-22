@@ -9,6 +9,26 @@ import {
 import { dlog } from "../desktop-logger.js";
 import type { AuthenticatedMobileClientEvent, OrchestratorCtx } from "./handle-client-event.js";
 
+export type MobileRoomContext = Pick<
+  OrchestratorCtx,
+  | "roomManager"
+  | "roomModes"
+  | "roomHistory"
+  | "roomToPublic"
+  | "sendProjectList"
+  | "settleMobileUploadClaims"
+  | "beforePhysicalSubmit"
+> & {
+  roomManager: NonNullable<OrchestratorCtx["roomManager"]>;
+  remote: Pick<
+    OrchestratorCtx["remote"],
+    "sendToViewer" | "sendToDevice" | "broadcast" | "hasAuthenticatedViewer"
+  >;
+  uploads: Parameters<typeof materializeMobileAttachments>[0]["uploads"];
+  authorizeSubmit?: () => Promise<void>;
+  recheckCreate?(cwd: string): Promise<void>;
+};
+
 /**
  * Handle a room.* mobile event. Rooms are resident stream-json Claude Code
  * sessions; they do not go through the chat worker bridge. A room's
@@ -19,7 +39,7 @@ import type { AuthenticatedMobileClientEvent, OrchestratorCtx } from "./handle-c
  * needs a live Host grant (RoomManager authorizeStart).
  */
 export async function handleRoomEvent(
-  ctx: OrchestratorCtx,
+  ctx: MobileRoomContext,
   event: AuthenticatedMobileClientEvent,
 ): Promise<void> {
   const reply = (serverEvent: MobileServerEvent): void => {
@@ -48,6 +68,13 @@ export async function handleRoomEvent(
       const decided = ctx.roomModes
         ? await ctx.roomModes.resolveCreateMode(kind, event.cwd, event.permissionMode)
         : { mode: event.permissionMode ?? "default", trustedBypass: false };
+      await ctx.authorizeSubmit?.();
+      if (ctx.recheckCreate) {
+        await ctx.recheckCreate(event.cwd);
+        if (decided.trustedBypass && !(await ctx.roomModes?.isTrusted(kind, event.cwd)))
+          throw Error("房间所在目录的信任状态已变更。");
+      }
+      ctx.beforePhysicalSubmit?.();
       const room = ctx.roomManager.createRoom({
         name: event.name,
         cwd: event.cwd,
@@ -83,11 +110,14 @@ export async function handleRoomEvent(
       return;
     }
     if (event.type === "room.history" && event.page) {
-      const { messages, ...page } = await (ctx.roomHistory ?? ctx.roomManager).getHistoryPage(event.roomId, {
-        sinceSeq: event.sinceSeq,
-        cursor: event.cursor,
-        limit: event.limit,
-      });
+      const { messages, ...page } = await (ctx.roomHistory ?? ctx.roomManager).getHistoryPage(
+        event.roomId,
+        {
+          sinceSeq: event.sinceSeq,
+          cursor: event.cursor,
+          limit: event.limit,
+        },
+      );
       reply({
         type: "room.history.ok",
         roomId: event.roomId,
@@ -99,8 +129,16 @@ export async function handleRoomEvent(
       return;
     }
     if (event.type === "room.history") {
-      const messages = await (ctx.roomHistory ?? ctx.roomManager).getMessages(event.roomId, event.sinceSeq ?? 0);
-      if (event.viewerId && event.deviceId && !ctx.remote.hasAuthenticatedViewer(event.viewerId, event.deviceId)) return;
+      const messages = await (ctx.roomHistory ?? ctx.roomManager).getMessages(
+        event.roomId,
+        event.sinceSeq ?? 0,
+      );
+      if (
+        event.viewerId &&
+        event.deviceId &&
+        !ctx.remote.hasAuthenticatedViewer(event.viewerId, event.deviceId)
+      )
+        return;
       const latestSeq = messages.length
         ? messages[messages.length - 1]!.seq
         : (event.sinceSeq ?? 0);
@@ -158,6 +196,7 @@ export async function handleRoomEvent(
             // A queued turn's final authority/Stop check, synchronously before the
             // room may (re)start its CLI and receive the input. An input the
             // durable receipts already hold returned above without reaching here.
+            await ctx.authorizeSubmit?.();
             ctx.beforePhysicalSubmit?.();
             ok = ctx.roomManager.send(event.roomId, text, materialized.metas, receipt);
           } catch (error) {

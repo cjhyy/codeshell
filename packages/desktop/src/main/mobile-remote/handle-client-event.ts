@@ -96,11 +96,11 @@ export interface OrchestratorCtx {
   newSessionAuthority?: typeof mobileNewSessionAuthority;
   remote: RemoteHostManager;
   uploads: MobileUploadService;
-  roomManager: RoomManager;
+  roomManager?: RoomManager;
   roomHistory?: import("../../shared/room-history.js").RoomHistoryAccess;
-  approvalBridge: Pick<ApprovalBridge, "respond" | "pendingRequests">;
+  approvalBridge?: Pick<ApprovalBridge, "respond" | "pendingRequests">;
   pendingApprovals: Pick<MobileApprovalAccess, "find">;
-  transcriptSubscriptions: TranscriptSubscriptionManager;
+  transcriptSubscriptions?: TranscriptSubscriptionManager;
   getBridge: () => AgentBridge | null;
   mobileSessionCwds: Map<string, string | null>;
   mobilePermissionModes: Map<string, PermissionMode>;
@@ -116,7 +116,11 @@ export interface OrchestratorCtx {
   resolveSessionWorkspaceRoot: (sessionId: string, fallbackCwd: string) => Promise<string>;
   sendMobilePermissionMode: (deviceId: string | undefined, sessionId: string) => void;
   sendSelectedMobilePermissionModes: () => void;
-  replayPendingMobileApprovals: (sessionId: string, deviceId?: string, viewerId?:string) => void | Promise<void>;
+  replayPendingMobileApprovals: (
+    sessionId: string,
+    deviceId?: string,
+    viewerId?: string,
+  ) => void | Promise<void>;
   /** Mirrors Host-accepted phone choices onto the Desktop Session's composer. */
   broadcastDesktopSessionSettings: (params: {
     sessionId: string;
@@ -405,12 +409,19 @@ export async function handleClientEvent(
   // ── CC Room (external claude CLI sessions) — checked first so "ccRoom.*"
   // never gets misrouted by the "room." prefix check below ───────────────
   if (event.type.startsWith("ccRoom.")) {
-    await handleCcRoomEvent(ctx, event);
+    const { roomManager, approvalBridge, transcriptSubscriptions } = ctx;
+    if (!roomManager || !approvalBridge || !transcriptSubscriptions)
+      throw Error("Room services unavailable");
+    await handleCcRoomEvent(
+      { ...ctx, roomManager, approvalBridge, transcriptSubscriptions },
+      event,
+    );
     return;
   }
   // ── Rooms (independent of the chat worker bridge) ─────────────────────
   if (event.type.startsWith("room.")) {
-    await handleRoomEvent(ctx, event);
+    if (!ctx.roomManager) throw Error("Room services unavailable");
+    await handleRoomEvent({ ...ctx, roomManager: ctx.roomManager }, event);
     return;
   }
   const bridge = ctx.getBridge();

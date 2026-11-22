@@ -26,7 +26,9 @@ interface MaterializeInput {
   cwd: string;
   sessionId: string;
   attachments?: MobileImageAttachment[];
-  uploads: Pick<MobileUploadService, "claim" | "release">;
+  uploads: Pick<MobileUploadService, "release"> & {
+    claim(deviceId: string, uploadId: string): ClaimedMobileUpload | Promise<ClaimedMobileUpload>;
+  };
 }
 
 interface PreparedInline {
@@ -95,7 +97,7 @@ export async function materializeMobileAttachments(input: MaterializeInput): Pro
         prepared.push({ descriptor, bytes });
       } else if (descriptor.transport === "upload") {
         if (!descriptor.uploadId?.trim()) throw new Error("uploadId is required");
-        const upload = input.uploads.claim(input.deviceId, descriptor.uploadId);
+        const upload = await input.uploads.claim(input.deviceId, descriptor.uploadId);
         claims.push(upload);
         if (
           upload.clientId !== descriptor.clientId ||

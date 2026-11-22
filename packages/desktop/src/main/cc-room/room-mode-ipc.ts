@@ -1,64 +1,13 @@
-import { BrowserWindow, dialog, webContents, type IpcMain } from "electron";
-import type { RoomManager, RoomMeta, RoomPublic } from "@cjhyy/code-shell-server/mobile-remote";
-import type { ApprovalBridge } from "./approval-bridge.js";
+import { BrowserWindow, dialog, webContents } from "electron";
 import {
   bypassConsequence,
   modeTakesEffect,
-  RoomModeAuthority,
-  requestRoomModeCard,
-  trustedClaudeWorkspacesFromUserSettings,
   type RoomModeApproval,
   type RoomModeRequester,
 } from "./room-mode-authority.js";
-import { readSettings } from "../settings-service.js";
-import { requireRendererProjectPath } from "../renderer-project-path.js";
-import { desktopRoomModeHostBoundary } from "./room-mode-host-boundary.js";
-import { registerRoomSettingsIpc } from "./room-settings-ipc.js";
-import {
-  parseExternalRuntimeModelKey,
-  type ExternalRuntimeModelEntry,
-} from "../../shared/external-runtime-models.js";
-
-type PermissionMode = "default" | "acceptEdits" | "bypassPermissions";
 type Decision = { approved: boolean; reason?: string };
 
-/**
- * Desktop Main's room permission-mode authority. bypassPermissions outside the
- * user-scope Claude Code allowlist needs a one-time high-risk approval minted
- * here: the existing room approval card for a paired phone, and a native
- * dialog on the requesting Desktop window.
- */
-export function createDesktopRoomModeAuthority(deps: {
-  roomManager: RoomManager;
-  approvalBridge: Pick<ApprovalBridge, "request" | "respond">;
-  externalRuntimeModels?: () => Promise<ExternalRuntimeModelEntry[]>;
-}): RoomModeAuthority {
-  return new RoomModeAuthority({
-    roomManager: deps.roomManager,
-    validateModel: async (key, kind) => {
-      const parsed = parseExternalRuntimeModelKey(key);
-      if (
-        !parsed?.model ||
-        parsed.kind !== kind ||
-        !((await deps.externalRuntimeModels?.()) ?? []).some(
-          (entry) => entry.key === key && entry.kind === kind,
-        )
-      )
-        throw new Error("该模型不在此电脑当前 CLI 的可用模型中，请刷新模型列表后重试。");
-    },
-    // Project roots, their subdirectories and registered linked worktrees
-    // (realpath-checked), plus the CLI's own on-disk session identity.
-    ...desktopRoomModeHostBoundary(),
-    trustedClaudeWorkspaces: async () =>
-      trustedClaudeWorkspacesFromUserSettings(await readSettings("user").catch(() => null)),
-    requestApproval: (approval, requester, signal) =>
-      requester.channel === "desktop"
-        ? confirmOnDesktop(approval, requester, signal)
-        : requestRoomModeCard(deps.approvalBridge, approval, signal),
-  });
-}
-
-async function confirmOnDesktop(
+export async function confirmOnDesktop(
   approval: RoomModeApproval,
   requester: RoomModeRequester,
   signal: AbortSignal,
@@ -89,50 +38,4 @@ async function confirmOnDesktop(
     signal,
   });
   return response === 1 ? { approved: true } : { approved: false, reason: "已拒绝" };
-}
-
-/**
- * The two Desktop routes that choose a room's mode. Both go through the same
- * Host authority as the paired phone, so neither can start bypass without it.
- */
-export function registerRoomModeIpc(deps: {
-  ipcMain: Pick<IpcMain, "handle">;
-  roomManager: Pick<
-    RoomManager,
-    "createRoom" | "getRoom" | "roomBusyReason" | "effectiveMode" | "isExecutionBusy"
-  >;
-  roomModes: RoomModeAuthority;
-  roomToPublic: (room: RoomMeta) => RoomPublic;
-  broadcastRoomState: (roomId: string) => void;
-}): void {
-  const { ipcMain, roomManager, roomModes } = deps;
-  ipcMain.handle(
-    "rooms:create",
-    async (
-      _e,
-      input: {
-        name?: string;
-        cwd: string;
-        kind?: "claude-code" | "codex";
-        permissionMode?: PermissionMode;
-      },
-    ) => {
-      const cwd = await requireRendererProjectPath(input?.cwd);
-      if (input.name !== undefined && (typeof input.name !== "string" || input.name.length > 512)) {
-        throw new Error("invalid room name");
-      }
-      const kind = input.kind ?? "claude-code";
-      // Explicit bypass outside the Host allowlist is refused, never downgraded.
-      const decided = await roomModes.resolveCreateMode(kind, cwd, input.permissionMode);
-      const room = roomManager.createRoom({
-        name: input.name,
-        cwd,
-        kind,
-        permissionMode: decided.mode,
-      });
-      if (decided.trustedBypass) roomModes.grantTrusted(room.id, room.cwd, room.kind);
-      return deps.roomToPublic(room);
-    },
-  );
-  registerRoomSettingsIpc(deps);
 }

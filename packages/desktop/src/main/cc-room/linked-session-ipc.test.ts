@@ -10,7 +10,11 @@ import {
   registerRoomHistoryIpc,
   takeOverLinkedSessionFromIpc,
 } from "./linked-session-ipc.js";
-import { registerRoomSettingsIpc } from "./room-settings-ipc.js";
+import {
+  openRoomSettings,
+  roomSettingsState,
+  registerRoomSettingsIpc,
+} from "./room-settings-ipc.js";
 
 const historyRoots: string[] = [];
 
@@ -27,12 +31,7 @@ test("native room settings preserve exact identity, validate input, and return H
     modelKey: "codex/old",
   };
   let busy: string | undefined = "queued";
-  registerRoomSettingsIpc({
-    ipcMain: {
-      handle: (name, handler) => {
-        handlers.set(name, handler);
-      },
-    },
+  const deps: Parameters<typeof openRoomSettings>[0] = {
     roomManager: {
       getRoom: (id) => (id === meta.id ? (meta as any) : undefined),
       roomBusyReason: () => busy as any,
@@ -54,7 +53,23 @@ test("native room settings preserve exact identity, validate input, and return H
       },
     },
     broadcastRoomState: (id) => broadcasts.push(id),
-  });
+  };
+  registerRoomSettingsIpc(
+    { handle: (channel, fn) => void handlers.set(channel, fn) },
+    (event, action) => {
+      if (action.op === "settings")
+        return roomSettingsState(deps.roomManager, action.roomId) as any;
+      if (action.op !== "openSession") throw Error("unexpected request");
+      return openRoomSettings(deps, action, {
+        key: "desktop:" + event.sender.id,
+        channel: "desktop",
+        ownerWebContentsId: event.sender.id,
+        assertCurrent() {
+          if (event.sender.isDestroyed()) throw Error("window closed");
+        },
+      });
+    },
+  );
   const state = handlers.get("ccRoom:settingsState")!({}, meta.id);
   expect(state).toEqual({
     roomId: meta.id,

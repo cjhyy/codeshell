@@ -12,7 +12,7 @@ type BackgroundHost = NonNullable<TaskInboxSourcesDeps["background"]>;
  * job identity permits observing that transcript, never authorizing a cwd for
  * commands or takeover. Grants belong to the window that opened the room. */
 export class DriveAgentTranscriptAccess {
-  private readonly observations = new Map<number, Map<string, LinkedSessionTarget>>();
+  private readonly observations = new Map<string | number, Map<string, LinkedSessionTarget>>();
 
   constructor(
     private readonly list: BackgroundHost["list"],
@@ -20,7 +20,7 @@ export class DriveAgentTranscriptAccess {
   ) {}
 
   async open<T extends { roomId: string; cwd: string }>(
-    senderId: number,
+    senderId: string | number,
     source: unknown,
     target: { externalSessionId: unknown; cwd: unknown; kind: unknown },
     open: (target: LinkedSessionTarget) => T,
@@ -67,7 +67,7 @@ export class DriveAgentTranscriptAccess {
   }
 
   async requireSubscription(
-    senderId: number,
+    senderId: string | number,
     roomId: string,
     target: { externalSessionId: unknown; cwd: unknown; kind: unknown },
   ): Promise<string> {
@@ -83,11 +83,11 @@ export class DriveAgentTranscriptAccess {
     return observed.cwd;
   }
 
-  forgetSender(senderId: number): void {
+  forgetSender(senderId: string | number): void {
     this.observations.delete(senderId);
   }
 
-  forgetRoom(senderId: number, roomId: string): void {
+  forgetRoom(senderId: string | number, roomId: string): void {
     this.observations.get(senderId)?.delete(roomId);
   }
 }

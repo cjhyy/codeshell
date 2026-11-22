@@ -6,6 +6,27 @@ import type { AuthenticatedMobileClientEvent, OrchestratorCtx } from "./handle-c
 import { mobileRoomModeRequesterKey } from "../cc-room/room-mode-authority.js";
 import { takeOverLinkedSessionAtHost } from "../cc-room/linked-session-ipc.js";
 
+export type MobileCcRoomContext = Pick<
+  OrchestratorCtx,
+  | "roomManager"
+  | "roomModes"
+  | "approvalBridge"
+  | "transcriptSubscriptions"
+  | "readCcRoom"
+  | "requireLinkedSessionPath"
+  | "broadcastRoomState"
+  | "roomMatchesTranscript"
+> & {
+  roomManager: NonNullable<OrchestratorCtx["roomManager"]>;
+  approvalBridge: NonNullable<OrchestratorCtx["approvalBridge"]>;
+  transcriptSubscriptions: NonNullable<OrchestratorCtx["transcriptSubscriptions"]>;
+  assertCurrent?: () => void;
+  remote: Pick<
+    OrchestratorCtx["remote"],
+    "sendToViewer" | "sendToDevice" | "broadcast" | "hasAuthenticatedViewer"
+  >;
+};
+
 /**
  * CC Room (external `claude` CLI sessions) for mobile — mirrors the desktop
  * ccRoom:* IPC handlers, reusing the SAME core discovery + roomManager
@@ -15,7 +36,7 @@ import { takeOverLinkedSessionAtHost } from "../cc-room/linked-session-ipc.js";
  * phone that has since switched projects can discard a stale reply.
  */
 export async function handleCcRoomEvent(
-  ctx: OrchestratorCtx,
+  ctx: MobileCcRoomContext,
   event: AuthenticatedMobileClientEvent,
 ): Promise<void> {
   const deviceId = event.deviceId;
@@ -113,7 +134,12 @@ export async function handleCcRoomEvent(
         const requirePath = ctx.requireLinkedSessionPath;
         if (!requirePath) throw new Error("此电脑不支持从远程接管 CLI 会话，请更新桌面端。");
         const result = await takeOverLinkedSessionAtHost(
-          { roomManager: ctx.roomManager, requirePath, broadcastRoomState: ctx.broadcastRoomState },
+          {
+            roomManager: ctx.roomManager,
+            requirePath,
+            assertCurrent: ctx.assertCurrent,
+            broadcastRoomState: ctx.broadcastRoomState,
+          },
           event.roomId,
           event.sessionId,
           event.cwd,
@@ -189,6 +215,7 @@ export async function handleCcRoomEvent(
       return;
     }
     if (event.type === "ccRoom.respondApproval") {
+      ctx.assertCurrent?.();
       ctx.approvalBridge.respond(event.roomId, event.requestId, event.decision);
       return;
     }

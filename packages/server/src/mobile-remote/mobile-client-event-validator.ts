@@ -343,7 +343,7 @@ export function parseMobileClientEvent(value: unknown): MobileClientEvent | unde
       valid =
         boundedString(event.roomId, MAX_ID_LENGTH) &&
         boundedString(event.requestId, MAX_ID_LENGTH) &&
-        isApprovalDecision(event.decision);
+        isRoomApprovalDecision(event.decision);
       break;
     case "terminal.list":
       valid = Object.keys(event).length === 1;
@@ -507,15 +507,22 @@ function isAnswerRecord(value: unknown): boolean {
   );
 }
 
-function isApprovalDecision(value: unknown): boolean {
+export function isRoomApprovalDecision(value: unknown): boolean {
   if (!isRecord(value)) return false;
   if (value.behavior === "allow") {
     return (
+      Object.keys(value).every((k) =>
+        ["behavior", "answer", "answers", "updatedInput"].includes(k),
+      ) &&
       (value.answer === undefined ||
         boundedOptionalEmptyString(value.answer, MAX_MESSAGE_LENGTH)) &&
       (value.answers === undefined || isAnswerRecord(value.answers)) &&
       (value.updatedInput === undefined || isRecord(value.updatedInput))
     );
   }
-  return value.behavior === "deny" && boundedOptionalEmptyString(value.message, MAX_MESSAGE_LENGTH);
+  return (
+    value.behavior === "deny" &&
+    Object.keys(value).every((k) => k === "behavior" || k === "message") &&
+    boundedOptionalEmptyString(value.message, MAX_MESSAGE_LENGTH)
+  );
 }

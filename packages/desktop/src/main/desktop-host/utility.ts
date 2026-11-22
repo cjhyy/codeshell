@@ -132,6 +132,7 @@ historyWorker.onExternalActivityChanged = () => parent.postMessage({ type: "mimi
 const profileLibrary = hostedProfileLibrary(storage, historyWorker, (options) => catalog.list(options));
 const activities = hostedActivityHistory(historyWorker);
 const roomReads = ccRoomReads(historyWorker);
+const runtimeCatalog = externalRuntimeCatalogOperations();
 const mediaProtocol = hostedMediaProtocol();
 const mimiTasks = new HostedMimiTasks(join(dirname(process.argv[2]), "pet"));
 const segments = hostedMimiSegments(storage, historyWorker, (domain) =>
@@ -193,7 +194,7 @@ const business = new HostBusinessCalls({
   ...activities.operations,
   ...attachmentOperations,
   "automation/command": (cmd, grant) => scheduler.command(cmd, grant.permit, grant.signal),
-  ...externalRuntimeCatalogOperations(),
+  ...runtimeCatalog,
   ...roomReads.native,
   ...catalogFiles,
   "transcripts/read": (input) => transcripts.read(input),
@@ -284,7 +285,12 @@ parent.on("message", ({ data, ports }) => {
     ports.length === 1 &&
     !remote
   ) {
-    remote = bindRemoteServices(electronPrivatePort(ports[0]), join(process.argv[2], ".."));
+    remote = bindRemoteServices(electronPrivatePort(ports[0]), join(process.argv[2], ".."), {
+      history: historyWorker,
+      read: roomReads.read,
+      models: () =>
+        runtimeCatalog["external-runtime/models"]({ searchPath: process.env.PATH ?? "" }),
+    });
     return;
   }
   if (

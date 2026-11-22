@@ -6,7 +6,15 @@ import type { CloudEffects } from "./cloud-effects.js";
 
 import { NativeCloudProjects } from "./cloud-projects-client.js";
 import { NativeAccountDevices } from "./account-devices-client.js";
+import { NativeRooms } from "./rooms-client.js";
 export class NativeRemoteClient {
+  private rooms?: NativeRooms;
+  createRooms(effects: ConstructorParameters<typeof NativeRooms>[1]) {
+    if (this.rooms) throw Error("Rooms already initialized");
+    this.rooms = new NativeRooms(() => this.current(), effects, this.waitForHost);
+    if (this.peer) void this.rooms.connected().catch(() => {});
+    return this.rooms;
+  }
   constructor(private readonly waitForHost?: (signal: AbortSignal) => Promise<void>) {}
   private devices?: NativeAccountDevices;
   createDevices(deps: ConstructorParameters<typeof NativeAccountDevices>[1]) {
@@ -42,6 +50,8 @@ export class NativeRemoteClient {
     const peer: PrivateHostPeer = new PrivateHostPeer(
       port,
       (method, input, signal) => {
+        if (method.startsWith("rooms/") && this.rooms)
+          return this.rooms.handle(method, input, signal);
         if (method.startsWith("mobile/") && this.mobile)
           return this.mobile.handle(method, input, signal);
         if (method.startsWith("devices/") && this.devices)
@@ -56,17 +66,20 @@ export class NativeRemoteClient {
           this.peer = undefined;
           this.account?.disconnect();
           this.devices?.disconnect();
+          this.rooms?.disconnect();
           void this.projects?.disconnect().catch(() => {});
           this.mobile?.disconnect();
         }
       },
       (method, input) => {
+        if (method.startsWith("rooms/")) this.rooms?.notice(method, input);
         if (method === "devices/event") this.devices?.notice(input);
         if (method === "mobile/status")
           this.mobile?.changed(input as import("../../shared/device-relay.js").DesktopRelayStatus);
       },
     );
     this.peer = peer;
+    void this.rooms?.connected().catch(() => {});
     void this.account?.connect().catch(() => {});
     void this.mobile?.connect().catch(() => {});
   }

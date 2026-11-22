@@ -6,7 +6,13 @@ import { join } from "node:path";
 import { HostedAccountDevices } from "./account-devices.js";
 import { HostedCloudProjects } from "./cloud-projects.js";
 import { HostedCloudAccount } from "./cloud-account.js";
-export function bindRemoteServices(port: PrivatePort, userData: string) {
+import { hostedRooms, type RoomHostSources } from "../rooms/service.js";
+export function bindRemoteServices(
+  port: PrivatePort,
+  userData: string,
+  roomSources?: RoomHostSources,
+) {
+  let rooms: ReturnType<typeof hostedRooms> | undefined;
   const account = new HostedCloudAccount(
     () => peer,
     join(userData, "cloud-account", "session.enc"),
@@ -26,22 +32,36 @@ export function bindRemoteServices(port: PrivatePort, userData: string) {
   const peer: PrivateHostPeer = new PrivateHostPeer(
     port,
     (method, input, signal) => {
+      if (method.startsWith("rooms/") && roomSources)
+        return (rooms ??= hostedRooms(() => peer, userData, roomSources)).run(
+          method,
+          input,
+          signal,
+        );
       if (method === "cloud/account") return account.run(input, signal);
       if (method.startsWith("devices/")) return devices.run(method, input, signal);
       if (method.startsWith("projects/")) return projects.run(method, input, signal);
       return mobile.run(method, input, signal);
     },
     () => {
+      closeRooms();
       devices.close();
       account.close();
       void Promise.allSettled([mobile.close(), projects.close()]);
     },
     (method, raw) => {
+      if (method.startsWith("rooms/")) rooms?.notice(method, raw);
       if (method === "mobile/targetEnded") mobile.targetEnded((raw as { id?: string })?.id);
     },
   );
+  function closeRooms() {
+    const owner = rooms;
+    rooms = undefined;
+    owner?.close();
+  }
   return {
     async close() {
+      closeRooms();
       devices.close();
       try {
         await Promise.allSettled([projects.close(), mobile.close()]);

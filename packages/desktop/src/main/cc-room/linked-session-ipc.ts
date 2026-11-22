@@ -63,6 +63,7 @@ export function takeOverLinkedSessionFromIpc(
   externalSessionId: unknown,
   cwd: unknown,
   kind: unknown,
+  assertCurrent?: () => void,
 ): ReturnType<RoomManager["takeOverLinkedSession"]> {
   if (typeof roomId !== "string" || !roomId.trim()) throw new Error("room id is required");
   const target = parseTarget(externalSessionId, cwd, kind);
@@ -71,6 +72,7 @@ export function takeOverLinkedSessionFromIpc(
     target.externalSessionId,
     target.cwd,
     target.kind,
+    ...(assertCurrent ? [assertCurrent] : []),
   );
 }
 
@@ -85,6 +87,7 @@ export async function takeOverLinkedSessionAtHost(
     roomManager: LinkedSessionRoomManager;
     requirePath(cwd: unknown): Promise<string>;
     broadcastRoomState?(roomId: string): void;
+    assertCurrent?: () => void;
   },
   roomId: unknown,
   externalSessionId: unknown,
@@ -97,6 +100,7 @@ export async function takeOverLinkedSessionAtHost(
     externalSessionId,
     await deps.requirePath(cwd),
     kind,
+    deps.assertCurrent,
   );
   deps.broadcastRoomState?.(result.roomId);
   return result;

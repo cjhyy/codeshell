@@ -25,6 +25,11 @@ import {
 } from "./room-history.js";
 export type { RoomHistoryPage, RoomHistoryRequest } from "./room-history.js";
 import { randomUUID } from "node:crypto";
+import {
+  assertRoomInputAvailable,
+  reserveRoomInput,
+  UncertainRoomInput,
+} from "./room-input-reservation.js";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { ResidentAgentEvent } from "./resident-agent.js";
 import type { InputAttachmentMeta } from "../attachment-service.js";
@@ -814,7 +819,7 @@ export class RoomManager extends RoomHistoryReader {
         encoding: "utf-8",
         mode: 0o600,
       });
-      const fd = openSync(temporary, "r");
+      const fd = openSync(temporary, "r+");
       try {
         fsyncSync(fd);
       } finally {
@@ -1669,17 +1674,26 @@ export class RoomManager extends RoomHistoryReader {
     externalSessionId: string,
     cwd: string,
     kind: RoomKind,
+    assertCurrent: () => void = () => {},
   ): Promise<{
     roomId: string;
     status: "running";
     mode: RoomPermissionMode;
     cwd: string;
   }> {
+    assertCurrent();
     const target = this.requireLinkedSessionTarget({ externalSessionId, cwd, kind });
     this.opts.assertExternalSessionAvailable?.(target.externalSessionId, target.kind);
     if (this.transitions.has(roomId)) throw new RoomBusyError("switching");
     if (this.retiring.has(roomId) && !(await this.settleRetiring(roomId)))
       throw new RoomBusyError("retiring");
+    const authorize = () => {
+      assertCurrent();
+      const next = this.requireLinkedSessionTarget({ externalSessionId, cwd, kind });
+      if (next.cwd !== target.cwd) throw new RoomStateChangedError("CLI 会话目录已变更。");
+      this.opts.assertExternalSessionAvailable?.(target.externalSessionId, target.kind);
+    };
+    authorize();
     const meta = this.getRoom(roomId);
     if (
       !meta ||
@@ -1702,7 +1716,7 @@ export class RoomManager extends RoomHistoryReader {
       status = await this.transitionRoom(roomId, {
         toMode: "default",
         expectedMode: meta.permissionMode,
-        authorize: () => undefined,
+        authorize,
         patch,
       });
     } else {
@@ -2070,6 +2084,7 @@ export class RoomManager extends RoomHistoryReader {
     );
     if (known && known !== receipt.clientIntentHash)
       throw new Error("同一输入的内容已改变，请核对草稿后作为新消息发送。");
+    if (known === undefined) assertRoomInputAvailable(this.roomDir(id), receipt);
     return known !== undefined;
   }
 
@@ -2108,12 +2123,16 @@ export class RoomManager extends RoomHistoryReader {
     const agent = this.agents.get(id);
     if (!agent) return false;
 
+    const finish = receipt
+      ? reserveRoomInput(this.roomDir(id), receipt, syncRoomDirectory)
+      : undefined;
     this.deferredEmitRooms.add(id);
     let accepted: boolean;
     try {
       accepted = agent.send(agentText);
     } catch (error) {
       this.deferredEmits.delete(id);
+      if (finish) throw new UncertainRoomInput();
       throw error;
     } finally {
       this.deferredEmitRooms.delete(id);
@@ -2124,6 +2143,7 @@ export class RoomManager extends RoomHistoryReader {
 
     if (!accepted) {
       // Rejected: nothing about this turn reaches history or the phone.
+      finish?.();
       return false;
     }
     // Counted before the buffered events replay, so a synchronous turn_end
@@ -2131,6 +2151,7 @@ export class RoomManager extends RoomHistoryReader {
     if (this.agents.get(id) === agent) this.turnCounts.set(id, (this.turnCounts.get(id) ?? 0) + 1);
     try {
       this.recordAcceptedInput(id, meta, agentText, displayText, summaries, buffered, receipt);
+      finish?.();
     } catch (error) {
       // The CLI already has this input. Reporting a plain failure would invite
       // a second submission of the same turn.

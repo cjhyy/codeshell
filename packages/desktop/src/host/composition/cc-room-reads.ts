@@ -23,7 +23,9 @@ function flag(value: unknown) {
 }
 async function projectRead<T>(cwd: string, run: (path: string) => Promise<T>, current: () => void) {
   async function scope() {
-    const path = await requireRendererProjectPath(cwd).catch(() => { throw new HostRevokedError(); });
+    const path = await requireRendererProjectPath(cwd).catch(() => {
+      throw new HostRevokedError();
+    });
     const owner = getProjectStore().resolveExactRootSync(path);
     current();
     return {
@@ -94,6 +96,18 @@ export function ccRoomReads(
     );
   }
   return {
+    read(signal: AbortSignal): import("../../shared/cc-room-reads.js").ReadCcRoom {
+      const operations = {
+        "ccRoom/probe": probe,
+        "ccRoom/sessions": sessions,
+        "ccRoom/history": read,
+      };
+      return async <K extends keyof CcRoomReads>(method: K, input: CcRoomReads[K]["params"]) => {
+        const result = await operations[method](input, () => signal.throwIfAborted());
+        signal.throwIfAborted();
+        return result as CcRoomReads[K]["result"];
+      };
+    },
     methods: [
       checked("ccRoom/probe", probe),
       checked("ccRoom/sessions", sessions),

@@ -18,7 +18,15 @@ export function stopRoomProcess(child: ChildProcess): void {
       /* already gone */
     }
   };
-  signal("SIGTERM");
+  if (process.platform === "win32" && readiness.has(child) && child.connected) {
+    try {
+      child.send("stop", (error) => {
+        if (error) signal("SIGTERM");
+      });
+    } catch {
+      signal("SIGTERM");
+    }
+  } else signal("SIGTERM");
   if (!child.pid) return;
   const timer = setTimeout(() => signal("SIGKILL"), 1_000);
   timer.unref();
@@ -55,12 +63,20 @@ export function stopRoomProcessAndWait(child: ChildProcess, timeoutMs: number): 
   return exited;
 }
 
+const readiness = new WeakMap<ChildProcess, Promise<void>>();
+export function setRoomProcessReadiness(child: ChildProcess, started: Promise<void>) {
+  started.catch(() => undefined);
+  readiness.set(child, started);
+}
+
 /**
  * Resolve once a just-spawned child exists. Node assigns `pid` synchronously
  * for a successful spawn; a failed spawn (missing command/cwd) has no pid and
  * reports the failure through `error` on a later tick.
  */
 export function waitForRoomProcessSpawn(child: ChildProcess): Promise<void> {
+  const guarded = readiness.get(child);
+  if (guarded) return guarded;
   if (child.pid !== undefined) return Promise.resolve();
   return new Promise((resolve, reject) => {
     child.once("spawn", () => resolve());

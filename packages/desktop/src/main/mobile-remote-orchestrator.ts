@@ -94,16 +94,19 @@ import {
 export { injectAndAwaitResult } from "./mobile-remote/handle-client-event.js";
 export type { AuthenticatedMobileClientEvent } from "./mobile-remote/handle-client-event.js";
 
+import { isRoomPhoneEvent } from "./mobile-remote/room-route.js";
+import type { NativeRooms } from "./desktop-host/rooms-client.js";
 export interface MobileRemoteOrchestratorDeps {
+  hostedRooms?: Pick<NativeRooms, "phone" | "left" | "cancel">;
   readCcRoom?: OrchestratorCtx["readCcRoom"];
   listDiskSessions?: OrchestratorCtx["listDiskSessions"];
   remote: RemoteHostManager;
   uploads: MobileUploadService;
   pendingApprovals: MobileApprovalAccess;
-  roomManager: RoomManager;
+  roomManager?: RoomManager;
   roomHistory?: OrchestratorCtx["roomHistory"];
-  approvalBridge: Pick<ApprovalBridge, "respond" | "pendingRequests">;
-  transcriptSubscriptions: TranscriptSubscriptionManager;
+  approvalBridge?: Pick<ApprovalBridge, "respond" | "pendingRequests">;
+  transcriptSubscriptions?: TranscriptSubscriptionManager;
   /** The agent worker bridge; null until the first window creates it. */
   getBridge: () => AgentBridge | null;
   getExternalRuntimeService?: () => ExternalRuntimeService | null;
@@ -196,12 +199,14 @@ export class MobileRemoteOrchestrator {
         this.selectedSessionAuthorized(viewer, device, sessionId),
       captureSession: (viewer, device, event) => this.captureQueuedSession(viewer, device, event),
       room: (roomId) => {
-        const room = deps.roomManager.getRoom(roomId);
+        const manager = deps.roomManager;
+        if (!manager) return undefined;
+        const room = manager.getRoom(roomId);
         return room
           ? {
               observing: room.linkedSessionMode === "observe-only",
-              mode: deps.roomManager.effectiveMode(roomId),
-              busy: deps.roomManager.isExecutionBusy(roomId),
+              mode: manager.effectiveMode(roomId),
+              busy: manager.isExecutionBusy(roomId),
             }
           : undefined;
       },
@@ -209,7 +214,7 @@ export class MobileRemoteOrchestrator {
     });
     // Mode changes are refused while turns submitted under the current mode are
     // pending; an explicit close (any view) pauses them before the signal.
-    deps.roomManager.setHostTurnHooks({
+    deps.roomManager?.setHostTurnHooks({
       hasPendingTurns: (roomId) => this.turnQueue.hasPendingTurns({ kind: "room", roomId }),
       beforeClose: (roomId) => this.turnQueue.pauseForStop({ kind: "room", roomId }),
     });
@@ -277,6 +282,7 @@ export class MobileRemoteOrchestrator {
   }
 
   releaseViewer(viewerId: string): void {
+    this.deps.hostedRooms?.left(viewerId);
     this.outputRecovery.revoke(viewerId);
     this.externalCommands.revoke(viewerId, true);
     // A disconnected tab cannot keep a mode-change card alive. A room that is
@@ -350,7 +356,8 @@ export class MobileRemoteOrchestrator {
         errors.push(error);
       }
     }
-    for (const result of await Promise.allSettled(retirements)) if (result.status === "rejected") errors.push(result.reason);
+    for (const result of await Promise.allSettled(retirements))
+      if (result.status === "rejected") errors.push(result.reason);
     if (errors.length) throw new AggregateError(errors, "Session recovery retirement failed");
   }
 
@@ -411,7 +418,7 @@ export class MobileRemoteOrchestrator {
     return undefined;
   }
 
-  private async sendProjectList(deviceId?: string): Promise<void> {
+  async sendProjectList(deviceId?: string): Promise<void> {
     const event: MobileServerEvent = {
       type: "room.projects.ok",
       projects: await this.projectList(),
@@ -466,24 +473,32 @@ export class MobileRemoteOrchestrator {
 
   // ── Approvals ──────────────────────────────────────────────────────────────
 
-  private async replayPendingMobileApprovals(sessionId: string, deviceId?: string, viewerId?:string): Promise<void> {
+  private async replayPendingMobileApprovals(
+    sessionId: string,
+    deviceId?: string,
+    viewerId?: string,
+  ): Promise<void> {
     const lines = await this.deps.pendingApprovals.replayLines(sessionId);
-    if (viewerId && deviceId && !this.deps.remote.hasAuthenticatedViewer(viewerId,deviceId)) return;
+    if (viewerId && deviceId && !this.deps.remote.hasAuthenticatedViewer(viewerId, deviceId))
+      return;
     for (const line of lines) {
-      if (viewerId) this.deps.remote.sendRawToViewer(viewerId,line);
+      if (viewerId) this.deps.remote.sendRawToViewer(viewerId, line);
       else if (deviceId) this.deps.remote.sendRawToDevice(deviceId, line);
       else this.deps.remote.broadcastRaw(line);
     }
   }
 
-  async broadcastApprovalResolved(params: {
-    requestId: string;
-    sessionId?: string;
-    connectionId?: string;
-    generation?: number;
-    approved?: boolean;
-    answer?: string;
-  }, caller?:{owner:number;signal:AbortSignal}): Promise<void> {
+  async broadcastApprovalResolved(
+    params: {
+      requestId: string;
+      sessionId?: string;
+      connectionId?: string;
+      generation?: number;
+      approved?: boolean;
+      answer?: string;
+    },
+    caller?: { owner: number; signal: AbortSignal },
+  ): Promise<void> {
     if (params.connectionId === undefined || params.generation === undefined) {
       const pending = params.sessionId
         ? await this.deps.pendingApprovals.find(params.sessionId, params.requestId)
@@ -620,7 +635,8 @@ export class MobileRemoteOrchestrator {
       broadcastApprovalResolved: (params) => this.broadcastApprovalResolved(params),
       roomToPublic: (room) => this.roomToPublic(room),
       ...(this.deps.roomModes ? { roomModes: this.deps.roomModes } : {}),
-      readCcRoom: this.deps.readCcRoom ?? (() => Promise.reject(new Error("CLI history is unavailable"))),
+      readCcRoom:
+        this.deps.readCcRoom ?? (() => Promise.reject(new Error("CLI history is unavailable"))),
       requireLinkedSessionPath: this.deps.requireLinkedSessionPath,
       sessionReadAuthority: mobileSessionCommandAuthority,
       broadcastRoomState: (roomId) => this.broadcastRoomState(roomId),
@@ -637,6 +653,19 @@ export class MobileRemoteOrchestrator {
    * path the renderer uses, via AgentBridge.injectWorkerMessage.
    */
   async handleMobileClientEvent(event: AuthenticatedMobileClientEvent): Promise<void> {
+    const rooms = this.deps.hostedRooms;
+    if (rooms && isRoomPhoneEvent(event)) {
+      this.externalCommands.observe(event);
+      void this.outputRecovery.handle(event);
+      await rooms.phone(event);
+      return;
+    }
+    if (
+      rooms &&
+      event.viewerId &&
+      (event.type === "session.select" || event.type === "session.create")
+    )
+      rooms.cancel(event.viewerId);
     if (isRemoteTerminalEvent(event)) {
       if (this.deps.terminals) this.deps.terminals.handle(event);
       else if (event.viewerId && event.type !== "terminal.list") {
@@ -675,7 +704,7 @@ export class MobileRemoteOrchestrator {
       ctx: this.ctx(),
       isTrustedDevice: (deviceId) => this.deps.remote.isTrustedDevice(deviceId),
       sessionAuthority: mobileSessionCommandAuthority,
-      roomMode: (roomId) => this.deps.roomManager.effectiveMode(roomId),
+      roomMode: (roomId) => this.deps.roomManager?.effectiveMode(roomId),
       handle: handleClientEvent,
     });
   }
@@ -696,7 +725,7 @@ export class MobileRemoteOrchestrator {
     return {
       ...room,
       modelKey: room.modelKey ?? null,
-      open: this.deps.roomManager.isOpen(room.id),
+      open: this.deps.roomManager?.isOpen(room.id) ?? false,
       observing: room.linkedSessionMode === "observe-only",
       ...(room.claudeSessionId ? { sessionId: room.claudeSessionId } : {}),
     };
@@ -707,7 +736,8 @@ export class MobileRemoteOrchestrator {
    * window after it changed, so no view keeps showing the mode it opened with.
    */
   broadcastRoomState(roomId: string): void {
-    const room = this.deps.roomManager.getRoom(roomId);
+    const room = this.deps.roomManager?.getRoom(roomId);
+    if (!this.deps.roomManager) return;
     this.deps.remote.broadcast({
       type: "room.list.ok",
       rooms: this.deps.roomManager.listRooms().map((r) => this.roomToPublic(r)),
@@ -721,7 +751,7 @@ export class MobileRemoteOrchestrator {
     sessionId: string,
     kind: "claude-code" | "codex",
   ): boolean {
-    const room = this.deps.roomManager.getRoom(roomId);
+    const room = this.deps.roomManager?.getRoom(roomId);
     // Rooms opened through the Host authority store the canonical directory.
     return Boolean(
       room &&

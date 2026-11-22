@@ -91,14 +91,12 @@ import {
   resolveGitPath,
   describeTranscribe,
 } from "@cjhyy/code-shell-core/internal";
-import { CC_COST_GUARD_PROMPT } from "@cjhyy/code-shell-capability-coding/orchestration";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
 import { getCuaDriverHost } from "./computer-use/service.js";
 import {
   closeComputerUse,
 } from "./computer-use/desktop-setup.js";
 import { startMobileExternalRuntime } from "./mobile-remote/start-external-runtime.js";
-import { initializeMobileRemoteLifecycle, publishRoomEnded } from "./mobile-remote/lifecycle.js";
 import { resolveMobileStaticRoot } from "./mobile-remote/mobile-static-root.js";
 import {
   externalRuntimeToolContextForSession,
@@ -116,7 +114,6 @@ import {
   requireRendererProject,
   requireRendererProjectPath,
   requireRendererProjectRoot,
-  requireRendererLinkedSessionPath,
 } from "./renderer-project-path.js";
 import { PetStateAggregator } from "./pet/pet-state-aggregator.js";
 import { nativeMimiExternalActivity } from "./desktop-host/mimi-external-client.js";
@@ -165,7 +162,6 @@ import {
 } from "./pet/pet-im-decisions.js";
 import { createOwnerReplyHandling, lastUserMessageIn } from "./pet/pet-notice-action-controls.js";
 import { selectSessionsToArchive } from "./pet/pet-auto-archive.js";
-import { resolveLinkedSessionFromDisk } from "./cc-room/linked-session-resolver.js";
 import { buildMigrationSummary } from "@cjhyy/code-shell-pet";
 import { materializeOutgoingAttachments } from "@cjhyy/code-shell-chat";
 import { createReusableSessionResolver } from "./pet/reusable-session-resolver.js";
@@ -252,11 +248,8 @@ import {
 import {
   AccessPasscode,
   CloudflaredBinary,
-  CodexRoomAgent,
   MobileUploadService,
   RemoteHostManager,
-  ResidentAgentProcess,
-  RoomManager,
   TrustedDeviceStore,
   TunnelManager,
 } from "@cjhyy/code-shell-server/mobile-remote";
@@ -264,7 +257,7 @@ import {
   MobileRemoteOrchestrator,
   type AuthenticatedMobileClientEvent,
 } from "./mobile-remote-orchestrator.js";
-import { createDesktopRoomModeAuthority } from "./cc-room/room-mode-ipc.js";
+import { confirmOnDesktop } from "./cc-room/room-mode-ipc.js";
 import {
   type GatewayControlEventAttachment,
   type GatewayControlEventInput,
@@ -272,8 +265,6 @@ import {
   type PetChatControlResult,
 } from "./im-gateway-control-server.js";
 import { registerImGatewayIpc } from "./im-gateway-ipc.js";
-import { ApprovalBridge } from "./cc-room/approval-bridge.js";
-import { createRoomTranscriptSubscriptions } from "./cc-room/transcript-subscriptions.js";
 import { QuickChatOwnershipRegistry } from "./quick-chat-ownership.js";
 import { revealInFinder, openPath } from "./desktop-services.js";
 import { readSettings } from "./settings-service.js";
@@ -893,101 +884,57 @@ mobileRemote.on("online-change", (ids: string[]) => {
 // with continuously (context persists for the room's lifetime). Messages are
 // persisted to disk (authoritative) and mirrored to the phone. See
 // docs/.../2026-06-07-mobile-rooms-external-agent-design.md.
-const approvalBridge = new ApprovalBridge({
-  onPush: (roomId, req) => {
-    // Push the approval request to the renderer(s) (and phone via WS) so a user
-    // can allow/deny. Mirrors the room:message dual-transport pattern.
-    for (const w of BrowserWindow.getAllWindows()) {
-      if (!w.isDestroyed()) w.webContents.send("ccRoom:approvalRequest", { roomId, ...req });
+const hostedRooms = desktopHost.remote.createRooms({
+  remote: mobileRemote,
+  uploads: mobileUploads,
+  document: desktopHost.documentSignal,
+  confirm: confirmOnDesktop,
+  listBackground: createTaskInboxBackgroundHost({ worker: () => bridge }).list,
+  projects: (device) => mobileOrchestrator.sendProjectList(device),
+  publish(event) {
+    const windows = (channel: string, data: unknown) => {
+      for (const window of mainWindows)
+        if (!window.isDestroyed()) window.webContents.send(channel, data);
+    };
+    switch (event.type) {
+      case "room.message":
+        mobileRemote.broadcast(event);
+        windows("room:message", { roomId: event.roomId, msg: event.msg });
+        return;
+      case "room.changed":
+        windows("ccRoom:roomState", event.room);
+        return;
+      case "room.recovery":
+        windows("ccRoom:transcriptRecovery", { roomId: event.roomId, message: event.message });
+        break;
+      case "ccRoom.approvalRequest":
+        windows("ccRoom:approvalRequest", { roomId: event.roomId, ...event.req });
+        break;
+      case "ccRoom.approvalResolved":
+        windows("ccRoom:approvalResolved", {
+          roomId: event.roomId,
+          requestId: event.requestId,
+          decision: event.decision,
+        });
+        break;
     }
-    mobileRemote.broadcast({ type: "ccRoom.approvalRequest", roomId, req });
+    mobileRemote.broadcast(event);
   },
-  onResolve: (roomId, requestId, decision) => {
-    // Mirror resolution to BOTH transports so every端 clears its stale card —
-    // fixes "点了/超时后审批卡不消失" across desktop windows + phones.
-    for (const w of BrowserWindow.getAllWindows()) {
-      if (!w.isDestroyed())
-        w.webContents.send("ccRoom:approvalResolved", { roomId, requestId, decision });
-    }
-    mobileRemote.broadcast({ type: "ccRoom.approvalResolved", roomId, requestId, decision });
-  },
-});
-const roomManager = new RoomManager({
-  rootDir: resolve(app.getPath("userData"), "mobile-remote", "rooms"),
-  modelTracing: {
-    storageDir: join(sessionsRoot(), ".model-traces"),
-    parameters: (room) =>
-      room.kind === "codex" ? {} : { appendSystemPrompt: CC_COST_GUARD_PROMPT },
-  },
-  resolveLinkedSession: resolveLinkedSessionFromDisk,
-  assertExternalSessionAvailable: backgroundWork.assertExternalSessionIdle,
-  authorizeStart: (room) => roomModes.authorizeStart(room),
-  onRoomClosed: (roomId) => roomModes.revoke(roomId),
-  onRoomStateChanged: (roomId) => mobileOrchestrator.broadcastRoomState(roomId),
-  createAgent: (room, onEvent) =>
-    room.kind === "codex"
-      ? new CodexRoomAgent({
-          command: "codex",
-          cwd: room.cwd,
-          permissionMode: room.permissionMode,
-          model: parseExternalRuntimeModelKey(room.modelKey)?.model,
-          resumeThreadId: room.claudeSessionId,
-          onEvent,
-          // Persist codex's thread id so the next turn / app restart resumes it.
-          onThreadId: (threadId) => roomManager.setRoomSessionId(room.id, threadId),
-        })
-      : new ResidentAgentProcess({
-          command: "claude",
-          cwd: room.cwd,
-          permissionMode: room.permissionMode,
-          model: parseExternalRuntimeModelKey(room.modelKey)?.model,
-          resumeSessionId: room.claudeSessionId,
-          appendSystemPrompt: CC_COST_GUARD_PROMPT,
-          onEvent,
-        }),
-  onMessage: (roomId, msg) => {
-    // Mirror to BOTH transports: phone (WS) and desktop renderer(s) (IPC), so
-    // a room is dual-ended — same resident CC, same messages, either side sends.
-    mobileOrchestrator.broadcastRoomMessage(roomId, msg);
-    for (const w of BrowserWindow.getAllWindows()) {
-      if (!w.isDestroyed()) w.webContents.send("room:message", { roomId, msg });
-    }
-  },
-  onApprovalRequest: (roomId, ev) => {
-    void approvalBridge
-      .request(roomId, ev.requestId, {
-        toolName: ev.toolName,
-        displayName: ev.displayName,
-        input: ev.input,
-        description: ev.description,
-        askUser: ev.askUser,
-      })
-      .then((decision) => roomManager.respondApproval(roomId, ev.requestId, decision));
-  },
-  onRoomEnded: (roomId) =>
-    publishRoomEnded(
-      { approvals: approvalBridge, transcripts: transcriptSubscriptions, remote: mobileRemote },
-      roomId,
-    ),
 });
 const roomHistory: import("../shared/room-history.js").RoomHistoryAccess = {
-  getMessages: (roomId, sinceSeq = 0) =>
-    desktopHost.callBusiness("rooms/messages", { rootIdentity: roomManager.rootIdentity, roomId, sinceSeq }),
-  getHistoryPage: (roomId, request = {}) =>
-    desktopHost.callBusiness("rooms/historyPage", { rootIdentity: roomManager.rootIdentity, roomId, request }),
+  getMessages: async (roomId, sinceSeq = 0) =>
+    desktopHost.callBusiness("rooms/messages", {
+      rootIdentity: await hostedRooms.root(),
+      roomId,
+      sinceSeq,
+    }),
+  getHistoryPage: async (roomId, request = {}) =>
+    desktopHost.callBusiness("rooms/historyPage", {
+      rootIdentity: await hostedRooms.root(),
+      roomId,
+      request,
+    }),
 };
-const transcriptSubscriptions = createRoomTranscriptSubscriptions({
-  roomManager,
-  checkpointDir: join(app.getPath("userData"), "mobile-remote", "transcript-checkpoints"),
-  broadcast: (event) => mobileRemote.broadcast(event),
-  windows: () => BrowserWindow.getAllWindows(),
-});
-const roomModes = createDesktopRoomModeAuthority({
-  roomManager,
-  approvalBridge,
-  externalRuntimeModels: () => externalRuntimeModelService.list(),
-});
-
 // Routes authenticated mobile events into the same run/permission path the
 // renderer uses (chat/approvals/sessions/rooms/cc-rooms). Extracted glue —
 // see mobile-remote-orchestrator.ts.
@@ -1013,11 +960,7 @@ const mobileOrchestrator: MobileRemoteOrchestrator = new MobileRemoteOrchestrato
   terminals: remoteTerminals,
   uploads: mobileUploads,
   pendingApprovals: pendingMobileApprovals,
-  roomManager,
-  approvalBridge,
-  roomModes,
-  requireLinkedSessionPath: requireRendererLinkedSessionPath,
-  transcriptSubscriptions,
+  hostedRooms,
   getBridge: () => bridge,
   getExternalRuntimeService: () => externalRuntime.service,
   getExternalRuntimeModels: () => externalRuntimeModelService.list(),
@@ -1038,12 +981,8 @@ const mobileOrchestrator: MobileRemoteOrchestrator = new MobileRemoteOrchestrato
   },
 });
 
-initializeMobileRemoteLifecycle(
-  mobileRemote,
-  mobileOrchestrator,
-  transcriptSubscriptions,
-  roomManager,
-);
+mobileRemote.on("online-change", () => hostedRooms.presence());
+mobileRemote.on("viewer-offline", ({ viewerId }) => mobileOrchestrator.releaseViewer(viewerId));
 
 async function createWindow(): Promise<BrowserWindow> {
   const { win, loadRenderer } = await createWorkbenchSurface(__dirname, {
@@ -3202,11 +3141,7 @@ registerRoomsIpc({
   readCcRoom: desktopHost.callBusiness,
   roomHistory,
   mainWindows,
-  bridge: () => bridge,
-  approvalBridge,
-  roomManager,
-  transcriptSubscriptions,
-  roomModes,
+  hostedRooms,
   mobileOrchestrator,
 });
 registerDialogPickerIpc();
@@ -3582,8 +3517,7 @@ registerDesktopShutdown(app, {
     disposePetIpc = null;
 
     ptyKillAll();
-    transcriptSubscriptions?.closeAll();
-    roomManager.closeAll();
+
     // Stop captured external runtimes explicitly; their child processes can survive Windows exit.
     const externalRuntimeShutdown = desktopModules.dispose();
     // Stop the embedded Cua child explicitly.
