@@ -252,12 +252,14 @@ for(const transport of [http,https])for(const name of ["get","request"])transpor
 const spawn=children.spawn;
 children.spawn=function(command,args,options){if(args?.some(arg=>String(arg).includes("agent-server-stdio")))return deny("worker");return spawn.call(this,command,args,options);};
 syncBuiltinESMExports();
+if (process.type === "browser") {
 const {app,BrowserWindow,ipcMain,net,safeStorage,shell}=await import("electron");
 net.request=net.fetch=()=>deny("network");
 for(const name of ["isEncryptionAvailable","getSelectedStorageBackend","encryptString","decryptString"])if(typeof safeStorage[name]==="function")safeStorage[name]=()=>deny("crypto");
 for(const name of ["openPath","openExternal","showItemInFolder"])shell[name]=()=>deny("OS-open");
 app.on("web-contents-created",(_event,contents)=>contents.session.webRequest.onBeforeRequest({urls:["http://*/*","https://*/*"]},()=>deny("network")));
 for(const method of ["loadFile","loadURL"]){const original=BrowserWindow.prototype[method];BrowserWindow.prototype[method]=function(...args){const missing=["pet:get-snapshot","pet:set-active-session","pet:get-attention"].filter(channel=>!ipcMain._invokeHandlers.has(channel));appendFileSync(${JSON.stringify(loadLog)},JSON.stringify({pid:process.pid,method,source:String(args[0]).slice(0,1024),missing,windowId:this.id})+"\\n",{mode:0o600});return original.apply(this,args);};}
+}
 `,
     );
     fixture = await prepareConfinedElectronFixture({
@@ -391,6 +393,12 @@ for(const method of ["loadFile","loadURL"]){const original=BrowserWindow.prototy
           new URL(pathToFileURL(join(appDir, "out/renderer/index.html"))).pathname,
         );
         await page.waitForFunction(() => Boolean(window.codeshell?.pet));
+        await page.evaluate(() =>
+          window.codeshell.onDesktopHostStatus((value) => {
+            window.__startupHostStatus = value;
+          }),
+        );
+        await page.waitForFunction(() => window.__startupHostStatus === "ready");
         const result = await page.evaluate(async () => ({
           active: await window.codeshell.pet.setActiveSession(null),
           snapshot: await window.codeshell.pet.getSnapshot(),
@@ -400,6 +408,21 @@ for(const method of ["loadFile","loadURL"]){const original=BrowserWindow.prototy
         assert.ok(result.snapshot && typeof result.snapshot === "object");
         assert.ok(result.attention && typeof result.attention === "object");
         return { activeSessionCleared: true, snapshotRead: true, attentionRead: true };
+      };
+      const capture = async (page, path) => {
+        await page.bringToFront();
+        const native = await app.browserWindow(page);
+        try {
+          const png = await native.evaluate(async (win) => {
+            if (!win.isVisible()) throw Error("Startup workbench is hidden");
+            const frame = await win.webContents.capturePage();
+            if (frame.isEmpty()) throw Error("Startup workbench has no compositor frame");
+            return frame.toPNG().toString("base64");
+          });
+          await writeFile(path, Buffer.from(png, "base64"), { mode: 0o600 });
+        } finally {
+          await native.dispose();
+        }
       };
       diagnostics.phase("startup-cold-pet");
       proof.operations.push({
@@ -413,7 +436,7 @@ for(const method of ["loadFile","loadURL"]){const original=BrowserWindow.prototy
         operation: "renderer reload real Pet IPC",
         result: await checkPet(win),
       });
-      await win.screenshot({ path: join(evidence, `cycle-${cycle}-reload.png`) });
+      await capture(win, join(evidence, `cycle-${cycle}-reload.png`));
       if (cycle === 1) {
         diagnostics.phase("startup-second-window");
         const opened = app.waitForEvent("window", { timeout: 15000 });
@@ -426,7 +449,7 @@ for(const method of ["loadFile","loadURL"]){const original=BrowserWindow.prototy
           operation: "production second window real Pet IPC",
           result: await checkPet(other),
         });
-        await other.screenshot({ path: join(evidence, "second-window.png") });
+        await capture(other, join(evidence, "second-window.png"));
         diagnostics.phase("startup-second-window-close");
         await other.close();
       }
