@@ -174,7 +174,7 @@ describe("briefs", () => {
     );
     expect(again.detail).toContain("已经发过");
     expect(f.h.ownerSends).toHaveLength(1);
-    expect(f.proactive.status().briefs.morning).toEqual({ lastSentDay: "2023-11-15" });
+    expect((await f.proactive.status()).briefs.morning).toEqual({ lastSentDay: "2023-11-15" });
   });
 
   test("slept through: caught up later that day, never on the next", async () => {
@@ -230,7 +230,7 @@ describe("briefs", () => {
       due(f, "system-brief-morning", NINE),
     );
     expect(result).toMatchObject({ status: "failed" });
-    expect(f.proactive.status().briefs.morning).toEqual({});
+    expect((await f.proactive.status()).briefs.morning).toEqual({});
   });
 
   test("a fire in another timezone than the rule's retimes the rules", async () => {
@@ -318,7 +318,7 @@ describe("heartbeat", () => {
     // Not consumed: the fifth result is still unjudged (seen only once judged).
     const stored = JSON.parse(await readFile(join(env.dir, "pet", "proactive.json"), "utf8"));
     expect(stored.heartbeat.seen).toHaveLength(4);
-    expect(f.proactive.status().heartbeat).toMatchObject({
+    expect((await f.proactive.status()).heartbeat).toMatchObject({
       saidToday: 4,
       atSayCap: true,
       atJudgeCap: false,
@@ -344,7 +344,10 @@ describe("heartbeat", () => {
       }
     }
     expect(calls).toBe(8);
-    expect(f.proactive.status().heartbeat).toMatchObject({ judgedToday: 8, atJudgeCap: true });
+    expect((await f.proactive.status()).heartbeat).toMatchObject({
+      judgedToday: 8,
+      atJudgeCap: true,
+    });
   });
 
   test("after a long gap the heartbeat looks back two hours at most", async () => {

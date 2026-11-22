@@ -260,6 +260,12 @@ const business = new HostBusinessCalls({
   ...approvals.native,
   "mimi/tasks": (command, grant) => mimiTasks.run(command, grant),
   ...segments,
+  "mimi/proactiveState":async(call,grant)=>{
+    const db=await storage;grant.assertCurrent();
+    const reply=await db.request<import("../../shared/mimi-proactive-state.js").MimiProactiveReply>("mimi/proactiveState",{call,permit:grant.permit});
+    if(!reply)throw Error("Mimi heartbeat state unavailable");
+    return reply;
+  },
   "mimi/conversationRoutes":async(call,grant)=>{
     const db=await storage;grant.assertCurrent();
     const reply=await db.request<import("../../shared/mimi-conversation-routes.js").MimiRouteReply>("mimi/conversationRoutes",{call,permit:grant.permit});

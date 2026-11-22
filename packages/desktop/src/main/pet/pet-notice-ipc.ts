@@ -71,7 +71,7 @@ export interface PetNoticeControlsDeps {
    */
   goals: { readActiveGoal(sessionId: string): { paused?: boolean } | undefined };
   /** Briefs' and heartbeat's state today (counts at their caps), once they run. */
-  proactive?: () => PetProactiveStatus | undefined;
+  proactive?: () => PetProactiveStatus | undefined | Promise<PetProactiveStatus | undefined>;
   /** Writes `pet.notifications` (briefs / heartbeat switches from the rule list). */
   writeNotificationSettings?: NotificationSettingsWrite;
   /** The follow-up control's cancel, used when the list cancels a follow-up. */
@@ -223,7 +223,7 @@ export function createPetNoticeControls(deps: PetNoticeControlsDeps): PetNoticeC
       await notices.ready;
       let proactive: PetProactiveStatus | undefined;
       try {
-        proactive = deps.proactive?.();
+        proactive = await deps.proactive?.();
       } catch {
         proactive = undefined;
       }

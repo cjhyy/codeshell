@@ -1,3 +1,4 @@
+import { nativeMimiProactiveState } from "../desktop-host/mimi-proactive-client.js";
 import { nativeMimiConversationRoutes } from "../desktop-host/mimi-conversation-routes-client.js";
 import { mimiWindowIpc, trustedMimiWindows } from "./mimi-windows.js";
 import type {
@@ -344,7 +345,7 @@ export function createMimiRuntimeShell(desktopHost: NativeMimiHost) {
     // Briefs and the heartbeat are system schedule rules on the same scheduler.
     const petProactive = wirePetProactive({
       notices,
-      userDataDir: app.getPath("userData"),
+      state: nativeMimiProactiveState(desktopHost.callBusiness),
       cwd: resolveNoRepoCwd(),
       accounting: {
         sessionsRootDir: petSessionsRootDir,

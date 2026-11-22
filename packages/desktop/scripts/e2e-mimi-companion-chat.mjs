@@ -138,6 +138,17 @@ try {
     target: "synthetic-private-chat",
     senderId: "synthetic-owner",
   };
+  // Older clients persist the brief day and the quota used by the heartbeat.
+  const currentLocalDay = () => {
+    const date = new Date();
+    return Math.floor((date.getTime() - date.getTimezoneOffset() * 60_000) / 86_400_000);
+  };
+  const localDay = currentLocalDay();
+  await put(join(isolated.userDataDir, "pet", "proactive.json"), {
+    version: 1,
+    briefs: { morning: { sentAt: expiredAt, day: localDay } },
+    heartbeat: { day: localDay, lastAt: expiredAt, judged: 8, said: 4, seen: ["fixture"] },
+  });
   const routesFile = join(isolated.userDataDir, "pet", "conversation-session-routes.json");
   const boundId = "synthetic-session-route";
   await put(routesFile, {
@@ -778,6 +789,25 @@ try {
     };
   });
   assert.deepEqual(chosenRule.rule, { state: "active", channel: "desktop", events: ["failed"] });
+  const verifyQuota = async () => {
+    const before = currentLocalDay();
+    const quota = await main.evaluate(
+      async () => (await window.codeshell.pet.getNoticesState()).proactive,
+    );
+    const after = currentLocalDay();
+    assert.equal(
+      quota.briefs.morning.lastSentDay,
+      new Date(localDay * 86_400_000).toISOString().slice(0, 10),
+    );
+    // The UI legitimately starts a fresh day if this smoke crosses midnight.
+    if (before === after) {
+      assert.equal(quota.heartbeat.judgedToday, after === localDay ? 8 : 0);
+      assert.equal(quota.heartbeat.saidToday, after === localDay ? 4 : 0);
+      assert.equal(quota.heartbeat.atJudgeCap, after === localDay);
+      assert.equal(quota.heartbeat.atSayCap, after === localDay);
+    }
+  };
+  await verifyQuota();
   const completedWakes = await recordedWakes();
   assert.deepEqual(
     completedWakes.map((wake) => wake?.status),
@@ -898,6 +928,10 @@ try {
     };
   });
   assert.deepEqual(restoredRule, chosenRule);
+  await verifyQuota();
+  receipt.checks.push(
+    "an existing brief day and exhausted heartbeat quotas survive Host replacement",
+  );
   assert.deepEqual(await recordedWakes(), completedWakes);
   assert.deepEqual(await readExpiredReceipt(), recoveredDelivery);
   assert.deepEqual(await routeMessage("/session", (await hostStarts()).at(-1).pid), {

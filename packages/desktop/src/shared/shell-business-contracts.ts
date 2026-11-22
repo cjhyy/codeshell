@@ -47,6 +47,7 @@ export interface ShellBusinessOperations extends GoalRecoveryOperations, Project
   "startup/quickChats": { input: Record<string, never>; result: string[] };
   "startup/cleanupAttachments": { input: { sessionId?: string }; result: void };
   "terminal/command": { input: import("./pty.js").NativeTerminalCommand; result: unknown };
+  "mimi/proactiveState": {input:import("./mimi-proactive-state.js").MimiProactiveCommand;result:import("./mimi-proactive-state.js").MimiProactiveReply};
   "mimi/conversationRoutes": {input:import("./mimi-conversation-routes.js").MimiRouteCall;result:import("./mimi-conversation-routes.js").MimiRouteReply};
   "mimi/noticeLedger": {input:import("./mimi-notice-ledger.js").NoticeLedgerCall;result:import("./mimi-notice-ledger.js").NoticeLedgerReply};
   "mimi/ruleScheduler": {input:"prepare"|"start"|"reconcile"|"stop";result:void};

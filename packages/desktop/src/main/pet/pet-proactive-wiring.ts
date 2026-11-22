@@ -1,4 +1,3 @@
-import { join } from "node:path";
 import type { PetLongTask } from "@cjhyy/code-shell-pet";
 import {
   createReplyModels,
@@ -7,7 +6,7 @@ import {
 } from "./pet-notice-reply-models.js";
 import type { PetNoticeWiring } from "./pet-notice-wiring-types.js";
 import { createPetProactive, type PetProactive } from "./pet-proactive.js";
-import { PetProactiveStateStore } from "./pet-proactive-state.js";
+import type { MimiProactiveAccess } from "../../shared/mimi-proactive-state.js";
 import type { DesktopPetProjectionSnapshot } from "./pet-state-aggregator.js";
 
 /** A brief's write-up is longer than a reply reading. */
@@ -28,7 +27,7 @@ export function wirePetProactive(input: {
     | "submitNotice"
     | "wasSessionViewedSince"
   >;
-  userDataDir: string;
+  state: MimiProactiveAccess;
   /** Settings cwd for the models. */
   cwd: string;
   externalReplyModel?: ExternalReplyModel;
@@ -40,7 +39,7 @@ export function wirePetProactive(input: {
   const { notices } = input;
   return createPetProactive({
     rules: notices.ruleStore,
-    state: new PetProactiveStateStore(join(input.userDataDir, "pet", "proactive.json")),
+    state: input.state,
     ledger: notices.ledger,
     tasks: input.tasks,
     sessions: () => input.projection().sessions,

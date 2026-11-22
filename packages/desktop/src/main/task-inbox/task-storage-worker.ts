@@ -1,4 +1,5 @@
 import { readTranscriptContext } from "../../host/composition/transcript-context.js";
+import {storedMimiProactiveState} from "../../host/composition/mimi-proactive-state.js";
 import {StoredMimiConversationRoutes} from "../../host/composition/mimi-conversation-routes.js";
 import { changeSessionFiles } from "../../host/composition/session-files.js";
 import {StoredMimiNoticeLedger} from "../../host/composition/mimi-notice-ledger.js";
@@ -55,6 +56,7 @@ catalog.onChanged((snapshot) => {
 let output: StoredDesktopOutput | undefined;
 let runLedger: RunOperationStorage | undefined;
 let ledger: OperationStorage | undefined;
+let proactiveState:ReturnType<typeof storedMimiProactiveState>|undefined;
 let conversationRoutes:StoredMimiConversationRoutes|undefined;
 let noticeLedger:StoredMimiNoticeLedger|undefined;
 let mimiRules: StoredMimiRules | undefined;
@@ -76,11 +78,15 @@ await serveSessionIndexWorker({
     if (isProfileLibraryChange(command)) return changeProfileLibrary(command,payload as Parameters<typeof changeProfileLibrary>[1]);
     if (isMemoryCommand(command))
       return writeHostedMemory(command, payload as Parameters<typeof writeHostedMemory>[1]);
-    if (command === "mimi/conversationRoutes" || command === "mimi/noticeLedger" || command === "mimi/rules" || command === "mimi/turnStorage" || command === "mimi/records" || command === "mimi/workMemory") {
+    if (command === "mimi/proactiveState" || command === "mimi/conversationRoutes" || command === "mimi/noticeLedger" || command === "mimi/rules" || command === "mimi/turnStorage" || command === "mimi/records" || command === "mimi/workMemory") {
       const directory = workerData?.config?.taskInboxDirectory;
       if (typeof directory !== "string" || !isAbsolute(directory))
         throw Error("Desktop data directory unavailable");
       const root = join(dirname(directory), "pet");
+      if (command==="mimi/proactiveState") {
+        proactiveState??=storedMimiProactiveState(root);
+        return proactiveState(payload as Parameters<typeof proactiveState>[0]);
+      }
       if (command==="mimi/conversationRoutes") {
         conversationRoutes??=new StoredMimiConversationRoutes(root);
         return conversationRoutes.run(payload as Parameters<StoredMimiConversationRoutes["run"]>[0]);

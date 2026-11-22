@@ -1,3 +1,4 @@
+import { PetProactiveStateStore } from "./pet-proactive-state.js";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -59,7 +60,7 @@ describe("Main proactive model wiring", () => {
     const selected: string[] = [];
     proactive = wirePetProactive({
       notices: notices.wiring,
-      userDataDir: env.dir,
+      state: new PetProactiveStateStore(join(env.dir, "pet", "proactive.json")),
       cwd: env.dir,
       tasks: () => notices!.tasks,
       projection: () => ({ sessions: notices!.sessions, pending: notices!.pending }),
