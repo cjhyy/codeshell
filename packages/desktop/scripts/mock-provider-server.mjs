@@ -329,6 +329,25 @@ export async function startMockProviderServer(options = {}) {
       }
 
       if (protocol === "anthropic") return writeAnthropicSse(res, body, scenario);
+      if (body.stream && script?.textChunks) {
+        const chunks = script.textChunks.map((content, index) =>
+          openAiChunk(body.model, [
+            {
+              index: 0,
+              delta: { ...(index === 0 && { role: "assistant" }), content },
+              finish_reason: null,
+            },
+          ]),
+        );
+        chunks.push(
+          openAiChunk(
+            body.model,
+            [{ index: 0, delta: {}, finish_reason: "stop" }],
+            usageFor(scenario),
+          ),
+        );
+        return await writeOpenAiSse(res, chunks, script.afterChunk);
+      }
       const response = openAiResponse(body, scenario, script?.toolCall);
       if (Array.isArray(response)) return await writeOpenAiSse(res, response, script?.afterChunk);
       return sendJson(res, 200, response);
