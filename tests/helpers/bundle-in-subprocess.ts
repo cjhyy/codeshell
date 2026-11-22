@@ -8,7 +8,7 @@
 export function bundleInSubprocess(
   entrypoints: string[],
   outdir: string,
-  options: { naming?: string; external?: string[] } = {},
+  options: { naming?: string; external?: string[]; packages?: "external" } = {},
 ): void {
   const result = Bun.spawnSync(
     [
@@ -17,6 +17,7 @@ export function bundleInSubprocess(
       ...entrypoints,
       "--target=node",
       `--outdir=${outdir}`,
+      ...(options.packages ? [`--packages=${options.packages}`] : []),
       ...(options.naming ? [`--entry-naming=${options.naming}`] : []),
       ...(options.external ?? []).map((name) => `--external=${name}`),
     ],

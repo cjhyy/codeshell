@@ -1,3 +1,4 @@
+import { bundleInSubprocess } from "../../../../../tests/helpers/bundle-in-subprocess.js";
 import { expect, test } from "bun:test";
 import { mkdtemp, symlink, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
@@ -10,14 +11,10 @@ test("hosted IM control, saved setup and outbox survive a real utility restart",
       join(root, "node_modules"),
       process.platform === "win32" ? "junction" : "dir",
     );
-    const built = await Bun.build({
-      entrypoints: [resolve("packages/desktop/scripts/__fixtures__/hosted-im-gateway.ts")],
-      outdir: root,
+    bundleInSubprocess([resolve("packages/desktop/scripts/__fixtures__/hosted-im-gateway.ts")], root, {
       naming: "fixture.mjs",
-      target: "node",
       packages: "external",
     });
-    expect(built.success, String(built.logs)).toBe(true);
     const child = Bun.spawn(["node", join(root, "fixture.mjs"), root], {
       stdout: "pipe",
       stderr: "pipe",
