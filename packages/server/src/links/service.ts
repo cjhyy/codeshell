@@ -153,6 +153,12 @@ export function publicLinkError(error: unknown): LinkServiceError {
 export interface LinkServiceOptions {
   cwd?: string;
   store?: CredentialStore;
+  /** Trusted native hosts can run replayable operations on detached credential images. */
+  credentials?: {
+    read<T>(work: (store: CredentialStore) => T): Promise<T>;
+    write<T>(work: (store: CredentialStore) => T, assertCurrent?: () => Promise<void>): Promise<T>;
+    pendingRetirements(): Promise<number>;
+  };
   withMutation?: <T>(write: () => Promise<T>) => Promise<T>;
   onChanged?: () => void | Promise<void>;
   now?: () => number;
@@ -235,6 +241,22 @@ type PreparedConnection = {
 /** One host/workspace credential domain. Browsers never provide the store or owner identity. */
 export function createLinkService(options: LinkServiceOptions = {}) {
   const store = options.store ?? new CredentialStore(options.cwd);
+  const credentials = options.credentials ?? {
+    read: async <T>(work: (source: CredentialStore) => T) => work(store),
+    write: async <T>(work: (source: CredentialStore) => T, assertCurrent?: () => Promise<void>) => {
+      await assertCurrent?.();
+      return work(store);
+    },
+    pendingRetirements: async () => store.remoteLinkRetirementCount(),
+  };
+  async function readCurrent<T>(
+    context: LinkOperationContext,
+    work: (source: CredentialStore) => T,
+  ) {
+    const value = await credentials.read(work);
+    await authorize(context);
+    return value;
+  }
   const now = options.now ?? Date.now;
   const validateToken = options.validateToken ?? validateLocalLinkToken;
   const cliStatus = options.cliStatus ?? getCliLinkStatus;
@@ -289,9 +311,9 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     if (closed) return Promise.resolve();
     if (cleanupRunning) return cleanupRunning;
     cleanupRunning = (async () => {
-      if (!store.remoteLinkRetirementCount()) return;
+      if (!(await credentials.pendingRetirements())) return;
       for (let count = 0; count < 8 && !closed; count++) {
-        const claim = store.claimRemoteLinkRetirement(now());
+        const claim = await credentials.write((source) => source.claimRemoteLinkRetirement(now()));
         if (!claim) break;
         let success = false;
         try {
@@ -300,7 +322,9 @@ export function createLinkService(options: LinkServiceOptions = {}) {
         } catch {
           /* Keep private custody and retry with persisted backoff. */
         }
-        store.finishRemoteLinkRetirement(claim, success, now());
+        await credentials.write((source) =>
+          source.finishRemoteLinkRetirement(claim, success, now()),
+        );
       }
     })()
       .catch(() => {
@@ -379,7 +403,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     }
     return current.revision;
   }
-  function records() {
+  function records(store: CredentialStore) {
     authorizationDiagnosticStage("host_store_read");
     try {
       const current = store.listWithStatus("full");
@@ -486,9 +510,9 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       ...(oauth?.expiresAt ? { expiresAt: oauth.expiresAt } : {}),
     };
   }
-  function snapshot(): LinkSnapshot {
+  function snapshotFromStore(store: CredentialStore): LinkSnapshot {
     if (closed) throw new LinkServiceError(503, "unavailable");
-    const current = records();
+    const current = records(store);
     const ids = new Set(current.credentials.map((credential) => credential.id));
     for (const id of revisions.keys()) if (!ids.has(id)) revisions.delete(id);
     const remoteConfig = remoteConfiguration();
@@ -740,9 +764,9 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       throw new LinkServiceError(400, "invalid_request");
     return id;
   }
-  function reviewed(id: string, expectedRevision: unknown): Credential {
+  function reviewed(store: CredentialStore, id: string, expectedRevision: unknown): Credential {
     authorizationDiagnosticStage("connection_review");
-    const current = records();
+    const current = records(store);
     authorizationDiagnosticStage("connection_review");
     const credential = current.credentials.find((entry) => entry.id === id);
     if (!credential || !isLink(credential)) throw new LinkServiceError(409, "conflict");
@@ -752,6 +776,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     return credential;
   }
   function prepare(
+    store: CredentialStore,
     raw: LinkConnectionInput,
     hostAdapter?: HostLinkOAuthAdapter,
   ): PreparedConnection {
@@ -782,7 +807,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     let expected: Credential | null = null;
     let knownConnectionIds: string[] | undefined;
     if (input.expectedRevision === null) {
-      const current = records();
+      const current = records(store);
       authorizationDiagnosticStage("connection_review");
       if (current.credentials.some((credential) => credential.id === id))
         throw new LinkServiceError(409, "conflict");
@@ -796,7 +821,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
           .map((credential) => credential.id)
           .sort();
     } else {
-      expected = reviewed(id, input.expectedRevision);
+      expected = reviewed(store, id, input.expectedRevision);
       if (
         expected.meta?.linkProvider !== input.providerId ||
         expected.meta.linkConnectionMethod !== input.methodId
@@ -807,26 +832,37 @@ export function createLinkService(options: LinkServiceOptions = {}) {
   }
   async function change<T>(
     context: LinkOperationContext,
-    write: () => T,
-    bypassBusy = false,
+    write: (store: CredentialStore) => T,
+    hooks: {
+      afterCommit?: (result: T) => void;
+      assertPending?: () => void;
+      bypassBusy?: boolean;
+    } = {},
   ): Promise<T> {
     const action = async () => {
       await authorize(context);
-      const result = write();
+      const result = await credentials.write(write, async () => {
+        await authorize(context);
+        hooks.assertPending?.();
+      });
+      hooks.afterCommit?.(result);
       await options.onChanged?.();
       return result;
     };
     const result =
-      !bypassBusy && options.withMutation ? await options.withMutation(action) : await action();
+      !hooks.bypassBusy && options.withMutation
+        ? await options.withMutation(action)
+        : await action();
     await authorize(context);
     return result;
   }
   function swap(
+    store: CredentialStore,
     prepared: PreparedConnection,
     next: Credential | null,
     retirement?: { retireExpected: boolean; adopt?: string; now: number },
   ): void {
-    const current = records();
+    const current = records(store);
     if (current.projectIds.has(prepared.id)) throw new LinkServiceError(403, "read_only");
     if (prepared.knownConnectionIds) {
       const currentIds = current.credentials
@@ -885,13 +921,11 @@ export function createLinkService(options: LinkServiceOptions = {}) {
         ).toISOString(),
       },
     };
-    return change(context, () => {
-      lifecycle?.beforeCommit();
-      swap(prepared, credential);
-      const connection = masked(credential, "user");
-      lifecycle?.onCommitted(connection);
-      return connection;
+    await change(context, (source) => swap(source, prepared, credential), {
+      afterCommit: () => lifecycle?.onCommitted(masked(credential, "user")),
+      assertPending: lifecycle?.beforeCommit,
     });
+    return masked(credential, "user");
   }
   function tokenSecret(token: LocalBrowserAuthToken): string {
     return JSON.stringify({
@@ -919,7 +953,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     authentication: ValidatedLinkAuthentication,
   ): Promise<MaskedLinkConnection> {
     await authorize(context);
-    const prepared = prepare(input);
+    const prepared = await readCurrent(context, (source) => prepare(source, input));
     if (validation.providerId !== prepared.input.providerId)
       throw new LinkServiceError(400, "invalid_request");
     const provider = providers.find((entry) => entry.id === prepared.input.providerId)!;
@@ -954,7 +988,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     const operation = begin(context);
     try {
       await authorize(context);
-      const prepared = prepare(input);
+      const prepared = await readCurrent(context, (source) => prepare(source, input));
       const token = string(input.token, 16_384);
       let validation: LocalLinkValidationResult;
       try {
@@ -978,7 +1012,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     const operation = begin(context);
     try {
       await authorize(context);
-      const prepared = prepare(input);
+      const prepared = await readCurrent(context, (source) => prepare(source, input));
       const providerId = prepared.input.providerId;
       const method = providers
         .find((provider) => provider.id === providerId)
@@ -1038,19 +1072,24 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     expectedRevision: string,
   ) {
     await authorize(context);
-    const credential = reviewed(safeId(id), expectedRevision);
+    const credential = await readCurrent(context, (source) =>
+      reviewed(source, safeId(id), expectedRevision),
+    );
     const replacement = { ...credential, label: string(label) };
-    return change(context, () => {
+    await change(context, (source) => {
       swap(
+        source,
         { id: credential.id, expected: credential, input: {} as LinkConnectionInput },
         replacement,
       );
-      return masked(replacement, "user");
     });
+    return masked(replacement, "user");
   }
   async function disconnect(context: LinkOperationContext, id: string, expectedRevision: string) {
     await authorize(context);
-    const credential = reviewed(safeId(id), expectedRevision);
+    const credential = await readCurrent(context, (source) =>
+      reviewed(source, safeId(id), expectedRevision),
+    );
     if (linkConnectionMetadata(credential.meta).linkExecutionBackend === "mcp") {
       const adapter = hostOAuthAdapters.find(
         (entry) =>
@@ -1059,9 +1098,13 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       );
       await change(
         context,
-        () =>
-          swap({ id: credential.id, expected: credential, input: {} as LinkConnectionInput }, null),
-        true,
+        (source) =>
+          swap(
+            source,
+            { id: credential.id, expected: credential, input: {} as LinkConnectionInput },
+            null,
+          ),
+        { bypassBusy: true },
       );
       // Local authority is already gone. Cleanup never deletes a new connection with this ID.
       await adapter?.disconnect?.(credential).catch(() => {});
@@ -1076,12 +1119,13 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       };
       await change(
         context,
-        () =>
+        (source) =>
           swap(
+            source,
             { id: credential.id, expected: credential, input: {} as LinkConnectionInput },
             disabled,
           ),
-        true,
+        { bypassBusy: true },
       );
       try {
         await revokeRemoteLinkAuthorization(disabled);
@@ -1090,18 +1134,26 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       }
       await change(
         context,
-        () =>
-          swap({ id: credential.id, expected: disabled, input: {} as LinkConnectionInput }, null),
-        true,
+        (source) =>
+          swap(
+            source,
+            { id: credential.id, expected: disabled, input: {} as LinkConnectionInput },
+            null,
+          ),
+        { bypassBusy: true },
       );
       return;
     }
     // Revocation must work during an active action; the host's credential observer aborts it.
     await change(
       context,
-      () =>
-        swap({ id: credential.id, expected: credential, input: {} as LinkConnectionInput }, null),
-      true,
+      (source) =>
+        swap(
+          source,
+          { id: credential.id, expected: credential, input: {} as LinkConnectionInput },
+          null,
+        ),
+      { bypassBusy: true },
     );
   }
   function terminal(
@@ -1197,11 +1249,11 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     authorizationDiagnosticStage("job_creation");
     for (const [id, job] of hostOAuthJobs)
       if (job.retireAt !== undefined && job.retireAt <= now()) hostOAuthJobs.delete(id);
+    const prepared = await readCurrent(context, (source) => prepare(source, input, adapter));
     if (hostOAuthJobs.size >= 32) {
       authorizationDiagnosticFailure("job_creation", "job_capacity_exceeded");
       throw new LinkServiceError(409, "busy");
     }
-    const prepared = prepare(input, adapter);
     authorizationDiagnosticStage("job_creation");
     const operation = begin(context);
     const expiresAt = new Date(now() + 10 * 60_000).toISOString();
@@ -1304,14 +1356,18 @@ export function createLinkService(options: LinkServiceOptions = {}) {
           ...candidate,
           meta: { ...candidateMeta, recordSchemaVersion: 2, linkRecipeId: "mcp-oauth" },
         };
-        await change(context, () => {
+        const assertPending = () => {
           operation.controller.signal.throwIfAborted();
           if (job.public.state !== "pending") throw new LinkServiceError(409, "cancelled");
-          swap(prepared, candidate!);
-          committed = true;
-          job.public = terminal(job.public, "connected", {
-            connection: masked(candidate!, "user"),
-          });
+        };
+        await change(context, (source) => swap(source, prepared, candidate!), {
+          afterCommit: () => {
+            committed = true;
+            job.public = terminal(job.public, "connected", {
+              connection: masked(candidate!, "user"),
+            });
+          },
+          assertPending,
         });
       } catch (error) {
         if (job.public.state === "pending") {
@@ -1331,7 +1387,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       } finally {
         if (candidate?.secret && !committed) {
           try {
-            const saved = store.resolve(candidate.id, "full");
+            const saved = await credentials.read((source) => source.resolve(candidate!.id, "full"));
             if (
               candidate.secret !== prepared.expected?.secret &&
               candidate.secret !== saved?.secret
@@ -1426,10 +1482,14 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     );
     if (input?.resourceUrl !== undefined && authModeId !== "remote-link" && !hostAdapter)
       throw new LinkServiceError(400, "invalid_request");
+    if (authModeId === "remote-link") context = remoteAuthority(context);
+    const diagnostic =
+      authModeId === "remote-link"
+        ? await refreshRemoteCatalogWithDiagnostic(context, true)
+        : undefined;
+    const catalog = await readCurrent(context, snapshotFromStore);
     if (authModeId === "remote-link") {
-      context = remoteAuthority(context);
-      const diagnostic = await refreshRemoteCatalogWithDiagnostic(context, true);
-      const state = snapshot().remoteCatalog?.state;
+      const state = catalog.remoteCatalog?.state;
       if (state !== "ready") {
         if (state === "unconfigured")
           authorizationDiagnosticFailure("remote_configuration", "remote_configuration_missing");
@@ -1442,7 +1502,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
         throw new LinkServiceError(503, "unavailable");
       }
     }
-    const provider = snapshot().providers.find((candidate) => candidate.id === input?.providerId);
+    const provider = catalog.providers.find((candidate) => candidate.id === input?.providerId);
     authorizationDiagnosticStage("mode_selection");
     const mode = provider?.authModes?.find(
       (candidate) =>
@@ -1472,11 +1532,11 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     if (mode.kind === "device-code") return startDeviceAuth(context, input);
     authorizationDiagnosticStage("job_creation");
     pruneInteractive();
+    const prepared = await readCurrent(context, (source) => prepare(source, input));
     if (interactiveJobs.size >= 32) {
       authorizationDiagnosticFailure("job_creation", "job_capacity_exceeded");
       throw new LinkServiceError(409, "busy");
     }
-    const prepared = prepare(input);
     authorizationDiagnosticStage("job_creation");
     const operation = begin(context);
     const expiresAt = now() + 10 * 60_000;
@@ -1778,7 +1838,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     let job: AuthorizationJob | undefined;
     try {
       await authorize(context);
-      const prepared = prepare(input);
+      const prepared = await readCurrent(context, (source) => prepare(source, input));
       authorizationDiagnosticStage("job_creation");
       const providerId = prepared.input.providerId;
       if (!isLocalBrowserLinkProvider(providerId))
@@ -1860,7 +1920,6 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     context: LinkOperationContext,
     input: LinkConnectionInput,
   ): Promise<LinkAuthorization> {
-    await authorize(context);
     authorizationDiagnosticStage("job_creation");
     const checkCapacity = () => {
       pruneRemoteJobs();
@@ -1886,6 +1945,24 @@ export function createLinkService(options: LinkServiceOptions = {}) {
           !input.resourceUrl))
     )
       throw new LinkServiceError(400, "invalid_request");
+    authorizationDiagnosticStage("connection_review");
+    const id =
+      input.connectionId === undefined ? `link-remote-${randomUUID()}` : safeId(input.connectionId);
+    const expected = await readCurrent(context, (store) => {
+      if (input.expectedRevision === null) {
+        const current = records(store);
+        authorizationDiagnosticStage("connection_review");
+        if (current.credentials.some((credential) => credential.id === id))
+          throw new LinkServiceError(409, "conflict");
+        return null;
+      } else {
+        const existing = reviewed(store, id, input.expectedRevision);
+        if (!isRemoteLinkCredential(existing) || existing.meta?.linkProvider !== input.providerId)
+          throw new LinkServiceError(409, "conflict");
+        return existing;
+      }
+    });
+    checkCapacity();
     const config = remoteConfiguration();
     if (!config) {
       authorizationDiagnosticFailure("remote_configuration", "remote_configuration_missing");
@@ -1900,20 +1977,6 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     if (!capabilities) {
       authorizationDiagnosticFailure("remote_catalog", "provider_capability_missing");
       throw new LinkServiceError(503, "unavailable");
-    }
-    authorizationDiagnosticStage("connection_review");
-    const id =
-      input.connectionId === undefined ? `link-remote-${randomUUID()}` : safeId(input.connectionId);
-    let expected: Credential | null = null;
-    if (input.expectedRevision === null) {
-      const current = records();
-      authorizationDiagnosticStage("connection_review");
-      if (current.credentials.some((credential) => credential.id === id))
-        throw new LinkServiceError(409, "conflict");
-    } else {
-      expected = reviewed(id, input.expectedRevision);
-      if (!isRemoteLinkCredential(expected) || expected.meta?.linkProvider !== input.providerId)
-        throw new LinkServiceError(409, "conflict");
     }
     const prepared = { id, expected, input: { ...input, label: string(input.label) } };
     authorizationDiagnosticStage("job_creation");
@@ -2000,9 +2063,11 @@ export function createLinkService(options: LinkServiceOptions = {}) {
         job.prepared.input.label,
         {
           now: now(),
-          onTokens: (minted) => {
+          onTokens: async (minted) => {
             credential = minted;
-            staged = store.stageRemoteLinkRetirement(minted, job.attempt.expiresAt + 60_000);
+            staged = await credentials.write((source) =>
+              source.stageRemoteLinkRetirement(minted, job.attempt.expiresAt + 60_000),
+            );
           },
         },
       );
@@ -2020,64 +2085,74 @@ export function createLinkService(options: LinkServiceOptions = {}) {
           return true;
         },
       };
-      await change(guarded, () => {
-        assertPending();
-        let prepared = job.prepared;
-        if (
-          options.reuseRemoteConnection &&
-          !prepared.expected &&
-          prepared.input.connectionId === undefined
-        ) {
-          // Identity comes from authenticated metadata, never a browser-supplied connection ID.
-          const current = records();
-          const matches = current.credentials.filter(
-            (entry) =>
-              !current.projectIds.has(entry.id) &&
-              isRemoteLinkCredential(entry) &&
-              entry.meta?.linkProvider === credential!.meta?.linkProvider &&
-              entry.meta?.linkRemoteIssuer === credential!.meta?.linkRemoteIssuer &&
-              entry.meta?.linkRemoteConnectionId === credential!.meta?.linkRemoteConnectionId,
-          );
-          if (matches.length > 1) throw new LinkServiceError(409, "conflict");
-          if (matches.length === 1) {
-            const expected = matches[0]!;
-            if (credential!.meta?.linkProvider === "figma") {
-              const oldGroups = expected.meta?.linkResourceGroups;
-              const newGroups = credential!.meta?.linkResourceGroups;
-              // A concurrent first connection never reviewed this saved grant.
-              // Reuse only when the newly minted authority already covers it;
-              // a local union cannot expand the remote token's file whitelist.
-              if (
-                expected.meta?.linkAccountId !== credential!.meta?.linkAccountId ||
-                oldGroups?.length !== 1 ||
-                oldGroups[0]?.id !== "files" ||
-                newGroups?.length !== 1 ||
-                newGroups[0]?.id !== "files" ||
-                oldGroups[0].items.some(
-                  (item) => !newGroups[0].items.some((next) => next.id === item.id),
-                ) ||
-                expected.meta?.linkCapabilityIds?.some(
-                  (id) => !credential!.meta?.linkCapabilityIds?.includes(id),
+      const minted = credential;
+      await change(
+        guarded,
+        (store) => {
+          let selected = minted;
+          let prepared = job.prepared;
+          if (
+            options.reuseRemoteConnection &&
+            !prepared.expected &&
+            prepared.input.connectionId === undefined
+          ) {
+            // Identity comes from authenticated metadata, never a browser-supplied connection ID.
+            const current = records(store);
+            const matches = current.credentials.filter(
+              (entry) =>
+                !current.projectIds.has(entry.id) &&
+                isRemoteLinkCredential(entry) &&
+                entry.meta?.linkProvider === selected.meta?.linkProvider &&
+                entry.meta?.linkRemoteIssuer === selected.meta?.linkRemoteIssuer &&
+                entry.meta?.linkRemoteConnectionId === selected.meta?.linkRemoteConnectionId,
+            );
+            if (matches.length > 1) throw new LinkServiceError(409, "conflict");
+            if (matches.length === 1) {
+              const expected = matches[0]!;
+              if (selected.meta?.linkProvider === "figma") {
+                const oldGroups = expected.meta?.linkResourceGroups;
+                const newGroups = selected.meta?.linkResourceGroups;
+                // A concurrent first connection never reviewed this saved grant.
+                // Reuse only when the newly minted authority already covers it;
+                // a local union cannot expand the remote token's file whitelist.
+                if (
+                  expected.meta?.linkAccountId !== selected.meta?.linkAccountId ||
+                  oldGroups?.length !== 1 ||
+                  oldGroups[0]?.id !== "files" ||
+                  newGroups?.length !== 1 ||
+                  newGroups[0]?.id !== "files" ||
+                  oldGroups[0].items.some(
+                    (item) => !newGroups[0].items.some((next) => next.id === item.id),
+                  ) ||
+                  expected.meta?.linkCapabilityIds?.some(
+                    (id) => !selected.meta?.linkCapabilityIds?.includes(id),
+                  )
                 )
-              )
-                throw new LinkServiceError(409, "conflict");
+                  throw new LinkServiceError(409, "conflict");
+              }
+              prepared = { ...prepared, id: expected.id, expected };
+              selected = { ...selected, id: expected.id, label: expected.label };
             }
-            prepared = { ...prepared, id: expected.id, expected };
-            credential = { ...credential!, id: expected.id, label: expected.label };
           }
-        }
-        swap(prepared, credential!, {
-          retireExpected: !!prepared.expected,
-          adopt: staged,
-          now: now(),
-        });
-        const connection = masked(credential!, "user");
-        committed = true;
-        job.public = terminal(job.public, "connected", { connection });
-      });
+          swap(store, prepared, selected, {
+            retireExpected: !!prepared.expected,
+            adopt: staged,
+            now: now(),
+          });
+          return selected;
+        },
+        {
+          afterCommit: (saved) => {
+            const connection = masked(saved, "user");
+            committed = true;
+            job.public = terminal(job.public, "connected", { connection });
+          },
+          assertPending,
+        },
+      );
       // Replacing the active record and retaining its previous grant is one atomic write.
       await retryRemoteCleanup();
-      if (store.remoteLinkRetirementCount()) job.public.previousGrantRevocationPending = true;
+      if (await credentials.pendingRetirements()) job.public.previousGrantRevocationPending = true;
       await authorize(context);
       return structuredClone(job.public);
     } catch (error) {
@@ -2088,7 +2163,7 @@ export function createLinkService(options: LinkServiceOptions = {}) {
       }
       // If the callback minted a grant but its destination changed, do not leave it usable remotely.
       if (staged) {
-        store.readyRemoteLinkRetirement(staged, now());
+        await credentials.write((source) => source.readyRemoteLinkRetirement(staged!, now()));
         await retryRemoteCleanup();
       } else if (credential) {
         // Storage itself failed. Best effort only: no durable write can be promised then.
@@ -2206,7 +2281,12 @@ export function createLinkService(options: LinkServiceOptions = {}) {
     jobs.clear();
   }
   return {
-    snapshot,
+    snapshot: () => {
+      if (options.credentials) throw new Error("Use snapshotAsync for asynchronous Link storage");
+      return snapshotFromStore(store);
+    },
+    snapshotAsync: () => credentials.read(snapshotFromStore),
+    snapshotFromStore,
     persistValidatedConnection,
     assertAuthorized: authorize,
     connectToken,
