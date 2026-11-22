@@ -66,6 +66,60 @@
       "commit": "b45914a2d86be678d6bb089ed9b37ba192960a75",
       "releaseWorkflow": "https://github.com/cjhyy/codeshell/actions/runs/44994619402",
       "artifactId": 14743434855
+    },
+    {
+      "timestamp": "2026-11-22T07:49:55.471Z",
+      "product": {
+        "version": "0.12.0-rc.1",
+        "electron": "45.4.1",
+        "appTreeSHA256": "758abfc46fd0d594c473f4c1d656625ed59578d3180bccd7cd81813e640ca97b"
+      },
+      "samples": [
+        {
+          "processToFirstContentfulPaintMs": 3740,
+          "navigationToFirstContentfulPaintMs": 632
+        },
+        {
+          "processToFirstContentfulPaintMs": 1151,
+          "navigationToFirstContentfulPaintMs": 200
+        },
+        {
+          "processToFirstContentfulPaintMs": 1244,
+          "navigationToFirstContentfulPaintMs": 224
+        },
+        {
+          "processToFirstContentfulPaintMs": 1190,
+          "navigationToFirstContentfulPaintMs": 244
+        },
+        {
+          "processToFirstContentfulPaintMs": 1169,
+          "navigationToFirstContentfulPaintMs": 228
+        },
+        {
+          "processToFirstContentfulPaintMs": 1194,
+          "navigationToFirstContentfulPaintMs": 212
+        },
+        {
+          "processToFirstContentfulPaintMs": 1189,
+          "navigationToFirstContentfulPaintMs": 220
+        },
+        {
+          "processToFirstContentfulPaintMs": 1167,
+          "navigationToFirstContentfulPaintMs": 200
+        },
+        {
+          "processToFirstContentfulPaintMs": 1193,
+          "navigationToFirstContentfulPaintMs": 200
+        },
+        {
+          "processToFirstContentfulPaintMs": 1277,
+          "navigationToFirstContentfulPaintMs": 312
+        }
+      ],
+      "medianMs": 1191.5,
+      "commit": "02084b3db7f18ab79602c2a8ce24b6d1e2c110c4",
+      "releaseWorkflow": "https://github.com/cjhyy/codeshell/actions/runs/44998218095",
+      "artifactId": 14744634826
     }
   ]
 }
