@@ -505,8 +505,8 @@ describe("decision prompts through the router", () => {
     expect(current.ownerSends).toEqual([]);
     expect(current.published).toEqual([]);
     expect(current.desktop).toEqual([]);
-    current.wiring.router.start();
-    expect(current.wiring.attention.getSnapshot().surfaceablePendingCount).toBe(1);
+    await current.wiring.attention.start();
+    expect((await current.wiring.attention.getSnapshot()).surfaceablePendingCount).toBe(1);
     // A code the owner never received answers nothing, and a bare number is ordinary chat.
     expect(await d.relay.reply({ message: "1", origin: OWNER_DM })).toBeUndefined();
   });

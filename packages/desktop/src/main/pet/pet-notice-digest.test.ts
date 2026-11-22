@@ -64,18 +64,6 @@ function setup(now: number, settings: NoticeRouterSettings) {
   });
   const im: Array<{ kind: string; body: string }> = [];
   const router = new PetNoticeRouter({
-    source: {
-      getSnapshot: () => ({
-        version: 1,
-        generation: 1,
-        workerState: "active",
-        observedAt: 0,
-        sessions: [],
-        pending: [],
-      }),
-      subscribe: () => () => {},
-    },
-    receipts: { has: () => false, mark: () => {} },
     now: () => clock.now,
     setTimeout: clock.setTimeout,
     clearTimeout: clock.clearTimeout,

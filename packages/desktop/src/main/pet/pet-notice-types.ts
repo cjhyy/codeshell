@@ -49,7 +49,8 @@ export interface PetAttentionOptions {
     getSnapshot(): DesktopPetProjectionSnapshot;
     subscribe(listener: (event: DesktopPetProjectionEvent) => void): () => void;
   };
-  receipts: { has(key: string): boolean; mark(key: string, state?: string): void };
+  claim(rows: import("../../shared/mimi-attention.js").AttentionReceipt[]): Promise<string[]>;
+  report(error: unknown): void;
   now?: () => number;
   setTimeout?: (callback: () => void, delay: number) => unknown;
   clearTimeout?: (timer: unknown) => void;
@@ -379,7 +380,10 @@ export interface ReplayedNotice {
   body: string;
 }
 
-export interface PetNoticeRouterOptions extends PetAttentionOptions {
+export interface PetNoticeRouterOptions extends Pick<
+  PetAttentionOptions,
+  "now" | "setTimeout" | "clearTimeout"
+> {
   /** Without a ledger the router cannot dedupe, cap or claim, so it never sends IM. */
   ledger?: NoticeLedgerPort;
   /** Defaults to "present" (desktop) when absent. */

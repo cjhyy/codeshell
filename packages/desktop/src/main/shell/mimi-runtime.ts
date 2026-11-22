@@ -217,6 +217,7 @@ export function createMimiRuntimeShell(desktopHost: NativeMimiHost) {
       isMimiSession: (sessionId) => sessionId === mimiSessionId,
       bridge,
       projection: aggregator,
+      attention: desktopHost.mimiAttention,
       longTasks: longTaskStore,
       sessionRoutes: () => sessionBridge?.routes,
       gateway: imGatewayService,
@@ -455,7 +456,7 @@ export function createMimiRuntimeShell(desktopHost: NativeMimiHost) {
       lifecycle.signal.throwIfAborted();
       await longTaskCoordinator.start();
       lifecycle.signal.throwIfAborted();
-      notices.router.start();
+      await notices.attention.start();
       // Auto-archive completed work sessions idle for 7+ days, then force a full
       // catalog rebuild. Rationale for the full pass: archiveDiskSession touches
       // state.json → bumps the session's dir mtime → the incremental

@@ -106,10 +106,14 @@ export interface PetIpcDispatcher {
 }
 
 export interface PetIpcAttention {
-  getSnapshot(): PetAttentionSnapshot;
+  getSnapshot(): PetAttentionSnapshot | Promise<PetAttentionSnapshot>;
   subscribe(listener: (event: PetAttentionEvent) => void): () => void;
-  setActiveSession(sessionId: string | null): void;
-  markReceipts(keys: readonly string[], state: "seen" | "dismissed"): void;
+  setActiveSession(sessionId: string | null, signal?: AbortSignal): void | Promise<void>;
+  markReceipts(
+    keys: readonly string[],
+    state: "seen" | "dismissed",
+    signal?: AbortSignal,
+  ): void | Promise<void>;
 }
 
 export interface PetIpcWorkInbox {
@@ -511,8 +515,10 @@ export function registerPetIpc(options: {
         throw new Error("invalid active session");
       }
       const sessionId = args[0] as string | null;
-      return afterReady(options.ready, () => {
-        options.attention!.setActiveSession(sessionId);
+      const signal = options.recordAuthority?.(_event);
+      return afterReady(options.ready, async () => {
+        signal?.throwIfAborted();
+        await options.attention!.setActiveSession(sessionId, signal);
         return { ok: true };
       });
     });
@@ -522,15 +528,18 @@ export function registerPetIpc(options: {
         args.length !== 1 ||
         !payload ||
         !Array.isArray(payload.keys) ||
-        payload.keys.some((key) => typeof key !== "string") ||
+        payload.keys.length > 1_000 ||
+        payload.keys.some((key) => typeof key !== "string" || !key.length || key.length > 4_096) ||
         (payload.state !== "seen" && payload.state !== "dismissed")
       ) {
         throw new Error("invalid attention receipt");
       }
       const keys = payload.keys as string[];
       const receiptState = payload.state as "seen" | "dismissed";
-      return afterReady(options.ready, () => {
-        options.attention!.markReceipts(keys, receiptState);
+      const signal = options.recordAuthority?.(_event);
+      return afterReady(options.ready, async () => {
+        signal?.throwIfAborted();
+        await options.attention!.markReceipts(keys, receiptState, signal);
         return { ok: true };
       });
     });

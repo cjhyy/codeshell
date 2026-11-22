@@ -1,3 +1,4 @@
+import { testAttention } from "./test-utils/test-attention.js";
 import { PetRuleStore } from "./pet-rule-store.js";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
@@ -87,23 +88,25 @@ function fixture() {
   ];
   const settings = { value: {} as Record<string, unknown> };
   const writes: Record<string, unknown>[] = [];
+  const projection: import("./pet-notice-types.js").PetAttentionOptions["source"] = {
+    getSnapshot: () => ({
+      version: 1,
+      generation: 1,
+      workerState: "active",
+      sessions: [session(SID)],
+      pending: [],
+      observedAt: NOW,
+      workMemorySegments: [],
+    }),
+    subscribe: () => () => undefined,
+  };
   const created = wirePetNotices({
     userDataDir: dir,
     ledger: new PetNoticeLedger({ path: join(dir, "pet", "notices.json"), now: () => clock }),
     rules: new PetRuleStore({ path: join(dir, "pet", "rules.json"), now: () => clock }),
     bridge: { setHostActionHandler: () => () => undefined },
-    projection: {
-      getSnapshot: () => ({
-        version: 1,
-        generation: 1,
-        workerState: "active",
-        sessions: [session(SID)],
-        pending: [],
-        observedAt: NOW,
-        workMemorySegments: [],
-      }),
-      subscribe: () => () => undefined,
-    },
+    projection,
+    attention: testAttention(projection, () => clock),
     longTasks: { activeForSession: () => undefined, getSnapshot: () => ({ tasks: [] }) },
     sessionRoutes: () => ({ notifyRoutesForSession: async () => [] }),
     gateway: {

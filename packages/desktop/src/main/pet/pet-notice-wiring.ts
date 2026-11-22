@@ -24,7 +24,6 @@ import { createTaskClosureAdapter } from "./pet-notice-task-closure.js";
 import { errorText } from "./pet-notice-types.js";
 import type { PetNoticeWiring, PetNoticeWiringDeps } from "./pet-notice-wiring-types.js";
 import { createPresenceDetector } from "./pet-presence.js";
-import { PetReceiptStore } from "./pet-receipt-store.js";
 import {
   goalPauseDedupeKey,
   PetSessionRuleWatcher,
@@ -63,7 +62,6 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
   const ledger = deps.ledger;
   // Each notice's files are copied here when it is recorded, so a resend sends the same bytes.
   const mediaStore = new PetNoticeMediaStore({ root: join(petDir, "notice-media"), log });
-  const receipts = new PetReceiptStore(join(petDir, "attention-receipts.json"), now);
   const views = new SessionViewTracker();
   const settings = createNoticeSettings({ readSettings: () => deps.readSettings(), now, log });
   let disposed = false;
@@ -113,8 +111,6 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
   };
 
   const router = new PetNoticeRouter({
-    source: deps.projection,
-    receipts,
     now,
     ledger,
     presence,
@@ -268,7 +264,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
   });
   const removeHostAction = deps.bridge.setHostActionHandler(PET_RULE_UPSERT_ACTION, upsertRule);
 
-  const ready: Promise<void> = Promise.all([ruleStore.load(), ledger.load(), receipts.load()])
+  const ready: Promise<void> = Promise.all([ruleStore.load(), ledger.load()])
     .then(() => undefined)
     .catch((error) => log("pet.notice.load_failed", { error: errorText(error) }));
   // In the background: a slow resend (up to the IM timeout) must not hold up
@@ -361,8 +357,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     ruleStore,
     watcher,
     ledger,
-    receipts,
-    attention: createNoticeAttention(router, views, now),
+    attention: createNoticeAttention(deps.attention, views, now),
     ready,
     observeSessionOutcomes(sessionId, outcomes) {
       if (outcomes.length === 0) return;

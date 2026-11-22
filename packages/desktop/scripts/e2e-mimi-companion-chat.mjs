@@ -149,6 +149,11 @@ try {
     briefs: { morning: { sentAt: expiredAt, day: localDay } },
     heartbeat: { day: localDay, lastAt: expiredAt, judged: 8, said: 4, seen: ["fixture"] },
   });
+  const bellFile = join(isolated.userDataDir, "pet", "attention-receipts.json");
+  const bellRows = async () => JSON.parse(await readFile(bellFile, "utf8"));
+  const oldBell = "local-user\0old-work\0old-request\0pending";
+  const freshBell = "local-user\0fresh-work\0fresh-request\0pending";
+  await put(bellFile, [{ key: oldBell, state: "suppressed-active", at: 17 }]);
   const routesFile = join(isolated.userDataDir, "pet", "conversation-session-routes.json");
   const boundId = "synthetic-session-route";
   await put(routesFile, {
@@ -808,6 +813,16 @@ try {
     }
   };
   await verifyQuota();
+  await main.evaluate(
+    async (key) => window.codeshell.pet.markAttentionReceipt([key], "seen"),
+    freshBell,
+  );
+  const beforeBell = await bellRows();
+  assert.deepEqual(
+    beforeBell.find((row) => row.key === oldBell),
+    { key: oldBell, state: "suppressed-active", at: 17 },
+  );
+  assert.equal(beforeBell.find((row) => row.key === freshBell).state, "seen");
   const completedWakes = await recordedWakes();
   assert.deepEqual(
     completedWakes.map((wake) => wake?.status),
@@ -928,6 +943,23 @@ try {
     };
   });
   assert.deepEqual(restoredRule, chosenRule);
+  await main.evaluate(
+    async (key) => window.codeshell.pet.markAttentionReceipt([key], "dismissed"),
+    freshBell,
+  );
+  const afterBell = await bellRows();
+  assert.deepEqual(
+    afterBell.find((row) => row.key === oldBell),
+    beforeBell.find((row) => row.key === oldBell),
+  );
+  assert.deepEqual(
+    afterBell.filter((row) => row.key === freshBell).map((row) => row.state),
+    ["dismissed"],
+  );
+  receipt.checks.push(
+    "the replacement Host preserves legacy attention suppressions and updates the same bell receipt",
+  );
+
   await verifyQuota();
   receipt.checks.push(
     "an existing brief day and exhausted heartbeat quotas survive Host replacement",

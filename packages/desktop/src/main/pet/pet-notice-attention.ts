@@ -1,5 +1,4 @@
 import type { PetIpcAttention } from "./pet-ipc.js";
-import type { PetNoticeRouter } from "./pet-notice-router.js";
 
 const MAX_VIEWED_SESSIONS = 500;
 
@@ -36,17 +35,28 @@ export class SessionViewTracker {
 
 /** The router as pet IPC (the bell) sees it; also records which Session the owner is viewing. */
 export function createNoticeAttention(
-  router: Pick<PetNoticeRouter, "getSnapshot" | "subscribe" | "setActiveSession" | "markReceipts">,
+  owner: PetIpcAttention & { start(): void | Promise<void> },
   views: SessionViewTracker,
   now: () => number,
-): PetIpcAttention {
+) {
+  let unsubscribeFocus: (() => void) | undefined;
   return {
-    getSnapshot: () => router.getSnapshot(),
-    subscribe: (listener) => router.subscribe(listener),
-    setActiveSession: (sessionId) => {
+    start: () => owner.start(),
+    getSnapshot: () => owner.getSnapshot(),
+    subscribe: (listener: Parameters<PetIpcAttention["subscribe"]>[0]) => owner.subscribe(listener),
+    setActiveSession: (sessionId: string | null, signal?: AbortSignal) => {
+      signal?.throwIfAborted();
+      unsubscribeFocus?.();
+      unsubscribeFocus = undefined;
       views.setActive(sessionId, now());
-      router.setActiveSession(sessionId);
+      if (signal && sessionId) {
+        const clear = () => views.setActive(null, now());
+        signal.addEventListener("abort", clear, { once: true });
+        unsubscribeFocus = () => signal.removeEventListener("abort", clear);
+      }
+      return owner.setActiveSession(sessionId, signal);
     },
-    markReceipts: (keys, state) => router.markReceipts(keys, state),
+    markReceipts: (...args: Parameters<PetIpcAttention["markReceipts"]>) =>
+      owner.markReceipts(...args),
   };
 }

@@ -1,3 +1,4 @@
+import { testAttention } from "./test-attention.js";
 import { PetNoticeLedger } from "../pet-notice-ledger.js";
 import { PetRuleStore } from "../pet-rule-store.js";
 import { expect } from "bun:test";
@@ -208,6 +209,13 @@ export function harness(overrides: Partial<PetNoticeWiringDeps> = {}): Harness {
     workMemorySegments: [],
   });
   const deriver = new SessionOutcomeDeriver({ now: () => env.clock });
+  const projection: import("../pet-notice-types.js").PetAttentionOptions["source"] = {
+    getSnapshot: snapshot,
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  };
   const wiring = wirePetNotices({
     userDataDir: env.dir,
     ledger: new PetNoticeLedger({
@@ -224,13 +232,8 @@ export function harness(overrides: Partial<PetNoticeWiringDeps> = {}): Harness {
         };
       },
     },
-    projection: {
-      getSnapshot: snapshot,
-      subscribe: (listener) => {
-        listeners.add(listener);
-        return () => listeners.delete(listener);
-      },
-    },
+    projection,
+    attention: testAttention(projection, () => env.clock),
     longTasks: {
       activeForSession: (id) =>
         tasks.find(

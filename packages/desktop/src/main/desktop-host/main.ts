@@ -1,4 +1,5 @@
 import { nativeMimiRules } from "./mimi-rules-client.js";
+import { NativeMimiAttention } from "./mimi-attention-client.js";
 import { NativeMimiProjection } from "./mimi-projection-client.js";
 import { NativeMimiDispatch } from "./mimi-dispatch-client.js";
 import { NativeMimiTasks } from "./mimi-task-client.js";
@@ -80,6 +81,7 @@ export function createDesktopHost(
         bindAutomation();
         bindMimiTasks();
         bindMimiDispatch();
+        mimiAttention.reconnect();
         mimiProjection.reconnect();
         mimiRules.invalidate();
         const { port1, port2 } = new MessageChannelMain();
@@ -102,6 +104,7 @@ export function createDesktopHost(
         automation.disconnect();
         mimiTasks.disconnect();
         mimiDispatch.disconnect();
+        mimiAttention.disconnect();
         mimiProjection.disconnect();
         remote.disconnect();
         im.disconnect();
@@ -186,6 +189,9 @@ export function createDesktopHost(
     }
   }
   const mimiRules = nativeMimiRules(supervisor.callBusiness.bind(supervisor));
+  const mimiAttention = new NativeMimiAttention(supervisor.callBusiness.bind(supervisor),
+    error => dlog('main', 'pet.attention.refresh_failed', {error: String(error)}));
+  supervisor.mimiAttentionEvent = event => mimiAttention.receive(event);
   const mimiProjection = new NativeMimiProjection(
     supervisor.callBusiness.bind(supervisor),
     (error) => dlog("main","pet.projection.reconcile.failed",{ error:String(error) }),
@@ -300,6 +306,7 @@ export function createDesktopHost(
     externalProviders: externalProviderFactories(openExternalProvider),
     inferExternalMemory: inferExternalMemory(openExternalProvider),
     mimiDispatch,
+    mimiAttention,
     mimiProjection,
     mimiRules: mimiRules.rules,
     mimiTasks,
@@ -449,6 +456,7 @@ export function createDesktopHost(
       supervisor.setDeleting(sessionId, deleting),
     dispose() {
       mimiDispatch.disconnect();
+      mimiAttention.stop();
       mimiTasks.stop();
       providerPorts.disconnect();
       terminals?.disconnect();

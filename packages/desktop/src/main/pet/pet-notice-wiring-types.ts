@@ -32,7 +32,6 @@ import type {
   NoticeSubmission,
   PetAttentionOptions,
 } from "./pet-notice-types.js";
-import type { PetReceiptStore } from "./pet-receipt-store.js";
 import type { PetRuleAccess } from "../../shared/mimi-rules.js";
 import type { NoticeRule } from "./pet-rule-store.js";
 import type { PetSessionRuleWatcher } from "./pet-session-rule-watcher.js";
@@ -44,6 +43,7 @@ export interface PetNoticeWiringDeps {
   userDataDir: string;
   rules: PetRuleAccess;
   ledger: MimiNoticeLedger;
+  attention: PetIpcAttention & { start(): void | Promise<void> };
   bridge: { setHostActionHandler(action: string, handler: HostActionHandler): () => void };
   /** The pet projection (PetStateAggregator): attention source and Session facts. */
   projection: PetAttentionOptions["source"];
@@ -118,9 +118,8 @@ export interface PetNoticeWiring {
   ruleStore: PetRuleAccess;
   watcher: PetSessionRuleWatcher;
   ledger: MimiNoticeLedger;
-  receipts: PetReceiptStore;
   /** The router as pet IPC sees it; also records which Session the owner is viewing. */
-  attention: PetIpcAttention;
+  attention: PetIpcAttention & { start(): void | Promise<void> };
   /**
    * Stores loaded. Startup recovery then runs in the background; the
    * router's submit, replay and digest flush wait for it themselves.

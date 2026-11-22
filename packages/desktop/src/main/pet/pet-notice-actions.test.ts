@@ -46,18 +46,6 @@ function harness(options: { imAccepted?: boolean } = {}) {
   const im: Array<{ body: string; nonDirect?: string }> = [];
   const desktop: string[] = [];
   const router = new PetNoticeRouter({
-    source: {
-      getSnapshot: () => ({
-        version: 1,
-        generation: 1,
-        workerState: "active",
-        observedAt: 0,
-        sessions: [],
-        pending: [],
-      }),
-      subscribe: () => () => {},
-    },
-    receipts: { has: () => false, mark: () => {} },
     now: () => clock.now,
     ledger,
     presence: { isPresent: () => false },

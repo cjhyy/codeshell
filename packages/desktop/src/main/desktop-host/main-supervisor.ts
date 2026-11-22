@@ -44,6 +44,7 @@ export class DesktopHostSupervisor {
   private readonly restartTimes: number[] = [];
   private readonly readyWaiters = new Set<() => void>();
   mimiRulesChanged?: () => void;
+  mimiAttentionEvent?: (event: import('../../shared/mimi-attention.js').PetAttentionEvent) => void;
   mimiProjectionUpdate?: (
     update: import("../../shared/mimi-projection.js").MimiProjectionUpdate,
   ) => void;
@@ -166,6 +167,8 @@ export class DesktopHostSupervisor {
         });
       } else if (message?.type === "mimi-rules-changed" && this.ready) {
         this.mimiRulesChanged?.();
+      } else if (message?.type === "mimi-attention" && this.ready) {
+        this.mimiAttentionEvent?.(message.event);
       } else if (message?.type === "mimi-projection" && this.ready) {
         this.mimiProjectionUpdate?.(message.update);
       } else if (

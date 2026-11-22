@@ -5,6 +5,7 @@ import { goalRecoveryOperations } from "../../host/composition/goal-recovery.js"
 import { hostedMimiRuleScheduler } from "../../host/composition/mimi-rule-scheduler.js";
 import type { MimiRuleReply } from "../../shared/mimi-rules.js";
 import { hostRuntimePath } from "../../host/runtime-path.js";
+import { hostedMimiAttention } from "../../host/composition/mimi-attention.js";
 import { HostedMimiProjection } from "../../host/composition/mimi-projection.js";
 import type { MimiRecords } from "../../shared/mimi-records.js";
 import { hostedMimiFollowUps } from "../../host/composition/mimi-follow-ups.js";
@@ -166,6 +167,12 @@ const projection = new HostedMimiProjection({
   publish: (update) => parent.postMessage({type:"mimi-projection",update}),
   report: (operation,error) => console.warn("[Desktop Host] Mimi projection",operation,error),
 });
+const attention = hostedMimiAttention(projection, async (call, permit) => {
+  const result = await (await storage).request<string[]>("mimi/attentionReceipts", {call, permit});
+  if (!result) throw Error("Mimi attention storage unavailable");
+  return result;
+}, (event) => parent.postMessage({type: "mimi-attention", event}),
+  (error) => console.warn("[Desktop Host] Mimi attention", error));
 historyWorker.onExternalActivityChanged = () => projection.activityChanged();
 const profileLibrary = hostedProfileLibrary(storage, historyWorker, (options) => catalog.list(options));
 const activities = hostedActivityHistory(historyWorker);
@@ -262,6 +269,7 @@ const business = new HostBusinessCalls({
   },
   ...approvals.native,
   "mimi/tasks": (command, grant) => mimiTasks.run(command, grant),
+  ...attention.methods,
   ...segments,
   "mimi/proactiveState":async(call,grant)=>{
     const db=await storage;grant.assertCurrent();
@@ -469,6 +477,7 @@ parent.on("message", ({ data, ports }) => {
     terminals.close();
     runKeys.close();
     runOperations.close();
+    attention.close();
     business.close();
     void scheduler
       .close()

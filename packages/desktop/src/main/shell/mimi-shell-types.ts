@@ -49,6 +49,7 @@ export type NativeMimiHost = Pick<
   | "callBusiness"
   | "documentSignal"
   | "mimiDispatch"
+  | "mimiAttention"
   | "mimiProjection"
   | "mimiRecordListeners"
   | "mimiRules"
