@@ -8,7 +8,7 @@ type ApprovalMethods = Pick<CodeshellApi, "approvePluginHooks" | "revokePluginHo
 describe("preload plugin hook approval contract", () => {
   test("wires explicit approve and revoke IPC methods", () => {
     const preload = readFileSync(join(import.meta.dir, "index.ts"), "utf-8");
-    const main = readFileSync(join(import.meta.dir, "..", "main", "index.ts"), "utf-8");
+    const main = readFileSync(join(import.meta.dir, "..", "main", "plugin-library-ipc.ts"), "utf-8");
     const methods: Array<keyof ApprovalMethods> = ["approvePluginHooks", "revokePluginHooks"];
 
     for (const method of methods) expect(preload).toContain(`${method}:`);

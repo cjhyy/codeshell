@@ -1,3 +1,4 @@
+import { InvalidParams } from "../../main/desktop-host/server.js";
 import { Worker } from "node:worker_threads";
 import { invalidateSkillCache } from "@cjhyy/code-shell-core";
 import type { MarketplaceOperations } from "../../shared/plugin-library.js";
@@ -105,6 +106,25 @@ export function hostedMarketplace(
   return {
     operations,
     reads: [
+      businessRead(
+        "plugins/hooks",
+        (input) => {
+          const { disabledPlugins } = businessArguments(input, ["disabledPlugins"]);
+          if (
+            disabledPlugins !== undefined &&
+            (!Array.isArray(disabledPlugins) || disabledPlugins.some((x) => typeof x !== "string"))
+          )
+            throw new InvalidParams();
+          return { disabledPlugins: disabledPlugins as string[] | undefined };
+        },
+        (input) => operations["plugins/hooks"](input),
+      ),
+      businessRead("mcp/pluginTrust", noBusinessArguments, (input) =>
+        operations["mcp/pluginTrust"](input),
+      ),
+      businessRead("marketplace/recommended", noBusinessArguments, (input) =>
+        operations["marketplace/recommended"](input),
+      ),
       businessRead("marketplace/list", noBusinessArguments, (input) =>
         operations["marketplace/list"](input),
       ),

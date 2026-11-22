@@ -19,12 +19,10 @@ export function createConfigurationReads(
     return Promise.reject(new Error("Configuration reads require the workbench Host"));
   }
   return {
-    listMarketplaces: () =>
-      read("marketplace/list", {}, () => ipcRenderer.invoke("marketplace:list")),
-    loadMarketplace: (name: string) =>
-      read("marketplace/load", { name }, () => ipcRenderer.invoke("marketplace:load", name)),
-    listPluginInstallJobs: () =>
-      read("marketplace/jobs", {}, () => ipcRenderer.invoke("plugins:installJobs")),
+    listMarketplaces: () => read("marketplace/list", {}),
+    loadMarketplace: (name: string) => read("marketplace/load", { name }),
+    listRecommendedMarketplaces: () => read("marketplace/recommended", {}),
+    listPluginInstallJobs: () => read("marketplace/jobs", {}),
     listProfiles: (target: RendererConfigurationTarget | null) =>
       read("profiles/list", { target }, () => ipcRenderer.invoke("profiles:list", target)),
     listProfileCatalog: () =>

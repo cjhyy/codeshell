@@ -22,6 +22,10 @@ type Plugins = typeof import("../main/plugins-service.js");
 type Result<F extends (...args: any[]) => unknown> = Awaited<ReturnType<F>>;
 type Empty = Record<string, never>;
 export interface MarketplaceReads {
+  "marketplace/recommended": {
+    params: Empty;
+    result: Result<Market["listRecommendedMarketplacesForUi"]>;
+  };
   "marketplace/list": { params: Empty; result: Result<Market["listMarketplacesForUi"]> };
   "marketplace/load": { params: { name: string }; result: Result<Market["loadMarketplaceForUi"]> };
   "marketplace/jobs": { params: Empty; result: Result<Market["listPluginInstallJobsForUi"]> };
@@ -46,10 +50,6 @@ export interface MarketplaceChanges {
     result: Result<(typeof import("@cjhyy/code-shell-core"))["listPluginMcpTrust"]>;
   };
   "marketplace/bootstrap": { input: { resourcesDir: string }; result: void };
-  "marketplace/recommended": {
-    input: Empty;
-    result: Result<Market["listRecommendedMarketplacesForUi"]>;
-  };
   "marketplace/add": {
     input: { source: string };
     result: Result<Market["addMarketplaceFromInput"]>;

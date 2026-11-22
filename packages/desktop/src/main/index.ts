@@ -2,7 +2,7 @@ import { createMimiPresenceShell } from "./shell/mimi-presence.js";
 import { createPanelCookieAdapter, registerPanelWindowShell } from "./shell/panel-app.js";
 import { petRemoteMemoryContext } from "./pet/pet-memory-host.js";
 import { mimiTurnStores } from "../shared/mimi-turn-storage.js";
-import { reviewedLocalPlugins } from "./reviewed-local-plugins.js";
+import { registerPluginLibraryIpc } from "./plugin-library-ipc.js";
 import { registerHostedWechatLogin } from "./desktop-host/wechat-login-client.js";
 import { registerConfigurationSettingsIpc } from "./configuration-settings-ipc.js";
 import type { SettingsChange } from "../shared/settings-change.js";
@@ -30,8 +30,7 @@ import { registerRemoteLinkIpc } from "./remote-link-ipc.js";
 import { linkAccountExecutionOptions } from "./link-account-access.js";
 import { registerOperationResolutionHost } from "./operation-resolution-host.js";
 /**
- * Electron main entry — broker between renderer (ipcMain) and the
- * agent worker subprocess (stdio JSON-RPC). See agent-bridge.ts.
+ * Electron Main owns windows, native authority and the Desktop Host lifecycle.
  */
 
 import {
@@ -2426,30 +2425,6 @@ const { assertRendererSessionAccess, deletingBrowserSessions, rendererBrowserSes
     bridge: () => bridge,
     chromeNativeRegistration: () => chromeNativeRegistration,
   });
-ipcMain.handle(
-  "plugins:createAutomationFromTemplate",
-  async (_e, installKey: string, templateId: string, expectedRevision: string, cwd?: string) => {
-    if (
-      typeof installKey !== "string" ||
-      typeof templateId !== "string" ||
-      typeof expectedRevision !== "string"
-    ) {
-      throw new Error("installKey, templateId and expectedRevision are required");
-    }
-    if (installKey.length > 512 || templateId.length > 512 || expectedRevision.length > 512) {
-      throw new Error("plugin automation identifiers are too long");
-    }
-    return cron.call(
-      "template",
-      { installKey, templateId, expectedRevision, workspace: { cwd } },
-      desktopHost.documentSignal(_e),
-    );
-  },
-);
-ipcMain.handle("plugins:uninstall",(event,pluginName,marketplaceName)=>desktopHost.callBusiness("marketplace/uninstall",{pluginName,marketplaceName},desktopHost.documentSignal(event)));
-ipcMain.handle("plugins:uninstallLocal",(event,name:string)=>desktopHost.callBusiness("plugins/uninstallLocal",{name},desktopHost.documentSignal(event)));
-ipcMain.handle("plugins:update",(event,installKey)=>desktopHost.callBusiness("marketplace/updatePlugin",{installKey},desktopHost.documentSignal(event)));
-ipcMain.handle("plugins:checkUpdate",(event,name:string)=>desktopHost.callBusiness("plugins/checkUpdate",{name},desktopHost.documentSignal(event)));
 // Is a usable git binary available (PATH, or the configured git.path)? The
 // marketplace UI uses this to show an "install Git" banner up front instead of
 // only after a clone fails.
@@ -2467,19 +2442,7 @@ ipcMain.handle("git:check", async () => {
 });
 
 registerSpeechIpc();
-ipcMain.handle("marketplace:list",(event)=>desktopHost.callBusiness("marketplace/list",{},desktopHost.documentSignal(event)));
-ipcMain.handle("marketplace:load",(event,name)=>desktopHost.callBusiness("marketplace/load",{name},desktopHost.documentSignal(event)));
-ipcMain.handle("marketplace:recommended",(event)=>desktopHost.callBusiness("marketplace/recommended",{},desktopHost.documentSignal(event)));
-ipcMain.handle("marketplace:add",(event,source)=>desktopHost.callBusiness("marketplace/add",{source},desktopHost.documentSignal(event)));
-ipcMain.handle("marketplace:addRecommended",(event,id)=>desktopHost.callBusiness("marketplace/addRecommended",{id},desktopHost.documentSignal(event)));
-ipcMain.handle("marketplace:remove",(event,name)=>desktopHost.callBusiness("marketplace/remove",{name},desktopHost.documentSignal(event)));
-ipcMain.handle("marketplace:refresh",(event,name)=>desktopHost.callBusiness("marketplace/refresh",{name},desktopHost.documentSignal(event)));
-ipcMain.handle("plugins:installJobs",(event)=>desktopHost.callBusiness("marketplace/jobs",{},desktopHost.documentSignal(event)));
-ipcMain.handle("plugins:install",(event,pluginName,marketplaceName)=>desktopHost.callBusiness("marketplace/install",{pluginName,marketplaceName},desktopHost.documentSignal(event)));
-ipcMain.handle("plugins:retryInstallJob",(event,id)=>desktopHost.callBusiness("marketplace/retry",{id},desktopHost.documentSignal(event)));
-const localPluginReviews=reviewedLocalPlugins(desktopHost.callBusiness);
-ipcMain.handle("plugins:previewLocal",(event,input)=>localPluginReviews.preview(input,desktopHost.documentSignal(event)));
-ipcMain.handle("plugins:installLocal",(event,input)=>localPluginReviews.install(input,desktopHost.documentSignal(event)));
+registerPluginLibraryIpc(desktopHost, cron);
 ipcMain.handle("themes:list", async () => {
   const themes = await listInstalledThemes();
   return themes.map(installedThemeToPack);
@@ -2531,31 +2494,6 @@ registerAttachmentsIpc({
 });
 registerAgentsMediaIpc({ host: desktopHost, mainWindows, mediaPreviewService });
 registerSkillsMcpIpc({ host: desktopHost, getMcpOAuthService });
-ipcMain.handle("hooks:approvePlugin", async (event, installKey: string) => {
-  if (typeof installKey !== "string" || !installKey) {
-    throw new Error("hooks:approvePlugin requires installKey");
-  }
-  return desktopHost.callBusiness("plugins/approveHooks", {installKey}, desktopHost.documentSignal(event));
-});
-ipcMain.handle("hooks:revokePlugin", async (event, installKey: string) => {
-  if (typeof installKey !== "string" || !installKey) {
-    throw new Error("hooks:revokePlugin requires installKey");
-  }
-  return desktopHost.callBusiness("plugins/revokeHooks", {installKey}, desktopHost.documentSignal(event));
-});
-ipcMain.handle("mcp:approvePlugin", async (event, installKey: string) => {
-  if (typeof installKey !== "string" || !installKey) {
-    throw new Error("mcp:approvePlugin requires installKey");
-  }
-  return desktopHost.callBusiness("plugins/approveMcp", {installKey}, desktopHost.documentSignal(event));
-});
-ipcMain.handle("mcp:revokePlugin", async (event, installKey: string) => {
-  if (typeof installKey !== "string" || !installKey) {
-    throw new Error("mcp:revokePlugin requires installKey");
-  }
-  return desktopHost.callBusiness("plugins/revokeMcp", {installKey}, desktopHost.documentSignal(event));
-});
-
 registerModelCatalogIpc(desktopHost);
 ipcMain.handle("updater:check", async () => checkForUpdate());
 ipcMain.handle("updater:download", async () => downloadUpdate());

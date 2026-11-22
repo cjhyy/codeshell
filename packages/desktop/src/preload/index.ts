@@ -1230,7 +1230,6 @@ contextBridge.exposeInMainWorld("codeshell", {
     reusedCredentialCatalogId?: string;
   }> => ipcRenderer.invoke("stt:describe", cwd),
   ensureMicAccess: (): Promise<{ granted: boolean }> => ipcRenderer.invoke("stt:ensureMicAccess"),
-  listRecommendedMarketplaces: () => ipcRenderer.invoke("marketplace:recommended"),
   addMarketplace: (input: string) => ipcRenderer.invoke("marketplace:add", input),
   addRecommendedMarketplace: (id: string) => ipcRenderer.invoke("marketplace:addRecommended", id),
   removeMarketplace: (name: string) => ipcRenderer.invoke("marketplace:remove", name),
