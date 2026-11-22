@@ -253,11 +253,18 @@ utilityProcess.fork = function (...args) {
   application = await launchCodeShellElectron({
     appDir,
     ...isolated,
-    env: { ...fixture.env, ...(process.platform !== "win32" && { SHELL: loginShell }), CODESHELL_E2E_MOCK_KEYCHAIN: "1" },
+    env: { ...fixture.env, ...(process.platform !== "win32" && { SHELL: loginShell }) },
     mainEntry: fixture.mainEntry,
     mainBootstrap: bootstrap,
     runtimeTimeoutMs: 90_000,
   });
+  if (process.platform === "linux" && process.env.CODESHELL_LINUX_KEYRING_REFERENCE) {
+    assert.equal(
+      await application.evaluate(({ app }) => app.commandLine.getSwitchValue("password-store")),
+      "gnome-libsecret",
+      "The workbench must use the private SecretService selected by the Linux fixture",
+    );
+  }
   const first = await findCodeShellWindow(application);
   await first.waitForFunction(() => performance.getEntriesByName("first-contentful-paint", "paint").length > 0);
   const claimId = "new-workbench";
