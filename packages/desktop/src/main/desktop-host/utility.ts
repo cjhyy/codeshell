@@ -1,3 +1,5 @@
+import { hostedMimiRuleScheduler } from "../../host/composition/mimi-rule-scheduler.js";
+import type { MimiRuleReply } from "../../shared/mimi-rules.js";
 import { HostedMimiProjection } from "../../host/composition/mimi-projection.js";
 import type { MimiRecords } from "../../shared/mimi-records.js";
 import { hostedMimiFollowUps } from "../../host/composition/mimi-follow-ups.js";
@@ -125,6 +127,14 @@ const automation = new HostAutomationRuns({
   drain: () => output.drain(),
 });
 const scheduler = new HostScheduler(schedulerPorts.port1, automation);
+const ruleScheduler = hostedMimiRuleScheduler({
+  petDir: join(dirname(process.argv[2]), "pet"),
+  rule: (call) => mimiBusiness("mimi/rules", call) as Promise<MimiRuleReply>,
+  cron: (command) => mimiBusiness("automation/command", command),
+  fire: (...args) => scheduler.fireRule(...args),
+  report: (event, error) => console.warn("[Desktop Host]", event, error),
+});
+scheduler.rules = ruleScheduler.coordinator;
 // Link-backed source definitions are validated against this process-local registry.
 installDefaultLinkProviders();
 const historyWorker = new ActivityHistoryWorker(
@@ -166,7 +176,7 @@ const pluginCommandsChanged=(requestId:string)=>parent.postMessage({
 const skills=hostedSkills(new URL("./skill-worker.mjs",import.meta.url),pluginCommandsChanged);
 const marketplace=hostedMarketplace(new URL("./marketplace-worker.mjs",import.meta.url),jobs=>parent.postMessage({type:"plugin-jobs",jobs}),pluginCommandsChanged);
 async function mimiBusiness(
-  method: "mimi/tasks" | "mimi/records" | "mimi/turnStorage",
+  method: "mimi/tasks" | "mimi/records" | "mimi/turnStorage" | "mimi/rules" | "automation/command",
   input: unknown,
   signal?: AbortSignal,
 ) {
@@ -243,6 +253,7 @@ const business = new HostBusinessCalls({
   ...approvals.native,
   "mimi/tasks": (command, grant) => mimiTasks.run(command, grant),
   ...segments,
+  "mimi/ruleScheduler": (command) => ruleScheduler.run(command),
   "mimi/rules": async (call, grant) => {
     const db = await storage;
     grant.assertCurrent();
@@ -251,6 +262,10 @@ const business = new HostBusinessCalls({
       { call, permit: grant.permit },
     );
     if (!reply) throw Error("Mimi rule storage unavailable");
+    if (reply.ok && reply.changed) {
+      ruleScheduler.changed();
+      parent.postMessage({ type: "mimi-rules-changed" });
+    }
     return reply;
   },
   "mimi/renderReply": (input, grant) =>
@@ -410,6 +425,7 @@ parent.on("message", ({ data, ports }) => {
 
   if (isDesktopHostControl(data) && data.type === "shutdown") {
     stopping = true;
+    ruleScheduler.coordinator.stop();
     closeRemoteTerminals?.();
     terminals.close();
     runKeys.close();

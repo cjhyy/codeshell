@@ -43,7 +43,10 @@ export class DesktopHostSupervisor {
   private cancelTimer?: () => void;
   private readonly restartTimes: number[] = [];
   private readonly readyWaiters = new Set<() => void>();
-  mimiProjectionUpdate?: (update: import("../../shared/mimi-projection.js").MimiProjectionUpdate) => void;
+  mimiRulesChanged?: () => void;
+  mimiProjectionUpdate?: (
+    update: import("../../shared/mimi-projection.js").MimiProjectionUpdate,
+  ) => void;
   readonly mimiRecordListeners = new Set<
     (domain: import("../../shared/mimi-records.js").MimiRecordDomain) => void
   >();
@@ -53,7 +56,7 @@ export class DesktopHostSupervisor {
   private readonly owners = new Map<string, number>();
   private sequence = 0;
   readonly projectRegistryListeners = new Set<(projects: LocalProject[]) => Promise<void>>();
-  pluginJobsChanged?:(jobs:PluginInstallJobDTO[])=>void;
+  pluginJobsChanged?: (jobs: PluginInstallJobDTO[]) => void;
   wechatEvent?: (event: WechatLoginEvent) => void;
   settingsCommitted?: (effects: SettingsChange) => Promise<void>;
   private readonly reads = new Map<
@@ -132,9 +135,13 @@ export class DesktopHostSupervisor {
         if (message.error)
           read.reject(Object.assign(new Error(message.error.message), message.error));
         else read.resolve(read.effects ? read.effects.then(() => message.result) : message.result);
-      } else if (message?.type === "git-root-observed" && this.ready && typeof message.root === "string") {
+      } else if (
+        message?.type === "git-root-observed" &&
+        this.ready &&
+        typeof message.root === "string"
+      ) {
         this.knownGitRoots.add(message.root);
-      } else if(message?.type==="plugin-jobs" && this.ready && Array.isArray(message.jobs)){
+      } else if (message?.type === "plugin-jobs" && this.ready && Array.isArray(message.jobs)) {
         this.pluginJobsChanged?.(message.jobs);
       } else if (message?.type === "wechat-login-event" && this.ready) {
         this.wechatEvent?.(message.event);
@@ -156,12 +163,16 @@ export class DesktopHostSupervisor {
             [...this.projectRegistryListeners].map((notify) => notify(message.projects)),
           );
         });
+      } else if (message?.type === "mimi-rules-changed" && this.ready) {
+        this.mimiRulesChanged?.();
       } else if (message?.type === "mimi-projection" && this.ready) {
         this.mimiProjectionUpdate?.(message.update);
       } else if (
         message?.type === "mimi-records-changed" &&
         this.ready &&
-        (message.domain === "memories" || message.domain === "journal" || message.domain === "work-inbox")
+        (message.domain === "memories" ||
+          message.domain === "journal" ||
+          message.domain === "work-inbox")
       ) {
         for (const listener of this.mimiRecordListeners) listener(message.domain);
       } else if (message?.type === "automation-notice" && this.ready) {
@@ -303,21 +314,57 @@ export class DesktopHostSupervisor {
     if (!this.ready || this.stopped) await this.waitUntilReady(signal);
     // Model-backed work owns its cancellation and can outlast a normal data read.
     const waitsForRun =
-      method === "mimi/tasks" && ["start", "control", "clearTerminal", "clearTerminalTask", "reconcileNow", "startDelegation", "watchSession", "observeSessionEvent"].includes((input as {method:string}).method) ||
-      method === "mimi/followUps" || method === "mimi/openFollowUps" || method === "mimi/handleFollowUp" ||
+      (method === "mimi/tasks" &&
+        [
+          "start",
+          "control",
+          "clearTerminal",
+          "clearTerminalTask",
+          "reconcileNow",
+          "startDelegation",
+          "watchSession",
+          "observeSessionEvent",
+        ].includes((input as { method: string }).method)) ||
+      method === "mimi/followUps" ||
+      method === "mimi/openFollowUps" ||
+      method === "mimi/handleFollowUp" ||
       method === "mimi/backfillSegments" ||
       method === "mimi/closeSegment" ||
-      method === "automation/command" && (input as { method?: string }).method === "cancel";
+      (method === "automation/command" && (input as { method?: string }).method === "cancel");
     // GitHub downloads have per-request deadlines and may stage a whole bundle.
     // Local copies can wait for a Skill worker and the cross-process directory lock.
-    const longRunning = waitsForRun || method === "im/wechatLogin" || method === "memory/dream" ||
-      method === "marketplace/bootstrap" || method === "marketplace/add" || method === "marketplace/addRecommended" || method === "marketplace/refresh" || method === "marketplace/updatePlugin" || method === "marketplace/uninstall" || method === "marketplace/recommended" ||
-      method === "plugins/previewLocal" || method === "plugins/installLocal" || method === "plugins/uninstallLocal" || method === "plugins/checkUpdate" ||
-      method === "profiles/addRepo" || method === "profiles/previewRequirements" || method === "profiles/installRequirements" ||
-      method === "sources/uploadPicked" || method === "skills/inspectGithub" ||
-      method === "skills/installGithub" || method === "skills/installLocal" ||
-      method === "skills/update" || method === "skills/uninstall";
-    const timeout = longRunning ? 0 : method === "ccRoom/sessions" || method === "ccRoom/history" || method === "rooms/historyPage" || method === "rooms/messages" ? 120_000 : 15_000;
+    const longRunning =
+      waitsForRun ||
+      method === "marketplace/bootstrap" ||
+      method === "im/wechatLogin" ||
+      method === "memory/dream" ||
+      method === "marketplace/add" ||
+      method === "marketplace/addRecommended" ||
+      method === "marketplace/refresh" ||
+      method === "marketplace/updatePlugin" ||
+      method === "marketplace/uninstall" ||
+      method === "marketplace/recommended" ||
+      method === "plugins/previewLocal" ||
+      method === "plugins/installLocal" ||
+      method === "plugins/uninstallLocal" ||
+      method === "plugins/checkUpdate" ||
+      method === "profiles/addRepo" ||
+      method === "profiles/previewRequirements" ||
+      method === "profiles/installRequirements" ||
+      method === "sources/uploadPicked" ||
+      method === "skills/inspectGithub" ||
+      method === "skills/installGithub" ||
+      method === "skills/installLocal" ||
+      method === "skills/update" ||
+      method === "skills/uninstall";
+    const timeout = longRunning
+      ? 0
+      : method === "ccRoom/sessions" ||
+          method === "ccRoom/history" ||
+          method === "rooms/historyPage" ||
+          method === "rooms/messages"
+        ? 120_000
+        : 15_000;
     const value = await this.request("host/business", { method, input }, timeout, signal);
     signal?.throwIfAborted();
     return value as ShellBusinessOperations[K]["result"];

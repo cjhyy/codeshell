@@ -40,6 +40,7 @@ export interface ShellBusinessOperations extends ProjectMigrationOperations, Mim
     result: import("../main/file-history-service.js").TurnUndoState | import("../main/file-history-service.js").TurnUndoResult[];
   };
   "terminal/command": { input: import("./pty.js").NativeTerminalCommand; result: unknown };
+  "mimi/ruleScheduler": {input:"prepare"|"start"|"reconcile"|"stop";result:void};
   "mimi/rules": { input: import("./mimi-rules.js").MimiRuleCall; result: import("./mimi-rules.js").MimiRuleReply };
   "mimi/turnStorage":{input:import("./mimi-turn-storage.js").MimiTurnStorageCommand;result:unknown};
   "mimi/tasks": {input: import("./mimi-tasks.js").MimiTaskCommand;result:unknown};

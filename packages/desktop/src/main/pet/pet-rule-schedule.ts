@@ -111,6 +111,7 @@ export class PetRuleScheduler {
   private readonly inFlight = new Set<Promise<void>>();
   private unsubscribe?: () => void;
   private started = false;
+  private lifecycle = 0;
   private preparation?: Promise<void>;
   private repairTimer?: ReturnType<typeof setTimeout>;
   private repairDelay = 1_000;
@@ -144,6 +145,7 @@ export class PetRuleScheduler {
    */
   async start(): Promise<void> {
     if (this.started) return;
+    const lifecycle = this.lifecycle;
     try {
       await this.prepare();
     } catch (error) {
@@ -151,6 +153,7 @@ export class PetRuleScheduler {
       this.deps.onError?.(error);
       return;
     }
+    if (lifecycle !== this.lifecycle || this.started) return;
     this.started = true;
     this.unsubscribe = this.deps.rules.onChange(() => {
       void this.reconcile().catch((error) => this.deps.onError?.(error));
@@ -162,6 +165,7 @@ export class PetRuleScheduler {
   }
 
   stop(): void {
+    this.lifecycle++;
     this.started = false;
     this.unsubscribe?.();
     this.unsubscribe = undefined;
@@ -193,10 +197,13 @@ export class PetRuleScheduler {
       .catch(() => undefined)
       .then(async () => {
         if (!this.started) return;
+        const lifecycle = this.lifecycle;
         const scheduler = this.deps.scheduler();
         const now = this.now();
         const desired = new Map<string, ScheduleNoticeRule>();
-        for (const rule of await this.deps.rules.list()) {
+        const rules = await this.deps.rules.list();
+        if (lifecycle !== this.lifecycle) return;
+        for (const rule of rules) {
           if (!isScheduleRule(rule) || rule.state !== "active" || rule.wake.status !== "scheduled")
             continue;
           if (dueAt(rule.wake) <= now) {
@@ -207,6 +214,7 @@ export class PetRuleScheduler {
         }
         const kept = new Set<string>();
         for (const job of await scheduler.list()) {
+          if (lifecycle !== this.lifecycle) return;
           if (!job.creationKey?.startsWith(PREFIX)) continue;
           const rule = desired.get(job.creationKey);
           if (rule && !kept.has(job.creationKey) && this.matches(job, rule)) {
@@ -216,6 +224,7 @@ export class PetRuleScheduler {
           await scheduler.delete(job.id);
         }
         for (const [key, rule] of desired) {
+          if (lifecycle !== this.lifecycle) return;
           if (kept.has(key)) continue;
           await scheduler.create(scheduleRuleTitle(rule), "once", JOB_PROMPT, {
             once: true,
@@ -244,7 +253,9 @@ export class PetRuleScheduler {
       throw new Error("invalid schedule rule wake identity");
     }
     await this.prepare();
-    await this.handleDue(parsed[1]!, Number(parsed[2]), Number(parsed[3]));
+    const handling = this.handleDue(parsed[1]!, Number(parsed[2]), Number(parsed[3]));
+    this.track(handling);
+    await handling;
   }
 
   /** The scheduler skipped a job (slept through it): the same deadline rules decide. */

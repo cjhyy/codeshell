@@ -126,7 +126,8 @@ import { wireMimiNoticeTools } from "./pet/pet-mimi-notice-tools.js";
 import { archivePetSessionsBySelector } from "./pet/pet-session-archive.js";
 import { createPetFollowUpRules } from "./pet/pet-follow-up-rules.js";
 import { wirePetProactive } from "./pet/pet-proactive-wiring.js";
-import { PetRuleScheduler, isPetRuleScheduleJob } from "./pet/pet-rule-schedule.js";
+import { NativeMimiScheduler } from "./desktop-host/mimi-scheduler-client.js";
+import { isPetRuleScheduleJob } from "./pet/pet-rule-schedule.js";
 import { nativeMimiWorkMemory } from "./desktop-host/mimi-work-client.js";
 import type { PetArchiveAnchors } from "./pet/pet-segment-controller.js";
 import { recordPetDelegationClosureBestEffort } from "./pet/pet-delegation-closure.js";
@@ -564,7 +565,12 @@ registerHostedWechatLogin(ipcMain, desktopHost, (work) => imGatewayService.withW
 let petStateAggregator: typeof desktopHost.mimiProjection | null = null;
 let reconcileExternalAdapters: (() => Promise<void>) | null = null;
 let petDispatchService: MimiDispatchService | null = null;
-let petRuleScheduler: PetRuleScheduler | null = null;
+const nativeMimiScheduler = new NativeMimiScheduler(
+  desktopHost.callBusiness,
+  powerMonitor,
+  (error) => dlog("main", "pet.followUp.scheduler.failed", { error: String(error) }),
+);
+let petRuleScheduler: import("./pet/pet-follow-up-rules.js").RuleSchedulerLifecycle | null = null;
 // The dispatcher exists before its worker and durable stores finish loading.
 // IM delivery shares the same completed initialization boundary as Pet IPC.
 let petRuntimeReady = false;
@@ -1313,19 +1319,11 @@ async function createWindow(): Promise<BrowserWindow> {
     const followUpRuntime = await createPetFollowUpRules({
       fireSystem: () => petProactive.fire,
       rules: notices.ruleStore,
-      legacyFollowUpsPath: resolve(app.getPath("userData"), "pet", "follow-ups.json"),
-      powerEvents: powerMonitor,
+      makeScheduler: (fire) => nativeMimiScheduler.configure(fire),
       sessions: () => aggregator.getSnapshot().sessions,
-      makeViews: (registered) =>
-        nativeMimiFollowUps(desktopHost.callBusiness, registered),
+      makeViews: (registered) => nativeMimiFollowUps(desktopHost.callBusiness, registered),
       tasks: longTaskStore,
       longTasks: longTaskCoordinator,
-      scheduler: () => ({
-        list: () => cron.call("petList", undefined),
-        create: (name, schedule, prompt, options = {}) =>
-          cron.call("petCreate", { name, schedule, prompt, options }),
-        delete: (id) => cron.call("petDelete", id),
-      }),
       submitNotice: notices.submitNotice,
       dispatch: () => petDispatchService,
       onError: (error) => dlog("main", "pet.followUp.wake.failed", { error: String(error) }),
@@ -2279,24 +2277,16 @@ app.whenReady().then(async () => {
         signal.throwIfAborted();
         if (job.resumeSessionId && !isPetRuleScheduleJob(job))
           return injectResumeTurn(job.resumeSessionId, job.prompt, signal, job);
-        if (!isPetRuleScheduleJob(job))
-          throw Error("Native execution requires a Mimi rule or existing session");
-        if (!petRuleScheduler)
-          return {
-            text: "Mimi 跟进服务不可用",
-            reason: "unavailable",
-            stop: { reason: "Mimi 跟进服务不可用" },
-          };
-        await petRuleScheduler.wake(job);
-        return { text: "Scheduled rule wake handled", reason: "done" };
+        throw Error("Native execution requires an existing Session");
+      },
+      online: () => nativeMimiScheduler.reconnect(),
+      fireRule: async (rule, due, signal) => {
+        await initialWindowReady;
+        signal.throwIfAborted();
+        return nativeMimiScheduler.effect(rule, due);
       },
       deliver: async (event) => {
         await initialWindowReady;
-        if (isPetRuleScheduleJob(event.job)) {
-          if (event.type === "job_missed") await petRuleScheduler?.missed(event.job);
-          if (event.type === "job_error") petRuleScheduler?.repairSoon();
-          return;
-        }
         if (event.type !== "job_start") {
           for (const [sessionId, jobId] of taskInboxAutomationSessions) {
             if (jobId === event.job.id) taskInboxAutomationSessions.delete(sessionId);

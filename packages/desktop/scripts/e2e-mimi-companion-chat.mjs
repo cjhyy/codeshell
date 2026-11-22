@@ -96,6 +96,42 @@ process.on("SIGINT", requestStop);
 process.on("SIGTERM", requestStop);
 
 try {
+  const expiredAt = Date.now() - 15 * 60_000;
+  const scheduledIds = [
+    "rule-00000000-0000-4000-8000-000000000011",
+    "rule-00000000-0000-4000-8000-000000000012",
+  ];
+  const ruleFile = join(isolated.userDataDir, "pet", "rules.json");
+  await put(ruleFile, {
+    version: 1,
+    rules: scheduledIds.map((id, index) => ({
+      id,
+      version: 1,
+      origin: "user",
+      createdBy: "follow-up",
+      when: { kind: "schedule", at: expiredAt, timezone: "UTC", missedPolicy: "skip" },
+      then: {
+        mode: "remind",
+        title: "Synthetic expired reminder",
+        text: "This private fixture must never deliver.",
+      },
+      wake:
+        index === 0
+          ? { occurrence: expiredAt, status: "scheduled" }
+          : { occurrence: expiredAt, status: "claimed", claimedAt: expiredAt },
+      attention: "always",
+      channel: "desktop",
+      target: { kind: "owner" },
+      state: "active",
+      createdAt: expiredAt - 1000,
+      updatedAt: expiredAt,
+    })),
+    quarantine: [],
+  });
+  const recordedWakes = async () => {
+    const state = JSON.parse(await readFile(ruleFile, "utf8"));
+    return scheduledIds.map((id) => state.rules.find((rule) => rule.id === id)?.wake);
+  };
   const followUpSession = "mimi-follow-up-fixture";
   const followUpDir = join(isolated.codeShellHome, "sessions", followUpSession);
   const followUpText = "Choose the synthetic fixture color";
@@ -680,6 +716,11 @@ try {
     };
   });
   assert.deepEqual(chosenRule.rule, { state: "active", channel: "desktop", events: ["failed"] });
+  const completedWakes = await recordedWakes();
+  assert.deepEqual(
+    completedWakes.map((wake) => wake?.status),
+    ["failed", "unknown"],
+  );
   const previousHost = (await hostStarts()).at(-1);
   const control = JSON.parse(
     await readFile(join(isolated.codeShellHome, "im-gateway", "desktop-control.json"), "utf8"),
@@ -761,6 +802,11 @@ try {
     };
   });
   assert.deepEqual(restoredRule, chosenRule);
+  assert.deepEqual(await recordedWakes(), completedWakes);
+  receipt.checks.push(
+    "overdue and previously claimed reminders settle once and retain their outcomes through Host replacement",
+  );
+
   receipt.checks.push(
     "owner notification rules preserve their events, channel and version across a Host restart",
   );

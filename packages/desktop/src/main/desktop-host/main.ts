@@ -174,6 +174,7 @@ export function createDesktopHost(
     supervisor.callBusiness.bind(supervisor),
     (error) => dlog("main","pet.projection.reconcile.failed",{ error:String(error) }),
   );
+  supervisor.mimiRulesChanged = mimiRules.invalidate;
   supervisor.mimiProjectionUpdate = (row) => mimiProjection.receive(row);
   const mimiTasks = new NativeMimiTasks(
     (command, signal) => supervisor.callBusiness("mimi/tasks", command, signal),

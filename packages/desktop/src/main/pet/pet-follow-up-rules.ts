@@ -20,7 +20,11 @@ import type { PetNoticePowerEvents } from "./pet-notice-decision-hooks.js";
 import { createFollowUpNotifier } from "./pet-notice-follow-up.js";
 import type { RouteDecision } from "./pet-notice-policy.js";
 import type { NoticeSubmission } from "./pet-notice-types.js";
-import { PetRuleScheduler, type RuleScheduleDue } from "./pet-rule-schedule.js";
+import {
+  PetRuleScheduler,
+  type PetRuleSchedulerDeps,
+  type RuleScheduleDue,
+} from "./pet-rule-schedule.js";
 import {
   isScheduleRule,
   isSystemScheduleRule,
@@ -224,32 +228,38 @@ type FollowUpViews =
   | { makeViews: (registered: RegisteredFollowUps) => PetFollowUpService }
   | { summaryStore: PetSummaryStore; summaryService: PetSummaryService; inbox: PetFollowUpInbox };
 
-export type PetFollowUpRulesDeps = FollowUpViews & {
-  rules: PetRuleAccess;
-  sessions(): readonly DesktopPetSession[];
-  tasks: {
-    [K in "get" | "getSnapshot"]: (
-      ...args: Parameters<PetLongTaskStore[K]>
-    ) => ReturnType<PetLongTaskStore[K]> | Promise<ReturnType<PetLongTaskStore[K]>>;
+export type RuleSchedulerLifecycle = Pick<PetRuleScheduler, "prepare" | "start" | "stop">;
+type ScheduleOwner =
+  | { makeScheduler(fire: PetRuleSchedulerDeps["fire"]): RuleSchedulerLifecycle }
+  | {
+      scheduler(): PetCronAccess;
+      legacyFollowUpsPath?: string;
+      powerEvents?: Pick<PetNoticePowerEvents, "on" | "removeListener">;
+    };
+export type PetFollowUpRulesDeps = FollowUpViews &
+  ScheduleOwner & {
+    rules: PetRuleAccess;
+    sessions(): readonly DesktopPetSession[];
+    tasks: {
+      [K in "get" | "getSnapshot"]: (
+        ...args: Parameters<PetLongTaskStore[K]>
+      ) => ReturnType<PetLongTaskStore[K]> | Promise<ReturnType<PetLongTaskStore[K]>>;
+    };
+    longTasks: Pick<PetLongTaskCoordinator, "control">;
+    /** The notice router (`PetNoticeWiring.submitNotice`): every reminder is sent through it. */
+    submitNotice(notice: NoticeSubmission): Promise<RouteDecision>;
+    dispatch(): Pick<PetDispatchService, "wakeFollowUp"> | null;
+    /**
+     * Mimi's own schedule rules (briefs, heartbeat) share the scheduler; their
+     * occurrences go to this handler (late-bound: it is built after this).
+     */
+    fireSystem?: () =>
+      | ((rule: SystemScheduleNoticeRule, due: RuleScheduleDue) => Promise<RuleWakeOutcome>)
+      | undefined;
+    now?: () => number;
+    onError(error: unknown): void;
+    log?(event: string, data: Record<string, unknown>): void;
   };
-  longTasks: Pick<PetLongTaskCoordinator, "control">;
-  scheduler(): PetCronAccess;
-  /** The notice router (`PetNoticeWiring.submitNotice`): every reminder is sent through it. */
-  submitNotice(notice: NoticeSubmission): Promise<RouteDecision>;
-  dispatch(): Pick<PetDispatchService, "wakeFollowUp"> | null;
-  powerEvents?: Pick<PetNoticePowerEvents, "on" | "removeListener">;
-  /**
-   * Mimi's own schedule rules (briefs, heartbeat) share the scheduler; their
-   * occurrences go to this handler (late-bound: it is built after this).
-   */
-  fireSystem?: () =>
-    | ((rule: SystemScheduleNoticeRule, due: RuleScheduleDue) => Promise<RuleWakeOutcome>)
-    | undefined;
-  legacyFollowUpsPath?: string;
-  now?: () => number;
-  onError(error: unknown): void;
-  log?(event: string, data: Record<string, unknown>): void;
-};
 
 /** Compose follow-ups on the rule table; Desktop supplies lifecycle, routing and authority. */
 export async function createPetFollowUpRules(deps: PetFollowUpRulesDeps) {
@@ -399,59 +409,62 @@ export async function createPetFollowUpRules(deps: PetFollowUpRulesDeps) {
     return dispatch.wakeFollowUp(wake);
   };
 
-  const coordinator = new PetRuleScheduler({
-    rules,
-    scheduler: deps.scheduler,
-    fire: async (scheduled, due) => {
-      if (isSystemScheduleRule(scheduled)) {
-        const handler = deps.fireSystem?.();
-        if (!handler)
-          return { status: "failed", detail: "Mimi 的定时功能尚未就绪，这一次未执行。" };
-        return handler(scheduled, due);
-      }
-      if (!isFollowUpRule(scheduled)) return { status: "failed", detail: "未知的定时规则。" };
-      const rule = scheduled;
-      const wake = followUpWake(rule, due.occurrence);
-      // The owner may cancel or finish the follow-up while Mimi's turn runs;
-      // its fence then refuses the launch. That is their decision, not an
-      // unknown effect, and they need no reminder about it.
-      const finishedMidRun = async () => {
-        const current = await rules.get(rule.id);
-        if (!current || current.state === "active" || current.state === "paused") return undefined;
-        return {
-          status: "failed" as const,
-          detail: current.state === "completed" ? "已标记为已处理，未续办。" : "已取消，未续办。",
-        };
-      };
-      let outcome: { launched: boolean; text: string; taskId?: string };
-      try {
-        outcome =
-          rule.then.mode === "run-mimi"
-            ? await resume(wake)
-            : { launched: false, text: rule.then.text };
-      } catch (error) {
-        const finished = await finishedMidRun();
-        if (finished) return finished;
-        throw error;
-      }
-      if (!outcome.launched && rule.then.mode === "run-mimi") {
-        const finished = await finishedMidRun();
-        if (finished) return finished;
-      }
-      // The router picks desktop / IM, records and dedupes the reminder (key: the occurrence).
-      await notify({ ...wake, catchUpUntil: due.deadline }, outcome.text, due.key);
+  const fire: PetRuleSchedulerDeps["fire"] = async (scheduled, due) => {
+    if (isSystemScheduleRule(scheduled)) {
+      const handler = deps.fireSystem?.();
+      if (!handler) return { status: "failed", detail: "Mimi 的定时功能尚未就绪，这一次未执行。" };
+      return handler(scheduled, due);
+    }
+    if (!isFollowUpRule(scheduled)) return { status: "failed", detail: "未知的定时规则。" };
+    const rule = scheduled;
+    const wake = followUpWake(rule, due.occurrence);
+    // The owner may cancel or finish the follow-up while Mimi's turn runs;
+    // its fence then refuses the launch. That is their decision, not an
+    // unknown effect, and they need no reminder about it.
+    const finishedMidRun = async () => {
+      const current = await rules.get(rule.id);
+      if (!current || current.state === "active" || current.state === "paused") return undefined;
       return {
-        status: outcome.launched ? "launched" : "notified",
-        detail: outcome.text,
-        ...(outcome.taskId ? { taskId: outcome.taskId } : {}),
+        status: "failed" as const,
+        detail: current.state === "completed" ? "已标记为已处理，未续办。" : "已取消，未续办。",
       };
-    },
-    ...(deps.powerEvents ? { powerEvents: deps.powerEvents } : {}),
-    ...(deps.legacyFollowUpsPath ? { legacyFollowUpsPath: deps.legacyFollowUpsPath } : {}),
-    now,
-    onError: deps.onError,
-    ...(deps.log ? { log: deps.log } : {}),
-  });
+    };
+    let outcome: { launched: boolean; text: string; taskId?: string };
+    try {
+      outcome =
+        rule.then.mode === "run-mimi"
+          ? await resume(wake)
+          : { launched: false, text: rule.then.text };
+    } catch (error) {
+      const finished = await finishedMidRun();
+      if (finished) return finished;
+      throw error;
+    }
+    if (!outcome.launched && rule.then.mode === "run-mimi") {
+      const finished = await finishedMidRun();
+      if (finished) return finished;
+    }
+    // The router picks desktop / IM, records and dedupes the reminder (key: the occurrence).
+    await notify({ ...wake, catchUpUntil: due.deadline }, outcome.text, due.key);
+    return {
+      status: outcome.launched ? "launched" : "notified",
+      detail: outcome.text,
+      ...(outcome.taskId ? { taskId: outcome.taskId } : {}),
+    };
+  };
+  const coordinator =
+    "makeScheduler" in deps
+      ? deps.makeScheduler(fire)
+      : new PetRuleScheduler({
+          rules,
+          fire,
+          scheduler: deps.scheduler,
+          ...(deps.powerEvents ? { powerEvents: deps.powerEvents } : {}),
+          ...(deps.legacyFollowUpsPath ? { legacyFollowUpsPath: deps.legacyFollowUpsPath } : {}),
+          now,
+          onError: deps.onError,
+          ...(deps.log ? { log: deps.log } : {}),
+        });
   // Not fatal: a rule table this build cannot write (or read) leaves
   // follow-ups off, logged, while the rest of Mimi and the bridge start.
   await coordinator.prepare().catch((error) => {

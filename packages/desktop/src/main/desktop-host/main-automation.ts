@@ -1,3 +1,4 @@
+import type { PetRuleSchedulerDeps } from "../pet/pet-rule-schedule.js";
 import { randomUUID } from "node:crypto";
 import type { CronJob, CronRunResult } from "@cjhyy/code-shell-core/internal";
 import type { PanelAutomationHost } from "@cjhyy/code-shell-server/panels";
@@ -8,6 +9,10 @@ import type { CallShellBusiness } from "../../shared/shell-business-contracts.js
 
 export interface NativeAutomationServices {
   execute(job: CronJob, signal: AbortSignal): Promise<CronRunResult>;
+  fireRule?(
+    ...args: [...Parameters<PetRuleSchedulerDeps["fire"]>, AbortSignal]
+  ): ReturnType<PetRuleSchedulerDeps["fire"]>;
+  online?(): void;
   deliver(notice: CronNotice): Promise<void>;
   dirty(id: string): void;
 }
@@ -50,6 +55,10 @@ export class NativeAutomationClient {
       switch (method) {
         case "execute":
           return services.execute(input as CronJob, signal);
+        case "fireRule":
+          if (!services.fireRule || !Array.isArray(input) || input.length !== 2)
+            throw Error("Mimi schedule adapter unavailable");
+          return services.fireRule(...(input as Parameters<PetRuleSchedulerDeps["fire"]>), signal);
         case "deliver":
           return services.deliver(input as CronNotice);
         case "authorize":
@@ -59,6 +68,7 @@ export class NativeAutomationClient {
           return services.dirty(String(input));
         case "online":
           this.online?.resolve();
+          services.online?.();
           return;
         default:
           throw Error("Unknown native automation adapter");

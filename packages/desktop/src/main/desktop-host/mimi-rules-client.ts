@@ -32,7 +32,6 @@ export function nativeMimiRules(call: CallShellBusiness) {
         currentMimiRuleDocument(),
       );
       if (!response.ok) throw new PetRuleStoreError(response.code);
-      if (response.changed) documents.exit(invalidate);
       return response.value as Awaited<ReturnType<PetRuleStore[K]>>;
     };
   const rules = {

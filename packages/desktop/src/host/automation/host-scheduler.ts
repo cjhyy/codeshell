@@ -1,3 +1,5 @@
+import type { PetRuleScheduler, PetRuleSchedulerDeps } from "../../main/pet/pet-rule-schedule.js";
+import type { CronNotice } from "./execution-receipts.js";
 import type { CronJob, CronRunResult } from "@cjhyy/code-shell-core/internal";
 import type { MessagePort } from "node:worker_threads";
 import { resolveDesktopAutomationJobWorkspace } from "../../main/automation-host.js";
@@ -9,6 +11,7 @@ import type { CronCommand } from "./commands.js";
 export class HostScheduler {
   private readonly storage: CronPeer;
   private native?: CronPeer;
+  rules?: Pick<PetRuleScheduler, "wake" | "missed" | "repairSoon">;
   private searchPath = "";
   private ready?: Promise<unknown>;
   private closing = false;
@@ -31,9 +34,21 @@ export class HostScheduler {
               stop: { reason: validation.reason },
             };
         }
+        if (this.rules && isPetRuleScheduleJob(job)) {
+          await this.rules.wake(job);
+          return { text: "Scheduled rule wake handled", reason: "done" };
+        }
         if (job.resumeSessionId || isPetRuleScheduleJob(job))
           return native.call<CronRunResult>("execute", job, signal);
         return this.engines.run(job, this.searchPath, signal);
+      }
+      if (method === "deliver" && this.rules) {
+        const event = input as CronNotice;
+        if (isPetRuleScheduleJob(event.job)) {
+          if (event.type === "job_missed") await this.rules.missed(event.job);
+          if (event.type === "job_error") this.rules.repairSoon();
+          return;
+        }
       }
       if (
         method === "deliver" ||
@@ -44,6 +59,12 @@ export class HostScheduler {
         return native.call(method, input, signal);
       throw Error("Unknown scheduler request");
     });
+  }
+  fireRule(
+    ...args: Parameters<PetRuleSchedulerDeps["fire"]>
+  ): ReturnType<PetRuleSchedulerDeps["fire"]> {
+    if (this.closing || !this.native) throw Error("Mimi schedule adapter unavailable");
+    return this.native.call("fireRule", args);
   }
   bind(port: CronPort, searchPath: string) {
     if (this.native || this.closing) {
