@@ -1,6 +1,6 @@
 import type { Stats } from "node:fs";
 /**
- * state.json file mechanics for SessionManager's CAS writer.
+ * state.json file mechanics for SessionManager's CAS writer and journal pin commits.
  *
  * Owns the per-session state lock (proper-lockfile lease plus recovery of the
  * old regular-file orphan lock), the bounded synchronous retry schedule shared
@@ -43,7 +43,7 @@ function sleepSync(ms: number): void {
 // Windows can deny replacement while a reader or filesystem filter briefly
 // holds the destination without delete sharing. Retry the same atomic rename
 // with the Session lease still held. A lasting denial preserves the old state.
-function publishState(tmp: string, target: string): void {
+export function replaceSessionStateFile(tmp: string, target: string): void {
   let delay = 10;
   const deadline = performance.now() + 1_000;
   for (;;) {
@@ -72,7 +72,7 @@ export function writeStateAtomically(target: string, state: SessionState, label 
       encoding: "utf-8",
       mode: 0o600,
     });
-    publishState(tmp, target);
+    replaceSessionStateFile(tmp, target);
     if (stateCommitted.hasSubscribers) {
       const directory = dirname(target);
       stateCommitted.publish({ root: dirname(directory), id: basename(directory) });

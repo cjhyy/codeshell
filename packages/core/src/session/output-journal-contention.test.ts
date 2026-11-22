@@ -1,9 +1,10 @@
-import { expect, test } from "bun:test";
+import { expect, spyOn, test } from "bun:test";
 import { spawn } from "node:child_process";
+import * as fs from "node:fs";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { lock } from "../utils/lockfile.js";
 import { SessionManager } from "./session-manager.js";
 import { readOutputJournal, SessionOutputJournal } from "./output-journal.js";
@@ -18,6 +19,51 @@ function fixture() {
   manager.startSessionRun(session.state, run);
   return { root, manager, session, run, id, state: join(root, id, "state.json") };
 }
+
+for (const persistent of [false, true])
+  test(`journal admission preserves state across a ${persistent ? "lasting" : "temporary"} Windows sharing violation`, () => {
+    const f = fixture();
+    const original = fs.readFileSync(f.state);
+    const platform = Object.getOwnPropertyDescriptor(process, "platform")!;
+    const rename = fs.renameSync;
+    let pin: fs.PathLike | undefined;
+    let attempts = 0;
+    const spy = spyOn(fs, "renameSync").mockImplementation((source, destination) => {
+      if (basename(String(source)).startsWith(".output-pin-")) pin ??= source;
+      if (source === pin) {
+        attempts++;
+        expect(fs.existsSync(f.state + ".lock")).toBe(true);
+        expect(fs.readFileSync(f.state)).toEqual(original);
+        if (persistent || attempts === 1) {
+          Object.defineProperty(process, "platform", { ...platform, value: "win32" });
+          throw Object.assign(new Error("Sharing violation"), { code: "EPERM" });
+        }
+        Object.defineProperty(process, "platform", platform);
+      }
+      rename(source, destination);
+    });
+    try {
+      const admit = () => new SessionOutputJournal(f.root, f.id, f.run);
+      if (persistent) {
+        expect(admit).toThrow("Sharing violation");
+        expect(fs.readFileSync(f.state)).toEqual(original);
+        expect(attempts).toBeGreaterThan(1);
+      } else {
+        admit().append({ type: "text_delta", text: "published" });
+        expect(attempts).toBe(2);
+        expect(readOutputJournal(f.root, f.id).frames[0]?.event).toEqual({
+          type: "text_delta",
+          text: "published",
+        });
+      }
+      expect(fs.existsSync(String(pin))).toBe(false);
+      expect(fs.existsSync(f.state + ".lock")).toBe(false);
+    } finally {
+      Object.defineProperty(process, "platform", platform);
+      spy.mockRestore();
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
 
 for (const phase of ["admission", "append"] as const)
   test(`a short state CAS in another Node process does not poison journal ${phase}`, async () => {
