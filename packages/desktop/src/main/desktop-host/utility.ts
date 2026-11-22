@@ -1,5 +1,6 @@
 import { wechatLoginOperations } from "../../host/composition/wechat-login.js";
 import { ccRoomReads } from "../../host/composition/cc-room-reads.js";
+import { hostedMediaProtocol } from "../../host/composition/media-protocol.js";
 import { attachmentOperations } from "../../host/composition/attachments.js";
 import { hostedActivityHistory } from "../../host/composition/activity-history.js";
 import { ActivityHistoryWorker } from "../activity-history-worker-client.js";
@@ -120,6 +121,9 @@ const business = new HostBusinessCalls({
   ...mimiRecordsOperations(storage, (domain) =>
     parent.postMessage({ type: "mimi-records-changed", domain }),
   ),
+const mediaProtocol = hostedMediaProtocol();
+const business = new HostBusinessCalls({
+  ...mediaProtocol.methods,
   ...activities.operations,
   ...attachmentOperations,
   "automation/command": (cmd, grant) => scheduler.command(cmd, grant.permit),
@@ -242,6 +246,8 @@ parent.on("message", ({ data, ports }) => {
           transcripts.close(),
           automation.close(),
           remote?.close(),
+          historyWorker.close(),
+          mediaProtocol.close(),
         ]),
       )
       .then(() => output.drain())

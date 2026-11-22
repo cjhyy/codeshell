@@ -40,3 +40,22 @@ export function classifyMediaPath(path: string): MediaPreviewKind | null {
 }
 
 export const MEDIA_PREVIEW_SCHEME = "csmedia";
+
+export function parseMediaPreviewRequest(input: unknown): MediaPreviewRequest | null {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return null;
+  const request = input as MediaPreviewRequest;
+  if (
+    Object.keys(request).some((key) => !["sessionId", "path", "rootId"].includes(key)) ||
+    typeof request.sessionId !== "string" ||
+    !/^[A-Za-z0-9_-][A-Za-z0-9_.-]{0,127}$/.test(request.sessionId) ||
+    request.sessionId.includes("..") ||
+    typeof request.path !== "string" ||
+    !request.path ||
+    request.path.length > 16_384 ||
+    request.path.includes("\0") ||
+    (request.rootId !== undefined &&
+      (typeof request.rootId !== "string" || !request.rootId || request.rootId.length > 512))
+  )
+    return null;
+  return request;
+}

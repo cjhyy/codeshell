@@ -2,7 +2,7 @@ import type { IpcMainInvokeEvent } from "electron";
 import type { CallShellBusiness } from "../shared/shell-business-contracts.js";
 import { BrowserWindow, dialog, ipcMain } from "electron";
 import { requireRendererOrSessionPath } from "./renderer-session-path.js";
-import { MediaPreviewService } from "./media-preview-service.js";
+import type { NativeMediaProtocol } from "./hosted-media-protocol.js";
 import { listAgents, readAgentBody, saveAgent, deleteAgent } from "./agents-service.js";
 import type { AgentDefinition } from "@cjhyy/code-shell-core";
 import { type RendererConfigurationTarget } from "./renderer-configuration-authority.js";
@@ -16,7 +16,7 @@ import {
 export interface AgentsMediaIpcDeps {
   host: { callBusiness: CallShellBusiness; documentSignal(event: IpcMainInvokeEvent): AbortSignal };
   mainWindows: Set<BrowserWindow>;
-  mediaPreviewService: MediaPreviewService;
+  mediaPreviewService: NativeMediaProtocol;
 }
 
 /** Agent definition routes plus media preview and image read/save routes. */
@@ -39,7 +39,7 @@ export function registerAgentsMediaIpc(deps: AgentsMediaIpcDeps) {
       )
     )
       return null;
-    return mediaPreviewService.create(event.sender.id, input);
+    return mediaPreviewService.create(event.sender.id, input, deps.host.documentSignal(event));
   });
   ipcMain.handle("media:releasePreview", (event, url: unknown) => {
     if (event.senderFrame === event.sender.mainFrame && typeof url === "string")

@@ -238,9 +238,8 @@ import { type ManagedCliInstallResult } from "./link-cli-installer.js";
 import { migrateCredentialStore, migrateKnownCredentialStores } from "./credential-migration.js";
 import { removeOrphanedExternalRuntimePartitions } from "./orphaned-browser-partitions.js";
 import { inspectReadableReplyAttachment } from "./image-read-service.js";
-import { MediaPreviewService } from "./media-preview-service.js";
+import { NativeMediaProtocol } from "./hosted-media-protocol.js";
 import { browserPartitionForBucket } from "./renderer-browser-session-ipc-authority.js";
-import { resolveMediaPreviewAuthority } from "./media-preview-authority.js";
 import { MEDIA_PREVIEW_SCHEME } from "../shared/media-preview.js";
 import {
   guestRecordForId,
@@ -513,21 +512,21 @@ registerNotificationFallback(
     return desktopHost.documentSignal(event);
   },
 );
-const mediaPreviewService = new MediaPreviewService({
-  isOwnerAlive: (ownerId) =>
-    [...mainWindows].some(
-      (window) =>
-        !window.isDestroyed() &&
-        !window.webContents.isDestroyed() &&
-        window.webContents.id === ownerId,
-    ),
-  resolveAuthority: async (sessionId, ownerId) => {
+const mediaPreviewService = new NativeMediaProtocol(
+  desktopHost.callBusiness,
+  (ownerId, sessionId) => {
     const sessionOwner = bridge?.panelOwnerWebContentsId(sessionId);
-    if (sessionOwner !== undefined && sessionOwner !== ownerId)
-      throw new Error("Media task belongs to another window");
-    return resolveMediaPreviewAuthority(sessionId);
+    return (
+      (sessionOwner === undefined || sessionOwner === ownerId) &&
+      [...mainWindows].some(
+        (window) =>
+          !window.isDestroyed() &&
+          !window.webContents.isDestroyed() &&
+          window.webContents.id === ownerId,
+      )
+    );
   },
-});
+);
 /** Deliver to the one live window owning `webContentsId`; other windows never see it. */
 function sendToOwnerWindow(webContentsId: number | undefined, channel: string, payload: unknown) {
   [...mainWindows]
