@@ -56,7 +56,7 @@ test("withdrawn Host cache edits cannot create or delete cached or legacy conten
   await cache.commitWrite(input, grant);
   expect(Atomics.load(grant, 0)).toBe(1);
   await expect(cache.commitDelete(key, revoked)).rejects.toThrow("revoked");
-  expect((await cache.read(key)).value).not.toBeNull();
+  expect(JSON.parse((await cache.read(key)).value).messages).toEqual([message("a")]);
 });
 
 afterEach(async () => {
