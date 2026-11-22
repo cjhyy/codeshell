@@ -17,6 +17,30 @@ manual installation from the DMG. Install the new app in Applications using
 the same account to retain existing sessions and settings. Send or copy any
 unsent text you want to keep before quitting 0.11. Restarting clears its composer.
 
+### Changed
+
+- The workbench reconnects to the local Host after a window reload. It catches
+  up on saved output and asks for the current pending approvals. If the Host
+  exits during a run, an interrupted task remains available for review.
+- Closing the last workbench keeps Desktop running. On Windows and Linux, use
+  the tray to reopen the workbench or quit. The workbench menu also has a
+  Quit command.
+- In Task center you can hide a task, show hidden tasks, delete an ended
+  or interrupted task record, and clear ended records in bulk. Removing a
+  record keeps its conversation and execution history. Archiving a session
+  hides its tasks. Unarchiving restores tasks hidden by the archive. Sending
+  a new message can bring that session's task back. Background activity and
+  title changes preserve your choice.
+
+### Upgrade and rollback
+
+- This candidate uses the existing RC update channel. Stable installations
+  continue to follow the stable channel.
+- Desktop builds an index from your existing session files. Your sessions,
+  saved transcripts and catalog drafts remain readable by 0.11. If you
+  reinstall 0.11, tasks hidden or deleted in 0.12 can reappear there. When
+  you return to 0.12 with the same data, it restores your saved choices.
+
 ## [0.11.0-rc.11] - 2026-11-22
 
 Remote (phone and web) work from #410, #412, #414 and #416, and the Bun 1.4.5
