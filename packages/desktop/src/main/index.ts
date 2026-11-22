@@ -1,3 +1,4 @@
+import { createPanelCookieAdapter, registerPanelWindowShell } from "./shell/panel-app.js";
 import { nativePendingApprovals } from "../shared/pending-approvals.js";
 import { registerHostedWechatLogin } from "./desktop-host/wechat-login-client.js";
 import { registerConfigurationSettingsIpc } from "./configuration-settings-ipc.js";
@@ -8,8 +9,6 @@ import {
 } from "@cjhyy/code-shell-core/internal";
 import {
   setDesktopCredentialFiles,
-  readDesktopCookie,
-  runDesktopCredentialOperation,
 } from "./credential-file-client.js";
 import { taskInboxEnabled } from "./task-inbox/task-host-reads.js";
 import { registerLinkedFileSourceIpc } from "./linked-file-sources-ipc.js";
@@ -35,7 +34,6 @@ import { registerOperationResolutionHost } from "./operation-resolution-host.js"
 import {
   app,
   BrowserWindow,
-  WebContentsView,
   dialog,
   ipcMain,
   Menu,
@@ -72,8 +70,6 @@ import {
   writeSettingsSchemaFile,
   userHome,
   codeShellHome,
-  summarizeCookieExpiry,
-  materializeCookieSecret,
   sweepStaleCredentialCookies,
   setDefaultCredentialCipher,
   setDefaultCredentialAccess,
@@ -219,11 +215,10 @@ import { createDesktopModelRequestSigner } from "./model-request-signing-service
 import { McpOAuthService, type McpOAuthLoginInput } from "./mcp-oauth-service.js";
 import { LinkDeviceOAuthBroker } from "./link-device-oauth.js";
 import { type ManagedCliInstallResult } from "./link-cli-installer.js";
-import { migrateCredentialStore, migrateKnownCredentialStores } from "./credential-migration.js";
+import { migrateKnownCredentialStores } from "./credential-migration.js";
 import { removeOrphanedExternalRuntimePartitions } from "./orphaned-browser-partitions.js";
 import { inspectReadableReplyAttachment } from "./image-read-service.js";
 import { NativeMediaProtocol } from "./hosted-media-protocol.js";
-import { browserPartitionForBucket } from "./renderer-browser-session-ipc-authority.js";
 import { MEDIA_PREVIEW_SCHEME } from "../shared/media-preview.js";
 import {
   partitionForSession,
@@ -250,11 +245,9 @@ import * as desktopNotifications from "./desktop-notification-routes.js";
 import type { CreateAutomationInput } from "./automation-service.js";
 import { dlog } from "./desktop-logger.js";
 import { ptyKillAll, ptyReapDestroyed } from "./pty-service.js";
-import { cleanupLease, sweepStaleLeases } from "./credentials-service.js";
+import { sweepStaleLeases } from "./credentials-service.js";
 import { cookieCredentialAutoRefresh } from "./cookie-credential-auto-refresh.js";
 import { isBrowserPartition } from "../shared/browser-partition.js";
-import { restoreCookieCredentialToBrowser } from "./cookie-credential-browser.js";
-import { loginAndCaptureCookies } from "./credentials-login/index.js";
 import {
   archiveDiskSession as writeSessionArchive,
   cleanupAttachments,
@@ -322,13 +315,10 @@ import { invalidatePanelAppBindingGuard, isPanelAppBoundToProject } from "./pane
 import { expandPluginCommand, listPluginCommands } from "./plugin-command-service.js";
 import { getPluginMedia } from "./plugin-media-service.js";
 import {
-  preparePanelApp,
   registerPanelAppSchemePrivileges,
-  validatePanelAppEntryUrl,
 } from "./panel-app-protocol.js";
 import { installThemeAssetProtocol } from "./theme-asset-protocol.js";
 import { PanelAppBridge } from "./panel-app-bridge.js";
-import { PanelAppWindows } from "./panel-app-windows.js";
 import { buildPanelAgentTaskModelCatalog } from "./panel-app-agent-task-models.js";
 import {
   listMarketplacesForUi,
@@ -665,147 +655,7 @@ const panelAppBridge = new PanelAppBridge({
       getMergedCatalog(),
     ),
   showNotification: showSystemNotification,
-  cookieCredentials: {
-    taskCredentials: async (cwd) => {
-      await migrateCredentialStore(cwd);
-      return runDesktopCredentialOperation(cwd, ["user", "project"], undefined, (s) => s.list());
-    },
-    list: async (cwd) => {
-      await migrateCredentialStore(cwd);
-      return (
-        await runDesktopCredentialOperation(cwd, ["user", "project"], undefined, (s) => s.list())
-      )
-        .filter((credential) => credential.type === "cookie")
-        .map((credential) => {
-          let health: "ready" | "corrupted" = "corrupted";
-          try {
-            const parsed = JSON.parse(credential.secret ?? "[]");
-            if (Array.isArray(parsed)) health = "ready";
-          } catch {
-            // CredentialStore deliberately preserves undecryptable ciphertext.
-            // Keep that value Host-only and expose only an actionable health bit.
-          }
-          return {
-            id: credential.id,
-            label: credential.label,
-            health,
-            domain: credential.meta?.domain,
-            platform: credential.meta?.platform,
-            appUrl: credential.meta?.appUrl,
-            autoUseByAI: credential.autoUseByAI,
-            autoInjectByAI: credential.autoInjectByAI,
-            cookieExpiry: summarizeCookieExpiry(credential.secret),
-          };
-        });
-    },
-    loginAndSave: async ({ appId, providerId, providerLabel, url, cwd, bucket }) => {
-      const capture = await loginAndCaptureCookies({
-        url,
-        platform: providerLabel,
-        fullCapture: true,
-      });
-      if (!capture.ok) return capture;
-      if (capture.jar.length === 0) {
-        return { ok: false, error: "登录窗口没有捕获到 Cookie，请确认登录成功后再保存" };
-      }
-      const credentialId = `panel-${appId}__${providerId}`;
-      const accountLabel =
-        typeof capture.suggestedLabel === "string" && capture.suggestedLabel.trim()
-          ? `${providerLabel} · ${capture.suggestedLabel.trim().slice(0, 80)}`
-          : `${providerLabel} 登录`;
-      cookieCredentialAutoRefresh.detachForCredential(cwd, credentialId, "user");
-      await runDesktopCredentialOperation(cwd, ["user"], "user", (store) => {
-        const previous = store.resolve(credentialId);
-        store.save("user", {
-          id: credentialId,
-          type: "cookie",
-          label: accountLabel,
-          secret: JSON.stringify(capture.jar),
-          meta: {
-            ...(previous?.type === "cookie" ? previous.meta : {}),
-            appUrl: url,
-            platform: providerLabel,
-            domain: capture.domain,
-            scope: "all",
-            switchMode: "merge",
-          },
-        });
-      });
-      bridge?.pushCredentialSnapshot(cwd);
-
-      let restoredCount = 0;
-      const partition = browserPartitionForBucket(bucket);
-      if (partition) {
-        // Resolve the user record just saved, without project shadowing.
-        const resolved = await readDesktopCookie(undefined, credentialId, "full");
-        if (!resolved.ok) throw new Error(resolved.error);
-        const restored = await restoreCookieCredentialToBrowser({
-          targetSession: partition,
-          sessionCwd: cwd,
-          credentialId,
-          credentialScope: "full",
-          resolved,
-        });
-        restoredCount = restored.count;
-        for (const window of BrowserWindow.getAllWindows()) {
-          if (!window.isDestroyed()) window.webContents.send("browser:reload", { bucket });
-        }
-      }
-      return {
-        ok: true,
-        credential: {
-          id: credentialId,
-          label: accountLabel,
-          health: "ready",
-          domain: capture.domain,
-          platform: providerLabel,
-          appUrl: url,
-        },
-        cookieCount: capture.jar.length,
-        restoredCount,
-      };
-    },
-    restore: async ({ credentialId, cwd, bucket }) => {
-      const partition = browserPartitionForBucket(bucket);
-      if (!partition) throw new Error("Cookie restore requires an active task browser");
-      await migrateCredentialStore(cwd);
-      const resolved = await readDesktopCookie(cwd, credentialId, "full");
-      if (!resolved.ok) return { invalid: true };
-      const result = await restoreCookieCredentialToBrowser({
-        targetSession: partition,
-        sessionCwd: cwd,
-        credentialId,
-        credentialScope: "full",
-        resolved,
-      });
-      for (const window of BrowserWindow.getAllWindows()) {
-        if (!window.isDestroyed()) window.webContents.send("browser:reload", { bucket });
-      }
-      return { count: result.count };
-    },
-    materialize: async ({ credentialId, cwd }) => {
-      await migrateCredentialStore(cwd);
-      const credential = await runDesktopCredentialOperation(
-        cwd,
-        ["user", "project"],
-        undefined,
-        (s) => s.resolve(credentialId),
-      );
-      if (!credential || credential.type !== "cookie") {
-        throw new Error(`No saved Cookie login: ${credentialId}`);
-      }
-      try {
-        const materialized = materializeCookieSecret(credential.id, credential.secret ?? "");
-        return {
-          filePath: materialized.cookiesFile,
-          count: materialized.count,
-          cleanup: () => cleanupLease(materialized.cookiesFile),
-        };
-      } catch {
-        return { invalid: true as const };
-      }
-    },
-  },
+  cookieCredentials: createPanelCookieAdapter((cwd) => bridge?.pushCredentialSnapshot(cwd)),
   automations: {
     uniqueCreation: true,
     conditional: cron.panel,
@@ -835,22 +685,7 @@ panelAppBridge.registerIpc();
 const browserWindows = createBrowserWindowShell({
   mainWindows, panelAppBridge, appRendererNavigation, mainDirectory: __dirname,
 });
-const panelAppWindows = new PanelAppWindows({
-  bridge: panelAppBridge,
-  prepare: preparePanelApp,
-  validateEntry: validatePanelAppEntryUrl,
-  ownerWindow: (id) => BrowserWindow.fromId(id),
-  createWindow: (options) => new BrowserWindow(options),
-  createView: (options) => new WebContentsView(options),
-  preloadPath: resolve(__dirname, "..", "preload", "panel-app.cjs"),
-});
-ipcMain.handle("panel-apps:open-window", async (event, target) => {
-  const parent = BrowserWindow.fromWebContents(event.sender);
-  if (!parent || !mainWindows.has(parent) || event.senderFrame !== event.sender.mainFrame) {
-    throw new Error("Panel windows can only be opened from their Desktop tab");
-  }
-  await panelAppWindows.open(event.sender, target);
-});
+registerPanelWindowShell(panelAppBridge, mainWindows, __dirname);
 const imGatewayService = desktopHost.im;
 registerImGatewayIpc(ipcMain, imGatewayService, (event, work) =>
   desktopHost.withDocumentCaller(event, () =>
