@@ -50,12 +50,14 @@ import { outputMethods } from "./output-methods.js";
 import { bindHostWorker } from "./host-worker.js";
 import { sessionsRoot } from "@cjhyy/code-shell-core";
 import { createSessionIndex } from "@cjhyy/code-shell-server/storage";
+import {
   isDesktopHostControl,
   isDesktopHostIdentity,
   isRpcRequest,
   isRpcResponse,
 } from "../../shared/desktop-host-protocol.js";
 import { DesktopSessionListVisibility } from "./session-list-visibility.js";
+import {
   DesktopHostServer,
   desktopHostMethods,
   WorkerCommandError,
@@ -256,7 +258,6 @@ parent.on("message", ({ data, ports }) => {
           automation.close(),
           ...[...providers].map((close) => close()),
           remote?.close(),
-          historyWorker.close(),
           mediaProtocol.close(),
         ]),
       )
