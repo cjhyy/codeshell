@@ -1,5 +1,3 @@
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import {
   createMcpAuthenticatedFetch,
   logger,
@@ -332,6 +330,10 @@ export function createFigmaMcpLinkAdapter(options: {
             validateCredential: async (candidate, signal) => {
               let stage: McpOAuthVerificationStage = "credential_binding";
               let status: number | undefined;
+              const [{ Client }, { StreamableHTTPClientTransport }] = await Promise.all([
+                import("@modelcontextprotocol/sdk/client/index.js"),
+                import("@modelcontextprotocol/sdk/client/streamableHttp.js"),
+              ]);
               const client = new Client(
                 { name: "CodeShell", version: VERSION },
                 { capabilities: {} },

@@ -2,10 +2,9 @@ import { runDesktopCredentialOperation } from "./credential-file-client.js";
 import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import { randomBytes } from "node:crypto";
 import { createServer } from "node:http";
-import {
-  auth,
-  type OAuthClientProvider,
-  type OAuthDiscoveryState,
+import type {
+  OAuthClientProvider,
+  OAuthDiscoveryState,
 } from "@modelcontextprotocol/sdk/client/auth.js";
 import type {
   OAuthClientInformationMixed,
@@ -877,6 +876,8 @@ export class McpOAuthService {
         "discovery_registration",
       );
     }
+    options.signal?.throwIfAborted();
+    const { auth } = await import("@modelcontextprotocol/sdk/client/auth.js");
     options.signal?.throwIfAborted();
     const timeoutMs = Math.max(1, Math.min(10 * 60_000, options.callbackTimeoutMs ?? 120_000));
     const state = randomBytes(16).toString("hex");

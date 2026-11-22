@@ -1,12 +1,10 @@
 import type { WebContents } from "electron";
 import { randomUUID } from "node:crypto";
-import {
-  connect,
-  ExtensionTransport,
-  type Browser,
-  type ConnectionTransport,
+import type {
+  Browser,
+  ConnectionTransport,
 } from "puppeteer-core/lib/esm/puppeteer/puppeteer-core-browser.js";
-import { PuppeteerBrowserDriver } from "../../browser-library/puppeteer-browser-driver.js";
+import type { PuppeteerBrowserDriver } from "../../browser-library/puppeteer-browser-driver.js";
 import { captureElectronPage } from "./electron-screenshot.js";
 
 const CONNECT_TIMEOUT_MS = 10_000;
@@ -179,6 +177,11 @@ export function getElectronBrowser(wc: WebContents): Promise<PuppeteerBrowserDri
   });
   const timer = setTimeout(() => invalidate(target, true), CONNECT_TIMEOUT_MS);
   const opening = (async () => {
+    const [{ connect, ExtensionTransport }, { PuppeteerBrowserDriver }] = await Promise.all([
+      import("puppeteer-core/lib/esm/puppeteer/puppeteer-core-browser.js"),
+      import("../../browser-library/puppeteer-browser-driver.js"),
+    ]);
+    if (!target.active) throw new Error(PAUSED);
     const transport = await ExtensionTransport.connectTab(target.token);
     if (!target.active) {
       transport.close();
