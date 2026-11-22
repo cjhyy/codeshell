@@ -61,16 +61,6 @@ async function until(read, message) {
   } while (Date.now() < deadline);
   throw new Error(message);
 }
-async function dismissTrust(page) {
-  const button = page.getByRole("button", { name: /^(仅查看|View only)/ });
-  if (
-    await button.waitFor({ state: "visible", timeout: 2000 }).then(
-      () => true,
-      () => false,
-    )
-  )
-    await button.click();
-}
 async function openLauncher() {
   const plus = win.locator('[data-panel-action="new-tab"]');
   if (!(await plus.isVisible())) await win.locator('[data-panel-action="toggle"]').click();
@@ -219,6 +209,17 @@ refresh().catch(error=>{window.fixture.error=String(error)});
       join(secondaryProject, ".code-shell/settings.json"),
       JSON.stringify({ panelAppBindings: [] }),
     ),
+    // The startup workbench initially selects the no-project directory. Seed the
+    // same view-only decision before its async trust check can open a modal.
+    writeFile(
+      join(isolated.codeShellHome, "desktop/trust.json"),
+      JSON.stringify({
+        [join(isolated.codeShellHome, "no-repo")]: "untrusted",
+        [project]: "trusted",
+        [secondaryProject]: "untrusted",
+      }),
+      { mode: 0o600 },
+    ),
     writeFile(
       join(isolated.codeShellHome, "desktop/recents.json"),
       JSON.stringify([{ path: project, name: "window-project", lastOpenedAt: Date.now() }]),
@@ -304,11 +305,8 @@ fixtureApp.on('session-created',ses=>{
   win.setDefaultTimeout(15_000);
   win.on("pageerror", (error) => report.errors.push(error.message));
   await win.setViewportSize({ width: 1200, height: 780 });
-  await dismissTrust(win);
-  await win.evaluate((cwd) => window.codeshell.setTrust(cwd, "trusted"), project);
-  const recent = win.getByText("window-project", { exact: true });
-  if (await recent.count()) await recent.first().click();
-  await dismissTrust(win);
+  assert.equal(await win.evaluate((cwd) => window.codeshell.getTrust(cwd), project), "trusted");
+  await win.getByText("window-project", { exact: true }).first().click();
   const registered = await until(
     () =>
       win.evaluate(
@@ -378,10 +376,8 @@ fixtureApp.on('session-created',ses=>{
     },
   });
   await win.reload();
-  await dismissTrust(win);
   await expandSidebar(win);
   await win.getByRole("button", { name: sessionTitles[0], exact: true }).click();
-  await dismissTrust(win);
   // Real Main operations migrate these isolated legacy installs into retained,
   // project-pinned packages. No renderer catalog or project registry is mocked.
   for (const id of fixtureAppIds) {
@@ -806,6 +802,9 @@ fixtureApp.on('session-created',ses=>{
             .catch((error) => ({ error: String(error) })),
           registry: await window.codeshell.projectRegistry.list(),
           alerts: [...document.querySelectorAll('[role="alert"]')].map((node) => node.textContent),
+          openDialogs: [...document.querySelectorAll('[role="dialog"], [role="alertdialog"]')].map(
+            (node) => node.querySelector("h1,h2,h3")?.textContent ?? node.getAttribute("aria-label"),
+          ),
           cards: document.querySelectorAll("[data-panel-launcher-window-kind]").length,
           // Failure diagnostics only; pass assertions use the visible UI and
           // real Main APIs, never React implementation details.
@@ -852,6 +851,7 @@ console.log(
         cards: report.availability.cards,
       },
       failure: report.failure,
+      openDialogs: report.rendererFailure?.openDialogs,
       evidence,
     },
     null,
