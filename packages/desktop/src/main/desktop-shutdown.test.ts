@@ -231,9 +231,9 @@ test("the external runtime pilot retains first-window start and the existing shu
   expect(startup.indexOf("bridge = new AgentBridge(")).toBeLessThan(
     startup.indexOf("desktopModules.start();"),
   );
-  expect(startup.indexOf("desktopModules.start();")).toBeLessThan(
-    startup.indexOf("const externalGoalSessions"),
-  );
+  const goalHooks = startup.indexOf("nativeExternalGoals(");
+  expect(goalHooks).toBeGreaterThan(startup.indexOf("desktopModules.start();"));
+  expect(startup.indexOf("mimiRuntime.start(")).toBeGreaterThan(goalHooks);
   expect(source).not.toContain("await desktopModules.start()");
   expect(source).toContain("registerNativeShutdown({");
   const shutdown = await readFile(new URL("./shell/shutdown.ts", import.meta.url), "utf8");
