@@ -116,13 +116,12 @@ const historyWorker = new ActivityHistoryWorker(
 );
 const activities = hostedActivityHistory(historyWorker);
 const roomReads = ccRoomReads(historyWorker);
+const mediaProtocol = hostedMediaProtocol();
 const business = new HostBusinessCalls({
   ...wechatLoginOperations((event) => parent.postMessage({ type: "wechat-login-event", event })),
   ...mimiRecordsOperations(storage, (domain) =>
     parent.postMessage({ type: "mimi-records-changed", domain }),
   ),
-const mediaProtocol = hostedMediaProtocol();
-const business = new HostBusinessCalls({
   ...mediaProtocol.methods,
   ...activities.operations,
   ...attachmentOperations,
