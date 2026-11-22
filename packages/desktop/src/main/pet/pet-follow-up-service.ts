@@ -42,20 +42,38 @@ export interface PetFollowUpInbox {
   addIfAbsentDurably(id: string): Promise<{ added: boolean; snapshot: PetWorkInboxSnapshot }>;
 }
 
+export type PetFollowUpSession = Pick<
+  DesktopPetSession,
+  "agentSessionId" | "title" | "workspaceDisplayName"
+> & {
+  terminal?: Pick<NonNullable<DesktopPetSession["terminal"]>, "status" | "at">;
+  external?: DesktopPetSession["external"] | boolean;
+};
+export interface RegisteredFollowUps {
+  load(): Promise<void>;
+  list(): PetFollowUpRuleView[];
+}
+
 export interface PetFollowUpService {
   /** Canonical feed used by the renderer; includes handled rows for its state filter. */
-  collect(options?: { allowGenerate?: boolean }): Promise<PetFollowUpSummaryRow[]>;
+  collect(
+    options?: { allowGenerate?: boolean },
+    signal?: AbortSignal,
+  ): Promise<PetFollowUpSummaryRow[]>;
   /** Canonical open feed injected into Mimi's FollowUps read capability. */
-  listOpen(options?: { allowGenerate?: boolean }): Promise<PetFollowUpItem[]>;
+  listOpen(options?: { allowGenerate?: boolean }, signal?: AbortSignal): Promise<PetFollowUpItem[]>;
   /**
    * Handle a result-derived row (UI or Mimi's ManageFollowUp). Registered
    * follow-ups are schedule rules and are changed through the rule table.
    */
-  mutate(input: {
-    action: "complete" | "dismiss";
-    followUpId: string;
-    expectedRevision?: number;
-  }): Promise<PetFollowUpMutationResult>;
+  mutate(
+    input: {
+      action: "complete" | "dismiss";
+      followUpId: string;
+      expectedRevision?: number;
+    },
+    signal?: AbortSignal,
+  ): Promise<PetFollowUpMutationResult>;
 }
 
 /**
@@ -64,15 +82,15 @@ export interface PetFollowUpService {
  * are versioned schedule rules, so UI handling also fences future wakes.
  */
 export function createPetFollowUpService(deps: {
-  listSessions(): readonly DesktopPetSession[];
+  listSessions(): readonly PetFollowUpSession[];
   summaryStore: PetSummaryStore;
   summaryService: PetSummaryService;
   inbox: PetFollowUpInbox;
   /** Follow-up schedule rules, as rows. */
-  registered?: { load(): Promise<void>; list(): PetFollowUpRuleView[] };
+  registered?: RegisteredFollowUps;
 }): PetFollowUpService {
   const rowOf = (
-    session: DesktopPetSession,
+    session: PetFollowUpSession,
     terminalAt: number,
     text: string,
   ): PetDerivedFollowUpSummaryRow => ({
@@ -115,7 +133,7 @@ export function createPetFollowUpService(deps: {
       .sort((left, right) => right.terminal!.at - left.terminal!.at);
 
     const cachedRows: PetDerivedFollowUpSummaryRow[] = [];
-    const toGenerate: Array<{ session: DesktopPetSession; terminalAt: number }> = [];
+    const toGenerate: Array<{ session: PetFollowUpSession; terminalAt: number }> = [];
     for (const session of completed) {
       const terminalAt = session.terminal!.at;
       const cached = deps.summaryStore.get(session.agentSessionId);

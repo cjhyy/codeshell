@@ -175,8 +175,8 @@ export interface PetIpcLatestResult {
  * persistent store.
  */
 export interface PetIpcSummaries {
-  collect(): Promise<PetFollowUpSummaryRow[]>;
-  control?(request: PetFollowUpControlRequest): Promise<unknown>;
+  collect(signal?: AbortSignal): Promise<PetFollowUpSummaryRow[]>;
+  control?(request: PetFollowUpControlRequest, signal?: AbortSignal): Promise<unknown>;
   subscribe?(listener: () => void): () => void;
 }
 
@@ -651,13 +651,15 @@ export function registerPetIpc(options: {
   if (options.summaries) {
     options.ipcMain.handle(PET_SUMMARIES_CHANNEL, (_event, ...args) => {
       if (args.length !== 0) throw new Error("pet:summaries-get does not accept arguments");
-      return afterReady(options.ready, () => options.summaries!.collect());
+      const signal = options.recordAuthority?.(_event);
+      return afterReady(options.ready, () => options.summaries!.collect(signal));
     });
     if (options.summaries.control) {
       options.ipcMain.handle(PET_FOLLOW_UP_CONTROL_CHANNEL, (_event, ...args) => {
         if (args.length !== 1) throw new Error("invalid follow-up control");
         const request = parseFollowUpControl(args[0]);
-        return afterReady(options.ready, () => options.summaries!.control!(request));
+        const signal = options.recordAuthority?.(_event);
+        return afterReady(options.ready, () => options.summaries!.control!(request, signal));
       });
     }
   }

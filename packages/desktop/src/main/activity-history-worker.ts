@@ -1,4 +1,5 @@
 import { searchSessionTranscripts } from "@cjhyy/code-shell-pet/disclosure";
+import { readPetSummaryInput } from "./pet/pet-summary-input.js";
 import type { RoomHistoryOperations } from "../shared/room-history.js";
 import { isProfileLibraryRead, type ProfileLibraryReads } from "../shared/profile-library.js";
 import { readProfileLibrary } from "./hosted-profile-library.js";
@@ -54,7 +55,11 @@ port.on("message", ({ id, method, input, permit }: ActivityHistoryWorkerRequest)
           (input as ActivityReads["activity/usage"]["params"]).query,
           options.sessionsDir,
         );
-      else if (method === "mimiSegmentWindow" || method === "mimiSegmentMessages") {
+      else if (method === "mimiSummaryInput") {
+        if (typeof input !== "string") throw Error("Invalid summary Session");
+        assertSafeSessionId(input);
+        value = await readPetSummaryInput(join(options.sessionsDir, input));
+      } else if (method === "mimiSegmentWindow" || method === "mimiSegmentMessages") {
         const request = input as {
           petSessionId: string;
           input: SegmentClosureInput;

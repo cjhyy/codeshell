@@ -7,7 +7,12 @@ import {
   type PetRegisteredFollowUpStatus,
 } from "@cjhyy/code-shell-pet";
 import type { PetDispatchService, PetHostActionContext } from "./pet-dispatch-service.js";
-import { createPetFollowUpService, type PetFollowUpInbox } from "./pet-follow-up-service.js";
+import {
+  createPetFollowUpService,
+  type PetFollowUpInbox,
+  type PetFollowUpService,
+  type RegisteredFollowUps,
+} from "./pet-follow-up-service.js";
 import type { PetLongTaskCoordinator } from "./pet-long-task-coordinator.js";
 import type { PetLongTaskStore } from "./pet-long-task-store.js";
 import type { PetNoticePowerEvents } from "./pet-notice-decision-hooks.js";
@@ -215,12 +220,13 @@ function receipt(action: string, rule: FollowUpRule): Record<string, unknown> {
   };
 }
 
-export interface PetFollowUpRulesDeps {
+type FollowUpViews =
+  | { makeViews: (registered: RegisteredFollowUps) => PetFollowUpService }
+  | { summaryStore: PetSummaryStore; summaryService: PetSummaryService; inbox: PetFollowUpInbox };
+
+export type PetFollowUpRulesDeps = FollowUpViews & {
   rules: PetRuleStore;
   sessions(): readonly DesktopPetSession[];
-  summaryStore: PetSummaryStore;
-  summaryService: PetSummaryService;
-  inbox: PetFollowUpInbox;
   tasks: {
     [K in "get" | "getSnapshot"]: (
       ...args: Parameters<PetLongTaskStore[K]>
@@ -243,20 +249,27 @@ export interface PetFollowUpRulesDeps {
   now?: () => number;
   onError(error: unknown): void;
   log?(event: string, data: Record<string, unknown>): void;
-}
+};
 
 /** Compose follow-ups on the rule table; Desktop supplies lifecycle, routing and authority. */
 export async function createPetFollowUpRules(deps: PetFollowUpRulesDeps) {
   const { rules } = deps;
   const now = deps.now ?? Date.now;
   const followUpRules = () => rules.list().filter(isFollowUpRule);
-  const petFollowUps = createPetFollowUpService({
-    listSessions: deps.sessions,
-    summaryStore: deps.summaryStore,
-    summaryService: deps.summaryService,
-    inbox: deps.inbox,
-    registered: { load: () => rules.load(), list: () => followUpRules().map(followUpRuleView) },
-  });
+  const registered = {
+    load: () => rules.load(),
+    list: () => followUpRules().map(followUpRuleView),
+  };
+  const petFollowUps =
+    "makeViews" in deps
+      ? deps.makeViews(registered)
+      : createPetFollowUpService({
+          listSessions: deps.sessions,
+          summaryStore: deps.summaryStore,
+          summaryService: deps.summaryService,
+          inbox: deps.inbox,
+          registered,
+        });
 
   const followUpRule = (id: string): FollowUpRule => {
     const rule = rules.get(id);
@@ -317,7 +330,9 @@ export async function createPetFollowUpRules(deps: PetFollowUpRulesDeps) {
   async function followUpHost(
     input: Record<string, unknown>,
     context?: PetHostActionContext,
+    signal?: AbortSignal,
   ): Promise<Record<string, unknown>> {
+    signal?.throwIfAborted();
     const payload: unknown = input;
     if (!isPetFollowUpMutationPayload(payload)) throw new Error("invalid follow-up request");
     if (payload.action === "register") return register(payload, context);
@@ -325,9 +340,10 @@ export async function createPetFollowUpRules(deps: PetFollowUpRulesDeps) {
       // Result-derived rows keep their handled-state namespace.
       if (payload.action !== "complete" && payload.action !== "dismiss")
         throw new Error("invalid follow-up mutation request");
-      return { ...(await petFollowUps.mutate(payload)) };
+      return { ...(await petFollowUps.mutate(payload, signal)) };
     }
     await rules.load();
+    signal?.throwIfAborted();
     const current = followUpRule(payload.followUpId);
     if (payload.expectedRevision === undefined)
       throw new Error("registered follow-up requires expectedRevision");

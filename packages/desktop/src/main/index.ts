@@ -117,8 +117,7 @@ import {
 } from "./renderer-project-path.js";
 import { PetStateAggregator } from "./pet/pet-state-aggregator.js";
 import { nativeMimiExternalActivity } from "./desktop-host/mimi-external-client.js";
-import { createPetSummaryStore } from "./pet/pet-summary-store.js";
-import { createPetSummaryService } from "./pet/pet-summary-service.js";
+import { nativeMimiFollowUps } from "./desktop-host/mimi-follow-ups-client.js";
 import {
   type PetSegmentClosureService,
 } from "./pet/pet-segment-closure-service.js";
@@ -186,9 +185,6 @@ import {
   persistedExternalRuntimeModelKey,
   isPersistedExternalRuntime,
 } from "./mobile-remote/external-runtime-commands.js";
-import {
-  allowNativePetAuxiliary,
-} from "./pet/pet-native-extraction-policy.js";
 import { createPetRuntimeControlWorker } from "./pet/pet-runtime-control-worker.js";
 import { createPetExternalRuntime } from "./pet/pet-external-runtime.js";
 import { createPetExternalReplyModel } from "./pet/pet-external-reply-model.js";
@@ -1597,25 +1593,6 @@ async function createWindow(): Promise<BrowserWindow> {
         }),
     });
     petHostActionReceiptService = hostActionReceiptService;
-    // Lazy "Mimi 小结" closure-summary layer: a persistent store keyed by
-    // session id + the aux summary service. summarize() is only called for
-    // completed sessions on a workbench pull (see the summaries collector).
-    const petSummaryStore = createPetSummaryStore(
-      resolve(app.getPath("userData"), "pet", "summaries.json"),
-    );
-    void petSummaryStore
-      .load()
-      .catch((error) => dlog("main", "pet.summary.load.failed", { error: String(error) }));
-    const petSummaryService = createPetSummaryService({
-      sessionsRootDir: petSessionsRootDir,
-      store: petSummaryStore,
-      cwd: resolveNoRepoCwd(),
-      allowGenerate: () =>
-        allowNativePetAuxiliary(
-          new SettingsManager(resolveNoRepoCwd(), "full").getForScope("user"),
-          mimiSessionId ? imRuntimeSessions.readSessionState(mimiSessionId) : undefined,
-        ),
-    });
     // Briefs and the heartbeat are system schedule rules on the same scheduler.
     const petProactive = wirePetProactive({
       notices,
@@ -1641,9 +1618,8 @@ async function createWindow(): Promise<BrowserWindow> {
       legacyFollowUpsPath: resolve(app.getPath("userData"), "pet", "follow-ups.json"),
       powerEvents: powerMonitor,
       sessions: () => aggregator.getSnapshot().sessions,
-      summaryStore: petSummaryStore,
-      summaryService: petSummaryService,
-      inbox: petWorkInbox,
+      makeViews: (registered) =>
+        nativeMimiFollowUps(desktopHost.callBusiness, () => aggregator.getSnapshot().sessions, registered),
       tasks: longTaskStore,
       longTasks: longTaskCoordinator,
       scheduler: () => ({
@@ -2113,8 +2089,8 @@ async function createWindow(): Promise<BrowserWindow> {
         }
       }),
       summaries: {
-        collect: () => petFollowUps.collect(),
-        control: (request) => followUpHost({ ...request }),
+        collect: (signal) => petFollowUps.collect(undefined, signal),
+        control: (request, signal) => followUpHost({ ...request }, undefined, signal),
         subscribe: followUpRuntime.subscribe,
       },
       journal: {

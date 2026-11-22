@@ -96,20 +96,46 @@ process.on("SIGINT", requestStop);
 process.on("SIGTERM", requestStop);
 
 try {
+  const followUpSession = "mimi-follow-up-fixture";
+  const followUpDir = join(isolated.codeShellHome, "sessions", followUpSession);
+  const followUpText = "Choose the synthetic fixture color";
+  await put(join(followUpDir, "state.json"), {
+    sessionId: followUpSession,
+    parentSessionId: null,
+    origin: "desktop",
+    status: "completed",
+    cwd: isolated.home,
+    title: "Synthetic completed session",
+  });
+  // Transcript records are one JSON object per physical line.
+  await writeFile(
+    join(followUpDir, "transcript.jsonl"),
+    JSON.stringify({
+      type: "message",
+      data: { role: "assistant", content: "Which synthetic fixture color should we choose?" },
+    }) + "\n",
+  );
+  const summaryRequest = (body) =>
+    body.messages?.some(
+      (message) =>
+        message.role === "system" && JSON.stringify(message.content).includes("FOLLOW_UP:"),
+    );
   model = await startMockProviderServer({
     scriptResponse: (body) =>
-      body.messages?.some(
-        (message) =>
-          message.role === "system" && JSON.stringify(message.content).includes("事件档案"),
-      )
-        ? {
-            text: JSON.stringify({
-              title: "Synthetic topic",
-              summary: "Two local test turns",
-              memories: ["Mimi synthetic closure preference"],
-            }),
-          }
-        : undefined,
+      summaryRequest(body)
+        ? { text: "FOLLOW_UP: " + followUpText }
+        : body.messages?.some(
+              (message) =>
+                message.role === "system" && JSON.stringify(message.content).includes("事件档案"),
+            )
+          ? {
+              text: JSON.stringify({
+                title: "Synthetic topic",
+                summary: "Two local test turns",
+                memories: ["Mimi synthetic closure preference"],
+              }),
+            }
+          : undefined,
   });
   const fixture = await prepareConfinedElectronFixture({ appDir, isolated, origin: model.origin });
   await seedOfflinePluginBootstrap(isolated.codeShellHome);
@@ -179,6 +205,20 @@ try {
     )
   )
     await trust.click();
+  const followUp = await waitForAsyncFunction(
+    main,
+    async (id) => (await window.codeshell.pet.getSummaries()).find((row) => row.sessionId === id),
+    followUpSession,
+  );
+  assert.equal(followUp.text, followUpText);
+  const cached = JSON.parse(
+    await readFile(join(isolated.userDataDir, "pet", "summaries.json"), "utf8"),
+  );
+  assert.equal(cached.version, 2);
+  assert(
+    cached.entries.some((row) => row.sessionId === followUpSession && row.text === followUpText),
+  );
+  assert.equal(model.requests.filter(({ body }) => summaryRequest(body)).length, 1);
   const readExternal = async ({ id, state }) => {
     const row = (await window.codeshell.pet.getSnapshot()).sessions.find(
       (session) => session.agentSessionId === id,
@@ -652,6 +692,16 @@ try {
       }
     },
     { sessionId: firstStatus.petSessionId, title: closedTopic.title },
+  );
+  const restored = await main.evaluate(
+    async (id) => (await window.codeshell.pet.getSummaries()).find((row) => row.sessionId === id),
+    followUpSession,
+  );
+  assert.equal(restored.followUpId, followUp.followUpId);
+  assert.equal(restored.text, followUpText);
+  assert.equal(model.requests.filter(({ body }) => summaryRequest(body)).length, 1);
+  receipt.checks.push(
+    "hosted follow-up from a completed Session survives a Host restart with no duplicate inference",
   );
   assert.equal(
     model.requests.length,

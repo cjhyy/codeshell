@@ -1,3 +1,5 @@
+import type { MimiRecords } from "../../shared/mimi-records.js";
+import { hostedMimiFollowUps } from "../../host/composition/mimi-follow-ups.js";
 import { gitOperations } from "../../host/composition/git.js";
 import { HostedMimiDispatch } from "../../host/composition/mimi-dispatch.js";
 import { randomUUID } from "node:crypto";
@@ -158,6 +160,18 @@ async function mimiBusiness(
     signal?.removeEventListener("abort", cancel);
   }
 }
+const followUps = hostedMimiFollowUps({
+  petDir: join(dirname(process.argv[2]), "pet"),
+  sessionsDir: sessionsRoot(),
+  history: historyWorker,
+  managerId: async () => (await readMimiList(storage, "metadata")).petSessionId,
+  inbox: (grant) => ({
+    getSnapshot: () => readMimiList(storage, "inboxSnapshot"),
+    addIfAbsentDurably: (id) =>
+      mimiBusiness("mimi/records", { action: "inboxClaim", args: [id] }, grant.signal) as
+        Promise<ReturnType<MimiRecords["inboxClaim"]>>,
+  }),
+});
 const mimiDispatch = new HostedMimiDispatch(
   storage, sessionsRoot(), (options) => catalog.list(options), mimiTasks,
   (cmd, signal) => mimiBusiness("mimi/tasks", cmd, signal),
@@ -177,6 +191,7 @@ const business = new HostBusinessCalls({
   ...approvals.native,
   "mimi/tasks": (command, grant) => mimiTasks.run(command, grant),
   ...segments,
+  ...followUps.methods,
   "rooms/messages": (p) => historyWorker.roomHistory("rooms/messages", p),
   "rooms/historyPage": (p) => historyWorker.roomHistory("rooms/historyPage", p),
   ...gitOperations(),
@@ -339,6 +354,7 @@ parent.on("message", ({ data, ports }) => {
           historyWorker.close(),
           skills.close(),
           mimiDispatch.close(),
+          followUps.close(),
           mimiTasks.close(),
           marketplace.close(),
           worker?.close(),

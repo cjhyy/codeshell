@@ -11,10 +11,9 @@
  * eviction. `get`/`set` are synchronous over the in-memory map; callers await
  * `load()` once before use and may `flush()` in teardown.
  */
-import { randomUUID } from "node:crypto";
-import { chmod, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { readBoundedJson, writeOwnerJsonAtomic } from "./bounded-json-store.js";
 
+const MAX_FILE_BYTES = 1024 * 1024;
 const DEFAULT_MAX_ENTRIES = 500;
 
 export interface PetSummaryEntry {
@@ -64,25 +63,19 @@ export function createPetSummaryStore(
   let writeQueue: Promise<void> = Promise.resolve();
 
   async function doLoad(): Promise<void> {
-    let text: string;
+    let parsed: Partial<PetSummaryFile> | null | undefined;
     try {
-      text = await readFile(filePath, "utf8");
+      parsed = (await readBoundedJson(filePath, MAX_FILE_BYTES)) as
+        | Partial<PetSummaryFile>
+        | undefined;
     } catch {
-      // Missing file → empty store.
-      return;
-    }
-    let parsed: Partial<PetSummaryFile>;
-    try {
-      parsed = JSON.parse(text) as Partial<PetSummaryFile>;
-    } catch {
-      // Corrupt JSON → empty store rather than throwing.
       return;
     }
     // v1 accepted arbitrary model prose and could surface ordinary completion
     // summaries as follow-ups. Ignore it so v2 regenerates through the strict
     // FOLLOW_UP/NONE envelope while preserving dismissals in the separate
     // work-inbox store.
-    if (parsed.version !== 2 || !Array.isArray(parsed.entries)) return;
+    if (parsed?.version !== 2 || !Array.isArray(parsed.entries)) return;
     for (const candidate of parsed.entries) {
       if (!isValidEntry(candidate)) continue;
       entries.set(candidate.sessionId, {
@@ -98,8 +91,6 @@ export function createPetSummaryStore(
   }
 
   async function persist(): Promise<void> {
-    await mkdir(dirname(filePath), { recursive: true, mode: 0o700 });
-    const temporary = `${filePath}.${process.pid}.${randomUUID()}.tmp`;
     const file: PetSummaryFile = {
       version: 2,
       entries: [...entries.entries()].map(([sessionId, entry]) => ({
@@ -108,17 +99,7 @@ export function createPetSummaryStore(
         text: entry.text,
       })),
     };
-    try {
-      await writeFile(temporary, `${JSON.stringify(file, null, 2)}\n`, {
-        encoding: "utf8",
-        mode: 0o600,
-      });
-      await rename(temporary, filePath);
-      await chmod(filePath, 0o600).catch(() => undefined);
-    } catch (error) {
-      await rm(temporary, { force: true }).catch(() => undefined);
-      throw error;
-    }
+    await writeOwnerJsonAtomic(filePath, file, MAX_FILE_BYTES);
   }
 
   function scheduleFlush(): void {

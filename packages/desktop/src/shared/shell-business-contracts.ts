@@ -1,3 +1,4 @@
+import type { MimiFollowUpOperations } from "./mimi-follow-ups.js";
 import type { GitOperations } from "./git-operations.js";
 import type { LabFileOperations } from "./optimization-lab-project.js";
 import type { PendingApprovalOperations } from "./pending-approvals.js";
@@ -30,7 +31,7 @@ type Operation<F extends (...args: any[]) => Promise<unknown>> = {
 
 /** Private calls from authenticated Electron adapters. These methods are never
  * registered on a renderer port or exposed by the window preload. */
-export interface ShellBusinessOperations extends MarketplaceOperations, PluginPackageOperations, GitOperations, PendingApprovalOperations, LabFileOperations, ConfiguredMcpProbe, RoomHistoryOperations, SkillOperations, MediaProtocolOperations, AttachmentOperations, WechatLoginOperations, ActivityOperations, NativeCcRoomReads, MemoryOperations, PrivateMemoryReads, ProjectRegistryOperations, CatalogEdits, ProfileLibraryOperations {
+export interface ShellBusinessOperations extends MimiFollowUpOperations, MarketplaceOperations, PluginPackageOperations, GitOperations, PendingApprovalOperations, LabFileOperations, ConfiguredMcpProbe, RoomHistoryOperations, SkillOperations, MediaProtocolOperations, AttachmentOperations, WechatLoginOperations, ActivityOperations, NativeCcRoomReads, MemoryOperations, PrivateMemoryReads, ProjectRegistryOperations, CatalogEdits, ProfileLibraryOperations {
   "mimi/turnStorage":{input:import("./mimi-turn-storage.js").MimiTurnStorageCommand;result:unknown};
   "mimi/tasks": {input: import("./mimi-tasks.js").MimiTaskCommand;result:unknown};
   "mimi/extractionAllowed": { input: Record<string,never>; result:boolean };

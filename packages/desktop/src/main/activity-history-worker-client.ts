@@ -23,6 +23,7 @@ export interface ActivityHistoryWorkerRequest {
     | keyof import("../shared/room-history.js").RoomHistoryOperations
     | "externalSessions"
     | "externalHistory"
+    | "mimiSummaryInput"
     | "mimiSegmentWindow"
     | "mimiSegmentMessages"
     | "mimiExternalActivity"
@@ -71,6 +72,9 @@ export class ActivityHistoryWorker {
   ) {}
 
   onExternalActivityChanged?: () => void;
+  mimiSummaryInput(sessionId: string): Promise<string | null> {
+    return this.request("mimiSummaryInput", sessionId);
+  }
   mimiSegmentWindow(input: {
     petSessionId: string;
     input: SegmentClosureInput;
