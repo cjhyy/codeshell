@@ -569,7 +569,11 @@ try {
       notify(id, { type: "assistant_message", agentId: "owned-background" });
       notify(id, { type: "turn_complete", agentId: "owned-background", reason: "completed" });
       notify(id, { type: "agent_end", agentId: "owned-background" });
-      await page.getByText("Owned background child · 已完成", { exact: false }).waitFor();
+      const childRow = page.locator(".subagent-row").filter({ hasText: "Owned background child" });
+      await childRow
+        .locator(".subagent-row-meta")
+        .getByText(/已完成/)
+        .waitFor();
       assert.equal(await send.isEnabled(), true);
       await hit(send);
       await page.screenshot({
@@ -676,7 +680,12 @@ try {
         async () => (await state()).items.filter((v) => v.kind === "tool" && v.done).length === 2,
         "Both orderings must complete through ProtocolClient",
       );
-      const tools = page.locator(".message-tool-card");
+      const group = page.locator(".message-process");
+      const summary = group.getByRole("button").first();
+      await summary.waitFor();
+      if ((await summary.getAttribute("aria-expanded")) === "false") await summary.click();
+      const tools = group.locator(".message-tool-card");
+      await tools.nth(1).waitFor();
       assert.equal(await tools.count(), 2);
       item.actualRenderedResults = [];
       for (let i = 0; i < 2; i++) {
