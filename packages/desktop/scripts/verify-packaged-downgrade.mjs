@@ -65,7 +65,7 @@ async function close() {
 }
 async function findTask() {
   const deadline = Date.now() + 45000;
-  let observed = [];
+  let observed;
   do {
     const rows = await page.evaluate(
       async () => (await window.codeshell.taskInbox.list({ limit: 200 })).records,

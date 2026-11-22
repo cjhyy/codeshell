@@ -19,6 +19,7 @@ test("the shared main build delivers the worker Link and Cua proxy entries with 
       "link-provider-module",
       "session-index-worker",
       "session-transcript-cache-worker",
+      "skill-worker",
     ]);
     const result = await esbuild.build({
       ...options,

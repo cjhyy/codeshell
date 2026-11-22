@@ -128,7 +128,7 @@ export function registerProfileMemoryPromotionIpc(
       return await reviews.commit(
         generation.owner,
         { ...input, cwd },
-        generation.controller.signal,
+        AbortSignal.any([document, generation.controller.signal]),
       );
     } finally {
       // A reviewed token is single use, including failed commits.
