@@ -124,6 +124,13 @@ export function mimiRecordsOperations(
   announce: (domain: MimiRecordDomain) => void,
 ) {
   return {
+    async "mimi/turnStorage"(command, grant) {
+      const db=await storage;
+      grant.assertCurrent();
+      const row=await db.request<{value:unknown}>("mimi/turnStorage",command);
+      if(!row)throw Error("Mimi turn storage unavailable");
+      return row.value;
+    },
     async "mimi/workMemory"(input, grant) {
       const db = await storage;
       grant.assertCurrent();
@@ -146,7 +153,7 @@ export function mimiRecordsOperations(
       if (row.changed) announce(row.changed);
       return row.result;
     },
-  } satisfies Pick<BusinessMethods, "mimi/records" | "mimi/workMemory">;
+  } satisfies Pick<BusinessMethods, "mimi/turnStorage" | "mimi/records" | "mimi/workMemory">;
 }
 
 export async function readMimiList<K extends "memoryList" | "journalList" | "inboxSnapshot">(

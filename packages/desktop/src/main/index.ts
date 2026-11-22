@@ -1,4 +1,5 @@
 import { createPanelCookieAdapter, registerPanelWindowShell } from "./shell/panel-app.js";
+import { mimiTurnStores } from "../shared/mimi-turn-storage.js";
 import { nativePendingApprovals } from "../shared/pending-approvals.js";
 import { registerHostedWechatLogin } from "./desktop-host/wechat-login-client.js";
 import { registerConfigurationSettingsIpc } from "./configuration-settings-ipc.js";
@@ -142,7 +143,6 @@ import { enrichPetChatReplyWithHostActions } from "./pet/host-action-reply.js";
 import { nativeMimiRecords } from "./desktop-host/mimi-records-client.js";
 import { petWidgetMenuTemplate } from "./pet/pet-widget-menu.js";
 import { PetWorkDelegationHost } from "./pet/pet-work-delegation-host.js";
-import { PetChatAttachmentContext } from "./pet/pet-chat-attachment-context.js";
 import { getSessionCwdIndex } from "./session-cwd-index.js";
 import { wirePetNotices, type PetNoticeWiring } from "./pet/pet-notice-wiring.js";
 import { withExternalDecisions } from "./pet/pet-notice-external-decisions.js";
@@ -150,16 +150,13 @@ import { createExternalSessionCatalog } from "./pet/pet-notice-external-sessions
 import { externalGoalNoticeSource } from "./pet/pet-notice-goal-reconcile.js";
 import { createPetNoticeControls, type PetNoticeControls } from "./pet/pet-notice-ipc.js";
 import { wireMimiNoticeTools } from "./pet/pet-mimi-notice-tools.js";
-import { PetHostActionReceiptStore } from "./pet/pet-host-action-receipts.js";
 import { archivePetSessionsBySelector } from "./pet/pet-session-archive.js";
 import { createPetFollowUpRules } from "./pet/pet-follow-up-rules.js";
 import { wirePetProactive } from "./pet/pet-proactive-wiring.js";
 import { PetRuleScheduler, isPetRuleScheduleJob } from "./pet/pet-rule-schedule.js";
-import { PetContextLinkStore } from "./pet/pet-context-links.js";
 import { nativeMimiWorkMemory } from "./desktop-host/mimi-work-client.js";
 import type { PetArchiveAnchors } from "./pet/pet-segment-controller.js";
 import { recordPetDelegationClosureBestEffort } from "./pet/pet-delegation-closure.js";
-import { PetReportReceiptStore } from "./pet/pet-report-receipt-store.js";
 import {
   createSessionOutcomeFanout,
   createSessionOutcomeTap,
@@ -1504,9 +1501,7 @@ async function createWindow(): Promise<BrowserWindow> {
     });
     const petWorkInbox = mimiRecords.workInbox;
     petWorkInboxStore = petWorkInbox;
-    const petHostActionReceipts = new PetHostActionReceiptStore(
-      resolve(app.getPath("userData"), "pet", "host-action-receipts.json"),
-    );
+    const turnStores=mimiTurnStores(command=>desktopHost.callBusiness("mimi/turnStorage",command));
     // Built inside petInitialization once the durable pet session id is known.
     let petSegmentClosureService: PetSegmentClosureService | null = null;
     const longTaskCoordinator = longTaskStore.configure({
@@ -1822,7 +1817,7 @@ async function createWindow(): Promise<BrowserWindow> {
       aggregator,
       worker: bridge,
       hostCwd: resolveNoRepoCwd(),
-      attachmentContext: new PetChatAttachmentContext(resolve(app.getPath("userData"), "pet")),
+      attachmentContext: turnStores.attachmentContext,
       sessionsRootDir: petSessionsRootDir,
       externalRuntime: createPetExternalRuntime({
         service: () => externalRuntime.service,
@@ -1861,10 +1856,8 @@ async function createWindow(): Promise<BrowserWindow> {
         if (!taskInboxService || !taskInboxEnabled()) throw new Error("Task inbox is unavailable");
         return taskInboxPetView(await taskInboxService.reconcile());
       },
-      hostActionReceipts: petHostActionReceipts,
-      contextLinks: new PetContextLinkStore(
-        resolve(app.getPath("userData"), "pet", "context-links.json"),
-      ),
+      hostActionReceipts: turnStores.receipts,
+      contextLinks: turnStores.contextLinks,
       // Atomic CodeShell capabilities Mimi may request via her host-action
       // tools; each runs only after her turn, and the real outcome is folded
       // into the reply. The key set gates which tools the worker exposes.
@@ -2034,9 +2027,7 @@ async function createWindow(): Promise<BrowserWindow> {
       startWorkSession: (delegation) => longTaskCoordinator.startDelegation(delegation),
     });
     const processingPetReports = new Set<string>();
-    const deliveredPetReports = new PetReportReceiptStore(
-      resolve(app.getPath("userData"), "pet", "report-receipts.json"),
-    );
+    const deliveredPetReports = turnStores.reports;
     unsubscribePetReportStream = bridge.subscribePetReports(async (event) => {
       if (processingPetReports.has(event.reportId)) return;
       processingPetReports.add(event.reportId);
@@ -2123,7 +2114,7 @@ async function createWindow(): Promise<BrowserWindow> {
       await Promise.all([
         notices.ready,
         petWorkInbox.load(),
-        petHostActionReceipts.load(),
+        turnStores.receipts.load(),
         petWorkMemory.load(),
       ]);
       // Build the topic-segment controller now that the pet session id is

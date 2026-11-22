@@ -380,7 +380,7 @@ export interface PetDispatchOptions {
    * proactive message). Optional: when absent, behaviour is the pre-existing at-least-once
    * one.
    */
-  hostActionReceipts?: PetHostActionReceiptStore;
+  hostActionReceipts?: Pick<PetHostActionReceiptStore,"claim"|"record">;
   /** Mimi's own recent briefs / heartbeat for the conversation a chat turn answers. */
   recentProactive?: PetRecentProactiveSource;
   /** Whose turn it is, for Mimi's notice tools (shown and readable only in the owner's). */
