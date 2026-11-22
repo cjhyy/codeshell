@@ -253,11 +253,7 @@ export class DesktopHostSupervisor {
     return result as T;
   }
 
-  async callBusiness<K extends keyof ShellBusinessOperations>(
-    method: K,
-    input: ShellBusinessOperations[K]["input"],
-    signal?: AbortSignal,
-  ): Promise<ShellBusinessOperations[K]["result"]> {
+  async waitUntilReady(signal?: AbortSignal): Promise<void> {
     signal?.throwIfAborted();
     if (this.stopped) throw new Error("Desktop Host is unavailable");
     if (!this.ready) {
@@ -276,6 +272,15 @@ export class DesktopHostSupervisor {
       }
     }
     signal?.throwIfAborted();
+    if (!this.ready || this.stopped) throw new Error("Desktop Host is unavailable");
+  }
+
+  async callBusiness<K extends keyof ShellBusinessOperations>(
+    method: K,
+    input: ShellBusinessOperations[K]["input"],
+    signal?: AbortSignal,
+  ): Promise<ShellBusinessOperations[K]["result"]> {
+    await this.waitUntilReady(signal);
     // A scheduled Engine turn can span many tool calls. Its scheduler owns cancellation.
     const waitsForRun =
       method === "automation/command" && (input as { method?: string }).method === "cancel";

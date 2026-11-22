@@ -1,3 +1,5 @@
+import { ExternalProviderPorts, externalProviderFactories, inferExternalMemory } from "./native-external-provider.js";
+import { electronPrivatePort } from "../../host/native-peer.js";
 import { NativeRemoteClient } from "./remote-client.js";
 import type { NativeRemoteTerminals } from "../mobile-remote/native-terminals.js";
 import { NativeAutomationClient } from "./main-automation.js";
@@ -39,6 +41,7 @@ export function createDesktopHost(
   hostReady?: () => void,
   settingsCommitted?: (effects: SettingsChange) => Promise<void>,
 ) {
+  const providerPorts = new ExternalProviderPorts();
   const remote = new NativeRemoteClient();
   let terminals: NativeRemoteTerminals | undefined;
   let worker: DesktopHostWorkerClient | undefined;
@@ -60,6 +63,7 @@ export function createDesktopHost(
         }
         bindTerminals();
       } else {
+        providerPorts.disconnect();
         worker?.disconnect();
         automation.disconnect();
         remote.disconnect();
@@ -166,6 +170,16 @@ export function createDesktopHost(
   }
   let changes: ReturnType<typeof createSessionIndexChanges> | undefined;
   const connect = (event: IpcMainEvent) => workbenches.connect(event);
+  const openExternalProvider = async (signal?: AbortSignal) => {
+    await supervisor.waitUntilReady(signal);
+    const { port1, port2 } = new MessageChannelMain();
+    if (!supervisor.post({ type: "external-provider-port" }, [port2])) {
+      port1.close();
+      port2.close();
+      throw Error("External provider Host unavailable");
+    }
+    return providerPorts.bind(electronPrivatePort(port1));
+  };
   return {
     callBusiness: supervisor.callBusiness.bind(supervisor),
     documentSignal,
@@ -173,6 +187,8 @@ export function createDesktopHost(
     remote,
     setRemoteTerminals(client: NativeRemoteTerminals) { terminals = client; },
     mimiRecordListeners: supervisor.mimiRecordListeners,
+    externalProviders: externalProviderFactories(openExternalProvider),
+    inferExternalMemory: inferExternalMemory(openExternalProvider),
     automationListeners: supervisor.automationListeners,
     automation,
     catalogListeners: supervisor.catalogListeners,
@@ -315,6 +331,7 @@ export function createDesktopHost(
     setDeleting: (sessionId: string, deleting: boolean) =>
       supervisor.setDeleting(sessionId, deleting),
     dispose() {
+      providerPorts.disconnect();
       terminals?.disconnect();
       changes?.close();
       changes = undefined;

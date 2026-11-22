@@ -266,6 +266,7 @@ export interface ExternalRuntimeServiceDeps {
   prepareCodexLaunch?: (cwd: string) => Promise<CodexLaunch>;
   /** Start the provider runtime; injectable for tests (production: the real CLI). */
   startSession?: typeof startExternalRuntimeSession;
+  providerFactories?: Parameters<typeof startExternalRuntimeSession>[0]["providerFactories"];
   /** Separate background maintenance; never lends the foreground CLI or tool lease. */
   memory?: Pick<ExternalRuntimeMemory, "schedule" | "cancel" | "dispose">;
 }
@@ -1314,6 +1315,20 @@ export class ExternalRuntimeService {
     this.deps.registerSession(request.sessionId, request.cwd, ownerId);
     try {
       session = await (this.deps.startSession ?? startExternalRuntimeSession)({
+        providerFactories: this.deps.providerFactories,
+        onProviderDisconnect: () => {
+          lifecycle.faulted = true;
+          const entry = this.sessions.get(request.sessionId);
+          if (entry?.lifecycle !== lifecycle) return;
+          entry.toolTurnAbort?.abort("External provider disconnected");
+          this.deps.cancelApprovals?.(request.sessionId);
+          void this.enqueueLifecycle(request.sessionId, async () => {
+            if (this.sessions.get(request.sessionId) === entry)
+              await this.stopExclusive(request.sessionId);
+          }).catch((err) =>
+            dlog("external-runtime", "provider_disconnect_cleanup_failed", { error: String(err) }),
+          );
+        },
         kind: request.kind,
         ...(codexLaunch ? { codexClient: codexLaunch } : {}),
         cwd: request.cwd,
@@ -1482,7 +1497,7 @@ export class ExternalRuntimeService {
 
     try {
       assertStartAuthority?.();
-      if (!this.authorityStillCurrent(request.cwd, authority)) {
+      if (lifecycle.faulted || !this.authorityStillCurrent(request.cwd, authority)) {
         throw new Error("External runtime authority changed while starting");
       }
       if (request.ownerWindow?.isDestroyed?.()) {

@@ -1,4 +1,7 @@
 import { wechatLoginOperations } from "../../host/composition/wechat-login.js";
+import { bindExternalProvider } from "../../host/composition/external-provider.js";
+import { electronPrivatePort } from "../../host/native-peer.js";
+import { mimiWorkView, type MimiWorkSnapshot } from "../../shared/mimi-work-memory.js";
 import { ccRoomReads } from "../../host/composition/cc-room-reads.js";
 import { hostedMediaProtocol } from "../../host/composition/media-protocol.js";
 import { attachmentOperations } from "../../host/composition/attachments.js";
@@ -7,7 +10,6 @@ import { ActivityHistoryWorker } from "../activity-history-worker-client.js";
 import { memoryReads } from "./memory-reads.js";
 import { memoryOperations } from "../../host/composition/memory.js";
 import { bindRemoteServices } from "../../host/remote/service.js";
-import { mimiWorkView, type MimiWorkSnapshot } from "../../shared/mimi-work-memory.js";
 import { bindRemoteTerminals } from "../../host/composition/remote-terminals.js";
 import { hostedTerminals } from "../../host/composition/terminals.js";
 import { mimiRecordsOperations, readMimiList } from "../../host/composition/mimi-records.js";
@@ -48,14 +50,12 @@ import { outputMethods } from "./output-methods.js";
 import { bindHostWorker } from "./host-worker.js";
 import { sessionsRoot } from "@cjhyy/code-shell-core";
 import { createSessionIndex } from "@cjhyy/code-shell-server/storage";
-import {
   isDesktopHostControl,
   isDesktopHostIdentity,
   isRpcRequest,
   isRpcResponse,
 } from "../../shared/desktop-host-protocol.js";
 import { DesktopSessionListVisibility } from "./session-list-visibility.js";
-import {
   DesktopHostServer,
   desktopHostMethods,
   WorkerCommandError,
@@ -153,6 +153,7 @@ const terminals = hostedTerminals(
 const approvals = new HostApprovalState((id, owner) => server?.allows(id, owner) ?? false);
 let remote: ReturnType<typeof bindRemoteServices> | undefined;
 let stopping = false;
+const providers = new Set<() => Promise<void>>();
 let closeRemoteTerminals: (() => void) | undefined;
 let worker: ReturnType<typeof bindHostWorker> | undefined;
 const output = new HostOutput(
@@ -175,6 +176,15 @@ const output = new HostOutput(
 parent.on("message", ({ data, ports }) => {
   if (stopping) {
     for (const port of ports) port.close();
+    return;
+  }
+  if (isDesktopHostControl(data) && data.type === "external-provider-port" && server && ports.length === 1) {
+    if (providers.size >= 128) {
+      ports[0].close();
+      return;
+    }
+    const dispose = bindExternalProvider(electronPrivatePort(ports[0]), () => providers.delete(dispose));
+    providers.add(dispose);
     return;
   }
   if (
@@ -244,6 +254,7 @@ parent.on("message", ({ data, ports }) => {
           worker?.close(),
           transcripts.close(),
           automation.close(),
+          ...[...providers].map((close) => close()),
           remote?.close(),
           historyWorker.close(),
           mediaProtocol.close(),

@@ -604,12 +604,14 @@ let chromeNativeRegistration: ChromeNativeRegistrationResult | undefined;
 const externalRuntime = createExternalRuntimeModule(() => {
   const externalBridge = bridge!;
   return {
+    memoryInference: desktopHost.inferExternalMemory,
     approvals: {
       windows: () => mainWindows,
       ownerWebContentsId: (sessionId) => externalBridge.panelOwnerWebContentsId(sessionId),
       onPendingChange: (event) => mobileOrchestrator.mirrorExternalApproval(event),
     },
     service: {
+      providerFactories: desktopHost.externalProviders,
       featureFlags: () => {
         const cwd = resolveNoRepoCwd();
         const settings = new SettingsManager(cwd, "full").getForScope("user") as {
