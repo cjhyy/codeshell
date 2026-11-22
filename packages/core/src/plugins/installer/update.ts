@@ -44,6 +44,7 @@ export async function reinstallAtomic(
   name: string,
   source: string,
   doInstall: () => Promise<unknown>,
+  beforeCommit?: () => void,
 ): Promise<void> {
   const dir = pluginInstallDir(name);
   const backup = `${dir}.bak-${process.pid}-${randomUUID()}`;
@@ -54,6 +55,7 @@ export async function reinstallAtomic(
   const key = pluginInstallKey(name, "local");
   const savedEntries = readInstalledPlugins().plugins[key];
 
+  beforeCommit?.();
   await rename(dir, backup);
   // The installer re-adds the entry on success; remove the stale one first so a
   // successful reinstall doesn't accumulate a duplicate.

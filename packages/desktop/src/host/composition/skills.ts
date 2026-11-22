@@ -1,12 +1,13 @@
 import { invalidateSkillCache } from "@cjhyy/code-shell-core";
 import { Worker } from "node:worker_threads";
+import type { PluginPackageOperations } from "../../shared/plugin-library.js";
 import type { ProfilePackageOperations } from "../../shared/profile-library.js";
 import type { SkillOperations } from "../../shared/skill-operations.js";
 import type { BusinessGrant, BusinessMethods } from "./business-calls.js";
 
 /** Network downloads and bundle hashing run independently of the Host port and SQLite writer. */
-type ExtensionOperations = SkillOperations & ProfilePackageOperations;
-export function hostedSkills(url: URL) {
+type ExtensionOperations = SkillOperations & ProfilePackageOperations & PluginPackageOperations;
+export function hostedSkills(url: URL, pluginChanged: (requestId: string) => void) {
   const pending = new Set<Promise<unknown>>();
   let closing = false;
   function route<K extends keyof ExtensionOperations>(method: K) {
@@ -22,7 +23,14 @@ export function hostedSkills(url: URL) {
         worker.once("message", (reply) => {
           if (typeof reply.error === "string") reject(new Error(reply.error));
           else {
-            if (Atomics.load(grant.permit, 0) === 1) invalidateSkillCache();
+            if (Atomics.load(grant.permit, 0) === 1) {
+              invalidateSkillCache();
+              if (
+                method === "plugins/uninstallLocal" ||
+                (method === "plugins/installLocal" && reply.value?.ok)
+              )
+                pluginChanged(grant.requestId);
+            }
             resolve(reply.value);
           }
         });
@@ -42,6 +50,10 @@ export function hostedSkills(url: URL) {
   }
   return {
     methods: {
+      "plugins/previewLocal": route("plugins/previewLocal"),
+      "plugins/installLocal": route("plugins/installLocal"),
+      "plugins/uninstallLocal": route("plugins/uninstallLocal"),
+      "plugins/checkUpdate": route("plugins/checkUpdate"),
       "profiles/addRepo": route("profiles/addRepo"),
       "profiles/previewRequirements": route("profiles/previewRequirements"),
       "profiles/installRequirements": route("profiles/installRequirements"),

@@ -134,7 +134,9 @@ const mimiTasks = new HostedMimiTasks(join(dirname(process.argv[2]), "pet"));
 const segments = hostedMimiSegments(storage, historyWorker, (domain) =>
   parent.postMessage({ type: "mimi-records-changed", domain }),
 );
-const skills = hostedSkills(new URL("./skill-worker.mjs", import.meta.url));
+const skills = hostedSkills(new URL("./skill-worker.mjs", import.meta.url),requestId=>parent.postMessage({
+  type:"settings-committed",requestId,effects:{panelApps:false,git:false,pet:false,externalVisibility:false,pluginCommands:true}
+}));
 let server: DesktopHostServer | undefined;
 const approvals = new HostApprovalState((id, owner) => server?.allows(id, owner) ?? false);
 const business = new HostBusinessCalls({

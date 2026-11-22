@@ -1,6 +1,7 @@
 import { createPanelCookieAdapter, registerPanelWindowShell } from "./shell/panel-app.js";
 import { mimiTurnStores } from "../shared/mimi-turn-storage.js";
 import { nativePendingApprovals } from "../shared/pending-approvals.js";
+import { reviewedLocalPlugins } from "./reviewed-local-plugins.js";
 import { registerHostedWechatLogin } from "./desktop-host/wechat-login-client.js";
 import { registerConfigurationSettingsIpc } from "./configuration-settings-ipc.js";
 import type { SettingsChange } from "../shared/settings-change.js";
@@ -304,9 +305,7 @@ import {
   listPlugins,
   getPluginDetail,
   uninstallPluginEntry,
-  uninstallLocalPluginEntry,
   updatePluginEntry,
-  checkPluginUpdateEntry,
 } from "./plugins-service.js";
 import { invalidatePanelAppBindingGuard, isPanelAppBoundToProject } from "./panel-apps-service.js";
 import { expandPluginCommand, listPluginCommands } from "./plugin-command-service.js";
@@ -327,8 +326,6 @@ import {
   removeMarketplaceForUi,
   refreshMarketplaceForUi,
   installPluginForUi,
-  installLocalPluginForUi,
-  previewLocalPluginForUi,
   onPluginInstallJobsChanged,
   retryPluginInstallJobForUi,
   gitDownloadUrl,
@@ -3279,19 +3276,13 @@ ipcMain.handle("plugins:uninstall", async (_e, pluginName: string, marketplaceNa
   broadcastPluginCommandsChanged(mainWindows);
   return result;
 });
-ipcMain.handle("plugins:uninstallLocal", async (_e, name: string) => {
-  const result = await uninstallLocalPluginEntry(name);
-  broadcastPluginCommandsChanged(mainWindows);
-  return result;
-});
+ipcMain.handle("plugins:uninstallLocal",(event,name:string)=>desktopHost.callBusiness("plugins/uninstallLocal",{name},desktopHost.documentSignal(event)));
 ipcMain.handle("plugins:update", async (_e, installKey: string) => {
   const result = await updatePluginEntry(installKey);
   broadcastPluginCommandsChanged(mainWindows);
   return result;
 });
-ipcMain.handle("plugins:checkUpdate", async (_e, name: string) => {
-  return checkPluginUpdateEntry(name);
-});
+ipcMain.handle("plugins:checkUpdate",(event,name:string)=>desktopHost.callBusiness("plugins/checkUpdate",{name},desktopHost.documentSignal(event)));
 // Is a usable git binary available (PATH, or the configured git.path)? The
 // marketplace UI uses this to show an "install Git" banner up front instead of
 // only after a clone fails.
@@ -3323,25 +3314,9 @@ ipcMain.handle("plugins:install", async (_e, pluginName: string, marketplaceName
   installPluginForUi(pluginName, marketplaceName),
 );
 ipcMain.handle("plugins:retryInstallJob", async (_e, id: string) => retryPluginInstallJobForUi(id));
-ipcMain.handle("plugins:previewLocal", async (_e, input: { kind: "dir" | "zip"; path: string }) =>
-  previewLocalPluginForUi(input),
-);
-ipcMain.handle(
-  "plugins:installLocal",
-  async (
-    _e,
-    input: {
-      kind: "dir" | "zip";
-      path: string;
-      reviewToken: string;
-      overwrite?: boolean;
-    },
-  ) => {
-    const result = await installLocalPluginForUi(input);
-    if (result.ok) broadcastPluginCommandsChanged(mainWindows);
-    return result;
-  },
-);
+const localPluginReviews=reviewedLocalPlugins(desktopHost.callBusiness);
+ipcMain.handle("plugins:previewLocal",(event,input)=>localPluginReviews.preview(input,desktopHost.documentSignal(event)));
+ipcMain.handle("plugins:installLocal",(event,input)=>localPluginReviews.install(input,desktopHost.documentSignal(event)));
 ipcMain.handle("themes:list", async () => {
   const themes = await listInstalledThemes();
   return themes.map(installedThemeToPack);

@@ -608,7 +608,7 @@ export async function installLocalPluginForUi(input: {
   path: string;
   reviewToken: string;
   overwrite?: boolean;
-}): Promise<{ ok: true; name: string } | LocalInstallError> {
+},beforeCommit?:()=>void): Promise<{ ok: true; name: string } | LocalInstallError> {
   if (
     !input ||
     (input.kind !== "dir" && input.kind !== "zip") ||
@@ -626,7 +626,7 @@ export async function installLocalPluginForUi(input: {
       { kind: input.kind, path: input.path },
       input.reviewToken,
       new Date().toISOString(),
-      { overwrite: input.overwrite === true },
+      { overwrite: input.overwrite === true, beforeCommit },
     );
     invalidateSkillCache();
     return { ok: true, name };

@@ -2,6 +2,11 @@ import { realpathSync, statSync } from "node:fs";
 import { userHome } from "@cjhyy/code-shell-core";
 import type { RendererConfigurationTarget } from "../../shared/renderer-configuration.js";
 import { parentPort, workerData } from "node:worker_threads";
+import {
+  previewLocalPluginForUi,
+  installLocalPluginForUi,
+} from "../../main/marketplace-service.js";
+import { uninstallLocalPluginEntry, checkPluginUpdateEntry } from "../../main/plugins-service.js";
 import { inspectRepo, installFromGithub } from "../../main/github-skill-service.js";
 import { installSkillFromDirectory, uninstallSkill } from "../../main/skills-service.js";
 import { updateSkillEntry } from "../../main/skill-update-entry.js";
@@ -15,6 +20,7 @@ import {
   previewProfileRequirements,
   installProfileRequirements,
 } from "../../main/profiles-service.js";
+import type { PluginPackageOperations } from "../../shared/plugin-library.js";
 import type { ProfilePackageOperations } from "../../shared/profile-library.js";
 import type { SkillOperations } from "../../shared/skill-operations.js";
 
@@ -37,13 +43,19 @@ async function skillDestination(target: RendererConfigurationTarget | null) {
     },
   };
 }
-type ExtensionOperations = SkillOperations & ProfilePackageOperations;
+type ExtensionOperations = SkillOperations & ProfilePackageOperations & PluginPackageOperations;
 type Handlers = {
   [K in keyof ExtensionOperations]: (
     input: ExtensionOperations[K]["input"],
   ) => Promise<ExtensionOperations[K]["result"]>;
 };
 const handlers = {
+  "plugins/previewLocal": (input) => previewLocalPluginForUi(input),
+  "plugins/installLocal": (input) =>
+    installLocalPluginForUi(input, () => claimBusinessCommit(workerData.permit)),
+  "plugins/uninstallLocal": ({ name }) =>
+    uninstallLocalPluginEntry(name, () => claimBusinessCommit(workerData.permit)),
+  "plugins/checkUpdate": ({ name }) => checkPluginUpdateEntry(name),
   "profiles/addRepo": ({ repo }) =>
     addProfileRepo(repo, () => claimBusinessCommit(workerData.permit)),
   async "profiles/previewRequirements"({ target, name }) {

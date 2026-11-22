@@ -223,11 +223,11 @@ export async function uninstallPluginEntry(
  * renderer derives from the install key (see resolveUninstallTarget).
  * Throws on bad input so the IPC layer surfaces a clear error.
  */
-export async function uninstallLocalPluginEntry(name: string): Promise<void> {
+export async function uninstallLocalPluginEntry(name: string,beforeCommit?:()=>void): Promise<void> {
   if (typeof name !== "string" || !name) {
     throw new Error("uninstallLocalPluginEntry requires a plugin name");
   }
-  await uninstallPluginByNameAsync(name);
+  await uninstallPluginByNameAsync(name,beforeCommit);
 }
 
 type PluginUpdateCatalogEntry = Pick<

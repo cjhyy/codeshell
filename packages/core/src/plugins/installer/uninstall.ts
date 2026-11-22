@@ -1,3 +1,4 @@
+import { withLocalPluginMutation } from "./mutation-lock.js";
 import { existsSync, rmSync } from "node:fs";
 import { detachPluginDirectory, removeDetachedPluginDirectories } from "./removeDirectory.js";
 import { pluginInstallDir, assertSafePluginName } from "./paths.js";
@@ -25,10 +26,18 @@ export function uninstallPluginByName(name: string): void {
 }
 
 /** Detach the installed name before yielding so a reinstall cannot be deleted. */
-export async function uninstallPluginByNameAsync(name: string): Promise<void> {
+export async function uninstallPluginByNameAsync(
+  name: string,
+  beforeCommit?: () => void,
+): Promise<void> {
   const cleanup: string[] = [];
   try {
-    uninstallLocal(name, (dir) => cleanup.push(detachPluginDirectory(dir)));
+    await withLocalPluginMutation(name, async () => {
+      uninstallLocal(name, (dir) => {
+        beforeCommit?.();
+        cleanup.push(detachPluginDirectory(dir));
+      });
+    });
   } finally {
     await removeDetachedPluginDirectories(cleanup);
   }
