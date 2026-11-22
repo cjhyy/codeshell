@@ -1,3 +1,4 @@
+import { createDesktopTaskInbox } from "./shell/task-inbox.js";
 import { createMimiPresenceShell } from "./shell/mimi-presence.js";
 import { createPanelCookieAdapter, registerPanelWindowShell } from "./shell/panel-app.js";
 import { petRemoteMemoryContext } from "./pet/pet-memory-host.js";
@@ -6,10 +7,6 @@ import { registerPluginLibraryIpc } from "./plugin-library-ipc.js";
 import { registerHostedWechatLogin } from "./desktop-host/wechat-login-client.js";
 import { registerConfigurationSettingsIpc } from "./configuration-settings-ipc.js";
 import type { SettingsChange } from "../shared/settings-change.js";
-import {
-  observeBackgroundWorkChange,
-  type BackgroundWorkChange,
-} from "@cjhyy/code-shell-core/internal";
 import {
   setDesktopCredentialFiles,
 } from "./credential-file-client.js";
@@ -80,10 +77,6 @@ import {
 import { createExternalRuntimeBackgroundWork } from "./external-runtime-background-work.js";
 import { createExternalGoalRpcHandler } from "./external-runtime-goal-rpc.js";
 import { buildExternalRuntimeHandoffFromEvents } from "./external-runtime-handoff.js";
-import {
-  removeExternalRuntimeBinding,
-  readExternalRuntimeBinding,
-} from "./external-runtime-state.js";
 import { parseExternalRuntimeModelKey } from "../shared/external-runtime-models.js";
 import {
   requireRendererProjectPath,
@@ -195,8 +188,6 @@ import { dlog } from "./desktop-logger.js";
 import { cookieCredentialAutoRefresh } from "./cookie-credential-auto-refresh.js";
 import { isBrowserPartition } from "../shared/browser-partition.js";
 import {
-  archiveDiskSession as writeSessionArchive,
-  deleteSession,
   markAttachmentsSent,
   stageFileBytes,
   stageImageBytes,
@@ -215,11 +206,7 @@ import { readSettings } from "./settings-service.js";
 import { registerDesktopOutputHistoryHost } from "./session-output-history-host.js";
 import { registerSessionCatalogIpc } from "./session-catalog-ipc.js";
 import { hostCatalogClient } from "./desktop-host/catalog-client.js";
-import { backgroundTaskSourceId, createTaskInboxSources } from "./task-inbox/task-inbox-sources.js";
-import { createTaskInboxService } from "./task-inbox/task-inbox-service.js";
-import { createTaskInboxBackgroundHost } from "./task-inbox/task-inbox-background-host.js";
 import * as backgroundWork from "./cc-room/background-work-ipc.js";
-import { registerTaskInboxIpc } from "./task-inbox/task-inbox-ipc.js";
 import { registerOptimizationLabHost } from "./optimization-lab-host.js";
 import { taskInboxPetView } from "./task-inbox/task-inbox-pet-view.js";
 import { assertDesktopSessionId } from "./session-validation.js";
@@ -232,7 +219,6 @@ import {
   gitInstallGuidance,
 } from "./marketplace-service.js";
 import { registerSourceCatalogIpc } from "./source-catalog-ipc.js";
-import { listRuns } from "./runs-service.js";
 import {
   checkForUpdate,
   downloadUpdate,
@@ -705,42 +691,8 @@ async function createWindow(): Promise<BrowserWindow> {
     // and which feature flags are on. The layers below deliberately refuse to
     // default any of it.
     bridge.setMobileOutputOnline(mobileRemote.onlineDeviceIds().length > 0);
-    const markBackgroundChanged = (origin: "main" | "worker", e: BackgroundWorkChange) => {
-      taskInboxService.markDirty(
-        e.kind === "shell" ? "background-shell" : "background-job",
-        backgroundTaskSourceId(origin, e.sessionId, e.startedAt, e.workId),
-      );
-    };
-    bridge.onWorkerBackgroundWorkChanged = (change) => markBackgroundChanged("worker", change);
-    taskInboxDisposers.push(
-      observeBackgroundWorkChange((change) => markBackgroundChanged("main", change)),
-    );
+    observeWorkerTasks(bridge);
     const externalBridge = bridge;
-    taskInboxDisposers.push(
-      bridge.subscribeOutbound((_line, entry) => {
-        const event = entry?.event as { type?: string } | undefined;
-        if (
-          event?.type &&
-          [
-            "session_started",
-            "run_result",
-            "approval_request",
-            "approval_resolved",
-            "ask_user",
-            "agent_started",
-            "agent_completed",
-            "background_task_started",
-            "background_task_completed",
-          ].includes(event.type)
-        ) {
-          if (entry) markSessionTaskDirty(entry.sessionId);
-          if (event.type.startsWith("background_task_")) {
-            taskInboxService.scheduleRefresh("background-shell");
-            taskInboxService.scheduleRefresh("background-job");
-          }
-        }
-      }),
-    );
     desktopModules.start();
 
     const externalGoalSessions = new SessionManager();
@@ -1761,41 +1713,6 @@ const PET_AUTO_ARCHIVE_IDLE_DAYS = 7;
  * anything changed — forces a FULL catalog rebuild so the aggregator's held Map
  * is repopulated from the archive-filtered listDiskSessions (no ghost rows).
  */
-/**
- * Every disk session, consumed page by page.
- *
- * Several callers used a bare `listDiskSessions({ limit: 1_000 })` and treated
- * the result as "all sessions". Once a user passed 1,000 sessions that silently
- * became a window: archiving a specific session by id would report "不存在"
- * merely because it fell outside the newest 1,000, and the auto-archive sweep —
- * whose comment claims a full catalog pass — quietly stopped seeing the oldest,
- * i.e. exactly the ones most likely to be archivable.
- *
- * `maxPages` is a runaway guard, not a cap: hitting it is logged rather than
- * silently truncating.
- */
-async function listAllDiskSessions(
-  opts: { includeSubagents?: boolean } = {},
-): Promise<Awaited<ReturnType<typeof listDiskSessions>>["sessions"]> {
-  const pageSize = 500;
-  const maxPages = 200;
-  const all: Awaited<ReturnType<typeof listDiskSessions>>["sessions"] = [];
-  let cursor: string | undefined;
-  for (let page = 0; page < maxPages; page += 1) {
-    const result = await listDiskSessions({
-      limit: pageSize,
-      includeArchived: true,
-      ...(opts.includeSubagents ? { includeSubagents: true } : {}),
-      ...(cursor ? { cursor } : {}),
-    });
-    all.push(...result.sessions);
-    if (!result.nextCursor) return all;
-    cursor = result.nextCursor;
-  }
-  dlog("main", "listAllDiskSessions.page_limit", { maxPages, scanned: all.length });
-  return all;
-}
-
 async function runPetAutoArchive(aggregator: typeof desktopHost.mimiProjection): Promise<void> {
   const sessions = await listAllDiskSessions();
   const toArchive = selectSessionsToArchive(
@@ -2394,8 +2311,8 @@ async function deleteDesktopSessionResources(id: string): Promise<void> {
   await externalRuntime.service?.stop(id).catch((error) => {
     dlog("external-runtime", "session.delete.stop_failed", { id, error: String(error) });
   });
-  removeExternalRuntimeBinding(id);
-  await deleteSession(id);
+  // The external binding is a file inside the Session directory.
+  await desktopHost.callBusiness("sessions/deleteFiles", { sessionId: id });
   await taskInboxService.sessionIntent({ type: "sessionDeleted", sessionId: id });
   await cleanupKnownAttachments(id);
   // Drop any in-memory snapshot for the deleted session so it can't be
@@ -2490,6 +2407,16 @@ ipcMain.handle("agent:subscribe", async (event, sessionId: string, sinceSeq?: nu
   assertPet();
   return snapshot;
 });
+const sessionCatalogStore = hostCatalogClient(
+  desktopHost.callBusiness,
+  desktopHost.catalogListeners,
+);
+const { taskInboxService, listAllDiskSessions, archiveDiskSession, markSessionTaskDirty, userContinuedTask, observeWorkerTasks } =
+  createDesktopTaskInbox({
+    desktopHost, mainWindows, externalRuntime, worker: () => bridge,
+    sessionProjection: () => petStateAggregator?.getSnapshot(), sessionCatalogStore,
+    taskInboxAutomationSessions, taskInboxDisposers, appRendererNavigation,
+  });
 let closeActivityHistory: (() => Promise<void>) | undefined;
 registerDesktopOutputHistoryHost({
   activityHost: desktopHost,
@@ -2506,10 +2433,6 @@ registerDesktopOutputHistoryHost({
     closeActivityHistory = cleanup;
   },
 });
-const sessionCatalogStore = hostCatalogClient(
-  desktopHost.callBusiness,
-  desktopHost.catalogListeners,
-);
 const sessionCatalogIpc = registerSessionCatalogIpc(
   ipcMain,
   () => {
@@ -2529,99 +2452,6 @@ taskInboxDisposers.push(
     trust: getTrust,
     bridge: () => bridge,
   }),
-);
-function markSessionTaskDirty(id: string) {
-  taskInboxService.markDirty("session", id);
-  taskInboxService.markDirty("external-runtime", id);
-  taskInboxService.markDirty("subagent", id);
-}
-function userContinuedTask(id: string) {
-  void taskInboxService
-    .sessionIntent({ type: "userContinued", sessionId: id })
-    .then(() => markSessionTaskDirty(id))
-    .catch((error) => dlog("main", "task-inbox.user-continue", { error: String(error) }));
-}
-async function archiveDiskSession(id: string, archivedAt: number | undefined) {
-  await writeSessionArchive(id, archivedAt);
-  await taskInboxService.sessionIntent({
-    type: archivedAt === undefined ? "sessionUnarchived" : "sessionArchived",
-    sessionId: id,
-  });
-  markSessionTaskDirty(id);
-}
-
-const taskInboxSources = createTaskInboxSources({
-  diskSessions: () => listAllDiskSessions({ includeSubagents: true }),
-  diskSession: async (id) =>
-    (
-      await listDiskSessions({
-        limit: 1,
-        sessionId: id,
-        includeArchived: true,
-        includeSubagents: true,
-      })
-    ).sessions[0],
-  sessionCatalog: () => sessionCatalogStore.load(),
-  sessionProjection: () => petStateAggregator?.getSnapshot(),
-  native: {
-    hasLiveWorker: () => !!bridge?.hasLiveWorker() || taskInboxAutomationSessions.size > 0,
-    isSessionRunning: (id) => taskInboxAutomationSessions.has(id) || !!bridge?.isSessionRunning(id),
-    cancel: async (id) => {
-      const jobId = taskInboxAutomationSessions.get(id);
-      if (jobId) return cron.call("cancel", jobId);
-      if (!bridge?.hasLiveWorker() || !bridge.isSessionRunning(id)) return false;
-      const result = await bridge.requestWorker("agent/cancel", { sessionId: id }, 15_000, {
-        failFast: true,
-        settleOnExit: true,
-        meta: { origin: "host", producer: "task-inbox" },
-      });
-      if (!result.ok) throw new Error(result.message);
-      return true;
-    },
-  },
-  runs: { list: listRuns },
-  automations: {
-    list: () => cron.call("list", undefined),
-    get: (id) => cron.call("get", id),
-    pause: (id) => cron.call("pause", id),
-    resume: (id) => cron.call("resume", id),
-    runNow: (id) => cron.call("runNow", id),
-  },
-  mimi: {
-    snapshot: () => desktopHost.mimiTasks.getSnapshot(),
-    get: (id) => desktopHost.mimiTasks.get(id),
-    control: (request) => desktopHost.mimiTasks.control(request),
-  },
-  external: {
-    hasSession: (id) => !!externalRuntime.service?.hasSession(id),
-    isSessionRunning: (id) => !!externalRuntime.service?.isSessionRunning(id),
-    hasPending: (id) => !!externalRuntime.approvals?.hasPendingSession(id),
-    kind: (id) => readExternalRuntimeBinding(id)?.kind,
-    interrupt: async (id) => {
-      if (!externalRuntime.service?.hasSession(id))
-        throw new Error("External runtime is unavailable");
-      await externalRuntime.service.interrupt(id);
-    },
-  },
-  background: createTaskInboxBackgroundHost({ worker: () => bridge }),
-});
-const taskInboxService = createTaskInboxService({
-  filePath: resolve(app.getPath("userData"), "task-inbox", "v1.json"),
-  ...taskInboxSources,
-  command: desktopHost.taskCommand,
-  enabled: taskInboxEnabled,
-  onError: (error) => dlog("main", "task-inbox.projection.failed", { error: String(error) }),
-});
-taskInboxDisposers.push(
-  registerTaskInboxIpc(
-    ipcMain,
-    () => [...mainWindows],
-    taskInboxService,
-    taskInboxEnabled,
-    (event) => appRendererNavigation.assertSender(event),
-    desktopHost.withDocumentCaller,
-  ),
-  sessionCatalogStore.onChanged(() => taskInboxService.scheduleRefresh("session")),
 );
 backgroundWork.registerBackgroundWorkIpc(ipcMain, mainWindows, () => bridge);
 const operationScope = {

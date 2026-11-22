@@ -1,3 +1,4 @@
+import { changeSessionFiles } from "../../host/composition/session-files.js";
 import { StoredMimiRules } from "../../host/composition/mimi-rules.js";
 import { isProjectMigrationCommand } from "../../shared/project-migration.js";
 import { writeHostedProjectMigration } from "../../host/composition/stored-project-migrations.js";
@@ -59,6 +60,8 @@ installDefaultLinkProviders();
 await serveSessionIndexWorker({
   ...tasks,
   async handle(ctx, command, payload) {
+    if (command === "sessions/archive" || command === "sessions/deleteFiles")
+      return changeSessionFiles(ctx.sessionsRoot, command, payload as Parameters<typeof changeSessionFiles>[2]);
     if (isProfileLibraryChange(command)) return changeProfileLibrary(command,payload as Parameters<typeof changeProfileLibrary>[1]);
     if (isMemoryCommand(command))
       return writeHostedMemory(command, payload as Parameters<typeof writeHostedMemory>[1]);

@@ -1,3 +1,4 @@
+import { sessionFileOperations } from "../../host/composition/session-files.js";
 import { hostedMimiRuleScheduler } from "../../host/composition/mimi-rule-scheduler.js";
 import type { MimiRuleReply } from "../../shared/mimi-rules.js";
 import { hostRuntimePath } from "../../host/runtime-path.js";
@@ -306,6 +307,7 @@ const business = new HostBusinessCalls({
   ...catalogEdits(storage),
   ...memoryOperations(storage),
   ...projectTrustOperations(storage),
+  ...sessionFileOperations(storage, (id) => index.changed(id)),
   ...projectRegistryOperations(storage, (requestId, projects) =>
     parent.postMessage({ type: "project-registry-committed", requestId, projects }),
   ),

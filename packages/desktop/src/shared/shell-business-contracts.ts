@@ -39,6 +39,8 @@ export interface ShellBusinessOperations extends ProjectMigrationOperations, Mim
     input: { sessionId: string; action: "state" | "undo" | "redo" };
     result: import("../main/file-history-service.js").TurnUndoState | import("../main/file-history-service.js").TurnUndoResult[];
   };
+  "sessions/archive": { input: { sessionId: string; archivedAt?: number }; result: void };
+  "sessions/deleteFiles": { input: { sessionId: string }; result: void };
   "startup/workspaces": { input: Record<string, never>; result: string[] };
   "startup/settingsSchema": { input: Record<string, never>; result: void };
   "startup/quickChats": { input: Record<string, never>; result: string[] };
