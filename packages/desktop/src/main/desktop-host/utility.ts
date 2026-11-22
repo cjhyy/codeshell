@@ -220,6 +220,7 @@ const business = new HostBusinessCalls({
   "rooms/messages": (p) => historyWorker.roomHistory("rooms/messages", p),
   "rooms/historyPage": (p) => historyWorker.roomHistory("rooms/historyPage", p),
   ...gitOperations(),
+  "files/turnHistory": (input, grant) => historyWorker.turnHistory(input, grant.permit),
   ...labFiles,
   ...skills.methods,
   ...marketplace.operations,

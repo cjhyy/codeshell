@@ -64,6 +64,7 @@ export class DesktopHostSupervisor {
       effects?: Promise<void>;
     }
   >();
+  private readonly fileHistoryGuards = new Map<AbortController, string>();
   private readonly reviewGuards = new Map<AbortController, string>();
   private readonly deleting = new Set<string>();
   private readonly streamViews = new Set<string>();
@@ -357,26 +358,29 @@ export class DesktopHostSupervisor {
     if (read) read.effects = job;
   }
 
-  watchOperationOwner(sessionId: string, webContentsId: number) {
+  watchOperationOwner(sessionId: string, webContentsId: number, scope: "review" | "fileHistory" = "review") {
+    const guards = scope === "review" ? this.reviewGuards : this.fileHistoryGuards;
     const owner = this.owners.get(sessionId);
     if (
       !this.ready ||
       this.stopped ||
       this.deleting.has(sessionId) ||
       (owner !== undefined && owner !== webContentsId) ||
-      this.reviewGuards.size >= 8
+      guards.size >= (scope === "review" ? 8 : 128)
     )
       throw new Error("Operation review owner changed");
     const guard = new AbortController();
-    this.reviewGuards.set(guard, sessionId);
-    return { signal: guard.signal, release: () => this.reviewGuards.delete(guard) };
+    guards.set(guard, sessionId);
+    return { signal: guard.signal, release: () => guards.delete(guard) };
   }
   private invalidateReviews(sessionId?: string) {
-    for (const [guard, id] of this.reviewGuards)
-      if (sessionId === undefined || id === sessionId) {
-        this.reviewGuards.delete(guard);
+    for (const guards of [this.reviewGuards, this.fileHistoryGuards]) {
+      for (const [guard, id] of guards) {
+        if (sessionId !== undefined && id !== sessionId) continue;
+        guards.delete(guard);
         guard.abort();
       }
+    }
   }
 
   private rejectReads(): void {

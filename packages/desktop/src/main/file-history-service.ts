@@ -30,7 +30,7 @@ export interface TurnUndoResult {
   ok: boolean;
 }
 
-function historyFor(sessionId: string): FileHistory | null {
+function historyFor(sessionId: string, root: string): FileHistory | null {
   if (
     typeof sessionId !== "string" ||
     sessionId === "." ||
@@ -40,12 +40,12 @@ function historyFor(sessionId: string): FileHistory | null {
   ) {
     return null;
   }
-  return FileHistory.loadFromDir(path.join(sessionsRoot(), sessionId));
+  return FileHistory.loadFromDir(path.join(root, sessionId));
 }
 
 /** Read-only: what the latest turn's card should show (undo vs redo vs nothing). */
-export function turnUndoState(sessionId: string): TurnUndoState {
-  const history = historyFor(sessionId);
+export function turnUndoState(sessionId: string, root = sessionsRoot()): TurnUndoState {
+  const history = historyFor(sessionId, root);
   if (!history) return { undoable: false, redoable: false, fileCount: 0 };
   const undoPlan = history.getLatestTurnUndoPlan();
   if (undoPlan) {
@@ -59,19 +59,19 @@ export function turnUndoState(sessionId: string): TurnUndoState {
 }
 
 /** Undo the most recent turn's file changes. Per-file results. */
-export function undoTurn(sessionId: string): TurnUndoResult[] {
-  const history = historyFor(sessionId);
+export function undoTurn(sessionId: string, beforeCommit?: () => void, root = sessionsRoot()): TurnUndoResult[] {
+  const history = historyFor(sessionId, root);
   if (!history) return [];
   const plan = history.getLatestTurnUndoPlan();
   if (!plan) return [];
-  return history.undoLatestTurn(plan.snapshots);
+  return history.undoLatestTurn(plan.snapshots, beforeCommit);
 }
 
 /** Re-apply the most recently undone turn's file changes. Per-file results. */
-export function redoTurn(sessionId: string): TurnUndoResult[] {
-  const history = historyFor(sessionId);
+export function redoTurn(sessionId: string, beforeCommit?: () => void, root = sessionsRoot()): TurnUndoResult[] {
+  const history = historyFor(sessionId, root);
   if (!history) return [];
   const targets = history.getLatestRedoRecords();
   if (targets.length === 0) return [];
-  return history.redoLatestTurn(targets);
+  return history.redoLatestTurn(targets, beforeCommit);
 }

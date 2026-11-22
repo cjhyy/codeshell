@@ -3097,6 +3097,7 @@ registerWorkspaceFilesIpc({
   assertRendererSessionAccess,
   business: desktopHost.callBusiness,
   documentSignal: desktopHost.documentSignal,
+  turnHistory: desktopHost.turnHistory,
   terminal: desktopHost.workbenchTerminal,
 });
 // Authoritative no-repo conversation cwd (~/.code-shell/no-repo). The renderer

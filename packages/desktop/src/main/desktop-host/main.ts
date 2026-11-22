@@ -238,6 +238,17 @@ export function createDesktopHost(
   };
   return {
     callBusiness: supervisor.callBusiness.bind(supervisor),
+    async turnHistory(event: Pick<IpcMainEvent, "sender" | "senderFrame">,
+      sessionId: string, action: "state" | "undo" | "redo") {
+      const document = documentSignal(event);
+      const lease = supervisor.watchOperationOwner(sessionId, event.sender.id, "fileHistory");
+      try {
+        return await supervisor.callBusiness("files/turnHistory", { sessionId, action },
+          AbortSignal.any([document, lease.signal]));
+      } finally {
+        lease.release();
+      }
+    },
     async workbenchTerminal(
       event: Pick<IpcMainEvent, "sender" | "senderFrame">,
       method: keyof TerminalCommands,

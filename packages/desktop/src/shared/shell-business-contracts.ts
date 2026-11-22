@@ -33,6 +33,10 @@ type Operation<F extends (...args: any[]) => Promise<unknown>> = {
 /** Private calls from authenticated Electron adapters. These methods are never
  * registered on a renderer port or exposed by the window preload. */
 export interface ShellBusinessOperations extends MimiProjectionOperations, MimiFollowUpOperations, MarketplaceOperations, PluginPackageOperations, GitOperations, PendingApprovalOperations, LabFileOperations, ConfiguredMcpProbe, RoomHistoryOperations, SkillOperations, MediaProtocolOperations, AttachmentOperations, WechatLoginOperations, ActivityOperations, NativeCcRoomReads, MemoryOperations, PrivateMemoryReads, ProjectRegistryOperations, CatalogEdits, ProfileLibraryOperations {
+  "files/turnHistory": {
+    input: { sessionId: string; action: "state" | "undo" | "redo" };
+    result: import("../main/file-history-service.js").TurnUndoState | import("../main/file-history-service.js").TurnUndoResult[];
+  };
   "terminal/command": { input: import("./pty.js").NativeTerminalCommand; result: unknown };
   "mimi/turnStorage":{input:import("./mimi-turn-storage.js").MimiTurnStorageCommand;result:unknown};
   "mimi/tasks": {input: import("./mimi-tasks.js").MimiTaskCommand;result:unknown};

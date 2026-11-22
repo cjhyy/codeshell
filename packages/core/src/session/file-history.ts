@@ -516,12 +516,13 @@ export class FileHistory {
    * existedBefore:false redo material) instead of restored. `targets` come from
    * latestTurnUndoTargets so preview and restore agree. Returns per-file results.
    */
-  undoLatestTurn(targets: FileSnapshot[]): Array<{ filePath: string; ok: boolean }> {
-    return this.withCurrentIndex(() => this.undoLatestTurnUnlocked(targets));
+  undoLatestTurn(targets: FileSnapshot[], beforeCommit?: () => void): Array<{ filePath: string; ok: boolean }> {
+    return this.withCurrentIndex(() => this.undoLatestTurnUnlocked(targets, beforeCommit));
   }
 
   private undoLatestTurnUnlocked(
     targets: FileSnapshot[],
+    beforeCommit?: () => void,
   ): Array<{ filePath: string; ok: boolean }> {
     const plan = this.latestTurnUndoPlanInternal();
     if (!plan) return [];
@@ -560,6 +561,7 @@ export class FileHistory {
     // a legitimate post-turn state (delete), represented by an absence marker.
     // If any capture fails, leave all working files untouched and keep the turn
     // live so the user can retry.
+    beforeCommit?.();
     const captured = plan.filePaths.map((filePath) =>
       this.captureRedoBackup(filePath, undoneTurn, !createdPaths.has(filePath)),
     );
@@ -647,12 +649,13 @@ export class FileHistory {
    * `redoTargets` come from latestRedoTargets (which guarantees they are the
    * latest still-undone turn). Returns per-file results.
    */
-  redoLatestTurn(redoTargets: RedoRecord[]): Array<{ filePath: string; ok: boolean }> {
-    return this.withCurrentIndex(() => this.redoLatestTurnUnlocked(redoTargets));
+  redoLatestTurn(redoTargets: RedoRecord[], beforeCommit?: () => void): Array<{ filePath: string; ok: boolean }> {
+    return this.withCurrentIndex(() => this.redoLatestTurnUnlocked(redoTargets, beforeCommit));
   }
 
   private redoLatestTurnUnlocked(
     redoTargets: RedoRecord[],
+    beforeCommit?: () => void,
   ): Array<{ filePath: string; ok: boolean }> {
     if (redoTargets.length === 0) return [];
     const expected = this.getLatestRedoRecords();
@@ -676,6 +679,7 @@ export class FileHistory {
 
     const turn = authoritative[0]!.turnSeq;
 
+    beforeCommit?.();
     const results = authoritative.map((rec) => {
       let ok = false;
       try {

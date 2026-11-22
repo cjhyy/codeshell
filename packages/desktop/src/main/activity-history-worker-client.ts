@@ -29,6 +29,7 @@ export interface ActivityHistoryWorkerRequest {
     | "mimiExternalActivity"
     | "flush"
     | keyof WorkerViews
+    | "files/turnHistory"
     | "activity/setTitle";
   permit?: Int32Array;
   input?: unknown;
@@ -129,6 +130,10 @@ export class ActivityHistoryWorker {
     input: WorkerViews[K]["params"],
   ): Promise<WorkerViews[K]["result"]> {
     return this.request(method, input);
+  }
+  turnHistory(input: ShellBusinessOperations["files/turnHistory"]["input"], permit: Int32Array):
+    Promise<ShellBusinessOperations["files/turnHistory"]["result"]> {
+    return this.request("files/turnHistory", input, permit);
   }
   setTitle(input: { id: string; title: string }, permit: Int32Array): Promise<void> {
     return this.request("activity/setTitle", input, permit);

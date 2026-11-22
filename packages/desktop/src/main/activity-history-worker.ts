@@ -10,6 +10,8 @@ import {
 } from "./pet/pet-segment-closure-service.js";
 import { createMimiExternalActivity } from "../host/composition/mimi-external-activity.js";
 import { externalHistory, externalSessions } from "../host/composition/cc-room-history.js";
+import { redoTurn, turnUndoState, undoTurn } from "./file-history-service.js";
+import type { ShellBusinessOperations } from "../shared/shell-business-contracts.js";
 import { claimBusinessCommit } from "../host/composition/business-calls.js";
 import type { ActivityReads } from "../shared/activity-history-contracts.js";
 import { listTitles, setTitle } from "./session-titles-store.js";
@@ -98,6 +100,15 @@ port.on("message", ({ id, method, input, permit }: ActivityHistoryWorkerRequest)
         value = await listRunsForUi(input as ActivityReads["activity/runs"]["params"]);
       else if (method === "activity/run")
         value = await getRunHistory((input as { runId: string }).runId);
+      else if (method === "files/turnHistory") {
+        const { sessionId, action } = input as ShellBusinessOperations["files/turnHistory"]["input"];
+        assertSafeSessionId(sessionId);
+        if (action === "state") value = turnUndoState(sessionId, options.sessionsDir);
+        else if (action === "undo" || action === "redo") {
+          if (!permit) throw Error("File history requires a document permit");
+          value = (action === "undo" ? undoTurn : redoTurn)(sessionId, () => claimBusinessCommit(permit), options.sessionsDir);
+        } else throw Error("Invalid file history action");
+      }
       else if (method === "activity/setTitle") {
         const { id, title } = input as { id: string; title: string };
         await setTitle(id, title, () => claimBusinessCommit(permit!));

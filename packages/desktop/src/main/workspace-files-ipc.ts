@@ -12,10 +12,10 @@ import {
   openPath,
   openInEditor,
 } from "./desktop-services.js";
-import { turnUndoState, undoTurn, redoTurn } from "./file-history-service.js";
 import { resolveRendererConfigurationTarget } from "./renderer-configuration-authority.js";
 
 export interface WorkspaceFilesIpcDeps {
+  turnHistory(event: IpcMainInvokeEvent, sessionId: string, action: "state" | "undo" | "redo"): Promise<unknown>;
   terminal(
     event: Electron.IpcMainInvokeEvent,
     method: keyof TerminalCommands,
@@ -70,13 +70,13 @@ export function registerWorkspaceFilesIpc(deps: WorkspaceFilesIpcDeps) {
   // Turn-level undo/redo via core FileHistory snapshots (keyed by sessionId, not
   // cwd). Always operates on the latest turn internally — see file-history-service.
   ipcMain.handle("files:turnUndoState", async (event, sessionId: unknown) => {
-    return turnUndoState(assertRendererSessionAccess(sessionId, event.sender.id));
+    return deps.turnHistory(event, assertRendererSessionAccess(sessionId, event.sender.id), "state");
   });
   ipcMain.handle("files:undoTurn", async (event, sessionId: unknown) => {
-    return undoTurn(assertRendererSessionAccess(sessionId, event.sender.id));
+    return deps.turnHistory(event, assertRendererSessionAccess(sessionId, event.sender.id), "undo");
   });
   ipcMain.handle("files:redoTurn", async (event, sessionId: unknown) => {
-    return redoTurn(assertRendererSessionAccess(sessionId, event.sender.id));
+    return deps.turnHistory(event, assertRendererSessionAccess(sessionId, event.sender.id), "redo");
   });
 
   // Older/prefer-IPC workbenches still use the single Host-owned PTY registry.
