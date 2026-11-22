@@ -18,6 +18,7 @@ import { registerQuotaIpc } from "./quota-ipc.js";
 
 export interface RoomsIpcDeps {
   readCcRoom: ReadCcRoom;
+  roomHistory: import("../shared/room-history.js").RoomHistoryAccess;
   mainWindows: Set<BrowserWindow>;
   bridge: () => AgentBridge | null;
   approvalBridge: ApprovalBridge;
@@ -58,7 +59,7 @@ export function registerRoomsIpc(deps: RoomsIpcDeps) {
     return roomManager.send(roomId, text);
   });
   ipcMain.handle("rooms:history", async (_e, roomId: string, sinceSeq?: number) =>
-    roomManager.getMessages(roomId, sinceSeq ?? 0),
+    deps.roomHistory.getMessages(roomId, sinceSeq ?? 0),
   );
 
   // ── CC rooms (external `claude` CLI orchestration) ──────────────────────────
@@ -103,7 +104,7 @@ export function registerRoomsIpc(deps: RoomsIpcDeps) {
         | { behavior: "deny"; message: string },
     ) => approvalBridge.respond(roomId, requestId, decision),
   );
-  registerRoomHistoryIpc(ipcMain, roomManager);
+  registerRoomHistoryIpc(ipcMain, deps.roomHistory);
   ipcMain.handle("ccRoom:readHistory", (_e, cwd: string, sessionId: string, limit: number) =>
     deps.readCcRoom("ccRoom/history", { kind: "claude-code", cwd, sessionId, limit }),
   );

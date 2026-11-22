@@ -59,6 +59,37 @@ function openRegular(path: string): number {
   }
   return fd;
 }
+function readBlock(fd: number, offset: number, length: number): Buffer {
+  const chunk = Buffer.allocUnsafe(length);
+  let count = 0;
+  while (count < length) {
+    const n = readSync(fd, chunk, count, length - count, offset + count);
+    if (!n) throw new Error("room history was truncated while freezing");
+    count += n;
+  }
+  return chunk;
+}
+
+function verifyFrozenPrefix(fd: number, path: string, initial: Stats, hashes: string[]): void {
+  const after = fstatSync(fd);
+  const named = regular(path);
+  if (stamp(after) === stamp(initial) && stamp(named) === stamp(initial)) return;
+  const appended = (s: Stats) =>
+    s.dev === initial.dev && s.ino === initial.ino && s.size > initial.size;
+  if (!appended(after) || !appended(named)) throw new Error("room history changed while freezing");
+  // A resident CLI can append in another process while the reader freezes its
+  // initial length. Only accept that append when the entire captured prefix
+  // still matches the original private inode. New messages belong to the next snapshot.
+  for (let i = 0; i < hashes.length; i++) {
+    const offset = i * 65536;
+    const chunk = readBlock(fd, offset, Math.min(65536, initial.size - offset));
+    if (createHash("sha256").update(chunk).digest("hex") !== hashes[i])
+      throw new Error("room history changed while freezing");
+  }
+  if (!appended(fstatSync(fd)) || !appended(regular(path)))
+    throw new Error("room history changed while freezing");
+}
+
 function syncDirectory(path: string): void {
   if (process.platform === "win32") return;
   const fd = openSync(path, "r");
@@ -305,13 +336,8 @@ export function readRoomHistoryPage<T extends { seq: number }>(
       const hashes: string[] = [];
       let offset = 0;
       while (offset < before.size) {
-        const chunk = Buffer.allocUnsafe(Math.min(64 * 1024, before.size - offset));
-        let count = 0;
-        while (count < chunk.length) {
-          const read = readSync(input, chunk, count, chunk.length - count, offset + count);
-          if (!read) throw new Error("room history was truncated while freezing");
-          count += read;
-        }
+        const chunk = readBlock(input, offset, Math.min(65536, before.size - offset));
+        const count = chunk.length;
         hashes.push(createHash("sha256").update(chunk).digest("hex"));
         let written = 0;
         while (written < count) {
@@ -322,9 +348,7 @@ export function readRoomHistoryPage<T extends { seq: number }>(
         offset += count;
       }
       fsyncSync(output);
-      if (stamp(before) !== stamp(fstatSync(input)) || stamp(before) !== stamp(regular(source))) {
-        throw new Error("room history changed while freezing");
-      }
+      verifyFrozenPrefix(input, source, before, hashes);
       const throughSeq = scanRoomHistory(file, parse);
       manifest = {
         version: 1,

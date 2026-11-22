@@ -121,13 +121,11 @@ import { parseExternalRuntimeModelKey } from "../shared/external-runtime-models.
 import {
   requireRendererProject,
   requireRendererProjectPath,
-  requireRendererProjectPrimary,
   requireRendererProjectRoot,
   requireRendererLinkedSessionPath,
 } from "./renderer-project-path.js";
 import { PetStateAggregator } from "./pet/pet-state-aggregator.js";
 import { nativeMimiExternalActivity } from "./desktop-host/mimi-external-client.js";
-import { createLatestResultCache } from "./pet/latest-result-cache.js";
 import { createPetSummaryStore } from "./pet/pet-summary-store.js";
 import { createPetSummaryService } from "./pet/pet-summary-service.js";
 import {
@@ -420,7 +418,6 @@ import {
 import {
   rendererConfigurationCwd,
   rendererOptionalConfigurationCwd,
-  rejectUnexpectedRendererKeys,
   requireRendererListedSkillPath,
 } from "./renderer-configuration-helpers.js";
 import { registerProfileCatalogIpc } from "./profile-catalog-ipc.js";
@@ -1264,6 +1261,12 @@ const roomManager = new RoomManager({
       roomId,
     ),
 });
+const roomHistory: import("../shared/room-history.js").RoomHistoryAccess = {
+  getMessages: (roomId, sinceSeq = 0) =>
+    desktopHost.callBusiness("rooms/messages", { rootIdentity: roomManager.rootIdentity, roomId, sinceSeq }),
+  getHistoryPage: (roomId, request = {}) =>
+    desktopHost.callBusiness("rooms/historyPage", { rootIdentity: roomManager.rootIdentity, roomId, request }),
+};
 const transcriptSubscriptions = createRoomTranscriptSubscriptions({
   roomManager,
   checkpointDir: join(app.getPath("userData"), "mobile-remote", "transcript-checkpoints"),
@@ -1295,6 +1298,7 @@ const remoteTerminals = new NativeRemoteTerminals({
 desktopHost.setRemoteTerminals(remoteTerminals);
 const mobileOrchestrator: MobileRemoteOrchestrator = new MobileRemoteOrchestrator({
   readCcRoom: desktopHost.callBusiness,
+  roomHistory,
   listDiskSessions,
   remote: mobileRemote,
   terminals: remoteTerminals,
@@ -3764,6 +3768,7 @@ registerProjectAuthorityIpc({
 
 registerRoomsIpc({
   readCcRoom: desktopHost.callBusiness,
+  roomHistory,
   mainWindows,
   bridge: () => bridge,
   approvalBridge,

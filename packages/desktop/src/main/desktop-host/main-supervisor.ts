@@ -297,7 +297,7 @@ export class DesktopHostSupervisor {
       method === "sources/uploadPicked" || method === "skills/inspectGithub" ||
       method === "skills/installGithub" || method === "skills/installLocal" ||
       method === "skills/update" || method === "skills/uninstall";
-    const timeout = longRunning ? 0 : method === "ccRoom/sessions" || method === "ccRoom/history" ? 120_000 : 15_000;
+    const timeout = longRunning ? 0 : method === "ccRoom/sessions" || method === "ccRoom/history" || method === "rooms/historyPage" || method === "rooms/messages" ? 120_000 : 15_000;
     const value = await this.request("host/business", { method, input }, timeout, signal);
     signal?.throwIfAborted();
     return value as ShellBusinessOperations[K]["result"];

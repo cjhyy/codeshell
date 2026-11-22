@@ -97,6 +97,7 @@ export interface OrchestratorCtx {
   remote: RemoteHostManager;
   uploads: MobileUploadService;
   roomManager: RoomManager;
+  roomHistory?: import("../../shared/room-history.js").RoomHistoryAccess;
   approvalBridge: Pick<ApprovalBridge, "respond" | "pendingRequests">;
   pendingApprovals: Pick<PendingMobileApprovals, "find">;
   transcriptSubscriptions: TranscriptSubscriptionManager;

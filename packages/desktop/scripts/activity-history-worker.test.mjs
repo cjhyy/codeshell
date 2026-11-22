@@ -9,6 +9,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, test } from "node:test";
 import { SessionManager, UsageLedger } from "@cjhyy/code-shell-core";
+import { RoomManager } from "@cjhyy/code-shell-server/mobile-remote";
 import { ModelTraceStore } from "@cjhyy/code-shell-core/internal";
 import { compileMainModules } from "./main-worker-suite.mjs";
 
@@ -65,7 +66,16 @@ test("real history scans leave the caller responsive and retain validation, owne
   });
   await traces.flushMaintenance();
   const before = readFileSync(join(root, "owned", "state.json"), "utf8");
-  const history = new ActivityHistoryWorker({ sessionsDir: root }, (options) => {
+  const roomsDir = join(root, "rooms");
+  const manager = new RoomManager({
+    rootDir: roomsDir,
+    createAgent() {
+      throw Error("History reads must never start a CLI");
+    },
+    onMessage() {},
+  });
+  const room = manager.createRoom({ cwd: root });
+  const history = new ActivityHistoryWorker({ sessionsDir: root, roomsDir }, (options) => {
     const worker = createActivityHistoryWorker(options);
     workers.push(worker);
     worker.once("exit", () => workers.splice(workers.indexOf(worker), 1));
@@ -73,6 +83,24 @@ test("real history scans leave the caller responsive and retain validation, owne
   });
   try {
     await history.getConfig(); // Start the actual worker before measuring the scan.
+    const roomInput = { rootIdentity: manager.rootIdentity, roomId: room.id };
+    const page = await history.roomHistory("rooms/historyPage", {
+      ...roomInput,
+      request: { limit: 1 },
+    });
+    assert.equal(page.messages[0].type, "room_created");
+    assert.deepEqual(
+      await history.roomHistory("rooms/messages", { ...roomInput, sinceSeq: 0 }),
+      page.messages,
+    );
+    await assert.rejects(
+      history.roomHistory("rooms/messages", {
+        ...roomInput,
+        rootIdentity: "different-room-root",
+        sinceSeq: 0,
+      }),
+      /root changed/,
+    );
     let heartbeats = 0;
     const timer = setInterval(() => heartbeats++, 1);
     try {

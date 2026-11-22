@@ -574,13 +574,145 @@ export interface RoomManagerOptions {
   now?: () => number;
 }
 
+/** A pinned room directory that can serve history without owning any live CLI.
+ * The Host reader and the process which opened the room must agree on its root. */
+export class RoomHistoryReader {
+  private readonly rootRealPath: string;
+  readonly rootIdentity: string;
+
+  constructor(private readonly rootDir: string) {
+    const rootInfo = lstatSync(rootDir);
+    if (rootInfo.isSymbolicLink() || !rootInfo.isDirectory()) {
+      throw new Error(`invalid room storage root: ${rootDir}`);
+    }
+    this.rootRealPath = realpathSync(rootDir);
+    this.rootIdentity = `${rootInfo.dev}:${rootInfo.ino}`;
+  }
+
+  protected assertRootUnchanged(): void {
+    const info = lstatSync(this.rootDir);
+    if (
+      info.isSymbolicLink() ||
+      !info.isDirectory() ||
+      realpathSync(this.rootDir) !== this.rootRealPath ||
+      `${info.dev}:${info.ino}` !== this.rootIdentity
+    ) {
+      throw new Error(`invalid room storage root: ${this.rootDir}`);
+    }
+  }
+
+  protected roomDir(id: string): string {
+    // roomId reaches path-building from client WS events (room.open/history/
+    // send/close all pass event.roomId straight through), so it is NOT always a
+    // system-generated id — an authenticated device could send "../../etc" and
+    // traverse out of rootDir. Enforce the generated shape (see createRoom:
+    // `room_<base36>_<base36>`) at this single chokepoint so every path-builder
+    // (metaPath/msgPath/getRoom/getMessages/open/send/close) is covered.
+    if (!isValidRoomId(id)) {
+      throw new Error(`invalid roomId: ${JSON.stringify(id)}`);
+    }
+    this.assertRootUnchanged();
+    const dir = join(this.rootDir, id);
+    if (existsSync(dir)) {
+      const info = lstatSync(dir);
+      if (
+        info.isSymbolicLink() ||
+        !info.isDirectory() ||
+        !isContained(this.rootRealPath, realpathSync(dir))
+      ) {
+        throw new Error(`invalid room directory: ${dir}`);
+      }
+    }
+    return dir;
+  }
+  private checkedRoomFile(id: string, name: "room.json" | "messages.jsonl"): string {
+    const path = join(this.roomDir(id), name);
+    if (existsSync(path)) {
+      const info = lstatSync(path);
+      if (info.isSymbolicLink() || !info.isFile() || info.nlink !== 1)
+        throw new Error(`invalid room file: ${path}`);
+    }
+    return path;
+  }
+  protected metaPath(id: string): string {
+    return this.checkedRoomFile(id, "room.json");
+  }
+  protected msgPath(id: string): string {
+    return this.checkedRoomFile(id, "messages.jsonl");
+  }
+
+  getRoom(id: string): RoomMeta | undefined {
+    // Invalid ids resolve to "no such room" rather than throwing, so the WS
+    // event handlers (which call this first) degrade to a missing response
+    // instead of crashing on a malicious roomId.
+    if (!isValidRoomId(id)) return undefined;
+    try {
+      const p = this.metaPath(id);
+      if (!existsSync(p)) return undefined;
+      return parseRoomMeta(JSON.parse(readBoundedUtf8File(p, MAX_ROOM_META_BYTES)), id);
+    } catch {
+      return undefined;
+    }
+  }
+
+  getMessages(id: string, sinceSeq = 0): RoomMessage[] {
+    if (!isValidRoomId(id)) return [];
+    const cursor = Number.isSafeInteger(sinceSeq) && sinceSeq >= 0 ? sinceSeq : 0;
+    let fd: number | undefined;
+    try {
+      const p = this.msgPath(id);
+      if (!existsSync(p)) return [];
+      fd = openSync(p, "r");
+      const size = fstatSync(fd).size;
+      const start = Math.max(0, size - MAX_ROOM_HISTORY_SCAN_BYTES);
+      const length = size - start;
+      const buffer = Buffer.allocUnsafe(length);
+      let total = 0;
+      while (total < length) {
+        const count = readSync(fd, buffer, total, length - total, start + total);
+        if (count === 0) break;
+        total += count;
+      }
+      let window = buffer.subarray(0, total);
+      if (start > 0) {
+        const firstNewline = window.indexOf(0x0a);
+        if (firstNewline < 0) return [];
+        window = window.subarray(firstNewline + 1);
+      }
+      const out: RoomMessage[] = [];
+      for (const line of window.toString("utf8").split("\n")) {
+        if (!line.trim() || Buffer.byteLength(line, "utf8") > MAX_ROOM_MESSAGE_BYTES) continue;
+        try {
+          const message = parseRoomMessage(JSON.parse(line) as unknown);
+          if (message && message.seq > cursor) out.push(message);
+        } catch {
+          /* skip malformed/torn lines */
+        }
+        if (out.length > MAX_ROOM_HISTORY_MESSAGES * 2) {
+          out.splice(0, out.length - MAX_ROOM_HISTORY_MESSAGES);
+        }
+      }
+      return out.slice(-MAX_ROOM_HISTORY_MESSAGES);
+    } catch {
+      return [];
+    } finally {
+      if (fd !== undefined) closeSync(fd);
+    }
+  }
+
+  getHistoryPage(id: string, request: RoomHistoryRequest = {}): RoomHistoryPage<RoomMessage> {
+    if (!this.getRoom(id)) throw new Error("room is missing or its metadata is corrupt");
+    return readRoomHistoryPage(this.roomDir(id), id, request, parseRoomMessage);
+  }
+}
+
 /**
  * Owns room lifecycle and the on-disk message log (the authoritative source).
  * A room's resident agent is started on open() and its normalized events are
  * appended to messages.jsonl and mirrored via onMessage. seq is monotonic per
  * room so the phone can sync incrementally.
  */
-export class RoomManager {
+export class RoomManager extends RoomHistoryReader {
   private agents = new Map<string, RoomAgent>();
   /** Permission mode each live agent was spawned with. The mode is a spawn-time
    * CLI argument, so room metadata alone cannot prove what a process runs. */
@@ -642,8 +774,6 @@ export class RoomManager {
   private pendingLastActive = new Map<string, number>();
   private lastActiveWrittenAt = new Map<string, number>();
   private now: () => number;
-  private readonly rootRealPath: string;
-  private readonly rootIdentity: string;
   private readonly failedWrites = new Set<string>();
   private readonly preparingInputReceipts = new Map<string, Promise<void>>();
   private readonly inputReceipts = new Map<
@@ -670,67 +800,10 @@ export class RoomManager {
   }
 
   constructor(private readonly opts: RoomManagerOptions) {
-    this.now = opts.now ?? (() => Date.now());
     mkdirSync(opts.rootDir, { recursive: true, mode: 0o700 });
-    const rootInfo = lstatSync(opts.rootDir);
-    if (rootInfo.isSymbolicLink() || !rootInfo.isDirectory()) {
-      throw new Error(`invalid room storage root: ${opts.rootDir}`);
-    }
-    this.rootRealPath = realpathSync(opts.rootDir);
-    this.rootIdentity = `${rootInfo.dev}:${rootInfo.ino}`;
+    super(opts.rootDir);
+    this.now = opts.now ?? (() => Date.now());
     if (process.platform !== "win32") chmodSync(opts.rootDir, 0o700);
-  }
-
-  private assertRootUnchanged(): void {
-    const info = lstatSync(this.opts.rootDir);
-    if (
-      info.isSymbolicLink() ||
-      !info.isDirectory() ||
-      realpathSync(this.opts.rootDir) !== this.rootRealPath ||
-      `${info.dev}:${info.ino}` !== this.rootIdentity
-    ) {
-      throw new Error(`invalid room storage root: ${this.opts.rootDir}`);
-    }
-  }
-
-  private roomDir(id: string): string {
-    // roomId reaches path-building from client WS events (room.open/history/
-    // send/close all pass event.roomId straight through), so it is NOT always a
-    // system-generated id — an authenticated device could send "../../etc" and
-    // traverse out of rootDir. Enforce the generated shape (see createRoom:
-    // `room_<base36>_<base36>`) at this single chokepoint so every path-builder
-    // (metaPath/msgPath/getRoom/getMessages/open/send/close) is covered.
-    if (!isValidRoomId(id)) {
-      throw new Error(`invalid roomId: ${JSON.stringify(id)}`);
-    }
-    this.assertRootUnchanged();
-    const dir = join(this.opts.rootDir, id);
-    if (existsSync(dir)) {
-      const info = lstatSync(dir);
-      if (
-        info.isSymbolicLink() ||
-        !info.isDirectory() ||
-        !isContained(this.rootRealPath, realpathSync(dir))
-      ) {
-        throw new Error(`invalid room directory: ${dir}`);
-      }
-    }
-    return dir;
-  }
-  private checkedRoomFile(id: string, name: "room.json" | "messages.jsonl"): string {
-    const path = join(this.roomDir(id), name);
-    if (existsSync(path)) {
-      const info = lstatSync(path);
-      if (info.isSymbolicLink() || !info.isFile() || info.nlink !== 1)
-        throw new Error(`invalid room file: ${path}`);
-    }
-    return path;
-  }
-  private metaPath(id: string): string {
-    return this.checkedRoomFile(id, "room.json");
-  }
-  private msgPath(id: string): string {
-    return this.checkedRoomFile(id, "messages.jsonl");
   }
 
   private writeRoomMeta(id: string, meta: RoomMeta): void {
@@ -874,20 +947,6 @@ export class RoomManager {
     return rooms.sort((a, b) => b.lastActiveAt - a.lastActiveAt);
   }
 
-  getRoom(id: string): RoomMeta | undefined {
-    // Invalid ids resolve to "no such room" rather than throwing, so the WS
-    // event handlers (which call this first) degrade to a missing response
-    // instead of crashing on a malicious roomId.
-    if (!isValidRoomId(id)) return undefined;
-    try {
-      const p = this.metaPath(id);
-      if (!existsSync(p)) return undefined;
-      return parseRoomMeta(JSON.parse(readBoundedUtf8File(p, MAX_ROOM_META_BYTES)), id);
-    } catch {
-      return undefined;
-    }
-  }
-
   private nextSeq(id: string): number {
     // Scan the file ONCE per room, then keep the counter in memory.
     //
@@ -990,56 +1049,6 @@ export class RoomManager {
     const meta = this.getRoom(id);
     if (!meta || meta.claudeSessionId === sessionId) return;
     this.writeRoomMeta(id, { ...meta, claudeSessionId: sessionId });
-  }
-
-  getMessages(id: string, sinceSeq = 0): RoomMessage[] {
-    if (!isValidRoomId(id)) return [];
-    const cursor = Number.isSafeInteger(sinceSeq) && sinceSeq >= 0 ? sinceSeq : 0;
-    let fd: number | undefined;
-    try {
-      const p = this.msgPath(id);
-      if (!existsSync(p)) return [];
-      fd = openSync(p, "r");
-      const size = fstatSync(fd).size;
-      const start = Math.max(0, size - MAX_ROOM_HISTORY_SCAN_BYTES);
-      const length = size - start;
-      const buffer = Buffer.allocUnsafe(length);
-      let total = 0;
-      while (total < length) {
-        const count = readSync(fd, buffer, total, length - total, start + total);
-        if (count === 0) break;
-        total += count;
-      }
-      let window = buffer.subarray(0, total);
-      if (start > 0) {
-        const firstNewline = window.indexOf(0x0a);
-        if (firstNewline < 0) return [];
-        window = window.subarray(firstNewline + 1);
-      }
-      const out: RoomMessage[] = [];
-      for (const line of window.toString("utf8").split("\n")) {
-        if (!line.trim() || Buffer.byteLength(line, "utf8") > MAX_ROOM_MESSAGE_BYTES) continue;
-        try {
-          const message = parseRoomMessage(JSON.parse(line) as unknown);
-          if (message && message.seq > cursor) out.push(message);
-        } catch {
-          /* skip malformed/torn lines */
-        }
-        if (out.length > MAX_ROOM_HISTORY_MESSAGES * 2) {
-          out.splice(0, out.length - MAX_ROOM_HISTORY_MESSAGES);
-        }
-      }
-      return out.slice(-MAX_ROOM_HISTORY_MESSAGES);
-    } catch {
-      return [];
-    } finally {
-      if (fd !== undefined) closeSync(fd);
-    }
-  }
-
-  getHistoryPage(id: string, request: RoomHistoryRequest = {}): RoomHistoryPage<RoomMessage> {
-    if (!this.getRoom(id)) throw new Error("room is missing or its metadata is corrupt");
-    return readRoomHistoryPage(this.roomDir(id), id, request, parseRoomMessage);
   }
 
   latestSeq(id: string): number {

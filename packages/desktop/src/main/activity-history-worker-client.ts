@@ -12,11 +12,13 @@ import type { createTraceHistoryService } from "./trace-history-service.js";
 type TraceHistory = ReturnType<typeof createTraceHistoryService>;
 export interface ActivityHistoryWorkerOptions {
   sessionsDir: string;
+  roomsDir?: string;
 }
 export interface ActivityHistoryWorkerRequest {
   id: number;
   method:
     | keyof TraceHistory
+    | keyof import("../shared/room-history.js").RoomHistoryOperations
     | "externalSessions"
     | "externalHistory"
     | "mimiSegmentWindow"
@@ -83,6 +85,12 @@ export class ActivityHistoryWorker {
     input: ShellBusinessOperations["mimi/externalActivity"]["input"],
   ): Promise<ShellBusinessOperations["mimi/externalActivity"]["result"]> {
     return this.request("mimiExternalActivity", input);
+  }
+
+  roomHistory<K extends keyof import("../shared/room-history.js").RoomHistoryOperations>(
+    method: K, input: ShellBusinessOperations[K]["input"],
+  ): Promise<ShellBusinessOperations[K]["result"]> {
+    return this.request(method, input);
   }
 
   externalSessions(input: CliList): Promise<CcRoomReads["ccRoom/sessions"]["result"]> {

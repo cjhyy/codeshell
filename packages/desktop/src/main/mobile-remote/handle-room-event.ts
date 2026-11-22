@@ -83,7 +83,7 @@ export async function handleRoomEvent(
       return;
     }
     if (event.type === "room.history" && event.page) {
-      const { messages, ...page } = ctx.roomManager.getHistoryPage(event.roomId, {
+      const { messages, ...page } = await (ctx.roomHistory ?? ctx.roomManager).getHistoryPage(event.roomId, {
         sinceSeq: event.sinceSeq,
         cursor: event.cursor,
         limit: event.limit,
@@ -99,7 +99,8 @@ export async function handleRoomEvent(
       return;
     }
     if (event.type === "room.history") {
-      const messages = ctx.roomManager.getMessages(event.roomId, event.sinceSeq ?? 0);
+      const messages = await (ctx.roomHistory ?? ctx.roomManager).getMessages(event.roomId, event.sinceSeq ?? 0);
+      if (event.viewerId && event.deviceId && !ctx.remote.hasAuthenticatedViewer(event.viewerId, event.deviceId)) return;
       const latestSeq = messages.length
         ? messages[messages.length - 1]!.seq
         : (event.sinceSeq ?? 0);

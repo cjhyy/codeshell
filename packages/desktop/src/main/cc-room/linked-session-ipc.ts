@@ -3,7 +3,7 @@ import type { IpcMain } from "electron";
 
 export function registerRoomHistoryIpc(
   ipcMain: Pick<IpcMain, "handle">,
-  roomManager: Pick<RoomManager, "getMessages" | "getHistoryPage">,
+  roomManager: import("../../shared/room-history.js").RoomHistoryAccess,
 ): void {
   // Keep the existing Main IPC authority and legacy number/undefined result.
   // Only a validated object selects the frozen-page contract; malformed

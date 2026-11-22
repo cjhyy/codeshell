@@ -1,3 +1,5 @@
+import { RoomHistoryReader } from "@cjhyy/code-shell-server/mobile-remote";
+import type { RoomHistoryOperations } from "../shared/room-history.js";
 import { assertSafeSessionId } from "@cjhyy/code-shell-server/storage";
 import {
   petSegmentTranscript,
@@ -29,6 +31,7 @@ const history = createTraceHistoryService({ storageDir: store.storageDir, store 
 const externalActivity = createMimiExternalActivity(() =>
   port.postMessage({ type: "mimi-external-changed" }),
 );
+let rooms: RoomHistoryReader | undefined;
 let tail = Promise.resolve();
 port.on("message", ({ id, method, input, permit }: ActivityHistoryWorkerRequest) => {
   // FIFO includes configuration writes and the shutdown maintenance barrier.
@@ -63,7 +66,19 @@ port.on("message", ({ id, method, input, permit }: ActivityHistoryWorkerRequest)
         value = await externalActivity.snapshot(
           input as Parameters<typeof externalActivity.snapshot>[0],
         );
-      else if (method === "externalSessions")
+      else if (method === "rooms/messages" || method === "rooms/historyPage") {
+        if (!options.roomsDir) throw new Error("Room history is unavailable");
+        rooms ??= new RoomHistoryReader(options.roomsDir);
+        const args = input as RoomHistoryOperations[typeof method]["input"];
+        if (rooms.rootIdentity !== args.rootIdentity) throw new Error("Room storage root changed");
+        if (method === "rooms/messages") {
+          const { roomId, sinceSeq } = args as RoomHistoryOperations["rooms/messages"]["input"];
+          value = rooms.getMessages(roomId, sinceSeq);
+        } else {
+          const { roomId, request } = args as RoomHistoryOperations["rooms/historyPage"]["input"];
+          value = rooms.getHistoryPage(roomId, request);
+        }
+      } else if (method === "externalSessions")
         value = await externalSessions(input as Parameters<typeof externalSessions>[0]);
       else if (method === "externalHistory")
         value = externalHistory(input as Parameters<typeof externalHistory>[0]);

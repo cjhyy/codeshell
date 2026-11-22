@@ -101,6 +101,7 @@ export interface MobileRemoteOrchestratorDeps {
   uploads: MobileUploadService;
   pendingApprovals: PendingMobileApprovals;
   roomManager: RoomManager;
+  roomHistory?: OrchestratorCtx["roomHistory"];
   approvalBridge: Pick<ApprovalBridge, "respond" | "pendingRequests">;
   transcriptSubscriptions: TranscriptSubscriptionManager;
   /** The agent worker bridge; null until the first window creates it. */
@@ -575,6 +576,7 @@ export class MobileRemoteOrchestrator {
       newSessionAuthority: mobileNewSessionAuthority,
       uploads: this.deps.uploads,
       roomManager: this.deps.roomManager,
+      roomHistory: this.deps.roomHistory,
       approvalBridge: this.deps.approvalBridge,
       pendingApprovals: this.deps.pendingApprovals,
       transcriptSubscriptions: this.deps.transcriptSubscriptions,

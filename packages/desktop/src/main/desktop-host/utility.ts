@@ -115,7 +115,7 @@ const scheduler = new HostScheduler(schedulerPorts.port1, automation);
 // Link-backed source definitions are validated against this process-local registry.
 installDefaultLinkProviders();
 const historyWorker = new ActivityHistoryWorker(
-  { sessionsDir: sessionsRoot() },
+  { sessionsDir: sessionsRoot(), roomsDir: join(process.argv[2], "..", "mobile-remote", "rooms") },
   (options) =>
     new Worker(new URL("./activity-history-worker.mjs", import.meta.url), { workerData: options }),
 );
@@ -129,6 +129,8 @@ const segments = hostedMimiSegments(storage, historyWorker, (domain) =>
 const skills = hostedSkills(new URL("./skill-worker.mjs", import.meta.url));
 const business = new HostBusinessCalls({
   ...segments,
+  "rooms/messages": (p) => historyWorker.roomHistory("rooms/messages", p),
+  "rooms/historyPage": (p) => historyWorker.roomHistory("rooms/historyPage", p),
   ...skills.methods,
   ...wechatLoginOperations((event) => parent.postMessage({ type: "wechat-login-event", event })),
   "mimi/externalActivity": (input) => historyWorker.mimiExternalActivity(input),
