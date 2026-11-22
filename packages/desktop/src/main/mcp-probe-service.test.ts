@@ -1,5 +1,6 @@
-import { afterAll, afterEach, beforeEach, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { afterAll, afterEach, beforeEach, expect, spyOn, test } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import * as os from "node:os";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { EncryptionCipher } from "@cjhyy/code-shell-core";
@@ -32,7 +33,8 @@ network.allowOrigin(origin);
 afterAll(() => network.restore());
 const { CredentialStore, PlaintextCipher, getDefaultCredentialCipher, setDefaultCredentialCipher } =
   await import("@cjhyy/code-shell-core");
-const { probeMcpServer, invalidateMcpProbeCache } = await import("./mcp-probe-service.js");
+const { mcpProbeDigest, probeMcpServer, invalidateMcpProbeCache } =
+  await import("./mcp-probe-service.js");
 const { probeHubMcp } = await import("../../../server/src/hub/mcp-probe.js");
 let directory: string, oldHome: string | undefined;
 let previousCipher: EncryptionCipher;
@@ -223,4 +225,53 @@ test("foreign safeStorage ciphertext never reaches an Authorization header or er
   expect(result.status).toBe("error");
   expect(authorizations).toEqual([]);
   expect(JSON.stringify(result)).not.toMatch(/enc:safeStorage|secret-value/);
+});
+
+test("the Host probes only a matching saved connection and returns no OS credential material", async () => {
+  const { configuredMcpProbe } = await import("../host/composition/configured-mcp-probe.js");
+  using ownedHome = spyOn(os, "homedir").mockReturnValue(process.env.HOME!);
+  const root = join(process.env.HOME!, ".code-shell");
+  mkdirSync(root, { recursive: true });
+  const basic = { name: "docs", url: origin + "/mcp" };
+  const protectedServer = {
+    name: "vault",
+    url: origin + "/private",
+    credentialRef: "test-reference",
+  };
+  const disabled = { name: "off", url: origin + "/off", enabled: false };
+  writeFileSync(
+    join(root, "settings.json"),
+    JSON.stringify({ mcpServers: { docs: basic, vault: protectedServer, off: disabled } }),
+  );
+  expect(mcpProbeDigest({ ...basic, headers: { A: "one", B: "two" } })).toBe(
+    mcpProbeDigest({ ...basic, headers: { B: "two", A: "one" } }),
+  );
+  const request = [basic, protectedServer, disabled, { ...basic, url: origin + "/old" }].map(
+    (config) => ({ name: config.name, digest: mcpProbeDigest(config) }),
+  );
+  const controller = new AbortController();
+  const grant = {
+    requestId: "current-document",
+    permit: new Int32Array(new SharedArrayBuffer(4)),
+    signal: controller.signal,
+    assertCurrent: () => controller.signal.throwIfAborted(),
+  };
+  const replies = await configuredMcpProbe["mcp/probeConfigured"](
+    { scope: "user", target: null, servers: request, force: true },
+    grant,
+  );
+  expect(replies).toMatchObject([
+    { route: "host", result: { name: "docs", status: "ok", toolCount: 1 } },
+    { route: "native" },
+    { route: "changed" },
+    { route: "changed" },
+  ]);
+  expect(authorizations).toEqual(["", "", ""]);
+  controller.abort();
+  await expect(
+    configuredMcpProbe["mcp/probeConfigured"](
+      { scope: "user", target: null, servers: request, force: false },
+      grant,
+    ),
+  ).rejects.toThrow();
 });

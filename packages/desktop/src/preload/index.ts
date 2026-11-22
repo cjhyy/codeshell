@@ -1354,8 +1354,8 @@ contextBridge.exposeInMainWorld("codeshell", {
   inspectGithubSkill: (url: string, existingNames?: string[]) =>
     ipcRenderer.invoke("skills:inspectGithub", url, existingNames),
   installFromGithub: (input: unknown) => ipcRenderer.invoke("skills:installFromGithub", input),
-  probeMcpServers: (cfgs: unknown, force?: boolean, target?: RendererConfigurationTarget | null) =>
-    ipcRenderer.invoke("mcp:probe", cfgs, force, target),
+  probeMcpServers: (cfgs: unknown, force?: boolean, target?: RendererConfigurationTarget | null, scope?: "user" | "project") =>
+    ipcRenderer.invoke("mcp:probe", cfgs, force, target, scope),
   approvePluginHooks: (installKey: string): Promise<PluginHookApprovalResult[]> =>
     ipcRenderer.invoke("hooks:approvePlugin", installKey),
   revokePluginHooks: (installKey: string): Promise<PluginHookApprovalResult[]> =>

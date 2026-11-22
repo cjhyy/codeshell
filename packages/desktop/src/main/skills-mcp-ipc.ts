@@ -6,7 +6,12 @@ import { McpOAuthService } from "./mcp-oauth-service.js";
 import { listMergedMcpServers } from "./mcp-config-view.js";
 import type { InstallFromGithubInput } from "./github-skill-service.js";
 import { GithubSkillReviewStore } from "./github-skill-review.js";
-import { probeMcpServers, type McpServerConfig } from "./mcp-probe-service.js";
+import {
+  mcpProbeDigest,
+  probeMcpServer,
+  probeMcpServers,
+  type McpServerConfig,
+} from "./mcp-probe-service.js";
 import { type RendererConfigurationTarget } from "./renderer-configuration-authority.js";
 import {
   rendererOptionalConfigurationCwd,
@@ -150,17 +155,53 @@ export function registerSkillsMcpIpc(deps: SkillsMcpIpcDeps) {
 
   ipcMain.handle(
     "mcp:probe",
-    async (_e, raw: unknown, force?: boolean, target?: RendererConfigurationTarget | null) => {
+    async (
+      event,
+      raw: unknown,
+      force?: boolean,
+      target?: RendererConfigurationTarget | null,
+      scope?: "user" | "project",
+    ) => {
+      const signal = host.documentSignal(event);
       if (!Array.isArray(raw)) return [];
       const configs = raw.filter(
         (x): x is McpServerConfig =>
           !!x && typeof x === "object" && typeof (x as McpServerConfig).name === "string",
       );
-      return probeMcpServers(configs, {
+      if (scope !== undefined && scope !== "user" && scope !== "project")
+        throw new Error("Invalid MCP settings scope");
+      const cwd = await rendererOptionalConfigurationCwd(target ?? null, resolveNoRepoCwd());
+      signal.throwIfAborted();
+      const nativeOptions = () => ({
         force: Boolean(force),
-        cwd: await rendererOptionalConfigurationCwd(target ?? null, resolveNoRepoCwd()),
+        cwd,
+        signal,
         oauthService: getMcpOAuthService(),
       });
+      if (scope === undefined) return probeMcpServers(configs, nativeOptions());
+      const checked = await host.callBusiness(
+        "mcp/probeConfigured",
+        {
+          scope,
+          target: target ?? null,
+          force: Boolean(force),
+          servers: configs.map((config) => ({ name: config.name, digest: mcpProbeDigest(config) })),
+        },
+        signal,
+      );
+      signal.throwIfAborted();
+      return Promise.all(
+        checked.map((reply, i) => {
+          if (reply.route === "host") return reply.result;
+          if (reply.route === "native") return probeMcpServer(configs[i], nativeOptions());
+          return {
+            name: configs[i].name,
+            status: "error",
+            transport: configs[i].transport ?? (configs[i].url ? "streamable-http" : "stdio"),
+            errorMessage: "MCP 配置已更改，请刷新后重试",
+          };
+        }),
+      );
     },
   );
 

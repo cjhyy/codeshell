@@ -1,5 +1,5 @@
 /**
- * MCP probe service — main-process driven probing of configured MCP
+ * MCP probe service — Desktop probing of configured MCP
  * servers, used by the settings UI to surface real runtime status
  * (connection ok / error message / tool count / tool list) without
  * waiting for an engine worker to spawn.
@@ -10,6 +10,7 @@
  * so the UI can be refreshed without re-probing on every tab switch.
  */
 
+import { createHash } from "node:crypto";
 import { localCredentialAccess } from "@cjhyy/code-shell-core";
 import {
   probeMcp,
@@ -71,19 +72,37 @@ interface CacheEntry {
 
 const cache = new Map<string, CacheEntry>();
 
-function hashConfig(cfg: McpServerConfig): string {
-  return JSON.stringify({
-    t: mcpProbeTransport(cfg),
-    c: cfg.command,
-    a: cfg.args ?? [],
-    u: cfg.url,
-    e: cfg.env ?? {},
-    h: cfg.headers ?? {},
-    ev: cfg.envVars ?? [],
-    b: cfg.bearerTokenEnvVar ?? "",
-    eh: cfg.envHeaders ?? {},
-    cr: cfg.credentialRef ?? "",
-  });
+/** The settings connection probe uses these transport fields independently of tool visibility overrides. */
+export function mcpProbeConnection(cfg: McpServerConfig): McpServerConfig {
+  return {
+    name: cfg.name,
+    transport: mcpProbeTransport(cfg),
+    command: cfg.command,
+    args: cfg.args ?? [],
+    url: cfg.url,
+    env: cfg.env ?? {},
+    headers: cfg.headers ?? {},
+    envVars: cfg.envVars ?? [],
+    bearerTokenEnvVar: cfg.bearerTokenEnvVar,
+    envHeaders: cfg.envHeaders ?? {},
+    credentialRef: cfg.credentialRef,
+  };
+}
+export function mcpProbeDigest(cfg: McpServerConfig): string {
+  const sorted = (values: Record<string, string> = {}) =>
+    Object.keys(values)
+      .sort()
+      .map((key) => [key, values[key]]);
+  return createHash("sha256")
+    .update(
+      JSON.stringify({
+        ...mcpProbeConnection(cfg),
+        env: sorted(cfg.env),
+        headers: sorted(cfg.headers),
+        envHeaders: sorted(cfg.envHeaders),
+      }),
+    )
+    .digest("hex");
 }
 
 function desktopProbeError(
@@ -183,13 +202,13 @@ export async function probeMcpServer(
   cfg: McpServerConfig,
   options: ProbeOptions = {},
 ): Promise<McpProbeResult> {
-  const configHash = hashConfig(cfg);
+  options.signal?.throwIfAborted();
+  const configHash = mcpProbeDigest(cfg);
   const key = JSON.stringify([options.cwd, cfg.name]);
   // Credential and forwarded-env revisions are owned by the adapter. Without
   // a versioned snapshot, do not retain their results across authorization changes.
   const cacheable =
     !!options.cwd &&
-    !options.signal &&
     !cfg.credentialRef &&
     !cfg.bearerTokenEnvVar &&
     !cfg.envVars?.length &&
@@ -205,6 +224,7 @@ export async function probeMcpServer(
   }
 
   const result = await probeOne(cfg, options);
+  options.signal?.throwIfAborted();
   if (cacheable)
     cache.set(key, {
       result,

@@ -1,3 +1,4 @@
+import { configuredMcpProbe } from "../../host/composition/configured-mcp-probe.js";
 import { parseMimiSegmentRange } from "../../shared/mimi-records.js";
 import { hostedMimiSegments } from "../../host/composition/mimi-segments.js";
 import { hostedSkills } from "../../host/composition/skills.js";
@@ -133,6 +134,7 @@ const business = new HostBusinessCalls({
   "rooms/messages": (p) => historyWorker.roomHistory("rooms/messages", p),
   "rooms/historyPage": (p) => historyWorker.roomHistory("rooms/historyPage", p),
   ...skills.methods,
+  ...configuredMcpProbe,
   ...wechatLoginOperations((event) => parent.postMessage({ type: "wechat-login-event", event })),
   "mimi/externalActivity": (input) => historyWorker.mimiExternalActivity(input),
   ...mimiRecordsOperations(storage, (domain) =>

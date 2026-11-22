@@ -2278,6 +2278,7 @@ export interface CodeshellApi
     configs: McpServerProbeInput[],
     force?: boolean,
     target?: RendererConfigurationTarget | null,
+    scope?: "user" | "project",
   ): Promise<McpProbeResult[]>;
   listMergedMcpServers(
     base: Record<string, unknown>,
