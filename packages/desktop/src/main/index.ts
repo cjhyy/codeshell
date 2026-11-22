@@ -58,7 +58,6 @@ import { injectDesktopManagedRuntimePath } from "./managed-runtime-service.js";
 import { createDesktopManagedRuntimeWiring } from "./managed-runtime-wiring.js";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { AppRendererNavigation } from "./app-renderer-navigation.js";
-import { randomUUID } from "node:crypto";
 import { dirname, resolve, isAbsolute, join } from "node:path";
 import {
   SettingsManager,
@@ -118,10 +117,11 @@ import {
 } from "./pet/pet-ipc.js";
 import {
   completePetHostActionReceipt,
-  PetHostActionReceiptService,
+  type PetHostActionReceiptRecorder,
 } from "./pet/pet-host-action-completion.js";
 import type { PetHostActionExecution } from "./pet/pet-dispatch-service.js";
-import { enrichPetChatReplyWithHostActions } from "./pet/host-action-reply.js";
+import type { PetChatEvent } from "../preload/pet-api.js";
+import type { MimiReplyRender } from "../shared/mimi-gateway-turn.js";
 import { nativeMimiRecords } from "./desktop-host/mimi-records-client.js";
 import { PetWorkDelegationHost } from "./pet/pet-work-delegation-host.js";
 import { getSessionCwdIndex } from "./session-cwd-index.js";
@@ -225,7 +225,6 @@ import {
   cleanupStaleQuickChatSessions,
   deleteSession,
   markAttachmentsSent,
-  stablePromptHash,
   stageFileBytes,
   stageImageBytes,
   type InputAttachmentMeta,
@@ -385,6 +384,11 @@ const desktopHost = createDesktopHost(
 );
 setDesktopCredentialFiles(desktopHost.credentialCommand);
 const { listDiskSessions, automation: cron } = desktopHost;
+const renderMimiReply = (
+  baseText: string,
+  executions: MimiReplyRender["executions"],
+  options: MimiReplyRender["options"],
+) => desktopHost.callBusiness("mimi/renderReply", { baseText, executions, options });
 const chromeNativeMessagingOrigin = nativeMessagingOriginFromArgv(process.argv);
 if (chromeNativeMessagingOrigin) {
   void runChromeNativeMessagingHost(chromeNativeMessagingOrigin)
@@ -608,7 +612,7 @@ let petRuleScheduler: PetRuleScheduler | null = null;
 // The dispatcher exists before its worker and durable stores finish loading.
 // IM delivery shares the same completed initialization boundary as Pet IPC.
 let petRuntimeReady = false;
-let petHostActionReceiptService: PetHostActionReceiptService | null = null;
+let petHostActionReceiptService: PetHostActionReceiptRecorder | null = null;
 let petNotices: PetNoticeWiring | null = null;
 let petWorkInboxStore: ReturnType<typeof nativeMimiRecords>["workInbox"] | null = null;
 const taskInboxDisposers: Array<() => void> = [];
@@ -1385,8 +1389,7 @@ async function createWindow(): Promise<BrowserWindow> {
         const enriched =
           message === undefined
             ? undefined
-            : await enrichPetChatReplyWithHostActions(message, closureHostActions, {
-                qrDir: resolve(app.getPath("userData"), "pet", "qr"),
+            : await renderMimiReply(message, closureHostActions, {
                 attachmentKinds: task.completionTarget?.replyAttachmentKinds,
               });
         // The closure manager's final assistant text is only an internal
@@ -1548,16 +1551,9 @@ async function createWindow(): Promise<BrowserWindow> {
     // so the directory Mimi reads and the one selectors resolve against can
     // never drift apart.
     const petSessionsRootDir = sessionsRoot();
-    const hostActionReceiptService = new PetHostActionReceiptService({
-      sessionsRootDir: petSessionsRootDir,
-      qrDir: resolve(app.getPath("userData"), "pet", "qr"),
-      onPersistError: (error, input) =>
-        dlog("main", "pet.hostActionReceipt.persist.failed", {
-          petSessionId: input.petSessionId,
-          clientMessageId: input.clientMessageId,
-          error: String(error),
-        }),
-    });
+    const hostActionReceiptService: PetHostActionReceiptRecorder = {
+      record: (input) => desktopHost.callBusiness("mimi/recordReceipt", input),
+    };
     petHostActionReceiptService = hostActionReceiptService;
     // Briefs and the heartbeat are system schedule rules on the same scheduler.
     const petProactive = wirePetProactive({
@@ -1803,8 +1799,7 @@ async function createWindow(): Promise<BrowserWindow> {
           // Mimi's draft for an IM-started task's origin; the delivery plan
           // names everyone else, and the router sends (quiet hours, caps, digest).
           const enriched = report.routedToOrigin
-            ? await enrichPetChatReplyWithHostActions(report.text, report.hostActions, {
-                qrDir: resolve(app.getPath("userData"), "pet", "qr"),
+            ? await renderMimiReply(report.text, report.hostActions, {
                 attachmentKinds: task?.completionTarget?.replyAttachmentKinds,
               })
             : undefined;
@@ -1816,11 +1811,10 @@ async function createWindow(): Promise<BrowserWindow> {
             ...(enriched ? { composed: enriched } : {}),
           });
         } else if (report.hostActions?.length && petHostActionReceiptService) {
-          const enriched = await enrichPetChatReplyWithHostActions(
+          const enriched = await renderMimiReply(
             report.text,
             report.hostActions,
             {
-              qrDir: resolve(app.getPath("userData"), "pet", "qr"),
               attachmentKinds: [],
             },
           );
@@ -2290,19 +2284,43 @@ async function dispatchGatewayPetChat(
   // "交给 Mimi": Mimi's turn gets the notice's data with the owner's request;
   // the item is used once that turn is dispatched, and freed if it never is.
   try {
-    return await dispatchGatewayPetTurn(request, dispatcher, sessionId, decisionReply);
+    const attachments = await stageGatewayAttachments(request, sessionId);
+    const replay = petNotices?.inboundReplay(request.origin);
+    const publish = (
+      event: Extract<PetChatEvent, { kind: "user-submitted" | "host-action-completed" }>,
+    ) => {
+      for (const win of BrowserWindow.getAllWindows())
+        if (!win.isDestroyed()) win.webContents.send(PET_CHAT_EVENT_CHANNEL, event);
+    };
+    try {
+      return await desktopHost.mimiDispatch.gatewayTurn(
+        {
+          sessionId,
+          message: request.message,
+          origin: request.origin,
+          handoff: decisionReply?.handoff,
+          attachments,
+        },
+        {
+          submitted: publish,
+          completed: publish,
+          dispatched: () => {
+            replay?.finish();
+            void decisionReply?.dispatched();
+          },
+          attachmentsSent: () => markAttachmentsSent(resolveNoRepoCwd(), sessionId, attachments),
+        },
+        replay,
+      );
+    } finally {
+      replay?.finish();
+    }
   } finally {
     decisionReply?.abandoned();
   }
 }
 
-async function dispatchGatewayPetTurn(
-  request: PetChatControlRequest,
-  dispatcher: MimiDispatchService,
-  sessionId: string,
-  handoff: Exclude<Awaited<ReturnType<PetImDecisions["reply"]>>, string>,
-): Promise<PetChatControlResult> {
-  const message = handoff?.handoff ?? request.message;
+async function stageGatewayAttachments(request: PetChatControlRequest, sessionId: string) {
   const cwd = resolveNoRepoCwd();
   const attachments: InputAttachmentMeta[] = [];
   let totalBytes = 0;
@@ -2337,152 +2355,7 @@ async function dispatchGatewayPetTurn(
     }
   }
 
-  const sourceChannel =
-    request.origin?.channel
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9_-]/g, "-")
-      .slice(0, 32) || "unknown";
-  const clientMessageId = request.origin?.messageId
-    ? `im:${sourceChannel}:${stablePromptHash(
-        `${request.origin.channel}\0${request.origin.target}\0${request.origin.senderId}\0${request.origin.messageId}`,
-      )}`
-    : `im:${sourceChannel}:${randomUUID()}`;
-  const submitted = {
-    kind: "user-submitted" as const,
-    clientMessageId,
-    message: request.message.trim(),
-    ...(attachments.length > 0
-      ? {
-          attachments: attachments.map(
-            ({ kind, path, absPath, sessionId, mime, originalName }) => ({
-              kind,
-              path,
-              absPath,
-              sessionId,
-              ...(mime ? { mime } : {}),
-              ...(originalName ? { originalName } : {}),
-            }),
-          ),
-        }
-      : {}),
-    createdAt: Date.now(),
-    ...(request.origin ? { origin: request.origin } : {}),
-  };
-  for (const window of BrowserWindow.getAllWindows()) {
-    if (!window.isDestroyed()) window.webContents.send(PET_CHAT_EVENT_CHANNEL, submitted);
-  }
-
-  // Notices this conversation missed ride the turn as data, taken when it starts.
-  const replay = petNotices?.inboundReplay(request.origin);
-  const result = await dispatcher
-    .dispatch({
-      type: "chat",
-      message,
-      ...(attachments.length > 0 ? { attachments } : {}),
-      ...(replay ? { pendingNotices: replay } : {}),
-      clientMessageId,
-      source: {
-        kind: "im-gateway",
-        channel: sourceChannel,
-        ...(request.origin?.senderId ? { senderId: request.origin.senderId } : {}),
-        isDirectMessage: request.origin?.isDirectMessage === true,
-        capabilities: request.origin?.capabilities ?? {
-          inbound: { text: true, attachments: [] },
-          outbound: { text: true, button: "link", attachments: [] },
-        },
-        ...(request.origin?.channels ? { channels: request.origin.channels } : {}),
-        ...(request.origin ? { target: request.origin.target } : {}),
-      },
-    })
-    .then(
-      (dispatched) => {
-        if (dispatched.ok) void handoff?.dispatched();
-        else handoff?.abandoned();
-        return dispatched;
-      },
-      (error: unknown) => {
-        handoff?.abandoned();
-        throw error;
-      },
-    )
-    .finally(() => replay?.finish());
-  if (!result.ok) throw new Error(result.message ?? result.code);
-  if (result.type !== "chat") throw new Error("Mimi Pet 返回了非聊天结果");
-  await markAttachmentsSent(cwd, sessionId, attachments).catch(() => undefined);
-  if (result.suppressReply) {
-    return {
-      text: "",
-      petSessionId: result.petSessionId,
-      reason: "steered",
-      suppressReply: true,
-    };
-  }
-  const worker = result.result as { text?: unknown; reason?: unknown } | undefined;
-  // Host-executed action outcomes (real tunnel address + pairing QR, task
-  // state changes, memory confirmations) are appended here so the IM reply
-  // carries what Mimi could only promise during her turn.
-  const enriched = await enrichPetChatReplyWithHostActions(
-    result.authoritativeReply ?? (typeof worker?.text === "string" ? worker.text : ""),
-    result.hostActions,
-    {
-      qrDir: resolve(app.getPath("userData"), "pet", "qr"),
-      authoritativeBaseText: Boolean(result.authoritativeReply),
-      attachmentKinds: request.origin?.capabilities.outbound.attachments.filter(
-        (kind): kind is "image" | "file" | "audio" | "video" =>
-          ["image", "file", "audio", "video"].includes(kind),
-      ),
-    },
-  );
-  const replacesGatewayTurn =
-    Boolean(result.authoritativeReply) ||
-    Boolean(
-      result.hostActions?.some(
-        (execution) => execution.kind === "gatewayReply" || execution.kind === "sessionBind",
-      ),
-    );
-  if (
-    (replacesGatewayTurn ||
-      result.hostActions?.some((execution) => execution.kind === "outboundMessage")) &&
-    petHostActionReceiptService
-  ) {
-    await completePetHostActionReceipt({
-      recorder: petHostActionReceiptService,
-      input: {
-        petSessionId: result.petSessionId,
-        clientMessageId,
-        executions: result.hostActions ?? [],
-        authoritativeMessage: enriched.text,
-        ...(result.contextCleared ? { userMessage: request.message.trim() } : {}),
-        ...(replacesGatewayTurn
-          ? {
-              replaceAssistant: true,
-              deliveryChannel: sourceChannel,
-            }
-          : {}),
-      },
-      publish: (receiptEvent) => {
-        for (const window of BrowserWindow.getAllWindows()) {
-          if (!window.isDestroyed()) {
-            window.webContents.send(PET_CHAT_EVENT_CHANNEL, receiptEvent);
-          }
-        }
-      },
-    }).catch((error) =>
-      dlog("main", "pet.hostActionReceipt.gateway.failed", {
-        petSessionId: result.petSessionId,
-        clientMessageId,
-        error: String(error),
-      }),
-    );
-  }
-  return {
-    text: enriched.text,
-    petSessionId: result.petSessionId,
-    ...(typeof worker?.reason === "string" ? { reason: worker.reason } : {}),
-    ...(enriched.button ? { button: enriched.button } : {}),
-    ...(enriched.attachments.length > 0 ? { attachments: enriched.attachments } : {}),
-  };
+  return attachments;
 }
 
 function decodeGatewayAttachment(dataBase64: string, expectedSize: number): Buffer {

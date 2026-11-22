@@ -1,3 +1,4 @@
+import { runMimiGatewayTurn } from "./mimi-gateway-turn.js";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
 import { isAbsolute, resolve } from "node:path";
@@ -38,6 +39,7 @@ export class HostedMimiDispatch {
     private readonly listSessions: ListSessions,
     private readonly tasks: HostedMimiTasks,
     private readonly projection: PetDispatchOptions["aggregator"],
+    private readonly replies: Pick<Parameters<typeof runMimiGatewayTurn>[1], "render" | "receipt">,
     private readonly runTask: (command: MimiTaskCommand, signal?: AbortSignal) => Promise<unknown>,
     private readonly runRecord: (command: MimiRecordCall, signal?: AbortSignal) => Promise<unknown>,
     private readonly turnStorage: (
@@ -259,6 +261,31 @@ export class HostedMimiDispatch {
               return manager.reportSessionMessage(args[0], args[1]);
             case "reportLongTaskClosure":
               return manager.reportLongTaskClosure(args[0]);
+            case "gatewayTurn": {
+              const [input, token, replay] = args;
+              if (typeof token !== "string" || typeof replay !== "boolean")
+                throw Error("Invalid gateway turn");
+              return runMimiGatewayTurn(input, {
+                ...this.replies,
+                manager,
+                ...(replay && {
+                  pending: {
+                    take: () => native("takePending")(token),
+                    started: () => native("pendingStarted")(token),
+                  },
+                }),
+                native: {
+                  submitted: (event) => native("gatewaySubmitted")(token, event),
+                  dispatched: () => native("gatewayDispatched")(token),
+                  completed: (event) => native("gatewayCompleted")(token, event),
+                  attachmentsSent: async () => {
+                    await native("gatewayAttachmentsSent")(token);
+                  },
+                },
+                onReceiptError: (e) =>
+                  console.warn("[Desktop Host] Mimi gateway receipt failed", e),
+              });
+            }
             case "dispatch": {
               const cmd = args[0] as WiredMimiCommand;
               if (cmd.type !== "chat" || !cmd.noticeSource) return manager.dispatch(cmd);

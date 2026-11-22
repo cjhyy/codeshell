@@ -1,3 +1,4 @@
+import type { MimiReplyOperations } from "../shared/mimi-gateway-turn.js";
 import type { ProfileWorkerReads } from "../shared/profile-library.js";
 type WorkerViews = ActivityReads & ProfileWorkerReads;
 import type {
@@ -15,6 +16,7 @@ type TraceHistory = ReturnType<typeof createTraceHistoryService>;
 export interface ActivityHistoryWorkerOptions {
   sessionsDir: string;
   roomsDir?: string;
+  petDir?: string;
 }
 export interface ActivityHistoryWorkerRequest {
   id: number;
@@ -23,6 +25,7 @@ export interface ActivityHistoryWorkerRequest {
     | keyof import("../shared/room-history.js").RoomHistoryOperations
     | "externalSessions"
     | "externalHistory"
+    | keyof MimiReplyOperations
     | "mimiSummaryInput"
     | "mimiSegmentWindow"
     | "mimiSegmentMessages"
@@ -73,6 +76,13 @@ export class ActivityHistoryWorker {
   ) {}
 
   onExternalActivityChanged?: () => void;
+  mimiReply<K extends keyof MimiReplyOperations>(
+    method: K,
+    input: MimiReplyOperations[K]["input"],
+    permit?: Int32Array,
+  ): Promise<MimiReplyOperations[K]["result"]> {
+    return this.request(method, input, permit);
+  }
   mimiSummaryInput(sessionId: string): Promise<string | null> {
     return this.request("mimiSummaryInput", sessionId);
   }
@@ -88,14 +98,15 @@ export class ActivityHistoryWorker {
   }): ReturnType<ReturnType<typeof petSegmentTranscript>["read"]> {
     return this.request("mimiSegmentMessages", input);
   }
-  mimiExternalActivity(
-    input: { projectCwds?: string[] },
-  ): Promise<import("./pet/pet-state-aggregator.js").DesktopPetSession[]> {
+  mimiExternalActivity(input: {
+    projectCwds?: string[];
+  }): Promise<import("./pet/pet-state-aggregator.js").DesktopPetSession[]> {
     return this.request("mimiExternalActivity", input);
   }
 
   roomHistory<K extends keyof import("../shared/room-history.js").RoomHistoryOperations>(
-    method: K, input: ShellBusinessOperations[K]["input"],
+    method: K,
+    input: ShellBusinessOperations[K]["input"],
   ): Promise<ShellBusinessOperations[K]["result"]> {
     return this.request(method, input);
   }

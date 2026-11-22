@@ -1,4 +1,7 @@
 import { searchSessionTranscripts } from "@cjhyy/code-shell-pet/disclosure";
+import { PetHostActionReceiptService } from "./pet/pet-host-action-completion.js";
+import { enrichPetChatReplyWithHostActions } from "./pet/host-action-reply.js";
+import type { MimiReplyOperations } from "../shared/mimi-gateway-turn.js";
 import { readPetSummaryInput } from "./pet/pet-summary-input.js";
 import type { RoomHistoryOperations } from "../shared/room-history.js";
 import { isProfileWorkerRead, type ProfileWorkerReads } from "../shared/profile-library.js";
@@ -36,6 +39,7 @@ const history = createTraceHistoryService({ storageDir: store.storageDir, store 
 const externalActivity = createMimiExternalActivity(() =>
   port.postMessage({ type: "mimi-external-changed" }),
 );
+let receipts: PetHostActionReceiptService | undefined;
 let rooms: RoomHistoryReader | undefined;
 let tail = Promise.resolve();
 port.on("message", ({ id, method, input, permit }: ActivityHistoryWorkerRequest) => {
@@ -57,7 +61,29 @@ port.on("message", ({ id, method, input, permit }: ActivityHistoryWorkerRequest)
           (input as ActivityReads["activity/usage"]["params"]).query,
           options.sessionsDir,
         );
-      else if (method === "mimiSummaryInput") {
+      else if (method === "mimi/recordReceipt" || method === "mimi/renderReply") {
+        if (!options.petDir) throw Error("Mimi reply storage unavailable");
+        if (permit) claimBusinessCommit(permit);
+        const qrDir = join(options.petDir, "qr");
+        if (method === "mimi/recordReceipt") {
+          const receipt = input as MimiReplyOperations[typeof method]["input"];
+          assertSafeSessionId(receipt.petSessionId);
+          if (!receipt.petSessionId.startsWith("pet-")) throw Error("Invalid Mimi Session");
+          receipts ??= new PetHostActionReceiptService({
+            sessionsRootDir: options.sessionsDir,
+            qrDir,
+            onPersistError: (err) =>
+              console.warn("[Desktop Host] Mimi receipt persistence failed", err),
+          });
+          value = await receipts.record(receipt);
+        } else {
+          const row = input as MimiReplyOperations[typeof method]["input"];
+          value = await enrichPetChatReplyWithHostActions(row.baseText, row.executions, {
+            ...row.options,
+            qrDir,
+          });
+        }
+      } else if (method === "mimiSummaryInput") {
         if (typeof input !== "string") throw Error("Invalid summary Session");
         assertSafeSessionId(input);
         value = await readPetSummaryInput(join(options.sessionsDir, input));

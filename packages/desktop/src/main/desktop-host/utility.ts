@@ -35,7 +35,8 @@ import { HostAutomationRuns } from "../../host/composition/automation-run.js";
 import { externalRuntimeCatalogOperations } from "../../host/composition/external-runtime-catalog.js";
 import { MessageChannel, Worker } from "node:worker_threads";
 import { SessionTranscriptCache } from "../session-transcript-cache.js";
-import type { BusinessMethods } from "../../host/composition/business-calls.js";
+import type { MimiReplyOperations } from "../../shared/mimi-gateway-turn.js";
+import type { BusinessGrant, BusinessMethods } from "../../host/composition/business-calls.js";
 import { RunKeyClient } from "./run-key-client.js";
 import { HostRunOperations } from "../../host/composition/run-operations.js";
 import { nativeOperations } from "../../host/composition/operations.js";
@@ -127,7 +128,11 @@ const scheduler = new HostScheduler(schedulerPorts.port1, automation);
 // Link-backed source definitions are validated against this process-local registry.
 installDefaultLinkProviders();
 const historyWorker = new ActivityHistoryWorker(
-  { sessionsDir: sessionsRoot(), roomsDir: join(process.argv[2], "..", "mobile-remote", "rooms") },
+  {
+    petDir: join(dirname(process.argv[2]), "pet"),
+    sessionsDir: sessionsRoot(),
+    roomsDir: join(process.argv[2], "..", "mobile-remote", "rooms"),
+  },
   (options) =>
     new Worker(new URL("./activity-history-worker.mjs", import.meta.url), { workerData: options }),
 );
@@ -188,11 +193,34 @@ const followUps = hostedMimiFollowUps({
         Promise<ReturnType<MimiRecords["inboxClaim"]>>,
   }),
 });
+async function recordMimiReceipt(
+  input: MimiReplyOperations["mimi/recordReceipt"]["input"],
+  grant?: BusinessGrant,
+) {
+  const { petSessionId } = await readMimiList(storage, "metadata");
+  grant?.assertCurrent();
+  if (input.petSessionId !== petSessionId) throw Error("Mimi receipt Session changed");
+  return historyWorker.mimiReply("mimi/recordReceipt", input, grant?.permit);
+}
 const mimiDispatch = new HostedMimiDispatch(
-  storage, sessionsRoot(), (options) => catalog.list(options), mimiTasks, {
+  storage,
+  sessionsRoot(),
+  (options) => catalog.list(options),
+  mimiTasks,
+  {
     getSnapshot: () => projection.snapshot(),
-    resolveNavigation: async (request) => { await projection.start(); return projection.state.resolveNavigation(request); },
-    refreshCatalog: async (...args) => { await projection.start(); return projection.state.refreshCatalog(...args); },
+    resolveNavigation: async (request) => {
+      await projection.start();
+      return projection.state.resolveNavigation(request);
+    },
+    refreshCatalog: async (...args) => {
+      await projection.start();
+      return projection.state.refreshCatalog(...args);
+    },
+  },
+  {
+    render: (input) => historyWorker.mimiReply("mimi/renderReply", input),
+    receipt: { record: recordMimiReceipt },
   },
   (cmd, signal) => mimiBusiness("mimi/tasks", cmd, signal),
   (cmd, signal) => mimiBusiness("mimi/records", cmd, signal),
@@ -215,6 +243,9 @@ const business = new HostBusinessCalls({
   ...approvals.native,
   "mimi/tasks": (command, grant) => mimiTasks.run(command, grant),
   ...segments,
+  "mimi/renderReply": (input, grant) =>
+    historyWorker.mimiReply("mimi/renderReply", input, grant.permit),
+  "mimi/recordReceipt": recordMimiReceipt,
   ...followUps.methods,
   ...projection.methods,
   "rooms/messages": (p) => historyWorker.roomHistory("rooms/messages", p),
@@ -227,8 +258,9 @@ const business = new HostBusinessCalls({
   ...profileLibrary.operations,
   ...configuredMcpProbe,
   ...wechatLoginOperations((event) => parent.postMessage({ type: "wechat-login-event", event })),
-  ...mimiRecordsOperations(storage, (domain) =>
-    parent.postMessage({ type: "mimi-records-changed", domain }),
+  ...mimiRecordsOperations(
+    storage,
+    (domain) => parent.postMessage({ type: "mimi-records-changed", domain }),
     (row) => projection.applyMemory(row),
   ),
   ...mediaProtocol.methods,

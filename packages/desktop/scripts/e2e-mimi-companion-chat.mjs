@@ -671,6 +671,45 @@ try {
       .split("\n")
       .map((line) => JSON.parse(line));
   const previousHost = (await hostStarts()).at(-1);
+  const control = JSON.parse(
+    await readFile(join(isolated.codeShellHome, "im-gateway", "desktop-control.json"), "utf8"),
+  );
+  const localControl = new URL(control.baseUrl);
+  assert.equal(localControl.protocol, "http:");
+  assert.equal(localControl.hostname, "127.0.0.1");
+  assert.equal(control.pid, previousHost.pid, "The test talks only to its isolated local gateway");
+  const gatewayReply = await fetch(new URL("/v1/pet/chat", localControl), {
+    method: "POST",
+    redirect: "error",
+    signal: AbortSignal.timeout(20_000),
+    headers: { "Content-Type": "application/json", Authorization: "Bearer " + control.token },
+    body: JSON.stringify({ message: "/clear" }),
+  });
+  assert.equal(gatewayReply.status, 200);
+  const reply = await gatewayReply.json();
+  assert.equal(reply.petSessionId, firstStatus.petSessionId);
+  assert.ok(reply.text.length > 0);
+  const auditFile = join(
+    isolated.codeShellHome,
+    "sessions",
+    firstStatus.petSessionId,
+    "transcript.jsonl",
+  );
+  const renderedReceipt = (await readFile(auditFile, "utf8"))
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line))
+    .findLast(
+      (row) =>
+        row.data?.displayOnly &&
+        row.data?.role === "assistant" &&
+        row.data.content === reply.text,
+    );
+  assert(renderedReceipt, "Gateway response must match the durable display-only receipt");
+  receipt.checks.push(
+    "a loopback gateway control turn records the Host-rendered response in the same Mimi Session",
+  );
+  receipt.providerRequests = model.requests.length;
   const isOwned = await app.evaluate(
     ({ app }, host) =>
       host.ppid === process.pid &&

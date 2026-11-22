@@ -1,3 +1,8 @@
+import type {
+  MimiGatewayInput,
+  MimiGatewayNative,
+  MimiGatewayResult,
+} from "../../shared/mimi-gateway-turn.js";
 import { randomUUID } from "node:crypto";
 import { PrivateHostPeer, type PrivatePort } from "../../host/native-peer.js";
 import type {
@@ -22,8 +27,14 @@ function reverseMethods(
   services: NativeMimiServices,
   notices: Map<string, PetPendingNoticeSource>,
   gates: Map<string, string>,
+  gateway: Map<string, MimiGatewayNative>,
   peer: () => PrivateHostPeer,
 ) {
+  const turn = (id: string) => {
+    const bound = gateway.get(id);
+    if (!bound) throw Error("Mimi gateway turn expired");
+    return bound;
+  };
   return {
     worker: (...args: Parameters<typeof services.worker.requestWorker>) => {
       if (!workerControls.has(args[0])) throw Error("Unknown Mimi worker operation");
@@ -71,10 +82,19 @@ function reverseMethods(
     roots: services.replyAttachmentRoots,
     workspaces: services.listWorkspaces,
     remoteContext: services.remoteContext,
+    gatewaySubmitted: (id: string, event: Parameters<MimiGatewayNative["submitted"]>[0]) =>
+      turn(id).submitted(event),
+    gatewayDispatched: (id: string) => turn(id).dispatched(),
+    gatewayAttachmentsSent: (id: string) => turn(id).attachmentsSent(),
+    gatewayCompleted: (id: string, event: Parameters<MimiGatewayNative["completed"]>[0]) =>
+      turn(id).completed(event),
     takePending: (id: string) => notices.get(id)?.take() ?? [],
     pendingStarted: (id: string) => notices.get(id)?.started(),
   };
 }
+type MimiPrivateCalls = MimiDispatchService & {
+  gatewayTurn(input: MimiGatewayInput, token: string, replay: boolean): Promise<MimiGatewayResult>;
+};
 export type MimiNativeMethods = ReturnType<typeof reverseMethods>;
 export class NativeMimiDispatch implements MimiDispatchService {
   private services?: NativeMimiServices;
@@ -82,6 +102,7 @@ export class NativeMimiDispatch implements MimiDispatchService {
   private configured?: Promise<void>;
   private ready?: Promise<void>;
   private readonly notices = new Map<string, PetPendingNoticeSource>();
+  private readonly gateway = new Map<string, MimiGatewayNative>();
   private readonly gates = new Map<string, string>();
   constructor(private readonly connect: () => Promise<void>) {}
   get needsPort() {
@@ -97,7 +118,7 @@ export class NativeMimiDispatch implements MimiDispatchService {
       port.close();
       return;
     }
-    const methods = reverseMethods(services, this.notices, this.gates, () => peer);
+    const methods = reverseMethods(services, this.notices, this.gates, this.gateway, () => peer);
     const peer: PrivateHostPeer = new PrivateHostPeer(
       port,
       (method, args, signal) => {
@@ -128,12 +149,13 @@ export class NativeMimiDispatch implements MimiDispatchService {
     for (const id of this.gates.keys()) this.services?.noticeTurns.end(id);
     this.gates.clear();
     this.notices.clear();
+    this.gateway.clear();
   }
-  private async invoke<K extends keyof MimiDispatchService>(
+  private async invoke<K extends keyof MimiPrivateCalls>(
     method: K,
     args: unknown[],
     scope?: AbortSignal,
-  ): Promise<Awaited<ReturnType<MimiDispatchService[K]>>> {
+  ): Promise<Awaited<ReturnType<MimiPrivateCalls[K]>>> {
     scope?.throwIfAborted();
     if (!this.services) throw Error("Mimi dispatcher not configured");
     if (!this.peer)
@@ -144,11 +166,7 @@ export class NativeMimiDispatch implements MimiDispatchService {
     if (!peer) throw Error("Mimi Host unavailable");
     await this.configured;
     if (this.peer !== peer) throw Error("Mimi Host changed");
-    const result = await peer.call<Awaited<ReturnType<MimiDispatchService[K]>>>(
-      method,
-      args,
-      scope,
-    );
+    const result = await peer.call<Awaited<ReturnType<MimiPrivateCalls[K]>>>(method, args, scope);
     scope?.throwIfAborted();
     return result;
   }
@@ -161,6 +179,21 @@ export class NativeMimiDispatch implements MimiDispatchService {
     try {
       return await this.invoke("dispatch", [{ ...chat, noticeSource: token }], signal);
     } finally {
+      this.notices.delete(token);
+    }
+  }
+  async gatewayTurn(
+    input: MimiGatewayInput,
+    callbacks: MimiGatewayNative,
+    pending?: PetPendingNoticeSource,
+  ) {
+    const token = randomUUID();
+    this.gateway.set(token, callbacks);
+    if (pending) this.notices.set(token, pending);
+    try {
+      return await this.invoke("gatewayTurn", [input, token, !!pending]);
+    } finally {
+      this.gateway.delete(token);
       this.notices.delete(token);
     }
   }
