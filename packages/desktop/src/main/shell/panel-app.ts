@@ -1,8 +1,12 @@
 import { BrowserWindow, WebContentsView, ipcMain } from "electron";
 import { resolve } from "node:path";
-import { materializeCookieSecret, summarizeCookieExpiry } from "@cjhyy/code-shell-core";
+import { materializeDesktopCookie } from "../desktop-cookie-lease.js";
 import { migrateCredentialStore } from "../credential-migration.js";
-import { readDesktopCookie, runDesktopCredentialOperation } from "../credential-file-client.js";
+import {
+  desktopCookieHost,
+  readDesktopCookie,
+  runDesktopCredentialOperation,
+} from "../credential-file-client.js";
 import { cookieCredentialAutoRefresh } from "../cookie-credential-auto-refresh.js";
 import { loginAndCaptureCookies } from "../credentials-login/index.js";
 import { restoreCookieCredentialToBrowser } from "../cookie-credential-browser.js";
@@ -53,31 +57,34 @@ export function createPanelCookieAdapter(
     },
     list: async (cwd) => {
       await migrateCredentialStore(cwd);
-      return (
-        await runDesktopCredentialOperation(cwd, ["user", "project"], undefined, (s) => s.list())
-      )
-        .filter((credential) => credential.type === "cookie")
-        .map((credential) => {
-          let health: "ready" | "corrupted" = "corrupted";
-          try {
-            const parsed = JSON.parse(credential.secret ?? "[]");
-            if (Array.isArray(parsed)) health = "ready";
-          } catch {
-            // CredentialStore deliberately preserves undecryptable ciphertext.
-            // Keep that value Host-only and expose only an actionable health bit.
-          }
-          return {
-            id: credential.id,
-            label: credential.label,
-            health,
-            domain: credential.meta?.domain,
-            platform: credential.meta?.platform,
-            appUrl: credential.meta?.appUrl,
-            autoUseByAI: credential.autoUseByAI,
-            autoInjectByAI: credential.autoInjectByAI,
-            cookieExpiry: summarizeCookieExpiry(credential.secret),
-          };
-        });
+      const credentials = await runDesktopCredentialOperation(
+        cwd,
+        ["user", "project"],
+        undefined,
+        (store) =>
+          store
+            .listWithSources("full")
+            .credentials.filter(({ credential }) => credential.type === "cookie")
+            .map(({ credential, source }) => ({
+              credential,
+              approvalIdentity: store.approvalIdentity(source, credential),
+            })),
+      );
+      if (!credentials.length) return [];
+      const inspections = await desktopCookieHost()("cookies/inspect", {
+        secrets: credentials.map(({ credential }) => credential.secret ?? "[]"),
+      });
+      return credentials.map(({ credential, approvalIdentity }, index) => ({
+        id: credential.id,
+        label: credential.label,
+        domain: credential.meta?.domain,
+        platform: credential.meta?.platform,
+        appUrl: credential.meta?.appUrl,
+        autoUseByAI: credential.autoUseByAI,
+        autoInjectByAI: credential.autoInjectByAI,
+        approvalIdentity,
+        ...inspections[index],
+      }));
     },
     loginAndSave: async ({ appId, providerId, providerLabel, url, cwd, bucket }) => {
       const capture = await loginAndCaptureCookies({
@@ -160,19 +167,16 @@ export function createPanelCookieAdapter(
       reloadBucket(bucket);
       return { count: result.count };
     },
-    materialize: async ({ credentialId, cwd }) => {
+    materialize: async ({ credentialId, cwd, expectedApprovalIdentity, assertCurrent }) => {
       await migrateCredentialStore(cwd);
-      const credential = await runDesktopCredentialOperation(
-        cwd,
-        ["user", "project"],
-        undefined,
-        (s) => s.resolve(credentialId),
-      );
-      if (!credential || credential.type !== "cookie") {
-        throw new Error(`No saved Cookie login: ${credentialId}`);
-      }
       try {
-        const materialized = materializeCookieSecret(credential.id, credential.secret ?? "");
+        const materialized = await materializeDesktopCookie(
+          cwd,
+          credentialId,
+          "full",
+          expectedApprovalIdentity,
+          assertCurrent,
+        );
         return {
           filePath: materialized.cookiesFile,
           count: materialized.count,

@@ -1,3 +1,4 @@
+import { runCookieFileWork } from "../../host/composition/cookie-files.js";
 import { readTranscriptContext } from "../../host/composition/transcript-context.js";
 import { storedAttentionReceipts } from "../../host/composition/mimi-attention-receipts.js";
 import {storedMimiProactiveState} from "../../host/composition/mimi-proactive-state.js";
@@ -72,6 +73,8 @@ installDefaultLinkProviders();
 await serveSessionIndexWorker({
   ...tasks,
   async handle(ctx, command, payload) {
+    if (command === "cookies/materialize" || command === "cookies/inspect" || command === "cookies/sweep")
+      return runCookieFileWork(command, payload as Parameters<typeof runCookieFileWork>[1]);
     if (command === "transcripts/context")
       return readTranscriptContext(ctx.sessionsRoot, payload as Parameters<typeof readTranscriptContext>[1]);
     if (command === "sessions/archive" || command === "sessions/deleteFiles")

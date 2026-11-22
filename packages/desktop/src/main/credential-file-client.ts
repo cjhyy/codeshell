@@ -1,3 +1,4 @@
+import type { CallShellBusiness } from "../shared/shell-business-contracts.js";
 import {
   type CredentialFileAddress,
   type CredentialFileCommand,
@@ -11,9 +12,15 @@ import {
 
 export type CredentialCommand = <T>(command: CredentialFileCommand, payload: unknown) => Promise<T>;
 let command: CredentialCommand | undefined;
+let cookieHost: CallShellBusiness | undefined;
+export function desktopCookieHost(): CallShellBusiness {
+  if (!cookieHost) throw Error("Cookie storage unavailable");
+  return cookieHost;
+}
 /** Installed once by Desktop Main. Shell-less unit callers can inject a fixture transport. */
-export function setDesktopCredentialFiles(transport: CredentialCommand) {
+export function setDesktopCredentialFiles(transport: CredentialCommand, call: CallShellBusiness) {
   command = transport;
+  cookieHost = call;
 }
 
 export function credentialFiles() {

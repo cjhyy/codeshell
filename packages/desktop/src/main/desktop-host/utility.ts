@@ -74,6 +74,7 @@ import { HostOutput } from "./host-output.js";
 import { outputMethods } from "./output-methods.js";
 import { bindHostWorker } from "./host-worker.js";
 import { codeShellHome, registerOpenRouterCatalogCache, sessionsRoot } from "@cjhyy/code-shell-core";
+import { cookieFileOperations } from "../../host/composition/cookie-files.js";
 import { startupOperations } from "../../host/composition/startup.js";
 import { createSessionIndex } from "@cjhyy/code-shell-server/storage";
 import {
@@ -262,6 +263,7 @@ function reportGitRoot(root: string) {
 }
 const business = new HostBusinessCalls({
   ...startupOperations,
+  ...cookieFileOperations(storage),
   "panels/taskModels": readPanelTaskModels,
   "terminal/command": (call, grant) => {
     if (!server) throw Error("Terminal Host unavailable");

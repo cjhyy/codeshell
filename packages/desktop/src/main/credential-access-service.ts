@@ -5,6 +5,7 @@ import type {
   ProfileCredentialQuestion,
   ProfileCredentialAnswers,
 } from "../shared/profile-switch-authority.js";
+import { materializeDesktopCookie } from "./desktop-cookie-lease.js";
 import { credentialFiles, runDesktopCredentialOperation } from "./credential-file-client.js";
 import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import {
@@ -140,14 +141,12 @@ export function materializeCredentialCookieForWorker(
   assertCurrent?: () => void,
 ) {
   if (assertCurrent)
-    return runDesktopCredentialOperation(
+    return materializeDesktopCookie(
       req.cwd,
-      req.scope === "project" ? ["project"] : ["user", "project"],
-      undefined,
-      (store) => {
-        assertCurrent();
-        return materializeCookie(store, req);
-      },
+      req.id,
+      req.scope,
+      req.expectedApprovalIdentity,
+      assertCurrent,
     );
   return materializeCookie(new CredentialStore(req.cwd), req);
 }

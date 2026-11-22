@@ -187,7 +187,7 @@ const desktopHost = createDesktopHost(
   },
   applyRendererSettingsSideEffects,
 );
-setDesktopCredentialFiles(desktopHost.credentialCommand);
+setDesktopCredentialFiles(desktopHost.credentialCommand, desktopHost.callBusiness);
 const { listDiskSessions, automation: cron } = desktopHost;
 const mimiRuntime = createMimiRuntimeShell(desktopHost);
 const chromeNativeMessaging = prepareNativeInstance();

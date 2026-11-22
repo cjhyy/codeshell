@@ -1,6 +1,6 @@
 import { app, BrowserWindow, Notification, session, webContents } from "electron";
 import { join, resolve } from "node:path";
-import { setDefaultCredentialCipher, sweepStaleCredentialCookies } from "@cjhyy/code-shell-core";
+import { setDefaultCredentialCipher } from "@cjhyy/code-shell-core";
 import { createDesktopLinkService } from "../desktop-link-service.js";
 import { prepareDesktopRuntimePath } from "./runtime-path.js";
 import { dlog } from "../desktop-logger.js";
@@ -19,7 +19,6 @@ import {
 import { removeOrphanedExternalRuntimePartitions } from "../orphaned-browser-partitions.js";
 import { runOwnedQuickChatStartupCleanup } from "../quick-chat-startup-cleanup.js";
 import { initUpdater } from "../updater.js";
-import { sweepStaleLeases } from "../credentials-service.js";
 import { applyGitPathFromSettings } from "../git-path-settings.js";
 import { installWorkbenchTray } from "../workbench-tray.js";
 import { warmTrustCache } from "../trust-store.js";
@@ -146,8 +145,8 @@ export function registerNativeStartup(options: NativeStartup) {
     installWorkbenchTray(restoreMainWindow);
     const initialWindowReady = restoreMainWindow();
     initUpdater();
-    sweepStaleLeases(); // clear any cookie-lease temp files left by a prior crash
-    sweepStaleCredentialCookies(); // clear UseCredential temp cookies.txt left by a prior crash
+    void desktopHost.callBusiness("cookies/sweep", {})
+      .catch((error) => dlog("credentials", "cookie_sweep.failed", { error: String(error) }));
 
     void applyGitPathFromSettings();
 
