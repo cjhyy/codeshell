@@ -199,7 +199,7 @@ async function seedMetadata() {
       ipcMain.removeHandler(channel);
       ipcMain.handle(channel, fn);
     };
-    replace("sessions:list", () => {
+    globalThis.__workbenchFixtureReads.set("sessions/history", () => {
       if (fixture.sessionsFail) throw new Error("synthetic session list failure");
       return Object.keys(fixture.titles).map((id, index) => ({
         id,

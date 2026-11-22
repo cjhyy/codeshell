@@ -491,6 +491,7 @@ parent.on("message", ({ data, ports }) => {
         ...taskHostReads(storage),
         businessRead("mimi/projection", noBusinessArguments, () => projection.snapshot()),
         businessRead("mimi/longTasks", noBusinessArguments, () => mimiTasks.snapshot()),
+        businessRead("sessions/history", noBusinessArguments, () => catalog.history(() => index.history())),
         businessRead("mimi/workInbox", noBusinessArguments, () => readMimiList(storage,"inboxSnapshot")),
         businessRead("mimi/segmentMessages", parseMimiSegmentRange, (range) =>
           segments["mimi/segmentMessages"](range),

@@ -9,13 +9,27 @@ export class DesktopSessionListVisibility {
 
   constructor(private readonly index: Pick<SessionIndex, "list" | "changed">) {}
 
-  async list(options: ListSessionOptions) {
+  list(options: ListSessionOptions) {
+    return this.visibleRead(async (hidden) => {
+      const page = await this.index.list(options);
+      return hidden.size
+        ? { ...page, sessions: page.sessions.filter((row) => !hidden.has(row.engineSessionId)) }
+        : page;
+    });
+  }
+
+  history(read: SessionIndex["history"]) {
+    return this.visibleRead(async (hidden) => {
+      const rows = await read();
+      return hidden.size ? rows.filter((row) => !hidden.has(row.id)) : rows;
+    });
+  }
+
+  private async visibleRead<T>(read: (hidden: ReadonlySet<string>) => Promise<T>) {
     const hidden = new Set(this.deleting.keys());
     this.pending.add(hidden);
     try {
-      const page = await this.index.list(options);
-      if (!hidden.size) return page;
-      return { ...page, sessions: page.sessions.filter((row) => !hidden.has(row.id)) };
+      return await read(hidden);
     } finally {
       this.pending.delete(hidden);
     }

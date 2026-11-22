@@ -26,6 +26,7 @@ export interface DesktopBusinessReads
     params: Record<string, never>;
     result: import("../main/pet/pet-journal-store.js").PetJournalEntry[];
   };
+  "sessions/history": { params: Record<string,never>; result: import("@cjhyy/code-shell-server/storage").DesktopSessionSummary[] };
   "catalog/load": {
     params: Record<string, never>;
     result: import("./session-catalog.js").SessionCatalogSnapshot;

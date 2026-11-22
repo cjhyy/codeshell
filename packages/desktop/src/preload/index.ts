@@ -998,7 +998,6 @@ contextBridge.exposeInMainWorld("codeshell", {
     target: RendererConfigurationTarget,
     patch: Record<string, unknown>,
   ) => ipcRenderer.invoke("settings:setConfiguration", target, patch),
-  listSessions: () => ipcRenderer.invoke("sessions:list"),
   setSessionArchived: (id: string, archived: boolean) =>
     ipcRenderer.invoke("sessions:setArchived", id, archived),
   deleteSession: (id: string) => ipcRenderer.invoke("sessions:delete", id),

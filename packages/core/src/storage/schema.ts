@@ -34,6 +34,8 @@ const migrations = [
    CREATE TABLE task_session_state (session_id TEXT PRIMARY KEY, state TEXT NOT NULL);
    CREATE TABLE task_projection_state (id INTEGER PRIMARY KEY CHECK (id=1), version INTEGER NOT NULL,
      errors_json TEXT NOT NULL, intent_version INTEGER NOT NULL);`,
+  `CREATE TABLE session_history (id TEXT PRIMARY KEY, stamp TEXT NOT NULL, file TEXT, title TEXT, size INTEGER, created_at REAL, updated_at REAL);
+   CREATE INDEX session_history_updated ON session_history(updated_at DESC);`,
 ];
 
 export class UnrecognizedStorageSchema extends Error {}
@@ -89,5 +91,12 @@ export function migrate(db: StorageDatabase): void {
     ];
     if (required.some((name) => !sessionColumns.some((column) => column.name === name)))
       throw new UnrecognizedStorageSchema("Invalid sessions index");
+    const historyColumns = db.all<{ name: string }>("PRAGMA table_info(session_history)");
+    if (
+      ["id", "stamp", "file", "title", "size", "created_at", "updated_at"].some(
+        (name) => !historyColumns.some((col) => col.name === name),
+      )
+    )
+      throw new UnrecognizedStorageSchema("Invalid session history index");
   });
 }

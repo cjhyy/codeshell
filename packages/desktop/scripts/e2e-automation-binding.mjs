@@ -281,7 +281,6 @@ async function installFixture() {
       throw new Error("Automation execution is forbidden in this metadata-only fixture");
     });
     replace("runs:list", () => []);
-    replace("sessions:list", () => []);
     replace("sessions:titles", () => ({}));
     replace("sessions:transcript", (_event, sessionId) => {
       fixture.transcriptReads.push(sessionId);

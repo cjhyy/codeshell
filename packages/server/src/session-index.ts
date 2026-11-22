@@ -2,12 +2,13 @@ import { lstatSync, watch, type FSWatcher } from "node:fs";
 import { resolve } from "node:path";
 import { openStateStorage, type StateStorage } from "@cjhyy/code-shell-core/internal/storage";
 import { assertSessionFileId } from "@cjhyy/code-shell-host/session-files";
-import { listDiskSessions } from "./sessions-service.js";
+import { listDiskSessions, listSessions, type DesktopSessionSummary } from "./sessions-service.js";
 import { listIndexedDiskSessions } from "./indexed-disk-sessions.js";
 
 type ListOptions = Parameters<typeof listDiskSessions>[0];
 
 export interface SessionIndex {
+  history(): Promise<DesktopSessionSummary[]>;
   list(options: ListOptions): ReturnType<typeof listDiskSessions>;
   changed(id: string): Promise<void>;
   reconcile(): Promise<void>;
@@ -112,6 +113,23 @@ export function createSessionIndex(
   }, 60_000);
   timer.unref();
   return {
+    async history() {
+      const db = await storage;
+      if (!closed && usable && db.mode === "sqlite") {
+        const rows = db.read<Omit<DesktopSessionSummary, "title"> & { title: string | null }>(
+          "SELECT id, file, title, size, created_at AS createdAt, updated_at AS updatedAt FROM session_history WHERE file IS NOT NULL ORDER BY updated_at DESC",
+        );
+        if (rows)
+          return rows
+            .map(({ title, ...row }) => (title === null ? row : { ...row, title }))
+            .sort((a, b) => b.updatedAt - a.updatedAt || a.id.localeCompare(b.id));
+      }
+      return (
+        (await db
+          .request<DesktopSessionSummary[]>("sessions/historyFallback")
+          .catch(() => undefined)) ?? listSessions(sessionsRoot)
+      );
+    },
     async list(options) {
       const db = await storage;
       if (

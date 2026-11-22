@@ -175,6 +175,7 @@ describe("desktop IPC contract", () => {
     const main = registeredMainHandleChannels(sourceFiles("src/main"));
     const preload = sourceFiles("src/preload").map(file => readFileSync(file, "utf8")).join("\n");
     const oldToNew = {
+      "sessions:list": "sessions/history",
       "marketplace:list": "marketplace/list", "marketplace:load": "marketplace/load",
       "marketplace:recommended": "marketplace/recommended", "plugins:installJobs": "marketplace/jobs",
       "skills:list": "skills/list", "skills:read": "skills/body", "skills:checkUpdate": "skills/checkUpdate",

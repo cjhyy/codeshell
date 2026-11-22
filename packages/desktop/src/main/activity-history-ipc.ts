@@ -3,7 +3,7 @@ import type { BrowserWindow, IpcMain, IpcMainInvokeEvent } from "electron";
 import { join } from "node:path";
 import { sessionsRoot } from "@cjhyy/code-shell-core";
 import { configureModelTracing } from "@cjhyy/code-shell-core/internal";
-import { archiveDiskSession, listSessions } from "@cjhyy/code-shell-server/storage";
+import { archiveDiskSession } from "@cjhyy/code-shell-server/storage";
 import { getSessionCwdIndex } from "./session-cwd-index.js";
 import { assertDesktopSessionId } from "./session-validation.js";
 import { registerSessionTranscriptIpc } from "./session-transcript-ipc.js";
@@ -24,7 +24,6 @@ export function registerActivityHistoryIpc(
     await (archive ?? archiveDiskSession)(id, archived ? Date.now() : undefined);
     await getSessionCwdIndex().refresh(id);
   });
-  ipcMain.handle("sessions:list", async () => listSessions());
   ipcMain.handle("sessions:titles", (event) =>
     callBusiness("activity/titles", {}, documentSignal(event)),
   );

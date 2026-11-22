@@ -19,6 +19,7 @@ export function createConfigurationReads(
     return Promise.reject(new Error("Configuration reads require the workbench Host"));
   }
   return {
+    listSessions: () => read("sessions/history", {}),
     listMarketplaces: () => read("marketplace/list", {}),
     loadMarketplace: (name: string) => read("marketplace/load", { name }),
     listRecommendedMarketplaces: () => read("marketplace/recommended", {}),

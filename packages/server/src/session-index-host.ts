@@ -1,3 +1,5 @@
+import { listSessions } from "./sessions-service.js";
+import { reconcileSessionHistory } from "./session-history-index.js";
 import {
   serveStorageWorker,
   type StorageWorkerHandlers,
@@ -9,10 +11,14 @@ export function serveSessionIndexWorker(extra?: StorageWorkerHandlers): Promise<
   return serveStorageWorker({
     ...extra,
     async initialize(ctx) {
-      if (ctx.db) reconcileSessionIndex(ctx.db, ctx.sessionsRoot);
+      if (ctx.db) {
+        reconcileSessionIndex(ctx.db, ctx.sessionsRoot);
+        await reconcileSessionHistory(ctx.db, ctx.sessionsRoot);
+      }
       await extra?.initialize?.(ctx);
     },
-    handle(ctx, command, payload) {
+    async handle(ctx, command, payload) {
+      if (command === "sessions/historyFallback") return listSessions(ctx.sessionsRoot);
       if (command === "sessions/reconcile") {
         if (!ctx.db) return false;
         if (
@@ -23,6 +29,7 @@ export function serveSessionIndexWorker(extra?: StorageWorkerHandlers): Promise<
         )
           throw new Error("Invalid dirty session list");
         reconcileSessionIndex(ctx.db, ctx.sessionsRoot, payload);
+        await reconcileSessionHistory(ctx.db, ctx.sessionsRoot, payload);
         return true;
       }
       if (extra?.handle) return extra.handle(ctx, command, payload);
