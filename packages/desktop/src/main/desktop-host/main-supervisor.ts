@@ -283,7 +283,8 @@ export class DesktopHostSupervisor {
     input: ShellBusinessOperations[K]["input"],
     signal?: AbortSignal,
   ): Promise<ShellBusinessOperations[K]["result"]> {
-    await this.waitUntilReady(signal);
+    signal?.throwIfAborted();
+    if (!this.ready || this.stopped) await this.waitUntilReady(signal);
     // A scheduled Engine turn can span many tool calls. Its scheduler owns cancellation.
     const waitsForRun =
       method === "automation/command" && (input as { method?: string }).method === "cancel";
