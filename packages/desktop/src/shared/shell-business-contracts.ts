@@ -1,3 +1,4 @@
+import type { AgentDefinitionChanges } from "./agent-definitions.js";
 import type { GoalRecoveryOperations } from "./goal-recovery.js";
 import type { MimiReplyOperations } from "./mimi-gateway-turn.js";
 import type { ProjectMigrationOperations } from "./project-migration.js";
@@ -35,7 +36,7 @@ type Operation<F extends (...args: any[]) => Promise<unknown>> = {
 
 /** Private calls from authenticated Electron adapters. These methods are never
  * registered on a renderer port or exposed by the window preload. */
-export interface ShellBusinessOperations extends GoalRecoveryOperations, ProjectMigrationOperations, MimiReplyOperations, MimiProjectionOperations, MimiFollowUpOperations, MarketplaceOperations, PluginPackageOperations, GitOperations, PendingApprovalOperations, LabFileOperations, ConfiguredMcpProbe, RoomHistoryOperations, SkillOperations, MediaProtocolOperations, AttachmentOperations, WechatLoginOperations, ActivityOperations, NativeCcRoomReads, MemoryOperations, PrivateMemoryReads, ProjectRegistryOperations, CatalogEdits, ProfileLibraryOperations {
+export interface ShellBusinessOperations extends AgentDefinitionChanges, GoalRecoveryOperations, ProjectMigrationOperations, MimiReplyOperations, MimiProjectionOperations, MimiFollowUpOperations, MarketplaceOperations, PluginPackageOperations, GitOperations, PendingApprovalOperations, LabFileOperations, ConfiguredMcpProbe, RoomHistoryOperations, SkillOperations, MediaProtocolOperations, AttachmentOperations, WechatLoginOperations, ActivityOperations, NativeCcRoomReads, MemoryOperations, PrivateMemoryReads, ProjectRegistryOperations, CatalogEdits, ProfileLibraryOperations {
   "files/turnHistory": {
     input: { sessionId: string; action: "state" | "undo" | "redo" };
     result: import("../main/file-history-service.js").TurnUndoState | import("../main/file-history-service.js").TurnUndoResult[];

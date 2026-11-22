@@ -1,6 +1,7 @@
 import type { MimiReplyOperations } from "../shared/mimi-gateway-turn.js";
 import type { ProfileWorkerReads } from "../shared/profile-library.js";
-type WorkerViews = ActivityReads & ProfileWorkerReads;
+import type { AgentDefinitionReads } from "../shared/agent-definitions.js";
+type WorkerViews = ActivityReads & ProfileWorkerReads & AgentDefinitionReads;
 import type {
   petSegmentTranscript,
   SegmentClosureInput,

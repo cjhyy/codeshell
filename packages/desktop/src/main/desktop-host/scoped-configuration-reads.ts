@@ -42,7 +42,10 @@ type ScopedMethod = {
     : never;
 }[keyof DesktopBusinessReads];
 
-export function scopedConfigurationReads(list: ListSessions) {
+export function scopedConfigurationReads(
+  list: ListSessions,
+  worker: Pick<import("../activity-history-worker-client.js").ActivityHistoryWorker, "view">,
+) {
   function register<K extends ScopedMethod>(
     name: K,
     parse: (input: unknown) => DesktopBusinessReads[K]["params"],
@@ -58,11 +61,13 @@ export function scopedConfigurationReads(list: ListSessions) {
       read,
     );
   }
-  function listedSkill(input: unknown) {
+  function listedFile(input: unknown) {
     const { target: t, filePath } = businessArguments(input, ["target", "filePath"]);
     return { target: maybeTarget(t), filePath: textArgument(filePath) };
   }
   return [
+    register("agents/list", optional, (args) => worker.view("agents/list", args)),
+    register("agents/body", listedFile, (args) => worker.view("agents/body", args)),
     register(
       "mcp/merged",
       (input) => {
@@ -106,10 +111,10 @@ export function scopedConfigurationReads(list: ListSessions) {
           includeDisabled,
         }),
     ),
-    register("skills/body", listedSkill, async ({ target, filePath }) =>
+    register("skills/body", listedFile, async ({ target, filePath }) =>
       readSkillBody(await requireRendererListedSkillPath(target, filePath)),
     ),
-    register("skills/checkUpdate", listedSkill, async ({ target, filePath }) =>
+    register("skills/checkUpdate", listedFile, async ({ target, filePath }) =>
       checkSkillUpdateEntry(await requireRendererListedSkillPath(target, filePath)),
     ),
     register("plugins/list", optional, async ({ target }) =>

@@ -1,3 +1,4 @@
+import type { AgentDefinitionReads } from "./agent-definitions.js";
 import type { RendererConfigurationTarget } from "./renderer-configuration.js";
 import type { CodeshellApi } from "../preload/types";
 
@@ -11,7 +12,7 @@ type Empty = Record<string, never>;
 type Target = { target: RendererConfigurationTarget };
 type OptionalTarget = { target: RendererConfigurationTarget | null };
 
-export interface ConfigurationReadContracts {
+export interface ConfigurationReadContracts extends AgentDefinitionReads {
   "models/meta": View<"resolveModelMeta", { models: unknown; providers: unknown }>;
   "models/reasoning": View<"reasoningControl", { kind: string; model: string }>;
   "models/provider": View<"listModels", { provider: unknown; refresh?: boolean }>;

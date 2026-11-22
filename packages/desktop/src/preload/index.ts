@@ -1330,10 +1330,6 @@ contextBridge.exposeInMainWorld("codeshell", {
     target?: RendererConfigurationTarget;
     skillName: string;
   }) => ipcRenderer.invoke("skills:uninstall", input),
-  listAgents: (target: RendererConfigurationTarget | null) =>
-    ipcRenderer.invoke("agents:list", target),
-  readAgentBody: (target: RendererConfigurationTarget | null, filePath: string) =>
-    ipcRenderer.invoke("agents:read", target, filePath),
   saveAgent: (
     def: import("./types").AgentDefinitionInput,
     opts?: { scope?: "user" | "project"; target?: RendererConfigurationTarget },

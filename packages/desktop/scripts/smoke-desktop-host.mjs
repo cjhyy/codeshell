@@ -1,3 +1,4 @@
+import { verifyHostedAgentDefinitions } from "./__fixtures__/hosted-agent-definitions.mjs";
 import { withdrawPendingRootMigration, verifyRootMigrations } from "./__fixtures__/project-root-migration.mjs";
 import { gitRepositoryId } from "@cjhyy/code-shell-capability-coding/git";
 import { execFileSync } from "node:child_process";
@@ -299,6 +300,7 @@ utilityProcess.fork = function (...args) {
   await first.evaluate(() => window.codeshell.newWindow());
   const second = await secondOpened;
   await observeHost(second);
+  await verifyHostedAgentDefinitions(first, second, mount, "host-smoke-project");
   const projectId = "host-smoke-project";
   await first.evaluate((id) => window.codeshell.switchProjectGitBranch(id, "review-fixture"), projectId);
   assert.equal(git("branch", "--show-current"), "review-fixture");

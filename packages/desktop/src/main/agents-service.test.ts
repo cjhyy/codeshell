@@ -3,7 +3,7 @@ import { promises as fs } from "node:fs";
 import { mkdir, mkdtemp, readFile, readdir, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { readAgentBody, saveAgent } from "./agents-service.js";
+import { deleteAgent, readAgentBody, saveAgent } from "./agents-service.js";
 
 const roots: string[] = [];
 
@@ -18,6 +18,22 @@ async function projectRoot(): Promise<string> {
 }
 
 describe("saveAgent atomic writes", () => {
+  test("a revoked document cannot replace or delete an active role", async () => {
+    const cwd = await projectRoot();
+    const scope = { scope: "project" as const, cwd };
+    const original = { name: "reviewer", description: "Original", systemPrompt: "Review" };
+    const row = await saveAgent(original, scope);
+    const denied = async () => {
+      throw Error("Document write was revoked");
+    };
+    await expect(saveAgent({ ...original, description: "New" }, scope, denied)).rejects.toThrow(
+      "revoked",
+    );
+    await expect(deleteAgent(original.name, scope, denied)).rejects.toThrow("revoked");
+    expect(await readFile(row.filePath, "utf8")).toContain("Original");
+    expect(await readdir(join(cwd, ".code-shell", "agents"))).toEqual(["reviewer.md"]);
+  });
+
   test("keeps the next same-agent write queued until replacement registration finishes", async () => {
     const cwd = await projectRoot();
     const realpath = fs.realpath;

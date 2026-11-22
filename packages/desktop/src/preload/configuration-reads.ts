@@ -91,6 +91,9 @@ export function createConfigurationReads(
       read("settings/project", { target }, () =>
         ipcRenderer.invoke("settings:getConfiguration", target),
       ),
+    listAgents: (target: RendererConfigurationTarget | null) => read("agents/list", { target }),
+    readAgentBody: (target: RendererConfigurationTarget | null, filePath: string) =>
+      read("agents/body", { target, filePath }),
     listSkills: (
       target: RendererConfigurationTarget | null,
       opts?: { includeDisabled?: boolean },

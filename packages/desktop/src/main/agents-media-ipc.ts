@@ -3,15 +3,22 @@ import type { CallShellBusiness } from "../shared/shell-business-contracts.js";
 import { BrowserWindow, dialog, ipcMain } from "electron";
 import { requireRendererOrSessionPath } from "./renderer-session-path.js";
 import type { NativeMediaProtocol } from "./hosted-media-protocol.js";
-import { listAgents, readAgentBody, saveAgent, deleteAgent } from "./agents-service.js";
 import type { AgentDefinition } from "@cjhyy/code-shell-core";
-import { type RendererConfigurationTarget } from "./renderer-configuration-authority.js";
-import {
-  rendererConfigurationCwd,
-  rendererOptionalConfigurationCwd,
-  rejectUnexpectedRendererKeys,
-  requireRendererListedAgentPath,
-} from "./renderer-configuration-helpers.js";
+import type { RendererConfigurationTarget } from "../shared/renderer-configuration.js";
+import { rejectUnexpectedRendererKeys } from "./renderer-configuration-helpers.js";
+
+type AgentOptions = { scope?: "user" | "project"; target?: RendererConfigurationTarget };
+function agentTarget(opts?: AgentOptions) {
+  if (opts) rejectUnexpectedRendererKeys(opts, ["scope", "target"], "Agent definition");
+  if (opts?.scope !== undefined && opts.scope !== "user" && opts.scope !== "project")
+    throw Error("Invalid agent scope");
+  if (opts?.scope === "project") {
+    if (!opts.target) throw Error("Project agent change requires stable authority");
+    return opts.target;
+  }
+  if (opts?.target) throw Error("User agent change does not accept project authority");
+  return null;
+}
 
 export interface AgentsMediaIpcDeps {
   host: { callBusiness: CallShellBusiness; documentSignal(event: IpcMainInvokeEvent): AbortSignal };
@@ -22,15 +29,6 @@ export interface AgentsMediaIpcDeps {
 /** Agent definition routes plus media preview and image read/save routes. */
 export function registerAgentsMediaIpc(deps: AgentsMediaIpcDeps) {
   const { mainWindows, mediaPreviewService } = deps;
-  ipcMain.handle("agents:list", async (_e, target: RendererConfigurationTarget | null) =>
-    listAgents(await rendererOptionalConfigurationCwd(target, "")),
-  );
-  ipcMain.handle(
-    "agents:read",
-    async (_e, target: RendererConfigurationTarget | null, filePath: unknown) =>
-      readAgentBody(await requireRendererListedAgentPath(target, filePath)),
-  );
-
   ipcMain.handle("media:getPreview", async (event, input: unknown) => {
     if (
       event.senderFrame !== event.sender.mainFrame ||
@@ -100,62 +98,18 @@ export function registerAgentsMediaIpc(deps: AgentsMediaIpcDeps) {
       return result.filePath;
     },
   );
-  ipcMain.handle(
-    "agents:save",
-    async (
-      _e,
-      def: AgentDefinition,
-      opts?: { scope?: "user" | "project"; target?: RendererConfigurationTarget },
-    ) => {
-      if (!def || typeof def !== "object") throw new Error("agents:save requires def");
-      if (typeof def.name !== "string" || typeof def.description !== "string")
-        throw new Error("agents:save: name and description are required");
-      if (opts?.scope !== undefined && opts.scope !== "user" && opts.scope !== "project") {
-        throw new Error("invalid agent scope");
-      }
-      if (opts) {
-        rejectUnexpectedRendererKeys(
-          opts as Record<string, unknown>,
-          ["scope", "target"],
-          "agents:save",
-        );
-      }
-      if (opts?.scope === "project" && !opts.target) {
-        throw new Error("project agent save requires stable authority");
-      }
-      if (opts?.scope !== "project" && opts?.target) {
-        throw new Error("user agent save does not accept project authority");
-      }
-      const cwd = opts?.target ? await rendererConfigurationCwd(opts.target) : undefined;
-      return saveAgent(def, { scope: opts?.scope, cwd });
-    },
+  ipcMain.handle("agents:save", (event, definition: AgentDefinition, opts?: AgentOptions) =>
+    deps.host.callBusiness(
+      "agents/save",
+      { target: agentTarget(opts), definition },
+      deps.host.documentSignal(event),
+    ),
   );
-  ipcMain.handle(
-    "agents:delete",
-    async (
-      _e,
-      name: string,
-      opts?: { scope?: "user" | "project"; target?: RendererConfigurationTarget },
-    ) => {
-      if (typeof name !== "string" || !name) throw new Error("agents:delete requires name");
-      if (opts?.scope !== undefined && opts.scope !== "user" && opts.scope !== "project") {
-        throw new Error("invalid agent scope");
-      }
-      if (opts) {
-        rejectUnexpectedRendererKeys(
-          opts as Record<string, unknown>,
-          ["scope", "target"],
-          "agents:delete",
-        );
-      }
-      if (opts?.scope === "project" && !opts.target) {
-        throw new Error("project agent delete requires stable authority");
-      }
-      if (opts?.scope !== "project" && opts?.target) {
-        throw new Error("user agent delete does not accept project authority");
-      }
-      const cwd = opts?.target ? await rendererConfigurationCwd(opts.target) : undefined;
-      return deleteAgent(name, { scope: opts?.scope, cwd });
-    },
+  ipcMain.handle("agents:delete", (event, name: string, opts?: AgentOptions) =>
+    deps.host.callBusiness(
+      "agents/delete",
+      { target: agentTarget(opts), name },
+      deps.host.documentSignal(event),
+    ),
   );
 }

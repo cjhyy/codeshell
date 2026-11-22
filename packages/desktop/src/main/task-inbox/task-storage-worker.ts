@@ -8,6 +8,7 @@ import { readStoredGoal } from "../../host/composition/goal-recovery.js";
 import { StoredMimiRules } from "../../host/composition/mimi-rules.js";
 import { isProjectMigrationCommand } from "../../shared/project-migration.js";
 import { writeHostedProjectMigration } from "../../host/composition/stored-project-migrations.js";
+import { changeAgentDefinition, type AgentDefinitionWork } from "../hosted-agent-definitions.js";
 import { isProfileLibraryChange } from "../../shared/profile-library.js";
 import { changeProfileLibrary } from "../hosted-profile-library.js";
 import { isMemoryCommand, writeHostedMemory } from "../hosted-memory.js";
@@ -75,6 +76,8 @@ await serveSessionIndexWorker({
       return changeSessionFiles(ctx.sessionsRoot, command, payload as Parameters<typeof changeSessionFiles>[2]);
     if (command === "goals/read" || command === "goals/resume" || command === "goals/recent" || command === "goals/attention")
       return readStoredGoal(command, payload, new SessionManager(ctx.sessionsRoot));
+    if (command === "agents/save" || command === "agents/delete")
+      return changeAgentDefinition(command, payload as AgentDefinitionWork);
     if (isProfileLibraryChange(command)) return changeProfileLibrary(command,payload as Parameters<typeof changeProfileLibrary>[1]);
     if (isMemoryCommand(command))
       return writeHostedMemory(command, payload as Parameters<typeof writeHostedMemory>[1]);

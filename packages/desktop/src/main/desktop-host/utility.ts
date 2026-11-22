@@ -13,6 +13,7 @@ import { HostedMimiDispatch } from "../../host/composition/mimi-dispatch.js";
 import { randomUUID } from "node:crypto";
 import { labFiles } from "../../host/composition/optimization-lab.js";
 import {hostedMarketplace} from "../../host/composition/marketplace.js";
+import { agentDefinitionChanges } from "../../host/composition/agent-definitions.js";
 import { hostedProfileLibrary } from "../../host/composition/profile-library.js";
 import { configuredMcpProbe } from "../../host/composition/configured-mcp-probe.js";
 import { HostedMimiTasks } from "../../host/composition/mimi-tasks.js";
@@ -308,6 +309,7 @@ const business = new HostBusinessCalls({
   ...skills.methods,
   ...marketplace.operations,
   ...profileLibrary.operations,
+  ...agentDefinitionChanges(storage),
   ...configuredMcpProbe,
   ...wechatLoginOperations((event) => parent.postMessage({ type: "wechat-login-event", event })),
   ...mimiRecordsOperations(
@@ -534,7 +536,7 @@ parent.on("message", ({ data, ports }) => {
         ...activities.reads,
         ...profileLibrary.reads,
         ...marketplace.reads,
-        ...scopedConfigurationReads((options) => catalog.list(options)),
+        ...scopedConfigurationReads((options) => catalog.list(options), historyWorker),
         ...workspaceReads((options) => catalog.list(options), reportGitRoot),
         businessRead("catalog/load", noBusinessArguments, catalogFiles["catalog/load"]),
         ...ingressMethods(
