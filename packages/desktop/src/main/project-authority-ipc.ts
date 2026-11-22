@@ -1,3 +1,5 @@
+import { migrateHostedSession } from "./project-migration-client.js";
+import { getSessionCwdIndex } from "./session-cwd-index.js";
 import type { IpcMainInvokeEvent } from "electron";
 import type {
   ProjectRegistryCommand,
@@ -30,6 +32,7 @@ export interface ProjectAuthorityIpcDependencies {
   host?: {
     callBusiness: CallShellBusiness;
     documentSignal(event: IpcMainInvokeEvent): AbortSignal;
+    generationSignal(document: AbortSignal): Promise<AbortSignal>;
     projectRegistryListeners: Set<(projects: LocalProject[]) => Promise<void>>;
   };
 
@@ -146,7 +149,23 @@ export function registerProjectAuthorityIpc(deps: ProjectAuthorityIpcDependencie
   });
   deps.ipcMain.handle(
     "projectRegistry:removeRoot",
-    async (_event, projectId: string, rootId: string) => {
+    async (event, projectId: string, rootId: string) => {
+      if (deps.host) {
+        const signal = deps.host.documentSignal(event);
+        const path = await deps.host.callBusiness(
+          "projects/removalPath",
+          { projectId, rootId },
+          signal,
+        );
+        const index = getSessionCwdIndex();
+        await index.ensureLoaded();
+        const observedIds = index.confirmedIdsForProjectRoot(projectId, rootId, path);
+        return deps.host.callBusiness(
+          "projects/removeRoot",
+          { projectId, rootId, path, observedIds },
+          signal,
+        );
+      }
       const project = await deps.projectStore.removeRoot(projectId, rootId);
       await broadcastProjectRegistry();
       return project;
@@ -154,12 +173,32 @@ export function registerProjectAuthorityIpc(deps: ProjectAuthorityIpcDependencie
   );
   deps.ipcMain.handle(
     "projectRegistry:migrateSessionMainRoot",
-    async (_event, sessionId: string, targetRootId: string) => {
+    async (event, sessionId: string, targetRootId: string) => {
       deps.assertSessionId(sessionId);
       if (typeof targetRootId !== "string" || !targetRootId || targetRootId.length > 512) {
         throw new Error("target root id is required");
       }
       const currentBridge = deps.getBridge();
+      if (deps.host) {
+        const signal = deps.host.documentSignal(event);
+        if (!currentBridge) throw Error("Session migration owner is unavailable");
+        const migrated = await migrateHostedSession(
+          sessionId,
+          targetRootId,
+          signal,
+          await deps.host.generationSignal(signal),
+          deps.host.callBusiness,
+          currentBridge,
+          deps.getTrust,
+        );
+        broadcastWorkspaceChanged({
+          sessionId,
+          workspace: migrated.workspace,
+          mainRoot: migrated.mainRoot,
+        });
+        signal.throwIfAborted();
+        return migrated;
+      }
       const migrated = await deps.projectStore.migrateSessionMainRoot(sessionId, targetRootId, {
         owner: currentBridge
           ? {
@@ -210,10 +249,9 @@ export function registerProjectAuthorityIpc(deps: ProjectAuthorityIpcDependencie
   deps.ipcMain.handle("projectRegistry:setPinned", (event, projectId: string, pinned: boolean) =>
     edits(event)("projects/setPinned", { projectId, pinned }),
   );
-  deps.ipcMain.handle("projectRegistry:remove", async (_event, projectId: string) => {
-    await deps.projectStore.remove(projectId);
-    await broadcastProjectRegistry();
-  });
+  deps.ipcMain.handle("projectRegistry:remove", (event, projectId: string) =>
+    edits(event)("projects/remove", { projectId }),
+  );
   deps.ipcMain.handle(
     "projectRegistry:resolveForCwd",
     async (_event, cwd: string, source: "disk-rebuild" | "automation-import" | "live") => {

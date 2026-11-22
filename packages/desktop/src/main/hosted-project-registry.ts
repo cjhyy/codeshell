@@ -16,6 +16,9 @@ type ProjectEdits = {
 
 export function projectRegistryEdits(store: ProjectStore, trust = getTrust): ProjectEdits {
   return {
+    "projects/remove": ({ projectId }, commit) => store.remove(projectId, commit),
+    "projects/removeRoot": ({ projectId, rootId, path, observedIds }, commit) =>
+      store.removeRoot(projectId, rootId, commit, { path, ids: observedIds }),
     "projects/createPicked": ({ pickedPath }, commit) => store.createFromPath(pickedPath, commit),
     "projects/addPickedRoot": ({ projectId, pickedPath }, commit) =>
       store.addRoot(projectId, pickedPath, commit),

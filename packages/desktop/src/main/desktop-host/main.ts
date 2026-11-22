@@ -252,6 +252,7 @@ export function createDesktopHost(
         lease.release();
       }
     },
+    generationSignal: supervisor.generationSignal.bind(supervisor),
     async workbenchTerminal(
       event: Pick<IpcMainEvent, "sender" | "senderFrame">,
       method: keyof TerminalCommands,

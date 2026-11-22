@@ -4245,6 +4245,7 @@ export class Engine {
     sessionId: string,
     project: import("../types.js").SessionProjectBinding,
     mainRoot: string,
+    commitTicket?: string,
   ): SessionWorkspace {
     return migrateOwnedSessionMainRoot({
       sessionManager: this.sessionManager,
@@ -4253,6 +4254,7 @@ export class Engine {
       sessionId,
       project,
       mainRoot,
+      commitTicket,
     });
   }
 

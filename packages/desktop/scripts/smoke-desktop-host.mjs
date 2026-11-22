@@ -1,10 +1,11 @@
+import { withdrawPendingRootMigration, verifyRootMigrations } from "./__fixtures__/project-root-migration.mjs";
 import { gitRepositoryId } from "@cjhyy/code-shell-capability-coding/git";
 import { execFileSync } from "node:child_process";
 /* global window */
 import { verifyPairedHostTerminal } from "./paired-host-terminal.mjs";
 import assert from "node:assert/strict";
 import { mkdir, readFile, readdir, realpath, utimes, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { startMockProviderServer } from "./mock-provider-server.mjs";
 import { prepareConfinedElectronFixture } from "./confined-electron-fixture.mjs";
@@ -43,6 +44,8 @@ try {
   const unregistered = join(isolated.home,"unregistered-project");
   await mkdir(unregistered);
   const mount = await realpath(projectRoot);
+  const secondRoot = join(dirname(mount), "host-smoke-secondary");
+  await mkdir(secondRoot);
   const cliProject = join(isolated.home,".claude","projects",mount.replace(/[^A-Za-z0-9]/g,"-"));
   await mkdir(cliProject,{recursive:true});
   await writeFile(join(cliProject,"host-cli-fixture.jsonl"),JSON.stringify({type:"user",cwd:mount,sessionId:"host-cli-fixture",message:{role:"user",content:"Host CLI transcript"}})+"\n");
@@ -65,7 +68,10 @@ try {
           id: "host-smoke-project",
           name: "Host smoke",
           primaryRootId: "root",
-          roots: [{ id: "root", name: "root", path: mount, canonicalIdentity: mount, addedAt: 1 }],
+          roots: [
+            { id: "root", name: "root", path: mount, canonicalIdentity: mount, addedAt: 1 },
+            { id: "secondary", name: "secondary", path: secondRoot, canonicalIdentity: secondRoot, addedAt: 1 },
+          ],
           createdAt: 1,
           updatedAt: 1,
           lastOpenedAt: 1,
@@ -517,6 +523,9 @@ utilityProcess.fork = function (...args) {
   assert.equal(reattached.pid, started.pid);
   await first.waitForFunction(() => window.hostTerminalText.includes("HOST_TERMINAL_READY"));
   await first.evaluate((id) => window.codeshell.ptyKill(id), terminalId);
+  const receipt = await withdrawPendingRootMigration({
+    isolated, mount, projectId, first, observeHost, fixture, application,
+  });
   // A full local fork exercises actual worker stdio without performing inference.
   await first.evaluate(() => {
     window.hostSmokeFork = window.codeshell.forkSession({
@@ -526,12 +535,11 @@ utilityProcess.fork = function (...args) {
     });
     void window.hostSmokeFork.catch(() => {});
   });
-  const receipt = await fixture.assertWorker(application);
-  assert.equal(receipt.spawned.length, 1);
   assert.equal((await first.evaluate(() => window.hostSmokeFork)).sessionId, "host-worker-copy");
   assert.deepEqual((await first.evaluate(() => window.codeshell.configure({}))).result, {
     ok: true,
   });
+  await verifyRootMigrations({ first, second, isolated, mount, secondRoot, projectId });
   const lifetimePty = await first.evaluate(async (cwd) => {
     window.hostTerminalLost = false;
     window.codeshell.onPtyExit((event) => {
@@ -580,6 +588,9 @@ utilityProcess.fork = function (...args) {
   const nextPid = await application.evaluate(() => globalThis.smokeHostChild.pid);
   assert.ok(nextPid && nextPid !== oldPid, "Expected a fresh Host process");
 
+  await second.evaluate((id) => window.codeshell.projectRegistry.remove(id), projectId);
+  assert.equal(await first.evaluate(async (id) =>
+    (await window.codeshell.projectRegistry.list()).some(project => project.id === id), projectId), false);
   // Destroying all fixture windows bypasses interactive save prompts. Exercise
   // the application's real last-window and activate listeners.
   await application.evaluate(async ({ app, BrowserWindow }) => {

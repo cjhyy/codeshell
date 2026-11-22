@@ -125,16 +125,20 @@ export interface MigratedSessionMainRoot {
   workspace: SessionWorkspace;
 }
 
+export interface ProjectMigrationTarget {
+  sessionId: string;
+  projectId: ProjectId;
+  mainRootId: ProjectRootId;
+  mainRoot: string;
+  workspaceContext: WorkspaceContext;
+}
+
 export interface MigrateSessionMainRootOptions {
+  beforeOwnerRequest?: (target: ProjectMigrationTarget) => void;
+  beforeOfflineCommit?: () => void;
   /** Prove resident ownership or fence a not-resident durable fallback. */
   owner?: {
-    migrate: (input: {
-      sessionId: string;
-      projectId: ProjectId;
-      mainRootId: ProjectRootId;
-      mainRoot: string;
-      workspaceContext: WorkspaceContext;
-    }) => Promise<MigrateSessionMainRootResult>;
+    migrate: (input: ProjectMigrationTarget) => Promise<MigrateSessionMainRootResult>;
     complete: (input: { sessionId: string; ownershipToken: string }) => Promise<void>;
   };
 }
@@ -309,21 +313,37 @@ export class ProjectStore {
     };
   }
 
-  async removeRoot(projectId: string, rootId: string): Promise<LocalProject> {
+  async removeRoot(
+    projectId: string,
+    rootId: string,
+    commit?: () => void,
+    observedSessions?: { path: string; ids: string[] },
+  ): Promise<LocalProject> {
     await this.sessionIndex.ensureLoaded();
     const current = await this.requireLive(projectId);
     const removedRoot = current.roots.find((root) => root.id === rootId);
     if (!removedRoot) throw new Error("project root not found");
     const removedKey = canonicalKey(removedRoot.path);
-    const affected = this.sessionIndex
-      .confirmedEntries()
-      .filter(
-        (entry) =>
-          this.sessionManager.readSessionArchivedAt(entry.sessionId) === undefined &&
-          ((entry.projectId === projectId && entry.mainRootId === rootId) ||
-            (!entry.projectId && canonicalKey(entry.cwd) === removedKey)),
-      )
-      .map((entry) => entry.sessionId);
+    if (observedSessions && canonicalKey(observedSessions.path) !== removedKey)
+      throw new Error("project root changed during removal");
+    const candidates = this.sessionIndex.confirmedIdsForProjectRoot(
+      projectId,
+      rootId,
+      removedRoot.path,
+    );
+    const affected = [...new Set([...candidates, ...(observedSessions?.ids ?? [])])].filter(
+      (id) => {
+        const state = this.sessionManager.readSessionState(id);
+        if (typeof state?.archivedAt === "number") return false;
+        // A confirmed process-local Session can have no durable state in the Host.
+        return (
+          !state ||
+          (state.project
+            ? state.project.projectId === projectId && state.project.mainRootId === rootId
+            : canonicalKey(state.cwd) === removedKey)
+        );
+      },
+    );
     if (affected.length > 0) {
       throw new Error(`folder is the main root for sessions: ${affected.join(", ")}`);
     }
@@ -339,7 +359,7 @@ export class ProjectStore {
       target.roots.splice(index, 1);
       touchProject(target, this.now());
       return target;
-    });
+    }, commit);
     await this.didChange();
     return cloneProject(project);
   }
@@ -387,6 +407,7 @@ export class ProjectStore {
       };
 
       if (options.owner) {
+        options.beforeOwnerRequest?.(commit);
         let ownership: MigrateSessionMainRootResult;
         try {
           ownership = await options.owner.migrate(commit);
@@ -442,6 +463,7 @@ export class ProjectStore {
               { projectId: durableProject.id, mainRootId: durableTarget.id },
               durableTarget.path,
               durable.stateRevision,
+              options.beforeOfflineCommit,
             );
           } finally {
             try {
@@ -541,7 +563,7 @@ export class ProjectStore {
     return cloneProject(project);
   }
 
-  async remove(projectId: string): Promise<void> {
+  async remove(projectId: string, commit?: () => void): Promise<void> {
     if ([...this.migratingRoots.keys()].some((key) => key.startsWith(`${projectId}\0`))) {
       throw new Error("project has an in-progress Session migration");
     }
@@ -551,7 +573,7 @@ export class ProjectStore {
       target.deletedAt = timestamp;
       touchProject(target, timestamp);
       return target;
-    });
+    }, commit);
     await this.didChange();
   }
 

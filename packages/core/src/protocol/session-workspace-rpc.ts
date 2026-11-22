@@ -28,6 +28,7 @@ interface WorkspaceEngine {
     sessionId: string,
     project: SessionProjectBinding,
     mainRoot: string,
+    commitTicket?: string,
   ): SessionWorkspace | null;
 }
 
@@ -189,11 +190,13 @@ export class SessionWorkspaceRpcHandlers {
             mainRoot: params.mainRoot,
             workspaceContext,
             projectTrusted: params.projectTrusted,
+            commitTicket: params.commitTicket,
           })
         : (engine as WorkspaceEngine).migrateSessionMainRoot?.(
             params.sessionId,
             params.project,
             params.mainRoot,
+            params.commitTicket,
           );
       if (!workspace) throw new Error(`Session ${params.sessionId} migration was not committed`);
       if (residentSession) {
@@ -261,6 +264,7 @@ function validMigrationParams(params: MigrateSessionMainRootParams): boolean {
     typeof params.projectTrusted === "boolean" &&
     typeof params.ownershipToken === "string" &&
     params.ownershipToken.length > 0 &&
-    params.ownershipToken.length <= 128
+    params.ownershipToken.length <= 128 &&
+    (params.commitTicket === undefined || (typeof params.commitTicket === "string" && /^[a-f0-9-]{36}$/.test(params.commitTicket)))
   );
 }

@@ -48,6 +48,8 @@ interface SessionCwdIndexOptions {
   syncFs?: SessionCwdIndexSyncFs;
   now?: () => number;
   tentativeTtlMs?: number;
+  /** Administrative root removal must include sessions beyond the normal startup scan. */
+  scanAll?: boolean;
 }
 
 export class SessionCwdIndex {
@@ -134,6 +136,17 @@ export class SessionCwdIndex {
       .map(publicEntry);
   }
 
+  confirmedIdsForProjectRoot(projectId: string, rootId: string, path: string): string[] {
+    const key = canonicalKey(path);
+    return this.confirmedEntries()
+      .filter((entry) =>
+        entry.projectId
+          ? entry.projectId === projectId && entry.mainRootId === rootId
+          : canonicalKey(entry.cwd) === key,
+      )
+      .map((entry) => entry.sessionId);
+  }
+
   confirmedEntries(): SessionCwdIndexEntry[] {
     this.pruneExpired();
     return [...this.entries.values()]
@@ -209,7 +222,7 @@ export class SessionCwdIndex {
     }
 
     const sessionIds = dirs
-      .slice(0, MAX_SESSION_DIRS_TO_SCAN)
+      .slice(0, this.options.scanAll ? undefined : MAX_SESSION_DIRS_TO_SCAN)
       .filter((entry) => entry.isDirectory() && !entry.name.startsWith("."))
       .map((entry) => entry.name);
     for (let offset = 0; offset < sessionIds.length; offset += 64) {

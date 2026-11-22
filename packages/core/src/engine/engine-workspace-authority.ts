@@ -159,13 +159,14 @@ export function migrateOwnedSessionMainRoot(options: {
   sessionId: string;
   project: SessionProjectBinding;
   mainRoot: string;
+  commitTicket?: string;
 }): SessionWorkspace {
   const { sessionManager, activeState, authorities, sessionId, project, mainRoot } = options;
   if (!sessionId || !sessionManager.exists(sessionId)) {
     throw new Error(`Session ${sessionId} does not exist`);
   }
   const workspace: SessionWorkspace = { root: mainRoot, kind: "main" };
-  const stateRevision = sessionManager.migrateSessionMainRoot(sessionId, project, mainRoot);
+  const stateRevision = sessionManager.migrateSessionMainRoot(sessionId, project, mainRoot, options.commitTicket);
   if (activeState?.sessionId === sessionId) {
     Object.assign(activeState, {
       project: { ...project },

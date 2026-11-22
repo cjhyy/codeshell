@@ -1,3 +1,4 @@
+export { reserveRootMigration, withdrawRootMigration } from "./root-migration-permit.js";
 export { openStateStorage, type StateStorage } from "./store.js";
 export {
   serveStorageWorker,

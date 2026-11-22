@@ -35,6 +35,7 @@ const scheduleTimer: Schedule = (callback, ms) => {
 
 export class DesktopHostSupervisor {
   private child?: HostChild;
+  private generation = new AbortController();
   private ready = false;
   private retiring = false;
   private stopped = false;
@@ -107,6 +108,7 @@ export class DesktopHostSupervisor {
       return;
     }
     const child = this.child;
+    this.generation = new AbortController();
     this.retiring = false;
     child.on("error", (type, location) => this.log("fatal_error", { type, location }));
     child.once("exit", (code) => {
@@ -287,6 +289,11 @@ export class DesktopHostSupervisor {
     if (!this.ready || this.stopped) throw new Error("Desktop Host is unavailable");
   }
 
+  async generationSignal(document: AbortSignal): Promise<AbortSignal> {
+    await this.waitUntilReady(document);
+    return this.generation.signal;
+  }
+
   async callBusiness<K extends keyof ShellBusinessOperations>(
     method: K,
     input: ShellBusinessOperations[K]["input"],
@@ -390,6 +397,7 @@ export class DesktopHostSupervisor {
       read.reject(new Error("Desktop Host is unavailable"));
     }
     this.reads.clear();
+    this.generation.abort();
   }
 
   setOwner(sessionId: string, webContentsId: number | null): void {

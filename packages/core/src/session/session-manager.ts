@@ -1,3 +1,4 @@
+import { claimRootMigration } from "../storage/root-migration-permit.js";
 import type { Dirent } from "node:fs";
 /**
  * Session lifecycle manager.
@@ -772,6 +773,7 @@ export class SessionManager {
     sessionId: string,
     project: import("../types.js").SessionProjectBinding,
     mainRoot: string,
+    commitTicket?: string,
   ): number {
     if (
       !project ||
@@ -784,11 +786,13 @@ export class SessionManager {
     ) {
       throw new SessionError(`invalid main-root migration for ${sessionId}`);
     }
-    return this.updateSessionState(sessionId, {
-      project: { ...project },
-      cwd: mainRoot,
-      workspace: { root: mainRoot, kind: "main" },
-    });
+    return this.mergeSessionState(
+      sessionId,
+      () => ({ project: { ...project }, cwd: mainRoot, workspace: { root: mainRoot, kind: "main" } }),
+      undefined,
+      commitTicket === undefined ? undefined : () =>
+        claimRootMigration(this.sessionsDir, sessionId, commitTicket, { ...project, mainRoot }),
+    );
   }
 
   /**
@@ -802,6 +806,7 @@ export class SessionManager {
     project: import("../types.js").SessionProjectBinding,
     mainRoot: string,
     expectedStateRevision: number | undefined,
+    beforeCommit?: () => void,
   ): number {
     assertSafeSessionId(sessionId);
     if (
@@ -824,7 +829,7 @@ export class SessionManager {
       cwd: mainRoot,
       workspace: { root: mainRoot, kind: "main" } as SessionWorkspace,
     });
-    const result = this.saveStateAttempt(state);
+    const result = this.saveStateAttempt(state, undefined, beforeCommit);
     if (result.ok) return state.stateRevision!;
     if (result.reason === "generation_conflict") {
       throw new SessionError(`Session generation conflict for ${sessionId}`);

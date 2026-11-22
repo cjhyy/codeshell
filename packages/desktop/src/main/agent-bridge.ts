@@ -1,3 +1,4 @@
+import { isRootMigrationReply, rootMigrationRequestPrefix } from "../shared/project-migration.js";
 import {
   handleRendererCommand,
   type DirectAdmission,
@@ -628,6 +629,7 @@ export class AgentBridge implements PetStateBridge {
    */
   private handleWorkerLine(line: string): void {
     const parsedLine = parseWorkerLine(line);
+    if (isRootMigrationReply(parsedLine.message)) return;
     const message = parsedLine.message as
       | { method?: unknown; params?: unknown; id?: unknown }
       | undefined;
@@ -2041,8 +2043,11 @@ export class AgentBridge implements PetStateBridge {
   ): Promise<{ ok: true; result: unknown } | { ok: false; message: string; code?: number }> {
     const timeoutMs = typeof timeoutOrOptions === "number" ? timeoutOrOptions : 120_000;
     const options = typeof timeoutOrOptions === "number" ? maybeOptions! : timeoutOrOptions;
-    const id = `desktop-pet-host-${++this.petHostRequestId}`;
-    // consume: false — the response line still flows to renderer + taps, like
+    const privateMigration =
+      method === Methods.MigrateSessionMainRoot || method === Methods.CompleteSessionMainRootMigration;
+    const id =
+      (privateMigration ? rootMigrationRequestPrefix : "desktop-pet-host-") + ++this.petHostRequestId;
+    // Ordinary requests use consume: false — the response line still flows to renderer + taps, like
     // any other worker output. failFast defaults unset — a dropped send waits out
     // the timeout, matching the old inject-then-wait semantics.
     //
@@ -2056,6 +2061,7 @@ export class AgentBridge implements PetStateBridge {
       id,
       timeoutMs,
       meta: options.meta,
+      ...(privateMigration ? { consume: true, settleOnExit: true, failFast: true } : {}),
       ...(options.settleOnExit ? { settleOnExit: true } : {}),
       ...(options.failFast ? { failFast: true } : {}),
       ...(options.waitForRunCompletion ? { waitForRunCompletion: true } : {}),
@@ -2669,7 +2675,7 @@ export class AgentBridge implements PetStateBridge {
     sessionId: string,
     project: SessionProjectBinding,
     mainRoot: string,
-    authority: { workspaceContext: WorkspaceContext; projectTrusted: boolean },
+    authority: { workspaceContext: WorkspaceContext; projectTrusted: boolean; commitTicket?: string },
   ): Promise<MigrateSessionMainRootResult> {
     if (!this.core.canSend()) {
       // Starting a worker with no resident Engine lets it mint the same

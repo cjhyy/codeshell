@@ -1,3 +1,4 @@
+import { isRootMigrationReply } from "../../shared/project-migration.js";
 import type { PetProjectionSnapshotResult } from "@cjhyy/code-shell-pet";
 import { prepareAgentRunMetadata } from "../agent-run-metadata.js";
 import { rendererRunFactReader } from "./renderer-run-facts.js";
@@ -89,6 +90,7 @@ export function bindHostWorker(
   };
   core.subscribeLines((line) => {
     const parsed = parseWorkerLine(line);
+    if (isRootMigrationReply(parsed.message)) return;
     if (observers.petProjection?.observe(parsed)) return;
     runs?.observe(parsed.message);
     const method = (parsed.message as { method?: string } | null)?.method;

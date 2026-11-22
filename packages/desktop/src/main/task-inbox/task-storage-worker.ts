@@ -1,4 +1,6 @@
 import { StoredMimiRules } from "../../host/composition/mimi-rules.js";
+import { isProjectMigrationCommand } from "../../shared/project-migration.js";
+import { writeHostedProjectMigration } from "../../host/composition/stored-project-migrations.js";
 import { isProfileLibraryChange } from "../../shared/profile-library.js";
 import { changeProfileLibrary } from "../hosted-profile-library.js";
 import { isMemoryCommand, writeHostedMemory } from "../hosted-memory.js";
@@ -84,6 +86,8 @@ await serveSessionIndexWorker({
       return commitPickedSourceUpload(payload as Parameters<typeof commitPickedSourceUpload>[0]);
     if (isCatalogEdit(command))
       return writeHostedCatalog(command, payload as Parameters<typeof writeHostedCatalog>[1]);
+    if (isProjectMigrationCommand(command))
+      return writeHostedProjectMigration(command, payload as Parameters<typeof writeHostedProjectMigration>[1]);
     if (isProjectRegistryCommand(command))
       return writeHostedProjectRegistry(
         command,
