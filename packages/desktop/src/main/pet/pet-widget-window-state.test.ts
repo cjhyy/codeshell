@@ -97,7 +97,7 @@ describe("desktop Pet window position", () => {
   });
 
   test("starts hidden and exposes visibility through the single presence owner", () => {
-    const mainSource = readFileSync(join(import.meta.dir, "..", "index.ts"), "utf8");
+    const mainSource = readFileSync(join(import.meta.dir, "..", "shell", "mimi-presence.ts"), "utf8");
     const stateSource = readFileSync(join(import.meta.dir, "mimi-presence-state.ts"), "utf8");
     const ipcSource = readFileSync(join(import.meta.dir, "mimi-presence-ipc.ts"), "utf8");
     expect(stateSource).toMatch(/visible: false,\s+mode: "docked"/);
@@ -112,7 +112,7 @@ describe("desktop Pet window position", () => {
       join(import.meta.dir, "..", "..", "renderer", "pet", "PetWidget.tsx"),
       "utf8",
     );
-    const mainSource = readFileSync(join(import.meta.dir, "..", "index.ts"), "utf8");
+    const mainSource = readFileSync(join(import.meta.dir, "..", "shell", "mimi-presence.ts"), "utf8");
     expect(widgetSource).toContain("onDoubleClick");
     expect(widgetSource).toContain("onOpen();");
     expect(widgetSource).toContain("onContextMenu();");
