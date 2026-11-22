@@ -1,3 +1,4 @@
+import type { MimiProjectionOperations } from "./mimi-projection.js";
 import type { MimiFollowUpOperations } from "./mimi-follow-ups.js";
 import type { GitOperations } from "./git-operations.js";
 import type { LabFileOperations } from "./optimization-lab-project.js";
@@ -31,17 +32,13 @@ type Operation<F extends (...args: any[]) => Promise<unknown>> = {
 
 /** Private calls from authenticated Electron adapters. These methods are never
  * registered on a renderer port or exposed by the window preload. */
-export interface ShellBusinessOperations extends MimiFollowUpOperations, MarketplaceOperations, PluginPackageOperations, GitOperations, PendingApprovalOperations, LabFileOperations, ConfiguredMcpProbe, RoomHistoryOperations, SkillOperations, MediaProtocolOperations, AttachmentOperations, WechatLoginOperations, ActivityOperations, NativeCcRoomReads, MemoryOperations, PrivateMemoryReads, ProjectRegistryOperations, CatalogEdits, ProfileLibraryOperations {
+export interface ShellBusinessOperations extends MimiProjectionOperations, MimiFollowUpOperations, MarketplaceOperations, PluginPackageOperations, GitOperations, PendingApprovalOperations, LabFileOperations, ConfiguredMcpProbe, RoomHistoryOperations, SkillOperations, MediaProtocolOperations, AttachmentOperations, WechatLoginOperations, ActivityOperations, NativeCcRoomReads, MemoryOperations, PrivateMemoryReads, ProjectRegistryOperations, CatalogEdits, ProfileLibraryOperations {
   "mimi/turnStorage":{input:import("./mimi-turn-storage.js").MimiTurnStorageCommand;result:unknown};
   "mimi/tasks": {input: import("./mimi-tasks.js").MimiTaskCommand;result:unknown};
   "mimi/extractionAllowed": { input: Record<string,never>; result:boolean };
   "mimi/closeSegment": Operation<import("../main/pet/pet-segment-closure-service.js").PetSegmentClosureService["close"]>;
   "mimi/backfillSegments": {input:{segments:readonly import("../main/pet/pet-segment-closure-service.js").ClosedSegmentDescriptor[];now:number};result:void};
   "mimi/segmentMessages": Operation<import("../main/pet/pet-segment-closure-service.js").PetSegmentClosureService["readSegmentMessages"]>;
-  "mimi/externalActivity": {
-    input: { projectCwds?: string[] };
-    result: import("../main/pet/pet-state-aggregator.js").DesktopPetSession[];
-  };
   "mimi/workMemory": {
     input: import("./mimi-work-memory.js").MimiWorkCommand;
     result: import("./mimi-work-memory.js").MimiWorkSnapshot;

@@ -257,34 +257,41 @@ try {
       (row) => row.id === added.id && row.text === "Updated synthetic preference",
     ),
   );
-  await main.evaluate((id) => {
-    window.__mimiRecordReads = [];
-    let reading = false;
-    window.__mimiRecordTimer = setInterval(async () => {
-      if (reading) return;
-      reading = true;
-      const start = Date.now();
-      try {
-        const [rows, journal, work, segment, inbox] = await Promise.all([
-          window.codeshell.pet.listMemories(),
-          window.codeshell.pet.listJournal(),
-          window.codeshell.pet.getWorkMemory(),
-          window.codeshell.pet.getSegmentMessages({ start: 0, end: 1 }),
-          window.codeshell.pet.getDismissedWorkItemIds(),
-        ]);
-        if (
-          rows.some((row) => row.id === id && row.text === "Updated synthetic preference") &&
-          Array.isArray(journal) &&
-          Array.isArray(work.segments) &&
-          inbox.dismissedIds.includes("completed:fixture") &&
-          Array.isArray(segment)
-        )
-          window.__mimiRecordReads.push({ start, end: Date.now() });
-      } finally {
-        reading = false;
-      }
-    }, 90);
-  }, added.id);
+  await main.evaluate(
+    ({ id, sessionId }) => {
+      window.__mimiRecordReads = [];
+      let reading = false;
+      window.__mimiRecordTimer = setInterval(async () => {
+        if (reading) return;
+        reading = true;
+        const start = Date.now();
+        try {
+          const [rows, journal, work, segment, inbox, projection] = await Promise.all([
+            window.codeshell.pet.listMemories(),
+            window.codeshell.pet.listJournal(),
+            window.codeshell.pet.getWorkMemory(),
+            window.codeshell.pet.getSegmentMessages({ start: 0, end: 1 }),
+            window.codeshell.pet.getDismissedWorkItemIds(),
+            window.codeshell.pet.getSnapshot(),
+          ]);
+          if (
+            rows.some((row) => row.id === id && row.text === "Updated synthetic preference") &&
+            Array.isArray(journal) &&
+            Array.isArray(work.segments) &&
+            inbox.dismissedIds.includes("completed:fixture") &&
+            projection.sessions.some(
+              (row) => row.agentSessionId === sessionId && row.terminal?.status === "completed",
+            ) &&
+            Array.isArray(segment)
+          )
+            window.__mimiRecordReads.push({ start, end: Date.now() });
+        } finally {
+          reading = false;
+        }
+      }, 90);
+    },
+    { id: added.id, sessionId: followUpSession },
+  );
   const hold = await app.evaluate(() => {
     const from = Date.now();
     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1800);
@@ -296,7 +303,7 @@ try {
   });
   assert(
     reads.some((r) => r.start > hold.from && r.end < hold.to),
-    "Mimi memory and journal must resolve during the Main hold",
+    "Mimi projection, memory and journal must resolve during the Main hold",
   );
   await main.evaluate((id) => window.codeshell.pet.removeMemory(id), added.id);
   assert(

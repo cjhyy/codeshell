@@ -25,6 +25,7 @@ describe("hosted Mimi follow-ups", () => {
       await inbox.load();
       const host = hostedMimiFollowUps({
         petDir: dir,
+        sessions: async () => input.sessions,
         sessionsDir: dir,
         history: { mimiSummaryInput: async (id) => (id === "work" ? "Choose a day?" : null) },
         generationAllowed: () => true,
@@ -78,6 +79,7 @@ describe("hosted Mimi follow-ups", () => {
       const host = new HostBusinessCalls(
         hostedMimiFollowUps({
           petDir: dir,
+          sessions: async () => input.sessions,
           sessionsDir: dir,
           managerId: async () => "pet-manager",
           inbox: () => inbox,

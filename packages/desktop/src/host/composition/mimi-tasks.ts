@@ -7,10 +7,6 @@ import {
   type PetLongTaskWorker,
 } from "../../main/pet/pet-long-task-coordinator.js";
 import { PetLongTaskStore } from "../../main/pet/pet-long-task-store.js";
-import type {
-  DesktopPetProjectionEvent,
-  DesktopPetProjectionSnapshot,
-} from "../../main/pet/pet-state-aggregator.js";
 import { PrivateHostPeer, type PrivatePort } from "../native-peer.js";
 import type { MimiTaskCommand } from "../../shared/mimi-tasks.js";
 import type { BusinessGrant } from "./business-calls.js";
@@ -24,13 +20,15 @@ export class HostedMimiTasks {
   }>();
   private readonly store: PetLongTaskStore;
   private readonly coordinator: PetLongTaskCoordinator;
-  private readonly subscribers = new Set<(event: DesktopPetProjectionEvent) => void>();
   private peer?: PrivateHostPeer;
   private notified = false;
   private loaded?: Promise<void>;
   private startup?: Promise<void>;
   private stopped = false;
-  constructor(directory: string) {
+  constructor(
+    directory: string,
+    projection: import("../../main/pet/pet-long-task-coordinator.js").PetLongTaskCoordinatorOptions["projection"],
+  ) {
     this.store = new PetLongTaskStore(
       join(directory, "long-tasks.json"),
       Date.now,
@@ -54,13 +52,7 @@ export class HostedMimiTasks {
         this.native<void>(name, task, true);
     this.coordinator = new PetLongTaskCoordinator({
       store: this.store,
-      projection: {
-        getSnapshot: () => this.native<DesktopPetProjectionSnapshot>("snapshot", null),
-        subscribe: (listener) => {
-          this.subscribers.add(listener);
-          return () => this.subscribers.delete(listener);
-        },
-      },
+      projection,
       launcher: { start: (input) => this.native("launch", input, true) },
       worker: {
         hasLiveWorker: (id) => this.native<boolean>("liveWorker", id),
@@ -143,9 +135,6 @@ export class HostedMimiTasks {
       if (!this.startup) throw Error("Mimi tasks not initialized");
       // Reverse callbacks during startup replay may inspect the loaded ledger.
       switch (command.method) {
-        case "projection":
-          for (const notify of this.subscribers) notify(...command.args);
-          return;
         case "observeSessionEvent":
           return this.coordinator.observeTaskEvent(...command.args);
         case "recordClosureDecision":

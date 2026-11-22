@@ -23,7 +23,18 @@ test("only the Host owns the committed task ledger and a withdrawn native contro
   });
   await seed.transition("test-task", { kind: "started", at: 6 });
   await seed.transition("test-task", { kind: "interrupted", at: 7, reason: "offline" });
-  const host = new HostedMimiTasks(directory);
+  const host = new HostedMimiTasks(directory, {
+    getSnapshot: () => ({
+      version: 1,
+      generation: 1,
+      workerState: "active",
+      sessions: [],
+      pending: [],
+      observedAt: 10,
+      workMemorySegments: [],
+    }),
+    subscribe: () => () => {},
+  });
   const commands = new HostBusinessCalls({ "mimi/tasks": (cmd, grant) => host.run(cmd, grant) });
   const entered = Promise.withResolvers<void>();
   const released = Promise.withResolvers<boolean>();
@@ -51,18 +62,6 @@ test("only the Host owns the committed task ledger and a withdrawn native contro
       start: async () => {
         throw Error("No launch expected");
       },
-    },
-    projection: {
-      getSnapshot: () => ({
-        version: 1,
-        generation: 1,
-        workerState: "active",
-        sessions: [],
-        pending: [],
-        observedAt: 10,
-        workMemorySegments: [],
-      }),
-      subscribe: () => () => {},
     },
     worker: {
       hasLiveWorker: () => {

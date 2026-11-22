@@ -467,7 +467,10 @@ export function createPetApi(
   const updateNoticeRule = (payload: PetNoticeSystemRulePatch | PetNoticeRuleUpdate) =>
     ipcRenderer.invoke("pet:notices:update-rule", payload);
   return {
-    getSnapshot: () => ipcRenderer.invoke("pet:get-snapshot") as Promise<PetProjectionSnapshot>,
+    getSnapshot: () => {
+      const fallback = () => ipcRenderer.invoke("pet:get-snapshot") as Promise<PetProjectionSnapshot>;
+      return host ? host.readBusiness("mimi/projection", {}, fallback) : fallback();
+    },
     getWorkMemory: () => {
       const fallback = () =>
         ipcRenderer.invoke("pet:get-work-memory") as Promise<PetWorkMemoryQuery>;

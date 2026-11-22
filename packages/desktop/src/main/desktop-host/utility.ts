@@ -1,3 +1,4 @@
+import { HostedMimiProjection } from "../../host/composition/mimi-projection.js";
 import type { MimiRecords } from "../../shared/mimi-records.js";
 import { hostedMimiFollowUps } from "../../host/composition/mimi-follow-ups.js";
 import { gitOperations } from "../../host/composition/git.js";
@@ -130,13 +131,27 @@ const historyWorker = new ActivityHistoryWorker(
   (options) =>
     new Worker(new URL("./activity-history-worker.mjs", import.meta.url), { workerData: options }),
 );
-historyWorker.onExternalActivityChanged = () => parent.postMessage({ type: "mimi-external-changed" });
+const projection = new HostedMimiProjection({
+  catalog: (options) => catalog.list(options),
+  worker: () => worker,
+  memory: async () => {
+    const stored = await (await storage).request<MimiWorkSnapshot>("mimi/workMemory",{type:"snapshot"});
+    if (!stored) throw Error("Mimi work memory unavailable");
+    return stored;
+  },
+  external: (input) => historyWorker.mimiExternalActivity(input),
+  publish: (update) => parent.postMessage({type:"mimi-projection",update}),
+  report: (operation,error) => console.warn("[Desktop Host] Mimi projection",operation,error),
+});
+historyWorker.onExternalActivityChanged = () => projection.activityChanged();
 const profileLibrary = hostedProfileLibrary(storage, historyWorker, (options) => catalog.list(options));
 const activities = hostedActivityHistory(historyWorker);
 const roomReads = ccRoomReads(historyWorker);
 const runtimeCatalog = externalRuntimeCatalogOperations();
 const mediaProtocol = hostedMediaProtocol();
-const mimiTasks = new HostedMimiTasks(join(dirname(process.argv[2]), "pet"));
+const mimiTasks = new HostedMimiTasks(join(dirname(process.argv[2]), "pet"), {
+  getSnapshot: () => projection.snapshot(), subscribe: (listener) => projection.state.subscribe(listener),
+});
 const segments = hostedMimiSegments(storage, historyWorker, (domain) =>
   parent.postMessage({ type: "mimi-records-changed", domain }),
 );
@@ -164,6 +179,7 @@ const followUps = hostedMimiFollowUps({
   petDir: join(dirname(process.argv[2]), "pet"),
   sessionsDir: sessionsRoot(),
   history: historyWorker,
+  sessions: async () => (await projection.snapshot()).sessions,
   managerId: async () => (await readMimiList(storage, "metadata")).petSessionId,
   inbox: (grant) => ({
     getSnapshot: () => readMimiList(storage, "inboxSnapshot"),
@@ -173,7 +189,11 @@ const followUps = hostedMimiFollowUps({
   }),
 });
 const mimiDispatch = new HostedMimiDispatch(
-  storage, sessionsRoot(), (options) => catalog.list(options), mimiTasks,
+  storage, sessionsRoot(), (options) => catalog.list(options), mimiTasks, {
+    getSnapshot: () => projection.snapshot(),
+    resolveNavigation: async (request) => { await projection.start(); return projection.state.resolveNavigation(request); },
+    refreshCatalog: async (...args) => { await projection.start(); return projection.state.refreshCatalog(...args); },
+  },
   (cmd, signal) => mimiBusiness("mimi/tasks", cmd, signal),
   (cmd, signal) => mimiBusiness("mimi/records", cmd, signal),
   (cmd, signal) => mimiBusiness("mimi/turnStorage", cmd, signal),
@@ -192,6 +212,7 @@ const business = new HostBusinessCalls({
   "mimi/tasks": (command, grant) => mimiTasks.run(command, grant),
   ...segments,
   ...followUps.methods,
+  ...projection.methods,
   "rooms/messages": (p) => historyWorker.roomHistory("rooms/messages", p),
   "rooms/historyPage": (p) => historyWorker.roomHistory("rooms/historyPage", p),
   ...gitOperations(),
@@ -201,9 +222,9 @@ const business = new HostBusinessCalls({
   ...profileLibrary.operations,
   ...configuredMcpProbe,
   ...wechatLoginOperations((event) => parent.postMessage({ type: "wechat-login-event", event })),
-  "mimi/externalActivity": (input) => historyWorker.mimiExternalActivity(input),
   ...mimiRecordsOperations(storage, (domain) =>
     parent.postMessage({ type: "mimi-records-changed", domain }),
+    (row) => projection.applyMemory(row),
   ),
   ...mediaProtocol.methods,
   ...activities.operations,
@@ -329,6 +350,7 @@ parent.on("message", ({ data, ports }) => {
       output,
       observeWorkerLine: (line) => approvals.observe(line),
       workerExited: (generation) => approvals.reset(generation),
+      petProjection: projection,
     });
     return;
   }
@@ -356,6 +378,7 @@ parent.on("message", ({ data, ports }) => {
           mimiDispatch.close(),
           followUps.close(),
           mimiTasks.close(),
+          projection.close(),
           marketplace.close(),
           worker?.close(),
           transcripts.close(),
@@ -384,6 +407,7 @@ parent.on("message", ({ data, ports }) => {
       new Map([
         ...desktopHostMethods((options) => catalog.list(options)),
         ...taskHostReads(storage),
+        businessRead("mimi/projection", noBusinessArguments, () => projection.snapshot()),
         businessRead("mimi/longTasks", noBusinessArguments, () => mimiTasks.snapshot()),
         businessRead("mimi/workInbox", noBusinessArguments, () => readMimiList(storage,"inboxSnapshot")),
         businessRead("mimi/segmentMessages", parseMimiSegmentRange, (range) =>

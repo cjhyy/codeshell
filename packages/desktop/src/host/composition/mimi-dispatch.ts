@@ -37,6 +37,7 @@ export class HostedMimiDispatch {
     private readonly sessionsDir: string,
     private readonly listSessions: ListSessions,
     private readonly tasks: HostedMimiTasks,
+    private readonly projection: PetDispatchOptions["aggregator"],
     private readonly runTask: (command: MimiTaskCommand, signal?: AbortSignal) => Promise<unknown>,
     private readonly runRecord: (command: MimiRecordCall, signal?: AbortSignal) => Promise<unknown>,
     private readonly turnStorage: (
@@ -107,11 +108,7 @@ export class HostedMimiDispatch {
         contextLinks: stores.contextLinks,
         hostActionReceipts: stores.receipts,
         worker,
-        aggregator: {
-          getSnapshot: native("snapshot"),
-          resolveNavigation: native("navigate", true),
-          refreshCatalog: native("refresh"),
-        },
+        aggregator: this.projection,
         managerModel: async () => {
           const settings = await readSettings("user");
           return petChatModelKeyFromSettings(settings) ?? sessionModelKeyFromSettings(settings);

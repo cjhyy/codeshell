@@ -256,6 +256,7 @@ export class PetStateAggregator {
   private reconcilePromise: Promise<void> | null = null;
   private catalogRefreshTimer: ReturnType<typeof setInterval> | null = null;
   private periodicCatalogRefreshRunning = false;
+  private catalogQueue = Promise.resolve();
   /**
    * AgentBridge deliberately does not await observers, so consecutive worker
    * notifications may otherwise enter `handleBridgeEvent` concurrently. Some
@@ -456,7 +457,14 @@ export class PetStateAggregator {
    *   Delete-aware callers therefore pass `{ full: true }` to rebuild from
    *   scratch; the first refresh (no watermark yet) is implicitly full.
    */
-  async refreshCatalog(emit = true, opts: { full?: boolean } = {}): Promise<void> {
+  refreshCatalog(emit = true, opts: { full?: boolean } = {}): Promise<void> {
+    // A simultaneous navigation or archival refresh must not install an older catalog after a newer one.
+    const work = this.catalogQueue.then(() => this.readCatalog(emit, opts));
+    this.catalogQueue = work.catch(() => undefined);
+    return work;
+  }
+
+  private async readCatalog(emit: boolean, opts: { full?: boolean }): Promise<void> {
     const observedAt = this.now();
     const full = opts.full ?? this.lastHighWaterMtime === undefined;
     const next = full ? new Map<string, DesktopPetSession>() : new Map(this.diskSessions);

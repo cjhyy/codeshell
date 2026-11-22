@@ -113,8 +113,6 @@ import { parseExternalRuntimeModelKey } from "../shared/external-runtime-models.
 import {
   requireRendererProjectPath,
 } from "./renderer-project-path.js";
-import { PetStateAggregator } from "./pet/pet-state-aggregator.js";
-import { nativeMimiExternalActivity } from "./desktop-host/mimi-external-client.js";
 import { nativeMimiFollowUps } from "./desktop-host/mimi-follow-ups-client.js";
 import {
   type PetSegmentClosureService,
@@ -388,7 +386,7 @@ const desktopHost = createDesktopHost(
         .then(() => { seededDefaults = true; })
         .catch((error) => dlog("main", "plugins.bootstrap.failed", { error: String(error) }));
     }
-    void petExternalVisibilityController?.restart().catch((error) =>
+    void reconcileExternalAdapters?.().catch((error) =>
       dlog("main", "pet.external.restart.failed", { error: String(error) }),
     );
   },
@@ -612,8 +610,7 @@ registerImGatewayIpc(ipcMain, imGatewayService, (event, work) =>
   ),
 );
 registerHostedWechatLogin(ipcMain, desktopHost, (work) => imGatewayService.withWechatLogin(work));
-let petStateAggregator: PetStateAggregator | null = null;
-let petExternalVisibilityController: ReturnType<typeof nativeMimiExternalActivity> | null = null;
+let petStateAggregator: typeof desktopHost.mimiProjection | null = null;
 let reconcileExternalAdapters: (() => Promise<void>) | null = null;
 let petDispatchService: MimiDispatchService | null = null;
 let petRuleScheduler: PetRuleScheduler | null = null;
@@ -1254,17 +1251,7 @@ async function createWindow(): Promise<BrowserWindow> {
         imGatewayService.ownerChannels().find((entry) => entry.id === channel)?.label,
     });
     const petWorkMemory = nativeMimiWorkMemory(desktopHost.callBusiness);
-    const aggregator = new PetStateAggregator({
-      bridge,
-      listDiskSessions,
-      // Every snapshot carries the durable topic-segment boundary history so the
-      // Mimi chat UI can render segment dividers + brief cards; mid-session
-      // changes ride notifyWorkMemorySegmentsChanged (see beginTurn wrapper).
-      workMemorySegments: () => petWorkMemory.segmentBoundaries(),
-      onBackgroundError: (operation, error) => {
-        dlog("main", `pet.${operation}.failed`, { error: String(error) });
-      },
-    });
+    const aggregator = desktopHost.mimiProjection;
     petStateAggregator = aggregator;
     taskInboxDisposers.push(
       aggregator.subscribe((event) => {
@@ -1277,14 +1264,10 @@ async function createWindow(): Promise<BrowserWindow> {
       }),
     );
 
-    const externalVisibility = nativeMimiExternalActivity(
-      desktopHost.callBusiness,
-      desktopHost.mimiExternalListeners,
-      async () => (await mobileOrchestrator.projectList()).map((project) => project.path),
-      aggregator,
+    const reconcileSources = async () => aggregator.sources(
+      (await mobileOrchestrator.projectList().catch(() => [])).map((project) => project.path),
     );
-    petExternalVisibilityController = externalVisibility;
-    reconcileExternalAdapters = () => externalVisibility.reconcile();
+    reconcileExternalAdapters = reconcileSources;
 
     // The topic-segment controller is created inside petInitialization once the
     // durable pet session id is known; until then the dispatch service holds a
@@ -1375,7 +1358,6 @@ async function createWindow(): Promise<BrowserWindow> {
     // Built inside petInitialization once the durable pet session id is known.
     let petSegmentClosureService: PetSegmentClosureService | null = null;
     const longTaskCoordinator = longTaskStore.configure({
-      projection: aggregator,
       worker: createPetRuntimeControlWorker({
         worker: bridge,
         isExternal: imExternalSubmissions.isExternal,
@@ -1616,7 +1598,7 @@ async function createWindow(): Promise<BrowserWindow> {
       powerEvents: powerMonitor,
       sessions: () => aggregator.getSnapshot().sessions,
       makeViews: (registered) =>
-        nativeMimiFollowUps(desktopHost.callBusiness, () => aggregator.getSnapshot().sessions, registered),
+        nativeMimiFollowUps(desktopHost.callBusiness, registered),
       tasks: longTaskStore,
       longTasks: longTaskCoordinator,
       scheduler: () => ({
@@ -1663,7 +1645,6 @@ async function createWindow(): Promise<BrowserWindow> {
     });
     await sessionBridge.recoverOnStartup().catch(() => undefined);
     petDispatchService = desktopHost.mimiDispatch.configure({
-      aggregator,
       worker: bridge,
       hostCwd: resolveNoRepoCwd(),
       externalRuntime: createPetExternalRuntime({
@@ -1675,17 +1656,7 @@ async function createWindow(): Promise<BrowserWindow> {
           if (!petSegmentController) throw new Error("Pet work-memory sink is not ready");
           await petSegmentController.requestContextClear();
         },
-        beginTurn: async (clientMessageId) => {
-          if (!petSegmentController) return undefined;
-          const before = petSegmentController.segmentBoundaries().length;
-          const brief = await petSegmentController.beginTurn(clientMessageId);
-          // A new boundary means the chat UI must gain a divider now, not on the
-          // next full snapshot fetch: push it through the projection channel.
-          if (petSegmentController.segmentBoundaries().length !== before) {
-            aggregator.notifyWorkMemorySegmentsChanged();
-          }
-          return brief;
-        },
+        beginTurn: async (clientMessageId) => petSegmentController?.beginTurn(clientMessageId),
         completeSegmentClosure: (closed) =>
           petSegmentController?.completeSegmentClosure(closed) ?? Promise.resolve(),
         onDelegationClosed: (closure) =>
@@ -1906,7 +1877,7 @@ async function createWindow(): Promise<BrowserWindow> {
     });
     const petInitialization = (async () => {
       await aggregator.start();
-      await externalVisibility.reconcile();
+      await reconcileSources();
       await Promise.all([
         notices.ready,
         petWorkInbox.load(),
@@ -2193,7 +2164,7 @@ async function listAllDiskSessions(
   return all;
 }
 
-async function runPetAutoArchive(aggregator: PetStateAggregator): Promise<void> {
+async function runPetAutoArchive(aggregator: typeof desktopHost.mimiProjection): Promise<void> {
   const sessions = await listAllDiskSessions();
   const toArchive = selectSessionsToArchive(
     sessions.map((s) => ({
@@ -3463,8 +3434,6 @@ registerDesktopShutdown(app, {
     bridge?.kill();
     petStateAggregator?.stop();
     petStateAggregator = null;
-    petExternalVisibilityController?.shutdown();
-    petExternalVisibilityController = null;
     reconcileExternalAdapters = null;
     petDispatchService = null;
     petRuleScheduler?.stop();

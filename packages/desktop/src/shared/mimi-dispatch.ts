@@ -10,7 +10,6 @@ export type MimiDispatchService = Pick<
 export type NativeMimiServices = Required<
   Pick<
     PetDispatchOptions,
-    | "aggregator"
     | "worker"
     | "externalRuntime"
     | "segmentController"

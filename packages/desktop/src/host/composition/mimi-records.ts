@@ -122,6 +122,7 @@ export class StoredMimiRecords {
 export function mimiRecordsOperations(
   storage: Promise<StateStorage>,
   announce: (domain: MimiRecordDomain) => void,
+  workCommitted?: (row:import("../../shared/mimi-work-memory.js").MimiWorkSnapshot) => void,
 ) {
   return {
     async "mimi/turnStorage"(command, grant) {
@@ -140,6 +141,7 @@ export function mimiRecordsOperations(
         input,
       );
       if (!row) throw Error("Mimi work memory unavailable");
+      workCommitted?.(row);
       return row;
     },
     async "mimi/records"(call, grant) {

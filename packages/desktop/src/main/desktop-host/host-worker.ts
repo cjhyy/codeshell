@@ -1,3 +1,4 @@
+import type { PetProjectionSnapshotResult } from "@cjhyy/code-shell-pet";
 import { prepareAgentRunMetadata } from "../agent-run-metadata.js";
 import { rendererRunFactReader } from "./renderer-run-facts.js";
 import { WorkerCommandError } from "./server.js";
@@ -19,6 +20,10 @@ export function bindHostWorker(
     runOperations?: HostRunOperations;
     observeWorkerLine?(line: ParsedWorkerLine): void;
     workerExited?(generation: number): void;
+    petProjection?: {
+      observe(line: ParsedWorkerLine): boolean;
+      workerState(generation: number, state: "active" | "disconnected" | "reclaimed"): void;
+    };
   } = {},
 ) {
   let active = true;
@@ -49,13 +54,23 @@ export function bindHostWorker(
     }),
     ...launch,
     buildEnv: () => env,
-    onWorkerStarted: ({ pid }) => post({ type: "started", generation, pid }),
-    onSpawnFailed: () => post({ type: "spawn-failed", generation }),
-    onSpawnError: (error) => post({ type: "spawn-failed", generation, message: String(error) }),
+    onWorkerStarted: ({ pid }) => {
+      post({ type: "started", generation, pid });
+      observers.petProjection?.workerState(generation, "active");
+    },
+    onSpawnFailed: () => {
+      post({ type: "spawn-failed", generation });
+      observers.petProjection?.workerState(generation, "disconnected");
+    },
+    onSpawnError: (error) => {
+      post({ type: "spawn-failed", generation, message: String(error) });
+      observers.petProjection?.workerState(generation, "disconnected");
+    },
     onExit: (info) => {
       runs?.close();
       try {
         observers.workerExited?.(generation);
+        observers.petProjection?.workerState(generation, info.clean ? "reclaimed" : "disconnected");
       } finally {
         const ended = generation;
         if (observers.output)
@@ -74,6 +89,7 @@ export function bindHostWorker(
   };
   core.subscribeLines((line) => {
     const parsed = parseWorkerLine(line);
+    if (observers.petProjection?.observe(parsed)) return;
     runs?.observe(parsed.message);
     const method = (parsed.message as { method?: string } | null)?.method;
     try {
@@ -190,6 +206,19 @@ export function bindHostWorker(
   port.start();
   return {
     close,
+    hasLiveWorker: () => active && core.hasLiveWorker(),
+    async petProjectionSnapshot() {
+      if (!active || !core.hasLiveWorker()) return null;
+      const result = await core.request("agent/getPetProjectionSnapshot", undefined, {
+        id: "mimi-projection:" + ++nextAdmission,
+        timeoutMs: 5_000,
+        consume: true,
+        failFast: true,
+        settleOnExit: true,
+        meta: { origin: "host", producer: "pet-projection-snapshot" },
+      });
+      return result.status === "result" ? (result.result as PetProjectionSnapshotResult) : null;
+    },
     async rendererCommand(request: WorkbenchRequest, current: () => void): Promise<unknown> {
       current();
       if (!active || admissions.size >= 128) throw new Error("Agent admission is unavailable");

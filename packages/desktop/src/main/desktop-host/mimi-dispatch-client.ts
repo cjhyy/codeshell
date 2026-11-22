@@ -25,11 +25,6 @@ function reverseMethods(
   peer: () => PrivateHostPeer,
 ) {
   return {
-    snapshot: () => services.aggregator.getSnapshot(),
-    navigate: (...args: Parameters<typeof services.aggregator.resolveNavigation>) =>
-      services.aggregator.resolveNavigation(...args),
-    refresh: (...args: Parameters<NonNullable<typeof services.aggregator.refreshCatalog>>) =>
-      services.aggregator.refreshCatalog?.(...args),
     worker: (...args: Parameters<typeof services.worker.requestWorker>) => {
       if (!workerControls.has(args[0])) throw Error("Unknown Mimi worker operation");
       return services.worker.requestWorker(...args);

@@ -17,7 +17,7 @@ import type {
   MimiTaskResult,
 } from "../../shared/mimi-tasks.js";
 
-type NativeServices = Omit<PetLongTaskCoordinatorOptions, "store">;
+type NativeServices = Omit<PetLongTaskCoordinatorOptions, "store" | "projection">;
 const workerMethods = new Set([
   "agent/cancel",
   "agent/goalGet",
@@ -30,7 +30,6 @@ export class NativeMimiTasks {
   private peer?: PrivateHostPeer;
   private enabled = false;
   private firstStart?: ReturnType<typeof Promise.withResolvers<void>>;
-  private unsubscribeProjection?: () => void;
   private subscribers = new Set<(snapshot: PetLongTaskSnapshot) => void>();
   constructor(
     private readonly business: (cmd: MimiTaskCommand, signal?: AbortSignal) => Promise<unknown>,
@@ -62,8 +61,6 @@ export class NativeMimiTasks {
     const peer = (this.peer = new PrivateHostPeer(port, async (method, input, signal) => {
       signal.throwIfAborted();
       switch (method) {
-        case "snapshot":
-          return services.projection.getSnapshot();
         case "liveWorker":
           return services.worker.hasLiveWorker(input as string | undefined);
         case "worker": {
@@ -97,11 +94,6 @@ export class NativeMimiTasks {
     void this.run("start", [])
       .then(async () => {
         if (this.peer !== peer) return;
-        this.unsubscribeProjection = services.projection.subscribe((event) => {
-          void this.run("projection", [event]).catch((e) =>
-            services.onBackgroundError?.("projection", e),
-          );
-        });
         await this.reconcileNow();
         if (this.peer !== peer) return;
         this.firstStart?.resolve();
@@ -113,8 +105,6 @@ export class NativeMimiTasks {
       });
   }
   disconnect() {
-    this.unsubscribeProjection?.();
-    this.unsubscribeProjection = undefined;
     this.peer?.close();
     this.peer = undefined;
   }

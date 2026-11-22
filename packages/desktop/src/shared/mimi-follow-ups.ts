@@ -1,9 +1,8 @@
 import type { PetFollowUpRuleView } from "../main/pet/pet-follow-up-rules.js";
-import type { PetFollowUpService, PetFollowUpSession } from "../main/pet/pet-follow-up-service.js";
+import type { PetFollowUpService } from "../main/pet/pet-follow-up-service.js";
 
 /** Facts from the native projection and rule scheduler. A renderer cannot supply this input. */
 export interface MimiFollowUpView {
-  sessions: PetFollowUpSession[];
   registered: PetFollowUpRuleView[];
 }
 type ReadInput = MimiFollowUpView & { options?: Parameters<PetFollowUpService["collect"]>[0] };

@@ -1,6 +1,5 @@
 import type { PetLongTaskCoordinator } from "../main/pet/pet-long-task-coordinator.js";
 import type { PetLongTaskStore } from "../main/pet/pet-long-task-store.js";
-import type { DesktopPetProjectionEvent } from "../main/pet/pet-state-aggregator.js";
 
 export type DirectMimiTask = Pick<
   PetLongTaskCoordinator,
@@ -16,7 +15,6 @@ export type DirectMimiTask = Pick<
   Pick<PetLongTaskStore, "getSnapshot" | "get" | "activeForSession"> & {
     observeSessionEvent: PetLongTaskCoordinator["observeTaskEvent"];
     start(): Promise<void>;
-    projection(event: DesktopPetProjectionEvent): void;
   };
 export type MimiTaskArgs<K extends keyof DirectMimiTask> = Parameters<DirectMimiTask[K]>;
 export type MimiTaskResult<K extends keyof DirectMimiTask> = Awaited<ReturnType<DirectMimiTask[K]>>;

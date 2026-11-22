@@ -7,6 +7,7 @@ import { allowNativePetAuxiliary } from "../../main/pet/pet-native-extraction-po
 import {
   createPetFollowUpService,
   type PetFollowUpInbox,
+  type PetFollowUpSession,
 } from "../../main/pet/pet-follow-up-service.js";
 import { createPetSummaryService } from "../../main/pet/pet-summary-service.js";
 import { createPetSummaryStore } from "../../main/pet/pet-summary-store.js";
@@ -17,6 +18,7 @@ export function hostedMimiFollowUps(options: {
   petDir: string;
   sessionsDir: string;
   history: Pick<ActivityHistoryWorker, "mimiSummaryInput">;
+  sessions(): Promise<readonly PetFollowUpSession[]>;
   managerId(): Promise<string>;
   inbox(grant: BusinessGrant): PetFollowUpInbox;
   generationAllowed?(managerId: string): boolean;
@@ -44,7 +46,8 @@ export function hostedMimiFollowUps(options: {
 
   async function service(view: MimiFollowUpView, grant: BusinessGrant) {
     grant.assertCurrent();
-    for (const row of view.sessions) {
+    const sessions = await options.sessions();
+    for (const row of sessions) {
       if (!row.external && row.terminal?.status === "completed")
         assertSafeSessionId(row.agentSessionId);
     }
@@ -59,7 +62,7 @@ export function hostedMimiFollowUps(options: {
       }
     };
     return createPetFollowUpService({
-      listSessions: () => view.sessions,
+      listSessions: () => sessions,
       summaryStore: store,
       summaryService: {
         summarize: (session, at) => summaryService().summarize(session, at, canGenerate),

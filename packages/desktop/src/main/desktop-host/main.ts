@@ -1,3 +1,4 @@
+import { NativeMimiProjection } from "./mimi-projection-client.js";
 import { NativeMimiDispatch } from "./mimi-dispatch-client.js";
 import { NativeMimiTasks } from "./mimi-task-client.js";
 import { ExternalProviderPorts, externalProviderFactories, inferExternalMemory } from "./native-external-provider.js";
@@ -61,6 +62,7 @@ export function createDesktopHost(
         bindAutomation();
         bindMimiTasks();
         bindMimiDispatch();
+        mimiProjection.reconnect();
         const { port1, port2 } = new MessageChannelMain();
         if (supervisor.post({ type: "remote-services-port" }, [port2])) remote.bind(electronPrivatePort(port1));
         else {
@@ -81,6 +83,7 @@ export function createDesktopHost(
         automation.disconnect();
         mimiTasks.disconnect();
         mimiDispatch.disconnect();
+        mimiProjection.disconnect();
         remote.disconnect();
         im.disconnect();
         terminals?.disconnect();
@@ -163,6 +166,11 @@ export function createDesktopHost(
       port2.close();
     }
   }
+  const mimiProjection = new NativeMimiProjection(
+    supervisor.callBusiness.bind(supervisor),
+    (error) => dlog("main","pet.projection.reconcile.failed",{ error:String(error) }),
+  );
+  supervisor.mimiProjectionUpdate = (row) => mimiProjection.receive(row);
   const mimiTasks = new NativeMimiTasks(
     (command, signal) => supervisor.callBusiness("mimi/tasks", command, signal),
     async () => {
@@ -235,11 +243,11 @@ export function createDesktopHost(
     remote,
     im,
     setRemoteTerminals(client: NativeRemoteTerminals) { terminals = client; },
-    mimiExternalListeners: supervisor.mimiExternalListeners,
     mimiRecordListeners: supervisor.mimiRecordListeners,
     externalProviders: externalProviderFactories(openExternalProvider),
     inferExternalMemory: inferExternalMemory(openExternalProvider),
     mimiDispatch,
+    mimiProjection,
     mimiTasks,
     automationListeners: supervisor.automationListeners,
     automation,

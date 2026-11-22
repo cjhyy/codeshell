@@ -88,8 +88,8 @@ export class ActivityHistoryWorker {
     return this.request("mimiSegmentMessages", input);
   }
   mimiExternalActivity(
-    input: ShellBusinessOperations["mimi/externalActivity"]["input"],
-  ): Promise<ShellBusinessOperations["mimi/externalActivity"]["result"]> {
+    input: { projectCwds?: string[] },
+  ): Promise<import("./pet/pet-state-aggregator.js").DesktopPetSession[]> {
     return this.request("mimiExternalActivity", input);
   }
 
