@@ -3,6 +3,7 @@
 import children from "node:child_process";
 import { createHash } from "node:crypto";
 import { appendFileSync, existsSync, realpathSync } from "node:fs";
+import threads from "node:worker_threads";
 import http from "node:http";
 import https from "node:https";
 import { syncBuiltinESMExports } from "node:module";
@@ -81,10 +82,29 @@ appendFileSync(
   { mode: 0o600 },
 );
 
+const legacyMainWorker = process.env.CODESHELL_OFFICIAL_011_MAIN_WORKER === "1";
+let workerSpawnCount = 0;
 if (role === "Main") {
   // The actual supplied Electron executable loads its own packaged entry.
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- This source is bundled as a synchronous CJS preload, also tested under plain Node.
   const { app, safeStorage, utilityProcess } = require("electron");
+  if (legacyMainWorker && !app.getVersion().startsWith("0.11."))
+    throw Error("Expected the 0.11 direct worker parent");
+  // Only Main is intentionally paused for guard installation. A worker that
+  // inherits --inspect-brk waits forever for a second debugger, including
+  // while quit waits for the transcript cache to flush.
+  const Worker = threads.Worker;
+  threads.Worker = class extends Worker {
+    constructor(entry, options = {}) {
+      super(entry, {
+        ...options,
+        execArgv: (options.execArgv ?? process.execArgv).filter(
+          (flag) => !/^--inspect(?:-brk|-wait)?(?:=|$)/.test(flag),
+        ),
+      });
+    }
+  };
+  syncBuiltinESMExports();
   const fork = utilityProcess.fork;
   let hostSpawnCount = 0;
   utilityProcess.fork = function (entry, args, options) {
@@ -116,7 +136,7 @@ if (role === "Main") {
         pid: process.pid,
         code,
         hostSpawnCount,
-        workerSpawnCount: 0,
+        workerSpawnCount,
       }) + "\n",
       { mode: 0o600 },
     ),
@@ -159,16 +179,16 @@ if (role === "Main") {
     };
   }
 }
-if (role === "Host") {
+if (role === "Host" || (legacyMainWorker && role === "Main")) {
   const spawn = children.spawn;
-  let workerSpawnCount = 0;
-  process.once("exit", (code) => {
-    appendFileSync(
-      join(home, "host-exits.jsonl"),
-      JSON.stringify({ pid: process.pid, ppid: process.ppid, code, workerSpawnCount }) + "\n",
-      { mode: 0o600 },
-    );
-  });
+  if (role === "Host")
+    process.once("exit", (code) => {
+      appendFileSync(
+        join(home, "host-exits.jsonl"),
+        JSON.stringify({ pid: process.pid, ppid: process.ppid, code, workerSpawnCount }) + "\n",
+        { mode: 0o600 },
+      );
+    });
   children.spawn = function (command, args, options) {
     const worker = args?.some((argument) => argument.includes("agent-server-stdio"));
     if (worker) {
@@ -214,7 +234,7 @@ if (role === "Host") {
         JSON.stringify({
           pid: child.pid,
           ppid: process.pid,
-          mainPid: Number(process.env.CODESHELL_OFFICIAL_MAIN_PID),
+          mainPid: legacyMainWorker ? process.pid : Number(process.env.CODESHELL_OFFICIAL_MAIN_PID),
           command: realpathSync(command),
           args: args.filter((argument) => argument.includes("agent-server-stdio")),
         }) + "\n",

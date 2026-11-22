@@ -35,6 +35,7 @@ export async function preparePackagedPetFixture({
   keychainReferenceFile,
   mockKeychain = false,
   requireWorkerEvidence = true,
+  legacyMainWorker = false,
   appImageRuntime,
   onLaunchError,
   launchDiagnostics = false,
@@ -138,6 +139,7 @@ export async function preparePackagedPetFixture({
     CODESHELL_OFFICIAL_BOOTSTRAP: bootstrap,
     CODESHELL_OFFICIAL_HOST_WRAPPER: hostWrapper,
     CODESHELL_OFFICIAL_USER_DATA: isolated.userDataDir,
+    ...(legacyMainWorker && { CODESHELL_OFFICIAL_011_MAIN_WORKER: "1" }),
   });
   // Never inherit APPIMAGE/APPDIR. Only the actual ELF runtime may supply them.
   if (appImageRuntime) Object.assign(environment, appImageRuntime.environment);
@@ -325,14 +327,16 @@ export async function preparePackagedPetFixture({
       let app;
       let launchPhase = "playwright-launch";
       try {
-        app = await _electron.launch({
-          executablePath: launcherExecutable,
-          chromiumSandbox: true,
-          args: launchArgs,
-          cwd: isolated.home,
-          env: environment,
-          timeout: 30_000,
-        }).finally(chromium.resolve);
+        app = await _electron
+          .launch({
+            executablePath: launcherExecutable,
+            chromiumSandbox: true,
+            args: launchArgs,
+            cwd: isolated.home,
+            env: environment,
+            timeout: 30_000,
+          })
+          .finally(chromium.resolve);
         launchPhase = "startup-barrier";
         startupObservation.sdkReturned(startupRecord);
         const startupPause = await preload;
@@ -476,7 +480,9 @@ export async function preparePackagedPetFixture({
           spawned.every(
             (worker) =>
               worker.command === executable &&
-              tree.hasWorker(worker) &&
+              (legacyMainWorker
+                ? worker.ppid === pid && worker.mainPid === pid
+                : tree.hasWorker(worker)) &&
               receipts.some(
                 (receipt) =>
                   receipt.pid === worker.pid &&
@@ -539,7 +545,7 @@ export async function preparePackagedPetFixture({
       )
         return false;
       return canCleanupPackagedProcesses({
-        requireHostEvidence: true,
+        requireHostEvidence: !legacyMainWorker,
         home: isolated.home,
         requireWorkerEvidence,
         launchFailed,

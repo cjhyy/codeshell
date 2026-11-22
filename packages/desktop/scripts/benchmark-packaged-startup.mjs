@@ -107,7 +107,7 @@ async function measure() {
   return sample;
 }
 
-for (let index = 0; index < 5; index++) {
+for (let index = 0; index < 10; index++) {
   timings.push(await measure());
   console.log(`Launch ${index + 1}: ${timings[index].processToFirstContentfulPaintMs} ms`);
 }
@@ -123,11 +123,11 @@ const report = {
     cpu: cpus()[0].model,
   },
   conditions:
-    "Five fresh processes and profiles, primed OS file cache from package verification before each launch, startup inspector pause and network guard included, Chromium mock Keychain.",
+    "Ten fresh processes and profiles, primed OS file cache from package verification before each launch, startup inspector pause and network guard included, Chromium mock Keychain.",
   metric:
     "Primary renderer first-contentful-paint minus OS-reported creationTime of the packaged Main process (ms).",
   samples: timings,
-  medianMs: sorted[2],
+  medianMs: (sorted[4] + sorted[5]) / 2,
 };
 await writeFile(output, JSON.stringify(report, null, 2) + "\n", { mode: 0o600, flag: "wx" });
 console.log(`Median ${report.medianMs} ms; saved ${output}`);
