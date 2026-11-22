@@ -43,6 +43,8 @@ export interface ClaudeRuntimeOptions {
   exposedToolNames: readonly string[];
   /** Executable; defaults to `claude` on PATH. */
   command?: string;
+  /** Login-shell executable search path from the desktop launcher. */
+  searchPath?: string;
   /** Extra args, inserted before the runtime's own. */
   extraArgs?: readonly string[];
   model?: string;
@@ -295,6 +297,9 @@ export class ClaudeCodeRuntime {
       child = spawn(this.options.command ?? "claude", args, {
         cwd: this.options.cwd,
         env: buildRuntimeSpawnEnv({
+          ...(this.options.searchPath && {
+            base: { ...process.env, PATH: this.options.searchPath },
+          }),
           bridgeToken: {
             name: this.options.bridge.tokenEnvVar,
             value: this.options.bridge.token,

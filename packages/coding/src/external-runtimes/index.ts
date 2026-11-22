@@ -83,4 +83,7 @@ export type {
   ExternalRuntimeKind,
   ExternalRuntimeSession,
   ExternalRuntimeSessionOptions,
+  ExternalProviderFactories,
+  CodexProvider,
+  ClaudeProvider,
 } from "./session-factory.js";

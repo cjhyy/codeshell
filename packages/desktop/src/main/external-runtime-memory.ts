@@ -24,7 +24,7 @@ import {
 import { dlog } from "./desktop-logger.js";
 
 type Settings = ReturnType<SettingsManager["get"]>;
-type TextRequest = {
+export type ExternalMemoryTextRequest = {
   cwd?: string;
   systemPrompt: string;
   userMessage: string;
@@ -109,7 +109,7 @@ export class ExternalRuntimeMemory {
     private readonly deps: {
       readSettings?: (cwd: string) => Settings;
       createClient?: typeof createLLMClient;
-      infer?: (request: TextRequest) => Promise<TextResponse>;
+      infer?: (request: ExternalMemoryTextRequest) => Promise<TextResponse>;
       storageDir?: string;
       /** Test/host seam; the real pipeline still owns all persistence guards. */
       run?: (

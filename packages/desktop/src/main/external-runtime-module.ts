@@ -11,6 +11,7 @@ import { dlog } from "./desktop-logger.js";
 import type { DesktopModule } from "./desktop-shutdown.js";
 
 interface ExternalRuntimeModuleOptions {
+  memoryInference?: NonNullable<ConstructorParameters<typeof ExternalRuntimeMemory>[0]>["infer"];
   approvals: ConstructorParameters<typeof ExternalRuntimeApprovals>[0];
   service: Omit<ExternalRuntimeServiceDeps, "memory" | "requestApproval" | "cancelApprovals">;
 }
@@ -68,7 +69,7 @@ export function createExternalRuntimeModule(
       approvals = runtimeApprovals;
       service = new ExternalRuntimeService({
         ...deps.service,
-        memory: new ExternalRuntimeMemory(),
+        memory: new ExternalRuntimeMemory({ infer: deps.memoryInference }),
         requestApproval: (sessionId, request, approvalOptions) =>
           runtimeApprovals.request(sessionId, request, approvalOptions),
         cancelApprovals: (sessionId) => runtimeApprovals.cancelSession(sessionId),

@@ -1,3 +1,5 @@
+import { bindExternalProvider } from "../../host/composition/external-provider.js";
+import { electronPrivatePort } from "../../host/native-peer.js";
 import { mimiWorkView, type MimiWorkSnapshot } from "../../shared/mimi-work-memory.js";
 import { ccRoomReads } from "../../host/composition/cc-room-reads.js";
 import { ActivityHistoryWorker } from "../activity-history-worker-client.js";
@@ -139,6 +141,7 @@ const terminals = hostedTerminals(
 const approvals = new HostApprovalState((id, owner) => server?.allows(id, owner) ?? false);
 let remote: ReturnType<typeof bindRemoteServices> | undefined;
 let stopping = false;
+const providers = new Set<() => Promise<void>>();
 let closeRemoteTerminals: (() => void) | undefined;
 let worker: ReturnType<typeof bindHostWorker> | undefined;
 const output = new HostOutput(
@@ -161,6 +164,15 @@ const output = new HostOutput(
 parent.on("message", ({ data, ports }) => {
   if (stopping) {
     for (const port of ports) port.close();
+    return;
+  }
+  if (isDesktopHostControl(data) && data.type === "external-provider-port" && server && ports.length === 1) {
+    if (providers.size >= 128) {
+      ports[0].close();
+      return;
+    }
+    const dispose = bindExternalProvider(electronPrivatePort(ports[0]), () => providers.delete(dispose));
+    providers.add(dispose);
     return;
   }
   if (
@@ -230,6 +242,7 @@ parent.on("message", ({ data, ports }) => {
           worker?.close(),
           transcripts.close(),
           automation.close(),
+          ...[...providers].map((close) => close()),
           remote?.close(),
         ]),
       )

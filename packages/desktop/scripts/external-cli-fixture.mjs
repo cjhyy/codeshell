@@ -69,7 +69,7 @@ process.stdin.on("end", async () => {
   } catch {}
   const step = queue.shift() ?? {};
   writeFileSync(${JSON.stringify(queueFile)}, JSON.stringify(queue));
-  const record = { pid: process.pid, cwd: process.cwd(), resumed: args.includes("--resume"), step, tools: [] };
+  const record = { pid: process.pid, ppid: process.ppid, cwd: process.cwd(), resumed: args.includes("--resume"), step, tools: [] };
   try {
     let instructions = "";
     try {
@@ -213,7 +213,7 @@ if (args.includes("--version")) {
 }
 if (args[0] !== "app-server") process.exit(1);
 const send = (value) => process.stdout.write(JSON.stringify(value) + "\\n");
-const log = (record) => appendFileSync(${JSON.stringify(logFile)}, JSON.stringify({ pid: process.pid, ...record }) + "\\n");
+const log = (record) => appendFileSync(${JSON.stringify(logFile)}, JSON.stringify({ pid: process.pid, ppid:process.ppid, ...record }) + "\\n");
 const threadId = "acceptance-worker-thread";
 const turn = { id: "acceptance-worker-turn" };
 
