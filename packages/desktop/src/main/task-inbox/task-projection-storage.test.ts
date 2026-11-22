@@ -1,4 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
+import { rejects } from "node:assert/strict";
 import { mkdtemp, mkdir, readFile, rename, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -76,9 +77,10 @@ test("dirty merges freeze hidden rows, limit deletion to eligible states and onl
   await intent(s, { type: "hide", taskKey: "session:one", expectedRevision: "1" });
   await ingest(s, [task("one", { title: "renamed", updatedAt: 20, sourceRevision: "2" })]);
   expect((await snapshot(s, "hidden")).records).toMatchObject([{ title: "renamed", updatedAt: 2 }]);
-  await expect(
+  await rejects(
     intent(s, { type: "delete", taskKey: "session:paused", expectedRevision: "1" }),
-  ).rejects.toThrow("ended or interrupted");
+    /ended or interrupted/,
+  );
   await intent(s, { type: "delete", taskKey: "session:interrupted", expectedRevision: "1" });
   await ingest(s, [task("interrupted", { status: "running", updatedAt: 30, sourceRevision: "2" })]);
   expect((await snapshot(s, "all")).records.map((r) => r.sessionId)).not.toContain("interrupted");
@@ -346,12 +348,12 @@ test("the writer checks a document permit at commit and consumes it once", async
     intent: { type: "hide", taskKey: "session:scoped", expectedRevision: "1" },
   };
   Atomics.store(permit, 0, -1);
-  await expect(db.request("tasks/commitIntent", payload)).rejects.toThrow("revoked");
+  await rejects(db.request("tasks/commitIntent", payload), /revoked/);
   expect((await snapshot(db)).records).toHaveLength(1);
   Atomics.store(permit, 0, 0);
   await db.request("tasks/commitIntent", payload);
   expect((await snapshot(db)).records).toHaveLength(0);
-  await expect(db.request("tasks/commitIntent", payload)).rejects.toThrow("revoked");
+  await rejects(db.request("tasks/commitIntent", payload), /revoked/);
 });
 
 test("a complete disk scan reconciles offline archival and verifies directory deletion before removing owned tasks", async () => {
