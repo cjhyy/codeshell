@@ -1,11 +1,10 @@
 import type { BrowserWindow, IpcMain, IpcMainInvokeEvent, MessageBoxOptions } from "electron";
 import { randomUUID } from "node:crypto";
-import { constants, promises as fs } from "node:fs";
-import { basename, dirname, isAbsolute, join, relative, resolve as resolvePath } from "node:path";
+import type { LabProjectFiles, LabProjectScope } from "../shared/optimization-lab-project.js";
+import { MAX_LAB_JSON_BYTES as MAX_JSON_BYTES } from "../shared/optimization-lab.js";
 import { LAB_QUERY_TYPES, type LabAuthorizationInput } from "../shared/optimization-lab.js";
 import type { EvidenceBundle } from "@cjhyy/code-shell-capability-optimization-lab";
 
-const MAX_JSON_BYTES = 16 * 1024 * 1024;
 const queryTypes = new Set<string>(LAB_QUERY_TYPES);
 const forbidden = new Set(["cwd", "type", "projectTrusted", "confirmed", "authorized"]);
 
@@ -16,13 +15,12 @@ interface Deps {
   waitForWorkerHost?(): Promise<void>;
   resolveTarget(target: unknown): Promise<{ kind: string; cwd: string }>;
   trusted(cwd: string): Promise<boolean>;
-  artifactRoot(): string;
+  documentSignal(event: IpcMainInvokeEvent): AbortSignal;
+  files(scope: LabProjectScope, signal: AbortSignal): LabProjectFiles;
   query(type: string, params: Record<string, unknown>): Promise<any>;
-  skills(cwd: string): unknown[];
   confirm(window: BrowserWindow, options: MessageBoxOptions): Promise<{ response: number }>;
   save(window: BrowserWindow, name: string): Promise<string | undefined>;
   choose(window: BrowserWindow): Promise<string | undefined>;
-  evidence?(cwd: string, runIds: string[]): Promise<EvidenceBundle>;
 }
 
 function datasetInput(input: unknown, exporting = false): Record<string, unknown> {
@@ -43,132 +41,6 @@ function datasetInput(input: unknown, exporting = false): Record<string, unknown
       throw new Error("Dataset text must be valid UTF-8");
   }
   return value;
-}
-
-/** Open the selected inode without following links and detect replacement or mutation. */
-async function readBoundedUtf8File(source: string): Promise<string> {
-  if (!isAbsolute(source)) throw new Error("Lab JSON file path must be absolute");
-  const prior = await fs.lstat(source, { bigint: true });
-  if (!prior.isFile() || prior.isSymbolicLink() || prior.size > BigInt(MAX_JSON_BYTES))
-    throw new Error("Lab JSON file must be a bounded regular file");
-  const file = await fs.open(
-    source,
-    constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0),
-  );
-  try {
-    const info = await file.stat({ bigint: true });
-    const same = (other: typeof info) =>
-      other.isFile() &&
-      !other.isSymbolicLink() &&
-      other.dev === info.dev &&
-      other.ino === info.ino &&
-      other.size === info.size &&
-      other.mtimeNs === info.mtimeNs &&
-      other.ctimeNs === info.ctimeNs;
-    if (!same(prior) || info.size > BigInt(MAX_JSON_BYTES))
-      throw new Error("Lab JSON file changed or is too large");
-    const buffer = Buffer.alloc(Number(info.size) + 1);
-    let length = 0;
-    while (length < buffer.length) {
-      const { bytesRead } = await file.read(buffer, length, buffer.length - length, null);
-      if (!bytesRead) break;
-      length += bytesRead;
-    }
-    if (
-      BigInt(length) !== info.size ||
-      !same(await file.stat({ bigint: true })) ||
-      !same(await fs.lstat(source, { bigint: true }))
-    )
-      throw new Error("Lab JSON file changed or is too large");
-    return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(
-      buffer.subarray(0, length),
-    );
-  } finally {
-    await file.close();
-  }
-}
-
-async function optionalEntry(
-  path: string,
-): Promise<Awaited<ReturnType<typeof fs.lstat>> | undefined> {
-  try {
-    return await fs.lstat(path);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
-    throw error;
-  }
-}
-
-function containsPath(root: string, path: string): boolean {
-  const child = relative(root, path);
-  return (
-    child === "" ||
-    (!child.startsWith(`..${process.platform === "win32" ? "\\" : "/"}`) &&
-      child !== ".." &&
-      !isAbsolute(child))
-  );
-}
-
-/** Replace only the selected regular file, never a symlink target or the immutable Lab store. */
-async function writeDatasetFile(
-  destination: string,
-  text: string,
-  artifactRoot: string,
-  revalidate: () => Promise<void>,
-): Promise<void> {
-  if (!isAbsolute(destination)) throw new Error("Dataset export path must be absolute");
-  const parent = await fs.realpath(dirname(destination));
-  const directory = await fs.lstat(parent);
-  if (!directory.isDirectory() || directory.isSymbolicLink())
-    throw new Error("Dataset export parent must be a regular directory");
-  const target = join(parent, basename(destination));
-  const protectedRoot = await fs.realpath(artifactRoot).catch((error: NodeJS.ErrnoException) => {
-    if (error.code === "ENOENT") return resolvePath(artifactRoot);
-    throw error;
-  });
-  if (containsPath(protectedRoot, target))
-    throw new Error("Cannot export into frozen Lab artifacts");
-  const existing = await optionalEntry(target);
-  if (existing && (!existing.isFile() || existing.isSymbolicLink()))
-    throw new Error("Dataset export destination must be a regular file");
-  const verifyPaths = async () => {
-    if ((await fs.realpath(dirname(destination))) !== parent)
-      throw new Error("Dataset export parent changed");
-    const currentDirectory = await fs.lstat(parent);
-    if (
-      !currentDirectory.isDirectory() ||
-      currentDirectory.isSymbolicLink() ||
-      currentDirectory.dev !== directory.dev ||
-      currentDirectory.ino !== directory.ino
-    )
-      throw new Error("Dataset export parent changed");
-    const current = await optionalEntry(target);
-    if (
-      existing
-        ? !current ||
-          !current.isFile() ||
-          current.isSymbolicLink() ||
-          current.dev !== existing.dev ||
-          current.ino !== existing.ino ||
-          current.size !== existing.size ||
-          current.mtimeMs !== existing.mtimeMs ||
-          current.ctimeMs !== existing.ctimeMs
-        : current !== undefined
-    )
-      throw new Error("Dataset export destination changed");
-  };
-  const temporary = join(parent, `.optimization-lab-${randomUUID()}.tmp`);
-  try {
-    await revalidate();
-    await verifyPaths();
-    await fs.writeFile(temporary, text, { encoding: "utf8", mode: 0o600, flag: "wx" });
-    await revalidate();
-    await verifyPaths();
-    // Rename replaces the directory entry itself; it never follows a destination symlink.
-    await fs.rename(temporary, target);
-  } finally {
-    await fs.rm(temporary, { force: true });
-  }
 }
 
 function record(input: unknown): Record<string, unknown> {
@@ -283,9 +155,10 @@ export function registerOptimizationLabIpc(deps: Deps): () => void {
     const { target: _target, ...params } = input;
     return { ...params, cwd: target.cwd };
   };
+  type FrameCheck = (() => void) & { signal: AbortSignal };
   const handle = (
     channel: string,
-    handler: (window: BrowserWindow, args: unknown[], check: () => void) => Promise<unknown>,
+    handler: (window: BrowserWindow, args: unknown[], check: FrameCheck) => Promise<unknown>,
   ) => {
     channels.push(channel);
     deps.ipc.handle(channel, (event, ...args) => {
@@ -295,7 +168,7 @@ export function registerOptimizationLabIpc(deps: Deps): () => void {
         if (owner(event) !== window || event.sender.mainFrame !== frame)
           throw new Error("Lab originating frame changed");
       };
-      return handler(window, args, check);
+      return handler(window, args, Object.assign(check, { signal: deps.documentSignal(event) }));
     });
   };
   const query = async (check: () => void, type: string, params: Record<string, unknown>) => {
@@ -328,16 +201,25 @@ export function registerOptimizationLabIpc(deps: Deps): () => void {
       if (current.cwd !== cwd) throw new Error("Project primary changed during file operation");
     };
   };
+  const projectFiles = (input: Record<string, unknown>, cwd: string, check: FrameCheck) => {
+    const projectId = (input.target as { projectId?: unknown })?.projectId;
+    if (typeof projectId !== "string" || !projectId) throw Error("Lab requires a stable project");
+    check();
+    return deps.files({ projectId, cwd }, check.signal);
+  };
   handle("optimizationLab:query", async (_window, args, check) => {
     if (args.length !== 2 || typeof args[0] !== "string" || !queryTypes.has(args[0]))
       throw new Error("Unsupported Lab query");
     const input = record(args[1]);
     const params = await resolve(input, check);
     const result = await query(check, `optimization_lab_${args[0]}`, params);
-    return args[0] === "discover" ? { ...result, skills: deps.skills(params.cwd) } : result;
+    if (args[0] !== "discover") return result;
+    const skills = await projectFiles(input, params.cwd, check).skills();
+    check();
+    return { ...result, skills };
   });
   handle("optimizationLab:previewEvidence", async (window, args, check) => {
-    if (args.length !== 1 || !deps.evidence) throw new Error("Evidence import unavailable");
+    if (args.length !== 1) throw new Error("Evidence import unavailable");
     const input = record(args[0]);
     if (
       Object.keys(input).some((key) => !["target", "runIds"].includes(key)) ||
@@ -349,7 +231,7 @@ export function registerOptimizationLabIpc(deps: Deps): () => void {
       throw new Error("Invalid selected run IDs");
     const params = await resolve(input, check);
     const revalidate = fileRevalidation(window, input, params.cwd, check);
-    const bundle = await deps.evidence(params.cwd, input.runIds as string[]);
+    const bundle = await projectFiles(input, params.cwd, check).evidence(input.runIds as string[]);
     await revalidate();
     for (const [id, prior] of previews)
       if (prior.window === window || prior.expiresAt <= Date.now()) previews.delete(id);
@@ -542,7 +424,7 @@ export function registerOptimizationLabIpc(deps: Deps): () => void {
     );
     if (!destination) return false;
     await revalidate();
-    await writeDatasetFile(destination, content, deps.artifactRoot(), revalidate);
+    await projectFiles(input, params.cwd, check).writePicked(destination, content, revalidate);
     return true;
   });
   handle("optimizationLab:importGrading", async (window, args, check) => {
@@ -555,7 +437,7 @@ export function registerOptimizationLabIpc(deps: Deps): () => void {
     const source = await deps.choose(window);
     if (!source) return null;
     await revalidate();
-    const grading = JSON.parse(await readBoundedUtf8File(source));
+    const grading = JSON.parse(await projectFiles(input, params.cwd, check).readPicked(source));
     await revalidate();
     return query(check, "optimization_lab_import_grading", {
       cwd: params.cwd,
@@ -572,7 +454,7 @@ export function registerOptimizationLabIpc(deps: Deps): () => void {
     const source = await deps.choose(window);
     if (!source) return null;
     await revalidate();
-    const text = await readBoundedUtf8File(source);
+    const text = await projectFiles(input, params.cwd, check).readPicked(source);
     await revalidate();
     return text;
   });
@@ -584,7 +466,11 @@ export function registerOptimizationLabIpc(deps: Deps): () => void {
     const destination = await deps.save(window, "optimization-dataset.json");
     if (!destination) return false;
     await revalidate();
-    await writeDatasetFile(destination, input.text as string, deps.artifactRoot(), revalidate);
+    await projectFiles(input, params.cwd, check).writePicked(
+      destination,
+      input.text as string,
+      revalidate,
+    );
     return true;
   });
   return () => {

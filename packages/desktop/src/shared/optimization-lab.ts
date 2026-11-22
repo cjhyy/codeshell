@@ -1,6 +1,8 @@
 import type { RendererConfigurationTarget } from "./renderer-configuration";
 import type { EvidenceBundle, EvalCase } from "@cjhyy/code-shell-capability-optimization-lab";
 
+export const MAX_LAB_JSON_BYTES = 16 * 1024 * 1024;
+
 export const LAB_QUERY_TYPES = [
   "discover",
   "bindings",

@@ -3986,6 +3986,8 @@ const sessionCatalogIpc = registerSessionCatalogIpc(
 );
 taskInboxDisposers.push(
   registerOptimizationLabHost({
+    business: desktopHost.callBusiness,
+    documentSignal: desktopHost.documentSignal,
     windows: () => [...mainWindows],
     settingsCwd: resolveNoRepoCwd,
     resolveTarget: resolveRendererConfigurationTarget,

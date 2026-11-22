@@ -1,3 +1,7 @@
+import {
+  readBoundedUtf8File,
+  writeDatasetFile,
+} from "../host/composition/optimization-lab-files.js";
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { promises as fs } from "node:fs";
 import {
@@ -373,7 +377,7 @@ function setup() {
       return { kind: targetKind, cwd: primary };
     },
     trusted: async () => trusted,
-    artifactRoot: () => artifactRoot,
+    documentSignal: () => new AbortController().signal,
     query: async (type, params) => {
       calls.push({ type, params });
       if (type.endsWith("adoption_preview")) return structuredClone(adoptionPreview);
@@ -383,21 +387,25 @@ function setup() {
         return { hash, json: { verified: false }, markdown: "# Immutable report" };
       return snapshot;
     },
-    skills: () => [{ name: "example", source: "project" }],
-    evidence: async (cwd, runIds) => {
-      evidenceReads.push({ cwd, runIds });
-      return buildEvidenceBundle(
-        "a".repeat(16),
-        runIds.map((runId) => ({
-          runId,
-          sessionId: null,
-          source: "managed_run" as const,
-          blocks: [{ kind: "input" as const, eventId: null, text: "Selected input" }],
-          missingEvidence: [],
-          truncated: false,
-        })),
-      );
-    },
+    files: ({ cwd }) => ({
+      readPicked: readBoundedUtf8File,
+      writePicked: (path, content, check) => writeDatasetFile(path, content, artifactRoot, check),
+      skills: async () => [{ name: "example", source: "project" }],
+      evidence: async (runIds) => {
+        evidenceReads.push({ cwd, runIds });
+        return buildEvidenceBundle(
+          "a".repeat(16),
+          runIds.map((runId) => ({
+            runId,
+            sessionId: null,
+            source: "managed_run" as const,
+            blocks: [{ kind: "input" as const, eventId: null, text: "Selected input" }],
+            missingEvidence: [],
+            truncated: false,
+          })),
+        );
+      },
+    }),
     confirm: async (_window, options) => {
       dialogs.push(options);
       confirming?.();
