@@ -12,7 +12,6 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   assertSourceElectronTransportSettled,
   captureRendererErrors,
-  chooseViewOnlyIfPrompted,
   expandSidebar,
   findCodeShellWindow,
   launchCodeShellElectron,
@@ -172,6 +171,12 @@ try {
     binary: { path: binaryFile, patch: binaryPatch },
   };
   await put(join(isolated.codeShellHome, "settings.json"), { autoUpdates: false });
+  // Both scopes are view-only for this read-only Review fixture, including the first
+  // no-project workbench shown while the recent repository is being registered.
+  await put(join(isolated.codeShellHome, "desktop/trust.json"), {
+    [join(isolated.codeShellHome, "no-repo")]: "untrusted",
+    [projectPath]: "untrusted",
+  });
   await put(join(isolated.codeShellHome, "desktop/recents.json"), [
     { path: projectPath, name: "Owned Review repository", lastOpenedAt: Date.now() },
   ]);
@@ -296,9 +301,7 @@ ipcMain.on=(channel,listener)=>on(channel,channel!=="agent:msg"?listener:(event,
   win.setDefaultTimeout(10000);
   rendererErrors.push(captureRendererErrors(win));
   await win.setViewportSize({ width: 1440, height: 960 });
-  await chooseViewOnlyIfPrompted(win);
   await win.getByText("Owned Review repository", { exact: true }).first().click();
-  await chooseViewOnlyIfPrompted(win);
   diagnostics.phase("review-session-seed");
   const project = await win.evaluate(
     async (path) =>
@@ -344,10 +347,8 @@ ipcMain.on=(channel,listener)=>on(channel,channel!=="agent:msg"?listener:(event,
     },
   });
   await win.reload();
-  await chooseViewOnlyIfPrompted(win);
   await expandSidebar(win);
   await win.getByRole("button", { name: title, exact: true }).click();
-  await chooseViewOnlyIfPrompted(win);
   report.confinement = await fixture.assertWorker(app, { requireWorker: false });
   assert.equal(report.confinement.workerCreated, false);
   diagnostics.phase("review-ui-operations");
