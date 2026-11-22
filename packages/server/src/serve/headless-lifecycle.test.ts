@@ -3,6 +3,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { WebSocket } from "ws";
+import { SessionManager, type StreamEvent } from "@cjhyy/code-shell-core";
+import { SessionOutputJournal } from "@cjhyy/code-shell-core/internal";
 import { startHeadlessServer, type HeadlessServer } from "./headless-server.js";
 
 // A controlled stdio worker exposes the actual Core create() publication
@@ -32,10 +34,22 @@ readline.createInterface({input:process.stdin}).on('line',line=>{
   const m=JSON.parse(line);
   if(m.method==='agent/run') {
     pending.set(m.id,m);
+    if (m.params.task === 'journal admission') {
+      notify('test/preparing', {requestId:m.id});
+      return;
+    }
     materialize(m,m.params.task.split(':')[0]);
     notify('agent/runAccepted',{requestId:m.id,sessionId:m.params.sessionId});
     notify('agent/streamEvent',{sessionId:m.params.sessionId,event:{type:'text_delta',text:'Live '+m.params.task}});
     notify('test/ready',{task:m.params.task});
+  } else if(m.method==='test/admit') {
+    const [id,run]=[...pending][0];
+    const {sessionId,clientMessageId}=run.params;
+    notify('agent/streamEvent',{sessionId,event:{type:'session_user_message',text:run.params.task,clientMessageId}});
+    notify('agent/runAccepted',{requestId:id,sessionId});
+    notify('test/accepted',{});
+  } else if(m.method==='test/output') {
+    for (const event of m.params.events) notify('agent/streamEvent',{sessionId:m.params.sessionId,event});
   } else if(m.method==='test/finish') {
     for(const [id,run] of pending) if(run.params.task===m.params.task) {
       materialize(run,'complete'); pending.delete(id); output({id,result:{completed:true}});
@@ -194,6 +208,76 @@ for (const stage of ["absent", "directory", "state"]) {
     expect((await save()).status).toBe(200);
   });
 }
+
+test("queue acceptance during the first state transaction publishes the proven user anchor exactly once", async () => {
+  const { dir, server, first } = await fixture();
+  const client = await connect(server, first.cookie);
+  const id = "journal-admission";
+  const text = "journal admission";
+  const clientMessageId = "submission";
+  const sendWorker = (method: string, params: object) =>
+    server.bridge.injectWorkerMessage(
+      JSON.stringify({ jsonrpc: "2.0", method: `test/${method}`, params }),
+      { origin: "serve", producer: "test" },
+    );
+  client.send("run", "agent/run", { sessionId: id, task: text, clientMessageId });
+  await client.wait((message) => message.method === "test/preparing");
+  const root = join(dir, "data", "worker", "sessions");
+  const manager = new SessionManager(root);
+  const session = manager.create(join(dir, "workspace"), "fixture", "fixture", id);
+  const runId = session.transcript.appendMessage("user", text).id;
+  manager.startSessionRun(session.state, runId);
+  // A second process owns exactly this directory while committing state.json.
+  // Keep it held until both the provisional echo and queue acceptance were routed.
+  const lease = join(root, id, "state.json.lock");
+  mkdirSync(lease);
+  try {
+    sendWorker("admit", {});
+    await client.wait((message) => message.method === "test/accepted");
+    expect(client.received.some((message) => message.method === "agent/streamEvent")).toBe(false);
+  } finally {
+    rmSync(lease, { recursive: true, force: true });
+  }
+  const writer = new SessionOutputJournal(root, id, runId, session.transcript.getEvents()[0].id);
+  const input = { type: "session_user_message", sessionId: id, text, clientMessageId } as const;
+  const userCursor = writer.append(input);
+  const start = {
+    type: "session_started",
+    sessionId: id,
+    runId,
+    clientMessageId,
+    promptTokens: 1,
+    promptTokensSource: "heuristic_estimate",
+    promptTokensConfidence: "low",
+  } satisfies StreamEvent;
+  const delta = { type: "text_delta", text: "streamed", tokens: 1 } satisfies StreamEvent;
+  const events = [start, delta].map((event) => ({ ...event, outputCursor: writer.append(event) }));
+  sendWorker("output", { sessionId: id, events });
+  await client.wait((message) => message.params?.event?.type === "text_delta");
+  const viewer = await connect(server, first.cookie);
+  viewer.send("detail", "agent/query", {
+    type: "session_detail",
+    sessionId: id,
+    outputRecovery: true,
+  });
+  const { result } = await viewer.wait((message) => message.id === "detail");
+  const snapshot = result.data;
+  expect(snapshot.outputCoverage).toMatchObject({
+    unpaired: false,
+    incarnation: snapshot.outputJournal.coverageIdentity,
+    inputIds: [],
+    outputCursor: events[1].outputCursor,
+  });
+  expect(snapshot.outputJournal.status).toBe("ok");
+  const cursors = [userCursor, ...events.map((event) => event.outputCursor)];
+  expect(snapshot.outputJournal.frames.map((frame: any) => frame.cursor)).toEqual(cursors);
+  expect(snapshot.liveStream.events.map(({ event }: any) => event.outputCursor)).toEqual(cursors);
+  expect(
+    client.received
+      .filter((message) => message.method === "agent/streamEvent")
+      .map((message) => message.params.event.outputCursor),
+  ).toEqual(cursors);
+});
 
 test("a Core-produced follow-up run keeps the session busy until its own completion", async () => {
   const { server, first, control } = await fixture();

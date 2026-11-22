@@ -234,6 +234,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
       sessionId: string;
       event: Record<string, unknown>;
       echoed: boolean;
+      firstOutput?: "pending" | "accepted" | "received";
     }
   >();
   let preparingRuns = 0;
@@ -415,7 +416,8 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
                 candidate.event.clientMessageId === value.clientMessageId,
             );
             if (input) {
-              if (input.echoed) return;
+              if (input.echoed || (input.firstOutput && typeof value.outputCursor !== "string"))
+                return;
               deliveredInput = input;
               event = {
                 ...input.event,
@@ -423,6 +425,39 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
                   ? { outputCursor: value.outputCursor }
                   : {}),
               };
+            }
+          }
+          if (
+            value &&
+            value.agentId === undefined &&
+            value.type !== "session_user_message" &&
+            (value.type === "session_started" ||
+              (typeof value.outputCursor !== "string" &&
+                (value.type === "text_delta" ||
+                  value.type === "error" ||
+                  value.type === "turn_complete")))
+          ) {
+            const input = [...runInputs.values()].find(
+              (candidate) =>
+                (candidate.firstOutput === "pending" || candidate.firstOutput === "accepted") &&
+                !candidate.echoed &&
+                candidate.sessionId === params.sessionId &&
+                (value.clientMessageId === undefined ||
+                  value.clientMessageId === candidate.event.clientMessageId),
+            );
+            if (input) {
+              input.firstOutput = "received";
+              const first =
+                typeof value.outputCursor === "string"
+                  ? firstJournaledInput(
+                      sessionRootDir,
+                      params.sessionId,
+                      value.outputCursor,
+                      value.runId,
+                      input.event,
+                    )
+                  : input.event; // A worker without a journal still publishes input before its first output.
+              if (first) input.echoed = publishStream(params.sessionId, first);
             }
           }
           if (publishStream(params.sessionId, event) && deliveredInput)
@@ -434,7 +469,8 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
         const params = message.params as { requestId?: unknown; sessionId?: unknown } | undefined;
         const requestId = String(params?.requestId);
         const input = runInputs.get(requestId);
-        if (input && !input.echoed) {
+        if (input?.firstOutput === "pending") input.firstOutput = "accepted";
+        else if (input && !input.echoed && !input.firstOutput) {
           input.echoed = publishStream(input.sessionId, input.event);
         }
         const route = pendingWorkerResponses.get(requestId);
@@ -507,6 +543,11 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
       }
       broadcast(line);
       return;
+    }
+    const completedInput = runInputs.get(String(message.id));
+    if (completedInput?.firstOutput === "accepted" && !completedInput.echoed && message.result) {
+      // Legacy workers may finish an accepted request without any stream frame.
+      publishStream(completedInput.sessionId, completedInput.event);
     }
     const receipt = runUploads.get(String(message.id));
     if (receipt) {
@@ -1216,12 +1257,13 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
             return;
           }
           let baselineEvents = 0;
+          let creatingSession = false;
           const baselineSessionId = workerMessage.params?.sessionId;
           if (hubAuth && parsed.method === "agent/run" && typeof baselineSessionId === "string") {
             try {
               if (readOptionalHubSessionState(sessionManager, baselineSessionId)) {
                 baselineEvents = readHubTranscript(sessionRootDir, baselineSessionId).length;
-              }
+              } else creatingSession = true;
             } catch (cause) {
               sendToTab(
                 ws,
@@ -1294,6 +1336,9 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
                 runInputs.set(workerRequestId, {
                   sessionId: runSessionId,
                   echoed: false,
+                  // Queue acceptance can arrive during the worker's first state.json
+                  // transaction. Its provisional input has no coverage to publish yet.
+                  firstOutput: creatingSession ? "pending" : undefined,
                   event: {
                     type: "session_user_message",
                     text: typeof params.displayText === "string" ? params.displayText : params.task,
@@ -1692,6 +1737,33 @@ function replyToHostSessionQuery(
       error instanceof Error ? error.message : "Session not found",
     );
   }
+}
+
+/** The new Session's user bubble may precede the state lock and the journal itself.
+ * Join only the first two durable frames, pinned to the start already received on stdio. */
+function firstJournaledInput(
+  root: string,
+  sessionId: string,
+  startCursor: string,
+  runId: unknown,
+  input: Record<string, unknown>,
+) {
+  if (typeof runId !== "string") return;
+  const page = readOutputJournal(root, sessionId, { through: startCursor, maxFrames: 2 });
+  const [anchor, start] = page.frames;
+  if (
+    page.status !== "ok" ||
+    !page.complete ||
+    start?.cursor !== startCursor ||
+    start.event?.type !== "session_started" ||
+    start.event.sessionId !== sessionId ||
+    start.runId !== runId ||
+    anchor?.runId !== runId ||
+    anchor.event?.type !== "session_user_message" ||
+    anchor.event.clientMessageId !== input.clientMessageId
+  )
+    return;
+  return { ...input, ...anchor.event, outputCursor: anchor.cursor };
 }
 
 /** A missing session can be created; malformed or unsafe existing storage must fail closed. */
