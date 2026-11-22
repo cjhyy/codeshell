@@ -11,7 +11,7 @@
 
 | 产物                                                           | 源码根                                                       | 构建                                                      | 运行环境                                   | 与 Host 的通信                                                |
 | -------------------------------------------------------------- | ------------------------------------------------------------ | --------------------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------- |
-| **Desktop Renderer**（主窗口 / 宠物小窗 / 浏览器弹窗）         | `renderer/` (~150k 行含 i18n)                                | `packages/desktop/vite.config.ts` → `out/renderer`        | Electron BrowserWindow（contextIsolation） | **只**通过 preload 暴露的 `window.codeshell.*`（IPC）         |
+| **Desktop Renderer**（主窗口 / 宠物小窗 / 浏览器弹窗）         | `renderer/` (~150k 行含 i18n)                                | `packages/desktop/vite.config.ts` → `out/renderer`        | Electron BrowserWindow（contextIsolation） | preload 按能力选择工作台 MessagePort 或原生 Electron IPC         |
 | **Desktop 托管的 Web 入口**（手机/平板/浏览器访问 `/mobile/`） | `mobile/main.tsx`（14 行入口）+ **`web/app/DesktopApp.tsx`** | `vite.mobile.config.ts` → `out/mobile`，`base:"/mobile/"` | 普通浏览器                                 | 同源 WebSocket `/ws`（配对设备协议）+ cookie HTTP `/api/v1/*` |
 | **`@cjhyy/code-shell-web` 库**                                 | `web/src/` (~8k 行)                                          | `tsc -p web/tsconfig.json` → `web/dist`                   | 浏览器（零 Electron/Node）                 | 被 renderer（少量纯函数）、`web/app`、`mobile/` 消费          |
 | **独立 Web SPA（Hub/Website）**                                | `web/app/` (~28k 行)                                         | `web/vite.config.ts` → `web/dist-app`                     | 浏览器                                     | `/ws` 上的 core JSON-RPC（`ProtocolClient`）+ `/api/v1/*`     |
@@ -34,6 +34,8 @@
 ### 0.12 的工作台连接
 
 工作台 preload 通过窗口自己的 MessagePort 查询会话、任务和活动历史，订阅输出并发送运行请求。刷新会撤销旧文档的连接和写入资格。Host 重启后客户端重新握手，按输出游标补齐事件，并按宿主状态版本恢复待审批请求。[工作台端口](../../packages/desktop/src/main/desktop-host/main-workbenches.ts) · [preload 客户端](../../packages/desktop/src/preload/desktop-host-client.ts)
+
+会话列表通过 Host 读 SQLite 索引。指定 Session ID 的读取若早于变更通知到达，会直接核对该会话目录。Review 的差异、文件状态和提示词准备也走工作台端口。切换会话或审查范围后，界面丢弃旧请求的返回值，保留当前输入框已有的草稿。[会话查询](../../packages/host/src/services/session-files.ts) · [Review 草稿验收](../../packages/desktop/scripts/e2e-review-draft-operations.mjs)
 
 配对设备通过 Desktop 的原生授权边界访问共享终端。Host 持有 PTY，桌面和手机能够看到同一个进程的回放及后续输出。关闭远程终端权限时，当前设备的订阅一并撤销。[原生终端授权](../../packages/desktop/src/main/mobile-remote/native-terminals.ts) · [Host 终端](../../packages/desktop/src/host/composition/remote-terminals.ts)
 
@@ -914,7 +916,7 @@ ChatView Stop → onStop → stop() (useRunController.ts:961)
 
 ---
 
-## 7. UI 数据流总图
+## 7. 0.9.45 UI 数据流快照
 
 ```mermaid
 flowchart LR

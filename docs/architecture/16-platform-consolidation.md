@@ -1,6 +1,6 @@
 # 16 · 平台层收敛技术方案
 
-> 状态：v1.5（2026-11-21），同步 0.12 Desktop Host 的 L2 传输范围和后续依赖。各批次进度见文末和首版实施计划。
+> 状态：v1.6（2026-11-22），同步 0.12 工作台握手、worker 归属与两类续传。各批次进度见文末和首版实施计划。
 > 基线：codeshell `main @ 08eaa4369`（0.9.41 源码已合入、尚未正式发布；v0.9.40 之后 97 个提交）；codeshell-services `main @ a5958f0`（锁定 `@cjhyy/code-shell-server` 0.9.38）
 > 对照：Codex（本机 ChatGPT.app 26.1002.52244 安装包、本仓库第 15 章）、Claude Code（公开设计）
 > 上游文档：[15 · Codex 对比与路线](15-codex-harness-comparison-and-roadmap.md)（Protocol v2 契约与术语以该章为准）
@@ -255,7 +255,7 @@ class HostRuntime {
 - AgentServer 对未发 `initialize` 的连接沿用 v1。
 - **S0 已实现的子集**：`initialize` 返回 `{ protocolVersion: "1", contracts }`（`packages/core/src/protocol/initialize.ts` 的 `InitializeResult`），在 `moduleReady` 之后分发，暂不读取客户端参数、不做版本协商。`contracts` 永久留在顶层，S1 在它旁边增加 `host`、`capabilities`、`methods`、`unsupported`。serve 的 `/health` 同样返回 `{ status, mode, contracts }`（no-store）。
 
-**0.12 Desktop 专用端口（L2）。** 受信工作台通过 MessagePort 发送 Core 的 JSON-RPC 2.0 信封。每条新端口先发 `initialize { protocolVersions: ["2.0"] }`，响应含 `protocolVersion: "2.0"`、顶层 `contracts`、`host: { kind: "electron", version }` 和方法清单。清单目前只有 `links/listLocalProviders`，即本地 Link 提供方的只读目录。Host 启动时经父进程通道向 Main 调用一次 `app/getVersion`，缓存应用版本。Renderer 无权调用这条反向方法。AgentServer 和 worker 仍沿用各自的现有握手及调用路径。
+**0.12 Desktop 工作台端口。** 受信文档用 `initialize` 协商 JSON-RPC 协议、宿主版本、契约和本次可用方法。preload 按握手结果发送会话、任务、Review、配置读取和 worker 请求。Native Shell 的私有操作使用独立父子进程通道。首批 L2 只读 Link 目录是这套端口最早的消费者。[工作台服务端](../../packages/desktop/src/main/desktop-host/server.ts) · [Host 入口](../../packages/desktop/src/main/desktop-host/utility.ts)
 
 ### 4.2 对象模型
 
@@ -286,7 +286,7 @@ class HostRuntime {
 
 Approval 事件同时出现在两处：作为 Item 进 journal（可续传），作为独立对象进状态快照（可查询）。`SessionSnapshotStore` 和 `HubStreamCursor` 各自的 seq / epoch 删除，或改成 journal cursor 的内存缓存。
 
-Desktop 的 L2 重连只建立新端口并重新握手。第 17 章 L5 负责接入上述两类续传，并按 §4.8 验收，再由平台首版第 8b 项合并回放缓存。L2 期间原 worker、输出与待审批服务继续提供现有行为。
+0.12 的工作台重连先建立新文档端口，再按 journal cursor 补读输出，并按 epoch 和 stateVersion 恢复宿主待审批状态。Host 崩溃与单窗刷新均通过真实 Electron 冒烟测试。平台首版第 8b 项可沿用这两个续传入口。[输出方法](../../packages/desktop/src/main/desktop-host/output-methods.ts) · [宿主状态](../../packages/desktop/src/main/desktop-host/approval-state.ts) · [原生验收](../../packages/desktop/scripts/smoke-desktop-host.mjs)
 
 ### 4.4 宿主请求类型化（worker → host）
 
@@ -649,3 +649,4 @@ flowchart LR
 | v1.3 | 2026-10-15 | CC 首轮修复：Desktop 内联 Host 改 devDependency、predist 同源实体化守卫；Panel 无文字 UI 的 AskUser 明确 unavailable 并清理；Desktop unsupported approve 增唯一 RPC id；主控已补齐上轮受限验证，本轮 unsigned pack 补跑单列。 |
 | v1.4 | 2026-10-15 | 第 8a 纯服务首版：skills inventory/MCP probe/Session FS 两端真实共用，MCP SDK 限 Core internal；Hub 模型探测 ownership 迁移；PR188 三个 P2 修复。8b replay 等两类续传，9–14 与 S2/S3 未开始；CC review/沙箱受限补验与提交单列。 |
 | v1.5 | 2026-11-21 | 更新 §4、§10 的 Desktop Host 进程决策，明确 L2 专用端口握手和只读方法，以及 L5 的两类续传。 |
+| v1.6 | 2026-11-22 | 记录 Desktop 工作台与 Host 的实际通信路径、worker 归属和输出与审批续传。 |
