@@ -47,9 +47,9 @@ export interface UpsertConversationSessionRouteInput {
 
 /**
  * Durable IM-conversation ↔ Work-Session routing, owned exclusively by the
- * Electron main process.
+ * Desktop Host storage worker.
  *
- * Single-writer on purpose: the chat CLI reaches main through the loopback
+ * Single-writer on purpose: the chat CLI reaches the route owner through the loopback
  * control plane rather than touching this file, so two processes can never
  * interleave writes to it. Lives beside the other Pet state under
  * `<userData>/pet/` because it is Pet-owned data with the same lifetime.
@@ -63,6 +63,7 @@ export class ConversationSessionRouteStore {
   constructor(
     private readonly filePath: string,
     private readonly now: () => number = Date.now,
+    private readonly replaceFile?: (from: string, to: string) => Promise<void>,
   ) {}
 
   async all(): Promise<ConversationSessionRoute[]> {
@@ -208,7 +209,7 @@ export class ConversationSessionRouteStore {
         staged.set(route.id, left);
         result.push(left);
       }
-      return { staged, result };
+      return { staged: result.length ? staged : this.routes, result };
     });
   }
 
@@ -220,6 +221,7 @@ export class ConversationSessionRouteStore {
       .then(() => this.load())
       .then(async () => {
         const { staged, result } = apply();
+        if (staged === this.routes) return result;
         // Trim oldest-updated first so an active conversation is never the one
         // evicted by a long tail of finished notify routes.
         if (staged.size > MAX_ROUTES) {
@@ -228,16 +230,18 @@ export class ConversationSessionRouteStore {
             if (route.mode !== "bound") staged.delete(route.id);
           }
         }
-        this.revision += 1;
+        const revision = this.revision + 1;
         await writeOwnerJsonAtomic(
           this.filePath,
           {
             version: CONVERSATION_SESSION_ROUTE_SCHEMA_VERSION,
-            revision: this.revision,
+            revision,
             routes: [...staged.values()],
           } satisfies ConversationSessionRouteFile,
           MAX_FILE_BYTES,
+          { replaceFile: this.replaceFile },
         );
+        this.revision = revision;
         this.routes = staged;
         return result;
       });

@@ -1,3 +1,4 @@
+import { ConversationSessionRouteStore } from "./conversation-session-route-store.js";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -44,7 +45,10 @@ function wiring(overrides: Partial<SessionBridgeWiringDeps> = {}) {
   };
   let onTurn!: (turn: BoundSessionTurnResult) => Promise<void>;
   const built = createSessionBridgeWiring({
-    routesFilePath: join(dir, "pet", "conversation-session-routes.json"),
+    routes: new ConversationSessionRouteStore(
+      join(dir, "pet", "conversation-session-routes.json"),
+      () => clock,
+    ),
     resolveSelector: async () =>
       ({
         sessionId: "s-login",

@@ -13,7 +13,7 @@
 
 import type { ConversationSessionRoute, SessionVisitReceipt } from "@cjhyy/code-shell-pet";
 import { openSessionVisitReceipt } from "@cjhyy/code-shell-pet";
-import type { ConversationSessionRouteStore } from "./conversation-session-route-store.js";
+import type { MimiConversationRoutes } from "../../shared/mimi-conversation-routes.js";
 import type { BindValidation, ValidateBindInput } from "./conversation-session-bind-validator.js";
 import { imConversationRouteKey } from "./session-turn-scheduler.js";
 
@@ -26,7 +26,7 @@ export interface BindActionContext {
 }
 
 export interface BindHostActionDeps {
-  routes: ConversationSessionRouteStore;
+  routes: MimiConversationRoutes;
   validate(input: ValidateBindInput): Promise<BindValidation>;
   /** Persist the receipt opened when a visit begins. */
   recordVisit?(receipt: SessionVisitReceipt): Promise<void>;

@@ -1,3 +1,4 @@
+import { nativeMimiConversationRoutes } from "../desktop-host/mimi-conversation-routes-client.js";
 import { mimiWindowIpc, trustedMimiWindows } from "./mimi-windows.js";
 import type {
   MimiShellOptions,
@@ -11,7 +12,6 @@ import { startMimiDecisions } from "./mimi-owner-decisions.js";
 import { connectMimiTasks, subscribeMimiReports } from "./mimi-reports.js";
 import { mimiTurnStores } from "../../shared/mimi-turn-storage.js";
 import { app, BrowserWindow, ipcMain, powerMonitor } from "electron";
-import { resolve } from "node:path";
 import { SettingsManager, SessionManager, sessionsRoot } from "@cjhyy/code-shell-core";
 import { AgentBridge, resolveNoRepoCwd } from "../agent-bridge.js";
 import { nativeMimiFollowUps } from "../desktop-host/mimi-follow-ups-client.js";
@@ -381,7 +381,7 @@ export function createMimiRuntimeShell(desktopHost: NativeMimiHost) {
     // root only names the collaborators it already owns.
     const worker = bridge;
     sessionBridge = createSessionBridgeWiring({
-      routesFilePath: resolve(app.getPath("userData"), "pet", "conversation-session-routes.json"),
+      routes: nativeMimiConversationRoutes(desktopHost.callBusiness),
       resolveSelector: createReusableSessionResolver(petSessionsRootDir),
       createRunner: (onTurn) =>
         createBoundSessionRunner(worker, aggregator, onTurn, sessionOutcomes, {

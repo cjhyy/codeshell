@@ -1,3 +1,4 @@
+import { withMimiRuleDocument } from "./mimi-rules-client.js";
 import type {
   MimiGatewayInput,
   MimiGatewayNative,
@@ -125,7 +126,9 @@ export class NativeMimiDispatch implements MimiDispatchService {
         signal.throwIfAborted();
         if (!Object.hasOwn(methods, method) || !Array.isArray(args))
           throw Error("Unknown native Mimi adapter");
-        return Reflect.apply(methods[method as keyof MimiNativeMethods], undefined, args);
+        return withMimiRuleDocument(signal, () =>
+          Reflect.apply(methods[method as keyof MimiNativeMethods], undefined, args),
+        );
       },
       () => {
         if (this.peer === peer) this.disconnect();

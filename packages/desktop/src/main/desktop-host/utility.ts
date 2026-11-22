@@ -260,6 +260,12 @@ const business = new HostBusinessCalls({
   ...approvals.native,
   "mimi/tasks": (command, grant) => mimiTasks.run(command, grant),
   ...segments,
+  "mimi/conversationRoutes":async(call,grant)=>{
+    const db=await storage;grant.assertCurrent();
+    const reply=await db.request<import("../../shared/mimi-conversation-routes.js").MimiRouteReply>("mimi/conversationRoutes",{call,permit:grant.permit});
+    if(!reply)throw Error("Mimi conversation routes unavailable");
+    return reply;
+  },
   "mimi/noticeLedger":async(call,grant)=>{
     const db=await storage; grant.assertCurrent();
     const row=await db.request<import("../../shared/mimi-notice-ledger.js").NoticeLedgerReply>("mimi/noticeLedger",{call,permit:grant.permit});

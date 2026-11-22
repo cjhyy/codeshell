@@ -167,6 +167,24 @@ describe("delivering into a Session", () => {
     expect(waitedForTurn).toBe(false);
   });
 
+  test("a binding removed during admission cannot receive another private message", async () => {
+    const deciding = Promise.withResolvers<void>();
+    const resume = Promise.withResolvers<boolean>();
+    const h = harness({
+      isRunning: async () => {
+        deciding.resolve();
+        return resume.promise;
+      },
+    });
+    await bind(h.routes);
+    const response = h.bridge.accept(INBOUND);
+    await deciding.promise;
+    await h.routes.leave(ROUTE_KEY, "user");
+    resume.resolve(false);
+    expect(await response).toMatchObject({ kind: "suspended" });
+    expect(h.calls).toEqual([]);
+  });
+
   test("a refused queued message is reported without retrying in another conversation", async () => {
     const { bridge, routes, calls } = harness({
       isRunning: async () => true,

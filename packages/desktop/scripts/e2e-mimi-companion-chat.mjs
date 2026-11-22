@@ -133,6 +133,36 @@ try {
     return scheduledIds.map((id) => state.rules.find((rule) => rule.id === id)?.wake);
   };
   // Previous clients keep their pending receipts in the same userData file.
+  const binding = {
+    channel: "fixture",
+    target: "synthetic-private-chat",
+    senderId: "synthetic-owner",
+  };
+  const routesFile = join(isolated.userDataDir, "pet", "conversation-session-routes.json");
+  const boundId = "synthetic-session-route";
+  await put(routesFile, {
+    version: 1,
+    revision: 1,
+    routes: [
+      {
+        schemaVersion: 1,
+        id: boundId,
+        routeKey: ["im:fixture", binding.target, binding.senderId].join(String.fromCharCode(0)),
+        ...binding,
+        sessionId: "mimi-follow-up-fixture",
+        sessionTitle: "Fixture bound session",
+        mode: "bound",
+        origin: "enter",
+        status: "active",
+        revision: 1,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        expiresAt: Date.now() + 60 * 60_000,
+      },
+    ],
+  });
+  const storedBinding = async () =>
+    JSON.parse(await readFile(routesFile, "utf8")).routes.find((row) => row.id === boundId);
   const noticeFile = join(isolated.userDataDir, "pet", "notices.json");
   const pendingId = "notice-00000000-0000-4000-8000-000000000099";
   await put(noticeFile, {
@@ -765,6 +795,36 @@ try {
   assert.equal(localControl.protocol, "http:");
   assert.equal(localControl.hostname, "127.0.0.1");
   assert.equal(control.pid, previousHost.pid, "The test talks only to its isolated local gateway");
+  async function routeMessage(text, expectedPid) {
+    const descriptor = JSON.parse(
+      await readFile(join(isolated.codeShellHome, "im-gateway", "desktop-control.json"), "utf8"),
+    );
+    const url = new URL("/v1/session/route", descriptor.baseUrl);
+    assert.equal(url.protocol, "http:");
+    assert.equal(url.hostname, "127.0.0.1");
+    assert.equal(descriptor.pid, expectedPid);
+    const response = await fetch(url, {
+      method: "POST",
+      redirect: "error",
+      signal: AbortSignal.timeout(10_000),
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + descriptor.token },
+      body: JSON.stringify({
+        ...binding,
+        isDirectMessage: true,
+        messageId: "route-fixture-" + text,
+        text,
+      }),
+    });
+    assert.equal(response.status, 200);
+    return response.json();
+  }
+  assert.deepEqual(await routeMessage("/session", previousHost.pid), {
+    kind: "status",
+    text: "当前在「Fixture bound session」中。发送 /mimi 可退出。",
+  });
+  assert.equal((await routeMessage("/mimi", previousHost.pid)).kind, "left");
+  const afterLeave = await storedBinding();
+  assert.equal(afterLeave.mode, "notify");
   const gatewayReply = await fetch(new URL("/v1/pet/chat", localControl), {
     method: "POST",
     redirect: "error",
@@ -840,6 +900,13 @@ try {
   assert.deepEqual(restoredRule, chosenRule);
   assert.deepEqual(await recordedWakes(), completedWakes);
   assert.deepEqual(await readExpiredReceipt(), recoveredDelivery);
+  assert.deepEqual(await routeMessage("/session", (await hostStarts()).at(-1).pid), {
+    kind: "not-bound",
+  });
+  assert.deepEqual(await storedBinding(), afterLeave);
+  receipt.checks.push(
+    "a legacy private conversation leaves its bound session and stays unbound after Host replacement",
+  );
   receipt.checks.push(
     "the Host expires a legacy queued receipt and preserves its exact outcome after replacement",
   );

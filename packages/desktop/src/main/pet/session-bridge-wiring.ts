@@ -20,7 +20,7 @@ import {
   injectMobileRunAndAwaitAcceptance,
   type MobileRunBridge,
 } from "@cjhyy/code-shell-server/mobile-remote";
-import { ConversationSessionRouteStore } from "./conversation-session-route-store.js";
+import type { MimiConversationRoutes } from "../../shared/mimi-conversation-routes.js";
 import { createConversationSessionBindValidator } from "./conversation-session-bind-validator.js";
 import {
   SessionConversationBridge,
@@ -40,8 +40,7 @@ import {
 } from "./session-outcome.js";
 
 export interface SessionBridgeWiringDeps {
-  /** `<userData>/pet/conversation-session-routes.json`. */
-  routesFilePath: string;
+  routes: MimiConversationRoutes;
   /** The strict selector gate DelegateWork's reuse path already applies. */
   resolveSelector(selector: string): Promise<PetReusableSessionCandidate | null>;
   /**
@@ -80,7 +79,7 @@ export interface SessionBridgeWiringDeps {
 }
 
 export interface SessionBridgeWiring {
-  routes: ConversationSessionRouteStore;
+  routes: MimiConversationRoutes;
   bridge: SessionConversationBridge;
   /** Register under the `sessionBind` key of the Mimi host-action table. */
   sessionBindExecutor(
@@ -103,7 +102,7 @@ export interface SessionBridgeWiring {
 
 export function createSessionBridgeWiring(deps: SessionBridgeWiringDeps): SessionBridgeWiring {
   const now = deps.now ?? Date.now;
-  const routes = new ConversationSessionRouteStore(deps.routesFilePath, now);
+  const routes = deps.routes;
   const validate = createConversationSessionBindValidator({
     resolveSelector: deps.resolveSelector,
     ...(deps.directoryExists ? { directoryExists: deps.directoryExists } : {}),
