@@ -18,18 +18,32 @@ export function desktopCookieHost(): CallShellBusiness {
   return cookieHost;
 }
 /** Installed once by Desktop Main. Shell-less unit callers can inject a fixture transport. */
-export function setDesktopCredentialFiles(transport: CredentialCommand, call: CallShellBusiness) {
+export function setDesktopCredentialFiles(transport: CredentialCommand, call?: CallShellBusiness) {
+  const previous = command;
+  const previousCookieHost = cookieHost;
   command = transport;
   cookieHost = call;
+  return () => {
+    if (command === transport) {
+      command = previous;
+      cookieHost = previousCookieHost;
+    }
+  };
+}
+
+async function issue<T>(method: CredentialFileCommand, payload: unknown): Promise<T> {
+  if (command) return command<T>(method, payload);
+  // Core and test-only callers use the same bounded read and CAS implementation.
+  const { credentialFileCommand } = await import("@cjhyy/code-shell-core/internal/storage");
+  return credentialFileCommand(undefined, method, payload) as T;
+}
+
+/** Count pending cleanup in the storage worker. This query never opens the keychain. */
+export function desktopPendingLinkRetirements(): Promise<number> {
+  return issue<number>("credentials/pendingRetirements", {});
 }
 
 export function credentialFiles() {
-  async function issue<T>(method: CredentialFileCommand, payload: unknown): Promise<T> {
-    if (command) return command<T>(method, payload);
-    // Core and test-only callers use the same bounded read and CAS implementation.
-    const { credentialFileCommand } = await import("@cjhyy/code-shell-core/internal/storage");
-    return credentialFileCommand(undefined, method, payload) as T;
-  }
   return {
     read: (address: CredentialFileAddress) =>
       issue<CredentialFileSnapshot>("credentials/read", address),
@@ -43,18 +57,36 @@ export function runDesktopCredentialOperation<T>(
   read: readonly CredentialScope[],
   write: CredentialScope | undefined,
   work: (store: CredentialStore) => T,
-  assertCurrent?: () => void,
+  assertCurrent?: () => void | Promise<void>,
+  options?: { guardProjectRevision?: boolean },
 ): Promise<T> {
   const files = credentialFiles();
-  const guarded = assertCurrent
-    ? {
-        ...files,
-        commit: (...args: Parameters<typeof files.commit>) => {
-          assertCurrent();
-          return files.commit(...args);
-        },
-      }
-    : files;
+  const guardProject = Boolean(options?.guardProjectRevision && cwd);
+  if (guardProject && (write !== "user" || !read.includes("project")))
+    throw Error("A project revision requires a user write and a project read");
+  let observedProject: string | undefined;
+  const guarded = {
+    async read(address: CredentialFileAddress) {
+      const snapshot = await files.read(address);
+      if (guardProject && address.scope === "project") observedProject = snapshot.revision;
+      return snapshot;
+    },
+    async commit(
+      address: CredentialFileAddress,
+      expectedRevision: string,
+      file: CredentialStoreFile,
+    ) {
+      await assertCurrent?.();
+      if (!guardProject) return files.commit(address, expectedRevision, file);
+      if (!observedProject) throw Error("Missing credential project revision");
+      return issue<boolean>("credentials/commit", {
+        ...address,
+        expectedRevision,
+        file,
+        projectGuard: { cwd, revision: observedProject },
+      });
+    },
+  };
   return new CredentialStore(cwd).withAsyncCipher(guarded, read, write, work);
 }
 

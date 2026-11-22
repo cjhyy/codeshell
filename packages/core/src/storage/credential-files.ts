@@ -2,10 +2,21 @@ import { createHash } from "node:crypto";
 import { lstatSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { isAbsolute, join } from "node:path";
-import { acquireFileLock, mutateJsonFile, readBoundedJsonFile } from "../utils/file-mutex.js";
+import {
+  acquireFileLock,
+  acquireLockOnPath,
+  mutateJsonFile,
+  readBoundedJsonFile,
+  writeFileAtomic,
+} from "../utils/file-mutex.js";
+import { retirementCount } from "../credentials/remote-link-retirement.js";
 import type { CredentialStoreFile } from "../credentials/types.js";
 
-export const credentialCommands = ["credentials/read", "credentials/commit"] as const;
+export const credentialCommands = [
+  "credentials/read",
+  "credentials/commit",
+  "credentials/pendingRetirements",
+] as const;
 export type CredentialFileCommand = (typeof credentialCommands)[number];
 export interface CredentialFileAddress {
   scope: "user" | "project";
@@ -34,14 +45,15 @@ function revisionOf(raw: string | undefined): string {
     .update(raw === undefined ? "missing" : "file:" + raw)
     .digest("hex");
 }
-function image(raw: string | undefined): CredentialFileSnapshot {
-  let file: CredentialStoreFile;
+function parseFile(raw: string | undefined): CredentialStoreFile {
   try {
-    file = raw === undefined ? { version: 1, credentials: [] } : checkedFile(JSON.parse(raw));
+    return raw === undefined ? { version: 1, credentials: [] } : checkedFile(JSON.parse(raw));
   } catch {
     throw new Error("Invalid credential store");
   }
-  return { file, revision: revisionOf(raw) };
+}
+function image(raw: string | undefined): CredentialFileSnapshot {
+  return { file: parseFile(raw), revision: revisionOf(raw) };
 }
 function assertPermit(value: unknown): void {
   if (
@@ -61,35 +73,39 @@ export function credentialFileCommand(
   command: CredentialFileCommand,
   input: unknown,
   permit?: unknown,
-): CredentialFileSnapshot | boolean {
-  if (!input || typeof input !== "object") throw new Error("Invalid credential request");
+): CredentialFileSnapshot | boolean | number {
+  if (!input || typeof input !== "object" || Array.isArray(input))
+    throw new Error("Invalid credential request");
   const p = input as Partial<CredentialFileAddress> & {
     expectedRevision?: unknown;
     file?: unknown;
+    projectGuard?: { cwd?: unknown; revision?: unknown };
   };
-  const allowed =
-    command === "credentials/read"
+  const counting = command === "credentials/pendingRetirements";
+  const allowed = counting
+    ? []
+    : command === "credentials/read"
       ? ["scope", "cwd"]
-      : ["scope", "cwd", "expectedRevision", "file"];
+      : ["scope", "cwd", "expectedRevision", "file", "projectGuard"];
   if (Object.keys(p).some((k) => !allowed.includes(k)))
     throw new Error("Invalid credential request");
-  const base = credentialDirectory(userDir, p);
+  const base = credentialDirectory(userDir, counting ? { scope: "user" } : p);
   const path = join(base, "credentials.json");
-  if (command === "credentials/read" && !checkCredentialDirectory(base)) {
+  function read(raw: string | undefined) {
+    const result = counting ? retirementCount(parseFile(raw).credentials) : image(raw);
     assertPermit(permit);
-    return image(undefined);
+    return result;
   }
+  const readOnly = counting || command === "credentials/read";
+  if (readOnly && !checkCredentialDirectory(base)) return read(undefined);
   mkdirSync(base, { recursive: true, mode: 0o700 });
   checkCredentialDirectory(base);
-  if (command === "credentials/read")
-    return mutateJsonFile<string | undefined, CredentialFileSnapshot>(path, {
+  if (readOnly)
+    return mutateJsonFile<string | undefined, number | CredentialFileSnapshot>(path, {
       maxBytes,
       parse: (raw) => raw,
       serialize: (raw) => raw!,
-      mutation: (raw) => {
-        assertPermit(permit);
-        return { result: image(raw) };
-      },
+      mutation: (raw) => ({ result: read(raw) }),
     })!;
   if (
     command !== "credentials/commit" ||
@@ -99,6 +115,47 @@ export function credentialFileCommand(
     throw new Error("Invalid credential commit");
   const file = checkedFile(p.file);
   const serialized = JSON.stringify(file, null, 2) + "\n";
+  if (p.projectGuard !== undefined) {
+    const guard = p.projectGuard;
+    if (
+      p.scope !== "user" ||
+      !guard ||
+      typeof guard !== "object" ||
+      Object.keys(guard).some((k) => k !== "cwd" && k !== "revision") ||
+      typeof guard.cwd !== "string" ||
+      typeof guard.revision !== "string" ||
+      !/^[a-f0-9]{64}$/.test(guard.revision)
+    )
+      throw new Error("Invalid credential project revision");
+    const project = credentialDirectory(userDir, { scope: "project", cwd: guard.cwd });
+    // The project file may not exist yet. Its directory lock also excludes the
+    // first writer of a project shadow; never recreate a deleted workspace.
+    if (!checkCredentialDirectory(project)) {
+      try {
+        mkdirSync(project, { mode: 0o700 });
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+      }
+      checkCredentialDirectory(project);
+    }
+    if (Buffer.byteLength(serialized) > maxBytes) throw Error("Credential store is too large");
+    return withUserRevisionLock(
+      base,
+      project,
+      { user: p.expectedRevision, project: guard.revision },
+      (current) => {
+        const releaseProject = acquireLockOnPath(project);
+        try {
+          if (!current()) return false;
+          assertPermit(permit);
+          writeFileAtomic(path, serialized, 0o600);
+          return true;
+        } finally {
+          releaseProject();
+        }
+      },
+    );
+  }
   return mutateJsonFile<string | undefined, boolean>(path, {
     maxBytes,
     mode: 0o600,
@@ -146,6 +203,17 @@ export function withProfileCredentialRevisions<T>(
 ): T {
   const user = credentialDirectory(undefined, { scope: "user" });
   const project = credentialDirectory(undefined, { scope: "project", cwd });
+  return withUserRevisionLock(user, project, expected, write);
+}
+
+/** The caller takes the project directory lock inside write. Both credential
+ * commits and profile adoption always acquire user first, or one lock for aliases. */
+function withUserRevisionLock<T>(
+  user: string,
+  project: string,
+  expected: ProfileCredentialRevisions,
+  write: (areCurrent: () => boolean) => T,
+): T {
   mkdirSync(user, { recursive: true, mode: 0o700 });
   const userInfo = checkCredentialDirectory(user)!;
   const projectInfo = checkCredentialDirectory(project);
