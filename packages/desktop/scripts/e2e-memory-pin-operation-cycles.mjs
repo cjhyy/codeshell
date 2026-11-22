@@ -15,6 +15,7 @@ import {
   launchCodeShellElectron,
   makeIsolatedElectronHome,
   navigateSettingsMenu,
+  seedViewOnlyWorkbench,
   waitForAsyncFunction,
 } from "./electron-harness.mjs";
 import { prepareConfinedElectronFixture } from "./confined-electron-fixture.mjs";
@@ -229,6 +230,7 @@ try {
     settingsBundleSHA256: hash(await readFile(join(appDir, "out/renderer/assets", settingsBundle))),
     coreMemorySHA256: hash(await readFile(resolve(appDir, "../core/dist/session/memory.js"))),
   };
+  await seedViewOnlyWorkbench(isolated, [project]);
   await write(join(isolated.codeShellHome, "settings.json"), { autoUpdates: false });
   await write(join(isolated.codeShellHome, "desktop/recents.json"), [
     { path: project, name: "Owned memory project", lastOpenedAt: Date.now() },
@@ -382,25 +384,10 @@ ipcMain.handle = (channel, listener) => handle(channel, !["memory:list", "memory
     localStorage.setItem("codeshell.uiLanguage", "en");
     window.dispatchEvent(new window.Event("codeshell:language-changed"));
   });
-  const viewOnly = win.getByRole("button", { name: /仅查看|View only/i });
-  if (
-    await viewOnly.waitFor({ state: "visible", timeout: 2_000 }).then(
-      () => true,
-      () => false,
-    )
-  )
-    await viewOnly.click();
   await win
     .locator("aside")
     .getByRole("button", { name: "Owned memory project", exact: true })
     .click();
-  if (
-    await viewOnly.waitFor({ state: "visible", timeout: 2_000 }).then(
-      () => true,
-      () => false,
-    )
-  )
-    await viewOnly.click();
   stage = "seed through production memory IPC";
   const seeded = await win.evaluate(
     async ({ project, names, bodies }) => {
