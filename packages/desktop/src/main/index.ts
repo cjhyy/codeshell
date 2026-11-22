@@ -3096,7 +3096,7 @@ const { externalRuntimeModelService } = registerExternalRuntimeIpc({
   externalRuntimeApprovals: () => externalRuntime.approvals,
 });
 const { sweepStaleWorktrees } = registerGitReviewIpc({ knownGitRoots, business: desktopHost.callBusiness, documentSignal: desktopHost.documentSignal });
-registerWorkspaceFilesIpc({ appRendererNavigation, mainWindows, assertRendererSessionAccess });
+registerWorkspaceFilesIpc({ appRendererNavigation, mainWindows, assertRendererSessionAccess, business: desktopHost.callBusiness, documentSignal: desktopHost.documentSignal });
 // Authoritative no-repo conversation cwd (~/.code-shell/no-repo). The renderer
 // is a thin client and must NOT recompute homedir() itself; it asks main so the
 // path it writes capabilityOverrides to is byte-identical to the worker cwd.

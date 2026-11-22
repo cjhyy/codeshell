@@ -1,4 +1,6 @@
 import { BrowserWindow, dialog, ipcMain } from "electron";
+import type { IpcMainInvokeEvent } from "electron";
+import type { CallShellBusiness } from "../shared/shell-business-contracts.js";
 import { AppRendererNavigation } from "./app-renderer-navigation.js";
 import { resolveNoRepoCwd } from "./agent-bridge.js";
 import { requireRendererProjectPath } from "./renderer-project-path.js";
@@ -11,8 +13,6 @@ import {
   revealInFinder,
   openPath,
   openInEditor,
-  undoFiles,
-  type UndoFilesResult,
 } from "./desktop-services.js";
 import { turnUndoState, undoTurn, redoTurn } from "./file-history-service.js";
 import { resolveRendererConfigurationTarget } from "./renderer-configuration-authority.js";
@@ -20,6 +20,8 @@ import { resolveRendererConfigurationTarget } from "./renderer-configuration-aut
 export interface WorkspaceFilesIpcDeps {
   appRendererNavigation: AppRendererNavigation;
   mainWindows: Set<BrowserWindow>;
+  business: CallShellBusiness;
+  documentSignal(event: IpcMainInvokeEvent): AbortSignal;
   assertRendererSessionAccess: (sessionId: unknown, senderWebContentsId: number) => string;
 }
 
@@ -58,22 +60,8 @@ export function registerWorkspaceFilesIpc(deps: WorkspaceFilesIpcDeps) {
     return openInEditor(p, authorizedCwd);
   });
 
-  ipcMain.handle(
-    "files:undo",
-    async (_e, cwd: string, paths: string[]): Promise<UndoFilesResult[]> => {
-      cwd = await requireRendererProjectPath(cwd);
-      if (
-        !Array.isArray(paths) ||
-        paths.length === 0 ||
-        paths.length > 100 ||
-        paths.some(
-          (path) => typeof path !== "string" || path.length > 32_768 || path.includes("\0"),
-        )
-      ) {
-        throw new Error("files:undo requires non-empty paths");
-      }
-      return undoFiles(cwd, paths);
-    },
+  ipcMain.handle("files:undo", (event, cwd: string, paths: string[]) =>
+    deps.business("git/undoFiles", { cwd, paths }, deps.documentSignal(event)),
   );
 
   // Turn-level undo/redo via core FileHistory snapshots (keyed by sessionId, not

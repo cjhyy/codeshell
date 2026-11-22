@@ -973,8 +973,8 @@ async function syntheticUntrackedDiff(cwd: string, file: string): Promise<string
  * — overwrites the working copy with the index-or-HEAD version, which
  * is what the user almost always means by "undo this edit".
  *
- * For untracked / newly-created files: `git ls-files --error-unmatch`
- * fails, so we delete the path from disk instead. We never `rm` a
+ * For untracked / newly-created files, a successful empty listing permits
+ * removal of that one file. We never `rm` a
  * tracked file — that would be surprising and easy to recover the
  * wrong direction from.
  *
@@ -988,50 +988,84 @@ export interface UndoFilesResult {
   error?: string;
 }
 
-export async function undoFiles(cwd: string, paths: string[]): Promise<UndoFilesResult[]> {
-  const results: UndoFilesResult[] = [];
-  for (const rel of paths) {
-    // Resolve under cwd; reject paths that escape it.
-    const abs = path.resolve(cwd, rel);
-    if (!abs.startsWith(path.resolve(cwd) + path.sep) && abs !== path.resolve(cwd)) {
-      results.push({
-        path: rel,
-        ok: false,
-        action: "skip",
-        error: "refused: path escapes cwd",
-      });
-      continue;
-    }
-    // Tracked? `git ls-files --error-unmatch -- <path>` exits 0 if so.
-    let tracked: boolean;
+// A missing parent is valid for a tracked file deleted with its directory.
+// Verify its nearest existing ancestor before Git recreates the path.
+async function assertUndoParent(root: string, parent: string): Promise<void> {
+  for (let current = parent; ; current = path.dirname(current)) {
     try {
-      await execFileAsync("git", ["ls-files", "--error-unmatch", "--", rel], {
-        cwd,
-      });
-      tracked = true;
-    } catch {
-      tracked = false;
-    }
-    try {
-      if (tracked) {
-        await execFileAsync("git", ["restore", "--source=HEAD", "--worktree", "--", rel], { cwd });
-        results.push({ path: rel, ok: true, action: "restore" });
-      } else {
-        // Untracked file — delete it from disk. Only do this if the
-        // file actually exists; otherwise it's a no-op success.
-        try {
-          await fs.unlink(abs);
-        } catch (e: unknown) {
-          if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
-        }
-        results.push({ path: rel, ok: true, action: "remove" });
+      if (path.relative(current, await fs.realpath(current)) !== "") {
+        throw Error("refused: undo path contains a redirected directory");
       }
-    } catch (e: unknown) {
+      return;
+    } catch (error) {
+      if (current === root || (error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      // A dangling symlink is not a missing directory.
+      const entry = await fs.lstat(current).catch((error: NodeJS.ErrnoException) => {
+        if (error.code !== "ENOENT") throw error;
+      });
+      if (entry) throw Error("refused: undo path contains an unavailable directory");
+    }
+  }
+}
+
+export async function undoFiles(
+  cwd: string,
+  paths: string[],
+  beforeChange?: () => Promise<void>,
+): Promise<UndoFilesResult[]> {
+  const root = await fs.realpath(cwd);
+  const results: UndoFilesResult[] = [];
+  for (const file of paths) {
+    let action: UndoFilesResult["action"] = "skip";
+    try {
+      const rel = path.relative(cwd, path.resolve(cwd, file));
+      const components = rel.split(path.sep);
+      if (
+        !rel ||
+        components[0] === ".." ||
+        path.isAbsolute(rel) ||
+        components.some((part) => part.toLowerCase() === ".git")
+      ) {
+        throw Error("refused: undo requires a file inside the worktree");
+      }
+      const absolute = path.join(root, rel);
+      const parent = path.dirname(absolute);
+      await assertUndoParent(root, parent);
+      // No matches mean untracked. A Git failure must leave the file intact.
+      const literal = rel.split(path.sep).join("/");
+      const { stdout } = await execFileAsync(
+        "git",
+        ["--literal-pathspecs", "ls-files", "-z", "--", literal],
+        { cwd: root },
+      );
+      if (stdout && stdout !== literal + "\0") throw Error("refused: undo requires one file");
+      const entry = await fs.lstat(absolute).catch((error: NodeJS.ErrnoException) => {
+        if (error.code !== "ENOENT") throw error;
+      });
+      if (entry && !entry.isFile() && !entry.isSymbolicLink())
+        throw Error("refused: undo requires a file");
+      await assertUndoParent(root, parent);
+      await beforeChange?.();
+      if (stdout) {
+        action = "restore";
+        await execFileAsync(
+          "git",
+          ["--literal-pathspecs", "restore", "--source=HEAD", "--worktree", "--", literal],
+          { cwd: root },
+        );
+      } else {
+        action = "remove";
+        await fs.unlink(absolute).catch((error: NodeJS.ErrnoException) => {
+          if (error.code !== "ENOENT") throw error;
+        });
+      }
+      results.push({ path: file, ok: true, action });
+    } catch (error) {
       results.push({
-        path: rel,
+        path: file,
         ok: false,
-        action: tracked ? "restore" : "remove",
-        error: String(e instanceof Error ? e.message : e),
+        action,
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   }

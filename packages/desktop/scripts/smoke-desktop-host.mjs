@@ -163,6 +163,13 @@ utilityProcess.fork = function (...args) {
   assert.equal(git("branch", "--show-current"), "main");
   assert.match(git("stash", "list"), /auto-stash before switching to main/);
 
+  const undoPath = join(mount, "host-file.txt");
+  const committed = await readFile(undoPath, "utf8");
+  await writeFile(undoPath, "owned edit to revert");
+  const undoResult = await second.evaluate((cwd) => window.codeshell.undoFiles(cwd, ["host-file.txt"]), mount);
+  assert.deepEqual(undoResult, [{ path: "host-file.txt", ok: true, action: "restore" }]);
+  assert.equal(await readFile(undoPath, "utf8"), committed);
+
   // A status poll must not refresh the index when the tracked file has a
   // new timestamp but identical contents. Another window can be mid-stash.
   await utimes(join(mount, "host-file.txt"), 1_000_000, 1_000_000);

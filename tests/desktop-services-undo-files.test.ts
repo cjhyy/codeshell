@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, beforeEach, expect, mock, test } from "bun:test";
-import { mkdtemp, rm, writeFile, readFile, access } from "node:fs/promises";
+import { mkdtemp, symlink, mkdir, rm, writeFile, readFile, access } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -139,4 +139,31 @@ test("reports per-path mixed outcomes in one batch", async () => {
     { p: "../escape", ok: false, a: "skip" },
     { p: "missing.txt", ok: true, a: "remove" },
   ]);
+});
+
+test("treats wildcard names literally and preserves directory contents", async () => {
+  await mkdir(join(dir, "nested"));
+  await writeFile(join(dir, "nested", "keep.txt"), "tracked");
+  await git(["add", "nested/keep.txt"]);
+  await git(["commit", "-m", "nested"]);
+  await writeFile(join(dir, "nested", "keep.txt"), "edited");
+  expect((await undoFiles(dir, ["nested"]))[0]?.ok).toBe(false);
+  expect(await readFile(join(dir, "nested", "keep.txt"), "utf8")).toBe("edited");
+  await writeFile(join(dir, "[x].txt"), "literal");
+  await writeFile(join(dir, "x.txt"), "other");
+  expect((await undoFiles(dir, ["[x].txt"]))[0]?.ok).toBe(true);
+  expect(await readFile(join(dir, "x.txt"), "utf8")).toBe("other");
+});
+
+test("a failed Git lookup and a redirected parent never authorize deletion", async () => {
+  const outside = await mkdtemp(join(tmpdir(), "codeshell-undo-outside-"));
+  try {
+    await writeFile(join(outside, "keep"), "original");
+    await symlink(outside, join(dir, "alias"), process.platform === "win32" ? "junction" : "dir");
+    expect((await undoFiles(dir, ["alias/keep"]))[0]?.ok).toBe(false);
+    expect((await undoFiles(outside, ["keep"]))[0]?.ok).toBe(false);
+    expect(await readFile(join(outside, "keep"), "utf8")).toBe("original");
+  } finally {
+    await rm(outside, { recursive: true, force: true });
+  }
 });

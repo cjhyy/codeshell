@@ -1,7 +1,11 @@
 import { isAbsolute } from "node:path";
 import { normalizeWorktreeBranchPrefix } from "@cjhyy/code-shell-capability-coding/git";
-import { requireRendererProjectPrimary } from "../../main/renderer-project-path.js";
 import {
+  requireRendererProjectPath,
+  requireRendererProjectPrimary,
+} from "../../main/renderer-project-path.js";
+import {
+  undoFiles,
   cleanupStaleWorktrees,
   stashAndSwitchGitBranch,
   switchGitBranch,
@@ -49,6 +53,29 @@ export function gitOperations() {
       } finally {
         if (changing.get(first.path) === action) changing.delete(first.path);
       }
+    },
+    "git/undoFiles": async ({ cwd, paths }, grant) => {
+      if (
+        !Array.isArray(paths) ||
+        !paths.length ||
+        paths.length > 100 ||
+        paths.some(
+          (file) => typeof file !== "string" || !file || file.length > 32768 || file.includes("\0"),
+        )
+      ) {
+        throw Error("Invalid files to undo");
+      }
+      const initial = await requireRendererProjectPath(cwd);
+      let claimed = false;
+      return undoFiles(initial, paths, async () => {
+        if ((await requireRendererProjectPath(cwd)) !== initial)
+          throw Error("Project changed before undo");
+        grant.assertCurrent();
+        if (!claimed) {
+          claimBusinessCommit(grant.permit);
+          claimed = true;
+        }
+      });
     },
     "git/sweepTracked": ({ root, graceMinutes, prefix }, grant) => {
       // Native lifecycle owns the set of roots reached via valid Session workspace operations.
