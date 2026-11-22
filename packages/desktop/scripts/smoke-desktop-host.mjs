@@ -1,3 +1,4 @@
+import { gitRepositoryId } from "@cjhyy/code-shell-capability-coding/git";
 import { execFileSync } from "node:child_process";
 /* global window */
 import { verifyPairedHostTerminal } from "./paired-host-terminal.mjs";
@@ -84,6 +85,7 @@ try {
       parentSessionId: null,
       title: "Host indexed row",
       cwd: mount,
+      project: { projectId: "host-smoke-project", mainRootId: "root" },
     }),
   );
   await writeFile(join(directory, "transcript.jsonl"), JSON.stringify({
@@ -180,6 +182,19 @@ utilityProcess.fork = function (...args) {
   assert.equal(sessionWorkspace.status.branch, "main");
   assert.equal(sessionWorkspace.branches.current, "main");
   assert(Array.isArray(sessionWorkspace.profiles));
+  const version = {
+    kind: "git-blob", commit: git("rev-parse", "HEAD"), blob: git("rev-parse", "HEAD:host-file.txt"),
+    repoPath: "host-file.txt", worktreePath: mount, linkedWorktree: false,
+    repositoryId: await gitRepositoryId(join(mount, ".git")),
+  };
+  const historical = await first.evaluate(async (ref) => Promise.all([
+    window.codeshell.readSessionFileVersion("index-visible", "root", ref),
+    window.codeshell.readProjectFileVersion("host-smoke-project", "root", ref),
+  ]), version);
+  for (const file of historical) {
+    assert.equal(file.status, "ok");
+    assert.equal(file.text, "from-workspace");
+  }
   const search = await first.evaluate(() => window.codeshell.searchSessionContent("search receipt"));
   assert(search.matches.some((match) => match.sessionId === "index-visible" &&
     match.snippets.some((snippet) => snippet.turnNumber === 4 && snippet.text.includes("search receipt"))));

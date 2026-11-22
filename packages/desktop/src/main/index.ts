@@ -111,9 +111,7 @@ import {
 } from "./external-runtime-state.js";
 import { parseExternalRuntimeModelKey } from "../shared/external-runtime-models.js";
 import {
-  requireRendererProject,
   requireRendererProjectPath,
-  requireRendererProjectRoot,
 } from "./renderer-project-path.js";
 import { PetStateAggregator } from "./pet/pet-state-aggregator.js";
 import { nativeMimiExternalActivity } from "./desktop-host/mimi-external-client.js";
@@ -302,7 +300,6 @@ import {
   setCapabilityOverride,
 } from "./capabilities-service.js";
 import { registerSourceCatalogIpc } from "./source-catalog-ipc.js";
-import { createRendererProjectFileSearch } from "./file-search-service.js";
 import { checkSkillUpdateEntry } from "./skill-update-entry.js";
 import { listRuns } from "./runs-service.js";
 import {
@@ -3007,13 +3004,7 @@ ipcMain.handle(
   async (_e, target: RendererConfigurationTarget | null, filePath: unknown) =>
     checkSkillUpdateEntry(await requireRendererListedSkillPath(target, filePath)),
 );
-const rendererProjectFileSearch = createRendererProjectFileSearch({
-  requireProject: requireRendererProject,
-  requireRoot: requireRendererProjectRoot,
-});
-ipcMain.handle("files:searchProject", (_e, projectId: unknown, query: unknown, rootId?: unknown) =>
-  rendererProjectFileSearch(projectId, query, rootId),
-);
+
 
 
 registerAttachmentsIpc({

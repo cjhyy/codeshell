@@ -1,11 +1,9 @@
 import { BrowserWindow, dialog, ipcMain } from "electron";
 import { AppRendererNavigation } from "./app-renderer-navigation.js";
 import { resolveNoRepoCwd } from "./agent-bridge.js";
-import { requireRendererProjectPath, requireRendererProjectRoot } from "./renderer-project-path.js";
+import { requireRendererProjectPath } from "./renderer-project-path.js";
 import { requireRendererOrSessionPath, type PtyStartRequest } from "./renderer-session-path.js";
 import { ptyStart, ptyWrite, ptyResize, ptyKill, assertValidPtySessionId } from "./pty-service.js";
-import { readDirectory, readFile as fsReadFile, fileExists as fsFileExists } from "./fs-service.js";
-import { registerFileVersionIpc } from "./file-version-ipc.js";
 import { registerLocalFilePreviewIpc } from "./local-file-preview-ipc.js";
 import { registerProfilePluginExportIpc } from "./profile-plugin-export-ipc.js";
 import {
@@ -17,12 +15,6 @@ import {
   type UndoFilesResult,
 } from "./desktop-services.js";
 import { turnUndoState, undoTurn, redoTurn } from "./file-history-service.js";
-import { assertDesktopSessionId } from "./session-validation.js";
-import {
-  readSessionDirectoryForUi,
-  readSessionFileForUi,
-  sessionFileExistsForUi,
-} from "./session-fs-service.js";
 import { resolveRendererConfigurationTarget } from "./renderer-configuration-authority.js";
 
 export interface WorkspaceFilesIpcDeps {
@@ -31,7 +23,7 @@ export interface WorkspaceFilesIpcDeps {
   assertRendererSessionAccess: (sessionId: unknown, senderWebContentsId: number) => string;
 }
 
-/** Shell open/reveal, file and turn undo, terminal (pty) and project/Session file-read routes. */
+/** Shell open/reveal, file and turn undo, terminal (pty) routes. */
 export function registerWorkspaceFilesIpc(deps: WorkspaceFilesIpcDeps) {
   const { appRendererNavigation, mainWindows, assertRendererSessionAccess } = deps;
   ipcMain.handle("shell:openExternal", async (event, url: string) => {
@@ -125,7 +117,6 @@ export function registerWorkspaceFilesIpc(deps: WorkspaceFilesIpcDeps) {
   });
 
   // ── Filesystem reads — file-browser panel ──────────────────────────────────
-  registerFileVersionIpc(ipcMain);
   registerLocalFilePreviewIpc(ipcMain, (sender) =>
     [...mainWindows].some((window) => !window.isDestroyed() && window.webContents === sender),
   );
@@ -136,40 +127,5 @@ export function registerWorkspaceFilesIpc(deps: WorkspaceFilesIpcDeps) {
     (sender) =>
       [...mainWindows].some((window) => !window.isDestroyed() && window.webContents === sender),
     resolveRendererConfigurationTarget,
-  );
-  ipcMain.handle("fsRoot:readDir", async (_e, projectId: string, rootId: string, dir?: string) => {
-    const root = await requireRendererProjectRoot(projectId, rootId);
-    return readDirectory(root.path, typeof dir === "string" && dir ? dir : root.path);
-  });
-  ipcMain.handle("fsRoot:readFile", async (_e, projectId: string, rootId: string, path: string) => {
-    const root = await requireRendererProjectRoot(projectId, rootId);
-    if (typeof path !== "string" || !path) throw new Error("fsRoot:readFile requires path");
-    return fsReadFile(root.path, path);
-  });
-  ipcMain.handle("fsRoot:exists", async (_e, projectId: string, rootId: string, path: string) => {
-    const root = await requireRendererProjectRoot(projectId, rootId).catch(() => null);
-    if (!root || typeof path !== "string" || !path) return false;
-    return fsFileExists(root.path, path);
-  });
-  ipcMain.handle(
-    "fsSession:readDir",
-    async (_e, sessionId: string, rootId: string, dir?: string) => {
-      assertDesktopSessionId(sessionId);
-      return readSessionDirectoryForUi(sessionId, rootId, dir);
-    },
-  );
-  ipcMain.handle(
-    "fsSession:readFile",
-    async (_e, sessionId: string, rootId: string, path: string) => {
-      assertDesktopSessionId(sessionId);
-      return readSessionFileForUi(sessionId, rootId, path);
-    },
-  );
-  ipcMain.handle(
-    "fsSession:exists",
-    async (_e, sessionId: string, rootId: string, path: string) => {
-      assertDesktopSessionId(sessionId);
-      return sessionFileExistsForUi(sessionId, rootId, path);
-    },
   );
 }

@@ -233,24 +233,6 @@ export async function searchProjectFiles(
     .map(({ hit }) => hit);
 }
 
-/** Resolve opaque registry identities before searching or applying the global
- * cap. Only an omitted root id retains the project-wide discovery behavior. */
-export function createRendererProjectFileSearch(authority: {
-  requireProject: (projectId: unknown) => Promise<{ roots: readonly ProjectSearchRoot[] }>;
-  requireRoot: (projectId: unknown, rootId: unknown) => Promise<{ rootId: string; path: string }>;
-}) {
-  return async (projectId: unknown, query: unknown, rootId?: unknown) => {
-    const q = typeof query === "string" ? query : "";
-    if (q.length > 512) throw new Error("files:searchProject query is too long");
-    if (rootId !== undefined) {
-      const root = await authority.requireRoot(projectId, rootId);
-      return searchProjectFiles([{ id: root.rootId, path: root.path }], q);
-    }
-    const project = await authority.requireProject(projectId);
-    return searchProjectFiles(project.roots, q);
-  };
-}
-
 export async function searchFiles(cwd: string, query: string): Promise<FileSearchHit[]> {
   if (!cwd || typeof cwd !== "string") return [];
   const entries = await loadFileList(cwd);

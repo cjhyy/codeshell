@@ -126,6 +126,58 @@ function review<R>(
   );
 }
 
+export function projectFileSearchRead(lookupProject = requireRendererProject) {
+  return businessRead(
+    "files/searchProject",
+    (input) => {
+      const args = businessArguments(input, ["projectId", "query", "rootId"]);
+      if (typeof args.query !== "string" || args.query.length > 512)
+        throw new InvalidParams("Invalid file search query");
+      return {
+        projectId: textArgument(args.projectId),
+        query: args.query,
+        rootId: args.rootId === undefined ? undefined : textArgument(args.rootId),
+      };
+    },
+    ({ projectId, rootId, query }, ctx) =>
+      readCurrentWorkspace(
+        async () => {
+          const p = await lookupProject(projectId);
+          const roots = (rootId ? p.roots.filter((r) => r.id === rootId) : p.roots).map((r) => ({
+            id: r.id,
+            path: requireMountedProjectRoot(r),
+          }));
+          if (rootId && !roots.length) throw new Error("Project root not found");
+          return { revision: p.revision, roots };
+        },
+        ctx,
+        ({ roots }) => searchProjectFiles(roots, query),
+      ),
+  );
+}
+
+export function fileVersionRead(
+  list: ListSessions,
+  lookup = resolveFileRoot,
+  readVersion = readGitBlobVersion,
+) {
+  return scopedBusinessRead(
+    "files/version",
+    list,
+    (input) => {
+      const args = businessArguments(input, ["owner", "rootId", "ref"]);
+      return { ...fileRoot(args), ref: args.ref as ExternalGitBlobRef };
+    },
+    fileScope,
+    (input, ctx) =>
+      readCurrentWorkspace(
+        () => lookup(input),
+        ctx,
+        ({ path }) => readVersion(path, input.ref),
+      ),
+  );
+}
+
 export function workspaceReads(list: ListSessions, trackGitRoot: (root: string) => void) {
   async function atSessionRoot<T>(
     id: string,
@@ -176,42 +228,8 @@ export function workspaceReads(list: ListSessions, trackGitRoot: (root: string) 
         return false;
       }
     }),
-    scopedBusinessRead(
-      "files/version",
-      list,
-      (input) => {
-        const args = businessArguments(input, ["owner", "rootId", "ref"]);
-        return { ...fileRoot(args), ref: args.ref as ExternalGitBlobRef };
-      },
-      fileScope,
-      (input, ctx) => atFileRoot(input, ctx, (root) => readGitBlobVersion(root, input.ref)),
-    ),
-    businessRead(
-      "files/searchProject",
-      (input) => {
-        const args = businessArguments(input, ["projectId", "query", "rootId"]);
-        if (typeof args.query !== "string" || args.query.length > 512) throw new InvalidParams();
-        return {
-          projectId: textArgument(args.projectId),
-          query: args.query,
-          rootId: args.rootId === undefined ? undefined : textArgument(args.rootId),
-        };
-      },
-      ({ projectId, rootId, query }, ctx) =>
-        readCurrentWorkspace(
-          async () => {
-            const p = await requireRendererProject(projectId);
-            const roots = (rootId ? p.roots.filter((r) => r.id === rootId) : p.roots).map((r) => ({
-              id: r.id,
-              path: requireMountedProjectRoot(r),
-            }));
-            if (rootId && !roots.length) throw new Error("Project root not found");
-            return { revision: p.revision, roots };
-          },
-          ctx,
-          ({ roots }) => searchProjectFiles(roots, query),
-        ),
-    ),
+    fileVersionRead(list),
+    projectFileSearchRead(),
     businessRead("git/projectStatus", project, ({ projectId }, ctx) =>
       atPrimary(projectId, ctx, getGitStatus),
     ),

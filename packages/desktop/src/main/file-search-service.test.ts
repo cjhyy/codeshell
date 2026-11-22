@@ -14,12 +14,9 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  createRendererProjectFileSearch,
-  searchFiles,
-  searchProjectFiles,
-} from "./file-search-service.js";
-import { requireRendererProject, requireRendererProjectRoot } from "./renderer-project-path.js";
+import { searchFiles, searchProjectFiles } from "./file-search-service.js";
+import { projectFileSearchRead } from "./desktop-host/workspace-reads.js";
+import { requireRendererProject } from "./renderer-project-path.js";
 import type { LocalProject } from "./project-store.js";
 import { createProjectAuthorityApi } from "../preload/project-authority-api.js";
 
@@ -118,22 +115,33 @@ async function projectSearchFixture() {
     revision: 1,
   };
   const projects = [project];
-  const handler = createRendererProjectFileSearch({
-    requireProject: (projectId) => requireRendererProject(projectId, { projects }),
-    requireRoot: (projectId, rootId) => requireRendererProjectRoot(projectId, rootId, { projects }),
-  });
-  const calls: unknown[][] = [];
-  const api = createProjectAuthorityApi({
-    invoke: async (channel, ...args) => {
-      expect(channel).toBe("files:searchProject");
-      calls.push(args);
-      return handler(args[0], args[1], args[2]);
+  const [method, registration] = projectFileSearchRead((id) =>
+    requireRendererProject(id, { projects }),
+  );
+  const ctx = {
+    identity: {
+      webContentsId: 1,
+      frameGeneration: 1,
+      frameToken: "fixture",
+      windowKind: "workbench" as const,
     },
-  } as Parameters<typeof createProjectAuthorityApi>[0]);
+    assertCurrent() {},
+  };
+  const handler = async (projectId: string, query: string, rootId?: unknown) =>
+    registration.run(ctx, { projectId, query, rootId });
+  const calls: unknown[][] = [];
+  const api = createProjectAuthorityApi({} as never, undefined, {
+    readBusiness: async (name, params: any) => {
+      expect(name).toBe(method);
+      const { projectId, query, rootId } = params;
+      calls.push(rootId === undefined ? [projectId, query] : [projectId, query, rootId]);
+      return handler(projectId, query, rootId);
+    },
+  } as Parameters<typeof createProjectAuthorityApi>[2]);
   return { active, other, directory, project, handler, api, calls };
 }
 
-describe("root-scoped preload and authorized Main search", () => {
+describe("root-scoped preload and authorized Host search", () => {
   test("filters the selected registered root before the top30 cap while preserving global callers", async () => {
     const { api, calls, active } = await projectSearchFixture();
     const global = await api.searchProjectFiles("project-1", "needle");
@@ -164,12 +172,12 @@ describe("root-scoped preload and authorized Main search", () => {
     await expect(api.searchProjectFiles("project-1", "needle", "foreign-root")).rejects.toThrow(
       "root not found",
     );
-    await expect(handler("project-1", "needle", null)).rejects.toThrow("root id is required");
+    await expect(handler("project-1", "needle", null)).rejects.toThrow("bounded nonempty string");
     await expect(api.searchProjectFiles("foreign-project", "needle", "active")).rejects.toThrow(
       "project not found",
     );
     await expect(api.searchProjectFiles("project-1", "x".repeat(513), "active")).rejects.toThrow(
-      "query is too long",
+      "Invalid file search query",
     );
     project.roots = project.roots.filter((root) => root.id !== "active");
     await expect(api.searchProjectFiles("project-1", "needle", "active")).rejects.toThrow(

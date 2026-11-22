@@ -136,9 +136,6 @@ describe("desktop IPC contract", () => {
       "workspace:authority",
       "projectRegistry:migrateSessionMainRoot",
       "sessions:setArchived",
-      "fsSession:readDir",
-      "fsSession:readFile",
-      "fsSession:exists",
     ];
 
     for (const channel of channels) {
@@ -156,6 +153,15 @@ describe("desktop IPC contract", () => {
       ["workspace:profiles", "workspace/profiles"],
       ["workspace:list", "workspace/list"],
       ["workspace:diff", "workspace/diff"],
+      ["files:searchProject", "files/searchProject"],
+      ["fsRoot:readDir", "files/list"],
+      ["fsRoot:readFile", "files/read"],
+      ["fsRoot:exists", "files/exists"],
+      ["fsSession:readDir", "files/list"],
+      ["fsSession:readFile", "files/read"],
+      ["fsSession:exists", "files/exists"],
+      ["fsSession:readFileVersion", "files/version"],
+      ["fsRoot:readFileVersion", "files/version"],
       ["git:projectStatus", "git/projectStatus"], ["git:projectBranches", "git/projectBranches"],
       ["review:status", "review/status"], ["review:diff", "review/diff"],
       ["review:recentCommits", "review/commits"], ["review:preparePrompt", "review/prompt"],
@@ -215,13 +221,6 @@ describe("desktop IPC contract", () => {
       "sources:unbindProject",
       "sources:pickAndUploadProject",
       "sources:deleteProjectUpload",
-      "files:searchProject",
-      "fsRoot:readDir",
-      "fsRoot:readFile",
-      "fsRoot:exists",
-      "fsSession:readDir",
-      "fsSession:readFile",
-      "fsSession:exists",
     ];
 
     for (const channel of retired) {
@@ -287,17 +286,17 @@ describe("desktop IPC contract", () => {
 test("preload version bridge forwards opaque authority ids and reference", async () => {
   const { createProjectAuthorityApi } = await import("./project-authority-api.js");
   const calls: unknown[][] = [];
-  const api = createProjectAuthorityApi({
-    invoke: async (...args: unknown[]) => {
+  const api = createProjectAuthorityApi({} as never, undefined, {
+    readBusiness: async (...args: unknown[]) => {
       calls.push(args);
       return { status: "unavailable", reason: "object-missing" };
     },
-  } as any);
+  } as Parameters<typeof createProjectAuthorityApi>[2]);
   const ref = { kind: "git-blob" } as any;
   await api.readSessionFileVersion("session", "root", ref);
   await api.readProjectFileVersion("project", "root", ref);
   expect(calls).toEqual([
-    ["fsSession:readFileVersion", "session", "root", ref],
-    ["fsRoot:readFileVersion", "project", "root", ref],
+    ["files/version", { owner: { sessionId: "session" }, rootId: "root", ref }],
+    ["files/version", { owner: { projectId: "project" }, rootId: "root", ref }],
   ]);
 });

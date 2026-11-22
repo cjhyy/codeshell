@@ -30,7 +30,16 @@ import {
   switchSessionWorkspaceForUi,
   type SessionWorkspaceList,
 } from "./session-workspace-service";
-import { readSessionDirectoryForUi, readSessionFileForUi } from "./session-fs-service";
+import { requireSessionFileRootForUi } from "./session-workspace-service.js";
+import { readDirectory, readFile as readWorkspaceFile } from "./fs-service.js";
+
+async function readSessionDirectoryForUi(id: string, rootId: string) {
+  const root = await requireSessionFileRootForUi(id, rootId);
+  return readDirectory(root, root);
+}
+async function readSessionFileForUi(id: string, rootId: string, path: string) {
+  return readWorkspaceFile(await requireSessionFileRootForUi(id, rootId), path);
+}
 import { requireRendererOrSessionPath } from "./renderer-session-path";
 
 const ENV = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_SYSTEM: "/dev/null" };
