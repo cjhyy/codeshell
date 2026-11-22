@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, realpath, rm, symlink } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, realpath, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -7,6 +7,7 @@ import { createElectronTestDiagnostics, observeElectronDiagnostic } from "./elec
 import { ensureElectronKeychainContext } from "./electron-keychain-preflight.mjs";
 import {
   assertStartupCycleSettled,
+  captureStartupWindow,
   resolveStartupEvidence,
   startupMainLogErrors,
 } from "./e2e-startup-operation-cycles.mjs";
@@ -200,5 +201,55 @@ test("evidence canonicalization rejects checkout/HOME aliases before creation", 
     );
   } finally {
     await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("startup frame waits for a paint and bounds only a transient native Viz readback", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "codeshell-startup-frame-"));
+  try {
+    for (const [sequence, reads, expectedError] of [
+      [["UnknownVizError", "png"], 2, null],
+      [Array(3).fill("UnknownVizError"), 3, "UnknownVizError"],
+      [["Frame Gone"], 1, "Frame Gone"],
+      [["hidden"], 1, "Startup workbench is hidden"],
+      [["empty"], 1, "Startup workbench has no compositor frame"],
+    ]) {
+      const order = [];
+      const page = {
+        bringToFront: async () => order.push("activate"),
+        evaluate: async () => order.push("paint"),
+      };
+      const native = {
+        evaluate: async (fn) => {
+          const result = sequence.shift();
+          order.push("read");
+          return fn({
+            isVisible: () => result !== "hidden",
+            webContents: {
+              capturePage: async () => {
+                if (!["png", "empty"].includes(result)) throw Error(result);
+                return { isEmpty: () => result === "empty", toPNG: () => Buffer.from("pixels") };
+              },
+            },
+          });
+        },
+        dispose: async () => order.push("release"),
+      };
+      const output = join(dir, "capture");
+      const capture = captureStartupWindow({ browserWindow: async () => native }, page, output);
+      if (expectedError) await assert.rejects(capture, { message: expectedError });
+      else {
+        await capture;
+        assert.equal(await readFile(output, "utf8"), "pixels");
+        await rm(output);
+      }
+      assert.deepEqual(order, [
+        "activate",
+        ...Array(reads).fill(["paint", "read"]).flat(),
+        "release",
+      ]);
+    }
+  } finally {
+    await rm(dir, { recursive: true, force: true });
   }
 });
