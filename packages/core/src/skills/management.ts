@@ -268,6 +268,7 @@ export function commitSkillDirectory(
   root: string,
   name: string,
   expectedRevision?: string,
+  beforeCommit?: () => void,
 ): InstalledSkill {
   assertSafeSkillName(name);
   const target = join(root, name);
@@ -283,6 +284,7 @@ export function commitSkillDirectory(
     let backedUp = false;
     let installed = false;
     try {
+      beforeCommit?.();
       if (expectedRevision !== undefined) {
         renameSync(target, backup);
         backedUp = true;
@@ -311,6 +313,7 @@ export async function installSkillFromDirectory(
   scope: "user" | "project",
   cwd?: string,
   requestedName?: string,
+  beforeCommit?: () => void,
 ): Promise<InstalledSkill> {
   const name = (requestedName || basename(sourceDir))
     .trim()
@@ -322,7 +325,7 @@ export async function installSkillFromDirectory(
   const root = skillRoot(scope, cwd, true);
   const stage = await stageSkillDirectory(resolve(sourceDir), root);
   try {
-    return commitSkillDirectory(stage, root, name);
+    return commitSkillDirectory(stage, root, name, undefined, beforeCommit);
   } finally {
     await fs.rm(stage, { recursive: true, force: true });
   }
@@ -355,15 +358,18 @@ export function editSkillMarkdown(
 export function removeOwnedSkill(
   filePath: string,
   roots: string[],
-  expectedRevision: string,
+  expectedRevision: string | undefined,
+  beforeCommit?: () => void,
 ): void {
   const dir = assertOwnedSkillDirectory(filePath, roots);
   const root = dirname(dir);
   withSkillDirectoryLock(root, () => {
     assertOwnedSkillDirectory(filePath, roots);
-    if (readSkillBundle(dir).revision !== expectedRevision) throw new SkillConflictError();
+    if (expectedRevision !== undefined && readSkillBundle(dir).revision !== expectedRevision)
+      throw new SkillConflictError();
     // Rename first makes discovery stop atomically and never follows an external child.
     const trash = join(skillMutationDirectory(root), `.skill-removed-${randomUUID()}`);
+    beforeCommit?.();
     renameSync(dir, trash);
     try {
       rmSync(trash, { recursive: true, force: true });

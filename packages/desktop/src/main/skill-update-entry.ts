@@ -24,6 +24,7 @@ import { assertCodeShellMarkdownPath } from "./safe-read.js";
  */
 export async function updateSkillEntry(
   filePath: string,
+  beforeCommit?: () => void,
 ): Promise<SkillUpdateResult> {
   if (typeof filePath !== "string" || !filePath) {
     throw new Error("updateSkillEntry requires a filePath");
@@ -32,12 +33,10 @@ export async function updateSkillEntry(
   // only a canonical SKILL.md path previously emitted by listSkills; otherwise
   // a forged renderer path plus sidecar could replace an arbitrary directory.
   assertCodeShellMarkdownPath(filePath);
-  return updateSkillFromSource(filePath);
+  return updateSkillFromSource(filePath, undefined, beforeCommit);
 }
 
-export async function checkSkillUpdateEntry(
-  filePath: string,
-): Promise<SkillUpdateCheck> {
+export async function checkSkillUpdateEntry(filePath: string): Promise<SkillUpdateCheck> {
   if (typeof filePath !== "string" || !filePath) {
     return {
       filePath: String(filePath),

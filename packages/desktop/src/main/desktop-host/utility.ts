@@ -1,5 +1,6 @@
 import { parseMimiSegmentRange } from "../../shared/mimi-records.js";
 import { hostedMimiSegments } from "../../host/composition/mimi-segments.js";
+import { hostedSkills } from "../../host/composition/skills.js";
 import { wechatLoginOperations } from "../../host/composition/wechat-login.js";
 import { bindExternalProvider } from "../../host/composition/external-provider.js";
 import { electronPrivatePort } from "../../host/native-peer.js";
@@ -125,8 +126,10 @@ const mediaProtocol = hostedMediaProtocol();
 const segments = hostedMimiSegments(storage, historyWorker, (domain) =>
   parent.postMessage({ type: "mimi-records-changed", domain }),
 );
+const skills = hostedSkills(new URL("./skill-worker.mjs", import.meta.url));
 const business = new HostBusinessCalls({
   ...segments,
+  ...skills.methods,
   ...wechatLoginOperations((event) => parent.postMessage({ type: "wechat-login-event", event })),
   "mimi/externalActivity": (input) => historyWorker.mimiExternalActivity(input),
   ...mimiRecordsOperations(storage, (domain) =>
@@ -261,6 +264,7 @@ parent.on("message", ({ data, ports }) => {
         Promise.all([
           index.close(),
           historyWorker.close(),
+          skills.close(),
           worker?.close(),
           transcripts.close(),
           automation.close(),

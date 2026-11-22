@@ -14,6 +14,7 @@ import { tmpdir } from "node:os";
 import {
   downloadSkillTree,
   inspectRepo,
+  installFromGithub,
   parseSkillSourceMeta,
   updateSkillFromSource,
   SKILL_META_FILE,
@@ -61,6 +62,48 @@ test("GitHub preview pins tree and markdown to the reviewed immutable commit", a
     pathInRepo: "SKILL.md",
   });
   expect(requests).toHaveLength(4);
+});
+
+test("publishes all files and pinned provenance before removing the GitHub download", async () => {
+  const cwd = directory();
+  const markdown = "---\nname: fixture\ndescription: Downloaded Skill\n---\nInstructions.\n";
+  globalThis.fetch = (async (input) => {
+    const url = String(input);
+    if (url.includes("/git/trees/"))
+      return Response.json({
+        tree: [
+          { path: "SKILL.md", type: "blob", sha: "skill", mode: "100644" },
+          { path: "asset.txt", type: "blob", sha: "asset", mode: "100644" },
+        ],
+      });
+    if (url.endsWith("/SKILL.md")) return new Response(markdown);
+    if (url.endsWith("/asset.txt")) return new Response("asset");
+    throw new Error("Unexpected fixture URL");
+  }) as typeof fetch;
+  const selected = {
+    name: "fixture",
+    description: "Fixture",
+    dirInRepo: "",
+    pathInRepo: "SKILL.md",
+  };
+  const inspection = {
+    url: { owner: "fixture", repo: "skills" },
+    defaultBranch: "main",
+    commit,
+    skills: [selected],
+    isPlugin: false,
+    totalDetected: 1,
+  };
+  let commits = 0;
+  const installed = await installFromGithub({ inspection, selected, cwd, scope: "project" }, () => {
+    ++commits;
+  });
+  expect(commits).toBe(1);
+  expect(readFileSync(installed.filePath, "utf8")).toBe(markdown);
+  expect(readFileSync(join(installed.targetDir, "asset.txt"), "utf8")).toBe("asset");
+  expect(JSON.parse(readFileSync(join(installed.targetDir, SKILL_META_FILE), "utf8")).commit).toBe(
+    commit,
+  );
 });
 
 test("root Skill bundles include their assets and preserve executable modes", async () => {

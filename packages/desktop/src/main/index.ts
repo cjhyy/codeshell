@@ -315,7 +315,7 @@ import { assertDesktopSessionId } from "./session-validation.js";
 import { getSessionEvents } from "./rawTranscript.js";
 import { createLinkService } from "@cjhyy/code-shell-server/links";
 import { createDesktopWebService, deploymentRemoteLink } from "./desktop-web-service.js";
-import { listSkills, readSkillBody, uninstallSkill } from "./skills-service.js";
+import { listSkills, readSkillBody } from "./skills-service.js";
 import {
   listPlugins,
   getPluginDetail,
@@ -360,7 +360,7 @@ import {
 } from "./capabilities-service.js";
 import { registerSourceCatalogIpc } from "./source-catalog-ipc.js";
 import { createRendererProjectFileSearch } from "./file-search-service.js";
-import { checkSkillUpdateEntry, updateSkillEntry } from "./skill-update-entry.js";
+import { checkSkillUpdateEntry } from "./skill-update-entry.js";
 import { listRuns } from "./runs-service.js";
 import {
   initUpdater,
@@ -3653,11 +3653,6 @@ ipcMain.handle(
   async (_e, target: RendererConfigurationTarget | null, filePath: unknown) =>
     checkSkillUpdateEntry(await requireRendererListedSkillPath(target, filePath)),
 );
-ipcMain.handle(
-  "skills:update",
-  async (_e, target: RendererConfigurationTarget | null, filePath: unknown) =>
-    updateSkillEntry(await requireRendererListedSkillPath(target, filePath)),
-);
 const rendererProjectFileSearch = createRendererProjectFileSearch({
   requireProject: requireRendererProject,
   requireRoot: requireRendererProjectRoot,
@@ -3679,48 +3674,8 @@ registerAttachmentsIpc({
   deleteDesktopSession,
   assertQuickChatClaim,
 });
-ipcMain.handle(
-  "skills:uninstall",
-  async (
-    _e,
-    input: {
-      scope?: unknown;
-      target?: unknown;
-      skillName?: unknown;
-    },
-  ) => {
-    if (!input || typeof input !== "object") {
-      throw new Error("skills:uninstall requires { scope, target, skillName }");
-    }
-    rejectUnexpectedRendererKeys(
-      input as Record<string, unknown>,
-      ["scope", "target", "skillName"],
-      "skills:uninstall",
-    );
-    const scope = input.scope === "user" || input.scope === "project" ? input.scope : null;
-    if (!scope) throw new Error("invalid scope");
-    if (typeof input.skillName !== "string") {
-      throw new Error("skills:uninstall requires skillName");
-    }
-    if (scope === "project" && input.target == null) {
-      throw new Error("project skill uninstall requires stable authority");
-    }
-    if (scope === "user" && input.target != null) {
-      throw new Error("user skill uninstall does not accept project authority");
-    }
-    const authorizedCwd =
-      input.target == null
-        ? undefined
-        : await rendererConfigurationCwd(input.target as RendererConfigurationTarget);
-    return uninstallSkill({
-      scope,
-      cwd: authorizedCwd,
-      skillName: input.skillName,
-    });
-  },
-);
 registerAgentsMediaIpc({ host: desktopHost, mainWindows, mediaPreviewService });
-registerSkillsMcpIpc({ getMcpOAuthService });
+registerSkillsMcpIpc({ host: desktopHost, getMcpOAuthService });
 // Read-only list of plugin-provided hooks, for the settings 钩子 page to show
 // alongside hand-written hooks (labelled by owner plugin). Mirrors
 // mcp:listMerged's disabledPlugins handling. (#钩子设置页改造)

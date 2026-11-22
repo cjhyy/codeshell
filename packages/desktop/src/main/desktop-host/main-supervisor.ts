@@ -291,7 +291,13 @@ export class DesktopHostSupervisor {
       method === "mimi/backfillSegments" ||
       method === "mimi/closeSegment" ||
       method === "automation/command" && (input as { method?: string }).method === "cancel";
-    const timeout = waitsForRun || method === "im/wechatLogin" || method === "memory/dream" || method === "sources/uploadPicked" ? 0 : method === "ccRoom/sessions" || method === "ccRoom/history" ? 120_000 : 15_000;
+    // GitHub downloads have per-request deadlines and may stage a whole bundle.
+    // Local copies can wait for a Skill worker and the cross-process directory lock.
+    const longRunning = waitsForRun || method === "im/wechatLogin" || method === "memory/dream" ||
+      method === "sources/uploadPicked" || method === "skills/inspectGithub" ||
+      method === "skills/installGithub" || method === "skills/installLocal" ||
+      method === "skills/update" || method === "skills/uninstall";
+    const timeout = longRunning ? 0 : method === "ccRoom/sessions" || method === "ccRoom/history" ? 120_000 : 15_000;
     const value = await this.request("host/business", { method, input }, timeout, signal);
     signal?.throwIfAborted();
     return value as ShellBusinessOperations[K]["result"];

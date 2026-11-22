@@ -7,7 +7,10 @@
 
 import { invalidateSkillCache, userHome } from "@cjhyy/code-shell-core";
 import { readSkillInventory } from "@cjhyy/code-shell-host";
-import { installSkillFromDirectory as installSharedSkillDirectory } from "@cjhyy/code-shell-core/internal/skills";
+import {
+  installSkillFromDirectory as installSharedSkillDirectory,
+  removeOwnedSkill,
+} from "@cjhyy/code-shell-core/internal/skills";
 import { assertCodeShellMarkdownPath, rememberCodeShellMarkdownPath } from "./safe-read.js";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
@@ -68,7 +71,10 @@ export async function readSkillBody(filePath: string): Promise<string> {
  * grow back on next plugin sync, so deleting them silently would be a
  * lie. Plugin skills should be disabled via `disabledSkills` instead.
  */
-export async function uninstallSkill(input: UninstallSkillInput): Promise<void> {
+export async function uninstallSkill(
+  input: UninstallSkillInput,
+  beforeCommit?: () => void,
+): Promise<void> {
   const skillName = assertSafeSkillName(input.skillName);
   if (input.scope === "project" && !input.cwd) {
     throw new Error("project scope requires cwd");
@@ -78,8 +84,12 @@ export async function uninstallSkill(input: UninstallSkillInput): Promise<void> 
     throw new Error(`skill not found: ${skillName}`);
   }
   const skillDir = await safeListedSkillDir(listed.filePath, input.scope, input.cwd);
-  await fs.rm(skillDir, { recursive: true, force: true });
-  invalidateSkillCache();
+  removeOwnedSkill(
+    path.join(skillDir, "SKILL.md"),
+    input.scope === "user" ? [userSkillRoot()] : projectSkillRoots(input.cwd),
+    undefined,
+    beforeCommit,
+  );
 }
 
 export async function uninstallListedSkill(
@@ -183,8 +193,15 @@ export async function installSkillFromDirectory(
   scope: "user" | "project",
   cwd?: string,
   requestedName?: string,
+  beforeCommit?: () => void,
 ): Promise<InstalledSkill> {
-  const installed = await installSharedSkillDirectory(sourceDir, scope, cwd, requestedName);
+  const installed = await installSharedSkillDirectory(
+    sourceDir,
+    scope,
+    cwd,
+    requestedName,
+    beforeCommit,
+  );
   rememberCodeShellMarkdownPath(installed.filePath);
   return installed;
 }

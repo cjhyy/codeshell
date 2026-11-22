@@ -252,3 +252,21 @@ describe("shared Skill management", () => {
     expect(existsSync(join(input, "SKILL.md"))).toBe(true);
   });
 });
+
+test("a withdrawn Skill commit leaves installed discovery and sibling files unchanged", async () => {
+  const cwd = fixture();
+  const src = source();
+  const deny = () => {
+    throw new Error("withdrawn");
+  };
+  await expect(installSkillFromDirectory(src, "project", cwd, "withdrawn", deny)).rejects.toThrow(
+    "withdrawn",
+  );
+  const original = await installSkillFromDirectory(src, "project", cwd, "original");
+  const root = skillRoot("project", cwd);
+  const revision = readSkillBundle(original.targetDir).revision;
+  expect(() => removeOwnedSkill(original.filePath, [root], undefined, deny)).toThrow("withdrawn");
+  expect(readSkillBundle(original.targetDir).revision).toBe(revision);
+  expect(readdirSync(root).sort()).toEqual([".skill-mutation", "original"]);
+  expect(readdirSync(join(root, ".skill-mutation"))).toEqual([]);
+});

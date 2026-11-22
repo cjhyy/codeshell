@@ -1,3 +1,4 @@
+import type { SkillOperations } from "./skill-operations.js";
 import type { WechatLoginOperations } from "./wechat-login.js";
 import type { NativeCcRoomReads } from "./cc-room-reads.js";
 import type { MediaProtocolOperations } from "./media-protocol-operations.js";
@@ -22,7 +23,7 @@ type Operation<F extends (...args: any[]) => Promise<unknown>> = {
 
 /** Private calls from authenticated Electron adapters. These methods are never
  * registered on a renderer port or exposed by the window preload. */
-export interface ShellBusinessOperations extends MediaProtocolOperations, AttachmentOperations, WechatLoginOperations, ActivityOperations, NativeCcRoomReads, MemoryOperations, PrivateMemoryReads, ProjectRegistryOperations, CatalogEdits {
+export interface ShellBusinessOperations extends SkillOperations, MediaProtocolOperations, AttachmentOperations, WechatLoginOperations, ActivityOperations, NativeCcRoomReads, MemoryOperations, PrivateMemoryReads, ProjectRegistryOperations, CatalogEdits {
   "mimi/extractionAllowed": { input: Record<string,never>; result:boolean };
   "mimi/closeSegment": Operation<import("../main/pet/pet-segment-closure-service.js").PetSegmentClosureService["close"]>;
   "mimi/backfillSegments": {input:{segments:readonly import("../main/pet/pet-segment-closure-service.js").ClosedSegmentDescriptor[];now:number};result:void};

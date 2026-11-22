@@ -142,6 +142,29 @@ utilityProcess.fork = function (...args) {
   const second = await secondOpened;
   await observeHost(second);
   assert.deepEqual(await readCatalog(second), catalog);
+  const skillSource = join(isolated.home, "owned-skill-directory");
+  const skillBody = "---\nname: host-smoke-skill\ndescription: Owned directory import\n---\nOwned body.\n";
+  await mkdir(skillSource);
+  await writeFile(join(skillSource, "SKILL.md"), skillBody);
+  const installed = await first.evaluate(
+    (source) => window.codeshell.installLocalSkill(source, "user", null, "host-smoke-skill"),
+    skillSource,
+  );
+  assert.equal(await readFile(installed.filePath, "utf8"), skillBody);
+  assert.equal(
+    await second.evaluate((path) => window.codeshell.readSkillBody(null, path), installed.filePath),
+    skillBody,
+  );
+  await second.evaluate(() =>
+    window.codeshell.uninstallSkill({ scope: "user", skillName: "host-smoke-skill" }),
+  );
+  await assert.rejects(readFile(installed.filePath), { code: "ENOENT" });
+  assert.equal(
+    await first.evaluate(async () =>
+      (await window.codeshell.listSkills(null)).some((skill) => skill.name === "host-smoke-skill"),
+    ),
+    false,
+  );
   await first.evaluate(() =>
     window.codeshell.updateSettings("user", { hostSmokeReceipt: "committed" }),
   );

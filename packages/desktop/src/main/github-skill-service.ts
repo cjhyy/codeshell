@@ -23,8 +23,8 @@ import {
 } from "@cjhyy/code-shell-core/internal/skills";
 import { rememberCodeShellMarkdownPath } from "./safe-read.js";
 
-export async function installFromGithub(input: InstallFromGithubInput) {
-  const installed = await installSharedGithubSkill(input);
+export async function installFromGithub(input: InstallFromGithubInput, beforeCommit?: () => void) {
+  const installed = await installSharedGithubSkill(input, beforeCommit);
   rememberCodeShellMarkdownPath(installed.filePath);
   return installed;
 }
