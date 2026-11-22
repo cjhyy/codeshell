@@ -288,7 +288,16 @@ import {appendFileSync} from "node:fs";
 import {syncBuiltinESMExports} from "node:module";
 await import(${JSON.stringify(new URL("./runtime-cost-gui-guard.mjs", import.meta.url).href)});
 const attempts=${JSON.stringify(join(isolated.home, "startup-denied-attempts.jsonl"))};
-const deny=kind=>{appendFileSync(attempts,JSON.stringify({pid:process.pid,kind})+"\\n",{mode:0o600});throw Error("Startup fixture denied "+kind);};
+const deny=kind=>{
+  const error=new Error("Startup fixture denied "+kind);
+  // Store source locations only. Request arguments, environment and URLs do not belong in receipts.
+  const frames=(error.stack??"").split("\\n").slice(1,12).flatMap(line=>{
+    const match=line.match(/(?:^|[/\\\\])([\\w.-]+\\.(?:mjs|cjs|js):\\d+:\\d+)\\)?$/);
+    return match?[match[1]]:[];
+  });
+  appendFileSync(attempts,JSON.stringify({pid:process.pid,kind,frames})+"\\n",{mode:0o600});
+  throw error;
+};
 globalThis.fetch=()=>deny("network");
 for(const transport of [http,https])for(const name of ["get","request"])transport[name]=()=>deny("network");
 const spawn=children.spawn;

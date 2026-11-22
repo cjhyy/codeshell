@@ -126,7 +126,14 @@ syncBuiltinESMExports();
   );
   await writeFile(
     hostEntry,
-    `await import(${JSON.stringify(preloadUrl)});
+    `import https from "node:https";
+import { syncBuiltinESMExports } from "node:module";
+await import(${JSON.stringify(preloadUrl)});
+// Account capabilities are read on ready/focus. Serve the fixed anonymous
+// status in memory; every other request still uses this fixture's network guard.
+const { withOwnedAccountDiscovery } = (await import(${JSON.stringify(new URL("./owned-account-discovery.cjs", import.meta.url).href)})).default;
+https.request = withOwnedAccountDiscovery(https.request.bind(https));
+syncBuiltinESMExports();
 await import(${JSON.stringify(pathToFileURL(workerSpawnGuard).href)});
 await import(${JSON.stringify(pathToFileURL(join(appDir, "out/main/desktop-host.mjs")).href)});`,
     { mode: 0o600 },
@@ -134,14 +141,9 @@ await import(${JSON.stringify(pathToFileURL(join(appDir, "out/main/desktop-host.
   await writeFile(
     mainEntry,
     `import { app, utilityProcess } from "electron";
-import https from "node:https";
 import { appendFileSync } from "node:fs";
 import { syncBuiltinESMExports } from "node:module";
 await import(${JSON.stringify(preloadUrl)});
-// Account capabilities are read on ready/focus. Serve the fixed anonymous
-// status in memory; every other request still uses this fixture's network guard.
-const { withOwnedAccountDiscovery } = (await import(${JSON.stringify(new URL("./owned-account-discovery.cjs", import.meta.url).href)})).default;
-https.request = withOwnedAccountDiscovery(https.request.bind(https));
 app.setAppPath(${JSON.stringify(appDir)});
 const originalFork = utilityProcess.fork;
 utilityProcess.fork = function(entry, args, options) {
