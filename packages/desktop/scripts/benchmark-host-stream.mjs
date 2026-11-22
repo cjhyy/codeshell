@@ -109,14 +109,12 @@ try {
     });
   });
   await page.waitForFunction(() => window.benchmarkHost === "ready");
-  const viewOnly = page.getByRole("button", { name: /仅查看|View only/i });
-  if (
-    await viewOnly.waitFor({ timeout: 4000 }).then(
-      () => true,
-      () => false,
-    )
-  )
-    await viewOnly.click();
+  page.setDefaultTimeout(15000);
+  const viewOnly = page
+    .getByRole("dialog")
+    .filter({ hasText: cwd })
+    .getByRole("button", { name: /^(仅查看|View only)/i });
+  await page.addLocatorHandler(viewOnly, (button) => button.click(), { times: 1 });
   const { pid, electron } = await app.evaluate(() => ({
     pid: process.pid,
     electron: process.versions.electron,
@@ -166,7 +164,10 @@ try {
   // Wait with the provider paused after its first token. Opening a turn and
   // publishing its cancellable state are lifecycle writes. Record those too,
   // then measure the following 20 s while text is actually arriving.
-  await page.getByText(/word0/).first().waitFor();
+  console.log("Provider received the workbench turn; holding the first output frame");
+  await page.waitForFunction(() => document.body.innerText.includes("word0"), undefined, {
+    timeout: 15000,
+  });
   await delay(1500);
   await page.evaluate(() => {
     window.benchmarkInput = [];
@@ -197,6 +198,7 @@ try {
   const wallStart = Date.now();
   const openingChanges = changes(wallStart);
   const started = performance.now();
+  console.log("Tracing Main and dispatching wheel input");
   releaseStream.resolve();
   const contended = (async () => {
     await delay(1500);
@@ -321,6 +323,9 @@ try {
   );
   assert.equal(tasks.length, 0, "Inspect native Main tasks lasting at least 50 ms");
   assert.equal(changesDuringStream.length, 0, "Task rows changed during text streaming");
+} catch (error) {
+  console.error(error);
+  throw error;
 } finally {
   releaseStream.resolve();
   if (tracing && client) await client.send("Tracing.end").catch(() => {});
