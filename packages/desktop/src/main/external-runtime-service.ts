@@ -1,3 +1,4 @@
+import { askUserApprovalRequest } from "./external-runtime-approvals.js";
 /**
  * Desktop wiring for external Agent Runtimes (Codex / Claude Code).
  *
@@ -135,24 +136,6 @@ export type DesktopExternalRuntimeTurnInput = ExternalRuntimeTurnInput & {
    */
   trigger?: SessionRunTrigger;
 };
-
-function askUserApprovalRequest(question: string, options?: Record<string, unknown>) {
-  // External approvals share the native ApprovalRequest wire contract. The
-  // renderer reads presentation fields from args, not the request's top level.
-  // Runtime-only controls (cancellation, deadlines) never cross the wire.
-  const {
-    signal: _signal,
-    throwOnFailure: _throwOnFailure,
-    autoResolveMs: _autoResolveMs,
-    ...presentation
-  } = options ?? {};
-  return {
-    toolName: "__ask_user__",
-    args: { ...presentation, question },
-    description: question,
-    riskLevel: "low" as const,
-  };
-}
 
 export interface ExternalRuntimeSubmissionHooks {
   /** Revalidate host authority inside the actual queue, before any input/Goal mutation. */
