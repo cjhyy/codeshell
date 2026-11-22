@@ -17,9 +17,35 @@ manual installation from the DMG. Install the new app in Applications using
 the same account to retain existing sessions and settings. Send or copy any
 unsent text you want to keep before quitting 0.11. Restarting clears its composer.
 
+## [0.11.0-rc.11] - 2026-11-22
+
+Remote (phone and web) work from #410, #412, #414 and #416, and the Bun 1.4.5
+toolchain upgrade (#407).
+
+### Added
+
+- Phone and web remote can open the same terminal the Desktop shows, including
+  running `claude` interactively. Viewers attach to the same terminal session
+  and see the same output; the Desktop terminal tab shows how many remote
+  viewers are attached. Off by default.
+- Phone and web remote list a session's subagents and open a read-only view of
+  each, as Desktop does.
+- Phone and web remote can take over a Claude Code or Codex session that is
+  only being observed, and load its earlier history page by page.
+
+### Fixed
+
+- Phone and web remote no longer show a Claude Code or Codex room as running
+  after it was closed on Desktop, at Host shutdown, or when the CLI exited;
+  approvals from another room, unread markers and the context of a failed
+  approval are reported correctly.
+
 ### Changed
 
-- Build: Bun 1.4.5 (was 1.3.11) for development, CI and the Docker image.
+- Build: Bun 1.4.5 (was 1.3.11) for development, CI and the Docker image. This
+  removes the intermittent `EBADF` spawn failures that Bun 1.3.x caused in long
+  test runs; the test suites that start real worker threads now run under Node,
+  as the app does.
 
 ## [0.11.0-rc.10] - 2026-11-21
 
