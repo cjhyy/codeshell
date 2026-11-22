@@ -604,7 +604,26 @@ try {
   }
   console.log("smoke L2: unavailable keyring rendered a concrete error with zero provider sends");
 
+  // The failed run can post its toast after the transcript error. Hovering a
+  // toast pauses its expiry, including when it covers the next model button.
+  const signingNoticeDismiss = win
+    .getByRole("status")
+    .locator(":scope > div")
+    .filter({
+      hasText: /本轮请求被拒绝|This request was rejected|Host could not securely sign this Session/,
+    })
+    .getByRole("button", { name: /^(关闭提示|Dismiss notification)$/ })
+    .first();
+  await win.addLocatorHandler(
+    signingNoticeDismiss,
+    async (button) => {
+      await button.click();
+      console.log("smoke L2: dismissed the expected signing rejection notice");
+    },
+    { noWaitAfter: true },
+  );
   await sendScenario(win, "mock-tool-call", "Run the provider tool-call smoke scenario.");
+  await win.removeLocatorHandler(signingNoticeDismiss);
   try {
     await win.locator('[data-message-kind="process"][data-tool-names~="Glob"]').last().waitFor({
       state: "attached",
