@@ -87,6 +87,7 @@ const hostOnlySamples = [
   "previewLocalPlugin",
   "uninstallPluginByName",
   "addMarketplace",
+  "createMarketplaceLifetime",
   "parseMarketplaceInput",
   "resolveApiKey",
   "detectEnvKeys",

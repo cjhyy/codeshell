@@ -527,6 +527,7 @@ export {
   listInstalled,
 } from "./plugins/pluginInstaller.js";
 export {
+  createMarketplaceLifetime,
   addMarketplace,
   refreshMarketplace,
   removeMarketplace,

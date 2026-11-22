@@ -686,6 +686,9 @@ jobs:
       - name: desktop Host across windows, Main stalls and utility restart
         timeout-minutes: 3
         run: xvfb-run -a node scripts/run-isolated-node-smoke.mjs --private-keyring packages/desktop/scripts/smoke-desktop-host.mjs
+      - name: quit during a first-run marketplace clone and retry on restart
+        timeout-minutes: 2
+        run: xvfb-run -a node scripts/run-isolated-node-smoke.mjs packages/desktop/scripts/e2e-marketplace-shutdown.mjs
       - name: encrypted operation ledger through the real stdio worker
         run: ELECTRON_RUN_AS_NODE=1 packages/desktop/node_modules/electron/dist/electron scripts/run-isolated-node-smoke.mjs packages/desktop/scripts/smoke-run-operation-ledger.mjs
       - name: real Electron isolated PDF with verified managed Node

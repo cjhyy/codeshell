@@ -61,14 +61,19 @@ export function seedAgents(srcDir: string, home: string): number {
  * addMarketplace for each. Clone failures are swallowed (best-effort; a bad
  * network on first launch must not block startup). Returns names attempted.
  */
-export async function seedMarketplaces(seedFile: string, home: string): Promise<string[]> {
-  return seedMarketplacesWith(seedFile, home, addMarketplace);
+export async function seedMarketplaces(
+  seedFile: string,
+  home: string,
+  signal?: AbortSignal,
+): Promise<string[]> {
+  return seedMarketplacesWith(seedFile, home, addMarketplace, signal);
 }
 
 export async function seedMarketplacesWith(
   seedFile: string,
   home: string,
   add: typeof addMarketplace,
+  signal?: AbortSignal,
 ): Promise<string[]> {
   if (!existsSync(seedFile)) return [];
   // Skip entries already present in the user's known_marketplaces.json.
@@ -92,13 +97,15 @@ export async function seedMarketplacesWith(
   const skipped: string[] = [];
   const failed: Array<{ name: string; error: string }> = [];
   for (const [name, source] of Object.entries(seed)) {
+    signal?.throwIfAborted();
     if (known[name]) {
       skipped.push(name);
       continue;
     }
     attempted.push(name);
     try {
-      const result = await add(name, source);
+      const result = await add(name, source, signal ? () => signal.throwIfAborted() : undefined);
+      signal?.throwIfAborted();
       if (result.ok) {
         added.push(name);
       } else {
@@ -106,6 +113,7 @@ export async function seedMarketplacesWith(
         console.error(`seed: failed to add marketplace ${name}: ${result.error}`);
       }
     } catch (err) {
+      signal?.throwIfAborted();
       failed.push({ name, error: err instanceof Error ? err.message : String(err) });
       console.error(`seed: failed to add marketplace ${name}`, err);
     }
@@ -127,7 +135,11 @@ function writeSeedMarketplaceStatus(home: string, status: SeedMarketplaceStatus)
 }
 
 /** Top-level first-run seeding, called once from app.whenReady. */
-export async function seedDefaults(resourcesDir: string, home = userHome()): Promise<void> {
+export async function seedDefaults(
+  resourcesDir: string,
+  home = userHome(),
+  signal?: AbortSignal,
+): Promise<void> {
   try {
     const n = seedAgents(join(resourcesDir, "agents"), home);
     if (n > 0) console.log(`seed: copied ${n} default agent(s)`);
@@ -135,9 +147,14 @@ export async function seedDefaults(resourcesDir: string, home = userHome()): Pro
     console.error("seed: agents failed", err);
   }
   try {
-    const names = await seedMarketplaces(join(resourcesDir, "known-marketplaces-seed.json"), home);
+    const names = await seedMarketplaces(
+      join(resourcesDir, "known-marketplaces-seed.json"),
+      home,
+      signal,
+    );
     if (names.length) console.log(`seed: registered marketplace(s): ${names.join(", ")}`);
   } catch (err) {
+    signal?.throwIfAborted();
     console.error("seed: marketplaces failed", err);
   }
 }

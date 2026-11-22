@@ -483,28 +483,32 @@ parent.on("message", ({ data, ports }) => {
     runOperations.close();
     attention.close();
     business.close();
-    void scheduler
-      .close()
-      .then(() =>
-        Promise.all([
-          index.close(),
-          historyWorker.close(),
-          skills.close(),
-          mimiDispatch.close(),
-          followUps.close(),
-          mimiTasks.close(),
-          projection.close(),
-          marketplace.close(),
-          worker?.close(),
-          transcripts.close(),
-          automation.close(),
-          ...[...providers].map((close) => close()),
-          remote?.close(),
-          im?.close(),
-          mediaProtocol.close(),
-        ]),
-      )
-      .then(() => output.drain())
+    // Start Git cancellation before waiting for scheduled work. Wait for both
+    // owners even if another service fails to close.
+    const closingMarketplace = marketplace.close();
+    const closingServices = scheduler.close().then(() =>
+      Promise.all([
+        index.close(),
+        historyWorker.close(),
+        skills.close(),
+        mimiDispatch.close(),
+        followUps.close(),
+        mimiTasks.close(),
+        projection.close(),
+        worker?.close(),
+        transcripts.close(),
+        automation.close(),
+        ...[...providers].map((close) => close()),
+        remote?.close(),
+        im?.close(),
+        mediaProtocol.close(),
+      ]),
+    );
+    void Promise.allSettled([closingMarketplace, closingServices])
+      .then((closures) => {
+        for (const result of closures) if (result.status === "rejected") throw result.reason;
+        return output.drain();
+      })
       .finally(async () => (await storage).close())
       .then(
         () => process.exit(0),

@@ -9,7 +9,7 @@
 import { existsSync, readFileSync, rmSync, mkdirSync, renameSync, mkdtempSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
-import { gitClone, githubRepoToCloneUrl } from "./gitOps.js";
+import { marketplaceLifetime, gitClone, githubRepoToCloneUrl } from "./gitOps.js";
 import {
   readKnownMarketplaces,
   upsertKnownMarketplace,
@@ -26,6 +26,30 @@ import type {
 } from "./types.js";
 
 export type { MarketplaceFormat } from "./types.js";
+
+export function createMarketplaceLifetime(signal: AbortSignal, isClosing: () => boolean) {
+  let cleanupError: string | undefined;
+  const owner = {
+    signal,
+    isClosing,
+    recordCleanupFailure(error: string) {
+      cleanupError ??= error;
+    },
+  };
+  return {
+    run<T>(work: () => T): T {
+      return marketplaceLifetime.run(owner, work);
+    },
+    get cleanupError() {
+      return cleanupError;
+    },
+  };
+}
+
+/** A worker blocked on a contended synchronous lock can still see its owner's closing flag. */
+function assertMarketplaceOpen(): void {
+  if (marketplaceLifetime.getStore()?.isClosing()) throw Error("Marketplace is closing");
+}
 
 function userHome(): string {
   return process.env.HOME ?? homedir();
@@ -135,10 +159,11 @@ export async function addMarketplace(
       lastUpdated: new Date().toISOString(),
       format: detectMarketplaceFormat(candidate),
     };
-    const release = acquireLockOnPath(marketplacesRoot());
+    const release = acquireLockOnPath(marketplacesRoot(), undefined, assertMarketplaceOpen);
     try {
       if (JSON.stringify(readKnownMarketplaces()[name]) !== JSON.stringify(previous))
         return { ok: false, error: `Marketplace ${name} changed while refreshing; try again` };
+      assertMarketplaceOpen();
       beforeCommit?.();
       const replace = cloned.ok && existsSync(dir);
       if (replace) renameSync(dir, backup);
@@ -190,8 +215,9 @@ export async function refreshMarketplace(
 export function removeMarketplace(name: string, beforeCommit?: () => void): boolean {
   const dir = marketplaceDir(name);
   mkdirSync(marketplacesRoot(), { recursive: true });
-  const release = acquireLockOnPath(marketplacesRoot());
+  const release = acquireLockOnPath(marketplacesRoot(), undefined, assertMarketplaceOpen);
   try {
+    assertMarketplaceOpen();
     beforeCommit?.();
     const removed = removeKnownMarketplace(name);
     if (existsSync(dir)) rmSync(dir, { recursive: true, force: true });

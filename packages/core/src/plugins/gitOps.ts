@@ -15,6 +15,7 @@
  * classification. See docs/architecture/17 for the trust framing.
  */
 
+import { AsyncLocalStorage } from "node:async_hooks";
 import { lstatSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { safeSpawn } from "../runtime/safe-spawn.js";
@@ -56,10 +57,21 @@ export function nonInteractiveGitEnv(base: NodeJS.ProcessEnv): NodeJS.ProcessEnv
   };
 }
 
+// A Host worker scopes its own marketplace operations, including install jobs
+// started by an operation and drained after its initial reply.
+export const marketplaceLifetime = new AsyncLocalStorage<{
+  signal: AbortSignal;
+  isClosing: () => boolean;
+  recordCleanupFailure: (error: string) => void;
+}>();
+
 async function runGit(args: string[], cwd?: string, timeoutMs = 60_000): Promise<GitResult> {
   // Up-front check: if git isn't installed/reachable at all, return a clear,
   // actionable error instead of a raw "spawn git ENOENT". The desktop host
   // turns GIT_NOT_FOUND into a friendly "install Git" prompt.
+  const owner = marketplaceLifetime.getStore();
+  const signal = owner?.signal;
+  if (owner?.isClosing() || signal?.aborted) return { ok: false, error: "Marketplace is closing" };
   if (!isGitAvailable()) {
     return {
       ok: false,
@@ -76,8 +88,15 @@ async function runGit(args: string[], cwd?: string, timeoutMs = 60_000): Promise
     // A stalled git clone/fetch owns helpers such as git-remote-https. Keep
     // them in a dedicated group so the timeout cannot leave network workers
     // running after the UI operation has failed.
-    processGroup: process.platform !== "win32",
+    processGroup: true,
+    signal,
   });
+  if (r.unreapedGroup) {
+    const error = `Git process tree ${r.unreapedGroup} is still present after termination`;
+    owner?.recordCleanupFailure(error);
+    return { ok: false, error };
+  }
+  if (r.aborted) return { ok: false, error: "Marketplace is closing" };
   if (r.spawnFailed) {
     return { ok: false, error: `git ${args.join(" ")} failed: ${r.error ?? "spawn failed"}` };
   }

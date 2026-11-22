@@ -6,10 +6,11 @@ import {
   listPluginHooks,
   listPluginMcpTrust,
 } from "@cjhyy/code-shell-core";
+import { createMarketplaceLifetime } from "@cjhyy/code-shell-core/internal";
 import { seedDefaults } from "../../main/seed-defaults.js";
 import { bootstrapCorePlugins } from "../../main/bootstrap-core-plugins.js";
 import { applyGitPathFromSettings } from "../../main/git-path-settings.js";
-import { parentPort } from "node:worker_threads";
+import { parentPort, workerData } from "node:worker_threads";
 import * as market from "../../main/marketplace-service.js";
 import { uninstallPluginEntry, updatePluginEntry } from "../../main/plugins-service.js";
 import type { MarketplaceOperations } from "../../shared/plugin-library.js";
@@ -20,6 +21,14 @@ type Handlers = {
     accept: () => void,
   ) => MarketplaceOperations[K]["result"] | Promise<MarketplaceOperations[K]["result"]>;
 };
+const lifetime = new AbortController();
+const { closingFlag } = workerData as { closingFlag: Int32Array };
+const isClosing = () => Atomics.load(closingFlag, 0) !== 0;
+const operations = createMarketplaceLifetime(lifetime.signal, isClosing);
+function assertOpen(): void {
+  if (isClosing()) throw Error("Marketplace is closing");
+}
+
 const handlers: Handlers = {
   "plugins/approveHooks": ({ installKey }, claim) => approvePluginHooks(installKey, claim),
   "plugins/revokeHooks": ({ installKey }, claim) => revokePluginHooks(installKey, claim),
@@ -28,8 +37,9 @@ const handlers: Handlers = {
   "plugins/hooks": ({ disabledPlugins }) => listPluginHooks(disabledPlugins),
   "mcp/pluginTrust": () => listPluginMcpTrust(),
   async "marketplace/bootstrap"({ resourcesDir }) {
-    await seedDefaults(resourcesDir);
-    await bootstrapCorePlugins();
+    await seedDefaults(resourcesDir, undefined, lifetime.signal);
+    lifetime.signal.throwIfAborted();
+    await bootstrapCorePlugins(undefined, lifetime.signal);
   },
   "marketplace/list": () => market.listMarketplacesForUi(),
   "marketplace/load": ({ name }) => market.loadMarketplaceForUi(name),
@@ -60,7 +70,7 @@ const tryDrain = () => {
       .listPluginInstallJobsForUi()
       .some((j) => j.status === "queued" || j.status === "installing")
   ) {
-    port.postMessage({ id: drainId });
+    port.postMessage({ id: drainId, error: operations.cleanupError });
     drainId = undefined;
   }
 };
@@ -80,6 +90,8 @@ port.on(
   }) => {
     if ((method as string) === "drain") {
       drainId = id;
+      lifetime.abort(new Error("Marketplace is closing"));
+      market.cancelQueuedPluginInstalls();
       tryDrain();
       return;
     }
@@ -99,10 +111,14 @@ port.on(
         ].includes(method)
       )
         await applyGitPathFromSettings();
-      const value = await handlers[method](input, () => {
-        if (!permit) throw Error("Missing marketplace write permit");
-        claimBusinessCommit(permit);
-      });
+      assertOpen();
+      const value = await operations.run(() =>
+        handlers[method](input, () => {
+          assertOpen();
+          if (!permit) throw Error("Missing marketplace write permit");
+          claimBusinessCommit(permit);
+        }),
+      );
       port.postMessage({
         id,
         value,

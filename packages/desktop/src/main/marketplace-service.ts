@@ -434,6 +434,21 @@ function pruneUninstalledJobs(): boolean {
   return changed;
 }
 
+/** Only the active install owns staging. Let it unwind before the worker exits. */
+export function cancelQueuedPluginInstalls(): void {
+  for (const id of installQueue.splice(0)) {
+    const job = installJobs.get(id);
+    if (job)
+      installJobs.set(id, {
+        ...job,
+        status: "failed",
+        finishedAt: Date.now(),
+        error: "Marketplace is closing",
+      });
+  }
+  emitPluginInstallJobsChanged();
+}
+
 function queueInstallJob(job: PluginInstallJobDTO): void {
   if (!installQueue.includes(job.id)) installQueue.push(job.id);
   emitPluginInstallJobsChanged();

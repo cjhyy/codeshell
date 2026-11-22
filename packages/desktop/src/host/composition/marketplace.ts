@@ -20,13 +20,14 @@ export function hostedMarketplace(
   let worker: Worker | undefined,
     closing = false,
     sequence = 0;
+  const closingFlag = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT));
   const pending = new Map<
     number,
     { resolve: (value: unknown) => void; reject: (err: Error) => void; grant?: BusinessGrant }
   >();
   function active() {
     if (worker) return worker;
-    const thread = new Worker(url);
+    const thread = new Worker(url, { workerData: { closingFlag } });
     worker = thread;
     const failed = (error: Error) => {
       if (worker !== thread) return;
@@ -141,6 +142,7 @@ export function hostedMarketplace(
     ],
     async close() {
       closing = true;
+      Atomics.store(closingFlag, 0, 1);
       const thread = worker;
       if (!thread) return;
       const id = ++sequence;

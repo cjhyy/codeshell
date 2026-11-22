@@ -88,8 +88,12 @@ export function acquireFileLock(file: string): () => void {
  * `timeoutMs` can exceed the default when the critical section legitimately
  * takes a while (network clone + directory swap).
  */
-export function acquireLockOnPath(target: string, timeoutMs = LOCK_WAIT_MS): () => void {
-  return acquireLockOn(target, timeoutMs);
+export function acquireLockOnPath(
+  target: string,
+  timeoutMs = LOCK_WAIT_MS,
+  checkWait?: () => void,
+): () => void {
+  return acquireLockOn(target, timeoutMs, checkWait);
 }
 
 /**
@@ -107,7 +111,7 @@ function isRetryableLockError(err: unknown): boolean {
   return code === "EPERM" && process.platform === "win32";
 }
 
-function acquireLockOn(target: string, timeoutMs: number): () => void {
+function acquireLockOn(target: string, timeoutMs: number, checkWait?: () => void): () => void {
   const deadline = Date.now() + timeoutMs;
   let lastError: unknown;
   let attempt = 0;
@@ -117,6 +121,7 @@ function acquireLockOn(target: string, timeoutMs: number): () => void {
     } catch (err) {
       lastError = err;
       if (!isRetryableLockError(err) || Date.now() > deadline) throw lastError;
+      checkWait?.();
       // Randomized backoff. A fixed delay makes every waiter wake at the same
       // instant and collide again, so under real contention (dozens of writers)
       // the same unlucky processes kept losing and eventually timed out.
