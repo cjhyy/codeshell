@@ -211,6 +211,12 @@ try {
     });
     await write("reducer-frozen.ts", frozen);
   }
+  // The historical API had one reducer. Current call sites use a second
+  // export for the scoped feed; route it to the old implementation verbatim.
+  const legacyExport = frozen !== undefined && !/export function reduceScopedStream\b/.test(frozen)
+    ? "\nexport { reduceStream as reduceScopedStream };\n"
+    : "";
+  if (legacyExport) report.reducerExportAlias = "reduceStream as reduceScopedStream";
   report.reducerSHA256 = hash(frozen ?? (await readFile(path.join(repo, reducerPath))));
   const bundle = await build({
     stdin: { contents: source, resolveDir: path.join(repo, "packages/web/app"), loader: "tsx" },
@@ -232,7 +238,7 @@ try {
             assert.equal(args.path, path.join(repo, reducerPath));
             return frozen === undefined
               ? undefined
-              : { contents: frozen, loader: "ts", resolveDir: path.dirname(args.path) };
+              : { contents: frozen + legacyExport, loader: "ts", resolveDir: path.dirname(args.path) };
           });
         },
       },
