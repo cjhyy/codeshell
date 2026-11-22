@@ -2,7 +2,6 @@ import { createMimiPresenceShell } from "./shell/mimi-presence.js";
 import { createPanelCookieAdapter, registerPanelWindowShell } from "./shell/panel-app.js";
 import { petRemoteMemoryContext } from "./pet/pet-memory-host.js";
 import { mimiTurnStores } from "../shared/mimi-turn-storage.js";
-import { nativePendingApprovals } from "../shared/pending-approvals.js";
 import { reviewedLocalPlugins } from "./reviewed-local-plugins.js";
 import { registerHostedWechatLogin } from "./desktop-host/wechat-login-client.js";
 import { registerConfigurationSettingsIpc } from "./configuration-settings-ipc.js";
@@ -18,7 +17,7 @@ import { taskInboxEnabled } from "./task-inbox/task-host-reads.js";
 import { registerLinkedFileSourceIpc } from "./linked-file-sources-ipc.js";
 import { openLinkedFileSourceOperation } from "./linked-file-sources-host.js";
 import { registerOperationBatchHost } from "./operation-batch-host.js";
-import { createDesktopRemoteServices } from "./desktop-remote-services.js";
+import { createMobileGatewayShell } from "./shell/mobile-gateway.js";
 import { createDesktopHost } from "./desktop-host/main.js";
 import { createDesktopModuleRegistry, registerDesktopShutdown } from "./desktop-shutdown.js";
 import { createExternalRuntimeModule } from "./external-runtime-module.js";
@@ -28,7 +27,7 @@ import { registerProfileSwitchIpc, hostedProfileSwitch } from "./profile-switch-
 import { registerSourceCollectionIpc } from "./source-collections-ipc.js";
 import { openSourceCollectionOperation } from "./source-collections-host.js";
 import { registerRemoteLinkIpc } from "./remote-link-ipc.js";
-import { linkAccountExecutionOptions, requireLinkAccountAccess } from "./link-account-access.js";
+import { linkAccountExecutionOptions } from "./link-account-access.js";
 import { registerOperationResolutionHost } from "./operation-resolution-host.js";
 /**
  * Electron main entry — broker between renderer (ipcMain) and the
@@ -48,11 +47,6 @@ import {
   webContents,
 } from "electron";
 import { registerWindowTitleBarIpc } from "./window-titlebar.js";
-import {
-  openCloudWorkbench,
-  openManagedCloudWorkbench,
-  closeManagedCloudWorkbench,
-} from "./cloud-workbench-window.js";
 import { registerCloudEnvironmentIpc } from "./cloud-environment-ipc.js";
 import { injectDesktopManagedRuntimePath } from "./managed-runtime-service.js";
 import { createDesktopManagedRuntimeWiring } from "./managed-runtime-wiring.js";
@@ -89,8 +83,6 @@ import { getCuaDriverHost } from "./computer-use/service.js";
 import {
   closeComputerUse,
 } from "./computer-use/desktop-setup.js";
-import { startMobileExternalRuntime } from "./mobile-remote/start-external-runtime.js";
-import { resolveMobileStaticRoot } from "./mobile-remote/mobile-static-root.js";
 import {
   externalRuntimeToolContextForSession,
   externalRuntimeWorkspaceForSession,
@@ -230,19 +222,6 @@ import {
   type InputAttachmentMeta,
 } from "@cjhyy/code-shell-server/storage";
 import {
-  AccessPasscode,
-  CloudflaredBinary,
-  MobileUploadService,
-  RemoteHostManager,
-  TrustedDeviceStore,
-  TunnelManager,
-} from "@cjhyy/code-shell-server/mobile-remote";
-import {
-  MobileRemoteOrchestrator,
-  type AuthenticatedMobileClientEvent,
-} from "./mobile-remote-orchestrator.js";
-import { confirmOnDesktop } from "./cc-room/room-mode-ipc.js";
-import {
   type GatewayControlEventAttachment,
   type GatewayControlEventInput,
   type PetChatControlRequest,
@@ -265,7 +244,6 @@ import { taskInboxPetView } from "./task-inbox/task-inbox-pet-view.js";
 import { assertDesktopSessionId } from "./session-validation.js";
 import { getSessionEvents } from "./rawTranscript.js";
 import { createLinkService } from "@cjhyy/code-shell-server/links";
-import { createDesktopWebService, deploymentRemoteLink } from "./desktop-web-service.js";
 import { listSkills, readSkillBody } from "./skills-service.js";
 import {
   listPlugins,
@@ -303,7 +281,6 @@ import { getProjectStore } from "./project-store.js";
 import {
   createDesktopPanelProjectScopeResolver,
   isRegisteredPanelProjectRoot,
-  resolveDesktopPanelProjectPath,
 } from "./panel-project-scope.js";
 import { registerProjectAuthorityIpc } from "./project-authority-ipc.js";
 import { createWorkbenchSurface } from "./shell/workbench-window.js";
@@ -340,10 +317,6 @@ import { registerAttachmentsIpc } from "./attachments-ipc.js";
 import { registerAgentsMediaIpc } from "./agents-media-ipc.js";
 import { registerSkillsMcpIpc } from "./skills-mcp-ipc.js";
 import { registerModelCatalogIpc } from "./model-catalog-ipc.js";
-import { registerMobileRemoteIpc } from "./mobile-remote-ipc.js";
-import { NativeRemoteTerminals } from "./mobile-remote/native-terminals.js";
-import { RemoteTerminalPolicy } from "./mobile-remote/remote-terminal-policy.js";
-import { registerRoomsIpc } from "./rooms-ipc.js";
 import { registerDialogPickerIpc } from "./dialog-picker-ipc.js";
 import { registerExternalRuntimeIpc } from "./external-runtime-ipc.js";
 import { createBrowserWindowShell } from "./shell/browser-windows.js";
@@ -352,7 +325,6 @@ import { registerWorkspaceFilesIpc } from "./workspace-files-ipc.js";
 import { registerMemoryIpc } from "./memory-ipc.js";
 import { registerAutomationIpc } from "./automation-ipc.js";
 import { registerTrustNotificationIpc } from "./trust-notification-ipc.js";
-import { accountRelayRecoveryPage } from "@cjhyy/code-shell-web/account-relay-bootstrap";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const appRendererNavigation = new AppRendererNavigation(
@@ -697,112 +669,31 @@ desktopHost.onPluginJobsChanged((jobs) => {
   if (installed) broadcastPluginCommandsChanged(BrowserWindow.getAllWindows());
 });
 
-// ── Mobile Web Remote (LAN phone controller; off by default) ────────────────
-// Trusted-device HTTP/WS host. Start is explicit in Settings → Advanced;
-// commands reuse the existing run/permission path.
-const mobileDevices = new TrustedDeviceStore(
-  resolve(app.getPath("userData"), "mobile-remote", "devices.json"),
-);
-const mobileUploads = new MobileUploadService({
-  rootDir: resolve(app.getPath("userData"), "mobile-remote", "uploads"),
-});
-const mobileRemote = new RemoteHostManager({
-  accountRelayRecoveryPage,
-  nativeModelSelection: true,
-  ccRoomModelSelection: true,
-  outputJournal: true,
-  legacyBasePages: true,
-  outputJournalPageFrames: 2048,
-  historyView: true,
-  devices: mobileDevices,
-  uploads: mobileUploads,
-  webApi: createDesktopWebService({
-    devices: mobileDevices,
-    automations: cron.panel,
-    sharedToolJobs: panelAppBridge.sharedToolJobs(),
-    resolveProjectScope: resolvePanelProjectScope,
-    resolvePanelProjectPath: (cwd) => resolveDesktopPanelProjectPath(getProjectStore(), cwd),
-    authorizePanelDirectory: (app, projectPath, workspacePath) =>
-      panelAppBridge.authorizePanelDirectory(app, projectPath, workspacePath),
-    getBridge: () => bridge,
-    captureRemoteAuthority: () => requireLinkAccountAccess(captureLinkAccount),
-    remoteLink: () => deploymentRemoteLink(() => requireLinkAccountAccess(captureLinkAccount)),
-    onPanelsChanged: (id, kind) => {
-      if (kind === "remove") panelAppBridge.revokeAppId(id);
-      broadcastPanelAppsChanged(BrowserWindow.getAllWindows());
-    },
-    resolveWorkspace: (input, deviceId) => mobileOrchestrator.resolveWebWorkspace(input, deviceId),
-    relayStatus: () => mobileRemoteController.relayStatus(),
-    phoneFeature: () => accountFeatures.snapshot()["relay.phone"],
-    onSessionsChanged: (cwd, sessionId) => {
-      const line = JSON.stringify({
-        jsonrpc: "2.0",
-        method: "serve/sessionsChanged",
-        params: { cwd, sessionId },
-      });
-      mobileRemote.broadcastRaw(line);
-      for (const window of BrowserWindow.getAllWindows()) {
-        if (!window.isDestroyed()) window.webContents.send("agent:msg", line);
-      }
-    },
-  }),
-  // The built mobile web app stays a desktop asset (out/mobile, sibling of the
-  // bundled out/main) — pass it explicitly now that RemoteHostManager lives in
-  // @cjhyy/code-shell-server and can no longer derive it from its own location.
-  // Packaged builds read it from app.asar.unpacked (see resolveMobileStaticRoot).
-  mobileRootDir: resolveMobileStaticRoot(__dirname),
-  onClientEvent: async (event) => {
-    // The remote host tags authenticated events with both the device id and a
-    // per-socket viewer id. Device state/replies remain shared per phone, while
-    // transcript ownership follows the exact tab that subscribed.
-    await mobileOrchestrator.handleMobileClientEvent(event as AuthenticatedMobileClientEvent);
-  },
-});
-const pendingMobileApprovals = nativePendingApprovals(desktopHost.callBusiness);
-
-// ── Public tunnel mode (off by default) ─────────────────────────────────────
-// cloudflared binary manager, tunnel process manager, and the access passcode
-// gate. All three live under <userData>/mobile-remote/. The tunnel is never
-// auto-started; the user opts in from Settings, which routes through the
-// mobileRemote:start IPC with { mode: "tunnel" }.
-const cloudflaredBinary = new CloudflaredBinary({
-  baseDir: resolve(app.getPath("userData"), "mobile-remote"),
-});
-const tunnelManager = new TunnelManager({
-  binaryPath: () => cloudflaredBinary.binaryPath(),
-});
-const accessPasscode = new AccessPasscode({
-  filePath: resolve(app.getPath("userData"), "mobile-remote", "access.json"),
-});
 let prepareAccountGitHubLink:
   | ReturnType<typeof registerRemoteLinkIpc>["prepareGitHubLink"]
   | undefined = undefined;
-const { mobileRemoteController, cloudManagementManager, captureLinkAccount, accountFeatures } =
-  createDesktopRemoteServices({
-    remote: desktopHost.remote,
-    documentSignal: desktopHost.documentSignal,
-    app,
-    ipcMain,
-    userDataDir: app.getPath("userData"),
-    listProjects: async () =>
-      (await getProjectStore().list()).flatMap((project) => {
-        const root = project.roots.find((entry) => entry.id === project.primaryRootId);
-        return root ? [{ id: project.id, name: project.name, path: root.path }] : [];
-      }),
-    safeStorage,
-    windows: () => mainWindows,
-    openExternal: (url) => shell.openExternal(url),
-    prepareGitHubLink: (signal, authorized) => {
-      if (!prepareAccountGitHubLink) throw new Error("GitHub Link 服务尚未就绪。");
-      return prepareAccountGitHubLink(signal, authorized);
-    },
-    host: mobileRemote,
-    tunnel: tunnelManager,
-    binary: cloudflaredBinary,
-    passcode: accessPasscode,
-    cloudWindows: { open: openManagedCloudWorkbench, close: closeManagedCloudWorkbench },
-    openLegacyCloud: openCloudWorkbench,
-  });
+const mobileShell = createMobileGatewayShell({
+  host: desktopHost,
+  mainDirectory: __dirname,
+  mainWindows,
+  panel: panelAppBridge,
+  automations: cron.panel,
+  resolveProjectScope: resolvePanelProjectScope,
+  onPanelsChanged(id, kind) {
+    if (kind === "remove") panelAppBridge.revokeAppId(id);
+    broadcastPanelAppsChanged(BrowserWindow.getAllWindows());
+  },
+  getBridge: () => bridge,
+  getExternalRuntimeService: () => externalRuntime.service,
+  getExternalRuntimeApprovals: () => externalRuntime.approvals,
+  getExternalRuntimeModels: () => externalRuntimeModelService.list(),
+  listDiskSessions,
+  prepareGitHubLink(signal, authorized) {
+    if (!prepareAccountGitHubLink) throw new Error("GitHub Link 服务尚未就绪。");
+    return prepareAccountGitHubLink(signal, authorized);
+  },
+});
+const { mobileRemote, mobileOrchestrator, pendingMobileApprovals, captureLinkAccount } = mobileShell;
 // Main-owned external runtimes use the same account gate as the stdio worker.
 setDefaultCredentialAccess({
   ...localCredentialAccess,
@@ -818,111 +709,6 @@ function publishGatewayControlEvent(event: GatewayControlEventInput): Promise<vo
   return imGatewayService.publish(event);
 }
 
-function publishGatewayControlEventBestEffort(event: GatewayControlEventInput): void {
-  void publishGatewayControlEvent(event).catch((error) =>
-    dlog("main", "im_gateway.notification_publish.failed", {
-      type: event.type,
-      error: String(error),
-    }),
-  );
-}
-// Forward tunnel status changes to every renderer so the UI can reflect
-// connected / disconnected (address invalidated) without polling.
-tunnelManager.on("status", (status: string, detail?: unknown) => {
-  if (status === "connected" && typeof detail === "string") {
-    mobileRemote.setPublicBaseUrl(detail);
-  }
-  for (const w of BrowserWindow.getAllWindows()) {
-    if (!w.isDestroyed()) w.webContents.send("mobileRemote:tunnelStatus", { status, detail });
-  }
-  if (status === "connected" && typeof detail === "string") {
-    publishGatewayControlEventBestEffort({
-      type: "tunnel.connected",
-      title: "CodeShell 公网隧道已连接",
-      text: `公网地址：${detail}`,
-      button: { text: "打开 CodeShell", url: detail },
-    });
-  } else if (status === "disconnected") {
-    publishGatewayControlEventBestEffort({
-      type: "tunnel.disconnected",
-      title: "CodeShell 公网隧道已断开",
-      text: "公网隧道连接已断开，请在桌面端或聊天命令中重新开启。",
-    });
-  } else if (status === "error") {
-    publishGatewayControlEventBestEffort({
-      type: "tunnel.error",
-      title: "CodeShell 公网隧道异常",
-      text: typeof detail === "string" ? detail : "公网隧道发生异常。",
-    });
-  }
-});
-// Push the live online-device set to every renderer whenever a phone connects
-// or disconnects, so the trusted-device list can show per-device online lamps.
-mobileRemote.on("online-change", (ids: string[]) => {
-  bridge?.setMobileOutputOnline(ids.length > 0);
-  for (const w of BrowserWindow.getAllWindows()) {
-    if (!w.isDestroyed()) w.webContents.send("mobileRemote:onlineChange", ids);
-  }
-});
-
-// Rooms: resident stream-json Claude Code sessions the phone can open and chat
-// with continuously (context persists for the room's lifetime). Messages are
-// persisted to disk (authoritative) and mirrored to the phone. See
-// docs/.../2026-06-07-mobile-rooms-external-agent-design.md.
-const hostedRooms = desktopHost.remote.createRooms({
-  remote: mobileRemote,
-  uploads: mobileUploads,
-  document: desktopHost.documentSignal,
-  confirm: confirmOnDesktop,
-  listBackground: createTaskInboxBackgroundHost({ worker: () => bridge }).list,
-  projects: (device) => mobileOrchestrator.sendProjectList(device),
-  publish(event) {
-    const windows = (channel: string, data: unknown) => {
-      for (const window of mainWindows)
-        if (!window.isDestroyed()) window.webContents.send(channel, data);
-    };
-    switch (event.type) {
-      case "room.message":
-        mobileRemote.broadcast(event);
-        windows("room:message", { roomId: event.roomId, msg: event.msg });
-        return;
-      case "room.changed":
-        windows("ccRoom:roomState", event.room);
-        return;
-      case "room.recovery":
-        windows("ccRoom:transcriptRecovery", { roomId: event.roomId, message: event.message });
-        break;
-      case "ccRoom.approvalRequest":
-        windows("ccRoom:approvalRequest", { roomId: event.roomId, ...event.req });
-        break;
-      case "ccRoom.approvalResolved":
-        windows("ccRoom:approvalResolved", {
-          roomId: event.roomId,
-          requestId: event.requestId,
-          decision: event.decision,
-        });
-        break;
-    }
-    mobileRemote.broadcast(event);
-  },
-});
-const roomHistory: import("../shared/room-history.js").RoomHistoryAccess = {
-  getMessages: async (roomId, sinceSeq = 0) =>
-    desktopHost.callBusiness("rooms/messages", {
-      rootIdentity: await hostedRooms.root(),
-      roomId,
-      sinceSeq,
-    }),
-  getHistoryPage: async (roomId, request = {}) =>
-    desktopHost.callBusiness("rooms/historyPage", {
-      rootIdentity: await hostedRooms.root(),
-      roomId,
-      request,
-    }),
-};
-// Routes authenticated mobile events into the same run/permission path the
-// renderer uses (chat/approvals/sessions/rooms/cc-rooms). Extracted glue —
-// see mobile-remote-orchestrator.ts.
 const projectStore = getProjectStore();
 const cloudEnvironment = registerCloudEnvironmentIpc({
   ipcMain,
@@ -930,45 +716,6 @@ const cloudEnvironment = registerCloudEnvironmentIpc({
   userDataDir: app.getPath("userData"),
   assertLocalProject: (id) => projectStore.requireLive(id),
 });
-const remoteTerminals = new NativeRemoteTerminals({
-  remote: mobileRemote,
-  policy: new RemoteTerminalPolicy(
-    resolve(app.getPath("userData"), "mobile-remote", "terminal.json"),
-  ),
-});
-desktopHost.setRemoteTerminals(remoteTerminals);
-const mobileOrchestrator: MobileRemoteOrchestrator = new MobileRemoteOrchestrator({
-  readCcRoom: desktopHost.callBusiness,
-  roomHistory,
-  listDiskSessions,
-  remote: mobileRemote,
-  terminals: remoteTerminals,
-  uploads: mobileUploads,
-  pendingApprovals: pendingMobileApprovals,
-  hostedRooms,
-  getBridge: () => bridge,
-  getExternalRuntimeService: () => externalRuntime.service,
-  getExternalRuntimeModels: () => externalRuntimeModelService.list(),
-  getExternalRuntimeApprovals: () => externalRuntime.approvals,
-  startMobileRuntime: (request) =>
-    startMobileExternalRuntime(
-      {
-        service: () => externalRuntime.service,
-        bridge: () => bridge,
-        windows: () => mainWindows,
-      },
-      request,
-    ),
-  broadcastToWindows: (channel, payload) => {
-    for (const w of BrowserWindow.getAllWindows()) {
-      if (!w.isDestroyed()) w.webContents.send(channel, payload);
-    }
-  },
-});
-
-mobileRemote.on("online-change", () => hostedRooms.presence());
-mobileRemote.on("viewer-offline", ({ viewerId }) => mobileOrchestrator.releaseViewer(viewerId));
-
 async function createWindow(): Promise<BrowserWindow> {
   const { win, loadRenderer } = await createWorkbenchSurface(__dirname, {
     mainWindows, hardenGuests: browserWindows.hardenWebviewGuests,
@@ -2904,21 +2651,7 @@ const {
   stopMobileRemote,
   createMobileRemotePairingUrl,
   getMobileRemoteGatewayStatus,
-} = registerMobileRemoteIpc({
-  approvalCaller(event,sessionId) {
-    const signal = desktopHost.documentSignal(event);
-    if (bridge?.panelOwnerWebContentsId(sessionId) !== event.sender.id) throw Error("Approval session belongs to another document");
-    return {owner:event.sender.id,signal};
-  },
-  mobileDevices,
-  mobileRemote,
-  cloudflaredBinary,
-  tunnelManager,
-  accessPasscode,
-  mobileRemoteController,
-  mobileOrchestrator,
-  remoteTerminals,
-});
+} = mobileShell.registerIpc();
 const { knownGitRoots } = desktopHost;
 
 registerProjectAuthorityIpc({
@@ -2938,13 +2671,6 @@ registerProjectAuthorityIpc({
   openPath,
 });
 
-registerRoomsIpc({
-  readCcRoom: desktopHost.callBusiness,
-  roomHistory,
-  mainWindows,
-  hostedRooms,
-  mobileOrchestrator,
-});
 registerDialogPickerIpc();
 ipcMain.handle("window:new", async () => {
   await createWindow();
@@ -3333,8 +3059,7 @@ registerDesktopShutdown(app, {
       desktopHostShutdown,
       closeActivityHistory?.(),
       mimiPresenceShutdown,
-      mobileRemoteController.dispose(),
-      cloudManagementManager.dispose(),
+      mobileShell.stop(),
       petWorkInboxFlush,
 
       petNoticeFlush,
@@ -3345,7 +3070,7 @@ registerDesktopShutdown(app, {
       cuaDriverShutdown,
       closeComputerUse(),
     ]);
-    await mobileUploads.dispose();
+    await mobileShell.disposeUploads();
   },
   finalize: () => sessionCatalogIpc.close(),
 });
