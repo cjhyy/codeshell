@@ -1,21 +1,24 @@
 import { bundleInSubprocess } from "../../../../../tests/helpers/bundle-in-subprocess.js";
 import { expect, test } from "bun:test";
-import { mkdtemp, symlink, rm } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 test("hosted IM control, saved setup and outbox survive a real utility restart", async () => {
   const root = await mkdtemp(join(tmpdir(), "codeshell-host-im-"));
+  let bundle: string | undefined;
   try {
-    await symlink(
-      resolve("packages/desktop/node_modules"),
-      join(root, "node_modules"),
-      process.platform === "win32" ? "junction" : "dir",
+    // Node resolves an external from the bundle's ancestors. A fresh Windows
+    // checkout may hoist dependencies above the Desktop node_modules folder.
+    bundle = await mkdtemp(resolve("packages/desktop/.im-native-test-"));
+    bundleInSubprocess(
+      [resolve("packages/desktop/scripts/__fixtures__/hosted-im-gateway.ts")],
+      bundle,
+      {
+        naming: "fixture.mjs",
+        packages: "external",
+      },
     );
-    bundleInSubprocess([resolve("packages/desktop/scripts/__fixtures__/hosted-im-gateway.ts")], root, {
-      naming: "fixture.mjs",
-      packages: "external",
-    });
-    const child = Bun.spawn(["node", join(root, "fixture.mjs"), root], {
+    const child = Bun.spawn(["node", join(bundle, "fixture.mjs"), root], {
       stdout: "pipe",
       stderr: "pipe",
       env: {
@@ -40,6 +43,8 @@ test("hosted IM control, saved setup and outbox survive a real utility restart",
       clearTimeout(timer);
     }
   } finally {
-    await rm(root, { recursive: true, force: true });
+    await Promise.all(
+      [root, ...(bundle ? [bundle] : [])].map((path) => rm(path, { recursive: true, force: true })),
+    );
   }
 }, 40000);
