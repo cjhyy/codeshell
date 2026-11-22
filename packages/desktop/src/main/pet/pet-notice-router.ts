@@ -387,12 +387,12 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
   }
 
   /** The notice whose open item has this internal code; undefined before the ledger loads. */
-  actionRecord(code: string): NoticeActionRecord | undefined {
+  actionRecord(code: string): Promise<NoticeActionRecord | undefined> {
     return this.items.actionRecord(code);
   }
 
   /** Open items that reached an IM conversation on `channel` (see NoticeItems). */
-  openActionItems(channel: string): NoticeActionRecord[] {
+  openActionItems(channel: string): Promise<NoticeActionRecord[]> {
     return this.items.openActionItems(channel);
   }
 
@@ -456,7 +456,7 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
   private async releaseMediaIfDone(id: string): Promise<void> {
     const store = this.options.media;
     if (!store) return;
-    const record = this.options.ledger?.get(id);
+    const record = await this.options.ledger?.get(id);
     if (record && !unpackFacts(record.facts).media?.attachments) return;
     if (record && this.needsMedia(record, this.now())) return;
     await store.release(id);
@@ -468,9 +468,9 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     const ledger = this.options.ledger;
     if (!store || !ledger) return;
     const now = this.now();
-    await store.sweep((id) => {
+    await store.sweep(async (id) => {
       if (this.freezing.has(id) || this.sending.has(id)) return true;
-      const record = ledger.get(id);
+      const record = await ledger.get(id);
       return record !== undefined && this.needsMedia(record, now);
     });
   }
@@ -485,28 +485,19 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
   }
 
   /** The decision prompt with this reply code, from its record; undefined before the ledger loads. */
-  decisionRecord(code: string): DecisionPromptRecord | undefined {
-    const ledger = this.options.ledger;
-    const record = ledger?.byPromptCode(code);
-    if (!ledger || !record) return undefined;
-    return this.promptView(record);
+  async decisionRecord(code: string): Promise<DecisionPromptRecord | undefined> {
+    return (await this.options.ledger?.decisionRows(code))?.[0];
   }
-
-  /** Decision prompts the ledger still holds (`only` filters before views are built). */
-  decisionRecords(only?: (prompt: NoticeDecisionPrompt) => boolean): DecisionPromptRecord[] {
-    const ledger = this.options.ledger;
-    if (!ledger) return [];
+  async decisionRecords(
+    only?: (prompt: NoticeDecisionPrompt) => boolean,
+  ): Promise<DecisionPromptRecord[]> {
     const seen = new Set<string>();
-    const views: DecisionPromptRecord[] = [];
-    for (const record of ledger.prompts(only)) {
-      // A resubmitted code (a duplicate record) is the same prompt.
-      if (seen.has(record.prompt!.code)) continue;
-      seen.add(record.prompt!.code);
-      views.push(this.promptView(record));
-    }
-    return views;
+    return ((await this.options.ledger?.decisionRows()) ?? []).filter((row) => {
+      if ((only && !only(row.prompt)) || seen.has(row.code)) return false;
+      seen.add(row.code);
+      return true;
+    });
   }
-
   async adoptDecision(
     sessionId: string,
     requestId: string,
@@ -515,7 +506,7 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
   ): Promise<DecisionPromptRecord | undefined> {
     const ledger = this.options.ledger;
     if (!ledger) return undefined;
-    const related = ledger.forRequest(sessionId, requestId);
+    const related = await ledger.forRequest(sessionId, requestId);
     // The oldest: a later one with the same key is a duplicate the policy dropped.
     const first = related.find(
       (record) => record.dedupeKey === dedupeKey && record.kind === "session.blocked",
@@ -527,9 +518,8 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     if (first.prompt && first.prompt.code !== prompt.code) return undefined;
     const escalated = related.some((record) => record.dedupeKey === `${dedupeKey}:away`);
     try {
-      return this.promptView(
-        await ledger.adoptPrompt(first.id, prompt, escalated ? "escalated" : "desktop"),
-      );
+      await ledger.adoptPrompt(first.id, prompt, escalated ? "escalated" : "desktop");
+      return this.decisionRecord(prompt.code);
     } catch (error) {
       this.log("pet.notice.prompt_adopt_failed", { error: errorText(error) });
       return undefined;
@@ -542,7 +532,7 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     patch: NoticeDecisionPromptPatch,
   ): Promise<DecisionPromptRecord | undefined> {
     const ledger = this.options.ledger;
-    const record = ledger?.byPromptCode(code);
+    const record = await ledger?.byPromptCode(code);
     if (!ledger || !record) return undefined;
     try {
       const next = await ledger.updatePrompt(record.id, patch);
@@ -558,45 +548,11 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
           patch.phase,
         );
       }
-      return this.promptView(next);
+      return this.decisionRecord(code);
     } catch (error) {
       this.log("pet.notice.prompt_update_failed", { phase: patch.phase, error: errorText(error) });
       return undefined;
     }
-  }
-
-  private promptView(record: NoticeRecord): DecisionPromptRecord {
-    const ledger = this.options.ledger!;
-    const { facts, target } = unpackFacts(record.facts);
-    const title = noticeLine(facts.title);
-    let copies: DecisionPromptRecord["copies"] | undefined;
-    // The prompt itself, then its other session.blocked copies (the escalation).
-    const readCopies = (): DecisionPromptRecord["copies"] =>
-      [
-        record,
-        ...ledger
-          .forRequest(record.sessionId!, record.requestId!)
-          .filter((other) => other.id !== record.id && other.kind === record.kind),
-      ].map((copy) => {
-        const channel = copy.delivery?.channel ?? copy.decision?.im;
-        return {
-          ...(copy.delivery ? { status: copy.delivery.status } : {}),
-          ...(channel !== undefined ? { channel } : {}),
-        };
-      });
-    return {
-      code: record.prompt!.code,
-      sessionId: record.sessionId!,
-      requestId: record.requestId!,
-      target,
-      ruleIds: record.ruleIds,
-      ...(title !== undefined ? { title } : {}),
-      prompt: record.prompt!,
-      ...(record.decision ? { decision: record.decision } : {}),
-      get copies() {
-        return (copies ??= readCopies());
-      },
-    };
   }
 
   /**
@@ -636,7 +592,7 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     for (const [id, at] of this.replaying) if (now - at >= holdMs) this.replaying.delete(id);
     const replay: ReplayedNotice[] = [];
     const resend: NoticeRecord[] = [];
-    for (const record of ledger.queued()) {
+    for (const record of await ledger.queued()) {
       if (record.delivery?.channel !== channel || this.replaying.has(record.id)) continue;
       const { facts, target, media } = unpackFacts(record.facts);
       // Route notices live in the gateway outbox, never in this queue's replay.
@@ -741,10 +697,10 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
   }
 
   /** Sessions with a goal-pause notice that still waits for a channel, the digest or the outbox. */
-  goalPauseSessions(): string[] {
+  async goalPauseSessions(): Promise<string[]> {
     const ledger = this.options.ledger;
     if (!ledger) return [];
-    const waiting = [...ledger.queued(), ...ledger.held(), ...ledger.enqueued()];
+    const waiting = await ledger.waiting();
     return [
       ...new Set(
         waiting.flatMap((record) =>
@@ -769,10 +725,10 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     }
     // A send being written right now is withdrawn the moment it lands.
     for (const id of this.sending) {
-      const sending = ledger.get(id);
+      const sending = await ledger.get(id);
       if (sending && matches(sending)) this.revokeOnLanding.set(id, reason);
     }
-    for (const record of [...ledger.queued(), ...ledger.held(), ...ledger.enqueued()]) {
+    for (const record of await ledger.waiting()) {
       if (!matches(record)) continue;
       if (this.sending.has(record.id)) {
         this.revokeOnLanding.set(record.id, reason);
@@ -865,9 +821,9 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     const ledger = this.options.ledger;
     if (!ledger || this.disposed) return;
     if (this.recovered) await this.recovered;
-    const record = ledger
-      .enqueued()
-      .find((candidate) => this.deliveryKeyOf(candidate) === deliveryKey);
+    const record = (await ledger.enqueued()).find(
+      (candidate) => this.deliveryKeyOf(candidate) === deliveryKey,
+    );
     if (record) {
       await this.settleFromOutbox(record, outcome, error);
       return;
@@ -875,7 +831,9 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     // Expired into the digest while the relay was still sending it, then
     // delivered after all: it is out of the digest for good.
     if (outcome === "delivered") {
-      const held = ledger.held().find((candidate) => this.deliveryKeyOf(candidate) === deliveryKey);
+      const held = (await ledger.held()).find(
+        (candidate) => this.deliveryKeyOf(candidate) === deliveryKey,
+      );
       if (held) {
         await this.settleQuietly(held.id, "accepted");
         return;
@@ -883,7 +841,7 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     }
     // The outbox can answer before this process recorded the send as enqueued.
     for (const id of this.sending) {
-      const sending = ledger.get(id);
+      const sending = await ledger.get(id);
       if (sending && this.deliveryKeyOf(sending) === deliveryKey)
         this.earlyResults.set(deliveryKey, { outcome, error });
     }
@@ -914,7 +872,7 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
       case "expired":
         if (!usesP0Budget(notice) && !immediate && owner && this.digest) {
           await this.settleQuietly(record.id, "held", "outbox-expired");
-          this.digest.schedule();
+          await this.digest.schedule();
           return;
         }
         break;
@@ -964,7 +922,7 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     await this.expireQueued(now);
     // Claims recovery marked unknown, expired and evicted records lose their files.
     await this.sweepMedia();
-    if (!this.disposed) this.digest?.schedule();
+    if (!this.disposed) await this.digest?.schedule();
   }
 
   private async expireQueued(now: number): Promise<void> {
@@ -1009,8 +967,9 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     if (ledger) {
       try {
         await ledger.load();
-        counts = ledger.countsThisHour(now);
-        seen = ledger.seenDedupeKeys();
+        const state = await ledger.routingState(now, notice.dedupeKey);
+        counts = state.counts;
+        if (state.seen) seen = new Set([notice.dedupeKey]);
       } catch (error) {
         ledgerReady = false;
         this.log("pet.notice.ledger_read_failed", { error: errorText(error) });
@@ -1021,7 +980,7 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     if (!ledger || !ledgerReady) return plan;
 
     // An open item going out over IM takes its number in that conversation.
-    const slotted = this.items.slot(notice, decision, id, actions);
+    const slotted = await this.items.slot(notice, decision, id, actions);
     if (slotted?.label) {
       body = `${slotted.label}${body}`;
       plan.body = body;
@@ -1177,7 +1136,7 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
       else if (plan.ledgerFailed && !handled)
         this.log("pet.notice.lost", { kind: notice.kind, priority: notice.priority });
       if (decision.outlet === "digest" && !plan.ledgerFailed && !this.disposed)
-        this.digest?.schedule();
+        await this.digest?.schedule();
       return undefined;
     }
     if (desktopNow) this.showDesktop(notice, desktopBody);
@@ -1233,7 +1192,7 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
         const early = this.earlyResults.get(noticeDeliveryKey(key, target));
         if (early && result.enqueued === true) {
           this.earlyResults.delete(noticeDeliveryKey(key, target));
-          const landed = this.options.ledger?.get(id);
+          const landed = await this.options.ledger?.get(id);
           if (landed?.delivery?.status === "enqueued")
             await this.settleFromOutbox(landed, early.outcome, early.error);
         }
@@ -1270,7 +1229,7 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     const ledger = this.options.ledger!;
     // The snapshot may be stale: a send of this process may have started or
     // settled it while earlier records were being recovered.
-    const current = ledger.get(record.id)?.delivery;
+    const current = (await ledger.get(record.id))?.delivery;
     if (
       this.sending.has(record.id) ||
       current?.status !== "claimed" ||
@@ -1296,7 +1255,7 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
         return;
       }
       if (state !== "pending") {
-        const current = ledger.get(record.id);
+        const current = await ledger.get(record.id);
         if (current) await this.settleFromOutbox(current, state.outcome, state.error);
       }
       return;
@@ -1341,7 +1300,7 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
   private async recoverEnqueued(): Promise<void> {
     const ledger = this.options.ledger!;
     if (!this.options.outlets?.outboxState) return;
-    for (const record of ledger.enqueued()) {
+    for (const record of await ledger.enqueued()) {
       const state = await this.outboxState(record);
       // Still starting: nothing is known yet, so nothing is lost either.
       if (state === "pending" || state === "not-ready") continue;
@@ -1361,7 +1320,7 @@ export class PetNoticeRouter implements NoticeDecisionPrompts {
     const waiting = [...this.awaitingOutbox];
     this.awaitingOutbox.clear();
     for (const id of waiting) {
-      const record = ledger.get(id);
+      const record = await ledger.get(id);
       if (record?.delivery?.status === "claimed") await this.recoverClaim(record);
     }
     await this.recoverEnqueued();

@@ -258,6 +258,12 @@ const business = new HostBusinessCalls({
   ...approvals.native,
   "mimi/tasks": (command, grant) => mimiTasks.run(command, grant),
   ...segments,
+  "mimi/noticeLedger":async(call,grant)=>{
+    const db=await storage; grant.assertCurrent();
+    const row=await db.request<import("../../shared/mimi-notice-ledger.js").NoticeLedgerReply>("mimi/noticeLedger",{call,permit:grant.permit});
+    if(!row)throw Error("Mimi notice ledger unavailable");
+    return row;
+  },
   "mimi/ruleScheduler": (command) => ruleScheduler.run(command),
   "mimi/rules": async (call, grant) => {
     const db = await storage;

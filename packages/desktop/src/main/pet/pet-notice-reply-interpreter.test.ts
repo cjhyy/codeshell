@@ -189,14 +189,14 @@ function relay(h: Harness, models: ReplyModel[], sent: unknown[] = []) {
 
 async function limitStop(h: Harness, sessionId = SID, runId = "run-1"): Promise<void> {
   env.clock += 1_000;
-  const before = h.wiring.router.openActionItems("wechat").length;
+  const before = (await h.wiring.router.openActionItems("wechat")).length;
   for (const event of [
     { type: "session_started", runId, clientMessageId: `cm-${runId}` },
     { type: "tool_use_start", toolCall: { id: "t1", toolName: "Edit", args: {} } },
     { type: "turn_complete", reason: "completed", runId, completionKind: "limit_stop" },
   ])
     h.observeSessionEvent(sessionId, event);
-  await settle(() => h.wiring.router.openActionItems("wechat").length > before);
+  await settle(async () => (await h.wiring.router.openActionItems("wechat")).length > before);
   await h.idle();
 }
 
@@ -251,7 +251,7 @@ describe("owner replies read by the model", () => {
     reply = resolve(4, "continue");
     expect(await d.relay.reply({ message: "继续", origin: OWNER_DM })).toBeUndefined();
     expect(sent).toEqual([]);
-    expect(current.wiring.router.openActionItems("wechat")).toHaveLength(1);
+    expect(await current.wiring.router.openActionItems("wechat")).toHaveLength(1);
   });
 
   test("a new run of the Session closes its stopped item", async () => {
@@ -259,8 +259,8 @@ describe("owner replies read by the model", () => {
     await current.handler(SID, upsertArgs({ channel: "wechat", events: ["blocked"] }));
     await limitStop(current);
     current.observeSessionEvent(SID, { type: "session_started", runId: "run-2" });
-    await settle(() => current!.wiring.router.openActionItems("wechat").length === 0);
-    expect(current.wiring.router.openActionItems("wechat")).toEqual([]);
+    await settle(async () => (await current!.wiring.router.openActionItems("wechat")).length === 0);
+    expect(await current.wiring.router.openActionItems("wechat")).toEqual([]);
   });
 
   test("two open items are numbered ①②, in the text and for the model", async () => {
@@ -280,7 +280,7 @@ describe("owner replies read by the model", () => {
       "它已经停了，不会自己再继续。",
     );
     expect(m.seen[0]!.items.map((item) => item.ordinal)).toEqual([1, 2]);
-    expect(current.wiring.router.openActionItems("wechat")).toHaveLength(1);
+    expect(await current.wiring.router.openActionItems("wechat")).toHaveLength(1);
   });
 
   test("the owner's words reach the Session verbatim, or not at all", async () => {
@@ -307,7 +307,7 @@ describe("owner replies read by the model", () => {
     };
     expect(handoff.handoff).toContain('"ownerSaid":"交给 Mimi 吧"');
     await handoff.dispatched();
-    expect(current.wiring.router.openActionItems("wechat")).toEqual([]);
+    expect(await current.wiring.router.openActionItems("wechat")).toEqual([]);
     expect(d.budgets).toEqual([false]);
   });
 
@@ -325,7 +325,9 @@ describe("owner replies read by the model", () => {
     });
     await settle();
     await d.poll(() => current!.ownerSends.length > 0);
-    await settle(() => current!.wiring.router.decisionRecord(d.code()!)?.prompt.phase === "im");
+    await settle(
+      async () => (await current!.wiring.router.decisionRecord(d.code()!))?.prompt.phase === "im",
+    );
     // A decision waits on the answer: no model, no guess.
     expect(await d.relay.reply({ message: "嗯", origin: OWNER_DM })).toBe(
       "现在没法理解这条回复，请在桌面上处理。",
@@ -353,7 +355,9 @@ describe("owner replies read by the model", () => {
     d.raise();
     await settle();
     await d.poll(() => current!.ownerSends.length > 0);
-    await settle(() => current!.wiring.router.decisionRecord(d.code()!)?.prompt.phase === "im");
+    await settle(
+      async () => (await current!.wiring.router.decisionRecord(d.code()!))?.prompt.phase === "im",
+    );
     expect(await d.relay.reply({ message: "嗯…", origin: OWNER_DM })).toContain("明确回我一声");
     explicit = true;
     expect(await d.relay.reply({ message: "允许", origin: OWNER_DM })).toContain("已允许这一次");

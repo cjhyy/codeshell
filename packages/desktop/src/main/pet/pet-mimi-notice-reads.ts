@@ -10,7 +10,8 @@ import type {
 } from "../../shared/pet-notices.js";
 import { actionHints, ordinalLabel } from "./pet-notice-action-codes.js";
 import { composeNoticeBody, noticeLine } from "./pet-notice-compose.js";
-import type { NoticeRecord, PetNoticeLedger } from "./pet-notice-ledger.js";
+import type { MimiNoticeLedger } from "../../shared/mimi-notice-ledger.js";
+import type { NoticeRecord } from "./pet-notice-ledger.js";
 import { hostTimezoneOffsetMin, isSnoozed } from "./pet-notice-policy.js";
 import { localIsoTime } from "./pet-notice-reply-interpreter.js";
 import { unpackFacts } from "./pet-notice-types.js";
@@ -24,13 +25,8 @@ import { unpackFacts } from "./pet-notice-types.js";
  */
 
 /** Mimi's own messages to the owner that her next turn there should know about. */
-const PROACTIVE_KINDS: ReadonlySet<string> = new Set([
-  "brief.morning",
-  "brief.evening",
-  "heartbeat",
-]);
-export const RECENT_PROACTIVE_WINDOW_MS = 12 * 60 * 60_000;
-export const RECENT_PROACTIVE_MAX = 3;
+export { RECENT_PROACTIVE_WINDOW_MS, RECENT_PROACTIVE_MAX } from "./pet-notice-row-query.js";
+import { RECENT_PROACTIVE_WINDOW_MS } from "./pet-notice-row-query.js";
 const REFS_PER_NOTICE = 8;
 const REF_TITLE_MAX = 80;
 const SYSTEM_TRIGGER_ACTIONS: Readonly<Record<string, readonly string[]>> = {
@@ -42,7 +38,7 @@ const SYSTEM_TRIGGER_ACTIONS: Readonly<Record<string, readonly string[]>> = {
 const ENDED: ReadonlySet<string> = new Set(["spent", "completed", "cancelled"]);
 
 export interface MimiNoticeReadsDeps {
-  ledger: Pick<PetNoticeLedger, "load" | "newest">;
+  ledger: Pick<MimiNoticeLedger, "load" | "readRows">;
   /** The rule list exactly as the settings page gets it (`pet:notices:get-state`). */
   rules(): Promise<readonly PetNoticeRuleSummary[]>;
   settingsView(): PetNotificationSettingsView;
@@ -130,16 +126,6 @@ function deliveryOf(record: NoticeRecord): string {
   return "unknown";
 }
 
-function wasDelivered(record: NoticeRecord): boolean {
-  const outlet = record.decision?.outlet;
-  if (outlet !== "desktop" && outlet !== "both" && outlet !== "im") return false;
-  const status = record.delivery?.status;
-  if (outlet !== "im") return true;
-  return (
-    status === "accepted" || status === "enqueued" || status === "claimed" || status === "unknown"
-  );
-}
-
 export function createMimiNoticeReads(deps: MimiNoticeReadsDeps) {
   const now = deps.now ?? Date.now;
   const offset = deps.timezoneOffsetMin ?? hostTimezoneOffsetMin;
@@ -206,14 +192,7 @@ export function createMimiNoticeReads(deps: MimiNoticeReadsDeps) {
 
   async function notices(query: PetNoticesQuery) {
     await deps.ledger.load();
-    const kinds = query.kinds ? new Set<string>(query.kinds) : undefined;
-    const match = (record: Readonly<NoticeRecord>) =>
-      (!kinds || kinds.has(record.kind)) &&
-      (query.sessionId === undefined || record.sessionId === query.sessionId) &&
-      (query.since === undefined || record.createdAt >= query.since) &&
-      (query.until === undefined || record.createdAt <= query.until) &&
-      record.decision?.outlet !== "drop";
-    const found = deps.ledger.newest(match, query.limit + 1);
+    const found = await deps.ledger.readRows({ kind: "history", query });
     return {
       ok: true,
       notices: found.slice(0, query.limit).map(noticeRow),
@@ -296,20 +275,14 @@ export function createMimiNoticeReads(deps: MimiNoticeReadsDeps) {
     )
       return [];
     const since = now() - RECENT_PROACTIVE_WINDOW_MS;
-    const found = deps.ledger.newest((record) => {
-      if (!PROACTIVE_KINDS.has(record.kind) || record.createdAt < since) return false;
-      if (
-        unpackFacts(record.facts).target.kind !== "owner" ||
-        !wasDelivered(record as NoticeRecord)
-      )
-        return false;
-      if (origin.kind === "desktop") return true;
-      const im = record.delivery?.channel ?? record.decision?.im;
-      return (
-        (record.decision?.outlet === "im" || record.decision?.outlet === "both") &&
-        im === origin.channel
-      );
-    }, RECENT_PROACTIVE_MAX);
+    const found = await deps.ledger.readRows({
+      kind: "proactive",
+      since,
+      channel: origin.kind === "im" ? origin.channel : undefined,
+    });
+    if (origin.kind === "im" && !(await deps.isOwnerConversation(origin.channel, origin.target)))
+      return [];
+
     return found.map((record) => {
       const refs = briefRefs(isRecord(record.facts) ? record.facts : {}).map(
         ({ type, status, title }) => ({ type, status, title }),

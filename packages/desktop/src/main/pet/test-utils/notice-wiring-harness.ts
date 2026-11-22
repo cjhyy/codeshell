@@ -1,3 +1,4 @@
+import { PetNoticeLedger } from "../pet-notice-ledger.js";
 import { PetRuleStore } from "../pet-rule-store.js";
 import { expect } from "bun:test";
 import { scriptedReplyModel } from "./scripted-reply-model.js";
@@ -209,6 +210,10 @@ export function harness(overrides: Partial<PetNoticeWiringDeps> = {}): Harness {
   const deriver = new SessionOutcomeDeriver({ now: () => env.clock });
   const wiring = wirePetNotices({
     userDataDir: env.dir,
+    ledger: new PetNoticeLedger({
+      path: join(env.dir, "pet", "notices.json"),
+      now: () => env.clock,
+    }),
     rules: new PetRuleStore({ path: join(env.dir, "pet", "rules.json"), now: () => env.clock }),
     bridge: {
       setHostActionHandler: (action, registered) => {
@@ -409,11 +414,14 @@ export function pause(ms = 1): Promise<void> {
  * so a loaded machine cannot fail a test by being slow; `poke` re-drives the
  * work on each round. Without it, a short drain for "nothing happens" checks.
  */
-export async function settle(until?: () => boolean, poke?: () => Promise<void>): Promise<void> {
+export async function settle(
+  until?: () => boolean | Promise<boolean>,
+  poke?: () => Promise<void>,
+): Promise<void> {
   for (let index = 0; index < 20; index += 1) await pause();
   if (!until) return;
   const deadline = Date.now() + SETTLE_DEADLINE_MS;
-  while (!until() && Date.now() < deadline) {
+  while (!(await until()) && Date.now() < deadline) {
     await poke?.();
     await pause(2);
   }

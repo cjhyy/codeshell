@@ -154,7 +154,7 @@ describe("现在别说，明早再说", () => {
       now: "2023-11-14T22:13:20+00:00",
     });
     // Said once: the item is used, nothing open any more.
-    expect(h.wiring.router.openActionItems("wechat")).toEqual([]);
+    expect(await h.wiring.router.openActionItems("wechat")).toEqual([]);
     const copy = h.wiring.ledger.held()[0]!;
     expect(copy).toMatchObject({
       kind: "brief.evening",
@@ -191,7 +191,7 @@ describe("现在别说，明早再说", () => {
     await h.idle();
     expect(h.ownerSends).toHaveLength(3);
     // Twice is the limit: the last copy is no longer an item that can be put off.
-    expect(h.wiring.router.openActionItems("wechat")).toEqual([]);
+    expect(await h.wiring.router.openActionItems("wechat")).toEqual([]);
   });
 
   test("a time is only taken for defer, and only as a full ISO instant", async () => {

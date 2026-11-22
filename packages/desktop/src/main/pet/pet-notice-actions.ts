@@ -93,7 +93,9 @@ export type NoticeDeferResult =
   | { ok: false; reason: "limit" | "gone" | "failed" };
 
 export interface NoticeActionRouter {
-  actionRecord(code: string): NoticeActionRecord | undefined;
+  actionRecord(
+    code: string,
+  ): NoticeActionRecord | undefined | Promise<NoticeActionRecord | undefined>;
   useAction(code: string, patch: NoticeActionsPatch): Promise<NoticeActionRecord | undefined>;
   /** Hold a copy of the notice until `until` (the host clamps it); absent: not supported. */
   deferNotice?(code: string, until: number | undefined): Promise<NoticeDeferResult>;
@@ -532,7 +534,7 @@ export function createNoticeActionExecutor(deps: NoticeActionExecutorDeps): Noti
 
   return {
     async execute(request) {
-      const record = router.actionRecord(request.code);
+      const record = await router.actionRecord(request.code);
       if (!record) return GONE;
       const { actions } = record;
       if (now() >= actions.expiresAt) return EXPIRED;

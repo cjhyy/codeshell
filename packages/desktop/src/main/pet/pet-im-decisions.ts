@@ -298,7 +298,7 @@ export interface PetImDecisionsOptions {
   ) => Promise<ReplyInterpretation | undefined>;
   /** Notice items (goal pauses, failures, results to open): listed per channel, executed on request. */
   actions?: {
-    items(channel: string): NoticeActionRecord[];
+    items(channel: string): NoticeActionRecord[] | Promise<NoticeActionRecord[]>;
     execute(request: NoticeActionRequest): Promise<NoticeActionReply>;
   };
 }
@@ -511,7 +511,7 @@ export class PetImDecisions {
       // Ended prompts matter only while their expiry notice is still owed.
       const open = (prompt: DecisionPromptRecord["prompt"]) =>
         !isPromptEnded(prompt.phase) || prompt.expiryNotice?.sent === false;
-      for (const record of this.router.decisionRecords(open)) {
+      for (const record of await this.router.decisionRecords(open)) {
         if (this.answering.has(record.code)) continue;
         try {
           const owed = record.prompt.expiryNotice;
@@ -535,12 +535,12 @@ export class PetImDecisions {
             await this.expire(entry);
             continue;
           }
-          let record = this.router.decisionRecord(entry.code);
+          let record = await this.router.decisionRecord(entry.code);
           if (record) record = await this.catchUp(entry, record);
           else {
             if (this.now() - entry.createdAt < this.graceMs()) continue;
             await this.promptFirst(entry);
-            record = this.router.decisionRecord(entry.code);
+            record = await this.router.decisionRecord(entry.code);
             if (!record) continue;
           }
           if (!this.escalates(entry, record)) continue;
@@ -550,7 +550,7 @@ export class PetImDecisions {
           this.options.onError(error);
         }
       }
-      this.reschedule(entries);
+      await this.reschedule(entries);
       this.watchAway(awaitingAway);
     } catch (error) {
       this.options.onError(error);
@@ -663,7 +663,7 @@ export class PetImDecisions {
   private async expire(entry: ImDecision): Promise<void> {
     // Core applies a model question's timeout (recommended option or skip).
     if (skippableEnvelope(entry.envelope)) return;
-    const found = this.router.decisionRecord(entry.code);
+    const found = await this.router.decisionRecord(entry.code);
     const record = found ? await this.catchUp(entry, found) : undefined;
     // Answered here already; the projection has not caught up yet.
     if (record && isPromptEnded(record.prompt.phase)) return;
@@ -746,13 +746,15 @@ export class PetImDecisions {
   }
 
   /** Each decision's next moment: the end of its grace, then its deadline. */
-  private reschedule(entries: readonly ImDecision[]): void {
+  private async reschedule(entries: readonly ImDecision[]): Promise<void> {
     const now = this.now();
     const codes = new Set(entries.map((entry) => entry.code));
     for (const code of this.unrecordedTries.keys())
       if (!codes.has(code)) this.unrecordedTries.delete(code);
+    const activeRows = entries.length ? await this.router.decisionRecords() : [];
+    const byCode = new Map(activeRows.map((row) => [row.code, row]));
     for (const entry of entries) {
-      const record = this.router.decisionRecord(entry.code);
+      const record = byCode.get(entry.code);
       if (record) this.unrecordedTries.delete(entry.code);
       const end = this.expiresAt(entry);
       const graceEnd = entry.createdAt + this.graceMs();
@@ -811,7 +813,7 @@ export class PetImDecisions {
     let expired = false;
     for (const entry of entries) {
       if (!(await this.sameOrigin(entry.delivery.target, origin))) continue;
-      const found = this.router.decisionRecord(entry.code);
+      const found = await this.router.decisionRecord(entry.code);
       const record = found ? await this.catchUp(entry, found) : undefined;
       const delivered =
         entry.delivery.target.kind === "route"
@@ -832,7 +834,7 @@ export class PetImDecisions {
       const slot = record?.prompt.slot;
       ordinals.push(slot?.channel === origin.channel ? slot.ordinal : undefined);
     }
-    for (const record of this.options.actions?.items(origin.channel) ?? []) {
+    for (const record of (await this.options.actions?.items(origin.channel)) ?? []) {
       if (!(await this.sameOrigin(record.target, origin))) continue;
       items.push({
         source: "action",
@@ -892,7 +894,7 @@ export class PetImDecisions {
   /** Prompts that reached this conversation and ended within the last 10 minutes. */
   private async recentlyEnded(origin: ReplyOrigin): Promise<DecisionPromptRecord[]> {
     const now = this.now();
-    const records = this.router.decisionRecords(
+    const records = await this.router.decisionRecords(
       (prompt) =>
         isPromptEnded(prompt.phase) &&
         prompt.channel === origin.channel &&
@@ -984,8 +986,8 @@ export class PetImDecisions {
   ): Promise<string> {
     const { code } = offered;
     // The model took a while: the decision may have been answered or ended meanwhile.
+    const prompted = await this.router.decisionRecord(code);
     const entry = (await this.options.read()).find((item) => item.code === code);
-    const prompted = this.router.decisionRecord(code);
     if (
       !entry ||
       !(await this.sameOrigin(entry.delivery.target, origin)) ||
@@ -1049,7 +1051,7 @@ export class PetImDecisions {
     this.answering.add(code);
     try {
       await this.options.approve(entry, decision);
-      const record = this.router.decisionRecord(code);
+      const record = await this.router.decisionRecord(code);
       if (record && !isPromptEnded(record.prompt.phase))
         await this.router.updateDecision(code, { phase: "answered", endedAt: this.now() });
       if (asked)

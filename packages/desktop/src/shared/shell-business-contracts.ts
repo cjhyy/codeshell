@@ -46,6 +46,7 @@ export interface ShellBusinessOperations extends ProjectMigrationOperations, Mim
   "startup/quickChats": { input: Record<string, never>; result: string[] };
   "startup/cleanupAttachments": { input: { sessionId?: string }; result: void };
   "terminal/command": { input: import("./pty.js").NativeTerminalCommand; result: unknown };
+  "mimi/noticeLedger": {input:import("./mimi-notice-ledger.js").NoticeLedgerCall;result:import("./mimi-notice-ledger.js").NoticeLedgerReply};
   "mimi/ruleScheduler": {input:"prepare"|"start"|"reconcile"|"stop";result:void};
   "mimi/rules": { input: import("./mimi-rules.js").MimiRuleCall; result: import("./mimi-rules.js").MimiRuleReply };
   "mimi/turnStorage":{input:import("./mimi-turn-storage.js").MimiTurnStorageCommand;result:unknown};

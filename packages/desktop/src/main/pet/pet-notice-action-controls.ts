@@ -219,7 +219,9 @@ export function createNoticeActionControls(deps: NoticeActionControlsDeps): Noti
  */
 export function createOwnerReplyHandling(
   deps: NoticeActionControlsDeps & {
-    router: NoticeActionRouter & { openActionItems(channel: string): NoticeActionRecord[] };
+    router: NoticeActionRouter & {
+      openActionItems(channel: string): NoticeActionRecord[] | Promise<NoticeActionRecord[]>;
+    };
     /** Settings cwd for the reply models. */
     cwd: string;
     models?: ReplyModel[];
@@ -236,7 +238,7 @@ export function createOwnerReplyHandling(
     options: { bound: boolean },
   ) => Promise<ReplyInterpretation | undefined>;
   actions: {
-    items(channel: string): NoticeActionRecord[];
+    items(channel: string): NoticeActionRecord[] | Promise<NoticeActionRecord[]>;
     execute: NoticeActionExecutor["execute"];
   };
 } {

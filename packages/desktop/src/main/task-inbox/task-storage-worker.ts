@@ -1,4 +1,5 @@
 import { changeSessionFiles } from "../../host/composition/session-files.js";
+import {StoredMimiNoticeLedger} from "../../host/composition/mimi-notice-ledger.js";
 import { StoredMimiRules } from "../../host/composition/mimi-rules.js";
 import { isProjectMigrationCommand } from "../../shared/project-migration.js";
 import { writeHostedProjectMigration } from "../../host/composition/stored-project-migrations.js";
@@ -50,6 +51,7 @@ catalog.onChanged((snapshot) => {
 let output: StoredDesktopOutput | undefined;
 let runLedger: RunOperationStorage | undefined;
 let ledger: OperationStorage | undefined;
+let noticeLedger:StoredMimiNoticeLedger|undefined;
 let mimiRules: StoredMimiRules | undefined;
 let mimiTurns:ReturnType<typeof storedMimiTurns>|undefined;
 let mimiWork: StoredMimiWorkMemory | undefined;
@@ -65,11 +67,15 @@ await serveSessionIndexWorker({
     if (isProfileLibraryChange(command)) return changeProfileLibrary(command,payload as Parameters<typeof changeProfileLibrary>[1]);
     if (isMemoryCommand(command))
       return writeHostedMemory(command, payload as Parameters<typeof writeHostedMemory>[1]);
-    if (command === "mimi/rules" || command === "mimi/turnStorage" || command === "mimi/records" || command === "mimi/workMemory") {
+    if (command === "mimi/noticeLedger" || command === "mimi/rules" || command === "mimi/turnStorage" || command === "mimi/records" || command === "mimi/workMemory") {
       const directory = workerData?.config?.taskInboxDirectory;
       if (typeof directory !== "string" || !isAbsolute(directory))
         throw Error("Desktop data directory unavailable");
       const root = join(dirname(directory), "pet");
+      if(command==="mimi/noticeLedger"){
+        noticeLedger??=new StoredMimiNoticeLedger(root);
+        return noticeLedger.run(payload as Parameters<StoredMimiNoticeLedger["run"]>[0]);
+      }
       if (command === "mimi/rules") {
         mimiRules ??= new StoredMimiRules(root);
         return mimiRules.run(payload as Parameters<StoredMimiRules["run"]>[0]);

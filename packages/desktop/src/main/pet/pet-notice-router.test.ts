@@ -1130,7 +1130,7 @@ describe("decision prompt records", () => {
     const h = harness();
     h.state.present = true;
     expect(await h.router.submit(prompt())).toMatchObject({ reason: "present-desktop" });
-    expect(h.router.decisionRecord("0123456789AB")).toMatchObject({
+    expect(await h.router.decisionRecord("0123456789AB")).toMatchObject({
       sessionId: "s-q",
       requestId: "req-1",
       target: { kind: "owner" },
@@ -1141,8 +1141,8 @@ describe("decision prompt records", () => {
     h.state.present = false;
     // The escalation copy carries no prompt of its own.
     await h.router.submit(prompt({ dedupeKey: "s-q:req-1:away", prompt: undefined }));
-    expect(h.router.decisionRecords()).toHaveLength(1);
-    expect(h.router.decisionRecord("0123456789AB")?.copies).toEqual([
+    expect(await h.router.decisionRecords()).toHaveLength(1);
+    expect((await h.router.decisionRecord("0123456789AB"))?.copies).toEqual([
       {},
       { status: "accepted", channel: "lark" },
     ]);
@@ -1170,12 +1170,12 @@ describe("decision prompt records", () => {
     expect(
       await h.router.adoptDecision("s-q", "req-1", "s-q:req-1", { code: "BA9876543210" }),
     ).toBeUndefined();
-    expect(h.router.decisionRecord("0123456789AB")).toBeDefined();
+    expect(await h.router.decisionRecord("0123456789AB")).toBeDefined();
   });
 
   test("a notice without a request id never carries a prompt", async () => {
     const h = harness();
     await h.router.submit(prompt({ requestId: undefined }));
-    expect(h.router.decisionRecords()).toEqual([]);
+    expect(await h.router.decisionRecords()).toEqual([]);
   });
 });

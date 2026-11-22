@@ -8,7 +8,6 @@ import { createDecisionHooks } from "./pet-notice-decision-hooks.js";
 import { createExternalDecisions } from "./pet-notice-external-decisions.js";
 import { createGoalNoticeReconciler } from "./pet-notice-goal-reconcile.js";
 import { createNoticeRuleAction, predictedIm } from "./pet-notice-host-action.js";
-import { PetNoticeLedger } from "./pet-notice-ledger.js";
 import { PetNoticeMediaStore } from "./pet-notice-media.js";
 import { createNoticeOutlets } from "./pet-notice-outlets.js";
 import {
@@ -61,7 +60,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
   const log = deps.log ?? ((event, data) => dlog("main", event, data));
   const petDir = join(deps.userDataDir, "pet");
   const ruleStore = deps.rules;
-  const ledger = new PetNoticeLedger({ path: join(petDir, "notices.json"), now });
+  const ledger = deps.ledger;
   // Each notice's files are copied here when it is recorded, so a resend sends the same bytes.
   const mediaStore = new PetNoticeMediaStore({ root: join(petDir, "notice-media"), log });
   const receipts = new PetReceiptStore(join(petDir, "attention-receipts.json"), now);
@@ -284,7 +283,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
         source: deps.externalGoals,
         isExternalSession: (sessionId) =>
           isExternal(sessionId) && view.isEligibleSession(sessionId),
-        isReported: (outcome) => ledger.seenDedupeKeys().has(goalPauseDedupeKey(outcome)),
+        isReported: (outcome) => ledger.hasSeen(goalPauseDedupeKey(outcome)),
         report: (outcome) => watcher.reportBlocked(outcome),
         waitingSessions: () => router.goalPauseSessions(),
         withdraw: (sessionId) => router.revokeSessionBlocked(sessionId, "goal-moved-on"),

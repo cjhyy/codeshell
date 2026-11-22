@@ -96,6 +96,7 @@ import {
 } from "./pet/pet-host-action-completion.js";
 import type { PetHostActionExecution } from "./pet/pet-dispatch-service.js";
 import type { PetChatEvent } from "../preload/pet-api.js";
+import {nativeMimiNoticeLedger} from "./desktop-host/mimi-notice-ledger-client.js";
 import { currentMimiRuleDocument } from "./desktop-host/mimi-rules-client.js";
 import type { MimiReplyRender } from "../shared/mimi-gateway-turn.js";
 import { nativeMimiRecords } from "./desktop-host/mimi-records-client.js";
@@ -895,6 +896,7 @@ async function createWindow(): Promise<BrowserWindow> {
       .catch(() => undefined);
     const notices = wirePetNotices({
       rules: desktopHost.mimiRules,
+      ledger:nativeMimiNoticeLedger(desktopHost.callBusiness),
       userDataDir: app.getPath("userData"),
       isMimiSession: (sessionId) => sessionId === mimiSessionId,
       bridge,

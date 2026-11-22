@@ -49,15 +49,17 @@ export function actionItemKey(recordId: string): string {
   return `action:${recordId}`;
 }
 
-function openSlots(ledger: SlotLedger, now: number): OpenSlot[] {
+async function openSlots(ledger: SlotLedger, now: number): Promise<OpenSlot[]> {
   const slots: OpenSlot[] = [];
-  for (const record of ledger.prompts((prompt) => !isPromptEnded(prompt.phase) && !!prompt.slot))
+  for (const record of await ledger.prompts(
+    (prompt) => !isPromptEnded(prompt.phase) && !!prompt.slot,
+  ))
     slots.push({
       key: decisionItemKey(record.sessionId ?? "", record.requestId ?? ""),
       slot: record.prompt!.slot!,
       target: unpackFacts(record.facts).target,
     });
-  for (const record of ledger.actionRecords())
+  for (const record of await ledger.actionRecords())
     if (record.actions?.slot && isOpenActions(record, now))
       slots.push({
         key: actionItemKey(record.id),
@@ -71,15 +73,15 @@ function openSlots(ledger: SlotLedger, now: number): OpenSlot[] {
  * The slot an item takes in the conversation `channel` + `target` reaches,
  * and the label its text starts with ("" when it is the only open item).
  */
-export function allocateSlot(
+export async function allocateSlot(
   ledger: SlotLedger,
   now: number,
   key: string,
   channel: string,
   target: NoticeTarget,
-): { slot: NoticeSlot; label: string } {
+): Promise<{ slot: NoticeSlot; label: string }> {
   const conversation = targetKey(imTarget(target, channel));
-  const here = openSlots(ledger, now).filter(
+  const here = (await openSlots(ledger, now)).filter(
     (open) =>
       open.slot.channel === channel && targetKey(imTarget(open.target, channel)) === conversation,
   );

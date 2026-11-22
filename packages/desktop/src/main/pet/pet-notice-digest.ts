@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { NoticeChannel } from "@cjhyy/code-shell-pet/protocol";
 import { composeDigestBody, type NoticeFacts } from "./pet-notice-compose.js";
-import type { NoticeRecord, NoticeSettleStatus, PetNoticeLedger } from "./pet-notice-ledger.js";
+import type { NoticeRecord, NoticeSettleStatus } from "./pet-notice-ledger.js";
 import {
   isInQuietHours,
   isOwnerTimedKind,
@@ -213,7 +213,10 @@ export class DigestTimer {
 }
 
 export interface NoticeDigestOptions {
-  ledger: Pick<PetNoticeLedger, "load" | "held" | "countsThisHour">;
+  ledger: Pick<
+    import("../../shared/mimi-notice-ledger.js").MimiNoticeLedger,
+    "load" | "held" | "countsThisHour"
+  >;
   now: () => number;
   setTimeout: (callback: () => void, delay: number) => unknown;
   clearTimeout: (timer: unknown) => void;
@@ -286,10 +289,14 @@ export class NoticeDigest {
   }
 
   /** Arm the flush for the current held set; a no-op when nothing is held. */
-  schedule(): void {
+  private scheduleVersion = 0;
+  async schedule(): Promise<void> {
     if (this.disposed) return;
+    const version = ++this.scheduleVersion;
     try {
-      const at = this.flushAt(this.options.ledger.held(), this.options.now());
+      const held = await this.options.ledger.held();
+      const at = await this.flushAt(held, this.options.now());
+      if (this.disposed || version !== this.scheduleVersion) return;
       if (at !== undefined) this.timer.arm(at);
     } catch (error) {
       this.options.log("pet.notice.digest_schedule_failed", { error: errorText(error) });
@@ -311,16 +318,16 @@ export class NoticeDigest {
   }
 
   /** When the held follow-ups / the other held notices / each standalone one may be sent. */
-  private flushTimes(
+  private async flushTimes(
     held: readonly NoticeRecord[],
     now: number,
-  ): {
+  ): Promise<{
     timed: number | undefined;
     regular: number | undefined;
     solo: (record: NoticeRecord) => number;
-  } {
+  }> {
     const window = this.options.window(now);
-    const counts = this.options.ledger.countsThisHour(now);
+    const counts = await this.options.ledger.countsThisHour(now);
     const timed = held.filter((record) => isTimed(record) && !this.isSolo(record));
     const regular = held.filter((record) => !isTimed(record) && !this.isSolo(record));
     const allowedAt = nextSendAllowedAt({
@@ -361,8 +368,8 @@ export class NoticeDigest {
     };
   }
 
-  private flushAt(held: readonly NoticeRecord[], now: number): number | undefined {
-    const { timed, regular, solo } = this.flushTimes(held, now);
+  private async flushAt(held: readonly NoticeRecord[], now: number): Promise<number | undefined> {
+    const { timed, regular, solo } = await this.flushTimes(held, now);
     const times = [timed, regular, ...held.filter(this.isSolo).map(solo)].filter(
       (at): at is number => at !== undefined,
     );
@@ -372,7 +379,7 @@ export class NoticeDigest {
   private async flushNow(): Promise<void> {
     if (this.disposed) return;
     await this.options.ledger.load();
-    const held = this.options.ledger.held();
+    const held = await this.options.ledger.held();
     // A digest that was itself held (a race with the cap) is superseded by this one.
     for (const record of held)
       if (isDigestRecord(record)) await this.options.settle(record.id, "revoked", "superseded");
@@ -384,7 +391,7 @@ export class NoticeDigest {
       if (stale) await this.options.settle(record.id, "revoked", stale);
       else candidates.push(record);
     }
-    const times = this.flushTimes(candidates, now);
+    const times = await this.flushTimes(candidates, now);
     const resend = this.options.resend;
     const solos = candidates.filter(this.isSolo);
     const ready = (record: NoticeRecord) => {

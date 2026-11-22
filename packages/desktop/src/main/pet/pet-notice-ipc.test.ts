@@ -1,3 +1,4 @@
+import { PetNoticeLedger } from "./pet-notice-ledger.js";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -54,6 +55,7 @@ function fixture(): Fixture {
   const settings = { value: {} as unknown };
   const created = wirePetNotices({
     userDataDir: dir,
+    ledger: new PetNoticeLedger({ path: join(dir, "pet", "notices.json"), now: () => NOW }),
     rules: new PetRuleStore({ path: join(dir, "pet", "rules.json"), now: () => NOW }),
     bridge: { setHostActionHandler: () => () => undefined },
     projection: {

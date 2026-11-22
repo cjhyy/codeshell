@@ -197,11 +197,11 @@ describe("arming a notice", () => {
     const third = await h.notify({ family: "failure", ...other("work-3") }, other("work-3"));
     expect(h.im[2]!.body.startsWith("① 「登录页」")).toBe(true);
     expect(h.ledger.byActionCode(third)!.actions!.slot!.ordinal).toBe(1);
-    expect(h.router.openActionItems("wechat").map((item) => item.actions.code)).toEqual([
+    expect((await h.router.openActionItems("wechat")).map((item) => item.actions.code)).toEqual([
       second,
       third,
     ]);
-    expect(h.router.openActionItems("lark")).toEqual([]);
+    expect(await h.router.openActionItems("lark")).toEqual([]);
   });
 
   test("a Session that moved on closes its items; a result stays openable for 2 hours", async () => {
@@ -224,16 +224,18 @@ describe("arming a notice", () => {
     await h.router.sessionRunStarted("work-2");
     expect(h.ledger.byActionCode(limit)!.actions!.closedAt).toBe(NOON);
     await h.router.sessionRunStarted("work-1");
-    expect(h.router.openActionItems("wechat").map((item) => item.actions.code)).toEqual([result]);
+    expect((await h.router.openActionItems("wechat")).map((item) => item.actions.code)).toEqual([
+      result,
+    ]);
     h.clock.now += 2 * HOUR;
-    expect(h.router.openActionItems("wechat")).toEqual([]);
+    expect(await h.router.openActionItems("wechat")).toEqual([]);
     expect(await h.run(result, "open")).toContain("已过期");
   });
 
   test("an item not delivered yet is not open in any chat", async () => {
     const h = harness({ imAccepted: false });
     await h.notify({ family: "goal", goalId: "goal-1", revision: 3 });
-    expect(h.router.openActionItems("wechat")).toEqual([]);
+    expect(await h.router.openActionItems("wechat")).toEqual([]);
   });
 });
 

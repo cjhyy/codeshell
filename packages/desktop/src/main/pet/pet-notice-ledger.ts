@@ -1,3 +1,8 @@
+import {
+  projectDecisionPrompts,
+  queryNoticeRows,
+  type NoticeRowQuery,
+} from "./pet-notice-row-query.js";
 import { createHash, randomUUID } from "node:crypto";
 import { readdir, rm } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
@@ -162,6 +167,7 @@ export interface PetNoticeLedgerOptions {
   maxBytes?: number;
   /** Cap on dedupe index entries (default 20 000); hashes of kept records are exempt. */
   maxDedupeEntries?: number;
+  replaceFile?: (from: string, to: string) => Promise<void>;
 }
 
 export type PetNoticeLedgerErrorCode =
@@ -645,7 +651,7 @@ export class PetNoticeLedger {
   private readonly maxDedupeEntries: number;
   private lastSidecarAt = 0;
 
-  constructor(options: PetNoticeLedgerOptions) {
+  constructor(private readonly options: PetNoticeLedgerOptions) {
     this.path = options.path;
     this.now = options.now ?? Date.now;
     this.localHourKey = options.localHourKey ?? defaultLocalHourKey;
@@ -678,6 +684,20 @@ export class PetNoticeLedger {
       this.loadPromise = attempt;
     }
     return this.loadPromise;
+  }
+
+  decisionRows(code?: string) {
+    return structuredClone(projectDecisionPrompts(this.state.records.values(), code));
+  }
+  readRows(query: NoticeRowQuery) {
+    return queryNoticeRows(this, query);
+  }
+  hasSeen(key: string) {
+    return this.seenDedupeKeys().has(key);
+  }
+
+  routingState(now: number, dedupeKey: string) {
+    return { counts: this.countsThisHour(now), seen: this.seenDedupeKeys().has(dedupeKey) };
   }
 
   get(id: string): NoticeRecord | undefined {
@@ -846,6 +866,11 @@ export class PetNoticeLedger {
         return at !== undefined && at > cutoff;
       },
     };
+  }
+
+  /** Capture queued, held and enqueued items in the same ledger revision. */
+  waiting(): NoticeRecord[] {
+    return [...this.queued(), ...this.held(), ...this.enqueued()];
   }
 
   /** Records waiting for an IM channel to come back, oldest first. */
@@ -1082,7 +1107,10 @@ export class PetNoticeLedger {
         this.enforceCount(staged, touched);
         const { file, movedQuarantine } = this.fitBytes(staged, touched);
         if (movedQuarantine.length > 0) await this.writeQuarantineSidecar(movedQuarantine);
-        await writeOwnerJsonAtomic(this.path, file, this.maxBytes, COMPACT);
+        await writeOwnerJsonAtomic(this.path, file, this.maxBytes, {
+          ...COMPACT,
+          replaceFile: this.options.replaceFile,
+        });
         this.state = staged;
         if (movedQuarantine.length > 0) await this.pruneQuarantineSidecars();
         return structuredClone(result);
@@ -1194,7 +1222,10 @@ export class PetNoticeLedger {
     // Monotonic per instance so the newest sidecar always sorts last.
     this.lastSidecarAt = Math.max(Date.now(), this.lastSidecarAt + 1);
     const sidecar = `${this.sidecarBase()}.quarantine.${this.lastSidecarAt}.${randomUUID()}.json`;
-    await writeOwnerJsonAtomic(sidecar, { version: SCHEMA_VERSION, rows }, this.maxBytes, COMPACT);
+    await writeOwnerJsonAtomic(sidecar, { version: SCHEMA_VERSION, rows }, this.maxBytes, {
+      ...COMPACT,
+      replaceFile: this.options.replaceFile,
+    });
     dlog("main", "pet.notices.quarantine_moved", { rows: rows.length, sidecar });
   }
 

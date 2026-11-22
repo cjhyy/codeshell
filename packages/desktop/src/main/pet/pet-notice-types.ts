@@ -1,3 +1,4 @@
+import type { MimiNoticeLedger } from "../../shared/mimi-notice-ledger.js";
 import { createHash } from "node:crypto";
 import type { PetLongTaskCompletionTarget } from "@cjhyy/code-shell-pet";
 import type { NoticeAttention, NoticeChannel } from "@cjhyy/code-shell-pet/protocol";
@@ -8,7 +9,6 @@ import type {
   NoticeDecisionPromptPatch,
   NoticeDeliveryStatus,
   NoticeRecord,
-  PetNoticeLedger,
 } from "./pet-notice-ledger.js";
 import {
   DEFAULT_MAX_P0_PER_HOUR,
@@ -143,7 +143,7 @@ export interface NoticeMediaFreezer {
   /** Delete the record's folder (best effort, never throws). */
   release(recordId: string): Promise<void>;
   /** Delete every record folder that `keep` does not claim (best effort). */
-  sweep(keep: (recordId: string) => boolean): Promise<void>;
+  sweep(keep: (recordId: string) => boolean | Promise<boolean>): Promise<void>;
 }
 
 /** One notice handed to `PetNoticeRouter.submit`. */
@@ -286,9 +286,13 @@ export interface NoticeDecisionPrompts {
   submitWithOutcome(notice: NoticeSubmission): Promise<NoticeSubmitResult>;
   /** Resolves once the records are readable (the ledger loaded, or failed to). */
   decisionsLoaded(): Promise<void>;
-  decisionRecord(code: string): DecisionPromptRecord | undefined;
+  decisionRecord(
+    code: string,
+  ): DecisionPromptRecord | undefined | Promise<DecisionPromptRecord | undefined>;
   /** Prompt records, oldest first; `only` picks them before any view is built. */
-  decisionRecords(only?: (prompt: NoticeDecisionPrompt) => boolean): DecisionPromptRecord[];
+  decisionRecords(
+    only?: (prompt: NoticeDecisionPrompt) => boolean,
+  ): DecisionPromptRecord[] | Promise<DecisionPromptRecord[]>;
   /**
    * A request prompted by an older build has its first record (`dedupeKey`)
    * but no lifecycle: give it one instead of prompting again.
@@ -330,18 +334,20 @@ export interface NoticeOutlets {
 
 /** The ledger surface the router uses; `PetNoticeLedger` satisfies it. */
 export type NoticeLedgerPort = Pick<
-  PetNoticeLedger,
+  MimiNoticeLedger,
   | "load"
   | "record"
   | "claim"
   | "settle"
   | "countsThisHour"
-  | "seenDedupeKeys"
+  | "routingState"
+  | "waiting"
   | "queued"
   | "held"
   | "enqueued"
   | "recoverOnStartup"
   | "expireQueued"
+  | "decisionRows"
   | "get"
   | "byDedupeKey"
   | "byPromptCode"

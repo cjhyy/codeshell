@@ -53,8 +53,8 @@ export interface PetProactiveDeps {
   state: PetProactiveStateStore;
   ledger: {
     load(): Promise<void>;
-    changedSince(ms: number): NoticeRecord[];
-    actionRecords(): NoticeRecord[];
+    changedSince(ms: number): NoticeRecord[] | Promise<NoticeRecord[]>;
+    actionRecords(): NoticeRecord[] | Promise<NoticeRecord[]>;
   };
   tasks(): readonly PetLongTask[] | Promise<readonly PetLongTask[]>;
   sessions(): readonly DesktopPetSession[];
@@ -127,7 +127,7 @@ export function createPetProactive(deps: PetProactiveDeps): PetProactive {
         sessions: deps.sessions(),
         pending: deps.pending(),
         followUps: await followUps(),
-        items: deps.ledger.actionRecords(),
+        items: await deps.ledger.actionRecords(),
       },
     );
     if (!facts) return outcome(`没有需要汇报的事，${name}未发送。`);
@@ -229,7 +229,7 @@ export function createPetProactive(deps: PetProactiveDeps): PetProactive {
       now: at,
       since,
       seen: new Set(beat.seen),
-      recent: deps.ledger.changedSince(since),
+      recent: await deps.ledger.changedSince(since),
       followUps: rules.filter(isFollowUpRule),
       sessions: deps.sessions(),
       sessionWatched: (sessionId) => watchAll || watched.has(sessionId),

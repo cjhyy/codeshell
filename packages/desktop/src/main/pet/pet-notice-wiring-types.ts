@@ -18,7 +18,7 @@ import type {
   PetNoticePowerEvents,
   PetNoticePresenceTimers,
 } from "./pet-notice-decision-hooks.js";
-import type { PetNoticeLedger } from "./pet-notice-ledger.js";
+import type { MimiNoticeLedger } from "../../shared/mimi-notice-ledger.js";
 import type { PetNoticeOutbox, PetNoticeWiringGateway } from "./pet-notice-outlets.js";
 import type { PetInboundOrigin, PetInboundReplay } from "./pet-notice-replay.js";
 import type { PetNoticeRouter } from "./pet-notice-router.js";
@@ -43,6 +43,7 @@ export interface PetNoticeWiringDeps {
   /** Electron `app.getPath("userData")`; stores live under `<userData>/pet/`. */
   userDataDir: string;
   rules: PetRuleAccess;
+  ledger: MimiNoticeLedger;
   bridge: { setHostActionHandler(action: string, handler: HostActionHandler): () => void };
   /** The pet projection (PetStateAggregator): attention source and Session facts. */
   projection: PetAttentionOptions["source"];
@@ -116,7 +117,7 @@ export interface PetNoticeWiring {
   router: PetNoticeRouter;
   ruleStore: PetRuleAccess;
   watcher: PetSessionRuleWatcher;
-  ledger: PetNoticeLedger;
+  ledger: MimiNoticeLedger;
   receipts: PetReceiptStore;
   /** The router as pet IPC sees it; also records which Session the owner is viewing. */
   attention: PetIpcAttention;

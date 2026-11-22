@@ -1,10 +1,5 @@
 import type { NoticeDeferResult } from "./pet-notice-actions.js";
-import {
-  MAX_DEFERS,
-  type NoticeActionsPatch,
-  type NoticeRecord,
-  type PetNoticeLedger,
-} from "./pet-notice-ledger.js";
+import { MAX_DEFERS, type NoticeActionsPatch, type NoticeRecord } from "./pet-notice-ledger.js";
 import { isStandaloneKind } from "./pet-notice-policy.js";
 import { errorText, unpackFacts } from "./pet-notice-types.js";
 
@@ -69,12 +64,15 @@ export function describeLocalTime(
 }
 
 export interface NoticeDeferDeps {
-  ledger: Pick<PetNoticeLedger, "byActionCode" | "record">;
+  ledger: Pick<
+    import("../../shared/mimi-notice-ledger.js").MimiNoticeLedger,
+    "byActionCode" | "record"
+  >;
   useAction(code: string, patch: NoticeActionsPatch): Promise<unknown>;
   now: () => number;
   offset: (ms: number) => number;
   /** Re-arm the digest, which sends the held copy at its time. */
-  schedule(): void;
+  schedule(): void | Promise<void>;
   log: (event: string, data: Record<string, unknown>) => void;
 }
 
@@ -84,7 +82,7 @@ export async function deferNotice(
   code: string,
   until: number | undefined,
 ): Promise<NoticeDeferResult> {
-  const record: NoticeRecord | undefined = deps.ledger.byActionCode(code);
+  const record: NoticeRecord | undefined = await deps.ledger.byActionCode(code);
   if (!record || record.actions?.family !== "notice") return { ok: false, reason: "gone" };
   const count = (record.deferCount ?? 0) + 1;
   if (count > MAX_DEFERS) return { ok: false, reason: "limit" };
@@ -111,6 +109,6 @@ export async function deferNotice(
     return { ok: false, reason: "failed" };
   }
   await deps.useAction(code, { usedAt: now });
-  deps.schedule();
+  await deps.schedule();
   return { ok: true, until: at };
 }

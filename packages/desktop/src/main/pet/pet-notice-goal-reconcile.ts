@@ -61,11 +61,11 @@ export interface GoalNoticeReconcilerDeps {
   /** A top-level work Session on a desktop external runtime (the notice catalog's `has`). */
   isExternalSession(sessionId: string): boolean;
   /** The ledger already holds this outcome's notice (sent, waiting, dropped or withdrawn). */
-  isReported(outcome: BlockedOutcome): boolean;
+  isReported(outcome: BlockedOutcome): boolean | Promise<boolean>;
   /** Report like a live outcome (`PetSessionRuleWatcher.reportBlocked`). */
   report(outcome: BlockedOutcome): Promise<void>;
   /** Sessions with a goal-pause notice that still waits (`PetNoticeRouter.goalPauseSessions`). */
-  waitingSessions(): readonly string[];
+  waitingSessions(): readonly string[] | Promise<readonly string[]>;
   /** Withdraw a Session's waiting goal-pause notices (`PetNoticeRouter.revokeSessionBlocked`). */
   withdraw(sessionId: string): Promise<void>;
   now(): number;
@@ -140,7 +140,7 @@ export function createGoalNoticeReconciler(deps: GoalNoticeReconcilerDeps): Goal
       const attention = persistedGoalAttention(state);
       if (!attention) {
         // Resumed, completed, cleared or paused by the user since: nothing to say any more.
-        if (deps.waitingSessions().includes(sessionId)) await deps.withdraw(sessionId);
+        if ((await deps.waitingSessions()).includes(sessionId)) await deps.withdraw(sessionId);
         return;
       }
       // A wait whose question was never recorded: still open, nothing to state.
@@ -149,7 +149,7 @@ export function createGoalNoticeReconciler(deps: GoalNoticeReconcilerDeps): Goal
       const outcome = persistedBlockedOutcome(sessionId, attention);
       // Asked first so a known pause adds no record; the router's own
       // dedupe still settles two reports that race.
-      if (outcome && !deps.isReported(outcome)) await deps.report(outcome);
+      if (outcome && !(await deps.isReported(outcome))) await deps.report(outcome);
     } catch (error) {
       deps.log("pet.notice.goal_reconcile_failed", { sessionId, error: errorText(error) });
     }
@@ -164,7 +164,7 @@ export function createGoalNoticeReconciler(deps: GoalNoticeReconcilerDeps): Goal
         deps.log("pet.notice.goal_reconcile_failed", { error: errorText(error) });
       }
       // One at a time: each read is synchronous, and startup has no hurry.
-      for (const sessionId of new Set([...recent, ...deps.waitingSessions()]))
+      for (const sessionId of new Set([...recent, ...(await deps.waitingSessions())]))
         await check(sessionId);
     },
   };

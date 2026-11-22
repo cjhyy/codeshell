@@ -89,6 +89,7 @@ function fixture() {
   const writes: Record<string, unknown>[] = [];
   const created = wirePetNotices({
     userDataDir: dir,
+    ledger: new PetNoticeLedger({ path: join(dir, "pet", "notices.json"), now: () => clock }),
     rules: new PetRuleStore({ path: join(dir, "pet", "rules.json"), now: () => clock }),
     bridge: { setHostActionHandler: () => () => undefined },
     projection: {

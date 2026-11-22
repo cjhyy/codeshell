@@ -132,6 +132,38 @@ try {
     const state = JSON.parse(await readFile(ruleFile, "utf8"));
     return scheduledIds.map((id) => state.rules.find((rule) => rule.id === id)?.wake);
   };
+  // Previous clients keep their pending receipts in the same userData file.
+  const noticeFile = join(isolated.userDataDir, "pet", "notices.json");
+  const pendingId = "notice-00000000-0000-4000-8000-000000000099";
+  await put(noticeFile, {
+    version: 1,
+    dedupe: [],
+    quarantine: [],
+    records: [
+      {
+        id: pendingId,
+        kind: "session.done",
+        priority: "P1",
+        dedupeKey: "synthetic-expired:done",
+        sessionId: "synthetic-expired",
+        ruleIds: [],
+        facts: { title: "Expired fixture" },
+        createdAt: expiredAt,
+        expiresAt: expiredAt,
+        delivery: {
+          status: "queued",
+          key: "0".repeat(24),
+          channel: "fixture-offline",
+          attempts: 1,
+          at: expiredAt,
+        },
+      },
+    ],
+  });
+  const readExpiredReceipt = async () =>
+    JSON.parse(await readFile(noticeFile, "utf8"))
+      .records.filter((record) => record.id === pendingId)
+      .map((row) => row.delivery);
   const followUpSession = "mimi-follow-up-fixture";
   const followUpDir = join(isolated.codeShellHome, "sessions", followUpSession);
   const followUpText = "Choose the synthetic fixture color";
@@ -721,6 +753,10 @@ try {
     completedWakes.map((wake) => wake?.status),
     ["failed", "unknown"],
   );
+  const recoveredDelivery = await readExpiredReceipt();
+  assert.equal(recoveredDelivery.length, 1);
+  assert.equal(recoveredDelivery[0].status, "revoked");
+  assert.equal(recoveredDelivery[0].error, "expired");
   const previousHost = (await hostStarts()).at(-1);
   const control = JSON.parse(
     await readFile(join(isolated.codeShellHome, "im-gateway", "desktop-control.json"), "utf8"),
@@ -803,6 +839,10 @@ try {
   });
   assert.deepEqual(restoredRule, chosenRule);
   assert.deepEqual(await recordedWakes(), completedWakes);
+  assert.deepEqual(await readExpiredReceipt(), recoveredDelivery);
+  receipt.checks.push(
+    "the Host expires a legacy queued receipt and preserves its exact outcome after replacement",
+  );
   receipt.checks.push(
     "overdue and previously claimed reminders settle once and retain their outcomes through Host replacement",
   );
