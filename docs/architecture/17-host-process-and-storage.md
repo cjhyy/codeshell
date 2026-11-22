@@ -1,6 +1,6 @@
 # 17 · Host 进程与存储层改造（0.12 技术方案）
 
-状态：**0.12 候选集成中**（2026-11-22）。L1–L5 已进入集成分支，L6 的服务迁移和 L7 的候选验收在 [PR 421](https://github.com/cjhyy/codeshell/pull/421) 继续。
+**0.12.0-rc.1 候选（2026-11-22）。** L1–L7 的实现覆盖 Electron 45、独立 Host、会话索引、任务中心和 worker 迁移。各层验收条件见第 9 节，本机性能实测见第 10 节。集成记录和候选检查见 [PR 421](https://github.com/cjhyy/codeshell/pull/421)。
 影响范围：`packages/desktop`（main、preload、renderer 接线）、`packages/host`、`packages/core`（会话索引、存储驱动）、`packages/coding`（外部 agent 会话绑定）、`packages/server`（worker 启动）、打包工具链。
 决策变更：修改第 16 章第 10 节已定的第 2 条决策（「S1、S2 内嵌 HostRuntime」），见第 12 节。
 版本策略：**0.11 线不再做性能改动，直接进入 0.12。** 止血分支 `fix/main-process-scroll-jank` 不单独合入，其中仍然适用的部分（外部绑定读缓存、开关缓存）在 L4/L6 迁入 Host 时复用。
