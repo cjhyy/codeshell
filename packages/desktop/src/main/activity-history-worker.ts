@@ -1,3 +1,4 @@
+import { searchSessionTranscripts } from "@cjhyy/code-shell-pet/disclosure";
 import type { RoomHistoryOperations } from "../shared/room-history.js";
 import { isProfileLibraryRead, type ProfileLibraryReads } from "../shared/profile-library.js";
 import { readProfileLibrary } from "./hosted-profile-library.js";
@@ -40,6 +41,10 @@ port.on("message", ({ id, method, input, permit }: ActivityHistoryWorkerRequest)
     try {
       let value: unknown;
       if (isProfileLibraryRead(method)) value = await readProfileLibrary(method, input as ProfileLibraryReads[typeof method]["params"]);
+      else if (method === "activity/searchTranscripts") {
+        const { query } = input as ActivityReads["activity/searchTranscripts"]["params"];
+        value = await searchSessionTranscripts(options.sessionsDir, query, { budgetMs: 5000 });
+      }
       else if (method === "activity/titles") value = await listTitles();
       else if (method === "activity/logTail") {
         const { bucket, lines } = input as ActivityReads["activity/logTail"]["params"];

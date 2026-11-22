@@ -1047,7 +1047,8 @@ contextBridge.exposeInMainWorld("codeshell", {
   runAutomationNow: (id: string) => ipcRenderer.invoke("automation:runNow", id),
   cancelAutomationRun: (id: string) => ipcRenderer.invoke("automation:cancelRun", id),
   searchSessionContent: (query: string): Promise<SessionContentSearchResult> =>
-    ipcRenderer.invoke("session:content-search", query),
+    configurationHost?.readBusiness("activity/searchTranscripts", { query }) ??
+    Promise.reject(new Error("Session search requires the workbench Host")),
   expandPluginCommand: (
     target: RendererConfigurationTarget,
     name: string,

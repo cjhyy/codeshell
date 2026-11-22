@@ -86,6 +86,9 @@ try {
       cwd: mount,
     }),
   );
+  await writeFile(join(directory, "transcript.jsonl"), JSON.stringify({
+    type: "message", turnNumber: 4, data: { role: "user", content: "Workbench transcript search receipt" },
+  }) + "\n", { mode: 0o600 });
   await writeFile(
     join(isolated.codeShellHome, "settings.json"),
     JSON.stringify({
@@ -177,6 +180,9 @@ utilityProcess.fork = function (...args) {
   assert.equal(sessionWorkspace.status.branch, "main");
   assert.equal(sessionWorkspace.branches.current, "main");
   assert(Array.isArray(sessionWorkspace.profiles));
+  const search = await first.evaluate(() => window.codeshell.searchSessionContent("search receipt"));
+  assert(search.matches.some((match) => match.sessionId === "index-visible" &&
+    match.snippets.some((snippet) => snippet.turnNumber === 4 && snippet.text.includes("search receipt"))));
   const diff = await first.evaluate((root) =>
     window.codeshell.getSessionWorktreeDiff("index-visible", root), mount);
   assert.equal(diff.changedFiles, 0);

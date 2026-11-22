@@ -66,13 +66,18 @@ export function hostedActivityHistory(worker: ActivityHistoryWorker) {
     const run = (args: unknown) => worker.view(method, parse(args));
     return { run, port: businessRead(method, parse, (args) => worker.view(method, args)) };
   }
+  const search = view("activity/searchTranscripts", (input) => {
+    const query = textArgument(businessArguments(input, ["query"]).query).trim();
+    if (query.length < 2 || query.length > 128) throw new Error("Invalid transcript search query");
+    return { query };
+  });
   const titles = view("activity/titles", noBusinessArguments);
   const logs = view("activity/logTail", logQuery);
   const usage = view("activity/usage", usageQuery);
   const runs = view("activity/runs", runList);
   const run = view("activity/run", runId);
   return {
-    reads: [titles.port, logs.port, usage.port, runs.port, run.port],
+    reads: [search.port, titles.port, logs.port, usage.port, runs.port, run.port],
     operations: {
       "activity/titles": titles.run,
       "activity/logTail": logs.run,

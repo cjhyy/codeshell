@@ -7,6 +7,7 @@ type View<K extends keyof CodeshellApi, P> = {
   result: CodeshellApi[K] extends (...args: any[]) => Promise<infer R> ? R : never;
 };
 export interface ActivityReads {
+  "activity/searchTranscripts": View<"searchSessionContent", { query: string }>;
   "activity/titles": View<"listSessionTitles", Record<string, never>>;
   "activity/logTail": View<"tailLog", { bucket: "ui-ink" | "engine" | "desktop"; lines?: number }>;
   "activity/usage": { params: { query?: UsageQuery }; result: UsageSummary };
@@ -19,7 +20,7 @@ type Trace<K extends keyof History> = {
   result: ReturnType<History[K]>;
 };
 type PrivateReads = {
-  [K in keyof ActivityReads]: {
+  [K in Exclude<keyof ActivityReads, "activity/searchTranscripts">]: {
     input: ActivityReads[K]["params"];
     result: ActivityReads[K]["result"];
   };

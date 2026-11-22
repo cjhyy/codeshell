@@ -167,7 +167,6 @@ import { createOwnerReplyHandling, lastUserMessageIn } from "./pet/pet-notice-ac
 import { selectSessionsToArchive } from "./pet/pet-auto-archive.js";
 import { resolveLinkedSessionFromDisk } from "./cc-room/linked-session-resolver.js";
 import { buildMigrationSummary } from "@cjhyy/code-shell-pet";
-import { searchSessionTranscripts } from "@cjhyy/code-shell-pet/disclosure";
 import { materializeOutgoingAttachments } from "@cjhyy/code-shell-chat";
 import { createReusableSessionResolver } from "./pet/reusable-session-resolver.js";
 import type { MimiDispatchService } from "../shared/mimi-dispatch.js";
@@ -3100,13 +3099,7 @@ const rendererProjectFileSearch = createRendererProjectFileSearch({
 ipcMain.handle("files:searchProject", (_e, projectId: unknown, query: unknown, rootId?: unknown) =>
   rendererProjectFileSearch(projectId, query, rootId),
 );
-ipcMain.handle("session:content-search", async (_e, ...args: unknown[]) => {
-  const query = args.length === 1 ? args[0] : undefined;
-  if (typeof query !== "string") throw new Error("invalid content search query");
-  const trimmed = query.trim();
-  if (trimmed.length < 2 || trimmed.length > 128) throw new Error("invalid content search query");
-  return searchSessionTranscripts(sessionsRoot(), trimmed, { budgetMs: 5_000 });
-});
+
 
 registerAttachmentsIpc({
   host: desktopHost,
