@@ -125,10 +125,10 @@ try {
   // or covered by onboarding. Measure idle reads once the real composer accepts input.
   await textarea.click();
   await page.evaluate(async () => {
-    const frame = () => new Promise(requestAnimationFrame);
+    const frame = () => new Promise((done) => window.requestAnimationFrame(done));
     await frame();
     await frame();
-    await new Promise((resolve) => requestIdleCallback(resolve));
+    await new Promise((resolve) => window.requestIdleCallback(resolve));
   });
   const idle = await sampleReads(page, 200);
   const storage = join(isolated.codeShellHome, ".codeshell-state");
@@ -182,8 +182,8 @@ try {
     .evaluate((transcript) => {
       const scroller = transcript.parentElement;
       const rect = scroller.getBoundingClientRect();
-      const x = Math.floor((Math.max(rect.left, 0) + Math.min(rect.right, innerWidth)) / 2);
-      const y = Math.floor((Math.max(rect.top, 0) + Math.min(rect.bottom, innerHeight)) / 2);
+      const x = Math.floor((Math.max(rect.left, 0) + Math.min(rect.right, window.innerWidth)) / 2);
+      const y = Math.floor((Math.max(rect.top, 0) + Math.min(rect.bottom, window.innerHeight)) / 2);
       if (!scroller.contains(document.elementFromPoint(x, y))) {
         throw Error("The workbench transcript must be visible at the wheel target");
       }
