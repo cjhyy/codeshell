@@ -1,3 +1,4 @@
+import { hostRuntimePath } from "../../host/runtime-path.js";
 import type { ExternalGitBlobRef } from "@cjhyy/code-shell-core";
 import { isDeepStrictEqual } from "node:util";
 import type { ListSessions } from "../../shared/disk-session-query.js";
@@ -173,9 +174,17 @@ export function fileVersionRead(
       readCurrentWorkspace(
         () => lookup(input),
         ctx,
-        ({ path }) => readVersion(path, input.ref),
+        ({ path }) => gitRead(ctx, (cwd) => readVersion(cwd, input.ref))(path),
       ),
   );
+}
+
+function gitRead<T>(ctx: HostRequestContext, read: (cwd: string) => Promise<T>) {
+  return async (cwd: string) => {
+    await hostRuntimePath.ready;
+    ctx.assertCurrent();
+    return read(cwd);
+  };
 }
 
 export function workspaceReads(list: ListSessions, trackGitRoot: (root: string) => void) {
@@ -231,16 +240,16 @@ export function workspaceReads(list: ListSessions, trackGitRoot: (root: string) 
     fileVersionRead(list),
     projectFileSearchRead(),
     businessRead("git/projectStatus", project, ({ projectId }, ctx) =>
-      atPrimary(projectId, ctx, getGitStatus),
+      atPrimary(projectId, ctx, gitRead(ctx, getGitStatus)),
     ),
     businessRead("git/projectBranches", project, ({ projectId }, ctx) =>
-      atPrimary(projectId, ctx, getGitBranches),
+      atPrimary(projectId, ctx, gitRead(ctx, getGitBranches)),
     ),
     scopedBusinessRead("workspace/gitStatus", list, session, sessionScope, ({ sessionId }, ctx) =>
-      atSessionRoot(sessionId, ctx, getGitStatus, true),
+      atSessionRoot(sessionId, ctx, gitRead(ctx, getGitStatus), true),
     ),
     scopedBusinessRead("workspace/gitBranches", list, session, sessionScope, ({ sessionId }, ctx) =>
-      atSessionRoot(sessionId, ctx, getGitBranches, true),
+      atSessionRoot(sessionId, ctx, gitRead(ctx, getGitBranches), true),
     ),
     scopedBusinessRead("workspace/profiles", list, session, sessionScope, ({ sessionId }, ctx) =>
       atSessionRoot(sessionId, ctx, listProfiles),

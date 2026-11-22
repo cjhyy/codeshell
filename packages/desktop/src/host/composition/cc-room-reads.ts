@@ -1,3 +1,4 @@
+import { hostRuntimePath } from "../runtime-path.js";
 import { probeClaudeCli, probeCodexCli } from "@cjhyy/code-shell-capability-coding/orchestration";
 import {
   businessArguments,
@@ -50,7 +51,9 @@ async function projectRead<T>(cwd: string, run: (path: string) => Promise<T>, cu
 export function ccRoomReads(
   history: Pick<ActivityHistoryWorker, "externalSessions" | "externalHistory">,
 ) {
-  function probe(input: unknown) {
+  async function probe(input: unknown, current: () => void) {
+    await hostRuntimePath.ready;
+    current();
     const p = businessArguments(input, ["kind", "force"]);
     return (kind(p.kind) === "codex" ? probeCodexCli : probeClaudeCli)(flag(p.force));
   }
@@ -114,7 +117,7 @@ export function ccRoomReads(
       checked("ccRoom/history", read),
     ],
     native: {
-      "ccRoom/probe": probe,
+      "ccRoom/probe": (p, grant) => probe(p, grant.assertCurrent),
       "ccRoom/sessions": (p, grant) => sessions(p, () => grant.signal.throwIfAborted()),
       "ccRoom/history": (p, grant) => read(p, () => grant.signal.throwIfAborted()),
     } satisfies Pick<import("./business-calls.js").BusinessMethods, keyof CcRoomReads>,

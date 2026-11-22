@@ -1,3 +1,4 @@
+import { hostRuntimePath } from "../runtime-path.js";
 import { isFeatureEnabled } from "@cjhyy/code-shell-core/extension";
 import { readUserFeatureFlags } from "../../main/capability-modules-env.js";
 import { availableExternalRuntimes } from "../../main/external-runtime-availability.js";
@@ -12,8 +13,13 @@ export function externalRuntimeCatalogOperations() {
     isFeatureEnabled(readUserFeatureFlags(resolveNoRepoCwd()), "external_agent_runtime");
   const models = new ExternalRuntimeModelService({ isEnabled });
   return {
-    "external-runtime/available": ({ searchPath }) =>
-      isEnabled() ? availableExternalRuntimes(searchPath) : [],
-    "external-runtime/models": ({ searchPath }) => models.list(searchPath),
+    async "external-runtime/available"({ searchPath }) {
+      await hostRuntimePath.ready;
+      return isEnabled() ? availableExternalRuntimes(hostRuntimePath.searchPath(searchPath)) : [];
+    },
+    async "external-runtime/models"({ searchPath }) {
+      await hostRuntimePath.ready;
+      return models.list(hostRuntimePath.searchPath(searchPath));
+    },
   } satisfies Pick<BusinessMethods, "external-runtime/available" | "external-runtime/models">;
 }

@@ -19,7 +19,7 @@ import { openLinkedFileSourceOperation } from "./linked-file-sources-host.js";
 import { registerOperationBatchHost } from "./operation-batch-host.js";
 import { createMobileGatewayShell } from "./shell/mobile-gateway.js";
 import { createDesktopHost } from "./desktop-host/main.js";
-import { createDesktopModuleRegistry, registerDesktopShutdown } from "./desktop-shutdown.js";
+import { createDesktopModuleRegistry } from "./desktop-shutdown.js";
 import { createExternalRuntimeModule } from "./external-runtime-module.js";
 import { externalRuntimeMimiHost } from "./external-runtime-mimi-tools.js";
 import { registerProjectPanelIpc } from "./project-panel-ipc.js";
@@ -41,13 +41,12 @@ import {
   session,
   shell,
   safeStorage,
-  Notification,
   powerMonitor,
-  webContents,
 } from "electron";
 import { registerWindowTitleBarIpc } from "./window-titlebar.js";
 import { registerCloudEnvironmentIpc } from "./cloud-environment-ipc.js";
-import { injectDesktopManagedRuntimePath } from "./managed-runtime-service.js";
+import { registerNativeShutdown } from "./shell/shutdown.js";
+import { registerNativeStartup } from "./shell/startup.js";
 import { createDesktopManagedRuntimeWiring } from "./managed-runtime-wiring.js";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { AppRendererNavigation } from "./app-renderer-navigation.js";
@@ -55,11 +54,8 @@ import { dirname, resolve, isAbsolute, join } from "node:path";
 import {
   SettingsManager,
   SessionManager,
-  writeSettingsSchemaFile,
   userHome,
   codeShellHome,
-  sweepStaleCredentialCookies,
-  setDefaultCredentialCipher,
   setDefaultCredentialAccess,
   localCredentialAccess,
   sessionsRoot,
@@ -67,7 +63,6 @@ import {
   installReviewedLocalTheme,
   listInstalledThemes,
   uninstallTheme,
-  registerOpenRouterCatalogCache,
   type ThemePreview,
 } from "@cjhyy/code-shell-core";
 import {
@@ -78,10 +73,6 @@ import {
   describeTranscribe,
 } from "@cjhyy/code-shell-core/internal";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
-import { getCuaDriverHost } from "./computer-use/service.js";
-import {
-  closeComputerUse,
-} from "./computer-use/desktop-setup.js";
 import {
   externalRuntimeToolContextForSession,
   externalRuntimeWorkspaceForSession,
@@ -179,11 +170,8 @@ import { createDesktopModelRequestSigner } from "./model-request-signing-service
 import { McpOAuthService, type McpOAuthLoginInput } from "./mcp-oauth-service.js";
 import { LinkDeviceOAuthBroker } from "./link-device-oauth.js";
 import { type ManagedCliInstallResult } from "./link-cli-installer.js";
-import { migrateKnownCredentialStores } from "./credential-migration.js";
-import { removeOrphanedExternalRuntimePartitions } from "./orphaned-browser-partitions.js";
 import { inspectReadableReplyAttachment } from "./image-read-service.js";
 import { NativeMediaProtocol } from "./hosted-media-protocol.js";
-import { MEDIA_PREVIEW_SCHEME } from "../shared/media-preview.js";
 import {
   partitionForSession,
 } from "./browser-driver/active-guest.js";
@@ -192,12 +180,8 @@ import {
   browserRuntime,
   builtInBrowserHandoffGrants,
   chromeExtensionRuntimeService,
-  installChromeNativeMessagingHost,
   interactiveBrowserBridgeForSession,
-  nativeMessagingOriginFromArgv,
   panelAccessRequests,
-  runChromeNativeMessagingHost,
-  type ChromeNativeRegistrationResult,
 } from "./browser-runtime/index.js";
 import type { AutomationSessionMeta } from "./automation-host.js";
 import { createAutomationResumeTurn } from "./automation-resume-turn.js";
@@ -208,14 +192,10 @@ import { registerNotificationFallback, showSystemNotification } from "./system-n
 import * as desktopNotifications from "./desktop-notification-routes.js";
 import type { CreateAutomationInput } from "./automation-service.js";
 import { dlog } from "./desktop-logger.js";
-import { sweepStaleLeases } from "./credentials-service.js";
 import { cookieCredentialAutoRefresh } from "./cookie-credential-auto-refresh.js";
 import { isBrowserPartition } from "../shared/browser-partition.js";
 import {
   archiveDiskSession as writeSessionArchive,
-  cleanupAttachments,
-  cleanupSessionAttachments,
-  cleanupStaleQuickChatSessions,
   deleteSession,
   markAttachmentsSent,
   stageFileBytes,
@@ -244,12 +224,7 @@ import { registerOptimizationLabHost } from "./optimization-lab-host.js";
 import { taskInboxPetView } from "./task-inbox/task-inbox-pet-view.js";
 import { assertDesktopSessionId } from "./session-validation.js";
 import { getSessionEvents } from "./rawTranscript.js";
-import { createLinkService } from "@cjhyy/code-shell-server/links";
 import { invalidatePanelAppBindingGuard, isPanelAppBoundToProject } from "./panel-apps-service.js";
-import {
-  registerPanelAppSchemePrivileges,
-} from "./panel-app-protocol.js";
-import { installThemeAssetProtocol } from "./theme-asset-protocol.js";
 import { PanelAppBridge } from "./panel-app-bridge.js";
 import { buildPanelAgentTaskModelCatalog } from "./panel-app-agent-task-models.js";
 import {
@@ -259,33 +234,22 @@ import {
 import { registerSourceCatalogIpc } from "./source-catalog-ipc.js";
 import { listRuns } from "./runs-service.js";
 import {
-  initUpdater,
   checkForUpdate,
   downloadUpdate,
   quitAndInstall,
-  cancelPendingUpdateInstall,
   getLastStatus,
 } from "./updater.js";
-import { loadProjects } from "./recents-store.js";
 import { getProjectStore } from "./project-store.js";
 import {
   createDesktopPanelProjectScopeResolver,
   isRegisteredPanelProjectRoot,
 } from "./panel-project-scope.js";
 import { registerProjectAuthorityIpc } from "./project-authority-ipc.js";
-import { createWorkbenchSurface } from "./shell/workbench-window.js";
-import { getTrust, getTrustCachedSync, warmTrustCache } from "./trust-store.js";
+import { bindWorkbenchInstance, createWorkbenchSurface, prepareNativeInstance } from "./shell/workbench-window.js";
+import { getTrust, getTrustCachedSync } from "./trust-store.js";
 import { installAppMenu } from "./menu.js";
-import { disposeWorkbenchTray, installWorkbenchTray } from "./workbench-tray.js";
 import { applyGitPathFromSettings } from "./git-path-settings.js";
 import { invalidateMcpProbeCache } from "./mcp-probe-service.js";
-import { injectLoginShellPathAtStartup } from "./login-shell-path.js";
-import {
-  acquireDesktopInstanceLock,
-  registerSecondInstanceFocus,
-  createMainWindowRestorer,
-  runOwnedQuickChatStartupCleanup,
-} from "./quick-chat-startup-cleanup.js";
 import {
   resolveRendererConfigurationTarget,
   type RendererConfigurationTarget,
@@ -346,26 +310,7 @@ const renderMimiReply = (
   executions: MimiReplyRender["executions"],
   options: MimiReplyRender["options"],
 ) => desktopHost.callBusiness("mimi/renderReply", { baseText, executions, options });
-const chromeNativeMessagingOrigin = nativeMessagingOriginFromArgv(process.argv);
-if (chromeNativeMessagingOrigin) {
-  void runChromeNativeMessagingHost(chromeNativeMessagingOrigin)
-    .then(() => app.exit(0))
-    .catch((error) => {
-      process.stderr.write(`[codeshell chrome native host] ${String(error)}\n`);
-      app.exit(1);
-    });
-}
-
-// Electron accepts privileged custom schemes in one pre-ready registration.
-// The request handlers are installed later on their respective sessions.
-registerPanelAppSchemePrivileges();
-
-// Override the runtime app name. In dev (`electron .`) the default is
-// "Electron"; this makes the macOS menu bar, Dock tooltip, and About
-// panel show our product name even before packaging. setAppUserModelId
-// makes Windows taskbar/notification grouping work correctly.
-app.setName("code-shell");
-if (process.platform === "win32") app.setAppUserModelId("com.cjhyy.codeshell");
+const chromeNativeMessaging = prepareNativeInstance();
 const mainWindows = new Set<BrowserWindow>();
 registerNotificationFallback(
   ipcMain,
@@ -412,22 +357,9 @@ const mimiShell = createMimiPresenceShell({
   openOverview: openPetOverviewFromWidget,
   cwd: resolveNoRepoCwd,
 });
-const ownsDesktopInstance = chromeNativeMessagingOrigin ? false : acquireDesktopInstanceLock(app);
-const restoreMainWindow = createMainWindowRestorer(preferredMainWindow, async () => {
-  await app.whenReady();
-  return createWindow();
-});
-if (ownsDesktopInstance) {
-  registerSecondInstanceFocus(
-    (handler) => app.on("second-instance", handler),
-    () => Array.from(mainWindows),
-    () => {
-      void restoreMainWindow().catch((error) =>
-        dlog("main", "window.restore_failed", { error: String(error) }),
-      );
-    },
-  );
-}
+const { ownsDesktopInstance, restoreMainWindow } = bindWorkbenchInstance(
+  chromeNativeMessaging, mainWindows, preferredMainWindow, createWindow,
+);
 
 dlog("main", "boot", { argv: process.argv, execPath: process.execPath, cwd: process.cwd() });
 
@@ -440,7 +372,6 @@ dlog("main", "boot", { argv: process.argv, execPath: process.execPath, cwd: proc
  */
 let bridge: AgentBridge | null = null;
 let desktopNotifier: DesktopNotifier | null = null;
-let chromeNativeRegistration: ChromeNativeRegistrationResult | undefined;
 const externalRuntime = createExternalRuntimeModule(() => {
   const externalBridge = bridge!;
   return {
@@ -713,32 +644,18 @@ async function createWindow(): Promise<BrowserWindow> {
       appRendererNavigation.bind(contents);
       desktopHost.trackWorkbench(contents);
     },
+    releaseDocumentAccess(id) {
+      mediaPreviewService.releaseOwner(id);
+      rendererBrowserSessionAccess.forgetWindow(id);
+    },
+    ownedSessionIds: (id) => externalRuntime.service?.ownedSessionIds(id) ?? [],
+    releaseWindow(id, parentId) {
+      externalRuntime.approvals?.cancelWindow(id);
+      void externalRuntime.service?.stopOwnedBy(id);
+      browserWindows.releaseParent(parentId);
+    },
+    lastNonMacWindowClosed: () => browserRuntime.closeAll(),
   });
-  const ownerWebContentsId = win.webContents.id;
-  const releaseDocumentAccess = () => {
-    mediaPreviewService.releaseOwner(ownerWebContentsId);
-    rendererBrowserSessionAccess.forgetWindow(ownerWebContentsId);
-  };
-  win.webContents.once("destroyed", releaseDocumentAccess);
-  win.webContents.on("render-process-gone", releaseDocumentAccess);
-  win.webContents.on("did-start-navigation", (navigation) => {
-    if (navigation.isMainFrame && !navigation.isSameDocument) releaseDocumentAccess();
-  });
-  // A reload starts with empty preload state; replay the runtimes Main still owns.
-  win.webContents.on("did-finish-load", () => {
-    for (const sessionId of externalRuntime.service?.ownedSessionIds(ownerWebContentsId) ?? [])
-      win.webContents.send("externalRuntime:sessionState", { sessionId, active: true });
-  });
-  win.on("closed", () => {
-    externalRuntime.approvals?.cancelWindow(ownerWebContentsId);
-    void externalRuntime.service?.stopOwnedBy(ownerWebContentsId);
-    mainWindows.delete(win);
-    browserWindows.releaseParent(win.id);
-    if (process.platform !== "darwin" && mainWindows.size === 0) {
-      browserRuntime.closeAll();
-    }
-  });
-
   if (!bridge) {
     bridge = new AgentBridge(
       win,
@@ -1920,29 +1837,8 @@ async function openPetOverviewFromWidget(request?: unknown): Promise<void> {
   else notify();
 }
 
-function writeSettingsSchemaAtStartup(): void {
-  try {
-    writeSettingsSchemaFile(join(userHome(), ".code-shell"));
-  } catch {
-    // Best-effort editor aid; desktop startup must not depend on schema writes.
-  }
-}
-
-async function knownAttachmentCwds(): Promise<string[]> {
-  const out = new Set<string>();
-  try {
-    for (const project of await loadProjects()) {
-      if (typeof project.path === "string" && project.path) out.add(project.path);
-    }
-  } catch {
-    // best effort
-  }
-  try {
-    out.add(resolveNoRepoCwd());
-  } catch {
-    // best effort
-  }
-  return [...out];
+function knownAttachmentCwds(): Promise<string[]> {
+  return desktopHost.callBusiness("startup/workspaces", {});
 }
 
 async function knownReplyAttachmentCwds(): Promise<string[]> {
@@ -1974,14 +1870,8 @@ async function inspectKnownReplyAttachments(
   return attachments;
 }
 
-async function cleanupKnownAttachments(sessionId?: string): Promise<void> {
-  for (const cwd of await knownAttachmentCwds()) {
-    if (sessionId) {
-      await cleanupSessionAttachments(cwd, sessionId).catch(() => undefined);
-    } else {
-      await cleanupAttachments({ cwd }).catch(() => undefined);
-    }
-  }
+function cleanupKnownAttachments(sessionId?: string): Promise<void> {
+  return desktopHost.callBusiness("startup/cleanupAttachments", {sessionId});
 }
 
 /** Bring a CodeShell window forward with this Session open (notification click, notice item). */
@@ -2105,48 +1995,15 @@ function decodeGatewayAttachment(dataBase64: string, expectedSize: number): Buff
   return bytes;
 }
 
-app.whenReady().then(async () => {
-  if (!ownsDesktopInstance) return;
-  desktopHost.start();
-  desktopNotifier = new DesktopNotifier(
-    resolve(app.getPath("userData"), "notifications", "delivered.json"),
-    {
-      hasFocusedWindow: () => BrowserWindow.getFocusedWindow() !== null,
-      isSupported: () => Notification.isSupported(),
-      show: (input) => showSystemNotification(input, revealSessionWindow),
-    },
-  );
-  await projectStore.warm();
-  writeSettingsSchemaAtStartup();
-  // Pricing for Mimi's main-process model calls beyond the bundled snapshot.
-  registerOpenRouterCatalogCache(join(codeShellHome(), "cache", "openrouter-models.json"));
-  void cleanupKnownAttachments();
-  // The main window and the pet popout both render on the default session, so
-  // one handler there serves cstheme:// assets to every window.
-  installThemeAssetProtocol();
-  session.defaultSession.protocol.handle(MEDIA_PREVIEW_SCHEME, (request) =>
-    mediaPreviewService.respond(request),
-  );
-
-  await chromeExtensionRuntimeService.start().catch((error) => {
-    dlog("browser", "chrome_extension_bridge_start_failed", { error: String(error) });
-  });
-  await mimiShell.start();
-  chromeNativeRegistration = await installChromeNativeMessagingHost({
-    executablePath: process.execPath,
-    appPath: app.getAppPath(),
-    resourcesPath: process.resourcesPath,
-    isPackaged: app.isPackaged,
-  }).catch((error) => ({
-    installed: false,
-    manifestPaths: [],
-    extensionPath: app.isPackaged
-      ? join(process.resourcesPath, "packages", "desktop", "resources", "chrome-extension")
-      : join(app.getAppPath(), "resources", "chrome-extension"),
-    detail: String(error),
-  }));
-
-  await imGatewayService.boot({
+const nativeStartup = registerNativeStartup({
+  ownsDesktopInstance,
+  mainDirectory: __dirname,
+  desktopHost,
+  revealSessionWindow,
+  notifierReady(value) { desktopNotifier = value; },
+  mediaResponse: (request) => mediaPreviewService.respond(request),
+  startMimi: () => mimiShell.start(),
+  startGateway: () => imGatewayService.boot({
     event: (event) => {
       for (const window of BrowserWindow.getAllWindows())
         if (!window.isDestroyed()) window.webContents.send("im-gateway:event", event);
@@ -2165,83 +2022,14 @@ app.whenReady().then(async () => {
       bridge: () => sessionBridge,
       replyToSession: async (request) => petImDecisions?.replyToSession(request),
     }),
-  }).catch((error) => dlog("main", "im_gateway.start_failed", { error: String(error) }));
+  }).catch((error) => dlog("main", "im_gateway.start_failed", { error: String(error) })),
+  startPanelMedia: () => panelAppBridge.initializeMedia(),
+  restoreMainWindow,
+  startAutomations: startDesktopAutomations,
+  sweepWorktrees: (trigger) => sweepStaleWorktrees(trigger),
+});
 
-  const staleQuickChats = await runOwnedQuickChatStartupCleanup(
-    ownsDesktopInstance,
-    cleanupStaleQuickChatSessions,
-  ).catch((error) => {
-    dlog("main", "quick_chat.startup_cleanup_failed", { error: String(error) });
-    return [];
-  });
-  if (staleQuickChats.length > 0) {
-    dlog("main", "quick_chat.startup_cleanup_done", { sessionIds: staleQuickChats });
-  }
-
-  await injectLoginShellPathAtStartup({
-    log: (event, data) => dlog("main", event, data),
-  });
-
-  // Child tools inherit appended fallbacks; existing and project PATHs keep precedence.
-  await injectDesktopManagedRuntimePath({
-    isPackaged: app.isPackaged,
-    resourcesPath: process.resourcesPath,
-    appPath: app.getAppPath(),
-    additionalDirectories: [join(app.getPath("userData"), "bin")],
-  })
-    .then((result) => dlog("main", "managed-runtime-path.ready", result))
-    .catch((error) => dlog("main", "managed-runtime-path.failed", { error: String(error) }));
-
-  // Main owns Electron safeStorage. Worker gets metadata snapshots and asks
-  // main to resolve/materialize secrets on demand; if safeStorage is unavailable
-  // SafeStorageCipher intentionally falls back to `plain:` owner-only storage.
-  setDefaultCredentialCipher(new SafeStorageCipher());
-  // Retired Link grants must resume cleanup even if no credentials page is opened.
-  const linkCleanup = createLinkService();
-  app.once("will-quit", () => linkCleanup.close());
-  void knownAttachmentCwds()
-    .then((cwds) => migrateKnownCredentialStores(cwds))
-    .then((result) => dlog("credentials", "migration.done", { ...result }))
-    .catch((err) => dlog("credentials", "migration.failed", { error: String(err) }));
-
-  // External-runtime sessions browse in the project bucket now; their old
-  // per-session partitions are never opened again. Before any window exists.
-  const partitionsDir = join(app.getPath("userData"), "Partitions");
-  void removeOrphanedExternalRuntimePartitions({
-    partitionsDir,
-    inUse: (directory) =>
-      webContents
-        .getAllWebContents()
-        .some((contents) => !contents.isDestroyed() && contents.session.storagePath === directory),
-  }).then((result) => {
-    // Counts only: a directory name carries a session id.
-    if (result.removed + result.inUse + result.failed > 0)
-      dlog("browser", "orphaned-partitions.cleanup", { ...result });
-  });
-
-  if (process.platform === "darwin" && app.dock) {
-    try {
-      app.dock.setIcon(resolve(__dirname, "..", "..", "build", "icon.png"));
-    } catch {
-      // dev-only nicety; ignore if the asset is missing in some build paths
-    }
-  }
-  // Prime the workspace-trust cache so the agent-bridge's synchronous
-  // agent/run handler can resolve project trust without a disk read. Until it
-  // resolves, unknown → fail-closed (untrusted), which is the safe default.
-  void warmTrustCache()
-    .then(() => panelAppBridge.initializeMedia())
-    .catch((error) => dlog("main", "panel.media.recovery.failed", { error: String(error) }));
-  // Share the restorer with `activate`: a Dock click queued during a blocked
-  // startup would otherwise open a second main window before this one registers.
-  installWorkbenchTray(restoreMainWindow);
-  const initialWindowReady = restoreMainWindow();
-  initUpdater();
-  sweepStaleLeases(); // clear any cookie-lease temp files left by a prior crash
-  sweepStaleCredentialCookies(); // clear UseCredential temp cookies.txt left by a prior crash
-
-  void applyGitPathFromSettings();
-
+async function startDesktopAutomations(initialWindowReady: Promise<BrowserWindow>) {
   // Register the scheduler while the first window hydrates. Native continuations
   // and notifications wait for their own services before touching that window.
   try {
@@ -2315,11 +2103,7 @@ app.whenReady().then(async () => {
   );
   taskInboxService?.start();
 
-  // Defer initial sweep so the renderer has a chance to push current
-  // git prefs via `git:setPrefs` first. Subsequent sweeps run hourly.
-  setTimeout(() => void sweepStaleWorktrees("startup"), 5_000);
-  setInterval(() => void sweepStaleWorktrees("interval"), 60 * 60_000);
-});
+}
 ipcMain.handle(
   "capabilities:setEnabled",
   async (
@@ -2413,7 +2197,7 @@ const { assertRendererSessionAccess, deletingBrowserSessions, rendererBrowserSes
   registerBrowserSessionIpc({
     mainWindows,
     bridge: () => bridge,
-    chromeNativeRegistration: () => chromeNativeRegistration,
+    chromeNativeRegistration: nativeStartup.chromeRegistration,
   });
 // Is a usable git binary available (PATH, or the configured git.path)? The
 // marketplace UI uses this to show an "install Git" banner up front instead of
@@ -2859,27 +2643,26 @@ registerTrustNotificationIpc({
   host: desktopHost,
   externalRuntimeService: () => externalRuntime.service,
 });
-registerDesktopShutdown(app, {
-  ownsInstance: () => ownsDesktopInstance,
-  flushRenderers: () => sessionCatalogIpc.flushRenderers(),
-  disposeOperationResolution: async () => {
-    disposeWorkbenchTray();
-    await disposeOperationBatchHost();
-    await disposeOperationResolutionHost();
-  },
-  onError: (phase, error) => dlog("main", phase, { error: String(error) }),
-  cancelQuit: cancelPendingUpdateInstall,
-  showFailureDialog: (options) => dialog.showMessageBox(options),
+registerNativeShutdown({
+  ownsDesktopInstance,
   restoreMainWindow,
-  cleanup: async () => {
+  flushRenderers: () => sessionCatalogIpc.flushRenderers(),
+  disposeOperationBatchHost,
+  disposeOperationResolutionHost,
+  stopIngress() {
+    nativeStartup.stop();
     cloudEnvironment.dispose();
-    taskInboxService?.dispose();
+    taskInboxService.dispose();
     for (const dispose of taskInboxDisposers.splice(0)) dispose();
-    const desktopHostShutdown = desktopHost.dispose();
-    const cookieRefreshShutdown = cookieCredentialAutoRefresh.shutdown();
+  },
+  desktopHost,
+  desktopModules,
+  withdrawWindows() {
     petRuntimeReady = false;
     browserRuntime.closeAll();
     bridge?.kill();
+  },
+  stopMimi() {
     petStateAggregator?.stop();
     petStateAggregator = null;
     reconcileExternalAdapters = null;
@@ -2901,29 +2684,11 @@ registerDesktopShutdown(app, {
 
     disposePetIpc?.();
     disposePetIpc = null;
-
-    // Stop captured external runtimes explicitly; their child processes can survive Windows exit.
-    const externalRuntimeShutdown = desktopModules.dispose();
-    // Stop the embedded Cua child explicitly.
-    const cuaDriverShutdown = getCuaDriverHost()?.stop();
-    // Withdraw both Mimi forms and persist presence before closing the character host.
-    const mimiPresenceShutdown = mimiShell.dispose();
-    await Promise.allSettled([
-      desktopHostShutdown,
-      closeActivityHistory?.(),
-      mimiPresenceShutdown,
-      mobileShell.stop(),
-      petWorkInboxFlush,
-
-      petNoticeFlush,
-      externalRuntimeShutdown,
-      cookieRefreshShutdown,
-      panelAppBridge.shutdownMedia(),
-      chromeExtensionRuntimeService.stop(),
-      cuaDriverShutdown,
-      closeComputerUse(),
-    ]);
-    await mobileShell.disposeUploads();
+    return [petNoticeFlush, petWorkInboxFlush];
   },
+  history: () => closeActivityHistory?.(),
+  mimiShell,
+  mobileShell,
+  panelAppBridge,
   finalize: () => sessionCatalogIpc.close(),
 });

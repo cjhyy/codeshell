@@ -4,7 +4,7 @@ import { execFileSync } from "node:child_process";
 /* global window */
 import { verifyPairedHostTerminal } from "./paired-host-terminal.mjs";
 import assert from "node:assert/strict";
-import { mkdir, readFile, readdir, realpath, utimes, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, realpath, stat, utimes, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { startMockProviderServer } from "./mock-provider-server.mjs";
@@ -126,8 +126,29 @@ try {
     isolated,
     origin: provider.origin,
   });
-  // Keep the exact child handle created by this Main so the failure injection can
-  // target only this test's own Host, including if the OS has recycled a PID.
+  const loginShell = join(isolated.home, "fixture-login-shell");
+  if (process.platform !== "win32") {
+    // A GUI-only CLI is absent at fork. The interactive PTY delegates to the system shell.
+    const cliBin = join(isolated.home, "login-bin");
+    await mkdir(cliBin);
+    await writeFile(join(cliBin, "codeshell-path-probe"), "#!/bin/sh\necho GUI_PATH_RECEIVED\n", {
+      mode: 0o700,
+    });
+    const script = [
+      "#!/bin/sh",
+      'if [ "$1" = "-lic" ] && [ "$2" = "env" ]; then',
+      '  touch "$HOME/path-probe-start"',
+      "  sleep 1",
+      '  touch "$HOME/path-probe-done"',
+      '  printf "PATH=%s:%s\\n" "$HOME/login-bin" "$PATH"',
+      "  exit 0",
+      "fi",
+      "exec /bin/sh -i",
+      "",
+    ].join("\n");
+    await writeFile(loginShell, script, { mode: 0o700 });
+  }
+  // The exact child handle restricts fault injection to this fixture's own Host.
   const bootstrap = join(isolated.home, "observe-host.cjs");
   await writeFile(
     bootstrap,
@@ -157,7 +178,7 @@ utilityProcess.fork = function (...args) {
   application = await launchCodeShellElectron({
     appDir,
     ...isolated,
-    env: { ...fixture.env, CODESHELL_E2E_MOCK_KEYCHAIN: "1" },
+    env: { ...fixture.env, ...(process.platform !== "win32" && { SHELL: loginShell }), CODESHELL_E2E_MOCK_KEYCHAIN: "1" },
     mainEntry: fixture.mainEntry,
     mainBootstrap: bootstrap,
     runtimeTimeoutMs: 90_000,
@@ -397,6 +418,18 @@ utilityProcess.fork = function (...args) {
   await first.waitForFunction(() =>
     window.hostTerminalText.includes("HOST_TERMINAL_READY"),
   );
+  if (process.platform !== "win32") {
+    await first.evaluate((id) => window.codeshell.ptyWrite(id, "codeshell-path-probe\r"), terminalId);
+    await first.waitForFunction(() => window.hostTerminalText.includes("GUI_PATH_RECEIVED"));
+    const start = (await stat(join(isolated.home, "path-probe-start"))).mtimeMs;
+    const done = (await stat(join(isolated.home, "path-probe-done"))).mtimeMs;
+    const paint = await first.evaluate(() => {
+      const entry = performance.getEntriesByName("first-paint", "paint")[0];
+      return entry ? performance.timeOrigin + entry.startTime : null;
+    });
+    assert.ok(Number.isFinite(paint), "The workbench produced its first frame");
+    console.log(`GUI startup with a delayed login shell: first workbench paint ${Math.round(paint - start)}ms after probe start, shell finished ${Math.round(done-start)}ms after start; Host PTY found the new CLI.`);
+  }
   const ownerWindow = await application.browserWindow(first);
   const otherWindow = await application.browserWindow(second);
   const fallback = (window, method, ...args) => window.evaluate(

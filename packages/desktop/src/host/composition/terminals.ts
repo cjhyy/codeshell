@@ -1,3 +1,4 @@
+import { hostRuntimePath } from "../runtime-path.js";
 import type { ListSessions } from "../../shared/disk-session-query.js";
 import { isDesktopSessionId } from "../../shared/disk-session-query.js";
 import { HostRevokedError, type HostRequestContext } from "../../main/desktop-host/authority.js";
@@ -59,6 +60,8 @@ export function hostedTerminals(host: () => DesktopHostServer, list: ListSession
       "pty/start",
       {
         async run(ctx, params) {
+          await hostRuntimePath.ready;
+          ctx.assertCurrent();
           const p = businessArguments(params, [
             "sessionId",
             "cols",

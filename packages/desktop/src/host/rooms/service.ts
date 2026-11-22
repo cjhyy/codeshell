@@ -1,3 +1,4 @@
+import { hostRuntimePath } from "../runtime-path.js";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { join } from "node:path";
 import { sessionsRoot } from "@cjhyy/code-shell-core";
@@ -93,7 +94,8 @@ export function hostedRooms(peer: () => PrivateHostPeer, data: string, sources: 
     /* A locked room is retained. */
   }
   return {
-    run(method: string, raw: unknown, signal: AbortSignal) {
+    async run(method: string, raw: unknown, signal: AbortSignal) {
+      await hostRuntimePath.ready;
       const active = AbortSignal.any([signal, life.signal]);
       active.throwIfAborted();
       if (method === "rooms/desktop") {

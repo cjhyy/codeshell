@@ -1,3 +1,4 @@
+import { hostRuntimePath } from "../runtime-path.js";
 import { isAbsolute } from "node:path";
 import { normalizeWorktreeBranchPrefix } from "@cjhyy/code-shell-capability-coding/git";
 import {
@@ -17,6 +18,8 @@ export function gitOperations() {
   const changing = new Map<string, Promise<unknown>>();
   return {
     "git/switchProjectBranch": async ({ projectId, branch, stash }, grant) => {
+      await hostRuntimePath.ready;
+      grant.assertCurrent();
       if (
         typeof branch !== "string" ||
         !branch ||
@@ -55,6 +58,8 @@ export function gitOperations() {
       }
     },
     "git/undoFiles": async ({ cwd, paths }, grant) => {
+      await hostRuntimePath.ready;
+      grant.assertCurrent();
       if (
         !Array.isArray(paths) ||
         !paths.length ||
@@ -77,7 +82,9 @@ export function gitOperations() {
         }
       });
     },
-    "git/sweepTracked": ({ root, graceMinutes, prefix }, grant) => {
+    "git/sweepTracked": async ({ root, graceMinutes, prefix }, grant) => {
+      await hostRuntimePath.ready;
+      grant.assertCurrent();
       // Native lifecycle owns the set of roots reached via valid Session workspace operations.
       if (
         typeof root !== "string" ||

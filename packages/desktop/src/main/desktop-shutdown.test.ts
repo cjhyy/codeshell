@@ -235,7 +235,9 @@ test("the external runtime pilot retains first-window start and the existing shu
     startup.indexOf("const externalGoalSessions"),
   );
   expect(source).not.toContain("await desktopModules.start()");
-  const cleanup = source.slice(source.indexOf("registerDesktopShutdown(app,"));
+  expect(source).toContain("registerNativeShutdown({");
+  const shutdown = await readFile(new URL("./shell/shutdown.ts", import.meta.url), "utf8");
+  const cleanup = shutdown.slice(shutdown.indexOf("registerDesktopShutdown(app,"));
   expect(cleanup.match(/desktopModules\.dispose\(\)/g)).toHaveLength(1);
   // Host owns room subprocesses and transcript watchers. Start its disposal
   // before disposing captured local runtimes, then wait for its completion.

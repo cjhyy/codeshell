@@ -1,3 +1,13 @@
+import {
+  nativeMessagingOriginFromArgv,
+  runChromeNativeMessagingHost,
+} from "../browser-runtime/index.js";
+import { registerPanelAppSchemePrivileges } from "../panel-app-protocol.js";
+import {
+  acquireDesktopInstanceLock,
+  registerSecondInstanceFocus,
+  createMainWindowRestorer,
+} from "../quick-chat-startup-cleanup.js";
 import { app, BrowserWindow, nativeTheme, session, type WebContents } from "electron";
 import { resolve } from "node:path";
 import { MEDIA_PREVIEW_SCHEME } from "../../shared/media-preview.js";
@@ -5,6 +15,56 @@ import { THEME_ASSET_SCHEME } from "../theme-asset-protocol.js";
 import { mainWindowTitleBarOptions } from "../window-titlebar.js";
 import { loadWindowState, saveWindowState } from "../window-state-store.js";
 import { dlog } from "../desktop-logger.js";
+
+/** Register schemes before Electron becomes ready, including in Chrome's native-messaging process. */
+export function prepareNativeInstance(): boolean {
+  const chromeNativeMessagingOrigin = nativeMessagingOriginFromArgv(process.argv);
+  if (chromeNativeMessagingOrigin) {
+    void runChromeNativeMessagingHost(chromeNativeMessagingOrigin)
+      .then(() => app.exit(0))
+      .catch((error) => {
+        process.stderr.write(`[codeshell chrome native host] ${String(error)}\n`);
+        app.exit(1);
+      });
+  }
+
+  // Electron accepts privileged custom schemes in one pre-ready registration.
+  // The request handlers are installed later on their respective sessions.
+  registerPanelAppSchemePrivileges();
+
+  // Override the runtime app name. In dev (`electron .`) the default is
+  // "Electron"; this makes the macOS menu bar, Dock tooltip, and About
+  // panel show our product name even before packaging. setAppUserModelId
+  // makes Windows taskbar/notification grouping work correctly.
+  app.setName("code-shell");
+  if (process.platform === "win32") app.setAppUserModelId("com.cjhyy.codeshell");
+  return Boolean(chromeNativeMessagingOrigin);
+}
+
+export function bindWorkbenchInstance(
+  chromeNativeMessaging: boolean,
+  mainWindows: Set<BrowserWindow>,
+  preferredMainWindow: () => BrowserWindow | null,
+  createWindow: () => Promise<BrowserWindow>,
+) {
+  const ownsDesktopInstance = chromeNativeMessaging ? false : acquireDesktopInstanceLock(app);
+  const restoreMainWindow = createMainWindowRestorer(preferredMainWindow, async () => {
+    await app.whenReady();
+    return createWindow();
+  });
+  if (ownsDesktopInstance) {
+    registerSecondInstanceFocus(
+      (handler) => app.on("second-instance", handler),
+      () => Array.from(mainWindows),
+      () => {
+        void restoreMainWindow().catch((error) =>
+          dlog("main", "window.restore_failed", { error: String(error) }),
+        );
+      },
+    );
+  }
+  return { ownsDesktopInstance, restoreMainWindow };
+}
 
 let cspInstalled = false;
 
@@ -19,6 +79,10 @@ export async function createWorkbenchSurface(
     mainWindows: Set<BrowserWindow>;
     hardenGuests(win: BrowserWindow): void;
     bind(contents: WebContents): void;
+    releaseDocumentAccess(ownerId: number): void;
+    ownedSessionIds(ownerId: number): Iterable<string>;
+    releaseWindow(ownerId: number, windowId: number): void;
+    lastNonMacWindowClosed(): void;
   },
 ) {
   const ws = await loadWindowState();
@@ -154,6 +218,23 @@ export async function createWorkbenchSurface(
   }
 
   deps.bind(win.webContents);
+  const ownerId = win.webContents.id;
+  const windowId = win.id;
+  const releaseDocumentAccess = () => deps.releaseDocumentAccess(ownerId);
+  win.webContents.once("destroyed", releaseDocumentAccess);
+  win.webContents.on("render-process-gone", releaseDocumentAccess);
+  win.webContents.on("did-start-navigation", (navigation) => {
+    if (navigation.isMainFrame && !navigation.isSameDocument) releaseDocumentAccess();
+  });
+  win.webContents.on("did-finish-load", () => {
+    for (const sessionId of deps.ownedSessionIds(ownerId))
+      win.webContents.send("externalRuntime:sessionState", { sessionId, active: true });
+  });
+  win.on("closed", () => {
+    deps.mainWindows.delete(win);
+    deps.releaseWindow(ownerId, windowId);
+    if (process.platform !== "darwin" && deps.mainWindows.size === 0) deps.lastNonMacWindowClosed();
+  });
 
   const devUrl = process.env.VITE_DEV_URL;
   const noDevtools = process.env.CODE_SHELL_NO_DEVTOOLS === "1";

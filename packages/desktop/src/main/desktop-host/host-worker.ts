@@ -1,4 +1,5 @@
 import { isRootMigrationReply } from "../../shared/project-migration.js";
+import { hostRuntimePath } from "../../host/runtime-path.js";
 import type { PetProjectionSnapshotResult } from "@cjhyy/code-shell-pet";
 import { prepareAgentRunMetadata } from "../agent-run-metadata.js";
 import { rendererRunFactReader } from "./renderer-run-facts.js";
@@ -180,8 +181,10 @@ export function bindHostWorker(
       )
         return;
       generation = message.generation;
+      const path = hostRuntimePath.searchPath(message.env.PATH);
       env = {
         ...message.env,
+        ...(path !== undefined && { PATH: path }),
         CODE_SHELL_PRIVATE_LEDGER: runs ? "host" : undefined,
         ELECTRON_RUN_AS_NODE: "1",
         CODESHELL_AGENT_STDIO: "1",
@@ -205,7 +208,9 @@ export function bindHostWorker(
         core.sendLine(message.line);
     }
   });
-  port.start();
+  hostRuntimePath.whenReady(() => {
+    if (active) port.start();
+  });
   return {
     close,
     hasLiveWorker: () => active && core.hasLiveWorker(),
@@ -222,6 +227,8 @@ export function bindHostWorker(
       return result.status === "result" ? (result.result as PetProjectionSnapshotResult) : null;
     },
     async rendererCommand(request: WorkbenchRequest, current: () => void): Promise<unknown> {
+      await hostRuntimePath.ready;
+      current();
       current();
       if (!active || admissions.size >= 128) throw new Error("Agent admission is unavailable");
       // These controls operate solely on the actual worker. The port grant

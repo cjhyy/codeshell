@@ -1,5 +1,6 @@
 import { hostedMimiRuleScheduler } from "../../host/composition/mimi-rule-scheduler.js";
 import type { MimiRuleReply } from "../../shared/mimi-rules.js";
+import { hostRuntimePath } from "../../host/runtime-path.js";
 import { HostedMimiProjection } from "../../host/composition/mimi-projection.js";
 import type { MimiRecords } from "../../shared/mimi-records.js";
 import { hostedMimiFollowUps } from "../../host/composition/mimi-follow-ups.js";
@@ -66,7 +67,8 @@ import { isPrivateTaskCommand } from "../task-inbox/private-task-command.js";
 import { HostOutput } from "./host-output.js";
 import { outputMethods } from "./output-methods.js";
 import { bindHostWorker } from "./host-worker.js";
-import { sessionsRoot } from "@cjhyy/code-shell-core";
+import { codeShellHome, registerOpenRouterCatalogCache, sessionsRoot } from "@cjhyy/code-shell-core";
+import { startupOperations } from "../../host/composition/startup.js";
 import { createSessionIndex } from "@cjhyy/code-shell-server/storage";
 import {
   isDesktopHostControl,
@@ -82,8 +84,9 @@ import {
   InvalidParams,
 } from "./server.js";
 
-// Obtain the immutable app version once. There is no generic Electron method
-// proxy on the renderer port, and the hosted catalog never waits on Main.
+// Dream, scheduled Engines and Mimi auxiliary models price their calls in this process.
+registerOpenRouterCatalogCache(join(codeShellHome(), "cache", "openrouter-models.json"));
+// Cache the immutable app version so renderer catalog calls do not wait on Main.
 const parent = process.parentPort;
 const versionRequestId = "host:app-version";
 const schedulerPorts = new MessageChannel();
@@ -246,6 +249,7 @@ function reportGitRoot(root: string) {
   reportedGitRoots.add(root);
 }
 const business = new HostBusinessCalls({
+  ...startupOperations,
   "terminal/command": (call, grant) => {
     if (!server) throw Error("Terminal Host unavailable");
     return server.runWorkbenchTerminal(call, grant.signal);
@@ -345,6 +349,10 @@ parent.on("message", ({ data, ports }) => {
     for (const port of ports) port.close();
     return;
   }
+  if (!ports.length && isDesktopHostControl(data) && data.type === "runtime-path") {
+    hostRuntimePath.install(data.path);
+    return;
+  }
   if (isDesktopHostControl(data) && data.type === "im-gateway-port" && server && ports.length === 1 && !im) {
     im = bindImGateway(electronPrivatePort(ports[0]));
     return;
@@ -397,7 +405,10 @@ parent.on("message", ({ data, ports }) => {
     server &&
     ports.length === 1
   ) {
-    scheduler.bind(electronPrivatePort(ports[0]), data.searchPath);
+    hostRuntimePath.whenReady(() => {
+      if (stopping) ports[0].close();
+      else scheduler.bind(electronPrivatePort(ports[0]), process.env.PATH ?? data.searchPath);
+    });
     return;
   }
   if (

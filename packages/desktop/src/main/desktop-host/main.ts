@@ -34,7 +34,7 @@ import { listDiskSessions as listJson } from "@cjhyy/code-shell-server/storage";
 import type { SettingsChange } from "../../shared/settings-change.js";
 import type { ListSessionOptions } from "../../shared/disk-session-query.js";
 import { createSessionIndexChanges } from "./session-index-changes.js";
-import { DesktopHostIpc } from "../../shared/desktop-host-protocol.js";
+import { DesktopHostIpc, runtimePathFlag } from "../../shared/desktop-host-protocol.js";
 import type { AppRendererNavigation } from "../app-renderer-navigation.js";
 import { dlog } from "../desktop-logger.js";
 import { DesktopHostSupervisor } from "./main-supervisor.js";
@@ -47,16 +47,32 @@ export function createDesktopHost(
   hostReady?: () => void,
   settingsCommitted?: (effects: SettingsChange) => Promise<void>,
 ) {
+  let nativePath: Promise<void> | undefined;
   const providerPorts = new ExternalProviderPorts();
   const remote = new NativeRemoteClient((signal) => supervisor.waitUntilReady(signal));
   const im = new NativeImGateway((signal) => supervisor.waitUntilReady(signal));
   let terminals: NativeRemoteTerminals | undefined;
   let worker: DesktopHostWorkerClient | undefined;
   const supervisor: DesktopHostSupervisor = new DesktopHostSupervisor(
-    () =>
-      utilityProcess.fork(entryPath, [join(app.getPath("userData"), "task-inbox")], {
-        serviceName: "CodeShell Desktop Host",
-      }),
+    () => {
+      const args = [join(app.getPath("userData"), "task-inbox")];
+      if (nativePath) args.push(runtimePathFlag);
+      const child = utilityProcess.fork(entryPath, args, { serviceName: "CodeShell Desktop Host" });
+      if (nativePath) {
+        const ready = nativePath;
+        child.once("spawn", () => {
+          void ready.then(() => {
+            // Keep the handle of this exact utility even if the supervisor has restarted.
+            try {
+              child.postMessage({ type: "runtime-path", path: process.env.PATH ?? "" });
+            } catch {
+              child.kill(); // The supervisor will bootstrap a replacement with the prepared PATH.
+            }
+          });
+        });
+      }
+      return child;
+    },
     () => app.getVersion(),
     (status) => {
       if (status === "ready") {
@@ -231,6 +247,8 @@ export function createDesktopHost(
   let changes: ReturnType<typeof createSessionIndexChanges> | undefined;
   const connect = (event: IpcMainEvent) => workbenches.connect(event);
   const openExternalProvider = async (signal?: AbortSignal) => {
+    await nativePath;
+    signal?.throwIfAborted();
     await supervisor.waitUntilReady(signal);
     const { port1, port2 } = new MessageChannelMain();
     if (!supervisor.post({ type: "external-provider-port" }, [port2])) {
@@ -290,7 +308,8 @@ export function createDesktopHost(
     catalogListeners: supervisor.catalogListeners,
     knownGitRoots: supervisor.knownGitRoots,
     projectRegistryListeners: supervisor.projectRegistryListeners,
-    start() {
+    start(preparePath?: Promise<void>) {
+      nativePath ??= preparePath?.catch(() => undefined);
       ipcMain.removeListener(DesktopHostIpc.connect, connect);
       ipcMain.on(DesktopHostIpc.connect, connect);
       changes ??= createSessionIndexChanges(sessionsRoot(), (ids) => {

@@ -1,3 +1,4 @@
+import { hostRuntimePath } from "../runtime-path.js";
 import {
   mcpProbeConnection,
   mcpProbeDigest,
@@ -14,6 +15,8 @@ type Config = McpServerConfig & { enabled?: boolean; pluginDisabled?: boolean };
 
 export const configuredMcpProbe = {
   async "mcp/probeConfigured"({ scope, target, servers, force }, grant) {
+    await hostRuntimePath.ready;
+    grant.assertCurrent();
     if (scope !== "user" && scope !== "project") throw new Error("Invalid MCP settings scope");
     if (scope === "project" && !target)
       throw new Error("Project scope requires a configuration target");

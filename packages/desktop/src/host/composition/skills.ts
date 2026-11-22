@@ -1,3 +1,4 @@
+import { hostRuntimePath } from "../runtime-path.js";
 import { invalidateSkillCache } from "@cjhyy/code-shell-core";
 import { Worker } from "node:worker_threads";
 import type { PluginPackageOperations } from "../../shared/plugin-library.js";
@@ -12,6 +13,7 @@ export function hostedSkills(url: URL, pluginChanged: (requestId: string) => voi
   let closing = false;
   function route<K extends keyof ExtensionOperations>(method: K) {
     return async (input: ExtensionOperations[K]["input"], grant: BusinessGrant) => {
+      await hostRuntimePath.ready;
       while (!closing && pending.size >= 4) {
         await Promise.race(pending).catch(() => undefined);
         grant.assertCurrent();

@@ -1,3 +1,4 @@
+import { hostRuntimePath } from "../runtime-path.js";
 import { RemoteTerminals } from "../../main/mobile-remote/remote-terminals.js";
 import type { TerminalControl, TerminalDelivery } from "../../main/mobile-remote/terminal-port.js";
 import { getProjectStore } from "../../main/project-store.js";
@@ -66,6 +67,8 @@ export function bindRemoteTerminals(port: Electron.MessagePortMain) {
       terminals.handle(frame.event);
     }
   });
-  port.start();
+  hostRuntimePath.whenReady(() => {
+    if (open) port.start();
+  });
   return close;
 }

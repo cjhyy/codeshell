@@ -1,6 +1,8 @@
 import { isDesktopSessionId } from "./disk-session-query.js";
 import type { RpcMessage } from "@cjhyy/code-shell-core";
 
+export const runtimePathFlag = "--codeshell-wait-for-runtime-path";
+
 // The dedicated desktop port uses Core's JSON-RPC envelopes. The parent pipe
 // also carries lifecycle messages which the renderer port must never accept.
 export type { RpcMessage };
@@ -24,6 +26,7 @@ export interface DesktopHostIdentity {
 }
 
 export type DesktopHostControl =
+  | { type: "runtime-path"; path: string }
   | {type:"mimi-dispatch-port"}
   | {type:"mimi-tasks-port"}
   | { type: "external-provider-port" }
@@ -103,6 +106,8 @@ export function isDesktopHostControl(value: unknown): value is DesktopHostContro
       typeof value.execPath === "string" &&
       typeof value.entryPath === "string"
     );
+  if (value.type === "runtime-path")
+    return hasOnly(value, ["type", "path"]) && typeof value.path === "string" && !value.path.includes("\0");
   if (value.type === "window-closed")
     return hasOnly(value, ["type", "webContentsId"]) && positiveId(value.webContentsId);
   if (value.type === "shutdown" || value.type === "remote-terminal-port") return hasOnly(value, ["type"]);

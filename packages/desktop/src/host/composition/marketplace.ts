@@ -1,4 +1,5 @@
 import { InvalidParams } from "../../main/desktop-host/server.js";
+import { hostRuntimePath } from "../runtime-path.js";
 import { Worker } from "node:worker_threads";
 import { invalidateSkillCache } from "@cjhyy/code-shell-core";
 import type { MarketplaceOperations } from "../../shared/plugin-library.js";
@@ -57,10 +58,11 @@ export function hostedMarketplace(
     return thread;
   }
   function route<K extends keyof MarketplaceOperations>(method: K) {
-    return (
+    return async (
       input: MarketplaceOperations[K]["input"],
       grant?: BusinessGrant,
     ): Promise<MarketplaceOperations[K]["result"]> => {
+      await hostRuntimePath.ready;
       if (closing || pending.size >= 128)
         return Promise.reject(new Error("Marketplace is unavailable or busy"));
       grant?.assertCurrent();
